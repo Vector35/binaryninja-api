@@ -3,18 +3,16 @@ use binaryninjacore_sys::BNGetMediumLevelILByIndex;
 use binaryninjacore_sys::BNMediumLevelILInstruction;
 use binaryninjacore_sys::BNMediumLevelILOperation;
 
-use crate::mlil::InstructionLiftedTrait;
 use crate::operand_iter::OperandIter;
 use crate::rc::Ref;
 use crate::types::{SSAVariable, Variable};
 
 use super::lift::*;
 use super::operation::*;
-use super::Form;
-use super::InstructionTrait;
-use super::InstructionTraitFromRaw;
-use super::MediumLevelILFunction;
-use super::Sealed;
+use super::{
+    Form, InstructionLiftedTrait, InstructionTrait, InstructionTraitFromRaw, MediumLevelILFunction,
+    Sealed,
+};
 
 use strum::IntoStaticStr;
 
@@ -24,11 +22,346 @@ pub struct MediumLevelILInstruction<I: Form> {
     pub address: u64,
     pub index: usize,
     pub size: usize,
-    pub kind: MediumLevelILInstructionKind<I>,
+    pub kind: I::Instruction,
+}
+
+macro_rules! construct_common {
+    ($form:ident) => {
+        fn from_common_operation(op: BNMediumLevelILInstruction) -> Option<Self> {
+            use crate::mlil::operation::*;
+            use BNMediumLevelILOperation::*;
+            Some(match op.operation {
+                MLIL_NOP => Self::Nop,
+                MLIL_NORET => Self::Noret,
+                MLIL_BP => Self::Bp,
+                MLIL_UNDEF => Self::Undef,
+                MLIL_UNIMPL => Self::Unimpl,
+                MLIL_IF => Self::If(MediumLevelILOperationIf {
+                    condition: op.operands[0] as usize,
+                    dest_true: op.operands[1],
+                    dest_false: op.operands[2],
+                }),
+                MLIL_FLOAT_CONST => Self::FloatConst(FloatConst {
+                    constant: get_float(op.operands[0], op.size),
+                }),
+                MLIL_CONST => Self::Const(Constant {
+                    constant: op.operands[0],
+                }),
+                MLIL_CONST_PTR => Self::ConstPtr(Constant {
+                    constant: op.operands[0],
+                }),
+                MLIL_IMPORT => Self::Import(Constant {
+                    constant: op.operands[0],
+                }),
+                MLIL_EXTERN_PTR => Self::ExternPtr(ExternPtr {
+                    constant: op.operands[0],
+                    offset: op.operands[1],
+                }),
+                MLIL_CONST_DATA => Self::ConstData(ConstData {
+                    constant_data_kind: op.operands[0] as u32,
+                    constant_data_value: op.operands[1] as i64,
+                    size: op.size,
+                }),
+                MLIL_JUMP => Self::Jump(Jump {
+                    dest: op.operands[0] as usize,
+                }),
+                MLIL_RET_HINT => Self::RetHint(Jump {
+                    dest: op.operands[0] as usize,
+                }),
+                MLIL_JUMP_TO => Self::JumpTo(JumpTo {
+                    dest: op.operands[0] as usize,
+                    num_operands: op.operands[1] as usize,
+                    first_operand: op.operands[2] as usize,
+                }),
+                MLIL_GOTO => Self::Goto(Goto {
+                    dest: op.operands[0],
+                }),
+                MLIL_MEM_PHI => Self::MemPhi(MemPhi {
+                    dest_memory: op.operands[0],
+                    num_operands: op.operands[1] as usize,
+                    first_operand: op.operands[2] as usize,
+                }),
+                MLIL_ADD => Self::Add(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_SUB => Self::Sub(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_AND => Self::And(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_OR => Self::Or(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_XOR => Self::Xor(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_LSL => Self::Lsl(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_LSR => Self::Lsr(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_ASR => Self::Asr(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_ROL => Self::Rol(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_ROR => Self::Ror(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_MUL => Self::Mul(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_MULU_DP => Self::MuluDp(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_MULS_DP => Self::MulsDp(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_DIVU => Self::Divu(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_DIVU_DP => Self::DivuDp(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_DIVS => Self::Divs(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_DIVS_DP => Self::DivsDp(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_MODU => Self::Modu(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_MODU_DP => Self::ModuDp(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_MODS => Self::Mods(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_MODS_DP => Self::ModsDp(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_CMP_E => Self::CmpE(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_CMP_NE => Self::CmpNe(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_CMP_SLT => Self::CmpSlt(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_CMP_ULT => Self::CmpUlt(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_CMP_SLE => Self::CmpSle(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_CMP_ULE => Self::CmpUle(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_CMP_SGE => Self::CmpSge(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_CMP_UGE => Self::CmpUge(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_CMP_SGT => Self::CmpSgt(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_CMP_UGT => Self::CmpUgt(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_TEST_BIT => Self::TestBit(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_ADD_OVERFLOW => Self::AddOverflow(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_FCMP_E => Self::FcmpE(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_FCMP_NE => Self::FcmpNe(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_FCMP_LT => Self::FcmpLt(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_FCMP_LE => Self::FcmpLe(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_FCMP_GE => Self::FcmpGe(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_FCMP_GT => Self::FcmpGt(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_FCMP_O => Self::FcmpO(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_FCMP_UO => Self::FcmpUo(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_FADD => Self::Fadd(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_FSUB => Self::Fsub(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_FMUL => Self::Fmul(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_FDIV => Self::Fdiv(BinaryOp {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                }),
+                MLIL_ADC => Self::Adc(BinaryOpCarry {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                    carry: op.operands[2] as usize,
+                }),
+                MLIL_SBB => Self::Sbb(BinaryOpCarry {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                    carry: op.operands[2] as usize,
+                }),
+                MLIL_RLC => Self::Rlc(BinaryOpCarry {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                    carry: op.operands[2] as usize,
+                }),
+                MLIL_RRC => Self::Rrc(BinaryOpCarry {
+                    left: op.operands[0] as usize,
+                    right: op.operands[1] as usize,
+                    carry: op.operands[2] as usize,
+                }),
+                MLIL_NEG => Self::Neg(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_NOT => Self::Not(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_SX => Self::Sx(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_ZX => Self::Zx(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_LOW_PART => Self::LowPart(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_BOOL_TO_INT => Self::BoolToInt(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_UNIMPL_MEM => Self::UnimplMem(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_FSQRT => Self::Fsqrt(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_FNEG => Self::Fneg(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_FABS => Self::Fabs(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_FLOAT_TO_INT => Self::FloatToInt(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_INT_TO_FLOAT => Self::IntToFloat(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_FLOAT_CONV => Self::FloatConv(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_ROUND_TO_INT => Self::RoundToInt(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_FLOOR => Self::Floor(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_CEIL => Self::Ceil(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_FTRUNC => Self::Ftrunc(UnaryOp {
+                    src: op.operands[0] as usize,
+                }),
+                MLIL_RET => Self::Ret(Ret {
+                    num_operands: op.operands[0] as usize,
+                    first_operand: op.operands[1] as usize,
+                }),
+                MLIL_SEPARATE_PARAM_LIST => Self::SeparateParamList(SeparateParamList {
+                    num_params: op.operands[0] as usize,
+                    first_param: op.operands[1] as usize,
+                }),
+                MLIL_SHARED_PARAM_SLOT => Self::SharedParamSlot(SharedParamSlot {
+                    num_params: op.operands[0] as usize,
+                    first_param: op.operands[1] as usize,
+                }),
+                MLIL_ADDRESS_OF => Self::AddressOf(Var {
+                    src: get_var(op.operands[0]),
+                }),
+                MLIL_ADDRESS_OF_FIELD => Self::AddressOfField(Field {
+                    src: get_var(op.operands[0]),
+                    offset: op.operands[1],
+                }),
+                MLIL_TRAP => Self::Trap(Trap {
+                    vector: op.operands[0],
+                }),
+                _ => return None,
+            })
+        }
+    };
 }
 
 #[derive(Debug, Copy, Clone, IntoStaticStr)]
-pub enum MediumLevelILInstructionKind<I: Form> {
+pub enum MediumLevelILInstructionKindNonSSA {
     Nop,
     Noret,
     Bp,
@@ -121,11 +454,6 @@ pub enum MediumLevelILInstructionKind<I: Form> {
     AddressOfField(Field),
     Trap(Trap),
 
-    Form(I::Instruction),
-}
-
-#[derive(Debug, Copy, Clone, IntoStaticStr)]
-pub enum MediumLevelILInstructionKindNonSSA {
     Var(Var),
     VarField(Field),
     Store(Store),
@@ -147,8 +475,11 @@ pub enum MediumLevelILInstructionKindNonSSA {
 }
 
 impl Sealed for MediumLevelILInstructionKindNonSSA {}
-impl InstructionTraitFromRaw for MediumLevelILInstructionKindNonSSA {
-    fn from_operation(op: BNMediumLevelILInstruction) -> Option<Self> {
+impl MediumLevelILInstructionKindNonSSA {
+    construct_common!(NonSSA);
+}
+impl MediumLevelILInstructionKindNonSSA {
+    fn from_this_operation(op: BNMediumLevelILInstruction) -> Option<Self> {
         use crate::mlil::operation::*;
         use BNMediumLevelILOperation::*;
         Some(match op.operation {
@@ -242,6 +573,12 @@ impl InstructionTraitFromRaw for MediumLevelILInstructionKindNonSSA {
     }
 }
 
+impl InstructionTraitFromRaw for MediumLevelILInstructionKindNonSSA {
+    fn from_operation(op: BNMediumLevelILInstruction) -> Option<Self> {
+        Self::from_common_operation(op).or_else(|| Self::from_this_operation(op))
+    }
+}
+
 impl InstructionTrait for MediumLevelILInstructionKindNonSSA {
     fn name(&self) -> &'static str {
         self.into()
@@ -250,6 +587,98 @@ impl InstructionTrait for MediumLevelILInstructionKindNonSSA {
 
 #[derive(Debug, Copy, Clone, IntoStaticStr)]
 pub enum MediumLevelILInstructionKindSSA {
+    Nop,
+    Noret,
+    Bp,
+    Undef,
+    Unimpl,
+    If(MediumLevelILOperationIf),
+    FloatConst(FloatConst),
+    Const(Constant),
+    ConstPtr(Constant),
+    Import(Constant),
+    ExternPtr(ExternPtr),
+    ConstData(ConstData),
+    Jump(Jump),
+    RetHint(Jump),
+    JumpTo(JumpTo),
+    Goto(Goto),
+    Add(BinaryOp),
+    Sub(BinaryOp),
+    And(BinaryOp),
+    Or(BinaryOp),
+    Xor(BinaryOp),
+    Lsl(BinaryOp),
+    Lsr(BinaryOp),
+    Asr(BinaryOp),
+    Rol(BinaryOp),
+    Ror(BinaryOp),
+    Mul(BinaryOp),
+    MuluDp(BinaryOp),
+    MulsDp(BinaryOp),
+    Divu(BinaryOp),
+    DivuDp(BinaryOp),
+    Divs(BinaryOp),
+    DivsDp(BinaryOp),
+    Modu(BinaryOp),
+    ModuDp(BinaryOp),
+    Mods(BinaryOp),
+    ModsDp(BinaryOp),
+    CmpE(BinaryOp),
+    CmpNe(BinaryOp),
+    CmpSlt(BinaryOp),
+    CmpUlt(BinaryOp),
+    CmpSle(BinaryOp),
+    CmpUle(BinaryOp),
+    CmpSge(BinaryOp),
+    CmpUge(BinaryOp),
+    CmpSgt(BinaryOp),
+    CmpUgt(BinaryOp),
+    TestBit(BinaryOp),
+    AddOverflow(BinaryOp),
+    FcmpE(BinaryOp),
+    FcmpNe(BinaryOp),
+    FcmpLt(BinaryOp),
+    FcmpLe(BinaryOp),
+    FcmpGe(BinaryOp),
+    FcmpGt(BinaryOp),
+    FcmpO(BinaryOp),
+    FcmpUo(BinaryOp),
+    Fadd(BinaryOp),
+    Fsub(BinaryOp),
+    Fmul(BinaryOp),
+    Fdiv(BinaryOp),
+    Adc(BinaryOpCarry),
+    Sbb(BinaryOpCarry),
+    Rlc(BinaryOpCarry),
+    Rrc(BinaryOpCarry),
+    Neg(UnaryOp),
+    Not(UnaryOp),
+    Sx(UnaryOp),
+    Zx(UnaryOp),
+    LowPart(UnaryOp),
+    BoolToInt(UnaryOp),
+    UnimplMem(UnaryOp),
+    Fsqrt(UnaryOp),
+    Fneg(UnaryOp),
+    Fabs(UnaryOp),
+    FloatToInt(UnaryOp),
+    IntToFloat(UnaryOp),
+    FloatConv(UnaryOp),
+    RoundToInt(UnaryOp),
+    Floor(UnaryOp),
+    Ceil(UnaryOp),
+    Ftrunc(UnaryOp),
+    Ret(Ret),
+
+    MemPhi(MemPhi),
+    SeparateParamList(SeparateParamList),
+    SharedParamSlot(SharedParamSlot),
+
+    AddressOf(Var),
+    AddressOfField(Field),
+    Trap(Trap),
+
     VarSsa(VarSsa),
     VarSsaField(VarSsaField),
     StoreSsa(StoreSsa),
@@ -277,8 +706,9 @@ pub enum MediumLevelILInstructionKindSSA {
 }
 
 impl Sealed for MediumLevelILInstructionKindSSA {}
-impl InstructionTraitFromRaw for MediumLevelILInstructionKindSSA {
-    fn from_operation(op: BNMediumLevelILInstruction) -> Option<Self> {
+impl MediumLevelILInstructionKindSSA {
+    construct_common!(SSA);
+    fn from_this_operation(op: BNMediumLevelILInstruction) -> Option<Self> {
         use crate::mlil::operation::*;
         use BNMediumLevelILOperation::*;
         Some(match op.operation {
@@ -405,6 +835,11 @@ impl InstructionTraitFromRaw for MediumLevelILInstructionKindSSA {
         })
     }
 }
+impl InstructionTraitFromRaw for MediumLevelILInstructionKindSSA {
+    fn from_operation(op: BNMediumLevelILInstruction) -> Option<Self> {
+        Self::from_common_operation(op).or_else(|| Self::from_this_operation(op))
+    }
+}
 
 impl InstructionTrait for MediumLevelILInstructionKindSSA {
     fn name(&self) -> &'static str {
@@ -423,454 +858,11 @@ impl<I: Form> core::fmt::Debug for MediumLevelILInstruction<I> {
     }
 }
 
-impl<I: Form> MediumLevelILInstructionKind<I> {
-    pub(crate) fn from_operation(op: BNMediumLevelILInstruction) -> Option<Self> {
-        use crate::mlil::operation::*;
-        use BNMediumLevelILOperation::*;
-        use MediumLevelILInstructionKind as Op;
-        Some(match op.operation {
-            MLIL_NOP => Op::Nop,
-            MLIL_NORET => Op::Noret,
-            MLIL_BP => Op::Bp,
-            MLIL_UNDEF => Op::Undef,
-            MLIL_UNIMPL => Op::Unimpl,
-            MLIL_IF => Op::If(MediumLevelILOperationIf {
-                condition: op.operands[0] as usize,
-                dest_true: op.operands[1],
-                dest_false: op.operands[2],
-            }),
-            MLIL_FLOAT_CONST => Op::FloatConst(FloatConst {
-                constant: get_float(op.operands[0], op.size),
-            }),
-            MLIL_CONST => Op::Const(Constant {
-                constant: op.operands[0],
-            }),
-            MLIL_CONST_PTR => Op::ConstPtr(Constant {
-                constant: op.operands[0],
-            }),
-            MLIL_IMPORT => Op::Import(Constant {
-                constant: op.operands[0],
-            }),
-            MLIL_EXTERN_PTR => Op::ExternPtr(ExternPtr {
-                constant: op.operands[0],
-                offset: op.operands[1],
-            }),
-            MLIL_CONST_DATA => Op::ConstData(ConstData {
-                constant_data_kind: op.operands[0] as u32,
-                constant_data_value: op.operands[1] as i64,
-                size: op.size,
-            }),
-            MLIL_JUMP => Op::Jump(Jump {
-                dest: op.operands[0] as usize,
-            }),
-            MLIL_RET_HINT => Op::RetHint(Jump {
-                dest: op.operands[0] as usize,
-            }),
-            MLIL_JUMP_TO => Op::JumpTo(JumpTo {
-                dest: op.operands[0] as usize,
-                num_operands: op.operands[1] as usize,
-                first_operand: op.operands[2] as usize,
-            }),
-            MLIL_GOTO => Op::Goto(Goto {
-                dest: op.operands[0],
-            }),
-            MLIL_MEM_PHI => Op::MemPhi(MemPhi {
-                dest_memory: op.operands[0],
-                num_operands: op.operands[1] as usize,
-                first_operand: op.operands[2] as usize,
-            }),
-            MLIL_ADD => Op::Add(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_SUB => Op::Sub(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_AND => Op::And(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_OR => Op::Or(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_XOR => Op::Xor(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_LSL => Op::Lsl(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_LSR => Op::Lsr(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_ASR => Op::Asr(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_ROL => Op::Rol(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_ROR => Op::Ror(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_MUL => Op::Mul(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_MULU_DP => Op::MuluDp(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_MULS_DP => Op::MulsDp(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_DIVU => Op::Divu(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_DIVU_DP => Op::DivuDp(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_DIVS => Op::Divs(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_DIVS_DP => Op::DivsDp(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_MODU => Op::Modu(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_MODU_DP => Op::ModuDp(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_MODS => Op::Mods(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_MODS_DP => Op::ModsDp(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_CMP_E => Op::CmpE(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_CMP_NE => Op::CmpNe(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_CMP_SLT => Op::CmpSlt(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_CMP_ULT => Op::CmpUlt(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_CMP_SLE => Op::CmpSle(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_CMP_ULE => Op::CmpUle(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_CMP_SGE => Op::CmpSge(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_CMP_UGE => Op::CmpUge(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_CMP_SGT => Op::CmpSgt(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_CMP_UGT => Op::CmpUgt(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_TEST_BIT => Op::TestBit(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_ADD_OVERFLOW => Op::AddOverflow(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_FCMP_E => Op::FcmpE(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_FCMP_NE => Op::FcmpNe(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_FCMP_LT => Op::FcmpLt(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_FCMP_LE => Op::FcmpLe(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_FCMP_GE => Op::FcmpGe(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_FCMP_GT => Op::FcmpGt(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_FCMP_O => Op::FcmpO(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_FCMP_UO => Op::FcmpUo(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_FADD => Op::Fadd(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_FSUB => Op::Fsub(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_FMUL => Op::Fmul(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_FDIV => Op::Fdiv(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-            }),
-            MLIL_ADC => Op::Adc(BinaryOpCarry {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-                carry: op.operands[2] as usize,
-            }),
-            MLIL_SBB => Op::Sbb(BinaryOpCarry {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-                carry: op.operands[2] as usize,
-            }),
-            MLIL_RLC => Op::Rlc(BinaryOpCarry {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-                carry: op.operands[2] as usize,
-            }),
-            MLIL_RRC => Op::Rrc(BinaryOpCarry {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-                carry: op.operands[2] as usize,
-            }),
-            MLIL_NEG => Op::Neg(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_NOT => Op::Not(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_SX => Op::Sx(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_ZX => Op::Zx(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_LOW_PART => Op::LowPart(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_BOOL_TO_INT => Op::BoolToInt(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_UNIMPL_MEM => Op::UnimplMem(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_FSQRT => Op::Fsqrt(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_FNEG => Op::Fneg(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_FABS => Op::Fabs(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_FLOAT_TO_INT => Op::FloatToInt(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_INT_TO_FLOAT => Op::IntToFloat(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_FLOAT_CONV => Op::FloatConv(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_ROUND_TO_INT => Op::RoundToInt(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_FLOOR => Op::Floor(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_CEIL => Op::Ceil(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_FTRUNC => Op::Ftrunc(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_RET => Op::Ret(Ret {
-                num_operands: op.operands[0] as usize,
-                first_operand: op.operands[1] as usize,
-            }),
-            MLIL_SEPARATE_PARAM_LIST => Op::SeparateParamList(SeparateParamList {
-                num_params: op.operands[0] as usize,
-                first_param: op.operands[1] as usize,
-            }),
-            MLIL_SHARED_PARAM_SLOT => Op::SharedParamSlot(SharedParamSlot {
-                num_params: op.operands[0] as usize,
-                first_param: op.operands[1] as usize,
-            }),
-            MLIL_ADDRESS_OF => Op::AddressOf(Var {
-                src: get_var(op.operands[0]),
-            }),
-            MLIL_ADDRESS_OF_FIELD => Op::AddressOfField(Field {
-                src: get_var(op.operands[0]),
-                offset: op.operands[1],
-            }),
-            MLIL_TRAP => Op::Trap(Trap {
-                vector: op.operands[0],
-            }),
-            _ => return I::Instruction::from_operation(op).map(Op::Form),
-        })
-    }
-
-    pub fn lift(
-        &self,
-        inst: &MediumLevelILInstruction<I>,
-    ) -> MediumLevelILLiftedInstructionKind<I> {
-        use MediumLevelILInstructionKind::*;
-        use MediumLevelILLiftedInstructionKind as Lifted;
-        match self {
-            Nop => Lifted::Nop,
-            Noret => Lifted::Noret,
-            Bp => Lifted::Bp,
-            Undef => Lifted::Undef,
-            Unimpl => Lifted::Unimpl,
-            If(op) => Lifted::If(op.lift(inst)),
-            FloatConst(op) => Lifted::FloatConst(*op),
-            Const(op) => Lifted::Const(*op),
-            ConstPtr(op) => Lifted::ConstPtr(*op),
-            Import(op) => Lifted::Import(*op),
-            ExternPtr(op) => Lifted::ExternPtr(*op),
-            ConstData(op) => Lifted::ConstData(op.lift(inst)),
-            Jump(op) => Lifted::Jump(op.lift(inst)),
-            RetHint(op) => Lifted::RetHint(op.lift(inst)),
-            JumpTo(op) => Lifted::JumpTo(op.lift(inst)),
-            Goto(op) => Lifted::Goto(*op),
-            Add(op) => Lifted::Add(op.lift(inst)),
-            Sub(op) => Lifted::Sub(op.lift(inst)),
-            And(op) => Lifted::And(op.lift(inst)),
-            Or(op) => Lifted::Or(op.lift(inst)),
-            Xor(op) => Lifted::Xor(op.lift(inst)),
-            Lsl(op) => Lifted::Lsl(op.lift(inst)),
-            Lsr(op) => Lifted::Lsr(op.lift(inst)),
-            Asr(op) => Lifted::Asr(op.lift(inst)),
-            Rol(op) => Lifted::Rol(op.lift(inst)),
-            Ror(op) => Lifted::Ror(op.lift(inst)),
-            Mul(op) => Lifted::Mul(op.lift(inst)),
-            MuluDp(op) => Lifted::MuluDp(op.lift(inst)),
-            MulsDp(op) => Lifted::MulsDp(op.lift(inst)),
-            Divu(op) => Lifted::Divu(op.lift(inst)),
-            DivuDp(op) => Lifted::DivuDp(op.lift(inst)),
-            Divs(op) => Lifted::Divs(op.lift(inst)),
-            DivsDp(op) => Lifted::DivsDp(op.lift(inst)),
-            Modu(op) => Lifted::Modu(op.lift(inst)),
-            ModuDp(op) => Lifted::ModuDp(op.lift(inst)),
-            Mods(op) => Lifted::Mods(op.lift(inst)),
-            ModsDp(op) => Lifted::ModsDp(op.lift(inst)),
-            CmpE(op) => Lifted::CmpE(op.lift(inst)),
-            CmpNe(op) => Lifted::CmpNe(op.lift(inst)),
-            CmpSlt(op) => Lifted::CmpSlt(op.lift(inst)),
-            CmpUlt(op) => Lifted::CmpUlt(op.lift(inst)),
-            CmpSle(op) => Lifted::CmpSle(op.lift(inst)),
-            CmpUle(op) => Lifted::CmpUle(op.lift(inst)),
-            CmpSge(op) => Lifted::CmpSge(op.lift(inst)),
-            CmpUge(op) => Lifted::CmpUge(op.lift(inst)),
-            CmpSgt(op) => Lifted::CmpSgt(op.lift(inst)),
-            CmpUgt(op) => Lifted::CmpUgt(op.lift(inst)),
-            TestBit(op) => Lifted::TestBit(op.lift(inst)),
-            AddOverflow(op) => Lifted::AddOverflow(op.lift(inst)),
-            FcmpE(op) => Lifted::FcmpE(op.lift(inst)),
-            FcmpNe(op) => Lifted::FcmpNe(op.lift(inst)),
-            FcmpLt(op) => Lifted::FcmpLt(op.lift(inst)),
-            FcmpLe(op) => Lifted::FcmpLe(op.lift(inst)),
-            FcmpGe(op) => Lifted::FcmpGe(op.lift(inst)),
-            FcmpGt(op) => Lifted::FcmpGt(op.lift(inst)),
-            FcmpO(op) => Lifted::FcmpO(op.lift(inst)),
-            FcmpUo(op) => Lifted::FcmpUo(op.lift(inst)),
-            Fadd(op) => Lifted::Fadd(op.lift(inst)),
-            Fsub(op) => Lifted::Fsub(op.lift(inst)),
-            Fmul(op) => Lifted::Fmul(op.lift(inst)),
-            Fdiv(op) => Lifted::Fdiv(op.lift(inst)),
-            Adc(op) => Lifted::Adc(op.lift(inst)),
-            Sbb(op) => Lifted::Sbb(op.lift(inst)),
-            Rlc(op) => Lifted::Rlc(op.lift(inst)),
-            Rrc(op) => Lifted::Rrc(op.lift(inst)),
-            Neg(op) => Lifted::Neg(op.lift(inst)),
-            Not(op) => Lifted::Not(op.lift(inst)),
-            Sx(op) => Lifted::Sx(op.lift(inst)),
-            Zx(op) => Lifted::Zx(op.lift(inst)),
-            LowPart(op) => Lifted::LowPart(op.lift(inst)),
-            BoolToInt(op) => Lifted::BoolToInt(op.lift(inst)),
-            UnimplMem(op) => Lifted::UnimplMem(op.lift(inst)),
-            Fsqrt(op) => Lifted::Fsqrt(op.lift(inst)),
-            Fneg(op) => Lifted::Fneg(op.lift(inst)),
-            Fabs(op) => Lifted::Fabs(op.lift(inst)),
-            FloatToInt(op) => Lifted::FloatToInt(op.lift(inst)),
-            IntToFloat(op) => Lifted::IntToFloat(op.lift(inst)),
-            FloatConv(op) => Lifted::FloatConv(op.lift(inst)),
-            RoundToInt(op) => Lifted::RoundToInt(op.lift(inst)),
-            Floor(op) => Lifted::Floor(op.lift(inst)),
-            Ceil(op) => Lifted::Ceil(op.lift(inst)),
-            Ftrunc(op) => Lifted::Ftrunc(op.lift(inst)),
-            Ret(op) => Lifted::Ret(op.lift(inst)),
-
-            MemPhi(op) => Lifted::MemPhi(op.lift(inst)),
-            SeparateParamList(op) => Lifted::SeparateParamList(op.lift(inst)),
-            SharedParamSlot(op) => Lifted::SharedParamSlot(op.lift(inst)),
-
-            AddressOf(op) => Lifted::AddressOf(*op),
-            AddressOfField(op) => Lifted::AddressOfField(*op),
-            Trap(op) => Lifted::Trap(*op),
-
-            Form(op) => Lifted::Form(I::InstructionLifted::from_instruction(inst, op)),
-        }
-    }
-    pub fn name(&self) -> &'static str {
-        match self {
-            Self::Form(op) => op.name(),
-            _ => self.into(),
-        }
-    }
-}
-
 impl<I: Form> MediumLevelILInstruction<I> {
     pub(crate) fn new(function: Ref<MediumLevelILFunction<I>>, index: usize) -> Self {
         let op = unsafe { BNGetMediumLevelILByIndex(function.handle, index) };
-        let kind = MediumLevelILInstructionKind::from_operation(op)
-            .expect("Invalid Medium Level IL Instruction");
+        let kind =
+            <I::Instruction>::from_operation(op).expect("Invalid Medium Level IL Instruction");
 
         Self {
             function,
@@ -886,7 +878,7 @@ impl<I: Form> MediumLevelILInstruction<I> {
             address: self.address,
             index: self.index,
             size: self.size,
-            kind: self.kind.lift(self),
+            kind: <I::InstructionLifted>::from_instruction(self),
         }
     }
     pub fn name(&self) -> &'static str {

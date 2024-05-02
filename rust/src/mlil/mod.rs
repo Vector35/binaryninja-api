@@ -29,7 +29,7 @@ trait InstructionTraitFromRaw: Sized {
 #[allow(private_bounds)]
 pub trait InstructionLiftedTrait<I: Form>: Sealed + Sized + Clone + Debug {
     fn name(&self) -> &'static str;
-    fn from_instruction(inst: &MediumLevelILInstruction<I>, kind: &I::Instruction) -> Self;
+    fn from_instruction(inst: &MediumLevelILInstruction<I>) -> Self;
     fn operands(&self) -> Vec<(&'static str, MediumLevelILLiftedOperand<I>)>;
 }
 

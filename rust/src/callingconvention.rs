@@ -89,23 +89,15 @@ where
         *count = len;
 
         if len == 0 {
-            ptr::null_mut()
-        } else {
-            let mut res = Vec::with_capacity(len + 1);
-
-            res.push(len as u32);
-
-            for i in items {
-                res.push(i);
-            }
-
-            assert!(res.len() == len + 1);
-
-            let raw = res.as_mut_ptr();
-            mem::forget(res);
-
-            unsafe { raw.offset(1) }
+            return ptr::null_mut();
         }
+
+        let res: Box<[_]> = [len as u32].into_iter().chain(items).collect();
+        debug_assert!(res.len() == len + 1);
+
+        // it's free on the function below: `cb_free_register_list`
+        let raw = Box::leak(res);
+        &mut raw[1]
     }
 
     extern "C" fn cb_free_register_list(_ctxt: *mut c_void, regs: *mut u32) {
@@ -115,8 +107,8 @@ where
             }
 
             let actual_start = regs.offset(-1);
-            let len = *actual_start + 1;
-            let _regs = Vec::from_raw_parts(actual_start, len as usize, len as usize);
+            let len = (*actual_start) + 1;
+            let _regs = Box::from_raw(ptr::slice_from_raw_parts_mut(actual_start, len as usize));
         })
     }
 

@@ -221,13 +221,13 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			log_error(traceback.format_exc())
 			return False
 
-	def _get_type_lines(self, ctxt, type, container, name, line_width, collapsed, escaping, result, result_count):
+	def _get_type_lines(self, ctxt, type, container, name, padding_cols, collapsed, escaping, result, result_count):
 		try:
 			result_py = self.get_type_lines(
 				types.Type.create(handle=core.BNNewTypeReference(type)),
 				typecontainer.TypeContainer(handle=container),
 				types.QualifiedName._from_core_struct(name.contents),
-				line_width, collapsed, escaping)
+				padding_cols, collapsed, escaping)
 
 			TypePrinter._cached_lines = (core.BNTypeDefinitionLine * len(result_py))()
 			for (i, line) in enumerate(result_py):
@@ -240,7 +240,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			log_error(traceback.format_exc())
 			return False
 
-	def _print_all_types(self, ctxt, names, types_, type_count, data, line_width, escaping, result):
+	def _print_all_types(self, ctxt, names, types_, type_count, data, padding_cols, escaping, result):
 		try:
 			types_py = []
 			for i in range(type_count):
@@ -252,7 +252,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			result_py = self.print_all_types(
 				types_py,
 				binaryview.BinaryView(handle=core.BNNewViewReference(data)),
-				line_width, escaping)
+				padding_cols, escaping)
 
 			TypePrinter._cached_string = core.cstr(result_py)
 			result[0] = TypePrinter._cached_string
@@ -288,7 +288,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			log_error(traceback.format_exc())
 			return False
 
-	def _default_print_all_types(self, types_: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, line_width = 80, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
+	def _default_print_all_types(self, types_: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 64, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		cpp_names = (core.BNQualifiedName * len(types_))()
 		cpp_types = (ctypes.POINTER(core.BNType) * len(types_))()
 
@@ -299,7 +299,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			i += 1
 
 		result = ctypes.c_char_p()
-		core.BNTypePrinterDefaultPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, line_width, ctypes.c_int(escaping), result)
+		core.BNTypePrinterDefaultPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, padding_cols, ctypes.c_int(escaping), result)
 		return core.pyNativeStr(result.value)
 
 	def get_type_tokens(self, type: types.Type, platform: Optional[_platform.Platform] = None, name: types.QualifiedNameType = "", base_confidence: int = core.max_confidence, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[_function.InstructionTextToken]:
@@ -379,31 +379,31 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		"""
 		raise NotImplementedError()
 
-	def get_type_lines(self, type: types.Type, container: 'typecontainer.TypeContainer', name: types.QualifiedNameType, line_width = 80, collapsed = False, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[types.TypeDefinitionLine]:
+	def get_type_lines(self, type: types.Type, container: 'typecontainer.TypeContainer', name: types.QualifiedNameType, padding_cols = 64, collapsed = False, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[types.TypeDefinitionLine]:
 		"""
 		Generate a multi-line representation of a type
 
 		:param type: Type to print
 		:param container: Type Container containing the type and dependencies
 		:param name: Name of the type
-		:param line_width: Maximum width of lines, in characters
+		:param padding_cols: Maximum number of bytes represented by each padding line
 		:param collapsed: Whether to collapse structure/enum blocks
 		:param escaping: Style of escaping literals which may not be parsable
 		:return: List of type definition lines
 		"""
 		raise NotImplementedError()
 
-	def print_all_types(self, types: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, line_width = 80, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
+	def print_all_types(self, types: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 64, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		"""
 		Print all types to a single big string, including headers, sections, etc
 
 		:param types: All types to print
 		:param data: Binary View in which all the types are defined
-		:param line_width: Maximum width of lines, in characters
+		:param padding_cols: Maximum number of bytes represented by each padding line
 		:param escaping: Style of escaping literals which may not be parsable
 		:return: All the types in a string
 		"""
-		return self._default_print_all_types(types, data, line_width, escaping)
+		return self._default_print_all_types(types, data, padding_cols, escaping)
 
 
 class CoreTypePrinter(TypePrinter):
@@ -491,14 +491,14 @@ class CoreTypePrinter(TypePrinter):
 
 	def get_type_lines(self, type: types.Type, container: 'typecontainer.TypeContainer',
 					   name: types.QualifiedNameType,
-					   line_width = 80, collapsed = False,
+					   padding_cols = 64, collapsed = False,
 					   escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType
 					   ) -> List[types.TypeDefinitionLine]:
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
 		count = ctypes.c_ulonglong()
 		core_lines = ctypes.POINTER(core.BNTypeDefinitionLine)()
-		if not core.BNGetTypePrinterTypeLines(self.handle, type.handle, container.handle, name._to_core_struct(), line_width, collapsed, ctypes.c_int(escaping), core_lines, count):
+		if not core.BNGetTypePrinterTypeLines(self.handle, type.handle, container.handle, name._to_core_struct(), padding_cols, collapsed, ctypes.c_int(escaping), core_lines, count):
 			raise RuntimeError("BNGetTypePrinterTypeLines returned False")
 		lines = []
 		for i in range(count.value):
@@ -507,7 +507,7 @@ class CoreTypePrinter(TypePrinter):
 		core.BNFreeTypeDefinitionLineList(core_lines, count.value)
 		return lines
 
-	def print_all_types(self, types_: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, line_width = 80, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
+	def print_all_types(self, types_: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 64, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		cpp_names = (core.BNQualifiedName * len(types_))()
 		cpp_types = (ctypes.POINTER(core.BNType) * len(types_))()
 
@@ -518,5 +518,5 @@ class CoreTypePrinter(TypePrinter):
 			i += 1
 
 		result = ctypes.c_char_p()
-		core.BNTypePrinterPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, line_width, ctypes.c_int(escaping), result)
+		core.BNTypePrinterPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, padding_cols, ctypes.c_int(escaping), result)
 		return core.pyNativeStr(result.value)

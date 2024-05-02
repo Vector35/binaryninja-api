@@ -2,8 +2,10 @@ use std::hash::{Hash, Hasher};
 
 use binaryninjacore_sys::BNFreeHighLevelILFunction;
 use binaryninjacore_sys::BNGetHighLevelILBasicBlockList;
+use binaryninjacore_sys::BNGetHighLevelILIndexForInstruction;
 use binaryninjacore_sys::BNGetHighLevelILInstructionCount;
 use binaryninjacore_sys::BNGetHighLevelILOwnerFunction;
+use binaryninjacore_sys::BNGetHighLevelILRootExpr;
 use binaryninjacore_sys::BNGetHighLevelILSSAForm;
 use binaryninjacore_sys::BNHighLevelILFunction;
 use binaryninjacore_sys::BNNewHighLevelILFunctionReference;
@@ -52,6 +54,29 @@ impl HighLevelILFunction {
         self.instruction_from_idx(expr_idx).lift()
     }
 
+    pub fn instruction_from_instruction_idx(&self, instr_idx: usize) -> HighLevelILInstruction {
+        HighLevelILInstruction::new(self.as_non_ast(), unsafe {
+            BNGetHighLevelILIndexForInstruction(self.handle, instr_idx)
+        })
+    }
+
+    pub fn lifted_instruction_from_instruction_idx(
+        &self,
+        instr_idx: usize,
+    ) -> HighLevelILLiftedInstruction {
+        self.instruction_from_instruction_idx(instr_idx).lift()
+    }
+
+    pub fn root(&self) -> HighLevelILInstruction {
+        HighLevelILInstruction::new(self.as_ast(), unsafe {
+            BNGetHighLevelILRootExpr(self.handle)
+        })
+    }
+
+    pub fn lifted_root(&self) -> HighLevelILLiftedInstruction {
+        self.root().lift()
+    }
+
     pub fn instruction_count(&self) -> usize {
         unsafe { BNGetHighLevelILInstructionCount(self.handle) }
     }
@@ -80,6 +105,22 @@ impl HighLevelILFunction {
         };
 
         unsafe { Array::new(blocks, count, context) }
+    }
+
+    pub fn as_ast(&self) -> Ref<HighLevelILFunction> {
+        Self {
+            handle: self.handle,
+            full_ast: true,
+        }
+        .to_owned()
+    }
+
+    pub fn as_non_ast(&self) -> Ref<HighLevelILFunction> {
+        Self {
+            handle: self.handle,
+            full_ast: false,
+        }
+        .to_owned()
     }
 }
 

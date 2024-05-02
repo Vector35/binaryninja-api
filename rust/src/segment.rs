@@ -209,10 +209,10 @@ unsafe impl CoreOwnedArrayProvider for Segment {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for Segment {
-    type Wrapped = Guard<'a, Segment>;
+unsafe impl CoreArrayWrapper for Segment {
+    type Wrapped<'a> = Guard<'a, Segment>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Segment::from_raw(*raw), context)
     }
 }

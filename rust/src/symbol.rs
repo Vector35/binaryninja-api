@@ -335,10 +335,10 @@ unsafe impl CoreOwnedArrayProvider for Symbol {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for Symbol {
-    type Wrapped = Guard<'a, Symbol>;
+unsafe impl CoreArrayWrapper for Symbol {
+    type Wrapped<'a> = Guard<'a, Symbol>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Symbol::from_raw(*raw), context)
     }
 }

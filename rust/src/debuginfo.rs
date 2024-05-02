@@ -74,7 +74,7 @@ use crate::{
     types::{DataVariableAndName, NameAndType, Type},
 };
 
-use std::{hash::Hash, mem, os::raw::c_void, ptr, slice};
+use std::{hash::Hash, os::raw::c_void, ptr, slice};
 
 struct ProgressContext(Option<Box<dyn Fn(usize, usize) -> Result<(), ()>>>);
 
@@ -109,14 +109,14 @@ impl DebugInfoParser {
 
     /// List all debug-info parsers
     pub fn list() -> Array<DebugInfoParser> {
-        let mut count: usize = unsafe { mem::zeroed() };
+        let mut count = 0;
         let raw_parsers = unsafe { BNGetDebugInfoParsers(&mut count as *mut _) };
         unsafe { Array::new(raw_parsers, count, ()) }
     }
 
     /// Returns a list of debug-info parsers that are valid for the provided binary view
     pub fn parsers_for_view(bv: &BinaryView) -> Array<DebugInfoParser> {
-        let mut count: usize = unsafe { mem::zeroed() };
+        let mut count = 0;
         let raw_parsers = unsafe { BNGetDebugInfoParsersForView(bv.handle, &mut count as *mut _) };
         unsafe { Array::new(raw_parsers, count, ()) }
     }
@@ -376,7 +376,7 @@ impl DebugInfo {
     }
 
     /// Returns a generator of all types provided by a named DebugInfoParser
-    pub fn types_by_name<S: BnStrCompatible>(&self, parser_name: S) -> Vec<NameAndType<String>> {
+    pub fn types_by_name<S: BnStrCompatible>(&self, parser_name: S) -> Vec<Ref<NameAndType>> {
         let parser_name = parser_name.into_bytes_with_nul();
 
         let mut count: usize = 0;
@@ -387,10 +387,10 @@ impl DebugInfo {
                 &mut count,
             )
         };
-        let result: Vec<NameAndType<String>> = unsafe {
+        let result: Vec<Ref<NameAndType>> = unsafe {
             slice::from_raw_parts_mut(debug_types_ptr, count)
                 .iter()
-                .map(NameAndType::<String>::from_raw)
+                .map(|x| NameAndType::from_raw(x).to_owned())
                 .collect()
         };
 
@@ -399,13 +399,13 @@ impl DebugInfo {
     }
 
     /// A generator of all types provided by DebugInfoParsers
-    pub fn types(&self) -> Vec<NameAndType<String>> {
+    pub fn types(&self) -> Vec<Ref<NameAndType>> {
         let mut count: usize = 0;
         let debug_types_ptr = unsafe { BNGetDebugTypes(self.handle, ptr::null_mut(), &mut count) };
-        let result: Vec<NameAndType<String>> = unsafe {
+        let result: Vec<Ref<NameAndType>> = unsafe {
             slice::from_raw_parts_mut(debug_types_ptr, count)
                 .iter()
-                .map(NameAndType::<String>::from_raw)
+                .map(|x| NameAndType::from_raw(x).to_owned())
                 .collect()
         };
 
@@ -414,10 +414,7 @@ impl DebugInfo {
     }
 
     /// Returns a generator of all functions provided by a named DebugInfoParser
-    pub fn functions_by_name<S: BnStrCompatible>(
-        &self,
-        parser_name: S,
-    ) -> Vec<DebugFunctionInfo> {
+    pub fn functions_by_name<S: BnStrCompatible>(&self, parser_name: S) -> Vec<DebugFunctionInfo> {
         let parser_name = parser_name.into_bytes_with_nul();
 
         let mut count: usize = 0;
@@ -758,21 +755,15 @@ impl DebugInfo {
         let short_name_bytes = new_func.short_name.map(|name| name.into_bytes_with_nul());
         let short_name = short_name_bytes
             .as_ref()
-            .map_or(ptr::null_mut() as *mut _, |name| {
-                name.as_ptr() as _
-            });
+            .map_or(ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
         let full_name_bytes = new_func.full_name.map(|name| name.into_bytes_with_nul());
         let full_name = full_name_bytes
             .as_ref()
-            .map_or(ptr::null_mut() as *mut _, |name| {
-                name.as_ptr() as _
-            });
+            .map_or(ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
         let raw_name_bytes = new_func.raw_name.map(|name| name.into_bytes_with_nul());
         let raw_name = raw_name_bytes
             .as_ref()
-            .map_or(ptr::null_mut() as *mut _, |name| {
-                name.as_ptr() as _
-            });
+            .map_or(ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
 
         let mut components_array: Vec<*const ::std::os::raw::c_char> =
             Vec::with_capacity(new_func.components.len());

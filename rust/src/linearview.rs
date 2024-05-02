@@ -423,10 +423,10 @@ unsafe impl CoreOwnedArrayProvider for LinearDisassemblyLine {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for LinearDisassemblyLine {
-    type Wrapped = Guard<'a, LinearDisassemblyLine>;
+unsafe impl CoreArrayWrapper for LinearDisassemblyLine {
+    type Wrapped<'a> = Guard<'a, LinearDisassemblyLine>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(LinearDisassemblyLine::from_raw(raw), _context)
     }
 }

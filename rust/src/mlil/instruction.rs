@@ -18,6 +18,7 @@ pub struct MediumLevelILInstruction {
     pub function: Ref<MediumLevelILFunction>,
     pub address: u64,
     pub index: usize,
+    pub size: usize,
     pub kind: MediumLevelILInstructionKind,
 }
 
@@ -704,7 +705,12 @@ impl MediumLevelILInstruction {
             }),
             // translated directly into a list for Expression or Variables
             // TODO MLIL_MEMORY_INTRINSIC_SSA needs to be handled properly
-            MLIL_CALL_OUTPUT | MLIL_CALL_PARAM | MLIL_CALL_PARAM_SSA | MLIL_CALL_OUTPUT_SSA | MLIL_MEMORY_INTRINSIC_OUTPUT_SSA | MLIL_MEMORY_INTRINSIC_SSA => {
+            MLIL_CALL_OUTPUT
+            | MLIL_CALL_PARAM
+            | MLIL_CALL_PARAM_SSA
+            | MLIL_CALL_OUTPUT_SSA
+            | MLIL_MEMORY_INTRINSIC_OUTPUT_SSA
+            | MLIL_MEMORY_INTRINSIC_SSA => {
                 unreachable!()
             }
         };
@@ -713,6 +719,7 @@ impl MediumLevelILInstruction {
             function,
             address: op.address,
             index,
+            size: op.size,
             kind,
         }
     }
@@ -1022,6 +1029,7 @@ impl MediumLevelILInstruction {
             function: self.function.clone(),
             address: self.address,
             index: self.index,
+            size: self.size,
             kind,
         }
     }

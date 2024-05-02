@@ -112,13 +112,13 @@ unsafe impl CoreOwnedArrayProvider for BackgroundTask {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for BackgroundTask {
-    type Wrapped = Guard<'a, BackgroundTask>;
+unsafe impl CoreArrayWrapper for BackgroundTask {
+    type Wrapped<'a> = Guard<'a, BackgroundTask>;
 
-    unsafe fn wrap_raw(
+    unsafe fn wrap_raw<'a>(
         raw: &'a *mut BNBackgroundTask,
         context: &'a (),
-    ) -> Guard<'a, BackgroundTask> {
+    ) -> Self::Wrapped<'a> {
         Guard::new(BackgroundTask::from_raw(*raw), context)
     }
 }

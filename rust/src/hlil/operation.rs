@@ -9,7 +9,7 @@ use super::HighLevelILLiftedInstruction;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GotoLabel {
     pub(crate) function: Ref<Function>,
-    pub(crate) target: u64,
+    pub target: u64,
 }
 
 impl GotoLabel {

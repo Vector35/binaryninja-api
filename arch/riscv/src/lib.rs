@@ -508,23 +508,23 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
         }
     }
 
-    fn inputs(&self) -> Vec<NameAndType<String>> {
+    fn inputs(&self) -> Vec<Ref<NameAndType>> {
         match self.id {
             Intrinsic::Uret | Intrinsic::Sret | Intrinsic::Mret | Intrinsic::Wfi => {
                 vec![]
             }
             Intrinsic::Csrrd => {
                 vec![NameAndType::new(
-                    "csr".into(),
+                    "csr",
                     &Type::int(4, false),
                     max_confidence(),
                 )]
             }
             Intrinsic::Csrrw | Intrinsic::Csrwr | Intrinsic::Csrrs | Intrinsic::Csrrc => {
                 vec![
-                    NameAndType::new("csr".into(), &Type::int(4, false), max_confidence()),
+                    NameAndType::new("csr", &Type::int(4, false), max_confidence()),
                     NameAndType::new(
-                        "value".into(),
+                        "value",
                         &Type::int(<D::RegFile as RegFile>::Int::width(), false),
                         min_confidence(),
                     ),
@@ -540,8 +540,8 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::Fmin(size)
             | Intrinsic::Fmax(size) => {
                 vec![
-                    NameAndType::new("".into(), &Type::float(size as usize), max_confidence()),
-                    NameAndType::new("".into(), &Type::float(size as usize), max_confidence()),
+                    NameAndType::new("", &Type::float(size as usize), max_confidence()),
+                    NameAndType::new("", &Type::float(size as usize), max_confidence()),
                 ]
             }
             Intrinsic::Fsqrt(size, _)
@@ -550,28 +550,28 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::FcvtFToI(size, _, _)
             | Intrinsic::FcvtFToU(size, _, _) => {
                 vec![NameAndType::new(
-                    "".into(),
+                    "",
                     &Type::float(size as usize),
                     max_confidence(),
                 )]
             }
             Intrinsic::FcvtIToF(size, _, _) => {
                 vec![NameAndType::new(
-                    "".into(),
+                    "",
                     &Type::int(size as usize, true),
                     max_confidence(),
                 )]
             }
             Intrinsic::FcvtUToF(size, _, _) => {
                 vec![NameAndType::new(
-                    "".into(),
+                    "",
                     &Type::int(size as usize, false),
                     max_confidence(),
                 )]
             }
             Intrinsic::Fence => {
                 vec![NameAndType::new(
-                    "".into(),
+                    "",
                     &Type::int(4, false),
                     min_confidence(),
                 )]
@@ -2431,10 +2431,9 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
                     .iter()
                     .find(|r| r.info().native_type == Self::R_RISCV_PCREL_HI20)
                 {
-                    Some(target) => target,
+                    Some(target) => target.target().wrapping_add(target.info().addend as u64),
                     None => return false,
                 };
-                let target = target.target().wrapping_add(target.info().addend as u64);
 
                 let offset = target.wrapping_sub(reloc.target()) as u32;
                 let low_offset = offset & 0xfff;

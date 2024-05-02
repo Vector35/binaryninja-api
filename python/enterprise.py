@@ -320,6 +320,11 @@ class LicenseCheckout:
 	"""
 	Helper class for scripts to make use of a license checkout in a scope.
 
+	:param duration: Duration between refreshes
+	:param _cache: Deprecated but left in for compatibility
+	:param release: If the license should be released at the end of scope. If `False`, you
+					can either manually release it later or it will expire after `duration`.
+
 	:Example:
 		>>> enterprise.connect()
 		>>> enterprise.authenticate_with_credentials("username", "password")
@@ -335,7 +340,7 @@ class LicenseCheckout:
 
 		:param duration: Duration between refreshes
 		:param _cache: Deprecated but left in for compatibility
-		:param release: If the license should be released at the end of scope. If False, you
+		:param release: If the license should be released at the end of scope. If `False`, you
 		                can either manually release it later or it will expire after `duration`.
 		"""
 		self.desired_duration = duration

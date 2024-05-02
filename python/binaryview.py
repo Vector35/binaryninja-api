@@ -4463,8 +4463,6 @@ class BinaryView:
 			    SymbolType.FunctionSymbol, SymbolType.ImportedFunctionSymbol, SymbolType.LibraryFunctionSymbol
 			]
 
-		if plat == None:
-			plat = self.platform
 		fns = []
 		addresses = [sym.address for sym in self.get_symbols_by_name(name, ordered_filter=ordered_filter)]
 		if len(addresses) == 0 and name.startswith("sub_"):
@@ -4474,7 +4472,9 @@ class BinaryView:
 				addresses = []
 		for address in addresses:
 			for fn in self.get_functions_at(address):
-				if fn.start == address and fn.platform == plat:
+				if fn.start == address:
+					if plat is not None and fn.platform == plat:
+						continue
 					fns.append(fn)
 		return fns
 

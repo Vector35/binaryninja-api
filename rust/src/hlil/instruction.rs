@@ -15,6 +15,8 @@ use super::{HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLifted
 pub struct HighLevelILInstruction {
     pub function: Ref<HighLevelILFunction>,
     pub address: u64,
+    pub index: usize,
+    pub size: usize,
     pub kind: HighLevelILInstructionKind,
 }
 
@@ -144,8 +146,8 @@ pub enum HighLevelILInstructionKind {
     DoWhileSsa(WhileSsa),
 }
 impl HighLevelILInstruction {
-    pub(crate) fn new(function: Ref<HighLevelILFunction>, idx: usize) -> Self {
-        let op = unsafe { BNGetHighLevelILByIndex(function.handle, idx, function.full_ast) };
+    pub(crate) fn new(function: Ref<HighLevelILFunction>, index: usize) -> Self {
+        let op = unsafe { BNGetHighLevelILByIndex(function.handle, index, function.full_ast) };
         use BNHighLevelILOperation::*;
         use HighLevelILInstructionKind as Op;
         let kind = match op.operation {
@@ -627,6 +629,8 @@ impl HighLevelILInstruction {
         Self {
             function,
             address: op.address,
+            index,
+            size: op.size,
             kind,
         }
     }
@@ -875,6 +879,8 @@ impl HighLevelILInstruction {
         HighLevelILLiftedInstruction {
             function: self.function.clone(),
             address: self.address,
+            index: self.index,
+            size: self.size,
             kind,
         }
     }

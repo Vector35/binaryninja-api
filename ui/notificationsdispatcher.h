@@ -109,6 +109,15 @@ public:
 		ComponentInfo(BinaryNinja::Component* component, const BinaryNinja::DataVariable& dataVar) : component(component), dataVar(dataVar) {};
 	};
 
+	struct TypeArchiveInfo
+	{
+		std::string id;
+		std::string path;
+
+		TypeArchiveInfo() {};
+		TypeArchiveInfo(const std::string& id, const std::string& path) : id(id), path(path) {};
+	};
+
 private:
 	using NotificationType = BinaryNinja::BinaryDataNotification::NotificationType;
 	using NotificationTypes = BinaryNinja::BinaryDataNotification::NotificationTypes;
@@ -117,21 +126,26 @@ private:
 	SymbolRef m_symbol;
 	std::unique_ptr<SymbolInfo> m_symbolInfo;
 	std::variant<std::monostate, BinaryDataChangeInfo, FunctionRef, BinaryNinja::DataVariable, TagTypeRef,
-		BinaryNinja::TagReference, StringInfo, TypeChangeInfo, SegmentRef, SectionRef, ComponentInfo> m_object;
+		BinaryNinja::TagReference, StringInfo, TypeChangeInfo, SegmentRef, SectionRef, ComponentInfo,
+		ExternalLibraryRef, ExternalLocationRef, TypeArchiveInfo, TypeArchiveRef> m_object;
 
 public:
 	NotificationEvent(NotificationType source): m_source(source) { }
 	NotificationEvent(NotificationType source, BinaryNinja::Symbol* symbol): m_source(source), m_symbol(symbol) { }
-	NotificationEvent(NotificationType source, const BinaryDataChangeInfo& binaryDataChange): m_source(source), m_object(binaryDataChange) { }
+	NotificationEvent(NotificationType source, BinaryDataChangeInfo&& binaryDataChange): m_source(source), m_object(std::move(binaryDataChange)) { }
 	NotificationEvent(NotificationType source, BinaryNinja::Function* function): m_source(source), m_object(function) { }
 	NotificationEvent(NotificationType source, const BinaryNinja::DataVariable& dataVariable): m_source(source), m_object(dataVariable) { }
 	NotificationEvent(NotificationType source, BinaryNinja::TagType* tagType): m_source(source), m_object(tagType) { }
 	NotificationEvent(NotificationType source, const BinaryNinja::TagReference& tagRef): m_source(source), m_object(tagRef) { }
-	NotificationEvent(NotificationType source, const StringInfo& stringInfo): m_source(source), m_object(stringInfo) { }
-	NotificationEvent(NotificationType source, const TypeChangeInfo& typeChangeInfo): m_source(source), m_object(typeChangeInfo) { }
+	NotificationEvent(NotificationType source, StringInfo&& stringInfo): m_source(source), m_object(std::move(stringInfo)) { }
+	NotificationEvent(NotificationType source, TypeChangeInfo&& typeChangeInfo): m_source(source), m_object(std::move(typeChangeInfo)) { }
 	NotificationEvent(NotificationType source, BinaryNinja::Segment* segment): m_source(source), m_object(segment) { }
 	NotificationEvent(NotificationType source, BinaryNinja::Section* section): m_source(source), m_object(section) { }
-	NotificationEvent(NotificationType source, const ComponentInfo& componentInfo): m_source(source), m_object(componentInfo) { }
+	NotificationEvent(NotificationType source, ComponentInfo&& componentInfo): m_source(source), m_object(std::move(componentInfo)) { }
+	NotificationEvent(NotificationType source, BinaryNinja::ExternalLibrary* library): m_source(source), m_object(library) { }
+	NotificationEvent(NotificationType source, BinaryNinja::ExternalLocation* location): m_source(source), m_object(location) { }
+	NotificationEvent(NotificationType source, TypeArchiveInfo&& typeArchiveInfo): m_source(source), m_object(std::move(typeArchiveInfo)) { }
+	NotificationEvent(NotificationType source, BinaryNinja::TypeArchive* archive): m_source(source), m_object(archive) { }
 
 	void cacheSymbolInfo();
 	SymbolInfo* getSymbolInfo() const { return m_symbolInfo.get(); }
@@ -270,6 +284,19 @@ public:
 	void OnComponentFunctionRemoved(BinaryNinja::BinaryView* view, BinaryNinja::Component* component, BinaryNinja::Function* func) override;
 	void OnComponentDataVariableAdded(BinaryNinja::BinaryView* view, BinaryNinja::Component* component, const BinaryNinja::DataVariable& var) override;
 	void OnComponentDataVariableRemoved(BinaryNinja::BinaryView* view, BinaryNinja::Component* component, const BinaryNinja::DataVariable& var) override;
+
+	void OnExternalLibraryAdded(BinaryNinja::BinaryView* data, BinaryNinja::ExternalLibrary* library) override;
+	void OnExternalLibraryRemoved(BinaryNinja::BinaryView* data, BinaryNinja::ExternalLibrary* library) override;
+	void OnExternalLibraryUpdated(BinaryNinja::BinaryView* data, BinaryNinja::ExternalLibrary* library) override;
+
+	void OnExternalLocationAdded(BinaryNinja::BinaryView* data, BinaryNinja::ExternalLocation* location) override;
+	void OnExternalLocationRemoved(BinaryNinja::BinaryView* data, BinaryNinja::ExternalLocation* location) override;
+	void OnExternalLocationUpdated(BinaryNinja::BinaryView* data, BinaryNinja::ExternalLocation* location) override;
+
+	void OnTypeArchiveAttached(BinaryNinja::BinaryView* data, const std::string& id, const std::string& path) override;
+	void OnTypeArchiveDetached(BinaryNinja::BinaryView* data, const std::string& id, const std::string& path) override;
+	void OnTypeArchiveConnected(BinaryNinja::BinaryView* data, BinaryNinja::TypeArchive* archive) override;
+	void OnTypeArchiveDisconnected(BinaryNinja::BinaryView* data, BinaryNinja::TypeArchive* archive) override;
 };
 
 

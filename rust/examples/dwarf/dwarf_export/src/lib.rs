@@ -551,7 +551,7 @@ fn export_data_vars(
             dwarf.unit.get_mut(var_die_uid).set(
                 gimli::DW_AT_name,
                 AttributeValue::String(
-                    format!("data_{:x}", data_variable.address)
+                    format!("data_{:x}", data_variable.address())
                         .as_bytes()
                         .to_vec(),
                 ),
@@ -559,15 +559,15 @@ fn export_data_vars(
         }
 
         let mut variable_location = Expression::new();
-        variable_location.op_addr(Address::Constant(data_variable.address));
+        variable_location.op_addr(Address::Constant(data_variable.address()));
         dwarf.unit.get_mut(var_die_uid).set(
             gimli::DW_AT_location,
             AttributeValue::Exprloc(variable_location),
         );
 
         if let Some(target_die_uid) = export_type(
-            format!("{}", data_variable.t.contents),
-            data_variable.t.contents.as_ref(),
+            format!("{}", data_variable.t()),
+            data_variable.t(),
             bv,
             defined_types,
             dwarf,
@@ -739,7 +739,7 @@ fn export_dwarf(bv: &BinaryView) {
     } else {
         BnString::new("Unknown")
     };
-    let responses = present_form(&arch_name);
+    let responses = present_form(arch_name.as_str());
 
     let encoding = gimli::Encoding {
         format: gimli::Format::Dwarf32,

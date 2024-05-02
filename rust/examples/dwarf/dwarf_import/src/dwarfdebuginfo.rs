@@ -316,7 +316,7 @@ impl DebugInfoBuilder {
             _ => Conf::new(binaryninja::types::Type::void(), 0),
         };
 
-        let parameters: Vec<FunctionParameter<String>> = function
+        let parameters: Vec<FunctionParameter> = function
             .parameters
             .iter()
             .filter_map(|parameter| match parameter {

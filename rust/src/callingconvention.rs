@@ -448,24 +448,21 @@ impl<A: Architecture> CallingConvention<A> {
         unsafe { BnString::from_raw(BNGetCallingConventionName(self.handle)) }
     }
 
-    pub fn variables_for_parameters<S: Clone + BnStrCompatible>(
+    pub fn variables_for_parameters(
         &self,
-        params: &[FunctionParameter<S>],
+        params: &[FunctionParameter],
         permitted_registers: Option<&[A::Register]>,
     ) -> Vec<Variable> {
         let mut bn_params: Vec<BNFunctionParameter> = vec![];
-        let mut name_strings = vec![];
+        let name_strings = params.iter().map(|parameter| &parameter.name);
 
-        for parameter in params.iter() {
-            name_strings.push(parameter.name.clone().into_bytes_with_nul());
-        }
-        for (parameter, raw_name) in params.iter().zip(name_strings.iter_mut()) {
+        for (parameter, raw_name) in params.iter().zip(name_strings) {
             let location = match &parameter.location {
                 Some(location) => location.raw(),
                 None => unsafe { mem::zeroed() },
             };
             bn_params.push(BNFunctionParameter {
-                name: raw_name.as_ref().as_ptr() as *mut _,
+                name: BnString::new(raw_name).into_raw(),
                 type_: parameter.t.contents.handle,
                 typeConfidence: parameter.t.confidence,
                 defaultLocation: parameter.location.is_none(),
@@ -500,9 +497,6 @@ impl<A: Architecture> CallingConvention<A> {
                 )
             }
         };
-
-        // Gotta keep this around so the pointers are valid during the call
-        drop(name_strings);
 
         let vars_slice = unsafe { slice::from_raw_parts(vars, count) };
         let mut result = vec![];
@@ -575,11 +569,43 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
     }
 
     fn int_arg_registers(&self) -> Vec<A::Register> {
-        Vec::new()
+        unsafe {
+            let mut count = 0;
+            let regs = BNGetIntegerArgumentRegisters(self.handle, &mut count);
+            let arch = self.arch_handle.borrow();
+
+            let res = slice::from_raw_parts(regs, count)
+                .iter()
+                .map(|&r| {
+                    arch.register_from_id(r)
+                        .expect("bad reg id from CallingConvention")
+                })
+                .collect();
+
+            BNFreeRegisterList(regs);
+
+            res
+        }
     }
 
     fn float_arg_registers(&self) -> Vec<A::Register> {
-        Vec::new()
+        unsafe {
+            let mut count = 0;
+            let regs = BNGetFloatArgumentRegisters(self.handle, &mut count);
+            let arch = self.arch_handle.borrow();
+
+            let res = slice::from_raw_parts(regs, count)
+                .iter()
+                .map(|&r| {
+                    arch.register_from_id(r)
+                        .expect("bad reg id from CallingConvention")
+                })
+                .collect();
+
+            BNFreeRegisterList(regs);
+
+            res
+        }
     }
 
     fn arg_registers_shared_index(&self) -> bool {
@@ -668,10 +694,10 @@ unsafe impl<A: Architecture> CoreOwnedArrayProvider for CallingConvention<A> {
     }
 }
 
-unsafe impl<'a, A: Architecture> CoreArrayWrapper<'a> for CallingConvention<A> {
-    type Wrapped = Guard<'a, CallingConvention<A>>;
+unsafe impl<A: Architecture> CoreArrayWrapper for CallingConvention<A> {
+    type Wrapped<'a> = Guard<'a, CallingConvention<A>>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(
             CallingConvention {
                 handle: *raw,

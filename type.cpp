@@ -1203,11 +1203,11 @@ bool Type::AddTypeMemberTokens(BinaryView* data, vector<InstructionTextToken>& t
 
 
 std::vector<TypeDefinitionLine> Type::GetLines(const TypeContainer& types, const std::string& name,
-	int lineWidth, bool collapsed, BNTokenEscapingType escaping)
+	int paddingCols, bool collapsed, BNTokenEscapingType escaping)
 {
 	size_t count;
 	BNTypeDefinitionLine* list =
-		BNGetTypeLines(m_object, types.GetObject(), name.c_str(), lineWidth, collapsed, escaping, &count);
+		BNGetTypeLines(m_object, types.GetObject(), name.c_str(), paddingCols, collapsed, escaping, &count);
 
 	std::vector<TypeDefinitionLine> results;
 	for (size_t i = 0; i < count; i++)

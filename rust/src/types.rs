@@ -25,7 +25,7 @@ use crate::{
     filemetadata::FileMetadata,
     function::Function,
     rc::*,
-    string::{raw_to_string, BnStr, BnStrCompatible, BnString},
+    string::{raw_to_string, BnStrCompatible, BnString},
     symbol::Symbol,
 };
 
@@ -56,6 +56,7 @@ pub type MemberScope = BNMemberScope;
 ////////////////
 // Confidence
 
+/// Compatible with the `BNType*WithConfidence` types
 pub struct Conf<T> {
     pub contents: T,
     pub confidence: u8,
@@ -260,15 +261,6 @@ impl From<BNOffsetWithConfidence> for Conf<i64> {
     }
 }
 
-impl From<Conf<Ref<Type>>> for BNTypeWithConfidence {
-    fn from(conf: Conf<Ref<Type>>) -> Self {
-        Self {
-            type_: conf.contents.handle,
-            confidence: conf.confidence,
-        }
-    }
-}
-
 impl From<Conf<&Type>> for BNTypeWithConfidence {
     fn from(conf: Conf<&Type>) -> Self {
         Self {
@@ -420,9 +412,9 @@ impl TypeBuilder {
         }
     }
 
-    pub fn parameters(&self) -> Result<Vec<FunctionParameter<BnString>>> {
+    pub fn parameters(&self) -> Result<Vec<FunctionParameter>> {
         unsafe {
-            let mut count: usize = mem::zeroed();
+            let mut count = 0;
             let parameters_raw = BNGetTypeBuilderParameters(self.handle, &mut count);
             if parameters_raw.is_null() {
                 Err(())
@@ -698,6 +690,7 @@ impl Drop for TypeBuilder {
 //////////
 // Type
 
+#[repr(transparent)]
 pub struct Type {
     pub(crate) handle: *mut BNType,
 }
@@ -791,9 +784,9 @@ impl Type {
         }
     }
 
-    pub fn parameters(&self) -> Result<Vec<FunctionParameter<BnString>>> {
+    pub fn parameters(&self) -> Result<Vec<FunctionParameter>> {
         unsafe {
-            let mut count: usize = mem::zeroed();
+            let mut count = 0;
             let parameters_raw: *mut BNFunctionParameter =
                 BNGetTypeParameters(self.handle, &mut count);
             if parameters_raw.is_null() {
@@ -992,9 +985,9 @@ impl Type {
         }
     }
 
-    pub fn function<'a, S: BnStrCompatible + Clone, T: Into<Conf<&'a Type>>>(
+    pub fn function<'a, T: Into<Conf<&'a Type>>>(
         return_type: T,
-        parameters: &[FunctionParameter<S>],
+        parameters: &[FunctionParameter],
         variable_arguments: bool,
     ) -> Ref<Self> {
         let mut return_type = return_type.into().into();
@@ -1012,14 +1005,14 @@ impl Type {
         let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
         let mut parameter_name_references = Vec::with_capacity(parameters.len());
         for parameter in parameters {
-            let raw_name = parameter.name.clone().into_bytes_with_nul();
+            let raw_name = parameter.name.as_str().into_bytes_with_nul();
             let location = match &parameter.location {
                 Some(location) => location.raw(),
                 None => unsafe { mem::zeroed() },
             };
 
             raw_parameters.push(BNFunctionParameter {
-                name: raw_name.as_ref().as_ptr() as *mut _,
+                name: raw_name.as_slice().as_ptr() as *mut _,
                 type_: parameter.t.contents.handle,
                 typeConfidence: parameter.t.confidence,
                 defaultLocation: parameter.location.is_none(),
@@ -1058,12 +1051,11 @@ impl Type {
     pub fn function_with_options<
         'a,
         A: Architecture,
-        S: BnStrCompatible + Clone,
         T: Into<Conf<&'a Type>>,
         C: Into<Conf<&'a CallingConvention<A>>>,
     >(
         return_type: T,
-        parameters: &[FunctionParameter<S>],
+        parameters: &[FunctionParameter],
         variable_arguments: bool,
         calling_convention: C,
         stack_adjust: Conf<i64>,
@@ -1084,14 +1076,14 @@ impl Type {
         }
 
         for (name, parameter) in zip(name_ptrs, parameters) {
-            let raw_name = name.into_bytes_with_nul();
+            let raw_name = name.as_str().into_bytes_with_nul();
             let location = match &parameter.location {
                 Some(location) => location.raw(),
                 None => unsafe { mem::zeroed() },
             };
 
             raw_parameters.push(BNFunctionParameter {
-                name: raw_name.as_ref().as_ptr() as *mut _,
+                name: raw_name.as_slice().as_ptr() as *mut _,
                 type_: parameter.t.contents.handle,
                 typeConfidence: parameter.t.confidence,
                 defaultLocation: parameter.location.is_none(),
@@ -1200,9 +1192,11 @@ impl Type {
         }
     }
 
-    pub fn generate_auto_demangled_type_id<'a, S: BnStrCompatible>(name: S) -> &'a BnStr {
+    pub fn generate_auto_demangled_type_id<'a, S: BnStrCompatible>(name: S) -> &'a str {
         let mut name = QualifiedName::from(name);
-        unsafe { BnStr::from_raw(BNGenerateAutoDemangledTypeId(&mut name.0)) }
+        unsafe { CStr::from_ptr(BNGenerateAutoDemangledTypeId(&mut name.0)) }
+            .to_str()
+            .unwrap()
     }
 }
 
@@ -1233,8 +1227,8 @@ impl fmt::Debug for Type {
                     BNGetTypeLines(
                         self.handle,
                         container,
-                        "".as_ptr() as *const c_char,
-                        80,
+                        "\x00".as_ptr() as *const c_char,
+                        64,
                         false,
                         BNTokenEscapingType::NoTokenEscapingType,
                         &mut count as *mut usize,
@@ -1315,34 +1309,35 @@ impl ToOwned for Type {
 // FunctionParameter
 
 #[derive(Clone, Debug)]
-pub struct FunctionParameter<S: BnStrCompatible> {
+pub struct FunctionParameter {
     pub t: Conf<Ref<Type>>,
-    pub name: S,
+    pub name: String,
     pub location: Option<Variable>,
 }
 
-impl<S: BnStrCompatible> FunctionParameter<S> {
-    pub fn new<T: Into<Conf<Ref<Type>>>>(t: T, name: S, location: Option<Variable>) -> Self {
+impl FunctionParameter {
+    pub fn new<T: Into<Conf<Ref<Type>>>>(t: T, name: String, location: Option<Variable>) -> Self {
         Self {
             t: t.into(),
             name,
             location,
         }
     }
-}
 
-impl FunctionParameter<BnString> {
     pub(crate) fn from_raw(member: BNFunctionParameter) -> Self {
-        let name: BnString = if member.name.is_null() {
+        let name = if member.name.is_null() {
             if member.location.type_ == BNVariableSourceType::RegisterVariableSourceType {
-                BnString::new(format!("reg_{}", member.location.storage))
+                format!("reg_{}", member.location.storage)
             } else if member.location.type_ == BNVariableSourceType::StackVariableSourceType {
-                BnString::new(format!("arg_{}", member.location.storage))
+                format!("arg_{}", member.location.storage)
             } else {
-                BnString::new("")
+                String::new()
             }
         } else {
-            BnString::new(unsafe { BnStr::from_raw(member.name) })
+            unsafe { CStr::from_ptr(member.name) }
+                .to_str()
+                .unwrap()
+                .to_owned()
         };
 
         Self {
@@ -1420,7 +1415,7 @@ pub struct NamedTypedVariable {
 
 impl NamedTypedVariable {
     pub fn name(&self) -> &str {
-        unsafe { BnStr::from_raw(self.name).as_str() }
+        unsafe { CStr::from_ptr(self.name).to_str().unwrap() }
     }
 
     pub fn var(&self) -> Variable {
@@ -1451,10 +1446,10 @@ unsafe impl CoreOwnedArrayProvider for NamedTypedVariable {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for NamedTypedVariable {
-    type Wrapped = ManuallyDrop<NamedTypedVariable>;
+unsafe impl CoreArrayWrapper for NamedTypedVariable {
+    type Wrapped<'a> = ManuallyDrop<NamedTypedVariable>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         ManuallyDrop::new(NamedTypedVariable {
             var: raw.var,
             ty: raw.type_,
@@ -1470,15 +1465,15 @@ unsafe impl<'a> CoreArrayWrapper<'a> for NamedTypedVariable {
 
 #[derive(Debug, Clone)]
 pub struct EnumerationMember {
-    pub name: BnString,
+    pub name: String,
     pub value: u64,
     pub is_default: bool,
 }
 
 impl EnumerationMember {
-    pub fn new<S: BnStrCompatible>(name: S, value: u64, is_default: bool) -> Self {
+    pub fn new(name: String, value: u64, is_default: bool) -> Self {
         Self {
-            name: BnString::new(name),
+            name,
             value,
             is_default,
         }
@@ -1486,7 +1481,7 @@ impl EnumerationMember {
 
     pub(crate) unsafe fn from_raw(member: BNEnumerationMember) -> Self {
         Self {
-            name: BnString::new(raw_to_string(member.name).unwrap()),
+            name: raw_to_string(member.name).unwrap(),
             value: member.value,
             is_default: member.isDefault,
         }
@@ -1547,7 +1542,7 @@ impl EnumerationBuilder {
 
     pub fn members(&self) -> Vec<EnumerationMember> {
         unsafe {
-            let mut count: usize = mem::zeroed();
+            let mut count = 0;
             let members_raw = BNGetEnumerationBuilderMembers(self.handle, &mut count);
             let members: &[BNEnumerationMember] = slice::from_raw_parts(members_raw, count);
 
@@ -1604,7 +1599,7 @@ impl Enumeration {
 
     pub fn members(&self) -> Vec<EnumerationMember> {
         unsafe {
-            let mut count: usize = mem::zeroed();
+            let mut count = 0;
             let members_raw = BNGetEnumerationMembers(self.handle, &mut count);
             let members: &[BNEnumerationMember] = slice::from_raw_parts(members_raw, count);
 
@@ -1935,7 +1930,7 @@ impl Structure {
 
     pub fn members(&self) -> Result<Vec<StructureMember>> {
         unsafe {
-            let mut count: usize = mem::zeroed();
+            let mut count = 0;
             let members_raw: *mut BNStructureMember =
                 BNGetStructureMembers(self.handle, &mut count);
             if members_raw.is_null() {
@@ -2010,23 +2005,23 @@ impl ToOwned for Structure {
 #[derive(Debug, Clone)]
 pub struct StructureMember {
     pub ty: Conf<Ref<Type>>,
-    pub name: BnString,
+    pub name: String,
     pub offset: u64,
     pub access: MemberAccess,
     pub scope: MemberScope,
 }
 
 impl StructureMember {
-    pub fn new<T: BnStrCompatible>(
+    pub fn new(
         ty: Conf<Ref<Type>>,
-        name: T,
+        name: String,
         offset: u64,
         access: MemberAccess,
         scope: MemberScope,
     ) -> Self {
         Self {
             ty,
-            name: BnString::new(name),
+            name,
             offset,
             access,
             scope,
@@ -2039,7 +2034,7 @@ impl StructureMember {
                 RefCountable::inc_ref(&Type::from_raw(handle.type_)),
                 handle.typeConfidence,
             ),
-            name: BnString::new(BnStr::from_raw(handle.name)),
+            name: CStr::from_ptr(handle.name).to_string_lossy().to_string(),
             offset: handle.offset,
             access: handle.access,
             scope: handle.scope,
@@ -2346,10 +2341,10 @@ unsafe impl CoreOwnedArrayProvider for QualifiedName {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedName {
-    type Wrapped = &'a QualifiedName;
+unsafe impl CoreArrayWrapper for QualifiedName {
+    type Wrapped<'a> = &'a QualifiedName;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }
 }
@@ -2388,10 +2383,10 @@ unsafe impl CoreOwnedArrayProvider for QualifiedNameAndType {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedNameAndType {
-    type Wrapped = &'a QualifiedNameAndType;
+unsafe impl CoreArrayWrapper for QualifiedNameAndType {
+    type Wrapped<'a> = &'a QualifiedNameAndType;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }
 }
@@ -2407,8 +2402,8 @@ impl QualifiedNameTypeAndId {
         unsafe { mem::transmute(&self.0.name) }
     }
 
-    pub fn id(&self) -> &BnStr {
-        unsafe { BnStr::from_raw(self.0.id) }
+    pub fn id(&self) -> &str {
+        unsafe { CStr::from_ptr(self.0.id).to_str().unwrap() }
     }
 
     pub fn type_object(&self) -> Guard<Type> {
@@ -2434,10 +2429,10 @@ unsafe impl CoreOwnedArrayProvider for QualifiedNameTypeAndId {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedNameTypeAndId {
-    type Wrapped = &'a QualifiedNameTypeAndId;
+unsafe impl CoreArrayWrapper for QualifiedNameTypeAndId {
+    type Wrapped<'a> = &'a QualifiedNameTypeAndId;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }
 }
@@ -2445,90 +2440,141 @@ unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedNameTypeAndId {
 //////////////////////////
 // NameAndType
 
-pub struct NameAndType<S: BnStrCompatible> {
-    pub name: S,
-    pub t: Conf<Ref<Type>>,
-}
+pub struct NameAndType(pub(crate) BNNameAndType);
 
-impl NameAndType<String> {
-    pub(crate) fn from_raw(raw: &BNNameAndType) -> Self {
-        Self::new(
-            raw_to_string(raw.name).unwrap(),
-            unsafe { &Type::ref_from_raw(raw.type_) },
-            raw.typeConfidence,
-        )
+impl NameAndType {
+    pub(crate) unsafe fn from_raw(raw: &BNNameAndType) -> Self {
+        Self ( *raw )
     }
 }
 
-impl<S: BnStrCompatible> NameAndType<S> {
-    pub fn new(name: S, t: &Ref<Type>, confidence: u8) -> Self {
-        Self {
-            name,
-            t: Conf::new(t.clone(), confidence),
+impl NameAndType {
+    pub fn new<S: BnStrCompatible>(name: S, t: &Type, confidence: u8) -> Ref<Self> {
+        unsafe {
+            Ref::new(Self(BNNameAndType {
+                name: BNAllocString(name.into_bytes_with_nul().as_ref().as_ptr() as *mut _),
+                type_: Ref::into_raw(t.to_owned()).handle,
+                typeConfidence: confidence,
+            }))
         }
     }
 
-    pub(crate) fn into_raw(self) -> BNNameAndType {
-        let t = self.t.clone();
-        let res = BNNameAndType {
-            name: BnString::new(self.name).into_raw(),
-            type_: t.contents.handle,
-            typeConfidence: self.t.confidence,
-        };
-        mem::forget(t);
-        res
+    pub fn name(&self) -> &str {
+        let c_str = unsafe { CStr::from_ptr(self.0.name) };
+        c_str.to_str().unwrap()
     }
 
-    pub fn type_with_confidence(&self) -> Conf<Ref<Type>> {
-        self.t.clone()
+    pub fn t(&self) -> &Type {
+        unsafe { mem::transmute::<_, &Type>(&self.0.type_) }
+    }
+
+    pub fn type_with_confidence(&self) -> Conf<&Type> {
+        Conf::new(self.t(), self.0.typeConfidence)
     }
 }
 
-impl<S: BnStrCompatible> CoreArrayProvider for NameAndType<S> {
+impl ToOwned for NameAndType {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for NameAndType {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Self::new(
+            CStr::from_ptr(handle.0.name),
+            handle.t(),
+            handle.0.typeConfidence,
+        )
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        unsafe {
+            BNFreeString(handle.0.name);
+            RefCountable::dec_ref(handle.t());
+        }
+    }
+}
+
+impl CoreArrayProvider for NameAndType {
     type Raw = BNNameAndType;
     type Context = ();
 }
 
-unsafe impl<S: BnStrCompatible> CoreOwnedArrayProvider for NameAndType<S> {
+unsafe impl CoreOwnedArrayProvider for NameAndType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeNameAndTypeList(raw, count);
     }
 }
 
-unsafe impl<'a, S: 'a + BnStrCompatible> CoreArrayWrapper<'a> for NameAndType<S> {
-    type Wrapped = &'a NameAndType<S>;
+unsafe impl CoreArrayWrapper for NameAndType {
+    type Wrapped<'a> = Guard<'a, NameAndType>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
-        mem::transmute(raw)
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        unsafe { Guard::new(NameAndType::from_raw(raw), raw) }
     }
 }
 
 //////////////////
 // DataVariable
 
-pub struct DataVariable {
-    pub address: u64,
-    pub t: Conf<Ref<Type>>,
-    pub auto_discovered: bool,
-}
+#[repr(transparent)]
+pub struct DataVariable(pub(crate) BNDataVariable);
 
 // impl DataVariable {
 //     pub(crate) fn from_raw(var: &BNDataVariable) -> Self {
-//         Self {
-//             address: var.address,
-//             t: Conf::new(unsafe { Type::ref_from_raw(var.type_) }, var.typeConfidence),
-//             auto_discovered: var.autoDiscovered,
-//         }
+//         let var = DataVariable(*var);
+//         Self(BNDataVariable {
+//             type_: unsafe { Ref::into_raw(var.t().to_owned()).handle },
+//             ..var.0
+//         })
 //     }
 // }
 
 impl DataVariable {
-    pub fn type_with_confidence(&self) -> Conf<Ref<Type>> {
-        Conf::new(self.t.contents.clone(), self.t.confidence)
+    pub fn address(&self) -> u64 {
+        self.0.address
+    }
+
+    pub fn auto_discovered(&self) -> bool {
+        self.0.autoDiscovered
+    }
+
+    pub fn t(&self) -> &Type {
+        unsafe { mem::transmute(&self.0.type_) }
+    }
+
+    pub fn type_with_confidence(&self) -> Conf<&Type> {
+        Conf::new(self.t(), self.0.typeConfidence)
     }
 
     pub fn symbol(&self, bv: &BinaryView) -> Option<Ref<Symbol>> {
-        bv.symbol_by_address(self.address).ok()
+        bv.symbol_by_address(self.0.address).ok()
+    }
+}
+
+impl ToOwned for DataVariable {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for DataVariable {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        unsafe {
+            Ref::new(Self(BNDataVariable {
+                type_: Ref::into_raw(handle.t().to_owned()).handle,
+                ..handle.0
+            }))
+        }
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        unsafe { BNFreeType(handle.0.type_) }
     }
 }
 
@@ -2542,10 +2588,10 @@ unsafe impl CoreOwnedArrayProvider for DataVariable {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for DataVariable {
-    type Wrapped = &'a DataVariable;
+unsafe impl CoreArrayWrapper for DataVariable {
+    type Wrapped<'a> = &'a DataVariable;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }
 }

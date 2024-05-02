@@ -88,31 +88,39 @@ This repository contains all of our Platform plugins available here:
 * [EFI](https://github.com/Vector35/binaryninja-api/tree/dev/platform/efi)
 
 
-## Related Repositories
+## Architectures
 
-In addition to this main API repository being open source Vector35 also has open sourced Architecture, BinaryView, DebugInfo and Debugger plugins open source as well:
+This repository contains all of our Architecture plugins available here:
 
-### Architectures
+* [ARMv7](https://github.com/Vector35/binaryninja-api/tree/dev/arch/armv7)
+* [PPC](https://github.com/Vector35/binaryninja-api/tree/dev/arch/powerpc)
+* [MIPS32](https://github.com/Vector35/binaryninja-api/tree/dev/arch/mips)
+* [ARM64](https://github.com/Vector35/binaryninja-api/tree/dev/arch/arm64)
+* [x86/x86_64](https://github.com/Vector35/binaryninja-api/tree/dev/arch/x86)
+* [RISCV](https://github.com/Vector35/binaryninja-api/tree/dev/arch/riscv)
 
-* [ARMv7](https://github.com/Vector35/arch-armv7)
-* [PPC](https://github.com/Vector35/arch-ppc)
-* [MIPS32](https://github.com/Vector35/arch-mips)
-* [ARM64](https://github.com/Vector35/arch-arm64)
-* [x86/x86_64](https://github.com/Vector35/arch-x86)
 
-### BinaryViewTypes
+## BinaryViewTypes
 
-* [Mach-O](https://github.com/Vector35/view-macho)
-* [ELF](https://github.com/Vector35/view-elf)
-* [PE/COFF](https://github.com/Vector35/view-pe)
+This repository contains all of our Binary View Type plugins available here:
 
-### DebugInfo
+* [Mach-O](https://github.com/Vector35/binaryninja-api/tree/dev/view/macho)
+* [ELF](https://github.com/Vector35/binaryninja-api/tree/dev/view/elf)
+* [PE/COFF/TE](https://github.com/Vector35/binaryninja-api/tree/dev/view/pe)
+* [MD1Rom](https://github.com/Vector35/binaryninja-api/tree/dev/view/md1rom)
+
+
+## DebugInfo
 
 * [DWARF Import](https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/dwarf/dwarf_import)
 
-### Debugger
+
+## Related Repositories
+
+In addition to this main API repository being open source Vector35 also has open sourced the Debugger and the Objective-C plugins open source as well:
 
 * [Debugger](https://github.com/Vector35/debugger)
+* [workflow_objc](https://github.com/Vector35/workflow_objc)
 
 ## Licensing
 

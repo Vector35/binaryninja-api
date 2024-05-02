@@ -17,6 +17,8 @@ use super::MediumLevelILFunction;
 pub struct MediumLevelILInstruction {
     pub function: Ref<MediumLevelILFunction>,
     pub address: u64,
+    pub index: usize,
+    pub size: usize,
     pub kind: MediumLevelILInstructionKind,
 }
 
@@ -166,8 +168,8 @@ impl core::fmt::Debug for MediumLevelILInstruction {
 }
 
 impl MediumLevelILInstruction {
-    pub(crate) fn new(function: Ref<MediumLevelILFunction>, idx: usize) -> Self {
-        let op = unsafe { BNGetMediumLevelILByIndex(function.handle, idx) };
+    pub(crate) fn new(function: Ref<MediumLevelILFunction>, index: usize) -> Self {
+        let op = unsafe { BNGetMediumLevelILByIndex(function.handle, index) };
         use BNMediumLevelILOperation::*;
         use MediumLevelILInstructionKind as Op;
         let kind = match op.operation {
@@ -703,7 +705,12 @@ impl MediumLevelILInstruction {
             }),
             // translated directly into a list for Expression or Variables
             // TODO MLIL_MEMORY_INTRINSIC_SSA needs to be handled properly
-            MLIL_CALL_OUTPUT | MLIL_CALL_PARAM | MLIL_CALL_PARAM_SSA | MLIL_CALL_OUTPUT_SSA | MLIL_MEMORY_INTRINSIC_OUTPUT_SSA | MLIL_MEMORY_INTRINSIC_SSA => {
+            MLIL_CALL_OUTPUT
+            | MLIL_CALL_PARAM
+            | MLIL_CALL_PARAM_SSA
+            | MLIL_CALL_OUTPUT_SSA
+            | MLIL_MEMORY_INTRINSIC_OUTPUT_SSA
+            | MLIL_MEMORY_INTRINSIC_SSA => {
                 unreachable!()
             }
         };
@@ -711,6 +718,8 @@ impl MediumLevelILInstruction {
         Self {
             function,
             address: op.address,
+            index,
+            size: op.size,
             kind,
         }
     }
@@ -1019,6 +1028,8 @@ impl MediumLevelILInstruction {
         MediumLevelILLiftedInstruction {
             function: self.function.clone(),
             address: self.address,
+            index: self.index,
+            size: self.size,
             kind,
         }
     }

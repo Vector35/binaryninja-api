@@ -3160,11 +3160,11 @@ namespace BinaryNinja {
 			ComponentDataVariableAdded = 1ULL << 37,
 			ComponentDataVariableRemoved = 1ULL << 38,
 			ExternalLibraryAdded = 1ULL << 39,
-			ExternalLibraryUpdated = 1ULL << 40,
-			ExternalLibraryRemoved = 1ULL << 41,
+			ExternalLibraryRemoved = 1ULL << 40,
+			ExternalLibraryUpdated = 1ULL << 41,
 			ExternalLocationAdded = 1ULL << 42,
-			ExternalLocationUpdated = 1ULL << 43,
-			ExternalLocationRemoved = 1ULL << 44,
+			ExternalLocationRemoved = 1ULL << 43,
+			ExternalLocationUpdated = 1ULL << 44,
 			TypeArchiveAttached = 1ULL << 45,
 			TypeArchiveDetached = 1ULL << 46,
 			TypeArchiveConnected = 1ULL << 47,
@@ -3187,6 +3187,10 @@ namespace BinaryNinja {
 			SectionLifetime = SectionAdded | SectionRemoved,
 			SectionUpdates = SectionLifetime | SectionUpdated,
 			ComponentUpdates = ComponentNameUpdated | ComponentAdded | ComponentRemoved | ComponentMoved | ComponentFunctionAdded | ComponentFunctionRemoved | ComponentDataVariableAdded | ComponentDataVariableRemoved,
+			ExternalLibraryLifetime = ExternalLibraryAdded | ExternalLibraryRemoved,
+			ExternalLibraryUpdates = ExternalLibraryLifetime | ExternalLibraryUpdated,
+			ExternalLocationLifetime = ExternalLocationAdded | ExternalLocationRemoved,
+			ExternalLocationUpdates = ExternalLocationLifetime | ExternalLocationUpdated,
 			TypeArchiveUpdates = TypeArchiveAttached | TypeArchiveDetached | TypeArchiveConnected | TypeArchiveDisconnected
 		};
 
@@ -3483,13 +3487,13 @@ namespace BinaryNinja {
 			(void)library;
 		}
 
-		virtual void OnExternalLibraryUpdated(BinaryView* data, ExternalLibrary* library)
+		virtual void OnExternalLibraryRemoved(BinaryView* data, ExternalLibrary* library)
 		{
 			(void)data;
 			(void)library;
 		}
 
-		virtual void OnExternalLibraryRemoved(BinaryView* data, ExternalLibrary* library)
+		virtual void OnExternalLibraryUpdated(BinaryView* data, ExternalLibrary* library)
 		{
 			(void)data;
 			(void)library;
@@ -3501,13 +3505,13 @@ namespace BinaryNinja {
 			(void)location;
 		}
 
-		virtual void OnExternalLocationUpdated(BinaryView* data, ExternalLocation* location)
+		virtual void OnExternalLocationRemoved(BinaryView* data, ExternalLocation* location)
 		{
 			(void)data;
 			(void)location;
 		}
 
-		virtual void OnExternalLocationRemoved(BinaryView* data, ExternalLocation* location)
+		virtual void OnExternalLocationUpdated(BinaryView* data, ExternalLocation* location)
 		{
 			(void)data;
 			(void)location;
@@ -8791,7 +8795,7 @@ namespace BinaryNinja {
 		bool AddTypeMemberTokens(BinaryView* data, std::vector<InstructionTextToken>& tokens, int64_t offset,
 		    std::vector<std::string>& nameList, size_t size = 0, bool indirect = false);
 		std::vector<TypeDefinitionLine> GetLines(const TypeContainer& types, const std::string& name,
-			int lineWidth = 80, bool collapsed = false, BNTokenEscapingType escaping = NoTokenEscapingType);
+			int paddingCols = 64, bool collapsed = false, BNTokenEscapingType escaping = NoTokenEscapingType);
 
 		static std::string GetSizeSuffix(size_t size);
 	};
@@ -14796,10 +14800,10 @@ namespace BinaryNinja {
 		static bool GetTypeStringAfterNameCallback(void* ctxt, BNType* type,
 			BNPlatform* platform, BNTokenEscapingType escaping, char** result);
 		static bool GetTypeLinesCallback(void* ctxt, BNType* type, BNTypeContainer* types,
-			BNQualifiedName* name, int lineWidth, bool collapsed,
+			BNQualifiedName* name, int paddingCols, bool collapsed,
 			BNTokenEscapingType escaping, BNTypeDefinitionLine** result, size_t* resultCount);
 		static bool PrintAllTypesCallback(void* ctxt, BNQualifiedName* names, BNType** types, size_t typeCount,
-			BNBinaryView* data, int lineWidth, BNTokenEscapingType escaping, char** result);
+			BNBinaryView* data, int paddingCols, BNTokenEscapingType escaping, char** result);
 		static void FreeTokensCallback(void* ctxt, BNInstructionTextToken* tokens, size_t count);
 		static void FreeStringCallback(void* ctxt, char* string);
 		static void FreeLinesCallback(void* ctxt, BNTypeDefinitionLine* lines, size_t count);
@@ -14911,7 +14915,7 @@ namespace BinaryNinja {
 		    \param type Type to print
 		    \param types Type Container in which the type is defined
 		    \param name Name of the type
-		    \param lineWidth Maximum width of lines, in characters
+		    \param paddingCols Maximum number of bytes represented by each padding line
 		    \param collapsed Whether to collapse structure/enum blocks
 		    \param escaping Style of escaping literals which may not be parsable
 		    \return List of type definition lines
@@ -14920,7 +14924,7 @@ namespace BinaryNinja {
 			Ref<Type> type,
 			const TypeContainer& types,
 			const QualifiedName& name,
-			int lineWidth = 80,
+			int paddingCols = 64,
 			bool collapsed = false,
 			BNTokenEscapingType escaping = NoTokenEscapingType
 		) = 0;
@@ -14929,14 +14933,14 @@ namespace BinaryNinja {
 		    Print all types to a single big string, including headers, sections, etc
 		    \param types All types to print
 		    \param data Binary View in which all the types are defined
-		    \param lineWidth Maximum width of lines, in characters
+		    \param paddingCols Maximum number of bytes represented by each padding line
 		    \param escaping Style of escaping literals which may not be parsable
 		    \return All the types in a string
 		*/
 		virtual std::string PrintAllTypes(
 			const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
 			Ref<BinaryView> data,
-			int lineWidth = 80,
+			int paddingCols = 64,
 			BNTokenEscapingType escaping = NoTokenEscapingType
 		);
 
@@ -14945,14 +14949,14 @@ namespace BinaryNinja {
 		    Print all types to a single big string, including headers, sections, etc
 		    \param types All types to print
 		    \param data Binary View in which all the types are defined
-		    \param lineWidth Maximum width of lines, in characters
+		    \param paddingCols Maximum number of bytes represented by each padding line
 		    \param escaping Style of escaping literals which may not be parsable
 		    \return All the types in a string
 		*/
 		std::string DefaultPrintAllTypes(
 			const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
 			Ref<BinaryView> data,
-			int lineWidth = 80,
+			int paddingCols = 64,
 			BNTokenEscapingType escaping = NoTokenEscapingType
 		);
 	};
@@ -14982,10 +14986,10 @@ namespace BinaryNinja {
 		virtual std::string GetTypeStringAfterName(Ref<Type> type, Ref<Platform> platform,
 			BNTokenEscapingType escaping) override;
 		virtual std::vector<TypeDefinitionLine> GetTypeLines(Ref<Type> type,
-			const TypeContainer& types, const QualifiedName& name, int lineWidth,
+			const TypeContainer& types, const QualifiedName& name, int paddingCols,
 			bool collapsed, BNTokenEscapingType escaping) override;
 		virtual std::string PrintAllTypes(const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
-			Ref<BinaryView> data, int lineWidth, BNTokenEscapingType escaping) override;
+			Ref<BinaryView> data, int paddingCols, BNTokenEscapingType escaping) override;
 	};
 
 	// DownloadProvider
@@ -15641,8 +15645,7 @@ namespace BinaryNinja {
 			"optional"           bool                                     None                 Yes        Indicates setting can be null
 			"hidden"             bool                                     "type" is "string"   Yes        Indicates the UI should conceal the content
 			"requiresRestart     bool                                     None                 Yes        Enable restart notification in the UI upon change
-			"uiSelectionAction"  string                                   "type" is "string"   Yes        {"file", "directory", <Registered UIAction Name>} Informs the UI to add
-			                                                                                              a button to open a selection dialog or run a registered UIAction
+			"uiSelectionAction"  string                                   "type" is "string"   Yes        {"file", "directory", <Registered UIAction Name>} Informs the UI to add a button to open a selection dialog or run a registered UIAction
 			==================   ======================================   ==================   ========   =======================================================================
 
 		\note In order to facilitate deterministic analysis results, settings from the <em><tt>default</tt></em> schema that impact analysis are serialized
@@ -17374,6 +17377,62 @@ namespace BinaryNinja {
 		void Append(const std::function<std::pair<Ref<Symbol>, Ref<Type>>()>& resolve,
 			const std::function<void(Symbol*, Type*)>& add);
 		void Process();
+	};
+
+	struct BaseAddressDetectionSettings
+	{
+		std::string Architecture;
+		std::string Analysis;
+		uint32_t MinStrlen;
+		uint32_t Alignment;
+		uint64_t LowerBoundary;
+		uint64_t UpperBoundary;
+		BNBaseAddressDetectionPOISetting POIAnalysis;
+		uint32_t MaxPointersPerCluster;
+	};
+
+	/*!
+		\ingroup baseaddressdetection
+	*/
+	class BaseAddressDetection
+	{
+		BNBaseAddressDetection* m_object;
+
+	public:
+		BaseAddressDetection(Ref<BinaryView> view);
+		~BaseAddressDetection();
+
+		/*! Analyze program, identify pointers and points-of-interest, and detect candidate base addresses
+
+			\param settings Base address detection settings
+			\return true on success, false otherwise
+		 */
+		bool DetectBaseAddress(BaseAddressDetectionSettings& settings);
+
+		/*! Get the top 10 candidate base addresses and thier scores
+
+			\param confidence Confidence level that indicates the likelihood the top base address candidate is correct
+			\param lastTestedBaseAddress Last base address tested before analysis was aborted or completed
+			\return Set of pairs containing candidate base addresses and their scores
+		 */
+		std::set<std::pair<size_t, uint64_t>> GetScores(BNBaseAddressDetectionConfidence* confidence, uint64_t *lastTestedBaseAddress);
+
+		/*! Get a vector of BNBaseAddressDetectionReasons containing information that indicates why a base address was reported as a candidate
+
+			\param baseAddress Base address to query reasons for
+			\return Vector of reason structures containing information about why a base address was reported as a candidate
+		 */
+		std::vector<BNBaseAddressDetectionReason> GetReasonsForBaseAddress(uint64_t baseAddress);
+
+		/*! Abort base address detection
+		 */
+		void Abort();
+
+		/*! Determine if base address detection is aborted
+
+			\return true if aborted by user, false otherwise
+		 */
+		bool IsAborted();
 	};
 }  // namespace BinaryNinja
 

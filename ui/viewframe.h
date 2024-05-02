@@ -117,6 +117,7 @@ class BINARYNINJAUIAPI View
 	bool m_binaryDataNavigable = false;
 	QPointer<TransformParameterDialog> m_transformParamDialog;
 
+	bool m_quiesceState = true;
 	QTimer* m_updateTimer = nullptr;
 
 	bool writeDataToClipboard(const BinaryNinja::DataBuffer& data, bool binary, TransformRef xform);
@@ -136,9 +137,10 @@ class BINARYNINJAUIAPI View
 	virtual ~View() {}
 
 	void enableRefreshTimer(QWidget* owner, int interval);
-	void setRefreshTimerRunning(bool running);
 	void setRefreshQuiesce(bool enable);
+	bool isQuiesced() const { return m_quiesceState; }
 	virtual void notifyRefresh() {};
+	virtual void notifyQuiesce(bool /*quiesce*/) {};
 
 	void setupView(QWidget* widget);
 

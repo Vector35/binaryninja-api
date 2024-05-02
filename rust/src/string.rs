@@ -14,7 +14,7 @@
 
 //! String wrappers for core-owned strings and strings being passed to the core
 
-use std::borrow::{Borrow, Cow};
+use std::borrow::Cow;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -33,61 +33,9 @@ pub(crate) fn raw_to_string(ptr: *const raw::c_char) -> Option<String> {
     }
 }
 
-/// These are strings that the core will both allocate and free.
-/// We just have a reference to these strings and want to be able use them, but aren't responsible for cleanup
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[repr(C)]
-pub struct BnStr {
-    raw: [u8],
-}
-
-impl BnStr {
-    pub(crate) unsafe fn from_raw<'a>(ptr: *const raw::c_char) -> &'a Self {
-        mem::transmute(CStr::from_ptr(ptr).to_bytes_with_nul())
-    }
-
-    pub fn as_str(&self) -> &str {
-        self.as_cstr().to_str().unwrap()
-    }
-
-    pub fn as_cstr(&self) -> &CStr {
-        unsafe { CStr::from_bytes_with_nul_unchecked(&self.raw) }
-    }
-}
-
-impl Deref for BnStr {
-    type Target = str;
-
-    fn deref(&self) -> &str {
-        self.as_str()
-    }
-}
-
-impl AsRef<[u8]> for BnStr {
-    fn as_ref(&self) -> &[u8] {
-        &self.raw
-    }
-}
-
-impl AsRef<str> for BnStr {
-    fn as_ref(&self) -> &str {
-        self.as_str()
-    }
-}
-
-impl Borrow<str> for BnStr {
-    fn borrow(&self) -> &str {
-        self.as_str()
-    }
-}
-
-impl fmt::Display for BnStr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.as_cstr().to_string_lossy())
-    }
-}
-
-#[repr(C)]
+/// Is the quivalent of `core::ffi::CString` but using the allocation and free
+/// functions provided by binaryninja_sys.
+#[repr(transparent)]
 pub struct BnString {
     raw: *mut raw::c_char,
 }
@@ -132,7 +80,19 @@ impl BnString {
     }
 
     pub fn as_str(&self) -> &str {
-        unsafe { BnStr::from_raw(self.raw).as_str() }
+        unsafe { CStr::from_ptr(self.raw).to_str().unwrap() }
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        self.as_str().as_bytes()
+    }
+
+    pub fn as_bytes_with_null(&self) -> &[u8] {
+        self.deref().to_bytes()
+    }
+
+    pub fn len(&self) -> usize {
+        self.as_ref().len()
     }
 }
 
@@ -158,16 +118,16 @@ impl Clone for BnString {
 }
 
 impl Deref for BnString {
-    type Target = BnStr;
+    type Target = CStr;
 
-    fn deref(&self) -> &BnStr {
-        unsafe { BnStr::from_raw(self.raw) }
+    fn deref(&self) -> &CStr {
+        unsafe { CStr::from_ptr(self.raw) }
     }
 }
 
 impl AsRef<[u8]> for BnString {
     fn as_ref(&self) -> &[u8] {
-        self.as_cstr().to_bytes_with_nul()
+        self.to_bytes_with_nul()
     }
 }
 
@@ -187,13 +147,13 @@ impl Eq for BnString {}
 
 impl fmt::Display for BnString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.as_cstr().to_string_lossy())
+        write!(f, "{}", self.to_string_lossy())
     }
 }
 
 impl fmt::Debug for BnString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.as_cstr().to_string_lossy())
+        write!(f, "{}", self.to_string_lossy())
     }
 }
 
@@ -209,11 +169,11 @@ unsafe impl CoreOwnedArrayProvider for BnString {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for BnString {
-    type Wrapped = &'a BnStr;
+unsafe impl CoreArrayWrapper for BnString {
+    type Wrapped<'a> = &'a str;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
-        BnStr::from_raw(*raw)
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        CStr::from_ptr(*raw).to_str().unwrap()
     }
 }
 
@@ -222,11 +182,11 @@ pub unsafe trait BnStrCompatible {
     fn into_bytes_with_nul(self) -> Self::Result;
 }
 
-unsafe impl<'a> BnStrCompatible for &'a BnStr {
+unsafe impl<'a> BnStrCompatible for &'a CStr {
     type Result = &'a [u8];
 
     fn into_bytes_with_nul(self) -> Self::Result {
-        self.as_cstr().to_bytes_with_nul()
+        self.to_bytes_with_nul()
     }
 }
 
@@ -235,14 +195,6 @@ unsafe impl BnStrCompatible for BnString {
 
     fn into_bytes_with_nul(self) -> Self::Result {
         self
-    }
-}
-
-unsafe impl<'a> BnStrCompatible for &'a CStr {
-    type Result = &'a [u8];
-
-    fn into_bytes_with_nul(self) -> Self::Result {
-        self.to_bytes_with_nul()
     }
 }
 

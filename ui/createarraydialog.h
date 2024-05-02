@@ -12,8 +12,9 @@ class CreateArrayDialog : public QDialog
 	BinaryViewRef m_data;
 
 	uint64_t m_startAddress;
+	size_t m_size;
 	TypeRef m_elementType;
-	uint64_t m_elementCount;
+	uint64_t m_elementCount{};
 
 	QLineEdit* m_startField;
 	QComboBox* m_typeDropdown;
@@ -22,15 +23,16 @@ class CreateArrayDialog : public QDialog
 	QPushButton* m_cancelButton;
 	QPushButton* m_createButton;
 
-	void validate();
+	void update();
+	size_t guessElementCount(size_t elementWidth);
 
 public:
-	explicit CreateArrayDialog(BinaryViewRef data, QWidget* parent = nullptr);
+	explicit CreateArrayDialog(BinaryViewRef data, BNAddressRange selection, QWidget* parent = nullptr);
 
 	/// Set the initial start address, element type, and element count for
 	/// the dialog. The element type may be null if no default is desired; a
 	/// default will be chosen by the dialog.
-	void setInitialState(uint64_t start, const TypeRef& elementType, uint64_t count);
+	void setInitialState();
 
 	/// Get the desired start address from the accepted dialog.
 	[[nodiscard]] uint64_t startAddress() const;

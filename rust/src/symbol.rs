@@ -14,6 +14,7 @@
 
 //! Interfaces for the various kinds of symbols in a binary.
 
+use std::ffi::CStr;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ptr;
@@ -252,17 +253,17 @@ impl Symbol {
         }
     }
 
-    pub fn short_name(&self) -> BnString {
+    pub fn short_name(&self) -> &str {
         unsafe {
             let name = BNGetSymbolShortName(self.handle);
-            BnString::from_raw(name)
+            CStr::from_ptr(name).to_str().unwrap()
         }
     }
 
-    pub fn raw_name(&self) -> BnString {
+    pub fn raw_name(&self) -> &str {
         unsafe {
             let name = BNGetSymbolRawName(self.handle);
-            BnString::from_raw(name)
+            CStr::from_ptr(name).to_str().unwrap()
         }
     }
 
@@ -334,10 +335,10 @@ unsafe impl CoreOwnedArrayProvider for Symbol {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for Symbol {
-    type Wrapped = Guard<'a, Symbol>;
+unsafe impl CoreArrayWrapper for Symbol {
+    type Wrapped<'a> = Guard<'a, Symbol>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Symbol::from_raw(*raw), context)
     }
 }

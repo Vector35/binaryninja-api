@@ -20,7 +20,7 @@
 
 import ctypes
 import struct
-from typing import Generator, List, Optional, Dict, Union, Tuple, NewType, ClassVar, Set, Callable, Any, Iterator
+from typing import Generator, List, Optional, Dict, Union, Tuple, NewType, ClassVar, Set, Callable, Any, Iterator, overload
 from dataclasses import dataclass
 
 # Binary Ninja components
@@ -5503,7 +5503,13 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 		for idx in range(self.start, self.end):
 			yield self._il_function[idx]
 
-	def __getitem__(self, idx):
+	@overload
+	def __getitem__(self, idx: int) -> 'LowLevelILInstruction': ...
+
+	@overload
+	def __getitem__(self, idx: slice) -> List['LowLevelILInstruction']: ...
+
+	def __getitem__(self, idx: Union[int, slice]) -> Union['LowLevelILInstruction', List['LowLevelILInstruction']]:
 		size = self.end - self.start
 		if isinstance(idx, slice):
 			return [self[index] for index in range(*idx.indices(size))]

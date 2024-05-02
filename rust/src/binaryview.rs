@@ -574,16 +574,24 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn define_auto_data_var(&self, dv: DataVariable) {
+    fn define_auto_data_var(&self, dv: &DataVariable) {
         unsafe {
-            BNDefineDataVariable(self.as_ref().handle, dv.address, &mut dv.t.into());
+            BNDefineDataVariable(
+                self.as_ref().handle,
+                dv.address(),
+                &mut dv.type_with_confidence().into(),
+            );
         }
     }
 
     /// You likely would also like to call [`Self::define_user_symbol`] to bind this data variable with a name
-    fn define_user_data_var(&self, dv: DataVariable) {
+    fn define_user_data_var(&self, dv: &DataVariable) {
         unsafe {
-            BNDefineUserDataVariable(self.as_ref().handle, dv.address, &mut dv.t.into());
+            BNDefineUserDataVariable(
+                self.as_ref().handle,
+                dv.address(),
+                &mut dv.type_with_confidence().into(),
+            );
         }
     }
 
@@ -674,7 +682,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         let name_array = unsafe { Array::<QualifiedName>::new(result_names, result_count, ()) };
 
         for (id, name) in id_array.iter().zip(name_array.iter()) {
-            result.insert(id.as_str().to_owned(), name.clone());
+            result.insert(id.to_owned(), name.clone());
         }
 
         result

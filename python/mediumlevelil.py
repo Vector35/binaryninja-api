@@ -21,7 +21,7 @@
 import ctypes
 import struct
 from typing import (Optional, List, Union, Mapping,
-	Generator, NewType, Tuple, ClassVar, Dict, Set, Callable, Any, Iterator)
+	Generator, NewType, Tuple, ClassVar, Dict, Set, Callable, Any, Iterator, overload)
 from dataclasses import dataclass
 from . import deprecation
 
@@ -3957,7 +3957,13 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 		for idx in range(self.start, self.end):
 			yield self._il_function[idx]
 
-	def __getitem__(self, idx) -> Union[List['MediumLevelILInstruction'], 'MediumLevelILInstruction']:
+	@overload
+	def __getitem__(self, idx: int) -> 'MediumLevelILInstruction': ...
+
+	@overload
+	def __getitem__(self, idx: slice) -> List['MediumLevelILInstruction']: ...
+
+	def __getitem__(self, idx: Union[int, slice]) -> Union[List['MediumLevelILInstruction'], 'MediumLevelILInstruction']:
 		size = self.end - self.start
 		if isinstance(idx, slice):
 			return [self[index] for index in range(*idx.indices(size))]  # type: ignore

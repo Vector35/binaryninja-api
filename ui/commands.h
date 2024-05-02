@@ -50,8 +50,8 @@ StructureRef BINARYNINJAUIAPI getInnerMostStructureContainingOffset(BinaryViewRe
 uint64_t BINARYNINJAUIAPI getInnerMostStructureOffset(
     BinaryViewRef data, StructureRef structure, const std::vector<std::string>& nameList, size_t nameIndex);
 
-// Auto generate a structure name
-std::string BINARYNINJAUIAPI createStructureName(BinaryNinja::TypeContainer types);
+// Auto generate a usable type name with the given prefix
+std::string BINARYNINJAUIAPI createStructureName(BinaryNinja::TypeContainer types, const std::string& prefix = "struct_");
 
 std::optional<BinaryNinja::Variable> BINARYNINJAUIAPI getSplitVariableForAssignment(
 	FunctionRef func, BNFunctionGraphType ilType, uint64_t location, const BinaryNinja::Variable& var);

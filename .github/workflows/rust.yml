@@ -1,0 +1,38 @@
+name: Rust PR Checks
+
+on:
+  pull_request:
+    paths:
+      - 'rust/**'
+
+jobs:
+  build_and_lint:
+    name: cargo check & cargo clippy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Clang
+        run: |
+          sudo apt update
+          sudo apt install clang -y
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.77.0
+          profile: minimal
+          override: true
+          components: clippy
+
+      - name: cargo check
+        working-directory: ./rust
+        run: cargo check --workspace
+
+      - name: cargo clippy
+        working-directory: ./rust
+        run: cargo clippy -- -D warnings
+        continue-on-error: true
+        # If this step fails, it will warn (?)

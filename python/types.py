@@ -2005,7 +2005,7 @@ class Type:
 		return result
 
 	def get_lines(
-		self, bv: Union['binaryview.BinaryView', 'typecontainer.TypeContainer'], name: str, line_width: int = 80, collapsed: bool = False,
+		self, bv: Union['binaryview.BinaryView', 'typecontainer.TypeContainer'], name: str, padding_cols: int = 64, collapsed: bool = False,
 		escaping: TokenEscapingType = TokenEscapingType.NoTokenEscapingType
 	) -> List['TypeDefinitionLine']:
 		"""
@@ -2015,7 +2015,7 @@ class Type:
 
 		:param BinaryView bv: BinaryView object owning this Type
 		:param str name: Displayed name of the Type
-		:param int line_width: Maximum width of lines (in characters)
+		:param int padding_cols: Maximum number of bytes represented by each padding line
 		:param bool collapsed: If the type should be collapsed, and not show fields/members
 		:param TokenEscapingType escaping: How to escape non-parsable strings in types
 		:return: Returns a list of :py:class:`TypeDefinitionLine` structures
@@ -2028,7 +2028,7 @@ class Type:
 			container = bv
 		else:
 			assert False, "Unexpected type container type"
-		core_lines = core.BNGetTypeLines(self._handle, container.handle, name, line_width, collapsed, escaping, count)
+		core_lines = core.BNGetTypeLines(self._handle, container.handle, name, padding_cols, collapsed, escaping, count)
 		assert core_lines is not None, "core.BNGetTypeLines returned None"
 		lines = []
 		for i in range(count.value):

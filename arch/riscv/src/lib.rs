@@ -34,7 +34,6 @@ use binaryninja::{
         CoreRelocationHandler, CustomRelocationHandlerHandle, RelocationHandler, RelocationInfo,
         RelocationType,
     },
-    string::BnString,
     symbol::{Symbol, SymbolType},
     types::{max_confidence, min_confidence, Conf, NameAndType, Type},
 };
@@ -509,23 +508,23 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
         }
     }
 
-    fn inputs(&self) -> Vec<NameAndType<String>> {
+    fn inputs(&self) -> Vec<Ref<NameAndType>> {
         match self.id {
             Intrinsic::Uret | Intrinsic::Sret | Intrinsic::Mret | Intrinsic::Wfi => {
                 vec![]
             }
             Intrinsic::Csrrd => {
                 vec![NameAndType::new(
-                    "csr".into(),
+                    "csr",
                     &Type::int(4, false),
                     max_confidence(),
                 )]
             }
             Intrinsic::Csrrw | Intrinsic::Csrwr | Intrinsic::Csrrs | Intrinsic::Csrrc => {
                 vec![
-                    NameAndType::new("csr".into(), &Type::int(4, false), max_confidence()),
+                    NameAndType::new("csr", &Type::int(4, false), max_confidence()),
                     NameAndType::new(
-                        "value".into(),
+                        "value",
                         &Type::int(<D::RegFile as RegFile>::Int::width(), false),
                         min_confidence(),
                     ),
@@ -541,8 +540,8 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::Fmin(size)
             | Intrinsic::Fmax(size) => {
                 vec![
-                    NameAndType::new("".into(), &Type::float(size as usize), max_confidence()),
-                    NameAndType::new("".into(), &Type::float(size as usize), max_confidence()),
+                    NameAndType::new("", &Type::float(size as usize), max_confidence()),
+                    NameAndType::new("", &Type::float(size as usize), max_confidence()),
                 ]
             }
             Intrinsic::Fsqrt(size, _)
@@ -551,28 +550,28 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::FcvtFToI(size, _, _)
             | Intrinsic::FcvtFToU(size, _, _) => {
                 vec![NameAndType::new(
-                    "".into(),
+                    "",
                     &Type::float(size as usize),
                     max_confidence(),
                 )]
             }
             Intrinsic::FcvtIToF(size, _, _) => {
                 vec![NameAndType::new(
-                    "".into(),
+                    "",
                     &Type::int(size as usize, true),
                     max_confidence(),
                 )]
             }
             Intrinsic::FcvtUToF(size, _, _) => {
                 vec![NameAndType::new(
-                    "".into(),
+                    "",
                     &Type::int(size as usize, false),
                     max_confidence(),
                 )]
             }
             Intrinsic::Fence => {
                 vec![NameAndType::new(
-                    "".into(),
+                    "",
                     &Type::int(4, false),
                     min_confidence(),
                 )]
@@ -969,20 +968,20 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             _ => (),
         }
 
-        res.push(InstructionTextToken::new(BnString::new(mnem), Instruction));
+        res.push(InstructionTextToken::new(&mnem, Instruction));
 
         for (i, oper) in operands.iter().enumerate() {
             if i == 0 {
                 res.push(InstructionTextToken::new(
-                    BnString::new(format!("{:1$}", " ", pad_len)),
+                    &format!("{:1$}", " ", pad_len),
                     Text,
                 ));
             } else {
                 res.push(InstructionTextToken::new(
-                    BnString::new(","),
+                    ",",
                     OperandSeparator,
                 ));
-                res.push(InstructionTextToken::new(BnString::new(" "), Text));
+                res.push(InstructionTextToken::new(" ", Text));
             }
 
             match *oper {
@@ -990,7 +989,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     let reg = self::Register::from(r);
 
                     res.push(InstructionTextToken::new(
-                        BnString::new(&reg.name()),
+                        &reg.name(),
                         Register,
                     ));
                 }
@@ -998,7 +997,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     let reg = self::Register::from(r);
 
                     res.push(InstructionTextToken::new(
-                        BnString::new(&reg.name()),
+                        &reg.name(),
                         Register,
                     ));
                 }
@@ -1015,16 +1014,16 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                             let target = addr.wrapping_add(i as i64 as u64);
 
                             res.push(InstructionTextToken::new(
-                                BnString::new(format!("0x{:x}", target)),
+                                &format!("0x{:x}", target),
                                 CodeRelativeAddress(target),
                             ));
                         }
                         _ => {
                             res.push(InstructionTextToken::new(
-                                BnString::new(match i {
+                                &match i {
                                     -0x8_0000..=-1 => format!("-0x{:x}", -i),
                                     _ => format!("0x{:x}", i),
-                                }),
+                                },
                                 Integer(i as u64),
                             ));
                         }
@@ -1034,31 +1033,31 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     let reg = self::Register::from(b);
 
                     res.push(InstructionTextToken::new(
-                        BnString::new(""),
+                        "",
                         BeginMemoryOperand,
                     ));
                     res.push(InstructionTextToken::new(
-                        BnString::new(if i < 0 {
+                        &if i < 0 {
                             format!("-0x{:x}", -i)
                         } else {
                             format!("0x{:x}", i)
-                        }),
+                        },
                         Integer(i as u64),
                     ));
 
-                    res.push(InstructionTextToken::new(BnString::new("("), Brace));
+                    res.push(InstructionTextToken::new("(", Brace));
                     res.push(InstructionTextToken::new(
-                        BnString::new(&reg.name()),
+                        &reg.name(),
                         Register,
                     ));
-                    res.push(InstructionTextToken::new(BnString::new(")"), Brace));
+                    res.push(InstructionTextToken::new(")", Brace));
                     res.push(InstructionTextToken::new(
-                        BnString::new(""),
+                        "",
                         EndMemoryOperand,
                     ));
                 }
                 Operand::RM(r) => {
-                    res.push(InstructionTextToken::new(BnString::new(r.name()), Register));
+                    res.push(InstructionTextToken::new(r.name(), Register));
                 }
             }
         }
@@ -2432,10 +2431,9 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
                     .iter()
                     .find(|r| r.info().native_type == Self::R_RISCV_PCREL_HI20)
                 {
-                    Some(target) => target,
+                    Some(target) => target.target().wrapping_add(target.info().addend as u64),
                     None => return false,
                 };
-                let target = target.target().wrapping_add(target.info().addend as u64);
 
                 let offset = target.wrapping_sub(reloc.target()) as u32;
                 let low_offset = offset & 0xfff;

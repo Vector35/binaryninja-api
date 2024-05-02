@@ -1022,7 +1022,7 @@ class TestTypePrinter(unittest.TestCase):
 				return f" bottom text"
 
 			def get_type_lines(self, type: types.Type, container: typecontainer.TypeContainer, name: types.QualifiedName,
-			       line_width, collapsed, escaping: TokenEscapingType) -> List[types.TypeDefinitionLine]:
+			       padding_cols, collapsed, escaping: TokenEscapingType) -> List[types.TypeDefinitionLine]:
 				return [
 				 TypeDefinitionLine(TypeDefinitionLineType.TypedefLineType, [
 				  InstructionTextToken(InstructionTextTokenType.TextToken, "the type is: ", 0),

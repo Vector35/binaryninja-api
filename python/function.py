@@ -21,7 +21,7 @@
 
 import ctypes
 import inspect
-from typing import Generator, Optional, List, Tuple, Union, Mapping, Any, Dict
+from typing import Generator, Optional, List, Tuple, Union, Mapping, Any, Dict, overload
 from dataclasses import dataclass
 
 # Binary Ninja components
@@ -211,6 +211,12 @@ class BasicBlockList:
 		self._n += 1
 		return self._function._instantiate_block(block)
 
+	@overload
+	def __getitem__(self, i: int) -> 'basicblock.BasicBlock': ...
+
+	@overload
+	def __getitem__(self, i: slice) -> List['basicblock.BasicBlock']: ...
+
 	def __getitem__(self, i: Union[int, slice]) -> Union['basicblock.BasicBlock', List['basicblock.BasicBlock']]:
 		if isinstance(i, int):
 			if i < 0:
@@ -237,6 +243,12 @@ class LowLevelILBasicBlockList(BasicBlockList):
 	def __repr__(self):
 		return f"<LowLevelILBasicBlockList {len(self)} BasicBlocks: {list(self)}>"
 
+	@overload
+	def __getitem__(self, i: int) -> 'lowlevelil.LowLevelILBasicBlock': ...
+
+	@overload
+	def __getitem__(self, i: slice) -> List['lowlevelil.LowLevelILBasicBlock']: ...
+
 	def __getitem__(
 	    self, i: Union[int, slice]
 	) -> Union['lowlevelil.LowLevelILBasicBlock', List['lowlevelil.LowLevelILBasicBlock']]:
@@ -250,6 +262,12 @@ class MediumLevelILBasicBlockList(BasicBlockList):
 	def __repr__(self):
 		return f"<MediumLevelILBasicBlockList {len(self)} BasicBlocks: {list(self)}>"
 
+	@overload
+	def __getitem__(self, i: int) -> 'mediumlevelil.MediumLevelILBasicBlock': ...
+
+	@overload
+	def __getitem__(self, i: slice) -> List['mediumlevelil.MediumLevelILBasicBlock']: ...
+
 	def __getitem__(
 	    self, i: Union[int, slice]
 	) -> Union['mediumlevelil.MediumLevelILBasicBlock', List['mediumlevelil.MediumLevelILBasicBlock']]:
@@ -262,6 +280,12 @@ class MediumLevelILBasicBlockList(BasicBlockList):
 class HighLevelILBasicBlockList(BasicBlockList):
 	def __repr__(self):
 		return f"<HighLevelILBasicBlockList {len(self)} BasicBlocks: {list(self)}>"
+
+	@overload
+	def __getitem__(self, i: int) -> 'highlevelil.HighLevelILBasicBlock': ...
+
+	@overload
+	def __getitem__(self, i: slice) -> List['highlevelil.HighLevelILBasicBlock']: ...
 
 	def __getitem__(
 	    self, i: Union[int, slice]
@@ -304,10 +328,15 @@ class TagList:
 		self._n += 1
 		return arch, address, binaryview.Tag(core_tag)
 
+	@overload
+	def __getitem__(self, i: int) -> Tuple['architecture.Architecture', int, 'binaryview.Tag']: ...
+
+	@overload
+	def __getitem__(self, i: slice) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]: ...
+
 	def __getitem__(
 	    self, i: Union[int, slice]
-	) -> Union[Tuple['architecture.Architecture', int, 'binaryview.Tag'], List[Tuple['architecture.Architecture', int,
-	                                                                                 'binaryview.Tag']]]:
+	) -> Union[Tuple['architecture.Architecture', int, 'binaryview.Tag'], List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]]:
 		if isinstance(i, int):
 			if i < 0:
 				i = len(self) + i
@@ -400,7 +429,13 @@ class Function:
 	def __hash__(self):
 		return hash((self.start, self.arch, self.platform))
 
-	def __getitem__(self, i) -> Union['basicblock.BasicBlock', List['basicblock.BasicBlock']]:
+	@overload
+	def __getitem__(self, i: int) -> 'basicblock.BasicBlock': ...
+
+	@overload
+	def __getitem__(self, i: slice) -> List['basicblock.BasicBlock']: ...
+
+	def __getitem__(self, i: Union[int, slice]) -> Union['basicblock.BasicBlock', List['basicblock.BasicBlock']]:
 		return self.basic_blocks[i]
 
 	def __iter__(self) -> Generator['basicblock.BasicBlock', None, None]:

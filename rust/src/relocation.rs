@@ -1,3 +1,4 @@
+use crate::rc::Guard;
 use crate::string::BnStrCompatible;
 use crate::{
     architecture::{Architecture, CoreArchitecture},
@@ -8,6 +9,7 @@ use crate::{
 };
 use binaryninjacore_sys::*;
 use std::borrow::Borrow;
+use std::mem::MaybeUninit;
 use std::os::raw::c_void;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -227,10 +229,10 @@ unsafe impl CoreOwnedArrayProvider for Relocation {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for Relocation {
-    type Wrapped = Relocation;
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
-        Relocation(*raw)
+unsafe impl CoreArrayWrapper for Relocation {
+    type Wrapped<'a> = Guard<'a, Relocation>;
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Guard::new(Relocation(*raw), &())
     }
 }
 
@@ -501,12 +503,9 @@ where
 
     let name = name.into_bytes_with_nul();
 
-    let uninit_handler = RelocationHandlerBuilder {
-        handler: unsafe { std::mem::zeroed() },
-    };
-    let raw = Box::into_raw(Box::new(uninit_handler));
+    let raw = Box::leak(Box::new(MaybeUninit::<RelocationHandlerBuilder<_>>::zeroed()));
     let mut custom_handler = BNCustomRelocationHandler {
-        context: raw as *mut _,
+        context: raw.as_mut_ptr() as *mut _,
         freeObject: Some(cb_free::<R>),
         getRelocationInfo: Some(cb_get_relocation_info::<R>),
         applyRelocation: Some(cb_apply_relocation::<R>),
@@ -517,13 +516,12 @@ where
     assert!(!handle_raw.is_null());
     let handle = CoreRelocationHandler(handle_raw);
     let custom_handle = CustomRelocationHandlerHandle {
-        handle: raw as *mut R,
+        handle: raw.as_mut_ptr() as *mut R,
     };
     unsafe {
-        core::ptr::write(
-            &mut raw.as_mut().unwrap().handler,
-            func(custom_handle, CoreRelocationHandler(handle.0)),
-        );
+        raw.write(RelocationHandlerBuilder {
+            handler: func(custom_handle, CoreRelocationHandler(handle.0)),
+        });
 
         BNArchitectureRegisterRelocationHandler(
             arch.handle().as_ref().0,

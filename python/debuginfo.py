@@ -314,6 +314,7 @@ class DebugInfo(object):
 		"""
 		Type Container for all types in the DebugInfo that resulted from the parse of
 		the given parser.
+
 		:param parser_name: Name of parser
 		:return: Type Container for types from that parser
 		"""

@@ -23,10 +23,8 @@ class BINARYNINJAUIAPI PossibleValueSetDialog : public QDialog
 	QLineEdit* m_input;
 	QPushButton* m_acceptButton;
 	QLabel* m_formatLabel;
+	QLabel* m_errorLabel;
 
-	std::map<BNRegisterValueType, QString> m_typeText;
-	std::map<BNRegisterValueType, QString> m_formatText;
-	std::map<QString, BNRegisterValueType> m_regValueTypes;
 	BNRegisterValueType m_curRegValueType;
 
 	BinaryNinja::PossibleValueSet m_valueSet;

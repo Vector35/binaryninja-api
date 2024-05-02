@@ -23,6 +23,7 @@ pub struct MediumLevelILInstruction<I: Form> {
     pub function: Ref<MediumLevelILFunction<I>>,
     pub address: u64,
     pub index: usize,
+    pub size: usize,
     pub kind: MediumLevelILInstructionKind<I>,
 }
 
@@ -875,6 +876,7 @@ impl<I: Form> MediumLevelILInstruction<I> {
             function,
             address: op.address,
             index,
+            size: op.size,
             kind,
         }
     }
@@ -883,6 +885,7 @@ impl<I: Form> MediumLevelILInstruction<I> {
             function: self.function.clone(),
             address: self.address,
             index: self.index,
+            size: self.size,
             kind: self.kind.lift(self),
         }
     }

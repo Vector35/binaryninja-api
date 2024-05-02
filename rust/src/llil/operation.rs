@@ -89,10 +89,10 @@ pub struct Syscall;
 pub struct Intrinsic;
 
 impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, Intrinsic>
-    where
-        A: 'func + Architecture,
-        M: FunctionMutability,
-        V: NonSSAVariant,
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    V: NonSSAVariant,
 {
     // TODO: Support register and expression lists
     pub fn intrinsic(&self) -> Option<A::Intrinsic> {
@@ -382,11 +382,19 @@ where
         }
     }
 
+    pub fn true_target_idx(&self) -> usize {
+        self.op.operands[1] as usize
+    }
+
     pub fn false_target(&self) -> Instruction<'func, A, M, F> {
         Instruction {
             function: self.function,
             instr_idx: self.op.operands[2] as usize,
         }
+    }
+
+    pub fn false_target_idx(&self) -> usize {
+        self.op.operands[2] as usize
     }
 }
 
@@ -404,6 +412,10 @@ where
             function: self.function,
             instr_idx: self.op.operands[0] as usize,
         }
+    }
+
+    pub fn target_idx(&self) -> usize {
+        self.op.operands[0] as usize
     }
 }
 

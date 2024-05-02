@@ -314,6 +314,22 @@ impl Function {
         }
     }
 
+    pub fn parameter_variables(&self) -> Conf<Vec<Variable>> {
+        unsafe {
+            let mut variables = BNGetFunctionParameterVariables(self.handle);
+            let mut result = Vec::with_capacity(variables.count);
+            let confidence = variables.confidence;
+            let vars = std::slice::from_raw_parts(variables.vars, variables.count);
+
+            for i in 0..variables.count {
+                result.push(Variable::from_raw(vars[i]));
+            }
+
+            BNFreeParameterVariables(&mut variables);
+            Conf::new(result, confidence)
+        }
+    }
+
     pub fn apply_imported_types(&self, sym: &Symbol, t: Option<&Type>) {
         unsafe {
             BNApplyImportedTypes(
@@ -406,10 +422,10 @@ unsafe impl CoreOwnedArrayProvider for Function {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for Function {
-    type Wrapped = Guard<'a, Function>;
+unsafe impl CoreArrayWrapper for Function {
+    type Wrapped<'a> = Guard<'a, Function>;
 
-    unsafe fn wrap_raw(raw: &'a *mut BNFunction, context: &'a ()) -> Guard<'a, Function> {
+    unsafe fn wrap_raw<'a>(raw: &'a *mut BNFunction, context: &'a ()) -> Self::Wrapped<'a> {
         Guard::new(Function { handle: *raw }, context)
     }
 }
@@ -460,10 +476,10 @@ unsafe impl CoreOwnedArrayProvider for AddressRange {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for AddressRange {
-    type Wrapped = &'a AddressRange;
+unsafe impl CoreArrayWrapper for AddressRange {
+    type Wrapped<'a> = &'a AddressRange;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }
 }

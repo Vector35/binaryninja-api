@@ -2,6 +2,7 @@ use core::hash::{Hash, Hasher};
 
 use binaryninjacore_sys::BNFreeMediumLevelILFunction;
 use binaryninjacore_sys::BNGetMediumLevelILBasicBlockList;
+use binaryninjacore_sys::BNGetMediumLevelILIndexForInstruction;
 use binaryninjacore_sys::BNGetMediumLevelILInstructionCount;
 use binaryninjacore_sys::BNGetMediumLevelILOwnerFunction;
 use binaryninjacore_sys::BNGetMediumLevelILSSAForm;
@@ -86,6 +87,22 @@ impl<I: Form> MediumLevelILFunction<I> {
         expr_idx: usize,
     ) -> MediumLevelILLiftedInstruction<I> {
         self.instruction_from_idx(expr_idx).lift()
+    }
+
+    pub fn instruction_from_instruction_idx(
+        &self,
+        instr_idx: usize,
+    ) -> MediumLevelILInstruction<I> {
+        MediumLevelILInstruction::new(self.to_owned(), unsafe {
+            BNGetMediumLevelILIndexForInstruction(self.handle, instr_idx)
+        })
+    }
+
+    pub fn lifted_instruction_from_instruction_idx(
+        &self,
+        instr_idx: usize,
+    ) -> MediumLevelILLiftedInstruction<I> {
+        self.instruction_from_instruction_idx(instr_idx).lift()
     }
 
     pub fn basic_blocks(&self) -> Array<BasicBlock<MediumLevelILBlock<I>>> {

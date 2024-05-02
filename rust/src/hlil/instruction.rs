@@ -16,6 +16,7 @@ pub struct HighLevelILInstruction {
     pub function: Ref<HighLevelILFunction>,
     pub address: u64,
     pub index: usize,
+    pub size: usize,
     pub kind: HighLevelILInstructionKind,
 }
 
@@ -629,6 +630,7 @@ impl HighLevelILInstruction {
             function,
             address: op.address,
             index,
+            size: op.size,
             kind,
         }
     }
@@ -878,6 +880,7 @@ impl HighLevelILInstruction {
             function: self.function.clone(),
             address: self.address,
             index: self.index,
+            size: self.size,
             kind,
         }
     }

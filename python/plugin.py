@@ -970,6 +970,18 @@ class _BackgroundTaskMetaclass(type):
 
 
 class BackgroundTask(metaclass=_BackgroundTaskMetaclass):
+	"""
+	The ``BackgroundTask`` class provides a mechanism for reporting progress of
+	an optionally cancelable task to the user via the status bar in the UI.
+	If ``can_cancel`` is is `True`, then the task can be cancelled either
+	programmatically (via :py:meth:`.cancel`) or by the user via the UI.
+
+	Note this class does not provide a means to execute a task, which is
+	available via the :py:class:`.BackgroundTaskThread` class.
+
+	:param initial_progress_text: text description of the task to display in the status bar in the UI, defaults to `""`
+	:param can_cancel: whether to enable cancelation of the task, defaults to `False`
+	"""
 	def __init__(self, initial_progress_text="", can_cancel=False, handle=None):
 		if handle is None:
 			self.handle = core.BNBeginBackgroundTask(initial_progress_text, can_cancel)
@@ -1022,6 +1034,15 @@ class BackgroundTask(metaclass=_BackgroundTaskMetaclass):
 
 
 class BackgroundTaskThread(BackgroundTask):
+	"""
+	The ``BackgroundTaskThread`` class provides an all-in-one solution for executing a :py:class:`.BackgroundTask`
+	in a thread.
+
+	See the :py:class:`.BackgroundTask` for additional information.
+
+	:param initial_progress_text: text description of the task to display in the status bar in the UI, defaults to `""`
+	:param can_cancel: whether to enable cancelation of the task, defaults to `False`
+	"""
 	def __init__(self, initial_progress_text: str = "", can_cancel: bool = False):
 		class _Thread(threading.Thread):
 			def __init__(self, task: 'BackgroundTaskThread'):

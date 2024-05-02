@@ -19,3 +19,6 @@
 [submodule "arch/x86/mbuild"]
 	path = arch/x86/mbuild
 	url = https://github.com/intelxed/mbuild.git
+[submodule "rust/examples/pdb-ng/pdb-0.8.0-patched"]
+	path = rust/examples/pdb-ng/pdb-0.8.0-patched
+	url = https://github.com/Vector35/pdb-rs.git

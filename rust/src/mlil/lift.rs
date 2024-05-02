@@ -33,6 +33,7 @@ pub struct MediumLevelILLiftedInstruction<I: Form> {
     pub function: Ref<MediumLevelILFunction<I>>,
     pub address: u64,
     pub index: usize,
+    pub size: usize,
     pub kind: MediumLevelILLiftedInstructionKind<I>,
 }
 

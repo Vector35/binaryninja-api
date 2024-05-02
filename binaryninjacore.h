@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 59
+#define BN_CURRENT_CORE_ABI_VERSION 60
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 59
+#define BN_MINIMUM_CORE_ABI_VERSION 60
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -279,6 +279,7 @@ extern "C"
 	typedef struct BNExternalLibrary BNExternalLibrary;
 	typedef struct BNExternalLocation BNExternalLocation;
 	typedef struct BNProjectFolder BNProjectFolder;
+	typedef struct BNBaseAddressDetection BNBaseAddressDetection;
 
 	//! Console log levels
 	typedef enum BNLogLevel
@@ -3157,6 +3158,54 @@ extern "C"
 		ConflictSyncStatus
 	} BNSyncStatus;
 
+	typedef enum BNBaseAddressDetectionPOISetting
+	{
+		POIAnalysisStringsOnly,
+		POIAnalysisFunctionsOnly,
+		POIAnalysisAll,
+	} BNBaseAddressDetectionPOISetting;
+
+	typedef enum BNBaseAddressDetectionPOIType
+	{
+		POIString,
+		POIFunction,
+		POIDataVariable,
+		POIFileStart,
+		POIFileEnd,
+	} BNBaseAddressDetectionPOIType;
+
+	typedef enum BNBaseAddressDetectionConfidence
+	{
+		NoConfidence,
+		LowConfidence,
+		HighConfidence,
+	} BNBaseAddressDetectionConfidence;
+
+	typedef struct BNBaseAddressDetectionSettings
+	{
+		const char* Architecture;
+		const char* Analysis;
+		uint32_t MinStrlen;
+		uint32_t Alignment;
+		uint64_t LowerBoundary;
+		uint64_t UpperBoundary;
+		BNBaseAddressDetectionPOISetting POIAnalysis;
+		uint32_t MaxPointersPerCluster;
+	} BNBaseAddressDetectionSettings;
+
+	typedef struct BNBaseAddressDetectionReason
+	{
+		uint64_t Pointer;
+		uint64_t POIOffset;
+		BNBaseAddressDetectionPOIType POIType;
+	} BNBaseAddressDetectionReason;
+
+	typedef struct BNBaseAddressDetectionScore
+	{
+		size_t Score;
+		uint64_t BaseAddress;
+	} BNBaseAddressDetectionScore;
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
@@ -3869,6 +3918,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNReadBE16(BNBinaryReader* stream, uint16_t* result);
 	BINARYNINJACOREAPI bool BNReadBE32(BNBinaryReader* stream, uint32_t* result);
 	BINARYNINJACOREAPI bool BNReadBE64(BNBinaryReader* stream, uint64_t* result);
+	BINARYNINJACOREAPI bool BNReadPointer(BNBinaryView* view, BNBinaryReader* stream, uint64_t* result);
 
 	BINARYNINJACOREAPI uint64_t BNGetReaderPosition(BNBinaryReader* stream);
 	BINARYNINJACOREAPI void BNSeekBinaryReader(BNBinaryReader* stream, uint64_t offset);
@@ -6988,6 +7038,17 @@ extern "C"
 	BINARYNINJACOREAPI bool BNBinaryViewPullTypeArchiveTypes(BNBinaryView* view, const char* archiveId, const char* const* archiveTypeIds, size_t archiveTypeIdCount, char*** updatedArchiveTypeIds, char*** updatedAnalysisTypeIds,  size_t* updatedTypeCount);
 	BINARYNINJACOREAPI bool BNBinaryViewPushTypeArchiveTypes(BNBinaryView* view, const char* archiveId, const char* const* typeIds, size_t typeIdCount, char*** updatedAnalysisTypeIds, char*** updatedArchiveTypeIds,  size_t* updatedTypeCount);
 
+	// Base Address Detection
+	BINARYNINJACOREAPI BNBaseAddressDetection* BNCreateBaseAddressDetection(BNBinaryView *view);
+	BINARYNINJACOREAPI bool BNDetectBaseAddress(BNBaseAddressDetection* bad, BNBaseAddressDetectionSettings& settings);
+	BINARYNINJACOREAPI size_t BNGetBaseAddressDetectionScores(BNBaseAddressDetection* bad, BNBaseAddressDetectionScore* scores, size_t count,
+		BNBaseAddressDetectionConfidence* confidence, uint64_t* lastTestedBaseAddress);
+	BINARYNINJACOREAPI BNBaseAddressDetectionReason* BNGetBaseAddressDetectionReasons(BNBaseAddressDetection* bad,
+		uint64_t baseAddress, size_t* count);
+	BINARYNINJACOREAPI void BNFreeBaseAddressDetectionReasons(BNBaseAddressDetectionReason* reasons);
+	BINARYNINJACOREAPI void BNAbortBaseAddressDetection(BNBaseAddressDetection* bad);
+	BINARYNINJACOREAPI bool BNIsBaseAddressDetectionAborted(BNBaseAddressDetection* bad);
+	BINARYNINJACOREAPI void BNFreeBaseAddressDetection(BNBaseAddressDetection* bad);
 #ifdef __cplusplus
 }
 #endif

@@ -73,7 +73,7 @@ pub type InstructionTextTokenContext = BNInstructionTextTokenContext;
 // IndirectImportToken = 69,
 // ExternalSymbolToken = 70,
 
-#[repr(C)]
+#[repr(transparent)]
 pub struct InstructionTextToken(pub(crate) BNInstructionTextToken);
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -99,8 +99,8 @@ pub enum InstructionTextTokenContents {
 }
 
 impl InstructionTextToken {
-    pub(crate) unsafe fn from_raw(raw: &BNInstructionTextToken) -> Self {
-        Self(*raw)
+    pub(crate) unsafe fn from_raw(raw: &BNInstructionTextToken) -> &Self {
+        mem::transmute(raw)
     }
 
     pub fn new(text: &str, contents: InstructionTextTokenContents) -> Self {
@@ -254,13 +254,16 @@ impl Clone for InstructionTextToken {
     }
 }
 
-// TODO : There is almost certainly a memory leak here - in the case where
-//  `impl CoreOwnedArrayProvider for InstructionTextToken` doesn't get triggered
-// impl Drop for InstructionTextToken {
-//     fn drop(&mut self) {
-//         let _owned = unsafe { BnString::from_raw(self.0.text) };
-//     }
-// }
+impl Drop for InstructionTextToken {
+    fn drop(&mut self) {
+        if !self.0.text.is_null() {
+            let _owned = unsafe { BnString::from_raw(self.0.text) };
+        }
+        if !self.0.typeNames.is_null() && self.0.namesCount != 0 {
+            unsafe { BNFreeStringList(self.0.typeNames, self.0.namesCount) }
+        }
+    }
+}
 
 pub struct DisassemblyTextLine(pub(crate) BNDisassemblyTextLine);
 
@@ -290,7 +293,7 @@ impl DisassemblyTextLine {
         unsafe {
             std::slice::from_raw_parts::<BNInstructionTextToken>(self.0.tokens, self.0.count)
                 .iter()
-                .map(|&x| InstructionTextToken::from_raw(&x))
+                .map(|x| InstructionTextToken::from_raw(x).clone())
                 .collect()
         }
     }
@@ -307,10 +310,9 @@ impl std::fmt::Display for DisassemblyTextLine {
 }
 
 impl From<Vec<InstructionTextToken>> for DisassemblyTextLine {
-    fn from(mut tokens: Vec<InstructionTextToken>) -> Self {
-        tokens.shrink_to_fit();
+    fn from(tokens: Vec<InstructionTextToken>) -> Self {
+        let mut tokens: Box<[_]> = tokens.into();
 
-        assert!(tokens.len() == tokens.capacity());
         // TODO: let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() }; // Can't use for now...still a rust nightly feature
         let tokens_pointer = tokens.as_mut_ptr();
         let tokens_len = tokens.len();
@@ -345,14 +347,11 @@ impl From<Vec<InstructionTextToken>> for DisassemblyTextLine {
 
 impl From<&Vec<&str>> for DisassemblyTextLine {
     fn from(string_tokens: &Vec<&str>) -> Self {
-        let mut tokens: Vec<BNInstructionTextToken> = Vec::with_capacity(string_tokens.len());
-        tokens.extend(
-            string_tokens.iter().map(|&token| {
-                InstructionTextToken::new(token, InstructionTextTokenContents::Text).0
-            }),
-        );
+        let mut tokens: Box<[BNInstructionTextToken]> = string_tokens
+            .iter()
+            .map(|&token| InstructionTextToken::new(token, InstructionTextTokenContents::Text).0)
+            .collect();
 
-        assert!(tokens.len() == tokens.capacity());
         // let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() };  // Can't use for now...still a rust nighly feature
         let tokens_pointer = tokens.as_mut_ptr();
         let tokens_len = tokens.len();
@@ -416,8 +415,9 @@ impl Default for DisassemblyTextLine {
 
 impl Drop for DisassemblyTextLine {
     fn drop(&mut self) {
-        unsafe {
-            Vec::from_raw_parts(self.0.tokens, self.0.count, self.0.count);
+        if !self.0.tokens.is_null() {
+            let ptr = core::ptr::slice_from_raw_parts_mut(self.0.tokens, self.0.count);
+            let _ = unsafe { Box::from_raw(ptr) };
         }
     }
 }

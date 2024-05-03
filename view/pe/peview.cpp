@@ -2785,7 +2785,8 @@ void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& nam
 						if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
 							typeRef = demangledType;
 					}
-					else if (!m_extractMangledTypes && DemangleLLVM(rawName, demangleName, m_simplifyTemplates)) {
+					else if (!m_extractMangledTypes && DemangleLLVM(rawName, demangleName, m_simplifyTemplates))
+					{
 						shortName = demangleName.GetString();
 						fullName = shortName;
 					}
@@ -2805,7 +2806,8 @@ void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& nam
 						if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
 							typeRef = demangledType;
 					}
-					else if (!m_extractMangledTypes && DemangleLLVM(rawName, demangleName, m_simplifyTemplates)) {
+					else if (!m_extractMangledTypes && DemangleLLVM(rawName, demangleName, m_simplifyTemplates))
+					{
 						shortName = demangleName.GetString();
 						fullName = shortName;
 					}

@@ -329,17 +329,13 @@ unsafe impl RefCountable for Symbol {
 impl CoreArrayProvider for Symbol {
     type Raw = *mut BNSymbol;
     type Context = ();
+    type Wrapped<'a> = Guard<'a, Symbol>;
 }
 
-unsafe impl CoreOwnedArrayProvider for Symbol {
+unsafe impl CoreArrayProviderInner for Symbol {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeSymbolList(raw, count);
     }
-}
-
-unsafe impl CoreArrayWrapper for Symbol {
-    type Wrapped<'a> = Guard<'a, Symbol>;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Symbol::from_raw(*raw), context)
     }

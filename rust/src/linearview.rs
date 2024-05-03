@@ -415,17 +415,13 @@ impl std::fmt::Display for LinearDisassemblyLine {
 impl CoreArrayProvider for LinearDisassemblyLine {
     type Raw = BNLinearDisassemblyLine;
     type Context = ();
+    type Wrapped<'a> = Guard<'a, LinearDisassemblyLine>;
 }
 
-unsafe impl CoreOwnedArrayProvider for LinearDisassemblyLine {
+unsafe impl CoreArrayProviderInner for LinearDisassemblyLine {
     unsafe fn free(raw: *mut BNLinearDisassemblyLine, count: usize, _context: &()) {
         BNFreeLinearDisassemblyLines(raw, count);
     }
-}
-
-unsafe impl CoreArrayWrapper for LinearDisassemblyLine {
-    type Wrapped<'a> = Guard<'a, LinearDisassemblyLine>;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(LinearDisassemblyLine::from_raw(raw), _context)
     }

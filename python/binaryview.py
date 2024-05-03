@@ -4473,7 +4473,7 @@ class BinaryView:
 		for address in addresses:
 			for fn in self.get_functions_at(address):
 				if fn.start == address:
-					if plat is not None and fn.platform == plat:
+					if plat is not None and fn.platform != plat:
 						continue
 					fns.append(fn)
 		return fns

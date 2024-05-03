@@ -26,7 +26,7 @@ use binaryninjacore_sys::*;
 
 use crate::architecture::{Architecture, ArchitectureExt, CoreArchitecture, Register};
 use crate::rc::{
-    CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Guard, Ref, RefCountable,
+    CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable,
 };
 use crate::string::*;
 
@@ -678,17 +678,13 @@ unsafe impl<A: Architecture> RefCountable for CallingConvention<A> {
 impl<A: Architecture> CoreArrayProvider for CallingConvention<A> {
     type Raw = *mut BNCallingConvention;
     type Context = A::Handle;
+    type Wrapped<'a> = Guard<'a, CallingConvention<A>>;
 }
 
-unsafe impl<A: Architecture> CoreOwnedArrayProvider for CallingConvention<A> {
+unsafe impl<A: Architecture> CoreArrayProviderInner for CallingConvention<A> {
     unsafe fn free(raw: *mut *mut BNCallingConvention, count: usize, _content: &Self::Context) {
         BNFreeCallingConventionList(raw, count);
     }
-}
-
-unsafe impl<A: Architecture> CoreArrayWrapper for CallingConvention<A> {
-    type Wrapped<'a> = Guard<'a, CallingConvention<A>>;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(
             CallingConvention {

@@ -253,6 +253,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	bool navigateToGotoLabel(uint64_t label);
 	bool navigateToMatchingBrace();
 	bool navigateToExternalLink(uint64_t linkSourceAddr);
+	void setSelectionOffsetsInternal(BNAddressRange range, bool navigateToStart = true);
 	void viewData();
 
 	void scrollLines(int count);
@@ -518,6 +519,26 @@ protected:
 	void splitToNewTabAndNavigateFromCursorPosition();
 	void splitToNewWindowAndNavigateFromCursorPosition();
 	void splitToNewPaneAndNavigateFromCursorPosition();
+
+	void extendSelectionToStartOfBinary();
+	void extendSelectionToEndOfBinary();
+	void extendSelectionToStartOfSection();
+	void extendSelectionToEndOfSection();
+	void extendSelectionToStartOfSegment();
+	void extendSelectionToEndOfSegment();
+	void extendSelectionToStartOfDataVariable();
+	void extendSelectionToEndOfDataVariable();
+	void extendSelectionByBytes();
+	void extendSelectionToAddress();
+	void setSelectionSizeTo();
+	void saveSelectionTo();
+
+	bool canExtendSelectionToStartOfSection();
+	bool canExtendSelectionToEndOfSection();
+	bool canExtendSelectionToStartOfSegment();
+	bool canExtendSelectionToEndOfSegment();
+	bool canExtendSelectionToStartOfDataVariable();
+	bool canExtendSelectionToEndOfDataVariable();
 };
 
 /*!

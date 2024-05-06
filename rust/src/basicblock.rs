@@ -110,14 +110,14 @@ pub trait BlockContext: Clone + Sync + Send + Sized {
     type Instruction;
     type Iter: Iterator<Item = Self::Instruction>;
 
-    fn start(&self, block: &BasicBlock<Self>) -> Self::Instruction;
-    fn iter(&self, block: &BasicBlock<Self>) -> Self::Iter;
+    fn start(block: &BasicBlock<Self>) -> Self::Instruction;
+    fn iter(block: &BasicBlock<Self>) -> Self::Iter;
 }
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct BasicBlock<C: BlockContext> {
     pub(crate) handle: *mut BNBasicBlock,
-    context: C,
+    pub(crate) context: C,
 }
 
 unsafe impl<C: BlockContext> Send for BasicBlock<C> {}
@@ -144,7 +144,7 @@ impl<C: BlockContext> BasicBlock<C> {
     }
 
     pub fn iter(&self) -> C::Iter {
-        self.context.iter(self)
+        C::iter(self)
     }
 
     pub fn raw_start(&self) -> u64 {

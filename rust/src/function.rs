@@ -98,11 +98,11 @@ impl BlockContext for NativeBlock {
     type Iter = NativeBlockIter;
     type Instruction = u64;
 
-    fn start(&self, block: &BasicBlock<Self>) -> u64 {
+    fn start(block: &BasicBlock<Self>) -> u64 {
         block.raw_start()
     }
 
-    fn iter(&self, block: &BasicBlock<Self>) -> NativeBlockIter {
+    fn iter(block: &BasicBlock<Self>) -> NativeBlockIter {
         NativeBlockIter {
             arch: block.arch(),
             bv: block.function().view(),

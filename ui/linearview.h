@@ -478,7 +478,7 @@ public:
 	void setContrast(HexEditorHighlightContrast mode);
 
 	void toggleOption(BNDisassemblyOption option);
-	void setAddressMode(BNDisassemblyAddressMode mode);
+	void setAddressMode(std::optional<BNDisassemblyAddressMode> mode, std::optional<bool> hex, std::optional<bool> withName);
 	void setDisplayedFileName();
 
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target) override;

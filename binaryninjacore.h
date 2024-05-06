@@ -705,21 +705,14 @@ extern "C"
 	{
 		AbsoluteDisassemblyAddressMode,
 		RelativeToBinaryStartDisassemblyAddressMode,
-		NameAndRelativeToBinaryStartDisassemblyAddressMode,
 		RelativeToSegmentStartDisassemblyAddressMode,
-		NameAndRelativeToSegmentStartDisassemblyAddressMode,
 		RelativeToSectionStartDisassemblyAddressMode,
-		NameAndRelativeToSectionStartDisassemblyAddressMode,
 		RelativeToFunctionStartDisassemblyAddressMode,
-		NameAndRelativeToFunctionStartDisassemblyAddressMode,
-		DecimalRelativeToBinaryStartDisassemblyAddressMode,
-		DecimalNameAndRelativeToBinaryStartDisassemblyAddressMode,
-		DecimalRelativeToSegmentStartDisassemblyAddressMode,
-		DecimalNameAndRelativeToSegmentStartDisassemblyAddressMode,
-		DecimalRelativeToSectionStartDisassemblyAddressMode,
-		DecimalNameAndRelativeToSectionStartDisassemblyAddressMode,
-		DecimalRelativeToFunctionStartDisassemblyAddressMode,
-		DecimalNameAndRelativeToFunctionStartDisassemblyAddressMode,
+		DisassemblyAddressModeMask = 0xFFFF,
+
+		IncludeNameDisassemblyAddressModeFlag = 0x10000,
+		DecimalDisassemblyAddressModeFlag = 0x20000,
+		DisassemblyAddressModeFlagsMask = 0xFFFF0000,
 	} BNDisassemblyAddressMode;
 
 	typedef enum BNTypeClass

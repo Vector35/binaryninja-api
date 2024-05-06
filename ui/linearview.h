@@ -262,7 +262,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	void getHexDumpLineBytes(
 		const BinaryNinja::LinearDisassemblyLine& line, size_t& skippedBytes, size_t& totalBytes, size_t& totalCols);
 
-	void paintHexDumpLine(QPainter& p, const LinearViewLine& line, int xoffset, int y, uint32_t addrLen, int tagOffset);
+	void paintHexDumpLine(QPainter& p, const LinearViewLine& line, int xoffset, int y, int tagOffset);
 	void paintAnalysisWarningLine(QPainter& p, const LinearViewLine& line, int xoffset, int y);
 	void paintTokenLine(QPainter& p, const LinearViewLine& line, int xoffset, int y, QRect eventRect, int tagOffset);
 
@@ -478,6 +478,8 @@ public:
 	void setContrast(HexEditorHighlightContrast mode);
 
 	void toggleOption(BNDisassemblyOption option);
+	void setAddressMode(std::optional<BNDisassemblyAddressMode> mode, std::optional<bool> hex, std::optional<bool> withName);
+	void setDisplayedFileName();
 
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target) override;
 	QFont getFont() override { return m_render.getFont(); }

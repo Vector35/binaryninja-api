@@ -1284,7 +1284,7 @@ bool ElfView::Init()
 						if (auto pos = entryName.find(".", 2); (pos != std::string::npos))
 						{
 							// These mapping symbols do not define actual names
-							if (entryName[0] == '$' && (entryName[1] == 'x' || entryName[1] == 'a' || entryName[1] == 'd'))
+							if (entryName[0] == '$' && (entryName[1] == 'x' || entryName[1] == 'a' || entryName[1] == 'd'  || entryName[1] == 't'))
 								continue;
 							entryName = entryName.substr(pos + 1);
 							if (entryName.size())
@@ -2369,6 +2369,11 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 					fullName += demangledType->GetStringAfterName();
 				if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
 					typeRef = demangledType;
+			}
+			else if (!m_extractMangledTypes && DemangleLLVM(rawName, varName, m_simplifyTemplates))
+			{
+				shortName = varName.GetString();
+				fullName = shortName;
 			}
 			else
 			{

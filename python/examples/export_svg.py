@@ -258,7 +258,7 @@ def render_svg(function, offset, mode, form, showOpcodes, showAddresses, orignam
 			.BaseStructureNameToken, .BaseStructureSeparatorToken {{
 				fill: {rgbStr('BaseStructureNameColor')};
 			}}
-			.TextToken, .BeginMemoryOperandToken, .EndMemoryOperandToken {{
+			.TextToken, .BeginMemoryOperandToken, .EndMemoryOperandToken, .AddressSeparatorToken {{
 				fill: {rgbStr('TextToken')};
 			}}
 		</style>

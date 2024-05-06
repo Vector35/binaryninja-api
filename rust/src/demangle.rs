@@ -26,6 +26,49 @@ use crate::rc::*;
 
 pub type Result<R> = result::Result<R, ()>;
 
+pub fn demangle_llvm<S: BnStrCompatible>(
+    mangled_name: S,
+    simplify: bool,
+) -> Result<Vec<String>> {
+    let mangled_name_bwn = mangled_name.into_bytes_with_nul();
+    let mangled_name_ptr = mangled_name_bwn.as_ref();
+    let mut out_name: *mut *mut std::os::raw::c_char = unsafe { std::mem::zeroed() };
+    let mut out_size: usize = 0;
+    let res = unsafe {
+        BNDemangleLLVM(
+            mangled_name_ptr.as_ptr() as *const c_char,
+            &mut out_name,
+            &mut out_size,
+            simplify,
+        )
+    };
+
+    if !res || out_size == 0 {
+        let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
+            Ok(cstr) => cstr,
+            Err(_) => {
+                log::error!("demangle_llvm: failed to parse mangled name");
+                return Err(());
+            }
+        };
+        return Ok(vec![cstr.to_string_lossy().into_owned()]);
+    }
+
+    if out_name.is_null() {
+        log::error!("demangle_llvm: out_name is NULL");
+        return Err(());
+    }
+
+    let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
+        .iter()
+        .map(str::to_string)
+        .collect();
+
+    unsafe { BNFreeDemangledName(&mut out_name, out_size) };
+
+    Ok(names)
+}
+
 pub fn demangle_gnu3<S: BnStrCompatible>(
     arch: &CoreArchitecture,
     mangled_name: S,

@@ -47,7 +47,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("path", help="path to the position-dependent raw firmware binary or directory")
     parser.add_argument("--debug", action="store_true", help="enable debug logging")
     parser.add_argument("--reasons", action="store_true", help="show reasons for base address selection")
-    parser.add_argument("--analysis", type=str, help="analysis level", default="basic")
+    parser.add_argument("--analysis", type=str, help="analysis level", default="full")
     parser.add_argument("--arch", type=str, default="", help="architecture of the binary")
     return parser.parse_args()
 

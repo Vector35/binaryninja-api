@@ -2785,6 +2785,11 @@ void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& nam
 						if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
 							typeRef = demangledType;
 					}
+					else if (!m_extractMangledTypes && DemangleLLVM(rawName, demangleName, m_simplifyTemplates))
+					{
+						shortName = demangleName.GetString();
+						fullName = shortName;
+					}
 					else
 					{
 						m_logger->LogDebug("Failed to demangle: '%s'\n", name.c_str());
@@ -2800,6 +2805,11 @@ void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& nam
 							fullName += demangledType->GetStringAfterName();
 						if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
 							typeRef = demangledType;
+					}
+					else if (!m_extractMangledTypes && DemangleLLVM(rawName, demangleName, m_simplifyTemplates))
+					{
+						shortName = demangleName.GetString();
+						fullName = shortName;
 					}
 					else
 					{

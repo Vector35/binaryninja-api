@@ -161,7 +161,7 @@ class BaseAddressDetection:
     def detect_base_address(
         self,
         arch: Optional[str] = "",
-        analysis: Optional[str] = Literal["basic", "controlFlow", "full"],
+        analysis: Optional[Literal["basic", "controlFlow", "full"]] = "full",
         min_strlen: Optional[int] = 10,
         alignment: Optional[int] = 1024,
         low_boundary: Optional[int] = 0,

@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 60
+#define BN_CURRENT_CORE_ABI_VERSION 61
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -382,7 +382,8 @@ extern "C"
 		AddressDisplayToken = 68,
 		IndirectImportToken = 69,
 		ExternalSymbolToken = 70,
-		StackVariableToken = 71
+		StackVariableToken = 71,
+		AddressSeparatorToken = 72
 	} BNInstructionTextTokenType;
 
 	typedef enum BNInstructionTextTokenContext
@@ -699,6 +700,20 @@ extern "C"
 		ShowILTypes = 130,
 		ShowILOpcodes = 131,
 	} BNDisassemblyOption;
+
+	typedef enum BNDisassemblyAddressMode
+	{
+		AbsoluteDisassemblyAddressMode,
+		RelativeToBinaryStartDisassemblyAddressMode,
+		RelativeToSegmentStartDisassemblyAddressMode,
+		RelativeToSectionStartDisassemblyAddressMode,
+		RelativeToFunctionStartDisassemblyAddressMode,
+		DisassemblyAddressModeMask = 0xFFFF,
+
+		IncludeNameDisassemblyAddressModeFlag = 0x10000,
+		DecimalDisassemblyAddressModeFlag = 0x20000,
+		DisassemblyAddressModeFlagsMask = 0xFFFF0000,
+	} BNDisassemblyAddressMode;
 
 	typedef enum BNTypeClass
 	{
@@ -1902,6 +1917,8 @@ extern "C"
 		CommentColor,
 		OperationColor,
 		BaseStructureNameColor,
+		IndentationLineColor,
+		IndentationLineHighlightColor,
 
 		// Script console colors
 		ScriptConsoleOutputColor,
@@ -5060,7 +5077,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetDisassemblyMaximumSymbolWidth(BNDisassemblySettings* settings, size_t width);
 	BINARYNINJACOREAPI size_t BNGetDisassemblyGutterWidth(BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI void BNSetDisassemblyGutterWidth(BNDisassemblySettings* settings, size_t width);
-
+	BINARYNINJACOREAPI BNDisassemblyAddressMode BNGetDisassemblyAddressMode(BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI void BNSetDisassemblyAddressMode(BNDisassemblySettings* settings, BNDisassemblyAddressMode mode);
 
 	// Flow graphs
 	BINARYNINJACOREAPI BNFlowGraph* BNCreateFlowGraph(void);
@@ -6514,6 +6532,11 @@ extern "C"
 	BINARYNINJACOREAPI bool BNDemangleGNU3WithOptions(BNArchitecture* arch, const char* mangledName, BNType** outType,
 	    char*** outVarName, size_t* outVarNameElements, const BNBinaryView* const view);
 	BINARYNINJACOREAPI void BNFreeDemangledName(char*** name, size_t nameElements);
+
+	BINARYNINJACOREAPI bool BNDemangleLLVM(const char* mangledName,
+		char*** outVarName, size_t* outVarNameElements, const bool simplify);
+	BINARYNINJACOREAPI bool BNDemangleLLVMWithOptions(const char* mangledName,
+	char*** outVarName, size_t* outVarNameElements, const BNBinaryView* const view);
 
 	// Plugin repository APIs
 	BINARYNINJACOREAPI char** BNPluginGetApis(BNRepoPlugin* p, size_t* count);

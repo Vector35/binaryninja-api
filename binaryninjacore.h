@@ -1917,6 +1917,8 @@ extern "C"
 		CommentColor,
 		OperationColor,
 		BaseStructureNameColor,
+		IndentationLineColor,
+		IndentationLineHighlightColor,
 
 		// Script console colors
 		ScriptConsoleOutputColor,

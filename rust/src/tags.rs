@@ -16,8 +16,10 @@
 
 use binaryninjacore_sys::*;
 
+use crate::architecture::CoreArchitecture;
 use crate::binaryview::BinaryView;
 
+use crate::function::Function;
 use crate::rc::*;
 use crate::string::*;
 
@@ -74,6 +76,21 @@ impl ToOwned for Tag {
 
     fn to_owned(&self) -> Self::Owned {
         unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+impl CoreArrayProvider for Tag {
+    type Raw = *mut BNTag;
+    type Context = ();
+    type Wrapped<'a> = Guard<'a, Self>;
+}
+
+unsafe impl CoreArrayProviderInner for Tag {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeTagList(raw, count)
+    }
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Guard::new(Self { handle: *raw }, &context)
     }
 }
 
@@ -176,3 +193,60 @@ impl ToOwned for TagType {
 
 unsafe impl Send for TagType {}
 unsafe impl Sync for TagType {}
+
+pub type TagReferenceType = BNTagReferenceType;
+
+pub struct TagReference {
+    ref_type: TagReferenceType,
+    auto_defined: bool,
+    tag: Ref<Tag>,
+    arch: CoreArchitecture,
+    func: Ref<Function>,
+    addr: u64,
+}
+
+impl TagReference {
+    unsafe fn from_borrowed_raw(value: &BNTagReference) -> Self {
+        Self {
+            ref_type: value.refType,
+            auto_defined: value.autoDefined,
+            tag: Tag { handle: value.tag }.to_owned(),
+            arch: CoreArchitecture::from_raw(value.arch),
+            func: Function { handle: value.func }.to_owned(),
+            addr: value.addr,
+        }
+    }
+    pub fn ref_type(&self) -> TagReferenceType {
+        self.ref_type
+    }
+    pub fn auto(&self) -> bool {
+        self.auto_defined
+    }
+    pub fn tag(&self) -> &Tag {
+        &self.tag
+    }
+    pub fn arch(&self) -> CoreArchitecture {
+        self.arch
+    }
+    pub fn functions(&self) -> &Function {
+        &self.func
+    }
+    pub fn address(&self) -> u64 {
+        self.addr
+    }
+}
+
+impl CoreArrayProvider for TagReference {
+    type Raw = BNTagReference;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for TagReference {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeTagReferences(raw, count)
+    }
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from_borrowed_raw(raw)
+    }
+}

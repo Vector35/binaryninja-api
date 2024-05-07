@@ -31,15 +31,14 @@ use crate::{
 
 use lazy_static::lazy_static;
 use std::{
-    borrow::Cow,
-    collections::HashSet,
+    borrow::{Borrow, Cow},
+    collections::{HashMap, HashSet},
     ffi::CStr,
-    fmt,
-    fmt::{Debug, Display, Formatter},
+    fmt::{self, Debug, Display, Formatter},
     hash::{Hash, Hasher},
     iter::{zip, IntoIterator},
-    mem,
-    mem::ManuallyDrop,
+    mem::{self, ManuallyDrop},
+    ops::Range,
     os::raw::c_char,
     ptr, result, slice,
     sync::Mutex,
@@ -214,6 +213,8 @@ impl<T: Clone> Clone for Conf<T> {
         }
     }
 }
+
+impl<T: Copy> Copy for Conf<T> {}
 
 impl<T> From<T> for Conf<T> {
     fn from(contents: T) -> Self {
@@ -1378,6 +1379,9 @@ impl Variable {
             storage: var.storage,
         }
     }
+    pub(crate) unsafe fn from_identifier(var: u64) -> Self {
+        Self::from_raw(unsafe { BNFromVariableIdentifier(var) })
+    }
 
     pub(crate) fn raw(&self) -> BNVariable {
         BNVariable {
@@ -1385,6 +1389,43 @@ impl Variable {
             index: self.index,
             storage: self.storage,
         }
+    }
+}
+
+impl CoreArrayProvider for Variable {
+    type Raw = BNVariable;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for Variable {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeVariableList(raw)
+    }
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Variable::from_raw(*raw)
+    }
+}
+
+// Name, Variable and Type
+impl CoreArrayProvider for (&str, Variable, &Type) {
+    type Raw = BNVariableNameAndType;
+    type Context = ();
+    type Wrapped<'a> = (&'a str, Variable, &'a Type) where Self: 'a;
+}
+
+unsafe impl CoreArrayProviderInner for (&str, Variable, &Type) {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeVariableNameAndTypeList(raw, count)
+    }
+    unsafe fn wrap_raw<'a>(
+        raw: &'a Self::Raw,
+        _context: &'a Self::Context,
+    ) -> (&'a str, Variable, &'a Type) {
+        let name = CStr::from_ptr(raw.name).to_str().unwrap();
+        let var = Variable::from_raw(raw.var);
+        let var_type = core::mem::transmute(&raw.type_);
+        (name, var, var_type)
     }
 }
 
@@ -1805,7 +1846,7 @@ impl StructureBuilder {
         &self,
         members: impl IntoIterator<Item = (T, S)>,
     ) -> &Self {
-        for (t, name) in members.into_iter() {
+        for (t, name) in members {
             self.append(t, name, MemberAccess::NoAccess, MemberScope::NoScope);
         }
         self
@@ -2496,7 +2537,7 @@ pub struct NameAndType(pub(crate) BNNameAndType);
 
 impl NameAndType {
     pub(crate) unsafe fn from_raw(raw: &BNNameAndType) -> Self {
-        Self ( *raw )
+        Self(*raw)
     }
 }
 
@@ -2851,3 +2892,818 @@ impl ConstantData {
 //         mem::transmute(raw)
 //     }
 // }
+
+/////////////////////////
+// ValueRange
+
+#[repr(transparent)]
+#[derive(Copy, Clone, Debug)]
+pub struct ValueRange<T> {
+    raw: BNValueRange,
+    _t: core::marker::PhantomData<T>,
+}
+
+impl<T> ValueRange<T> {
+    fn from_raw(value: BNValueRange) -> Self {
+        Self {
+            raw: value,
+            _t: core::marker::PhantomData,
+        }
+    }
+    fn into_raw(self) -> BNValueRange {
+        self.raw
+    }
+}
+
+impl IntoIterator for ValueRange<u64> {
+    type Item = u64;
+    type IntoIter = core::iter::StepBy<Range<u64>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (self.raw.start..self.raw.end).step_by(self.raw.step.try_into().unwrap())
+    }
+}
+impl IntoIterator for ValueRange<i64> {
+    type Item = i64;
+    type IntoIter = core::iter::StepBy<Range<i64>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (self.raw.start as i64..self.raw.end as i64).step_by(self.raw.step.try_into().unwrap())
+    }
+}
+
+/////////////////////////
+// PossibleValueSet
+
+#[derive(Clone, Debug)]
+pub enum PossibleValueSet {
+    UndeterminedValue,
+    EntryValue {
+        reg: i64,
+    },
+    ConstantValue {
+        value: i64,
+    },
+    ConstantPointerValue {
+        value: i64,
+    },
+    ExternalPointerValue,
+    StackFrameOffset {
+        offset: i64,
+    },
+    ReturnAddressValue,
+    ImportedAddressValue,
+    SignedRangeValue {
+        offset: i64,
+        ranges: Vec<ValueRange<i64>>,
+    },
+    UnsignedRangeValue {
+        offset: i64,
+        ranges: Vec<ValueRange<u64>>,
+    },
+    LookupTableValue {
+        tables: Vec<LookupTableEntry>,
+    },
+    InSetOfValues {
+        values: HashSet<i64>,
+    },
+    NotInSetOfValues {
+        values: HashSet<i64>,
+    },
+    ConstantDataValue {
+        value_type: ConstantDataType,
+        value: i64,
+    },
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum ConstantDataType {
+    Value,
+    ZeroExtend,
+    SignExtend,
+    Aggregate,
+}
+
+impl PossibleValueSet {
+    pub(crate) unsafe fn from_raw(value: BNPossibleValueSet) -> Self {
+        unsafe fn from_range<T>(value: BNPossibleValueSet) -> Vec<ValueRange<T>> {
+            core::slice::from_raw_parts(value.ranges, value.count)
+                .iter()
+                .copied()
+                .map(|range| ValueRange::from_raw(range))
+                .collect()
+        }
+        let from_sets = |value: BNPossibleValueSet| {
+            unsafe { core::slice::from_raw_parts(value.valueSet, value.count) }
+                .iter()
+                .copied()
+                .collect()
+        };
+        use BNRegisterValueType::*;
+        match value.state {
+            UndeterminedValue => Self::UndeterminedValue,
+            EntryValue => Self::EntryValue { reg: value.value },
+            ConstantValue => Self::ConstantValue { value: value.value },
+            ConstantPointerValue => Self::ConstantPointerValue { value: value.value },
+            StackFrameOffset => Self::StackFrameOffset {
+                offset: value.value,
+            },
+            ConstantDataValue => Self::ConstantDataValue {
+                value_type: ConstantDataType::Value,
+                value: value.value,
+            },
+            ConstantDataZeroExtendValue => Self::ConstantDataValue {
+                value_type: ConstantDataType::ZeroExtend,
+                value: value.value,
+            },
+            ConstantDataSignExtendValue => Self::ConstantDataValue {
+                value_type: ConstantDataType::SignExtend,
+                value: value.value,
+            },
+            ConstantDataAggregateValue => Self::ConstantDataValue {
+                value_type: ConstantDataType::Aggregate,
+                value: value.value,
+            },
+            SignedRangeValue => Self::SignedRangeValue {
+                offset: value.value,
+                ranges: from_range(value),
+            },
+            UnsignedRangeValue => Self::UnsignedRangeValue {
+                offset: value.value,
+                ranges: from_range(value),
+            },
+            LookupTableValue => {
+                let raw_tables = unsafe { core::slice::from_raw_parts(value.table, value.count) };
+                let raw_from_tables = |i: &BNLookupTableEntry| unsafe {
+                    core::slice::from_raw_parts(i.fromValues, i.fromCount)
+                };
+                let tables = raw_tables
+                    .iter()
+                    .map(|table| LookupTableEntry {
+                        from_values: raw_from_tables(table).to_vec(),
+                        to_value: table.toValue,
+                    })
+                    .collect();
+                Self::LookupTableValue { tables }
+            }
+            NotInSetOfValues => Self::NotInSetOfValues {
+                values: from_sets(value),
+            },
+            InSetOfValues => Self::InSetOfValues {
+                values: from_sets(value),
+            },
+            ImportedAddressValue => Self::ImportedAddressValue,
+            ReturnAddressValue => Self::ReturnAddressValue,
+            ExternalPointerValue => Self::ExternalPointerValue,
+        }
+    }
+    pub(crate) fn into_raw(self) -> PossibleValueSetRaw {
+        let mut raw: BNPossibleValueSet = unsafe { core::mem::zeroed() };
+        // set the state field
+        raw.state = self.value_type().into_raw_value();
+        // set all other fields
+        match self {
+            PossibleValueSet::UndeterminedValue
+            | PossibleValueSet::ExternalPointerValue
+            | PossibleValueSet::ReturnAddressValue
+            | PossibleValueSet::ImportedAddressValue => {}
+            PossibleValueSet::EntryValue { reg: value }
+            | PossibleValueSet::ConstantValue { value }
+            | PossibleValueSet::ConstantPointerValue { value }
+            | PossibleValueSet::ConstantDataValue { value, .. }
+            | PossibleValueSet::StackFrameOffset { offset: value } => raw.value = value,
+            PossibleValueSet::NotInSetOfValues { values }
+            | PossibleValueSet::InSetOfValues { values } => {
+                let values = Box::leak(values.into_iter().collect());
+                raw.valueSet = values.as_mut_ptr();
+                raw.count = values.len();
+            }
+            PossibleValueSet::SignedRangeValue { offset, ranges } => {
+                let ranges = Box::leak(ranges.into_iter().map(|x| x.into_raw()).collect());
+                raw.value = offset;
+                raw.ranges = ranges.as_mut_ptr();
+                raw.count = ranges.len();
+            }
+            PossibleValueSet::UnsignedRangeValue { offset, ranges } => {
+                let ranges = Box::leak(ranges.into_iter().map(|x| x.into_raw()).collect());
+                raw.value = offset;
+                raw.ranges = ranges.as_mut_ptr();
+                raw.count = ranges.len();
+            }
+            PossibleValueSet::LookupTableValue { tables } => {
+                let tables = Box::leak(tables.into_iter().map(|table| table.into_raw()).collect());
+                // SAFETY: BNLookupTableEntry and LookupTableEntryRaw are transparent
+                raw.table = tables.as_mut_ptr() as *mut BNLookupTableEntry;
+                raw.count = tables.len();
+            }
+        }
+        PossibleValueSetRaw(raw)
+    }
+
+    pub fn value_type(&self) -> RegisterValueType {
+        use RegisterValueType::*;
+        match self {
+            PossibleValueSet::UndeterminedValue => UndeterminedValue,
+            PossibleValueSet::EntryValue { .. } => EntryValue,
+            PossibleValueSet::ConstantValue { .. } => ConstantValue,
+            PossibleValueSet::ConstantPointerValue { .. } => ConstantPointerValue,
+            PossibleValueSet::ExternalPointerValue => ExternalPointerValue,
+            PossibleValueSet::StackFrameOffset { .. } => StackFrameOffset,
+            PossibleValueSet::ReturnAddressValue => ReturnAddressValue,
+            PossibleValueSet::ImportedAddressValue => ImportedAddressValue,
+            PossibleValueSet::SignedRangeValue { .. } => SignedRangeValue,
+            PossibleValueSet::UnsignedRangeValue { .. } => UnsignedRangeValue,
+            PossibleValueSet::LookupTableValue { .. } => LookupTableValue,
+            PossibleValueSet::InSetOfValues { .. } => InSetOfValues,
+            PossibleValueSet::NotInSetOfValues { .. } => NotInSetOfValues,
+            PossibleValueSet::ConstantDataValue {
+                value_type: ConstantDataType::Value,
+                ..
+            } => ConstantDataValue,
+            PossibleValueSet::ConstantDataValue {
+                value_type: ConstantDataType::ZeroExtend,
+                ..
+            } => ConstantDataZeroExtendValue,
+            PossibleValueSet::ConstantDataValue {
+                value_type: ConstantDataType::SignExtend,
+                ..
+            } => ConstantDataSignExtendValue,
+            PossibleValueSet::ConstantDataValue {
+                value_type: ConstantDataType::Aggregate,
+                ..
+            } => ConstantDataAggregateValue,
+        }
+    }
+}
+
+/// The owned version of the BNPossibleValueSet
+#[repr(transparent)]
+pub(crate) struct PossibleValueSetRaw(BNPossibleValueSet);
+
+impl PossibleValueSetRaw {
+    pub fn as_ffi(&self) -> &BNPossibleValueSet {
+        &self.0
+    }
+}
+
+impl Drop for PossibleValueSetRaw {
+    fn drop(&mut self) {
+        use BNRegisterValueType::*;
+        match self.0.state {
+            UndeterminedValue
+            | ExternalPointerValue
+            | ReturnAddressValue
+            | ImportedAddressValue
+            | EntryValue
+            | ConstantValue
+            | ConstantPointerValue
+            | StackFrameOffset
+            | ConstantDataValue
+            | ConstantDataZeroExtendValue
+            | ConstantDataSignExtendValue
+            | ConstantDataAggregateValue => {}
+            InSetOfValues | NotInSetOfValues => {
+                let _values: Box<[i64]> = unsafe {
+                    Box::from_raw(ptr::slice_from_raw_parts_mut(self.0.valueSet, self.0.count))
+                };
+            }
+            SignedRangeValue | UnsignedRangeValue => {
+                let _ranges: Box<[BNValueRange]> = unsafe {
+                    Box::from_raw(ptr::slice_from_raw_parts_mut(self.0.ranges, self.0.count))
+                };
+            }
+            LookupTableValue => {
+                // SAFETY: LookupTableEntryRaw and BNLookupTableEntry can be safely transmuted
+                let table_ptr = self.0.table as *mut LookupTableEntryRaw;
+                let _table: Box<[LookupTableEntryRaw]> = unsafe {
+                    Box::from_raw(ptr::slice_from_raw_parts_mut(table_ptr, self.0.count))
+                };
+            }
+        }
+    }
+}
+
+/////////////////////////
+// LookupTableEntry
+
+#[derive(Clone, Debug)]
+pub struct LookupTableEntry {
+    pub from_values: Vec<i64>,
+    pub to_value: i64,
+}
+
+impl LookupTableEntry {
+    fn into_raw(self) -> LookupTableEntryRaw {
+        let from_value = Box::leak(self.from_values.into_boxed_slice());
+        LookupTableEntryRaw(BNLookupTableEntry {
+            toValue: self.to_value,
+            fromValues: from_value.as_mut_ptr(),
+            fromCount: from_value.len(),
+        })
+    }
+}
+
+/// The owned version of the BNLookupTableEntry
+#[repr(transparent)]
+struct LookupTableEntryRaw(BNLookupTableEntry);
+impl Drop for LookupTableEntryRaw {
+    fn drop(&mut self) {
+        let _from_value: Box<[i64]> = unsafe {
+            Box::from_raw(ptr::slice_from_raw_parts_mut(
+                self.0.fromValues,
+                self.0.fromCount,
+            ))
+        };
+    }
+}
+
+/////////////////////////
+// ArchAndAddr
+
+#[derive(Copy, Clone, Eq, Hash, PartialEq)]
+pub struct ArchAndAddr {
+    pub arch: CoreArchitecture,
+    pub address: u64,
+}
+
+/////////////////////////
+// UserVariableValues
+
+pub struct UserVariableValues {
+    pub(crate) vars: *const [BNUserVariableValue],
+}
+
+impl UserVariableValues {
+    pub fn into_hashmap(self) -> HashMap<Variable, HashMap<ArchAndAddr, PossibleValueSet>> {
+        let mut result: HashMap<Variable, HashMap<ArchAndAddr, PossibleValueSet>> = HashMap::new();
+        for (var, def_site, possible_val) in self.all() {
+            result
+                .entry(var)
+                .or_default()
+                .entry(def_site)
+                .or_insert(possible_val);
+        }
+        result
+    }
+    pub fn all(&self) -> impl Iterator<Item = (Variable, ArchAndAddr, PossibleValueSet)> {
+        unsafe { &*self.vars }.iter().map(|var_val| {
+            let var = unsafe { Variable::from_raw(var_val.var) };
+            let def_site = ArchAndAddr {
+                arch: unsafe { CoreArchitecture::from_raw(var_val.defSite.arch) },
+                address: var_val.defSite.address,
+            };
+            let possible_val = unsafe { PossibleValueSet::from_raw(var_val.value) };
+            (var, def_site, possible_val)
+        })
+    }
+    pub fn values_from_variable(
+        &self,
+        var: Variable,
+    ) -> impl Iterator<Item = (ArchAndAddr, PossibleValueSet)> {
+        self.all()
+            .filter(move |(t_var, _, _)| t_var == &var)
+            .map(|(_var, def_site, possible_val)| (def_site, possible_val))
+    }
+}
+
+impl Drop for UserVariableValues {
+    fn drop(&mut self) {
+        unsafe { BNFreeUserVariableValues(self.vars as *mut BNUserVariableValue) };
+    }
+}
+
+/////////////////////////
+// ConstantReference
+
+#[derive(Copy, Clone, Eq, Hash, PartialEq)]
+pub struct ConstantReference {
+    pub value: i64,
+    pub size: usize,
+    pub pointer: bool,
+    pub intermediate: bool,
+}
+
+impl ConstantReference {
+    pub fn from_raw(value: BNConstantReference) -> Self {
+        Self {
+            value: value.value,
+            size: value.size,
+            pointer: value.pointer,
+            intermediate: value.intermediate,
+        }
+    }
+    pub fn into_raw(self) -> BNConstantReference {
+        BNConstantReference {
+            value: self.value,
+            size: self.size,
+            pointer: self.pointer,
+            intermediate: self.intermediate,
+        }
+    }
+}
+
+impl CoreArrayProvider for ConstantReference {
+    type Raw = BNConstantReference;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for ConstantReference {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeConstantReferenceList(raw)
+    }
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from_raw(*raw)
+    }
+}
+
+/////////////////////////
+// IndirectBranchInfo
+
+pub struct IndirectBranchInfo {
+    pub source_arch: CoreArchitecture,
+    pub source_addr: u64,
+    pub dest_arch: CoreArchitecture,
+    pub dest_addr: u64,
+    pub auto_defined: bool,
+}
+
+impl IndirectBranchInfo {
+    pub fn from_raw(value: BNIndirectBranchInfo) -> Self {
+        Self {
+            source_arch: unsafe { CoreArchitecture::from_raw(value.sourceArch) },
+            source_addr: value.sourceAddr,
+            dest_arch: unsafe { CoreArchitecture::from_raw(value.destArch) },
+            dest_addr: value.destAddr,
+            auto_defined: value.autoDefined,
+        }
+    }
+    pub fn into_raw(self) -> BNIndirectBranchInfo {
+        BNIndirectBranchInfo {
+            sourceArch: self.source_arch.0,
+            sourceAddr: self.source_addr,
+            destArch: self.dest_arch.0,
+            destAddr: self.dest_addr,
+            autoDefined: self.auto_defined,
+        }
+    }
+}
+
+impl CoreArrayProvider for IndirectBranchInfo {
+    type Raw = BNIndirectBranchInfo;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for IndirectBranchInfo {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeIndirectBranchList(raw)
+    }
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from_raw(*raw)
+    }
+}
+
+/////////////////////////
+// HighlightStandardColor
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum HighlightStandardColor {
+    //NoHighlightColor,
+    BlueHighlightColor,
+    GreenHighlightColor,
+    CyanHighlightColor,
+    RedHighlightColor,
+    MagentaHighlightColor,
+    YellowHighlightColor,
+    OrangeHighlightColor,
+    WhiteHighlightColor,
+    BlackHighlightColor,
+}
+
+impl HighlightStandardColor {
+    pub fn from_raw(value: BNHighlightStandardColor) -> Option<Self> {
+        Some(match value {
+            BNHighlightStandardColor::NoHighlightColor => return None,
+            BNHighlightStandardColor::BlueHighlightColor => Self::BlueHighlightColor,
+            BNHighlightStandardColor::GreenHighlightColor => Self::GreenHighlightColor,
+            BNHighlightStandardColor::CyanHighlightColor => Self::CyanHighlightColor,
+            BNHighlightStandardColor::RedHighlightColor => Self::RedHighlightColor,
+            BNHighlightStandardColor::MagentaHighlightColor => Self::MagentaHighlightColor,
+            BNHighlightStandardColor::YellowHighlightColor => Self::YellowHighlightColor,
+            BNHighlightStandardColor::OrangeHighlightColor => Self::OrangeHighlightColor,
+            BNHighlightStandardColor::WhiteHighlightColor => Self::WhiteHighlightColor,
+            BNHighlightStandardColor::BlackHighlightColor => Self::BlackHighlightColor,
+        })
+    }
+    pub fn into_raw(self) -> BNHighlightStandardColor {
+        match self {
+            //Self::NoHighlightColor => BNHighlightStandardColor::NoHighlightColor,
+            Self::BlueHighlightColor => BNHighlightStandardColor::BlueHighlightColor,
+            Self::GreenHighlightColor => BNHighlightStandardColor::GreenHighlightColor,
+            Self::CyanHighlightColor => BNHighlightStandardColor::CyanHighlightColor,
+            Self::RedHighlightColor => BNHighlightStandardColor::RedHighlightColor,
+            Self::MagentaHighlightColor => BNHighlightStandardColor::MagentaHighlightColor,
+            Self::YellowHighlightColor => BNHighlightStandardColor::YellowHighlightColor,
+            Self::OrangeHighlightColor => BNHighlightStandardColor::OrangeHighlightColor,
+            Self::WhiteHighlightColor => BNHighlightStandardColor::WhiteHighlightColor,
+            Self::BlackHighlightColor => BNHighlightStandardColor::BlackHighlightColor,
+        }
+    }
+}
+
+/////////////////////////
+// HighlightColor
+
+#[derive(Debug, Copy, Clone)]
+pub enum HighlightColor {
+    NoHighlightColor {
+        alpha: u8,
+    },
+    StandardHighlightColor {
+        color: HighlightStandardColor,
+        alpha: u8,
+    },
+    MixedHighlightColor {
+        color: HighlightStandardColor,
+        mix_color: HighlightStandardColor,
+        mix: u8,
+        alpha: u8,
+    },
+    CustomHighlightColor {
+        r: u8,
+        g: u8,
+        b: u8,
+        alpha: u8,
+    },
+}
+
+impl HighlightColor {
+    pub fn from_raw(raw: BNHighlightColor) -> Self {
+        const HIGHLIGHT_COLOR: u32 = BNHighlightColorStyle::StandardHighlightColor as u32;
+        const MIXED_HIGHLIGHT_COLOR: u32 = BNHighlightColorStyle::MixedHighlightColor as u32;
+        const CUSTOM_HIGHLIHGT_COLOR: u32 = BNHighlightColorStyle::CustomHighlightColor as u32;
+        match raw.style as u32 {
+            HIGHLIGHT_COLOR => {
+                let Some(color) = HighlightStandardColor::from_raw(raw.color) else {
+                    // StandardHighlightColor with NoHighlightColor, is no color
+                    return Self::NoHighlightColor { alpha: raw.alpha };
+                };
+                Self::StandardHighlightColor {
+                    color,
+                    alpha: raw.alpha,
+                }
+            }
+            MIXED_HIGHLIGHT_COLOR => {
+                let Some(color) = HighlightStandardColor::from_raw(raw.color) else {
+                    panic!("Highlight mixed color with no color");
+                };
+                let Some(mix_color) = HighlightStandardColor::from_raw(raw.mixColor) else {
+                    panic!("Highlight mixed color with no mix_color");
+                };
+                Self::MixedHighlightColor {
+                    color,
+                    mix_color,
+                    mix: raw.mix,
+                    alpha: raw.alpha,
+                }
+            }
+            CUSTOM_HIGHLIHGT_COLOR => Self::CustomHighlightColor {
+                r: raw.r,
+                g: raw.g,
+                b: raw.b,
+                alpha: raw.alpha,
+            },
+            // other color style is just no color
+            _ => Self::NoHighlightColor { alpha: u8::MAX },
+        }
+    }
+
+    pub fn into_raw(self) -> BNHighlightColor {
+        let zeroed: BNHighlightColor = unsafe { core::mem::zeroed() };
+        match self {
+            Self::NoHighlightColor { alpha } => BNHighlightColor {
+                style: BNHighlightColorStyle::StandardHighlightColor,
+                color: BNHighlightStandardColor::NoHighlightColor,
+                alpha,
+                ..zeroed
+            },
+            Self::StandardHighlightColor { color, alpha } => BNHighlightColor {
+                style: BNHighlightColorStyle::StandardHighlightColor,
+                color: color.into_raw(),
+                alpha,
+                ..zeroed
+            },
+            Self::MixedHighlightColor {
+                color,
+                mix_color,
+                mix,
+                alpha,
+            } => BNHighlightColor {
+                color: color.into_raw(),
+                mixColor: mix_color.into_raw(),
+                mix,
+                alpha,
+                ..zeroed
+            },
+            Self::CustomHighlightColor { r, g, b, alpha } => BNHighlightColor {
+                r,
+                g,
+                b,
+                alpha,
+                ..zeroed
+            },
+        }
+    }
+}
+
+/////////////////////////
+// IntegerDisplayType
+
+pub type IntegerDisplayType = binaryninjacore_sys::BNIntegerDisplayType;
+
+/////////////////////////
+// StackVariableReference
+
+#[derive(Debug, Clone)]
+pub struct StackVariableReference {
+    _source_operand: u32,
+    var_type: Conf<Ref<Type>>,
+    name: BnString,
+    var: Variable,
+    offset: i64,
+    size: usize,
+}
+
+impl StackVariableReference {
+    pub fn from_raw(value: BNStackVariableReference) -> Self {
+        let var_type = Conf::new(
+            unsafe { Type::ref_from_raw(value.type_) },
+            value.typeConfidence,
+        );
+        let name = unsafe { BnString::from_raw(value.name) };
+        let var = unsafe { Variable::from_identifier(value.varIdentifier) };
+        let offset = value.referencedOffset;
+        let size = value.size;
+        Self {
+            _source_operand: value.sourceOperand,
+            var_type,
+            name,
+            var,
+            offset,
+            size,
+        }
+    }
+    pub fn variable(&self) -> &Variable {
+        &self.var
+    }
+    pub fn variable_type(&self) -> Conf<&Type> {
+        self.var_type.as_ref()
+    }
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+    pub fn offset(&self) -> i64 {
+        self.offset
+    }
+    pub fn size(&self) -> usize {
+        self.size
+    }
+}
+
+impl CoreArrayProvider for StackVariableReference {
+    type Raw = BNStackVariableReference;
+    type Context = ();
+    type Wrapped<'a> = Guard<'a, Self>;
+}
+
+unsafe impl CoreArrayProviderInner for StackVariableReference {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeStackVariableReferenceList(raw, count)
+    }
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Guard::new(Self::from_raw(*raw), context)
+    }
+}
+
+/////////////////////////
+// RegisterStackAdjustment
+
+#[derive(Debug, Copy, Clone)]
+pub struct RegisterStackAdjustment<A: Architecture> {
+    reg_id: u32,
+    adjustment: Conf<i32>,
+    arch: A::Handle,
+}
+
+impl<A: Architecture> RegisterStackAdjustment<A> {
+    pub(crate) unsafe fn from_raw(value: BNRegisterStackAdjustment, arch: A::Handle) -> Self {
+        RegisterStackAdjustment {
+            reg_id: value.regStack,
+            adjustment: Conf::new(value.adjustment, value.confidence),
+            arch,
+        }
+    }
+    pub(crate) fn into_raw(self) -> BNRegisterStackAdjustment {
+        BNRegisterStackAdjustment {
+            regStack: self.reg_id,
+            adjustment: self.adjustment.contents,
+            confidence: self.adjustment.confidence,
+        }
+    }
+    pub fn new<I>(reg_id: u32, adjustment: I, arch_handle: A::Handle) -> Self
+    where
+        I: Into<Conf<i32>>,
+    {
+        Self {
+            reg_id,
+            adjustment: adjustment.into(),
+            arch: arch_handle,
+        }
+    }
+    pub const fn register_id(&self) -> u32 {
+        self.reg_id
+    }
+    pub fn register(&self) -> A::Register {
+        self.arch.borrow().register_from_id(self.reg_id).unwrap()
+    }
+}
+
+impl<A: Architecture> CoreArrayProvider for RegisterStackAdjustment<A> {
+    type Raw = BNRegisterStackAdjustment;
+    type Context = A::Handle;
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl<A: Architecture> CoreArrayProviderInner for RegisterStackAdjustment<A> {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeRegisterStackAdjustments(raw)
+    }
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from_raw(*raw, context.clone())
+    }
+}
+
+/////////////////////////
+// RegisterStackAdjustment
+
+// NOTE only exists as part of an Array, never owned
+pub struct MergedVariable {
+    target: Variable,
+    // droped by the CoreArrayProviderInner::free
+    sources: ManuallyDrop<Array<Variable>>,
+}
+
+impl MergedVariable {
+    pub fn target(&self) -> Variable {
+        self.target
+    }
+    pub fn sources(&self) -> &Array<Variable> {
+        &self.sources
+    }
+}
+
+impl CoreArrayProvider for MergedVariable {
+    type Raw = BNMergedVariable;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for MergedVariable {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeMergedVariableList(raw, count)
+    }
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self {
+            target: Variable::from_raw(raw.target),
+            sources: ManuallyDrop::new(Array::new(raw.sources, raw.sourceCount, ())),
+        }
+    }
+}
+
+/////////////////////////
+// UnresolvedIndirectBranches
+
+// NOTE only exists as part of an Array, never owned
+pub struct UnresolvedIndirectBranches(u64);
+
+impl UnresolvedIndirectBranches {
+    pub fn address(&self) -> u64 {
+        self.0
+    }
+}
+
+impl CoreArrayProvider for UnresolvedIndirectBranches {
+    type Raw = u64;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for UnresolvedIndirectBranches {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeAddressList(raw)
+    }
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self(*raw)
+    }
+}

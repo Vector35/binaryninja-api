@@ -1,4 +1,4 @@
-use binaryninjacore_sys::BNFromVariableIdentifier;
+use binaryninjacore_sys::BNGetDefaultIndexForMediumLevelILVariableDefinition;
 use binaryninjacore_sys::BNGetMediumLevelILByIndex;
 use binaryninjacore_sys::BNMediumLevelILInstruction;
 use binaryninjacore_sys::BNMediumLevelILOperation;
@@ -1034,6 +1034,22 @@ impl MediumLevelILInstruction {
         }
     }
 
+    /// Gets the unique variable for a definition instruction. This unique variable can be passed
+    /// to [crate::function::Function::split_variable] to split a variable at a definition. The given `var` is the
+    /// assigned variable to query.
+    ///
+    /// * `var` - variable to query
+    pub fn get_split_var_for_definition(&self, var: &Variable) -> Variable {
+        let new_index = unsafe {
+            BNGetDefaultIndexForMediumLevelILVariableDefinition(
+                self.function.handle,
+                &var.raw(),
+                self.index,
+            )
+        };
+        Variable::new(var.t, new_index, var.storage)
+    }
+
     fn lift_operand(&self, expr_idx: usize) -> Box<MediumLevelILLiftedInstruction> {
         Box::new(self.function.lifted_instruction_from_idx(expr_idx))
     }
@@ -1121,7 +1137,7 @@ fn get_raw_operation(function: &MediumLevelILFunction, idx: usize) -> BNMediumLe
 }
 
 fn get_var(id: u64) -> Variable {
-    unsafe { Variable::from_raw(BNFromVariableIdentifier(id)) }
+    unsafe { Variable::from_identifier(id) }
 }
 
 fn get_var_ssa(id: u64, version: usize) -> SSAVariable {

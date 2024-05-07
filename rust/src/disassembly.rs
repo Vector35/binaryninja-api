@@ -265,6 +265,35 @@ impl Drop for InstructionTextToken {
     }
 }
 
+impl CoreArrayProvider for InstructionTextToken {
+    type Raw = BNInstructionTextToken;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+unsafe impl CoreArrayProviderInner for InstructionTextToken {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeInstructionText(raw, count)
+    }
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self(*raw)
+    }
+}
+
+impl CoreArrayProvider for Array<InstructionTextToken> {
+    type Raw = BNInstructionTextLine;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+unsafe impl CoreArrayProviderInner for Array<InstructionTextToken> {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeInstructionTextLines(raw, count)
+    }
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::new(raw.tokens, raw.count, ())
+    }
+}
+
+#[repr(transparent)]
 pub struct DisassemblyTextLine(pub(crate) BNDisassemblyTextLine);
 
 impl DisassemblyTextLine {
@@ -419,6 +448,21 @@ impl Drop for DisassemblyTextLine {
             let ptr = core::ptr::slice_from_raw_parts_mut(self.0.tokens, self.0.count);
             let _ = unsafe { Box::from_raw(ptr) };
         }
+    }
+}
+
+impl CoreArrayProvider for DisassemblyTextLine {
+    type Raw = BNDisassemblyTextLine;
+    type Context = ();
+    type Wrapped<'a> = &'a Self;
+}
+
+unsafe impl CoreArrayProviderInner for DisassemblyTextLine {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeDisassemblyTextLines(raw, count)
+    }
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        core::mem::transmute(raw)
     }
 }
 

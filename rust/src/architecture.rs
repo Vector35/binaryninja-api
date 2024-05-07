@@ -715,6 +715,21 @@ impl Register for CoreRegister {
     }
 }
 
+impl CoreArrayProvider for CoreRegister {
+    type Raw = u32;
+    type Context = CoreArchitecture;
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for CoreRegister {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeRegisterList(raw)
+    }
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self(context.0, *raw)
+    }
+}
+
 pub struct CoreRegisterStackInfo(*mut BNArchitecture, BNRegisterStackInfo);
 
 impl RegisterStackInfo for CoreRegisterStackInfo {
@@ -2419,7 +2434,10 @@ where
         };
 
         let inputs = intrinsic.inputs();
-        let mut res: Box<[_]> = inputs.into_iter().map(|input| unsafe { Ref::into_raw(input) }.0).collect();
+        let mut res: Box<[_]> = inputs
+            .into_iter()
+            .map(|input| unsafe { Ref::into_raw(input) }.0)
+            .collect();
 
         unsafe {
             *count = res.len();

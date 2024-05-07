@@ -1,4 +1,3 @@
-use binaryninjacore_sys::BNFromVariableIdentifier;
 use binaryninjacore_sys::BNGetHighLevelILByIndex;
 use binaryninjacore_sys::BNGetMediumLevelILByIndex;
 use binaryninjacore_sys::BNHighLevelILOperation;
@@ -215,7 +214,7 @@ impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandSSAVarIter<F> {
 }
 
 pub fn get_var(id: u64) -> Variable {
-    unsafe { Variable::from_raw(BNFromVariableIdentifier(id)) }
+    unsafe { Variable::from_identifier(id) }
 }
 
 pub fn get_var_ssa(id: u64, version: usize) -> SSAVariable {

@@ -1,4 +1,3 @@
-use binaryninjacore_sys::BNFromVariableIdentifier;
 use binaryninjacore_sys::BNGetHighLevelILByIndex;
 use binaryninjacore_sys::BNHighLevelILOperation;
 
@@ -985,7 +984,7 @@ fn get_float(value: u64, size: usize) -> f64 {
 }
 
 fn get_var(id: u64) -> Variable {
-    unsafe { Variable::from_raw(BNFromVariableIdentifier(id)) }
+    unsafe { Variable::from_identifier(id) }
 }
 
 fn get_member_index(idx: u64) -> Option<usize> {

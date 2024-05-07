@@ -29,7 +29,7 @@ jobs:
 
       - name: cargo check
         working-directory: ./rust
-        run: cargo check --workspace
+        run: cargo check --workspace --all-features
 
       - name: cargo clippy
         working-directory: ./rust

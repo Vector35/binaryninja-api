@@ -28,14 +28,25 @@ int disas_instr_word(uint32_t instr_word, char *buf)
 {
 	int rc = -1;
 
-	struct decomp_result res;
+	struct decomp_result res = {0};
 	struct cs_insn *insn = &(res.insn);
 	struct cs_detail *detail = &(res.detail);
 	struct cs_ppc *ppc = &(detail->ppc);
 
 	if(powerpc_decompose((const uint8_t *)&instr_word, 4, 0, bigendian, &res, address_size_, cs_mode_local)) {
-		if(print_errors) printf("ERROR: powerpc_decompose()\n");
-		goto cleanup;
+		if(print_errors)
+		{			
+			if (DoesQualifyForLocalDisassembly((uint8_t*)&instr_word, !bigendian) != PPC_INS_INVALID)
+			{
+				size_t instsz = 4;
+				PerformLocalDisassembly((uint8_t*)&instr_word, 0, instsz, &res, !bigendian);
+			}
+			else
+			{
+				printf("ERROR: powerpc_decompose()\n");
+				goto cleanup;
+			}
+		}
 	}
 
 	/* MEGA DETAILS, IF YOU WANT 'EM */

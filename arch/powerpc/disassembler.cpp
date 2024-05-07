@@ -26,7 +26,9 @@ int DoesQualifyForLocalDisassembly(const uint8_t *data, bool bigendian)
 	uint32_t tmp = 0;
 
 	if(bigendian == true)
+	{
 		insword = bswap32(insword);
+	}
 
 	// 111111xxx00xxxxxxxxxx00001000000 <- fcmpo
 	tmp = insword & 0xFC6007FF;
@@ -41,17 +43,78 @@ int DoesQualifyForLocalDisassembly(const uint8_t *data, bool bigendian)
 
 void ppc_fcmpo(uint32_t insword, decomp_result *res)
 {
+	unsigned regtmp = 0;
+
 	// 111111AAA00BBBBBCCCCC00001000000 "fcmpo crA,fB,fC"
-	res->detail.ppc.operands[0].reg = (ppc_reg)(PPC_REG_CR0 + (insword >> 23) & 7);
+	regtmp = PPC_REG_CR0 + ((insword >> 23) & 7);
+	res->detail.ppc.operands[0].reg = (ppc_reg)(regtmp);
 	res->detail.ppc.operands[0].type = PPC_OP_REG;
-	res->detail.ppc.operands[1].reg = (ppc_reg)(PPC_REG_F0 + (insword >> 16) & 31);
+
+	regtmp = PPC_REG_F0 + ((insword >> 16) & 31);
+	res->detail.ppc.operands[1].reg = (ppc_reg)(regtmp);
 	res->detail.ppc.operands[1].type = PPC_OP_REG;
-	res->detail.ppc.operands[2].reg = (ppc_reg)(PPC_REG_F0 + (insword >> 11) & 31);
+
+	regtmp = PPC_REG_F0 + ((insword >> 11) & 31);
+	res->detail.ppc.operands[2].reg = (ppc_reg)(regtmp);
 	res->detail.ppc.operands[2].type = PPC_OP_REG;
 
+
+#ifdef FORCE_TEST
+	SStream ss;
+	struct cs_struct* handle = 0;
+	struct MCInst tempmc = {0};
+	char* first_space = 0;
+
+	// SStream_Init(&ss);
+	ss.index = 0;
+	ss.buffer[0] = '\0';
+	regtmp = PPC_REG_CR0 + ((insword >> 23) & 7);
+	tempmc.Operands[0].MachineOperandType = MCOperand::kRegister;
+	tempmc.Operands[0].Kind = 1;
+	tempmc.Operands[0].RegVal = regtmp;
+	regtmp = PPC_REG_F0 + ((insword >> 16) & 31);
+	tempmc.Operands[1].MachineOperandType = MCOperand::kRegister;
+	tempmc.Operands[1].Kind = 1;
+	tempmc.Operands[1].RegVal = regtmp;
+	regtmp = PPC_REG_F0 + ((insword >> 11) & 31);
+	tempmc.Operands[2].Kind = 1;
+	tempmc.Operands[2].MachineOperandType = MCOperand::kRegister;
+	tempmc.Operands[2].RegVal = regtmp;
+
+	// temporarily set this so that print processing succeeds
+	res->insn.id = PPC_INS_FCMPU;
+
+	if (handle_big != 0)
+	{
+		handle = (struct cs_struct*)handle_big;
+	}
+	else if (handle_lil != 0)
+	{
+		handle = (struct cs_struct*)handle_lil;
+	}
+
+#define PPC_FCMPUS 804
+
+	tempmc.csh = handle;
+	tempmc.Opcode = PPC_FCMPUS;
+	tempmc.flat_insn = &res->insn;
+	tempmc.flat_insn->detail = &res->detail;
+
+	if (handle != 0)
+	{
+		handle->printer(&tempmc, &ss, handle->printer_info);
+	}
+
+	// replace the 'fcmpu' with 'fcmpo'
+	first_space = strchr(ss.buffer, ' ');
+	strncpy(res->insn.op_str, first_space + 1, sizeof(res->insn.op_str));
+#endif
+
+	strncpy(res->insn.mnemonic, "fcmpo", sizeof(res->insn.mnemonic));
+
+	// reset this to the target value
 	res->insn.id = PPC_INS_BN_FCMPO;
 	res->detail.ppc.op_count = 3;
-	strncpy(res->insn.mnemonic, "fcmpo", sizeof(res->insn.mnemonic));
 }
 
 void ppc_xxpermr(uint32_t insword, decomp_result *res)
@@ -76,10 +139,13 @@ void ppc_xxpermr(uint32_t insword, decomp_result *res)
 bool PerformLocalDisassembly(const uint8_t *data, uint64_t addr, size_t &len, decomp_result* res, bool bigendian)
 {
 	uint32_t local_op = 0;
-	uint32_t insword = 0;
+	uint32_t insword = *(uint32_t *)data;
 
 	if(bigendian == true)
+	{
 		insword = bswap32(insword);
+	}
+
 	local_op = DoesQualifyForLocalDisassembly(data, bigendian);
 
 	switch(local_op)

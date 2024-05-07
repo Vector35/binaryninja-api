@@ -57,6 +57,8 @@ if (DEFINED FORCE_TEST)
 		add_executable(test_disasm test_disasm.cpp disassembler.cpp)
 		add_executable(test_asm test_asm.cpp assembler.cpp)
 
+		target_compile_definitions(test_disasm PRIVATE FORCE_TEST=1)
+
 		set_target_properties(test_disasm test_asm PROPERTIES
 			CXX_STANDARD 17
 			CXX_VISIBILITY_PRESET hidden

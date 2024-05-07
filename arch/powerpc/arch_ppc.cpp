@@ -482,25 +482,25 @@ class PowerpcArchitecture: public Architecture
 		case PPC_INS_BN_FCMPO:
 			result.emplace_back(InstructionToken, insn->mnemonic);
 			result.emplace_back(TextToken, "   ");
-			snprintf(buf, sizeof(buf), "cr%d", ppc->operands[0].reg);
+			snprintf(buf, sizeof(buf), "cr%d", ppc->operands[0].reg - PPC_REG_CR0);
 			result.emplace_back(RegisterToken, buf);
 			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "f%d", ppc->operands[1].reg);
+			snprintf(buf, sizeof(buf), "f%d", ppc->operands[1].reg - PPC_REG_F0);
 			result.emplace_back(RegisterToken, buf);
 			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "f%d", ppc->operands[2].reg);
+			snprintf(buf, sizeof(buf), "f%d", ppc->operands[2].reg - PPC_REG_F0);
 			result.emplace_back(RegisterToken, buf);
 			break;
 		case PPC_INS_BN_XXPERMR:
 			result.emplace_back(InstructionToken, insn->mnemonic);
 			result.emplace_back(TextToken, " ");
-			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[0].reg);
+			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[0].reg - PPC_REG_VS0);
 			result.emplace_back(RegisterToken, buf);
 			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[1].reg);
+			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[1].reg - PPC_REG_VS0);
 			result.emplace_back(RegisterToken, buf);
 			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[2].reg);
+			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[2].reg - PPC_REG_VS0);
 			result.emplace_back(RegisterToken, buf);
 			break;
 		default:
@@ -531,8 +531,10 @@ class PowerpcArchitecture: public Architecture
 		}
 
 		if (DoesQualifyForLocalDisassembly(data, endian == BigEndian))
+		{
 			// PerformLocalDisassembly(data, addr, len, &res, endian == BigEndian);
 			return PrintLocalDisassembly(data, addr, len, result, &res);
+		}
 		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			goto cleanup;

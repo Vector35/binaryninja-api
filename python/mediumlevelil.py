@@ -91,14 +91,14 @@ class SSAVariable:
 		"""
 		Gets the MediumLevelILInstruction where this SSAVariable is defined.
 		"""
-		return self.var.function.get_ssa_var_definition(self)
+		return self.function.mlil.get_ssa_var_definition(self)
 
 	@property
 	def use_sites(self) -> List['MediumLevelILInstruction']:
 		"""
 		Gets the list of MediumLevelILInstructions where this SSAVariable is used inside of this function.
 		"""
-		return self.var.function.get_ssa_var_uses(self)
+		return self.function.mlil.get_ssa_var_uses(self)
 
 
 class MediumLevelILLabel:

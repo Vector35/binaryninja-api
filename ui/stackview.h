@@ -275,6 +275,9 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 	//! Override the default event handler so we can have nice tooltips.
 	bool event(QEvent* event) override;
 
+	//! Get the current base name/offset using the currently selected base register
+	std::pair<std::string, int64_t> calculateBaseOffset() const;
+
 	BinaryViewRef getData() override;
 	uint64_t getCurrentOffset() override;
 	bool canCopyAddress() override { return false; };

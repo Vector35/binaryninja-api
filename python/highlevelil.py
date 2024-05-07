@@ -43,7 +43,7 @@ from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Tailcall, Syscall, Localcall, Comparison, Signed, UnaryOperation, BinaryOperation, SSA, Phi,
     Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal, FloatingPoint, Intrinsic, Return,
-    VariableInstruction, SSAVariableInstruction
+    VariableInstruction, SSAVariableInstruction, SetVar
 )
 from . import deprecation
 
@@ -1267,7 +1267,7 @@ class HighLevelILVarDeclare(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILVarInit(HighLevelILInstruction):
+class HighLevelILVarInit(HighLevelILInstruction, SetVar):
 	@property
 	def dest(self) -> 'variable.Variable':
 		return self.get_var(0)
@@ -1289,7 +1289,7 @@ class HighLevelILVarInit(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILVarInitSsa(HighLevelILInstruction, SSA):
+class HighLevelILVarInitSsa(HighLevelILInstruction, SetVar, SSA):
 	@property
 	def dest(self) -> 'mediumlevelil.SSAVariable':
 		return self.get_var_ssa(0, 1)
@@ -1311,7 +1311,7 @@ class HighLevelILVarInitSsa(HighLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILAssign(HighLevelILInstruction):
+class HighLevelILAssign(HighLevelILInstruction, SetVar):
 	@property
 	def dest(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
@@ -1338,7 +1338,7 @@ class HighLevelILAssign(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILAssignUnpack(HighLevelILInstruction):
+class HighLevelILAssignUnpack(HighLevelILInstruction, SetVar):
 	@property
 	def dest(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(0, 1)
@@ -1448,7 +1448,7 @@ class HighLevelILVarSsa(HighLevelILInstruction, SSAVariableInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILVarPhi(HighLevelILInstruction, Phi):
+class HighLevelILVarPhi(HighLevelILInstruction, Phi, SetVar):
 	@property
 	def dest(self) -> 'mediumlevelil.SSAVariable':
 		return self.get_var_ssa(0, 1)

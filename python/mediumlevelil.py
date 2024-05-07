@@ -80,25 +80,32 @@ class SSAVariable:
 
 	@property
 	def function(self) -> 'function.Function':
+		"""returns the source Function object which this variable belongs to"""
 		return self.var.function
 
 	@property
+	def il_function(self) -> 'function.ILFunctionType':
+		"""returns the il Function object which this variable belongs to"""
+		return self.var._il_function
+
+	@property
 	def dead_store_elimination(self) -> DeadStoreElimination:
+		"""returns the dead store elimination setting for this variable (read-only)"""
 		return self.var.dead_store_elimination
 
 	@property
-	def def_site(self) -> Optional['MediumLevelILInstruction']:
+	def def_site(self) -> Optional[Union['MediumLevelILInstruction', 'highlevelil.HighLevelILInstruction']]:
 		"""
-		Gets the MediumLevelILInstruction where this SSAVariable is defined.
+		Gets the IL instructions where this SSAVariable is defined.
 		"""
-		return self.function.mlil.get_ssa_var_definition(self)
+		return self.il_function.get_ssa_var_definition(self)
 
 	@property
-	def use_sites(self) -> List['MediumLevelILInstruction']:
+	def use_sites(self) -> List[Union['MediumLevelILInstruction', 'highlevelil.HighLevelILInstruction']]:
 		"""
-		Gets the list of MediumLevelILInstructions where this SSAVariable is used inside of this function.
+		Gets the list of IL instructions where this SSAVariable is used inside of this function.
 		"""
-		return self.function.mlil.get_ssa_var_uses(self)
+		return self.il_function.get_ssa_var_uses(self)
 
 
 class MediumLevelILLabel:

@@ -4,6 +4,7 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QLineEdit>
+#include <optional>
 
 #include "dockhandler.h"
 #include "render.h"
@@ -196,6 +197,9 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 	HighlightTokenState m_highlight;
 	size_t m_lineIndex;
 	size_t m_tokenIndex;
+	bool m_needFirstFocus;
+
+	std::optional<int64_t> m_baseOffset;
 
 	//! Bind and register all stack view actions.
 	void setupActions();
@@ -271,6 +275,15 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 
 	//! Show the dialog to switch which base register is used for offsets
 	void chooseBaseRegister();
+
+	//! Show the dialog to pick a constant base offset
+	void chooseBaseOffset();
+
+	//! Set the base offset to a register (or clear on nullopt)
+	void setBaseRegister(ArchitectureRef arch, std::optional<std::string> regName);
+
+	//! Set the base offset to a constant (or clear on nullopt)
+	void setBaseOffset(std::optional<int64_t> offset);
 
 	//! Override the default event handler so we can have nice tooltips.
 	bool event(QEvent* event) override;

@@ -293,6 +293,8 @@ extern "C"
 	typedef struct BNAnalysisMergeConflict BNAnalysisMergeConflict;
 	typedef struct BNTypeArchiveMergeConflict BNTypeArchiveMergeConflict;
 	typedef struct BNCollaborationLazyT BNCollaborationLazyT;
+	typedef struct BNUndoAction BNUndoAction;
+	typedef struct BNUndoEntry BNUndoEntry;
 
 	//! Console log levels
 	typedef enum BNLogLevel
@@ -2193,24 +2195,6 @@ extern "C"
 		uint64_t addr;
 	} BNTagReference;
 
-	typedef struct BNUndoAction
-	{
-		BNActionType actionType;
-		char* summaryText;
-		BNInstructionTextToken* summaryTokens;
-		size_t summaryTokenCount;
-	} BNUndoAction;
-
-	typedef struct BNUndoEntry
-	{
-		bool valid;
-		BNUser* user;
-		char* id;
-		BNUndoAction* actions;
-		uint64_t actionCount;
-		uint64_t timestamp;
-	} BNUndoEntry;
-
 	typedef struct BNCallingConventionWithConfidence
 	{
 		BNCallingConvention* convention;
@@ -3649,13 +3633,27 @@ extern "C"
 	BINARYNINJACOREAPI BNKeyValueStore* BNReadSnapshotDataWithProgress(
 	    BNSnapshot* snapshot, void* ctxt, bool (*progress)(void* ctxt, size_t progress, size_t total));
 	BINARYNINJACOREAPI BNDataBuffer* BNGetSnapshotUndoData(BNSnapshot* snapshot);
-	BINARYNINJACOREAPI BNUndoEntry* BNGetSnapshotUndoEntries(BNSnapshot* snapshot, size_t* count);
-	BINARYNINJACOREAPI BNUndoEntry* BNGetSnapshotUndoEntriesWithProgress(
+	BINARYNINJACOREAPI BNUndoEntry** BNGetSnapshotUndoEntries(BNSnapshot* snapshot, size_t* count);
+	BINARYNINJACOREAPI BNUndoEntry** BNGetSnapshotUndoEntriesWithProgress(
 	    BNSnapshot* snapshot, void* ctxt, bool (*progress)(void* ctxt, size_t progress, size_t total), size_t* count);
 	BINARYNINJACOREAPI bool BNSnapshotHasAncestor(BNSnapshot* snapshot, BNSnapshot* other);
 	BINARYNINJACOREAPI bool BNSnapshotStoreData(BNSnapshot* snapshot, BNKeyValueStore* data,
 		void* ctxt, BNProgressFunction progress);
 
+	// Undo actions
+	BINARYNINJACOREAPI BNUndoAction* BNNewUndoActionReference(BNUndoAction* action);
+	BINARYNINJACOREAPI void BNFreeUndoAction(BNUndoAction* action);
+	BINARYNINJACOREAPI void BNFreeUndoActionList(BNUndoAction** actions, size_t count);
+	BINARYNINJACOREAPI char* BNUndoActionGetSummaryText(BNUndoAction* action);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNUndoActionGetSummary(BNUndoAction* action, size_t* tokenCount);
+
+	// Undo entries
+	BINARYNINJACOREAPI BNUndoEntry* BNNewUndoEntryReference(BNUndoEntry* entry);
+	BINARYNINJACOREAPI void BNFreeUndoEntry(BNUndoEntry* entry);
+	BINARYNINJACOREAPI void BNFreeUndoEntryList(BNUndoEntry** entrys, size_t count);
+	BINARYNINJACOREAPI char* BNUndoEntryGetId(BNUndoEntry* entry);
+	BINARYNINJACOREAPI BNUndoAction** BNUndoEntryGetActions(BNUndoEntry* entry, size_t* count);
+	BINARYNINJACOREAPI uint64_t BNUndoEntryGetTimestamp(BNUndoEntry* entry);
 
 	BINARYNINJACOREAPI bool BNRebase(BNBinaryView* data, uint64_t address);
 	BINARYNINJACOREAPI bool BNRebaseWithProgress(
@@ -3683,13 +3681,13 @@ extern "C"
 	BINARYNINJACOREAPI bool BNCanRedo(BNFileMetadata* file);
 	BINARYNINJACOREAPI bool BNRedo(BNFileMetadata* file);
 
-	BINARYNINJACOREAPI BNUndoEntry* BNGetUndoEntries(BNFileMetadata* file, size_t* count);
-	BINARYNINJACOREAPI BNUndoEntry* BNGetRedoEntries(BNFileMetadata* file, size_t* count);
-	BINARYNINJACOREAPI BNUndoEntry BNGetLastUndoEntry(BNFileMetadata* file);
-	BINARYNINJACOREAPI BNUndoEntry BNGetLastRedoEntry(BNFileMetadata* file);
+	BINARYNINJACOREAPI BNUndoEntry** BNGetUndoEntries(BNFileMetadata* file, size_t* count);
+	BINARYNINJACOREAPI BNUndoEntry** BNGetRedoEntries(BNFileMetadata* file, size_t* count);
+	BINARYNINJACOREAPI BNUndoEntry* BNGetLastUndoEntry(BNFileMetadata* file);
+	BINARYNINJACOREAPI BNUndoEntry* BNGetLastRedoEntry(BNFileMetadata* file);
 	BINARYNINJACOREAPI char* BNGetLastUndoEntryTitle(BNFileMetadata* file);
 	BINARYNINJACOREAPI char* BNGetLastRedoEntryTitle(BNFileMetadata* file);
-	BINARYNINJACOREAPI void BNFreeUndoEntries(BNUndoEntry* entries, size_t count);
+	BINARYNINJACOREAPI void BNFreeUndoEntries(BNUndoEntry** entries, size_t count);
 	BINARYNINJACOREAPI void BNClearUndoEntries(BNFileMetadata* file);
 
 	BINARYNINJACOREAPI BNUser* BNNewUserReference(BNUser* user);

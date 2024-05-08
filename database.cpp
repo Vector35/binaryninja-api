@@ -298,41 +298,31 @@ DataBuffer Snapshot::GetUndoData()
 }
 
 
-vector<UndoEntry> Snapshot::GetUndoEntries()
+vector<Ref<UndoEntry>> Snapshot::GetUndoEntries()
 {
 	return GetUndoEntries([](size_t, size_t) { return true; });
 }
 
 
-vector<UndoEntry> Snapshot::GetUndoEntries(const std::function<bool(size_t, size_t)>& progress)
+vector<Ref<UndoEntry>> Snapshot::GetUndoEntries(const std::function<bool(size_t, size_t)>& progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
 
-	size_t numEntries;
-	BNUndoEntry* entries = BNGetSnapshotUndoEntriesWithProgress(m_object, &pctxt, ProgressCallback, &numEntries);
+	size_t count;
+	BNUndoEntry** entries = BNGetSnapshotUndoEntriesWithProgress(m_object, &pctxt, ProgressCallback, &count);
 	if (entries == nullptr)
 	{
-		throw DatabaseException("BNGetSnapshotUndoEntries");
+		throw DatabaseException("BNGetSnapshotUndoEntriesWithProgress");
 	}
 
-	vector<UndoEntry> result;
-	result.reserve(numEntries);
-	for (size_t i = 0; i < numEntries; i++)
+	vector<Ref<UndoEntry>> result;
+	for (size_t i = 0; i < count; i++)
 	{
-		UndoEntry temp;
-		temp.timestamp = entries[i].timestamp;
-		temp.id = entries[i].id;
-		temp.user = new User(BNNewUserReference(entries[i].user));
-		size_t actionCount = entries[i].actionCount;
-		for (size_t actionIndex = 0; actionIndex < actionCount; actionIndex++)
-		{
-			temp.actions.emplace_back(entries[i].actions[actionIndex]);
-		}
-		result.push_back(temp);
+		result.push_back(new UndoEntry(BNNewUndoEntryReference(entries[i])));
 	}
+	BNFreeUndoEntryList(entries, count);
 
-	BNFreeUndoEntries(entries, numEntries);
 	return result;
 }
 

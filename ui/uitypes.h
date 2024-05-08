@@ -115,6 +115,8 @@ typedef BinaryNinja::Ref<BinaryNinja::RepoPlugin> RepoPluginRef;
 typedef BinaryNinja::Ref<BinaryNinja::Repository> RepositoryRef;
 typedef BinaryNinja::Ref<BinaryNinja::RepositoryManager> RepositoryManagerRef;
 typedef BinaryNinja::Ref<BinaryNinja::Logger> LoggerRef;
+typedef BinaryNinja::Ref<BinaryNinja::UndoAction> UndoActionRef;
+typedef BinaryNinja::Ref<BinaryNinja::UndoEntry> UndoEntryRef;
 
 typedef BinaryNinja::Ref<BinaryNinja::Collaboration::Remote> RemoteRef;
 typedef BinaryNinja::Ref<BinaryNinja::Collaboration::RemoteProject> RemoteProjectRef;

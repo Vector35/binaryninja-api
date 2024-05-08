@@ -2330,7 +2330,7 @@ namespace BinaryNinja {
 		    const BNInstructionTextToken* tokens, size_t count);
 	};
 
-	struct UndoEntry;
+	class UndoEntry;
 
 	/*!
 
@@ -2399,8 +2399,8 @@ namespace BinaryNinja {
 		DataBuffer GetFileContents();
 		DataBuffer GetFileContentsHash();
 		DataBuffer GetUndoData();
-		std::vector<UndoEntry> GetUndoEntries();
-		std::vector<UndoEntry> GetUndoEntries(const std::function<bool(size_t, size_t)>& progress);
+		std::vector<Ref<UndoEntry>> GetUndoEntries();
+		std::vector<Ref<UndoEntry>> GetUndoEntries(const std::function<bool(size_t, size_t)>& progress);
 		Ref<KeyValueStore> ReadData();
 		Ref<KeyValueStore> ReadData(const std::function<bool(size_t, size_t)>& progress);
 		bool StoreData(const Ref<KeyValueStore>& data, const std::function<bool(size_t, size_t)>& progress);
@@ -2744,31 +2744,31 @@ namespace BinaryNinja {
 		void EndBulkOperation();
 	};
 
-
 	/*!
 
 		\ingroup undo
 	*/
-	struct UndoAction
+	class UndoAction : public CoreRefCountObject<BNUndoAction, BNNewUndoActionReference, BNFreeUndoAction>
 	{
-		BNActionType actionType;
-		std::string summaryText;
-		std::vector<InstructionTextToken> summaryTokens;
+	  public:
+		UndoAction(BNUndoAction* action);
 
-		UndoAction() {};
-		UndoAction(const BNUndoAction& action);
+		std::string GetSummaryText();
+		std::vector<InstructionTextToken> GetSummary();
 	};
 
 	/*!
 
 		\ingroup undo
 	*/
-	struct UndoEntry
+	class UndoEntry : public CoreRefCountObject<BNUndoEntry, BNNewUndoEntryReference, BNFreeUndoEntry>
 	{
-		Ref<User> user;
-		std::string id;
-		std::vector<UndoAction> actions;
-		uint64_t timestamp;
+	  public:
+		UndoEntry(BNUndoEntry* entry);
+
+		std::string GetId();
+		std::vector<Ref<UndoAction>> GetActions();
+		uint64_t GetTimestamp();
 	};
 
 	/*!
@@ -2995,10 +2995,10 @@ namespace BinaryNinja {
 		bool Redo();
 
 		std::vector<Ref<User>> GetUsers();
-		std::vector<UndoEntry> GetUndoEntries();
-		std::vector<UndoEntry> GetRedoEntries();
-		std::optional<UndoEntry> GetLastUndoEntry();
-		std::optional<UndoEntry> GetLastRedoEntry();
+		std::vector<Ref<UndoEntry>> GetUndoEntries();
+		std::vector<Ref<UndoEntry>> GetRedoEntries();
+		Ref<UndoEntry> GetLastUndoEntry();
+		Ref<UndoEntry> GetLastRedoEntry();
 		std::optional<std::string> GetLastUndoEntryTitle();
 		std::optional<std::string> GetLastRedoEntryTitle();
 		void ClearUndoEntries();

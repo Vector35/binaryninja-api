@@ -7,10 +7,11 @@ b mips_disassemble
 
 #include <stdio.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #include "mips.h"
 
-int disassemble(uint32_t insword, uint64_t address, enum MipsVersion version, char *result)
+int disassemble(uint32_t insword, uint64_t address, MipsVersion version, char *result)
 {
 	int rc;
 	Instruction instr;
@@ -39,42 +40,72 @@ int disassemble(uint32_t insword, uint64_t address, enum MipsVersion version, ch
 		exit(-1); \
 	}
 
+void usage(char** av)
+{
+	printf("usage:\n");
+	printf("\t%s [instruction_words]\n", av[0]);
+	printf("\t%s test\n", av[0]);
+	printf("example:\n");
+	printf("\t%s 3c028081 68435a50 24445a50 6c830007\n", av[0]);
+	printf("\t%s test\n", av[0]);
+	exit(-1);
+}
+
 int main(int ac, char **av)
 {
 	char instxt[4096];
+	uint32_t insword = 0;
+	uint64_t baseaddr = 0;
+	int instindex = 0;
+	int c = 0;
 
-	if(ac == 1) {
-		printf("usage:\n");
-		printf("\t%s [<address>] <instruction_word>\n", av[0]);
-		printf("\t%s <instruction_word>\n", av[0]);
-		printf("\t%s test\n", av[0]);
-		printf("examples:\n");
-		printf("\t%s 0 14E00003\n", av[0]);
-		printf("\t%s 00405A58 14E00003\n", av[0]);
-		printf("\t%s test\n", av[0]);
-		exit(-1);
+	while ((c = getopt(ac, av, "a:")) != -1)
+	{
+		switch (c)
+		{
+		case 'a':
+			baseaddr = strtoull(optarg, NULL, 0x10);
+			break;
+		default:
+			usage(av);
+			goto cleanup;
+		}
 	}
 
-	if(ac == 2 && !strcmp(av[1], "test")) {
+	if (optind >= ac)
+	{
+		usage(av);
+		goto cleanup;
+	}
+
+	instindex = optind;
+
+	if (ac == 2 && !strcmp(av[1], "test"))
+	{
 		disassemble(0x14E00003, 0, MIPS_32, instxt);
 		ASSERT(!strcmp(instxt, "bne\t$a3, $zero, 0x10"));
-		disassemble(0x14E00003, 0x405a58, MIPS_32, instxt);
+		disassemble(0x14E00003, 4, MIPS_32, instxt);
 		ASSERT(!strcmp(instxt, "bne\t$a3, $zero, 0x405a68"));
 		exit(0);
 	}
 
-	uint64_t address = 0;
-	uint32_t insword = 0;
-	if(ac == 2) {
-		address = 0;
-		insword = strtoul(av[1], NULL, 16);
-	}
-	else if(ac == 3) {
-		address = strtoul(av[1], NULL, 16);
-		insword = strtoul(av[2], NULL, 16);
+	while (instindex < ac)
+	{
+		insword = strtoul(av[instindex], NULL, 16);
+
+		if (0 == disassemble(insword, baseaddr, MIPS_32, instxt))
+		{
+			printf("%08llX: %08X %s\n", baseaddr, insword, instxt);
+		}
+		else
+		{
+			printf("%08llX: %08X ??\n", baseaddr, insword);
+		}
+
+		baseaddr += 4;
+		instindex++;
 	}
 
-	if(0 == disassemble(insword, address, MIPS_32, instxt)) {
-		printf("%08llX: %08X %s\n", address, insword, instxt);
-	}
+cleanup:
+	return 0;
 }

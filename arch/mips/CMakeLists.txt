@@ -46,3 +46,6 @@ if(BN_INTERNAL_BUILD)
 		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
 		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
 endif()
+
+add_executable(mipstest mips/mips.c mips/test.c)
+target_link_libraries(mipstest PRIVATE arch_mips)

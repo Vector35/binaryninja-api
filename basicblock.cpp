@@ -102,6 +102,18 @@ void DisassemblySettings::SetAddressMode(BNDisassemblyAddressMode mode)
 }
 
 
+uint64_t DisassemblySettings::GetAddressBaseOffset() const
+{
+	return BNGetDisassemblyAddressBaseOffset(m_object);
+}
+
+
+void DisassemblySettings::SetAddressBaseOffset(uint64_t addressBaseOffset)
+{
+	BNSetDisassemblyAddressBaseOffset(m_object, addressBaseOffset);
+}
+
+
 DisassemblyTextLine::DisassemblyTextLine()
 {
 	addr = 0;

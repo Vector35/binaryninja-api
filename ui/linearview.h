@@ -481,6 +481,7 @@ public:
 	void toggleOption(BNDisassemblyOption option);
 	void setAddressMode(std::optional<BNDisassemblyAddressMode> mode, std::optional<bool> hex, std::optional<bool> withName);
 	void setDisplayedFileName();
+	void setAddressBaseOffset(bool toHere);
 
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target) override;
 	QFont getFont() override { return m_render.getFont(); }

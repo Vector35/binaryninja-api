@@ -169,10 +169,10 @@ unsafe impl CoreOwnedArrayProvider for BnString {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for BnString {
-    type Wrapped = &'a str;
+unsafe impl CoreArrayWrapper for BnString {
+    type Wrapped<'a> = &'a str;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         CStr::from_ptr(*raw).to_str().unwrap()
     }
 }

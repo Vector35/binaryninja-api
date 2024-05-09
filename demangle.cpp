@@ -3,6 +3,29 @@
 using namespace std;
 
 namespace BinaryNinja {
+	bool DemangleLLVM(const std::string& mangledName, QualifiedName& outVarName,
+		BinaryView* view)
+	{
+		const bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", view);
+		return DemangleLLVM(mangledName, outVarName, simplify);
+	}
+
+	bool DemangleLLVM(const std::string& mangledName, QualifiedName& outVarName,
+		const bool simplify)
+	{
+		BNType* localType = nullptr;
+		char** localVarName = nullptr;
+		size_t localSize = 0;
+		if (!BNDemangleLLVM(mangledName.c_str(), &localVarName, &localSize, simplify))
+			return false;
+		for (size_t i = 0; i < localSize; i++)
+		{
+			outVarName.push_back(localVarName[i]);
+		}
+		BNFreeDemangledName(&localVarName, localSize);
+		return true;
+	}
+
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
 	    BinaryView* view)
 	{

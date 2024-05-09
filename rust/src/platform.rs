@@ -373,10 +373,10 @@ unsafe impl CoreOwnedArrayProvider for Platform {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for Platform {
-    type Wrapped = Guard<'a, Platform>;
+unsafe impl CoreArrayWrapper for Platform {
+    type Wrapped<'a> = Guard<'a, Platform>;
 
-    unsafe fn wrap_raw(raw: &'a *mut BNPlatform, context: &'a ()) -> Guard<'a, Platform> {
+    unsafe fn wrap_raw<'a>(raw: &'a *mut BNPlatform, context: &'a ()) -> Self::Wrapped<'a> {
         debug_assert!(!raw.is_null());
         Guard::new(Platform { handle: *raw }, context)
     }

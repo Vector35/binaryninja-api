@@ -43,6 +43,7 @@ struct BINARYNINJAUIAPI HighlightTokenState
 	BinaryNinja::Variable localVar;
 	size_t tokenIndex;
 	size_t characterIndex;
+	size_t indentGroup;
 
 	HighlightTokenState();
 

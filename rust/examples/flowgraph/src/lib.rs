@@ -36,7 +36,7 @@ fn test_graph(view: &BinaryView) {
         &EdgeStyle::default(),
     );
 
-    view.show_graph_report("Rust Graph Title", graph);
+    view.show_graph_report("Rust Graph Title", &graph);
 }
 
 #[no_mangle]

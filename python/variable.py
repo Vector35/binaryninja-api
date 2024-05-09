@@ -886,6 +886,11 @@ class Variable(CoreVariable):
 		"""returns the source Function object which this variable belongs to"""
 		return self._function
 
+	@property
+	def il_function(self) -> 'function.ILFunctionType':
+		"""returns the IL Function object which this variable belongs to"""
+		return self.var._il_function
+
 	def set_name_async(self, name: Optional[str]) -> None:
 		"""
 		``set_name_async`` provides a way to asynchronously set the name of a variable. This method should be used

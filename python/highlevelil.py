@@ -43,7 +43,7 @@ from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Tailcall, Syscall, Localcall, Comparison, Signed, UnaryOperation, BinaryOperation, SSA, Phi,
     Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal, FloatingPoint, Intrinsic, Return,
-    VariableInstruction, SSAVariableInstruction
+    VariableInstruction, SSAVariableInstruction, SetVar
 )
 from . import deprecation
 
@@ -798,10 +798,11 @@ class HighLevelILInstruction(BaseILInstruction):
 
 		:Example:
 			>>> def get_constant_less_than_value(inst: HighLevelILInstruction, value: int) -> int:
-			>>>     if isinstance(inst, Constant) and inst.constant < value:
-			>>>         return inst.constant
+			... 	if isinstance(inst, Constant) and inst.constant < value:
+			... 		return inst.constant
 			>>>
-			>>> list(inst.traverse(get_constant_less_than_value, 10))
+			>>> for result in inst.traverse(get_constant_less_than_value, 10):
+			... 	print(f"Found a constant {result} < 10 in {repr(inst)}")
 		"""
 		if (result := cb(self, *args, **kwargs)) is not None:
 			yield result
@@ -1266,7 +1267,7 @@ class HighLevelILVarDeclare(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILVarInit(HighLevelILInstruction):
+class HighLevelILVarInit(HighLevelILInstruction, SetVar):
 	@property
 	def dest(self) -> 'variable.Variable':
 		return self.get_var(0)
@@ -1288,7 +1289,7 @@ class HighLevelILVarInit(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILVarInitSsa(HighLevelILInstruction, SSA):
+class HighLevelILVarInitSsa(HighLevelILInstruction, SetVar, SSA):
 	@property
 	def dest(self) -> 'mediumlevelil.SSAVariable':
 		return self.get_var_ssa(0, 1)
@@ -1310,7 +1311,7 @@ class HighLevelILVarInitSsa(HighLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILAssign(HighLevelILInstruction):
+class HighLevelILAssign(HighLevelILInstruction, SetVar):
 	@property
 	def dest(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
@@ -1337,7 +1338,7 @@ class HighLevelILAssign(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILAssignUnpack(HighLevelILInstruction):
+class HighLevelILAssignUnpack(HighLevelILInstruction, SetVar):
 	@property
 	def dest(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(0, 1)
@@ -1447,7 +1448,7 @@ class HighLevelILVarSsa(HighLevelILInstruction, SSAVariableInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILVarPhi(HighLevelILInstruction, Phi):
+class HighLevelILVarPhi(HighLevelILInstruction, Phi, SetVar):
 	@property
 	def dest(self) -> 'mediumlevelil.SSAVariable':
 		return self.get_var_ssa(0, 1)
@@ -2556,7 +2557,7 @@ class HighLevelILFunction:
 
 	def traverse(self, cb: Callable[['HighLevelILInstruction', Any], Any], *args: Any, **kwargs: Any) -> Iterator[Any]:
 		"""
-		``traverse`` iterates through all the instructions in the HighLevelILInstruction and calls the callback function for
+		``traverse`` iterates through all the instructions in the HighLevelILFunction and calls the callback function for
 		each instruction and sub-instruction. See the `Developer Docs <https://docs.binary.ninja/dev/concepts.html#walking-ils>`_ for more examples.
 
 		:param Callable[[HighLevelILInstruction, Any], Any] cb: The callback function to call for each node in the HighLevelILInstruction
@@ -2572,7 +2573,8 @@ class HighLevelILFunction:
 			... 		case Localcall(dest=Constant(constant=c), params=[_, _, p]) if c == target and not isinstance(p, Constant):
 			... 			return i
 			>>> target_address = bv.get_symbol_by_raw_name('_memcpy').address
-			>>> list(current_il_function.traverse(find_non_constant_memcpy, target_address))
+			>>> for result in current_il_function.traverse(find_non_constant_memcpy, target_address):
+			... 	print(f"Found suspicious memcpy: {repr(i)}")
 		"""
 		root = self.root
 		if root is None:

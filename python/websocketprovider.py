@@ -46,6 +46,9 @@ def to_bytes(field):
 
 
 class WebsocketClient(object):
+	"""
+	This class implements a websocket client. See :py:func:`~WebsocketClient.connect` for more details.
+	"""
 	_registered_clients = []
 
 	def __init__(self, provider, handle=None):
@@ -157,12 +160,20 @@ class WebsocketClient(object):
 		:param function(bytes) -> bool on_data: function to call when data is read from the websocket
 		:return: if the connection has started, but not necessarily if it succeeded
 		:rtype: bool
+
+		:Example:
+			>>> provider = list(WebsocketProvider)[0]
+			>>> client = provider.create_instance()
+			>>> client.connect("ws://localhost:8080", {})
+			True
 		"""
 		if self._connected:
 			raise RuntimeError("Cannot use connect() twice on the same WebsocketClient")
 
 		self._connected = True
 
+		if headers is None:
+			headers = {}
 		header_keys = (ctypes.c_char_p * len(headers))()
 		header_values = (ctypes.c_char_p * len(headers))()
 		for (i, item) in enumerate(headers.items()):

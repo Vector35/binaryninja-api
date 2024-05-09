@@ -139,6 +139,7 @@ public:
 	const BinaryNinja::QualifiedName& name() const { return m_name; }
 	const TypeRef& type() const { return m_type; }
 	void setType(const std::string& id, const BinaryNinja::QualifiedName& name, const TypeRef& type);
+	const std::string& sortName() const { return m_sortName; }
 
 	const SourceType& sourceType() const { return m_sourceType; }
 	std::optional<BinaryNinja::TypeContainer> typeContainer() const;
@@ -327,6 +328,7 @@ class BINARYNINJAUIAPI TypeBrowserFilterModel : public QSortFilterProxyModel
 	TypeBrowserModel* m_model;
 	std::string m_filter;
 	TypeBrowserFilterMode m_filterMode;
+	bool m_exactOnTop;
 
 protected:
 	bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const override;

@@ -88,11 +88,11 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
             if let Some(data_var) = view
                 .data_variables()
                 .iter()
-                .find(|var| var.address == symbol.address())
+                .find(|var| var.address() == symbol.address())
             {
                 // TODO : This should eventually be wrapped by some DataView sorta thingy thing, like how python does it
-                let data_type = data_var.type_with_confidence().contents;
-                let data = view.read_vec(data_var.address, data_type.width() as usize);
+                let data_type = data_var.t();
+                let data = view.read_vec(data_var.address(), data_type.width() as usize);
                 let element_type = data_type.element_type().unwrap().contents;
 
                 if let Some(current_section_header) = data

@@ -4463,8 +4463,6 @@ class BinaryView:
 			    SymbolType.FunctionSymbol, SymbolType.ImportedFunctionSymbol, SymbolType.LibraryFunctionSymbol
 			]
 
-		if plat == None:
-			plat = self.platform
 		fns = []
 		addresses = [sym.address for sym in self.get_symbols_by_name(name, ordered_filter=ordered_filter)]
 		if len(addresses) == 0 and name.startswith("sub_"):
@@ -4474,7 +4472,9 @@ class BinaryView:
 				addresses = []
 		for address in addresses:
 			for fn in self.get_functions_at(address):
-				if fn.start == address and fn.platform == plat:
+				if fn.start == address:
+					if plat is not None and fn.platform != plat:
+						continue
 					fns.append(fn)
 		return fns
 
@@ -8700,6 +8700,15 @@ class BinaryView:
 
 		:return: A generator object that yields the offset and matched DataBuffer for each match found.
 		:rtype: QueueGenerator
+		:Example:
+			>>> from binaryninja import load
+			>>> bv = load('/bin/ls')
+			>>> print(bv)
+			<BinaryView: '/bin/ls', start 0x100000000, len 0x182f8>
+			>>> bytes(list(bv.search("50 ?4"))[0][1]).hex()
+			'5004'
+			>>> bytes(list(bv.search("[\\x20-\\x25][\\x60-\\x67]"))[0][1]).hex()
+			'2062'
 		"""
 		if start is None:
 			start = self.start
@@ -8824,7 +8833,7 @@ class BinaryView:
 		``show_graph_report`` displays a :py:class:`FlowGraph` object `graph` in a new tab with ``title``.
 
 		:param title: Title of the graph
-		:type title: Plain text string title
+		:type title: Text string title of the tab
 		:param graph: The graph you wish to display
 		:type graph: :py:class:`FlowGraph` object
 		"""
@@ -8835,7 +8844,7 @@ class BinaryView:
 		``get_address_input`` Gets a virtual address via a prompt displayed to the user
 
 		:param prompt: Prompt for the dialog
-		:param title: Display title, if displayed via the UI
+		:param title: Window title, if used in the UI
 		:param current_address: Optional current address, for relative inputs
 		:return: The value entered by the user, if one was entered
 		"""

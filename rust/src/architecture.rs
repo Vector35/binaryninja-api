@@ -23,7 +23,7 @@ use std::{
     collections::HashMap,
     ffi::{c_char, c_int, CStr, CString},
     hash::Hash,
-    mem::zeroed,
+    mem::{zeroed, MaybeUninit},
     ops, ptr, slice,
 };
 
@@ -313,7 +313,7 @@ pub trait Intrinsic: Sized + Clone + Copy {
     fn id(&self) -> u32;
 
     /// Reeturns the list of the input names and types for this intrinsic.
-    fn inputs(&self) -> Vec<NameAndType<String>>;
+    fn inputs(&self) -> Vec<Ref<NameAndType>>;
 
     /// Returns the list of the output types for this intrinsic.
     fn outputs(&self) -> Vec<Conf<Ref<Type>>>;
@@ -650,7 +650,7 @@ impl Intrinsic for UnusedIntrinsic {
     fn id(&self) -> u32 {
         unreachable!()
     }
-    fn inputs(&self) -> Vec<NameAndType<String>> {
+    fn inputs(&self) -> Vec<Ref<NameAndType>> {
         unreachable!()
     }
     fn outputs(&self) -> Vec<Conf<Ref<Type>>> {
@@ -992,7 +992,7 @@ impl Intrinsic for crate::architecture::CoreIntrinsic {
         self.1
     }
 
-    fn inputs(&self) -> Vec<NameAndType<String>> {
+    fn inputs(&self) -> Vec<Ref<NameAndType>> {
         let mut count: usize = 0;
 
         unsafe {
@@ -1000,7 +1000,7 @@ impl Intrinsic for crate::architecture::CoreIntrinsic {
 
             let ret = slice::from_raw_parts_mut(inputs, count)
                 .iter()
-                .map(NameAndType::from_raw)
+                .map(|x| NameAndType::from_raw(x).to_owned())
                 .collect();
 
             BNFreeNameAndTypeList(inputs, count);
@@ -1162,17 +1162,18 @@ impl Architecture for CoreArchitecture {
                 &mut result as *mut _,
                 &mut count as *mut _,
             ) {
-                let vec = Vec::<BNInstructionTextToken>::from_raw_parts(result, count, count)
+                let vec = slice::from_raw_parts(result, count)
                     .iter()
-                    .map(|x| InstructionTextToken::from_raw(x))
+                    .map(|x| InstructionTextToken::from_raw(x).to_owned())
                     .collect();
+                BNFreeInstructionText(result, count);
                 Some((consumed, vec))
             } else {
                 None
             }
         }
     }
-    
+
     fn instruction_llil(
         &self,
         data: &[u8],
@@ -1689,8 +1690,8 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
         F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
     {
-        arch: A,
-        func: F,
+        arch: MaybeUninit<A>,
+        func: Option<F>,
     }
 
     extern "C" fn cb_init<A, F>(ctxt: *mut c_void, obj: *mut BNArchitecture)
@@ -1704,11 +1705,10 @@ where
                 handle: ctxt as *mut A,
             };
 
-            let create = ptr::read(&custom_arch.func);
-            ptr::write(
-                &mut custom_arch.arch,
-                create(custom_arch_handle, CoreArchitecture(obj)),
-            );
+            let create = custom_arch.func.take().unwrap();
+            custom_arch
+                .arch
+                .write(create(custom_arch_handle, CoreArchitecture(obj)));
         }
     }
 
@@ -1811,27 +1811,25 @@ where
         let data = unsafe { slice::from_raw_parts(data, *len) };
         let result = unsafe { &mut *result };
 
-        match custom_arch.instruction_text(data, addr) {
-            Some((res_size, mut res_tokens)) => {
-                unsafe {
-                    // TODO: Can't use into_raw_parts as it's unstable so we do this instead...
-                    let r_ptr = res_tokens.as_mut_ptr();
-                    let r_count = res_tokens.len();
-                    mem::forget(res_tokens);
+        let Some((res_size, res_tokens)) = custom_arch.instruction_text(data, addr) else {
+            return false;
+        };
 
-                    *result = &mut (*r_ptr).0;
-                    *count = r_count;
-                    *len = res_size;
-                }
-                true
-            }
-            None => false,
+        let res_tokens: Box<[_]> = res_tokens.into_boxed_slice();
+        unsafe {
+            let res_tokens = Box::leak(res_tokens);
+            let r_ptr = res_tokens.as_mut_ptr();
+            let r_count = res_tokens.len();
+
+            *result = &mut (*r_ptr).0;
+            *count = r_count;
+            *len = res_size;
         }
+        true
     }
 
     extern "C" fn cb_free_instruction_text(tokens: *mut BNInstructionTextToken, count: usize) {
-        let _tokens =
-            unsafe { Vec::from_raw_parts(tokens as *mut InstructionTextToken, count, count) };
+        let _tokens = unsafe { Box::from_raw(ptr::slice_from_raw_parts_mut(tokens, count)) };
     }
 
     extern "C" fn cb_instruction_llil<A>(
@@ -1931,15 +1929,7 @@ where
         if len == 0 {
             ptr::null_mut()
         } else {
-            let mut res = Vec::with_capacity(len + 1);
-
-            res.push(len as u32);
-
-            for i in items {
-                res.push(i);
-            }
-
-            assert!(res.len() == len + 1);
+            let mut res: Box<[_]> = [len as u32].into_iter().chain(items).collect();
 
             let raw = res.as_mut_ptr();
             mem::forget(res);
@@ -2280,7 +2270,8 @@ where
         unsafe {
             let actual_start = regs.offset(-1);
             let len = *actual_start + 1;
-            let _regs = Vec::from_raw_parts(actual_start, len as usize, len as usize);
+            let regs_ptr = ptr::slice_from_raw_parts_mut(actual_start, len.try_into().unwrap());
+            let _regs = Box::from_raw(regs_ptr);
         }
     }
 
@@ -2420,28 +2411,25 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        if let Some(intrinsic) = custom_arch.intrinsic_from_id(intrinsic) {
-            let inputs = intrinsic.inputs();
-            let mut res = Vec::with_capacity(inputs.len());
-            for input in inputs {
-                res.push(input.into_raw());
-            }
-
-            unsafe {
-                *count = res.len();
-                if res.is_empty() {
-                    ptr::null_mut()
-                } else {
-                    let raw = res.as_mut_ptr();
-                    mem::forget(res);
-                    raw
-                }
-            }
-        } else {
+        let Some(intrinsic) = custom_arch.intrinsic_from_id(intrinsic) else {
             unsafe {
                 *count = 0;
             }
-            ptr::null_mut()
+            return ptr::null_mut();
+        };
+
+        let inputs = intrinsic.inputs();
+        let mut res: Box<[_]> = inputs.into_iter().map(|input| unsafe { Ref::into_raw(input) }.0).collect();
+
+        unsafe {
+            *count = res.len();
+            if res.is_empty() {
+                ptr::null_mut()
+            } else {
+                let raw = res.as_mut_ptr();
+                mem::forget(res);
+                raw
+            }
         }
     }
 
@@ -2453,9 +2441,9 @@ where
 
         if !nt.is_null() {
             unsafe {
-                let list = Vec::from_raw_parts(nt, count, count);
-                for nt in list {
-                    BnString::from_raw(nt.name);
+                let name_and_types = Box::from_raw(ptr::slice_from_raw_parts_mut(nt, count));
+                for nt in name_and_types.into_iter() {
+                    Ref::new(NameAndType::from_raw(nt));
                 }
             }
         }
@@ -2473,10 +2461,7 @@ where
 
         if let Some(intrinsic) = custom_arch.intrinsic_from_id(intrinsic) {
             let inputs = intrinsic.outputs();
-            let mut res = Vec::with_capacity(inputs.len());
-            for input in inputs {
-                res.push(input.into());
-            }
+            let mut res: Box<[_]> = inputs.iter().map(|input| input.as_ref().into()).collect();
 
             unsafe {
                 *count = res.len();
@@ -2505,9 +2490,7 @@ where
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
         if !tl.is_null() {
-            unsafe {
-                let _list = Vec::from_raw_parts(tl, count, count);
-            }
+            let _type_list = unsafe { Box::from_raw(ptr::slice_from_raw_parts_mut(tl, count)) };
         }
     }
 
@@ -2685,13 +2668,13 @@ where
     let name = name.into_bytes_with_nul();
 
     let uninit_arch = ArchitectureBuilder {
-        arch: unsafe { zeroed() },
-        func,
+        arch: MaybeUninit::zeroed(),
+        func: Some(func),
     };
 
     let raw = Box::into_raw(Box::new(uninit_arch));
     let mut custom_arch = BNCustomArchitecture {
-        context: raw as *mut _,
+        context: raw as *mut ArchitectureBuilder<_, _> as *mut _,
         init: Some(cb_init::<A, F>),
         getEndianness: Some(cb_endianness::<A>),
         getAddressSize: Some(cb_address_size::<A>),
@@ -2776,7 +2759,7 @@ where
 
         assert!(!res.is_null());
 
-        &(*raw).arch
+        (*raw).arch.assume_init_mut()
     }
 }
 

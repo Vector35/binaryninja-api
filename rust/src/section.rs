@@ -179,10 +179,10 @@ unsafe impl CoreOwnedArrayProvider for Section {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for Section {
-    type Wrapped = Guard<'a, Section>;
+unsafe impl CoreArrayWrapper for Section {
+    type Wrapped<'a> = Guard<'a, Section>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Section::from_raw(*raw), context)
     }
 }

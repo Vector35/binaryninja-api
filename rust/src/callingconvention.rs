@@ -89,23 +89,15 @@ where
         *count = len;
 
         if len == 0 {
-            ptr::null_mut()
-        } else {
-            let mut res = Vec::with_capacity(len + 1);
-
-            res.push(len as u32);
-
-            for i in items {
-                res.push(i);
-            }
-
-            assert!(res.len() == len + 1);
-
-            let raw = res.as_mut_ptr();
-            mem::forget(res);
-
-            unsafe { raw.offset(1) }
+            return ptr::null_mut();
         }
+
+        let res: Box<[_]> = [len as u32].into_iter().chain(items).collect();
+        debug_assert!(res.len() == len + 1);
+
+        // it's free on the function below: `cb_free_register_list`
+        let raw = Box::leak(res);
+        &mut raw[1]
     }
 
     extern "C" fn cb_free_register_list(_ctxt: *mut c_void, regs: *mut u32) {
@@ -115,8 +107,8 @@ where
             }
 
             let actual_start = regs.offset(-1);
-            let len = *actual_start + 1;
-            let _regs = Vec::from_raw_parts(actual_start, len as usize, len as usize);
+            let len = (*actual_start) + 1;
+            let _regs = Box::from_raw(ptr::slice_from_raw_parts_mut(actual_start, len as usize));
         })
     }
 
@@ -569,11 +561,43 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
     }
 
     fn int_arg_registers(&self) -> Vec<A::Register> {
-        Vec::new()
+        unsafe {
+            let mut count = 0;
+            let regs = BNGetIntegerArgumentRegisters(self.handle, &mut count);
+            let arch = self.arch_handle.borrow();
+
+            let res = slice::from_raw_parts(regs, count)
+                .iter()
+                .map(|&r| {
+                    arch.register_from_id(r)
+                        .expect("bad reg id from CallingConvention")
+                })
+                .collect();
+
+            BNFreeRegisterList(regs);
+
+            res
+        }
     }
 
     fn float_arg_registers(&self) -> Vec<A::Register> {
-        Vec::new()
+        unsafe {
+            let mut count = 0;
+            let regs = BNGetFloatArgumentRegisters(self.handle, &mut count);
+            let arch = self.arch_handle.borrow();
+
+            let res = slice::from_raw_parts(regs, count)
+                .iter()
+                .map(|&r| {
+                    arch.register_from_id(r)
+                        .expect("bad reg id from CallingConvention")
+                })
+                .collect();
+
+            BNFreeRegisterList(regs);
+
+            res
+        }
     }
 
     fn arg_registers_shared_index(&self) -> bool {
@@ -662,10 +686,10 @@ unsafe impl<A: Architecture> CoreOwnedArrayProvider for CallingConvention<A> {
     }
 }
 
-unsafe impl<'a, A: Architecture> CoreArrayWrapper<'a> for CallingConvention<A> {
-    type Wrapped = Guard<'a, CallingConvention<A>>;
+unsafe impl<A: Architecture> CoreArrayWrapper for CallingConvention<A> {
+    type Wrapped<'a> = Guard<'a, CallingConvention<A>>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(
             CallingConvention {
                 handle: *raw,

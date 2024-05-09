@@ -1283,6 +1283,9 @@ bool ElfView::Init()
 						// handle long form symbols
 						if (auto pos = entryName.find(".", 2); (pos != std::string::npos))
 						{
+							// These mapping symbols do not define actual names
+							if (entryName[0] == '$' && (entryName[1] == 'x' || entryName[1] == 'a' || entryName[1] == 'd'  || entryName[1] == 't'))
+								continue;
 							entryName = entryName.substr(pos + 1);
 							if (entryName.size())
 								DefineElfSymbol(isMappingFunctionSymbol ? FunctionSymbol : DataSymbol, entryName, entry->value, false, entry->binding, entry->size);
@@ -2167,8 +2170,7 @@ bool ElfView::Init()
 		DefineAutoSymbol(new Symbol(DataSymbol, "__elf_dynamic_table", adjustedVirtualAddr, NoBinding));
 	}
 
-	// Add types for the dynamic symbol table
-	if (m_auxSymbolTable.size)
+	if (m_auxSymbolTable.size || m_symbolTableSection.offset)
 	{
 		StructureBuilder symTableBuilder;
 		if (m_elf32)
@@ -2193,9 +2195,25 @@ bool ElfView::Init()
 		Ref<Type> symTableType = Type::StructureType(symTableStruct);
 		QualifiedName symTableName = m_elf32 ? string("Elf32_Sym") : string("Elf64_Sym");
 		const string symTableTypeId = Type::GenerateAutoTypeId("elf", symTableName);
-		QualifiedName symTableTypeName = DefineType(symTableTypeId, symTableName, symTableType);
-		DefineDataVariable(m_auxSymbolTable.offset, Type::ArrayType(Type::NamedType(this, symTableTypeName), m_auxSymbolTable.size / m_auxSymbolTableEntrySize));
-		DefineAutoSymbol(new Symbol(DataSymbol, "__elf_symbol_table", m_auxSymbolTable.offset, NoBinding));
+
+		// Add types for the dynamic symbol table
+		if (m_auxSymbolTable.size)
+		{
+			auto defineAuxSymTableForView = [&](Ref<BinaryView> view) {
+				QualifiedName symTableTypeName = view->DefineType(symTableTypeId, symTableName, symTableType);
+				view->DefineDataVariable(m_auxSymbolTable.offset, Type::ArrayType(Type::NamedType(this, symTableTypeName), m_auxSymbolTable.size / m_auxSymbolTableEntrySize));
+				view->DefineAutoSymbol(new Symbol(DataSymbol, "__elf_symbol_table", m_auxSymbolTable.offset, NoBinding));
+			};
+			defineAuxSymTableForView(this);
+			defineAuxSymTableForView(GetParentView());
+		}
+
+		if (m_symbolTableSection.offset)
+		{
+			QualifiedName symTableTypeName = GetParentView()->DefineType(symTableTypeId, symTableName, symTableType);
+			GetParentView()->DefineDataVariable(m_symbolTableSection.offset, Type::ArrayType(Type::NamedType(this, symTableTypeName), m_symbolTableSection.size / m_auxSymbolTableEntrySize));
+			GetParentView()->DefineAutoSymbol(new Symbol(DataSymbol, "__elf_symbol_table", m_symbolTableSection.offset, NoBinding));
+		}
 	}
 
 	// In 32-bit mips with .got, add .extern symbol "RTL_Resolve"
@@ -2351,6 +2369,11 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 					fullName += demangledType->GetStringAfterName();
 				if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
 					typeRef = demangledType;
+			}
+			else if (!m_extractMangledTypes && DemangleLLVM(rawName, varName, m_simplifyTemplates))
+			{
+				shortName = varName.GetString();
+				fullName = shortName;
 			}
 			else
 			{

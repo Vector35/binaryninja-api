@@ -59,6 +59,11 @@ fn binja_path() -> PathBuf {
         let path = CStr::from_ptr(info.dli_fname);
         let path = OsStr::from_bytes(path.to_bytes());
         let mut path = PathBuf::from(path);
+        while path.is_symlink() {
+            path = path
+                .read_link()
+                .expect("Failed to find libbinaryninjacore path!");
+        }
 
         path.pop();
         path

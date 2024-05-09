@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-use std::ops::{Deref, Range};
-use std::sync::Arc;
+use std::ops::Range;
 
 use binaryninja::section::Section;
 use binaryninja::segment::Segment;
@@ -16,36 +15,10 @@ use binaryninja::custombinaryview::{
     BinaryViewType, BinaryViewTypeBase, CustomBinaryView, CustomBinaryViewType, CustomView,
     CustomViewBuilder,
 };
-use binaryninja::databuffer::DataBuffer;
 use binaryninja::platform::Platform;
 use binaryninja::Endianness;
 
 type BinaryViewResult<R> = binaryninja::binaryview::Result<R>;
-
-/// A wrapper around a `binaryninja::databuffer::DataBuffer`, from which a `[u8]` buffer can be obtained
-/// to pass to `minidump::Minidump::read`.
-///
-/// This code is taken from [`dwarfdump`](https://github.com/Vector35/binaryninja-api/blob/9d8bc846bd213407fb1a7a19af2a96f17501ac3b/rust/examples/dwarfdump/src/lib.rs#L81)
-/// in the Rust API examples.
-#[derive(Clone)]
-pub struct DataBufferWrapper {
-    inner: Arc<DataBuffer>,
-}
-
-impl DataBufferWrapper {
-    pub fn new(buf: DataBuffer) -> Self {
-        DataBufferWrapper {
-            inner: Arc::new(buf),
-        }
-    }
-}
-
-impl Deref for DataBufferWrapper {
-    type Target = [u8];
-    fn deref(&self) -> &Self::Target {
-        self.inner.get_data()
-    }
-}
 
 /// The _Minidump_ binary view type, which the Rust plugin registers with the Binary Ninja core
 /// (via `binaryninja::custombinaryview::register_view_type`) as a possible binary view
@@ -141,9 +114,8 @@ impl MinidumpBinaryView {
     fn init(&self) -> BinaryViewResult<()> {
         let parent_view = self.parent_view()?;
         let read_buffer = parent_view.read_buffer(0, parent_view.len())?;
-        let read_buffer = DataBufferWrapper::new(read_buffer);
 
-        if let Ok(minidump_obj) = Minidump::read(read_buffer) {
+        if let Ok(minidump_obj) = Minidump::read(read_buffer.get_data()) {
             // Architecture, platform information
             if let Ok(minidump_system_info) = minidump_obj.get_stream::<MinidumpSystemInfo>() {
                 if let Some(platform) = MinidumpBinaryView::translate_minidump_platform(

@@ -708,6 +708,7 @@ extern "C"
 		RelativeToSegmentStartDisassemblyAddressMode,
 		RelativeToSectionStartDisassemblyAddressMode,
 		RelativeToFunctionStartDisassemblyAddressMode,
+		RelativeToAddressBaseOffsetDisassemblyAddressMode,
 		DisassemblyAddressModeMask = 0xFFFF,
 
 		IncludeNameDisassemblyAddressModeFlag = 0x10000,
@@ -5079,6 +5080,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetDisassemblyGutterWidth(BNDisassemblySettings* settings, size_t width);
 	BINARYNINJACOREAPI BNDisassemblyAddressMode BNGetDisassemblyAddressMode(BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI void BNSetDisassemblyAddressMode(BNDisassemblySettings* settings, BNDisassemblyAddressMode mode);
+	BINARYNINJACOREAPI uint64_t BNGetDisassemblyAddressBaseOffset(BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI void BNSetDisassemblyAddressBaseOffset(BNDisassemblySettings* settings, uint64_t addressBaseOffset);
 
 	// Flow graphs
 	BINARYNINJACOREAPI BNFlowGraph* BNCreateFlowGraph(void);

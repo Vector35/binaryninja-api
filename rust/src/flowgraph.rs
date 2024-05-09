@@ -68,7 +68,7 @@ impl<'a> FlowGraphNode<'a> {
         unsafe { FlowGraphNode::from_raw(BNCreateFlowGraphNode(graph.handle)) }
     }
 
-    pub fn set_disassembly_lines(&self, lines: &'a Vec<DisassemblyTextLine>) {
+    pub fn set_disassembly_lines(&self, lines: &'a [DisassemblyTextLine]) {
         unsafe {
             BNSetFlowGraphNodeLines(self.handle, lines.as_ptr() as *mut _, lines.len());
             // BNFreeDisassemblyTextLines(lines.as_ptr() as *mut _, lines.len());  // Shouldn't need...would be a double free?
@@ -79,7 +79,7 @@ impl<'a> FlowGraphNode<'a> {
         let lines = lines
             .iter()
             .map(|&line| DisassemblyTextLine::from(&vec![line]))
-            .collect();
+            .collect::<Vec<_>>();
         self.set_disassembly_lines(&lines);
     }
 
@@ -114,8 +114,6 @@ impl<'a> ToOwned for FlowGraphNode<'a> {
     }
 }
 
-// TODO : FlowGraph are RefCounted objects, this needs to be changed to only return Refs to FlowGraph
-
 #[derive(PartialEq, Eq, Hash)]
 pub struct FlowGraph {
     pub(crate) handle: *mut BNFlowGraph,
@@ -126,8 +124,8 @@ impl FlowGraph {
         Self { handle: raw }
     }
 
-    pub fn new() -> Self {
-        unsafe { FlowGraph::from_raw(BNCreateFlowGraph()) }
+    pub fn new() -> Ref<Self> {
+        unsafe { Ref::new(FlowGraph::from_raw(BNCreateFlowGraph())) }
     }
 
     pub fn append(&self, node: &FlowGraphNode) -> usize {

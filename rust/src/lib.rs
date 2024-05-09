@@ -49,7 +49,7 @@
 //!
 //! Create a new library (`cargo new --lib <plugin-name>`) and include the following in your `Cargo.toml`:
 //!
-//! ```
+//! ```toml
 //! [lib]
 //! crate-type = ["cdylib"]
 //!
@@ -73,21 +73,19 @@
 //!
 //! ### `main.rs`
 //! Standalone binaries need to initialize Binary Ninja before they can work. You can do this through [`headless::Session`], [`headless::script_helper`], or [`headless::init()`] at start and [`headless::shutdown()`] at shutdown.
-//! ```rust
-//! fn main() {
-//!     // This loads all the core architecture, platform, etc plugins
-//!     // Standalone executables need to call this, but plugins do not
-//!     let headless_session = binaryninja::headless::Session::new();
+//! ```no_run
+//! // This loads all the core architecture, platform, etc plugins
+//! // Standalone executables need to call this, but plugins do not
+//! let headless_session = binaryninja::headless::Session::new();
 //!
-//!     println!("Loading binary...");
-//!     let bv = headless_session.load("/bin/cat").expect("Couldn't open `/bin/cat`");
+//! println!("Loading binary...");
+//! let bv = headless_session.load("/bin/cat").expect("Couldn't open `/bin/cat`");
 //!
-//!     // Your code here...
-//! }
+//! // Your code here...
 //! ```
 //!
 //! ### `Cargo.toml`
-//! ```
+//! ```toml
 //! [dependencies]
 //! binaryninja = { git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev"}
 //! ```
@@ -219,7 +217,7 @@ pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::Binar
 
 /// The main way to open and load files (with options) into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
 ///
-/// ```rust
+/// ```no_run
 /// let settings = [("analysis.linearSweep.autorun", false)].into();
 ///
 /// let bv = binaryninja::load_with_options("/bin/cat", true, Some(settings))

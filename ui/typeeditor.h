@@ -104,12 +104,14 @@ public:
 	void undefine();
 	void undefineRoots();
 	void undefineMembers();
+	bool canAppendField();
+	void appendField();
 	bool canCreateArray();
 	void createArray();
 	bool canChangeType();
 	void changeType();
 	void changeTypeRoot();
-	void changeTypeAddMember();
+	void changeTypeAddMember(bool atEnd = false);
 	void changeTypeMember();
 	bool canChangeTypeMembers();
 	void changeTypeMembers(TypeRef newType);

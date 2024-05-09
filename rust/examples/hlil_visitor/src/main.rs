@@ -20,7 +20,7 @@ fn print_variable(func: &HighLevelILFunction, var: &Variable) {
 fn print_il_expr(instr: &HighLevelILLiftedInstruction, mut indent: usize) {
     print_indent(indent);
     print_operation(instr);
-    println!("");
+    println!();
 
     indent += 1;
 

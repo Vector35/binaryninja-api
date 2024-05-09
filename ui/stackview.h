@@ -4,6 +4,7 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QLineEdit>
+#include <optional>
 
 #include "dockhandler.h"
 #include "render.h"
@@ -80,6 +81,15 @@ class StackViewLine
 	//! Get the stack frame offset for this line.
 	int64_t offset() const;
 
+	//! Get the value of the base offset
+	int64_t baseOffset() const;
+
+	//! Get the name of the base offset
+	std::string baseName() const;
+
+	//! Set the base offset to a given name and value. Does not affect offset()
+	void setBase(const std::string& baseName, int64_t baseOffset);
+
 	//! Get the number of bytes this line represents on the stack.
 	size_t width() const;
 
@@ -148,6 +158,9 @@ class StackViewLine
 	BinaryNinja::Variable m_var;
 	size_t m_widthOverride;
 
+	std::string m_baseName;
+	int64_t m_baseOffset;
+
 	bool m_isReferenced;
 	bool m_isUnused;
 
@@ -184,6 +197,7 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 	HighlightTokenState m_highlight;
 	size_t m_lineIndex;
 	size_t m_tokenIndex;
+	bool m_needFirstFocus;
 
 	//! Bind and register all stack view actions.
 	void setupActions();
@@ -257,8 +271,23 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 	//! Create a new struct at the cursor, spanning until the next stack variable.
 	void quickCreateStructAtCursor();
 
+	//! Show the dialog to switch which base register is used for offsets
+	void chooseBaseRegister();
+
+	//! Show the dialog to pick a constant base offset
+	void chooseBaseOffset();
+
+	//! Set the base offset to a register (or clear on nullopt)
+	void setBaseRegister(ArchitectureRef arch, std::optional<std::string> regName);
+
+	//! Set the base offset to a constant (or clear on nullopt)
+	void setBaseOffset(FunctionRef func, std::optional<int64_t> offset);
+
 	//! Override the default event handler so we can have nice tooltips.
 	bool event(QEvent* event) override;
+
+	//! Get the current base name/offset using the currently selected base register
+	std::pair<std::string, int64_t> calculateBaseOffset() const;
 
 	BinaryViewRef getData() override;
 	uint64_t getCurrentOffset() override;
@@ -278,11 +307,13 @@ class BINARYNINJAUIAPI StackViewSidebarWidget : public SidebarWidget
 {
 	Q_OBJECT
 
+	QWidget* m_header;
 	StackView* m_stackView;
 
   public:
 	StackViewSidebarWidget(ViewFrame* view, BinaryViewRef data);
 
+	QWidget* headerWidget() override { return m_header; }
 	void refresh();
 	void focus() override { refresh(); }
 	void notifyFontChanged() override { m_stackView->updateFonts(); }

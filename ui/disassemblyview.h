@@ -78,6 +78,7 @@ class BINARYNINJAUIAPI DisassemblyView : public FlowGraphWidget
 	void toggleOption(BNDisassemblyOption option);
 	void setAddressMode(std::optional<BNDisassemblyAddressMode> mode, std::optional<bool> hex, std::optional<bool> withName);
 	void setDisplayedFileName();
+	void setAddressBaseOffset(bool toHere);
 
 	virtual DisassemblySettingsRef getDisassemblySettings() override;
 	virtual void setDisassemblySettings(DisassemblySettingsRef settings) override;

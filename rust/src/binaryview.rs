@@ -1064,7 +1064,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNApplyDebugInfo(self.as_ref().handle, debug_info.handle) }
     }
 
-    fn show_graph_report<S: BnStrCompatible>(&self, raw_name: S, graph: FlowGraph) {
+    fn show_graph_report<S: BnStrCompatible>(&self, raw_name: S, graph: &FlowGraph) {
         let raw_name = raw_name.into_bytes_with_nul();
         unsafe {
             BNShowGraphReport(
@@ -1553,7 +1553,7 @@ pub type BinaryViewEventType = BNBinaryViewEventType;
 ///
 /// # Example
 ///
-/// ```rust
+/// ```no_run
 /// use binaryninja::binaryview::{BinaryView, BinaryViewEventHandler, BinaryViewEventType, register_binary_view_event};
 ///
 /// struct EventHandlerContext {
@@ -1561,7 +1561,7 @@ pub type BinaryViewEventType = BNBinaryViewEventType;
 /// }
 ///
 /// impl BinaryViewEventHandler for EventHandlerContext {
-///     fn on_event(&mut self, binary_view: &BinaryView) {
+///     fn on_event(&self, binary_view: &BinaryView) {
 ///         // handle event
 ///     }
 /// }
@@ -1584,11 +1584,9 @@ where
         ctx: *mut ::std::os::raw::c_void,
         view: *mut BNBinaryView,
     ) {
-        ffi_wrap!("EventHandler::on_event", unsafe {
-            let mut context = &mut *(ctx as *mut Handler);
-
-            let handle = BinaryView::from_raw(BNNewViewReference(view));
-            Handler::on_event(&mut context, handle.as_ref());
+        ffi_wrap!("EventHandler::on_event", {
+            let context = unsafe { &*(ctx as *const Handler) };
+            context.on_event(&BinaryView::from_raw(BNNewViewReference(view)));
         })
     }
 

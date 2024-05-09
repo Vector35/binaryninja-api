@@ -251,6 +251,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	bool navigateToLine(
 		FunctionRef func, uint64_t offset, size_t instrIndex, bool center, bool updateHighlight, bool navByRef = false);
 	bool navigateToGotoLabel(uint64_t label);
+	bool navigateToMatchingBrace();
 	bool navigateToExternalLink(uint64_t linkSourceAddr);
 	void viewData();
 
@@ -480,6 +481,7 @@ public:
 	void toggleOption(BNDisassemblyOption option);
 	void setAddressMode(std::optional<BNDisassemblyAddressMode> mode, std::optional<bool> hex, std::optional<bool> withName);
 	void setDisplayedFileName();
+	void setAddressBaseOffset(bool toHere);
 
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target) override;
 	QFont getFont() override { return m_render.getFont(); }

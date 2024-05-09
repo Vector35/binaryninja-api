@@ -9722,6 +9722,8 @@ namespace BinaryNinja {
 		void SetGutterWidth(size_t width);
 		BNDisassemblyAddressMode GetAddressMode() const;
 		void SetAddressMode(BNDisassemblyAddressMode mode);
+		uint64_t GetAddressBaseOffset() const;
+		void SetAddressBaseOffset(uint64_t addressBaseOffset);
 	};
 
 	/*!

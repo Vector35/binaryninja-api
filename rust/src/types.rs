@@ -695,11 +695,12 @@ pub struct Type {
     pub(crate) handle: *mut BNType,
 }
 
-/// ```
-/// use binaryninja::types::Type;
-/// let bv = unsafe { BinaryView::from_raw(view) };
-/// let my_custom_type_1 = Self::named_int(5, false, "my_w");
-/// let my_custom_type_2 = Self::int(5, false);
+/// ```no_run
+/// # use crate::binaryninja::binaryview::BinaryViewExt;
+/// # use binaryninja::types::Type;
+/// let bv = binaryninja::load("example.bin").unwrap();
+/// let my_custom_type_1 = Type::named_int(5, false, "my_w");
+/// let my_custom_type_2 = Type::int(5, false);
 /// bv.define_user_type("int_1", &my_custom_type_1);
 /// bv.define_user_type("int_2", &my_custom_type_2);
 /// ```
@@ -1642,9 +1643,10 @@ pub struct StructureBuilder {
     pub(crate) handle: *mut BNStructureBuilder,
 }
 
-/// ```rust
+/// ```no_run
 /// // Includes
-/// use binaryninja::types::{Structure, Type};
+/// # use binaryninja::binaryview::BinaryViewExt;
+/// use binaryninja::types::{Structure, StructureBuilder, Type, MemberAccess, MemberScope};
 ///
 /// // Define struct, set size (in bytes)
 /// let mut my_custom_struct = StructureBuilder::new();
@@ -1653,16 +1655,16 @@ pub struct StructureBuilder {
 /// let field_3 = Type::int(8, false);
 ///
 /// // Assign those fields
-/// my_custom_struct.append(&field_1, "field_4");
-/// my_custom_struct.insert(&field_1, "field_1", 0);
-/// my_custom_struct.insert(&field_2, "field_2", 5);
-/// my_custom_struct.insert(&field_3, "field_3", 9);
+/// my_custom_struct.insert(&field_1, "field_1", 0, false, MemberAccess::PublicAccess, MemberScope::NoScope);
+/// my_custom_struct.insert(&field_2, "field_2", 5, false, MemberAccess::PublicAccess, MemberScope::NoScope);
+/// my_custom_struct.insert(&field_3, "field_3", 9, false, MemberAccess::PublicAccess, MemberScope::NoScope);
+/// my_custom_struct.append(&field_1, "field_4", MemberAccess::PublicAccess, MemberScope::NoScope);
 ///
 /// // Convert structure to type
-/// let my_custom_structure_type = Self::structure_type(&mut my_custom_struct);
+/// let my_custom_structure_type = Type::structure(&my_custom_struct.finalize());
 ///
 /// // Add the struct to the binary view to use in analysis
-/// let bv = unsafe { BinaryView::from_raw(view) };
+/// let bv = binaryninja::load("example").unwrap();
 /// bv.define_user_type("my_custom_struct", &my_custom_structure_type);
 /// ```
 impl StructureBuilder {
@@ -1860,7 +1862,58 @@ impl StructureBuilder {
         }
     }
 
-    // TODO : The other methods in the python version (type, members, remove, replace, etc)
+    pub fn members(&self) -> Array<StructureMember> {
+        let mut count = 0;
+        let members_raw = unsafe { BNGetStructureBuilderMembers(self.handle, &mut count) };
+        unsafe { Array::new(members_raw, count, ()) }
+    }
+
+    pub fn index_by_name(&self, name: &str) -> Option<usize> {
+        self.members().iter().position(|member| member.name == name)
+    }
+
+    pub fn index_by_offset(&self, offset: u64) -> Option<usize> {
+        self.members()
+            .iter()
+            .position(|member| member.offset == offset)
+    }
+
+    // Setters
+
+    pub fn clear_members(&self) {
+        let len = self.members().len();
+        for idx in (0..len).rev() {
+            self.remove(idx)
+        }
+    }
+
+    pub fn add_members<'a>(&self, members: impl IntoIterator<Item = &'a StructureMember>) {
+        for member in members {
+            self.append(&member.ty, &member.name, member.access, member.scope);
+        }
+    }
+
+    pub fn set_members<'a>(&self, members: impl IntoIterator<Item = &'a StructureMember>) {
+        self.clear_members();
+        self.add_members(members);
+    }
+
+    pub fn remove(&self, index: usize) {
+        unsafe { BNRemoveStructureBuilderMember(self.handle, index) }
+    }
+
+    pub fn replace(&self, index: usize, type_: Conf<&Type>, name: &str, overwrite: bool) {
+        let name = name.into_bytes_with_nul();
+        let name_ptr = name.as_ptr() as *const _;
+
+        let raw_type_ = BNTypeWithConfidence {
+            type_: type_.contents as *const Type as *mut _,
+            confidence: type_.confidence,
+        };
+        unsafe {
+            BNReplaceStructureBuilderMember(self.handle, index, &raw_type_, name_ptr, overwrite)
+        }
+    }
 }
 
 impl From<&Structure> for StructureBuilder {
@@ -2039,6 +2092,25 @@ impl StructureMember {
             access: handle.access,
             scope: handle.scope,
         }
+    }
+}
+
+impl CoreArrayProvider for StructureMember {
+    type Raw = BNStructureMember;
+    type Context = ();
+}
+
+unsafe impl CoreOwnedArrayProvider for StructureMember {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeStructureMemberList(raw, count)
+    }
+}
+
+unsafe impl CoreArrayWrapper for StructureMember {
+    type Wrapped<'a> = Guard<'a, StructureMember>;
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Guard::new(StructureMember::from_raw(*raw), &())
     }
 }
 

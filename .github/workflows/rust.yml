@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          submodules: true
 
       - name: Install Clang
         run: |
@@ -29,7 +31,7 @@ jobs:
 
       - name: cargo check
         working-directory: ./rust
-        run: cargo check --workspace
+        run: cargo check --workspace --all-features
 
       - name: cargo clippy
         working-directory: ./rust

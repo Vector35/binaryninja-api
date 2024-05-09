@@ -27,7 +27,7 @@
 //! And finally calling `binaryninja::debuginfo::DebugInfoParser::register` to register it with the core.
 //!
 //! Here's a minimal, complete example boilerplate-plugin:
-//! ```
+//! ```no_run
 //! use binaryninja::{
 //!     binaryview::BinaryView,
 //!     debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser},
@@ -40,8 +40,9 @@
 //!         true
 //!     }
 //!
-//!     fn parse_info(&self, _debug_info: &mut DebugInfo, _view: &BinaryView, _debug_file: &BinaryView, _progress: Box<dyn Fn(usize, usize) -> bool>) {
+//!     fn parse_info(&self, _debug_info: &mut DebugInfo, _view: &BinaryView, _debug_file: &BinaryView, _progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>) -> bool {
 //!         println!("Parsing info");
+//!         true
 //!     }
 //! }
 //!
@@ -53,11 +54,14 @@
 //! ```
 //!
 //! `DebugInfo` will then be automatically applied to binary views that contain debug information (via the setting `analysis.debugInfo.internal`), binary views that provide valid external debug info files (`analysis.debugInfo.external`), or manually fetched/applied as below:
-//! ```
-//! let valid_parsers = DebugInfoParser::parsers_for_view(bv);
-//! let parser = valid_parsers[0];
-//! let debug_info = parser.parse_debug_info(bv);
-//! bv.apply_debug_info(debug_info);
+//! ```no_run
+//! # use binaryninja::debuginfo::DebugInfoParser;
+//! # use binaryninja::binaryview::BinaryViewExt;
+//! let bv = binaryninja::load("example").unwrap();
+//! let valid_parsers = DebugInfoParser::parsers_for_view(&bv);
+//! let parser = valid_parsers.get(0);
+//! let debug_info = parser.parse_debug_info(&bv, &bv, None, None).unwrap();
+//! bv.apply_debug_info(&debug_info);
 //! ```
 //!
 //! Multiple debug-info parsers can manually contribute debug info for a binary view by simply calling `parse_debug_info` with the
@@ -277,6 +281,14 @@ unsafe impl CoreOwnedArrayProvider for DebugInfoParser {
     }
 }
 
+unsafe impl CoreArrayWrapper for DebugInfoParser {
+    type Wrapped<'a> = Guard<'a, DebugInfoParser>;
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Guard::new(DebugInfoParser { handle: *raw }, &())
+    }
+}
+
 ///////////////////////
 // DebugFunctionInfo
 
@@ -414,7 +426,10 @@ impl DebugInfo {
     }
 
     /// Returns a generator of all functions provided by a named DebugInfoParser
-    pub fn functions_by_name<S: BnStrCompatible>(&self, parser_name: S) -> Vec<DebugFunctionInfo> {
+    pub fn functions_by_name<S: BnStrCompatible>(
+        &self,
+        parser_name: S
+    ) -> Vec<DebugFunctionInfo> {
         let parser_name = parser_name.into_bytes_with_nul();
 
         let mut count: usize = 0;

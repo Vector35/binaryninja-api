@@ -13,6 +13,5 @@ Additionally, several types of containers for type information are documented he
 - [Platform Types](platformtypes.md): Types that automatically apply to a platform
 - [Type Archives](typearchives.md): How you can use type archives to share types between analysis databases
 - [Signature Libraries](../../dev/annotation.md#signature-library): Signature libraries are used to match names of functions with signatures for code that is statically compiled
-- [Platform Types](platformtypes.md): Platform types are base types that apply to all binaries on a particular platform
 
 Additionally, make sure to see the [applying annotations](../../dev/annotation.md) section of the developer guide for information about using the API with types and covering the creation of many of the items described below.

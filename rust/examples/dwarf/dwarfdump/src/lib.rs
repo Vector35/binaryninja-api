@@ -33,7 +33,7 @@ use gimli::{
     UnitSectionOffset,
 };
 
-static PADDING: [&'static str; 23] = [
+static PADDING: [&str; 23] = [
     "",
     " ",
     "  ",
@@ -189,7 +189,7 @@ fn get_info_string<R: Reader>(
             let value_string = format!("{}", value);
             attr_line.push(InstructionTextToken::new(
                 &value_string,
-                InstructionTextTokenContents::Integer(value.into()),
+                InstructionTextTokenContents::Integer(value),
             ));
         } else if let Some(value) = attr.sdata_value() {
             let value_string = format!("{}", value);
@@ -281,7 +281,7 @@ fn dump_dwarf(bv: &BinaryView) {
         }
     }
 
-    view.show_graph_report("DWARF", graph);
+    view.show_graph_report("DWARF", &graph);
 }
 
 struct DWARFDump;

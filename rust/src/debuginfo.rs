@@ -281,10 +281,10 @@ unsafe impl CoreOwnedArrayProvider for DebugInfoParser {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for DebugInfoParser {
-    type Wrapped = Guard<'a, DebugInfoParser>;
+unsafe impl CoreArrayWrapper for DebugInfoParser {
+    type Wrapped<'a> = Guard<'a, DebugInfoParser>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(DebugInfoParser { handle: *raw }, &())
     }
 }

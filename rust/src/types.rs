@@ -2104,10 +2104,10 @@ unsafe impl CoreOwnedArrayProvider for StructureMember {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for StructureMember {
-    type Wrapped = Guard<'a, StructureMember>;
+unsafe impl CoreArrayWrapper for StructureMember {
+    type Wrapped<'a> = Guard<'a, StructureMember>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(StructureMember::from_raw(*raw), &())
     }
 }

@@ -47,5 +47,21 @@ if(BN_INTERNAL_BUILD)
 		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
 endif()
 
-add_executable(mipstest mips/mips.c mips/test.c)
-target_link_libraries(mipstest PRIVATE arch_mips)
+if (DEFINED FORCE_TEST)
+	
+	if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+		add_executable(mipstest mips/mips.c mips/test.c)
+
+		target_compile_definitions(mipstest PRIVATE FORCE_TEST=1)
+
+		set_target_properties(mipstest PROPERTIES
+			CXX_STANDARD 17
+			CXX_VISIBILITY_PRESET hidden
+			CXX_STANDARD_REQUIRED ON
+			VISIBILITY_INLINES_HIDDEN ON
+			POSITION_INDEPENDENT_CODE ON)
+		
+		target_link_libraries(mipstest PRIVATE arch_mips)
+	endif()
+endif()
+

@@ -58,11 +58,27 @@ int main(int ac, char **av)
 	uint64_t baseaddr = 0;
 	int instindex = 0;
 	int c = 0;
+	int version = MIPS_32;
 
-	while ((c = getopt(ac, av, "a:")) != -1)
+	while ((c = getopt(ac, av, "klmnoa:")) != -1)
 	{
 		switch (c)
 		{
+		case 'k':
+			version = MIPS_64;
+			break;
+		case 'l':
+			version = MIPS_1;
+			break;
+		case 'm':
+			version = MIPS_2;
+			break;
+		case 'n':
+			version = MIPS_3;
+			break;
+		case 'o':
+			version = MIPS_4;
+			break;
 		case 'a':
 			baseaddr = strtoull(optarg, NULL, 0x10);
 			break;
@@ -82,9 +98,9 @@ int main(int ac, char **av)
 
 	if (ac == 2 && !strcmp(av[1], "test"))
 	{
-		disassemble(0x14E00003, 0, MIPS_32, instxt);
+		disassemble(0x14E00003, 0, version, instxt);
 		ASSERT(!strcmp(instxt, "bne\t$a3, $zero, 0x10"));
-		disassemble(0x14E00003, 4, MIPS_32, instxt);
+		disassemble(0x14E00003, 4, version, instxt);
 		ASSERT(!strcmp(instxt, "bne\t$a3, $zero, 0x405a68"));
 		exit(0);
 	}
@@ -93,7 +109,7 @@ int main(int ac, char **av)
 	{
 		insword = strtoul(av[instindex], NULL, 16);
 
-		if (0 == disassemble(insword, baseaddr, MIPS_32, instxt))
+		if (0 == disassemble(insword, baseaddr, version, instxt))
 		{
 			printf("%08llX: %08X %s\n", baseaddr, insword, instxt);
 		}

@@ -2094,17 +2094,13 @@ impl StructureMember {
 impl CoreArrayProvider for StructureMember {
     type Raw = BNStructureMember;
     type Context = ();
+    type Wrapped<'a> = Guard<'a, StructureMember>;
 }
 
-unsafe impl CoreOwnedArrayProvider for StructureMember {
+unsafe impl CoreArrayProviderInner for StructureMember {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeStructureMemberList(raw, count)
     }
-}
-
-unsafe impl CoreArrayWrapper for StructureMember {
-    type Wrapped<'a> = Guard<'a, StructureMember>;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(StructureMember::from_raw(*raw), &())
     }

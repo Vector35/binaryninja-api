@@ -456,7 +456,7 @@ where
 {
     fn from(value: &[(S, T)]) -> Self {
         let data: Vec<(S::Result, Ref<Metadata>)> = value
-            .into_iter()
+            .iter()
             .map(|(k, v)| (k.into_bytes_with_nul(), v.into()))
             .collect();
         let mut keys: Vec<*const c_char> = data

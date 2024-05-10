@@ -222,7 +222,7 @@ impl FileMetadata {
                 BNCreateDatabaseWithProgress(
                     handle,
                     filename_ptr,
-                    core::mem::transmute(func),
+                    func as *mut libc::c_void,
                     Some(cb_progress_func),
                     ptr::null_mut(),
                 )
@@ -271,7 +271,7 @@ impl FileMetadata {
                 BNOpenExistingDatabaseWithProgress(
                     self.handle,
                     filename_ptr,
-                    core::mem::transmute(func),
+                    func as *mut libc::c_void,
                     Some(cb_progress_func),
                 )
             },

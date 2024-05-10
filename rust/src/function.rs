@@ -321,8 +321,8 @@ impl Function {
             let confidence = variables.confidence;
             let vars = std::slice::from_raw_parts(variables.vars, variables.count);
 
-            for i in 0..variables.count {
-                result.push(Variable::from_raw(vars[i]));
+            for var in vars.iter().take(variables.count) {
+                result.push(Variable::from_raw(*var));
             }
 
             BNFreeParameterVariables(&mut variables);

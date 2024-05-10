@@ -1,23 +1,23 @@
 use std::env;
 
 use binaryninja::binaryview::BinaryViewExt;
-use binaryninja::mlil::MediumLevelILLiftedOperand;
-use binaryninja::mlil::{MediumLevelILFunction, MediumLevelILLiftedInstruction};
+use binaryninja::mlil;
+use binaryninja::mlil::{MediumLevelILLiftedOperand, MediumLevelILFunction, MediumLevelILLiftedInstruction};
 use binaryninja::types::Variable;
 
 fn print_indent(indent: usize) {
     print!("{:<indent$}", "")
 }
 
-fn print_operation(operation: &MediumLevelILLiftedInstruction) {
+fn print_operation<I: mlil::Form>(operation: &MediumLevelILLiftedInstruction<I>) {
     print!("{}", operation.name());
 }
 
-fn print_variable(func: &MediumLevelILFunction, var: &Variable) {
+fn print_variable<I: mlil::Form>(func: &MediumLevelILFunction<I>, var: &Variable) {
     print!("{}", func.get_function().get_variable_name(var));
 }
 
-fn print_il_expr(instr: &MediumLevelILLiftedInstruction, mut indent: usize) {
+fn print_il_expr<I: mlil::Form>(instr: &MediumLevelILLiftedInstruction<I>, mut indent: usize) {
     print_indent(indent);
     print_operation(instr);
     println!();

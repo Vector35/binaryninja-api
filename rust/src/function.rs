@@ -251,7 +251,7 @@ impl Function {
         }
     }
 
-    pub fn medium_level_il(&self) -> Result<Ref<mlil::MediumLevelILFunction>, ()> {
+    pub fn medium_level_il(&self) -> Result<Ref<mlil::MediumLevelILFunction<mlil::NonSSA>>, ()> {
         unsafe {
             let mlil = BNGetFunctionMediumLevelIL(self.handle);
 

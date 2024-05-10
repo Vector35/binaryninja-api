@@ -5,19 +5,20 @@ use binaryninjacore_sys::BNHighLevelILOperation;
 use binaryninjacore_sys::BNMediumLevelILOperation;
 
 use crate::hlil::{HighLevelILFunction, HighLevelILInstruction};
+use crate::mlil;
 use crate::mlil::{MediumLevelILFunction, MediumLevelILInstruction};
 use crate::rc::{Ref, RefCountable};
 use crate::types::{SSAVariable, Variable};
 
 pub trait ILFunction {
-    type Instruction;
+    type Instruction: Sized;
 
     fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction;
     fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5];
 }
 
-impl ILFunction for MediumLevelILFunction {
-    type Instruction = MediumLevelILInstruction;
+impl<I: mlil::Form> ILFunction for MediumLevelILFunction<I> {
+    type Instruction = MediumLevelILInstruction<I>;
 
     fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction {
         self.instruction_from_idx(expr_idx)

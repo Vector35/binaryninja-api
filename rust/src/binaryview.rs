@@ -237,26 +237,11 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// Appends up to `len` bytes from address `offset` into `dest`
     fn read_into_vec(&self, dest: &mut Vec<u8>, offset: u64, len: usize) -> usize {
         let starting_len = dest.len();
-        let space = dest.capacity() - starting_len;
-
-        if space < len {
-            dest.reserve(len - space);
-        }
-
-        unsafe {
-            let res;
-
-            {
-                let dest_slice = dest.get_unchecked_mut(starting_len..starting_len + len);
-                res = self.read(dest_slice, offset);
-            }
-
-            if res > 0 {
-                dest.set_len(starting_len + res);
-            }
-
-            res
-        }
+        dest.resize(starting_len + len, 0);
+        let slice = &mut dest[starting_len..];
+        let read_size = self.read(slice, offset);
+        dest.truncate(starting_len + read_size);
+        read_size
     }
 
     fn notify_data_written(&self, offset: u64, len: usize) {

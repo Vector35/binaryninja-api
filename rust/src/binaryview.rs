@@ -225,18 +225,11 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     /// Reads up to `len` bytes from address `offset`
     fn read_vec(&self, offset: u64, len: usize) -> Vec<u8> {
-        let mut ret = Vec::with_capacity(len);
+        let mut ret = vec![0; len];
 
-        unsafe {
-            let res;
-
-            {
-                let dest_slice = ret.get_unchecked_mut(0..len);
-                res = self.read(dest_slice, offset);
-            }
-
-            ret.set_len(res);
-        }
+        let slice = ret.as_mut_slice();
+        let size = self.read(slice, offset);
+        ret.truncate(size);
 
         ret
     }

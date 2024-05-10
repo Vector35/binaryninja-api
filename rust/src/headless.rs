@@ -135,7 +135,12 @@ impl Session {
     }
 
     /// ```no_run
-    /// let settings = [("analysis.linearSweep.autorun", false)].into();
+    /// use binaryninja::{metadata::Metadata, rc::Ref};
+    /// use std::collections::HashMap;
+    ///
+    /// let settings: Ref<Metadata> = HashMap::from([
+    ///     ("analysis.linearSweep.autorun", false.into()),
+    /// ]).into();
     /// let headless_session = binaryninja::headless::Session::new();
     ///
     /// let bv = headless_session.load_with_options("/bin/cat", true, Some(settings))

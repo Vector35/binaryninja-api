@@ -2,7 +2,7 @@
 
 //! To use logging in your script, do something like:
 //!
-//! ```
+//! ```no-test
 //! use binaryninja::logger;
 //! use log::{info, LevelFilter};
 //!
@@ -15,7 +15,7 @@
 //!
 //! or
 //!
-//!```
+//!```no-test
 //! use binaryninja::logger;
 //! use log::{info, LevelFilter};
 //!

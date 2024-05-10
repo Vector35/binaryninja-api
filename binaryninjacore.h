@@ -1568,6 +1568,9 @@ extern "C"
 		void (*typeArchiveDetached)(void* ctxt, BNBinaryView* view, const char* id, const char* path);
 		void (*typeArchiveConnected)(void* ctxt, BNBinaryView* view, BNTypeArchive* archive);
 		void (*typeArchiveDisconnected)(void* ctxt, BNBinaryView* view, BNTypeArchive* archive);
+		void (*undoEntryAdded)(void* ctxt, BNBinaryView* view, BNUndoEntry* entry);
+		void (*undoEntryTaken)(void* ctxt, BNBinaryView* view, BNUndoEntry* entry);
+		void (*redoEntryTaken)(void* ctxt, BNBinaryView* view, BNUndoEntry* entry);
 	} BNBinaryDataNotification;
 
 	typedef struct BNProjectNotification

@@ -79,6 +79,7 @@ from . import deprecation
 from . import typecontainer
 from . import externallibrary
 from . import project
+from . import undo
 
 
 PathType = Union[str, os.PathLike]
@@ -667,6 +668,10 @@ class BinaryDataNotificationCallbacks:
 			self._cb.typeArchiveDetached = self._cb.typeArchiveDetached.__class__(self._type_archive_detached)
 			self._cb.typeArchiveConnected = self._cb.typeArchiveConnected.__class__(self._type_archive_connected)
 			self._cb.typeArchiveDisconnected = self._cb.typeArchiveDisconnected.__class__(self._type_archive_disconnected)
+
+			self._cb.undoEntryAdded = self._cb.undoEntryAdded.__class__(self._undo_entry_added)
+			self._cb.undoEntryTaken = self._cb.undoEntryTaken.__class__(self._undo_entry_taken)
+			self._cb.redoEntryTaken = self._cb.redoEntryTaken.__class__(self._redo_entry_taken)
 		else:
 			if notify.notifications & NotificationType.NotificationBarrier:
 				self._cb.notificationBarrier = self._cb.notificationBarrier.__class__(self._notification_barrier)
@@ -755,6 +760,13 @@ class BinaryDataNotificationCallbacks:
 				self._cb.typeArchiveConnected = self._cb.typeArchiveConnected.__class__(self._type_archive_connected)
 			if notify.notifications & NotificationType.TypeArchiveDisconnected:
 				self._cb.typeArchiveDisconnected = self._cb.typeArchiveDisconnected.__class__(self._type_archive_disconnected)
+
+			if notify.notifications & NotificationType.UndoEntryAdded:
+				self._cb.undoEntryAdded = self._cb.undoEntryAdded.__class__(self._undo_entry_added)
+			if notify.notifications & NotificationType.UndoEntryTaken:
+				self._cb.undoEntryTaken = self._cb.undoEntryTaken.__class__(self._undo_entry_taken)
+			if notify.notifications & NotificationType.RedoEntryTaken:
+				self._cb.redoEntryTaken = self._cb.redoEntryTaken.__class__(self._redo_entry_taken)
 
 	def _register(self) -> None:
 		core.BNRegisterDataNotification(self._view.handle, self._cb)
@@ -1152,6 +1164,26 @@ class BinaryDataNotificationCallbacks:
 		except:
 			log_error(traceback.format_exc())
 
+	def _undo_entry_added(self, ctxt, view: core.BNBinaryView, archive: core.BNUndoEntry):
+		try:
+			py_entry = undo.UndoEntry(handle=core.BNNewUndoEntryReference(archive))
+			self._notify.undo_entry_added(self._view, py_entry)
+		except:
+			log_error(traceback.format_exc())
+
+	def _undo_entry_taken(self, ctxt, view: core.BNBinaryView, archive: core.BNUndoEntry):
+		try:
+			py_entry = undo.UndoEntry(handle=core.BNNewUndoEntryReference(archive))
+			self._notify.undo_entry_taken(self._view, py_entry)
+		except:
+			log_error(traceback.format_exc())
+
+	def _redo_entry_taken(self, ctxt, view: core.BNBinaryView, archive: core.BNUndoEntry):
+		try:
+			py_entry = undo.UndoEntry(handle=core.BNNewUndoEntryReference(archive))
+			self._notify.redo_entry_taken(self._view, py_entry)
+		except:
+			log_error(traceback.format_exc())
 
 	@property
 	def view(self) -> 'BinaryView':

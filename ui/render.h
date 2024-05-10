@@ -112,7 +112,7 @@ class BINARYNINJAUIAPI RenderContext
 	    size_t tokenIndex, const std::vector<BinaryNinja::InstructionTextToken>& tokens);
 	HighlightTokenState getHighlightTokenForTextToken(const BinaryNinja::InstructionTextToken& token);
 
-	void drawText(QPainter& p, int x, int y, QColor color, const QString& text);
+	void drawText(QPainter& p, int x, int y, QColor color, const QString& text) const;
 	void drawUnderlinedText(QPainter& p, int x, int y, QColor color, const QString& text);
 
 	void drawSeparatorLine(QPainter& p, QColor top, QColor bottom, QColor line, const QRect& rect);
@@ -120,14 +120,14 @@ class BINARYNINJAUIAPI RenderContext
 
 	void drawLinearDisassemblyLineBackground(
 		QPainter& p, BNLinearDisassemblyLineType type, const QRect& rect, const QRect& dirtyRect, int gutterWidth);
-	void drawDisassemblyLine(QPainter& p, int left, int top,
+	int drawDisassemblyLine(QPainter& p, int left, int top,
 	    const std::vector<BinaryNinja::InstructionTextToken>& tokens, HighlightTokenState& highlight,
-	    bool highlightOnly = false);
+	    bool highlightOnly = false) const;
 
 	void drawHexEditorLine(QPainter& p, int left, int top, const HexEditorHighlightState& highlight, BinaryViewRef view,
 	    uint64_t lineStartAddr, size_t cols, size_t firstCol, size_t count, bool cursorVisible, bool cursorAscii,
 	    size_t cursorPos, bool byteCursor);
-	QFont getFont() { return m_fontParams.getFont(); }
-	QFont getEmojiFont() { return m_fontParams.getEmojiFont(); }
+	QFont getFont() const { return m_fontParams.getFont(); }
+	QFont getEmojiFont() const { return m_fontParams.getEmojiFont(); }
 	void setFont(const QFont& font);
 };

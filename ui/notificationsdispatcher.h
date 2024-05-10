@@ -127,7 +127,7 @@ private:
 	std::unique_ptr<SymbolInfo> m_symbolInfo;
 	std::variant<std::monostate, BinaryDataChangeInfo, FunctionRef, BinaryNinja::DataVariable, TagTypeRef,
 		BinaryNinja::TagReference, StringInfo, TypeChangeInfo, SegmentRef, SectionRef, ComponentInfo,
-		ExternalLibraryRef, ExternalLocationRef, TypeArchiveInfo, TypeArchiveRef> m_object;
+		ExternalLibraryRef, ExternalLocationRef, TypeArchiveInfo, TypeArchiveRef, UndoEntryRef> m_object;
 
 public:
 	NotificationEvent(NotificationType source): m_source(source) { }
@@ -146,6 +146,7 @@ public:
 	NotificationEvent(NotificationType source, BinaryNinja::ExternalLocation* location): m_source(source), m_object(location) { }
 	NotificationEvent(NotificationType source, TypeArchiveInfo&& typeArchiveInfo): m_source(source), m_object(std::move(typeArchiveInfo)) { }
 	NotificationEvent(NotificationType source, BinaryNinja::TypeArchive* archive): m_source(source), m_object(archive) { }
+	NotificationEvent(NotificationType source, BinaryNinja::UndoEntry* entry): m_source(source), m_object(entry) { }
 
 	void cacheSymbolInfo();
 	SymbolInfo* getSymbolInfo() const { return m_symbolInfo.get(); }
@@ -297,6 +298,10 @@ public:
 	void OnTypeArchiveDetached(BinaryNinja::BinaryView* data, const std::string& id, const std::string& path) override;
 	void OnTypeArchiveConnected(BinaryNinja::BinaryView* data, BinaryNinja::TypeArchive* archive) override;
 	void OnTypeArchiveDisconnected(BinaryNinja::BinaryView* data, BinaryNinja::TypeArchive* archive) override;
+
+	void OnUndoEntryAdded(BinaryNinja::BinaryView* data, BinaryNinja::UndoEntry* entry) override;
+	void OnUndoEntryTaken(BinaryNinja::BinaryView* data, BinaryNinja::UndoEntry* entry) override;
+	void OnRedoEntryTaken(BinaryNinja::BinaryView* data, BinaryNinja::UndoEntry* entry) override;
 };
 
 

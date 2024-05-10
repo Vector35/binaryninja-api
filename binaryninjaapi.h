@@ -3139,6 +3139,10 @@ namespace BinaryNinja {
 		static void TypeArchiveConnectedCallback(void* ctxt, BNBinaryView* data, BNTypeArchive* archive);
 		static void TypeArchiveDisconnectedCallback(void* ctxt, BNBinaryView* data, BNTypeArchive* archive);
 
+		static void UndoEntryAddedCallback(void* ctxt, BNBinaryView* data, BNUndoEntry* entry);
+		static void UndoEntryTakenCallback(void* ctxt, BNBinaryView* data, BNUndoEntry* entry);
+		static void RedoEntryTakenCallback(void* ctxt, BNBinaryView* data, BNUndoEntry* entry);
+
 	  public:
 
 		enum NotificationType : uint64_t
@@ -3192,6 +3196,9 @@ namespace BinaryNinja {
 			TypeArchiveDetached = 1ULL << 46,
 			TypeArchiveConnected = 1ULL << 47,
 			TypeArchiveDisconnected = 1ULL << 48,
+			UndoEntryAdded = 1ULL << 49,
+			UndoEntryTaken = 1ULL << 50,
+			RedoEntryTaken = 1ULL << 51,
 
 			BinaryDataUpdates = DataWritten | DataInserted | DataRemoved,
 			FunctionLifetime = FunctionAdded | FunctionRemoved,
@@ -3214,7 +3221,8 @@ namespace BinaryNinja {
 			ExternalLibraryUpdates = ExternalLibraryLifetime | ExternalLibraryUpdated,
 			ExternalLocationLifetime = ExternalLocationAdded | ExternalLocationRemoved,
 			ExternalLocationUpdates = ExternalLocationLifetime | ExternalLocationUpdated,
-			TypeArchiveUpdates = TypeArchiveAttached | TypeArchiveDetached | TypeArchiveConnected | TypeArchiveDisconnected
+			TypeArchiveUpdates = TypeArchiveAttached | TypeArchiveDetached | TypeArchiveConnected | TypeArchiveDisconnected,
+			UndoUpdates = UndoEntryAdded | UndoEntryTaken | RedoEntryTaken
 		};
 
 		using NotificationTypes = uint64_t;
@@ -3586,6 +3594,39 @@ namespace BinaryNinja {
 		{
 			(void)data;
 			(void)archive;
+		}
+
+		/*! This notification is posted whenever an entry is added to undo history
+
+		    \param data BinaryView the action was taken on
+		    \param entry UndoEntry
+		 */
+		virtual void OnUndoEntryAdded(BinaryView* data, UndoEntry* entry)
+		{
+			(void)data;
+			(void)entry;
+		}
+
+		/*! This notification is posted whenever an action is undone
+
+		    \param data BinaryView the action was taken on
+		    \param entry UndoEntry that was undone
+		 */
+		virtual void OnUndoEntryTaken(BinaryView* data, UndoEntry* entry)
+		{
+			(void)data;
+			(void)entry;
+		}
+
+		/*! This notification is posted whenever an action is redone
+
+		    \param data BinaryView the action was taken on
+		    \param entry UndoEntry that was redone
+		 */
+		virtual void OnRedoEntryTaken(BinaryView* data, UndoEntry* entry)
+		{
+			(void)data;
+			(void)entry;
 		}
 	};
 

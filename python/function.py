@@ -659,10 +659,9 @@ class Function:
 		"""
 		return TagList(self)
 
-	def get_tags_at(self, addr: int, arch: Optional['architecture.Architecture'] = None, auto: Optional[bool] = None) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
+	def get_tags_at(self, addr: int, arch: Optional['architecture.Architecture'] = None, auto: Optional[bool] = None) -> List['binaryview.Tag']:
 		"""
-		``get_tags`` gets a list of Tags (but not function tags). You optionally get tags by address, range, or type, and filter by user tags.
-		Tags are returned as a list of (arch, address, Tag) tuples.
+		``get_tags`` gets a list of Tags (but not function tags).
 
 		:param int addr: Address to get tags from.
 		:param bool auto: If None, gets all tags, if True, gets auto tags, if False, gets user tags

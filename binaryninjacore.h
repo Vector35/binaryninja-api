@@ -802,7 +802,7 @@ extern "C"
 		UnalignedSuffix,
 		RestrictSuffix,
 		ReferenceSuffix,
-		LvalueSuffix
+		LvalueSuffix,
 	} BNPointerSuffix;
 
 	// Caution: these enumeration values are used a lookups into the static NameTypeStrings in the core
@@ -5871,6 +5871,10 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetTypeAlternateName(BNType* type);
 	BINARYNINJACOREAPI uint32_t BNTypeGetSystemCallNumber(BNType* type);
 	BINARYNINJACOREAPI bool BNTypeIsSystemCall(BNType* type);
+	BINARYNINJACOREAPI BNPointerSuffix* BNGetTypePointerSuffix(BNType* type, size_t* count);
+	BINARYNINJACOREAPI char* BNGetTypePointerSuffixString(BNType* type);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypePointerSuffixTokens(BNType* type, uint8_t baseConfidence, size_t* count);
+	BINARYNINJACOREAPI void BNFreePointerSuffixList(BNPointerSuffix* suffix, size_t count);
 
 	BINARYNINJACOREAPI char* BNGetTypeString(BNType* type, BNPlatform* platform, BNTokenEscapingType escaping);
 	BINARYNINJACOREAPI char* BNGetTypeStringBeforeName(BNType* type, BNPlatform* platform, BNTokenEscapingType escaping);
@@ -5933,6 +5937,11 @@ extern "C"
 	BINARYNINJACOREAPI bool BNTypeBuilderIsSystemCall(BNTypeBuilder* type);
 	BINARYNINJACOREAPI uint32_t BNTypeBuilderGetSystemCallNumber(BNTypeBuilder* type);
 	BINARYNINJACOREAPI void BNTypeBuilderSetStackAdjustment(BNTypeBuilder* type, BNOffsetWithConfidence* adjust);
+	BINARYNINJACOREAPI BNPointerSuffix* BNGetTypeBuilderPointerSuffix(BNTypeBuilder* type, size_t* count);
+	BINARYNINJACOREAPI char* BNGetTypeBuilderPointerSuffixString(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeBuilderPointerSuffixTokens(BNTypeBuilder* type, uint8_t baseConfidence, size_t* count);
+	BINARYNINJACOREAPI void BNAddTypeBuilderPointerSuffix(BNTypeBuilder* type, BNPointerSuffix ps);
+	BINARYNINJACOREAPI void BNSetTypeBuilderPointerSuffix(BNTypeBuilder* type, BNPointerSuffix* suffix, size_t count);
 
 	BINARYNINJACOREAPI char* BNGetTypeBuilderString(BNTypeBuilder* type, BNPlatform* platform);
 	BINARYNINJACOREAPI char* BNGetTypeBuilderStringBeforeName(BNTypeBuilder* type, BNPlatform* platform);

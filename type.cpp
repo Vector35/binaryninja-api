@@ -693,6 +693,36 @@ Confidence<int64_t> Type::GetStackAdjustment() const
 }
 
 
+std::set<BNPointerSuffix> Type::GetPointerSuffix() const
+{
+	size_t count = 0;
+	BNPointerSuffix* suffix = BNGetTypePointerSuffix(m_object, &count);
+	std::set<BNPointerSuffix> result(suffix, suffix + count);
+	BNFreePointerSuffixList(suffix, count);
+	return result;
+
+}
+
+
+std::string Type::GetPointerSuffixString() const
+{
+	char* string = BNGetTypePointerSuffixString(m_object);
+	std::string result(string);
+	BNFreeString(string);
+	return result;
+}
+
+
+std::vector<InstructionTextToken> Type::GetPointerSuffixTokens(uint8_t baseConfidence) const
+{
+	size_t count = 0;
+	BNInstructionTextToken* tokens = BNGetTypePointerSuffixTokens(m_object, baseConfidence, &count);
+	std::vector<InstructionTextToken> result = InstructionTextToken::ConvertInstructionTextTokenList(tokens, count);
+	BNFreeInstructionText(tokens, count);
+	return result;
+}
+
+
 string Type::GetString(Platform* platform, BNTokenEscapingType escaping) const
 {
 	char* str = BNGetTypeString(m_object, platform ? platform->GetObject() : nullptr, escaping);
@@ -1932,6 +1962,54 @@ TypeBuilder& TypeBuilder::SetParameters(const std::vector<FunctionParameter>& pa
 	BNFunctionParameter* paramArray = GetParamArray(params, paramCount);
 	BNSetFunctionTypeBuilderParameters(m_object, paramArray, paramCount);
 	delete[] paramArray;
+	return *this;
+}
+
+
+std::set<BNPointerSuffix> TypeBuilder::GetPointerSuffix() const
+{
+	size_t count = 0;
+	BNPointerSuffix* suffix = BNGetTypeBuilderPointerSuffix(m_object, &count);
+	std::set<BNPointerSuffix> result(suffix, suffix + count);
+	BNFreePointerSuffixList(suffix, count);
+	return result;
+}
+
+
+std::string TypeBuilder::GetPointerSuffixString() const
+{
+	char* string = BNGetTypeBuilderPointerSuffixString(m_object);
+	std::string result(string);
+	BNFreeString(string);
+	return result;
+}
+
+
+std::vector<InstructionTextToken> TypeBuilder::GetPointerSuffixTokens(uint8_t baseConfidence) const
+{
+	size_t count = 0;
+	BNInstructionTextToken* tokens = BNGetTypeBuilderPointerSuffixTokens(m_object, baseConfidence, &count);
+	std::vector<InstructionTextToken> result = InstructionTextToken::ConvertInstructionTextTokenList(tokens, count);
+	BNFreeInstructionText(tokens, count);
+	return result;
+}
+
+
+TypeBuilder& TypeBuilder::AddPointerSuffix(BNPointerSuffix ps)
+{
+	BNAddTypeBuilderPointerSuffix(m_object, ps);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetPointerSuffix(const std::set<BNPointerSuffix>& suffix)
+{
+	std::vector<BNPointerSuffix> apiSuffix;
+	for (auto& s: suffix)
+	{
+		apiSuffix.push_back(s);
+	}
+	BNSetTypeBuilderPointerSuffix(m_object, apiSuffix.data(), apiSuffix.size());
 	return *this;
 }
 

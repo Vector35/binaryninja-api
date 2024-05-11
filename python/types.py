@@ -29,7 +29,7 @@ from . import _binaryninjacore as core
 from .enums import (
     StructureVariant, SymbolType, SymbolBinding, TypeClass, NamedTypeReferenceClass, ReferenceType, VariableSourceType,
     TypeReferenceType, MemberAccess, MemberScope, TypeDefinitionLineType, TokenEscapingType,
-    NameType
+    NameType, PointerSuffix
 )
 from . import callingconvention
 from . import function as _function
@@ -962,6 +962,41 @@ class PointerBuilder(TypeBuilder):
 	@origin.setter
 	def origin(self, origin: 'NamedTypeReferenceType'):
 		core.BNSetTypeBuilderNamedTypeReference(self._handle, origin.ntr_handle)
+
+	@property
+	def pointer_suffix(self) -> List[PointerSuffix]:
+		count = ctypes.c_size_t(0)
+		suffix = core.BNGetTypeBuilderPointerSuffix(self._handle, count)
+		assert suffix is not None, "core.BNGetTypeBuilderPointerSuffix returned None"
+		try:
+			result = []
+			for i in range(count.value):
+				result.append(PointerSuffix(suffix[i]))
+			return result
+		finally:
+			core.BNFreePointerSuffixList(suffix, count)
+
+	@pointer_suffix.setter
+	def pointer_suffix(self, value: List[PointerSuffix]):
+		suffix = (core.PointerSuffixEnum * len(value))()
+		for i, s in enumerate(value):
+			suffix[i] = core.PointerSuffixEnum(s)
+		core.BNSetTypeBuilderPointerSuffix(self._handle, suffix, len(value))
+
+	def add_pointer_suffix(self, suffix: PointerSuffix):
+		core.BNAddTypeBuilderPointerSuffix(self._handle, suffix)
+
+	@property
+	def pointer_suffix_string(self) -> str:
+		return core.BNGetTypeBuilderPointerSuffixString(self._handle)
+
+	def get_pointer_suffix_tokens(self, base_confidence: int = core.max_confidence) -> List['_function.InstructionTextToken']:
+		count = ctypes.c_ulonglong()
+		tokens = core.BNGetTypeBuilderPointerSuffixTokens(self._handle, base_confidence, count)
+		assert tokens is not None, "core.BNGetTypeBuilderPointerSuffixTokens returned None"
+		result = _function.InstructionTextToken._from_core_struct(tokens, count.value)
+		core.BNFreeInstructionText(tokens, count.value)
+		return result
 
 
 class ArrayBuilder(TypeBuilder):
@@ -2793,6 +2828,34 @@ class PointerType(Type):
 	@property
 	def children(self) -> List[Type]:
 		return [self.target]
+
+	@property
+	def pointer_suffix(self) -> List[PointerSuffix]:
+		count = ctypes.c_size_t(0)
+		suffix = core.BNGetTypePointerSuffix(self.handle, count)
+		assert suffix is not None, "core.BNGetTypePointerSuffix returned None"
+		try:
+			result = []
+			for i in range(count.value):
+				result.append(suffix[i])
+			return result
+		finally:
+			core.BNFreePointerSuffixList(suffix, count)
+
+	@property
+	def pointer_suffix_string(self) -> str:
+		return core.BNGetTypePointerSuffixString(self.handle)
+
+	def get_pointer_suffix_tokens(self, base_confidence: int = core.max_confidence) -> List['_function.InstructionTextToken']:
+		count = ctypes.c_ulonglong()
+		platform = None
+		if self._platform is not None:
+			platform = self._platform.handle
+		tokens = core.BNGetTypePointerSuffixTokens(self._handle, base_confidence, count)
+		assert tokens is not None, "core.BNGetTypePointerSuffixTokens returned None"
+		result = _function.InstructionTextToken._from_core_struct(tokens, count.value)
+		core.BNFreeInstructionText(tokens, count.value)
+		return result
 
 
 class ArrayType(Type):

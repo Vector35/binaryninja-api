@@ -8595,6 +8595,10 @@ namespace BinaryNinja {
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
 
+		std::set<BNPointerSuffix> GetPointerSuffix() const;
+		std::string GetPointerSuffixString() const;
+		std::vector<InstructionTextToken> GetPointerSuffixTokens(uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+
 		std::string GetString(Platform* platform = nullptr, BNTokenEscapingType escaping = NoTokenEscapingType) const;
 		std::string GetTypeAndName(const QualifiedName& name, BNTokenEscapingType escaping = NoTokenEscapingType) const;
 		std::string GetStringBeforeName(Platform* platform = nullptr, BNTokenEscapingType escaping = NoTokenEscapingType) const;
@@ -8985,6 +8989,13 @@ namespace BinaryNinja {
 		TypeBuilder& SetFunctionCanReturn(const Confidence<bool>& canReturn);
 		TypeBuilder& SetPure(const Confidence<bool>& pure);
 		TypeBuilder& SetParameters(const std::vector<FunctionParameter>& params);
+
+		std::set<BNPointerSuffix> GetPointerSuffix() const;
+		std::string GetPointerSuffixString() const;
+		std::vector<InstructionTextToken> GetPointerSuffixTokens(uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+
+		TypeBuilder& AddPointerSuffix(BNPointerSuffix ps);
+		TypeBuilder& SetPointerSuffix(const std::set<BNPointerSuffix>& suffix);
 
 		std::string GetString(Platform* platform = nullptr) const;
 		std::string GetTypeAndName(const QualifiedName& name) const;

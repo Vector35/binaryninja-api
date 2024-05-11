@@ -686,6 +686,18 @@ uint64_t Type::GetOffset() const
 }
 
 
+BNPointerBaseType Type::GetPointerBaseType() const
+{
+	return BNTypeGetPointerBaseType(m_object);
+}
+
+
+int64_t Type::GetPointerBaseOffset() const
+{
+	return BNTypeGetPointerBaseOffset(m_object);
+}
+
+
 Confidence<int64_t> Type::GetStackAdjustment() const
 {
 	BNOffsetWithConfidence result = BNGetTypeStackAdjustment(m_object);
@@ -1966,6 +1978,13 @@ TypeBuilder& TypeBuilder::SetParameters(const std::vector<FunctionParameter>& pa
 }
 
 
+TypeBuilder& TypeBuilder::SetPointerBase(BNPointerBaseType baseType, int64_t baseOffset)
+{
+	BNSetTypeBuilderPointerBase(m_object, baseType, baseOffset);
+	return *this;
+}
+
+
 std::set<BNPointerSuffix> TypeBuilder::GetPointerSuffix() const
 {
 	size_t count = 0;
@@ -2055,6 +2074,18 @@ bool TypeBuilder::IsSystemCall() const
 uint32_t TypeBuilder::GetSystemCallNumber() const
 {
 	return BNTypeBuilderGetSystemCallNumber(m_object);
+}
+
+
+BNPointerBaseType TypeBuilder::GetPointerBaseType() const
+{
+	return BNTypeBuilderGetPointerBaseType(m_object);
+}
+
+
+int64_t TypeBuilder::GetPointerBaseOffset() const
+{
+	return BNTypeBuilderGetPointerBaseOffset(m_object);
 }
 
 

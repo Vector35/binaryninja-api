@@ -805,6 +805,14 @@ extern "C"
 		LvalueSuffix,
 	} BNPointerSuffix;
 
+	typedef enum BNPointerBaseType
+	{
+		AbsolutePointerBaseType,
+		RelativeToConstantPointerBaseType,
+		RelativeToBinaryStartPointerBaseType,
+		RelativeToVariableAddressPointerBaseType,
+	} BNPointerBaseType;
+
 	// Caution: these enumeration values are used a lookups into the static NameTypeStrings in the core
 	// if you modify this you must also modify the string lookups as well
 	typedef enum BNNameType
@@ -5868,6 +5876,8 @@ extern "C"
 	BINARYNINJACOREAPI BNQualifiedName BNTypeGetStructureName(BNType* type);
 	BINARYNINJACOREAPI BNNamedTypeReference* BNGetRegisteredTypeName(BNType* type);
 	BINARYNINJACOREAPI BNReferenceType BNTypeGetReferenceType(BNType* type);
+	BINARYNINJACOREAPI BNPointerBaseType BNTypeGetPointerBaseType(BNType* type);
+	BINARYNINJACOREAPI int64_t BNTypeGetPointerBaseOffset(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeAlternateName(BNType* type);
 	BINARYNINJACOREAPI uint32_t BNTypeGetSystemCallNumber(BNType* type);
 	BINARYNINJACOREAPI bool BNTypeIsSystemCall(BNType* type);
@@ -5920,6 +5930,7 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderElementCount(BNTypeBuilder* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderOffset(BNTypeBuilder* type);
 	BINARYNINJACOREAPI void BNSetTypeBuilderOffset(BNTypeBuilder* type, uint64_t offset);
+	BINARYNINJACOREAPI void BNSetTypeBuilderPointerBase(BNTypeBuilder* type, BNPointerBaseType baseType, int64_t baseOffset);
 	BINARYNINJACOREAPI void BNSetFunctionTypeBuilderCanReturn(BNTypeBuilder* type, BNBoolWithConfidence* canReturn);
 	BINARYNINJACOREAPI void BNSetTypeBuilderPure(BNTypeBuilder* type, BNBoolWithConfidence* pure);
 	BINARYNINJACOREAPI void BNSetFunctionTypeBuilderParameters(
@@ -5933,6 +5944,8 @@ extern "C"
 	BINARYNINJACOREAPI BNOffsetWithConfidence BNGetTypeBuilderStackAdjustment(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNQualifiedName BNTypeBuilderGetStructureName(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNReferenceType BNTypeBuilderGetReferenceType(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNPointerBaseType BNTypeBuilderGetPointerBaseType(BNTypeBuilder* type);
+	BINARYNINJACOREAPI int64_t BNTypeBuilderGetPointerBaseOffset(BNTypeBuilder* type);
 	BINARYNINJACOREAPI char* BNGetTypeBuilderAlternateName(BNTypeBuilder* type);
 	BINARYNINJACOREAPI bool BNTypeBuilderIsSystemCall(BNTypeBuilder* type);
 	BINARYNINJACOREAPI uint32_t BNTypeBuilderGetSystemCallNumber(BNTypeBuilder* type);

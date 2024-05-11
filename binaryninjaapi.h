@@ -8594,6 +8594,8 @@ namespace BinaryNinja {
 
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
+		BNPointerBaseType GetPointerBaseType() const;
+		int64_t GetPointerBaseOffset() const;
 
 		std::set<BNPointerSuffix> GetPointerSuffix() const;
 		std::string GetPointerSuffixString() const;
@@ -8984,11 +8986,14 @@ namespace BinaryNinja {
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
 		uint32_t GetSystemCallNumber() const;
+		BNPointerBaseType GetPointerBaseType() const;
+		int64_t GetPointerBaseOffset() const;
 
 		TypeBuilder& SetOffset(uint64_t offset);
 		TypeBuilder& SetFunctionCanReturn(const Confidence<bool>& canReturn);
 		TypeBuilder& SetPure(const Confidence<bool>& pure);
 		TypeBuilder& SetParameters(const std::vector<FunctionParameter>& params);
+		TypeBuilder& SetPointerBase(BNPointerBaseType baseType, int64_t baseOffset);
 
 		std::set<BNPointerSuffix> GetPointerSuffix() const;
 		std::string GetPointerSuffixString() const;

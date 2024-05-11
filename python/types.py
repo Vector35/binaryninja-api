@@ -27,9 +27,11 @@ import uuid
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import (
-    StructureVariant, SymbolType, SymbolBinding, TypeClass, NamedTypeReferenceClass, ReferenceType, VariableSourceType,
-    TypeReferenceType, MemberAccess, MemberScope, TypeDefinitionLineType, TokenEscapingType,
-    NameType, PointerSuffix
+	StructureVariant, SymbolType, SymbolBinding, TypeClass, NamedTypeReferenceClass,
+	ReferenceType, VariableSourceType,
+	TypeReferenceType, MemberAccess, MemberScope, TypeDefinitionLineType,
+	TokenEscapingType,
+	NameType, PointerSuffix, PointerBaseType
 )
 from . import callingconvention
 from . import function as _function
@@ -997,6 +999,25 @@ class PointerBuilder(TypeBuilder):
 		result = _function.InstructionTextToken._from_core_struct(tokens, count.value)
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
+
+	def set_pointer_base(self, base_type: PointerBaseType, base_offset: int):
+		core.BNSetTypeBuilderPointerBase(self._handle, base_type, base_offset)
+
+	@property
+	def pointer_base_type(self) -> PointerBaseType:
+		return PointerBaseType(core.BNTypeBuilderGetPointerBaseType(self._handle))
+
+	@pointer_base_type.setter
+	def pointer_base_type(self, value: PointerBaseType):
+		self.set_pointer_base(value, self.pointer_base_offset)
+
+	@property
+	def pointer_base_offset(self) -> int:
+		return core.BNTypeBuilderGetPointerBaseOffset(self._handle)
+
+	@pointer_base_offset.setter
+	def pointer_base_offset(self, value: int):
+		self.set_pointer_base(self.pointer_base_type, value)
 
 
 class ArrayBuilder(TypeBuilder):
@@ -2856,6 +2877,14 @@ class PointerType(Type):
 		result = _function.InstructionTextToken._from_core_struct(tokens, count.value)
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
+
+	@property
+	def pointer_base_type(self) -> PointerBaseType:
+		return PointerBaseType(core.BNTypeGetPointerBaseType(self._handle))
+
+	@property
+	def pointer_base_offset(self) -> int:
+		return core.BNTypeGetPointerBaseOffset(self._handle)
 
 
 class ArrayType(Type):

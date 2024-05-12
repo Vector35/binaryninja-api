@@ -9824,6 +9824,8 @@ namespace BinaryNinja {
 		void SetAddressMode(BNDisassemblyAddressMode mode);
 		uint64_t GetAddressBaseOffset() const;
 		void SetAddressBaseOffset(uint64_t addressBaseOffset);
+		BNDisassemblyCallParameterHints GetCallParameterHints() const;
+		void SetCallParameterHints(BNDisassemblyCallParameterHints hints);
 	};
 
 	/*!

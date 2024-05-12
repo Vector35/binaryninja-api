@@ -8780,7 +8780,6 @@ class BinaryView:
 			settings.set_option(DisassemblyOption.ShowAddress, False)
 			settings.set_option(DisassemblyOption.ShowOpcode, False)
 			settings.set_option(DisassemblyOption.ShowVariableTypesWhenAssigned, True)
-			settings.set_option(DisassemblyOption.ShowCallParameterNames, True)
 			settings.set_option(DisassemblyOption.WaitForIL, True)
 		if not isinstance(settings, _function.DisassemblySettings):
 			raise TypeError("settings parameter is not DisassemblySettings type")
@@ -8870,7 +8869,6 @@ class BinaryView:
 			settings.set_option(DisassemblyOption.ShowAddress, False)
 			settings.set_option(DisassemblyOption.ShowOpcode, False)
 			settings.set_option(DisassemblyOption.ShowVariableTypesWhenAssigned, True)
-			settings.set_option(DisassemblyOption.ShowCallParameterNames, True)
 			settings.set_option(DisassemblyOption.WaitForIL, True)
 		if not isinstance(settings, _function.DisassemblySettings):
 			raise TypeError("settings parameter is not DisassemblySettings type")

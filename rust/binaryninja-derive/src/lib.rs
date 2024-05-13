@@ -124,11 +124,11 @@ impl Repr {
                             let content;
                             parenthesized!(content in meta.input);
                             align = Some(content.parse()?);
-                        } else if ident_in_list(ident, ["u8", "u16", "u32", "u64"]) {
+                        } else if ident_in_list(ident, ["u8", "u16", "u32", "u64", "u128"]) {
                             primitive = Some((meta.path.clone(), false));
-                        } else if ident_in_list(ident, ["i8", "i16", "i32", "i64"]) {
+                        } else if ident_in_list(ident, ["i8", "i16", "i32", "i64", "i128"]) {
                             primitive = Some((meta.path.clone(), true));
-                        } else if ident_in_list(ident, ["usize", "isize", "u128", "i128"]) {
+                        } else if ident_in_list(ident, ["usize", "isize"]) {
                             return Err(ident
                                 .span()
                                 .error(format!("`repr({ident})` types are not supported"))

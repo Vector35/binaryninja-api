@@ -15828,6 +15828,12 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
+	case ENC_FMAX_S_FLOATDP2:
+		intrin_id = ARM64_INTRIN_VMAX_F32;  // FMAX Sd,Sn,Sm
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_input_reg(inputs, il, instr.operands[2]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
 	case ENC_FMAX_H_FLOATDP2:
 		intrin_id = ARM64_INTRIN_VMAXH_F16;  // FMAX Hd,Hn,Hm
 		add_input_reg(inputs, il, instr.operands[1]);
@@ -15928,6 +15934,12 @@ bool NeonGetLowLevelILForInstruction(
 		break;
 	case ENC_FMIN_D_FLOATDP2:
 		intrin_id = ARM64_INTRIN_VMIN_F64;  // FMIN Dd,Dn,Dm
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_input_reg(inputs, il, instr.operands[2]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
+	case ENC_FMIN_S_FLOATDP2:
+		intrin_id = ARM64_INTRIN_VMIN_F32;  // FMIN Sd,Sn,Sm
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_reg(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
@@ -16322,6 +16334,11 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
+	case ENC_FNEG_S_FLOATDP1:
+		intrin_id = ARM64_INTRIN_VNEG_F32;  // FNEG Sd,Sn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
 	case ENC_FNEG_H_FLOATDP1:
 		intrin_id = ARM64_INTRIN_VNEGH_F16;  // FNEG Hd,Hn
 		add_input_reg(inputs, il, instr.operands[1]);
@@ -16661,6 +16678,11 @@ bool NeonGetLowLevelILForInstruction(
 		break;
 	case ENC_FSQRT_D_FLOATDP1:
 		intrin_id = ARM64_INTRIN_VSQRT_F64;  // FSQRT Dd,Dn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
+	case ENC_FSQRT_S_FLOATDP1:
+		intrin_id = ARM64_INTRIN_VSQRT_F32;  // FSQRT Sd,Sn
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;

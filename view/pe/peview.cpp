@@ -598,13 +598,20 @@ bool PEView::Init()
 		m_simplifyTemplates = viewSettings->Get<bool>("analysis.types.templateSimplifier", this);
 
 		settings = GetLoadSettings(GetTypeName());
-		if (settings && settings->Contains("loader.imageBase") && settings->Contains("loader.architecture")) // handle overrides
+		if (settings)
 		{
-			m_imageBase = settings->Get<uint64_t>("loader.imageBase", this);
+			if (settings->Contains("loader.imageBase"))
+				m_imageBase = settings->Get<uint64_t>("loader.imageBase", this);
 
-			Ref<Architecture> arch = Architecture::GetByName(settings->Get<string>("loader.architecture", this));
-			if (!m_arch || (arch && (arch->GetName() != m_arch->GetName())))
-				m_arch = arch;
+			if (settings->Contains("loader.platform"))
+			{
+				Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this));
+				if (platformOverride)
+				{
+					platform = platformOverride;
+					m_arch = platform->GetArchitecture();
+				}
+			}
 		}
 
 		// Apply architecture and platform
@@ -636,16 +643,7 @@ bool PEView::Init()
 			return false;
 		}
 
-
 		platform = platform->GetAssociatedPlatformByAddress(m_entryPoint);
-
-		if (settings && settings->Contains("loader.platform")) // handle overrides
-		{
-			Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this));
-			if (platformOverride)
-				platform = platformOverride;
-		}
-
 		SetDefaultPlatform(platform);
 		SetDefaultArchitecture(platform->GetArchitecture());
 
@@ -3086,7 +3084,7 @@ Ref<Settings> PEViewType::GetLoadSettingsForData(BinaryView* data)
 	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);
 
 	// specify default load settings that can be overridden
-	vector<string> overrides = {"loader.architecture", "loader.imageBase", "loader.platform"};
+	vector<string> overrides = {"loader.imageBase", "loader.platform"};
 	if (!viewRef->IsRelocatable())
 		settings->UpdateProperty("loader.imageBase", "message", "Note: File indicates image is not relocatable.");
 

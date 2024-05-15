@@ -459,13 +459,20 @@ bool ElfView::Init()
 	m_simplifyTemplates = viewSettings->Get<bool>("analysis.types.templateSimplifier", this);
 
 	Ref<Settings> settings = GetLoadSettings(GetTypeName());
-	if (settings && settings->Contains("loader.imageBase") && settings->Contains("loader.architecture")) // handle overrides
+	if (settings)
 	{
-		preferredImageBase = settings->Get<uint64_t>("loader.imageBase", this);
+		if (settings->Contains("loader.imageBase"))
+			preferredImageBase = settings->Get<uint64_t>("loader.imageBase", this);
 
-		Ref<Architecture> arch = Architecture::GetByName(settings->Get<string>("loader.architecture", this));
-		if (!m_arch || (arch && (arch->GetName() != m_arch->GetName())))
-			m_arch = arch;
+		if (settings->Contains("loader.platform"))
+		{
+			Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this));
+			if (platformOverride)
+			{
+				m_plat = platformOverride;
+				m_arch = m_plat->GetArchitecture();
+			}
+		}
 	}
 
 	int64_t imageBaseAdjustment = 0;
@@ -732,13 +739,6 @@ bool ElfView::Init()
 		platform = platform->GetRelatedPlatform(entryPointArch);
 	if (!platform)
 		platform = entryPointArch->GetStandalonePlatform();
-
-	if (settings && settings->Contains("loader.platform")) // handle overrides
-	{
-		Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this));
-		if (platformOverride)
-			platform = platformOverride;
-	}
 
 	SetDefaultPlatform(platform);
 	GetParentView()->SetDefaultPlatform(platform);
@@ -2783,7 +2783,7 @@ Ref<Settings> ElfViewType::GetLoadSettingsForData(BinaryView* data)
 	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);
 
 	// specify default load settings that can be overridden
-	vector<string> overrides = {"loader.architecture", "loader.imageBase", "loader.platform"};
+	vector<string> overrides = {"loader.imageBase", "loader.platform"};
 	if (!viewRef->IsRelocatable())
 		settings->UpdateProperty("loader.imageBase", "message", "Note: File indicates image is not relocatable.");
 

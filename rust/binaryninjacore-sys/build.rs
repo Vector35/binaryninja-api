@@ -96,6 +96,7 @@ fn main() {
         .clang_arg("c++")
         .size_t_is_usize(true)
         .generate_comments(false)
+        .derive_default(true)
         .allowlist_function("BN.*")
         .allowlist_var("BN_CURRENT_CORE_ABI_VERSION")
         .allowlist_var("BN_MINIMUM_CORE_ABI_VERSION")

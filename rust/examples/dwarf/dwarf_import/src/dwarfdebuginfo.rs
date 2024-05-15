@@ -47,6 +47,7 @@ pub(crate) struct FunctionInfoBuilder {
     pub(crate) address: Option<u64>,
     pub(crate) parameters: Vec<Option<(String, TypeUID)>>,
     pub(crate) platform: Option<Ref<Platform>>,
+    pub(crate) variable_arguments: bool,
 }
 
 impl FunctionInfoBuilder {
@@ -188,6 +189,7 @@ impl DebugInfoBuilder {
         return_type: Option<TypeUID>,
         address: Option<u64>,
         parameters: Vec<Option<(String, TypeUID)>>,
+        variable_arguments: bool,
     ) {
         // Raw names should be the primary key, but if they don't exist, use the full name
         // TODO : Consider further falling back on address/architecture
@@ -211,6 +213,7 @@ impl DebugInfoBuilder {
                 address,
                 parameters,
                 platform: None,
+                variable_arguments,
             });
         }
     }
@@ -325,10 +328,7 @@ impl DebugInfoBuilder {
             })
             .collect();
 
-        // TODO : Handle
-        let variable_parameters = false;
-
-        binaryninja::types::Type::function(&return_type, &parameters, variable_parameters)
+        binaryninja::types::Type::function(&return_type, &parameters, function.variable_arguments)
     }
 
     fn commit_functions(&self, debug_info: &mut DebugInfo) {

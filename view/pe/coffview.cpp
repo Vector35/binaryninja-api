@@ -196,13 +196,25 @@ bool COFFView::Init()
 
 		m_imageBase = 0; // 0 for COFF? opt.imageBase;
 		settings = GetLoadSettings(GetTypeName());
-		if (settings && settings->Contains("loader.imageBase") && settings->Contains("loader.architecture")) // handle overrides
+		if (settings)
 		{
-			m_imageBase = settings->Get<uint64_t>("loader.imageBase", this);
+			if (settings->Contains("loader.imageBase"))
+				m_imageBase = settings->Get<uint64_t>("loader.imageBase", this);
 
-			Ref<Architecture> arch = Architecture::GetByName(settings->Get<string>("loader.architecture", this));
-			if (!m_arch || (arch && (arch->GetName() != m_arch->GetName())))
-				m_arch = arch;
+			if (settings->Contains("loader.platform"))
+			{
+				auto platformName = settings->Get<string>("loader.platform", this);
+				platform = Platform::GetByName(platformName);
+				if (platform)
+				{
+					m_arch = platform->GetArchitecture();
+					LogDebug("COFF: loader.platform override (%#x, arch: %s): %s", header.machine, m_arch->GetName().c_str(), platformName.c_str());
+				}
+				else
+				{
+					LogError("COFF: Cannot find platform \"%s\" specified in loader.platform override", platformName.c_str());
+				}
+			}
 		}
 
 		Ref<Settings> viewSettings = Settings::Instance();
@@ -448,29 +460,15 @@ bool COFFView::Init()
 		SetDefaultArchitecture(entryPointArch);
 		GetParentView()->SetDefaultArchitecture(entryPointArch);
 
-		platform = g_coffViewType->GetPlatform(IMAGE_SUBSYSTEM_UNKNOWN, m_arch);
-		LogDebug("COFF: initial platform (%#x, arch: %s): %s", header.machine, m_arch->GetName().c_str(), platform->GetName().c_str());
-
 		if (!platform)
-			platform = m_arch->GetStandalonePlatform();
+		{
+			platform = g_coffViewType->GetPlatform(IMAGE_SUBSYSTEM_UNKNOWN, m_arch);
+			LogDebug("COFF: initial platform (%#x, arch: %s): %s", header.machine, m_arch->GetName().c_str(), platform->GetName().c_str());
+		}
+
 		platform = platform->GetAssociatedPlatformByAddress(entryPointAddress);
 		entryPointAddress = m_entryPoint;
 		LogDebug("COFF: entry point %#" PRIx64 " associated platform (%#x, arch: %s): %s", entryPointAddress, header.machine, m_arch->GetName().c_str(), platform->GetName().c_str());
-
-		if (settings && settings->Contains("loader.platform")) // handle overrides
-		{
-			auto platformOverrideName = settings->Get<string>("loader.platform", this);
-			Ref<Platform> platformOverride = Platform::GetByName(platformOverrideName);
-			if (platformOverride)
-			{
-				platform = platformOverride;
-				LogDebug("COFF: loader.platform override (%#x, arch: %s): %s", header.machine, m_arch->GetName().c_str(), platform->GetName().c_str());
-			}
-			else
-			{
-				LogError("COFF: Cannot find platform \"%s\" specified in loader.platform override", platformOverrideName.c_str());
-			}
-		}
 
 		SetDefaultPlatform(platform);
 		SetDefaultArchitecture(platform->GetArchitecture());
@@ -1647,7 +1645,7 @@ Ref<Settings> COFFViewType::GetLoadSettingsForData(BinaryView* data)
 	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);
 
 	// specify default load settings that can be overridden
-	vector<string> overrides = {"loader.architecture", "loader.imageBase", "loader.platform"};
+	vector<string> overrides = {"loader.imageBase", "loader.platform"};
 	if (!viewRef->IsRelocatable())
 		settings->UpdateProperty("loader.imageBase", "message", "Note: File indicates image is not relocatable.");
 

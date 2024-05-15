@@ -186,6 +186,9 @@ class NotificationType(IntFlag):
 	TypeArchiveDetached = 1 << 46
 	TypeArchiveConnected = 1 << 47
 	TypeArchiveDisconnected = 1 << 48
+	UndoEntryAdded = 1 << 49
+	UndoEntryTaken = 1 << 50
+	RedoEntryTaken = 1 << 51
 
 	BinaryDataUpdates = DataWritten | DataInserted | DataRemoved
 	FunctionLifetime = FunctionAdded | FunctionRemoved
@@ -209,6 +212,7 @@ class NotificationType(IntFlag):
 	ExternalLocationLifetime = ExternalLocationAdded | ExternalLocationRemoved
 	ExternalLocationUpdates = ExternalLocationLifetime | ExternalLocationUpdated
 	TypeArchiveUpdates = TypeArchiveAttached | TypeArchiveDetached | TypeArchiveConnected | TypeArchiveDisconnected
+	UndoUpdates = UndoEntryAdded | UndoEntryTaken | RedoEntryTaken
 
 
 class BinaryDataNotification:

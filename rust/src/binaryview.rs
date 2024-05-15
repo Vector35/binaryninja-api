@@ -227,8 +227,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     fn read_vec(&self, offset: u64, len: usize) -> Vec<u8> {
         let mut ret = vec![0; len];
 
-        let slice = ret.as_mut_slice();
-        let size = self.read(slice, offset);
+        let size = self.read(&mut ret, offset);
         ret.truncate(size);
 
         ret
@@ -238,8 +237,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     fn read_into_vec(&self, dest: &mut Vec<u8>, offset: u64, len: usize) -> usize {
         let starting_len = dest.len();
         dest.resize(starting_len + len, 0);
-        let slice = &mut dest[starting_len..];
-        let read_size = self.read(slice, offset);
+        let read_size = self.read(&mut dest[starting_len..], offset);
         dest.truncate(starting_len + read_size);
         read_size
     }

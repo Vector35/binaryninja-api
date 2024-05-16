@@ -138,6 +138,7 @@ pub mod databuffer;
 pub mod debuginfo;
 pub mod demangle;
 pub mod disassembly;
+pub mod enterprise;
 pub mod component;
 pub mod downloadprovider;
 pub mod externallibrary;
@@ -432,6 +433,75 @@ pub fn path_relative_to_user_directory<S: string::BnStrCompatible>(path: S) -> R
 
 pub fn version() -> string::BnString {
     unsafe { string::BnString::from_raw(binaryninjacore_sys::BNGetVersionString()) }
+}
+
+pub fn build_id() -> u32 {
+    unsafe { binaryninjacore_sys::BNGetBuildId() }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct VersionInfo {
+    pub major: u32,
+    pub minor: u32,
+    pub build: u32,
+    pub channel: string::BnString,
+}
+
+pub fn version_info() -> VersionInfo {
+    let info_raw = unsafe { binaryninjacore_sys::BNGetVersionInfo() };
+    VersionInfo {
+        major: info_raw.major,
+        minor: info_raw.minor,
+        build: info_raw.build,
+        channel: unsafe { string::BnString::from_raw(info_raw.channel) },
+    }
+}
+
+pub fn serial_number() -> string::BnString {
+    unsafe { string::BnString::from_raw(binaryninjacore_sys::BNGetSerialNumber()) }
+}
+
+pub fn is_license_validated() -> bool {
+    unsafe { binaryninjacore_sys::BNIsLicenseValidated() }
+}
+
+pub fn licensed_user_email() -> string::BnString {
+    unsafe { string::BnString::from_raw(binaryninjacore_sys::BNGetLicensedUserEmail()) }
+}
+
+pub fn license_count() -> i32 {
+    unsafe { binaryninjacore_sys::BNGetLicenseCount() }
+}
+
+pub fn set_license<S: string::BnStrCompatible>(license: S) {
+    let license = license.into_bytes_with_nul();
+    let license_slice = license.as_ref();
+    unsafe { binaryninjacore_sys::BNSetLicense(license_slice.as_ptr() as *const i8) }
+}
+
+pub fn product() -> string::BnString {
+    unsafe { string::BnString::from_raw(binaryninjacore_sys::BNGetProduct()) }
+}
+
+pub fn product_type() -> string::BnString {
+    unsafe { string::BnString::from_raw(binaryninjacore_sys::BNGetProductType()) }
+}
+
+pub fn license_expiration_time() -> std::time::SystemTime {
+    let m = std::time::Duration::from_secs(unsafe {
+        binaryninjacore_sys::BNGetLicenseExpirationTime()
+    });
+    std::time::UNIX_EPOCH + m
+}
+
+pub fn is_ui_enabled() -> bool {
+    unsafe { binaryninjacore_sys::BNIsUIEnabled() }
+}
+
+pub fn is_database<S: string::BnStrCompatible>(filename: S) -> bool {
+    let filename = filename.into_bytes_with_nul();
+    let filename_slice = filename.as_ref();
+    unsafe { binaryninjacore_sys::BNIsDatabase(filename_slice.as_ptr() as *const i8) }
 }
 
 pub fn plugin_abi_version() -> u32 {

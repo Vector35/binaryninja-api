@@ -849,7 +849,7 @@ std::vector<std::pair<uint64_t, std::string>> Remote::SearchGroups(const std::st
 		results.push_back({ids[i], names[i]});
 	}
 
-	delete ids;
+	delete[] ids;
 	BNFreeStringList(names, count);
 
 	return results;

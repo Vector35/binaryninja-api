@@ -12,11 +12,17 @@ For PDBs, Binary Ninja will automatically try to source from specified local fol
 
 DWARF supports information compiled in to ELF binaries, information from external ELF files (`.dwo`, `.debug`, etc), information compiled in to Mach-O's, and information from external `.dSYM` files as well. Support for DWARF information in PEs is [planned](https://github.com/Vector35/binaryninja-api/issues/1555).
 
-## Applying debug info
+## Applying Debug Info
 
-## Not applying debug info
+Debug Info is automatically applied by default if applicable. 
 
-You can control if debug information is imported for a file by changing the setting "Import Debug Information" (`analysis.debugInfo.internal`). You can import debug information at any point later by using the menu action `Analysis` -> `Import Debug Info`.
+![Import Debug Info >](../../img/import-debug-info.png "Import Debug Info"){ width="300" }
+
+However, for some file formats, you may wish to specify an external source of Debug Info using the `Import Debug Info from External File` menu option under `Analysis`.
+
+## Blocking Debug Info
+
+You can control if debug information is imported for a file by changing the setting "Import Debug Information" ([`analysis.debugInfo.internal`](https://docs.binary.ninja/guide/settings.html#analysis.debugInfo.internal)). You can import debug information at any point later by using the menu action `Analysis` -> `Import Debug Info`.
 
 ### PDB Notes
 
@@ -41,7 +47,3 @@ Our [DWARF Export plugin](https://github.com/Vector35/binaryninja-api/tree/dev/r
 `.dSYM` packages are often provided as application bundles. Binary Ninja currently does not support extracting the actual `.dSYM` file out of the package for parsing, so you may need to provide a full path for Binary Ninja to correctly parse.
 
 For example, you could have the file `hello.macho` that you would like to import debug info for. Thankfully, you also have `hello.dSYM`. So you open `hello.macho` with options, find the "External Debug Info File" and provide the `hello.dSYM` file. When the file opens, you notice that no information was imported and the log reads "No available/valid parsers for file." This is because `hello.dSYM` is a bundle. The actual path you needed to provide for the "External Debug Info File" setting would look something like `hello.dSYM/Contents/Resources/DWARF/hello`.
-
-### Importing from External Files
-
-If Binary Ninja chooses the wrong PDB to import debug information from, or you have an external DWARF file you with to import the debug information from, you'll need to explicitly set the "External Debug Info File" setting field (`analysis.debugInfo.external`), or use the menu action `Analysis` -> `Import Debug Info from External File`.

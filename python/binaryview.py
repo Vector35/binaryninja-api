@@ -1458,7 +1458,7 @@ class Segment:
 		>>> rom_base = 0xffff0000
 		>>> segments = Segment.serialize(image_base=base, start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
 		>>> segments = Segment.serialize(image_base=base, start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable, segments=segments)
-		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.architecture': 'x86', 'loader.segments': segments})
+		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': segments})
 		```
 		"""
 		segments_list = json.loads(segments)

@@ -417,7 +417,7 @@ def load(*args, **kwargs) -> BinaryView:
 		...
 		134
 
-		>>> with load(bytes.fromhex('5054ebfe'), options={'loader.architecture' : 'x86'}) as bv:
+		>>> with load(bytes.fromhex('5054ebfe'), options={'loader.platform' : 'x86'}) as bv:
 		...     print(len(list(bv.functions)))
 		...
 		1

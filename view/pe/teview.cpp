@@ -214,6 +214,9 @@ bool TEView::Init()
 		ReadTEImageHeader(reader, header);
 		ReadTEImageSectionHeaders(reader, header.numberOfSections);
 		m_headersOffset = header.strippedSize - EFI_TE_IMAGE_HEADER_SIZE;
+
+		// m_imageBase represents the base of the original PE image (before headers were stripped), not the base of the
+		// TE image (bv.start)
 		m_imageBase = header.imageBase;
 
 		// Set architecture and platform
@@ -223,8 +226,7 @@ bool TEView::Init()
 			if (settings->Contains("loader.imageBase"))
 			{
 				uint64_t baseOverride = settings->Get<uint64_t>("loader.imageBase", this);
-				// TE image bases represent the base of the original PE (before headers are stripped) - make this
-				// adjustment for the user
+				// Apply the headers offset adjustment to compute the base of the original PE image
 				m_imageBase = baseOverride - m_headersOffset;
 			}
 

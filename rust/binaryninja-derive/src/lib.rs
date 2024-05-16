@@ -1,85 +1,153 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use proc_macro2_diagnostics::{Diagnostic, SpanDiagnosticExt};
 use quote::{format_ident, quote};
+use std::cell::OnceCell;
 use syn::spanned::Spanned;
 use syn::{
     parenthesized, parse_macro_input, token, Attribute, Data, DeriveInput, Expr, Field, Fields,
-    FieldsNamed, Ident, Lit, LitInt, Path, Type, Variant,
+    FieldsNamed, Ident, Lit, LitInt, Meta, Path, Type, Variant,
 };
 
 type Result<T> = std::result::Result<T, Diagnostic>;
 
+enum FieldKind {
+    Ptr(Type, usize),
+    Ty(Type),
+}
+
+impl FieldKind {
+    fn ty(&self) -> &Type {
+        match self {
+            FieldKind::Ptr(ty, _) | FieldKind::Ty(ty) => &ty,
+        }
+    }
+}
+
 struct AbstractField {
-    ty: Type,
-    width: Option<Type>,
+    kind: FieldKind,
     ident: Ident,
-    named: bool,
+    name: Option<String>,
 }
 
 impl AbstractField {
-    fn from_field(field: Field) -> Result<Self> {
+    fn from_field(field: Field, parent_name: &Ident, pointer_width: Option<usize>) -> Result<Self> {
         let Some(ident) = field.ident else {
             return Err(field.span().error("field must be named"));
         };
-        let named = field.attrs.iter().any(|attr| attr.path().is_ident("named"));
-        let width = field
-            .attrs
-            .iter()
-            .find(|attr| attr.path().is_ident("width"));
-        if let Type::Ptr(ty) = field.ty {
-            if let Some(attr) = width {
-                if let Expr::Lit(expr) = &attr.meta.require_name_value()?.value {
-                    if let Lit::Str(lit_str) = &expr.lit {
-                        return Ok(Self {
-                            ty: *ty.elem,
-                            width: Some(lit_str.parse()?),
-                            ident,
-                            named,
-                        });
-                    }
+        let kind = match field.ty {
+            Type::Ptr(ty) => {
+                let Some(width) = pointer_width else {
+                    return Err(parent_name.span().error(
+                        // broken up to make rustfmt happy
+                        "types containing pointer fields must be \
+                         decorated with `#[binja(pointer_width = <int>)]`",
+                    ));
+                };
+                FieldKind::Ptr(*ty.elem, width)
+            }
+            _ => FieldKind::Ty(field.ty),
+        };
+        let name = find_binja_attr(&field.attrs)?
+            .map(|attr| match attr.kind {
+                BinjaAttrKind::PointerWidth(_) => Err(attr.span.error(
+                    // broken up to make rustfmt happy
+                    "invalid attribute, expected either \
+                    `#[binja(named)]` or `#[binja(name = \"...\")]`",
+                )),
+                BinjaAttrKind::Named(Some(name)) => Ok(name),
+                BinjaAttrKind::Named(None) => {
+                    let ty = kind.ty();
+                    Ok(quote!(#ty).to_string())
                 }
-            }
-            Err(ident.span()
-                .error("pointer field must have explicit `#[width = \"<type>\"]` attribute, for example: `u64`"))
-        } else {
-            match width {
-                Some(attr) => Err(attr
-                    .span()
-                    .error("`#[width]` attribute can only be applied to pointer fields")),
-                None => Ok(Self {
-                    ty: field.ty,
-                    width: None,
-                    ident,
-                    named,
-                }),
-            }
-        }
+            })
+            .transpose()?;
+        Ok(Self { kind, ident, name })
     }
 
     fn resolved_ty(&self) -> TokenStream {
-        let ty = &self.ty;
+        let ty = self.kind.ty();
         let mut resolved = quote! { <#ty as ::binaryninja::types::AbstractType>::resolve_type() };
-        if self.named {
+        if let Some(name) = &self.name {
             resolved = quote! {
-                ::binaryninja::types::Type::named_type_from_type(
-                    stringify!(#ty),
-                    &#resolved
-                )
-            };
+                ::binaryninja::types::Type::named_type_from_type(#name, &#resolved)
+            }
         }
-        if let Some(width) = &self.width {
+        if let FieldKind::Ptr(_, width) = self.kind {
             resolved = quote! {
-                ::binaryninja::types::Type::pointer_of_width(
-                    &#resolved,
-                    ::std::mem::size_of::<#width>(),
-                    false,
-                    false,
-                    None
-                )
+                ::binaryninja::types::Type::pointer_of_width(&#resolved, #width, false, false, None)
             }
         }
         resolved
     }
+}
+
+#[derive(Debug)]
+struct BinjaAttr {
+    kind: BinjaAttrKind,
+    span: Span,
+}
+
+#[derive(Debug)]
+enum BinjaAttrKind {
+    PointerWidth(usize),
+    Named(Option<String>),
+}
+
+fn find_binja_attr(attrs: &[Attribute]) -> Result<Option<BinjaAttr>> {
+    let binja_attr = OnceCell::new();
+
+    let set_attr = |attr: BinjaAttr| {
+        let span = attr.span;
+        binja_attr
+            .set(attr)
+            .map_err(|_| span.error("conflicting `#[binja(...)]` attributes"))
+    };
+
+    for attr in attrs {
+        let Some(ident) = attr.path().get_ident() else {
+            continue;
+        };
+        if ident == "binja" {
+            let meta = attr.parse_args::<Meta>()?;
+            let meta_ident = meta.path().require_ident()?;
+            if meta_ident == "pointer_width" {
+                let value = &meta.require_name_value()?.value;
+                if let Expr::Lit(expr) = &value {
+                    if let Lit::Int(val) = &expr.lit {
+                        set_attr(BinjaAttr {
+                            kind: BinjaAttrKind::PointerWidth(val.base10_parse()?),
+                            span: attr.span(),
+                        })?;
+                        continue;
+                    }
+                }
+                return Err(value.span().error("expected integer literal"));
+            } else if meta_ident == "name" {
+                let value = &meta.require_name_value()?.value;
+                if let Expr::Lit(expr) = &value {
+                    if let Lit::Str(lit) = &expr.lit {
+                        set_attr(BinjaAttr {
+                            kind: BinjaAttrKind::Named(Some(lit.value())),
+                            span: attr.span(),
+                        })?;
+                        continue;
+                    }
+                }
+                return Err(value.span().error(r#"expected string literal"#));
+            } else if meta_ident == "named" {
+                meta.require_path_only()?;
+                set_attr(BinjaAttr {
+                    kind: BinjaAttrKind::Named(None),
+                    span: attr.span(),
+                })?;
+            } else {
+                return Err(meta
+                    .span()
+                    .error(format!("unrecognized property `{meta_ident}`")));
+            }
+        }
+    }
+    Ok(binja_attr.into_inner())
 }
 
 struct Repr {
@@ -90,7 +158,7 @@ struct Repr {
 }
 
 impl Repr {
-    fn from_attrs(attrs: Vec<Attribute>) -> Result<Self> {
+    fn from_attrs(attrs: &[Attribute]) -> Result<Self> {
         let mut c = false;
         let mut packed = None;
         let mut align = None;
@@ -99,15 +167,7 @@ impl Repr {
             let Some(ident) = attr.path().get_ident() else {
                 continue;
             };
-            if ident == "named" {
-                return Err(attr
-                    .span()
-                    .error("`#[named]` attribute can only be applied to fields"));
-            } else if ident == "width" {
-                return Err(attr
-                    .span()
-                    .error("`#[width]` attribute can only be applied to pointer fields"));
-            } else if ident == "repr" {
+            if ident == "repr" {
                 attr.parse_nested_meta(|meta| {
                     if let Some(ident) = meta.path.get_ident() {
                         if ident == "C" {
@@ -153,7 +213,7 @@ fn ident_in_list<const N: usize>(ident: &Ident, list: [&'static str; N]) -> bool
     list.iter().any(|id| ident == id)
 }
 
-#[proc_macro_derive(AbstractType, attributes(named, width))]
+#[proc_macro_derive(AbstractType, attributes(binja))]
 pub fn abstract_type_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     match impl_abstract_type(input) {
@@ -163,7 +223,18 @@ pub fn abstract_type_derive(input: proc_macro::TokenStream) -> proc_macro::Token
 }
 
 fn impl_abstract_type(ast: DeriveInput) -> Result<TokenStream> {
-    let repr = Repr::from_attrs(ast.attrs)?;
+    let repr = Repr::from_attrs(&ast.attrs)?;
+    let width = find_binja_attr(&ast.attrs)?
+        .map(|attr| match attr.kind {
+            BinjaAttrKind::PointerWidth(width) => Ok(width),
+            BinjaAttrKind::Named(Some(_)) => Err(attr
+                .span
+                .error(r#"`#[binja(name = "...")] is only supported on fields"#)),
+            BinjaAttrKind::Named(None) => Err(attr
+                .span
+                .error("`#[binja(named)]` is only supported on fields")),
+        })
+        .transpose()?;
 
     if !ast.generics.params.is_empty() {
         return Err(ast.generics.span().error("type must not be generic"));
@@ -173,7 +244,7 @@ fn impl_abstract_type(ast: DeriveInput) -> Result<TokenStream> {
     match ast.data {
         Data::Struct(s) => match s.fields {
             Fields::Named(fields) => {
-                impl_abstract_structure_type(ident, fields, repr, StructureKind::Struct)
+                impl_abstract_structure_type(ident, fields, repr, width, StructureKind::Struct)
             }
             Fields::Unnamed(_) => Err(s
                 .fields
@@ -184,7 +255,9 @@ fn impl_abstract_type(ast: DeriveInput) -> Result<TokenStream> {
                 .error("unit structs are unsupported; provide at least one named field")),
         },
         Data::Enum(e) => impl_abstract_enum_type(ident, e.variants, repr),
-        Data::Union(u) => impl_abstract_structure_type(ident, u.fields, repr, StructureKind::Union),
+        Data::Union(u) => {
+            impl_abstract_structure_type(ident, u.fields, repr, width, StructureKind::Union)
+        }
     }
 }
 
@@ -197,6 +270,7 @@ fn impl_abstract_structure_type(
     name: Ident,
     fields: FieldsNamed,
     repr: Repr,
+    pointer_width: Option<usize>,
     kind: StructureKind,
 ) -> Result<TokenStream> {
     if !repr.c {
@@ -210,7 +284,7 @@ fn impl_abstract_structure_type(
     let abstract_fields = fields
         .named
         .into_iter()
-        .map(AbstractField::from_field)
+        .map(|field| AbstractField::from_field(field, &name, pointer_width))
         .collect::<Result<Vec<_>>>()?;
     let layout_name = format_ident!("__{name}_layout");
     let field_wrapper = format_ident!("__{name}_field_wrapper");
@@ -218,13 +292,17 @@ fn impl_abstract_structure_type(
         .iter()
         .map(|field| {
             let ident = &field.ident;
-            let layout_ty = field.width.as_ref().unwrap_or(&field.ty);
-            quote! {
-                #ident: #field_wrapper<
-                    [u8; <#layout_ty as ::binaryninja::types::AbstractType>::SIZE],
-                    { <#layout_ty as ::binaryninja::types::AbstractType>::ALIGN },
-                >
-            }
+            let (size, align) = match &field.kind {
+                FieldKind::Ptr(_, width) => {
+                    let align = width.next_power_of_two();
+                    (quote! { #width }, quote! { #align })
+                }
+                FieldKind::Ty(ty) => (
+                    quote! { <#ty as ::binaryninja::types::AbstractType>::SIZE },
+                    quote! { { <#ty as ::binaryninja::types::AbstractType>::ALIGN } },
+                ),
+            };
+            quote! { #ident: #field_wrapper<[u8; #size], #align> }
         })
         .collect::<Vec<_>>();
     let args = abstract_fields

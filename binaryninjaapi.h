@@ -4241,6 +4241,7 @@ namespace BinaryNinja {
 	class DebugInfo;
 	class TypeLibrary;
 	class TypeArchive;
+	class MemoryMap;
 
 	class QueryMetadataException : public ExceptionWithStackTrace
 	{
@@ -4311,6 +4312,8 @@ namespace BinaryNinja {
 	*/
 	class BinaryView : public CoreRefCountObject<BNBinaryView, BNNewViewReference, BNFreeBinaryView>
 	{
+		std::unique_ptr<MemoryMap> m_memoryMap;
+
 	  protected:
 		Ref<FileMetadata> m_file;  //!< The underlying file
 
@@ -6311,6 +6314,12 @@ namespace BinaryNinja {
 		bool GetAddressInput(
 		    uint64_t& result, const std::string& prompt, const std::string& title, uint64_t currentAddress);
 
+		/*! A mock object that is a placeholder during development of this feature.
+
+			\return MemoryMap object
+		*/
+		MemoryMap* GetMemoryMap() { return m_memoryMap.get(); }
+
 		/*! Add an analysis segment that specifies how data from the raw file is mapped into a virtual address space
 
 			\param start Starting virtual address
@@ -6651,6 +6660,54 @@ namespace BinaryNinja {
 		std::vector<Ref<ExternalLocation>> GetExternalLocations();
 	};
 
+	class MemoryMap
+	{
+		BNBinaryView* m_object;
+
+	public:
+		MemoryMap(BNBinaryView* view): m_object(view) {}
+		~MemoryMap() = default;
+
+		bool AddBinaryMemoryRegion(const std::string& name, uint64_t start, Ref<BinaryView> source)
+		{
+			return BNAddBinaryMemoryRegion(m_object, name.c_str(), start, source->GetObject());
+		}
+
+		bool AddDataMemoryRegion(const std::string& name, uint64_t start, const DataBuffer& source)
+		{
+			return BNAddDataMemoryRegion(m_object, name.c_str(), start, source.GetBufferObject());
+		}
+
+		bool AddRemoteMemoryRegion(const std::string& name, uint64_t start, FileAccessor* source)
+		{
+			return BNAddRemoteMemoryRegion(m_object, name.c_str(), start, source->GetCallbacks());
+		}
+
+		bool RemoveMemoryRegion(const std::string& name)
+		{
+			return BNRemoveMemoryRegion(m_object, name.c_str());
+		}
+
+		bool IsMemoryRegionEnabled(const std::string& name, uint64_t start)
+		{
+			return BNIsMemoryRegionEnabled(m_object, name.c_str(), start);
+		}
+
+		bool SetMemoryRegionEnabled(const std::string& name, uint64_t start, bool enabled)
+		{
+			return BNSetMemoryRegionEnabled(m_object, name.c_str(), start, enabled);
+		}
+
+		bool SetMemoryRegionFill(const std::string& name, uint64_t start, uint8_t fill)
+		{
+			return BNSetMemoryRegionFill(m_object, name.c_str(), start, fill);
+		}
+
+		void Reset()
+		{
+			BNResetMemoryMap(m_object);
+		}
+	};
 
 	/*!
 		\ingroup binaryview

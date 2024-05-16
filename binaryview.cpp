@@ -1249,6 +1249,7 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file, BinaryVi
 	AddRefForRegistration();
 	m_object = BNCreateCustomBinaryView(
 	    typeName.c_str(), m_file->GetObject(), parentView ? parentView->GetObject() : nullptr, &view);
+	m_memoryMap = std::make_unique<MemoryMap>(m_object);
 }
 
 
@@ -1256,6 +1257,7 @@ BinaryView::BinaryView(BNBinaryView* view)
 {
 	m_object = view;
 	m_file = new FileMetadata(BNGetFileForView(m_object));
+	m_memoryMap = std::make_unique<MemoryMap>(m_object);
 }
 
 

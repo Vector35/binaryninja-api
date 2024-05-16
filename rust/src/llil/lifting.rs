@@ -55,7 +55,7 @@ impl<R: ArchReg> RegisterOrConstant<R> {
         match self {
             RegisterOrConstant::Register(_, r) => BNRegisterOrConstant {
                 constant: false,
-                reg: r.id(),
+                reg: r.id().0,
                 value: 0,
             },
             RegisterOrConstant::Constant(_, value) => BNRegisterOrConstant {
@@ -168,7 +168,7 @@ impl<R: ArchReg> FlagWriteOp<R> {
                 RegisterOrConstant::Constant(size, operand.value)
             } else {
                 let il_reg = if 0x8000_0000 & operand.reg == 0 {
-                    Register::ArchReg(arch.register_from_id(operand.reg).unwrap())
+                    Register::ArchReg(arch.register_from_id(RegisterId(operand.reg)).unwrap())
                 } else {
                     Register::Temp(operand.reg)
                 };
@@ -400,7 +400,7 @@ where
     use binaryninjacore_sys::BNGetDefaultArchitectureFlagConditionLowLevelIL;
 
     let handle = arch.as_ref();
-    let class_id = class.map(|c| c.id()).unwrap_or(0);
+    let class_id = class.map(|c| c.id().0).unwrap_or(0);
 
     unsafe {
         let expr_idx =
@@ -609,7 +609,7 @@ where
 {
     pub fn with_flag_write(mut self, flag_write: A::FlagWrite) -> Self {
         // TODO verify valid id
-        self.flags = flag_write.id();
+        self.flags = flag_write.id().0;
         self
     }
 
@@ -1006,7 +1006,7 @@ where
 
         // TODO verify valid id
         let reg = match reg.into() {
-            Register::ArchReg(r) => r.id(),
+            Register::ArchReg(r) => r.id().0,
             Register::Temp(r) => 0x8000_0000 | r,
         };
 
@@ -1030,7 +1030,7 @@ where
 
         // TODO verify valid id
         let dest_reg = match dest_reg.into() {
-            Register::ArchReg(r) => r.id(),
+            Register::ArchReg(r) => r.id().0,
             Register::Temp(r) => 0x8000_0000 | r,
         };
 
@@ -1065,13 +1065,13 @@ where
 
         // TODO verify valid id
         let hi_reg = match hi_reg.into() {
-            Register::ArchReg(r) => r.id(),
+            Register::ArchReg(r) => r.id().0,
             Register::Temp(r) => 0x8000_0000 | r,
         };
 
         // TODO verify valid id
         let lo_reg = match lo_reg.into() {
-            Register::ArchReg(r) => r.id(),
+            Register::ArchReg(r) => r.id().0,
             Register::Temp(r) => 0x8000_0000 | r,
         };
 
@@ -1095,8 +1095,9 @@ where
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLAG;
 
         // TODO verify valid id
-        let expr_idx =
-            unsafe { BNLowLevelILAddExpr(self.handle, LLIL_FLAG, 0, 0, flag.id() as u64, 0, 0, 0) };
+        let expr_idx = unsafe {
+            BNLowLevelILAddExpr(self.handle, LLIL_FLAG, 0, 0, flag.id().0 as u64, 0, 0, 0)
+        };
 
         Expression::new(self, expr_idx)
     }
@@ -1129,7 +1130,7 @@ where
                 LLIL_FLAG_GROUP,
                 0,
                 0,
-                group.id() as u64,
+                group.id().0 as u64,
                 0,
                 0,
                 0,
@@ -1158,7 +1159,7 @@ where
             op: LLIL_SET_FLAG,
             size: 0,
             flags: 0,
-            op1: dest_flag.id() as u64,
+            op1: dest_flag.id().0 as u64,
             op2: expr.expr_idx as u64,
             op3: 0,
             op4: 0,
@@ -1241,7 +1242,7 @@ where
             .map(|output| {
                 // TODO verify valid id
                 let output = match output.into() {
-                    Register::ArchReg(r) => r.id(),
+                    Register::ArchReg(r) => r.id().0,
                     Register::Temp(r) => 0x8000_0000 | r,
                 };
                 output as u64
@@ -1281,7 +1282,7 @@ where
             flags: 0,
             op1: outputs.len() as u64,
             op2: output_expr_idx as u64,
-            op3: intrinsic.id() as u64,
+            op3: intrinsic.id().0 as u64,
             op4: input_expr_idx as u64,
             _ty: PhantomData,
         }

@@ -2010,13 +2010,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 self.log(|| format!("Register {:?} ==> {:?}", reg, xreg));
                 self.arch
                     .register_by_name(xreg.to_string().to_lowercase())
-                    .map(|reg| reg.id() as i64)
+                    .map(|reg| reg.id().0 as i64)
             }
             Some(AMD64(areg)) => {
                 self.log(|| format!("Register {:?} ==> {:?}", reg, areg));
                 self.arch
                     .register_by_name(areg.to_string().to_lowercase())
-                    .map(|reg| reg.id() as i64)
+                    .map(|reg| reg.id().0 as i64)
             }
             // TODO: Other arches
             _ => None,

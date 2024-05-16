@@ -421,6 +421,15 @@ class BinaryDataNotification:
 	def type_archive_disconnected(self, view: 'BinaryView', archive: 'typearchive.TypeArchive'):
 		pass
 
+	def undo_entry_added(self, view: 'BinaryView', entry: 'undo.UndoEntry'):
+		pass
+
+	def undo_entry_taken(self, view: 'BinaryView', entry: 'undo.UndoEntry'):
+		pass
+
+	def redo_entry_taken(self, view: 'BinaryView', entry: 'undo.UndoEntry'):
+		pass
+
 
 class StringReference:
 	_decodings = {
@@ -1169,23 +1178,23 @@ class BinaryDataNotificationCallbacks:
 		except:
 			log_error(traceback.format_exc())
 
-	def _undo_entry_added(self, ctxt, view: core.BNBinaryView, archive: core.BNUndoEntry):
+	def _undo_entry_added(self, ctxt, view: core.BNBinaryView, entry: core.BNUndoEntry):
 		try:
-			py_entry = undo.UndoEntry(handle=core.BNNewUndoEntryReference(archive))
+			py_entry = undo.UndoEntry(handle=core.BNNewUndoEntryReference(entry))
 			self._notify.undo_entry_added(self._view, py_entry)
 		except:
 			log_error(traceback.format_exc())
 
-	def _undo_entry_taken(self, ctxt, view: core.BNBinaryView, archive: core.BNUndoEntry):
+	def _undo_entry_taken(self, ctxt, view: core.BNBinaryView, entry: core.BNUndoEntry):
 		try:
-			py_entry = undo.UndoEntry(handle=core.BNNewUndoEntryReference(archive))
+			py_entry = undo.UndoEntry(handle=core.BNNewUndoEntryReference(entry))
 			self._notify.undo_entry_taken(self._view, py_entry)
 		except:
 			log_error(traceback.format_exc())
 
-	def _redo_entry_taken(self, ctxt, view: core.BNBinaryView, archive: core.BNUndoEntry):
+	def _redo_entry_taken(self, ctxt, view: core.BNBinaryView, entry: core.BNUndoEntry):
 		try:
-			py_entry = undo.UndoEntry(handle=core.BNNewUndoEntryReference(archive))
+			py_entry = undo.UndoEntry(handle=core.BNNewUndoEntryReference(entry))
 			self._notify.redo_entry_taken(self._view, py_entry)
 		except:
 			log_error(traceback.format_exc())

@@ -208,6 +208,13 @@ pub trait Register: Sized + Clone + Copy + Hash + Eq {
     /// *MUST* be in the range [0, 0x7fff_ffff]
     fn id(&self) -> RegisterId;
 }
+impl<A: Architecture> ArchitectureFromId<A> for RegisterId {
+    type Output = A::Register;
+
+    fn into_value(self, arch: &A) -> Option<Self::Output> {
+        arch.register_from_id(self)
+    }
+}
 
 pub trait RegisterStackInfo: Sized {
     type RegStackType: RegisterStack<InfoType = Self>;
@@ -238,6 +245,13 @@ pub trait RegisterStack: Sized + Clone + Copy {
     /// *MUST* be in the range [0, 0x7fff_ffff]
     fn id(&self) -> RegisterStackId;
 }
+impl<A: Architecture> ArchitectureFromId<A> for RegisterStackId {
+    type Output = A::RegisterStack;
+
+    fn into_value(self, arch: &A) -> Option<Self::Output> {
+        arch.register_stack_from_id(self)
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FlagId(pub u32);
@@ -251,6 +265,13 @@ pub trait Flag: Sized + Clone + Copy + Hash + Eq {
     ///
     /// *MUST* be in the range [0, 0x7fff_ffff]
     fn id(&self) -> FlagId;
+}
+impl<A: Architecture> ArchitectureFromId<A> for FlagId {
+    type Output = A::Flag;
+
+    fn into_value(self, arch: &A) -> Option<Self::Output> {
+        arch.flag_from_id(self)
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -270,6 +291,13 @@ pub trait FlagWrite: Sized + Clone + Copy {
 
     fn flags_written(&self) -> Vec<Self::FlagType>;
 }
+impl<A: Architecture> ArchitectureFromId<A> for FlagWriteId {
+    type Output = A::FlagWrite;
+
+    fn into_value(self, arch: &A) -> Option<Self::Output> {
+        arch.flag_write_from_id(self)
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FlagClassId(pub u32);
@@ -281,6 +309,13 @@ pub trait FlagClass: Sized + Clone + Copy + Hash + Eq {
     /// *MUST NOT* be 0.
     /// *MUST* be in the range [1, 0x7fff_ffff]
     fn id(&self) -> FlagClassId;
+}
+impl<A: Architecture> ArchitectureFromId<A> for FlagClassId {
+    type Output = A::FlagClass;
+
+    fn into_value(self, arch: &A) -> Option<Self::Output> {
+        arch.flag_class_from_id(self)
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -322,6 +357,13 @@ pub trait FlagGroup: Sized + Clone + Copy {
     /// inline it into conditional branches when appropriate.
     fn flag_conditions(&self) -> HashMap<Self::FlagClass, FlagCondition>;
 }
+impl<A: Architecture> ArchitectureFromId<A> for FlagGroupId {
+    type Output = A::FlagGroup;
+
+    fn into_value(self, arch: &A) -> Option<Self::Output> {
+        arch.flag_group_from_id(self)
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct IntrinsicId(pub u32);
@@ -336,6 +378,13 @@ pub trait Intrinsic: Sized + Clone + Copy {
 
     /// Returns the list of the output types for this intrinsic.
     fn outputs(&self) -> Vec<Conf<Ref<Type>>>;
+}
+impl<A: Architecture> ArchitectureFromId<A> for IntrinsicId {
+    type Output = A::Intrinsic;
+
+    fn into_value(self, arch: &A) -> Option<Self::Output> {
+        arch.intrinsic_from_id(self)
+    }
 }
 
 pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
@@ -1689,6 +1738,11 @@ pub trait ArchitectureExt: Architecture {
         R: 'static + FunctionRecognizer + Send + Sync + Sized,
     {
         crate::functionrecognizer::register_arch_function_recognizer(self.as_ref(), recognizer);
+    }
+
+    #[inline]
+    fn field<F: ArchitectureFromId<Self>>(&self, id: F) -> Option<F::Output> {
+        F::into_value(id, self)
     }
 }
 

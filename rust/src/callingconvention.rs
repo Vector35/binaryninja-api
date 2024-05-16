@@ -705,7 +705,7 @@ impl Debug for CallingConvention<CoreArchitecture> {
 
 pub struct ConventionBuilder<A: Architecture> {
     caller_saved_registers: Vec<A::Register>,
-    _callee_saved_registers: Vec<A::Register>,
+    callee_saved_registers: Vec<A::Register>,
     int_arg_registers: Vec<A::Register>,
     float_arg_registers: Vec<A::Register>,
 
@@ -774,7 +774,7 @@ impl<A: Architecture> ConventionBuilder<A> {
     pub fn new(arch: &A) -> Self {
         Self {
             caller_saved_registers: Vec::new(),
-            _callee_saved_registers: Vec::new(),
+            callee_saved_registers: Vec::new(),
             int_arg_registers: Vec::new(),
             float_arg_registers: Vec::new(),
 
@@ -799,7 +799,7 @@ impl<A: Architecture> ConventionBuilder<A> {
     }
 
     reg_list!(caller_saved_registers);
-    reg_list!(_callee_saved_registers);
+    reg_list!(callee_saved_registers);
     reg_list!(int_arg_registers);
     reg_list!(float_arg_registers);
 
@@ -833,7 +833,7 @@ impl<A: Architecture> CallingConventionBase for ConventionBuilder<A> {
     }
 
     fn callee_saved_registers(&self) -> Vec<A::Register> {
-        self.caller_saved_registers.clone()
+        self.callee_saved_registers.clone()
     }
 
     fn int_arg_registers(&self) -> Vec<A::Register> {

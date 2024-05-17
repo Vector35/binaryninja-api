@@ -43,29 +43,12 @@ int main(int argc, char* argv[])
 	SetBundledPluginDirectory(GetBundledPluginDirectory());
 	InitPlugins();
 
-	Ref<BinaryData> bd = BinaryData::CreateFromFilename(new FileMetadata(), argv[1]);
-	if (!bd)
-	{
-		fprintf(stderr, "Could not open input file.\n");
-		return -1;
-	}
-	Ref<BinaryView> bv;
-	for (auto type : BinaryViewType::GetViewTypes())
-	{
-		if (type->IsTypeValidForData(bd) && type->GetName() != "Raw")
-		{
-			bv = type->Create(bd);
-			break;
-		}
-	}
-
+	Ref<BinaryView> bv = BinaryNinja::Load(fname);
 	if (!bv || bv->GetTypeName() == "Raw")
 	{
-		fprintf(stderr, "Input file does not appear to be an exectuable\n");
+		fprintf(stderr, "Input file does not appear to be an executable\n");
 		return -1;
 	}
-
-	bv->UpdateAnalysisAndWait();
 
 	cout << "Target:   " << fname << endl << endl;
 	cout << "TYPE:     " << bv->GetTypeName() << endl;
@@ -98,6 +81,9 @@ int main(int argc, char* argv[])
 		if (++x >= 10)
 			break;
 	}
+
+	// Close the file so that the resources can be freed
+	bv->GetFile()->Close();
 
 	// Shutting down is required to allow for clean exit of the core
 	BNShutdown();

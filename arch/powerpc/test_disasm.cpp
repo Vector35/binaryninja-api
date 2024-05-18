@@ -22,7 +22,8 @@ g++ -std=c++11 -O0 -g -I capstone/include -L./build/capstone test_disasm.cpp dis
 int print_errors = 1;
 int cs_mode_local = 0;
 size_t address_size_ = 4;
-bool bigendian = true;
+// data in default with strtoul is little endian
+bool littleendian = true;
 
 int disas_instr_word(uint32_t instr_word, char *buf)
 {
@@ -33,13 +34,13 @@ int disas_instr_word(uint32_t instr_word, char *buf)
 	struct cs_detail *detail = &(res.detail);
 	struct cs_ppc *ppc = &(detail->ppc);
 
-	if(powerpc_decompose((const uint8_t *)&instr_word, 4, 0, bigendian, &res, address_size_, cs_mode_local)) {
+	if(powerpc_decompose((const uint8_t *)&instr_word, 4, 0, littleendian, &res, address_size_, cs_mode_local)) {
 		if(print_errors)
 		{			
-			if (DoesQualifyForLocalDisassembly((uint8_t*)&instr_word, !bigendian) != PPC_INS_INVALID)
+			if (DoesQualifyForLocalDisassembly((uint8_t*)&instr_word, !littleendian) != PPC_INS_INVALID)
 			{
 				size_t instsz = 4;
-				PerformLocalDisassembly((uint8_t*)&instr_word, 0, instsz, &res, !bigendian);
+				PerformLocalDisassembly((uint8_t*)&instr_word, 0, instsz, &res, !littleendian);
 			}
 			else
 			{

@@ -33,6 +33,10 @@ jobs:
         working-directory: ./rust
         run: cargo check --workspace --all-features
 
+      - name: cargo doc test
+        working-directory: ./rust
+        run: cargo test --doc -- --show-output
+
       - name: cargo clippy
         working-directory: ./rust
         run: cargo clippy -- -D warnings

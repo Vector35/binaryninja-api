@@ -32,6 +32,7 @@ from . import binaryview
 from . import database
 from . import deprecation
 from . import project
+from . import undo
 
 ProgressFuncType = Callable[[int, int], bool]
 ViewName = str
@@ -139,7 +140,6 @@ class FileMetadata:
 		self._nav: Optional[NavigationHandler] = None
 		assert _handle is not None
 		self.handle = _handle
-		self._previous_undos = []
 
 	def __repr__(self):
 		return f"<FileMetadata: {self.filename}>"
@@ -384,7 +384,6 @@ class FileMetadata:
 			>>>
 		"""
 		id = core.BNBeginUndoActions(self.handle, anonymous_allowed)
-		self._previous_undos.append(id)
 		return id
 
 	def commit_undo_actions(self, id: Optional[str] = None) -> None:
@@ -515,6 +514,40 @@ class FileMetadata:
 			>>>
 		"""
 		core.BNRedo(self.handle)
+
+	@property
+	def undo_entries(self) -> List['undo.UndoEntry']:
+		count = ctypes.c_ulonglong()
+
+		entries = core.BNGetUndoEntries(self.handle, count)
+		assert entries is not None, "core.BNGetUndoEntries returned None"
+
+		result = []
+		try:
+			for i in range(0, count.value):
+				tag_handle = core.BNNewUndoEntryReference(entries[i])
+				assert tag_handle is not None, "core.BNNewUndoEntryReference returned None"
+				result.append(undo.UndoEntry(tag_handle))
+			return result
+		finally:
+			core.BNFreeUndoEntryList(entries, count.value)
+
+	@property
+	def redo_entries(self) -> List['undo.UndoEntry']:
+		count = ctypes.c_ulonglong()
+
+		entries = core.BNGetRedoEntries(self.handle, count)
+		assert entries is not None, "core.BNGetRedoEntries returned None"
+
+		result = []
+		try:
+			for i in range(0, count.value):
+				tag_handle = core.BNNewUndoEntryReference(entries[i])
+				assert tag_handle is not None, "core.BNNewUndoEntryReference returned None"
+				result.append(undo.UndoEntry(tag_handle))
+			return result
+		finally:
+			core.BNFreeUndoEntryList(entries, count.value)
 
 	def navigate(self, view: ViewName, offset: int) -> bool:
 		"""

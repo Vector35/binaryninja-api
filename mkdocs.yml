@@ -81,6 +81,11 @@ nav:
         - Projects: 'guide/projects.md'
         - Troubleshooting: 'guide/troubleshooting.md'
         - Objective-C (Experimental): 'guide/objectivec.md'
+        - Enterprise:
+            - 'guide/enterprise/index.md'
+            - User Interface: 'guide/enterprise/user-interface.md'
+            - Functionality: 'guide/enterprise/functionality.md'
+            - Troubleshooting: 'guide/enterprise/troubleshooting.md'
         - Debugger:
             - Overview: 'guide/debugger/index.md'
             - Remote Debugging: 'guide/debugger/remote-debugging.md'

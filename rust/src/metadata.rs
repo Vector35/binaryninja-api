@@ -1,6 +1,4 @@
-use crate::rc::{
-    Array, CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Guard, Ref, RefCountable,
-};
+use crate::rc::{Array, CoreArrayProvider, Guard, CoreArrayProviderInner, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
@@ -335,17 +333,13 @@ unsafe impl RefCountable for Metadata {
 impl CoreArrayProvider for Metadata {
     type Raw = *mut BNMetadata;
     type Context = ();
+    type Wrapped<'a> = Guard<'a, Metadata>;
 }
 
-unsafe impl CoreOwnedArrayProvider for Metadata {
+unsafe impl CoreArrayProviderInner for Metadata {
     unsafe fn free(raw: *mut *mut BNMetadata, _count: usize, _context: &()) {
         BNFreeMetadataArray(raw);
     }
-}
-
-unsafe impl CoreArrayWrapper for Metadata {
-    type Wrapped<'a> = Guard<'a, Metadata>;
-
     unsafe fn wrap_raw<'a>(raw: &'a *mut BNMetadata, context: &'a ()) -> Self::Wrapped<'a> {
         Guard::new(Metadata::from_raw(*raw), context)
     }
@@ -462,7 +456,7 @@ where
 {
     fn from(value: &[(S, T)]) -> Self {
         let data: Vec<(S::Result, Ref<Metadata>)> = value
-            .into_iter()
+            .iter()
             .map(|(k, v)| (k.into_bytes_with_nul(), v.into()))
             .collect();
         let mut keys: Vec<*const c_char> = data

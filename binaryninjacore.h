@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 61
+#define BN_CURRENT_CORE_ABI_VERSION 63
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 60
+#define BN_MINIMUM_CORE_ABI_VERSION 62
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -280,6 +280,21 @@ extern "C"
 	typedef struct BNExternalLocation BNExternalLocation;
 	typedef struct BNProjectFolder BNProjectFolder;
 	typedef struct BNBaseAddressDetection BNBaseAddressDetection;
+	typedef struct BNCollaborationChangeset BNCollaborationChangeset;
+	typedef struct BNRemoteFile BNRemoteFile;
+	typedef struct BNRemoteFolder BNRemoteFolder;
+	typedef struct BNCollaborationGroup BNCollaborationGroup;
+	typedef struct BNCollaborationPermission BNCollaborationPermission;
+	typedef struct BNRemoteProject BNRemoteProject;
+	typedef struct BNRemote BNRemote;
+	typedef struct BNCollaborationSnapshot BNCollaborationSnapshot;
+	typedef struct BNCollaborationUndoEntry BNCollaborationUndoEntry;
+	typedef struct BNCollaborationUser BNCollaborationUser;
+	typedef struct BNAnalysisMergeConflict BNAnalysisMergeConflict;
+	typedef struct BNTypeArchiveMergeConflict BNTypeArchiveMergeConflict;
+	typedef struct BNCollaborationLazyT BNCollaborationLazyT;
+	typedef struct BNUndoAction BNUndoAction;
+	typedef struct BNUndoEntry BNUndoEntry;
 
 	//! Console log levels
 	typedef enum BNLogLevel
@@ -1553,6 +1568,9 @@ extern "C"
 		void (*typeArchiveDetached)(void* ctxt, BNBinaryView* view, const char* id, const char* path);
 		void (*typeArchiveConnected)(void* ctxt, BNBinaryView* view, BNTypeArchive* archive);
 		void (*typeArchiveDisconnected)(void* ctxt, BNBinaryView* view, BNTypeArchive* archive);
+		void (*undoEntryAdded)(void* ctxt, BNBinaryView* view, BNUndoEntry* entry);
+		void (*undoEntryTaken)(void* ctxt, BNBinaryView* view, BNUndoEntry* entry);
+		void (*redoEntryTaken)(void* ctxt, BNBinaryView* view, BNUndoEntry* entry);
 	} BNBinaryDataNotification;
 
 	typedef struct BNProjectNotification
@@ -2179,24 +2197,6 @@ extern "C"
 		BNFunction* func;
 		uint64_t addr;
 	} BNTagReference;
-
-	typedef struct BNUndoAction
-	{
-		BNActionType actionType;
-		char* summaryText;
-		BNInstructionTextToken* summaryTokens;
-		size_t summaryTokenCount;
-	} BNUndoAction;
-
-	typedef struct BNUndoEntry
-	{
-		bool valid;
-		BNUser* user;
-		char* id;
-		BNUndoAction* actions;
-		uint64_t actionCount;
-		uint64_t timestamp;
-	} BNUndoEntry;
 
 	typedef struct BNCallingConventionWithConfidence
 	{
@@ -3224,6 +3224,33 @@ extern "C"
 		uint64_t BaseAddress;
 	} BNBaseAddressDetectionScore;
 
+	typedef enum BNCollaborationPermissionLevel
+	{
+		AdminPermission = 1,
+		EditPermission = 2,
+		ViewPermission = 3
+	} BNCollaborationPermissionLevel;
+
+	typedef enum BNRemoteFileType
+	{
+		RawDataFileType, // "RW"
+		BinaryViewAnalysisFileType, // "BV"
+		TypeArchiveFileType, // "TA"
+		UnknownFileType, // Others
+	} BNRemoteFileType;
+
+	typedef enum BNMergeConflictDataType
+	{
+		TextConflictDataType,
+		JsonConflictDataType,
+		BinaryConflictDataType
+	} BNMergeConflictDataType;
+
+
+	typedef bool(*BNProgressFunction)(void*, size_t, size_t);
+	typedef bool(*BNCollaborationAnalysisConflictHandler)(void*, const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount);
+	typedef bool(*BNCollaborationNameChangesetFunction)(void*, BNCollaborationChangeset*);
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
@@ -3574,7 +3601,7 @@ extern "C"
 	BINARYNINJACOREAPI BNSnapshot* BNGetDatabaseSnapshot(BNDatabase* database, int64_t id);
 	BINARYNINJACOREAPI int64_t BNWriteDatabaseSnapshotData(BNDatabase* database, int64_t* parents, size_t parentCount,
 	    BNBinaryView* file, const char* name, BNKeyValueStore* data, bool autoSave, void* ctxt,
-	    bool (*progress)(void*, size_t, size_t));
+	    BNProgressFunction progress);
 	BINARYNINJACOREAPI bool BNTrimDatabaseSnapshot(BNDatabase* database, int64_t id);
 	BINARYNINJACOREAPI bool BNRemoveDatabaseSnapshot(BNDatabase* database, int64_t id);
 	BINARYNINJACOREAPI char** BNGetDatabaseGlobalKeys(BNDatabase* database, size_t* count);
@@ -3609,13 +3636,27 @@ extern "C"
 	BINARYNINJACOREAPI BNKeyValueStore* BNReadSnapshotDataWithProgress(
 	    BNSnapshot* snapshot, void* ctxt, bool (*progress)(void* ctxt, size_t progress, size_t total));
 	BINARYNINJACOREAPI BNDataBuffer* BNGetSnapshotUndoData(BNSnapshot* snapshot);
-	BINARYNINJACOREAPI BNUndoEntry* BNGetSnapshotUndoEntries(BNSnapshot* snapshot, size_t* count);
-	BINARYNINJACOREAPI BNUndoEntry* BNGetSnapshotUndoEntriesWithProgress(
+	BINARYNINJACOREAPI BNUndoEntry** BNGetSnapshotUndoEntries(BNSnapshot* snapshot, size_t* count);
+	BINARYNINJACOREAPI BNUndoEntry** BNGetSnapshotUndoEntriesWithProgress(
 	    BNSnapshot* snapshot, void* ctxt, bool (*progress)(void* ctxt, size_t progress, size_t total), size_t* count);
 	BINARYNINJACOREAPI bool BNSnapshotHasAncestor(BNSnapshot* snapshot, BNSnapshot* other);
 	BINARYNINJACOREAPI bool BNSnapshotStoreData(BNSnapshot* snapshot, BNKeyValueStore* data,
-		void* ctxt, bool (*progress)(void*, size_t, size_t));
+		void* ctxt, BNProgressFunction progress);
 
+	// Undo actions
+	BINARYNINJACOREAPI BNUndoAction* BNNewUndoActionReference(BNUndoAction* action);
+	BINARYNINJACOREAPI void BNFreeUndoAction(BNUndoAction* action);
+	BINARYNINJACOREAPI void BNFreeUndoActionList(BNUndoAction** actions, size_t count);
+	BINARYNINJACOREAPI char* BNUndoActionGetSummaryText(BNUndoAction* action);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNUndoActionGetSummary(BNUndoAction* action, size_t* tokenCount);
+
+	// Undo entries
+	BINARYNINJACOREAPI BNUndoEntry* BNNewUndoEntryReference(BNUndoEntry* entry);
+	BINARYNINJACOREAPI void BNFreeUndoEntry(BNUndoEntry* entry);
+	BINARYNINJACOREAPI void BNFreeUndoEntryList(BNUndoEntry** entrys, size_t count);
+	BINARYNINJACOREAPI char* BNUndoEntryGetId(BNUndoEntry* entry);
+	BINARYNINJACOREAPI BNUndoAction** BNUndoEntryGetActions(BNUndoEntry* entry, size_t* count);
+	BINARYNINJACOREAPI uint64_t BNUndoEntryGetTimestamp(BNUndoEntry* entry);
 
 	BINARYNINJACOREAPI bool BNRebase(BNBinaryView* data, uint64_t address);
 	BINARYNINJACOREAPI bool BNRebaseWithProgress(
@@ -3643,13 +3684,13 @@ extern "C"
 	BINARYNINJACOREAPI bool BNCanRedo(BNFileMetadata* file);
 	BINARYNINJACOREAPI bool BNRedo(BNFileMetadata* file);
 
-	BINARYNINJACOREAPI BNUndoEntry* BNGetUndoEntries(BNFileMetadata* file, size_t* count);
-	BINARYNINJACOREAPI BNUndoEntry* BNGetRedoEntries(BNFileMetadata* file, size_t* count);
-	BINARYNINJACOREAPI BNUndoEntry BNGetLastUndoEntry(BNFileMetadata* file);
-	BINARYNINJACOREAPI BNUndoEntry BNGetLastRedoEntry(BNFileMetadata* file);
+	BINARYNINJACOREAPI BNUndoEntry** BNGetUndoEntries(BNFileMetadata* file, size_t* count);
+	BINARYNINJACOREAPI BNUndoEntry** BNGetRedoEntries(BNFileMetadata* file, size_t* count);
+	BINARYNINJACOREAPI BNUndoEntry* BNGetLastUndoEntry(BNFileMetadata* file);
+	BINARYNINJACOREAPI BNUndoEntry* BNGetLastRedoEntry(BNFileMetadata* file);
 	BINARYNINJACOREAPI char* BNGetLastUndoEntryTitle(BNFileMetadata* file);
 	BINARYNINJACOREAPI char* BNGetLastRedoEntryTitle(BNFileMetadata* file);
-	BINARYNINJACOREAPI void BNFreeUndoEntries(BNUndoEntry* entries, size_t count);
+	BINARYNINJACOREAPI void BNFreeUndoEntries(BNUndoEntry** entries, size_t count);
 	BINARYNINJACOREAPI void BNClearUndoEntries(BNFileMetadata* file);
 
 	BINARYNINJACOREAPI BNUser* BNNewUserReference(BNUser* user);
@@ -3672,6 +3713,17 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsSnapshotDataAppliedWithoutError(BNFileMetadata* view);
 
 	BINARYNINJACOREAPI void BNUnregisterViewOfType(BNFileMetadata* file, const char* type, BNBinaryView* view);
+
+	// Memory Map
+	BINARYNINJACOREAPI char* BNGetMemoryMapDescription(BNBinaryView* view);
+	BINARYNINJACOREAPI bool BNAddBinaryMemoryRegion(BNBinaryView* view, const char* name, uint64_t start, BNBinaryView* data);
+	BINARYNINJACOREAPI bool BNAddDataMemoryRegion(BNBinaryView* view, const char* name, uint64_t start, BNDataBuffer* data);
+	BINARYNINJACOREAPI bool BNAddRemoteMemoryRegion(BNBinaryView* view, const char* name, uint64_t start, BNFileAccessor* accessor);
+	BINARYNINJACOREAPI bool BNRemoveMemoryRegion(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI bool BNIsMemoryRegionEnabled(BNBinaryView* view, const char* name, uint64_t start);
+	BINARYNINJACOREAPI bool BNSetMemoryRegionEnabled(BNBinaryView* view, const char* name, uint64_t start, bool enable);
+	BINARYNINJACOREAPI bool BNSetMemoryRegionFill(BNBinaryView* view, const char* name, uint64_t start, uint8_t fill);
+	BINARYNINJACOREAPI void BNResetMemoryMap(BNBinaryView* view);
 
 	// Binary view access
 	BINARYNINJACOREAPI BNBinaryView* BNNewViewReference(BNBinaryView* view);
@@ -4761,8 +4813,8 @@ extern "C"
 	BINARYNINJACOREAPI BNQualifiedName BNDefineAnalysisType(
 	    BNBinaryView* view, const char* id, BNQualifiedName* defaultName, BNType* type);
 	BINARYNINJACOREAPI void BNDefineUserAnalysisType(BNBinaryView* view, BNQualifiedName* name, BNType* type);
-	BINARYNINJACOREAPI size_t BNDefineAnalysisTypes(BNBinaryView* view, BNQualifiedNameTypeAndId* types, size_t count, bool (*progress)(void*, size_t, size_t), void* progressContext, char*** resultIds, BNQualifiedName** resultNames);
-	BINARYNINJACOREAPI void BNDefineUserAnalysisTypes(BNBinaryView* view, BNQualifiedNameAndType* types, size_t count, bool (*progress)(void*, size_t, size_t), void* progressContext);
+	BINARYNINJACOREAPI size_t BNDefineAnalysisTypes(BNBinaryView* view, BNQualifiedNameTypeAndId* types, size_t count, BNProgressFunction progress, void* progressContext, char*** resultIds, BNQualifiedName** resultNames);
+	BINARYNINJACOREAPI void BNDefineUserAnalysisTypes(BNBinaryView* view, BNQualifiedNameAndType* types, size_t count, BNProgressFunction progress, void* progressContext);
 	BINARYNINJACOREAPI void BNUndefineAnalysisType(BNBinaryView* view, const char* id);
 	BINARYNINJACOREAPI void BNUndefineUserAnalysisType(BNBinaryView* view, BNQualifiedName* name);
 	BINARYNINJACOREAPI void BNRenameAnalysisType(
@@ -6919,7 +6971,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetDebugInfoParserName(BNDebugInfoParser* parser);
 	BINARYNINJACOREAPI bool BNIsDebugInfoParserValidForView(BNDebugInfoParser* parser, BNBinaryView* view);
 	BINARYNINJACOREAPI BNDebugInfo* BNParseDebugInfo(BNDebugInfoParser* parser, BNBinaryView* view, BNBinaryView* debugFile,
-		BNDebugInfo* existingDebugInfo, bool (*progress)(void*, size_t, size_t), void* progressCtxt);
+		BNDebugInfo* existingDebugInfo, BNProgressFunction progress, void* progressCtxt);
 	BINARYNINJACOREAPI BNDebugInfoParser* BNNewDebugInfoParserReference(BNDebugInfoParser* parser);
 	BINARYNINJACOREAPI void BNFreeDebugInfoParserReference(BNDebugInfoParser* parser);
 	BINARYNINJACOREAPI void BNFreeDebugInfoParserList(BNDebugInfoParser** parsers, size_t count);
@@ -7044,7 +7096,7 @@ extern "C"
 		char*** mergeConflictsOut,
 		size_t* mergeConflictCountOut,
 		char** result,
-		bool (*progress)(void*, size_t, size_t),
+		BNProgressFunction progress,
 		void* context
 	);
 
@@ -7075,6 +7127,357 @@ extern "C"
 	BINARYNINJACOREAPI void BNAbortBaseAddressDetection(BNBaseAddressDetection* bad);
 	BINARYNINJACOREAPI bool BNIsBaseAddressDetectionAborted(BNBaseAddressDetection* bad);
 	BINARYNINJACOREAPI void BNFreeBaseAddressDetection(BNBaseAddressDetection* bad);
+
+	// Collaboration
+	BINARYNINJACOREAPI BNRemote* BNCollaborationGetActiveRemote();
+	BINARYNINJACOREAPI void BNCollaborationSetActiveRemote(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNCollaborationStoreDataInKeychain(const char* key, const char** dataKeys, const char** dataValues, size_t dataCount);
+	BINARYNINJACOREAPI bool BNCollaborationHasDataInKeychain(const char* key);
+	BINARYNINJACOREAPI size_t BNCollaborationGetDataFromKeychain(const char* key, char*** foundKeys, char*** foundValues);
+	BINARYNINJACOREAPI bool BNCollaborationDeleteDataFromKeychain(const char* key);
+	BINARYNINJACOREAPI bool BNCollaborationLoadRemotes();
+	BINARYNINJACOREAPI BNRemote** BNCollaborationGetRemotes(size_t* count);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationGetRemoteById(const char* remoteId);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationGetRemoteByAddress(const char* remoteAddress);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationGetRemoteByName(const char* name);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationCreateRemote(const char* name, const char* address);
+	BINARYNINJACOREAPI void BNCollaborationRemoveRemote(BNRemote* remote);
+	BINARYNINJACOREAPI void BNCollaborationSaveRemotes();
+	BINARYNINJACOREAPI bool BNCollaborationIsCollaborationDatabase(BNDatabase* database);
+	BINARYNINJACOREAPI bool BNCollaborationIsSnapshotIgnored(BNDatabase* database, BNSnapshot* snapshot);
+	BINARYNINJACOREAPI bool BNCollaborationSyncDatabase(BNDatabase* database, BNRemoteFile* file, BNCollaborationAnalysisConflictHandler conflictHandler, void* conflictHandlerCtxt, BNProgressFunction progress, void* progressCtxt, BNCollaborationNameChangesetFunction nameChangeset, void* nameChangesetCtxt);
+	BINARYNINJACOREAPI bool BNCollaborationSyncTypeArchive(BNTypeArchive* archive, BNRemoteFile* file, bool(*conflictHandler)(void*, BNTypeArchiveMergeConflict** conflicts, size_t conflictCount), void* conflictHandlerCtxt, BNProgressFunction progress, void* progressCtxt);
+	BINARYNINJACOREAPI bool BNCollaborationPushTypeArchive(BNTypeArchive* archive, BNRemoteFile* file, size_t* count, BNProgressFunction progress, void* progressCtxt);
+	BINARYNINJACOREAPI bool BNCollaborationPullTypeArchive(BNTypeArchive* archive, BNRemoteFile* file, size_t* count, bool(*conflictHandler)(void*, BNTypeArchiveMergeConflict** conflicts, size_t conflictCount), void* conflictHandlerCtxt, BNProgressFunction progress, void* progressCtxt);
+	BINARYNINJACOREAPI bool BNCollaborationIsCollaborationTypeArchive(BNTypeArchive* archive);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationGetRemoteForLocalTypeArchive(BNTypeArchive* archive);
+	BINARYNINJACOREAPI BNRemoteProject* BNCollaborationGetRemoteProjectForLocalTypeArchive(BNTypeArchive* archive);
+	BINARYNINJACOREAPI BNRemoteFile* BNCollaborationGetRemoteFileForLocalTypeArchive(BNTypeArchive* archive);
+	BINARYNINJACOREAPI BNCollaborationSnapshot* BNCollaborationGetRemoteSnapshotFromLocalTypeArchive(BNTypeArchive* archive, const char* snapshotId);
+	BINARYNINJACOREAPI char* BNCollaborationGetLocalSnapshotFromRemoteTypeArchive(BNCollaborationSnapshot* snapshot, BNTypeArchive* archive);
+	BINARYNINJACOREAPI bool BNCollaborationIsTypeArchiveSnapshotIgnored(BNTypeArchive* archive, const char* snapshot);
+	BINARYNINJACOREAPI bool BNCollaborationSetSnapshotAuthor(BNDatabase* database, BNSnapshot* snapshot, const char* author);
+	BINARYNINJACOREAPI char* BNCollaborationDefaultProjectPath(BNRemoteProject* project);
+	BINARYNINJACOREAPI char* BNCollaborationDefaultFilePath(BNRemoteFile* file);
+	BINARYNINJACOREAPI BNFileMetadata* BNCollaborationDownloadFile(BNRemoteFile* file, const char* dbPath, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNRemoteFile* BNCollaborationUploadDatabase(BNFileMetadata* metadata, BNRemoteProject* project, BNRemoteFolder* folder, BNProgressFunction progress, void* progressContext, BNCollaborationNameChangesetFunction nameChangeset, void* nameChangesetContext);
+	BINARYNINJACOREAPI bool BNCollaborationIsCollaborationDatabase(BNDatabase* database);
+	BINARYNINJACOREAPI bool BNCollaborationGetRemoteForLocalDatabase(BNDatabase* database, BNRemote** result);
+	BINARYNINJACOREAPI bool BNCollaborationGetRemoteProjectForLocalDatabase(BNDatabase* database, BNRemoteProject** result);
+	BINARYNINJACOREAPI bool BNCollaborationGetRemoteFileForLocalDatabase(BNDatabase* database, BNRemoteFile** result);
+	BINARYNINJACOREAPI bool BNCollaborationAssignSnapshotMap(BNSnapshot* localSnapshot, BNCollaborationSnapshot* remoteSnapshot);
+	BINARYNINJACOREAPI bool BNCollaborationGetRemoteSnapshotFromLocal(BNSnapshot* snapshot, BNCollaborationSnapshot** result);
+	BINARYNINJACOREAPI bool BNCollaborationGetLocalSnapshotFromRemote(BNCollaborationSnapshot* snapshot, BNDatabase* database, BNSnapshot** result);
+	BINARYNINJACOREAPI bool BNCollaborationDownloadTypeArchive(BNRemoteFile* file, const char* dbPath, BNProgressFunction progress, void* progressContext, BNTypeArchive** result);
+	BINARYNINJACOREAPI bool BNCollaborationUploadTypeArchive(BNTypeArchive* archive, BNRemoteProject* project, BNRemoteFolder* folder, BNProgressFunction progress, void* progressContext, BNProjectFile* coreFile, BNRemoteFile** result);
+	BINARYNINJACOREAPI bool BNCollaborationDownloadDatabaseForFile(BNRemoteFile* file, const char* dbPath, bool force, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNSnapshot* BNCollaborationMergeSnapshots(BNSnapshot* first, BNSnapshot* second, BNCollaborationAnalysisConflictHandler conflictHandler, void* conflictHandlerCtxt, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI bool BNCollaborationPullDatabase(BNDatabase* database, BNRemoteFile* file, size_t* count, BNCollaborationAnalysisConflictHandler conflictHandler, void* conflictHandlerCtxt, BNProgressFunction progress, void* progressContext, BNCollaborationNameChangesetFunction nameChangeset, void* nameChangesetContext);
+	BINARYNINJACOREAPI bool BNCollaborationMergeDatabase(BNDatabase* database, BNCollaborationAnalysisConflictHandler conflictHandler, void* conflictHandlerCtxt, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI bool BNCollaborationPushDatabase(BNDatabase* database, BNRemoteFile* file, size_t* count, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI bool BNCollaborationDumpDatabase(BNDatabase* database);
+	BINARYNINJACOREAPI bool BNCollaborationIgnoreSnapshot(BNDatabase* database, BNSnapshot* snapshot);
+	BINARYNINJACOREAPI bool BNCollaborationIsSnapshotIgnored(BNDatabase* database, BNSnapshot* snapshot);
+	BINARYNINJACOREAPI bool BNCollaborationGetSnapshotAuthor(BNDatabase* database, BNSnapshot* snapshot, char** result);
+	BINARYNINJACOREAPI void BNCollaborationFreeIdList(uint64_t* ids, size_t size);
+	BINARYNINJACOREAPI void BNCollaborationFreeSnapshotIdList(int64_t* ids, size_t size);
+
+	// LazyT
+	BINARYNINJACOREAPI BNCollaborationLazyT* BNCollaborationLazyTCreate(void*(*ctor)(void*), void* context);
+	BINARYNINJACOREAPI void* BNCollaborationLazyTDereference(BNCollaborationLazyT* lazyT);
+	BINARYNINJACOREAPI void  BNCollaborationFreeLazyT(BNCollaborationLazyT* lazyT);
+
+	// Remote
+	BINARYNINJACOREAPI BNRemote* BNNewRemoteReference(BNRemote* remote);
+	BINARYNINJACOREAPI void BNFreeRemote(BNRemote* remote);
+	BINARYNINJACOREAPI void BNFreeRemoteList(BNRemote** remotes, size_t count);
+	BINARYNINJACOREAPI char* BNRemoteGetUniqueId(BNRemote* remote);
+	BINARYNINJACOREAPI char* BNRemoteGetName(BNRemote* remote);
+	BINARYNINJACOREAPI char* BNRemoteGetAddress(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteHasLoadedMetadata(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteIsConnected(BNRemote* remote);
+	BINARYNINJACOREAPI char* BNRemoteGetUsername(BNRemote* remote);
+	BINARYNINJACOREAPI char* BNRemoteGetToken(BNRemote* remote);
+	BINARYNINJACOREAPI int BNRemoteGetServerVersion(BNRemote* remote);
+	BINARYNINJACOREAPI char* BNRemoteGetServerBuildId(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteGetAuthBackends(BNRemote* remote, char*** backendIds, char*** backendNames, size_t* count);
+	BINARYNINJACOREAPI bool BNRemoteHasPulledProjects(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteHasPulledUsers(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteHasPulledGroups(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteIsAdmin(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteIsEnterprise(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteLoadMetadata(BNRemote* remote);
+	BINARYNINJACOREAPI char* BNRemoteRequestAuthenticationToken(BNRemote* remote, const char* username, const char* password);
+	BINARYNINJACOREAPI bool BNRemoteConnect(BNRemote* remote, const char* username, const char* token);
+	BINARYNINJACOREAPI bool BNRemoteDisconnect(BNRemote* remote);
+	BINARYNINJACOREAPI BNRemoteProject** BNRemoteGetProjects(BNRemote* remote, size_t* count);
+	BINARYNINJACOREAPI BNRemoteProject* BNRemoteGetProjectById(BNRemote* remote, const char* id);
+	BINARYNINJACOREAPI BNRemoteProject* BNRemoteGetProjectByName(BNRemote* remote, const char* name);
+	BINARYNINJACOREAPI bool BNRemotePullProjects(BNRemote* remote, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNRemoteProject* BNRemoteCreateProject(BNRemote* remote, const char* name, const char* description);
+	BINARYNINJACOREAPI BNRemoteProject* BNRemoteImportLocalProject(BNRemote* remote, BNProject* localProject, bool (*progress)(void*, size_t, size_t), void* progressCtxt);
+	BINARYNINJACOREAPI bool BNRemotePushProject(BNRemote* remote, BNRemoteProject* project, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
+	BINARYNINJACOREAPI bool BNRemoteDeleteProject(BNRemote* remote, BNRemoteProject* project);
+	BINARYNINJACOREAPI BNCollaborationGroup** BNRemoteGetGroups(BNRemote* remote, size_t* count);
+	BINARYNINJACOREAPI BNCollaborationGroup* BNRemoteGetGroupById(BNRemote* remote, uint64_t id);
+	BINARYNINJACOREAPI BNCollaborationGroup* BNRemoteGetGroupByName(BNRemote* remote, const char* name);
+	BINARYNINJACOREAPI bool BNRemoteSearchGroups(BNRemote* remote, const char* prefix, uint64_t** groupIds, char*** groupNames, size_t* count);
+	BINARYNINJACOREAPI bool BNRemotePullGroups(BNRemote* remote, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNCollaborationGroup* BNRemoteCreateGroup(BNRemote* remote, const char* name, const char** usernames, size_t usernameCount);
+	BINARYNINJACOREAPI bool BNRemotePushGroup(BNRemote* remote, BNCollaborationGroup* group, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
+	BINARYNINJACOREAPI bool BNRemoteDeleteGroup(BNRemote* remote, BNCollaborationGroup* group);
+	BINARYNINJACOREAPI BNCollaborationUser** BNRemoteGetUsers(BNRemote* remote, size_t* count);
+	BINARYNINJACOREAPI BNCollaborationUser* BNRemoteGetUserById(BNRemote* remote, const char* id);
+	BINARYNINJACOREAPI BNCollaborationUser* BNRemoteGetUserByUsername(BNRemote* remote, const char* username);
+	BINARYNINJACOREAPI BNCollaborationUser* BNRemoteGetCurrentUser(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteSearchUsers(BNRemote* remote, const char* prefix, char*** userIds, char*** usernames, size_t* count);
+	BINARYNINJACOREAPI bool BNRemotePullUsers(BNRemote* remote, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNCollaborationUser* BNRemoteCreateUser(BNRemote* remote, const char* username, const char* email, bool isActive, const char* password, const uint64_t* groupIds, size_t groupIdCount, const uint64_t* userPermissionIds, size_t userPermissionIdCount);
+	BINARYNINJACOREAPI bool BNRemotePushUser(BNRemote* remote, BNCollaborationUser* user, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
+	BINARYNINJACOREAPI int BNRemoteRequest(BNRemote* remote, void* request, void* ret);
+
+	// CollabGroup
+	BINARYNINJACOREAPI BNCollaborationGroup* BNNewCollaborationGroupReference(BNCollaborationGroup* group);
+	BINARYNINJACOREAPI void BNFreeCollaborationGroup(BNCollaborationGroup* group);
+	BINARYNINJACOREAPI void BNFreeCollaborationGroupList(BNCollaborationGroup** group, size_t count);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationGroupGetRemote(BNCollaborationGroup* group);
+	BINARYNINJACOREAPI char* BNCollaborationGroupGetUrl(BNCollaborationGroup* group);
+	BINARYNINJACOREAPI uint64_t BNCollaborationGroupGetId(BNCollaborationGroup* group);
+	BINARYNINJACOREAPI char* BNCollaborationGroupGetName(BNCollaborationGroup* group);
+	BINARYNINJACOREAPI void BNCollaborationGroupSetName(BNCollaborationGroup* group, const char* name);
+	BINARYNINJACOREAPI bool BNCollaborationGroupGetUsers(BNCollaborationGroup* group, char*** userIds, char*** usernames, size_t* count);
+	BINARYNINJACOREAPI bool BNCollaborationGroupSetUsernames(BNCollaborationGroup* group, const char** names, size_t count);
+	BINARYNINJACOREAPI bool BNCollaborationGroupContainsUser(BNCollaborationGroup* group, const char* username);
+
+	// CollabUser
+	BINARYNINJACOREAPI BNCollaborationUser* BNNewCollaborationUserReference(BNCollaborationUser* user);
+	BINARYNINJACOREAPI void BNFreeCollaborationUser(BNCollaborationUser* user);
+	BINARYNINJACOREAPI void BNFreeCollaborationUserList(BNCollaborationUser** users, size_t count);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationUserGetRemote(BNCollaborationUser* user);
+	BINARYNINJACOREAPI char* BNCollaborationUserGetUrl(BNCollaborationUser* user);
+	BINARYNINJACOREAPI char* BNCollaborationUserGetId(BNCollaborationUser* user);
+	BINARYNINJACOREAPI char* BNCollaborationUserGetUsername(BNCollaborationUser* user);
+	BINARYNINJACOREAPI char* BNCollaborationUserGetEmail(BNCollaborationUser* user);
+	BINARYNINJACOREAPI char* BNCollaborationUserGetLastLogin(BNCollaborationUser* user);
+	BINARYNINJACOREAPI bool BNCollaborationUserIsActive(BNCollaborationUser* user);
+	BINARYNINJACOREAPI bool BNCollaborationUserSetUsername(BNCollaborationUser* user, const char* username);
+	BINARYNINJACOREAPI bool BNCollaborationUserSetEmail(BNCollaborationUser* user, const char* email);
+	BINARYNINJACOREAPI bool BNCollaborationUserSetIsActive(BNCollaborationUser* user, bool isActive);
+
+	// RemoteProject
+	BINARYNINJACOREAPI BNRemoteProject* BNNewRemoteProjectReference(BNRemoteProject* project);
+	BINARYNINJACOREAPI void BNFreeRemoteProject(BNRemoteProject* project);
+	BINARYNINJACOREAPI void BNFreeRemoteProjectList(BNRemoteProject** projects, size_t count);
+	BINARYNINJACOREAPI BNProject* BNRemoteProjectGetCoreProject(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectIsOpen(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectOpen(BNRemoteProject* project, bool (*progress)(void*, size_t, size_t), void* progressCtxt);
+	BINARYNINJACOREAPI void BNRemoteProjectClose(BNRemoteProject* project);
+	BINARYNINJACOREAPI BNRemote* BNRemoteProjectGetRemote(BNRemoteProject* project);
+	BINARYNINJACOREAPI char* BNRemoteProjectGetUrl(BNRemoteProject* project);
+	BINARYNINJACOREAPI int64_t BNRemoteProjectGetCreated(BNRemoteProject* project);
+	BINARYNINJACOREAPI int64_t BNRemoteProjectGetLastModified(BNRemoteProject* project);
+	BINARYNINJACOREAPI char* BNRemoteProjectGetId(BNRemoteProject* project);
+	BINARYNINJACOREAPI char* BNRemoteProjectGetName(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectSetName(BNRemoteProject* project, const char* name);
+	BINARYNINJACOREAPI char* BNRemoteProjectGetDescription(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectSetDescription(BNRemoteProject* project, const char* description);
+	BINARYNINJACOREAPI uint64_t BNRemoteProjectGetReceivedFileCount(BNRemoteProject* project);
+	BINARYNINJACOREAPI uint64_t BNRemoteProjectGetReceivedFolderCount(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectHasPulledFiles(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectHasPulledFolders(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectHasPulledGroupPermissions(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectHasPulledUserPermissions(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectIsAdmin(BNRemoteProject* project);
+	BINARYNINJACOREAPI BNRemoteFile** BNRemoteProjectGetFiles(BNRemoteProject* project, size_t* count);
+	BINARYNINJACOREAPI BNRemoteFile* BNRemoteProjectGetFileById(BNRemoteProject* project, const char* id);
+	BINARYNINJACOREAPI BNRemoteFile* BNRemoteProjectGetFileByName(BNRemoteProject* project, const char* name);
+	BINARYNINJACOREAPI bool BNRemoteProjectPullFiles(BNRemoteProject* project, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNRemoteFile* BNRemoteProjectCreateFile(BNRemoteProject* project, const char* filename, uint8_t* contents, size_t contentsSize, const char* name, const char* description, BNRemoteFolder* folder, BNRemoteFileType type, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI bool BNRemoteProjectPushFile(BNRemoteProject* project, BNRemoteFile* file, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
+	BINARYNINJACOREAPI bool BNRemoteProjectDeleteFile(BNRemoteProject* project, BNRemoteFile* file);
+	BINARYNINJACOREAPI BNRemoteFolder** BNRemoteProjectGetFolders(BNRemoteProject* project, size_t* count);
+	BINARYNINJACOREAPI BNRemoteFolder* BNRemoteProjectGetFolderById(BNRemoteProject* project, const char* id);
+	BINARYNINJACOREAPI bool BNRemoteProjectPullFolders(BNRemoteProject* project, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNRemoteFolder* BNRemoteProjectCreateFolder(BNRemoteProject* project, const char* name, const char* description, BNRemoteFolder* parent, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI bool BNRemoteProjectPushFolder(BNRemoteProject* project, BNRemoteFolder* folder, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
+	BINARYNINJACOREAPI bool BNRemoteProjectDeleteFolder(BNRemoteProject* project, BNRemoteFolder* folder);
+	BINARYNINJACOREAPI BNCollaborationPermission** BNRemoteProjectGetGroupPermissions(BNRemoteProject* project, size_t* count);
+	BINARYNINJACOREAPI BNCollaborationPermission** BNRemoteProjectGetUserPermissions(BNRemoteProject* project, size_t* count);
+	BINARYNINJACOREAPI BNCollaborationPermission* BNRemoteProjectGetPermissionById(BNRemoteProject* project, const char* id);
+	BINARYNINJACOREAPI bool BNRemoteProjectPullGroupPermissions(BNRemoteProject* project, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI bool BNRemoteProjectPullUserPermissions(BNRemoteProject* project, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNCollaborationPermission* BNRemoteProjectCreateGroupPermission(BNRemoteProject* project, int64_t groupId, BNCollaborationPermissionLevel level, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNCollaborationPermission* BNRemoteProjectCreateUserPermission(BNRemoteProject* project, const char* userId, BNCollaborationPermissionLevel level, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI bool BNRemoteProjectPushPermission(BNRemoteProject* project, BNCollaborationPermission* permission, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
+	BINARYNINJACOREAPI bool BNRemoteProjectDeletePermission(BNRemoteProject* project, BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI bool BNRemoteProjectCanUserView(BNRemoteProject* project, const char* username);
+	BINARYNINJACOREAPI bool BNRemoteProjectCanUserEdit(BNRemoteProject* project, const char* username);
+	BINARYNINJACOREAPI bool BNRemoteProjectCanUserAdmin(BNRemoteProject* project, const char* username);
+
+	// RemoteFile
+	BINARYNINJACOREAPI BNRemoteFile* BNNewRemoteFileReference(BNRemoteFile* file);
+	BINARYNINJACOREAPI void BNFreeRemoteFile(BNRemoteFile* file);
+	BINARYNINJACOREAPI void BNFreeRemoteFileList(BNRemoteFile** files, size_t count);
+	BINARYNINJACOREAPI BNProjectFile* BNRemoteFileGetCoreFile(BNRemoteFile* file);
+	BINARYNINJACOREAPI BNRemoteProject* BNRemoteFileGetProject(BNRemoteFile* file);
+	BINARYNINJACOREAPI BNRemoteFolder* BNRemoteFileGetFolder(BNRemoteFile* file);
+	BINARYNINJACOREAPI BNRemote* BNRemoteFileGetRemote(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetUrl(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetChatLogUrl(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetUserPositionsUrl(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetId(BNRemoteFile* file);
+	BINARYNINJACOREAPI BNRemoteFileType BNRemoteFileGetType(BNRemoteFile* file);
+	BINARYNINJACOREAPI int64_t BNRemoteFileGetCreated(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetCreatedBy(BNRemoteFile* file);
+	BINARYNINJACOREAPI int64_t BNRemoteFileGetLastModified(BNRemoteFile* file);
+	BINARYNINJACOREAPI int64_t BNRemoteFileGetLastSnapshot(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetLastSnapshotBy(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetLastSnapshotName(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetHash(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetName(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetDescription(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetMetadata(BNRemoteFile* file);
+	BINARYNINJACOREAPI uint64_t BNRemoteFileGetSize(BNRemoteFile* file);
+	BINARYNINJACOREAPI bool BNRemoteFileHasPulledSnapshots(BNRemoteFile* file);
+	BINARYNINJACOREAPI bool BNRemoteFileSetName(BNRemoteFile* file, const char* name);
+	BINARYNINJACOREAPI bool BNRemoteFileSetDescription(BNRemoteFile* file, const char* description);
+	BINARYNINJACOREAPI bool BNRemoteFileSetFolder(BNRemoteFile* file, BNRemoteFolder* folder);
+	BINARYNINJACOREAPI bool BNRemoteFileSetMetadata(BNRemoteFile* file, const char* metadata);
+	BINARYNINJACOREAPI BNCollaborationSnapshot** BNRemoteFileGetSnapshots(BNRemoteFile* file, size_t* count);
+	BINARYNINJACOREAPI BNCollaborationSnapshot* BNRemoteFileGetSnapshotById(BNRemoteFile* file, const char* id);
+	BINARYNINJACOREAPI bool BNRemoteFilePullSnapshots(BNRemoteFile* file, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNCollaborationSnapshot* BNRemoteFileCreateSnapshot(BNRemoteFile* file, const char* name, uint8_t* contents, size_t contentsSize, uint8_t* analysisCacheContents, size_t analysisCacheContentsSize, uint8_t* fileContents, size_t fileContentsSize, const char** parentIds, size_t parentIdCount, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI bool BNRemoteFileDeleteSnapshot(BNRemoteFile* file, BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI bool BNRemoteFileDownload(BNRemoteFile* file, BNProgressFunction progress, void* progressCtxt, uint8_t** data, size_t* size);
+	BINARYNINJACOREAPI char* BNRemoteFileRequestUserPositions(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileRequestChatLog(BNRemoteFile* file);
+
+	// RemoteFolder
+	BINARYNINJACOREAPI BNRemoteFolder* BNNewRemoteFolderReference(BNRemoteFolder* folder);
+	BINARYNINJACOREAPI void BNFreeRemoteFolder(BNRemoteFolder* folder);
+	BINARYNINJACOREAPI void BNFreeRemoteFolderList(BNRemoteFolder** folders, size_t count);
+	BINARYNINJACOREAPI BNProjectFolder* BNRemoteFolderGetCoreFolder(BNRemoteFolder* folder);
+	BINARYNINJACOREAPI BNRemoteProject* BNRemoteFolderGetProject(BNRemoteFolder* folder);
+	BINARYNINJACOREAPI BNRemote* BNRemoteFolderGetRemote(BNRemoteFolder* folder);
+	BINARYNINJACOREAPI bool BNRemoteFolderGetParent(BNRemoteFolder* folder, BNRemoteFolder** parent);
+	BINARYNINJACOREAPI char* BNRemoteFolderGetUrl(BNRemoteFolder* folder);
+	BINARYNINJACOREAPI char* BNRemoteFolderGetId(BNRemoteFolder* folder);
+	BINARYNINJACOREAPI bool BNRemoteFolderGetParentId(BNRemoteFolder* folder, char** result);
+	BINARYNINJACOREAPI char* BNRemoteFolderGetName(BNRemoteFolder* folder);
+	BINARYNINJACOREAPI char* BNRemoteFolderGetDescription(BNRemoteFolder* folder);
+	BINARYNINJACOREAPI bool BNRemoteFolderSetName(BNRemoteFolder* folder, const char* name);
+	BINARYNINJACOREAPI bool BNRemoteFolderSetDescription(BNRemoteFolder* folder, const char* description);
+	BINARYNINJACOREAPI bool BNRemoteFolderSetParent(BNRemoteFolder* folder, BNRemoteFolder* parent);
+
+	// CollabPermission
+	BINARYNINJACOREAPI BNCollaborationPermission* BNNewCollaborationPermissionReference(BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI void BNFreeCollaborationPermission(BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI void BNFreeCollaborationPermissionList(BNCollaborationPermission** permissions, size_t count);
+	BINARYNINJACOREAPI BNRemoteProject* BNCollaborationPermissionGetProject(BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationPermissionGetRemote(BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI char* BNCollaborationPermissionGetId(BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI char* BNCollaborationPermissionGetUrl(BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI uint64_t BNCollaborationPermissionGetGroupId(BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI char* BNCollaborationPermissionGetGroupName(BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI char* BNCollaborationPermissionGetUserId(BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI char* BNCollaborationPermissionGetUsername(BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI BNCollaborationPermissionLevel BNCollaborationPermissionGetLevel(BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI void BNCollaborationPermissionSetLevel(BNCollaborationPermission* permission, BNCollaborationPermissionLevel level);
+	BINARYNINJACOREAPI bool BNCollaborationPermissionCanView(BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI bool BNCollaborationPermissionCanEdit(BNCollaborationPermission* permission);
+	BINARYNINJACOREAPI bool BNCollaborationPermissionCanAdmin(BNCollaborationPermission* permission);
+
+	// AnalysisMergeConflict
+	BINARYNINJACOREAPI BNAnalysisMergeConflict* BNNewAnalysisMergeConflictReference(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI void BNFreeAnalysisMergeConflict(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI void BNFreeAnalysisMergeConflictList(BNAnalysisMergeConflict** conflicts, size_t count);
+	BINARYNINJACOREAPI BNDatabase* BNAnalysisMergeConflictGetDatabase(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNAnalysisMergeConflictGetType(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNAnalysisMergeConflictGetKey(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNMergeConflictDataType BNAnalysisMergeConflictGetDataType(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNAnalysisMergeConflictGetBase(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNAnalysisMergeConflictGetFirst(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNAnalysisMergeConflictGetSecond(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNFileMetadata* BNAnalysisMergeConflictGetBaseFile(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNFileMetadata* BNAnalysisMergeConflictGetFirstFile(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNFileMetadata* BNAnalysisMergeConflictGetSecondFile(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNSnapshot* BNAnalysisMergeConflictGetBaseSnapshot(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNSnapshot* BNAnalysisMergeConflictGetFirstSnapshot(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNSnapshot* BNAnalysisMergeConflictGetSecondSnapshot(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI void* BNAnalysisMergeConflictGetPathItem(BNAnalysisMergeConflict* conflict, const char* path);
+	BINARYNINJACOREAPI bool BNAnalysisMergeConflictSuccess(BNAnalysisMergeConflict* conflict, const char* value);
+
+	// TypeArchiveMergeConflict
+	BINARYNINJACOREAPI BNTypeArchiveMergeConflict* BNNewTypeArchiveMergeConflictReference(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI void BNFreeTypeArchiveMergeConflict(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI void BNFreeTypeArchiveMergeConflictList(BNTypeArchiveMergeConflict** conflicts, size_t count);
+	BINARYNINJACOREAPI BNTypeArchive* BNTypeArchiveMergeConflictGetTypeArchive(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNTypeArchiveMergeConflictGetTypeId(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNTypeArchiveMergeConflictGetBaseSnapshotId(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNTypeArchiveMergeConflictGetFirstSnapshotId(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNTypeArchiveMergeConflictGetSecondSnapshotId(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI bool BNTypeArchiveMergeConflictSuccess(BNTypeArchiveMergeConflict* conflict, const char* value);
+
+	// CollabSnapshot
+	BINARYNINJACOREAPI BNCollaborationSnapshot* BNNewCollaborationSnapshotReference(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI void BNFreeCollaborationSnapshot(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI void BNFreeCollaborationSnapshotList(BNCollaborationSnapshot** snapshots, size_t count);
+	BINARYNINJACOREAPI BNRemoteFile* BNCollaborationSnapshotGetFile(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI BNRemoteProject* BNCollaborationSnapshotGetProject(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationSnapshotGetRemote(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollaborationSnapshotGetUrl(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollaborationSnapshotGetId(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollaborationSnapshotGetName(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollaborationSnapshotGetAuthor(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI int64_t BNCollaborationSnapshotGetCreated(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI int64_t BNCollaborationSnapshotGetLastModified(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollaborationSnapshotGetHash(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollaborationSnapshotGetSnapshotFileHash(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI bool BNCollaborationSnapshotHasPulledUndoEntries(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI bool BNCollaborationSnapshotIsFinalized(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI char** BNCollaborationSnapshotGetParentIds(BNCollaborationSnapshot* snapshot, size_t* count);
+	BINARYNINJACOREAPI char** BNCollaborationSnapshotGetChildIds(BNCollaborationSnapshot* snapshot, size_t* count);
+	BINARYNINJACOREAPI uint64_t BNCollaborationSnapshotGetAnalysisCacheBuildId(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollaborationSnapshotGetTitle(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollaborationSnapshotGetDescription(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollaborationSnapshotGetAuthorUsername(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI BNCollaborationSnapshot** BNCollaborationSnapshotGetParents(BNCollaborationSnapshot* snapshot, size_t* count);
+	BINARYNINJACOREAPI BNCollaborationSnapshot** BNCollaborationSnapshotGetChildren(BNCollaborationSnapshot* snapshot, size_t* count);
+	BINARYNINJACOREAPI BNCollaborationUndoEntry** BNCollaborationSnapshotGetUndoEntries(BNCollaborationSnapshot* snapshot, size_t* count);
+	BINARYNINJACOREAPI BNCollaborationUndoEntry* BNCollaborationSnapshotGetUndoEntryById(BNCollaborationSnapshot* snapshot, uint64_t id);
+	BINARYNINJACOREAPI bool BNCollaborationSnapshotPullUndoEntries(BNCollaborationSnapshot* snapshot, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNCollaborationUndoEntry* BNCollaborationSnapshotCreateUndoEntry(BNCollaborationSnapshot* snapshot, bool hasParent, uint64_t parent, const char* data);
+	BINARYNINJACOREAPI bool BNCollaborationSnapshotFinalize(BNCollaborationSnapshot* snapshot);
+	BINARYNINJACOREAPI bool BNCollaborationSnapshotDownloadSnapshotFile(BNCollaborationSnapshot* snapshot, BNProgressFunction progress, void* progressContext, uint8_t** data, size_t* size);
+	BINARYNINJACOREAPI bool BNCollaborationSnapshotDownload(BNCollaborationSnapshot* snapshot, BNProgressFunction progress, void* progressContext, uint8_t** data, size_t* size);
+	BINARYNINJACOREAPI bool BNCollaborationSnapshotDownloadAnalysisCache(BNCollaborationSnapshot* snapshot, BNProgressFunction progress, void* progressContext, uint8_t** data, size_t* size);
+
+	// CollabUndoEntry
+	BINARYNINJACOREAPI BNCollaborationUndoEntry* BNNewCollaborationUndoEntryReference(BNCollaborationUndoEntry* entry);
+	BINARYNINJACOREAPI void BNFreeCollaborationUndoEntry(BNCollaborationUndoEntry* entry);
+	BINARYNINJACOREAPI void BNFreeCollaborationUndoEntryList(BNCollaborationUndoEntry** entries, size_t count);
+	BINARYNINJACOREAPI BNCollaborationSnapshot* BNCollaborationUndoEntryGetSnapshot(BNCollaborationUndoEntry* undoEntry);
+	BINARYNINJACOREAPI BNRemoteFile* BNCollaborationUndoEntryGetFile(BNCollaborationUndoEntry* undoEntry);
+	BINARYNINJACOREAPI BNRemoteProject* BNCollaborationUndoEntryGetProject(BNCollaborationUndoEntry* undoEntry);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationUndoEntryGetRemote(BNCollaborationUndoEntry* undoEntry);
+	BINARYNINJACOREAPI char* BNCollaborationUndoEntryGetUrl(BNCollaborationUndoEntry* undoEntry);
+	BINARYNINJACOREAPI uint64_t BNCollaborationUndoEntryGetId(BNCollaborationUndoEntry* undoEntry);
+	BINARYNINJACOREAPI bool BNCollaborationUndoEntryGetParentId(BNCollaborationUndoEntry* undoEntry, uint64_t* parentId);
+	BINARYNINJACOREAPI bool BNCollaborationUndoEntryGetData(BNCollaborationUndoEntry* undoEntry, char** data);
+	BINARYNINJACOREAPI BNCollaborationUndoEntry* BNCollaborationUndoEntryGetParent(BNCollaborationUndoEntry* undoEntry);
+
+	// CollabChangeset
+	BINARYNINJACOREAPI BNCollaborationChangeset* BNNewCollaborationChangesetReference(BNCollaborationChangeset* changeset);
+	BINARYNINJACOREAPI void BNFreeCollaborationChangeset(BNCollaborationChangeset* changeset);
+	BINARYNINJACOREAPI void BNFreeCollaborationChangesetList(BNCollaborationChangeset** changesets, size_t count);
+	BINARYNINJACOREAPI BNDatabase* BNCollaborationChangesetGetDatabase(BNCollaborationChangeset* changeset);
+	BINARYNINJACOREAPI BNRemoteFile* BNCollaborationChangesetGetFile(BNCollaborationChangeset* changeset);
+	BINARYNINJACOREAPI int64_t* BNCollaborationChangesetGetSnapshotIds(BNCollaborationChangeset* changeset, size_t* count);
+	BINARYNINJACOREAPI BNCollaborationUser* BNCollaborationChangesetGetAuthor(BNCollaborationChangeset* changeset);
+	BINARYNINJACOREAPI char* BNCollaborationChangesetGetName(BNCollaborationChangeset* changeset);
+	BINARYNINJACOREAPI bool BNCollaborationChangesetSetName(BNCollaborationChangeset* changeset, const char* name);
+
+
 #ifdef __cplusplus
 }
 #endif

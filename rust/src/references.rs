@@ -1,6 +1,6 @@
 use crate::architecture::CoreArchitecture;
 use crate::function::Function;
-use crate::rc::{CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Guard, Ref};
+use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref};
 use binaryninjacore_sys::{BNFreeCodeReferences, BNFreeDataReferences, BNReferenceSource};
 use std::mem::ManuallyDrop;
 
@@ -56,17 +56,13 @@ impl<'a> CodeReference {
 impl CoreArrayProvider for CodeReference {
     type Raw = BNReferenceSource;
     type Context = ();
+    type Wrapped<'a> = Guard<'a, CodeReference>;
 }
 
-unsafe impl CoreOwnedArrayProvider for CodeReference {
+unsafe impl CoreArrayProviderInner for CodeReference {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeCodeReferences(raw, count)
     }
-}
-
-unsafe impl CoreArrayWrapper for CodeReference {
-    type Wrapped<'a> = Guard<'a, CodeReference>;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(CodeReference::new(raw), &())
     }
@@ -77,17 +73,13 @@ unsafe impl CoreArrayWrapper for CodeReference {
 impl CoreArrayProvider for DataReference {
     type Raw = u64;
     type Context = ();
+    type Wrapped<'a> = DataReference;
 }
 
-unsafe impl CoreOwnedArrayProvider for DataReference {
+unsafe impl CoreArrayProviderInner for DataReference {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeDataReferences(raw)
     }
-}
-
-unsafe impl CoreArrayWrapper for DataReference {
-    type Wrapped<'a> = DataReference;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         DataReference { address: *raw }
     }

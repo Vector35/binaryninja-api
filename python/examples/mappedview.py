@@ -26,6 +26,7 @@
 from binaryninja.log import log_error
 from binaryninja import _binaryninjacore as core
 from binaryninja.architecture import Architecture
+from binaryninja.platform import Platform
 from binaryninja.binaryview import BinaryView
 from binaryninja.binaryview import BinaryViewType
 from binaryninja.enums import SegmentFlag
@@ -53,7 +54,7 @@ class MappedView(BinaryView):
 	def get_load_settings_for_data(cls, data):
 		# This method is optional. If provided this is where the Load Settings for a BinaryViewType are specified. Binary Ninja provides
 		# some default read-only load settings which are:
-		#		["loader.architecture", "loader.platform", "loader.entryPointOffset", "loader.imageBase", "loader.segments", "loader.sections"]
+		#		["loader.platform", "loader.entryPointOffset", "loader.imageBase", "loader.segments", "loader.sections"]
 		# The default load settings are provided for consistency and convenience.
 		# The default load settings are always generated with a read-only indication which is respected by the UI.
 		# The read-only indication is a property that consists of a JSON name/value pair ("readOnly" : true).
@@ -75,7 +76,7 @@ class MappedView(BinaryView):
 			load_settings = registered_view.get_default_load_settings_for_data(view)
 
 			# Specify default load settings that can be overridden (from the UI).
-			overrides = ["loader.architecture", "loader.platform", "loader.entryPointOffset", "loader.imageBase", "loader.segments", "loader.sections"]
+			overrides = ["loader.platform", "loader.entryPointOffset", "loader.imageBase", "loader.segments", "loader.sections"]
 			for override in overrides:
 				if load_settings.contains(override):
 					load_settings.update_property(override, json.dumps({'readOnly': False}))
@@ -127,9 +128,9 @@ class MappedView(BinaryView):
 					# This allows us to generate default load options for the BinaryView. This step is not required but can be useful.
 					load_settings = self.__class__.get_load_settings_for_data(self.parent_view)
 
-			arch = load_settings.get_string("loader.architecture", self)
-			self.arch = Architecture[arch]  # type: ignore
-			self.platform = Architecture[arch].standalone_platform  # type: ignore
+			platform = load_settings.get_string("loader.platform", self)
+			self.platform = Platform[platform]
+			self.arch = self.platform.arch  # type: ignore
 			self.load_address = load_settings.get_integer("loader.imageBase", self)
 			self.add_auto_segment(
 			  self.load_address, len(self.parent_view), 0, len(self.parent_view),

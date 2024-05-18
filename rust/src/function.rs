@@ -321,8 +321,8 @@ impl Function {
             let confidence = variables.confidence;
             let vars = std::slice::from_raw_parts(variables.vars, variables.count);
 
-            for i in 0..variables.count {
-                result.push(Variable::from_raw(vars[i]));
+            for var in vars.iter().take(variables.count) {
+                result.push(Variable::from_raw(*var));
             }
 
             BNFreeParameterVariables(&mut variables);
@@ -414,17 +414,13 @@ unsafe impl RefCountable for Function {
 impl CoreArrayProvider for Function {
     type Raw = *mut BNFunction;
     type Context = ();
+    type Wrapped<'a> = Guard<'a, Function>;
 }
 
-unsafe impl CoreOwnedArrayProvider for Function {
+unsafe impl CoreArrayProviderInner for Function {
     unsafe fn free(raw: *mut *mut BNFunction, count: usize, _context: &()) {
         BNFreeFunctionList(raw, count);
     }
-}
-
-unsafe impl CoreArrayWrapper for Function {
-    type Wrapped<'a> = Guard<'a, Function>;
-
     unsafe fn wrap_raw<'a>(raw: &'a *mut BNFunction, context: &'a ()) -> Self::Wrapped<'a> {
         Guard::new(Function { handle: *raw }, context)
     }
@@ -469,16 +465,12 @@ impl AddressRange {
 impl CoreArrayProvider for AddressRange {
     type Raw = BNAddressRange;
     type Context = ();
+    type Wrapped<'a> = &'a AddressRange;
 }
-unsafe impl CoreOwnedArrayProvider for AddressRange {
+unsafe impl CoreArrayProviderInner for AddressRange {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeAddressRanges(raw);
     }
-}
-
-unsafe impl CoreArrayWrapper for AddressRange {
-    type Wrapped<'a> = &'a AddressRange;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }

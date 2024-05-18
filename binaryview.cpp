@@ -496,6 +496,33 @@ void BinaryDataNotification::TypeArchiveDisconnectedCallback(void* ctxt, BNBinar
 }
 
 
+void BinaryDataNotification::UndoEntryAddedCallback(void* ctxt, BNBinaryView* data, BNUndoEntry* entry)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<UndoEntry> apiEntry = new UndoEntry(BNNewUndoEntryReference(entry));
+	notify->OnUndoEntryAdded(view, apiEntry);
+}
+
+
+void BinaryDataNotification::UndoEntryTakenCallback(void* ctxt, BNBinaryView* data, BNUndoEntry* entry)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<UndoEntry> apiEntry = new UndoEntry(BNNewUndoEntryReference(entry));
+	notify->OnUndoEntryTaken(view, apiEntry);
+}
+
+
+void BinaryDataNotification::RedoEntryTakenCallback(void* ctxt, BNBinaryView* data, BNUndoEntry* entry)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<UndoEntry> apiEntry = new UndoEntry(BNNewUndoEntryReference(entry));
+	notify->OnRedoEntryTaken(view, apiEntry);
+}
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
@@ -548,6 +575,9 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.typeArchiveDetached = TypeArchiveDetachedCallback;
 	m_callbacks.typeArchiveConnected = TypeArchiveConnectedCallback;
 	m_callbacks.typeArchiveDisconnected = TypeArchiveDisconnectedCallback;
+	m_callbacks.undoEntryAdded = UndoEntryAddedCallback;
+	m_callbacks.undoEntryTaken = UndoEntryTakenCallback;
+	m_callbacks.redoEntryTaken = RedoEntryTakenCallback;
 }
 
 
@@ -603,6 +633,9 @@ BinaryDataNotification::BinaryDataNotification(NotificationTypes notifications)
 	m_callbacks.typeArchiveDetached = (notifications & NotificationType::TypeArchiveDetached) ? TypeArchiveDetachedCallback : nullptr;
 	m_callbacks.typeArchiveConnected = (notifications & NotificationType::TypeArchiveConnected) ? TypeArchiveConnectedCallback : nullptr;
 	m_callbacks.typeArchiveDisconnected = (notifications & NotificationType::TypeArchiveDisconnected) ? TypeArchiveDisconnectedCallback : nullptr;
+	m_callbacks.undoEntryAdded = (notifications & NotificationType::UndoEntryAdded) ? UndoEntryAddedCallback : nullptr;
+	m_callbacks.undoEntryTaken = (notifications & NotificationType::UndoEntryTaken) ? UndoEntryTakenCallback : nullptr;
+	m_callbacks.redoEntryTaken = (notifications & NotificationType::RedoEntryTaken) ? RedoEntryTakenCallback : nullptr;
 }
 
 
@@ -1216,6 +1249,7 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file, BinaryVi
 	AddRefForRegistration();
 	m_object = BNCreateCustomBinaryView(
 	    typeName.c_str(), m_file->GetObject(), parentView ? parentView->GetObject() : nullptr, &view);
+	m_memoryMap = std::make_unique<MemoryMap>(m_object);
 }
 
 
@@ -1223,6 +1257,7 @@ BinaryView::BinaryView(BNBinaryView* view)
 {
 	m_object = view;
 	m_file = new FileMetadata(BNGetFileForView(m_object));
+	m_memoryMap = std::make_unique<MemoryMap>(m_object);
 }
 
 

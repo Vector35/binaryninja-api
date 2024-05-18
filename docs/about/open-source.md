@@ -38,6 +38,9 @@ The previous tools are used in the generation of our documentation, but are not 
     - [xxHash] ([xxHash License] - 2-clause BSD)
     - [botan] ([botan license] - 2-clause BSD)
     - [fmt] ([fmt license] - MIT)
+    - [dtl] ([dtl license] - BSD)
+    - [JSON for Modern C++] ([JSON for Modern C++ license] - MIT)
+    - [zstd] ([zstd license] - BSD)
 
 * Core (Rust)
     - [Rust] ([Rust license] - Apache 2.0 / MIT)
@@ -343,6 +346,12 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [xxHash license]: https://github.com/Cyan4973/xxHash/blob/release/LICENSE
 [botan]: https://github.com/randombit/botan
 [botan license]: https://github.com/randombit/botan/blob/master/license.txt
+[dtl]: https://github.com/cubicdaiya/dtl/
+[dtl license]: https://github.com/cubicdaiya/dtl/COPYING
+[JSON for Modern C++]: https://github.com/nlohmann/json/
+[JSON for Modern C++ license]: https://github.com/nlohmann/json/blob/develop/LICENSE.MIT
+[zstd]: https://github.com/facebook/zstd/
+[zstd license]: https://github.com/facebook/zstd/LICENSE
 [deprecation]: https://github.com/briancurtin/deprecation
 [deprecation license]: https://github.com/briancurtin/deprecation/blob/master/LICENSE
 [API / Documentation]: https://github.com/vector35/binaryninja-api

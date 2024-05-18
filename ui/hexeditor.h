@@ -51,7 +51,6 @@ class BINARYNINJAUIAPI HexEditor :
 	virtual void selectAll();
 	virtual void selectNone();
 
-	void setSelectionRange(uint64_t begin, uint64_t end);
 	virtual void setSelectionOffsets(BNAddressRange range) override;
 
 	virtual void updateFonts() override;
@@ -170,6 +169,28 @@ class BINARYNINJAUIAPI HexEditor :
 	void toggleInsertMode();
 	void deleteBack();
 	void deleteForward();
+
+	void extendSelectionToStartOfBinary();
+	void extendSelectionToEndOfBinary();
+	void extendSelectionToStartOfSection();
+	void extendSelectionToEndOfSection();
+	void extendSelectionToStartOfSegment();
+	void extendSelectionToEndOfSegment();
+	void extendSelectionToStartOfDataVariable();
+	void extendSelectionToEndOfDataVariable();
+	void extendSelectionByBytes();
+	void extendSelectionToAddress();
+	void setSelectionSizeTo();
+	void saveSelectionTo();
+
+	bool canExtendSelectionToStartOfSection();
+	bool canExtendSelectionToEndOfSection();
+	bool canExtendSelectionToStartOfSegment();
+	bool canExtendSelectionToEndOfSegment();
+	bool canExtendSelectionToStartOfDataVariable();
+	bool canExtendSelectionToEndOfDataVariable();
+
+	void setSelectionOffsetsInternal(BNAddressRange range, bool navigateToStart = true);
 
 	BinaryViewRef m_data;
 	ViewFrame* m_view;

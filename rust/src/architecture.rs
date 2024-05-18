@@ -2442,7 +2442,7 @@ where
         if !nt.is_null() {
             unsafe {
                 let name_and_types = Box::from_raw(ptr::slice_from_raw_parts_mut(nt, count));
-                for nt in name_and_types.into_iter() {
+                for nt in name_and_types.iter() {
                     Ref::new(NameAndType::from_raw(nt));
                 }
             }
@@ -2674,7 +2674,7 @@ where
 
     let raw = Box::into_raw(Box::new(uninit_arch));
     let mut custom_arch = BNCustomArchitecture {
-        context: raw as *mut ArchitectureBuilder<_, _> as *mut _,
+        context: raw as *mut _,
         init: Some(cb_init::<A, F>),
         getEndianness: Some(cb_endianness::<A>),
         getAddressSize: Some(cb_address_size::<A>),

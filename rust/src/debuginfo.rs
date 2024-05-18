@@ -273,19 +273,15 @@ impl ToOwned for DebugInfoParser {
 impl CoreArrayProvider for DebugInfoParser {
     type Raw = *mut BNDebugInfoParser;
     type Context = ();
+    type Wrapped<'a> = Guard<'a, DebugInfoParser>;
 }
 
-unsafe impl CoreOwnedArrayProvider for DebugInfoParser {
+unsafe impl CoreArrayProviderInner for DebugInfoParser {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _: &Self::Context) {
         BNFreeDebugInfoParserList(raw, count);
     }
-}
-
-unsafe impl CoreArrayWrapper for DebugInfoParser {
-    type Wrapped<'a> = Guard<'a, DebugInfoParser>;
-
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(DebugInfoParser { handle: *raw }, &())
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Guard::new(Self { handle: *raw }, context)
     }
 }
 

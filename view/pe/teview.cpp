@@ -202,19 +202,6 @@ TEView::TEView(BinaryView* bv, bool parseOnly) : BinaryView("TE", bv->GetFile(),
 	m_backedByDatabase = bv->GetFile()->IsBackedByDatabase("TE");
 }
 
-void TEView::HandleUserOverrides()
-{
-	auto settings = GetLoadSettings(GetTypeName());
-	if (!settings)
-		return;
-
-	if (settings->Contains("loader.imageBase"))
-		m_imageBase = settings->Get<uint64_t>("loader.imageBase", this);
-
-	if (settings->Contains("loader.architecture"))
-		m_arch = Architecture::GetByName(settings->Get<string>("loader.architecture", this));
-}
-
 bool TEView::Init()
 {
 	BinaryReader reader(GetParentView(), LittleEndian);
@@ -228,26 +215,27 @@ bool TEView::Init()
 		ReadTEImageSectionHeaders(reader, header.numberOfSections);
 		m_headersOffset = header.strippedSize - EFI_TE_IMAGE_HEADER_SIZE;
 
+		// m_imageBase represents the base of the original PE image (before headers were stripped), not the base of the
+		// TE image (bv.start)
+		m_imageBase = header.imageBase;
+
 		// Set architecture and platform
-		HandleUserOverrides();
-		if (m_arch)
+		auto settings = GetLoadSettings(GetTypeName());
+		if (settings)
 		{
-			auto archName = m_arch->GetName();
-			if (archName == "x86")
-				platform = Platform::GetByName("efi-x86");
-			if (archName == "x86_64")
-				platform = Platform::GetByName("efi-x86_64");
-			if (archName == "aarch64")
-				platform = Platform::GetByName("efi-aarch64");
-			if (!platform)
+			if (settings->Contains("loader.imageBase"))
 			{
-				m_logger->LogError("TE architecture '%s' is not supported", archName.c_str());
-				return false;
+				uint64_t baseOverride = settings->Get<uint64_t>("loader.imageBase", this);
+				// Apply the headers offset adjustment to compute the base of the original PE image
+				m_imageBase = baseOverride - m_headersOffset;
 			}
+
+			if (settings->Contains("loader.platform"))
+				platform = Platform::GetByName(settings->Get<string>("loader.platform", this));
 		}
-		else
+
+		if (!platform)
 		{
-			m_imageBase = header.imageBase;
 			switch (header.machine)
 			{
 			case IMAGE_FILE_MACHINE_I386:
@@ -259,21 +247,19 @@ bool TEView::Init()
 			case IMAGE_FILE_MACHINE_ARM64:
 				platform = Platform::GetByName("efi-aarch64");
 				break;
+			case IMAGE_FILE_MACHINE_ARM:
+				platform = Platform::GetByName("efi-armv7");
+				break;
+			case IMAGE_FILE_MACHINE_THUMB:
+				platform = Platform::GetByName("efi-thumb2");
+				break;
 			default:
-				LogError("TE architecture '0x%x' is not supported", header.machine);
+				LogError("TE platform '0x%x' is not supported", header.machine);
 				return false;
 			}
-
-			if (!platform)
-			{
-				// Should never occur as long as the platforms exist
-				m_logger->LogError("Failed to set platform for TE file");
-				return false;
-			}
-
-			m_arch = platform->GetArchitecture();
 		}
 
+		m_arch = platform->GetArchitecture();
 		SetDefaultPlatform(platform);
 		SetDefaultArchitecture(m_arch);
 
@@ -382,7 +368,7 @@ Ref<Settings> TEViewType::GetLoadSettingsForData(BinaryView *bv)
 
 	// specify default load settings that can be overridden
 	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);
-	vector<string> overrides = {"loader.architecture", "loader.imageBase"};
+	vector<string> overrides = {"loader.platform", "loader.imageBase"};
 	for (const auto& override : overrides)
 	{
 		if (settings->Contains(override))

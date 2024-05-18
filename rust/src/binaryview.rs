@@ -49,7 +49,9 @@ use crate::segment::{Segment, SegmentBuilder};
 use crate::settings::Settings;
 use crate::symbol::{Symbol, SymbolType};
 use crate::tags::{Tag, TagType};
-use crate::types::{DataVariable, NamedTypeReference, QualifiedName, QualifiedNameAndType, Type};
+use crate::types::{
+    Conf, DataVariable, NamedTypeReference, QualifiedName, QualifiedNameAndType, Type,
+};
 use crate::Endianness;
 
 use crate::rc::*;
@@ -225,18 +227,10 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     /// Reads up to `len` bytes from address `offset`
     fn read_vec(&self, offset: u64, len: usize) -> Vec<u8> {
-        let mut ret = Vec::with_capacity(len);
+        let mut ret = vec![0; len];
 
-        unsafe {
-            let res;
-
-            {
-                let dest_slice = ret.get_unchecked_mut(0..len);
-                res = self.read(dest_slice, offset);
-            }
-
-            ret.set_len(res);
-        }
+        let size = self.read(&mut ret, offset);
+        ret.truncate(size);
 
         ret
     }
@@ -244,26 +238,10 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// Appends up to `len` bytes from address `offset` into `dest`
     fn read_into_vec(&self, dest: &mut Vec<u8>, offset: u64, len: usize) -> usize {
         let starting_len = dest.len();
-        let space = dest.capacity() - starting_len;
-
-        if space < len {
-            dest.reserve(len - space);
-        }
-
-        unsafe {
-            let res;
-
-            {
-                let dest_slice = dest.get_unchecked_mut(starting_len..starting_len + len);
-                res = self.read(dest_slice, offset);
-            }
-
-            if res > 0 {
-                dest.set_len(starting_len + res);
-            }
-
-            res
-        }
+        dest.resize(starting_len + len, 0);
+        let read_size = self.read(&mut dest[starting_len..], offset);
+        dest.truncate(starting_len + read_size);
+        read_size
     }
 
     fn notify_data_written(&self, offset: u64, len: usize) {
@@ -574,24 +552,16 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn define_auto_data_var(&self, dv: &DataVariable) {
+    fn define_auto_data_var<'a, T: Into<Conf<&'a Type>>>(&self, addr: u64, ty: T) {
         unsafe {
-            BNDefineDataVariable(
-                self.as_ref().handle,
-                dv.address(),
-                &mut dv.type_with_confidence().into(),
-            );
+            BNDefineDataVariable(self.as_ref().handle, addr, &mut ty.into().into());
         }
     }
 
     /// You likely would also like to call [`Self::define_user_symbol`] to bind this data variable with a name
-    fn define_user_data_var(&self, dv: &DataVariable) {
+    fn define_user_data_var<'a, T: Into<Conf<&'a Type>>>(&self, addr: u64, ty: T) {
         unsafe {
-            BNDefineUserDataVariable(
-                self.as_ref().handle,
-                dv.address(),
-                &mut dv.type_with_confidence().into(),
-            );
+            BNDefineUserDataVariable(self.as_ref().handle, addr, &mut ty.into().into());
         }
     }
 

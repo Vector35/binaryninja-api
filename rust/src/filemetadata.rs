@@ -40,6 +40,7 @@ use binaryninjacore_sys::{
     BNSetFilename,
     BNUndo,
 };
+use binaryninjacore_sys::{BNCreateDatabaseWithProgress, BNOpenExistingDatabaseWithProgress};
 
 use crate::binaryview::BinaryView;
 
@@ -204,16 +205,28 @@ impl FileMetadata {
         }
     }
 
-    pub fn create_database<S: BnStrCompatible>(&self, filename: S) -> bool {
+    pub fn create_database<S: BnStrCompatible>(
+        &self,
+        filename: S,
+        progress_func: Option<fn(usize, usize) -> bool>,
+    ) -> bool {
         let filename = filename.into_bytes_with_nul();
+        let filename_ptr = filename.as_ref().as_ptr() as *mut _;
         let raw = "Raw".into_bytes_with_nul();
+        let raw_ptr = raw.as_ptr() as *mut _;
 
-        unsafe {
-            BNCreateDatabase(
-                BNGetFileViewOfType(self.handle, raw.as_ptr() as *mut _),
-                filename.as_ref().as_ptr() as *mut _,
-                ptr::null_mut() as *mut _,
-            )
+        let handle = unsafe { BNGetFileViewOfType(self.handle, raw_ptr) };
+        match progress_func {
+            None => unsafe { BNCreateDatabase(handle, filename_ptr, ptr::null_mut()) },
+            Some(func) => unsafe {
+                BNCreateDatabaseWithProgress(
+                    handle,
+                    filename_ptr,
+                    func as *mut libc::c_void,
+                    Some(cb_progress_func),
+                    ptr::null_mut(),
+                )
+            },
         }
     }
 
@@ -244,17 +257,25 @@ impl FileMetadata {
         }
     }
 
-    pub fn open_database<S: BnStrCompatible>(&self, filename: S) -> Result<Ref<BinaryView>, ()> {
+    pub fn open_database<S: BnStrCompatible>(
+        &self,
+        filename: S,
+        progress_func: Option<fn(usize, usize) -> bool>,
+    ) -> Result<Ref<BinaryView>, ()> {
         let filename = filename.into_bytes_with_nul();
         let filename_ptr = filename.as_ref().as_ptr() as *mut _;
 
-        let view = unsafe { BNOpenExistingDatabase(self.handle, filename_ptr) };
-
-        // TODO : add optional progress function
-        // let view = match progress_func {
-        //     None => BNOpenExistingDatabase(self.handle, filename_ptr),
-        //     _ => BNOpenExistingDatabaseWithProgress(self.handle, str(filename), None, ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: progress_func(cur, total)))
-        // };
+        let view = match progress_func {
+            None => unsafe { BNOpenExistingDatabase(self.handle, filename_ptr) },
+            Some(func) => unsafe {
+                BNOpenExistingDatabaseWithProgress(
+                    self.handle,
+                    filename_ptr,
+                    func as *mut libc::c_void,
+                    Some(cb_progress_func),
+                )
+            },
+        };
 
         if view.is_null() {
             Err(())
@@ -284,7 +305,11 @@ unsafe impl RefCountable for FileMetadata {
     }
 }
 
-/*
-BNCreateDatabase,
-BNCreateDatabaseWithProgress,
-*/
+unsafe extern "C" fn cb_progress_func(
+    ctxt: *mut ::std::os::raw::c_void,
+    progress: usize,
+    total: usize,
+) -> bool {
+    let func: fn(usize, usize) -> bool = core::mem::transmute(ctxt);
+    func(progress, total)
+}

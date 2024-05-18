@@ -26,6 +26,7 @@ import traceback
 import ctypes
 import abc
 import json
+import pprint
 import inspect
 import os
 import uuid
@@ -79,6 +80,7 @@ from . import deprecation
 from . import typecontainer
 from . import externallibrary
 from . import project
+from . import undo
 
 
 PathType = Union[str, os.PathLike]
@@ -185,6 +187,9 @@ class NotificationType(IntFlag):
 	TypeArchiveDetached = 1 << 46
 	TypeArchiveConnected = 1 << 47
 	TypeArchiveDisconnected = 1 << 48
+	UndoEntryAdded = 1 << 49
+	UndoEntryTaken = 1 << 50
+	RedoEntryTaken = 1 << 51
 
 	BinaryDataUpdates = DataWritten | DataInserted | DataRemoved
 	FunctionLifetime = FunctionAdded | FunctionRemoved
@@ -208,6 +213,7 @@ class NotificationType(IntFlag):
 	ExternalLocationLifetime = ExternalLocationAdded | ExternalLocationRemoved
 	ExternalLocationUpdates = ExternalLocationLifetime | ExternalLocationUpdated
 	TypeArchiveUpdates = TypeArchiveAttached | TypeArchiveDetached | TypeArchiveConnected | TypeArchiveDisconnected
+	UndoUpdates = UndoEntryAdded | UndoEntryTaken | RedoEntryTaken
 
 
 class BinaryDataNotification:
@@ -413,6 +419,15 @@ class BinaryDataNotification:
 		pass
 
 	def type_archive_disconnected(self, view: 'BinaryView', archive: 'typearchive.TypeArchive'):
+		pass
+
+	def undo_entry_added(self, view: 'BinaryView', entry: 'undo.UndoEntry'):
+		pass
+
+	def undo_entry_taken(self, view: 'BinaryView', entry: 'undo.UndoEntry'):
+		pass
+
+	def redo_entry_taken(self, view: 'BinaryView', entry: 'undo.UndoEntry'):
 		pass
 
 
@@ -667,6 +682,10 @@ class BinaryDataNotificationCallbacks:
 			self._cb.typeArchiveDetached = self._cb.typeArchiveDetached.__class__(self._type_archive_detached)
 			self._cb.typeArchiveConnected = self._cb.typeArchiveConnected.__class__(self._type_archive_connected)
 			self._cb.typeArchiveDisconnected = self._cb.typeArchiveDisconnected.__class__(self._type_archive_disconnected)
+
+			self._cb.undoEntryAdded = self._cb.undoEntryAdded.__class__(self._undo_entry_added)
+			self._cb.undoEntryTaken = self._cb.undoEntryTaken.__class__(self._undo_entry_taken)
+			self._cb.redoEntryTaken = self._cb.redoEntryTaken.__class__(self._redo_entry_taken)
 		else:
 			if notify.notifications & NotificationType.NotificationBarrier:
 				self._cb.notificationBarrier = self._cb.notificationBarrier.__class__(self._notification_barrier)
@@ -755,6 +774,13 @@ class BinaryDataNotificationCallbacks:
 				self._cb.typeArchiveConnected = self._cb.typeArchiveConnected.__class__(self._type_archive_connected)
 			if notify.notifications & NotificationType.TypeArchiveDisconnected:
 				self._cb.typeArchiveDisconnected = self._cb.typeArchiveDisconnected.__class__(self._type_archive_disconnected)
+
+			if notify.notifications & NotificationType.UndoEntryAdded:
+				self._cb.undoEntryAdded = self._cb.undoEntryAdded.__class__(self._undo_entry_added)
+			if notify.notifications & NotificationType.UndoEntryTaken:
+				self._cb.undoEntryTaken = self._cb.undoEntryTaken.__class__(self._undo_entry_taken)
+			if notify.notifications & NotificationType.RedoEntryTaken:
+				self._cb.redoEntryTaken = self._cb.redoEntryTaken.__class__(self._redo_entry_taken)
 
 	def _register(self) -> None:
 		core.BNRegisterDataNotification(self._view.handle, self._cb)
@@ -1152,6 +1178,26 @@ class BinaryDataNotificationCallbacks:
 		except:
 			log_error(traceback.format_exc())
 
+	def _undo_entry_added(self, ctxt, view: core.BNBinaryView, entry: core.BNUndoEntry):
+		try:
+			py_entry = undo.UndoEntry(handle=core.BNNewUndoEntryReference(entry))
+			self._notify.undo_entry_added(self._view, py_entry)
+		except:
+			log_error(traceback.format_exc())
+
+	def _undo_entry_taken(self, ctxt, view: core.BNBinaryView, entry: core.BNUndoEntry):
+		try:
+			py_entry = undo.UndoEntry(handle=core.BNNewUndoEntryReference(entry))
+			self._notify.undo_entry_taken(self._view, py_entry)
+		except:
+			log_error(traceback.format_exc())
+
+	def _redo_entry_taken(self, ctxt, view: core.BNBinaryView, entry: core.BNUndoEntry):
+		try:
+			py_entry = undo.UndoEntry(handle=core.BNNewUndoEntryReference(entry))
+			self._notify.redo_entry_taken(self._view, py_entry)
+		except:
+			log_error(traceback.format_exc())
 
 	@property
 	def view(self) -> 'BinaryView':
@@ -1412,7 +1458,7 @@ class Segment:
 		>>> rom_base = 0xffff0000
 		>>> segments = Segment.serialize(image_base=base, start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
 		>>> segments = Segment.serialize(image_base=base, start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable, segments=segments)
-		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.architecture': 'x86', 'loader.segments': segments})
+		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': segments})
 		```
 		"""
 		segments_list = json.loads(segments)
@@ -2066,6 +2112,186 @@ class AdvancedILFunctionList:
 				break
 			yield self._func_queue.popleft().function
 
+
+class MemoryMap:
+	"""
+	The MemoryMap object is used to describe a system level MemoryMap for which a BinaryView is loaded into. A loaded
+	BinaryView has a view into the MemoryMap which is described by the Segments defined in that BinaryView. The MemoryMap
+	object allows for the addition of multiple, arbitrary overlapping regions of memory. Segmenting of the address space is
+	automatically handled when the MemoryMap is modified and in the case where a portion of the system address space has
+	multilple defined regions, the default ordering gives priority to the most recently added region. This feature is
+	experimental and under active development.
+
+	:Example:
+
+		>>> base = 0x10000
+		>>> rom_base = 0xc0000000
+		>>> segments = Segment.serialize(image_base=base, start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
+		>>> segments = Segment.serialize(image_base=base, start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable, segments=segments)
+		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': segments})
+		>>> print(view.memory_map)
+			<region: 0x10000 - 0x10004>
+				size: 0x4
+				objects:
+					'origin<Mapped>' | Mapped<Absolute>
+
+			<region: 0xc0000000 - 0xc0001000>
+				size: 0x1000
+				objects:
+					'origin<Mapped>' | Unmapped | FILL<0x0>
+
+			<region: 0xc0001000 - 0xc0001014>
+				size: 0x14
+				objects:
+					'origin<Mapped>' | Unmapped | FILL<0x0>
+		>>> view.memory_map.add_memory_region("rom", rom_base, b'\x90' * 4096)
+		True
+		>>> print(view.memory_map)
+			<region: 0x10000 - 0x10004>
+				size: 0x4
+				objects:
+					'origin<Mapped>' | Mapped<Absolute>
+
+			<region: 0xc0000000 - 0xc0001000>
+				size: 0x1000
+				objects:
+					'rom' | Mapped
+					'origin<Mapped>' | Unmapped | FILL<0x0>
+
+			<region: 0xc0001000 - 0xc0001014>
+				size: 0x14
+				objects:
+					'origin<Mapped>' | Unmapped | FILL<0x0>
+		>>> view.read(rom_base, 16)
+		b'\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90'
+		>>> view.memory_map.add_memory_region("pad", rom_base, b'\xa5' * 8)
+		True
+		>>> view.read(rom_base, 16)
+		b'\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\x90\x90\x90\x90\x90\x90\x90\x90'
+		>>> print(view.memory_map)
+			<region: 0x10000 - 0x10004>
+				size: 0x4
+				objects:
+					'origin<Mapped>' | Mapped<Absolute>
+
+			<region: 0xc0000000 - 0xc0000008>
+				size: 0x8
+				objects:
+					'pad' | Mapped<Relative>
+					'rom' | Mapped<Relative>
+					'origin<Mapped>' | Unmapped | FILL<0x0>
+
+			<region: 0xc0000008 - 0xc0001000>
+				size: 0xff8
+				objects:
+					'rom' | Mapped<Relative>
+					'origin<Mapped>' | Unmapped | FILL<0x0>
+
+			<region: 0xc0001000 - 0xc0001014>
+				size: 0x14
+				objects:
+					'origin<Mapped>' | Unmapped | FILL<0x0>
+	"""
+
+	def __repr__(self):
+		return pprint.pformat(self.description())
+
+	def __str__(self):
+		description = self.description()
+		formatted_description = ""
+		for entry in description['MemoryMap']:
+			formatted_description += f"<region: {hex(entry['address'])} - {hex(entry['address'] + entry['length'])}>\n"
+			formatted_description += f"\tsize: {hex(entry['length'])}\n"
+			formatted_description += "\tobjects:\n"
+			for obj in entry['objects']:
+				if obj['target']:
+					mapped_state = f"Mapped<{'Absolute' if obj['absolute_address_mode'] else 'Relative'}>"
+				else:
+					mapped_state = "Unmapped"
+				formatted_description += f"\t\t'{obj['name']}' | {mapped_state}"
+				if not obj['target']:
+					formatted_description += f" | FILL<{hex(obj['fill'])}>"
+				if not obj['enabled']:
+					formatted_description += f" | <DISABLED>"
+				formatted_description += "\n"
+			formatted_description += "\n"
+
+		return formatted_description
+
+	def __init__(self, handle: 'BinaryView'):
+		self.handle = handle
+
+	def __len__(self):
+		mm_json = self.description()
+		if 'MemoryMap' in mm_json:
+			return len(mm_json['MemoryMap'])
+		else:
+			return 0
+
+	def description(self):
+		return json.loads(core.BNGetMemoryMapDescription(self.handle))
+
+	def add_memory_region(self, name: str, start: int, source: Union['os.PathLike', str, bytes, bytearray, 'BinaryView', 'databuffer.DataBuffer', 'fileaccessor.FileAccessor']) -> bool:
+		"""
+		Adds a memory region into the memory map. There are three types of memory regions that can be added:
+		- BinaryMemoryRegion(*** Unimplemented ***): Creates a memory region from a loadable binary format and provides persistence across sessions.
+		- DataMemoryRegion: Creates a memory region from a flat file or bytes and provide persistence across sessions.
+		- RemoteMemoryRegion: Creates a memory region from a proxy callback interface. This region is ephemeral and not saved across sessions.
+
+		The type of memory region added depends on the source parameter:
+		- `os.PathLike`, `str`, : Treats the source as a file path which is read and loaded into memory as a DataMemoryRegion.
+		- `bytes`, `bytearray`: Directly loads these byte formats into memory as a DataMemoryRegion.
+		- `databuffer.DataBuffer`: Directly loads a data buffer into memory as a DataMemoryRegion.
+		- `fileaccessor.FileAccessor`: Utilizes a file accessor to establish a RemoteMemoryRegion, managing data fetched from a remote source.
+
+		Parameters:
+			name (str): A unique name of the memory region.
+			start (int): The start address in memory where the region will be loaded.
+			source (Union[os.PathLike, str, bytes, bytearray, BinaryView, databuffer.DataBuffer, fileaccessor.FileAccessor]): The source from which the memory is loaded.
+
+		Returns:
+			bool: True if the memory region was successfully added, False otherwise.
+
+		Raises:
+			NotImplementedError: If the source type is not supported.
+
+		Notes:
+			If parts of the new memory region do not overlap with existing segments, new segments will be automatically created for each non-overlapping area, each with the SegmentFlag.SegmentReadable flag set.
+		"""
+		if isinstance(source, os.PathLike):
+			source = str(source)
+		if isinstance(source, bytes) or isinstance(source, bytearray):
+			source = databuffer.DataBuffer(source)
+		if isinstance(source, str):
+			with open(source, "rb") as f:
+				source = databuffer.DataBuffer(f.read())
+
+		if name is None:
+			name = ""
+
+		if isinstance(source, BinaryView):
+			return core.BNAddBinaryMemoryRegion(self.handle, name, start, source.handle)
+		elif isinstance(source, databuffer.DataBuffer):
+			return core.BNAddDataMemoryRegion(self.handle, name, start, source.handle)
+		elif isinstance(source, fileaccessor.FileAccessor):
+			return core.BNAddRemoteMemoryRegion(self.handle, name, start, source._cb)
+		else:
+			raise NotImplementedError
+
+	def remove_memory_region(self, name: str) -> bool:
+		return core.BNRemoveMemoryRegion(self.handle, name)
+
+	def is_memory_region_enabled(self, name: str, start: int) -> bool:
+		return core.BNIsMemoryRegionEnabled(self.handle, name, start)
+
+	def set_memory_region_enabled(self, name: str, start: int, enabled: bool = True) -> bool:
+		return core.BNSetMemoryRegionEnabled(self.handle, name, start, enabled)
+
+	def set_memory_region_fill(self, name: str, start: int, fill: int) -> bool:
+		return core.BNSetMemoryRegionFill(self.handle, name, start, fill)
+
+	def reset(self):
+		core.BNResetMemoryMap(self.handle)
 
 class BinaryView:
 	"""
@@ -9428,6 +9654,9 @@ class BinaryView:
 		finally:
 			core.BNFreeExternalLocationList(handles, count.value)
 
+	@property
+	def memory_map(self):
+		return MemoryMap(handle=self.handle)
 
 class BinaryReader:
 	"""

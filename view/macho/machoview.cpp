@@ -1099,13 +1099,20 @@ bool MachoView::Init()
 
 	SetOriginalBase(initialImageBase);
 	uint64_t preferredImageBase = initialImageBase;
-	if (settings && settings->Contains("loader.imageBase") && settings->Contains("loader.architecture")) // handle overrides
+	if (settings)
 	{
-		preferredImageBase = settings->Get<uint64_t>("loader.imageBase", this);
+		if (settings->Contains("loader.imageBase"))
+			preferredImageBase = settings->Get<uint64_t>("loader.imageBase", this);
 
-		Ref<Architecture> arch = Architecture::GetByName(settings->Get<string>("loader.architecture", this));
-		if (!m_arch || (arch && (arch->GetName() != m_arch->GetName())))
-			m_arch = arch;
+		if (settings->Contains("loader.platform"))
+		{
+			Ref<Platform> platform = Platform::GetByName(settings->Get<string>("loader.platform", this));
+			if (platform)
+			{
+				m_plat = platform;
+				m_arch = platform->GetArchitecture();
+			}
+		}
 	}
 
 	m_imageBaseAdjustment = 0;
@@ -1806,13 +1813,6 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 		if (header.m_entryPoints.size() > 0)
 			platform = platform->GetAssociatedPlatformByAddress(header.m_entryPoints[0]);
-
-		if (settings && settings->Contains("loader.platform")) // handle overrides
-		{
-			Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this));
-			if (platformOverride)
-				platform = platformOverride;
-		}
 
 		SetDefaultPlatform(platform);
 		SetDefaultArchitecture(platform->GetArchitecture());
@@ -3345,7 +3345,7 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);
 
 	// specify default load settings that can be overridden
-	vector<string> overrides = {"loader.architecture", "loader.imageBase", "loader.platform"};
+	vector<string> overrides = {"loader.imageBase", "loader.platform"};
 	if (!viewRef->IsRelocatable())
 		settings->UpdateProperty("loader.imageBase", "message", "Note: File indicates image is not relocatable.");
 

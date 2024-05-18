@@ -1439,17 +1439,13 @@ impl NamedTypedVariable {
 impl CoreArrayProvider for NamedTypedVariable {
     type Raw = BNVariableNameAndType;
     type Context = ();
+    type Wrapped<'a> = ManuallyDrop<NamedTypedVariable>;
 }
 
-unsafe impl CoreOwnedArrayProvider for NamedTypedVariable {
+unsafe impl CoreArrayProviderInner for NamedTypedVariable {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeVariableNameAndTypeList(raw, count)
     }
-}
-
-unsafe impl CoreArrayWrapper for NamedTypedVariable {
-    type Wrapped<'a> = ManuallyDrop<NamedTypedVariable>;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         ManuallyDrop::new(NamedTypedVariable {
             var: raw.var,
@@ -2098,17 +2094,13 @@ impl StructureMember {
 impl CoreArrayProvider for StructureMember {
     type Raw = BNStructureMember;
     type Context = ();
+    type Wrapped<'a> = Guard<'a, StructureMember>;
 }
 
-unsafe impl CoreOwnedArrayProvider for StructureMember {
+unsafe impl CoreArrayProviderInner for StructureMember {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeStructureMemberList(raw, count)
     }
-}
-
-unsafe impl CoreArrayWrapper for StructureMember {
-    type Wrapped<'a> = Guard<'a, StructureMember>;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(StructureMember::from_raw(*raw), &())
     }
@@ -2406,16 +2398,12 @@ impl Drop for QualifiedName {
 impl CoreArrayProvider for QualifiedName {
     type Raw = BNQualifiedName;
     type Context = ();
+    type Wrapped<'a> = &'a QualifiedName;
 }
-unsafe impl CoreOwnedArrayProvider for QualifiedName {
+unsafe impl CoreArrayProviderInner for QualifiedName {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTypeNameList(raw, count);
     }
-}
-
-unsafe impl CoreArrayWrapper for QualifiedName {
-    type Wrapped<'a> = &'a QualifiedName;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }
@@ -2448,16 +2436,12 @@ impl Drop for QualifiedNameAndType {
 impl CoreArrayProvider for QualifiedNameAndType {
     type Raw = BNQualifiedNameAndType;
     type Context = ();
+    type Wrapped<'a> = &'a QualifiedNameAndType;
 }
-unsafe impl CoreOwnedArrayProvider for QualifiedNameAndType {
+unsafe impl CoreArrayProviderInner for QualifiedNameAndType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTypeAndNameList(raw, count);
     }
-}
-
-unsafe impl CoreArrayWrapper for QualifiedNameAndType {
-    type Wrapped<'a> = &'a QualifiedNameAndType;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }
@@ -2494,16 +2478,12 @@ impl Drop for QualifiedNameTypeAndId {
 impl CoreArrayProvider for QualifiedNameTypeAndId {
     type Raw = BNQualifiedNameTypeAndId;
     type Context = ();
+    type Wrapped<'a> = &'a QualifiedNameTypeAndId;
 }
-unsafe impl CoreOwnedArrayProvider for QualifiedNameTypeAndId {
+unsafe impl CoreArrayProviderInner for QualifiedNameTypeAndId {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTypeIdList(raw, count);
     }
-}
-
-unsafe impl CoreArrayWrapper for QualifiedNameTypeAndId {
-    type Wrapped<'a> = &'a QualifiedNameTypeAndId;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }
@@ -2573,17 +2553,13 @@ unsafe impl RefCountable for NameAndType {
 impl CoreArrayProvider for NameAndType {
     type Raw = BNNameAndType;
     type Context = ();
+    type Wrapped<'a> = Guard<'a, NameAndType>;
 }
 
-unsafe impl CoreOwnedArrayProvider for NameAndType {
+unsafe impl CoreArrayProviderInner for NameAndType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeNameAndTypeList(raw, count);
     }
-}
-
-unsafe impl CoreArrayWrapper for NameAndType {
-    type Wrapped<'a> = Guard<'a, NameAndType>;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         unsafe { Guard::new(NameAndType::from_raw(raw), raw) }
     }
@@ -2653,16 +2629,12 @@ unsafe impl RefCountable for DataVariable {
 impl CoreArrayProvider for DataVariable {
     type Raw = BNDataVariable;
     type Context = ();
+    type Wrapped<'a> = &'a DataVariable;
 }
-unsafe impl CoreOwnedArrayProvider for DataVariable {
+unsafe impl CoreArrayProviderInner for DataVariable {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeDataVariables(raw, count);
     }
-}
-
-unsafe impl CoreArrayWrapper for DataVariable {
-    type Wrapped<'a> = &'a DataVariable;
-
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }

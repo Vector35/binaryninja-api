@@ -104,21 +104,14 @@ unsafe impl RefCountable for BackgroundTask {
 impl CoreArrayProvider for BackgroundTask {
     type Raw = *mut BNBackgroundTask;
     type Context = ();
+    type Wrapped<'a> = Guard<'a, BackgroundTask>;
 }
 
-unsafe impl CoreOwnedArrayProvider for BackgroundTask {
+unsafe impl CoreArrayProviderInner for BackgroundTask {
     unsafe fn free(raw: *mut *mut BNBackgroundTask, count: usize, _context: &()) {
         BNFreeBackgroundTaskList(raw, count);
     }
-}
-
-unsafe impl CoreArrayWrapper for BackgroundTask {
-    type Wrapped<'a> = Guard<'a, BackgroundTask>;
-
-    unsafe fn wrap_raw<'a>(
-        raw: &'a *mut BNBackgroundTask,
-        context: &'a (),
-    ) -> Self::Wrapped<'a> {
+    unsafe fn wrap_raw<'a>(raw: &'a *mut BNBackgroundTask, context: &'a ()) -> Self::Wrapped<'a> {
         Guard::new(BackgroundTask::from_raw(*raw), context)
     }
 }

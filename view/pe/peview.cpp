@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cctype>
+#include <list>
 #include <string.h>
 #include <inttypes.h>
 #include <iomanip>
@@ -597,13 +598,20 @@ bool PEView::Init()
 		m_simplifyTemplates = viewSettings->Get<bool>("analysis.types.templateSimplifier", this);
 
 		settings = GetLoadSettings(GetTypeName());
-		if (settings && settings->Contains("loader.imageBase") && settings->Contains("loader.architecture")) // handle overrides
+		if (settings)
 		{
-			m_imageBase = settings->Get<uint64_t>("loader.imageBase", this);
+			if (settings->Contains("loader.imageBase"))
+				m_imageBase = settings->Get<uint64_t>("loader.imageBase", this);
 
-			Ref<Architecture> arch = Architecture::GetByName(settings->Get<string>("loader.architecture", this));
-			if (!m_arch || (arch && (arch->GetName() != m_arch->GetName())))
-				m_arch = arch;
+			if (settings->Contains("loader.platform"))
+			{
+				Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this));
+				if (platformOverride)
+				{
+					platform = platformOverride;
+					m_arch = platform->GetArchitecture();
+				}
+			}
 		}
 
 		// Apply architecture and platform
@@ -635,16 +643,7 @@ bool PEView::Init()
 			return false;
 		}
 
-
 		platform = platform->GetAssociatedPlatformByAddress(m_entryPoint);
-
-		if (settings && settings->Contains("loader.platform")) // handle overrides
-		{
-			Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this));
-			if (platformOverride)
-				platform = platformOverride;
-		}
-
 		SetDefaultPlatform(platform);
 		SetDefaultArchitecture(platform->GetArchitecture());
 
@@ -2619,6 +2618,166 @@ bool PEView::Init()
 			DefineRelocation(m_arch, reloc, symbol, reloc.address);
 	}
 
+	try
+	{
+		//TODO: properly name tables, entries, data entries
+
+		PEDataDirectory dir;
+		// Read resource directory
+		if (m_dataDirs.size() > IMAGE_DIRECTORY_ENTRY_RESOURCE)
+			dir = m_dataDirs[IMAGE_DIRECTORY_ENTRY_RESOURCE];
+		else
+			dir.virtualAddress = 0;
+
+		if (dir.virtualAddress > 0)
+		{
+			// Create Resource Directory Table Type
+			StructureBuilder resourceDirTableBuilder;
+			resourceDirTableBuilder.AddMember(Type::IntegerType(4, false), "characteristics");
+			resourceDirTableBuilder.AddMember(Type::IntegerType(4, false), "timeDateStamp");
+			resourceDirTableBuilder.AddMember(Type::IntegerType(2, false), "majorVersion");
+			resourceDirTableBuilder.AddMember(Type::IntegerType(2, false), "minorVersion");
+			resourceDirTableBuilder.AddMember(Type::IntegerType(2, false), "numNameEntries");
+			resourceDirTableBuilder.AddMember(Type::IntegerType(2, false), "numIdEntries");
+
+			Ref<Structure> resourceTableStruct = resourceDirTableBuilder.Finalize();
+			Ref<Type> resourceDirTableType = Type::StructureType(resourceTableStruct);
+			QualifiedName resourceDirTableName = string("Resource_Directory_Table");
+			string resourceDirTableTypeId = Type::GenerateAutoTypeId("pe", resourceDirTableName);
+			QualifiedName resourceDirTableTypeName = DefineType(resourceDirTableTypeId, resourceDirTableName, resourceDirTableType);
+
+			// Create Resource Directory Entry Type
+			StructureBuilder resourceDirEntryBuilder;
+			resourceDirEntryBuilder.AddMember(Type::IntegerType(4, false), "id");
+			resourceDirEntryBuilder.AddMember(Type::IntegerType(4, false), "offset");
+
+			Ref<Structure> resourceDirEntryStruct = resourceDirEntryBuilder.Finalize();
+			Ref<Type> resourceDirEntryType = Type::StructureType(resourceDirEntryStruct);
+			QualifiedName resourceDirEntryName = string("Resource_Directory_Table_Entry");
+			string resourceDirEntryTypeId = Type::GenerateAutoTypeId("pe", resourceDirEntryName);
+			QualifiedName resourceDirEntryTypeName = DefineType(resourceDirEntryTypeId, resourceDirEntryName, resourceDirEntryType);
+
+			// Create Resource Data Entry Type
+			StructureBuilder resourceDataEntryBuilder;
+			resourceDataEntryBuilder.AddMember(Type::IntegerType(4, false), "dataRva");
+			resourceDataEntryBuilder.AddMember(Type::IntegerType(4, false), "dataSize");
+			resourceDataEntryBuilder.AddMember(Type::IntegerType(4, false), "codepage");
+			resourceDataEntryBuilder.AddMember(Type::IntegerType(4, false), "reserved");
+
+			Ref<Structure> resourceDataEntryStruct = resourceDataEntryBuilder.Finalize();
+			Ref<Type> resourceDataEntryType = Type::StructureType(resourceDataEntryStruct);
+			QualifiedName resourceDataEntryName = string("Resource_Data_Entry");
+			string resourceDataEntryTypeId = Type::GenerateAutoTypeId("pe", resourceDataEntryName);
+			QualifiedName resourceDataEntryTypeName = DefineType(resourceDataEntryTypeId, resourceDataEntryName, resourceDataEntryType);
+
+			std::list<uint64_t> tableAddrsToParse = {dir.virtualAddress};
+
+			uint32_t resourceDirectoryTableNum = 0;
+			while (!tableAddrsToParse.empty())
+			{
+				uint64_t tableAddr = tableAddrsToParse.front();
+				tableAddrsToParse.pop_front();
+				// Read in next directory entry
+				reader.Seek(RVAToFileOffset(tableAddr));
+				PEResourceDirectoryTable importDirTable;
+				importDirTable.characteristics = reader.Read32();
+				importDirTable.timeDateStamp = reader.Read32();
+				importDirTable.majorVersion = reader.Read16();
+				importDirTable.minorVersion = reader.Read16();
+				importDirTable.numNameEntries = reader.Read16();
+				importDirTable.numIdEntries = reader.Read16();
+
+				DefineDataVariable(m_imageBase + tableAddr, Type::NamedType(this, resourceDirTableTypeName));
+				DefineAutoSymbol(new Symbol(DataSymbol, fmt::format("__resource_directory_table_{}", resourceDirectoryTableNum), m_imageBase + tableAddr, NoBinding));
+
+				// All the Name entries precede all the ID entries for the table but we treat them the same
+				// All entries for the table are sorted in ascending order: the Name entries by case-sensitive string and the ID entries by numeric value.
+				// Offsets are relative to the address in the IMAGE_DIRECTORY_ENTRY_RESOURCE DataDirectory.
+
+				// Offset value:
+				// High bit 0. Address of a Resource Data entry (a leaf).
+				// High bit 1. The lower 31 bits are the address of another resource directory table (the next level down).
+
+				std::vector<size_t> dataEntryOffsets;
+
+				size_t numTableEntries = importDirTable.numNameEntries + importDirTable.numIdEntries;
+
+				if (numTableEntries > 0)
+				{
+					for (size_t entryNum = 0; entryNum < numTableEntries; entryNum++)
+					{
+						PEResourceDirectoryEntry importDirEntry;
+						importDirEntry.id = reader.Read32();
+						importDirEntry.offset = reader.Read32();
+
+						if (importDirEntry.id & 0x80000000)
+						{
+							// Name entry
+							// First 2 bytes of name are length
+
+							size_t nameAddr = dir.virtualAddress + (importDirEntry.id ^ 0x80000000);
+
+							BinaryReader nameReader(GetParentView(), LittleEndian);
+							nameReader.Seek(RVAToFileOffset(nameAddr));
+
+							uint16_t nameLen = nameReader.Read16();
+							// Plus 2 because it's length-prefixed
+							DefineDataVariable(m_imageBase + nameAddr + 2, Type::ArrayType(Type::WideCharType(2), nameLen));
+						}
+
+						if (importDirEntry.offset & 0x80000000)
+						{
+							// Lower 31 bits are address of another table
+							tableAddrsToParse.push_back(dir.virtualAddress + (importDirEntry.offset ^ 0x80000000));
+						}
+						else
+						{
+							// Address of data entry
+							dataEntryOffsets.push_back(importDirEntry.offset);
+						}
+					}
+
+					size_t tableEntriesStart = m_imageBase + tableAddr + sizeof(PEResourceDirectoryTable);
+					DefineDataVariable(tableEntriesStart, Type::ArrayType(Type::NamedType(this, resourceDirEntryTypeName), numTableEntries));
+					DefineAutoSymbol(new Symbol(DataSymbol, fmt::format("__resource_directory_table_{}_entries", resourceDirectoryTableNum), tableEntriesStart, NoBinding));
+				}
+
+				for(size_t dataEntryNum = 0; dataEntryNum < dataEntryOffsets.size(); dataEntryNum++)
+				{
+					BinaryReader entryReader(GetParentView(), LittleEndian);
+
+					size_t entryOffset = dataEntryOffsets[dataEntryNum];
+					entryReader.Seek(RVAToFileOffset(dir.virtualAddress + entryOffset));
+					PEResourceDataEntry dataEntry;
+					dataEntry.dataRva = entryReader.Read32();
+					dataEntry.dataSize = entryReader.Read32();
+					dataEntry.dataCodePage = entryReader.Read32();
+					dataEntry.reserved = entryReader.Read32();
+
+					if (dataEntry.reserved != 0)
+					{
+						// Invalid entry, this needs to be 0
+						continue;
+					}
+
+					size_t entryAddr = m_imageBase + dir.virtualAddress + entryOffset;
+
+					DefineDataVariable(entryAddr, Type::NamedType(this, resourceDataEntryTypeName));
+					DefineAutoSymbol(new Symbol(DataSymbol, fmt::format("__resource_directory_table_{}_data_entry_{}", resourceDirectoryTableNum, dataEntryNum), entryAddr, NoBinding));
+
+					//TODO: properly name based on path taken to get here
+					DefineDataVariable(m_imageBase + dataEntry.dataRva, Type::ArrayType(Type::IntegerType(1, true), dataEntry.dataSize));
+				}
+
+				resourceDirectoryTableNum++;
+			}
+		}
+	}
+	catch (std::exception& e)
+	{
+		m_logger->LogWarn("Failed to parse resource directory: %s\n", e.what());
+	}
+
 	// Add a symbol for the entry point
 	if (m_entryPoint)
 		DefineAutoSymbol(new Symbol(FunctionSymbol, "_start", m_imageBase + m_entryPoint));
@@ -2925,7 +3084,7 @@ Ref<Settings> PEViewType::GetLoadSettingsForData(BinaryView* data)
 	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);
 
 	// specify default load settings that can be overridden
-	vector<string> overrides = {"loader.architecture", "loader.imageBase", "loader.platform"};
+	vector<string> overrides = {"loader.imageBase", "loader.platform"};
 	if (!viewRef->IsRelocatable())
 		settings->UpdateProperty("loader.imageBase", "message", "Note: File indicates image is not relocatable.");
 

@@ -125,40 +125,29 @@ bool Md1romView::Init()
 		AddAutoSection(m_mainRom.name, mainRomBase + m_mainRom.addr, m_mainRom.length, ReadOnlyCodeSectionSemantics);
 		m_entryPoint = mainRomBase + m_mainRom.addr;
 
-		if (settings && settings->Contains("loader.architecture"))
-		{
-			auto arch =  Architecture::GetByName(settings->Get<string>("loader.architecture", this));
-			if (!m_arch || (arch && (arch->GetName() != m_arch->GetName())))
-				m_arch = arch;
-		}
-		else
-		{
-			m_arch = Architecture::GetByName("nanomips");
-		}
-
-		if (m_arch)
-		{
-			SetDefaultArchitecture(m_arch);
-		}
-		else
-		{
-			LogWarn("nanoMIPS architecture not found. Code cannot be disassembled. If you are interested in purchasing "
-					"the nanoMIPS architecture plugin, please contact us via https://binary.ninja/support/");
-		}
-
 		if (settings && settings->Contains("loader.platform")) // handle overrides
 		{
 			Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this));
 			if (platformOverride)
+			{
 				m_plat = platformOverride;
+				m_arch = m_plat->GetArchitecture();
+			}
 		}
 		else
 		{
 			m_plat = Platform::GetByName("nanomips");
+			m_arch = Architecture::GetByName("nanomips");
+			if (!m_arch)
+			{
+				LogWarn("nanoMIPS architecture not found. Code cannot be disassembled. If you are interested in purchasing "
+						"the nanoMIPS architecture plugin, please contact us via https://binary.ninja/support/");
+			}
 		}
 
-		if (m_plat)
+		if (m_arch && m_plat)
 		{
+			SetDefaultArchitecture(m_arch);
 			SetDefaultPlatform(m_plat);
 		}
 	}
@@ -441,7 +430,7 @@ Ref<Settings> Md1romViewType::GetLoadSettingsForData(BinaryNinja::BinaryView* da
 	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);
 
 	// specify default load settings that can be overridden
-	vector<string> overrides = {"loader.architecture", "loader.imageBase", "loader.platform"};
+	vector<string> overrides = {"loader.imageBase", "loader.platform"};
 	for (const auto& override : overrides)
 	{
 		if (settings->Contains(override))

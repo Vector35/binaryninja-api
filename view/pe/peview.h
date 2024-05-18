@@ -420,6 +420,30 @@ namespace BinaryNinja
 		uint32_t Age;
 	};
 
+	struct PEResourceDirectoryTable
+	{
+		uint32_t characteristics;
+		uint32_t timeDateStamp;
+		uint16_t majorVersion;
+		uint16_t minorVersion;
+		uint16_t numNameEntries;
+		uint16_t numIdEntries;
+	};
+
+	struct PEResourceDirectoryEntry
+	{
+		uint32_t id;
+		uint32_t offset;
+	};
+
+	struct PEResourceDataEntry
+	{
+		uint32_t dataRva;
+		uint32_t dataSize;
+		uint32_t dataCodePage;
+		uint32_t reserved;
+	};
+
 	class PEView: public BinaryView
 	{
 		bool m_parseOnly, m_backedByDatabase;

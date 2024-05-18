@@ -218,7 +218,12 @@ pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::Binar
 /// The main way to open and load files (with options) into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
 ///
 /// ```no_run
-/// let settings = [("analysis.linearSweep.autorun", false)].into();
+/// use binaryninja::{metadata::Metadata, rc::Ref};
+/// use std::collections::HashMap;
+///
+/// let settings: Ref<Metadata> = HashMap::from([
+///     ("analysis.linearSweep.autorun", false.into()),
+/// ]).into();
 ///
 /// let bv = binaryninja::load_with_options("/bin/cat", true, Some(settings))
 ///     .expect("Couldn't open `/bin/cat`");

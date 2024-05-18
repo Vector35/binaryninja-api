@@ -77,7 +77,6 @@ namespace BinaryNinja
 	private:
 		void ReadTEImageHeader(BinaryReader& reader, struct TEImageHeader& imageHeader);
 		void ReadTEImageSectionHeaders(BinaryReader& reader, uint32_t numSections);
-		void HandleUserOverrides();
 		void CreateSections();
 		void AssignHeaderTypes();
 	};

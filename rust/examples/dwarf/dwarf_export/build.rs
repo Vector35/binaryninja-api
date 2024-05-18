@@ -48,21 +48,24 @@ fn main() {
 
     #[cfg(target_os = "linux")]
     println!(
-        "cargo:rustc-link-arg=-Wl,-rpath,{},-L{},-l:libbinaryninjacore.so.1",
+        "cargo::rustc-link-arg=-Wl,-rpath,{},-L{},-l:libbinaryninjacore.so.1",
         install_path.to_str().unwrap(),
         install_path.to_str().unwrap(),
     );
 
     #[cfg(target_os = "macos")]
     println!(
-        "cargo:rustc-link-arg=-Wl,-rpath,{},-L{},-lbinaryninjacore",
+        "cargo::rustc-link-arg=-Wl,-rpath,{},-L{},-lbinaryninjacore",
         install_path.to_str().unwrap(),
         install_path.to_str().unwrap(),
     );
 
     #[cfg(target_os = "windows")]
     {
-        println!("cargo:rustc-link-lib=binaryninjacore");
-        println!("cargo:rustc-link-search={}", install_path.to_str().unwrap());
+        println!("cargo::rustc-link-lib=binaryninjacore");
+        println!(
+            "cargo::rustc-link-search={}",
+            install_path.to_str().unwrap()
+        );
     }
 }

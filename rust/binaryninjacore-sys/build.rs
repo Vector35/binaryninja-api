@@ -44,7 +44,7 @@ fn link_path() -> PathBuf {
 }
 
 fn main() {
-    println!("cargo:rerun-if-changed=../../binaryninjacore.h");
+    println!("cargo::rerun-if-changed=../../binaryninjacore.h");
 
     //Cargo's output directory
     let out_dir = env::var("OUT_DIR").unwrap();
@@ -69,11 +69,11 @@ fn main() {
             )
             .expect("failed to create required symlink");
         }
-        println!("cargo:rustc-link-search={}", out_dir);
+        println!("cargo::rustc-link-search={}", out_dir);
     }
 
-    println!("cargo:rustc-link-lib=binaryninjacore");
-    println!("cargo:rustc-link-search={}", link_path.to_str().unwrap());
+    println!("cargo::rustc-link-lib=binaryninjacore");
+    println!("cargo::rustc-link-search={}", link_path.to_str().unwrap());
 
     let current_line = "#define BN_CURRENT_UI_ABI_VERSION ";
     let minimum_line = "#define BN_MINIMUM_UI_ABI_VERSION ";

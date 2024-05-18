@@ -3,27 +3,32 @@ use binaryninjacore_sys::BNGetMediumLevelILByIndex;
 use binaryninjacore_sys::BNMediumLevelILInstruction;
 use binaryninjacore_sys::BNMediumLevelILOperation;
 
+use crate::mlil::InstructionLiftedTrait;
 use crate::operand_iter::OperandIter;
 use crate::rc::Ref;
-use crate::types::{
-    ConstantData, ILIntrinsic, RegisterValue, RegisterValueType, SSAVariable, Variable,
-};
+use crate::types::{SSAVariable, Variable};
 
 use super::lift::*;
 use super::operation::*;
+use super::Form;
+use super::InstructionTrait;
+use super::InstructionTraitFromRaw;
 use super::MediumLevelILFunction;
+use super::Sealed;
+
+use strum::IntoStaticStr;
 
 #[derive(Clone)]
-pub struct MediumLevelILInstruction {
-    pub function: Ref<MediumLevelILFunction>,
+pub struct MediumLevelILInstruction<I: Form> {
+    pub function: Ref<MediumLevelILFunction<I>>,
     pub address: u64,
     pub index: usize,
     pub size: usize,
-    pub kind: MediumLevelILInstructionKind,
+    pub kind: MediumLevelILInstructionKind<I>,
 }
 
-#[derive(Copy, Clone)]
-pub enum MediumLevelILInstructionKind {
+#[derive(Debug, Copy, Clone, IntoStaticStr)]
+pub enum MediumLevelILInstructionKind<I: Form> {
     Nop,
     Noret,
     Bp,
@@ -38,26 +43,8 @@ pub enum MediumLevelILInstructionKind {
     ConstData(ConstData),
     Jump(Jump),
     RetHint(Jump),
-    StoreSsa(StoreSsa),
-    StoreStructSsa(StoreStructSsa),
-    StoreStruct(StoreStruct),
-    Store(Store),
     JumpTo(JumpTo),
     Goto(Goto),
-    FreeVarSlot(FreeVarSlot),
-    SetVarField(SetVarField),
-    SetVar(SetVar),
-    FreeVarSlotSsa(FreeVarSlotSsa),
-    SetVarSsaField(SetVarSsaField),
-    SetVarAliasedField(SetVarSsaField),
-    SetVarAliased(SetVarAliased),
-    SetVarSsa(SetVarSsa),
-    VarPhi(VarPhi),
-    MemPhi(MemPhi),
-    VarSplit(VarSplit),
-    SetVarSplit(SetVarSplit),
-    VarSplitSsa(VarSplitSsa),
-    SetVarSplitSsa(SetVarSplitSsa),
     Add(BinaryOp),
     Sub(BinaryOp),
     And(BinaryOp),
@@ -107,22 +94,6 @@ pub enum MediumLevelILInstructionKind {
     Sbb(BinaryOpCarry),
     Rlc(BinaryOpCarry),
     Rrc(BinaryOpCarry),
-    Call(Call),
-    Tailcall(Call),
-    Syscall(Syscall),
-    Intrinsic(Intrinsic),
-    IntrinsicSsa(IntrinsicSsa),
-    CallSsa(CallSsa),
-    TailcallSsa(CallSsa),
-    CallUntypedSsa(CallUntypedSsa),
-    TailcallUntypedSsa(CallUntypedSsa),
-    SyscallSsa(SyscallSsa),
-    SyscallUntypedSsa(SyscallUntypedSsa),
-    CallUntyped(CallUntyped),
-    TailcallUntyped(CallUntyped),
-    SyscallUntyped(SyscallUntyped),
-    SeparateParamList(SeparateParamList),
-    SharedParamSlot(SharedParamSlot),
     Neg(UnaryOp),
     Not(UnaryOp),
     Sx(UnaryOp),
@@ -140,23 +111,308 @@ pub enum MediumLevelILInstructionKind {
     Floor(UnaryOp),
     Ceil(UnaryOp),
     Ftrunc(UnaryOp),
-    Load(UnaryOp),
-    LoadStruct(LoadStruct),
-    LoadStructSsa(LoadStructSsa),
-    LoadSsa(LoadSsa),
     Ret(Ret),
-    Var(Var),
+
+    MemPhi(MemPhi),
+    SeparateParamList(SeparateParamList),
+    SharedParamSlot(SharedParamSlot),
+
     AddressOf(Var),
-    VarField(Field),
     AddressOfField(Field),
-    VarSsa(VarSsa),
-    VarAliased(VarSsa),
-    VarSsaField(VarSsaField),
-    VarAliasedField(VarSsaField),
     Trap(Trap),
+
+    Form(I::Instruction),
 }
 
-impl core::fmt::Debug for MediumLevelILInstruction {
+#[derive(Debug, Copy, Clone, IntoStaticStr)]
+pub enum MediumLevelILInstructionKindNonSSA {
+    Var(Var),
+    VarField(Field),
+    Store(Store),
+    StoreStruct(StoreStruct),
+    SetVar(SetVar),
+    SetVarField(SetVarField),
+    FreeVarSlot(FreeVarSlot),
+    VarSplit(VarSplit),
+    SetVarSplit(SetVarSplit),
+    Call(Call),
+    CallUntyped(CallUntyped),
+    Tailcall(Call),
+    Syscall(Syscall),
+    SyscallUntyped(SyscallUntyped),
+    Intrinsic(Intrinsic),
+    TailcallUntyped(CallUntyped),
+    Load(UnaryOp),
+    LoadStruct(LoadStruct),
+}
+
+impl Sealed for MediumLevelILInstructionKindNonSSA {}
+impl InstructionTraitFromRaw for MediumLevelILInstructionKindNonSSA {
+    fn from_operation(op: BNMediumLevelILInstruction) -> Option<Self> {
+        use crate::mlil::operation::*;
+        use BNMediumLevelILOperation::*;
+        Some(match op.operation {
+            MLIL_STORE_STRUCT => Self::StoreStruct(StoreStruct {
+                dest: op.operands[0] as usize,
+                offset: op.operands[1],
+                src: op.operands[2] as usize,
+            }),
+            MLIL_STORE => Self::Store(Store {
+                dest: op.operands[0] as usize,
+                src: op.operands[1] as usize,
+            }),
+            MLIL_FREE_VAR_SLOT => Self::FreeVarSlot(FreeVarSlot {
+                dest: get_var(op.operands[0]),
+            }),
+            MLIL_SET_VAR_FIELD => Self::SetVarField(SetVarField {
+                dest: get_var(op.operands[0]),
+                offset: op.operands[1],
+                src: op.operands[2] as usize,
+            }),
+            MLIL_SET_VAR => Self::SetVar(SetVar {
+                dest: get_var(op.operands[0]),
+                src: op.operands[1] as usize,
+            }),
+            MLIL_VAR_SPLIT => Self::VarSplit(VarSplit {
+                high: get_var(op.operands[0]),
+                low: get_var(op.operands[1]),
+            }),
+            MLIL_SET_VAR_SPLIT => Self::SetVarSplit(SetVarSplit {
+                high: get_var(op.operands[0]),
+                low: get_var(op.operands[1]),
+                src: op.operands[2] as usize,
+            }),
+            MLIL_CALL => Self::Call(Call {
+                num_outputs: op.operands[0] as usize,
+                first_output: op.operands[1] as usize,
+                dest: op.operands[2] as usize,
+                num_params: op.operands[3] as usize,
+                first_param: op.operands[4] as usize,
+            }),
+            MLIL_TAILCALL => Self::Tailcall(Call {
+                num_outputs: op.operands[0] as usize,
+                first_output: op.operands[1] as usize,
+                dest: op.operands[2] as usize,
+                num_params: op.operands[3] as usize,
+                first_param: op.operands[4] as usize,
+            }),
+            MLIL_SYSCALL => Self::Syscall(Syscall {
+                num_outputs: op.operands[0] as usize,
+                first_output: op.operands[1] as usize,
+                num_params: op.operands[2] as usize,
+                first_param: op.operands[3] as usize,
+            }),
+            MLIL_INTRINSIC => Self::Intrinsic(Intrinsic {
+                num_outputs: op.operands[0] as usize,
+                first_output: op.operands[1] as usize,
+                intrinsic: op.operands[2] as u32,
+                num_params: op.operands[3] as usize,
+                first_param: op.operands[4] as usize,
+            }),
+            MLIL_CALL_UNTYPED => Self::CallUntyped(CallUntyped {
+                output: op.operands[0] as usize,
+                dest: op.operands[1] as usize,
+                params: op.operands[2] as usize,
+                stack: op.operands[3] as usize,
+            }),
+            MLIL_TAILCALL_UNTYPED => Self::TailcallUntyped(CallUntyped {
+                output: op.operands[0] as usize,
+                dest: op.operands[1] as usize,
+                params: op.operands[2] as usize,
+                stack: op.operands[3] as usize,
+            }),
+            MLIL_SYSCALL_UNTYPED => Self::SyscallUntyped(SyscallUntyped {
+                output: op.operands[0] as usize,
+                params: op.operands[1] as usize,
+                stack: op.operands[2] as usize,
+            }),
+            MLIL_LOAD => Self::Load(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            MLIL_LOAD_STRUCT => Self::LoadStruct(LoadStruct {
+                src: op.operands[0] as usize,
+                offset: op.operands[1],
+            }),
+            MLIL_VAR_FIELD => Self::VarField(Field {
+                src: get_var(op.operands[0]),
+                offset: op.operands[1],
+            }),
+            _ => return None,
+        })
+    }
+}
+
+impl InstructionTrait for MediumLevelILInstructionKindNonSSA {
+    fn name(&self) -> &'static str {
+        self.into()
+    }
+}
+
+#[derive(Debug, Copy, Clone, IntoStaticStr)]
+pub enum MediumLevelILInstructionKindSSA {
+    VarSsa(VarSsa),
+    VarSsaField(VarSsaField),
+    StoreSsa(StoreSsa),
+    StoreStructSsa(StoreStructSsa),
+    SetVarSsa(SetVarSsa),
+    SetVarSsaField(SetVarSsaField),
+    FreeVarSlotSsa(FreeVarSlotSsa),
+    VarSplitSsa(VarSplitSsa),
+    SetVarSplitSsa(SetVarSplitSsa),
+    CallSsa(CallSsa),
+    CallUntypedSsa(CallUntypedSsa),
+    TailcallSsa(CallSsa),
+    SyscallSsa(SyscallSsa),
+    SyscallUntypedSsa(SyscallUntypedSsa),
+    IntrinsicSsa(IntrinsicSsa),
+    TailcallUntypedSsa(CallUntypedSsa),
+    LoadSsa(LoadSsa),
+    LoadStructSsa(LoadStructSsa),
+
+    SetVarAliased(SetVarAliased),
+    SetVarAliasedField(SetVarSsaField),
+    VarPhi(VarPhi),
+    VarAliased(VarSsa),
+    VarAliasedField(VarSsaField),
+}
+
+impl Sealed for MediumLevelILInstructionKindSSA {}
+impl InstructionTraitFromRaw for MediumLevelILInstructionKindSSA {
+    fn from_operation(op: BNMediumLevelILInstruction) -> Option<Self> {
+        use crate::mlil::operation::*;
+        use BNMediumLevelILOperation::*;
+        Some(match op.operation {
+            MLIL_STORE_SSA => Self::StoreSsa(StoreSsa {
+                dest: op.operands[0] as usize,
+                dest_memory: op.operands[1],
+                src_memory: op.operands[2],
+                src: op.operands[3] as usize,
+            }),
+            MLIL_STORE_STRUCT_SSA => Self::StoreStructSsa(StoreStructSsa {
+                dest: op.operands[0] as usize,
+                offset: op.operands[1],
+                dest_memory: op.operands[2],
+                src_memory: op.operands[3],
+                src: op.operands[4] as usize,
+            }),
+            MLIL_FREE_VAR_SLOT_SSA => Self::FreeVarSlotSsa(FreeVarSlotSsa {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
+            }),
+            MLIL_SET_VAR_SSA_FIELD => Self::SetVarSsaField(SetVarSsaField {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
+                offset: op.operands[3],
+                src: op.operands[4] as usize,
+            }),
+            MLIL_SET_VAR_ALIASED_FIELD => Self::SetVarAliasedField(SetVarSsaField {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
+                offset: op.operands[3],
+                src: op.operands[4] as usize,
+            }),
+            MLIL_SET_VAR_ALIASED => Self::SetVarAliased(SetVarAliased {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
+                src: op.operands[3] as usize,
+            }),
+            MLIL_SET_VAR_SSA => Self::SetVarSsa(SetVarSsa {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                src: op.operands[2] as usize,
+            }),
+            MLIL_VAR_PHI => Self::VarPhi(VarPhi {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                num_operands: op.operands[2] as usize,
+                first_operand: op.operands[3] as usize,
+            }),
+            MLIL_VAR_SPLIT_SSA => Self::VarSplitSsa(VarSplitSsa {
+                high: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                low: get_var_ssa(op.operands[2], op.operands[3] as usize),
+            }),
+            MLIL_SET_VAR_SPLIT_SSA => Self::SetVarSplitSsa(SetVarSplitSsa {
+                high: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                low: get_var_ssa(op.operands[2], op.operands[3] as usize),
+                src: op.operands[4] as usize,
+            }),
+            MLIL_INTRINSIC_SSA => Self::IntrinsicSsa(IntrinsicSsa {
+                num_outputs: op.operands[0] as usize,
+                first_output: op.operands[1] as usize,
+                intrinsic: op.operands[2] as u32,
+                num_params: op.operands[3] as usize,
+                first_param: op.operands[4] as usize,
+            }),
+            MLIL_CALL_SSA => Self::CallSsa(CallSsa {
+                output: op.operands[0] as usize,
+                dest: op.operands[1] as usize,
+                num_params: op.operands[2] as usize,
+                first_param: op.operands[3] as usize,
+                src_memory: op.operands[4],
+            }),
+            MLIL_TAILCALL_SSA => Self::TailcallSsa(CallSsa {
+                output: op.operands[0] as usize,
+                dest: op.operands[1] as usize,
+                num_params: op.operands[2] as usize,
+                first_param: op.operands[3] as usize,
+                src_memory: op.operands[4],
+            }),
+            MLIL_CALL_UNTYPED_SSA => Self::CallUntypedSsa(CallUntypedSsa {
+                output: op.operands[0] as usize,
+                dest: op.operands[1] as usize,
+                params: op.operands[2] as usize,
+                stack: op.operands[3] as usize,
+            }),
+            MLIL_TAILCALL_UNTYPED_SSA => Self::TailcallUntypedSsa(CallUntypedSsa {
+                output: op.operands[0] as usize,
+                dest: op.operands[1] as usize,
+                params: op.operands[2] as usize,
+                stack: op.operands[3] as usize,
+            }),
+            MLIL_SYSCALL_SSA => Self::SyscallSsa(SyscallSsa {
+                output: op.operands[0] as usize,
+                num_params: op.operands[1] as usize,
+                first_param: op.operands[2] as usize,
+                src_memory: op.operands[3],
+            }),
+            MLIL_SYSCALL_UNTYPED_SSA => Self::SyscallUntypedSsa(SyscallUntypedSsa {
+                output: op.operands[0] as usize,
+                params: op.operands[1] as usize,
+                stack: op.operands[2] as usize,
+            }),
+            MLIL_LOAD_STRUCT_SSA => Self::LoadStructSsa(LoadStructSsa {
+                src: op.operands[0] as usize,
+                offset: op.operands[1],
+                src_memory: op.operands[2],
+            }),
+            MLIL_LOAD_SSA => Self::LoadSsa(LoadSsa {
+                src: op.operands[0] as usize,
+                src_memory: op.operands[1],
+            }),
+            MLIL_VAR_SSA => Self::VarSsa(VarSsa {
+                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
+            }),
+            MLIL_VAR_ALIASED => Self::VarAliased(VarSsa {
+                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
+            }),
+            MLIL_VAR_SSA_FIELD => Self::VarSsaField(VarSsaField {
+                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                offset: op.operands[2],
+            }),
+            MLIL_VAR_ALIASED_FIELD => Self::VarAliasedField(VarSsaField {
+                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                offset: op.operands[2],
+            }),
+            _ => return None,
+        })
+    }
+}
+
+impl InstructionTrait for MediumLevelILInstructionKindSSA {
+    fn name(&self) -> &'static str {
+        self.into()
+    }
+}
+
+impl<I: Form> core::fmt::Debug for MediumLevelILInstruction<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(
             f,
@@ -167,12 +423,12 @@ impl core::fmt::Debug for MediumLevelILInstruction {
     }
 }
 
-impl MediumLevelILInstruction {
-    pub(crate) fn new(function: Ref<MediumLevelILFunction>, index: usize) -> Self {
-        let op = unsafe { BNGetMediumLevelILByIndex(function.handle, index) };
+impl<I: Form> MediumLevelILInstructionKind<I> {
+    pub(crate) fn from_operation(op: BNMediumLevelILInstruction) -> Option<Self> {
+        use crate::mlil::operation::*;
         use BNMediumLevelILOperation::*;
         use MediumLevelILInstructionKind as Op;
-        let kind = match op.operation {
+        Some(match op.operation {
             MLIL_NOP => Op::Nop,
             MLIL_NORET => Op::Noret,
             MLIL_BP => Op::Bp,
@@ -210,28 +466,6 @@ impl MediumLevelILInstruction {
             MLIL_RET_HINT => Op::RetHint(Jump {
                 dest: op.operands[0] as usize,
             }),
-            MLIL_STORE_SSA => Op::StoreSsa(StoreSsa {
-                dest: op.operands[0] as usize,
-                dest_memory: op.operands[1],
-                src_memory: op.operands[2],
-                src: op.operands[3] as usize,
-            }),
-            MLIL_STORE_STRUCT_SSA => Op::StoreStructSsa(StoreStructSsa {
-                dest: op.operands[0] as usize,
-                offset: op.operands[1],
-                dest_memory: op.operands[2],
-                src_memory: op.operands[3],
-                src: op.operands[4] as usize,
-            }),
-            MLIL_STORE_STRUCT => Op::StoreStruct(StoreStruct {
-                dest: op.operands[0] as usize,
-                offset: op.operands[1],
-                src: op.operands[2] as usize,
-            }),
-            MLIL_STORE => Op::Store(Store {
-                dest: op.operands[0] as usize,
-                src: op.operands[1] as usize,
-            }),
             MLIL_JUMP_TO => Op::JumpTo(JumpTo {
                 dest: op.operands[0] as usize,
                 num_operands: op.operands[1] as usize,
@@ -240,70 +474,10 @@ impl MediumLevelILInstruction {
             MLIL_GOTO => Op::Goto(Goto {
                 dest: op.operands[0],
             }),
-            MLIL_FREE_VAR_SLOT => Op::FreeVarSlot(FreeVarSlot {
-                dest: get_var(op.operands[0]),
-            }),
-            MLIL_SET_VAR_FIELD => Op::SetVarField(SetVarField {
-                dest: get_var(op.operands[0]),
-                offset: op.operands[1],
-                src: op.operands[2] as usize,
-            }),
-            MLIL_SET_VAR => Op::SetVar(SetVar {
-                dest: get_var(op.operands[0]),
-                src: op.operands[1] as usize,
-            }),
-            MLIL_FREE_VAR_SLOT_SSA => Op::FreeVarSlotSsa(FreeVarSlotSsa {
-                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
-            }),
-            MLIL_SET_VAR_SSA_FIELD => Op::SetVarSsaField(SetVarSsaField {
-                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
-                offset: op.operands[3],
-                src: op.operands[4] as usize,
-            }),
-            MLIL_SET_VAR_ALIASED_FIELD => Op::SetVarAliasedField(SetVarSsaField {
-                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
-                offset: op.operands[3],
-                src: op.operands[4] as usize,
-            }),
-            MLIL_SET_VAR_ALIASED => Op::SetVarAliased(SetVarAliased {
-                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
-                src: op.operands[3] as usize,
-            }),
-            MLIL_SET_VAR_SSA => Op::SetVarSsa(SetVarSsa {
-                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                src: op.operands[2] as usize,
-            }),
-            MLIL_VAR_PHI => Op::VarPhi(VarPhi {
-                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                num_operands: op.operands[2] as usize,
-                first_operand: op.operands[3] as usize,
-            }),
             MLIL_MEM_PHI => Op::MemPhi(MemPhi {
                 dest_memory: op.operands[0],
                 num_operands: op.operands[1] as usize,
                 first_operand: op.operands[2] as usize,
-            }),
-            MLIL_VAR_SPLIT => Op::VarSplit(VarSplit {
-                high: get_var(op.operands[0]),
-                low: get_var(op.operands[1]),
-            }),
-            MLIL_SET_VAR_SPLIT => Op::SetVarSplit(SetVarSplit {
-                high: get_var(op.operands[0]),
-                low: get_var(op.operands[1]),
-                src: op.operands[2] as usize,
-            }),
-            MLIL_VAR_SPLIT_SSA => Op::VarSplitSsa(VarSplitSsa {
-                high: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                low: get_var_ssa(op.operands[2], op.operands[3] as usize),
-            }),
-            MLIL_SET_VAR_SPLIT_SSA => Op::SetVarSplitSsa(SetVarSplitSsa {
-                high: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                low: get_var_ssa(op.operands[2], op.operands[3] as usize),
-                src: op.operands[4] as usize,
             }),
             MLIL_ADD => Op::Add(BinaryOp {
                 left: op.operands[0] as usize,
@@ -505,94 +679,6 @@ impl MediumLevelILInstruction {
                 right: op.operands[1] as usize,
                 carry: op.operands[2] as usize,
             }),
-            MLIL_CALL => Op::Call(Call {
-                num_outputs: op.operands[0] as usize,
-                first_output: op.operands[1] as usize,
-                dest: op.operands[2] as usize,
-                num_params: op.operands[3] as usize,
-                first_param: op.operands[4] as usize,
-            }),
-            MLIL_TAILCALL => Op::Tailcall(Call {
-                num_outputs: op.operands[0] as usize,
-                first_output: op.operands[1] as usize,
-                dest: op.operands[2] as usize,
-                num_params: op.operands[3] as usize,
-                first_param: op.operands[4] as usize,
-            }),
-            MLIL_SYSCALL => Op::Syscall(Syscall {
-                num_outputs: op.operands[0] as usize,
-                first_output: op.operands[1] as usize,
-                num_params: op.operands[2] as usize,
-                first_param: op.operands[3] as usize,
-            }),
-            MLIL_INTRINSIC => Op::Intrinsic(Intrinsic {
-                num_outputs: op.operands[0] as usize,
-                first_output: op.operands[1] as usize,
-                intrinsic: op.operands[2] as u32,
-                num_params: op.operands[3] as usize,
-                first_param: op.operands[4] as usize,
-            }),
-            MLIL_INTRINSIC_SSA => Op::IntrinsicSsa(IntrinsicSsa {
-                num_outputs: op.operands[0] as usize,
-                first_output: op.operands[1] as usize,
-                intrinsic: op.operands[2] as u32,
-                num_params: op.operands[3] as usize,
-                first_param: op.operands[4] as usize,
-            }),
-            MLIL_CALL_SSA => Op::CallSsa(CallSsa {
-                output: op.operands[0] as usize,
-                dest: op.operands[1] as usize,
-                num_params: op.operands[2] as usize,
-                first_param: op.operands[3] as usize,
-                src_memory: op.operands[4],
-            }),
-            MLIL_TAILCALL_SSA => Op::TailcallSsa(CallSsa {
-                output: op.operands[0] as usize,
-                dest: op.operands[1] as usize,
-                num_params: op.operands[2] as usize,
-                first_param: op.operands[3] as usize,
-                src_memory: op.operands[4],
-            }),
-            MLIL_CALL_UNTYPED_SSA => Op::CallUntypedSsa(CallUntypedSsa {
-                output: op.operands[0] as usize,
-                dest: op.operands[1] as usize,
-                params: op.operands[2] as usize,
-                stack: op.operands[3] as usize,
-            }),
-            MLIL_TAILCALL_UNTYPED_SSA => Op::TailcallUntypedSsa(CallUntypedSsa {
-                output: op.operands[0] as usize,
-                dest: op.operands[1] as usize,
-                params: op.operands[2] as usize,
-                stack: op.operands[3] as usize,
-            }),
-            MLIL_SYSCALL_SSA => Op::SyscallSsa(SyscallSsa {
-                output: op.operands[0] as usize,
-                num_params: op.operands[1] as usize,
-                first_param: op.operands[2] as usize,
-                src_memory: op.operands[3],
-            }),
-            MLIL_SYSCALL_UNTYPED_SSA => Op::SyscallUntypedSsa(SyscallUntypedSsa {
-                output: op.operands[0] as usize,
-                params: op.operands[1] as usize,
-                stack: op.operands[2] as usize,
-            }),
-            MLIL_CALL_UNTYPED => Op::CallUntyped(CallUntyped {
-                output: op.operands[0] as usize,
-                dest: op.operands[1] as usize,
-                params: op.operands[2] as usize,
-                stack: op.operands[3] as usize,
-            }),
-            MLIL_TAILCALL_UNTYPED => Op::TailcallUntyped(CallUntyped {
-                output: op.operands[0] as usize,
-                dest: op.operands[1] as usize,
-                params: op.operands[2] as usize,
-                stack: op.operands[3] as usize,
-            }),
-            MLIL_SYSCALL_UNTYPED => Op::SyscallUntyped(SyscallUntyped {
-                output: op.operands[0] as usize,
-                params: op.operands[1] as usize,
-                stack: op.operands[2] as usize,
-            }),
             MLIL_NEG => Op::Neg(UnaryOp {
                 src: op.operands[0] as usize,
             }),
@@ -644,22 +730,6 @@ impl MediumLevelILInstruction {
             MLIL_FTRUNC => Op::Ftrunc(UnaryOp {
                 src: op.operands[0] as usize,
             }),
-            MLIL_LOAD => Op::Load(UnaryOp {
-                src: op.operands[0] as usize,
-            }),
-            MLIL_LOAD_STRUCT => Op::LoadStruct(LoadStruct {
-                src: op.operands[0] as usize,
-                offset: op.operands[1],
-            }),
-            MLIL_LOAD_STRUCT_SSA => Op::LoadStructSsa(LoadStructSsa {
-                src: op.operands[0] as usize,
-                offset: op.operands[1],
-                src_memory: op.operands[2],
-            }),
-            MLIL_LOAD_SSA => Op::LoadSsa(LoadSsa {
-                src: op.operands[0] as usize,
-                src_memory: op.operands[1],
-            }),
             MLIL_RET => Op::Ret(Ret {
                 num_operands: op.operands[0] as usize,
                 first_operand: op.operands[1] as usize,
@@ -672,48 +742,135 @@ impl MediumLevelILInstruction {
                 num_params: op.operands[0] as usize,
                 first_param: op.operands[1] as usize,
             }),
-            MLIL_VAR => Op::Var(Var {
-                src: get_var(op.operands[0]),
-            }),
             MLIL_ADDRESS_OF => Op::AddressOf(Var {
                 src: get_var(op.operands[0]),
-            }),
-            MLIL_VAR_FIELD => Op::VarField(Field {
-                src: get_var(op.operands[0]),
-                offset: op.operands[1],
             }),
             MLIL_ADDRESS_OF_FIELD => Op::AddressOfField(Field {
                 src: get_var(op.operands[0]),
                 offset: op.operands[1],
             }),
-            MLIL_VAR_SSA => Op::VarSsa(VarSsa {
-                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
-            }),
-            MLIL_VAR_ALIASED => Op::VarAliased(VarSsa {
-                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
-            }),
-            MLIL_VAR_SSA_FIELD => Op::VarSsaField(VarSsaField {
-                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                offset: op.operands[2],
-            }),
-            MLIL_VAR_ALIASED_FIELD => Op::VarAliasedField(VarSsaField {
-                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                offset: op.operands[2],
-            }),
             MLIL_TRAP => Op::Trap(Trap {
                 vector: op.operands[0],
             }),
-            // translated directly into a list for Expression or Variables
-            // TODO MLIL_MEMORY_INTRINSIC_SSA needs to be handled properly
-            MLIL_CALL_OUTPUT
-            | MLIL_CALL_PARAM
-            | MLIL_CALL_PARAM_SSA
-            | MLIL_CALL_OUTPUT_SSA
-            | MLIL_MEMORY_INTRINSIC_OUTPUT_SSA
-            | MLIL_MEMORY_INTRINSIC_SSA => {
-                unreachable!()
-            }
-        };
+            _ => return I::Instruction::from_operation(op).map(Op::Form),
+        })
+    }
+
+    pub fn lift(
+        &self,
+        inst: &MediumLevelILInstruction<I>,
+    ) -> MediumLevelILLiftedInstructionKind<I> {
+        use MediumLevelILInstructionKind::*;
+        use MediumLevelILLiftedInstructionKind as Lifted;
+        match self {
+            Nop => Lifted::Nop,
+            Noret => Lifted::Noret,
+            Bp => Lifted::Bp,
+            Undef => Lifted::Undef,
+            Unimpl => Lifted::Unimpl,
+            If(op) => Lifted::If(op.lift(inst)),
+            FloatConst(op) => Lifted::FloatConst(*op),
+            Const(op) => Lifted::Const(*op),
+            ConstPtr(op) => Lifted::ConstPtr(*op),
+            Import(op) => Lifted::Import(*op),
+            ExternPtr(op) => Lifted::ExternPtr(*op),
+            ConstData(op) => Lifted::ConstData(op.lift(inst)),
+            Jump(op) => Lifted::Jump(op.lift(inst)),
+            RetHint(op) => Lifted::RetHint(op.lift(inst)),
+            JumpTo(op) => Lifted::JumpTo(op.lift(inst)),
+            Goto(op) => Lifted::Goto(*op),
+            Add(op) => Lifted::Add(op.lift(inst)),
+            Sub(op) => Lifted::Sub(op.lift(inst)),
+            And(op) => Lifted::And(op.lift(inst)),
+            Or(op) => Lifted::Or(op.lift(inst)),
+            Xor(op) => Lifted::Xor(op.lift(inst)),
+            Lsl(op) => Lifted::Lsl(op.lift(inst)),
+            Lsr(op) => Lifted::Lsr(op.lift(inst)),
+            Asr(op) => Lifted::Asr(op.lift(inst)),
+            Rol(op) => Lifted::Rol(op.lift(inst)),
+            Ror(op) => Lifted::Ror(op.lift(inst)),
+            Mul(op) => Lifted::Mul(op.lift(inst)),
+            MuluDp(op) => Lifted::MuluDp(op.lift(inst)),
+            MulsDp(op) => Lifted::MulsDp(op.lift(inst)),
+            Divu(op) => Lifted::Divu(op.lift(inst)),
+            DivuDp(op) => Lifted::DivuDp(op.lift(inst)),
+            Divs(op) => Lifted::Divs(op.lift(inst)),
+            DivsDp(op) => Lifted::DivsDp(op.lift(inst)),
+            Modu(op) => Lifted::Modu(op.lift(inst)),
+            ModuDp(op) => Lifted::ModuDp(op.lift(inst)),
+            Mods(op) => Lifted::Mods(op.lift(inst)),
+            ModsDp(op) => Lifted::ModsDp(op.lift(inst)),
+            CmpE(op) => Lifted::CmpE(op.lift(inst)),
+            CmpNe(op) => Lifted::CmpNe(op.lift(inst)),
+            CmpSlt(op) => Lifted::CmpSlt(op.lift(inst)),
+            CmpUlt(op) => Lifted::CmpUlt(op.lift(inst)),
+            CmpSle(op) => Lifted::CmpSle(op.lift(inst)),
+            CmpUle(op) => Lifted::CmpUle(op.lift(inst)),
+            CmpSge(op) => Lifted::CmpSge(op.lift(inst)),
+            CmpUge(op) => Lifted::CmpUge(op.lift(inst)),
+            CmpSgt(op) => Lifted::CmpSgt(op.lift(inst)),
+            CmpUgt(op) => Lifted::CmpUgt(op.lift(inst)),
+            TestBit(op) => Lifted::TestBit(op.lift(inst)),
+            AddOverflow(op) => Lifted::AddOverflow(op.lift(inst)),
+            FcmpE(op) => Lifted::FcmpE(op.lift(inst)),
+            FcmpNe(op) => Lifted::FcmpNe(op.lift(inst)),
+            FcmpLt(op) => Lifted::FcmpLt(op.lift(inst)),
+            FcmpLe(op) => Lifted::FcmpLe(op.lift(inst)),
+            FcmpGe(op) => Lifted::FcmpGe(op.lift(inst)),
+            FcmpGt(op) => Lifted::FcmpGt(op.lift(inst)),
+            FcmpO(op) => Lifted::FcmpO(op.lift(inst)),
+            FcmpUo(op) => Lifted::FcmpUo(op.lift(inst)),
+            Fadd(op) => Lifted::Fadd(op.lift(inst)),
+            Fsub(op) => Lifted::Fsub(op.lift(inst)),
+            Fmul(op) => Lifted::Fmul(op.lift(inst)),
+            Fdiv(op) => Lifted::Fdiv(op.lift(inst)),
+            Adc(op) => Lifted::Adc(op.lift(inst)),
+            Sbb(op) => Lifted::Sbb(op.lift(inst)),
+            Rlc(op) => Lifted::Rlc(op.lift(inst)),
+            Rrc(op) => Lifted::Rrc(op.lift(inst)),
+            Neg(op) => Lifted::Neg(op.lift(inst)),
+            Not(op) => Lifted::Not(op.lift(inst)),
+            Sx(op) => Lifted::Sx(op.lift(inst)),
+            Zx(op) => Lifted::Zx(op.lift(inst)),
+            LowPart(op) => Lifted::LowPart(op.lift(inst)),
+            BoolToInt(op) => Lifted::BoolToInt(op.lift(inst)),
+            UnimplMem(op) => Lifted::UnimplMem(op.lift(inst)),
+            Fsqrt(op) => Lifted::Fsqrt(op.lift(inst)),
+            Fneg(op) => Lifted::Fneg(op.lift(inst)),
+            Fabs(op) => Lifted::Fabs(op.lift(inst)),
+            FloatToInt(op) => Lifted::FloatToInt(op.lift(inst)),
+            IntToFloat(op) => Lifted::IntToFloat(op.lift(inst)),
+            FloatConv(op) => Lifted::FloatConv(op.lift(inst)),
+            RoundToInt(op) => Lifted::RoundToInt(op.lift(inst)),
+            Floor(op) => Lifted::Floor(op.lift(inst)),
+            Ceil(op) => Lifted::Ceil(op.lift(inst)),
+            Ftrunc(op) => Lifted::Ftrunc(op.lift(inst)),
+            Ret(op) => Lifted::Ret(op.lift(inst)),
+
+            MemPhi(op) => Lifted::MemPhi(op.lift(inst)),
+            SeparateParamList(op) => Lifted::SeparateParamList(op.lift(inst)),
+            SharedParamSlot(op) => Lifted::SharedParamSlot(op.lift(inst)),
+
+            AddressOf(op) => Lifted::AddressOf(*op),
+            AddressOfField(op) => Lifted::AddressOfField(*op),
+            Trap(op) => Lifted::Trap(*op),
+
+            Form(op) => Lifted::Form(I::InstructionLifted::from_instruction(inst, op)),
+        }
+    }
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Form(op) => op.name(),
+            _ => self.into(),
+        }
+    }
+}
+
+impl<I: Form> MediumLevelILInstruction<I> {
+    pub(crate) fn new(function: Ref<MediumLevelILFunction<I>>, index: usize) -> Self {
+        let op = unsafe { BNGetMediumLevelILByIndex(function.handle, index) };
+        let kind = MediumLevelILInstructionKind::from_operation(op)
+            .expect("Invalid Medium Level IL Instruction");
 
         Self {
             function,
@@ -723,391 +880,78 @@ impl MediumLevelILInstruction {
             kind,
         }
     }
-
-    pub fn lift(&self) -> MediumLevelILLiftedInstruction {
-        use MediumLevelILInstructionKind::*;
-        use MediumLevelILLiftedInstructionKind as Lifted;
-
-        let kind = match self.kind {
-            Nop => Lifted::Nop,
-            Noret => Lifted::Noret,
-            Bp => Lifted::Bp,
-            Undef => Lifted::Undef,
-            Unimpl => Lifted::Unimpl,
-            If(op) => Lifted::If(LiftedIf {
-                condition: self.lift_operand(op.condition),
-                dest_true: op.dest_true,
-                dest_false: op.dest_false,
-            }),
-
-            FloatConst(op) => Lifted::FloatConst(op),
-            Const(op) => Lifted::Const(op),
-            ConstPtr(op) => Lifted::ConstPtr(op),
-            Import(op) => Lifted::Import(op),
-            ExternPtr(op) => Lifted::ExternPtr(op),
-
-            ConstData(op) => Lifted::ConstData(LiftedConstData {
-                constant_data: ConstantData::new(
-                    self.function.get_function(),
-                    RegisterValue {
-                        state: RegisterValueType::from_raw_value(op.constant_data_kind).unwrap(),
-                        value: op.constant_data_value,
-                        offset: 0,
-                        size: op.size,
-                    },
-                ),
-            }),
-            Jump(op) => Lifted::Jump(LiftedJump {
-                dest: self.lift_operand(op.dest),
-            }),
-            RetHint(op) => Lifted::RetHint(LiftedJump {
-                dest: self.lift_operand(op.dest),
-            }),
-            StoreSsa(op) => Lifted::StoreSsa(LiftedStoreSsa {
-                dest: self.lift_operand(op.dest),
-                dest_memory: op.dest_memory,
-                src_memory: op.src_memory,
-                src: self.lift_operand(op.src),
-            }),
-            StoreStructSsa(op) => Lifted::StoreStructSsa(LiftedStoreStructSsa {
-                dest: self.lift_operand(op.dest),
-                offset: op.offset,
-                dest_memory: op.dest_memory,
-                src_memory: op.src_memory,
-                src: self.lift_operand(op.src),
-            }),
-            StoreStruct(op) => Lifted::StoreStruct(LiftedStoreStruct {
-                dest: self.lift_operand(op.dest),
-                offset: op.offset,
-                src: self.lift_operand(op.src),
-            }),
-            Store(op) => Lifted::Store(LiftedStore {
-                dest: self.lift_operand(op.dest),
-                src: self.lift_operand(op.src),
-            }),
-            JumpTo(op) => Lifted::JumpTo(LiftedJumpTo {
-                dest: self.lift_operand(op.dest),
-                targets: OperandIter::new(&*self.function, op.first_operand, op.num_operands)
-                    .pairs()
-                    .collect(),
-            }),
-            Goto(op) => Lifted::Goto(op),
-            FreeVarSlot(op) => Lifted::FreeVarSlot(op),
-            SetVarField(op) => Lifted::SetVarField(LiftedSetVarField {
-                dest: op.dest,
-                offset: op.offset,
-                src: self.lift_operand(op.src),
-            }),
-            SetVar(op) => Lifted::SetVar(LiftedSetVar {
-                dest: op.dest,
-                src: self.lift_operand(op.src),
-            }),
-            FreeVarSlotSsa(op) => Lifted::FreeVarSlotSsa(op),
-            SetVarSsaField(op) => Lifted::SetVarSsaField(LiftedSetVarSsaField {
-                dest: op.dest,
-                prev: op.prev,
-                offset: op.offset,
-                src: self.lift_operand(op.src),
-            }),
-            SetVarAliasedField(op) => Lifted::SetVarAliasedField(LiftedSetVarSsaField {
-                dest: op.dest,
-                prev: op.prev,
-                offset: op.offset,
-                src: self.lift_operand(op.src),
-            }),
-            SetVarAliased(op) => Lifted::SetVarAliased(LiftedSetVarAliased {
-                dest: op.dest,
-                prev: op.prev,
-                src: self.lift_operand(op.src),
-            }),
-            SetVarSsa(op) => Lifted::SetVarSsa(LiftedSetVarSsa {
-                dest: op.dest,
-                src: self.lift_operand(op.src),
-            }),
-            VarPhi(op) => Lifted::VarPhi(LiftedVarPhi {
-                dest: op.dest,
-                src: OperandIter::new(&*self.function, op.first_operand, op.num_operands)
-                    .ssa_vars()
-                    .collect(),
-            }),
-            MemPhi(op) => Lifted::MemPhi(LiftedMemPhi {
-                dest_memory: op.dest_memory,
-                src_memory: OperandIter::new(&*self.function, op.first_operand, op.num_operands)
-                    .collect(),
-            }),
-            VarSplit(op) => Lifted::VarSplit(op),
-            SetVarSplit(op) => Lifted::SetVarSplit(LiftedSetVarSplit {
-                high: op.high,
-                low: op.low,
-                src: self.lift_operand(op.src),
-            }),
-            VarSplitSsa(op) => Lifted::VarSplitSsa(op),
-            SetVarSplitSsa(op) => Lifted::SetVarSplitSsa(LiftedSetVarSplitSsa {
-                high: op.high,
-                low: op.low,
-                src: self.lift_operand(op.src),
-            }),
-
-            Add(op) => Lifted::Add(self.lift_binary_op(op)),
-            Sub(op) => Lifted::Sub(self.lift_binary_op(op)),
-            And(op) => Lifted::And(self.lift_binary_op(op)),
-            Or(op) => Lifted::Or(self.lift_binary_op(op)),
-            Xor(op) => Lifted::Xor(self.lift_binary_op(op)),
-            Lsl(op) => Lifted::Lsl(self.lift_binary_op(op)),
-            Lsr(op) => Lifted::Lsr(self.lift_binary_op(op)),
-            Asr(op) => Lifted::Asr(self.lift_binary_op(op)),
-            Rol(op) => Lifted::Rol(self.lift_binary_op(op)),
-            Ror(op) => Lifted::Ror(self.lift_binary_op(op)),
-            Mul(op) => Lifted::Mul(self.lift_binary_op(op)),
-            MuluDp(op) => Lifted::MuluDp(self.lift_binary_op(op)),
-            MulsDp(op) => Lifted::MulsDp(self.lift_binary_op(op)),
-            Divu(op) => Lifted::Divu(self.lift_binary_op(op)),
-            DivuDp(op) => Lifted::DivuDp(self.lift_binary_op(op)),
-            Divs(op) => Lifted::Divs(self.lift_binary_op(op)),
-            DivsDp(op) => Lifted::DivsDp(self.lift_binary_op(op)),
-            Modu(op) => Lifted::Modu(self.lift_binary_op(op)),
-            ModuDp(op) => Lifted::ModuDp(self.lift_binary_op(op)),
-            Mods(op) => Lifted::Mods(self.lift_binary_op(op)),
-            ModsDp(op) => Lifted::ModsDp(self.lift_binary_op(op)),
-            CmpE(op) => Lifted::CmpE(self.lift_binary_op(op)),
-            CmpNe(op) => Lifted::CmpNe(self.lift_binary_op(op)),
-            CmpSlt(op) => Lifted::CmpSlt(self.lift_binary_op(op)),
-            CmpUlt(op) => Lifted::CmpUlt(self.lift_binary_op(op)),
-            CmpSle(op) => Lifted::CmpSle(self.lift_binary_op(op)),
-            CmpUle(op) => Lifted::CmpUle(self.lift_binary_op(op)),
-            CmpSge(op) => Lifted::CmpSge(self.lift_binary_op(op)),
-            CmpUge(op) => Lifted::CmpUge(self.lift_binary_op(op)),
-            CmpSgt(op) => Lifted::CmpSgt(self.lift_binary_op(op)),
-            CmpUgt(op) => Lifted::CmpUgt(self.lift_binary_op(op)),
-            TestBit(op) => Lifted::TestBit(self.lift_binary_op(op)),
-            AddOverflow(op) => Lifted::AddOverflow(self.lift_binary_op(op)),
-            FcmpE(op) => Lifted::FcmpE(self.lift_binary_op(op)),
-            FcmpNe(op) => Lifted::FcmpNe(self.lift_binary_op(op)),
-            FcmpLt(op) => Lifted::FcmpLt(self.lift_binary_op(op)),
-            FcmpLe(op) => Lifted::FcmpLe(self.lift_binary_op(op)),
-            FcmpGe(op) => Lifted::FcmpGe(self.lift_binary_op(op)),
-            FcmpGt(op) => Lifted::FcmpGt(self.lift_binary_op(op)),
-            FcmpO(op) => Lifted::FcmpO(self.lift_binary_op(op)),
-            FcmpUo(op) => Lifted::FcmpUo(self.lift_binary_op(op)),
-            Fadd(op) => Lifted::Fadd(self.lift_binary_op(op)),
-            Fsub(op) => Lifted::Fsub(self.lift_binary_op(op)),
-            Fmul(op) => Lifted::Fmul(self.lift_binary_op(op)),
-            Fdiv(op) => Lifted::Fdiv(self.lift_binary_op(op)),
-
-            Adc(op) => Lifted::Adc(self.lift_binary_op_carry(op)),
-            Sbb(op) => Lifted::Sbb(self.lift_binary_op_carry(op)),
-            Rlc(op) => Lifted::Rlc(self.lift_binary_op_carry(op)),
-            Rrc(op) => Lifted::Rrc(self.lift_binary_op_carry(op)),
-
-            Call(op) => Lifted::Call(self.lift_call(op)),
-            Tailcall(op) => Lifted::Tailcall(self.lift_call(op)),
-
-            Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
-                output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
-                    .vars()
-                    .collect(),
-                intrinsic: ILIntrinsic::new(self.function.get_function().arch(), op.intrinsic),
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                    .exprs()
-                    .map(|expr| expr.lift())
-                    .collect(),
-            }),
-            Syscall(op) => Lifted::Syscall(LiftedSyscallCall {
-                output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
-                    .vars()
-                    .collect(),
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                    .exprs()
-                    .map(|expr| expr.lift())
-                    .collect(),
-            }),
-            IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
-                output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
-                    .ssa_vars()
-                    .collect(),
-                intrinsic: ILIntrinsic::new(self.function.get_function().arch(), op.intrinsic),
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                    .exprs()
-                    .map(|expr| expr.lift())
-                    .collect(),
-            }),
-
-            CallSsa(op) => Lifted::CallSsa(self.lift_call_ssa(op)),
-            TailcallSsa(op) => Lifted::TailcallSsa(self.lift_call_ssa(op)),
-
-            CallUntypedSsa(op) => Lifted::CallUntypedSsa(self.lift_call_untyped_ssa(op)),
-            TailcallUntypedSsa(op) => Lifted::TailcallUntypedSsa(self.lift_call_untyped_ssa(op)),
-
-            SyscallSsa(op) => Lifted::SyscallSsa(LiftedSyscallSsa {
-                output: get_call_output_ssa(&self.function, op.output).collect(),
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                    .exprs()
-                    .map(|expr| expr.lift())
-                    .collect(),
-                src_memory: op.src_memory,
-            }),
-            SyscallUntypedSsa(op) => Lifted::SyscallUntypedSsa(LiftedSyscallUntypedSsa {
-                output: get_call_output_ssa(&self.function, op.output).collect(),
-                params: get_call_params_ssa(&self.function, op.params)
-                    .map(|param| param.lift())
-                    .collect(),
-                stack: self.lift_operand(op.stack),
-            }),
-
-            CallUntyped(op) => Lifted::CallUntyped(self.lift_call_untyped(op)),
-            TailcallUntyped(op) => Lifted::TailcallUntyped(self.lift_call_untyped(op)),
-            SyscallUntyped(op) => Lifted::SyscallUntyped(LiftedSyscallUntyped {
-                output: get_call_output(&self.function, op.output).collect(),
-                params: get_call_params(&self.function, op.params)
-                    .map(|param| param.lift())
-                    .collect(),
-                stack: self.lift_operand(op.stack),
-            }),
-
-            Neg(op) => Lifted::Neg(self.lift_unary_op(op)),
-            Not(op) => Lifted::Not(self.lift_unary_op(op)),
-            Sx(op) => Lifted::Sx(self.lift_unary_op(op)),
-            Zx(op) => Lifted::Zx(self.lift_unary_op(op)),
-            LowPart(op) => Lifted::LowPart(self.lift_unary_op(op)),
-            BoolToInt(op) => Lifted::BoolToInt(self.lift_unary_op(op)),
-            UnimplMem(op) => Lifted::UnimplMem(self.lift_unary_op(op)),
-            Fsqrt(op) => Lifted::Fsqrt(self.lift_unary_op(op)),
-            Fneg(op) => Lifted::Fneg(self.lift_unary_op(op)),
-            Fabs(op) => Lifted::Fabs(self.lift_unary_op(op)),
-            FloatToInt(op) => Lifted::FloatToInt(self.lift_unary_op(op)),
-            IntToFloat(op) => Lifted::IntToFloat(self.lift_unary_op(op)),
-            FloatConv(op) => Lifted::FloatConv(self.lift_unary_op(op)),
-            RoundToInt(op) => Lifted::RoundToInt(self.lift_unary_op(op)),
-            Floor(op) => Lifted::Floor(self.lift_unary_op(op)),
-            Ceil(op) => Lifted::Ceil(self.lift_unary_op(op)),
-            Ftrunc(op) => Lifted::Ftrunc(self.lift_unary_op(op)),
-            Load(op) => Lifted::Load(self.lift_unary_op(op)),
-
-            LoadStruct(op) => Lifted::LoadStruct(LiftedLoadStruct {
-                src: self.lift_operand(op.src),
-                offset: op.offset,
-            }),
-            LoadStructSsa(op) => Lifted::LoadStructSsa(LiftedLoadStructSsa {
-                src: self.lift_operand(op.src),
-                offset: op.offset,
-                src_memory: op.src_memory,
-            }),
-            LoadSsa(op) => Lifted::LoadSsa(LiftedLoadSsa {
-                src: self.lift_operand(op.src),
-                src_memory: op.src_memory,
-            }),
-            Ret(op) => Lifted::Ret(LiftedRet {
-                src: OperandIter::new(&*self.function, op.first_operand, op.num_operands)
-                    .exprs()
-                    .map(|expr| expr.lift())
-                    .collect(),
-            }),
-            SeparateParamList(op) => Lifted::SeparateParamList(LiftedSeparateParamList {
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                    .exprs()
-                    .map(|expr| expr.lift())
-                    .collect(),
-            }),
-            SharedParamSlot(op) => Lifted::SharedParamSlot(LiftedSharedParamSlot {
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                    .exprs()
-                    .map(|expr| expr.lift())
-                    .collect(),
-            }),
-            Var(op) => Lifted::Var(op),
-            AddressOf(op) => Lifted::AddressOf(op),
-            VarField(op) => Lifted::VarField(op),
-            AddressOfField(op) => Lifted::AddressOfField(op),
-            VarSsa(op) => Lifted::VarSsa(op),
-            VarAliased(op) => Lifted::VarAliased(op),
-            VarSsaField(op) => Lifted::VarSsaField(op),
-            VarAliasedField(op) => Lifted::VarAliasedField(op),
-            Trap(op) => Lifted::Trap(op),
-        };
-
+    pub fn lift(&self) -> MediumLevelILLiftedInstruction<I> {
         MediumLevelILLiftedInstruction {
             function: self.function.clone(),
             address: self.address,
             index: self.index,
             size: self.size,
-            kind,
+            kind: self.kind.lift(self),
         }
     }
-
-    fn lift_operand(&self, expr_idx: usize) -> Box<MediumLevelILLiftedInstruction> {
+    pub fn name(&self) -> &'static str {
+        self.kind.name()
+    }
+    pub(crate) fn lift_operand(&self, expr_idx: usize) -> Box<MediumLevelILLiftedInstruction<I>> {
         Box::new(self.function.lifted_instruction_from_idx(expr_idx))
     }
 
-    fn lift_binary_op(&self, op: BinaryOp) -> LiftedBinaryOp {
-        LiftedBinaryOp {
-            left: self.lift_operand(op.left),
-            right: self.lift_operand(op.right),
-        }
+    pub(crate) fn get_call_output(&self, idx: usize) -> impl Iterator<Item = Variable> {
+        let op = self.get_raw_operation(idx);
+        assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_OUTPUT);
+        OperandIter::new(
+            self.function.as_ref(),
+            op.operands[1] as usize,
+            op.operands[0] as usize,
+        )
+        .vars()
     }
 
-    fn lift_binary_op_carry(&self, op: BinaryOpCarry) -> LiftedBinaryOpCarry {
-        LiftedBinaryOpCarry {
-            left: self.lift_operand(op.left),
-            right: self.lift_operand(op.right),
-            carry: self.lift_operand(op.carry),
-        }
+    pub(crate) fn get_call_params(
+        &self,
+        idx: usize,
+    ) -> impl Iterator<Item = MediumLevelILInstruction<I>> {
+        let op = self.get_raw_operation(idx);
+        assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_PARAM);
+        OperandIter::new(
+            self.function.as_ref(),
+            op.operands[1] as usize,
+            op.operands[0] as usize,
+        )
+        .exprs()
     }
 
-    fn lift_unary_op(&self, op: UnaryOp) -> LiftedUnaryOp {
-        LiftedUnaryOp {
-            src: self.lift_operand(op.src),
-        }
+    pub(crate) fn get_call_output_ssa(&self, idx: usize) -> impl Iterator<Item = SSAVariable> {
+        let op = self.get_raw_operation(idx);
+        assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_OUTPUT_SSA);
+        OperandIter::new(
+            self.function.as_ref(),
+            op.operands[2] as usize,
+            op.operands[1] as usize,
+        )
+        .ssa_vars()
     }
 
-    fn lift_call(&self, op: Call) -> LiftedCall {
-        LiftedCall {
-            output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
-                .vars()
-                .collect(),
-            dest: self.lift_operand(op.dest),
-            params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                .exprs()
-                .map(|expr| expr.lift())
-                .collect(),
-        }
+    pub(crate) fn get_call_params_ssa(
+        &self,
+        idx: usize,
+    ) -> impl Iterator<Item = MediumLevelILInstruction<I>> {
+        let op = self.get_raw_operation(idx);
+        assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_PARAM_SSA);
+        OperandIter::new(
+            self.function.as_ref(),
+            op.operands[2] as usize,
+            op.operands[1] as usize,
+        )
+        .exprs()
     }
 
-    fn lift_call_untyped(&self, op: CallUntyped) -> LiftedCallUntyped {
-        LiftedCallUntyped {
-            output: get_call_output(&self.function, op.output).collect(),
-            dest: self.lift_operand(op.dest),
-            params: get_call_params(&self.function, op.params)
-                .map(|expr| expr.lift())
-                .collect(),
-            stack: self.lift_operand(op.stack),
-        }
-    }
-
-    fn lift_call_ssa(&self, op: CallSsa) -> LiftedCallSsa {
-        LiftedCallSsa {
-            output: get_call_output_ssa(&self.function, op.output).collect(),
-            dest: self.lift_operand(op.dest),
-            params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                .exprs()
-                .map(|expr| expr.lift())
-                .collect(),
-            src_memory: op.src_memory,
-        }
-    }
-
-    fn lift_call_untyped_ssa(&self, op: CallUntypedSsa) -> LiftedCallUntypedSsa {
-        LiftedCallUntypedSsa {
-            output: get_call_output_ssa(&self.function, op.output).collect(),
-            dest: self.lift_operand(op.dest),
-            params: get_call_params_ssa(&self.function, op.params)
-                .map(|param| param.lift())
-                .collect(),
-            stack: self.lift_operand(op.stack),
-        }
+    pub(crate) fn get_raw_operation(&self, idx: usize) -> BNMediumLevelILInstruction {
+        unsafe { BNGetMediumLevelILByIndex(self.function.handle, idx) }
     }
 }
 
-fn get_float(value: u64, size: usize) -> f64 {
+pub(crate) fn get_float(value: u64, size: usize) -> f64 {
     match size {
         4 => f32::from_bits(value as u32) as f64,
         8 => f64::from_bits(value),
@@ -1116,47 +960,10 @@ fn get_float(value: u64, size: usize) -> f64 {
     }
 }
 
-fn get_raw_operation(function: &MediumLevelILFunction, idx: usize) -> BNMediumLevelILInstruction {
-    unsafe { BNGetMediumLevelILByIndex(function.handle, idx) }
-}
-
-fn get_var(id: u64) -> Variable {
+pub(crate) fn get_var(id: u64) -> Variable {
     unsafe { Variable::from_raw(BNFromVariableIdentifier(id)) }
 }
 
-fn get_var_ssa(id: u64, version: usize) -> SSAVariable {
+pub(crate) fn get_var_ssa(id: u64, version: usize) -> SSAVariable {
     SSAVariable::new(get_var(id), version)
-}
-
-fn get_call_output(function: &MediumLevelILFunction, idx: usize) -> impl Iterator<Item = Variable> {
-    let op = get_raw_operation(function, idx);
-    assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_OUTPUT);
-    OperandIter::new(function, op.operands[1] as usize, op.operands[0] as usize).vars()
-}
-
-fn get_call_params(
-    function: &MediumLevelILFunction,
-    idx: usize,
-) -> impl Iterator<Item = MediumLevelILInstruction> {
-    let op = get_raw_operation(function, idx);
-    assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_PARAM);
-    OperandIter::new(function, op.operands[1] as usize, op.operands[0] as usize).exprs()
-}
-
-fn get_call_output_ssa(
-    function: &MediumLevelILFunction,
-    idx: usize,
-) -> impl Iterator<Item = SSAVariable> {
-    let op = get_raw_operation(function, idx);
-    assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_OUTPUT_SSA);
-    OperandIter::new(function, op.operands[2] as usize, op.operands[1] as usize).ssa_vars()
-}
-
-fn get_call_params_ssa(
-    function: &MediumLevelILFunction,
-    idx: usize,
-) -> impl Iterator<Item = MediumLevelILInstruction> {
-    let op = get_raw_operation(function, idx);
-    assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_PARAM_SSA);
-    OperandIter::new(function, op.operands[2] as usize, op.operands[1] as usize).exprs()
 }

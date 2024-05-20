@@ -40,7 +40,7 @@ pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisS
 pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
 
 use std::{fmt, mem};
-use std::{hash::Hash, ops::Range};
+use std::{ffi::c_char, hash::Hash, ops::Range};
 
 pub struct Location {
     pub arch: Option<CoreArchitecture>,
@@ -1499,7 +1499,7 @@ impl Function {
         let arch = arch.unwrap_or_else(|| self.arch());
         let enum_display_typeid = enum_display_typeid.map(BnStrCompatible::into_bytes_with_nul);
         let enum_display_typeid_ptr = enum_display_typeid
-            .map(|x| x.as_ref().as_ptr() as *const i8)
+            .map(|x| x.as_ref().as_ptr() as *const c_char)
             .unwrap_or(core::ptr::null());
         unsafe {
             BNSetIntegerConstantDisplayType(
@@ -1944,7 +1944,7 @@ impl Function {
             .iter()
             .position(|(alias, _value)| *alias == name)
         {
-            let name = DEBUG_REPORT_ALIAS[alias_idx].1.as_ptr() as *const i8;
+            let name = DEBUG_REPORT_ALIAS[alias_idx].1.as_ptr() as *const c_char;
             unsafe { BNRequestFunctionDebugReport(self.handle, name) }
         } else {
             let name = std::ffi::CString::new(name.to_string()).unwrap();

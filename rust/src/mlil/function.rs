@@ -1,4 +1,5 @@
 use core::hash::{Hash, Hasher};
+use std::ffi::c_char;
 
 use binaryninjacore_sys::*;
 
@@ -127,7 +128,7 @@ impl MediumLevelILFunction {
                 self.get_function().handle,
                 offset,
                 &mut raw_var_type,
-                name.as_ref().as_ptr() as *const i8,
+                name.as_ref().as_ptr() as *const c_char,
             )
         }
     }
@@ -270,7 +271,7 @@ impl MediumLevelILFunction {
                 self.get_function().handle,
                 offset,
                 &mut var_type,
-                name_c_str.as_ptr() as *const i8,
+                name_c_str.as_ptr() as *const c_char,
             )
         }
     }
@@ -295,7 +296,7 @@ impl MediumLevelILFunction {
                 self.get_function().handle,
                 &var.raw(),
                 &mut var_type,
-                name_c_str.as_ptr() as *const i8,
+                name_c_str.as_ptr() as *const c_char,
                 ignore_disjoint_uses,
             )
         }

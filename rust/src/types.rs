@@ -24,6 +24,7 @@ use crate::{
     callingconvention::CallingConvention,
     filemetadata::FileMetadata,
     function::Function,
+    mlil::MediumLevelILFunction,
     rc::*,
     string::{raw_to_string, BnStrCompatible, BnString},
     symbol::Symbol,
@@ -51,6 +52,8 @@ pub type TypeClass = BNTypeClass;
 pub type NamedTypeReferenceClass = BNNamedTypeReferenceClass;
 pub type MemberAccess = BNMemberAccess;
 pub type MemberScope = BNMemberScope;
+pub type ILBranchDependence = BNILBranchDependence;
+pub type DataFlowQueryOption = BNDataFlowQueryOption;
 
 ////////////////
 // Confidence
@@ -1439,6 +1442,41 @@ pub struct SSAVariable {
 impl SSAVariable {
     pub fn new(variable: Variable, version: usize) -> Self {
         Self { variable, version }
+    }
+}
+
+impl CoreArrayProvider for SSAVariable {
+    type Raw = usize;
+    type Context = Variable;
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for SSAVariable {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeILInstructionList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        SSAVariable::new(*context, *raw)
+    }
+}
+
+impl CoreArrayProvider for Array<SSAVariable> {
+    type Raw = BNVariable;
+    type Context = Ref<MediumLevelILFunction>;
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for Array<SSAVariable> {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeVariableList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let mut count = 0;
+        let versions =
+            unsafe { BNGetMediumLevelILVariableSSAVersions(context.handle, raw, &mut count) };
+        Array::new(versions, count, Variable::from_raw(*raw))
     }
 }
 

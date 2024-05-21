@@ -5920,6 +5920,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetTypeBuilderPure(BNTypeBuilder* type, BNBoolWithConfidence* pure);
 	BINARYNINJACOREAPI void BNSetFunctionTypeBuilderParameters(
 	    BNTypeBuilder* type, BNFunctionParameter* params, size_t paramCount);
+	BINARYNINJACOREAPI void BNTypeBuilderSetWidth(BNTypeBuilder* type, size_t width);
+	BINARYNINJACOREAPI void BNTypeBuilderSetAlignment(BNTypeBuilder* type, size_t alignment);
 	BINARYNINJACOREAPI void BNTypeBuilderSetConst(BNTypeBuilder* type, BNBoolWithConfidence* cnst);
 	BINARYNINJACOREAPI void BNTypeBuilderSetVolatile(BNTypeBuilder* type, BNBoolWithConfidence* vltl);
 	BINARYNINJACOREAPI void BNTypeBuilderSetSigned(BNTypeBuilder* type, BNBoolWithConfidence* sign);

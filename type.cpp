@@ -1349,9 +1349,31 @@ Confidence<bool> TypeBuilder::IsConst() const
 	return Confidence<bool>(result.value, result.confidence);
 }
 
+
+Confidence<bool> TypeBuilder::IsVolatile() const
+{
+	BNBoolWithConfidence result = BNIsTypeBuilderVolatile(m_object);
+	return Confidence<bool>(result.value, result.confidence);
+}
+
+
 void TypeBuilder::SetIntegerTypeDisplayType(BNIntegerDisplayType displayType)
 {
 	BNSetIntegerTypeDisplayType(m_object, displayType);
+}
+
+
+TypeBuilder& TypeBuilder::SetWidth(size_t width)
+{
+	BNTypeBuilderSetWidth(m_object, width);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetAlignment(size_t alignment)
+{
+	BNTypeBuilderSetAlignment(m_object, alignment);
+	return *this;
 }
 
 

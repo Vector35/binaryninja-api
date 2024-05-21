@@ -8963,6 +8963,8 @@ namespace BinaryNinja {
 		Ref<Enumeration> GetEnumeration() const;
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
 		Confidence<BNMemberScope> GetScope() const;
+		TypeBuilder& SetWidth(size_t width);
+		TypeBuilder& SetAlignment(size_t alignment);
 		TypeBuilder& SetNamedTypeReference(NamedTypeReference* ntr);
 		TypeBuilder& SetScope(const Confidence<BNMemberScope>& scope);
 		TypeBuilder& SetConst(const Confidence<bool>& cnst);

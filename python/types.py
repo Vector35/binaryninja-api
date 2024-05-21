@@ -749,6 +749,10 @@ class TypeBuilder:
 	def width(self) -> _int:
 		return core.BNGetTypeBuilderWidth(self._handle)
 
+	@width.setter
+	def width(self, value: _int):
+		core.BNTypeBuilderSetWidth(self._handle, value)
+
 	def __len__(self):
 		return self.width
 
@@ -787,6 +791,10 @@ class TypeBuilder:
 	@property
 	def alignment(self) -> _int:
 		return core.BNGetTypeBuilderAlignment(self._handle)
+
+	@alignment.setter
+	def alignment(self, alignment: _int):
+		core.BNTypeBuilderSetAlignment(self._handle, alignment)
 
 	@property
 	def child(self) -> 'Type':

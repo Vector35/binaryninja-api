@@ -1539,9 +1539,15 @@ bool ElfView::Init()
 					entry += imageBaseAdjustment;
 					Ref<Architecture> entryArch = entryPointArch->GetAssociatedArchitectureByAddress(entry);
 					if (entryArch != entryPointArch)
-						AddFunctionForAnalysis(platform->GetRelatedPlatform(entryArch), entry);
+					{
+						auto func = AddFunctionForAnalysis(platform->GetRelatedPlatform(entryArch), entry);
+						AddToEntryFunctions(func);
+					}
 					else
-						AddFunctionForAnalysis(platform, entry);
+					{
+						auto func = AddFunctionForAnalysis(platform, entry);
+						AddToEntryFunctions(func);
+					}
 					m_logger->LogDebug("Adding function start: %#" PRIx64 "\n", entry);
 
 					// name functions in .init_array, .fini_array, .ctors and .dtors

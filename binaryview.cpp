@@ -1985,6 +1985,12 @@ void BinaryView::AddEntryPointForAnalysis(Platform* platform, uint64_t addr)
 }
 
 
+void BinaryView::AddToEntryFunctions(Function* func)
+{
+	BNAddToEntryFunctions(m_object, func->GetObject());
+}
+
+
 void BinaryView::RemoveAnalysisFunction(Function* func, bool updateRefs)
 {
 	BNRemoveAnalysisFunction(m_object, func->GetObject(), updateRefs);
@@ -2205,6 +2211,21 @@ Ref<Function> BinaryView::GetAnalysisEntryPoint()
 	if (!func)
 		return nullptr;
 	return new Function(func);
+}
+
+
+vector<Ref<Function>> BinaryView::GetAllEntryFunctions()
+{
+	size_t count;
+	BNFunction** funcs = BNGetAllEntryFunctions(m_object, &count);
+	if (count == 0)
+		return {};
+
+	vector<Ref<Function>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Function(BNNewFunctionReference(funcs[i])));
+	BNFreeFunctionList(funcs, count);
+	return result;
 }
 
 

@@ -942,6 +942,15 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    fn entry_point_functions(&self) -> Array<Function> {
+        unsafe {
+            let mut count = 0;
+            let functions = BNGetAllEntryFunctions(self.as_ref().handle, &mut count);
+
+            Array::new(functions, count, ())
+        }
+    }
+
     fn functions(&self) -> Array<Function> {
         unsafe {
             let mut count = 0;

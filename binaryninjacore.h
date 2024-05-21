@@ -4222,6 +4222,8 @@ extern "C"
 	BINARYNINJACOREAPI BNFunction** BNGetAnalysisFunctionsContainingAddress(
 	    BNBinaryView* view, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI BNFunction* BNGetAnalysisEntryPoint(BNBinaryView* view);
+	BINARYNINJACOREAPI BNFunction** BNGetAllEntryFunctions(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI void BNAddToEntryFunctions(BNBinaryView* view, BNFunction* func);
 
 	BINARYNINJACOREAPI char* BNGetGlobalCommentForAddress(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI uint64_t* BNGetGlobalCommentedAddresses(BNBinaryView* view, size_t* count);

@@ -1920,6 +1920,8 @@ bool PEView::Init()
 								m_logger->LogInfo("Found TLS entrypoint %s: 0x%" PRIx64, name, address);
 								Ref<Platform> assPlatform = platform->GetAssociatedPlatformByAddress(address);
 								AddPESymbol(FunctionSymbol, "", name, address - m_imageBase);
+								auto func = AddFunctionForAnalysis(platform, address);
+								AddToEntryFunctions(func);
 							}
 							else
 								m_logger->LogInfo("Found TLS entrypoint %s: 0x%" PRIx64 " however it is not backed by file!",

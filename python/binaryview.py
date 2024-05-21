@@ -3035,6 +3035,39 @@ class BinaryView:
 		return _function.Function(self, func)
 
 	@property
+	def entry_functions(self) -> FunctionList:
+		"""A List of entry functions (read-only)
+		This list contains vanilla entry function, and functions like init_array, fini_arry, and TLS callbacks etc.
+		User-added entry functions(via `add_entry_point`) are also included.
+
+		We see `entry_functions` as good starting points for analysis, these functions normally don't have internal references.
+		However, note that exported functions in a dll/so file are not included.
+
+		Note the difference with `entry_function`
+
+		:Example:
+
+			>>> bv.entry_function
+			<func: x86@0x4014c8>
+			>>> bv.entry_functions
+			[<func: x86@0x4014c8>, <func: x86@0x401618>]
+
+		:return: a list of functions, containing the vanilla entry and other platform-specific entry functions
+		:rtype: list(Function)
+		"""
+		count = ctypes.c_ulonglong(0)
+		funcs = core.BNGetAllEntryFunctions(self.handle, count)
+
+		assert funcs is not None, "core.BNGetAllEntryFunctions returned None"
+		result = []
+		try:
+			for i in range(0, count.value):
+				result.append(_function.Function(self, core.BNNewFunctionReference(funcs[i])))
+			return result
+		finally:
+			core.BNFreeFunctionList(funcs, count.value)
+
+	@property
 	def symbols(self) -> SymbolMapping:
 		"""
 		Dict of symbols (read-only)
@@ -4405,6 +4438,21 @@ class BinaryView:
 		if not isinstance(plat, _platform.Platform):
 			raise ValueError("Provided platform is not of type `Platform`")
 		core.BNAddEntryPointForAnalysis(self.handle, plat.handle, addr)
+
+	def add_to_entry_functions(self, func: '_function.Function') -> None:
+		"""
+		``add_to_entry_functions`` adds a function to the `entry_functions` list.
+
+		:param Function func: a Function object
+		:rtype: None
+		:Example:
+			>>> bv.entry_functions
+			[<func: x86@0x4014c8>, <func: x86@0x401618>]
+			>>> bv.add_to_entry_functions(bv.get_function_at(0x4014da))
+			>>> bv.entry_functions
+			[<func: x86@0x4014c8>, <func: x86@0x401618>, <func: x86@0x4014da>]
+		"""
+		core.BNAddToEntryFunctions(self.handle, func.handle)
 
 	def remove_function(self, func: '_function.Function', update_refs = False) -> None:
 		"""

@@ -5,10 +5,14 @@ use binaryninjacore_sys::*;
 
 use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
+use crate::disassembly::DisassemblySettings;
+use crate::flowgraph::FlowGraph;
 use crate::function::{Function, Location};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
 use crate::string::BnStrCompatible;
-use crate::types::{Conf, PossibleValueSet, Type, UserVariableValues, Variable};
+use crate::types::{
+    Conf, PossibleValueSet, RegisterValue, SSAVariable, Type, UserVariableValues, Variable,
+};
 
 use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
 
@@ -370,6 +374,207 @@ impl MediumLevelILFunction {
         };
         assert!(!refs.is_null());
         unsafe { Array::new(refs, count, self.to_owned()) }
+    }
+
+    /// Current IL Address
+    pub fn current_address(&self) -> u64 {
+        unsafe { BNMediumLevelILGetCurrentAddress(self.handle) }
+    }
+
+    /// Set the current IL Address
+    pub fn set_current_address(&self, value: u64, arch: Option<CoreArchitecture>) {
+        let arch = arch
+            .map(|x| x.0)
+            .unwrap_or_else(|| self.get_function().arch().0);
+        unsafe { BNMediumLevelILSetCurrentAddress(self.handle, arch, value) }
+    }
+
+    /// Returns the BasicBlock at the given MLIL `instruction`.
+    pub fn basic_block_containing(
+        &self,
+        instruction: &MediumLevelILInstruction,
+    ) -> Option<BasicBlock<MediumLevelILBlock>> {
+        let index = instruction.index;
+        let block = unsafe { BNGetMediumLevelILBasicBlockForInstruction(self.handle, index) };
+        (!block.is_null()).then(|| unsafe {
+            BasicBlock::from_raw(
+                block,
+                MediumLevelILBlock {
+                    function: self.to_owned(),
+                },
+            )
+        })
+    }
+    /// ends the function and computes the list of basic blocks.
+    pub fn finalize(&self) {
+        unsafe { BNFinalizeMediumLevelILFunction(self.handle) }
+    }
+
+    /// Generate SSA form given the current MLIL
+    ///
+    /// * `analyze_conditionals` - whether or not to analyze conditionals
+    /// * `handle_aliases` - whether or not to handle aliases
+    /// * `known_not_aliases` - optional list of variables known to be not aliased
+    /// * `known_aliases` - optional list of variables known to be aliased
+    pub fn generate_ssa_form(
+        &self,
+        analyze_conditionals: bool,
+        handle_aliases: bool,
+        known_not_aliases: impl IntoIterator<Item = Variable>,
+        known_aliases: impl IntoIterator<Item = Variable>,
+    ) {
+        let mut known_not_aliases: Box<[_]> =
+            known_not_aliases.into_iter().map(|x| x.raw()).collect();
+        let mut known_aliases: Box<[_]> = known_aliases.into_iter().map(|x| x.raw()).collect();
+        let (known_not_aliases_ptr, known_not_aliases_len) = if known_not_aliases.is_empty() {
+            (core::ptr::null_mut(), 0)
+        } else {
+            (known_not_aliases.as_mut_ptr(), known_not_aliases.len())
+        };
+        let (known_aliases_ptr, known_aliases_len) = if known_not_aliases.is_empty() {
+            (core::ptr::null_mut(), 0)
+        } else {
+            (known_aliases.as_mut_ptr(), known_aliases.len())
+        };
+        unsafe {
+            BNGenerateMediumLevelILSSAForm(
+                self.handle,
+                analyze_conditionals,
+                handle_aliases,
+                known_not_aliases_ptr,
+                known_not_aliases_len,
+                known_aliases_ptr,
+                known_aliases_len,
+            )
+        }
+    }
+
+    /// Gets the instruction that contains the given SSA variable's definition.
+    ///
+    /// Since SSA variables can only be defined once, this will return the single instruction where that occurs.
+    /// For SSA variable version 0s, which don't have definitions, this will return None instead.
+    pub fn ssa_variable_definition(&self, var: SSAVariable) -> Option<MediumLevelILInstruction> {
+        let result = unsafe {
+            BNGetMediumLevelILSSAVarDefinition(self.handle, &var.variable.raw(), var.version)
+        };
+        (result < self.instruction_count())
+            .then(|| MediumLevelILInstruction::new(self.to_owned(), result))
+    }
+
+    pub fn ssa_memory_definition(&self, version: usize) -> Option<MediumLevelILInstruction> {
+        let result = unsafe { BNGetMediumLevelILSSAMemoryDefinition(self.handle, version) };
+        (result < self.instruction_count())
+            .then(|| MediumLevelILInstruction::new(self.to_owned(), result))
+    }
+
+    ///Gets all the instructions that use the given SSA variable.
+    pub fn ssa_variable_uses(&self, ssa_var: SSAVariable) -> Array<MediumLevelILInstruction> {
+        let mut count = 0;
+        let uses = unsafe {
+            BNGetMediumLevelILSSAVarUses(
+                self.handle,
+                &ssa_var.variable.raw(),
+                ssa_var.version,
+                &mut count,
+            )
+        };
+        assert!(!uses.is_null());
+        unsafe { Array::new(uses, count, self.to_owned()) }
+    }
+
+    pub fn ssa_memory_uses(&self, version: usize) -> Array<MediumLevelILInstruction> {
+        let mut count = 0;
+        let uses = unsafe { BNGetMediumLevelILSSAMemoryUses(self.handle, version, &mut count) };
+        assert!(!uses.is_null());
+        unsafe { Array::new(uses, count, self.to_owned()) }
+    }
+
+    /// determines if `ssa_var` is live at any point in the function
+    pub fn is_ssa_variable_live(&self, ssa_var: SSAVariable) -> bool {
+        unsafe {
+            BNIsMediumLevelILSSAVarLive(self.handle, &ssa_var.variable.raw(), ssa_var.version)
+        }
+    }
+
+    pub fn variable_definitions(&self, variable: Variable) -> Array<MediumLevelILInstruction> {
+        let mut count = 0;
+        let defs = unsafe {
+            BNGetMediumLevelILVariableDefinitions(self.handle, &variable.raw(), &mut count)
+        };
+        unsafe { Array::new(defs, count, self.to_owned()) }
+    }
+
+    pub fn variable_uses(&self, variable: Variable) -> Array<MediumLevelILInstruction> {
+        let mut count = 0;
+        let uses =
+            unsafe { BNGetMediumLevelILVariableUses(self.handle, &variable.raw(), &mut count) };
+        unsafe { Array::new(uses, count, self.to_owned()) }
+    }
+
+    /// Computes the list of instructions for which `var` is live.
+    /// If `include_last_use` is false, the last use of the variable will not be included in the
+    /// list (this allows for easier computation of overlaps in liveness between two variables).
+    /// If the variable is never used, this function will return an empty list.
+    ///
+    /// `var` - the variable to query
+    /// `include_last_use` - whether to include the last use of the variable in the list of instructions
+    pub fn live_instruction_for_variable(
+        &self,
+        variable: Variable,
+        include_last_user: bool,
+    ) -> Array<MediumLevelILInstruction> {
+        let mut count = 0;
+        let uses = unsafe {
+            BNGetMediumLevelILLiveInstructionsForVariable(
+                self.handle,
+                &variable.raw(),
+                include_last_user,
+                &mut count,
+            )
+        };
+        unsafe { Array::new(uses, count, self.to_owned()) }
+    }
+
+    pub fn ssa_variable_value(&self, ssa_var: SSAVariable) -> RegisterValue {
+        unsafe {
+            BNGetMediumLevelILSSAVarValue(self.handle, &ssa_var.variable.raw(), ssa_var.version)
+        }
+        .into()
+    }
+
+    pub fn create_graph(&self, settings: Option<DisassemblySettings>) -> FlowGraph {
+        let settings = settings.map(|x| x.handle).unwrap_or(core::ptr::null_mut());
+        let graph = unsafe { BNCreateMediumLevelILFunctionGraph(self.handle, settings) };
+        unsafe { FlowGraph::from_raw(graph) }
+    }
+
+    /// This gets just the MLIL variables - you may be interested in the union
+    /// of [MediumLevelIlFunction::aliased_variables] and
+    /// [crate::function::Function::parameter_variables] for all the
+    /// variables used in the function
+    pub fn variables(&self) -> Array<Variable> {
+        let mut count = 0;
+        let uses = unsafe { BNGetMediumLevelILVariables(self.handle, &mut count) };
+        unsafe { Array::new(uses, count, ()) }
+    }
+
+    /// This returns a list of Variables that are taken reference to and used
+    /// elsewhere. You may also wish to consider [MediumLevelIlFunction::variables]
+    /// and [crate::function::Function::parameter_variables]
+    pub fn aliased_variables(&self) -> Array<Variable> {
+        let mut count = 0;
+        let uses = unsafe { BNGetMediumLevelILAliasedVariables(self.handle, &mut count) };
+        unsafe { Array::new(uses, count, ()) }
+    }
+
+    /// This gets just the MLIL SSA variables - you may be interested in the
+    /// union of [MediumLevelIlFunction::aliased_variables] and
+    /// [crate::function::Function::parameter_variables] for all the
+    /// variables used in the function.
+    pub fn ssa_variables(&self) -> Array<Array<SSAVariable>> {
+        let mut count = 0;
+        let vars = unsafe { BNGetMediumLevelILVariables(self.handle, &mut count) };
+        unsafe { Array::new(vars, count, self.to_owned()) }
     }
 }
 

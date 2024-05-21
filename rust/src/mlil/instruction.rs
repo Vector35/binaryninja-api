@@ -1,12 +1,13 @@
-use binaryninjacore_sys::BNGetDefaultIndexForMediumLevelILVariableDefinition;
-use binaryninjacore_sys::BNGetMediumLevelILByIndex;
-use binaryninjacore_sys::BNMediumLevelILInstruction;
-use binaryninjacore_sys::BNMediumLevelILOperation;
+use binaryninjacore_sys::*;
 
 use crate::architecture::CoreIntrinsic;
+use crate::disassembly::InstructionTextToken;
 use crate::operand_iter::OperandIter;
-use crate::rc::Ref;
-use crate::types::{ConstantData, RegisterValue, RegisterValueType, SSAVariable, Variable};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
+use crate::types::{
+    Conf, ConstantData, DataFlowQueryOption, ILBranchDependence, PossibleValueSet,
+    RegisterValue, RegisterValueType, SSAVariable, Type, Variable,
+};
 
 use super::lift::*;
 use super::operation::*;
@@ -1033,20 +1034,386 @@ impl MediumLevelILInstruction {
         }
     }
 
+    pub fn tokens(&self) -> Array<InstructionTextToken> {
+        let mut count = 0;
+        let mut tokens = core::ptr::null_mut();
+        assert!(unsafe {
+            BNGetMediumLevelILExprText(
+                self.function.handle,
+                self.function.get_function().arch().0,
+                self.index,
+                &mut tokens,
+                &mut count,
+                core::ptr::null_mut(),
+            )
+        });
+        unsafe { Array::new(tokens, count, ()) }
+    }
+
+    /// Value of expression if constant or a known value
+    pub fn value(&self) -> RegisterValue {
+        unsafe { BNGetMediumLevelILExprValue(self.function.handle, self.index) }.into()
+    }
+
+    /// Possible values of expression using path-sensitive static data flow analysis
+    pub fn possible_values(&self, options: Option<&[DataFlowQueryOption]>) -> PossibleValueSet {
+        let options_ptr = options
+            .map(|op| op.as_ptr() as *mut DataFlowQueryOption)
+            .unwrap_or(core::ptr::null_mut());
+        let options_len = options.map(|op| op.len()).unwrap_or(0);
+        let mut value = unsafe {
+            BNGetMediumLevelILPossibleExprValues(
+                self.function.handle,
+                self.index,
+                options_ptr,
+                options_len,
+            )
+        };
+        let result = unsafe { PossibleValueSet::from_raw(value) };
+        unsafe { BNFreePossibleValueSet(&mut value) }
+        result
+    }
+
+    pub fn possible_ssa_variable_values(
+        &self,
+        ssa_var: SSAVariable,
+        options: Option<&[DataFlowQueryOption]>,
+    ) -> PossibleValueSet {
+        let options_ptr = options
+            .map(|op| op.as_ptr() as *mut DataFlowQueryOption)
+            .unwrap_or(core::ptr::null_mut());
+        let options_len = options.map(|op| op.len()).unwrap_or(0);
+        let mut value = unsafe {
+            BNGetMediumLevelILPossibleSSAVarValues(
+                self.function.handle,
+                &ssa_var.variable.raw(),
+                ssa_var.version,
+                self.index,
+                options_ptr,
+                options_len,
+            )
+        };
+        let result = unsafe { PossibleValueSet::from_raw(value) };
+        unsafe { BNFreePossibleValueSet(&mut value) }
+        result
+    }
+
+    /// return the variable version used at this instruction
+    pub fn ssa_variable_version(&self, var: Variable) -> SSAVariable {
+        let version = unsafe {
+            BNGetMediumLevelILSSAVarVersionAtILInstruction(
+                self.function.handle,
+                &var.raw(),
+                self.index,
+            )
+        };
+        SSAVariable::new(var, version)
+    }
+
+    /// Set of branching instructions that must take the true or false path to reach this instruction
+    pub fn branch_dependence(&self) -> Array<BranchDependence> {
+        let mut count = 0;
+        let deps = unsafe {
+            BNGetAllMediumLevelILBranchDependence(self.function.handle, self.index, &mut count)
+        };
+        assert!(!deps.is_null());
+        unsafe { Array::new(deps, count, self.function.clone()) }
+    }
+
+    pub fn branch_dependence_at(&self, instruction: MediumLevelILInstruction) -> BranchDependence {
+        let deps = unsafe {
+            BNGetMediumLevelILBranchDependence(self.function.handle, self.index, instruction.index)
+        };
+        BranchDependence {
+            instruction,
+            dependence: deps,
+        }
+    }
+
+    /// Version of active memory contents in SSA form for this instruction
+    pub fn ssa_memory_version(&self) -> usize {
+        unsafe {
+            BNGetMediumLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.index)
+        }
+    }
+
+    /// Type of expression
+    pub fn expr_type(&self) -> Option<Conf<Ref<Type>>> {
+        let result = unsafe { BNGetMediumLevelILExprType(self.function.handle, self.index) };
+        (!result.type_.is_null()).then(|| {
+            Conf::new(
+                unsafe { Type::ref_from_raw(result.type_) },
+                result.confidence,
+            )
+        })
+    }
+
+    /// Set type of expression
+    ///
+    /// This API is only meant for workflows or for debugging purposes, since the changes they make are not persistent
+    /// and get lost after a database save and reload. To make persistent changes to the analysis, one should use other
+    /// APIs to, for example, change the type of variables. The analysis will then propagate the type of the variable
+    /// and update the type of related expressions.
+    pub fn set_expr_type<'a, T: Into<Conf<&'a Type>>>(&self, value: T) {
+        let type_: Conf<&'a Type> = value.into();
+        let mut type_raw: BNTypeWithConfidence = BNTypeWithConfidence {
+            type_: type_.contents.handle,
+            confidence: type_.confidence,
+        };
+        unsafe { BNSetMediumLevelILExprType(self.function.handle, self.index, &mut type_raw) }
+    }
+
+    pub fn variable_for_register(&self, reg_id: u32) -> Variable {
+        let result = unsafe {
+            BNGetMediumLevelILVariableForRegisterAtInstruction(
+                self.function.handle,
+                reg_id,
+                self.index,
+            )
+        };
+        unsafe { Variable::from_raw(result) }
+    }
+
+    pub fn variable_for_flag(&self, flag_id: u32) -> Variable {
+        let result = unsafe {
+            BNGetMediumLevelILVariableForFlagAtInstruction(
+                self.function.handle,
+                flag_id,
+                self.index,
+            )
+        };
+        unsafe { Variable::from_raw(result) }
+    }
+
+    pub fn variable_for_stack_location(&self, offset: i64) -> Variable {
+        let result = unsafe {
+            BNGetMediumLevelILVariableForStackLocationAtInstruction(
+                self.function.handle,
+                offset,
+                self.index,
+            )
+        };
+        unsafe { Variable::from_raw(result) }
+    }
+
+    pub fn register_value(&self, reg_id: u32) -> RegisterValue {
+        unsafe {
+            BNGetMediumLevelILRegisterValueAtInstruction(self.function.handle, reg_id, self.index)
+        }
+        .into()
+    }
+
+    pub fn register_value_after(&self, reg_id: u32) -> RegisterValue {
+        unsafe {
+            BNGetMediumLevelILRegisterValueAfterInstruction(
+                self.function.handle,
+                reg_id,
+                self.index,
+            )
+        }
+        .into()
+    }
+
+    pub fn possible_register_values(
+        &self,
+        reg_id: u32,
+        options: Option<&[DataFlowQueryOption]>,
+    ) -> PossibleValueSet {
+        let options_ptr = options
+            .map(|op| op.as_ptr() as *mut DataFlowQueryOption)
+            .unwrap_or(core::ptr::null_mut());
+        let options_len = options.map(|op| op.len()).unwrap_or(0);
+        let mut value = unsafe {
+            BNGetMediumLevelILPossibleRegisterValuesAtInstruction(
+                self.function.handle,
+                reg_id,
+                self.index,
+                options_ptr,
+                options_len,
+            )
+        };
+        let result = unsafe { PossibleValueSet::from_raw(value) };
+        unsafe { BNFreePossibleValueSet(&mut value) }
+        result
+    }
+
+    pub fn possible_register_values_after(
+        &self,
+        reg_id: u32,
+        options: Option<&[DataFlowQueryOption]>,
+    ) -> PossibleValueSet {
+        let options_ptr = options
+            .map(|op| op.as_ptr() as *mut DataFlowQueryOption)
+            .unwrap_or(core::ptr::null_mut());
+        let options_len = options.map(|op| op.len()).unwrap_or(0);
+        let mut value = unsafe {
+            BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(
+                self.function.handle,
+                reg_id,
+                self.index,
+                options_ptr,
+                options_len,
+            )
+        };
+        let result = unsafe { PossibleValueSet::from_raw(value) };
+        unsafe { BNFreePossibleValueSet(&mut value) }
+        result
+    }
+
+    pub fn flag_value(&self, flag_id: u32) -> RegisterValue {
+        unsafe {
+            BNGetMediumLevelILFlagValueAtInstruction(self.function.handle, flag_id, self.index)
+        }
+        .into()
+    }
+
+    pub fn flag_value_after(&self, flag_id: u32) -> RegisterValue {
+        unsafe {
+            BNGetMediumLevelILFlagValueAfterInstruction(self.function.handle, flag_id, self.index)
+        }
+        .into()
+    }
+
+    pub fn possible_flag_values(
+        &self,
+        flag_id: u32,
+        options: Option<&[DataFlowQueryOption]>,
+    ) -> PossibleValueSet {
+        let options_ptr = options
+            .map(|op| op.as_ptr() as *mut DataFlowQueryOption)
+            .unwrap_or(core::ptr::null_mut());
+        let options_len = options.map(|op| op.len()).unwrap_or(0);
+        let mut value = unsafe {
+            BNGetMediumLevelILPossibleFlagValuesAtInstruction(
+                self.function.handle,
+                flag_id,
+                self.index,
+                options_ptr,
+                options_len,
+            )
+        };
+        let result = unsafe { PossibleValueSet::from_raw(value) };
+        unsafe { BNFreePossibleValueSet(&mut value) }
+        result
+    }
+
+    pub fn possible_flag_values_after(
+        &self,
+        flag_id: u32,
+        options: Option<&[DataFlowQueryOption]>,
+    ) -> PossibleValueSet {
+        let options_ptr = options
+            .map(|op| op.as_ptr() as *mut DataFlowQueryOption)
+            .unwrap_or(core::ptr::null_mut());
+        let options_len = options.map(|op| op.len()).unwrap_or(0);
+        let mut value = unsafe {
+            BNGetMediumLevelILPossibleFlagValuesAfterInstruction(
+                self.function.handle,
+                flag_id,
+                self.index,
+                options_ptr,
+                options_len,
+            )
+        };
+        let result = unsafe { PossibleValueSet::from_raw(value) };
+        unsafe { BNFreePossibleValueSet(&mut value) }
+        result
+    }
+
+    pub fn stack_contents(&self, offset: i64, size: usize) -> RegisterValue {
+        unsafe {
+            BNGetMediumLevelILStackContentsAtInstruction(
+                self.function.handle,
+                offset,
+                size,
+                self.index,
+            )
+        }
+        .into()
+    }
+
+    pub fn stack_contents_after(&self, offset: i64, size: usize) -> RegisterValue {
+        unsafe {
+            BNGetMediumLevelILStackContentsAfterInstruction(
+                self.function.handle,
+                offset,
+                size,
+                self.index,
+            )
+        }
+        .into()
+    }
+
+    pub fn possible_stack_contents(
+        &self,
+        offset: i64,
+        size: usize,
+        options: Option<&[DataFlowQueryOption]>,
+    ) -> PossibleValueSet {
+        let options_ptr = options
+            .map(|op| op.as_ptr() as *mut DataFlowQueryOption)
+            .unwrap_or(core::ptr::null_mut());
+        let options_len = options.map(|op| op.len()).unwrap_or(0);
+        let mut value = unsafe {
+            BNGetMediumLevelILPossibleStackContentsAtInstruction(
+                self.function.handle,
+                offset,
+                size,
+                self.index,
+                options_ptr,
+                options_len,
+            )
+        };
+        let result = unsafe { PossibleValueSet::from_raw(value) };
+        unsafe { BNFreePossibleValueSet(&mut value) }
+        result
+    }
+
+    pub fn possible_stack_contents_after(
+        &self,
+        offset: i64,
+        size: usize,
+        options: Option<&[DataFlowQueryOption]>,
+    ) -> PossibleValueSet {
+        let options_ptr = options
+            .map(|op| op.as_ptr() as *mut DataFlowQueryOption)
+            .unwrap_or(core::ptr::null_mut());
+        let options_len = options.map(|op| op.len()).unwrap_or(0);
+        let mut value = unsafe {
+            BNGetMediumLevelILPossibleStackContentsAfterInstruction(
+                self.function.handle,
+                offset,
+                size,
+                self.index,
+                options_ptr,
+                options_len,
+            )
+        };
+        let result = unsafe { PossibleValueSet::from_raw(value) };
+        unsafe { BNFreePossibleValueSet(&mut value) }
+        result
+    }
+
     /// Gets the unique variable for a definition instruction. This unique variable can be passed
     /// to [crate::function::Function::split_variable] to split a variable at a definition. The given `var` is the
     /// assigned variable to query.
     ///
     /// * `var` - variable to query
-    pub fn get_split_var_for_definition(&self, var: &Variable) -> Variable {
-        let new_index = unsafe {
+    pub fn split_var_for_definition(&self, var: Variable) -> Variable {
+        let index = unsafe {
             BNGetDefaultIndexForMediumLevelILVariableDefinition(
                 self.function.handle,
                 &var.raw(),
                 self.index,
             )
         };
-        Variable::new(var.t, new_index, var.storage)
+        Variable::new(var.t, index, var.storage)
+    }
+
+    /// alias for [MediumLevelILInstruction::split_var_for_definition]
+    #[inline]
+    pub fn get_split_var_for_definition(&self, var: &Variable) -> Variable {
+        self.split_var_for_definition(*var)
     }
 
     fn lift_operand(&self, expr_idx: usize) -> Box<MediumLevelILLiftedInstruction> {
@@ -1122,6 +1489,22 @@ impl MediumLevelILInstruction {
     }
 }
 
+impl CoreArrayProvider for MediumLevelILInstruction {
+    type Raw = usize;
+    type Context = Ref<MediumLevelILFunction>;
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for MediumLevelILInstruction {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeILInstructionList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        context.instruction_from_idx(*raw)
+    }
+}
+
 fn get_float(value: u64, size: usize) -> f64 {
     match size {
         4 => f32::from_bits(value as u32) as f64,
@@ -1174,4 +1557,29 @@ fn get_call_params_ssa(
     let op = get_raw_operation(function, idx);
     assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_PARAM_SSA);
     OperandIter::new(function, op.operands[2] as usize, op.operands[1] as usize).exprs()
+}
+
+/// Conditional branching instruction and an expected conditional result
+pub struct BranchDependence {
+    pub instruction: MediumLevelILInstruction,
+    pub dependence: ILBranchDependence,
+}
+
+impl CoreArrayProvider for BranchDependence {
+    type Raw = BNILBranchInstructionAndDependence;
+    type Context = Ref<MediumLevelILFunction>;
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for BranchDependence {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        unsafe { BNFreeILBranchDependenceList(raw) };
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self {
+            instruction: MediumLevelILInstruction::new(context.clone(), raw.branch),
+            dependence: raw.dependence,
+        }
+    }
 }

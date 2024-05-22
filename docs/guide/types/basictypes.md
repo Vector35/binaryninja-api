@@ -127,47 +127,6 @@ the name of a type will take you to its definition.
 	* **Show Inherited Members** - When working with [structures with inheritance](cpp.md#derived-classes), show members from base classes in child classes
 	* **Wrap Lines** - Soft-wrap long text lines
 
-### Type Annotations
+### Structure Offset Annotations
 
-The Types view now annotates code references to structure offsets. It uses the same convention as in the graph/linear view. For example, the `__offset(0x8).q` token means the code references the offset 0x8 bytes into this structure, and the size of the access is a qword. This will make it easier to see which offsets of a structure are being used, and aid in the process of creating structure members.
-
-## Attributes
-
-Structs support the attribute `__packed` to indicate that there is no padding. Additionally, function prototypes support the following keywords to indicate their calling convention or other features:
-
-``` text
-__cdecl
-__stdcall
-__fastcall
-__convention
-__noreturn
-```
-
-To use the `__convention` keyword, pass in the convention name as a parameter argument:
-
-```
-__convention("customconvention")
-```
-
-
-## Examples
-
-``` C
-enum _flags
-{
-    F_X = 0x1,
-    F_W = 0x2,
-    F_R = 0x4
-};
-```
-
-``` C
-struct Header __packed
-{
-    char *name;
-    uint32_t version;
-    void (* callback)();
-    uint16_t size;
-    enum _flags flags;
-};
-```
+The Types view annotates code references to structure offsets if a structure member is not present. These annotations use the same convention as in the graph/linear view, showing the offset position and width. For example, the `__offset(0x8).q` token means the code references the offset 0x8 bytes into this structure, and the size of the access is a qword (8 bytes). You can press S on an offset annotation and a structure member of the appropriate type will be created there. Additionally, if you right click the structure name, you can choose to create all of these references.

@@ -967,6 +967,7 @@ class PointerBuilder(TypeBuilder):
 
 	@property
 	def pointer_suffix(self) -> List[PointerSuffix]:
+		"""Pointer suffix, e.g. __unaligned is [UnalignedSuffix] (read-only)"""
 		count = ctypes.c_size_t(0)
 		suffix = core.BNGetTypeBuilderPointerSuffix(self._handle, count)
 		assert suffix is not None, "core.BNGetTypeBuilderPointerSuffix returned None"
@@ -986,13 +987,23 @@ class PointerBuilder(TypeBuilder):
 		core.BNSetTypeBuilderPointerSuffix(self._handle, suffix, len(value))
 
 	def add_pointer_suffix(self, suffix: PointerSuffix):
+		"""
+		Append a suffix to the pointer, must be one defined in :py:class:`PointerSuffix`.
+		:param suffix: New suffix
+		"""
 		core.BNAddTypeBuilderPointerSuffix(self._handle, suffix)
 
 	@property
 	def pointer_suffix_string(self) -> str:
+		"""Pointer suffix, but as a string, e.g. "__unaligned" (read-only)"""
 		return core.BNGetTypeBuilderPointerSuffixString(self._handle)
 
 	def get_pointer_suffix_tokens(self, base_confidence: int = core.max_confidence) -> List['_function.InstructionTextToken']:
+		"""
+		Get the pointer suffix, as a list of tokens
+		:param base_confidence: (optional) Confidence value to combine with the pointer's confidence
+		:return: Token list
+		"""
 		count = ctypes.c_ulonglong()
 		tokens = core.BNGetTypeBuilderPointerSuffixTokens(self._handle, base_confidence, count)
 		assert tokens is not None, "core.BNGetTypeBuilderPointerSuffixTokens returned None"
@@ -1001,10 +1012,16 @@ class PointerBuilder(TypeBuilder):
 		return result
 
 	def set_pointer_base(self, base_type: PointerBaseType, base_offset: int):
+		"""
+		Set the pointer base type and offset
+		:param base_type: Base type, e.g. __based(start) is RelativeToBinaryStartPointerBaseType
+		:param base_offset: Base offset, e.g. __based(start, 0x1000) is 0x1000
+		"""
 		core.BNSetTypeBuilderPointerBase(self._handle, base_type, base_offset)
 
 	@property
 	def pointer_base_type(self) -> PointerBaseType:
+		"""Pointer base type, e.g. __based(start) is RelativeToBinaryStartPointerBaseType"""
 		return PointerBaseType(core.BNTypeBuilderGetPointerBaseType(self._handle))
 
 	@pointer_base_type.setter
@@ -1013,6 +1030,7 @@ class PointerBuilder(TypeBuilder):
 
 	@property
 	def pointer_base_offset(self) -> int:
+		"""Pointer base offset, e.g. __based(start, 0x1000) is 0x1000"""
 		return core.BNTypeBuilderGetPointerBaseOffset(self._handle)
 
 	@pointer_base_offset.setter
@@ -2852,6 +2870,7 @@ class PointerType(Type):
 
 	@property
 	def pointer_suffix(self) -> List[PointerSuffix]:
+		"""Pointer suffix, e.g. __unaligned is [UnalignedSuffix] (read-only)"""
 		count = ctypes.c_size_t(0)
 		suffix = core.BNGetTypePointerSuffix(self.handle, count)
 		assert suffix is not None, "core.BNGetTypePointerSuffix returned None"
@@ -2865,9 +2884,15 @@ class PointerType(Type):
 
 	@property
 	def pointer_suffix_string(self) -> str:
+		"""Pointer suffix, but as a string, e.g. "__unaligned" (read-only)"""
 		return core.BNGetTypePointerSuffixString(self.handle)
 
 	def get_pointer_suffix_tokens(self, base_confidence: int = core.max_confidence) -> List['_function.InstructionTextToken']:
+		"""
+		Get the pointer suffix, as a list of tokens
+		:param base_confidence: (optional) Confidence value to combine with the pointer's confidence
+		:return: Token list
+		"""
 		count = ctypes.c_ulonglong()
 		platform = None
 		if self._platform is not None:
@@ -2880,10 +2905,12 @@ class PointerType(Type):
 
 	@property
 	def pointer_base_type(self) -> PointerBaseType:
+		"""Pointer base type, e.g. __based(start) is RelativeToBinaryStartPointerBaseType (read-only)"""
 		return PointerBaseType(core.BNTypeGetPointerBaseType(self._handle))
 
 	@property
 	def pointer_base_offset(self) -> int:
+		"""Pointer base offset, e.g. __based(start, 0x1000) is 0x1000 (read-only)"""
 		return core.BNTypeGetPointerBaseOffset(self._handle)
 
 

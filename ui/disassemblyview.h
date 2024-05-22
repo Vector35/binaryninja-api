@@ -77,6 +77,7 @@ class BINARYNINJAUIAPI DisassemblyView : public FlowGraphWidget
 	void setOption(BNDisassemblyOption option, bool state = true);
 	void toggleOption(BNDisassemblyOption option);
 	void setAddressMode(std::optional<BNDisassemblyAddressMode> mode, std::optional<bool> hex, std::optional<bool> withName);
+	void setCallParamHints(BNDisassemblyCallParameterHints hints);
 	void setDisplayedFileName();
 	void setAddressBaseOffset(bool toHere);
 
@@ -134,6 +135,7 @@ class BINARYNINJAUIAPI DisassemblyView : public FlowGraphWidget
 	BNFunctionGraphType m_ilViewType;
 	std::set<BNDisassemblyOption> m_options;
 	BNDisassemblyAddressMode m_addressMode;
+	BNDisassemblyCallParameterHints m_callParamHints;
 	DisassemblyContainer* m_container;
 	SettingsRef m_settings;
 

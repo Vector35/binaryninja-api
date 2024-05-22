@@ -113,6 +113,17 @@ void DisassemblySettings::SetAddressBaseOffset(uint64_t addressBaseOffset)
 	BNSetDisassemblyAddressBaseOffset(m_object, addressBaseOffset);
 }
 
+BNDisassemblyCallParameterHints DisassemblySettings::GetCallParameterHints() const
+{
+	return BNGetDisassemblyCallParameterHints(m_object);
+}
+
+
+void DisassemblySettings::SetCallParameterHints(BNDisassemblyCallParameterHints hints)
+{
+	BNSetDisassemblyCallParameterHints(m_object, hints);
+}
+
 
 DisassemblyTextLine::DisassemblyTextLine()
 {

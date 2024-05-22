@@ -697,7 +697,6 @@ extern "C"
 		ExpandLongOpcode = 2,
 		ShowVariablesAtTopOfGraph = 3,
 		ShowVariableTypesWhenAssigned = 4,
-		ShowCallParameterNames = 6,
 		ShowRegisterHighlight = 7,
 		ShowFunctionAddress = 8,
 		ShowFunctionHeader = 9,
@@ -730,6 +729,13 @@ extern "C"
 		DecimalDisassemblyAddressModeFlag = 0x20000,
 		DisassemblyAddressModeFlagsMask = 0xFFFF0000,
 	} BNDisassemblyAddressMode;
+
+	typedef enum BNDisassemblyCallParameterHints
+	{
+		NeverShowMatchingParameterHints,
+		AlwaysShowParameterHints,
+		NeverShowParameterHints,
+	} BNDisassemblyCallParameterHints;
 
 	typedef enum BNTypeClass
 	{
@@ -5134,6 +5140,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetDisassemblyAddressMode(BNDisassemblySettings* settings, BNDisassemblyAddressMode mode);
 	BINARYNINJACOREAPI uint64_t BNGetDisassemblyAddressBaseOffset(BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI void BNSetDisassemblyAddressBaseOffset(BNDisassemblySettings* settings, uint64_t addressBaseOffset);
+	BINARYNINJACOREAPI BNDisassemblyCallParameterHints BNGetDisassemblyCallParameterHints(BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI void BNSetDisassemblyCallParameterHints(BNDisassemblySettings* settings, BNDisassemblyCallParameterHints hints);
 
 	// Flow graphs
 	BINARYNINJACOREAPI BNFlowGraph* BNCreateFlowGraph(void);

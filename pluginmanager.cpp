@@ -70,11 +70,6 @@ string RepoPlugin::GetDescription() const
 	RETURN_STRING(BNPluginGetDescription(m_object));
 }
 
-string RepoPlugin::GetLicense() const
-{
-	RETURN_STRING(BNPluginGetLicense(m_object));
-}
-
 string RepoPlugin::GetLicenseText() const
 {
 	RETURN_STRING(BNPluginGetLicenseText(m_object));

@@ -6686,7 +6686,6 @@ extern "C"
 	BINARYNINJACOREAPI char** BNPluginGetApis(BNRepoPlugin* p, size_t* count);
 	BINARYNINJACOREAPI const char* BNPluginGetAuthor(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetDescription(BNRepoPlugin* p);
-	BINARYNINJACOREAPI const char* BNPluginGetLicense(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetLicenseText(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetLongdescription(BNRepoPlugin* p);
 	BINARYNINJACOREAPI uint64_t BNPluginGetMinimumVersion(BNRepoPlugin* p);

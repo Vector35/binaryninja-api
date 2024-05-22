@@ -131,11 +131,6 @@ class RepoPlugin:
 		return core.BNPluginGetDescription(self.handle)
 
 	@property
-	def license(self) -> Optional[str]:
-		"""String short license description (ie MIT, BSD, GPLv2, etc)"""
-		return core.BNPluginGetLicense(self.handle)
-
-	@property
 	def license_text(self) -> Optional[str]:
 		"""String complete license text for the given plugin"""
 		return core.BNPluginGetLicenseText(self.handle)

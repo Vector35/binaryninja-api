@@ -268,14 +268,14 @@ impl Drop for InstructionTextToken {
 impl CoreArrayProvider for InstructionTextToken {
     type Raw = BNInstructionTextToken;
     type Context = ();
-    type Wrapped<'a> = Self;
+    type Wrapped<'a> = &'a Self;
 }
 unsafe impl CoreArrayProviderInner for InstructionTextToken {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeInstructionText(raw, count)
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self(*raw)
+        core::mem::transmute(raw)
     }
 }
 

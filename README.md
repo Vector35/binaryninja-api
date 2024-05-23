@@ -53,6 +53,7 @@ In addition to the default build setup, you may want to:
 
 There are many examples available. The [Python examples folder](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples) demonstrates many different applications of the Python API, while C++ examples include:
 
+- [background_task](https://github.com/Vector35/binaryninja-api/tree/dev/examples/background_task) is a plugin that demonstrates managing a background task.\*
 - [bin-info](https://github.com/Vector35/binaryninja-api/tree/dev/examples/bin-info) is a standalone executable that prints some information about a given binary to the terminal.\*
 - [breakpoint](https://github.com/Vector35/binaryninja-api/tree/dev/examples/breakpoint) is a plugin that allows you to select a region within an x86 binary and use the context menu to fill it with breakpoint bytes.
 - [command-line disassm](https://github.com/Vector35/binaryninja-api/tree/dev/examples/cmdline_disasm) demonstrates how to dump disassembly to the command line.\*

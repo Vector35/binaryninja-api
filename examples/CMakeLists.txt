@@ -1,3 +1,4 @@
+add_subdirectory(background_task)
 add_subdirectory(bin-info)
 add_subdirectory(breakpoint)
 add_subdirectory(cmdline_disasm)

@@ -15513,8 +15513,20 @@ namespace BinaryNinja {
 	    public CoreRefCountObject<BNBackgroundTask, BNNewBackgroundTaskReference, BNFreeBackgroundTask>
 	{
 	  public:
-		BackgroundTask(BNBackgroundTask* task);
-		BackgroundTask(const std::string& initialText, bool canCancel);
+		BackgroundTask(BNBackgroundTask *task);
+
+		/*!
+			Provides a mechanism for reporting progress of
+			an optionally cancelable task to the user via the status bar in the UI.
+			If canCancel is is `True`, then the task can be cancelled either
+			programmatically or by the user via the UI.
+
+			\note This API does not provide a means to execute a task. The caller is responsible to execute (and possibly cancel) the task.
+
+			\param initialText Text description of the progress of the background task (displayed in status bar of the UI)
+			\param canCancel Whether the task can be cancelled
+		*/
+		BackgroundTask(const std::string &initialText, bool canCancel);
 
 		bool CanCancel() const;
 		bool IsCancelled() const;

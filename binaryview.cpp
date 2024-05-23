@@ -523,6 +523,15 @@ void BinaryDataNotification::RedoEntryTakenCallback(void* ctxt, BNBinaryView* da
 }
 
 
+void BinaryDataNotification::RebasedCallback(void *ctxt, BNBinaryView *oldView, BNBinaryView *newView)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view1 = new BinaryView(BNNewViewReference(oldView));
+	Ref<BinaryView> view2 = new BinaryView(BNNewViewReference(newView));
+	notify->OnRebased(view1, view2);
+}
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
@@ -578,6 +587,7 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.undoEntryAdded = UndoEntryAddedCallback;
 	m_callbacks.undoEntryTaken = UndoEntryTakenCallback;
 	m_callbacks.redoEntryTaken = RedoEntryTakenCallback;
+	m_callbacks.rebased = RebasedCallback;
 }
 
 
@@ -636,6 +646,7 @@ BinaryDataNotification::BinaryDataNotification(NotificationTypes notifications)
 	m_callbacks.undoEntryAdded = (notifications & NotificationType::UndoEntryAdded) ? UndoEntryAddedCallback : nullptr;
 	m_callbacks.undoEntryTaken = (notifications & NotificationType::UndoEntryTaken) ? UndoEntryTakenCallback : nullptr;
 	m_callbacks.redoEntryTaken = (notifications & NotificationType::RedoEntryTaken) ? RedoEntryTakenCallback : nullptr;
+	m_callbacks.rebased = (notifications & NotificationType::Rebased) ? RebasedCallback : nullptr;
 }
 
 

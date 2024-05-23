@@ -1585,6 +1585,7 @@ extern "C"
 		void (*undoEntryAdded)(void* ctxt, BNBinaryView* view, BNUndoEntry* entry);
 		void (*undoEntryTaken)(void* ctxt, BNBinaryView* view, BNUndoEntry* entry);
 		void (*redoEntryTaken)(void* ctxt, BNBinaryView* view, BNUndoEntry* entry);
+		void (*rebased)(void* ctxt, BNBinaryView* oldView, BNBinaryView* newView);
 	} BNBinaryDataNotification;
 
 	typedef struct BNProjectNotification

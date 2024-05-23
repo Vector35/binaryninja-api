@@ -1441,6 +1441,7 @@ class Segment:
 	def serialize(cls, image_base: int, start: int, length: int, data_offset: int=0, data_length: int=0, flags: 'SegmentFlag'=SegmentFlag.SegmentReadable, auto_defined=True, segments: str="[]"):
 		"""
 		Serialize segment parameters into a JSON string. This is useful for generating a properly formatted segment description as options when using `load`.
+
 		:param int image_base: The base address of the image.
 		:param int start: The start address of the segment.
 		:param int length: The length of the segment.
@@ -1452,14 +1453,12 @@ class Segment:
 		:return: A JSON string representing the segment.
 		:rtype: str
 
-		Example usage:
-		```
-		>>> base = 0x400000
-		>>> rom_base = 0xffff0000
-		>>> segments = Segment.serialize(image_base=base, start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
-		>>> segments = Segment.serialize(image_base=base, start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable, segments=segments)
-		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': segments})
-		```
+		:Example::
+			>>> base = 0x400000
+			>>> rom_base = 0xffff0000
+			>>> segments = Segment.serialize(image_base=base, start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
+			>>> segments = Segment.serialize(image_base=base, start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable, segments=segments)
+			>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': segments})
 		"""
 		segments_list = json.loads(segments)
 		segment_info = {
@@ -1602,6 +1601,7 @@ class Section:
 	def serialize(cls, image_base: int, name: str, start: int, length: int, semantics: SectionSemantics=SectionSemantics.DefaultSectionSemantics, type: str="", align: int=1, entry_size: int=0, link: str="", info_section: str="", info_data: int=0, auto_defined: bool=True, sections: str="[]"):
 		"""
 		Serialize section parameters into a JSON string. This is useful for generating a properly formatted section description as options when using `load`.
+
 		:param int image_base: The base address of the image.
 		:param str name: The name of the section.
 		:param int start: The start address of the section.
@@ -2114,15 +2114,17 @@ class AdvancedILFunctionList:
 
 
 class MemoryMap:
-	"""
+	r"""
 	The MemoryMap object is used to describe a system level MemoryMap for which a BinaryView is loaded into. A loaded
 	BinaryView has a view into the MemoryMap which is described by the Segments defined in that BinaryView. The MemoryMap
 	object allows for the addition of multiple, arbitrary overlapping regions of memory. Segmenting of the address space is
 	automatically handled when the MemoryMap is modified and in the case where a portion of the system address space has
-	multilple defined regions, the default ordering gives priority to the most recently added region. This feature is
+	multiple defined regions, the default ordering gives priority to the most recently added region. This feature is
 	experimental and under active development.
 
 	:Example:
+
+.. code-block:: python
 
 		>>> base = 0x10000
 		>>> rom_base = 0xc0000000
@@ -2134,12 +2136,12 @@ class MemoryMap:
 				size: 0x4
 				objects:
 					'origin<Mapped>' | Mapped<Absolute>
-
+			
 			<region: 0xc0000000 - 0xc0001000>
 				size: 0x1000
 				objects:
 					'origin<Mapped>' | Unmapped | FILL<0x0>
-
+			
 			<region: 0xc0001000 - 0xc0001014>
 				size: 0x14
 				objects:
@@ -2151,13 +2153,13 @@ class MemoryMap:
 				size: 0x4
 				objects:
 					'origin<Mapped>' | Mapped<Absolute>
-
+			
 			<region: 0xc0000000 - 0xc0001000>
 				size: 0x1000
 				objects:
 					'rom' | Mapped
 					'origin<Mapped>' | Unmapped | FILL<0x0>
-
+			
 			<region: 0xc0001000 - 0xc0001014>
 				size: 0x14
 				objects:
@@ -2173,20 +2175,20 @@ class MemoryMap:
 				size: 0x4
 				objects:
 					'origin<Mapped>' | Mapped<Absolute>
-
+			
 			<region: 0xc0000000 - 0xc0000008>
 				size: 0x8
 				objects:
 					'pad' | Mapped<Relative>
 					'rom' | Mapped<Relative>
 					'origin<Mapped>' | Unmapped | FILL<0x0>
-
+			
 			<region: 0xc0000008 - 0xc0001000>
 				size: 0xff8
 				objects:
 					'rom' | Mapped<Relative>
 					'origin<Mapped>' | Unmapped | FILL<0x0>
-
+			
 			<region: 0xc0001000 - 0xc0001014>
 				size: 0x14
 				objects:
@@ -2671,8 +2673,10 @@ class BinaryView:
 		"""
 		``new`` creates a new, Raw :py:class:`BinaryView` for the provided data.
 
-		:param Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView'] data: path to file/bndb, raw bytes, or raw view to load
-		:param :py:class:`~binaryninja.filemetadata.FileMetadata` file_metadata: Optional FileMetadata object for this new view
+		:param data: path to file/bndb, raw bytes, or raw view to load
+		:type data: Union[:py:class:`str`, :py:class:`bytes`, :py:class:`bytearray`, :py:class:`~binaryninja.databuffer.DataBuffer`, :py:class:`os.PathLike`, :py:class:`BinaryView`]
+		:param file_metadata: Optional FileMetadata object for this new view
+		:type file_metadata: :py:class:`~binaryninja.filemetadata.FileMetadata`
 		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
 		:rtype: :py:class:`BinaryView` or ``None``
 
@@ -4066,11 +4070,8 @@ class BinaryView:
 		return self._file.navigate(view_name, offset)
 
 	def read(self, addr: int, length: int) -> bytes:
-		"""
+		r"""
 		``read`` returns the data reads at most ``length`` bytes from virtual address ``addr``.
-
-		.. note:: Python2 returns a str, but Python3 returns a bytes object. str(DataBufferObject) will \
- 		still get you a str in either case.
 
 		:param int addr: virtual address to read from.
 		:param int length: number of bytes to read.
@@ -4081,7 +4082,7 @@ class BinaryView:
 			>>> #Opening a x86_64 Mach-O binary
 			>>> bv = BinaryView.new("/bin/ls") # note that we are using `new` instead of `load` to get the raw view
 			>>> bv.read(0,4)
-			b\'\\xcf\\xfa\\xed\\xfe\'
+			b'\xcf\xfa\xed\xfe'
 		"""
 		if (addr < 0) or (length < 0):
 			raise ValueError("length and address must both be positive")
@@ -4897,7 +4898,7 @@ class BinaryView:
 
 		.. warning:: If you're looking at this API, please double check that you don't mean to use :py:func:`get_code_refs` instead. \
 		`get_code_refs` returns references from code to the specified address while this API returns references from data \
-        (pointers in global variables for example). Also, note there exists :py:func:`get_data_refs_from`.
+		(pointers in global variables for example). Also, note there exists :py:func:`get_data_refs_from`.
 
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query
@@ -4929,7 +4930,7 @@ class BinaryView:
 		``get_data_refs_from`` returns a list of virtual addresses referenced by the address ``addr``. Optionally specifying
 		a length. When ``length`` is set ``get_data_refs_from`` returns the data referenced in the range ``addr``-``addr``+``length``.
 		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. To add a user-specified
-        reference, see :py:func:`add_user_data_ref`. Also, note there exists :py:func:`get_data_refs`.
+		reference, see :py:func:`add_user_data_ref`. Also, note there exists :py:func:`get_data_refs`.
 
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query
@@ -6093,7 +6094,7 @@ class BinaryView:
 		``tags`` gets a list of all data :py:class:`Tag` objects in the view.
 		Tags are returned as a list of (address, :py:class:`Tag`) pairs.
 
-		:type: list(int, Tag)
+		:rtype: list(int, Tag)
 		"""
 		return self.get_tags()
 
@@ -6102,7 +6103,7 @@ class BinaryView:
 		``tags`` gets a list of all data :py:class:`Tag` objects in the view.
 		Tags are returned as a list of (address, :py:class:`Tag`) pairs.
 
-		:type: list(int, Tag)
+		:rtype: list(int, Tag)
 		"""
 		count = ctypes.c_ulonglong()
 
@@ -8014,22 +8015,30 @@ class BinaryView:
 		a new dependency.
 
 		This is useful if a BinaryView was automatically marked up with a lot of debug information but you
-		want to export only a subset of that information into a new TypeLibrary. By creating a describing
+		want to export only a subset of that information into a new TypeLibrary. By creating a description of
 		which local types correspond to types in other already extant libraries, those types will be avoided
 		during the recursive export.
 
 		This data is not persisted and does not impact analysis.
 
-		BinaryView contains the following types:
+		For example, if a BinaryView contains the following types:
+
+.. code-block:: c
+
 			struct RECT { ... }; // omitted
 			struct ContrivedExample { RECT rect; };
 
-		overrides = {"RECT": ("tagRECT", "winX64common")}
-		bv.set_manual_type_source_override(overrides)
-		bv.export_type_to_library(dest_new_typelib, "ContrivedExample", bv.get_type_by_name("ContrivedExample"))
+Then the following python:
 
-		Results in dest_new_typelib only having ContrivedExample added, and "RECT" being inserted as a dependency
-		to a the type "tagRECT" found in the typelibrary "winX64common"
+.. code-block:: python
+
+			overrides = {"RECT": ("tagRECT", "winX64common")}
+			bv.set_manual_type_source_override(overrides)
+			bv.export_type_to_library(dest_new_typelib, "ContrivedExample", bv.get_type_by_name("ContrivedExample"))
+
+Results in dest_new_typelib only having ContrivedExample added, and "RECT" being inserted as a dependency
+to a the type "tagRECT" found in the typelibrary "winX64common"
+
 		"""
 		count = len(entries)
 		src_names = (core.BNQualifiedName * count)()
@@ -8907,16 +8916,20 @@ class BinaryView:
 			return self.QueueGenerator(t, results)
 
 	def search(self, pattern: str, start: int = None, end: int = None, raw: bool = False, ignore_case: bool = False, overlap: bool = False, align: int = 1) -> QueueGenerator:
-		"""
+		r"""
 		Searches for matches of the specified `pattern` within this BinaryView with an optionally provided address range specified by `start` and `end`.
 		The search pattern can be interpreted in various ways:
+
 			- specified as a string of hexadecimal digits where whitespace is ignored, and the '?' character acts as a wildcard
 			- a regular expression suitable for working with bytes
 			- or if the `raw` option is enabled, the pattern is interpreted as a raw string, and any special characters are escaped and interpreted literally
 
-		:param str pattern: The pattern to search for.
-		:param int start: The address to start the search from. (default: None)
-		:param int end: The address to end the search (inclusive). (default: None)
+		:param pattern: The pattern to search for.
+		:type pattern: :py:class:`str`
+		:param start: The address to start the search from. (default: None)
+		:type start: :py:class:`int`
+		:param end: The address to end the search (inclusive). (default: None)
+		:type end: :py:class:`int`
 		:param bool raw: Whether to interpret the pattern as a raw string (default: False).
 		:param bool ignore_case: Whether to perform case-insensitive matching (default: False).
 		:param bool overlap: Whether to allow matches to overlap (default: False).
@@ -8931,7 +8944,7 @@ class BinaryView:
 			<BinaryView: '/bin/ls', start 0x100000000, len 0x182f8>
 			>>> bytes(list(bv.search("50 ?4"))[0][1]).hex()
 			'5004'
-			>>> bytes(list(bv.search("[\\x20-\\x25][\\x60-\\x67]"))[0][1]).hex()
+			>>> bytes(list(bv.search("[\x20-\x25][\x60-\x67]"))[0][1]).hex()
 			'2062'
 		"""
 		if start is None:
@@ -9345,6 +9358,7 @@ class BinaryView:
 		to True. Auto metadata is not saved into the database and is presumably re-generated \
 		when re-opening the database.
 		:rtype: None
+
 		:Example:
 
 			>>> bv.store_metadata("integer", 1337)
@@ -9762,7 +9776,7 @@ class BinaryReader:
 		return core.BNIsEndOfFile(self._handle)
 
 	def read(self, length: int, address: Optional[int] = None) -> Optional[bytes]:
-		"""
+		r"""
 		``read`` returns ``length`` bytes read from the current offset, adding ``length`` to offset.
 
 		:param int length: number of bytes to read.
@@ -9772,7 +9786,7 @@ class BinaryReader:
 		:Example:
 
 			>>> br.read(8)
-			'\\xcf\\xfa\\xed\\xfe\\x07\\x00\\x00\\x01'
+			'\xcf\xfa\xed\xfe\x07\x00\x00\x01'
 			>>>
 		"""
 		if address is not None:

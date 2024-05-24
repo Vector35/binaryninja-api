@@ -611,8 +611,8 @@ impl HighLevelILInstruction {
                 body: op.operands[1] as usize,
             }),
             HLIL_DO_WHILE => Op::DoWhile(While {
-                condition: op.operands[0] as usize,
-                body: op.operands[1] as usize,
+                body: op.operands[0] as usize,
+                condition: op.operands[1] as usize,
             }),
             HLIL_WHILE_SSA => Op::WhileSsa(WhileSsa {
                 condition_phi: op.operands[0] as usize,

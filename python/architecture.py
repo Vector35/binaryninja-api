@@ -523,13 +523,14 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		return self.name
 
 	@classmethod
-	def register(cls) -> None:
+	def register(cls) -> 'Architecture':
 		binaryninja._init_plugins()
 		if cls.name is None:
 			raise ValueError("architecture 'name' is not defined")
 		arch = cls()
 		cls._registered_cb = arch._cb
 		arch.handle = core.BNRegisterArchitecture(cls.name, arch._cb)
+		return arch
 
 	@property
 	def full_width_regs(self) -> List[RegisterName]:

@@ -142,18 +142,18 @@ Though convenient it is many orders of magnitude slower than simply calling the 
 ```python
 Type.int(4) # Creates a 4 byte signed integer
 Type.int(8, False) # Creates an 8 bytes unsigned integer
-Type.int(2, altName="short") # Creates a 2 byte signed integer named 'short'
+Type.int(2, alternate_name="short") # Creates a 2 byte signed integer named 'short'
 # Similarly through their classes directly
 IntegerType.create(4)
 IntegerType.create(8, False)
-IntegerType.create(2, altName="short")
+IntegerType.create(2, alternate_name="short")
 ```
 
 #### Character Types
 
 ```python
 Type.char() # This is just a 1 byte signed integer and can be used as such
-Type.wideChar(2, altName="wchar_t") # Creates a wide character with the name 'wchar_t'
+Type.wide_char(2, alternate_name="wchar_t") # Creates a wide character with the name 'wchar_t'
 # Similarly through their classes directly
 CharType.create()
 WideCharType.create(2)

@@ -97,11 +97,11 @@ impl<'a> Iterator for BranchIter<'a> {
 #[repr(C)]
 pub struct InstructionInfo(BNInstructionInfo);
 impl InstructionInfo {
-    pub fn new(len: usize, branch_delay: bool) -> Self {
+    pub fn new(len: usize, delay_slots: u8) -> Self {
         InstructionInfo(BNInstructionInfo {
             length: len,
             archTransitionByTargetAddr: false,
-            branchDelay: branch_delay,
+            delaySlots: delay_slots,
             branchCount: 0usize,
             branchType: [BranchType::UnresolvedBranch; 3],
             branchTarget: [0u64; 3],
@@ -121,8 +121,8 @@ impl InstructionInfo {
         self.0.branchCount
     }
 
-    pub fn branch_delay(&self) -> bool {
-        self.0.branchDelay
+    pub fn delay_slots(&self) -> u8 {
+        self.0.delaySlots
     }
 
     pub fn branches(&self) -> BranchIter {

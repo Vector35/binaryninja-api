@@ -7569,7 +7569,7 @@ namespace BinaryNinja {
 	struct InstructionInfo : public BNInstructionInfo
 	{
 		InstructionInfo();
-		void AddBranch(BNBranchType type, uint64_t target = 0, Architecture* arch = nullptr, bool hasDelaySlot = false);
+		void AddBranch(BNBranchType type, uint64_t target = 0, Architecture* arch = nullptr, uint8_t delaySlots = 0);
 	};
 
 	struct NameAndType

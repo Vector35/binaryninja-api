@@ -687,7 +687,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             _ => return None,
         };
 
-        let mut res = InstructionInfo::new(inst_len, false);
+        let mut res = InstructionInfo::new(inst_len, 0);
 
         match op {
             Op::Jal(ref j) => {

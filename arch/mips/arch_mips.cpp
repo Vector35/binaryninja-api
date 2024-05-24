@@ -301,7 +301,7 @@ protected:
 			if (instr.operands[0].immediate != addr + 8)
 				result.AddBranch(CallDestination, instr.operands[0].immediate, nullptr, hasBranchDelay);
 			else
-				result.branchDelay = 1; // We have a "get pc" mnemonic; do nothing
+				result.delaySlots = 1; // We have a "get pc" mnemonic; do nothing
 			break;
 
 		case MIPS_JAL:
@@ -311,7 +311,7 @@ protected:
 		//Jmp to register register value is unknown
 		case MIPS_JALR:
 		case MIPS_JALR_HB:
-			result.branchDelay = 1;
+			result.delaySlots = 1;
 			break;
 
 		case MIPS_BGEZAL:

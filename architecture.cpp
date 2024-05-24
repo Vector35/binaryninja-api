@@ -34,15 +34,15 @@ InstructionInfo::InstructionInfo()
 	length = 0;
 	archTransitionByTargetAddr = false;
 	branchCount = 0;
-	branchDelay = false;
+	delaySlots = 0;
 }
 
 
-void InstructionInfo::AddBranch(BNBranchType type, uint64_t target, Architecture* arch, bool hasDelaySlot)
+void InstructionInfo::AddBranch(BNBranchType type, uint64_t target, Architecture* arch, uint8_t delaySlot)
 {
 	if (branchCount >= BN_MAX_INSTRUCTION_BRANCHES)
 		return;
-	branchDelay = hasDelaySlot;
+	delaySlots = delaySlot;
 	branchType[branchCount] = type;
 	branchTarget[branchCount] = target;
 	branchArch[branchCount++] = arch ? arch->GetObject() : nullptr;
@@ -242,6 +242,7 @@ bool Architecture::GetInstructionInfoCallback(
 	CallbackRef<Architecture> arch(ctxt);
 
 	InstructionInfo info;
+	info.delaySlots = result->delaySlots;
 	bool ok = arch->GetInstructionInfo(data, addr, maxLen, info);
 	*result = info;
 	return ok;

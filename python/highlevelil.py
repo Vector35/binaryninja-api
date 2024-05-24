@@ -146,6 +146,8 @@ class HighLevelILInstruction(BaseILInstruction):
 	core_instr: CoreHighLevelILInstruction
 	as_ast: bool
 	instr_index: InstructionIndex
+	# ILOperations is deprecated and will be removed in a future version once BNIL Graph no longer uses it
+	# Use the visit methods visit, visit_all, and visit_operands
 	ILOperations: ClassVar[Mapping[HighLevelILOperation, List[Tuple[str, str]]]] = {
 	    HighLevelILOperation.HLIL_NOP: [], HighLevelILOperation.HLIL_BLOCK: [("body", "expr_list")],
 	    HighLevelILOperation.HLIL_IF: [("condition", "expr"), ("true", "expr"),

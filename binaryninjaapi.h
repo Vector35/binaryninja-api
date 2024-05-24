@@ -14495,6 +14495,12 @@ namespace BinaryNinja {
 		Platform(Architecture* arch, const std::string& name, const std::string& typeFile,
 		    const std::vector<std::string>& includeDirs = std::vector<std::string>());
 
+		static void InitCallback(void *ctxt, BNPlatform*);
+		static void InitViewCallback(void* ctxt, BNBinaryView* view);
+		static uint32_t* GetGlobalRegistersCallback(void* ctxt, size_t* count);
+		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs, size_t count);
+		static BNType* GetGlobalRegisterTypeCallback(void* ctxt, uint32_t reg);
+
 	  public:
 		Platform(BNPlatform* platform);
 
@@ -14630,6 +14636,30 @@ namespace BinaryNinja {
 		*/
 		void SetSystemCallConvention(CallingConvention* cc);
 
+		/*! Callback that will be called when the platform of a binaryview
+		 * is set. Allows for the Platform to to do platform-specific
+		 * processing of views just after finalization.
+		 *
+		 * \param view BinaryView that was just set to this Platform
+		 */
+		virtual void BinaryViewInit(BinaryView* view);
+
+		/*! Get the global register list for this Platform
+		 *
+		 * Allows the Platform to override the global register list
+		 * used by analysis.
+		 */
+		virtual std::vector<uint32_t> GetGlobalRegisters();
+
+		/*! Get the type of a global register
+		 *
+		 * Called by analysis when the incoming register value of a
+		 * global register is observed.
+		 *
+		 * \param reg The register being queried for type information.
+		 */
+		virtual Ref<Type> GetGlobalRegisterType(uint32_t reg);
+
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);
 		Ref<Platform> GetAssociatedPlatformByAddress(uint64_t& addr);
@@ -14718,6 +14748,16 @@ namespace BinaryNinja {
 		    std::map<QualifiedName, Ref<Type>>& variables, std::map<QualifiedName, Ref<Type>>& functions,
 		    std::string& errors, const std::vector<std::string>& includeDirs = std::vector<std::string>(),
 		    const std::string& autoTypeSource = "");
+	};
+
+
+	class CorePlatform : public Platform
+	{
+	public:
+		CorePlatform(BNPlatform* plat);
+
+		virtual std::vector<uint32_t> GetGlobalRegisters() override;
+		virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override;
 	};
 
 	/*!

@@ -1920,7 +1920,7 @@ Ref<Platform> BinaryView::GetDefaultPlatform() const
 	BNPlatform* platform = BNGetDefaultPlatform(m_object);
 	if (!platform)
 		return nullptr;
-	return new Platform(platform);
+	return new CorePlatform(platform);
 }
 
 
@@ -4177,7 +4177,7 @@ std::optional<std::pair<Ref<Platform>, QualifiedName>> BinaryView::LookupImporte
 		return std::nullopt;
 	QualifiedName targetName = QualifiedName::FromAPIObject(&resultName);
 	BNFreeQualifiedName(&resultName);
-	return std::make_pair(new Platform(resultLib), targetName);
+	return std::make_pair(new CorePlatform(resultLib), targetName);
 }
 
 

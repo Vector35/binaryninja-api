@@ -30,20 +30,89 @@ Platform::Platform(BNPlatform* platform)
 }
 
 
+CorePlatform::CorePlatform(BNPlatform* platform) : Platform(platform) {}
+
+
 Platform::Platform(Architecture* arch, const string& name)
 {
-	m_object = BNCreatePlatform(arch->GetObject(), name.c_str());
+	BNCustomPlatform plat;
+	plat.context = this;
+	plat.init = InitCallback;
+	plat.viewInit = InitViewCallback;
+	plat.getGlobalRegisters = GetGlobalRegistersCallback;
+	plat.freeRegisterList = FreeRegisterListCallback;
+	plat.getGlobalRegisterType = GetGlobalRegisterTypeCallback;
+	m_object = BNCreateCustomPlatform(arch->GetObject(), name.c_str(), &plat);
+	AddRefForRegistration();
 }
 
 
 Platform::Platform(Architecture* arch, const string& name, const string& typeFile, const vector<string>& includeDirs)
 {
+	BNCustomPlatform plat;
+	plat.context = this;
+	plat.init = InitCallback;
+	plat.viewInit = InitViewCallback;
+	plat.getGlobalRegisters = GetGlobalRegistersCallback;
+	plat.freeRegisterList = FreeRegisterListCallback;
+	plat.getGlobalRegisterType = GetGlobalRegisterTypeCallback;
 	const char** includeDirList = new const char*[includeDirs.size()];
 	for (size_t i = 0; i < includeDirs.size(); i++)
 		includeDirList[i] = includeDirs[i].c_str();
-	m_object = BNCreatePlatformWithTypes(
-	    arch->GetObject(), name.c_str(), typeFile.c_str(), includeDirList, includeDirs.size());
+	m_object = BNCreateCustomPlatformWithTypes(
+	    arch->GetObject(), name.c_str(), &plat,
+			typeFile.c_str(), includeDirList, includeDirs.size());
 	delete[] includeDirList;
+	AddRefForRegistration();
+}
+
+
+
+
+void Platform::InitCallback(void* ctxt, BNPlatform* plat)
+{
+}
+
+
+void Platform::InitViewCallback(void* ctxt, BNBinaryView* view)
+{
+	CallbackRef<Platform> plat(ctxt);
+	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
+	plat->BinaryViewInit(viewObj);
+}
+
+
+uint32_t* Platform::GetGlobalRegistersCallback(void* ctxt, size_t* count)
+{
+	CallbackRef<Platform> plat(ctxt);
+
+	std::vector<uint32_t> regs = plat->GetGlobalRegisters();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+
+	return result;
+}
+
+
+void Platform::FreeRegisterListCallback(void*, uint32_t* regs, size_t)
+{
+	delete[] regs;
+}
+
+
+BNType* Platform::GetGlobalRegisterTypeCallback(void* ctxt, uint32_t reg)
+{
+	CallbackRef<Platform> plat(ctxt);
+
+	Ref<Type> result = plat->GetGlobalRegisterType(reg);
+
+	if (!result)
+		return nullptr;
+
+	return BNNewTypeReference(result->GetObject());
 }
 
 
@@ -73,7 +142,7 @@ Ref<Platform> Platform::GetByName(const string& name)
 	BNPlatform* platform = BNGetPlatformByName(name.c_str());
 	if (!platform)
 		return nullptr;
-	return new Platform(platform);
+	return new CorePlatform(platform);
 }
 
 
@@ -85,7 +154,7 @@ vector<Ref<Platform>> Platform::GetList()
 	vector<Ref<Platform>> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-		result.push_back(new Platform(BNNewPlatformReference(list[i])));
+		result.push_back(new CorePlatform(BNNewPlatformReference(list[i])));
 
 	BNFreePlatformList(list, count);
 	return result;
@@ -100,7 +169,7 @@ vector<Ref<Platform>> Platform::GetList(Architecture* arch)
 	vector<Ref<Platform>> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-		result.push_back(new Platform(BNNewPlatformReference(list[i])));
+		result.push_back(new CorePlatform(BNNewPlatformReference(list[i])));
 
 	BNFreePlatformList(list, count);
 	return result;
@@ -115,7 +184,7 @@ vector<Ref<Platform>> Platform::GetList(const string& os)
 	vector<Ref<Platform>> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-		result.push_back(new Platform(BNNewPlatformReference(list[i])));
+		result.push_back(new CorePlatform(BNNewPlatformReference(list[i])));
 
 	BNFreePlatformList(list, count);
 	return result;
@@ -130,7 +199,7 @@ vector<Ref<Platform>> Platform::GetList(const string& os, Architecture* arch)
 	vector<Ref<Platform>> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-		result.push_back(new Platform(BNNewPlatformReference(list[i])));
+		result.push_back(new CorePlatform(BNNewPlatformReference(list[i])));
 
 	BNFreePlatformList(list, count);
 	return result;
@@ -248,12 +317,53 @@ void Platform::SetSystemCallConvention(CallingConvention* cc)
 }
 
 
+void Platform::BinaryViewInit(BinaryView*)
+{
+}
+
+
+std::vector<uint32_t> Platform::GetGlobalRegisters()
+{
+	return GetArchitecture()->GetGlobalRegisters();
+}
+
+
+Ref<Type> Platform::GetGlobalRegisterType(uint32_t reg)
+{
+	return nullptr;
+}
+
+
+std::vector<uint32_t> CorePlatform::GetGlobalRegisters()
+{
+	size_t count;
+	uint32_t* regs = BNGetPlatformGlobalRegisters(m_object, &count);
+
+	std::vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+
+	BNFreeRegisterList(regs);
+
+	return result;
+}
+
+
+Ref<Type> CorePlatform::GetGlobalRegisterType(uint32_t reg)
+{
+	BNType* res = BNGetPlatformGlobalRegisterType(m_object, reg);
+	if (!res)
+		return nullptr;
+	return new Type(res);
+}
+
+
 Ref<Platform> Platform::GetRelatedPlatform(Architecture* arch)
 {
 	BNPlatform* platform = BNGetRelatedPlatform(m_object, arch->GetObject());
 	if (!platform)
 		return nullptr;
-	return new Platform(platform);
+	return new CorePlatform(platform);
 }
 
 
@@ -268,7 +378,7 @@ Ref<Platform> Platform::GetAssociatedPlatformByAddress(uint64_t& addr)
 	BNPlatform* platform = BNGetAssociatedPlatformByAddress(m_object, &addr);
 	if (!platform)
 		return nullptr;
-	return new Platform(platform);
+	return new CorePlatform(platform);
 }
 
 

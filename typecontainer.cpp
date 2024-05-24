@@ -128,7 +128,7 @@ Ref<Platform> TypeContainer::GetPlatform() const
 	BNPlatform* platform = BNTypeContainerGetPlatform(m_object);
 	if (!platform)
 		return nullptr;
-	return new Platform(platform);
+	return new CorePlatform(platform);
 }
 
 

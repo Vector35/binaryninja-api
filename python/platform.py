@@ -20,6 +20,7 @@
 
 import os
 import ctypes
+import traceback
 from typing import List, Dict, Optional
 
 # Binary Ninja components
@@ -31,6 +32,8 @@ from . import callingconvention
 from . import typelibrary
 from . import architecture
 from . import typecontainer
+from . import binaryview
+from .log import log_error
 
 
 class _PlatformMetaClass(type):
@@ -61,6 +64,10 @@ class Platform(metaclass=_PlatformMetaClass):
 	name = None
 	type_file_path = None  # path to platform types file
 	type_include_dirs = []  # list of directories available to #include from type_file_path
+	global_regs = [] # list of global registers. if empty, it populated with the arch global reg list
+	global_reg_types = {} # opportunity for plugin to provide default types for the entry value of global registers
+
+	_registered_platforms = []
 
 	def __init__(self, arch: Optional['architecture.Architecture'] = None, handle=None):
 		if handle is None:
@@ -68,26 +75,91 @@ class Platform(metaclass=_PlatformMetaClass):
 				raise ValueError("platform must have an associated architecture")
 			assert self.__class__.name is not None, "Can not instantiate Platform directly, you probably want arch.standalone_platform"
 			_arch = arch
+			if len(self.global_regs) == 0:
+				self.__dict__["global_regs"] = arch.global_regs
+			self._cb = core.BNCustomPlatform()
+			self._cb.context = 0
+			self._cb.init = self._cb.init.__class__(self._init)
+			self._cb.viewInit = self._cb.viewInit.__class__(self._view_init)
+			self._cb.getGlobalRegisters = self._cb.getGlobalRegisters.__class__(self._get_global_regs)
+			self._cb.freeRegisterList = self._cb.freeRegisterList.__class__(self._free_register_list)
+			self._cb.getGlobalRegisterType = self._cb.getGlobalRegisterType.__class__(self._get_global_reg_type)
+			self._pending_reg_lists = {}
 			if self.__class__.type_file_path is None:
-				_handle = core.BNCreatePlatform(arch.handle, self.__class__.name)
+				_handle = core.BNCreateCustomPlatform(arch.handle, self.__class__.name, self._cb)
 				assert _handle is not None
 			else:
 				dir_buf = (ctypes.c_char_p * len(self.__class__.type_include_dirs))()
 				for (i, dir) in enumerate(self.__class__.type_include_dirs):
 					dir_buf[i] = dir.encode('charmap')
-				_handle = core.BNCreatePlatformWithTypes(
-				    arch.handle, self.__class__.name, self.__class__.type_file_path, dir_buf,
+				_handle = core.BNCreateCustomPlatformWithTypes(
+				    arch.handle, self.__class__.name, self._cb, self.__class__.type_file_path, dir_buf,
 				    len(self.__class__.type_include_dirs)
 				)
 				assert _handle is not None
+				self.__class__._registered_platforms.append(self)
 		else:
 			_handle = handle
 			_arch = architecture.CoreArchitecture._from_cache(core.BNGetPlatformArchitecture(_handle))
+			count = ctypes.c_ulonglong()
+			regs = core.BNGetPlatformGlobalRegisters(handle, count)
+			result = []
+			for i in range(0, count.value):
+				result.append(_arch.get_reg_name(regs[i]))
+			core.BNFreeRegisterList(regs)
+			self.__dict__["global_regs"] = result
 		assert _handle is not None
 		assert _arch is not None
 		self.handle: ctypes.POINTER(core.BNPlatform) = _handle
 		self._arch = _arch
 		self._name = None
+
+	def _init(self, ctxt):
+		pass
+
+	def _view_init(self, ctxt, view):
+		try:
+			view_obj = binaryview.BinaryView(handle=core.BNNewViewReference(view))
+			self.view_init(view)
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_global_regs(self, ctxt, count):
+		try:
+			regs = self.global_regs
+			count[0] = len(regs)
+			reg_buf = (ctypes.c_uint * len(regs))()
+			for i in range(0, len(regs)):
+				reg_buf[i] = self.arch.regs[regs[i]].index
+			result = ctypes.cast(reg_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, reg_buf)
+			return result.value
+		except:
+			log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _free_register_list(self, ctxt, regs, size):
+		try:
+			buf = ctypes.cast(regs, ctypes.c_void_p)
+			if buf.value not in self._pending_reg_lists:
+				raise ValueError("freeing register list that wasn't allocated")
+			del self._pending_reg_lists[buf.value]
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_global_reg_type(self, ctxt, reg):
+		try:
+			reg_name = self.arch.get_reg_name(reg)
+			if reg_name in self.global_reg_types:
+				type_obj = self.global_reg_types[reg_name]
+				log_error(f"aaaa {type_obj}")
+				handle = core.BNNewTypeReference(type_obj.handle)
+				return ctypes.cast(handle, ctypes.c_void_p).value
+			return None
+		except:
+			log_error(traceback.format_exc())
+			return None
 
 	def __del__(self):
 		if core is not None:
@@ -252,6 +324,18 @@ class Platform(metaclass=_PlatformMetaClass):
 			result.append(callingconvention.CallingConvention(handle=core.BNNewCallingConventionReference(cc[i])))
 		core.BNFreeCallingConventionList(cc, count.value)
 		return result
+
+	def get_global_register_type(self, reg: 'architecture.RegisterType'):
+		reg = self.arch.get_reg_index(reg)
+		type_obj = core.BNGetPlatformGlobalRegisterType(self.handle, reg)
+		if type_obj is None:
+			return None
+		return types.Type.create(type_obj, platform=self)
+
+	def view_init(self, view):
+		pass
+		#raise NotImplementedError
+
 
 	@property
 	def types(self):

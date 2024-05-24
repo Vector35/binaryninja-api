@@ -100,7 +100,7 @@ vector<DebugFunctionInfo> DebugInfo::GetFunctions(const string& parserName) cons
 		    functions[i].fullName ? functions[i].fullName : "", functions[i].rawName ? functions[i].rawName : "",
 		    functions[i].address,
 		    functions[i].type ? new Type(BNNewTypeReference(functions[i].type)) : nullptr,
-		    functions[i].platform ? new Platform(BNNewPlatformReference(functions[i].platform)) : nullptr, components);
+		    functions[i].platform ? new CorePlatform(BNNewPlatformReference(functions[i].platform)) : nullptr, components);
 	}
 
 	BNFreeDebugFunctions(functions, count);

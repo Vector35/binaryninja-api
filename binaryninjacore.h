@@ -1872,6 +1872,18 @@ extern "C"
 		bool (*skipAndReturnValue)(void* ctxt, uint8_t* data, uint64_t addr, size_t len, uint64_t value);
 	} BNCustomArchitecture;
 
+	typedef struct BNCustomPlatform
+	{
+		void* context;
+		void (*init)(void* ctxt, BNPlatform* obj);
+		void (*viewInit)(void* ctxt, BNBinaryView* view);
+
+		uint32_t* (*getGlobalRegisters)(void* ctxt, size_t* count);
+		void (*freeRegisterList)(void* ctxt, uint32_t* regs, size_t len);
+
+		BNType* (*getGlobalRegisterType)(void* ctxt, uint32_t reg);
+	} BNCustomPlatform;
+
 	typedef struct BNBasicBlockEdge
 	{
 		BNBranchType type;
@@ -6360,6 +6372,10 @@ extern "C"
 	BINARYNINJACOREAPI BNPlatform* BNCreatePlatform(BNArchitecture* arch, const char* name);
 	BINARYNINJACOREAPI BNPlatform* BNCreatePlatformWithTypes(
 	    BNArchitecture* arch, const char* name, const char* typeFile, const char** includeDirs, size_t includeDirCount);
+	BINARYNINJACOREAPI BNPlatform* BNCreateCustomPlatform(BNArchitecture* arch, const char* name, BNCustomPlatform* impl);
+	BINARYNINJACOREAPI BNPlatform* BNCreateCustomPlatformWithTypes(
+	    BNArchitecture* arch, const char* name, BNCustomPlatform* impl,
+			const char* typeFile, const char** includeDirs, size_t includeDirCount);
 	BINARYNINJACOREAPI void BNRegisterPlatform(const char* os, BNPlatform* platform);
 	BINARYNINJACOREAPI BNPlatform* BNNewPlatformReference(BNPlatform* platform);
 	BINARYNINJACOREAPI void BNFreePlatform(BNPlatform* platform);
@@ -6390,6 +6406,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNRegisterPlatformStdcallCallingConvention(BNPlatform* platform, BNCallingConvention* cc);
 	BINARYNINJACOREAPI void BNRegisterPlatformFastcallCallingConvention(BNPlatform* platform, BNCallingConvention* cc);
 	BINARYNINJACOREAPI void BNSetPlatformSystemCallConvention(BNPlatform* platform, BNCallingConvention* cc);
+
+	BINARYNINJACOREAPI uint32_t* BNGetPlatformGlobalRegisters(BNPlatform* platform, size_t* count);
+	BINARYNINJACOREAPI BNType* BNGetPlatformGlobalRegisterType(BNPlatform* platform, uint32_t reg);
 
 	BINARYNINJACOREAPI BNPlatform* BNGetArchitectureStandalonePlatform(BNArchitecture* arch);
 

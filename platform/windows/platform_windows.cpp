@@ -7,10 +7,15 @@ using namespace std;
 
 class WindowsX86Platform: public Platform
 {
+	uint32_t m_fsbase;
+	Ref<Type> m_teb;
+
 public:
 	WindowsX86Platform(Architecture* arch): Platform(arch, "windows-x86")
 	{
 		Ref<CallingConvention> cc;
+
+		m_fsbase = arch->GetRegisterByName("fsbase");
 
 		cc = arch->GetCallingConventionByName("cdecl");
 		if (cc)
@@ -36,14 +41,35 @@ public:
 		if (cc)
 			RegisterCallingConvention(cc);
 	}
+
+
+	virtual void BinaryViewInit(BinaryView* view) override
+	{
+		if (!m_teb)
+			m_teb = Type::PointerType(GetArchitecture()->GetAddressSize(), Type::NamedType(QualifiedName("TEB"), GetTypeByName(QualifiedName("TEB"))));
+	}
+
+
+	virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override
+	{
+		if (reg == m_fsbase)
+			return m_teb;
+
+		return nullptr;
+	}
 };
 
 
 class WindowsX64Platform: public Platform
 {
+	uint32_t m_gsbase;
+	Ref<Type> m_teb;
+
 public:
 	WindowsX64Platform(Architecture* arch): Platform(arch, "windows-x86_64")
 	{
+		m_gsbase = arch->GetRegisterByName("gsbase");
+
 		Ref<CallingConvention> cc;
 
 		cc = arch->GetCallingConventionByName("win64");
@@ -54,6 +80,22 @@ public:
 			RegisterFastcallCallingConvention(cc);
 			RegisterStdcallCallingConvention(cc);
 		}
+	}
+
+
+	virtual void BinaryViewInit(BinaryView* view) override
+	{
+		if (!m_teb)
+			m_teb = Type::PointerType(GetArchitecture()->GetAddressSize(), Type::NamedType(QualifiedName("TEB"), GetTypeByName(QualifiedName("TEB"))));
+	}
+
+
+	virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override
+	{
+		if (reg == m_gsbase)
+			return m_teb;
+
+		return nullptr;
 	}
 };
 

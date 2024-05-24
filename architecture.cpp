@@ -1372,7 +1372,7 @@ Ref<CallingConvention> Architecture::GetFastcallCallingConvention()
 
 Ref<Platform> Architecture::GetStandalonePlatform()
 {
-	return new Platform(BNGetArchitectureStandalonePlatform(m_object));
+	return new CorePlatform(BNGetArchitectureStandalonePlatform(m_object));
 }
 
 

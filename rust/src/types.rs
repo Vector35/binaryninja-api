@@ -33,6 +33,7 @@ use crate::{
 use lazy_static::lazy_static;
 use std::ptr::null_mut;
 use std::{
+    alloc::Layout,
     borrow::{Borrow, Cow},
     collections::{HashMap, HashSet},
     ffi::CStr,
@@ -698,8 +699,9 @@ impl Drop for TypeBuilder {
 #[cfg(feature = "derive")]
 pub use binaryninja_derive::*;
 pub trait AbstractType: Sized {
-    const SIZE: usize = std::mem::size_of::<Self>();
-    const ALIGN: usize = std::mem::align_of::<Self>();
+    #[doc(hidden)]
+    const LAYOUT: Layout = Layout::new::<Self>();
+
     fn resolve_type() -> Ref<Type>;
 }
 

@@ -298,11 +298,11 @@ fn impl_abstract_structure_type(
                     (quote! { #width }, quote! { #align })
                 }
                 FieldKind::Ty(ty) => (
-                    quote! { <#ty as ::binaryninja::types::AbstractType>::SIZE },
-                    quote! { { <#ty as ::binaryninja::types::AbstractType>::ALIGN } },
+                    quote! { { <#ty as ::binaryninja::types::AbstractType>::LAYOUT.size() } },
+                    quote! { { <#ty as ::binaryninja::types::AbstractType>::LAYOUT.align() } },
                 ),
             };
-            quote! { #ident: #field_wrapper<[u8; #size], #align> }
+            quote! { #ident: #field_wrapper<#size, #align> }
         })
         .collect::<Vec<_>>();
     let args = abstract_fields
@@ -330,7 +330,7 @@ fn impl_abstract_structure_type(
         .map(|n| {
             (
                 quote! { #[repr(align(#n))] },
-                quote! { .set_alignment(Self::ALIGN) },
+                quote! { .set_alignment(Self::LAYOUT.align()) },
             )
         })
         .unzip();
@@ -348,12 +348,12 @@ fn impl_abstract_structure_type(
     Ok(quote! {
         #[repr(C)]
         #[derive(Copy, Clone)]
-        struct #field_wrapper<T, const N: usize>
+        struct #field_wrapper<const SIZE: usize, const ALIGN: usize>
         where
-            ::binaryninja::elain::Align<N>: ::binaryninja::elain::Alignment
+            ::binaryninja::elain::Align<ALIGN>: ::binaryninja::elain::Alignment
         {
-            t: T,
-            _align: ::binaryninja::elain::Align<N>,
+            t: [u8; SIZE],
+            _align: ::binaryninja::elain::Align<ALIGN>,
         }
 
         #[repr(C)]
@@ -364,13 +364,12 @@ fn impl_abstract_structure_type(
         }
 
         impl ::binaryninja::types::AbstractType for #name {
-            const SIZE: usize = ::std::mem::size_of::<#layout_name>();
-            const ALIGN: usize = ::std::mem::align_of::<#layout_name>();
+            const LAYOUT: ::std::alloc::Layout = ::std::alloc::Layout::new::<#layout_name>();
             fn resolve_type() -> ::binaryninja::rc::Ref<::binaryninja::types::Type> {
                 ::binaryninja::types::Type::structure(
                     &::binaryninja::types::Structure::builder()
                         #(.insert(#args))*
-                        .set_width(Self::SIZE as u64)
+                        .set_width(Self::LAYOUT.size() as u64)
                         .set_packed(#is_packed)
                         #set_alignment
                         #set_union

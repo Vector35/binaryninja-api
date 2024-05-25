@@ -2189,6 +2189,15 @@ bool GetLowLevelILForInstruction(
 		                      il.Const(1, (REGSZ_O(operand1) * 8) - IMM_O(operand4) - IMM_O(operand3))),
 		                  il.Const(1, (REGSZ_O(operand1) * 8) - IMM_O(operand4)))));
 		break;
+	case ARM64_SCVTF:
+		if (operand3.operandClass == NONE) {
+			il.AddInstruction(ILSETREG_O(operand1, il.FloatToInt(REGSZ_O(operand1), ILREG_O(operand2))));
+		} else {
+			if (IMM_O(operand3) > (REGSZ_O(operand1) * 8))
+				ABORT_LIFT;
+			il.AddInstruction(ILSETREG_O(operand1, il.FloatToInt(REGSZ_O(operand1), ExtractBits(il, operand2, IMM_O(operand3), 0))));
+		}
+		break;
 	case ARM64_SDIV:
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.DivSigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3))));

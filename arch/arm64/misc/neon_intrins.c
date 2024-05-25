@@ -1241,29 +1241,17 @@ uint64x1_t vcvt_n_u64_f64(float64x1_t a, const int n);                   // FCVT
 uint64x2_t vcvtq_n_u64_f64(float64x2_t a, const int n);                  // FCVTZU Vd.2D,Vn.2D,#n
 int64_t vcvtd_n_s64_f64(float64_t a, const int n);                       // FCVTZS Dd,Dn,#n
 uint64_t vcvtd_n_u64_f64(float64_t a, const int n);                      // FCVTZU Dd,Dn,#n
-float32x2_t vcvt_f32_s32(int32x2_t a);                                   // SCVTF Vd.2S,Vn.2S
-float32x4_t vcvtq_f32_s32(int32x4_t a);                                  // SCVTF Vd.4S,Vn.4S
 float32x2_t vcvt_f32_u32(uint32x2_t a);                                  // UCVTF Vd.2S,Vn.2S
 float32x4_t vcvtq_f32_u32(uint32x4_t a);                                 // UCVTF Vd.4S,Vn.4S
-float32_t vcvts_f32_s32(int32_t a);                                      // SCVTF Sd,Sn
 float32_t vcvts_f32_u32(uint32_t a);                                     // UCVTF Sd,Sn
-float64x1_t vcvt_f64_s64(int64x1_t a);                                   // SCVTF Dd,Dn
-float64x2_t vcvtq_f64_s64(int64x2_t a);                                  // SCVTF Vd.2D,Vn.2D
 float64x1_t vcvt_f64_u64(uint64x1_t a);                                  // UCVTF Dd,Dn
 float64x2_t vcvtq_f64_u64(uint64x2_t a);                                 // UCVTF Vd.2D,Vn.2D
-float64_t vcvtd_f64_s64(int64_t a);                                      // SCVTF Dd,Dn
 float64_t vcvtd_f64_u64(uint64_t a);                                     // UCVTF Dd,Dn
-float32x2_t vcvt_n_f32_s32(int32x2_t a, const int n);                    // SCVTF Vd.2S,Vn.2S,#n
-float32x4_t vcvtq_n_f32_s32(int32x4_t a, const int n);                   // SCVTF Vd.4S,Vn.4S,#n
 float32x2_t vcvt_n_f32_u32(uint32x2_t a, const int n);                   // UCVTF Vd.2S,Vn.2S,#n
 float32x4_t vcvtq_n_f32_u32(uint32x4_t a, const int n);                  // UCVTF Vd.4S,Vn.4S,#n
-float32_t vcvts_n_f32_s32(int32_t a, const int n);                       // SCVTF Sd,Sn,#n
 float32_t vcvts_n_f32_u32(uint32_t a, const int n);                      // UCVTF Sd,Sn,#n
-float64x1_t vcvt_n_f64_s64(int64x1_t a, const int n);                    // SCVTF Dd,Dn,#n
-float64x2_t vcvtq_n_f64_s64(int64x2_t a, const int n);                   // SCVTF Vd.2D,Vn.2D,#n
 float64x1_t vcvt_n_f64_u64(uint64x1_t a, const int n);                   // UCVTF Dd,Dn,#n
 float64x2_t vcvtq_n_f64_u64(uint64x2_t a, const int n);                  // UCVTF Vd.2D,Vn.2D,#n
-float64_t vcvtd_n_f64_s64(int64_t a, const int n);                       // SCVTF Dd,Dn,#n
 float64_t vcvtd_n_f64_u64(uint64_t a, const int n);                      // UCVTF Dd,Dn,#n
 float16x4_t vcvt_f16_f32(float32x4_t a);                                 // FCVTN Vd.4H,Vn.4S
 float16x8_t vcvt_high_f16_f32(float16x4_t r, float32x4_t a);             // FCVTN2 Vd.8H,Vn.4S
@@ -4284,9 +4272,6 @@ uint16_t vcgezh_f16(float16_t a);                                    // FCMGE Hd
 uint16_t vcgtzh_f16(float16_t a);                                    // FCMGT Hd,Hn,#0
 uint16_t vclezh_f16(float16_t a);                                    // FCMLE Hd,Hn,#0
 uint16_t vcltzh_f16(float16_t a);                                    // FCMLT Hd,Hn,#0
-float16_t vcvth_f16_s16(int16_t a);                                  // SCVTF Hd,Hn
-float16_t vcvth_f16_s32(int32_t a);                                  // SCVTF Hd,Hn
-float16_t vcvth_f16_s64(int64_t a);                                  // SCVTF Hd,Hn
 float16_t vcvth_f16_u16(uint16_t a);                                 // UCVTF Hd,Hn
 float16_t vcvth_f16_u32(uint32_t a);                                 // UCVTF Hd,Hn
 float16_t vcvth_f16_u64(uint64_t a);                                 // UCVTF Hd,Hn
@@ -4343,9 +4328,6 @@ uint16_t vcgeh_f16(float16_t a, float16_t b);                        // FCMGE Hd
 uint16_t vcgth_f16(float16_t a, float16_t b);                        // FCMGT Hd,Hn,Hm
 uint16_t vcleh_f16(float16_t a, float16_t b);                        // FCMGE Hd,Hn,Hm
 uint16_t vclth_f16(float16_t a, float16_t b);                        // FCMGT Hd,Hn,Hm
-float16_t vcvth_n_f16_s16(int16_t a, const int n);                   // SCVTF Hd,Hn,#n
-float16_t vcvth_n_f16_s32(int32_t a, const int n);                   // SCVTF Hd,Hn,#n
-float16_t vcvth_n_f16_s64(int64_t a, const int n);                   // SCVTF Hd,Hn,#n
 float16_t vcvth_n_f16_u16(uint16_t a, const int n);                  // UCVTF Hd,Hn,#n
 float16_t vcvth_n_f16_u32(uint32_t a, const int n);                  // UCVTF Hd,Hn,#n
 float16_t vcvth_n_f16_u64(uint64_t a, const int n);                  // UCVTF Hd,Hn,#n
@@ -4379,8 +4361,6 @@ uint16x4_t vclez_f16(float16x4_t a);                                 // FCMLE Vd
 uint16x8_t vclezq_f16(float16x8_t a);                                // FCMLE Vd.8H,Vn.8H,#0
 uint16x4_t vcltz_f16(float16x4_t a);                                 // FCMLT Vd.4H,Vn.4H,#0
 uint16x8_t vcltzq_f16(float16x8_t a);                                // FCMLT Vd.8H,Vn.8H,#0
-float16x4_t vcvt_f16_s16(int16x4_t a);                               // SCVTF Vd.4H,Vn.4H,#0
-float16x8_t vcvtq_f16_s16(int16x8_t a);                              // SCVTF Vd.8H,Vn.8H,#0
 float16x4_t vcvt_f16_u16(uint16x4_t a);                              // UCVTF Vd.4H,Vn.4H,#0
 float16x8_t vcvtq_f16_u16(uint16x8_t a);                             // UCVTF Vd.8H,Vn.8H
 int16x4_t vcvt_s16_f16(float16x4_t a);                               // FCVTZS Vd.4H,Vn.4H
@@ -4447,8 +4427,6 @@ uint16x4_t vcle_f16(float16x4_t a, float16x4_t b);                   // FCMGE Vd
 uint16x8_t vcleq_f16(float16x8_t a, float16x8_t b);                  // FCMGE Vd.8H,Vn.8H,Vm.8H
 uint16x4_t vclt_f16(float16x4_t a, float16x4_t b);                   // FCMGT Vd.4H,Vn.4H,Vm.4H
 uint16x8_t vcltq_f16(float16x8_t a, float16x8_t b);                  // FCMGT Vd.8H,Vn.8H,Vm.8H
-float16x4_t vcvt_n_f16_s16(int16x4_t a, const int n);                // SCVTF Vd.4H,Vn.4H,#n
-float16x8_t vcvtq_n_f16_s16(int16x8_t a, const int n);               // SCVTF Vd.8H,Vn.8H,#n
 float16x4_t vcvt_n_f16_u16(uint16x4_t a, const int n);               // UCVTF Vd.4H,Vn.4H,#n
 float16x8_t vcvtq_n_f16_u16(uint16x8_t a, const int n);              // UCVTF Vd.8H,Vn.8H,#n
 int16x4_t vcvt_n_s16_f16(float16x4_t a, const int n);                // FCVTZS Vd.4H,Vn.4H,#n

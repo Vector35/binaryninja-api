@@ -564,8 +564,12 @@ tests_ucvtf2 = [
 ]
 
 tests_scvtf = [
-    # scvtf d1, x15                                          SCVTF_D64_float2int
-    (b'\xe1\x01b\x9e', 'LLIL_INTRINSIC([d1],vcvtd_f64_s64,[LLIL_REG.q(x15)])')
+     # scvtf d1, x15                                          SCVTF_D64_float2int
+    (b'\xe1\x01b\x9e', 'LLIL_SET_REG.q(d1,LLIL_FLOAT_TO_INT.q(LLIL_REG.q(x15)))'),
+    # scvtf d0, d1
+    (b'\x20\xd8\x61\x5e', 'LLIL_SET_REG.q(d0,LLIL_FLOAT_TO_INT.q(LLIL_REG.q(d1)))'),
+    # svctf d0, d1, #0xf
+    (b'\x20\xe4\x71\x5f', 'LLIL_SET_REG.q(,LLIL_FLOAT_TO_INT.q(LLIL_AND.q(LLIL_REG.q(d1),LLIL_CONST.q(0x7FFF))))'),
 ]
 
 tests_ret = [

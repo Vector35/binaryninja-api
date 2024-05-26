@@ -34,6 +34,8 @@ impl AbstractField {
         let Some(ident) = field.ident else {
             return Err(field.span().error("field must be named"));
         };
+
+        // If the field is a pointer, we want the type being pointed at, not the pointer itself.
         let kind = match field.ty {
             Type::Ptr(ty) => {
                 let Some(width) = pointer_width else {
@@ -47,6 +49,8 @@ impl AbstractField {
             }
             _ => FieldKind::Ty(field.ty),
         };
+
+        // Fields may be decorated with either `#[binja(name = "...")]` or `#[binja(named)]`.
         let name = find_binja_attr(&field.attrs)?
             .map(|attr| match attr.kind {
                 BinjaAttrKind::PointerWidth(_) => Err(attr.span.error(
@@ -61,9 +65,11 @@ impl AbstractField {
                 }
             })
             .transpose()?;
+
         Ok(Self { kind, ident, name })
     }
 
+    /// Transforms the `AbstractField` into a token stream that constructs a binja `Type` object
     fn resolved_ty(&self) -> TokenStream {
         let ty = self.kind.ty();
         let mut resolved = quote! { <#ty as ::binaryninja::types::AbstractType>::resolve_type() };
@@ -93,9 +99,19 @@ enum BinjaAttrKind {
     Named(Option<String>),
 }
 
+/// Given a list of attributes, look for a `#[binja(...)]` attribute. At most one copy of the
+/// attribute is allowed to decorate an item (i.e. a type or field). If more than one copy is
+/// present, we throw an error.
+///
+/// Three properties are supported, and for any given item they are mutually exclusive:
+///  - `pointer_width`: Expects an integer literal. Only allowed on types, not fields.
+///  - `name`: Expects a string literal. Only allowed on fields.
+///  - `named`: Must be a bare path. Only allowed on fields.
 fn find_binja_attr(attrs: &[Attribute]) -> Result<Option<BinjaAttr>> {
+    // Use a `OnceCell` to assert that we only allow a single `#[binja(...)]` attribute per-item.
     let binja_attr = OnceCell::new();
 
+    // Wrapper function for setting the value of the `OnceCell` above.
     let set_attr = |attr: BinjaAttr| {
         let span = attr.span;
         binja_attr
@@ -111,6 +127,7 @@ fn find_binja_attr(attrs: &[Attribute]) -> Result<Option<BinjaAttr>> {
             let meta = attr.parse_args::<Meta>()?;
             let meta_ident = meta.path().require_ident()?;
             if meta_ident == "pointer_width" {
+                // #[binja(pointer_width = <int>)]
                 let value = &meta.require_name_value()?.value;
                 if let Expr::Lit(expr) = &value {
                     if let Lit::Int(val) = &expr.lit {
@@ -123,6 +140,7 @@ fn find_binja_attr(attrs: &[Attribute]) -> Result<Option<BinjaAttr>> {
                 }
                 return Err(value.span().error("expected integer literal"));
             } else if meta_ident == "name" {
+                // #[binja(name = "...")]
                 let value = &meta.require_name_value()?.value;
                 if let Expr::Lit(expr) = &value {
                     if let Lit::Str(lit) = &expr.lit {
@@ -135,6 +153,7 @@ fn find_binja_attr(attrs: &[Attribute]) -> Result<Option<BinjaAttr>> {
                 }
                 return Err(value.span().error(r#"expected string literal"#));
             } else if meta_ident == "named" {
+                // #[binja(named)]
                 meta.require_path_only()?;
                 set_attr(BinjaAttr {
                     kind: BinjaAttrKind::Named(None),
@@ -150,6 +169,7 @@ fn find_binja_attr(attrs: &[Attribute]) -> Result<Option<BinjaAttr>> {
     Ok(binja_attr.into_inner())
 }
 
+/// Struct representing the contents of all `#[repr(...)]` attributes decorating a type.
 struct Repr {
     c: bool,
     packed: Option<Option<LitInt>>,
@@ -158,6 +178,8 @@ struct Repr {
 }
 
 impl Repr {
+    /// Scan through a list of attributes and finds every instance of a `#[repr(...)]` attribute,
+    /// then initialize `Self` based off the collective contents of those attributes.
     fn from_attrs(attrs: &[Attribute]) -> Result<Self> {
         let mut c = false;
         let mut packed = None;
@@ -213,23 +235,34 @@ fn ident_in_list<const N: usize>(ident: &Ident, list: [&'static str; N]) -> bool
     list.iter().any(|id| ident == id)
 }
 
+/// Entry point to the proc-macro.
 #[proc_macro_derive(AbstractType, attributes(binja))]
 pub fn abstract_type_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
+    // Transforming the error diagnostic into tokens for emission allows the business logic to
+    // return `Result` and make use of the `?` operator like any normal Rust program
     match impl_abstract_type(input) {
         Ok(tokens) => tokens.into(),
         Err(diag) => diag.emit_as_item_tokens().into(),
     }
 }
 
+/// Main business logic of the macro. Parses any relevant attributes decorating the type, then
+/// defers execution based on the kind of type: struct, enum, or union.
 fn impl_abstract_type(ast: DeriveInput) -> Result<TokenStream> {
     let repr = Repr::from_attrs(&ast.attrs)?;
     let width = find_binja_attr(&ast.attrs)?
         .map(|attr| match attr.kind {
-            BinjaAttrKind::PointerWidth(width) => Ok(width),
+            BinjaAttrKind::PointerWidth(width) => {
+                if let Data::Enum(_) = ast.data {
+                    Err(attr.span.error("`#[binja(pointer_width)]` is only supported on structs and unions, not enums"))
+                } else {
+                    Ok(width)
+                }
+            }
             BinjaAttrKind::Named(Some(_)) => Err(attr
                 .span
-                .error(r#"`#[binja(name = "...")] is only supported on fields"#)),
+                .error(r#"`#[binja(name)] is only supported on fields"#)),
             BinjaAttrKind::Named(None) => Err(attr
                 .span
                 .error("`#[binja(named)]` is only supported on fields")),
@@ -240,23 +273,23 @@ fn impl_abstract_type(ast: DeriveInput) -> Result<TokenStream> {
         return Err(ast.generics.span().error("type must not be generic"));
     }
 
-    let ident = ast.ident;
     match ast.data {
         Data::Struct(s) => match s.fields {
             Fields::Named(fields) => {
-                impl_abstract_structure_type(ident, fields, repr, width, StructureKind::Struct)
+                impl_abstract_structure_type(ast.ident, fields, repr, width, StructureKind::Struct)
             }
-            Fields::Unnamed(_) => Err(s
-                .fields
-                .span()
-                .error("tuple structs are unsupported; struct must have named fields")),
-            Fields::Unit => Err(ident
-                .span()
-                .error("unit structs are unsupported; provide at least one named field")),
+            Fields::Unnamed(_) => Err(s.fields.span().error(
+                "tuple structs are unsupported; \
+                struct must have named fields",
+            )),
+            Fields::Unit => Err(ast.ident.span().error(
+                "unit structs are unsupported; \
+                 provide at least one named field",
+            )),
         },
-        Data::Enum(e) => impl_abstract_enum_type(ident, e.variants, repr),
+        Data::Enum(e) => impl_abstract_enum_type(ast.ident, e.variants, repr),
         Data::Union(u) => {
-            impl_abstract_structure_type(ident, u.fields, repr, width, StructureKind::Union)
+            impl_abstract_structure_type(ast.ident, u.fields, repr, width, StructureKind::Union)
         }
     }
 }
@@ -266,6 +299,70 @@ enum StructureKind {
     Union,
 }
 
+/// Implements the `AbstractType` trait for either a struct or union, based on the value of `kind`.
+///
+/// Unlike C-style enums, structs and unions can contain other types within them that affect their
+/// size and alignment. For example, the size of a struct is at least the sum of the sizes of its
+/// fields (plus any padding), and its alignment is equal to that of the most-aligned field.
+/// Likewise, a union's size is at least that of its largest field.
+///
+/// Normally this would be fine, because the compiler can give you size and alignment information
+/// using `std::mem::{size_of, align_of}`. However, the `#[binja(pointer_width)]` attribute allows
+/// users to change the width of pointer fields to be different in Binja compared to the host CPU
+/// architecture, meaning the value calculated by the compiler will be wrong in that case. What's
+/// worse, is that a pointer field with custom width not only affects the size/alignment of its
+/// parent struct, but anything that contains *that* struct, and so on up the tree.
+///
+/// So, we need a way to propagate the modified layout information at compile-time. To accomplish
+/// this, we use the `AbstractType::LAYOUT` associated constant, which by default matches the
+/// layout of the struct as calculated by the compiler, but which can be swapped out for any other
+/// valid `std::alloc::Layout` object when implementing the `AbstractType` trait. We then create a
+/// mock-type with the desired custom layout and use that for propagation.
+///
+/// In order to mock a type, we make use of the following construction:
+///
+/// ```ignore
+/// #[repr(C)]
+/// struct Mock<const SIZE: usize, const ALIGN: usize>
+/// where:
+///     elain::Align<ALIGN>: elain::Alignment,
+/// {
+///     t: [u8; SIZE],
+///     _align: elain::Align<ALIGN>
+/// }
+/// ```
+///
+/// The `elain::Align` type is a zero-size type with a const-generic parameter specifying its
+/// alignment. The trait bound serves to restrict the possible values of `ALIGN` to only those
+/// valid for specifying alignment (powers of two). Additionally, we know that `[u8; SIZE]` is
+/// always of size `SIZE`, and alignment 1. Therefore, the `Mock` type is guaranteed to be of size
+/// `SIZE` and alignment equal to `ALIGN`.
+///
+/// This constructed `Mock` type allows us to generate a struct with arbitrary layout, which we can
+/// use to mimic the layout of another struct:
+///
+/// ```ignore
+/// #[derive(AbstractType)]
+/// #[repr(C)]
+/// struct S {
+///     first: u8,
+///     second: u16,
+///     third: u64,
+/// }
+///
+/// // Identical layout to `S` above
+/// #[repr(C)]
+/// struct __S_layout {
+///     first: Mock<1, 1>,
+///     second: Mock<2, 2>,
+///     third: Mock<8, 8>,
+/// }
+/// ```
+///
+/// Then, we can propagate any changes in the layout of `S` (due to custom pointer widths) by
+/// setting the `S::LAYOUT` constant equal to `alloc::Layout<__S_layout>` rather than the default
+/// value of `alloc::Layout<S>`. Then, when mocking fields of type `S`, we use `S::LAYOUT.size()`
+/// and `S::LAYOUT.align()` for the const-generic parameters of `Mock`, instead of just integers.
 fn impl_abstract_structure_type(
     name: Ident,
     fields: FieldsNamed,
@@ -286,25 +383,10 @@ fn impl_abstract_structure_type(
         .into_iter()
         .map(|field| AbstractField::from_field(field, &name, pointer_width))
         .collect::<Result<Vec<_>>>()?;
+
+    // Generate the arguments to `StructureBuilder::insert`. Luckily `mem::offset_of!` was stabilized in
+    // Rust 1.77 or otherwise this would be a lot more complicated.
     let layout_name = format_ident!("__{name}_layout");
-    let field_wrapper = format_ident!("__{name}_field_wrapper");
-    let layout_fields = abstract_fields
-        .iter()
-        .map(|field| {
-            let ident = &field.ident;
-            let (size, align) = match &field.kind {
-                FieldKind::Ptr(_, width) => {
-                    let align = width.next_power_of_two();
-                    (quote! { #width }, quote! { #align })
-                }
-                FieldKind::Ty(ty) => (
-                    quote! { { <#ty as ::binaryninja::types::AbstractType>::LAYOUT.size() } },
-                    quote! { { <#ty as ::binaryninja::types::AbstractType>::LAYOUT.align() } },
-                ),
-            };
-            quote! { #ident: #field_wrapper<#size, #align> }
-        })
-        .collect::<Vec<_>>();
     let args = abstract_fields
         .iter()
         .map(|field| {
@@ -320,6 +402,33 @@ fn impl_abstract_structure_type(
             }
         })
         .collect::<Vec<_>>();
+
+    // Calculate size and alignment for each field - these may differ from the compiler's
+    // calculated values so we use the construction discussed above to mock/propagate them.
+    let field_wrapper = format_ident!("__{name}_field_wrapper");
+    let layout_fields = abstract_fields
+        .iter()
+        .map(|field| {
+            let ident = &field.ident;
+            let (size, align) = match &field.kind {
+                // Since pointers can be of arbitrary size as specified by the user, we manually
+                // calculate size/alignment for them.
+                FieldKind::Ptr(_, width) => {
+                    let align = width.next_power_of_two();
+                    (quote! { #width }, quote! { #align })
+                }
+                // All other types defer to the value of Self::LAYOUT
+                FieldKind::Ty(ty) => (
+                    quote! { { <#ty as ::binaryninja::types::AbstractType>::LAYOUT.size() } },
+                    quote! { { <#ty as ::binaryninja::types::AbstractType>::LAYOUT.align() } },
+                ),
+            };
+            quote! { #ident: #field_wrapper<#size, #align> }
+        })
+        .collect::<Vec<_>>();
+
+    // If the struct/union is marked `#[repr(packed)]` or `#[repr(align(...))]`, we decorate the
+    // mocked layout type with those as well
     let is_packed = repr.packed.is_some();
     let packed = repr.packed.map(|size| match size {
         Some(n) => quote! { #[repr(packed(#n))] },
@@ -334,17 +443,18 @@ fn impl_abstract_structure_type(
             )
         })
         .unzip();
+
+    // Distinguish between structs and unions
     let (kind, set_union) = match kind {
         StructureKind::Struct => (quote! { struct }, None),
         StructureKind::Union => (
             quote! { union },
             Some(quote! {
-                .set_structure_type(
-                    ::binaryninja::types::StructureType::UnionStructureType
-                )
+                .set_structure_type(::binaryninja::types::StructureType::UnionStructureType)
             }),
         ),
     };
+
     Ok(quote! {
         #[repr(C)]
         #[derive(Copy, Clone)]
@@ -380,6 +490,7 @@ fn impl_abstract_structure_type(
     })
 }
 
+/// Implements the `AbstractType` trait for an enum.
 fn impl_abstract_enum_type(
     name: Ident,
     variants: impl IntoIterator<Item = Variant>,
@@ -400,6 +511,9 @@ fn impl_abstract_enum_type(
             .span()
             .error("must provide a primitive `repr` type, e.g. `u32`"));
     };
+
+    // Extract the variant names and the value of their discriminants. Variants must not hold any
+    // nested data (in other words, they must be simple C-style identifiers).
     let variants = variants
         .into_iter()
         .map(|variant| {
@@ -415,6 +529,7 @@ fn impl_abstract_enum_type(
             Ok(quote! { stringify!(#ident), #discriminant as u64 })
         })
         .collect::<Result<Vec<_>>>()?;
+
     Ok(quote! {
         impl ::binaryninja::types::AbstractType for #name {
             fn resolve_type() -> ::binaryninja::rc::Ref<::binaryninja::types::Type> {

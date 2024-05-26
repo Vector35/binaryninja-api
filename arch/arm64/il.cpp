@@ -2270,6 +2270,41 @@ bool GetLowLevelILForInstruction(
 
 		break;
 	}
+	case ARM64_SXTL:
+	case ARM64_SXTL2:
+	case ARM64_SSHLL:
+	case ARM64_SSHLL2:
+	{
+		Register srcs[16], dsts[16];
+		int dst_n = unpack_vector(operand1, dsts);
+		int src_n = unpack_vector(operand2, srcs);
+
+		// We cannot check that the src and dst counts are the same here
+		// because the 2 variants use different count arrange specs, e.g.
+		// sxtl2 v0.2d, v1.4s
+
+		int left_shift = 0;
+		if (instr.operation == ARM64_SSHLL || instr.operation == ARM64_SSHLL2)
+			left_shift = IMM_O(operand3);
+
+		int two_variant_shift = 0;
+		if (instr.operation == ARM64_SXTL2 || instr.operation == ARM64_SSHLL2)
+			two_variant_shift = 64;
+
+		int dst_size = get_register_size(dsts[0]);
+		int src_size = get_register_size(srcs[0]);
+
+		for (int i = 0; i < dst_n; ++i)
+			il.AddInstruction(il.SetRegister(dst_size, dsts[i],
+				il.SignExtend(dst_size,
+					il.ShiftLeft(dst_size,
+						il.LogicalShiftRight(src_size,
+							il.Register(src_size, srcs[i]),
+							il.Const(1, two_variant_shift)),
+						il.Const(1, left_shift)))));
+
+		break;
+	}
 	case ARM64_ST1:
 		LoadStoreVector(il, false, instr.operands[0], instr.operands[1]);
 		break;

@@ -15,6 +15,21 @@ path_il_h = os.path.join(path_here, 'il.h')
 
 ATTR_PTR_AUTH = ILInstructionAttribute(16) # enum BNILInstructionAttribute.SrcInstructionUsesPointerAuth from api/binaryninjacore.h
 
+tests_sshll = [
+    # sshll v0.2d, v0.2s, #0xf
+    (b'\x00\xa4\x2f\x0f', 'LLIL_SET_REG.q(v0.d[0],LLIL_SX.q(LLIL_LSL.q(LLIL_LSR.d(LLIL_REG.d(v0.s[0]),LLIL_CONST.b(0x0)),LLIL_CONST.b(0xF))));' + \
+     ' LLIL_SET_REG.q(v0.d[1],LLIL_SX.q(LLIL_LSL.q(LLIL_LSR.d(LLIL_REG.d(v0.s[1]),LLIL_CONST.b(0x0)),LLIL_CONST.b(0xF))))'),
+    # sxtl v0.2d, v0.2s
+    (b'\x00\xa4\x20\x0f', 'LLIL_SET_REG.q(v0.d[0],LLIL_SX.q(LLIL_LSL.q(LLIL_LSR.d(LLIL_REG.d(v0.s[0]),LLIL_CONST.b(0x0)),LLIL_CONST.b(0x0))));' + \
+     ' LLIL_SET_REG.q(v0.d[1],LLIL_SX.q(LLIL_LSL.q(LLIL_LSR.d(LLIL_REG.d(v0.s[1]),LLIL_CONST.b(0x0)),LLIL_CONST.b(0x0))))'),
+    # sshll2 v0.2d, v0.4s, #0xf
+    (b'\x00\xa4\x2f\x4f', 'LLIL_SET_REG.q(v0.d[0],LLIL_SX.q(LLIL_LSL.q(LLIL_LSR.d(LLIL_REG.d(v0.s[0]),LLIL_CONST.b(0x40)),LLIL_CONST.b(0xF))));' + \
+     ' LLIL_SET_REG.q(v0.d[1],LLIL_SX.q(LLIL_LSL.q(LLIL_LSR.d(LLIL_REG.d(v0.s[1]),LLIL_CONST.b(0x40)),LLIL_CONST.b(0xF))))'),
+    # sxtl2 v0.2d, v0.2s
+    (b'\x00\xa4\x20\x4f', 'LLIL_SET_REG.q(v0.d[0],LLIL_SX.q(LLIL_LSL.q(LLIL_LSR.d(LLIL_REG.d(v0.s[0]),LLIL_CONST.b(0x40)),LLIL_CONST.b(0x0))));' + \
+     ' LLIL_SET_REG.q(v0.d[1],LLIL_SX.q(LLIL_LSL.q(LLIL_LSR.d(LLIL_REG.d(v0.s[1]),LLIL_CONST.b(0x40)),LLIL_CONST.b(0x0))))'),
+]
+
 tests_udf = [
     # udf #0
     (b'\x00\x00\x00\x00', 'LLIL_TRAP(0)'),
@@ -561,11 +576,6 @@ tests_ucvtf2 = [
     # UCVTF_asisdmiscfp16_R 0111111001111001110110xxxxxxxxxx
     # ucvtf h30, h0
     (b'\x1E\xD8\x79\x7E', 'LLIL_INTRINSIC([h30],vcvth_f16_u16,[LLIL_REG.w(h0)])')
-]
-
-tests_scvtf = [
-    # scvtf d1, x15                                          SCVTF_D64_float2int
-    (b'\xe1\x01b\x9e', 'LLIL_INTRINSIC([d1],vcvtd_f64_s64,[LLIL_REG.q(x15)])')
 ]
 
 tests_ret = [
@@ -2400,7 +2410,6 @@ test_cases = \
     tests_ld1 + \
     tests_ld2 + \
     tests_st1 + \
-    tests_scvtf + \
     [
     # some vectors loads/stores that do not fill the entire register
     # TODO: ld1/st1 with different addressing modes
@@ -2977,6 +2986,46 @@ test_cases = \
                          ' LLIL_GOTO(8)'), # ccmp w8, #30, #8, mi
     (b'\x1F\x20\x03\xD5', 'LLIL_NOP()'), # nop, gets optimized from function
 ]
+
+test_cases = \
+    tests_sshll + \
+    tests_udf + \
+    tests_pac + \
+    tests_load_acquire_store_release + \
+    tests_movk + \
+    tests_mvni + \
+    tests_2791 + \
+    tests_ucvtf + \
+    tests_ucvtf2 + \
+    tests_scvtf + \
+    tests_ret + \
+    tests_svc_hvc_smc + \
+    tests_clrex + \
+    tests_xtn_xtn2 + \
+    tests_dc + \
+    tests_uxtl_uxtl2 + \
+    tests_ldadd + \
+    tests_swp + \
+    tests_dup + \
+    tests_stlr + \
+    tests_ldnp + \
+    tests_stnp + \
+    tests_mov + \
+    tests_movi + \
+    tests_fsub + \
+    tests_fadd + \
+    tests_fmul + \
+    tests_fcvt + \
+    tests_fccmp_fccmpe + \
+    tests_fcmp_fcmpe + \
+    tests_fcsel + \
+    tests_fmov + \
+    tests_sha + \
+    tests_rev + \
+    tests_ld1 + \
+    tests_ld2 + \
+    tests_st1 + \
+    tests_grab_bag
 
 def il2str(il):
     sz_lookup = {1:'.b', 2:'.w', 4:'.d', 8:'.q', 16:'.o'}

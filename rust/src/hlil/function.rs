@@ -6,7 +6,7 @@ use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
 use crate::function::Function;
 use crate::rc::{Array, Ref, RefCountable};
-use crate::types::SSAVariable;
+use crate::types::{SSAVariable, Variable};
 
 use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelILLiftedInstruction};
 
@@ -195,6 +195,15 @@ impl HighLevelILFunction {
                 instr.index,
             )
         }
+    }
+
+    pub fn variable_definitions(&self, variable: Variable) -> Array<HighLevelILInstruction> {
+        let mut count = 0;
+        let defs = unsafe {
+            BNGetHighLevelILVariableDefinitions(self.handle, &variable.raw(), &mut count)
+        };
+        assert!(!defs.is_null());
+        unsafe { Array::new(defs, count, self.to_owned()) }
     }
 }
 

@@ -1,9 +1,9 @@
-use binaryninjacore_sys::BNGetHighLevelILByIndex;
-use binaryninjacore_sys::BNHighLevelILOperation;
+use binaryninjacore_sys::*;
 
 use crate::architecture::CoreIntrinsic;
+use crate::disassembly::DisassemblyTextLine;
 use crate::operand_iter::OperandIter;
-use crate::rc::Ref;
+use crate::rc::{Array, Ref};
 use crate::types::{ConstantData, RegisterValue, RegisterValueType, SSAVariable, Variable};
 
 use super::operation::*;
@@ -881,6 +881,21 @@ impl HighLevelILInstruction {
             size: self.size,
             kind,
         }
+    }
+
+    /// HLIL text lines
+    pub fn lines(&self) -> Array<DisassemblyTextLine> {
+        let mut count = 0;
+        let lines = unsafe {
+            BNGetHighLevelILExprText(
+                self.function.handle,
+                self.index,
+                self.function.full_ast,
+                &mut count,
+                core::ptr::null_mut(),
+            )
+        };
+        unsafe { Array::new(lines, count, ()) }
     }
 
     fn lift_operand(&self, expr_idx: usize) -> Box<HighLevelILLiftedInstruction> {

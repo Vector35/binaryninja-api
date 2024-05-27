@@ -171,8 +171,8 @@ pub use binaryninjacore_sys::BNEndianness as Endianness;
 use binaryview::BinaryView;
 use metadata::Metadata;
 use metadata::MetadataType;
-use rc::Ref;
 use string::BnStrCompatible;
+use string::IntoJson;
 
 // Commented out to suppress unused warnings
 // const BN_MAX_INSTRUCTION_LENGTH: u64 = 256;
@@ -227,24 +227,32 @@ pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::Binar
 /// let bv = binaryninja::load_with_options("/bin/cat", true, Some(settings))
 ///     .expect("Couldn't open `/bin/cat`");
 /// ```
-pub fn load_with_options<S: BnStrCompatible>(
+pub fn load_with_options<S: BnStrCompatible, O: IntoJson>(
     filename: S,
     update_analysis_and_wait: bool,
-    options: Option<Ref<Metadata>>,
+    options: Option<O>,
 ) -> Option<rc::Ref<binaryview::BinaryView>> {
     let filename = filename.into_bytes_with_nul();
 
     let options_or_default = if let Some(opt) = options {
-        opt
+        opt.get_json_string()
+            .ok()?
+            .into_bytes_with_nul()
+            .as_ref()
+            .to_vec()
     } else {
         Metadata::new_of_type(MetadataType::KeyValueDataType)
+            .get_json_string()
+            .ok()?
+            .as_ref()
+            .to_vec()
     };
 
     let handle = unsafe {
         binaryninjacore_sys::BNLoadFilename(
             filename.as_ref().as_ptr() as *mut _,
             update_analysis_and_wait,
-            options_or_default.get_json_string().unwrap().as_ref().as_ptr() as *mut _,
+            options_or_default.as_ptr() as *mut core::ffi::c_char,
             None,
         )
     };

@@ -1,5 +1,5 @@
-use crate::rc::{Array, CoreArrayProvider, Guard, CoreArrayProviderInner, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
+use crate::string::{BnStrCompatible, BnString, IntoJson};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::os::raw::c_char;
@@ -700,5 +700,26 @@ impl TryFrom<&Metadata> for HashMap<String, Ref<Metadata>> {
         value
             .get_value_store()
             .map(|m| m.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
+    }
+}
+
+impl IntoJson for &Metadata {
+    type Output = BnString;
+    fn get_json_string(self) -> Result<BnString, ()> {
+        Metadata::get_json_string(self)
+    }
+}
+
+impl IntoJson for Metadata {
+    type Output = BnString;
+    fn get_json_string(self) -> Result<BnString, ()> {
+        Metadata::get_json_string(&self)
+    }
+}
+
+impl IntoJson for Ref<Metadata> {
+    type Output = BnString;
+    fn get_json_string(self) -> Result<BnString, ()> {
+        Metadata::get_json_string(&self)
     }
 }

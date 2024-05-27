@@ -1,5 +1,6 @@
 use std::env;
 
+use binaryninja::architecture::Intrinsic;
 use binaryninja::binaryview::BinaryViewExt;
 use binaryninja::mlil::MediumLevelILLiftedOperand;
 use binaryninja::mlil::{MediumLevelILFunction, MediumLevelILLiftedInstruction};

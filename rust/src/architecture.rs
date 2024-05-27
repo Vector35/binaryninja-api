@@ -983,8 +983,8 @@ impl FlagGroup for CoreFlagGroup {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub struct CoreIntrinsic(*mut BNArchitecture, u32);
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct CoreIntrinsic(pub(crate) *mut BNArchitecture, pub(crate) u32);
 
 impl Intrinsic for crate::architecture::CoreIntrinsic {
     fn name(&self) -> Cow<str> {

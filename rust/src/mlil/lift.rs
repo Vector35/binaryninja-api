@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 
+use crate::architecture::CoreIntrinsic;
 use crate::rc::Ref;
-use crate::types::{ConstantData, ILIntrinsic, SSAVariable, Variable};
+use crate::types::{ConstantData, SSAVariable, Variable};
 
 use super::operation::*;
 use super::MediumLevelILFunction;
@@ -9,7 +10,7 @@ use super::MediumLevelILFunction;
 #[derive(Clone)]
 pub enum MediumLevelILLiftedOperand {
     ConstantData(ConstantData),
-    Intrinsic(ILIntrinsic),
+    Intrinsic(CoreIntrinsic),
     Expr(MediumLevelILLiftedInstruction),
     ExprList(Vec<MediumLevelILLiftedInstruction>),
     Float(f64),

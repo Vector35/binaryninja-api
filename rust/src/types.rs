@@ -1194,11 +1194,9 @@ impl Type {
         }
     }
 
-    pub fn generate_auto_demangled_type_id<'a, S: BnStrCompatible>(name: S) -> &'a str {
+    pub fn generate_auto_demangled_type_id<S: BnStrCompatible>(name: S) -> BnString {
         let mut name = QualifiedName::from(name);
-        unsafe { CStr::from_ptr(BNGenerateAutoDemangledTypeId(&mut name.0)) }
-            .to_str()
-            .unwrap()
+        unsafe { BnString::from_raw(BNGenerateAutoDemangledTypeId(&mut name.0)) }
     }
 }
 
@@ -2715,29 +2713,6 @@ impl<S: BnStrCompatible> DataVariableAndName<S> {
     pub fn type_with_confidence(&self) -> Conf<Ref<Type>> {
         Conf::new(self.t.contents.clone(), self.t.confidence)
     }
-}
-
-/////////////////////////
-// ILIntrinsic
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ILIntrinsic {
-    arch: CoreArchitecture,
-    index: u32,
-}
-
-impl ILIntrinsic {
-    pub(crate) fn new(arch: CoreArchitecture, index: u32) -> Self {
-        Self { arch, index }
-    }
-
-    pub fn name(&self) -> &str {
-        let name_ptr = unsafe { BNGetArchitectureIntrinsicName(self.arch.0, self.index) };
-        let name_raw = unsafe { core::ffi::CStr::from_ptr(name_ptr) };
-        name_raw.to_str().unwrap()
-    }
-
-    // TODO impl inputs and outputs function
 }
 
 /////////////////////////

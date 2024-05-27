@@ -1,11 +1,10 @@
 use binaryninjacore_sys::BNGetHighLevelILByIndex;
 use binaryninjacore_sys::BNHighLevelILOperation;
 
+use crate::architecture::CoreIntrinsic;
 use crate::operand_iter::OperandIter;
 use crate::rc::Ref;
-use crate::types::{
-    ConstantData, ILIntrinsic, RegisterValue, RegisterValueType, SSAVariable, Variable,
-};
+use crate::types::{ConstantData, RegisterValue, RegisterValueType, SSAVariable, Variable};
 
 use super::operation::*;
 use super::{HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLiftedInstructionKind};
@@ -812,11 +811,11 @@ impl HighLevelILInstruction {
                 cond_false: self.lift_operand(op.cond_false),
             }),
             Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
-                intrinsic: ILIntrinsic::new(self.function.get_function().arch(), op.intrinsic),
+                intrinsic: CoreIntrinsic(self.function.get_function().arch().0, op.intrinsic),
                 params: self.lift_instruction_list(op.first_param, op.num_params),
             }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
-                intrinsic: ILIntrinsic::new(self.function.get_function().arch(), op.intrinsic),
+                intrinsic: CoreIntrinsic(self.function.get_function().arch().0, op.intrinsic),
                 params: self.lift_instruction_list(op.first_param, op.num_params),
                 dest_memory: op.dest_memory,
                 src_memory: op.src_memory,

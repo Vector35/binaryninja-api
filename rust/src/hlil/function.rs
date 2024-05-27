@@ -174,10 +174,26 @@ impl HighLevelILFunction {
         unsafe { Array::new(instrs, count, self.to_owned()) }
     }
 
-    /// Determines if `ssa_var` is live at any point in the function
+    /// Determines if `variable` is live at any point in the function
     pub fn is_ssa_variable_live(&self, variable: SSAVariable) -> bool {
         unsafe {
             BNIsHighLevelILSSAVarLive(self.handle, &variable.variable.raw(), variable.version)
+        }
+    }
+
+    /// Determines if `variable` is live at a given point in the function
+    pub fn is_ssa_variable_live_at(
+        &self,
+        variable: SSAVariable,
+        instr: &HighLevelILInstruction,
+    ) -> bool {
+        unsafe {
+            BNIsHighLevelILSSAVarLiveAt(
+                self.handle,
+                &variable.variable.raw(),
+                variable.version,
+                instr.index,
+            )
         }
     }
 }

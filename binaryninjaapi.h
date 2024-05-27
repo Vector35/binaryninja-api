@@ -15840,7 +15840,7 @@ namespace BinaryNinja {
 			"message"            string                                   None                 Yes        An optional message with additional emphasis
 			"readOnly"           bool                                     None                 Yes        Only enforced by UI elements
 			"optional"           bool                                     None                 Yes        Indicates setting can be null
-			"hidden"             bool                                     "type" is "string"   Yes        Indicates the UI should conceal the content
+			"hidden"             bool                                     "type" is "string"   Yes        Indicates the UI should conceal the content. The "ignore" property is required to specify the applicable storage scopes
 			"requiresRestart     bool                                     None                 Yes        Enable restart notification in the UI upon change
 			"uiSelectionAction"  string                                   "type" is "string"   Yes        {"file", "directory", <Registered UIAction Name>} Informs the UI to add a button to open a selection dialog or run a registered UIAction
 			==================   ======================================   ==================   ========   =======================================================================

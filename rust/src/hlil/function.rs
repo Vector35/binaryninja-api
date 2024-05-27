@@ -6,6 +6,7 @@ use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
 use crate::function::Function;
 use crate::rc::{Array, Ref, RefCountable};
+use crate::types::SSAVariable;
 
 use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelILLiftedInstruction};
 
@@ -66,7 +67,7 @@ impl HighLevelILFunction {
         })
     }
 
-    pub fn set_root(&self, new_root: HighLevelILInstruction) {
+    pub fn set_root(&self, new_root: &HighLevelILInstruction) {
         unsafe { BNSetHighLevelILRootExpr(self.handle, new_root.index) }
     }
 
@@ -127,6 +128,25 @@ impl HighLevelILFunction {
     pub fn set_current_address(&self, address: u64, arch: Option<CoreArchitecture>) {
         let arch = arch.unwrap_or_else(|| self.get_function().arch()).0;
         unsafe { BNHighLevelILSetCurrentAddress(self.handle, arch, address) }
+    }
+
+    /// Gets the instruction that contains the given SSA variable's definition.
+    ///
+    /// Since SSA variables can only be defined once, this will return the single instruction where that occurs.
+    /// For SSA variable version 0s, which don't have definitions, this will return None instead.
+    pub fn ssa_variable_definition(&self, variable: SSAVariable) -> Option<HighLevelILInstruction> {
+        let index = unsafe {
+            BNGetHighLevelILSSAVarDefinition(
+                self.handle,
+                &variable.variable.raw(),
+                variable.version,
+            )
+        };
+        if index >= self.instruction_count() {
+            None
+        } else {
+            Some(HighLevelILInstruction::new(self.to_owned(), index))
+        }
     }
 }
 

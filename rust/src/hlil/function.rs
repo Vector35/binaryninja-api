@@ -142,11 +142,14 @@ impl HighLevelILFunction {
                 variable.version,
             )
         };
-        if index >= self.instruction_count() {
-            None
-        } else {
-            Some(HighLevelILInstruction::new(self.to_owned(), index))
-        }
+        (index < self.instruction_count())
+            .then(|| HighLevelILInstruction::new(self.to_owned(), index))
+    }
+
+    pub fn ssa_memory_definition(&self, version: usize) -> Option<HighLevelILInstruction> {
+        let index = unsafe { BNGetHighLevelILSSAMemoryDefinition(self.handle, version) };
+        (index < self.instruction_count())
+            .then(|| HighLevelILInstruction::new(self.to_owned(), index))
     }
 }
 

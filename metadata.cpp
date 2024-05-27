@@ -13,7 +13,7 @@ Metadata::Metadata(bool data)
 	m_object = BNCreateMetadataBooleanData(data);
 }
 
-Metadata::Metadata(const string& data)
+Metadata::Metadata(const std::string& data)
 {
 	m_object = BNCreateMetadataStringData(data.c_str());
 }
@@ -163,12 +163,12 @@ Ref<Metadata> Metadata::Get(size_t index)
 	return new Metadata(result);
 }
 
-bool Metadata::SetValueForKey(const string& key, Ref<Metadata> data)
+bool Metadata::SetValueForKey(const std::string& key, Ref<Metadata> data)
 {
 	return BNMetadataSetValueForKey(m_object, key.c_str(), data->m_object);
 }
 
-void Metadata::RemoveKey(const string& key)
+void Metadata::RemoveKey(const std::string& key)
 {
 	return BNMetadataRemoveKey(m_object, key.c_str());
 }
@@ -183,10 +183,10 @@ bool Metadata::GetBoolean() const
 	return BNMetadataGetBoolean(m_object);
 }
 
-string Metadata::GetString() const
+std::string Metadata::GetString() const
 {
 	char* str = BNMetadataGetString(m_object);
-	string result = string(str);
+	std::string result = std::string(str);
 	BNFreeString(str);
 	return result;
 }
@@ -312,14 +312,22 @@ vector<Ref<Metadata>> Metadata::GetArray() const
 	return result;
 }
 
-map<string, Ref<Metadata>> Metadata::GetKeyValueStore() const
+map<std::string, Ref<Metadata>> Metadata::GetKeyValueStore() const
 {
 	BNMetadataValueStore* data = BNMetadataGetValueStore(m_object);
-	map<string, Ref<Metadata>> result;
+	map<std::string, Ref<Metadata>> result;
 	for (size_t i = 0; i < data->size; i++)
 	{
 		result[data->keys[i]] = new Metadata(data->values[i]);
 	}
+	return result;
+}
+
+std::string Metadata::GetJsonString() const
+{
+	char* str = BNMetadataGetJsonString(m_object);
+	std::string result = std::string(str);
+	BNFreeString(str);
 	return result;
 }
 

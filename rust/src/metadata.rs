@@ -166,6 +166,19 @@ impl Metadata {
         }
     }
 
+    pub fn get_json_string(&self) -> Result<BnString, ()> {
+        match self.get_type() {
+            MetadataType::StringDataType => {
+                let ptr: *mut c_char = unsafe { BNMetadataGetJsonString(self.handle) };
+                if ptr.is_null() {
+                    return Err(());
+                }
+                Ok(unsafe { BnString::from_raw(ptr) })
+            }
+            _ => Err(()),
+        }
+    }
+
     pub fn get_raw(&self) -> Result<Vec<u8>, ()> {
         match self.get_type() {
             MetadataType::RawDataType => {

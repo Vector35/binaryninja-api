@@ -197,14 +197,13 @@ const BN_INVALID_EXPR: usize = usize::MAX;
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
 pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::BinaryView>> {
     let filename = filename.into_bytes_with_nul();
-    let metadata = Metadata::new_of_type(MetadataType::KeyValueDataType);
 
     let handle = unsafe {
         binaryninjacore_sys::BNLoadFilename(
             filename.as_ref().as_ptr() as *mut _,
             true,
+            std::ptr::null(),
             None,
-            metadata.handle,
         )
     };
 
@@ -245,8 +244,8 @@ pub fn load_with_options<S: BnStrCompatible>(
         binaryninjacore_sys::BNLoadFilename(
             filename.as_ref().as_ptr() as *mut _,
             update_analysis_and_wait,
+            options_or_default.get_json_string().unwrap().as_ref().as_ptr() as *mut _,
             None,
-            options_or_default.as_ref().handle,
         )
     };
 

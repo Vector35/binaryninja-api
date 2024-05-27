@@ -2136,12 +2136,12 @@ class MemoryMap:
 				size: 0x4
 				objects:
 					'origin<Mapped>' | Mapped<Absolute>
-			
+
 			<region: 0xc0000000 - 0xc0001000>
 				size: 0x1000
 				objects:
 					'origin<Mapped>' | Unmapped | FILL<0x0>
-			
+
 			<region: 0xc0001000 - 0xc0001014>
 				size: 0x14
 				objects:
@@ -2153,13 +2153,13 @@ class MemoryMap:
 				size: 0x4
 				objects:
 					'origin<Mapped>' | Mapped<Absolute>
-			
+
 			<region: 0xc0000000 - 0xc0001000>
 				size: 0x1000
 				objects:
 					'rom' | Mapped
 					'origin<Mapped>' | Unmapped | FILL<0x0>
-			
+
 			<region: 0xc0001000 - 0xc0001014>
 				size: 0x14
 				objects:
@@ -2175,20 +2175,20 @@ class MemoryMap:
 				size: 0x4
 				objects:
 					'origin<Mapped>' | Mapped<Absolute>
-			
+
 			<region: 0xc0000000 - 0xc0000008>
 				size: 0x8
 				objects:
 					'pad' | Mapped<Relative>
 					'rom' | Mapped<Relative>
 					'origin<Mapped>' | Unmapped | FILL<0x0>
-			
+
 			<region: 0xc0000008 - 0xc0001000>
 				size: 0xff8
 				objects:
 					'rom' | Mapped<Relative>
 					'origin<Mapped>' | Unmapped | FILL<0x0>
-			
+
 			<region: 0xc0001000 - 0xc0001014>
 				size: 0x14
 				objects:
@@ -2751,14 +2751,14 @@ class BinaryView:
 		if isinstance(source, os.PathLike):
 			source = str(source)
 		if isinstance(source, BinaryView):
-			handle = core.BNLoadBinaryView(source.handle, update_analysis, progress_cfunc, metadata.Metadata(options).handle, source.file.has_database)
+			handle = core.BNLoadBinaryView(source.handle, update_analysis, json.dumps(options), progress_cfunc)
 		elif isinstance(source, project.ProjectFile):
-			handle = core.BNLoadProjectFile(source._handle, update_analysis, progress_cfunc, metadata.Metadata(options).handle)
+			handle = core.BNLoadProjectFile(source._handle, update_analysis, json.dumps(options), progress_cfunc)
 		elif isinstance(source, str):
-			handle = core.BNLoadFilename(source, update_analysis, progress_cfunc, metadata.Metadata(options).handle)
+			handle = core.BNLoadFilename(source, update_analysis, json.dumps(options), progress_cfunc)
 		elif isinstance(source, bytes) or isinstance(source, bytearray) or isinstance(source, databuffer.DataBuffer):
 			raw_view = BinaryView.new(source)
-			handle = core.BNLoadBinaryView(raw_view.handle, update_analysis, progress_cfunc, metadata.Metadata(options).handle, False)
+			handle = core.BNLoadBinaryView(raw_view.handle, update_analysis, json.dumps(options), progress_cfunc)
 		else:
 			raise NotImplementedError
 		return BinaryView(handle=handle) if handle else None

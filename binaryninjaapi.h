@@ -1366,6 +1366,7 @@ namespace BinaryNinja {
 		std::vector<uint8_t> GetRaw() const;
 		std::vector<Ref<Metadata>> GetArray() const;
 		std::map<std::string, Ref<Metadata>> GetKeyValueStore() const;
+		std::string GetJsonString() const;
 
 		// For key-value data only
 		/*! Get a Metadata object by key. Only for if IsKeyValueStore == true
@@ -1483,15 +1484,12 @@ namespace BinaryNinja {
 	    \param filename Path to filename or BNDB to open.
 	    \param updateAnalysis If true, UpdateAnalysisAndWait() will be called after opening
 	                          a BinaryView.
+	    \param options A Json string whose keys are setting identifiers and whose values are the desired settings.
 	    \param progress Optional function to be called with progress updates as the view is
 	                    being loaded. If the function returns false, it will cancel Load.
-	    \param options A Json object whose keys are setting identifiers and whose values are
-	                   the desired settings.
 	    \return Constructed view, or a nullptr Ref<BinaryView>
 	*/
-	Ref<BinaryView> Load(const std::string& filename, bool updateAnalysis = true,
-		std::function<bool(size_t, size_t)> progress = {}, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType));
-
+	Ref<BinaryView> Load(const std::string& filename, bool updateAnalysis = true, const std::string& options = "{}", std::function<bool(size_t, size_t)> progress = {});
 	/*! Open a BinaryView from a raw data buffer, initializing data views and loading settings.
 
 	    @threadmainonly
@@ -1502,14 +1500,12 @@ namespace BinaryNinja {
 	    \param rawData Buffer with raw binary data to load (cannot load from bndb)
 	    \param updateAnalysis If true, UpdateAnalysisAndWait() will be called after opening
 	                          a BinaryView.
+	    \param options A Json string whose keys are setting identifiers and whose values are the desired settings.
 	    \param progress Optional function to be called with progress updates as the view is
 	                    being loaded. If the function returns false, it will cancel Load.
-	    \param options A Json object whose keys are setting identifiers and whose values are
-	                   the desired settings.
 	    \return Constructed view, or a nullptr Ref<BinaryView>
 	*/
-	Ref<BinaryView> Load(const DataBuffer& rawData, bool updateAnalysis = true,
-		std::function<bool(size_t, size_t)> progress = {}, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType));
+	Ref<BinaryView> Load(const DataBuffer& rawData, bool updateAnalysis = true, const std::string& options = "{}", std::function<bool(size_t, size_t)> progress = {});
 
 
 	/*! Open a BinaryView from a raw BinaryView, initializing data views and loading settings.
@@ -1522,16 +1518,27 @@ namespace BinaryNinja {
 	    \param rawData BinaryView with raw binary data to load
 	    \param updateAnalysis If true, UpdateAnalysisAndWait() will be called after opening
 	                          a BinaryView.
+	    \param options A Json string whose keys are setting identifiers and whose values are the desired settings.
 	    \param progress Optional function to be called with progress updates as the view is
 	                    being loaded. If the function returns false, it will cancel Load.
-	    \param options A Json object whose keys are setting identifiers and whose values are
-	                   the desired settings.
-	    \param isDatabase True if the view being loaded is the raw view of an already opened database.
 	    \return Constructed view, or a nullptr Ref<BinaryView>
 	*/
-	Ref<BinaryView> Load(Ref<BinaryView> rawData, bool updateAnalysis = true,
-		std::function<bool(size_t, size_t)> progress = {}, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType),
-		bool isDatabase = false);
+	Ref<BinaryView> Load(Ref<BinaryView> rawData, bool updateAnalysis = true, const std::string& options = "{}", std::function<bool(size_t, size_t)> progress = {});
+
+	/*!
+		Deprecated. Use non-metadata version.
+	*/
+	Ref<BinaryView> Load(const std::string& filename, bool updateAnalysis, std::function<bool(size_t, size_t)> progress, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType));
+
+	/*!
+		Deprecated. Use non-metadata version.
+	*/
+	Ref<BinaryView> Load(const DataBuffer& rawData, bool updateAnalysis, std::function<bool(size_t, size_t)> progress, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType));
+
+	/*!
+		Deprecated. Use non-metadata version.
+	*/
+	Ref<BinaryView> Load(Ref<BinaryView> rawData, bool updateAnalysis, std::function<bool(size_t, size_t)> progress, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType), bool isDatabase = false);
 
 	/*! Demangles using LLVM's demangler
 

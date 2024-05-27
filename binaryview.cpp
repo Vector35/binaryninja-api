@@ -5316,11 +5316,7 @@ Ref<BinaryData> BinaryData::CreateFromFile(FileMetadata* file, FileAccessor* acc
 Ref<BinaryView> BinaryNinja::Load(const std::string& filename, bool updateAnalysis,
 	std::function<bool(size_t, size_t)> progress, Ref<Metadata> options)
 {
-	BNBinaryView* handle = BNLoadFilename(filename.c_str(), updateAnalysis,
-		(bool (*)(size_t, size_t))progress.target<bool (*)(size_t, size_t)>(), options->m_object);
-	if (!handle)
-		return nullptr;
-	return new BinaryView(handle);
+	return Load(filename, updateAnalysis, options->GetJsonString(), progress);
 }
 
 
@@ -5336,8 +5332,30 @@ Ref<BinaryView> BinaryNinja::Load(
 Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis,
 	std::function<bool(size_t, size_t)> progress, Ref<Metadata> options, bool isDatabase)
 {
-	BNBinaryView* handle = BNLoadBinaryView(view->GetObject(), updateAnalysis,
-		(bool (*)(size_t, size_t))progress.target<bool (*)(size_t, size_t)>(), options->m_object, isDatabase);
+	return Load(view, updateAnalysis, options->GetJsonString(), progress);
+}
+
+
+Ref<BinaryView> BinaryNinja::Load(const std::string& filename, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
+{
+	BNBinaryView* handle = BNLoadFilename(filename.c_str(), updateAnalysis, options.c_str(), (bool (*)(size_t, size_t))progress.target<bool (*)(size_t, size_t)>());
+	if (!handle)
+		return nullptr;
+	return new BinaryView(handle);
+}
+
+
+Ref<BinaryView> BinaryNinja::Load(const DataBuffer& rawData, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
+{
+	Ref<FileMetadata> file = new FileMetadata();
+	Ref<BinaryView> view = new BinaryData(file, rawData);
+	return Load(view, updateAnalysis, options, progress);
+}
+
+
+Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
+{
+	BNBinaryView* handle = BNLoadBinaryView(view->GetObject(), updateAnalysis, options.c_str(), (bool (*)(size_t, size_t))progress.target<bool (*)(size_t, size_t)>());
 	if (!handle)
 		return nullptr;
 	return new BinaryView(handle);

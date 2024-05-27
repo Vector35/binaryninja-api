@@ -2,6 +2,7 @@ use std::hash::{Hash, Hasher};
 
 use binaryninjacore_sys::*;
 
+use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
 use crate::function::Function;
 use crate::rc::{Array, Ref, RefCountable};
@@ -117,6 +118,11 @@ impl HighLevelILFunction {
 
     pub fn current_address(&self) -> u64 {
         unsafe { BNHighLevelILGetCurrentAddress(self.handle) }
+    }
+
+    pub fn set_current_address(&self, address: u64, arch: Option<CoreArchitecture>) {
+        let arch = arch.unwrap_or_else(|| self.get_function().arch()).0;
+        unsafe { BNHighLevelILSetCurrentAddress(self.handle, arch, address) }
     }
 }
 

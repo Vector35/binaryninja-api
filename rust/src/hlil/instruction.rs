@@ -911,6 +911,11 @@ impl HighLevelILInstruction {
         })
     }
 
+    /// Version of active memory contents in SSA form for this instruction
+    pub fn ssa_memory_version(&self) -> usize {
+        unsafe { BNGetHighLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.index) }
+    }
+
     fn lift_operand(&self, expr_idx: usize) -> Box<HighLevelILLiftedInstruction> {
         Box::new(self.function.lifted_instruction_from_idx(expr_idx))
     }

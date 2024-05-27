@@ -916,6 +916,17 @@ impl HighLevelILInstruction {
         unsafe { BNGetHighLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.index) }
     }
 
+    pub fn ssa_variable_version(&self, variable: Variable) -> SSAVariable {
+        let version = unsafe {
+            BNGetHighLevelILSSAVarVersionAtILInstruction(
+                self.function.handle,
+                &variable.raw(),
+                self.index,
+            )
+        };
+        SSAVariable { variable, version }
+    }
+
     fn lift_operand(&self, expr_idx: usize) -> Box<HighLevelILLiftedInstruction> {
         Box::new(self.function.lifted_instruction_from_idx(expr_idx))
     }

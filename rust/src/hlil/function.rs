@@ -205,6 +205,14 @@ impl HighLevelILFunction {
         assert!(!defs.is_null());
         unsafe { Array::new(defs, count, self.to_owned()) }
     }
+
+    pub fn variable_uses(&self, variable: Variable) -> Array<HighLevelILInstruction> {
+        let mut count = 0;
+        let instrs =
+            unsafe { BNGetHighLevelILVariableUses(self.handle, &variable.raw(), &mut count) };
+        assert!(!instrs.is_null());
+        unsafe { Array::new(instrs, count, self.to_owned()) }
+    }
 }
 
 impl ToOwned for HighLevelILFunction {

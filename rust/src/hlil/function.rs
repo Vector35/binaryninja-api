@@ -230,6 +230,16 @@ impl HighLevelILFunction {
         unsafe { Array::new(variables, count, ()) }
     }
 
+    /// This returns a list of Variables that are taken reference to and used
+    /// elsewhere. You may also wish to consider [HighLevelILFunction::variables]
+    /// and [crate::function::Function::parameter_variables]
+    pub fn aliased_variables(&self) -> Array<Variable> {
+        let mut count = 0;
+        let variables = unsafe { BNGetHighLevelILAliasedVariables(self.handle, &mut count) };
+        assert!(!variables.is_null());
+        unsafe { Array::new(variables, count, ()) }
+    }
+
     /// This gets just the HLIL SSA variables - you may be interested in the union
     /// of [crate::function::Function::parameter_variables] and
     /// [crate::mlil::function::MediumLevelILFunction::aliased_variables] as well for all the

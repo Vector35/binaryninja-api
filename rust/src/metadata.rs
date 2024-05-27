@@ -710,13 +710,6 @@ impl IntoJson for &Metadata {
     }
 }
 
-impl IntoJson for Metadata {
-    type Output = BnString;
-    fn get_json_string(self) -> Result<BnString, ()> {
-        Metadata::get_json_string(&self)
-    }
-}
-
 impl IntoJson for Ref<Metadata> {
     type Output = BnString;
     fn get_json_string(self) -> Result<BnString, ()> {

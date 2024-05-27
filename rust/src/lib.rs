@@ -197,12 +197,13 @@ const BN_INVALID_EXPR: usize = usize::MAX;
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
 pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::BinaryView>> {
     let filename = filename.into_bytes_with_nul();
+    let options = "";
 
     let handle = unsafe {
         binaryninjacore_sys::BNLoadFilename(
             filename.as_ref().as_ptr() as *mut _,
             true,
-            std::ptr::null(),
+            options.as_ptr() as *mut core::ffi::c_char,
             None,
         )
     };
@@ -216,15 +217,13 @@ pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::Binar
 
 /// The main way to open and load files (with options) into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
 ///
+/// <div class="warning">Your JSON needs to be compliant with RapidJSON's format, which basically means you just need to escape double quotes (\") and single quotes won't work.</div>
+///
 /// ```no_run
 /// use binaryninja::{metadata::Metadata, rc::Ref};
 /// use std::collections::HashMap;
 ///
-/// let settings: Ref<Metadata> = HashMap::from([
-///     ("analysis.linearSweep.autorun", false.into()),
-/// ]).into();
-///
-/// let bv = binaryninja::load_with_options("/bin/cat", true, Some(settings))
+/// let bv = binaryninja::load_with_options("/bin/cat", true, Some("{\"analysis.linearSweep.autorun\": false}"))
 ///     .expect("Couldn't open `/bin/cat`");
 /// ```
 pub fn load_with_options<S: BnStrCompatible, O: IntoJson>(

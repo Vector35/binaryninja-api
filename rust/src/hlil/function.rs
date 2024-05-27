@@ -166,6 +166,13 @@ impl HighLevelILFunction {
         assert!(!instrs.is_null());
         unsafe { Array::new(instrs, count, self.to_owned()) }
     }
+
+    pub fn ssa_memory_uses(&self, version: usize) -> Array<HighLevelILInstruction> {
+        let mut count = 0;
+        let instrs = unsafe { BNGetHighLevelILSSAMemoryUses(self.handle, version, &mut count) };
+        assert!(!instrs.is_null());
+        unsafe { Array::new(instrs, count, self.to_owned()) }
+    }
 }
 
 impl ToOwned for HighLevelILFunction {

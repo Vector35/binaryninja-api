@@ -19,15 +19,7 @@
 use binaryninjacore_sys::*;
 
 use crate::{
-    architecture::{Architecture, CoreArchitecture},
-    binaryview::{BinaryView, BinaryViewExt},
-    callingconvention::CallingConvention,
-    filemetadata::FileMetadata,
-    function::Function,
-    mlil::MediumLevelILFunction,
-    rc::*,
-    string::{raw_to_string, BnStrCompatible, BnString},
-    symbol::Symbol,
+    architecture::{Architecture, CoreArchitecture}, binaryview::{BinaryView, BinaryViewExt}, callingconvention::CallingConvention, filemetadata::FileMetadata, function::Function, hlil::HighLevelILFunction, mlil::MediumLevelILFunction, rc::*, string::{raw_to_string, BnStrCompatible, BnString}, symbol::Symbol
 };
 
 use lazy_static::lazy_static;
@@ -1461,13 +1453,14 @@ unsafe impl CoreArrayProviderInner for SSAVariable {
     }
 }
 
-impl CoreArrayProvider for Array<SSAVariable> {
+pub struct MediumLevelILSSAVariable;
+impl CoreArrayProvider for MediumLevelILSSAVariable {
     type Raw = BNVariable;
     type Context = Ref<MediumLevelILFunction>;
-    type Wrapped<'a> = Self;
+    type Wrapped<'a> = Array<SSAVariable>;
 }
 
-unsafe impl CoreArrayProviderInner for Array<SSAVariable> {
+unsafe impl CoreArrayProviderInner for MediumLevelILSSAVariable {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeVariableList(raw)
     }
@@ -1476,6 +1469,26 @@ unsafe impl CoreArrayProviderInner for Array<SSAVariable> {
         let mut count = 0;
         let versions =
             unsafe { BNGetMediumLevelILVariableSSAVersions(context.handle, raw, &mut count) };
+        Array::new(versions, count, Variable::from_raw(*raw))
+    }
+}
+
+pub struct HighLevelILSSAVariable;
+impl CoreArrayProvider for HighLevelILSSAVariable {
+    type Raw = BNVariable;
+    type Context = Ref<HighLevelILFunction>;
+    type Wrapped<'a> = Array<SSAVariable>;
+}
+
+unsafe impl CoreArrayProviderInner for HighLevelILSSAVariable {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeVariableList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let mut count = 0;
+        let versions =
+            unsafe { BNGetHighLevelILVariableSSAVersions(context.handle, raw, &mut count) };
         Array::new(versions, count, Variable::from_raw(*raw))
     }
 }

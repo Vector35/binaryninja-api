@@ -6,7 +6,7 @@ use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
 use crate::function::Function;
 use crate::rc::{Array, Ref, RefCountable};
-use crate::types::{SSAVariable, Variable};
+use crate::types::{HighLevelILSSAVariable, SSAVariable, Variable};
 
 use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelILLiftedInstruction};
 
@@ -228,6 +228,17 @@ impl HighLevelILFunction {
         let variables = unsafe { BNGetHighLevelILVariables(self.handle, &mut count) };
         assert!(!variables.is_null());
         unsafe { Array::new(variables, count, ()) }
+    }
+
+    /// This gets just the HLIL SSA variables - you may be interested in the union
+    /// of [crate::function::Function::parameter_variables] and
+    /// [crate::mlil::function::MediumLevelILFunction::aliased_variables] as well for all the
+    /// variables used in the function
+    pub fn ssa_variables(&self) -> Array<HighLevelILSSAVariable> {
+        let mut count = 0;
+        let variables = unsafe { BNGetHighLevelILVariables(self.handle, &mut count) };
+        assert!(!variables.is_null());
+        unsafe { Array::new(variables, count, self.to_owned()) }
     }
 }
 

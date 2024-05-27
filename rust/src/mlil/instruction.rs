@@ -3,11 +3,10 @@ use binaryninjacore_sys::BNGetMediumLevelILByIndex;
 use binaryninjacore_sys::BNMediumLevelILInstruction;
 use binaryninjacore_sys::BNMediumLevelILOperation;
 
+use crate::architecture::CoreIntrinsic;
 use crate::operand_iter::OperandIter;
 use crate::rc::Ref;
-use crate::types::{
-    ConstantData, ILIntrinsic, RegisterValue, RegisterValueType, SSAVariable, Variable,
-};
+use crate::types::{ConstantData, RegisterValue, RegisterValueType, SSAVariable, Variable};
 
 use super::lift::*;
 use super::operation::*;
@@ -906,7 +905,7 @@ impl MediumLevelILInstruction {
                 output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
                     .vars()
                     .collect(),
-                intrinsic: ILIntrinsic::new(self.function.get_function().arch(), op.intrinsic),
+                intrinsic: CoreIntrinsic(self.function.get_function().arch().0, op.intrinsic),
                 params: OperandIter::new(&*self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())
@@ -925,7 +924,7 @@ impl MediumLevelILInstruction {
                 output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
                     .ssa_vars()
                     .collect(),
-                intrinsic: ILIntrinsic::new(self.function.get_function().arch(), op.intrinsic),
+                intrinsic: CoreIntrinsic(self.function.get_function().arch().0, op.intrinsic),
                 params: OperandIter::new(&*self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())

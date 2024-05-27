@@ -1,8 +1,10 @@
 use binaryninjacore_sys::BNGetGotoLabelName;
 
+use crate::architecture::CoreIntrinsic;
 use crate::function::Function;
 use crate::rc::Ref;
-use crate::types::{ConstantData, ILIntrinsic, SSAVariable, Variable};
+use crate::string::BnString;
+use crate::types::{ConstantData, SSAVariable, Variable};
 
 use super::HighLevelILLiftedInstruction;
 
@@ -13,10 +15,8 @@ pub struct GotoLabel {
 }
 
 impl GotoLabel {
-    pub fn name(&self) -> &str {
-        let raw_str = unsafe { BNGetGotoLabelName(self.function.handle, self.target) };
-        let c_str = unsafe { core::ffi::CStr::from_ptr(raw_str) };
-        c_str.to_str().unwrap()
+    pub fn name(&self) -> BnString {
+        unsafe { BnString::from_raw(BNGetGotoLabelName(self.function.handle, self.target)) }
     }
 }
 
@@ -320,7 +320,7 @@ pub struct Intrinsic {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIntrinsic {
-    pub intrinsic: ILIntrinsic,
+    pub intrinsic: CoreIntrinsic,
     pub params: Vec<HighLevelILLiftedInstruction>,
 }
 
@@ -335,7 +335,7 @@ pub struct IntrinsicSsa {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIntrinsicSsa {
-    pub intrinsic: ILIntrinsic,
+    pub intrinsic: CoreIntrinsic,
     pub params: Vec<HighLevelILLiftedInstruction>,
     pub dest_memory: u64,
     pub src_memory: u64,

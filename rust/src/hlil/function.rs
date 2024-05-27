@@ -66,6 +66,10 @@ impl HighLevelILFunction {
         })
     }
 
+    pub fn set_root(&self, new_root: HighLevelILInstruction) {
+        unsafe { BNSetHighLevelILRootExpr(self.handle, new_root.index) }
+    }
+
     pub fn lifted_root(&self) -> HighLevelILLiftedInstruction {
         self.root().lift()
     }

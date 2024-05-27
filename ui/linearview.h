@@ -323,6 +323,7 @@ private Q_SLOTS:
 	void undefineName();
 	void setUserVariableValue();
 	void clearUserVariableValue();
+	void setVariableConstraint();
 	void createFunc(const UIActionContext& context);
 	void createFuncWithPlatform(PlatformRef platform, bool autoSelect = false);
 	void defineFuncName();

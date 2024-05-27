@@ -2762,6 +2762,7 @@ pub enum RegisterValueType {
     ConstantDataZeroExtendValue,
     ConstantDataSignExtendValue,
     ConstantDataAggregateValue,
+    ConstantDataConstraintValue,
 }
 
 impl RegisterValueType {
@@ -2785,6 +2786,7 @@ impl RegisterValueType {
             x if x == ConstantDataZeroExtendValue as u32 => Self::ConstantDataZeroExtendValue,
             x if x == ConstantDataSignExtendValue as u32 => Self::ConstantDataSignExtendValue,
             x if x == ConstantDataAggregateValue as u32 => Self::ConstantDataAggregateValue,
+            x if x == ConstantDataConstraintValue as u32 => Self::ConstantDataConstraintValue,
             _ => return None,
         })
     }
@@ -2809,6 +2811,7 @@ impl RegisterValueType {
             Self::ConstantDataZeroExtendValue => ConstantDataZeroExtendValue,
             Self::ConstantDataSignExtendValue => ConstantDataSignExtendValue,
             Self::ConstantDataAggregateValue => ConstantDataAggregateValue,
+            Self::ConstantDataConstraintValue => ConstantDataConstraintValue,
         }
     }
 }

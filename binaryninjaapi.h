@@ -10234,7 +10234,7 @@ namespace BinaryNinja {
 		size_t count;
 
 		static PossibleValueSet FromAPIObject(BNPossibleValueSet& value);
-		BNPossibleValueSet ToAPIObject();
+		BNPossibleValueSet ToAPIObject() const;
 		static void FreeAPIObject(BNPossibleValueSet* value);
 	};
 
@@ -10789,6 +10789,8 @@ namespace BinaryNinja {
 		void ClearUserVariableValue(const Variable& var, uint64_t defAddr);
 		std::map<Variable, std::map<ArchAndAddr, PossibleValueSet>> GetAllUserVariableValues();
 		void ClearAllUserVariableValues();
+
+		void SetVariableConstraint(uint64_t address, const Variable& var, const PossibleValueSet& value);
 
 		void RequestDebugReport(const std::string& name);
 

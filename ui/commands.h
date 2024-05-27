@@ -32,6 +32,7 @@ bool BINARYNINJAUIAPI createStructMembers(
 
 bool BINARYNINJAUIAPI inputPossibleValueSet(QWidget* parent, BinaryViewRef data, FunctionRef currentFunction, BNFunctionGraphType funcType,
     const BinaryNinja::Variable& var, size_t ilInstructionIndex = BN_INVALID_EXPR);
+bool BINARYNINJAUIAPI inputVariableConstraint(QWidget* parent, BinaryViewRef data, FunctionRef currentFunction, const BinaryNinja::Variable& var, uint64_t address);
 
 bool BINARYNINJAUIAPI getEnumSelection(QWidget* parent, BinaryViewRef data, FunctionRef func, uint64_t constValue,
 	TypeRef& selectedEnum, bool checkValue, bool canTruncate);

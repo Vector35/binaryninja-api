@@ -1052,7 +1052,8 @@ extern "C"
 		ConstantDataValue = 0x8000,
 		ConstantDataZeroExtendValue = ConstantDataValue | 0x1,
 		ConstantDataSignExtendValue = ConstantDataValue | 0x2,
-		ConstantDataAggregateValue = ConstantDataValue | 0x3
+		ConstantDataAggregateValue = ConstantDataValue | 0x3,
+		ConstantDataConstraintValue = ConstantDataValue | 0x4
 	} BNRegisterValueType;
 
 	typedef enum BNDataFlowQueryOption
@@ -5043,6 +5044,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeUserVariableValues(BNUserVariableValue* result);
 	BINARYNINJACOREAPI bool BNParsePossibleValueSet(BNBinaryView* view, const char* valueText,
 	    BNRegisterValueType state, BNPossibleValueSet* result, uint64_t here, char** errors);
+
+	BINARYNINJACOREAPI void BNSetVariableConstraint(BNFunction* func, uint64_t address, BNVariable* var, BNPossibleValueSet* value);
 
 	BINARYNINJACOREAPI void BNRequestFunctionDebugReport(BNFunction* func, const char* name);
 

@@ -483,7 +483,7 @@ PossibleValueSet PossibleValueSet::FromAPIObject(BNPossibleValueSet& value)
 }
 
 
-BNPossibleValueSet PossibleValueSet::ToAPIObject()
+BNPossibleValueSet PossibleValueSet::ToAPIObject() const
 {
 	BNPossibleValueSet result;
 	result.state = state;
@@ -2644,6 +2644,18 @@ void Function::ClearAllUserVariableValues()
 			ClearUserVariableValue(valuePair.first, valMap.first.address);
 		}
 	}
+}
+
+
+void Function::SetVariableConstraint(uint64_t address, const Variable& var, const PossibleValueSet& value)
+{
+	BNVariable varData;
+	varData.type = var.type;
+	varData.index = var.index;
+	varData.storage = var.storage;
+
+	auto valueObj = value.ToAPIObject();
+	BNSetVariableConstraint(m_object, address, &varData, &valueObj);
 }
 
 

@@ -344,6 +344,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void undefineName();
 	void setUserVariableValue();
 	void clearUserVariableValue();
+	void setVariableConstraint();
 	void defineFuncName();
 	void editFunctionProperties();
 	void undefineFunc();

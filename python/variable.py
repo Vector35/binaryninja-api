@@ -201,6 +201,8 @@ class ConstantDataRegisterValue(RegisterValue):
 			return f"<const data {{sx.{self.size}({self.value:#x})}}>"
 		if self.type == RegisterValueType.ConstantDataAggregateValue:
 			return f"<const data {{aggregate.{self.size}}} @ {self.value:#x}>"
+		if self.type == RegisterValueType.ConstantDataConstraintValue:
+			return f"<const data {{constraint.{self.size}}} @ {self.value:#x}>"
 		return f"<const data {{invalid}} {self.type} {self.value:#x}>"
 
 
@@ -215,6 +217,8 @@ class ConstantData(RegisterValue):
 			return f"<{self.__class__.__name__}: {{sx.{self.size}({self.value:#x})}}>"
 		if self.type == RegisterValueType.ConstantDataAggregateValue:
 			return f"<{self.__class__.__name__}: {{aggregate.{self.size}}} @ {self.value:#x}>"
+		if self.type == RegisterValueType.ConstantDataConstraintValue:
+			return f"<{self.__class__.__name__}: {{constraint.{self.size}}} @ {self.value:#x}>"
 		return f"<{self.__class__.__name__}: {{invalid}} {self.type} {self.value:#x}>"
 
 	@property
@@ -317,6 +321,8 @@ class PossibleValueSet:
 			return f"<const data {{sx.{self._size}({self.value:#x})}}>"
 		if self._type == RegisterValueType.ConstantDataAggregateValue:
 			return f"<const data {{aggregate.{self._size}}} @ {self.value:#x}>"
+		if self._type == RegisterValueType.ConstantDataConstraintValue:
+			return f"<const data {{constraint.{self._size}}} @ {self.value:#x}>"
 		if self._type == RegisterValueType.SignedRangeValue:
 			return f"<signed ranges: {repr(self.ranges)}>"
 		if self._type == RegisterValueType.UnsignedRangeValue:

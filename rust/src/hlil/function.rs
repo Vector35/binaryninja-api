@@ -1,14 +1,6 @@
 use std::hash::{Hash, Hasher};
 
-use binaryninjacore_sys::BNFreeHighLevelILFunction;
-use binaryninjacore_sys::BNGetHighLevelILBasicBlockList;
-use binaryninjacore_sys::BNGetHighLevelILIndexForInstruction;
-use binaryninjacore_sys::BNGetHighLevelILInstructionCount;
-use binaryninjacore_sys::BNGetHighLevelILOwnerFunction;
-use binaryninjacore_sys::BNGetHighLevelILRootExpr;
-use binaryninjacore_sys::BNGetHighLevelILSSAForm;
-use binaryninjacore_sys::BNHighLevelILFunction;
-use binaryninjacore_sys::BNNewHighLevelILFunctionReference;
+use binaryninjacore_sys::*;
 
 use crate::basicblock::BasicBlock;
 use crate::function::Function;
@@ -121,6 +113,10 @@ impl HighLevelILFunction {
             full_ast: false,
         }
         .to_owned()
+    }
+
+    pub fn current_address(&self) -> u64 {
+        unsafe { BNHighLevelILGetCurrentAddress(self.handle) }
     }
 }
 

@@ -1,10 +1,12 @@
-use binaryninjacore_sys::BNGetHighLevelILByIndex;
-use binaryninjacore_sys::BNHighLevelILOperation;
+use binaryninjacore_sys::*;
 
 use crate::architecture::CoreIntrinsic;
+use crate::disassembly::DisassemblyTextLine;
 use crate::operand_iter::OperandIter;
-use crate::rc::Ref;
-use crate::types::{ConstantData, RegisterValue, RegisterValueType, SSAVariable, Variable};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
+use crate::types::{
+    Conf, ConstantData, RegisterValue, RegisterValueType, SSAVariable, Type, Variable,
+};
 
 use super::operation::*;
 use super::{HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLiftedInstructionKind};
@@ -884,6 +886,48 @@ impl HighLevelILInstruction {
         }
     }
 
+    /// HLIL text lines
+    pub fn lines(&self) -> Array<DisassemblyTextLine> {
+        let mut count = 0;
+        let lines = unsafe {
+            BNGetHighLevelILExprText(
+                self.function.handle,
+                self.index,
+                self.function.full_ast,
+                &mut count,
+                core::ptr::null_mut(),
+            )
+        };
+        unsafe { Array::new(lines, count, ()) }
+    }
+
+    /// Type of expression
+    pub fn expr_type(&self) -> Option<Conf<Ref<Type>>> {
+        let result = unsafe { BNGetHighLevelILExprType(self.function.handle, self.index) };
+        (!result.type_.is_null()).then(|| {
+            Conf::new(
+                unsafe { Type::ref_from_raw(result.type_) },
+                result.confidence,
+            )
+        })
+    }
+
+    /// Version of active memory contents in SSA form for this instruction
+    pub fn ssa_memory_version(&self) -> usize {
+        unsafe { BNGetHighLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.index) }
+    }
+
+    pub fn ssa_variable_version(&self, variable: Variable) -> SSAVariable {
+        let version = unsafe {
+            BNGetHighLevelILSSAVarVersionAtILInstruction(
+                self.function.handle,
+                &variable.raw(),
+                self.index,
+            )
+        };
+        SSAVariable { variable, version }
+    }
+
     fn lift_operand(&self, expr_idx: usize) -> Box<HighLevelILLiftedInstruction> {
         Box::new(self.function.lifted_instruction_from_idx(expr_idx))
     }
@@ -960,6 +1004,22 @@ impl HighLevelILInstruction {
             .exprs()
             .map(|expr| expr.lift())
             .collect()
+    }
+}
+
+impl CoreArrayProvider for HighLevelILInstruction {
+    type Raw = usize;
+    type Context = Ref<HighLevelILFunction>;
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for HighLevelILInstruction {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        unsafe { BNFreeILInstructionList(raw) }
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::new(context.clone(), *raw)
     }
 }
 

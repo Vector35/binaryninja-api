@@ -173,6 +173,13 @@ impl HighLevelILFunction {
         assert!(!instrs.is_null());
         unsafe { Array::new(instrs, count, self.to_owned()) }
     }
+
+    /// Determines if `ssa_var` is live at any point in the function
+    pub fn is_ssa_variable_live(&self, variable: SSAVariable) -> bool {
+        unsafe {
+            BNIsHighLevelILSSAVarLive(self.handle, &variable.variable.raw(), variable.version)
+        }
+    }
 }
 
 impl ToOwned for HighLevelILFunction {

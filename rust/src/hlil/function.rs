@@ -218,6 +218,17 @@ impl HighLevelILFunction {
     pub fn is_variable_live_at(&self, variable: Variable, instr: &HighLevelILInstruction) -> bool {
         unsafe { BNIsHighLevelILVarLiveAt(self.handle, &variable.raw(), instr.index) }
     }
+
+    /// This gets just the HLIL variables - you may be interested in the union
+    /// of [crate::function::Function::parameter_variables] and
+    /// [crate::mlil::function::MediumLevelILFunction::aliased_variables] as well for all the
+    /// variables used in the function
+    pub fn variables(&self) -> Array<Variable> {
+        let mut count = 0;
+        let variables = unsafe { BNGetHighLevelILVariables(self.handle, &mut count) };
+        assert!(!variables.is_null());
+        unsafe { Array::new(variables, count, ()) }
+    }
 }
 
 impl ToOwned for HighLevelILFunction {

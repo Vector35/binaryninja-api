@@ -4,7 +4,9 @@ use crate::architecture::CoreIntrinsic;
 use crate::disassembly::DisassemblyTextLine;
 use crate::operand_iter::OperandIter;
 use crate::rc::{Array, Ref};
-use crate::types::{ConstantData, RegisterValue, RegisterValueType, SSAVariable, Variable};
+use crate::types::{
+    Conf, ConstantData, RegisterValue, RegisterValueType, SSAVariable, Type, Variable,
+};
 
 use super::operation::*;
 use super::{HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLiftedInstructionKind};
@@ -896,6 +898,17 @@ impl HighLevelILInstruction {
             )
         };
         unsafe { Array::new(lines, count, ()) }
+    }
+
+    /// Type of expression
+    pub fn expr_type(&self) -> Option<Conf<Ref<Type>>> {
+        let result = unsafe { BNGetHighLevelILExprType(self.function.handle, self.index) };
+        (!result.type_.is_null()).then(|| {
+            Conf::new(
+                unsafe { Type::ref_from_raw(result.type_) },
+                result.confidence,
+            )
+        })
     }
 
     fn lift_operand(&self, expr_idx: usize) -> Box<HighLevelILLiftedInstruction> {

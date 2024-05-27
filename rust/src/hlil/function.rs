@@ -151,6 +151,21 @@ impl HighLevelILFunction {
         (index < self.instruction_count())
             .then(|| HighLevelILInstruction::new(self.to_owned(), index))
     }
+
+    /// Gets all the instructions that use the given SSA variable.
+    pub fn ssa_variable_uses(&self, variable: SSAVariable) -> Array<HighLevelILInstruction> {
+        let mut count = 0;
+        let instrs = unsafe {
+            BNGetHighLevelILSSAVarUses(
+                self.handle,
+                &variable.variable.raw(),
+                variable.version,
+                &mut count,
+            )
+        };
+        assert!(!instrs.is_null());
+        unsafe { Array::new(instrs, count, self.to_owned()) }
+    }
 }
 
 impl ToOwned for HighLevelILFunction {

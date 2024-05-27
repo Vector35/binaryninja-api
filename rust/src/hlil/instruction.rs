@@ -3,7 +3,7 @@ use binaryninjacore_sys::*;
 use crate::architecture::CoreIntrinsic;
 use crate::disassembly::DisassemblyTextLine;
 use crate::operand_iter::OperandIter;
-use crate::rc::{Array, Ref};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::types::{
     Conf, ConstantData, RegisterValue, RegisterValueType, SSAVariable, Type, Variable,
 };
@@ -1003,6 +1003,22 @@ impl HighLevelILInstruction {
             .exprs()
             .map(|expr| expr.lift())
             .collect()
+    }
+}
+
+impl CoreArrayProvider for HighLevelILInstruction {
+    type Raw = usize;
+    type Context = Ref<HighLevelILFunction>;
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for HighLevelILInstruction {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        unsafe { BNFreeILInstructionList(raw) }
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::new(context.clone(), *raw)
     }
 }
 

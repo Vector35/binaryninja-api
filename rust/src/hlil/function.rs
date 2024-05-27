@@ -213,6 +213,11 @@ impl HighLevelILFunction {
         assert!(!instrs.is_null());
         unsafe { Array::new(instrs, count, self.to_owned()) }
     }
+
+    /// Determines if `variable` is live at a given point in the function
+    pub fn is_variable_live_at(&self, variable: Variable, instr: &HighLevelILInstruction) -> bool {
+        unsafe { BNIsHighLevelILVarLiveAt(self.handle, &variable.raw(), instr.index) }
+    }
 }
 
 impl ToOwned for HighLevelILFunction {

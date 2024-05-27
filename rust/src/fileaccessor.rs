@@ -12,10 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use binaryninjacore_sys::BNFileAccessor;
+use binaryninjacore_sys::*;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::marker::PhantomData;
+use std::path::PathBuf;
+use std::ptr::NonNull;
 use std::slice;
+
+use crate::databuffer::DataBuffer;
+use crate::rc::{Ref, RefCountable};
+use crate::string::BnString;
 
 pub struct FileAccessor<'a> {
     pub(crate) api_object: BNFileAccessor,
@@ -86,5 +92,80 @@ impl<'a> FileAccessor<'a> {
             },
             _ref: PhantomData,
         }
+    }
+}
+
+pub struct TemporaryFile {
+    handle: NonNull<BNTemporaryFile>
+}
+
+impl TemporaryFile {
+    pub(crate) fn from_raw(handle: NonNull<BNTemporaryFile>) -> Self {
+        Self { handle }
+    }
+
+    // TODO: Error type
+    /// Create an empty temporary file.
+    pub fn new() -> Result<Ref<Self>, ()> {
+        let raw = NonNull::new(unsafe { BNCreateTemporaryFile() }).ok_or_else(|| ())?;
+        // SAFETY: BNCreateTemporaryFile increments ref count
+        Ok(unsafe {
+            Ref::new(Self::from_raw(raw))
+        })
+    }
+
+    // TODO: Error type
+    /// Create a temporary file with the contents of the [DataBuffer].
+    pub fn new_from_contents(contents: &DataBuffer) -> Result<Ref<Self>, ()> {
+        let raw = NonNull::new(unsafe { BNCreateTemporaryFileWithContents(contents.as_raw()) }).ok_or_else(|| ())?;
+        // SAFETY: BNCreateTemporaryFileWithContents increments ref count
+        Ok(unsafe {
+            Ref::new(Self::from_raw(raw))
+        })
+    }
+
+    pub fn path(&self) -> PathBuf {
+        let path = unsafe { BnString::from_raw(BNGetTemporaryFilePath(self.handle.as_ptr())) };
+        PathBuf::from(path.to_string())
+    }
+    
+    pub fn contents(&self) -> DataBuffer {
+        unsafe { DataBuffer::from_raw(BNGetTemporaryFileContents(self.handle.as_ptr())) }
+    }
+}
+
+impl ToOwned for TemporaryFile {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for TemporaryFile {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        let raw = NonNull::new(BNNewTemporaryFileReference(handle.handle.as_ptr())).expect("incremented reference pointer");
+        // SAFETY: BNNewTemporaryFileReference increments ref count
+        Ref::new(Self::from_raw(raw))
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeTemporaryFile(handle.handle.as_ptr());
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    
+    use crate::databuffer::DataBuffer;
+
+    #[test]
+    pub fn create_tmp_file() {
+        const DATA: &[u8] = b"test 123";
+        let data = DataBuffer::new(DATA).unwrap();
+        let tmp_file = TemporaryFile::new_from_contents(&data).unwrap();
+        let data_read = tmp_file.contents();
+        assert_eq!(data_read.get_data(), DATA);
     }
 }

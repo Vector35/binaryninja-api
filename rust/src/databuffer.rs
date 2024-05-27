@@ -25,6 +25,7 @@ pub struct DataBuffer(*mut BNDataBuffer);
 
 impl DataBuffer {
     pub(crate) fn from_raw(raw: *mut BNDataBuffer) -> Self {
+        assert!(!raw.is_null());
         DataBuffer(raw)
     }
     pub(crate) fn as_raw(&self) -> *mut BNDataBuffer {

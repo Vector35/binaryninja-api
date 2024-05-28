@@ -57,6 +57,26 @@ public:
 
 		return nullptr;
 	}
+
+	virtual void AdjustTypeParserInput(
+		Ref<TypeParser> parser,
+		std::vector<std::string>& arguments,
+		std::vector<std::pair<std::string, std::string>>& sourceFiles
+	) override
+	{
+		if (parser->GetName() != "ClangTypeParser")
+		{
+			return;
+		}
+
+		for (auto& arg: arguments)
+		{
+			if (arg.find("--target=") == 0 && arg.find("-unknown-") != std::string::npos)
+			{
+				arg = "--target=i386-pc-windows-msvc";
+			}
+		}
+	}
 };
 
 
@@ -97,6 +117,26 @@ public:
 
 		return nullptr;
 	}
+
+	virtual void AdjustTypeParserInput(
+		Ref<TypeParser> parser,
+		std::vector<std::string>& arguments,
+		std::vector<std::pair<std::string, std::string>>& sourceFiles
+	) override
+	{
+		if (parser->GetName() != "ClangTypeParser")
+		{
+			return;
+		}
+
+		for (auto& arg: arguments)
+		{
+			if (arg.find("--target=") == 0 && arg.find("-unknown-") != std::string::npos)
+			{
+				arg = "--target=x86_64-pc-windows-msvc";
+			}
+		}
+	}
 };
 
 
@@ -114,6 +154,26 @@ public:
 			RegisterCdeclCallingConvention(cc);
 			RegisterFastcallCallingConvention(cc);
 			RegisterStdcallCallingConvention(cc);
+		}
+	}
+
+	virtual void AdjustTypeParserInput(
+		Ref<TypeParser> parser,
+		std::vector<std::string>& arguments,
+		std::vector<std::pair<std::string, std::string>>& sourceFiles
+	) override
+	{
+		if (parser->GetName() != "ClangTypeParser")
+		{
+			return;
+		}
+
+		for (auto& arg: arguments)
+		{
+			if (arg.find("--target=") == 0 && arg.find("-unknown-") != std::string::npos)
+			{
+				arg = "--target=armv7-pc-windows-msvc";
+			}
 		}
 	}
 };
@@ -140,6 +200,26 @@ public:
 		if (cc)
 		{
 			SetSystemCallConvention(cc);
+		}
+	}
+
+	virtual void AdjustTypeParserInput(
+		Ref<TypeParser> parser,
+		std::vector<std::string>& arguments,
+		std::vector<std::pair<std::string, std::string>>& sourceFiles
+	) override
+	{
+		if (parser->GetName() != "ClangTypeParser")
+		{
+			return;
+		}
+
+		for (auto& arg: arguments)
+		{
+			if (arg.find("--target=") == 0 && arg.find("-unknown-") != std::string::npos)
+			{
+				arg = "--target=aarch64-pc-windows-msvc";
+			}
 		}
 	}
 };

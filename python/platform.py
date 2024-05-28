@@ -21,7 +21,7 @@
 import os
 import ctypes
 import traceback
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 
 # Binary Ninja components
 import binaryninja
@@ -84,7 +84,10 @@ class Platform(metaclass=_PlatformMetaClass):
 			self._cb.getGlobalRegisters = self._cb.getGlobalRegisters.__class__(self._get_global_regs)
 			self._cb.freeRegisterList = self._cb.freeRegisterList.__class__(self._free_register_list)
 			self._cb.getGlobalRegisterType = self._cb.getGlobalRegisterType.__class__(self._get_global_reg_type)
+			self._cb.adjustTypeParserInput = self._cb.adjustTypeParserInput.__class__(self._adjust_type_parser_input)
+			self._cb.freeTypeParserInput = self._cb.freeTypeParserInput.__class__(self._free_type_parser_input)
 			self._pending_reg_lists = {}
+			self._pending_parser_input_lists = {}
 			if self.__class__.type_file_path is None:
 				_handle = core.BNCreateCustomPlatform(arch.handle, self.__class__.name, self._cb)
 				assert _handle is not None
@@ -160,6 +163,103 @@ class Platform(metaclass=_PlatformMetaClass):
 		except:
 			log_error(traceback.format_exc())
 			return None
+
+	def _adjust_type_parser_input(
+			self,
+			ctxt,
+			parser,
+			arguments_in,
+			arguments_len_in,
+			source_file_names_in,
+			source_file_values_in,
+			source_files_len_in,
+			arguments_out,
+			arguments_len_out,
+			source_file_names_out,
+			source_file_values_out,
+			source_files_len_out
+	):
+		try:
+			parser_py = typeparser.TypeParser(handle=parser)
+
+			arguments = []
+			for i in range(arguments_len_in):
+				arguments.append(core.pyNativeStr(arguments_in[i]))
+
+			source_files = []
+			for i in range(source_files_len_in):
+				source_files.append((core.pyNativeStr(source_file_names_in[i]), core.pyNativeStr(source_file_values_in[i])))
+
+			arguments, source_files = self.adjust_type_parser_input(parser_py, arguments, source_files)
+
+			arguments_len_out[0] = len(arguments)
+			arguments_buf = (ctypes.c_char_p * len(arguments))()
+			for i, r in enumerate(arguments):
+				arguments_buf[i] = core.cstr(r)
+			arguments_ptr = ctypes.cast(arguments_buf, ctypes.c_void_p)
+			arguments_out[0] = arguments_buf
+			self._pending_parser_input_lists[arguments_ptr.value] = (arguments_ptr.value, arguments_buf)
+
+			source_files_len_out[0] = len(source_files)
+			source_file_names_buf = (ctypes.c_char_p * len(source_files))()
+			source_file_values_buf = (ctypes.c_char_p * len(source_files))()
+			for i, (name, value) in enumerate(source_files):
+				source_file_names_buf[i] = core.cstr(name)
+				source_file_values_buf[i] = core.cstr(value)
+			source_file_names_ptr = ctypes.cast(source_file_names_buf, ctypes.c_void_p)
+			source_file_names_out[0] = source_file_names_buf
+			source_file_values_ptr = ctypes.cast(source_file_values_buf, ctypes.c_void_p)
+			source_file_values_out[0] = source_file_values_buf
+			self._pending_parser_input_lists[source_file_names_ptr.value] = (source_file_names_ptr.value, source_file_names_buf)
+			self._pending_parser_input_lists[source_file_values_ptr.value] = (source_file_values_ptr.value, source_file_values_buf)
+
+		except:
+			arguments_len_out[0] = 0
+			source_files_len_out[0] = 0
+			traceback.print_exc()
+
+	def _free_type_parser_input(
+			self,
+			ctxt,
+			arguments,
+			arguments_len,
+			source_file_names,
+			source_file_values,
+			source_files_len
+	):
+		try:
+			buf = ctypes.cast(arguments, ctypes.c_void_p)
+			if buf.value not in self._pending_parser_input_lists:
+				raise ValueError("freeing arguments list that wasn't allocated")
+			del self._pending_parser_input_lists[buf.value]
+
+			buf = ctypes.cast(source_file_names, ctypes.c_void_p)
+			if buf.value not in self._pending_parser_input_lists:
+				raise ValueError("freeing source_file_names list that wasn't allocated")
+			del self._pending_parser_input_lists[buf.value]
+
+			buf = ctypes.cast(source_file_values, ctypes.c_void_p)
+			if buf.value not in self._pending_parser_input_lists:
+				raise ValueError("freeing source_file_values list that wasn't allocated")
+			del self._pending_parser_input_lists[buf.value]
+		except:
+			log_error(traceback.format_exc())
+
+	def adjust_type_parser_input(
+			self,
+			parser: 'typeparser.TypeParser',
+			arguments: List[str],
+			source_files: List[Tuple[str, str]]
+	) -> Tuple[List[str], List[Tuple[str, str]]]:
+		"""
+		Modify the arguments passed to the Type Parser with Platform-specific features.
+
+		:param parser: Type Parser instance
+		:param arguments: Default arguments passed to the parser
+		:param source_files: Source file names and contents
+		:return: A tuple of (modified arguments, modified source files)
+		"""
+		return arguments, source_files
 
 	def __del__(self):
 		if core is not None:

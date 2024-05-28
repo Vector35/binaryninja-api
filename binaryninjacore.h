@@ -1882,6 +1882,29 @@ extern "C"
 		void (*freeRegisterList)(void* ctxt, uint32_t* regs, size_t len);
 
 		BNType* (*getGlobalRegisterType)(void* ctxt, uint32_t reg);
+
+		void (*adjustTypeParserInput)(
+			void* ctxt,
+			BNTypeParser* parser,
+			const char* const* argumentsIn,
+			size_t argumentsLenIn,
+			const char* const* sourceFileNamesIn,
+			const char* const* sourceFileValuesIn,
+			size_t sourceFilesLenIn,
+			char*** argumentsOut,
+			size_t* argumentsLenOut,
+			char*** sourceFileNamesOut,
+			char*** sourceFileValuesOut,
+			size_t* sourceFilesLenOut
+		);
+		void (*freeTypeParserInput)(
+			void* ctxt,
+			char** arguments,
+			size_t argumentsLen,
+			char** sourceFileNames,
+			char** sourceFileValues,
+			size_t sourceFilesLen
+		);
 	} BNCustomPlatform;
 
 	typedef struct BNBasicBlockEdge
@@ -6408,6 +6431,20 @@ extern "C"
 
 	BINARYNINJACOREAPI uint32_t* BNGetPlatformGlobalRegisters(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI BNType* BNGetPlatformGlobalRegisterType(BNPlatform* platform, uint32_t reg);
+	BINARYNINJACOREAPI void BNPlatformAdjustTypeParserInput(
+		BNPlatform* platform,
+		BNTypeParser* parser,
+		const char* const* argumentsIn,
+		size_t argumentsLenIn,
+		const char* const* sourceFileNamesIn,
+		const char* const* sourceFileValuesIn,
+		size_t sourceFilesLenIn,
+		char*** argumentsOut,
+		size_t* argumentsLenOut,
+		char*** sourceFileNamesOut,
+		char*** sourceFileValuesOut,
+		size_t* sourceFilesLenOut
+	);
 
 	BINARYNINJACOREAPI BNPlatform* BNGetArchitectureStandalonePlatform(BNArchitecture* arch);
 

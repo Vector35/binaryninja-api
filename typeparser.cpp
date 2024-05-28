@@ -99,6 +99,12 @@ std::string TypeParser::FormatParseErrors(const std::vector<TypeParserError>& er
 }
 
 
+std::string TypeParser::GetName() const
+{
+	return BNGetTypeParserName(m_object);
+}
+
+
 bool TypeParser::GetOptionText(BNTypeParserOption option, std::string value, std::string& result) const
 {
 	// Default: Don't accept anything

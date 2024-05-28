@@ -42,6 +42,8 @@ Platform::Platform(Architecture* arch, const string& name)
 	plat.getGlobalRegisters = GetGlobalRegistersCallback;
 	plat.freeRegisterList = FreeRegisterListCallback;
 	plat.getGlobalRegisterType = GetGlobalRegisterTypeCallback;
+	plat.adjustTypeParserInput = AdjustTypeParserInputCallback;
+	plat.freeTypeParserInput = FreeTypeParserInputCallback;
 	m_object = BNCreateCustomPlatform(arch->GetObject(), name.c_str(), &plat);
 	AddRefForRegistration();
 }
@@ -56,6 +58,8 @@ Platform::Platform(Architecture* arch, const string& name, const string& typeFil
 	plat.getGlobalRegisters = GetGlobalRegistersCallback;
 	plat.freeRegisterList = FreeRegisterListCallback;
 	plat.getGlobalRegisterType = GetGlobalRegisterTypeCallback;
+	plat.adjustTypeParserInput = AdjustTypeParserInputCallback;
+	plat.freeTypeParserInput = FreeTypeParserInputCallback;
 	const char** includeDirList = new const char*[includeDirs.size()];
 	for (size_t i = 0; i < includeDirs.size(); i++)
 		includeDirList[i] = includeDirs[i].c_str();
@@ -94,6 +98,78 @@ uint32_t* Platform::GetGlobalRegistersCallback(void* ctxt, size_t* count)
 		result[i] = regs[i];
 
 	return result;
+}
+
+
+void Platform::AdjustTypeParserInputCallback(
+	void* ctxt,
+	BNTypeParser* parser,
+	const char* const* argumentsIn,
+	size_t argumentsLenIn,
+	const char* const* sourceFileNamesIn,
+	const char* const* sourceFileValuesIn,
+	size_t sourceFilesLenIn,
+	char*** argumentsOut,
+	size_t* argumentsLenOut,
+	char*** sourceFileNamesOut,
+	char*** sourceFileValuesOut,
+	size_t* sourceFilesLenOut
+)
+{
+	CallbackRef<Platform> plat(ctxt);
+	Ref<TypeParser> parserCpp = new CoreTypeParser(parser);
+
+	vector<string> arguments;
+	for (size_t i = 0; i < argumentsLenIn; i ++)
+	{
+		arguments.push_back(argumentsIn[i]);
+	}
+	vector<pair<string, string>> sourceFiles;
+	for (size_t i = 0; i < sourceFilesLenIn; i ++)
+	{
+		sourceFiles.push_back(make_pair(sourceFileNamesIn[i], sourceFileValuesIn[i]));
+	}
+
+	plat->AdjustTypeParserInput(
+		parserCpp,
+		arguments,
+		sourceFiles
+	);
+
+	vector<const char*> argumentsPtrs;
+	for (auto& argument : arguments)
+	{
+		argumentsPtrs.push_back(argument.c_str());
+	}
+	*argumentsOut = BNAllocStringList(argumentsPtrs.data(), argumentsPtrs.size());
+	*argumentsLenOut = arguments.size();
+
+	vector<const char*> sourceFileNamesPtrs;
+	vector<const char*> sourceFileValuesPtrs;
+	for (auto& [sourceFileName, sourceFileValue] : sourceFiles)
+	{
+		sourceFileNamesPtrs.push_back(sourceFileName.c_str());
+		sourceFileValuesPtrs.push_back(sourceFileValue.c_str());
+	}
+	*sourceFileNamesOut = BNAllocStringList(sourceFileNamesPtrs.data(), sourceFileNamesPtrs.size());
+	*sourceFileValuesOut = BNAllocStringList(sourceFileValuesPtrs.data(), sourceFileValuesPtrs.size());
+	*sourceFilesLenOut = sourceFiles.size();
+}
+
+
+void Platform::FreeTypeParserInputCallback(
+	void* ctxt,
+	char** arguments,
+	size_t argumentsLen,
+	char** sourceFileNames,
+	char** sourceFileValues,
+	size_t sourceFilesLen
+)
+{
+	(void)ctxt;
+	BNFreeStringList(arguments, argumentsLen);
+	BNFreeStringList(sourceFileNames, sourceFilesLen);
+	BNFreeStringList(sourceFileValues, sourceFilesLen);
 }
 
 
@@ -355,6 +431,75 @@ Ref<Type> CorePlatform::GetGlobalRegisterType(uint32_t reg)
 	if (!res)
 		return nullptr;
 	return new Type(res);
+}
+
+
+void Platform::AdjustTypeParserInput(
+	Ref<TypeParser> parser,
+	vector<string>& arguments,
+	vector<pair<string, string>>& sourceFiles
+)
+{
+	(void)parser;
+	(void)arguments;
+	(void)sourceFiles;
+}
+
+
+void CorePlatform::AdjustTypeParserInput(
+	Ref<TypeParser> parser,
+	vector<string>& arguments,
+	vector<pair<string, string>>& sourceFiles
+)
+{
+	vector<const char*> argumentsIn;
+	for (size_t i = 0; i < arguments.size(); i ++)
+	{
+		argumentsIn.push_back(arguments[i].c_str());
+	}
+	vector<const char*> sourceFileNamesIn;
+	vector<const char*> sourceFileValuesIn;
+	for (size_t i = 0; i < sourceFiles.size(); i ++)
+	{
+		sourceFileNamesIn.push_back(sourceFiles[i].first.c_str());
+		sourceFileValuesIn.push_back(sourceFiles[i].second.c_str());
+	}
+
+	char** argumentsOut;
+	size_t argumentsLenOut;
+	char** sourceFileNamesOut;
+	char** sourceFileValuesOut;
+	size_t sourceFilesLenOut;
+
+	BNPlatformAdjustTypeParserInput(
+		m_object,
+		parser->m_object,
+		argumentsIn.data(),
+		argumentsIn.size(),
+		sourceFileNamesIn.data(),
+		sourceFileValuesIn.data(),
+		sourceFileNamesIn.size(),
+		&argumentsOut,
+		&argumentsLenOut,
+		&sourceFileNamesOut,
+		&sourceFileValuesOut,
+		&sourceFilesLenOut
+	);
+
+	arguments.clear();
+	for (size_t i = 0; i < argumentsLenOut; i ++)
+	{
+		arguments.push_back(argumentsOut[i]);
+	}
+	sourceFiles.clear();
+	for (size_t i = 0; i < sourceFilesLenOut; i ++)
+	{
+		sourceFiles.push_back(make_pair(sourceFileNamesOut[i], sourceFileValuesOut[i]));
+	}
+
+	BNFreeStringList(argumentsOut, argumentsLenOut);
+	BNFreeStringList(sourceFileNamesOut, sourceFilesLenOut);
+	BNFreeStringList(sourceFileValuesOut, sourceFilesLenOut);
 }
 
 

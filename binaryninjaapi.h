@@ -14518,6 +14518,28 @@ namespace BinaryNinja {
 		static uint32_t* GetGlobalRegistersCallback(void* ctxt, size_t* count);
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs, size_t count);
 		static BNType* GetGlobalRegisterTypeCallback(void* ctxt, uint32_t reg);
+		static void AdjustTypeParserInputCallback(
+			void* ctxt,
+			BNTypeParser* parser,
+			const char* const* argumentsIn,
+			size_t argumentsLenIn,
+			const char* const* sourceFileNamesIn,
+			const char* const* sourceFileValuesIn,
+			size_t sourceFilesLenIn,
+			char*** argumentsOut,
+			size_t* argumentsLenOut,
+			char*** sourceFileNamesOut,
+			char*** sourceFileValuesOut,
+			size_t* sourceFilesLenOut
+		);
+		static void FreeTypeParserInputCallback(
+			void* ctxt,
+			char** arguments,
+			size_t argumentsLen,
+			char** sourceFileNames,
+			char** sourceFileValues,
+			size_t sourceFilesLen
+		);
 
 	  public:
 		Platform(BNPlatform* platform);
@@ -14678,6 +14700,18 @@ namespace BinaryNinja {
 		 */
 		virtual Ref<Type> GetGlobalRegisterType(uint32_t reg);
 
+		/*! Modify the input passed to the Type Parser with Platform-specific features.
+
+			\param[in] parser Type Parser instance
+			\param[in,out] arguments Arguments to the type parser
+			\param[in,out] sourceFiles Source file names and contents
+		 */
+		virtual void AdjustTypeParserInput(
+			Ref<class TypeParser> parser,
+			std::vector<std::string>& arguments,
+			std::vector<std::pair<std::string, std::string>>& sourceFiles
+		);
+
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);
 		Ref<Platform> GetAssociatedPlatformByAddress(uint64_t& addr);
@@ -14776,6 +14810,11 @@ namespace BinaryNinja {
 
 		virtual std::vector<uint32_t> GetGlobalRegisters() override;
 		virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override;
+		virtual void AdjustTypeParserInput(
+			Ref<class TypeParser> parser,
+			std::vector<std::string>& arguments,
+			std::vector<std::pair<std::string, std::string>>& sourceFiles
+		) override;
 	};
 
 	/*!
@@ -14833,6 +14872,12 @@ namespace BinaryNinja {
 		    \return String of formatted errors
 		*/
 		static std::string FormatParseErrors(const std::vector<TypeParserError>& errors);
+
+		/*!
+		    Get the Type Parser's registered name
+		    \return Parser name
+		 */
+		std::string GetName() const;
 
 		/**
 		    Get the string representation of an option for passing to ParseTypes*

@@ -198,6 +198,7 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 	size_t m_lineIndex;
 	size_t m_tokenIndex;
 	bool m_needFirstFocus;
+	bool m_positionAware;
 
 	//! Bind and register all stack view actions.
 	void setupActions();
@@ -282,6 +283,9 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 
 	//! Set the base offset to a constant (or clear on nullopt)
 	void setBaseOffset(FunctionRef func, std::optional<int64_t> offset);
+
+	//! Set whether we show only the vars relevant for the current address
+	void setPositionAware(bool positionAware);
 
 	//! Override the default event handler so we can have nice tooltips.
 	bool event(QEvent* event) override;

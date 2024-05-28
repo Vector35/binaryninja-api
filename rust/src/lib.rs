@@ -217,13 +217,19 @@ pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::Binar
 
 /// The main way to open and load files (with options) into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
 ///
-/// <div class="warning">Your JSON needs to be compliant with RapidJSON's format, which basically means you just need to escape double quotes (\") and single quotes won't work.</div>
+/// <div class="warning">Strict JSON doesn't support single quotes for strings, so you'll need to either use a raw strings (<code>f#"{"setting": "value"}"#</code>) or escape double quotes (<code>"{\"setting\": \"value\"}"</code>). Or use <code>serde_json::json</code>.</div>
 ///
 /// ```no_run
+/// # // Mock implementation of json! macro for documentation purposes
+/// # macro_rules! json {
+/// #   ($($arg:tt)*) => {
+/// #     stringify!($($arg)*)
+/// #   };
+/// # }
 /// use binaryninja::{metadata::Metadata, rc::Ref};
 /// use std::collections::HashMap;
 ///
-/// let bv = binaryninja::load_with_options("/bin/cat", true, Some("{\"analysis.linearSweep.autorun\": false}"))
+/// let bv = binaryninja::load_with_options("/bin/cat", true, Some(json!("analysis.linearSweep.autorun": false).to_string()))
 ///     .expect("Couldn't open `/bin/cat`");
 /// ```
 pub fn load_with_options<S: BnStrCompatible, O: IntoJson>(

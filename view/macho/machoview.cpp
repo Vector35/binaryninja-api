@@ -2031,13 +2031,25 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 			if (relocationHandler->GetRelocationInfo(this, m_arch, infoList))
 			{
+				unordered_map<string, vector<Ref<Symbol>>> symbolCache;
 				for (auto& reloc: infoList)
 				{
 					if (reloc.symbolIndex >= m_symbols.size())
 							continue;
 
 					// retrieve first symbol that is not a symbol relocation
-					auto symbols = GetSymbolsByName(m_symbols[reloc.symbolIndex]);
+					vector<Ref<Symbol>> symbols;
+					auto symName = m_symbols[reloc.symbolIndex];
+					if (auto itr = symbolCache.find(symName); itr != symbolCache.end())
+					{
+						symbols = itr->second;
+					}
+					else
+					{
+						symbols = GetSymbolsByName(symName);
+						symbolCache[symName] = symbols;
+					}
+
 					for (const auto& symbol : symbols)
 					{
 							if (symbol->GetAddress() == reloc.address)

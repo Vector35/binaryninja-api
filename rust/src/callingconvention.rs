@@ -128,7 +128,7 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::_callee_saved_registers", unsafe {
+        ffi_wrap!("CallingConvention::callee_saved_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             let regs = ctxt.cc.callee_saved_registers();
 

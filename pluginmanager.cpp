@@ -80,9 +80,14 @@ string RepoPlugin::GetLongdescription() const
 	RETURN_STRING(BNPluginGetLongdescription(m_object));
 }
 
-uint64_t RepoPlugin::GetMinimumVersion() const
+BNVersionInfo RepoPlugin::GetMinimumVersionInfo() const
 {
-	return BNPluginGetMinimumVersion(m_object);
+	return BNPluginGetMinimumVersionInfo(m_object);
+}
+
+BNVersionInfo RepoPlugin::GetMaximumVersionInfo() const
+{
+	return BNPluginGetMaximumVersionInfo(m_object);
 }
 
 string RepoPlugin::GetName() const

@@ -2733,8 +2733,8 @@ unsafe impl CoreArrayProviderInner for DataVariable {
 #[repr(C)]
 pub struct DataVariableAndName {
     pub address: u64,
-    pub t: Type,
-    name: BnString,
+    t: ManuallyDrop<Type>,
+    name: ManuallyDrop<BnString>,
     pub auto_discovered: bool,
     type_confidence: u8,
 }
@@ -2752,21 +2752,6 @@ impl DataVariableAndName {
         unsafe { mem::transmute(self) }
     }
 
-    pub fn new<S: BnStrCompatible>(
-        address: u64,
-        t: Conf<Type>,
-        auto_discovered: bool,
-        name: S,
-    ) -> Self {
-        Self {
-            address,
-            t: t.contents,
-            name: BnString::new(name),
-            auto_discovered,
-            type_confidence: t.confidence,
-        }
-    }
-
     pub fn name(&self) -> &str {
         self.name.as_str()
     }
@@ -2778,9 +2763,7 @@ impl DataVariableAndName {
 
 impl Drop for DataVariableAndName {
     fn drop(&mut self) {
-        unsafe{
-            BNFreeDataVariableAndName(self.as_raw_mut())
-        }
+        unsafe { BNFreeDataVariableAndName(self.as_raw_mut()) }
     }
 }
 
@@ -2793,6 +2776,54 @@ impl CoreArrayProvider for DataVariableAndName {
 unsafe impl CoreArrayProviderInner for DataVariableAndName {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         unsafe { BNFreeDataVariablesAndName(raw, count) };
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::ref_from_raw(raw)
+    }
+}
+
+/////////////////////////
+// DataVariableAndNameAndDebugParser
+
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct DataVariableAndNameAndDebugParser {
+    pub address: u64,
+    pub t: Type,
+    name: BnString,
+    parser: BnString,
+    pub auto_discovered: bool,
+    type_confidence: u8,
+}
+
+impl DataVariableAndNameAndDebugParser {
+    pub(crate) unsafe fn ref_from_raw(var: &BNDataVariableAndNameAndDebugParser) -> &Self {
+        unsafe { mem::transmute(var) }
+    }
+
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    pub fn parser(&self) -> &str {
+        self.parser.as_str()
+    }
+
+    pub fn type_with_confidence(&self) -> Conf<&Type> {
+        Conf::new(&self.t, self.type_confidence)
+    }
+}
+
+impl CoreArrayProvider for DataVariableAndNameAndDebugParser {
+    type Raw = BNDataVariableAndNameAndDebugParser;
+    type Context = ();
+    type Wrapped<'a> = &'a Self;
+}
+
+unsafe impl CoreArrayProviderInner for DataVariableAndNameAndDebugParser {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        unsafe { BNFreeDataVariableAndNameAndDebugParserList(raw, count) };
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -3820,6 +3851,11 @@ mod test {
 
     // TODO BNGetDebugDataVariableByName returns a *mut BNDataVariableAndName
     // pointer, can we deref it? Or it need to be freed by proper drop.
-    // Verify if DebugInfo::get_data_variable_by_name should call
-    // BNFreeDataVariableAndName
+    // Verify if 
+    // * DebugInfo::get_data_variable_by_name
+    // * DebugInfo::get_data_variable_by_address
+    // should call BNFreeDataVariableAndName
+    // Also verify if
+    // * DebugInfo::add_data_variable_info
+    // should receive a reference or some kind of owned pointer
 }

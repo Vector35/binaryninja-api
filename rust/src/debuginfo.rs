@@ -75,7 +75,7 @@ use crate::{
     platform::Platform,
     rc::*,
     string::{raw_to_string, BnStrCompatible, BnString},
-    types::{DataVariableAndName, NameAndType, Type},
+    types::{DataVariableAndName, DataVariableAndNameAndDebugParser, NameAndType, Type},
 };
 
 use std::{
@@ -514,18 +514,23 @@ impl DebugInfo {
         let parser_name = parser_name.into_bytes_with_nul();
         let name = name.into_bytes_with_nul();
 
-        let result = unsafe {
+        let name_and_var_raw = unsafe {
             BNGetDebugDataVariableByName(
                 self.handle,
                 parser_name.as_ref().as_ptr() as *mut _,
                 name.as_ref().as_ptr() as *mut _,
             )
         };
-        if result.is_null() {
+        if name_and_var_raw.is_null() {
             return None;
         }
-        let result = unsafe { DataVariableAndName::ref_from_raw(&*result) };
-        Some((result.address, result.t.clone()))
+        let name_and_var = unsafe { DataVariableAndName::ref_from_raw(&*name_and_var_raw) };
+        let result = (
+            name_and_var.address,
+            name_and_var.type_with_confidence().contents.clone(),
+        );
+        unsafe { BNFreeDataVariableAndName(name_and_var_raw) };
+        Some(result)
     }
 
     pub fn get_data_variable_by_address<S: BnStrCompatible>(
@@ -534,7 +539,7 @@ impl DebugInfo {
         address: u64,
     ) -> Option<(String, Type)> {
         let parser_name = parser_name.into_bytes_with_nul();
-        let name_and_var = unsafe {
+        let name_and_var_raw = unsafe {
             BNGetDebugDataVariableByAddress(
                 self.handle,
                 parser_name.as_ref().as_ptr() as *mut _,
@@ -542,14 +547,18 @@ impl DebugInfo {
             )
         };
 
-        if name_and_var.is_null() {
+        if name_and_var_raw.is_null() {
             return None;
         }
-        let result = unsafe { DataVariableAndName::ref_from_raw(&*name_and_var) };
-        Some((result.name().to_owned(), result.t.clone()))
+        let name_and_var = unsafe { DataVariableAndName::ref_from_raw(&*name_and_var_raw) };
+        let result = (
+            name_and_var.name().to_owned(),
+            name_and_var.type_with_confidence().contents.clone(),
+        );
+        unsafe { BNFreeDataVariableAndName(name_and_var_raw) };
+        Some(result)
     }
 
-    // The tuple is (DebugInfoParserName, type)
     pub fn get_types_by_name<S: BnStrCompatible>(&self, name: S) -> Array<NameAndType> {
         let name = name.into_bytes_with_nul();
 
@@ -561,7 +570,6 @@ impl DebugInfo {
         unsafe { Array::new(raw_names_and_types, count, ()) }
     }
 
-    // The tuple is (DebugInfoParserName, address, type)
     pub fn get_data_variables_by_name<S: BnStrCompatible>(
         &self,
         name: S,
@@ -576,38 +584,15 @@ impl DebugInfo {
         unsafe { Array::new(raw_variables_and_names, count, ()) }
     }
 
-    /// The tuple is (DebugInfoParserName, TypeName, type)
-    pub fn get_data_variables_by_address(&self, address: u64) -> Vec<(String, String, Type)> {
+    pub fn get_data_variables_by_address(
+        &self,
+        address: u64,
+    ) -> Array<DataVariableAndNameAndDebugParser> {
         let mut count: usize = 0;
         let raw_variables_and_names =
             unsafe { BNGetDebugDataVariablesByAddress(self.handle, address, &mut count) };
 
-        let variables_and_names: &[*mut BNDataVariableAndNameAndDebugParser] =
-            unsafe { slice::from_raw_parts(raw_variables_and_names as *mut _, count) };
-
-        let result = variables_and_names
-            .iter()
-            .take(count)
-            .map(|&variable_and_name| unsafe {
-                assert!(!variable_and_name.is_null());
-                let BNDataVariableAndNameAndDebugParser {
-                    address: _,
-                    type_,
-                    name,
-                    parser,
-                    autoDiscovered: _,
-                    typeConfidence: _,
-                } = *variable_and_name;
-                (
-                    raw_to_string(parser).unwrap(),
-                    raw_to_string(name).unwrap(),
-                    Type::from_raw(ptr::NonNull::new(BNNewTypeReference(type_)).unwrap()),
-                )
-            })
-            .collect();
-
-        unsafe { BNFreeDataVariableAndNameAndDebugParserList(raw_variables_and_names, count) };
-        result
+        unsafe { Array::new(raw_variables_and_names, count, ()) }
     }
 
     pub fn remove_parser_info<S: BnStrCompatible>(&self, parser_name: S) -> bool {

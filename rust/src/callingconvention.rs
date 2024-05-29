@@ -17,17 +17,13 @@
 use std::borrow::Borrow;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
-use std::mem;
 use std::os::raw::c_void;
-use std::ptr;
-use std::slice;
+use std::{mem, ptr, slice};
 
 use binaryninjacore_sys::*;
 
 use crate::architecture::{Architecture, ArchitectureExt, CoreArchitecture, Register};
-use crate::rc::{
-    CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable,
-};
+use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::*;
 
 // TODO
@@ -437,7 +433,9 @@ impl<A: Architecture> CallingConvention<A> {
     }
 
     pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetCallingConventionName(self.handle)) }
+        unsafe {
+            BnString::from_raw(NonNull::new(BNGetCallingConventionName(self.handle)).unwrap())
+        }
     }
 
     pub fn variables_for_parameters(

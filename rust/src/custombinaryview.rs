@@ -19,11 +19,9 @@ use binaryninjacore_sys::*;
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
 use std::marker::PhantomData;
-use std::mem;
 use std::mem::MaybeUninit;
 use std::os::raw::c_void;
-use std::ptr;
-use std::slice;
+use std::{mem, ptr, slice};
 
 use crate::architecture::Architecture;
 use crate::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt, Result};
@@ -183,11 +181,17 @@ pub trait BinaryViewTypeBase: AsRef<BinaryViewType> {
 
 pub trait BinaryViewTypeExt: BinaryViewTypeBase {
     fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetBinaryViewTypeName(self.as_ref().0)) }
+        unsafe {
+            BnString::from_raw(ptr::NonNull::new(BNGetBinaryViewTypeName(self.as_ref().0)).unwrap())
+        }
     }
 
     fn long_name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetBinaryViewTypeLongName(self.as_ref().0)) }
+        unsafe {
+            BnString::from_raw(
+                ptr::NonNull::new(BNGetBinaryViewTypeLongName(self.as_ref().0)).unwrap(),
+            )
+        }
     }
 
     fn register_arch<A: Architecture>(&self, id: u32, endianness: Endianness, arch: &A) {

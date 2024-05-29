@@ -14,9 +14,8 @@
 
 //! Interfaces for the various kinds of symbols in a binary.
 
-use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::ptr;
+use std::{fmt, ptr};
 
 use crate::rc::*;
 use crate::string::*;
@@ -248,15 +247,15 @@ impl Symbol {
     }
 
     pub fn full_name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetSymbolFullName(self.handle)) }
+        unsafe { BnString::from_raw(ptr::NonNull::new(BNGetSymbolFullName(self.handle)).unwrap()) }
     }
 
     pub fn short_name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetSymbolShortName(self.handle)) }
+        unsafe { BnString::from_raw(ptr::NonNull::new(BNGetSymbolShortName(self.handle)).unwrap()) }
     }
 
     pub fn raw_name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetSymbolRawName(self.handle)) }
+        unsafe { BnString::from_raw(ptr::NonNull::new(BNGetSymbolRawName(self.handle)).unwrap()) }
     }
 
     pub fn address(&self) -> u64 {

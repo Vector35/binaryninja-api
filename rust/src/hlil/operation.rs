@@ -1,3 +1,5 @@
+use std::ptr::NonNull;
+
 use binaryninjacore_sys::BNGetGotoLabelName;
 
 use crate::architecture::CoreIntrinsic;
@@ -16,7 +18,8 @@ pub struct GotoLabel {
 
 impl GotoLabel {
     pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetGotoLabelName(self.function.handle, self.target)) }
+        let result = unsafe { BNGetGotoLabelName(self.function.handle, self.target) };
+        unsafe { BnString::from_raw(NonNull::new(result).unwrap()) }
     }
 }
 

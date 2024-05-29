@@ -694,7 +694,9 @@ impl TypeBuilder {
 impl fmt::Display for TypeBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", unsafe {
-            BnString::from_raw(BNGetTypeBuilderString(self.as_raw(), ptr::null_mut()))
+            BnString::from_raw(
+                NonNull::new(BNGetTypeBuilderString(self.as_raw(), ptr::null_mut())).unwrap(),
+            )
         })
     }
 }
@@ -1222,18 +1224,21 @@ impl Type {
 
     pub fn generate_auto_demangled_type_id<S: BnStrCompatible>(name: S) -> BnString {
         let mut name = QualifiedName::from(name);
-        unsafe { BnString::from_raw(BNGenerateAutoDemangledTypeId(&mut name.0)) }
+        unsafe {
+            BnString::from_raw(NonNull::new(BNGenerateAutoDemangledTypeId(&mut name.0)).unwrap())
+        }
     }
 }
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", unsafe {
-            BnString::from_raw(BNGetTypeString(
+            let result = BNGetTypeString(
                 self.as_raw(),
                 ptr::null_mut(),
                 BNTokenEscapingType::NoTokenEscapingType,
-            ))
+            );
+            BnString::from_raw(NonNull::new(result).unwrap())
         })
     }
 }
@@ -2312,7 +2317,7 @@ impl NamedTypeReference {
     }
 
     pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetTypeReferenceId(self.handle)) }
+        unsafe { BnString::from_raw(NonNull::new(BNGetTypeReferenceId(self.handle)).unwrap()) }
     }
 
     pub fn class(&self) -> NamedTypeReferenceClass {
@@ -3574,7 +3579,7 @@ impl StackVariableReference {
             unsafe { Type::from_raw(NonNull::new(value.type_).unwrap()) },
             value.typeConfidence,
         );
-        let name = unsafe { BnString::from_raw(value.name) };
+        let name = unsafe { BnString::from_raw(NonNull::new(value.name).unwrap()) };
         let var = unsafe { Variable::from_identifier(value.varIdentifier) };
         let offset = value.referencedOffset;
         let size = value.size;

@@ -24,7 +24,9 @@ use std::{
     ffi::{c_char, c_int, CStr, CString},
     hash::Hash,
     mem::{zeroed, MaybeUninit},
-    ops, ptr, slice,
+    ops,
+    ptr,
+    slice,
 };
 
 use crate::{
@@ -1087,7 +1089,7 @@ impl CoreArchitecture {
     }
 
     pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetArchitectureName(self.0)) }
+        unsafe { BnString::from_raw(ptr::NonNull::new(BNGetArchitectureName(self.0)).unwrap()) }
     }
 }
 

@@ -5,7 +5,7 @@ use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::ffi::{c_void, CStr};
 use std::os::raw::c_char;
-use std::ptr::null_mut;
+use std::ptr::{null_mut, NonNull};
 use std::slice;
 
 pub struct DownloadProvider {
@@ -106,7 +106,7 @@ impl DownloadInstance {
 
     fn get_error(&self) -> BnString {
         let err: *mut c_char = unsafe { BNGetErrorForDownloadInstance(self.handle) };
-        unsafe { BnString::from_raw(err) }
+        unsafe { BnString::from_raw(NonNull::new(err).unwrap()) }
     }
 
     unsafe extern "C" fn o_write_callback(data: *mut u8, len: u64, ctxt: *mut c_void) -> u64 {

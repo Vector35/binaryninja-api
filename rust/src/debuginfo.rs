@@ -78,7 +78,12 @@ use crate::{
     types::{DataVariableAndName, NameAndType, Type},
 };
 
-use std::{hash::Hash, os::raw::c_void, ptr, slice};
+use std::{
+    hash::Hash,
+    os::raw::c_void,
+    ptr::{self, NonNull},
+    slice,
+};
 
 struct ProgressContext(Option<Box<dyn Fn(usize, usize) -> Result<(), ()>>>);
 
@@ -127,7 +132,7 @@ impl DebugInfoParser {
 
     /// Returns the name of the current parser
     pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetDebugInfoParserName(self.handle)) }
+        unsafe { BnString::from_raw(NonNull::new(BNGetDebugInfoParserName(self.handle)).unwrap()) }
     }
 
     /// Returns whether this debug-info parser is valid for the provided binary view

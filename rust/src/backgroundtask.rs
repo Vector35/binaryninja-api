@@ -16,6 +16,7 @@
 
 use binaryninjacore_sys::*;
 
+use std::ptr::NonNull;
 use std::result;
 
 use crate::rc::*;
@@ -60,7 +61,9 @@ impl BackgroundTask {
     }
 
     pub fn get_progress_text(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetBackgroundTaskProgressText(self.handle)) }
+        unsafe {
+            BnString::from_raw(NonNull::new(BNGetBackgroundTaskProgressText(self.handle)).unwrap())
+        }
     }
 
     pub fn cancel(&self) {

@@ -19,6 +19,7 @@ use binaryninjacore_sys::*;
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 use std::path::PathBuf;
+use std::ptr::NonNull;
 
 use crate::binaryview::BinaryView;
 use crate::rc::Ref;
@@ -38,7 +39,7 @@ pub fn get_text_line_input(prompt: &str, title: &str) -> Option<String> {
         return None;
     }
 
-    Some(unsafe { BnString::from_raw(value).to_string() })
+    Some(unsafe { BnString::from_raw(NonNull::new(value).unwrap()).to_string() })
 }
 
 pub fn get_integer_input(prompt: &str, title: &str) -> Option<i64> {
@@ -93,7 +94,7 @@ pub fn get_open_filename_input(prompt: &str, extension: &str) -> Option<PathBuf>
         return None;
     }
 
-    let string = unsafe { BnString::from_raw(value) };
+    let string = unsafe { BnString::from_raw(NonNull::new(value).unwrap()) };
     Some(PathBuf::from(string.as_str()))
 }
 
@@ -112,7 +113,7 @@ pub fn get_save_filename_input(prompt: &str, title: &str, default_name: &str) ->
         return None;
     }
 
-    let string = unsafe { BnString::from_raw(value) };
+    let string = unsafe { BnString::from_raw(NonNull::new(value).unwrap()) };
     Some(PathBuf::from(string.as_str()))
 }
 
@@ -130,7 +131,7 @@ pub fn get_directory_name_input(prompt: &str, default_name: &str) -> Option<Path
         return None;
     }
 
-    let string = unsafe { BnString::from_raw(value) };
+    let string = unsafe { BnString::from_raw(NonNull::new(value).unwrap()) };
     Some(PathBuf::from(string.as_str()))
 }
 

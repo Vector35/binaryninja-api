@@ -16,11 +16,11 @@
 
 use std::borrow::Cow;
 use std::ffi::{CStr, CString};
-use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::mem;
 use std::ops::Deref;
 use std::os::raw;
+use std::ptr::NonNull;
+use std::{fmt, mem};
 
 use crate::rc::*;
 use crate::types::QualifiedName;
@@ -37,7 +37,7 @@ pub(crate) fn raw_to_string(ptr: *const raw::c_char) -> Option<String> {
 /// functions provided by binaryninja_sys.
 #[repr(transparent)]
 pub struct BnString {
-    raw: *mut raw::c_char,
+    raw: NonNull<raw::c_char>,
 }
 
 /// A nul-terminated C string allocated by the core.
@@ -59,28 +59,28 @@ impl BnString {
             let ptr = raw.as_ref().as_ptr() as *mut _;
 
             Self {
-                raw: BNAllocString(ptr),
+                raw: NonNull::new(BNAllocString(ptr)).unwrap(),
             }
         }
     }
 
     /// Construct a BnString from an owned const char* allocated by BNAllocString
-    pub(crate) unsafe fn from_raw(raw: *mut raw::c_char) -> Self {
+    pub(crate) unsafe fn from_raw(raw: NonNull<raw::c_char>) -> Self {
         Self { raw }
     }
 
-    pub(crate) fn into_raw(self) -> *mut raw::c_char {
-        let res = self.raw;
+    pub(crate) fn as_raw(&self) -> &raw::c_char {
+        unsafe { &*self.raw.as_ptr() }
+    }
 
+    pub(crate) fn into_raw(self) -> *mut raw::c_char {
         // we're surrendering ownership over the *mut c_char to
         // the core, so ensure we don't free it
-        mem::forget(self);
-
-        res
+        mem::ManuallyDrop::new(self).raw.as_ptr()
     }
 
     pub fn as_str(&self) -> &str {
-        unsafe { CStr::from_ptr(self.raw).to_str().unwrap() }
+        unsafe { CStr::from_ptr(self.raw.as_ptr()).to_str().unwrap() }
     }
 
     pub fn as_bytes(&self) -> &[u8] {
@@ -104,9 +104,7 @@ impl Drop for BnString {
     fn drop(&mut self) {
         use binaryninjacore_sys::BNFreeString;
 
-        unsafe {
-            BNFreeString(self.raw);
-        }
+        unsafe { BNFreeString(self.as_raw() as *const raw::c_char as *mut raw::c_char) };
     }
 }
 
@@ -115,7 +113,7 @@ impl Clone for BnString {
         use binaryninjacore_sys::BNAllocString;
         unsafe {
             Self {
-                raw: BNAllocString(self.raw),
+                raw: NonNull::new(BNAllocString(self.as_raw())).unwrap(),
             }
         }
     }
@@ -125,7 +123,7 @@ impl Deref for BnString {
     type Target = CStr;
 
     fn deref(&self) -> &CStr {
-        unsafe { CStr::from_ptr(self.raw) }
+        unsafe { CStr::from_ptr(self.as_raw()) }
     }
 }
 

@@ -194,7 +194,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     fn type_name(&self) -> BnString {
         let ptr: *mut c_char = unsafe { BNGetViewType(self.as_ref().handle) };
-        unsafe { BnString::from_raw(ptr) }
+        unsafe { BnString::from_raw(ptr::NonNull::new(ptr).unwrap()) }
     }
 
     fn parent_view(&self) -> Result<Ref<BinaryView>> {
@@ -222,7 +222,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     fn view_type(&self) -> BnString {
         let ptr: *mut c_char = unsafe { BNGetViewType(self.as_ref().handle) };
-        unsafe { BnString::from_raw(ptr) }
+        unsafe { BnString::from_raw(ptr::NonNull::new(ptr).unwrap()) }
     }
 
     /// Reads up to `len` bytes from address `offset`
@@ -770,7 +770,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let mut qualified_name = QualifiedName::from(name);
             let id_cstr = BNGetAnalysisTypeId(self.as_ref().handle, &mut qualified_name.0);
-            let id = BnString::from_raw(id_cstr);
+            let id = BnString::from_raw(ptr::NonNull::new(id_cstr).unwrap());
             if id.is_empty() {
                 return None;
             }

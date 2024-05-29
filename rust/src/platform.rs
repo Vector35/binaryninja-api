@@ -18,6 +18,7 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::os::raw;
 use std::path::Path;
+use std::ptr::NonNull;
 use std::{ptr, slice};
 
 use binaryninjacore_sys::*;
@@ -157,7 +158,7 @@ impl Platform {
     pub fn name(&self) -> BnString {
         unsafe {
             let raw_name = BNGetPlatformName(self.handle);
-            BnString::from_raw(raw_name)
+            BnString::from_raw(NonNull::new(raw_name).unwrap())
         }
     }
 
@@ -312,7 +313,7 @@ impl TypeParser for Platform {
                 auto_type_source.as_ref().as_ptr() as _,
             );
 
-            let error_msg = BnString::from_raw(error_string);
+            let error_msg = BnString::from_raw(NonNull::new(error_string).unwrap());
 
             if !success {
                 return Err(error_msg.to_string());

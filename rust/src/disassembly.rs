@@ -23,8 +23,7 @@ use crate::rc::*;
 
 use std::convert::From;
 use std::ffi::CStr;
-use std::mem;
-use std::ptr;
+use std::{mem, ptr};
 
 pub type InstructionTextTokenType = BNInstructionTextTokenType;
 pub type InstructionTextTokenContext = BNInstructionTextTokenContext;
@@ -257,7 +256,7 @@ impl Clone for InstructionTextToken {
 impl Drop for InstructionTextToken {
     fn drop(&mut self) {
         if !self.0.text.is_null() {
-            let _owned = unsafe { BnString::from_raw(self.0.text) };
+            let _owned = unsafe { BnString::from_raw(ptr::NonNull::new(self.0.text).unwrap()) };
         }
         if !self.0.typeNames.is_null() && self.0.namesCount != 0 {
             unsafe { BNFreeStringList(self.0.typeNames, self.0.namesCount) }

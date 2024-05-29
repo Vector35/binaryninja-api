@@ -184,7 +184,7 @@ impl Function {
     }
 
     pub fn comment(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetFunctionComment(self.handle)) }
+        unsafe { BnString::from_raw(NonNull::new(BNGetFunctionComment(self.handle)).unwrap()) }
     }
 
     pub fn set_comment<S: BnStrCompatible>(&self, comment: S) {
@@ -206,7 +206,9 @@ impl Function {
     }
 
     pub fn comment_at(&self, addr: u64) -> BnString {
-        unsafe { BnString::from_raw(BNGetCommentForAddress(self.handle, addr)) }
+        unsafe {
+            BnString::from_raw(NonNull::new(BNGetCommentForAddress(self.handle, addr)).unwrap())
+        }
     }
 
     pub fn set_comment_at<S: BnStrCompatible>(&self, addr: u64, comment: S) {
@@ -279,7 +281,7 @@ impl Function {
         unsafe {
             let raw_var = var.raw();
             let raw_name = BNGetVariableName(self.handle, &raw_var);
-            BnString::from_raw(raw_name)
+            BnString::from_raw(NonNull::new(raw_name).unwrap())
         }
     }
 
@@ -1536,15 +1538,16 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> BnString {
         let arch = arch.unwrap_or_else(|| self.arch());
-        unsafe {
-            BnString::from_raw(BNGetIntegerConstantDisplayTypeEnumerationType(
+        let result = unsafe {
+            BNGetIntegerConstantDisplayTypeEnumerationType(
                 self.handle,
                 arch.0,
                 instr_addr,
                 value,
                 operand,
-            ))
-        }
+            )
+        };
+        unsafe { BnString::from_raw(NonNull::new(result).unwrap()) }
     }
 
     /// Get the current text display type for an integer token in the disassembly or IL views
@@ -1721,7 +1724,7 @@ impl Function {
             return None;
         }
         let var = unsafe { Variable::from_raw(found_value.var) };
-        let name = unsafe { BnString::from_raw(found_value.name) };
+        let name = unsafe { BnString::from_raw(NonNull::new(found_value.name).unwrap()) };
         let var_type = Conf::new(
             unsafe { Type::from_raw(NonNull::new(found_value.type_).unwrap()) },
             found_value.typeConfidence,
@@ -2093,7 +2096,7 @@ impl Function {
     /// is under develoment. Currently the provenance information is
     /// undocumented, not persistent, and not saved to a database.
     pub fn provenance(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetProvenanceString(self.handle)) }
+        unsafe { BnString::from_raw(NonNull::new(BNGetProvenanceString(self.handle)).unwrap()) }
     }
 
     /// Get registers that are used for the return value

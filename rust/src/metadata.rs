@@ -3,6 +3,7 @@ use crate::string::{BnStrCompatible, BnString, IntoJson};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::os::raw::c_char;
+use std::ptr::NonNull;
 use std::slice;
 
 pub type MetadataType = BNMetadataType;
@@ -69,7 +70,7 @@ impl Metadata {
                 if ptr.is_null() {
                     return Err(());
                 }
-                Ok(unsafe { BnString::from_raw(ptr) })
+                Ok(unsafe { BnString::from_raw(NonNull::new(ptr).unwrap()) })
             }
             _ => Err(()),
         }
@@ -157,7 +158,7 @@ impl Metadata {
                 let list = unsafe { slice::from_raw_parts(ptr, size) };
                 let vec = list
                     .iter()
-                    .map(|ptr| unsafe { BnString::from_raw(*ptr) })
+                    .map(|ptr| unsafe { BnString::from_raw(NonNull::new(*ptr).unwrap()) })
                     .collect::<Vec<_>>();
                 unsafe { BNFreeMetadataStringList(ptr, size) };
                 Ok(vec)
@@ -173,7 +174,7 @@ impl Metadata {
                 if ptr.is_null() {
                     return Err(());
                 }
-                Ok(unsafe { BnString::from_raw(ptr) })
+                Ok(unsafe { BnString::from_raw(NonNull::new(ptr).unwrap()) })
             }
             _ => Err(()),
         }
@@ -230,7 +231,7 @@ impl Metadata {
 
                 let mut map = HashMap::new();
                 for i in 0..size {
-                    let key = unsafe { BnString::from_raw(keys[i]) };
+                    let key = unsafe { BnString::from_raw(NonNull::new(keys[i]).unwrap()) };
 
                     let value = unsafe {
                         Ref::<Metadata>::new(Self {

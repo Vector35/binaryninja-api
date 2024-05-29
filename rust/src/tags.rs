@@ -14,6 +14,8 @@
 
 //! Interfaces for creating and modifying tags in a BinaryView.
 
+use std::ptr::NonNull;
+
 use binaryninjacore_sys::*;
 
 use crate::architecture::CoreArchitecture;
@@ -40,11 +42,11 @@ impl Tag {
     }
 
     pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagGetId(self.handle)) }
+        unsafe { BnString::from_raw(NonNull::new(BNTagGetId(self.handle)).unwrap()) }
     }
 
     pub fn data(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagGetData(self.handle)) }
+        unsafe { BnString::from_raw(NonNull::new(BNTagGetData(self.handle)).unwrap()) }
     }
 
     pub fn t(&self) -> Ref<TagType> {
@@ -122,11 +124,11 @@ impl TagType {
     }
 
     pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagTypeGetId(self.handle)) }
+        unsafe { BnString::from_raw(NonNull::new(BNTagTypeGetId(self.handle)).unwrap()) }
     }
 
     pub fn icon(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagTypeGetIcon(self.handle)) }
+        unsafe { BnString::from_raw(NonNull::new(BNTagTypeGetIcon(self.handle)).unwrap()) }
     }
 
     pub fn set_icon<S: BnStrCompatible>(&self, icon: S) {
@@ -137,7 +139,7 @@ impl TagType {
     }
 
     pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagTypeGetName(self.handle)) }
+        unsafe { BnString::from_raw(NonNull::new(BNTagTypeGetName(self.handle)).unwrap()) }
     }
 
     pub fn set_name<S: BnStrCompatible>(&self, name: S) {

@@ -16,6 +16,7 @@
 
 use std::fmt;
 use std::ops::Range;
+use std::ptr::NonNull;
 
 use binaryninjacore_sys::*;
 
@@ -83,11 +84,11 @@ impl Section {
     }
 
     pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNSectionGetName(self.handle)) }
+        unsafe { BnString::from_raw(NonNull::new(BNSectionGetName(self.handle)).unwrap()) }
     }
 
     pub fn section_type(&self) -> BnString {
-        unsafe { BnString::from_raw(BNSectionGetType(self.handle)) }
+        unsafe { BnString::from_raw(NonNull::new(BNSectionGetType(self.handle)).unwrap()) }
     }
 
     pub fn start(&self) -> u64 {
@@ -115,11 +116,11 @@ impl Section {
     }
 
     pub fn linked_section(&self) -> BnString {
-        unsafe { BnString::from_raw(BNSectionGetLinkedSection(self.handle)) }
+        unsafe { BnString::from_raw(NonNull::new(BNSectionGetLinkedSection(self.handle)).unwrap()) }
     }
 
     pub fn info_section(&self) -> BnString {
-        unsafe { BnString::from_raw(BNSectionGetInfoSection(self.handle)) }
+        unsafe { BnString::from_raw(NonNull::new(BNSectionGetInfoSection(self.handle)).unwrap()) }
     }
 
     pub fn info_data(&self) -> u64 {

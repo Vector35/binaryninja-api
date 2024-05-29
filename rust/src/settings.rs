@@ -16,14 +16,14 @@
 
 pub use binaryninjacore_sys::BNSettingsScope as SettingsScope;
 use binaryninjacore_sys::*;
+
 use std::iter::FromIterator;
 use std::os::raw::c_char;
+use std::ptr;
 
 use crate::binaryview::BinaryView;
 use crate::rc::*;
 use crate::string::{BnStrCompatible, BnString};
-
-use std::ptr;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Settings {
@@ -57,7 +57,7 @@ impl Settings {
     }
 
     pub fn serialize_schema(&self) -> BnString {
-        unsafe { BnString::from_raw(BNSettingsSerializeSchema(self.handle)) }
+        unsafe { BnString::from_raw(ptr::NonNull::new(BNSettingsSerializeSchema(self.handle)).unwrap()) }
     }
 
     pub fn deserialize_schema<S: BnStrCompatible>(&self, schema: S) -> bool {
@@ -168,14 +168,15 @@ impl Settings {
             Some(mut scope) => scope.as_mut(),
             _ => ptr::null_mut() as *mut _,
         };
-        unsafe {
-            BnString::from_raw(BNSettingsGetString(
+        let result = unsafe {
+            BNSettingsGetString(
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
                 view_handle,
                 scope_ptr,
-            ))
-        }
+            )
+        };
+        unsafe { BnString::from_raw(ptr::NonNull::new(result).unwrap()) }
     }
 
     pub fn get_string_list<S: BnStrCompatible>(
@@ -224,14 +225,15 @@ impl Settings {
             Some(mut scope) => scope.as_mut(),
             _ => ptr::null_mut() as *mut _,
         };
-        unsafe {
-            BnString::from_raw(BNSettingsGetJson(
+        let result = unsafe {
+            BNSettingsGetJson(
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
                 view_handle,
                 scope_ptr,
-            ))
-        }
+            )
+        };
+        unsafe { BnString::from_raw(ptr::NonNull::new(result).unwrap()) }
     }
 
     pub fn set_bool<S: BnStrCompatible>(

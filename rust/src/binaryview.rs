@@ -497,17 +497,15 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn define_auto_symbol_with_type<'a, T: Into<Option<&'a Type>>>(
+    fn define_auto_symbol_with_type(
         &self,
         sym: &Symbol,
         plat: &Platform,
-        ty: T,
+        ty: Option<&Type>,
     ) -> Result<Ref<Symbol>> {
-        let raw_type = if let Some(t) = ty.into() {
-            t.handle
-        } else {
-            ptr::null_mut()
-        };
+        let raw_type = ty
+            .map(|t| t.as_raw() as *mut BNType)
+            .unwrap_or(ptr::null_mut());
 
         unsafe {
             let raw_sym = BNDefineAutoSymbolAndVariableOrFunction(
@@ -594,7 +592,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 self.as_ref().handle,
                 id_str,
                 &mut qualified_name.0,
-                type_obj.handle,
+                type_obj.as_raw(),
             )
         };
         QualifiedName(name_handle)
@@ -603,7 +601,11 @@ pub trait BinaryViewExt: BinaryViewBase {
     fn define_user_type<S: BnStrCompatible>(&self, name: S, type_obj: &Type) {
         let mut qualified_name = QualifiedName::from(name);
         unsafe {
-            BNDefineUserAnalysisType(self.as_ref().handle, &mut qualified_name.0, type_obj.handle)
+            BNDefineUserAnalysisType(
+                self.as_ref().handle,
+                &mut qualified_name.0,
+                type_obj.as_raw(),
+            )
         }
     }
 
@@ -627,7 +629,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             api_types.push(BNQualifiedNameTypeAndId {
                 name: name.0,
                 id: source.as_ref().as_ptr() as *mut _,
-                type_: type_obj.handle,
+                type_: type_obj.as_raw(),
             });
         }
 
@@ -674,7 +676,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         for (name, type_obj) in names.iter().zip(types.iter()) {
             api_types.push(BNQualifiedNameAndType {
                 name: name.0,
-                type_: type_obj.handle,
+                type_: type_obj.as_raw(),
             });
         }
 
@@ -718,28 +720,28 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_type_by_name<S: BnStrCompatible>(&self, name: S) -> Option<Ref<Type>> {
+    fn get_type_by_name<S: BnStrCompatible>(&self, name: S) -> Option<Type> {
         unsafe {
             let mut qualified_name = QualifiedName::from(name);
             let type_handle = BNGetAnalysisTypeByName(self.as_ref().handle, &mut qualified_name.0);
             if type_handle.is_null() {
                 return None;
             }
-            Some(Type::ref_from_raw(type_handle))
+            Some(Type::from_raw(ptr::NonNull::new(type_handle).unwrap()))
         }
     }
 
-    fn get_type_by_ref(&self, ref_: &NamedTypeReference) -> Option<Ref<Type>> {
+    fn get_type_by_ref(&self, ref_: &NamedTypeReference) -> Option<Type> {
         unsafe {
             let type_handle = BNGetAnalysisTypeByRef(self.as_ref().handle, ref_.handle);
             if type_handle.is_null() {
                 return None;
             }
-            Some(Type::ref_from_raw(type_handle))
+            Some(Type::from_raw(ptr::NonNull::new(type_handle).unwrap()))
         }
     }
 
-    fn get_type_by_id<S: BnStrCompatible>(&self, id: S) -> Option<Ref<Type>> {
+    fn get_type_by_id<S: BnStrCompatible>(&self, id: S) -> Option<Type> {
         unsafe {
             let id_str = id.into_bytes_with_nul();
             let type_handle =
@@ -747,7 +749,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             if type_handle.is_null() {
                 return None;
             }
-            Some(Type::ref_from_raw(type_handle))
+            Some(Type::from_raw(ptr::NonNull::new(type_handle).unwrap()))
         }
     }
 
@@ -888,7 +890,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     ) -> Option<Ref<Function>> {
         unsafe {
             let func_type = match func_type {
-                Some(func_type) => func_type.handle,
+                Some(func_type) => func_type.as_raw(),
                 None => ptr::null_mut(),
             };
 

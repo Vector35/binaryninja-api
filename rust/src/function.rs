@@ -39,8 +39,8 @@ pub use binaryninjacore_sys::BNAnalysisSkipReason as AnalysisSkipReason;
 pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisSkipOverride;
 pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
 
-use std::{fmt, mem};
 use std::{ffi::c_char, hash::Hash, ops::Range};
+use std::{fmt, mem, ptr::NonNull};
 
 pub struct Location {
     pub arch: Option<CoreArchitecture>,
@@ -372,11 +372,11 @@ impl Function {
         (!llil.is_null()).then(|| unsafe { llil::LiftedFunction::from_raw(self.arch(), llil) })
     }
 
-    pub fn return_type(&self) -> Conf<Ref<Type>> {
+    pub fn return_type(&self) -> Conf<Type> {
         let result = unsafe { BNGetFunctionReturnType(self.handle) };
 
         Conf::new(
-            unsafe { Type::ref_from_raw(result.type_) },
+            unsafe { Type::from_raw(NonNull::new(result.type_).unwrap()) },
             result.confidence,
         )
     }
@@ -390,7 +390,7 @@ impl Function {
             BNSetAutoFunctionReturnType(
                 self.handle,
                 &mut BNTypeWithConfidence {
-                    type_: return_type.contents.handle,
+                    type_: return_type.contents.as_raw(),
                     confidence: return_type.confidence,
                 },
             )
@@ -406,15 +406,15 @@ impl Function {
             BNSetUserFunctionReturnType(
                 self.handle,
                 &mut BNTypeWithConfidence {
-                    type_: return_type.contents.handle,
+                    type_: return_type.contents.as_raw(),
                     confidence: return_type.confidence,
                 },
             )
         }
     }
 
-    pub fn function_type(&self) -> Ref<Type> {
-        unsafe { Type::ref_from_raw(BNGetFunctionType(self.handle)) }
+    pub fn function_type(&self) -> Type {
+        unsafe { Type::from_raw(NonNull::new(BNGetFunctionType(self.handle)).unwrap()) }
     }
 
     pub fn has_user_type(&self) -> bool {
@@ -422,11 +422,11 @@ impl Function {
     }
 
     pub fn set_user_type(&self, t: &Type) {
-        unsafe { BNSetFunctionUserType(self.handle, t.handle) }
+        unsafe { BNSetFunctionUserType(self.handle, t.as_raw()) }
     }
 
     pub fn set_auto_type(&self, t: &Type) {
-        unsafe { BNSetFunctionAutoType(self.handle, t.handle) }
+        unsafe { BNSetFunctionAutoType(self.handle, t.as_raw()) }
     }
 
     pub fn stack_layout(&self) -> Array<NamedTypedVariable> {
@@ -514,11 +514,15 @@ impl Function {
         &self,
         addr: u64,
         arch: Option<CoreArchitecture>,
-    ) -> Option<Conf<Ref<Type>>> {
+    ) -> Option<Conf<Type>> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let result = unsafe { BNGetCallTypeAdjustment(self.handle, arch.0, addr) };
-        (!result.type_.is_null())
-            .then(|| unsafe { Conf::new(Type::ref_from_raw(result.type_), result.confidence) })
+        (!result.type_.is_null()).then(|| unsafe {
+            Conf::new(
+                Type::from_raw(NonNull::new(result.type_).unwrap()),
+                result.confidence,
+            )
+        })
     }
 
     /// Sets or removes the call type override at a call site to the given type.
@@ -538,7 +542,7 @@ impl Function {
         let mut adjust_type = adjust_type.map(|adjust_type| {
             let adjust_type = adjust_type.into();
             BNTypeWithConfidence {
-                type_: adjust_type.contents.handle,
+                type_: adjust_type.contents.as_raw(),
                 confidence: adjust_type.confidence,
             }
         });
@@ -565,7 +569,7 @@ impl Function {
                 arch.0,
                 addr,
                 &mut BNTypeWithConfidence {
-                    type_: adjust_type.contents.handle,
+                    type_: adjust_type.contents.as_raw(),
                     confidence: adjust_type.confidence,
                 },
             )
@@ -806,7 +810,9 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let func_type = func_type.map(|f| f.handle).unwrap_or(core::ptr::null_mut());
+        let func_type = func_type
+            .map(|f| f.as_raw() as *mut BNType)
+            .unwrap_or(core::ptr::null_mut());
         let value =
             unsafe { BNGetParameterValueAtInstruction(self.handle, arch.0, addr, func_type, i) };
         value.into()
@@ -819,7 +825,7 @@ impl Function {
         i: usize,
     ) -> RegisterValue {
         let value = unsafe {
-            BNGetParameterValueAtLowLevelILInstruction(self.handle, instr, func_type.handle, i)
+            BNGetParameterValueAtLowLevelILInstruction(self.handle, instr, func_type.as_raw(), i)
         };
         value.into()
     }
@@ -830,7 +836,7 @@ impl Function {
                 self.handle,
                 sym.handle,
                 if let Some(t) = t {
-                    t.handle
+                    t.as_raw()
                 } else {
                     core::ptr::null_mut()
                 },
@@ -839,7 +845,7 @@ impl Function {
     }
 
     pub fn apply_auto_discovered_type(&self, func_type: &Type) {
-        unsafe { BNApplyAutoDiscoveredFunctionType(self.handle, func_type.handle) }
+        unsafe { BNApplyAutoDiscoveredFunctionType(self.handle, func_type.as_raw()) }
     }
 
     /// Whether automatic analysis was skipped for this function.
@@ -1705,7 +1711,7 @@ impl Function {
         addr: u64,
         offset: i64,
         arch: Option<CoreArchitecture>,
-    ) -> Option<(Variable, BnString, Conf<Ref<Type>>)> {
+    ) -> Option<(Variable, BnString, Conf<Type>)> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut found_value: BNVariableNameAndType = unsafe { mem::zeroed() };
         let found = unsafe {
@@ -1717,7 +1723,7 @@ impl Function {
         let var = unsafe { Variable::from_raw(found_value.var) };
         let name = unsafe { BnString::from_raw(found_value.name) };
         let var_type = Conf::new(
-            unsafe { Type::ref_from_raw(found_value.type_) },
+            unsafe { Type::from_raw(NonNull::new(found_value.type_).unwrap()) },
             found_value.typeConfidence,
         );
         Some((var, name, var_type))

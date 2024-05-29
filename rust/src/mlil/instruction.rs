@@ -1,3 +1,5 @@
+use std::ptr::NonNull;
+
 use binaryninjacore_sys::*;
 
 use crate::architecture::CoreIntrinsic;
@@ -1138,11 +1140,11 @@ impl MediumLevelILInstruction {
     }
 
     /// Type of expression
-    pub fn expr_type(&self) -> Option<Conf<Ref<Type>>> {
+    pub fn expr_type(&self) -> Option<Conf<Type>> {
         let result = unsafe { BNGetMediumLevelILExprType(self.function.handle, self.index) };
         (!result.type_.is_null()).then(|| {
             Conf::new(
-                unsafe { Type::ref_from_raw(result.type_) },
+                unsafe { Type::from_raw(NonNull::new(result.type_).unwrap()) },
                 result.confidence,
             )
         })
@@ -1157,7 +1159,7 @@ impl MediumLevelILInstruction {
     pub fn set_expr_type<'a, T: Into<Conf<&'a Type>>>(&self, value: T) {
         let type_: Conf<&'a Type> = value.into();
         let mut type_raw: BNTypeWithConfidence = BNTypeWithConfidence {
-            type_: type_.contents.handle,
+            type_: type_.contents.as_raw(),
             confidence: type_.confidence,
         };
         unsafe { BNSetMediumLevelILExprType(self.function.handle, self.index, &mut type_raw) }

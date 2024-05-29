@@ -14,17 +14,19 @@
 
 //! Contains all information related to the execution environment of the binary, mainly the calling conventions used
 
-use std::{borrow::Borrow, collections::HashMap, os::raw, path::Path, ptr, slice};
+use std::borrow::Borrow;
+use std::collections::HashMap;
+use std::os::raw;
+use std::path::Path;
+use std::{ptr, slice};
 
 use binaryninjacore_sys::*;
 
-use crate::{
-    architecture::{Architecture, CoreArchitecture},
-    callingconvention::CallingConvention,
-    rc::*,
-    string::*,
-    types::{QualifiedName, QualifiedNameAndType, Type},
-};
+use crate::architecture::{Architecture, CoreArchitecture};
+use crate::callingconvention::CallingConvention;
+use crate::rc::*;
+use crate::string::*;
+use crate::types::{QualifiedName, QualifiedNameAndType, Type};
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Platform {
@@ -257,9 +259,9 @@ pub trait TypeParser {
 
 #[derive(Clone, Default)]
 pub struct TypeParserResult {
-    pub types: HashMap<String, Ref<Type>>,
-    pub variables: HashMap<String, Ref<Type>>,
-    pub functions: HashMap<String, Ref<Type>>,
+    pub types: HashMap<String, Type>,
+    pub variables: HashMap<String, Type>,
+    pub functions: HashMap<String, Type>,
 }
 
 impl TypeParser for Platform {
@@ -318,23 +320,26 @@ impl TypeParser for Platform {
 
             for i in slice::from_raw_parts(result.types, result.typeCount) {
                 let name = QualifiedName(i.name);
-                type_parser_result
-                    .types
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
+                type_parser_result.types.insert(
+                    name.string(),
+                    Type::from_raw(ptr::NonNull::new(i.type_).unwrap()),
+                );
             }
 
             for i in slice::from_raw_parts(result.functions, result.functionCount) {
                 let name = QualifiedName(i.name);
-                type_parser_result
-                    .functions
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
+                type_parser_result.functions.insert(
+                    name.string(),
+                    Type::from_raw(ptr::NonNull::new(i.type_).unwrap()),
+                );
             }
 
             for i in slice::from_raw_parts(result.variables, result.variableCount) {
                 let name = QualifiedName(i.name);
-                type_parser_result
-                    .variables
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
+                type_parser_result.variables.insert(
+                    name.string(),
+                    Type::from_raw(ptr::NonNull::new(i.type_).unwrap()),
+                );
             }
         }
 

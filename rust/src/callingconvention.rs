@@ -455,7 +455,7 @@ impl<A: Architecture> CallingConvention<A> {
             };
             bn_params.push(BNFunctionParameter {
                 name: BnString::new(raw_name).into_raw(),
-                type_: parameter.t.contents.handle,
+                type_: parameter.t.contents.as_raw(),
                 typeConfidence: parameter.t.confidence,
                 defaultLocation: parameter.location.is_none(),
                 location,

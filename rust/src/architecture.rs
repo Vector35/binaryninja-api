@@ -316,7 +316,7 @@ pub trait Intrinsic: Sized + Clone + Copy {
     fn inputs(&self) -> Vec<Ref<NameAndType>>;
 
     /// Returns the list of the output types for this intrinsic.
-    fn outputs(&self) -> Vec<Conf<Ref<Type>>>;
+    fn outputs(&self) -> Vec<Conf<Type>>;
 }
 
 pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
@@ -653,7 +653,7 @@ impl Intrinsic for UnusedIntrinsic {
     fn inputs(&self) -> Vec<Ref<NameAndType>> {
         unreachable!()
     }
-    fn outputs(&self) -> Vec<Conf<Ref<Type>>> {
+    fn outputs(&self) -> Vec<Conf<Type>> {
         unreachable!()
     }
 }
@@ -1024,7 +1024,7 @@ impl Intrinsic for crate::architecture::CoreIntrinsic {
         }
     }
 
-    fn outputs(&self) -> Vec<Conf<Ref<Type>>> {
+    fn outputs(&self) -> Vec<Conf<Type>> {
         let mut count: usize = 0;
 
         unsafe {

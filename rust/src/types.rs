@@ -455,13 +455,10 @@ impl TypeBuilder {
         unsafe { BNIsTypeBuilderPure(self.as_raw()).into() }
     }
 
-    pub fn get_structure(&self) -> Result<Ref<Structure>> {
-        let result = unsafe { BNGetTypeBuilderStructure(self.as_raw()) };
-        if result.is_null() {
-            Err(())
-        } else {
-            Ok(unsafe { Structure::ref_from_raw(result) })
-        }
+    pub fn get_structure(&self) -> Result<Structure> {
+        NonNull::new(unsafe { BNGetTypeBuilderStructure(self.as_raw()) })
+            .map(|result| unsafe { Structure::from_raw(result) })
+            .ok_or(())
     }
 
     pub fn get_enumeration(&self) -> Result<Enumeration> {
@@ -577,7 +574,7 @@ impl TypeBuilder {
     pub fn structure(structure_type: &Structure) -> Self {
         unsafe {
             Self::from_raw(
-                NonNull::new(BNCreateStructureTypeBuilder(structure_type.handle)).unwrap(),
+                NonNull::new(BNCreateStructureTypeBuilder(structure_type.as_raw())).unwrap(),
             )
         }
     }
@@ -843,13 +840,10 @@ impl Type {
         unsafe { BNIsTypePure(self.as_raw()).into() }
     }
 
-    pub fn get_structure(&self) -> Result<Ref<Structure>> {
-        let result = unsafe { BNGetTypeStructure(self.as_raw()) };
-        if result.is_null() {
-            Err(())
-        } else {
-            Ok(unsafe { Structure::ref_from_raw(result) })
-        }
+    pub fn get_structure(&self) -> Result<Structure> {
+        NonNull::new(unsafe { BNGetTypeStructure(self.as_raw()) })
+            .map(|result| unsafe { Structure::from_raw(result) })
+            .ok_or(())
     }
 
     pub fn get_enumeration(&self) -> Result<Enumeration> {
@@ -975,7 +969,7 @@ impl Type {
     }
 
     pub fn structure(structure: &Structure) -> Self {
-        unsafe { Self::from_raw(NonNull::new(BNCreateStructureType(structure.handle)).unwrap()) }
+        unsafe { Self::from_raw(NonNull::new(BNCreateStructureType(structure.as_raw())).unwrap()) }
     }
 
     pub fn named_type(type_reference: &NamedTypeReference) -> Self {
@@ -1806,9 +1800,9 @@ impl StructureBuilder {
     }
 
     // Chainable terminal
-    pub fn finalize(&self) -> Ref<Structure> {
+    pub fn finalize(&self) -> Structure {
         let result = unsafe { BNFinalizeStructureBuilder(self.as_raw()) };
-        unsafe { Structure::ref_from_raw(result) }
+        unsafe { Structure::from_raw(NonNull::new(result).unwrap()) }
     }
 
     // Chainable builders/setters
@@ -2045,7 +2039,7 @@ impl StructureBuilder {
 
 impl From<&Structure> for StructureBuilder {
     fn from(structure: &Structure) -> StructureBuilder {
-        let result = unsafe { BNCreateStructureBuilderFromStructure(structure.handle) };
+        let result = unsafe { BNCreateStructureBuilderFromStructure(structure.as_raw()) };
         unsafe { Self::from_raw(NonNull::new(result).unwrap()) }
     }
 }
@@ -2090,20 +2084,19 @@ impl Default for StructureBuilder {
 ///////////////
 // Structure
 
+#[repr(transparent)]
 #[derive(PartialEq, Eq, Hash)]
 pub struct Structure {
-    pub(crate) handle: *mut BNStructure,
+    handle: NonNull<BNStructure>,
 }
 
 impl Structure {
-    unsafe fn from_raw(handle: *mut BNStructure) -> Self {
-        debug_assert!(!handle.is_null());
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNStructure>) -> Self {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: *mut BNStructure) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+    pub(crate) fn as_raw(&self) -> &mut BNStructure {
+        unsafe { &mut (*self.handle.as_ptr()) }
     }
 
     pub fn builder() -> StructureBuilder {
@@ -2111,18 +2104,18 @@ impl Structure {
     }
 
     pub fn width(&self) -> u64 {
-        unsafe { BNGetStructureWidth(self.handle) }
+        unsafe { BNGetStructureWidth(self.as_raw()) }
     }
 
     pub fn structure_type(&self) -> StructureType {
-        unsafe { BNGetStructureType(self.handle) }
+        unsafe { BNGetStructureType(self.as_raw()) }
     }
 
     pub fn members(&self) -> Result<Vec<StructureMember>> {
         unsafe {
             let mut count = 0;
             let members_raw: *mut BNStructureMember =
-                BNGetStructureMembers(self.handle, &mut count);
+                BNGetStructureMembers(self.as_raw(), &mut count);
             if members_raw.is_null() {
                 return Err(());
             }
@@ -2140,7 +2133,7 @@ impl Structure {
 
     pub fn base_structures(&self) -> Result<Vec<BaseStructure>> {
         let mut count = 0usize;
-        let bases = unsafe { BNGetBaseStructuresForStructure(self.handle, &mut count) };
+        let bases = unsafe { BNGetBaseStructuresForStructure(self.as_raw(), &mut count) };
         if bases.is_null() {
             Err(())
         } else {
@@ -2174,21 +2167,15 @@ impl Debug for Structure {
     }
 }
 
-unsafe impl RefCountable for Structure {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self::from_raw(BNNewStructureReference(handle.handle)))
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeStructure(handle.handle);
+impl Clone for Structure {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(NonNull::new(BNNewStructureReference(self.as_raw())).unwrap()) }
     }
 }
 
-impl ToOwned for Structure {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl Drop for Structure {
+    fn drop(&mut self) {
+        unsafe { BNFreeStructure(self.as_raw()) }
     }
 }
 

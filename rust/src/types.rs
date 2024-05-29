@@ -715,10 +715,6 @@ impl Type {
         unsafe { &mut (*self.handle.as_ptr()) }
     }
 
-    pub(crate) fn into_raw(self) -> *mut BNType {
-        ManuallyDrop::new(self).handle.as_ptr()
-    }
-
     pub fn to_builder(&self) -> TypeBuilder {
         TypeBuilder::new(self)
     }
@@ -2670,61 +2666,48 @@ unsafe impl CoreArrayProviderInner for NameAndType {
 //////////////////
 // DataVariable
 
-#[repr(transparent)]
-pub struct DataVariable(pub(crate) BNDataVariable);
-
-// impl DataVariable {
-//     pub(crate) fn from_raw(var: &BNDataVariable) -> Self {
-//         let var = DataVariable(*var);
-//         Self(BNDataVariable {
-//             type_: unsafe { Ref::into_raw(var.t().to_owned()).handle },
-//             ..var.0
-//         })
-//     }
-// }
+#[repr(C)]
+pub struct DataVariable {
+    pub address: u64,
+    // droped by BNFreeDataVariable
+    type_: ManuallyDrop<Type>,
+    auto_discovered: bool,
+    type_confidence: u8,
+}
 
 impl DataVariable {
+    pub(crate) unsafe fn ref_from_raw(value: &BNDataVariable) -> &Self {
+        mem::transmute(value)
+    }
+
+    pub(crate) fn as_raw_mut(&mut self) -> &mut BNDataVariable {
+        unsafe { mem::transmute(self) }
+    }
+
     pub fn address(&self) -> u64 {
-        self.0.address
+        self.address
     }
 
     pub fn auto_discovered(&self) -> bool {
-        self.0.autoDiscovered
+        self.auto_discovered
     }
 
     pub fn t(&self) -> &Type {
-        unsafe { mem::transmute(&self.0.type_) }
+        &self.type_
     }
 
     pub fn type_with_confidence(&self) -> Conf<&Type> {
-        Conf::new(self.t(), self.0.typeConfidence)
+        Conf::new(self.t(), self.type_confidence)
     }
 
     pub fn symbol(&self, bv: &BinaryView) -> Option<Ref<Symbol>> {
-        bv.symbol_by_address(self.0.address).ok()
+        bv.symbol_by_address(self.address).ok()
     }
 }
 
-impl ToOwned for DataVariable {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
-    }
-}
-
-unsafe impl RefCountable for DataVariable {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        unsafe {
-            Ref::new(Self(BNDataVariable {
-                type_: handle.t().clone().into_raw(),
-                ..handle.0
-            }))
-        }
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        unsafe { BNFreeType(handle.0.type_) }
+impl Drop for DataVariable {
+    fn drop(&mut self) {
+        unsafe { BNFreeDataVariable(self.as_raw_mut()) }
     }
 }
 
@@ -2733,12 +2716,14 @@ impl CoreArrayProvider for DataVariable {
     type Context = ();
     type Wrapped<'a> = &'a DataVariable;
 }
+
 unsafe impl CoreArrayProviderInner for DataVariable {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeDataVariables(raw, count);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        mem::transmute(raw)
+        DataVariable::ref_from_raw(raw)
     }
 }
 

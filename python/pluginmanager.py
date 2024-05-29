@@ -23,9 +23,9 @@ import json
 from datetime import datetime, date
 from typing import List, Dict, Optional
 
-# Binary Ninja components
 import binaryninja
 from . import _binaryninjacore as core
+from . import deprecation
 from .enums import PluginType
 
 
@@ -140,10 +140,23 @@ class RepoPlugin:
 		"""String long description of the plugin"""
 		return core.BNPluginGetLongdescription(self.handle)
 
+	@deprecation.deprecated(deprecated_in="4.0.5366", details='Use :py:func:`minimum_version_info` instead.')
 	@property
 	def minimum_version(self) -> int:
-		"""String minimum version the plugin was tested on"""
-		return core.BNPluginGetMinimumVersion(self.handle)
+		"""Minimum version the plugin was tested on"""
+		return self.minimum_version_info.build
+
+	@property
+	def minimum_version_info(self) -> 'binaryninja.CoreVersionInfo':
+		"""Minimum version info the plugin was tested on"""
+		core_version_info = core.BNPluginGetMinimumVersionInfo(self.handle)
+		return binaryninja.CoreVersionInfo(core_version_info.major, core_version_info.minor, core_version_info.build)
+
+	@property
+	def maximum_version_info(self) -> 'binaryninja.CoreVersionInfo':
+		"""Maximum version info the plugin will support"""
+		core_version_info = core.BNPluginGetMaximumVersionInfo(self.handle)
+		return binaryninja.CoreVersionInfo(core_version_info.major, core_version_info.minor, core_version_info.build)
 
 	@property
 	def name(self) -> str:

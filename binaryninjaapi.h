@@ -15794,7 +15794,8 @@ namespace BinaryNinja {
 		std::string GetCommit() const;
 		std::string GetRepository() const;
 		std::string GetProjectData();
-		uint64_t GetMinimumVersion() const;
+		BNVersionInfo GetMinimumVersionInfo() const;
+		BNVersionInfo GetMaximumVersionInfo() const;
 		uint64_t GetLastUpdate();
 		bool IsBeingDeleted() const;
 		bool IsBeingUpdated() const;

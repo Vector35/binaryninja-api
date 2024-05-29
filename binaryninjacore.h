@@ -6688,7 +6688,10 @@ extern "C"
 	BINARYNINJACOREAPI const char* BNPluginGetDescription(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetLicenseText(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetLongdescription(BNRepoPlugin* p);
-	BINARYNINJACOREAPI uint64_t BNPluginGetMinimumVersion(BNRepoPlugin* p);
+	BINARYNINJACOREAPI BNVersionInfo BNPluginGetMinimumVersionInfo(BNRepoPlugin* p);
+	BINARYNINJACOREAPI BNVersionInfo BNPluginGetMaximumVersionInfo(BNRepoPlugin* p);
+	BINARYNINJACOREAPI BNVersionInfo BNParseVersionString(const char* v);
+	BINARYNINJACOREAPI bool BNVersionLessThan(const BNVersionInfo smaller, const BNVersionInfo larger);
 	BINARYNINJACOREAPI const char* BNPluginGetName(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetProjectUrl(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetPackageUrl(BNRepoPlugin* p);

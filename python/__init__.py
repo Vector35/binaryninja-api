@@ -132,19 +132,13 @@ class CoreVersionInfo:
 		self.build = 0
 		self.channel = ""
 		if isinstance(major, str) and minor is None and build is None and channel is None:
-			# Coerce a version string into an object
-			try:
-				# Intentionally doing separately to opportunistically match what we can
-				self.major = int(major.split(".")[0])
-				self.minor = int(major.split(".")[1])
-				build = major.split(".")[2]
-				if "-" in build:
-					self.build = int(build.split("-")[0])
-					self.channel = build.split("-")[1]
-				self.build = int(build)
-			except:
-				pass
-			pass
+			core_version_info = core.BNParseVersionString(major)
+			self.major = core_version_info.major
+			self.minor = core_version_info.minor
+			self.build = core_version_info.build
+			if core_version_info.channel is not None:
+				self.channel = core_version_info.channel
+			core.BNFreeString(core_version_info.channel)
 		else:
 			self.major = major
 			if minor is not None:
@@ -167,19 +161,15 @@ class CoreVersionInfo:
 		return False
 
 	def _versionCompare(self, other):
-		if int(self.major) < int(other.major):
-			return True
-		if int(self.major) > int(other.major):
-			return False
-		if int(self.minor) < int(other.minor):
-			return True
-		if int(self.minor) > int(other.minor):
-			return False
-		if int(self.build) < int(other.build):
-			return True
-		if int(self.build) > int(other.build):
-			return False
-		return False #equal
+		a = core.BNVersionInfo()
+		a.major = self.major
+		a.minor = self.minor
+		a.build = self.build
+		b = core.BNVersionInfo()
+		b.major = other.major
+		b.minor = other.minor
+		b.build = other.build
+		return core.BNVersionLessThan(a, b)
 
 	def __lt__(self, other):
 		if isinstance(other, CoreVersionInfo):

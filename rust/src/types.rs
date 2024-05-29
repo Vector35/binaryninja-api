@@ -1925,24 +1925,13 @@ impl StructureBuilder {
         unsafe { BNStructureBuilderPropagatesDataVariableReferences(self.as_raw()) }
     }
 
-    pub fn base_structures(&self) -> Result<Vec<BaseStructure>> {
+    pub fn base_structures(&self) -> Result<Array<BaseStructure>> {
         let mut count = 0usize;
         let bases = unsafe { BNGetBaseStructuresForStructureBuilder(self.as_raw(), &mut count) };
         if bases.is_null() {
             Err(())
         } else {
-            let bases_slice = unsafe { slice::from_raw_parts_mut(bases, count) };
-
-            let result = bases_slice
-                .iter()
-                .map(|base| unsafe { BaseStructure::from_raw(*base) })
-                .collect::<Vec<_>>();
-
-            unsafe {
-                BNFreeBaseStructureList(bases, count);
-            }
-
-            Ok(result)
+            Ok(unsafe { Array::new(bases, count, ()) })
         }
     }
 
@@ -2088,24 +2077,13 @@ impl Structure {
         }
     }
 
-    pub fn base_structures(&self) -> Result<Vec<BaseStructure>> {
+    pub fn base_structures(&self) -> Result<Array<BaseStructure>> {
         let mut count = 0usize;
         let bases = unsafe { BNGetBaseStructuresForStructure(self.as_raw(), &mut count) };
         if bases.is_null() {
             Err(())
         } else {
-            let bases_slice = unsafe { slice::from_raw_parts_mut(bases, count) };
-
-            let result = bases_slice
-                .iter()
-                .map(|base| unsafe { BaseStructure::from_raw(*base) })
-                .collect::<Vec<_>>();
-
-            unsafe {
-                BNFreeBaseStructureList(bases, count);
-            }
-
-            Ok(result)
+            Ok(unsafe { Array::new(bases, count, ()) })
         }
     }
 
@@ -2226,6 +2204,7 @@ impl InheritedStructureMember {
     // }
 }
 
+#[repr(C)]
 #[derive(Debug, Clone)]
 pub struct BaseStructure {
     pub ty: NamedTypeReference,
@@ -2238,12 +2217,24 @@ impl BaseStructure {
         Self { ty, offset, width }
     }
 
-    pub(crate) unsafe fn from_raw(handle: BNBaseStructure) -> Self {
-        Self {
-            ty: NamedTypeReference::from_raw(NonNull::new(handle.type_).unwrap()),
-            offset: handle.offset,
-            width: handle.width,
-        }
+    pub(crate) unsafe fn ref_from_raw(handle: &BNBaseStructure) -> &Self {
+        mem::transmute(handle)
+    }
+}
+
+impl CoreArrayProvider for BaseStructure {
+    type Raw = BNBaseStructure;
+    type Context = ();
+    type Wrapped<'a> = &'a Self;
+}
+
+unsafe impl CoreArrayProviderInner for BaseStructure {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeBaseStructureList(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::ref_from_raw(raw)
     }
 }
 

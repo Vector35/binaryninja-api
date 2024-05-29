@@ -15,7 +15,7 @@ pub fn simplify_str_to_str<S: BnStrCompatible>(input: S) -> BnString {
 pub fn simplify_str_to_fqn<S: BnStrCompatible>(input: S, simplify: bool) -> QualifiedName {
     let name = input.into_bytes_with_nul();
     unsafe {
-        QualifiedName(BNRustSimplifyStrToFQN(
+        QualifiedName::from_raw(BNRustSimplifyStrToFQN(
             name.as_ref().as_ptr() as *mut _,
             simplify,
         ))

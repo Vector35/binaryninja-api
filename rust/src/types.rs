@@ -2355,12 +2355,24 @@ impl Debug for NamedTypeReference {
 ///////////////////
 // QualifiedName
 
-#[repr(transparent)]
-pub struct QualifiedName(pub(crate) BNQualifiedName);
+#[repr(C)]
+pub struct QualifiedName(BNQualifiedName);
 
 impl QualifiedName {
+    pub(crate) unsafe fn from_raw(handle: BNQualifiedName) -> Self {
+        mem::transmute(handle)
+    }
+
     pub(crate) unsafe fn ref_from_raw(handle: &BNQualifiedName) -> &Self {
         mem::transmute(handle)
+    }
+
+    pub(crate) fn as_raw(&self) -> &BNQualifiedName {
+        &self.0
+    }
+
+    pub(crate) fn as_raw_mut(&mut self) -> &mut BNQualifiedName {
+        &mut self.0
     }
 
     // TODO : I think this is bad
@@ -2492,24 +2504,35 @@ unsafe impl CoreArrayProviderInner for QualifiedName {
 //////////////////////////
 // QualifiedNameAndType
 
-#[repr(transparent)]
-pub struct QualifiedNameAndType(pub(crate) BNQualifiedNameAndType);
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct QualifiedNameAndType {
+    // Drop is done by BNFreeQualifiedNameAndType
+    name: ManuallyDrop<QualifiedName>,
+    type_: ManuallyDrop<Type>,
+}
 
 impl QualifiedNameAndType {
-    pub fn name(&self) -> &QualifiedName {
-        unsafe { mem::transmute(&self.0.name) }
+    pub(crate) unsafe fn ref_from_raw(handle: &BNQualifiedNameAndType) -> &QualifiedNameAndType {
+        mem::transmute(handle)
     }
 
-    pub fn type_object(&self) -> Guard<Type> {
-        unsafe { Guard::new(Type::from_raw(NonNull::new(self.0.type_).unwrap()), self) }
+    pub(crate) fn as_raw(&mut self) -> &mut BNQualifiedNameAndType {
+        unsafe { mem::transmute(self) }
+    }
+
+    pub fn name(&self) -> &QualifiedName {
+        &self.name
+    }
+
+    pub fn type_object(&self) -> &Type {
+        &self.type_
     }
 }
 
 impl Drop for QualifiedNameAndType {
     fn drop(&mut self) {
-        unsafe {
-            BNFreeQualifiedNameAndType(&mut self.0);
-        }
+        unsafe { BNFreeQualifiedNameAndType(self.as_raw()) };
     }
 }
 
@@ -2522,8 +2545,9 @@ unsafe impl CoreArrayProviderInner for QualifiedNameAndType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTypeAndNameList(raw, count);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        mem::transmute(raw)
+        Self::ref_from_raw(raw)
     }
 }
 
@@ -3773,4 +3797,7 @@ mod test {
     // TODO NamedTypeReference::new, NamedTypeReference::new_with_id was
     // previously leaking memory, probably because the name received a ownership
     // and didn't clone it, please verify the fix
+
+    // TODO <Plarform as TypeParser>::parse_types_from_source forgot to call
+    // BNFreeTypeParserResult, leaking the result
 }

@@ -1104,7 +1104,7 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = &name.0 as *const BNQualifiedName as *mut _;
+        let name_ptr = name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName;
         unsafe { BNAddUserTypeReference(self.handle, arch.0, from_addr, name_ptr) }
     }
 
@@ -1129,7 +1129,7 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = &name.0 as *const BNQualifiedName as *mut _;
+        let name_ptr = name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName;
         unsafe { BNRemoveUserTypeReference(self.handle, arch.0, from_addr, name_ptr) }
     }
 
@@ -1160,7 +1160,7 @@ impl Function {
     ) {
         let size = size.unwrap_or(0);
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = &name.0 as *const _ as *mut _;
+        let name_ptr = name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName;
         unsafe {
             BNAddUserTypeFieldReference(self.handle, arch.0, from_addr, name_ptr, offset, size)
         }
@@ -1192,7 +1192,7 @@ impl Function {
     ) {
         let size = size.unwrap_or(0);
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = &name.0 as *const _ as *mut _;
+        let name_ptr = name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName;
         unsafe {
             BNRemoveUserTypeFieldReference(self.handle, arch.0, from_addr, name_ptr, offset, size)
         }

@@ -583,19 +583,21 @@ pub trait BinaryViewExt: BinaryViewBase {
     ) -> QualifiedName {
         let mut qualified_name = QualifiedName::from(name);
         let source_str = source.into_bytes_with_nul();
-        let name_handle = unsafe {
-            let id_str = BNGenerateAutoTypeId(
+        let id_str = unsafe {
+            BNGenerateAutoTypeId(
                 source_str.as_ref().as_ptr() as *const _,
-                &mut qualified_name.0,
-            );
+                qualified_name.as_raw_mut(),
+            )
+        };
+        let name_handle = unsafe {
             BNDefineAnalysisType(
                 self.as_ref().handle,
                 id_str,
-                &mut qualified_name.0,
+                qualified_name.as_raw_mut(),
                 type_obj.as_raw(),
             )
         };
-        QualifiedName(name_handle)
+        unsafe { QualifiedName::from_raw(name_handle) }
     }
 
     fn define_user_type<S: BnStrCompatible>(&self, name: S, type_obj: &Type) {
@@ -603,7 +605,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             BNDefineUserAnalysisType(
                 self.as_ref().handle,
-                &mut qualified_name.0,
+                qualified_name.as_raw_mut(),
                 type_obj.as_raw(),
             )
         }

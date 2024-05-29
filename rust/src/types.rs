@@ -2359,6 +2359,10 @@ impl Debug for NamedTypeReference {
 pub struct QualifiedName(pub(crate) BNQualifiedName);
 
 impl QualifiedName {
+    pub(crate) unsafe fn ref_from_raw(handle: &BNQualifiedName) -> &Self {
+        mem::transmute(handle)
+    }
+
     // TODO : I think this is bad
     pub fn string(&self) -> String {
         unsafe {
@@ -2481,7 +2485,7 @@ unsafe impl CoreArrayProviderInner for QualifiedName {
         BNFreeTypeNameList(raw, count);
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        mem::transmute(raw)
+        QualifiedName::ref_from_raw(raw)
     }
 }
 

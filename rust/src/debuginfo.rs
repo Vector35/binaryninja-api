@@ -402,7 +402,7 @@ impl DebugInfo {
         };
         // BNFreeDebugTypes is identical to BNFreeNameAndTypeList, so we can use
         // Array<NameAndType> here with no consequences
-        unsafe{Array::new(debug_types_ptr, count, ())}
+        unsafe { Array::new(debug_types_ptr, count, ()) }
     }
 
     /// A generator of all types provided by DebugInfoParsers
@@ -411,7 +411,7 @@ impl DebugInfo {
         let debug_types_ptr = unsafe { BNGetDebugTypes(self.handle, ptr::null_mut(), &mut count) };
         // BNFreeDebugTypes is identical to BNFreeNameAndTypeList, so we can use
         // Array<NameAndType> here with no consequences
-        unsafe{Array::new(debug_types_ptr, count, ())}
+        unsafe { Array::new(debug_types_ptr, count, ()) }
     }
 
     /// Returns a generator of all functions provided by a named DebugInfoParser
@@ -459,7 +459,7 @@ impl DebugInfo {
     pub fn data_variables_by_name<S: BnStrCompatible>(
         &self,
         parser_name: S,
-    ) -> Vec<DataVariableAndName<String>> {
+    ) -> Array<DataVariableAndName> {
         let parser_name = parser_name.into_bytes_with_nul();
 
         let mut count: usize = 0;
@@ -471,36 +471,24 @@ impl DebugInfo {
             )
         };
 
-        let result: Vec<DataVariableAndName<String>> = unsafe {
-            slice::from_raw_parts_mut(data_variables_ptr, count)
-                .iter()
-                .map(DataVariableAndName::<String>::from_raw)
-                .collect()
-        };
-
-        unsafe { BNFreeDataVariablesAndName(data_variables_ptr, count) };
-        result
+        unsafe { Array::new(data_variables_ptr, count, ()) }
     }
 
     /// A generator of all data variables provided by DebugInfoParsers
-    pub fn data_variables(&self) -> Vec<DataVariableAndName<String>> {
+    pub fn data_variables(&self) -> Array<DataVariableAndName> {
         let mut count: usize = 0;
         let data_variables_ptr =
             unsafe { BNGetDebugDataVariables(self.handle, ptr::null_mut(), &mut count) };
 
-        let result: Vec<DataVariableAndName<String>> = unsafe {
-            slice::from_raw_parts_mut(data_variables_ptr, count)
-                .iter()
-                .map(DataVariableAndName::<String>::from_raw)
-                .collect()
-        };
-
-        unsafe { BNFreeDataVariablesAndName(data_variables_ptr, count) };
-        result
+        unsafe { Array::new(data_variables_ptr, count, ()) }
     }
 
     /// May return nullptr
-    pub fn type_by_name<S: BnStrCompatible>(&self, parser_name: S, name: S) -> Option<Type> {
+    pub fn type_by_name<S1: BnStrCompatible, S2: BnStrCompatible>(
+        &self,
+        parser_name: S1,
+        name: S1,
+    ) -> Option<Type> {
         let parser_name = parser_name.into_bytes_with_nul();
         let name = name.into_bytes_with_nul();
 
@@ -518,10 +506,10 @@ impl DebugInfo {
         }
     }
 
-    pub fn get_data_variable_by_name<S: BnStrCompatible>(
+    pub fn get_data_variable_by_name<S1: BnStrCompatible, S2: BnStrCompatible>(
         &self,
-        parser_name: S,
-        name: S,
+        parser_name: S1,
+        name: S2,
     ) -> Option<(u64, Type)> {
         let parser_name = parser_name.into_bytes_with_nul();
         let name = name.into_bytes_with_nul();
@@ -533,21 +521,11 @@ impl DebugInfo {
                 name.as_ref().as_ptr() as *mut _,
             )
         };
-
-        if !result.is_null() {
-            let BNDataVariableAndName {
-                address,
-                type_,
-                name,
-                autoDiscovered: _,
-                typeConfidence: _,
-            } = unsafe { *result };
-            unsafe { BNFreeString(name) };
-            let var_type = unsafe { Type::from_raw(ptr::NonNull::new(type_).unwrap()) };
-            Some((address, var_type))
-        } else {
-            None
+        if result.is_null() {
+            return None;
         }
+        let result = unsafe { DataVariableAndName::ref_from_raw(&*result) };
+        Some((result.address, result.t.clone()))
     }
 
     pub fn get_data_variable_by_address<S: BnStrCompatible>(
@@ -564,29 +542,15 @@ impl DebugInfo {
             )
         };
 
-        if !name_and_var.is_null() {
-            let BNDataVariableAndName {
-                address: _,
-                type_,
-                name,
-                autoDiscovered: _,
-                typeConfidence: _,
-            } = unsafe { *name_and_var };
-            let result = unsafe {
-                (
-                    raw_to_string(name).unwrap(),
-                    Type::from_raw(ptr::NonNull::new(type_).unwrap()),
-                )
-            };
-            unsafe { BNFreeString(name) };
-            Some(result)
-        } else {
-            None
+        if name_and_var.is_null() {
+            return None;
         }
+        let result = unsafe { DataVariableAndName::ref_from_raw(&*name_and_var) };
+        Some((result.name().to_owned(), result.t.clone()))
     }
 
     // The tuple is (DebugInfoParserName, type)
-    pub fn get_types_by_name<S: BnStrCompatible>(&self, name: S) -> Vec<(String, Type)> {
+    pub fn get_types_by_name<S: BnStrCompatible>(&self, name: S) -> Array<NameAndType> {
         let name = name.into_bytes_with_nul();
 
         let mut count: usize = 0;
@@ -594,35 +558,14 @@ impl DebugInfo {
             BNGetDebugTypesByName(self.handle, name.as_ref().as_ptr() as *mut _, &mut count)
         };
 
-        let names_and_types: &[*mut BNNameAndType] =
-            unsafe { slice::from_raw_parts(raw_names_and_types as *mut _, count) };
-
-        let result = names_and_types
-            .iter()
-            .take(count)
-            .map(|&name_and_type| unsafe {
-                assert!(!name_and_type.is_null());
-                let BNNameAndType {
-                    name,
-                    type_,
-                    typeConfidence: _,
-                } = *name_and_type;
-                (
-                    raw_to_string(name).unwrap(),
-                    Type::from_raw(ptr::NonNull::new(BNNewTypeReference(type_)).unwrap()),
-                )
-            })
-            .collect();
-
-        unsafe { BNFreeNameAndTypeList(raw_names_and_types, count) };
-        result
+        unsafe { Array::new(raw_names_and_types, count, ()) }
     }
 
     // The tuple is (DebugInfoParserName, address, type)
     pub fn get_data_variables_by_name<S: BnStrCompatible>(
         &self,
         name: S,
-    ) -> Vec<(String, u64, Type)> {
+    ) -> Array<DataVariableAndName> {
         let name = name.into_bytes_with_nul();
 
         let mut count: usize = 0;
@@ -630,31 +573,7 @@ impl DebugInfo {
             BNGetDebugDataVariablesByName(self.handle, name.as_ref().as_ptr() as *mut _, &mut count)
         };
 
-        let variables_and_names: &[*mut BNDataVariableAndName] =
-            unsafe { slice::from_raw_parts(raw_variables_and_names as *mut _, count) };
-
-        let result = variables_and_names
-            .iter()
-            .take(count)
-            .map(|&variable_and_name| unsafe {
-                assert!(!variable_and_name.is_null());
-                let BNDataVariableAndName {
-                    address,
-                    type_,
-                    name,
-                    autoDiscovered: _,
-                    typeConfidence: _,
-                } = *variable_and_name;
-                (
-                    raw_to_string(name).unwrap(),
-                    address,
-                    Type::from_raw(ptr::NonNull::new(BNNewTypeReference(type_)).unwrap()),
-                )
-            })
-            .collect();
-
-        unsafe { BNFreeDataVariablesAndName(raw_variables_and_names, count) };
-        result
+        unsafe { Array::new(raw_variables_and_names, count, ()) }
     }
 
     /// The tuple is (DebugInfoParserName, TypeName, type)
@@ -874,20 +793,8 @@ impl DebugInfo {
         }
     }
 
-    pub fn add_data_variable_info<S: BnStrCompatible>(&self, var: DataVariableAndName<S>) -> bool {
-        let name = var.name.into_bytes_with_nul();
-        unsafe {
-            BNAddDebugDataVariableInfo(
-                self.handle,
-                &BNDataVariableAndName {
-                    address: var.address,
-                    type_: var.t.contents.as_raw(),
-                    name: name.as_ref().as_ptr() as *mut _,
-                    autoDiscovered: var.auto_discovered,
-                    typeConfidence: var.t.confidence,
-                },
-            )
-        }
+    pub fn add_data_variable_info(&self, var: DataVariableAndName) -> bool {
+        unsafe { BNAddDebugDataVariableInfo(self.handle, var.as_raw()) }
     }
 }
 

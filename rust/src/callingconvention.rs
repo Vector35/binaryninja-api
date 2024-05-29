@@ -434,7 +434,7 @@ impl<A: Architecture> CallingConvention<A> {
 
     pub fn name(&self) -> BnString {
         unsafe {
-            BnString::from_raw(NonNull::new(BNGetCallingConventionName(self.handle)).unwrap())
+            BnString::from_raw(ptr::NonNull::new(BNGetCallingConventionName(self.handle)).unwrap())
         }
     }
 
@@ -443,22 +443,9 @@ impl<A: Architecture> CallingConvention<A> {
         params: &[FunctionParameter],
         permitted_registers: Option<&[A::Register]>,
     ) -> Vec<Variable> {
-        let mut bn_params: Vec<BNFunctionParameter> = vec![];
-        let name_strings = params.iter().map(|parameter| &parameter.name);
-
-        for (parameter, raw_name) in params.iter().zip(name_strings) {
-            let location = match &parameter.location {
-                Some(location) => location.raw(),
-                None => unsafe { mem::zeroed() },
-            };
-            bn_params.push(BNFunctionParameter {
-                name: BnString::new(raw_name).into_raw(),
-                type_: parameter.t.contents.as_raw(),
-                typeConfidence: parameter.t.confidence,
-                defaultLocation: parameter.location.is_none(),
-                location,
-            });
-        }
+        // SAFETY: FunctionParameter and BNFunctionParameter are transparent,
+        // so this can be safelly transmuted
+        let bn_params: &[BNFunctionParameter] = unsafe { mem::transmute(params) };
 
         let mut count: usize = 0;
         let vars: *mut BNVariable = if let Some(permitted_args) = permitted_registers {

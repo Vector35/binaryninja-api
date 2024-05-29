@@ -37,7 +37,7 @@ use std::{
     ffi::CStr,
     fmt::{self, Debug, Display, Formatter},
     hash::{Hash, Hasher},
-    iter::{zip, IntoIterator},
+    iter::IntoIterator,
     mem::{self, ManuallyDrop},
     ops::Range,
     os::raw::c_char,
@@ -1029,24 +1029,9 @@ impl Type {
             };
 
         let mut stack_adjust = Conf::<i64>::new(0, min_confidence()).into();
-        let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
-        let mut parameter_name_references = Vec::with_capacity(parameters.len());
-        for parameter in parameters {
-            let raw_name = parameter.name.as_str().into_bytes_with_nul();
-            let location = match &parameter.location {
-                Some(location) => location.raw(),
-                None => unsafe { mem::zeroed() },
-            };
-
-            raw_parameters.push(BNFunctionParameter {
-                name: raw_name.as_slice().as_ptr() as *mut _,
-                type_: parameter.t.contents.as_raw(),
-                typeConfidence: parameter.t.confidence,
-                defaultLocation: parameter.location.is_none(),
-                location,
-            });
-            parameter_name_references.push(raw_name);
-        }
+        // SAFETY: FunctionParameter and BNFunctionParameter are transparent,
+        // so this can be safelly transmuted
+        let raw_parameters: &[BNFunctionParameter] = unsafe { mem::transmute(parameters) };
         let reg_stack_adjust_regs = ptr::null_mut();
         let reg_stack_adjust_values = ptr::null_mut();
 
@@ -1060,7 +1045,7 @@ impl Type {
             let result = BNNewTypeReference(BNCreateFunctionType(
                 &mut return_type,
                 &mut raw_calling_convention,
-                raw_parameters.as_mut_ptr(),
+                raw_parameters.as_ptr() as *mut BNFunctionParameter,
                 raw_parameters.len(),
                 &mut variable_arguments,
                 &mut can_return,
@@ -1096,29 +1081,14 @@ impl Type {
             calling_convention.into().into();
         let mut stack_adjust = stack_adjust.into();
 
-        let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
-        let mut parameter_name_references = Vec::with_capacity(parameters.len());
         let mut name_ptrs = vec![];
         for parameter in parameters {
-            name_ptrs.push(parameter.name.clone());
+            name_ptrs.push(parameter.name().clone());
         }
 
-        for (name, parameter) in zip(name_ptrs, parameters) {
-            let raw_name = name.as_str().into_bytes_with_nul();
-            let location = match &parameter.location {
-                Some(location) => location.raw(),
-                None => unsafe { mem::zeroed() },
-            };
-
-            raw_parameters.push(BNFunctionParameter {
-                name: raw_name.as_slice().as_ptr() as *mut _,
-                type_: parameter.t.contents.as_raw(),
-                typeConfidence: parameter.t.confidence,
-                defaultLocation: parameter.location.is_none(),
-                location,
-            });
-            parameter_name_references.push(raw_name);
-        }
+        // SAFETY: FunctionParameter and BNFunctionParameter are transparent,
+        // so this can be safelly transmuted
+        let raw_parameters: &[BNFunctionParameter] = unsafe { mem::transmute(parameters) };
 
         // TODO: Update type signature and include these (will be a breaking change)
         let reg_stack_adjust_regs = ptr::null_mut();
@@ -1134,7 +1104,7 @@ impl Type {
             let result = BNCreateFunctionType(
                 &mut return_type,
                 &mut raw_calling_convention,
-                raw_parameters.as_mut_ptr(),
+                raw_parameters.as_ptr() as *mut BNFunctionParameter,
                 raw_parameters.len(),
                 &mut variable_arguments,
                 &mut can_return,
@@ -1333,49 +1303,76 @@ impl Drop for Type {
 ///////////////////////
 // FunctionParameter
 
+#[repr(C)]
 #[derive(Clone, Debug)]
 pub struct FunctionParameter {
-    pub t: Conf<Type>,
-    pub name: String,
-    pub location: Option<Variable>,
+    name: Option<BnString>,
+    pub t: Type,
+    type_confidence: u8,
+    default_location: bool,
+    location: Variable,
 }
 
 impl FunctionParameter {
-    pub fn new<T: Into<Conf<Type>>>(t: T, name: String, location: Option<Variable>) -> Self {
+    pub fn new<S: BnStrCompatible, T: Into<Conf<Type>>>(
+        t: T,
+        name: S,
+        location: Option<Variable>,
+    ) -> Self {
+        let t = t.into();
+        let dummy_var: Variable =
+            Variable::new(BNVariableSourceType::StackVariableSourceType, 0, 0);
         Self {
-            t: t.into(),
+            name: Some(BnString::new(name)),
+            t: t.contents,
+            type_confidence: t.confidence,
+            default_location: location.is_some(),
+            location: location.unwrap_or(dummy_var),
+        }
+    }
+
+    pub(crate) unsafe fn from_raw(member: BNFunctionParameter) -> Self {
+        let name = NonNull::new(member.name).map(|name| unsafe { BnString::from_raw(name) });
+
+        let location = if member.defaultLocation {
+            // dummy value
+            Variable::new(BNVariableSourceType::StackVariableSourceType, 0, 0)
+        } else {
+            unsafe { Variable::from_raw(member.location) }
+        };
+
+        Self {
+            t: unsafe { Type::from_raw(NonNull::new(BNNewTypeReference(member.type_)).unwrap()) },
+            type_confidence: member.typeConfidence,
             name,
+            default_location: member.defaultLocation,
             location,
         }
     }
 
-    pub(crate) fn from_raw(member: BNFunctionParameter) -> Self {
-        let name = if member.name.is_null() {
-            if member.location.type_ == BNVariableSourceType::RegisterVariableSourceType {
-                format!("reg_{}", member.location.storage)
-            } else if member.location.type_ == BNVariableSourceType::StackVariableSourceType {
-                format!("arg_{}", member.location.storage)
-            } else {
-                String::new()
-            }
-        } else {
-            unsafe { CStr::from_ptr(member.name) }
-                .to_str()
-                .unwrap()
-                .to_owned()
-        };
+    pub fn location(&self) -> Option<Variable> {
+        (!self.default_location).then_some(self.location)
+    }
 
-        Self {
-            t: Conf::new(
-                unsafe { Type::from_raw(NonNull::new(BNNewTypeReference(member.type_)).unwrap()) },
-                member.typeConfidence,
-            ),
-            name,
-            location: if member.defaultLocation {
-                None
-            } else {
-                Some(unsafe { Variable::from_raw(member.location) })
-            },
+    pub fn name(&self) -> Cow<str> {
+        if let Some(name) = &self.name {
+            Cow::Borrowed(name.as_str())
+        } else {
+            match self.location() {
+                Some(Variable {
+                    t: BNVariableSourceType::RegisterVariableSourceType,
+                    ..
+                }) => Cow::Owned(format!("reg_{}", self.location.storage)),
+                Some(Variable {
+                    t: BNVariableSourceType::StackVariableSourceType,
+                    ..
+                }) => Cow::Owned(format!("arg_{}", self.location.storage)),
+                Some(Variable {
+                    t: BNVariableSourceType::FlagVariableSourceType,
+                    ..
+                })
+                | None => Cow::Borrowed(""),
+            }
         }
     }
 }
@@ -1383,6 +1380,7 @@ impl FunctionParameter {
 //////////////
 // Variable
 
+#[repr(C)]
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct Variable {
     pub t: BNVariableSourceType,

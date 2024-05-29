@@ -152,12 +152,6 @@ vector<string> RepoPlugin::GetInstallPlatforms() const
 }
 
 
-std::string RepoPlugin::GetInstallInstructions(const std::string& platform) const
-{
-	RETURN_STRING(BNPluginGetInstallInstructions(m_object, platform.c_str()));
-}
-
-
 bool RepoPlugin::IsBeingDeleted() const
 {
 	return BNPluginIsBeingDeleted(m_object);

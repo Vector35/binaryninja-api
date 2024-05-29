@@ -191,16 +191,6 @@ class RepoPlugin:
 		"""String version of the plugin"""
 		return core.BNPluginGetVersion(self.handle)
 
-	def install_instructions(self, platform: str) -> Optional[str]:
-		"""
-		Installation instructions for the given platform
-
-		:param str platform: One of the valid platforms "Windows", "Linux", "Darwin"
-		:return: String of the installation instructions for the provided platform
-		:rtype: str
-		"""
-		return core.BNPluginGetInstallInstructions(self.handle, platform)
-
 	@property
 	def install_platforms(self) -> List[str]:
 		"""List of platforms this plugin can execute on"""

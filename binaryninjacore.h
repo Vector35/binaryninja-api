@@ -6709,7 +6709,6 @@ extern "C"
 	BINARYNINJACOREAPI bool BNPluginInstallDependencies(BNRepoPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginUninstall(BNRepoPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginUpdate(BNRepoPlugin* p);
-	BINARYNINJACOREAPI char* BNPluginGetInstallInstructions(BNRepoPlugin* p, const char* platform);
 	BINARYNINJACOREAPI char** BNPluginGetPlatforms(BNRepoPlugin* p, size_t* count);
 	BINARYNINJACOREAPI void BNFreePluginPlatforms(char** platforms, size_t count);
 	BINARYNINJACOREAPI const char* BNPluginGetRepository(BNRepoPlugin* p);

@@ -1990,7 +1990,9 @@ impl StructureBuilder {
     }
 
     pub fn index_by_name(&self, name: &str) -> Option<usize> {
-        self.members().iter().position(|member| member.name == name)
+        self.members()
+            .iter()
+            .position(|member| member.name() == name)
     }
 
     pub fn index_by_offset(&self, offset: u64) -> Option<usize> {
@@ -2010,7 +2012,7 @@ impl StructureBuilder {
 
     pub fn add_members<'a>(&self, members: impl IntoIterator<Item = &'a StructureMember>) {
         for member in members {
-            self.append(&member.ty, &member.name, member.access, member.scope);
+            self.append(&member.ty, member.name(), member.access, member.scope);
         }
     }
 
@@ -2111,7 +2113,7 @@ impl Structure {
         unsafe { BNGetStructureType(self.as_raw()) }
     }
 
-    pub fn members(&self) -> Result<Vec<StructureMember>> {
+    pub fn members(&self) -> Result<Array<StructureMember>> {
         unsafe {
             let mut count = 0;
             let members_raw: *mut BNStructureMember =
@@ -2119,15 +2121,7 @@ impl Structure {
             if members_raw.is_null() {
                 return Err(());
             }
-            let members = slice::from_raw_parts(members_raw, count);
-
-            let result = (0..count)
-                .map(|i| StructureMember::ref_from_raw(members[i]))
-                .collect();
-
-            BNFreeStructureMemberList(members_raw, count);
-
-            Ok(result)
+            Ok(Array::new(members_raw, count, ()))
         }
     }
 
@@ -2159,7 +2153,7 @@ impl Debug for Structure {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "Structure {{")?;
         if let Ok(members) = self.members() {
-            for member in members {
+            for member in &members {
                 write!(f, " {:?}", member)?;
             }
         }
@@ -2179,50 +2173,52 @@ impl Drop for Structure {
     }
 }
 
+#[repr(C)]
 #[derive(Debug, Clone)]
 pub struct StructureMember {
-    pub ty: Conf<Type>,
-    pub name: String,
+    ty: Type,
+    name: BnString,
     pub offset: u64,
+    type_confidence: u8,
     pub access: MemberAccess,
     pub scope: MemberScope,
 }
 
 impl StructureMember {
-    pub fn new(
+    pub fn new<S: BnStrCompatible>(
         ty: Conf<Type>,
-        name: String,
+        name: S,
         offset: u64,
         access: MemberAccess,
         scope: MemberScope,
     ) -> Self {
         Self {
-            ty,
-            name,
+            ty: ty.contents,
+            name: BnString::new(name),
             offset,
+            type_confidence: ty.confidence,
             access,
             scope,
         }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: BNStructureMember) -> Self {
-        Self {
-            ty: Conf::new(
-                Type::ref_from_raw(&handle.type_).clone(),
-                handle.typeConfidence,
-            ),
-            name: CStr::from_ptr(handle.name).to_string_lossy().to_string(),
-            offset: handle.offset,
-            access: handle.access,
-            scope: handle.scope,
-        }
+    pub(crate) unsafe fn ref_from_raw(handle: &BNStructureMember) -> &Self {
+        mem::transmute(handle)
+    }
+
+    pub fn ty(&self) -> Conf<&Type> {
+        Conf::new(&self.ty, self.type_confidence)
+    }
+
+    pub fn name(&self) -> &str {
+        self.name.as_str()
     }
 }
 
 impl CoreArrayProvider for StructureMember {
     type Raw = BNStructureMember;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, StructureMember>;
+    type Wrapped<'a> = &'a StructureMember;
 }
 
 unsafe impl CoreArrayProviderInner for StructureMember {
@@ -2230,7 +2226,7 @@ unsafe impl CoreArrayProviderInner for StructureMember {
         BNFreeStructureMemberList(raw, count)
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(StructureMember::ref_from_raw(*raw), &())
+        StructureMember::ref_from_raw(raw)
     }
 }
 

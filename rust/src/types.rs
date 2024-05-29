@@ -2513,6 +2513,14 @@ pub struct QualifiedNameAndType {
 }
 
 impl QualifiedNameAndType {
+    pub fn new<N: BnStrCompatible>(name: N, type_: Type) -> Self {
+        let name: QualifiedName = name.into();
+        Self {
+            name: ManuallyDrop::new(name),
+            type_: ManuallyDrop::new(type_),
+        }
+    }
+
     pub(crate) unsafe fn ref_from_raw(handle: &BNQualifiedNameAndType) -> &QualifiedNameAndType {
         mem::transmute(handle)
     }
@@ -2554,27 +2562,46 @@ unsafe impl CoreArrayProviderInner for QualifiedNameAndType {
 //////////////////////////
 // QualifiedNameTypeAndId
 
-#[repr(transparent)]
-pub struct QualifiedNameTypeAndId(pub(crate) BNQualifiedNameTypeAndId);
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct QualifiedNameTypeAndId {
+    // Drop is done by BNFreeQualifiedNameTypeAndId
+    name: ManuallyDrop<QualifiedName>,
+    id: ManuallyDrop<BnString>,
+    type_: ManuallyDrop<Type>,
+}
 
 impl QualifiedNameTypeAndId {
+    pub fn new<N: BnStrCompatible, I: BnStrCompatible>(name: N, id: I, type_: Type) -> Self {
+        let name: QualifiedName = name.into();
+        Self {
+            name: ManuallyDrop::new(name),
+            id: ManuallyDrop::new(BnString::new(id)),
+            type_: ManuallyDrop::new(type_),
+        }
+    }
+
+    pub(crate) fn as_raw_mut(&mut self) -> &mut BNQualifiedNameTypeAndId {
+        unsafe { mem::transmute(self) }
+    }
+
     pub fn name(&self) -> &QualifiedName {
-        unsafe { mem::transmute(&self.0.name) }
+        &self.name
     }
 
     pub fn id(&self) -> &str {
-        unsafe { CStr::from_ptr(self.0.id).to_str().unwrap() }
+        self.id.as_str()
     }
 
-    pub fn type_object(&self) -> Guard<Type> {
-        unsafe { Guard::new(Type::from_raw(NonNull::new(self.0.type_).unwrap()), self) }
+    pub fn type_object(&self) -> &Type {
+        &self.type_
     }
 }
 
 impl Drop for QualifiedNameTypeAndId {
     fn drop(&mut self) {
         unsafe {
-            BNFreeQualifiedNameTypeAndId(&mut self.0);
+            BNFreeQualifiedNameTypeAndId(self.as_raw_mut());
         }
     }
 }

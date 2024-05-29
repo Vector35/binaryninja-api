@@ -1760,9 +1760,10 @@ impl Drop for Enumeration {
 
 pub type StructureType = BNStructureVariant;
 
+#[repr(transparent)]
 #[derive(PartialEq, Eq, Hash)]
 pub struct StructureBuilder {
-    pub(crate) handle: *mut BNStructureBuilder,
+    handle: NonNull<BNStructureBuilder>,
 }
 
 /// ```no_run
@@ -1792,25 +1793,29 @@ pub struct StructureBuilder {
 impl StructureBuilder {
     pub fn new() -> Self {
         Self {
-            handle: unsafe { BNCreateStructureBuilder() },
+            handle: unsafe { NonNull::new(BNCreateStructureBuilder()).unwrap() },
         }
     }
 
-    pub(crate) unsafe fn from_raw(handle: *mut BNStructureBuilder) -> Self {
-        debug_assert!(!handle.is_null());
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNStructureBuilder>) -> Self {
         Self { handle }
+    }
+
+    pub(crate) fn as_raw(&self) -> &mut BNStructureBuilder {
+        unsafe { &mut (*self.handle.as_ptr()) }
     }
 
     // Chainable terminal
     pub fn finalize(&self) -> Ref<Structure> {
-        unsafe { Structure::ref_from_raw(BNFinalizeStructureBuilder(self.handle)) }
+        let result = unsafe { BNFinalizeStructureBuilder(self.as_raw()) };
+        unsafe { Structure::ref_from_raw(result) }
     }
 
     // Chainable builders/setters
 
     pub fn set_width(&self, width: u64) -> &Self {
         unsafe {
-            BNSetStructureBuilderWidth(self.handle, width);
+            BNSetStructureBuilderWidth(self.as_raw(), width);
         }
 
         self
@@ -1818,7 +1823,7 @@ impl StructureBuilder {
 
     pub fn set_alignment(&self, alignment: usize) -> &Self {
         unsafe {
-            BNSetStructureBuilderAlignment(self.handle, alignment);
+            BNSetStructureBuilderAlignment(self.as_raw(), alignment);
         }
 
         self
@@ -1826,24 +1831,24 @@ impl StructureBuilder {
 
     pub fn set_packed(&self, packed: bool) -> &Self {
         unsafe {
-            BNSetStructureBuilderPacked(self.handle, packed);
+            BNSetStructureBuilderPacked(self.as_raw(), packed);
         }
 
         self
     }
 
     pub fn set_structure_type(&self, t: StructureType) -> &Self {
-        unsafe { BNSetStructureBuilderType(self.handle, t) };
+        unsafe { BNSetStructureBuilderType(self.as_raw(), t) };
         self
     }
 
     pub fn set_pointer_offset(&self, offset: i64) -> &Self {
-        unsafe { BNSetStructureBuilderPointerOffset(self.handle, offset) };
+        unsafe { BNSetStructureBuilderPointerOffset(self.as_raw(), offset) };
         self
     }
 
     pub fn set_propagates_data_var_refs(&self, does: bool) -> &Self {
-        unsafe { BNSetStructureBuilderPropagatesDataVariableReferences(self.handle, does) };
+        unsafe { BNSetStructureBuilderPropagatesDataVariableReferences(self.as_raw(), does) };
         self
     }
 
@@ -1859,7 +1864,7 @@ impl StructureBuilder {
 
         unsafe {
             BNSetBaseStructuresForStructureBuilder(
-                self.handle,
+                self.as_raw(),
                 bases_api.as_mut_ptr(),
                 bases_api.len(),
             )
@@ -1878,7 +1883,7 @@ impl StructureBuilder {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddStructureBuilderMember(
-                self.handle,
+                self.as_raw(),
                 &t.into().into(),
                 name.as_ref().as_ptr() as _,
                 access,
@@ -1914,7 +1919,7 @@ impl StructureBuilder {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddStructureBuilderMemberAtOffset(
-                self.handle,
+                self.as_raw(),
                 &t.into().into(),
                 name.as_ref().as_ptr() as _,
                 offset,
@@ -1940,32 +1945,32 @@ impl StructureBuilder {
     // Getters
 
     pub fn width(&self) -> u64 {
-        unsafe { BNGetStructureBuilderWidth(self.handle) }
+        unsafe { BNGetStructureBuilderWidth(self.as_raw()) }
     }
 
     pub fn alignment(&self) -> usize {
-        unsafe { BNGetStructureBuilderAlignment(self.handle) }
+        unsafe { BNGetStructureBuilderAlignment(self.as_raw()) }
     }
 
     pub fn packed(&self) -> bool {
-        unsafe { BNIsStructureBuilderPacked(self.handle) }
+        unsafe { BNIsStructureBuilderPacked(self.as_raw()) }
     }
 
     pub fn structure_type(&self) -> StructureType {
-        unsafe { BNGetStructureBuilderType(self.handle) }
+        unsafe { BNGetStructureBuilderType(self.as_raw()) }
     }
 
     pub fn pointer_offset(&self) -> i64 {
-        unsafe { BNGetStructureBuilderPointerOffset(self.handle) }
+        unsafe { BNGetStructureBuilderPointerOffset(self.as_raw()) }
     }
 
     pub fn propagates_data_var_refs(&self) -> bool {
-        unsafe { BNStructureBuilderPropagatesDataVariableReferences(self.handle) }
+        unsafe { BNStructureBuilderPropagatesDataVariableReferences(self.as_raw()) }
     }
 
     pub fn base_structures(&self) -> Result<Vec<BaseStructure>> {
         let mut count = 0usize;
-        let bases = unsafe { BNGetBaseStructuresForStructureBuilder(self.handle, &mut count) };
+        let bases = unsafe { BNGetBaseStructuresForStructureBuilder(self.as_raw(), &mut count) };
         if bases.is_null() {
             Err(())
         } else {
@@ -1986,7 +1991,7 @@ impl StructureBuilder {
 
     pub fn members(&self) -> Array<StructureMember> {
         let mut count = 0;
-        let members_raw = unsafe { BNGetStructureBuilderMembers(self.handle, &mut count) };
+        let members_raw = unsafe { BNGetStructureBuilderMembers(self.as_raw(), &mut count) };
         unsafe { Array::new(members_raw, count, ()) }
     }
 
@@ -2021,7 +2026,7 @@ impl StructureBuilder {
     }
 
     pub fn remove(&self, index: usize) {
-        unsafe { BNRemoveStructureBuilderMember(self.handle, index) }
+        unsafe { BNRemoveStructureBuilderMember(self.as_raw(), index) }
     }
 
     pub fn replace(&self, index: usize, type_: Conf<&Type>, name: &str, overwrite: bool) {
@@ -2033,14 +2038,15 @@ impl StructureBuilder {
             confidence: type_.confidence,
         };
         unsafe {
-            BNReplaceStructureBuilderMember(self.handle, index, &raw_type_, name_ptr, overwrite)
+            BNReplaceStructureBuilderMember(self.as_raw(), index, &raw_type_, name_ptr, overwrite)
         }
     }
 }
 
 impl From<&Structure> for StructureBuilder {
     fn from(structure: &Structure) -> StructureBuilder {
-        unsafe { Self::from_raw(BNCreateStructureBuilderFromStructure(structure.handle)) }
+        let result = unsafe { BNCreateStructureBuilderFromStructure(structure.handle) };
+        unsafe { Self::from_raw(NonNull::new(result).unwrap()) }
     }
 }
 
@@ -2060,9 +2066,18 @@ impl Debug for StructureBuilder {
     }
 }
 
+impl Clone for StructureBuilder {
+    fn clone(&self) -> Self {
+        let result = unsafe { BNDuplicateStructureBuilder(self.as_raw()) };
+        Self {
+            handle: NonNull::new(result).unwrap(),
+        }
+    }
+}
+
 impl Drop for StructureBuilder {
     fn drop(&mut self) {
-        unsafe { BNFreeStructureBuilder(self.handle) };
+        unsafe { BNFreeStructureBuilder(self.as_raw()) };
     }
 }
 

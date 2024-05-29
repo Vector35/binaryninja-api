@@ -1447,9 +1447,9 @@ bool GetLowLevelILForInstruction(
 		    ILSETREG_O(operand1, il.Neg(REGSZ_O(operand1), ILREG_O(operand3))));
 		break;
 	case ARM64_CSET:
-		GenIfElse(il, GetCondition(il, operand2.cond),
-		    ILSETREG_O(operand1, il.Const(REGSZ_O(operand1), 1)),
-		    ILSETREG_O(operand1, il.Const(REGSZ_O(operand1), 0)));
+		il.AddInstruction(
+			ILSETREG_O(operand1,
+				il.BoolToInt(REGSZ_O(operand1), GetCondition(il, operand2.cond))));
 		break;
 	case ARM64_CSETM:
 		GenIfElse(il, GetCondition(il, operand2.cond),

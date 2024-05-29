@@ -13,7 +13,7 @@ from binaryninja.enums import LowLevelILOperation, ILInstructionAttribute
 path_here = pathlib.Path(__file__).parent.absolute()
 path_il_h = os.path.join(path_here, 'il.h')
 
-ATTR_PTR_AUTH = ILInstructionAttribute(8) # enum BNILInstructionAttribute.SrcInstructionUsesPointerAuth from api/binaryninjacore.h
+ATTR_PTR_AUTH = ILInstructionAttribute(16) # enum BNILInstructionAttribute.SrcInstructionUsesPointerAuth from api/binaryninjacore.h
 
 tests_udf = [
     # udf #0
@@ -2405,11 +2405,7 @@ test_cases = \
                          ' LLIL_SET_REG.q(x28,LLIL_LOAD.q(LLIL_ADD.q(LLIL_REG.q(x21),LLIL_CONST.q(0x8))));' + \
                          ' LLIL_SET_REG.q(x21,LLIL_ADD.q(LLIL_REG.q(x21),LLIL_CONST.q(0x90)))'),
     # # cset w8, ne
-    (b'\xE8\x07\x9F\x1A', 'LLIL_IF(LLIL_FLAG_GROUP(ne),1,3);' + \
-                         ' LLIL_SET_REG.d(w8,LLIL_CONST.d(0x1));' + \
-                         ' LLIL_GOTO(5);' + \
-                         ' LLIL_SET_REG.d(w8,LLIL_CONST.d(0x0));' + \
-                         ' LLIL_GOTO(5)'),
+    (b'\xE8\x07\x9F\x1A', 'LLIL_SET_REG.d(w8,LLIL_BOOL_TO_INT.d(LLIL_FLAG_GROUP(ne)))'),
     # some vector loads/stores
     (b'\x00\x70\x00\x4C', 'LLIL_STORE.o(LLIL_REG.q(x0),LLIL_REG.o(v0))'), # st1 {v0.16b}, [x0]
     (b'\x00\xA0\x00\x4C', 'LLIL_STORE.o(LLIL_REG.q(x0),LLIL_REG.o(v0));' + \

@@ -464,13 +464,10 @@ impl TypeBuilder {
         }
     }
 
-    pub fn get_enumeration(&self) -> Result<Ref<Enumeration>> {
-        let result = unsafe { BNGetTypeBuilderEnumeration(self.as_raw()) };
-        if result.is_null() {
-            Err(())
-        } else {
-            Ok(unsafe { Enumeration::ref_from_raw(result) })
-        }
+    pub fn get_enumeration(&self) -> Result<Enumeration> {
+        NonNull::new(unsafe { BNGetTypeBuilderEnumeration(self.as_raw()) })
+            .map(|result| unsafe { Enumeration::from_raw(result) })
+            .ok_or(())
     }
 
     pub fn get_named_type_reference(&self) -> Result<Ref<NamedTypeReference>> {
@@ -569,7 +566,7 @@ impl TypeBuilder {
             let mut fake_arch: BNArchitecture = mem::zeroed();
             let result = BNCreateEnumerationTypeBuilder(
                 &mut fake_arch,
-                enumeration.handle,
+                enumeration.as_raw(),
                 width,
                 &mut is_signed.into().into(),
             );
@@ -855,13 +852,10 @@ impl Type {
         }
     }
 
-    pub fn get_enumeration(&self) -> Result<Ref<Enumeration>> {
-        let result = unsafe { BNGetTypeEnumeration(self.as_raw()) };
-        if result.is_null() {
-            Err(())
-        } else {
-            Ok(unsafe { Enumeration::ref_from_raw(result) })
-        }
+    pub fn get_enumeration(&self) -> Result<Enumeration> {
+        NonNull::new(unsafe { BNGetTypeEnumeration(self.as_raw()) })
+            .map(|result| unsafe { Enumeration::from_raw(result) })
+            .ok_or(())
     }
 
     pub fn get_named_type_reference(&self) -> Result<Ref<NamedTypeReference>> {
@@ -972,7 +966,7 @@ impl Type {
             let mut fake_arch: BNArchitecture = mem::zeroed();
             let result = BNCreateEnumerationType(
                 &mut fake_arch,
-                enumeration.handle,
+                enumeration.as_raw(),
                 width,
                 &mut is_signed.into().into(),
             );
@@ -1589,8 +1583,29 @@ impl EnumerationMember {
     pub(crate) unsafe fn from_raw(member: BNEnumerationMember) -> Self {
         mem::transmute(member)
     }
+
+    pub(crate) unsafe fn ref_from_raw(member: &BNEnumerationMember) -> &Self {
+        mem::transmute(member)
+    }
 }
 
+impl CoreArrayProvider for EnumerationMember {
+    type Raw = BNEnumerationMember;
+    type Context = ();
+    type Wrapped<'a> = &'a Self;
+}
+
+unsafe impl CoreArrayProviderInner for EnumerationMember {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeEnumerationMemberList(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::ref_from_raw(raw)
+    }
+}
+
+#[repr(transparent)]
 #[derive(PartialEq, Eq, Hash)]
 pub struct EnumerationBuilder {
     handle: NonNull<BNEnumerationBuilder>,
@@ -1611,8 +1626,11 @@ impl EnumerationBuilder {
         unsafe { &mut (*self.handle.as_ptr()) }
     }
 
-    pub fn finalize(&self) -> Ref<Enumeration> {
-        unsafe { Enumeration::ref_from_raw(BNFinalizeEnumerationBuilder(self.as_raw())) }
+    pub fn finalize(&self) -> Enumeration {
+        unsafe {
+            let result = BNFinalizeEnumerationBuilder(self.as_raw());
+            Enumeration::from_raw(NonNull::new(result).unwrap())
+        }
     }
 
     pub fn append<S: BnStrCompatible>(&self, name: S) -> &Self {
@@ -1682,7 +1700,7 @@ impl Default for EnumerationBuilder {
 impl From<&Enumeration> for EnumerationBuilder {
     fn from(enumeration: &Enumeration) -> Self {
         unsafe {
-            let result = BNCreateEnumerationBuilderFromEnumeration(enumeration.handle);
+            let result = BNCreateEnumerationBuilderFromEnumeration(enumeration.as_raw());
             Self::from_raw(NonNull::new(result).unwrap())
         }
     }
@@ -1697,53 +1715,43 @@ impl Drop for EnumerationBuilder {
 /////////////////
 // Enumeration
 
+#[repr(transparent)]
 #[derive(PartialEq, Eq, Hash)]
 pub struct Enumeration {
-    pub(crate) handle: *mut BNEnumeration,
+    handle: NonNull<BNEnumeration>,
 }
 
 impl Enumeration {
-    pub(crate) unsafe fn ref_from_raw(handle: *mut BNEnumeration) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNEnumeration>) -> Self {
+        Self { handle }
+    }
+
+    pub(crate) fn as_raw(&self) -> &mut BNEnumeration {
+        unsafe { &mut (*self.handle.as_ptr()) }
     }
 
     pub fn builder() -> EnumerationBuilder {
         EnumerationBuilder::new()
     }
 
-    pub fn members(&self) -> Vec<EnumerationMember> {
+    pub fn members(&self) -> Array<EnumerationMember> {
         unsafe {
             let mut count = 0;
-            let members_raw = BNGetEnumerationMembers(self.handle, &mut count);
-            let members: &[BNEnumerationMember] = slice::from_raw_parts(members_raw, count);
-
-            let result = (0..count)
-                .map(|i| EnumerationMember::from_raw(members[i]))
-                .collect();
-
-            BNFreeEnumerationMemberList(members_raw, count);
-
-            result
+            let members_raw = BNGetEnumerationMembers(self.as_raw(), &mut count);
+            Array::new(members_raw, count, ())
         }
     }
 }
 
-unsafe impl RefCountable for Enumeration {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Self::ref_from_raw(BNNewEnumerationReference(handle.handle))
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeEnumeration(handle.handle);
+impl Clone for Enumeration {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(NonNull::new(BNNewEnumerationReference(self.as_raw())).unwrap()) }
     }
 }
 
-impl ToOwned for Enumeration {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl Drop for Enumeration {
+    fn drop(&mut self) {
+        unsafe { BNFreeEnumeration(self.as_raw()) };
     }
 }
 

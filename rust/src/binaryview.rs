@@ -733,7 +733,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     fn get_type_by_ref(&self, ref_: &NamedTypeReference) -> Option<Type> {
         unsafe {
-            let type_handle = BNGetAnalysisTypeByRef(self.as_ref().handle, ref_.handle);
+            let type_handle = BNGetAnalysisTypeByRef(self.as_ref().handle, ref_.as_raw());
             if type_handle.is_null() {
                 return None;
             }

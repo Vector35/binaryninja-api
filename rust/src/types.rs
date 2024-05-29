@@ -711,11 +711,6 @@ impl Type {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNType) -> &Self {
-        assert!(!handle.is_null());
-        mem::transmute(handle)
-    }
-
     pub(crate) fn as_raw(&self) -> &mut BNType {
         unsafe { &mut (*self.handle.as_ptr()) }
     }
@@ -2623,68 +2618,44 @@ unsafe impl CoreArrayProviderInner for QualifiedNameTypeAndId {
 //////////////////////////
 // NameAndType
 
-pub struct NameAndType(pub(crate) BNNameAndType);
-
-impl NameAndType {
-    pub(crate) unsafe fn from_raw(raw: &BNNameAndType) -> Self {
-        Self(*raw)
-    }
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct NameAndType {
+    name: BnString,
+    type_: Type,
+    type_confidence: u8,
 }
 
 impl NameAndType {
-    pub fn new<S: BnStrCompatible>(name: S, t: Type, confidence: u8) -> Ref<Self> {
-        unsafe {
-            Ref::new(Self(BNNameAndType {
-                name: BNAllocString(name.into_bytes_with_nul().as_ref().as_ptr() as *mut _),
-                type_: t.into_raw(),
-                typeConfidence: confidence,
-            }))
+    pub(crate) unsafe fn ref_from_raw(raw: &BNNameAndType) -> &Self {
+        mem::transmute(raw)
+    }
+
+    pub fn new<S: BnStrCompatible>(name: S, t: Type, confidence: u8) -> Self {
+        Self {
+            name: BnString::new(name),
+            type_: t,
+            type_confidence: confidence,
         }
     }
 
     pub fn name(&self) -> &str {
-        let c_str = unsafe { CStr::from_ptr(self.0.name) };
-        c_str.to_str().unwrap()
+        self.name.as_str()
     }
 
     pub fn t(&self) -> &Type {
-        unsafe { Type::ref_from_raw(&self.0.type_) }
+        &self.type_
     }
 
     pub fn type_with_confidence(&self) -> Conf<&Type> {
-        Conf::new(self.t(), self.0.typeConfidence)
-    }
-}
-
-impl ToOwned for NameAndType {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
-    }
-}
-
-unsafe impl RefCountable for NameAndType {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Self::new(
-            CStr::from_ptr(handle.0.name),
-            handle.t().clone(),
-            handle.0.typeConfidence,
-        )
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        unsafe {
-            BNFreeString(handle.0.name);
-            let _ = Type::from_raw(NonNull::new(handle.0.type_).unwrap());
-        }
+        Conf::new(self.t(), self.type_confidence)
     }
 }
 
 impl CoreArrayProvider for NameAndType {
     type Raw = BNNameAndType;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, NameAndType>;
+    type Wrapped<'a> = &'a NameAndType;
 }
 
 unsafe impl CoreArrayProviderInner for NameAndType {
@@ -2692,7 +2663,7 @@ unsafe impl CoreArrayProviderInner for NameAndType {
         BNFreeNameAndTypeList(raw, count);
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        unsafe { Guard::new(NameAndType::from_raw(raw), raw) }
+        NameAndType::ref_from_raw(raw)
     }
 }
 

@@ -24,9 +24,7 @@ use std::{
     ffi::{c_char, c_int, CStr, CString},
     hash::Hash,
     mem::{zeroed, MaybeUninit},
-    ops,
-    ptr,
-    slice,
+    ops, ptr, slice,
 };
 
 use crate::{
@@ -315,7 +313,7 @@ pub trait Intrinsic: Sized + Clone + Copy {
     fn id(&self) -> u32;
 
     /// Reeturns the list of the input names and types for this intrinsic.
-    fn inputs(&self) -> Vec<Ref<NameAndType>>;
+    fn inputs(&self) -> Array<NameAndType>;
 
     /// Returns the list of the output types for this intrinsic.
     fn outputs(&self) -> Vec<Conf<Type>>;
@@ -652,7 +650,7 @@ impl Intrinsic for UnusedIntrinsic {
     fn id(&self) -> u32 {
         unreachable!()
     }
-    fn inputs(&self) -> Vec<Ref<NameAndType>> {
+    fn inputs(&self) -> Array<NameAndType> {
         unreachable!()
     }
     fn outputs(&self) -> Vec<Conf<Type>> {
@@ -1009,20 +1007,12 @@ impl Intrinsic for crate::architecture::CoreIntrinsic {
         self.1
     }
 
-    fn inputs(&self) -> Vec<Ref<NameAndType>> {
+    fn inputs(&self) -> Array<NameAndType> {
         let mut count: usize = 0;
 
         unsafe {
             let inputs = BNGetArchitectureIntrinsicInputs(self.0, self.1, &mut count as *mut _);
-
-            let ret = slice::from_raw_parts_mut(inputs, count)
-                .iter()
-                .map(|x| NameAndType::from_raw(x).to_owned())
-                .collect();
-
-            BNFreeNameAndTypeList(inputs, count);
-
-            ret
+            Array::new(inputs, count, ())
         }
     }
 
@@ -2435,21 +2425,10 @@ where
             return ptr::null_mut();
         };
 
-        let inputs = intrinsic.inputs();
-        let mut res: Box<[_]> = inputs
-            .into_iter()
-            .map(|input| unsafe { Ref::into_raw(input) }.0)
-            .collect();
-
         unsafe {
-            *count = res.len();
-            if res.is_empty() {
-                ptr::null_mut()
-            } else {
-                let raw = res.as_mut_ptr();
-                mem::forget(res);
-                raw
-            }
+            let (inputs, inputs_len, ()) = intrinsic.inputs().into_raw();
+            *count = inputs_len;
+            inputs
         }
     }
 
@@ -2460,12 +2439,7 @@ where
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
 
         if !nt.is_null() {
-            unsafe {
-                let name_and_types = Box::from_raw(ptr::slice_from_raw_parts_mut(nt, count));
-                for nt in name_and_types.iter() {
-                    Ref::new(NameAndType::from_raw(nt));
-                }
-            }
+            let _array: Array<NameAndType> = unsafe { Array::new(nt, count, ()) };
         }
     }
 

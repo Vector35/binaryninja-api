@@ -1503,40 +1503,58 @@ unsafe impl CoreArrayProviderInner for Array<SSAVariable> {
 ///////////////
 // NamedVariable
 
+#[repr(C)]
+#[derive(Debug, Clone)]
 pub struct NamedTypedVariable {
-    var: BNVariable,
+    var: Variable,
+    // ManuallyDrop because this is droped by the BNFreeVariableNameAndType
+    // and not but Type::drop and BnString::drop
+    ty: ManuallyDrop<Type>,
+    name: ManuallyDrop<BnString>,
     auto_defined: bool,
     type_confidence: u8,
-    name: *mut c_char,
-    ty: *mut BNType,
 }
 
 impl NamedTypedVariable {
+    pub(crate) unsafe fn ref_from_raw(handle: &BNVariableNameAndType) -> &Self {
+        assert!(!handle.type_.is_null());
+        assert!(!handle.name.is_null());
+        mem::transmute(handle)
+    }
+
+    pub(crate) fn as_raw(&self) -> &BNVariableNameAndType {
+        unsafe { mem::transmute(self) }
+    }
+
     pub fn name(&self) -> &str {
-        unsafe { CStr::from_ptr(self.name).to_str().unwrap() }
+        self.name.as_str()
     }
 
     pub fn var(&self) -> Variable {
-        unsafe { Variable::from_raw(self.var) }
+        self.var
     }
 
     pub fn auto_defined(&self) -> bool {
         self.auto_defined
     }
 
-    pub fn type_confidence(&self) -> u8 {
-        self.type_confidence
+    pub fn var_type(&self) -> Conf<&Type> {
+        Conf::new(&self.ty, self.type_confidence)
     }
+}
 
-    pub fn var_type(&self) -> Type {
-        unsafe { Type::from_raw(NonNull::new(self.ty).unwrap()) }
+impl Drop for NamedTypedVariable {
+    fn drop(&mut self) {
+        unsafe {
+            BNFreeVariableNameAndType(self.as_raw() as *const _ as *mut BNVariableNameAndType)
+        }
     }
 }
 
 impl CoreArrayProvider for NamedTypedVariable {
     type Raw = BNVariableNameAndType;
     type Context = ();
-    type Wrapped<'a> = ManuallyDrop<NamedTypedVariable>;
+    type Wrapped<'a> = &'a NamedTypedVariable;
 }
 
 unsafe impl CoreArrayProviderInner for NamedTypedVariable {
@@ -1544,13 +1562,7 @@ unsafe impl CoreArrayProviderInner for NamedTypedVariable {
         BNFreeVariableNameAndTypeList(raw, count)
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        ManuallyDrop::new(NamedTypedVariable {
-            var: raw.var,
-            ty: raw.type_,
-            name: raw.name,
-            auto_defined: raw.autoDefined,
-            type_confidence: raw.typeConfidence,
-        })
+        Self::ref_from_raw(raw)
     }
 }
 

@@ -422,23 +422,14 @@ impl TypeBuilder {
         }
     }
 
-    pub fn parameters(&self) -> Result<Vec<FunctionParameter>> {
+    pub fn parameters(&self) -> Result<Array<FunctionParameter>> {
         unsafe {
             let mut count = 0;
             let parameters_raw = BNGetTypeBuilderParameters(self.as_raw(), &mut count);
             if parameters_raw.is_null() {
                 Err(())
             } else {
-                let parameters: &[BNFunctionParameter] =
-                    slice::from_raw_parts(parameters_raw, count);
-
-                let result = (0..count)
-                    .map(|i| FunctionParameter::from_raw(parameters[i]))
-                    .collect();
-
-                BNFreeTypeParameterList(parameters_raw, count);
-
-                Ok(result)
+                Ok(Array::new(parameters_raw, count, ()))
             }
         }
     }
@@ -806,7 +797,7 @@ impl Type {
         }
     }
 
-    pub fn parameters(&self) -> Result<Vec<FunctionParameter>> {
+    pub fn parameters(&self) -> Result<Array<FunctionParameter>> {
         unsafe {
             let mut count = 0;
             let parameters_raw: *mut BNFunctionParameter =
@@ -814,16 +805,7 @@ impl Type {
             if parameters_raw.is_null() {
                 Err(())
             } else {
-                let parameters: &[BNFunctionParameter] =
-                    slice::from_raw_parts(parameters_raw, count);
-
-                let result = (0..count)
-                    .map(|i| FunctionParameter::from_raw(parameters[i]))
-                    .collect();
-
-                BNFreeTypeParameterList(parameters_raw, count);
-
-                Ok(result)
+                Ok(Array::new(parameters_raw, count, ()))
             }
         }
     }
@@ -1319,23 +1301,9 @@ impl FunctionParameter {
         }
     }
 
-    pub(crate) unsafe fn from_raw(member: BNFunctionParameter) -> Self {
-        let name = NonNull::new(member.name).map(|name| unsafe { BnString::from_raw(name) });
-
-        let location = if member.defaultLocation {
-            // dummy value
-            Variable::new(BNVariableSourceType::StackVariableSourceType, 0, 0)
-        } else {
-            unsafe { Variable::from_raw(member.location) }
-        };
-
-        Self {
-            t: unsafe { Type::from_raw(NonNull::new(BNNewTypeReference(member.type_)).unwrap()) },
-            type_confidence: member.typeConfidence,
-            name,
-            default_location: member.defaultLocation,
-            location,
-        }
+    pub(crate) unsafe fn ref_from_raw(handle: &BNFunctionParameter) -> &Self {
+        assert!(!handle.type_.is_null());
+        mem::transmute(handle)
     }
 
     pub fn location(&self) -> Option<Variable> {
@@ -1362,6 +1330,22 @@ impl FunctionParameter {
                 | None => Cow::Borrowed(""),
             }
         }
+    }
+}
+
+impl CoreArrayProvider for FunctionParameter {
+    type Raw = BNFunctionParameter;
+    type Context = ();
+    type Wrapped<'a> = &'a Self;
+}
+
+unsafe impl CoreArrayProviderInner for FunctionParameter {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeTypeParameterList(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::ref_from_raw(raw)
     }
 }
 
@@ -1574,10 +1558,6 @@ impl EnumerationMember {
         }
     }
 
-    pub(crate) unsafe fn from_raw(member: BNEnumerationMember) -> Self {
-        mem::transmute(member)
-    }
-
     pub(crate) unsafe fn ref_from_raw(member: &BNEnumerationMember) -> &Self {
         mem::transmute(member)
     }
@@ -1668,19 +1648,11 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn members(&self) -> Vec<EnumerationMember> {
+    pub fn members(&self) -> Array<EnumerationMember> {
         unsafe {
             let mut count = 0;
             let members_raw = BNGetEnumerationBuilderMembers(self.as_raw(), &mut count);
-            let members: &[BNEnumerationMember] = slice::from_raw_parts(members_raw, count);
-
-            let result = (0..count)
-                .map(|i| EnumerationMember::from_raw(members[i]))
-                .collect();
-
-            BNFreeEnumerationMemberList(members_raw, count);
-
-            result
+            Array::new(members_raw, count, ())
         }
     }
 }

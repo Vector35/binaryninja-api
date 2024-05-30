@@ -2162,6 +2162,7 @@ unsafe impl CoreArrayProviderInner for StructureMember {
     }
 }
 
+#[repr(C)]
 #[derive(Debug, Clone)]
 pub struct InheritedStructureMember {
     pub base: NamedTypeReference,
@@ -2185,14 +2186,35 @@ impl InheritedStructureMember {
         }
     }
 
-    // pub(crate) unsafe fn from_raw(handle: BNInheritedStructureMember) -> Self {
-    //     Self {
-    //         base: RefCountable::inc_ref(&NamedTypeReference::from_raw(handle.base)),
-    //         base_offset: handle.baseOffset,
-    //         member: StructureMember::from_raw(handle.member),
-    //         member_index: handle.memberIndex,
-    //     }
-    // }
+    pub(crate) unsafe fn ref_from_raw(handle: &BNInheritedStructureMember) -> &Self {
+        mem::transmute(handle)
+    }
+
+    pub(crate) fn as_raw_mut(&mut self) -> &mut BNInheritedStructureMember {
+        unsafe { mem::transmute(self) }
+    }
+}
+
+impl Drop for InheritedStructureMember {
+    fn drop(&mut self) {
+        unsafe { BNFreeInheritedStructureMember(self.as_raw_mut()) }
+    }
+}
+
+impl CoreArrayProvider for InheritedStructureMember {
+    type Raw = BNInheritedStructureMember ;
+    type Context = ();
+    type Wrapped<'a> = &'a Self;
+}
+
+unsafe impl CoreArrayProviderInner for InheritedStructureMember {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeInheritedStructureMemberList(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::ref_from_raw(raw)
+    }
 }
 
 #[repr(C)]
@@ -3851,7 +3873,7 @@ mod test {
 
     // TODO BNGetDebugDataVariableByName returns a *mut BNDataVariableAndName
     // pointer, can we deref it? Or it need to be freed by proper drop.
-    // Verify if 
+    // Verify if
     // * DebugInfo::get_data_variable_by_name
     // * DebugInfo::get_data_variable_by_address
     // should call BNFreeDataVariableAndName

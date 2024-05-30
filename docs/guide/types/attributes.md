@@ -170,19 +170,90 @@ int main()
 
 ## Offset Pointers
 
-Offset pointers, often called shifted pointers or relative pointers, are used to provide extra information about the "origin" of a pointer. They can include offset information about a struct and member, for example. These are used by analysis to keep track of shifted references to a structure and resolve member field accesses to be relative to the base.
+Offset pointers, often called shifted pointers, relative pointers, or adjusted pointers, represent a pointer to a structure that has been offset by a certain number of bytes.
+Annotating these offset pointers allows Binary Ninja to deduce types for dereferences through them, find the structure's start, and render proper member names. 
 
-More discussion about Offset Pointers can be found [on our blog](https://binary.ninja/2022/10/28/3.2-released.html#offset-pointers).
+These are often seen in intrusive linked lists, where structures have a pointer to the next item in the list, but the pointer is offset from the base of the structure and
+instead points to the member containing the pointer to the next item. Iterating through the items in the list involves following the pointer, then shifting the result by the offset
+of the pointer in the structure, to get the base of the structure. Because of this, many compilers will use the offset pointer to access structure members, accounting for the shift
+in any dereferences, and saving a couple instructions.
 
 ### Examples
 
-``` C
-/* rbx_1 is a void* located 0x2b0 bytes from the start of a _KSDEVICE */
-void* __offset(_KSDEVICE, 0x2b0) rbx_1 = &device->__offset(0x2b0).q;
+You will see uses of the offset pointers annotated with `(var - offset)` in IL views and `ADJ(var)` in Pseudo-C.  
 
-/* Further relative accesses through rbx_1 are annotated and displayed relative to the structure */
-(rbx_1 - 0x2b0)->field18 = 0; /* mov qword [rbx_1-0x298], 0x0 */
+``` C
+/* High Level IL */
+void* __offset(perf_event, 0x50) next = event->migrate_entry_next
+void* __offset(perf_event, 0x50) prev = event->migrate_entry_prev
+(next - 0x50)->migrate_entry_prev = prev
+(prev - 0x50)->migrate_entry_next = next
+
+/* Pseudo-C */
+void* __offset(perf_event, 0x50) next = event->migrate_entry_next;
+void* __offset(perf_event, 0x50) prev = event->migrate_entry_prev;
+ADJ(next)->migrate_entry_prev = prev;
+ADJ(prev)->migrate_entry_next = next;
 ```
+
+If we don't annotate the pointers in the list (as is the default), this intrusive linked list
+will just do math on the pointers.
+
+``` C
+/* This structure... */
+struct perf_event __packed
+{
+    ...
+    void* sibling_list_next; /* Offset: 0x10 */
+    void* sibling_list_prev; /* Offset: 0x18 */
+    ...
+};
+
+/* ...yields this decompilation */
+void* event = leader->sibling_list_next - 0x10
+
+while (leader != event)
+    /* Note these fields are not annotated */
+    if (*(event + 0x98) == &pmu && *(event + 0xa8) s>= 0)
+        if (collect_event(cpuc, event, max_count, n: n_events) != 0)
+            break
+
+        n_events += 1
+
+    event = *(event + 0x10) - 0x10
+```
+
+We can instead use offset pointers for the intrusive linked list members and improve our output:
+
+``` C
+/* Now the pointers have offsets annotated */
+struct perf_event __packed
+{
+    ...
+    /* These pointers are pointing to &perf_event::sibling_list_next, 0x10 bytes from
+     * the start of a perf_event structure. */
+    void* __offset(perf_event, 0x10) sibling_list_next; /* Offset: 0x10 */
+    void* __offset(perf_event, 0x10) sibling_list_prev; /* Offset: 0x18 */
+    ...
+};
+
+/* Now the decompilation shows member accesses properly */
+struct perf_event* event = leader->sibling_list_next - 0x10
+
+while (leader != event)
+    if (event->pmu == &pmu && event->state s>= PERF_EVENT_STATE_INACTIVE)
+        if (collect_event(cpuc, event, max_count, n: n_events) != 0)
+            break
+
+        n_events += 1
+
+    event = event->sibling_list_next - 0x10
+```
+
+???+ Tip "Tip"
+    Normally, intrusive linked lists are a structure containing pointers to that structure
+    inside the next object, but we're inlining the structure members here, so we can
+    specialize their pointer offsets.
 
 ## Based Pointers
 

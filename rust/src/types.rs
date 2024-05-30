@@ -707,6 +707,10 @@ pub struct Type {
 /// bv.define_user_type("int_2", &my_custom_type_2);
 /// ```
 impl Type {
+    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNType) -> &Self {
+        mem::transmute(handle)
+    }
+
     pub(crate) unsafe fn from_raw(handle: NonNull<BNType>) -> Self {
         Self { handle }
     }
@@ -1251,6 +1255,22 @@ impl Clone for Type {
 impl Drop for Type {
     fn drop(&mut self) {
         unsafe { BNFreeType(self.as_raw()) };
+    }
+}
+
+impl CoreArrayProvider for Conf<Type> {
+    type Raw = BNTypeWithConfidence;
+    type Context = ();
+    type Wrapped<'a> = Conf<&'a Type>;
+}
+
+unsafe impl CoreArrayProviderInner for Conf<Type> {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeOutputTypeList(raw, count);
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Conf::new(Type::ref_from_raw(&raw.type_), raw.confidence)
     }
 }
 
@@ -3793,7 +3813,7 @@ unsafe impl CoreArrayProviderInner for UnresolvedIndirectBranches {
 mod test {
     use crate::types::{FunctionParameter, TypeClass};
 
-    use super::{Type, TypeBuilder};
+    use super::{NamedTypeReference, NamedTypeReferenceClass, QualifiedName, Type, TypeBuilder};
 
     #[test]
     fn create_bool_type() {
@@ -3832,9 +3852,13 @@ mod test {
         assert_eq!(type_built, expected_type);
     }
 
-    // TODO NamedTypeReference::new, NamedTypeReference::new_with_id was
-    // previously leaking memory, probably because the name received a ownership
-    // and didn't clone it, please verify the fix
+    #[test]
+    fn create_name_type_reference() {
+        let name: QualifiedName = "Test".into();
+        let type_class = NamedTypeReferenceClass::UnknownNamedTypeClass;
+        let name_type_ref = NamedTypeReference::new(type_class, &name);
+        assert_eq!(name_type_ref.name().string().as_str(), "Test");
+    }
 
     // TODO <Plarform as TypeParser>::parse_types_from_source forgot to call
     // BNFreeTypeParserResult, leaking the result

@@ -171,103 +171,108 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             self.named_types.len()
         );
 
-        let (symbols, functions) =
-            self.parse_symbols(Self::split_progress(&progress, 1, &[1.0, 3.0, 0.5, 0.5]))?;
-
         if self
             .settings
-            .get_bool("pdb.features.createMissingNamedTypes", Some(self.bv), None)
+            .get_bool("pdb.features.parseSymbols", Some(self.bv), None)
         {
-            self.resolve_missing_ntrs(
-                &symbols,
-                Self::split_progress(&progress, 2, &[1.0, 3.0, 0.5, 0.5]),
-            )?;
-            self.resolve_missing_ntrs(
-                &functions,
-                Self::split_progress(&progress, 3, &[1.0, 3.0, 0.5, 0.5]),
-            )?;
-        }
+            let (symbols, functions) =
+                self.parse_symbols(Self::split_progress(&progress, 1, &[1.0, 3.0, 0.5, 0.5]))?;
 
-        info!("PDB found {} types", self.named_types.len());
-        info!("PDB found {} data variables", symbols.len());
-        info!("PDB found {} functions", functions.len());
+            if self
+                .settings
+                .get_bool("pdb.features.createMissingNamedTypes", Some(self.bv), None)
+            {
+                self.resolve_missing_ntrs(
+                    &symbols,
+                    Self::split_progress(&progress, 2, &[1.0, 3.0, 0.5, 0.5]),
+                )?;
+                self.resolve_missing_ntrs(
+                    &functions,
+                    Self::split_progress(&progress, 3, &[1.0, 3.0, 0.5, 0.5]),
+                )?;
+            }
 
-        let allow_void =
-            self.settings
-                .get_bool("pdb.features.allowVoidGlobals", Some(self.bv), None);
+            info!("PDB found {} types", self.named_types.len());
+            info!("PDB found {} data variables", symbols.len());
+            info!("PDB found {} functions", functions.len());
 
-        for sym in symbols {
-            match sym {
-                ParsedSymbol::Data(ParsedDataSymbol {
-                    address,
-                    name,
-                    type_,
-                    ..
-                }) => {
-                    let real_type =
-                        type_.unwrap_or_else(|| Conf::new(Type::void(), min_confidence()));
+            let allow_void =
+                self.settings
+                    .get_bool("pdb.features.allowVoidGlobals", Some(self.bv), None);
 
-                    if real_type.contents.type_class() == TypeClass::VoidTypeClass {
-                        if !allow_void {
-                            self.log(|| {
-                                format!("Not adding void-typed symbol {:?}@{:x}", name, address)
-                            });
-                            continue;
+            for sym in symbols {
+                match sym {
+                    ParsedSymbol::Data(ParsedDataSymbol {
+                        address,
+                        name,
+                        type_,
+                        ..
+                    }) => {
+                        let real_type =
+                            type_.unwrap_or_else(|| Conf::new(Type::void(), min_confidence()));
+
+                        if real_type.contents.type_class() == TypeClass::VoidTypeClass {
+                            if !allow_void {
+                                self.log(|| {
+                                    format!("Not adding void-typed symbol {:?}@{:x}", name, address)
+                                });
+                                continue;
+                            }
                         }
-                    }
 
-                    self.log(|| {
-                        format!(
-                            "Adding data variable: 0x{:x}: {} {:?}",
-                            address, &name.raw_name, real_type
-                        )
-                    });
-                    self.debug_info
-                        .add_data_variable_info(DataVariableAndName::new(
-                            address,
-                            real_type,
-                            true,
-                            name.full_name.unwrap_or(name.raw_name),
-                        ));
-                }
-                s => {
-                    self.log(|| format!("Not adding non-data symbol {:?}", s));
+                        self.log(|| {
+                            format!(
+                                "Adding data variable: 0x{:x}: {} {:?}",
+                                address, &name.raw_name, real_type
+                            )
+                        });
+                        self.debug_info
+                            .add_data_variable_info(DataVariableAndName::new(
+                                address,
+                                real_type,
+                                true,
+                                name.full_name.unwrap_or(name.raw_name),
+                            ));
+                    }
+                    s => {
+                        self.log(|| format!("Not adding non-data symbol {:?}", s));
+                    }
                 }
             }
-        }
 
-        for sym in functions {
-            match sym {
-                ParsedSymbol::Procedure(ParsedProcedure {
-                    address,
-                    name,
-                    type_,
-                    ..
-                }) => {
-                    self.log(|| {
-                        format!(
-                            "Adding function: 0x{:x}: {} {:?}",
-                            address, &name.raw_name, type_
-                        )
-                    });
-                    self.debug_info.add_function(DebugFunctionInfo::new(
-                        Some(name.short_name.unwrap_or(name.raw_name.clone())),
-                        Some(name.full_name.unwrap_or(name.raw_name.clone())),
-                        Some(name.raw_name),
-                        type_.clone().and_then(|conf| {
-                            // TODO: When DebugInfo support confidence on function types, remove this
-                            if conf.confidence == 0 {
-                                None
-                            } else {
-                                Some(conf.contents)
-                            }
-                        }),
-                        Some(address),
-                        Some(self.platform.clone()),
-                        vec![], // TODO : Components
-                    ));
+            for sym in functions {
+                match sym {
+                    ParsedSymbol::Procedure(ParsedProcedure {
+                        address,
+                        name,
+                        type_,
+                        ..
+                    }) => {
+                        self.log(|| {
+                            format!(
+                                "Adding function: 0x{:x}: {} {:?}",
+                                address, &name.raw_name, type_
+                            )
+                        });
+                        self.debug_info.add_function(DebugFunctionInfo::new(
+                            Some(name.short_name.unwrap_or(name.raw_name.clone())),
+                            Some(name.full_name.unwrap_or(name.raw_name.clone())),
+                            Some(name.raw_name),
+                            type_.clone().and_then(|conf| {
+                                // TODO: When DebugInfo support confidence on function types, remove this
+                                if conf.confidence == 0 {
+                                    None
+                                } else {
+                                    Some(conf.contents)
+                                }
+                            }),
+                            Some(address),
+                            Some(self.platform.clone()),
+                            vec![], // TODO : Components
+                        ));
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         }
 

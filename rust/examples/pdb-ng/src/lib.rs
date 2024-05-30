@@ -841,6 +841,18 @@ fn init_plugin() -> bool {
         }"#,
     );
 
+    settings.register_setting_json(
+        "pdb.features.parseSymbols",
+        r#"{
+            "title" : "Parse PDB Symbols",
+            "type" : "boolean",
+            "default" : true,
+            "aliases" : [],
+            "description" : "Parse Symbol names and types. If you turn this off, you will only load Types.",
+            "ignore" : []
+        }"#,
+    );
+
     true
 }
 

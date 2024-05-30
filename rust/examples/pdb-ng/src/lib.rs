@@ -412,13 +412,27 @@ impl PDBParser {
                 if check_guid {
                     return Err(anyhow!("PDB GUID does not match"));
                 } else {
-                    if interaction::show_message_box(
-                        "Mismatched PDB",
-                        "This PDB does not look like it matches your binary. Do you want to load it anyway?",
-                        MessageBoxButtonSet::YesNoButtonSet,
-                        binaryninja::interaction::MessageBoxIcon::QuestionIcon
-                    ) == MessageBoxButtonResult::NoButton {
-                        return Err(anyhow!("User cancelled mismatched load"));
+                    let ask = Settings::new("").get_string(
+                        "pdb.features.loadMismatchedPDB",
+                        Some(view),
+                        None,
+                    );
+
+                    match ask.as_str() {
+                        "true" => {},
+                        "ask" => {
+                            if interaction::show_message_box(
+                                "Mismatched PDB",
+                                "This PDB does not look like it matches your binary. Do you want to load it anyway?",
+                                MessageBoxButtonSet::YesNoButtonSet,
+                                binaryninja::interaction::MessageBoxIcon::QuestionIcon
+                            ) == MessageBoxButtonResult::NoButton {
+                                return Err(anyhow!("User cancelled mismatched load"));
+                            }
+                        }
+                        _ => {
+                            return Err(anyhow!("PDB GUID does not match"));
+                        }
                     }
                 }
             }
@@ -513,13 +527,27 @@ impl PDBParser {
             if check_guid {
                 return Err(anyhow!("File not compiled with PDB information"));
             } else {
-                if interaction::show_message_box(
-                    "No PDB Information",
-                    "This file does not look like it was compiled with a PDB, so your PDB might not correctly apply to the analysis. Do you want to load it anyway?",
-                    MessageBoxButtonSet::YesNoButtonSet,
-                    binaryninja::interaction::MessageBoxIcon::QuestionIcon
-                ) == MessageBoxButtonResult::NoButton {
-                    return Err(anyhow!("User cancelled missing info load"));
+                let ask = Settings::new("").get_string(
+                    "pdb.features.loadMismatchedPDB",
+                    Some(view),
+                    None,
+                );
+
+                match ask.as_str() {
+                    "true" => {},
+                    "ask" => {
+                        if interaction::show_message_box(
+                            "No PDB Information",
+                            "This file does not look like it was compiled with a PDB, so your PDB might not correctly apply to the analysis. Do you want to load it anyway?",
+                            MessageBoxButtonSet::YesNoButtonSet,
+                            binaryninja::interaction::MessageBoxIcon::QuestionIcon
+                        ) == MessageBoxButtonResult::NoButton {
+                            return Err(anyhow!("User cancelled missing info load"));
+                        }
+                    }
+                    _ => {
+                        return Err(anyhow!("File not compiled with PDB information"));
+                    }
                 }
             }
         }
@@ -837,6 +865,24 @@ fn init_plugin() -> bool {
             "default" : true,
             "aliases" : ["pdb.createMissingNamedTypes"],
             "description" : "Allow creation of types named by function signatures which are not found in the PDB's types list or the Binary View. These types are usually found in stripped PDBs that have no type information but function signatures reference the stripped types.",
+            "ignore" : []
+        }"#,
+    );
+
+    settings.register_setting_json(
+        "pdb.features.loadMismatchedPDB",
+        r#"{
+            "title" : "Load Mismatched PDB",
+            "type" : "string",
+            "default" : "ask",
+            "enum" : ["true", "ask", "false"],
+            "enumDescriptions" : [
+                "Always load the PDB",
+                "Use the Interaction system to ask if the PDB should be loaded",
+                "Never load the PDB"
+            ],
+            "aliases" : [],
+            "description" : "If a manually loaded PDB has a mismatched GUID, should it be loaded?",
             "ignore" : []
         }"#,
     );

@@ -588,7 +588,7 @@ impl TypeBuilder {
         unsafe {
             let result = BNCreateNamedTypeReferenceBuilderFromTypeAndId(
                 BnString::new("").as_ptr() as *mut _,
-                &mut name.0,
+                name.as_raw_mut(),
                 t.as_raw(),
             );
             Self::from_raw(NonNull::new(result).unwrap())
@@ -957,7 +957,7 @@ impl Type {
         unsafe {
             let result = BNCreateNamedTypeReferenceFromTypeAndId(
                 BnString::new("").as_ptr() as *mut _,
-                &mut name.0,
+                name.as_raw_mut(),
                 t.as_raw(),
             );
             Self::from_raw(NonNull::new(result).unwrap())
@@ -1147,7 +1147,9 @@ impl Type {
     pub fn generate_auto_demangled_type_id<S: BnStrCompatible>(name: S) -> BnString {
         let mut name = QualifiedName::from(name);
         unsafe {
-            BnString::from_raw(NonNull::new(BNGenerateAutoDemangledTypeId(&mut name.0)).unwrap())
+            BnString::from_raw(
+                NonNull::new(BNGenerateAutoDemangledTypeId(name.as_raw_mut())).unwrap(),
+            )
         }
     }
 }
@@ -2202,7 +2204,7 @@ impl Drop for InheritedStructureMember {
 }
 
 impl CoreArrayProvider for InheritedStructureMember {
-    type Raw = BNInheritedStructureMember ;
+    type Raw = BNInheritedStructureMember;
     type Context = ();
     type Wrapped<'a> = &'a Self;
 }
@@ -2279,7 +2281,7 @@ impl NamedTypeReference {
             let result = BNCreateNamedType(
                 type_class,
                 ptr::null(),
-                &name.0 as *const _ as *mut BNQualifiedName,
+                name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName,
             );
             Self::from_raw(NonNull::new(result).unwrap())
         }
@@ -2301,15 +2303,14 @@ impl NamedTypeReference {
             let result = BNCreateNamedType(
                 type_class,
                 type_id.as_ref().as_ptr() as _,
-                &name.0 as *const _ as *mut BNQualifiedName,
+                name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName,
             );
             Self::from_raw(NonNull::new(result).unwrap())
         }
     }
 
     pub fn name(&self) -> QualifiedName {
-        let named_ref: BNQualifiedName = unsafe { BNGetTypeReferenceName(self.as_raw()) };
-        QualifiedName(named_ref)
+        unsafe { QualifiedName::from_raw(BNGetTypeReferenceName(self.as_raw())) }
     }
 
     pub fn id(&self) -> BnString {
@@ -2369,9 +2370,34 @@ impl Debug for NamedTypeReference {
 // QualifiedName
 
 #[repr(C)]
-pub struct QualifiedName(BNQualifiedName);
+pub struct QualifiedName {
+    name: *mut BnString,
+    join: ManuallyDrop<BnString>,
+    name_count: usize,
+}
 
 impl QualifiedName {
+    pub fn new<N, J>(names: N, join: J) -> Self
+    where
+        N: IntoIterator,
+        N::Item: BnStrCompatible,
+        J: BnStrCompatible,
+    {
+        let join = BnString::new(join);
+        let names: Vec<_> = names.into_iter().map(|n| n.into_bytes_with_nul()).collect();
+        let mut names_ptr: Vec<*const core::ffi::c_char> = names
+            .iter()
+            .map(|n| n.as_ref().as_ptr() as *const core::ffi::c_char)
+            .collect();
+        let names_list_ptr = names_ptr.as_mut_slice().as_mut_ptr();
+
+        QualifiedName {
+            name: unsafe { mem::transmute(BNAllocStringList(names_list_ptr, names.len())) },
+            join: ManuallyDrop::new(join),
+            name_count: 1,
+        }
+    }
+
     pub(crate) unsafe fn from_raw(handle: BNQualifiedName) -> Self {
         mem::transmute(handle)
     }
@@ -2381,87 +2407,66 @@ impl QualifiedName {
     }
 
     pub(crate) fn as_raw(&self) -> &BNQualifiedName {
-        &self.0
+        unsafe { mem::transmute(self) }
     }
 
     pub(crate) fn as_raw_mut(&mut self) -> &mut BNQualifiedName {
-        &mut self.0
+        unsafe { mem::transmute(self) }
     }
 
     // TODO : I think this is bad
     pub fn string(&self) -> String {
-        unsafe {
-            slice::from_raw_parts(self.0.name, self.0.nameCount)
-                .iter()
-                .map(|c| CStr::from_ptr(*c).to_string_lossy())
-                .collect::<Vec<_>>()
-                .join("::")
-        }
+        self.strings()
+            .iter()
+            .map(|c| c.as_str())
+            .collect::<Vec<_>>()
+            .join("::")
     }
 
-    pub fn join(&self) -> Cow<str> {
-        let join: *mut c_char = self.0.join;
-        unsafe { CStr::from_ptr(join) }.to_string_lossy()
+    pub fn join(&self) -> &str {
+        self.join.as_str()
     }
 
-    pub fn strings(&self) -> Vec<Cow<str>> {
-        let names: *mut *mut c_char = self.0.name;
-        unsafe {
-            slice::from_raw_parts(names, self.0.nameCount)
-                .iter()
-                .map(|name| CStr::from_ptr(*name).to_string_lossy())
-                .collect::<Vec<_>>()
-        }
+    pub fn strings(&self) -> &[BnString] {
+        unsafe { slice::from_raw_parts(self.name, self.name_count) }
     }
 
     pub fn len(&self) -> usize {
-        self.0.nameCount
+        self.name_count
     }
 
     pub fn is_empty(&self) -> bool {
-        self.0.nameCount == 0
+        self.len() == 0
     }
 }
 
 impl<S: BnStrCompatible> From<S> for QualifiedName {
     fn from(name: S) -> Self {
-        let join = BnString::new("::");
-        let name = name.into_bytes_with_nul();
-        let mut list = vec![name.as_ref().as_ptr() as *const _];
-
-        QualifiedName(BNQualifiedName {
-            name: unsafe { BNAllocStringList(list.as_mut_ptr(), 1) },
-            join: join.into_raw(),
-            nameCount: 1,
-        })
+        Some(name).into_iter().collect()
     }
 }
 
-impl<S: BnStrCompatible> From<Vec<S>> for QualifiedName {
-    fn from(names: Vec<S>) -> Self {
-        let join = BnString::new("::");
-        let names = names
-            .into_iter()
-            .map(|n| n.into_bytes_with_nul())
-            .collect::<Vec<_>>();
-        let mut list = names
-            .iter()
-            .map(|n| n.as_ref().as_ptr() as *const _)
-            .collect::<Vec<_>>();
-
-        QualifiedName(BNQualifiedName {
-            name: unsafe { BNAllocStringList(list.as_mut_ptr(), list.len()) },
-            join: join.into_raw(),
-            nameCount: list.len(),
-        })
+impl<S: BnStrCompatible> FromIterator<S> for QualifiedName {
+    fn from_iter<T: IntoIterator<Item = S>>(iter: T) -> Self {
+        let default_join = unsafe { CStr::from_bytes_with_nul_unchecked(b"::\x00") };
+        Self::new(iter, default_join)
     }
 }
 
 impl Clone for QualifiedName {
     fn clone(&self) -> Self {
-        let strings = self.strings();
-        let name = Self::from(strings.iter().collect::<Vec<&Cow<str>>>());
-        name
+        let name_raw = unsafe {
+            BNAllocStringList(
+                self.as_raw().name as *mut *const core::ffi::c_char,
+                self.name_count,
+            )
+        };
+        let name = unsafe { mem::transmute(name_raw) };
+        Self {
+            name,
+            join: self.join.clone(),
+            name_count: self.name_count,
+        }
     }
 }
 
@@ -2494,9 +2499,7 @@ impl Eq for QualifiedName {}
 
 impl Drop for QualifiedName {
     fn drop(&mut self) {
-        unsafe {
-            BNFreeQualifiedName(&mut self.0);
-        }
+        unsafe { BNFreeQualifiedName(self.as_raw_mut()) };
     }
 }
 

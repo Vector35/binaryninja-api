@@ -4,7 +4,7 @@ use binaryninjacore_sys::BNHighLevelILOperation;
 use crate::architecture::CoreIntrinsic;
 use crate::operand_iter::OperandIter;
 use crate::rc::Ref;
-use crate::types::{ConstantData, RegisterValue, RegisterValueType, SSAVariable, Variable};
+use crate::types::{ConstantData, RegisterValue, SSAVariable, Variable};
 
 use super::operation::*;
 use super::{HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLiftedInstructionKind};
@@ -749,12 +749,12 @@ impl HighLevelILInstruction {
             ConstData(op) => Lifted::ConstData(LiftedConstData {
                 constant_data: ConstantData::new(
                     self.function.get_function(),
-                    RegisterValue {
-                        state: RegisterValueType::from_raw_value(op.constant_data_kind).unwrap(),
-                        value: op.constant_data_value,
-                        offset: 0,
-                        size: op.size,
-                    },
+                    RegisterValue::new(
+                        RegisterValue::type_from_u32(op.constant_data_kind).unwrap(),
+                        op.constant_data_value,
+                        0,
+                        op.size,
+                    ),
                 ),
             }),
 

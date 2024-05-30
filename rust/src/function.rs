@@ -1205,8 +1205,7 @@ impl Function {
         size: Option<usize>,
     ) -> DataBuffer {
         let size = size.unwrap_or(0);
-        let state_raw = state.into_raw_value();
-        DataBuffer::from_raw(unsafe { BNGetConstantData(self.handle, state_raw, value, size) })
+        DataBuffer::from_raw(unsafe { BNGetConstantData(self.handle, state, value, size) })
     }
 
     pub fn constants_referenced_by(

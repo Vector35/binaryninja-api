@@ -2859,85 +2859,18 @@ unsafe impl CoreArrayProviderInner for DataVariableAndNameAndDebugParser {
 /////////////////////////
 // RegisterValueType
 
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum RegisterValueType {
-    UndeterminedValue,
-    EntryValue,
-    ConstantValue,
-    ConstantPointerValue,
-    ExternalPointerValue,
-    StackFrameOffset,
-    ReturnAddressValue,
-    ImportedAddressValue,
-    SignedRangeValue,
-    UnsignedRangeValue,
-    LookupTableValue,
-    InSetOfValues,
-    NotInSetOfValues,
-    ConstantDataValue,
-    ConstantDataZeroExtendValue,
-    ConstantDataSignExtendValue,
-    ConstantDataAggregateValue,
-}
-
-impl RegisterValueType {
-    pub(crate) fn from_raw_value(value: u32) -> Option<Self> {
-        use BNRegisterValueType::*;
-        Some(match value {
-            x if x == UndeterminedValue as u32 => Self::UndeterminedValue,
-            x if x == EntryValue as u32 => Self::EntryValue,
-            x if x == ConstantValue as u32 => Self::ConstantValue,
-            x if x == ConstantPointerValue as u32 => Self::ConstantPointerValue,
-            x if x == ExternalPointerValue as u32 => Self::ExternalPointerValue,
-            x if x == StackFrameOffset as u32 => Self::StackFrameOffset,
-            x if x == ReturnAddressValue as u32 => Self::ReturnAddressValue,
-            x if x == ImportedAddressValue as u32 => Self::ImportedAddressValue,
-            x if x == SignedRangeValue as u32 => Self::SignedRangeValue,
-            x if x == UnsignedRangeValue as u32 => Self::UnsignedRangeValue,
-            x if x == LookupTableValue as u32 => Self::LookupTableValue,
-            x if x == InSetOfValues as u32 => Self::InSetOfValues,
-            x if x == NotInSetOfValues as u32 => Self::NotInSetOfValues,
-            x if x == ConstantDataValue as u32 => Self::ConstantDataValue,
-            x if x == ConstantDataZeroExtendValue as u32 => Self::ConstantDataZeroExtendValue,
-            x if x == ConstantDataSignExtendValue as u32 => Self::ConstantDataSignExtendValue,
-            x if x == ConstantDataAggregateValue as u32 => Self::ConstantDataAggregateValue,
-            _ => return None,
-        })
-    }
-
-    pub(crate) fn into_raw_value(self) -> BNRegisterValueType {
-        use BNRegisterValueType::*;
-        match self {
-            Self::UndeterminedValue => UndeterminedValue,
-            Self::EntryValue => EntryValue,
-            Self::ConstantValue => ConstantValue,
-            Self::ConstantPointerValue => ConstantPointerValue,
-            Self::ExternalPointerValue => ExternalPointerValue,
-            Self::StackFrameOffset => StackFrameOffset,
-            Self::ReturnAddressValue => ReturnAddressValue,
-            Self::ImportedAddressValue => ImportedAddressValue,
-            Self::SignedRangeValue => SignedRangeValue,
-            Self::UnsignedRangeValue => UnsignedRangeValue,
-            Self::LookupTableValue => LookupTableValue,
-            Self::InSetOfValues => InSetOfValues,
-            Self::NotInSetOfValues => NotInSetOfValues,
-            Self::ConstantDataValue => ConstantDataValue,
-            Self::ConstantDataZeroExtendValue => ConstantDataZeroExtendValue,
-            Self::ConstantDataSignExtendValue => ConstantDataSignExtendValue,
-            Self::ConstantDataAggregateValue => ConstantDataAggregateValue,
-        }
-    }
-}
+pub type RegisterValueType = BNRegisterValueType;
 
 /////////////////////////
 // RegisterValue
 
+#[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct RegisterValue {
-    pub(crate) state: RegisterValueType,
-    pub(crate) value: i64,
-    pub(crate) offset: i64,
-    pub(crate) size: usize,
+    pub state: RegisterValueType,
+    pub value: i64,
+    pub offset: i64,
+    pub size: usize,
 }
 
 impl RegisterValue {
@@ -2949,27 +2882,59 @@ impl RegisterValue {
             size,
         }
     }
-}
 
-impl From<BNRegisterValue> for RegisterValue {
-    fn from(value: BNRegisterValue) -> Self {
+    pub(crate) fn type_from_u32(raw_type: u32) -> Option<RegisterValueType> {
+        use BNRegisterValueType::*;
+        Some(match raw_type {
+            0 => UndeterminedValue,
+            1 => EntryValue,
+            2 => ConstantValue,
+            3 => ConstantPointerValue,
+            4 => ExternalPointerValue,
+            5 => StackFrameOffset,
+            6 => ReturnAddressValue,
+            7 => ImportedAddressValue,
+            8 => SignedRangeValue,
+            9 => UnsignedRangeValue,
+            10 => LookupTableValue,
+            11 => InSetOfValues,
+            12 => NotInSetOfValues,
+            32768 => ConstantDataValue,
+            32769 => ConstantDataZeroExtendValue,
+            32770 => ConstantDataSignExtendValue,
+            32771 => ConstantDataAggregateValue,
+            _ => return None,
+        })
+    }
+
+    pub(crate) fn from_raw(value: BNRegisterValue) -> Self {
         Self {
-            state: RegisterValueType::from_raw_value(value.state as u32).unwrap(),
+            state: value.state,
             value: value.value,
             offset: value.offset,
             size: value.size,
         }
     }
+
+    pub(crate) fn raw(self) -> BNRegisterValue {
+        BNRegisterValue {
+            state: self.state,
+            value: self.value,
+            offset: self.offset,
+            size: self.size,
+        }
+    }
+}
+
+impl From<BNRegisterValue> for RegisterValue {
+    fn from(value: BNRegisterValue) -> Self {
+        Self::from_raw(value)
+    }
 }
 
 impl From<RegisterValue> for BNRegisterValue {
     fn from(value: RegisterValue) -> Self {
-        Self {
-            state: value.state.into_raw_value(),
-            value: value.value,
-            offset: value.offset,
-            size: value.size,
-        }
+        value.raw()
     }
 }
 
@@ -3176,7 +3141,7 @@ impl PossibleValueSet {
     pub(crate) fn into_raw(self) -> PossibleValueSetRaw {
         let mut raw: BNPossibleValueSet = unsafe { core::mem::zeroed() };
         // set the state field
-        raw.state = self.value_type().into_raw_value();
+        raw.state = self.value_type();
         // set all other fields
         match self {
             PossibleValueSet::UndeterminedValue
@@ -3217,7 +3182,7 @@ impl PossibleValueSet {
     }
 
     pub fn value_type(&self) -> RegisterValueType {
-        use RegisterValueType::*;
+        use BNRegisterValueType::*;
         match self {
             PossibleValueSet::UndeterminedValue => UndeterminedValue,
             PossibleValueSet::EntryValue { .. } => EntryValue,

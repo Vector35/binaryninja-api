@@ -7,8 +7,8 @@ use crate::disassembly::InstructionTextToken;
 use crate::operand_iter::OperandIter;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::types::{
-    Conf, ConstantData, DataFlowQueryOption, ILBranchDependence, PossibleValueSet,
-    RegisterValue, RegisterValueType, SSAVariable, Type, Variable,
+    Conf, ConstantData, DataFlowQueryOption, ILBranchDependence, PossibleValueSet, RegisterValue,
+    SSAVariable, Type, Variable,
 };
 
 use super::lift::*;
@@ -751,12 +751,12 @@ impl MediumLevelILInstruction {
             ConstData(op) => Lifted::ConstData(LiftedConstData {
                 constant_data: ConstantData::new(
                     self.function.get_function(),
-                    RegisterValue {
-                        state: RegisterValueType::from_raw_value(op.constant_data_kind).unwrap(),
-                        value: op.constant_data_value,
-                        offset: 0,
-                        size: op.size,
-                    },
+                    RegisterValue::new(
+                        RegisterValue::type_from_u32(op.constant_data_kind).unwrap(),
+                        op.constant_data_value,
+                        0,
+                        op.size,
+                    ),
                 ),
             }),
             Jump(op) => Lifted::Jump(LiftedJump {

@@ -1476,6 +1476,137 @@ tests_fcvt = [
     (b'\x44\x02\x39\x1E', 'LLIL_INTRINSIC([w4],vcvts_u32_f32,[LLIL_REG.d(s18)])')
 ]
 
+tests_scvtf = [
+    # scvtf s10, s25                                                   SCVTF_asisdmisc_R
+    (b'\x2A\xDB\x21\x5E', 'LLIL_SET_REG.d(s10,LLIL_INT_TO_FLOAT.d(LLIL_REG.d(s25)))'),
+    # scvtf s20, s11                                                   SCVTF_asisdmisc_R
+    (b'\x74\xD9\x21\x5E', 'LLIL_SET_REG.d(s20,LLIL_INT_TO_FLOAT.d(LLIL_REG.d(s11)))'),
+    # scvtf d26, d29                                                   SCVTF_asisdmisc_R
+    (b'\xBA\xDB\x61\x5E', 'LLIL_SET_REG.q(d26,LLIL_INT_TO_FLOAT.q(LLIL_REG.q(d29)))'),
+    # scvtf d29, d7                                                    SCVTF_asisdmisc_R
+    (b'\xFD\xD8\x61\x5E', 'LLIL_SET_REG.q(d29,LLIL_INT_TO_FLOAT.q(LLIL_REG.q(d7)))'),
+    # scvtf s6, s20                                                    SCVTF_asisdmisc_R
+    (b'\x86\xDA\x21\x5E', 'LLIL_SET_REG.d(s6,LLIL_INT_TO_FLOAT.d(LLIL_REG.d(s20)))'),
+    # scvtf s21, s24                                                   SCVTF_asisdmisc_R
+    (b'\x15\xDB\x21\x5E', 'LLIL_SET_REG.d(s21,LLIL_INT_TO_FLOAT.d(LLIL_REG.d(s24)))'),
+    # scvtf s2, s29                                                    SCVTF_asisdmisc_R
+    (b'\xA2\xDB\x21\x5E', 'LLIL_SET_REG.d(s2,LLIL_INT_TO_FLOAT.d(LLIL_REG.d(s29)))'),
+    # scvtf s1, s31                                                    SCVTF_asisdmisc_R
+    (b'\xE1\xDB\x21\x5E', 'LLIL_SET_REG.d(s1,LLIL_INT_TO_FLOAT.d(LLIL_REG.d(s31)))'),
+    # scvtf h20, h5                                                    SCVTF_asisdmiscfp16_R
+    (b'\xB4\xD8\x79\x5E', 'LLIL_SET_REG.w(h20,LLIL_INT_TO_FLOAT.w(LLIL_REG.w(h5)))'),
+    # scvtf h31, h28                                                   SCVTF_asisdmiscfp16_R
+    (b'\x9F\xDB\x79\x5E', 'LLIL_SET_REG.w(h31,LLIL_INT_TO_FLOAT.w(LLIL_REG.w(h28)))'),
+    # scvtf h7, h7                                                     SCVTF_asisdmiscfp16_R
+    (b'\xE7\xD8\x79\x5E', 'LLIL_SET_REG.w(h7,LLIL_INT_TO_FLOAT.w(LLIL_REG.w(h7)))'),
+    # scvtf h20, h14                                                   SCVTF_asisdmiscfp16_R
+    (b'\xD4\xD9\x79\x5E', 'LLIL_SET_REG.w(h20,LLIL_INT_TO_FLOAT.w(LLIL_REG.w(h14)))'),
+    # scvtf h10, h23                                                   SCVTF_asisdmiscfp16_R
+    (b'\xEA\xDA\x79\x5E', 'LLIL_SET_REG.w(h10,LLIL_INT_TO_FLOAT.w(LLIL_REG.w(h23)))'),
+    # scvtf h20, h29                                                   SCVTF_asisdmiscfp16_R
+    (b'\xB4\xDB\x79\x5E', 'LLIL_SET_REG.w(h20,LLIL_INT_TO_FLOAT.w(LLIL_REG.w(h29)))'),
+    # scvtf h9, h26                                                    SCVTF_asisdmiscfp16_R
+    (b'\x49\xDB\x79\x5E', 'LLIL_SET_REG.w(h9,LLIL_INT_TO_FLOAT.w(LLIL_REG.w(h26)))'),
+    # scvtf h10, h5                                                    SCVTF_asisdmiscfp16_R
+    (b'\xAA\xD8\x79\x5E', 'LLIL_SET_REG.w(h10,LLIL_INT_TO_FLOAT.w(LLIL_REG.w(h5)))'),
+    # scvtf s22, w20                                                   SCVTF_S32_float2int
+    (b'\x96\x02\x22\x1E', 'LLIL_SET_REG.d(s22,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.d(w20))))'),
+    # scvtf s11, w5                                                    SCVTF_S32_float2int
+    (b'\xAB\x00\x22\x1E', 'LLIL_SET_REG.d(s11,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.d(w5))))'),
+    # scvtf s3, w29                                                    SCVTF_S32_float2int
+    (b'\xA3\x03\x22\x1E', 'LLIL_SET_REG.d(s3,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.d(w29))))'),
+    # scvtf s9, w13                                                    SCVTF_S32_float2int
+    (b'\xA9\x01\x22\x1E', 'LLIL_SET_REG.d(s9,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.d(w13))))'),
+    # scvtf s26, w6                                                    SCVTF_S32_float2int
+    (b'\xDA\x00\x22\x1E', 'LLIL_SET_REG.d(s26,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.d(w6))))'),
+    # scvtf s16, w25                                                   SCVTF_S32_float2int
+    (b'\x30\x03\x22\x1E', 'LLIL_SET_REG.d(s16,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.d(w25))))'),
+    # scvtf s25, w12                                                   SCVTF_S32_float2int
+    (b'\x99\x01\x22\x1E', 'LLIL_SET_REG.d(s25,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.d(w12))))'),
+    # scvtf s24, w15                                                   SCVTF_S32_float2int
+    (b'\xF8\x01\x22\x1E', 'LLIL_SET_REG.d(s24,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.d(w15))))'),
+    # scvtf s12, x1                                                    SCVTF_S64_float2int
+    (b'\x2C\x00\x22\x9E', 'LLIL_SET_REG.d(s12,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.q(x1))))'),
+    # scvtf s24, x25                                                   SCVTF_S64_float2int
+    (b'\x38\x03\x22\x9E', 'LLIL_SET_REG.d(s24,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.q(x25))))'),
+    # scvtf s2, x10                                                    SCVTF_S64_float2int
+    (b'\x42\x01\x22\x9E', 'LLIL_SET_REG.d(s2,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.q(x10))))'),
+    # scvtf s0, x17                                                    SCVTF_S64_float2int
+    (b'\x20\x02\x22\x9E', 'LLIL_SET_REG.d(s0,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.q(x17))))'),
+    # scvtf s18, x20                                                   SCVTF_S64_float2int
+    (b'\x92\x02\x22\x9E', 'LLIL_SET_REG.d(s18,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.q(x20))))'),
+    # scvtf s30, x7                                                    SCVTF_S64_float2int
+    (b'\xFE\x00\x22\x9E', 'LLIL_SET_REG.d(s30,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.q(x7))))'),
+    # scvtf s2, x26                                                    SCVTF_S64_float2int
+    (b'\x42\x03\x22\x9E', 'LLIL_SET_REG.d(s2,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.q(x26))))'),
+    # scvtf s28, x18                                                   SCVTF_S64_float2int
+    (b'\x5C\x02\x22\x9E', 'LLIL_SET_REG.d(s28,LLIL_INT_TO_FLOAT.d(LLIL_SX.d(LLIL_REG.q(x18))))'),
+    # scvtf d3, w3                                                     SCVTF_D32_float2int
+    (b'\x63\x00\x62\x1E', 'LLIL_SET_REG.q(d3,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.d(w3))))'),
+    # scvtf d1, w2                                                     SCVTF_D32_float2int
+    (b'\x41\x00\x62\x1E', 'LLIL_SET_REG.q(d1,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.d(w2))))'),
+    # scvtf d28, w4                                                    SCVTF_D32_float2int
+    (b'\x9C\x00\x62\x1E', 'LLIL_SET_REG.q(d28,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.d(w4))))'),
+    # scvtf d11, w9                                                    SCVTF_D32_float2int
+    (b'\x2B\x01\x62\x1E', 'LLIL_SET_REG.q(d11,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.d(w9))))'),
+    # scvtf d28, w0                                                    SCVTF_D32_float2int
+    (b'\x1C\x00\x62\x1E', 'LLIL_SET_REG.q(d28,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.d(w0))))'),
+    # scvtf d12, w12                                                   SCVTF_D32_float2int
+    (b'\x8C\x01\x62\x1E', 'LLIL_SET_REG.q(d12,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.d(w12))))'),
+    # scvtf d4, w9                                                     SCVTF_D32_float2int
+    (b'\x24\x01\x62\x1E', 'LLIL_SET_REG.q(d4,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.d(w9))))'),
+    # scvtf d12, w24                                                   SCVTF_D32_float2int
+    (b'\x0C\x03\x62\x1E', 'LLIL_SET_REG.q(d12,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.d(w24))))'),
+    # scvtf d16, x17                                                   SCVTF_D64_float2int
+    (b'\x30\x02\x62\x9E', 'LLIL_SET_REG.q(d16,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.q(x17))))'),
+    # scvtf d15, x22                                                   SCVTF_D64_float2int
+    (b'\xCF\x02\x62\x9E', 'LLIL_SET_REG.q(d15,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.q(x22))))'),
+    # scvtf d3, x15                                                    SCVTF_D64_float2int
+    (b'\xE3\x01\x62\x9E', 'LLIL_SET_REG.q(d3,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.q(x15))))'),
+    # scvtf d3, x9                                                     SCVTF_D64_float2int
+    (b'\x23\x01\x62\x9E', 'LLIL_SET_REG.q(d3,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.q(x9))))'),
+    # scvtf d24, x1                                                    SCVTF_D64_float2int
+    (b'\x38\x00\x62\x9E', 'LLIL_SET_REG.q(d24,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.q(x1))))'),
+    # scvtf d20, x19                                                   SCVTF_D64_float2int
+    (b'\x74\x02\x62\x9E', 'LLIL_SET_REG.q(d20,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.q(x19))))'),
+    # scvtf d0, x12                                                    SCVTF_D64_float2int
+    (b'\x80\x01\x62\x9E', 'LLIL_SET_REG.q(d0,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.q(x12))))'),
+    # scvtf d3, x19                                                    SCVTF_D64_float2int
+    (b'\x63\x02\x62\x9E', 'LLIL_SET_REG.q(d3,LLIL_INT_TO_FLOAT.q(LLIL_SX.q(LLIL_REG.q(x19))))'),
+    # scvtf h13, w7                                                    SCVTF_H32_float2int
+    (b'\xED\x00\xE2\x1E', 'LLIL_SET_REG.w(h13,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.d(w7))))'),
+    # scvtf h0, w23                                                    SCVTF_H32_float2int
+    (b'\xE0\x02\xE2\x1E', 'LLIL_SET_REG.w(h0,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.d(w23))))'),
+    # scvtf h7, w22                                                    SCVTF_H32_float2int
+    (b'\xC7\x02\xE2\x1E', 'LLIL_SET_REG.w(h7,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.d(w22))))'),
+    # scvtf h17, w12                                                   SCVTF_H32_float2int
+    (b'\x91\x01\xE2\x1E', 'LLIL_SET_REG.w(h17,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.d(w12))))'),
+    # scvtf h19, w24                                                   SCVTF_H32_float2int
+    (b'\x13\x03\xE2\x1E', 'LLIL_SET_REG.w(h19,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.d(w24))))'),
+    # scvtf h12, w9                                                    SCVTF_H32_float2int
+    (b'\x2C\x01\xE2\x1E', 'LLIL_SET_REG.w(h12,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.d(w9))))'),
+    # scvtf h8, w6                                                     SCVTF_H32_float2int
+    (b'\xC8\x00\xE2\x1E', 'LLIL_SET_REG.w(h8,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.d(w6))))'),
+    # scvtf h22, w5                                                    SCVTF_H32_float2int
+    (b'\xB6\x00\xE2\x1E', 'LLIL_SET_REG.w(h22,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.d(w5))))'),
+    # scvtf h8, x29                                                    SCVTF_H64_float2int
+    (b'\xA8\x03\xE2\x9E', 'LLIL_SET_REG.w(h8,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.q(x29))))'),
+    # scvtf h28, xzr                                                   SCVTF_H64_float2int
+    (b'\xFC\x03\xE2\x9E', 'LLIL_SET_REG.w(h28,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_CONST.q(0x0))))'),
+    # scvtf h16, x27                                                   SCVTF_H64_float2int
+    (b'\x70\x03\xE2\x9E', 'LLIL_SET_REG.w(h16,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.q(x27))))'),
+    # scvtf h17, x23                                                   SCVTF_H64_float2int
+    (b'\xF1\x02\xE2\x9E', 'LLIL_SET_REG.w(h17,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.q(x23))))'),
+    # scvtf h9, x24                                                    SCVTF_H64_float2int
+    (b'\x09\x03\xE2\x9E', 'LLIL_SET_REG.w(h9,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.q(x24))))'),
+    # scvtf h15, x26                                                   SCVTF_H64_float2int
+    (b'\x4F\x03\xE2\x9E', 'LLIL_SET_REG.w(h15,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.q(x26))))'),
+    # scvtf h8, x20                                                    SCVTF_H64_float2int
+    (b'\x88\x02\xE2\x9E', 'LLIL_SET_REG.w(h8,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.q(x20))))'),
+    # scvtf h1, x10                                                    SCVTF_H64_float2int
+    (b'\x41\x01\xE2\x9E', 'LLIL_SET_REG.w(h1,LLIL_INT_TO_FLOAT.w(LLIL_SX.w(LLIL_REG.q(x10))))'),
+]
+
 tests_fccmp_fccmpe = [
     # fccmpe d0, d20, #0x7, lo
     (b'\x17\x34\x74\x1E', 'LLIL_IF(LLIL_FLAG_GROUP(cc),1,3);' + \
@@ -2269,6 +2400,7 @@ test_cases = \
     tests_ld1 + \
     tests_ld2 + \
     tests_st1 + \
+    tests_scvtf + \
     [
     # some vectors loads/stores that do not fill the entire register
     # TODO: ld1/st1 with different addressing modes

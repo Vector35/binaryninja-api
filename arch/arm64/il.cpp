@@ -2189,6 +2189,59 @@ bool GetLowLevelILForInstruction(
 		                      il.Const(1, (REGSZ_O(operand1) * 8) - IMM_O(operand4) - IMM_O(operand3))),
 		                  il.Const(1, (REGSZ_O(operand1) * 8) - IMM_O(operand4)))));
 		break;
+	case ARM64_SCVTF:
+		switch (instr.encoding)
+		{
+		// Scalar, float
+		case ENC_SCVTF_ASISDMISCFP16_R:
+		case ENC_SCVTF_ASISDMISC_R:
+		{
+			il.AddInstruction(ILSETREG_O(
+			    operand1, il.IntToFloat(REGSZ_O(operand1),
+					ILREG_O(operand2))));
+			break;
+		}
+		// Scalar, integer
+		case ENC_SCVTF_D32_FLOAT2INT:
+		case ENC_SCVTF_D64_FLOAT2INT:
+		case ENC_SCVTF_H32_FLOAT2INT:
+		case ENC_SCVTF_H64_FLOAT2INT:
+		case ENC_SCVTF_S32_FLOAT2INT:
+		case ENC_SCVTF_S64_FLOAT2INT:
+		{
+			il.AddInstruction(ILSETREG_O(
+			    operand1, il.IntToFloat(REGSZ_O(operand1),
+					il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2)))));
+			break;
+		}
+		// Scalar, fixed-point (in SIMD&FP register)
+		case ENC_SCVTF_ASISDSHF_C:
+		// Scalar, fixed-point (in GP register)
+		case ENC_SCVTF_D32_FLOAT2FIX:
+		case ENC_SCVTF_D64_FLOAT2FIX:
+		case ENC_SCVTF_H32_FLOAT2FIX:
+		case ENC_SCVTF_H64_FLOAT2FIX:
+		case ENC_SCVTF_S32_FLOAT2FIX:
+		case ENC_SCVTF_S64_FLOAT2FIX:
+		// Vector, integer
+		case ENC_SCVTF_ASIMDMISCFP16_R:
+		case ENC_SCVTF_ASIMDMISC_R:
+		// Vector, fixed-point
+		case ENC_SCVTF_ASIMDSHF_C:
+		// SVE: Vector, integer
+		case ENC_SCVTF_Z_P_Z_H2FP16:
+		case ENC_SCVTF_Z_P_Z_W2D:
+		case ENC_SCVTF_Z_P_Z_W2FP16:
+		case ENC_SCVTF_Z_P_Z_W2S:
+		case ENC_SCVTF_Z_P_Z_X2D:
+		case ENC_SCVTF_Z_P_Z_X2FP16:
+		case ENC_SCVTF_Z_P_Z_X2S:
+			ABORT_LIFT;
+			break;
+		default:
+			break;
+		}
+		break;
 	case ARM64_SDIV:
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.DivSigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3))));

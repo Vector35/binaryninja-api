@@ -313,35 +313,33 @@ impl TypeParser for Platform {
                 auto_type_source.as_ref().as_ptr() as _,
             );
 
-            let error_msg = BnString::from_raw(NonNull::new(error_string).unwrap());
-
             if !success {
+                let error_msg = BnString::from_raw(NonNull::new(error_string).unwrap());
                 return Err(error_msg.to_string());
             }
 
             for i in slice::from_raw_parts(result.types, result.typeCount) {
-                let name = QualifiedName::from_raw(i.name);
-                type_parser_result.types.insert(
-                    name.string(),
-                    Type::from_raw(ptr::NonNull::new(i.type_).unwrap()),
-                );
+                let name = QualifiedName::ref_from_raw(&i.name);
+                type_parser_result
+                    .types
+                    .insert(name.string(), Type::ref_from_raw(&i.type_).clone());
             }
 
             for i in slice::from_raw_parts(result.functions, result.functionCount) {
-                let name = QualifiedName::from_raw(i.name);
-                type_parser_result.functions.insert(
-                    name.string(),
-                    Type::from_raw(ptr::NonNull::new(i.type_).unwrap()),
-                );
+                let name = QualifiedName::ref_from_raw(&i.name);
+                type_parser_result
+                    .functions
+                    .insert(name.string(), Type::ref_from_raw(&i.type_).clone());
             }
 
             for i in slice::from_raw_parts(result.variables, result.variableCount) {
-                let name = QualifiedName::from_raw(i.name);
-                type_parser_result.variables.insert(
-                    name.string(),
-                    Type::from_raw(ptr::NonNull::new(i.type_).unwrap()),
-                );
+                let name = QualifiedName::ref_from_raw(&i.name);
+                type_parser_result
+                    .variables
+                    .insert(name.string(), Type::ref_from_raw(&i.type_).clone());
             }
+
+            BNFreeTypeParserResult(&mut result);
         }
 
         Ok(type_parser_result)

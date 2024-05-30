@@ -3860,9 +3860,6 @@ mod test {
         assert_eq!(name_type_ref.name().string().as_str(), "Test");
     }
 
-    // TODO <Plarform as TypeParser>::parse_types_from_source forgot to call
-    // BNFreeTypeParserResult, leaking the result
-
     // TODO BNGetDebugDataVariableByName returns a *mut BNDataVariableAndName
     // pointer, can we deref it? Or it need to be freed by proper drop.
     // Verify if

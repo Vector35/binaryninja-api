@@ -505,7 +505,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         ty: Option<&Type>,
     ) -> Result<Ref<Symbol>> {
         let raw_type = ty
-            .map(|t| t.as_raw() as *mut BNType)
+            .map(|t| unsafe { t.as_raw() as *mut BNType })
             .unwrap_or(ptr::null_mut());
 
         unsafe {

@@ -233,18 +233,6 @@ impl<P: CoreArrayProviderInner> Array<P> {
         }
     }
 
-    pub(crate) unsafe fn into_raw(self) -> (*mut P::Raw, usize, P::Context) {
-        let contents = self.contents;
-        let count = self.count;
-
-        // extract the context, because we can't move it directly, we need
-        // to be carefull to take the value, not droping self
-        let slf = mem::ManuallyDrop::new(self);
-        let context = mem::transmute_copy(&slf.context);
-
-        (contents, count, context)
-    }
-
     #[inline]
     pub fn len(&self) -> usize {
         self.count

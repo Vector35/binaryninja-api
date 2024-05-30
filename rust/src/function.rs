@@ -544,7 +544,7 @@ impl Function {
         let mut adjust_type = adjust_type.map(|adjust_type| {
             let adjust_type = adjust_type.into();
             BNTypeWithConfidence {
-                type_: adjust_type.contents.as_raw(),
+                type_: unsafe { adjust_type.contents.as_raw() },
                 confidence: adjust_type.confidence,
             }
         });
@@ -813,7 +813,7 @@ impl Function {
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
         let func_type = func_type
-            .map(|f| f.as_raw() as *mut BNType)
+            .map(|f| unsafe { f.as_raw() as *mut BNType })
             .unwrap_or(core::ptr::null_mut());
         let value =
             unsafe { BNGetParameterValueAtInstruction(self.handle, arch.0, addr, func_type, i) };
@@ -1104,7 +1104,7 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName;
+        let name_ptr = unsafe { name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName };
         unsafe { BNAddUserTypeReference(self.handle, arch.0, from_addr, name_ptr) }
     }
 
@@ -1129,7 +1129,7 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName;
+        let name_ptr = unsafe { name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName };
         unsafe { BNRemoveUserTypeReference(self.handle, arch.0, from_addr, name_ptr) }
     }
 
@@ -1160,7 +1160,7 @@ impl Function {
     ) {
         let size = size.unwrap_or(0);
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName;
+        let name_ptr = unsafe { name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName };
         unsafe {
             BNAddUserTypeFieldReference(self.handle, arch.0, from_addr, name_ptr, offset, size)
         }
@@ -1192,7 +1192,7 @@ impl Function {
     ) {
         let size = size.unwrap_or(0);
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName;
+        let name_ptr = unsafe{ name.as_raw() as *const BNQualifiedName as *mut BNQualifiedName };
         unsafe {
             BNRemoveUserTypeFieldReference(self.handle, arch.0, from_addr, name_ptr, offset, size)
         }

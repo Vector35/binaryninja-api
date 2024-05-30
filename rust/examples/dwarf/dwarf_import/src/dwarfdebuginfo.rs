@@ -95,7 +95,7 @@ impl FunctionInfoBuilder {
 // TODO : Don't make this pub...fix the value thing
 pub(crate) struct DebugType {
     name: String,
-    t: Ref<Type>,
+    t: Type,
     commit: bool,
 }
 
@@ -226,7 +226,7 @@ impl DebugInfoBuilder {
         self.types.values()
     }
 
-    pub(crate) fn add_type(&mut self, type_uid: TypeUID, name: String, t: Ref<Type>, commit: bool) {
+    pub(crate) fn add_type(&mut self, type_uid: TypeUID, name: String, t: Type, commit: bool) {
         if let Some(DebugType {
             name: existing_name,
             t: existing_type,
@@ -255,7 +255,7 @@ impl DebugInfoBuilder {
     }
 
     // TODO : Non-copy?
-    pub(crate) fn get_type(&self, type_uid: TypeUID) -> Option<(String, Ref<Type>)> {
+    pub(crate) fn get_type(&self, type_uid: TypeUID) -> Option<(String, Type)> {
         self.types
             .get(&type_uid)
             .map(|type_ref_ref| (type_ref_ref.name.clone(), type_ref_ref.t.clone()))
@@ -290,7 +290,7 @@ impl DebugInfoBuilder {
     fn commit_types(&self, debug_info: &mut DebugInfo) {
         for debug_type in self.types() {
             if debug_type.commit {
-                debug_info.add_type(debug_type.name.clone(), debug_type.t.as_ref(), &[]);
+                debug_info.add_type(debug_type.name.clone(), &debug_type.t, &[]);
                 // TODO : Components
             }
         }
@@ -308,7 +308,7 @@ impl DebugInfoBuilder {
         }
     }
 
-    fn get_function_type(&self, function: &FunctionInfoBuilder) -> Ref<Type> {
+    fn get_function_type(&self, function: &FunctionInfoBuilder) -> Type {
         let return_type = match function.return_type {
             Some(return_type_id) => Conf::new(self.get_type(return_type_id).unwrap().1.clone(), 0),
             _ => Conf::new(binaryninja::types::Type::void(), 0),

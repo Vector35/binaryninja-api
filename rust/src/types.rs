@@ -270,7 +270,7 @@ impl From<BNOffsetWithConfidence> for Conf<i64> {
 impl From<Conf<&Type>> for BNTypeWithConfidence {
     fn from(conf: Conf<&Type>) -> Self {
         Self {
-            type_: conf.contents.as_raw(),
+            type_: unsafe { conf.contents.as_raw() },
             confidence: conf.confidence,
         }
     }
@@ -321,7 +321,8 @@ impl TypeBuilder {
         Self { handle }
     }
 
-    pub(crate) fn as_raw(&self) -> &mut BNTypeBuilder {
+    #[allow(clippy::mut_from_ref)]
+    pub(crate) unsafe fn as_raw(&self) -> &mut BNTypeBuilder {
         unsafe { &mut (*self.handle.as_ptr()) }
     }
 
@@ -711,7 +712,12 @@ impl Type {
         Self { handle }
     }
 
-    pub(crate) fn as_raw(&self) -> &mut BNType {
+    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNType) -> &Self {
+        mem::transmute(handle)
+    }
+
+    #[allow(clippy::mut_from_ref)]
+    pub(crate) unsafe fn as_raw(&self) -> &mut BNType {
         unsafe { &mut (*self.handle.as_ptr()) }
     }
 
@@ -1294,6 +1300,13 @@ impl FunctionParameter {
         (!self.default_location).then_some(self.location)
     }
 
+    pub fn set_location(&mut self, value: Option<Variable>) {
+        self.default_location = value.is_none();
+        if let Some(var) = value {
+            self.location = var;
+        }
+    }
+
     pub fn name(&self) -> Cow<str> {
         if let Some(name) = &self.name {
             Cow::Borrowed(name.as_str())
@@ -1314,6 +1327,10 @@ impl FunctionParameter {
                 | None => Cow::Borrowed(""),
             }
         }
+    }
+
+    pub fn set_name<S: BnStrCompatible>(&mut self, value: S) {
+        self.name = Some(BnString::new(value));
     }
 }
 
@@ -1478,7 +1495,8 @@ impl NamedTypedVariable {
         mem::transmute(handle)
     }
 
-    pub(crate) fn as_raw(&self) -> &BNVariableNameAndType {
+    #[allow(clippy::mut_from_ref)]
+    pub(crate) unsafe fn as_raw(&self) -> &BNVariableNameAndType {
         unsafe { mem::transmute(self) }
     }
 
@@ -1580,7 +1598,8 @@ impl EnumerationBuilder {
         Self { handle }
     }
 
-    pub(crate) fn as_raw(&self) -> &mut BNEnumerationBuilder {
+    #[allow(clippy::mut_from_ref)]
+    pub(crate) unsafe fn as_raw(&self) -> &mut BNEnumerationBuilder {
         unsafe { &mut (*self.handle.as_ptr()) }
     }
 
@@ -1676,7 +1695,8 @@ impl Enumeration {
         Self { handle }
     }
 
-    pub(crate) fn as_raw(&self) -> &mut BNEnumeration {
+    #[allow(clippy::mut_from_ref)]
+    pub(crate) unsafe fn as_raw(&self) -> &mut BNEnumeration {
         unsafe { &mut (*self.handle.as_ptr()) }
     }
 
@@ -1751,7 +1771,8 @@ impl StructureBuilder {
         Self { handle }
     }
 
-    pub(crate) fn as_raw(&self) -> &mut BNStructureBuilder {
+    #[allow(clippy::mut_from_ref)]
+    pub(crate) unsafe fn as_raw(&self) -> &mut BNStructureBuilder {
         unsafe { &mut (*self.handle.as_ptr()) }
     }
 
@@ -1991,11 +2012,14 @@ impl From<&Structure> for StructureBuilder {
     }
 }
 
-impl From<Vec<StructureMember>> for StructureBuilder {
-    fn from(members: Vec<StructureMember>) -> StructureBuilder {
+impl<'a, I> From<I> for StructureBuilder
+where
+    I: IntoIterator<Item = &'a StructureMember>,
+{
+    fn from(members: I) -> StructureBuilder {
         let builder = StructureBuilder::new();
         for m in members {
-            builder.insert_member(&m, false);
+            builder.insert_member(m, false);
         }
         builder
     }
@@ -2042,7 +2066,8 @@ impl Structure {
         Self { handle }
     }
 
-    pub(crate) fn as_raw(&self) -> &mut BNStructure {
+    #[allow(clippy::mut_from_ref)]
+    pub(crate) unsafe fn as_raw(&self) -> &mut BNStructure {
         unsafe { &mut (*self.handle.as_ptr()) }
     }
 
@@ -2142,6 +2167,11 @@ impl StructureMember {
 
     pub fn ty(&self) -> Conf<&Type> {
         Conf::new(&self.ty, self.type_confidence)
+    }
+
+    pub fn set_type(&mut self, value: Conf<Type>) {
+        self.ty = value.contents;
+        self.type_confidence = value.confidence;
     }
 
     pub fn name(&self) -> &str {
@@ -2267,7 +2297,8 @@ impl NamedTypeReference {
         mem::transmute(handle)
     }
 
-    pub(crate) fn as_raw(&self) -> &mut BNNamedTypeReference {
+    #[allow(clippy::mut_from_ref)]
+    pub(crate) unsafe fn as_raw(&self) -> &mut BNNamedTypeReference {
         unsafe { &mut (*self.handle.as_ptr()) }
     }
 
@@ -2406,7 +2437,8 @@ impl QualifiedName {
         mem::transmute(handle)
     }
 
-    pub(crate) fn as_raw(&self) -> &BNQualifiedName {
+    #[allow(clippy::mut_from_ref)]
+    pub(crate) unsafe fn as_raw(&self) -> &BNQualifiedName {
         unsafe { mem::transmute(self) }
     }
 
@@ -2443,6 +2475,12 @@ impl QualifiedName {
 impl<S: BnStrCompatible> From<S> for QualifiedName {
     fn from(name: S) -> Self {
         Some(name).into_iter().collect()
+    }
+}
+
+impl<S: BnStrCompatible> From<Vec<S>> for QualifiedName {
+    fn from(names: Vec<S>) -> Self {
+        names.into_iter().collect()
     }
 }
 
@@ -2765,11 +2803,27 @@ pub struct DataVariableAndName {
 }
 
 impl DataVariableAndName {
+    pub fn new<S: BnStrCompatible>(
+        address: u64,
+        t: Conf<Type>,
+        auto_discovered: bool,
+        name: S,
+    ) -> Self {
+        Self {
+            address,
+            t: ManuallyDrop::new(t.contents),
+            name: ManuallyDrop::new(BnString::new(name)),
+            auto_discovered,
+            type_confidence: t.confidence,
+        }
+    }
+
     pub(crate) unsafe fn ref_from_raw(var: &BNDataVariableAndName) -> &Self {
         unsafe { mem::transmute(var) }
     }
 
-    pub(crate) fn as_raw(&self) -> &BNDataVariableAndName {
+    #[allow(clippy::mut_from_ref)]
+    pub(crate) unsafe fn as_raw(&self) -> &BNDataVariableAndName {
         unsafe { mem::transmute(self) }
     }
 

@@ -16,7 +16,6 @@ use binaryninja::{
     interaction,
     interaction::{FormResponses, FormResponses::Index},
     logger::init,
-    rc::Ref,
     string::BnString,
     symbol::SymbolType,
     types::{Conf, MemberAccess, StructureType, Type, TypeClass},
@@ -27,12 +26,12 @@ fn export_type(
     name: String,
     t: &Type,
     bv: &BinaryView,
-    defined_types: &mut Vec<(Ref<Type>, UnitEntryId)>,
+    defined_types: &mut Vec<(Type, UnitEntryId)>,
     dwarf: &mut DwarfUnit,
 ) -> Option<UnitEntryId> {
     if let Some((_, die)) = defined_types
         .iter()
-        .find(|(defined_type, _)| defined_type.as_ref() == t)
+        .find(|(defined_type, _)| defined_type == t)
     {
         return Some(*die);
     }
@@ -130,12 +129,12 @@ fn export_type(
                 AttributeValue::Data2(t.width() as u16),
             );
 
-            for struct_member in t.get_structure().unwrap().members().unwrap() {
+            for struct_member in t.get_structure().unwrap().members().unwrap().iter() {
                 let struct_member_die_uid =
                     dwarf.unit.add(structure_die_uid, constants::DW_TAG_member);
                 dwarf.unit.get_mut(struct_member_die_uid).set(
                     gimli::DW_AT_name,
-                    AttributeValue::String(struct_member.name.as_bytes().to_vec()),
+                    AttributeValue::String(struct_member.name().as_bytes().to_vec()),
                 );
                 match struct_member.access {
                     MemberAccess::PrivateAccess => {
@@ -164,8 +163,8 @@ fn export_type(
                 );
 
                 if let Some(target_die_uid) = export_type(
-                    format!("{}", struct_member.ty.contents),
-                    struct_member.ty.contents.as_ref(),
+                    format!("{}", struct_member.ty().contents),
+                    struct_member.ty().contents,
                     bv,
                     defined_types,
                     dwarf,
@@ -192,7 +191,7 @@ fn export_type(
                 AttributeValue::Data1(t.width() as u8),
             );
 
-            for enum_field in t.get_enumeration().unwrap().members() {
+            for enum_field in t.get_enumeration().unwrap().members().iter() {
                 let enum_field_die_uid = dwarf.unit.add(enum_die_uid, constants::DW_TAG_enumerator);
                 dwarf.unit.get_mut(enum_field_die_uid).set(
                     gimli::DW_AT_name,
@@ -373,7 +372,7 @@ fn export_type(
 fn export_types(
     bv: &BinaryView,
     dwarf: &mut DwarfUnit,
-    defined_types: &mut Vec<(Ref<Type>, UnitEntryId)>,
+    defined_types: &mut Vec<(Type, UnitEntryId)>,
 ) {
     for t in &bv.types() {
         export_type(
@@ -389,7 +388,7 @@ fn export_types(
 fn export_functions(
     bv: &BinaryView,
     dwarf: &mut DwarfUnit,
-    defined_types: &mut Vec<(Ref<Type>, UnitEntryId)>,
+    defined_types: &mut Vec<(Type, UnitEntryId)>,
 ) {
     let entry_point = bv.entry_point_function();
 
@@ -459,7 +458,7 @@ fn export_functions(
         if function.return_type().contents.type_class() != TypeClass::VoidTypeClass {
             if let Some(return_type_die_uid) = export_type(
                 format!("{}", function.return_type().contents),
-                function.return_type().contents.as_ref(),
+                &function.return_type().contents,
                 bv,
                 defined_types,
                 dwarf,
@@ -471,19 +470,19 @@ fn export_functions(
             }
         }
 
-        for parameter in function.function_type().parameters().unwrap() {
+        for parameter in function.function_type().parameters().unwrap().iter() {
             let param_die_uid = dwarf
                 .unit
                 .add(function_die_uid, constants::DW_TAG_formal_parameter);
 
             dwarf.unit.get_mut(param_die_uid).set(
                 gimli::DW_AT_name,
-                AttributeValue::String(parameter.name.as_bytes().to_vec()),
+                AttributeValue::String(parameter.name().as_bytes().to_vec()),
             );
 
             if let Some(target_die_uid) = export_type(
-                format!("{}", parameter.t.contents),
-                &parameter.t.contents,
+                format!("{}", &parameter.t),
+                &parameter.t,
                 bv,
                 defined_types,
                 dwarf,
@@ -516,7 +515,7 @@ fn export_functions(
 fn export_data_vars(
     bv: &BinaryView,
     dwarf: &mut DwarfUnit,
-    defined_types: &mut Vec<(Ref<Type>, UnitEntryId)>,
+    defined_types: &mut Vec<(Type, UnitEntryId)>,
 ) {
     let root = dwarf.unit.root();
 
@@ -754,7 +753,7 @@ fn export_dwarf(bv: &BinaryView) {
     );
 
     // Everything has types, so we need to track what is already defined globally as to not duplicate type entries
-    let mut defined_types: Vec<(Ref<Type>, UnitEntryId)> = vec![];
+    let mut defined_types: Vec<(Type, UnitEntryId)> = vec![];
     export_types(bv, &mut dwarf, &mut defined_types);
     export_functions(bv, &mut dwarf, &mut defined_types);
     export_data_vars(bv, &mut dwarf, &mut defined_types);

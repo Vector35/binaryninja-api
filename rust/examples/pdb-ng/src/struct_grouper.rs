@@ -414,7 +414,7 @@ fn apply_groups(
                 let mut inner = StructureBuilder::new();
                 apply_groups(members, &mut inner, children, inner_offset);
                 structure.insert(
-                    &Conf::new(Type::structure(inner.finalize().as_ref()), max_confidence()),
+                    &Conf::new(Type::structure(&inner.finalize()), max_confidence()),
                     format!("__inner{}", i),
                     inner_offset - offset,
                     false,
@@ -427,7 +427,7 @@ fn apply_groups(
                 inner.set_structure_type(StructureType::UnionStructureType);
                 apply_groups(members, &mut inner, children, inner_offset);
                 structure.insert(
-                    &Conf::new(Type::structure(inner.finalize().as_ref()), max_confidence()),
+                    &Conf::new(Type::structure(&inner.finalize()), max_confidence()),
                     format!("__inner{}", i),
                     inner_offset - offset,
                     false,

@@ -1159,7 +1159,7 @@ impl MediumLevelILInstruction {
     pub fn set_expr_type<'a, T: Into<Conf<&'a Type>>>(&self, value: T) {
         let type_: Conf<&'a Type> = value.into();
         let mut type_raw: BNTypeWithConfidence = BNTypeWithConfidence {
-            type_: type_.contents.as_raw(),
+            type_: unsafe{ type_.contents.as_raw() },
             confidence: type_.confidence,
         };
         unsafe { BNSetMediumLevelILExprType(self.function.handle, self.index, &mut type_raw) }

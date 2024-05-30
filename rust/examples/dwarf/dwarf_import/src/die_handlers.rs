@@ -16,10 +16,7 @@ use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
 use crate::helpers::*;
 use crate::types::get_type;
 
-use binaryninja::{
-    rc::*,
-    types::{EnumerationBuilder, FunctionParameter, ReferenceType, Type, TypeBuilder},
-};
+use binaryninja::types::{EnumerationBuilder, FunctionParameter, ReferenceType, Type, TypeBuilder};
 
 use gimli::{constants, AttributeValue::Encoding, DebuggingInformationEntry, Reader, Unit};
 
@@ -27,7 +24,7 @@ pub(crate) fn handle_base_type<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
-) -> Option<Ref<Type>> {
+) -> Option<Type> {
     // All base types have:
     //   DW_AT_encoding (our concept of type_class)
     //   DW_AT_byte_size and/or DW_AT_bit_size
@@ -73,7 +70,7 @@ pub(crate) fn handle_enum<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
-) -> Option<Ref<Type>> {
+) -> Option<Type> {
     // All base types have:
     //   DW_AT_byte_size
     //   *DW_AT_name
@@ -132,7 +129,7 @@ pub(crate) fn handle_typedef(
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
     typedef_name: String,
-) -> (Option<Ref<Type>>, bool) {
+) -> (Option<Type>, bool) {
     // All base types have:
     //   DW_AT_name
     //   *DW_AT_type
@@ -159,7 +156,7 @@ pub(crate) fn handle_pointer<R: Reader<Offset = usize>>(
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
     reference_type: ReferenceType,
-) -> Option<Ref<Type>> {
+) -> Option<Type> {
     // All pointer types have:
     //   DW_AT_type
     //   *DW_AT_byte_size
@@ -174,7 +171,7 @@ pub(crate) fn handle_pointer<R: Reader<Offset = usize>>(
         if let Some(entry_type_offset) = entry_type {
             let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().1;
             Some(Type::pointer_of_width(
-                parent_type.as_ref(),
+                &parent_type,
                 pointer_size,
                 false,
                 false,
@@ -182,7 +179,7 @@ pub(crate) fn handle_pointer<R: Reader<Offset = usize>>(
             ))
         } else {
             Some(Type::pointer_of_width(
-                Type::void().as_ref(),
+                &Type::void(),
                 pointer_size,
                 false,
                 false,
@@ -192,7 +189,7 @@ pub(crate) fn handle_pointer<R: Reader<Offset = usize>>(
     } else if let Some(entry_type_offset) = entry_type {
         let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().1;
         Some(Type::pointer_of_width(
-            parent_type.as_ref(),
+            &parent_type,
             debug_info_builder_context.default_address_size(),
             false,
             false,
@@ -200,7 +197,7 @@ pub(crate) fn handle_pointer<R: Reader<Offset = usize>>(
         ))
     } else {
         Some(Type::pointer_of_width(
-            Type::void().as_ref(),
+            &Type::void(),
             debug_info_builder_context.default_address_size(),
             false,
             false,
@@ -214,7 +211,7 @@ pub(crate) fn handle_array<R: Reader<Offset = usize>>(
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
-) -> Option<Ref<Type>> {
+) -> Option<Type> {
     // All array types have:
     //    DW_AT_type
     //   *DW_AT_name
@@ -234,22 +231,16 @@ pub(crate) fn handle_array<R: Reader<Offset = usize>>(
         let mut children = tree.root().unwrap().children();
 
         // TODO : This is currently applying the size in reverse order
-        let mut result_type: Option<Ref<Type>> = None;
+        let mut result_type: Option<Type> = None;
         while let Ok(Some(child)) = children.next() {
             if let Some(inner_type) = result_type {
-                result_type = Some(Type::array(
-                    inner_type.as_ref(),
-                    get_subrange_size(child.entry()),
-                ));
+                result_type = Some(Type::array(&inner_type, get_subrange_size(child.entry())));
             } else {
-                result_type = Some(Type::array(
-                    parent_type.as_ref(),
-                    get_subrange_size(child.entry()),
-                ));
+                result_type = Some(Type::array(&parent_type, get_subrange_size(child.entry())));
             }
         }
 
-        result_type.map_or(Some(Type::array(parent_type.as_ref(), 0)), Some)
+        result_type.map_or(Some(Type::array(&parent_type, 0)), Some)
     } else {
         None
     }
@@ -261,7 +252,7 @@ pub(crate) fn handle_function<R: Reader<Offset = usize>>(
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
-) -> Option<Ref<Type>> {
+) -> Option<Type> {
     // All subroutine types have:
     //   *DW_AT_name
     //   *DW_AT_type (if not provided, void)
@@ -301,7 +292,7 @@ pub(crate) fn handle_function<R: Reader<Offset = usize>>(
             name.clone(),
             Type::named_type_from_type(
                 name,
-                &Type::function::<&binaryninja::types::Type>(return_type.as_ref(), &[], false),
+                &Type::function::<&binaryninja::types::Type>(&return_type, &[], false),
             ),
             false,
         );
@@ -339,7 +330,7 @@ pub(crate) fn handle_function<R: Reader<Offset = usize>>(
     }
 
     Some(Type::function(
-        return_type.as_ref(),
+        &return_type,
         &parameters,
         variable_arguments,
     ))
@@ -348,7 +339,7 @@ pub(crate) fn handle_function<R: Reader<Offset = usize>>(
 pub(crate) fn handle_const(
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
-) -> Option<Ref<Type>> {
+) -> Option<Type> {
     // All const types have:
     //   ?DW_AT_allocated
     //   ?DW_AT_associated
@@ -359,7 +350,7 @@ pub(crate) fn handle_const(
 
     if let Some(entry_type_offset) = entry_type {
         let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().1;
-        Some((*parent_type).to_builder().set_const(true).finalize())
+        Some(parent_type.to_builder().set_const(true).finalize())
     } else {
         Some(TypeBuilder::void().set_const(true).finalize())
     }
@@ -368,7 +359,7 @@ pub(crate) fn handle_const(
 pub(crate) fn handle_volatile(
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
-) -> Option<Ref<Type>> {
+) -> Option<Type> {
     // All const types have:
     //   ?DW_AT_allocated
     //   ?DW_AT_associated
@@ -379,7 +370,7 @@ pub(crate) fn handle_volatile(
 
     if let Some(entry_type_offset) = entry_type {
         let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().1;
-        Some((*parent_type).to_builder().set_volatile(true).finalize())
+        Some(parent_type.to_builder().set_volatile(true).finalize())
     } else {
         Some(TypeBuilder::void().set_volatile(true).finalize())
     }

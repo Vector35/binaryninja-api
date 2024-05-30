@@ -36,7 +36,6 @@ use binaryninja::architecture::{Architecture, ArchitectureExt, Register};
 use binaryninja::binaryninjacore_sys::BNVariableSourceType;
 use binaryninja::binaryview::BinaryViewBase;
 use binaryninja::demangle::demangle_ms;
-use binaryninja::rc::Ref;
 use binaryninja::types::{
     max_confidence, min_confidence, Conf, ConfMergable, FunctionParameter, QualifiedName,
     StructureBuilder, Type, TypeClass, Variable,
@@ -64,7 +63,7 @@ pub struct ParsedDataSymbol {
     /// Symbol name
     pub name: SymbolNames,
     /// Type if known
-    pub type_: Option<Conf<Ref<Type>>>,
+    pub type_: Option<Conf<Type>>,
 }
 
 /// Parsed functions and function-y symbols
@@ -77,7 +76,7 @@ pub struct ParsedProcedure {
     /// Symbol name
     pub name: SymbolNames,
     /// Function type if known
-    pub type_: Option<Conf<Ref<Type>>>,
+    pub type_: Option<Conf<Type>>,
     /// List of local variables (TODO: use these)
     pub locals: Vec<ParsedVariable>,
 }
@@ -97,7 +96,7 @@ pub struct ParsedVariable {
     /// Variable name
     pub name: String,
     /// Variable type if known
-    pub type_: Option<Conf<Ref<Type>>>,
+    pub type_: Option<Conf<Type>>,
     /// Location(s) where the variable is stored. PDB lets you store a variable in multiple locations
     /// despite binja not really understanding that. Length is probably never zero
     pub storage: Vec<ParsedLocation>,
@@ -866,8 +865,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         &self,
         index: SymbolIndex,
         type_index: TypeIndex,
-        demangled_type: Option<Conf<Ref<Type>>>,
-    ) -> Result<(Option<Conf<Ref<Type>>>, Vec<ParsedVariable>)> {
+        demangled_type: Option<Conf<Type>>,
+    ) -> Result<(Option<Conf<Type>>, Vec<ParsedVariable>)> {
         // So generally speaking, here's the information we have:
         // - The function type is usually accurate wrt the parameter locations
         // - The parameter symbols have the names we want for the params
@@ -921,10 +920,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             .contents
             .parameters()
             .map_err(|_| anyhow!("no params"))?;
-        let mut fancy_params = fancy_type
+        let mut fancy_params: Vec<_> = fancy_type
             .contents
             .parameters()
-            .map_err(|_| anyhow!("no params"))?;
+            .map_err(|_| anyhow!("no params"))?
+            .iter()
+            .cloned()
+            .collect();
 
         // Collect all the parameters we are expecting from the symbols
         let mut parsed_params = vec![];
@@ -958,15 +960,17 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             }
         }
 
-        self.log(|| format!("Raw params:    {:#x?}", raw_params));
-        self.log(|| format!("Fancy params:  {:#x?}", fancy_params));
+        self.log(|| {
+            format!(
+                "Raw params:    {:#x?}",
+                raw_params.iter().collect::<Vec<_>>()
+            )
+        });
+        self.log(|| format!("Fancy params:  {:#x?}", &fancy_params));
         self.log(|| format!("Parsed params: {:#x?}", parsed_params));
 
         // We expect one parameter for each unnamed parameter in the marked up type
-        let expected_param_count = fancy_params
-            .iter()
-            .filter(|p| p.name.as_str().is_empty())
-            .count();
+        let expected_param_count = fancy_params.iter().filter(|p| p.name().is_empty()).count();
         // Sanity
         if expected_param_count != raw_params.len() {
             return Err(anyhow!(
@@ -994,8 +998,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         let mut i = 0;
         for p in fancy_params.iter_mut() {
-            if p.name.as_str().is_empty() {
-                if p.t.contents != expected_parsed_params[i].t.contents {
+            if p.name().is_empty() {
+                if p.t != expected_parsed_params[i].t {
                     self.log(|| {
                         format!(
                             "Suspicious parameter {}: {:?} vs {:?}",
@@ -1003,10 +1007,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         )
                     });
                 }
-                if expected_parsed_params[i].name.as_str() == "__formal" {
-                    p.name = format!("__formal{}", i);
+                if expected_parsed_params[i].name() == "__formal" {
+                    p.set_name(format!("__formal{}", i));
                 } else {
-                    p.name = expected_parsed_params[i].name.clone();
+                    p.set_name(&expected_parsed_params[i].name());
                 }
                 i += 1;
             }
@@ -1029,10 +1033,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         let locations = cc.contents.variables_for_parameters(&fancy_params, None);
         for (p, new_location) in fancy_params.iter_mut().zip(locations.into_iter()) {
-            p.location = Some(new_location);
+            p.set_location(Some(new_location));
         }
 
-        self.log(|| format!("Final params: {:#x?}", fancy_params));
+        self.log(|| format!("Final params: {:#x?}", &fancy_params));
 
         // Use the new locals we've parsed to make the Real Definitely True function type
         let fancy_type = Conf::new(
@@ -1041,7 +1045,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     .contents
                     .return_value()
                     .map_err(|_| anyhow!("no ret"))?,
-                fancy_params.as_slice(),
+                &fancy_params,
                 fancy_type.contents.has_variable_arguments().contents,
                 &cc,
                 fancy_type.contents.stack_adjustment(),
@@ -1191,7 +1195,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let mut target_name = None;
         let mut thunk_name = None;
 
-        let mut fn_type: Option<Conf<Ref<Type>>> = None;
+        let mut fn_type: Option<Conf<Type>> = None;
 
         // These have the same name as their target, so look that up
         if let Some(syms) = self.addressed_symbols.get(&target_address) {
@@ -1749,7 +1753,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         &self,
         raw_name: &String,
         rva: Rva,
-    ) -> Result<(Option<Conf<Ref<Type>>>, Option<QualifiedName>)> {
+    ) -> Result<(Option<Conf<Type>>, Option<QualifiedName>)> {
         let (mut t, mut name) = match demangle_ms(&self.arch, raw_name.clone(), true) {
             Ok((Some(t), name)) => (Some(Conf::new(t, DEMANGLE_CONFIDENCE)), name),
             Ok((_, name)) => (None, name),
@@ -1763,8 +1767,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     .contents
                     .parameters()
                     .map_err(|_| anyhow!("no parameters"))?;
-                if let [p] = parameters.as_slice() {
-                    if p.t.contents.type_class() == TypeClass::VoidTypeClass {
+                if parameters.len() == 1 {
+                    let p = parameters.get(0);
+                    if p.t.type_class() == TypeClass::VoidTypeClass {
                         t = Some(Conf::new(
                             Type::function::<_>(
                                 &ty.contents
@@ -1829,7 +1834,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         if let Some(ty) = self.named_types.get(search_type) {
                             // Fallback in case we don't find a specific one
                             t = Some(Conf::new(
-                                Type::named_type_from_type(search_type, ty.as_ref()),
+                                Type::named_type_from_type(search_type, &ty),
                                 max_confidence(),
                             ));
 
@@ -1848,7 +1853,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                     if let Some(ty) = self.named_types.get(&lengthy_name) {
                                         // Wow!
                                         t = Some(Conf::new(
-                                            Type::named_type_from_type(lengthy_name, ty.as_ref()),
+                                            Type::named_type_from_type(lengthy_name, &ty),
                                             max_confidence(),
                                         ));
                                     } else {
@@ -1883,7 +1888,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
                 if let Some(ty) = self.named_types.get(&vt_name) {
                     t = Some(Conf::new(
-                        Type::named_type_from_type(&vt_name, ty.as_ref()),
+                        Type::named_type_from_type(&vt_name, &ty),
                         max_confidence(),
                     ));
                 } else {
@@ -1895,15 +1900,14 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
                     if let Some(ty) = self.named_types.get(&vt_name) {
                         t = Some(Conf::new(
-                            Type::named_type_from_type(&vt_name, ty.as_ref()),
+                            Type::named_type_from_type(&vt_name, &ty),
                             max_confidence(),
                         ));
                     } else {
                         t = Some(Conf::new(
                             Type::named_type_from_type(
                                 &vt_name,
-                                Type::structure(StructureBuilder::new().finalize().as_ref())
-                                    .as_ref(),
+                                &Type::structure(&StructureBuilder::new().finalize()),
                             ),
                             DEMANGLE_CONFIDENCE,
                         ));
@@ -1935,31 +1939,34 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
     fn make_lengthy_type(
         &self,
-        base_type: &Ref<Type>,
+        base_type: &Type,
         base_address: u64,
-    ) -> Result<Option<(Ref<Type>, usize)>> {
+    ) -> Result<Option<(Type, usize)>> {
         if base_type.type_class() != TypeClass::StructureTypeClass {
             return Ok(None);
         }
         let structure = base_type
             .get_structure()
             .map_err(|_| anyhow!("Expected structure"))?;
-        let mut members = structure
+        let mut members: Vec<_> = structure
             .members()
-            .map_err(|_| anyhow!("Expected structure to have members"))?;
+            .map_err(|_| anyhow!("Expected structure to have members"))?
+            .iter()
+            .cloned()
+            .collect();
         let last_member = members
             .last_mut()
             .ok_or_else(|| anyhow!("Not enough members"))?;
 
-        if last_member.ty.contents.type_class() != TypeClass::ArrayTypeClass {
+        if last_member.ty().contents.type_class() != TypeClass::ArrayTypeClass {
             return Ok(None);
         }
-        if last_member.ty.contents.count() != 0 {
+        if last_member.ty().contents.count() != 0 {
             return Ok(None);
         }
 
         let member_element = last_member
-            .ty
+            .ty()
             .contents
             .element_type()
             .map_err(|_| anyhow!("Last member has no type"))?
@@ -1985,10 +1992,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
 
         // Make a new copy of the type with the correct element count
-        last_member.ty.contents = Type::array(member_element.as_ref(), element_count);
+        last_member.set_type(Conf::new(
+            Type::array(&member_element, element_count),
+            last_member.ty().confidence,
+        ));
 
         Ok(Some((
-            Type::structure(StructureBuilder::from(members).finalize().as_ref()),
+            Type::structure(&StructureBuilder::from(members.iter()).finalize()),
             element_count as usize,
         )))
     }

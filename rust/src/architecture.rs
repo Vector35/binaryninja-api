@@ -313,7 +313,7 @@ pub trait Intrinsic: Sized + Clone + Copy {
     fn id(&self) -> u32;
 
     /// Reeturns the list of the input names and types for this intrinsic.
-    fn inputs(&self) -> Array<NameAndType>;
+    fn inputs(&self) -> Vec<NameAndType>;
 
     /// Returns the list of the output types for this intrinsic.
     fn outputs(&self) -> Vec<Conf<Type>>;
@@ -650,7 +650,7 @@ impl Intrinsic for UnusedIntrinsic {
     fn id(&self) -> u32 {
         unreachable!()
     }
-    fn inputs(&self) -> Array<NameAndType> {
+    fn inputs(&self) -> Vec<NameAndType> {
         unreachable!()
     }
     fn outputs(&self) -> Vec<Conf<Type>> {
@@ -1007,12 +1007,20 @@ impl Intrinsic for crate::architecture::CoreIntrinsic {
         self.1
     }
 
-    fn inputs(&self) -> Array<NameAndType> {
+    fn inputs(&self) -> Vec<NameAndType> {
         let mut count: usize = 0;
 
         unsafe {
             let inputs = BNGetArchitectureIntrinsicInputs(self.0, self.1, &mut count as *mut _);
-            Array::new(inputs, count, ())
+
+            let ret = slice::from_raw_parts_mut(inputs, count)
+                .iter()
+                .map(|x| NameAndType::ref_from_raw(x).to_owned())
+                .collect();
+
+            BNFreeNameAndTypeList(inputs, count);
+
+            ret
         }
     }
 
@@ -2425,10 +2433,19 @@ where
             return ptr::null_mut();
         };
 
+        let inputs = intrinsic.inputs();
+        let mut res: Box<[_]> = inputs.into_boxed_slice();
+
         unsafe {
-            let (inputs, inputs_len, ()) = intrinsic.inputs().into_raw();
-            *count = inputs_len;
-            inputs
+            *count = res.len();
+            if res.is_empty() {
+                ptr::null_mut()
+            } else {
+                // SAFETY NameAndType and BNNameAndType are transparent
+                let raw = res.as_mut_ptr() as *mut BNNameAndType;
+                mem::forget(res);
+                raw
+            }
         }
     }
 

@@ -549,7 +549,7 @@ impl MediumLevelILFunction {
     }
 
     /// This gets just the MLIL variables - you may be interested in the union
-    /// of [MediumLevelIlFunction::aliased_variables] and
+    /// of [MediumLevelILFunction::aliased_variables] and
     /// [crate::function::Function::parameter_variables] for all the
     /// variables used in the function
     pub fn variables(&self) -> Array<Variable> {
@@ -559,7 +559,7 @@ impl MediumLevelILFunction {
     }
 
     /// This returns a list of Variables that are taken reference to and used
-    /// elsewhere. You may also wish to consider [MediumLevelIlFunction::variables]
+    /// elsewhere. You may also wish to consider [MediumLevelILFunction::variables]
     /// and [crate::function::Function::parameter_variables]
     pub fn aliased_variables(&self) -> Array<Variable> {
         let mut count = 0;
@@ -568,7 +568,7 @@ impl MediumLevelILFunction {
     }
 
     /// This gets just the MLIL SSA variables - you may be interested in the
-    /// union of [MediumLevelIlFunction::aliased_variables] and
+    /// union of [MediumLevelILFunction::aliased_variables] and
     /// [crate::function::Function::parameter_variables] for all the
     /// variables used in the function.
     pub fn ssa_variables(&self) -> Array<Array<SSAVariable>> {

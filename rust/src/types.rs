@@ -707,10 +707,6 @@ pub struct Type {
 /// bv.define_user_type("int_2", &my_custom_type_2);
 /// ```
 impl Type {
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNType) -> &Self {
-        mem::transmute(handle)
-    }
-
     pub(crate) unsafe fn from_raw(handle: NonNull<BNType>) -> Self {
         Self { handle }
     }
@@ -1255,22 +1251,6 @@ impl Clone for Type {
 impl Drop for Type {
     fn drop(&mut self) {
         unsafe { BNFreeType(self.as_raw()) };
-    }
-}
-
-impl CoreArrayProvider for Conf<Type> {
-    type Raw = BNTypeWithConfidence;
-    type Context = ();
-    type Wrapped<'a> = Conf<&'a Type>;
-}
-
-unsafe impl CoreArrayProviderInner for Conf<Type> {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeOutputTypeList(raw, count);
-    }
-
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Conf::new(Type::ref_from_raw(&raw.type_), raw.confidence)
     }
 }
 
@@ -3811,9 +3791,11 @@ unsafe impl CoreArrayProviderInner for UnresolvedIndirectBranches {
 
 #[cfg(test)]
 mod test {
-    use crate::types::{FunctionParameter, TypeClass};
+    use crate::types::{
+        FunctionParameter, NamedTypeReference, NamedTypeReferenceClass, QualifiedName, TypeClass,
+    };
 
-    use super::{NamedTypeReference, NamedTypeReferenceClass, QualifiedName, Type, TypeBuilder};
+    use super::{Type, TypeBuilder};
 
     #[test]
     fn create_bool_type() {

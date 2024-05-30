@@ -778,7 +778,7 @@ impl DebugInfo {
         }
     }
 
-    pub fn add_data_variable_info(&self, var: DataVariableAndName) -> bool {
+    pub fn add_data_variable_info(&self, var: &DataVariableAndName) -> bool {
         unsafe { BNAddDebugDataVariableInfo(self.handle, var.as_raw()) }
     }
 }

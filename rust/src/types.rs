@@ -3859,14 +3859,4 @@ mod test {
         let name_type_ref = NamedTypeReference::new(type_class, &name);
         assert_eq!(name_type_ref.name().string().as_str(), "Test");
     }
-
-    // TODO BNGetDebugDataVariableByName returns a *mut BNDataVariableAndName
-    // pointer, can we deref it? Or it need to be freed by proper drop.
-    // Verify if
-    // * DebugInfo::get_data_variable_by_name
-    // * DebugInfo::get_data_variable_by_address
-    // should call BNFreeDataVariableAndName
-    // Also verify if
-    // * DebugInfo::add_data_variable_info
-    // should receive a reference or some kind of owned pointer
 }

@@ -2216,20 +2216,6 @@ bool GetLowLevelILForInstruction(
 		}
 		// Scalar, fixed-point (in SIMD&FP register)
 		case ENC_SCVTF_ASISDSHF_C:
-		{
-			if (operand3.operandClass == NONE || IMM_O(operand3) == 0) {
-				// should not happen
-				il.AddInstruction(ILSETREG_O(operand1, il.IntToFloat(REGSZ_O(operand1), ILREG_O(operand2))));
-			} else {
-				if (IMM_O(operand3) > (REGSZ_O(operand1) * 8))
-					ABORT_LIFT;
-				il.AddInstruction(ILSETREG_O(operand1,
-					il.FloatDiv(REGSZ_O(operand1),
-						il.IntToFloat(REGSZ_O(operand1), ILREG_O(operand2)),
-						il.IntToFloat(REGSZ_O(operand1), il.Const(REGSZ_O(operand1), 1 << IMM_O(operand3))))));
-			}
-			break;
-		}
 		// Scalar, fixed-point (in GP register)
 		case ENC_SCVTF_D32_FLOAT2FIX:
 		case ENC_SCVTF_D64_FLOAT2FIX:
@@ -2237,62 +2223,11 @@ bool GetLowLevelILForInstruction(
 		case ENC_SCVTF_H64_FLOAT2FIX:
 		case ENC_SCVTF_S32_FLOAT2FIX:
 		case ENC_SCVTF_S64_FLOAT2FIX:
-		{
-			if (operand3.operandClass == NONE || IMM_O(operand3) == 0) {
-				// should not happen
-				il.AddInstruction(ILSETREG_O(operand1,
-					il.IntToFloat(REGSZ_O(operand1),
-						il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2)))));
-			} else {
-				if (IMM_O(operand3) > (REGSZ_O(operand1) * 8))
-					ABORT_LIFT;
-				il.AddInstruction(ILSETREG_O(operand1,
-					il.FloatDiv(REGSZ_O(operand1),
-						il.IntToFloat(REGSZ_O(operand1),
-							il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2))),
-						il.IntToFloat(REGSZ_O(operand1), il.Const(REGSZ_O(operand1), 1 << IMM_O(operand3))))));
-			}
-			break;
-		}
 		// Vector, integer
 		case ENC_SCVTF_ASIMDMISCFP16_R:
 		case ENC_SCVTF_ASIMDMISC_R:
-		{
-			Register srcs[16], dsts[16];
-			int dst_n = unpack_vector(operand1, dsts);
-			int src_n = unpack_vector(operand2, srcs);
-			if ((dst_n != src_n) || dst_n == 0)
-				ABORT_LIFT;
-
-			int rsize = get_register_size(dsts[0]);
-			for (int i = 0; i < dst_n; ++i)
-				il.AddInstruction(ILSETREG(
-					dsts[i], il.IntToFloat(rsize,
-						il.SignExtend(rsize, ILREG(srcs[i])))));
-			break;
-		}
 		// Vector, fixed-point
 		case ENC_SCVTF_ASIMDSHF_C:
-		{
-			if (IMM_O(operand3) > (REGSZ_O(operand1) * 8))
-				ABORT_LIFT;
-			Register srcs[16], dsts[16];
-			int dst_n = unpack_vector(operand1, dsts);
-			int src_n = unpack_vector(operand2, srcs);
-			if ((dst_n != src_n) || dst_n == 0)
-				ABORT_LIFT;
-
-			int rsize = get_register_size(dsts[0]);
-			if (IMM_O(operand3) > (rsize * 8))
-				ABORT_LIFT;
-			for (int i = 0; i < dst_n; ++i)
-				il.AddInstruction(ILSETREG(
-					dsts[i],
-					il.FloatDiv(rsize,
-						il.IntToFloat(rsize, ILREG(srcs[i])),
-						il.IntToFloat(rsize, il.Const(rsize, 1 << IMM_O(operand3))))));
-			break;
-		}
 		// SVE: Vector, integer
 		case ENC_SCVTF_Z_P_Z_H2FP16:
 		case ENC_SCVTF_Z_P_Z_W2D:

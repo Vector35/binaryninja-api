@@ -12,8 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::DebugInfoBuilderContext;
+use std::{
+    collections::HashMap,
+    ops::Deref,
+    sync::mpsc,
+    str::FromStr
+};
 
+use crate::DebugInfoBuilderContext;
+use binaryninja::binaryview::BinaryViewBase;
+use binaryninja::filemetadata::FileMetadata;
+use binaryninja::Endianness;
+use binaryninja::{binaryview::{BinaryView, BinaryViewExt}, downloadprovider::{DownloadInstanceInputOutputCallbacks, DownloadProvider}, rc::Ref, settings::Settings};
 use gimli::{
     constants, Attribute, AttributeValue,
     AttributeValue::{DebugInfoRef, UnitRef},
@@ -290,4 +300,124 @@ pub(crate) fn get_expr_value<R: Reader<Offset = usize>>(
     } else {
         None
     }
+}
+
+
+pub(crate) fn download_debug_info(view: &BinaryView) -> Result<Ref<BinaryView>, String> {
+    let settings = Settings::new("");
+
+    let mut build_id: Option<String> = None;
+
+    if let Ok(raw_view) = view.raw_view() {
+        if let Ok(build_id_section) = raw_view.section_by_name(".note.gnu.build-id") {
+            // Name size - 4 bytes
+            // Desc size - 4 bytes
+            // Type - 4 bytes
+            // Name - n bytes
+            // Desc - n bytes
+            let build_id_bytes = raw_view.read_vec(build_id_section.start(), build_id_section.len());
+            if build_id_bytes.len() < 12 {
+                return Err("Build id section must be at least 12 bytes".to_string());
+            }
+
+            let name_len: u32;
+            let desc_len: u32;
+            let note_type: u32;
+            match raw_view.default_endianness() {
+                Endianness::LittleEndian => {
+                    name_len = u32::from_le_bytes(build_id_bytes[0..4].try_into().unwrap());
+                    desc_len = u32::from_le_bytes(build_id_bytes[4..8].try_into().unwrap());
+                    note_type = u32::from_le_bytes(build_id_bytes[8..12].try_into().unwrap());
+                },
+                Endianness::BigEndian => {
+                    name_len = u32::from_be_bytes(build_id_bytes[0..4].try_into().unwrap());
+                    desc_len = u32::from_be_bytes(build_id_bytes[4..8].try_into().unwrap());
+                    note_type = u32::from_be_bytes(build_id_bytes[8..12].try_into().unwrap());
+                }
+            };
+
+            if note_type != 3 {
+                return Err(format!("Build id section has wrong type: {}", note_type));
+            }
+
+            let expected_len = (12 + name_len + desc_len) as usize;
+
+            if build_id_bytes.len() < expected_len {
+                return Err(format!("Build id section not expected length: expected {}, got {}", expected_len, build_id_bytes.len()));
+            }
+
+            let desc: &[u8] = &build_id_bytes[(12+name_len as usize)..expected_len];
+            build_id = Some(desc.iter().map(|b| format!("{:02x}", b)).collect());
+        }
+    }
+
+    if build_id.is_none() {
+        return Err("Failed to get build id".to_string());
+    }
+
+    let debug_server_urls = settings.get_string_list("network.debuginfodServers", Some(view), None);
+
+    for debug_server_url in debug_server_urls.iter() {
+        let artifact_url = format!("{}/buildid/{}/debuginfo", debug_server_url, build_id.as_ref().unwrap());
+
+        // Download from remote
+        let (tx, rx) = mpsc::channel();
+        let write = move |data: &[u8]| -> usize {
+            if let Ok(_) = tx.send(Vec::from(data)) {
+                data.len()
+            } else {
+                0
+            }
+        };
+
+        let dp = DownloadProvider::try_default().map_err(|_| "No default download provider")?;
+        let mut inst = dp
+            .create_instance()
+            .map_err(|_| "Couldn't create download instance")?;
+        let result = inst
+            .perform_custom_request(
+                "GET",
+                artifact_url,
+                HashMap::<String, String>::new(),
+                DownloadInstanceInputOutputCallbacks {
+                    read: None,
+                    write: Some(Box::new(write)),
+                    progress: None,
+                },
+            )
+            .map_err(|e| e.to_string())?;
+        if result.status_code != 200 {
+            continue;
+        }
+
+        let mut expected_length = None;
+        for (k, v) in result.headers.iter() {
+            if k.to_lowercase() == "content-length" {
+                expected_length = Some(usize::from_str(v).map_err(|e| e.to_string())?);
+            }
+        }
+
+        let mut data = vec![];
+        while let Ok(packet) = rx.try_recv() {
+            data.extend(packet.into_iter());
+        }
+
+        if let Some(length) = expected_length {
+            if data.len() != length {
+                return Err(format!(
+                    "Bad length: expected {} got {}",
+                    length,
+                    data.len()
+                ));
+            }
+        }
+
+        let options = "{\"analysis.debugInfo.internal\": false}";
+        let bv = BinaryView::from_data(FileMetadata::new().deref(), &data)
+            .map_err(|_| "Unable to create binary view from downloaded data".to_string())?;
+
+        return binaryninja::load_view(bv.deref(), false, Some(options))
+            .ok_or("Unable to load binary view from downloaded data".to_string());
+    }
+    return Err("Could not find a server with debug info for this file".to_string());
 }

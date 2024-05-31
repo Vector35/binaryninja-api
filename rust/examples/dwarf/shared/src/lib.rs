@@ -20,6 +20,7 @@ use binaryninja::{
     binaryview::{BinaryView, BinaryViewBase, BinaryViewExt},
     databuffer::DataBuffer,
     Endianness,
+    settings::Settings,
 };
 
 use std::{ffi::CString, rc::Rc};
@@ -50,6 +51,15 @@ pub fn is_raw_dwo_dwarf(view: &BinaryView) -> bool {
     } else {
         false
     }
+}
+
+pub fn can_use_debuginfod(view: &BinaryView) -> bool {
+    if let Ok(raw_view) = view.raw_view() {
+        if raw_view.section_by_name(".note.gnu.build-id").is_ok() {
+            return Settings::new("").get_bool("network.enableDebuginfod", Some(view), None);
+        }
+    }
+    false
 }
 
 pub fn is_valid(view: &BinaryView) -> bool {

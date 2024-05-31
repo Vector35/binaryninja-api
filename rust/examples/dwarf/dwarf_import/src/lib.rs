@@ -27,6 +27,7 @@ use binaryninja::{
     binaryview::{BinaryView, BinaryViewExt},
     debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser},
     logger,
+    settings::Settings,
     templatesimplifier::simplify_str_to_str,
 };
 use dwarfreader::{
@@ -213,20 +214,21 @@ fn parse_unit<R: Reader<Offset = usize>>(
 }
 
 fn parse_dwarf(
-    view: &BinaryView,
+    bv: &BinaryView,
     progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
-) -> DebugInfoBuilder {
+) -> Result<DebugInfoBuilder, ()> {
     // Determine if this is a DWO
     // TODO : Make this more robust...some DWOs follow non-DWO conventions
-    let dwo_file = is_dwo_dwarf(view) || is_raw_dwo_dwarf(view);
 
     // Figure out if it's the given view or the raw view that has the dwarf info in it
-    let raw_view = &view.raw_view().unwrap();
-    let view = if is_dwo_dwarf(view) || is_non_dwo_dwarf(view) {
-        view
+    let raw_view = &bv.raw_view().unwrap();
+    let view = if is_dwo_dwarf(bv) || is_non_dwo_dwarf(bv) {
+        bv
     } else {
         raw_view
     };
+
+    let dwo_file = is_dwo_dwarf(view) || is_raw_dwo_dwarf(view);
 
     // gimli setup
     let endian = get_endian(view);
@@ -246,7 +248,7 @@ fn parse_dwarf(
         if !recover_names(&mut debug_info_builder_context, &progress)
             || debug_info_builder_context.total_die_count == 0
         {
-            return debug_info_builder;
+            return Ok(debug_info_builder);
         }
 
         // Parse all the compilation units
@@ -261,14 +263,14 @@ fn parse_dwarf(
             );
         }
     }
-    debug_info_builder
+    Ok(debug_info_builder)
 }
 
 struct DWARFParser;
 
 impl CustomDebugInfoParser for DWARFParser {
     fn is_valid(&self, view: &BinaryView) -> bool {
-        dwarfreader::is_valid(view)
+        dwarfreader::is_valid(view) || dwarfreader::can_use_debuginfod(view)
     }
 
     fn parse_info(
@@ -278,16 +280,59 @@ impl CustomDebugInfoParser for DWARFParser {
         debug_file: &BinaryView,
         progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool {
-        parse_dwarf(debug_file, progress)
-            .post_process(bv, debug_info)
-            .commit_info(debug_info);
-        true
+        let external_file = if !dwarfreader::is_valid(bv) && dwarfreader::can_use_debuginfod(bv) {
+            //TODO: try to download from debuginfod if there is no debug info in the binary
+            if let Ok(debug_view) = helpers::download_debug_info(bv) {
+                Some(debug_view)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        match parse_dwarf(external_file.as_deref().unwrap_or(debug_file), progress) {
+            Ok(mut builder) => {
+                builder
+                .post_process(bv, debug_info)
+                .commit_info(debug_info);
+                true
+            },
+            Err(_) => {
+                false
+            }
+        }
     }
 }
 
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
     logger::init(LevelFilter::Debug).unwrap();
+
+    let settings = Settings::new("");
+
+    settings.register_setting_json(
+        "network.enableDebuginfod",
+        r#"{
+            "title" : "Enable Debuginfod Support",
+            "type" : "boolean",
+            "default" : false,
+            "description" : "Enable using debuginfod servers to fetch debug info for files with a .note.gnu.build-id section.",
+            "ignore" : []
+        }"#,
+    );
+
+    settings.register_setting_json(
+        "network.debuginfodServers",
+        r#"{
+            "title" : "Debuginfod Server URLs",
+            "type" : "array",
+			"elementType" : "string",
+			"default" : [],
+            "description" : "Servers to use for fetching debug info for files with a .note.gnu.build-id section.",
+            "ignore" : []
+        }"#,
+    );
 
     DebugInfoParser::register("DWARF", DWARFParser {});
     true

@@ -1747,18 +1747,15 @@ private:
 
 		Ref<Symbol> funcSym = Symbol::ImportedFunctionFromImportAddressSymbol(sym, func->GetStart());
 		data->DefineAutoSymbol(funcSym);
-		for (auto& extSym : data->GetSymbolsByName(funcSym->GetRawName()))
-		{
-			if (extSym->GetType() == ExternalSymbol)
-			{
-				DataVariable var;
-				if (data->GetDataVariableAtAddress(extSym->GetAddress(), var))
-				{
-					func->ApplyImportedTypes(funcSym, var.type);
-				}
 
-				return true;
+		auto extSym = data->GetSymbolsByName(funcSym->GetRawName(), data->GetExternalNameSpace());
+		if (!extSym.empty()) {
+			DataVariable var;
+			if (data->GetDataVariableAtAddress(extSym.front()->GetAddress(), var))
+			{
+				func->ApplyImportedTypes(funcSym, var.type);
 			}
+			return true;
 		}
 		return false;
 	}
@@ -1823,18 +1820,14 @@ private:
 
 		if (pltSym)
 		{
-			for (auto& extSym : data->GetSymbolsByName(pltSym->GetRawName()))
-			{
-				if (extSym->GetType() == ExternalSymbol)
+			auto extSym = data->GetSymbolsByName(pltSym->GetRawName(), data->GetExternalNameSpace());
+			if (!extSym.empty()) {
+				DataVariable var;
+				if (data->GetDataVariableAtAddress(extSym.front()->GetAddress(), var))
 				{
-					DataVariable var;
-					if (data->GetDataVariableAtAddress(extSym->GetAddress(), var))
-					{
-						func->ApplyImportedTypes(pltSym, var.type);
-					}
-
-					return true;
+					func->ApplyImportedTypes(pltSym, var.type);
 				}
+				return true;
 			}
 		}
 
@@ -1951,20 +1944,17 @@ private:
 
 		Ref<Symbol> funcSym = Symbol::ImportedFunctionFromImportAddressSymbol(sym, func->GetStart());
 		data->DefineAutoSymbol(funcSym);
-		for (auto& extSym : data->GetSymbolsByName(funcSym->GetRawName()))
-		{
-			if (extSym->GetType() == ExternalSymbol)
-			{
-				DataVariable var;
-				if (data->GetDataVariableAtAddress(extSym->GetAddress(), var))
-				{
-					func->ApplyImportedTypes(funcSym, var.type);
-				}
 
-				return true;
+		auto extSym = data->GetSymbolsByName(funcSym->GetRawName(), data->GetExternalNameSpace());
+		if (!extSym.empty()) {
+			DataVariable var;
+			if (data->GetDataVariableAtAddress(extSym.front()->GetAddress(), var))
+			{
+				func->ApplyImportedTypes(funcSym, var.type);
 			}
+			return true;
 		}
-		return true;
+		return false;
 	}
 
 

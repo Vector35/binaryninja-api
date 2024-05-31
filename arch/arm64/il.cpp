@@ -2282,6 +2282,7 @@ bool GetLowLevelILForInstruction(
 		// We cannot check that the src and dst counts are the same here
 		// because the 2 variants use different count arrange specs, e.g.
 		// sxtl2 v0.2d, v1.4s
+		(void) src_n;
 
 		int left_shift = 0;
 		if (instr.operation == ARM64_SSHLL || instr.operation == ARM64_SSHLL2)
@@ -2295,13 +2296,30 @@ bool GetLowLevelILForInstruction(
 		int src_size = get_register_size(srcs[0]);
 
 		for (int i = 0; i < dst_n; ++i)
-			il.AddInstruction(il.SetRegister(dst_size, dsts[i],
-				il.SignExtend(dst_size,
-					il.ShiftLeft(dst_size,
+			if (left_shift && two_variant_shift)
+				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
+					il.SignExtend(dst_size,
+						il.ShiftLeft(dst_size,
+							il.LogicalShiftRight(src_size,
+								il.Register(src_size, srcs[i]),
+								il.Const(1, two_variant_shift)),
+							il.Const(1, left_shift)))));
+			else if (left_shift)
+				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
+					il.SignExtend(dst_size,
+						il.ShiftLeft(dst_size,
+							il.Register(src_size, srcs[i]),
+							il.Const(1, left_shift)))));
+			else if (two_variant_shift)
+				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
+					il.SignExtend(dst_size,
 						il.LogicalShiftRight(src_size,
 							il.Register(src_size, srcs[i]),
-							il.Const(1, two_variant_shift)),
-						il.Const(1, left_shift)))));
+							il.Const(1, two_variant_shift)))));
+			else
+				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
+					il.SignExtend(dst_size,
+						il.Register(src_size, srcs[i]))));
 
 		break;
 	}

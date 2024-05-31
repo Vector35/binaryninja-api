@@ -11,7 +11,7 @@ use crate::function::{Function, Location};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
 use crate::string::BnStrCompatible;
 use crate::types::{
-    Conf, PossibleValueSet, RegisterValue, SSAVariable, Type, UserVariableValues, Variable,
+    Conf, PossibleValueSet, RegisterValue, SSAVariable, Type, UserVariableValue, Variable,
 };
 
 use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
@@ -242,20 +242,18 @@ impl MediumLevelILFunction {
 
     /// Returns a map of current defined user variable values.
     /// Returns a Map of user current defined user variable values and their definition sites.
-    pub fn user_var_values(&self) -> UserVariableValues {
+    pub fn user_var_values(&self) -> Array<UserVariableValue> {
         let mut count = 0;
         let function = self.get_function();
         let var_values = unsafe { BNGetAllUserVariableValues(function.handle, &mut count) };
         assert!(!var_values.is_null());
-        UserVariableValues {
-            vars: core::ptr::slice_from_raw_parts(var_values, count),
-        }
+        unsafe { Array::new(var_values, count, ()) }
     }
 
     /// Clear all user defined variable values.
     pub fn clear_user_var_values(&self) -> Result<(), ()> {
-        for (var, arch_and_addr, _value) in self.user_var_values().all() {
-            self.clear_user_var_value(&var, arch_and_addr.address)?;
+        for user_value in self.user_var_values().iter() {
+            self.clear_user_var_value(&user_value.var, user_value.def_site.address)?;
         }
         Ok(())
     }

@@ -3355,55 +3355,78 @@ impl Drop for LookupTableEntryRaw {
 /////////////////////////
 // ArchAndAddr
 
+#[repr(C)]
 #[derive(Copy, Clone, Eq, Hash, PartialEq)]
 pub struct ArchAndAddr {
     pub arch: CoreArchitecture,
     pub address: u64,
 }
 
-/////////////////////////
-// UserVariableValues
-
-pub struct UserVariableValues {
-    pub(crate) vars: *const [BNUserVariableValue],
+impl ArchAndAddr {
+    pub(crate) unsafe fn from_raw(value: BNArchitectureAndAddress) -> Self {
+        mem::transmute(value)
+    }
 }
 
-impl UserVariableValues {
-    pub fn into_hashmap(self) -> HashMap<Variable, HashMap<ArchAndAddr, PossibleValueSet>> {
+/////////////////////////
+// UserVariableValue
+
+pub struct UserVariableValue {
+    pub var: Variable,
+    pub def_site: ArchAndAddr,
+    pub possible_value: PossibleValueSet,
+}
+
+impl UserVariableValue {
+    pub(crate) unsafe fn from_raw(value: BNUserVariableValue) -> Self {
+        let var = Variable::from_raw(value.var);
+        let def_site = ArchAndAddr::from_raw(value.defSite);
+        let value = PossibleValueSet::from_raw(value.value);
+        Self {
+            var,
+            def_site,
+            possible_value: value,
+        }
+    }
+}
+
+impl CoreArrayProvider for UserVariableValue {
+    type Raw = BNUserVariableValue;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for UserVariableValue {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        unsafe { BNFreeUserVariableValues(raw) };
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from_raw(*raw)
+    }
+}
+
+impl Array<UserVariableValue> {
+    pub fn into_hashmap(&self) -> HashMap<Variable, HashMap<ArchAndAddr, PossibleValueSet>> {
         let mut result: HashMap<Variable, HashMap<ArchAndAddr, PossibleValueSet>> = HashMap::new();
-        for (var, def_site, possible_val) in self.all() {
+        for value in self.iter()
+        {
             result
-                .entry(var)
+                .entry(value.var)
                 .or_default()
-                .entry(def_site)
-                .or_insert(possible_val);
+                .entry(value.def_site)
+                .or_insert(value.possible_value);
         }
         result
     }
-    pub fn all(&self) -> impl Iterator<Item = (Variable, ArchAndAddr, PossibleValueSet)> {
-        unsafe { &*self.vars }.iter().map(|var_val| {
-            let var = unsafe { Variable::from_raw(var_val.var) };
-            let def_site = ArchAndAddr {
-                arch: unsafe { CoreArchitecture::from_raw(var_val.defSite.arch) },
-                address: var_val.defSite.address,
-            };
-            let possible_val = unsafe { PossibleValueSet::from_raw(var_val.value) };
-            (var, def_site, possible_val)
-        })
-    }
-    pub fn values_from_variable(
-        &self,
-        var: Variable,
-    ) -> impl Iterator<Item = (ArchAndAddr, PossibleValueSet)> {
-        self.all()
-            .filter(move |(t_var, _, _)| t_var == &var)
-            .map(|(_var, def_site, possible_val)| (def_site, possible_val))
-    }
-}
 
-impl Drop for UserVariableValues {
-    fn drop(&mut self) {
-        unsafe { BNFreeUserVariableValues(self.vars as *mut BNUserVariableValue) };
+    pub fn values_from_variable<'a>(
+        &'a self,
+        var: Variable,
+    ) -> impl Iterator<Item = (ArchAndAddr, PossibleValueSet)> + 'a {
+        self.iter()
+            .filter(move |value| value.var == var)
+            .map(|value| (value.def_site, value.possible_value))
     }
 }
 

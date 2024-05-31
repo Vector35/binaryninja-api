@@ -3660,47 +3660,39 @@ pub type IntegerDisplayType = binaryninjacore_sys::BNIntegerDisplayType;
 /////////////////////////
 // StackVariableReference
 
+#[repr(C)]
 #[derive(Debug, Clone)]
 pub struct StackVariableReference {
-    _source_operand: u32,
-    var_type: Conf<Type>,
+    source_operand: u32,
+    type_confidence: u8,
+    type_: Type,
     name: BnString,
-    var: Variable,
-    offset: i64,
+    var_identifier: u64,
+    referenced_offset: i64,
     size: usize,
 }
 
 impl StackVariableReference {
-    pub fn from_raw(value: BNStackVariableReference) -> Self {
-        let var_type = Conf::new(
-            unsafe { Type::from_raw(NonNull::new(value.type_).unwrap()) },
-            value.typeConfidence,
-        );
-        let name = unsafe { BnString::from_raw(NonNull::new(value.name).unwrap()) };
-        let var = unsafe { Variable::from_identifier(value.varIdentifier) };
-        let offset = value.referencedOffset;
-        let size = value.size;
-        Self {
-            _source_operand: value.sourceOperand,
-            var_type,
-            name,
-            var,
-            offset,
-            size,
-        }
+    pub(crate) unsafe fn ref_from_raw(value: &BNStackVariableReference) -> &Self {
+        mem::transmute(value)
     }
-    pub fn variable(&self) -> &Variable {
-        &self.var
+
+    pub fn variable(&self) -> Variable {
+        unsafe { Variable::from_identifier(self.var_identifier) }
     }
+
     pub fn variable_type(&self) -> Conf<&Type> {
-        self.var_type.as_ref()
+        Conf::new(&self.type_, self.type_confidence)
     }
+
     pub fn name(&self) -> &str {
         self.name.as_str()
     }
+
     pub fn offset(&self) -> i64 {
-        self.offset
+        self.referenced_offset
     }
+
     pub fn size(&self) -> usize {
         self.size
     }
@@ -3709,15 +3701,15 @@ impl StackVariableReference {
 impl CoreArrayProvider for StackVariableReference {
     type Raw = BNStackVariableReference;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, Self>;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for StackVariableReference {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeStackVariableReferenceList(raw, count)
     }
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self::from_raw(*raw), context)
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::ref_from_raw(raw)
     }
 }
 

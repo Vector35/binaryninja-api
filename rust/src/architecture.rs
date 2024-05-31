@@ -1059,6 +1059,7 @@ impl Drop for CoreArchitectureList {
     }
 }
 
+#[repr(transparent)]
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct CoreArchitecture(pub(crate) *mut BNArchitecture);
 

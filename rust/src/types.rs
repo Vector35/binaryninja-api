@@ -3455,6 +3455,8 @@ unsafe impl CoreArrayProviderInner for ConstantReference {
 /////////////////////////
 // IndirectBranchInfo
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct IndirectBranchInfo {
     pub source_arch: CoreArchitecture,
     pub source_addr: u64,

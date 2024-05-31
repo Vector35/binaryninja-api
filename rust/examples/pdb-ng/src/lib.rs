@@ -252,6 +252,14 @@ fn sym_store_exists(path: &String) -> Result<bool> {
     if !Settings::new("").get_bool("network.pdbAutoDownload", None, None) {
         return Err(anyhow!("Auto download disabled"));
     }
+
+    // If the user doesn't want to check the network path
+    // (in the case of using a symbol server proxy that doesn't accept HEAD requests),
+    // just assume the path exists and return true.
+    if path.contains("localhost:") && Settings::new("").get_bool("network.pdbSkipNetworkPathCheck", None, None) {
+        return Ok(true);
+    }
+
     info!("HEAD: {}", path);
 
     // Download from remote
@@ -780,6 +788,18 @@ fn init_plugin() -> bool {
             "default" : true,
             "aliases" : ["pdb.autoDownload", "pdb.auto-download-pdb"],
             "description" : "Automatically search for and download pdb files from specified symbol servers.",
+            "ignore" : []
+        }"#,
+    );
+
+    settings.register_setting_json(
+        "network.pdbSkipNetworkPathCheck",
+        r#"{
+            "title" : "Skip Network Path Check",
+            "type" : "boolean",
+            "default" : false,
+            "aliases" : ["pdb.SkipNetworkPathCheck", "pdb.skip-network-path-check"],
+            "description" : "Skip the HEAD http request that verifies if a PDB network path exists (only for localhost servers).",
             "ignore" : []
         }"#,
     );

@@ -266,7 +266,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 		try:
 			source_py = core.pyNativeStr(source)
 			file_name_py = core.pyNativeStr(fileName)
-			platform_py = platform.Platform(handle=core.BNNewPlatformReference(platform_))
+			platform_py = platform.CorePlatform._from_cache(handle=core.BNNewPlatformReference(platform_))
 
 			existing_types_py = None
 			if existingTypes:
@@ -310,7 +310,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 		try:
 			source_py = core.pyNativeStr(source)
 			file_name_py = core.pyNativeStr(fileName)
-			platform_py = platform.Platform(handle=core.BNNewPlatformReference(platform_))
+			platform_py = platform.CorePlatform._from_cache(handle=core.BNNewPlatformReference(platform_))
 
 			existing_types_py = None
 			if existingTypes:
@@ -359,7 +359,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 	) -> bool:
 		try:
 			source_py = core.pyNativeStr(source)
-			platform_py = platform.Platform(handle=core.BNNewPlatformReference(platform_))
+			platform_py = platform.CorePlatform._from_cache(handle=core.BNNewPlatformReference(platform_))
 
 			existing_types_py = None
 			if existingTypes:

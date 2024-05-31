@@ -21,6 +21,7 @@
 import os
 import ctypes
 import traceback
+import warnings
 from typing import List, Dict, Optional, Tuple
 
 # Binary Ninja components
@@ -44,7 +45,7 @@ class _PlatformMetaClass(type):
 		assert platforms is not None, "core.BNGetPlatformList returned None"
 		try:
 			for i in range(0, count.value):
-				yield Platform(handle=core.BNNewPlatformReference(platforms[i]))
+				yield CorePlatform(handle=core.BNNewPlatformReference(platforms[i]))
 		finally:
 			core.BNFreePlatformList(platforms, count.value)
 
@@ -53,7 +54,7 @@ class _PlatformMetaClass(type):
 		platform = core.BNGetPlatformByName(str(value))
 		if platform is None:
 			raise KeyError("'%s' is not a valid platform" % str(value))
-		return Platform(handle=platform)
+		return CorePlatform(handle=platform)
 
 
 class Platform(metaclass=_PlatformMetaClass):
@@ -102,6 +103,10 @@ class Platform(metaclass=_PlatformMetaClass):
 				assert _handle is not None
 				self.__class__._registered_platforms.append(self)
 		else:
+			if type(self) is Platform:
+				binaryninja.log_warn(
+					":py:func:`Platform(handle=...)` is deprecated, use :py:func:`CorePlatform._from_cache(handle=...)`"
+				)
 			_handle = handle
 			_arch = architecture.CoreArchitecture._from_cache(core.BNGetPlatformArchitecture(_handle))
 			count = ctypes.c_ulonglong()
@@ -214,7 +219,10 @@ class Platform(metaclass=_PlatformMetaClass):
 			self._pending_parser_input_lists[source_file_values_ptr.value] = (source_file_values_ptr.value, source_file_values_buf)
 
 		except:
+			arguments_out[0] = None
 			arguments_len_out[0] = 0
+			source_file_names_out[0] = None
+			source_file_values_out[0] = None
 			source_files_len_out[0] = 0
 			traceback.print_exc()
 
@@ -229,19 +237,22 @@ class Platform(metaclass=_PlatformMetaClass):
 	):
 		try:
 			buf = ctypes.cast(arguments, ctypes.c_void_p)
-			if buf.value not in self._pending_parser_input_lists:
-				raise ValueError("freeing arguments list that wasn't allocated")
-			del self._pending_parser_input_lists[buf.value]
+			if buf.value is not None:
+				if buf.value not in self._pending_parser_input_lists:
+					raise ValueError("freeing arguments list that wasn't allocated")
+				del self._pending_parser_input_lists[buf.value]
 
 			buf = ctypes.cast(source_file_names, ctypes.c_void_p)
-			if buf.value not in self._pending_parser_input_lists:
-				raise ValueError("freeing source_file_names list that wasn't allocated")
-			del self._pending_parser_input_lists[buf.value]
+			if buf.value is not None:
+				if buf.value not in self._pending_parser_input_lists:
+					raise ValueError("freeing source_file_names list that wasn't allocated")
+				del self._pending_parser_input_lists[buf.value]
 
 			buf = ctypes.cast(source_file_values, ctypes.c_void_p)
-			if buf.value not in self._pending_parser_input_lists:
-				raise ValueError("freeing source_file_values list that wasn't allocated")
-			del self._pending_parser_input_lists[buf.value]
+			if buf.value is not None:
+				if buf.value not in self._pending_parser_input_lists:
+					raise ValueError("freeing source_file_values list that wasn't allocated")
+				del self._pending_parser_input_lists[buf.value]
 		except:
 			log_error(traceback.format_exc())
 
@@ -318,7 +329,7 @@ class Platform(metaclass=_PlatformMetaClass):
 			assert platforms is not None, "core.BNGetPlatformListByArchitecture returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(Platform(handle=core.BNNewPlatformReference(platforms[i])))
+			result.append(CorePlatform._from_cache(core.BNNewPlatformReference(platforms[i])))
 		core.BNFreePlatformList(platforms, count.value)
 		return result
 
@@ -533,7 +544,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		result = core.BNGetRelatedPlatform(self.handle, arch.handle)
 		if not result:
 			return None
-		return Platform(handle=result)
+		return CorePlatform._from_cache(handle=result)
 
 	def add_related_platform(self, arch, platform):
 		core.BNAddRelatedPlatform(self.handle, arch.handle, platform.handle)
@@ -542,7 +553,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		new_addr = ctypes.c_ulonglong()
 		new_addr.value = addr
 		result = core.BNGetAssociatedPlatformByAddress(self.handle, new_addr)
-		return Platform(handle=result), new_addr.value
+		return CorePlatform._from_cache(result), new_addr.value
 
 	@property
 	def type_container(self) -> 'typecontainer.TypeContainer':
@@ -707,3 +718,81 @@ class Platform(metaclass=_PlatformMetaClass):
 	@property
 	def arch(self):
 		return self._arch
+
+
+_platform_cache = {}
+
+
+class CorePlatform(Platform):
+	def __init__(self, handle: core.BNPlatform):
+		super(CorePlatform, self).__init__(handle=handle)
+		if type(self) is CorePlatform:
+			global _platform_cache
+			_platform_cache[ctypes.addressof(handle.contents)] = self
+
+	@classmethod
+	def _from_cache(cls, handle) -> 'Platform':
+		"""
+		Look up a platform from a given BNPlatform handle
+		:param handle: BNPlatform pointer
+		:return: Platform instance responsible for this handle
+		"""
+		global _platform_cache
+		return _platform_cache.get(ctypes.addressof(handle.contents)) or cls(handle)
+
+	def adjust_type_parser_input(
+			self,
+			parser: 'typeparser.TypeParser',
+			arguments: List[str],
+			source_files: List[Tuple[str, str]]
+	) -> Tuple[List[str], List[Tuple[str, str]]]:
+
+		arguments_in = (ctypes.c_char_p * len(arguments))()
+		for i, argument in enumerate(arguments):
+			arguments_in[i] = core.cstr(argument)
+
+		source_file_names_in = (ctypes.c_char_p * len(source_files))()
+		source_file_names_out = (ctypes.c_char_p * len(source_files))()
+		source_file_values_in = (ctypes.c_char_p * len(source_files))()
+		source_file_values_out = (ctypes.c_char_p * len(source_files))()
+		for i, (name, value) in enumerate(source_files):
+			source_file_names_in[i] = core.cstr(name)
+			source_file_values_in[i] = core.cstr(value)
+
+		arguments_out = ctypes.POINTER(ctypes.c_char_p)()
+		arguments_len_out = (ctypes.c_size_t)()
+		source_file_names_out = ctypes.POINTER(ctypes.c_char_p)()
+		source_file_values_out = ctypes.POINTER(ctypes.c_char_p)()
+		source_files_len_out = (ctypes.c_size_t)()
+
+		core.BNPlatformAdjustTypeParserInput(
+			self.handle,
+			parser.handle,
+			arguments_in,
+			len(arguments),
+			source_file_names_in,
+			source_file_values_in,
+			len(source_files),
+			arguments_out,
+			arguments_len_out,
+			source_file_names_out,
+			source_file_values_out,
+			source_files_len_out
+		)
+
+		result_arguments = []
+		for i in range(arguments_len_out.value):
+			result_arguments.append(core.pyNativeStr(arguments_out[i]))
+
+		result_source_files = []
+		for i in range(source_files_len_out.value):
+			result_source_files.append((
+				core.pyNativeStr(source_file_names_out[i]),
+				core.pyNativeStr(source_file_values_out[i]),
+			))
+
+		core.BNFreeStringList(arguments_out, arguments_len_out.value)
+		core.BNFreeStringList(source_file_names_out, source_files_len_out.value)
+		core.BNFreeStringList(source_file_values_out, source_files_len_out.value)
+
+		return result_arguments, result_source_files

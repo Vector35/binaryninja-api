@@ -1381,13 +1381,13 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		plat = core.BNGetPlatformForViewType(self.handle, ident, arch.handle)
 		if plat is None:
 			return None
-		return _platform.Platform(handle=plat)
+		return _platform.CorePlatform._from_cache(handle=plat)
 
 	def recognize_platform(self, ident, endian: Endianness, view: 'BinaryView', metadata):
 		plat = core.BNRecognizePlatformForViewType(self.handle, ident, endian, view.handle, metadata.handle)
 		if plat is None:
 			return None
-		return binaryninja.Platform(handle=plat)
+		return _platform.CorePlatform._from_cache(handle=plat)
 
 	@staticmethod
 	def add_binaryview_finalized_event(callback: BinaryViewEvent.BinaryViewEventCallback) -> None:
@@ -2941,7 +2941,7 @@ class BinaryView:
 		plat = core.BNGetDefaultPlatform(self.handle)
 		if plat is None:
 			return None
-		self._platform = _platform.Platform(self.arch, handle=plat)
+		self._platform = _platform.CorePlatform._from_cache(handle=plat)
 		return self._platform
 
 	@platform.setter
@@ -8603,7 +8603,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		result_name = (core.BNQualifiedName * 1)()
 		if not core.BNLookupImportedTypePlatform(self.handle, name._to_core_struct(), result_platform, result_name):
 			return None
-		platform = _platform.Platform(arch=self.arch, handle=result_platform[0])
+		platform = _platform.CorePlatform._from_cache(handle=result_platform[0])
 		name = _types.QualifiedName._from_core_struct(result_name[0])
 		core.BNFreeQualifiedName(result_name)
 		return platform, name

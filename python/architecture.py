@@ -566,7 +566,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 	def standalone_platform(self) -> 'platform.Platform':
 		"""Architecture standalone platform (read-only)"""
 		pl = core.BNGetArchitectureStandalonePlatform(self.handle)
-		return platform.Platform(self, pl)
+		return platform.CorePlatform._from_cache(pl)
 
 	@property
 	def type_libraries(self) -> List['typelibrary.TypeLibrary']:

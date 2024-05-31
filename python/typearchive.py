@@ -140,7 +140,7 @@ class TypeArchive:
 		"""
 		handle = core.BNGetTypeArchivePlatform(self.handle)
 		assert handle is not None
-		return platform.Platform(handle=handle)
+		return platform.CorePlatform._from_cache(handle=handle)
 
 	@property
 	def current_snapshot_id(self) -> str:

@@ -503,7 +503,7 @@ class Function:
 			plat = core.BNGetFunctionPlatform(self.handle)
 			if plat is None:
 				return None
-			self._platform = _platform.Platform(handle=plat)
+			self._platform = _platform.CorePlatform._from_cache(handle=plat)
 			return self._platform
 
 	@property

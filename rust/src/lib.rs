@@ -152,6 +152,7 @@ pub mod logger;
 pub mod metadata;
 pub mod mlil;
 pub mod platform;
+pub mod project;
 pub mod rc;
 pub mod references;
 pub mod relocation;

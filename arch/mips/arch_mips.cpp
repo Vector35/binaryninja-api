@@ -1747,8 +1747,20 @@ private:
 
 		Ref<Symbol> funcSym = Symbol::ImportedFunctionFromImportAddressSymbol(sym, func->GetStart());
 		data->DefineAutoSymbol(funcSym);
-		func->ApplyImportedTypes(funcSym);
-		return true;
+		for (auto& extSym : data->GetSymbolsByName(funcSym->GetRawName()))
+		{
+			if (extSym->GetType() == ExternalSymbol)
+			{
+				DataVariable var;
+				if (data->GetDataVariableAtAddress(extSym->GetAddress(), var))
+				{
+					func->ApplyImportedTypes(funcSym, var.type);
+				}
+
+				return true;
+			}
+		}
+		return false;
 	}
 
 
@@ -1939,7 +1951,19 @@ private:
 
 		Ref<Symbol> funcSym = Symbol::ImportedFunctionFromImportAddressSymbol(sym, func->GetStart());
 		data->DefineAutoSymbol(funcSym);
-		func->ApplyImportedTypes(funcSym);
+		for (auto& extSym : data->GetSymbolsByName(funcSym->GetRawName()))
+		{
+			if (extSym->GetType() == ExternalSymbol)
+			{
+				DataVariable var;
+				if (data->GetDataVariableAtAddress(extSym->GetAddress(), var))
+				{
+					func->ApplyImportedTypes(funcSym, var.type);
+				}
+
+				return true;
+			}
+		}
 		return true;
 	}
 

@@ -2448,10 +2448,22 @@ class Arm64ImportedFunctionRecognizer : public FunctionRecognizer
 		if (jumpOperand.GetSourceRegister<LLIL_REG>() != targetReg)
 			return false;
 
-		Ref<Symbol> funcSym = Symbol::ImportedFunctionFromImportAddressSymbol(sym, func->GetStart());
+		Ref<Symbol> funcSym = Symbol::ImportedFunctionFromImportAddressSymbol(sym, func->GetStart()); // func is plt function
 		data->DefineAutoSymbol(funcSym);
-		func->ApplyImportedTypes(funcSym);
-		return true;
+		for (auto& extSym : data->GetSymbolsByName(funcSym->GetRawName()))
+		{
+			if (extSym->GetType() == ExternalSymbol)
+			{
+				DataVariable var;
+				if (data->GetDataVariableAtAddress(extSym->GetAddress(), var))
+				{
+					func->ApplyImportedTypes(funcSym, var.type);
+				}
+
+				return true;
+			}
+		}
+		return false;
 	}
 
 

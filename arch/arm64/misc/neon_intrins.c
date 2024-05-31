@@ -1097,15 +1097,9 @@ int32x4_t vqrshrn_high_n_s64(int32x2_t r, int64x2_t a, const int n);     // SQRS
 uint8x16_t vqrshrn_high_n_u16(uint8x8_t r, uint16x8_t a, const int n);   // UQRSHRN2 Vd.16B,Vn.8H,#n
 uint16x8_t vqrshrn_high_n_u32(uint16x4_t r, uint32x4_t a, const int n);  // UQRSHRN2 Vd.8H,Vn.4S,#n
 uint32x4_t vqrshrn_high_n_u64(uint32x2_t r, uint64x2_t a, const int n);  // UQRSHRN2 Vd.4S,Vn.2D,#n
-int16x8_t vshll_n_s8(int8x8_t a, const int n);                           // SSHLL Vd.8H,Vn.8B,#n
-int32x4_t vshll_n_s16(int16x4_t a, const int n);                         // SSHLL Vd.4S,Vn.4H,#n
-int64x2_t vshll_n_s32(int32x2_t a, const int n);                         // SSHLL Vd.2D,Vn.2S,#n
 uint16x8_t vshll_n_u8(uint8x8_t a, const int n);                         // USHLL Vd.8H,Vn.8B,#n
 uint32x4_t vshll_n_u16(uint16x4_t a, const int n);                       // USHLL Vd.4S,Vn.4H,#n
 uint64x2_t vshll_n_u32(uint32x2_t a, const int n);                       // USHLL Vd.2D,Vn.2S,#n
-int16x8_t vshll_high_n_s8(int8x16_t a, const int n);                     // SSHLL2 Vd.8H,Vn.16B,#n
-int32x4_t vshll_high_n_s16(int16x8_t a, const int n);                    // SSHLL2 Vd.4S,Vn.8H,#n
-int64x2_t vshll_high_n_s32(int32x4_t a, const int n);                    // SSHLL2 Vd.2D,Vn.4S,#n
 uint16x8_t vshll_high_n_u8(uint8x16_t a, const int n);                   // USHLL2 Vd.8H,Vn.16B,#n
 uint32x4_t vshll_high_n_u16(uint16x8_t a, const int n);                  // USHLL2 Vd.4S,Vn.8H,#n
 uint64x2_t vshll_high_n_u32(uint32x4_t a, const int n);                  // USHLL2 Vd.2D,Vn.4S,#n
@@ -1314,15 +1308,9 @@ int32x4_t vmovn_high_s64(int32x2_t r, int64x2_t a);                      // XTN2
 uint8x16_t vmovn_high_u16(uint8x8_t r, uint16x8_t a);                    // XTN2 Vd.16B,Vn.8H
 uint16x8_t vmovn_high_u32(uint16x4_t r, uint32x4_t a);                   // XTN2 Vd.8H,Vn.4S
 uint32x4_t vmovn_high_u64(uint32x2_t r, uint64x2_t a);                   // XTN2 Vd.4S,Vn.2D
-int16x8_t vmovl_s8(int8x8_t a);                                          // SSHLL Vd.8H,Vn.8B,#0
-int32x4_t vmovl_s16(int16x4_t a);                                        // SSHLL Vd.4S,Vn.4H,#0
-int64x2_t vmovl_s32(int32x2_t a);                                        // SSHLL Vd.2D,Vn.2S,#0
 uint16x8_t vmovl_u8(uint8x8_t a);                                        // USHLL Vd.8H,Vn.8B,#0
 uint32x4_t vmovl_u16(uint16x4_t a);                                      // USHLL Vd.4S,Vn.4H,#0
 uint64x2_t vmovl_u32(uint32x2_t a);                                      // USHLL Vd.2D,Vn.2S,#0
-int16x8_t vmovl_high_s8(int8x16_t a);                                    // SSHLL2 Vd.8H,Vn.16B,#0
-int32x4_t vmovl_high_s16(int16x8_t a);                                   // SSHLL2 Vd.4S,Vn.8H,#0
-int64x2_t vmovl_high_s32(int32x4_t a);                                   // SSHLL2 Vd.2D,Vn.4S,#0
 uint16x8_t vmovl_high_u8(uint8x16_t a);                                  // USHLL2 Vd.8H,Vn.16B,#0
 uint32x4_t vmovl_high_u16(uint16x8_t a);                                 // USHLL2 Vd.4S,Vn.8H,#0
 uint64x2_t vmovl_high_u32(uint32x4_t a);                                 // USHLL2 Vd.2D,Vn.4S,#0

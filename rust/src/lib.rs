@@ -269,6 +269,41 @@ pub fn load_with_options<S: BnStrCompatible, O: IntoJson>(
     }
 }
 
+pub fn load_view<O: IntoJson>(
+    bv: &BinaryView,
+    update_analysis_and_wait: bool,
+    options: Option<O>,
+) -> Option<rc::Ref<binaryview::BinaryView>> {
+    let options_or_default = if let Some(opt) = options {
+        opt.get_json_string()
+            .ok()?
+            .into_bytes_with_nul()
+            .as_ref()
+            .to_vec()
+    } else {
+        Metadata::new_of_type(MetadataType::KeyValueDataType)
+            .get_json_string()
+            .ok()?
+            .as_ref()
+            .to_vec()
+    };
+
+    let handle = unsafe {
+        binaryninjacore_sys::BNLoadBinaryView(
+            bv.handle as *mut _,
+            update_analysis_and_wait,
+            options_or_default.as_ptr() as *mut core::ffi::c_char,
+            None,
+        )
+    };
+
+    if handle.is_null() {
+        None
+    } else {
+        Some(unsafe { BinaryView::from_raw(handle) })
+    }
+}
+
 pub fn install_directory() -> Result<PathBuf, ()> {
     let s: *mut std::os::raw::c_char = unsafe { binaryninjacore_sys::BNGetInstallDirectory() };
     if s.is_null() {

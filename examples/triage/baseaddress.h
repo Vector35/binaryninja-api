@@ -6,12 +6,14 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QTableWidget>
 #include <QHeaderView>
+#include <QCoreApplication>
 #include "theme.h"
 #include "fontsettings.h"
 #include "expandablegroup.h"
 #include "viewframe.h"
 #include "binaryninjaapi.h"
 #include "binaryninjacore.h"
+#include "progresstask.h"
 
 struct BaseAddressDetectionQtInputs
 {
@@ -77,6 +79,7 @@ class BaseAddressDetectionWidget : public QWidget
 	ExpandableGroup* m_advancedSettingsGroup;
 
 	void DetectBaseAddress();
+	const std::string GetRebaseViewName();
 	void RebaseWithFullAnalysis();
 	void Abort();
 	void HandleResults(const BaseAddressDetectionQtResults& results);

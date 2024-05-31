@@ -250,12 +250,24 @@ void BaseAddressDetectionWidget::Abort()
 }
 
 
+const std::string BaseAddressDetectionWidget::GetRebaseViewName()
+{
+	auto fileMetadata = m_view->GetFile();
+	if (!fileMetadata)
+		return "";
+
+	for (const auto& viewName : fileMetadata->GetExistingViews())
+	{
+		if (viewName != "Raw" && viewName != "Debugger")
+			return viewName;
+	}
+
+	return "";
+}
+
+
 void BaseAddressDetectionWidget::RebaseWithFullAnalysis()
 {
-	auto mappedView = m_view->GetFile()->GetViewOfType("Mapped");
-	if (!mappedView)
-		return;
-
 	auto fileMetadata = m_view->GetFile();
 	if (!fileMetadata)
 		return;
@@ -268,12 +280,45 @@ void BaseAddressDetectionWidget::RebaseWithFullAnalysis()
 		return;
 	}
 
-	if (!fileMetadata->Rebase(mappedView, address))
-		return;
+	auto rebaseViewName = GetRebaseViewName();
+	if (!rebaseViewName.empty())
+	{
+		// Found an existing view that isn't raw, rebase it
+		auto view = m_view->GetFile()->GetViewOfType(rebaseViewName);
+		if (!view)
+			return;
 
-	BinaryNinja::Settings::Instance()->Set("analysis.mode", "full", mappedView);
-	mappedView->Reanalyze();
+		bool result = false;
+		ProgressTask* task = new ProgressTask(this, "Rebase", "Rebasing...", "Cancel", [&](std::function<bool(size_t, size_t)> progress) {
+			result = fileMetadata->Rebase(view, address, progress);
+		});
+		task->wait();
+		if (!result)
+			return;
 
+		view->Reanalyze();
+	}
+	else
+	{
+		// Only a raw view exists - load the binary and run full analysis
+		BinaryNinja::Settings::Instance()->Set("analysis.mode", "full", m_view);
+		map<string, BinaryNinja::Ref<BinaryNinja::Metadata>> metadataMap = {
+			{"analysis.linearSweep.permissive", new BinaryNinja::Metadata(true)},
+			{"loader.imageBase", new BinaryNinja::Metadata((uint64_t) address)},
+		};
+
+		if (m_inputs.ArchitectureBox->currentText() != "auto detect")
+			metadataMap["loader.platform"] = new BinaryNinja::Metadata(m_inputs.ArchitectureBox->currentText().toStdString());
+
+		auto options = new BinaryNinja::Metadata(metadataMap);
+		auto newView = Load(m_view->GetFile()->GetViewOfType("Raw"), false, options->GetJsonString());
+		if (!newView)
+			return;
+
+		rebaseViewName = newView->GetTypeName();
+	}
+
+	// Refresh the UI and jump to Linear view
 	auto frame = ViewFrame::viewFrameForWidget(this);
 	if (!frame)
 		return;
@@ -286,23 +331,15 @@ void BaseAddressDetectionWidget::RebaseWithFullAnalysis()
 	if (!uiContext)
 		return;
 
-	uiContext->recreateViewFrames(fileContext);
 	fileContext->refreshDataViewCache();
+	uiContext->recreateViewFrames(fileContext);
+	QCoreApplication::processEvents();
 
-	auto newFrame = ViewFrame::viewFrameForWidget(this);
+	auto newFrame = fileContext->getCurrentViewFrame();
 	if (!newFrame)
 		return;
 
-	auto view = newFrame->getCurrentViewInterface();
-	if (!view)
-		return;
-
-	auto data = view->getData();
-	if (!data)
-		return;
-
-	if (!view->navigate(address))
-		data->Navigate("Linear:Mapped", address);
+	newFrame->navigate(QString("Linear:%1").arg(QString::fromStdString(rebaseViewName)), address);
 }
 
 

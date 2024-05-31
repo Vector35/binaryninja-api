@@ -3410,6 +3410,7 @@ impl Drop for UserVariableValues {
 /////////////////////////
 // ConstantReference
 
+#[repr(C)]
 #[derive(Copy, Clone, Eq, Hash, PartialEq)]
 pub struct ConstantReference {
     pub value: i64,

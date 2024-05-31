@@ -18409,12 +18409,17 @@ namespace BinaryNinja::Collaboration
 		Ref<Snapshot> GetFirstSnapshot();
 		Ref<Snapshot> GetSecondSnapshot();
 
-		std::any GetPathItem(const std::string& path);
+		template<typename T> T GetPathItem(const std::string& key);
 
 		bool Success(std::nullopt_t value);
 		bool Success(std::optional<const nlohmann::json*> value);
 		bool Success(const std::optional<nlohmann::json>& value);
 	};
+
+	template<> std::any AnalysisMergeConflict::GetPathItem<std::any>(const std::string& path);
+	template<> std::string AnalysisMergeConflict::GetPathItem<std::string>(const std::string& path);
+	template<> uint64_t AnalysisMergeConflict::GetPathItem<uint64_t>(const std::string& path);
+	template<> nlohmann::json AnalysisMergeConflict::GetPathItem<nlohmann::json>(const std::string& path);
 
 	class TypeArchiveMergeConflict : public CoreRefCountObject<BNTypeArchiveMergeConflict, BNNewTypeArchiveMergeConflictReference, BNFreeTypeArchiveMergeConflict>
 	{

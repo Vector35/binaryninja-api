@@ -2101,12 +2101,62 @@ Ref<Snapshot> AnalysisMergeConflict::GetSecondSnapshot()
 }
 
 
-std::any AnalysisMergeConflict::GetPathItem(const std::string& path)
+template <>
+std::any AnalysisMergeConflict::GetPathItem<std::any>(const std::string& path)
 {
 	void* val = BNAnalysisMergeConflictGetPathItem(m_object, path.c_str());
 	if (val == nullptr)
-		return {};
+		throw SyncException(fmt::format("Failed to find merge conflict path item \"{}\"", path));
 	return *(std::any*)val;
+}
+
+
+template <>
+uint64_t AnalysisMergeConflict::GetPathItem<uint64_t>(const std::string& path)
+{
+	std::any anyVal = GetPathItem<std::any>(path);
+	try
+	{
+		return std::any_cast<uint64_t>(anyVal);
+	}
+	catch (const std::exception& e)
+	{
+		throw SyncException(fmt::format(
+			"Failed to cast merge conflict path item \"{}\" from \"{}\" to \"{}\": {}",
+			path, anyVal.type().name(), typeid(uint64_t).name(), e.what()
+		));
+	}
+}
+
+
+template <>
+std::string AnalysisMergeConflict::GetPathItem<std::string>(const std::string& path)
+{
+	char* val = BNAnalysisMergeConflictGetPathItemString(m_object, path.c_str());
+	if (val == nullptr)
+		throw SyncException(fmt::format("Failed to find merge conflict path item \"{}\"", path));
+
+	std::string strVal = val;
+	BNFreeString(val);
+	return strVal;
+}
+
+
+template <>
+nlohmann::json AnalysisMergeConflict::GetPathItem<nlohmann::json>(const std::string& path)
+{
+	std::any anyVal = GetPathItem<std::any>(path);
+	try
+	{
+		return std::any_cast<nlohmann::json>(anyVal);
+	}
+	catch (const std::exception& e)
+	{
+		throw SyncException(fmt::format(
+			"Failed to cast merge conflict path item \"{}\" from \"{}\" to \"{}\": {}",
+			path, anyVal.type().name(), typeid(nlohmann::json).name(), e.what()
+		));
+	}
 }
 
 

@@ -5,7 +5,7 @@ use std::{ffi, mem};
 use binaryninjacore_sys::*;
 
 use crate::metadata::Metadata;
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::string::{BnStrCompatible, BnString};
 
 #[repr(C)]
@@ -54,7 +54,7 @@ impl Project {
     /// Open an existing project
     ///
     /// * `path` - Path to the project directory (.bnpr) or project metadata file (.bnpm)
-    pub fn open_file<P: BnStrCompatible>(path: P) -> Self {
+    pub fn open_project<P: BnStrCompatible>(path: P) -> Self {
         let path_raw = path.into_bytes_with_nul();
         let handle = unsafe { BNOpenProject(path_raw.as_ref().as_ptr() as *const ffi::c_char) };
         unsafe { Self::from_raw(NonNull::new(handle).unwrap()) }
@@ -110,7 +110,7 @@ impl Project {
     }
 
     /// Set the description of the project
-    pub fn set_desription<S: BnStrCompatible>(&self, value: S) {
+    pub fn set_description<S: BnStrCompatible>(&self, value: S) {
         let value = value.into_bytes_with_nul();
         unsafe {
             BNProjectSetDescription(self.as_raw(), value.as_ref().as_ptr() as *const ffi::c_char)
@@ -118,15 +118,15 @@ impl Project {
     }
 
     /// Retrieves metadata stored under a key from the project
-    pub fn query_metadata<S: BnStrCompatible>(&self, key: S) -> Metadata {
+    pub fn query_metadata<S: BnStrCompatible>(&self, key: S) -> Ref<Metadata> {
         let key = key.into_bytes_with_nul();
         let result = unsafe {
             BNProjectQueryMetadata(self.as_raw(), key.as_ref().as_ptr() as *const ffi::c_char)
         };
-        unsafe { Metadata::from_raw(result) }
+        unsafe { Metadata::ref_from_raw(result) }
     }
 
-    /// Stores metadata within the project
+    /// Stores metadata within the project,
     ///
     /// * `key` - Key under which to store the Metadata object
     /// * `value` - Object to store

@@ -790,6 +790,7 @@ fn init_plugin() -> bool {
             "title" : "Symbol Server List",
             "type" : "array",
             "elementType" : "string",
+            "sorted" : false,
             "default" : ["https://msdl.microsoft.com/download/symbols"],
             "aliases" : ["pdb.symbol-server-list", "pdb.symbolServerList"],
             "description" : "List of servers to query for pdb symbols.",

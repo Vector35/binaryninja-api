@@ -188,10 +188,9 @@ impl MediumLevelILFunction {
     /// # use binaryninja::mlil::MediumLevelILFunction;
     /// # use binaryninja::types::PossibleValueSet;
     /// # let mlil_fun: MediumLevelILFunction = todo!();
-    /// let (mlil_var, arch_addr, _val) = mlil_fun.user_var_values().all().next().unwrap();
-    /// let def_address = arch_addr.address;
+    /// let var_val = mlil_fun.user_var_values().get(0);
     /// let var_value = PossibleValueSet::ConstantValue{value: 5};
-    /// mlil_fun.set_user_var_value(&mlil_var, def_address, var_value).unwrap();
+    /// mlil_fun.set_user_var_value(&var_val.var, var_val.def_site.address, var_value).unwrap();
     /// ```
     pub fn set_user_var_value(
         &self,

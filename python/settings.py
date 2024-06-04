@@ -65,6 +65,7 @@ class Settings:
 		"title"               string                                   None                 No         Concise Setting Title
 		"type"                string                                   None                 No         {"array", "boolean", "number", "string"}
 		"elementType"         string                                   "type" is "array"    No         {"string"}
+		"sorted"              boolean                                  "type" is "array"    Yes        Automatically sort list items (default is true)
 		"enum"                array : {string}                         "type" is "string"   Yes        Enumeration definitions
 		"enumDescriptions"    array : {string}                         "type" is "string"   Yes        Enumeration descriptions that match "enum" array
 		"minValue"            number                                   "type" is "number"   Yes        Specify 0 to infer unsigned (default is signed)

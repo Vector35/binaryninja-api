@@ -103,6 +103,10 @@ impl InstructionTextToken {
         mem::transmute(raw)
     }
 
+    pub(crate) fn into_raw(self) -> BNInstructionTextToken {
+        mem::ManuallyDrop::new(self).0
+    }
+
     pub fn new(text: &str, contents: InstructionTextTokenContents) -> Self {
         let (value, address) = match contents {
             InstructionTextTokenContents::Integer(v) => (v, 0),
@@ -378,7 +382,7 @@ impl From<&Vec<&str>> for DisassemblyTextLine {
     fn from(string_tokens: &Vec<&str>) -> Self {
         let mut tokens: Box<[BNInstructionTextToken]> = string_tokens
             .iter()
-            .map(|&token| InstructionTextToken::new(token, InstructionTextTokenContents::Text).0)
+            .map(|&token| InstructionTextToken::new(token, InstructionTextTokenContents::Text).into_raw())
             .collect();
 
         // let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() };  // Can't use for now...still a rust nighly feature

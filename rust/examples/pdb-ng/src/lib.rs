@@ -24,7 +24,7 @@ use anyhow::{anyhow, Result};
 use log::{debug, error, info, LevelFilter};
 use pdb::PDB;
 
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser};
 use binaryninja::downloadprovider::{DownloadInstanceInputOutputCallbacks, DownloadProvider};
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet};
@@ -238,48 +238,7 @@ fn read_from_sym_store(path: &String) -> Result<(bool, Vec<u8>)> {
     Ok((true, data))
 }
 
-fn sym_store_exists(path: &String) -> Result<bool> {
-    info!("Check file exists: {}", path);
-    if !path.contains("://") {
-        // Local file
-        if PathBuf::from(path).exists() {
-            return Ok(true);
-        } else {
-            return Ok(false);
-        }
-    }
-
-    if !Settings::new("").get_bool("network.pdbAutoDownload", None, None) {
-        return Err(anyhow!("Auto download disabled"));
-    }
-    info!("HEAD: {}", path);
-
-    // Download from remote
-    let dp =
-        DownloadProvider::try_default().map_err(|_| anyhow!("No default download provider"))?;
-    let mut inst = dp
-        .create_instance()
-        .map_err(|_| anyhow!("Couldn't create download instance"))?;
-    let result = inst
-        .perform_custom_request(
-            "HEAD",
-            path.clone(),
-            HashMap::<BnString, BnString>::new(),
-            DownloadInstanceInputOutputCallbacks {
-                read: None,
-                write: None,
-                progress: None,
-            },
-        )
-        .map_err(|e| anyhow!(e.to_string()))?;
-    if result.status_code != 200 {
-        return Ok(false);
-    }
-
-    Ok(true)
-}
-
-fn search_sym_store(store_path: &String, pdb_info: &PDBInfo) -> Result<Option<String>> {
+fn search_sym_store(store_path: &String, pdb_info: &PDBInfo) -> Result<Option<Vec<u8>>> {
     // https://www.technlg.net/windows/symbol-server-path-windbg-debugging/
     // For symbol servers, to identify the files path easily, Windbg uses the format
     // binaryname.pdb/GUID
@@ -302,17 +261,17 @@ fn search_sym_store(store_path: &String, pdb_info: &PDBInfo) -> Result<Option<St
     // We don't care about #3 because it says we don't
 
     let direct_path = base_path.clone() + "/" + &pdb_info.file_name;
-    if sym_store_exists(&direct_path)? {
-        return Ok(Some(direct_path));
+    if let Ok((_remote, conts)) = read_from_sym_store(&direct_path) {
+        return Ok(Some(conts));
     }
 
     let file_ptr = base_path.clone() + "/" + "file.ptr";
-    if sym_store_exists(&file_ptr)? {
-        let path = String::from_utf8(read_from_sym_store(&file_ptr)?.1)?;
+    if let Ok((_remote, conts)) = read_from_sym_store(&file_ptr) {
+        let path = String::from_utf8(conts)?;
         // PATH:https://full/path
         if path.starts_with("PATH:") {
-            if sym_store_exists(&path[5..].to_string())? {
-                return Ok(Some(path));
+            if let Ok((_remote, conts)) = read_from_sym_store(&path[5..].to_string()) {
+                return Ok(Some(conts));
             }
         }
     }
@@ -396,14 +355,13 @@ struct PDBParser;
 impl PDBParser {
     fn load_from_file(
         &self,
-        filename: &String,
+        conts: &Vec<u8>,
         debug_info: &mut DebugInfo,
         view: &BinaryView,
         progress: &Box<dyn Fn(usize, usize) -> Result<(), ()>>,
         check_guid: bool,
         did_download: bool,
     ) -> Result<()> {
-        let (_downloaded, conts) = read_from_sym_store(filename)?;
         let mut pdb = PDB::open(Cursor::new(&conts))?;
 
         if let Some(info) = parse_pdb_info(view) {
@@ -593,11 +551,9 @@ impl CustomDebugInfoParser for PDBParser {
         debug_file: &BinaryView,
         progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool {
-        let filename = debug_file.file().filename();
-
         if is_pdb(debug_file) {
             match self.load_from_file(
-                &filename.to_string(),
+                &debug_file.read_vec(0, debug_file.len()),
                 debug_info,
                 view,
                 &progress,
@@ -625,9 +581,9 @@ impl CustomDebugInfoParser for PDBParser {
                 if let Ok(stores) = stores {
                     for store in stores {
                         match search_sym_store(&store, &info) {
-                            Ok(Some(path)) => {
+                            Ok(Some(conts)) => {
                                 match self
-                                    .load_from_file(&path, debug_info, view, &progress, true, true)
+                                    .load_from_file(&conts, debug_info, view, &progress, true, true)
                                 {
                                     Ok(_) => return true,
                                     Err(e) if e.to_string() == "Cancelled" => return false,
@@ -643,10 +599,16 @@ impl CustomDebugInfoParser for PDBParser {
 
             // Does the raw path just exist?
             if PathBuf::from(&info.path).exists() {
-                match self.load_from_file(&info.path, debug_info, view, &progress, true, false) {
-                    Ok(_) => return true,
+                match fs::read(&info.path) {
+                    Ok(conts) => match self
+                        .load_from_file(&conts, debug_info, view, &progress, true, false)
+                    {
+                        Ok(_) => return true,
+                        Err(e) if e.to_string() == "Cancelled" => return false,
+                        Err(e) => debug!("Skipping, {}", e.to_string()),
+                    },
                     Err(e) if e.to_string() == "Cancelled" => return false,
-                    Err(e) => debug!("Skipping, {}", e.to_string()),
+                    Err(e) => debug!("Could not read pdb: {}", e.to_string()),
                 }
             }
 
@@ -655,28 +617,30 @@ impl CustomDebugInfoParser for PDBParser {
             potential_path.pop();
             potential_path.push(&info.file_name);
             if potential_path.exists() {
-                match self.load_from_file(
+                match fs::read(
                     &potential_path
                         .to_str()
                         .expect("Potential path is a real string")
                         .to_string(),
-                    debug_info,
-                    view,
-                    &progress,
-                    true,
-                    false,
                 ) {
-                    Ok(_) => return true,
+                    Ok(conts) => match self
+                        .load_from_file(&conts, debug_info, view, &progress, true, false)
+                    {
+                        Ok(_) => return true,
+                        Err(e) if e.to_string() == "Cancelled" => return false,
+                        Err(e) => debug!("Skipping, {}", e.to_string()),
+                    },
                     Err(e) if e.to_string() == "Cancelled" => return false,
-                    Err(e) => debug!("Skipping, {}", e.to_string()),
+                    Err(e) => debug!("Could not read pdb: {}", e.to_string()),
                 }
             }
 
             // Check the local symbol store
             if let Ok(local_store_path) = active_local_cache(Some(view)) {
                 match search_sym_store(&local_store_path, &info) {
-                    Ok(Some(path)) => {
-                        match self.load_from_file(&path, debug_info, view, &progress, true, false) {
+                    Ok(Some(conts)) => {
+                        match self.load_from_file(&conts, debug_info, view, &progress, true, false)
+                        {
                             Ok(_) => return true,
                             Err(e) if e.to_string() == "Cancelled" => return false,
                             Err(e) => debug!("Skipping, {}", e.to_string()),
@@ -696,8 +660,8 @@ impl CustomDebugInfoParser for PDBParser {
 
             for server in server_list.iter() {
                 match search_sym_store(&server.to_string(), &info) {
-                    Ok(Some(path)) => {
-                        match self.load_from_file(&path, debug_info, view, &progress, true, true) {
+                    Ok(Some(conts)) => {
+                        match self.load_from_file(&conts, debug_info, view, &progress, true, true) {
                             Ok(_) => return true,
                             Err(e) if e.to_string() == "Cancelled" => return false,
                             Err(e) => debug!("Skipping, {}", e.to_string()),

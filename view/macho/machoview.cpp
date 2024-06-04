@@ -1992,6 +1992,12 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 	EndBulkModifySymbols();
 
+	for (auto& [relocation, name] : header.externalRelocations)
+	{
+		if (auto symbol = GetSymbolByRawName(name, GetExternalNameSpace()); symbol)
+			DefineRelocation(m_arch, relocation, symbol, relocation.address);
+	}
+
 	auto relocationHandler = m_arch->GetRelocationHandler("Mach-O");
 	if (relocationHandler)
 	{
@@ -2465,6 +2471,7 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 	try {
 		reader.Seek(tableOffset);
 		auto table = reader.Read(tableSize);
+		BNRelocationInfo externReloc;
 
 		BNSymbolType symtype = incomingType;
 		// uint64_t ordinal = 0;
@@ -2525,6 +2532,15 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 						throw MachoFormatException();
 
 					DefineMachoSymbol(symtype, string(name), address, binding, true);
+
+					memset(&externReloc, 0, sizeof(externReloc));
+					externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+					externReloc.address = address;
+					externReloc.size = m_addressSize;
+					externReloc.pcRelative = false;
+					externReloc.external = true;
+					header.externalRelocations.emplace_back(externReloc, string(name));
+
 					address += m_addressSize;
 					break;
 				case BindOpcodeDoBindAddAddressULEB:
@@ -2532,6 +2548,15 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 						throw MachoFormatException();
 
 					DefineMachoSymbol(symtype, string(name), address, binding, true);
+
+					memset(&externReloc, 0, sizeof(externReloc));
+					externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+					externReloc.address = address;
+					externReloc.size = m_addressSize;
+					externReloc.pcRelative = false;
+					externReloc.external = true;
+					header.externalRelocations.emplace_back(externReloc, string(name));
+
 					address += m_addressSize;
 					address += readLEB128(table, tableSize, i);
 					break;
@@ -2540,6 +2565,14 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 						throw MachoFormatException();
 
 					DefineMachoSymbol(symtype, string(name), address, binding, true);
+
+					memset(&externReloc, 0, sizeof(externReloc));
+					externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+					externReloc.address = address;
+					externReloc.size = m_addressSize;
+					externReloc.pcRelative = false;
+					externReloc.external = true;
+					header.externalRelocations.emplace_back(externReloc, string(name));
 					address += m_addressSize;
 					address += (imm * m_addressSize);
 					break;
@@ -2552,8 +2585,17 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 					uint64_t skip = readLEB128(table, tableSize, i);
 					for (; count > 0; count--)
 					{
-						address += skip + m_addressSize;
 						DefineMachoSymbol(symtype, string(name), address, binding, true);
+
+						memset(&externReloc, 0, sizeof(externReloc));
+						externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+						externReloc.address = address;
+						externReloc.size = m_addressSize;
+						externReloc.pcRelative = false;
+						externReloc.external = true;
+						header.externalRelocations.emplace_back(externReloc, string(name));
+
+						address += skip + m_addressSize;
 					}
 					break;
 				}
@@ -2595,7 +2637,7 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 		if (header.chainedFixupsPresent)
 		{
 			m_logger->LogDebug("Chained Fixups");
-			ParseChainedFixups(header.chainedFixups);
+			ParseChainedFixups(header, header.chainedFixups);
 		}
 		if (header.exportTriePresent && header.isMainHeader)
 			ParseExportTrie(reader, header.exportTrie);
@@ -2793,9 +2835,7 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 }
 
 
-
-
-void MachoView::ParseChainedFixups(linkedit_data_command chainedFixups)
+void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command chainedFixups)
 {
 	if (!chainedFixups.dataoff)
 		return;
@@ -3103,10 +3143,18 @@ void MachoView::ParseChainedFixups(linkedit_data_command chainedFixups)
 								if (!entry.name.empty())
 								{
 									reloc.address = targetAddress;
-									DefineRelocation(m_arch, reloc, 0, reloc.address);
-									DefineMachoSymbol(ImportedDataSymbol, entry.name,
+									DefineMachoSymbol(ImportAddressSymbol, entry.name,
 										targetAddress,
 										entry.weak ? WeakBinding : GlobalBinding, true);
+
+									BNRelocationInfo externReloc;
+									memset(&externReloc, 0, sizeof(externReloc));
+									externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+									externReloc.address = targetAddress;
+									externReloc.size = m_addressSize;
+									externReloc.pcRelative = false;
+									externReloc.external = true;
+									header.externalRelocations.emplace_back(externReloc, entry.name);
 								}
 								else
 								{

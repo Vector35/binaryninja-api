@@ -1238,6 +1238,8 @@ namespace BinaryNinja
 		std::vector<std::pair<uint64_t, bool>> entryPoints;
 		std::vector<uint64_t> m_entryPoints; //list of entrypoints
 
+		std::vector<std::pair<BNRelocationInfo, std::string>> externalRelocations;
+
 		symtab_command symtab;
 		dysymtab_command dysymtab;
 		dyld_info_command dyldInfo;
@@ -1345,7 +1347,7 @@ namespace BinaryNinja
 			BNSymbolBinding binding);
 		bool GetSectionPermissions(MachOHeader& header, uint64_t address, uint32_t &flags);
 		bool GetSegmentPermissions(MachOHeader& header, uint64_t address, uint32_t &flags);
-		void ParseChainedFixups(linkedit_data_command chainedFixups);
+		void ParseChainedFixups(MachOHeader& header, linkedit_data_command chainedFixups);
 
 		virtual uint64_t PerformGetEntryPoint() const override;
 

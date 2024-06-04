@@ -1833,6 +1833,25 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 	Ref<Platform> platform = m_plat ? m_plat : g_machoViewType->GetPlatform(0, m_arch);
 
+	bool parseObjCStructs = true;
+	if (settings && settings->Contains("loader.macho.processObjectiveC"))
+		parseObjCStructs = settings->Get<bool>("loader.macho.processObjectiveC", this);
+	if (!ObjCProcessor::ViewHasObjCMetadata(this))
+		parseObjCStructs = false;
+	if (parseObjCStructs)
+	{
+		m_objcProcessor = new ObjCProcessor(this, m_backedByDatabase);
+
+		if (!settings) // Add our defaults
+		{
+			Ref<Settings> programSettings = Settings::Instance();
+			if (programSettings->Get<bool>("corePlugins.workflows.objc"))
+			{
+				programSettings->Set("workflows.enable", true, this);
+				programSettings->Set("workflows.functionWorkflow", "core.function.objectiveC", this);
+			}
+		}
+	}
 
 	// parse thread starts section if available
 	bool rebaseThreadStarts = false;
@@ -2265,6 +2284,19 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		{
 			LogError("Error when applying Mach-O header types at %" PRIx64, imageBase);
 		}
+	}
+
+	if (parseObjCStructs)
+	{
+		try {
+			m_objcProcessor->ProcessObjCData();
+		}
+		catch (std::exception& ex)
+		{
+			m_logger->LogError("Failed to process Objective-C Metadata. Binary may be malformed");
+			m_logger->LogError("Error: %s", ex.what());
+		}
+		delete m_objcProcessor;
 	}
 
 
@@ -3204,6 +3236,11 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 
 							reloc.address = GetStart() + (chainEntryAddress - m_universalImageOffset);
 							DefineRelocation(m_arch, reloc, entryOffset, reloc.address);
+
+							if (m_objcProcessor)
+							{
+								m_objcProcessor->AddRelocatedPointer(reloc.address, entryOffset);
+							}
 						}
 
 						chainEntryAddress += (nextEntryStrideCount * strideSize);
@@ -3413,6 +3450,23 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 	{
 		if (settings->Contains(override))
 			settings->UpdateProperty(override, "readOnly", false);
+	}
+
+	if (ObjCProcessor::ViewHasObjCMetadata(viewRef))
+	{
+		settings->RegisterSetting("loader.macho.processObjectiveC",
+			R"({
+			"title" : "Process Objective-C metadata",
+			"type" : "boolean",
+			"default" : true,
+			"description" : "Processes Objective-C structures, applying method names and types from encoded metadata"
+			})");
+		Ref<Settings> programSettings = Settings::Instance();
+		if (programSettings->Get<bool>("corePlugins.workflows.objc"))
+		{
+			programSettings->Set("workflows.enable", true, viewRef);
+			programSettings->Set("workflows.functionWorkflow", "core.function.objectiveC", viewRef);
+		}
 	}
 
 	// register additional settings

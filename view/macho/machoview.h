@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "binaryninjaapi.h"
+#include "objc.h"
 
 //These are laready defined in one of the osx headers we want to override
 #undef CPU_SUBTYPE_INTEL
@@ -1304,6 +1305,8 @@ namespace BinaryNinja
 			QualifiedName dylibCommandQualName;
 			QualifiedName filesetEntryCommandQualName;
 		} m_typeNames;
+
+		ObjCProcessor* m_objcProcessor = nullptr;
 
 		uint64_t m_universalImageOffset;
 		bool m_parseOnly, m_backedByDatabase;

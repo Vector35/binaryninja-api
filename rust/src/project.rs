@@ -1403,10 +1403,10 @@ mod test {
 
         // check folders
         let folders = [
-            ("folder_1", None, folder_1_desc),
-            ("folder_2", Some(folder_2_id), folder_2_desc),
-            (&tmp_folder_1_name, None, folder_3_desc),
-            (&tmp_folder_2_name, None, folder_4_desc),
+            ("folder_1", None),
+            ("folder_2", Some(folder_2_id)),
+            (&tmp_folder_1_name, None),
+            (&tmp_folder_2_name, None),
         ];
         for folder in project.folders().unwrap().iter() {
             let found = folders
@@ -1416,27 +1416,26 @@ mod test {
             if let Some(id) = found.1 {
                 assert_eq!(folder.id().as_str(), id);
             }
-            assert_eq!(folder.description().as_str(), found.2);
         }
 
         // check files
         #[rustfmt::skip]
         let files = [
-            ("file_1", &file_1_data[..], file_1_desc, None, None),
-            ("file_2", &file_2_data[..], file_2_desc, Some(file_2_id), None),
-            ("file_3", &file_3_data[..], file_3_desc, None, None),
-            ("file_4", &file_4_data[..], file_4_desc, Some(file_4_id), Some(file_4_time)),
-            ("file_5", &input_file_1_data[..], file_5_desc, None, None),
-            ("file_6", &input_file_2_data[..], file_6_desc, Some(file_6_id), Some(file_6_time)),
-            ("input_1", &input_file_1_data[..], "", None, None),
-            ("input_2", &input_file_2_data[..], "", None, None),
+            ("file_1", &file_1_data[..], None, None),
+            ("file_2", &file_2_data[..], Some(file_2_id), None),
+            ("file_3", &file_3_data[..], None, None),
+            ("file_4", &file_4_data[..], Some(file_4_id), Some(file_4_time)),
+            ("file_5", &input_file_1_data[..], None, None),
+            ("file_6", &input_file_2_data[..], Some(file_6_id), Some(file_6_time)),
+            ("input_1", &input_file_1_data[..], None, None),
+            ("input_2", &input_file_2_data[..], None, None),
         ];
         for file in project.files().unwrap().iter() {
             let found = files.iter().find(|f| file.name().as_str() == f.0).unwrap();
-            if let Some(id) = found.3 {
+            if let Some(id) = found.2 {
                 assert_eq!(file.id().as_str(), id);
             }
-            if let Some(time) = found.4 {
+            if let Some(time) = found.3 {
                 assert_eq!(
                     file.creation_time()
                         .duration_since(SystemTime::UNIX_EPOCH)
@@ -1447,7 +1446,6 @@ mod test {
                         .as_secs()
                 );
             }
-            assert_eq!(file.description().as_str(), found.2);
             let content = std::fs::read(file.path_on_disk().as_str()).unwrap();
             assert_eq!(content, found.1);
         }

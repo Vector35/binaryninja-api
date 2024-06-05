@@ -289,8 +289,8 @@ class Database:
 		Trim a snapshot's contents in the database by id, but leave the parent/child
 		hierarchy intact. Future references to this snapshot will return False for has_contents
 		"""
-		if not core.BNRemoveDatabaseSnapshot(self.handle, id):
-			raise RuntimeError("BNRemoveDatabaseSnapshot returned False")
+		if not core.BNTrimDatabaseSnapshot(self.handle, id):
+			raise RuntimeError("BNTrimDatabaseSnapshot returned False")
 
 	def remove_snapshot(self, id: int):
 		"""

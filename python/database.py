@@ -98,22 +98,22 @@ class KeyValueStore:
 		return core.BNIsKeyValueStoreEmpty(self.handle)
 
 	@property
-	def value_size(self) -> bool:
+	def value_size(self) -> int:
 		"""Number of values in the kvs (read-only)"""
 		return core.BNGetKeyValueStoreValueSize(self.handle)
 
 	@property
-	def data_size(self) -> bool:
+	def data_size(self) -> int:
 		"""Length of serialized data (read-only)"""
 		return core.BNGetKeyValueStoreDataSize(self.handle)
 
 	@property
-	def value_storage_size(self) -> bool:
+	def value_storage_size(self) -> int:
 		"""Size of all data in storage (read-only)"""
 		return core.BNGetKeyValueStoreValueStorageSize(self.handle)
 
 	@property
-	def namespace_size(self) -> bool:
+	def namespace_size(self) -> int:
 		"""Number of namespaces pushed with begin_namespace (read-only)"""
 		return core.BNGetKeyValueStoreNamespaceSize(self.handle)
 

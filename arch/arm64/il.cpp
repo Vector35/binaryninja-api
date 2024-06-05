@@ -2270,10 +2270,54 @@ bool GetLowLevelILForInstruction(
 
 		break;
 	}
-	case ARM64_SXTL:
-	case ARM64_SXTL2:
+	case ARM64_SSHL:
+	{
+		Register srcs1[16], srcs2[16], dsts[16];
+		int dst_n = unpack_vector(operand1, dsts);
+		int src1_n = unpack_vector(operand2, srcs1);
+		int src2_n = unpack_vector(operand3, srcs2);
+		if ((dst_n != src1_n) || (src1_n != src2_n) || dst_n == 0)
+			ABORT_LIFT;
+
+		int rsize = get_register_size(dsts[0]);
+		for (int i = 0; i < dst_n; ++i)
+		{
+			il.AddInstruction(il.SetRegister(rsize, dsts[i],
+			    il.ShiftLeft(rsize,
+					il.SignExtend(rsize, il.Register(rsize, srcs1[i])),
+					il.Register(1, srcs2[i]))));
+		}
+
+		break;
+	}
+	case ARM64_SSHR:
+	{
+		// Note: we don't lift SRSHR, because it requires rounding the shifted results
+
+		Register srcs[16], dsts[16];
+		int dst_n = unpack_vector(operand1, dsts);
+		int src_n = unpack_vector(operand2, srcs);
+
+		if ((dst_n != src_n) || dst_n == 0)
+			ABORT_LIFT;
+
+		int rsize = get_register_size(dsts[0]);
+		for (int i = 0; i < dst_n; ++i)
+		{
+			il.AddInstruction(il.SetRegister(rsize, dsts[i],
+			    il.ArithShiftRight(rsize, il.Register(rsize, srcs[i]), il.Const(1, IMM_O(operand3)))));
+		}
+
+		break;
+	}
 	case ARM64_SSHLL:
 	case ARM64_SSHLL2:
+	case ARM64_SXTL:
+	case ARM64_SXTL2:
+	// SHLL{2} is the same as SHLL{2}, except the extension is signed or unsigned "without change of functionality"
+	// (The shift amount is the element size, but is still disassembled to the immediate value in the third operand)
+	case ARM64_SHLL:
+	case ARM64_SHLL2:
 	{
 		Register srcs[16], dsts[16];
 		int dst_n = unpack_vector(operand1, dsts);
@@ -2282,44 +2326,31 @@ bool GetLowLevelILForInstruction(
 		// We cannot check that the src and dst counts are the same here
 		// because the 2 variants use different count arrange specs, e.g.
 		// sxtl2 v0.2d, v1.4s
-		(void) src_n;
+		// (void) src_n;
 
 		int left_shift = 0;
-		if (instr.operation == ARM64_SSHLL || instr.operation == ARM64_SSHLL2)
+		if (instr.operation == ARM64_SSHLL || instr.operation == ARM64_SSHLL2 ||
+			instr.operation == ARM64_SHLL || instr.operation == ARM64_SHLL2)
 			left_shift = IMM_O(operand3);
 
-		int two_variant_shift = 0;
-		if (instr.operation == ARM64_SXTL2 || instr.operation == ARM64_SSHLL2)
-			two_variant_shift = 64;
+		int two_variant_offset = 0;
+		if (instr.operation == ARM64_SXTL2 || instr.operation == ARM64_SSHLL2 || instr.operation == ARM64_SHLL2)
+			two_variant_offset = src_n / 2;
 
 		int dst_size = get_register_size(dsts[0]);
 		int src_size = get_register_size(srcs[0]);
 
 		for (int i = 0; i < dst_n; ++i)
-			if (left_shift && two_variant_shift)
+			if (left_shift)
 				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
-					il.SignExtend(dst_size,
-						il.ShiftLeft(dst_size,
-							il.LogicalShiftRight(src_size,
-								il.Register(src_size, srcs[i]),
-								il.Const(1, two_variant_shift)),
-							il.Const(1, left_shift)))));
-			else if (left_shift)
-				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
-					il.SignExtend(dst_size,
-						il.ShiftLeft(dst_size,
-							il.Register(src_size, srcs[i]),
-							il.Const(1, left_shift)))));
-			else if (two_variant_shift)
-				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
-					il.SignExtend(dst_size,
-						il.LogicalShiftRight(src_size,
-							il.Register(src_size, srcs[i]),
-							il.Const(1, two_variant_shift)))));
+					il.ShiftLeft(dst_size,
+						il.SignExtend(dst_size,
+							il.Register(src_size, srcs[i + two_variant_offset])),
+						il.Const(1, left_shift))));
 			else
 				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
 					il.SignExtend(dst_size,
-						il.Register(src_size, srcs[i]))));
+						il.Register(src_size, srcs[i + two_variant_offset]))));
 
 		break;
 	}
@@ -2442,25 +2473,40 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_UXTL:
 	case ARM64_UXTL2:
+	case ARM64_USHLL:
+	case ARM64_USHLL2:
 	{
 		Register srcs[16], dsts[16];
 		int dst_n = unpack_vector(operand1, dsts);
 		int src_n = unpack_vector(operand2, srcs);
 
-		if (src_n == 0 || dst_n == 0)
-			ABORT_LIFT;
-		if (instr.operation == ARM64_UXTL && (src_n != dst_n))
-			ABORT_LIFT;
-		if (instr.operation == ARM64_UXTL2 && (src_n != 2 * dst_n))
-			ABORT_LIFT;
+		// We cannot check that the src and dst counts are the same here
+		// because the 2 variants use different count arrange specs, e.g.
+		// uxtl2 v0.2d, v1.4s
+		(void) src_n;
+
+		int left_shift = 0;
+		if (instr.operation == ARM64_USHLL || instr.operation == ARM64_USHLL2)
+			left_shift = IMM_O(operand3);
+
+		int two_variant_offset = 0;
+		if (instr.operation == ARM64_UXTL2 || instr.operation == ARM64_USHLL2)
+			two_variant_offset = src_n / 2;
+
+		int dst_size = get_register_size(dsts[0]);
+		int src_size = get_register_size(srcs[0]);
 
 		for (int i = 0; i < dst_n; ++i)
-		{
-			if (instr.operation == ARM64_UXTL)
-				il.AddInstruction(ILSETREG(dsts[i], ILREG(srcs[i])));
+			if (left_shift)
+				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
+					il.ShiftLeft(dst_size,
+						il.ZeroExtend(dst_size,
+							il.Register(src_size, srcs[i + two_variant_offset])),
+						il.Const(1, left_shift))));
 			else
-				il.AddInstruction(ILSETREG(dsts[i], ILREG(srcs[i + src_n / 2])));
-		}
+				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
+					il.ZeroExtend(dst_size,
+						il.Register(src_size, srcs[i + two_variant_offset]))));
 
 		break;
 	}
@@ -2469,8 +2515,30 @@ bool GetLowLevelILForInstruction(
 		    il.Add(REGSZ_O(operand1), ILREG_O(operand4),
 		        il.MultDoublePrecSigned(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
 		break;
+	case ARM64_USHL:
+	{
+		Register srcs1[16], srcs2[16], dsts[16];
+		int dst_n = unpack_vector(operand1, dsts);
+		int src1_n = unpack_vector(operand2, srcs1);
+		int src2_n = unpack_vector(operand3, srcs2);
+		if ((dst_n != src1_n) || (src1_n != src2_n) || dst_n == 0)
+			ABORT_LIFT;
+
+		int rsize = get_register_size(dsts[0]);
+		for (int i = 0; i < dst_n; ++i)
+		{
+			il.AddInstruction(il.SetRegister(rsize, dsts[i],
+			    il.ShiftLeft(rsize,
+					il.Register(rsize, srcs1[i]),
+					il.Register(1, srcs2[i]))));
+		}
+
+		break;
+	}
 	case ARM64_USHR:
 	{
+		// Note: we don't lift URSHR, because it requires rounding the shifted results
+
 		Register srcs[16], dsts[16];
 		int dst_n = unpack_vector(operand1, dsts);
 		int src_n = unpack_vector(operand2, srcs);

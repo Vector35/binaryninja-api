@@ -281,7 +281,6 @@ impl CustomDebugInfoParser for DWARFParser {
         progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool {
         let external_file = if !dwarfreader::is_valid(bv) && dwarfreader::can_use_debuginfod(bv) {
-            //TODO: try to download from debuginfod if there is no debug info in the binary
             if let Ok(debug_view) = helpers::download_debug_info(bv) {
                 Some(debug_view)
             } else {

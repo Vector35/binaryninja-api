@@ -133,6 +133,7 @@ pub mod binarywriter;
 pub mod callingconvention;
 pub mod command;
 pub mod custombinaryview;
+pub mod database;
 pub mod databuffer;
 pub mod debuginfo;
 pub mod demangle;

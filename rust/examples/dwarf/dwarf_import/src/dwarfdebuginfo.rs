@@ -57,7 +57,7 @@ impl FunctionInfoBuilder {
         raw_name: Option<String>,
         return_type: Option<TypeUID>,
         address: Option<u64>,
-        parameters: Vec<Option<(String, TypeUID)>>,
+        parameters: &Vec<Option<(String, TypeUID)>>,
     ) {
         if full_name.is_some() {
             self.full_name = full_name;
@@ -77,13 +77,13 @@ impl FunctionInfoBuilder {
 
         for (i, new_parameter) in parameters.into_iter().enumerate() {
             match self.parameters.get(i) {
-                Some(None) => self.parameters[i] = new_parameter,
+                Some(None) => self.parameters[i] = new_parameter.clone(),
                 Some(Some(_)) => (),
                 // Some(Some((name, _))) if name.as_bytes().is_empty() => {
                 //     self.parameters[i] = new_parameter
                 // }
                 // Some(Some((_, uid))) if *uid == 0 => self.parameters[i] = new_parameter, // TODO : This is a placebo....void types aren't actually UID 0
-                _ => self.parameters.push(new_parameter),
+                _ => self.parameters.push(new_parameter.clone()),
             }
         }
     }
@@ -168,6 +168,8 @@ impl<R: Reader<Offset = usize>> DebugInfoBuilderContext<R> {
 //  info and types to one DIE's UID (T) before adding the completed info to BN's debug info
 pub(crate) struct DebugInfoBuilder {
     functions: Vec<FunctionInfoBuilder>,
+    raw_function_name_indices: HashMap<String, usize>,
+    full_function_name_indices: HashMap<String, usize>,
     types: HashMap<TypeUID, DebugType>,
     data_variables: HashMap<u64, (Option<String>, TypeUID)>,
 }
@@ -176,6 +178,8 @@ impl DebugInfoBuilder {
     pub(crate) fn new() -> Self {
         Self {
             functions: vec![],
+            raw_function_name_indices: HashMap::new(),
+            full_function_name_indices: HashMap::new(),
             types: HashMap::new(),
             data_variables: HashMap::new(),
         }
@@ -188,34 +192,85 @@ impl DebugInfoBuilder {
         raw_name: Option<String>,
         return_type: Option<TypeUID>,
         address: Option<u64>,
-        parameters: Vec<Option<(String, TypeUID)>>,
+        parameters: &Vec<Option<(String, TypeUID)>>,
         variable_arguments: bool,
     ) {
         // Raw names should be the primary key, but if they don't exist, use the full name
         // TODO : Consider further falling back on address/architecture
-        if let Some(function) = self
-            .functions
-            .iter_mut()
-            .find(|func| func.raw_name.is_some() && func.raw_name == raw_name)
-        {
-            function.update(full_name, raw_name, return_type, address, parameters);
-        } else if let Some(function) = self.functions.iter_mut().find(|func| {
-            (func.raw_name.is_none() || raw_name.is_none())
-                && func.full_name.is_some()
-                && func.full_name == full_name
-        }) {
-            function.update(full_name, raw_name, return_type, address, parameters);
-        } else {
-            self.functions.push(FunctionInfoBuilder {
-                full_name,
-                raw_name,
-                return_type,
-                address,
-                parameters,
-                platform: None,
-                variable_arguments,
-            });
+
+        /*
+            If it has a raw_name and we know it, update it and return
+            Else if it has a full_name and we know it, update it and return
+            Else Add a new entry if we don't know the full_name or raw_name
+         */
+
+        if let Some(ident) = &raw_name {
+            // check if we already know about this raw name's index
+            // if we do, and the full name will change, remove the known full index if it exists
+            // update the function
+            // if the full name exists, update the stored index for the full name
+            if let Some(idx) = self.raw_function_name_indices.get(ident) {
+                let function = self.functions.get_mut(*idx).unwrap();
+
+                if function.full_name.is_some() && function.full_name != full_name {
+                    self.full_function_name_indices.remove(function.full_name.as_ref().unwrap());
+                }
+
+                function.update(full_name, raw_name, return_type, address, parameters);
+
+                if function.full_name.is_some()  {
+                    self.full_function_name_indices.insert(function.full_name.clone().unwrap(), *idx);
+                }
+
+                return;
+            }
         }
+
+        else if let Some(ident) = &full_name {
+            // check if we already know about this full name's index
+            // if we do, and the raw name will change, remove the known raw index if it exists
+            // update the function
+            // if the raw name exists, update the stored index for the raw name
+            if let Some(idx) = self.full_function_name_indices.get(ident) {
+                let function = self.functions.get_mut(*idx).unwrap();
+
+                if function.raw_name.is_some() && function.raw_name != raw_name {
+                    self.raw_function_name_indices.remove(function.raw_name.as_ref().unwrap());
+                }
+
+                function.update(full_name, raw_name, return_type, address, parameters);
+
+                if function.raw_name.is_some()  {
+                    self.raw_function_name_indices.insert(function.raw_name.clone().unwrap(), *idx);
+                }
+
+                return;
+            }
+        }
+
+        if raw_name.is_none() && full_name.is_none() {
+            unreachable!("Function entry in DWARF without full or raw name. Please report this issue.");
+        }
+
+        let function = FunctionInfoBuilder {
+            full_name,
+            raw_name,
+            return_type,
+            address,
+            parameters: parameters.clone(),
+            platform: None,
+            variable_arguments,
+        };
+
+        if let Some(n) = &function.full_name {
+            self.full_function_name_indices.insert(n.clone(), self.functions.len());
+        }
+
+        if let Some(n) = &function.raw_name {
+            self.raw_function_name_indices.insert(n.clone(), self.functions.len());
+        }
+
+        self.functions.push(function);
     }
 
     pub(crate) fn functions(&self) -> &[FunctionInfoBuilder] {

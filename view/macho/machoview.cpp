@@ -1921,11 +1921,11 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			}
 			libraries.push_back(new Metadata(string(libName)));
 			// Compose exact name with {install_name}.{platform}.{version}
-			std::string libNameExact = fmt::format("{}.{}.{}", libName, platform->GetName(), libVersion);
+			std::string libNameExact = fmt::format("{}.{}.{}", libName, GetDefaultPlatform()->GetName(), libVersion);
 			Ref<TypeLibrary> typeLib = GetTypeLibrary(libNameExact);
 			if (!typeLib)
 			{
-				vector<Ref<TypeLibrary>> typeLibs = platform->GetTypeLibrariesByName(libNameExact);
+				vector<Ref<TypeLibrary>> typeLibs = GetDefaultPlatform()->GetTypeLibrariesByName(libNameExact);
 				if (typeLibs.size())
 				{
 					typeLib = typeLibs[0];
@@ -1940,7 +1940,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 				typeLib = GetTypeLibrary(libName);
 				if (!typeLib)
 				{
-					vector<Ref<TypeLibrary>> typeLibs = platform->GetTypeLibrariesByName(libName);
+					vector<Ref<TypeLibrary>> typeLibs = GetDefaultPlatform()->GetTypeLibrariesByName(libName);
 					if (typeLibs.size())
 					{
 						typeLib = typeLibs[0];

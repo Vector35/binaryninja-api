@@ -2049,6 +2049,42 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		core.BNRegisterCallingConvention(self.handle, cc.handle)
 
+	def get_default_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+		cc_handle = core.BNGetArchitectureDefaultCallingConvention(self.handle)
+		if cc_handle is None:
+			return None
+		return callingconvention.CallingConvention(handle=cc_handle)
+
+	def set_default_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+		core.BNSetArchitectureDefaultCallingConvention(self.handle, cc.handle)
+
+	def get_cdecl_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+		cc_handle = core.BNGetArchitectureCdeclCallingConvention(self.handle)
+		if cc_handle is None:
+			return None
+		return callingconvention.CallingConvention(handle=cc_handle)
+
+	def set_cdecl_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+		core.BNSetArchitectureCdeclCallingConvention(self.handle, cc.handle)
+
+	def get_stdcall_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+		cc_handle = core.BNGetArchitectureStdcallCallingConvention(self.handle)
+		if cc_handle is None:
+			return None
+		return callingconvention.CallingConvention(handle=cc_handle)
+
+	def set_stdcall_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+		core.BNSetArchitectureStdcallCallingConvention(self.handle, cc.handle)
+
+	def get_fastcall_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+		cc_handle = core.BNGetArchitectureFastcallCallingConvention(self.handle)
+		if cc_handle is None:
+			return None
+		return callingconvention.CallingConvention(handle=cc_handle)
+
+	def set_fastcall_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+		core.BNSetArchitectureFastcallCallingConvention(self.handle, cc.handle)
+
 
 _architecture_cache = {}
 

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::path::PathBuf;
 use std::{
     collections::HashMap,
     ops::Deref,
@@ -303,9 +304,7 @@ pub(crate) fn get_expr_value<R: Reader<Offset = usize>>(
 }
 
 
-pub(crate) fn download_debug_info(view: &BinaryView) -> Result<Ref<BinaryView>, String> {
-    let settings = Settings::new("");
-
+pub(crate) fn get_build_id(view: &BinaryView) -> Result<String, String> {
     let mut build_id: Option<String> = None;
 
     if let Ok(raw_view) = view.raw_view() {
@@ -351,14 +350,24 @@ pub(crate) fn download_debug_info(view: &BinaryView) -> Result<Ref<BinaryView>, 
         }
     }
 
-    if build_id.is_none() {
-        return Err("Failed to get build id".to_string());
+    if let Some(x) = build_id {
+        Ok(x)
     }
+    else {
+        Err("Failed to get build id".to_string())
+    }
+}
+
+
+pub(crate) fn download_debug_info(view: &BinaryView) -> Result<Ref<BinaryView>, String> {
+    let settings = Settings::new("");
+
+    let build_id = get_build_id(view)?;
 
     let debug_server_urls = settings.get_string_list("network.debuginfodServers", Some(view), None);
 
     for debug_server_url in debug_server_urls.iter() {
-        let artifact_url = format!("{}/buildid/{}/debuginfo", debug_server_url, build_id.as_ref().unwrap());
+        let artifact_url = format!("{}/buildid/{}/debuginfo", debug_server_url, build_id);
 
         // Download from remote
         let (tx, rx) = mpsc::channel();
@@ -420,4 +429,48 @@ pub(crate) fn download_debug_info(view: &BinaryView) -> Result<Ref<BinaryView>, 
             .ok_or("Unable to load binary view from downloaded data".to_string());
     }
     return Err("Could not find a server with debug info for this file".to_string());
+}
+
+
+pub(crate) fn load_debug_info_for_build_id(view: &BinaryView) -> Result<Option<Ref<BinaryView>>, String> {
+    let settings = Settings::new("");
+    let debug_info_paths = settings.get_string_list("analysis.debugInfo.debugDirectories", Some(view), None);
+    if debug_info_paths.is_empty() {
+        return Ok(None)
+    }
+
+    for debug_info_path in debug_info_paths.into_iter() {
+        if let Ok(path) = PathBuf::from_str(&debug_info_path.to_string())
+        {
+            let build_id = get_build_id(view)?;
+            let elf_path = path
+                .join(&build_id[..2])
+                .join(&build_id[2..])
+                .join("elf");
+
+            let debug_ext_path = path
+                .join(&build_id[..2])
+                .join(format!("{}.debug", &build_id[2..]));
+
+            let options = "{\"analysis.debugInfo.internal\": false}";
+            let final_path = if debug_ext_path.exists() {
+                debug_ext_path
+            }
+            else if elf_path.exists() {
+                elf_path
+            }
+            else {
+                // No paths exist
+                return Ok(None)
+            };
+            return Ok(
+                binaryninja::load_with_options(
+                    final_path.to_string_lossy().to_string(),
+                    false,
+                    Some(options)
+                )
+            );
+        }
+    }
+    Ok(None)
 }

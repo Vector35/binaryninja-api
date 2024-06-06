@@ -270,7 +270,9 @@ struct DWARFParser;
 
 impl CustomDebugInfoParser for DWARFParser {
     fn is_valid(&self, view: &BinaryView) -> bool {
-        dwarfreader::is_valid(view) || dwarfreader::can_use_debuginfod(view)
+        dwarfreader::is_valid(view) ||
+        dwarfreader::can_use_build_id(view) ||
+        dwarfreader::can_use_debuginfod(view)
     }
 
     fn parse_info(
@@ -280,13 +282,29 @@ impl CustomDebugInfoParser for DWARFParser {
         debug_file: &BinaryView,
         progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool {
-        let external_file = if !dwarfreader::is_valid(bv) && dwarfreader::can_use_debuginfod(bv) {
-            if let Ok(debug_view) = helpers::download_debug_info(bv) {
-                Some(debug_view)
-            } else {
+        let external_file = if !dwarfreader::is_valid(bv) {
+            if dwarfreader::can_use_build_id(bv) {
+                if let Ok(Some(debug_view)) = helpers::load_debug_info_for_build_id(bv) {
+                    Some(debug_view)
+                }
+                else {
+                    if dwarfreader::can_use_debuginfod(bv) {
+                        if let Ok(debug_view) = helpers::download_debug_info(bv) {
+                            Some(debug_view)
+                        } else {
+                            None
+                        }
+                    }
+                    else {
+                        None
+                    }
+                }
+            }
+            else {
                 None
             }
-        } else {
+        }
+        else {
             None
         };
 
@@ -329,6 +347,18 @@ pub extern "C" fn CorePluginInit() -> bool {
 			"elementType" : "string",
 			"default" : [],
             "description" : "Servers to use for fetching debug info for files with a .note.gnu.build-id section.",
+            "ignore" : []
+        }"#,
+    );
+
+    settings.register_setting_json(
+        "analysis.debugInfo.debugDirectories",
+        r#"{
+            "title" : "Debug File Directories",
+            "type" : "array",
+			"elementType" : "string",
+            "default" : [],
+            "description" : "Paths to folder containing debug info stored by build id.",
             "ignore" : []
         }"#,
     );

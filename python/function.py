@@ -3755,7 +3755,7 @@ class DisassemblyTextRenderer:
 		return None
 
 	@basic_block.setter
-	def basic_block(self, block: 'basicblock.BasicBlock') -> None:
+	def basic_block(self, block: Optional['basicblock.BasicBlock']) -> None:
 		if block is not None:
 			core.BNSetDisassemblyTextRendererBasicBlock(self.handle, block.handle)
 		else:
@@ -3776,10 +3776,11 @@ class DisassemblyTextRenderer:
 		return DisassemblySettings(handle=core.BNGetDisassemblyTextRendererSettings(self.handle))
 
 	@settings.setter
-	def settings(self, settings: 'DisassemblySettings') -> None:
+	def settings(self, settings: Optional['DisassemblySettings']) -> None:
 		if settings is not None:
 			core.BNSetDisassemblyTextRendererSettings(self.handle, settings.handle)
-		core.BNSetDisassemblyTextRendererSettings(self.handle, None)
+		else:
+			core.BNSetDisassemblyTextRendererSettings(self.handle, None)
 
 	@property
 	def il(self) -> bool:

@@ -249,7 +249,8 @@ impl DebugInfoBuilder {
         }
 
         if raw_name.is_none() && full_name.is_none() {
-            unreachable!("Function entry in DWARF without full or raw name. Please report this issue.");
+            error!("Function entry in DWARF without full or raw name. Please report this issue.");
+            return;
         }
 
         let function = FunctionInfoBuilder {

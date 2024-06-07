@@ -16,11 +16,17 @@
 
 use binaryninjacore_sys::*;
 
-use crate::string::BnString;
-use crate::{BN_FULL_CONFIDENCE, BN_INVALID_EXPR};
+use crate::architecture::{Architecture, CoreArchitecture};
+use crate::basicblock::BasicBlock;
+use crate::function::{Function, NativeBlock};
+use crate::llil::{FunctionForm, FunctionMutability};
+use crate::string::{BnStrCompatible, BnString};
+use crate::types::StackVariableReference;
+use crate::{hlil, llil, mlil, BN_FULL_CONFIDENCE, BN_INVALID_EXPR};
 
 use crate::rc::*;
 
+use core::ffi;
 use std::convert::From;
 use std::ffi::CStr;
 use std::mem;
@@ -510,5 +516,300 @@ unsafe impl RefCountable for DisassemblySettings {
 
     unsafe fn dec_ref(handle: &Self) {
         BNFreeDisassemblySettings(handle.handle);
+    }
+}
+
+#[repr(transparent)]
+pub struct DisassemblyTextRenderer {
+    handle: ptr::NonNull<BNDisassemblyTextRenderer>,
+}
+
+impl DisassemblyTextRenderer {
+    pub unsafe fn from_raw(handle: ptr::NonNull<BNDisassemblyTextRenderer>) -> Self {
+        Self { handle }
+    }
+
+    #[allow(clippy::mut_from_ref)]
+    pub unsafe fn as_raw(&self) -> &mut BNDisassemblyTextRenderer {
+        unsafe { &mut *self.handle.as_ptr() }
+    }
+
+    pub fn from_function(func: &Function, settings: Option<&DisassemblySettings>) -> Self {
+        let settings_ptr = settings.map(|s| s.handle).unwrap_or(ptr::null_mut());
+        let result = unsafe { BNCreateDisassemblyTextRenderer(func.handle, settings_ptr) };
+        unsafe { Self::from_raw(ptr::NonNull::new(result).unwrap()) }
+    }
+
+    pub fn from_llil_function<A: Architecture, M: FunctionMutability, F: FunctionForm>(
+        func: &llil::Function<A, M, F>,
+        settings: Option<&DisassemblySettings>,
+    ) -> Self {
+        let settings_ptr = settings.map(|s| s.handle).unwrap_or(ptr::null_mut());
+        let result =
+            unsafe { BNCreateLowLevelILDisassemblyTextRenderer(func.handle, settings_ptr) };
+        unsafe { Self::from_raw(ptr::NonNull::new(result).unwrap()) }
+    }
+
+    pub fn from_mlil_function(
+        func: &mlil::MediumLevelILFunction,
+        settings: Option<&DisassemblySettings>,
+    ) -> Self {
+        let settings_ptr = settings.map(|s| s.handle).unwrap_or(ptr::null_mut());
+        let result =
+            unsafe { BNCreateMediumLevelILDisassemblyTextRenderer(func.handle, settings_ptr) };
+        unsafe { Self::from_raw(ptr::NonNull::new(result).unwrap()) }
+    }
+
+    pub fn from_hlil_function(
+        func: &hlil::HighLevelILFunction,
+        settings: Option<&DisassemblySettings>,
+    ) -> Self {
+        let settings_ptr = settings.map(|s| s.handle).unwrap_or(ptr::null_mut());
+        let result =
+            unsafe { BNCreateHighLevelILDisassemblyTextRenderer(func.handle, settings_ptr) };
+        unsafe { Self::from_raw(ptr::NonNull::new(result).unwrap()) }
+    }
+
+    pub fn function(&self) -> Ref<Function> {
+        let result = unsafe { BNGetDisassemblyTextRendererFunction(self.as_raw()) };
+        assert!(!result.is_null());
+        unsafe { Function::from_raw(result) }
+    }
+
+    pub fn llil_function<M: FunctionMutability, F: FunctionForm>(
+        &self,
+    ) -> Ref<llil::Function<CoreArchitecture, M, F>> {
+        let arch = self.arch();
+        let result = unsafe { BNGetDisassemblyTextRendererLowLevelILFunction(self.as_raw()) };
+        assert!(!result.is_null());
+        unsafe { llil::Function::from_raw(arch.handle(), result) }
+    }
+
+    pub fn mlil_function(&self) -> Ref<mlil::MediumLevelILFunction> {
+        let result = unsafe { BNGetDisassemblyTextRendererMediumLevelILFunction(self.as_raw()) };
+        assert!(!result.is_null());
+        unsafe { mlil::MediumLevelILFunction::ref_from_raw(result) }
+    }
+
+    pub fn hlil_function(&self) -> Ref<hlil::HighLevelILFunction> {
+        let result = unsafe { BNGetDisassemblyTextRendererHighLevelILFunction(self.as_raw()) };
+        assert!(!result.is_null());
+        unsafe { hlil::HighLevelILFunction::ref_from_raw(result, true) }
+    }
+
+    pub fn basic_block(&self) -> Option<Ref<BasicBlock<NativeBlock>>> {
+        let result = unsafe { BNGetDisassemblyTextRendererBasicBlock(self.as_raw()) };
+        if result.is_null() {
+            return None;
+        }
+        Some(unsafe { Ref::new(BasicBlock::from_raw(result, NativeBlock::new())) })
+    }
+
+    pub fn set_basic_block(&self, value: Option<&BasicBlock<NativeBlock>>) {
+        let block_ptr = value.map(|b| b.handle).unwrap_or(ptr::null_mut());
+        unsafe { BNSetDisassemblyTextRendererBasicBlock(self.as_raw(), block_ptr) }
+    }
+
+    pub fn arch(&self) -> CoreArchitecture {
+        let result = unsafe { BNGetDisassemblyTextRendererArchitecture(self.as_raw()) };
+        assert!(!result.is_null());
+        CoreArchitecture(result)
+    }
+
+    pub fn set_arch(&self, value: CoreArchitecture) {
+        unsafe { BNSetDisassemblyTextRendererArchitecture(self.as_raw(), value.0) }
+    }
+
+    pub fn settings(&self) -> DisassemblySettings {
+        DisassemblySettings {
+            handle: unsafe { BNGetDisassemblyTextRendererSettings(self.as_raw()) },
+        }
+    }
+
+    pub fn set_settings(&self, settings: Option<&DisassemblySettings>) {
+        let settings_ptr = settings.map(|s| s.handle).unwrap_or(ptr::null_mut());
+        unsafe { BNSetDisassemblyTextRendererSettings(self.as_raw(), settings_ptr) }
+    }
+
+    pub fn is_il(&self) -> bool {
+        unsafe { BNIsILDisassemblyTextRenderer(self.as_raw()) }
+    }
+
+    pub fn has_data_flow(&self) -> bool {
+        unsafe { BNDisassemblyTextRendererHasDataFlow(self.as_raw()) }
+    }
+
+    pub fn instruction_annotations(&self, addr: u64) -> Array<InstructionTextToken> {
+        let mut count = 0;
+        let result = unsafe {
+            BNGetDisassemblyTextRendererInstructionAnnotations(self.as_raw(), addr, &mut count)
+        };
+        assert!(!result.is_null());
+        unsafe { Array::new(result, count, ()) }
+    }
+
+    pub fn instruction_text(&self, addr: u64) -> Option<(Array<DisassemblyTextLine>, usize)> {
+        let mut count = 0;
+        let mut length = 0;
+        let mut lines: *mut BNDisassemblyTextLine = ptr::null_mut();
+        let result = unsafe {
+            BNGetDisassemblyTextRendererInstructionText(
+                self.as_raw(),
+                addr,
+                &mut length,
+                &mut lines,
+                &mut count,
+            )
+        };
+        result.then(|| (unsafe { Array::new(lines, count, ()) }, length))
+    }
+
+    pub fn disassembly_text(&self, addr: u64) -> Option<(Array<DisassemblyTextLine>, usize)> {
+        let mut count = 0;
+        let mut length = 0;
+        let mut lines: *mut BNDisassemblyTextLine = ptr::null_mut();
+        let result = unsafe {
+            BNGetDisassemblyTextRendererLines(
+                self.as_raw(),
+                addr,
+                &mut length,
+                &mut lines,
+                &mut count,
+            )
+        };
+        result.then(|| (unsafe { Array::new(lines, count, ()) }, length))
+    }
+
+    // TODO post_process_lines BNPostProcessDisassemblyTextRendererLines
+
+    pub fn is_integer_token(token_type: InstructionTextTokenType) -> bool {
+        unsafe { BNIsIntegerToken(token_type) }
+    }
+
+    pub fn reset_deduplicated_comments(&self) {
+        unsafe { BNResetDisassemblyTextRendererDeduplicatedComments(self.as_raw()) }
+    }
+
+    pub fn symbol_tokens(
+        &self,
+        addr: u64,
+        size: usize,
+        operand: Option<usize>,
+    ) -> Option<Array<InstructionTextToken>> {
+        let operand = operand.unwrap_or(0xffffffff);
+        let mut count = 0;
+        let mut tokens: *mut BNInstructionTextToken = ptr::null_mut();
+        let result = unsafe {
+            BNGetDisassemblyTextRendererSymbolTokens(
+                self.as_raw(),
+                addr,
+                size,
+                operand,
+                &mut tokens,
+                &mut count,
+            )
+        };
+        result.then(|| unsafe { Array::new(tokens, count, ()) })
+    }
+
+    pub fn stack_var_reference_tokens(
+        &self,
+        ref_: &StackVariableReference,
+    ) -> Array<InstructionTextToken> {
+        let name = ref_.name().into_bytes_with_nul();
+        let mut stack_ref = BNStackVariableReference {
+            sourceOperand: ref_.source_operand().unwrap_or(0xffffffff),
+            typeConfidence: ref_.variable_type().confidence,
+            type_: ref_.variable_type().contents.handle,
+            name: name.as_ptr() as *mut ffi::c_char,
+            varIdentifier: ref_.variable().identifier(),
+            referencedOffset: ref_.offset(),
+            size: ref_.size(),
+        };
+        let mut count = 0;
+        let tokens = unsafe {
+            BNGetDisassemblyTextRendererStackVariableReferenceTokens(
+                self.as_raw(),
+                &mut stack_ref,
+                &mut count,
+            )
+        };
+        assert!(!tokens.is_null());
+        unsafe { Array::new(tokens, count, ()) }
+    }
+
+    pub fn integer_token(
+        &self,
+        int_token: &InstructionTextToken,
+        addr: u64,
+        arch: Option<CoreArchitecture>,
+    ) -> Array<InstructionTextToken> {
+        let arch = arch.map(|a| a.0).unwrap_or(ptr::null_mut());
+        let mut count = 0;
+        let tokens = unsafe {
+            BNGetDisassemblyTextRendererIntegerTokens(
+                self.as_raw(),
+                &int_token.0 as *const BNInstructionTextToken as *mut _,
+                arch,
+                addr,
+                &mut count,
+            )
+        };
+        assert!(!tokens.is_null());
+        unsafe { Array::new(tokens, count, ()) }
+    }
+
+    pub fn wrap_comment<S1: BnStrCompatible, S2: BnStrCompatible, S3: BnStrCompatible>(
+        &self,
+        cur_line: &DisassemblyTextLine,
+        comment: S1,
+        has_auto_annotations: bool,
+        leading_spaces: S2,
+        indent_spaces: S3,
+    ) -> Array<DisassemblyTextLine> {
+        //// //leading_spaces: str = "  ", indent_spaces: str = ""
+        let tokens = cur_line.tokens();
+        let mut tokens_raw: Vec<_> = tokens.iter().map(|x| x.0).collect();
+        let mut cur_line_obj = BNDisassemblyTextLine {
+            addr: cur_line.addr(),
+            instrIndex: cur_line.instr_idx(),
+            tokens: tokens_raw.as_mut_ptr(),
+            count: tokens.len(),
+            highlight: cur_line.0.highlight,
+            ..Default::default()
+        };
+        let mut count = 0;
+        let comment_raw = comment.into_bytes_with_nul();
+        let leading_spaces_raw = leading_spaces.into_bytes_with_nul();
+        let indent_spaces_raw = indent_spaces.into_bytes_with_nul();
+        let lines = unsafe {
+            BNDisassemblyTextRendererWrapComment(
+                self.as_raw(),
+                &mut cur_line_obj,
+                &mut count,
+                comment_raw.as_ref().as_ptr() as *const ffi::c_char,
+                has_auto_annotations,
+                leading_spaces_raw.as_ref().as_ptr() as *const ffi::c_char,
+                indent_spaces_raw.as_ref().as_ptr() as *const ffi::c_char,
+            )
+        };
+        assert!(!lines.is_null());
+        unsafe { Array::new(lines, count, ()) }
+    }
+}
+
+impl Clone for DisassemblyTextRenderer {
+    fn clone(&self) -> Self {
+        unsafe {
+            Self::from_raw(
+                ptr::NonNull::new(BNNewDisassemblyTextRendererReference(self.as_raw())).unwrap(),
+            )
+        }
+    }
+}
+
+impl Drop for DisassemblyTextRenderer {
+    fn drop(&mut self) {
+        unsafe { BNFreeDisassemblyTextRenderer(self.as_raw()) }
     }
 }

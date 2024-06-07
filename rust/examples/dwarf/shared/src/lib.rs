@@ -54,12 +54,12 @@ pub fn is_raw_dwo_dwarf(view: &BinaryView) -> bool {
 }
 
 pub fn can_use_debuginfod(view: &BinaryView) -> bool {
-    can_use_build_id(view) &&
+    has_build_id_section(view) &&
     Settings::new("")
         .get_bool("network.enableDebuginfod", Some(view), None)
 }
 
-pub fn can_use_build_id(view: &BinaryView) -> bool {
+pub fn has_build_id_section(view: &BinaryView) -> bool {
     if let Ok(raw_view) = view.raw_view() {
         return raw_view.section_by_name(".note.gnu.build-id").is_ok()
     }

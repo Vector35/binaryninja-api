@@ -432,17 +432,22 @@ pub(crate) fn download_debug_info(view: &BinaryView) -> Result<Ref<BinaryView>, 
 }
 
 
-pub(crate) fn load_debug_info_for_build_id(view: &BinaryView) -> Result<Option<Ref<BinaryView>>, String> {
+pub(crate) fn find_local_debug_file(view: &BinaryView) -> Option<String> {
     let settings = Settings::new("");
     let debug_info_paths = settings.get_string_list("analysis.debugInfo.debugDirectories", Some(view), None);
+
     if debug_info_paths.is_empty() {
-        return Ok(None)
+        return None
     }
+
+    let build_id = match get_build_id(view) {
+        Ok(x) => x,
+        Err(_) => return None,
+    };
 
     for debug_info_path in debug_info_paths.into_iter() {
         if let Ok(path) = PathBuf::from_str(&debug_info_path.to_string())
         {
-            let build_id = get_build_id(view)?;
             let elf_path = path
                 .join(&build_id[..2])
                 .join(&build_id[2..])
@@ -452,7 +457,6 @@ pub(crate) fn load_debug_info_for_build_id(view: &BinaryView) -> Result<Option<R
                 .join(&build_id[..2])
                 .join(format!("{}.debug", &build_id[2..]));
 
-            let options = "{\"analysis.debugInfo.internal\": false}";
             let final_path = if debug_ext_path.exists() {
                 debug_ext_path
             }
@@ -460,17 +464,29 @@ pub(crate) fn load_debug_info_for_build_id(view: &BinaryView) -> Result<Option<R
                 elf_path
             }
             else {
-                // No paths exist
-                return Ok(None)
+                // No paths exist in this dir, try the next one
+                continue;
             };
-            return Ok(
-                binaryninja::load_with_options(
-                    final_path.to_string_lossy().to_string(),
-                    false,
-                    Some(options)
-                )
-            );
+            return final_path
+                .to_str()
+                .and_then(|x| Some(x.to_string()));
         }
     }
-    Ok(None)
+    None
+}
+
+
+pub(crate) fn load_debug_info_for_build_id(view: &BinaryView) -> Result<Option<Ref<BinaryView>>, String> {
+    if let Some(debug_file_path) = find_local_debug_file(view) {
+        Ok(
+            binaryninja::load_with_options(
+                debug_file_path,
+                false,
+                Some("{\"analysis.debugInfo.internal\": false}")
+            )
+        )
+    }
+    else {
+        Ok(None)
+    }
 }

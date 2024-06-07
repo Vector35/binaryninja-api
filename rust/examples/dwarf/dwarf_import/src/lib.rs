@@ -271,8 +271,8 @@ struct DWARFParser;
 impl CustomDebugInfoParser for DWARFParser {
     fn is_valid(&self, view: &BinaryView) -> bool {
         dwarfreader::is_valid(view) ||
-        dwarfreader::can_use_build_id(view) ||
-        dwarfreader::can_use_debuginfod(view)
+        dwarfreader::can_use_debuginfod(view) ||
+        (dwarfreader::has_build_id_section(view) && helpers::find_local_debug_file(view).is_some())
     }
 
     fn parse_info(
@@ -283,7 +283,7 @@ impl CustomDebugInfoParser for DWARFParser {
         progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool {
         let external_file = if !dwarfreader::is_valid(bv) {
-            if dwarfreader::can_use_build_id(bv) {
+            if dwarfreader::has_build_id_section(bv) {
                 if let Ok(Some(debug_view)) = helpers::load_debug_info_for_build_id(bv) {
                     Some(debug_view)
                 }

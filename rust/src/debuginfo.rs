@@ -75,7 +75,7 @@ use crate::{
     platform::Platform,
     rc::*,
     string::{raw_to_string, BnStrCompatible, BnString},
-    types::{DataVariableAndName, NameAndType, Type},
+    types::{DataVariableAndName, NameAndType, NamedTypedVariable, Type},
 };
 
 use std::{hash::Hash, os::raw::c_void, ptr, slice};
@@ -301,6 +301,7 @@ pub struct DebugFunctionInfo {
     address: u64,
     platform: Option<Ref<Platform>>,
     components: Vec<String>,
+    local_variables: Vec<NamedTypedVariable>,
 }
 
 impl From<&BNDebugFunctionInfo> for DebugFunctionInfo {
@@ -308,6 +309,15 @@ impl From<&BNDebugFunctionInfo> for DebugFunctionInfo {
         let components = unsafe { slice::from_raw_parts(raw.components, raw.componentN) }
             .iter()
             .map(|component| raw_to_string(*component as *const _).unwrap())
+            .collect();
+
+        let local_variables: Vec<NamedTypedVariable> = unsafe { slice::from_raw_parts(raw.localVariables, raw.localVariableN) }
+            .iter()
+            .map(|local_variable| {
+                unsafe {
+                    NamedTypedVariable::from_raw(local_variable)
+                }
+            })
             .collect();
 
         Self {
@@ -326,6 +336,7 @@ impl From<&BNDebugFunctionInfo> for DebugFunctionInfo {
                 Some(unsafe { Platform::ref_from_raw(raw.platform) })
             },
             components,
+            local_variables,
         }
     }
 }
@@ -339,6 +350,7 @@ impl DebugFunctionInfo {
         address: Option<u64>,
         platform: Option<Ref<Platform>>,
         components: Vec<String>,
+        local_variables: Vec<NamedTypedVariable>,
     ) -> Self {
         Self {
             short_name,
@@ -351,6 +363,7 @@ impl DebugFunctionInfo {
             },
             platform,
             components,
+            local_variables,
         }
     }
 }
@@ -776,14 +789,31 @@ impl DebugInfo {
             .as_ref()
             .map_or(ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
 
-        let mut components_array: Vec<*const ::std::os::raw::c_char> =
+        let mut components_array: Vec<*mut ::std::os::raw::c_char> =
             Vec::with_capacity(new_func.components.len());
-        for component in &new_func.components {
-            components_array.push(component.as_ptr() as _);
-        }
+
+
+        let mut local_variables_array: Vec<BNVariableNameAndType> =
+            Vec::with_capacity(new_func.local_variables.len());
 
         unsafe {
-            BNAddDebugFunction(
+            for component in &new_func.components {
+                components_array.push(BNAllocString(component.clone().into_bytes_with_nul().as_ptr() as _));
+            }
+
+            for local_variable in &new_func.local_variables {
+                local_variables_array.push(
+                    BNVariableNameAndType {
+                        var: local_variable.var.raw(),
+                        autoDefined: local_variable.auto_defined,
+                        typeConfidence: local_variable.ty.confidence,
+                        name: BNAllocString(local_variable.name.clone().into_bytes_with_nul().as_ptr() as _),
+                        type_: local_variable.ty.contents.handle,
+                    }
+                );
+            }
+
+            let result = BNAddDebugFunction(
                 self.handle,
                 &mut BNDebugFunctionInfo {
                     shortName: short_name,
@@ -800,8 +830,19 @@ impl DebugInfo {
                     },
                     components: components_array.as_ptr() as _,
                     componentN: new_func.components.len(),
+                    localVariables: local_variables_array.as_ptr() as _,
+                    localVariableN: local_variables_array.len(),
                 },
-            )
+            );
+
+            for i in components_array {
+                BNFreeString(i);
+            }
+
+            for i in &local_variables_array {
+                BNFreeString(i.name);
+            }
+            result
         }
     }
 

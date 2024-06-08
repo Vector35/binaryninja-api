@@ -16401,11 +16401,14 @@ namespace BinaryNinja {
 		Ref<Type> type;
 		Ref<Platform> platform;
 		std::vector<std::string> components;
+		std::vector<VariableNameAndType> localVariables;
 
 		DebugFunctionInfo(std::string shortName, std::string fullName, std::string rawName, uint64_t address,
-		    Ref<Type> type, Ref<Platform> platform, const std::vector<std::string>& components) :
+		    Ref<Type> type, Ref<Platform> platform, const std::vector<std::string>& components,
+			const std::vector<VariableNameAndType>& localVariables) :
 		    shortName(shortName), fullName(fullName), rawName(rawName),
-		    address(address), platform(platform), components(components)
+		    address(address), platform(platform), components(components),
+			localVariables(localVariables)
 		{}
 	};
 

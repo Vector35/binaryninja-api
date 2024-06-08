@@ -21,7 +21,7 @@ mod types;
 use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext};
 use crate::functions::parse_function_entry;
 use crate::helpers::{get_attr_die, get_name, get_uid, DieReference};
-use crate::types::parse_data_variable;
+use crate::types::parse_variable;
 
 use binaryninja::{
     binaryview::{BinaryView, BinaryViewExt},
@@ -188,9 +188,12 @@ fn parse_unit<R: Reader<Offset = usize>>(
 ) {
     let mut entries = unit.entries();
 
+    let mut current_depth: isize = 0;
+    let mut functions_by_depth: Vec<(Option<usize>, isize)> = vec![];
+
     // Really all we care about as we iterate the entries in a given unit is how they modify state (our perception of the file)
     // There's a lot of junk we don't care about in DWARF info, so we choose a couple DIEs and mutate state (add functions (which adds the types it uses) and keep track of what namespace we're in)
-    while let Ok(Some((_, entry))) = entries.next_dfs() {
+    while let Ok(Some((depth_delta, entry))) = entries.next_dfs() {
         *current_die_number += 1;
         if (*progress)(
             *current_die_number,
@@ -201,12 +204,30 @@ fn parse_unit<R: Reader<Offset = usize>>(
             return; // Parsing canceled
         }
 
+        current_depth = current_depth.saturating_add(depth_delta);
+
+        loop {
+            if let Some((_fn_idx, depth)) = functions_by_depth.last() {
+                if current_depth <= *depth {
+                    functions_by_depth.pop();
+                }
+                else {
+                    break
+                }
+            }
+            else {
+                break;
+            }
+        }
+
         match entry.tag() {
             constants::DW_TAG_subprogram => {
-                parse_function_entry(unit, entry, debug_info_builder_context, debug_info_builder)
+                let fn_idx = parse_function_entry(unit, entry, debug_info_builder_context, debug_info_builder);
+                functions_by_depth.push((fn_idx, current_depth));
             }
             constants::DW_TAG_variable => {
-                parse_data_variable(unit, entry, debug_info_builder_context, debug_info_builder)
+                let current_fn_idx = functions_by_depth.last().and_then(|x| x.0);
+                parse_variable(unit, entry, debug_info_builder_context, debug_info_builder, current_fn_idx)
             }
             _ => (),
         }

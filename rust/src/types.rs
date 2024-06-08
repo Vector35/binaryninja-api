@@ -180,6 +180,20 @@ impl<T: Display> Display for Conf<T> {
     }
 }
 
+impl<T: PartialEq> PartialEq for Conf<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.contents.eq(&other.contents)
+    }
+}
+
+impl<T: Eq> Eq for Conf<T> {}
+
+impl<T: Hash> Hash for Conf<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.contents.hash(state);
+    }
+}
+
 impl<'a, T> From<&'a Conf<T>> for Conf<&'a T> {
     fn from(c: &'a Conf<T>) -> Self {
         Conf::new(&c.contents, c.confidence)
@@ -1483,21 +1497,40 @@ unsafe impl CoreArrayProviderInner for Array<SSAVariable> {
 ///////////////
 // NamedVariable
 
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct NamedTypedVariable {
-    var: BNVariable,
-    auto_defined: bool,
-    type_confidence: u8,
-    name: *mut c_char,
-    ty: *mut BNType,
+    pub name: String,
+    pub ty: Conf<Ref<Type>>,
+    pub var: Variable,
+    pub auto_defined: bool,
 }
 
 impl NamedTypedVariable {
+
+    pub fn new(var: Variable, name: String, ty: Conf<Ref<Type>>, auto_defined: bool) -> Self {
+        Self {
+            name,
+            ty,
+            var,
+            auto_defined,
+        }
+    }
+
+    pub(crate) unsafe fn from_raw(var: &BNVariableNameAndType) -> Self {
+        Self {
+            var: Variable::from_raw(var.var),
+            auto_defined: var.autoDefined,
+            name: CStr::from_ptr(var.name).to_str().unwrap().to_string(),
+            ty: Conf::new(Type::ref_from_raw(var.type_), var.typeConfidence)
+        }
+    }
+
     pub fn name(&self) -> &str {
-        unsafe { CStr::from_ptr(self.name).to_str().unwrap() }
+        &self.name
     }
 
     pub fn var(&self) -> Variable {
-        unsafe { Variable::from_raw(self.var) }
+        self.var
     }
 
     pub fn auto_defined(&self) -> bool {
@@ -1505,18 +1538,18 @@ impl NamedTypedVariable {
     }
 
     pub fn type_confidence(&self) -> u8 {
-        self.type_confidence
+        self.ty.confidence
     }
 
     pub fn var_type(&self) -> Ref<Type> {
-        unsafe { Ref::new(Type::from_raw(self.ty)) }
+        self.ty.contents.clone()
     }
 }
 
 impl CoreArrayProvider for NamedTypedVariable {
     type Raw = BNVariableNameAndType;
     type Context = ();
-    type Wrapped<'a> = ManuallyDrop<NamedTypedVariable>;
+    type Wrapped<'a> = Guard<'a, NamedTypedVariable>;
 }
 
 unsafe impl CoreArrayProviderInner for NamedTypedVariable {
@@ -1524,13 +1557,7 @@ unsafe impl CoreArrayProviderInner for NamedTypedVariable {
         BNFreeVariableNameAndTypeList(raw, count)
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        ManuallyDrop::new(NamedTypedVariable {
-            var: raw.var,
-            ty: raw.type_,
-            name: raw.name,
-            auto_defined: raw.autoDefined,
-            type_confidence: raw.typeConfidence,
-        })
+        unsafe { Guard::new(NamedTypedVariable::from_raw(raw), raw) }
     }
 }
 

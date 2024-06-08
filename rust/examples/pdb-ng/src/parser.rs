@@ -246,6 +246,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         address,
                         name,
                         type_,
+                        locals,
                         ..
                     }) => {
                         self.log(|| {
@@ -269,6 +270,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                             Some(address),
                             Some(self.platform.clone()),
                             vec![], // TODO : Components
+                            vec![], //TODO: local variables
                         ));
                     }
                     _ => {}

@@ -21,7 +21,8 @@ use binaryninja::{
     rc::*,
     symbol::SymbolType,
     templatesimplifier::simplify_str_to_fqn,
-    types::{Conf, FunctionParameter, Type},
+    types::{Conf, FunctionParameter, NamedTypedVariable, Type, Variable},
+    binaryninjacore_sys::BNVariableSourceType,
 };
 
 use gimli::{DebuggingInformationEntry, Dwarf, Reader, Unit};
@@ -48,6 +49,7 @@ pub(crate) struct FunctionInfoBuilder {
     pub(crate) parameters: Vec<Option<(String, TypeUID)>>,
     pub(crate) platform: Option<Ref<Platform>>,
     pub(crate) variable_arguments: bool,
+    pub(crate) stack_variables: Vec<NamedTypedVariable>,
 }
 
 impl FunctionInfoBuilder {
@@ -194,7 +196,8 @@ impl DebugInfoBuilder {
         address: Option<u64>,
         parameters: &Vec<Option<(String, TypeUID)>>,
         variable_arguments: bool,
-    ) {
+    ) -> Option<usize> {
+        // Returns the index of the function
         // Raw names should be the primary key, but if they don't exist, use the full name
         // TODO : Consider further falling back on address/architecture
 
@@ -222,7 +225,7 @@ impl DebugInfoBuilder {
                     self.full_function_name_indices.insert(function.full_name.clone().unwrap(), *idx);
                 }
 
-                return;
+                return Some(*idx);
             }
         }
 
@@ -244,13 +247,13 @@ impl DebugInfoBuilder {
                     self.raw_function_name_indices.insert(function.raw_name.clone().unwrap(), *idx);
                 }
 
-                return;
+                return Some(*idx);
             }
         }
 
         if raw_name.is_none() && full_name.is_none() {
             error!("Function entry in DWARF without full or raw name. Please report this issue.");
-            return;
+            return None;
         }
 
         let function = FunctionInfoBuilder {
@@ -261,6 +264,7 @@ impl DebugInfoBuilder {
             parameters: parameters.clone(),
             platform: None,
             variable_arguments,
+            stack_variables: vec![],
         };
 
         if let Some(n) = &function.full_name {
@@ -272,6 +276,7 @@ impl DebugInfoBuilder {
         }
 
         self.functions.push(function);
+        Some(self.functions.len()-1)
     }
 
     pub(crate) fn functions(&self) -> &[FunctionInfoBuilder] {
@@ -319,6 +324,47 @@ impl DebugInfoBuilder {
 
     pub(crate) fn contains_type(&self, type_uid: TypeUID) -> bool {
         self.types.get(&type_uid).is_some()
+    }
+
+
+    pub(crate) fn add_stack_variable(
+        &mut self,
+        fn_idx: Option<usize>,
+        base_relative_offset: i64,
+        name: Option<String>,
+        type_uid: TypeUID,
+    ) {
+        //TODO: actually calculate this properly
+        let offset = base_relative_offset + 8;
+
+        let name = match name {
+            Some(x) => {
+                if x.len() == 1 && x.chars().next() == Some('\x00') {
+                    // Anonymous variable, generate name
+                    format!("debug_var_{}", offset)
+                }
+                else {
+                    x
+                }
+            },
+            None => {
+                // Anonymous variable, generate name
+                format!("debug_var_{}", offset)
+            }
+        };
+
+        let Some(function_index) = fn_idx else {
+            error!("Trying to add a local variable outside of a subprogram. Please report this issue.");
+            return;
+        };
+
+        let t = self.get_type(type_uid).unwrap().1;
+
+        let function = &mut self.functions[function_index];
+
+        let var = Variable::new(BNVariableSourceType::StackVariableSourceType, 0, offset);
+        function.stack_variables.push(NamedTypedVariable::new(var, name, Conf::new(t, 128), false));
+
     }
 
     pub(crate) fn add_data_variable(
@@ -399,6 +445,7 @@ impl DebugInfoBuilder {
                 function.address,
                 function.platform.clone(),
                 vec![], // TODO : Components
+                function.stack_variables.clone(), // TODO: local non-stack variables
             ));
         }
     }

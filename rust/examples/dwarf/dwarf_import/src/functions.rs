@@ -67,7 +67,7 @@ pub(crate) fn parse_function_entry<R: Reader<Offset = usize>>(
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
-) {
+) -> Option<usize> {
     // Collect function properties (if they exist in this DIE)
     let full_name = debug_info_builder_context.get_name(unit, entry);
     let raw_name = get_raw_name(unit, entry, debug_info_builder_context);
@@ -75,5 +75,5 @@ pub(crate) fn parse_function_entry<R: Reader<Offset = usize>>(
     let address = get_start_address(unit, entry, debug_info_builder_context);
     let (parameters, variable_arguments) = get_parameters(unit, entry, debug_info_builder_context, debug_info_builder);
 
-    debug_info_builder.insert_function(full_name, raw_name, return_type, address, &parameters, variable_arguments);
+    debug_info_builder.insert_function(full_name, raw_name, return_type, address, &parameters, variable_arguments)
 }

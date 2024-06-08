@@ -96,11 +96,26 @@ vector<DebugFunctionInfo> DebugInfo::GetFunctions(const string& parserName) cons
 		vector<string> components;
 		for (size_t componentN = 0; componentN < functions[i].componentN; ++componentN)
 			components.emplace_back(functions[i].components[componentN]);
+
+		vector<VariableNameAndType> localVariables;
+		for (size_t localVariableN = 0; localVariableN < functions[i].localVariableN; ++localVariableN)
+		{
+			auto& bnVar = functions[i].localVariables[localVariableN];
+
+			VariableNameAndType vnt;
+			vnt.var = bnVar.var;
+			vnt.name = bnVar.name;
+			vnt.autoDefined = bnVar.autoDefined;
+			vnt.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(bnVar.type)), bnVar.typeConfidence);
+			localVariables.push_back(vnt);
+		}
+
 		result.emplace_back(functions[i].shortName ? functions[i].shortName : "",
 		    functions[i].fullName ? functions[i].fullName : "", functions[i].rawName ? functions[i].rawName : "",
 		    functions[i].address,
 		    functions[i].type ? new Type(BNNewTypeReference(functions[i].type)) : nullptr,
-		    functions[i].platform ? new CorePlatform(BNNewPlatformReference(functions[i].platform)) : nullptr, components);
+		    functions[i].platform ? new CorePlatform(BNNewPlatformReference(functions[i].platform)) : nullptr,
+			components, localVariables);
 	}
 
 	BNFreeDebugFunctions(functions, count);
@@ -286,6 +301,17 @@ bool DebugInfo::AddFunction(const DebugFunctionInfo& function)
 	for (size_t i = 0; i < function.components.size(); ++i)
 		components[i] = (char*)function.components[i].c_str();
 
+	BNVariableNameAndType* localVariables = new BNVariableNameAndType[function.localVariables.size()];
+	for (size_t i = 0; i < function.localVariables.size(); i++)
+	{
+		auto v = function.localVariables[i];
+		localVariables[i].var = v.var;
+		localVariables[i].type = v.type.GetValue()->m_object;
+		localVariables[i].typeConfidence = v.type.GetConfidence();
+		localVariables[i].name = BNAllocString(v.name.c_str());
+		localVariables[i++].autoDefined = v.autoDefined;
+	}
+
 	BNDebugFunctionInfo input;
 
 	input.shortName = function.shortName.size() ? BNAllocString(function.shortName.c_str()) : nullptr;
@@ -296,13 +322,15 @@ bool DebugInfo::AddFunction(const DebugFunctionInfo& function)
 	input.platform = function.platform ? function.platform->GetObject() : nullptr;
 	input.components = components;
 	input.componentN = function.components.size();
+	input.localVariables = localVariables;
+	input.localVariableN = function.localVariables.size();
 
 	bool result = BNAddDebugFunction(m_object, &input);
 
 	BNFreeString(input.shortName);
 	BNFreeString(input.fullName);
 	BNFreeString(input.rawName);
-
+	BNFreeVariableNameAndTypeList(localVariables, function.localVariables.size());
 	return result;
 }
 

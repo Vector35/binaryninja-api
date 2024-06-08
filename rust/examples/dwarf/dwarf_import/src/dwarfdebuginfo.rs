@@ -27,7 +27,7 @@ use binaryninja::{
 
 use gimli::{DebuggingInformationEntry, Dwarf, Reader, Unit};
 
-use log::{error, warn};
+use log::{debug, error, warn};
 use std::{
     cmp::Ordering,
     collections::{hash_map::Values, HashMap},
@@ -174,6 +174,7 @@ pub(crate) struct DebugInfoBuilder {
     full_function_name_indices: HashMap<String, usize>,
     types: HashMap<TypeUID, DebugType>,
     data_variables: HashMap<u64, (Option<String>, TypeUID)>,
+    range_data_offsets: iset::IntervalMap<u64, i64>
 }
 
 impl DebugInfoBuilder {
@@ -184,7 +185,12 @@ impl DebugInfoBuilder {
             full_function_name_indices: HashMap::new(),
             types: HashMap::new(),
             data_variables: HashMap::new(),
+            range_data_offsets: iset::IntervalMap::new(),
         }
+    }
+
+    pub(crate) fn set_range_data_offsets(&mut self, offsets: iset::IntervalMap<u64, i64>) {
+        self.range_data_offsets = offsets
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -330,13 +336,10 @@ impl DebugInfoBuilder {
     pub(crate) fn add_stack_variable(
         &mut self,
         fn_idx: Option<usize>,
-        base_relative_offset: i64,
+        offset: i64,
         name: Option<String>,
         type_uid: TypeUID,
     ) {
-        //TODO: actually calculate this properly
-        let offset = base_relative_offset + 8;
-
         let name = match name {
             Some(x) => {
                 if x.len() == 1 && x.chars().next() == Some('\x00') {
@@ -354,15 +357,37 @@ impl DebugInfoBuilder {
         };
 
         let Some(function_index) = fn_idx else {
+            // If we somehow lost track of what subprogram we're in or we're not actually in a subprogram
             error!("Trying to add a local variable outside of a subprogram. Please report this issue.");
             return;
         };
 
         let t = self.get_type(type_uid).unwrap().1;
-
         let function = &mut self.functions[function_index];
 
-        let var = Variable::new(BNVariableSourceType::StackVariableSourceType, 0, offset);
+        // TODO: If we can't find a known offset can we try to guess somehow?
+
+        let Some(func_addr) = function.address else {
+            // If we somehow are processing a function's variables before the function is created
+            error!("Trying to add a local variable without a known function start. Please report this issue.");
+            return;
+        };
+
+        let Some(offset_adjustment) = self.range_data_offsets.values_overlap(func_addr).next() else {
+            // Unknown why, but this is happening with MachO + external dSYM
+            debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CIE offset.", name, offset, func_addr);
+            return;
+        };
+
+        let adjusted_offset = offset - offset_adjustment;
+
+        if adjusted_offset > 0 {
+            // If we somehow end up with a positive sp offset
+            error!("Trying to add a local variable at positive storage offset {}. Please report this issue.", adjusted_offset);
+            return;
+        }
+
+        let var = Variable::new(BNVariableSourceType::StackVariableSourceType, 0, adjusted_offset);
         function.stack_variables.push(NamedTypedVariable::new(var, name, Conf::new(t, 128), false));
 
     }

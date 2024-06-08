@@ -25,7 +25,7 @@ use binaryninja::{
 
 use gimli::{constants, AttributeValue, DebuggingInformationEntry, Operation, Reader, Unit};
 
-use log::{error, warn};
+use log::{debug, error, warn};
 
 pub(crate) fn parse_variable<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
@@ -51,11 +51,16 @@ pub(crate) fn parse_variable<R: Reader<Offset = usize>>(
         Ok(Operation::FrameOffset { offset }) => {
             debug_info_builder.add_stack_variable(function_index, offset, full_name, type_uid);
         },
+        //Ok(Operation::RegisterOffset { register: _, offset: _, base_type: _ }) => {
+        //    //TODO: look up register by index (binja register indexes don't match processor indexes?)
+        //    //TODO: calculate absolute stack offset
+        //    //TODO: add by absolute offset
+        //},
         Ok(Operation::Address { address }) => {
             debug_info_builder.add_data_variable(address, full_name, type_uid)
         },
         Ok(op) => {
-            warn!("Unhandled operation type for variable: {:?}", op)
+            debug!("Unhandled operation type for variable: {:?}", op);
         },
         Err(e) => error!("Error parsing operation type for variable {:?}: {}", full_name, e)
     }

@@ -321,6 +321,7 @@ dependencies = [
  "binaryninja",
  "dwarfreader",
  "gimli",
+ "iset",
  "log",
 ]
 
@@ -465,6 +466,12 @@ dependencies = [
  "equivalent",
  "hashbrown",
 ]
+
+[[package]]
+name = "iset"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0716a0d7080cb7b20b9426276315e6ff5ed537bd920af47417b16de07f9ac76"
 
 [[package]]
 name = "itertools"

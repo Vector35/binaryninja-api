@@ -386,9 +386,10 @@ class RepositoryManager:
 		"""
 		``add_repository`` adds a new plugin repository for the manager to track.
 
-		There is currently no function to remove a repository. If you want to
-		remove a repository, you must delete the directory and remove the
-		plugin_status.json entries from repositories/ file in the User Folder
+		To remove a repository, restart Binary Ninja (and don't re-add the repository!).
+		File artifacts will remain on disk under repositories/ file in the User Folder.
+
+		Before you can query plugin metadata from a repository, you need to call ``check_for_updates``.
 
 		:param str url: URL to the plugins.json containing the records for this repository
 		:param str repopath: path to where the repository will be stored on disk locally
@@ -399,6 +400,7 @@ class RepositoryManager:
 			>>> mgr = RepositoryManager()
 			>>> mgr.add_repository("https://raw.githubusercontent.com/Vector35/community-plugins/master/plugins.json", "community")
 			True
+			>>> mgr.check_for_updates()
 			>>>
 		"""
 		if not isinstance(url, str) or not isinstance(repopath, str):

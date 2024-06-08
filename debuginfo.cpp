@@ -308,8 +308,8 @@ bool DebugInfo::AddFunction(const DebugFunctionInfo& function)
 		localVariables[i].var = v.var;
 		localVariables[i].type = v.type.GetValue()->m_object;
 		localVariables[i].typeConfidence = v.type.GetConfidence();
-		localVariables[i].name = BNAllocString(v.name.c_str());
-		localVariables[i++].autoDefined = v.autoDefined;
+		localVariables[i].name = (char*)v.name.c_str();
+		localVariables[i].autoDefined = v.autoDefined;
 	}
 
 	BNDebugFunctionInfo input;
@@ -330,7 +330,8 @@ bool DebugInfo::AddFunction(const DebugFunctionInfo& function)
 	BNFreeString(input.shortName);
 	BNFreeString(input.fullName);
 	BNFreeString(input.rawName);
-	BNFreeVariableNameAndTypeList(localVariables, function.localVariables.size());
+	delete[] components;
+	delete[] localVariables;
 	return result;
 }
 

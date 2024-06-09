@@ -364,13 +364,15 @@ impl PDBParser {
     ) -> Result<()> {
         let mut pdb = PDB::open(Cursor::new(&conts))?;
 
+        let settings = Settings::new("");
+
         if let Some(info) = parse_pdb_info(view) {
-            let pdb_info = pdb.pdb_information()?;
+            let pdb_info = &pdb.pdb_information()?;
             if info.guid.as_slice() != pdb_info.guid.as_ref() {
                 if check_guid {
                     return Err(anyhow!("PDB GUID does not match"));
                 } else {
-                    let ask = Settings::new("").get_string(
+                    let ask = settings.get_string(
                         "pdb.features.loadMismatchedPDB",
                         Some(view),
                         None,
@@ -406,7 +408,7 @@ impl PDBParser {
                 }
             }
 
-            if did_download && Settings::new("").get_bool("pdb.files.localStoreCache", None, None) {
+            if did_download && settings.get_bool("pdb.files.localStoreCache", None, None) {
                 match active_local_cache(Some(view)) {
                     Ok(cache) => {
                         let mut cab_path = PathBuf::from(&cache);
@@ -485,7 +487,7 @@ impl PDBParser {
             if check_guid {
                 return Err(anyhow!("File not compiled with PDB information"));
             } else {
-                let ask = Settings::new("").get_string(
+                let ask = settings.get_string(
                     "pdb.features.loadMismatchedPDB",
                     Some(view),
                     None,

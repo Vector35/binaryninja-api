@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::env;
 use std::fmt::Display;
+use std::sync::OnceLock;
 
 use anyhow::{anyhow, Result};
 use log::{debug, info};
@@ -200,7 +201,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 self.settings
                     .get_bool("pdb.features.allowVoidGlobals", Some(self.bv), None);
 
-            for sym in symbols {
+            let min_confidence_type = Conf::new(Type::void(), min_confidence());
+            for sym in symbols.iter() {
                 match sym {
                     ParsedSymbol::Data(ParsedDataSymbol {
                         address,
@@ -209,7 +211,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         ..
                     }) => {
                         let real_type =
-                            type_.unwrap_or_else(|| Conf::new(Type::void(), min_confidence()));
+                            type_.as_ref().unwrap_or(&min_confidence_type);
 
                         if real_type.contents.type_class() == TypeClass::VoidTypeClass {
                             if !allow_void {
@@ -228,10 +230,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         });
                         self.debug_info
                             .add_data_variable_info(DataVariableAndName::new(
-                                address,
-                                real_type,
+                                *address,
+                                real_type.clone(),
                                 true,
-                                name.full_name.unwrap_or(name.raw_name),
+                                name.full_name.as_ref().unwrap_or(&name.raw_name),
                             ));
                     }
                     s => {
@@ -282,19 +284,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     fn collect_name(
         &self,
         name: &NamedTypeReference,
-        unknown_names: &mut BTreeMap<String, NamedTypeReferenceClass>,
+        unknown_names: &mut HashMap<String, NamedTypeReferenceClass>,
     ) {
         let used_name = name.name().to_string();
         if let Some(&found) =
-            unknown_names.iter().find_map(
-                |(key, value)| {
-                    if key == &used_name {
-                        Some(value)
-                    } else {
-                        None
-                    }
-                },
-            )
+            unknown_names.get(&used_name)
         {
             if found != name.class() {
                 // Interesting case, not sure we care
@@ -315,7 +309,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     fn collect_names(
         &self,
         ty: &Type,
-        unknown_names: &mut BTreeMap<String, NamedTypeReferenceClass>,
+        unknown_names: &mut HashMap<String, NamedTypeReferenceClass>,
     ) {
         match ty.type_class() {
             TypeClass::StructureTypeClass => {
@@ -366,13 +360,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         symbols: &Vec<ParsedSymbol>,
         progress: Box<dyn Fn(usize, usize) -> Result<()> + '_>,
     ) -> Result<()> {
-        let mut unknown_names = BTreeMap::new();
+        let mut unknown_names = HashMap::new();
         let mut known_names = self
             .bv
             .types()
             .iter()
             .map(|qnat| qnat.name().string())
-            .collect::<BTreeSet<_>>();
+            .collect::<HashSet<_>>();
 
         for ty in &self.named_types {
             known_names.insert(ty.0.clone());
@@ -404,7 +398,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
 
         for (name, class) in unknown_names.into_iter() {
-            if known_names.iter().any(|known| known == &name) {
+            if known_names.contains(&name) {
                 self.log(|| format!("Found referenced name and ignoring: {}", &name));
                 continue;
             }
@@ -460,7 +454,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
     /// Lazy logging function that prints like 20MB of messages
     pub(crate) fn log<F: FnOnce() -> D, D: Display>(&self, msg: F) {
-        if env::var("BN_DEBUG_PDB").is_ok() {
+        static MEM: OnceLock<bool> = OnceLock::new();
+        let debug_pdb = MEM.get_or_init(|| {
+            env::var("BN_DEBUG_PDB").is_ok()
+        });
+        if *debug_pdb {
             let space = "\t".repeat(self.type_stack.len()) + &"\t".repeat(self.symbol_stack.len());
             let msg = format!("{}", msg());
             debug!(

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 use anyhow::{anyhow, Result};
 use binaryninja::architecture::{Architecture, CoreArchitecture};
@@ -410,12 +411,22 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 self.log(|| format!("Remove builtin type {}", name));
             }
         }
+
+        static MEM: OnceLock<Regex> = OnceLock::new();
+        let uint_regex = MEM.get_or_init(|| {
+            Regex::new(r"u?int\d+_t").unwrap()
+        });
+
+        let float_regex = MEM.get_or_init(|| {
+            Regex::new(r"float\d+").unwrap()
+        });
+
         let mut remove_names = vec![];
         for (name, _) in &self.named_types {
-            if Regex::new(r"u?int\d+_t")?.is_match(name) {
+            if uint_regex.is_match(name) {
                 remove_names.push(name.clone());
             }
-            if Regex::new(r"float\d+")?.is_match(name) {
+            if float_regex.is_match(name) {
                 remove_names.push(name.clone());
             }
         }

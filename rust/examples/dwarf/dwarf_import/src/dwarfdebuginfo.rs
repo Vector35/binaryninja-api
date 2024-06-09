@@ -296,7 +296,7 @@ impl DebugInfoBuilder {
             },
         ) {
             if existing_type != t && commit {
-                error!("DWARF info contains duplicate type definition. Overwriting type `{}` (named `{:?}`) with `{}` (named `{:?}`)",
+                warn!("DWARF info contains duplicate type definition. Overwriting type `{}` (named `{:?}`) with `{}` (named `{:?}`)",
                     existing_type,
                     existing_name,
                     t,
@@ -334,7 +334,7 @@ impl DebugInfoBuilder {
             let new_type = self.get_type(type_uid).unwrap().1;
 
             if existing_type_uid != type_uid || existing_type != new_type {
-                error!("DWARF info contains duplicate data variable definition. Overwriting data variable at 0x{:08x} (`{}`) with `{}`",
+                warn!("DWARF info contains duplicate data variable definition. Overwriting data variable at 0x{:08x} (`{}`) with `{}`",
                     address,
                     self.get_type(existing_type_uid).unwrap().1,
                     self.get_type(type_uid).unwrap().1

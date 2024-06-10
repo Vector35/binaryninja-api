@@ -681,6 +681,27 @@ namespace BinaryNinja
 		MachOPPC64	= MachOABI64 | MachOPPC,
 	};
 
+	enum RebaseType {
+		RebaseTypeInvalid = 0,
+		RebaseTypePointer = 1,
+		RebaseTypeTextAbsolute32 = 2,
+		RebaseTypeTextPCRel32 = 3
+	};
+
+	enum RebaseOpcode {
+		RebaseOpcodeMask                            = 0xF0u, // REBASE_OPCODE_MASK
+		RebaseImmediateMask                         = 0x0Fu, // REBASE_IMMEDIATE_MASK
+		RebaseOpcodeDone                            = 0x00u, // REBASE_OPCODE_DONE
+		RebaseOpcodeSetTypeImmediate                = 0x10u, // REBASE_OPCODE_SET_TYPE_IMM
+		RebaseOpcodeSetSegmentAndOffsetUleb         = 0x20u, // REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+		RebaseOpcodeAddAddressUleb                  = 0x30u, // REBASE_OPCODE_ADD_ADDR_ULEB
+		RebaseOpcodeAddAddressImmediateScaled       = 0x40u, // REBASE_OPCODE_ADD_ADDR_IMM_SCALED
+		RebaseOpcodeDoRebaseImmediateTimes          = 0x50u, // REBASE_OPCODE_DO_REBASE_IMM_TIMES
+		RebaseOpcodeDoRebaseUlebTimes               = 0x60u, // REBASE_OPCODE_DO_REBASE_ULEB_TIMES
+		RebaseOpcodeDoRebaseAddAddressUleb          = 0x70u, // REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB
+		RebaseOpcodeDoRebaseUlebTimesSkippingUleb   = 0x80u, // REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB
+	};
+
 	enum BindOpcode {
 		BindOpcodeMask                            = 0xF0u, // BIND_OPCODE_MASK
 		BindImmediateMask                         = 0x0Fu, // BIND_IMMEDIATE_MASK
@@ -1240,6 +1261,7 @@ namespace BinaryNinja
 		std::vector<uint64_t> m_entryPoints; //list of entrypoints
 
 		std::vector<std::pair<BNRelocationInfo, std::string>> externalRelocations;
+		std::vector<BNRelocationInfo> rebaseRelocations;
 
 		symtab_command symtab;
 		dysymtab_command dysymtab;
@@ -1346,6 +1368,7 @@ namespace BinaryNinja
 		void ReadExportNode(uint64_t viewStart, DataBuffer& buffer, const std::string& currentText,
 			size_t cursor, uint32_t endGuard);
 
+		void ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint32_t tableOffset, uint32_t tableSize);
 		void ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNSymbolType type, uint32_t tableOffset, uint32_t tableSize,
 			BNSymbolBinding binding);
 		bool GetSectionPermissions(MachOHeader& header, uint64_t address, uint32_t &flags);

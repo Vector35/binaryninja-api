@@ -2011,6 +2011,17 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 	EndBulkModifySymbols();
 
+	for (auto& relocation : header.rebaseRelocations)
+	{
+		uint64_t relocationLocation = relocation.address;
+		virtualReader.Seek(relocationLocation);
+		uint64_t target = virtualReader.ReadPointer();
+		uint64_t slidTarget = target + m_imageBaseAdjustment;
+		relocation.address = slidTarget;
+		DefineRelocation(m_arch, relocation, slidTarget, relocationLocation);
+		if (m_objcProcessor)
+			m_objcProcessor->AddRelocatedPointer(relocationLocation, slidTarget);
+	}
 	for (auto& [relocation, name] : header.externalRelocations)
 	{
 		if (auto symbol = GetSymbolByRawName(name, GetExternalNameSpace()); symbol)
@@ -2497,6 +2508,157 @@ void MachoView::ReadExportNode(uint64_t viewStart, DataBuffer& buffer, const std
 	}
 }
 
+
+void MachoView::ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint32_t tableOffset, uint32_t tableSize)
+{
+	if (tableSize == 0 || tableOffset == 0)
+		return;
+
+	std::function segmentActualLoadAddress = [&](uint64_t segmentIndex) {
+		if (segmentIndex >= header.segments.size())
+			throw ReadException();
+		return header.segments[segmentIndex].vmaddr;
+	};
+	std::function segmentActualEndAddress = [&](uint64_t segmentIndex) {
+		if (segmentIndex >= header.segments.size())
+			throw ReadException();
+		return header.segments[segmentIndex].vmaddr + header.segments[segmentIndex].vmsize;
+	};
+
+	try {
+		reader.Seek(tableOffset);
+		auto table = reader.Read(tableSize);
+
+		BNRelocationInfo rebaseRelocation;
+
+		RebaseType type = RebaseTypeInvalid;
+		uint64_t segmentIndex = 0;
+		uint64_t address = segmentActualLoadAddress(0);
+		uint64_t segmentStartAddress = segmentActualLoadAddress(0);
+		uint64_t segmentEndAddress = segmentActualEndAddress(0);
+		uint64_t count;
+		uint64_t size;
+		uint64_t skip;
+		bool done = false;
+		size_t i = 0;
+		while ( !done && (i < tableSize))
+		{
+			uint8_t opAndIm = table[i];
+			uint8_t opcode = opAndIm & RebaseOpcodeMask;
+			uint64_t immediate = opAndIm & RebaseImmediateMask;
+			m_logger->LogDebug("Rebase opcode 0x%llx (im: 0x%llx)", opcode, immediate);
+			i++;
+			switch (opcode)
+			{
+			case RebaseOpcodeDone:
+				done = true;
+				break;
+			case RebaseOpcodeSetTypeImmediate:
+				type = (RebaseType)immediate;
+				break;
+			case RebaseOpcodeSetSegmentAndOffsetUleb:
+				segmentIndex = immediate;
+				address = segmentActualLoadAddress(segmentIndex) + readLEB128(table, tableSize, i);
+				segmentStartAddress = segmentActualLoadAddress(segmentIndex);
+				segmentEndAddress = segmentActualEndAddress(segmentIndex);
+				break;
+			case RebaseOpcodeAddAddressUleb:
+				address += readLEB128(table, tableSize, i);
+				break;
+			case RebaseOpcodeAddAddressImmediateScaled:
+				address += immediate * m_addressSize;
+				break;
+			case RebaseOpcodeDoRebaseImmediateTimes:
+				count = immediate;
+				for (uint64_t j = 0; j < count; ++j)
+				{
+					m_logger->LogDebug("Rebasing address %llx", address);
+					if (address < segmentStartAddress || address >= segmentEndAddress)
+					{
+						m_logger->LogError("Rebase address out of segment bounds");
+						throw ReadException();
+					}
+					memset(&rebaseRelocation, 0, sizeof(rebaseRelocation));
+					rebaseRelocation.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+					rebaseRelocation.address = address;
+					rebaseRelocation.size = m_addressSize;
+					rebaseRelocation.pcRelative = false;
+					rebaseRelocation.external = false;
+					header.rebaseRelocations.push_back(rebaseRelocation);
+					address += m_addressSize;
+				}
+				break;
+			case RebaseOpcodeDoRebaseUlebTimes:
+				count = readLEB128(table, tableSize, i);
+				for (uint64_t j = 0; j < count; ++j)
+				{
+					m_logger->LogDebug("Rebasing address %llx", address);
+					if (address < segmentStartAddress || address >= segmentEndAddress)
+					{
+						m_logger->LogError("Rebase address out of segment bounds");
+						throw ReadException();
+					}
+					memset(&rebaseRelocation, 0, sizeof(rebaseRelocation));
+					rebaseRelocation.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+					rebaseRelocation.address = address;
+					rebaseRelocation.size = m_addressSize;
+					rebaseRelocation.pcRelative = false;
+					rebaseRelocation.external = false;
+					header.rebaseRelocations.push_back(rebaseRelocation);
+					address += m_addressSize;
+				}
+				break;
+			case RebaseOpcodeDoRebaseAddAddressUleb:
+				m_logger->LogDebug("Rebasing address %llx", address);
+				if (address < segmentStartAddress || address >= segmentEndAddress)
+				{
+					m_logger->LogError("Rebase address out of segment bounds");
+					throw ReadException();
+				}
+				memset(&rebaseRelocation, 0, sizeof(rebaseRelocation));
+				rebaseRelocation.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+				rebaseRelocation.address = address;
+				rebaseRelocation.size = m_addressSize;
+				rebaseRelocation.pcRelative = false;
+				rebaseRelocation.external = false;
+				header.rebaseRelocations.push_back(rebaseRelocation);
+				address += readLEB128(table, tableSize, i) + m_addressSize;
+				break;
+			case RebaseOpcodeDoRebaseUlebTimesSkippingUleb:
+				count = readLEB128(table, tableSize, i);
+				skip = readLEB128(table, tableSize, i);
+				for (uint64_t j = 0; j < count; ++j)
+				{
+					m_logger->LogDebug("Rebasing address %llx", address);
+					if (address < segmentStartAddress || address >= segmentEndAddress)
+					{
+						m_logger->LogError("Rebase address out of segment bounds");
+						throw ReadException();
+					}
+					memset(&rebaseRelocation, 0, sizeof(rebaseRelocation));
+					rebaseRelocation.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+					rebaseRelocation.address = address;
+					rebaseRelocation.size = m_addressSize;
+					rebaseRelocation.pcRelative = false;
+					rebaseRelocation.external = false;
+					header.rebaseRelocations.push_back(rebaseRelocation);
+					address += skip + m_addressSize;
+				}
+				break;
+			default:
+				m_logger->LogError("Unknown rebase opcode %d", opcode);
+				throw ReadException();
+				break;
+			}
+		}
+	}
+	catch (ReadException&)
+	{
+		m_logger->LogError("Error while parsing Rebase Table");
+	}
+}
+
+
 void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNSymbolType incomingType, uint32_t tableOffset,
 	uint32_t tableSize, BNSymbolBinding binding)
 {
@@ -2665,6 +2827,8 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 			m_logger->LogDebug("Lazy symbols");
 			ParseDynamicTable(reader, header, ImportAddressSymbol, header.dyldInfo.lazy_bind_off,
 					  header.dyldInfo.lazy_bind_size, GlobalBinding);
+			m_logger->LogDebug("Parsing rebase table");
+			ParseRebaseTable(reader, header, header.dyldInfo.rebase_off, header.dyldInfo.rebase_size);
 		}
 		if (header.chainedFixupsPresent)
 		{

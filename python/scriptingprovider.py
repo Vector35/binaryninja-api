@@ -1298,7 +1298,7 @@ class PythonScriptingProvider(ScriptingProvider):
 		)
 
 		for inst in PythonScriptingInstance._registered_instances:
-			inst.update_magic_variables()
+			inst.interpreter.update_magic_variables()
 
 	@classmethod
 	def unregister_magic_variable(cls, name: str):
@@ -1309,7 +1309,7 @@ class PythonScriptingProvider(ScriptingProvider):
 		del cls.magic_variables[name]
 
 		for inst in PythonScriptingInstance._registered_instances:
-			inst.update_magic_variables()
+			inst.interpreter.update_magic_variables()
 
 
 PythonScriptingProvider().register()

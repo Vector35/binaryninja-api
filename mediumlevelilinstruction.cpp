@@ -3125,3 +3125,49 @@ ExprId MediumLevelILFunction::FloatCompareUnordered(size_t size, ExprId a, ExprI
 {
 	return AddExprWithLocation(MLIL_FCMP_UO, loc, size, a, b);
 }
+
+
+fmt::format_context::iterator fmt::formatter<MediumLevelILInstruction>::format(const MediumLevelILInstruction& obj, format_context& ctx) const
+{
+	if (!obj.function)
+		return fmt::format_to(ctx.out(), "<uninit>");
+
+	vector<InstructionTextToken> tokens;
+#ifdef BINARYNINJACORE_LIBRARY
+	bool success = obj.function->GetExprText(obj.function->GetFunction(), obj.function->GetArchitecture(), obj, tokens, new DisassemblySettings());
+#else
+	bool success = obj.function->GetExprText(obj.function->GetArchitecture(), obj.exprIndex, tokens);
+#endif
+	if (success)
+	{
+		string text;
+		if (presentation == '?')
+		{
+			fmt::format_to(ctx.out(), "{} ", obj.operation);
+			fmt::format_to(ctx.out(), "@ {:#x} ", obj.address);
+			if (obj.exprIndex != BN_INVALID_EXPR && (obj.exprIndex & 0xffff000000000000) == 0)
+			{
+				fmt::format_to(ctx.out(), "[expr {}] ", obj.exprIndex);
+			}
+			if (obj.instructionIndex != BN_INVALID_EXPR && (obj.instructionIndex & 0xffff000000000000) == 0)
+			{
+				fmt::format_to(ctx.out(), "[instr {}] ", obj.instructionIndex);
+			}
+			Ref<Type> type = obj.GetType();
+			if (type)
+			{
+				fmt::format_to(ctx.out(), "[type: {}] ", type->GetString());
+			}
+		}
+
+		for (auto& token: tokens)
+		{
+			fmt::format_to(ctx.out(), token.text);
+		}
+	}
+	else
+	{
+		fmt::format_to(ctx.out(), "???");
+	}
+	return ctx.out();
+}

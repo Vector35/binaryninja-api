@@ -2303,6 +2303,7 @@ bool PEView::Init()
 				{
 					reader.Seek(RVAToFileOffset(guardCFCheckFunctionPointer - m_imageBase));
 					guardCFCheckFunction = m_is64 ? reader.Read64() : reader.Read32();
+					guardCFCheckFunction += (m_imageBase - m_peImageBase);
 				}
 
 				uint64_t guardCFDispatchFunction = 0;
@@ -2310,6 +2311,7 @@ bool PEView::Init()
 				{
 					reader.Seek(RVAToFileOffset(guardCFDispatchFunctionPointer - m_imageBase));
 					guardCFDispatchFunction = m_is64 ? reader.Read64() : reader.Read32();
+					guardCFDispatchFunction += (m_imageBase - m_peImageBase);
 				}
 
 				auto functionPointer = Type::PointerType(platform->GetArchitecture(), Type::FunctionType(Type::VoidType(), platform->GetDefaultCallingConvention(), {}));

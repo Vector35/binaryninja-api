@@ -786,7 +786,7 @@ class HighLevelILInstruction(BaseILInstruction):
 		"""
 		return []
 
-	def traverse(self, cb: Callable[['HighLevelILInstruction', Any], Any], *args: Any, **kwargs: Any) -> Iterator[Any]:
+	def traverse(self, cb: Callable[['HighLevelILInstruction', Any], Any], *args: Any, shallow: bool = True, **kwargs: Any) -> Iterator[Any]:
 		"""
 		``traverse`` is a generator that allows you to traverse the HLIL AST in a depth-first manner. It will yield the
 		result of the callback function for each node in the AST. Arguments can be passed to the callback function using
@@ -794,6 +794,7 @@ class HighLevelILInstruction(BaseILInstruction):
 
 		:param Callable[[HighLevelILInstruction, Any], Any] cb: The callback function to call for each node in the HighLevelILInstruction
 		:param Any args: Custom user-defined arguments
+		:param bool shallow: Whether traversal occurs on block instructions
 		:param Any kwargs: Custom user-defined keyword arguments
 		:return: An iterator of the results of the callback function
 		:rtype: Iterator[Any]
@@ -805,15 +806,27 @@ class HighLevelILInstruction(BaseILInstruction):
 			>>>
 			>>> for result in inst.traverse(get_constant_less_than_value, 10):
 			... 	print(f"Found a constant {result} < 10 in {repr(inst)}")
+
+		:Example:
+			>>> def get_import_data_var_with_name(inst: HighLevelILInstruction, name: str) -> Optional['DataVariable']:
+			... 	if isinstance(inst, HighLevelILImport):
+			...			if bv.get_symbol_at(inst.constant).name == name:
+			... 			return bv.get_data_var_at(inst.constant)
+			>>>
+			>>> for result in inst.traverse(get_import_data_var_with_name, "__cxa_finalize", shallow=False):
+			... 	print(f"Found import at {result} in {repr(inst)}")
 		"""
 		if (result := cb(self, *args, **kwargs)) is not None:
 			yield result
-		for _, op, _ in self.detailed_operands:
+		blacklisted_op_names = {'true', 'false', 'body', 'cases', 'default'}
+		for op_name, op, _ in self.detailed_operands:
+			if shallow and op_name in blacklisted_op_names:
+				continue
 			if isinstance(op, HighLevelILInstruction):
-				yield from op.traverse(cb, *args, **kwargs)
+				yield from op.traverse(cb, *args, shallow=shallow, **kwargs)
 			elif isinstance(op, list) and all(isinstance(i, HighLevelILInstruction) for i in op):
 				for i in op:
-					yield from i.traverse(cb, *args, **kwargs) # type: ignore
+					yield from i.traverse(cb, *args, shallow=shallow, **kwargs) # type: ignore
 
 	@deprecation.deprecated(deprecated_in="4.0.4907", details="Use :py:func:`HighLevelILInstruction.traverse` instead.")
 	def visit_all(self, cb: HighLevelILVisitorCallback,
@@ -2584,7 +2597,7 @@ class HighLevelILFunction:
 		if not isinstance(root, HighLevelILBlock):
 			root = [root]
 		for instr in root:
-			yield from instr.traverse(cb, *args, **kwargs)
+			yield from instr.traverse(cb, *args, shallow=False, **kwargs)
 
 	@deprecation.deprecated(deprecated_in="4.0.4907", details="Use :py:func:`HighLevelILFunction.traverse` instead.")
 	def visit(self, cb: HighLevelILVisitorCallback) -> bool:

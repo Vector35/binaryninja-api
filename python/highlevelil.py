@@ -2597,7 +2597,7 @@ class HighLevelILFunction:
 		if not isinstance(root, HighLevelILBlock):
 			root = [root]
 		for instr in root:
-			yield from instr.traverse(cb, *args, **kwargs)
+			yield from instr.traverse(cb, *args, shallow=False, **kwargs)
 
 	@deprecation.deprecated(deprecated_in="4.0.4907", details="Use :py:func:`HighLevelILFunction.traverse` instead.")
 	def visit(self, cb: HighLevelILVisitorCallback) -> bool:

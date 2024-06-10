@@ -384,6 +384,10 @@ fn impl_abstract_structure_type(
         .map(|field| AbstractField::from_field(field, &name, pointer_width))
         .collect::<Result<Vec<_>>>()?;
 
+    if abstract_fields.is_empty() {
+        return Err(name.span().error("expected at least one named field"));
+    }
+
     // Generate the arguments to `StructureBuilder::insert`. Luckily `mem::offset_of!` was stabilized in
     // Rust 1.77 or otherwise this would be a lot more complicated.
     let layout_name = format_ident!("__{name}_layout");
@@ -434,15 +438,7 @@ fn impl_abstract_structure_type(
         Some(n) => quote! { #[repr(packed(#n))] },
         None => quote! { #[repr(packed)] },
     });
-    let (align, set_alignment) = repr
-        .align
-        .map(|n| {
-            (
-                quote! { #[repr(align(#n))] },
-                quote! { .set_alignment(Self::LAYOUT.align()) },
-            )
-        })
-        .unzip();
+    let align = repr.align.map(|n| quote! { #[repr(align(#n))] });
 
     // Distinguish between structs and unions
     let (kind, set_union) = match kind {
@@ -478,11 +474,11 @@ fn impl_abstract_structure_type(
             fn resolve_type() -> ::binaryninja::rc::Ref<::binaryninja::types::Type> {
                 ::binaryninja::types::Type::structure(
                     &::binaryninja::types::Structure::builder()
-                        #(.insert(#args))*
-                        .set_width(Self::LAYOUT.size() as u64)
                         .set_packed(#is_packed)
-                        #set_alignment
+                        .set_width(Self::LAYOUT.size() as u64)
+                        .set_alignment(Self::LAYOUT.align())
                         #set_union
+                        #(.insert(#args))*
                         .finalize()
                 )
             }

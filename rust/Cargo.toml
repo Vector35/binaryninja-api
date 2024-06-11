@@ -24,6 +24,7 @@ pdb = { path = "./examples/pdb-ng/pdb-0.8.0-patched" }
 
 [workspace]
 members = [
+    "examples/abstract-type",
     "examples/basic_script",
     "examples/decompile",
     "examples/dwarf/dwarf_export",

@@ -26,6 +26,11 @@ public:
 		if (cc)
 			RegisterStdcallCallingConvention(cc);
 	}
+
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
+	}
 };
 
 
@@ -44,6 +49,11 @@ public:
 			RegisterFastcallCallingConvention(cc);
 			RegisterStdcallCallingConvention(cc);
 		}
+	}
+
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
 	}
 };
 
@@ -64,6 +74,11 @@ public:
 			RegisterStdcallCallingConvention(cc);
 		}
 	}
+
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
+	}
 };
 
 
@@ -82,6 +97,11 @@ public:
 			RegisterFastcallCallingConvention(cc);
 			RegisterStdcallCallingConvention(cc);
 		}
+	}
+
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
 	}
 };
 

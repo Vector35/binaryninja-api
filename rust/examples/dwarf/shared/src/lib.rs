@@ -112,13 +112,27 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
                 if let Some(current_section_header) = data
                     .chunks(element_type.width() as usize)
                     .find(|section_header| {
-                        endian.read_u64(&section_header[24..32]) == section.start()
+                        if view.address_size() == 4 {
+                            endian.read_u32(&section_header[16..20]) as u64 == section.start()
+                        }
+                        else {
+                            endian.read_u64(&section_header[24..32]) == section.start()
+                        }
                     })
                 {
-                    if (endian.read_u64(&current_section_header[8..16]) & 2048) != 0 {
+                    let section_flags = if view.address_size() == 4 {
+                        endian.read_u32(&current_section_header[8..12]) as u64
+                    }
+                    else {
+                        endian.read_u64(&current_section_header[8..16])
+                    };
+                    // If the section has the compressed bit set
+                    if (section_flags & 2048) != 0 {
                         // Get section, trim header, decompress, return
-                        let offset = section.start() + 24;
-                        let len = section.len() - 24;
+                        let compressed_header_size = view.address_size()*3;
+
+                        let offset = section.start() + compressed_header_size as u64;
+                        let len = section.len() - compressed_header_size;
 
                         if let Ok(buffer) = view.read_buffer(offset, len) {
                             use std::ptr;

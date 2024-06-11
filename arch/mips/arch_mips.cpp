@@ -702,6 +702,8 @@ public:
 				return true;
 
 			int32_t imm = instr.operands[i].immediate;
+			uint64_t label_imm = instr.operands[i].immediate;
+
 			if (i != 0)
 				result.emplace_back(OperandSeparatorToken, ", ");
 
@@ -720,7 +722,7 @@ public:
 				result.emplace_back(IntegerToken, operand, imm);
 				break;
 			case LABEL:
-				snprintf(operand, sizeof(operand), "%#x", imm);
+				snprintf(operand, sizeof(operand), "%#" PRIx64, label_imm);
 				result.emplace_back(PossibleAddressToken, operand, imm);
 				break;
 			case REG:

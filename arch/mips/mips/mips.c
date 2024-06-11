@@ -1408,7 +1408,7 @@ uint32_t mips_decompose_instruction(
 			break;
 		case MIPS_J:
 		case MIPS_JAL:
-			INS_1(LABEL, (address & 0xf0000000) + (((uint32_t)ins.j.immediate)<<2))
+			INS_1(LABEL, (address & 0xfffffffff0000000) + (((uint32_t)ins.j.immediate)<<2))
 			break;
 		case MIPS_JR:
 			INS_1(REG, ins.r.rs)

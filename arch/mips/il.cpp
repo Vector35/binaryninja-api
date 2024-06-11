@@ -546,7 +546,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			if (op1.immediate == (addr + 8)) // Get PC construct
 				il.AddInstruction(il.SetRegister(addrSize, REG_RA, il.ConstPointer(addrSize ,addr + 8)));
 			else
-				il.AddInstruction(il.Call(il.ConstPointer(4, op1.immediate)));
+				il.AddInstruction(il.Call(il.ConstPointer(addrSize, op1.immediate)));
 			break;
 
 		case MIPS_BEQ:

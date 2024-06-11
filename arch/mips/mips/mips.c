@@ -240,7 +240,7 @@ static Operation mips32_special3_table[8][8] = {
 };
 
 static Operation mips64_special3_table[8][8] = {
-	{MIPS_EXT,     MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INS,     MIPS_DINSM,   MIPS_DINSU,   MIPS_DINS},
+	{MIPS_EXT,     MIPS_DEXTM,   MIPS_DEXTU,   MIPS_DEXT,    MIPS_INS,     MIPS_DINSM,   MIPS_DINSU,   MIPS_DINS},
 	{MIPS_INVALID, MIPS_INVALID, MIPS_LX,      MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
 	{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
 	{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
@@ -478,6 +478,9 @@ static const char* const OperationStrings[] = {
 		"ddiv",
 		"ddivu",
 		"deret",
+		"dext",
+		"dextm",
+		"dextu",
 		"di",
 		"dins",
 		"dinsm",
@@ -1933,7 +1936,14 @@ uint32_t mips_decompose_instruction(
 			INS_4(REG, ins.r.rt, REG, ins.r.rs, IMM, ins.r.sa + 32, IMM, ((int32_t)ins.r.rd + 1) - ins.r.sa);
 			break;
 		case MIPS_EXT:
+		case MIPS_DEXT:
 			INS_4(REG, ins.r.rt, REG, ins.r.rs, IMM, ins.r.sa, IMM, ins.r.rd + 1);
+			break;
+		case MIPS_DEXTM:
+			INS_4(REG, ins.r.rt, REG, ins.r.rs, IMM, ins.r.sa, IMM, ins.r.rd + 33);
+			break;
+		case MIPS_DEXTU:
+			INS_4(REG, ins.r.rt, REG, ins.r.rs, IMM, ins.r.sa + 32, IMM, ins.r.rd + 1);
 			break;
 		case MIPS_ALIGN:
 			INS_4(REG, ins.r.rd, REG, ins.r.rs, REG, ins.r.rt, IMM, (ins.r.sa & 3));

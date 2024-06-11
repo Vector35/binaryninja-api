@@ -1171,7 +1171,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_DSRA32:
 		case MIPS_DSRA:
 		case MIPS_DSRAV:
-		case MIPS_DSLV:
+		case MIPS_DSRLV:
 		case MIPS_DSUB:
 		case MIPS_DSUBU:
 		case MIPS_LDL:

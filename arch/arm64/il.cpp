@@ -679,39 +679,6 @@ static int consolidate_vector(
 	return 1;
 }
 
-static void LoadStoreOperandPair(LowLevelILFunction& il, bool load, InstructionOperand& operand1,
-    InstructionOperand& operand2, InstructionOperand& operand3)
-{
-	unsigned sz = REGSZ_O(operand1);
-
-	/* do pre-indexing */
-	ExprId tmp = GetILOperandPreIndex(il, operand3);
-	if (tmp)
-		il.AddInstruction(tmp);
-
-	/* compute addresses */
-	OperandClass oclass = (operand3.operandClass == MEM_PRE_IDX) ? MEM_REG : operand3.operandClass;
-	ExprId addr0 = GetILOperandEffectiveAddress(il, operand3, 8, oclass, 0);
-	ExprId addr1 = GetILOperandEffectiveAddress(il, operand3, 8, oclass, sz);
-
-	/* load/store */
-	if (load)
-	{
-		il.AddInstruction(ILSETREG_O(operand1, il.Load(sz, addr0)));
-		il.AddInstruction(ILSETREG_O(operand2, il.Load(sz, addr1)));
-	}
-	else
-	{
-		il.AddInstruction(il.Store(sz, addr0, ILREG_O(operand1)));
-		il.AddInstruction(il.Store(sz, addr1, ILREG_O(operand2)));
-	}
-
-	/* do post-indexing */
-	tmp = GetILOperandPostIndex(il, operand3);
-	if (tmp)
-		il.AddInstruction(tmp);
-}
-
 static void LoadStoreOperandPairSize(LowLevelILFunction& il, bool load, size_t load_size, InstructionOperand& operand1,
 	InstructionOperand& operand2, InstructionOperand& operand3)
 {
@@ -728,8 +695,23 @@ static void LoadStoreOperandPairSize(LowLevelILFunction& il, bool load, size_t l
 	/* load/store */
 	if (load)
 	{
-		il.AddInstruction(ILSETREG_O(operand1, il.Load(load_size, addr0)));
-		il.AddInstruction(ILSETREG_O(operand2, il.Load(load_size, addr1)));
+		// We lift this instruction differently if operand1 and operand3 are equal as to not break outlining in the common case,
+		//  since outlining does not seem to handle intermediate stores to temporary registers
+		// TODO: unify lifting once outlining handles intermediate temporary stores
+		if (REG_O(operand1) != REG_O(operand3))
+		{
+			// {op} X, Y, [Z]
+			il.AddInstruction(ILSETREG_O(operand1, il.Load(load_size, addr0)));
+			il.AddInstruction(ILSETREG_O(operand2, il.Load(load_size, addr1)));
+		}
+		else
+		{
+			// {op} X, Y, [X]
+			// Prevent clobbering of source during write to operand1 by storing source in a temporary register
+			il.AddInstruction(il.SetRegister(REGSZ_O(operand1), LLIL_TEMP(0), addr1));
+			il.AddInstruction(ILSETREG_O(operand1, il.Load(load_size, addr0)));
+			il.AddInstruction(ILSETREG_O(operand2, il.Load(load_size, il.Register(load_size, LLIL_TEMP(0)))));
+		}
 	}
 	else
 	{
@@ -741,6 +723,14 @@ static void LoadStoreOperandPairSize(LowLevelILFunction& il, bool load, size_t l
 	tmp = GetILOperandPostIndex(il, operand3);
 	if (tmp)
 		il.AddInstruction(tmp);
+}
+
+
+static void LoadStoreOperandPair(LowLevelILFunction& il, bool load, InstructionOperand& operand1,
+    InstructionOperand& operand2, InstructionOperand& operand3)
+{
+	unsigned sz = REGSZ_O(operand1);
+	LoadStoreOperandPairSize(il, load, sz, operand1, operand2, operand3);
 }
 
 

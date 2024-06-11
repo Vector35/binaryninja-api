@@ -181,12 +181,12 @@ class MipsArchitecture: public Architecture
 protected:
 	size_t m_bits;
 	BNEndianness m_endian;
-	uint32_t m_enablePseudoOps;
+	uint32_t m_decomposeFlags;
 
 	virtual bool Disassemble(const uint8_t* data, uint64_t addr, size_t maxLen, Instruction& result)
 	{
 		memset(&result, 0, sizeof(result));
-		if (mips_decompose((uint32_t*)data, maxLen,  &result, m_bits == 64 ? MIPS_64 : MIPS_32, addr, m_endian, m_enablePseudoOps) != 0)
+		if (mips_decompose((uint32_t*)data, maxLen,  &result, m_bits == 64 ? MIPS_64 : MIPS_32, addr, m_endian, m_decomposeFlags) != 0)
 			return false;
 		return true;
 	}
@@ -219,6 +219,7 @@ protected:
 			case MIPS_BLTZL:
 			case MIPS_BNE:
 			case MIPS_BNEL:
+			case MIPS_BNEZ:
 			case MIPS_JR:
 			case MIPS_JR_HB:
 			case MIPS_J:
@@ -233,6 +234,10 @@ protected:
 			case MIPS_BC2TL:
 			case MIPS_BC2F:
 			case MIPS_BC2T:
+			case CNMIPS_BBIT0:
+			case CNMIPS_BBIT032:
+			case CNMIPS_BBIT1:
+			case CNMIPS_BBIT132:
 				return 1;
 			default:
 				return 0;
@@ -244,8 +249,12 @@ protected:
 	{
 		switch (instr.operation)
 		{
+		case MIPS_LDL:
+		case MIPS_LDR:
 		case MIPS_LWL:
 		case MIPS_LWR:
+		case MIPS_SDL:
+		case MIPS_SDR:
 		case MIPS_SWL:
 		case MIPS_SWR:
 			return true;
@@ -270,6 +279,7 @@ protected:
 			case MIPS_BLTZL:
 			case MIPS_BEQ:
 			case MIPS_BNE:
+			case MIPS_BNEZ:
 			case MIPS_BEQL:
 			case MIPS_BNEL:
 			case MIPS_BC1F:
@@ -280,6 +290,10 @@ protected:
 			case MIPS_BC2TL:
 			case MIPS_BC2F:
 			case MIPS_BC2T:
+			case CNMIPS_BBIT0:
+			case CNMIPS_BBIT032:
+			case CNMIPS_BBIT1:
+			case CNMIPS_BBIT132:
 				return true;
 			default:
 				return false;
@@ -333,6 +347,7 @@ protected:
 		case MIPS_BGTZ:
 		case MIPS_BLEZ:
 		case MIPS_BLTZ:
+		case MIPS_BNEZ:
 		case MIPS_BGEZL:
 		case MIPS_BGTZL:
 		case MIPS_BLEZL:
@@ -346,6 +361,10 @@ protected:
 		case MIPS_BNE:
 		case MIPS_BEQL:
 		case MIPS_BNEL:
+		case CNMIPS_BBIT0:
+		case CNMIPS_BBIT032:
+		case CNMIPS_BBIT1:
+		case CNMIPS_BBIT132:
 			result.AddBranch(TrueBranch, instr.operands[2].immediate, nullptr, hasBranchDelay);
 			//need to jump over the branch delay slot and current instruction
 			result.AddBranch(FalseBranch, addr + 8, nullptr, hasBranchDelay);
@@ -383,10 +402,13 @@ protected:
 	}
 
 public:
-	MipsArchitecture(const std::string& name, BNEndianness endian, size_t bits): Architecture(name), m_bits(bits), m_endian(endian)
+	MipsArchitecture(const std::string& name, BNEndianness endian, size_t bits, uint32_t decomposeFlags = 0)
+		: Architecture(name), m_bits(bits), m_endian(endian), m_decomposeFlags(decomposeFlags)
 	{
 		Ref<Settings> settings = Settings::Instance();
-		m_enablePseudoOps = settings->Get<bool>("arch.mips.disassembly.pseudoOps") ? 1 : 0;
+		uint32_t flag_pseudo_ops = settings->Get<bool>("arch.mips.disassembly.pseudoOps") ? DECOMPOSE_FLAGS_PSEUDO_OP : 0;
+
+		m_decomposeFlags |= flag_pseudo_ops;
 	}
 
 	virtual BNEndianness GetEndianness() const override
@@ -501,7 +523,7 @@ public:
 				il.AddInstruction(il.If(GetConditionForInstruction(il, instr, GetAddressSize()), trueCode, falseCode));
 				il.MarkLabel(trueCode);
 				il.SetCurrentAddress(this, addr + instr.size);
-				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize());
+				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize(), m_decomposeFlags);
 				for (size_t i = 0; i < instrInfo.branchCount; i++)
 				{
 					if (instrInfo.branchType[i] == TrueBranch)
@@ -527,7 +549,7 @@ public:
 				nop = il.Nop();
 				il.AddInstruction(nop);
 
-				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize());
+				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize(), m_decomposeFlags);
 
 				LowLevelILInstruction delayed;
 				uint32_t clobbered = BN_INVALID_REGISTER;
@@ -554,7 +576,7 @@ public:
 				}
 				else
 				{
-					status = GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize());
+					status = GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_decomposeFlags);
 				}
 
 				if (clobbered != BN_INVALID_REGISTER)
@@ -603,45 +625,110 @@ public:
 			Instruction* base;
 			uint32_t addrToUse;
 			bool store = false;
-			bool proceed = true;
+			bool proceed = false;
+			bool is32bit = false;
 
 			switch (instr.operation)
 			{
-			case MIPS_SWL:
-				store = true;
-				// fall through
-			case MIPS_LWL:
-				proceed = (secondInstr.operation == (store ? MIPS_SWR : MIPS_LWR));
-				left = &instr;
-				right = &secondInstr;
-				break;
+				case MIPS_LDL: proceed = secondInstr.operation == MIPS_LDR; break;
+				case MIPS_LDR: proceed = secondInstr.operation == MIPS_LDL; break;
+				case MIPS_LWL: proceed = secondInstr.operation == MIPS_LWR; break;
+				case MIPS_LWR: proceed = secondInstr.operation == MIPS_LWL; break;
 
-			case MIPS_SWR:
-				store = true;
-				// fall through
-			case MIPS_LWR:
-				proceed = (secondInstr.operation == (store ? MIPS_SWL : MIPS_LWL));
-				left = &secondInstr;
-				right = &instr;
-				break;
+				case MIPS_SDL: proceed = secondInstr.operation == MIPS_SDR; break;
+				case MIPS_SDR: proceed = secondInstr.operation == MIPS_SDL; break;
+				case MIPS_SWL: proceed = secondInstr.operation == MIPS_SWR; break;
+				case MIPS_SWR: proceed = secondInstr.operation == MIPS_SWL; break;
 
-			default:
-				proceed = false;
-				break;
+				default: proceed = false;
+			}
+
+			switch (instr.operation)
+			{
+				case MIPS_SDL:
+				case MIPS_SDR:
+				case MIPS_SWL:
+				case MIPS_SWR:
+					store = true;
+					break;
+				case MIPS_LDL:
+				case MIPS_LDR:
+				case MIPS_LWL:
+				case MIPS_LWR:
+					store = false;
+					break;
+
+				default: proceed = false;
+			}
+
+			switch (instr.operation)
+			{
+				case MIPS_LDL:
+				case MIPS_LWL:
+				case MIPS_SDL:
+				case MIPS_SWL:
+					left = &instr;
+					right = &secondInstr;
+					break;
+
+				case MIPS_LDR:
+				case MIPS_LWR:
+				case MIPS_SDR:
+				case MIPS_SWR:
+					left = &secondInstr;
+					right = &instr;
+					break;
+
+				default: proceed = false;
+			}
+
+			switch (instr.operation)
+			{
+				case MIPS_LWL:
+				case MIPS_LWR:
+				case MIPS_SWL:
+				case MIPS_SWR:
+					is32bit = true;
+					break;
+
+				case MIPS_LDL:
+				case MIPS_LDR:
+				case MIPS_SDL:
+				case MIPS_SDR:
+					is32bit = false;
+					break;
+
+				default: proceed = false;
 			}
 
 			proceed = proceed && (instr.operands[0].reg == secondInstr.operands[0].reg);
 
 			if (m_endian == BigEndian)
 			{
-				proceed = proceed && ((left->operands[1].immediate + 3) == right->operands[1].immediate);
-				addrToUse = (uint32_t)addr + ((&instr == left) ? 0 : 4);
+				if (is32bit)
+				{
+					proceed = proceed && ((left->operands[1].immediate + 3) == right->operands[1].immediate);
+					addrToUse = (uint32_t)addr + ((&instr == left) ? 0 : 4);
+				}
+				else
+				{
+					proceed = proceed && ((left->operands[1].immediate + 7) == right->operands[1].immediate);
+					addrToUse = (uint32_t)addr + ((&instr == left) ? 0 : 8);
+				}
 				base = left;
 			}
 			else
 			{
-				proceed = proceed && (left->operands[1].immediate == (right->operands[1].immediate + 3));
-				addrToUse = (uint32_t)addr + ((&instr == right) ? 0 : 4);
+				if (is32bit)
+				{
+					proceed = proceed && (left->operands[1].immediate == (right->operands[1].immediate + 3));
+					addrToUse = (uint32_t)addr + ((&instr == right) ? 0 : 4);
+				}
+				else
+				{
+					proceed = proceed && (left->operands[1].immediate == (right->operands[1].immediate + 7));
+					addrToUse = (uint32_t)addr + ((&instr == right) ? 0 : 8);
+				}
 				base = right;
 			}
 
@@ -649,13 +736,17 @@ public:
 			{
 				len = 8;
 				il.SetCurrentAddress(this, addrToUse);
-				base->operation = store ? MIPS_SW : MIPS_LW;
-				return GetLowLevelILForInstruction(this, addrToUse, il, *base, GetAddressSize());
+				if (store)
+					base->operation = is32bit ? MIPS_SW : MIPS_SD;
+				else
+					base->operation = is32bit ? MIPS_LW : MIPS_LD;
+
+				return GetLowLevelILForInstruction(this, addrToUse, il, *base, GetAddressSize(), m_decomposeFlags);
 			}
 		}
 
 		len = instr.size;
-		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize());
+		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_decomposeFlags);
 	}
 
 	virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override
@@ -702,6 +793,8 @@ public:
 				return true;
 
 			int32_t imm = instr.operands[i].immediate;
+			uint64_t label_imm = instr.operands[i].immediate;
+
 			if (i != 0)
 				result.emplace_back(OperandSeparatorToken, ", ");
 
@@ -720,7 +813,7 @@ public:
 				result.emplace_back(IntegerToken, operand, imm);
 				break;
 			case LABEL:
-				snprintf(operand, sizeof(operand), "%#x", imm);
+				snprintf(operand, sizeof(operand), "%#" PRIx64, label_imm);
 				result.emplace_back(PossibleAddressToken, operand, imm);
 				break;
 			case REG:
@@ -800,22 +893,97 @@ public:
 		{
 			case MIPS_INTRIN_WSBH:
 				return "__wsbh";
+			case MIPS_INTRIN_DSBH:
+				return "_dsbh";
+			case MIPS_INTRIN_DSHD:
+				return "_dshd";
 			case MIPS_INTRIN_MFC0:
-				return "moveFromCoprocessor";
+				return "moveFromCoprocessor0";
+			case MIPS_INTRIN_MFC2:
+				return "moveFromCoprocessor2";
 			case MIPS_INTRIN_MFC_UNIMPLEMENTED:
 				return "moveFromCoprocessorUnimplemented";
 			case MIPS_INTRIN_MTC0:
-				return "moveToCoprocessor";
+				return "moveToCoprocessor0";
+			case MIPS_INTRIN_MTC2:
+				return "moveToCoprocessor2";
 			case MIPS_INTRIN_MTC_UNIMPLEMENTED:
 				return "moveToCoprocessorUnimplemented";
 			case MIPS_INTRIN_DMFC0:
-				return "moveDwordFromCoprocessor";
+				return "moveDwordFromCoprocessor0";
+			case MIPS_INTRIN_DMFC2:
+				return "moveDwordFromCoprocessor2";
 			case MIPS_INTRIN_DMFC_UNIMPLEMENTED:
 				return "moveDwordFromCoprocessorUnimplemented";
 			case MIPS_INTRIN_DMTC0:
-				return "moveDwordToCoprocessor";
+				return "moveDwordToCoprocessor0";
+			case MIPS_INTRIN_DMTC2:
+				return "moveDwordToCoprocessor2";
 			case MIPS_INTRIN_DMTC_UNIMPLEMENTED:
 				return "moveDwordToCoprocessorUnimplemented";
+			case MIPS_INTRIN_SYNC:
+				return "_sync";
+			case MIPS_INTRIN_EI:
+				return "_enableInterrupts";
+			case MIPS_INTRIN_DI:
+				return "_disableInterrupts";
+			case MIPS_INTRIN_EHB:
+				return "_clearExecutionHazards";
+			case MIPS_INTRIN_WAIT:
+				return "_enterLowPowerMode";
+			case MIPS_INTRIN_HWR0:
+				return "_cpuNum";
+			case MIPS_INTRIN_HWR1:
+				return "_synciStep";
+			case MIPS_INTRIN_HWR2:
+				return "_cycleCounter";
+			case MIPS_INTRIN_HWR3:
+				return "_cycleCounterResolution";
+			case MIPS_INTRIN_HWR29:
+				return "_userLocalRegister";
+			case MIPS_INTRIN_HWR_UNKNOWN:
+				return "_hardwareRegister";
+			case MIPS_INTRIN_LLBIT_SET:
+				return "_setLLBit";
+			case MIPS_INTRIN_LLBIT_CHECK:
+				return "_checkLLBit";
+			case MIPS_INTRIN_PREFETCH:
+				return "_prefetch";
+			case MIPS_INTRIN_CACHE:
+				return "_cache";
+			case MIPS_INTRIN_GET_LEFT_PART32:
+				return "_getLeftPart32";
+			case MIPS_INTRIN_GET_RIGHT_PART32:
+				return "_getRightPart32";
+			case MIPS_INTRIN_SET_LEFT_PART32:
+				return "_setLeftPart32";
+			case MIPS_INTRIN_SET_RIGHT_PART32:
+				return "_setRightPart32";
+			case MIPS_INTRIN_GET_LEFT_PART64:
+				return "_getLeftPart64";
+			case MIPS_INTRIN_GET_RIGHT_PART64:
+				return "_getRightPart64";
+			case MIPS_INTRIN_SET_LEFT_PART64:
+				return "_setLeftPart64";
+			case MIPS_INTRIN_SET_RIGHT_PART64:
+				return "_setRightPart64";
+
+			case CNMIPS_INTRIN_SYNCIOBDMA:
+				return "_synciobdma";
+			case CNMIPS_INTRIN_SYNCS:
+				return "_syncs";
+			case CNMIPS_INTRIN_SYNCW:
+				return "_syncw";
+			case CNMIPS_INTRIN_SYNCWS:
+				return "_syncws";
+			case CNMIPS_INTRIN_HWR30:
+				return "_chOrd";
+			case CNMIPS_INTRIN_HWR31:
+				return "_cvmCount";
+			case CNMIPS_INTRIN_POP:
+				return "_countOnes32";
+			case CNMIPS_INTRIN_DPOP:
+				return "_countOnes64";
 			default:
 				return "";
 		}
@@ -825,6 +993,8 @@ public:
 	{
 		return vector<uint32_t>{
 			MIPS_INTRIN_WSBH,
+			MIPS_INTRIN_DSBH,
+			MIPS_INTRIN_DSHD,
 			MIPS_INTRIN_MFC0,
 			MIPS_INTRIN_MFC_UNIMPLEMENTED,
 			MIPS_INTRIN_MTC0,
@@ -833,6 +1003,38 @@ public:
 			MIPS_INTRIN_DMFC_UNIMPLEMENTED,
 			MIPS_INTRIN_DMTC0,
 			MIPS_INTRIN_DMTC_UNIMPLEMENTED,
+			MIPS_INTRIN_SYNC,
+			MIPS_INTRIN_DI,
+			MIPS_INTRIN_EHB,
+			MIPS_INTRIN_EI,
+			MIPS_INTRIN_WAIT,
+			MIPS_INTRIN_HWR0,
+			MIPS_INTRIN_HWR1,
+			MIPS_INTRIN_HWR2,
+			MIPS_INTRIN_HWR3,
+			MIPS_INTRIN_HWR29,
+			MIPS_INTRIN_HWR_UNKNOWN,
+			MIPS_INTRIN_LLBIT_SET,
+			MIPS_INTRIN_LLBIT_CHECK,
+			MIPS_INTRIN_PREFETCH,
+			MIPS_INTRIN_CACHE,
+			MIPS_INTRIN_GET_LEFT_PART32,
+			MIPS_INTRIN_GET_RIGHT_PART32,
+			MIPS_INTRIN_SET_LEFT_PART32,
+			MIPS_INTRIN_SET_RIGHT_PART32,
+			MIPS_INTRIN_GET_LEFT_PART64,
+			MIPS_INTRIN_GET_RIGHT_PART64,
+			MIPS_INTRIN_SET_LEFT_PART64,
+			MIPS_INTRIN_SET_RIGHT_PART64,
+
+			CNMIPS_INTRIN_SYNCIOBDMA,
+			CNMIPS_INTRIN_SYNCS,
+			CNMIPS_INTRIN_SYNCW,
+			CNMIPS_INTRIN_SYNCWS,
+			CNMIPS_INTRIN_HWR30,
+			CNMIPS_INTRIN_HWR31,
+			CNMIPS_INTRIN_POP,
+			CNMIPS_INTRIN_DPOP,
 		};
 	}
 
@@ -842,6 +1044,9 @@ public:
 		{
 			case MIPS_INTRIN_WSBH:
 				return {NameAndType(Type::IntegerType(4, false))};
+			case MIPS_INTRIN_DSBH:
+			case MIPS_INTRIN_DSHD:
+				return {NameAndType(Type::IntegerType(8, false))};
 			case MIPS_INTRIN_MFC0:
 				return {
 					NameAndType("register", Type::IntegerType(4, false)),
@@ -885,6 +1090,71 @@ public:
 					NameAndType("register", Type::IntegerType(4, false)),
 					NameAndType("selector", Type::IntegerType(4, false)),
 					NameAndType("value", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_SYNC:
+				return {
+					NameAndType("stype", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_HWR_UNKNOWN:
+				return {
+					NameAndType("hwreg", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_LLBIT_SET:
+				return {
+					NameAndType("value", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_PREFETCH:
+			case MIPS_INTRIN_CACHE:
+				return {
+					NameAndType("op", Type::IntegerType(1, false)),
+					NameAndType("address", Type::IntegerType(m_bits == 64 ? 8 : 4, false)),
+				};
+
+			// NOTE: SET_x_PARTx could potentially benefit from
+			//       including the old value as an input (since each
+			//       only sets part of the register and keeps the
+			//       other the same), but this can lead to registers
+			//       unnecessarily treated as function arguments
+			//
+			// NOTE: PARTx intrinsics could benefit from some kind
+			//       of "size" input indicating how many bytes to
+			//       get/set, but that value would be taking the
+			//       low bits of a pointer with unknown value, which
+			//       isn't exactly useful
+			//
+			//       PLUS, the majority of the SWL/SWR/etc.
+			//       instructions that get lifted by themselves
+			//       actually *are* members of a pair that just
+			//       aren't immediately next to each other, so they
+			//       go through the code checking for those pairs...
+			//       so for each "rX = setLeftXX([address])" we also
+			//       expect to see a "rY = setRightXX([address])",
+			//       which is a little more follow-able
+			case MIPS_INTRIN_GET_LEFT_PART32:
+			case MIPS_INTRIN_GET_RIGHT_PART32:
+				return {
+					NameAndType("value", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_SET_LEFT_PART32:
+				return {
+					NameAndType("leftpart", Type::IntegerType(4, false))
+				};
+			case MIPS_INTRIN_SET_RIGHT_PART32:
+				return {
+					NameAndType("rightpart", Type::IntegerType(4, false))
+				};
+			case MIPS_INTRIN_GET_LEFT_PART64:
+			case MIPS_INTRIN_GET_RIGHT_PART64:
+				return {
+					NameAndType("value", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_SET_LEFT_PART64:
+				return {
+					NameAndType("leftpart", Type::IntegerType(8, false))
+				};
+			case MIPS_INTRIN_SET_RIGHT_PART64:
+				return {
+					NameAndType("rightpart", Type::IntegerType(8, false))
 				};
 			default:
 				return vector<NameAndType>();
@@ -896,12 +1166,38 @@ public:
 		switch (intrinsic)
 		{
 			case MIPS_INTRIN_WSBH:
+			case CNMIPS_INTRIN_POP:
 				return {Type::IntegerType(4, false)};
+			case MIPS_INTRIN_DSBH:
+			case MIPS_INTRIN_DSHD:
+			case CNMIPS_INTRIN_DPOP:
+				return {Type::IntegerType(8, false)};
 			case MIPS_INTRIN_MFC0:
 			case MIPS_INTRIN_MFC_UNIMPLEMENTED:
 				return {Type::IntegerType(4, false)};
 			case MIPS_INTRIN_DMFC0:
 			case MIPS_INTRIN_DMFC_UNIMPLEMENTED:
+				return {Type::IntegerType(8, false)};
+			case MIPS_INTRIN_HWR0:
+			case MIPS_INTRIN_HWR1:
+			case MIPS_INTRIN_HWR2:
+			case MIPS_INTRIN_HWR3:
+			case MIPS_INTRIN_HWR29:
+			case MIPS_INTRIN_HWR_UNKNOWN:
+			case CNMIPS_INTRIN_HWR30:
+			case CNMIPS_INTRIN_HWR31:
+				return {Type::IntegerType(4, false)};
+			case MIPS_INTRIN_LLBIT_CHECK:
+				return {Type::IntegerType(0, false)};
+			case MIPS_INTRIN_GET_LEFT_PART32:
+			case MIPS_INTRIN_GET_RIGHT_PART32:
+			case MIPS_INTRIN_SET_LEFT_PART32:
+			case MIPS_INTRIN_SET_RIGHT_PART32:
+				return {Type::IntegerType(4, false)};
+			case MIPS_INTRIN_GET_LEFT_PART64:
+			case MIPS_INTRIN_GET_RIGHT_PART64:
+			case MIPS_INTRIN_SET_LEFT_PART64:
+			case MIPS_INTRIN_SET_RIGHT_PART64:
 				return {Type::IntegerType(8, false)};
 			default:
 				return vector<Confidence<Ref<Type>>>();
@@ -995,7 +1291,7 @@ public:
 		if (GetEndianness() == LittleEndian)
 			instValue = bswap32(instValue);
 
-		uint32_t op = instValue >> 25;
+		uint32_t op = instValue >> 26;
 		switch (op)
 		{
 			case 1: //REGIMM
@@ -1074,7 +1370,7 @@ public:
 
 	virtual vector<uint32_t> GetFullWidthRegisters() override
 	{
-		return vector<uint32_t>{
+		vector<uint32_t> registers = vector<uint32_t>{
 			REG_ZERO,  REG_AT,  REG_V0,  REG_V1,  REG_A0,  REG_A1,  REG_A2,  REG_A3,
 			REG_T0,    REG_T1,  REG_T2,  REG_T3,  REG_T4,  REG_T5,  REG_T6,  REG_T7,
 			REG_S0,    REG_S1,  REG_S2,  REG_S3,  REG_S4,  REG_S5,  REG_S6,  REG_S7,
@@ -1190,11 +1486,210 @@ public:
 			// Coprocessor 0 register 31
 			REG_DESAVE,
 		};
+
+		if ((m_decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+		{
+			uint32_t cavium_registers[] =
+			{
+				CNREG_MPL0,
+				CNREG_MPL1,
+				CNREG_MPL2,
+				CNREG_P0,
+				CNREG_P1,
+				CNREG_P2,
+
+				CNREG0_CVM_COUNT,
+				CNREG0_CVM_CTL,
+				CNREG0_POWTHROTTLE,
+				CNREG0_CVM_MEM_CTL,
+				CNREG0_MULTICORE_DBG,
+
+				CNREG2_0040_HSH_DAT0,
+				CNREG2_0041_HSH_DAT1,
+				CNREG2_0042_HSH_DAT2,
+				CNREG2_0043_HSH_DAT3,
+				CNREG2_0044_HSH_DAT4,
+				CNREG2_0045_HSH_DAT5,
+				CNREG2_0046_HSH_DAT6,
+
+				CNREG2_0048_HSH_IV0,
+				CNREG2_0049_HSH_IV1,
+				CNREG2_004A_HSH_IV2,
+				CNREG2_004B_HSH_IV3,
+
+				CNREG2_0050_SHA3_DAT24,
+				CNREG2_0051_SHA3_DAT15_RD,
+
+				CNREG2_0058_GFM_MUL_REFLECT0,
+				CNREG2_0059_GFM_MUL_REFLECT1,
+				CNREG2_005A_GFM_RESINP_REFLECT0,
+				CNREG2_005B_GFM_RESINP_REFLECT1,
+				CNREG2_005C_GFM_XOR0_REFLECT,
+
+				// also KASUMI
+				CNREG2_0080_3DES_KEY0,
+				CNREG2_0081_3DES_KEY1,
+				CNREG2_0082_3DES_KEY2,
+
+				CNREG2_0084_3DES_IV,
+				CNREG2_0088_3DES_RESULT_RD,
+				CNREG2_0098_3DES_RESULT_WR,
+
+				// also SMS4 RESINP
+				CNREG2_0100_AES_RESULT0,
+				CNREG2_0101_AES_RESULT1,
+
+				// also SMS4 IV
+				CNREG2_0102_AES_IV0,
+				CNREG2_0103_AES_IV1,
+
+				// also SMS4 KEY
+				CNREG2_0104_AES_KEY0,
+				CNREG2_0105_AES_KEY1,
+				CNREG2_0106_AES_KEY2,
+				CNREG2_0107_AES_KEY3,
+
+				// also SMS4_x
+				CNREG2_0108_AES_ENC_CBC0,
+				CNREG2_010A_AES_ENC0,
+				CNREG2_010C_AES_DEC_CBC0,
+				CNREG2_010E_AES_DEC0,
+
+				CNREG2_0110_AES_KEYLENGTH,
+				CNREG2_0111_AES_DAT0,
+
+				CNREG2_0115_CAMELLIA_FL,
+				CNREG2_0116_CAMELLIA_FLINV,
+
+				CNREG2_0200_CRC_POLYNOMIAL,
+				CNREG2_0201_CRC_IV,
+				CNREG2_0202_CRC_LEN,
+				CNREG2_0203_CRC_IV_REFLECT_RD,
+				CNREG2_0204_CRC_BYTE,
+				CNREG2_0205_CRC_HALF,
+				CNREG2_0206_CRC_WORD,
+				CNREG2_0211_CRC_IV_REFLECT_WR,
+				CNREG2_0214_CRC_BYTE_REFLECT,
+				CNREG2_0215_CRC_HALF_REFLECT,
+				CNREG2_0216_CRC_WORD_REFLECT,
+
+				// also SNOW3G_LFSR, SHA3DAT0..=14
+				CNREG2_0240_HSH_DATW0,
+				CNREG2_0241_HSH_DATW1,
+				CNREG2_0242_HSH_DATW2,
+				CNREG2_0243_HSH_DATW3,
+				CNREG2_0244_HSH_DATW4,
+				CNREG2_0245_HSH_DATW5,
+				CNREG2_0246_HSH_DATW6,
+				CNREG2_0247_HSH_DATW7,
+				CNREG2_0248_HSH_DATW8,
+				CNREG2_0249_HSH_DATW9,
+				CNREG2_024A_HSH_DATW10,
+				CNREG2_024B_HSH_DATW11,
+				CNREG2_024C_HSH_DATW12,
+				CNREG2_024D_HSH_DATW13,
+				CNREG2_024E_HSH_DATW14,
+
+				CNREG2_024F_SHA3_DAT15_RD,
+
+				// also SNOW3G_RESULT (0x250), SNOW3G_SFM (0x251, 0x252, 0x253)
+				CNREG2_0250_HSH_IVW0,
+				CNREG2_0251_HSH_IVW1,
+				CNREG2_0252_HSH_IVW2,
+				CNREG2_0253_HSH_IVW3,
+				CNREG2_0254_HSH_IVW4,
+				CNREG2_0255_HSH_IVW5,
+				CNREG2_0256_HSH_IVW6,
+				CNREG2_0257_HSH_IVW7,
+
+				CNREG2_0258_GFM_MUL0,
+				CNREG2_0259_GFM_MUL1,
+				CNREG2_025A_GFM_RESINP0,
+				CNREG2_025B_GFM_RESINP1,
+				CNREG2_025C_GFM_XOR0,
+				CNREG2_025E_GFM_POLY,
+
+				CNREG2_02C0_SHA3_XORDAT0,
+				CNREG2_02C1_SHA3_XORDAT1,
+				CNREG2_02C2_SHA3_XORDAT2,
+				CNREG2_02C3_SHA3_XORDAT3,
+				CNREG2_02C4_SHA3_XORDAT4,
+				CNREG2_02C5_SHA3_XORDAT5,
+				CNREG2_02C6_SHA3_XORDAT6,
+				CNREG2_02C7_SHA3_XORDAT7,
+				CNREG2_02C8_SHA3_XORDAT8,
+				CNREG2_02C9_SHA3_XORDAT9,
+				CNREG2_02CA_SHA3_XORDAT10,
+				CNREG2_02CB_SHA3_XORDAT11,
+				CNREG2_02CC_SHA3_XORDAT12,
+				CNREG2_02CD_SHA3_XORDAT13,
+				CNREG2_02CE_SHA3_XORDAT14,
+				CNREG2_02CF_SHA3_XORDAT15,
+				CNREG2_02D0_SHA3_XORDAT16,
+				CNREG2_02D1_SHA3_XORDAT17,
+
+				CNREG2_0400_LLM_READ_ADDR0,
+				CNREG2_0401_LLM_WRITE_ADDR_INTERNAL0,
+				CNREG2_0402_LLM_DATA0,
+				CNREG2_0404_LLM_READ64_ADDR0,
+				CNREG2_0405_LLM_WRITE64_ADDR_INTERNAL0,
+				CNREG2_0408_LLM_READ_ADDR1,
+				CNREG2_0409_LLM_WRITE_ADDR_INTERNAL1,
+				CNREG2_040a_LLM_DATA1,
+				CNREG2_040c_LLM_READ64_ADDR1,
+				CNREG2_040d_LLM_WRITE64_ADDR_INTERNAL1,
+
+				CNREG2_1202_CRC_LEN,
+				CNREG2_1207_CRC_DWORD,
+				CNREG2_1208_CRC_VAR,
+				CNREG2_1217_CRC_DWORD_REFLECT,
+				CNREG2_1218_CRC_VAR_REFLECT,
+
+				CNREG2_3109_AES_ENC_CBC1,
+				CNREG2_310B_AES_ENC1,
+				CNREG2_310D_AES_DEC_CBC1,
+				CNREG2_310F_AES_DEC1,
+
+				CNREG2_3114_CAMELLIA_ROUND,
+
+				CNREG2_3119_SMS4_ENC_CBC1,
+				CNREG2_311B_SMS4_ENC1,
+				CNREG2_311D_SMS4_DEC_CBC1,
+				CNREG2_311F_SMS4_DEC1,
+
+				CNREG2_4052_SHA3_STARTOP,
+				CNREG2_4047_HSH_STARTMD5,
+				CNREG2_404D_SNOW3G_START,
+				CNREG2_4055_ZUC_START,
+				CNREG2_4056_ZUC_MORE,
+				CNREG2_405D_GFM_XORMUL1_REFLECT,
+				CNREG2_404E_SNOW3G_MORE,
+				CNREG2_404F_HSH_STARTSHA256,
+				CNREG2_4057_HSH_STARTSHA,
+				CNREG2_4088_3DES_ENC_CBC,
+				CNREG2_4089_KAS_ENC_CBC,
+				CNREG2_408A_3DES_ENC,
+				CNREG2_408B_KAS_ENC,
+				CNREG2_408C_3DES_DEC_CBC,
+				CNREG2_408E_3DES_DEC,
+
+				CNREG2_4200_CRC_POLYNOMIAL_WR,
+				CNREG2_4210_CRC_POLYNOMIAL_REFLECT,
+
+				CNREG2_424F_HSH_STARTSHA512,
+				CNREG2_425D_GFM_XORMUL1,
+
+			};
+
+			registers.insert(registers.end(), std::begin(cavium_registers), std::end(cavium_registers));
+		}
+
+		return registers;
 	}
 
 	virtual vector<uint32_t> GetAllRegisters() override
 	{
-		return vector<uint32_t>{
+		vector<uint32_t> registers = vector<uint32_t>{
 			REG_ZERO,      REG_AT,        REG_V0,        REG_V1,        REG_A0,        REG_A1,        REG_A2,        REG_A3,
 			REG_T0,        REG_T1,        REG_T2,        REG_T3,        REG_T4,        REG_T5,        REG_T6,        REG_T7,
 			REG_S0,        REG_S1,        REG_S2,        REG_S3,        REG_S4,        REG_S5,        REG_S6,        REG_S7,
@@ -1309,6 +1804,205 @@ public:
 			// Coprocessor 0 register 31
 			REG_DESAVE,
 		};
+
+		if ((m_decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+		{
+			uint32_t cavium_registers[] =
+			{
+				CNREG_MPL0,
+				CNREG_MPL1,
+				CNREG_MPL2,
+				CNREG_P0,
+				CNREG_P1,
+				CNREG_P2,
+
+				CNREG0_CVM_COUNT,
+				CNREG0_CVM_CTL,
+				CNREG0_POWTHROTTLE,
+				CNREG0_CVM_MEM_CTL,
+				CNREG0_MULTICORE_DBG,
+
+				CNREG2_0040_HSH_DAT0,
+				CNREG2_0041_HSH_DAT1,
+				CNREG2_0042_HSH_DAT2,
+				CNREG2_0043_HSH_DAT3,
+				CNREG2_0044_HSH_DAT4,
+				CNREG2_0045_HSH_DAT5,
+				CNREG2_0046_HSH_DAT6,
+
+				CNREG2_0048_HSH_IV0,
+				CNREG2_0049_HSH_IV1,
+				CNREG2_004A_HSH_IV2,
+				CNREG2_004B_HSH_IV3,
+
+				CNREG2_0050_SHA3_DAT24,
+				CNREG2_0051_SHA3_DAT15_RD,
+
+				CNREG2_0058_GFM_MUL_REFLECT0,
+				CNREG2_0059_GFM_MUL_REFLECT1,
+				CNREG2_005A_GFM_RESINP_REFLECT0,
+				CNREG2_005B_GFM_RESINP_REFLECT1,
+				CNREG2_005C_GFM_XOR0_REFLECT,
+
+				// also KASUMI
+				CNREG2_0080_3DES_KEY0,
+				CNREG2_0081_3DES_KEY1,
+				CNREG2_0082_3DES_KEY2,
+
+				CNREG2_0084_3DES_IV,
+				CNREG2_0088_3DES_RESULT_RD,
+				CNREG2_0098_3DES_RESULT_WR,
+
+				// also SMS4 RESINP
+				CNREG2_0100_AES_RESULT0,
+				CNREG2_0101_AES_RESULT1,
+
+				// also SMS4 IV
+				CNREG2_0102_AES_IV0,
+				CNREG2_0103_AES_IV1,
+
+				// also SMS4 KEY
+				CNREG2_0104_AES_KEY0,
+				CNREG2_0105_AES_KEY1,
+				CNREG2_0106_AES_KEY2,
+				CNREG2_0107_AES_KEY3,
+
+				// also SMS4_x
+				CNREG2_0108_AES_ENC_CBC0,
+				CNREG2_010A_AES_ENC0,
+				CNREG2_010C_AES_DEC_CBC0,
+				CNREG2_010E_AES_DEC0,
+
+				CNREG2_0110_AES_KEYLENGTH,
+				CNREG2_0111_AES_DAT0,
+
+				CNREG2_0115_CAMELLIA_FL,
+				CNREG2_0116_CAMELLIA_FLINV,
+
+				CNREG2_0200_CRC_POLYNOMIAL,
+				CNREG2_0201_CRC_IV,
+				CNREG2_0202_CRC_LEN,
+				CNREG2_0203_CRC_IV_REFLECT_RD,
+				CNREG2_0204_CRC_BYTE,
+				CNREG2_0205_CRC_HALF,
+				CNREG2_0206_CRC_WORD,
+				CNREG2_0211_CRC_IV_REFLECT_WR,
+				CNREG2_0214_CRC_BYTE_REFLECT,
+				CNREG2_0215_CRC_HALF_REFLECT,
+				CNREG2_0216_CRC_WORD_REFLECT,
+
+				// also SNOW3G_LFSR, SHA3DAT0..=14
+				CNREG2_0240_HSH_DATW0,
+				CNREG2_0241_HSH_DATW1,
+				CNREG2_0242_HSH_DATW2,
+				CNREG2_0243_HSH_DATW3,
+				CNREG2_0244_HSH_DATW4,
+				CNREG2_0245_HSH_DATW5,
+				CNREG2_0246_HSH_DATW6,
+				CNREG2_0247_HSH_DATW7,
+				CNREG2_0248_HSH_DATW8,
+				CNREG2_0249_HSH_DATW9,
+				CNREG2_024A_HSH_DATW10,
+				CNREG2_024B_HSH_DATW11,
+				CNREG2_024C_HSH_DATW12,
+				CNREG2_024D_HSH_DATW13,
+				CNREG2_024E_HSH_DATW14,
+
+				CNREG2_024F_SHA3_DAT15_RD,
+
+				// also SNOW3G_RESULT (0x250), SNOW3G_SFM (0x251, 0x252, 0x253)
+				CNREG2_0250_HSH_IVW0,
+				CNREG2_0251_HSH_IVW1,
+				CNREG2_0252_HSH_IVW2,
+				CNREG2_0253_HSH_IVW3,
+				CNREG2_0254_HSH_IVW4,
+				CNREG2_0255_HSH_IVW5,
+				CNREG2_0256_HSH_IVW6,
+				CNREG2_0257_HSH_IVW7,
+
+				CNREG2_0258_GFM_MUL0,
+				CNREG2_0259_GFM_MUL1,
+				CNREG2_025A_GFM_RESINP0,
+				CNREG2_025B_GFM_RESINP1,
+				CNREG2_025C_GFM_XOR0,
+				CNREG2_025E_GFM_POLY,
+
+				CNREG2_02C0_SHA3_XORDAT0,
+				CNREG2_02C1_SHA3_XORDAT1,
+				CNREG2_02C2_SHA3_XORDAT2,
+				CNREG2_02C3_SHA3_XORDAT3,
+				CNREG2_02C4_SHA3_XORDAT4,
+				CNREG2_02C5_SHA3_XORDAT5,
+				CNREG2_02C6_SHA3_XORDAT6,
+				CNREG2_02C7_SHA3_XORDAT7,
+				CNREG2_02C8_SHA3_XORDAT8,
+				CNREG2_02C9_SHA3_XORDAT9,
+				CNREG2_02CA_SHA3_XORDAT10,
+				CNREG2_02CB_SHA3_XORDAT11,
+				CNREG2_02CC_SHA3_XORDAT12,
+				CNREG2_02CD_SHA3_XORDAT13,
+				CNREG2_02CE_SHA3_XORDAT14,
+				CNREG2_02CF_SHA3_XORDAT15,
+				CNREG2_02D0_SHA3_XORDAT16,
+				CNREG2_02D1_SHA3_XORDAT17,
+
+				CNREG2_0400_LLM_READ_ADDR0,
+				CNREG2_0401_LLM_WRITE_ADDR_INTERNAL0,
+				CNREG2_0402_LLM_DATA0,
+				CNREG2_0404_LLM_READ64_ADDR0,
+				CNREG2_0405_LLM_WRITE64_ADDR_INTERNAL0,
+				CNREG2_0408_LLM_READ_ADDR1,
+				CNREG2_0409_LLM_WRITE_ADDR_INTERNAL1,
+				CNREG2_040a_LLM_DATA1,
+				CNREG2_040c_LLM_READ64_ADDR1,
+				CNREG2_040d_LLM_WRITE64_ADDR_INTERNAL1,
+
+				CNREG2_1202_CRC_LEN,
+				CNREG2_1207_CRC_DWORD,
+				CNREG2_1208_CRC_VAR,
+				CNREG2_1217_CRC_DWORD_REFLECT,
+				CNREG2_1218_CRC_VAR_REFLECT,
+
+				CNREG2_3109_AES_ENC_CBC1,
+				CNREG2_310B_AES_ENC1,
+				CNREG2_310D_AES_DEC_CBC1,
+				CNREG2_310F_AES_DEC1,
+
+				CNREG2_3114_CAMELLIA_ROUND,
+
+				CNREG2_3119_SMS4_ENC_CBC1,
+				CNREG2_311B_SMS4_ENC1,
+				CNREG2_311D_SMS4_DEC_CBC1,
+				CNREG2_311F_SMS4_DEC1,
+
+				CNREG2_4052_SHA3_STARTOP,
+				CNREG2_4047_HSH_STARTMD5,
+				CNREG2_404D_SNOW3G_START,
+				CNREG2_4055_ZUC_START,
+				CNREG2_4056_ZUC_MORE,
+				CNREG2_405D_GFM_XORMUL1_REFLECT,
+				CNREG2_404E_SNOW3G_MORE,
+				CNREG2_404F_HSH_STARTSHA256,
+				CNREG2_4057_HSH_STARTSHA,
+				CNREG2_4088_3DES_ENC_CBC,
+				CNREG2_4089_KAS_ENC_CBC,
+				CNREG2_408A_3DES_ENC,
+				CNREG2_408B_KAS_ENC,
+				CNREG2_408C_3DES_DEC_CBC,
+				CNREG2_408E_3DES_DEC,
+
+				CNREG2_4200_CRC_POLYNOMIAL_WR,
+				CNREG2_4210_CRC_POLYNOMIAL_REFLECT,
+
+				CNREG2_424F_HSH_STARTSHA512,
+				CNREG2_425D_GFM_XORMUL1,
+
+			};
+
+			registers.insert(registers.end(), std::begin(cavium_registers), std::end(cavium_registers));
+		}
+
+		return registers;
 	}
 
 	virtual vector<uint32_t> GetAllFlags() override
@@ -1336,7 +2030,7 @@ public:
 
 	virtual vector<uint32_t> GetSystemRegisters() override
 	{
-		return vector< uint32_t> {
+		vector<uint32_t> registers = vector<uint32_t>{
 			// Coprocessor 0 register 0
 			REG_INDEX,
 			REG_MVP_CONTROL,
@@ -1437,7 +2131,207 @@ public:
 			REG_ERROR_EPC,
 			// Coprocessor 0 register 31
 			REG_DESAVE,
+
 		};
+
+		if ((m_decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+		{
+			uint32_t cavium_registers[] =
+			{
+				CNREG_MPL0,
+				CNREG_MPL1,
+				CNREG_MPL2,
+				CNREG_P0,
+				CNREG_P1,
+				CNREG_P2,
+
+				CNREG0_CVM_COUNT,
+				CNREG0_CVM_CTL,
+				CNREG0_POWTHROTTLE,
+				CNREG0_CVM_MEM_CTL,
+				CNREG0_MULTICORE_DBG,
+
+				CNREG2_0040_HSH_DAT0,
+				CNREG2_0041_HSH_DAT1,
+				CNREG2_0042_HSH_DAT2,
+				CNREG2_0043_HSH_DAT3,
+				CNREG2_0044_HSH_DAT4,
+				CNREG2_0045_HSH_DAT5,
+				CNREG2_0046_HSH_DAT6,
+
+				CNREG2_0048_HSH_IV0,
+				CNREG2_0049_HSH_IV1,
+				CNREG2_004A_HSH_IV2,
+				CNREG2_004B_HSH_IV3,
+
+				CNREG2_0050_SHA3_DAT24,
+				CNREG2_0051_SHA3_DAT15_RD,
+
+				CNREG2_0058_GFM_MUL_REFLECT0,
+				CNREG2_0059_GFM_MUL_REFLECT1,
+				CNREG2_005A_GFM_RESINP_REFLECT0,
+				CNREG2_005B_GFM_RESINP_REFLECT1,
+				CNREG2_005C_GFM_XOR0_REFLECT,
+
+				// also KASUMI
+				CNREG2_0080_3DES_KEY0,
+				CNREG2_0081_3DES_KEY1,
+				CNREG2_0082_3DES_KEY2,
+
+				CNREG2_0084_3DES_IV,
+				CNREG2_0088_3DES_RESULT_RD,
+				CNREG2_0098_3DES_RESULT_WR,
+
+				// also SMS4 RESINP
+				CNREG2_0100_AES_RESULT0,
+				CNREG2_0101_AES_RESULT1,
+
+				// also SMS4 IV
+				CNREG2_0102_AES_IV0,
+				CNREG2_0103_AES_IV1,
+
+				// also SMS4 KEY
+				CNREG2_0104_AES_KEY0,
+				CNREG2_0105_AES_KEY1,
+				CNREG2_0106_AES_KEY2,
+				CNREG2_0107_AES_KEY3,
+
+				// also SMS4_x
+				CNREG2_0108_AES_ENC_CBC0,
+				CNREG2_010A_AES_ENC0,
+				CNREG2_010C_AES_DEC_CBC0,
+				CNREG2_010E_AES_DEC0,
+
+				CNREG2_0110_AES_KEYLENGTH,
+				CNREG2_0111_AES_DAT0,
+
+				CNREG2_0115_CAMELLIA_FL,
+				CNREG2_0116_CAMELLIA_FLINV,
+
+				CNREG2_0200_CRC_POLYNOMIAL,
+				CNREG2_0201_CRC_IV,
+				CNREG2_0202_CRC_LEN,
+				CNREG2_0203_CRC_IV_REFLECT_RD,
+				CNREG2_0204_CRC_BYTE,
+				CNREG2_0205_CRC_HALF,
+				CNREG2_0206_CRC_WORD,
+				CNREG2_0211_CRC_IV_REFLECT_WR,
+				CNREG2_0214_CRC_BYTE_REFLECT,
+				CNREG2_0215_CRC_HALF_REFLECT,
+				CNREG2_0216_CRC_WORD_REFLECT,
+
+				// also SNOW3G_LFSR, SHA3DAT0..=14
+				CNREG2_0240_HSH_DATW0,
+				CNREG2_0241_HSH_DATW1,
+				CNREG2_0242_HSH_DATW2,
+				CNREG2_0243_HSH_DATW3,
+				CNREG2_0244_HSH_DATW4,
+				CNREG2_0245_HSH_DATW5,
+				CNREG2_0246_HSH_DATW6,
+				CNREG2_0247_HSH_DATW7,
+				CNREG2_0248_HSH_DATW8,
+				CNREG2_0249_HSH_DATW9,
+				CNREG2_024A_HSH_DATW10,
+				CNREG2_024B_HSH_DATW11,
+				CNREG2_024C_HSH_DATW12,
+				CNREG2_024D_HSH_DATW13,
+				CNREG2_024E_HSH_DATW14,
+
+				CNREG2_024F_SHA3_DAT15_RD,
+
+				// also SNOW3G_RESULT (0x250), SNOW3G_SFM (0x251, 0x252, 0x253)
+				CNREG2_0250_HSH_IVW0,
+				CNREG2_0251_HSH_IVW1,
+				CNREG2_0252_HSH_IVW2,
+				CNREG2_0253_HSH_IVW3,
+				CNREG2_0254_HSH_IVW4,
+				CNREG2_0255_HSH_IVW5,
+				CNREG2_0256_HSH_IVW6,
+				CNREG2_0257_HSH_IVW7,
+
+				CNREG2_0258_GFM_MUL0,
+				CNREG2_0259_GFM_MUL1,
+				CNREG2_025A_GFM_RESINP0,
+				CNREG2_025B_GFM_RESINP1,
+				CNREG2_025C_GFM_XOR0,
+				CNREG2_025E_GFM_POLY,
+
+				CNREG2_02C0_SHA3_XORDAT0,
+				CNREG2_02C1_SHA3_XORDAT1,
+				CNREG2_02C2_SHA3_XORDAT2,
+				CNREG2_02C3_SHA3_XORDAT3,
+				CNREG2_02C4_SHA3_XORDAT4,
+				CNREG2_02C5_SHA3_XORDAT5,
+				CNREG2_02C6_SHA3_XORDAT6,
+				CNREG2_02C7_SHA3_XORDAT7,
+				CNREG2_02C8_SHA3_XORDAT8,
+				CNREG2_02C9_SHA3_XORDAT9,
+				CNREG2_02CA_SHA3_XORDAT10,
+				CNREG2_02CB_SHA3_XORDAT11,
+				CNREG2_02CC_SHA3_XORDAT12,
+				CNREG2_02CD_SHA3_XORDAT13,
+				CNREG2_02CE_SHA3_XORDAT14,
+				CNREG2_02CF_SHA3_XORDAT15,
+				CNREG2_02D0_SHA3_XORDAT16,
+				CNREG2_02D1_SHA3_XORDAT17,
+
+				CNREG2_0400_LLM_READ_ADDR0,
+				CNREG2_0401_LLM_WRITE_ADDR_INTERNAL0,
+				CNREG2_0402_LLM_DATA0,
+				CNREG2_0404_LLM_READ64_ADDR0,
+				CNREG2_0405_LLM_WRITE64_ADDR_INTERNAL0,
+				CNREG2_0408_LLM_READ_ADDR1,
+				CNREG2_0409_LLM_WRITE_ADDR_INTERNAL1,
+				CNREG2_040a_LLM_DATA1,
+				CNREG2_040c_LLM_READ64_ADDR1,
+				CNREG2_040d_LLM_WRITE64_ADDR_INTERNAL1,
+
+				CNREG2_1202_CRC_LEN,
+				CNREG2_1207_CRC_DWORD,
+				CNREG2_1208_CRC_VAR,
+				CNREG2_1217_CRC_DWORD_REFLECT,
+				CNREG2_1218_CRC_VAR_REFLECT,
+
+				CNREG2_3109_AES_ENC_CBC1,
+				CNREG2_310B_AES_ENC1,
+				CNREG2_310D_AES_DEC_CBC1,
+				CNREG2_310F_AES_DEC1,
+
+				CNREG2_3114_CAMELLIA_ROUND,
+
+				CNREG2_3119_SMS4_ENC_CBC1,
+				CNREG2_311B_SMS4_ENC1,
+				CNREG2_311D_SMS4_DEC_CBC1,
+				CNREG2_311F_SMS4_DEC1,
+
+				CNREG2_4052_SHA3_STARTOP,
+				CNREG2_4047_HSH_STARTMD5,
+				CNREG2_404D_SNOW3G_START,
+				CNREG2_4055_ZUC_START,
+				CNREG2_4056_ZUC_MORE,
+				CNREG2_405D_GFM_XORMUL1_REFLECT,
+				CNREG2_404E_SNOW3G_MORE,
+				CNREG2_404F_HSH_STARTSHA256,
+				CNREG2_4057_HSH_STARTSHA,
+				CNREG2_4088_3DES_ENC_CBC,
+				CNREG2_4089_KAS_ENC_CBC,
+				CNREG2_408A_3DES_ENC,
+				CNREG2_408B_KAS_ENC,
+				CNREG2_408C_3DES_DEC_CBC,
+				CNREG2_408E_3DES_DEC,
+
+				CNREG2_4200_CRC_POLYNOMIAL_WR,
+				CNREG2_4210_CRC_POLYNOMIAL_REFLECT,
+
+				CNREG2_424F_HSH_STARTSHA512,
+				CNREG2_425D_GFM_XORMUL1,
+
+			};
+
+			registers.insert(registers.end(), std::begin(cavium_registers), std::end(cavium_registers));
+		}
+
+		return registers;
 	}
 
 };
@@ -2035,7 +2929,7 @@ public:
 				uint32_t inst2 = *(uint32_t*)(cur->relocationDataCache);
 				Instruction instruction;
 				memset(&instruction, 0, sizeof(instruction));
-				if (mips_decompose(&inst2, sizeof(uint32_t), &instruction, MIPS_32, cur->address, arch->GetEndianness(), 1))
+				if (mips_decompose(&inst2, sizeof(uint32_t), &instruction, MIPS_32, cur->address, arch->GetEndianness(), DECOMPOSE_FLAGS_PSEUDO_OP))
 					break;
 
 				int32_t immediate = swap(inst2) & 0xffff;
@@ -2226,6 +3120,36 @@ static void InitMipsSettings()
 			})");
 }
 
+
+static Ref<Platform> ElfFlagsRecognize(BinaryView* view, Metadata* metadata)
+{
+	Ref<Metadata> abiMetadata = metadata->Get("EI_OSABI");
+	if (!abiMetadata || !abiMetadata->IsUnsignedInteger())
+		return nullptr;
+
+	uint64_t abi = abiMetadata->GetUnsignedInteger();
+	if (abi != 0 && abi != 3)
+		return nullptr;
+
+	Ref<Metadata> flagsMetadata = metadata->Get("e_flags");
+	if (!flagsMetadata || !flagsMetadata->IsUnsignedInteger())
+		return nullptr;
+
+	uint64_t flagsValue = flagsMetadata->GetUnsignedInteger();
+	uint8_t machineVariant = (flagsValue >> 16) & 0xff;
+
+	switch (machineVariant)
+	{
+		case 0x8b:	// EF_MIPS_MACH_OCTEON
+		case 0x8d:	// EF_MIPS_MACH_OCTEON2
+		case 0x8e:	// EF_MIPS_MACH_OCTEON3
+			LogInfo("ELF flags 0x%08" PRIx64 " machine variant 0x%02x: using cavium architecture", flagsValue, machineVariant);
+			return Platform::GetByName("linux-cnmips64");
+		default:
+			return nullptr;
+	}
+}
+
 extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
@@ -2245,15 +3169,18 @@ extern "C"
 		Architecture* mipsel = new MipsArchitecture("mipsel32", LittleEndian, 32);
 		Architecture* mipseb = new MipsArchitecture("mips32", BigEndian, 32);
 		Architecture* mips64eb = new MipsArchitecture("mips64", BigEndian, 64);
+		Architecture* cnmips64eb = new MipsArchitecture("cavium-mips64", BigEndian, 64, DECOMPOSE_FLAGS_CAVIUM);
 
 		Architecture::Register(mipsel);
 		Architecture::Register(mipseb);
 		Architecture::Register(mips64eb);
+		Architecture::Register(cnmips64eb);
 
 		/* calling conventions */
 		MipsO32CallingConvention* o32LE = new MipsO32CallingConvention(mipsel);
 		MipsO32CallingConvention* o32BE = new MipsO32CallingConvention(mipseb);
 		MipsN64CallingConvention* n64BE = new MipsN64CallingConvention(mips64eb);
+		MipsN64CallingConvention* n64BEc = new MipsN64CallingConvention(cnmips64eb);
 
 		mipsel->RegisterCallingConvention(o32LE);
 		mipseb->RegisterCallingConvention(o32BE);
@@ -2261,6 +3188,8 @@ extern "C"
 		mipseb->SetDefaultCallingConvention(o32BE);
 		mips64eb->RegisterCallingConvention(n64BE);
 		mips64eb->SetDefaultCallingConvention(n64BE);
+		cnmips64eb->RegisterCallingConvention(n64BEc);
+		cnmips64eb->SetDefaultCallingConvention(n64BEc);
 
 		MipsLinuxSyscallCallingConvention* linuxSyscallLE = new MipsLinuxSyscallCallingConvention(mipsel);
 		MipsLinuxSyscallCallingConvention* linuxSyscallBE = new MipsLinuxSyscallCallingConvention(mipseb);
@@ -2270,6 +3199,7 @@ extern "C"
 		mipsel->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mipsel));
 		mipseb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mipseb));
 		mips64eb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips64eb));
+		cnmips64eb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(cnmips64eb));
 
 		/* function recognizers */
 		mipsel->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
@@ -2278,6 +3208,7 @@ extern "C"
 		mipsel->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mipseb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mips64eb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
+		cnmips64eb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 
 		// Register the architectures with the binary format parsers so that they know when to use
 		// these architectures for disassembling an executable file
@@ -2292,6 +3223,11 @@ extern "C"
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS64, BigEndian, mips64eb);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, LittleEndian, mipsel);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, BigEndian, mipseb);
+
+		Ref<BinaryViewType> elf = BinaryViewType::GetByName("ELF");
+		if (elf)
+			elf->RegisterPlatformRecognizer(ARCH_ID_MIPS64, BigEndian, ElfFlagsRecognize);
+
 		BinaryViewType::RegisterArchitecture("PE", 0x166, LittleEndian, mipsel);
 		return true;
 	}

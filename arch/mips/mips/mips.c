@@ -244,7 +244,7 @@ static Operation mips64_special3_table[8][8] = {
 	{MIPS_INVALID, MIPS_INVALID, MIPS_LX,      MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
 	{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
 	{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
-	{MIPS_BSHFL,   MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+	{MIPS_BSHFL,   MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_DBSHFL,  MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
 	{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
 	{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
 	{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_RDHWR,   MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
@@ -475,6 +475,7 @@ static const char* const OperationStrings[] = {
 		"daddi",
 		"daddiu",
 		"daddu",
+		"dbshfl",
 		"dclo",
 		"dclz",
 		"ddiv",
@@ -501,6 +502,8 @@ static const char* const OperationStrings[] = {
 		"dmtc1",
 		"dmtc2",
 		"dret",
+		"dsbh",
+		"dshd",
 		"dsll",
 		"dsll32",
 		"dsllv",
@@ -1070,6 +1073,15 @@ uint32_t mips_decompose_instruction(
 						return 1;
 				}
 				break;
+			case MIPS_DBSHFL:
+				switch (ins.r.sa)
+				{
+					case 0x02: instruction->operation = MIPS_DSBH; break;
+					case 0x05: instruction->operation = MIPS_DSHD; break;
+					default:
+						return 1;
+				}
+				break;
 			case MIPS_SRL:
 				if (ins.bits.bit21 == 1)
 					instruction->operation = MIPS_ROTR;
@@ -1586,6 +1598,8 @@ uint32_t mips_decompose_instruction(
 		case MIPS_NEG:
 		case MIPS_NEGU:
 		case MIPS_BITSWAP:
+		case MIPS_DSBH:
+		case MIPS_DSHD:
 			INS_2(REG, ins.r.rd, REG, ins.r.rt)
 			break;
 		case MIPS_CFC0:

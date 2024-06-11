@@ -2047,6 +2047,7 @@ uint32_t mips_disassemble(
 }
 
 
+// flags: see DECOMPOSE_FLAGS_*
 uint32_t mips_decompose(
 		const uint32_t* instructionValue,
 		size_t size,
@@ -2054,7 +2055,7 @@ uint32_t mips_decompose(
 		uint32_t version,
 		uint64_t address,
 		uint32_t endianBig,
-		uint32_t enablePseudoOps)
+		uint32_t flags)
 {
 	combined ins;
 	if (instructionValue == NULL)
@@ -2070,7 +2071,7 @@ uint32_t mips_decompose(
 		return result;
 	instruction->size = 4;
 	//look for peudoinstructions by disassembling the next instruction too
-	if (enablePseudoOps != 0 && size >= 8)
+	if ((flags & DECOMPOSE_FLAGS_PSEUDO_OP != 0) && size >= 8)
 	{
 		if (endianBig == 1)
 			ins.value = bswap32(instructionValue[1]);

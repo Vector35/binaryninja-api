@@ -30,6 +30,8 @@
 namespace mips
 {
 #endif
+	static const uint32_t DECOMPOSE_FLAGS_PSEUDO_OP = 0x1;
+
 	enum Operation {
 		MIPS_INVALID,
 		MIPS_ABS_D,

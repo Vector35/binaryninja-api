@@ -77,6 +77,11 @@ public:
 			}
 		}
 	}
+
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
+	}
 };
 
 
@@ -137,6 +142,11 @@ public:
 			}
 		}
 	}
+
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
+	}
 };
 
 
@@ -175,6 +185,11 @@ public:
 				arg = "--target=armv7-pc-windows-msvc";
 			}
 		}
+	}
+
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
 	}
 };
 
@@ -221,6 +236,11 @@ public:
 				arg = "--target=aarch64-pc-windows-msvc";
 			}
 		}
+	}
+
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
 	}
 };
 

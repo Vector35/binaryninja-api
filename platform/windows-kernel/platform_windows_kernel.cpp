@@ -40,6 +40,11 @@ public:
 			RegisterCallingConvention(cc);
 	}
 
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
+	}
+
 	static Ref<Platform> Recognize(BinaryView* view, Metadata* metadata)
 	{
 		Ref<Metadata> subsystem = metadata->Get("Subsystem");
@@ -73,6 +78,11 @@ public:
 		RegisterCallingConvention(cc);
 	}
 
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
+	}
+
 	static Ref<Platform> Recognize(BinaryView* view, Metadata* metadata)
 	{
 		Ref<Metadata> subsystem = metadata->Get("Subsystem");
@@ -101,6 +111,11 @@ public:
 			RegisterFastcallCallingConvention(cc);
 			RegisterStdcallCallingConvention(cc);
 		}
+	}
+
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
 	}
 
 	static Ref<Platform> Recognize(BinaryView* view, Metadata* metadata)

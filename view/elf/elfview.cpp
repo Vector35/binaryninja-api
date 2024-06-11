@@ -1541,12 +1541,18 @@ bool ElfView::Init()
 					if (entryArch != entryPointArch)
 					{
 						auto func = AddFunctionForAnalysis(platform->GetRelatedPlatform(entryArch), entry);
-						AddToEntryFunctions(func);
+						if (func)
+						{
+							AddToEntryFunctions(func);
+						}
 					}
 					else
 					{
 						auto func = AddFunctionForAnalysis(platform, entry);
-						AddToEntryFunctions(func);
+						if (func)
+						{
+							AddToEntryFunctions(func);
+						}
 					}
 					m_logger->LogDebug("Adding function start: %#" PRIx64 "\n", entry);
 

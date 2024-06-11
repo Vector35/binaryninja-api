@@ -14556,6 +14556,7 @@ namespace BinaryNinja {
 			char** sourceFileValues,
 			size_t sourceFilesLen
 		);
+		static bool GetFallbackEnabledCallback(void* ctxt);
 
 	  public:
 		Platform(BNPlatform* platform);
@@ -14727,6 +14728,13 @@ namespace BinaryNinja {
 			std::vector<std::string>& arguments,
 			std::vector<std::pair<std::string, std::string>>& sourceFiles
 		);
+
+		/*! Provide an option for platforms to decide whether to use
+		 * the fallback type library.
+		 *
+		 * Allows the Platform to override it to false.
+		 */
+		virtual bool GetFallbackEnabled();
 
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);

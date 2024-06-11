@@ -1906,6 +1906,8 @@ extern "C"
 			char** sourceFileValues,
 			size_t sourceFilesLen
 		);
+
+		bool (*getFallbackEnabled)(void* ctxt);
 	} BNCustomPlatform;
 
 	typedef struct BNBasicBlockEdge

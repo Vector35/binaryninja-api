@@ -44,6 +44,7 @@ Platform::Platform(Architecture* arch, const string& name)
 	plat.getGlobalRegisterType = GetGlobalRegisterTypeCallback;
 	plat.adjustTypeParserInput = AdjustTypeParserInputCallback;
 	plat.freeTypeParserInput = FreeTypeParserInputCallback;
+	plat.getFallbackEnabled = GetFallbackEnabledCallback;
 	m_object = BNCreateCustomPlatform(arch->GetObject(), name.c_str(), &plat);
 	AddRefForRegistration();
 }
@@ -60,6 +61,7 @@ Platform::Platform(Architecture* arch, const string& name, const string& typeFil
 	plat.getGlobalRegisterType = GetGlobalRegisterTypeCallback;
 	plat.adjustTypeParserInput = AdjustTypeParserInputCallback;
 	plat.freeTypeParserInput = FreeTypeParserInputCallback;
+	plat.getFallbackEnabled = GetFallbackEnabledCallback;
 	const char** includeDirList = new const char*[includeDirs.size()];
 	for (size_t i = 0; i < includeDirs.size(); i++)
 		includeDirList[i] = includeDirs[i].c_str();
@@ -189,6 +191,12 @@ BNType* Platform::GetGlobalRegisterTypeCallback(void* ctxt, uint32_t reg)
 		return nullptr;
 
 	return BNNewTypeReference(result->GetObject());
+}
+
+bool Platform::GetFallbackEnabledCallback(void* ctxt)
+{
+	CallbackRef<Platform> plat(ctxt);
+	return plat->GetFallbackEnabled();
 }
 
 
@@ -407,6 +415,12 @@ std::vector<uint32_t> Platform::GetGlobalRegisters()
 Ref<Type> Platform::GetGlobalRegisterType(uint32_t reg)
 {
 	return nullptr;
+}
+
+
+bool Platform::GetFallbackEnabled()
+{
+	return true;
 }
 
 

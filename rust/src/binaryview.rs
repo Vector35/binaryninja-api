@@ -270,6 +270,18 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNIsOffsetWritableSemantics(self.as_ref().handle, offset) }
     }
 
+    fn original_base(&self) -> u64 {
+        unsafe {
+            BNGetOriginalBase(self.as_ref().handle)
+        }
+    }
+
+    fn set_original_base(&self, base: u64) {
+        unsafe {
+            BNSetOriginalBase(self.as_ref().handle, base)
+        }
+    }
+
     fn end(&self) -> u64 {
         unsafe { BNGetEndOffset(self.as_ref().handle) }
     }

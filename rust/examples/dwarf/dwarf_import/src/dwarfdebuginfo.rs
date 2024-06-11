@@ -404,7 +404,6 @@ impl DebugInfoBuilder {
     }
 
     pub(crate) fn post_process(&mut self, bv: &BinaryView, _debug_info: &mut DebugInfo) -> &Self {
-        // TODO : We don't need post-processing if we process correctly the first time....
         //   When originally resolving names, we need to check:
         //     If there's already a name from binja that's "more correct" than what we found (has more namespaces)
         //     If there's no name for the DIE, but there's a linkage name that's resolved in binja to a usable name
@@ -436,8 +435,10 @@ impl DebugInfoBuilder {
                 }
             }
 
-            if let Some(address) = func.address {
-                let existing_functions = bv.functions_at(address);
+            if let Some(address) = func.address.as_mut() {
+                let diff = bv.start() - bv.original_base();
+                *address += diff;  // rebase the address
+                let existing_functions = bv.functions_at(*address);
                 match existing_functions.len().cmp(&1) {
                     Ordering::Greater => {
                         warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");

@@ -233,6 +233,10 @@ protected:
 			case MIPS_BC2TL:
 			case MIPS_BC2F:
 			case MIPS_BC2T:
+			case CNMIPS_BBIT0:
+			case CNMIPS_BBIT032:
+			case CNMIPS_BBIT1:
+			case CNMIPS_BBIT132:
 				return 1;
 			default:
 				return 0;
@@ -280,6 +284,10 @@ protected:
 			case MIPS_BC2TL:
 			case MIPS_BC2F:
 			case MIPS_BC2T:
+			case CNMIPS_BBIT0:
+			case CNMIPS_BBIT032:
+			case CNMIPS_BBIT1:
+			case CNMIPS_BBIT132:
 				return true;
 			default:
 				return false;
@@ -346,6 +354,10 @@ protected:
 		case MIPS_BNE:
 		case MIPS_BEQL:
 		case MIPS_BNEL:
+		case CNMIPS_BBIT0:
+		case CNMIPS_BBIT032:
+		case CNMIPS_BBIT1:
+		case CNMIPS_BBIT132:
 			result.AddBranch(TrueBranch, instr.operands[2].immediate, nullptr, hasBranchDelay);
 			//need to jump over the branch delay slot and current instruction
 			result.AddBranch(FalseBranch, addr + 8, nullptr, hasBranchDelay);
@@ -387,8 +399,9 @@ public:
 	{
 		Ref<Settings> settings = Settings::Instance();
 		uint32_t flag_pseudo_ops = settings->Get<bool>("arch.mips.disassembly.pseudoOps") ? DECOMPOSE_FLAGS_PSEUDO_OP : 0;
+		uint32_t flag_cavium = settings->Get<bool>("arch.mips.disassembly.octeon") ? DECOMPOSE_FLAGS_CAVIUM : 0;
 
-		m_decomposeFlags = flag_pseudo_ops;
+		m_decomposeFlags = flag_cavium | flag_pseudo_ops;
 	}
 
 	virtual BNEndianness GetEndianness() const override
@@ -2214,6 +2227,14 @@ static void InitMipsSettings()
 			"default" : true,
 			"description" : "Enable use of pseudo-op instructions in MIPS disassembly."
 			})");
+
+	settings->RegisterSetting("arch.mips.disassembly.octeon",
+		R"({
+		"title" : "MIPS Octeon Instructions",
+		"type" : "boolean",
+		"default" : false,
+		"description" : "Enable use of Octeon MIPS instructions."
+		})");
 }
 
 extern "C"

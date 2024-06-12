@@ -54,6 +54,17 @@ using namespace mips;
 	} while (0);
 
 
+static Operation cavium_mips_base_table[8][8] = {
+	{MIPS_INVALID, MIPS_INVALID, MIPS_J,       MIPS_JAL,     MIPS_BEQ,     MIPS_BNE,  MIPS_BLEZ,      MIPS_BGTZ},
+	{MIPS_ADDI,    MIPS_ADDIU,   MIPS_SLTI,    MIPS_SLTIU,   MIPS_ANDI,    MIPS_ORI,  MIPS_XORI,      MIPS_LUI},
+	{MIPS_COP0,    MIPS_COP1,    MIPS_COP2,    MIPS_COP1X,   MIPS_BEQL,    MIPS_BNEL, MIPS_BLEZL,     MIPS_BGTZL},
+	{MIPS_DADDI,   MIPS_DADDIU,  MIPS_LDL,     MIPS_LDR,     MIPS_INVALID, MIPS_JALX, MIPS_INVALID,   MIPS_INVALID},
+	{MIPS_LB,      MIPS_LH,      MIPS_LWL,     MIPS_LW,      MIPS_LBU,     MIPS_LHU,  MIPS_LWR,       MIPS_LWU},
+	{MIPS_SB,      MIPS_SH,      MIPS_SWL,     MIPS_SW,      MIPS_SDL,     MIPS_SDR,  MIPS_SWR,       MIPS_CACHE},
+	{MIPS_LL,      MIPS_LWC1,    CNMIPS_BBIT0, MIPS_PREF,    MIPS_LLD,     MIPS_LDC1, CNMIPS_BBIT032, MIPS_LD},
+	{MIPS_SC,      MIPS_SWC1,    CNMIPS_BBIT1, MIPS_INVALID, MIPS_SCD,     MIPS_SDC1, CNMIPS_BBIT132, MIPS_SD}
+};
+
 //Fields are: [Version][opcode_high][opcode_low]
 static Operation mips_base_table[6][8][8] = {
 	{	//MIPS version 1
@@ -226,6 +237,17 @@ static Operation mips64_special2_table[8][8] = {
 	{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
 	{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
 	{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_SDBBP}
+};
+
+static Operation cavium_mips64_special2_table[8][8] = {
+	{MIPS_MADD,    MIPS_MADDU,    MIPS_MUL,     CNMIPS_DMUL,   MIPS_MSUB,    MIPS_MSUBU,   MIPS_INVALID, MIPS_INVALID},
+	{CNMIPS_MTM0,  CNMIPS_MTP0,   CNMIPS_MTP1,  CNMIPS_MTP2,   CNMIPS_MTM1,  CNMIPS_MTM2,  MIPS_INVALID, MIPS_INVALID},
+	{MIPS_INVALID, CNMIPS_V3MULU, MIPS_INVALID, MIPS_INVALID,  MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+	{CNMIPS_SAA,   CNMIPS_SAAD,   MIPS_INVALID, MIPS_INVALID,  MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, CNMIPS_CVM},
+	{MIPS_CLZ,     MIPS_CLO,      MIPS_INVALID, MIPS_INVALID,  MIPS_DCLZ,    MIPS_DCLO,    MIPS_INVALID, MIPS_INVALID},
+	{CNMIPS_BADDU, MIPS_INVALID,  CNMIPS_SEQ,   CNMIPS_SNE,    CNMIPS_POP,   CNMIPS_DPOP,  CNMIPS_SEQI,  CNMIPS_SNEI},
+	{MIPS_INVALID, MIPS_INVALID,  CNMIPS_CINS,  CNMIPS_CINS32, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+	{MIPS_INVALID, MIPS_INVALID,  CNMIPS_EXTS,  CNMIPS_EXTS32, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_SDBBP}
 };
 
 static Operation mips32_special3_table[8][8] = {
@@ -739,6 +761,37 @@ static const char* const OperationStrings[] = {
 		"wsbh",
 		"xor",
 		"xori",
+
+		// cavium instructions
+		"baddu",
+		"bbit0",
+		"bbit032",
+		"bbit1",
+		"bbit132",
+		"cins",
+		"cins32",
+		"cvm",
+		"dmul",
+		"dpop",
+		"exts",
+		"exts32",
+		"mtm0",
+		"mtm1",
+		"mtm2",
+		"mtp0",
+		"mtp1",
+		"mtp2",
+		"pop",
+		"saa",
+		"saad",
+		"seq",
+		"seqi",
+		"sne",
+		"snei",
+		"v3mulu",
+		"zcb",
+		"zcbt",
+
 };
 
 static const char * const RegisterStrings[] = {
@@ -999,7 +1052,8 @@ uint32_t mips_decompose_instruction(
 		combined ins,
 		Instruction* restrict instruction,
 		uint32_t version,
-		uint64_t address)
+		uint64_t address,
+		uint32_t flags)
 {
 	uint64_t registerMask;
 
@@ -1028,7 +1082,26 @@ uint32_t mips_decompose_instruction(
 			if (version == MIPS_32)
 				instruction->operation = mips32_special2_table[ins.decode.func_hi][ins.decode.func_lo];
 			else if (version == MIPS_64)
-				instruction->operation = mips64_special2_table[ins.decode.func_hi][ins.decode.func_lo];
+			{
+				if ((flags & DECOMPOSE_FLAGS_CAVIUM) == 0)
+					instruction->operation = mips64_special2_table[ins.decode.func_hi][ins.decode.func_lo];
+				else
+				{
+					instruction->operation = cavium_mips64_special2_table[ins.decode.func_hi][ins.decode.func_lo];
+					if (instruction->operation == CNMIPS_CVM)
+					{
+						switch (ins.r.sa)
+						{
+							// note that CN50xx docs don't include these instructions, but they are
+							// listed in the SDK (bootloader/u-boot/mips/include/asm/inst.h)
+							case 0x1c: instruction->operation = CNMIPS_ZCB; break;
+							case 0x1d: instruction->operation = CNMIPS_ZCBT; break;
+							default: return 1;
+						}
+					}
+				}
+
+			}
 			break;
 		case 0x1f:
 			if (version == MIPS_32)
@@ -1037,7 +1110,10 @@ uint32_t mips_decompose_instruction(
 				instruction->operation = mips64_special3_table[ins.decode.func_hi][ins.decode.func_lo];
 			break;
 		default:
-			instruction->operation = mips_base_table[version-1][ins.decode.op_hi][ins.decode.op_lo];
+			if ((flags & DECOMPOSE_FLAGS_CAVIUM) == 0)
+				instruction->operation = mips_base_table[version-1][ins.decode.op_hi][ins.decode.op_lo];
+			else
+				instruction->operation = cavium_mips_base_table[ins.decode.op_hi][ins.decode.op_lo];
 	}
 
 	//Now deal with aliases and stage 2 decoding
@@ -1966,6 +2042,67 @@ uint32_t mips_decompose_instruction(
 		case MIPS_ALIGN:
 			INS_4(REG, ins.r.rd, REG, ins.r.rs, REG, ins.r.rt, IMM, (ins.r.sa & 3));
 			break;
+
+		case CNMIPS_BADDU:
+		case CNMIPS_DMUL:
+		case CNMIPS_SEQ:
+		case CNMIPS_SNE:
+		case CNMIPS_V3MULU:
+			INS_3(REG, ins.r.rd, REG, ins.r.rs, REG, ins.r.rt)
+			if (ins.r.sa != 0)
+				return 1;
+			break;
+		case CNMIPS_BBIT0:
+		case CNMIPS_BBIT032:
+		case CNMIPS_BBIT1:
+		case CNMIPS_BBIT132:
+			INS_3(REG, ins.i.rs, IMM, ins.i.rt, LABEL, (4 + address + (ins.i.immediate<<2)) & registerMask)
+			break;
+		case CNMIPS_CINS:
+		case CNMIPS_CINS32:
+		case CNMIPS_EXTS:
+		case CNMIPS_EXTS32:
+			INS_4(REG, ins.r.rt, REG, ins.r.rs, IMM, ins.r.sa, IMM, ins.r.rd)
+			break;
+		case CNMIPS_MTM0:
+		case CNMIPS_MTM1:
+		case CNMIPS_MTM2:
+		case CNMIPS_MTP0:
+		case CNMIPS_MTP1:
+		case CNMIPS_MTP2:
+			INS_1(REG, ins.r.rs)
+			break;
+		case CNMIPS_SAA:
+		case CNMIPS_SAAD:
+			instruction->operands[0].operandClass = REG;
+			instruction->operands[1].operandClass = MEM_IMM;
+			instruction->operands[0].reg = ins.i.rt;
+			instruction->operands[1].reg = ins.i.rs;
+			instruction->operands[1].immediate = 0;
+			break;
+		case CNMIPS_SEQI:
+		case CNMIPS_SNEI:
+		{
+			uint32_t uimm = ins.decode.group1;
+
+			uint32_t mask = 1u << (10 - 1);
+			int32_t simm = (uimm ^ mask) - mask;
+
+			INS_3(REG, ins.r.rt, REG, ins.r.rs, IMM, simm)
+			break;
+		}
+		case CNMIPS_DPOP:
+		case CNMIPS_POP:
+			INS_2(REG, ins.r.rd, REG, ins.r.rs);
+			break;
+
+		case CNMIPS_ZCB:
+		case CNMIPS_ZCBT:
+			instruction->operands[0].operandClass = MEM_IMM;
+			instruction->operands[0].reg = ins.i.rs;
+			instruction->operands[0].immediate = 0;
+			break;
+
 		default:
 			return 1;
 	}
@@ -2066,7 +2203,7 @@ uint32_t mips_decompose(
 	else
 		ins.value = instructionValue[0];
 
-	uint32_t result = mips_decompose_instruction(ins, instruction, version, address);
+	uint32_t result = mips_decompose_instruction(ins, instruction, version, address, flags);
 	if (result != 0)
 		return result;
 	instruction->size = 4;
@@ -2080,7 +2217,7 @@ uint32_t mips_decompose(
 		Instruction instruction2;
 		if (instruction->operation == MIPS_LUI)
 		{
-			result = mips_decompose_instruction(ins, &instruction2, version, address+4);
+			result = mips_decompose_instruction(ins, &instruction2, version, address+4, flags);
 			if (result != 0)
 			{
 				return result;

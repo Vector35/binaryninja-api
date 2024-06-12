@@ -878,8 +878,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, ReadILOperand(il, instr, 2, registerSize)));
 			break;
 		case MIPS_SRA:
-		case MIPS_SRAV:
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.ArithShiftRight(4, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
+			break;
+		case MIPS_SRAV:
+			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.ArithShiftRight(4, ReadILOperand(il, instr, 2, registerSize), il.And(4, ReadILOperand(il, instr, 3, registerSize), il.Const(4, 0x1f)))));
 			break;
 		case MIPS_SLT:
 			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.BoolToInt(registerSize,
@@ -898,8 +900,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				il.CompareUnsignedLessThan(registerSize, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize)))));
 			break;
 		case MIPS_SLL:
-		case MIPS_SLLV:
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.ShiftLeft(4, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
+			break;
+		case MIPS_SLLV:
+			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.ShiftLeft(4, ReadILOperand(il, instr, 2, registerSize), il.And(4, ReadILOperand(il, instr, 3, registerSize), il.Const(4, 0x1f)))));
 			break;
 		case MIPS_DSLL:
 		case MIPS_DSLL32:
@@ -1058,8 +1062,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(il.Store(2, GetILOperandMemoryAddress(il, op2, addrSize), il.LowPart(2, ReadILOperand(il, instr, 1, registerSize))));
 			break;
 		case MIPS_SRL:
-		case MIPS_SRLV:
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.LogicalShiftRight(4, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
+			break;
+		case MIPS_SRLV:
+			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.LogicalShiftRight(4, ReadILOperand(il, instr, 2, registerSize), il.And(4, ReadILOperand(il, instr, 3, registerSize), il.Const(4, 0x1f)))));
 			break;
 		case MIPS_SSNOP:
 		case MIPS_NOP:

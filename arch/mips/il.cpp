@@ -857,6 +857,19 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 							il.Const(registerSize, (1<<op4.immediate)-1)
 						)));
 			break;
+		case MIPS_DEXT:
+		case MIPS_DEXTM:
+		case MIPS_DEXTU:
+			//op1 = op4.imm bits in op2.reg at bit offset op3.imm
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
+						il.And(8,
+							il.LogicalShiftRight(8,
+								ReadILOperand(il, instr, 2, registerSize),
+								il.Const(1, op3.immediate)
+							),
+							il.Const(8, (((uint64_t)1)<<op4.immediate)-1)
+						)));
+			break;
 		case MIPS_INS:
 			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg,
 						il.Or(registerSize,

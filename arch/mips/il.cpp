@@ -874,6 +874,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, ReadILOperand(il, instr, 2, registerSize, 4)));
 			break;
 		case MIPS_LD:
+		case MIPS_LLD: // TODO: Atomic access primitives
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, ReadILOperand(il, instr, 2, registerSize)));
 			break;
 		case MIPS_SRA:
@@ -1361,7 +1362,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_LDL:
 		case MIPS_LDR:
 		case MIPS_LDXC1:
-		case MIPS_LLD:
 		case MIPS_LLO:
 		case MIPS_LUXC1:
 		case MIPS_LWC1:

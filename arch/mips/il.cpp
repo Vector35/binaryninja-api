@@ -850,9 +850,12 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			//op1 = op4.imm bits in op2.reg at bit offset op3.imm
 			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg,
 						il.And(registerSize,
-							il.Const(registerSize, (1<<op4.immediate)-1),
-							il.ShiftLeft(registerSize, ReadILOperand(il, instr, 2, registerSize),
-								il.Const(1, op3.immediate)))));
+							il.LogicalShiftRight(registerSize,
+								ReadILOperand(il, instr, 2, registerSize),
+								il.Const(1, op3.immediate)
+							),
+							il.Const(registerSize, (1<<op4.immediate)-1)
+						)));
 			break;
 		case MIPS_INS:
 			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg,

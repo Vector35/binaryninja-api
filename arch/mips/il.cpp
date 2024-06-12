@@ -909,6 +909,13 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			}
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ShiftLeft(8, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
 			break;
+		case MIPS_DSLLV:
+			if (registerSize != 8) {
+				il.AddInstruction(il.Undefined());
+				break;
+			}
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ShiftLeft(8, ReadILOperand(il, instr, 2, registerSize), il.And(8, ReadILOperand(il, instr, 3, registerSize), il.Const(8, 0x3f)))));
+			break;
 		case MIPS_DSRL:
 		case MIPS_DSRL32:
 			if (registerSize != 8) {
@@ -916,6 +923,28 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				break;
 			}
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.LogicalShiftRight(8, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
+			break;
+		case MIPS_DSRLV:
+			if (registerSize != 8) {
+				il.AddInstruction(il.Undefined());
+				break;
+			}
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.LogicalShiftRight(8, ReadILOperand(il, instr, 2, registerSize), il.And(8, ReadILOperand(il, instr, 3, registerSize), il.Const(8, 0x3f)))));
+			break;
+		case MIPS_DSRA:
+		case MIPS_DSRA32:
+			if (registerSize != 8) {
+				il.AddInstruction(il.Unimplemented());
+				break;
+			}
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ArithShiftRight(8, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
+			break;
+		case MIPS_DSRAV:
+			if (registerSize != 8) {
+				il.AddInstruction(il.Undefined());
+				break;
+			}
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ArithShiftRight(8, ReadILOperand(il, instr, 2, registerSize), il.And(8, ReadILOperand(il, instr, 3, registerSize), il.Const(8, 0x3f)))));
 			break;
 		case MIPS_SB:
 			il.AddInstruction(il.Store(1, GetILOperandMemoryAddress(il, op2, addrSize), il.LowPart(1, ReadILOperand(il, instr, 1, registerSize))));
@@ -1354,11 +1383,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 
 		case MIPS_ADDR:
-		case MIPS_DSLLV:
-		case MIPS_DSRA32:
-		case MIPS_DSRA:
-		case MIPS_DSRAV:
-		case MIPS_DSRLV:
 		case MIPS_LDL:
 		case MIPS_LDR:
 		case MIPS_LDXC1:

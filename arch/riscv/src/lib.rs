@@ -2865,9 +2865,17 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
 
         let func_sym =
             Symbol::imported_function_from_import_address_symbol(sym.as_ref(), func.start());
+
         bv.define_auto_symbol(func_sym.as_ref());
-        func.apply_imported_types(func_sym.as_ref(), None);
-        true
+        for ext_sym in &bv.symbols_by_name(func_sym.raw_name()) {
+            if ext_sym.sym_type() == SymbolType::External {
+                if let Some(var) = bv.data_variable_at_address(ext_sym.address()) {
+                    func.apply_imported_types(func_sym.as_ref(), Some(var.t()));
+                    return true;
+                }
+            }
+        }
+        false
     }
 }
 

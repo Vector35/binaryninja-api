@@ -564,6 +564,17 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    fn data_variable_at_address(&self, addr: u64) -> Option<Ref<DataVariable>> {
+        let dv = BNDataVariable::default();
+        unsafe {
+            if BNGetDataVariableAtAddress(self.as_ref().handle, addr, std::mem::transmute(&dv)) {
+                Some(DataVariable(dv).to_owned())
+            } else {
+                None
+            }
+        }
+    }
+
     fn define_auto_data_var<'a, T: Into<Conf<&'a Type>>>(&self, addr: u64, ty: T) {
         unsafe {
             BNDefineDataVariable(self.as_ref().handle, addr, &mut ty.into().into());

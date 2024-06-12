@@ -520,6 +520,13 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 									ReadILOperand(il, instr, 2, registerSize, 4),
 									ReadILOperand(il, instr, 3, registerSize, 4))));
 			break;
+		case MIPS_DSUB:
+		case MIPS_DSUBU:
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
+								il.Sub(8,
+									ReadILOperand(il, instr, 2, registerSize, 8),
+									ReadILOperand(il, instr, 3, registerSize, 8))));
+			break;
 		case MIPS_AND:
 			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg,
 								il.And(4,
@@ -1214,8 +1221,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_DSRA:
 		case MIPS_DSRAV:
 		case MIPS_DSRLV:
-		case MIPS_DSUB:
-		case MIPS_DSUBU:
 		case MIPS_LDL:
 		case MIPS_LDR:
 		case MIPS_LDXC1:

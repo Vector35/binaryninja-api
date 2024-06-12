@@ -700,6 +700,8 @@ bool Remote::LoadMetadata()
 std::string Remote::RequestAuthenticationToken(const std::string& username, const std::string& password)
 {
 	char* token = BNRemoteRequestAuthenticationToken(m_object, username.c_str(), password.c_str());
+	if (token == nullptr)
+		throw RemoteException("Failed to authenticate");
 	std::string result = token;
 	BNFreeString(token);
 	return result;

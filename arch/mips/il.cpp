@@ -223,6 +223,39 @@ ExprId GetConditionForInstruction(LowLevelILFunction& il, Instruction& instr, si
 		if (instr.operands[0].operandClass == FLAG)
 			return il.Flag(instr.operands[0].reg);
 		return il.Flag(FPCCREG_FCC0);
+	case CNMIPS_BBIT0:
+		return il.CompareEqual(registerSize,
+			il.And(registerSize,
+				ReadILOperand(il, instr, 1, registerSize),
+				il.Const(registerSize, 1 << instr.operands[1].immediate)
+			),
+			il.Const(registerSize, 0)
+		);
+	case CNMIPS_BBIT032:
+		return il.CompareEqual(registerSize,
+			il.And(registerSize,
+				ReadILOperand(il, instr, 1, registerSize),
+				il.Const(registerSize, ((uint64_t)1) << (instr.operands[1].immediate + 32))
+			),
+			il.Const(registerSize, 0)
+		);
+	case CNMIPS_BBIT1:
+		return il.CompareNotEqual(registerSize,
+			il.And(registerSize,
+				ReadILOperand(il, instr, 1, registerSize),
+				il.Const(registerSize, 1 << instr.operands[1].immediate)
+			),
+			il.Const(registerSize, 0)
+		);
+	case CNMIPS_BBIT132:
+		return il.CompareNotEqual(registerSize,
+			il.And(registerSize,
+				ReadILOperand(il, instr, 1, registerSize),
+				il.Const(registerSize, ((uint64_t)1) << (instr.operands[1].immediate + 32))
+			),
+			il.Const(registerSize, 0)
+		);
+
 	default:
 		LogError("Missing conditional: %d", instr.operation);
 		return il.Unimplemented();
@@ -1166,6 +1199,15 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 					il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)))));
 			}
 			break;
+
+
+		case CNMIPS_BBIT0:
+		case CNMIPS_BBIT032:
+		case CNMIPS_BBIT1:
+		case CNMIPS_BBIT132:
+			ConditionalJump(arch, il, GetConditionForInstruction(il, instr, registerSize), addrSize, op3.immediate, addr + 8);
+			break;
+
 		case MIPS_ADDR:
 		case MIPS_DSLLV:
 		case MIPS_DSRA32:

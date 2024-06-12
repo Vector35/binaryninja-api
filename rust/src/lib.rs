@@ -148,6 +148,7 @@ pub mod fileaccessor;
 pub mod filemetadata;
 pub mod flowgraph;
 pub mod function;
+pub mod typeparser;
 pub mod functionrecognizer;
 pub mod headless;
 pub mod hlil;

@@ -887,6 +887,25 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 							)
 						)));
 			break;
+		case MIPS_DINS:
+		case MIPS_DINSM:
+		case MIPS_DINSU:
+			// recall: pos = op3, size = op4
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
+						il.Or(8,
+							il.And(8,
+								ReadILOperand(il, instr, 1, registerSize),
+								il.Const(registerSize, ~(((((uint64_t)1)<<op4.immediate)-1)<<op3.immediate))
+							),
+							il.ShiftLeft(8,
+								il.And(8,
+									ReadILOperand(il, instr, 2, registerSize),
+									il.Const(8, (((uint64_t)1)<<op4.immediate)-1)
+								),
+								il.Const(8, op3.immediate)
+							)
+						)));
+			break;
 		case MIPS_LUI:
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.Const(4, op2.immediate << 16)));
 			break;

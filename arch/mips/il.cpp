@@ -1207,12 +1207,149 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			}
 			break;
 
+		case CNMIPS_BADDU:
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
+				il.ZeroExtend(registerSize,
+					il.Add(1,
+						il.LowPart(1, ReadILOperand(il, instr, 2, registerSize, 8)),
+						il.LowPart(1, ReadILOperand(il, instr, 3, registerSize, 8))
+					)
+				)
+			));
+			break;
 
 		case CNMIPS_BBIT0:
 		case CNMIPS_BBIT032:
 		case CNMIPS_BBIT1:
 		case CNMIPS_BBIT132:
 			ConditionalJump(arch, il, GetConditionForInstruction(il, instr, registerSize), addrSize, op3.immediate, addr + 8);
+			break;
+
+		case CNMIPS_CINS:
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
+				il.ShiftLeft(8,
+					il.And(8,
+						ReadILOperand(il, instr, 2, registerSize),
+						il.Const(8, (((uint64_t)1) << (op4.immediate + 1)) - 1)),
+					il.Const(8, op3.immediate)
+				)
+			));
+			break;
+
+		case CNMIPS_CINS32:
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
+				il.ShiftLeft(8,
+					il.And(8,
+						ReadILOperand(il, instr, 2, registerSize),
+						il.Const(8, (((uint64_t)1) << (op4.immediate + 1)) - 1)),
+					il.Const(8, op3.immediate + 32)
+				)
+			));
+			break;
+
+		case CNMIPS_DMUL:
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
+								il.Mult(8,
+									ReadILOperand(il, instr, 2, registerSize, 8),
+									ReadILOperand(il, instr, 3, registerSize, 8))));
+			break;
+
+		case CNMIPS_EXTS:
+			// recall: p = op3.immediate, lenm1 = op4.immediate
+			if (op3.immediate == 0 && op4.immediate == 7)
+			{
+				il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
+					il.SignExtend(8, il.LowPart(1, ReadILOperand(il, instr, 2, registerSize, registerSize)))
+				));
+			}
+			else if (op3.immediate == 0 && op4.immediate == 0xf)
+			{
+				il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
+					il.SignExtend(8, il.LowPart(2, ReadILOperand(il, instr, 2, registerSize, registerSize)))
+				));
+			}
+			else if (op3.immediate == 0 && op4.immediate == 0x1f)
+			{
+				il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
+					il.SignExtend(8, il.LowPart(4, ReadILOperand(il, instr, 2, registerSize, registerSize)))
+				));
+			}
+			else
+			{
+				il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
+					il.ArithShiftRight(8,
+						il.ShiftLeft(8,
+							ReadILOperand(il, instr, 2, registerSize, 8),
+							il.Const(8, 63 - (op3.immediate + op4.immediate))
+						),
+						il.Const(8, 63 - op4.immediate)
+					)
+				));
+			}
+			break;
+
+		case CNMIPS_EXTS32:
+			// recall: p = op3.immediate, lenm1 = op4.immediate
+			if (op3.immediate + op4.immediate + 32 > 63)
+			{
+				il.AddInstruction(il.Undefined());
+			}
+			else
+			{
+				il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
+					il.ArithShiftRight(8,
+						il.ShiftLeft(8,
+							ReadILOperand(il, instr, 2, registerSize, 8),
+							il.Const(8, 63 - (32 + op3.immediate + op4.immediate))
+						),
+						il.Const(8, 63 - op4.immediate)
+					)
+				));
+			}
+			break;
+
+		case CNMIPS_SAA:
+			il.AddInstruction(
+				il.Store(4,
+					GetILOperandMemoryAddress(il, op2, addrSize),
+					il.Add(4,
+						il.Load(4, GetILOperandMemoryAddress(il, op2, addrSize)),
+						ReadILOperand(il, instr, 1, registerSize, 4)
+					)
+				)
+			);
+			break;
+
+		case CNMIPS_SAAD:
+			il.AddInstruction(
+				il.Store(8,
+					GetILOperandMemoryAddress(il, op2, addrSize),
+					il.Add(8,
+						il.Load(8, GetILOperandMemoryAddress(il, op2, addrSize)),
+						ReadILOperand(il, instr, 1, registerSize, 8)
+					)
+				)
+			);
+			break;
+
+		case CNMIPS_SEQ:
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.BoolToInt(registerSize,
+				il.CompareEqual(registerSize, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize)))));
+			break;
+
+		case CNMIPS_SEQI:
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.BoolToInt(registerSize,
+				il.CompareEqual(registerSize, ReadILOperand(il, instr, 2, registerSize), il.Const(registerSize, op3.immediate)))));
+			break;
+
+		case CNMIPS_SNE:
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.BoolToInt(registerSize,
+				il.CompareNotEqual(registerSize, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize)))));
+			break;
+
+		case CNMIPS_SNEI:
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.BoolToInt(registerSize,
+				il.CompareNotEqual(registerSize, ReadILOperand(il, instr, 2, registerSize), il.Const(registerSize, op3.immediate)))));
 			break;
 
 		case MIPS_ADDR:

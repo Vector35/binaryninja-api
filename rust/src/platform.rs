@@ -14,7 +14,7 @@
 
 //! Contains all information related to the execution environment of the binary, mainly the calling conventions used
 
-use std::{borrow::Borrow, collections::HashMap, os::raw, path::Path, ptr, slice};
+use std::{borrow::Borrow, ffi, ptr};
 
 use binaryninjacore_sys::*;
 
@@ -23,7 +23,8 @@ use crate::{
     callingconvention::CallingConvention,
     rc::*,
     string::*,
-    types::{QualifiedName, QualifiedNameAndType, Type},
+    typeparser::{TypeParserError, TypeParserErrorSeverity, TypeParserResult},
+    types::QualifiedNameAndType,
 };
 
 #[derive(PartialEq, Eq, Hash)]
@@ -241,104 +242,119 @@ impl Platform {
             Array::new(handles, count, ())
         }
     }
-}
 
-pub trait TypeParser {
-    fn parse_types_from_source<S: BnStrCompatible, P: AsRef<Path>>(
+    pub fn preprocess_source(
         &self,
-        _source: S,
-        _filename: S,
-        _include_directories: &[P],
-        _auto_type_source: S,
-    ) -> Result<TypeParserResult, String> {
-        Err(String::new())
-    }
-}
+        source: &str,
+        file_name: &str,
+        include_dirs: &[BnString],
+    ) -> Result<BnString, Vec<TypeParserError>> {
+        let source_cstr = BnString::new(source);
+        let file_name_cstr = BnString::new(file_name);
 
-#[derive(Clone, Default)]
-pub struct TypeParserResult {
-    pub types: HashMap<String, Ref<Type>>,
-    pub variables: HashMap<String, Ref<Type>>,
-    pub functions: HashMap<String, Ref<Type>>,
-}
-
-impl TypeParser for Platform {
-    fn parse_types_from_source<S: BnStrCompatible, P: AsRef<Path>>(
-        &self,
-        source: S,
-        filename: S,
-        include_directories: &[P],
-        auto_type_source: S,
-    ) -> Result<TypeParserResult, String> {
-        let mut result = BNTypeParserResult {
-            functionCount: 0,
-            typeCount: 0,
-            variableCount: 0,
-            functions: ptr::null_mut(),
-            types: ptr::null_mut(),
-            variables: ptr::null_mut(),
-        };
-
-        let mut type_parser_result = TypeParserResult::default();
-
-        let mut error_string: *mut raw::c_char = ptr::null_mut();
-
-        let src = source.into_bytes_with_nul();
-        let filename = filename.into_bytes_with_nul();
-        let auto_type_source = auto_type_source.into_bytes_with_nul();
-
-        let mut include_dirs = vec![];
-
-        for dir in include_directories.iter() {
-            let d = dir
-                .as_ref()
-                .to_string_lossy()
-                .to_string()
-                .into_bytes_with_nul();
-            include_dirs.push(d.as_ptr() as _);
-        }
-
-        unsafe {
-            let success = BNParseTypesFromSource(
-                self.handle,
-                src.as_ref().as_ptr() as _,
-                filename.as_ref().as_ptr() as _,
+        let mut result = ptr::null_mut();
+        let mut error_string = ptr::null_mut();
+        let success = unsafe {
+            BNPreprocessSource(
+                source_cstr.as_ptr(),
+                file_name_cstr.as_ptr(),
                 &mut result,
                 &mut error_string,
-                include_dirs.as_mut_ptr(),
+                include_dirs.as_ptr() as *mut *const ffi::c_char,
                 include_dirs.len(),
-                auto_type_source.as_ref().as_ptr() as _,
-            );
+            )
+        };
 
-            let error_msg = BnString::from_raw(error_string);
-
-            if !success {
-                return Err(error_msg.to_string());
-            }
-
-            for i in slice::from_raw_parts(result.types, result.typeCount) {
-                let name = QualifiedName(i.name);
-                type_parser_result
-                    .types
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
-            }
-
-            for i in slice::from_raw_parts(result.functions, result.functionCount) {
-                let name = QualifiedName(i.name);
-                type_parser_result
-                    .functions
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
-            }
-
-            for i in slice::from_raw_parts(result.variables, result.variableCount) {
-                let name = QualifiedName(i.name);
-                type_parser_result
-                    .variables
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
-            }
+        if success {
+            assert!(!result.is_null());
+            Ok(unsafe { BnString::from_raw(result) })
+        } else {
+            assert!(!error_string.is_null());
+            Err(vec![TypeParserError::new(
+                TypeParserErrorSeverity::FatalSeverity,
+                unsafe { BnString::from_raw(error_string) },
+                file_name,
+                0,
+                0,
+            )])
         }
+    }
 
-        Ok(type_parser_result)
+    pub fn parse_types_from_source(
+        &self,
+        src: &str,
+        filename: &str,
+        include_dirs: &[BnString],
+        auto_type_source: &str,
+    ) -> Result<TypeParserResult, Vec<TypeParserError>> {
+        let source_cstr = BnString::new(src);
+        let file_name_cstr = BnString::new(filename);
+        let auto_type_source = BnString::new(auto_type_source);
+
+        let mut result = BNTypeParserResult::default();
+        let mut error_string = ptr::null_mut();
+        let success = unsafe {
+            BNParseTypesFromSource(
+                self.handle,
+                source_cstr.as_ptr(),
+                file_name_cstr.as_ptr(),
+                &mut result,
+                &mut error_string,
+                include_dirs.as_ptr() as *mut *const ffi::c_char,
+                include_dirs.len(),
+                auto_type_source.as_ptr(),
+            )
+        };
+
+        if success {
+            Ok(unsafe { TypeParserResult::from_raw(result) })
+        } else {
+            assert!(!error_string.is_null());
+            Err(vec![TypeParserError::new(
+                TypeParserErrorSeverity::FatalSeverity,
+                unsafe { BnString::from_raw(error_string) },
+                filename,
+                0,
+                0,
+            )])
+        }
+    }
+
+    pub fn parse_types_from_source_file(
+        &self,
+        filename: &str,
+        include_dirs: &[BnString],
+        auto_type_source: &str,
+    ) -> Result<TypeParserResult, Vec<TypeParserError>> {
+        let file_name_cstr = BnString::new(filename);
+        let auto_type_source = BnString::new(auto_type_source);
+
+        let mut result = BNTypeParserResult::default();
+        let mut error_string = ptr::null_mut();
+        let success = unsafe {
+            BNParseTypesFromSourceFile(
+                self.handle,
+                file_name_cstr.as_ptr(),
+                &mut result,
+                &mut error_string,
+                include_dirs.as_ptr() as *mut *const ffi::c_char,
+                include_dirs.len(),
+                auto_type_source.as_ptr(),
+            )
+        };
+
+        if success {
+            Ok(unsafe { TypeParserResult::from_raw(result) })
+        } else {
+            assert!(!error_string.is_null());
+            Err(vec![TypeParserError::new(
+                TypeParserErrorSeverity::FatalSeverity,
+                unsafe { BnString::from_raw(error_string) },
+                filename,
+                0,
+                0,
+            )])
+        }
     }
 }
 

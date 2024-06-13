@@ -1490,6 +1490,22 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(SimpleIntrinsic(il, CNMIPS_INTRIN_SYNCWS));
 			break;
 
+		case MIPS_DI:
+			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_DI));
+			break;
+
+		case MIPS_EHB:
+			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_EHB));
+			break;
+
+		case MIPS_EI:
+			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_EI));
+			break;
+
+		case MIPS_WAIT:
+			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_WAIT));
+			break;
+
 		case MIPS_ADDR:
 		case MIPS_LDL:
 		case MIPS_LDR:
@@ -1530,10 +1546,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_CTC1:
 		case MIPS_CTC2:
 		case MIPS_DERET:
-		case MIPS_DI:
 		case MIPS_DRET:
-		case MIPS_EHB:
-		case MIPS_EI:
 		case MIPS_JALX: //Special instruction for switching to MIPS32/microMIPS32/MIPS16e
 		case MIPS_MTHC1:
 		case MIPS_MTHC2:
@@ -1545,7 +1558,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_TLBR:
 		case MIPS_TLBWI:
 		case MIPS_TLBWR:
-		case MIPS_WAIT:
 		case MIPS_WRPGPR:
 		case MIPS_RDPGPR:
 		case MIPS_RECIP1:

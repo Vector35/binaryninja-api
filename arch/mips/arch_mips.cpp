@@ -835,6 +835,16 @@ public:
 				return "moveDwordToCoprocessorUnimplemented";
 			case MIPS_INTRIN_SYNC:
 				return "_sync";
+			case MIPS_INTRIN_EI:
+				return "_enableInterrupts";
+			case MIPS_INTRIN_DI:
+				return "_disableInterrupts";
+			case MIPS_INTRIN_EHB:
+				return "_clearExecutionHazards";
+			case MIPS_INTRIN_WAIT:
+				return "_enterLowPowerMode";
+
+
 			case CNMIPS_INTRIN_SYNCIOBDMA:
 				return "_synciobdma";
 			case CNMIPS_INTRIN_SYNCS:
@@ -861,6 +871,10 @@ public:
 			MIPS_INTRIN_DMTC0,
 			MIPS_INTRIN_DMTC_UNIMPLEMENTED,
 			MIPS_INTRIN_SYNC,
+			MIPS_INTRIN_DI,
+			MIPS_INTRIN_EHB,
+			MIPS_INTRIN_EI,
+			MIPS_INTRIN_WAIT,
 
 			CNMIPS_INTRIN_SYNCIOBDMA,
 			CNMIPS_INTRIN_SYNCS,

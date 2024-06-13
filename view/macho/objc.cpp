@@ -1209,23 +1209,23 @@ void ObjCProcessor::ProcessObjCData()
 	m_typeNames.category = finalizeStructureBuilder(m_data, categoryBuilder, "objc_category_t").first;
 
 
-	auto reader = new BinaryReader(m_data);
+	auto reader = BinaryReader(m_data);
 	m_data->BeginBulkModifySymbols();
 	if (auto classList = m_data->GetSectionByName("__objc_classlist"))
-		LoadClasses(reader, classList);
+		LoadClasses(&reader, classList);
 	if (auto nonLazyClassList = m_data->GetSectionByName("__objc_nlclslist"))
-		LoadClasses(reader, nonLazyClassList);  // See: https://stackoverflow.com/a/15318325
+		LoadClasses(&reader, nonLazyClassList);  // See: https://stackoverflow.com/a/15318325
 
 	GenerateClassTypes();
 	for (auto& [_, cls] : m_classes)
 		ApplyMethodTypes(cls);
 
 	if (auto catList = m_data->GetSectionByName("__objc_catlist"))  // Do this after loading class type data.
-		LoadCategories(reader, catList);
+		LoadCategories(&reader, catList);
 	for (auto& [_, cat] : m_categories)
 		ApplyMethodTypes(cat);
 
-	PostProcessObjCSections(reader);
+	PostProcessObjCSections(&reader);
 
 	m_symbolQueue->Process();
 	m_data->EndBulkModifySymbols();

@@ -843,7 +843,18 @@ public:
 				return "_clearExecutionHazards";
 			case MIPS_INTRIN_WAIT:
 				return "_enterLowPowerMode";
-
+			case MIPS_INTRIN_HWR0:
+				return "_cpuNum";
+			case MIPS_INTRIN_HWR1:
+				return "_synciStep";
+			case MIPS_INTRIN_HWR2:
+				return "_cycleCounter";
+			case MIPS_INTRIN_HWR3:
+				return "_cycleCounterResolution";
+			case MIPS_INTRIN_HWR29:
+				return "_userLocalRegister";
+			case MIPS_INTRIN_HWR_UNKNOWN:
+				return "_hardwareRegister";
 
 			case CNMIPS_INTRIN_SYNCIOBDMA:
 				return "_synciobdma";
@@ -875,6 +886,12 @@ public:
 			MIPS_INTRIN_EHB,
 			MIPS_INTRIN_EI,
 			MIPS_INTRIN_WAIT,
+			MIPS_INTRIN_HWR0,
+			MIPS_INTRIN_HWR1,
+			MIPS_INTRIN_HWR2,
+			MIPS_INTRIN_HWR3,
+			MIPS_INTRIN_HWR29,
+			MIPS_INTRIN_HWR_UNKNOWN,
 
 			CNMIPS_INTRIN_SYNCIOBDMA,
 			CNMIPS_INTRIN_SYNCS,
@@ -937,6 +954,10 @@ public:
 				return {
 					NameAndType("stype", Type::IntegerType(4, false)),
 				};
+			case MIPS_INTRIN_HWR_UNKNOWN:
+				return {
+					NameAndType("hwreg", Type::IntegerType(4, false)),
+				};
 			default:
 				return vector<NameAndType>();
 		}
@@ -954,6 +975,13 @@ public:
 			case MIPS_INTRIN_DMFC0:
 			case MIPS_INTRIN_DMFC_UNIMPLEMENTED:
 				return {Type::IntegerType(8, false)};
+			case MIPS_INTRIN_HWR0:
+			case MIPS_INTRIN_HWR1:
+			case MIPS_INTRIN_HWR2:
+			case MIPS_INTRIN_HWR3:
+			case MIPS_INTRIN_HWR29:
+			case MIPS_INTRIN_HWR_UNKNOWN:
+				return {Type::IntegerType(4, false)};
 			default:
 				return vector<Confidence<Ref<Type>>>();
 		}

@@ -844,8 +844,31 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 									il.Operand(1, il.Const(4, 0x0000ffff & op3.immediate)))));
 			break;
 		case MIPS_RDHWR:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.Unimplemented()));
+		{
+			MipsIntrinsic intrinsic;
+			switch (op2.immediate)
+			{
+				case 0: intrinsic = MIPS_INTRIN_HWR0; break;
+				case 1: intrinsic = MIPS_INTRIN_HWR1; break;
+				case 2: intrinsic = MIPS_INTRIN_HWR2; break;
+				case 3: intrinsic = MIPS_INTRIN_HWR3; break;
+				default: intrinsic = MIPS_INTRIN_HWR_UNKNOWN;
+			}
+
+			if (intrinsic != MIPS_INTRIN_HWR_UNKNOWN)
+			{
+				il.AddInstruction(
+					il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, intrinsic, {})
+				);
+			}
+			else
+			{
+				il.AddInstruction(
+					il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_HWR_UNKNOWN, {il.Const(1, op2.immediate)})
+				);
+			}
 			break;
+		}
 		case MIPS_SW:
 			il.AddInstruction(il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize, 4)));
 			break;

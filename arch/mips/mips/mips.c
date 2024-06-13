@@ -1556,7 +1556,7 @@ uint32_t mips_decompose_instruction(
 			INS_2(REG, ins.r.rd, REG, ins.r.rs)
 			break;
 		case MIPS_RDHWR:
-			INS_2(REG, ins.r.rt, REG, (CPREG_0 + ins.r.rd));
+			INS_2(REG, ins.r.rt, IMM, ins.r.rd);
 			break;
 		case MIPS_TRUNC_W_S:
 		case MIPS_TRUNC_W_D:

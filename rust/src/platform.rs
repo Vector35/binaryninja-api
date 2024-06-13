@@ -23,6 +23,7 @@ use crate::{
     callingconvention::CallingConvention,
     rc::*,
     string::*,
+    typelibrary::TypeLibrary,
     types::{QualifiedName, QualifiedNameAndType, Type},
 };
 
@@ -161,6 +162,15 @@ impl Platform {
 
     pub fn arch(&self) -> CoreArchitecture {
         unsafe { CoreArchitecture::from_raw(BNGetPlatformArchitecture(self.handle)) }
+    }
+
+    pub fn get_type_libraries_by_name(&self, name: &QualifiedName) -> Array<TypeLibrary> {
+        let mut count = 0;
+        let result = unsafe {
+            BNGetPlatformTypeLibrariesByName(self.handle, &name.0 as *const _ as *mut _, &mut count)
+        };
+        assert!(!result.is_null());
+        unsafe { Array::new(result, count, ()) }
     }
 
     pub fn register_os<S: BnStrCompatible>(&self, os: S) {

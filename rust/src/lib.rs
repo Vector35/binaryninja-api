@@ -166,6 +166,7 @@ pub mod string;
 pub mod symbol;
 pub mod tags;
 pub mod templatesimplifier;
+pub mod typelibrary;
 pub mod typearchive;
 pub mod types;
 

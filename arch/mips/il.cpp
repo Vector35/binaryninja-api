@@ -476,6 +476,11 @@ static ExprId MoveToCoprocessor(unsigned cop, LowLevelILFunction& il, size_t sto
 			{il.Const(4, cop), il.Const(4, reg), il.Const(4, sel), srcExpr});
 }
 
+static ExprId SimpleIntrinsic(LowLevelILFunction& il, MipsIntrinsic intrinsic)
+{
+	return il.Intrinsic({}, intrinsic, {});
+}
+
 bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize)
 {
 	LowLevelILLabel trueLabel, falseLabel, doneLabel, dirFlagSet, dirFlagClear, dirFlagDone;
@@ -1459,6 +1464,32 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				il.CompareNotEqual(registerSize, ReadILOperand(il, instr, 2, registerSize), il.Const(registerSize, op3.immediate)))));
 			break;
 
+		case MIPS_SYNC:
+		{
+			uint64_t stype = 0;
+			if (op1.operandClass != NONE) {
+				stype = op1.immediate;
+			}
+
+			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_SYNC, {il.Const(1, stype)}));
+			break;
+		}
+		case CNMIPS_SYNCIOBDMA:
+			il.AddInstruction(SimpleIntrinsic(il, CNMIPS_INTRIN_SYNCIOBDMA));
+			break;
+
+		case CNMIPS_SYNCS:
+			il.AddInstruction(SimpleIntrinsic(il, CNMIPS_INTRIN_SYNCS));
+			break;
+
+		case CNMIPS_SYNCW:
+			il.AddInstruction(SimpleIntrinsic(il, CNMIPS_INTRIN_SYNCW));
+			break;
+
+		case CNMIPS_SYNCWS:
+			il.AddInstruction(SimpleIntrinsic(il, CNMIPS_INTRIN_SYNCWS));
+			break;
+
 		case MIPS_ADDR:
 		case MIPS_LDL:
 		case MIPS_LDR:
@@ -1509,7 +1540,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_PAUSE:
 		case MIPS_PREF:
 		case MIPS_PREFX:
-		case MIPS_SYNC:
 		case MIPS_SYNCI:
 		case MIPS_TLBP:
 		case MIPS_TLBR:

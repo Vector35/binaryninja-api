@@ -833,6 +833,16 @@ public:
 				return "moveDwordToCoprocessor";
 			case MIPS_INTRIN_DMTC_UNIMPLEMENTED:
 				return "moveDwordToCoprocessorUnimplemented";
+			case MIPS_INTRIN_SYNC:
+				return "_sync";
+			case CNMIPS_INTRIN_SYNCIOBDMA:
+				return "_synciobdma";
+			case CNMIPS_INTRIN_SYNCS:
+				return "_syncs";
+			case CNMIPS_INTRIN_SYNCW:
+				return "_syncw";
+			case CNMIPS_INTRIN_SYNCWS:
+				return "_syncws";
 			default:
 				return "";
 		}
@@ -850,6 +860,12 @@ public:
 			MIPS_INTRIN_DMFC_UNIMPLEMENTED,
 			MIPS_INTRIN_DMTC0,
 			MIPS_INTRIN_DMTC_UNIMPLEMENTED,
+			MIPS_INTRIN_SYNC,
+
+			CNMIPS_INTRIN_SYNCIOBDMA,
+			CNMIPS_INTRIN_SYNCS,
+			CNMIPS_INTRIN_SYNCW,
+			CNMIPS_INTRIN_SYNCWS,
 		};
 	}
 
@@ -902,6 +918,10 @@ public:
 					NameAndType("register", Type::IntegerType(4, false)),
 					NameAndType("selector", Type::IntegerType(4, false)),
 					NameAndType("value", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_SYNC:
+				return {
+					NameAndType("stype", Type::IntegerType(4, false)),
 				};
 			default:
 				return vector<NameAndType>();

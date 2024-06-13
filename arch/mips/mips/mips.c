@@ -788,6 +788,10 @@ static const char* const OperationStrings[] = {
 		"seqi",
 		"sne",
 		"snei",
+		"synciobdma",
+		"syncs",
+		"syncw",
+		"syncws",
 		"v3mulu",
 		"zcb",
 		"zcbt",
@@ -1421,6 +1425,18 @@ uint32_t mips_decompose_instruction(
 			case MIPS_BGEZAL:
 				if (ins.r.rs == 0)
 					instruction->operation = MIPS_BAL;
+			case MIPS_SYNC:
+				if ((flags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+				{
+					switch (ins.r.sa)
+					{
+						case 2: instruction->operation = CNMIPS_SYNCIOBDMA; break;
+						case 4: instruction->operation = CNMIPS_SYNCW; break;
+						case 5: instruction->operation = CNMIPS_SYNCWS; break;
+						case 6: instruction->operation = CNMIPS_SYNCS; break;
+					}
+				}
+				break;
 			default:
 				break;
 		}
@@ -2094,6 +2110,12 @@ uint32_t mips_decompose_instruction(
 		case CNMIPS_DPOP:
 		case CNMIPS_POP:
 			INS_2(REG, ins.r.rd, REG, ins.r.rs);
+			break;
+
+		case CNMIPS_SYNCIOBDMA:
+		case CNMIPS_SYNCS:
+		case CNMIPS_SYNCW:
+		case CNMIPS_SYNCWS:
 			break;
 
 		case CNMIPS_ZCB:

@@ -786,6 +786,12 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_MULTU:
 			il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO, il.MultDoublePrecUnsigned(8, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize))));
 			break;
+		case MIPS_DMULT:
+			il.AddInstruction(il.SetRegisterSplit(8, REG_HI, REG_LO, il.MultDoublePrecSigned(16, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize))));
+			break;
+		case MIPS_DMULTU:
+			il.AddInstruction(il.SetRegisterSplit(8, REG_HI, REG_LO, il.MultDoublePrecUnsigned(16, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize))));
+			break;
 		case MIPS_NEG:
 		case MIPS_NEGU:
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg,
@@ -1474,8 +1480,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_CTC2:
 		case MIPS_DERET:
 		case MIPS_DI:
-		case MIPS_DMULT:
-		case MIPS_DMULTU:
 		case MIPS_DRET:
 		case MIPS_EHB:
 		case MIPS_EI:

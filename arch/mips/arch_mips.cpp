@@ -864,6 +864,10 @@ public:
 				return "_syncw";
 			case CNMIPS_INTRIN_SYNCWS:
 				return "_syncws";
+			case CNMIPS_INTRIN_HWR30:
+				return "_chOrd";
+			case CNMIPS_INTRIN_HWR31:
+				return "_cvmCount";
 			default:
 				return "";
 		}
@@ -897,6 +901,8 @@ public:
 			CNMIPS_INTRIN_SYNCS,
 			CNMIPS_INTRIN_SYNCW,
 			CNMIPS_INTRIN_SYNCWS,
+			CNMIPS_INTRIN_HWR30,
+			CNMIPS_INTRIN_HWR31,
 		};
 	}
 
@@ -981,6 +987,8 @@ public:
 			case MIPS_INTRIN_HWR3:
 			case MIPS_INTRIN_HWR29:
 			case MIPS_INTRIN_HWR_UNKNOWN:
+			case CNMIPS_INTRIN_HWR30:
+			case CNMIPS_INTRIN_HWR31:
 				return {Type::IntegerType(4, false)};
 			default:
 				return vector<Confidence<Ref<Type>>>();

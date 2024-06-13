@@ -1443,6 +1443,30 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			}
 			break;
 
+		case CNMIPS_RDHWR:
+		{
+			MipsIntrinsic intrinsic;
+			switch (op2.immediate)
+			{
+				case 30: intrinsic = CNMIPS_INTRIN_HWR30; break;
+				case 31: intrinsic = CNMIPS_INTRIN_HWR31; break;
+				default: intrinsic = MIPS_INTRIN_HWR_UNKNOWN;
+			}
+
+			if (intrinsic != MIPS_INTRIN_HWR_UNKNOWN)
+			{
+				il.AddInstruction(
+					il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, intrinsic, {})
+				);
+			}
+			else
+			{
+				il.AddInstruction(
+					il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_HWR_UNKNOWN, {il.Const(1, op2.immediate)})
+				);
+			}
+			break;
+		}
 		case CNMIPS_SAA:
 			il.AddInstruction(
 				il.Store(4,

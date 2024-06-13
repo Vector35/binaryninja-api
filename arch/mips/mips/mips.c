@@ -782,6 +782,7 @@ static const char* const OperationStrings[] = {
 		"mtp1",
 		"mtp2",
 		"pop",
+		"rdhwr",
 		"saa",
 		"saad",
 		"seq",
@@ -1434,6 +1435,16 @@ uint32_t mips_decompose_instruction(
 						case 4: instruction->operation = CNMIPS_SYNCW; break;
 						case 5: instruction->operation = CNMIPS_SYNCWS; break;
 						case 6: instruction->operation = CNMIPS_SYNCS; break;
+					}
+				}
+				break;
+			case MIPS_RDHWR:
+				if ((flags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+				{
+					switch (ins.r.rd)
+					{
+						case 30: instruction->operation = CNMIPS_RDHWR; break;
+						case 31: instruction->operation = CNMIPS_RDHWR; break;
 					}
 				}
 				break;
@@ -2110,6 +2121,10 @@ uint32_t mips_decompose_instruction(
 		case CNMIPS_DPOP:
 		case CNMIPS_POP:
 			INS_2(REG, ins.r.rd, REG, ins.r.rs);
+			break;
+
+		case CNMIPS_RDHWR:
+			INS_2(REG, ins.r.rt, IMM, ins.r.rd);
 			break;
 
 		case CNMIPS_SYNCIOBDMA:

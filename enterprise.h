@@ -41,6 +41,18 @@ namespace BinaryNinja
 		};
 
 		/*!
+		    Determine if the Enterprise Client has been initialized yet.
+		    \return True if Initialize() has been called successfully
+		 */
+		bool IsInitialized();
+
+		/*!
+		    Initialize the Enterprise Client
+		    \return True if successful
+		 */
+		bool Initialize();
+
+		/*!
 		    Authenticate to the Enterprise server with username and password
 		    \param username Username to authenticate with
 		    \param password Password to authenticate with

@@ -23,6 +23,19 @@
 
 using namespace BinaryNinja::Enterprise;
 
+
+bool BinaryNinja::Enterprise::IsInitialized()
+{
+	return BNIsEnterpriseServerInitialized();
+}
+
+
+bool BinaryNinja::Enterprise::Initialize()
+{
+	return BNInitializeEnterpriseServer();
+}
+
+
 bool BinaryNinja::Enterprise::AuthenticateWithCredentials(const std::string& username, const std::string& password, bool remember)
 {
 	return BNAuthenticateEnterpriseServerWithCredentials(username.c_str(), password.c_str(), remember);
@@ -99,6 +112,8 @@ bool BinaryNinja::Enterprise::IsAuthenticated()
 std::string BinaryNinja::Enterprise::GetUsername()
 {
 	char* value = BNGetEnterpriseServerUsername();
+	if (!value)
+		return "";
 	std::string result = value;
 	BNFreeString(value);
 	return result;
@@ -108,6 +123,8 @@ std::string BinaryNinja::Enterprise::GetUsername()
 std::string BinaryNinja::Enterprise::GetToken()
 {
 	char* value = BNGetEnterpriseServerToken();
+	if (!value)
+		return "";
 	std::string result = value;
 	BNFreeString(value);
 	return result;
@@ -117,6 +134,8 @@ std::string BinaryNinja::Enterprise::GetToken()
 std::string BinaryNinja::Enterprise::GetServerName()
 {
 	char* value = BNGetEnterpriseServerName();
+	if (!value)
+		return "";
 	std::string result = value;
 	BNFreeString(value);
 	return result;
@@ -126,6 +145,8 @@ std::string BinaryNinja::Enterprise::GetServerName()
 std::string BinaryNinja::Enterprise::GetServerUrl()
 {
 	char* value = BNGetEnterpriseServerUrl();
+	if (!value)
+		return "";
 	std::string result = value;
 	BNFreeString(value);
 	return result;
@@ -135,6 +156,8 @@ std::string BinaryNinja::Enterprise::GetServerUrl()
 std::string BinaryNinja::Enterprise::GetServerId()
 {
 	char* value = BNGetEnterpriseServerId();
+	if (!value)
+		return "";
 	std::string result = value;
 	BNFreeString(value);
 	return result;
@@ -150,6 +173,8 @@ uint64_t BinaryNinja::Enterprise::GetServerVersion()
 std::string BinaryNinja::Enterprise::GetServerBuildId()
 {
 	char* value = BNGetEnterpriseServerBuildId();
+	if (!value)
+		return "";
 	std::string result = value;
 	BNFreeString(value);
 	return result;
@@ -188,7 +213,6 @@ bool BinaryNinja::Enterprise::IsLicenseStillActivated()
 
 std::string BinaryNinja::Enterprise::GetLastError()
 {
-	return BNGetEnterpriseServerLastError();
 	char* str = BNGetEnterpriseServerLastError();
 	std::string value = str;
 	BNFreeString(str);
@@ -208,7 +232,7 @@ void BinaryNinja::Enterprise::UnregisterNotification(BNEnterpriseServerCallbacks
 }
 
 
-BinaryNinja::Enterprise::LicenseCheckout::LicenseCheckout(int64_t duration)
+BinaryNinja::Enterprise::LicenseCheckout::LicenseCheckout(int64_t duration): m_acquiredLicense(false)
 {
 	// This is a port of python's binaryninja.enterprise.LicenseCheckout
 
@@ -216,6 +240,28 @@ BinaryNinja::Enterprise::LicenseCheckout::LicenseCheckout(int64_t duration)
 	if (BNIsUIEnabled())
 		return;
 
+	if (!IsInitialized())
+	{
+		if (!Initialize())
+		{
+			// Named/computer licenses don't need this flow at all
+			if (!IsFloatingLicense())
+			{
+				return;
+			}
+
+			// Floating licenses though, this is an error. Probably the error
+			// for needing to set enterprise.server.url in settings.json
+			throw EnterpriseException(
+				"Could not initialize Binary Ninja Enterprise: " + GetLastError()
+			);
+		}
+	}
+
+	if (!IsFloatingLicense())
+	{
+		return;
+	}
 	if (!IsConnected())
 	{
 		Connect();

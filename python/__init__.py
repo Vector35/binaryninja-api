@@ -216,24 +216,18 @@ class _DestructionCallbackHandler:
 
 _enable_default_log = True
 _plugin_init = False
+_enterprise_license_checkout = None
 
 
 def _init_plugins():
 	global _enable_default_log
 	global _plugin_init
+	global _enterprise_license_checkout
 
 	if not core_ui_enabled() and core.BNGetProduct() == "Binary Ninja Enterprise Client":
 		# Enterprise client needs to checkout a license reservation or else BNInitPlugins will fail
-		if not enterprise.is_license_still_activated():
-			try:
-				enterprise.authenticate_with_method("Keychain")
-			except RuntimeError:
-				pass
-		if not core.BNIsLicenseValidated() or not enterprise.is_license_still_activated():
-			raise RuntimeError(
-			    "To use Binary Ninja Enterprise from a headless python script, you must check out a license first.\n"
-			    "You can either check out a license for an extended time with the UI, or use the binaryninja.enterprise module."
-			)
+		_enterprise_license_checkout = enterprise.LicenseCheckout()
+		_enterprise_license_checkout.acquire()
 
 	if not _plugin_init:
 		# The first call to BNInitCorePlugins returns True for successful initialization and True in this context indicates headless operation.

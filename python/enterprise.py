@@ -18,6 +18,23 @@ if core.BNGetProduct() != "Binary Ninja Enterprise Client":
 	raise RuntimeError("Cannot use Binary Ninja Enterprise client functionality with a non-Enterprise client.")
 
 
+def is_initialized() -> bool:
+	"""
+	Determine if the Enterprise Client has been initialized yet.
+
+	:return: True if :py:func:`initialize` has been called
+	"""
+	return core.BNIsEnterpriseServerInitialized()
+
+
+def initialize():
+	"""
+	Initialize the Enterprise Client
+	"""
+	if not core.BNInitializeEnterpriseServer():
+		raise RuntimeError(last_error())
+
+
 def connect():
 	"""
 	Connect to the Enterprise Server.
@@ -117,8 +134,8 @@ def username() -> Optional[str]:
 	:return: Username, if authenticated. None, otherwise.
 	"""
 	value = core.BNGetEnterpriseServerUsername()
-	if value == "":
-		return None
+	if value is None:
+		raise RuntimeError(last_error())
 	return value
 
 
@@ -129,8 +146,8 @@ def token() -> Optional[str]:
 	:return: Token, if authenticated. None, otherwise.
 	"""
 	value = core.BNGetEnterpriseServerToken()
-	if value == "":
-		return None
+	if value is None:
+		raise RuntimeError(last_error())
 	return value
 
 
@@ -140,7 +157,10 @@ def server_url() -> str:
 
 	:return: The current url
 	"""
-	return core.BNGetEnterpriseServerUrl()
+	value = core.BNGetEnterpriseServerUrl()
+	if value is None:
+		raise RuntimeError(last_error())
+	return value
 
 
 def set_server_url(url: str):
@@ -164,8 +184,8 @@ def server_name() -> str:
 	if not is_connected():
 		connect()
 	value = core.BNGetEnterpriseServerName()
-	if value == "":
-		return None
+	if value is None:
+		raise RuntimeError(last_error())
 	return value
 
 
@@ -178,8 +198,8 @@ def server_id() -> str:
 	if not is_connected():
 		connect()
 	value = core.BNGetEnterpriseServerId()
-	if value == "":
-		return None
+	if value is None:
+		raise RuntimeError(last_error())
 	return value
 
 
@@ -193,7 +213,7 @@ def server_version() -> int:
 		connect()
 	value = core.BNGetEnterpriseServerVersion()
 	if value == 0:
-		return None
+		raise RuntimeError(last_error())
 	return value
 
 
@@ -206,8 +226,8 @@ def server_build_id() -> str:
 	if not is_connected():
 		connect()
 	value = core.BNGetEnterpriseServerBuildId()
-	if value == "":
-		return None
+	if value is None:
+		raise RuntimeError(last_error())
 	return value
 
 
@@ -234,6 +254,7 @@ def update_license(duration, _cache=True):
 	if not core.BNUpdateEnterpriseServerLicense(duration):
 		raise RuntimeError(last_error())
 
+
 @deprecation.deprecated(deprecated_in="3.4.4137", details="Use .update_license instead.")
 def acquire_license(duration, _cache=True):
 	"""
@@ -247,6 +268,7 @@ def acquire_license(duration, _cache=True):
 	:param bool _cache: Deprecated but left in for compatibility
 	"""
 	update_license(duration, _cache)
+
 
 def release_license():
 	"""
@@ -306,15 +328,6 @@ def last_error() -> str:
 	return core.BNGetEnterpriseServerLastError()
 
 
-def is_initialized() -> bool:
-	"""
-	Determine if the Enterprise Client has been initialized yet.
-
-	:return: True if any other Enterprise methods have been called
-	"""
-	return core.BNIsEnterpriseServerInitialized()
-
-
 @decorators.enterprise
 class LicenseCheckout:
 	"""
@@ -347,9 +360,30 @@ class LicenseCheckout:
 		self.acquired_license = False
 		self.desired_release = release
 
+	def __del__(self):
+		self.release()
+
 	def __enter__(self) -> None:
+		self.acquire()
+
+	def __exit__(self, exc_type, exc_val, exc_tb):
+		self.release()
+
+	def acquire(self):
 		# UI builds have their own license manager
 		if binaryninja.core_ui_enabled():
+			return
+		if not is_initialized():
+			try:
+				initialize()
+			except:
+				# Named/computer licenses don't need this flow at all
+				if not is_floating_license():
+					return
+				# Floating licenses though, this is an error. Probably the error
+				# for needing to set enterprise.server.url in settings.json
+				raise
+		if not is_floating_license():
 			return
 		if not is_connected():
 			connect()
@@ -385,10 +419,11 @@ class LicenseCheckout:
 			update_license(self.desired_duration)
 			self.acquired_license = True
 
-	def __exit__(self, exc_type, exc_val, exc_tb):
+	def release(self):
 		# UI builds have their own license manager
 		if binaryninja.core_ui_enabled():
 			return
 		# Don't release if we got one from keychain
 		if self.acquired_license and self.desired_release:
 			release_license()
+			self.acquired_license = False

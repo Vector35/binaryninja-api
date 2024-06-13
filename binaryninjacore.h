@@ -3359,6 +3359,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNRegisterEnterpriseServerNotification(BNEnterpriseServerCallbacks* notify);
 	BINARYNINJACOREAPI void BNUnregisterEnterpriseServerNotification(BNEnterpriseServerCallbacks* notify);
 	BINARYNINJACOREAPI bool BNIsEnterpriseServerInitialized(void);
+	BINARYNINJACOREAPI bool BNInitializeEnterpriseServer(void);
 
 	BINARYNINJACOREAPI void BNRegisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);
 	BINARYNINJACOREAPI void BNUnregisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);

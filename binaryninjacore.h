@@ -3169,6 +3169,8 @@ extern "C"
 		BNPlatform* platform;
 		char** components;
 		size_t componentN;
+		BNVariableNameAndType* localVariables;
+		size_t localVariableN;
 	} BNDebugFunctionInfo;
 
 	typedef struct BNSecretsProviderCallbacks

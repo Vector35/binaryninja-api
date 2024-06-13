@@ -23,27 +23,46 @@ use binaryninja::{
     },
 };
 
-use gimli::{constants, DebuggingInformationEntry, Reader, Unit};
+use gimli::{constants, AttributeValue, DebuggingInformationEntry, Operation, Reader, Unit};
 
-use log::warn;
+use log::{debug, error, warn};
 
-pub(crate) fn parse_data_variable<R: Reader<Offset = usize>>(
+pub(crate) fn parse_variable<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
+    function_index: Option<usize>,
 ) {
     let full_name = debug_info_builder_context.get_name(unit, entry);
     let type_uid = get_type(unit, entry, debug_info_builder_context, debug_info_builder);
 
-    let address = if let Ok(Some(attr)) = entry.attr(constants::DW_AT_location) {
-        get_expr_value(unit, attr)
-    } else {
-        None
+    let Ok(Some(attr)) = entry.attr(constants::DW_AT_location) else {
+        return
     };
 
-    if let (Some(address), Some(type_uid)) = (address, type_uid) {
-        debug_info_builder.add_data_variable(address, full_name, type_uid);
+    let AttributeValue::Exprloc(mut expression) = attr.value() else {
+        return
+    };
+
+    match Operation::parse(&mut expression.0, unit.encoding()) {
+        Ok(Operation::FrameOffset { offset }) => {
+            debug_info_builder.add_stack_variable(function_index, offset, full_name, type_uid);
+        },
+        //Ok(Operation::RegisterOffset { register: _, offset: _, base_type: _ }) => {
+        //    //TODO: look up register by index (binja register indexes don't match processor indexes?)
+        //    //TODO: calculate absolute stack offset
+        //    //TODO: add by absolute offset
+        //},
+        Ok(Operation::Address { address }) => {
+            if let Some(uid) = type_uid {
+                debug_info_builder.add_data_variable(address, full_name, uid)
+            }
+        },
+        Ok(op) => {
+            debug!("Unhandled operation type for variable: {:?}", op);
+        },
+        Err(e) => error!("Error parsing operation type for variable {:?}: {}", full_name, e)
     }
 }
 

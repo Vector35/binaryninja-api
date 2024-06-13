@@ -21,12 +21,13 @@ use binaryninja::{
     rc::*,
     symbol::SymbolType,
     templatesimplifier::simplify_str_to_fqn,
-    types::{Conf, FunctionParameter, Type},
+    types::{Conf, FunctionParameter, NamedTypedVariable, Type, Variable},
+    binaryninjacore_sys::BNVariableSourceType,
 };
 
 use gimli::{DebuggingInformationEntry, Dwarf, Reader, Unit};
 
-use log::{error, warn};
+use log::{debug, error, warn};
 use std::{
     cmp::Ordering,
     collections::{hash_map::Values, HashMap},
@@ -48,6 +49,7 @@ pub(crate) struct FunctionInfoBuilder {
     pub(crate) parameters: Vec<Option<(String, TypeUID)>>,
     pub(crate) platform: Option<Ref<Platform>>,
     pub(crate) variable_arguments: bool,
+    pub(crate) stack_variables: Vec<NamedTypedVariable>,
 }
 
 impl FunctionInfoBuilder {
@@ -172,6 +174,7 @@ pub(crate) struct DebugInfoBuilder {
     full_function_name_indices: HashMap<String, usize>,
     types: HashMap<TypeUID, DebugType>,
     data_variables: HashMap<u64, (Option<String>, TypeUID)>,
+    range_data_offsets: iset::IntervalMap<u64, i64>
 }
 
 impl DebugInfoBuilder {
@@ -182,7 +185,12 @@ impl DebugInfoBuilder {
             full_function_name_indices: HashMap::new(),
             types: HashMap::new(),
             data_variables: HashMap::new(),
+            range_data_offsets: iset::IntervalMap::new(),
         }
+    }
+
+    pub(crate) fn set_range_data_offsets(&mut self, offsets: iset::IntervalMap<u64, i64>) {
+        self.range_data_offsets = offsets
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -194,7 +202,8 @@ impl DebugInfoBuilder {
         address: Option<u64>,
         parameters: &Vec<Option<(String, TypeUID)>>,
         variable_arguments: bool,
-    ) {
+    ) -> Option<usize> {
+        // Returns the index of the function
         // Raw names should be the primary key, but if they don't exist, use the full name
         // TODO : Consider further falling back on address/architecture
 
@@ -222,7 +231,7 @@ impl DebugInfoBuilder {
                     self.full_function_name_indices.insert(function.full_name.clone().unwrap(), *idx);
                 }
 
-                return;
+                return Some(*idx);
             }
         }
 
@@ -244,13 +253,13 @@ impl DebugInfoBuilder {
                     self.raw_function_name_indices.insert(function.raw_name.clone().unwrap(), *idx);
                 }
 
-                return;
+                return Some(*idx);
             }
         }
 
         if raw_name.is_none() && full_name.is_none() {
             error!("Function entry in DWARF without full or raw name. Please report this issue.");
-            return;
+            return None;
         }
 
         let function = FunctionInfoBuilder {
@@ -261,6 +270,7 @@ impl DebugInfoBuilder {
             parameters: parameters.clone(),
             platform: None,
             variable_arguments,
+            stack_variables: vec![],
         };
 
         if let Some(n) = &function.full_name {
@@ -272,6 +282,7 @@ impl DebugInfoBuilder {
         }
 
         self.functions.push(function);
+        Some(self.functions.len()-1)
     }
 
     pub(crate) fn functions(&self) -> &[FunctionInfoBuilder] {
@@ -319,6 +330,70 @@ impl DebugInfoBuilder {
 
     pub(crate) fn contains_type(&self, type_uid: TypeUID) -> bool {
         self.types.get(&type_uid).is_some()
+    }
+
+
+    pub(crate) fn add_stack_variable(
+        &mut self,
+        fn_idx: Option<usize>,
+        offset: i64,
+        name: Option<String>,
+        type_uid: Option<TypeUID>,
+    ) {
+        let name = match name {
+            Some(x) => {
+                if x.len() == 1 && x.chars().next() == Some('\x00') {
+                    // Anonymous variable, generate name
+                    format!("debug_var_{}", offset)
+                }
+                else {
+                    x
+                }
+            },
+            None => {
+                // Anonymous variable, generate name
+                format!("debug_var_{}", offset)
+            }
+        };
+
+        let Some(function_index) = fn_idx else {
+            // If we somehow lost track of what subprogram we're in or we're not actually in a subprogram
+            error!("Trying to add a local variable outside of a subprogram. Please report this issue.");
+            return;
+        };
+
+        // Either get the known type or use a 0 confidence void type so we at least get the name applied
+        let t = match type_uid {
+            Some(uid) => Conf::new(self.get_type(uid).unwrap().1, 128),
+            None => Conf::new(Type::void(), 0)
+        };
+        let function = &mut self.functions[function_index];
+
+        // TODO: If we can't find a known offset can we try to guess somehow?
+
+        let Some(func_addr) = function.address else {
+            // If we somehow are processing a function's variables before the function is created
+            error!("Trying to add a local variable without a known function start. Please report this issue.");
+            return;
+        };
+
+        let Some(offset_adjustment) = self.range_data_offsets.values_overlap(func_addr).next() else {
+            // Unknown why, but this is happening with MachO + external dSYM
+            debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CIE offset.", name, offset, func_addr);
+            return;
+        };
+
+        let adjusted_offset = offset - offset_adjustment;
+
+        if adjusted_offset > 0 {
+            // If we somehow end up with a positive sp offset
+            error!("Trying to add a local variable at positive storage offset {}. Please report this issue.", adjusted_offset);
+            return;
+        }
+
+        let var = Variable::new(BNVariableSourceType::StackVariableSourceType, 0, adjusted_offset);
+        function.stack_variables.push(NamedTypedVariable::new(var, name, t, false));
+
     }
 
     pub(crate) fn add_data_variable(
@@ -399,6 +474,7 @@ impl DebugInfoBuilder {
                 function.address,
                 function.platform.clone(),
                 vec![], // TODO : Components
+                function.stack_variables.clone(), // TODO: local non-stack variables
             ));
         }
     }

@@ -296,7 +296,7 @@ pub(crate) fn get_expr_value<R: Reader<Offset = usize>>(
             Ok(Operation::UnsignedConstant { value }) => Some(value),
             Ok(Operation::Address { address: 0 }) => None,
             Ok(Operation::Address { address }) => Some(address),
-            _ => None,
+            _ => None
         }
     } else {
         None

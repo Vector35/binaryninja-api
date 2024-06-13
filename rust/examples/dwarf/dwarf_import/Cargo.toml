@@ -12,3 +12,4 @@ dwarfreader = { path = "../shared/" }
 binaryninja = { path = "../../../" }
 gimli = "0.28"
 log = "0.4.20"
+iset = "0.2.2"

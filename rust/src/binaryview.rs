@@ -23,15 +23,11 @@ pub use binaryninjacore_sys::BNAnalysisState as AnalysisState;
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
 use std::collections::HashMap;
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void};
 use std::ops::Range;
-use std::os::raw::c_char;
-use std::ptr;
-use std::result;
-use std::{ops, slice};
+use std::{ops, ptr, result, slice};
 
-use crate::architecture::Architecture;
-use crate::architecture::CoreArchitecture;
+use crate::architecture::{Architecture, CoreArchitecture};
 use crate::basicblock::BasicBlock;
 use crate::component::{Component, ComponentBuilder, IntoComponentGuid};
 use crate::databuffer::DataBuffer;
@@ -40,8 +36,7 @@ use crate::fileaccessor::FileAccessor;
 use crate::filemetadata::FileMetadata;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
-use crate::linearview::LinearDisassemblyLine;
-use crate::linearview::LinearViewCursor;
+use crate::linearview::{LinearDisassemblyLine, LinearViewCursor};
 use crate::metadata::Metadata;
 use crate::platform::Platform;
 use crate::relocation::Relocation;
@@ -50,6 +45,7 @@ use crate::segment::{Segment, SegmentBuilder};
 use crate::settings::Settings;
 use crate::symbol::{Symbol, SymbolType};
 use crate::tags::{Tag, TagType};
+use crate::typelibrary::TypeLibrary;
 use crate::types::{
     Conf, DataVariable, NamedTypeReference, QualifiedName, QualifiedNameAndType, Type,
 };
@@ -1428,6 +1424,206 @@ pub trait BinaryViewExt: BinaryViewBase {
             )
         };
         unsafe { Array::new(result, count, ()) }
+    }
+
+    /// Make the contents of a type library available for type/import resolution
+    fn add_type_library(&self, library: &TypeLibrary) {
+        unsafe { BNAddBinaryViewTypeLibrary(self.as_ref().handle, library.as_raw()) }
+    }
+
+    fn type_library_by_name<S: BnStrCompatible>(&self, name: S) -> Option<TypeLibrary> {
+        let name = name.into_bytes_with_nul();
+        let result = unsafe {
+            BNGetBinaryViewTypeLibrary(
+                self.as_ref().handle,
+                name.as_ref().as_ptr() as *const core::ffi::c_char,
+            )
+        };
+        core::ptr::NonNull::new(result).map(|h| unsafe { TypeLibrary::from_raw(h) })
+    }
+
+    /// Should be called by custom py:py:class:`BinaryView` implementations
+    /// when they have successfully imported an object from a type library (eg a symbol's type).
+    /// Values recorded with this function will then be queryable via [BinaryViewExt::lookup_imported_object_library].
+    ///
+    /// * `lib` - Type Library containing the imported type
+    /// * `name` - Name of the object in the type library
+    /// * `addr` - address of symbol at import site
+    /// * `platform` - Platform of symbol at import site
+    fn record_imported_object_library(
+        &self,
+        lib: &TypeLibrary,
+        name: &QualifiedName,
+        addr: u64,
+        platform: &Platform,
+    ) {
+        unsafe {
+            BNBinaryViewRecordImportedObjectLibrary(
+                self.as_ref().handle,
+                platform.handle,
+                addr,
+                lib.as_raw(),
+                &name.0 as *const _ as *mut _,
+            )
+        }
+    }
+
+    /// Recursively imports a type from the specified type library, or, if
+    /// no library was explicitly provided, the first type library associated with the current [BinaryView]
+    /// that provides the name requested.
+    ///
+    /// This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
+    /// when references to types provided by them are first encountered.
+    ///
+    /// Note that the name actually inserted into the view may not match the name as it exists in the type library in
+    /// the event of a name conflict. To aid in this, the [Type] object returned is a `NamedTypeReference` to
+    /// the deconflicted name used.
+    fn import_type_library(
+        &self,
+        name: &QualifiedName,
+        mut lib: Option<TypeLibrary>,
+    ) -> Option<Ref<Type>> {
+        let mut lib_ref = lib
+            .as_mut()
+            .map(|l| unsafe { l.as_raw() } as *mut _)
+            .unwrap_or(ptr::null_mut());
+        let result = unsafe {
+            BNBinaryViewImportTypeLibraryType(
+                self.as_ref().handle,
+                &mut lib_ref,
+                &name.0 as *const _ as *mut _,
+            )
+        };
+        (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
+    }
+
+    /// Recursively imports an object from the specified type library, or, if
+    /// no library was explicitly provided, the first type library associated with the current [BinaryView]
+    /// that provides the name requested.
+    ///
+    /// This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
+    /// when references to types provided by them are first encountered.
+    ///
+    /// .. note:: If you are implementing a custom BinaryView and use this method to import object types,
+    /// you should then call [BinaryViewExt::record_imported_object_library] with the details of where the object is located.
+    fn import_type_object(
+        &self,
+        name: &QualifiedName,
+        mut lib: Option<TypeLibrary>,
+    ) -> Option<Ref<Type>> {
+        let mut lib_ref = lib
+            .as_mut()
+            .map(|l| unsafe { l.as_raw() } as *mut _)
+            .unwrap_or(ptr::null_mut());
+        let result = unsafe {
+            BNBinaryViewImportTypeLibraryObject(
+                self.as_ref().handle,
+                &mut lib_ref,
+                &name.0 as *const _ as *mut _,
+            )
+        };
+        (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
+    }
+
+    /// Recursively imports a type interface given its GUID.
+    ///
+    /// .. note:: To support this type of lookup a type library must have
+    /// 	contain a metadata key called "type_guids" which is a map
+    /// 	Dict[string_guid, string_type_name] or
+    /// 	Dict[string_guid, Tuple[string_type_name, type_library_name]]
+    fn import_type_by_guid<S: BnStrCompatible>(&self, guid: S) -> Option<Ref<Type>> {
+        let guid = guid.into_bytes_with_nul();
+        let result = unsafe {
+            BNBinaryViewImportTypeLibraryTypeByGuid(
+                self.as_ref().handle,
+                guid.as_ref().as_ptr() as *const c_char,
+            )
+        };
+        (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
+    }
+
+    /// Recursively exports `type_obj` into `lib` as a type with name `name`
+    ///
+    /// As other referenced types are encountered, they are either copied into the destination type library or
+    /// else the type library that provided the referenced type is added as a dependency for the destination library.
+    fn export_type_to_library(&self, lib: &TypeLibrary, name: &QualifiedName, type_obj: &Type) {
+        unsafe {
+            BNBinaryViewExportTypeToTypeLibrary(
+                self.as_ref().handle,
+                lib.as_raw(),
+                &name.0 as *const _ as *mut _,
+                type_obj.handle,
+            )
+        }
+    }
+
+    /// Recursively exports `type_obj` into `lib` as a type with name `name`
+    ///
+    /// As other referenced types are encountered, they are either copied into the destination type library or
+    /// 	else the type library that provided the referenced type is added as a dependency for the destination library.
+    fn export_object_to_library(&self, lib: &TypeLibrary, name: &QualifiedName, type_obj: &Type) {
+        unsafe {
+            BNBinaryViewExportObjectToTypeLibrary(
+                self.as_ref().handle,
+                lib.as_raw(),
+                &name.0 as *const _ as *mut _,
+                type_obj.handle,
+            )
+        }
+    }
+
+    /// Gives you details of which type library and name was used to determine
+    /// the type of a symbol at a given address
+    ///
+    /// * `addr` - address of symbol at import site
+    /// * `platform` - Platform of symbol at import site
+    fn lookup_imported_object_library(
+        &self,
+        addr: u64,
+        platform: &Platform,
+    ) -> Option<(TypeLibrary, QualifiedName)> {
+        let mut result_lib = ptr::null_mut();
+        let mut result_name = Default::default();
+        let success = unsafe {
+            BNBinaryViewLookupImportedObjectLibrary(
+                self.as_ref().handle,
+                platform.handle,
+                addr,
+                &mut result_lib,
+                &mut result_name,
+            )
+        };
+        if !success {
+            return None;
+        }
+        let lib = unsafe { TypeLibrary::from_raw(ptr::NonNull::new(result_lib)?) };
+        let name = QualifiedName(result_name);
+        Some((lib, name))
+    }
+
+    /// Gives you details of from which type library and name a given type in the analysis was imported.
+    ///
+    /// * `name` - Name of type in analysis
+    fn lookup_imported_type_library(
+        &self,
+        name: &QualifiedNameAndType,
+    ) -> Option<(TypeLibrary, QualifiedName)> {
+        let mut result_lib = ptr::null_mut();
+        let mut result_name = Default::default();
+        let success = unsafe {
+            BNBinaryViewLookupImportedTypeLibrary(
+                self.as_ref().handle,
+                &name.0 as *const _ as *mut _,
+                &mut result_lib,
+                &mut result_name,
+            )
+        };
+        if !success {
+            return None;
+        }
+        let lib = unsafe { TypeLibrary::from_raw(ptr::NonNull::new(result_lib)?) };
+        let name = QualifiedName(result_name);
+        Some((lib, name))
     }
 }
 

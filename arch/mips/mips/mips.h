@@ -717,6 +717,13 @@ namespace mips
 		// Coprocessor 0 register 31
 		REG_DESAVE,		// 0
 
+		// cavium cop0 registers: see `COP0_xx` macros in cvmx-asm.h in SDK
+		CNREG0_CVM_COUNT,	// implementation-defined 9, 6
+		CNREG0_CVM_CTL,		// implementation-defined 9, 7
+		CNREG0_POWTHROTTLE,	// implementation-defined 11, 6
+		CNREG0_CVM_MEM_CTL,	// implementation-defined 11, 7
+		CNREG0_MULTICORE_DBG,	// implementation-defined 22, 0
+
 		// Last valid register
 		END_REG
 	};

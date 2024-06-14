@@ -968,6 +968,13 @@ static const char * const RegisterStrings[] = {
 	"cop0_DataHi",
 	"cop0_ErrorEPC",
 	"cop0_DESAVE",
+
+	// cavium-specific implementation defined
+	"cop0_CvmCount",
+	"cop0_CvmCtl",
+	"cop0_PowerThrottle",
+	"cop0_CvmMemCtl",
+	"cop0_MulticoreDbg",
 };
 
 static const char * const FlagStrings[] = {

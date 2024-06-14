@@ -262,6 +262,39 @@ ExprId GetConditionForInstruction(LowLevelILFunction& il, Instruction& instr, si
 	}
 }
 
+static bool IsCop0ImplementationDefined(uint32_t reg, uint64_t sel)
+{
+	switch (reg)
+	{
+		case 9:
+			switch (sel)
+			{
+				case 6:
+				case 7: return true;
+				default: return false;
+			}
+			break;
+		case 11:
+			switch (sel)
+			{
+				case 6:
+				case 7: return true;
+				default: return false;
+			}
+			break;
+		case 16:
+			switch (sel)
+			{
+				case 6:
+				case 7: return true;
+				default: return false;
+			}
+			break;
+		case 22: return true;
+		default: return false;
+	}
+}
+
 // Get the IL Register for a given cop0 register/selector pair.
 // Returns REG_ZERO for unsupported/unimplemented values.
 static Reg GetCop0Register(uint32_t reg, uint64_t sel)
@@ -434,18 +467,58 @@ static Reg GetCop0Register(uint32_t reg, uint64_t sel)
 	return REG_ZERO;
 }
 
-static ExprId MoveFromCoprocessor(unsigned cop, LowLevelILFunction& il, size_t loadSize, uint32_t outReg, uint32_t reg, uint64_t sel)
+static Reg GetCaviumCop0Register(uint32_t reg, uint64_t sel)
+{
+	switch (reg)
+	{
+		case 9:
+			switch (sel)
+			{
+				case 6: return CNREG0_CVM_COUNT;
+				case 7: return CNREG0_CVM_CTL;
+				default: return REG_ZERO;
+			}
+			break;
+
+		case 11:
+			switch (sel)
+			{
+				case 6: return CNREG0_POWTHROTTLE;
+				case 7: return CNREG0_CVM_MEM_CTL;
+				default: return REG_ZERO;
+			}
+			break;
+		case 22:
+			switch (sel)
+			{
+				case 0: return CNREG0_MULTICORE_DBG;
+				default: return REG_ZERO;
+			}
+			break;
+
+		default: return REG_ZERO;
+	}
+}
+
+static ExprId MoveFromCoprocessor(unsigned cop, LowLevelILFunction& il, size_t loadSize, uint32_t outReg, uint32_t reg, uint64_t sel, uint32_t decomposeFlags)
 {
 	if (cop == 0) {
 		Reg copReg = GetCop0Register(reg, sel);
-		switch (copReg) {
-			case REG_ZERO: /* Unimplemented coprocessor register */
-				break;
-			default:
-				return il.Intrinsic(
-						{RegisterOrFlag::Register(outReg)},
-						loadSize == 4 ? MIPS_INTRIN_MFC0 : MIPS_INTRIN_DMFC0,
-						{il.Register(loadSize, copReg)});
+		if (copReg == REG_ZERO && IsCop0ImplementationDefined(reg, sel))
+		{
+			if ((decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+			{
+				copReg = GetCaviumCop0Register(reg, sel);
+			}
+		}
+
+		if (copReg != REG_ZERO)
+		{
+			return il.Intrinsic(
+					{RegisterOrFlag::Register(outReg)},
+					loadSize == 4 ? MIPS_INTRIN_MFC0 : MIPS_INTRIN_DMFC0,
+					{il.Register(loadSize, copReg)});
+
 		}
 	}
 
@@ -455,18 +528,24 @@ static ExprId MoveFromCoprocessor(unsigned cop, LowLevelILFunction& il, size_t l
 			{il.Const(4, cop), il.Const(4, reg), il.Const(4, sel)});
 }
 
-static ExprId MoveToCoprocessor(unsigned cop, LowLevelILFunction& il, size_t storeSize, uint32_t reg, uint64_t sel, ExprId srcExpr)
+static ExprId MoveToCoprocessor(unsigned cop, LowLevelILFunction& il, size_t storeSize, uint32_t reg, uint64_t sel, ExprId srcExpr, uint32_t decomposeFlags)
 {
 	if (cop == 0) {
 		Reg copReg = GetCop0Register(reg, sel);
-		switch (copReg) {
-			case REG_ZERO: /* Unimplemented coprocessor register */
-				break;
-			default:
-				return il.Intrinsic(
-						{},
-						storeSize == 4 ? MIPS_INTRIN_MTC0 : MIPS_INTRIN_DMTC0,
-						{il.Register(storeSize, copReg), srcExpr});
+		if (copReg == REG_ZERO && IsCop0ImplementationDefined(reg, sel))
+		{
+			if ((decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+			{
+				copReg = GetCaviumCop0Register(reg, sel);
+			}
+		}
+
+		if (copReg != REG_ZERO)
+		{
+			return il.Intrinsic(
+					{},
+					storeSize == 4 ? MIPS_INTRIN_MTC0 : MIPS_INTRIN_DMTC0,
+					{il.Register(storeSize, copReg), srcExpr});
 		}
 	}
 
@@ -481,7 +560,7 @@ static ExprId SimpleIntrinsic(LowLevelILFunction& il, MipsIntrinsic intrinsic)
 	return il.Intrinsic({}, intrinsic, {});
 }
 
-bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize)
+bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize, uint32_t decomposeFlags)
 {
 	LowLevelILLabel trueLabel, falseLabel, doneLabel, dirFlagSet, dirFlagClear, dirFlagDone;
 	InstructionOperand& op1 = instr.operands[0];
@@ -789,28 +868,28 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(il.SetRegister(registerSize, REG_LO, ReadILOperand(il, instr, 1, registerSize)));
 			break;
 		case MIPS_DMFC0:
-			il.AddInstruction(MoveFromCoprocessor(0, il, 8, op1.reg, op2.immediate, op3.immediate));
+			il.AddInstruction(MoveFromCoprocessor(0, il, 8, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
 			break;
 		case MIPS_MFC0:
-			il.AddInstruction(MoveFromCoprocessor(0, il, 4, op1.reg, op2.immediate, op3.immediate));
+			il.AddInstruction(MoveFromCoprocessor(0, il, 4, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
 			break;
 		case MIPS_MFC1:
-			il.AddInstruction(MoveFromCoprocessor(1, il, 4, op1.reg, op2.immediate, op3.immediate));
+			il.AddInstruction(MoveFromCoprocessor(1, il, 4, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
 			break;
 		case MIPS_MFC2:
-			il.AddInstruction(MoveFromCoprocessor(2, il, 4, op1.reg, op2.immediate, op3.immediate));
+			il.AddInstruction(MoveFromCoprocessor(2, il, 4, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
 			break;
 		case MIPS_DMTC0:
-			il.AddInstruction(MoveToCoprocessor(0, il, 8, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize)));
+			il.AddInstruction(MoveToCoprocessor(0, il, 8, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize), decomposeFlags));
 			break;
 		case MIPS_MTC0:
-			il.AddInstruction(MoveToCoprocessor(0, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize)));
+			il.AddInstruction(MoveToCoprocessor(0, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize), decomposeFlags));
 			break;
 		case MIPS_MTC1:
-			il.AddInstruction(MoveToCoprocessor(1, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize)));
+			il.AddInstruction(MoveToCoprocessor(1, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize), decomposeFlags));
 			break;
 		case MIPS_MTC2:
-			il.AddInstruction(MoveToCoprocessor(2, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize)));
+			il.AddInstruction(MoveToCoprocessor(2, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize), decomposeFlags));
 			break;
 		case MIPS_MOVE:
 			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, ReadILOperand(il, instr, 2, registerSize)));
@@ -956,15 +1035,15 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 		}
 		case MIPS_SWC1:
-			il.AddInstruction(MoveFromCoprocessor(1, il, 4, LLIL_TEMP(0), op1.immediate, 0));
+			il.AddInstruction(MoveFromCoprocessor(1, il, 4, LLIL_TEMP(0), op1.immediate, 0, decomposeFlags));
 			il.AddInstruction(WriteILOperand(il, instr, 1, addrSize, il.Register(4, LLIL_TEMP(0))));
 			break;
 		case MIPS_SWC2:
-			il.AddInstruction(MoveFromCoprocessor(2, il, 4, LLIL_TEMP(0), op1.immediate, 0));
+			il.AddInstruction(MoveFromCoprocessor(2, il, 4, LLIL_TEMP(0), op1.immediate, 0, decomposeFlags));
 			il.AddInstruction(WriteILOperand(il, instr, 1, addrSize, il.Register(4, LLIL_TEMP(0))));
 			break;
 		case MIPS_SWC3:
-			il.AddInstruction(MoveFromCoprocessor(3, il, 4, LLIL_TEMP(0), op1.immediate, 0));
+			il.AddInstruction(MoveFromCoprocessor(3, il, 4, LLIL_TEMP(0), op1.immediate, 0, decomposeFlags));
 			il.AddInstruction(WriteILOperand(il, instr, 1, addrSize, il.Register(4, LLIL_TEMP(0))));
 			break;
 		case MIPS_SWL:

@@ -47,6 +47,7 @@ bool GetLowLevelILForInstruction(
 		uint64_t addr,
 		BinaryNinja::LowLevelILFunction& il,
 		mips::Instruction& instr,
-		size_t addrSize);
+		size_t addrSize,
+		uint32_t decomposeFlags);
 
 BinaryNinja::ExprId GetConditionForInstruction(BinaryNinja::LowLevelILFunction& il, mips::Instruction& instr, size_t registerSize);

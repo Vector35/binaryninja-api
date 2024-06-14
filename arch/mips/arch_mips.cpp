@@ -516,7 +516,7 @@ public:
 				il.AddInstruction(il.If(GetConditionForInstruction(il, instr, GetAddressSize()), trueCode, falseCode));
 				il.MarkLabel(trueCode);
 				il.SetCurrentAddress(this, addr + instr.size);
-				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize());
+				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize(), m_decomposeFlags);
 				for (size_t i = 0; i < instrInfo.branchCount; i++)
 				{
 					if (instrInfo.branchType[i] == TrueBranch)
@@ -542,7 +542,7 @@ public:
 				nop = il.Nop();
 				il.AddInstruction(nop);
 
-				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize());
+				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize(), m_decomposeFlags);
 
 				LowLevelILInstruction delayed;
 				uint32_t clobbered = BN_INVALID_REGISTER;
@@ -569,7 +569,7 @@ public:
 				}
 				else
 				{
-					status = GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize());
+					status = GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_decomposeFlags);
 				}
 
 				if (clobbered != BN_INVALID_REGISTER)
@@ -665,12 +665,12 @@ public:
 				len = 8;
 				il.SetCurrentAddress(this, addrToUse);
 				base->operation = store ? MIPS_SW : MIPS_LW;
-				return GetLowLevelILForInstruction(this, addrToUse, il, *base, GetAddressSize());
+				return GetLowLevelILForInstruction(this, addrToUse, il, *base, GetAddressSize(), m_decomposeFlags);
 			}
 		}
 
 		len = instr.size;
-		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize());
+		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_decomposeFlags);
 	}
 
 	virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override
@@ -1193,7 +1193,7 @@ public:
 
 	virtual vector<uint32_t> GetFullWidthRegisters() override
 	{
-		return vector<uint32_t>{
+		vector<uint32_t> registers = vector<uint32_t>{
 			REG_ZERO,  REG_AT,  REG_V0,  REG_V1,  REG_A0,  REG_A1,  REG_A2,  REG_A3,
 			REG_T0,    REG_T1,  REG_T2,  REG_T3,  REG_T4,  REG_T5,  REG_T6,  REG_T7,
 			REG_S0,    REG_S1,  REG_S2,  REG_S3,  REG_S4,  REG_S5,  REG_S6,  REG_S7,
@@ -1309,11 +1309,27 @@ public:
 			// Coprocessor 0 register 31
 			REG_DESAVE,
 		};
+
+		if ((m_decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+		{
+			uint32_t cavium_registers[] =
+			{
+				CNREG0_CVM_COUNT,
+				CNREG0_CVM_CTL,
+				CNREG0_POWTHROTTLE,
+				CNREG0_CVM_MEM_CTL,
+				CNREG0_MULTICORE_DBG,
+			};
+
+			registers.insert(registers.end(), std::begin(cavium_registers), std::end(cavium_registers));
+		}
+
+		return registers;
 	}
 
 	virtual vector<uint32_t> GetAllRegisters() override
 	{
-		return vector<uint32_t>{
+		vector<uint32_t> registers = vector<uint32_t>{
 			REG_ZERO,      REG_AT,        REG_V0,        REG_V1,        REG_A0,        REG_A1,        REG_A2,        REG_A3,
 			REG_T0,        REG_T1,        REG_T2,        REG_T3,        REG_T4,        REG_T5,        REG_T6,        REG_T7,
 			REG_S0,        REG_S1,        REG_S2,        REG_S3,        REG_S4,        REG_S5,        REG_S6,        REG_S7,
@@ -1428,6 +1444,22 @@ public:
 			// Coprocessor 0 register 31
 			REG_DESAVE,
 		};
+
+		if ((m_decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+		{
+			uint32_t cavium_registers[] =
+			{
+				CNREG0_CVM_COUNT,
+				CNREG0_CVM_CTL,
+				CNREG0_POWTHROTTLE,
+				CNREG0_CVM_MEM_CTL,
+				CNREG0_MULTICORE_DBG,
+			};
+
+			registers.insert(registers.end(), std::begin(cavium_registers), std::end(cavium_registers));
+		}
+
+		return registers;
 	}
 
 	virtual vector<uint32_t> GetAllFlags() override
@@ -1455,7 +1487,7 @@ public:
 
 	virtual vector<uint32_t> GetSystemRegisters() override
 	{
-		return vector< uint32_t> {
+		vector<uint32_t> registers = vector<uint32_t>{
 			// Coprocessor 0 register 0
 			REG_INDEX,
 			REG_MVP_CONTROL,
@@ -1556,7 +1588,24 @@ public:
 			REG_ERROR_EPC,
 			// Coprocessor 0 register 31
 			REG_DESAVE,
+
 		};
+
+		if ((m_decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+		{
+			uint32_t cavium_registers[] =
+			{
+				CNREG0_CVM_COUNT,
+				CNREG0_CVM_CTL,
+				CNREG0_POWTHROTTLE,
+				CNREG0_CVM_MEM_CTL,
+				CNREG0_MULTICORE_DBG,
+			};
+
+			registers.insert(registers.end(), std::begin(cavium_registers), std::end(cavium_registers));
+		}
+
+		return registers;
 	}
 
 };

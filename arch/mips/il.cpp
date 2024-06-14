@@ -1488,6 +1488,12 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			}
 			break;
 
+		case CNMIPS_POP:
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, CNMIPS_INTRIN_POP, {ReadILOperand(il, instr, 2, registerSize)}));
+			break;
+		case CNMIPS_DPOP:
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, CNMIPS_INTRIN_DPOP, {ReadILOperand(il, instr, 2, registerSize)}));
+			break;
 		case CNMIPS_RDHWR:
 		{
 			MipsIntrinsic intrinsic;

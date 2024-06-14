@@ -876,6 +876,10 @@ public:
 				return "_chOrd";
 			case CNMIPS_INTRIN_HWR31:
 				return "_cvmCount";
+			case CNMIPS_INTRIN_POP:
+				return "_countOnes32";
+			case CNMIPS_INTRIN_DPOP:
+				return "_countOnes64";
 			default:
 				return "";
 		}
@@ -915,6 +919,8 @@ public:
 			CNMIPS_INTRIN_SYNCWS,
 			CNMIPS_INTRIN_HWR30,
 			CNMIPS_INTRIN_HWR31,
+			CNMIPS_INTRIN_POP,
+			CNMIPS_INTRIN_DPOP,
 		};
 	}
 
@@ -993,9 +999,11 @@ public:
 		switch (intrinsic)
 		{
 			case MIPS_INTRIN_WSBH:
+			case CNMIPS_INTRIN_POP:
 				return {Type::IntegerType(4, false)};
 			case MIPS_INTRIN_DSBH:
 			case MIPS_INTRIN_DSHD:
+			case CNMIPS_INTRIN_DPOP:
 				return {Type::IntegerType(8, false)};
 			case MIPS_INTRIN_MFC0:
 			case MIPS_INTRIN_MFC_UNIMPLEMENTED:

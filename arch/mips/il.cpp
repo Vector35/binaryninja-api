@@ -872,9 +872,45 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_SW:
 			il.AddInstruction(il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize, 4)));
 			break;
+		case MIPS_SC:
+		{
+			LowLevelILLabel trueCode, falseCode, doneCode;
+			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_LLBIT_CHECK, {}));
+			il.AddInstruction(il.If(il.CompareEqual(0, il.Register(0, LLIL_TEMP(0)), il.Const(0, 1)),
+			                        trueCode, falseCode));
+			il.MarkLabel(trueCode);
+
+			il.AddInstruction(il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize, 4)));
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.Const(0, 1)));
+			il.AddInstruction(il.Goto(doneCode));
+
+			il.MarkLabel(falseCode);
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.Const(0, 0)));
+
+			il.MarkLabel(doneCode);
+			break;
+		}
 		case MIPS_SD:
 			il.AddInstruction(il.Store(8, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize)));
 			break;
+		case MIPS_SCD:
+		{
+			LowLevelILLabel trueCode, falseCode, doneCode;
+			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_LLBIT_CHECK, {}));
+			il.AddInstruction(il.If(il.CompareEqual(0, il.Register(0, LLIL_TEMP(0)), il.Const(0, 1)),
+			                        trueCode, falseCode));
+			il.MarkLabel(trueCode);
+
+			il.AddInstruction(il.Store(8, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize, 4)));
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.Const(0, 1)));
+			il.AddInstruction(il.Goto(doneCode));
+
+			il.MarkLabel(falseCode);
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.Const(0, 0)));
+
+			il.MarkLabel(doneCode);
+			break;
+		}
 		case MIPS_SWC1:
 			il.AddInstruction(MoveFromCoprocessor(1, il, 4, LLIL_TEMP(0), op1.immediate, 0));
 			il.AddInstruction(WriteILOperand(il, instr, 1, addrSize, il.Register(4, LLIL_TEMP(0))));
@@ -966,15 +1002,21 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_LI:
 		case MIPS_LW:
 		case MIPS_LWX:
-		case MIPS_LL: // TODO: Atomic access primitives
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, ReadILOperand(il, instr, 2, registerSize, 4)));
 			break;
 		case MIPS_LWU:
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ZeroExtend(8, ReadILOperand(il, instr, 2, registerSize, 4))));
 			break;
 		case MIPS_LD:
-		case MIPS_LLD: // TODO: Atomic access primitives
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, ReadILOperand(il, instr, 2, registerSize)));
+			break;
+		case MIPS_LL:
+			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, ReadILOperand(il, instr, 2, registerSize, 4)));
+			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_LLBIT_SET, {il.Const(0, 1)}));
+			break;
+		case MIPS_LLD:
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, ReadILOperand(il, instr, 2, registerSize)));
+			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_LLBIT_SET, {il.Const(0, 1)}));
 			break;
 		case MIPS_SRA:
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.ArithShiftRight(4, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
@@ -1144,9 +1186,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_ROTR:
 		case MIPS_ROTRV:
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.RotateRight(4, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
-			break;
-		case MIPS_SC:
-			il.AddInstruction(il.UnimplementedMemoryRef(4, ReadILOperand(il, instr, 2, registerSize)));
 			break;
 		case MIPS_SDBBP:
 			il.AddInstruction(il.Unimplemented());
@@ -1567,7 +1606,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_MFHC2:
 		case MIPS_MOVT:
 		case MIPS_MULR:
-		case MIPS_SCD:
 		case MIPS_SDC1:
 		case MIPS_SDC2:
 		case MIPS_SDC3:

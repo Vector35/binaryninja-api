@@ -855,6 +855,10 @@ public:
 				return "_userLocalRegister";
 			case MIPS_INTRIN_HWR_UNKNOWN:
 				return "_hardwareRegister";
+			case MIPS_INTRIN_LLBIT_SET:
+				return "_setLLBit";
+			case MIPS_INTRIN_LLBIT_CHECK:
+				return "_checkLLBit";
 
 			case CNMIPS_INTRIN_SYNCIOBDMA:
 				return "_synciobdma";
@@ -896,6 +900,8 @@ public:
 			MIPS_INTRIN_HWR3,
 			MIPS_INTRIN_HWR29,
 			MIPS_INTRIN_HWR_UNKNOWN,
+			MIPS_INTRIN_LLBIT_SET,
+			MIPS_INTRIN_LLBIT_CHECK,
 
 			CNMIPS_INTRIN_SYNCIOBDMA,
 			CNMIPS_INTRIN_SYNCS,
@@ -964,6 +970,10 @@ public:
 				return {
 					NameAndType("hwreg", Type::IntegerType(4, false)),
 				};
+			case MIPS_INTRIN_LLBIT_SET:
+				return {
+					NameAndType("value", Type::IntegerType(4, false)),
+				};
 			default:
 				return vector<NameAndType>();
 		}
@@ -990,6 +1000,8 @@ public:
 			case CNMIPS_INTRIN_HWR30:
 			case CNMIPS_INTRIN_HWR31:
 				return {Type::IntegerType(4, false)};
+			case MIPS_INTRIN_LLBIT_CHECK:
+				return {Type::IntegerType(0, false)};
 			default:
 				return vector<Confidence<Ref<Type>>>();
 		}

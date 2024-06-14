@@ -1387,6 +1387,33 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			}
 			break;
 
+		case MIPS_SYNC:
+		{
+			uint64_t stype = 0;
+			if (op1.operandClass != NONE) {
+				stype = op1.immediate;
+			}
+
+			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_SYNC, {il.Const(1, stype)}));
+			break;
+		}
+
+		case MIPS_DI:
+			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_DI));
+			break;
+
+		case MIPS_EHB:
+			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_EHB));
+			break;
+
+		case MIPS_EI:
+			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_EI));
+			break;
+
+		case MIPS_WAIT:
+			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_WAIT));
+			break;
+
 		case CNMIPS_BADDU:
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
 				il.ZeroExtend(registerSize,
@@ -1562,16 +1589,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				il.CompareNotEqual(registerSize, ReadILOperand(il, instr, 2, registerSize), il.Const(registerSize, op3.immediate)))));
 			break;
 
-		case MIPS_SYNC:
-		{
-			uint64_t stype = 0;
-			if (op1.operandClass != NONE) {
-				stype = op1.immediate;
-			}
-
-			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_SYNC, {il.Const(1, stype)}));
-			break;
-		}
 		case CNMIPS_SYNCIOBDMA:
 			il.AddInstruction(SimpleIntrinsic(il, CNMIPS_INTRIN_SYNCIOBDMA));
 			break;
@@ -1586,22 +1603,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 
 		case CNMIPS_SYNCWS:
 			il.AddInstruction(SimpleIntrinsic(il, CNMIPS_INTRIN_SYNCWS));
-			break;
-
-		case MIPS_DI:
-			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_DI));
-			break;
-
-		case MIPS_EHB:
-			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_EHB));
-			break;
-
-		case MIPS_EI:
-			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_EI));
-			break;
-
-		case MIPS_WAIT:
-			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_WAIT));
 			break;
 
 		case MIPS_ADDR:

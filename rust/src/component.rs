@@ -227,7 +227,31 @@ impl Component {
         };
         unsafe { Array::new(result, count, ()) }
     }
+
+    pub fn remove_itself(&self) -> bool {
+        unsafe { BNComponentRemoveComponent(self.as_raw()) }
+    }
+
+    pub fn remove_all_functions(&self) {
+        unsafe { BNComponentRemoveAllFunctions(self.as_raw()) }
+    }
+
+    pub fn add_all_members(&self, component: &Component) {
+        unsafe { BNComponentAddAllMembersFromComponent(self.as_raw(), component.as_raw()) }
+    }
 }
+
+impl PartialEq for Component {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { BNComponentsEqual(self.as_raw(), other.as_raw()) }
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        unsafe { BNComponentsNotEqual(self.as_raw(), other.as_raw()) }
+    }
+}
+
+impl Eq for Component {}
 
 impl Drop for Component {
     fn drop(&mut self) {

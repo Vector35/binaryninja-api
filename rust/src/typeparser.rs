@@ -5,7 +5,7 @@ use binaryninjacore_sys::*;
 use crate::binaryview::BinaryView;
 use crate::disassembly::InstructionTextToken;
 use crate::platform::Platform;
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
+use crate::rc::{Array, ArrayGuard, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::string::{BnStrCompatible, BnString};
 use crate::types::{NamedTypeReference, QualifiedName, QualifiedNameAndType, Type};
 
@@ -222,7 +222,7 @@ pub trait TypeParser {
         options: &[BnString],
         include_dirs: &[BnString],
         auto_type_source: &str,
-    ) -> Result<TypeParserResult, Vec<TypeParserError>>;
+    ) -> Result<TypeParserResultUser, Vec<TypeParserError>>;
 
     /// Parse a single type and name from a string containing their definition.
     ///
@@ -874,82 +874,87 @@ unsafe impl CoreArrayProviderInner for TypeParserError {
     }
 }
 
+/// The user created version of TypeParserResult
 #[derive(Debug, Clone, Default)]
-pub struct TypeParserResult {
+pub struct TypeParserResultUser {
     pub types: Vec<ParsedType>,
     pub variables: Vec<ParsedType>,
     pub functions: Vec<ParsedType>,
 }
 
-impl TypeParserResult {
-    pub(crate) unsafe fn from_raw(mut value: BNTypeParserResult) -> Self {
-        fn from_types(values: *mut BNParsedType, value_len: usize) -> Vec<ParsedType> {
-            unsafe { core::slice::from_raw_parts(values, value_len) }
-                .iter()
-                .map(|t| unsafe { ParsedType::clone_from_raw(t) })
-                .collect()
-        }
-        let output = Self {
-            types: from_types(value.types, value.typeCount),
-            variables: from_types(value.variables, value.variableCount),
-            functions: from_types(value.functions, value.functionCount),
-        };
-        BNFreeTypeParserResult(&mut value);
-        output
-    }
-
-    unsafe fn into_raw(self) -> TypeParserResultRaw {
+impl TypeParserResultUser {
+    fn into_user_raw(self) -> BNTypeParserResult {
         let Self {
             types,
             variables,
             functions,
         } = self;
-        let types: &mut [BNParsedType] =
-            Box::leak(types.into_iter().map(|x| x.into_raw()).collect());
-        let variables: &mut [BNParsedType] =
-            Box::leak(variables.into_iter().map(|x| x.into_raw()).collect());
-        let functions: &mut [BNParsedType] =
-            Box::leak(functions.into_iter().map(|x| x.into_raw()).collect());
-        TypeParserResultRaw(BNTypeParserResult {
+        let types = Box::leak(types.into_iter().map(|t| unsafe { t.into_raw() }).collect());
+        let variables = Box::leak(
+            variables
+                .into_iter()
+                .map(|t| unsafe { t.into_raw() })
+                .collect(),
+        );
+        let functions = Box::leak(
+            functions
+                .into_iter()
+                .map(|t| unsafe { t.into_raw() })
+                .collect(),
+        );
+        BNTypeParserResult {
             types: types.as_mut_ptr(),
-            variables: variables.as_mut_ptr(),
-            functions: functions.as_mut_ptr(),
             typeCount: types.len(),
+            variables: variables.as_mut_ptr(),
             variableCount: variables.len(),
+            functions: functions.as_mut_ptr(),
             functionCount: functions.len(),
-        })
+        }
+    }
+
+    /// SAFETY only can be used with products from [TypeParserResultUser::into_user_raw]
+    unsafe fn from_user_raw(value: BNTypeParserResult) -> Self {
+        let from_raw = |raw, count| {
+            Box::from_raw(ptr::slice_from_raw_parts_mut(raw, count))
+                .into_iter()
+                .map(|t| ParsedType::from_raw(t))
+                .collect()
+        };
+        Self {
+            types: from_raw(value.types, value.typeCount),
+            variables: from_raw(value.variables, value.variableCount),
+            functions: from_raw(value.functions, value.functionCount),
+        }
     }
 }
 
-#[repr(transparent)]
-struct TypeParserResultRaw(BNTypeParserResult);
+pub struct TypeParserResult(BNTypeParserResult);
 
-impl TypeParserResultRaw {
-    pub(crate) unsafe fn into_raw(self) -> BNTypeParserResult {
-        mem::ManuallyDrop::new(self).0
+impl TypeParserResult {
+    pub(crate) unsafe fn from_raw(value: BNTypeParserResult) -> Self {
+        Self(value)
+    }
+
+    fn as_raw(&mut self) -> &mut BNTypeParserResult {
+        &mut self.0
+    }
+
+    pub fn types(&self) -> ArrayGuard<&ParsedType> {
+        unsafe { ArrayGuard::new(self.0.types, self.0.typeCount, &()) }
+    }
+
+    pub fn variables(&self) -> ArrayGuard<&ParsedType> {
+        unsafe { ArrayGuard::new(self.0.variables, self.0.variableCount, &()) }
+    }
+
+    pub fn functions(&self) -> ArrayGuard<&ParsedType> {
+        unsafe { ArrayGuard::new(self.0.functions, self.0.functionCount, &()) }
     }
 }
 
-impl Drop for TypeParserResultRaw {
+impl Drop for TypeParserResult {
     fn drop(&mut self) {
-        drop(unsafe {
-            Box::from_raw(ptr::slice_from_raw_parts_mut(
-                self.0.types,
-                self.0.typeCount,
-            ))
-        });
-        drop(unsafe {
-            Box::from_raw(ptr::slice_from_raw_parts_mut(
-                self.0.variables,
-                self.0.variableCount,
-            ))
-        });
-        drop(unsafe {
-            Box::from_raw(ptr::slice_from_raw_parts_mut(
-                self.0.functions,
-                self.0.functionCount,
-            ))
-        });
+        unsafe { BNFreeTypeParserResult(self.as_raw()) }
     }
 }
 
@@ -966,6 +971,14 @@ impl ParsedType {
             name,
             type_,
             is_user,
+        }
+    }
+
+    pub(crate) unsafe fn from_raw(parsed: &BNParsedType) -> Self {
+        Self {
+            name: QualifiedName(parsed.name),
+            type_: Type::ref_from_raw(parsed.type_),
+            is_user: parsed.isUser,
         }
     }
 
@@ -1002,6 +1015,23 @@ impl ParsedType {
 
     pub fn is_user(&self) -> bool {
         self.is_user
+    }
+}
+
+impl<'a> CoreArrayProvider for &'a ParsedType {
+    type Raw = BNParsedType;
+    type Context = &'a ();
+    type Wrapped<'b> = ParsedType where 'a: 'b;
+}
+
+unsafe impl<'a> CoreArrayProviderInner for &'a ParsedType {
+    // ParsedType can only by used in a ArrayGuard
+    unsafe fn free(_raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        unreachable!()
+    }
+
+    unsafe fn wrap_raw<'b>(raw: &'b Self::Raw, _context: &'b Self::Context) -> Self::Wrapped<'b> {
+        ParsedType::clone_from_raw(raw)
     }
 }
 
@@ -1238,8 +1268,7 @@ unsafe extern "C" fn cb_parse_types_from_source<T: TypeParser>(
         &auto_type_source.to_string_lossy(),
     ) {
         Ok(inner_result) => {
-            let inner_result_raw = inner_result.into_raw();
-            let inner_result_ffi = inner_result_raw.into_raw();
+            let inner_result_ffi = inner_result.into_user_raw();
             // SAFETY drop by the function cb_free_result
             *result = inner_result_ffi;
             *errors = ptr::null_mut();
@@ -1297,7 +1326,7 @@ unsafe extern "C" fn cb_free_string(_ctxt: *mut ffi::c_void, string: *mut ffi::c
 }
 
 unsafe extern "C" fn cb_free_result(_ctxt: *mut ffi::c_void, result: *mut BNTypeParserResult) {
-    drop(TypeParserResultRaw(*result))
+    drop(TypeParserResultUser::from_user_raw(*result))
 }
 
 unsafe extern "C" fn cb_free_error_list(

@@ -682,13 +682,35 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(il.Goto(again));
 			il.MarkLabel(falseCode);
 			break;
-		case MIPS_CLZ:
+		case MIPS_DCLO:
 			//count leading ones
 			//algorithm is as follows
 			//
 			//tmp0 = 0;
 			//again:
-			//if (((op2 << tmp) & 0x80000000) != 0)
+			//if (((op2 << tmp) & 0x80000000_00000000) != 0)
+			//{
+			//   tmp0 += 1;
+			//   goto again;
+			//}
+			//
+			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Const(4,0)));
+			il.MarkLabel(again);
+			il.AddInstruction(il.If(il.CompareNotEqual(8,
+					il.And(8, il.ShiftLeft(8, ReadILOperand(il, instr, 2, registerSize, 8), il.Register(1, LLIL_TEMP(0))), il.Const(8, 0x8000000000000000)),
+					il.Const(8,0)), trueCode, falseCode));
+			il.MarkLabel(trueCode);
+			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Add(1, il.Const(1,1), il.Register(1, LLIL_TEMP(0)))));
+			il.AddInstruction(il.Goto(again));
+			il.MarkLabel(falseCode);
+			break;
+		case MIPS_CLZ:
+			//count leading zeroes
+			//algorithm is as follows
+			//
+			//tmp0 = 0;
+			//again:
+			//if (((op2 << tmp) & 0x80000000) == 0)
 			//{
 			//   tmp0 += 1;
 			//   goto again;
@@ -699,6 +721,28 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(il.If(il.CompareEqual(4,
 					il.And(4, il.ShiftLeft(4, ReadILOperand(il, instr, 2, registerSize, 4), il.Register(1, LLIL_TEMP(0))), il.Const(4, 0x80000000)),
 					il.Const(4,0)), trueCode, falseCode));
+			il.MarkLabel(trueCode);
+			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Add(1, il.Const(1,1), il.Register(1, LLIL_TEMP(0)))));
+			il.AddInstruction(il.Goto(again));
+			il.MarkLabel(falseCode);
+			break;
+		case MIPS_DCLZ:
+			//count leading zeroes
+			//algorithm is as follows
+			//
+			//tmp0 = 0;
+			//again:
+			//if (((op2 << tmp) & 0x80000000_00000000) == 0)
+			//{
+			//   tmp0 += 1;
+			//   goto again;
+			//}
+			//
+			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Const(4,0)));
+			il.MarkLabel(again);
+			il.AddInstruction(il.If(il.CompareEqual(8,
+					il.And(8, il.ShiftLeft(8, ReadILOperand(il, instr, 2, registerSize, 8), il.Register(1, LLIL_TEMP(0))), il.Const(8, 0x8000000000000000)),
+					il.Const(8,0)), trueCode, falseCode));
 			il.MarkLabel(trueCode);
 			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Add(1, il.Const(1,1), il.Register(1, LLIL_TEMP(0)))));
 			il.AddInstruction(il.Goto(again));

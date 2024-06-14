@@ -78,7 +78,6 @@ impl CoreTypeParser {
         let mut result = ptr::null_mut();
         let mut errors = ptr::null_mut();
         let mut error_count = 0;
-        // SAFETY BnString and *const ffi::c_char are transparent
         let success = unsafe {
             BNTypeParserPreprocessSource(
                 self.as_raw(),
@@ -119,7 +118,6 @@ impl CoreTypeParser {
         let mut result = BNTypeParserResult::default();
         let mut errors = ptr::null_mut();
         let mut error_count = 0;
-        // SAFETY BnString and *const ffi::c_char are transparent
         let success = unsafe {
             BNTypeParserParseTypesFromSource(
                 self.as_raw(),

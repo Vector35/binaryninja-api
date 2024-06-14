@@ -1339,6 +1339,24 @@ impl ToOwned for Type {
     }
 }
 
+pub struct ComponentReferencedTypes;
+impl CoreArrayProvider for ComponentReferencedTypes{
+    type Raw= *mut BNType;
+    type Context=  ();
+    type Wrapped<'a> = &'a Self;
+}
+
+unsafe impl CoreArrayProviderInner for ComponentReferencedTypes{
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNComponentFreeReferencedTypes(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        // SAFETY: BNType and Type are trasparent
+        core::mem::transmute(raw)
+    }
+}
+
 ///////////////////////
 // FunctionParameter
 

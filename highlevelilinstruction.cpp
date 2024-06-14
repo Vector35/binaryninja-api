@@ -1103,7 +1103,8 @@ void HighLevelILInstruction::CollectSubExprs(stack<size_t>& toProcess) const
 		toProcess.push(GetConditionExpr<HLIL_SWITCH>().exprIndex);
 		break;
 	case HLIL_CASE:
-		toProcess.push(GetTrueExpr<HLIL_CASE>().exprIndex);
+		if (ast)
+			toProcess.push(GetTrueExpr<HLIL_CASE>().exprIndex);
 		exprs = GetValueExprs<HLIL_CASE>();
 		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
 			toProcess.push(i->exprIndex);

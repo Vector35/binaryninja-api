@@ -891,7 +891,7 @@ static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_ex
 	if (load)
 	{
 		// LLIL_TEMP registers will be reported to have size 0, so override with size
-		size_t extendSize = REGSZ_O(operand1) ?: size;
+		size_t extendSize = REGSZ_O(operand1) ? REGSZ_O(operand1) : size;
 		switch (operand2.operandClass)
 		{
 		case MEM_REG:
@@ -1836,7 +1836,11 @@ bool GetLowLevelILForInstruction(
 	case ARM64_LDADDAL:
 	{
 		// TODO: represent/annotate (model?) acquire/release memory ordering semantics for all LDADD* instructions
-		InstructionOperand tmp = { .reg = { (Register) LLIL_TEMP(0) } };
+
+		// I want to do this, but I also don't want to add an #ifdef __clang__
+		// InstructionOperand tmp = { .reg = { (Register) LLIL_TEMP(0) } };
+		InstructionOperand tmp;
+		tmp.reg[0] = (Register) LLIL_TEMP(0);
 		LoadStoreOperandSize(il, true, false, REGSZ_O(operand2), tmp, operand3);
 		il.AddInstruction(il.Store(REGSZ_O(operand2), ILREG_O(operand3),
 		    il.Add(REGSZ_O(operand1),
@@ -1860,7 +1864,9 @@ bool GetLowLevelILForInstruction(
 	case ARM64_LDADDLB:
 	case ARM64_LDADDALB:
 	{
-		InstructionOperand tmp = { .reg = { (Register) LLIL_TEMP(0) } };
+		// InstructionOperand tmp = { .reg = { (Register) LLIL_TEMP(0) } };
+		InstructionOperand tmp;
+		tmp.reg[0] = (Register) LLIL_TEMP(0);
 		LoadStoreOperandSize(il, true, false, 1, tmp, operand3);
 		il.AddInstruction(il.Store(1, ILREG_O(operand3),
 		    il.Add(1, il.LowPart(1, ILREG_O(operand1)), il.LowPart(1, il.Register(1, LLIL_TEMP(0))))));
@@ -1881,7 +1887,9 @@ bool GetLowLevelILForInstruction(
 	case ARM64_LDADDLH:
 	case ARM64_LDADDALH:
 	{
-		InstructionOperand tmp = { .reg = { (Register) LLIL_TEMP(0) } };
+		// InstructionOperand tmp = { .reg = { (Register) LLIL_TEMP(0) } };
+		InstructionOperand tmp;
+		tmp.reg[0] = (Register) LLIL_TEMP(0);
 		LoadStoreOperandSize(il, true, false, 2, tmp, operand3);
 		il.AddInstruction(il.Store(2, ILREG_O(operand3),
 		    il.Add(2, il.LowPart(2, ILREG_O(operand1)), il.LowPart(2, il.Register(2, LLIL_TEMP(0))))));

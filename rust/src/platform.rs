@@ -267,7 +267,7 @@ impl Platform {
         source: &str,
         file_name: &str,
         include_dirs: &[BnString],
-    ) -> Result<BnString, Vec<TypeParserError>> {
+    ) -> Result<BnString, TypeParserError> {
         let source_cstr = BnString::new(source);
         let file_name_cstr = BnString::new(file_name);
 
@@ -289,13 +289,13 @@ impl Platform {
             Ok(unsafe { BnString::from_raw(result) })
         } else {
             assert!(!error_string.is_null());
-            Err(vec![TypeParserError::new(
+            Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
                 unsafe { BnString::from_raw(error_string) },
                 file_name,
                 0,
                 0,
-            )])
+            ))
         }
     }
     pub fn parse_types_from_source(
@@ -304,7 +304,7 @@ impl Platform {
         filename: &str,
         include_dirs: &[BnString],
         auto_type_source: &str,
-    ) -> Result<TypeParserResult, Vec<TypeParserError>> {
+    ) -> Result<TypeParserResult, TypeParserError> {
         let source_cstr = BnString::new(src);
         let file_name_cstr = BnString::new(filename);
         let auto_type_source = BnString::new(auto_type_source);
@@ -328,13 +328,13 @@ impl Platform {
             Ok(unsafe { TypeParserResult::from_raw(result) })
         } else {
             assert!(!error_string.is_null());
-            Err(vec![TypeParserError::new(
+            Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
                 unsafe { BnString::from_raw(error_string) },
                 filename,
                 0,
                 0,
-            )])
+            ))
         }
     }
 
@@ -343,7 +343,7 @@ impl Platform {
         filename: &str,
         include_dirs: &[BnString],
         auto_type_source: &str,
-    ) -> Result<TypeParserResult, Vec<TypeParserError>> {
+    ) -> Result<TypeParserResult, TypeParserError> {
         let file_name_cstr = BnString::new(filename);
         let auto_type_source = BnString::new(auto_type_source);
 
@@ -365,13 +365,13 @@ impl Platform {
             Ok(unsafe { TypeParserResult::from_raw(result) })
         } else {
             assert!(!error_string.is_null());
-            Err(vec![TypeParserError::new(
+            Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
                 unsafe { BnString::from_raw(error_string) },
                 filename,
                 0,
                 0,
-            )])
+            ))
         }
     }
 }

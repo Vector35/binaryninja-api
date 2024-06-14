@@ -11,6 +11,7 @@ use crate::{
     types::{QualifiedName, QualifiedNameAndType, Type},
 };
 
+#[repr(transparent)]
 pub struct TypeLibrary {
     handle: ptr::NonNull<BNTypeLibrary>,
 }

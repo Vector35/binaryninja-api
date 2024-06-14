@@ -967,7 +967,15 @@ void ObjCProcessor::PostProcessObjCSections(BinaryReader* reader)
 		auto type = Type::PointerType(ptrSize, Type::NamedType(m_data, m_typeNames.cls));
 		for (view_ptr_t i = start; i < end; i += ptrSize)
 		{
-			m_data->DefineDataVariable(i, type);
+			reader->Seek(i);
+			auto clsLoc = ReadPointerAccountingForRelocations(reader);
+			if (const auto& it = m_classes.find(clsLoc); it != m_classes.end())
+			{
+				auto& cls = it->second;
+				std::string name = cls.name;
+				if (!name.empty())
+					DefineObjCSymbol(DataSymbol, type, "clsRef_" + name, i, true);
+			}
 		}
 	}
 	if (auto superRefs = m_data->GetSectionByName("__objc_superrefs"))
@@ -975,6 +983,26 @@ void ObjCProcessor::PostProcessObjCSections(BinaryReader* reader)
 		auto start = superRefs->GetStart();
 		auto end = superRefs->GetEnd();
 		auto type = Type::PointerType(ptrSize, Type::NamedType(m_data, m_typeNames.cls));
+		for (view_ptr_t i = start; i < end; i += ptrSize)
+		{
+			reader->Seek(i);
+			auto clsLoc = ReadPointerAccountingForRelocations(reader);
+			if (const auto& it = m_classes.find(clsLoc); it != m_classes.end())
+			{
+				auto& cls = it->second;
+				std::string name = cls.name;
+				if (!name.empty())
+					DefineObjCSymbol(DataSymbol, type, "superRef_" + name, i, true);
+			}
+		}
+	}
+	if (auto ivars = m_data->GetSectionByName("__objc_ivar"))
+	{
+		auto start = ivars->GetStart();
+		auto end = ivars->GetEnd();
+		auto ivarSectionEntryTypeBuilder = new TypeBuilder(Type::IntegerType(8, false));
+		ivarSectionEntryTypeBuilder->SetConst(true);
+		auto type = ivarSectionEntryTypeBuilder->Finalize();
 		for (view_ptr_t i = start; i < end; i += ptrSize)
 		{
 			m_data->DefineDataVariable(i, type);

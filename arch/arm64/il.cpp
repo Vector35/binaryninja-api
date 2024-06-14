@@ -1575,7 +1575,7 @@ bool GetLowLevelILForInstruction(
 
 			int rsize = get_register_size(dsts[0]);
 			for (int i = 0; i < dst_n; ++i)
-				il.AddInstruction(il.FloatSub(rsize, ILREG(dsts[i]), ILREG(srcs[i])));
+				il.AddInstruction(ILSETREG(dsts[i], il.FloatSub(rsize, ILREG(dsts[i]), ILREG(srcs[i]))));
 		}
 		break;
 		default:
@@ -2257,6 +2257,23 @@ bool GetLowLevelILForInstruction(
 					il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2)))));
 			break;
 		}
+		// Vector, single-precision and double-precision
+		case ENC_SCVTF_ASIMDMISC_R:
+		// Vector, half precision
+		case ENC_SCVTF_ASIMDMISCFP16_R:
+		{
+			// There is no intrinsic for this instruction:
+			// SCVTF <Vd>.<T>, <Vn>.<T>
+			Register srcs[16], dsts[16];
+			int dst_n = unpack_vector(operand1, dsts);
+			int src_n = unpack_vector(operand2, srcs);
+			if ((dst_n != src_n) || dst_n == 0)
+				ABORT_LIFT;
+
+			int rsize = get_register_size(dsts[0]);
+			for (int i = 0; i < dst_n; ++i)
+				il.AddInstruction(ILSETREG(dsts[i], il.IntToFloat(rsize, ILREG(dsts[i]), ILREG(srcs[i]))));
+		}
 		// Scalar, fixed-point (in SIMD&FP register)
 		case ENC_SCVTF_ASISDSHF_C:
 		// Scalar, fixed-point (in GP register)
@@ -2266,11 +2283,10 @@ bool GetLowLevelILForInstruction(
 		case ENC_SCVTF_H64_FLOAT2FIX:
 		case ENC_SCVTF_S32_FLOAT2FIX:
 		case ENC_SCVTF_S64_FLOAT2FIX:
-		// Vector, integer
-		case ENC_SCVTF_ASIMDMISCFP16_R:
-		case ENC_SCVTF_ASIMDMISC_R:
 		// Vector, fixed-point
 		case ENC_SCVTF_ASIMDSHF_C:
+			// Lift to instrinsics (except there are none)
+			break;
 		// SVE: Vector, integer
 		case ENC_SCVTF_Z_P_Z_H2FP16:
 		case ENC_SCVTF_Z_P_Z_W2D:

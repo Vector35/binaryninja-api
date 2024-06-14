@@ -817,6 +817,10 @@ public:
 		{
 			case MIPS_INTRIN_WSBH:
 				return "__wsbh";
+			case MIPS_INTRIN_DSBH:
+				return "_dsbh";
+			case MIPS_INTRIN_DSHD:
+				return "_dshd";
 			case MIPS_INTRIN_MFC0:
 				return "moveFromCoprocessor";
 			case MIPS_INTRIN_MFC_UNIMPLEMENTED:
@@ -881,6 +885,8 @@ public:
 	{
 		return vector<uint32_t>{
 			MIPS_INTRIN_WSBH,
+			MIPS_INTRIN_DSBH,
+			MIPS_INTRIN_DSHD,
 			MIPS_INTRIN_MFC0,
 			MIPS_INTRIN_MFC_UNIMPLEMENTED,
 			MIPS_INTRIN_MTC0,
@@ -918,6 +924,9 @@ public:
 		{
 			case MIPS_INTRIN_WSBH:
 				return {NameAndType(Type::IntegerType(4, false))};
+			case MIPS_INTRIN_DSBH:
+			case MIPS_INTRIN_DSHD:
+				return {NameAndType(Type::IntegerType(8, false))};
 			case MIPS_INTRIN_MFC0:
 				return {
 					NameAndType("register", Type::IntegerType(4, false)),
@@ -985,6 +994,9 @@ public:
 		{
 			case MIPS_INTRIN_WSBH:
 				return {Type::IntegerType(4, false)};
+			case MIPS_INTRIN_DSBH:
+			case MIPS_INTRIN_DSHD:
+				return {Type::IntegerType(8, false)};
 			case MIPS_INTRIN_MFC0:
 			case MIPS_INTRIN_MFC_UNIMPLEMENTED:
 				return {Type::IntegerType(4, false)};

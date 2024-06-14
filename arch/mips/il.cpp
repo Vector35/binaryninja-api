@@ -1212,6 +1212,12 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_WSBH:
 			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_WSBH, {ReadILOperand(il, instr, 2, registerSize)}));
 			break;
+		case MIPS_DSBH:
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_DSBH, {ReadILOperand(il, instr, 2, registerSize)}));
+			break;
+		case MIPS_DSHD:
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_DSHD, {ReadILOperand(il, instr, 2, registerSize)}));
+			break;
 		case MIPS_BGEZALL:
 		case MIPS_BLTZALL:
 			break;

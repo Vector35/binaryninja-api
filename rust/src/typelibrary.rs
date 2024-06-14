@@ -293,7 +293,11 @@ impl TypeLibrary {
     /// Manually flag NamedTypeReferences to the given QualifiedName as originating from another source
     /// TypeLibrary with the given dependency name.
     ///
-    /// .. warning:: Use this api with extreme caution.
+    /// <div class="warning">
+    ///
+    /// Use this api with extreme caution.
+    ///
+    /// </div/
     pub fn add_type_source<S: BnStrCompatible>(&self, name: &QualifiedName, source: S) {
         let source = source.into_bytes_with_nul();
         unsafe {

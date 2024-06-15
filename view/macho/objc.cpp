@@ -1436,9 +1436,11 @@ void ObjCProcessor::ProcessObjCData()
 
 	PostProcessObjCSections(&reader);
 
+	auto id = m_data->BeginUndoActions();
 	m_symbolQueue->Process();
 	m_data->EndBulkModifySymbols();
 	delete m_symbolQueue;
+	m_data->CommitUndoActions(id);
 
 	auto meta = SerializeMetadata();
 	m_data->StoreMetadata("Objective-C", meta, true);

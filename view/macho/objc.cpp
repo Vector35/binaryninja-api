@@ -559,7 +559,6 @@ void ObjCProcessor::LoadCategories(BinaryReader* reader, Ref<Section> classPtrSe
 		category_t cat;
 
 		reader->Seek(i);
-		m_data->DefineDataVariable(i, ptrType);
 		auto catLocation = ReadPointerAccountingForRelocations(reader);
 		reader->Seek(catLocation);
 
@@ -577,7 +576,6 @@ void ObjCProcessor::LoadCategories(BinaryReader* reader, Ref<Section> classPtrSe
 			m_logger->LogError("Failed to read category pointed to by 0x%llx", i);
 			continue;
 		}
-		m_data->DefineDataVariable(catLocation, catType);
 
 		std::string categoryAdditionsName;
 		std::string categoryBaseClassName;
@@ -616,6 +614,8 @@ void ObjCProcessor::LoadCategories(BinaryReader* reader, Ref<Section> classPtrSe
 			categoryAdditionsName = std::to_string(catLocation);
 		}
 		category.name = categoryBaseClassName + " (" + categoryAdditionsName + ")";
+		DefineObjCSymbol(BNSymbolType::DataSymbol, ptrType, "categoryPtr_" + category.name, i, true);
+		DefineObjCSymbol(BNSymbolType::DataSymbol, catType, "category_" + category.name, catLocation, true);
 
 		if (cat.instanceMethods)
 		{
@@ -1426,6 +1426,8 @@ void ObjCProcessor::ProcessObjCData()
 
 	if (auto catList = m_data->GetSectionByName("__objc_catlist"))  // Do this after loading class type data.
 		LoadCategories(&reader, catList);
+	if (auto nonLazyCatList = m_data->GetSectionByName("__objc_nlcatlist"))  // Do this after loading class type data.
+		LoadCategories(&reader, nonLazyCatList);
 	for (auto& [_, cat] : m_categories)
 		ApplyMethodTypes(cat);
 

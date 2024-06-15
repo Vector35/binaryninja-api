@@ -888,8 +888,11 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_MFC1:
 			il.AddInstruction(MoveFromCoprocessor(1, il, 4, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
 			break;
+		case MIPS_DMFC2:
+			il.AddInstruction(MoveFromCoprocessor(2, il, 8, op1.reg, op2.immediate, 0, decomposeFlags));
+			break;
 		case MIPS_MFC2:
-			il.AddInstruction(MoveFromCoprocessor(2, il, 4, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
+			il.AddInstruction(MoveFromCoprocessor(2, il, 4, op1.reg, op2.immediate, 0, decomposeFlags));
 			break;
 		case MIPS_DMTC0:
 			il.AddInstruction(MoveToCoprocessor(0, il, 8, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize), decomposeFlags));
@@ -900,8 +903,11 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_MTC1:
 			il.AddInstruction(MoveToCoprocessor(1, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize), decomposeFlags));
 			break;
+		case MIPS_DMTC2:
+			il.AddInstruction(MoveToCoprocessor(2, il, 8, op2.immediate, 0, ReadILOperand(il, instr, 1, registerSize), decomposeFlags));
+			break;
 		case MIPS_MTC2:
-			il.AddInstruction(MoveToCoprocessor(2, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize), decomposeFlags));
+			il.AddInstruction(MoveToCoprocessor(2, il, 4, op2.immediate, 0, ReadILOperand(il, instr, 1, registerSize), decomposeFlags));
 			break;
 		case MIPS_MOVE:
 			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, ReadILOperand(il, instr, 2, registerSize)));

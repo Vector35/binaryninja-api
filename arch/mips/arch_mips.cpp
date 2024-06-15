@@ -1207,7 +1207,7 @@ public:
 		if (GetEndianness() == LittleEndian)
 			instValue = bswap32(instValue);
 
-		uint32_t op = instValue >> 25;
+		uint32_t op = instValue >> 26;
 		switch (op)
 		{
 			case 1: //REGIMM

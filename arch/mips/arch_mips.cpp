@@ -219,6 +219,7 @@ protected:
 			case MIPS_BLTZL:
 			case MIPS_BNE:
 			case MIPS_BNEL:
+			case MIPS_BNEZ:
 			case MIPS_JR:
 			case MIPS_JR_HB:
 			case MIPS_J:
@@ -278,6 +279,7 @@ protected:
 			case MIPS_BLTZL:
 			case MIPS_BEQ:
 			case MIPS_BNE:
+			case MIPS_BNEZ:
 			case MIPS_BEQL:
 			case MIPS_BNEL:
 			case MIPS_BC1F:
@@ -345,6 +347,7 @@ protected:
 		case MIPS_BGTZ:
 		case MIPS_BLEZ:
 		case MIPS_BLTZ:
+		case MIPS_BNEZ:
 		case MIPS_BGEZL:
 		case MIPS_BGTZL:
 		case MIPS_BLEZL:

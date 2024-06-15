@@ -200,6 +200,8 @@ ExprId GetConditionForInstruction(LowLevelILFunction& il, Instruction& instr, si
 		return il.CompareNotEqual(registerSize, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize));
 	case MIPS_BEQZ:
 		return il.CompareEqual(registerSize, ReadILOperand(il, instr, 1, registerSize), il.Const(registerSize, 0));
+	case MIPS_BNEZ:
+		return il.CompareNotEqual(registerSize, ReadILOperand(il, instr, 1, registerSize), il.Const(registerSize, 0));
 	case MIPS_BGEZ:
 	case MIPS_BGEZL:
 	case MIPS_BGEZAL:
@@ -925,6 +927,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_BGTZ:
 		case MIPS_BLEZ:
 		case MIPS_BLTZ:
+		case MIPS_BNEZ:
 		case MIPS_BGEZL: //Branch likely
 		case MIPS_BGTZL:
 		case MIPS_BLEZL:

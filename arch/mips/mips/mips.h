@@ -85,6 +85,7 @@ namespace mips
 		MIPS_BLTZL,
 		MIPS_BNE,
 		MIPS_BNEL,
+		MIPS_BNEZ,
 		MIPS_BNZ_B,
 		MIPS_BNZ_D,
 		MIPS_BNZ_H,

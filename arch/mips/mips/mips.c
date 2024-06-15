@@ -377,6 +377,7 @@ static const char* const OperationStrings[] = {
 		"bltzl",
 		"bne",
 		"bnel",
+		"bnez",
 		"bnz.b",
 		"bnz.d",
 		"bnz.h",
@@ -1617,6 +1618,11 @@ uint32_t mips_decompose_instruction(
 						instruction->operation = MIPS_BEQZ;
 				}
 				break;
+			case MIPS_BNE:
+				if (ins.r.rt == 0)
+					instruction->operation = MIPS_BNEZ;
+
+				break;
 			case MIPS_BGEZAL:
 				if (ins.r.rs == 0)
 					instruction->operation = MIPS_BAL;
@@ -1831,6 +1837,7 @@ uint32_t mips_decompose_instruction(
 		case MIPS_BLTZALL:
 		case MIPS_BLTZL:
 		case MIPS_BEQZ:
+		case MIPS_BNEZ:
 			INS_2(REG, ins.i.rs, LABEL, (4 + address + (ins.i.immediate<<2)) & registerMask)
 			break;
 		case MIPS_BGTZ:

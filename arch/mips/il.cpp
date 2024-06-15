@@ -101,7 +101,8 @@ static size_t ReadILOperand(LowLevelILFunction& il,
 	size_t opSize = SIZE_MAX,
 	bool isAddress = false)
 {
-	if (opSize == SIZE_MAX) {
+	if (opSize == SIZE_MAX)
+	{
 		opSize = registerSize;
 	}
 	InstructionOperand operand = instr.operands[i - 1];
@@ -299,9 +300,11 @@ static bool IsCop0ImplementationDefined(uint32_t reg, uint64_t sel)
 // Returns REG_ZERO for unsupported/unimplemented values.
 static Reg GetCop0Register(uint32_t reg, uint64_t sel)
 {
-	switch (reg) {
+	switch (reg)
+	{
 		case 0:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_INDEX;
 				case 1: return REG_MVP_CONTROL;
 				case 2: return REG_MVP_CONF0;
@@ -309,7 +312,8 @@ static Reg GetCop0Register(uint32_t reg, uint64_t sel)
 			}
 			break;
 		case 1:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_RANDOM;
 				case 1: return REG_VPE_CONTROL;
 				case 2: return REG_VPE_CONF0;
@@ -321,7 +325,8 @@ static Reg GetCop0Register(uint32_t reg, uint64_t sel)
 			}
 			break;
 		case 2:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_ENTRY_LO0;
 				case 1: return REG_TC_STATUS;
 				case 2: return REG_TC_BIND;
@@ -333,24 +338,28 @@ static Reg GetCop0Register(uint32_t reg, uint64_t sel)
 			}
 			break;
 		case 3:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_ENTRY_LO1;
 			}
 			break;
 		case 4:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_CONTEXT;
 				case 1: return REG_CONTEXT_CONFIG;
 			}
 			break;
 		case 5:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_PAGE_MASK;
 				case 1: return REG_PAGE_GRAIN;
 			}
 			break;
 		case 6:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_WIRED;
 				case 1: return REG_SRS_CONF0;
 				case 2: return REG_SRS_CONF1;
@@ -360,32 +369,38 @@ static Reg GetCop0Register(uint32_t reg, uint64_t sel)
 			}
 			break;
 		case 7:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_HWR_ENA;
 			}
 			break;
 		case 8:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_BAD_VADDR;
 			}
 			break;
 		case 9:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_COUNT;
 			}
 			break;
 		case 10:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_ENTRY_HI;
 			}
 			break;
 		case 11:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_COMPARE;
 			}
 			break;
 		case 12:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_STATUS;
 				case 1: return REG_INT_CTL;
 				case 2: return REG_SRS_CTL;
@@ -393,23 +408,27 @@ static Reg GetCop0Register(uint32_t reg, uint64_t sel)
 			}
 			break;
 		case 13:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_CAUSE;
 			}
 			break;
 		case 14:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_EPC;
 			}
 			break;
 		case 15:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_PR_ID;
 				case 1: return REG_EBASE;
 			}
 			break;
 		case 16:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_CONFIG;
 				case 1: return REG_CONFIG1;
 				case 2: return REG_CONFIG2;
@@ -417,17 +436,20 @@ static Reg GetCop0Register(uint32_t reg, uint64_t sel)
 			}
 			break;
 		case 17:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_LLADDR;
 			}
 			break;
 		case 20:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_XCONTEXT;
 			}
 			break;
 		case 23:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_DEBUG;
 				case 1: return REG_TRACE_CONTROL;
 				case 2: return REG_TRACE_CONTROL2;
@@ -436,17 +458,20 @@ static Reg GetCop0Register(uint32_t reg, uint64_t sel)
 			}
 			break;
 		case 24:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_DEPC;
 			}
 			break;
 		case 26:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_ERR_CTL;
 			}
 			break;
 		case 27:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_CACHE_ERR0;
 				case 1: return REG_CACHE_ERR1;
 				case 2: return REG_CACHE_ERR2;
@@ -454,12 +479,14 @@ static Reg GetCop0Register(uint32_t reg, uint64_t sel)
 			}
 			break;
 		case 30:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_ERROR_EPC;
 			}
 			break;
 		case 31:
-			switch (sel) {
+			switch (sel)
+			{
 				case 0: return REG_DESAVE;
 			}
 			break;
@@ -653,7 +680,8 @@ static Reg GetCaviumCop2Register(uint32_t reg)
 
 static ExprId MoveFromCoprocessor(unsigned cop, LowLevelILFunction& il, size_t loadSize, uint32_t outReg, uint32_t reg, uint64_t sel, uint32_t decomposeFlags)
 {
-	if (cop == 0) {
+	if (cop == 0)
+	{
 		Reg copReg = GetCop0Register(reg, sel);
 		if (copReg == REG_ZERO && IsCop0ImplementationDefined(reg, sel))
 		{
@@ -695,7 +723,8 @@ static ExprId MoveFromCoprocessor(unsigned cop, LowLevelILFunction& il, size_t l
 
 static ExprId MoveToCoprocessor(unsigned cop, LowLevelILFunction& il, size_t storeSize, uint32_t reg, uint64_t sel, ExprId srcExpr, uint32_t decomposeFlags)
 {
-	if (cop == 0) {
+	if (cop == 0)
+	{
 		Reg copReg = GetCop0Register(reg, sel);
 		if (copReg == REG_ZERO && IsCop0ImplementationDefined(reg, sel))
 		{
@@ -1368,14 +1397,16 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 		case MIPS_DSLL:
 		case MIPS_DSLL32:
-			if (registerSize != 8) {
+			if (registerSize != 8)
+			{
 				il.AddInstruction(il.Unimplemented());
 				break;
 			}
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ShiftLeft(8, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_DSLLV:
-			if (registerSize != 8) {
+			if (registerSize != 8)
+			{
 				il.AddInstruction(il.Undefined());
 				break;
 			}
@@ -1383,14 +1414,16 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 		case MIPS_DSRL:
 		case MIPS_DSRL32:
-			if (registerSize != 8) {
+			if (registerSize != 8)
+			{
 				il.AddInstruction(il.Unimplemented());
 				break;
 			}
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.LogicalShiftRight(8, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_DSRLV:
-			if (registerSize != 8) {
+			if (registerSize != 8)
+			{
 				il.AddInstruction(il.Undefined());
 				break;
 			}
@@ -1398,14 +1431,16 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 		case MIPS_DSRA:
 		case MIPS_DSRA32:
-			if (registerSize != 8) {
+			if (registerSize != 8)
+			{
 				il.AddInstruction(il.Unimplemented());
 				break;
 			}
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ArithShiftRight(8, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_DSRAV:
-			if (registerSize != 8) {
+			if (registerSize != 8)
+			{
 				il.AddInstruction(il.Undefined());
 				break;
 			}
@@ -1710,7 +1745,8 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_SYNC:
 		{
 			uint64_t stype = 0;
-			if (op1.operandClass != NONE) {
+			if (op1.operandClass != NONE)
+			{
 				stype = op1.immediate;
 			}
 

@@ -1569,10 +1569,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(il.Unimplemented());
 			break;
 		case MIPS_SEB:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.SignExtend(4, il.LowPart(1, ReadILOperand(il, instr, 2, registerSize)))));
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.SignExtend(registerSize, il.LowPart(1, ReadILOperand(il, instr, 2, registerSize)))));
 			break;
 		case MIPS_SEH:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.SignExtend(4, il.LowPart(2, ReadILOperand(il, instr, 2, registerSize)))));
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.SignExtend(registerSize, il.LowPart(2, ReadILOperand(il, instr, 2, registerSize)))));
 			break;
 		case MIPS_SH:
 			il.AddInstruction(il.Store(2, GetILOperandMemoryAddress(il, op2, addrSize), il.LowPart(2, ReadILOperand(il, instr, 1, registerSize))));

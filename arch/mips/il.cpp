@@ -1272,16 +1272,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(MoveFromCoprocessor(3, il, 4, LLIL_TEMP(0), op1.immediate, 0, decomposeFlags));
 			il.AddInstruction(WriteILOperand(il, instr, 1, addrSize, il.Register(4, LLIL_TEMP(0))));
 			break;
-		case MIPS_SWL:
-			il.AddInstruction(il.Store(2,
-				GetILOperandMemoryAddress(il, op2, addrSize),
-				il.LogicalShiftRight(4, ReadILOperand(il, instr, 1, registerSize, 4), il.Const(1, 16))));
-			break;
-		case MIPS_SWR:
-			il.AddInstruction(il.Store(2,
-				il.Sub(4, GetILOperandMemoryAddress(il, op2, addrSize), il.Const(4, 1)),
-				il.And(4, ReadILOperand(il, instr, 1, registerSize, 4), il.Const(4, 0xffff))));
-			break;
 		case MIPS_SYSCALL:
 			il.AddInstruction(il.SystemCall());
 			break;
@@ -1494,28 +1484,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 		case MIPS_LHU:
 			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.ZeroExtend(4, ReadILOperand(il, instr, 2, registerSize, 2))));
-			break;
-		case MIPS_LWR:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg,
-						il.And(4,
-							il.Const(4, 0xffff0000),
-							il.Register(4, op1.reg))));
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg,
-						il.Or(4,
-							ReadILOperand(il, instr, 2, registerSize, 2),
-							il.Register(4, op1.reg))));
-			break;
-		case MIPS_LWL:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg,
-						il.And(4,
-							il.Const(4, 0xffff),
-							il.Register(4, op1.reg))));
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg,
-						il.Or(4,
-							il.ShiftLeft(4,
-								ReadILOperand(il, instr, 2, registerSize, 2),
-								il.Const(1, 16)),
-							il.Register(4, op1.reg))));
 			break;
 		case MIPS_MADD:
 			il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO,
@@ -2081,6 +2049,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_LDC1:
 		case MIPS_LDC2:
 		case MIPS_LDC3:
+		case MIPS_SWL:
+		case MIPS_SWR:
+		case MIPS_LWR:
+		case MIPS_LWL:
 
 		//unimplemented system functions
 		case MIPS_BC1ANY2:

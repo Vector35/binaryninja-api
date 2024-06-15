@@ -248,8 +248,12 @@ protected:
 	{
 		switch (instr.operation)
 		{
+		case MIPS_LDL:
+		case MIPS_LDR:
 		case MIPS_LWL:
 		case MIPS_LWR:
+		case MIPS_SDL:
+		case MIPS_SDR:
 		case MIPS_SWL:
 		case MIPS_SWR:
 			return true;
@@ -618,45 +622,110 @@ public:
 			Instruction* base;
 			uint32_t addrToUse;
 			bool store = false;
-			bool proceed = true;
+			bool proceed = false;
+			bool is32bit = false;
 
 			switch (instr.operation)
 			{
-			case MIPS_SWL:
-				store = true;
-				// fall through
-			case MIPS_LWL:
-				proceed = (secondInstr.operation == (store ? MIPS_SWR : MIPS_LWR));
-				left = &instr;
-				right = &secondInstr;
-				break;
+				case MIPS_LDL: proceed = secondInstr.operation == MIPS_LDR; break;
+				case MIPS_LDR: proceed = secondInstr.operation == MIPS_LDL; break;
+				case MIPS_LWL: proceed = secondInstr.operation == MIPS_LWR; break;
+				case MIPS_LWR: proceed = secondInstr.operation == MIPS_LWL; break;
 
-			case MIPS_SWR:
-				store = true;
-				// fall through
-			case MIPS_LWR:
-				proceed = (secondInstr.operation == (store ? MIPS_SWL : MIPS_LWL));
-				left = &secondInstr;
-				right = &instr;
-				break;
+				case MIPS_SDL: proceed = secondInstr.operation == MIPS_SDR; break;
+				case MIPS_SDR: proceed = secondInstr.operation == MIPS_SDL; break;
+				case MIPS_SWL: proceed = secondInstr.operation == MIPS_SWR; break;
+				case MIPS_SWR: proceed = secondInstr.operation == MIPS_SWL; break;
 
-			default:
-				proceed = false;
-				break;
+				default: proceed = false;
+			}
+
+			switch (instr.operation)
+			{
+				case MIPS_SDL:
+				case MIPS_SDR:
+				case MIPS_SWL:
+				case MIPS_SWR:
+					store = true;
+					break;
+				case MIPS_LDL:
+				case MIPS_LDR:
+				case MIPS_LWL:
+				case MIPS_LWR:
+					store = false;
+					break;
+
+				default: proceed = false;
+			}
+
+			switch (instr.operation)
+			{
+				case MIPS_LDL:
+				case MIPS_LWL:
+				case MIPS_SDL:
+				case MIPS_SWL:
+					left = &instr;
+					right = &secondInstr;
+					break;
+
+				case MIPS_LDR:
+				case MIPS_LWR:
+				case MIPS_SDR:
+				case MIPS_SWR:
+					left = &secondInstr;
+					right = &instr;
+					break;
+
+				default: proceed = false;
+			}
+
+			switch (instr.operation)
+			{
+				case MIPS_LWL:
+				case MIPS_LWR:
+				case MIPS_SWL:
+				case MIPS_SWR:
+					is32bit = true;
+					break;
+
+				case MIPS_LDL:
+				case MIPS_LDR:
+				case MIPS_SDL:
+				case MIPS_SDR:
+					is32bit = false;
+					break;
+
+				default: proceed = false;
 			}
 
 			proceed = proceed && (instr.operands[0].reg == secondInstr.operands[0].reg);
 
 			if (m_endian == BigEndian)
 			{
-				proceed = proceed && ((left->operands[1].immediate + 3) == right->operands[1].immediate);
-				addrToUse = (uint32_t)addr + ((&instr == left) ? 0 : 4);
+				if (is32bit)
+				{
+					proceed = proceed && ((left->operands[1].immediate + 3) == right->operands[1].immediate);
+					addrToUse = (uint32_t)addr + ((&instr == left) ? 0 : 4);
+				}
+				else
+				{
+					proceed = proceed && ((left->operands[1].immediate + 7) == right->operands[1].immediate);
+					addrToUse = (uint32_t)addr + ((&instr == left) ? 0 : 8);
+				}
 				base = left;
 			}
 			else
 			{
-				proceed = proceed && (left->operands[1].immediate == (right->operands[1].immediate + 3));
-				addrToUse = (uint32_t)addr + ((&instr == right) ? 0 : 4);
+				if (is32bit)
+				{
+					proceed = proceed && (left->operands[1].immediate == (right->operands[1].immediate + 3));
+					addrToUse = (uint32_t)addr + ((&instr == right) ? 0 : 4);
+				}
+				else
+				{
+					proceed = proceed && (left->operands[1].immediate == (right->operands[1].immediate + 7));
+					addrToUse = (uint32_t)addr + ((&instr == right) ? 0 : 8);
+				}
 				base = right;
 			}
 
@@ -664,7 +733,11 @@ public:
 			{
 				len = 8;
 				il.SetCurrentAddress(this, addrToUse);
-				base->operation = store ? MIPS_SW : MIPS_LW;
+				if (store)
+					base->operation = is32bit ? MIPS_SW : MIPS_SD;
+				else
+					base->operation = is32bit ? MIPS_LW : MIPS_LD;
+
 				return GetLowLevelILForInstruction(this, addrToUse, il, *base, GetAddressSize(), m_decomposeFlags);
 			}
 		}

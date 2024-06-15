@@ -524,6 +524,9 @@ static const char* const OperationStrings[] = {
 		"dmtc1",
 		"dmtc2",
 		"dret",
+		"drotr",
+		"drotr32",
+		"drotrv",
 		"dsbh",
 		"dshd",
 		"dsll",
@@ -1344,9 +1347,21 @@ uint32_t mips_decompose_instruction(
 				if (ins.bits.bit21 == 1)
 					instruction->operation = MIPS_ROTR;
 				break;
+			case MIPS_DSRL:
+				if (ins.bits.bit21 == 1)
+					instruction->operation = MIPS_DROTR;
+				break;
+			case MIPS_DSRL32:
+				if (ins.bits.bit21 == 1)
+					instruction->operation = MIPS_DROTR32;
+				break;
 			case MIPS_SRLV:
 				if (ins.bits.bit6 == 1)
 					instruction->operation = MIPS_ROTRV;
+				break;
+			case MIPS_DSRLV:
+				if (ins.bits.bit6 == 1)
+					instruction->operation = MIPS_DROTRV;
 				break;
 			case MIPS_COP0:
 				switch (ins.r.rs)
@@ -2164,6 +2179,8 @@ uint32_t mips_decompose_instruction(
 			INS_3(REG, ins.i.rs, REG, ins.i.rt, LABEL, (4 + address + (ins.i.immediate<<2)) & registerMask)
 			break;
 		case MIPS_ROTR:
+		case MIPS_DROTR:
+		case MIPS_DROTR32:
 			INS_3(REG, ins.r.rd, REG, ins.r.rt, IMM, ins.r.sa)
 			if (ins.r.rs != 1)
 				return 1;
@@ -2186,6 +2203,7 @@ uint32_t mips_decompose_instruction(
 				return 1;
 			break;
 		case MIPS_ROTRV:
+		case MIPS_DROTRV:
 			INS_3(REG, ins.r.rd, REG, ins.r.rt, REG, ins.r.rs)
 			if (ins.r.sa != 1)
 				return 1;

@@ -833,13 +833,13 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 		case MIPS_AND:
 			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg,
-								il.And(4,
+								il.And(registerSize,
 									ReadILOperand(il, instr, 2, registerSize),
 									ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_ANDI:
 			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg,
-								il.And(4,
+								il.And(registerSize,
 									ReadILOperand(il, instr, 2, registerSize),
 									il.Operand(1, il.Const(4, 0x0000ffff & op3.immediate)))));
 			break;
@@ -890,15 +890,15 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 									ReadILOperand(il, instr, 3, registerSize, 4))));
 			break;
 		case MIPS_XOR:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg,
-								il.Xor(4,
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg,
+								il.Xor(registerSize,
 									ReadILOperand(il, instr, 2, registerSize),
 									ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_XORI:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg,
-									il.Xor(4,
-										ReadILOperand(il, instr, 2, registerSize, 4),
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg,
+									il.Xor(registerSize,
+										ReadILOperand(il, instr, 2, registerSize),
 										il.Operand(1,il.Const(4, 0x0000ffff & op3.immediate)))));
 			break;
 		case MIPS_B:
@@ -1172,23 +1172,23 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 									il.Neg(4, ReadILOperand(il, instr, 2, registerSize))));
 			break;
 		case MIPS_NOT:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg,
-									il.Not(4, ReadILOperand(il, instr, 2, registerSize))));
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg,
+									il.Not(registerSize, ReadILOperand(il, instr, 2, registerSize))));
 			break;
 		case MIPS_NOR:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg,
-									il.Not(4, il.Or(4, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize)))));
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg,
+									il.Not(registerSize, il.Or(registerSize, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize)))));
 			break;
 		case MIPS_OR:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg,
-									il.Or(4, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg,
+									il.Or(registerSize, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_ORI:
 			if (op2.reg == REG_ZERO)
-				il.AddInstruction(il.SetRegister(4, op1.reg, il.Operand(1, il.Const(4, 0x0000ffff & op3.immediate))));
+				il.AddInstruction(il.SetRegister(registerSize, op1.reg, il.Operand(1, il.Const(4, 0x0000ffff & op3.immediate))));
 			else
-				il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg,
-								il.Or(4,
+				il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg,
+								il.Or(registerSize,
 									ReadILOperand(il, instr, 2, registerSize),
 									il.Operand(1, il.Const(4, 0x0000ffff & op3.immediate)))));
 			break;

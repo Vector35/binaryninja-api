@@ -340,7 +340,8 @@ void ObjCProcessor::LoadClasses(BinaryReader* reader, Ref<Section> classPtrSecti
 	auto size = classPtrSection->GetEnd() - classPtrSection->GetStart();
 	if (size == 0)
 		return;
-	auto ptrCount = size / m_data->GetAddressSize();
+	auto ptrSize = m_data->GetAddressSize();
+	auto ptrCount = size / ptrSize;
 
 	auto classPtrSectionStart = classPtrSection->GetStart();
 	for (size_t i = 0; i < ptrCount; i++)
@@ -433,6 +434,19 @@ void ObjCProcessor::LoadClasses(BinaryReader* reader, Ref<Section> classPtrSecti
 		DefineObjCSymbol(BNSymbolType::DataSymbol, m_typeNames.cls, "cls_" + name, classPtr, true);
 		DefineObjCSymbol(BNSymbolType::DataSymbol, m_typeNames.classRO, "cls_ro_" + name, classROPtr, true);
 		DefineObjCSymbol(BNSymbolType::DataSymbol, Type::ArrayType(Type::IntegerType(1, true), name.size()+1), "clsName_" + name, classRO.name, true);
+		if (classRO.baseProtocols)
+		{
+			DefineObjCSymbol(BNSymbolType::DataSymbol, Type::NamedType(m_data, m_typeNames.protocolList),
+				"clsProtocols_" + name, classRO.baseProtocols, true);
+			reader->Seek(classRO.baseProtocols);
+			uint32_t count = reader->Read64();
+			view_ptr_t addr = reader->GetOffset();
+			for (uint32_t j = 0; j < count; j++)
+			{
+				m_data->DefineDataVariable(addr, Type::PointerType(ptrSize, Type::NamedType(m_data, m_typeNames.protocol)));
+				addr += ptrSize;
+			}
+		}
 
 		if (clsStruct.isa)
 		{
@@ -631,6 +645,130 @@ void ObjCProcessor::LoadCategories(BinaryReader* reader, Ref<Section> classPtrSe
 	}
 }
 
+void ObjCProcessor::LoadProtocols(BinaryReader* reader, Ref<Section> listSection)
+{
+	if (!listSection)
+		return;
+	auto size = listSection->GetEnd() - listSection->GetStart();
+	if (size == 0)
+		return;
+	auto ptrSize = m_data->GetAddressSize();
+
+	auto listSectionStart = listSection->GetStart();
+	auto listSectionEnd = listSection->GetEnd();
+
+	auto protocolType = Type::NamedType(m_data, m_typeNames.protocol);
+	auto ptrType = Type::PointerType(m_data->GetDefaultArchitecture(), protocolType);
+	for (size_t i = listSectionStart; i < listSectionEnd; i += ptrSize)
+	{
+		protocol_t protocol;
+		reader->Seek(i);
+		auto protocolLocation = ReadPointerAccountingForRelocations(reader);
+		reader->Seek(protocolLocation);
+
+		try
+		{
+			protocol.isa = ReadPointerAccountingForRelocations(reader);
+			protocol.mangledName = ReadPointerAccountingForRelocations(reader);
+			protocol.protocols = ReadPointerAccountingForRelocations(reader);
+			protocol.instanceMethods = ReadPointerAccountingForRelocations(reader);
+			protocol.classMethods = ReadPointerAccountingForRelocations(reader);
+			protocol.optionalInstanceMethods = ReadPointerAccountingForRelocations(reader);
+			protocol.optionalClassMethods = ReadPointerAccountingForRelocations(reader);
+			protocol.instanceProperties = ReadPointerAccountingForRelocations(reader);
+		}
+		catch (ReadException& ex)
+		{
+			m_logger->LogError("Failed to read protocol pointed to by 0x%llx", i);
+			continue;
+		}
+
+		std::string protocolName;
+		try
+		{
+			reader->Seek(protocol.mangledName);
+			protocolName = reader->ReadCString();
+			DefineObjCSymbol(BNSymbolType::DataSymbol, Type::ArrayType(Type::IntegerType(1, true), protocolName.size() + 1),
+				"protocolName_" + protocolName, protocol.mangledName, true);
+		}
+		catch (ReadException& ex)
+		{
+			m_logger->LogError(
+				"Failed to read protocol name for protocol at 0x%llx. Using base address as stand-in protocol name",
+				protocolLocation);
+			protocolName = std::to_string(protocolLocation);
+		}
+
+		Protocol protocolClass;
+		protocolClass.name = protocolName;
+		DefineObjCSymbol(BNSymbolType::DataSymbol, ptrType, "protocolPtr_" + protocolName, i, true);
+		DefineObjCSymbol(BNSymbolType::DataSymbol, protocolType, "protocol_" + protocolName, protocolLocation, true);
+		if (protocol.protocols)
+		{
+			DefineObjCSymbol(BNSymbolType::DataSymbol, Type::NamedType(m_data, m_typeNames.protocolList),
+				"protoProtocols_" + protocolName, protocol.protocols, true);
+			reader->Seek(protocol.protocols);
+			uint32_t count = reader->Read64();
+			view_ptr_t addr = reader->GetOffset();
+			for (uint32_t j = 0; j < count; j++)
+			{
+				m_data->DefineDataVariable(addr, Type::PointerType(ptrSize, Type::NamedType(m_data, m_typeNames.protocol)));
+				addr += ptrSize;
+			}
+		}
+
+		if (protocol.instanceMethods)
+		{
+			try
+			{
+				ReadMethodList(reader, protocolClass.instanceMethods, protocolName, protocol.instanceMethods);
+			}
+			catch (ReadException& ex)
+			{
+				m_logger->LogError(
+					"Failed to read the instance method list for protocol pointed to by 0x%llx", protocolLocation);
+			}
+		}
+		if (protocol.classMethods)
+		{
+			try
+			{
+				ReadMethodList(reader, protocolClass.classMethods, protocolName, protocol.classMethods);
+			}
+			catch (ReadException& ex)
+			{
+				m_logger->LogError(
+					"Failed to read the class method list for protocol pointed to by 0x%llx", protocolLocation);
+			}
+		}
+		if (protocol.optionalInstanceMethods)
+		{
+			try
+			{
+				ReadMethodList(reader, protocolClass.optionalInstanceMethods, protocolName, protocol.optionalInstanceMethods);
+			}
+			catch (ReadException& ex)
+			{
+				m_logger->LogError(
+					"Failed to read the optional instance method list for protocol pointed to by 0x%llx", protocolLocation);
+			}
+		}
+		if (protocol.optionalClassMethods)
+		{
+			try
+			{
+				ReadMethodList(reader, protocolClass.optionalClassMethods, protocolName, protocol.optionalClassMethods);
+			}
+			catch (ReadException& ex)
+			{
+				m_logger->LogError(
+					"Failed to read the optional class method list for protocol pointed to by 0x%llx", protocolLocation);
+			}
+		}
+		m_protocols[protocolLocation] = protocolClass;
+	}
+}
+
 void ObjCProcessor::ReadMethodList(BinaryReader* reader, ClassBase& cls, std::string name, view_ptr_t start)
 {
 	reader->Seek(start);
@@ -755,6 +893,10 @@ void ObjCProcessor::ReadIvarList(BinaryReader* reader, ClassBase& cls, std::stri
 			ivar.type = reader->ReadCString();
 
 			DefineObjCSymbol(DataSymbol, m_typeNames.ivar, "ivar_" + ivar.name, cursor, true);
+			DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), ivar.name.size() + 1),
+				"ivarName_" + ivar.name, ivarStruct.name, true);
+			DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), ivar.type.size() + 1),
+				"ivarType_" + ivar.name, ivarStruct.type, true);
 
 			cls.ivarList[cursor] = ivar;
 		}
@@ -996,6 +1138,24 @@ void ObjCProcessor::PostProcessObjCSections(BinaryReader* reader)
 			}
 		}
 	}
+	if (auto protoRefs = m_data->GetSectionByName("__objc_protorefs"))
+	{
+		auto start = protoRefs->GetStart();
+		auto end = protoRefs->GetEnd();
+		auto type = Type::PointerType(ptrSize, Type::NamedType(m_data, m_typeNames.protocol));
+		for (view_ptr_t i = start; i < end; i += ptrSize)
+		{
+			reader->Seek(i);
+			auto protoLoc = ReadPointerAccountingForRelocations(reader);
+			if (const auto& it = m_protocols.find(protoLoc); it != m_protocols.end())
+			{
+				auto& proto = it->second;
+				std::string name = proto.name;
+				if (!name.empty())
+					DefineObjCSymbol(DataSymbol, type, "protoRef_" + name, i, true);
+			}
+		}
+	}
 	if (auto ivars = m_data->GetSectionByName("__objc_ivar"))
 	{
 		auto start = ivars->GetStart();
@@ -1189,6 +1349,10 @@ void ObjCProcessor::ProcessObjCData()
 	type = finalizeStructureBuilder(m_data, ivarList, "objc_ivar_list_t");
 	m_typeNames.ivarList = type.first;
 
+	StructureBuilder protocolListBuilder;
+	protocolListBuilder.AddMember(Type::IntegerType(addrSize, false), "count");
+	m_typeNames.protocolList = finalizeStructureBuilder(m_data, protocolListBuilder, "objc_protocol_list_t").first;
+
 	StructureBuilder classROBuilder;
 	classROBuilder.AddMember(Type::IntegerType(4, false), "flags");
 	classROBuilder.AddMember(Type::IntegerType(4, false), "start");
@@ -1198,7 +1362,7 @@ void ObjCProcessor::ProcessObjCData()
 	classROBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "ivar_layout");
 	classROBuilder.AddMember(Type::PointerType(addrSize, Type::IntegerType(1, true)), "name");
 	classROBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "methods");
-	classROBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "protocols");
+	classROBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.protocolList)), "protocols");
 	classROBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.ivarList)), "ivars");
 	classROBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "weak_ivar_layout");
 	classROBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "properties");
@@ -1236,6 +1400,18 @@ void ObjCProcessor::ProcessObjCData()
 	categoryBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "properties");
 	m_typeNames.category = finalizeStructureBuilder(m_data, categoryBuilder, "objc_category_t").first;
 
+	StructureBuilder protocolBuilder;
+	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "isa");
+	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::IntegerType(1, true)), "mangledName");
+	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.protocolList)), "protocols");
+	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "instanceMethods");
+	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "classMethods");
+	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "optionalInstanceMethods");
+	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "optionalClassMethods");
+	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "instanceProperties");
+	protocolBuilder.AddMember(Type::IntegerType(4, false), "size");
+	protocolBuilder.AddMember(Type::IntegerType(4, false), "flags");
+	m_typeNames.protocol = finalizeStructureBuilder(m_data, protocolBuilder, "objc_protocol_t").first;
 
 	auto reader = BinaryReader(m_data);
 	m_data->BeginBulkModifySymbols();
@@ -1252,6 +1428,9 @@ void ObjCProcessor::ProcessObjCData()
 		LoadCategories(&reader, catList);
 	for (auto& [_, cat] : m_categories)
 		ApplyMethodTypes(cat);
+
+	if (auto protoList = m_data->GetSectionByName("__objc_protolist"))
+		LoadProtocols(&reader, protoList);
 
 	PostProcessObjCSections(&reader);
 

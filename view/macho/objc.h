@@ -48,6 +48,7 @@ namespace BinaryNinja {
 		uint64_t count;
 	} protocol_list_t;
 	typedef struct {
+		view_ptr_t isa;
 		view_ptr_t mangledName;
 		view_ptr_t protocols;
 		view_ptr_t instanceMethods;
@@ -128,6 +129,16 @@ namespace BinaryNinja {
 		QualifiedName associatedName;
 	};
 
+	class Protocol {
+	public:
+		std::string name;
+		std::vector<QualifiedName> protocols;
+		ClassBase instanceMethods;
+		ClassBase classMethods;
+		ClassBase optionalInstanceMethods;
+		ClassBase optionalClassMethods;
+	};
+
 	struct QualifiedNameOrType {
 		BinaryNinja::Ref<BinaryNinja::Type> type = nullptr;
 		BinaryNinja::QualifiedName name;
@@ -155,6 +166,8 @@ namespace BinaryNinja {
 			QualifiedName classRO;
 			QualifiedName cls;
 			QualifiedName category;
+			QualifiedName protocol;
+			QualifiedName protocolList;
 			QualifiedName ivar;
 			QualifiedName ivarList;
 		} m_typeNames;
@@ -166,6 +179,7 @@ namespace BinaryNinja {
 		Ref<Logger> m_logger;
 		std::map<uint64_t, Class> m_classes;
 		std::map<uint64_t, Class> m_categories;
+		std::map<uint64_t, Protocol> m_protocols;
 		std::unordered_map<uint64_t, std::string> m_selectorCache;
 		std::unordered_map<uint64_t, Method> m_localMethods;
 
@@ -189,6 +203,7 @@ namespace BinaryNinja {
 		void ReadMethodList(BinaryReader* reader, ClassBase& cls, std::string name, view_ptr_t start);
 		void LoadClasses(BinaryReader* reader, Ref<Section> listSection);
 		void LoadCategories(BinaryReader* reader, Ref<Section> listSection);
+		void LoadProtocols(BinaryReader* reader, Ref<Section> listSection);
 		void GenerateClassTypes();
 		bool ApplyMethodType(Class& cls, Method& method, bool isInstanceMethod);
 		void ApplyMethodTypes(Class& cls);

@@ -1390,7 +1390,18 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				il.CompareUnsignedLessThan(registerSize, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize)))));
 			break;
 		case MIPS_SLL:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.ShiftLeft(4, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
+			// SLL is unique in that the input doesn't have to be sign extended, and the
+			// preferred way to sign extend the lower 32 bits of an register is to shift
+			// it left by 0
+			if (registerSize == 8 && op2.reg != 0 && op3.immediate == 0)
+			{
+				il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.SignExtend(8, il.LowPart(4, ReadILOperand(il, instr, 2, 8)))));
+
+			}
+			else
+			{
+				il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.ShiftLeft(4, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
+			}
 			break;
 		case MIPS_SLLV:
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.ShiftLeft(4, ReadILOperand(il, instr, 2, registerSize), il.And(4, ReadILOperand(il, instr, 3, registerSize), il.Const(4, 0x1f)))));

@@ -500,6 +500,157 @@ static Reg GetCaviumCop0Register(uint32_t reg, uint64_t sel)
 	}
 }
 
+static Reg GetCaviumCop2Register(uint32_t reg)
+{
+	switch (reg)
+	{
+		case 0x0040: return CNREG2_0040_HSH_DAT0;
+		case 0x0041: return CNREG2_0041_HSH_DAT1;
+		case 0x0042: return CNREG2_0042_HSH_DAT2;
+		case 0x0043: return CNREG2_0043_HSH_DAT3;
+		case 0x0044: return CNREG2_0044_HSH_DAT4;
+		case 0x0045: return CNREG2_0045_HSH_DAT5;
+		case 0x0046: return CNREG2_0046_HSH_DAT6;
+		case 0x0048: return CNREG2_0048_HSH_IV0;
+		case 0x0049: return CNREG2_0049_HSH_IV1;
+		case 0x004a: return CNREG2_004A_HSH_IV2;
+		case 0x004b: return CNREG2_004B_HSH_IV3;
+		case 0x0050: return CNREG2_0050_SHA3_DAT24;
+		case 0x0051: return CNREG2_0051_SHA3_DAT15_RD;
+		case 0x0058: return CNREG2_0058_GFM_MUL_REFLECT0;
+		case 0x0059: return CNREG2_0059_GFM_MUL_REFLECT1;
+		case 0x005a: return CNREG2_005A_GFM_RESINP_REFLECT0;
+		case 0x005b: return CNREG2_005B_GFM_RESINP_REFLECT1;
+		case 0x005c: return CNREG2_005C_GFM_XOR0_REFLECT;
+		case 0x0080: return CNREG2_0080_3DES_KEY0;
+		case 0x0081: return CNREG2_0081_3DES_KEY1;
+		case 0x0082: return CNREG2_0082_3DES_KEY2;
+		case 0x0084: return CNREG2_0084_3DES_IV;
+		case 0x0088: return CNREG2_0088_3DES_RESULT_RD;
+		case 0x0098: return CNREG2_0098_3DES_RESULT_WR;
+		case 0x0100: return CNREG2_0100_AES_RESULT0;
+		case 0x0101: return CNREG2_0101_AES_RESULT1;
+		case 0x0102: return CNREG2_0102_AES_IV0;
+		case 0x0103: return CNREG2_0103_AES_IV1;
+		case 0x0104: return CNREG2_0104_AES_KEY0;
+		case 0x0105: return CNREG2_0105_AES_KEY1;
+		case 0x0106: return CNREG2_0106_AES_KEY2;
+		case 0x0107: return CNREG2_0107_AES_KEY3;
+		case 0x0108: return CNREG2_0108_AES_ENC_CBC0;
+		case 0x010a: return CNREG2_010A_AES_ENC0;
+		case 0x010c: return CNREG2_010C_AES_DEC_CBC0;
+		case 0x010e: return CNREG2_010E_AES_DEC0;
+		case 0x0110: return CNREG2_0110_AES_KEYLENGTH;
+		case 0x0111: return CNREG2_0111_AES_DAT0;
+		case 0x0115: return CNREG2_0115_CAMELLIA_FL;
+		case 0x0116: return CNREG2_0116_CAMELLIA_FLINV;
+		case 0x0200: return CNREG2_0200_CRC_POLYNOMIAL;
+		case 0x0201: return CNREG2_0201_CRC_IV;
+		case 0x0202: return CNREG2_0202_CRC_LEN;
+		case 0x0203: return CNREG2_0203_CRC_IV_REFLECT_RD;
+		case 0x0204: return CNREG2_0204_CRC_BYTE;
+		case 0x0205: return CNREG2_0205_CRC_HALF;
+		case 0x0206: return CNREG2_0206_CRC_WORD;
+		case 0x0211: return CNREG2_0211_CRC_IV_REFLECT_WR;
+		case 0x0214: return CNREG2_0214_CRC_BYTE_REFLECT;
+		case 0x0215: return CNREG2_0215_CRC_HALF_REFLECT;
+		case 0x0216: return CNREG2_0216_CRC_WORD_REFLECT;
+		case 0x0240: return CNREG2_0240_HSH_DATW0;
+		case 0x0241: return CNREG2_0241_HSH_DATW1;
+		case 0x0242: return CNREG2_0242_HSH_DATW2;
+		case 0x0243: return CNREG2_0243_HSH_DATW3;
+		case 0x0244: return CNREG2_0244_HSH_DATW4;
+		case 0x0245: return CNREG2_0245_HSH_DATW5;
+		case 0x0246: return CNREG2_0246_HSH_DATW6;
+		case 0x0247: return CNREG2_0247_HSH_DATW7;
+		case 0x0248: return CNREG2_0248_HSH_DATW8;
+		case 0x0249: return CNREG2_0249_HSH_DATW9;
+		case 0x024a: return CNREG2_024A_HSH_DATW10;
+		case 0x024b: return CNREG2_024B_HSH_DATW11;
+		case 0x024c: return CNREG2_024C_HSH_DATW12;
+		case 0x024d: return CNREG2_024D_HSH_DATW13;
+		case 0x024e: return CNREG2_024E_HSH_DATW14;
+		case 0x024f: return CNREG2_024F_SHA3_DAT15_RD;
+		case 0x0250: return CNREG2_0250_HSH_IVW0;
+		case 0x0251: return CNREG2_0251_HSH_IVW1;
+		case 0x0252: return CNREG2_0252_HSH_IVW2;
+		case 0x0253: return CNREG2_0253_HSH_IVW3;
+		case 0x0254: return CNREG2_0254_HSH_IVW4;
+		case 0x0255: return CNREG2_0255_HSH_IVW5;
+		case 0x0256: return CNREG2_0256_HSH_IVW6;
+		case 0x0257: return CNREG2_0257_HSH_IVW7;
+		case 0x0258: return CNREG2_0258_GFM_MUL0;
+		case 0x0259: return CNREG2_0259_GFM_MUL1;
+		case 0x025a: return CNREG2_025A_GFM_RESINP0;
+		case 0x025b: return CNREG2_025B_GFM_RESINP1;
+		case 0x025c: return CNREG2_025C_GFM_XOR0;
+		case 0x025e: return CNREG2_025E_GFM_POLY;
+		case 0x02c0: return CNREG2_02C0_SHA3_XORDAT0;
+		case 0x02c1: return CNREG2_02C1_SHA3_XORDAT1;
+		case 0x02c2: return CNREG2_02C2_SHA3_XORDAT2;
+		case 0x02c3: return CNREG2_02C3_SHA3_XORDAT3;
+		case 0x02c4: return CNREG2_02C4_SHA3_XORDAT4;
+		case 0x02c5: return CNREG2_02C5_SHA3_XORDAT5;
+		case 0x02c6: return CNREG2_02C6_SHA3_XORDAT6;
+		case 0x02c7: return CNREG2_02C7_SHA3_XORDAT7;
+		case 0x02c8: return CNREG2_02C8_SHA3_XORDAT8;
+		case 0x02c9: return CNREG2_02C9_SHA3_XORDAT9;
+		case 0x02ca: return CNREG2_02CA_SHA3_XORDAT10;
+		case 0x02cb: return CNREG2_02CB_SHA3_XORDAT11;
+		case 0x02cc: return CNREG2_02CC_SHA3_XORDAT12;
+		case 0x02cd: return CNREG2_02CD_SHA3_XORDAT13;
+		case 0x02ce: return CNREG2_02CE_SHA3_XORDAT14;
+		case 0x02cf: return CNREG2_02CF_SHA3_XORDAT15;
+		case 0x02d0: return CNREG2_02D0_SHA3_XORDAT16;
+		case 0x02d1: return CNREG2_02D1_SHA3_XORDAT17;
+		case 0x0400: return CNREG2_0400_LLM_READ_ADDR0;
+		case 0x0401: return CNREG2_0401_LLM_WRITE_ADDR_INTERNAL0;
+		case 0x0402: return CNREG2_0402_LLM_DATA0;
+		case 0x0404: return CNREG2_0404_LLM_READ64_ADDR0;
+		case 0x0405: return CNREG2_0405_LLM_WRITE64_ADDR_INTERNAL0;
+		case 0x0408: return CNREG2_0408_LLM_READ_ADDR1;
+		case 0x0409: return CNREG2_0409_LLM_WRITE_ADDR_INTERNAL1;
+		case 0x040a: return CNREG2_040a_LLM_DATA1;
+		case 0x040c: return CNREG2_040c_LLM_READ64_ADDR1;
+		case 0x040d: return CNREG2_040d_LLM_WRITE64_ADDR_INTERNAL1;
+		case 0x1202: return CNREG2_1202_CRC_LEN;
+		case 0x1207: return CNREG2_1207_CRC_DWORD;
+		case 0x1208: return CNREG2_1208_CRC_VAR;
+		case 0x1217: return CNREG2_1217_CRC_DWORD_REFLECT;
+		case 0x1218: return CNREG2_1218_CRC_VAR_REFLECT;
+		case 0x3109: return CNREG2_3109_AES_ENC_CBC1;
+		case 0x310b: return CNREG2_310B_AES_ENC1;
+		case 0x310d: return CNREG2_310D_AES_DEC_CBC1;
+		case 0x310f: return CNREG2_310F_AES_DEC1;
+		case 0x3114: return CNREG2_3114_CAMELLIA_ROUND;
+		case 0x3119: return CNREG2_3119_SMS4_ENC_CBC1;
+		case 0x311b: return CNREG2_311B_SMS4_ENC1;
+		case 0x311d: return CNREG2_311D_SMS4_DEC_CBC1;
+		case 0x311f: return CNREG2_311F_SMS4_DEC1;
+		case 0x4052: return CNREG2_4052_SHA3_STARTOP;
+		case 0x4047: return CNREG2_4047_HSH_STARTMD5;
+		case 0x404d: return CNREG2_404D_SNOW3G_START;
+		case 0x4055: return CNREG2_4055_ZUC_START;
+		case 0x4056: return CNREG2_4056_ZUC_MORE;
+		case 0x405d: return CNREG2_405D_GFM_XORMUL1_REFLECT;
+		case 0x404e: return CNREG2_404E_SNOW3G_MORE;
+		case 0x404f: return CNREG2_404F_HSH_STARTSHA256;
+		case 0x4057: return CNREG2_4057_HSH_STARTSHA;
+		case 0x4088: return CNREG2_4088_3DES_ENC_CBC;
+		case 0x4089: return CNREG2_4089_KAS_ENC_CBC;
+		case 0x408a: return CNREG2_408A_3DES_ENC;
+		case 0x408b: return CNREG2_408B_KAS_ENC;
+		case 0x408c: return CNREG2_408C_3DES_DEC_CBC;
+		case 0x408e: return CNREG2_408E_3DES_DEC;
+		case 0x4200: return CNREG2_4200_CRC_POLYNOMIAL_WR;
+		case 0x4210: return CNREG2_4210_CRC_POLYNOMIAL_REFLECT;
+		case 0x424f: return CNREG2_424F_HSH_STARTSHA512;
+		case 0x425d: return CNREG2_425D_GFM_XORMUL1;
+
+		default: return REG_ZERO;
+	}
+}
+
 static ExprId MoveFromCoprocessor(unsigned cop, LowLevelILFunction& il, size_t loadSize, uint32_t outReg, uint32_t reg, uint64_t sel, uint32_t decomposeFlags)
 {
 	if (cop == 0) {
@@ -519,6 +670,20 @@ static ExprId MoveFromCoprocessor(unsigned cop, LowLevelILFunction& il, size_t l
 					loadSize == 4 ? MIPS_INTRIN_MFC0 : MIPS_INTRIN_DMFC0,
 					{il.Register(loadSize, copReg)});
 
+		}
+	}
+	else if (cop == 2)
+	{
+		if ((decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+		{
+			Reg cop2Reg = GetCaviumCop2Register(reg);
+			if (cop2Reg != REG_ZERO)
+			{
+				return il.Intrinsic(
+					{RegisterOrFlag::Register(outReg)},
+					loadSize == 4 ? MIPS_INTRIN_MFC2 : MIPS_INTRIN_DMFC2,
+					{il.Register(loadSize, cop2Reg)});
+			}
 		}
 	}
 
@@ -546,6 +711,20 @@ static ExprId MoveToCoprocessor(unsigned cop, LowLevelILFunction& il, size_t sto
 					{},
 					storeSize == 4 ? MIPS_INTRIN_MTC0 : MIPS_INTRIN_DMTC0,
 					{il.Register(storeSize, copReg), srcExpr});
+		}
+	}
+	else if (cop == 2)
+	{
+		if ((decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+		{
+			Reg cop2Reg = GetCaviumCop2Register(reg);
+			if (cop2Reg != REG_ZERO)
+			{
+				return il.Intrinsic(
+						{},
+						storeSize == 4 ? MIPS_INTRIN_MTC2 : MIPS_INTRIN_DMTC2,
+						{il.Register(storeSize, cop2Reg), srcExpr});
+			}
 		}
 	}
 

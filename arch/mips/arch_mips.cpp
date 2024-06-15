@@ -1314,6 +1314,13 @@ public:
 		{
 			uint32_t cavium_registers[] =
 			{
+				CNREG_MPL0,
+				CNREG_MPL1,
+				CNREG_MPL2,
+				CNREG_P0,
+				CNREG_P1,
+				CNREG_P2,
+
 				CNREG0_CVM_COUNT,
 				CNREG0_CVM_CTL,
 				CNREG0_POWTHROTTLE,
@@ -1449,6 +1456,13 @@ public:
 		{
 			uint32_t cavium_registers[] =
 			{
+				CNREG_MPL0,
+				CNREG_MPL1,
+				CNREG_MPL2,
+				CNREG_P0,
+				CNREG_P1,
+				CNREG_P2,
+
 				CNREG0_CVM_COUNT,
 				CNREG0_CVM_CTL,
 				CNREG0_POWTHROTTLE,
@@ -1595,6 +1609,13 @@ public:
 		{
 			uint32_t cavium_registers[] =
 			{
+				CNREG_MPL0,
+				CNREG_MPL1,
+				CNREG_MPL2,
+				CNREG_P0,
+				CNREG_P1,
+				CNREG_P2,
+
 				CNREG0_CVM_COUNT,
 				CNREG0_CVM_CTL,
 				CNREG0_POWTHROTTLE,

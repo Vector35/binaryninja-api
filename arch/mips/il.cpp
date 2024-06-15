@@ -560,6 +560,18 @@ static ExprId SimpleIntrinsic(LowLevelILFunction& il, MipsIntrinsic intrinsic)
 	return il.Intrinsic({}, intrinsic, {});
 }
 
+// returns 256-bit value of [0:64] || [regHi] || [regMid] || [regLo]
+static ExprId Concat3to256(LowLevelILFunction& il, uint32_t regHi, uint32_t regMid, uint32_t regLo)
+{
+	return il.Or(0x20,
+		il.ShiftLeft(0x20, il.ZeroExtend(0x20, il.Register(8, regHi)), il.Const(4, 0x80)),
+		il.Or(0x20,
+			il.ShiftLeft(0x20, il.ZeroExtend(0x20, il.Register(8, regMid)), il.Const(4, 0x40)),
+			il.ZeroExtend(0x20, il.Register(8, regLo))
+		)
+	);
+}
+
 bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize, uint32_t decomposeFlags)
 {
 	LowLevelILLabel trueLabel, falseLabel, doneLabel, dirFlagSet, dirFlagClear, dirFlagDone;
@@ -1644,6 +1656,24 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case CNMIPS_DPOP:
 			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, CNMIPS_INTRIN_DPOP, {ReadILOperand(il, instr, 2, registerSize)}));
 			break;
+		case CNMIPS_MTM0:
+			il.AddInstruction(il.SetRegister(registerSize, CNREG_MPL0, ReadILOperand(il, instr, 1, registerSize)));
+			break;
+		case CNMIPS_MTM1:
+			il.AddInstruction(il.SetRegister(registerSize, CNREG_MPL1, ReadILOperand(il, instr, 1, registerSize)));
+			break;
+		case CNMIPS_MTM2:
+			il.AddInstruction(il.SetRegister(registerSize, CNREG_MPL2, ReadILOperand(il, instr, 1, registerSize)));
+			break;
+		case CNMIPS_MTP0:
+			il.AddInstruction(il.SetRegister(registerSize, CNREG_P0, ReadILOperand(il, instr, 1, registerSize)));
+			break;
+		case CNMIPS_MTP1:
+			il.AddInstruction(il.SetRegister(registerSize, CNREG_P1, ReadILOperand(il, instr, 1, registerSize)));
+			break;
+		case CNMIPS_MTP2:
+			il.AddInstruction(il.SetRegister(registerSize, CNREG_P2, ReadILOperand(il, instr, 1, registerSize)));
+			break;
 		case CNMIPS_RDHWR:
 		{
 			MipsIntrinsic intrinsic;
@@ -1726,6 +1756,54 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 
 		case CNMIPS_SYNCWS:
 			il.AddInstruction(SimpleIntrinsic(il, CNMIPS_INTRIN_SYNCWS));
+			break;
+
+		case CNMIPS_V3MULU:
+			// description of this behemoth of an instruction:
+			//
+			//    ([0:64] || P2 || P1 || P0)
+			//  + ([0:192]            || rt)
+			//  + (rs x (MPL2 || MPL1 || MPL0))
+			//  ------------------------------
+			//    (P2 || P1 || P0 || rd)
+			//
+			// register splits IL operations work with 2 registers, and
+			// considering Px registers as subregisters of a massive
+			// product register would also introduce complications (for example,
+			// note that P0 is in bits 63..0 in the first summand, but then
+			// occupies bits 127..64 of the total sum), so the simplest way forward
+			// seems to be to do shifts...
+			il.AddInstruction(il.SetRegister(0x20, LLIL_TEMP(0),
+				il.Add(0x20,
+					// [0:64] || P2 || P1 || P0
+					Concat3to256(il, CNREG_P2, CNREG_P1, CNREG_P0),
+					il.Add(0x20,
+						// [0:192] || rt
+						il.ZeroExtend(0x20, ReadILOperand(il, instr, 3, 8)),
+
+						// rs x (MPL2 || MPL1 || MPL0)
+						il.Mult(0x20,
+							il.ZeroExtend(0x20, ReadILOperand(il, instr, 2, 8)),
+							Concat3to256(il, CNREG_MPL2, CNREG_MPL1, CNREG_MPL0)
+						)
+					)
+				)
+			));
+
+			il.AddInstruction(il.SetRegister(8, CNREG_P2,
+				il.LowPart(8, il.LogicalShiftRight(0x20, il.Register(0x20, LLIL_TEMP(0)), il.Const(4, 0xc0)))
+			));
+
+			il.AddInstruction(il.SetRegister(8, CNREG_P1,
+				il.LowPart(8, il.LogicalShiftRight(0x20, il.Register(0x20, LLIL_TEMP(0)), il.Const(4, 0x80)))
+			));
+
+			il.AddInstruction(il.SetRegister(8, CNREG_P0,
+				il.LowPart(8, il.LogicalShiftRight(0x20, il.Register(0x20, LLIL_TEMP(0)), il.Const(4, 0x40)))
+			));
+
+			il.AddInstruction(SetRegisterOrNop(il, 8, 8, op1.reg, il.LowPart(8, il.Register(0x20, LLIL_TEMP(0)))));
+
 			break;
 
 		case MIPS_ADDR:

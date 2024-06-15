@@ -969,6 +969,14 @@ static const char * const RegisterStrings[] = {
 	"cop0_ErrorEPC",
 	"cop0_DESAVE",
 
+	// cavium-specific multiplication registers
+	"cvm_mpl0",
+	"cvm_mpl1",
+	"cvm_mpl2",
+	"cvm_p0",
+	"cvm_p1",
+	"cvm_p2",
+
 	// cavium-specific implementation defined
 	"cop0_CvmCount",
 	"cop0_CvmCtl",

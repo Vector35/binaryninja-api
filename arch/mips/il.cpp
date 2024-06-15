@@ -1549,6 +1549,14 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_WAIT));
 			break;
 
+		case MIPS_PREF:
+			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_PREFETCH, {il.Const(1, op1.immediate), GetILOperandMemoryAddress(il, op2, addrSize)}));
+			break;
+
+		case MIPS_CACHE:
+			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_CACHE, {il.Const(1, op1.immediate), GetILOperandMemoryAddress(il, op2, addrSize)}));
+			break;
+
 		case CNMIPS_BADDU:
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
 				il.ZeroExtend(registerSize,
@@ -1850,7 +1858,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_MTHC1:
 		case MIPS_MTHC2:
 		case MIPS_PAUSE:
-		case MIPS_PREF:
 		case MIPS_PREFX:
 		case MIPS_SYNCI:
 		case MIPS_TLBP:

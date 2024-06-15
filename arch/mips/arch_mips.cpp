@@ -863,6 +863,10 @@ public:
 				return "_setLLBit";
 			case MIPS_INTRIN_LLBIT_CHECK:
 				return "_checkLLBit";
+			case MIPS_INTRIN_PREFETCH:
+				return "_prefetch";
+			case MIPS_INTRIN_CACHE:
+				return "_cache";
 
 			case CNMIPS_INTRIN_SYNCIOBDMA:
 				return "_synciobdma";
@@ -912,6 +916,8 @@ public:
 			MIPS_INTRIN_HWR_UNKNOWN,
 			MIPS_INTRIN_LLBIT_SET,
 			MIPS_INTRIN_LLBIT_CHECK,
+			MIPS_INTRIN_PREFETCH,
+			MIPS_INTRIN_CACHE,
 
 			CNMIPS_INTRIN_SYNCIOBDMA,
 			CNMIPS_INTRIN_SYNCS,
@@ -988,6 +994,12 @@ public:
 			case MIPS_INTRIN_LLBIT_SET:
 				return {
 					NameAndType("value", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_PREFETCH:
+			case MIPS_INTRIN_CACHE:
+				return {
+					NameAndType("op", Type::IntegerType(1, false)),
+					NameAndType("address", Type::IntegerType(m_bits == 64 ? 8 : 4, false)),
 				};
 			default:
 				return vector<NameAndType>();

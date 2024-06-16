@@ -37,6 +37,31 @@ enum MipsIntrinsic : uint32_t
 		MIPS_INTRIN_PREFETCH,
 		MIPS_INTRIN_CACHE,
 
+		// there's no clean way to lift LWL/LWR, SWL/SWR, etc when not
+		// a pair of adjacent instructions, since the number and position
+		// of the bytes written to/read from depends on the alignment of
+		// the address
+		//
+		// consider writing a register to an unaligned address with
+		// SWL rX, 0(rY)/SWR rX, 3(rY); this could write either 1, 2, 3,
+		// or 4 bytes in each instruction, and then later in the function
+		// to load the value of rX back, the number of bytes read by
+		// LWL rX, 0(rY)/LWR rX, 3(rY) is again variable...the number of
+		// bytes, shifts, and bitmasks all depend on (rY & 3)
+		//
+		// lifting these instructions faithfully, even when the analysis
+		// engine is able to follow this, would be a total mess to read,
+		// so it might as well be an intrinsic-like black box anyways, to
+		// help data cross-references work
+		MIPS_INTRIN_GET_LEFT_PART32,
+		MIPS_INTRIN_GET_RIGHT_PART32,
+		MIPS_INTRIN_SET_LEFT_PART32,
+		MIPS_INTRIN_SET_RIGHT_PART32,
+		MIPS_INTRIN_GET_LEFT_PART64,
+		MIPS_INTRIN_GET_RIGHT_PART64,
+		MIPS_INTRIN_SET_LEFT_PART64,
+		MIPS_INTRIN_SET_RIGHT_PART64,
+
 		CNMIPS_INTRIN_SYNCIOBDMA,
 		CNMIPS_INTRIN_SYNCS,
 		CNMIPS_INTRIN_SYNCW,

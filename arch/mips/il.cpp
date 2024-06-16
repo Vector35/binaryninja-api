@@ -62,33 +62,33 @@ static void ConditionExecute(LowLevelILFunction& il, ExprId cond, ExprId trueCas
 }
 
 
-static size_t GetILOperandMemoryAddress(LowLevelILFunction& il, InstructionOperand& operand, size_t addrSize)
+static size_t GetILOperandMemoryAddress(LowLevelILFunction& il, InstructionOperand& operand, size_t addrSize, int32_t delta=0)
 {
 	size_t offset = 0;
 	if (operand.reg == REG_ZERO)
-		return il.ConstPointer(addrSize, operand.immediate);
+		return il.ConstPointer(addrSize, operand.immediate + (int64_t)delta);
 
 	if (operand.operandClass == MEM_IMM)
 	{
-		if (operand.immediate  >= 0x80000000)
+		if (operand.immediate + (uint64_t)((int64_t)delta) >= 0x80000000)
 			offset = il.Sub(addrSize,
 					il.Register(addrSize, operand.reg),
-					il.Const(addrSize, -(int32_t)operand.immediate));
+					il.Const(addrSize, -((int32_t)operand.immediate + delta)));
 		else
 			offset = il.Add(addrSize,
 						il.Register(addrSize, operand.reg),
-						il.Const(addrSize, operand.immediate));
+						il.Const(addrSize, operand.immediate + delta));
 	}
 	else if (operand.operandClass == MEM_REG)
 	{
-		if (operand.immediate  >= 0x80000000)
+		if (operand.immediate + (uint64_t)((int64_t)delta) >= 0x80000000)
 			offset = il.Sub(addrSize,
 						il.Register(addrSize, operand.reg),
-						il.Register(addrSize, -(int32_t)operand.immediate));
+						il.Register(addrSize, -((int32_t)operand.immediate + delta)));
 		else
 			offset = il.Add(addrSize,
 						il.Register(addrSize, operand.reg),
-						il.Register(addrSize, operand.immediate));
+						il.Register(addrSize, operand.immediate + delta));
 	}
 	return offset;
 }
@@ -791,6 +791,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 	InstructionOperand& op4 = instr.operands[3];
 	LowLevelILLabel trueCode, falseCode, again;
 	size_t registerSize = addrSize;
+	BNEndianness endian = arch->GetEndianness();
 	switch (instr.operation)
 	{
 		case MIPS_ADD:
@@ -1224,6 +1225,53 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_SW:
 			il.AddInstruction(il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize, 4)));
 			break;
+		case MIPS_SWL:
+		{
+			int32_t delta = endian == LittleEndian ? -3 : 0;
+			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_GET_LEFT_PART32, { ReadILOperand(il, instr, 1, registerSize, 4) }));
+			il.AddInstruction(il.Store(4,
+				GetILOperandMemoryAddress(il, op2, addrSize, delta),
+				il.Register(4, LLIL_TEMP(0))
+			));
+
+			break;
+		}
+
+		case MIPS_SDL:
+		{
+			int32_t delta = endian == LittleEndian ? -7 : 0;
+			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_GET_LEFT_PART64, { ReadILOperand(il, instr, 1, registerSize, 8) }));
+			il.AddInstruction(il.Store(8,
+				GetILOperandMemoryAddress(il, op2, addrSize, delta),
+				il.Register(8, LLIL_TEMP(0))
+			));
+
+			break;
+		}
+		case MIPS_SWR:
+		{
+			int32_t delta = endian == BigEndian ? -3 : 0;
+			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_GET_RIGHT_PART32, { ReadILOperand(il, instr, 1, registerSize, 4) }));
+			il.AddInstruction(il.Store(4,
+				GetILOperandMemoryAddress(il, op2, addrSize, delta),
+				il.Register(4, LLIL_TEMP(0))
+			));
+
+			break;
+		}
+
+		case MIPS_SDR:
+		{
+			int32_t delta = endian == BigEndian ? -7 : 0;
+			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_GET_RIGHT_PART64, { ReadILOperand(il, instr, 1, registerSize, 8) }));
+			il.AddInstruction(il.Store(8,
+				GetILOperandMemoryAddress(il, op2, addrSize, delta),
+				il.Register(8, LLIL_TEMP(0))
+			));
+
+			break;
+		}
+
 		case MIPS_SC:
 		{
 			LowLevelILLabel trueCode, falseCode, doneCode;
@@ -1352,6 +1400,50 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_LD:
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, ReadILOperand(il, instr, 2, registerSize)));
 			break;
+		case MIPS_LWL:
+		{
+			int32_t delta = endian == LittleEndian ? -3 : 0;
+			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(op1.reg) }, MIPS_INTRIN_SET_LEFT_PART32,
+				{
+					il.Load(4, GetILOperandMemoryAddress(il, op2, addrSize, delta))
+				}
+			));
+
+			break;
+		}
+		case MIPS_LDL:
+		{
+			int32_t delta = endian == LittleEndian ? -7 : 0;
+			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(op1.reg) }, MIPS_INTRIN_SET_LEFT_PART64,
+				{
+					il.Load(8, GetILOperandMemoryAddress(il, op2, addrSize, delta))
+				}
+			));
+
+			break;
+		}
+		case MIPS_LWR:
+		{
+			int32_t delta = endian == BigEndian ? -3 : 0;
+			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(op1.reg) }, MIPS_INTRIN_SET_RIGHT_PART32,
+				{
+					il.Load(4, GetILOperandMemoryAddress(il, op2, addrSize, delta))
+				}
+			));
+
+			break;
+		}
+		case MIPS_LDR:
+		{
+			int32_t delta = endian == BigEndian ? -7 : 0;
+			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(op1.reg) }, MIPS_INTRIN_SET_RIGHT_PART64,
+				{
+					il.Load(8, GetILOperandMemoryAddress(il, op2, addrSize, delta))
+				}
+			));
+
+			break;
+		}
 		case MIPS_LL:
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, ReadILOperand(il, instr, 2, registerSize, 4)));
 			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_LLBIT_SET, {il.Const(0, 1)}));
@@ -2030,8 +2122,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 
 		case MIPS_ADDR:
-		case MIPS_LDL:
-		case MIPS_LDR:
 		case MIPS_LDXC1:
 		case MIPS_LLO:
 		case MIPS_LUXC1:
@@ -2046,16 +2136,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_SDC1:
 		case MIPS_SDC2:
 		case MIPS_SDC3:
-		case MIPS_SDL:
-		case MIPS_SDR:
 		case MIPS_SDXC1:
 		case MIPS_LDC1:
 		case MIPS_LDC2:
 		case MIPS_LDC3:
-		case MIPS_SWL:
-		case MIPS_SWR:
-		case MIPS_LWR:
-		case MIPS_LWL:
 
 		//unimplemented system functions
 		case MIPS_BC1ANY2:

@@ -951,6 +951,22 @@ public:
 				return "_prefetch";
 			case MIPS_INTRIN_CACHE:
 				return "_cache";
+			case MIPS_INTRIN_GET_LEFT_PART32:
+				return "_getLeftPart32";
+			case MIPS_INTRIN_GET_RIGHT_PART32:
+				return "_getRightPart32";
+			case MIPS_INTRIN_SET_LEFT_PART32:
+				return "_setLeftPart32";
+			case MIPS_INTRIN_SET_RIGHT_PART32:
+				return "_setRightPart32";
+			case MIPS_INTRIN_GET_LEFT_PART64:
+				return "_getLeftPart64";
+			case MIPS_INTRIN_GET_RIGHT_PART64:
+				return "_getRightPart64";
+			case MIPS_INTRIN_SET_LEFT_PART64:
+				return "_setLeftPart64";
+			case MIPS_INTRIN_SET_RIGHT_PART64:
+				return "_setRightPart64";
 
 			case CNMIPS_INTRIN_SYNCIOBDMA:
 				return "_synciobdma";
@@ -1002,6 +1018,14 @@ public:
 			MIPS_INTRIN_LLBIT_CHECK,
 			MIPS_INTRIN_PREFETCH,
 			MIPS_INTRIN_CACHE,
+			MIPS_INTRIN_GET_LEFT_PART32,
+			MIPS_INTRIN_GET_RIGHT_PART32,
+			MIPS_INTRIN_SET_LEFT_PART32,
+			MIPS_INTRIN_SET_RIGHT_PART32,
+			MIPS_INTRIN_GET_LEFT_PART64,
+			MIPS_INTRIN_GET_RIGHT_PART64,
+			MIPS_INTRIN_SET_LEFT_PART64,
+			MIPS_INTRIN_SET_RIGHT_PART64,
 
 			CNMIPS_INTRIN_SYNCIOBDMA,
 			CNMIPS_INTRIN_SYNCS,
@@ -1085,6 +1109,53 @@ public:
 					NameAndType("op", Type::IntegerType(1, false)),
 					NameAndType("address", Type::IntegerType(m_bits == 64 ? 8 : 4, false)),
 				};
+
+			// NOTE: SET_x_PARTx could potentially benefit from
+			//       including the old value as an input (since each
+			//       only sets part of the register and keeps the
+			//       other the same), but this can lead to registers
+			//       unnecessarily treated as function arguments
+			//
+			// NOTE: PARTx intrinsics could benefit from some kind
+			//       of "size" input indicating how many bytes to
+			//       get/set, but that value would be taking the
+			//       low bits of a pointer with unknown value, which
+			//       isn't exactly useful
+			//
+			//       PLUS, the majority of the SWL/SWR/etc.
+			//       instructions that get lifted by themselves
+			//       actually *are* members of a pair that just
+			//       aren't immediately next to each other, so they
+			//       go through the code checking for those pairs...
+			//       so for each "rX = setLeftXX([address])" we also
+			//       expect to see a "rY = setRightXX([address])",
+			//       which is a little more follow-able
+			case MIPS_INTRIN_GET_LEFT_PART32:
+			case MIPS_INTRIN_GET_RIGHT_PART32:
+				return {
+					NameAndType("value", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_SET_LEFT_PART32:
+				return {
+					NameAndType("leftpart", Type::IntegerType(4, false))
+				};
+			case MIPS_INTRIN_SET_RIGHT_PART32:
+				return {
+					NameAndType("rightpart", Type::IntegerType(4, false))
+				};
+			case MIPS_INTRIN_GET_LEFT_PART64:
+			case MIPS_INTRIN_GET_RIGHT_PART64:
+				return {
+					NameAndType("value", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_SET_LEFT_PART64:
+				return {
+					NameAndType("leftpart", Type::IntegerType(8, false))
+				};
+			case MIPS_INTRIN_SET_RIGHT_PART64:
+				return {
+					NameAndType("rightpart", Type::IntegerType(8, false))
+				};
 			default:
 				return vector<NameAndType>();
 		}
@@ -1118,6 +1189,16 @@ public:
 				return {Type::IntegerType(4, false)};
 			case MIPS_INTRIN_LLBIT_CHECK:
 				return {Type::IntegerType(0, false)};
+			case MIPS_INTRIN_GET_LEFT_PART32:
+			case MIPS_INTRIN_GET_RIGHT_PART32:
+			case MIPS_INTRIN_SET_LEFT_PART32:
+			case MIPS_INTRIN_SET_RIGHT_PART32:
+				return {Type::IntegerType(4, false)};
+			case MIPS_INTRIN_GET_LEFT_PART64:
+			case MIPS_INTRIN_GET_RIGHT_PART64:
+			case MIPS_INTRIN_SET_LEFT_PART64:
+			case MIPS_INTRIN_SET_RIGHT_PART64:
+				return {Type::IntegerType(8, false)};
 			default:
 				return vector<Confidence<Ref<Type>>>();
 		}

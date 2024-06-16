@@ -212,6 +212,7 @@ namespace BinaryNinja {
 		static bool ViewHasObjCMetadata(BinaryView* data);
 		ObjCProcessor(BinaryView* data, bool isBackedByDatabase);
 		void ProcessObjCData();
+		void ProcessCFStrings();
 		void AddRelocatedPointer(uint64_t location, uint64_t rewrite);
 	};
 }

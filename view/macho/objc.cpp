@@ -97,7 +97,6 @@ Ref<Metadata> ObjCProcessor::SerializeMetadata()
 	// ---
 
 
-
 	return new Metadata(viewMeta);
 }
 
@@ -163,7 +162,7 @@ std::vector<QualifiedNameOrType> ObjCProcessor::ParseEncodedType(const std::stri
 		case '}':
 			readingStructDepth--;
 			if (readingStructDepth < 0)
-				return {}; // seriously malformed type.
+				return {};  // seriously malformed type.
 
 			if (readingStructDepth == 0)
 			{
@@ -296,7 +295,7 @@ void ObjCProcessor::DefineObjCSymbol(
 
 	if (deferred)
 	{
-		m_symbolQueue->Append(process, [this, addr=addr](Symbol* symbol, Type* type) {
+		m_symbolQueue->Append(process, [this, addr = addr](Symbol* symbol, Type* type) {
 			// Armv7/Thumb: This will rewrite the symbol's address.
 			// e.g. We pass in 0xc001, it will rewrite it to 0xc000 and create the function w/ the "thumb2" arch.
 			if (Ref<Symbol> existingSymbol = m_data->GetSymbolByAddress(addr))
@@ -305,7 +304,8 @@ void ObjCProcessor::DefineObjCSymbol(
 			if (funcSym->GetType() == FunctionSymbol)
 			{
 				uint64_t target = symbol->GetAddress();
-				Ref<Platform> targetPlatform = m_data->GetDefaultPlatform()->GetAssociatedPlatformByAddress(target); // rewrites target.
+				Ref<Platform> targetPlatform =
+					m_data->GetDefaultPlatform()->GetAssociatedPlatformByAddress(target);  // rewrites target.
 				if (Ref<Function> targetFunction = m_data->GetAnalysisFunction(targetPlatform, target))
 				{
 					if (!m_isBackedByDatabase)
@@ -323,13 +323,13 @@ void ObjCProcessor::DefineObjCSymbol(
 	if (sym->GetType() == FunctionSymbol)
 	{
 		uint64_t target = result.first->GetAddress();
-		Ref<Platform> targetPlatform = m_data->GetDefaultPlatform()->GetAssociatedPlatformByAddress(target); // rewrites target.
+		Ref<Platform> targetPlatform = m_data->GetDefaultPlatform()->GetAssociatedPlatformByAddress(target);  // rewrites
+		                                                                                                      // target.
 		if (Ref<Function> targetFunction = m_data->GetAnalysisFunction(targetPlatform, target))
 		{
 			if (!m_isBackedByDatabase)
 				targetFunction->SetUserType(result.second);
 		}
-
 	}
 }
 
@@ -433,7 +433,8 @@ void ObjCProcessor::LoadClasses(BinaryReader* reader, Ref<Section> classPtrSecti
 			classPointerLocation, true);
 		DefineObjCSymbol(BNSymbolType::DataSymbol, m_typeNames.cls, "cls_" + name, classPtr, true);
 		DefineObjCSymbol(BNSymbolType::DataSymbol, m_typeNames.classRO, "cls_ro_" + name, classROPtr, true);
-		DefineObjCSymbol(BNSymbolType::DataSymbol, Type::ArrayType(Type::IntegerType(1, true), name.size()+1), "clsName_" + name, classRO.name, true);
+		DefineObjCSymbol(BNSymbolType::DataSymbol, Type::ArrayType(Type::IntegerType(1, true), name.size() + 1),
+			"clsName_" + name, classRO.name, true);
 		if (classRO.baseProtocols)
 		{
 			DefineObjCSymbol(BNSymbolType::DataSymbol, Type::NamedType(m_data, m_typeNames.protocolList),
@@ -443,7 +444,8 @@ void ObjCProcessor::LoadClasses(BinaryReader* reader, Ref<Section> classPtrSecti
 			view_ptr_t addr = reader->GetOffset();
 			for (uint32_t j = 0; j < count; j++)
 			{
-				m_data->DefineDataVariable(addr, Type::PointerType(ptrSize, Type::NamedType(m_data, m_typeNames.protocol)));
+				m_data->DefineDataVariable(
+					addr, Type::PointerType(ptrSize, Type::NamedType(m_data, m_typeNames.protocol)));
 				addr += ptrSize;
 			}
 		}
@@ -688,8 +690,9 @@ void ObjCProcessor::LoadProtocols(BinaryReader* reader, Ref<Section> listSection
 		{
 			reader->Seek(protocol.mangledName);
 			protocolName = reader->ReadCString();
-			DefineObjCSymbol(BNSymbolType::DataSymbol, Type::ArrayType(Type::IntegerType(1, true), protocolName.size() + 1),
-				"protocolName_" + protocolName, protocol.mangledName, true);
+			DefineObjCSymbol(BNSymbolType::DataSymbol,
+				Type::ArrayType(Type::IntegerType(1, true), protocolName.size() + 1), "protocolName_" + protocolName,
+				protocol.mangledName, true);
 		}
 		catch (ReadException& ex)
 		{
@@ -712,7 +715,8 @@ void ObjCProcessor::LoadProtocols(BinaryReader* reader, Ref<Section> listSection
 			view_ptr_t addr = reader->GetOffset();
 			for (uint32_t j = 0; j < count; j++)
 			{
-				m_data->DefineDataVariable(addr, Type::PointerType(ptrSize, Type::NamedType(m_data, m_typeNames.protocol)));
+				m_data->DefineDataVariable(
+					addr, Type::PointerType(ptrSize, Type::NamedType(m_data, m_typeNames.protocol)));
 				addr += ptrSize;
 			}
 		}
@@ -745,12 +749,13 @@ void ObjCProcessor::LoadProtocols(BinaryReader* reader, Ref<Section> listSection
 		{
 			try
 			{
-				ReadMethodList(reader, protocolClass.optionalInstanceMethods, protocolName, protocol.optionalInstanceMethods);
+				ReadMethodList(
+					reader, protocolClass.optionalInstanceMethods, protocolName, protocol.optionalInstanceMethods);
 			}
 			catch (ReadException& ex)
 			{
-				m_logger->LogError(
-					"Failed to read the optional instance method list for protocol pointed to by 0x%llx", protocolLocation);
+				m_logger->LogError("Failed to read the optional instance method list for protocol pointed to by 0x%llx",
+					protocolLocation);
 			}
 		}
 		if (protocol.optionalClassMethods)
@@ -761,8 +766,8 @@ void ObjCProcessor::LoadProtocols(BinaryReader* reader, Ref<Section> listSection
 			}
 			catch (ReadException& ex)
 			{
-				m_logger->LogError(
-					"Failed to read the optional class method list for protocol pointed to by 0x%llx", protocolLocation);
+				m_logger->LogError("Failed to read the optional class method list for protocol pointed to by 0x%llx",
+					protocolLocation);
 			}
 		}
 		m_protocols[protocolLocation] = protocolClass;
@@ -1096,8 +1101,8 @@ void ObjCProcessor::PostProcessObjCSections(BinaryReader* reader)
 				reader->Seek(selLoc);
 				sel = reader->ReadCString();
 				m_selectorCache[selLoc] = sel;
-				DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), sel.size() + 1),
-					"sel_" + sel, selLoc, true);
+				DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), sel.size() + 1), "sel_" + sel,
+					selLoc, true);
 			}
 			DefineObjCSymbol(DataSymbol, type, "selRef_" + sel, i, true);
 		}
@@ -1168,56 +1173,6 @@ void ObjCProcessor::PostProcessObjCSections(BinaryReader* reader)
 			m_data->DefineDataVariable(i, type);
 		}
 	}
-	if (auto cfstrings = m_data->GetSectionByName("__cfstring"))
-	{
-		auto start = cfstrings->GetStart();
-		auto end = cfstrings->GetEnd();
-		auto type = Type::NamedType(m_data, m_typeNames.cfString);
-		auto typeWidth = type->GetWidth();
-		for (view_ptr_t i = start; i < end; i += typeWidth)
-		{
-			reader->Seek(i + ptrSize);
-			uint64_t flags = reader->ReadPointer();
-			auto strLoc = ReadPointerAccountingForRelocations(reader);
-			auto size = reader->ReadPointer();
-			std::string str;
-			if (flags & 0b10000) // UTF16
-			{
-				m_data->DefineDataVariable(i, Type::NamedType(m_data, m_typeNames.cfStringUTF16));
-				auto data = m_data->ReadBuffer(strLoc, size * 2);
-
-				str = "";
-				for (uint64_t bufferOff = 0; bufferOff < size * 2; bufferOff += 2)
-				{
-					uint8_t* rawData = static_cast<uint8_t*>(data.GetData());
-					uint8_t* offsetAddress = rawData + bufferOff;
-					uint16_t c = *reinterpret_cast<uint16_t*>(offsetAddress);
-					if (c == 0x20)
-						str.push_back('_');
-					else if (c < 0x80)
-						str.push_back(c);
-					else
-						str.push_back('?');
-				}
-				DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::WideCharType(2), size + 1),
-					"ustr_" + str, strLoc, true);
-				DefineObjCSymbol(DataSymbol, Type::NamedType(m_data, m_typeNames.cfStringUTF16), "cfstr_" + str, i, true);
-			}
-			else // UTF8 / ASCII
-			{
-				reader->Seek(strLoc);
-				str = reader->ReadCString(size + 1);
-				for (auto& c : str)
-				{
-					if (c == ' ')
-						c = '_';
-				}
-				DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), str.size() + 1),
-					"cstr_" + str, strLoc, true);
-				DefineObjCSymbol(DataSymbol, Type::NamedType(m_data, m_typeNames.cfString), "cfstr_" + str, i, true);
-			}
-		}
-	}
 }
 
 uint64_t ObjCProcessor::ReadPointerAccountingForRelocations(BinaryReader* reader)
@@ -1231,14 +1186,15 @@ uint64_t ObjCProcessor::ReadPointerAccountingForRelocations(BinaryReader* reader
 }
 
 
-ObjCProcessor::ObjCProcessor(BinaryNinja::BinaryView* data, bool isBackedByDatabase) : m_isBackedByDatabase(isBackedByDatabase), m_data(data)
+ObjCProcessor::ObjCProcessor(BinaryNinja::BinaryView* data, bool isBackedByDatabase) :
+	m_isBackedByDatabase(isBackedByDatabase), m_data(data)
 {
 	m_logger = m_data->CreateLogger("macho.objc");
-	m_symbolQueue = new SymbolQueue();
 }
 
 void ObjCProcessor::ProcessObjCData()
 {
+	m_symbolQueue = new SymbolQueue();
 	auto addrSize = m_data->GetAddressSize();
 
 	m_typeNames.relativePtr = defineTypedef(m_data, {"rptr_t"}, Type::IntegerType(4, true));
@@ -1251,35 +1207,6 @@ void ObjCProcessor::ProcessObjCData()
 	m_typeNames.nsInteger = defineTypedef(m_data, {"NSInteger"}, Type::IntegerType(addrSize, true));
 	m_typeNames.nsuInteger = defineTypedef(m_data, {"NSUInteger"}, Type::IntegerType(addrSize, false));
 	m_typeNames.cgFloat = defineTypedef(m_data, {"CGFloat"}, Type::FloatType(addrSize));
-
-	// https://github.com/apple/llvm-project/blob/next/clang/lib/CodeGen/CodeGenModule.cpp#L6129
-	// See also ASTContext.cpp ctrl+f __NSConstantString_tag
-
-	// The place these flags are used is unclear, along with any clear flag definitions, but they are useful for introspection
-	EnumerationBuilder __cfStringFlagBuilder;
-	__cfStringFlagBuilder.AddMemberWithValue("SwiftABI", 0b1);
-	__cfStringFlagBuilder.AddMemberWithValue("Swift4_1", 0b100);
-	// LLVM also sets 0x7c0 (0b11111000000) on both UTF8 and UTF16 strings however it is unclear what this denotes.
-	__cfStringFlagBuilder.AddMemberWithValue("UTF8", 0b1000);
-	__cfStringFlagBuilder.AddMemberWithValue("UTF16", 0b10000);
-	auto type = finalizeEnumerationBuilder(m_data, __cfStringFlagBuilder, addrSize, {"CFStringFlag"});
-	m_typeNames.cfStringFlag = type.first;
-
-	StructureBuilder __cfStringStructBuilder;
-	__cfStringStructBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "isa");
-	__cfStringStructBuilder.AddMember(Type::NamedType(m_data, m_typeNames.cfStringFlag), "flags");
-	__cfStringStructBuilder.AddMember(Type::PointerType(addrSize, Type::IntegerType(1, true)), "data");
-	__cfStringStructBuilder.AddMember(Type::IntegerType(addrSize, false), "length");
-	type = finalizeStructureBuilder(m_data, __cfStringStructBuilder, "__NSConstantString");
-	m_typeNames.cfString = type.first;
-
-	StructureBuilder __cfStringUTF16StructBuilder;
-	__cfStringUTF16StructBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "isa");
-	__cfStringUTF16StructBuilder.AddMember(Type::NamedType(m_data, m_typeNames.cfStringFlag), "flags");
-	__cfStringUTF16StructBuilder.AddMember(Type::PointerType(addrSize, Type::IntegerType(2, true)), "data");
-	__cfStringUTF16StructBuilder.AddMember(Type::IntegerType(addrSize, false), "length");
-	type = finalizeStructureBuilder(m_data, __cfStringUTF16StructBuilder, "__NSConstantString_UTF16");
-	m_typeNames.cfStringUTF16 = type.first;
 
 	// https://github.com/apple-oss-distributions/objc4/blob/196363c165b175ed925ef6b9b99f558717923c47/runtime/objc-abi.h
 	EnumerationBuilder imageInfoFlagBuilder;
@@ -1305,7 +1232,8 @@ void ObjCProcessor::ProcessObjCData()
 	swiftVersionBuilder.AddMemberWithValue("SwiftVersion4_1", 6);  // [sic]
 	swiftVersionBuilder.AddMemberWithValue("SwiftVersion4_2", 6);
 	swiftVersionBuilder.AddMemberWithValue("SwiftVersion5", 7);
-	auto swiftVersionType = finalizeEnumerationBuilder(m_data, swiftVersionBuilder, 4, {"objc_image_info_swift_version"});
+	auto swiftVersionType =
+		finalizeEnumerationBuilder(m_data, swiftVersionBuilder, 4, {"objc_image_info_swift_version"});
 	m_typeNames.imageInfoSwiftVersion = swiftVersionType.first;
 
 	StructureBuilder imageInfoBuilder;
@@ -1318,7 +1246,7 @@ void ObjCProcessor::ProcessObjCData()
 	methodEntry.AddMember(rptr_t, "name");
 	methodEntry.AddMember(rptr_t, "types");
 	methodEntry.AddMember(rptr_t, "imp");
-	type = finalizeStructureBuilder(m_data, methodEntry, "objc_method_entry_t");
+	auto type = finalizeStructureBuilder(m_data, methodEntry, "objc_method_entry_t");
 	m_typeNames.methodEntry = type.first;
 
 	StructureBuilder method;
@@ -1362,7 +1290,8 @@ void ObjCProcessor::ProcessObjCData()
 	classROBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "ivar_layout");
 	classROBuilder.AddMember(Type::PointerType(addrSize, Type::IntegerType(1, true)), "name");
 	classROBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "methods");
-	classROBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.protocolList)), "protocols");
+	classROBuilder.AddMember(
+		Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.protocolList)), "protocols");
 	classROBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.ivarList)), "ivars");
 	classROBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "weak_ivar_layout");
 	classROBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "properties");
@@ -1403,11 +1332,16 @@ void ObjCProcessor::ProcessObjCData()
 	StructureBuilder protocolBuilder;
 	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "isa");
 	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::IntegerType(1, true)), "mangledName");
-	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.protocolList)), "protocols");
-	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "instanceMethods");
-	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "classMethods");
-	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "optionalInstanceMethods");
-	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "optionalClassMethods");
+	protocolBuilder.AddMember(
+		Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.protocolList)), "protocols");
+	protocolBuilder.AddMember(
+		Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "instanceMethods");
+	protocolBuilder.AddMember(
+		Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "classMethods");
+	protocolBuilder.AddMember(
+		Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "optionalInstanceMethods");
+	protocolBuilder.AddMember(
+		Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.methodList)), "optionalClassMethods");
 	protocolBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "instanceProperties");
 	protocolBuilder.AddMember(Type::IntegerType(4, false), "size");
 	protocolBuilder.AddMember(Type::IntegerType(4, false), "flags");
@@ -1446,6 +1380,99 @@ void ObjCProcessor::ProcessObjCData()
 	m_data->StoreMetadata("Objective-C", meta, true);
 
 	m_relocationPointerRewrites.clear();
+}
+
+
+void ObjCProcessor::ProcessCFStrings()
+{
+	m_symbolQueue = new SymbolQueue();
+	uint64_t ptrSize = m_data->GetAddressSize();
+	// https://github.com/apple/llvm-project/blob/next/clang/lib/CodeGen/CodeGenModule.cpp#L6129
+	// See also ASTContext.cpp ctrl+f __NSConstantString_tag
+
+	// The place these flags are used is unclear, along with any clear flag definitions, but they are useful for
+	// introspection
+	EnumerationBuilder __cfStringFlagBuilder;
+	__cfStringFlagBuilder.AddMemberWithValue("SwiftABI", 0b1);
+	__cfStringFlagBuilder.AddMemberWithValue("Swift4_1", 0b100);
+	// LLVM also sets 0x7c0 (0b11111000000) on both UTF8 and UTF16 strings however it is unclear what this denotes.
+	__cfStringFlagBuilder.AddMemberWithValue("UTF8", 0b1000);
+	__cfStringFlagBuilder.AddMemberWithValue("UTF16", 0b10000);
+	auto type = finalizeEnumerationBuilder(m_data, __cfStringFlagBuilder, ptrSize, {"CFStringFlag"});
+	m_typeNames.cfStringFlag = type.first;
+
+	StructureBuilder __cfStringStructBuilder;
+	__cfStringStructBuilder.AddMember(Type::PointerType(ptrSize, Type::VoidType()), "isa");
+	__cfStringStructBuilder.AddMember(Type::NamedType(m_data, m_typeNames.cfStringFlag), "flags");
+	__cfStringStructBuilder.AddMember(Type::PointerType(ptrSize, Type::IntegerType(1, true)), "data");
+	__cfStringStructBuilder.AddMember(Type::IntegerType(ptrSize, false), "length");
+	type = finalizeStructureBuilder(m_data, __cfStringStructBuilder, "__NSConstantString");
+	m_typeNames.cfString = type.first;
+
+	StructureBuilder __cfStringUTF16StructBuilder;
+	__cfStringUTF16StructBuilder.AddMember(Type::PointerType(ptrSize, Type::VoidType()), "isa");
+	__cfStringUTF16StructBuilder.AddMember(Type::NamedType(m_data, m_typeNames.cfStringFlag), "flags");
+	__cfStringUTF16StructBuilder.AddMember(Type::PointerType(ptrSize, Type::IntegerType(2, true)), "data");
+	__cfStringUTF16StructBuilder.AddMember(Type::IntegerType(ptrSize, false), "length");
+	type = finalizeStructureBuilder(m_data, __cfStringUTF16StructBuilder, "__NSConstantString_UTF16");
+	m_typeNames.cfStringUTF16 = type.first;
+
+	auto reader = BinaryReader(m_data);
+	if (auto cfstrings = m_data->GetSectionByName("__cfstring"))
+	{
+		auto start = cfstrings->GetStart();
+		auto end = cfstrings->GetEnd();
+		auto typeWidth = Type::NamedType(m_data, m_typeNames.cfString)->GetWidth();
+		m_data->BeginBulkModifySymbols();
+		for (view_ptr_t i = start; i < end; i += typeWidth)
+		{
+			reader.Seek(i + ptrSize);
+			uint64_t flags = reader.ReadPointer();
+			auto strLoc = ReadPointerAccountingForRelocations(&reader);
+			auto size = reader.ReadPointer();
+			std::string str;
+			if (flags & 0b10000)  // UTF16
+			{
+				auto data = m_data->ReadBuffer(strLoc, size * 2);
+
+				str = "";
+				for (uint64_t bufferOff = 0; bufferOff < size * 2; bufferOff += 2)
+				{
+					uint8_t* rawData = static_cast<uint8_t*>(data.GetData());
+					uint8_t* offsetAddress = rawData + bufferOff;
+					uint16_t c = *reinterpret_cast<uint16_t*>(offsetAddress);
+					if (c == 0x20)
+						str.push_back('_');
+					else if (c < 0x80)
+						str.push_back(c);
+					else
+						str.push_back('?');
+				}
+				DefineObjCSymbol(
+					DataSymbol, Type::ArrayType(Type::WideCharType(2), size + 1), "ustr_" + str, strLoc, true);
+				DefineObjCSymbol(
+					DataSymbol, Type::NamedType(m_data, m_typeNames.cfStringUTF16), "cfstr_" + str, i, true);
+			}
+			else  // UTF8 / ASCII
+			{
+				reader.Seek(strLoc);
+				str = reader.ReadCString(size + 1);
+				for (auto& c : str)
+				{
+					if (c == ' ')
+						c = '_';
+				}
+				DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), str.size() + 1), "cstr_" + str,
+					strLoc, true);
+				DefineObjCSymbol(DataSymbol, Type::NamedType(m_data, m_typeNames.cfString), "cfstr_" + str, i, true);
+			}
+		}
+		auto id = m_data->BeginUndoActions();
+		m_symbolQueue->Process();
+		m_data->EndBulkModifySymbols();
+		m_data->CommitUndoActions(id);
+	}
+	delete m_symbolQueue;
 }
 
 void ObjCProcessor::AddRelocatedPointer(uint64_t location, uint64_t rewrite)

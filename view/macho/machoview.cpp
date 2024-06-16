@@ -1834,13 +1834,21 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	Ref<Platform> platform = m_plat ? m_plat : g_machoViewType->GetPlatform(0, m_arch);
 
 	bool parseObjCStructs = true;
+	bool parseCFStrings = true;
 	if (settings && settings->Contains("loader.macho.processObjectiveC"))
 		parseObjCStructs = settings->Get<bool>("loader.macho.processObjectiveC", this);
+	if (settings && settings->Contains("loader.macho.processCFStrings"))
+		parseCFStrings = settings->Get<bool>("loader.macho.processCFStrings", this);
 	if (!ObjCProcessor::ViewHasObjCMetadata(this))
 		parseObjCStructs = false;
-	if (parseObjCStructs)
+	if (!GetSectionByName("__cfstring"))
+		parseCFStrings = false;
+	if (parseObjCStructs || parseCFStrings)
 	{
 		m_objcProcessor = new ObjCProcessor(this, m_backedByDatabase);
+	}
+	if (parseObjCStructs)
+	{
 
 		if (!settings) // Add our defaults
 		{
@@ -2294,6 +2302,18 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		catch (ReadException&)
 		{
 			LogError("Error when applying Mach-O header types at %" PRIx64, imageBase);
+		}
+	}
+
+	if (parseCFStrings)
+	{
+		try {
+			m_objcProcessor->ProcessCFStrings();
+		}
+		catch (std::exception& ex)
+		{
+			m_logger->LogError("Failed to process CFStrings. Binary may be malformed");
+			m_logger->LogError("Error: %s", ex.what());
 		}
 	}
 
@@ -3631,6 +3651,16 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 			programSettings->Set("workflows.enable", true, viewRef);
 			programSettings->Set("workflows.functionWorkflow", "core.function.objectiveC", viewRef);
 		}
+	}
+	if (viewRef->GetSectionByName("__cfstring"))
+	{
+		settings->RegisterSetting("loader.macho.processCFStrings",
+			R"({
+			"title" : "Process CFString Metadata",
+			"type" : "boolean",
+			"default" : true,
+			"description" : "Processes CoreFoundation strings, applying string values from encoded metadata"
+			})");
 	}
 
 	// register additional settings

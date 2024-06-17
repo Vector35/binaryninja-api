@@ -1947,6 +1947,10 @@ bool GetLowLevelILForInstruction(
 
 		break;
 	}
+	case ARM64_MOVN:
+		il.AddInstruction(ILSETREG_O(operand1,
+			il.Const(REGSZ_O(operand2), ~(operand2.immediate << (operand3.operandClass == NONE ? 0 : operand3.immediate)))));
+		break;
 	case ARM64_MOVI:
 	{
 		Register regs[16];

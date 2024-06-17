@@ -227,11 +227,19 @@ fn parse_unit<R: Reader<Offset = usize>>(
             constants::DW_TAG_subprogram => {
                 let fn_idx = parse_function_entry(unit, entry, debug_info_builder_context, debug_info_builder);
                 functions_by_depth.push((fn_idx, current_depth));
-            }
+            },
             constants::DW_TAG_variable => {
                 let current_fn_idx = functions_by_depth.last().and_then(|x| x.0);
                 parse_variable(unit, entry, debug_info_builder_context, debug_info_builder, current_fn_idx)
-            }
+            },
+            constants::DW_TAG_class_type |
+            constants::DW_TAG_enumeration_type |
+            constants::DW_TAG_structure_type |
+            constants::DW_TAG_union_type |
+            constants::DW_TAG_typedef => {
+                // Ensure types are loaded even if they're unused
+                types::get_type(unit, entry, debug_info_builder_context, debug_info_builder);
+            },
             _ => (),
         }
     }

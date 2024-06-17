@@ -1150,7 +1150,7 @@ enum Arm64Intrinsic operation_to_intrinsic(int operation)
 
 
 bool GetLowLevelILForInstruction(
-    Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize, bool requireAlignment)
+    Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize, bool requireAlignment, bool preferIntrinsics)
 {
 	bool SetPacAttr = false;
 
@@ -1510,6 +1510,8 @@ bool GetLowLevelILForInstruction(
 		case ENC_FADD_ASIMDSAME_ONLY:
 		case ENC_FADD_ASIMDSAMEFP16_ONLY:
 		{
+			if (preferIntrinsics)
+				break;
 			Register srcs1[16], srcs2[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
 			int src1_n = unpack_vector(operand2, srcs1);
@@ -1567,6 +1569,8 @@ bool GetLowLevelILForInstruction(
 		case ENC_FSUB_ASIMDSAME_ONLY:
 		case ENC_FSUB_ASIMDSAMEFP16_ONLY:
 		{
+			if (preferIntrinsics)
+				break;
 			Register srcs[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
 			int src_n = unpack_vector(operand2, srcs);
@@ -1615,6 +1619,10 @@ bool GetLowLevelILForInstruction(
 		case ENC_FDIV_D_FLOATDP2:
 			il.AddInstruction(ILSETREG_O(
 			    operand1, il.FloatDiv(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3))));
+			break;
+		case ENC_FDIV_ASIMDSAMEFP16_ONLY:
+		case ENC_FDIV_ASIMDSAME_ONLY:
+			// Lift as intrinsic calls
 			break;
 		default:
 			il.AddInstruction(il.Unimplemented());
@@ -2378,6 +2386,9 @@ bool GetLowLevelILForInstruction(
 	case ARM64_SHLL:
 	case ARM64_SHLL2:
 	{
+		if (preferIntrinsics)
+			break;
+
 		Register srcs[16], dsts[16];
 		int dst_n = unpack_vector(operand1, dsts);
 		int src_n = unpack_vector(operand2, srcs);
@@ -2535,6 +2546,9 @@ bool GetLowLevelILForInstruction(
 	case ARM64_USHLL:
 	case ARM64_USHLL2:
 	{
+		if (preferIntrinsics)
+			break;
+
 		Register srcs[16], dsts[16];
 		int dst_n = unpack_vector(operand1, dsts);
 		int src_n = unpack_vector(operand2, srcs);
@@ -2576,6 +2590,9 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_USHL:
 	{
+		if (preferIntrinsics)
+			break;
+
 		Register srcs1[16], srcs2[16], dsts[16];
 		int dst_n = unpack_vector(operand1, dsts);
 		int src1_n = unpack_vector(operand2, srcs1);
@@ -2597,6 +2614,9 @@ bool GetLowLevelILForInstruction(
 	case ARM64_USHR:
 	{
 		// Note: we don't lift URSHR, because it requires rounding the shifted results
+
+		if (preferIntrinsics)
+			break;
 
 		Register srcs[16], dsts[16];
 		int dst_n = unpack_vector(operand1, dsts);

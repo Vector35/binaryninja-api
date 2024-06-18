@@ -1633,25 +1633,30 @@ bool GetLowLevelILForInstruction(
 		{
 		case ENC_FMOV_64VX_FLOAT2INT:
 			il.AddInstruction(ILSETREG_O(operand1,
-			    il.FloatToInt(REGSZ_O(operand1), ILREG(vector_reg_minimize(instr.operands[1])))));
+			    il.ZeroExtend(REGSZ_O(operand1), ILREG(vector_reg_minimize(instr.operands[1])))));
 			break;
 		case ENC_FMOV_V64I_FLOAT2INT:
 		{
 			Register minreg = vector_reg_minimize(instr.operands[0]);
 			il.AddInstruction(il.SetRegister(get_register_size(minreg), minreg,
-			    il.FloatToInt(REGSZ_O(operand1), ILREG_O(instr.operands[1]))));
+			    il.Register(REGSZ_O(operand1), instr.operands[1].reg[0])));
 			break;
 		}
 		case ENC_FMOV_32H_FLOAT2INT:
 		case ENC_FMOV_32S_FLOAT2INT:
 		case ENC_FMOV_64H_FLOAT2INT:
 		case ENC_FMOV_64D_FLOAT2INT:
+			// <Rd> <- <Vn> (copy from FP register to general register, with no conversion)
+			il.AddInstruction(
+			    ILSETREG_O(operand1, il.ZeroExtend(REGSZ_O(operand1), ILREG_O(instr.operands[1]))));
+			break;
 		case ENC_FMOV_D64_FLOAT2INT:
 		case ENC_FMOV_H32_FLOAT2INT:
 		case ENC_FMOV_H64_FLOAT2INT:
 		case ENC_FMOV_S32_FLOAT2INT:
+			// <Vd> <- <Rn> (copy from general register to FP register, with no conversion)
 			il.AddInstruction(
-			    ILSETREG_O(operand1, il.FloatToInt(REGSZ_O(operand1), ILREG_O(instr.operands[1]))));
+			    ILSETREG_O(operand1, il.IntToFloat(REGSZ_O(operand1), ILREG_O(instr.operands[1]))));
 			break;
 		case ENC_FMOV_H_FLOATIMM:
 		case ENC_FMOV_S_FLOATIMM:
@@ -1662,7 +1667,8 @@ bool GetLowLevelILForInstruction(
 				float_sz = 4;
 			if (instr.encoding == ENC_FMOV_D_FLOATIMM)
 				float_sz = 8;
-			il.AddInstruction(ILSETREG_O(operand1, GetFloat(il, operand2, float_sz)));
+			// Technically, we should use 2 bytes to GetFloat for half-precision registers, but that causes MLIL and HLIL to lift the constant to 0
+			il.AddInstruction(ILSETREG_O(operand1, il.FloatConvert(float_sz, GetFloat(il, operand2, float_sz == 2 ? 4 : float_sz))));
 			break;
 		}
 		case ENC_FMOV_H_FLOATDP1:
@@ -1683,7 +1689,8 @@ bool GetLowLevelILForInstruction(
 			Register regs[16];
 			int dst_n = unpack_vector(operand1, regs);
 			for (int i = 0; i < dst_n; ++i)
-				il.AddInstruction(ILSETREG(regs[i], GetFloat(il, operand2, float_sz)));
+				// Technically, we should use 2 bytes to GetFloat for half-precision registers, but that causes MLIL and HLIL to lift the constant to 0
+				il.AddInstruction(ILSETREG(regs[i], il.FloatConvert(float_sz, GetFloat(il, operand2, float_sz == 2 ? 4 : float_sz))));
 			break;
 		}
 		default:

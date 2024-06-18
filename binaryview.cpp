@@ -4868,6 +4868,7 @@ vector<string> BinaryView::GetUniqueSectionNames(const vector<string>& names)
 	for (size_t i = 0; i < names.size(); i++)
 		result.push_back(outgoingNames[i]);
 
+	delete[] incomingNames;
 	BNFreeStringList(outgoingNames, names.size());
 	return result;
 }

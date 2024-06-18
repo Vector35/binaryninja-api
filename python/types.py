@@ -1859,7 +1859,7 @@ class Type:
 
 	@classmethod
 	def create(
-	    cls, handle=core.BNTypeHandle, platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence
+	    cls, handle: core.BNTypeHandle, platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence
 	) -> 'Type':
 		assert handle is not None, "Passed a handle which is None"
 		assert isinstance(handle, core.BNTypeHandle)

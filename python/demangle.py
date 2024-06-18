@@ -26,9 +26,9 @@ from . import binaryview
 from . import types
 from .architecture import Architecture
 from .platform import Platform
-from typing import Union
+from typing import Iterable, List, Optional, Union
 
-def get_qualified_name(names):
+def get_qualified_name(names: Iterable[str]):
 	"""
 	``get_qualified_name`` gets a qualified name for the provided name list.
 
@@ -46,15 +46,15 @@ def get_qualified_name(names):
 	return "::".join(names)
 
 
-def demangle_llvm(mangled_name: str, options=None):
+def demangle_llvm(mangled_name: str, options: Optional[Union[bool, binaryview.BinaryView]] = None) -> Optional[List[str]]:
 	"""
 	``demangle_llvm`` demangles a mangled name to a Type object.
 
 	:param str mangled_name: a mangled (msvc/itanium/rust/dlang) name
 	:param options: (optional) Whether to simplify demangled names : None falls back to user settings, a BinaryView uses that BinaryView's settings, or a boolean to set it directly
-	:type options: Tuple[bool, BinaryView, None]
+	:type options: Optional[Union[bool, BinaryView]]
 	:return: returns demangled name or None on error
-	:rtype: str
+	:rtype: Optional[List[str]]
 	"""
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()
@@ -79,16 +79,16 @@ def demangle_llvm(mangled_name: str, options=None):
 	return None
 
 
-def demangle_ms(archOrPlatform:Union[Architecture, Platform], mangled_name:str, options=False):
+def demangle_ms(archOrPlatform: Union[Architecture, Platform], mangled_name: str, options: Optional[Union[bool, binaryview.BinaryView]] = False):
 	"""
 	``demangle_ms`` demangles a mangled Microsoft Visual Studio C++ name to a Type object.
 
 	:param Union[Architecture, Platform] archOrPlatform: Architecture or Platform for the symbol. Required for pointer/integer sizes and calling conventions.
 	:param str mangled_name: a mangled Microsoft Visual Studio C++ name
 	:param options: (optional) Whether to simplify demangled names : None falls back to user settings, a BinaryView uses that BinaryView's settings, or a boolean to set it directly
-	:type options: Tuple[bool, BinaryView, None]
+	:type options: Optional[Union[bool, BinaryView]]
 	:return: returns tuple of (Type, demangled_name) or (None, mangled_name) on error
-	:rtype: Tuple
+	:rtype: Tuple[Optional[Type], Union[str, List[str]]]
 	:Example:
 
 		>>> demangle_ms(Platform["x86_64"], "?testf@Foobar@@SA?AW4foo@1@W421@@Z")
@@ -128,16 +128,16 @@ def demangle_ms(archOrPlatform:Union[Architecture, Platform], mangled_name:str, 
 	return (None, mangled_name)
 
 
-def demangle_gnu3(arch, mangled_name, options=None):
+def demangle_gnu3(arch, mangled_name: str, options: Optional[Union[bool, binaryview.BinaryView]] = None):
 	"""
 	``demangle_gnu3`` demangles a mangled name to a Type object.
 
 	:param Architecture arch: Architecture for the symbol. Required for pointer and integer sizes.
 	:param str mangled_name: a mangled GNU3 name
 	:param options: (optional) Whether to simplify demangled names : None falls back to user settings, a BinaryView uses that BinaryView's settings, or a boolean to set it directly
-	:type options: Tuple[bool, BinaryView, None]
+	:type options: Optional[Union[bool, BinaryView]]
 	:return: returns tuple of (Type, demangled_name) or (None, mangled_name) on error
-	:rtype: Tuple
+	:rtype: Tuple[Optional[Type], Union[str, List[str]]]
 	"""
 	handle = ctypes.POINTER(core.BNType)()
 	outName = ctypes.POINTER(ctypes.c_char_p)()
@@ -165,7 +165,7 @@ def demangle_gnu3(arch, mangled_name, options=None):
 	return (None, mangled_name)
 
 
-def simplify_name_to_string(input_name):
+def simplify_name_to_string(input_name: Union[str, types.QualifiedName]):
 	"""
 	``simplify_name_to_string`` simplifies a templated C++ name with default arguments and returns a string
 
@@ -189,7 +189,7 @@ def simplify_name_to_string(input_name):
 	return result
 
 
-def simplify_name_to_qualified_name(input_name, simplify=True):
+def simplify_name_to_qualified_name(input_name: Union[str, types.QualifiedName], simplify: bool = True):
 	"""
 	``simplify_name_to_qualified_name`` simplifies a templated C++ name with default arguments and returns a qualified name. This can also tokenize a string to a qualified name with/without simplifying it
 

@@ -31,6 +31,15 @@ void BinaryNinja::InitElfViewType()
 		"description" : "Maximum number of entries to include in section header array",
 		"ignore" : ["SettingsProjectScope"]
 		})");
+
+	settings->RegisterSetting("files.elf.detectARMBE8Binary",
+		R"({
+		"title" : "Enable ARM BE8 binary detection",
+		"type" : "boolean",
+		"default" : true,
+		"description" : "Enable ARM BE8 binary detection for mixed little/big endianness for code/data",
+		"ignore" : ["SettingsProjectScope"]
+		})");
 }
 
 
@@ -2740,7 +2749,8 @@ uint64_t ElfViewType::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonH
 	// retrieve architecture
 	// FIXME: Architecture registration methods should perhaps be virtual and take the raw data, or some additional opaque information.
 
-	endianness = header.flags & EF_ARM_BE8 ? BigEndian : endianness;
+	if (Settings::Instance()->Get<bool>("files.elf.detectARMBE8Binary"))
+		endianness = ((commonHeader.arch == EM_ARM) && (header.flags & EF_ARM_BE8)) ? BigEndian : endianness;
 
 	/* for architectures where .e_machine field doesn't disambiguate between 32/64 (like MIPS),
 	   form the conventional alternative id, including the .e_ident[EI_CLASS] field */

@@ -1271,6 +1271,7 @@ namespace BinaryNinja
 		std::vector<section_64> moduleInitSections;
 		linkedit_data_command exportTrie;
 		linkedit_data_command chainedFixups {};
+		section_64 chainStarts {};
 
 		DataBuffer* stringList;
 		size_t stringListSize = 0;
@@ -1293,6 +1294,7 @@ namespace BinaryNinja
 		bool dyldInfoPresent = false;
 		bool exportTriePresent = false;
 		bool chainedFixupsPresent = false;
+		bool chainStartsPresent = false;
 		bool routinesPresent = false;
 		bool functionStartsPresent = false;
 		bool relocatable = false;
@@ -1374,6 +1376,7 @@ namespace BinaryNinja
 		bool GetSectionPermissions(MachOHeader& header, uint64_t address, uint32_t &flags);
 		bool GetSegmentPermissions(MachOHeader& header, uint64_t address, uint32_t &flags);
 		void ParseChainedFixups(MachOHeader& header, linkedit_data_command chainedFixups);
+		void ParseChainedStarts(MachOHeader& header, section_64 chainedStarts);
 
 		virtual uint64_t PerformGetEntryPoint() const override;
 

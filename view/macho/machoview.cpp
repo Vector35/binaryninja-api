@@ -1744,6 +1744,12 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			semantics = ReadWriteDataSectionSemantics;
 		if (strncmp(header.sections[i].segname, "__DATA_CONST", sizeof(header.sections[i].segname)) == 0)
 			semantics = ReadOnlyDataSectionSemantics;
+		if (strncmp(header.sections[i].sectname, "__chain_starts", sizeof(header.sections[i].sectname)) == 0
+			&& header.sections[i].size < UINT32_MAX)
+		{
+			header.chainStartsPresent = true;
+			header.chainStarts = header.sections[i];
+		}
 
 		AddAutoSection(header.sectionNames[i], header.sections[i].addr, header.sections[i].size, semantics, type, header.sections[i].align);
 	}
@@ -2855,6 +2861,11 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 			m_logger->LogDebug("Chained Fixups");
 			ParseChainedFixups(header, header.chainedFixups);
 		}
+		else if (header.chainStartsPresent)
+		{
+			m_logger->LogDebug("Chained Starts");
+			ParseChainedStarts(header, header.chainStarts);
+		}
 		if (header.exportTriePresent && header.isMainHeader)
 			ParseExportTrie(reader, header.exportTrie);
 
@@ -3448,6 +3459,195 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 	catch (ReadException&)
 	{
 		m_logger->LogError("Chained Fixup parsing failed");
+	}
+}
+
+
+void MachoView::ParseChainedStarts(MachOHeader& header, section_64 chainedStarts)
+{
+	if (!chainedStarts.offset)
+		return;
+
+	m_logger->LogDebug("Processing Chained Starts");
+
+	// Dummy relocation
+	BNRelocationInfo reloc;
+	memset(&reloc, 0, sizeof(BNRelocationInfo));
+	reloc.type = StandardRelocationType;
+	reloc.size = m_addressSize;
+	reloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+
+	bool processBinds = true;
+
+	BinaryReader parentReader(GetParentView());
+	BinaryReader mappedReader(this);
+
+	try {
+		uint64_t fixupHeaderAddress = m_universalImageOffset + chainedStarts.offset;
+		parentReader.Seek(fixupHeaderAddress);
+
+		uint32_t pointerFormat = parentReader.Read32();
+		uint32_t startsCount = parentReader.Read32();
+		std::vector<uint32_t> startsOffsets;
+		for (size_t i = 0; i < startsCount; i++)
+		{
+			startsOffsets.push_back(parentReader.Read32());
+		}
+
+		uint8_t strideSize;
+		ChainedFixupPointerGeneric format;
+
+		// Firmware formats will require digging up whatever place they're being used and reversing it.
+		// They are not handled by dyld.
+		switch (pointerFormat) {
+		case DYLD_CHAINED_PTR_ARM64E:
+		case DYLD_CHAINED_PTR_ARM64E_USERLAND:
+		case DYLD_CHAINED_PTR_ARM64E_USERLAND24:
+			strideSize = 8;
+			format = GenericArm64eFixupFormat;
+			break;
+		case DYLD_CHAINED_PTR_ARM64E_KERNEL:
+			strideSize = 4;
+			format = GenericArm64eFixupFormat;
+			break;
+		// case DYLD_CHAINED_PTR_ARM64E_FIRMWARE: Unsupported.
+		case DYLD_CHAINED_PTR_64:
+		case DYLD_CHAINED_PTR_64_OFFSET:
+		case DYLD_CHAINED_PTR_64_KERNEL_CACHE:
+			strideSize = 4;
+			format = Generic64FixupFormat;
+			break;
+		case DYLD_CHAINED_PTR_32:
+		case DYLD_CHAINED_PTR_32_CACHE:
+			strideSize = 4;
+			format = Generic32FixupFormat;
+			break;
+		case DYLD_CHAINED_PTR_32_FIRMWARE:
+			strideSize = 4;
+			format = Firmware32FixupFormat;
+			break;
+		case DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE:
+			strideSize = 1;
+			format = Generic64FixupFormat;
+			break;
+		default:
+		{
+			m_logger->LogError("Chained Starts: Unknown or unsupported pointer format %d, "
+				"unable to process chain starts", pointerFormat);
+			return;
+		}
+		}
+
+		for (uint32_t offset : startsOffsets)
+		{
+			uint64_t chainEntryAddress = m_universalImageOffset + offset;
+
+			bool fixupsDone = false;
+
+			while (!fixupsDone)
+			{
+				ChainedFixupPointer pointer;
+				parentReader.Seek(chainEntryAddress);
+				mappedReader.Seek(chainEntryAddress - m_universalImageOffset + GetStart());
+				if (format == Generic32FixupFormat || format == Firmware32FixupFormat)
+					pointer.raw32 = (uint32_t)(uintptr_t)mappedReader.Read32();
+				else
+					pointer.raw64 = (uintptr_t)mappedReader.Read64();
+
+				bool bind = false;
+				uint64_t nextEntryStrideCount;
+
+				switch (format)
+				{
+				case Generic32FixupFormat:
+					bind = pointer.generic32.bind.bind;
+					nextEntryStrideCount = pointer.generic32.rebase.next;
+					break;
+				case Generic64FixupFormat:
+					bind = pointer.generic64.bind.bind;
+					nextEntryStrideCount = pointer.generic64.rebase.next;
+					break;
+				case GenericArm64eFixupFormat:
+					bind = pointer.arm64e.bind.bind;
+					nextEntryStrideCount = pointer.arm64e.rebase.next;
+					break;
+				case Firmware32FixupFormat:
+					nextEntryStrideCount = pointer.firmware32.next;
+					bind = false;
+					break;
+				}
+
+				m_logger->LogTrace("Chained Starts: @ 0x%llx ( 0x%llx ) - %d 0x%llx", chainEntryAddress,
+					GetStart() + (chainEntryAddress - m_universalImageOffset),
+					bind, nextEntryStrideCount);
+
+				if (bind && processBinds)
+				{
+					m_logger->LogWarn("Chained Starts: Bind pointers not supported in Chained Starts");
+					chainEntryAddress += (nextEntryStrideCount * strideSize);
+					if (nextEntryStrideCount == 0)
+						fixupsDone = true;
+					continue;
+				}
+				else if (!bind)
+				{
+					uint64_t entryOffset;
+					switch (pointerFormat)
+					{
+					case DYLD_CHAINED_PTR_ARM64E:
+					case DYLD_CHAINED_PTR_ARM64E_KERNEL:
+					case DYLD_CHAINED_PTR_ARM64E_USERLAND:
+					case DYLD_CHAINED_PTR_ARM64E_USERLAND24:
+					{
+						if (pointer.arm64e.bind.auth)
+							entryOffset = pointer.arm64e.authRebase.target;
+						else
+							entryOffset = pointer.arm64e.rebase.target;
+
+						if ( pointerFormat != DYLD_CHAINED_PTR_ARM64E || pointer.arm64e.bind.auth)
+							entryOffset += GetStart();
+
+						break;
+					}
+					case DYLD_CHAINED_PTR_64:
+						entryOffset = pointer.generic64.rebase.target;
+						break;
+					case DYLD_CHAINED_PTR_64_OFFSET:
+						entryOffset = pointer.generic64.rebase.target + GetStart();
+						break;
+					case DYLD_CHAINED_PTR_64_KERNEL_CACHE:
+					case DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE:
+						entryOffset = pointer.kernel64.target;
+						break;
+					case DYLD_CHAINED_PTR_32:
+					case DYLD_CHAINED_PTR_32_CACHE:
+						entryOffset = pointer.generic32.rebase.target;
+						break;
+					case DYLD_CHAINED_PTR_32_FIRMWARE:
+						entryOffset = pointer.firmware32.target;
+						break;
+					}
+
+					reloc.address = GetStart() + (chainEntryAddress - m_universalImageOffset);
+					DefineRelocation(m_arch, reloc, entryOffset, reloc.address);
+					m_logger->LogDebug("Chained Starts: Adding relocated pointer %llx -> %llx", reloc.address, entryOffset);
+
+					if (m_objcProcessor)
+					{
+						m_objcProcessor->AddRelocatedPointer(reloc.address, entryOffset);
+					}
+				}
+
+				chainEntryAddress += (nextEntryStrideCount * strideSize);
+
+				if (nextEntryStrideCount == 0)
+					fixupsDone = true;
+			}
+		}
+	}
+	catch (ReadException&)
+	{
+		m_logger->LogError("Chained Starts parsing failed");
 	}
 }
 

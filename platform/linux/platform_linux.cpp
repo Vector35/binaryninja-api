@@ -161,6 +161,28 @@ public:
 	}
 };
 
+class LinuxMips64Platform: public Platform
+{
+public:
+	LinuxMips64Platform(Architecture* arch, const std::string& name): Platform(arch, name)
+	{
+		Ref<CallingConvention> cc;
+
+		cc = arch->GetCallingConventionByName("n64");
+		if (cc)
+		{
+			RegisterDefaultCallingConvention(cc);
+			RegisterCdeclCallingConvention(cc);
+			RegisterFastcallCallingConvention(cc);
+			RegisterStdcallCallingConvention(cc);
+		}
+
+		cc = arch->GetCallingConventionByName("linux-syscall");
+		if (cc)
+			SetSystemCallConvention(cc);
+	}
+};
+
 
 class LinuxRiscVPlatform : public Platform
 {
@@ -309,19 +331,24 @@ extern "C"
 
 		Ref<Architecture> mipsel = Architecture::GetByName("mipsel32");
 		Ref<Architecture> mipseb = Architecture::GetByName("mips32");
-		if (mipsel && mipseb)
+		Ref<Architecture> mips64eb = Architecture::GetByName("mips64");
+		if (mipsel && mipseb && mips64eb)
 		{
-			Ref<Platform> platformLE, platformBE;
+			Ref<Platform> platformLE, platformBE, platformBE64;
 
 			platformLE = new LinuxMipsPlatform(mipsel, "linux-mipsel");
 			platformBE = new LinuxMipsPlatform(mipseb, "linux-mips");
+			platformBE64 = new LinuxMips64Platform(mips64eb, "linux-mips64");
 			Platform::Register("linux", platformLE);
 			Platform::Register("linux", platformBE);
+			Platform::Register("linux", platformBE64);
 			// Linux binaries sometimes have an OS identifier of zero, even though 3 is the correct one
 			BinaryViewType::RegisterPlatform("ELF", 0, mipsel, platformLE);
 			BinaryViewType::RegisterPlatform("ELF", 0, mipseb, platformBE);
+			BinaryViewType::RegisterPlatform("ELF", 0, mips64eb, platformBE64);
 			BinaryViewType::RegisterPlatform("ELF", 3, mipsel, platformLE);
 			BinaryViewType::RegisterPlatform("ELF", 3, mipseb, platformBE);
+			BinaryViewType::RegisterPlatform("ELF", 3, mips64eb, platformBE64);
 		}
 
 		Ref<Architecture> rv32 = Architecture::GetByName("rv32gc");

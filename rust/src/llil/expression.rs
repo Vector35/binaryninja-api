@@ -83,6 +83,36 @@ where
     }
 }
 
+impl<'func, A, V, R> Clone for Expression<'func, A, Mutable, NonSSA<V>, R>
+    where
+        A: 'func + Architecture,
+        V: NonSSAVariant,
+        R: ExpressionResultType,
+{
+    fn clone(&self) -> Self {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        
+        let expr = unsafe {
+            BNGetLowLevelILByIndex(self.function.handle, self.expr_idx)
+        };
+
+        let cloned_expr_idx = unsafe {
+            BNLowLevelILAddExpr(
+                self.function.handle,
+                expr.operation,
+                expr.size,
+                expr.flags,
+                expr.operands[0],
+                expr.operands[1],
+                expr.operands[2],
+                expr.operands[3],
+            )
+        };
+
+        Expression::new(self.function, cloned_expr_idx)
+    }
+}
+
 fn common_info<'func, A, M, F>(
     function: &'func Function<A, M, F>,
     op: BNLowLevelILInstruction,

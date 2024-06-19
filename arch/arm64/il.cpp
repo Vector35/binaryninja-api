@@ -1928,35 +1928,90 @@ bool GetLowLevelILForInstruction(
 		    ILSETREG_O(operand1, il.LogicalShiftRight(REGSZ_O(operand2), ILREG_O(operand2),
 		                             ReadILOperand(il, operand3, REGSZ_O(operand2)))));
 		break;
+	case ARM64_DUP:
 	case ARM64_MOV:
+	case ARM64_MOVN:
+	case ARM64_UMOV:
+	case ARM64_INS:
+	case ARM64_MOVS:
 	{
-		// Small hack... it doesn't seem the lifter ever see the ENC_DUP_ASISDONE_ONLY,
-		// but instead ENC_MOV_DUP_ASISDONE_ONLY
-		if (instr.encoding == ENC_MOV_DUP_ASISDONE_ONLY &&
-			instr.operands[1].laneUsed)
-			// Specific use case. e.g: [mov/dup] h16, v19.h[7].
+		bool zero_extend = false;
+		switch (instr.encoding)
+		{
+		case ENC_DUP_ASIMDINS_DR_R:
+		case ENC_DUP_ASIMDINS_DV_V:
 			// We let the Neon intrinsic lifter take care of this case.
 			break;
-
-		Register regs[16];
-		int n = unpack_vector(operand1, regs);
-
-		if (n == 1) {
-			il.AddInstruction(ILSETREG(regs[0], ReadILOperand(il, operand2, get_register_size(regs[0]))));
-		} else {
-			Register cregs[2];
-			if (consolidate_vector(operand1, operand2, cregs))
-				il.AddInstruction(ILSETREG(cregs[0], ILREG(cregs[1])));
-			else
+		case ENC_MOV_UMOV_ASIMDINS_W_W:
+		case ENC_MOV_UMOV_ASIMDINS_X_X:
+		case ENC_UMOV_ASIMDINS_W_W:
+		case ENC_UMOV_ASIMDINS_X_X:
+			zero_extend = true;
+		case ENC_MOV_DUP_ASISDONE_ONLY:
+		case ENC_DUP_ASISDONE_ONLY:
+		case ENC_MOV_INS_ASIMDINS_IV_V:
+		case ENC_INS_ASIMDINS_IV_V:
+		{
+			// Register regs[16];
+			// int regs_n = unpack_vector(operand1, regs);
+			// if (regs_n <= 0)
+			// 	ABORT_LIFT;
+			// int lane_sz = REGSZ(regs[0]);
+			// for (int i = 0; i < regs_n; ++i)
+			// 	il.AddInstruction(ILSETREG(regs[i], ExtractRegister(il, operand2, 0, lane_sz, 0, lane_sz)));
+			Register srcs[16], dsts[16];
+			int dst_n = unpack_vector(operand1, dsts);
+			int src_n = unpack_vector(operand2, srcs);
+			if ((dst_n != src_n) || dst_n == 0)
 				ABORT_LIFT;
-		}
 
+			for (int i = 0; i < dst_n; ++i)
+				il.AddInstruction(ILSETREG(dsts[i], zero_extend
+					? il.ZeroExtend(REGSZ(dsts[i]), ILREG(srcs[i]))
+						: ILREG(srcs[i])));
+
+			break;
+		}
+		case ENC_MOV_MOVN_32_MOVEWIDE:
+		case ENC_MOV_MOVN_64_MOVEWIDE:
+		case ENC_MOVN_32_MOVEWIDE:
+		case ENC_MOVN_64_MOVEWIDE:
+			il.AddInstruction(ILSETREG_O(operand1,
+				il.Const(REGSZ_O(operand2), ~(operand2.immediate << (operand3.operandClass == NONE ? 0 : operand3.immediate)))));
+			break;
+		case ENC_MOV_INS_ASIMDINS_IR_R:
+		case ENC_INS_ASIMDINS_IR_R:
+		case ENC_MOV_ORR_32_LOG_IMM:
+		case ENC_MOV_ORR_32_LOG_SHIFT:
+		case ENC_MOV_ORR_64_LOG_IMM:
+		case ENC_MOV_ORR_64_LOG_SHIFT:
+		case ENC_MOV_ADD_32_ADDSUB_IMM:
+		case ENC_MOV_ADD_64_ADDSUB_IMM:
+		case ENC_MOV_ORR_ASIMDSAME_ONLY:
+		case ENC_MOV_MOVZ_32_MOVEWIDE:
+		case ENC_MOV_MOVZ_64_MOVEWIDE:
+		{
+			Register regs[16];
+			int n = unpack_vector(operand1, regs);
+
+			if (n == 1) {
+				il.AddInstruction(ILSETREG(regs[0], ReadILOperand(il, operand2, get_register_size(regs[0]))));
+			} else {
+				Register cregs[2];
+				if (consolidate_vector(operand1, operand2, cregs))
+					il.AddInstruction(ILSETREG(cregs[0], ILREG(cregs[1])));
+				else
+					ABORT_LIFT;
+			}
+			break;
+		}
+		default:
+			// case ENC_MOVS_ORRS_P_P_PP_Z:
+			// il.AddInstruction(il.Unimplemented());
+			break;
+		}
 		break;
 	}
-	case ARM64_MOVN:
-		il.AddInstruction(ILSETREG_O(operand1,
-			il.Const(REGSZ_O(operand2), ~(operand2.immediate << (operand3.operandClass == NONE ? 0 : operand3.immediate)))));
-		break;
 	case ARM64_MOVI:
 	{
 		Register regs[16];
@@ -2184,9 +2239,32 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_ORR:
 	case ARM64_ORRS:
-		il.AddInstruction(
-		    ILSETREG_O(operand1, il.Or(REGSZ_O(operand1), ILREG_O(operand2),
-		                             ReadILOperand(il, operand3, REGSZ_O(operand1)), SETFLAGS)));
+		switch (instr.encoding)
+		{
+		case ENC_ORR_32_LOG_IMM:
+		case ENC_ORR_32_LOG_SHIFT:
+		case ENC_ORR_64_LOG_IMM:
+		case ENC_ORR_64_LOG_SHIFT:
+			il.AddInstruction(
+				ILSETREG_O(operand1, il.Or(REGSZ_O(operand1), ILREG_O(operand2),
+										ReadILOperand(il, operand3, REGSZ_O(operand1)), SETFLAGS)));
+			break;
+		case ENC_ORR_ASIMDIMM_L_HL:
+		case ENC_ORR_ASIMDIMM_L_SL:
+		{
+			Register regs[16];
+			int n = unpack_vector(operand1, regs);
+			for (int i = 0; i < n; ++i)
+				il.AddInstruction(ILSETREG(regs[i], ILCONST_O(get_register_size(regs[i]), operand2)));
+			break;
+		}
+		case ENC_ORR_ASIMDSAME_ONLY:
+			// Let the neon intrinsic lifter take over.
+			break;
+		default:
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
 		break;
 	case ARM64_PSB:
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_PSBCSYNC, {}));
@@ -2484,6 +2562,19 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.SystemCall());
 		break;
 	}
+
+	case ARM64_SMOV:
+	{
+		Register srcs[16], dsts[16];
+		int dst_n = unpack_vector(operand1, dsts);
+		int src_n = unpack_vector(operand2, srcs);
+		if ((dst_n != src_n) || dst_n == 0)
+			ABORT_LIFT;
+
+		for (int i = 0; i < dst_n; ++i)
+			il.AddInstruction(ILSETREG(dsts[i], il.SignExtend(REGSZ(dsts[i]), ILREG(srcs[i]))));
+		break;
+	}
 	case ARM64_SWP: /* word (4) or doubleword (8) */
 	case ARM64_SWPA:
 	case ARM64_SWPL:
@@ -2723,19 +2814,33 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(
 		    il.Trap(IMM_O(operand1)));  // FIXME Breakpoint may need a parameter (IMM_O(operand1)));
 		return false;
-	case ARM64_DUP:
-	{
-		if (instr.encoding != ENC_DUP_ASIMDINS_DR_R)
-			break; // Abort lifting and let the neon intrinsic lifter take over.
-		Register regs[16];
-		int regs_n = unpack_vector(operand1, regs);
-		if (regs_n <= 0)
-			ABORT_LIFT;
-		int lane_sz = REGSZ(regs[0]);
-		for (int i = 0; i < regs_n; ++i)
-			il.AddInstruction(ILSETREG(regs[i], ExtractRegister(il, operand2, 0, lane_sz, 0, lane_sz)));
-	}
-	break;
+	// case ARM64_DUP:
+	// {
+	// 	switch (instr.encoding)
+	// 	{
+	// 	case ENC_DUP_ASIMDINS_DR_R:
+	// 	case ENC_DUP_ASIMDINS_DV_V:
+	// 		break; // Abort lifting and let the neon intrinsic lifter take over.
+	// 	case ENC_DUP_ASISDONE_ONLY:
+	// 	case ENC_MOV_DUP_ASISDONE_ONLY:
+	// 	{
+	// 		if (instr.encoding != ENC_DUP_ASIMDINS_DR_R)
+	// 			break; // Abort lifting and let the neon intrinsic lifter take over.
+	// 		Register regs[16];
+	// 		int regs_n = unpack_vector(operand1, regs);
+	// 		if (regs_n <= 0)
+	// 			ABORT_LIFT;
+	// 		int lane_sz = REGSZ(regs[0]);
+	// 		for (int i = 0; i < regs_n; ++i)
+	// 			il.AddInstruction(ILSETREG(regs[i], ExtractRegister(il, operand2, 0, lane_sz, 0, lane_sz)));
+	// 		break;
+	// 	}
+	// 	default:
+	// 		il.AddInstruction(il.Unimplemented());
+	// 		break;
+	// 	}
+	// }
+	// break;
 	case ARM64_DGH:
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_HINT_DGH, {}));
 		break;

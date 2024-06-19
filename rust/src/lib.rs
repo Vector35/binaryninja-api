@@ -69,6 +69,7 @@ pub mod rc;
 pub mod references;
 pub mod relocation;
 pub mod render_layer;
+pub mod secretsprovider;
 pub mod section;
 pub mod segment;
 pub mod settings;

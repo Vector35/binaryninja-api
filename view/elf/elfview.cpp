@@ -2749,7 +2749,8 @@ uint64_t ElfViewType::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonH
 	// retrieve architecture
 	// FIXME: Architecture registration methods should perhaps be virtual and take the raw data, or some additional opaque information.
 
-	if (Settings::Instance()->Get<bool>("files.elf.detectARMBE8Binary"))
+	bool checkForARMBE8 = Settings::Instance()->Get<bool>("files.elf.detectARMBE8Binary");
+	if (checkForARMBE8)
 		endianness = ((commonHeader.arch == EM_ARM) && (header.flags & EF_ARM_BE8)) ? BigEndian : endianness;
 
 	/* for architectures where .e_machine field doesn't disambiguate between 32/64 (like MIPS),
@@ -2774,7 +2775,7 @@ uint64_t ElfViewType::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonH
 	else
 	{
 		BNEndianness codeEndianness = endianness;
-		if ((commonHeader.arch == EM_ARM) && (header.flags & EF_ARM_BE8))
+		if (checkForARMBE8 && (commonHeader.arch == EM_ARM) && (header.flags & EF_ARM_BE8))
 			codeEndianness = LittleEndian;
 
 		if (arch)

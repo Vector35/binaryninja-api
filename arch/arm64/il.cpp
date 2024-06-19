@@ -1150,7 +1150,7 @@ enum Arm64Intrinsic operation_to_intrinsic(int operation)
 
 
 bool GetLowLevelILForInstruction(
-    Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize, bool requireAlignment, bool preferIntrinsics)
+    Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize, bool requireAlignment, std::function<bool()> preferIntrinsics)
 {
 	bool SetPacAttr = false;
 
@@ -1510,7 +1510,7 @@ bool GetLowLevelILForInstruction(
 		case ENC_FADD_ASIMDSAME_ONLY:
 		case ENC_FADD_ASIMDSAMEFP16_ONLY:
 		{
-			if (preferIntrinsics)
+			if (preferIntrinsics())
 				break;
 			Register srcs1[16], srcs2[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
@@ -1569,7 +1569,7 @@ bool GetLowLevelILForInstruction(
 		case ENC_FSUB_ASIMDSAME_ONLY:
 		case ENC_FSUB_ASIMDSAMEFP16_ONLY:
 		{
-			if (preferIntrinsics)
+			if (preferIntrinsics())
 				break;
 			Register srcs[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
@@ -2475,7 +2475,7 @@ bool GetLowLevelILForInstruction(
 	case ARM64_SHLL:
 	case ARM64_SHLL2:
 	{
-		if (preferIntrinsics)
+		if (preferIntrinsics())
 			break;
 
 		Register srcs[16], dsts[16];
@@ -2648,7 +2648,7 @@ bool GetLowLevelILForInstruction(
 	case ARM64_USHLL:
 	case ARM64_USHLL2:
 	{
-		if (preferIntrinsics)
+		if (preferIntrinsics())
 			break;
 
 		Register srcs[16], dsts[16];
@@ -2692,7 +2692,7 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_USHL:
 	{
-		if (preferIntrinsics)
+		if (preferIntrinsics())
 			break;
 
 		Register srcs1[16], srcs2[16], dsts[16];
@@ -2717,7 +2717,7 @@ bool GetLowLevelILForInstruction(
 	{
 		// Note: we don't lift URSHR, because it requires rounding the shifted results
 
-		if (preferIntrinsics)
+		if (preferIntrinsics())
 			break;
 
 		Register srcs[16], dsts[16];

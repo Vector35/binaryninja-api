@@ -1240,7 +1240,11 @@ class Arm64Architecture : public Architecture
 		}
 
 		len = 4;
-		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_onlyDisassembleOnAlignedAddresses);
+		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_onlyDisassembleOnAlignedAddresses, [&]() -> bool
+			{
+				return m_preferIntrinsics && Settings::Instance()->Get<bool>("arch.aarch64.disassembly.preferIntrinsics",
+					il.GetFunction()->GetView());
+			});
 	}
 
 
@@ -3508,20 +3512,20 @@ static void InitAarch64Settings()
 {
 	Ref<Settings> settings = Settings::Instance();
 
+	settings->RegisterSetting("arch.aarch64.disassembly.preferIntrinsics",
+			R"({
+			"title" : "AARCH64 Prefer Intrinsics for Vector Operations",
+			"type" : "boolean",
+			"default" : true,
+			"description" : "Prefer generating calls to intrinsics (where one is available) to lifting vector operations as unrolled loops (where available).\nNote that not all vector operations are currently lifted as either intrinsics or unrolled loops."
+			})");
+
 	settings->RegisterSetting("arch.aarch64.disassembly.alignRequired",
 			R"({
 			"title" : "AARCH64 Alignment Requirement",
 			"type" : "boolean",
 			"default" : true,
 			"description" : "Require instructions be on 4-byte aligned addresses to be disassembled."
-			})");
-	settings->RegisterSetting("arch.aarch64.disassembly.preferIntrinsics",
-			R"({
-			"title" : "AARCH64 Prefer Intrinsics for Vector Operations",
-			"type" : "boolean",
-			"default" : true,
-			"description" : "Prefer generating calls to intrinsics (where one is available) to lifting vector operations as unrolled loops (where available)."
-			" (Note that not all vector operations are currently lifted as either intrinsics or unrolled loops.)
 			})");
 }
 

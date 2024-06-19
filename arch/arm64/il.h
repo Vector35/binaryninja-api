@@ -101,7 +101,13 @@ enum Arm64FakeRegister : uint32_t
 };
 
 bool GetLowLevelILForInstruction(BinaryNinja::Architecture* arch, uint64_t addr,
-    BinaryNinja::LowLevelILFunction& il, Instruction& instr, size_t addrSize, bool alignmentRequired, bool preferIntrinsics=true);
+    BinaryNinja::LowLevelILFunction& il, Instruction& instr, size_t addrSize, bool alignmentRequired, std::function<bool()> preferIntrinsics=[] { return true; });
+
+// bool GetLowLevelILForInstruction(BinaryNinja::Architecture* arch, uint64_t addr,
+//     BinaryNinja::LowLevelILFunction& il, Instruction& instr, size_t addrSize, bool alignmentRequired)
+// {
+// 	return GetLowLevelILForInstruction(arch, addr, il, instr, addrSize, alignmentRequired, [] { return true; });
+// }
 
 BinaryNinja::ExprId ExtractRegister(BinaryNinja::LowLevelILFunction& il,
     InstructionOperand& operand, size_t regNum, size_t extractSize, bool signExtend,

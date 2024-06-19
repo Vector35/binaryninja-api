@@ -1719,8 +1719,8 @@ bool GetLowLevelILForInstruction(
 			for (int i = 0; i < dst_n; ++i)
 				il.AddInstruction(ILSETREG(
 					dsts[i], il.FloatMult(rsize, ILREG(srcs1[i]), ILREG(srcs2[i]))));
+			break;
 		}
-		break;
 		case ENC_FMUL_ASIMDELEM_RH_H:
 		case ENC_FMUL_ASIMDELEM_R_SD:
 		case ENC_FMUL_ASISDELEM_RH_H:
@@ -1736,8 +1736,8 @@ bool GetLowLevelILForInstruction(
 			for (int i = 0; i < dst_n; ++i)
 				il.AddInstruction(ILSETREG(
 					dsts[i], il.FloatMult(rsize, ILREG(srcs1[i]), ILREG(srcs2[0]))));
+			break;
 		}
-		break;
 		default:
 			il.AddInstruction(il.Unimplemented());
 		}
@@ -1752,7 +1752,6 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_ISB, {}));
 		break;
 	case ARM64_LDAR:
-
 	case ARM64_LDAPR:
 	case ARM64_LDAPUR:
 		LoadStoreOperand(il, true, instr.operands[0], instr.operands[1], 0);
@@ -1975,8 +1974,7 @@ bool GetLowLevelILForInstruction(
 		// zero the underling register slice
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.And(REGSZ_O(operand1), ILREG_O(operand1),
-			il.Not(REGSZ_O(operand1),
-			    il.Const(REGSZ_O(operand1), 0xffffULL << operand2.shiftValue)))));
+			    il.Const(REGSZ_O(operand1), ~(0xffffULL << operand2.shiftValue)))));
 		// mov the immediate into it
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.Or(REGSZ_O(operand1), ILREG_O(operand1),
@@ -2292,6 +2290,8 @@ bool GetLowLevelILForInstruction(
 			int rsize = get_register_size(dsts[0]);
 			for (int i = 0; i < dst_n; ++i)
 				il.AddInstruction(ILSETREG(dsts[i], il.IntToFloat(rsize, ILREG(dsts[i]), ILREG(srcs[i]))));
+
+			break;
 		}
 		// Scalar, fixed-point (in SIMD&FP register)
 		case ENC_SCVTF_ASISDSHF_C:

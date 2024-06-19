@@ -2328,15 +2328,23 @@ bool GetLowLevelILForInstruction(
 		                  il.Const(1, (REGSZ_O(operand1) * 8) - IMM_O(operand4)))));
 		break;
 	case ARM64_SCVTF:
+	case ARM64_UCVTF:
+	{
+		bool signConvert = instr.operation == ARM64_SCVTF;
 		switch (instr.encoding)
 		{
 		// Scalar, float
 		case ENC_SCVTF_ASISDMISCFP16_R:
 		case ENC_SCVTF_ASISDMISC_R:
+		case ENC_UCVTF_ASISDMISCFP16_R:
+		case ENC_UCVTF_ASISDMISC_R:
 		{
 			il.AddInstruction(ILSETREG_O(
 			    operand1, il.IntToFloat(REGSZ_O(operand1),
-					ILREG_O(operand2))));
+					signConvert
+						? il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2))
+						: il.ZeroExtend(REGSZ_O(operand1), ILREG_O(operand2))
+						)));
 			break;
 		}
 		// Scalar, integer
@@ -2346,18 +2354,31 @@ bool GetLowLevelILForInstruction(
 		case ENC_SCVTF_H64_FLOAT2INT:
 		case ENC_SCVTF_S32_FLOAT2INT:
 		case ENC_SCVTF_S64_FLOAT2INT:
+		case ENC_UCVTF_D32_FLOAT2INT:
+		case ENC_UCVTF_D64_FLOAT2INT:
+		case ENC_UCVTF_H32_FLOAT2INT:
+		case ENC_UCVTF_H64_FLOAT2INT:
+		case ENC_UCVTF_S32_FLOAT2INT:
+		case ENC_UCVTF_S64_FLOAT2INT:
 		{
 			il.AddInstruction(ILSETREG_O(
 			    operand1, il.IntToFloat(REGSZ_O(operand1),
-					il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2)))));
+					signConvert
+						? il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2))
+						: il.ZeroExtend(REGSZ_O(operand1), ILREG_O(operand2))
+						)));
 			break;
 		}
 		// Vector, single-precision and double-precision
 		case ENC_SCVTF_ASIMDMISC_R:
+		case ENC_UCVTF_ASIMDMISC_R:
 		// Vector, half precision
 		case ENC_SCVTF_ASIMDMISCFP16_R:
+		case ENC_UCVTF_ASIMDMISCFP16_R:
 		{
-			// There is no intrinsic for this instruction:
+			if (preferIntrinsics())
+				break;
+
 			// SCVTF <Vd>.<T>, <Vn>.<T>
 			Register srcs[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
@@ -2373,7 +2394,7 @@ bool GetLowLevelILForInstruction(
 		}
 		// Scalar, fixed-point (in SIMD&FP register)
 		case ENC_SCVTF_ASISDSHF_C:
-		// Scalar, fixed-point (in GP register)
+		// Scalar, fixed-point (in GP register) [will fail because no intrinsics]
 		case ENC_SCVTF_D32_FLOAT2FIX:
 		case ENC_SCVTF_D64_FLOAT2FIX:
 		case ENC_SCVTF_H32_FLOAT2FIX:
@@ -2382,7 +2403,7 @@ bool GetLowLevelILForInstruction(
 		case ENC_SCVTF_S64_FLOAT2FIX:
 		// Vector, fixed-point
 		case ENC_SCVTF_ASIMDSHF_C:
-			// Lift to instrinsics (except there are none)
+			// Lift to instrinsics
 			break;
 		// SVE: Vector, integer
 		case ENC_SCVTF_Z_P_Z_H2FP16:
@@ -2398,6 +2419,7 @@ bool GetLowLevelILForInstruction(
 			break;
 		}
 		break;
+	}
 	case ARM64_SDIV:
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.DivSigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3))));

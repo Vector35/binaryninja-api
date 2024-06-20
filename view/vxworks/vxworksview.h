@@ -6,8 +6,9 @@
 #pragma warning(disable: 4005)
 #endif
 
+#define DEFAULT_VXWORKS_BASE_ADDRESS 0x10000
 #define MAX_SYMBOL_TABLE_REGION_SIZE 0x2000000
-#define MIN_VALID_SYMBOL_ENTRIES 200
+#define MIN_VALID_SYMBOL_ENTRIES 256
 #define VXWORKS_SYMBOL_ENTRY_TYPE(flags) ((flags >> 8) & 0xff)
 
 enum VxWorksVersion
@@ -19,10 +20,10 @@ enum VxWorksVersion
 
 enum VxWorksImageType
 {
-    VxWorksUnsupportedImageType,
-    VxWorksStandardImageType,
-    VxWorksCDMPackagedImageType,
-    VxWorksCDMNewImageType,
+	VxWorksUnsupportedImageType,
+	VxWorksStandardImageType,
+	VxWorksCDMPackagedImageType,
+	VxWorksCDMNewImageType,
 };
 
 enum VxWorks5SymbolType
@@ -113,16 +114,18 @@ struct VxWorksSectionInfo
 
 namespace BinaryNinja
 {
-    class VxWorksView: public BinaryView
-    {
+	class VxWorksView: public BinaryView
+	{
 		Ref<Logger> m_logger;
 		bool m_parseOnly;
 		bool m_relocatable = false;
-        BNEndianness m_endianness = BigEndian;
+		BNEndianness m_endianness = BigEndian;
+		Ref<Platform> m_platform;
 		Ref<Architecture> m_arch;
+		size_t m_addressSize;
 		uint64_t m_entryPoint = 0;
 		uint64_t m_imageBase = 0;
-		uint64_t m_usrRoot = 0; // Entrypoint, if we find it in the symbol table
+		uint64_t m_sysInit = 0; // Entrypoint, if we find it in the symbol table
 		std::vector<VxWorksSectionInfo> m_sections;
 
 		VxWorksVersion m_version = VxWorksUnknownVersion;
@@ -136,7 +139,7 @@ namespace BinaryNinja
 		bool ScanForVxWorks6SymbolTable(BinaryView* parentView, BinaryReader *reader);
 		bool ScanForVxWorks5SymbolTable(BinaryView* parentView, BinaryReader *reader);
 		bool ScanForVxWorksSymbolTable(BinaryView* parentView, BinaryReader *reader);
-		bool DetermineImageBase(BinaryReader *reader);
+		void DetermineImageBaseFromSymbols();
 
 	protected:
 		virtual uint64_t PerformGetEntryPoint() const override;
@@ -148,7 +151,7 @@ namespace BinaryNinja
 	public:
 		VxWorksView(BinaryView* data, bool parseOnly = false);
 		virtual bool Init() override;
-    }; // class VxWorksView
+	}; // class VxWorksView
 
 	class VxWorksViewType: public BinaryViewType
 	{
@@ -161,7 +164,7 @@ namespace BinaryNinja
 		virtual Ref<BinaryView> Parse(BinaryView* data) override;
 		virtual bool IsTypeValidForData(BinaryView* data) override;
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
-        static enum VxWorksImageType IdentifyImageType(Ref<BinaryReader>& reader);
+		static enum VxWorksImageType IdentifyImageType(Ref<BinaryReader>& reader);
 	}; // class VxWorksViewType
 
 	void InitVxWorksViewType();

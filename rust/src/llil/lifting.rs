@@ -607,6 +607,26 @@ where
     A: 'a + Architecture,
     R: ExpressionResultType,
 {
+    pub fn from_expr(expr: Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R>) -> Self {
+        use binaryninjacore_sys::BNGetLowLevelILByIndex;
+
+        let instr = unsafe {
+            BNGetLowLevelILByIndex(expr.function.handle, expr.expr_idx)
+        };
+
+        ExpressionBuilder {
+            function: expr.function,
+            op: instr.operation,
+            size: instr.size,
+            flags: instr.flags,
+            op1: instr.operands[0],
+            op2: instr.operands[1],
+            op3: instr.operands[2],
+            op4: instr.operands[3],
+            _ty: PhantomData
+        }
+    }
+
     pub fn with_flag_write(mut self, flag_write: A::FlagWrite) -> Self {
         // TODO verify valid id
         self.flags = flag_write.id();

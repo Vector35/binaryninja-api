@@ -38,6 +38,16 @@ void VxWorksView::DetermineImageBaseFromSymbols()
 		}
 	}
 
+	if (m_version == VxWorksVersion6)
+	{
+		for (const auto& entry : m_symbolTable6)
+		{
+			uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
+			if (type == VxWorks6GlobalTextSymbolType && entry.address < lowestTextAddress)
+				lowestTextAddress = entry.address;
+		}
+	}
+
 	if (lowestTextAddress == LOWEST_TEXT_SYMBOL_ADDRESS_START)
 	{
 		m_logger->LogWarn("Could not determine image base address, using default 0x%08x", DEFAULT_VXWORKS_BASE_ADDRESS);
@@ -47,6 +57,59 @@ void VxWorksView::DetermineImageBaseFromSymbols()
 
 	m_logger->LogDebug("Determined image base address: 0x%016x", lowestTextAddress);
 	m_imageBase = lowestTextAddress;
+}
+
+
+bool VxWorksView::ScanForVxWorks6SymbolTable(BinaryView *parentView, BinaryReader *reader)
+{
+	VxWorks6SymbolTableEntry entry;
+	uint64_t startOffset = parentView->GetLength() - sizeof(entry);
+	uint64_t endOffset = 0;
+	if (parentView->GetLength() > MAX_SYMBOL_TABLE_REGION_SIZE)
+		endOffset = parentView->GetLength() - MAX_SYMBOL_TABLE_REGION_SIZE;
+	uint64_t searchPos = startOffset;
+
+	m_logger->LogDebug("Scanning backwards for VxWorks 6 symbol table (0x%016x-0x%016x) (endianess=%s)...",
+		startOffset, endOffset, m_endianness == BigEndian ? "big" : "little");
+	while (searchPos > endOffset)
+	{
+		reader->Seek(searchPos + 4); // Skip the first unknown field
+		if (!reader->TryRead32(entry.name) || !reader->TryRead32(entry.address))
+			break;
+
+		reader->Seek(searchPos + 16); // Skip the second unknown field
+		if (!reader->TryReadBE32(entry.flags))
+			break;
+
+		uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
+		auto it = VxWorks6SymbolTypeMap.find((VxWorks6SymbolType)type);
+		if (entry.name != 0 &&
+			entry.address != 0 &&
+			entry.name && it != VxWorks6SymbolTypeMap.end())
+		{
+			// Name address is greater than the last name address and flags has a valid symbol type
+			m_logger->LogDebug("flags: %08x address: %08x name: %08x type: %02x", entry.flags, entry.address, entry.name, type);
+			m_symbolTable6.push_back(entry);
+			searchPos -= sizeof(entry);
+			continue;
+		}
+
+		if (m_symbolTable6.size() > MIN_VALID_SYMBOL_ENTRIES)
+			break;
+
+		searchPos -= 4;
+		m_symbolTable6.clear();
+	}
+
+	if (m_symbolTable6.size() < MIN_VALID_SYMBOL_ENTRIES)
+	{
+		m_symbolTable6.clear();
+		return false;
+	}
+
+	m_version = VxWorksVersion6;
+	m_logger->LogDebug("Found %d VxWorks 6 symbol table entries", m_symbolTable6.size());
+	return true;
 }
 
 
@@ -109,8 +172,11 @@ bool VxWorksView::ScanForVxWorksSymbolTable(BinaryView* parentView, BinaryReader
 	if (ScanForVxWorks5SymbolTable(parentView, reader))
 		return true;
 
-	// TODO scan for VxWorks 6 symbol table
-	return false;
+	if (ScanForVxWorks6SymbolTable(parentView, reader))
+		return true;
+	m_endianness = BigEndian;
+	reader->SetEndianness(m_endianness);
+	return ScanForVxWorks6SymbolTable(parentView, reader);
 }
 
 
@@ -167,7 +233,42 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 	}
 	case VxWorksVersion6:
 	{
-		m_logger->LogError("VxWorks 6 symbol table not implemented yet");
+		for (const auto& entry : m_symbolTable6)
+		{
+			reader->Seek(entry.name - m_imageBase);
+			string symbolName = reader->ReadCString(MAX_SYMBOL_NAME_LENGTH);
+			uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
+			auto it = VxWorks6SymbolTypeMap.find((VxWorks6SymbolType)type);
+			if (it == VxWorks6SymbolTypeMap.end())
+			{
+				m_logger->LogError("Unknown VxWorks 6 symbol type: 0x%02x (%s)", type, symbolName.c_str());
+				continue;
+			}
+
+			auto symbolType = it->second;
+			switch (symbolType)
+			{
+			case FunctionSymbol:
+				textSymbolAddresses.insert(entry.address);
+				AddFunctionForAnalysis(m_platform, entry.address);
+				break;
+			case DataSymbol:
+				if (type == VxWorks6GlobalAbsoluteSymbolType)
+					roDataSymbolAddresses.insert(entry.address);
+				else
+					dataSymbolAddresses.insert(entry.address);
+				break;
+			case ExternalSymbol:
+				externSymbolAddresses.insert(entry.address);
+				break;
+			default:
+				break;
+			}
+
+			DefineAutoSymbol(new Symbol(symbolType, symbolName, entry.address));
+			if (symbolName == "sysInit")
+				m_sysInit = entry.address;
+		}
 		break;
 	}
 	case VxWorksUnknownVersion:

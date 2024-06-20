@@ -71,6 +71,8 @@ enum VxWorks6SymbolType
 	VxWorks6GlobalBSSSymbolType = 0x11,
 	VxWorks6LocalCommonSymbolType = 0x20,
 	VxWorks6GlobalCommonSymbolType = 0x21,
+	VxWorks6LocalSymbols = 0x40,
+	VxWorks6GlobalSymboks = 0x41,
 };
 
 std::map<VxWorks6SymbolType, BNSymbolType> VxWorks6SymbolTypeMap = {
@@ -86,6 +88,8 @@ std::map<VxWorks6SymbolType, BNSymbolType> VxWorks6SymbolTypeMap = {
 	{ VxWorks6GlobalBSSSymbolType, DataSymbol },
 	{ VxWorks6LocalCommonSymbolType, DataSymbol },
 	{ VxWorks6GlobalCommonSymbolType, DataSymbol },
+	{ VxWorks6LocalSymbols, DataSymbol },
+	{ VxWorks6GlobalSymboks, DataSymbol },
 };
 
 struct VxWorks5SymbolTableEntry

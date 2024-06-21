@@ -122,6 +122,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [indexmap] ([indexmap license] - APACHE 2.0 / MIT)
     - [input_buffer] ([input_buffer license] - APACHE 2.0 / MIT)
     - [ipnet] ([ipnet license] - APACHE 2.0 / MIT)
+    - [iset] ([iset license] - MIT)
     - [itertools] ([itertools license] - APACHE 2.0 / MIT)
     - [itoa] ([itoa license] - APACHE 2.0 / MIT)
     - [keyring] ([keyring license] - APACHE 2.0 / MIT)
@@ -529,6 +530,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [input_buffer license]: https://github.com/snapview/input_buffer/blob/master/LICENSE-MIT
 [ipnet]: https://github.com/krisprice/ipnet
 [ipnet license]: https://github.com/krisprice/ipnet/blob/master/LICENSE-MIT
+[iset]: https://github.com/tprodanov/iset
+[iset license]: https://github.com/tprodanov/iset/blob/master/LICENSE
 [itertools]: https://github.com/rust-itertools/itertools
 [itertools license]: https://github.com/rust-itertools/itertools/blob/master/LICENSE-MIT
 [itoa]: https://github.com/dtolnay/itoa

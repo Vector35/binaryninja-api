@@ -8,8 +8,8 @@
 
 #define DEFAULT_VXWORKS_BASE_ADDRESS 0x10000
 #define MAX_SYMBOL_TABLE_REGION_SIZE 0x2000000
-#define MIN_VALID_SYMBOL_ENTRIES 256
-#define VXWORKS_SYMBOL_ENTRY_TYPE(flags) ((flags >> 8) & 0xff)
+#define MIN_VALID_SYMBOL_ENTRIES 1000
+#define VXWORKS_SYMBOL_ENTRY_TYPE(flags) (((flags >> 8) & 0xff))
 
 enum VxWorksVersion
 {
@@ -40,6 +40,10 @@ enum VxWorks5SymbolType
 	VxWorks5GlobalBSSSymbolType = 0x09,
 	VxWorks5LocalCommonSymbolType = 0x12,
 	VxWorks5GlobalCommonSymbolType = 0x13,
+	VxWorks5PowerPCLocalSDASymbolType = 0x40,
+	VxWorks5PowerPCGlobalSDASymbolType = 0x41,
+	VxWorks5PowerPCLocalSDA2SymbolType = 0x80,
+	VxWorks5PowerPCGlobalSDA2SymbolType = 0x81,
 };
 
 std::map<VxWorks5SymbolType, BNSymbolType> VxWorks5SymbolTypeMap = {
@@ -55,6 +59,10 @@ std::map<VxWorks5SymbolType, BNSymbolType> VxWorks5SymbolTypeMap = {
 	{ VxWorks5GlobalBSSSymbolType, DataSymbol },
 	{ VxWorks5LocalCommonSymbolType, DataSymbol },
 	{ VxWorks5GlobalCommonSymbolType, DataSymbol },
+	{ VxWorks5PowerPCLocalSDASymbolType, DataSymbol },
+	{ VxWorks5PowerPCGlobalSDASymbolType, DataSymbol },
+	{ VxWorks5PowerPCLocalSDA2SymbolType, DataSymbol },
+	{ VxWorks5PowerPCGlobalSDA2SymbolType, DataSymbol },
 };
 
 enum VxWorks6SymbolType
@@ -72,7 +80,7 @@ enum VxWorks6SymbolType
 	VxWorks6LocalCommonSymbolType = 0x20,
 	VxWorks6GlobalCommonSymbolType = 0x21,
 	VxWorks6LocalSymbols = 0x40,
-	VxWorks6GlobalSymboks = 0x41,
+	VxWorks6GlobalSymbols = 0x41,
 };
 
 std::map<VxWorks6SymbolType, BNSymbolType> VxWorks6SymbolTypeMap = {
@@ -89,7 +97,9 @@ std::map<VxWorks6SymbolType, BNSymbolType> VxWorks6SymbolTypeMap = {
 	{ VxWorks6LocalCommonSymbolType, DataSymbol },
 	{ VxWorks6GlobalCommonSymbolType, DataSymbol },
 	{ VxWorks6LocalSymbols, DataSymbol },
-	{ VxWorks6GlobalSymboks, DataSymbol },
+	{ VxWorks6GlobalSymbols, DataSymbol },
+	{ VxWorks6LocalSymbols, DataSymbol },
+	{ VxWorks6GlobalSymbols, DataSymbol },
 };
 
 struct VxWorks5SymbolTableEntry
@@ -140,6 +150,7 @@ namespace BinaryNinja
 		void DetermineEntryPoint();
 		void AddSections(BinaryView* parentView);
 		void ProcessSymbolTable(BinaryReader *reader);
+		bool FunctionAddressesAreValid(VxWorksVersion version);
 		bool ScanForVxWorks6SymbolTable(BinaryView* parentView, BinaryReader *reader);
 		bool ScanForVxWorks5SymbolTable(BinaryView* parentView, BinaryReader *reader);
 		bool ScanForVxWorksSymbolTable(BinaryView* parentView, BinaryReader *reader);

@@ -59,6 +59,54 @@ void VxWorksView::DetermineImageBaseFromSymbols()
 	m_imageBase = lowestTextAddress;
 }
 
+#define MAX_ADDRESSES_ENDIANNESS_CHECK 10
+// Check least significant byte of the first 10 function symbol addresses to make sure they aren't all the same
+bool VxWorksView::FunctionAddressesAreValid(VxWorksVersion version)
+{
+	size_t count = 0;
+	std::vector<uint32_t> funcAddresses;
+	if (version == VxWorksVersion5)
+	{
+		for (const auto& entry : m_symbolTable5)
+		{
+			uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
+			if (type == VxWorks5GlobalTextSymbolType)
+			{
+				funcAddresses.push_back(entry.address);
+				count++;
+			}
+
+			if (count == MAX_ADDRESSES_ENDIANNESS_CHECK)
+				break;
+		}
+	}
+
+	if (version == VxWorksVersion6)
+	{
+		m_logger->LogDebug("Checking VxWorks 6 function symbol addresses");
+		for (const auto& entry : m_symbolTable6)
+		{
+			uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
+			if (type == VxWorks6GlobalTextSymbolType)
+			{
+				funcAddresses.push_back(entry.address);
+				count++;
+			}
+
+			if (count == MAX_ADDRESSES_ENDIANNESS_CHECK)
+				break;
+		}
+	}
+
+	if (funcAddresses.size() < MAX_ADDRESSES_ENDIANNESS_CHECK)
+		return false;
+
+	uint32_t val = 0;
+	for (const auto& addr : funcAddresses)
+		val ^= addr;
+	return (val & 0xff) != 0;
+}
+
 
 bool VxWorksView::ScanForVxWorks6SymbolTable(BinaryView *parentView, BinaryReader *reader)
 {
@@ -87,14 +135,12 @@ bool VxWorksView::ScanForVxWorks6SymbolTable(BinaryView *parentView, BinaryReade
 			entry.address != 0 &&
 			entry.name && it != VxWorks6SymbolTypeMap.end())
 		{
-			// Name address is greater than the last name address and flags has a valid symbol type
-			m_logger->LogDebug("flags: %08x address: %08x name: %08x type: %02x", entry.flags, entry.address, entry.name, type);
 			m_symbolTable6.push_back(entry);
 			searchPos -= sizeof(entry);
 			continue;
 		}
 
-		if (m_symbolTable6.size() > MIN_VALID_SYMBOL_ENTRIES)
+		if (m_symbolTable6.size() > MIN_VALID_SYMBOL_ENTRIES && FunctionAddressesAreValid(VxWorksVersion6))
 			break;
 
 		searchPos -= 4;
@@ -124,7 +170,6 @@ bool VxWorksView::ScanForVxWorks5SymbolTable(BinaryView* parentView, BinaryReade
 
 	m_logger->LogDebug("Scanning backwards for VxWorks 5 symbol table (0x%016x-0x%016x) (endianess=%s)...",
 		startOffset, endOffset, m_endianness == BigEndian ? "big" : "little");
-	uint64_t lastNameAddress = 0;
 	while (searchPos > endOffset)
 	{
 		reader->Seek(searchPos + 4); // Skip the unknown field
@@ -133,20 +178,21 @@ bool VxWorksView::ScanForVxWorks5SymbolTable(BinaryView* parentView, BinaryReade
 
 		uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
 		auto it = VxWorks5SymbolTypeMap.find((VxWorks5SymbolType)type);
-		if (entry.name >= lastNameAddress && entry.address != 0 && it != VxWorks5SymbolTypeMap.end())
+		if (entry.name != 0 &&
+			entry.address != 0 &&
+			entry.flags != 0 &&
+			it != VxWorks5SymbolTypeMap.end())
 		{
 			// Name address is greater than the last name address and flags has a valid symbol type
-			lastNameAddress = entry.name;
 			m_symbolTable5.push_back(entry);
 			searchPos -= sizeof(entry);
 			continue;
 		}
 
-		if (m_symbolTable5.size() > MIN_VALID_SYMBOL_ENTRIES)
+		if (m_symbolTable5.size() > MIN_VALID_SYMBOL_ENTRIES && FunctionAddressesAreValid(VxWorksVersion5))
 			break;
 
 		searchPos -= 4;
-		lastNameAddress = 0;
 		m_symbolTable5.clear();
 	}
 

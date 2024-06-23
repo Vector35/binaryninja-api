@@ -14,7 +14,7 @@
 
 //! Contains all information related to the execution environment of the binary, mainly the calling conventions used
 
-use std::{borrow::Borrow, collections::HashMap, os::raw, path::Path, ptr, slice};
+use std::{borrow::Borrow, collections::HashMap, path::Path, ptr, slice};
 
 use binaryninjacore_sys::*;
 
@@ -291,7 +291,7 @@ impl TypeParser for Platform {
 
         let mut type_parser_result = TypeParserResult::default();
 
-        let mut error_string: *mut raw::c_char = ptr::null_mut();
+        let mut error_string = ptr::null_mut();
 
         let src = source.into_bytes_with_nul();
         let filename = filename.into_bytes_with_nul();

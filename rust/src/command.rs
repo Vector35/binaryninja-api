@@ -37,8 +37,8 @@ use binaryninjacore_sys::{
     BNRegisterPluginCommandForFunction, BNRegisterPluginCommandForRange,
 };
 
+use std::ffi::c_void;
 use std::ops::Range;
-use std::os::raw::c_void;
 
 use crate::binaryview::BinaryView;
 use crate::function::Function;

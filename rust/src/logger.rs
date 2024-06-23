@@ -33,8 +33,7 @@ pub use binaryninjacore_sys::BNLogLevel as Level;
 use binaryninjacore_sys::{BNLogListener, BNUpdateLogListeners};
 
 use log;
-use std::ffi::CStr;
-use std::os::raw::{c_char, c_void};
+use std::ffi::{c_char, c_void, CStr};
 
 struct Logger;
 static LOGGER: Logger = Logger;

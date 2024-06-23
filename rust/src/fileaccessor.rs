@@ -27,7 +27,7 @@ impl<'a> FileAccessor<'a> {
     where
         F: 'a + Read + Write + Seek + Sized,
     {
-        use std::os::raw::c_void;
+        use std::ffi::c_void;
 
         extern "C" fn cb_get_length<F>(ctxt: *mut c_void) -> u64
         where

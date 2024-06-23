@@ -19,6 +19,7 @@
 use binaryninjacore_sys::*;
 
 use std::{
+    alloc,
     borrow::{Borrow, Cow},
     collections::HashMap,
     ffi::{c_char, c_int, CStr, CString},
@@ -1696,8 +1697,8 @@ where
     A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
     F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
 {
+    use std::ffi::{c_char, c_void};
     use std::mem;
-    use std::os::raw::{c_char, c_void};
 
     #[repr(C)]
     struct ArchitectureBuilder<A, F>
@@ -2096,30 +2097,44 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        if let Some(group) = custom_arch.flag_group_from_id(group) {
-            let flag_conditions = group.flag_conditions();
+        let Some(group) = custom_arch.flag_group_from_id(group) else {
+            unsafe { *count = 0 };
+            return ptr::null_mut();
+        };
 
-            unsafe {
-                let allocation_size =
-                    mem::size_of::<BNFlagConditionForSemanticClass>() * flag_conditions.len();
-                let result = libc::malloc(allocation_size) as *mut BNFlagConditionForSemanticClass;
-                let out_slice = slice::from_raw_parts_mut(result, flag_conditions.len());
+        let flag_conditions = group.flag_conditions();
 
-                for (i, (class, cond)) in flag_conditions.iter().enumerate() {
-                    let out = out_slice.get_unchecked_mut(i);
+        let conds: Box<[_]> = flag_conditions
+            .iter()
+            .map(|(class, cond)| BNFlagConditionForSemanticClass {
+                semanticClass: class.id(),
+                condition: *cond,
+            })
+            .collect();
 
-                    out.semanticClass = class.id();
-                    out.condition = *cond;
-                }
+        // Extremely gross. We want to smuggle the length through FFI so that we can free the array
+        // later, so we construct a custom Layout containing one `usize` followed by all the
+        // conditions, then allocate according to this layout.
+        let len = flag_conditions.len();
+        let (layout, offset) = alloc::Layout::new::<usize>()
+            .extend(alloc::Layout::array::<BNFlagConditionForSemanticClass>(len).unwrap())
+            .map(|(layout, offset)| (layout.pad_to_align(), offset))
+            .unwrap();
 
-                *count = flag_conditions.len();
-                result
+        unsafe {
+            let raw: *mut u8 = alloc::alloc(layout);
+            if raw.is_null() {
+                return ptr::null_mut();
             }
-        } else {
-            unsafe {
-                *count = 0;
-            }
-            ptr::null_mut()
+
+            // Smuggle the length
+            raw.cast::<usize>().write(len);
+            // Offset past the length, now we're just pointing at the conditions
+            let raw = raw.add(offset).cast::<BNFlagConditionForSemanticClass>();
+            raw.copy_from(conds.as_ptr(), len);
+
+            count.write(len);
+            raw
         }
     }
 
@@ -2129,8 +2144,27 @@ where
     ) where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
+        if conds.is_null() {
+            return;
+        }
+
+        // We don't know the length yet, and the alignment of an array is the same as its elements,
+        // so we just mock [T; N] with T in order to obtain the offset we want.
+        let offset = alloc::Layout::new::<usize>()
+            .extend(alloc::Layout::new::<BNFlagConditionForSemanticClass>())
+            .unwrap()
+            .1;
+
         unsafe {
-            libc::free(conds as *mut _);
+            // Read out the smuggled length, then recalculate the *actual* layout of the data given
+            // the length, and finally free the memory.
+            let base = conds.cast::<u8>().sub(offset);
+            let len = base.cast::<usize>().read();
+            let layout = alloc::Layout::new::<usize>()
+                .extend(alloc::Layout::array::<BNFlagConditionForSemanticClass>(len).unwrap())
+                .unwrap()
+                .0;
+            alloc::dealloc(base, layout);
         }
     }
 

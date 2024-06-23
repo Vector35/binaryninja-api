@@ -3,7 +3,7 @@ use crate::{
     architecture::CoreArchitecture, binaryview::BinaryView, function::Function, llil, mlil,
 };
 use binaryninjacore_sys::*;
-use std::os::raw::c_void;
+use std::ffi::c_void;
 
 pub trait FunctionRecognizer {
     fn recognize_low_level_il(

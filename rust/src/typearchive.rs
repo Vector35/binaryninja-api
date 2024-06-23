@@ -884,9 +884,9 @@ where
 }
 
 unsafe extern "C" fn cb_type_added<T: TypeArchiveNotificationCallback>(
-    ctxt: *mut ::std::os::raw::c_void,
+    ctxt: *mut ffi::c_void,
     archive: *mut BNTypeArchive,
-    id: *const ::std::os::raw::c_char,
+    id: *const ffi::c_char,
     definition: *mut BNType,
 ) {
     let ctxt: &mut T = &mut *(ctxt as *mut T);
@@ -897,9 +897,9 @@ unsafe extern "C" fn cb_type_added<T: TypeArchiveNotificationCallback>(
     )
 }
 unsafe extern "C" fn cb_type_updated<T: TypeArchiveNotificationCallback>(
-    ctxt: *mut ::std::os::raw::c_void,
+    ctxt: *mut ffi::c_void,
     archive: *mut BNTypeArchive,
-    id: *const ::std::os::raw::c_char,
+    id: *const ffi::c_char,
     old_definition: *mut BNType,
     new_definition: *mut BNType,
 ) {
@@ -916,9 +916,9 @@ unsafe extern "C" fn cb_type_updated<T: TypeArchiveNotificationCallback>(
     )
 }
 unsafe extern "C" fn cb_type_renamed<T: TypeArchiveNotificationCallback>(
-    ctxt: *mut ::std::os::raw::c_void,
+    ctxt: *mut ffi::c_void,
     archive: *mut BNTypeArchive,
-    id: *const ::std::os::raw::c_char,
+    id: *const ffi::c_char,
     old_name: *const BNQualifiedName,
     new_name: *const BNQualifiedName,
 ) {
@@ -933,9 +933,9 @@ unsafe extern "C" fn cb_type_renamed<T: TypeArchiveNotificationCallback>(
     )
 }
 unsafe extern "C" fn cb_type_deleted<T: TypeArchiveNotificationCallback>(
-    ctxt: *mut ::std::os::raw::c_void,
+    ctxt: *mut ffi::c_void,
     archive: *mut BNTypeArchive,
-    id: *const ::std::os::raw::c_char,
+    id: *const ffi::c_char,
     definition: *mut BNType,
 ) {
     let ctxt: &mut T = &mut *(ctxt as *mut T);

@@ -56,8 +56,8 @@ static const std::map<VxWorks6SymbolType, BNSymbolType> VxWorks6SymbolTypeMap = 
 static const std::map<std::string, BNSectionSemantics> VxWorksSectionSemanticsMap = {
 	{ ".text", ReadOnlyCodeSectionSemantics },
 	{ ".data", ReadWriteDataSectionSemantics },
-	{ ".rodata", ReadOnlyDataSectionSemantics },
 	{ ".extern", ExternalSectionSemantics },
+	{ ".symtab", ReadOnlyDataSectionSemantics },
 };
 
 static VxWorksViewType* g_vxWorksViewType = nullptr;
@@ -77,6 +77,45 @@ VxWorksView::VxWorksView(BinaryView* data, bool parseOnly): BinaryView("VxWorks"
 	m_logger = CreateLogger("BinaryView.VxWorksView");
 }
 
+void VxWorksView::DefineSymbolTableDataVariable()
+{
+	StructureBuilder symbolTableEntry;
+	switch (m_version)
+	{
+	case VxWorksVersion5:
+		symbolTableEntry.AddMember(Type::IntegerType(4, false), "unknown");
+		symbolTableEntry.AddMember(Type::PointerType(m_platform->GetArchitecture(),
+			Type::VoidType())->WithConfidence(BN_FULL_CONFIDENCE), "name");
+		symbolTableEntry.AddMember(Type::PointerType(m_platform->GetArchitecture(),
+			Type::VoidType())->WithConfidence(BN_FULL_CONFIDENCE), "address");
+		symbolTableEntry.AddMember(Type::IntegerType(4, false), "flags");
+		break;
+	case VxWorksVersion6:
+		symbolTableEntry.AddMember(Type::IntegerType(4, false), "unknown1");
+		symbolTableEntry.AddMember(Type::PointerType(m_platform->GetArchitecture(),
+			Type::VoidType())->WithConfidence(BN_FULL_CONFIDENCE), "name");
+		symbolTableEntry.AddMember(Type::PointerType(m_platform->GetArchitecture(),
+			Type::VoidType())->WithConfidence(BN_FULL_CONFIDENCE), "address");
+		symbolTableEntry.AddMember(Type::IntegerType(4, false), "unknown2");
+		symbolTableEntry.AddMember(Type::IntegerType(4, false), "flags");
+		break;
+	default:
+		m_logger->LogError("VxWorks version is not set. Please report this issue.");
+		return;
+	}
+
+	auto symbolEntryStruct = symbolTableEntry.Finalize();
+	auto symbolEntryType = Type::StructureType(symbolEntryStruct);
+	QualifiedName symbolEntryName = string("VxWorksSymbolEntry");
+	auto symbolEntryTypeId = Type::GenerateAutoTypeId("VxWorks", symbolEntryName);
+	QualifiedName symbolEntryTypeName = DefineType(symbolEntryTypeId, symbolEntryName, symbolEntryType);
+	DefineDataVariable(m_imageBase + m_symbolTableOffset,
+		Type::ArrayType(Type::NamedType(this, symbolEntryTypeName),
+		m_symbols.size())
+	);
+
+	DefineAutoSymbol(new Symbol(DataSymbol, "VxWorksSymbolTable", m_imageBase + m_symbolTableOffset));
+}
 
 void VxWorksView::DetermineImageBaseFromSymbols()
 {
@@ -134,88 +173,81 @@ bool VxWorksView::FunctionAddressesAreValid(VxWorksVersion version)
 }
 
 
-bool VxWorksView::ScanForVxWorks6SymbolTable(BinaryView *parentView, BinaryReader *reader)
+bool VxWorksView::TryReadVxWorksSymbolEntry(BinaryReader *reader, uint64_t offset,
+	VxWorksSymbolEntry& entry, VxWorksVersion version)
 {
-	VxWorksSymbolEntry entry;
-	uint64_t startOffset = parentView->GetLength() - VXWORKS6_SYMBOL_ENTRY_SIZE;
-	uint64_t endOffset = 0;
-	if (parentView->GetLength() > MAX_SYMBOL_TABLE_REGION_SIZE)
-		endOffset = parentView->GetLength() - MAX_SYMBOL_TABLE_REGION_SIZE;
-	uint64_t searchPos = startOffset;
-
-	m_logger->LogDebug("Scanning backwards for VxWorks 6 symbol table (0x%016x-0x%016x) (endianess=%s)...",
-		startOffset, endOffset, m_endianness == BigEndian ? "big" : "little");
-	while (searchPos > endOffset)
-	{
-		reader->Seek(searchPos + 4); // Skip the first unknown field
-		if (!reader->TryRead32(entry.name) || !reader->TryRead32(entry.address))
-			break;
-
-		reader->Seek(searchPos + 16); // Skip the second unknown field
-		if (!reader->TryReadBE32(entry.flags))
-			break;
-
-		uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
-		auto it = VxWorks6SymbolTypeMap.find((VxWorks6SymbolType)type);
-		if (entry.name != 0 &&
-			entry.address != 0 &&
-			entry.name && it != VxWorks6SymbolTypeMap.end())
-		{
-			m_symbols.push_back(entry);
-			searchPos -= VXWORKS6_SYMBOL_ENTRY_SIZE;
-			continue;
-		}
-
-		if (m_symbols.size() > MIN_VALID_SYMBOL_ENTRIES && FunctionAddressesAreValid(VxWorksVersion6))
-			break;
-
-		searchPos -= 4;
-		m_symbols.clear();
-	}
-
-	if (m_symbols.size() < MIN_VALID_SYMBOL_ENTRIES)
-	{
-		m_symbols.clear();
+	reader->Seek(offset + 4); // Skip first unknown field
+	if (!reader->TryRead32(entry.name) || !reader->TryRead32(entry.address))
 		return false;
-	}
 
-	m_version = VxWorksVersion6;
-	m_logger->LogDebug("Found %d VxWorks 6 symbol table entries", m_symbols.size());
-	return true;
-}
+	if (version == VxWorksVersion6)
+		reader->Seek(offset + 16); // Skip second unknown field (VxWorks 6 only)
 
+	if (!reader->TryReadBE32(entry.flags))
+		return false;
 
-bool VxWorksView::ScanForVxWorks5SymbolTable(BinaryView* parentView, BinaryReader *reader)
-{
-	VxWorksSymbolEntry entry;
-	uint64_t startOffset = parentView->GetLength() - VXWORKS5_SYMBOL_ENTRY_SIZE;
-	uint64_t endOffset = 0;
-	if (parentView->GetLength() > MAX_SYMBOL_TABLE_REGION_SIZE)
-		endOffset = parentView->GetLength() - MAX_SYMBOL_TABLE_REGION_SIZE;
-	uint64_t searchPos = startOffset;
-
-	m_logger->LogDebug("Scanning backwards for VxWorks 5 symbol table (0x%016x-0x%016x) (endianess=%s)...",
-		startOffset, endOffset, m_endianness == BigEndian ? "big" : "little");
-	while (searchPos > endOffset)
+	uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
+	switch (version)
 	{
-		reader->Seek(searchPos + 4); // Skip the unknown field
-		if (!reader->TryRead32(entry.name) || !reader->TryRead32(entry.address) || !reader->TryReadBE32(entry.flags))
-			break;
-
-		uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
+	case VxWorksVersion5:
+	{
 		auto it = VxWorks5SymbolTypeMap.find((VxWorks5SymbolType)type);
-		if (entry.name != 0 &&
-			entry.address != 0 &&
-			entry.flags != 0 &&
-			it != VxWorks5SymbolTypeMap.end())
+		if (entry.name != 0 && entry.flags != 0 && it != VxWorks5SymbolTypeMap.end())
+			return true;
+
+		return false;
+	}
+	case VxWorksVersion6:
+	{
+		auto it = VxWorks6SymbolTypeMap.find((VxWorks6SymbolType)type);
+		if (entry.name != 0 && it != VxWorks6SymbolTypeMap.end())
+			return true;
+
+		return false;
+	}
+	default:
+		m_logger->LogError("VxWorks version is not set. Please report this issue.");
+		return false;
+	}
+}
+
+
+bool VxWorksView::ScanForVxWorksSystemTable(BinaryReader *reader, VxWorksVersion version, BNEndianness endianness)
+{
+	size_t entrySize;
+	m_endianness = endianness;
+	reader->SetEndianness(m_endianness);
+	switch (version)
+	{
+	case VxWorksVersion5:
+		entrySize = VXWORKS5_SYMBOL_ENTRY_SIZE;
+		break;
+	case VxWorksVersion6:
+		entrySize = VXWORKS6_SYMBOL_ENTRY_SIZE;
+		break;
+	default:
+		m_logger->LogError("VxWorks version is not set. Please report this issue.");
+		return false;
+	}
+
+	VxWorksSymbolEntry entry;
+	ssize_t startOffset = m_parentView->GetLength() - entrySize;
+	ssize_t endOffset = 0;
+	if (m_parentView->GetLength() > MAX_SYMBOL_TABLE_REGION_SIZE)
+		endOffset = m_parentView->GetLength() - MAX_SYMBOL_TABLE_REGION_SIZE;
+	ssize_t searchPos = startOffset;
+	m_logger->LogDebug("Scanning backwards for VxWorks system table (0x%016x-0x%016x) (endianess=%s) (version=%d)...",
+		startOffset, endOffset, m_endianness == BigEndian ? "big" : "little", version == VxWorksVersion5 ? 5 : 6);
+	while (searchPos > endOffset)
+	{
+		if (TryReadVxWorksSymbolEntry(reader, searchPos, entry, version))
 		{
-			// Name address is greater than the last name address and flags has a valid symbol type
 			m_symbols.push_back(entry);
-			searchPos -= VXWORKS5_SYMBOL_ENTRY_SIZE;
+			searchPos -= entrySize;
 			continue;
 		}
 
-		if (m_symbols.size() > MIN_VALID_SYMBOL_ENTRIES && FunctionAddressesAreValid(VxWorksVersion5))
+		if (m_symbols.size() > MIN_VALID_SYMBOL_ENTRIES && FunctionAddressesAreValid(version))
 			break;
 
 		searchPos -= 4;
@@ -228,27 +260,36 @@ bool VxWorksView::ScanForVxWorks5SymbolTable(BinaryView* parentView, BinaryReade
 		return false;
 	}
 
-	m_version = VxWorksVersion5;
-	m_logger->LogDebug("Found %d VxWorks 5 symbol table entries", m_symbols.size());
+	m_symbolTableOffset = searchPos + entrySize;
+
+	// Scan algorithm is prone to missing a few entries at the end of the table
+	searchPos = m_symbolTableOffset + (entrySize * m_symbols.size());
+	while (TryReadVxWorksSymbolEntry(reader, searchPos, entry, version))
+	{
+		m_symbols.push_back(entry);
+		searchPos += entrySize;
+	}
+
+	m_version = version;
+	m_logger->LogDebug("Found %d VxWorks %d symbol table entries starting at offset 0x%016x",
+		m_symbols.size(), version == VxWorksVersion5 ? 5 : 6, m_symbolTableOffset);
+
 	return true;
 }
 
 
-bool VxWorksView::ScanForVxWorksSymbolTable(BinaryView* parentView, BinaryReader *reader)
+bool VxWorksView::FindSymbolTable(BinaryReader *reader)
 {
-	if (ScanForVxWorks5SymbolTable(parentView, reader))
+	if (ScanForVxWorksSystemTable(reader, VxWorksVersion5, BigEndian))
 		return true;
 
-	m_endianness = LittleEndian;
-	reader->SetEndianness(m_endianness);
-	if (ScanForVxWorks5SymbolTable(parentView, reader))
+	if (ScanForVxWorksSystemTable(reader, VxWorksVersion5, LittleEndian))
 		return true;
 
-	if (ScanForVxWorks6SymbolTable(parentView, reader))
+	if (ScanForVxWorksSystemTable(reader, VxWorksVersion6, LittleEndian))
 		return true;
-	m_endianness = BigEndian;
-	reader->SetEndianness(m_endianness);
-	return ScanForVxWorks6SymbolTable(parentView, reader);
+
+	return ScanForVxWorksSystemTable(reader, VxWorksVersion6, BigEndian);
 }
 
 
@@ -262,22 +303,7 @@ void VxWorksView::AssignSymbolToSection(std::map<std::string, std::set<uint64_t>
 		AddFunctionForAnalysis(m_platform, address);
 		break;
 	case DataSymbol:
-		if (m_version == VxWorksVersion5)
-		{
-			if (vxSymbolType == VxWorks5GlobalAbsoluteSymbolType)
-				sections[".rodata"].insert(address);
-			else
-				sections[".data"].insert(address);
-		}
-
-		if (m_version == VxWorksVersion6)
-		{
-			if (vxSymbolType == VxWorks6GlobalAbsoluteSymbolType)
-				sections[".rodata"].insert(address);
-			else
-				sections[".data"].insert(address);
-		}
-
+		sections[".data"].insert(address);
 		break;
 	case ExternalSymbol:
 		sections[".extern"].insert(address);
@@ -294,8 +320,8 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 	std::map<std::string, std::set<uint64_t>> sections = {
 		{ ".text", {} },
 		{ ".data", {} },
-		{ ".rodata", {} },
-		{ ".extern", {} }
+		{ ".extern", {} },
+		{ ".symtab", {} },
 	};
 
 	for (const auto& entry : m_symbols)
@@ -336,13 +362,19 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 			return;
 		}
 
-		AssignSymbolToSection(sections, bnSymbolType, vxSymbolType, entry.address);
-		DefineAutoSymbol(new Symbol(bnSymbolType, symbolName, entry.address));
-		if (symbolName == "sysInit")
-			m_sysInit = entry.address;
+		if (m_parentView->IsOffsetBackedByFile(entry.address - m_imageBase))
+		{
+			AssignSymbolToSection(sections, bnSymbolType, vxSymbolType, entry.address);
+			DefineAutoSymbol(new Symbol(bnSymbolType, symbolName, entry.address));
+			if (symbolName == "sysInit" || symbolName == "_sysInit")
+				m_sysInit = entry.address;
+		}
 	}
 
 	// Build section info from address ranges of symbols and their types
+	sections[".symtab"].insert(m_imageBase + m_symbolTableOffset);
+	sections[".symtab"].insert(m_imageBase + (m_symbolTableOffset + m_symbols.size() *
+		(m_version == VxWorksVersion5 ? VXWORKS5_SYMBOL_ENTRY_SIZE : VXWORKS6_SYMBOL_ENTRY_SIZE)));
 	for (const auto& section : sections)
 	{
 		if (section.second.empty())
@@ -365,12 +397,12 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 }
 
 
-void VxWorksView::AddSections(BinaryView *parentView)
+void VxWorksView::AddSections()
 {
 	if (m_sections.empty())
 	{
 		m_logger->LogDebug("No sections found, creating default section");
-		AddAutoSection(".text", m_imageBase, parentView->GetLength(), ReadOnlyCodeSectionSemantics);
+		AddAutoSection(".text", m_imageBase, m_parentView->GetLength(), ReadOnlyCodeSectionSemantics);
 		return;
 	}
 
@@ -387,7 +419,7 @@ void VxWorksView::AddSections(BinaryView *parentView)
 		uint64_t end = lastStart ? lastStart : section.AddressRange.second;
 		if (lastSection)
 		{
-			end = m_imageBase + parentView->GetLength();
+			end = m_imageBase + m_parentView->GetLength();
 			lastSection = false;
 		}
 
@@ -422,15 +454,15 @@ bool VxWorksView::Init()
 {
 	try
 	{
-		auto parentView = GetParentView();
-		if (!parentView)
+		m_parentView = GetParentView();
+		if (!m_parentView)
 		{
 			m_logger->LogError("Failed to get parent view");
 			return false;
 		}
 
-		BinaryReader reader(parentView, m_endianness);
-		bool isSymTable = ScanForVxWorksSymbolTable(parentView, &reader);
+		BinaryReader reader(m_parentView, m_endianness);
+		bool isSymTable = FindSymbolTable(&reader);
 		if (isSymTable)
 		{
 			DetermineImageBaseFromSymbols();
@@ -442,7 +474,7 @@ bool VxWorksView::Init()
 			m_imageBase = DEFAULT_VXWORKS_BASE_ADDRESS;
 		}
 
-		AddAutoSegment(m_imageBase, parentView->GetLength(), 0, parentView->GetLength(),
+		AddAutoSegment(m_imageBase, m_parentView->GetLength(), 0, m_parentView->GetLength(),
 			SegmentReadable | SegmentWritable | SegmentExecutable);
 
 		auto settings = GetLoadSettings(GetTypeName());
@@ -470,8 +502,12 @@ bool VxWorksView::Init()
 			return true;
 
 		if (isSymTable)
+		{
 			ProcessSymbolTable(&reader);
-		AddSections(parentView);
+			DefineSymbolTableDataVariable();
+		}
+
+		AddSections();
 		DetermineEntryPoint();
 		AddEntryPointForAnalysis(m_platform, m_entryPoint);
 		return true;

@@ -80,10 +80,12 @@ namespace BinaryNinja
 		Ref<Logger> m_logger;
 		bool m_parseOnly;
 		bool m_relocatable = false;
+		Ref<BinaryView> m_parentView = nullptr;
 		BNEndianness m_endianness = BigEndian;
 		Ref<Platform> m_platform;
 		Ref<Architecture> m_arch;
 		size_t m_addressSize;
+		uint64_t m_symbolTableOffset = 0;
 		uint64_t m_entryPoint = 0;
 		uint64_t m_imageBase = 0;
 		uint64_t m_sysInit = 0; // Entrypoint, if we find it in the symbol table
@@ -94,14 +96,16 @@ namespace BinaryNinja
 
 	private:
 		void DetermineEntryPoint();
-		void AddSections(BinaryView* parentView);
+		void AddSections();
 		void AssignSymbolToSection(std::map<std::string, std::set<uint64_t>>& sections,
 			BNSymbolType bnSymbolType, uint8_t vxSymbolType, uint64_t address);
+		void DefineSymbolTableDataVariable();
 		void ProcessSymbolTable(BinaryReader *reader);
 		bool FunctionAddressesAreValid(VxWorksVersion version);
-		bool ScanForVxWorks6SymbolTable(BinaryView* parentView, BinaryReader *reader);
-		bool ScanForVxWorks5SymbolTable(BinaryView* parentView, BinaryReader *reader);
-		bool ScanForVxWorksSymbolTable(BinaryView* parentView, BinaryReader *reader);
+		bool TryReadVxWorksSymbolEntry(BinaryReader *reader, uint64_t offset,
+			VxWorksSymbolEntry& entry, VxWorksVersion version);
+		bool ScanForVxWorksSystemTable(BinaryReader *reader, VxWorksVersion version, BNEndianness endianness);
+		bool FindSymbolTable(BinaryReader *reader);
 		void DetermineImageBaseFromSymbols();
 
 	protected:

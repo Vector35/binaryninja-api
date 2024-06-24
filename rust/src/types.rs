@@ -1308,6 +1308,23 @@ impl ToOwned for Type {
     }
 }
 
+impl CoreArrayProvider for Type {
+    type Raw = *mut BNType;
+    type Context = ();
+    type Wrapped<'a> = &'a Self;
+}
+
+unsafe impl CoreArrayProviderInner for Type {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeTypeList(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        // SAFEITY *mut BNType and Type are transparent
+        mem::transmute(raw)
+    }
+}
+
 ///////////////////////
 // FunctionParameter
 

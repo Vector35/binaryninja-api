@@ -13,6 +13,7 @@ pub type TypeParserErrorSeverity = BNTypeParserErrorSeverity;
 pub type TypeParserOption = BNTypeParserOption;
 pub type TokenEscapingType = BNTokenEscapingType;
 pub type TypeDefinitionLineType = BNTypeDefinitionLineType;
+pub type TypeContainerType = BNTypeContainerType;
 
 #[repr(transparent)]
 pub struct CoreTypeParser {
@@ -279,6 +280,17 @@ unsafe impl CoreArrayProviderInner for CoreTypeParser {
     }
 }
 
+/// A `TypeContainer` is a generic interface to access various Binary Ninja models
+/// that contain types. Types are stored with both a unique id and a unique name.
+// ///
+// /// The `TypeContainer` class should not generally be instantiated directly. Instances
+// /// can be retrieved from the following properties and methods in the API:
+// /// * [BinaryView::type_container]
+// /// * [BinaryView::auto_type_container]
+// /// * [BinaryView::user_type_container]
+// /// * [Platform::type_container]
+// /// * [TypeLibrary::type_container]
+// /// * [DebugInfo::get_type_container]
 #[repr(transparent)]
 pub struct TypeContainer {
     handle: ptr::NonNull<BNTypeContainer>,
@@ -297,6 +309,340 @@ impl TypeContainer {
     #[allow(clippy::ref_as_ptr)]
     pub(crate) unsafe fn as_raw(&self) -> &mut BNTypeContainer {
         &mut *self.handle.as_ptr()
+    }
+
+    /// Get an id string for the Type Container. This will be unique within a given
+    /// analysis session, but may not be globally unique.
+    pub fn id(&self) -> BnString {
+        let result = unsafe { BNTypeContainerGetId(self.as_raw()) };
+        assert!(!result.is_null());
+        unsafe { BnString::from_raw(result) }
+    }
+
+    /// Get a user-friendly name for the Type Container.
+    pub fn name(&self) -> BnString {
+        let result = unsafe { BNTypeContainerGetName(self.as_raw()) };
+        assert!(!result.is_null());
+        unsafe { BnString::from_raw(result) }
+    }
+
+    /// Get the type of underlying model the Type Container is accessing.
+    pub fn container_type(&self) -> TypeContainerType {
+        unsafe { BNTypeContainerGetType(self.as_raw()) }
+    }
+
+    /// Test if the Type Container supports mutable operations (add, rename, delete)
+    pub fn is_mutable(&self) -> bool {
+        unsafe { BNTypeContainerIsMutable(self.as_raw()) }
+    }
+
+    /// Get the Platform object associated with this Type Container. All Type Containers
+    /// have exactly one associated Platform (as opposed to, e.g. Type Libraries).
+    pub fn platform(&self) -> Ref<Platform> {
+        let result = unsafe { BNTypeContainerGetPlatform(self.as_raw()) };
+        assert!(!result.is_null());
+        unsafe { Platform::ref_from_raw(result) }
+    }
+
+    /// Add or update types to a Type Container. If the Type Container already contains
+    /// a type with the same name as a type being added, the existing type will be
+    /// replaced with the definition given to this function, and references will be
+    /// updated in the source model.
+    pub fn add_types<I>(&self, types: I) -> bool
+    where
+        I: IntoIterator<Item = (QualifiedName, Ref<Type>)>,
+    {
+        let (names, types): (Vec<QualifiedName>, Vec<Ref<Type>>) = types.into_iter().unzip();
+
+        // SAFETY QualifiedName is transparent with BNQualifiedName
+        let names_raw: &[BNQualifiedName] = unsafe { mem::transmute(names.as_slice()) };
+
+        let mut types_raw: Vec<*mut BNType> = types.iter().map(|t| t.handle).collect();
+
+        let mut result_names = ptr::null_mut();
+        let mut result_ids = ptr::null_mut();
+        let mut result_count = 0;
+        unsafe {
+            BNTypeContainerAddTypes(
+                self.as_raw(),
+                names_raw.as_ptr(),
+                types_raw.as_mut_ptr(),
+                types.len(),
+                Some(cb_progress_nop),
+                ptr::null_mut(),
+                &mut result_names,
+                &mut result_ids,
+                &mut result_count,
+            )
+        }
+    }
+
+    pub fn add_types_with_progress<I, F>(&self, types: I, mut progress: F) -> bool
+    where
+        I: IntoIterator<Item = (QualifiedName, Ref<Type>)>,
+        F: FnMut(usize, usize) -> bool,
+    {
+        let (names, types): (Vec<QualifiedName>, Vec<Ref<Type>>) = types.into_iter().unzip();
+
+        // SAFETY QualifiedName is transparent with BNQualifiedName
+        let names_raw: &[BNQualifiedName] = unsafe { mem::transmute(names.as_slice()) };
+
+        let mut types_raw: Vec<*mut BNType> = types.iter().map(|t| t.handle).collect();
+
+        let mut result_names = ptr::null_mut();
+        let mut result_ids = ptr::null_mut();
+        let mut result_count = 0;
+        unsafe {
+            BNTypeContainerAddTypes(
+                self.as_raw(),
+                names_raw.as_ptr(),
+                types_raw.as_mut_ptr(),
+                types.len(),
+                Some(cb_progress::<F>),
+                &mut progress as *mut F as *mut ffi::c_void,
+                &mut result_names,
+                &mut result_ids,
+                &mut result_count,
+            )
+        }
+    }
+
+    /// Rename a type in the Type Container. All references to this type will be updated
+    /// (by id) to use the new name.
+    pub fn rename_type<S: BnStrCompatible>(&self, name: &QualifiedName, type_id: S) -> bool {
+        let type_id = type_id.into_bytes_with_nul();
+        unsafe {
+            BNTypeContainerRenameType(
+                self.as_raw(),
+                type_id.as_ref().as_ptr() as *const ffi::c_char,
+                &name.0,
+            )
+        }
+    }
+
+    /// Delete a type in the Type Container. Behavior of references to this type is
+    /// not specified and you may end up with broken references if any still exist.
+    pub fn delete_type<S: BnStrCompatible>(&self, type_id: S) -> bool {
+        let type_id = type_id.into_bytes_with_nul();
+        unsafe {
+            BNTypeContainerDeleteType(
+                self.as_raw(),
+                type_id.as_ref().as_ptr() as *const ffi::c_char,
+            )
+        }
+    }
+
+    /// Get the unique id of the type in the Type Container with the given name.
+    /// If no type with that name exists, returns None.
+    pub fn type_id(&self, type_name: &QualifiedName) -> Option<BnString> {
+        let mut result = ptr::null_mut();
+        let success = unsafe { BNTypeContainerGetTypeId(self.as_raw(), &type_name.0, &mut result) };
+        success.then(|| unsafe { BnString::from_raw(result) })
+    }
+
+    /// Get the unique name of the type in the Type Container with the given id.
+    /// If no type with that id exists, returns None.
+    pub fn type_name<S: BnStrCompatible>(&self, type_id: S) -> Option<QualifiedName> {
+        let type_id = type_id.into_bytes_with_nul();
+        let mut result = BNQualifiedName::default();
+        let success = unsafe {
+            BNTypeContainerGetTypeName(
+                self.as_raw(),
+                type_id.as_ref().as_ptr() as *const ffi::c_char,
+                &mut result,
+            )
+        };
+        success.then(|| QualifiedName(result))
+    }
+
+    /// Get the definition of the type in the Type Container with the given id.
+    /// If no type with that id exists, returns None.
+    pub fn type_by_id<S: BnStrCompatible>(&self, type_id: S) -> Option<Ref<Type>> {
+        let type_id = type_id.into_bytes_with_nul();
+        let mut result = ptr::null_mut();
+        let success = unsafe {
+            BNTypeContainerGetTypeById(
+                self.as_raw(),
+                type_id.as_ref().as_ptr() as *const ffi::c_char,
+                &mut result,
+            )
+        };
+        success.then(|| unsafe { Type::ref_from_raw(result) })
+    }
+
+    /// Get the definition of the type in the Type Container with the given name.
+    /// If no type with that name exists, returns None.
+    pub fn type_by_name(&self, type_name: &QualifiedName) -> Option<Ref<Type>> {
+        let mut result = ptr::null_mut();
+        let success =
+            unsafe { BNTypeContainerGetTypeByName(self.as_raw(), &type_name.0, &mut result) };
+        success.then(|| unsafe { Type::ref_from_raw(result) })
+    }
+
+    /// Get a mapping of all types in a Type Container.
+    pub fn types(&self) -> Option<(Array<Type>, Array<QualifiedName>, Array<BnString>)> {
+        let mut type_ids = ptr::null_mut();
+        let mut type_names = ptr::null_mut();
+        let mut type_types = ptr::null_mut();
+        let mut type_count = 0;
+        let success = unsafe {
+            BNTypeContainerGetTypes(
+                self.as_raw(),
+                &mut type_ids,
+                &mut type_names,
+                &mut type_types,
+                &mut type_count,
+            )
+        };
+        success.then(|| unsafe {
+            let ids = Array::new(type_ids, type_count, ());
+            let names = Array::new(type_names, type_count, ());
+            let types = Array::new(type_types, type_count, ());
+            (types, names, ids)
+        })
+    }
+
+    /// Get all type ids in a Type Container.
+    pub fn type_ids(&self) -> Option<Array<BnString>> {
+        let mut type_ids = ptr::null_mut();
+        let mut type_count = 0;
+        let success =
+            unsafe { BNTypeContainerGetTypeIds(self.as_raw(), &mut type_ids, &mut type_count) };
+        success.then(|| unsafe { Array::new(type_ids, type_count, ()) })
+    }
+
+    /// Get all type names in a Type Container.
+    pub fn type_names(&self) -> Option<Array<QualifiedName>> {
+        let mut type_ids = ptr::null_mut();
+        let mut type_count = 0;
+        let success =
+            unsafe { BNTypeContainerGetTypeNames(self.as_raw(), &mut type_ids, &mut type_count) };
+        success.then(|| unsafe { Array::new(type_ids, type_count, ()) })
+    }
+
+    /// Get a mapping of all type ids and type names in a Type Container.
+    pub fn type_names_and_ids(&self) -> Option<(Array<BnString>, Array<QualifiedName>)> {
+        let mut type_ids = ptr::null_mut();
+        let mut type_names = ptr::null_mut();
+        let mut type_count = 0;
+        let success = unsafe {
+            BNTypeContainerGetTypeNamesAndIds(
+                self.as_raw(),
+                &mut type_ids,
+                &mut type_names,
+                &mut type_count,
+            )
+        };
+        success.then(|| unsafe {
+            let ids = Array::new(type_ids, type_count, ());
+            let names = Array::new(type_names, type_count, ());
+            (ids, names)
+        })
+    }
+
+    /// Parse a single type and name from a string containing their definition, with
+    /// knowledge of the types in the Type Container.
+    ///
+    /// * `source` - Source code to parse
+    /// * `import_dependencies` - If Type Library / Type Archive types should be imported during parsing
+    pub fn parse_type_string<S: BnStrCompatible>(
+        &self,
+        source: S,
+        import_dependencies: bool,
+    ) -> Result<QualifiedNameAndType, Array<TypeParserError>> {
+        let source = source.into_bytes_with_nul();
+        let mut result = BNQualifiedNameAndType::default();
+        let mut errors = ptr::null_mut();
+        let mut error_count = 0;
+        let success = unsafe {
+            BNTypeContainerParseTypeString(
+                self.as_raw(),
+                source.as_ref().as_ptr() as *const ffi::c_char,
+                import_dependencies,
+                &mut result,
+                &mut errors,
+                &mut error_count,
+            )
+        };
+        if success {
+            Ok(QualifiedNameAndType(result))
+        } else {
+            assert!(!errors.is_null());
+            Err(unsafe { Array::new(errors, error_count, ()) })
+        }
+    }
+
+    /// Parse an entire block of source into types, variables, and functions, with
+    /// knowledge of the types in the Type Container.
+
+    /// * `source` - Source code to parse
+    /// * `file_name` - Name of the file containing the source (optional: exists on disk)
+    /// * `options` - String arguments to pass as options, e.g. command line arguments
+    /// * `include_dirs` - List of directories to include in the header search path
+    /// * `auto_type_source` - Source of types if used for automatically generated types
+    /// * `import_dependencies` - If Type Library / Type Archive types should be imported during parsing
+    pub fn parse_types_from_source<S, F, O, D, A>(
+        &self,
+        source: S,
+        filename: F,
+        options: O,
+        include_directories: D,
+        auto_type_source: A,
+        import_dependencies: bool,
+    ) -> Result<TypeParserResult, Array<TypeParserError>>
+    where
+        S: BnStrCompatible,
+        F: BnStrCompatible,
+        O: IntoIterator,
+        O::Item: BnStrCompatible,
+        D: IntoIterator,
+        D::Item: BnStrCompatible,
+        A: BnStrCompatible,
+    {
+        let source = source.into_bytes_with_nul();
+        let filename = filename.into_bytes_with_nul();
+        let options: Vec<_> = options
+            .into_iter()
+            .map(|o| o.into_bytes_with_nul())
+            .collect();
+        let options_raw: Vec<*const ffi::c_char> = options
+            .iter()
+            .map(|o| o.as_ref().as_ptr() as *const ffi::c_char)
+            .collect();
+        let include_directories: Vec<_> = include_directories
+            .into_iter()
+            .map(|d| d.into_bytes_with_nul())
+            .collect();
+        let include_directories_raw: Vec<*const ffi::c_char> = include_directories
+            .iter()
+            .map(|d| d.as_ref().as_ptr() as *const ffi::c_char)
+            .collect();
+        let auto_type_source = auto_type_source.into_bytes_with_nul();
+        let mut result = BNTypeParserResult::default();
+        let mut errors = ptr::null_mut();
+        let mut error_count = 0;
+        let success = unsafe {
+            BNTypeContainerParseTypesFromSource(
+                self.as_raw(),
+                source.as_ref().as_ptr() as *const ffi::c_char,
+                filename.as_ref().as_ptr() as *const ffi::c_char,
+                options_raw.as_ptr(),
+                options_raw.len(),
+                include_directories_raw.as_ptr(),
+                include_directories_raw.len(),
+                auto_type_source.as_ref().as_ptr() as *const ffi::c_char,
+                import_dependencies,
+                &mut result,
+                &mut errors,
+                &mut error_count,
+            )
+        };
+        if success {
+            Ok(unsafe { TypeParserResult::from_raw(result) })
+        } else {
+            assert!(!errors.is_null());
+            Err(unsafe { Array::new(errors, error_count, ()) })
+        }
     }
 }
 
@@ -1581,6 +1927,23 @@ unsafe extern "C" fn cb_print_all_types<T: TypePrinter>(
         *result = ptr::null_mut();
         false
     }
+}
+
+unsafe extern "C" fn cb_progress_nop(
+    _ctxt: *mut ::std::os::raw::c_void,
+    _progress: usize,
+    _total: usize,
+) -> bool {
+    true
+}
+
+unsafe extern "C" fn cb_progress<F: FnMut(usize, usize) -> bool>(
+    ctxt: *mut ::std::os::raw::c_void,
+    progress: usize,
+    total: usize,
+) -> bool {
+    let ctxt = &mut *(ctxt as *mut F);
+    ctxt(progress, total)
 }
 
 unsafe extern "C" fn cb_free_tokens(

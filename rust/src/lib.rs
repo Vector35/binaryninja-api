@@ -139,6 +139,7 @@ pub mod demangle;
 pub mod disassembly;
 pub mod component;
 pub mod downloadprovider;
+pub mod externallibrary;
 pub mod fileaccessor;
 pub mod filemetadata;
 pub mod flowgraph;

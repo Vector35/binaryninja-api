@@ -6,11 +6,6 @@
 #pragma warning(disable: 4005)
 #endif
 
-#define DEFAULT_VXWORKS_BASE_ADDRESS 0x10000
-#define MAX_SYMBOL_TABLE_REGION_SIZE 0x2000000
-#define MIN_VALID_SYMBOL_ENTRIES 1000
-#define VXWORKS_SYMBOL_ENTRY_TYPE(flags) (((flags >> 8) & 0xff))
-
 enum VxWorksVersion
 {
 	VxWorksUnknownVersion,
@@ -46,25 +41,6 @@ enum VxWorks5SymbolType
 	VxWorks5PowerPCGlobalSDA2SymbolType = 0x81,
 };
 
-std::map<VxWorks5SymbolType, BNSymbolType> VxWorks5SymbolTypeMap = {
-	{ VxWorks5UndefinedSymbolType, FunctionSymbol },
-	{ VxWorks5GlobalExternalSymbolType, ImportAddressSymbol },
-	{ VxWorks5LocalAbsoluteSymbolType, DataSymbol },
-	{ VxWorks5GlobalAbsoluteSymbolType, DataSymbol },
-	{ VxWorks5LocalTextSymbolType, FunctionSymbol },
-	{ VxWorks5GlobalTextSymbolType, FunctionSymbol },
-	{ VxWorks5LocalDataSymbolType, DataSymbol },
-	{ VxWorks5GlobalDataSymbolType, DataSymbol },
-	{ VxWorks5LocalBSSSymbolType, DataSymbol },
-	{ VxWorks5GlobalBSSSymbolType, DataSymbol },
-	{ VxWorks5LocalCommonSymbolType, DataSymbol },
-	{ VxWorks5GlobalCommonSymbolType, DataSymbol },
-	{ VxWorks5PowerPCLocalSDASymbolType, DataSymbol },
-	{ VxWorks5PowerPCGlobalSDASymbolType, DataSymbol },
-	{ VxWorks5PowerPCLocalSDA2SymbolType, DataSymbol },
-	{ VxWorks5PowerPCGlobalSDA2SymbolType, DataSymbol },
-};
-
 enum VxWorks6SymbolType
 {
 	VxWorks6UndefinedSymbolType = 0x00,
@@ -83,39 +59,10 @@ enum VxWorks6SymbolType
 	VxWorks6GlobalSymbols = 0x41,
 };
 
-std::map<VxWorks6SymbolType, BNSymbolType> VxWorks6SymbolTypeMap = {
-	{ VxWorks6UndefinedSymbolType, FunctionSymbol },
-	{ VxWorks6GlobalExternalSymbolType, ImportAddressSymbol },
-	{ VxWorks6LocalAbsoluteSymbolType, DataSymbol },
-	{ VxWorks6GlobalAbsoluteSymbolType, DataSymbol },
-	{ VxWorks6LocalTextSymbolType, FunctionSymbol },
-	{ VxWorks6GlobalTextSymbolType, FunctionSymbol },
-	{ VxWorks6LocalDataSymbolType, DataSymbol },
-	{ VxWorks6GlobalDataSymbolType, DataSymbol },
-	{ VxWorks6LocalBSSSymbolType, DataSymbol },
-	{ VxWorks6GlobalBSSSymbolType, DataSymbol },
-	{ VxWorks6LocalCommonSymbolType, DataSymbol },
-	{ VxWorks6GlobalCommonSymbolType, DataSymbol },
-	{ VxWorks6LocalSymbols, DataSymbol },
-	{ VxWorks6GlobalSymbols, DataSymbol },
-	{ VxWorks6LocalSymbols, DataSymbol },
-	{ VxWorks6GlobalSymbols, DataSymbol },
-};
-
-struct VxWorks5SymbolTableEntry
+struct VxWorksSymbolEntry
 {
-	uint32_t unknown;
 	uint32_t name;
 	uint32_t address;
-	uint32_t flags;
-};
-
-struct VxWorks6SymbolTableEntry
-{
-	uint32_t unknown1;
-	uint32_t name;
-	uint32_t address;
-	uint32_t unknown2;
 	uint32_t flags;
 };
 
@@ -143,12 +90,13 @@ namespace BinaryNinja
 		std::vector<VxWorksSectionInfo> m_sections;
 
 		VxWorksVersion m_version = VxWorksUnknownVersion;
-		std::vector<VxWorks5SymbolTableEntry> m_symbolTable5;
-		std::vector<VxWorks6SymbolTableEntry> m_symbolTable6;
+		std::vector<VxWorksSymbolEntry> m_symbols;
 
 	private:
 		void DetermineEntryPoint();
 		void AddSections(BinaryView* parentView);
+		void AssignSymbolToSection(std::map<std::string, std::set<uint64_t>>& sections,
+			BNSymbolType bnSymbolType, uint8_t vxSymbolType, uint64_t address);
 		void ProcessSymbolTable(BinaryReader *reader);
 		bool FunctionAddressesAreValid(VxWorksVersion version);
 		bool ScanForVxWorks6SymbolTable(BinaryView* parentView, BinaryReader *reader);
@@ -171,7 +119,6 @@ namespace BinaryNinja
 	class VxWorksViewType: public BinaryViewType
 	{
 		Ref<Logger> m_logger;
-
 
 	public:
 		VxWorksViewType();

@@ -5,8 +5,62 @@
 using namespace BinaryNinja;
 using namespace std;
 
-static VxWorksViewType* g_vxWorksViewType = nullptr;
+#define MAX_SYMBOL_TABLE_REGION_SIZE 0x2000000
+#define VXWORKS5_SYMBOL_ENTRY_SIZE 0x10
+#define VXWORKS6_SYMBOL_ENTRY_SIZE 0x14
+#define MAX_SYMBOL_NAME_LENGTH 128
+#define MIN_VALID_SYMBOL_ENTRIES 1000
+#define VXWORKS_SYMBOL_ENTRY_TYPE(flags) (((flags >> 8) & 0xff))
+#define LOWEST_TEXT_SYMBOL_ADDRESS_START 0xffffffffffffffff
+#define DEFAULT_VXWORKS_BASE_ADDRESS 0x10000
+#define MAX_ADDRESSES_ENDIANNESS_CHECK 10
 
+static const std::map<VxWorks5SymbolType, BNSymbolType> VxWorks5SymbolTypeMap = {
+	{ VxWorks5UndefinedSymbolType, FunctionSymbol },
+	{ VxWorks5GlobalExternalSymbolType, ImportAddressSymbol },
+	{ VxWorks5LocalAbsoluteSymbolType, DataSymbol },
+	{ VxWorks5GlobalAbsoluteSymbolType, DataSymbol },
+	{ VxWorks5LocalTextSymbolType, FunctionSymbol },
+	{ VxWorks5GlobalTextSymbolType, FunctionSymbol },
+	{ VxWorks5LocalDataSymbolType, DataSymbol },
+	{ VxWorks5GlobalDataSymbolType, DataSymbol },
+	{ VxWorks5LocalBSSSymbolType, DataSymbol },
+	{ VxWorks5GlobalBSSSymbolType, DataSymbol },
+	{ VxWorks5LocalCommonSymbolType, DataSymbol },
+	{ VxWorks5GlobalCommonSymbolType, DataSymbol },
+	{ VxWorks5PowerPCLocalSDASymbolType, DataSymbol },
+	{ VxWorks5PowerPCGlobalSDASymbolType, DataSymbol },
+	{ VxWorks5PowerPCLocalSDA2SymbolType, DataSymbol },
+	{ VxWorks5PowerPCGlobalSDA2SymbolType, DataSymbol },
+};
+
+static const std::map<VxWorks6SymbolType, BNSymbolType> VxWorks6SymbolTypeMap = {
+	{ VxWorks6UndefinedSymbolType, FunctionSymbol },
+	{ VxWorks6GlobalExternalSymbolType, ImportAddressSymbol },
+	{ VxWorks6LocalAbsoluteSymbolType, DataSymbol },
+	{ VxWorks6GlobalAbsoluteSymbolType, DataSymbol },
+	{ VxWorks6LocalTextSymbolType, FunctionSymbol },
+	{ VxWorks6GlobalTextSymbolType, FunctionSymbol },
+	{ VxWorks6LocalDataSymbolType, DataSymbol },
+	{ VxWorks6GlobalDataSymbolType, DataSymbol },
+	{ VxWorks6LocalBSSSymbolType, DataSymbol },
+	{ VxWorks6GlobalBSSSymbolType, DataSymbol },
+	{ VxWorks6LocalCommonSymbolType, DataSymbol },
+	{ VxWorks6GlobalCommonSymbolType, DataSymbol },
+	{ VxWorks6LocalSymbols, DataSymbol },
+	{ VxWorks6GlobalSymbols, DataSymbol },
+	{ VxWorks6LocalSymbols, DataSymbol },
+	{ VxWorks6GlobalSymbols, DataSymbol },
+};
+
+static const std::map<std::string, BNSectionSemantics> VxWorksSectionSemanticsMap = {
+	{ ".text", ReadOnlyCodeSectionSemantics },
+	{ ".data", ReadWriteDataSectionSemantics },
+	{ ".rodata", ReadOnlyDataSectionSemantics },
+	{ ".extern", ExternalSectionSemantics },
+};
+
+static VxWorksViewType* g_vxWorksViewType = nullptr;
 
 void BinaryNinja::InitVxWorksViewType()
 {
@@ -24,28 +78,20 @@ VxWorksView::VxWorksView(BinaryView* data, bool parseOnly): BinaryView("VxWorks"
 }
 
 
-#define LOWEST_TEXT_SYMBOL_ADDRESS_START 0xffffffffffffffff
 void VxWorksView::DetermineImageBaseFromSymbols()
 {
 	uint64_t lowestTextAddress = LOWEST_TEXT_SYMBOL_ADDRESS_START;
-	if (m_version == VxWorksVersion5)
+	for (const auto& entry : m_symbols)
 	{
-		for (const auto& entry : m_symbolTable5)
-		{
-			uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
-			if (type == VxWorks5GlobalTextSymbolType && entry.address < lowestTextAddress)
-				lowestTextAddress = entry.address;
-		}
-	}
+		uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
+		if (m_version == VxWorksVersion5 && type != VxWorks5GlobalTextSymbolType)
+			continue;
 
-	if (m_version == VxWorksVersion6)
-	{
-		for (const auto& entry : m_symbolTable6)
-		{
-			uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
-			if (type == VxWorks6GlobalTextSymbolType && entry.address < lowestTextAddress)
-				lowestTextAddress = entry.address;
-		}
+		if (m_version == VxWorksVersion6 && type != VxWorks6GlobalTextSymbolType)
+			continue;
+
+		if (entry.address < lowestTextAddress)
+			lowestTextAddress = entry.address;
 	}
 
 	if (lowestTextAddress == LOWEST_TEXT_SYMBOL_ADDRESS_START)
@@ -59,59 +105,39 @@ void VxWorksView::DetermineImageBaseFromSymbols()
 	m_imageBase = lowestTextAddress;
 }
 
-#define MAX_ADDRESSES_ENDIANNESS_CHECK 10
+
 // Check least significant byte of the first 10 function symbol addresses to make sure they aren't all the same
 bool VxWorksView::FunctionAddressesAreValid(VxWorksVersion version)
 {
-	size_t count = 0;
 	std::vector<uint32_t> funcAddresses;
-	if (version == VxWorksVersion5)
+	for (const auto& entry : m_symbols)
 	{
-		for (const auto& entry : m_symbolTable5)
-		{
-			uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
-			if (type == VxWorks5GlobalTextSymbolType)
-			{
-				funcAddresses.push_back(entry.address);
-				count++;
-			}
+		uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
+		if (version == VxWorksVersion5 && type != VxWorks5GlobalTextSymbolType)
+			continue;
 
-			if (count == MAX_ADDRESSES_ENDIANNESS_CHECK)
-				break;
+		if (version == VxWorksVersion6 && type != VxWorks6GlobalTextSymbolType)
+			continue;
+
+		funcAddresses.push_back(entry.address);
+		if (funcAddresses.size() == MAX_ADDRESSES_ENDIANNESS_CHECK)
+		{
+			uint32_t val = 0;
+			for (const auto& addr : funcAddresses)
+				val ^= addr;
+			return (val & 0xff) != 0;
 		}
 	}
 
-	if (version == VxWorksVersion6)
-	{
-		m_logger->LogDebug("Checking VxWorks 6 function symbol addresses");
-		for (const auto& entry : m_symbolTable6)
-		{
-			uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
-			if (type == VxWorks6GlobalTextSymbolType)
-			{
-				funcAddresses.push_back(entry.address);
-				count++;
-			}
-
-			if (count == MAX_ADDRESSES_ENDIANNESS_CHECK)
-				break;
-		}
-	}
-
-	if (funcAddresses.size() < MAX_ADDRESSES_ENDIANNESS_CHECK)
-		return false;
-
-	uint32_t val = 0;
-	for (const auto& addr : funcAddresses)
-		val ^= addr;
-	return (val & 0xff) != 0;
+	// Too few function symbols for check
+	return false;
 }
 
 
 bool VxWorksView::ScanForVxWorks6SymbolTable(BinaryView *parentView, BinaryReader *reader)
 {
-	VxWorks6SymbolTableEntry entry;
-	uint64_t startOffset = parentView->GetLength() - sizeof(entry);
+	VxWorksSymbolEntry entry;
+	uint64_t startOffset = parentView->GetLength() - VXWORKS6_SYMBOL_ENTRY_SIZE;
 	uint64_t endOffset = 0;
 	if (parentView->GetLength() > MAX_SYMBOL_TABLE_REGION_SIZE)
 		endOffset = parentView->GetLength() - MAX_SYMBOL_TABLE_REGION_SIZE;
@@ -135,34 +161,34 @@ bool VxWorksView::ScanForVxWorks6SymbolTable(BinaryView *parentView, BinaryReade
 			entry.address != 0 &&
 			entry.name && it != VxWorks6SymbolTypeMap.end())
 		{
-			m_symbolTable6.push_back(entry);
-			searchPos -= sizeof(entry);
+			m_symbols.push_back(entry);
+			searchPos -= VXWORKS6_SYMBOL_ENTRY_SIZE;
 			continue;
 		}
 
-		if (m_symbolTable6.size() > MIN_VALID_SYMBOL_ENTRIES && FunctionAddressesAreValid(VxWorksVersion6))
+		if (m_symbols.size() > MIN_VALID_SYMBOL_ENTRIES && FunctionAddressesAreValid(VxWorksVersion6))
 			break;
 
 		searchPos -= 4;
-		m_symbolTable6.clear();
+		m_symbols.clear();
 	}
 
-	if (m_symbolTable6.size() < MIN_VALID_SYMBOL_ENTRIES)
+	if (m_symbols.size() < MIN_VALID_SYMBOL_ENTRIES)
 	{
-		m_symbolTable6.clear();
+		m_symbols.clear();
 		return false;
 	}
 
 	m_version = VxWorksVersion6;
-	m_logger->LogDebug("Found %d VxWorks 6 symbol table entries", m_symbolTable6.size());
+	m_logger->LogDebug("Found %d VxWorks 6 symbol table entries", m_symbols.size());
 	return true;
 }
 
 
 bool VxWorksView::ScanForVxWorks5SymbolTable(BinaryView* parentView, BinaryReader *reader)
 {
-	VxWorks5SymbolTableEntry entry;
-	uint64_t startOffset = parentView->GetLength() - sizeof(entry);
+	VxWorksSymbolEntry entry;
+	uint64_t startOffset = parentView->GetLength() - VXWORKS5_SYMBOL_ENTRY_SIZE;
 	uint64_t endOffset = 0;
 	if (parentView->GetLength() > MAX_SYMBOL_TABLE_REGION_SIZE)
 		endOffset = parentView->GetLength() - MAX_SYMBOL_TABLE_REGION_SIZE;
@@ -184,26 +210,26 @@ bool VxWorksView::ScanForVxWorks5SymbolTable(BinaryView* parentView, BinaryReade
 			it != VxWorks5SymbolTypeMap.end())
 		{
 			// Name address is greater than the last name address and flags has a valid symbol type
-			m_symbolTable5.push_back(entry);
-			searchPos -= sizeof(entry);
+			m_symbols.push_back(entry);
+			searchPos -= VXWORKS5_SYMBOL_ENTRY_SIZE;
 			continue;
 		}
 
-		if (m_symbolTable5.size() > MIN_VALID_SYMBOL_ENTRIES && FunctionAddressesAreValid(VxWorksVersion5))
+		if (m_symbols.size() > MIN_VALID_SYMBOL_ENTRIES && FunctionAddressesAreValid(VxWorksVersion5))
 			break;
 
 		searchPos -= 4;
-		m_symbolTable5.clear();
+		m_symbols.clear();
 	}
 
-	if (m_symbolTable5.size() < MIN_VALID_SYMBOL_ENTRIES)
+	if (m_symbols.size() < MIN_VALID_SYMBOL_ENTRIES)
 	{
-		m_symbolTable5.clear();
+		m_symbols.clear();
 		return false;
 	}
 
 	m_version = VxWorksVersion5;
-	m_logger->LogDebug("Found %d VxWorks 5 symbol table entries", m_symbolTable5.size());
+	m_logger->LogDebug("Found %d VxWorks 5 symbol table entries", m_symbols.size());
 	return true;
 }
 
@@ -226,140 +252,114 @@ bool VxWorksView::ScanForVxWorksSymbolTable(BinaryView* parentView, BinaryReader
 }
 
 
-#define MAX_SYMBOL_NAME_LENGTH 128
+void VxWorksView::AssignSymbolToSection(std::map<std::string, std::set<uint64_t>>& sections,
+	BNSymbolType bnSymbolType, uint8_t vxSymbolType, uint64_t address)
+{
+	switch (bnSymbolType)
+	{
+	case FunctionSymbol:
+		sections[".text"].insert(address);
+		AddFunctionForAnalysis(m_platform, address);
+		break;
+	case DataSymbol:
+		if (m_version == VxWorksVersion5)
+		{
+			if (vxSymbolType == VxWorks5GlobalAbsoluteSymbolType)
+				sections[".rodata"].insert(address);
+			else
+				sections[".data"].insert(address);
+		}
+
+		if (m_version == VxWorksVersion6)
+		{
+			if (vxSymbolType == VxWorks6GlobalAbsoluteSymbolType)
+				sections[".rodata"].insert(address);
+			else
+				sections[".data"].insert(address);
+		}
+
+		break;
+	case ExternalSymbol:
+		sections[".extern"].insert(address);
+		break;
+	default:
+		m_logger->LogWarn("Unknown symbol type: %d", bnSymbolType);
+		break;
+	}
+}
+
+
 void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 {
-	std::set<uint64_t> textSymbolAddresses;
-	std::set<uint64_t> dataSymbolAddresses;
-	std::set<uint64_t> roDataSymbolAddresses;
-	std::set<uint64_t> externSymbolAddresses;
+	std::map<std::string, std::set<uint64_t>> sections = {
+		{ ".text", {} },
+		{ ".data", {} },
+		{ ".rodata", {} },
+		{ ".extern", {} }
+	};
 
-	switch (m_version)
+	for (const auto& entry : m_symbols)
 	{
-	case VxWorksVersion5:
-	{
-		for (const auto& entry : m_symbolTable5)
+		reader->Seek(entry.name - m_imageBase);
+		string symbolName = reader->ReadCString(MAX_SYMBOL_NAME_LENGTH);
+		uint8_t vxSymbolType = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
+		BNSymbolType bnSymbolType;
+
+		switch (m_version)
 		{
-			reader->Seek(entry.name - m_imageBase);
-			string symbolName = reader->ReadCString(MAX_SYMBOL_NAME_LENGTH);
-			uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
-			auto it = VxWorks5SymbolTypeMap.find((VxWorks5SymbolType)type);
+		case VxWorksVersion5:
+		{
+			auto it = VxWorks5SymbolTypeMap.find((VxWorks5SymbolType)vxSymbolType);
 			if (it == VxWorks5SymbolTypeMap.end())
 			{
-				m_logger->LogError("Unknown VxWorks 5 symbol type: 0x%02x (%s)", type, symbolName.c_str());
+				m_logger->LogWarn("Unknown VxWorks 5 symbol type: 0x%02x (%s)", vxSymbolType, symbolName.c_str());
 				continue;
 			}
 
-			auto symbolType = it->second;
-			switch (symbolType)
-			{
-			case FunctionSymbol:
-				textSymbolAddresses.insert(entry.address);
-				AddFunctionForAnalysis(m_platform, entry.address);
-				break;
-			case DataSymbol:
-				if (type == VxWorks5GlobalAbsoluteSymbolType)
-					roDataSymbolAddresses.insert(entry.address);
-				else
-					dataSymbolAddresses.insert(entry.address);
-				break;
-			case ExternalSymbol:
-				externSymbolAddresses.insert(entry.address);
-				break;
-			default:
-				break;
-			}
-
-			DefineAutoSymbol(new Symbol(symbolType, symbolName, entry.address));
-			if (symbolName == "sysInit")
-				m_sysInit = entry.address;
+			bnSymbolType = it->second;
+			break;
 		}
-
-		break;
-	}
-	case VxWorksVersion6:
-	{
-		for (const auto& entry : m_symbolTable6)
+		case VxWorksVersion6:
 		{
-			reader->Seek(entry.name - m_imageBase);
-			string symbolName = reader->ReadCString(MAX_SYMBOL_NAME_LENGTH);
-			uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
-			auto it = VxWorks6SymbolTypeMap.find((VxWorks6SymbolType)type);
+			auto it = VxWorks6SymbolTypeMap.find((VxWorks6SymbolType)vxSymbolType);
 			if (it == VxWorks6SymbolTypeMap.end())
 			{
-				m_logger->LogError("Unknown VxWorks 6 symbol type: 0x%02x (%s)", type, symbolName.c_str());
+				m_logger->LogWarn("Unknown VxWorks 6 symbol type: 0x%02x (%s)", vxSymbolType, symbolName.c_str());
 				continue;
 			}
 
-			auto symbolType = it->second;
-			switch (symbolType)
-			{
-			case FunctionSymbol:
-				textSymbolAddresses.insert(entry.address);
-				AddFunctionForAnalysis(m_platform, entry.address);
-				break;
-			case DataSymbol:
-				if (type == VxWorks6GlobalAbsoluteSymbolType)
-					roDataSymbolAddresses.insert(entry.address);
-				else
-					dataSymbolAddresses.insert(entry.address);
-				break;
-			case ExternalSymbol:
-				externSymbolAddresses.insert(entry.address);
-				break;
-			default:
-				break;
-			}
-
-			DefineAutoSymbol(new Symbol(symbolType, symbolName, entry.address));
-			if (symbolName == "sysInit")
-				m_sysInit = entry.address;
+			bnSymbolType = it->second;
+			break;
 		}
-		break;
-	}
-	case VxWorksUnknownVersion:
-	default:
-		// Shouldn't get here - we set the VxWorks version when we find the symbol table
-		m_logger->LogError(
-			"VxWorks version is unknown, cannot apply symbols."
-			"Please report this issue."
-		);
-		return;
+		default:
+			m_logger->LogError("VxWorks version is not set. Please report this issue.");
+			return;
+		}
+
+		AssignSymbolToSection(sections, bnSymbolType, vxSymbolType, entry.address);
+		DefineAutoSymbol(new Symbol(bnSymbolType, symbolName, entry.address));
+		if (symbolName == "sysInit")
+			m_sysInit = entry.address;
 	}
 
-	if (textSymbolAddresses.size() > 1)
+	// Build section info from address ranges of symbols and their types
+	for (const auto& section : sections)
 	{
-		m_sections.push_back({
-			{ *textSymbolAddresses.begin(), *textSymbolAddresses.rbegin() },
-			".text",
-			ReadOnlyCodeSectionSemantics
-		});
-	}
+		if (section.second.empty())
+			continue;
 
-	if (dataSymbolAddresses.size() > 1)
-	{
-		m_sections.push_back({
-			{ *dataSymbolAddresses.begin(), *dataSymbolAddresses.rbegin() },
-			".data",
-			ReadWriteDataSectionSemantics
-		});
-	}
+		auto it = VxWorksSectionSemanticsMap.find(section.first);
+		if (it == VxWorksSectionSemanticsMap.end())
+		{
+			m_logger->LogWarn("Unknown section semantics for section: %s. Please report this issue.",
+				section.first.c_str());
+			continue;
+		}
 
-	if (externSymbolAddresses.size() > 1)
-	{
 		m_sections.push_back({
-			{ *externSymbolAddresses.begin(), *externSymbolAddresses.rbegin() },
-			".extern",
-			ExternalSectionSemantics
-		});
-	}
-
-	if (roDataSymbolAddresses.size() > 1)
-	{
-		m_sections.push_back({
-			{ *roDataSymbolAddresses.begin(), *roDataSymbolAddresses.rbegin() },
-			".rodata",
-			ReadOnlyDataSectionSemantics
+			{ *section.second.begin(), *section.second.rbegin() },
+			section.first,
+			it->second
 		});
 	}
 }

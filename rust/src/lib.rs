@@ -163,6 +163,7 @@ pub mod symbol;
 pub mod tags;
 pub mod templatesimplifier;
 pub mod types;
+pub mod update;
 
 use std::path::PathBuf;
 

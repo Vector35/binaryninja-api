@@ -1525,6 +1525,15 @@ def _get_current_llil(instance: PythonScriptingInstance):
 PythonScriptingProvider.register_magic_variable("current_llil", _get_current_llil)
 
 
+def _get_current_lifted_il(instance: PythonScriptingInstance):
+	if instance.interpreter.active_func is None:
+		return None
+	return instance.interpreter.active_func.lifted_il_if_available
+
+
+PythonScriptingProvider.register_magic_variable("current_lifted_il", _get_current_lifted_il)
+
+
 def _get_current_llil_ssa(instance: PythonScriptingInstance):
 	if instance.interpreter.locals["current_llil"] is None:
 		return None
@@ -1535,6 +1544,28 @@ PythonScriptingProvider.register_magic_variable(
 	"current_llil_ssa",
 	_get_current_llil_ssa,
 	depends_on=["current_llil"]
+)
+
+
+def _get_current_mapped_mlil(instance: PythonScriptingInstance):
+	if instance.interpreter.active_func is None:
+		return None
+	return instance.interpreter.active_func.mmlil_if_available
+
+
+PythonScriptingProvider.register_magic_variable("current_mapped_mlil", _get_current_mapped_mlil)
+
+
+def _get_current_mapped_mlil_ssa(instance: PythonScriptingInstance):
+	if instance.interpreter.locals["current_mapped_mlil"] is None:
+		return None
+	return instance.interpreter.locals["current_mapped_mlil"].ssa_form
+
+
+PythonScriptingProvider.register_magic_variable(
+	"current_mapped_mlil_ssa",
+	_get_current_mapped_mlil_ssa,
+	depends_on=["current_mapped_mlil"]
 )
 
 
@@ -1770,8 +1801,14 @@ def _get_current_il_function(instance: PythonScriptingInstance):
 		ilType = instance.interpreter.locals["current_ui_view_location"].getILViewType()
 		if ilType == FunctionGraphType.LowLevelILFunctionGraph:
 			return instance.interpreter.locals["current_llil"]
+		elif ilType == FunctionGraphType.LiftedILFunctionGraph:
+			return instance.interpreter.locals["current_lifted_il"]
 		elif ilType == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
 			return instance.interpreter.locals["current_llil_ssa"]
+		elif ilType == FunctionGraphType.MappedMediumLevelILFunctionGraph:
+			return instance.interpreter.locals["current_mapped_mlil"]
+		elif ilType == FunctionGraphType.MappedMediumLevelILSSAFormFunctionGraph:
+			return instance.interpreter.locals["current_mapped_mlil_ssa"]
 		elif ilType == FunctionGraphType.MediumLevelILFunctionGraph:
 			return instance.interpreter.locals["current_mlil"]
 		elif ilType == FunctionGraphType.MediumLevelILSSAFormFunctionGraph:
@@ -1789,11 +1826,14 @@ PythonScriptingProvider.register_magic_variable(
 	depends_on=[
 		"current_ui_view_location",
 		"current_llil",
+		"current_lifted_il",
 		"current_llil_ssa",
+		"current_mapped_mlil",
+		"current_mapped_mlil_ssa",
 		"current_mlil",
 		"current_mlil_ssa",
 		"current_hlil",
-		"current_hlil_ssa"
+		"current_hlil_ssa",
 	]
 )
 

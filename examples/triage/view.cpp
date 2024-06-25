@@ -3,6 +3,7 @@
 #include <QtWidgets/QSplitter>
 #include "view.h"
 #include "entropy.h"
+#include "entry.h"
 #include "imports.h"
 #include "exports.h"
 #include "sections.h"
@@ -107,6 +108,15 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 		layout->addWidget(sectionsGroup);
 		if (sectionsWidget->GetSections().size() == 0)
 			sectionsGroup->hide();
+
+		QGroupBox* entryGroup = new QGroupBox("Entry Functions", container);
+		QVBoxLayout* entryLayout = new QVBoxLayout();
+		EntryWidget* entryWidget = new EntryWidget(entryGroup, m_data);
+		entryLayout->addWidget(entryWidget);
+		entryGroup->setLayout(entryLayout);
+		layout->addWidget(entryGroup);
+		if (entryWidget->GetEntry().size() == 0)
+			entryGroup->hide();
 
 		QGroupBox* stringsGroup = new QGroupBox("Strings", container);
 		QVBoxLayout* stringsLayout = new QVBoxLayout();

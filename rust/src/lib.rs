@@ -169,6 +169,7 @@ pub mod templatesimplifier;
 pub mod typelibrary;
 pub mod typearchive;
 pub mod types;
+pub mod update;
 
 use std::path::PathBuf;
 

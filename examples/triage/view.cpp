@@ -88,6 +88,12 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 
 		layout->addWidget(importExportSplitter);
 
+		QGroupBox* entryGroup = new QGroupBox("Entry Functions", container);
+		QVBoxLayout* entryLayout = new QVBoxLayout();
+		entryLayout->addWidget(new EntryWidget(entryGroup, this, m_data));
+		entryGroup->setLayout(entryLayout);
+		layout->addWidget(entryGroup);
+
 		if (m_data->GetTypeName() != "PE")
 		{
 			QGroupBox* segmentsGroup = new QGroupBox("Segments", container);
@@ -109,14 +115,6 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 		if (sectionsWidget->GetSections().size() == 0)
 			sectionsGroup->hide();
 
-		QGroupBox* entryGroup = new QGroupBox("Entry Functions", container);
-		QVBoxLayout* entryLayout = new QVBoxLayout();
-		EntryWidget* entryWidget = new EntryWidget(entryGroup, m_data);
-		entryLayout->addWidget(entryWidget);
-		entryGroup->setLayout(entryLayout);
-		layout->addWidget(entryGroup);
-		if (entryWidget->GetEntry().size() == 0)
-			entryGroup->hide();
 
 		QGroupBox* stringsGroup = new QGroupBox("Strings", container);
 		QVBoxLayout* stringsLayout = new QVBoxLayout();

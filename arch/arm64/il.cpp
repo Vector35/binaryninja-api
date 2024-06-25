@@ -128,6 +128,45 @@ ExprId ExtractImmediate(LowLevelILFunction& il, InstructionOperand& operand, int
 	return ILCONST(sizeof_imm, imm & ONES(sizeof_imm * 8));
 }
 
+std::pair<uint64_t, bool> ExtractImmediate(InstructionOperand& operand, int sizeof_imm)
+{
+	if (operand.operandClass != IMM32 && operand.operandClass != IMM64)
+		return std::pair<uint64_t, bool>(0, false);
+
+	uint64_t imm = operand.immediate;
+
+	if (operand.shiftValueUsed)
+	{
+		switch (operand.shiftType)
+		{
+		case ShiftType_LSL:
+			imm = imm << operand.shiftValue;
+			break;
+		case ShiftType_LSR:
+			imm = imm >> operand.shiftValue;
+			break;
+		case ShiftType_MSL:
+			imm = (imm << operand.shiftValue) | ONES(operand.shiftValue);
+			break;
+		case ShiftType_ASR:
+		case ShiftType_ROR:
+		case ShiftType_UXTW:
+		case ShiftType_SXTW:
+		case ShiftType_SXTX:
+		case ShiftType_UXTX:
+		case ShiftType_SXTB:
+		case ShiftType_SXTH:
+		case ShiftType_UXTH:
+		case ShiftType_UXTB:
+		case ShiftType_END:
+		default:
+			return std::pair<uint64_t, bool>(0, false);
+		}
+	}
+
+	return std::pair<uint64_t, bool>(imm & ONES(sizeof_imm * 8), true);
+}
+
 // extractSize can be smaller than the register, generating an LLIL_LOWPART
 // resultSize can be larger than the register, generating sign or zero extension
 ExprId ExtractRegister(LowLevelILFunction& il, InstructionOperand& operand, size_t regNum,
@@ -662,21 +701,121 @@ static int unpack_vector(InstructionOperand& oper, Register* result)
 static int consolidate_vector(
 		InstructionOperand& operand1,
 		InstructionOperand& operand2,
-		Register *result)
+		Register *result,
+		uint64_t *immediate)
 {
+	int n = 1;
 	/* make sure both our operand classes are single regs */
-	if (operand1.operandClass != REG || operand2.operandClass != REG)
+	if (operand1.operandClass != REG || 
+		(operand2.operandClass != REG && operand2.operandClass != IMM32 && operand2.operandClass != IMM64))
 		return 0;
+
+ 	if (operand2.operandClass != REG)
+	{
+		Register reg[16];
+		int n_regs = unpack_vector(operand1, reg);
+		uint64_t imm = operand2.immediate;
+		auto extracted = ExtractImmediate(operand2, REGSZ(reg[0]));
+		if (extracted.second)
+			imm = extracted.first;
+		else if (operand2.shiftType != ShiftType_NONE && operand2.shiftValue)
+			imm = operand2.immediate << operand2.shiftValue;
+		uint64_t b = imm & 0xFF;
+		uint64_t w = imm & 0xFFFF;
+		uint64_t d = imm & 0xFFFFFFFF;
+		uint64_t q = imm;
+		switch (operand1.arrSpec)
+		{
+		case ARRSPEC_FULL:
+			*immediate = q;
+			result[0] = v_consolidate_lookup[operand1.reg[0] - REG_V0][ARRSPEC_FULL];
+			break;
+		case ARRSPEC_16BYTES:
+			immediate[0] =
+				(b << 0) | (b << 8) | (b << 16) | (b << 24) |
+				(b << 32) | (b << 40) | (b << 48) | (b << 56);
+			immediate[1] =
+				(b << 0) | (b << 8) | (b << 16) | (b << 24) |
+				(b << 32) | (b << 40) | (b << 48) | (b << 56);
+			n = 2;
+			result[0] = v_unpack_lookup[ARRSPEC_2DOUBLES][operand1.reg[0] - REG_V0][0];
+			result[1] = v_unpack_lookup[ARRSPEC_2DOUBLES][operand1.reg[0] - REG_V0][1];
+			break;
+		case ARRSPEC_8BYTES:
+			*immediate = 
+				(b << 0) | (b << 8) | (b << 16) | (b << 24) |
+				(b << 32) | (b << 40) | (b << 48) | (b << 56);
+			result[0] = v_consolidate_lookup[operand1.reg[0] - REG_V0][ARRSPEC_1DOUBLE];
+			break;
+		case ARRSPEC_4BYTES:
+			*immediate = (b << 0) | (b << 8) | (b << 16) | (b << 24);
+			result[0] = v_consolidate_lookup[operand1.reg[0] - REG_V0][ARRSPEC_1SINGLE];
+			break;
+		case ARRSPEC_1BYTE:
+			*immediate = b;
+			result[0] = v_consolidate_lookup[operand1.reg[0] - REG_V0][ARRSPEC_1BYTE];
+			break;
+		case ARRSPEC_1HALF:
+			*immediate = w;
+			result[0] = v_consolidate_lookup[operand1.reg[0] - REG_V0][ARRSPEC_1HALF];
+			break;
+		case ARRSPEC_2HALVES:
+			*immediate = (w << 16) | (w << 0);
+			result[0] = v_consolidate_lookup[operand1.reg[0] - REG_V0][ARRSPEC_1SINGLE];
+			break;
+		case ARRSPEC_4HALVES:
+			*immediate = (w << 48) | (w << 32) | (w << 16) | (w << 0);
+			result[0] = v_consolidate_lookup[operand1.reg[0] - REG_V0][ARRSPEC_1DOUBLE];
+			break;
+		case ARRSPEC_8HALVES:
+			n = 2;
+			immediate[0] = (w << 48) | (w << 32) | (w << 16) | (w << 0);
+			immediate[1] = (w << 48) | (w << 32) | (w << 16) | (w << 0);
+			result[0] = v_unpack_lookup[ARRSPEC_2DOUBLES][operand1.reg[0] - REG_V0][0];
+			result[1] = v_unpack_lookup[ARRSPEC_2DOUBLES][operand1.reg[0] - REG_V0][1];
+			break;
+		case ARRSPEC_1SINGLE:
+			*immediate = d;
+			result[0] = v_consolidate_lookup[operand1.reg[0] - REG_V0][ARRSPEC_1SINGLE];
+			break;
+		case ARRSPEC_2SINGLES:
+			*immediate = d | (d << 32);
+			result[0] = v_consolidate_lookup[operand1.reg[0] - REG_V0][ARRSPEC_1DOUBLE];
+			break;
+		case ARRSPEC_4SINGLES:
+			n = 2;
+			immediate[0] = d | (d << 32);
+			immediate[1] = d | (d << 32);
+			result[0] = v_unpack_lookup[ARRSPEC_2DOUBLES][operand1.reg[0] - REG_V0][0];
+			result[1] = v_unpack_lookup[ARRSPEC_2DOUBLES][operand1.reg[0] - REG_V0][1];
+			break;
+		case ARRSPEC_1DOUBLE:
+			*immediate = q;
+			result[0] = v_consolidate_lookup[operand1.reg[0] - REG_V0][ARRSPEC_1DOUBLE];
+			break;
+		case ARRSPEC_2DOUBLES:
+			n = 2;
+			immediate[0] = q;
+			immediate[1] = q;
+			result[0] = v_unpack_lookup[ARRSPEC_2DOUBLES][operand1.reg[0] - REG_V0][0];
+			result[1] = v_unpack_lookup[ARRSPEC_2DOUBLES][operand1.reg[0] - REG_V0][1];
+			break;
+			
+		default:
+			return 0;
+		}
+	}
 
 	/* make sure our arrSpec's match. We need this to deal with cases where the arrSpec might
         have different sizes, e.g. 'uxtl v2.2d, v8.2s'.*/
-	if (operand1.arrSpec != operand2.arrSpec)
+	else if (operand1.arrSpec != operand2.arrSpec)
 		return 0;
+	else
+		result[1] = v_consolidate_lookup[operand2.reg[0]-REG_V0][operand2.arrSpec];
 
 	result[0] = v_consolidate_lookup[operand1.reg[0]-REG_V0][operand1.arrSpec];
-	result[1] = v_consolidate_lookup[operand2.reg[0]-REG_V0][operand2.arrSpec];
 
-	return 1;
+	return n;
 }
 
 static void LoadStoreOperandPairSize(LowLevelILFunction& il, bool load, size_t load_size, InstructionOperand& operand1,
@@ -1991,14 +2130,18 @@ bool GetLowLevelILForInstruction(
 		case ENC_MOV_MOVZ_32_MOVEWIDE:
 		case ENC_MOV_MOVZ_64_MOVEWIDE:
 		{
+
 			Register regs[16];
 			int n = unpack_vector(operand1, regs);
 
 			if (n == 1) {
 				il.AddInstruction(ILSETREG(regs[0], ReadILOperand(il, operand2, get_register_size(regs[0]))));
 			} else {
+				if (preferIntrinsics())
+					return true;
+
 				Register cregs[2];
-				if (consolidate_vector(operand1, operand2, cregs))
+				if (consolidate_vector(operand1, operand2, cregs, nullptr))
 					il.AddInstruction(ILSETREG(cregs[0], ILREG(cregs[1])));
 				else
 					ABORT_LIFT;
@@ -2015,9 +2158,20 @@ bool GetLowLevelILForInstruction(
 	case ARM64_MOVI:
 	{
 		Register regs[16];
-		int n = unpack_vector(operand1, regs);
-		for (int i = 0; i < n; ++i)
-			il.AddInstruction(ILSETREG(regs[i], ILCONST_O(get_register_size(regs[i]), operand2)));
+		uint64_t imm[2];
+		int n;
+		if ((n = consolidate_vector(operand1, operand2, regs, imm)) > 0)
+		{
+			il.AddInstruction(ILSETREG(regs[0], ILCONST(REGSZ(regs[0]), imm[0])));
+			if (n > 1)
+				il.AddInstruction(ILSETREG(regs[1], ILCONST(REGSZ(regs[1]), imm[1])));
+		}
+		else
+		{
+			int n = unpack_vector(operand1, regs);
+			for (int i = 0; i < n; ++i)
+				il.AddInstruction(ILSETREG(regs[i], ILCONST_O(get_register_size(regs[i]), operand2)));
+		}
 		break;
 	}
 	case ARM64_MVN:

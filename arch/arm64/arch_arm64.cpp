@@ -1240,7 +1240,15 @@ class Arm64Architecture : public Architecture
 		}
 
 		len = 4;
-		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_onlyDisassembleOnAlignedAddresses);
+		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_onlyDisassembleOnAlignedAddresses, [&]() -> bool
+			{
+				Ref<Function> f = il.GetFunction();
+				Ref<BinaryView> v;
+				Ref<Settings> s = Settings::Instance();
+				if (s && f && (v = f->GetView()))
+					return m_preferIntrinsics && s->Get<bool>("arch.aarch64.disassembly.preferIntrinsics", v);
+				return true;
+			});
 	}
 
 

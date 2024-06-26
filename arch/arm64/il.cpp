@@ -1150,7 +1150,7 @@ enum Arm64Intrinsic operation_to_intrinsic(int operation)
 
 
 bool GetLowLevelILForInstruction(
-    Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize, bool requireAlignment, bool preferIntrinsics)
+    Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize, bool requireAlignment, std::function<bool()> _preferIntrinsics)
 {
 	bool SetPacAttr = false;
 
@@ -1164,6 +1164,15 @@ bool GetLowLevelILForInstruction(
 	}
 
 	int n_instrs_before = il.GetInstructionCount();
+
+	auto preferIntrinsics = [&]() -> bool {
+		if (_preferIntrinsics())
+		{
+			NeonGetLowLevelILForInstruction(arch, addr, il, instr, addrSize);
+			return (il.GetInstructionCount() > n_instrs_before);
+		}
+		return false;
+	};
 
 	// printf("%s() operation:%d encoding:%d\n", __func__, instr.operation, instr.encoding);
 
@@ -1510,8 +1519,8 @@ bool GetLowLevelILForInstruction(
 		case ENC_FADD_ASIMDSAME_ONLY:
 		case ENC_FADD_ASIMDSAMEFP16_ONLY:
 		{
-			if (preferIntrinsics)
-				break;
+			if (preferIntrinsics())
+				return true;
 			Register srcs1[16], srcs2[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
 			int src1_n = unpack_vector(operand2, srcs1);
@@ -1569,8 +1578,9 @@ bool GetLowLevelILForInstruction(
 		case ENC_FSUB_ASIMDSAME_ONLY:
 		case ENC_FSUB_ASIMDSAMEFP16_ONLY:
 		{
-			if (preferIntrinsics)
-				break;
+			if (preferIntrinsics())
+				return true;
+
 			Register srcs[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
 			int src_n = unpack_vector(operand2, srcs);
@@ -1580,8 +1590,8 @@ bool GetLowLevelILForInstruction(
 			int rsize = get_register_size(dsts[0]);
 			for (int i = 0; i < dst_n; ++i)
 				il.AddInstruction(ILSETREG(dsts[i], il.FloatSub(rsize, ILREG(dsts[i]), ILREG(srcs[i]))));
+			break;
 		}
-		break;
 		default:
 			il.AddInstruction(il.Unimplemented());
 		}
@@ -1622,13 +1632,28 @@ bool GetLowLevelILForInstruction(
 			break;
 		case ENC_FDIV_ASIMDSAMEFP16_ONLY:
 		case ENC_FDIV_ASIMDSAME_ONLY:
-			// Lift as intrinsic calls
+		{
+			if (preferIntrinsics())
+				return true;
+
+			Register srcs1[16], srcs2[16], dsts[16];
+			int dst_n = unpack_vector(operand1, dsts);
+			int src1_n = unpack_vector(operand2, srcs1);
+			int src2_n = unpack_vector(operand3, srcs2);
+			if ((dst_n != src1_n) || (src1_n != src2_n) || dst_n == 0)
+				ABORT_LIFT;
+			int rsize = get_register_size(dsts[0]);
+			for (int i = 0; i < dst_n; ++i)
+				il.AddInstruction(ILSETREG(
+					dsts[i], il.FloatDiv(rsize, ILREG(srcs1[i]), ILREG(srcs2[i]))));
 			break;
+		}
 		default:
 			il.AddInstruction(il.Unimplemented());
 		}
 		break;
 	case ARM64_FMOV:
+
 		switch (instr.encoding)
 		{
 		case ENC_FMOV_64VX_FLOAT2INT:
@@ -1680,6 +1705,9 @@ bool GetLowLevelILForInstruction(
 		case ENC_FMOV_ASIMDIMM_H_H:
 		case ENC_FMOV_ASIMDIMM_S_S:
 		{
+			if (preferIntrinsics())
+				return true;
+
 			int float_sz = 2;
 			if (instr.encoding == ENC_FMOV_ASIMDIMM_S_S)
 				float_sz = 4;
@@ -1709,6 +1737,9 @@ bool GetLowLevelILForInstruction(
 		case ENC_FMUL_ASIMDSAME_ONLY:
 		case ENC_FMUL_ASIMDSAMEFP16_ONLY:
 		{
+			if (preferIntrinsics())
+				return true;
+
 			Register srcs1[16], srcs2[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
 			int src1_n = unpack_vector(operand2, srcs1);
@@ -1726,6 +1757,9 @@ bool GetLowLevelILForInstruction(
 		case ENC_FMUL_ASISDELEM_RH_H:
 		case ENC_FMUL_ASISDELEM_R_SD:
 		{
+			if (preferIntrinsics())
+				return true;
+
 			Register srcs1[16], srcs2[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
 			int src1_n = unpack_vector(operand2, srcs1);
@@ -1736,6 +1770,36 @@ bool GetLowLevelILForInstruction(
 			for (int i = 0; i < dst_n; ++i)
 				il.AddInstruction(ILSETREG(
 					dsts[i], il.FloatMult(rsize, ILREG(srcs1[i]), ILREG(srcs2[0]))));
+			break;
+		}
+		default:
+			il.AddInstruction(il.Unimplemented());
+		}
+		break;
+	case ARM64_FNEG:
+		switch (instr.encoding)
+		{
+		case ENC_FNEG_D_FLOATDP1:
+		case ENC_FNEG_S_FLOATDP1:
+		case ENC_FNEG_H_FLOATDP1:
+			il.AddInstruction(ILSETREG_O(
+				operand1, il.FloatNeg(REGSZ_O(operand1), ILREG_O(operand2))));
+			break;
+		case ENC_FNEG_ASIMDMISCFP16_R:
+		case ENC_FNEG_ASIMDMISC_R:
+		{
+			if (preferIntrinsics())
+				return true;
+
+			Register srcs[16], dsts[16];
+			int dst_n = unpack_vector(operand1, dsts);
+			int src_n = unpack_vector(operand2, srcs);
+			if ((dst_n != src_n) || dst_n == 0)
+				ABORT_LIFT;
+
+			int rsize = get_register_size(dsts[0]);
+			for (int i = 0; i < dst_n; ++i)
+				il.AddInstruction(ILSETREG(dsts[i], il.FloatNeg(rsize, ILREG(srcs[i]))));
 			break;
 		}
 		default:
@@ -1939,6 +2003,19 @@ bool GetLowLevelILForInstruction(
 		switch (instr.encoding)
 		{
 		case ENC_DUP_ASIMDINS_DR_R:
+		{
+			if (preferIntrinsics())
+				return true;
+
+			Register regs[16];
+			int regs_n = unpack_vector(operand1, regs);
+			if (regs_n <= 0)
+				ABORT_LIFT;
+			int lane_sz = REGSZ(regs[0]);
+			for (int i = 0; i < regs_n; ++i)
+				il.AddInstruction(ILSETREG(regs[i], ExtractRegister(il, operand2, 0, lane_sz, 0, lane_sz)));
+			break;
+		}
 		case ENC_DUP_ASIMDINS_DV_V:
 			// We let the Neon intrinsic lifter take care of this case.
 			break;
@@ -1952,18 +2029,14 @@ bool GetLowLevelILForInstruction(
 		case ENC_MOV_INS_ASIMDINS_IV_V:
 		case ENC_INS_ASIMDINS_IV_V:
 		{
-			// Register regs[16];
-			// int regs_n = unpack_vector(operand1, regs);
-			// if (regs_n <= 0)
-			// 	ABORT_LIFT;
-			// int lane_sz = REGSZ(regs[0]);
-			// for (int i = 0; i < regs_n; ++i)
-			// 	il.AddInstruction(ILSETREG(regs[i], ExtractRegister(il, operand2, 0, lane_sz, 0, lane_sz)));
 			Register srcs[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
 			int src_n = unpack_vector(operand2, srcs);
 			if ((dst_n != src_n) || dst_n == 0)
 				ABORT_LIFT;
+
+			if (dst_n > 1 && preferIntrinsics())
+				return true;
 
 			for (int i = 0; i < dst_n; ++i)
 				il.AddInstruction(ILSETREG(dsts[i], zero_extend
@@ -2357,7 +2430,9 @@ bool GetLowLevelILForInstruction(
 		// Vector, half precision
 		case ENC_SCVTF_ASIMDMISCFP16_R:
 		{
-			// There is no intrinsic for this instruction:
+			if (preferIntrinsics())
+				return true;
+
 			// SCVTF <Vd>.<T>, <Vn>.<T>
 			Register srcs[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
@@ -2373,16 +2448,25 @@ bool GetLowLevelILForInstruction(
 		}
 		// Scalar, fixed-point (in SIMD&FP register)
 		case ENC_SCVTF_ASISDSHF_C:
-		// Scalar, fixed-point (in GP register)
+		case ENC_UCVTF_ASISDSHF_C:
+		// Scalar, fixed-point (in GP register) [will fail because no intrinsics]
 		case ENC_SCVTF_D32_FLOAT2FIX:
 		case ENC_SCVTF_D64_FLOAT2FIX:
 		case ENC_SCVTF_H32_FLOAT2FIX:
 		case ENC_SCVTF_H64_FLOAT2FIX:
 		case ENC_SCVTF_S32_FLOAT2FIX:
 		case ENC_SCVTF_S64_FLOAT2FIX:
+		case ENC_UCVTF_D32_FLOAT2FIX:
+		case ENC_UCVTF_D64_FLOAT2FIX:
+		case ENC_UCVTF_H32_FLOAT2FIX:
+		case ENC_UCVTF_H64_FLOAT2FIX:
+		case ENC_UCVTF_S32_FLOAT2FIX:
+		case ENC_UCVTF_S64_FLOAT2FIX:
 		// Vector, fixed-point
 		case ENC_SCVTF_ASIMDSHF_C:
 			// Lift to instrinsics (except there are none)
+		case ENC_UCVTF_ASIMDSHF_C:
+			// Lift to instrinsics
 			break;
 		// SVE: Vector, integer
 		case ENC_SCVTF_Z_P_Z_H2FP16:
@@ -2392,6 +2476,13 @@ bool GetLowLevelILForInstruction(
 		case ENC_SCVTF_Z_P_Z_X2D:
 		case ENC_SCVTF_Z_P_Z_X2FP16:
 		case ENC_SCVTF_Z_P_Z_X2S:
+		case ENC_UCVTF_Z_P_Z_H2FP16:
+		case ENC_UCVTF_Z_P_Z_W2D:
+		case ENC_UCVTF_Z_P_Z_W2FP16:
+		case ENC_UCVTF_Z_P_Z_W2S:
+		case ENC_UCVTF_Z_P_Z_X2D:
+		case ENC_UCVTF_Z_P_Z_X2FP16:
+		case ENC_UCVTF_Z_P_Z_X2S:
 			ABORT_LIFT;
 			break;
 		default:
@@ -2470,13 +2561,22 @@ bool GetLowLevelILForInstruction(
 	case ARM64_SSHLL2:
 	case ARM64_SXTL:
 	case ARM64_SXTL2:
+		if ((instr.encoding == ENC_SSHLL_ASIMDSHF_L || instr.encoding == ENC_SXTL_SSHLL_ASIMDSHF_L) && preferIntrinsics())
+		{
+			// // Not all valid operand combinations have intrinsics and we have to try it here in case it fails
+			// NeonGetLowLevelILForInstruction(arch, addr, il, instr, addrSize);
+			// LogWarn("NeonGetLowLevelILForInstruction: %d -> %d\n", n_instrs_before, il.GetInstructionCount());
+			// if (il.GetInstructionCount() > n_instrs_before)
+			// 	return true;
+			return true;
+		}
 	// SHLL{2} is the same as SHLL{2}, except the extension is signed or unsigned "without change of functionality"
 	// (The shift amount is the element size, but is still disassembled to the immediate value in the third operand)
 	case ARM64_SHLL:
 	case ARM64_SHLL2:
 	{
-		if (preferIntrinsics)
-			break;
+		if (preferIntrinsics())
+			return true;
 
 		Register srcs[16], dsts[16];
 		int dst_n = unpack_vector(operand1, dsts);
@@ -2648,8 +2748,15 @@ bool GetLowLevelILForInstruction(
 	case ARM64_USHLL:
 	case ARM64_USHLL2:
 	{
-		if (preferIntrinsics)
-			break;
+		if ((instr.encoding == ENC_USHLL_ASIMDSHF_L || instr.encoding == ENC_UXTL_USHLL_ASIMDSHF_L) && preferIntrinsics())
+		{
+			// // Not all valid operand combinations have intrinsics and we have to try it here in case it fails
+			// NeonGetLowLevelILForInstruction(arch, addr, il, instr, addrSize);
+			// LogWarn("NeonGetLowLevelILForInstruction: %d -> %d\n", n_instrs_before, il.GetInstructionCount());
+			// if (il.GetInstructionCount() > n_instrs_before)
+			// 	return true;
+			return true;
+		}
 
 		Register srcs[16], dsts[16];
 		int dst_n = unpack_vector(operand1, dsts);
@@ -2692,33 +2799,40 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_USHL:
 	{
-		if (preferIntrinsics)
-			break;
-
-		Register srcs1[16], srcs2[16], dsts[16];
-		int dst_n = unpack_vector(operand1, dsts);
-		int src1_n = unpack_vector(operand2, srcs1);
-		int src2_n = unpack_vector(operand3, srcs2);
-		if ((dst_n != src1_n) || (src1_n != src2_n) || dst_n == 0)
-			ABORT_LIFT;
-
-		int rsize = get_register_size(dsts[0]);
-		for (int i = 0; i < dst_n; ++i)
+		switch (instr.encoding)
 		{
-			il.AddInstruction(il.SetRegister(rsize, dsts[i],
-			    il.ShiftLeft(rsize,
-					il.Register(rsize, srcs1[i]),
-					il.Register(1, srcs2[i]))));
-		}
+			case ENC_USHL_ASIMDSAME_ONLY:
+			case ENC_USHL_ASISDSAME_ONLY:
+				if (preferIntrinsics())
+					return true;
 
+			default:
+			{
+				Register srcs1[16], srcs2[16], dsts[16];
+				int dst_n = unpack_vector(operand1, dsts);
+				int src1_n = unpack_vector(operand2, srcs1);
+				int src2_n = unpack_vector(operand3, srcs2);
+				if ((dst_n != src1_n) || (src1_n != src2_n) || dst_n == 0)
+					ABORT_LIFT;
+
+				int rsize = get_register_size(dsts[0]);
+				for (int i = 0; i < dst_n; ++i)
+				{
+					il.AddInstruction(il.SetRegister(rsize, dsts[i],
+						il.ShiftLeft(rsize,
+							il.Register(rsize, srcs1[i]),
+							il.Register(1, srcs2[i]))));
+				}
+			}
+		}
 		break;
 	}
 	case ARM64_USHR:
 	{
 		// Note: we don't lift URSHR, because it requires rounding the shifted results
 
-		if (preferIntrinsics)
-			break;
+		if (preferIntrinsics())
+			return true;
 
 		Register srcs[16], dsts[16];
 		int dst_n = unpack_vector(operand1, dsts);

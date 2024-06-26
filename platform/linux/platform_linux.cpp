@@ -332,23 +332,28 @@ extern "C"
 		Ref<Architecture> mipsel = Architecture::GetByName("mipsel32");
 		Ref<Architecture> mipseb = Architecture::GetByName("mips32");
 		Ref<Architecture> mips64eb = Architecture::GetByName("mips64");
-		if (mipsel && mipseb && mips64eb)
+		Ref<Architecture> cnmips64eb = Architecture::GetByName("cavium-mips64");
+		if (mipsel && mipseb && mips64eb && cnmips64eb)
 		{
-			Ref<Platform> platformLE, platformBE, platformBE64;
+			Ref<Platform> platformLE, platformBE, platformBE64, platformBE64cn;
 
 			platformLE = new LinuxMipsPlatform(mipsel, "linux-mipsel");
 			platformBE = new LinuxMipsPlatform(mipseb, "linux-mips");
 			platformBE64 = new LinuxMips64Platform(mips64eb, "linux-mips64");
+			platformBE64cn = new LinuxMips64Platform(cnmips64eb, "linux-cnmips64");
 			Platform::Register("linux", platformLE);
 			Platform::Register("linux", platformBE);
 			Platform::Register("linux", platformBE64);
+			Platform::Register("linux", platformBE64cn);
 			// Linux binaries sometimes have an OS identifier of zero, even though 3 is the correct one
 			BinaryViewType::RegisterPlatform("ELF", 0, mipsel, platformLE);
 			BinaryViewType::RegisterPlatform("ELF", 0, mipseb, platformBE);
 			BinaryViewType::RegisterPlatform("ELF", 0, mips64eb, platformBE64);
+			BinaryViewType::RegisterPlatform("ELF", 0, cnmips64eb, platformBE64cn);
 			BinaryViewType::RegisterPlatform("ELF", 3, mipsel, platformLE);
 			BinaryViewType::RegisterPlatform("ELF", 3, mipseb, platformBE);
 			BinaryViewType::RegisterPlatform("ELF", 3, mips64eb, platformBE64);
+			BinaryViewType::RegisterPlatform("ELF", 3, cnmips64eb, platformBE64cn);
 		}
 
 		Ref<Architecture> rv32 = Architecture::GetByName("rv32gc");

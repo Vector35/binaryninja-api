@@ -402,13 +402,13 @@ protected:
 	}
 
 public:
-	MipsArchitecture(const std::string& name, BNEndianness endian, size_t bits): Architecture(name), m_bits(bits), m_endian(endian)
+	MipsArchitecture(const std::string& name, BNEndianness endian, size_t bits, uint32_t decomposeFlags = 0)
+		: Architecture(name), m_bits(bits), m_endian(endian), m_decomposeFlags(decomposeFlags)
 	{
 		Ref<Settings> settings = Settings::Instance();
 		uint32_t flag_pseudo_ops = settings->Get<bool>("arch.mips.disassembly.pseudoOps") ? DECOMPOSE_FLAGS_PSEUDO_OP : 0;
-		uint32_t flag_cavium = settings->Get<bool>("arch.mips.disassembly.octeon") ? DECOMPOSE_FLAGS_CAVIUM : 0;
 
-		m_decomposeFlags = flag_cavium | flag_pseudo_ops;
+		m_decomposeFlags |= flag_pseudo_ops;
 	}
 
 	virtual BNEndianness GetEndianness() const override
@@ -3104,14 +3104,36 @@ static void InitMipsSettings()
 			"default" : true,
 			"description" : "Enable use of pseudo-op instructions in MIPS disassembly."
 			})");
+}
 
-	settings->RegisterSetting("arch.mips.disassembly.octeon",
-		R"({
-		"title" : "MIPS Octeon Instructions",
-		"type" : "boolean",
-		"default" : false,
-		"description" : "Enable use of Octeon MIPS instructions."
-		})");
+
+static Ref<Platform> ElfFlagsRecognize(BinaryView* view, Metadata* metadata)
+{
+	Ref<Metadata> abiMetadata = metadata->Get("EI_OSABI");
+	if (!abiMetadata || !abiMetadata->IsUnsignedInteger())
+		return nullptr;
+
+	uint64_t abi = abiMetadata->GetUnsignedInteger();
+	if (abi != 0 && abi != 3)
+		return nullptr;
+
+	Ref<Metadata> flagsMetadata = metadata->Get("e_flags");
+	if (!flagsMetadata || !flagsMetadata->IsUnsignedInteger())
+		return nullptr;
+
+	uint64_t flagsValue = flagsMetadata->GetUnsignedInteger();
+	uint8_t machineVariant = (flagsValue >> 16) & 0xff;
+
+	switch (machineVariant)
+	{
+		case 0x8b:	// EF_MIPS_MACH_OCTEON
+		case 0x8d:	// EF_MIPS_MACH_OCTEON2
+		case 0x8e:	// EF_MIPS_MACH_OCTEON3
+			LogInfo("ELF flags 0x%08" PRIx64 " machine variant 0x%02x: using cavium architecture", flagsValue, machineVariant);
+			return Platform::GetByName("linux-cnmips64");
+		default:
+			return nullptr;
+	}
 }
 
 extern "C"
@@ -3133,15 +3155,18 @@ extern "C"
 		Architecture* mipsel = new MipsArchitecture("mipsel32", LittleEndian, 32);
 		Architecture* mipseb = new MipsArchitecture("mips32", BigEndian, 32);
 		Architecture* mips64eb = new MipsArchitecture("mips64", BigEndian, 64);
+		Architecture* cnmips64eb = new MipsArchitecture("cavium-mips64", BigEndian, 64, DECOMPOSE_FLAGS_CAVIUM);
 
 		Architecture::Register(mipsel);
 		Architecture::Register(mipseb);
 		Architecture::Register(mips64eb);
+		Architecture::Register(cnmips64eb);
 
 		/* calling conventions */
 		MipsO32CallingConvention* o32LE = new MipsO32CallingConvention(mipsel);
 		MipsO32CallingConvention* o32BE = new MipsO32CallingConvention(mipseb);
 		MipsN64CallingConvention* n64BE = new MipsN64CallingConvention(mips64eb);
+		MipsN64CallingConvention* n64BEc = new MipsN64CallingConvention(cnmips64eb);
 
 		mipsel->RegisterCallingConvention(o32LE);
 		mipseb->RegisterCallingConvention(o32BE);
@@ -3149,6 +3174,8 @@ extern "C"
 		mipseb->SetDefaultCallingConvention(o32BE);
 		mips64eb->RegisterCallingConvention(n64BE);
 		mips64eb->SetDefaultCallingConvention(n64BE);
+		cnmips64eb->RegisterCallingConvention(n64BEc);
+		cnmips64eb->SetDefaultCallingConvention(n64BEc);
 
 		MipsLinuxSyscallCallingConvention* linuxSyscallLE = new MipsLinuxSyscallCallingConvention(mipsel);
 		MipsLinuxSyscallCallingConvention* linuxSyscallBE = new MipsLinuxSyscallCallingConvention(mipseb);
@@ -3158,6 +3185,7 @@ extern "C"
 		mipsel->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mipsel));
 		mipseb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mipseb));
 		mips64eb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips64eb));
+		cnmips64eb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(cnmips64eb));
 
 		/* function recognizers */
 		mipsel->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
@@ -3166,6 +3194,7 @@ extern "C"
 		mipsel->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mipseb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mips64eb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
+		cnmips64eb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 
 		// Register the architectures with the binary format parsers so that they know when to use
 		// these architectures for disassembling an executable file
@@ -3180,6 +3209,11 @@ extern "C"
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS64, BigEndian, mips64eb);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, LittleEndian, mipsel);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, BigEndian, mipseb);
+
+		Ref<BinaryViewType> elf = BinaryViewType::GetByName("ELF");
+		if (elf)
+			elf->RegisterPlatformRecognizer(ARCH_ID_MIPS64, BigEndian, ElfFlagsRecognize);
+
 		BinaryViewType::RegisterArchitecture("PE", 0x166, LittleEndian, mipsel);
 		return true;
 	}

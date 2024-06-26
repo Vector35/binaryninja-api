@@ -163,6 +163,7 @@ pub mod symbol;
 pub mod tags;
 pub mod templatesimplifier;
 pub mod types;
+pub mod websocketprovider;
 
 use std::path::PathBuf;
 

@@ -184,6 +184,9 @@ stdenv.mkDerivation rec {
 [slack]: https://slack.binary.ninja
 [hashes]: https://binary.ninja/js/hashes.js
 
+### Intel 13th and 14th generation CPUs
+
+As described in [issue 5449](https://github.com/Vector35/binaryninja-api/issues/5449), several users have reported unknown crashes due to a [known bug](https://www.theverge.com/2024/6/14/24178751/intel-raptor-lake-crash-fix-etvb-not-yet). The currently recommended work-around is to do a BIOS upgrade to microcode 0x125 or later.
 
 ## Environment Variables
 

@@ -2050,7 +2050,7 @@ bool GetLowLevelILForInstruction(
 		case ENC_MOVN_32_MOVEWIDE:
 		case ENC_MOVN_64_MOVEWIDE:
 			il.AddInstruction(ILSETREG_O(operand1,
-				il.Const(REGSZ_O(operand2), ~(operand2.immediate << (operand3.operandClass == NONE ? 0 : operand3.immediate)))));
+				ReadILOperand(il, operand2, REGSZ_O(operand1))));
 			break;
 		case ENC_MOV_INS_ASIMDINS_IR_R:
 		case ENC_INS_ASIMDINS_IR_R:

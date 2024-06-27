@@ -3528,8 +3528,7 @@ static void InitAarch64Settings()
 			"title" : "AARCH64 Prefer Intrinsics for Vector Operations",
 			"type" : "boolean",
 			"default" : true,
-			"description" : "Prefer generating calls to intrinsics (where one is available) to lifting vector operations as unrolled loops (where available)."
-			" (Note that not all vector operations are currently lifted as either intrinsics or unrolled loops.)
+			"description" : "Prefer generating calls to intrinsics (where one is available) to lifting vector operations as unrolled loops (where available). Note that not all vector operations are currently lifted as either intrinsics or unrolled loops."
 			})");
 }
 

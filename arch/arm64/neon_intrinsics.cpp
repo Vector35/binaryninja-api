@@ -15305,8 +15305,28 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
+	case ENC_FABD_ASISDSAME_ONLY:
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].reg[0] >= REG_D0 && instr.operands[2].reg[0] <= REG_D31))
+			// float64_t vabdd_f64(float64_t a, float64_t b)
+			// argprep: a -> Dn; b -> Dm
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VABDD_F64;  // FABD Dd,Dn,Dm
+		else if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31) && (instr.operands[2].reg[0] >= REG_S0 && instr.operands[2].reg[0] <= REG_S31))
+			// float32_t vabds_f32(float32_t a, float32_t b)
+			// argprep: a -> Sn; b -> Sm
+			// results: Sd -> result
+			intrin_id = ARM64_INTRIN_VABDS_F32;  // FABD Sd,Sn,Sm
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_input_reg(inputs, il, instr.operands[2]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
 	case ENC_FABS_D_FLOATDP1:
 		intrin_id = ARM64_INTRIN_VABS_F64;  // FABS Dd,Dn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
+	case ENC_FABS_S_FLOATDP1:
+		intrin_id = ARM64_INTRIN_VABS_F32;  // FABS Sd,Sn
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;

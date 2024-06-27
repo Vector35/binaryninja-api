@@ -1507,6 +1507,38 @@ bool GetLowLevelILForInstruction(
 		                                 ILREG_O(operand3)),
 		                             il.Const(1, IMM_O(operand4)))));
 		break;
+	case ARM64_FABD:
+		switch (instr.encoding)
+		{
+		case ENC_FABD_ASISDSAMEFP16_ONLY:
+		case ENC_FABD_ASISDSAME_ONLY:
+			il.AddInstruction(ILSETREG_O(operand1,
+				il.FloatAbs(REGSZ_O(operand1),
+					il.FloatSub(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
+			break;
+		case ENC_FABD_ASIMDSAMEFP16_ONLY:
+		case ENC_FABD_ASIMDSAME_ONLY:
+			// covered by intrinsics
+			break;
+		case ENC_FABD_Z_P_ZZ_:
+		default:
+			ABORT_LIFT;
+		}
+		break;
+	case ARM64_FABS:
+		switch (instr.encoding)
+		{
+		case ENC_FABS_D_FLOATDP1:
+		case ENC_FABS_S_FLOATDP1:
+		case ENC_FABS_H_FLOATDP1:
+			il.AddInstruction(ILSETREG_O(operand1, il.FloatAbs(REGSZ_O(operand1), ILREG_O(operand2))));
+			break;
+		case ENC_FABS_ASIMDMISC_R:
+		case ENC_FABS_ASIMDMISCFP16_R:
+			// covered by intrinsics
+			break;
+		}
+		break;
 	case ARM64_FADD:
 		switch (instr.encoding)
 		{

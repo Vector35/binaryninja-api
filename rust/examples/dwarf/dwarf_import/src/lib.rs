@@ -382,43 +382,42 @@ impl CustomDebugInfoParser for DWARFParser {
         debug_file: &BinaryView,
         progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool {
-        let external_file = if !dwarfreader::is_valid(bv) {
+        let (external_file, close_external) = if !dwarfreader::is_valid(bv) {
             if dwarfreader::has_build_id_section(bv) {
                 if let Ok(Some(debug_view)) = helpers::load_debug_info_for_build_id(bv) {
-                    Some(debug_view)
-                }
-                else {
+                    (Some(debug_view), false)
+                } else {
                     if dwarfreader::can_use_debuginfod(bv) {
                         if let Ok(debug_view) = helpers::download_debug_info(bv) {
-                            Some(debug_view)
+                            (Some(debug_view), true)
                         } else {
-                            None
+                            (None, false)
                         }
-                    }
-                    else {
-                        None
+                    } else {
+                        (None, false)
                     }
                 }
+            } else {
+                (None, false)
             }
-            else {
-                None
-            }
-        }
-        else {
-            None
+        } else {
+            (None, false)
         };
 
-        match parse_dwarf(bv, external_file.as_deref().unwrap_or(debug_file), progress) {
+        let result = match parse_dwarf(bv, external_file.as_deref().unwrap_or(debug_file), progress)
+        {
             Ok(mut builder) => {
-                builder
-                .post_process(bv, debug_info)
-                .commit_info(debug_info);
+                builder.post_process(bv, debug_info).commit_info(debug_info);
                 true
-            },
-            Err(_) => {
-                false
             }
+            Err(_) => false,
+        };
+
+        if let (Some(ext), true) = (external_file, close_external) {
+            ext.file().close();
         }
+
+        result
     }
 }
 

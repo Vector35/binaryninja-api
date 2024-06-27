@@ -14946,8 +14946,49 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_DUP_ASIMDINS_DR_R:
-		// This instrinsic is already handled in GetLowLevelIlForInstruction, in il.cpp
-		break; // Should be unreachable
+		if (instr.operands[0].arrSpec == ARRSPEC_4HALVES)
+			// uint16x4_t vmov_n_u16(uint16_t value)
+			// argprep: value -> Wn
+			// results: Vd.4H -> result
+			intrin_id = ARM64_INTRIN_VMOV_N_U16;  // DUP Vd.4H,rn
+		else if (instr.operands[0].arrSpec == ARRSPEC_2SINGLES)
+			// uint32x2_t vmov_n_u32(uint32_t value)
+			// argprep: value -> Wn
+			// results: Vd.2S -> result
+			intrin_id = ARM64_INTRIN_VMOV_N_U32;  // DUP Vd.2S,rn
+		else if (instr.operands[0].arrSpec == ARRSPEC_8BYTES)
+			// uint8x8_t vmov_n_u8(uint8_t value)
+			// argprep: value -> Wn
+			// results: Vd.8B -> result
+			intrin_id = ARM64_INTRIN_VMOV_N_U8;  // DUP Vd.8B,rn
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES)
+			// uint16x8_t vmovq_n_u16(uint16_t value)
+			// argprep: value -> Wn
+			// results: Vd.8H -> result
+			intrin_id = ARM64_INTRIN_VMOVQ_N_U16;  // DUP Vd.8H,rn
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES)
+			// uint32x4_t vmovq_n_u32(uint32_t value)
+			// argprep: value -> Wn
+			// results: Vd.4S -> result
+			intrin_id = ARM64_INTRIN_VMOVQ_N_U32;  // DUP Vd.4S,rn
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES)
+			// uint64x2_t vmovq_n_u64(uint64_t value)
+			// argprep: value -> Xn
+			// results: Vd.2D -> result
+			intrin_id = ARM64_INTRIN_VMOVQ_N_U64;  // DUP Vd.2D,rn
+		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
+			// uint8x16_t vmovq_n_u8(uint8_t value)
+			// argprep: value -> Wn
+			// results: Vd.16B -> result
+			intrin_id = ARM64_INTRIN_VMOVQ_N_U8;  // DUP Vd.16B,rn
+		else if (instr.operands[0].arrSpec == ARRSPEC_1DOUBLE)
+			// uint64x1_t vmov_n_u64(uint64_t value)
+			// argprep: value -> Xn
+			// results: Vd.1D -> result
+			intrin_id = ARM64_INTRIN_VMOV_N_U64;  // DUP Vd.1D,rn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
 	case ENC_DUP_ASISDONE_ONLY:
 	case ENC_MOV_DUP_ASISDONE_ONLY: // The lifter use this instead of ENC_DUP_ASISDONE_ONLY
 		// NOTE(ek0): The decoder only returns the base arrSpec. Not sure if intended,

@@ -2928,33 +2928,6 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(
 		    il.Trap(IMM_O(operand1)));  // FIXME Breakpoint may need a parameter (IMM_O(operand1)));
 		return false;
-	// case ARM64_DUP:
-	// {
-	// 	switch (instr.encoding)
-	// 	{
-	// 	case ENC_DUP_ASIMDINS_DR_R:
-	// 	case ENC_DUP_ASIMDINS_DV_V:
-	// 		break; // Abort lifting and let the neon intrinsic lifter take over.
-	// 	case ENC_DUP_ASISDONE_ONLY:
-	// 	case ENC_MOV_DUP_ASISDONE_ONLY:
-	// 	{
-	// 		if (instr.encoding != ENC_DUP_ASIMDINS_DR_R)
-	// 			break; // Abort lifting and let the neon intrinsic lifter take over.
-	// 		Register regs[16];
-	// 		int regs_n = unpack_vector(operand1, regs);
-	// 		if (regs_n <= 0)
-	// 			ABORT_LIFT;
-	// 		int lane_sz = REGSZ(regs[0]);
-	// 		for (int i = 0; i < regs_n; ++i)
-	// 			il.AddInstruction(ILSETREG(regs[i], ExtractRegister(il, operand2, 0, lane_sz, 0, lane_sz)));
-	// 		break;
-	// 	}
-	// 	default:
-	// 		il.AddInstruction(il.Unimplemented());
-	// 		break;
-	// 	}
-	// }
-	// break;
 	case ARM64_DGH:
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_HINT_DGH, {}));
 		break;

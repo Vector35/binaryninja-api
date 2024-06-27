@@ -1538,6 +1538,51 @@ bool GetLowLevelILForInstruction(
 			il.AddInstruction(il.Unimplemented());
 		}
 		break;
+	case ARM64_FADDP:
+		switch (instr.encoding)
+		{
+		case ENC_FADDP_ASISDPAIR_ONLY_H:
+		case ENC_FADDP_ASISDPAIR_ONLY_SD:
+		{
+			Register srcs[16];
+			int src_n = unpack_vector(operand2, srcs);
+			if (src_n != 2)
+				ABORT_LIFT;
+			il.AddInstruction(ILSETREG_O(operand1,
+				il.FloatAdd(REGSZ_O(operand1), ILREG(srcs[0]), ILREG(srcs[1]))
+			));
+			break;
+		}
+		case ENC_FADDP_ASIMDSAME_ONLY:
+		case ENC_FADDP_ASIMDSAMEFP16_ONLY:
+		{
+			if (preferIntrinsics())
+				return true;
+
+			Register srcs1[16], srcs2[16], dsts[16];
+			int dst_n = unpack_vector(operand1, dsts);
+			int src1_n = unpack_vector(operand2, srcs1);
+			int src2_n = unpack_vector(operand3, srcs2);
+			if ((dst_n != src1_n) || (src1_n != src2_n) || dst_n == 0)
+				ABORT_LIFT;
+
+			int rsize = get_register_size(dsts[0]);
+			for (int i = 0; i < dst_n; ++i)
+			{
+				auto srcs = i < dst_n / 2 ? srcs1 : srcs2;
+				auto index = i % (dst_n / 2);
+				il.AddInstruction(il.SetRegister(REGSZ(dsts[i]),
+					LLIL_TEMP(i), il.FloatAdd(rsize, ILREG(srcs[2 * index]), ILREG(srcs[2 * index + 1]))));
+			}
+			for (int i = 0; i < dst_n; ++i)
+				il.AddInstruction(ILSETREG(dsts[i], il.Register(REGSZ(dsts[i]), LLIL_TEMP(i))));
+
+			break;
+		}
+		case ENC_FADDP_Z_P_ZZ_:
+			il.AddInstruction(il.Unimplemented());
+		}
+		break;
 	case ARM64_FCCMP:
 	case ARM64_FCCMPE:
 	{

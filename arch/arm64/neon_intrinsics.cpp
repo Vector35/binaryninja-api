@@ -15394,24 +15394,57 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
-	case ENC_FADDP_ASIMDSAME_ONLY:
 	case ENC_FADDP_ASIMDSAMEFP16_ONLY:
-		if (instr.operands[1].arrSpec == ARRSPEC_2SINGLES)
-			intrin_id = ARM64_INTRIN_VPADD_F32;  // FADDP Vd.2S,Vn.2S,Vm.2S
-		else if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
-			intrin_id = ARM64_INTRIN_VPADDQ_F32;  // FADDP Vd.4S,Vn.4S,Vm.4S
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
-			intrin_id = ARM64_INTRIN_VPADDQ_F64;  // FADDP Vd.2D,Vn.2D,Vm.2D
-		else if (instr.operands[1].arrSpec == ARRSPEC_4HALVES)
+		if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_4HALVES)
+			// float16x4_t vpadd_f16(float16x4_t a, float16x4_t b)
+			// argprep: a -> Vn.4H; b -> Vm.4H
+			// results: Vd.4H -> result
 			intrin_id = ARM64_INTRIN_VPADD_F16;  // FADDP Vd.4H,Vn.4H,Vm.4H
-		else if (instr.operands[1].arrSpec == ARRSPEC_8HALVES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && instr.operands[2].arrSpec == ARRSPEC_8HALVES)
+			// float16x8_t vpaddq_f16(float16x8_t a, float16x8_t b)
+			// argprep: a -> Vn.8H; b -> Vm.8H
+			// results: Vd.8H -> result
 			intrin_id = ARM64_INTRIN_VPADDQ_F16;  // FADDP Vd.8H,Vn.8H,Vm.8H
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_reg(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
-	case ENC_FADDP_ASISDPAIR_ONLY_H:
-		intrin_id = ARM64_INTRIN_VPADDS_F32;  // FADDP Sd,Vn.2S
+	case ENC_FADDP_ASIMDSAME_ONLY:
+		if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && instr.operands[2].arrSpec == ARRSPEC_4SINGLES)
+			// float32_t vaddvq_f32(float32x4_t a)
+			// argprep: a -> Vm.4S
+			// results: Sd -> result
+			intrin_id = ARM64_INTRIN_VADDVQ_F32;  // FADDP Vt.4S,Vn.4S,Vm.4S; FADDP Sd,Vt.2S
+		else if (instr.operands[0].arrSpec == ARRSPEC_2SINGLES && instr.operands[1].arrSpec == ARRSPEC_2SINGLES && instr.operands[2].arrSpec == ARRSPEC_2SINGLES)
+			// float32x2_t vpadd_f32(float32x2_t a, float32x2_t b)
+			// argprep: a -> Vn.2S; b -> Vm.2S
+			// results: Vd.2S -> result
+			intrin_id = ARM64_INTRIN_VPADD_F32;  // FADDP Vd.2S,Vn.2S,Vm.2S
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && instr.operands[2].arrSpec == ARRSPEC_4SINGLES)
+			// float32x4_t vpaddq_f32(float32x4_t a, float32x4_t b)
+			// argprep: a -> Vn.4S; b -> Vm.4S
+			// results: Vd.4S -> result
+			intrin_id = ARM64_INTRIN_VPADDQ_F32;  // FADDP Vd.4S,Vn.4S,Vm.4S
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_2DOUBLES && instr.operands[2].arrSpec == ARRSPEC_2DOUBLES)
+			// float64x2_t vpaddq_f64(float64x2_t a, float64x2_t b)
+			// argprep: a -> Vn.2D; b -> Vm.2D
+			// results: Vd.2D -> result
+			intrin_id = ARM64_INTRIN_VPADDQ_F64;  // FADDP Vd.2D,Vn.2D,Vm.2D
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_input_reg(inputs, il, instr.operands[2]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
+	case ENC_FADDP_ASISDPAIR_ONLY_SD:
+		if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && instr.operands[1].arrSpec == ARRSPEC_2SINGLES)
+			// float32_t vpadds_f32(float32x2_t a)
+			// argprep: a -> Vn.2S
+			// results: Sd -> result
+			intrin_id = ARM64_INTRIN_VPADDS_F32;  // FADDP Sd,Vn.2S
+		else if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
+			// float64_t vpaddd_f64(float64x2_t a)
+			// argprep: a -> Vn.2D
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VPADDD_F64;  // FADDP Dd,Vn.2D
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;

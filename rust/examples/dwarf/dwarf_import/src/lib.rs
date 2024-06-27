@@ -287,6 +287,12 @@ fn parse_eh_frame<R: Reader>(
                         continue;
                     }
                 };
+
+                if fde.len() == 0 {
+                    // This FDE is a terminator
+                    return Ok(cie_data_offsets);
+                }
+
                 // Store CIE offset for FDE range
                 cie_data_offsets.insert(
                     fde.initial_address()..fde.initial_address()+fde.len(),

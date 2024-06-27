@@ -138,9 +138,7 @@ static string BuildToolVersionToString(uint32_t version)
 	uint32_t update = version & 0xff;
 
 	stringstream ss;
-	ss << major << "." << minor;
-	if (update)
-		ss << "." << update;
+	ss << major << "." << minor << "." << update;
 	return ss.str();
 }
 
@@ -802,11 +800,14 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 			case LC_LOAD_DYLIB:
 			{
 				uint32_t offset = reader.Read32();
+				reader.Read32(); // timestamp
+				uint32_t currentVersion = reader.Read32();
 				if (offset < nextOffset)
 				{
 						reader.Seek(curOffset + offset);
 						string libname = reader.ReadCString();
-						header.dylibs.push_back(libname);
+						auto version = BuildToolVersionToString(currentVersion);
+						header.dylibs.push_back({libname, version});
 				}
 			}
 			break;
@@ -1926,17 +1927,19 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	{
 		vector<Ref<Metadata>> libraries;
 		vector<Ref<Metadata>> libraryFound;
-		for (auto& libName : header.dylibs)
+		for (auto& [libName, libVersion] : header.dylibs)
 		{
 			if (!GetExternalLibrary(libName))
 			{
 				AddExternalLibrary(libName, {}, true);
 			}
 			libraries.push_back(new Metadata(string(libName)));
-			Ref<TypeLibrary> typeLib = GetTypeLibrary(libName);
+			// Compose exact name with {install_name}.{platform}.{version}
+			std::string libNameExact = fmt::format("{}.{}.{}", libName, GetDefaultPlatform()->GetName(), libVersion);
+			Ref<TypeLibrary> typeLib = GetTypeLibrary(libNameExact);
 			if (!typeLib)
 			{
-				vector<Ref<TypeLibrary>> typeLibs = platform->GetTypeLibrariesByName(libName);
+				vector<Ref<TypeLibrary>> typeLibs = GetDefaultPlatform()->GetTypeLibrariesByName(libNameExact);
 				if (typeLibs.size())
 				{
 					typeLib = typeLibs[0];
@@ -1944,6 +1947,22 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 					m_logger->LogDebug("mach-o: adding type library for '%s': %s (%s)",
 						libName.c_str(), typeLib->GetName().c_str(), typeLib->GetGuid().c_str());
+				}
+			}
+			if (!typeLib)
+			{
+				typeLib = GetTypeLibrary(libName);
+				if (!typeLib)
+				{
+					vector<Ref<TypeLibrary>> typeLibs = GetDefaultPlatform()->GetTypeLibrariesByName(libName);
+					if (typeLibs.size())
+					{
+						typeLib = typeLibs[0];
+						AddTypeLibrary(typeLib);
+
+						m_logger->LogDebug("mach-o: adding type library for '%s': %s (%s)",
+							libName.c_str(), typeLib->GetName().c_str(), typeLib->GetGuid().c_str());
+					}
 				}
 			}
 
@@ -2344,8 +2363,6 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 Ref<Symbol> MachoView::DefineMachoSymbol(
 	BNSymbolType type, const string& name, uint64_t addr, BNSymbolBinding binding, bool deferred)
 {
-	Ref<Type> symbolTypeRef;
-
 	// If name is empty, symbol is not valid
 	if (name.size() == 0)
 		return nullptr;
@@ -2375,17 +2392,19 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 			return nullptr;
 	}
 
+	Ref<Type> symbolTypeRef;
+
 	if ((type == ExternalSymbol) || (type == ImportAddressSymbol) || (type == ImportedDataSymbol))
 	{
 		QualifiedName n(name);
-		// TODO
-		Ref<TypeLibrary> appliedLib = nullptr;
+		Ref<TypeLibrary> appliedLib;
 		symbolTypeRef = ImportTypeLibraryObject(appliedLib, n);
 		if (symbolTypeRef)
 		{
 			m_logger->LogDebug("mach-o: type Library '%s' found hit for '%s'", appliedLib->GetName().c_str(), name.c_str());
 			RecordImportedObjectLibrary(GetDefaultPlatform(), addr, appliedLib, n);
 		}
+
 	}
 
 	auto process = [=]() {
@@ -3785,11 +3804,50 @@ uint64_t MachoViewType::ParseHeaders(BinaryView* data, uint64_t imageOffset, mac
 		errorMsg = "invalid file class";
 		return 0;
 	}
+	uint64_t loadCommandStart = reader.GetOffset();
+
+	uint32_t cmd;
+	uint32_t cmdsize;
+	MachoPlatform machoPlat = MachoPlatform::MACHO_PLATFORM_MACOS; // Default to macOS.
+	// Quickly determine the OS from commands.
+	for (uint32_t i = 0; i < ident.ncmds; i++)
+	{
+		cmd = reader.Read32();
+		cmdsize = reader.Read32();
+		if (cmd == LC_BUILD_VERSION)
+		{
+			machoPlat = MachoPlatform(reader.Read32());
+			break;
+		}
+		else if (cmd == LC_VERSION_MIN_MACOSX)
+		{
+			machoPlat = MachoPlatform(1);
+			break;
+		}
+		else if (cmd == LC_VERSION_MIN_IPHONEOS)
+		{
+			machoPlat = MachoPlatform(2);
+			break;
+		}
+		else if (cmd == _LC_VERSION_MIN_TVOS)
+		{
+			machoPlat = MachoPlatform(3);
+			break;
+		}
+		else if (cmd == LC_VERSION_MIN_WATCHOS)
+		{
+			machoPlat = MachoPlatform(4);
+			break;
+		}
+
+		reader.SeekRelative(cmdsize - 8);
+	}
 
 	map<string, Ref<Metadata>> metadataMap = {
 		{"cputype",    new Metadata((uint64_t) ident.cputype)},
 		{"cpusubtype", new Metadata((uint64_t) ident.cpusubtype)},
 		{"flags",      new Metadata((uint64_t) ident.flags)},
+		{"machoplatform",   new Metadata((uint64_t) machoPlat)},
 	};
 
 	Ref<Metadata> metadata = new Metadata(metadataMap);
@@ -3810,7 +3868,7 @@ uint64_t MachoViewType::ParseHeaders(BinaryView* data, uint64_t imageOffset, mac
 		*arch = g_machoViewType->GetArchitecture(ident.cputype, endianness);
 	}
 
-	return reader.GetOffset();
+	return loadCommandStart;
 }
 
 

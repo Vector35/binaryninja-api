@@ -290,6 +290,62 @@ where
     }
 }
 
+// LLIL_REG_SPLIT
+pub struct RegSplit;
+
+impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, RegSplit>
+    where
+        A: 'func + Architecture,
+        M: FunctionMutability,
+        V: NonSSAVariant,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn low_reg(&self) -> Register<A::Register> {
+        let raw_id = self.op.operands[0] as u32;
+
+        if raw_id >= 0x8000_0000 {
+            Register::Temp(raw_id & 0x7fff_ffff)
+        } else {
+            self.function
+                .arch()
+                .register_from_id(raw_id)
+                .map(Register::ArchReg)
+                .unwrap_or_else(|| {
+                    error!(
+                        "got garbage register from LLIL_REG @ 0x{:x}",
+                        self.op.address
+                    );
+
+                    Register::Temp(0)
+                })
+        }
+    }
+
+    pub fn high_reg(&self) -> Register<A::Register> {
+        let raw_id = self.op.operands[1] as u32;
+
+        if raw_id >= 0x8000_0000 {
+            Register::Temp(raw_id & 0x7fff_ffff)
+        } else {
+            self.function
+                .arch()
+                .register_from_id(raw_id)
+                .map(Register::ArchReg)
+                .unwrap_or_else(|| {
+                    error!(
+                        "got garbage register from LLIL_REG @ 0x{:x}",
+                        self.op.address
+                    );
+
+                    Register::Temp(0)
+                })
+        }
+    }
+}
+
 // LLIL_FLAG, LLIL_FLAG_SSA
 pub struct Flag;
 
@@ -702,6 +758,7 @@ impl OperationArguments for SetFlag {}
 impl OperationArguments for Load {}
 impl OperationArguments for Store {}
 impl OperationArguments for Reg {}
+impl OperationArguments for RegSplit {}
 impl OperationArguments for Flag {}
 impl OperationArguments for FlagBit {}
 impl OperationArguments for Jump {}

@@ -136,6 +136,8 @@ where
         LLIL_ZX => ExprInfo::Zx(Operation::new(function, op)),
         LLIL_LOW_PART => ExprInfo::LowPart(Operation::new(function, op)),
 
+        LLIL_REG_SPLIT => ExprInfo::RegSplit(Operation::new(function, op)),
+
         LLIL_CMP_E => ExprInfo::CmpE(Operation::new(function, op)),
         LLIL_CMP_NE => ExprInfo::CmpNe(Operation::new(function, op)),
         LLIL_CMP_SLT => ExprInfo::CmpSlt(Operation::new(function, op)),
@@ -273,6 +275,7 @@ where
             LLIL_LOAD => ExprInfo::Load(Operation::new(self.function, op)),
             LLIL_POP => ExprInfo::Pop(Operation::new(self.function, op)),
             LLIL_REG => ExprInfo::Reg(Operation::new(self.function, op)),
+            LLIL_REG_SPLIT => ExprInfo::RegSplit(Operation::new(self.function, op)),
             LLIL_FLAG => ExprInfo::Flag(Operation::new(self.function, op)),
             LLIL_FLAG_BIT => ExprInfo::FlagBit(Operation::new(self.function, op)),
             LLIL_FLAG_COND => ExprInfo::FlagCond(Operation::new(self.function, op)), // TODO lifted only
@@ -327,6 +330,7 @@ where
         match op.operation {
             LLIL_LOAD_SSA => ExprInfo::Load(Operation::new(self.function, op)),
             LLIL_REG_SSA | LLIL_REG_SSA_PARTIAL => ExprInfo::Reg(Operation::new(self.function, op)),
+            LLIL_REG_SPLIT_SSA => ExprInfo::RegSplit(Operation::new(self.function, op)),
             LLIL_FLAG_SSA => ExprInfo::Flag(Operation::new(self.function, op)),
             LLIL_FLAG_BIT_SSA => ExprInfo::FlagBit(Operation::new(self.function, op)),
             _ => common_info(self.function, op),
@@ -383,6 +387,7 @@ where
     Load(Operation<'func, A, M, F, operation::Load>),
     Pop(Operation<'func, A, M, F, operation::Pop>),
     Reg(Operation<'func, A, M, F, operation::Reg>),
+    RegSplit(Operation<'func, A, M, F, operation::RegSplit>),
     Const(Operation<'func, A, M, F, operation::Const>),
     ConstPtr(Operation<'func, A, M, F, operation::Const>),
     Flag(Operation<'func, A, M, F, operation::Flag>),
@@ -595,6 +600,8 @@ where
 
             Reg(ref op) => &op.op,
 
+            RegSplit(ref op) => &op.op,
+
             Flag(ref op) => &op.op,
 
             FlagBit(ref op) => &op.op,
@@ -647,6 +654,8 @@ where
             Pop(ref op) => op.flag_write(),
 
             Reg(ref op) => op.flag_write(),
+
+            RegSplit(ref op) => op.flag_write(),
 
             Flag(ref op) => op.flag_write(),
 
@@ -732,6 +741,31 @@ where
                 match size {
                     Some(s) => write!(f, "{:?}.{}", reg, s),
                     _ => write!(f, "{:?}", reg),
+                }
+            }
+
+            RegSplit(ref op) => {
+                let low_reg = op.low_reg();
+                let high_reg = op.high_reg();
+                let size = op.size();
+
+                let low_size = match low_reg {
+                    Register::Temp(_) => Some(size),
+                    Register::ArchReg(ref r) if r.info().size() != size => Some(size),
+                    _ => None,
+                };
+
+                let high_size = match high_reg {
+                    Register::Temp(_) => Some(size),
+                    Register::ArchReg(ref r) if r.info().size() != size => Some(size),
+                    _ => None,
+                };
+
+                match (low_size, high_size) {
+                    (Some(ls), Some(hs)) => write!(f, "{:?}.{}:{:?}.{}", high_reg, hs, low_reg, ls),
+                    (Some(ls), None) => write!(f, "{:?}:{:?}.{}", high_reg, low_reg, ls),
+                    (None, Some(hs)) => write!(f, "{:?}.{}:{:?}", high_reg, hs, low_reg),
+                    _ => write!(f, "{:?}:{:?}", high_reg, low_reg),
                 }
             }
 

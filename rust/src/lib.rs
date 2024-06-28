@@ -197,7 +197,7 @@ const BN_INVALID_EXPR: usize = usize::MAX;
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
 pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::BinaryView>> {
     let filename = filename.into_bytes_with_nul();
-    let options = "";
+    let options = "\x00";
 
     let handle = unsafe {
         binaryninjacore_sys::BNLoadFilename(

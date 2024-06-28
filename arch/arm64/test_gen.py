@@ -44,14 +44,19 @@ def gather_samples(mnems, encodings):
 
     global N_SAMPLES
     fpath = "./disassembler/test_cases.txt"
-    with open(fpath) as fp:
-        lines = fp.readlines()
+    with open(fpath, "rt") as fp:
+        lines_read = fp.read()
 
     mnems = [re.compile(x, re.IGNORECASE) for x in mnems]
 
     samples = 0
     current_encoding = None
-    for line in lines:
+    # encoding_line_pat = re.compile(r"^// (.*?) .*")
+    not_sample_line_pat = re.compile(r"^// (\w*) .*")
+    encoding_line_pat = re.compile(r"^// (\w*_\w*?) .*")
+    # sample_line_pat = re.compile(r"^(..)(..)(..)(..) (.*)$")
+    sample_line_pat = re.compile(r"^([\dA-F]{2})([\dA-F]{2})([\dA-F]{2})([\dA-F]{2}) (.*)$")
+    for i, line in enumerate(lines_read.splitlines()):
         if line.startswith("// NOTE:"):
             continue
         if line.startswith("// SYNTAX:"):
@@ -79,8 +84,10 @@ def gather_samples(mnems, encodings):
         if line.strip().endswith("// PSSBB_DSB_BO_BARRIERS"):
             continue
 
-        if re.match(r"^// .*? .*", line):
-            m = re.match(r"^// (.*?) .*", line)
+        # if re.match(r"^// .*? .*", line):
+        m = encoding_line_pat.match(line)
+        if m:
+            # m = re.match(r"^// (.*?) .*", line)
 
             # example:
             # // BFCVT_Z_P_Z_S2BF 01100101|opc=10|0010|opc2=10|101|Pg=xxx|Zn=xxxxx|Zd=xxxxx
@@ -88,7 +95,13 @@ def gather_samples(mnems, encodings):
             samples = 0
             continue
 
-        m = re.match(r"^(..)(..)(..)(..) (.*)$", line)
+        # if not_sample_line_pat.match(line):
+        #     continue
+        if line.startswith("//"):
+            continue
+
+        # m = re.match(r"^(..)(..)(..)(..) (.*)$", line)
+        m = sample_line_pat.match(line)
         if m:
             # example:
             # 658AB9BB bfcvt z27.h, p6/m, z13.s
@@ -114,7 +127,7 @@ def gather_samples(mnems, encodings):
             samples += 1
             continue
 
-        print("unable to parse line: %r" % line)
+        print("unable to parse line (%d): %r" % (i + 1, line))
         sys.exit(-1)
 
 

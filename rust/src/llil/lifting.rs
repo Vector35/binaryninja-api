@@ -1016,6 +1016,43 @@ where
         Expression::new(self, expr_idx)
     }
 
+    pub fn reg_split<H: Into<Register<A::Register>>, L: Into<Register<A::Register>>>(
+        &self,
+        size: usize,
+        hi_reg: H,
+        lo_reg: L,
+    ) -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_REG_SPLIT;
+
+        // TODO verify valid id
+        let hi_reg = match hi_reg.into() {
+            Register::ArchReg(r) => r.id(),
+            Register::Temp(r) => 0x8000_0000 | r,
+        };
+
+        // TODO verify valid id
+        let lo_reg = match lo_reg.into() {
+            Register::ArchReg(r) => r.id(),
+            Register::Temp(r) => 0x8000_0000 | r,
+        };
+
+        let expr_idx = unsafe {
+            BNLowLevelILAddExpr(
+                self.handle,
+                LLIL_REG_SPLIT,
+                size,
+                0,
+                hi_reg as u64,
+                lo_reg as u64,
+                0,
+                0,
+            )
+        };
+
+        Expression::new(self, expr_idx)
+    }
+
     pub fn set_reg<'a, R, E>(
         &'a self,
         size: usize,

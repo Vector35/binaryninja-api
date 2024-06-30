@@ -585,3 +585,14 @@ fmt::format_context::iterator fmt::formatter<BinaryNinja::NameList>::format(cons
 {
 	return fmt::format_to(ctx.out(), "{}", obj.GetString());
 }
+
+
+std::optional<size_t> BinaryNinja::FuzzyMatchSingle(const std::string& target, const std::string& query)
+{
+	size_t result = BNFuzzyMatchSingle(target.c_str(), query.c_str());
+	if (result == 0)
+	{
+		return std::nullopt;
+	}
+	return result;
+}

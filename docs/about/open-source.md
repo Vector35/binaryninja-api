@@ -68,6 +68,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [cipher] ([cipher license] - APACHE 2.0 / MIT)
     - [clang] ([clang license] - APACHE 2.0)
     - [clang-sys] ([clang-sys license] - APACHE 2.0)
+    - [code_fuzzy_match] ([code_fuzzy_match license] - MIT)
     - [core-foundation-sys] ([core-foundation-sys license] - APACHE 2.0 / MIT)
     - [core-foundation] ([core-foundation license] - APACHE 2.0 / MIT)
     - [cpp_demangle] ([cpp_demangle license] - APACHE 2.0 / MIT)
@@ -417,6 +418,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [clang license]: https://github.com/KyleMayes/clang-rs/blob/master/LICENSE.txt
 [clang-sys]: https://github.com/KyleMayes/clang-sys
 [clang-sys license]: https://github.com/KyleMayes/clang-sys/blob/master/LICENSE.txt
+[code_fuzzy_match license]: https://github.com/D0ntPanic/code-fuzzy-match/blob/master/LICENSE
 [core-foundation-sys]: https://github.com/servo/core-foundation-rs
 [core-foundation-sys license]: https://github.com/servo/core-foundation-rs/blob/main/LICENSE-MIT
 [core-foundation]: https://github.com/servo/core-foundation-rs

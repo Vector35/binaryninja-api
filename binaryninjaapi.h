@@ -1215,6 +1215,8 @@ namespace BinaryNinja {
 		return result;
 	}
 
+	std::optional<size_t> FuzzyMatchSingle(const std::string& target, const std::string& query);
+
 	/*!
 		@}
 	*/

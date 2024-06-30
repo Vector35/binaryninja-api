@@ -461,6 +461,21 @@ class UIPluginInHeadlessError(Exception):
 		Exception.__init__(self, *args, **kwargs)
 
 
+def fuzzy_match_single(target, query) -> Optional[int]:
+	"""
+	Fuzzy match a string against a query string. Returns a score that is higher for
+	a more confident match, or None if the query does not match the target string.
+
+	:param target: Target (larger) string
+	:param query: Query (smaller) string
+	:return: Confidence of match, or None if the string doesn't match
+	"""
+	result = core.BNFuzzyMatchSingle(target, query)
+	if result == 0:
+		return None
+	return result
+
+
 # Load Collaboration scripts from Enterprise (they are bundled in shipping builds)
 try:
 	from . import collaboration

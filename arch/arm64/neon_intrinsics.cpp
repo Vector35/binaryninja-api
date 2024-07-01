@@ -17469,6 +17469,16 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
+	case ENC_FCVTZS_ASISDSHF_C:
+		if ((instr.operands[0].reg[0] >= REG_H0 && instr.operands[0].reg[0] <= REG_H31) && (instr.operands[1].reg[0] >= REG_H0 && instr.operands[1].reg[0] <= REG_H31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int16_t vcvth_n_s16_f16(float16_t a, const int n)
+			// argprep: a -> Hn; n -> n
+			// results: Hd -> result
+			intrin_id = ARM64_INTRIN_VCVTH_N_S16_F16;  // FCVTZS Hd,Hn,#n
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_input_imm(inputs, il, instr.operands[2]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
 	case ENC_FCVTZU_32D_FLOAT2INT:
 		if ((instr.operands[0].reg[0] >= REG_W0 && instr.operands[0].reg[0] <= REG_WSP) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
 			// int32_t vcvtd_u32_f64(float64_t a)
@@ -21935,17 +21945,16 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_SRI_ASISDSHF_R:
-		if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
-			intrin_id = ARM64_INTRIN_VSRIQ_N_S8;  // SRI Vd.16B,Vn.16B,#n
-		// if(None) intrin_id = ARM64_INTRIN_VSRI_N_S64; // SRI Dd,Dn,#n
-		if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint64_t vsrid_n_u64(uint64_t a, uint64_t b, const int n)
+			// argprep: a -> Dd; b -> Dn; n -> n
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VSRID_N_U64;  // SRI Dd,Dn,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES && instr.operands[1].arrSpec == ARRSPEC_16BYTES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint8x16_t vsriq_n_u8(uint8x16_t a, uint8x16_t b, const int n)
+			// argprep: a -> Vd.16B; b -> Vn.16B; n -> n
+			// results: Vd.16B -> result
 			intrin_id = ARM64_INTRIN_VSRIQ_N_U8;  // SRI Vd.16B,Vn.16B,#n
-		// if(None) intrin_id = ARM64_INTRIN_VSRI_N_U64; // SRI Dd,Dn,#n
-		// if(None) intrin_id = ARM64_INTRIN_VSRI_N_P64; // SRI Dd,Dn,#n
-		if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
-			intrin_id = ARM64_INTRIN_VSRIQ_N_P8;  // SRI Vd.16B,Vn.16B,#n
-		// if(None) intrin_id = ARM64_INTRIN_VSRID_N_S64; // SRI Dd,Dn,#n
-		// if(None) intrin_id = ARM64_INTRIN_VSRID_N_U64; // SRI Dd,Dn,#n
 		add_input_reg(inputs, il, instr.operands[0]);
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_imm(inputs, il, instr.operands[2]);
@@ -21994,37 +22003,68 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_SRSHR_ASISDSHF_R:
-		if (instr.operands[1].arrSpec == ARRSPEC_16BYTES)
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int64_t vrshrd_n_s64(int64_t a, const int n)
+			// argprep: a -> Dn; n -> n
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VRSHRD_N_S64;  // SRSHR Dd,Dn,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES && instr.operands[1].arrSpec == ARRSPEC_16BYTES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int8x16_t vrshrq_n_s8(int8x16_t a, const int n)
+			// argprep: a -> Vn.16B; n -> n
+			// results: Vd.16B -> result
 			intrin_id = ARM64_INTRIN_VRSHRQ_N_S8;  // SRSHR Vd.16B,Vn.16B,#n
-		// if(None) intrin_id = ARM64_INTRIN_VRSHR_N_S64; // SRSHR Dd,Dn,#n
-		// if(None) intrin_id = ARM64_INTRIN_VRSHRD_N_S64; // SRSHR Dd,Dn,#n
-		add_input_reg(inputs, il, instr.operands[1]);
-		add_input_imm(inputs, il, instr.operands[2]);
-		add_output_reg(outputs, il, instr.operands[0]);
-		break;
-	case ENC_SRSRA_ASIMDSHF_R:
-		if (instr.operands[0].arrSpec == ARRSPEC_8BYTES)
-			intrin_id = ARM64_INTRIN_VRSRA_N_S8;  // SRSRA Vd.8B,Vn.8B,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES)
-			intrin_id = ARM64_INTRIN_VRSRA_N_S16;  // SRSRA Vd.4H,Vn.4H,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES)
-			intrin_id = ARM64_INTRIN_VRSRAQ_N_S16;  // SRSRA Vd.8H,Vn.8H,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_2SINGLES)
-			intrin_id = ARM64_INTRIN_VRSRA_N_S32;  // SRSRA Vd.2S,Vn.2S,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES)
-			intrin_id = ARM64_INTRIN_VRSRAQ_N_S32;  // SRSRA Vd.4S,Vn.4S,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES)
-			intrin_id = ARM64_INTRIN_VRSRAQ_N_S64;  // SRSRA Vd.2D,Vn.2D,#n
-		add_input_reg(inputs, il, instr.operands[0]);
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_imm(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_SRSRA_ASISDSHF_R:
-		if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
+	case ENC_SRSRA_ASIMDSHF_R:
+		if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int16x4_t vrsra_n_s16(int16x4_t a, int16x4_t b, const int n)
+			// argprep: a -> Vd.4H; b -> Vn.4H; n -> n
+			// results: Vd.4H -> result
+			intrin_id = ARM64_INTRIN_VRSRA_N_S16;  // SRSRA Vd.4H,Vn.4H,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_2SINGLES && instr.operands[1].arrSpec == ARRSPEC_2SINGLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int32x2_t vrsra_n_s32(int32x2_t a, int32x2_t b, const int n)
+			// argprep: a -> Vd.2S; b -> Vn.2S; n -> n
+			// results: Vd.2S -> result
+			intrin_id = ARM64_INTRIN_VRSRA_N_S32;  // SRSRA Vd.2S,Vn.2S,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_8BYTES && instr.operands[1].arrSpec == ARRSPEC_8BYTES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int8x8_t vrsra_n_s8(int8x8_t a, int8x8_t b, const int n)
+			// argprep: a -> Vd.8B; b -> Vn.8B; n -> n
+			// results: Vd.8B -> result
+			intrin_id = ARM64_INTRIN_VRSRA_N_S8;  // SRSRA Vd.8B,Vn.8B,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int16x8_t vrsraq_n_s16(int16x8_t a, int16x8_t b, const int n)
+			// argprep: a -> Vd.8H; b -> Vn.8H; n -> n
+			// results: Vd.8H -> result
+			intrin_id = ARM64_INTRIN_VRSRAQ_N_S16;  // SRSRA Vd.8H,Vn.8H,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int32x4_t vrsraq_n_s32(int32x4_t a, int32x4_t b, const int n)
+			// argprep: a -> Vd.4S; b -> Vn.4S; n -> n
+			// results: Vd.4S -> result
+			intrin_id = ARM64_INTRIN_VRSRAQ_N_S32;  // SRSRA Vd.4S,Vn.4S,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_2DOUBLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int64x2_t vrsraq_n_s64(int64x2_t a, int64x2_t b, const int n)
+			// argprep: a -> Vd.2D; b -> Vn.2D; n -> n
+			// results: Vd.2D -> result
+			intrin_id = ARM64_INTRIN_VRSRAQ_N_S64;  // SRSRA Vd.2D,Vn.2D,#n
+		// add_input_reg(inputs, il, instr.operands[0]);
+		// add_input_reg(inputs, il, instr.operands[1]);
+		// add_input_imm(inputs, il, instr.operands[2]);
+		// add_output_reg(outputs, il, instr.operands[0]);
+		// break;
+	// case ENC_SRSRA_ASISDSHF_R:
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int64_t vrsrad_n_s64(int64_t a, int64_t b, const int n)
+			// argprep: a -> Dd; b -> Dn; n -> n
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VRSRAD_N_S64;  // SRSRA Dd,Dn,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES && instr.operands[1].arrSpec == ARRSPEC_16BYTES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int8x16_t vrsraq_n_s8(int8x16_t a, int8x16_t b, const int n)
+			// argprep: a -> Vd.16B; b -> Vn.16B; n -> n
+			// results: Vd.16B -> result
 			intrin_id = ARM64_INTRIN_VRSRAQ_N_S8;  // SRSRA Vd.16B,Vn.16B,#n
-		// if(None) intrin_id = ARM64_INTRIN_VRSRA_N_S64; // SRSRA Dd,Dn,#n
-		// if(None) intrin_id = ARM64_INTRIN_VRSRAD_N_S64; // SRSRA Dd,Dn,#n
 		add_input_reg(inputs, il, instr.operands[0]);
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_imm(inputs, il, instr.operands[2]);
@@ -22196,10 +22236,16 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_SSRA_ASISDSHF_R:
-		if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int64_t vsrad_n_s64(int64_t a, int64_t b, const int n)
+			// argprep: a -> Dd; b -> Dn; n -> n
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VSRAD_N_S64;  // SSRA Dd,Dn,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES && instr.operands[1].arrSpec == ARRSPEC_16BYTES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int8x16_t vsraq_n_s8(int8x16_t a, int8x16_t b, const int n)
+			// argprep: a -> Vd.16B; b -> Vn.16B; n -> n
+			// results: Vd.16B -> result
 			intrin_id = ARM64_INTRIN_VSRAQ_N_S8;  // SSRA Vd.16B,Vn.16B,#n
-		// if(None) intrin_id = ARM64_INTRIN_VSRA_N_S64; // SSRA Dd,Dn,#n
-		// if(None) intrin_id = ARM64_INTRIN_VSRAD_N_S64; // SSRA Dd,Dn,#n
 		add_input_reg(inputs, il, instr.operands[0]);
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_imm(inputs, il, instr.operands[2]);
@@ -22258,30 +22304,36 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_SUBHN_ASIMDDIFF_N:
-		if (instr.operands[1].arrSpec == ARRSPEC_8BYTES)
-			intrin_id = ARM64_INTRIN_VSUBHN_S16;  // SUBHN Vd.8B,Vn.8H,Vm.8H
-		else if (instr.operands[1].arrSpec == ARRSPEC_4HALVES)
-			intrin_id = ARM64_INTRIN_VSUBHN_S32;  // SUBHN Vd.4H,Vn.4S,Vm.4S
-		else if (instr.operands[1].arrSpec == ARRSPEC_2SINGLES)
-			intrin_id = ARM64_INTRIN_VSUBHN_S64;  // SUBHN Vd.2S,Vn.2D,Vm.2D
-		else if (instr.operands[1].arrSpec == ARRSPEC_8BYTES)
-			intrin_id = ARM64_INTRIN_VSUBHN_U16;  // SUBHN Vd.8B,Vn.8H,Vm.8H
-		else if (instr.operands[1].arrSpec == ARRSPEC_4HALVES)
-			intrin_id = ARM64_INTRIN_VSUBHN_U32;  // SUBHN Vd.4H,Vn.4S,Vm.4S
-		else if (instr.operands[1].arrSpec == ARRSPEC_2SINGLES)
-			intrin_id = ARM64_INTRIN_VSUBHN_U64;  // SUBHN Vd.2S,Vn.2D,Vm.2D
-		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
-			intrin_id = ARM64_INTRIN_VSUBHN_HIGH_S16;  // SUBHN2 Vd.16B,Vn.8H,Vm.8H
-		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES)
-			intrin_id = ARM64_INTRIN_VSUBHN_HIGH_S32;  // SUBHN2 Vd.8H,Vn.4S,Vm.4S
-		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES)
-			intrin_id = ARM64_INTRIN_VSUBHN_HIGH_S64;  // SUBHN2 Vd.4S,Vn.2D,Vm.2D
-		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
+		if (instr.operands[0].arrSpec == ARRSPEC_16BYTES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && instr.operands[2].arrSpec == ARRSPEC_8HALVES)
+			// uint8x16_t vsubhn_high_u16(uint8x8_t r, uint16x8_t a, uint16x8_t b)
+			// argprep: r -> Vd.8B; a -> Vn.8H; b -> Vm.8H
+			// results: Vd.16B -> result
 			intrin_id = ARM64_INTRIN_VSUBHN_HIGH_U16;  // SUBHN2 Vd.16B,Vn.8H,Vm.8H
-		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && instr.operands[2].arrSpec == ARRSPEC_4SINGLES)
+			// uint16x8_t vsubhn_high_u32(uint16x4_t r, uint32x4_t a, uint32x4_t b)
+			// argprep: r -> Vd.4H; a -> Vn.4S; b -> Vm.4S
+			// results: Vd.8H -> result
 			intrin_id = ARM64_INTRIN_VSUBHN_HIGH_U32;  // SUBHN2 Vd.8H,Vn.4S,Vm.4S
-		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_2DOUBLES && instr.operands[2].arrSpec == ARRSPEC_2DOUBLES)
+			// uint32x4_t vsubhn_high_u64(uint32x2_t r, uint64x2_t a, uint64x2_t b)
+			// argprep: r -> Vd.2S; a -> Vn.2D; b -> Vm.2D
+			// results: Vd.4S -> result
 			intrin_id = ARM64_INTRIN_VSUBHN_HIGH_U64;  // SUBHN2 Vd.4S,Vn.2D,Vm.2D
+		else if (instr.operands[0].arrSpec == ARRSPEC_8BYTES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && instr.operands[2].arrSpec == ARRSPEC_8HALVES)
+			// uint8x8_t vsubhn_u16(uint16x8_t a, uint16x8_t b)
+			// argprep: a -> Vn.8H; b -> Vm.8H
+			// results: Vd.8B -> result
+			intrin_id = ARM64_INTRIN_VSUBHN_U16;  // SUBHN Vd.8B,Vn.8H,Vm.8H
+		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && instr.operands[2].arrSpec == ARRSPEC_4SINGLES)
+			// uint16x4_t vsubhn_u32(uint32x4_t a, uint32x4_t b)
+			// argprep: a -> Vn.4S; b -> Vm.4S
+			// results: Vd.4H -> result
+			intrin_id = ARM64_INTRIN_VSUBHN_U32;  // SUBHN Vd.4H,Vn.4S,Vm.4S
+		else if (instr.operands[0].arrSpec == ARRSPEC_2SINGLES && instr.operands[1].arrSpec == ARRSPEC_2DOUBLES && instr.operands[2].arrSpec == ARRSPEC_2DOUBLES)
+			// uint32x2_t vsubhn_u64(uint64x2_t a, uint64x2_t b)
+			// argprep: a -> Vn.2D; b -> Vm.2D
+			// results: Vd.2S -> result
+			intrin_id = ARM64_INTRIN_VSUBHN_U64;  // SUBHN Vd.2S,Vn.2D,Vm.2D
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_reg(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
@@ -22545,18 +22597,36 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_UABDL_ASIMDDIFF_L:
-		if (instr.operands[1].arrSpec == ARRSPEC_8HALVES)
-			intrin_id = ARM64_INTRIN_VABDL_U8;  // UABDL Vd.8H,Vn.8B,Vm.8B
-		else if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
-			intrin_id = ARM64_INTRIN_VABDL_U16;  // UABDL Vd.4S,Vn.4H,Vm.4H
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
-			intrin_id = ARM64_INTRIN_VABDL_U32;  // UABDL Vd.2D,Vn.2S,Vm.2S
-		else if (instr.operands[1].arrSpec == ARRSPEC_8HALVES)
-			intrin_id = ARM64_INTRIN_VABDL_HIGH_U8;  // UABDL2 Vd.8H,Vn.16B,Vm.16B
-		else if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
+		if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && instr.operands[2].arrSpec == ARRSPEC_8HALVES)
+			// uint32x4_t vabdl_high_u16(uint16x8_t a, uint16x8_t b)
+			// argprep: a -> Vn.8H; b -> Vm.8H
+			// results: Vd.4S -> result
 			intrin_id = ARM64_INTRIN_VABDL_HIGH_U16;  // UABDL2 Vd.4S,Vn.8H,Vm.8H
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && instr.operands[2].arrSpec == ARRSPEC_4SINGLES)
+			// uint64x2_t vabdl_high_u32(uint32x4_t a, uint32x4_t b)
+			// argprep: a -> Vn.4S; b -> Vm.4S
+			// results: Vd.2D -> result
 			intrin_id = ARM64_INTRIN_VABDL_HIGH_U32;  // UABDL2 Vd.2D,Vn.4S,Vm.4S
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_16BYTES && instr.operands[2].arrSpec == ARRSPEC_16BYTES)
+			// uint16x8_t vabdl_high_u8(uint8x16_t a, uint8x16_t b)
+			// argprep: a -> Vn.16B; b -> Vm.16B
+			// results: Vd.8H -> result
+			intrin_id = ARM64_INTRIN_VABDL_HIGH_U8;  // UABDL2 Vd.8H,Vn.16B,Vm.16B
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_4HALVES)
+			// uint32x4_t vabdl_u16(uint16x4_t a, uint16x4_t b)
+			// argprep: a -> Vn.4H; b -> Vm.4H
+			// results: Vd.4S -> result
+			intrin_id = ARM64_INTRIN_VABDL_U16;  // UABDL Vd.4S,Vn.4H,Vm.4H
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_2SINGLES && instr.operands[2].arrSpec == ARRSPEC_2SINGLES)
+			// uint64x2_t vabdl_u32(uint32x2_t a, uint32x2_t b)
+			// argprep: a -> Vn.2S; b -> Vm.2S
+			// results: Vd.2D -> result
+			intrin_id = ARM64_INTRIN_VABDL_U32;  // UABDL Vd.2D,Vn.2S,Vm.2S
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_8BYTES && instr.operands[2].arrSpec == ARRSPEC_8BYTES)
+			// uint16x8_t vabdl_u8(uint8x8_t a, uint8x8_t b)
+			// argprep: a -> Vn.8B; b -> Vm.8B
+			// results: Vd.8H -> result
+			intrin_id = ARM64_INTRIN_VABDL_U8;  // UABDL Vd.8H,Vn.8B,Vm.8B
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_reg(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
@@ -23078,47 +23148,81 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_UMULL_ASIMDDIFF_L:
-		if (instr.operands[1].arrSpec == ARRSPEC_8HALVES)
-			intrin_id = ARM64_INTRIN_VMULL_U8;  // UMULL Vd.8H,Vn.8B,Vm.8B
-		else if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
-			intrin_id = ARM64_INTRIN_VMULL_U16;  // UMULL Vd.4S,Vn.4H,Vm.4H
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
-			intrin_id = ARM64_INTRIN_VMULL_U32;  // UMULL Vd.2D,Vn.2S,Vm.2S
-		else if (instr.operands[1].arrSpec == ARRSPEC_8HALVES)
-			intrin_id = ARM64_INTRIN_VMULL_HIGH_U8;  // UMULL2 Vd.8H,Vn.16B,Vm.16B
-		else if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
-			intrin_id = ARM64_INTRIN_VMULL_HIGH_U16;  // UMULL2 Vd.4S,Vn.8H,Vm.8H
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
-			intrin_id = ARM64_INTRIN_VMULL_HIGH_U32;  // UMULL2 Vd.2D,Vn.4S,Vm.4S
-		else if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
-			intrin_id = ARM64_INTRIN_VMULL_N_U16;  // UMULL Vd.4S,Vn.4H,Vm.H[0]
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
-			intrin_id = ARM64_INTRIN_VMULL_N_U32;  // UMULL Vd.2D,Vn.2S,Vm.S[0]
-		else if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
+		if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed)
+			// uint32x4_t vmull_high_n_u16(uint16x8_t a, uint16_t b)
+			// argprep: a -> Vn.8H; b -> Vm.H[0]
+			// results: Vd.4S -> result
 			intrin_id = ARM64_INTRIN_VMULL_HIGH_N_U16;  // UMULL2 Vd.4S,Vn.8H,Vm.H[0]
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && instr.operands[2].arrSpec == ARRSPEC_1SINGLE && instr.operands[2].laneUsed)
+			// uint64x2_t vmull_high_n_u32(uint32x4_t a, uint32_t b)
+			// argprep: a -> Vn.4S; b -> Vm.S[0]
+			// results: Vd.2D -> result
 			intrin_id = ARM64_INTRIN_VMULL_HIGH_N_U32;  // UMULL2 Vd.2D,Vn.4S,Vm.S[0]
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && instr.operands[2].arrSpec == ARRSPEC_8HALVES)
+			// uint32x4_t vmull_high_u16(uint16x8_t a, uint16x8_t b)
+			// argprep: a -> Vn.8H; b -> Vm.8H
+			// results: Vd.4S -> result
+			intrin_id = ARM64_INTRIN_VMULL_HIGH_U16;  // UMULL2 Vd.4S,Vn.8H,Vm.8H
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && instr.operands[2].arrSpec == ARRSPEC_4SINGLES)
+			// uint64x2_t vmull_high_u32(uint32x4_t a, uint32x4_t b)
+			// argprep: a -> Vn.4S; b -> Vm.4S
+			// results: Vd.2D -> result
+			intrin_id = ARM64_INTRIN_VMULL_HIGH_U32;  // UMULL2 Vd.2D,Vn.4S,Vm.4S
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_16BYTES && instr.operands[2].arrSpec == ARRSPEC_16BYTES)
+			// uint16x8_t vmull_high_u8(uint8x16_t a, uint8x16_t b)
+			// argprep: a -> Vn.16B; b -> Vm.16B
+			// results: Vd.8H -> result
+			intrin_id = ARM64_INTRIN_VMULL_HIGH_U8;  // UMULL2 Vd.8H,Vn.16B,Vm.16B
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed)
+			// uint32x4_t vmull_n_u16(uint16x4_t a, uint16_t b)
+			// argprep: a -> Vn.4H; b -> Vm.H[0]
+			// results: Vd.4S -> result
+			intrin_id = ARM64_INTRIN_VMULL_N_U16;  // UMULL Vd.4S,Vn.4H,Vm.H[0]
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_2SINGLES && instr.operands[2].arrSpec == ARRSPEC_1SINGLE && instr.operands[2].laneUsed)
+			// uint64x2_t vmull_n_u32(uint32x2_t a, uint32_t b)
+			// argprep: a -> Vn.2S; b -> Vm.S[0]
+			// results: Vd.2D -> result
+			intrin_id = ARM64_INTRIN_VMULL_N_U32;  // UMULL Vd.2D,Vn.2S,Vm.S[0]
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_4HALVES)
+			// uint32x4_t vmull_u16(uint16x4_t a, uint16x4_t b)
+			// argprep: a -> Vn.4H; b -> Vm.4H
+			// results: Vd.4S -> result
+			intrin_id = ARM64_INTRIN_VMULL_U16;  // UMULL Vd.4S,Vn.4H,Vm.4H
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_2SINGLES && instr.operands[2].arrSpec == ARRSPEC_2SINGLES)
+			// uint64x2_t vmull_u32(uint32x2_t a, uint32x2_t b)
+			// argprep: a -> Vn.2S; b -> Vm.2S
+			// results: Vd.2D -> result
+			intrin_id = ARM64_INTRIN_VMULL_U32;  // UMULL Vd.2D,Vn.2S,Vm.2S
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_8BYTES && instr.operands[2].arrSpec == ARRSPEC_8BYTES)
+			// uint16x8_t vmull_u8(uint8x8_t a, uint8x8_t b)
+			// argprep: a -> Vn.8B; b -> Vm.8B
+			// results: Vd.8H -> result
+			intrin_id = ARM64_INTRIN_VMULL_U8;  // UMULL Vd.8H,Vn.8B,Vm.8B
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_reg(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_UMULL_ASIMDELEM_L:
-		if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
-			intrin_id = ARM64_INTRIN_VMULL_LANE_U16;  // UMULL Vd.4S,Vn.4H,Vm.H[lane]
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
-			intrin_id = ARM64_INTRIN_VMULL_LANE_U32;  // UMULL Vd.2D,Vn.2S,Vm.S[lane]
-		else if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
-			intrin_id = ARM64_INTRIN_VMULL_HIGH_LANE_U16;  // UMULL2 Vd.4S,Vn.8H,Vm.H[lane]
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
-			intrin_id = ARM64_INTRIN_VMULL_HIGH_LANE_U32;  // UMULL2 Vd.2D,Vn.4S,Vm.S[lane]
-		else if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
-			intrin_id = ARM64_INTRIN_VMULL_LANEQ_U16;  // UMULL Vd.4S,Vn.4H,Vm.H[lane]
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
-			intrin_id = ARM64_INTRIN_VMULL_LANEQ_U32;  // UMULL Vd.2D,Vn.2S,Vm.S[lane]
-		else if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
+		if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed)
+			// uint32x4_t vmull_high_laneq_u16(uint16x8_t a, uint16x8_t v, const int lane)
+			// argprep: a -> Vn.8H; v -> Vm.8H; lane -> <lane>
+			// results: Vd.4S -> result
 			intrin_id = ARM64_INTRIN_VMULL_HIGH_LANEQ_U16;  // UMULL2 Vd.4S,Vn.8H,Vm.H[lane]
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && instr.operands[2].arrSpec == ARRSPEC_1SINGLE && instr.operands[2].laneUsed)
+			// uint64x2_t vmull_high_laneq_u32(uint32x4_t a, uint32x4_t v, const int lane)
+			// argprep: a -> Vn.4S; v -> Vm.4S; lane -> <lane>
+			// results: Vd.2D -> result
 			intrin_id = ARM64_INTRIN_VMULL_HIGH_LANEQ_U32;  // UMULL2 Vd.2D,Vn.4S,Vm.S[lane]
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed)
+			// uint32x4_t vmull_laneq_u16(uint16x4_t a, uint16x8_t v, const int lane)
+			// argprep: a -> Vn.4H; v -> Vm.8H; lane -> <lane>
+			// results: Vd.4S -> result
+			intrin_id = ARM64_INTRIN_VMULL_LANEQ_U16;  // UMULL Vd.4S,Vn.4H,Vm.H[lane]
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_2SINGLES && instr.operands[2].arrSpec == ARRSPEC_1SINGLE && instr.operands[2].laneUsed)
+			// uint64x2_t vmull_laneq_u32(uint32x2_t a, uint32x4_t v, const int lane)
+			// argprep: a -> Vn.2S; v -> Vm.4S; lane -> <lane>
+			// results: Vd.2D -> result
+			intrin_id = ARM64_INTRIN_VMULL_LANEQ_U32;  // UMULL Vd.2D,Vn.2S,Vm.S[lane]
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_reg(inputs, il, instr.operands[2]);
 		add_input_lane(inputs, il, instr.operands[2]);
@@ -23175,24 +23279,56 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_UQRSHRN_ASIMDSHF_N:
-		if (instr.operands[1].arrSpec == ARRSPEC_8BYTES)
-			intrin_id = ARM64_INTRIN_VQRSHRN_N_U16;  // UQRSHRN Vd.8B,Vn.8H,#n
-		else if (instr.operands[1].arrSpec == ARRSPEC_4HALVES)
-			intrin_id = ARM64_INTRIN_VQRSHRN_N_U32;  // UQRSHRN Vd.4H,Vn.4S,#n
-		else if (instr.operands[1].arrSpec == ARRSPEC_2SINGLES)
-			intrin_id = ARM64_INTRIN_VQRSHRN_N_U64;  // UQRSHRN Vd.2S,Vn.2D,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
+		if (instr.operands[0].arrSpec == ARRSPEC_16BYTES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint8x16_t vqrshrn_high_n_u16(uint8x8_t r, uint16x8_t a, const int n)
+			// argprep: r -> Vd.8B; a -> Vn.8H; n -> n
+			// results: Vd.16B -> result
 			intrin_id = ARM64_INTRIN_VQRSHRN_HIGH_N_U16;  // UQRSHRN2 Vd.16B,Vn.8H,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint16x8_t vqrshrn_high_n_u32(uint16x4_t r, uint32x4_t a, const int n)
+			// argprep: r -> Vd.4H; a -> Vn.4S; n -> n
+			// results: Vd.8H -> result
 			intrin_id = ARM64_INTRIN_VQRSHRN_HIGH_N_U32;  // UQRSHRN2 Vd.8H,Vn.4S,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_2DOUBLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint32x4_t vqrshrn_high_n_u64(uint32x2_t r, uint64x2_t a, const int n)
+			// argprep: r -> Vd.2S; a -> Vn.2D; n -> n
+			// results: Vd.4S -> result
 			intrin_id = ARM64_INTRIN_VQRSHRN_HIGH_N_U64;  // UQRSHRN2 Vd.4S,Vn.2D,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_8BYTES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint8x8_t vqrshrn_n_u16(uint16x8_t a, const int n)
+			// argprep: a -> Vn.8H; n -> n
+			// results: Vd.8B -> result
+			intrin_id = ARM64_INTRIN_VQRSHRN_N_U16;  // UQRSHRN Vd.8B,Vn.8H,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint16x4_t vqrshrn_n_u32(uint32x4_t a, const int n)
+			// argprep: a -> Vn.4S; n -> n
+			// results: Vd.4H -> result
+			intrin_id = ARM64_INTRIN_VQRSHRN_N_U32;  // UQRSHRN Vd.4H,Vn.4S,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_2SINGLES && instr.operands[1].arrSpec == ARRSPEC_2DOUBLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint32x2_t vqrshrn_n_u64(uint64x2_t a, const int n)
+			// argprep: a -> Vn.2D; n -> n
+			// results: Vd.2S -> result
+			intrin_id = ARM64_INTRIN_VQRSHRN_N_U64;  // UQRSHRN Vd.2S,Vn.2D,#n
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_imm(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_UQRSHRN_ASISDSHF_N:
-		intrin_id = ARM64_INTRIN_VQRSHRNH_N_U16;  // UQRSHRN Bd,Hn,#n
+		if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint32_t vqrshrnd_n_u64(uint64_t a, const int n)
+			// argprep: a -> Dn; n -> n
+			// results: Sd -> result
+			intrin_id = ARM64_INTRIN_VQRSHRND_N_U64;  // UQRSHRN Sd,Dn,#n
+		else if ((instr.operands[0].reg[0] >= REG_B0 && instr.operands[0].reg[0] <= REG_B31) && (instr.operands[1].reg[0] >= REG_H0 && instr.operands[1].reg[0] <= REG_H31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint8_t vqrshrnh_n_u16(uint16_t a, const int n)
+			// argprep: a -> Hn; n -> n
+			// results: Bd -> result
+			intrin_id = ARM64_INTRIN_VQRSHRNH_N_U16;  // UQRSHRN Bd,Hn,#n
+		else if ((instr.operands[0].reg[0] >= REG_H0 && instr.operands[0].reg[0] <= REG_H31) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint16_t vqrshrns_n_u32(uint32_t a, const int n)
+			// argprep: a -> Sn; n -> n
+			// results: Hd -> result
+			intrin_id = ARM64_INTRIN_VQRSHRNS_N_U32;  // UQRSHRN Hd,Sn,#n
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_imm(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
@@ -23225,24 +23361,56 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_UQSHRN_ASIMDSHF_N:
-		if (instr.operands[1].arrSpec == ARRSPEC_8BYTES)
-			intrin_id = ARM64_INTRIN_VQSHRN_N_U16;  // UQSHRN Vd.8B,Vn.8H,#n
-		else if (instr.operands[1].arrSpec == ARRSPEC_4HALVES)
-			intrin_id = ARM64_INTRIN_VQSHRN_N_U32;  // UQSHRN Vd.4H,Vn.4S,#n
-		else if (instr.operands[1].arrSpec == ARRSPEC_2SINGLES)
-			intrin_id = ARM64_INTRIN_VQSHRN_N_U64;  // UQSHRN Vd.2S,Vn.2D,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
+		if (instr.operands[0].arrSpec == ARRSPEC_16BYTES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint8x16_t vqshrn_high_n_u16(uint8x8_t r, uint16x8_t a, const int n)
+			// argprep: r -> Vd.8B; a -> Vn.8H; n -> n
+			// results: Vd.16B -> result
 			intrin_id = ARM64_INTRIN_VQSHRN_HIGH_N_U16;  // UQSHRN2 Vd.16B,Vn.8H,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint16x8_t vqshrn_high_n_u32(uint16x4_t r, uint32x4_t a, const int n)
+			// argprep: r -> Vd.4H; a -> Vn.4S; n -> n
+			// results: Vd.8H -> result
 			intrin_id = ARM64_INTRIN_VQSHRN_HIGH_N_U32;  // UQSHRN2 Vd.8H,Vn.4S,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_2DOUBLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint32x4_t vqshrn_high_n_u64(uint32x2_t r, uint64x2_t a, const int n)
+			// argprep: r -> Vd.2S; a -> Vn.2D; n -> n
+			// results: Vd.4S -> result
 			intrin_id = ARM64_INTRIN_VQSHRN_HIGH_N_U64;  // UQSHRN2 Vd.4S,Vn.2D,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_8BYTES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint8x8_t vqshrn_n_u16(uint16x8_t a, const int n)
+			// argprep: a -> Vn.8H; n -> n
+			// results: Vd.8B -> result
+			intrin_id = ARM64_INTRIN_VQSHRN_N_U16;  // UQSHRN Vd.8B,Vn.8H,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint16x4_t vqshrn_n_u32(uint32x4_t a, const int n)
+			// argprep: a -> Vn.4S; n -> n
+			// results: Vd.4H -> result
+			intrin_id = ARM64_INTRIN_VQSHRN_N_U32;  // UQSHRN Vd.4H,Vn.4S,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_2SINGLES && instr.operands[1].arrSpec == ARRSPEC_2DOUBLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint32x2_t vqshrn_n_u64(uint64x2_t a, const int n)
+			// argprep: a -> Vn.2D; n -> n
+			// results: Vd.2S -> result
+			intrin_id = ARM64_INTRIN_VQSHRN_N_U64;  // UQSHRN Vd.2S,Vn.2D,#n
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_imm(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_UQSHRN_ASISDSHF_N:
-		intrin_id = ARM64_INTRIN_VQSHRNH_N_U16;  // UQSHRN Bd,Hn,#n
+		if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint32_t vqshrnd_n_u64(uint64_t a, const int n)
+			// argprep: a -> Dn; n -> n
+			// results: Sd -> result
+			intrin_id = ARM64_INTRIN_VQSHRND_N_U64;  // UQSHRN Sd,Dn,#n
+		else if ((instr.operands[0].reg[0] >= REG_B0 && instr.operands[0].reg[0] <= REG_B31) && (instr.operands[1].reg[0] >= REG_H0 && instr.operands[1].reg[0] <= REG_H31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint8_t vqshrnh_n_u16(uint16_t a, const int n)
+			// argprep: a -> Hn; n -> n
+			// results: Bd -> result
+			intrin_id = ARM64_INTRIN_VQSHRNH_N_U16;  // UQSHRN Bd,Hn,#n
+		else if ((instr.operands[0].reg[0] >= REG_H0 && instr.operands[0].reg[0] <= REG_H31) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint16_t vqshrns_n_u32(uint32_t a, const int n)
+			// argprep: a -> Sn; n -> n
+			// results: Hd -> result
+			intrin_id = ARM64_INTRIN_VQSHRNS_N_U32;  // UQSHRN Hd,Sn,#n
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_imm(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
@@ -23273,18 +23441,36 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_UQXTN_ASIMDMISC_N:
-		if (instr.operands[1].arrSpec == ARRSPEC_8BYTES)
-			intrin_id = ARM64_INTRIN_VQMOVN_U16;  // UQXTN Vd.8B,Vn.8H
-		else if (instr.operands[1].arrSpec == ARRSPEC_4HALVES)
-			intrin_id = ARM64_INTRIN_VQMOVN_U32;  // UQXTN Vd.4H,Vn.4S
-		else if (instr.operands[1].arrSpec == ARRSPEC_2SINGLES)
-			intrin_id = ARM64_INTRIN_VQMOVN_U64;  // UQXTN Vd.2S,Vn.2D
-		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
+		if (instr.operands[0].arrSpec == ARRSPEC_16BYTES && instr.operands[1].arrSpec == ARRSPEC_8HALVES)
+			// uint8x16_t vqmovn_high_u16(uint8x8_t r, uint16x8_t a)
+			// argprep: r -> Vd.8B; a -> Vn.8H
+			// results: Vd.16B -> result
 			intrin_id = ARM64_INTRIN_VQMOVN_HIGH_U16;  // UQXTN2 Vd.16B,Vn.8H
-		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
+			// uint16x8_t vqmovn_high_u32(uint16x4_t r, uint32x4_t a)
+			// argprep: r -> Vd.4H; a -> Vn.4S
+			// results: Vd.8H -> result
 			intrin_id = ARM64_INTRIN_VQMOVN_HIGH_U32;  // UQXTN2 Vd.8H,Vn.4S
-		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
+			// uint32x4_t vqmovn_high_u64(uint32x2_t r, uint64x2_t a)
+			// argprep: r -> Vd.2S; a -> Vn.2D
+			// results: Vd.4S -> result
 			intrin_id = ARM64_INTRIN_VQMOVN_HIGH_U64;  // UQXTN2 Vd.4S,Vn.2D
+		else if (instr.operands[0].arrSpec == ARRSPEC_8BYTES && instr.operands[1].arrSpec == ARRSPEC_8HALVES)
+			// uint8x8_t vqmovn_u16(uint16x8_t a)
+			// argprep: a -> Vn.8H
+			// results: Vd.8B -> result
+			intrin_id = ARM64_INTRIN_VQMOVN_U16;  // UQXTN Vd.8B,Vn.8H
+		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
+			// uint16x4_t vqmovn_u32(uint32x4_t a)
+			// argprep: a -> Vn.4S
+			// results: Vd.4H -> result
+			intrin_id = ARM64_INTRIN_VQMOVN_U32;  // UQXTN Vd.4H,Vn.4S
+		else if (instr.operands[0].arrSpec == ARRSPEC_2SINGLES && instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
+			// uint32x2_t vqmovn_u64(uint64x2_t a)
+			// argprep: a -> Vn.2D
+			// results: Vd.2S -> result
+			intrin_id = ARM64_INTRIN_VQMOVN_U64;  // UQXTN Vd.2S,Vn.2D
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
@@ -23344,27 +23530,51 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_URSHR_ASIMDSHF_R:
-		if (instr.operands[1].arrSpec == ARRSPEC_8BYTES)
-			intrin_id = ARM64_INTRIN_VRSHR_N_U8;  // URSHR Vd.8B,Vn.8B,#n
-		else if (instr.operands[1].arrSpec == ARRSPEC_4HALVES)
+		if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint16x4_t vrshr_n_u16(uint16x4_t a, const int n)
+			// argprep: a -> Vn.4H; n -> n
+			// results: Vd.4H -> result
 			intrin_id = ARM64_INTRIN_VRSHR_N_U16;  // URSHR Vd.4H,Vn.4H,#n
-		else if (instr.operands[1].arrSpec == ARRSPEC_8HALVES)
-			intrin_id = ARM64_INTRIN_VRSHRQ_N_U16;  // URSHR Vd.8H,Vn.8H,#n
-		else if (instr.operands[1].arrSpec == ARRSPEC_2SINGLES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_2SINGLES && instr.operands[1].arrSpec == ARRSPEC_2SINGLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint32x2_t vrshr_n_u32(uint32x2_t a, const int n)
+			// argprep: a -> Vn.2S; n -> n
+			// results: Vd.2S -> result
 			intrin_id = ARM64_INTRIN_VRSHR_N_U32;  // URSHR Vd.2S,Vn.2S,#n
-		else if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_8BYTES && instr.operands[1].arrSpec == ARRSPEC_8BYTES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint8x8_t vrshr_n_u8(uint8x8_t a, const int n)
+			// argprep: a -> Vn.8B; n -> n
+			// results: Vd.8B -> result
+			intrin_id = ARM64_INTRIN_VRSHR_N_U8;  // URSHR Vd.8B,Vn.8B,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint16x8_t vrshrq_n_u16(uint16x8_t a, const int n)
+			// argprep: a -> Vn.8H; n -> n
+			// results: Vd.8H -> result
+			intrin_id = ARM64_INTRIN_VRSHRQ_N_U16;  // URSHR Vd.8H,Vn.8H,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint32x4_t vrshrq_n_u32(uint32x4_t a, const int n)
+			// argprep: a -> Vn.4S; n -> n
+			// results: Vd.4S -> result
 			intrin_id = ARM64_INTRIN_VRSHRQ_N_U32;  // URSHR Vd.4S,Vn.4S,#n
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_2DOUBLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint64x2_t vrshrq_n_u64(uint64x2_t a, const int n)
+			// argprep: a -> Vn.2D; n -> n
+			// results: Vd.2D -> result
 			intrin_id = ARM64_INTRIN_VRSHRQ_N_U64;  // URSHR Vd.2D,Vn.2D,#n
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_imm(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_URSHR_ASISDSHF_R:
-		if (instr.operands[1].arrSpec == ARRSPEC_16BYTES)
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint64_t vrshrd_n_u64(uint64_t a, const int n)
+			// argprep: a -> Dn; n -> n
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VRSHRD_N_U64;  // URSHR Dd,Dn,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES && instr.operands[1].arrSpec == ARRSPEC_16BYTES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint8x16_t vrshrq_n_u8(uint8x16_t a, const int n)
+			// argprep: a -> Vn.16B; n -> n
+			// results: Vd.16B -> result
 			intrin_id = ARM64_INTRIN_VRSHRQ_N_U8;  // URSHR Vd.16B,Vn.16B,#n
-		// if(None) intrin_id = ARM64_INTRIN_VRSHR_N_U64; // URSHR Dd,Dn,#n
-		// if(None) intrin_id = ARM64_INTRIN_VRSHRD_N_U64; // URSHR Dd,Dn,#n
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_imm(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
@@ -23377,29 +23587,54 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
-	case ENC_URSRA_ASIMDSHF_R:
-		if (instr.operands[0].arrSpec == ARRSPEC_8BYTES)
-			intrin_id = ARM64_INTRIN_VRSRA_N_U8;  // URSRA Vd.8B,Vn.8B,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES)
-			intrin_id = ARM64_INTRIN_VRSRA_N_U16;  // URSRA Vd.4H,Vn.4H,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES)
-			intrin_id = ARM64_INTRIN_VRSRAQ_N_U16;  // URSRA Vd.8H,Vn.8H,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_2SINGLES)
-			intrin_id = ARM64_INTRIN_VRSRA_N_U32;  // URSRA Vd.2S,Vn.2S,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES)
-			intrin_id = ARM64_INTRIN_VRSRAQ_N_U32;  // URSRA Vd.4S,Vn.4S,#n
-		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES)
-			intrin_id = ARM64_INTRIN_VRSRAQ_N_U64;  // URSRA Vd.2D,Vn.2D,#n
-		add_input_reg(inputs, il, instr.operands[0]);
-		add_input_reg(inputs, il, instr.operands[1]);
-		add_input_imm(inputs, il, instr.operands[2]);
-		add_output_reg(outputs, il, instr.operands[0]);
-		break;
 	case ENC_URSRA_ASISDSHF_R:
-		if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
+	case ENC_URSRA_ASIMDSHF_R:
+		if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint16x4_t vrsra_n_u16(uint16x4_t a, uint16x4_t b, const int n)
+			// argprep: a -> Vd.4H; b -> Vn.4H; n -> n
+			// results: Vd.4H -> result
+			intrin_id = ARM64_INTRIN_VRSRA_N_U16;  // URSRA Vd.4H,Vn.4H,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_2SINGLES && instr.operands[1].arrSpec == ARRSPEC_2SINGLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint32x2_t vrsra_n_u32(uint32x2_t a, uint32x2_t b, const int n)
+			// argprep: a -> Vd.2S; b -> Vn.2S; n -> n
+			// results: Vd.2S -> result
+			intrin_id = ARM64_INTRIN_VRSRA_N_U32;  // URSRA Vd.2S,Vn.2S,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_8BYTES && instr.operands[1].arrSpec == ARRSPEC_8BYTES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint8x8_t vrsra_n_u8(uint8x8_t a, uint8x8_t b, const int n)
+			// argprep: a -> Vd.8B; b -> Vn.8B; n -> n
+			// results: Vd.8B -> result
+			intrin_id = ARM64_INTRIN_VRSRA_N_U8;  // URSRA Vd.8B,Vn.8B,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint16x8_t vrsraq_n_u16(uint16x8_t a, uint16x8_t b, const int n)
+			// argprep: a -> Vd.8H; b -> Vn.8H; n -> n
+			// results: Vd.8H -> result
+			intrin_id = ARM64_INTRIN_VRSRAQ_N_U16;  // URSRA Vd.8H,Vn.8H,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint32x4_t vrsraq_n_u32(uint32x4_t a, uint32x4_t b, const int n)
+			// argprep: a -> Vd.4S; b -> Vn.4S; n -> n
+			// results: Vd.4S -> result
+			intrin_id = ARM64_INTRIN_VRSRAQ_N_U32;  // URSRA Vd.4S,Vn.4S,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_2DOUBLES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint64x2_t vrsraq_n_u64(uint64x2_t a, uint64x2_t b, const int n)
+			// argprep: a -> Vd.2D; b -> Vn.2D; n -> n
+			// results: Vd.2D -> result
+			intrin_id = ARM64_INTRIN_VRSRAQ_N_U64;  // URSRA Vd.2D,Vn.2D,#n
+	// 	add_input_reg(inputs, il, instr.operands[0]);
+	// 	add_input_reg(inputs, il, instr.operands[1]);
+	// 	add_input_imm(inputs, il, instr.operands[2]);
+	// 	add_output_reg(outputs, il, instr.operands[0]);
+	// 	break;
+	// case ENC_URSRA_ASISDSHF_R:
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint64_t vrsrad_n_u64(uint64_t a, uint64_t b, const int n)
+			// argprep: a -> Dd; b -> Dn; n -> n
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VRSRAD_N_U64;  // URSRA Dd,Dn,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES && instr.operands[1].arrSpec == ARRSPEC_16BYTES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint8x16_t vrsraq_n_u8(uint8x16_t a, uint8x16_t b, const int n)
+			// argprep: a -> Vd.16B; b -> Vn.16B; n -> n
+			// results: Vd.16B -> result
 			intrin_id = ARM64_INTRIN_VRSRAQ_N_U8;  // URSRA Vd.16B,Vn.16B,#n
-		// if(None) intrin_id = ARM64_INTRIN_VRSRA_N_U64; // URSRA Dd,Dn,#n
-		// if(None) intrin_id = ARM64_INTRIN_VRSRAD_N_U64; // URSRA Dd,Dn,#n
 		add_input_reg(inputs, il, instr.operands[0]);
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_imm(inputs, il, instr.operands[2]);
@@ -23611,28 +23846,52 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_USRA_ASISDSHF_R:
-		if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint64_t vsrad_n_u64(uint64_t a, uint64_t b, const int n)
+			// argprep: a -> Dd; b -> Dn; n -> n
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VSRAD_N_U64;  // USRA Dd,Dn,#n
+		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES && instr.operands[1].arrSpec == ARRSPEC_16BYTES && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// uint8x16_t vsraq_n_u8(uint8x16_t a, uint8x16_t b, const int n)
+			// argprep: a -> Vd.16B; b -> Vn.16B; n -> n
+			// results: Vd.16B -> result
 			intrin_id = ARM64_INTRIN_VSRAQ_N_U8;  // USRA Vd.16B,Vn.16B,#n
-		// if(None) intrin_id = ARM64_INTRIN_VSRA_N_U64; // USRA Dd,Dn,#n
-		// if(None) intrin_id = ARM64_INTRIN_VSRAD_N_U64; // USRA Dd,Dn,#n
 		add_input_reg(inputs, il, instr.operands[0]);
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_imm(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_USUBL_ASIMDDIFF_L:
-		if (instr.operands[1].arrSpec == ARRSPEC_8HALVES)
-			intrin_id = ARM64_INTRIN_VSUBL_U8;  // USUBL Vd.8H,Vn.8B,Vm.8B
-		else if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
-			intrin_id = ARM64_INTRIN_VSUBL_U16;  // USUBL Vd.4S,Vn.4H,Vm.4H
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
-			intrin_id = ARM64_INTRIN_VSUBL_U32;  // USUBL Vd.2D,Vn.2S,Vm.2S
-		else if (instr.operands[1].arrSpec == ARRSPEC_8HALVES)
-			intrin_id = ARM64_INTRIN_VSUBL_HIGH_U8;  // USUBL2 Vd.8H,Vn.16B,Vm.16B
-		else if (instr.operands[1].arrSpec == ARRSPEC_4SINGLES)
+		if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && instr.operands[2].arrSpec == ARRSPEC_8HALVES)
+			// uint32x4_t vsubl_high_u16(uint16x8_t a, uint16x8_t b)
+			// argprep: a -> Vn.8H; b -> Vm.8H
+			// results: Vd.4S -> result
 			intrin_id = ARM64_INTRIN_VSUBL_HIGH_U16;  // USUBL2 Vd.4S,Vn.8H,Vm.8H
-		else if (instr.operands[1].arrSpec == ARRSPEC_2DOUBLES)
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_4SINGLES && instr.operands[2].arrSpec == ARRSPEC_4SINGLES)
+			// uint64x2_t vsubl_high_u32(uint32x4_t a, uint32x4_t b)
+			// argprep: a -> Vn.4S; b -> Vm.4S
+			// results: Vd.2D -> result
 			intrin_id = ARM64_INTRIN_VSUBL_HIGH_U32;  // USUBL2 Vd.2D,Vn.4S,Vm.4S
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_16BYTES && instr.operands[2].arrSpec == ARRSPEC_16BYTES)
+			// uint16x8_t vsubl_high_u8(uint8x16_t a, uint8x16_t b)
+			// argprep: a -> Vn.16B; b -> Vm.16B
+			// results: Vd.8H -> result
+			intrin_id = ARM64_INTRIN_VSUBL_HIGH_U8;  // USUBL2 Vd.8H,Vn.16B,Vm.16B
+		else if (instr.operands[0].arrSpec == ARRSPEC_4SINGLES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_4HALVES)
+			// uint32x4_t vsubl_u16(uint16x4_t a, uint16x4_t b)
+			// argprep: a -> Vn.4H; b -> Vm.4H
+			// results: Vd.4S -> result
+			intrin_id = ARM64_INTRIN_VSUBL_U16;  // USUBL Vd.4S,Vn.4H,Vm.4H
+		else if (instr.operands[0].arrSpec == ARRSPEC_2DOUBLES && instr.operands[1].arrSpec == ARRSPEC_2SINGLES && instr.operands[2].arrSpec == ARRSPEC_2SINGLES)
+			// uint64x2_t vsubl_u32(uint32x2_t a, uint32x2_t b)
+			// argprep: a -> Vn.2S; b -> Vm.2S
+			// results: Vd.2D -> result
+			intrin_id = ARM64_INTRIN_VSUBL_U32;  // USUBL Vd.2D,Vn.2S,Vm.2S
+		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_8BYTES && instr.operands[2].arrSpec == ARRSPEC_8BYTES)
+			// uint16x8_t vsubl_u8(uint8x8_t a, uint8x8_t b)
+			// argprep: a -> Vn.8B; b -> Vm.8B
+			// results: Vd.8H -> result
+			intrin_id = ARM64_INTRIN_VSUBL_U8;  // USUBL Vd.8H,Vn.8B,Vm.8B
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_reg(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);

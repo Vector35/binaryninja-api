@@ -1887,6 +1887,11 @@ bool GetLowLevelILForInstruction(
 			il.AddInstruction(il.Unimplemented());
 		}
 		break;
+	case ARM64_FNMUL:
+		il.AddInstruction(ILSETREG_O(operand1,
+			il.FloatNeg(REGSZ_O(operand1),
+				il.FloatMult(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
+		break;
 	case ARM64_ERET:
 	case ARM64_ERETAA:
 	case ARM64_ERETAB:

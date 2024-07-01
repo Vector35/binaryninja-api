@@ -1537,6 +1537,8 @@ bool GetLowLevelILForInstruction(
 		case ENC_FABS_ASIMDMISCFP16_R:
 			// covered by intrinsics
 			break;
+		default:
+			ABORT_LIFT;
 		}
 		break;
 	case ARM64_FADD:
@@ -1567,7 +1569,7 @@ bool GetLowLevelILForInstruction(
 		}
 		break;
 		default:
-			il.AddInstruction(il.Unimplemented());
+			ABORT_LIFT;
 		}
 		break;
 	case ARM64_FADDP:
@@ -1613,6 +1615,8 @@ bool GetLowLevelILForInstruction(
 		}
 		case ENC_FADDP_Z_P_ZZ_:
 			il.AddInstruction(il.Unimplemented());
+		default:
+			ABORT_LIFT;
 		}
 		break;
 	case ARM64_FCCMP:
@@ -2190,8 +2194,15 @@ bool GetLowLevelILForInstruction(
 		    ILSETREG_O(operand1, il.Const(REGSZ_O(operand1), IMM_O(operand2) << operand2.shiftValue)));
 		break;
 	case ARM64_MUL:
-		il.AddInstruction(
-		    ILSETREG_O(operand1, il.Mult(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3))));
+		switch (instr.encoding)
+		{
+			case ENC_MUL_ASIMDSAME_ONLY:
+			case ENC_MUL_ASIMDELEM_R:
+				break;
+			default:
+				il.AddInstruction(
+					ILSETREG_O(operand1, il.Mult(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3))));
+		}
 		break;
 	case ARM64_MADD:
 		il.AddInstruction(ILSETREG_O(operand1,
@@ -2439,18 +2450,30 @@ bool GetLowLevelILForInstruction(
 	case ARM64_REV32:
 	case ARM64_REV64:
 	case ARM64_REV:
-		if (IS_SVE_O(operand1))
-		{
-			il.AddInstruction(il.Unimplemented());
+		switch (instr.encoding) {
+		case ENC_REV16_ASIMDMISC_R:
+		case ENC_REV32_ASIMDMISC_R:
+		case ENC_REV64_ASIMDMISC_R:
 			break;
+		default:
+			if (IS_SVE_O(operand1))
+			{
+				il.AddInstruction(il.Unimplemented());
+				break;
+			}
+			// if LLIL_BSWAP ever gets added, replace
+			il.AddInstruction(il.Intrinsic(
+				{RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_REV, {ILREG_O(operand2)}));
 		}
-		// if LLIL_BSWAP ever gets added, replace
-		il.AddInstruction(il.Intrinsic(
-		    {RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_REV, {ILREG_O(operand2)}));
 		break;
 	case ARM64_RBIT:
-		il.AddInstruction(il.Intrinsic(
-		    {RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_RBIT, {ILREG_O(operand2)}));
+		switch (instr.encoding) {
+		case ENC_RBIT_ASIMDMISC_R:
+			break;
+		default:
+			il.AddInstruction(il.Intrinsic(
+				{RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_RBIT, {ILREG_O(operand2)}));
+		}
 		break;
 	case ARM64_ROR:
 		il.AddInstruction(ILSETREG_O(operand1, il.RotateRight(REGSZ_O(operand2), ILREG_O(operand2),
@@ -2478,18 +2501,33 @@ bool GetLowLevelILForInstruction(
 		                  il.Const(1, (REGSZ_O(operand1) * 8) - IMM_O(operand4)))));
 		break;
 	case ARM64_SCVTF:
+	case ARM64_UCVTF:
+	{
+		bool zero_extend = false;
 		switch (instr.encoding)
 		{
 		// Scalar, float
+		case ENC_UCVTF_ASISDMISCFP16_R:
+		case ENC_UCVTF_ASISDMISC_R:
+			zero_extend = true;
 		case ENC_SCVTF_ASISDMISCFP16_R:
 		case ENC_SCVTF_ASISDMISC_R:
 		{
 			il.AddInstruction(ILSETREG_O(
 			    operand1, il.IntToFloat(REGSZ_O(operand1),
-					ILREG_O(operand2))));
+					zero_extend
+					? il.ZeroExtend(REGSZ_O(operand1), ILREG_O(operand2))
+					: il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2)))));
 			break;
 		}
 		// Scalar, integer
+		case ENC_UCVTF_D32_FLOAT2INT:
+		case ENC_UCVTF_D64_FLOAT2INT:
+		case ENC_UCVTF_H32_FLOAT2INT:
+		case ENC_UCVTF_H64_FLOAT2INT:
+		case ENC_UCVTF_S32_FLOAT2INT:
+		case ENC_UCVTF_S64_FLOAT2INT:
+			zero_extend = true;
 		case ENC_SCVTF_D32_FLOAT2INT:
 		case ENC_SCVTF_D64_FLOAT2INT:
 		case ENC_SCVTF_H32_FLOAT2INT:
@@ -2499,9 +2537,16 @@ bool GetLowLevelILForInstruction(
 		{
 			il.AddInstruction(ILSETREG_O(
 			    operand1, il.IntToFloat(REGSZ_O(operand1),
-					il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2)))));
+					zero_extend
+					? il.ZeroExtend(REGSZ_O(operand1), ILREG_O(operand2))
+					: il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2)))));
 			break;
 		}
+		// Vector, single-precision and double-precision unsigned
+		case ENC_UCVTF_ASIMDMISC_R:
+		// Vector, half precision unsigned
+		case ENC_UCVTF_ASIMDMISCFP16_R:
+			zero_extend = true;
 		// Vector, single-precision and double-precision
 		case ENC_SCVTF_ASIMDMISC_R:
 		// Vector, half precision
@@ -2510,17 +2555,30 @@ bool GetLowLevelILForInstruction(
 			if (preferIntrinsics())
 				return true;
 
-			// SCVTF <Vd>.<T>, <Vn>.<T>
-			Register srcs[16], dsts[16];
-			int dst_n = unpack_vector(operand1, dsts);
-			int src_n = unpack_vector(operand2, srcs);
-			if ((dst_n != src_n) || dst_n == 0)
-				ABORT_LIFT;
+			Register cregs[2];
+			if (false && consolidate_vector(operand1, operand2, cregs))
+				il.AddInstruction(ILSETREG(cregs[0],
+					il.IntToFloat(REGSZ(cregs[0]),
+						zero_extend
+						? il.ZeroExtend(REGSZ(cregs[0]), ILREG(cregs[1]))
+						: il.SignExtend(REGSZ(cregs[0]), ILREG(cregs[1])))));
+			else
+			{
+				// SCVTF <Vd>.<T>, <Vn>.<T>
+				Register srcs[16], dsts[16];
+				int dst_n = unpack_vector(operand1, dsts);
+				int src_n = unpack_vector(operand2, srcs);
+				if ((dst_n != src_n) || dst_n == 0)
+					ABORT_LIFT;
 
-			int rsize = get_register_size(dsts[0]);
-			for (int i = 0; i < dst_n; ++i)
-				il.AddInstruction(ILSETREG(dsts[i], il.IntToFloat(rsize, ILREG(dsts[i]), ILREG(srcs[i]))));
+				int rsize = get_register_size(dsts[0]);
+				for (int i = 0; i < dst_n; ++i)
+					il.AddInstruction(ILSETREG(dsts[i], il.IntToFloat(rsize,
+						zero_extend
+						? il.ZeroExtend(rsize, ILREG(srcs[i]))
+						: il.SignExtend(rsize, ILREG(srcs[i])))));
 
+			}
 			break;
 		}
 		// Scalar, fixed-point (in SIMD&FP register)
@@ -2560,12 +2618,12 @@ bool GetLowLevelILForInstruction(
 		case ENC_UCVTF_Z_P_Z_X2D:
 		case ENC_UCVTF_Z_P_Z_X2FP16:
 		case ENC_UCVTF_Z_P_Z_X2S:
-			ABORT_LIFT;
 			break;
 		default:
 			break;
 		}
 		break;
+	}
 	case ARM64_SDIV:
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.DivSigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3))));

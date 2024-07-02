@@ -847,7 +847,7 @@ impl ProjectFolder {
     }
 
     /// Set the name of this folder
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) {
+    pub fn set_name<S: BnStrCompatible>(&self, value: S) -> bool {
         let value_raw = value.into_bytes_with_nul();
         unsafe {
             BNProjectFolderSetName(
@@ -863,7 +863,7 @@ impl ProjectFolder {
     }
 
     /// Set the description of this folder
-    pub fn set_description<S: BnStrCompatible>(&self, value: S) {
+    pub fn set_description<S: BnStrCompatible>(&self, value: S) -> bool {
         let value_raw = value.into_bytes_with_nul();
         unsafe {
             BNProjectFolderSetDescription(
@@ -880,7 +880,7 @@ impl ProjectFolder {
     }
 
     /// Set the folder that contains this folder
-    pub fn set_folder(&self, folder: Option<&ProjectFolder>) {
+    pub fn set_folder(&self, folder: Option<&ProjectFolder>) -> bool {
         let folder_handle = folder
             .map(|x| unsafe { x.as_raw() as *mut _ })
             .unwrap_or(null_mut());
@@ -997,7 +997,7 @@ impl ProjectFile {
     }
 
     /// Set the name of this file
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) {
+    pub fn set_name<S: BnStrCompatible>(&self, value: S) -> bool {
         let value_raw = value.into_bytes_with_nul();
         unsafe {
             BNProjectFileSetName(
@@ -1013,7 +1013,7 @@ impl ProjectFile {
     }
 
     /// Set the description of this file
-    pub fn set_description<S: BnStrCompatible>(&self, value: S) {
+    pub fn set_description<S: BnStrCompatible>(&self, value: S) -> bool {
         let value_raw = value.into_bytes_with_nul();
         unsafe {
             BNProjectFileSetDescription(
@@ -1035,7 +1035,7 @@ impl ProjectFile {
     }
 
     /// Set the folder that contains this file
-    pub fn set_folder(&self, folder: Option<&ProjectFolder>) {
+    pub fn set_folder(&self, folder: Option<&ProjectFolder>) -> bool {
         let folder_handle = folder
             .map(|x| unsafe { x.as_raw() as *mut _ })
             .unwrap_or(null_mut());

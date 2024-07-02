@@ -3599,12 +3599,12 @@ extern "C"
 	BINARYNINJACOREAPI char* BNProjectFileGetPathOnDisk(BNProjectFile* file);
 	BINARYNINJACOREAPI bool BNProjectFileExistsOnDisk(BNProjectFile* file);
 	BINARYNINJACOREAPI char* BNProjectFileGetName(BNProjectFile* file);
-	BINARYNINJACOREAPI void BNProjectFileSetName(BNProjectFile* file, const char* name);
+	BINARYNINJACOREAPI bool BNProjectFileSetName(BNProjectFile* file, const char* name);
 	BINARYNINJACOREAPI char* BNProjectFileGetDescription(BNProjectFile* file);
-	BINARYNINJACOREAPI void BNProjectFileSetDescription(BNProjectFile* file, const char* description);
+	BINARYNINJACOREAPI bool BNProjectFileSetDescription(BNProjectFile* file, const char* description);
 	BINARYNINJACOREAPI char* BNProjectFileGetId(BNProjectFile* file);
 	BINARYNINJACOREAPI BNProjectFolder* BNProjectFileGetFolder(BNProjectFile* file);
-	BINARYNINJACOREAPI void BNProjectFileSetFolder(BNProjectFile* file, BNProjectFolder* folder);
+	BINARYNINJACOREAPI bool BNProjectFileSetFolder(BNProjectFile* file, BNProjectFolder* folder);
 	BINARYNINJACOREAPI BNProject* BNProjectFileGetProject(BNProjectFile* file);
 	BINARYNINJACOREAPI bool BNProjectFileExport(BNProjectFile* file, const char* destination);
 	BINARYNINJACOREAPI int64_t BNProjectFileGetCreationTimestamp(BNProjectFile* file);
@@ -3616,11 +3616,11 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeProjectFolderList(BNProjectFolder** folders, size_t count);
 	BINARYNINJACOREAPI char* BNProjectFolderGetId(BNProjectFolder* folder);
 	BINARYNINJACOREAPI char* BNProjectFolderGetName(BNProjectFolder* folder);
-	BINARYNINJACOREAPI void BNProjectFolderSetName(BNProjectFolder* folder, const char* name);
+	BINARYNINJACOREAPI bool BNProjectFolderSetName(BNProjectFolder* folder, const char* name);
 	BINARYNINJACOREAPI char* BNProjectFolderGetDescription(BNProjectFolder* folder);
-	BINARYNINJACOREAPI void BNProjectFolderSetDescription(BNProjectFolder* folder, const char* description);
+	BINARYNINJACOREAPI bool BNProjectFolderSetDescription(BNProjectFolder* folder, const char* description);
 	BINARYNINJACOREAPI BNProjectFolder* BNProjectFolderGetParent(BNProjectFolder* folder);
-	BINARYNINJACOREAPI void BNProjectFolderSetParent(BNProjectFolder* folder, BNProjectFolder* parent);
+	BINARYNINJACOREAPI bool BNProjectFolderSetParent(BNProjectFolder* folder, BNProjectFolder* parent);
 	BINARYNINJACOREAPI BNProject* BNProjectFolderGetProject(BNProjectFolder* folder);
 	BINARYNINJACOREAPI bool BNProjectFolderExport(BNProjectFolder* folder, const char* destination, void* ctxt,
 		bool (*progress)(void* ctxt, size_t progress, size_t total));

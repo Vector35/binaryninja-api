@@ -79,12 +79,12 @@ namespace BinaryNinja
 	{
 		Ref<Logger> m_logger;
 		bool m_parseOnly;
-		bool m_relocatable = false;
 		Ref<BinaryView> m_parentView = nullptr;
 		BNEndianness m_endianness = BigEndian;
 		Ref<Platform> m_platform;
 		Ref<Architecture> m_arch;
 		size_t m_addressSize;
+		bool m_hasSymbolTable = false;
 		uint64_t m_symbolTableOffset = 0;
 		uint64_t m_entryPoint = 0;
 		uint64_t m_imageBase = 0;
@@ -112,7 +112,7 @@ namespace BinaryNinja
 		virtual uint64_t PerformGetEntryPoint() const override;
 		virtual bool PerformIsExecutable() const override { return true; }
 		virtual BNEndianness PerformGetDefaultEndianness() const override { return m_endianness; }
-		virtual bool PerformIsRelocatable() const override { return m_relocatable; }
+		virtual bool PerformIsRelocatable() const override { return m_hasSymbolTable == false; }
 		virtual size_t PerformGetAddressSize() const override;
 
 	public:

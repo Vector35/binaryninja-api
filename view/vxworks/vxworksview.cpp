@@ -10,10 +10,10 @@ using namespace std;
 #define VXWORKS6_SYMBOL_ENTRY_SIZE 0x14
 #define MAX_SYMBOL_NAME_LENGTH 128
 #define MIN_VALID_SYMBOL_ENTRIES 1000
-#define VXWORKS_SYMBOL_ENTRY_TYPE(flags) (((flags >> 8) & 0xff))
+#define VXWORKS_SYMBOL_ENTRY_TYPE(flags) ((flags >> 8) & 0xff)
 #define LOWEST_TEXT_SYMBOL_ADDRESS_START 0xffffffffffffffff
-#define DEFAULT_VXWORKS_BASE_ADDRESS 0x10000
 #define MAX_ADDRESSES_ENDIANNESS_CHECK 10
+#define ALIGN4(x) (x & 0xfffffffffffffffc)
 
 static const std::map<VxWorks5SymbolType, BNSymbolType> VxWorks5SymbolTypeMap = {
 	{ VxWorks5UndefinedSymbolType, FunctionSymbol },
@@ -135,8 +135,7 @@ void VxWorksView::DetermineImageBaseFromSymbols()
 
 	if (lowestTextAddress == LOWEST_TEXT_SYMBOL_ADDRESS_START)
 	{
-		m_logger->LogWarn("Could not determine image base address, using default 0x%08x", DEFAULT_VXWORKS_BASE_ADDRESS);
-		m_imageBase = DEFAULT_VXWORKS_BASE_ADDRESS;
+		m_logger->LogWarn("Could not determine image base from VxWorks symbol table");
 		return;
 	}
 
@@ -168,7 +167,7 @@ bool VxWorksView::FunctionAddressesAreValid(VxWorksVersion version)
 		}
 	}
 
-	// Too few function symbols for check
+	// Too few symbols to check
 	return false;
 }
 
@@ -231,17 +230,24 @@ bool VxWorksView::ScanForVxWorksSystemTable(BinaryReader *reader, VxWorksVersion
 	}
 
 	VxWorksSymbolEntry entry;
-	ssize_t startOffset = m_parentView->GetLength() - entrySize;
+	ssize_t startOffset = ALIGN4(m_parentView->GetLength() - entrySize);
 	ssize_t endOffset = 0;
 	if (m_parentView->GetLength() > MAX_SYMBOL_TABLE_REGION_SIZE)
-		endOffset = m_parentView->GetLength() - MAX_SYMBOL_TABLE_REGION_SIZE;
+		endOffset = ALIGN4(m_parentView->GetLength() - MAX_SYMBOL_TABLE_REGION_SIZE);
 	ssize_t searchPos = startOffset;
+	std::vector<uint32_t> foundNames;
+
 	m_logger->LogDebug("Scanning backwards for VxWorks system table (0x%016x-0x%016x) (endianess=%s) (version=%d)...",
 		startOffset, endOffset, m_endianness == BigEndian ? "big" : "little", version == VxWorksVersion5 ? 5 : 6);
 	while (searchPos > endOffset)
 	{
-		if (TryReadVxWorksSymbolEntry(reader, searchPos, entry, version))
+		if (TryReadVxWorksSymbolEntry(reader, searchPos, entry, version) &&
+			find(foundNames.begin(), foundNames.end(), entry.name) == foundNames.end())
 		{
+			if (version == VxWorksVersion5 && endianness == BigEndian)
+				m_logger->LogDebug("0x%016x: address=%016x name=%016x flags=%08x count=%d", searchPos, entry.address, entry.name, entry.flags, m_symbols.size());
+
+			foundNames.push_back(entry.address);
 			m_symbols.push_back(entry);
 			searchPos -= entrySize;
 			continue;
@@ -251,6 +257,7 @@ bool VxWorksView::ScanForVxWorksSystemTable(BinaryReader *reader, VxWorksVersion
 			break;
 
 		searchPos -= 4;
+		foundNames.clear();
 		m_symbols.clear();
 	}
 
@@ -365,6 +372,7 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 		if (m_parentView->IsOffsetBackedByFile(entry.address - m_imageBase))
 		{
 			AssignSymbolToSection(sections, bnSymbolType, vxSymbolType, entry.address);
+			// TODO: make sure symbolName only contains ASCII
 			DefineAutoSymbol(new Symbol(bnSymbolType, symbolName, entry.address));
 			if (symbolName == "sysInit" || symbolName == "_sysInit")
 				m_sysInit = entry.address;
@@ -462,8 +470,8 @@ bool VxWorksView::Init()
 		}
 
 		BinaryReader reader(m_parentView, m_endianness);
-		bool isSymTable = FindSymbolTable(&reader);
-		if (isSymTable)
+		m_hasSymbolTable = FindSymbolTable(&reader);
+		if (m_hasSymbolTable)
 		{
 			DetermineImageBaseFromSymbols();
 			m_entryPoint = m_imageBase; // This will get updated later if the sysInit symbol is found
@@ -471,11 +479,7 @@ bool VxWorksView::Init()
 		else
 		{
 			m_logger->LogWarn("Could not find VxWorks symbol table");
-			m_imageBase = DEFAULT_VXWORKS_BASE_ADDRESS;
 		}
-
-		AddAutoSegment(m_imageBase, m_parentView->GetLength(), 0, m_parentView->GetLength(),
-			SegmentReadable | SegmentWritable | SegmentExecutable);
 
 		auto settings = GetLoadSettings(GetTypeName());
 		if (!settings || settings->IsEmpty())
@@ -485,13 +489,19 @@ bool VxWorksView::Init()
 			return true;
 		}
 
-		auto platformName = settings->Get<string>("loader.platform");
-		m_platform = Platform::GetByName(platformName);
-		if (!m_platform)
+		if (settings->Contains("loader.platform"))
 		{
-			m_logger->LogError("Failed to get platform");
-			return false;
+			auto platformName = settings->Get<string>("loader.platform", this);
+			m_platform = Platform::GetByName(platformName);
+			if (!m_platform)
+			{
+				m_logger->LogError("Failed to get platform");
+				return false;
+			}
 		}
+
+		if (settings->Contains("loader.imageBase"))
+			m_imageBase = settings->Get<uint64_t>("loader.imageBase", this);
 
 		m_arch = m_platform->GetArchitecture();
 		m_addressSize = m_arch->GetAddressSize();
@@ -501,7 +511,10 @@ bool VxWorksView::Init()
 		if (m_parseOnly)
 			return true;
 
-		if (isSymTable)
+		AddAutoSegment(m_imageBase, m_parentView->GetLength(), 0, m_parentView->GetLength(),
+			SegmentReadable | SegmentWritable | SegmentExecutable);
+
+		if (m_hasSymbolTable)
 		{
 			ProcessSymbolTable(&reader);
 			DefineSymbolTableDataVariable();
@@ -613,8 +626,15 @@ Ref<Settings> VxWorksViewType::GetLoadSettingsForData(BinaryView *data)
 			settings->UpdateProperty(override, "readOnly", false);
 	}
 
-	if (settings->Contains("loader.entryPointOffset"))
-		settings->UpdateProperty("loader.entryPointOffset", "default", viewRef->GetEntryPoint());
+	if (!viewRef->IsRelocatable())
+	{
+		settings->UpdateProperty("loader.imageBase", "default", viewRef->GetEntryPoint());
+		settings->UpdateProperty("loader.imageBase", "message", "Note: base address determined from VxWorks symbol table.");
+	}
+	else
+	{
+		settings->UpdateProperty("loader.imageBase", "message", "VxWorks symbol table was not found. Base address must be set manually.");
+	}
 
 	return settings;
 }

@@ -53,9 +53,9 @@ impl ComponentBuilder {
     }
 }
 
-/// Components are objects that can contain Functions and other Components.
+/// Components are objects that can contain Functions, Data Variables, and other Components.
 ///
-/// They can be queried for information about the functions contained within them.
+/// They can be queried for information about the items contained within them.
 ///
 /// Components have a Guid, which persistent across saves and loads of the database, and should be
 /// used for retrieving components when such is required and a reference to the Component cannot be held.
@@ -122,19 +122,22 @@ impl Component {
             .add_component(component)
     }
 
+    /// Add data variable to this component.
     pub fn add_data_variable(&self, data_variable: &DataVariable) -> bool {
         unsafe { BNComponentAddDataVariable(self.as_raw(), data_variable.address()) }
     }
 
+    /// Check whether this component contains a data variable.
     pub fn contains_data_variable(&self, data_variable: &DataVariable) -> bool {
         unsafe { BNComponentContainsDataVariable(self.as_raw(), data_variable.address()) }
     }
 
+    /// Remove data variable from this component.
     pub fn remove_data_variable(&self, data_variable: &DataVariable) -> bool {
         unsafe { BNComponentRemoveDataVariable(self.as_raw(), data_variable.address()) }
     }
 
-    /// Original Name of the component
+    /// Original name of the component
     pub fn display_name(&self) -> BnString {
         let result = unsafe { BNComponentGetDisplayName(self.as_raw()) };
         assert!(!result.is_null());
@@ -150,7 +153,7 @@ impl Component {
     /// remain what was originally set (e.g. "MyComponentName")
 
     /// If this component has a duplicate name and is moved to a component where none of its siblings share its name,
-    /// the .name property will return the original "MyComponentName"
+    /// .name will return the original "MyComponentName"
     pub fn name(&self) -> BnString {
         let result = unsafe { BNComponentGetOriginalName(self.as_raw()) };
         assert!(!result.is_null());
@@ -182,12 +185,6 @@ impl Component {
     }
 
     /// List of all Functions contained within this Component
-    ///
-    /// <div class="warning">
-    ///
-    /// functions Should be used instead of this in any performance sensitive context.
-    ///
-    /// </div>
     pub fn functions(&self) -> Array<Function> {
         let mut count = 0;
         let result = unsafe { BNComponentGetContainedFunctions(self.as_raw(), &mut count) };
@@ -195,6 +192,7 @@ impl Component {
         unsafe { Array::new(result, count, ()) }
     }
 
+    /// List of all Data Variables contained within this Component
     pub fn data_variables(&self) -> Array<DataVariable> {
         let mut count = 0;
         let result = unsafe { BNComponentGetContainedDataVariables(self.as_raw(), &mut count) };
@@ -228,15 +226,11 @@ impl Component {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn remove_itself(&self) -> bool {
-        unsafe { BNComponentRemoveComponent(self.as_raw()) }
-    }
-
     pub fn remove_all_functions(&self) {
         unsafe { BNComponentRemoveAllFunctions(self.as_raw()) }
     }
 
-    pub fn add_all_members(&self, component: &Component) {
+    pub fn add_all_members_from(&self, component: &Component) {
         unsafe { BNComponentAddAllMembersFromComponent(self.as_raw(), component.as_raw()) }
     }
 }

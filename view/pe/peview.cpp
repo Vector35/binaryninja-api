@@ -1920,6 +1920,8 @@ bool PEView::Init()
 								m_logger->LogInfo("Found TLS entrypoint %s: 0x%" PRIx64, name, address);
 								Ref<Platform> assPlatform = platform->GetAssociatedPlatformByAddress(address);
 								AddPESymbol(FunctionSymbol, "", name, address - m_imageBase);
+								auto func = AddFunctionForAnalysis(platform, address);
+								AddToEntryFunctions(func);
 							}
 							else
 								m_logger->LogInfo("Found TLS entrypoint %s: 0x%" PRIx64 " however it is not backed by file!",
@@ -2301,6 +2303,7 @@ bool PEView::Init()
 				{
 					reader.Seek(RVAToFileOffset(guardCFCheckFunctionPointer - m_imageBase));
 					guardCFCheckFunction = m_is64 ? reader.Read64() : reader.Read32();
+					guardCFCheckFunction += (m_imageBase - m_peImageBase);
 				}
 
 				uint64_t guardCFDispatchFunction = 0;
@@ -2308,6 +2311,7 @@ bool PEView::Init()
 				{
 					reader.Seek(RVAToFileOffset(guardCFDispatchFunctionPointer - m_imageBase));
 					guardCFDispatchFunction = m_is64 ? reader.Read64() : reader.Read32();
+					guardCFDispatchFunction += (m_imageBase - m_peImageBase);
 				}
 
 				auto functionPointer = Type::PointerType(platform->GetArchitecture(), Type::FunctionType(Type::VoidType(), platform->GetDefaultCallingConvention(), {}));

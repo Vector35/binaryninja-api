@@ -687,7 +687,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             _ => return None,
         };
 
-        let mut res = InstructionInfo::new(inst_len, false);
+        let mut res = InstructionInfo::new(inst_len, 0);
 
         match op {
             Op::Jal(ref j) => {
@@ -2164,6 +2164,8 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RiscVELFRelocationHandler<D> 
     const R_RISCV_RELATIVE: u64 = 3;
     const R_RISCV_COPY: u64 = 4;
     const R_RISCV_JUMP_SLOT: u64 = 5;
+    const R_RISCV_TLS_TPREL32: u64 = 10;
+    const R_RISCV_TLS_TPREL64: u64 = 11;
     const R_RISCV_BRANCH: u64 = 16;
     const R_RISCV_JAL: u64 = 17;
     const R_RISCV_CALL: u64 = 18;
@@ -2334,6 +2336,13 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
                     reloc.has_sign = false;
                     reloc.size = 2;
                     reloc.truncate_size = 2;
+                }
+                Self::R_RISCV_TLS_TPREL32 | Self::R_RISCV_TLS_TPREL64 => {
+                    reloc.type_ = RelocationType::UnhandledRelocation;
+                    log::warn!(
+                        "Unhandled relocation type R_RISCV_TLS_TPREL at {:x?}",
+                        reloc.address
+                    )
                 }
                 _ => {
                     reloc.type_ = RelocationType::UnhandledRelocation;
@@ -2856,9 +2865,17 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
 
         let func_sym =
             Symbol::imported_function_from_import_address_symbol(sym.as_ref(), func.start());
+
         bv.define_auto_symbol(func_sym.as_ref());
-        func.apply_imported_types(func_sym.as_ref(), None);
-        true
+        for ext_sym in &bv.symbols_by_name(func_sym.raw_name()) {
+            if ext_sym.sym_type() == SymbolType::External {
+                if let Some(var) = bv.data_variable_at_address(ext_sym.address()) {
+                    func.apply_imported_types(func_sym.as_ref(), Some(var.t()));
+                    return true;
+                }
+            }
+        }
+        false
     }
 }
 

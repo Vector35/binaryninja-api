@@ -322,6 +322,8 @@ class LowLevelILInstruction(BaseILInstruction):
 	expr_index: ExpressionIndex
 	instr: CoreLowLevelILInstruction
 	instr_index: Optional[InstructionIndex]
+	# ILOperations is deprecated and will be removed in a future version once BNIL Graph no longer uses it
+	# Use the visit methods visit, visit_all, and visit_operands
 	ILOperations: ClassVar[Dict[LowLevelILOperation, List[Tuple[str, str]]]] = {
 	    LowLevelILOperation.LLIL_NOP: [], LowLevelILOperation.LLIL_SET_REG: [("dest", "reg"), ("src", "expr")],
 	    LowLevelILOperation.LLIL_SET_REG_SPLIT: [("hi", "reg"), ("lo", "reg"),

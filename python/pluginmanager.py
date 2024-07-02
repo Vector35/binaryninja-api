@@ -23,9 +23,9 @@ import json
 from datetime import datetime, date
 from typing import List, Dict, Optional
 
-# Binary Ninja components
 import binaryninja
 from . import _binaryninjacore as core
+from . import deprecation
 from .enums import PluginType
 
 
@@ -131,11 +131,6 @@ class RepoPlugin:
 		return core.BNPluginGetDescription(self.handle)
 
 	@property
-	def license(self) -> Optional[str]:
-		"""String short license description (ie MIT, BSD, GPLv2, etc)"""
-		return core.BNPluginGetLicense(self.handle)
-
-	@property
 	def license_text(self) -> Optional[str]:
 		"""String complete license text for the given plugin"""
 		return core.BNPluginGetLicenseText(self.handle)
@@ -145,10 +140,23 @@ class RepoPlugin:
 		"""String long description of the plugin"""
 		return core.BNPluginGetLongdescription(self.handle)
 
+	@deprecation.deprecated(deprecated_in="4.0.5366", details='Use :py:func:`minimum_version_info` instead.')
 	@property
 	def minimum_version(self) -> int:
-		"""String minimum version the plugin was tested on"""
-		return core.BNPluginGetMinimumVersion(self.handle)
+		"""Minimum version the plugin was tested on"""
+		return self.minimum_version_info.build
+
+	@property
+	def minimum_version_info(self) -> 'binaryninja.CoreVersionInfo':
+		"""Minimum version info the plugin was tested on"""
+		core_version_info = core.BNPluginGetMinimumVersionInfo(self.handle)
+		return binaryninja.CoreVersionInfo(core_version_info.major, core_version_info.minor, core_version_info.build)
+
+	@property
+	def maximum_version_info(self) -> 'binaryninja.CoreVersionInfo':
+		"""Maximum version info the plugin will support"""
+		core_version_info = core.BNPluginGetMaximumVersionInfo(self.handle)
+		return binaryninja.CoreVersionInfo(core_version_info.major, core_version_info.minor, core_version_info.build)
 
 	@property
 	def name(self) -> str:
@@ -195,16 +203,6 @@ class RepoPlugin:
 	def version(self) -> Optional[str]:
 		"""String version of the plugin"""
 		return core.BNPluginGetVersion(self.handle)
-
-	def install_instructions(self, platform: str) -> Optional[str]:
-		"""
-		Installation instructions for the given platform
-
-		:param str platform: One of the valid platforms "Windows", "Linux", "Darwin"
-		:return: String of the installation instructions for the provided platform
-		:rtype: str
-		"""
-		return core.BNPluginGetInstallInstructions(self.handle, platform)
 
 	@property
 	def install_platforms(self) -> List[str]:
@@ -388,9 +386,10 @@ class RepositoryManager:
 		"""
 		``add_repository`` adds a new plugin repository for the manager to track.
 
-		There is currently no function to remove a repository. If you want to
-		remove a repository, you must delete the directory and remove the
-		plugin_status.json entries from repositories/ file in the User Folder
+		To remove a repository, restart Binary Ninja (and don't re-add the repository!).
+		File artifacts will remain on disk under repositories/ file in the User Folder.
+
+		Before you can query plugin metadata from a repository, you need to call ``check_for_updates``.
 
 		:param str url: URL to the plugins.json containing the records for this repository
 		:param str repopath: path to where the repository will be stored on disk locally
@@ -401,6 +400,7 @@ class RepositoryManager:
 			>>> mgr = RepositoryManager()
 			>>> mgr.add_repository("https://raw.githubusercontent.com/Vector35/community-plugins/master/plugins.json", "community")
 			True
+			>>> mgr.check_for_updates()
 			>>>
 		"""
 		if not isinstance(url, str) or not isinstance(repopath, str):

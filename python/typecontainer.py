@@ -108,7 +108,7 @@ class TypeContainer:
 		"""
 		handle = core.BNTypeContainerGetPlatform(self.handle)
 		assert handle is not None
-		return platform.Platform(handle=handle)
+		return platform.CorePlatform._from_cache(handle=handle)
 
 	def add_types(self, types: Mapping['_types.QualifiedNameType', '_types.Type'], progress_func: Optional[ProgressFuncType] = None) -> Optional[Mapping['_types.QualifiedName', str]]:
 		"""

@@ -20,7 +20,9 @@
 
 import os
 import ctypes
-from typing import List, Dict, Optional
+import traceback
+import warnings
+from typing import List, Dict, Optional, Tuple
 
 # Binary Ninja components
 import binaryninja
@@ -31,6 +33,8 @@ from . import callingconvention
 from . import typelibrary
 from . import architecture
 from . import typecontainer
+from . import binaryview
+from .log import log_error
 
 
 class _PlatformMetaClass(type):
@@ -41,7 +45,7 @@ class _PlatformMetaClass(type):
 		assert platforms is not None, "core.BNGetPlatformList returned None"
 		try:
 			for i in range(0, count.value):
-				yield Platform(handle=core.BNNewPlatformReference(platforms[i]))
+				yield CorePlatform(handle=core.BNNewPlatformReference(platforms[i]))
 		finally:
 			core.BNFreePlatformList(platforms, count.value)
 
@@ -50,7 +54,7 @@ class _PlatformMetaClass(type):
 		platform = core.BNGetPlatformByName(str(value))
 		if platform is None:
 			raise KeyError("'%s' is not a valid platform" % str(value))
-		return Platform(handle=platform)
+		return CorePlatform(handle=platform)
 
 
 class Platform(metaclass=_PlatformMetaClass):
@@ -61,6 +65,10 @@ class Platform(metaclass=_PlatformMetaClass):
 	name = None
 	type_file_path = None  # path to platform types file
 	type_include_dirs = []  # list of directories available to #include from type_file_path
+	global_regs = [] # list of global registers. if empty, it populated with the arch global reg list
+	global_reg_types = {} # opportunity for plugin to provide default types for the entry value of global registers
+
+	_registered_platforms = []
 
 	def __init__(self, arch: Optional['architecture.Architecture'] = None, handle=None):
 		if handle is None:
@@ -68,26 +76,201 @@ class Platform(metaclass=_PlatformMetaClass):
 				raise ValueError("platform must have an associated architecture")
 			assert self.__class__.name is not None, "Can not instantiate Platform directly, you probably want arch.standalone_platform"
 			_arch = arch
+			if len(self.global_regs) == 0:
+				self.__dict__["global_regs"] = arch.global_regs
+			self._cb = core.BNCustomPlatform()
+			self._cb.context = 0
+			self._cb.init = self._cb.init.__class__(self._init)
+			self._cb.viewInit = self._cb.viewInit.__class__(self._view_init)
+			self._cb.getGlobalRegisters = self._cb.getGlobalRegisters.__class__(self._get_global_regs)
+			self._cb.freeRegisterList = self._cb.freeRegisterList.__class__(self._free_register_list)
+			self._cb.getGlobalRegisterType = self._cb.getGlobalRegisterType.__class__(self._get_global_reg_type)
+			self._cb.adjustTypeParserInput = self._cb.adjustTypeParserInput.__class__(self._adjust_type_parser_input)
+			self._cb.freeTypeParserInput = self._cb.freeTypeParserInput.__class__(self._free_type_parser_input)
+			self._pending_reg_lists = {}
+			self._pending_parser_input_lists = {}
 			if self.__class__.type_file_path is None:
-				_handle = core.BNCreatePlatform(arch.handle, self.__class__.name)
+				_handle = core.BNCreateCustomPlatform(arch.handle, self.__class__.name, self._cb)
 				assert _handle is not None
 			else:
 				dir_buf = (ctypes.c_char_p * len(self.__class__.type_include_dirs))()
 				for (i, dir) in enumerate(self.__class__.type_include_dirs):
 					dir_buf[i] = dir.encode('charmap')
-				_handle = core.BNCreatePlatformWithTypes(
-				    arch.handle, self.__class__.name, self.__class__.type_file_path, dir_buf,
+				_handle = core.BNCreateCustomPlatformWithTypes(
+				    arch.handle, self.__class__.name, self._cb, self.__class__.type_file_path, dir_buf,
 				    len(self.__class__.type_include_dirs)
 				)
 				assert _handle is not None
+				self.__class__._registered_platforms.append(self)
 		else:
+			if type(self) is Platform:
+				binaryninja.log_warn(
+					":py:func:`Platform(handle=...)` is deprecated, use :py:func:`CorePlatform._from_cache(handle=...)`"
+				)
 			_handle = handle
 			_arch = architecture.CoreArchitecture._from_cache(core.BNGetPlatformArchitecture(_handle))
+			count = ctypes.c_ulonglong()
+			regs = core.BNGetPlatformGlobalRegisters(handle, count)
+			result = []
+			for i in range(0, count.value):
+				result.append(_arch.get_reg_name(regs[i]))
+			core.BNFreeRegisterList(regs)
+			self.__dict__["global_regs"] = result
 		assert _handle is not None
 		assert _arch is not None
 		self.handle: ctypes.POINTER(core.BNPlatform) = _handle
 		self._arch = _arch
 		self._name = None
+
+	def _init(self, ctxt):
+		pass
+
+	def _view_init(self, ctxt, view):
+		try:
+			view_obj = binaryview.BinaryView(handle=core.BNNewViewReference(view))
+			self.view_init(view)
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_global_regs(self, ctxt, count):
+		try:
+			regs = self.global_regs
+			count[0] = len(regs)
+			reg_buf = (ctypes.c_uint * len(regs))()
+			for i in range(0, len(regs)):
+				reg_buf[i] = self.arch.regs[regs[i]].index
+			result = ctypes.cast(reg_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, reg_buf)
+			return result.value
+		except:
+			log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _free_register_list(self, ctxt, regs, size):
+		try:
+			buf = ctypes.cast(regs, ctypes.c_void_p)
+			if buf.value not in self._pending_reg_lists:
+				raise ValueError("freeing register list that wasn't allocated")
+			del self._pending_reg_lists[buf.value]
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_global_reg_type(self, ctxt, reg):
+		try:
+			reg_name = self.arch.get_reg_name(reg)
+			if reg_name in self.global_reg_types:
+				type_obj = self.global_reg_types[reg_name]
+				log_error(f"aaaa {type_obj}")
+				handle = core.BNNewTypeReference(type_obj.handle)
+				return ctypes.cast(handle, ctypes.c_void_p).value
+			return None
+		except:
+			log_error(traceback.format_exc())
+			return None
+
+	def _adjust_type_parser_input(
+			self,
+			ctxt,
+			parser,
+			arguments_in,
+			arguments_len_in,
+			source_file_names_in,
+			source_file_values_in,
+			source_files_len_in,
+			arguments_out,
+			arguments_len_out,
+			source_file_names_out,
+			source_file_values_out,
+			source_files_len_out
+	):
+		try:
+			parser_py = typeparser.TypeParser(handle=parser)
+
+			arguments = []
+			for i in range(arguments_len_in):
+				arguments.append(core.pyNativeStr(arguments_in[i]))
+
+			source_files = []
+			for i in range(source_files_len_in):
+				source_files.append((core.pyNativeStr(source_file_names_in[i]), core.pyNativeStr(source_file_values_in[i])))
+
+			arguments, source_files = self.adjust_type_parser_input(parser_py, arguments, source_files)
+
+			arguments_len_out[0] = len(arguments)
+			arguments_buf = (ctypes.c_char_p * len(arguments))()
+			for i, r in enumerate(arguments):
+				arguments_buf[i] = core.cstr(r)
+			arguments_ptr = ctypes.cast(arguments_buf, ctypes.c_void_p)
+			arguments_out[0] = arguments_buf
+			self._pending_parser_input_lists[arguments_ptr.value] = (arguments_ptr.value, arguments_buf)
+
+			source_files_len_out[0] = len(source_files)
+			source_file_names_buf = (ctypes.c_char_p * len(source_files))()
+			source_file_values_buf = (ctypes.c_char_p * len(source_files))()
+			for i, (name, value) in enumerate(source_files):
+				source_file_names_buf[i] = core.cstr(name)
+				source_file_values_buf[i] = core.cstr(value)
+			source_file_names_ptr = ctypes.cast(source_file_names_buf, ctypes.c_void_p)
+			source_file_names_out[0] = source_file_names_buf
+			source_file_values_ptr = ctypes.cast(source_file_values_buf, ctypes.c_void_p)
+			source_file_values_out[0] = source_file_values_buf
+			self._pending_parser_input_lists[source_file_names_ptr.value] = (source_file_names_ptr.value, source_file_names_buf)
+			self._pending_parser_input_lists[source_file_values_ptr.value] = (source_file_values_ptr.value, source_file_values_buf)
+
+		except:
+			arguments_out[0] = None
+			arguments_len_out[0] = 0
+			source_file_names_out[0] = None
+			source_file_values_out[0] = None
+			source_files_len_out[0] = 0
+			traceback.print_exc()
+
+	def _free_type_parser_input(
+			self,
+			ctxt,
+			arguments,
+			arguments_len,
+			source_file_names,
+			source_file_values,
+			source_files_len
+	):
+		try:
+			buf = ctypes.cast(arguments, ctypes.c_void_p)
+			if buf.value is not None:
+				if buf.value not in self._pending_parser_input_lists:
+					raise ValueError("freeing arguments list that wasn't allocated")
+				del self._pending_parser_input_lists[buf.value]
+
+			buf = ctypes.cast(source_file_names, ctypes.c_void_p)
+			if buf.value is not None:
+				if buf.value not in self._pending_parser_input_lists:
+					raise ValueError("freeing source_file_names list that wasn't allocated")
+				del self._pending_parser_input_lists[buf.value]
+
+			buf = ctypes.cast(source_file_values, ctypes.c_void_p)
+			if buf.value is not None:
+				if buf.value not in self._pending_parser_input_lists:
+					raise ValueError("freeing source_file_values list that wasn't allocated")
+				del self._pending_parser_input_lists[buf.value]
+		except:
+			log_error(traceback.format_exc())
+
+	def adjust_type_parser_input(
+			self,
+			parser: 'typeparser.TypeParser',
+			arguments: List[str],
+			source_files: List[Tuple[str, str]]
+	) -> Tuple[List[str], List[Tuple[str, str]]]:
+		"""
+		Modify the arguments passed to the Type Parser with Platform-specific features.
+
+		:param parser: Type Parser instance
+		:param arguments: Default arguments passed to the parser
+		:param source_files: Source file names and contents
+		:return: A tuple of (modified arguments, modified source files)
+		"""
+		return arguments, source_files
 
 	def __del__(self):
 		if core is not None:
@@ -146,7 +329,7 @@ class Platform(metaclass=_PlatformMetaClass):
 			assert platforms is not None, "core.BNGetPlatformListByArchitecture returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(Platform(handle=core.BNNewPlatformReference(platforms[i])))
+			result.append(CorePlatform._from_cache(core.BNNewPlatformReference(platforms[i])))
 		core.BNFreePlatformList(platforms, count.value)
 		return result
 
@@ -253,6 +436,18 @@ class Platform(metaclass=_PlatformMetaClass):
 		core.BNFreeCallingConventionList(cc, count.value)
 		return result
 
+	def get_global_register_type(self, reg: 'architecture.RegisterType'):
+		reg = self.arch.get_reg_index(reg)
+		type_obj = core.BNGetPlatformGlobalRegisterType(self.handle, reg)
+		if type_obj is None:
+			return None
+		return types.Type.create(type_obj, platform=self)
+
+	def view_init(self, view):
+		pass
+		#raise NotImplementedError
+
+
 	@property
 	def types(self):
 		"""List of platform-specific types (read-only)"""
@@ -349,7 +544,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		result = core.BNGetRelatedPlatform(self.handle, arch.handle)
 		if not result:
 			return None
-		return Platform(handle=result)
+		return CorePlatform._from_cache(handle=result)
 
 	def add_related_platform(self, arch, platform):
 		core.BNAddRelatedPlatform(self.handle, arch.handle, platform.handle)
@@ -358,7 +553,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		new_addr = ctypes.c_ulonglong()
 		new_addr.value = addr
 		result = core.BNGetAssociatedPlatformByAddress(self.handle, new_addr)
-		return Platform(handle=result), new_addr.value
+		return CorePlatform._from_cache(result), new_addr.value
 
 	@property
 	def type_container(self) -> 'typecontainer.TypeContainer':
@@ -523,3 +718,81 @@ class Platform(metaclass=_PlatformMetaClass):
 	@property
 	def arch(self):
 		return self._arch
+
+
+_platform_cache = {}
+
+
+class CorePlatform(Platform):
+	def __init__(self, handle: core.BNPlatform):
+		super(CorePlatform, self).__init__(handle=handle)
+		if type(self) is CorePlatform:
+			global _platform_cache
+			_platform_cache[ctypes.addressof(handle.contents)] = self
+
+	@classmethod
+	def _from_cache(cls, handle) -> 'Platform':
+		"""
+		Look up a platform from a given BNPlatform handle
+		:param handle: BNPlatform pointer
+		:return: Platform instance responsible for this handle
+		"""
+		global _platform_cache
+		return _platform_cache.get(ctypes.addressof(handle.contents)) or cls(handle)
+
+	def adjust_type_parser_input(
+			self,
+			parser: 'typeparser.TypeParser',
+			arguments: List[str],
+			source_files: List[Tuple[str, str]]
+	) -> Tuple[List[str], List[Tuple[str, str]]]:
+
+		arguments_in = (ctypes.c_char_p * len(arguments))()
+		for i, argument in enumerate(arguments):
+			arguments_in[i] = core.cstr(argument)
+
+		source_file_names_in = (ctypes.c_char_p * len(source_files))()
+		source_file_names_out = (ctypes.c_char_p * len(source_files))()
+		source_file_values_in = (ctypes.c_char_p * len(source_files))()
+		source_file_values_out = (ctypes.c_char_p * len(source_files))()
+		for i, (name, value) in enumerate(source_files):
+			source_file_names_in[i] = core.cstr(name)
+			source_file_values_in[i] = core.cstr(value)
+
+		arguments_out = ctypes.POINTER(ctypes.c_char_p)()
+		arguments_len_out = (ctypes.c_size_t)()
+		source_file_names_out = ctypes.POINTER(ctypes.c_char_p)()
+		source_file_values_out = ctypes.POINTER(ctypes.c_char_p)()
+		source_files_len_out = (ctypes.c_size_t)()
+
+		core.BNPlatformAdjustTypeParserInput(
+			self.handle,
+			parser.handle,
+			arguments_in,
+			len(arguments),
+			source_file_names_in,
+			source_file_values_in,
+			len(source_files),
+			arguments_out,
+			arguments_len_out,
+			source_file_names_out,
+			source_file_values_out,
+			source_files_len_out
+		)
+
+		result_arguments = []
+		for i in range(arguments_len_out.value):
+			result_arguments.append(core.pyNativeStr(arguments_out[i]))
+
+		result_source_files = []
+		for i in range(source_files_len_out.value):
+			result_source_files.append((
+				core.pyNativeStr(source_file_names_out[i]),
+				core.pyNativeStr(source_file_values_out[i]),
+			))
+
+		core.BNFreeStringList(arguments_out, arguments_len_out.value)
+		core.BNFreeStringList(source_file_names_out, source_files_len_out.value)
+		core.BNFreeStringList(source_file_values_out, source_files_len_out.value)
+
+		return result_arguments, result_source_files

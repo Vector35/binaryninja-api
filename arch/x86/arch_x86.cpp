@@ -4272,8 +4272,8 @@ public:
 					result[i].type = IgnoredRelocation;
 				else
 				{
-					result[i].next = &result[i + 1];
 					result[i + 1].type = IgnoredRelocation;
+					result[i].next = new BNRelocationInfo(result[i + 1]);
 					i++;
 				}
 				break;

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::types::{ConstantData, ILIntrinsic, SSAVariable, Variable};
+use crate::{architecture::CoreIntrinsic, types::{ConstantData, SSAVariable, Variable}};
 
 use super::MediumLevelILLiftedInstruction;
 
@@ -355,7 +355,7 @@ pub struct Intrinsic {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIntrinsic {
     pub output: Vec<Variable>,
-    pub intrinsic: ILIntrinsic,
+    pub intrinsic: CoreIntrinsic,
     pub params: Vec<MediumLevelILLiftedInstruction>,
 }
 
@@ -371,7 +371,7 @@ pub struct IntrinsicSsa {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIntrinsicSsa {
     pub output: Vec<SSAVariable>,
-    pub intrinsic: ILIntrinsic,
+    pub intrinsic: CoreIntrinsic,
     pub params: Vec<MediumLevelILLiftedInstruction>,
 }
 

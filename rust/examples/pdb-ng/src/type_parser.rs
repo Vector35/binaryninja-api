@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 use anyhow::{anyhow, Result};
 use binaryninja::architecture::{Architecture, CoreArchitecture};
@@ -410,12 +411,22 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 self.log(|| format!("Remove builtin type {}", name));
             }
         }
+
+        static MEM: OnceLock<Regex> = OnceLock::new();
+        let uint_regex = MEM.get_or_init(|| {
+            Regex::new(r"u?int\d+_t").unwrap()
+        });
+
+        let float_regex = MEM.get_or_init(|| {
+            Regex::new(r"float\d+").unwrap()
+        });
+
         let mut remove_names = vec![];
         for (name, _) in &self.named_types {
-            if Regex::new(r"u?int\d+_t")?.is_match(name) {
+            if uint_regex.is_match(name) {
                 remove_names.push(name.clone());
             }
-            if Regex::new(r"float\d+")?.is_match(name) {
+            if float_regex.is_match(name) {
                 remove_names.push(name.clone());
             }
         }
@@ -481,6 +492,33 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                             if let Ok(params) = ty.parameters() {
                                 if params.len() == 0 {
                                     confidence = 0;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Also array of bare function pointers (often seen in vtables)
+                // These should not be marked confidently, as they don't actually know
+                // the types of their contents
+
+                if ty.type_class() == TypeClass::ArrayTypeClass {
+                    if let Ok(ptr) = ty.element_type() {
+                        if ptr.contents.type_class() == TypeClass::PointerTypeClass {
+                            if let Ok(fun) = ptr.contents.target() {
+                                if fun.contents.type_class() == TypeClass::FunctionTypeClass
+                                    && fun
+                                        .contents
+                                        .parameters()
+                                        .map(|pars| pars.len())
+                                        .unwrap_or(0)
+                                        == 0
+                                {
+                                    if let Ok(ret) = fun.contents.return_value() {
+                                        if ret.contents.type_class() == TypeClass::VoidTypeClass {
+                                            confidence = 0;
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -843,10 +881,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                     Type::structure(builder.finalize().as_ref()),
                                     max_confidence(),
                                 ),
-                                name: bitfield_name(
-                                    last_bitfield_offset,
-                                    last_bitfield_idx,
-                                ),
+                                name: bitfield_name(last_bitfield_offset, last_bitfield_idx),
                                 offset: last_bitfield_offset,
                                 access: MemberAccess::PublicAccess,
                                 scope: MemberScope::NoScope,
@@ -880,10 +915,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                 Type::structure(builder.finalize().as_ref()),
                                 max_confidence(),
                             ),
-                            name: bitfield_name(
-                                last_bitfield_offset,
-                                last_bitfield_idx,
-                            ),
+                            name: bitfield_name(last_bitfield_offset, last_bitfield_idx),
                             offset: last_bitfield_offset,
                             access: MemberAccess::PublicAccess,
                             scope: MemberScope::NoScope,

@@ -148,7 +148,7 @@ Ref<Platform> TypeArchive::GetPlatform() const
 	BNPlatform* platform = BNGetTypeArchivePlatform(m_object);
 	if (!platform)
 		return nullptr;
-	return new Platform(platform);
+	return new CorePlatform(platform);
 }
 
 

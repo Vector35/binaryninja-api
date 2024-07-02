@@ -31,6 +31,15 @@ void BinaryNinja::InitElfViewType()
 		"description" : "Maximum number of entries to include in section header array",
 		"ignore" : ["SettingsProjectScope"]
 		})");
+
+	settings->RegisterSetting("files.elf.detectARMBE8Binary",
+		R"({
+		"title" : "Enable ARM BE8 binary detection",
+		"type" : "boolean",
+		"default" : true,
+		"description" : "Enable ARM BE8 binary detection for mixed little/big endianness for code/data",
+		"ignore" : ["SettingsProjectScope"]
+		})");
 }
 
 
@@ -55,6 +64,8 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 	memset(&m_dynamicSymbolTableSection, 0, sizeof(m_dynamicSymbolTableSection));
 	memset(&m_dynamicStringTable, 0, sizeof(m_dynamicStringTable));
 	memset(&m_dynamicTable, 0, sizeof(m_dynamicTable));
+	memset(&m_relocSection, 0, sizeof(m_relocSection));
+	memset(&m_relocaSection, 0, sizeof(m_relocaSection));
 	memset(&m_tlsSegment, 0, sizeof(m_tlsSegment));
 	memset(&m_auxSymbolTable, 0, sizeof(m_auxSymbolTable));
 	memset(&m_sectionStringTable, 0, sizeof(m_sectionStringTable));
@@ -775,10 +786,8 @@ bool ElfView::Init()
 			uint64_t adjustedVirtualAddr = m_dynamicTable.virtualAddress + imageBaseAdjustment;
 			reader.Seek(adjustedVirtualAddr - dynSeg->GetStart() + dynSeg->GetDataOffset());
 
-			Elf64SectionHeader reloca, plt, rel;
-			memset(&reloca, 0, sizeof(reloca));
+			Elf64SectionHeader plt;
 			memset(&plt, 0, sizeof(plt));
-			memset(&rel, 0, sizeof(rel));
 			uint64_t pltType = ELF_DT_RELA;
 			bool end = false;
 			uint64_t entrySize = m_elf32 ? 8 : 16;
@@ -843,25 +852,25 @@ bool ElfView::Init()
 					m_gnuHashHeader = value + imageBaseAdjustment;
 					break;
 				case ELF_DT_RELA:
-					reloca.offset = value + imageBaseAdjustment;
+					m_relocaSection.offset = value + imageBaseAdjustment;
 					break;
 				case ELF_DT_RELASZ:
-					reloca.size = value;
+					m_relocaSection.size = value;
 					break;
 				case ELF_DT_RELAENT:
-					reloca.entrySize = value;
+					m_relocaSection.entrySize = value;
 					break;
 				case ELF_DT_STRSZ:
 					m_dynamicStringTable.size = value;
 					break;
 				case ELF_DT_REL:
-					rel.offset = value + imageBaseAdjustment;
+					m_relocSection.offset = value + imageBaseAdjustment;
 					break;
 				case ELF_DT_RELSZ:
-					rel.size = value;
+					m_relocSection.size = value;
 					break;
 				case ELF_DT_RELENT:
-					rel.entrySize = value;
+					m_relocSection.entrySize = value;
 					break;
 				case ELF_DT_PLTGOT:
 					gotStart = value + imageBaseAdjustment;
@@ -916,16 +925,17 @@ bool ElfView::Init()
 			StoreMetadata("Libraries", new Metadata(libraries), true);
 			StoreMetadata("LibraryFound", new Metadata(libraryFound), true);
 
-			if (reloca.size > 0)
+			if (m_relocaSection.size > 0)
 			{
 				bool alreadyExists = false;
 				for (auto& relSec : relocASections)
-					if (relSec.offset == reloca.offset)
+					if (relSec.offset == m_relocaSection.offset)
 						alreadyExists = true;
 				if (!alreadyExists)
 				{
-					dynRelocASections.push_back(reloca);
-					AddAutoSection(".dynamic_rela", reloca.offset, reloca.size, ReadOnlyDataSectionSemantics);
+					dynRelocASections.push_back(m_relocaSection);
+					AddAutoSection(
+						".dynamic_rela", m_relocaSection.offset, m_relocaSection.size, ReadOnlyDataSectionSemantics);
 				}
 			}
 			if (plt.size > 0)
@@ -955,16 +965,17 @@ bool ElfView::Init()
 					}
 				}
 			}
-			if (rel.size > 0)
+			if (m_relocSection.size > 0)
 			{
 				bool alreadyExists = false;
 				for (auto& relSec : relocSections)
-					if ((relSec.address + imageBaseAdjustment) == rel.offset)
+					if ((relSec.address + imageBaseAdjustment) == m_relocSection.offset)
 						alreadyExists = true;
 				if (!alreadyExists)
 				{
-					dynRelocSections.push_back(rel);
-					AddAutoSection(".dynamic_rel", rel.offset, rel.size, ReadOnlyDataSectionSemantics);
+					dynRelocSections.push_back(m_relocSection);
+					AddAutoSection(
+						".dynamic_rel", m_relocSection.offset, m_relocSection.size, ReadOnlyDataSectionSemantics);
 				}
 			}
 		}
@@ -1539,9 +1550,21 @@ bool ElfView::Init()
 					entry += imageBaseAdjustment;
 					Ref<Architecture> entryArch = entryPointArch->GetAssociatedArchitectureByAddress(entry);
 					if (entryArch != entryPointArch)
-						AddFunctionForAnalysis(platform->GetRelatedPlatform(entryArch), entry);
+					{
+						auto func = AddFunctionForAnalysis(platform->GetRelatedPlatform(entryArch), entry);
+						if (func)
+						{
+							AddToEntryFunctions(func);
+						}
+					}
 					else
-						AddFunctionForAnalysis(platform, entry);
+					{
+						auto func = AddFunctionForAnalysis(platform, entry);
+						if (func)
+						{
+							AddToEntryFunctions(func);
+						}
+					}
 					m_logger->LogDebug("Adding function start: %#" PRIx64 "\n", entry);
 
 					// name functions in .init_array, .fini_array, .ctors and .dtors
@@ -2216,6 +2239,58 @@ bool ElfView::Init()
 		}
 	}
 
+	if (m_relocSection.size)
+	{
+		StructureBuilder relocationTableBuilder;
+		if (m_elf32)
+		{
+			relocationTableBuilder.AddMember(Type::IntegerType(4, false), "r_offset");
+			relocationTableBuilder.AddMember(Type::IntegerType(4, false), "r_info");
+		}
+		else
+		{
+			relocationTableBuilder.AddMember(Type::IntegerType(8, false), "r_offset");
+			relocationTableBuilder.AddMember(Type::IntegerType(8, false), "r_info");
+		};
+		Ref<Structure> relocationTableStruct = relocationTableBuilder.Finalize();
+		Ref<Type> relocationTableType = Type::StructureType(relocationTableStruct);
+		QualifiedName relocationTableName = m_elf32 ? string("Elf32_Rel") : string("Elf64_Rel");
+		const string relocationTableTypeId = Type::GenerateAutoTypeId("elf", relocationTableName);
+
+		QualifiedName relocTableTypeName = DefineType(relocationTableTypeId, relocationTableName, relocationTableType);
+		DefineDataVariable(m_relocSection.offset,
+			Type::ArrayType(Type::NamedType(this, relocTableTypeName), m_relocSection.size / m_relocSection.entrySize));
+		DefineAutoSymbol(new Symbol(DataSymbol, "__elf_rel_table", m_relocSection.offset, NoBinding));
+	}
+
+	if (m_relocaSection.size)
+	{
+		StructureBuilder relocationATableBuilder;
+		if (m_elf32)
+		{
+			relocationATableBuilder.AddMember(Type::IntegerType(4, false), "r_offset");
+			relocationATableBuilder.AddMember(Type::IntegerType(4, false), "r_info");
+			relocationATableBuilder.AddMember(Type::IntegerType(4, true), "r_addend");
+		}
+		else
+		{
+			relocationATableBuilder.AddMember(Type::IntegerType(8, false), "r_offset");
+			relocationATableBuilder.AddMember(Type::IntegerType(8, false), "r_info");
+			relocationATableBuilder.AddMember(Type::IntegerType(8, true), "r_addend");
+		};
+		Ref<Structure> relocationATableStruct = relocationATableBuilder.Finalize();
+		Ref<Type> relocationATableType = Type::StructureType(relocationATableStruct);
+		QualifiedName relocationATableName = m_elf32 ? string("Elf32_Rela") : string("Elf64_Rela");
+		const string relocationATableTypeId = Type::GenerateAutoTypeId("elf", relocationATableName);
+
+		QualifiedName relocaTableTypeName =
+			DefineType(relocationATableTypeId, relocationATableName, relocationATableType);
+		DefineDataVariable(m_relocaSection.offset,
+			Type::ArrayType(
+				Type::NamedType(this, relocaTableTypeName), m_relocaSection.size / m_relocaSection.entrySize));
+		DefineAutoSymbol(new Symbol(DataSymbol, "__elf_rela_table", m_relocaSection.offset, NoBinding));
+	}
+
 	// In 32-bit mips with .got, add .extern symbol "RTL_Resolve"
 	if (gotStart && In(m_arch->GetName(), {"mips32", "mipsel32", "mips64", "nanomips"}))
 	{
@@ -2728,7 +2803,9 @@ uint64_t ElfViewType::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonH
 	// retrieve architecture
 	// FIXME: Architecture registration methods should perhaps be virtual and take the raw data, or some additional opaque information.
 
-	endianness = header.flags & EF_ARM_BE8 ? BigEndian : endianness;
+	bool checkForARMBE8 = Settings::Instance()->Get<bool>("files.elf.detectARMBE8Binary");
+	if (checkForARMBE8)
+		endianness = ((commonHeader.arch == EM_ARM) && (header.flags & EF_ARM_BE8)) ? BigEndian : endianness;
 
 	/* for architectures where .e_machine field doesn't disambiguate between 32/64 (like MIPS),
 	   form the conventional alternative id, including the .e_ident[EI_CLASS] field */
@@ -2752,7 +2829,7 @@ uint64_t ElfViewType::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonH
 	else
 	{
 		BNEndianness codeEndianness = endianness;
-		if ((commonHeader.arch == EM_ARM) && (header.flags & EF_ARM_BE8))
+		if (checkForARMBE8 && (commonHeader.arch == EM_ARM) && (header.flags & EF_ARM_BE8))
 			codeEndianness = LittleEndian;
 
 		if (arch)

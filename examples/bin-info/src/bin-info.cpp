@@ -58,6 +58,13 @@ int main(int argc, char* argv[])
 	cout << "PLATFORM: " << bv->GetDefaultPlatform()->GetName() << endl;
 	cout << endl;
 
+	cout << "------ALL ENTRY FUNCTIONS---------" << endl;
+	for (auto func : bv->GetAllEntryFunctions())
+	{
+		cout << hex << func->GetStart() << " " << func->GetSymbol()->GetFullName() << endl;
+	}
+	cout << endl;
+
 	cout << "---------- 10 Functions ----------" << endl;
 	int x = 0;
 	for (auto func : bv->GetAnalysisFunctionList())

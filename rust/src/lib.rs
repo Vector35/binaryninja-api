@@ -152,6 +152,7 @@ pub mod logger;
 pub mod metadata;
 pub mod mlil;
 pub mod platform;
+pub mod project;
 pub mod rc;
 pub mod references;
 pub mod relocation;
@@ -171,8 +172,8 @@ pub use binaryninjacore_sys::BNEndianness as Endianness;
 use binaryview::BinaryView;
 use metadata::Metadata;
 use metadata::MetadataType;
-use rc::Ref;
 use string::BnStrCompatible;
+use string::IntoJson;
 
 // Commented out to suppress unused warnings
 // const BN_MAX_INSTRUCTION_LENGTH: u64 = 256;
@@ -197,14 +198,14 @@ const BN_INVALID_EXPR: usize = usize::MAX;
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
 pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::BinaryView>> {
     let filename = filename.into_bytes_with_nul();
-    let metadata = Metadata::new_of_type(MetadataType::KeyValueDataType);
+    let options = "\x00";
 
     let handle = unsafe {
         binaryninjacore_sys::BNLoadFilename(
             filename.as_ref().as_ptr() as *mut _,
             true,
+            options.as_ptr() as *mut core::ffi::c_char,
             None,
-            metadata.handle,
         )
     };
 
@@ -217,36 +218,83 @@ pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::Binar
 
 /// The main way to open and load files (with options) into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
 ///
+/// <div class="warning">Strict JSON doesn't support single quotes for strings, so you'll need to either use a raw strings (<code>f#"{"setting": "value"}"#</code>) or escape double quotes (<code>"{\"setting\": \"value\"}"</code>). Or use <code>serde_json::json</code>.</div>
+///
 /// ```no_run
+/// # // Mock implementation of json! macro for documentation purposes
+/// # macro_rules! json {
+/// #   ($($arg:tt)*) => {
+/// #     stringify!($($arg)*)
+/// #   };
+/// # }
 /// use binaryninja::{metadata::Metadata, rc::Ref};
 /// use std::collections::HashMap;
 ///
-/// let settings: Ref<Metadata> = HashMap::from([
-///     ("analysis.linearSweep.autorun", false.into()),
-/// ]).into();
-///
-/// let bv = binaryninja::load_with_options("/bin/cat", true, Some(settings))
+/// let bv = binaryninja::load_with_options("/bin/cat", true, Some(json!("analysis.linearSweep.autorun": false).to_string()))
 ///     .expect("Couldn't open `/bin/cat`");
 /// ```
-pub fn load_with_options<S: BnStrCompatible>(
+pub fn load_with_options<S: BnStrCompatible, O: IntoJson>(
     filename: S,
     update_analysis_and_wait: bool,
-    options: Option<Ref<Metadata>>,
+    options: Option<O>,
 ) -> Option<rc::Ref<binaryview::BinaryView>> {
     let filename = filename.into_bytes_with_nul();
 
     let options_or_default = if let Some(opt) = options {
-        opt
+        opt.get_json_string()
+            .ok()?
+            .into_bytes_with_nul()
+            .as_ref()
+            .to_vec()
     } else {
         Metadata::new_of_type(MetadataType::KeyValueDataType)
+            .get_json_string()
+            .ok()?
+            .as_ref()
+            .to_vec()
     };
 
     let handle = unsafe {
         binaryninjacore_sys::BNLoadFilename(
             filename.as_ref().as_ptr() as *mut _,
             update_analysis_and_wait,
+            options_or_default.as_ptr() as *mut core::ffi::c_char,
             None,
-            options_or_default.as_ref().handle,
+        )
+    };
+
+    if handle.is_null() {
+        None
+    } else {
+        Some(unsafe { BinaryView::from_raw(handle) })
+    }
+}
+
+pub fn load_view<O: IntoJson>(
+    bv: &BinaryView,
+    update_analysis_and_wait: bool,
+    options: Option<O>,
+) -> Option<rc::Ref<binaryview::BinaryView>> {
+    let options_or_default = if let Some(opt) = options {
+        opt.get_json_string()
+            .ok()?
+            .into_bytes_with_nul()
+            .as_ref()
+            .to_vec()
+    } else {
+        Metadata::new_of_type(MetadataType::KeyValueDataType)
+            .get_json_string()
+            .ok()?
+            .as_ref()
+            .to_vec()
+    };
+
+    let handle = unsafe {
+        binaryninjacore_sys::BNLoadBinaryView(
+            bv.handle as *mut _,
+            update_analysis_and_wait,
+            options_or_default.as_ptr() as *mut core::ffi::c_char,
+            None,
         )
     };
 

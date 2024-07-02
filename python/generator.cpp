@@ -567,7 +567,10 @@ int main(int argc, char* argv[])
 			// Emit wrapper to get Python string and free native memory
 			fprintf(out, "\tresult = ");
 			fprintf(out, "%s\n", stringArgFuncCall.c_str());
-			fprintf(out, "\tstring = str(pyNativeStr(ctypes.cast(result, ctypes.c_char_p).value))\n");
+			fprintf(out, "\tcasted = ctypes.cast(result, ctypes.c_char_p).value\n");
+			fprintf(out, "\tif casted is None:\n");
+			fprintf(out, "\t\treturn None\n");
+			fprintf(out, "\tstring = str(pyNativeStr(casted))\n");
 			fprintf(out, "\tBNFreeString(result)\n");
 			fprintf(out, "\treturn string\n");
 		}

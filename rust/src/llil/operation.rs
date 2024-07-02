@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use binaryninjacore_sys::BNLowLevelILInstruction;
+use binaryninjacore_sys::{BNGetLowLevelILByIndex, BNLowLevelILInstruction};
 
+use std::collections::BTreeMap;
 use std::marker::PhantomData;
 use std::mem;
 
@@ -289,6 +290,62 @@ where
     }
 }
 
+// LLIL_REG_SPLIT
+pub struct RegSplit;
+
+impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, RegSplit>
+    where
+        A: 'func + Architecture,
+        M: FunctionMutability,
+        V: NonSSAVariant,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn low_reg(&self) -> Register<A::Register> {
+        let raw_id = self.op.operands[0] as u32;
+
+        if raw_id >= 0x8000_0000 {
+            Register::Temp(raw_id & 0x7fff_ffff)
+        } else {
+            self.function
+                .arch()
+                .register_from_id(raw_id)
+                .map(Register::ArchReg)
+                .unwrap_or_else(|| {
+                    error!(
+                        "got garbage register from LLIL_REG @ 0x{:x}",
+                        self.op.address
+                    );
+
+                    Register::Temp(0)
+                })
+        }
+    }
+
+    pub fn high_reg(&self) -> Register<A::Register> {
+        let raw_id = self.op.operands[1] as u32;
+
+        if raw_id >= 0x8000_0000 {
+            Register::Temp(raw_id & 0x7fff_ffff)
+        } else {
+            self.function
+                .arch()
+                .register_from_id(raw_id)
+                .map(Register::ArchReg)
+                .unwrap_or_else(|| {
+                    error!(
+                        "got garbage register from LLIL_REG @ 0x{:x}",
+                        self.op.address
+                    );
+
+                    Register::Temp(0)
+                })
+        }
+    }
+}
+
 // LLIL_FLAG, LLIL_FLAG_SSA
 pub struct Flag;
 
@@ -312,6 +369,36 @@ where
 // LLIL_JUMP_TO
 pub struct JumpTo;
 
+struct TargetListIter<'func, A, M, F>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    function: &'func Function<A, M, F>,
+    cursor: BNLowLevelILInstruction,
+    cursor_operand: usize,
+}
+
+impl<'func, A, M, F> TargetListIter<'func, A, M, F>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn next(&mut self) -> u64 {
+        if self.cursor_operand >= 3 {
+            self.cursor = unsafe {
+                BNGetLowLevelILByIndex(self.function.handle, self.cursor.operands[3] as usize)
+            };
+            self.cursor_operand = 0;
+        }
+        let result = self.cursor.operands[self.cursor_operand];
+        self.cursor_operand += 1;
+        result
+    }
+}
+
 impl<'func, A, M, F> Operation<'func, A, M, F, JumpTo>
 where
     A: 'func + Architecture,
@@ -321,7 +408,26 @@ where
     pub fn target(&self) -> Expression<'func, A, M, F, ValueExpr> {
         Expression::new(self.function, self.op.operands[0] as usize)
     }
-    // TODO target list
+
+    pub fn target_list(&self) -> BTreeMap<u64, usize> {
+        let mut result = BTreeMap::new();
+        let count = self.op.operands[1] as usize / 2;
+        let mut list = TargetListIter {
+            function: self.function,
+            cursor: unsafe {
+                BNGetLowLevelILByIndex(self.function.handle, self.op.operands[2] as usize)
+            },
+            cursor_operand: 0,
+        };
+
+        for _ in 0..count {
+            let value = list.next();
+            let target = list.next() as usize;
+            result.insert(value, target);
+        }
+
+        result
+    }
 }
 
 // LLIL_CALL, LLIL_CALL_SSA
@@ -652,6 +758,7 @@ impl OperationArguments for SetFlag {}
 impl OperationArguments for Load {}
 impl OperationArguments for Store {}
 impl OperationArguments for Reg {}
+impl OperationArguments for RegSplit {}
 impl OperationArguments for Flag {}
 impl OperationArguments for FlagBit {}
 impl OperationArguments for Jump {}

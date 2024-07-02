@@ -131,7 +131,7 @@ class InstructionBranch:
 class InstructionInfo:
 	length: int = 0
 	arch_transition_by_target_addr: bool = False
-	branch_delay: bool = False
+	branch_delay: int = 0
 	branches: List[InstructionBranch] = field(default_factory=list)
 
 	def add_branch(self, branch_type: BranchType, target: int = 0, arch: Optional['Architecture'] = None) -> None:
@@ -525,13 +525,14 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		return self.name
 
 	@classmethod
-	def register(cls) -> None:
+	def register(cls) -> 'Architecture':
 		binaryninja._init_plugins()
 		if cls.name is None:
 			raise ValueError("architecture 'name' is not defined")
 		arch = cls()
 		cls._registered_cb = arch._cb
 		arch.handle = core.BNRegisterArchitecture(cls.name, arch._cb)
+		return arch
 
 	@property
 	def full_width_regs(self) -> List[RegisterName]:
@@ -566,7 +567,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 	def standalone_platform(self) -> 'platform.Platform':
 		"""Architecture standalone platform (read-only)"""
 		pl = core.BNGetArchitectureStandalonePlatform(self.handle)
-		return platform.Platform(self, pl)
+		return platform.CorePlatform._from_cache(pl)
 
 	@property
 	def type_libraries(self) -> List['typelibrary.TypeLibrary']:
@@ -648,7 +649,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				return False
 			result[0].length = info.length
 			result[0].archTransitionByTargetAddr = info.arch_transition_by_target_addr
-			result[0].branchDelay = info.branch_delay
+			result[0].delaySlots = info.branch_delay
 			result[0].branchCount = len(info.branches)
 			for i in range(0, len(info.branches)):
 				if isinstance(info.branches[i].type, str):
@@ -2048,6 +2049,42 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		core.BNRegisterCallingConvention(self.handle, cc.handle)
 
+	def get_default_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+		cc_handle = core.BNGetArchitectureDefaultCallingConvention(self.handle)
+		if cc_handle is None:
+			return None
+		return callingconvention.CallingConvention(handle=cc_handle)
+
+	def set_default_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+		core.BNSetArchitectureDefaultCallingConvention(self.handle, cc.handle)
+
+	def get_cdecl_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+		cc_handle = core.BNGetArchitectureCdeclCallingConvention(self.handle)
+		if cc_handle is None:
+			return None
+		return callingconvention.CallingConvention(handle=cc_handle)
+
+	def set_cdecl_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+		core.BNSetArchitectureCdeclCallingConvention(self.handle, cc.handle)
+
+	def get_stdcall_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+		cc_handle = core.BNGetArchitectureStdcallCallingConvention(self.handle)
+		if cc_handle is None:
+			return None
+		return callingconvention.CallingConvention(handle=cc_handle)
+
+	def set_stdcall_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+		core.BNSetArchitectureStdcallCallingConvention(self.handle, cc.handle)
+
+	def get_fastcall_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+		cc_handle = core.BNGetArchitectureFastcallCallingConvention(self.handle)
+		if cc_handle is None:
+			return None
+		return callingconvention.CallingConvention(handle=cc_handle)
+
+	def set_fastcall_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+		core.BNSetArchitectureFastcallCallingConvention(self.handle, cc.handle)
+
 
 _architecture_cache = {}
 
@@ -2346,7 +2383,7 @@ class CoreArchitecture(Architecture):
 		result = InstructionInfo()
 		result.length = info.length
 		result.arch_transition_by_target_addr = info.archTransitionByTargetAddr
-		result.branch_delay = info.branchDelay
+		result.branch_delay = info.delaySlots
 		for i in range(0, info.branchCount):
 			target = info.branchTarget[i]
 			if info.branchArch[i]:

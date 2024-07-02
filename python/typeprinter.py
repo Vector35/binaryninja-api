@@ -117,7 +117,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		try:
 			platform_py = None
 			if platform:
-				platform_py = _platform.Platform(handle=core.BNNewPlatformReference(platform))
+				platform_py = _platform.CorePlatform._from_cache(handle=core.BNNewPlatformReference(platform))
 			result_py = self.get_type_tokens(
 				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				types.QualifiedName._from_core_struct(name.contents), base_confidence, escaping)
@@ -135,7 +135,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		try:
 			platform_py = None
 			if platform:
-				platform_py = _platform.Platform(handle=core.BNNewPlatformReference(platform))
+				platform_py = _platform.CorePlatform._from_cache(handle=core.BNNewPlatformReference(platform))
 			parent_type_py = None
 			if parent_type:
 				parent_type_py = types.Type.create(handle=core.BNNewTypeReference(parent_type))
@@ -156,7 +156,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		try:
 			platform_py = None
 			if platform:
-				platform_py = _platform.Platform(handle=core.BNNewPlatformReference(platform))
+				platform_py = _platform.CorePlatform._from_cache(handle=core.BNNewPlatformReference(platform))
 			parent_type_py = None
 			if parent_type:
 				parent_type_py = types.Type.create(handle=core.BNNewTypeReference(parent_type))
@@ -177,7 +177,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		try:
 			platform_py = None
 			if platform:
-				platform_py = _platform.Platform(handle=core.BNNewPlatformReference(platform))
+				platform_py = _platform.CorePlatform._from_cache(handle=core.BNNewPlatformReference(platform))
 			result_py = self.get_type_string(
 				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				types.QualifiedName._from_core_struct(name.contents), escaping)
@@ -193,7 +193,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		try:
 			platform_py = None
 			if platform:
-				platform_py = _platform.Platform(handle=core.BNNewPlatformReference(platform))
+				platform_py = _platform.CorePlatform._from_cache(handle=core.BNNewPlatformReference(platform))
 			result_py = self.get_type_string_before_name(
 				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				escaping)
@@ -209,7 +209,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		try:
 			platform_py = None
 			if platform:
-				platform_py = _platform.Platform(handle=core.BNNewPlatformReference(platform))
+				platform_py = _platform.CorePlatform._from_cache(handle=core.BNNewPlatformReference(platform))
 			result_py = self.get_type_string_after_name(
 				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				escaping)

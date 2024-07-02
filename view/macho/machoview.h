@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "binaryninjaapi.h"
+#include "objc.h"
 
 //These are laready defined in one of the osx headers we want to override
 #undef CPU_SUBTYPE_INTEL
@@ -680,6 +681,27 @@ namespace BinaryNinja
 		MachOPPC64	= MachOABI64 | MachOPPC,
 	};
 
+	enum RebaseType {
+		RebaseTypeInvalid = 0,
+		RebaseTypePointer = 1,
+		RebaseTypeTextAbsolute32 = 2,
+		RebaseTypeTextPCRel32 = 3
+	};
+
+	enum RebaseOpcode {
+		RebaseOpcodeMask                            = 0xF0u, // REBASE_OPCODE_MASK
+		RebaseImmediateMask                         = 0x0Fu, // REBASE_IMMEDIATE_MASK
+		RebaseOpcodeDone                            = 0x00u, // REBASE_OPCODE_DONE
+		RebaseOpcodeSetTypeImmediate                = 0x10u, // REBASE_OPCODE_SET_TYPE_IMM
+		RebaseOpcodeSetSegmentAndOffsetUleb         = 0x20u, // REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+		RebaseOpcodeAddAddressUleb                  = 0x30u, // REBASE_OPCODE_ADD_ADDR_ULEB
+		RebaseOpcodeAddAddressImmediateScaled       = 0x40u, // REBASE_OPCODE_ADD_ADDR_IMM_SCALED
+		RebaseOpcodeDoRebaseImmediateTimes          = 0x50u, // REBASE_OPCODE_DO_REBASE_IMM_TIMES
+		RebaseOpcodeDoRebaseUlebTimes               = 0x60u, // REBASE_OPCODE_DO_REBASE_ULEB_TIMES
+		RebaseOpcodeDoRebaseAddAddressUleb          = 0x70u, // REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB
+		RebaseOpcodeDoRebaseUlebTimesSkippingUleb   = 0x80u, // REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB
+	};
+
 	enum BindOpcode {
 		BindOpcodeMask                            = 0xF0u, // BIND_OPCODE_MASK
 		BindImmediateMask                         = 0x0Fu, // BIND_IMMEDIATE_MASK
@@ -1238,6 +1260,9 @@ namespace BinaryNinja
 		std::vector<std::pair<uint64_t, bool>> entryPoints;
 		std::vector<uint64_t> m_entryPoints; //list of entrypoints
 
+		std::vector<std::pair<BNRelocationInfo, std::string>> externalRelocations;
+		std::vector<BNRelocationInfo> rebaseRelocations;
+
 		symtab_command symtab;
 		dysymtab_command dysymtab;
 		dyld_info_command dyldInfo;
@@ -1246,6 +1271,7 @@ namespace BinaryNinja
 		std::vector<section_64> moduleInitSections;
 		linkedit_data_command exportTrie;
 		linkedit_data_command chainedFixups {};
+		section_64 chainStarts {};
 
 		DataBuffer* stringList;
 		size_t stringListSize = 0;
@@ -1259,7 +1285,7 @@ namespace BinaryNinja
 		std::vector<section_64> symbolStubSections;
 		std::vector<section_64> symbolPointerSections;
 
-		std::vector<std::string> dylibs;
+		std::vector<std::pair<std::string, std::string>> dylibs;
 
 		build_version_command buildVersion;
 		std::vector<build_tool_version> buildToolVersions;
@@ -1268,6 +1294,7 @@ namespace BinaryNinja
 		bool dyldInfoPresent = false;
 		bool exportTriePresent = false;
 		bool chainedFixupsPresent = false;
+		bool chainStartsPresent = false;
 		bool routinesPresent = false;
 		bool functionStartsPresent = false;
 		bool relocatable = false;
@@ -1302,6 +1329,8 @@ namespace BinaryNinja
 			QualifiedName dylibCommandQualName;
 			QualifiedName filesetEntryCommandQualName;
 		} m_typeNames;
+
+		ObjCProcessor* m_objcProcessor = nullptr;
 
 		uint64_t m_universalImageOffset;
 		bool m_parseOnly, m_backedByDatabase;
@@ -1341,11 +1370,13 @@ namespace BinaryNinja
 		void ReadExportNode(uint64_t viewStart, DataBuffer& buffer, const std::string& currentText,
 			size_t cursor, uint32_t endGuard);
 
+		void ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint32_t tableOffset, uint32_t tableSize);
 		void ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNSymbolType type, uint32_t tableOffset, uint32_t tableSize,
 			BNSymbolBinding binding);
 		bool GetSectionPermissions(MachOHeader& header, uint64_t address, uint32_t &flags);
 		bool GetSegmentPermissions(MachOHeader& header, uint64_t address, uint32_t &flags);
-		void ParseChainedFixups(linkedit_data_command chainedFixups);
+		void ParseChainedFixups(MachOHeader& header, linkedit_data_command chainedFixups);
+		void ParseChainedStarts(MachOHeader& header, section_64 chainedStarts);
 
 		virtual uint64_t PerformGetEntryPoint() const override;
 

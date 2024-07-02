@@ -138,9 +138,7 @@ static string BuildToolVersionToString(uint32_t version)
 	uint32_t update = version & 0xff;
 
 	stringstream ss;
-	ss << major << "." << minor;
-	if (update)
-		ss << "." << update;
+	ss << major << "." << minor << "." << update;
 	return ss.str();
 }
 
@@ -802,11 +800,14 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 			case LC_LOAD_DYLIB:
 			{
 				uint32_t offset = reader.Read32();
+				reader.Read32(); // timestamp
+				uint32_t currentVersion = reader.Read32();
 				if (offset < nextOffset)
 				{
 						reader.Seek(curOffset + offset);
 						string libname = reader.ReadCString();
-						header.dylibs.push_back(libname);
+						auto version = BuildToolVersionToString(currentVersion);
+						header.dylibs.push_back({libname, version});
 				}
 			}
 			break;
@@ -1744,6 +1745,12 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			semantics = ReadWriteDataSectionSemantics;
 		if (strncmp(header.sections[i].segname, "__DATA_CONST", sizeof(header.sections[i].segname)) == 0)
 			semantics = ReadOnlyDataSectionSemantics;
+		if (strncmp(header.sections[i].sectname, "__chain_starts", sizeof(header.sections[i].sectname)) == 0
+			&& header.sections[i].size < UINT32_MAX)
+		{
+			header.chainStartsPresent = true;
+			header.chainStarts = header.sections[i];
+		}
 
 		AddAutoSection(header.sectionNames[i], header.sections[i].addr, header.sections[i].size, semantics, type, header.sections[i].align);
 	}
@@ -1833,6 +1840,33 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 	Ref<Platform> platform = m_plat ? m_plat : g_machoViewType->GetPlatform(0, m_arch);
 
+	bool parseObjCStructs = true;
+	bool parseCFStrings = true;
+	if (settings && settings->Contains("loader.macho.processObjectiveC"))
+		parseObjCStructs = settings->Get<bool>("loader.macho.processObjectiveC", this);
+	if (settings && settings->Contains("loader.macho.processCFStrings"))
+		parseCFStrings = settings->Get<bool>("loader.macho.processCFStrings", this);
+	if (!ObjCProcessor::ViewHasObjCMetadata(this))
+		parseObjCStructs = false;
+	if (!GetSectionByName("__cfstring"))
+		parseCFStrings = false;
+	if (parseObjCStructs || parseCFStrings)
+	{
+		m_objcProcessor = new ObjCProcessor(this, m_backedByDatabase);
+	}
+	if (parseObjCStructs)
+	{
+
+		if (!settings) // Add our defaults
+		{
+			Ref<Settings> programSettings = Settings::Instance();
+			if (programSettings->Get<bool>("corePlugins.workflows.objc"))
+			{
+				programSettings->Set("workflows.enable", true, this);
+				programSettings->Set("workflows.functionWorkflow", "core.function.objectiveC", this);
+			}
+		}
+	}
 
 	// parse thread starts section if available
 	bool rebaseThreadStarts = false;
@@ -1893,17 +1927,19 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	{
 		vector<Ref<Metadata>> libraries;
 		vector<Ref<Metadata>> libraryFound;
-		for (auto& libName : header.dylibs)
+		for (auto& [libName, libVersion] : header.dylibs)
 		{
 			if (!GetExternalLibrary(libName))
 			{
 				AddExternalLibrary(libName, {}, true);
 			}
 			libraries.push_back(new Metadata(string(libName)));
-			Ref<TypeLibrary> typeLib = GetTypeLibrary(libName);
+			// Compose exact name with {install_name}.{platform}.{version}
+			std::string libNameExact = fmt::format("{}.{}.{}", libName, GetDefaultPlatform()->GetName(), libVersion);
+			Ref<TypeLibrary> typeLib = GetTypeLibrary(libNameExact);
 			if (!typeLib)
 			{
-				vector<Ref<TypeLibrary>> typeLibs = platform->GetTypeLibrariesByName(libName);
+				vector<Ref<TypeLibrary>> typeLibs = GetDefaultPlatform()->GetTypeLibrariesByName(libNameExact);
 				if (typeLibs.size())
 				{
 					typeLib = typeLibs[0];
@@ -1911,6 +1947,22 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 					m_logger->LogDebug("mach-o: adding type library for '%s': %s (%s)",
 						libName.c_str(), typeLib->GetName().c_str(), typeLib->GetGuid().c_str());
+				}
+			}
+			if (!typeLib)
+			{
+				typeLib = GetTypeLibrary(libName);
+				if (!typeLib)
+				{
+					vector<Ref<TypeLibrary>> typeLibs = GetDefaultPlatform()->GetTypeLibrariesByName(libName);
+					if (typeLibs.size())
+					{
+						typeLib = typeLibs[0];
+						AddTypeLibrary(typeLib);
+
+						m_logger->LogDebug("mach-o: adding type library for '%s': %s (%s)",
+							libName.c_str(), typeLib->GetName().c_str(), typeLib->GetGuid().c_str());
+					}
 				}
 			}
 
@@ -1992,6 +2044,23 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 	EndBulkModifySymbols();
 
+	for (auto& relocation : header.rebaseRelocations)
+	{
+		uint64_t relocationLocation = relocation.address;
+		virtualReader.Seek(relocationLocation);
+		uint64_t target = virtualReader.ReadPointer();
+		uint64_t slidTarget = target + m_imageBaseAdjustment;
+		relocation.address = slidTarget;
+		DefineRelocation(m_arch, relocation, slidTarget, relocationLocation);
+		if (m_objcProcessor)
+			m_objcProcessor->AddRelocatedPointer(relocationLocation, slidTarget);
+	}
+	for (auto& [relocation, name] : header.externalRelocations)
+	{
+		if (auto symbol = GetSymbolByRawName(name, GetExternalNameSpace()); symbol)
+			DefineRelocation(m_arch, relocation, symbol, relocation.address);
+	}
+
 	auto relocationHandler = m_arch->GetRelocationHandler("Mach-O");
 	if (relocationHandler)
 	{
@@ -2031,13 +2100,25 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 			if (relocationHandler->GetRelocationInfo(this, m_arch, infoList))
 			{
+				unordered_map<string, vector<Ref<Symbol>>> symbolCache;
 				for (auto& reloc: infoList)
 				{
 					if (reloc.symbolIndex >= m_symbols.size())
 							continue;
 
 					// retrieve first symbol that is not a symbol relocation
-					auto symbols = GetSymbolsByName(m_symbols[reloc.symbolIndex]);
+					vector<Ref<Symbol>> symbols;
+					auto symName = m_symbols[reloc.symbolIndex];
+					if (auto itr = symbolCache.find(symName); itr != symbolCache.end())
+					{
+						symbols = itr->second;
+					}
+					else
+					{
+						symbols = GetSymbolsByName(symName);
+						symbolCache[symName] = symbols;
+					}
+
 					for (const auto& symbol : symbols)
 					{
 							if (symbol->GetAddress() == reloc.address)
@@ -2249,6 +2330,31 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		}
 	}
 
+	if (parseCFStrings)
+	{
+		try {
+			m_objcProcessor->ProcessCFStrings();
+		}
+		catch (std::exception& ex)
+		{
+			m_logger->LogError("Failed to process CFStrings. Binary may be malformed");
+			m_logger->LogError("Error: %s", ex.what());
+		}
+	}
+
+	if (parseObjCStructs)
+	{
+		try {
+			m_objcProcessor->ProcessObjCData();
+		}
+		catch (std::exception& ex)
+		{
+			m_logger->LogError("Failed to process Objective-C Metadata. Binary may be malformed");
+			m_logger->LogError("Error: %s", ex.what());
+		}
+		delete m_objcProcessor;
+	}
+
 
 	return true;
 }
@@ -2257,8 +2363,6 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 Ref<Symbol> MachoView::DefineMachoSymbol(
 	BNSymbolType type, const string& name, uint64_t addr, BNSymbolBinding binding, bool deferred)
 {
-	Ref<Type> symbolTypeRef;
-
 	// If name is empty, symbol is not valid
 	if (name.size() == 0)
 		return nullptr;
@@ -2288,17 +2392,19 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 			return nullptr;
 	}
 
+	Ref<Type> symbolTypeRef;
+
 	if ((type == ExternalSymbol) || (type == ImportAddressSymbol) || (type == ImportedDataSymbol))
 	{
 		QualifiedName n(name);
-		// TODO
-		Ref<TypeLibrary> appliedLib = nullptr;
+		Ref<TypeLibrary> appliedLib;
 		symbolTypeRef = ImportTypeLibraryObject(appliedLib, n);
 		if (symbolTypeRef)
 		{
 			m_logger->LogDebug("mach-o: type Library '%s' found hit for '%s'", appliedLib->GetName().c_str(), name.c_str());
 			RecordImportedObjectLibrary(GetDefaultPlatform(), addr, appliedLib, n);
 		}
+
 	}
 
 	auto process = [=]() {
@@ -2447,12 +2553,164 @@ void MachoView::ReadExportNode(uint64_t viewStart, DataBuffer& buffer, const std
 	}
 }
 
+
+void MachoView::ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint32_t tableOffset, uint32_t tableSize)
+{
+	if (tableSize == 0 || tableOffset == 0)
+		return;
+
+	std::function segmentActualLoadAddress = [&](uint64_t segmentIndex) {
+		if (segmentIndex >= header.segments.size())
+			throw ReadException();
+		return header.segments[segmentIndex].vmaddr;
+	};
+	std::function segmentActualEndAddress = [&](uint64_t segmentIndex) {
+		if (segmentIndex >= header.segments.size())
+			throw ReadException();
+		return header.segments[segmentIndex].vmaddr + header.segments[segmentIndex].vmsize;
+	};
+
+	try {
+		reader.Seek(tableOffset);
+		auto table = reader.Read(tableSize);
+
+		BNRelocationInfo rebaseRelocation;
+
+		RebaseType type = RebaseTypeInvalid;
+		uint64_t segmentIndex = 0;
+		uint64_t address = segmentActualLoadAddress(0);
+		uint64_t segmentStartAddress = segmentActualLoadAddress(0);
+		uint64_t segmentEndAddress = segmentActualEndAddress(0);
+		uint64_t count;
+		uint64_t size;
+		uint64_t skip;
+		bool done = false;
+		size_t i = 0;
+		while ( !done && (i < tableSize))
+		{
+			uint8_t opAndIm = table[i];
+			uint8_t opcode = opAndIm & RebaseOpcodeMask;
+			uint64_t immediate = opAndIm & RebaseImmediateMask;
+			m_logger->LogDebug("Rebase opcode 0x%llx (im: 0x%llx)", opcode, immediate);
+			i++;
+			switch (opcode)
+			{
+			case RebaseOpcodeDone:
+				done = true;
+				break;
+			case RebaseOpcodeSetTypeImmediate:
+				type = (RebaseType)immediate;
+				break;
+			case RebaseOpcodeSetSegmentAndOffsetUleb:
+				segmentIndex = immediate;
+				address = segmentActualLoadAddress(segmentIndex) + readLEB128(table, tableSize, i);
+				segmentStartAddress = segmentActualLoadAddress(segmentIndex);
+				segmentEndAddress = segmentActualEndAddress(segmentIndex);
+				break;
+			case RebaseOpcodeAddAddressUleb:
+				address += readLEB128(table, tableSize, i);
+				break;
+			case RebaseOpcodeAddAddressImmediateScaled:
+				address += immediate * m_addressSize;
+				break;
+			case RebaseOpcodeDoRebaseImmediateTimes:
+				count = immediate;
+				for (uint64_t j = 0; j < count; ++j)
+				{
+					m_logger->LogDebug("Rebasing address %llx", address);
+					if (address < segmentStartAddress || address >= segmentEndAddress)
+					{
+						m_logger->LogError("Rebase address out of segment bounds");
+						throw ReadException();
+					}
+					memset(&rebaseRelocation, 0, sizeof(rebaseRelocation));
+					rebaseRelocation.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+					rebaseRelocation.address = address;
+					rebaseRelocation.size = m_addressSize;
+					rebaseRelocation.pcRelative = false;
+					rebaseRelocation.external = false;
+					header.rebaseRelocations.push_back(rebaseRelocation);
+					address += m_addressSize;
+				}
+				break;
+			case RebaseOpcodeDoRebaseUlebTimes:
+				count = readLEB128(table, tableSize, i);
+				for (uint64_t j = 0; j < count; ++j)
+				{
+					m_logger->LogDebug("Rebasing address %llx", address);
+					if (address < segmentStartAddress || address >= segmentEndAddress)
+					{
+						m_logger->LogError("Rebase address out of segment bounds");
+						throw ReadException();
+					}
+					memset(&rebaseRelocation, 0, sizeof(rebaseRelocation));
+					rebaseRelocation.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+					rebaseRelocation.address = address;
+					rebaseRelocation.size = m_addressSize;
+					rebaseRelocation.pcRelative = false;
+					rebaseRelocation.external = false;
+					header.rebaseRelocations.push_back(rebaseRelocation);
+					address += m_addressSize;
+				}
+				break;
+			case RebaseOpcodeDoRebaseAddAddressUleb:
+				m_logger->LogDebug("Rebasing address %llx", address);
+				if (address < segmentStartAddress || address >= segmentEndAddress)
+				{
+					m_logger->LogError("Rebase address out of segment bounds");
+					throw ReadException();
+				}
+				memset(&rebaseRelocation, 0, sizeof(rebaseRelocation));
+				rebaseRelocation.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+				rebaseRelocation.address = address;
+				rebaseRelocation.size = m_addressSize;
+				rebaseRelocation.pcRelative = false;
+				rebaseRelocation.external = false;
+				header.rebaseRelocations.push_back(rebaseRelocation);
+				address += readLEB128(table, tableSize, i) + m_addressSize;
+				break;
+			case RebaseOpcodeDoRebaseUlebTimesSkippingUleb:
+				count = readLEB128(table, tableSize, i);
+				skip = readLEB128(table, tableSize, i);
+				for (uint64_t j = 0; j < count; ++j)
+				{
+					m_logger->LogDebug("Rebasing address %llx", address);
+					if (address < segmentStartAddress || address >= segmentEndAddress)
+					{
+						m_logger->LogError("Rebase address out of segment bounds");
+						throw ReadException();
+					}
+					memset(&rebaseRelocation, 0, sizeof(rebaseRelocation));
+					rebaseRelocation.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+					rebaseRelocation.address = address;
+					rebaseRelocation.size = m_addressSize;
+					rebaseRelocation.pcRelative = false;
+					rebaseRelocation.external = false;
+					header.rebaseRelocations.push_back(rebaseRelocation);
+					address += skip + m_addressSize;
+				}
+				break;
+			default:
+				m_logger->LogError("Unknown rebase opcode %d", opcode);
+				throw ReadException();
+				break;
+			}
+		}
+	}
+	catch (ReadException&)
+	{
+		m_logger->LogError("Error while parsing Rebase Table");
+	}
+}
+
+
 void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNSymbolType incomingType, uint32_t tableOffset,
 	uint32_t tableSize, BNSymbolBinding binding)
 {
 	try {
 		reader.Seek(tableOffset);
 		auto table = reader.Read(tableSize);
+		BNRelocationInfo externReloc;
 
 		BNSymbolType symtype = incomingType;
 		// uint64_t ordinal = 0;
@@ -2513,6 +2771,15 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 						throw MachoFormatException();
 
 					DefineMachoSymbol(symtype, string(name), address, binding, true);
+
+					memset(&externReloc, 0, sizeof(externReloc));
+					externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+					externReloc.address = address;
+					externReloc.size = m_addressSize;
+					externReloc.pcRelative = false;
+					externReloc.external = true;
+					header.externalRelocations.emplace_back(externReloc, string(name));
+
 					address += m_addressSize;
 					break;
 				case BindOpcodeDoBindAddAddressULEB:
@@ -2520,6 +2787,15 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 						throw MachoFormatException();
 
 					DefineMachoSymbol(symtype, string(name), address, binding, true);
+
+					memset(&externReloc, 0, sizeof(externReloc));
+					externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+					externReloc.address = address;
+					externReloc.size = m_addressSize;
+					externReloc.pcRelative = false;
+					externReloc.external = true;
+					header.externalRelocations.emplace_back(externReloc, string(name));
+
 					address += m_addressSize;
 					address += readLEB128(table, tableSize, i);
 					break;
@@ -2528,6 +2804,14 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 						throw MachoFormatException();
 
 					DefineMachoSymbol(symtype, string(name), address, binding, true);
+
+					memset(&externReloc, 0, sizeof(externReloc));
+					externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+					externReloc.address = address;
+					externReloc.size = m_addressSize;
+					externReloc.pcRelative = false;
+					externReloc.external = true;
+					header.externalRelocations.emplace_back(externReloc, string(name));
 					address += m_addressSize;
 					address += (imm * m_addressSize);
 					break;
@@ -2540,8 +2824,17 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 					uint64_t skip = readLEB128(table, tableSize, i);
 					for (; count > 0; count--)
 					{
-						address += skip + m_addressSize;
 						DefineMachoSymbol(symtype, string(name), address, binding, true);
+
+						memset(&externReloc, 0, sizeof(externReloc));
+						externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+						externReloc.address = address;
+						externReloc.size = m_addressSize;
+						externReloc.pcRelative = false;
+						externReloc.external = true;
+						header.externalRelocations.emplace_back(externReloc, string(name));
+
+						address += skip + m_addressSize;
 					}
 					break;
 				}
@@ -2579,11 +2872,18 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 			m_logger->LogDebug("Lazy symbols");
 			ParseDynamicTable(reader, header, ImportAddressSymbol, header.dyldInfo.lazy_bind_off,
 					  header.dyldInfo.lazy_bind_size, GlobalBinding);
+			m_logger->LogDebug("Parsing rebase table");
+			ParseRebaseTable(reader, header, header.dyldInfo.rebase_off, header.dyldInfo.rebase_size);
 		}
 		if (header.chainedFixupsPresent)
 		{
 			m_logger->LogDebug("Chained Fixups");
-			ParseChainedFixups(header.chainedFixups);
+			ParseChainedFixups(header, header.chainedFixups);
+		}
+		else if (header.chainStartsPresent)
+		{
+			m_logger->LogDebug("Chained Starts");
+			ParseChainedStarts(header, header.chainStarts);
 		}
 		if (header.exportTriePresent && header.isMainHeader)
 			ParseExportTrie(reader, header.exportTrie);
@@ -2781,9 +3081,7 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 }
 
 
-
-
-void MachoView::ParseChainedFixups(linkedit_data_command chainedFixups)
+void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command chainedFixups)
 {
 	if (!chainedFixups.dataoff)
 		return;
@@ -3091,10 +3389,18 @@ void MachoView::ParseChainedFixups(linkedit_data_command chainedFixups)
 								if (!entry.name.empty())
 								{
 									reloc.address = targetAddress;
-									DefineRelocation(m_arch, reloc, 0, reloc.address);
-									DefineMachoSymbol(ImportedDataSymbol, entry.name,
+									DefineMachoSymbol(ImportAddressSymbol, entry.name,
 										targetAddress,
 										entry.weak ? WeakBinding : GlobalBinding, true);
+
+									BNRelocationInfo externReloc;
+									memset(&externReloc, 0, sizeof(externReloc));
+									externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+									externReloc.address = targetAddress;
+									externReloc.size = m_addressSize;
+									externReloc.pcRelative = false;
+									externReloc.external = true;
+									header.externalRelocations.emplace_back(externReloc, entry.name);
 								}
 								else
 								{
@@ -3144,6 +3450,11 @@ void MachoView::ParseChainedFixups(linkedit_data_command chainedFixups)
 
 							reloc.address = GetStart() + (chainEntryAddress - m_universalImageOffset);
 							DefineRelocation(m_arch, reloc, entryOffset, reloc.address);
+
+							if (m_objcProcessor)
+							{
+								m_objcProcessor->AddRelocatedPointer(reloc.address, entryOffset);
+							}
 						}
 
 						chainEntryAddress += (nextEntryStrideCount * strideSize);
@@ -3167,6 +3478,195 @@ void MachoView::ParseChainedFixups(linkedit_data_command chainedFixups)
 	catch (ReadException&)
 	{
 		m_logger->LogError("Chained Fixup parsing failed");
+	}
+}
+
+
+void MachoView::ParseChainedStarts(MachOHeader& header, section_64 chainedStarts)
+{
+	if (!chainedStarts.offset)
+		return;
+
+	m_logger->LogDebug("Processing Chained Starts");
+
+	// Dummy relocation
+	BNRelocationInfo reloc;
+	memset(&reloc, 0, sizeof(BNRelocationInfo));
+	reloc.type = StandardRelocationType;
+	reloc.size = m_addressSize;
+	reloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
+
+	bool processBinds = true;
+
+	BinaryReader parentReader(GetParentView());
+	BinaryReader mappedReader(this);
+
+	try {
+		uint64_t fixupHeaderAddress = m_universalImageOffset + chainedStarts.offset;
+		parentReader.Seek(fixupHeaderAddress);
+
+		uint32_t pointerFormat = parentReader.Read32();
+		uint32_t startsCount = parentReader.Read32();
+		std::vector<uint32_t> startsOffsets;
+		for (size_t i = 0; i < startsCount; i++)
+		{
+			startsOffsets.push_back(parentReader.Read32());
+		}
+
+		uint8_t strideSize;
+		ChainedFixupPointerGeneric format;
+
+		// Firmware formats will require digging up whatever place they're being used and reversing it.
+		// They are not handled by dyld.
+		switch (pointerFormat) {
+		case DYLD_CHAINED_PTR_ARM64E:
+		case DYLD_CHAINED_PTR_ARM64E_USERLAND:
+		case DYLD_CHAINED_PTR_ARM64E_USERLAND24:
+			strideSize = 8;
+			format = GenericArm64eFixupFormat;
+			break;
+		case DYLD_CHAINED_PTR_ARM64E_KERNEL:
+			strideSize = 4;
+			format = GenericArm64eFixupFormat;
+			break;
+		// case DYLD_CHAINED_PTR_ARM64E_FIRMWARE: Unsupported.
+		case DYLD_CHAINED_PTR_64:
+		case DYLD_CHAINED_PTR_64_OFFSET:
+		case DYLD_CHAINED_PTR_64_KERNEL_CACHE:
+			strideSize = 4;
+			format = Generic64FixupFormat;
+			break;
+		case DYLD_CHAINED_PTR_32:
+		case DYLD_CHAINED_PTR_32_CACHE:
+			strideSize = 4;
+			format = Generic32FixupFormat;
+			break;
+		case DYLD_CHAINED_PTR_32_FIRMWARE:
+			strideSize = 4;
+			format = Firmware32FixupFormat;
+			break;
+		case DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE:
+			strideSize = 1;
+			format = Generic64FixupFormat;
+			break;
+		default:
+		{
+			m_logger->LogError("Chained Starts: Unknown or unsupported pointer format %d, "
+				"unable to process chain starts", pointerFormat);
+			return;
+		}
+		}
+
+		for (uint32_t offset : startsOffsets)
+		{
+			uint64_t chainEntryAddress = m_universalImageOffset + offset;
+
+			bool fixupsDone = false;
+
+			while (!fixupsDone)
+			{
+				ChainedFixupPointer pointer;
+				parentReader.Seek(chainEntryAddress);
+				mappedReader.Seek(chainEntryAddress - m_universalImageOffset + GetStart());
+				if (format == Generic32FixupFormat || format == Firmware32FixupFormat)
+					pointer.raw32 = (uint32_t)(uintptr_t)mappedReader.Read32();
+				else
+					pointer.raw64 = (uintptr_t)mappedReader.Read64();
+
+				bool bind = false;
+				uint64_t nextEntryStrideCount;
+
+				switch (format)
+				{
+				case Generic32FixupFormat:
+					bind = pointer.generic32.bind.bind;
+					nextEntryStrideCount = pointer.generic32.rebase.next;
+					break;
+				case Generic64FixupFormat:
+					bind = pointer.generic64.bind.bind;
+					nextEntryStrideCount = pointer.generic64.rebase.next;
+					break;
+				case GenericArm64eFixupFormat:
+					bind = pointer.arm64e.bind.bind;
+					nextEntryStrideCount = pointer.arm64e.rebase.next;
+					break;
+				case Firmware32FixupFormat:
+					nextEntryStrideCount = pointer.firmware32.next;
+					bind = false;
+					break;
+				}
+
+				m_logger->LogTrace("Chained Starts: @ 0x%llx ( 0x%llx ) - %d 0x%llx", chainEntryAddress,
+					GetStart() + (chainEntryAddress - m_universalImageOffset),
+					bind, nextEntryStrideCount);
+
+				if (bind && processBinds)
+				{
+					m_logger->LogWarn("Chained Starts: Bind pointers not supported in Chained Starts");
+					chainEntryAddress += (nextEntryStrideCount * strideSize);
+					if (nextEntryStrideCount == 0)
+						fixupsDone = true;
+					continue;
+				}
+				else if (!bind)
+				{
+					uint64_t entryOffset;
+					switch (pointerFormat)
+					{
+					case DYLD_CHAINED_PTR_ARM64E:
+					case DYLD_CHAINED_PTR_ARM64E_KERNEL:
+					case DYLD_CHAINED_PTR_ARM64E_USERLAND:
+					case DYLD_CHAINED_PTR_ARM64E_USERLAND24:
+					{
+						if (pointer.arm64e.bind.auth)
+							entryOffset = pointer.arm64e.authRebase.target;
+						else
+							entryOffset = pointer.arm64e.rebase.target;
+
+						if ( pointerFormat != DYLD_CHAINED_PTR_ARM64E || pointer.arm64e.bind.auth)
+							entryOffset += GetStart();
+
+						break;
+					}
+					case DYLD_CHAINED_PTR_64:
+						entryOffset = pointer.generic64.rebase.target;
+						break;
+					case DYLD_CHAINED_PTR_64_OFFSET:
+						entryOffset = pointer.generic64.rebase.target + GetStart();
+						break;
+					case DYLD_CHAINED_PTR_64_KERNEL_CACHE:
+					case DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE:
+						entryOffset = pointer.kernel64.target;
+						break;
+					case DYLD_CHAINED_PTR_32:
+					case DYLD_CHAINED_PTR_32_CACHE:
+						entryOffset = pointer.generic32.rebase.target;
+						break;
+					case DYLD_CHAINED_PTR_32_FIRMWARE:
+						entryOffset = pointer.firmware32.target;
+						break;
+					}
+
+					reloc.address = GetStart() + (chainEntryAddress - m_universalImageOffset);
+					DefineRelocation(m_arch, reloc, entryOffset, reloc.address);
+					m_logger->LogDebug("Chained Starts: Adding relocated pointer %llx -> %llx", reloc.address, entryOffset);
+
+					if (m_objcProcessor)
+					{
+						m_objcProcessor->AddRelocatedPointer(reloc.address, entryOffset);
+					}
+				}
+
+				chainEntryAddress += (nextEntryStrideCount * strideSize);
+
+				if (nextEntryStrideCount == 0)
+					fixupsDone = true;
+			}
+		}
+	}
+	catch (ReadException&)
+	{
+		m_logger->LogError("Chained Starts parsing failed");
 	}
 }
 
@@ -3304,11 +3804,50 @@ uint64_t MachoViewType::ParseHeaders(BinaryView* data, uint64_t imageOffset, mac
 		errorMsg = "invalid file class";
 		return 0;
 	}
+	uint64_t loadCommandStart = reader.GetOffset();
+
+	uint32_t cmd;
+	uint32_t cmdsize;
+	MachoPlatform machoPlat = MachoPlatform::MACHO_PLATFORM_MACOS; // Default to macOS.
+	// Quickly determine the OS from commands.
+	for (uint32_t i = 0; i < ident.ncmds; i++)
+	{
+		cmd = reader.Read32();
+		cmdsize = reader.Read32();
+		if (cmd == LC_BUILD_VERSION)
+		{
+			machoPlat = MachoPlatform(reader.Read32());
+			break;
+		}
+		else if (cmd == LC_VERSION_MIN_MACOSX)
+		{
+			machoPlat = MachoPlatform(1);
+			break;
+		}
+		else if (cmd == LC_VERSION_MIN_IPHONEOS)
+		{
+			machoPlat = MachoPlatform(2);
+			break;
+		}
+		else if (cmd == _LC_VERSION_MIN_TVOS)
+		{
+			machoPlat = MachoPlatform(3);
+			break;
+		}
+		else if (cmd == LC_VERSION_MIN_WATCHOS)
+		{
+			machoPlat = MachoPlatform(4);
+			break;
+		}
+
+		reader.SeekRelative(cmdsize - 8);
+	}
 
 	map<string, Ref<Metadata>> metadataMap = {
 		{"cputype",    new Metadata((uint64_t) ident.cputype)},
 		{"cpusubtype", new Metadata((uint64_t) ident.cpusubtype)},
 		{"flags",      new Metadata((uint64_t) ident.flags)},
+		{"machoplatform",   new Metadata((uint64_t) machoPlat)},
 	};
 
 	Ref<Metadata> metadata = new Metadata(metadataMap);
@@ -3329,7 +3868,7 @@ uint64_t MachoViewType::ParseHeaders(BinaryView* data, uint64_t imageOffset, mac
 		*arch = g_machoViewType->GetArchitecture(ident.cputype, endianness);
 	}
 
-	return reader.GetOffset();
+	return loadCommandStart;
 }
 
 
@@ -3353,6 +3892,33 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 	{
 		if (settings->Contains(override))
 			settings->UpdateProperty(override, "readOnly", false);
+	}
+
+	if (ObjCProcessor::ViewHasObjCMetadata(viewRef))
+	{
+		settings->RegisterSetting("loader.macho.processObjectiveC",
+			R"({
+			"title" : "Process Objective-C metadata",
+			"type" : "boolean",
+			"default" : true,
+			"description" : "Processes Objective-C structures, applying method names and types from encoded metadata"
+			})");
+		Ref<Settings> programSettings = Settings::Instance();
+		if (programSettings->Get<bool>("corePlugins.workflows.objc"))
+		{
+			programSettings->Set("workflows.enable", true, viewRef);
+			programSettings->Set("workflows.functionWorkflow", "core.function.objectiveC", viewRef);
+		}
+	}
+	if (viewRef->GetSectionByName("__cfstring"))
+	{
+		settings->RegisterSetting("loader.macho.processCFStrings",
+			R"({
+			"title" : "Process CFString Metadata",
+			"type" : "boolean",
+			"default" : true,
+			"description" : "Processes CoreFoundation strings, applying string values from encoded metadata"
+			})");
 	}
 
 	// register additional settings

@@ -1,5 +1,6 @@
 import ctypes
 import json
+import os
 from typing import Dict, List, Optional, Tuple
 
 import binaryninja
@@ -15,10 +16,6 @@ class Remote:
 	"""
 	def __init__(self, handle: core.BNRemoteHandle):
 		"""
-		Create a Remote object (but don't connect to it yet)
-
-		:param name: Identifier for remote
-		:param address: Base address (HTTPS) for all api requests
 		:param handle: FFI handle for internal use
 		:raises: RuntimeError if there was an error
 		"""
@@ -245,22 +242,37 @@ class Remote:
 		"""
 		if not self.has_loaded_metadata:
 			self.load_metadata()
-		if username is None:
+		got_auth = False
+		if username is not None and token is not None:
+			got_auth = True
+		if not got_auth:
 			# Try logging in with defaults
-			if self.is_enterprise:
+			if self.is_enterprise and enterprise.is_authenticated():
 				username = enterprise.username()
 				token = enterprise.token()
-			else:
-				# Load from default secrets provider
-				secrets = binaryninja.SecretsProvider[
-					binaryninja.Settings().get_string("enterprise.secretsProvider")]
-				if not secrets.has_data(self.address):
-					raise RuntimeError("No username and token provided, and none found "
-									   "in the default keychain.")
+				if username is not None and token is not None:
+					got_auth = True
+
+		if not got_auth:
+			# Try to load from default secrets provider
+			secrets = binaryninja.SecretsProvider[
+				binaryninja.Settings().get_string("enterprise.secretsProvider")]
+			if secrets.has_data(self.address):
 				creds = json.loads(secrets.get_data(self.address))
 				username = creds['username']
 				token = creds['token']
-		if username is None or token is None:
+				got_auth = True
+
+		if not got_auth:
+			# Try logging in with creds in the env
+			if os.environ.get('BN_ENTERPRISE_USERNAME') is not None and \
+				os.environ.get('BN_ENTERPRISE_PASSWORD') is not None:
+				token = self.request_authentication_token(os.environ['BN_ENTERPRISE_USERNAME'], os.environ['BN_ENTERPRISE_PASSWORD'])
+				if token is not None:
+					username = os.environ['BN_ENTERPRISE_USERNAME']
+					got_auth = True
+
+		if not got_auth or username is None or token is None:
 			raise RuntimeError("Cannot connect without a username or token")
 
 		if not core.BNRemoteConnect(self._handle, username, token):

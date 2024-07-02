@@ -17594,22 +17594,6 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
-	case ENC_SCVTF_D64_FLOAT2INT:
-		// Lift instruction such as `scvtf d3, x15` to vcvtd_f64_s64(int64_t)
-		intrin_id = ARM64_INTRIN_VCVTD_F64_S64;  // SCVTF Dd,Dn
-		add_input_reg(inputs, il, instr.operands[1]);
-		add_output_reg(outputs, il, instr.operands[0]);
-		break;
-	case ENC_SCVTF_D32_FLOAT2INT:
-		intrin_id = ARM64_INTRIN_VCVT_F64_S64;  // SCVTF Dd,Dn
-		add_input_reg(inputs, il, instr.operands[1]);
-		add_output_reg(outputs, il, instr.operands[0]);
-		break;
-	case ENC_SCVTF_S32_FLOAT2INT:
-		intrin_id = ARM64_INTRIN_VCVTS_F32_S32;  // SCVTF Sd,Sn
-		add_input_reg(inputs, il, instr.operands[1]);
-		add_output_reg(outputs, il, instr.operands[0]);
-		break;
 	case ENC_SCVTF_ASIMDMISCFP16_R:
 		if (instr.operands[1].arrSpec == ARRSPEC_2SINGLES)
 			intrin_id = ARM64_INTRIN_VCVT_F32_S32;  // SCVTF Vd.2S,Vn.2S
@@ -17631,11 +17615,6 @@ bool NeonGetLowLevelILForInstruction(
 			intrin_id = ARM64_INTRIN_VCVT_N_F16_S16;  // SCVTF Vd.4H,Vn.4H,#n
 		if (instr.operands[1].arrSpec == ARRSPEC_8HALVES)
 			intrin_id = ARM64_INTRIN_VCVTQ_N_F16_S16;  // SCVTF Vd.8H,Vn.8H,#n
-		add_input_reg(inputs, il, instr.operands[1]);
-		add_output_reg(outputs, il, instr.operands[0]);
-		break;
-	case ENC_SCVTF_ASISDMISCFP16_R:
-		intrin_id = ARM64_INTRIN_VCVTH_F16_S16;  // SCVTF Hd,Hn
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;

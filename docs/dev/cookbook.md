@@ -287,3 +287,17 @@ def invoke_plugin(name: str, bv: BinaryView, address=0, length = 0,function=None
     cmds = PluginCommand.get_valid_list(ctx)
     cmds[name].execute(ctx)
 ```
+
+### Add variable to the Python Console
+```python
+from binaryninja import PythonScriptingProvider, PythonScriptingInstance
+
+def get_my_foo(instance: PythonScriptingInstance):
+    # See scriptingprovider.py for details and implementations of other variables
+    return instance.interpreter.active_addr & 0xffffff
+
+PythonScriptingProvider.register_magic_variable(
+    "my_foo",
+    get_my_foo
+)
+```

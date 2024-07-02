@@ -686,10 +686,52 @@ uint64_t Type::GetOffset() const
 }
 
 
+BNPointerBaseType Type::GetPointerBaseType() const
+{
+	return BNTypeGetPointerBaseType(m_object);
+}
+
+
+int64_t Type::GetPointerBaseOffset() const
+{
+	return BNTypeGetPointerBaseOffset(m_object);
+}
+
+
 Confidence<int64_t> Type::GetStackAdjustment() const
 {
 	BNOffsetWithConfidence result = BNGetTypeStackAdjustment(m_object);
 	return Confidence<int64_t>(result.value, result.confidence);
+}
+
+
+std::set<BNPointerSuffix> Type::GetPointerSuffix() const
+{
+	size_t count = 0;
+	BNPointerSuffix* suffix = BNGetTypePointerSuffix(m_object, &count);
+	std::set<BNPointerSuffix> result(suffix, suffix + count);
+	BNFreePointerSuffixList(suffix, count);
+	return result;
+
+}
+
+
+std::string Type::GetPointerSuffixString() const
+{
+	char* string = BNGetTypePointerSuffixString(m_object);
+	std::string result(string);
+	BNFreeString(string);
+	return result;
+}
+
+
+std::vector<InstructionTextToken> Type::GetPointerSuffixTokens(uint8_t baseConfidence) const
+{
+	size_t count = 0;
+	BNInstructionTextToken* tokens = BNGetTypePointerSuffixTokens(m_object, baseConfidence, &count);
+	std::vector<InstructionTextToken> result = InstructionTextToken::ConvertInstructionTextTokenList(tokens, count);
+	BNFreeInstructionText(tokens, count);
+	return result;
 }
 
 
@@ -1349,9 +1391,31 @@ Confidence<bool> TypeBuilder::IsConst() const
 	return Confidence<bool>(result.value, result.confidence);
 }
 
+
+Confidence<bool> TypeBuilder::IsVolatile() const
+{
+	BNBoolWithConfidence result = BNIsTypeBuilderVolatile(m_object);
+	return Confidence<bool>(result.value, result.confidence);
+}
+
+
 void TypeBuilder::SetIntegerTypeDisplayType(BNIntegerDisplayType displayType)
 {
 	BNSetIntegerTypeDisplayType(m_object, displayType);
+}
+
+
+TypeBuilder& TypeBuilder::SetWidth(size_t width)
+{
+	BNTypeBuilderSetWidth(m_object, width);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetAlignment(size_t alignment)
+{
+	BNTypeBuilderSetAlignment(m_object, alignment);
+	return *this;
 }
 
 
@@ -1914,6 +1978,61 @@ TypeBuilder& TypeBuilder::SetParameters(const std::vector<FunctionParameter>& pa
 }
 
 
+TypeBuilder& TypeBuilder::SetPointerBase(BNPointerBaseType baseType, int64_t baseOffset)
+{
+	BNSetTypeBuilderPointerBase(m_object, baseType, baseOffset);
+	return *this;
+}
+
+
+std::set<BNPointerSuffix> TypeBuilder::GetPointerSuffix() const
+{
+	size_t count = 0;
+	BNPointerSuffix* suffix = BNGetTypeBuilderPointerSuffix(m_object, &count);
+	std::set<BNPointerSuffix> result(suffix, suffix + count);
+	BNFreePointerSuffixList(suffix, count);
+	return result;
+}
+
+
+std::string TypeBuilder::GetPointerSuffixString() const
+{
+	char* string = BNGetTypeBuilderPointerSuffixString(m_object);
+	std::string result(string);
+	BNFreeString(string);
+	return result;
+}
+
+
+std::vector<InstructionTextToken> TypeBuilder::GetPointerSuffixTokens(uint8_t baseConfidence) const
+{
+	size_t count = 0;
+	BNInstructionTextToken* tokens = BNGetTypeBuilderPointerSuffixTokens(m_object, baseConfidence, &count);
+	std::vector<InstructionTextToken> result = InstructionTextToken::ConvertInstructionTextTokenList(tokens, count);
+	BNFreeInstructionText(tokens, count);
+	return result;
+}
+
+
+TypeBuilder& TypeBuilder::AddPointerSuffix(BNPointerSuffix ps)
+{
+	BNAddTypeBuilderPointerSuffix(m_object, ps);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetPointerSuffix(const std::set<BNPointerSuffix>& suffix)
+{
+	std::vector<BNPointerSuffix> apiSuffix;
+	for (auto& s: suffix)
+	{
+		apiSuffix.push_back(s);
+	}
+	BNSetTypeBuilderPointerSuffix(m_object, apiSuffix.data(), apiSuffix.size());
+	return *this;
+}
+
+
 QualifiedName TypeBuilder::GetTypeName() const
 {
 	BNQualifiedName name = BNTypeBuilderGetTypeName(m_object);
@@ -1955,6 +2074,18 @@ bool TypeBuilder::IsSystemCall() const
 uint32_t TypeBuilder::GetSystemCallNumber() const
 {
 	return BNTypeBuilderGetSystemCallNumber(m_object);
+}
+
+
+BNPointerBaseType TypeBuilder::GetPointerBaseType() const
+{
+	return BNTypeBuilderGetPointerBaseType(m_object);
+}
+
+
+int64_t TypeBuilder::GetPointerBaseOffset() const
+{
+	return BNTypeBuilderGetPointerBaseOffset(m_object);
 }
 
 

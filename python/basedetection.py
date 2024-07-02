@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from .enums import BaseAddressDetectionPOIType, BaseAddressDetectionConfidence, BaseAddressDetectionPOISetting
 from .binaryview import BinaryView
 from . import _binaryninjacore as core
+from . import architecture
 
 
 @dataclass
@@ -160,7 +161,7 @@ class BaseAddressDetection:
 
     def detect_base_address(
         self,
-        arch: Optional[str] = "",
+        arch: Optional[Union['architecture.Architecture', str]] = None,
         analysis: Optional[Literal["basic", "controlFlow", "full"]] = "full",
         min_strlen: Optional[int] = 10,
         alignment: Optional[int] = 1024,
@@ -175,7 +176,7 @@ class BaseAddressDetection:
         .. note:: This operation can take a long time to complete depending on the size and complexity of the binary \
         and the settings used
 
-        :param str arch: CPU architecture of the binary (defaults to using auto-detection)
+        :param Architecture arch: CPU architecture of the binary (defaults to using auto-detection)
         :param str analysis: analysis mode (``basic``, ``controlFlow``, or ``full``)
         :param int min_strlen: minimum length of a string to be considered a point-of-interest
         :param int alignment: byte boundary to align the base address to while brute-forcing
@@ -187,8 +188,11 @@ class BaseAddressDetection:
         :rtype: bool
         """
 
+        if isinstance(arch, str):
+            arch = architecture.Architecture[arch]
+
         if not arch and self._view_arch:
-            arch = str(self._view_arch)
+            arch = self._view_arch
 
         if analysis not in ["basic", "controlFlow", "full"]:
             raise ValueError("invalid analysis setting")
@@ -202,8 +206,9 @@ class BaseAddressDetection:
         if high_boundary < low_boundary:
             raise ValueError("upper boundary must be greater than lower boundary")
 
+        archname = arch.name if arch else ""
         settings = core.BNBaseAddressDetectionSettings(
-            arch.encode(),
+            archname.encode(),
             analysis.encode(),
             min_strlen,
             alignment,

@@ -290,6 +290,8 @@ The tags panel allows you to both change existing tag categories, add your own c
 
 The "Memory Map" pane and sidebar widget show segments and sections currently present in the binary, allows some modification of automatically added sections, and allows adding, modifying, and deleting user segments and sections.
 
+Double clicking an address in the "start" or "end" column will navigate in the address in the current view. If an address in the "Data Offset" column is double clicked, that address will always be navigated to in the `Raw` view which may be confusing at first.
+
 ![memory map icon <](../img/memory-map-icon.png "Memory Map Icon")
 
 To access it, use either the icon in the sidebar to open the panel, or use the view drop-down in the main pane, or use the command-palette!

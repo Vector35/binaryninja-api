@@ -2450,8 +2450,17 @@ class Arm64ImportedFunctionRecognizer : public FunctionRecognizer
 
 		Ref<Symbol> funcSym = Symbol::ImportedFunctionFromImportAddressSymbol(sym, func->GetStart());
 		data->DefineAutoSymbol(funcSym);
-		func->ApplyImportedTypes(funcSym);
-		return true;
+
+		auto extSym = data->GetSymbolsByName(funcSym->GetRawName(), data->GetExternalNameSpace());
+		if (!extSym.empty()) {
+			DataVariable var;
+			if (data->GetDataVariableAtAddress(extSym.front()->GetAddress(), var))
+			{
+				func->ApplyImportedTypes(funcSym, var.type);
+			}
+			return true;
+		}
+		return false;
 	}
 
 

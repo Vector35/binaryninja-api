@@ -98,6 +98,7 @@ pub enum Op<D: RiscVDisassembler> {
     Sret,
     Mret,
     Wfi,
+    SfenceVm(RTypeIntInst<D>),
     SfenceVma(RTypeIntInst<D>),
 
     //
@@ -1867,6 +1868,7 @@ impl<D: RiscVDisassembler> Instr<D> {
                     ops.push(Operand::R(j.rd()));
                     ops.push(Operand::I(j.imm()));
                 }
+                Op::SfenceVm(ref r) => {}
                 Op::SfenceVma(ref r) => {
                     ops.push(Operand::R(r.rs1()));
                     ops.push(Operand::R(r.rs2()));
@@ -2077,6 +2079,7 @@ impl<'a, D: RiscVDisassembler + 'a> Mnem<'a, D> {
 
                 Op::Wfi => "wfi",
 
+                Op::SfenceVm(..) => "sfence.vm",
                 Op::SfenceVma(..) => "sfence.vma",
 
                 Op::Csrrw(..) => "csrrw",
@@ -3137,6 +3140,9 @@ pub trait RiscVDisassembler: Sized + Copy + Clone {
                                     // or ignores it
                                     f if (f & 0xfe0) == 0x120 => {
                                         Op::SfenceVma(RTypeIntInst::new(inst)?)
+                                    }
+                                    0x104 => {
+                                        Op::SfenceVm(RTypeIntInst::new(inst)?)
                                     }
 
                                     0x000 => Op::Ecall,

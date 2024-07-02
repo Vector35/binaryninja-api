@@ -607,6 +607,26 @@ where
     A: 'a + Architecture,
     R: ExpressionResultType,
 {
+    pub fn from_expr(expr: Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R>) -> Self {
+        use binaryninjacore_sys::BNGetLowLevelILByIndex;
+
+        let instr = unsafe {
+            BNGetLowLevelILByIndex(expr.function.handle, expr.expr_idx)
+        };
+
+        ExpressionBuilder {
+            function: expr.function,
+            op: instr.operation,
+            size: instr.size,
+            flags: instr.flags,
+            op1: instr.operands[0],
+            op2: instr.operands[1],
+            op3: instr.operands[2],
+            op4: instr.operands[3],
+            _ty: PhantomData
+        }
+    }
+
     pub fn with_flag_write(mut self, flag_write: A::FlagWrite) -> Self {
         // TODO verify valid id
         self.flags = flag_write.id();
@@ -1012,6 +1032,43 @@ where
 
         let expr_idx =
             unsafe { BNLowLevelILAddExpr(self.handle, LLIL_REG, size, 0, reg as u64, 0, 0, 0) };
+
+        Expression::new(self, expr_idx)
+    }
+
+    pub fn reg_split<H: Into<Register<A::Register>>, L: Into<Register<A::Register>>>(
+        &self,
+        size: usize,
+        hi_reg: H,
+        lo_reg: L,
+    ) -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_REG_SPLIT;
+
+        // TODO verify valid id
+        let hi_reg = match hi_reg.into() {
+            Register::ArchReg(r) => r.id(),
+            Register::Temp(r) => 0x8000_0000 | r,
+        };
+
+        // TODO verify valid id
+        let lo_reg = match lo_reg.into() {
+            Register::ArchReg(r) => r.id(),
+            Register::Temp(r) => 0x8000_0000 | r,
+        };
+
+        let expr_idx = unsafe {
+            BNLowLevelILAddExpr(
+                self.handle,
+                LLIL_REG_SPLIT,
+                size,
+                0,
+                hi_reg as u64,
+                lo_reg as u64,
+                0,
+                0,
+            )
+        };
 
         Expression::new(self, expr_idx)
     }

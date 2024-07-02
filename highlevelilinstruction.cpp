@@ -1103,7 +1103,8 @@ void HighLevelILInstruction::CollectSubExprs(stack<size_t>& toProcess) const
 		toProcess.push(GetConditionExpr<HLIL_SWITCH>().exprIndex);
 		break;
 	case HLIL_CASE:
-		toProcess.push(GetTrueExpr<HLIL_CASE>().exprIndex);
+		if (ast)
+			toProcess.push(GetTrueExpr<HLIL_CASE>().exprIndex);
 		exprs = GetValueExprs<HLIL_CASE>();
 		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
 			toProcess.push(i->exprIndex);
@@ -3261,4 +3262,56 @@ ExprId HighLevelILFunction::FloatCompareOrdered(size_t size, ExprId a, ExprId b,
 ExprId HighLevelILFunction::FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_FCMP_UO, loc, size, a, b);
+}
+
+
+fmt::format_context::iterator fmt::formatter<HighLevelILInstruction>::format(const HighLevelILInstruction& obj, format_context& ctx) const
+{
+	if (!obj.function)
+		return fmt::format_to(ctx.out(), "<uninit>");
+
+	vector<InstructionTextToken> tokens;
+	Ref<DisassemblySettings> settings = new DisassemblySettings();
+	vector<DisassemblyTextLine> lines = obj.function->GetExprText(obj, settings);
+	if (!lines.empty())
+	{
+		if (presentation == '?')
+		{
+			fmt::format_to(ctx.out(), "{} ", obj.operation);
+			fmt::format_to(ctx.out(), "@ {:#x} ", obj.address);
+			if (obj.exprIndex != BN_INVALID_EXPR && (obj.exprIndex & 0xffff000000000000) == 0)
+			{
+				fmt::format_to(ctx.out(), "[expr {}] ", obj.exprIndex);
+			}
+			if (obj.instructionIndex != BN_INVALID_EXPR && (obj.instructionIndex & 0xffff000000000000) == 0)
+			{
+				fmt::format_to(ctx.out(), "[instr {}] ", obj.instructionIndex);
+			}
+			Ref<Type> type = obj.GetType();
+			if (type)
+			{
+				fmt::format_to(ctx.out(), "[type: {}] ", type->GetString());
+			}
+		}
+
+		bool first = true;
+		for (auto& line: lines)
+		{
+			if (!first)
+			{
+				fmt::format_to(ctx.out(), " ; ");
+			}
+			first = false;
+
+			for (auto& token: line.tokens)
+			{
+				fmt::format_to(ctx.out(), "{}", token.text);
+			}
+		}
+	}
+	else
+	{
+		fmt::format_to(ctx.out(), "???");
+	}
+	return ctx.out();
 }

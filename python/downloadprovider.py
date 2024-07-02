@@ -128,8 +128,8 @@ class DownloadInstance(object):
 				self.bn_response.headerKeys = (ctypes.c_char_p * len(py_response.headers))()
 				self.bn_response.headerValues = (ctypes.c_char_p * len(py_response.headers))()
 				for i, (key, value) in enumerate(py_response.headers.items()):
-					self.bn_response.headerKeys[i] = core.BNAllocString(key.decode('utf8'))
-					self.bn_response.headerValues[i] = core.BNAllocString(value.decode('utf8'))
+					self.bn_response.headerKeys[i] = core.BNAllocString(key)
+					self.bn_response.headerValues[i] = core.BNAllocString(value)
 
 				out_response[0] = ctypes.pointer(self.bn_response)
 			else:

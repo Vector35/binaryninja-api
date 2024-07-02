@@ -54,10 +54,8 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 	}
 
 	auto fileMetadata = m_data->GetFile();
-	auto existingViews = fileMetadata->GetExistingViews();
-	if ((existingViews.size() == 2 && fileMetadata->GetViewOfType("Mapped")) || existingViews.size() == 1)
+	if (m_data == fileMetadata->GetViewOfType("Raw") || m_data == fileMetadata->GetViewOfType("Mapped"))
 	{
-		// Binary either only has raw view (Open for triage mode) or raw and mapped view
 		QGroupBox* baseDetectionGroup = new QGroupBox("Base Address Detection", container);
 		QVBoxLayout* baseDetectionLayout = new QVBoxLayout();
 		baseDetectionLayout->addWidget(new BaseAddressDetectionWidget(this, data));

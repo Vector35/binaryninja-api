@@ -72,6 +72,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [clang-sys] ([clang-sys license] - APACHE 2.0)
     - [core-foundation-sys] ([core-foundation-sys license] - APACHE 2.0 / MIT)
     - [core-foundation] ([core-foundation license] - APACHE 2.0 / MIT)
+    - [cpp-demangle] ([cpp-demangle license] - APACHE 2.0 / MIT)
     - [cpufeatures] ([cpufeatures license] - APACHE 2.0 / MIT)
     - [crc] ([crc license] - APACHE 2.0 / MIT)
     - [crc-catalog] ([crc-catalog license] - APACHE 2.0 / MIT)
@@ -121,6 +122,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [indexmap] ([indexmap license] - APACHE 2.0 / MIT)
     - [input_buffer] ([input_buffer license] - APACHE 2.0 / MIT)
     - [ipnet] ([ipnet license] - APACHE 2.0 / MIT)
+    - [iset] ([iset license] - MIT)
     - [itertools] ([itertools license] - APACHE 2.0 / MIT)
     - [itoa] ([itoa license] - APACHE 2.0 / MIT)
     - [keyring] ([keyring license] - APACHE 2.0 / MIT)
@@ -426,6 +428,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [core-foundation-sys license]: https://github.com/servo/core-foundation-rs/blob/master/LICENSE-MIT
 [core-foundation]: https://github.com/servo/core-foundation-rs
 [core-foundation license]: https://github.com/servo/core-foundation-rs/blob/master/LICENSE-MIT
+[cpp-demangle]: https://github.com/gimli-rs/cpp_demangle
+[cpp-demangle license]: https://github.com/gimli-rs/cpp_demangle/blob/master/LICENSE-MIT
 [cpufeatures]: https://github.com/RustCrypto/utils/tree/master/cpufeatures
 [cpufeatures license]: https://github.com/RustCrypto/utils/blob/master/cpufeatures/LICENSE-MIT
 [crc]: https://github.com/mrhooray/crc-rs
@@ -526,6 +530,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [input_buffer license]: https://github.com/snapview/input_buffer/blob/master/LICENSE-MIT
 [ipnet]: https://github.com/krisprice/ipnet
 [ipnet license]: https://github.com/krisprice/ipnet/blob/master/LICENSE-MIT
+[iset]: https://github.com/tprodanov/iset
+[iset license]: https://github.com/tprodanov/iset/blob/master/LICENSE
 [itertools]: https://github.com/rust-itertools/itertools
 [itertools license]: https://github.com/rust-itertools/itertools/blob/master/LICENSE-MIT
 [itoa]: https://github.com/dtolnay/itoa

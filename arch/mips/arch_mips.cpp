@@ -306,7 +306,7 @@ protected:
 			if (instr.operands[0].immediate != addr + 8)
 				result.AddBranch(CallDestination, instr.operands[0].immediate, nullptr, hasBranchDelay);
 			else
-				result.branchDelay = 1; // We have a "get pc" mnemonic; do nothing
+				result.delaySlots = 1; // We have a "get pc" mnemonic; do nothing
 			break;
 
 		case MIPS_JAL:
@@ -316,7 +316,7 @@ protected:
 		//Jmp to register register value is unknown
 		case MIPS_JALR:
 		case MIPS_JALR_HB:
-			result.branchDelay = 1;
+			result.delaySlots = 1;
 			break;
 
 		case MIPS_BGEZAL:
@@ -1753,8 +1753,17 @@ private:
 
 		Ref<Symbol> funcSym = Symbol::ImportedFunctionFromImportAddressSymbol(sym, func->GetStart());
 		data->DefineAutoSymbol(funcSym);
-		func->ApplyImportedTypes(funcSym);
-		return true;
+
+		auto extSym = data->GetSymbolsByName(funcSym->GetRawName(), data->GetExternalNameSpace());
+		if (!extSym.empty()) {
+			DataVariable var;
+			if (data->GetDataVariableAtAddress(extSym.front()->GetAddress(), var))
+			{
+				func->ApplyImportedTypes(funcSym, var.type);
+			}
+			return true;
+		}
+		return false;
 	}
 
 
@@ -1817,18 +1826,14 @@ private:
 
 		if (pltSym)
 		{
-			for (auto& extSym : data->GetSymbolsByName(pltSym->GetRawName()))
-			{
-				if (extSym->GetType() == ExternalSymbol)
+			auto extSym = data->GetSymbolsByName(pltSym->GetRawName(), data->GetExternalNameSpace());
+			if (!extSym.empty()) {
+				DataVariable var;
+				if (data->GetDataVariableAtAddress(extSym.front()->GetAddress(), var))
 				{
-					DataVariable var;
-					if (data->GetDataVariableAtAddress(extSym->GetAddress(), var))
-					{
-						func->ApplyImportedTypes(pltSym, var.type);
-					}
-
-					return true;
+					func->ApplyImportedTypes(pltSym, var.type);
 				}
+				return true;
 			}
 		}
 
@@ -1945,8 +1950,17 @@ private:
 
 		Ref<Symbol> funcSym = Symbol::ImportedFunctionFromImportAddressSymbol(sym, func->GetStart());
 		data->DefineAutoSymbol(funcSym);
-		func->ApplyImportedTypes(funcSym);
-		return true;
+
+		auto extSym = data->GetSymbolsByName(funcSym->GetRawName(), data->GetExternalNameSpace());
+		if (!extSym.empty()) {
+			DataVariable var;
+			if (data->GetDataVariableAtAddress(extSym.front()->GetAddress(), var))
+			{
+				func->ApplyImportedTypes(funcSym, var.type);
+			}
+			return true;
+		}
+		return false;
 	}
 
 

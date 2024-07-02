@@ -216,6 +216,9 @@ class Metadata:
 			result[key] = self[key]
 		return result
 
+	def get_json_string(self):
+		return str(core.BNMetadataGetJsonString(self.handle))
+
 	@property
 	def type(self):
 		return MetadataType(core.BNMetadataGetType(self.handle))

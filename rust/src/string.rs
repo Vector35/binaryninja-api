@@ -246,3 +246,15 @@ unsafe impl BnStrCompatible for &QualifiedName {
         self.string().into_bytes_with_nul()
     }
 }
+
+pub trait IntoJson {
+    type Output: BnStrCompatible;
+    fn get_json_string(self) -> Result<Self::Output, ()>;
+}
+
+impl<S: BnStrCompatible> IntoJson for S {
+    type Output = S;
+    fn get_json_string(self) -> Result<Self::Output, ()> {
+        Ok(self)
+    }
+}

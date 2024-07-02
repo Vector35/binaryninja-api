@@ -55,6 +55,14 @@ class XrefItem
 		TypeXrefType
 	};
 
+	enum XrefQueryKind
+	{
+		AddressXrefQuery,
+		TypeXrefQuery,
+		TypeFieldXrefQuery,
+		LocalVarXrefQuery
+	};
+
   protected:
 	FunctionRef m_func;
 	ArchitectureRef m_arch;
@@ -65,6 +73,7 @@ class XrefItem
 	BNFunctionGraphType m_ilType;
 	size_t m_instrId;
 	XrefType m_type;
+	XrefQueryKind m_queryKind;
 	XrefDirection m_direction;
 	mutable std::vector<BinaryNinja::InstructionTextToken> m_cachedTokens;
 	mutable XrefHeader* m_parentItem;
@@ -74,11 +83,13 @@ class XrefItem
 	explicit XrefItem();
 	explicit XrefItem(XrefHeader* parent, XrefType type, FunctionRef func);
 	// The four constructors are used for code/data/type/variable references, respectively
-	explicit XrefItem(BinaryNinja::ReferenceSource ref, XrefType type, XrefDirection direction);
-	explicit XrefItem(uint64_t addr, XrefType type, XrefDirection direction);
-	explicit XrefItem(BinaryNinja::TypeReferenceSource ref, XrefType type, XrefDirection direction);
-	explicit XrefItem(
-	    BinaryNinja::Variable var, BinaryNinja::ILReferenceSource ref, XrefType type, XrefDirection direction);
+	explicit XrefItem(BinaryNinja::ReferenceSource ref, XrefType type, XrefDirection direction,
+			XrefQueryKind kind);
+	explicit XrefItem(uint64_t addr, XrefType type, XrefDirection direction, XrefQueryKind kind);
+	explicit XrefItem(BinaryNinja::TypeReferenceSource ref, XrefType type, XrefDirection direction,
+			XrefQueryKind kind);
+	explicit XrefItem(BinaryNinja::Variable var, BinaryNinja::ILReferenceSource ref, XrefType type,
+			XrefDirection direction, XrefQueryKind kind);
 	XrefItem(const XrefItem& ref);
 	virtual ~XrefItem();
 
@@ -92,6 +103,7 @@ class XrefItem
 	BNFunctionGraphType ilType() const { return m_ilType; }
 	size_t instrId() const { return m_instrId; }
 	XrefType type() const { return m_type; }
+	XrefQueryKind kind() const { return m_queryKind; }
 	int size() const { return m_size; }
 	void setSize(int size) const { m_size = size; }
 	void setParent(XrefHeader* parent) const;

@@ -5,6 +5,7 @@ There's so many things to learn about working with Types in Binary Ninja that we
 - [Basic Type Editing](basictypes.md): Brief overview of the basics
 - [Working with Types](type.md): Interacting with types in disassembly and decompilation
 - [Importing/Exporting Types](typeimportexport.md): How to import or export types from header files, archives, or other BNDBs
+- [Attributes and Annotations](attributes.md): Annotations you can apply to types to influence analysis and presentation
 
 Additionally, several types of containers for type information are documented here:
 

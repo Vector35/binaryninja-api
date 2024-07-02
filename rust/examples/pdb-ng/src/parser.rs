@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::env;
 use std::fmt::Display;
+use std::sync::OnceLock;
 
 use anyhow::{anyhow, Result};
 use log::{debug, info};
@@ -63,36 +64,36 @@ pub struct PDBParserInstance<'a, S: Source<'a> + 'a> {
     /// type_parser.rs
 
     /// TypeIndex -> ParsedType enum used during parsing
-    pub(crate) indexed_types: HashMap<TypeIndex, ParsedType>,
+    pub(crate) indexed_types: BTreeMap<TypeIndex, ParsedType>,
     /// QName -> Binja Type for finished types
-    pub(crate) named_types: HashMap<String, Ref<Type>>,
+    pub(crate) named_types: BTreeMap<String, Ref<Type>>,
     /// Raw (mangled) name -> TypeIndex for resolving forward references
-    pub(crate) full_type_indices: HashMap<String, TypeIndex>,
+    pub(crate) full_type_indices: BTreeMap<String, TypeIndex>,
     /// Stack of types we're currently parsing
     pub(crate) type_stack: Vec<TypeIndex>,
     /// Stack of parent types we're parsing nested types inside of
     pub(crate) namespace_stack: Vec<String>,
     /// Type Index -> Does it return on the stack
-    pub(crate) type_default_returnable: HashMap<TypeIndex, bool>,
+    pub(crate) type_default_returnable: BTreeMap<TypeIndex, bool>,
 
     /// symbol_parser.rs
 
     /// List of fully parsed symbols from all modules
     pub(crate) parsed_symbols: Vec<ParsedSymbol>,
     /// Raw name -> index in parsed_symbols
-    pub(crate) parsed_symbols_by_name: HashMap<String, usize>,
+    pub(crate) parsed_symbols_by_name: BTreeMap<String, usize>,
     /// Raw name -> Symbol index for looking up symbols for the currently parsing module (mostly for thunks)
-    pub(crate) named_symbols: HashMap<String, SymbolIndex>,
+    pub(crate) named_symbols: BTreeMap<String, SymbolIndex>,
     /// Parent -> Children symbol index tree for the currently parsing module
-    pub(crate) symbol_tree: HashMap<SymbolIndex, Vec<SymbolIndex>>,
+    pub(crate) symbol_tree: BTreeMap<SymbolIndex, Vec<SymbolIndex>>,
     /// Child -> Parent symbol index mapping, inverse of symbol_tree
-    pub(crate) symbol_parents: HashMap<SymbolIndex, SymbolIndex>,
+    pub(crate) symbol_parents: BTreeMap<SymbolIndex, SymbolIndex>,
     /// Stack of (start, end) indices for the current symbols being parsed while constructing the tree
     pub(crate) symbol_stack: Vec<(SymbolIndex, SymbolIndex)>,
     /// Index -> parsed symbol for the currently parsing module
-    pub(crate) indexed_symbols: HashMap<SymbolIndex, ParsedSymbol>,
+    pub(crate) indexed_symbols: BTreeMap<SymbolIndex, ParsedSymbol>,
     /// Symbol address -> Symbol for looking up by address
-    pub(crate) addressed_symbols: HashMap<u64, Vec<ParsedSymbol>>,
+    pub(crate) addressed_symbols: BTreeMap<u64, Vec<ParsedSymbol>>,
     /// CPU type of the currently parsing module
     pub(crate) module_cpu_type: Option<CPUType>,
 }
@@ -166,104 +167,116 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             self.debug_info.add_type(name, ty.as_ref(), &[]); // TODO : Components
         }
 
-        info!("PDB found {} types", self.named_types.len());
-
-        let (symbols, functions) =
-            self.parse_symbols(Self::split_progress(&progress, 1, &[1.0, 3.0, 0.5, 0.5]))?;
+        info!(
+            "PDB found {} types (before resolving NTRs)",
+            self.named_types.len()
+        );
 
         if self
             .settings
-            .get_bool("pdb.features.createMissingNamedTypes", Some(self.bv), None)
+            .get_bool("pdb.features.parseSymbols", Some(self.bv), None)
         {
-            self.resolve_missing_ntrs(
-                &symbols,
-                Self::split_progress(&progress, 2, &[1.0, 3.0, 0.5, 0.5]),
-            )?;
-            self.resolve_missing_ntrs(
-                &functions,
-                Self::split_progress(&progress, 3, &[1.0, 3.0, 0.5, 0.5]),
-            )?;
-        }
+            let (symbols, functions) =
+                self.parse_symbols(Self::split_progress(&progress, 1, &[1.0, 3.0, 0.5, 0.5]))?;
 
-        info!("PDB found {} data variables", symbols.len());
-        info!("PDB found {} functions", functions.len());
+            if self
+                .settings
+                .get_bool("pdb.features.createMissingNamedTypes", Some(self.bv), None)
+            {
+                self.resolve_missing_ntrs(
+                    &symbols,
+                    Self::split_progress(&progress, 2, &[1.0, 3.0, 0.5, 0.5]),
+                )?;
+                self.resolve_missing_ntrs(
+                    &functions,
+                    Self::split_progress(&progress, 3, &[1.0, 3.0, 0.5, 0.5]),
+                )?;
+            }
 
-        let allow_void =
-            self.settings
-                .get_bool("pdb.features.allowVoidGlobals", Some(self.bv), None);
+            info!("PDB found {} types", self.named_types.len());
+            info!("PDB found {} data variables", symbols.len());
+            info!("PDB found {} functions", functions.len());
 
-        for sym in symbols {
-            match sym {
-                ParsedSymbol::Data(ParsedDataSymbol {
-                    address,
-                    name,
-                    type_,
-                    ..
-                }) => {
-                    let real_type =
-                        type_.unwrap_or_else(|| Conf::new(Type::void(), min_confidence()));
+            let allow_void =
+                self.settings
+                    .get_bool("pdb.features.allowVoidGlobals", Some(self.bv), None);
 
-                    if real_type.contents.type_class() == TypeClass::VoidTypeClass {
-                        if !allow_void {
-                            self.log(|| {
-                                format!("Not adding void-typed symbol {:?}@{:x}", name, address)
-                            });
-                            continue;
+            let min_confidence_type = Conf::new(Type::void(), min_confidence());
+            for sym in symbols.iter() {
+                match sym {
+                    ParsedSymbol::Data(ParsedDataSymbol {
+                        address,
+                        name,
+                        type_,
+                        ..
+                    }) => {
+                        let real_type =
+                            type_.as_ref().unwrap_or(&min_confidence_type);
+
+                        if real_type.contents.type_class() == TypeClass::VoidTypeClass {
+                            if !allow_void {
+                                self.log(|| {
+                                    format!("Not adding void-typed symbol {:?}@{:x}", name, address)
+                                });
+                                continue;
+                            }
                         }
-                    }
 
-                    self.log(|| {
-                        format!(
-                            "Adding data variable: 0x{:x}: {} {:?}",
-                            address, &name.raw_name, real_type
-                        )
-                    });
-                    self.debug_info
-                        .add_data_variable_info(DataVariableAndName::new(
-                            address,
-                            real_type,
-                            true,
-                            name.full_name.unwrap_or(name.raw_name),
-                        ));
-                }
-                s => {
-                    self.log(|| format!("Not adding non-data symbol {:?}", s));
+                        self.log(|| {
+                            format!(
+                                "Adding data variable: 0x{:x}: {} {:?}",
+                                address, &name.raw_name, real_type
+                            )
+                        });
+                        self.debug_info
+                            .add_data_variable_info(DataVariableAndName::new(
+                                *address,
+                                real_type.clone(),
+                                true,
+                                name.full_name.as_ref().unwrap_or(&name.raw_name),
+                            ));
+                    }
+                    s => {
+                        self.log(|| format!("Not adding non-data symbol {:?}", s));
+                    }
                 }
             }
-        }
 
-        for sym in functions {
-            match sym {
-                ParsedSymbol::Procedure(ParsedProcedure {
-                    address,
-                    name,
-                    type_,
-                    ..
-                }) => {
-                    self.log(|| {
-                        format!(
-                            "Adding function: 0x{:x}: {} {:?}",
-                            address, &name.raw_name, type_
-                        )
-                    });
-                    self.debug_info.add_function(DebugFunctionInfo::new(
-                        Some(name.short_name.unwrap_or(name.raw_name.clone())),
-                        Some(name.full_name.unwrap_or(name.raw_name.clone())),
-                        Some(name.raw_name),
-                        type_.clone().and_then(|conf| {
-                            // TODO: When DebugInfo support confidence on function types, remove this
-                            if conf.confidence == 0 {
-                                None
-                            } else {
-                                Some(conf.contents)
-                            }
-                        }),
-                        Some(address),
-                        Some(self.platform.clone()),
-                        vec![], // TODO : Components
-                    ));
+            for sym in functions {
+                match sym {
+                    ParsedSymbol::Procedure(ParsedProcedure {
+                        address,
+                        name,
+                        type_,
+                        locals,
+                        ..
+                    }) => {
+                        self.log(|| {
+                            format!(
+                                "Adding function: 0x{:x}: {} {:?}",
+                                address, &name.raw_name, type_
+                            )
+                        });
+                        self.debug_info.add_function(DebugFunctionInfo::new(
+                            Some(name.short_name.unwrap_or(name.raw_name.clone())),
+                            Some(name.full_name.unwrap_or(name.raw_name.clone())),
+                            Some(name.raw_name),
+                            type_.clone().and_then(|conf| {
+                                // TODO: When DebugInfo support confidence on function types, remove this
+                                if conf.confidence == 0 {
+                                    None
+                                } else {
+                                    Some(conf.contents)
+                                }
+                            }),
+                            Some(address),
+                            Some(self.platform.clone()),
+                            vec![], // TODO : Components
+                            vec![], //TODO: local variables
+                        ));
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         }
 
@@ -277,15 +290,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     ) {
         let used_name = name.name().to_string();
         if let Some(&found) =
-            unknown_names.iter().find_map(
-                |(key, value)| {
-                    if key == &used_name {
-                        Some(value)
-                    } else {
-                        None
-                    }
-                },
-            )
+            unknown_names.get(&used_name)
         {
             if found != name.class() {
                 // Interesting case, not sure we care
@@ -395,7 +400,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
 
         for (name, class) in unknown_names.into_iter() {
-            if known_names.iter().any(|known| known == &name) {
+            if known_names.contains(&name) {
                 self.log(|| format!("Found referenced name and ignoring: {}", &name));
                 continue;
             }
@@ -451,7 +456,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
     /// Lazy logging function that prints like 20MB of messages
     pub(crate) fn log<F: FnOnce() -> D, D: Display>(&self, msg: F) {
-        if env::var("BN_DEBUG_PDB").is_ok() {
+        static MEM: OnceLock<bool> = OnceLock::new();
+        let debug_pdb = MEM.get_or_init(|| {
+            env::var("BN_DEBUG_PDB").is_ok()
+        });
+        if *debug_pdb {
             let space = "\t".repeat(self.type_stack.len()) + &"\t".repeat(self.symbol_stack.len());
             let msg = format!("{}", msg());
             debug!(

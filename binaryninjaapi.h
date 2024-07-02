@@ -1366,6 +1366,7 @@ namespace BinaryNinja {
 		std::vector<uint8_t> GetRaw() const;
 		std::vector<Ref<Metadata>> GetArray() const;
 		std::map<std::string, Ref<Metadata>> GetKeyValueStore() const;
+		std::string GetJsonString() const;
 
 		// For key-value data only
 		/*! Get a Metadata object by key. Only for if IsKeyValueStore == true
@@ -1483,15 +1484,12 @@ namespace BinaryNinja {
 	    \param filename Path to filename or BNDB to open.
 	    \param updateAnalysis If true, UpdateAnalysisAndWait() will be called after opening
 	                          a BinaryView.
+	    \param options A Json string whose keys are setting identifiers and whose values are the desired settings.
 	    \param progress Optional function to be called with progress updates as the view is
 	                    being loaded. If the function returns false, it will cancel Load.
-	    \param options A Json object whose keys are setting identifiers and whose values are
-	                   the desired settings.
 	    \return Constructed view, or a nullptr Ref<BinaryView>
 	*/
-	Ref<BinaryView> Load(const std::string& filename, bool updateAnalysis = true,
-		std::function<bool(size_t, size_t)> progress = {}, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType));
-
+	Ref<BinaryView> Load(const std::string& filename, bool updateAnalysis = true, const std::string& options = "{}", std::function<bool(size_t, size_t)> progress = {});
 	/*! Open a BinaryView from a raw data buffer, initializing data views and loading settings.
 
 	    @threadmainonly
@@ -1502,14 +1500,12 @@ namespace BinaryNinja {
 	    \param rawData Buffer with raw binary data to load (cannot load from bndb)
 	    \param updateAnalysis If true, UpdateAnalysisAndWait() will be called after opening
 	                          a BinaryView.
+	    \param options A Json string whose keys are setting identifiers and whose values are the desired settings.
 	    \param progress Optional function to be called with progress updates as the view is
 	                    being loaded. If the function returns false, it will cancel Load.
-	    \param options A Json object whose keys are setting identifiers and whose values are
-	                   the desired settings.
 	    \return Constructed view, or a nullptr Ref<BinaryView>
 	*/
-	Ref<BinaryView> Load(const DataBuffer& rawData, bool updateAnalysis = true,
-		std::function<bool(size_t, size_t)> progress = {}, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType));
+	Ref<BinaryView> Load(const DataBuffer& rawData, bool updateAnalysis = true, const std::string& options = "{}", std::function<bool(size_t, size_t)> progress = {});
 
 
 	/*! Open a BinaryView from a raw BinaryView, initializing data views and loading settings.
@@ -1522,16 +1518,27 @@ namespace BinaryNinja {
 	    \param rawData BinaryView with raw binary data to load
 	    \param updateAnalysis If true, UpdateAnalysisAndWait() will be called after opening
 	                          a BinaryView.
+	    \param options A Json string whose keys are setting identifiers and whose values are the desired settings.
 	    \param progress Optional function to be called with progress updates as the view is
 	                    being loaded. If the function returns false, it will cancel Load.
-	    \param options A Json object whose keys are setting identifiers and whose values are
-	                   the desired settings.
-	    \param isDatabase True if the view being loaded is the raw view of an already opened database.
 	    \return Constructed view, or a nullptr Ref<BinaryView>
 	*/
-	Ref<BinaryView> Load(Ref<BinaryView> rawData, bool updateAnalysis = true,
-		std::function<bool(size_t, size_t)> progress = {}, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType),
-		bool isDatabase = false);
+	Ref<BinaryView> Load(Ref<BinaryView> rawData, bool updateAnalysis = true, const std::string& options = "{}", std::function<bool(size_t, size_t)> progress = {});
+
+	/*!
+		Deprecated. Use non-metadata version.
+	*/
+	Ref<BinaryView> Load(const std::string& filename, bool updateAnalysis, std::function<bool(size_t, size_t)> progress, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType));
+
+	/*!
+		Deprecated. Use non-metadata version.
+	*/
+	Ref<BinaryView> Load(const DataBuffer& rawData, bool updateAnalysis, std::function<bool(size_t, size_t)> progress, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType));
+
+	/*!
+		Deprecated. Use non-metadata version.
+	*/
+	Ref<BinaryView> Load(Ref<BinaryView> rawData, bool updateAnalysis, std::function<bool(size_t, size_t)> progress, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType), bool isDatabase = false);
 
 	/*! Demangles using LLVM's demangler
 
@@ -3143,6 +3150,8 @@ namespace BinaryNinja {
 		static void UndoEntryTakenCallback(void* ctxt, BNBinaryView* data, BNUndoEntry* entry);
 		static void RedoEntryTakenCallback(void* ctxt, BNBinaryView* data, BNUndoEntry* entry);
 
+		static void RebasedCallback(void* ctxt, BNBinaryView* oldView, BNBinaryView* newView);
+
 	  public:
 
 		enum NotificationType : uint64_t
@@ -3199,6 +3208,7 @@ namespace BinaryNinja {
 			UndoEntryAdded = 1ULL << 49,
 			UndoEntryTaken = 1ULL << 50,
 			RedoEntryTaken = 1ULL << 51,
+			Rebased = 1ULL << 52,
 
 			BinaryDataUpdates = DataWritten | DataInserted | DataRemoved,
 			FunctionLifetime = FunctionAdded | FunctionRemoved,
@@ -3627,6 +3637,17 @@ namespace BinaryNinja {
 		{
 			(void)data;
 			(void)entry;
+		}
+
+		/*! This notification is posted whenever a binary view is rebased
+
+		    \param oldView BinaryView the old view
+		    \param newView BinaryView the new view
+		 */
+		virtual void OnRebased(BinaryView* oldView, BinaryView* newView)
+		{
+			(void)oldView;
+			(void)newView;
 		}
 	};
 
@@ -4532,6 +4553,8 @@ namespace BinaryNinja {
 		virtual bool PerformSave(FileAccessor* file);
 		void PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, uint64_t target, uint64_t reloc);
 		void PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, Ref<Symbol> sym, uint64_t reloc);
+
+	  public:
 		void NotifyDataWritten(uint64_t offset, size_t len);
 		void NotifyDataInserted(uint64_t offset, size_t len);
 		void NotifyDataRemoved(uint64_t offset, uint64_t len);
@@ -4939,6 +4962,12 @@ namespace BinaryNinja {
 		*/
 		void AddEntryPointForAnalysis(Platform* platform, uint64_t start);
 
+		/*! adds an function to all entry function list
+
+			\param func Function to add
+		*/
+		void AddToEntryFunctions(Function* func);
+
 		/*! removes a function from the list of functions
 
 		    \param func Function to be removed
@@ -5082,6 +5111,11 @@ namespace BinaryNinja {
 		*/
 		Ref<Function> GetAnalysisEntryPoint();
 
+		/*! Get all entry functions (including user-defined ones)
+
+		    \return vector of Functions
+		*/
+		std::vector<Ref<Function>> GetAllEntryFunctions();
 
 		/*! Get most recently used Basic Block containing a virtual address
 
@@ -7569,7 +7603,7 @@ namespace BinaryNinja {
 	struct InstructionInfo : public BNInstructionInfo
 	{
 		InstructionInfo();
-		void AddBranch(BNBranchType type, uint64_t target = 0, Architecture* arch = nullptr, bool hasDelaySlot = false);
+		void AddBranch(BNBranchType type, uint64_t target = 0, Architecture* arch = nullptr, uint8_t delaySlots = 0);
 	};
 
 	struct NameAndType
@@ -8594,6 +8628,12 @@ namespace BinaryNinja {
 
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
+		BNPointerBaseType GetPointerBaseType() const;
+		int64_t GetPointerBaseOffset() const;
+
+		std::set<BNPointerSuffix> GetPointerSuffix() const;
+		std::string GetPointerSuffixString() const;
+		std::vector<InstructionTextToken> GetPointerSuffixTokens(uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
 
 		std::string GetString(Platform* platform = nullptr, BNTokenEscapingType escaping = NoTokenEscapingType) const;
 		std::string GetTypeAndName(const QualifiedName& name, BNTokenEscapingType escaping = NoTokenEscapingType) const;
@@ -8963,6 +9003,8 @@ namespace BinaryNinja {
 		Ref<Enumeration> GetEnumeration() const;
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
 		Confidence<BNMemberScope> GetScope() const;
+		TypeBuilder& SetWidth(size_t width);
+		TypeBuilder& SetAlignment(size_t alignment);
 		TypeBuilder& SetNamedTypeReference(NamedTypeReference* ntr);
 		TypeBuilder& SetScope(const Confidence<BNMemberScope>& scope);
 		TypeBuilder& SetConst(const Confidence<bool>& cnst);
@@ -8978,11 +9020,21 @@ namespace BinaryNinja {
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
 		uint32_t GetSystemCallNumber() const;
+		BNPointerBaseType GetPointerBaseType() const;
+		int64_t GetPointerBaseOffset() const;
 
 		TypeBuilder& SetOffset(uint64_t offset);
 		TypeBuilder& SetFunctionCanReturn(const Confidence<bool>& canReturn);
 		TypeBuilder& SetPure(const Confidence<bool>& pure);
 		TypeBuilder& SetParameters(const std::vector<FunctionParameter>& params);
+		TypeBuilder& SetPointerBase(BNPointerBaseType baseType, int64_t baseOffset);
+
+		std::set<BNPointerSuffix> GetPointerSuffix() const;
+		std::string GetPointerSuffixString() const;
+		std::vector<InstructionTextToken> GetPointerSuffixTokens(uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+
+		TypeBuilder& AddPointerSuffix(BNPointerSuffix ps);
+		TypeBuilder& SetPointerSuffix(const std::set<BNPointerSuffix>& suffix);
 
 		std::string GetString(Platform* platform = nullptr) const;
 		std::string GetTypeAndName(const QualifiedName& name) const;
@@ -14477,6 +14529,35 @@ namespace BinaryNinja {
 		Platform(Architecture* arch, const std::string& name, const std::string& typeFile,
 		    const std::vector<std::string>& includeDirs = std::vector<std::string>());
 
+		static void InitCallback(void *ctxt, BNPlatform*);
+		static void InitViewCallback(void* ctxt, BNBinaryView* view);
+		static uint32_t* GetGlobalRegistersCallback(void* ctxt, size_t* count);
+		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs, size_t count);
+		static BNType* GetGlobalRegisterTypeCallback(void* ctxt, uint32_t reg);
+		static void AdjustTypeParserInputCallback(
+			void* ctxt,
+			BNTypeParser* parser,
+			const char* const* argumentsIn,
+			size_t argumentsLenIn,
+			const char* const* sourceFileNamesIn,
+			const char* const* sourceFileValuesIn,
+			size_t sourceFilesLenIn,
+			char*** argumentsOut,
+			size_t* argumentsLenOut,
+			char*** sourceFileNamesOut,
+			char*** sourceFileValuesOut,
+			size_t* sourceFilesLenOut
+		);
+		static void FreeTypeParserInputCallback(
+			void* ctxt,
+			char** arguments,
+			size_t argumentsLen,
+			char** sourceFileNames,
+			char** sourceFileValues,
+			size_t sourceFilesLen
+		);
+		static bool GetFallbackEnabledCallback(void* ctxt);
+
 	  public:
 		Platform(BNPlatform* platform);
 
@@ -14612,6 +14693,49 @@ namespace BinaryNinja {
 		*/
 		void SetSystemCallConvention(CallingConvention* cc);
 
+		/*! Callback that will be called when the platform of a binaryview
+		 * is set. Allows for the Platform to to do platform-specific
+		 * processing of views just after finalization.
+		 *
+		 * \param view BinaryView that was just set to this Platform
+		 */
+		virtual void BinaryViewInit(BinaryView* view);
+
+		/*! Get the global register list for this Platform
+		 *
+		 * Allows the Platform to override the global register list
+		 * used by analysis.
+		 */
+		virtual std::vector<uint32_t> GetGlobalRegisters();
+
+		/*! Get the type of a global register
+		 *
+		 * Called by analysis when the incoming register value of a
+		 * global register is observed.
+		 *
+		 * \param reg The register being queried for type information.
+		 */
+		virtual Ref<Type> GetGlobalRegisterType(uint32_t reg);
+
+		/*! Modify the input passed to the Type Parser with Platform-specific features.
+
+			\param[in] parser Type Parser instance
+			\param[in,out] arguments Arguments to the type parser
+			\param[in,out] sourceFiles Source file names and contents
+		 */
+		virtual void AdjustTypeParserInput(
+			Ref<class TypeParser> parser,
+			std::vector<std::string>& arguments,
+			std::vector<std::pair<std::string, std::string>>& sourceFiles
+		);
+
+		/*! Provide an option for platforms to decide whether to use
+		 * the fallback type library.
+		 *
+		 * Allows the Platform to override it to false.
+		 */
+		virtual bool GetFallbackEnabled();
+
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);
 		Ref<Platform> GetAssociatedPlatformByAddress(uint64_t& addr);
@@ -14702,6 +14826,21 @@ namespace BinaryNinja {
 		    const std::string& autoTypeSource = "");
 	};
 
+
+	class CorePlatform : public Platform
+	{
+	public:
+		CorePlatform(BNPlatform* plat);
+
+		virtual std::vector<uint32_t> GetGlobalRegisters() override;
+		virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override;
+		virtual void AdjustTypeParserInput(
+			Ref<class TypeParser> parser,
+			std::vector<std::string>& arguments,
+			std::vector<std::pair<std::string, std::string>>& sourceFiles
+		) override;
+	};
+
 	/*!
 		\ingroup typeparser
 	*/
@@ -14757,6 +14896,12 @@ namespace BinaryNinja {
 		    \return String of formatted errors
 		*/
 		static std::string FormatParseErrors(const std::vector<TypeParserError>& errors);
+
+		/*!
+		    Get the Type Parser's registered name
+		    \return Parser name
+		 */
+		std::string GetName() const;
 
 		/**
 		    Get the string representation of an option for passing to ParseTypes*
@@ -15513,8 +15658,20 @@ namespace BinaryNinja {
 	    public CoreRefCountObject<BNBackgroundTask, BNNewBackgroundTaskReference, BNFreeBackgroundTask>
 	{
 	  public:
-		BackgroundTask(BNBackgroundTask* task);
-		BackgroundTask(const std::string& initialText, bool canCancel);
+		BackgroundTask(BNBackgroundTask *task);
+
+		/*!
+			Provides a mechanism for reporting progress of
+			an optionally cancelable task to the user via the status bar in the UI.
+			If canCancel is is `True`, then the task can be cancelled either
+			programmatically or by the user via the UI.
+
+			\note This API does not provide a means to execute a task. The caller is responsible to execute (and possibly cancel) the task.
+
+			\param initialText Text description of the progress of the background task (displayed in status bar of the UI)
+			\param canCancel Whether the task can be cancelled
+		*/
+		BackgroundTask(const std::string &initialText, bool canCancel);
 
 		bool CanCancel() const;
 		bool IsCancelled() const;
@@ -15650,7 +15807,6 @@ namespace BinaryNinja {
 		std::string GetPluginDirectory() const;
 		std::string GetAuthor() const;
 		std::string GetDescription() const;
-		std::string GetLicense() const;
 		std::string GetLicenseText() const;
 		std::string GetLongdescription() const;
 		std::string GetName() const;
@@ -15662,8 +15818,8 @@ namespace BinaryNinja {
 		std::string GetCommit() const;
 		std::string GetRepository() const;
 		std::string GetProjectData();
-		std::string GetInstallInstructions(const std::string& platform) const;
-		uint64_t GetMinimumVersion() const;
+		BNVersionInfo GetMinimumVersionInfo() const;
+		BNVersionInfo GetMaximumVersionInfo() const;
 		uint64_t GetLastUpdate();
 		bool IsBeingDeleted() const;
 		bool IsBeingUpdated() const;
@@ -15770,7 +15926,7 @@ namespace BinaryNinja {
 			"message"            string                                   None                 Yes        An optional message with additional emphasis
 			"readOnly"           bool                                     None                 Yes        Only enforced by UI elements
 			"optional"           bool                                     None                 Yes        Indicates setting can be null
-			"hidden"             bool                                     "type" is "string"   Yes        Indicates the UI should conceal the content
+			"hidden"             bool                                     "type" is "string"   Yes        Indicates the UI should conceal the content. The "ignore" property is required to specify the applicable storage scopes
 			"requiresRestart     bool                                     None                 Yes        Enable restart notification in the UI upon change
 			"uiSelectionAction"  string                                   "type" is "string"   Yes        {"file", "directory", <Registered UIAction Name>} Informs the UI to add a button to open a selection dialog or run a registered UIAction
 			==================   ======================================   ==================   ========   =======================================================================
@@ -16268,11 +16424,14 @@ namespace BinaryNinja {
 		Ref<Type> type;
 		Ref<Platform> platform;
 		std::vector<std::string> components;
+		std::vector<VariableNameAndType> localVariables;
 
 		DebugFunctionInfo(std::string shortName, std::string fullName, std::string rawName, uint64_t address,
-		    Ref<Type> type, Ref<Platform> platform, const std::vector<std::string>& components) :
+		    Ref<Type> type, Ref<Platform> platform, const std::vector<std::string>& components,
+			const std::vector<VariableNameAndType>& localVariables) :
 		    shortName(shortName), fullName(fullName), rawName(rawName),
-		    address(address), platform(platform), components(components)
+		    address(address), platform(platform), components(components),
+			localVariables(localVariables)
 		{}
 	};
 
@@ -18276,12 +18435,17 @@ namespace BinaryNinja::Collaboration
 		Ref<Snapshot> GetFirstSnapshot();
 		Ref<Snapshot> GetSecondSnapshot();
 
-		std::any GetPathItem(const std::string& path);
+		template<typename T> T GetPathItem(const std::string& key);
 
 		bool Success(std::nullopt_t value);
 		bool Success(std::optional<const nlohmann::json*> value);
 		bool Success(const std::optional<nlohmann::json>& value);
 	};
+
+	template<> std::any AnalysisMergeConflict::GetPathItem<std::any>(const std::string& path);
+	template<> std::string AnalysisMergeConflict::GetPathItem<std::string>(const std::string& path);
+	template<> uint64_t AnalysisMergeConflict::GetPathItem<uint64_t>(const std::string& path);
+	template<> nlohmann::json AnalysisMergeConflict::GetPathItem<nlohmann::json>(const std::string& path);
 
 	class TypeArchiveMergeConflict : public CoreRefCountObject<BNTypeArchiveMergeConflict, BNNewTypeArchiveMergeConflictReference, BNFreeTypeArchiveMergeConflict>
 	{

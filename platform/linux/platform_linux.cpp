@@ -30,6 +30,11 @@ public:
 		if (cc)
 			SetSystemCallConvention(cc);
 	}
+
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
+	}
 };
 
 class LinuxPpc32Platform: public Platform
@@ -90,6 +95,11 @@ public:
 		if (cc)
 			SetSystemCallConvention(cc);
 	}
+
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
+	}
 };
 
 
@@ -136,6 +146,11 @@ public:
 		if (cc)
 			SetSystemCallConvention(cc);
 	}
+
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
+	}
 };
 
 
@@ -158,6 +173,11 @@ public:
 		cc = arch->GetCallingConventionByName("linux-syscall");
 		if (cc)
 			SetSystemCallConvention(cc);
+	}
+
+	virtual bool GetFallbackEnabled() override
+	{
+		return false;
 	}
 };
 

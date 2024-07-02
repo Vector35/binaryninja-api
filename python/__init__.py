@@ -132,19 +132,13 @@ class CoreVersionInfo:
 		self.build = 0
 		self.channel = ""
 		if isinstance(major, str) and minor is None and build is None and channel is None:
-			# Coerce a version string into an object
-			try:
-				# Intentionally doing separately to opportunistically match what we can
-				self.major = int(major.split(".")[0])
-				self.minor = int(major.split(".")[1])
-				build = major.split(".")[2]
-				if "-" in build:
-					self.build = int(build.split("-")[0])
-					self.channel = build.split("-")[1]
-				self.build = int(build)
-			except:
-				pass
-			pass
+			core_version_info = core.BNParseVersionString(major)
+			self.major = core_version_info.major
+			self.minor = core_version_info.minor
+			self.build = core_version_info.build
+			if core_version_info.channel is not None:
+				self.channel = core_version_info.channel
+			core.BNFreeString(core_version_info.channel)
 		else:
 			self.major = major
 			if minor is not None:
@@ -167,19 +161,15 @@ class CoreVersionInfo:
 		return False
 
 	def _versionCompare(self, other):
-		if int(self.major) < int(other.major):
-			return True
-		if int(self.major) > int(other.major):
-			return False
-		if int(self.minor) < int(other.minor):
-			return True
-		if int(self.minor) > int(other.minor):
-			return False
-		if int(self.build) < int(other.build):
-			return True
-		if int(self.build) > int(other.build):
-			return False
-		return False #equal
+		a = core.BNVersionInfo()
+		a.major = self.major
+		a.minor = self.minor
+		a.build = self.build
+		b = core.BNVersionInfo()
+		b.major = other.major
+		b.minor = other.minor
+		b.build = other.build
+		return core.BNVersionLessThan(a, b)
 
 	def __lt__(self, other):
 		if isinstance(other, CoreVersionInfo):
@@ -226,24 +216,18 @@ class _DestructionCallbackHandler:
 
 _enable_default_log = True
 _plugin_init = False
+_enterprise_license_checkout = None
 
 
 def _init_plugins():
 	global _enable_default_log
 	global _plugin_init
+	global _enterprise_license_checkout
 
 	if not core_ui_enabled() and core.BNGetProduct() == "Binary Ninja Enterprise Client":
 		# Enterprise client needs to checkout a license reservation or else BNInitPlugins will fail
-		if not enterprise.is_license_still_activated():
-			try:
-				enterprise.authenticate_with_method("Keychain")
-			except RuntimeError:
-				pass
-		if not core.BNIsLicenseValidated() or not enterprise.is_license_still_activated():
-			raise RuntimeError(
-			    "To use Binary Ninja Enterprise from a headless python script, you must check out a license first.\n"
-			    "You can either check out a license for an extended time with the UI, or use the binaryninja.enterprise module."
-			)
+		_enterprise_license_checkout = enterprise.LicenseCheckout()
+		_enterprise_license_checkout.acquire()
 
 	if not _plugin_init:
 		# The first call to BNInitCorePlugins returns True for successful initialization and True in this context indicates headless operation.

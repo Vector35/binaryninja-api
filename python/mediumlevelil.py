@@ -176,7 +176,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 	instr: CoreMediumLevelILInstruction
 	instr_index: InstructionIndex
 
-	# ILOperations is deprecated and will be removed in a future version
+	# ILOperations is deprecated and will be removed in a future version once BNIL Graph no longer uses it
 	# Use the visit methods visit, visit_all, and visit_operands
 	ILOperations: ClassVar[Mapping[MediumLevelILOperation, List[Tuple[str, str]]]] = {
 	    MediumLevelILOperation.MLIL_NOP: [], MediumLevelILOperation.MLIL_SET_VAR: [("dest", "var"), ("src", "expr")],
@@ -332,13 +332,13 @@ class MediumLevelILInstruction(BaseILInstruction):
 	    ], MediumLevelILOperation.MLIL_SET_VAR_SSA: [
 	        ("dest", "var_ssa"), ("src", "expr")
 	    ], MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: [
-	        ("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")
+	        ("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")
 	    ], MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [
 	        ("high", "var_ssa"), ("low", "var_ssa"), ("src", "expr")
 	    ], MediumLevelILOperation.MLIL_SET_VAR_ALIASED: [
-	        ("prev", "var_ssa_dest_and_src"), ("src", "expr")
+	        ("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src"), ("src", "expr")
 	    ], MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD: [
-	        ("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")
+	        ("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")
 	    ], MediumLevelILOperation.MLIL_VAR_SSA: [("src", "var_ssa")], MediumLevelILOperation.MLIL_VAR_SSA_FIELD: [
 	        ("src", "var_ssa"), ("offset", "int")
 	    ], MediumLevelILOperation.MLIL_VAR_ALIASED: [
@@ -348,7 +348,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 	    ], MediumLevelILOperation.MLIL_VAR_SPLIT_SSA: [
 	        ("high", "var_ssa"), ("low", "var_ssa")
 	    ], MediumLevelILOperation.MLIL_CALL_SSA: [
-	        ("output", "expr"), ("dest", "expr"),
+	        ("output", "expr"), ("output_dest_memory", "int"), ("dest", "expr"),
 	        ("params", "expr_list"), ("src_memory", "int")
 	    ], MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA: [
 	        ("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")
@@ -358,7 +358,8 @@ class MediumLevelILInstruction(BaseILInstruction):
 	    ], MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA: [
 	        ("output", "expr"), ("params", "expr"), ("stack", "expr")
 	    ], MediumLevelILOperation.MLIL_TAILCALL_SSA: [
-	        ("output", "expr"), ("dest", "expr"), ("params", "expr_list"), ("src_memory", "int")
+	        ("output", "expr"), ("output_dest_memory", "int"),
+	        ("dest", "expr"), ("params", "expr_list"), ("src_memory", "int")
 	    ], MediumLevelILOperation.MLIL_TAILCALL_UNTYPED_SSA: [
 	        ("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")
 	    ], MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA: [
@@ -546,15 +547,15 @@ class MediumLevelILInstruction(BaseILInstruction):
 		:return: True if all instructions were visited, False if the callback returned False
 
 		:Example:
-		>>> def visitor(_a, inst, _c, _d) -> bool:
-		>>>     if isinstance(inst, Constant):
-		>>>         print(f"Found constant: {inst.constant}")
-		>>>         return False # Stop recursion (once we find a constant, don't recurse in to any sub-instructions (which there won't actually be any...))
-		>>>     # Otherwise, keep recursing the subexpressions of this instruction; if no return value is provided, it'll keep descending
-		>>>
-		>>> # Finds all constants used in the program
-		>>> for inst in current_mlil.instructions:
-		>>>     inst.visit(visitor)
+			>>> def visitor(_a, inst, _c, _d) -> bool:
+			>>>     if isinstance(inst, Constant):
+			>>>         print(f"Found constant: {inst.constant}")
+			>>>         return False # Stop recursion (once we find a constant, don't recurse in to any sub-instructions (which there won't actually be any...))
+			>>>     # Otherwise, keep recursing the subexpressions of this instruction; if no return value is provided, it'll keep descending
+			>>>
+			>>> # Finds all constants used in the program
+			>>> for inst in current_mlil.instructions:
+			>>>     inst.visit(visitor)
 		"""
 		if cb(name, self, "MediumLevelILInstruction", parent) == False:
 			return False

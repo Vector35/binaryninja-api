@@ -25,7 +25,7 @@ raw position-dependent firmware binaries
 import argparse
 import json
 from os import walk, path
-from binaryninja import BaseAddressDetection, log_to_stderr, LogLevel, log_info, log_error
+from binaryninja import BaseAddressDetection, log_to_stderr, LogLevel, log_info, log_error, Architecture
 
 
 def _get_directory_listing(_path: str) -> list[str]:
@@ -48,7 +48,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--debug", action="store_true", help="enable debug logging")
     parser.add_argument("--reasons", action="store_true", help="show reasons for base address selection")
     parser.add_argument("--analysis", type=str, help="analysis level", default="full")
-    parser.add_argument("--arch", type=str, default="", help="architecture of the binary")
+    parser.add_argument("--arch", type=str, help="architecture of the binary")
     return parser.parse_args()
 
 
@@ -68,7 +68,8 @@ def main() -> None:
     for _file in files:
         log_info(f"Running base address detection analysis on '{_file}'...")
         bad = BaseAddressDetection(_file)
-        if not bad.detect_base_address(analysis=args.analysis, arch=args.arch):
+        arch = Architecture[args.arch] if args.arch else None
+        if not bad.detect_base_address(analysis=args.analysis, arch=arch):
             log_error("Base address detection analysis failed")
             continue
 

@@ -70,11 +70,6 @@ string RepoPlugin::GetDescription() const
 	RETURN_STRING(BNPluginGetDescription(m_object));
 }
 
-string RepoPlugin::GetLicense() const
-{
-	RETURN_STRING(BNPluginGetLicense(m_object));
-}
-
 string RepoPlugin::GetLicenseText() const
 {
 	RETURN_STRING(BNPluginGetLicenseText(m_object));
@@ -85,9 +80,14 @@ string RepoPlugin::GetLongdescription() const
 	RETURN_STRING(BNPluginGetLongdescription(m_object));
 }
 
-uint64_t RepoPlugin::GetMinimumVersion() const
+BNVersionInfo RepoPlugin::GetMinimumVersionInfo() const
 {
-	return BNPluginGetMinimumVersion(m_object);
+	return BNPluginGetMinimumVersionInfo(m_object);
+}
+
+BNVersionInfo RepoPlugin::GetMaximumVersionInfo() const
+{
+	return BNPluginGetMaximumVersionInfo(m_object);
 }
 
 string RepoPlugin::GetName() const
@@ -154,12 +154,6 @@ vector<string> RepoPlugin::GetInstallPlatforms() const
 		result.push_back(platforms[i]);
 	BNFreeStringList(platforms, count);
 	return result;
-}
-
-
-std::string RepoPlugin::GetInstallInstructions(const std::string& platform) const
-{
-	RETURN_STRING(BNPluginGetInstallInstructions(m_object, platform.c_str()));
 }
 
 

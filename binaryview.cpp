@@ -523,6 +523,15 @@ void BinaryDataNotification::RedoEntryTakenCallback(void* ctxt, BNBinaryView* da
 }
 
 
+void BinaryDataNotification::RebasedCallback(void *ctxt, BNBinaryView *oldView, BNBinaryView *newView)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view1 = new BinaryView(BNNewViewReference(oldView));
+	Ref<BinaryView> view2 = new BinaryView(BNNewViewReference(newView));
+	notify->OnRebased(view1, view2);
+}
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
@@ -578,6 +587,7 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.undoEntryAdded = UndoEntryAddedCallback;
 	m_callbacks.undoEntryTaken = UndoEntryTakenCallback;
 	m_callbacks.redoEntryTaken = RedoEntryTakenCallback;
+	m_callbacks.rebased = RebasedCallback;
 }
 
 
@@ -636,6 +646,7 @@ BinaryDataNotification::BinaryDataNotification(NotificationTypes notifications)
 	m_callbacks.undoEntryAdded = (notifications & NotificationType::UndoEntryAdded) ? UndoEntryAddedCallback : nullptr;
 	m_callbacks.undoEntryTaken = (notifications & NotificationType::UndoEntryTaken) ? UndoEntryTakenCallback : nullptr;
 	m_callbacks.redoEntryTaken = (notifications & NotificationType::RedoEntryTaken) ? RedoEntryTakenCallback : nullptr;
+	m_callbacks.rebased = (notifications & NotificationType::Rebased) ? RebasedCallback : nullptr;
 }
 
 
@@ -1920,7 +1931,7 @@ Ref<Platform> BinaryView::GetDefaultPlatform() const
 	BNPlatform* platform = BNGetDefaultPlatform(m_object);
 	if (!platform)
 		return nullptr;
-	return new Platform(platform);
+	return new CorePlatform(platform);
 }
 
 
@@ -1982,6 +1993,12 @@ Ref<Function> BinaryView::AddFunctionForAnalysis(Platform* platform, uint64_t ad
 void BinaryView::AddEntryPointForAnalysis(Platform* platform, uint64_t addr)
 {
 	BNAddEntryPointForAnalysis(m_object, platform->GetObject(), addr);
+}
+
+
+void BinaryView::AddToEntryFunctions(Function* func)
+{
+	BNAddToEntryFunctions(m_object, func->GetObject());
 }
 
 
@@ -2205,6 +2222,21 @@ Ref<Function> BinaryView::GetAnalysisEntryPoint()
 	if (!func)
 		return nullptr;
 	return new Function(func);
+}
+
+
+vector<Ref<Function>> BinaryView::GetAllEntryFunctions()
+{
+	size_t count;
+	BNFunction** funcs = BNGetAllEntryFunctions(m_object, &count);
+	if (count == 0)
+		return {};
+
+	vector<Ref<Function>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Function(BNNewFunctionReference(funcs[i])));
+	BNFreeFunctionList(funcs, count);
+	return result;
 }
 
 
@@ -4177,7 +4209,7 @@ std::optional<std::pair<Ref<Platform>, QualifiedName>> BinaryView::LookupImporte
 		return std::nullopt;
 	QualifiedName targetName = QualifiedName::FromAPIObject(&resultName);
 	BNFreeQualifiedName(&resultName);
-	return std::make_pair(new Platform(resultLib), targetName);
+	return std::make_pair(new CorePlatform(resultLib), targetName);
 }
 
 
@@ -4847,6 +4879,7 @@ vector<string> BinaryView::GetUniqueSectionNames(const vector<string>& names)
 	for (size_t i = 0; i < names.size(); i++)
 		result.push_back(outgoingNames[i]);
 
+	delete[] incomingNames;
 	BNFreeStringList(outgoingNames, names.size());
 	return result;
 }
@@ -5316,11 +5349,7 @@ Ref<BinaryData> BinaryData::CreateFromFile(FileMetadata* file, FileAccessor* acc
 Ref<BinaryView> BinaryNinja::Load(const std::string& filename, bool updateAnalysis,
 	std::function<bool(size_t, size_t)> progress, Ref<Metadata> options)
 {
-	BNBinaryView* handle = BNLoadFilename(filename.c_str(), updateAnalysis,
-		(bool (*)(size_t, size_t))progress.target<bool (*)(size_t, size_t)>(), options->m_object);
-	if (!handle)
-		return nullptr;
-	return new BinaryView(handle);
+	return Load(filename, updateAnalysis, options->GetJsonString(), progress);
 }
 
 
@@ -5336,8 +5365,30 @@ Ref<BinaryView> BinaryNinja::Load(
 Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis,
 	std::function<bool(size_t, size_t)> progress, Ref<Metadata> options, bool isDatabase)
 {
-	BNBinaryView* handle = BNLoadBinaryView(view->GetObject(), updateAnalysis,
-		(bool (*)(size_t, size_t))progress.target<bool (*)(size_t, size_t)>(), options->m_object, isDatabase);
+	return Load(view, updateAnalysis, options->GetJsonString(), progress);
+}
+
+
+Ref<BinaryView> BinaryNinja::Load(const std::string& filename, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
+{
+	BNBinaryView* handle = BNLoadFilename(filename.c_str(), updateAnalysis, options.c_str(), (bool (*)(size_t, size_t))progress.target<bool (*)(size_t, size_t)>());
+	if (!handle)
+		return nullptr;
+	return new BinaryView(handle);
+}
+
+
+Ref<BinaryView> BinaryNinja::Load(const DataBuffer& rawData, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
+{
+	Ref<FileMetadata> file = new FileMetadata();
+	Ref<BinaryView> view = new BinaryData(file, rawData);
+	return Load(view, updateAnalysis, options, progress);
+}
+
+
+Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
+{
+	BNBinaryView* handle = BNLoadBinaryView(view->GetObject(), updateAnalysis, options.c_str(), (bool (*)(size_t, size_t))progress.target<bool (*)(size_t, size_t)>());
 	if (!handle)
 		return nullptr;
 	return new BinaryView(handle);

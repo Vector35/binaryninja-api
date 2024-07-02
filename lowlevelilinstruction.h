@@ -2010,3 +2010,24 @@ namespace BinaryNinja
 #undef _STD_UNORDERED_MAP
 #undef _STD_MAP
 }  // namespace BinaryNinjaCore
+
+#ifdef BINARYNINJACORE_LIBRARY
+#define IL_INS_NS BinaryNinjaCore
+#else
+#define IL_INS_NS BinaryNinja
+#endif
+template<> struct fmt::formatter<IL_INS_NS::LowLevelILInstruction>
+{
+	// <empty> -> normal, ? -> debug
+	char presentation = ' ';
+	format_context::iterator format(const IL_INS_NS::LowLevelILInstruction& obj, format_context& ctx) const;
+	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator
+	{
+		auto it = ctx.begin(), end = ctx.end();
+		if (it != end && *it == '?')
+			presentation = *it++;
+		if (it != end && *it != '}') detail::throw_format_error("invalid format");
+		return it;
+	}
+};
+#undef IL_INS_NS

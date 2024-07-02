@@ -75,14 +75,15 @@ def enterprise_remote() -> Optional['Remote']:
 	return None
 
 
-def add_known_remote(remote: 'Remote') -> None:
+def create_remote(name: str, address: str) -> 'Remote':
 	"""
-	Add a Remote to the list of known remotes (saved to Settings)
+	Create a Remote and add it to the list of known remotes (saved to Settings)
 
-	:param remote: New Remote to add
+	:param name: Identifier for remote
+	:param address: Base address (HTTPS) for all api requests
 	"""
 	binaryninja._init_plugins()
-	core.BNCollaborationAddRemote(remote._handle)
+	return Remote(core.BNCollaborationCreateRemote(name, address))
 
 
 def remove_known_remote(remote: 'Remote') -> None:

@@ -192,7 +192,7 @@ Ref<BinaryView> Function::GetView() const
 
 Ref<Platform> Function::GetPlatform() const
 {
-	return new Platform(BNGetFunctionPlatform(m_object));
+	return new CorePlatform(BNGetFunctionPlatform(m_object));
 }
 
 

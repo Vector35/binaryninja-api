@@ -13,6 +13,8 @@
 // limitations under the License.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::mem;
+use std::sync::OnceLock;
 
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
@@ -329,12 +331,30 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 .into_iter()
                 .map(|(_, sym)| sym.clone())
                 .sorted_by_key(|sym| match sym {
-                    ParsedSymbol::Data(ParsedDataSymbol { type_, .. }) => {
-                        type_.as_ref().map(|ty| ty.confidence).unwrap_or(0)
-                    }
-                    ParsedSymbol::Procedure(ParsedProcedure { type_, .. }) => {
-                        type_.as_ref().map(|ty| ty.confidence).unwrap_or(0)
-                    }
+                    ParsedSymbol::Data(ParsedDataSymbol {
+                        type_, is_public, ..
+                    }) => type_
+                        .as_ref()
+                        .map(|ty| {
+                            if *is_public {
+                                ty.confidence / 2
+                            } else {
+                                ty.confidence
+                            }
+                        })
+                        .unwrap_or(0),
+                    ParsedSymbol::Procedure(ParsedProcedure {
+                        type_, is_public, ..
+                    }) => type_
+                        .as_ref()
+                        .map(|ty| {
+                            if *is_public {
+                                ty.confidence / 2
+                            } else {
+                                ty.confidence
+                            }
+                        })
+                        .unwrap_or(0),
                     _ => 0,
                 })
                 .collect::<Vec<_>>(),
@@ -342,12 +362,30 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 .into_iter()
                 .map(|(_, func)| func.clone())
                 .sorted_by_key(|sym| match sym {
-                    ParsedSymbol::Data(ParsedDataSymbol { type_, .. }) => {
-                        type_.as_ref().map(|ty| ty.confidence).unwrap_or(0)
-                    }
-                    ParsedSymbol::Procedure(ParsedProcedure { type_, .. }) => {
-                        type_.as_ref().map(|ty| ty.confidence).unwrap_or(0)
-                    }
+                    ParsedSymbol::Data(ParsedDataSymbol {
+                        type_, is_public, ..
+                    }) => type_
+                        .as_ref()
+                        .map(|ty| {
+                            if *is_public {
+                                ty.confidence / 2
+                            } else {
+                                ty.confidence
+                            }
+                        })
+                        .unwrap_or(0),
+                    ParsedSymbol::Procedure(ParsedProcedure {
+                        type_, is_public, ..
+                    }) => type_
+                        .as_ref()
+                        .map(|ty| {
+                            if *is_public {
+                                ty.confidence / 2
+                            } else {
+                                ty.confidence
+                            }
+                        })
+                        .unwrap_or(0),
                     _ => 0,
                 })
                 .collect::<Vec<_>>(),
@@ -478,7 +516,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
                 self.log(|| format!("Symbol {:?} ", sym.index()));
                 let (name, address) =
-                    if let Some(parsed) = self.handle_symbol_index(sym.index(), sym)? {
+                    if let Some(parsed) = self.handle_symbol_index(sym.index(), &sym)? {
                         final_symbols.insert(sym.index());
                         match parsed {
                             ParsedSymbol::Data(ParsedDataSymbol { name, address, .. }) => {
@@ -513,9 +551,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             }
         }
 
-        let filtered_symbols = self
-            .indexed_symbols
-            .drain()
+        let filtered_symbols = mem::replace(&mut self.indexed_symbols, BTreeMap::new())
+            .into_iter()
             .filter_map(|(idx, sym)| {
                 if final_symbols.contains(&idx) {
                     Some(sym)
@@ -581,17 +618,14 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     fn handle_symbol_index(
         &mut self,
         idx: SymbolIndex,
-        sym: Symbol,
+        sym: &Symbol,
     ) -> Result<Option<&ParsedSymbol>> {
         if let None = self.indexed_symbols.get(&idx) {
             match sym.parse() {
                 Ok(data) => match self.handle_symbol(idx, &data) {
                     Ok(Some(parsed)) => {
                         self.log(|| format!("Symbol {} parsed into: {:?}", idx, parsed));
-                        match &parsed {
-                            _ => {}
-                        }
-                        self.indexed_symbols.insert(idx, parsed.clone());
+                        self.indexed_symbols.insert(idx, parsed);
                     }
                     Ok(None) => {}
                     e => {
@@ -1750,7 +1784,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         raw_name: &String,
         rva: Rva,
     ) -> Result<(Option<Conf<Ref<Type>>>, Option<QualifiedName>)> {
-        let (mut t, mut name) = match demangle_ms(&self.arch, raw_name.clone(), true) {
+        let (mut t, mut name) = match demangle_ms(&self.arch, raw_name, true) {
             Ok((Some(t), name)) => (Some(Conf::new(t, DEMANGLE_CONFIDENCE)), name),
             Ok((_, name)) => (None, name),
             _ => (None, vec![raw_name.clone()]),
@@ -1782,55 +1816,58 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         // These have types but they aren't actually set anywhere. So it's the demangler's
         // job to take care of them, apparently?
-        let name_to_type: HashMap<String, Vec<String>> = HashMap::from_iter([
-            (
-                "`RTTI Complete Object Locator'".to_string(),
-                vec![
-                    "_s_RTTICompleteObjectLocator".to_string(),
-                    "_s__RTTICompleteObjectLocator".to_string(),
-                    "_s__RTTICompleteObjectLocator2".to_string(),
-                ],
-            ),
-            (
-                "`RTTI Class Hierarchy Descriptor'".to_string(),
-                vec![
-                    "_s_RTTIClassHierarchyDescriptor".to_string(),
-                    "_s__RTTIClassHierarchyDescriptor".to_string(),
-                    "_s__RTTIClassHierarchyDescriptor2".to_string(),
-                ],
-            ),
-            (
-                // TODO: This type is dynamic
-                "`RTTI Base Class Array'".to_string(),
-                vec![
-                    "_s_RTTIBaseClassArray".to_string(),
-                    "_s__RTTIBaseClassArray".to_string(),
-                    "_s__RTTIBaseClassArray2".to_string(),
-                ],
-            ),
-            (
-                "`RTTI Base Class Descriptor at (".to_string(),
-                vec![
-                    "_s_RTTIBaseClassDescriptor".to_string(),
-                    "_s__RTTIBaseClassDescriptor".to_string(),
-                    "_s__RTTICBaseClassDescriptor2".to_string(),
-                ],
-            ),
-            (
-                "`RTTI Type Descriptor'".to_string(),
-                vec!["_TypeDescriptor".to_string()],
-            ),
-        ]);
+        static MEM: OnceLock<Vec<(String, Vec<String>)>> = OnceLock::new();
+        let name_to_type = MEM.get_or_init(|| {
+            vec![
+                (
+                    "`RTTI Complete Object Locator'".to_string(),
+                    vec![
+                        "_s_RTTICompleteObjectLocator".to_string(),
+                        "_s__RTTICompleteObjectLocator".to_string(),
+                        "_s__RTTICompleteObjectLocator2".to_string(),
+                    ],
+                ),
+                (
+                    "`RTTI Class Hierarchy Descriptor'".to_string(),
+                    vec![
+                        "_s_RTTIClassHierarchyDescriptor".to_string(),
+                        "_s__RTTIClassHierarchyDescriptor".to_string(),
+                        "_s__RTTIClassHierarchyDescriptor2".to_string(),
+                    ],
+                ),
+                (
+                    // TODO: This type is dynamic
+                    "`RTTI Base Class Array'".to_string(),
+                    vec![
+                        "_s_RTTIBaseClassArray".to_string(),
+                        "_s__RTTIBaseClassArray".to_string(),
+                        "_s__RTTIBaseClassArray2".to_string(),
+                    ],
+                ),
+                (
+                    "`RTTI Base Class Descriptor at (".to_string(),
+                    vec![
+                        "_s_RTTIBaseClassDescriptor".to_string(),
+                        "_s__RTTIBaseClassDescriptor".to_string(),
+                        "_s__RTTICBaseClassDescriptor2".to_string(),
+                    ],
+                ),
+                (
+                    "`RTTI Type Descriptor'".to_string(),
+                    vec!["_TypeDescriptor".to_string()],
+                ),
+            ]
+        });
 
         if let Some(last_name) = name.last() {
-            for (search_name, search_types) in &name_to_type {
+            for (search_name, search_types) in name_to_type.iter() {
                 if last_name.contains(search_name) {
                     for search_type in search_types {
                         if let Some(ty) = self.named_types.get(search_type) {
                             // Fallback in case we don't find a specific one
                             t = Some(Conf::new(
                                 Type::named_type_from_type(search_type, ty.as_ref()),
-                                max_confidence(),
+                                DEMANGLE_CONFIDENCE,
                             ));
 
                             if self.settings.get_bool(
@@ -1849,10 +1886,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                         // Wow!
                                         t = Some(Conf::new(
                                             Type::named_type_from_type(lengthy_name, ty.as_ref()),
-                                            max_confidence(),
+                                            DEMANGLE_CONFIDENCE,
                                         ));
                                     } else {
-                                        t = Some(Conf::new(lengthy_type, max_confidence()));
+                                        t = Some(Conf::new(lengthy_type, DEMANGLE_CONFIDENCE));
                                     }
                                 }
                             }
@@ -1884,7 +1921,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 if let Some(ty) = self.named_types.get(&vt_name) {
                     t = Some(Conf::new(
                         Type::named_type_from_type(&vt_name, ty.as_ref()),
-                        max_confidence(),
+                        DEMANGLE_CONFIDENCE,
                     ));
                 } else {
                     // Sometimes the demangler has trouble with `class Foo` in templates
@@ -1896,7 +1933,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     if let Some(ty) = self.named_types.get(&vt_name) {
                         t = Some(Conf::new(
                             Type::named_type_from_type(&vt_name, ty.as_ref()),
-                            max_confidence(),
+                            DEMANGLE_CONFIDENCE,
                         ));
                     } else {
                         t = Some(Conf::new(

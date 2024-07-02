@@ -99,6 +99,12 @@ std::string TypeParser::FormatParseErrors(const std::vector<TypeParserError>& er
 }
 
 
+std::string TypeParser::GetName() const
+{
+	return BNGetTypeParserName(m_object);
+}
+
+
 bool TypeParser::GetOptionText(BNTypeParserOption option, std::string value, std::string& result) const
 {
 	// Default: Don't accept anything
@@ -147,7 +153,7 @@ bool TypeParser::PreprocessSourceCallback(void* ctxt,
 	bool success = parser->PreprocessSource(
 		source,
 		fileName,
-		new Platform(platform),
+		new CorePlatform(platform),
 		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
 		optionsCpp,
 		includeDirsCpp,
@@ -207,7 +213,7 @@ bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 	bool success = parser->ParseTypesFromSource(
 		source,
 		fileName,
-		new Platform(platform),
+		new CorePlatform(platform),
 		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
 		optionsCpp,
 		includeDirsCpp,
@@ -278,7 +284,7 @@ bool TypeParser::ParseTypeStringCallback(void* ctxt,
 	vector<TypeParserError> errorsCpp;
 	bool success = parser->ParseTypeString(
 		source,
-		new Platform(platform),
+		new CorePlatform(platform),
 		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
 		resultCpp,
 		errorsCpp

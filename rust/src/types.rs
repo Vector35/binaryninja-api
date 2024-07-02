@@ -24,12 +24,14 @@ use crate::{
     callingconvention::CallingConvention,
     filemetadata::FileMetadata,
     function::Function,
+    mlil::MediumLevelILFunction,
     rc::*,
     string::{raw_to_string, BnStrCompatible, BnString},
     symbol::Symbol,
 };
 
 use lazy_static::lazy_static;
+use std::ptr::null_mut;
 use std::{
     borrow::{Borrow, Cow},
     collections::{HashMap, HashSet},
@@ -51,6 +53,8 @@ pub type TypeClass = BNTypeClass;
 pub type NamedTypeReferenceClass = BNNamedTypeReferenceClass;
 pub type MemberAccess = BNMemberAccess;
 pub type MemberScope = BNMemberScope;
+pub type ILBranchDependence = BNILBranchDependence;
+pub type DataFlowQueryOption = BNDataFlowQueryOption;
 
 ////////////////
 // Confidence
@@ -174,6 +178,20 @@ impl<T: Debug> Debug for Conf<T> {
 impl<T: Display> Display for Conf<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{} ({} confidence)", self.contents, self.confidence)
+    }
+}
+
+impl<T: PartialEq> PartialEq for Conf<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.contents.eq(&other.contents)
+    }
+}
+
+impl<T: Eq> Eq for Conf<T> {}
+
+impl<T: Hash> Hash for Conf<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.contents.hash(state);
     }
 }
 
@@ -1194,11 +1212,9 @@ impl Type {
         }
     }
 
-    pub fn generate_auto_demangled_type_id<'a, S: BnStrCompatible>(name: S) -> &'a str {
+    pub fn generate_auto_demangled_type_id<S: BnStrCompatible>(name: S) -> BnString {
         let mut name = QualifiedName::from(name);
-        unsafe { CStr::from_ptr(BNGenerateAutoDemangledTypeId(&mut name.0)) }
-            .to_str()
-            .unwrap()
+        unsafe { BnString::from_raw(BNGenerateAutoDemangledTypeId(&mut name.0)) }
     }
 }
 
@@ -1223,17 +1239,33 @@ impl fmt::Debug for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Ok(lock) = TYPE_DEBUG_BV.lock() {
             if let Some(bv) = &*lock {
-                let mut count: usize = 0;
                 let container = unsafe { BNGetAnalysisTypeContainer(bv.handle) };
-                let lines: *mut BNTypeDefinitionLine = unsafe {
-                    BNGetTypeLines(
+
+                let printer = if f.alternate() {
+                    unsafe { BNGetTypePrinterByName(c"_DebugTypePrinter".as_ptr()) }
+                } else {
+                    unsafe { BNGetTypePrinterByName(c"CoreTypePrinter".as_ptr()) }
+                };
+                if printer.is_null() {
+                    return Err(fmt::Error);
+                }
+
+                let mut name = QualifiedName::from("");
+
+                let mut lines: *mut BNTypeDefinitionLine = null_mut();
+                let mut count: usize = 0;
+
+                unsafe {
+                    BNGetTypePrinterTypeLines(
+                        printer,
                         self.handle,
                         container,
-                        "\x00".as_ptr() as *const c_char,
+                        &mut name.0,
                         64,
                         false,
                         BNTokenEscapingType::NoTokenEscapingType,
-                        &mut count as *mut usize,
+                        &mut lines,
+                        &mut count,
                     )
                 };
                 unsafe {
@@ -1444,24 +1476,78 @@ impl SSAVariable {
     }
 }
 
+impl CoreArrayProvider for SSAVariable {
+    type Raw = usize;
+    type Context = Variable;
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for SSAVariable {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeILInstructionList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        SSAVariable::new(*context, *raw)
+    }
+}
+
+impl CoreArrayProvider for Array<SSAVariable> {
+    type Raw = BNVariable;
+    type Context = Ref<MediumLevelILFunction>;
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for Array<SSAVariable> {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeVariableList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let mut count = 0;
+        let versions =
+            unsafe { BNGetMediumLevelILVariableSSAVersions(context.handle, raw, &mut count) };
+        Array::new(versions, count, Variable::from_raw(*raw))
+    }
+}
+
 ///////////////
 // NamedVariable
 
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct NamedTypedVariable {
-    var: BNVariable,
-    auto_defined: bool,
-    type_confidence: u8,
-    name: *mut c_char,
-    ty: *mut BNType,
+    pub name: String,
+    pub ty: Conf<Ref<Type>>,
+    pub var: Variable,
+    pub auto_defined: bool,
 }
 
 impl NamedTypedVariable {
+
+    pub fn new(var: Variable, name: String, ty: Conf<Ref<Type>>, auto_defined: bool) -> Self {
+        Self {
+            name,
+            ty,
+            var,
+            auto_defined,
+        }
+    }
+
+    pub(crate) unsafe fn from_raw(var: &BNVariableNameAndType) -> Self {
+        Self {
+            var: Variable::from_raw(var.var),
+            auto_defined: var.autoDefined,
+            name: CStr::from_ptr(var.name).to_str().unwrap().to_string(),
+            ty: Conf::new(Type::ref_from_raw(var.type_), var.typeConfidence)
+        }
+    }
+
     pub fn name(&self) -> &str {
-        unsafe { CStr::from_ptr(self.name).to_str().unwrap() }
+        &self.name
     }
 
     pub fn var(&self) -> Variable {
-        unsafe { Variable::from_raw(self.var) }
+        self.var
     }
 
     pub fn auto_defined(&self) -> bool {
@@ -1469,18 +1555,18 @@ impl NamedTypedVariable {
     }
 
     pub fn type_confidence(&self) -> u8 {
-        self.type_confidence
+        self.ty.confidence
     }
 
     pub fn var_type(&self) -> Ref<Type> {
-        unsafe { Ref::new(Type::from_raw(self.ty)) }
+        self.ty.contents.clone()
     }
 }
 
 impl CoreArrayProvider for NamedTypedVariable {
     type Raw = BNVariableNameAndType;
     type Context = ();
-    type Wrapped<'a> = ManuallyDrop<NamedTypedVariable>;
+    type Wrapped<'a> = Guard<'a, NamedTypedVariable>;
 }
 
 unsafe impl CoreArrayProviderInner for NamedTypedVariable {
@@ -1488,13 +1574,7 @@ unsafe impl CoreArrayProviderInner for NamedTypedVariable {
         BNFreeVariableNameAndTypeList(raw, count)
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        ManuallyDrop::new(NamedTypedVariable {
-            var: raw.var,
-            ty: raw.type_,
-            name: raw.name,
-            auto_defined: raw.autoDefined,
-            type_confidence: raw.typeConfidence,
-        })
+        unsafe { Guard::new(NamedTypedVariable::from_raw(raw), raw) }
     }
 }
 
@@ -2715,29 +2795,6 @@ impl<S: BnStrCompatible> DataVariableAndName<S> {
     pub fn type_with_confidence(&self) -> Conf<Ref<Type>> {
         Conf::new(self.t.contents.clone(), self.t.confidence)
     }
-}
-
-/////////////////////////
-// ILIntrinsic
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ILIntrinsic {
-    arch: CoreArchitecture,
-    index: u32,
-}
-
-impl ILIntrinsic {
-    pub(crate) fn new(arch: CoreArchitecture, index: u32) -> Self {
-        Self { arch, index }
-    }
-
-    pub fn name(&self) -> &str {
-        let name_ptr = unsafe { BNGetArchitectureIntrinsicName(self.arch.0, self.index) };
-        let name_raw = unsafe { core::ffi::CStr::from_ptr(name_ptr) };
-        name_raw.to_str().unwrap()
-    }
-
-    // TODO impl inputs and outputs function
 }
 
 /////////////////////////

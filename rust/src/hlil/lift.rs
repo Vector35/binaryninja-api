@@ -1,7 +1,9 @@
-use super::{operation::*, HighLevelILFunction};
+use super::operation::*;
+use super::HighLevelILFunction;
 
+use crate::architecture::CoreIntrinsic;
 use crate::rc::Ref;
-use crate::types::{ConstantData, ILIntrinsic, SSAVariable, Variable};
+use crate::types::{ConstantData, SSAVariable, Variable};
 
 #[derive(Clone)]
 pub enum HighLevelILLiftedOperand {
@@ -11,7 +13,7 @@ pub enum HighLevelILLiftedOperand {
     Float(f64),
     Int(u64),
     IntList(Vec<u64>),
-    Intrinsic(ILIntrinsic),
+    Intrinsic(CoreIntrinsic),
     Label(GotoLabel),
     MemberIndex(Option<usize>),
     Var(Variable),

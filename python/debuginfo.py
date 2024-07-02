@@ -351,7 +351,7 @@ class DebugInfo(object):
 					function_type = None
 
 				if function.platform:
-					func_platform = _platform.Platform(handle=core.BNNewPlatformReference(function.platform))
+					func_platform = _platform.CorePlatform._from_cache(handle=core.BNNewPlatformReference(function.platform))
 				else:
 					func_platform = None
 

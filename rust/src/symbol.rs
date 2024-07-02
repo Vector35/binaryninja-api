@@ -14,7 +14,6 @@
 
 //! Interfaces for the various kinds of symbols in a binary.
 
-use std::ffi::CStr;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ptr;
@@ -249,24 +248,15 @@ impl Symbol {
     }
 
     pub fn full_name(&self) -> BnString {
-        unsafe {
-            let name = BNGetSymbolFullName(self.handle);
-            BnString::from_raw(name)
-        }
+        unsafe { BnString::from_raw(BNGetSymbolFullName(self.handle)) }
     }
 
-    pub fn short_name(&self) -> &str {
-        unsafe {
-            let name = BNGetSymbolShortName(self.handle);
-            CStr::from_ptr(name).to_str().unwrap()
-        }
+    pub fn short_name(&self) -> BnString {
+        unsafe { BnString::from_raw(BNGetSymbolShortName(self.handle)) }
     }
 
-    pub fn raw_name(&self) -> &str {
-        unsafe {
-            let name = BNGetSymbolRawName(self.handle);
-            CStr::from_ptr(name).to_str().unwrap()
-        }
+    pub fn raw_name(&self) -> BnString {
+        unsafe { BnString::from_raw(BNGetSymbolRawName(self.handle)) }
     }
 
     pub fn address(&self) -> u64 {

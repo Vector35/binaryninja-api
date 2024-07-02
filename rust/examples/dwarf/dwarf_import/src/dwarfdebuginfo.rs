@@ -21,12 +21,13 @@ use binaryninja::{
     rc::*,
     symbol::SymbolType,
     templatesimplifier::simplify_str_to_fqn,
-    types::{Conf, FunctionParameter, Type},
+    types::{Conf, FunctionParameter, NamedTypedVariable, Type, Variable},
+    binaryninjacore_sys::BNVariableSourceType,
 };
 
 use gimli::{DebuggingInformationEntry, Dwarf, Reader, Unit};
 
-use log::{error, warn};
+use log::{debug, error, warn};
 use std::{
     cmp::Ordering,
     collections::{hash_map::Values, HashMap},
@@ -48,6 +49,7 @@ pub(crate) struct FunctionInfoBuilder {
     pub(crate) parameters: Vec<Option<(String, TypeUID)>>,
     pub(crate) platform: Option<Ref<Platform>>,
     pub(crate) variable_arguments: bool,
+    pub(crate) stack_variables: Vec<NamedTypedVariable>,
 }
 
 impl FunctionInfoBuilder {
@@ -57,7 +59,7 @@ impl FunctionInfoBuilder {
         raw_name: Option<String>,
         return_type: Option<TypeUID>,
         address: Option<u64>,
-        parameters: Vec<Option<(String, TypeUID)>>,
+        parameters: &Vec<Option<(String, TypeUID)>>,
     ) {
         if full_name.is_some() {
             self.full_name = full_name;
@@ -77,13 +79,13 @@ impl FunctionInfoBuilder {
 
         for (i, new_parameter) in parameters.into_iter().enumerate() {
             match self.parameters.get(i) {
-                Some(None) => self.parameters[i] = new_parameter,
+                Some(None) => self.parameters[i] = new_parameter.clone(),
                 Some(Some(_)) => (),
                 // Some(Some((name, _))) if name.as_bytes().is_empty() => {
                 //     self.parameters[i] = new_parameter
                 // }
                 // Some(Some((_, uid))) if *uid == 0 => self.parameters[i] = new_parameter, // TODO : This is a placebo....void types aren't actually UID 0
-                _ => self.parameters.push(new_parameter),
+                _ => self.parameters.push(new_parameter.clone()),
             }
         }
     }
@@ -168,17 +170,27 @@ impl<R: Reader<Offset = usize>> DebugInfoBuilderContext<R> {
 //  info and types to one DIE's UID (T) before adding the completed info to BN's debug info
 pub(crate) struct DebugInfoBuilder {
     functions: Vec<FunctionInfoBuilder>,
+    raw_function_name_indices: HashMap<String, usize>,
+    full_function_name_indices: HashMap<String, usize>,
     types: HashMap<TypeUID, DebugType>,
     data_variables: HashMap<u64, (Option<String>, TypeUID)>,
+    range_data_offsets: iset::IntervalMap<u64, i64>
 }
 
 impl DebugInfoBuilder {
     pub(crate) fn new() -> Self {
         Self {
             functions: vec![],
+            raw_function_name_indices: HashMap::new(),
+            full_function_name_indices: HashMap::new(),
             types: HashMap::new(),
             data_variables: HashMap::new(),
+            range_data_offsets: iset::IntervalMap::new(),
         }
+    }
+
+    pub(crate) fn set_range_data_offsets(&mut self, offsets: iset::IntervalMap<u64, i64>) {
+        self.range_data_offsets = offsets
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -188,34 +200,89 @@ impl DebugInfoBuilder {
         raw_name: Option<String>,
         return_type: Option<TypeUID>,
         address: Option<u64>,
-        parameters: Vec<Option<(String, TypeUID)>>,
+        parameters: &Vec<Option<(String, TypeUID)>>,
         variable_arguments: bool,
-    ) {
+    ) -> Option<usize> {
+        // Returns the index of the function
         // Raw names should be the primary key, but if they don't exist, use the full name
         // TODO : Consider further falling back on address/architecture
-        if let Some(function) = self
-            .functions
-            .iter_mut()
-            .find(|func| func.raw_name.is_some() && func.raw_name == raw_name)
-        {
-            function.update(full_name, raw_name, return_type, address, parameters);
-        } else if let Some(function) = self.functions.iter_mut().find(|func| {
-            (func.raw_name.is_none() || raw_name.is_none())
-                && func.full_name.is_some()
-                && func.full_name == full_name
-        }) {
-            function.update(full_name, raw_name, return_type, address, parameters);
-        } else {
-            self.functions.push(FunctionInfoBuilder {
-                full_name,
-                raw_name,
-                return_type,
-                address,
-                parameters,
-                platform: None,
-                variable_arguments,
-            });
+
+        /*
+            If it has a raw_name and we know it, update it and return
+            Else if it has a full_name and we know it, update it and return
+            Else Add a new entry if we don't know the full_name or raw_name
+         */
+
+        if let Some(ident) = &raw_name {
+            // check if we already know about this raw name's index
+            // if we do, and the full name will change, remove the known full index if it exists
+            // update the function
+            // if the full name exists, update the stored index for the full name
+            if let Some(idx) = self.raw_function_name_indices.get(ident) {
+                let function = self.functions.get_mut(*idx).unwrap();
+
+                if function.full_name.is_some() && function.full_name != full_name {
+                    self.full_function_name_indices.remove(function.full_name.as_ref().unwrap());
+                }
+
+                function.update(full_name, raw_name, return_type, address, parameters);
+
+                if function.full_name.is_some()  {
+                    self.full_function_name_indices.insert(function.full_name.clone().unwrap(), *idx);
+                }
+
+                return Some(*idx);
+            }
         }
+
+        else if let Some(ident) = &full_name {
+            // check if we already know about this full name's index
+            // if we do, and the raw name will change, remove the known raw index if it exists
+            // update the function
+            // if the raw name exists, update the stored index for the raw name
+            if let Some(idx) = self.full_function_name_indices.get(ident) {
+                let function = self.functions.get_mut(*idx).unwrap();
+
+                if function.raw_name.is_some() && function.raw_name != raw_name {
+                    self.raw_function_name_indices.remove(function.raw_name.as_ref().unwrap());
+                }
+
+                function.update(full_name, raw_name, return_type, address, parameters);
+
+                if function.raw_name.is_some()  {
+                    self.raw_function_name_indices.insert(function.raw_name.clone().unwrap(), *idx);
+                }
+
+                return Some(*idx);
+            }
+        }
+
+        if raw_name.is_none() && full_name.is_none() {
+            error!("Function entry in DWARF without full or raw name. Please report this issue.");
+            return None;
+        }
+
+        let function = FunctionInfoBuilder {
+            full_name,
+            raw_name,
+            return_type,
+            address,
+            parameters: parameters.clone(),
+            platform: None,
+            variable_arguments,
+            stack_variables: vec![],
+        };
+
+        if let Some(n) = &function.full_name {
+            self.full_function_name_indices.insert(n.clone(), self.functions.len());
+        }
+
+        if let Some(n) = &function.raw_name {
+            self.raw_function_name_indices.insert(n.clone(), self.functions.len());
+        }
+
+        self.functions.push(function);
+        Some(self.functions.len()-1)
     }
 
     pub(crate) fn functions(&self) -> &[FunctionInfoBuilder] {
@@ -240,7 +307,7 @@ impl DebugInfoBuilder {
             },
         ) {
             if existing_type != t && commit {
-                error!("DWARF info contains duplicate type definition. Overwriting type `{}` (named `{:?}`) with `{}` (named `{:?}`)",
+                warn!("DWARF info contains duplicate type definition. Overwriting type `{}` (named `{:?}`) with `{}` (named `{:?}`)",
                     existing_type,
                     existing_name,
                     t,
@@ -265,6 +332,70 @@ impl DebugInfoBuilder {
         self.types.get(&type_uid).is_some()
     }
 
+
+    pub(crate) fn add_stack_variable(
+        &mut self,
+        fn_idx: Option<usize>,
+        offset: i64,
+        name: Option<String>,
+        type_uid: Option<TypeUID>,
+    ) {
+        let name = match name {
+            Some(x) => {
+                if x.len() == 1 && x.chars().next() == Some('\x00') {
+                    // Anonymous variable, generate name
+                    format!("debug_var_{}", offset)
+                }
+                else {
+                    x
+                }
+            },
+            None => {
+                // Anonymous variable, generate name
+                format!("debug_var_{}", offset)
+            }
+        };
+
+        let Some(function_index) = fn_idx else {
+            // If we somehow lost track of what subprogram we're in or we're not actually in a subprogram
+            error!("Trying to add a local variable outside of a subprogram. Please report this issue.");
+            return;
+        };
+
+        // Either get the known type or use a 0 confidence void type so we at least get the name applied
+        let t = match type_uid {
+            Some(uid) => Conf::new(self.get_type(uid).unwrap().1, 128),
+            None => Conf::new(Type::void(), 0)
+        };
+        let function = &mut self.functions[function_index];
+
+        // TODO: If we can't find a known offset can we try to guess somehow?
+
+        let Some(func_addr) = function.address else {
+            // If we somehow are processing a function's variables before the function is created
+            error!("Trying to add a local variable without a known function start. Please report this issue.");
+            return;
+        };
+
+        let Some(offset_adjustment) = self.range_data_offsets.values_overlap(func_addr).next() else {
+            // Unknown why, but this is happening with MachO + external dSYM
+            debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CIE offset.", name, offset, func_addr);
+            return;
+        };
+
+        let adjusted_offset = offset - offset_adjustment;
+
+        if adjusted_offset > 0 {
+            // If we somehow end up with a positive sp offset
+            error!("Trying to add a local variable at positive storage offset {}. Please report this issue.", adjusted_offset);
+            return;
+        }
+
+        let var = Variable::new(BNVariableSourceType::StackVariableSourceType, 0, adjusted_offset);
+        function.stack_variables.push(NamedTypedVariable::new(var, name, t, false));
+
+    }
+
     pub(crate) fn add_data_variable(
         &mut self,
         address: u64,
@@ -278,7 +409,7 @@ impl DebugInfoBuilder {
             let new_type = self.get_type(type_uid).unwrap().1;
 
             if existing_type_uid != type_uid || existing_type != new_type {
-                error!("DWARF info contains duplicate data variable definition. Overwriting data variable at 0x{:08x} (`{}`) with `{}`",
+                warn!("DWARF info contains duplicate data variable definition. Overwriting data variable at 0x{:08x} (`{}`) with `{}`",
                     address,
                     self.get_type(existing_type_uid).unwrap().1,
                     self.get_type(type_uid).unwrap().1
@@ -343,12 +474,12 @@ impl DebugInfoBuilder {
                 function.address,
                 function.platform.clone(),
                 vec![], // TODO : Components
+                function.stack_variables.clone(), // TODO: local non-stack variables
             ));
         }
     }
 
     pub(crate) fn post_process(&mut self, bv: &BinaryView, _debug_info: &mut DebugInfo) -> &Self {
-        // TODO : We don't need post-processing if we process correctly the first time....
         //   When originally resolving names, we need to check:
         //     If there's already a name from binja that's "more correct" than what we found (has more namespaces)
         //     If there's no name for the DIE, but there's a linkage name that's resolved in binja to a usable name
@@ -380,8 +511,10 @@ impl DebugInfoBuilder {
                 }
             }
 
-            if let Some(address) = func.address {
-                let existing_functions = bv.functions_at(address);
+            if let Some(address) = func.address.as_mut() {
+                let diff = bv.start() - bv.original_base();
+                *address += diff;  // rebase the address
+                let existing_functions = bv.functions_at(*address);
                 match existing_functions.len().cmp(&1) {
                     Ordering::Greater => {
                         warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");

@@ -686,10 +686,8 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.current_selection_begin = 0
 			self.current_selection_end = 0
 			self.current_dbg = None
-			self.current_project = None
 
 			# Selections that were current as of last issued command
-			self.active_project = None
 			self.active_view = None
 			self.active_func = None
 			self.active_block = None
@@ -813,7 +811,6 @@ from binaryninja import *
 			self.active_selection_begin = self.current_selection_begin
 			self.active_selection_end = self.current_selection_end
 			self.active_dbg = self.current_dbg
-			self.active_project = self.current_project
 
 			self.locals.blacklist_enabled = False
 
@@ -979,11 +976,9 @@ from binaryninja import *
 		if view is not None:
 			if self.debugger_imported:
 				self.interpreter.current_dbg = self.DebuggerController(view)
-			self.interpreter.current_project = view.project
 
 		else:
 			self.interpreter.current_dbg = None
-			self.interpreter.current_project = None
 
 		# This is a workaround that allows BN to properly free up resources when the last tab of a binary view is closed.
 		# Without this update, the interpreter local variables will NOT be updated until the user interacts with the
@@ -1489,10 +1484,23 @@ PythonScriptingProvider.register_magic_variable(
 	"current_thread",
 	lambda instance: instance.interpreter.interpreter
 )
+
+
+def _get_current_project(instance: PythonScriptingInstance):
+	if instance.interpreter.active_view is not None:
+		return instance.interpreter.active_view.project
+	if instance.interpreter.locals["current_ui_context"] is not None:
+		return instance.interpreter.locals["current_ui_context"].getProject()
+	return None
+
+
 PythonScriptingProvider.register_magic_variable(
 	"current_project",
-	lambda instance: instance.interpreter.active_project
+	_get_current_project,
+	depends_on=["current_ui_context", "current_view"],
 )
+
+
 PythonScriptingProvider.register_magic_variable(
 	"current_view",
 	lambda instance: instance.interpreter.active_view

@@ -51,6 +51,10 @@ impl Settings {
         }
     }
 
+    pub fn default() -> Ref<Self> {
+        Self::new("default")
+    }
+
     pub fn set_resource_id<S: BnStrCompatible>(&self, resource_id: S) {
         let resource_id = resource_id.into_bytes_with_nul();
         unsafe { BNSettingsSetResourceId(self.handle, resource_id.as_ref().as_ptr() as *mut _) };

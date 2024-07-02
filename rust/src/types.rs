@@ -1339,6 +1339,23 @@ impl ToOwned for Type {
     }
 }
 
+// NOTE ConfTypeList never exists by itself, it's always part of other struct,
+// like TypeFieldReferenceTypeInfo
+pub struct ConfTypeList<'a>(core::marker::PhantomData<&'a ()>);
+impl<'a> CoreArrayProvider for ConfTypeList<'a> {
+    type Raw = BNTypeWithConfidence;
+    type Context = core::marker::PhantomData<&'a ()>;
+    type Wrapped<'b> = Conf<Ref<Type>> where 'a: 'b;
+}
+
+unsafe impl CoreArrayProviderInner for ConfTypeList<'_> {
+    unsafe fn free(_raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {}
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Conf::new(Type::from_raw(raw.type_).to_owned(), raw.confidence)
+    }
+}
+
 ///////////////////////
 // FunctionParameter
 
@@ -3762,5 +3779,124 @@ unsafe impl CoreArrayProviderInner for UnresolvedIndirectBranches {
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Self(*raw)
+    }
+}
+
+/////////////////////////
+// TypeFieldReference
+
+#[derive(Debug, Clone)]
+pub struct TypeFieldReference {
+    pub func: Ref<Function>,
+    pub arch: CoreArchitecture,
+    pub addr: u64,
+    pub size: usize,
+    pub type_: Conf<Ref<Type>>,
+}
+
+impl TypeFieldReference {
+    pub fn from_raw(value: BNTypeFieldReference) -> Self {
+        Self {
+            func: unsafe { Function::from_raw(value.func) },
+            arch: CoreArchitecture(value.arch),
+            addr: value.addr,
+            size: value.size,
+            type_: Conf::new(
+                unsafe { Type::ref_from_raw(value.incomingType.type_) },
+                value.incomingType.confidence,
+            ),
+        }
+    }
+}
+
+impl CoreArrayProvider for TypeFieldReference {
+    type Raw = BNTypeFieldReference;
+    type Context = ();
+    type Wrapped<'a> = ManuallyDrop<Self>;
+}
+
+unsafe impl CoreArrayProviderInner for TypeFieldReference {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeTypeFieldReferences(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        ManuallyDrop::new(TypeFieldReference::from_raw(*raw))
+    }
+}
+
+/////////////////////////
+// TypeFieldReferenceSizeInfo
+
+#[repr(transparent)]
+pub struct TypeFieldReferenceSizeInfo(BNTypeFieldReferenceSizeInfo);
+
+impl TypeFieldReferenceSizeInfo {
+    pub(crate) unsafe fn ref_from_raw(value: &BNTypeFieldReferenceSizeInfo) -> &Self {
+        mem::transmute(value)
+    }
+
+    pub fn sizes(&self) -> &[usize] {
+        unsafe { core::slice::from_raw_parts(self.0.sizes, self.0.count) }
+    }
+}
+
+impl Drop for TypeFieldReferenceSizeInfo {
+    fn drop(&mut self) {
+        unsafe { BNFreeTypeFieldReferenceSizes(self.0.sizes, self.0.count) }
+    }
+}
+
+impl CoreArrayProvider for TypeFieldReferenceSizeInfo {
+    type Raw = BNTypeFieldReferenceSizeInfo;
+    type Context = ();
+    type Wrapped<'a> = &'a TypeFieldReferenceSizeInfo;
+}
+
+unsafe impl CoreArrayProviderInner for TypeFieldReferenceSizeInfo {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeTypeFieldReferenceSizeInfo(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        TypeFieldReferenceSizeInfo::ref_from_raw(raw)
+    }
+}
+
+/////////////////////////
+// TypeFieldReferenceTypeInfo
+
+#[repr(transparent)]
+pub struct TypeFieldReferenceTypeInfo(BNTypeFieldReferenceTypeInfo);
+
+impl TypeFieldReferenceTypeInfo {
+    pub(crate) unsafe fn ref_from_raw(value: &BNTypeFieldReferenceTypeInfo) -> &Self {
+        mem::transmute(value)
+    }
+
+    pub fn types(&self) -> Array<ConfTypeList> {
+        unsafe { Array::new(self.0.types, self.0.count, core::marker::PhantomData) }
+    }
+}
+
+impl Drop for TypeFieldReferenceTypeInfo {
+    fn drop(&mut self) {
+        unsafe { BNFreeTypeFieldReferenceTypes(self.0.types, self.0.count) }
+    }
+}
+
+impl CoreArrayProvider for TypeFieldReferenceTypeInfo {
+    type Raw = BNTypeFieldReferenceTypeInfo;
+    type Context = ();
+    type Wrapped<'a> = &'a TypeFieldReferenceTypeInfo;
+}
+
+unsafe impl CoreArrayProviderInner for TypeFieldReferenceTypeInfo {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeTypeFieldReferenceTypeInfo(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        TypeFieldReferenceTypeInfo::ref_from_raw(raw)
     }
 }

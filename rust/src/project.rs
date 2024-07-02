@@ -748,8 +748,8 @@ impl Project {
     /// }
     /// ```
     // NOTE mut is used here, so only one lock can be aquired at once
-    pub fn bulk_operation(&mut self) -> Result<ProjectBultOperationLock, ()> {
-        Ok(ProjectBultOperationLock::lock(self))
+    pub fn bulk_operation(&mut self) -> Result<ProjectBulkOperationLock, ()> {
+        Ok(ProjectBulkOperationLock::lock(self))
     }
 }
 
@@ -781,11 +781,11 @@ unsafe impl CoreArrayProviderInner for Project {
     }
 }
 
-pub struct ProjectBultOperationLock<'a> {
+pub struct ProjectBulkOperationLock<'a> {
     lock: &'a mut Project,
 }
 
-impl<'a> ProjectBultOperationLock<'a> {
+impl<'a> ProjectBulkOperationLock<'a> {
     pub fn lock(project: &'a mut Project) -> Self {
         unsafe { BNProjectBeginBulkOperation(project.as_raw()) };
         Self { lock: project }
@@ -796,14 +796,14 @@ impl<'a> ProjectBultOperationLock<'a> {
     }
 }
 
-impl std::ops::Deref for ProjectBultOperationLock<'_> {
+impl std::ops::Deref for ProjectBulkOperationLock<'_> {
     type Target = Project;
     fn deref(&self) -> &Self::Target {
         self.lock
     }
 }
 
-impl Drop for ProjectBultOperationLock<'_> {
+impl Drop for ProjectBulkOperationLock<'_> {
     fn drop(&mut self) {
         unsafe { BNProjectEndBulkOperation(self.lock.as_raw()) };
     }

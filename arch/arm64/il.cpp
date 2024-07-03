@@ -1682,6 +1682,23 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.FloatSub(REGSZ_O(operand1), ILREG_O(operand1),
 		    ReadILOperand(il, operand2, REGSZ_O(operand1)), SETFLAGS));
 		break;
+	case ARM64_FSQRT:
+		switch (instr.encoding)
+		{
+		case ENC_FSQRT_D_FLOATDP1:
+		case ENC_FSQRT_H_FLOATDP1:
+		case ENC_FSQRT_S_FLOATDP1:
+			il.AddInstruction(ILSETREG_O(
+			    operand1, il.FloatSqrt(REGSZ_O(operand1), ILREG_O(operand2))));
+			break;
+		case ENC_FSQRT_ASIMDMISCFP16_R:
+		case ENC_FSQRT_ASIMDMISC_R:
+			// Intrinsics
+			break;
+		default:
+			ABORT_LIFT;
+		}
+		break;
 	case ARM64_FSUB:
 		switch (instr.encoding)
 		{

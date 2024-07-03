@@ -188,8 +188,6 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |network|Log Downloads|When enabled, will log all URLs through the download provider|`boolean`|`False`|[`SettingsUserScope`]|<a id='network.logDownloads'>network.logDownloads</a>|
 |network|Enable Auto Downloading PDBs|Automatically search for and download pdb files from specified symbol servers.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='network.pdbAutoDownload'>network.pdbAutoDownload</a>|
 |network|Websocket Provider|Specify the registered WebsocketProvider which enables communication over HTTPS.|`string`|`CoreWebsocketProvider`|[`SettingsUserScope`]|<a id='network.websocketProviderName'>network.websocketProviderName</a>|
-| | | |`enum`|`_EnterpriseWebsocketProvider`| | |
-| | | |`enum`|`CoreWebsocketProvider`| | |
 |pdb|Allow Unnamed Untyped Symbols|Allow creation of symbols with no name and void types, often used as static local variables. Generally, these are just noisy and not relevant.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='pdb.features.allowUnnamedVoidSymbols'>pdb.features.allowUnnamedVoidSymbols</a>|
 |pdb|Allow Untyped Symbols|Allow creation of symbols that have no type, and will be created as void-typed symbols. Generally, this happens in a stripped PDB when a Global symbol's mangled name does not contain type information.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='pdb.features.allowVoidGlobals'>pdb.features.allowVoidGlobals</a>|
 |pdb|Create Missing Named Types|Allow creation of types named by function signatures which are not found in the PDB's types list or the Binary View. These types are usually found in stripped PDBs that have no type information but function signatures reference the stripped types.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='pdb.features.createMissingNamedTypes'>pdb.features.createMissingNamedTypes</a>|
@@ -347,27 +345,6 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |ui|Scripting Provider History Size|Specify the maximum number of lines contained in the scripting history.|`number`|`1000`|[`SettingsUserScope`]|<a id='ui.scripting.historySize'>ui.scripting.historySize</a>|
 |ui|Display Settings Identifiers|Display setting identifiers in the UI settings view.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.settings.displayIdentifiers'>ui.settings.displayIdentifiers</a>|
 |ui|Default Sidebar Content on Open|Specify the sidebar widgets to automatically activate when opening a file.|`array`|[`Cross References`, `Symbols`]|[`SettingsUserScope`]|<a id='ui.sidebar.defaultWidgets'>ui.sidebar.defaultWidgets</a>|
-| | | |`enum`|`None`| | |
-| | | |`enum`|`Symbols`| | |
-| | | |`enum`|`Types`| | |
-| | | |`enum`|`Tags`| | |
-| | | |`enum`|`Memory Map`| | |
-| | | |`enum`|`External Links`| | |
-| | | |`enum`|`Debugger`| | |
-| | | |`enum`|`Mini Graph`| | |
-| | | |`enum`|`Cross References`| | |
-| | | |`enum`|`Other (Compatibility)`| | |
-| | | |`enum`|`Console`| | |
-| | | |`enum`|`Variables`| | |
-| | | |`enum`|`Stack`| | |
-| | | |`enum`|`Chat`| | |
-| | | |`enum`|`User Positions`| | |
-| | | |`enum`|`History`| | |
-| | | |`enum`|`Strings`| | |
-| | | |`enum`|`Find`| | |
-| | | |`enum`|`Log`| | |
-| | | |`enum`|`Debugger Modules`| | |
-| | | |`enum`|`Stack Trace`| | |
 |ui|Extend Left Sidebar to Bottom of Window|When the left sidebar is open, the sidebar contents will extend to the bottom of the window. If not set, the bottom area will extend to the left edge of the window even when the left sidebar is open.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.sidebar.extendLeftToBottom'>ui.sidebar.extendLeftToBottom</a>|
 |ui|Extend Right Sidebar to Bottom of Window|When the right sidebar is open, the sidebar contents will extend to the bottom of the window. If not set, the bottom area will extend to the right edge of the window even when the right sidebar is open.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.sidebar.extendRightToBottom'>ui.sidebar.extendRightToBottom</a>|
 |ui|Sidebar Icon Size|Size of the icons in the sidebar.|`string`|`standard`|[`SettingsUserScope`]|<a id='ui.sidebar.iconSize'>ui.sidebar.iconSize</a>|

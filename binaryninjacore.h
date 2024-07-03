@@ -5580,6 +5580,8 @@ extern "C"
 	    BNMediumLevelILFunction* func, size_t version, size_t* count);
 	BINARYNINJACOREAPI bool BNIsMediumLevelILSSAVarLive(
 	    BNMediumLevelILFunction* func, const BNVariable* var, size_t version);
+	BINARYNINJACOREAPI bool BNIsMediumLevelILSSAVarLiveAt(
+	    BNMediumLevelILFunction* func, const BNVariable* var, size_t version, const size_t instr);
 
 	BINARYNINJACOREAPI BNVariable* BNGetMediumLevelILVariables(BNMediumLevelILFunction* func, size_t* count);
 	BINARYNINJACOREAPI BNVariable* BNGetMediumLevelILAliasedVariables(BNMediumLevelILFunction* func, size_t* count);

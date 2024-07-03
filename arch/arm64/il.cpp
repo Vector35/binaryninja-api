@@ -1158,6 +1158,10 @@ bool GetLowLevelILForInstruction(
 	InstructionOperand& operand2 = instr.operands[1];
 	InstructionOperand& operand3 = instr.operands[2];
 	InstructionOperand& operand4 = instr.operands[3];
+	InstructionOperand& operand5 = instr.operands[4];
+
+	const size_t pairedSize = REGSZ_O(operand1) * 2;
+
 
 	if (requireAlignment && (addr % 4 != 0)) {
 		return false;
@@ -1326,6 +1330,37 @@ bool GetLowLevelILForInstruction(
 					il.Not(REGSZ_O(operand2), ReadILOperand(il, operand3, REGSZ_O(operand2))), SETFLAGS)));
 		}
 		break;
+	// TODO: some representation of the Acquire/Release semantics of the CAS* instructions... attribute?
+	case ARM64_CASP:  // these compare-and-swaps can be pairs of 32 bit words or 64 bit doublewords
+	case ARM64_CASPA:
+	case ARM64_CASPAL:
+	case ARM64_CASPL:
+	{
+		// the ordering of the register pairing depends on the byte order (endianness) of memory
+		bool bigEndian = arch->GetEndianness() == BigEndian;
+		auto hi1 = bigEndian ? operand1 : operand2;
+		auto lo1 = bigEndian ? operand2 : operand1;
+		auto hi2 = bigEndian ? operand3 : operand4;
+		auto lo2 = bigEndian ? operand4 : operand3;
+		il.AddInstruction(il.SetRegister(pairedSize, LLIL_TEMP(0), il.Load(pairedSize, ILREG_O(operand5))));
+
+		GenIfElse(il,
+			il.CompareEqual(pairedSize,
+				il.RegisterSplit(REGSZ_O(operand1),
+					hi1.reg[0], lo1.reg[0]),
+				il.Register(pairedSize, LLIL_TEMP(0))),
+			il.Store(pairedSize,
+				ILREG_O(operand5),
+				il.RegisterSplit(REGSZ_O(operand1), hi2.reg[0], lo2.reg[0])),
+			0);
+
+		il.AddInstruction(
+			il.SetRegisterSplit(pairedSize,
+				hi1.reg[0],
+				lo1.reg[0],
+				il.Register(pairedSize, LLIL_TEMP(0))));
+		break;
+	}
 	case ARM64_CAS:  // these compare-and-swaps can be 32 or 64 bit
 	case ARM64_CASA:
 	case ARM64_CASAL:
@@ -1500,9 +1535,9 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_EXTR:
 		il.AddInstruction(
-		    ILSETREG_O(operand1, il.LogicalShiftRight(REGSZ_O(operand1) * 2,
-		                             il.Or(REGSZ_O(operand1) * 2,
-		                                 il.ShiftLeft(REGSZ_O(operand1) * 2, ILREG_O(operand2),
+		    ILSETREG_O(operand1, il.LogicalShiftRight(pairedSize,
+		                             il.Or(pairedSize,
+		                                 il.ShiftLeft(pairedSize, ILREG_O(operand2),
 		                                     il.Const(1, REGSZ_O(operand1) * 8)),
 		                                 ILREG_O(operand3)),
 		                             il.Const(1, IMM_O(operand4)))));

@@ -87,10 +87,9 @@ namespace BinaryNinja
 		bool m_hasSymbolTable = false;
 		uint64_t m_symbolTableOffset = 0;
 		uint64_t m_entryPoint = 0;
-		uint64_t m_imageBase = 0;
-		uint64_t m_sysInit = 0; // Entrypoint, if we find it in the symbol table
+		uint64_t m_determinedImagebase = 0; // Determined from analysis of the symbol table
+		uint64_t m_imageBase = 0; // Selected image base that could be overriden by user
 		std::vector<VxWorksSectionInfo> m_sections;
-
 		VxWorksVersion m_version = VxWorksUnknownVersion;
 		std::vector<VxWorksSymbolEntry> m_symbols;
 
@@ -106,9 +105,12 @@ namespace BinaryNinja
 			VxWorksSymbolEntry& entry, VxWorksVersion version);
 		bool ScanForVxWorksSystemTable(BinaryReader *reader, VxWorksVersion version, BNEndianness endianness);
 		bool FindSymbolTable(BinaryReader *reader);
-		void DetermineImageBaseFromSymbols();
+		uint64_t FindSysInit(BinaryReader *reader, uint64_t imageBase);
+		void AdjustImageBaseForHeaderIfPresent(BinaryReader* reader);
+		void DetermineImageBaseFromSymbols(BinaryReader* reader);
 
 	protected:
+		virtual uint64_t PerformGetStart() const override;
 		virtual uint64_t PerformGetEntryPoint() const override;
 		virtual bool PerformIsExecutable() const override { return true; }
 		virtual BNEndianness PerformGetDefaultEndianness() const override { return m_endianness; }

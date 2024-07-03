@@ -36,6 +36,7 @@
 #define ELF_PT_SUNW_UNWIND       0x6464e550
 #define ELF_PT_GNU_STACK         0x6474e551 // Indicates stack executability.
 #define ELF_PT_GNU_RELRO         0x6474e552 // Read-only after relocation.
+#define ELF_PT_GNU_PROPERTY      0x6474e553
 #define ELF_PT_OPENBSD_RANDOMIZE 0x65a3dbe6 // Fill with random data.
 #define ELF_PT_OPENBSD_WXNEEDED  0x65a3dbe7 // Program does W^X violations.
 #define ELF_PT_OPENBSD_BOOTDATA  0x65a41be6 // Section for boot arguments.

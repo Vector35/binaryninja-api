@@ -1851,6 +1851,7 @@ bool ElfView::Init()
 	programHeaderTypeBuilder.AddMemberWithValue("PT_GNU_EH_FRAME", ELF_PT_GNU_EH_FRAME);
 	programHeaderTypeBuilder.AddMemberWithValue("PT_GNU_STACK", ELF_PT_GNU_STACK);
 	programHeaderTypeBuilder.AddMemberWithValue("PT_GNU_RELRO", ELF_PT_GNU_RELRO);
+	programHeaderTypeBuilder.AddMemberWithValue("PT_GNU_PROPERTY", ELF_PT_GNU_PROPERTY);
 	programHeaderTypeBuilder.AddMemberWithValue("PT_LOSUNW", ELF_PT_LOSUNW);
 	programHeaderTypeBuilder.AddMemberWithValue("PT_SUNWBSS", ELF_PT_SUNWBSS);
 	programHeaderTypeBuilder.AddMemberWithValue("PT_SUNWSTACK", ELF_PT_SUNWSTACK);

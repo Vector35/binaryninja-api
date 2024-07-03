@@ -77,6 +77,15 @@ VxWorksView::VxWorksView(BinaryView* data, bool parseOnly): BinaryView("VxWorks"
 	m_logger = CreateLogger("BinaryView.VxWorksView");
 }
 
+
+bool VxWorksView::IsASCIIString(std::string &s)
+{
+	return !std::any_of(s.begin(), s.end(), [](char c) {
+        return static_cast<unsigned char>(c) > 127;
+    });
+}
+
+
 void VxWorksView::DefineSymbolTableDataVariable()
 {
 	StructureBuilder symbolTableEntry;
@@ -152,10 +161,10 @@ void VxWorksView::AdjustImageBaseForHeaderIfPresent(BinaryReader *reader)
 		return; // Likely not a header
 
 	// Meets size constraints, now verify that a symbol name address aligns with a known symbol name before adjusting
-	if (FindSysInit(reader, m_determinedImagebase - possibleHeaderSz))
+	if (FindSysInit(reader, m_determinedImageBase - possibleHeaderSz))
 	{
 		m_logger->LogDebug("sysInit found, adjusting base address by 0x%08x bytes", possibleHeaderSz);
-		m_determinedImagebase -= possibleHeaderSz;
+		m_determinedImageBase -= possibleHeaderSz;
 	}
 }
 
@@ -183,10 +192,10 @@ void VxWorksView::DetermineImageBaseFromSymbols(BinaryReader* reader)
 		return;
 	}
 
-	m_determinedImagebase = lowestTextAddress;
+	m_determinedImageBase = lowestTextAddress;
 	AdjustImageBaseForHeaderIfPresent(reader);
 	m_logger->LogDebug("Determined image base address: 0x%016x", lowestTextAddress);
-	m_imageBase = m_determinedImagebase;
+	m_imageBase = m_determinedImageBase;
 }
 
 
@@ -365,6 +374,7 @@ void VxWorksView::AssignSymbolToSection(std::map<std::string, std::set<uint64_t>
 }
 
 
+#define MAX_BAD_SYMBOLS_BEFORE_ABORT 10
 void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 {
 	std::map<std::string, std::set<uint64_t>> sections = {
@@ -374,6 +384,7 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 		{ ".symtab", {} },
 	};
 
+	size_t badSymbols = 0;
 	for (const auto& entry : m_symbols)
 	{
 		reader->Seek(entry.name - m_imageBase);
@@ -412,10 +423,28 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 			return;
 		}
 
+		// While our scanning code for symbol table discovery has been tested, false positives are possible.
+		if (!IsASCIIString(symbolName) || symbolName.empty())
+		{
+			if (badSymbols < MAX_BAD_SYMBOLS_BEFORE_ABORT) // Hush after reporting 10 bad symbols
+				m_logger->LogWarn("Symbol entry name for 0x%016x is invalid", entry.address);
+
+			badSymbols++;
+			if (badSymbols == MAX_BAD_SYMBOLS_BEFORE_ABORT)
+			{
+				m_logger->LogWarn(
+					"%d or more symbols contain invalid names. VxWorks symbol table might not be a " \
+					"symbol table at all! Please, report this issue.", MAX_BAD_SYMBOLS_BEFORE_ABORT
+				);
+				return;
+			}
+
+			continue;
+		}
+
 		if (m_parentView->IsOffsetBackedByFile(entry.address - m_imageBase))
 		{
 			AssignSymbolToSection(sections, bnSymbolType, vxSymbolType, entry.address);
-			// TODO: make sure symbolName only contains ASCII
 			DefineAutoSymbol(new Symbol(bnSymbolType, symbolName, entry.address));
 		}
 	}
@@ -498,7 +527,7 @@ bool VxWorksView::Init()
 		if (m_hasSymbolTable)
 		{
 			DetermineImageBaseFromSymbols(&reader);
-			uint64_t sysInit = FindSysInit(&reader, m_determinedImagebase);
+			uint64_t sysInit = FindSysInit(&reader, m_determinedImageBase);
 			m_entryPoint = sysInit ? sysInit : m_imageBase;
 		}
 		else
@@ -541,7 +570,7 @@ bool VxWorksView::Init()
 
 		if (m_hasSymbolTable)
 		{
-			if (m_determinedImagebase != m_imageBase)
+			if (m_determinedImageBase != m_imageBase)
 				m_logger->LogWarn("VxWorks image base overriden by user. Not applying symbols...");
 			else
 				ProcessSymbolTable(&reader);

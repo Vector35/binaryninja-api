@@ -117,8 +117,52 @@ void VxWorksView::DefineSymbolTableDataVariable()
 	DefineAutoSymbol(new Symbol(DataSymbol, "VxWorksSymbolTable", m_imageBase + m_symbolTableOffset));
 }
 
-void VxWorksView::DetermineImageBaseFromSymbols()
+
+uint64_t VxWorksView::FindSysInit(BinaryReader *reader, uint64_t imageBase)
 {
+	for (const auto& entry : m_symbols)
+	{
+		reader->Seek(entry.name - imageBase);
+		string symbolName = reader->ReadCString(MAX_SYMBOL_NAME_LENGTH);
+		if (symbolName == "sysInit" || symbolName == "_sysInit")
+		{
+			m_logger->LogDebug("Found %s function at 0x%016x", symbolName.c_str(), entry.address);
+			return entry.address;
+		}
+	}
+
+	return 0;
+}
+
+
+// All VxWorks image headers I've seen are less than 256 bytes in size. 1k should be plenty.
+#define MAX_VXWORKS_HEADER_SIZE 1024
+void VxWorksView::AdjustImageBaseForHeaderIfPresent(BinaryReader *reader)
+{
+	// Many VxWorks images contain a header and the first dword contains the size of the header.
+	reader->Seek(0);
+	uint32_t possibleHeaderSz = 0;
+	if (!reader->TryRead32(possibleHeaderSz))
+	{
+		m_logger->LogWarn("Failed to read first 4 bytes of VxWorks image. Please, report this issue.");
+		return;
+	}
+
+	if (!possibleHeaderSz || possibleHeaderSz > MAX_VXWORKS_HEADER_SIZE)
+		return; // Likely not a header
+
+	// Meets size constraints, now verify that a symbol name address aligns with a known symbol name before adjusting
+	if (FindSysInit(reader, m_determinedImagebase - possibleHeaderSz))
+	{
+		m_logger->LogDebug("sysInit found, adjusting base address by 0x%08x bytes", possibleHeaderSz);
+		m_determinedImagebase -= possibleHeaderSz;
+	}
+}
+
+
+void VxWorksView::DetermineImageBaseFromSymbols(BinaryReader* reader)
+{
+	// Get lowest address from symbol table text section entries
 	uint64_t lowestTextAddress = LOWEST_TEXT_SYMBOL_ADDRESS_START;
 	for (const auto& entry : m_symbols)
 	{
@@ -139,8 +183,10 @@ void VxWorksView::DetermineImageBaseFromSymbols()
 		return;
 	}
 
+	m_determinedImagebase = lowestTextAddress;
+	AdjustImageBaseForHeaderIfPresent(reader);
 	m_logger->LogDebug("Determined image base address: 0x%016x", lowestTextAddress);
-	m_imageBase = lowestTextAddress;
+	m_imageBase = m_determinedImagebase;
 }
 
 
@@ -244,9 +290,6 @@ bool VxWorksView::ScanForVxWorksSystemTable(BinaryReader *reader, VxWorksVersion
 		if (TryReadVxWorksSymbolEntry(reader, searchPos, entry, version) &&
 			find(foundNames.begin(), foundNames.end(), entry.name) == foundNames.end())
 		{
-			if (version == VxWorksVersion5 && endianness == BigEndian)
-				m_logger->LogDebug("0x%016x: address=%016x name=%016x flags=%08x count=%d", searchPos, entry.address, entry.name, entry.flags, m_symbols.size());
-
 			foundNames.push_back(entry.address);
 			m_symbols.push_back(entry);
 			searchPos -= entrySize;
@@ -374,8 +417,6 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 			AssignSymbolToSection(sections, bnSymbolType, vxSymbolType, entry.address);
 			// TODO: make sure symbolName only contains ASCII
 			DefineAutoSymbol(new Symbol(bnSymbolType, symbolName, entry.address));
-			if (symbolName == "sysInit" || symbolName == "_sysInit")
-				m_sysInit = entry.address;
 		}
 	}
 
@@ -409,12 +450,14 @@ void VxWorksView::AddSections()
 {
 	if (m_sections.empty())
 	{
-		m_logger->LogDebug("No sections found, creating default section");
+		// User overrode the base address or we couldn't find the symbol table
+		m_logger->LogWarn("Creating default .text section over everything...");
 		AddAutoSection(".text", m_imageBase, m_parentView->GetLength(), ReadOnlyCodeSectionSemantics);
 		return;
 	}
 
 	// Sort section information by start address (section w/ highest start address first)
+	m_logger->LogWarn("Creating sections from VxWorks symbol table entry ranges...");
 	std::sort(m_sections.begin(), m_sections.end(), [](const VxWorksSectionInfo& a, const VxWorksSectionInfo& b)
 	{
 		return a.AddressRange.first > b.AddressRange.first;
@@ -439,25 +482,6 @@ void VxWorksView::AddSections()
 }
 
 
-void VxWorksView::DetermineEntryPoint()
-{
-	m_entryPoint = m_imageBase;
-	if (m_sysInit)
-	{
-		// If we found the sysInit function in the symbol table, use it
-		m_entryPoint = m_sysInit;
-		return;
-	}
-
-	for (const auto& section : m_sections)
-	{
-		// No symbol table, set the entry point to the start of .text, likely the sysInit function
-		if (section.Name == ".text")
-			m_entryPoint = section.AddressRange.first;
-	}
-}
-
-
 bool VxWorksView::Init()
 {
 	try
@@ -473,8 +497,9 @@ bool VxWorksView::Init()
 		m_hasSymbolTable = FindSymbolTable(&reader);
 		if (m_hasSymbolTable)
 		{
-			DetermineImageBaseFromSymbols();
-			m_entryPoint = m_imageBase; // This will get updated later if the sysInit symbol is found
+			DetermineImageBaseFromSymbols(&reader);
+			uint64_t sysInit = FindSysInit(&reader, m_determinedImagebase);
+			m_entryPoint = sysInit ? sysInit : m_imageBase;
 		}
 		else
 		{
@@ -516,22 +541,31 @@ bool VxWorksView::Init()
 
 		if (m_hasSymbolTable)
 		{
-			ProcessSymbolTable(&reader);
+			if (m_determinedImagebase != m_imageBase)
+				m_logger->LogWarn("VxWorks image base overriden by user. Not applying symbols...");
+			else
+				ProcessSymbolTable(&reader);
+
 			DefineSymbolTableDataVariable();
 		}
 
 		AddSections();
-		DetermineEntryPoint();
 		AddEntryPointForAnalysis(m_platform, m_entryPoint);
 		return true;
 	}
 	catch (std::exception& e)
 	{
-		m_logger->LogError("Failed to load VxWorks image: %s", e.what());
+		m_logger->LogError("Failed to parse VxWorks image: %s", e.what());
 		return false;
 	}
 
 	return true;
+}
+
+
+uint64_t VxWorksView::PerformGetStart() const
+{
+	return m_imageBase;
 }
 
 
@@ -628,12 +662,18 @@ Ref<Settings> VxWorksViewType::GetLoadSettingsForData(BinaryView *data)
 
 	if (!viewRef->IsRelocatable())
 	{
-		settings->UpdateProperty("loader.imageBase", "default", viewRef->GetEntryPoint());
-		settings->UpdateProperty("loader.imageBase", "message", "Note: base address determined from VxWorks symbol table.");
+		settings->UpdateProperty(
+			"loader.imageBase", "message",
+			"Base address determined from discovered VxWorks symbol table. This image is not relocatable.\n" \
+			"   Overriding this value will degrade analysis and is NOT recommended."
+		);
 	}
 	else
 	{
-		settings->UpdateProperty("loader.imageBase", "message", "VxWorks symbol table was not found. Base address must be set manually.");
+		settings->UpdateProperty(
+			"loader.imageBase", "message",
+			"VxWorks symbol table was not found. Set the base address manually."
+		);
 	}
 
 	return settings;

@@ -8403,19 +8403,25 @@ vector<NameAndType> NeonGetIntrinsicInputs(uint32_t intrinsic)
 		case ARM64_INTRIN_VCLEZS_F32:	// FCMLE Sd,Sn,#0 uint32_t vclezs_f32(float32_t a)
 		case ARM64_INTRIN_VCLTZS_F32:	// FCMLT Sd,Sn,#0 uint32_t vcltzs_f32(float32_t a)
 		case ARM64_INTRIN_VCVT_U64_F32:	// FCVTZU Xd,Sn uint64x1_t vcvt_u64_f32(float32x1_t a)
-		case ARM64_INTRIN_VCVTAS_S32_F32:	// FCVTAS Wd,Sn int32_t vcvtas_s32_f32(float32_t a)
-		case ARM64_INTRIN_VCVTAS_U32_F32:	// FCVTAU Wd,Sn uint32_t vcvtas_u32_f32(float32_t a)
+		case ARM64_INTRIN_VCVTAS_S32_F32:	// FCVTAS Sd,Sn int32_t vcvtas_s32_f32(float32_t a)
+		// case ARM64_INTRIN_VCVTAS_S32_F32:	// FCVTAS Wd,Sn int32_t vcvtas_s32_f32(float32_t a)
+		case ARM64_INTRIN_VCVTAS_U32_F32:	// FCVTAU Sd,Sn uint32_t vcvtas_u32_f32(float32_t a)
+		// case ARM64_INTRIN_VCVTAS_U32_F32:	// FCVTAU Wd,Sn uint32_t vcvtas_u32_f32(float32_t a)
 		case ARM64_INTRIN_VCVTH_BF16_F32:	// BFCVT Hd,Sn bfloat16_t vcvth_bf16_f32(float32_t a)
-		case ARM64_INTRIN_VCVTMS_S32_F32:	// FCVTMS Wd,Sn int32_t vcvtms_s32_f32(float32_t a)
-		case ARM64_INTRIN_VCVTMS_U32_F32:	// FCVTMU Wd,Sn uint32_t vcvtms_u32_f32(float32_t a)
+		case ARM64_INTRIN_VCVTMS_S32_F32:	// FCVTMS Sd,Sn int32_t vcvtms_s32_f32(float32_t a)
+		// case ARM64_INTRIN_VCVTMS_S32_F32:	// FCVTMS Wd,Sn int32_t vcvtms_s32_f32(float32_t a)
+		case ARM64_INTRIN_VCVTMS_U32_F32:	// FCVTMU Sd,Sn uint32_t vcvtms_u32_f32(float32_t a)
+		// case ARM64_INTRIN_VCVTMS_U32_F32:	// FCVTMU Wd,Sn uint32_t vcvtms_u32_f32(float32_t a)
 		case ARM64_INTRIN_VCVTNS_S32_F32:	// FCVTNS Sd,Sn int32_t vcvtns_s32_f32(float32_t a)
 		// case ARM64_INTRIN_VCVTNS_S32_F32:	// FCVTNS Wd,Sn int32_t vcvtns_s32_f32(float32_t a)
 		case ARM64_INTRIN_VCVTNS_U32_F32:	// FCVTNU Sd,Sn uint32_t vcvtns_u32_f32(float32_t a)
 		// case ARM64_INTRIN_VCVTNS_U32_F32:	// FCVTNU Wd,Sn uint32_t vcvtns_u32_f32(float32_t a)
-		case ARM64_INTRIN_VCVTPS_S32_F32:	// FCVTPS Wd,Sn int32_t vcvtps_s32_f32(float32_t a)
+		case ARM64_INTRIN_VCVTPS_S32_F32:	// FCVTPS Sd,Sn int32_t vcvtps_s32_f32(float32_t a)
+		// case ARM64_INTRIN_VCVTPS_S32_F32:	// FCVTPS Wd,Sn int32_t vcvtps_s32_f32(float32_t a)
 		case ARM64_INTRIN_VCVTPS_U32_F32:	// FCVTPU Sd,Sn uint32_t vcvtps_u32_f32(float32_t a)
 		// case ARM64_INTRIN_VCVTPS_U32_F32:	// FCVTPU Wd,Sn uint32_t vcvtps_u32_f32(float32_t a)
-		case ARM64_INTRIN_VCVTS_S32_F32:	// FCVTZS Wd,Sn int32_t vcvts_s32_f32(float32_t a)
+		case ARM64_INTRIN_VCVTS_S32_F32:	// FCVTZS Sd,Sn int32_t vcvts_s32_f32(float32_t a)
+		// case ARM64_INTRIN_VCVTS_S32_F32:	// FCVTZS Wd,Sn int32_t vcvts_s32_f32(float32_t a)
 		case ARM64_INTRIN_VCVTS_U32_F32:	// FCVTZU Sd,Sn uint32_t vcvts_u32_f32(float32_t a)
 		// case ARM64_INTRIN_VCVTS_U32_F32:	// FCVTZU Wd,Sn uint32_t vcvts_u32_f32(float32_t a)
 		case ARM64_INTRIN_VDUP_N_F32:	// DUP Vd.2S,rn float32x2_t vdup_n_f32(float32_t value)
@@ -8475,10 +8481,8 @@ vector<NameAndType> NeonGetIntrinsicInputs(uint32_t intrinsic)
 		case ARM64_INTRIN_VCVTPS_N_S32_F32:	// FCVTPS Wd,Sn,#n int32_t vcvtps_n_s32_f32(float32_t a, const int n)
 		case ARM64_INTRIN_VCVTPS_N_U32_F32:	// FCVTPU Wd,Sn,#n uint32_t vcvtps_n_u32_f32(float32_t a, const int n)
 		case ARM64_INTRIN_VCVTS_N_S32_F32:	// FCVTZS Sd,Sn,#n int32_t vcvts_n_s32_f32(float32_t a, const int n)
-		// case ARM64_INTRIN_VCVTS_N_S32_F32:	// FCVTZS Wd,Sn int32_t vcvts_n_s32_f32(float32_t a, const int n)
 		// case ARM64_INTRIN_VCVTS_N_S32_F32:	// FCVTZS Wd,Sn,#n int32_t vcvts_n_s32_f32(float32_t a, const int n)
 		case ARM64_INTRIN_VCVTS_N_U32_F32:	// FCVTZU Sd,Sn,#n uint32_t vcvts_n_u32_f32(float32_t a, const int n)
-		// case ARM64_INTRIN_VCVTS_N_U32_F32:	// FCVTZU Wd,Sn uint32_t vcvts_n_u32_f32(float32_t a, const int n)
 		// case ARM64_INTRIN_VCVTS_N_U32_F32:	// FCVTZU Wd,Sn,#n uint32_t vcvts_n_u32_f32(float32_t a, const int n)
 		case ARM64_INTRIN_VCVTS_N_U64_F32:	// FCVTZU Xd,Sn,#n uint64_t vcvts_n_u64_f32(float32_t a, const int n)
 			return {NameAndType(Type::FloatType(4)), NameAndType(Type::IntegerType(4, false))};
@@ -8512,65 +8516,113 @@ vector<NameAndType> NeonGetIntrinsicInputs(uint32_t intrinsic)
 		case ARM64_INTRIN_VCVT_S16_F16:	// FCVTZS Vd.4H,Vn.4H int16x4_t vcvt_s16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVT_S32_F32:	// FCVTZS Vd.2S,Vn.2S int32x2_t vcvt_s32_f32(float32x2_t a)
 		case ARM64_INTRIN_VCVT_S32_F64:	// FCVTZS Wd,Dn int32x1_t vcvt_s32_f64(float64x1_t a)
-		case ARM64_INTRIN_VCVT_S64_F64:	// FCVTZS Xd,Dn int64x1_t vcvt_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVT_S32_F64:	// FCVTZS Wd,Sn int32x1_t vcvt_s32_f64(float64x1_t a)
+		case ARM64_INTRIN_VCVT_S64_F64:	// FCVTZS Dd,Dn int64x1_t vcvt_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVT_S64_F64:	// FCVTZS Xd,Dn int64x1_t vcvt_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVT_S64_F64:	// FCVTZS Xd,Sn int64x1_t vcvt_s64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVT_U16_F16:	// FCVTZS Vd.4H,Vn.4H uint16x4_t vcvt_u16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVT_U32_F32:	// FCVTZU Vd.2S,Vn.2S uint32x2_t vcvt_u32_f32(float32x2_t a)
 		case ARM64_INTRIN_VCVT_U32_F64:	// FCVTZU Wd,Dn uint32x1_t vcvt_u32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVT_U32_F64:	// FCVTZU Wd,Sn uint32x1_t vcvt_u32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVT_U64_F64:	// FCVTZU Xd,Dn uint64x1_t vcvt_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVT_U64_F64:	// FCVTZU Xd,Sn uint64x1_t vcvt_u64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTA_S16_F16:	// FCVTAS Vd.4H,Vn.4H int16x4_t vcvta_s16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTA_S32_F32:	// FCVTAS Vd.2S,Vn.2S int32x2_t vcvta_s32_f32(float32x2_t a)
 		case ARM64_INTRIN_VCVTA_S32_F64:	// FCVTAS Wd,Dn int32x1_t vcvta_s32_f64(float64x1_t a)
-		case ARM64_INTRIN_VCVTA_S64_F64:	// FCVTAS Xd,Dn int64x1_t vcvta_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTA_S32_F64:	// FCVTAS Wd,Sn int32x1_t vcvta_s32_f64(float64x1_t a)
+		case ARM64_INTRIN_VCVTA_S64_F64:	// FCVTAS Dd,Dn int64x1_t vcvta_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTA_S64_F64:	// FCVTAS Xd,Dn int64x1_t vcvta_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTA_S64_F64:	// FCVTAS Xd,Sn int64x1_t vcvta_s64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTA_U16_F16:	// FCVTAU Vd.4H,Vn.4H uint16x4_t vcvta_u16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTA_U32_F32:	// FCVTAU Vd.2S,Vn.2S uint32x2_t vcvta_u32_f32(float32x2_t a)
 		case ARM64_INTRIN_VCVTA_U32_F64:	// FCVTAU Wd,Dn uint32x1_t vcvta_u32_f64(float64x1_t a)
-		case ARM64_INTRIN_VCVTA_U64_F64:	// FCVTAU Xd,Dn uint64x1_t vcvta_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTA_U32_F64:	// FCVTAU Wd,Sn uint32x1_t vcvta_u32_f64(float64x1_t a)
+		case ARM64_INTRIN_VCVTA_U64_F64:	// FCVTAU Dd,Dn uint64x1_t vcvta_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTA_U64_F64:	// FCVTAU Xd,Dn uint64x1_t vcvta_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTA_U64_F64:	// FCVTAU Xd,Sn uint64x1_t vcvta_u64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTAD_S32_F64:	// FCVTAS Wd,Dn int32_t vcvtad_s32_f64(float64_t a)
-		case ARM64_INTRIN_VCVTAD_S64_F64:	// FCVTAS Xd,Dn int64_t vcvtad_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTAD_S32_F64:	// FCVTAS Wd,Sn int32_t vcvtad_s32_f64(float64_t a)
+		case ARM64_INTRIN_VCVTAD_S64_F64:	// FCVTAS Dd,Dn int64_t vcvtad_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTAD_S64_F64:	// FCVTAS Xd,Dn int64_t vcvtad_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTAD_S64_F64:	// FCVTAS Xd,Sn int64_t vcvtad_s64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTAD_U32_F64:	// FCVTAU Wd,Dn uint32_t vcvtad_u32_f64(float64_t a)
-		case ARM64_INTRIN_VCVTAD_U64_F64:	// FCVTAU Xd,Dn uint64_t vcvtad_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTAD_U32_F64:	// FCVTAU Wd,Sn uint32_t vcvtad_u32_f64(float64_t a)
+		case ARM64_INTRIN_VCVTAD_U64_F64:	// FCVTAU Dd,Dn uint64_t vcvtad_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTAD_U64_F64:	// FCVTAU Xd,Dn uint64_t vcvtad_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTAD_U64_F64:	// FCVTAU Xd,Sn uint64_t vcvtad_u64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTD_S32_F64:	// FCVTZS Wd,Dn int32_t vcvtd_s32_f64(float64_t a)
-		case ARM64_INTRIN_VCVTD_S64_F64:	// FCVTZS Xd,Dn int64_t vcvtd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTD_S32_F64:	// FCVTZS Wd,Sn int32_t vcvtd_s32_f64(float64_t a)
+		case ARM64_INTRIN_VCVTD_S64_F64:	// FCVTZS Dd,Dn int64_t vcvtd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTD_S64_F64:	// FCVTZS Xd,Dn int64_t vcvtd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTD_S64_F64:	// FCVTZS Xd,Sn int64_t vcvtd_s64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTD_U32_F64:	// FCVTZU Wd,Dn uint32_t vcvtd_u32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTD_U32_F64:	// FCVTZU Wd,Sn uint32_t vcvtd_u32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTD_U64_F64:	// FCVTZU Dd,Dn uint64_t vcvtd_u64_f64(float64_t a)
 		// case ARM64_INTRIN_VCVTD_U64_F64:	// FCVTZU Xd,Dn uint64_t vcvtd_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTD_U64_F64:	// FCVTZU Xd,Sn uint64_t vcvtd_u64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTM_S16_F16:	// FCVTMS Vd.4H,Vn.4H int16x4_t vcvtm_s16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTM_S32_F32:	// FCVTMS Vd.2S,Vn.2S int32x2_t vcvtm_s32_f32(float32x2_t a)
 		case ARM64_INTRIN_VCVTM_S32_F64:	// FCVTMS Wd,Dn int32x1_t vcvtm_s32_f64(float64x1_t a)
-		case ARM64_INTRIN_VCVTM_S64_F64:	// FCVTMS Xd,Dn int64x1_t vcvtm_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTM_S32_F64:	// FCVTMS Wd,Sn int32x1_t vcvtm_s32_f64(float64x1_t a)
+		case ARM64_INTRIN_VCVTM_S64_F64:	// FCVTMS Dd,Dn int64x1_t vcvtm_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTM_S64_F64:	// FCVTMS Xd,Dn int64x1_t vcvtm_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTM_S64_F64:	// FCVTMS Xd,Sn int64x1_t vcvtm_s64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTM_U16_F16:	// FCVTMU Vd.4H,Vn.4H uint16x4_t vcvtm_u16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTM_U32_F32:	// FCVTMU Vd.2S,Vn.2S uint32x2_t vcvtm_u32_f32(float32x2_t a)
 		case ARM64_INTRIN_VCVTM_U32_F64:	// FCVTMU Wd,Dn uint32x1_t vcvtm_u32_f64(float64x1_t a)
-		case ARM64_INTRIN_VCVTM_U64_F64:	// FCVTMU Xd,Dn uint64x1_t vcvtm_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTM_U32_F64:	// FCVTMU Wd,Sn uint32x1_t vcvtm_u32_f64(float64x1_t a)
+		case ARM64_INTRIN_VCVTM_U64_F64:	// FCVTMU Dd,Dn uint64x1_t vcvtm_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTM_U64_F64:	// FCVTMU Xd,Dn uint64x1_t vcvtm_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTM_U64_F64:	// FCVTMU Xd,Sn uint64x1_t vcvtm_u64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTMD_S32_F64:	// FCVTMS Wd,Dn int32_t vcvtmd_s32_f64(float64_t a)
-		case ARM64_INTRIN_VCVTMD_S64_F64:	// FCVTMS Xd,Dn int64_t vcvtmd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTMD_S32_F64:	// FCVTMS Wd,Sn int32_t vcvtmd_s32_f64(float64_t a)
+		case ARM64_INTRIN_VCVTMD_S64_F64:	// FCVTMS Dd,Dn int64_t vcvtmd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTMD_S64_F64:	// FCVTMS Xd,Dn int64_t vcvtmd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTMD_S64_F64:	// FCVTMS Xd,Sn int64_t vcvtmd_s64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTMD_U32_F64:	// FCVTMU Wd,Dn uint32_t vcvtmd_u32_f64(float64_t a)
-		case ARM64_INTRIN_VCVTMD_U64_F64:	// FCVTMU Xd,Dn uint64_t vcvtmd_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTMD_U32_F64:	// FCVTMU Wd,Sn uint32_t vcvtmd_u32_f64(float64_t a)
+		case ARM64_INTRIN_VCVTMD_U64_F64:	// FCVTMU Dd,Dn uint64_t vcvtmd_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTMD_U64_F64:	// FCVTMU Xd,Dn uint64_t vcvtmd_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTMD_U64_F64:	// FCVTMU Xd,Sn uint64_t vcvtmd_u64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTN_S16_F16:	// FCVTNS Vd.4H,Vn.4H int16x4_t vcvtn_s16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTN_S32_F32:	// FCVTNS Vd.2S,Vn.2S int32x2_t vcvtn_s32_f32(float32x2_t a)
 		case ARM64_INTRIN_VCVTN_S32_F64:	// FCVTNS Wd,Dn int32x1_t vcvtn_s32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTN_S32_F64:	// FCVTNS Wd,Sn int32x1_t vcvtn_s32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTN_S64_F64:	// FCVTNS Dd,Dn int64x1_t vcvtn_s64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTN_U16_F16:	// FCVTNU Vd.4H,Vn.4H uint16x4_t vcvtn_u16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTN_U32_F32:	// FCVTNU Vd.2S,Vn.2S uint32x2_t vcvtn_u32_f32(float32x2_t a)
 		case ARM64_INTRIN_VCVTN_U32_F64:	// FCVTNU Wd,Dn uint32x1_t vcvtn_u32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTN_U32_F64:	// FCVTNU Wd,Sn uint32x1_t vcvtn_u32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTN_U64_F64:	// FCVTNU Dd,Dn uint64x1_t vcvtn_u64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTND_S32_F64:	// FCVTNS Wd,Dn int32_t vcvtnd_s32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTND_S32_F64:	// FCVTNS Wd,Sn int32_t vcvtnd_s32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTND_S64_F64:	// FCVTNS Dd,Dn int64_t vcvtnd_s64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTND_U32_F64:	// FCVTNU Wd,Dn uint32_t vcvtnd_u32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTND_U32_F64:	// FCVTNU Wd,Sn uint32_t vcvtnd_u32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTND_U64_F64:	// FCVTNU Dd,Dn uint64_t vcvtnd_u64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTP_S16_F16:	// FCVTPS Vd.4H,Vn.4H int16x4_t vcvtp_s16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTP_S32_F32:	// FCVTPS Vd.2S,Vn.2S int32x2_t vcvtp_s32_f32(float32x2_t a)
 		case ARM64_INTRIN_VCVTP_S32_F64:	// FCVTPS Wd,Dn int32x1_t vcvtp_s32_f64(float64x1_t a)
-		case ARM64_INTRIN_VCVTP_S64_F64:	// FCVTPS Xd,Dn int64x1_t vcvtp_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTP_S32_F64:	// FCVTPS Wd,Sn int32x1_t vcvtp_s32_f64(float64x1_t a)
+		case ARM64_INTRIN_VCVTP_S64_F64:	// FCVTPS Dd,Dn int64x1_t vcvtp_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTP_S64_F64:	// FCVTPS Xd,Dn int64x1_t vcvtp_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTP_S64_F64:	// FCVTPS Xd,Sn int64x1_t vcvtp_s64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTP_U16_F16:	// FCVTPU Vd.4H,Vn.4H uint16x4_t vcvtp_u16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTP_U32_F32:	// FCVTPU Vd.2S,Vn.2S uint32x2_t vcvtp_u32_f32(float32x2_t a)
 		case ARM64_INTRIN_VCVTP_U32_F64:	// FCVTPU Wd,Dn uint32x1_t vcvtp_u32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTP_U32_F64:	// FCVTPU Wd,Sn uint32x1_t vcvtp_u32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTP_U64_F64:	// FCVTPU Xd,Dn uint64x1_t vcvtp_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTP_U64_F64:	// FCVTPU Xd,Sn uint64x1_t vcvtp_u64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTPD_S32_F64:	// FCVTPS Wd,Dn int32_t vcvtpd_s32_f64(float64_t a)
-		case ARM64_INTRIN_VCVTPD_S64_F64:	// FCVTPS Xd,Dn int64_t vcvtpd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTPD_S32_F64:	// FCVTPS Wd,Sn int32_t vcvtpd_s32_f64(float64_t a)
+		case ARM64_INTRIN_VCVTPD_S64_F64:	// FCVTPS Dd,Dn int64_t vcvtpd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTPD_S64_F64:	// FCVTPS Xd,Dn int64_t vcvtpd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTPD_S64_F64:	// FCVTPS Xd,Sn int64_t vcvtpd_s64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTPD_U32_F64:	// FCVTPU Wd,Dn uint32_t vcvtpd_u32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTPD_U32_F64:	// FCVTPU Wd,Sn uint32_t vcvtpd_u32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTPD_U64_F64:	// FCVTPU Dd,Dn uint64_t vcvtpd_u64_f64(float64_t a)
 		// case ARM64_INTRIN_VCVTPD_U64_F64:	// FCVTPU Xd,Dn uint64_t vcvtpd_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTPD_U64_F64:	// FCVTPU Xd,Sn uint64_t vcvtpd_u64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTXD_F32_F64:	// FCVTXN Sd,Dn float32_t vcvtxd_f32_f64(float64_t a)
 		case ARM64_INTRIN_VDUP_N_F64:	// INS Vd.D[0],rn float64x1_t vdup_n_f64(float64_t value)
 		case ARM64_INTRIN_VDUPQ_N_F64:	// DUP Vd.2D,rn float64x2_t vdupq_n_f64(float64_t value)
@@ -8860,22 +8912,18 @@ vector<NameAndType> NeonGetIntrinsicInputs(uint32_t intrinsic)
 		case ARM64_INTRIN_VCVT_N_S16_F16:	// FCVTZS Vd.4H,Vn.4H,#n int16x4_t vcvt_n_s16_f16(float16x4_t a, const int n)
 		case ARM64_INTRIN_VCVT_N_S32_F32:	// FCVTZS Vd.2S,Vn.2S,#n int32x2_t vcvt_n_s32_f32(float32x2_t a, const int n)
 		case ARM64_INTRIN_VCVT_N_S64_F64:	// FCVTZS Dd,Dn,#n int64x1_t vcvt_n_s64_f64(float64x1_t a, const int n)
-		// case ARM64_INTRIN_VCVT_N_S64_F64:	// FCVTZS Xd,Dn int64x1_t vcvt_n_s64_f64(float64x1_t a, const int n)
 		// case ARM64_INTRIN_VCVT_N_S64_F64:	// FCVTZS Xd,Dn,#n int64x1_t vcvt_n_s64_f64(float64x1_t a, const int n)
 		case ARM64_INTRIN_VCVT_N_U16_F16:	// FCVTZU Vd.4H,Vn.4H,#n uint16x4_t vcvt_n_u16_f16(float16x4_t a, const int n)
 		case ARM64_INTRIN_VCVT_N_U32_F32:	// FCVTZU Vd.2S,Vn.2S,#n uint32x2_t vcvt_n_u32_f32(float32x2_t a, const int n)
 		case ARM64_INTRIN_VCVT_N_U64_F64:	// FCVTZU Dd,Dn,#n uint64x1_t vcvt_n_u64_f64(float64x1_t a, const int n)
-		// case ARM64_INTRIN_VCVT_N_U64_F64:	// FCVTZU Xd,Dn uint64x1_t vcvt_n_u64_f64(float64x1_t a, const int n)
 		// case ARM64_INTRIN_VCVT_N_U64_F64:	// FCVTZU Xd,Dn,#n uint64x1_t vcvt_n_u64_f64(float64x1_t a, const int n)
 		case ARM64_INTRIN_VCVTA_N_S64_F64:	// FCVTAS Xd,Dn,#n int64x1_t vcvta_n_s64_f64(float64x1_t a, const int n)
 		case ARM64_INTRIN_VCVTA_N_U64_F64:	// FCVTAU Xd,Dn,#n uint64x1_t vcvta_n_u64_f64(float64x1_t a, const int n)
 		case ARM64_INTRIN_VCVTAD_N_S64_F64:	// FCVTAS Xd,Dn,#n int64_t vcvtad_n_s64_f64(float64_t a, const int n)
 		case ARM64_INTRIN_VCVTAD_N_U64_F64:	// FCVTAU Xd,Dn,#n uint64_t vcvtad_n_u64_f64(float64_t a, const int n)
 		case ARM64_INTRIN_VCVTD_N_S64_F64:	// FCVTZS Dd,Dn,#n int64_t vcvtd_n_s64_f64(float64_t a, const int n)
-		// case ARM64_INTRIN_VCVTD_N_S64_F64:	// FCVTZS Xd,Dn int64_t vcvtd_n_s64_f64(float64_t a, const int n)
 		// case ARM64_INTRIN_VCVTD_N_S64_F64:	// FCVTZS Xd,Dn,#n int64_t vcvtd_n_s64_f64(float64_t a, const int n)
 		case ARM64_INTRIN_VCVTD_N_U64_F64:	// FCVTZU Dd,Dn,#n uint64_t vcvtd_n_u64_f64(float64_t a, const int n)
-		// case ARM64_INTRIN_VCVTD_N_U64_F64:	// FCVTZU Xd,Dn uint64_t vcvtd_n_u64_f64(float64_t a, const int n)
 		// case ARM64_INTRIN_VCVTD_N_U64_F64:	// FCVTZU Xd,Dn,#n uint64_t vcvtd_n_u64_f64(float64_t a, const int n)
 		case ARM64_INTRIN_VCVTM_N_S64_F64:	// FCVTMS Xd,Dn,#n int64x1_t vcvtm_n_s64_f64(float64x1_t a, const int n)
 		case ARM64_INTRIN_VCVTM_N_U64_F64:	// FCVTMU Xd,Dn,#n uint64x1_t vcvtm_n_u64_f64(float64x1_t a, const int n)
@@ -13192,50 +13240,74 @@ vector<Confidence<Ref<Type>>> NeonGetIntrinsicOutputs(uint32_t intrinsic)
 		case ARM64_INTRIN_VCLTS_F32:	// FCMGT Sd,Sm,Sn uint32_t vclts_f32(float32_t a, float32_t b)
 		case ARM64_INTRIN_VCLTZS_F32:	// FCMLT Sd,Sn,#0 uint32_t vcltzs_f32(float32_t a)
 		case ARM64_INTRIN_VCVT_S32_F64:	// FCVTZS Wd,Dn int32x1_t vcvt_s32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVT_S32_F64:	// FCVTZS Wd,Sn int32x1_t vcvt_s32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVT_U32_F64:	// FCVTZU Wd,Dn uint32x1_t vcvt_u32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVT_U32_F64:	// FCVTZU Wd,Sn uint32x1_t vcvt_u32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTA_S32_F64:	// FCVTAS Wd,Dn int32x1_t vcvta_s32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTA_S32_F64:	// FCVTAS Wd,Sn int32x1_t vcvta_s32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTA_U32_F64:	// FCVTAU Wd,Dn uint32x1_t vcvta_u32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTA_U32_F64:	// FCVTAU Wd,Sn uint32x1_t vcvta_u32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTAD_S32_F64:	// FCVTAS Wd,Dn int32_t vcvtad_s32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTAD_S32_F64:	// FCVTAS Wd,Sn int32_t vcvtad_s32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTAD_U32_F64:	// FCVTAU Wd,Dn uint32_t vcvtad_u32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTAD_U32_F64:	// FCVTAU Wd,Sn uint32_t vcvtad_u32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTAS_N_S32_F32:	// FCVTAS Wd,Sn,#n int32_t vcvtas_n_s32_f32(float32_t a, const int n)
 		case ARM64_INTRIN_VCVTAS_N_U32_F32:	// FCVTAU Wd,Sn,#n uint32_t vcvtas_n_u32_f32(float32_t a, const int n)
-		case ARM64_INTRIN_VCVTAS_S32_F32:	// FCVTAS Wd,Sn int32_t vcvtas_s32_f32(float32_t a)
-		case ARM64_INTRIN_VCVTAS_U32_F32:	// FCVTAU Wd,Sn uint32_t vcvtas_u32_f32(float32_t a)
+		case ARM64_INTRIN_VCVTAS_S32_F32:	// FCVTAS Sd,Sn int32_t vcvtas_s32_f32(float32_t a)
+		// case ARM64_INTRIN_VCVTAS_S32_F32:	// FCVTAS Wd,Sn int32_t vcvtas_s32_f32(float32_t a)
+		case ARM64_INTRIN_VCVTAS_U32_F32:	// FCVTAU Sd,Sn uint32_t vcvtas_u32_f32(float32_t a)
+		// case ARM64_INTRIN_VCVTAS_U32_F32:	// FCVTAU Wd,Sn uint32_t vcvtas_u32_f32(float32_t a)
 		case ARM64_INTRIN_VCVTD_S32_F64:	// FCVTZS Wd,Dn int32_t vcvtd_s32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTD_S32_F64:	// FCVTZS Wd,Sn int32_t vcvtd_s32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTD_U32_F64:	// FCVTZU Wd,Dn uint32_t vcvtd_u32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTD_U32_F64:	// FCVTZU Wd,Sn uint32_t vcvtd_u32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTM_S32_F64:	// FCVTMS Wd,Dn int32x1_t vcvtm_s32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTM_S32_F64:	// FCVTMS Wd,Sn int32x1_t vcvtm_s32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTM_U32_F64:	// FCVTMU Wd,Dn uint32x1_t vcvtm_u32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTM_U32_F64:	// FCVTMU Wd,Sn uint32x1_t vcvtm_u32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTMD_S32_F64:	// FCVTMS Wd,Dn int32_t vcvtmd_s32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTMD_S32_F64:	// FCVTMS Wd,Sn int32_t vcvtmd_s32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTMD_U32_F64:	// FCVTMU Wd,Dn uint32_t vcvtmd_u32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTMD_U32_F64:	// FCVTMU Wd,Sn uint32_t vcvtmd_u32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTMS_N_S32_F32:	// FCVTMS Wd,Sn,#n int32_t vcvtms_n_s32_f32(float32_t a, const int n)
 		case ARM64_INTRIN_VCVTMS_N_U32_F32:	// FCVTMU Wd,Sn,#n uint32_t vcvtms_n_u32_f32(float32_t a, const int n)
-		case ARM64_INTRIN_VCVTMS_S32_F32:	// FCVTMS Wd,Sn int32_t vcvtms_s32_f32(float32_t a)
-		case ARM64_INTRIN_VCVTMS_U32_F32:	// FCVTMU Wd,Sn uint32_t vcvtms_u32_f32(float32_t a)
+		case ARM64_INTRIN_VCVTMS_S32_F32:	// FCVTMS Sd,Sn int32_t vcvtms_s32_f32(float32_t a)
+		// case ARM64_INTRIN_VCVTMS_S32_F32:	// FCVTMS Wd,Sn int32_t vcvtms_s32_f32(float32_t a)
+		case ARM64_INTRIN_VCVTMS_U32_F32:	// FCVTMU Sd,Sn uint32_t vcvtms_u32_f32(float32_t a)
+		// case ARM64_INTRIN_VCVTMS_U32_F32:	// FCVTMU Wd,Sn uint32_t vcvtms_u32_f32(float32_t a)
 		case ARM64_INTRIN_VCVTN_S32_F64:	// FCVTNS Wd,Dn int32x1_t vcvtn_s32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTN_S32_F64:	// FCVTNS Wd,Sn int32x1_t vcvtn_s32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTN_U32_F64:	// FCVTNU Wd,Dn uint32x1_t vcvtn_u32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTN_U32_F64:	// FCVTNU Wd,Sn uint32x1_t vcvtn_u32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTND_S32_F64:	// FCVTNS Wd,Dn int32_t vcvtnd_s32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTND_S32_F64:	// FCVTNS Wd,Sn int32_t vcvtnd_s32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTND_U32_F64:	// FCVTNU Wd,Dn uint32_t vcvtnd_u32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTND_U32_F64:	// FCVTNU Wd,Sn uint32_t vcvtnd_u32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTNS_S32_F32:	// FCVTNS Sd,Sn int32_t vcvtns_s32_f32(float32_t a)
 		// case ARM64_INTRIN_VCVTNS_S32_F32:	// FCVTNS Wd,Sn int32_t vcvtns_s32_f32(float32_t a)
 		case ARM64_INTRIN_VCVTNS_U32_F32:	// FCVTNU Sd,Sn uint32_t vcvtns_u32_f32(float32_t a)
 		// case ARM64_INTRIN_VCVTNS_U32_F32:	// FCVTNU Wd,Sn uint32_t vcvtns_u32_f32(float32_t a)
 		case ARM64_INTRIN_VCVTP_S32_F64:	// FCVTPS Wd,Dn int32x1_t vcvtp_s32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTP_S32_F64:	// FCVTPS Wd,Sn int32x1_t vcvtp_s32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTP_U32_F64:	// FCVTPU Wd,Dn uint32x1_t vcvtp_u32_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTP_U32_F64:	// FCVTPU Wd,Sn uint32x1_t vcvtp_u32_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTPD_S32_F64:	// FCVTPS Wd,Dn int32_t vcvtpd_s32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTPD_S32_F64:	// FCVTPS Wd,Sn int32_t vcvtpd_s32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTPD_U32_F64:	// FCVTPU Wd,Dn uint32_t vcvtpd_u32_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTPD_U32_F64:	// FCVTPU Wd,Sn uint32_t vcvtpd_u32_f64(float64_t a)
 		case ARM64_INTRIN_VCVTPS_N_S32_F32:	// FCVTPS Wd,Sn,#n int32_t vcvtps_n_s32_f32(float32_t a, const int n)
 		case ARM64_INTRIN_VCVTPS_N_U32_F32:	// FCVTPU Wd,Sn,#n uint32_t vcvtps_n_u32_f32(float32_t a, const int n)
-		case ARM64_INTRIN_VCVTPS_S32_F32:	// FCVTPS Wd,Sn int32_t vcvtps_s32_f32(float32_t a)
+		case ARM64_INTRIN_VCVTPS_S32_F32:	// FCVTPS Sd,Sn int32_t vcvtps_s32_f32(float32_t a)
+		// case ARM64_INTRIN_VCVTPS_S32_F32:	// FCVTPS Wd,Sn int32_t vcvtps_s32_f32(float32_t a)
 		case ARM64_INTRIN_VCVTPS_U32_F32:	// FCVTPU Sd,Sn uint32_t vcvtps_u32_f32(float32_t a)
 		// case ARM64_INTRIN_VCVTPS_U32_F32:	// FCVTPU Wd,Sn uint32_t vcvtps_u32_f32(float32_t a)
 		case ARM64_INTRIN_VCVTS_N_S32_F32:	// FCVTZS Sd,Sn,#n int32_t vcvts_n_s32_f32(float32_t a, const int n)
-		// case ARM64_INTRIN_VCVTS_N_S32_F32:	// FCVTZS Wd,Sn int32_t vcvts_n_s32_f32(float32_t a, const int n)
 		// case ARM64_INTRIN_VCVTS_N_S32_F32:	// FCVTZS Wd,Sn,#n int32_t vcvts_n_s32_f32(float32_t a, const int n)
 		case ARM64_INTRIN_VCVTS_N_U32_F32:	// FCVTZU Sd,Sn,#n uint32_t vcvts_n_u32_f32(float32_t a, const int n)
-		// case ARM64_INTRIN_VCVTS_N_U32_F32:	// FCVTZU Wd,Sn uint32_t vcvts_n_u32_f32(float32_t a, const int n)
 		// case ARM64_INTRIN_VCVTS_N_U32_F32:	// FCVTZU Wd,Sn,#n uint32_t vcvts_n_u32_f32(float32_t a, const int n)
 		case ARM64_INTRIN_VCVTS_N_U32_F64:	// FCVTZU Wd,Dn,#n uint32_t vcvts_n_u32_f64(float64_t a, const int n)
-		case ARM64_INTRIN_VCVTS_S32_F32:	// FCVTZS Wd,Sn int32_t vcvts_s32_f32(float32_t a)
+		case ARM64_INTRIN_VCVTS_S32_F32:	// FCVTZS Sd,Sn int32_t vcvts_s32_f32(float32_t a)
+		// case ARM64_INTRIN_VCVTS_S32_F32:	// FCVTZS Wd,Sn int32_t vcvts_s32_f32(float32_t a)
 		case ARM64_INTRIN_VCVTS_U32_F32:	// FCVTZU Sd,Sn uint32_t vcvts_u32_f32(float32_t a)
 		// case ARM64_INTRIN_VCVTS_U32_F32:	// FCVTZU Wd,Sn uint32_t vcvts_u32_f32(float32_t a)
 		case ARM64_INTRIN_VDUPS_LANE_S32:	// DUP Sd,Vn.S[lane] int32_t vdups_lane_s32(int32x2_t vec, const int lane)
@@ -13560,53 +13632,71 @@ vector<Confidence<Ref<Type>>> NeonGetIntrinsicOutputs(uint32_t intrinsic)
 		case ARM64_INTRIN_VCVT_N_S16_F16:	// FCVTZS Vd.4H,Vn.4H,#n int16x4_t vcvt_n_s16_f16(float16x4_t a, const int n)
 		case ARM64_INTRIN_VCVT_N_S32_F32:	// FCVTZS Vd.2S,Vn.2S,#n int32x2_t vcvt_n_s32_f32(float32x2_t a, const int n)
 		case ARM64_INTRIN_VCVT_N_S64_F64:	// FCVTZS Dd,Dn,#n int64x1_t vcvt_n_s64_f64(float64x1_t a, const int n)
-		// case ARM64_INTRIN_VCVT_N_S64_F64:	// FCVTZS Xd,Dn int64x1_t vcvt_n_s64_f64(float64x1_t a, const int n)
 		// case ARM64_INTRIN_VCVT_N_S64_F64:	// FCVTZS Xd,Dn,#n int64x1_t vcvt_n_s64_f64(float64x1_t a, const int n)
 		case ARM64_INTRIN_VCVT_N_U16_F16:	// FCVTZU Vd.4H,Vn.4H,#n uint16x4_t vcvt_n_u16_f16(float16x4_t a, const int n)
 		case ARM64_INTRIN_VCVT_N_U32_F32:	// FCVTZU Vd.2S,Vn.2S,#n uint32x2_t vcvt_n_u32_f32(float32x2_t a, const int n)
 		case ARM64_INTRIN_VCVT_N_U64_F64:	// FCVTZU Dd,Dn,#n uint64x1_t vcvt_n_u64_f64(float64x1_t a, const int n)
-		// case ARM64_INTRIN_VCVT_N_U64_F64:	// FCVTZU Xd,Dn uint64x1_t vcvt_n_u64_f64(float64x1_t a, const int n)
 		// case ARM64_INTRIN_VCVT_N_U64_F64:	// FCVTZU Xd,Dn,#n uint64x1_t vcvt_n_u64_f64(float64x1_t a, const int n)
 		case ARM64_INTRIN_VCVT_S16_F16:	// FCVTZS Vd.4H,Vn.4H int16x4_t vcvt_s16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVT_S32_F32:	// FCVTZS Vd.2S,Vn.2S int32x2_t vcvt_s32_f32(float32x2_t a)
-		case ARM64_INTRIN_VCVT_S64_F64:	// FCVTZS Xd,Dn int64x1_t vcvt_s64_f64(float64x1_t a)
+		case ARM64_INTRIN_VCVT_S64_F64:	// FCVTZS Dd,Dn int64x1_t vcvt_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVT_S64_F64:	// FCVTZS Xd,Dn int64x1_t vcvt_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVT_S64_F64:	// FCVTZS Xd,Sn int64x1_t vcvt_s64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVT_U16_F16:	// FCVTZS Vd.4H,Vn.4H uint16x4_t vcvt_u16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVT_U32_F32:	// FCVTZU Vd.2S,Vn.2S uint32x2_t vcvt_u32_f32(float32x2_t a)
 		case ARM64_INTRIN_VCVT_U64_F32:	// FCVTZU Xd,Sn uint64x1_t vcvt_u64_f32(float32x1_t a)
 		case ARM64_INTRIN_VCVT_U64_F64:	// FCVTZU Xd,Dn uint64x1_t vcvt_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVT_U64_F64:	// FCVTZU Xd,Sn uint64x1_t vcvt_u64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTA_N_S64_F64:	// FCVTAS Xd,Dn,#n int64x1_t vcvta_n_s64_f64(float64x1_t a, const int n)
 		case ARM64_INTRIN_VCVTA_N_U64_F64:	// FCVTAU Xd,Dn,#n uint64x1_t vcvta_n_u64_f64(float64x1_t a, const int n)
 		case ARM64_INTRIN_VCVTA_S16_F16:	// FCVTAS Vd.4H,Vn.4H int16x4_t vcvta_s16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTA_S32_F32:	// FCVTAS Vd.2S,Vn.2S int32x2_t vcvta_s32_f32(float32x2_t a)
-		case ARM64_INTRIN_VCVTA_S64_F64:	// FCVTAS Xd,Dn int64x1_t vcvta_s64_f64(float64x1_t a)
+		case ARM64_INTRIN_VCVTA_S64_F64:	// FCVTAS Dd,Dn int64x1_t vcvta_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTA_S64_F64:	// FCVTAS Xd,Dn int64x1_t vcvta_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTA_S64_F64:	// FCVTAS Xd,Sn int64x1_t vcvta_s64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTA_U16_F16:	// FCVTAU Vd.4H,Vn.4H uint16x4_t vcvta_u16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTA_U32_F32:	// FCVTAU Vd.2S,Vn.2S uint32x2_t vcvta_u32_f32(float32x2_t a)
-		case ARM64_INTRIN_VCVTA_U64_F64:	// FCVTAU Xd,Dn uint64x1_t vcvta_u64_f64(float64x1_t a)
+		case ARM64_INTRIN_VCVTA_U64_F64:	// FCVTAU Dd,Dn uint64x1_t vcvta_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTA_U64_F64:	// FCVTAU Xd,Dn uint64x1_t vcvta_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTA_U64_F64:	// FCVTAU Xd,Sn uint64x1_t vcvta_u64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTAD_N_S64_F64:	// FCVTAS Xd,Dn,#n int64_t vcvtad_n_s64_f64(float64_t a, const int n)
 		case ARM64_INTRIN_VCVTAD_N_U64_F64:	// FCVTAU Xd,Dn,#n uint64_t vcvtad_n_u64_f64(float64_t a, const int n)
-		case ARM64_INTRIN_VCVTAD_S64_F64:	// FCVTAS Xd,Dn int64_t vcvtad_s64_f64(float64_t a)
-		case ARM64_INTRIN_VCVTAD_U64_F64:	// FCVTAU Xd,Dn uint64_t vcvtad_u64_f64(float64_t a)
+		case ARM64_INTRIN_VCVTAD_S64_F64:	// FCVTAS Dd,Dn int64_t vcvtad_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTAD_S64_F64:	// FCVTAS Xd,Dn int64_t vcvtad_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTAD_S64_F64:	// FCVTAS Xd,Sn int64_t vcvtad_s64_f64(float64_t a)
+		case ARM64_INTRIN_VCVTAD_U64_F64:	// FCVTAU Dd,Dn uint64_t vcvtad_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTAD_U64_F64:	// FCVTAU Xd,Dn uint64_t vcvtad_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTAD_U64_F64:	// FCVTAU Xd,Sn uint64_t vcvtad_u64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTD_N_S64_F64:	// FCVTZS Dd,Dn,#n int64_t vcvtd_n_s64_f64(float64_t a, const int n)
-		// case ARM64_INTRIN_VCVTD_N_S64_F64:	// FCVTZS Xd,Dn int64_t vcvtd_n_s64_f64(float64_t a, const int n)
 		// case ARM64_INTRIN_VCVTD_N_S64_F64:	// FCVTZS Xd,Dn,#n int64_t vcvtd_n_s64_f64(float64_t a, const int n)
 		case ARM64_INTRIN_VCVTD_N_U64_F64:	// FCVTZU Dd,Dn,#n uint64_t vcvtd_n_u64_f64(float64_t a, const int n)
-		// case ARM64_INTRIN_VCVTD_N_U64_F64:	// FCVTZU Xd,Dn uint64_t vcvtd_n_u64_f64(float64_t a, const int n)
 		// case ARM64_INTRIN_VCVTD_N_U64_F64:	// FCVTZU Xd,Dn,#n uint64_t vcvtd_n_u64_f64(float64_t a, const int n)
-		case ARM64_INTRIN_VCVTD_S64_F64:	// FCVTZS Xd,Dn int64_t vcvtd_s64_f64(float64_t a)
+		case ARM64_INTRIN_VCVTD_S64_F64:	// FCVTZS Dd,Dn int64_t vcvtd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTD_S64_F64:	// FCVTZS Xd,Dn int64_t vcvtd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTD_S64_F64:	// FCVTZS Xd,Sn int64_t vcvtd_s64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTD_U64_F64:	// FCVTZU Dd,Dn uint64_t vcvtd_u64_f64(float64_t a)
 		// case ARM64_INTRIN_VCVTD_U64_F64:	// FCVTZU Xd,Dn uint64_t vcvtd_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTD_U64_F64:	// FCVTZU Xd,Sn uint64_t vcvtd_u64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTM_N_S64_F64:	// FCVTMS Xd,Dn,#n int64x1_t vcvtm_n_s64_f64(float64x1_t a, const int n)
 		case ARM64_INTRIN_VCVTM_N_U64_F64:	// FCVTMU Xd,Dn,#n uint64x1_t vcvtm_n_u64_f64(float64x1_t a, const int n)
 		case ARM64_INTRIN_VCVTM_S16_F16:	// FCVTMS Vd.4H,Vn.4H int16x4_t vcvtm_s16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTM_S32_F32:	// FCVTMS Vd.2S,Vn.2S int32x2_t vcvtm_s32_f32(float32x2_t a)
-		case ARM64_INTRIN_VCVTM_S64_F64:	// FCVTMS Xd,Dn int64x1_t vcvtm_s64_f64(float64x1_t a)
+		case ARM64_INTRIN_VCVTM_S64_F64:	// FCVTMS Dd,Dn int64x1_t vcvtm_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTM_S64_F64:	// FCVTMS Xd,Dn int64x1_t vcvtm_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTM_S64_F64:	// FCVTMS Xd,Sn int64x1_t vcvtm_s64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTM_U16_F16:	// FCVTMU Vd.4H,Vn.4H uint16x4_t vcvtm_u16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTM_U32_F32:	// FCVTMU Vd.2S,Vn.2S uint32x2_t vcvtm_u32_f32(float32x2_t a)
-		case ARM64_INTRIN_VCVTM_U64_F64:	// FCVTMU Xd,Dn uint64x1_t vcvtm_u64_f64(float64x1_t a)
+		case ARM64_INTRIN_VCVTM_U64_F64:	// FCVTMU Dd,Dn uint64x1_t vcvtm_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTM_U64_F64:	// FCVTMU Xd,Dn uint64x1_t vcvtm_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTM_U64_F64:	// FCVTMU Xd,Sn uint64x1_t vcvtm_u64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTMD_N_S64_F64:	// FCVTMS Xd,Dn,#n int64_t vcvtmd_n_s64_f64(float64_t a, const int n)
 		case ARM64_INTRIN_VCVTMD_N_U64_F64:	// FCVTMU Xd,Dn,#n uint64_t vcvtmd_n_u64_f64(float64_t a, const int n)
-		case ARM64_INTRIN_VCVTMD_S64_F64:	// FCVTMS Xd,Dn int64_t vcvtmd_s64_f64(float64_t a)
-		case ARM64_INTRIN_VCVTMD_U64_F64:	// FCVTMU Xd,Dn uint64_t vcvtmd_u64_f64(float64_t a)
+		case ARM64_INTRIN_VCVTMD_S64_F64:	// FCVTMS Dd,Dn int64_t vcvtmd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTMD_S64_F64:	// FCVTMS Xd,Dn int64_t vcvtmd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTMD_S64_F64:	// FCVTMS Xd,Sn int64_t vcvtmd_s64_f64(float64_t a)
+		case ARM64_INTRIN_VCVTMD_U64_F64:	// FCVTMU Dd,Dn uint64_t vcvtmd_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTMD_U64_F64:	// FCVTMU Xd,Dn uint64_t vcvtmd_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTMD_U64_F64:	// FCVTMU Xd,Sn uint64_t vcvtmd_u64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTN_S16_F16:	// FCVTNS Vd.4H,Vn.4H int16x4_t vcvtn_s16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTN_S32_F32:	// FCVTNS Vd.2S,Vn.2S int32x2_t vcvtn_s32_f32(float32x2_t a)
 		case ARM64_INTRIN_VCVTN_S64_F64:	// FCVTNS Dd,Dn int64x1_t vcvtn_s64_f64(float64x1_t a)
@@ -13619,15 +13709,21 @@ vector<Confidence<Ref<Type>>> NeonGetIntrinsicOutputs(uint32_t intrinsic)
 		case ARM64_INTRIN_VCVTP_N_U64_F64:	// FCVTPU Xd,Dn,#n uint64x1_t vcvtp_n_u64_f64(float64x1_t a, const int n)
 		case ARM64_INTRIN_VCVTP_S16_F16:	// FCVTPS Vd.4H,Vn.4H int16x4_t vcvtp_s16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTP_S32_F32:	// FCVTPS Vd.2S,Vn.2S int32x2_t vcvtp_s32_f32(float32x2_t a)
-		case ARM64_INTRIN_VCVTP_S64_F64:	// FCVTPS Xd,Dn int64x1_t vcvtp_s64_f64(float64x1_t a)
+		case ARM64_INTRIN_VCVTP_S64_F64:	// FCVTPS Dd,Dn int64x1_t vcvtp_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTP_S64_F64:	// FCVTPS Xd,Dn int64x1_t vcvtp_s64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTP_S64_F64:	// FCVTPS Xd,Sn int64x1_t vcvtp_s64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTP_U16_F16:	// FCVTPU Vd.4H,Vn.4H uint16x4_t vcvtp_u16_f16(float16x4_t a)
 		case ARM64_INTRIN_VCVTP_U32_F32:	// FCVTPU Vd.2S,Vn.2S uint32x2_t vcvtp_u32_f32(float32x2_t a)
 		case ARM64_INTRIN_VCVTP_U64_F64:	// FCVTPU Xd,Dn uint64x1_t vcvtp_u64_f64(float64x1_t a)
+		// case ARM64_INTRIN_VCVTP_U64_F64:	// FCVTPU Xd,Sn uint64x1_t vcvtp_u64_f64(float64x1_t a)
 		case ARM64_INTRIN_VCVTPD_N_S64_F64:	// FCVTPS Xd,Dn,#n int64_t vcvtpd_n_s64_f64(float64_t a, const int n)
 		case ARM64_INTRIN_VCVTPD_N_U64_F64:	// FCVTPU Xd,Dn,#n uint64_t vcvtpd_n_u64_f64(float64_t a, const int n)
-		case ARM64_INTRIN_VCVTPD_S64_F64:	// FCVTPS Xd,Dn int64_t vcvtpd_s64_f64(float64_t a)
+		case ARM64_INTRIN_VCVTPD_S64_F64:	// FCVTPS Dd,Dn int64_t vcvtpd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTPD_S64_F64:	// FCVTPS Xd,Dn int64_t vcvtpd_s64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTPD_S64_F64:	// FCVTPS Xd,Sn int64_t vcvtpd_s64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTPD_U64_F64:	// FCVTPU Dd,Dn uint64_t vcvtpd_u64_f64(float64_t a)
 		// case ARM64_INTRIN_VCVTPD_U64_F64:	// FCVTPU Xd,Dn uint64_t vcvtpd_u64_f64(float64_t a)
+		// case ARM64_INTRIN_VCVTPD_U64_F64:	// FCVTPU Xd,Sn uint64_t vcvtpd_u64_f64(float64_t a)
 		case ARM64_INTRIN_VCVTS_N_U64_F32:	// FCVTZU Xd,Sn,#n uint64_t vcvts_n_u64_f32(float32_t a, const int n)
 		case ARM64_INTRIN_VCVTS_N_U64_F64:	// FCVTZU Xd,Dn,#n uint64_t vcvts_n_u64_f64(float64_t a, const int n)
 		case ARM64_INTRIN_VDOT_LANE_S32:	// SDOT Vd.2S,Vn.8B,Vm.4B[lane] int32x2_t vdot_lane_s32(int32x2_t r, int8x8_t a, int8x8_t b, const int lane)
@@ -16345,43 +16441,23 @@ bool NeonGetLowLevelILForInstruction(
 		break;
 	case ENC_FCMLA_ASIMDELEM_C_H:
 		if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed && (instr.operands[3].operandClass && instr.operands[3].operandClass <= FIMM32 && instr.operands[3].immediate == 0))
-			// float16x4_t vcmla_lane_f16(float16x4_t r, float16x4_t a, float16x4_t b, const int lane)
-			// argprep: r -> Vd.4H; a -> Vn.4H; b -> Vm.H; lane -> <lane>
-			// results: Vd.4H -> result
-			intrin_id = ARM64_INTRIN_VCMLA_LANE_F16;  // FCMLA Vd.4H,Vn.4H,Vm.H[lane],#0
-		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32 && instr.operands[2].immediate == 0))
 			// float16x4_t vcmla_laneq_f16(float16x4_t r, float16x4_t a, float16x8_t b, const int lane)
-			// argprep: r -> Vd.4H; a -> Vm.D[1]; b -> Vn.4H; lane -> <lane>
+			// argprep: r -> Vd.4H; a -> Vn.4H; b -> Vm.H; lane -> <lane>
 			// results: Vd.4H -> result
 			intrin_id = ARM64_INTRIN_VCMLA_LANEQ_F16;  // FCMLA Vd.4H,Vn.4H,Vm.H[lane],#0
 		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed && (instr.operands[3].operandClass && instr.operands[3].operandClass <= FIMM32 && instr.operands[3].immediate == 180))
-			// float16x4_t vcmla_rot180_lane_f16(float16x4_t r, float16x4_t a, float16x4_t b, const int lane)
-			// argprep: r -> Vd.4H; a -> Vn.4H; b -> Vm.H; lane -> <lane>
-			// results: Vd.4H -> result
-			intrin_id = ARM64_INTRIN_VCMLA_ROT180_LANE_F16;  // FCMLA Vd.4H,Vn.4H,Vm.H[lane],#180
-		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32 && instr.operands[2].immediate == 180))
 			// float16x4_t vcmla_rot180_laneq_f16(float16x4_t r, float16x4_t a, float16x8_t b, const int lane)
-			// argprep: r -> Vd.4H; a -> Vm.D[1]; b -> Vn.4H; lane -> <lane>
+			// argprep: r -> Vd.4H; a -> Vn.4H; b -> Vm.H; lane -> <lane>
 			// results: Vd.4H -> result
 			intrin_id = ARM64_INTRIN_VCMLA_ROT180_LANEQ_F16;  // FCMLA Vd.4H,Vn.4H,Vm.H[lane],#180
 		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed && (instr.operands[3].operandClass && instr.operands[3].operandClass <= FIMM32 && instr.operands[3].immediate == 270))
-			// float16x4_t vcmla_rot270_lane_f16(float16x4_t r, float16x4_t a, float16x4_t b, const int lane)
-			// argprep: r -> Vd.4H; a -> Vn.4H; b -> Vm.H; lane -> <lane>
-			// results: Vd.4H -> result
-			intrin_id = ARM64_INTRIN_VCMLA_ROT270_LANE_F16;  // FCMLA Vd.4H,Vn.4H,Vm.H[lane],#270
-		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32 && instr.operands[2].immediate == 270))
 			// float16x4_t vcmla_rot270_laneq_f16(float16x4_t r, float16x4_t a, float16x8_t b, const int lane)
-			// argprep: r -> Vd.4H; a -> Vm.D[1]; b -> Vn.4H; lane -> <lane>
+			// argprep: r -> Vd.4H; a -> Vn.4H; b -> Vm.H; lane -> <lane>
 			// results: Vd.4H -> result
 			intrin_id = ARM64_INTRIN_VCMLA_ROT270_LANEQ_F16;  // FCMLA Vd.4H,Vn.4H,Vm.H[lane],#270
 		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed && (instr.operands[3].operandClass && instr.operands[3].operandClass <= FIMM32 && instr.operands[3].immediate == 90))
-			// float16x4_t vcmla_rot90_lane_f16(float16x4_t r, float16x4_t a, float16x4_t b, const int lane)
-			// argprep: r -> Vd.4H; a -> Vn.4H; b -> Vm.H; lane -> <lane>
-			// results: Vd.4H -> result
-			intrin_id = ARM64_INTRIN_VCMLA_ROT90_LANE_F16;  // FCMLA Vd.4H,Vn.4H,Vm.H[lane],#90
-		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32 && instr.operands[2].immediate == 90))
 			// float16x4_t vcmla_rot90_laneq_f16(float16x4_t r, float16x4_t a, float16x8_t b, const int lane)
-			// argprep: r -> Vd.4H; a -> Vm.D[1]; b -> Vn.4H; lane -> <lane>
+			// argprep: r -> Vd.4H; a -> Vn.4H; b -> Vm.H; lane -> <lane>
 			// results: Vd.4H -> result
 			intrin_id = ARM64_INTRIN_VCMLA_ROT90_LANEQ_F16;  // FCMLA Vd.4H,Vn.4H,Vm.H[lane],#90
 		else if (instr.operands[0].arrSpec == ARRSPEC_8HALVES && instr.operands[1].arrSpec == ARRSPEC_8HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed && (instr.operands[3].operandClass && instr.operands[3].operandClass <= FIMM32 && instr.operands[3].immediate == 0))
@@ -16427,9 +16503,9 @@ bool NeonGetLowLevelILForInstruction(
 			// argprep: r -> Vd.2S; a -> Vn.2S; b -> Vm.2S; lane -> <lane>
 			// results: Vd.2S -> result
 			intrin_id = ARM64_INTRIN_VCMLA_ROT270_LANE_F32;  // FCMLA Vd.2S,Vn.2S,Vm.2S[lane],#270
-		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32 && instr.operands[2].immediate == 270))
+		else if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed && (instr.operands[3].operandClass && instr.operands[3].operandClass <= FIMM32 && instr.operands[3].immediate == 270))
 			// float16x4_t vcmla_rot270_laneq_f16(float16x4_t r, float16x4_t a, float16x8_t b, const int lane)
-			// argprep: r -> Vd.4H; a -> Vm.D[1]; b -> Vn.4H; lane -> <lane>
+			// argprep: r -> Vd.4H; a -> Vn.4H; b -> Vm.H; lane -> <lane>
 			// results: Vd.4H -> result
 			intrin_id = ARM64_INTRIN_VCMLA_ROT270_LANEQ_F16;  // FCMLA Vd.4H,Vn.4H,Vm.H[lane],#270
 		else if (instr.operands[0].arrSpec == ARRSPEC_2SINGLES && instr.operands[1].arrSpec == ARRSPEC_2SINGLES && instr.operands[2].arrSpec == ARRSPEC_2SINGLES && instr.operands[2].laneUsed && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32 && instr.operands[2].immediate == 270))
@@ -16724,12 +16800,31 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
+	// case ENC_FCVTAS_64D_FLOAT2FIX:
+	// 	if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+	// 		// int64_t vcvtad_n_s64_f64(float64_t a, const int n)
+	// 		// argprep: a -> Dn; n -> n
+	// 		// results: Xd -> result
+	// 		intrin_id = ARM64_INTRIN_VCVTAD_N_S64_F64;  // FCVTAS Xd,Dn,#n
+	// 	add_input_reg(inputs, il, instr.operands[1]);
+	// 	add_input_imm(inputs, il, instr.operands[2]);
+	// 	add_output_reg(outputs, il, instr.operands[0]);
+	// 	break;
 	case ENC_FCVTAS_64D_FLOAT2INT:
 		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
 			// int64_t vcvtad_s64_f64(float64_t a)
 			// argprep: a -> Dn
 			// results: Xd -> result
 			intrin_id = ARM64_INTRIN_VCVTAD_S64_F64;  // FCVTAS Xd,Dn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
+	case ENC_FCVTAS_64S_FLOAT2INT:
+		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+			// int64_t vcvtad_s64_f64(float64_t a)
+			// argprep: a -> Sn
+			// results: Xd -> result
+			intrin_id = ARM64_INTRIN_VCVTAD_S64_F64;  // FCVTAS Xd,Sn
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
@@ -16799,6 +16894,15 @@ bool NeonGetLowLevelILForInstruction(
 			// argprep: a -> Dn
 			// results: Xd -> result
 			intrin_id = ARM64_INTRIN_VCVTAD_U64_F64;  // FCVTAU Xd,Dn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
+	case ENC_FCVTAU_64S_FLOAT2INT:
+		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+			// uint64_t vcvtad_u64_f64(float64_t a)
+			// argprep: a -> Sn
+			// results: Xd -> result
+			intrin_id = ARM64_INTRIN_VCVTAD_U64_F64;  // FCVTAU Xd,Sn
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
@@ -16895,6 +16999,15 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
+	case ENC_FCVTMS_64S_FLOAT2INT:
+		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+			// int64_t vcvtmd_s64_f64(float64_t a)
+			// argprep: a -> Sn
+			// results: Xd -> result
+			intrin_id = ARM64_INTRIN_VCVTMD_S64_F64;  // FCVTMS Xd,Sn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
 	case ENC_FCVTMS_ASIMDMISCFP16_R:
 		if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES)
 			// int16x4_t vcvtm_s16_f16(float16x4_t a)
@@ -16961,6 +17074,15 @@ bool NeonGetLowLevelILForInstruction(
 			// argprep: a -> Dn
 			// results: Xd -> result
 			intrin_id = ARM64_INTRIN_VCVTMD_U64_F64;  // FCVTMU Xd,Dn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
+	case ENC_FCVTMU_64S_FLOAT2INT:
+		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+			// uint64_t vcvtmd_u64_f64(float64_t a)
+			// argprep: a -> Sn
+			// results: Xd -> result
+			intrin_id = ARM64_INTRIN_VCVTMD_U64_F64;  // FCVTMU Xd,Sn
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
@@ -17233,21 +17355,21 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
-	case ENC_FCVTPS_64S_FLOAT2INT:
-		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
-			// int64_t vcvtps_s64_f32(float32_t a)
-			// argprep: a -> Sn
-			// results: Wd -> result
-			intrin_id = ARM64_INTRIN_VCVTPS_S64_F32;  // FCVTPS Xd,Sn
-		add_input_reg(inputs, il, instr.operands[1]);
-		add_output_reg(outputs, il, instr.operands[0]);
-		break;
 	case ENC_FCVTPS_64D_FLOAT2INT:
 		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
 			// int64_t vcvtpd_s64_f64(float64_t a)
 			// argprep: a -> Dn
 			// results: Xd -> result
 			intrin_id = ARM64_INTRIN_VCVTPD_S64_F64;  // FCVTPS Xd,Dn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
+	case ENC_FCVTPS_64S_FLOAT2INT:
+		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+			// int64_t vcvtpd_s64_f64(float64_t a)
+			// argprep: a -> Sn
+			// results: Xd -> result
+			intrin_id = ARM64_INTRIN_VCVTPD_S64_F64;  // FCVTPS Xd,Sn
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
@@ -17294,21 +17416,26 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_FCVTPU_32D_FLOAT2INT:
-		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
-			// uint64_t vcvtpd_u64_f64(float64_t a)
+		if ((instr.operands[0].reg[0] >= REG_W0 && instr.operands[0].reg[0] <= REG_WSP) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
+			// uint32_t vcvtpd_u32_f64(float64_t a)
 			// argprep: a -> Dn
-			// results: Dd -> result
-			intrin_id = ARM64_INTRIN_VCVTPD_U64_F64;  // FCVTPU Dd,Dn
+			// results: Wd -> result
+			intrin_id = ARM64_INTRIN_VCVTPD_U32_F64;  // FCVTPU Wd,Dn
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
+	// case ENC_FCVTPU_32S_FLOAT2FIX:
+	// 	if ((instr.operands[0].reg[0] >= REG_W0 && instr.operands[0].reg[0] <= REG_WSP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+	// 		// uint32_t vcvtps_n_u32_f32(float32_t a, const int n)
+	// 		// argprep: a -> Sn; n -> n
+	// 		// results: Wd -> result
+	// 		intrin_id = ARM64_INTRIN_VCVTPS_N_U32_F32;  // FCVTPU Wd,Sn,#n
+	// 	add_input_reg(inputs, il, instr.operands[1]);
+	// 	add_input_imm(inputs, il, instr.operands[2]);
+	// 	add_output_reg(outputs, il, instr.operands[0]);
+	// 	break;
 	case ENC_FCVTPU_32S_FLOAT2INT:
-		if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
-			// uint32_t vcvtps_u32_f32(float32_t a)
-			// argprep: a -> Sn
-			// results: Sd -> result
-			intrin_id = ARM64_INTRIN_VCVTPS_U32_F32;  // FCVTPU Sd,Sn
-		else if ((instr.operands[0].reg[0] >= REG_W0 && instr.operands[0].reg[0] <= REG_WSP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+		if ((instr.operands[0].reg[0] >= REG_W0 && instr.operands[0].reg[0] <= REG_WSP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
 			// uint32_t vcvtps_u32_f32(float32_t a)
 			// argprep: a -> Sn
 			// results: Wd -> result
@@ -17316,12 +17443,31 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
+	// case ENC_FCVTPU_64D_FLOAT2FIX:
+	// 	if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+	// 		// uint64_t vcvtpd_n_u64_f64(float64_t a, const int n)
+	// 		// argprep: a -> Dn; n -> n
+	// 		// results: Xd -> result
+	// 		intrin_id = ARM64_INTRIN_VCVTPD_N_U64_F64;  // FCVTPU Xd,Dn,#n
+	// 	add_input_reg(inputs, il, instr.operands[1]);
+	// 	add_input_imm(inputs, il, instr.operands[2]);
+	// 	add_output_reg(outputs, il, instr.operands[0]);
+	// 	break;
 	case ENC_FCVTPU_64D_FLOAT2INT:
 		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
 			// uint64_t vcvtpd_u64_f64(float64_t a)
 			// argprep: a -> Dn
 			// results: Xd -> result
 			intrin_id = ARM64_INTRIN_VCVTPD_U64_F64;  // FCVTPU Xd,Dn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
+	case ENC_FCVTPU_64S_FLOAT2INT:
+		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+			// uint64_t vcvtpd_u64_f64(float64_t a)
+			// argprep: a -> Sn
+			// results: Xd -> result
+			intrin_id = ARM64_INTRIN_VCVTPD_U64_F64;  // FCVTPU Xd,Sn
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
@@ -17423,13 +17569,14 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
-	case ENC_FCVTZS_64S_FLOAT2INT:
-		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
-			// int64_t vcvts_s64_f32(float32_t a)
-			// argprep: a -> Sn
-			// results: Wd -> result
-			intrin_id = ARM64_INTRIN_VCVTS_S64_F32;  // FCVTZS Xd,Sn
+	case ENC_FCVTZS_64D_FLOAT2FIX:
+		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
+			// int64_t vcvtd_n_s64_f64(float64_t a, const int n)
+			// argprep: a -> Dn; n -> n
+			// results: Xd -> result
+			intrin_id = ARM64_INTRIN_VCVTD_N_S64_F64;  // FCVTZS Xd,Dn,#n
 		add_input_reg(inputs, il, instr.operands[1]);
+		add_input_imm(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_FCVTZS_64D_FLOAT2INT:
@@ -17438,6 +17585,15 @@ bool NeonGetLowLevelILForInstruction(
 			// argprep: a -> Dn
 			// results: Xd -> result
 			intrin_id = ARM64_INTRIN_VCVTD_S64_F64;  // FCVTZS Xd,Dn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
+	case ENC_FCVTZS_64S_FLOAT2INT:
+		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+			// int64_t vcvts_s64_f32(float32_t a)
+			// argprep: a -> Sn
+			// results: Wd -> result
+			intrin_id = ARM64_INTRIN_VCVTS_S64_F32;  // FCVTZS Xd,Sn
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
@@ -17513,25 +17669,11 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
-	case ENC_FCVTZS_ASISDMISC_R:
-		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
-			// int64_t vcvtd_n_s64_f64(float64_t a, const int n)
-			// argprep: a -> Dn; n -> #n
-			// results: Xd -> result
-			intrin_id = ARM64_INTRIN_VCVTD_N_S64_F64;  // FCVTZS Xd,Dn
-		else if ((instr.operands[0].reg[0] >= REG_W0 && instr.operands[0].reg[0] <= REG_WSP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
-			// int32_t vcvts_n_s32_f32(float32_t a, const int n)
-			// argprep: a -> Sn; n -> #n
-			// results: Wd -> result
-			intrin_id = ARM64_INTRIN_VCVTS_N_S32_F32;  // FCVTZS Wd,Sn
-		add_input_reg(inputs, il, instr.operands[1]);
-		add_output_reg(outputs, il, instr.operands[0]);
-		break;
 	case ENC_FCVTZS_ASISDSHF_C:
 		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
 			// int64_t vcvtd_n_s64_f64(float64_t a, const int n)
 			// argprep: a -> Dn; n -> n
-			// results: Xd -> result
+			// results: Dd -> result
 			intrin_id = ARM64_INTRIN_VCVTD_N_S64_F64;  // FCVTZS Dd,Dn,#n
 		else if ((instr.operands[0].reg[0] >= REG_H0 && instr.operands[0].reg[0] <= REG_H31) && (instr.operands[1].reg[0] >= REG_H0 && instr.operands[1].reg[0] <= REG_H31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
 			// int16_t vcvth_n_s16_f16(float16_t a, const int n)
@@ -17541,7 +17683,7 @@ bool NeonGetLowLevelILForInstruction(
 		else if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31) && (instr.operands[2].operandClass && instr.operands[2].operandClass <= FIMM32))
 			// int32_t vcvts_n_s32_f32(float32_t a, const int n)
 			// argprep: a -> Sn; n -> n
-			// results: Wd -> result
+			// results: Sd -> result
 			intrin_id = ARM64_INTRIN_VCVTS_N_S32_F32;  // FCVTZS Sd,Sn,#n
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_imm(inputs, il, instr.operands[2]);
@@ -17616,10 +17758,10 @@ bool NeonGetLowLevelILForInstruction(
 		break;
 	case ENC_FCVTZU_64S_FLOAT2INT:
 		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
-			// uint64x1_t vcvt_u64_f32(float32x1_t a)
+			// uint61_t vcvtd_u64_f32(float32x1_t a)
 			// argprep: a -> Sn
 			// results: Xd -> result
-			intrin_id = ARM64_INTRIN_VCVTS_U64_F32;  // FCVTZU Xd,Sn
+			intrin_id = ARM64_INTRIN_VCVT_U64_F32;  // FCVTZU Xd,Sn  FIXME: ARM64_INTRIN_VCVTD_U64_F32
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
@@ -17682,21 +17824,11 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_FCVTZU_ASISDMISC_R:
-		if ((instr.operands[0].reg[0] >= REG_X0 && instr.operands[0].reg[0] <= REG_SP) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
-			// uint64_t vcvtd_n_u64_f64(float64_t a, const int n)
-			// argprep: a -> Dn; n -> #n
-			// results: Xd -> result
-			intrin_id = ARM64_INTRIN_VCVTD_N_U64_F64;  // FCVTZU Xd,Dn
-		else if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
 			// uint64_t vcvtd_u64_f64(float64_t a)
 			// argprep: a -> Dn
 			// results: Dd -> result
 			intrin_id = ARM64_INTRIN_VCVTD_U64_F64;  // FCVTZU Dd,Dn
-		else if ((instr.operands[0].reg[0] >= REG_W0 && instr.operands[0].reg[0] <= REG_WSP) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
-			// uint32_t vcvts_n_u32_f32(float32_t a, const int n)
-			// argprep: a -> Sn; n -> #n
-			// results: Wd -> result
-			intrin_id = ARM64_INTRIN_VCVTS_N_U32_F32;  // FCVTZU Wd,Sn
 		else if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
 			// uint32_t vcvts_u32_f32(float32_t a)
 			// argprep: a -> Sn

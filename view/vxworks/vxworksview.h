@@ -87,27 +87,27 @@ namespace BinaryNinja
 		bool m_hasSymbolTable = false;
 		uint64_t m_symbolTableOffset = 0;
 		uint64_t m_entryPoint = 0;
-		uint64_t m_determinedImagebase = 0; // Determined from analysis of the symbol table
+		uint64_t m_determinedImageBase = 0; // Determined from analysis of the symbol table
 		uint64_t m_imageBase = 0; // Selected image base that could be overriden by user
 		std::vector<VxWorksSectionInfo> m_sections;
 		VxWorksVersion m_version = VxWorksUnknownVersion;
 		std::vector<VxWorksSymbolEntry> m_symbols;
 
 	private:
-		void DetermineEntryPoint();
-		void AddSections();
-		void AssignSymbolToSection(std::map<std::string, std::set<uint64_t>>& sections,
-			BNSymbolType bnSymbolType, uint8_t vxSymbolType, uint64_t address);
+		bool IsASCIIString(std::string &s);
 		void DefineSymbolTableDataVariable();
-		void ProcessSymbolTable(BinaryReader *reader);
+		uint64_t FindSysInit(BinaryReader *reader, uint64_t imageBase);
+		void AdjustImageBaseForHeaderIfPresent(BinaryReader* reader);
+		void DetermineImageBaseFromSymbols(BinaryReader* reader);
 		bool FunctionAddressesAreValid(VxWorksVersion version);
 		bool TryReadVxWorksSymbolEntry(BinaryReader *reader, uint64_t offset,
 			VxWorksSymbolEntry& entry, VxWorksVersion version);
 		bool ScanForVxWorksSystemTable(BinaryReader *reader, VxWorksVersion version, BNEndianness endianness);
 		bool FindSymbolTable(BinaryReader *reader);
-		uint64_t FindSysInit(BinaryReader *reader, uint64_t imageBase);
-		void AdjustImageBaseForHeaderIfPresent(BinaryReader* reader);
-		void DetermineImageBaseFromSymbols(BinaryReader* reader);
+		void AssignSymbolToSection(std::map<std::string, std::set<uint64_t>>& sections,
+			BNSymbolType bnSymbolType, uint8_t vxSymbolType, uint64_t address);
+		void ProcessSymbolTable(BinaryReader *reader);
+		void AddSections();
 
 	protected:
 		virtual uint64_t PerformGetStart() const override;

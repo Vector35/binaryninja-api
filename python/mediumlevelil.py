@@ -3677,6 +3677,12 @@ class MediumLevelILFunction:
 		"""
 		return core.BNIsMediumLevelILSSAVarLiveAt(self.handle, ssa_var.var.to_BNVariable(), ssa_var.version, instr)
 
+	def is_var_live_at(self, var: 'variable.Variable', instr: InstructionIndex) -> bool:
+		"""
+		``is_var_live_at`` determines if ``var`` is live at a given point in the function
+		"""
+		return core.BNIsMediumLevelILVarLiveAt(self.handle, var.to_BNVariable(), instr)
+
 	def get_var_definitions(self, var: 'variable.Variable') -> List[MediumLevelILInstruction]:
 		count = ctypes.c_ulonglong()
 		var_data = var.to_BNVariable()

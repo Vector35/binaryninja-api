@@ -16870,6 +16870,20 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
+	case ENC_FCVTAS_ASISDMISC_R:
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
+			// int64_t vcvtad_s64_f64(float64_t a)
+			// argprep: a -> Dn
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VCVTAD_S64_F64;  // FCVTAS Dd,Dn
+		else if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+			// int32_t vcvtas_s32_f32(float32_t a)
+			// argprep: a -> Sn
+			// results: Sd -> result
+			intrin_id = ARM64_INTRIN_VCVTAS_S32_F32;  // FCVTAS Sd,Sn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
 	case ENC_FCVTAU_32D_FLOAT2INT:
 		if ((instr.operands[0].reg[0] >= REG_W0 && instr.operands[0].reg[0] <= REG_WSP) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
 			// uint32_t vcvtad_u32_f64(float64_t a)
@@ -16945,6 +16959,20 @@ bool NeonGetLowLevelILForInstruction(
 			// argprep: a -> Hn
 			// results: Hd -> result
 			intrin_id = ARM64_INTRIN_VCVTAH_U64_F16;  // FCVTAU Hd,Hn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
+	case ENC_FCVTAU_ASISDMISC_R:
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
+			// uint64_t vcvtad_u64_f64(float64_t a)
+			// argprep: a -> Dn
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VCVTAD_U64_F64;  // FCVTAU Dd,Dn
+		else if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+			// uint32_t vcvtas_u32_f32(float32_t a)
+			// argprep: a -> Sn
+			// results: Sd -> result
+			intrin_id = ARM64_INTRIN_VCVTAS_U32_F32;  // FCVTAU Sd,Sn
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
@@ -17050,6 +17078,20 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
+	case ENC_FCVTMS_ASISDMISC_R:
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
+			// int64_t vcvtmd_s64_f64(float64_t a)
+			// argprep: a -> Dn
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VCVTMD_S64_F64;  // FCVTMS Dd,Dn
+		else if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+			// int32_t vcvtms_s32_f32(float32_t a)
+			// argprep: a -> Sn
+			// results: Sd -> result
+			intrin_id = ARM64_INTRIN_VCVTMS_S32_F32;  // FCVTMS Sd,Sn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
 	case ENC_FCVTMU_32D_FLOAT2INT:
 		if ((instr.operands[0].reg[0] >= REG_W0 && instr.operands[0].reg[0] <= REG_WSP) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
 			// uint32_t vcvtmd_u32_f64(float64_t a)
@@ -17125,6 +17167,20 @@ bool NeonGetLowLevelILForInstruction(
 			// argprep: a -> Hn
 			// results: Hd -> result
 			intrin_id = ARM64_INTRIN_VCVTMH_U64_F16;  // FCVTMU Hd,Hn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
+	case ENC_FCVTMU_ASISDMISC_R:
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
+			// uint64_t vcvtmd_u64_f64(float64_t a)
+			// argprep: a -> Dn
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VCVTMD_U64_F64;  // FCVTMU Dd,Dn
+		else if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+			// uint32_t vcvtms_u32_f32(float32_t a)
+			// argprep: a -> Sn
+			// results: Sd -> result
+			intrin_id = ARM64_INTRIN_VCVTMS_U32_F32;  // FCVTMU Sd,Sn
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
@@ -17415,6 +17471,20 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
+	case ENC_FCVTPS_ASISDMISC_R:
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
+			// int64_t vcvtpd_s64_f64(float64_t a)
+			// argprep: a -> Dn
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VCVTPD_S64_F64;  // FCVTPS Dd,Dn
+		else if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+			// int32_t vcvtps_s32_f32(float32_t a)
+			// argprep: a -> Sn
+			// results: Sd -> result
+			intrin_id = ARM64_INTRIN_VCVTPS_S32_F32;  // FCVTPS Sd,Sn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
 	case ENC_FCVTPU_32D_FLOAT2INT:
 		if ((instr.operands[0].reg[0] >= REG_W0 && instr.operands[0].reg[0] <= REG_WSP) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
 			// uint32_t vcvtpd_u32_f64(float64_t a)
@@ -17666,6 +17736,20 @@ bool NeonGetLowLevelILForInstruction(
 			// argprep: a -> Hn
 			// results: Hd -> result
 			intrin_id = ARM64_INTRIN_VCVTH_S16_F16;  // FCVTZS Hd,Hn
+		add_input_reg(inputs, il, instr.operands[1]);
+		add_output_reg(outputs, il, instr.operands[0]);
+		break;
+	case ENC_FCVTZS_ASISDMISC_R:
+		if ((instr.operands[0].reg[0] >= REG_D0 && instr.operands[0].reg[0] <= REG_D31) && (instr.operands[1].reg[0] >= REG_D0 && instr.operands[1].reg[0] <= REG_D31))
+			// int64_t vcvtd_s64_f64(float64_t a)
+			// argprep: a -> Dn
+			// results: Dd -> result
+			intrin_id = ARM64_INTRIN_VCVTD_S64_F64;  // FCVTZS Dd,Dn
+		else if ((instr.operands[0].reg[0] >= REG_S0 && instr.operands[0].reg[0] <= REG_S31) && (instr.operands[1].reg[0] >= REG_S0 && instr.operands[1].reg[0] <= REG_S31))
+			// int32_t vcvts_s32_f32(float32_t a)
+			// argprep: a -> Sn
+			// results: Sd -> result
+			intrin_id = ARM64_INTRIN_VCVTS_S32_F32;  // FCVTZS Sd,Sn
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;

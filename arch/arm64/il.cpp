@@ -2142,8 +2142,8 @@ bool GetLowLevelILForInstruction(
 		{
 		case ENC_DUP_ASIMDINS_DR_R:
 		{
-			if (preferIntrinsics())
-				return true;
+			// if (preferIntrinsics())
+			// 	return true;
 
 			Register regs[16];
 			int regs_n = unpack_vector(operand1, regs);
@@ -2173,8 +2173,8 @@ bool GetLowLevelILForInstruction(
 			if ((dst_n != src_n) || dst_n == 0)
 				ABORT_LIFT;
 
-			if (dst_n > 1 && preferIntrinsics())
-				return true;
+			// if (dst_n > 1 && preferIntrinsics())
+			// 	return true;
 
 			for (int i = 0; i < dst_n; ++i)
 				il.AddInstruction(ILSETREG(dsts[i], zero_extend
@@ -2994,10 +2994,10 @@ bool GetLowLevelILForInstruction(
 		switch (instr.encoding)
 		{
 			case ENC_USHL_ASIMDSAME_ONLY:
-			case ENC_USHL_ASISDSAME_ONLY:
 				if (preferIntrinsics())
 					return true;
 
+			case ENC_USHL_ASISDSAME_ONLY:
 			default:
 			{
 				Register srcs1[16], srcs2[16], dsts[16];

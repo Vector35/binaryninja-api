@@ -1528,35 +1528,8 @@ class Segment:
 		return core.BNSegmentGetDataEnd(self.handle)
 
 	@property
-	def relocation_count(self) -> int:
-		return core.BNSegmentGetRelocationsCount(self.handle)
-
-	@property
 	def auto_defined(self) -> bool:
 		return core.BNSegmentIsAutoDefined(self.handle)
-
-	@property
-	def relocation_ranges(self) -> List[Tuple[int, int]]:
-		"""List of relocation range tuples (read-only)"""
-
-		count = ctypes.c_ulonglong()
-		ranges = core.BNSegmentGetRelocationRanges(self.handle, count)
-		assert ranges is not None, "core.BNSegmentGetRelocationRanges returned None"
-		try:
-			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
-		finally:
-			core.BNFreeRelocationRanges(ranges)
-
-	def relocation_ranges_at(self, addr: int) -> List[Tuple[int, int]]:
-		"""List of relocation range tuples (read-only)"""
-
-		count = ctypes.c_ulonglong()
-		ranges = core.BNSegmentGetRelocationRangesAtAddress(self.handle, addr, count)
-		assert ranges is not None, "core.BNSegmentGetRelocationRangesAtAddress returned None"
-		try:
-			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
-		finally:
-			core.BNFreeRelocationRanges(ranges)
 
 
 class Section:
@@ -2230,10 +2203,10 @@ class MemoryMap:
 		else:
 			return 0
 
-	def description(self):
-		return json.loads(core.BNGetMemoryMapDescription(self.handle))
+	def description(self, layer: str=""):
+		return json.loads(core.BNGetMemoryMapDescription(self.handle, layer))
 
-	def add_memory_region(self, name: str, start: int, source: Union['os.PathLike', str, bytes, bytearray, 'BinaryView', 'databuffer.DataBuffer', 'fileaccessor.FileAccessor']) -> bool:
+	def add_memory_region(self, name: str, start: int, source: Union['os.PathLike', str, bytes, bytearray, 'BinaryView', 'databuffer.DataBuffer', 'fileaccessor.FileAccessor'], flags: SegmentFlag = 0) -> bool:
 		"""
 		Adds a memory region into the memory map. There are three types of memory regions that can be added:
 		- BinaryMemoryRegion(*** Unimplemented ***): Creates a memory region from a loadable binary format and provides persistence across sessions.
@@ -2272,11 +2245,11 @@ class MemoryMap:
 			name = ""
 
 		if isinstance(source, BinaryView):
-			return core.BNAddBinaryMemoryRegion(self.handle, name, start, source.handle)
+			return core.BNAddBinaryMemoryRegion(self.handle, name, start, source.handle, flags)
 		elif isinstance(source, databuffer.DataBuffer):
-			return core.BNAddDataMemoryRegion(self.handle, name, start, source.handle)
+			return core.BNAddDataMemoryRegion(self.handle, name, start, source.handle, flags)
 		elif isinstance(source, fileaccessor.FileAccessor):
-			return core.BNAddRemoteMemoryRegion(self.handle, name, start, source._cb)
+			return core.BNAddRemoteMemoryRegion(self.handle, name, start, source._cb, flags)
 		else:
 			raise NotImplementedError
 
@@ -2894,14 +2867,29 @@ class BinaryView:
 		return self._file
 
 	@property
-	def original_base(self) -> int:
+	def image_base(self) -> int:
+		"""Image base of the binary"""
+		return core.BNGetImageBase(self.handle)
+
+	@property
+	def original_image_base(self) -> int:
 		"""Original image base of the binary"""
-		return core.BNGetOriginalBase(self.handle)
+		return core.BNGetOriginalImageBase(self.handle)
+
+	@original_image_base.setter
+	def original_image_base(self, image_base: int) -> None:
+		"""Set original image base of the binary. Only intended for binary view implementations"""
+		return core.BNSetOriginalImageBase(self.handle, image_base)
+
+	@property
+	def original_base(self) -> int:
+		"""Original image base of the binary Deprecated: 4.0.xxxx Use original_image_base instead."""
+		return core.BNGetOriginalImageBase(self.handle)
 
 	@original_base.setter
 	def original_base(self, base: int) -> None:
-		"""Set original image base of the binary. Only intended for binary view implementations"""
-		return core.BNSetOriginalBase(self.handle, base)
+		"""Set original image base of the binary. Only intended for binary view implementations. Deprecated: 4.0.xxxx Use original_image_base instead."""
+		return core.BNSetOriginalImageBase(self.handle, base)
 
 	@property
 	def start(self) -> int:
@@ -3311,10 +3299,38 @@ class BinaryView:
 
 	@property
 	def allocated_ranges(self) -> List['variable.AddressRange']:
-		"""List of valid address ranges for this view (read-only)"""
+		"""List of valid address ranges for this view (read-only) Deprecated: 4.0.xxxx Use mapped_address_ranges instead."""
 		count = ctypes.c_ulonglong(0)
 		range_list = core.BNGetAllocatedRanges(self.handle, count)
 		assert range_list is not None, "core.BNGetAllocatedRanges returned None"
+		result = []
+		try:
+			for i in range(0, count.value):
+				result.append(variable.AddressRange(range_list[i].start, range_list[i].end))
+			return result
+		finally:
+			core.BNFreeAddressRanges(range_list)
+
+	@property
+	def mapped_address_ranges(self) -> List['variable.AddressRange']:
+		"""List of mapped address ranges for this view (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		range_list = core.BNGetMappedAddressRanges(self.handle, count)
+		assert range_list is not None, "core.BNGetMappedAddressRanges returned None"
+		result = []
+		try:
+			for i in range(0, count.value):
+				result.append(variable.AddressRange(range_list[i].start, range_list[i].end))
+			return result
+		finally:
+			core.BNFreeAddressRanges(range_list)
+
+	@property
+	def backed_address_ranges(self) -> List['variable.AddressRange']:
+		"""List of backed address ranges for this view (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		range_list = core.BNGetBackedAddressRanges(self.handle, count)
+		assert range_list is not None, "core.BNGetBackedAddressRanges returned None"
 		result = []
 		try:
 			for i in range(0, count.value):
@@ -3374,6 +3390,17 @@ class BinaryView:
 		count = ctypes.c_ulonglong()
 		ranges = core.BNGetRelocationRangesAtAddress(self.handle, addr, count)
 		assert ranges is not None, "core.BNGetRelocationRangesAtAddress returned None"
+		try:
+			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
+		finally:
+			core.BNFreeRelocationRanges(ranges)
+
+	def relocation_ranges_in_range(self, addr: int, size: int) -> List[Tuple[int, int]]:
+		"""List of relocation range tuples for a given range"""
+
+		count = ctypes.c_ulonglong()
+		ranges = core.BNGetRelocationRangesInRange(self.handle, addr, size, count)
+		assert ranges is not None, "core.BNGetRelocationRangesInRange returned None"
 		try:
 			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
 		finally:
@@ -4177,7 +4204,7 @@ class BinaryView:
 		if not (isinstance(data, bytes) or isinstance(data, bytearray) or isinstance(data, str)):
 			raise TypeError("Must be bytes, bytearray, or str")
 		buf = databuffer.DataBuffer(data)
-		if except_on_relocation and self.range_contains_relocation(addr, addr + len(data)):
+		if except_on_relocation and self.range_contains_relocation(addr, len(data)):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 
 		return core.BNWriteViewBuffer(self.handle, addr, buf.handle)
@@ -10206,7 +10233,7 @@ class BinaryWriter:
 		if address is not None:
 			self.seek(address)
 
-		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + len(value)):
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, len(value)):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		if isinstance(value, str):
 			value = value.decode("utf-8")
@@ -10234,7 +10261,7 @@ class BinaryWriter:
 		if address is not None:
 			self.seek(address)
 
-		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + 1):
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, 1):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		return core.BNWrite8(self._handle, value)
 
@@ -10251,7 +10278,7 @@ class BinaryWriter:
 		if address is not None:
 			self.seek(address)
 
-		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + 2):
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, 2):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		return core.BNWrite16(self._handle, value)
 
@@ -10268,7 +10295,7 @@ class BinaryWriter:
 		if address is not None:
 			self.seek(address)
 
-		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + 4):
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, 4):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		return core.BNWrite32(self._handle, value)
 
@@ -10285,7 +10312,7 @@ class BinaryWriter:
 		if address is not None:
 			self.seek(address)
 
-		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + 8):
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, 8):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		return core.BNWrite64(self._handle, value)
 

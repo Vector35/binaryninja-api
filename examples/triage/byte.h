@@ -40,7 +40,6 @@ class ByteView : public QAbstractScrollArea, public View
 	QTimer* m_cursorTimer;
 
 	void updateRanges();
-	void removeRange(uint64_t begin, uint64_t end);
 
 	void setTopToAddress(uint64_t addr);
 

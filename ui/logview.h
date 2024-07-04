@@ -173,7 +173,7 @@ class BINARYNINJAUIAPI LogItemDelegate : public QStyledItemDelegate, public Bina
 	ViewFrame* m_viewFrame = nullptr;
 	View* m_view = nullptr;
 	BinaryViewRef m_data;
-	std::vector<std::pair<uint64_t, uint64_t>> m_validRanges;
+	std::vector<BNAddressRange> m_mappedRanges;
 	QFont m_font;
 	int m_height;
 

@@ -160,45 +160,10 @@ void ByteView::setSelectionOffsets(BNAddressRange range)
 
 void ByteView::updateRanges()
 {
-	m_ranges = m_data->GetAllocatedRanges();
-	// Remove regions not backed by the file
-	for (auto& i : m_data->GetSegments())
-		if (i->GetDataLength() < i->GetLength())
-			removeRange(i->GetStart() + i->GetDataLength(), i->GetEnd());
+	m_ranges = m_data->GetBackedAddressRanges();
 	m_allocatedLength = 0;
 	for (auto& i : m_ranges)
 		m_allocatedLength += i.end - i.start;
-}
-
-
-void ByteView::removeRange(uint64_t begin, uint64_t end)
-{
-	std::vector<BNAddressRange> newRanges;
-	for (auto& i : m_ranges)
-	{
-		if ((end <= i.start) || (begin >= i.end))
-		{
-			newRanges.push_back(i);
-		}
-		else if ((begin <= i.start) && (end >= i.end))
-		{
-			continue;
-		}
-		else if ((begin <= i.start) && (end < i.end))
-		{
-			newRanges.push_back(BNAddressRange {end, i.end});
-		}
-		else if ((begin > i.start) && (end >= i.end))
-		{
-			newRanges.push_back(BNAddressRange {i.start, begin});
-		}
-		else
-		{
-			newRanges.push_back(BNAddressRange {i.start, begin});
-			newRanges.push_back(BNAddressRange {end, i.end});
-		}
-	}
-	m_ranges = newRanges;
 }
 
 

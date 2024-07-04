@@ -5,9 +5,9 @@
 
 import re, sys, codecs
 
-N_SAMPLES = 8  # number of samples for each encoding
+N_SAMPLES = 3  # number of samples for each encoding
 
-from arm64test import lift
+from arm64test import lift, ATTR_PTR_AUTH, path_il_h
 
 if not sys.argv[1:]:
     sys.exit(-1)
@@ -28,6 +28,8 @@ def disassemble(addr, data):
 def print_case(data, comment=""):
     ilstr, attributes = lift(data)
     il_lines = ilstr.split(";")
+    if len(il_lines) == 2 and len(ilstr) < 60:
+        il_lines = [ilstr]
     print("\t(b'%s', " % ("".join(["\\x%02X" % b for b in data])), end="")
     for i, line in enumerate(il_lines):
         if i != 0:
@@ -35,8 +37,15 @@ def print_case(data, comment=""):
         print("'%s" % line, end="")
         if i != len(il_lines) - 1:
             print(";' + \\")
+    # comment = comment or ""
+    # comment += " %s" % len(il_lines)
     comment = " # " + comment if comment else ""
-    print("'),%s" % comment)
+    attr = ''
+    if attributes:
+        # attr = ", \"%s\"" % repr(list(attributes)[0])
+        if ATTR_PTR_AUTH in attributes:
+            attr = ", ATTR_PTR_AUTH"
+    print("'%s),%s" % (attr, comment))
 
 
 def gather_samples(mnems, encodings):
@@ -177,8 +186,33 @@ elif sys.argv[1] == "recompute_arm64test":
         lines = [x.rstrip() for x in fp.readlines()]
 
     i = 0
+    preserve = False
+    with open(path_il_h, "rt") as f:
+        LIFT_PAC_AS_INTRINSIC = "'#define LIFT_PAC_AS_INTRINSIC 1\n'" in f.readlines()
+        # print(f"{LIFT_PAC_AS_INTRINSIC=!r}", file=sys.stdout)
     while i < len(lines):
-        m = re.match(r"^\t\(b\'\\x(..)\\x(..)\\x(..)\\x(..)\'.*$", lines[i])
+        if "testing that select PAC instructions lift to " in lines[i]:
+            if "testing that select PAC instructions lift to intrinsics" in lines[i]:
+                preserve = not LIFT_PAC_AS_INTRINSIC
+            elif "testing that select PAC instructions lift to NOP" in lines[i]:
+                preserve = LIFT_PAC_AS_INTRINSIC
+            # print(f"{LIFT_PAC_AS_INTRINSIC=!r} {preserve=!r}", file=sys.stdout)
+        if preserve:
+            print(lines[i])
+            i += 1
+            continue
+        m = re.match(r"^(?:\t| {4})\(b\'\\x(..)\\x(..)\\x(..)\\x(..)\'.*$", lines[i])
+        if m:
+            while i + 1 < len(lines) and re.match(r"^\s+\'.*$", lines[i + 1]):
+                lines[i] += lines[i + 1]
+                del lines[i + 1]
+            # if i + 1 < len(lines):
+            #     if re.match(r"^\s+\'.*$", lines[i + 1]):
+            #         while i + 1 < len(lines) and re.match(r"^\s+\'.*$", lines[i + 1]):
+            #             lines[i] += lines[i + 1]
+            #             del lines[i + 1]
+
+        # m = re.match(r"^(?:\t| {4})\(b\'\\x(..)\\x(..)\\x(..)\\x(..)\'.*($\n^.*)*?$\n(?=^ {4}\(b)", lines[i], re.M)
         if not m:
             print(lines[i])
             i += 1

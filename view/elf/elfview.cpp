@@ -1152,13 +1152,14 @@ bool ElfView::Init()
 						Ref<Symbol> sym = GetSymbolByAddress(gotEntry);
 						if (entry.value && sym && (sym->GetType() == ImportAddressSymbol))
 						{
-							Ref<Platform> targetPlatform = platform->GetAssociatedPlatformByAddress(entry.value);
-							Ref<Function> func = AddFunctionForAnalysis(targetPlatform, entry.value);
+							uint64_t adjustedAddress = entry.value + imageBaseAdjustment;
+							Ref<Platform> targetPlatform = platform->GetAssociatedPlatformByAddress(adjustedAddress);
+							Ref<Function> func = AddFunctionForAnalysis(targetPlatform, adjustedAddress);
 							if (func)
 							{
 								Ref<Symbol> funcSym = new Symbol(ImportedFunctionSymbol,
 										sym->GetShortName(), sym->GetFullName(), sym->GetRawName(),
-										entry.value, NoBinding, sym->GetNameSpace(), sym->GetOrdinal());
+										adjustedAddress, NoBinding, sym->GetNameSpace(), sym->GetOrdinal());
 								DefineAutoSymbol(funcSym);
 								func->ApplyImportedTypes(funcSym);
 							}

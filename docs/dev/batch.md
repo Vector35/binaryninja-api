@@ -119,6 +119,12 @@ By default, logging will follow whatever the setting is for [minimum log level](
 
 We can customize our analysis a lot more granularly than that though. In [`load`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.load), notice the named `options` parameter, and the example code. Any setting you can set in the Binary Ninja "Open with Options" UI you can set through that parameter.
 
+### In-Memory License
+
+For many applications it might be helpful to avoid having a license file on disk. Whether because the environment will be used to analyze malware, or because a docker image might be saved somewhere that the license file needs to be kept secret. (Note: this does not obfuscate the serial number as it can be extracted from memory or even via the API -- an informed attacker can still leak it and network isolation is recommended for analzying malicious applications)
+
+To use this API, copy the contents of your license file into a string and pass it as an argument to [`core_set_license`](https://api.binary.ninja/#binaryninja.core_set_license)
+
 ## Parallelization
 
 Of course, one of the main reasons you might want to build some automation so to spin up a number of threads to process multiple files. Be aware though, that Binary Ninja itself is multithreaded. In fact, if the bottle neck for your analysis script is BN itself, you're almost certainly better off not using any parallelization because the multithreading BN does on its own will provide more benefit than you'd gain by extra parallelization.

@@ -5,7 +5,7 @@
 
 import re, sys, codecs
 
-N_SAMPLES = 3  # number of samples for each encoding
+N_SAMPLES = 4  # number of samples for each encoding
 
 from arm64test import lift, ATTR_PTR_AUTH, path_il_h
 
@@ -30,10 +30,12 @@ def print_case(data, comment=""):
     il_lines = ilstr.split(";")
     if len(il_lines) == 2 and len(ilstr) < 60:
         il_lines = [ilstr]
-    print("\t(b'%s', " % ("".join(["\\x%02X" % b for b in data])), end="")
+    # print("\t(b'%s', " % ("".join(["\\x%02X" % b for b in data])), end="")
+    print("    (b'%s', " % ("".join(["\\x%02X" % b for b in data])), end="")
     for i, line in enumerate(il_lines):
         if i != 0:
-            print("\t\t\t\t\t\t ", end="")
+            # print("\t\t\t\t\t\t ", end="")
+            print(" " * (4 * 6 + 1), end="")
         print("'%s" % line, end="")
         if i != len(il_lines) - 1:
             print(";' + \\")
@@ -60,37 +62,37 @@ def gather_samples(mnems, encodings):
 
     samples = 0
     current_encoding = None
-    # encoding_line_pat = re.compile(r"^// (.*?) .*")
-    not_sample_line_pat = re.compile(r"^// (\w*) .*")
-    encoding_line_pat = re.compile(r"^// (\w*_\w*?) .*")
+    # not_sample_line_pat = re.compile(r"^// (\w*) .*", re.IGNORECASE)
+    encoding_line_pat = re.compile(r"^// (\w*_\w*?) .*", re.IGNORECASE)
     # sample_line_pat = re.compile(r"^(..)(..)(..)(..) (.*)$")
-    sample_line_pat = re.compile(r"^([\dA-F]{2})([\dA-F]{2})([\dA-F]{2})([\dA-F]{2}) (.*)$")
+    sample_line_pat = re.compile(r"^([\dA-F]{2})([\dA-F]{2})([\dA-F]{2})([\dA-F]{2}) (.*)$", re.IGNORECASE)
     for i, line in enumerate(lines_read.splitlines()):
-        if line.startswith("// NOTE:"):
+        _line = line.strip().upper()
+        if _line.startswith("// NOTE:"):
             continue
-        if line.startswith("// SYNTAX:"):
+        if _line.startswith("// SYNTAX:"):
             continue
-        if line.startswith("// https:"):
+        if _line.startswith("// https:"):
             continue
-        if line.startswith(
-            "// 1101010100|L=0|OP0=00|OP1=011|CRN=0011|CRM=0100|1|OPC=00|RT=11111"
-        ):
+        if _line.startswith("// HTTPS:"):
             continue
-        if line.strip().endswith("// TCOMMIT"):
+        if _line.startswith("// 1101010100|L=0|OP0=00|OP1=011|CRN=0011|CRM=0100|1|OPC=00|RT=11111"):
             continue
-        if line.strip().endswith("// DRPS"):
+        if _line.endswith("// TCOMMIT"):
             continue
-        if line.strip().endswith("// ERET"):
+        if _line.endswith("// DRPS"):
             continue
-        if line.strip().endswith("// ERETAA"):
+        if _line.endswith("// ERET"):
             continue
-        if line.strip().endswith("// ERETAB"):
+        if _line.endswith("// ERETAA"):
             continue
-        if line.strip().endswith("// PSSBB"):
+        if _line.endswith("// ERETAB"):
             continue
-        if line.strip().endswith("// SSBB"):
+        if _line.endswith("// PSSBB"):
             continue
-        if line.strip().endswith("// PSSBB_DSB_BO_BARRIERS"):
+        if _line.endswith("// SSBB"):
+            continue
+        if _line.endswith("// PSSBB_DSB_BO_BARRIERS"):
             continue
 
         # if re.match(r"^// .*? .*", line):
@@ -130,7 +132,8 @@ def gather_samples(mnems, encodings):
 
             # if samples == 0:
             # 	print('\t# %s' % encoding)
-            print("\t# %s %s" % (instxt.ljust(64), current_encoding))
+            # print("\t# %s %s" % (instxt.ljust(64), current_encoding))
+            print("    # %s %s" % (instxt.ljust(64), current_encoding))
             print_case(data)
 
             samples += 1
@@ -229,5 +232,5 @@ elif sys.argv[1] == "recompute_arm64test":
         print_case(data, comment)
 
         i += 1
-        while lines[i].startswith("\t\t\t\t\t\t"):
+        while lines[i].startswith("\t\t\t\t\t\t") or lines[i].startswith(" " * (4 * 6)):
             i += 1

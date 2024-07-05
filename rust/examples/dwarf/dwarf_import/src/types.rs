@@ -129,7 +129,7 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
     if let Some(full_name) = &full_name {
         debug_info_builder.add_type(
             get_uid(unit, entry),
-            full_name.clone(),
+            &full_name,
             Type::named_type_from_type(
                 full_name.clone(),
                 &Type::structure(&structure_builder.finalize()),
@@ -143,8 +143,8 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
         let full_name = format!("anonymous_structure_{:x}", get_uid(unit, entry));
         debug_info_builder.add_type(
             get_uid(unit, entry),
-            full_name.clone(),
-            Type::named_type_from_type(full_name, &Type::structure(&structure_builder.finalize())),
+            &full_name,
+            Type::named_type_from_type(&full_name, &Type::structure(&structure_builder.finalize())),
             false,
         );
     }
@@ -209,14 +209,14 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
     if let Some(full_name) = full_name {
         debug_info_builder.add_type(
             get_uid(unit, entry) + 1, // TODO : This is super broke (uid + 1 is not guaranteed to be unique)
-            full_name,
+            &full_name,
             finalized_structure,
             true,
         );
     } else {
         debug_info_builder.add_type(
             get_uid(unit, entry),
-            format!("{}", finalized_structure),
+            &format!("{}", finalized_structure),
             finalized_structure,
             false, // Don't commit anonymous unions (because I think it'll break things)
         );
@@ -232,8 +232,9 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
     debug_info_builder: &mut DebugInfoBuilder,
 ) -> Option<TypeUID> {
     // If this node (and thus all its referenced nodes) has already been processed, just return the offset
-    if debug_info_builder.contains_type(get_uid(unit, entry)) {
-        return Some(get_uid(unit, entry));
+    let entry_uid = get_uid(unit, entry);
+    if debug_info_builder.contains_type(entry_uid) {
+        return Some(entry_uid);
     }
 
     // Don't parse types that are just declarations and not definitions
@@ -284,8 +285,8 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
 
     // If this node (and thus all its referenced nodes) has already been processed, just return the offset
     // This check is not redundant because this type might have been processes in the recursive calls above
-    if debug_info_builder.contains_type(get_uid(unit, entry)) {
-        return Some(get_uid(unit, entry));
+    if debug_info_builder.contains_type(entry_uid) {
+        return Some(entry_uid);
     }
 
     // Collect the required information to create a type and add it to the type map. Also, add the dependencies of this type to the type's typeinfo
@@ -405,8 +406,8 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
             format!("{}", type_def)
         });
 
-        debug_info_builder.add_type(get_uid(unit, entry), name, type_def, commit);
-        Some(get_uid(unit, entry))
+        debug_info_builder.add_type(entry_uid, &name, type_def, commit);
+        Some(entry_uid)
     } else {
         None
     }

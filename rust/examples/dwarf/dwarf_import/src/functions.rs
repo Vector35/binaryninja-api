@@ -30,41 +30,44 @@ fn get_parameters<R: Reader<Offset = usize>>(
     debug_info_builder: &mut DebugInfoBuilder,
 ) -> (Vec<Option<(String, TypeUID)>>, bool) {
     if !entry.has_children() {
-        (vec![], false)
-    } else {
-        // We make a new tree from the current entry to iterate over its children
-        let mut sub_die_tree = unit.entries_tree(Some(entry.offset())).unwrap();
-        let root = sub_die_tree.root().unwrap();
-
-        let mut variable_arguments = false;
-        let mut result = vec![];
-        let mut children = root.children();
-        while let Some(child) = children.next().unwrap() {
-            match child.entry().tag() {
-                constants::DW_TAG_formal_parameter => {
-                    let name = debug_info_builder_context.get_name(unit, child.entry());
-                    let type_ = get_type(
-                        unit,
-                        child.entry(),
-                        debug_info_builder_context,
-                        debug_info_builder,
-                    );
-                    if let Some(parameter_name) = name {
-                        if let Some(parameter_type) = type_ {
-                            result.push(Some((parameter_name, parameter_type)));
-                        } else {
-                            result.push(Some((parameter_name, 0)))
-                        }
-                    } else {
-                        result.push(None)
-                    }
-                }
-                constants::DW_TAG_unspecified_parameters => variable_arguments = true,
-                _ => (),
-            }
-        }
-        (result, variable_arguments)
+        return (vec![], false);
     }
+
+    // We make a new tree from the current entry to iterate over its children
+    let mut sub_die_tree = unit.entries_tree(Some(entry.offset())).unwrap();
+    let root = sub_die_tree.root().unwrap();
+
+    let mut variable_arguments = false;
+    let mut result = vec![];
+    let mut children = root.children();
+    while let Some(child) = children.next().unwrap() {
+        match child.entry().tag() {
+            constants::DW_TAG_formal_parameter => {
+                //TODO: if the param type is a typedef to an anonymous struct (typedef struct {...} foo) then this is reoslved to an anonymous struct instead of foo
+                //  We should still recurse to make sure we load all types this param type depends on, but
+                let name = debug_info_builder_context.get_name(unit, child.entry());
+
+                let type_ = get_type(
+                    unit,
+                    child.entry(),
+                    debug_info_builder_context,
+                    debug_info_builder,
+                );
+                if let Some(parameter_name) = name {
+                    if let Some(parameter_type) = type_ {
+                        result.push(Some((parameter_name, parameter_type)));
+                    } else {
+                        result.push(Some((parameter_name, 0)))
+                    }
+                } else {
+                    result.push(None)
+                }
+            }
+            constants::DW_TAG_unspecified_parameters => variable_arguments = true,
+            _ => (),
+        }
+    }
+    (result, variable_arguments)
 }
 
 pub(crate) fn parse_function_entry<R: Reader<Offset = usize>>(

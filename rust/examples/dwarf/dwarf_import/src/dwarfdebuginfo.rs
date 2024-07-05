@@ -303,7 +303,7 @@ impl DebugInfoBuilder {
         self.types.values()
     }
 
-    pub(crate) fn add_type(&mut self, type_uid: TypeUID, name: String, t: Ref<Type>, commit: bool) {
+    pub(crate) fn add_type(&mut self, type_uid: TypeUID, name: &String, t: Ref<Type>, commit: bool) {
         if let Some(DebugType {
             name: existing_name,
             t: existing_type,

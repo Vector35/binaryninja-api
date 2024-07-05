@@ -295,9 +295,9 @@ pub(crate) fn handle_function<R: Reader<Offset = usize>>(
     if let Some(name) = debug_info_builder_context.get_name(unit, entry) {
         debug_info_builder.add_type(
             get_uid(unit, entry),
-            name.clone(),
+            &name,
             Type::named_type_from_type(
-                name,
+                &name,
                 &Type::function::<&binaryninja::types::Type>(return_type.as_ref(), &[], false),
             ),
             false,

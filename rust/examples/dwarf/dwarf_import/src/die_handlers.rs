@@ -131,7 +131,7 @@ pub(crate) fn handle_enum<R: Reader<Offset = usize>>(
 pub(crate) fn handle_typedef(
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
-    typedef_name: String,
+    typedef_name: &String,
 ) -> (Option<Ref<Type>>, bool) {
     // All base types have:
     //   DW_AT_name
@@ -140,12 +140,8 @@ pub(crate) fn handle_typedef(
 
     // This will fail in the case where we have a typedef to a type that doesn't exist (failed to parse, incomplete, etc)
     if let Some(entry_type_offset) = entry_type {
-        if let Some((name, t)) = debug_info_builder.get_type(entry_type_offset) {
-            if typedef_name == name {
-                return (Some(t), false);
-            } else if typedef_name != name {
-                return (Some(t), true);
-            }
+        if let Some(t) = debug_info_builder.get_type(entry_type_offset) {
+            return (Some(t.get_type()), typedef_name != t.get_name());
         }
     }
 
@@ -172,7 +168,7 @@ pub(crate) fn handle_pointer<R: Reader<Offset = usize>>(
 
     if let Some(pointer_size) = get_size_as_usize(entry) {
         if let Some(entry_type_offset) = entry_type {
-            let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().1;
+            let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().get_type();
             Some(Type::pointer_of_width(
                 parent_type.as_ref(),
                 pointer_size,
@@ -190,7 +186,7 @@ pub(crate) fn handle_pointer<R: Reader<Offset = usize>>(
             ))
         }
     } else if let Some(entry_type_offset) = entry_type {
-        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().1;
+        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().get_type();
         Some(Type::pointer_of_width(
             parent_type.as_ref(),
             debug_info_builder_context.default_address_size(),
@@ -228,7 +224,7 @@ pub(crate) fn handle_array<R: Reader<Offset = usize>>(
     //   For multidimensional arrays, DW_TAG_subrange_type or DW_TAG_enumeration_type
 
     if let Some(entry_type_offset) = entry_type {
-        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().1;
+        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().get_type();
 
         let mut tree = unit.entries_tree(Some(entry.offset())).unwrap();
         let mut children = tree.root().unwrap().children();
@@ -289,7 +285,7 @@ pub(crate) fn handle_function<R: Reader<Offset = usize>>(
             debug_info_builder
                 .get_type(entry_type_offset)
                 .expect("Subroutine return type was not processed")
-                .1
+                .get_type()
         }
         None => Type::void(),
     };
@@ -326,7 +322,7 @@ pub(crate) fn handle_function<R: Reader<Offset = usize>>(
                     debug_info_builder_context.get_name(unit, child.entry()),
                 )
             } {
-                let child_type = debug_info_builder.get_type(child_uid).unwrap().1;
+                let child_type = debug_info_builder.get_type(child_uid).unwrap().get_type();
                 parameters.push(FunctionParameter::new(child_type, name, None));
             }
         } else if child.entry().tag() == constants::DW_TAG_unspecified_parameters {
@@ -358,7 +354,7 @@ pub(crate) fn handle_const(
     //   ?DW_AT_type
 
     if let Some(entry_type_offset) = entry_type {
-        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().1;
+        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().get_type();
         Some((*parent_type).to_builder().set_const(true).finalize())
     } else {
         Some(TypeBuilder::void().set_const(true).finalize())
@@ -378,7 +374,7 @@ pub(crate) fn handle_volatile(
     //   ?DW_AT_type
 
     if let Some(entry_type_offset) = entry_type {
-        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().1;
+        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().get_type();
         Some((*parent_type).to_builder().set_volatile(true).finalize())
     } else {
         Some(TypeBuilder::void().set_volatile(true).finalize())

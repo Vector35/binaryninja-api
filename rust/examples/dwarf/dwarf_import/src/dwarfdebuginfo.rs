@@ -101,6 +101,16 @@ pub(crate) struct DebugType {
     commit: bool,
 }
 
+impl DebugType {
+    pub fn get_name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn get_type(&self) -> Ref<Type> {
+        self.t.clone()
+    }
+}
+
 pub(crate) struct DebugInfoBuilderContext<R: Reader<Offset = usize>> {
     dwarf: Dwarf<R>,
     units: Vec<Unit<R>>,
@@ -321,15 +331,12 @@ impl DebugInfoBuilder {
         self.types.remove(&type_uid);
     }
 
-    // TODO : Non-copy?
-    pub(crate) fn get_type(&self, type_uid: TypeUID) -> Option<(String, Ref<Type>)> {
-        self.types
-            .get(&type_uid)
-            .map(|type_ref_ref| (type_ref_ref.name.clone(), type_ref_ref.t.clone()))
+    pub(crate) fn get_type(&self, type_uid: TypeUID) -> Option<&DebugType> {
+        self.types.get(&type_uid)
     }
 
     pub(crate) fn contains_type(&self, type_uid: TypeUID) -> bool {
-        self.types.get(&type_uid).is_some()
+        self.types.contains_key(&type_uid)
     }
 
 
@@ -364,7 +371,7 @@ impl DebugInfoBuilder {
 
         // Either get the known type or use a 0 confidence void type so we at least get the name applied
         let t = match type_uid {
-            Some(uid) => Conf::new(self.get_type(uid).unwrap().1, 128),
+            Some(uid) => Conf::new(self.get_type(uid).unwrap().get_type(), 128),
             None => Conf::new(Type::void(), 0)
         };
         let function = &mut self.functions[function_index];
@@ -405,14 +412,14 @@ impl DebugInfoBuilder {
         if let Some((_existing_name, existing_type_uid)) =
             self.data_variables.insert(address, (name, type_uid))
         {
-            let existing_type = self.get_type(existing_type_uid).unwrap().1;
-            let new_type = self.get_type(type_uid).unwrap().1;
+            let existing_type = self.get_type(existing_type_uid).unwrap().get_type();
+            let new_type = self.get_type(type_uid).unwrap().get_type();
 
             if existing_type_uid != type_uid || existing_type != new_type {
                 warn!("DWARF info contains duplicate data variable definition. Overwriting data variable at 0x{:08x} (`{}`) with `{}`",
                     address,
-                    self.get_type(existing_type_uid).unwrap().1,
-                    self.get_type(type_uid).unwrap().1
+                    existing_type,
+                    new_type
                 );
             }
         }
@@ -432,7 +439,7 @@ impl DebugInfoBuilder {
         for (&address, (name, type_uid)) in &self.data_variables {
             assert!(debug_info.add_data_variable(
                 address,
-                &self.get_type(*type_uid).unwrap().1,
+                &self.get_type(*type_uid).unwrap().t,
                 name.clone(),
                 &[] // TODO : Components
             ));
@@ -441,7 +448,7 @@ impl DebugInfoBuilder {
 
     fn get_function_type(&self, function: &FunctionInfoBuilder) -> Ref<Type> {
         let return_type = match function.return_type {
-            Some(return_type_id) => Conf::new(self.get_type(return_type_id).unwrap().1.clone(), 0),
+            Some(return_type_id) => Conf::new(self.get_type(return_type_id).unwrap().get_type(), 0),
             _ => Conf::new(binaryninja::types::Type::void(), 0),
         };
 
@@ -451,7 +458,7 @@ impl DebugInfoBuilder {
             .filter_map(|parameter| match parameter {
                 Some((name, 0)) => Some(FunctionParameter::new(Type::void(), name.clone(), None)),
                 Some((name, uid)) => Some(FunctionParameter::new(
-                    self.get_type(*uid).unwrap().1,
+                    self.get_type(*uid).unwrap().get_type(),
                     name.clone(),
                     None,
                 )),

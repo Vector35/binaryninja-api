@@ -160,7 +160,8 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
                 debug_info_builder_context,
                 debug_info_builder,
             ) {
-                if let Some((_, child_type)) = debug_info_builder.get_type(child_type_id) {
+                if let Some(t) = debug_info_builder.get_type(child_type_id) {
+                    let child_type = t.get_type();
                     if let Some(child_name) = debug_info_builder_context
                         .get_name(unit, child.entry())
                         .map_or(
@@ -331,7 +332,7 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
         // Basic types
         constants::DW_TAG_typedef => {
             if let Some(name) = debug_info_builder_context.get_name(unit, entry) {
-                handle_typedef(debug_info_builder, entry_type, name)
+                handle_typedef(debug_info_builder, entry_type, &name)
             } else {
                 (None, false)
             }

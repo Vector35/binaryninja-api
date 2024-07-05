@@ -211,7 +211,7 @@ There's also [many](#using-the-keyboard) keyboard-based navigation options.
 Switching views happens multiple ways. In some instances, it is automatic, such as clicking a data reference from graph view. This will navigate to linear view as data is not shown in the graph view. While navigating, you can use the [view hotkeys](#default-hotkeys) to switch to a specific view at the same location as the current selection. Next you can use the [command palette](#command-palette). Additionally, the view menu in the header at the top of each pane can be used to change views without navigating to any given location. Finally, you can also use the `View` application menu.
 
 ???+ Tip "Tip"
-    Any loaded BinaryView will show up in the upper-left of the main pane. You can switch between (for example), `ELF` and `Raw` to switch between multiple loaded [BinaryViews](../dev/concepts.md#Binary-Views).
+    Any loaded BinaryView will show up in the upper-left of the main pane. You can switch between (for example), `ELF` and `Raw` to switch between multiple loaded [BinaryViews](../dev/concepts.md#binary-views).
 
 ## The Sidebar
 
@@ -582,7 +582,8 @@ The hex view is particularly good for transforming data in various ways via the 
 If you're using the hex view for a Binary View like ELF, Mach-O or PE, you probably want to make sure you're also in the `Raw` view if you want to see the file as it exists on disk in hex view.
 
 ### Live Preview
-    Any changes made in the Hex view will take effect immediately in any other views open into the same file (new views can be created via the `Split to new tab`, or `Split to new window` options under `View`, or via [splitting panes](#tiling-panes)). This can, however, cause large amounts of re-analysis so be warned before making large edits or transformations in a large binary file.
+
+Any changes made in the Hex view will take effect immediately in any other views open into the same file (new views can be created via the `Split to new tab`, or `Split to new window` options under `View`, or via [splitting panes](#tiling-panes)). This can, however, cause large amounts of re-analysis so be warned before making large edits or transformations in a large binary file.
 
 ## Linear View
 
@@ -680,7 +681,7 @@ dialog and deselect the variables that should no longer be merged.
 
 ### Split Variables
 
-![Split Variable >](../img/split-var.png "Split Variable"){ width="200" }
+![Split Variable >](../img/split-var.png "Split Variable"){ width="400" }
 
 Variables that have multiple definitions can be manually split into multiple variables by clicking on the
 variable at a definition site and selecting "Split Variable at Definition" from the context menu.

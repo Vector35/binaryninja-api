@@ -296,7 +296,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [dejavusanscode license]: https://github.com/SSNikolaevich/DejaVuSansCode/blob/master/LICENSE
 [dejavusanscode]: https://github.com/SSNikolaevich/DejaVuSansCode
 [doxygen license]: https://github.com/doxygen/doxygen/blob/master/LICENSE
-[doxygen]: http://www.stack.nl/~dimitri/doxygen/
+[doxygen]: https://www.doxygen.nl
 [flatbuffer]: https://github.com/google/flatbuffers
 [flatbuffer license]: https://github.com/google/flatbuffers/blob/master/LICENSE
 [jsoncpp]: https://github.com/open-source-parsers/jsoncpp
@@ -349,11 +349,11 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [botan]: https://github.com/randombit/botan
 [botan license]: https://github.com/randombit/botan/blob/master/license.txt
 [dtl]: https://github.com/cubicdaiya/dtl/
-[dtl license]: https://github.com/cubicdaiya/dtl/COPYING
+[dtl license]: https://github.com/cubicdaiya/dtl/blob/master/COPYING
 [JSON for Modern C++]: https://github.com/nlohmann/json/
 [JSON for Modern C++ license]: https://github.com/nlohmann/json/blob/develop/LICENSE.MIT
 [zstd]: https://github.com/facebook/zstd/
-[zstd license]: https://github.com/facebook/zstd/LICENSE
+[zstd license]: https://github.com/facebook/zstd/blob/dev/LICENSE
 [deprecation]: https://github.com/briancurtin/deprecation
 [deprecation license]: https://github.com/briancurtin/deprecation/blob/master/LICENSE
 [API / Documentation]: https://github.com/vector35/binaryninja-api

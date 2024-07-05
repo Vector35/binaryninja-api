@@ -448,7 +448,7 @@ impl DebugInfoBuilder {
 
     fn get_function_type(&self, function: &FunctionInfoBuilder) -> Ref<Type> {
         let return_type = match function.return_type {
-            Some(return_type_id) => Conf::new(self.get_type(return_type_id).unwrap().get_type(), 0),
+            Some(return_type_id) => Conf::new(self.get_type(return_type_id).unwrap().get_type(), 128),
             _ => Conf::new(binaryninja::types::Type::void(), 0),
         };
 

@@ -3894,6 +3894,73 @@ tests_st1 = [
                          ' LLIL_SET_REG.q(x29,LLIL_ADD.q(LLIL_REG.q(x29),LLIL_REG.q(x21)))'),
 ]
 
+tests_tbl = [
+    # tbl v3.16b, {v13.16b}, v17.16b                                   TBL_asimdtbl_L1_1
+    (b'\xA3\x01\x11\x4E', 'LLIL_INTRINSIC([v3],vqtbl1q_s8,[LLIL_REG.o(v13),LLIL_REG.o(v17)])'),
+    # tbl v28.16b, {v5.16b}, v2.16b                                    TBL_asimdtbl_L1_1
+    (b'\xBC\x00\x02\x4E', 'LLIL_INTRINSIC([v28],vqtbl1q_s8,[LLIL_REG.o(v5),LLIL_REG.o(v2)])'),
+    # tbl v30.8b, {v14.16b}, v10.8b                                    TBL_asimdtbl_L1_1
+    (b'\xDE\x01\x0A\x0E', 'LLIL_INTRINSIC([v30],vtbl1_s8,[LLIL_REG.o(v14),LLIL_REG.o(v10)])'),
+    # tbl v20.16b, {v30.16b}, v26.16b                                  TBL_asimdtbl_L1_1
+    (b'\xD4\x03\x1A\x4E', 'LLIL_INTRINSIC([v20],vqtbl1q_s8,[LLIL_REG.o(v30),LLIL_REG.o(v26)])'),
+    # tbl v0.8b, {v19.16b}, v25.8b                                     TBL_asimdtbl_L1_1
+    (b'\x60\x02\x19\x0E', 'LLIL_INTRINSIC([v0],vtbl1_s8,[LLIL_REG.o(v19),LLIL_REG.o(v25)])'),
+    # tbl v15.8b, {v2.16b}, v10.8b                                     TBL_asimdtbl_L1_1
+    (b'\x4F\x00\x0A\x0E', 'LLIL_INTRINSIC([v15],vtbl1_s8,[LLIL_REG.o(v2),LLIL_REG.o(v10)])'),
+    # tbl v18.8b, {v23.16b}, v6.8b                                     TBL_asimdtbl_L1_1
+    (b'\xF2\x02\x06\x0E', 'LLIL_INTRINSIC([v18],vtbl1_s8,[LLIL_REG.o(v23),LLIL_REG.o(v6)])'),
+    # tbl v28.8b, {v19.16b}, v1.8b                                     TBL_asimdtbl_L1_1
+    (b'\x7C\x02\x01\x0E', 'LLIL_INTRINSIC([v28],vtbl1_s8,[LLIL_REG.o(v19),LLIL_REG.o(v1)])'),
+    # tbl v5.8b, {v3.16b, v4.16b}, v2.8b                               TBL_asimdtbl_L2_2
+    (b'\x65\x20\x02\x0E', 'LLIL_INTRINSIC([v5],vqtbl2_s8,[LLIL_REG.o(v4),LLIL_REG.o(v3),LLIL_REG.o(v2)])'),
+    # tbl v13.8b, {v19.16b, v20.16b}, v3.8b                            TBL_asimdtbl_L2_2
+    (b'\x6D\x22\x03\x0E', 'LLIL_INTRINSIC([v13],vqtbl2_s8,[LLIL_REG.o(v20),LLIL_REG.o(v19),LLIL_REG.o(v3)])'),
+    # tbl v1.16b, {v19.16b, v20.16b}, v6.16b                           TBL_asimdtbl_L2_2
+    (b'\x61\x22\x06\x4E', 'LLIL_INTRINSIC([v1],vqtbl2q_s8,[LLIL_REG.o(v20),LLIL_REG.o(v19),LLIL_REG.o(v6)])'),
+    # tbl v17.8b, {v17.16b, v18.16b}, v20.8b                           TBL_asimdtbl_L2_2
+    (b'\x31\x22\x14\x0E', 'LLIL_INTRINSIC([v17],vqtbl2_s8,[LLIL_REG.o(v18),LLIL_REG.o(v17),LLIL_REG.o(v20)])'),
+    # tbl v13.16b, {v30.16b, v31.16b}, v6.16b                          TBL_asimdtbl_L2_2
+    (b'\xCD\x23\x06\x4E', 'LLIL_INTRINSIC([v13],vqtbl2q_s8,[LLIL_REG.o(v31),LLIL_REG.o(v30),LLIL_REG.o(v6)])'),
+    # tbl v24.16b, {v11.16b, v12.16b}, v22.16b                         TBL_asimdtbl_L2_2
+    (b'\x78\x21\x16\x4E', 'LLIL_INTRINSIC([v24],vqtbl2q_s8,[LLIL_REG.o(v12),LLIL_REG.o(v11),LLIL_REG.o(v22)])'),
+    # tbl v15.16b, {v17.16b, v18.16b}, v17.16b                         TBL_asimdtbl_L2_2
+    (b'\x2F\x22\x11\x4E', 'LLIL_INTRINSIC([v15],vqtbl2q_s8,[LLIL_REG.o(v18),LLIL_REG.o(v17),LLIL_REG.o(v17)])'),
+    # tbl v3.8b, {v18.16b, v19.16b}, v31.8b                            TBL_asimdtbl_L2_2
+    (b'\x43\x22\x1F\x0E', 'LLIL_INTRINSIC([v3],vqtbl2_s8,[LLIL_REG.o(v19),LLIL_REG.o(v18),LLIL_REG.o(v31)])'),
+    # tbl v24.8b, {v9.16b, v10.16b, v11.16b}, v7.8b                    TBL_asimdtbl_L3_3
+    (b'\x38\x41\x07\x0E', 'LLIL_INTRINSIC([v24],vqtbl3_s8,[LLIL_REG.o(v9),LLIL_REG.o(v10),LLIL_REG.o(v11),LLIL_REG.o(v7)])'),
+    # tbl v13.16b, {v0.16b, v1.16b, v2.16b}, v3.16b                    TBL_asimdtbl_L3_3
+    (b'\x0D\x40\x03\x4E', 'LLIL_INTRINSIC([v13],vqtbl3q_s8,[LLIL_REG.o(v0),LLIL_REG.o(v1),LLIL_REG.o(v2),LLIL_REG.o(v3)])'),
+    # tbl v1.8b, {v1.16b, v2.16b, v3.16b}, v23.8b                      TBL_asimdtbl_L3_3
+    (b'\x21\x40\x17\x0E', 'LLIL_INTRINSIC([v1],vqtbl3_s8,[LLIL_REG.o(v1),LLIL_REG.o(v2),LLIL_REG.o(v3),LLIL_REG.o(v23)])'),
+    # tbl v3.16b, {v23.16b, v24.16b, v25.16b}, v6.16b                  TBL_asimdtbl_L3_3
+    (b'\xE3\x42\x06\x4E', 'LLIL_INTRINSIC([v3],vqtbl3q_s8,[LLIL_REG.o(v23),LLIL_REG.o(v24),LLIL_REG.o(v25),LLIL_REG.o(v6)])'),
+    # tbl v0.8b, {v14.16b, v15.16b, v16.16b}, v17.8b                   TBL_asimdtbl_L3_3
+    (b'\xC0\x41\x11\x0E', 'LLIL_INTRINSIC([v0],vqtbl3_s8,[LLIL_REG.o(v14),LLIL_REG.o(v15),LLIL_REG.o(v16),LLIL_REG.o(v17)])'),
+    # tbl v7.8b, {v30.16b, v31.16b, v0.16b}, v22.8b                    TBL_asimdtbl_L3_3
+    (b'\xC7\x43\x16\x0E', 'LLIL_INTRINSIC([v7],vqtbl3_s8,[LLIL_REG.o(v30),LLIL_REG.o(v31),LLIL_REG.b(b0),LLIL_REG.o(v22)])'),
+    # tbl v7.8b, {v4.16b, v5.16b, v6.16b}, v18.8b                      TBL_asimdtbl_L3_3
+    (b'\x87\x40\x12\x0E', 'LLIL_INTRINSIC([v7],vqtbl3_s8,[LLIL_REG.o(v4),LLIL_REG.o(v5),LLIL_REG.o(v6),LLIL_REG.o(v18)])'),
+    # tbl v12.16b, {v27.16b, v28.16b, v29.16b}, v7.16b                 TBL_asimdtbl_L3_3
+    (b'\x6C\x43\x07\x4E', 'LLIL_INTRINSIC([v12],vqtbl3q_s8,[LLIL_REG.o(v27),LLIL_REG.o(v28),LLIL_REG.o(v29),LLIL_REG.o(v7)])'),
+    # tbl v31.8b, {v31.16b, v0.16b, v1.16b, v2.16b}, v2.8b             TBL_asimdtbl_L4_4
+    (b'\xFF\x63\x02\x0E', 'LLIL_INTRINSIC([v31],vqtbl4_s8,[LLIL_REG.o(v31),LLIL_REG.b(b0),LLIL_REG.b(b1),LLIL_REG.b(b2),LLIL_REG.o(v2)])'),
+    # tbl v4.16b, {v1.16b, v2.16b, v3.16b, v4.16b}, v29.16b            TBL_asimdtbl_L4_4
+    (b'\x24\x60\x1D\x4E', 'LLIL_INTRINSIC([v4],vqtbl4q_s8,[LLIL_REG.o(v1),LLIL_REG.o(v2),LLIL_REG.o(v3),LLIL_REG.o(v4),LLIL_REG.o(v29)])'),
+    # tbl v12.8b, {v11.16b, v12.16b, v13.16b, v14.16b}, v4.8b          TBL_asimdtbl_L4_4
+    (b'\x6C\x61\x04\x0E', 'LLIL_INTRINSIC([v12],vqtbl4_s8,[LLIL_REG.o(v11),LLIL_REG.o(v12),LLIL_REG.o(v13),LLIL_REG.o(v14),LLIL_REG.o(v4)])'),
+    # tbl v6.8b, {v0.16b, v1.16b, v2.16b, v3.16b}, v26.8b              TBL_asimdtbl_L4_4
+    (b'\x06\x60\x1A\x0E', 'LLIL_INTRINSIC([v6],vqtbl4_s8,[LLIL_REG.o(v0),LLIL_REG.o(v1),LLIL_REG.o(v2),LLIL_REG.o(v3),LLIL_REG.o(v26)])'),
+    # tbl v26.8b, {v31.16b, v0.16b, v1.16b, v2.16b}, v0.8b             TBL_asimdtbl_L4_4
+    (b'\xFA\x63\x00\x0E', 'LLIL_INTRINSIC([v26],vqtbl4_s8,[LLIL_REG.o(v31),LLIL_REG.b(b0),LLIL_REG.b(b1),LLIL_REG.b(b2),LLIL_REG.o(v0)])'),
+    # tbl v19.16b, {v6.16b, v7.16b, v8.16b, v9.16b}, v13.16b           TBL_asimdtbl_L4_4
+    (b'\xD3\x60\x0D\x4E', 'LLIL_INTRINSIC([v19],vqtbl4q_s8,[LLIL_REG.o(v6),LLIL_REG.o(v7),LLIL_REG.o(v8),LLIL_REG.o(v9),LLIL_REG.o(v13)])'),
+    # tbl v20.8b, {v16.16b, v17.16b, v18.16b, v19.16b}, v2.8b          TBL_asimdtbl_L4_4
+    (b'\x14\x62\x02\x0E', 'LLIL_INTRINSIC([v20],vqtbl4_s8,[LLIL_REG.o(v16),LLIL_REG.o(v17),LLIL_REG.o(v18),LLIL_REG.o(v19),LLIL_REG.o(v2)])'),
+    # tbl v13.8b, {v24.16b, v25.16b, v26.16b, v27.16b}, v0.8b          TBL_asimdtbl_L4_4
+    (b'\x0D\x63\x00\x0E', 'LLIL_INTRINSIC([v13],vqtbl4_s8,[LLIL_REG.o(v24),LLIL_REG.o(v25),LLIL_REG.o(v26),LLIL_REG.o(v27),LLIL_REG.o(v0)])'),
+]
+
 tests_grab_bag = [
     # some vectors loads/stores that do not fill the entire register
     # TODO: ld1/st1 with different addressing modes
@@ -3967,42 +4034,42 @@ tests_grab_bag = [
                          ' LLIL_GOTO(4);' + \
                          ' LLIL_SET_REG.d(w13,LLIL_REG.d(temp0))'), # casal w13, w30, [x3]
     (b'\x43\x7C\xE5\x48', 'LLIL_SET_REG.w(temp0,LLIL_LOAD.w(LLIL_REG.q(x2)));' + \
-						 ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.w(LLIL_REG.d(w5)),LLIL_REG.w(temp0)),2,4);' + \
+                         ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.w(LLIL_REG.d(w5)),LLIL_REG.w(temp0)),2,4);' + \
                          ' LLIL_STORE.w(LLIL_REG.q(x2),LLIL_LOW_PART.w(LLIL_REG.d(w3)));' + \
                          ' LLIL_GOTO(4);' + \
                          ' LLIL_SET_REG.d(w5,LLIL_REG.w(temp0))'), # casah w5, w3, [x2]
     (b'\xDE\xFC\xF2\x48', 'LLIL_SET_REG.w(temp0,LLIL_LOAD.w(LLIL_REG.q(x6)));' + \
-						 ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.w(LLIL_REG.d(w18)),LLIL_REG.w(temp0)),2,4);' + \
+                         ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.w(LLIL_REG.d(w18)),LLIL_REG.w(temp0)),2,4);' + \
                          ' LLIL_STORE.w(LLIL_REG.q(x6),LLIL_LOW_PART.w(LLIL_REG.d(w30)));' + \
                          ' LLIL_GOTO(4);' + \
                          ' LLIL_SET_REG.d(w18,LLIL_REG.w(temp0))'), # casalh w18, w30, [x6]
     (b'\x80\x7F\xB5\x48', 'LLIL_SET_REG.w(temp0,LLIL_LOAD.w(LLIL_REG.q(x28)));' + \
-						 ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.w(LLIL_REG.d(w21)),LLIL_REG.w(temp0)),2,4);' + \
+                         ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.w(LLIL_REG.d(w21)),LLIL_REG.w(temp0)),2,4);' + \
                          ' LLIL_STORE.w(LLIL_REG.q(x28),LLIL_LOW_PART.w(LLIL_REG.d(w0)));' + \
                          ' LLIL_GOTO(4);' + \
                          ' LLIL_SET_REG.d(w21,LLIL_REG.w(temp0))'), # cash w21, w0, [x28]
     (b'\xEB\xFD\xA5\x48', 'LLIL_SET_REG.w(temp0,LLIL_LOAD.w(LLIL_REG.q(x15)));' + \
-						 ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.w(LLIL_REG.d(w5)),LLIL_REG.w(temp0)),2,4);' + \
+                         ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.w(LLIL_REG.d(w5)),LLIL_REG.w(temp0)),2,4);' + \
                          ' LLIL_STORE.w(LLIL_REG.q(x15),LLIL_LOW_PART.w(LLIL_REG.d(w11)));' + \
                          ' LLIL_GOTO(4);' + \
                          ' LLIL_SET_REG.d(w5,LLIL_REG.w(temp0))'), # caslh w5, w11, [x15]
     (b'\x2E\x7C\xF7\x08', 'LLIL_SET_REG.b(temp0,LLIL_LOAD.b(LLIL_REG.q(x1)));' + \
-						 ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.b(LLIL_REG.d(w23)),LLIL_REG.b(temp0)),2,4);' + \
+                         ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.b(LLIL_REG.d(w23)),LLIL_REG.b(temp0)),2,4);' + \
                          ' LLIL_STORE.b(LLIL_REG.q(x1),LLIL_LOW_PART.b(LLIL_REG.d(w14)));' + \
                          ' LLIL_GOTO(4);' + \
                          ' LLIL_SET_REG.d(w23,LLIL_REG.b(temp0))'), # casab w23, w14, [x1]
     (b'\x27\xFF\xE6\x08', 'LLIL_SET_REG.b(temp0,LLIL_LOAD.b(LLIL_REG.q(x25)));' + \
-						 ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.b(LLIL_REG.d(w6)),LLIL_REG.b(temp0)),2,4);' + \
+                         ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.b(LLIL_REG.d(w6)),LLIL_REG.b(temp0)),2,4);' + \
                          ' LLIL_STORE.b(LLIL_REG.q(x25),LLIL_LOW_PART.b(LLIL_REG.d(w7)));' + \
                          ' LLIL_GOTO(4);' + \
                          ' LLIL_SET_REG.d(w6,LLIL_REG.b(temp0))'), # casalb w6, w7, [x25]
     (b'\x1E\x7E\xB8\x08', 'LLIL_SET_REG.b(temp0,LLIL_LOAD.b(LLIL_REG.q(x16)));' + \
-						 ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.b(LLIL_REG.d(w24)),LLIL_REG.b(temp0)),2,4);' + \
+                         ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.b(LLIL_REG.d(w24)),LLIL_REG.b(temp0)),2,4);' + \
                          ' LLIL_STORE.b(LLIL_REG.q(x16),LLIL_LOW_PART.b(LLIL_REG.d(w30)));' + \
                          ' LLIL_GOTO(4);' + \
                          ' LLIL_SET_REG.d(w24,LLIL_REG.b(temp0))'), # casb w24, w30, [x16]
     (b'\xA6\xFD\xAE\x08', 'LLIL_SET_REG.b(temp0,LLIL_LOAD.b(LLIL_REG.q(x13)));' + \
-						 ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.b(LLIL_REG.d(w14)),LLIL_REG.b(temp0)),2,4);' + \
+                         ' LLIL_IF(LLIL_CMP_E.d(LLIL_LOW_PART.b(LLIL_REG.d(w14)),LLIL_REG.b(temp0)),2,4);' + \
                          ' LLIL_STORE.b(LLIL_REG.q(x13),LLIL_LOW_PART.b(LLIL_REG.d(w6)));' + \
                          ' LLIL_GOTO(4);' + \
                          ' LLIL_SET_REG.d(w14,LLIL_REG.b(temp0))'), # caslb w14, w6, [x13]
@@ -4550,6 +4617,7 @@ test_cases = \
     tests_ld1 + \
     tests_ld2 + \
     tests_st1 + \
+    tests_tbl + \
     tests_grab_bag
 
 def il2str(il):

@@ -5503,6 +5503,97 @@ tests_ngc_sbc = [
     (b'\x39\x01\x12\xDA', 'LLIL_SET_REG.q(x25,LLIL_SBB.q(LLIL_REG.q(x9),LLIL_REG.q(x18),LLIL_NOT(LLIL_FLAG(c))))'),
 ]
 
+tests_sbf = [
+    # asr w21, w7, #0x7                                                ASR_SBFM_32M_bitfield
+    (b'\xF5\x7C\x07\x13', 'LLIL_SET_REG.d(w21,LLIL_ASR.d(LLIL_REG.d(w7),LLIL_CONST.d(0x7)))'),
+    # asr w15, w5, #0x1e                                               ASR_SBFM_32M_bitfield
+    (b'\xAF\x7C\x1E\x13', 'LLIL_SET_REG.d(w15,LLIL_ASR.d(LLIL_REG.d(w5),LLIL_CONST.d(0x1E)))'),
+    # asr w8, w17, #0xe                                                ASR_SBFM_32M_bitfield
+    (b'\x28\x7E\x0E\x13', 'LLIL_SET_REG.d(w8,LLIL_ASR.d(LLIL_REG.d(w17),LLIL_CONST.d(0xE)))'),
+    # asr w7, w5, #0x1a                                                ASR_SBFM_32M_bitfield
+    (b'\xA7\x7C\x1A\x13', 'LLIL_SET_REG.d(w7,LLIL_ASR.d(LLIL_REG.d(w5),LLIL_CONST.d(0x1A)))'),
+    # asr x24, x10, #0x21                                              ASR_SBFM_64M_bitfield
+    (b'\x58\xFD\x61\x93', 'LLIL_SET_REG.q(x24,LLIL_ASR.q(LLIL_REG.q(x10),LLIL_CONST.q(0x21)))'),
+    # asr x8, x30, #0x3b                                               ASR_SBFM_64M_bitfield
+    (b'\xC8\xFF\x7B\x93', 'LLIL_SET_REG.q(x8,LLIL_ASR.q(LLIL_REG.q(x30),LLIL_CONST.q(0x3B)))'),
+    # asr x7, x9, #0x33                                                ASR_SBFM_64M_bitfield
+    (b'\x27\xFD\x73\x93', 'LLIL_SET_REG.q(x7,LLIL_ASR.q(LLIL_REG.q(x9),LLIL_CONST.q(0x33)))'),
+    # asr x17, x21, #0x1a                                              ASR_SBFM_64M_bitfield
+    (b'\xB1\xFE\x5A\x93', 'LLIL_SET_REG.q(x17,LLIL_ASR.q(LLIL_REG.q(x21),LLIL_CONST.q(0x1A)))'),
+    # sbfiz w0, w9, #0x1c, #0x3                                        SBFIZ_SBFM_32M_bitfield
+    (b'\x20\x09\x04\x13', 'LLIL_SET_REG.d(w0,LLIL_ASR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(w9),LLIL_CONST.d(0x7)),LLIL_CONST.b(0x1D)),LLIL_CONST.b(0x1)))'),
+    # sbfiz w5, w27, #0x1b, #0x1                                       SBFIZ_SBFM_32M_bitfield
+    (b'\x65\x03\x05\x13', 'LLIL_SET_REG.d(w5,LLIL_ASR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(w27),LLIL_CONST.d(0x1)),LLIL_CONST.b(0x1F)),LLIL_CONST.b(0x4)))'),
+    # sbfiz w7, w2, #0x9, #0xd                                         SBFIZ_SBFM_32M_bitfield
+    (b'\x47\x30\x17\x13', 'LLIL_SET_REG.d(w7,LLIL_ASR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(w2),LLIL_CONST.d(0x1FFF)),LLIL_CONST.b(0x13)),LLIL_CONST.b(0xA)))'),
+    # sbfiz w1, w20, #0x12, #0x9                                       SBFIZ_SBFM_32M_bitfield
+    (b'\x81\x22\x0E\x13', 'LLIL_SET_REG.d(w1,LLIL_ASR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(w20),LLIL_CONST.d(0x1FF)),LLIL_CONST.b(0x17)),LLIL_CONST.b(0x5)))'),
+    # sbfiz x22, x23, #0x10, #0x26                                     SBFIZ_SBFM_64M_bitfield
+    (b'\xF6\x96\x70\x93', 'LLIL_SET_REG.q(x22,LLIL_ASR.q(LLIL_LSL.q(LLIL_AND.q(LLIL_REG.q(x23),LLIL_CONST.q(0x3FFFFFFFFF)),LLIL_CONST.b(0x1A)),LLIL_CONST.b(0xA)))'),
+    # sbfiz x23, x19, #0x20, #0x3                                      SBFIZ_SBFM_64M_bitfield
+    (b'\x77\x0A\x60\x93', 'LLIL_SET_REG.q(x23,LLIL_ASR.q(LLIL_LSL.q(LLIL_AND.q(LLIL_REG.q(x19),LLIL_CONST.q(0x7)),LLIL_CONST.b(0x3D)),LLIL_CONST.b(0x1D)))'),
+    # sbfiz x6, x25, #0x1, #0x37                                       SBFIZ_SBFM_64M_bitfield
+    (b'\x26\xDB\x7F\x93', 'LLIL_SET_REG.q(x6,LLIL_ASR.q(LLIL_LSL.q(LLIL_AND.q(LLIL_REG.q(x25),LLIL_CONST.q(0x7FFFFFFFFFFFFF)),LLIL_CONST.b(0x9)),LLIL_CONST.b(0x8)))'),
+    # sbfiz x23, x16, #0x5, #0xb                                       SBFIZ_SBFM_64M_bitfield
+    (b'\x17\x2A\x7B\x93', 'LLIL_SET_REG.q(x23,LLIL_ASR.q(LLIL_LSL.q(LLIL_AND.q(LLIL_REG.q(x16),LLIL_CONST.q(0x7FF)),LLIL_CONST.b(0x35)),LLIL_CONST.b(0x30)))'),
+    # sbfx w6, w9, #0x1, #0x19                                         SBFX_SBFM_32M_bitfield
+    (b'\x26\x65\x01\x13', 'LLIL_SET_REG.d(w6,LLIL_ASR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(w9),LLIL_CONST.d(0x3FFFFFE)),LLIL_CONST.b(0x6)),LLIL_CONST.b(0x7)))'),
+    # sbfx w30, w23, #0xb, #0x5                                        SBFX_SBFM_32M_bitfield
+    (b'\xFE\x3E\x0B\x13', 'LLIL_SET_REG.d(w30,LLIL_ASR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(w23),LLIL_CONST.d(0xF800)),LLIL_CONST.b(0x10)),LLIL_CONST.b(0x1B)))'),
+    # sbfx w22, w28, #0xa, #0x13                                       SBFX_SBFM_32M_bitfield
+    (b'\x96\x73\x0A\x13', 'LLIL_SET_REG.d(w22,LLIL_ASR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(w28),LLIL_CONST.d(0x1FFFFC00)),LLIL_CONST.b(0x3)),LLIL_CONST.b(0xD)))'),
+    # sbfx w29, w12, #0x12, #0x5                                       SBFX_SBFM_32M_bitfield
+    (b'\x9D\x59\x12\x13', 'LLIL_SET_REG.d(w29,LLIL_ASR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(w12),LLIL_CONST.d(0x7C0000)),LLIL_CONST.b(0x9)),LLIL_CONST.b(0x1B)))'),
+    # sbfx x5, x1, #0xb, #0x13                                         SBFX_SBFM_64M_bitfield
+    (b'\x25\x74\x4B\x93', 'LLIL_SET_REG.q(x5,LLIL_ASR.q(LLIL_LSL.q(LLIL_AND.q(LLIL_REG.q(x1),LLIL_CONST.q(0x3FFFF800)),LLIL_CONST.b(0x22)),LLIL_CONST.b(0x2D)))'),
+    # sbfx x4, x16, #0x1e, #0x3                                        SBFX_SBFM_64M_bitfield
+    (b'\x04\x82\x5E\x93', 'LLIL_SET_REG.q(x4,LLIL_ASR.q(LLIL_LSL.q(LLIL_AND.q(LLIL_REG.q(x16),LLIL_CONST.q(0x1C0000000)),LLIL_CONST.b(0x1F)),LLIL_CONST.b(0x3D)))'),
+    # sbfx x26, x7, #0x11, #0x1e                                       SBFX_SBFM_64M_bitfield
+    (b'\xFA\xB8\x51\x93', 'LLIL_SET_REG.q(x26,LLIL_ASR.q(LLIL_LSL.q(LLIL_AND.q(LLIL_REG.q(x7),LLIL_CONST.q(0x7FFFFFFE0000)),LLIL_CONST.b(0x11)),LLIL_CONST.b(0x22)))'),
+    # sbfx xzr, x5, #0x9, #0x32                                        SBFX_SBFM_64M_bitfield
+    (b'\xBF\xE8\x49\x93', 'LLIL_ASR.q(LLIL_LSL.q(LLIL_AND.q(LLIL_REG.q(x5),LLIL_CONST.q(0x7FFFFFFFFFFFE00)),LLIL_CONST.b(0x5)),LLIL_CONST.b(0xE))'),
+    # sxtb w10, w4                                                     SXTB_SBFM_32M_bitfield
+    (b'\x8A\x1C\x00\x13', 'LLIL_SET_REG.d(w10,LLIL_SX.d(LLIL_LOW_PART.b(LLIL_REG.d(w4))))'),
+    # sxtb w30, w20                                                    SXTB_SBFM_32M_bitfield
+    (b'\x9E\x1E\x00\x13', 'LLIL_SET_REG.d(w30,LLIL_SX.d(LLIL_LOW_PART.b(LLIL_REG.d(w20))))'),
+    # sxtb w26, w22                                                    SXTB_SBFM_32M_bitfield
+    (b'\xDA\x1E\x00\x13', 'LLIL_SET_REG.d(w26,LLIL_SX.d(LLIL_LOW_PART.b(LLIL_REG.d(w22))))'),
+    # sxtb w0, w11                                                     SXTB_SBFM_32M_bitfield
+    (b'\x60\x1D\x00\x13', 'LLIL_SET_REG.d(w0,LLIL_SX.d(LLIL_LOW_PART.b(LLIL_REG.d(w11))))'),
+    # sxtb x1, w19                                                     SXTB_SBFM_64M_bitfield
+    (b'\x61\x1E\x40\x93', 'LLIL_SET_REG.q(x1,LLIL_SX.q(LLIL_LOW_PART.b(LLIL_REG.d(w19))))'),
+    # sxtb x20, w16                                                    SXTB_SBFM_64M_bitfield
+    (b'\x14\x1E\x40\x93', 'LLIL_SET_REG.q(x20,LLIL_SX.q(LLIL_LOW_PART.b(LLIL_REG.d(w16))))'),
+    # sxtb x19, w17                                                    SXTB_SBFM_64M_bitfield
+    (b'\x33\x1E\x40\x93', 'LLIL_SET_REG.q(x19,LLIL_SX.q(LLIL_LOW_PART.b(LLIL_REG.d(w17))))'),
+    # sxtb x19, w2                                                     SXTB_SBFM_64M_bitfield
+    (b'\x53\x1C\x40\x93', 'LLIL_SET_REG.q(x19,LLIL_SX.q(LLIL_LOW_PART.b(LLIL_REG.d(w2))))'),
+    # sxth w26, w23                                                    SXTH_SBFM_32M_bitfield
+    (b'\xFA\x3E\x00\x13', 'LLIL_SET_REG.d(w26,LLIL_SX.d(LLIL_LOW_PART.w(LLIL_REG.d(w23))))'),
+    # sxth wzr, w18                                                    SXTH_SBFM_32M_bitfield
+    (b'\x5F\x3E\x00\x13', 'LLIL_SX.d(LLIL_LOW_PART.w(LLIL_REG.d(w18)))'),
+    # sxth w23, wzr                                                    SXTH_SBFM_32M_bitfield
+    (b'\xF7\x3F\x00\x13', 'LLIL_SET_REG.d(w23,LLIL_CONST.d(0x0))'),
+    # sxth w12, w4                                                     SXTH_SBFM_32M_bitfield
+    (b'\x8C\x3C\x00\x13', 'LLIL_SET_REG.d(w12,LLIL_SX.d(LLIL_LOW_PART.w(LLIL_REG.d(w4))))'),
+    # sxth x2, w13                                                     SXTH_SBFM_64M_bitfield
+    (b'\xA2\x3D\x40\x93', 'LLIL_SET_REG.q(x2,LLIL_SX.q(LLIL_LOW_PART.w(LLIL_REG.d(w13))))'),
+    # sxth x2, w19                                                     SXTH_SBFM_64M_bitfield
+    (b'\x62\x3E\x40\x93', 'LLIL_SET_REG.q(x2,LLIL_SX.q(LLIL_LOW_PART.w(LLIL_REG.d(w19))))'),
+    # sxth x26, w27                                                    SXTH_SBFM_64M_bitfield
+    (b'\x7A\x3F\x40\x93', 'LLIL_SET_REG.q(x26,LLIL_SX.q(LLIL_LOW_PART.w(LLIL_REG.d(w27))))'),
+    # sxth x2, w11                                                     SXTH_SBFM_64M_bitfield
+    (b'\x62\x3D\x40\x93', 'LLIL_SET_REG.q(x2,LLIL_SX.q(LLIL_LOW_PART.w(LLIL_REG.d(w11))))'),
+    # sxtw x16, w15                                                    SXTW_SBFM_64M_bitfield
+    (b'\xF0\x7D\x40\x93', 'LLIL_SET_REG.q(x16,LLIL_SX.q(LLIL_REG.d(w15)))'),
+    # sxtw x15, w15                                                    SXTW_SBFM_64M_bitfield
+    (b'\xEF\x7D\x40\x93', 'LLIL_SET_REG.q(x15,LLIL_SX.q(LLIL_REG.d(w15)))'),
+    # sxtw x0, w25                                                     SXTW_SBFM_64M_bitfield
+    (b'\x20\x7F\x40\x93', 'LLIL_SET_REG.q(x0,LLIL_SX.q(LLIL_REG.d(w25)))'),
+    # sxtw x0, w20                                                     SXTW_SBFM_64M_bitfield
+    (b'\x80\x7E\x40\x93', 'LLIL_SET_REG.q(x0,LLIL_SX.q(LLIL_REG.d(w20)))'),
+]
+
 tests_grab_bag = [
     # some vectors loads/stores that do not fill the entire register
     # TODO: ld1/st1 with different addressing modes

@@ -778,6 +778,21 @@ definitions will be automatically resolved into one or more other variables. If 
 have been included as part of the same variable, use "Merge Variables..." from the context menu after splitting
 to select which of the other definitions should be merged.
 
+## Tooltips
+
+![tooltip](../img/tooltip.png "Tooltip"){ width="800" }
+
+Tooltips show the destination of jumps, calls, or global data variables.  In the case of a code target, the tooltip will
+show the same level of IL or disassembly, but the target will be rendered in graph view regardless of whether the source
+was a different view or not.
+
+If you wish to disable tooltips, you can unset the [`ui.manualTooltip`](https://docs.binary.ninja/guide/settings.html#ui.manualTooltip) setting.
+
+You can even navigate within the tooltip that pops up. First, hold the `Alt` or `Option` key on your keyboard and the
+tooltip will become sticky and not disappear when your mouse moves. You can then interact with the popup by clicking or
+mouse-wheeling. Shift-mouse-wheel will scroll horizontally.
+
+
 ## Script (Python) Console
 
 ![console](../img/console.png "Console"){ width="800" }

@@ -571,6 +571,87 @@ Current options include:
         - Show IL Opcodes
         - Show Stack Pointer Value (LLIL only)
 
+## Triage Summary
+
+![triage summary](../img/triagesummary.png "Triage Summary"){ width="800" }
+
+The Triage Summary view is intended to give a quick overview of a file. There is even a special way to open multiple
+files for triage (`File/Open for Triage`) so a high level overview can be viewed before deciding whether to trigger a
+full analysis. If a file is opened in this way, a button at the bottom appears titled, "Start Full Analysis".
+
+Triage Summary was originally a [python
+plugin](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples/triage) implemented as a proof-of-concept
+for extending the UI. The functionality was so useful it was re-written in C++ and integrated into the official UI,
+however the python plugin contains a feature that the C++ one does not: the ability to resolve some dynamic imports. To
+use this version, copy the folder linked above into your [plugins folder](#user-folder) and disable the built-in C++ UI
+using the [`corePlugins.triage`](settings.md#corePlugins.triage) setting.
+
+1. Entropy: This image shows the overall entropy of the file. Brighter areas indicate regions of higher entropy
+   (encrypted, compressed, etc), while darker regions indicate places of lower entropy. You can click anywhere in the
+   entropy map to navigate to that location in your default view.
+
+1. File Info: The file info section contains some summary information for the file, each result can be clicked to copy
+   it into your clipboard.
+
+1. Base Address Detection (BASE):
+
+    ![BASE](../img/base.png "BASE Address Detection"){ width="800" }
+
+    The Base Address Scan Engine (or BASE) is used to automatically identify load addresses for embedded files or
+    other formats where the load address isn't known and the file isn't relocatable. BASE is only visible in the triage
+    summary when the file doesn't specify a load address such as a raw or mapped file. For BinaryViews like PE or MachO,
+    switching the view in the upper-left from the BinaryView name to `raw` will force the BASE UI to show up in the
+    Triage Summary.
+
+    See our recent [blog
+    post](https://binary.ninja/2024/05/21/automatically-identifying-base-addresses.html) for more information on how
+    BASE works. The following settings describe the advanced settings and how they influence the process.
+
+    Note that you can cancel the analysis at any time and the current results will be displayed which may be useful for
+    large files or files with many pointers being analyzed.
+
+    If the file format has a header that can be identified before analysis that may help BASE identify the proper load
+    address, otherwise the alignment would need to account for the header. 
+
+    |Setting|Description|Default|
+    |--- |--- |--- |
+    |Min. String Length|Minimum length of string to be considered a point-of-interest|0n10|
+    |Alignment|Byte boundary to align the base address while scanning|0n1024|
+    |Lower Boundary|Lowest address to begin search for candidate base address|0x0|
+    |Upper Boundary|Highest address to end search for candidate base address|0xffffffffffffffff|
+    |Points of Interest|Specifies types of points-of-interest to use for analysis (all, strings only, functions only)|All|
+    |Max Pointers|Maximum amount of pointers to allow in each pointer cluster|0n128|
+
+
+1. Headers: This section appears only in BinaryViews and the exact information depends on the view itself. PE headers
+   are the most detailed and include such items as checksums, characterstics, and compiler strings. Addresses that
+   existing in the virtual memory space of the file can be clicked to navigate to that location.
+
+1. Libraries: For file formats that include explicit linking information to a particular library (like PE), the
+   libraries linked will be listed in this section and are available in the [API as well](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.libraries).
+
+1. Imports / Exports: The Imports and Exports sections show any imports and exports. The lists are sortable by clicking
+   the table headers. 
+
+1. Sections: If the file format contains section information, they will be listed here. All mapped addresses are
+   clickable to navigate to the virtual address.
+
+1. Strings: Strings can be double clicked to navigate to them, and the table can be sorted or the list filtered by
+   typing in the search box.
+
+
+## Byte Overview
+
+![byte overview](../img/byteoverview.png "Byte Overview"){ width="800" }
+
+The Byte Overview (or "Bytes" when selected in the view switcher) shows the binary (mapped or raw, depending on the
+top-level selection) as a [Code Page 437](https://en.wikipedia.org/wiki/Code_page_437) view. This view is commonly used
+by malware analysis researchers using the [Hiew](http://hiew.ru) tool.
+
+While this view is less featureful than the Hex view, it allows for a much higher information density as every byte is
+represented by one character as opposted to four total characters when in Hex view (including the space between hex
+digits and the ASCII representation).
+
 ## Hex View
 
 ![hex](../img/hex.png "hex view"){ width="800" }

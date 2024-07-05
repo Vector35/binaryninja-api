@@ -4416,6 +4416,7 @@ extern "C"
 	    BNFunction* func, BNDisassemblySettings* settings, size_t* count);
 
 	BINARYNINJACOREAPI BNRegisterValueWithConfidence BNGetFunctionGlobalPointerValue(BNFunction* func);
+	BINARYNINJACOREAPI bool BNFunctionUsesIncomingGlobalPointer(BNFunction* func);
 	BINARYNINJACOREAPI BNRegisterValueWithConfidence BNGetFunctionRegisterValueAtExit(BNFunction* func, uint32_t reg);
 
 	BINARYNINJACOREAPI BNBoolWithConfidence BNIsFunctionInlinedDuringAnalysis(BNFunction* func);

@@ -1822,6 +1822,11 @@ class Function:
 		return variable.RegisterValue.from_BNRegisterValue(result, self.arch)
 
 	@property
+	def uses_incoming_global_pointer(self) -> bool:
+		"""Whether the function uses the incoming global pointer value"""
+		return core.BNFunctionUsesIncomingGlobalPointer(self.handle)
+
+	@property
 	def comment(self) -> str:
 		"""Gets the comment for the current function"""
 		return core.BNGetFunctionComment(self.handle)

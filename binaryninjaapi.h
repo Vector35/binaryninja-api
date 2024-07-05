@@ -10793,6 +10793,7 @@ namespace BinaryNinja {
 		std::vector<DisassemblyTextLine> GetTypeTokens(DisassemblySettings* settings = nullptr);
 
 		Confidence<RegisterValue> GetGlobalPointerValue() const;
+		bool UsesIncomingGlobalPointer() const;
 		Confidence<RegisterValue> GetRegisterValueAtExit(uint32_t reg) const;
 
 		/*! Whether the function is too large to automatically perform analysis

@@ -10,13 +10,12 @@ To contribute to the Binary Ninja documentation, first sign the [contribution li
 - [breathe]
 - [mkdocs]
 - [doxygen]
-
+- The following mkdocs plugins: `mkdocs-callouts mkdocs-click mkdocs-include-markdown-plugin mkdocs-material mkdocs-glightbox mkdocs-htmlproofer-plugin`
 
 ## Building
 
     git clone https://github.com/Vector35/binaryninja-api/
     cd binaryninja-api
-    cd api
     mkdocs build
     echo User documentation available in site/
     cd api-docs

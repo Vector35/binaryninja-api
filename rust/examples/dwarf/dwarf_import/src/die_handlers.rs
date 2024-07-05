@@ -16,6 +16,7 @@ use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
 use crate::helpers::*;
 use crate::types::get_type;
 
+use binaryninja::types::TypeClass;
 use binaryninja::{
     rc::*,
     types::{EnumerationBuilder, FunctionParameter, ReferenceType, Type, TypeBuilder},
@@ -169,7 +170,11 @@ pub(crate) fn handle_pointer<R: Reader<Offset = usize>>(
 
     if let Some(pointer_size) = get_size_as_usize(entry) {
         if let Some(entry_type_offset) = entry_type {
-            let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().get_type();
+            let debug_type = debug_info_builder.get_type(entry_type_offset).unwrap();
+            let parent_type = match debug_type.get_type().type_class() {
+                TypeClass::NamedTypeReferenceClass => Type::named_type_from_type(debug_type.get_name(), &debug_type.get_type()),
+                _ => debug_type.get_type()
+            };
             Some(Type::pointer_of_width(
                 parent_type.as_ref(),
                 pointer_size,
@@ -187,7 +192,11 @@ pub(crate) fn handle_pointer<R: Reader<Offset = usize>>(
             ))
         }
     } else if let Some(entry_type_offset) = entry_type {
-        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().get_type();
+        let debug_type = debug_info_builder.get_type(entry_type_offset).unwrap();
+        let parent_type = match debug_type.get_type().type_class() {
+            TypeClass::NamedTypeReferenceClass => Type::named_type_from_type(debug_type.get_name(), &debug_type.get_type()),
+            _ => debug_type.get_type()
+        };
         Some(Type::pointer_of_width(
             parent_type.as_ref(),
             debug_info_builder_context.default_address_size(),

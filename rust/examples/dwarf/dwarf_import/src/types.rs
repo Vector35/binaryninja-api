@@ -110,11 +110,9 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
         return None;
     }
 
-    let full_name = if get_name(unit, entry, debug_info_builder_context).is_some() {
-        debug_info_builder_context.get_name(unit, entry)
-    } else {
-        None
-    };
+    let full_name = get_name(unit, entry, debug_info_builder_context)
+        .and(debug_info_builder_context.get_name(unit, entry))
+        .unwrap_or_else(|| format!("anonymous_structure_{:x}", get_uid(unit, entry)));
 
     // Create structure with proper size
     let size = get_size_as_u64(entry).unwrap_or(0);
@@ -126,28 +124,18 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
 
     // This reference type will be used by any children to grab while we're still building this type
     //  it will also be how any other types refer to this struct
-    if let Some(full_name) = &full_name {
-        debug_info_builder.add_type(
-            get_uid(unit, entry),
+    // We _need_ to have initial typedefs or else we can enter infinite parsing loops
+    // These get overwritten in the last step with the actual type, however, so this
+    // is either perfectly fine or breaking a bunch of NTRs
+    debug_info_builder.add_type(
+        get_uid(unit, entry),
+        &full_name,
+        Type::named_type_from_type(
             &full_name,
-            Type::named_type_from_type(
-                full_name.clone(),
-                &Type::structure(&structure_builder.finalize()),
-            ),
-            false,
-        );
-    } else {
-        // We _need_ to have initial typedefs or else we can enter infinite parsing loops
-        // These get overwritten in the last step with the actual type, however, so this
-        // is either perfectly fine or breaking a bunch of NTRs
-        let full_name = format!("anonymous_structure_{:x}", get_uid(unit, entry));
-        debug_info_builder.add_type(
-            get_uid(unit, entry),
-            &full_name,
-            Type::named_type_from_type(&full_name, &Type::structure(&structure_builder.finalize())),
-            false,
-        );
-    }
+            &Type::structure(&structure_builder.finalize()),
+        ),
+        false,
+    );
 
     // Get all the children and populate
     let mut tree = unit.entries_tree(Some(entry.offset())).unwrap();
@@ -206,21 +194,12 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
     }
 
     let finalized_structure = Type::structure(&structure_builder.finalize());
-    if let Some(full_name) = full_name {
-        debug_info_builder.add_type(
-            get_uid(unit, entry) + 1, // TODO : This is super broke (uid + 1 is not guaranteed to be unique)
-            &full_name,
-            finalized_structure,
-            true,
-        );
-    } else {
-        debug_info_builder.add_type(
-            get_uid(unit, entry),
-            &format!("{}", finalized_structure),
-            finalized_structure,
-            false, // Don't commit anonymous unions (because I think it'll break things)
-        );
-    }
+    debug_info_builder.add_type(
+        get_uid(unit, entry) + 1, // TODO : This is super broke (uid + 1 is not guaranteed to be unique)
+        &full_name,
+        finalized_structure,
+        true,
+    );
     Some(get_uid(unit, entry))
 }
 

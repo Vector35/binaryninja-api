@@ -264,12 +264,12 @@ pub(crate) fn get_attr_as_u64<R: Reader<Offset = usize>>(attr: &Attribute<R>) ->
         Some(value)
     } else if let Some(value) = attr.sdata_value() {
         Some(value as u64)
-    } else if let Some(mut expr) = attr.exprloc_value() {
-        match expr.0.len() {
-            1 => expr.0.read_u8().map(u64::from).ok(),
-            2 => expr.0.read_u16().map(u64::from).ok(),
-            4 => expr.0.read_u32().map(u64::from).ok(),
-            8 => expr.0.read_u64().ok(),
+    } else if let AttributeValue::Block(mut data) = attr.value() {
+        match data.len() {
+            1 => data.read_u8().map(u64::from).ok(),
+            2 => data.read_u16().map(u64::from).ok(),
+            4 => data.read_u32().map(u64::from).ok(),
+            8 => data.read_u64().ok(),
             _ => None
         }
     } else {

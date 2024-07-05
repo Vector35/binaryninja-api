@@ -22890,10 +22890,17 @@ bool NeonGetLowLevelILForInstruction(
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
 	case ENC_TBL_ASIMDTBL_L1_1:
+	case ENC_TBX_ASIMDTBL_L1_1:
 		if (instr.operands[0].arrSpec == ARRSPEC_8BYTES)
-			intrin_id = ARM64_INTRIN_VTBL1_S8;  // TBL Vd.8B,{Vn.16B},Vm.8B
+			if (instr.encoding == ENC_TBL_ASIMDTBL_L1_1)
+				intrin_id = ARM64_INTRIN_VTBL1_S8;  // TBL Vd.8B,{Vn.16B},Vm.8B
+			else
+				intrin_id = ARM64_INTRIN_VTBX1_S8;  // TBX Vd.8B,{Vn.16B},Vm.8B
 		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
-			intrin_id = ARM64_INTRIN_VQTBL1Q_S8;  // TBL Vd.16B,{Vn.16B},Vm.16B
+			if (instr.encoding == ENC_TBL_ASIMDTBL_L1_1)
+				intrin_id = ARM64_INTRIN_VQTBL1Q_S8;  // TBL Vd.16B,{Vn.16B},Vm.16B
+			else
+				intrin_id = ARM64_INTRIN_VQTBX1Q_S8;  // TBX Vd.16B,{Vn.16B},Vm.16B
 		add_input_reg(inputs, il, instr.operands[1]);
 		add_input_reg(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
@@ -22901,11 +22908,18 @@ bool NeonGetLowLevelILForInstruction(
 	// Technically, the intrinsics for 2, 3, and 4 vector TBL take a vector of vectors (like int8x16x4 for vqtbl4),
 	// but it is simpler to just pass all the vector registers as parameters to the intrinsic.
 	case ENC_TBL_ASIMDTBL_L2_2:
+	case ENC_TBX_ASIMDTBL_L2_2:
 	{
 		if (instr.operands[0].arrSpec == ARRSPEC_8BYTES)
-			intrin_id = ARM64_INTRIN_VQTBL2_S8;  // TBL Vd.8B,{Vn.16B - Vn+1.16B},Vm.8B
+			if (instr.encoding == ENC_TBL_ASIMDTBL_L2_2)
+				intrin_id = ARM64_INTRIN_VTBL2_S8;  // TBL Vd.8B,{Vn.16B - Vn+1.16B},Vm.8B
+			else
+				intrin_id = ARM64_INTRIN_VTBX2_S8;  // TBX Vd.8B,{Vn.16B - Vn+1.16B},Vm.8B
 		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
-			intrin_id = ARM64_INTRIN_VQTBL2Q_S8;  // TBL Vd.16B,{Vn.16B - Vn+1.16B},Vm.16B
+			if (instr.encoding == ENC_TBL_ASIMDTBL_L2_2)
+				intrin_id = ARM64_INTRIN_VQTBL2Q_S8;  // TBL Vd.16B,{Vn.16B - Vn+1.16B},Vm.16B
+			else
+				intrin_id = ARM64_INTRIN_VQTBX2Q_S8;  // TBX Vd.16B,{Vn.16B - Vn+1.16B},Vm.16B
 		InstructionOperand tmp;
 		tmp.reg[0] = (Register) (instr.operands[1].reg[0] + 1);
 		add_input_reg(inputs, il, tmp);
@@ -22915,11 +22929,18 @@ bool NeonGetLowLevelILForInstruction(
 		break;
 	}
 	case ENC_TBL_ASIMDTBL_L3_3:
+	case ENC_TBX_ASIMDTBL_L3_3:
 	{
 		if (instr.operands[0].arrSpec == ARRSPEC_8BYTES)
-			intrin_id = ARM64_INTRIN_VQTBL3_S8;  // TBL Vd.8B,{Vn.16B - Vn+2.16B},Vm.8B
+			if (instr.encoding == ENC_TBL_ASIMDTBL_L3_3)
+				intrin_id = ARM64_INTRIN_VTBL3_S8;  // TBL Vd.8B,{Vn.16B - Vn+2.16B},Vm.8B
+			else
+				intrin_id = ARM64_INTRIN_VTBX3_S8;  // TBX Vd.8B,{Vn.16B - Vn+2.16B},Vm.8B
 		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
-			intrin_id = ARM64_INTRIN_VQTBL3Q_S8;  // TBL Vd.16B,{Vn.16B - Vn+2.16B},Vm.16B
+			if (instr.encoding == ENC_TBL_ASIMDTBL_L3_3)
+				intrin_id = ARM64_INTRIN_VQTBL3Q_S8;  // TBL Vd.16B,{Vn.16B - Vn+2.16B},Vm.16B
+			else
+				intrin_id = ARM64_INTRIN_VQTBX3Q_S8;  // TBX Vd.16B,{Vn.16B - Vn+2.16B},Vm.16B
 		add_input_reg(inputs, il, instr.operands[1]);
 		InstructionOperand tmp;
 		tmp.reg[0] = (Register) (instr.operands[1].reg[0] + 1);
@@ -22931,11 +22952,18 @@ bool NeonGetLowLevelILForInstruction(
 		break;
 	}
 	case ENC_TBL_ASIMDTBL_L4_4:
+	case ENC_TBX_ASIMDTBL_L4_4:
 	{
 		if (instr.operands[0].arrSpec == ARRSPEC_8BYTES)
-			intrin_id = ARM64_INTRIN_VQTBL4_S8;  // TBL Vd.8B,{Vn.16B - Vn+3.16B},Vm.8B
+			if (instr.encoding == ENC_TBL_ASIMDTBL_L4_4)
+				intrin_id = ARM64_INTRIN_VTBL4_S8;  // TBL Vd.8B,{Vn.16B - Vn+3.16B},Vm.8B
+			else
+				intrin_id = ARM64_INTRIN_VTBX4_S8;  // TBX Vd.8B,{Vn.16B - Vn+3.16B},Vm.8B
 		else if (instr.operands[0].arrSpec == ARRSPEC_16BYTES)
-			intrin_id = ARM64_INTRIN_VQTBL4Q_S8;  // TBL Vd.16B,{Vn.16B - Vn+3.16B},Vm.16B
+			if (instr.encoding == ENC_TBL_ASIMDTBL_L4_4)
+				intrin_id = ARM64_INTRIN_VQTBL4Q_S8;  // TBL Vd.16B,{Vn.16B - Vn+3.16B},Vm.16B
+			else
+				intrin_id = ARM64_INTRIN_VQTBX4Q_S8;  // TBX Vd.16B,{Vn.16B - Vn+3.16B},Vm.16B
 		add_input_reg(inputs, il, instr.operands[1]);
 		InstructionOperand tmp;
 		tmp.reg[0] = (Register) (instr.operands[1].reg[0] + 1);

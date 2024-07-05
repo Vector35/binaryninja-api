@@ -27,6 +27,8 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 
 **Note**: In order to facilitate reproducible analysis results, when opening a file for the first time, all of the analysis settings are automatically serialized into the _Resource Setting_ scope. This prevents subsequent _User_ and _Project_ setting modifications from unintentionally changing existing analysis results.
 
+## All Settings
+
 |Category|Setting|Description|Type|Default|Scope|Key|
 |---|---|---|---|---|---|---|
 |analysis|Alternate Type Propagation|Enable an alternate approach for function type propagation.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.alternateTypePropagation'>analysis.alternateTypePropagation</a>|

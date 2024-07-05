@@ -1381,7 +1381,7 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.SetRegister(2, LLIL_TEMP(0), il.Load(2, ILREG_O(operand3))));
 
 		GenIfElse(il,
-			il.CompareEqual(REGSZ_O(operand1), ExtractRegister(il, operand1, 0, 2, false, 2), LLIL_TEMP(0)),
+			il.CompareEqual(REGSZ_O(operand1), ExtractRegister(il, operand1, 0, 2, false, 2), il.Register(2, LLIL_TEMP(0))),
 			il.Store(2, ILREG_O(operand3), ExtractRegister(il, operand2, 0, 2, false, 2)),
 			0);
 
@@ -1394,7 +1394,7 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Load(1, ILREG_O(operand3))));
 
 		GenIfElse(il,
-			il.CompareEqual(REGSZ_O(operand1), ExtractRegister(il, operand1, 0, 1, false, 1), LLIL_TEMP(0)),
+			il.CompareEqual(REGSZ_O(operand1), ExtractRegister(il, operand1, 0, 1, false, 1), il.Register(1, LLIL_TEMP(0))),
 			il.Store(1, ILREG_O(operand3), ExtractRegister(il, operand2, 0, 1, false, 1)),
 			0);
 

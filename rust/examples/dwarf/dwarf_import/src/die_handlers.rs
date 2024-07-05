@@ -108,16 +108,17 @@ pub(crate) fn handle_enum<R: Reader<Offset = usize>>(
     while let Ok(Some(child)) = children.next() {
         if child.entry().tag() == constants::DW_TAG_enumerator {
             let name = debug_info_builder_context.get_name(unit, child.entry())?;
-            let value = get_attr_as_u64(
-                &child
-                    .entry()
-                    .attr(constants::DW_AT_const_value)
-                    .unwrap()
-                    .unwrap(),
-            )
-            .unwrap();
-
-            enumeration_builder.insert(name, value);
+            let attr = &child
+                .entry()
+                .attr(constants::DW_AT_const_value)
+                .unwrap()
+                .unwrap();
+            if let Some(value) = get_attr_as_u64(attr) {
+                enumeration_builder.insert(name, value);
+            } else {
+                log::error!("Unhandled enum member value type - please report this");
+                return None;
+            }
         }
     }
 

@@ -260,14 +260,20 @@ pub(crate) fn get_start_address<R: Reader<Offset = usize>>(
 
 // Get an attribute value as a u64 if it can be coerced
 pub(crate) fn get_attr_as_u64<R: Reader<Offset = usize>>(attr: &Attribute<R>) -> Option<u64> {
-    if let Some(value) = attr.u8_value() {
-        Some(value.into())
-    } else if let Some(value) = attr.u16_value() {
-        Some(value.into())
-    } else if let Some(value) = attr.udata_value() {
+    if let Some(value) = attr.udata_value() {
         Some(value)
+    } else if let Some(value) = attr.sdata_value() {
+        Some(value as u64)
+    } else if let Some(mut expr) = attr.exprloc_value() {
+        match expr.0.len() {
+            1 => expr.0.read_u8().map(u64::from).ok(),
+            2 => expr.0.read_u16().map(u64::from).ok(),
+            4 => expr.0.read_u32().map(u64::from).ok(),
+            8 => expr.0.read_u64().ok(),
+            _ => None
+        }
     } else {
-        attr.sdata_value().map(|value| value as u64)
+        None
     }
 }
 

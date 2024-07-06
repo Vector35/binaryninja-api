@@ -1906,8 +1906,6 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		{
 			uint64_t target = (m_addressSize == 4) ? reader.Read32() : reader.Read64();
 			target += m_imageBaseAdjustment;
-			Ref<Platform> targetPlatform = platform->GetAssociatedPlatformByAddress(target);
-			DefineMachoSymbol(FunctionSymbol, "mod_init_func_" + to_string(modInitFuncCnt++), target, GlobalBinding, false);
 			if (m_header.ident.filetype == MH_FILESET)
 			{
 				// FIXME: This isn't a super robust way of detagging,
@@ -1919,7 +1917,11 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 				// and combine them with bottom 8 of the original entry
 				target = tag | (target & 0xFFFFFFFF);
 			}
+			Ref<Platform> targetPlatform = GetDefaultPlatform()->GetAssociatedPlatformByAddress(target);
+			auto name = "mod_init_func_" + to_string(modInitFuncCnt++);
 			AddEntryPointForAnalysis(targetPlatform, target);
+			auto symbol = new Symbol(FunctionSymbol, name, target, GlobalBinding);
+			DefineAutoSymbol(symbol);
 		}
 	}
 
@@ -1989,7 +1991,9 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			// and combine them with bottom 8 of the original entry
 			entry = tag | (entry & 0xFFFFFFFF);
 		}
-		AddEntryPointForAnalysis(platform, entry);
+		// We set the BinaryView's default platform based on this already modified entry point address
+		// 	so we do not need to (again) GetAssociatedPlatformByAddress here.
+		AddEntryPointForAnalysis(GetDefaultPlatform(), entry);
 		if (first)
 		{
 			first = false;

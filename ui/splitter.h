@@ -74,6 +74,7 @@ class BINARYNINJAUIAPI Splitter: public QWidget
 
 	Qt::Orientation m_orientation;
 	int m_handleSize;
+	int m_minimumWidgetSize;
 
 	std::vector<SplitterWidget> m_widgets;
 	std::map<QString, SplitterWidgetSizing> m_sizing;
@@ -105,6 +106,9 @@ public:
 
 	Qt::Orientation orientation() const { return m_orientation; }
 	void setOrientation(Qt::Orientation orientation);
+
+	int minimumWidgetSize() const { return m_minimumWidgetSize; }
+	void setMinimumWidgetSize(int minimumSize);
 
 	QList<int> sizes() const;
 	void setSizes(const QList<int>& sizes);

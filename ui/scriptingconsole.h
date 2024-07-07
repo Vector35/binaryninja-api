@@ -163,6 +163,7 @@ class BINARYNINJAUIAPI ScriptingConsole : public SidebarWidget, BinaryNinja::Scr
 	ScriptingInstanceRef m_instance;
 	ScriptingConsoleOutput* m_output;
 	ScriptingConsoleEdit* m_input;
+	Splitter* m_splitter;
 	QLabel* m_prompt;
 	QPushButton* m_button;
 	QTimer* m_runTimer;

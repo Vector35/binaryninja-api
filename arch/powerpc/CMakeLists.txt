@@ -47,3 +47,31 @@ if(BN_INTERNAL_BUILD)
 		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
 		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
 endif()
+
+if (DEFINED FORCE_TEST)
+	set(TEST_INLCUDE_LIST )
+	set(TEST_LINK_DIRECTORIES )
+	set(TEST_LINK_LIBRARIES capstone)
+	
+	if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+		add_executable(test_disasm test_disasm.cpp disassembler.cpp)
+		add_executable(test_asm test_asm.cpp assembler.cpp)
+
+		target_compile_definitions(test_disasm PRIVATE FORCE_TEST=1)
+
+		set_target_properties(test_disasm test_asm PROPERTIES
+			CXX_STANDARD 17
+			CXX_VISIBILITY_PRESET hidden
+			CXX_STANDARD_REQUIRED ON
+			VISIBILITY_INLINES_HIDDEN ON
+			POSITION_INDEPENDENT_CODE ON)
+		
+		target_include_directories(test_disasm PRIVATE ${TEST_INCLUDE_LIST})
+		target_link_directories(test_disasm PRIVATE ${TEST_LINK_DIRECTORIES})
+		target_link_libraries(test_disasm PRIVATE ${TEST_LINK_LIBRARIES})
+
+		target_include_directories(test_asm PRIVATE ${TEST_INCLUDE_LIST})
+		target_link_directories(test_asm PRIVATE ${TEST_LINK_DIRECTORIES})
+		target_link_libraries(test_asm PRIVATE ${TEST_LINK_LIBRARIES})
+	endif()
+endif()

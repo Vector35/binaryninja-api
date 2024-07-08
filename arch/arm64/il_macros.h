@@ -6,7 +6,7 @@
 
 /* construct IL from a register id, immediate */
 #define ILREG(R)           il.Register(get_register_size(R), (R))
-#define ILSETREG(R, VALUE) il.SetRegister(get_register_size(R), (R), (VALUE))
+#define ILSETREG(R, VALUE) IS_ZERO_REG(R) ? (VALUE) : il.SetRegister(get_register_size(R), (R), (VALUE))
 #define ILCONST(SZ, VAL)   il.Const((SZ), (VAL))
 
 /* helpers given a register id */

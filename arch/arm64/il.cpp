@@ -1150,7 +1150,7 @@ enum Arm64Intrinsic operation_to_intrinsic(int operation)
 
 
 bool GetLowLevelILForInstruction(
-    Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize, bool requireAlignment)
+    Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize, bool requireAlignment, std::function<bool()> _preferIntrinsics)
 {
 	bool SetPacAttr = false;
 
@@ -1158,12 +1158,25 @@ bool GetLowLevelILForInstruction(
 	InstructionOperand& operand2 = instr.operands[1];
 	InstructionOperand& operand3 = instr.operands[2];
 	InstructionOperand& operand4 = instr.operands[3];
+	InstructionOperand& operand5 = instr.operands[4];
+
+	const size_t pairedSize = REGSZ_O(operand1) * 2;
+
 
 	if (requireAlignment && (addr % 4 != 0)) {
 		return false;
 	}
 
 	int n_instrs_before = il.GetInstructionCount();
+
+	auto preferIntrinsics = [&]() -> bool {
+		if (_preferIntrinsics())
+		{
+			NeonGetLowLevelILForInstruction(arch, addr, il, instr, addrSize);
+			return (il.GetInstructionCount() > n_instrs_before);
+		}
+		return false;
+	};
 
 	// printf("%s() operation:%d encoding:%d\n", __func__, instr.operation, instr.encoding);
 
@@ -1317,6 +1330,37 @@ bool GetLowLevelILForInstruction(
 					il.Not(REGSZ_O(operand2), ReadILOperand(il, operand3, REGSZ_O(operand2))), SETFLAGS)));
 		}
 		break;
+	// TODO: some representation of the Acquire/Release semantics of the CAS* instructions... attribute?
+	case ARM64_CASP:  // these compare-and-swaps can be pairs of 32 bit words or 64 bit doublewords
+	case ARM64_CASPA:
+	case ARM64_CASPAL:
+	case ARM64_CASPL:
+	{
+		// the ordering of the register pairing depends on the byte order (endianness) of memory
+		bool bigEndian = arch->GetEndianness() == BigEndian;
+		auto hi1 = bigEndian ? operand1 : operand2;
+		auto lo1 = bigEndian ? operand2 : operand1;
+		auto hi2 = bigEndian ? operand3 : operand4;
+		auto lo2 = bigEndian ? operand4 : operand3;
+		il.AddInstruction(il.SetRegister(pairedSize, LLIL_TEMP(0), il.Load(pairedSize, ILREG_O(operand5))));
+
+		GenIfElse(il,
+			il.CompareEqual(pairedSize,
+				il.RegisterSplit(REGSZ_O(operand1),
+					hi1.reg[0], lo1.reg[0]),
+				il.Register(pairedSize, LLIL_TEMP(0))),
+			il.Store(pairedSize,
+				ILREG_O(operand5),
+				il.RegisterSplit(REGSZ_O(operand1), hi2.reg[0], lo2.reg[0])),
+			0);
+
+		il.AddInstruction(
+			il.SetRegisterSplit(pairedSize,
+				hi1.reg[0],
+				lo1.reg[0],
+				il.Register(pairedSize, LLIL_TEMP(0))));
+		break;
+	}
 	case ARM64_CAS:  // these compare-and-swaps can be 32 or 64 bit
 	case ARM64_CASA:
 	case ARM64_CASAL:
@@ -1337,7 +1381,7 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.SetRegister(2, LLIL_TEMP(0), il.Load(2, ILREG_O(operand3))));
 
 		GenIfElse(il,
-			il.CompareEqual(REGSZ_O(operand1), ExtractRegister(il, operand1, 0, 2, false, 2), LLIL_TEMP(0)),
+			il.CompareEqual(REGSZ_O(operand1), ExtractRegister(il, operand1, 0, 2, false, 2), il.Register(2, LLIL_TEMP(0))),
 			il.Store(2, ILREG_O(operand3), ExtractRegister(il, operand2, 0, 2, false, 2)),
 			0);
 
@@ -1350,7 +1394,7 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Load(1, ILREG_O(operand3))));
 
 		GenIfElse(il,
-			il.CompareEqual(REGSZ_O(operand1), ExtractRegister(il, operand1, 0, 1, false, 1), LLIL_TEMP(0)),
+			il.CompareEqual(REGSZ_O(operand1), ExtractRegister(il, operand1, 0, 1, false, 1), il.Register(1, LLIL_TEMP(0))),
 			il.Store(1, ILREG_O(operand3), ExtractRegister(il, operand2, 0, 1, false, 1)),
 			0);
 
@@ -1491,12 +1535,46 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_EXTR:
 		il.AddInstruction(
-		    ILSETREG_O(operand1, il.LogicalShiftRight(REGSZ_O(operand1) * 2,
-		                             il.Or(REGSZ_O(operand1) * 2,
-		                                 il.ShiftLeft(REGSZ_O(operand1) * 2, ILREG_O(operand2),
+		    ILSETREG_O(operand1, il.LogicalShiftRight(pairedSize,
+		                             il.Or(pairedSize,
+		                                 il.ShiftLeft(pairedSize, ILREG_O(operand2),
 		                                     il.Const(1, REGSZ_O(operand1) * 8)),
 		                                 ILREG_O(operand3)),
 		                             il.Const(1, IMM_O(operand4)))));
+		break;
+	case ARM64_FABD:
+		switch (instr.encoding)
+		{
+		case ENC_FABD_ASISDSAMEFP16_ONLY:
+		case ENC_FABD_ASISDSAME_ONLY:
+			il.AddInstruction(ILSETREG_O(operand1,
+				il.FloatAbs(REGSZ_O(operand1),
+					il.FloatSub(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
+			break;
+		case ENC_FABD_ASIMDSAMEFP16_ONLY:
+		case ENC_FABD_ASIMDSAME_ONLY:
+			// covered by intrinsics
+			break;
+		case ENC_FABD_Z_P_ZZ_:
+		default:
+			ABORT_LIFT;
+		}
+		break;
+	case ARM64_FABS:
+		switch (instr.encoding)
+		{
+		case ENC_FABS_D_FLOATDP1:
+		case ENC_FABS_S_FLOATDP1:
+		case ENC_FABS_H_FLOATDP1:
+			il.AddInstruction(ILSETREG_O(operand1, il.FloatAbs(REGSZ_O(operand1), ILREG_O(operand2))));
+			break;
+		case ENC_FABS_ASIMDMISC_R:
+		case ENC_FABS_ASIMDMISCFP16_R:
+			// covered by intrinsics
+			break;
+		default:
+			ABORT_LIFT;
+		}
 		break;
 	case ARM64_FADD:
 		switch (instr.encoding)
@@ -1510,6 +1588,8 @@ bool GetLowLevelILForInstruction(
 		case ENC_FADD_ASIMDSAME_ONLY:
 		case ENC_FADD_ASIMDSAMEFP16_ONLY:
 		{
+			if (preferIntrinsics())
+				return true;
 			Register srcs1[16], srcs2[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
 			int src1_n = unpack_vector(operand2, srcs1);
@@ -1524,7 +1604,54 @@ bool GetLowLevelILForInstruction(
 		}
 		break;
 		default:
+			ABORT_LIFT;
+		}
+		break;
+	case ARM64_FADDP:
+		switch (instr.encoding)
+		{
+		case ENC_FADDP_ASISDPAIR_ONLY_H:
+		case ENC_FADDP_ASISDPAIR_ONLY_SD:
+		{
+			Register srcs[16];
+			int src_n = unpack_vector(operand2, srcs);
+			if (src_n != 2)
+				ABORT_LIFT;
+			il.AddInstruction(ILSETREG_O(operand1,
+				il.FloatAdd(REGSZ_O(operand1), ILREG(srcs[0]), ILREG(srcs[1]))
+			));
+			break;
+		}
+		case ENC_FADDP_ASIMDSAME_ONLY:
+		case ENC_FADDP_ASIMDSAMEFP16_ONLY:
+		{
+			if (preferIntrinsics())
+				return true;
+
+			Register srcs1[16], srcs2[16], dsts[16];
+			int dst_n = unpack_vector(operand1, dsts);
+			int src1_n = unpack_vector(operand2, srcs1);
+			int src2_n = unpack_vector(operand3, srcs2);
+			if ((dst_n != src1_n) || (src1_n != src2_n) || dst_n == 0)
+				ABORT_LIFT;
+
+			int rsize = get_register_size(dsts[0]);
+			for (int i = 0; i < dst_n; ++i)
+			{
+				auto srcs = i < dst_n / 2 ? srcs1 : srcs2;
+				auto index = i % (dst_n / 2);
+				il.AddInstruction(il.SetRegister(REGSZ(dsts[i]),
+					LLIL_TEMP(i), il.FloatAdd(rsize, ILREG(srcs[2 * index]), ILREG(srcs[2 * index + 1]))));
+			}
+			for (int i = 0; i < dst_n; ++i)
+				il.AddInstruction(ILSETREG(dsts[i], il.Register(REGSZ(dsts[i]), LLIL_TEMP(i))));
+
+			break;
+		}
+		case ENC_FADDP_Z_P_ZZ_:
 			il.AddInstruction(il.Unimplemented());
+		default:
+			ABORT_LIFT;
 		}
 		break;
 	case ARM64_FCCMP:
@@ -1555,6 +1682,23 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.FloatSub(REGSZ_O(operand1), ILREG_O(operand1),
 		    ReadILOperand(il, operand2, REGSZ_O(operand1)), SETFLAGS));
 		break;
+	case ARM64_FSQRT:
+		switch (instr.encoding)
+		{
+		case ENC_FSQRT_D_FLOATDP1:
+		case ENC_FSQRT_H_FLOATDP1:
+		case ENC_FSQRT_S_FLOATDP1:
+			il.AddInstruction(ILSETREG_O(
+			    operand1, il.FloatSqrt(REGSZ_O(operand1), ILREG_O(operand2))));
+			break;
+		case ENC_FSQRT_ASIMDMISCFP16_R:
+		case ENC_FSQRT_ASIMDMISC_R:
+			// Intrinsics
+			break;
+		default:
+			ABORT_LIFT;
+		}
+		break;
 	case ARM64_FSUB:
 		switch (instr.encoding)
 		{
@@ -1567,6 +1711,9 @@ bool GetLowLevelILForInstruction(
 		case ENC_FSUB_ASIMDSAME_ONLY:
 		case ENC_FSUB_ASIMDSAMEFP16_ONLY:
 		{
+			if (preferIntrinsics())
+				return true;
+
 			Register srcs[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
 			int src_n = unpack_vector(operand2, srcs);
@@ -1575,9 +1722,9 @@ bool GetLowLevelILForInstruction(
 
 			int rsize = get_register_size(dsts[0]);
 			for (int i = 0; i < dst_n; ++i)
-				il.AddInstruction(il.FloatSub(rsize, ILREG(dsts[i]), ILREG(srcs[i])));
+				il.AddInstruction(ILSETREG(dsts[i], il.FloatSub(rsize, ILREG(dsts[i]), ILREG(srcs[i]))));
+			break;
 		}
-		break;
 		default:
 			il.AddInstruction(il.Unimplemented());
 		}
@@ -1616,34 +1763,58 @@ bool GetLowLevelILForInstruction(
 			il.AddInstruction(ILSETREG_O(
 			    operand1, il.FloatDiv(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3))));
 			break;
+		case ENC_FDIV_ASIMDSAMEFP16_ONLY:
+		case ENC_FDIV_ASIMDSAME_ONLY:
+		{
+			if (preferIntrinsics())
+				return true;
+
+			Register srcs1[16], srcs2[16], dsts[16];
+			int dst_n = unpack_vector(operand1, dsts);
+			int src1_n = unpack_vector(operand2, srcs1);
+			int src2_n = unpack_vector(operand3, srcs2);
+			if ((dst_n != src1_n) || (src1_n != src2_n) || dst_n == 0)
+				ABORT_LIFT;
+			int rsize = get_register_size(dsts[0]);
+			for (int i = 0; i < dst_n; ++i)
+				il.AddInstruction(ILSETREG(
+					dsts[i], il.FloatDiv(rsize, ILREG(srcs1[i]), ILREG(srcs2[i]))));
+			break;
+		}
 		default:
 			il.AddInstruction(il.Unimplemented());
 		}
 		break;
 	case ARM64_FMOV:
+
 		switch (instr.encoding)
 		{
 		case ENC_FMOV_64VX_FLOAT2INT:
 			il.AddInstruction(ILSETREG_O(operand1,
-			    il.FloatToInt(REGSZ_O(operand1), ILREG(vector_reg_minimize(instr.operands[1])))));
+			    il.ZeroExtend(REGSZ_O(operand1), ILREG(vector_reg_minimize(instr.operands[1])))));
 			break;
 		case ENC_FMOV_V64I_FLOAT2INT:
 		{
 			Register minreg = vector_reg_minimize(instr.operands[0]);
 			il.AddInstruction(il.SetRegister(get_register_size(minreg), minreg,
-			    il.FloatToInt(REGSZ_O(operand1), ILREG_O(instr.operands[1]))));
+			    il.Register(REGSZ_O(operand1), instr.operands[1].reg[0])));
 			break;
 		}
 		case ENC_FMOV_32H_FLOAT2INT:
 		case ENC_FMOV_32S_FLOAT2INT:
 		case ENC_FMOV_64H_FLOAT2INT:
 		case ENC_FMOV_64D_FLOAT2INT:
+			// <Rd> <- <Vn> (copy from FP register to general register, with no conversion)
+			il.AddInstruction(
+			    ILSETREG_O(operand1, il.ZeroExtend(REGSZ_O(operand1), ILREG_O(instr.operands[1]))));
+			break;
 		case ENC_FMOV_D64_FLOAT2INT:
 		case ENC_FMOV_H32_FLOAT2INT:
 		case ENC_FMOV_H64_FLOAT2INT:
 		case ENC_FMOV_S32_FLOAT2INT:
+			// <Vd> <- <Rn> (copy from general register to FP register, with no conversion)
 			il.AddInstruction(
-			    ILSETREG_O(operand1, il.FloatToInt(REGSZ_O(operand1), ILREG_O(instr.operands[1]))));
+			    ILSETREG_O(operand1, il.IntToFloat(REGSZ_O(operand1), ILREG_O(instr.operands[1]))));
 			break;
 		case ENC_FMOV_H_FLOATIMM:
 		case ENC_FMOV_S_FLOATIMM:
@@ -1654,7 +1825,8 @@ bool GetLowLevelILForInstruction(
 				float_sz = 4;
 			if (instr.encoding == ENC_FMOV_D_FLOATIMM)
 				float_sz = 8;
-			il.AddInstruction(ILSETREG_O(operand1, GetFloat(il, operand2, float_sz)));
+			// Technically, we should use 2 bytes to GetFloat for half-precision registers, but that causes MLIL and HLIL to lift the constant to 0
+			il.AddInstruction(ILSETREG_O(operand1, il.FloatConvert(float_sz, GetFloat(il, operand2, float_sz == 2 ? 4 : float_sz))));
 			break;
 		}
 		case ENC_FMOV_H_FLOATDP1:
@@ -1666,6 +1838,9 @@ bool GetLowLevelILForInstruction(
 		case ENC_FMOV_ASIMDIMM_H_H:
 		case ENC_FMOV_ASIMDIMM_S_S:
 		{
+			if (preferIntrinsics())
+				return true;
+
 			int float_sz = 2;
 			if (instr.encoding == ENC_FMOV_ASIMDIMM_S_S)
 				float_sz = 4;
@@ -1675,7 +1850,8 @@ bool GetLowLevelILForInstruction(
 			Register regs[16];
 			int dst_n = unpack_vector(operand1, regs);
 			for (int i = 0; i < dst_n; ++i)
-				il.AddInstruction(ILSETREG(regs[i], GetFloat(il, operand2, float_sz)));
+				// Technically, we should use 2 bytes to GetFloat for half-precision registers, but that causes MLIL and HLIL to lift the constant to 0
+				il.AddInstruction(ILSETREG(regs[i], il.FloatConvert(float_sz, GetFloat(il, operand2, float_sz == 2 ? 4 : float_sz))));
 			break;
 		}
 		default:
@@ -1694,6 +1870,9 @@ bool GetLowLevelILForInstruction(
 		case ENC_FMUL_ASIMDSAME_ONLY:
 		case ENC_FMUL_ASIMDSAMEFP16_ONLY:
 		{
+			if (preferIntrinsics())
+				return true;
+
 			Register srcs1[16], srcs2[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
 			int src1_n = unpack_vector(operand2, srcs1);
@@ -1704,13 +1883,16 @@ bool GetLowLevelILForInstruction(
 			for (int i = 0; i < dst_n; ++i)
 				il.AddInstruction(ILSETREG(
 					dsts[i], il.FloatMult(rsize, ILREG(srcs1[i]), ILREG(srcs2[i]))));
+			break;
 		}
-		break;
 		case ENC_FMUL_ASIMDELEM_RH_H:
 		case ENC_FMUL_ASIMDELEM_R_SD:
 		case ENC_FMUL_ASISDELEM_RH_H:
 		case ENC_FMUL_ASISDELEM_R_SD:
 		{
+			if (preferIntrinsics())
+				return true;
+
 			Register srcs1[16], srcs2[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
 			int src1_n = unpack_vector(operand2, srcs1);
@@ -1721,11 +1903,46 @@ bool GetLowLevelILForInstruction(
 			for (int i = 0; i < dst_n; ++i)
 				il.AddInstruction(ILSETREG(
 					dsts[i], il.FloatMult(rsize, ILREG(srcs1[i]), ILREG(srcs2[0]))));
+			break;
 		}
-		break;
 		default:
 			il.AddInstruction(il.Unimplemented());
 		}
+		break;
+	case ARM64_FNEG:
+		switch (instr.encoding)
+		{
+		case ENC_FNEG_D_FLOATDP1:
+		case ENC_FNEG_S_FLOATDP1:
+		case ENC_FNEG_H_FLOATDP1:
+			il.AddInstruction(ILSETREG_O(
+				operand1, il.FloatNeg(REGSZ_O(operand1), ILREG_O(operand2))));
+			break;
+		case ENC_FNEG_ASIMDMISCFP16_R:
+		case ENC_FNEG_ASIMDMISC_R:
+		{
+			if (preferIntrinsics())
+				return true;
+
+			Register srcs[16], dsts[16];
+			int dst_n = unpack_vector(operand1, dsts);
+			int src_n = unpack_vector(operand2, srcs);
+			if ((dst_n != src_n) || dst_n == 0)
+				ABORT_LIFT;
+
+			int rsize = get_register_size(dsts[0]);
+			for (int i = 0; i < dst_n; ++i)
+				il.AddInstruction(ILSETREG(dsts[i], il.FloatNeg(rsize, ILREG(srcs[i]))));
+			break;
+		}
+		default:
+			il.AddInstruction(il.Unimplemented());
+		}
+		break;
+	case ARM64_FNMUL:
+		il.AddInstruction(ILSETREG_O(operand1,
+			il.FloatNeg(REGSZ_O(operand1),
+				il.FloatMult(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
 		break;
 	case ARM64_ERET:
 	case ARM64_ERETAA:
@@ -1737,7 +1954,6 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_ISB, {}));
 		break;
 	case ARM64_LDAR:
-
 	case ARM64_LDAPR:
 	case ARM64_LDAPUR:
 		LoadStoreOperand(il, true, instr.operands[0], instr.operands[1], 0);
@@ -1914,29 +2130,97 @@ bool GetLowLevelILForInstruction(
 		    ILSETREG_O(operand1, il.LogicalShiftRight(REGSZ_O(operand2), ILREG_O(operand2),
 		                             ReadILOperand(il, operand3, REGSZ_O(operand2)))));
 		break;
+	case ARM64_DUP:
 	case ARM64_MOV:
+	case ARM64_MOVN:
+	case ARM64_UMOV:
+	case ARM64_INS:
+	case ARM64_MOVS:
 	{
-		// Small hack... it doesn't seem the lifter ever see the ENC_DUP_ASISDONE_ONLY,
-		// but instead ENC_MOV_DUP_ASISDONE_ONLY
-		if (instr.encoding == ENC_MOV_DUP_ASISDONE_ONLY &&
-			instr.operands[1].laneUsed)
-			// Specific use case. e.g: [mov/dup] h16, v19.h[7].
+		bool zero_extend = false;
+		switch (instr.encoding)
+		{
+		case ENC_DUP_ASIMDINS_DR_R:
+		{
+			// if (preferIntrinsics())
+			// 	return true;
+
+			Register regs[16];
+			int regs_n = unpack_vector(operand1, regs);
+			if (regs_n <= 0)
+				ABORT_LIFT;
+			int lane_sz = REGSZ(regs[0]);
+			for (int i = 0; i < regs_n; ++i)
+				il.AddInstruction(ILSETREG(regs[i], ExtractRegister(il, operand2, 0, lane_sz, 0, lane_sz)));
+			break;
+		}
+		case ENC_DUP_ASIMDINS_DV_V:
 			// We let the Neon intrinsic lifter take care of this case.
 			break;
-
-		Register regs[16];
-		int n = unpack_vector(operand1, regs);
-
-		if (n == 1) {
-			il.AddInstruction(ILSETREG(regs[0], ReadILOperand(il, operand2, get_register_size(regs[0]))));
-		} else {
-			Register cregs[2];
-			if (consolidate_vector(operand1, operand2, cregs))
-				il.AddInstruction(ILSETREG(cregs[0], ILREG(cregs[1])));
-			else
+		case ENC_MOV_UMOV_ASIMDINS_W_W:
+		case ENC_MOV_UMOV_ASIMDINS_X_X:
+		case ENC_UMOV_ASIMDINS_W_W:
+		case ENC_UMOV_ASIMDINS_X_X:
+			zero_extend = true;
+		case ENC_MOV_DUP_ASISDONE_ONLY:
+		case ENC_DUP_ASISDONE_ONLY:
+		case ENC_MOV_INS_ASIMDINS_IV_V:
+		case ENC_INS_ASIMDINS_IV_V:
+		{
+			Register srcs[16], dsts[16];
+			int dst_n = unpack_vector(operand1, dsts);
+			int src_n = unpack_vector(operand2, srcs);
+			if ((dst_n != src_n) || dst_n == 0)
 				ABORT_LIFT;
-		}
 
+			// if (dst_n > 1 && preferIntrinsics())
+			// 	return true;
+
+			for (int i = 0; i < dst_n; ++i)
+				il.AddInstruction(ILSETREG(dsts[i], zero_extend
+					? il.ZeroExtend(REGSZ(dsts[i]), ILREG(srcs[i]))
+						: ILREG(srcs[i])));
+
+			break;
+		}
+		case ENC_MOV_MOVN_32_MOVEWIDE:
+		case ENC_MOV_MOVN_64_MOVEWIDE:
+		case ENC_MOVN_32_MOVEWIDE:
+		case ENC_MOVN_64_MOVEWIDE:
+			il.AddInstruction(ILSETREG_O(operand1,
+				ReadILOperand(il, operand2, REGSZ_O(operand1))));
+			break;
+		case ENC_MOV_INS_ASIMDINS_IR_R:
+		case ENC_INS_ASIMDINS_IR_R:
+		case ENC_MOV_ORR_32_LOG_IMM:
+		case ENC_MOV_ORR_32_LOG_SHIFT:
+		case ENC_MOV_ORR_64_LOG_IMM:
+		case ENC_MOV_ORR_64_LOG_SHIFT:
+		case ENC_MOV_ADD_32_ADDSUB_IMM:
+		case ENC_MOV_ADD_64_ADDSUB_IMM:
+		case ENC_MOV_ORR_ASIMDSAME_ONLY:
+		case ENC_MOV_MOVZ_32_MOVEWIDE:
+		case ENC_MOV_MOVZ_64_MOVEWIDE:
+		{
+			Register regs[16];
+			int n = unpack_vector(operand1, regs);
+
+			if (n == 1) {
+				il.AddInstruction(ILSETREG(regs[0], ReadILOperand(il, operand2, get_register_size(regs[0]))));
+			} else {
+				Register cregs[2];
+				if (consolidate_vector(operand1, operand2, cregs))
+					il.AddInstruction(ILSETREG(cregs[0], ILREG(cregs[1])));
+				else
+					ABORT_LIFT;
+			}
+			break;
+		}
+		default:
+			// case ENC_MOVS_ORRS_P_P_PP_Z:
+			// il.AddInstruction(il.Unimplemented());
+			break;
+		}
 		break;
 	}
 	case ARM64_MOVI:
@@ -1956,8 +2240,7 @@ bool GetLowLevelILForInstruction(
 		// zero the underling register slice
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.And(REGSZ_O(operand1), ILREG_O(operand1),
-			il.Not(REGSZ_O(operand1),
-			    il.Const(REGSZ_O(operand1), 0xffffULL << operand2.shiftValue)))));
+			    il.Const(REGSZ_O(operand1), ~(0xffffULL << operand2.shiftValue)))));
 		// mov the immediate into it
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.Or(REGSZ_O(operand1), ILREG_O(operand1),
@@ -1968,8 +2251,15 @@ bool GetLowLevelILForInstruction(
 		    ILSETREG_O(operand1, il.Const(REGSZ_O(operand1), IMM_O(operand2) << operand2.shiftValue)));
 		break;
 	case ARM64_MUL:
-		il.AddInstruction(
-		    ILSETREG_O(operand1, il.Mult(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3))));
+		switch (instr.encoding)
+		{
+			case ENC_MUL_ASIMDSAME_ONLY:
+			case ENC_MUL_ASIMDELEM_R:
+				break;
+			default:
+				il.AddInstruction(
+					ILSETREG_O(operand1, il.Mult(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3))));
+		}
 		break;
 	case ARM64_MADD:
 		il.AddInstruction(ILSETREG_O(operand1,
@@ -2167,9 +2457,32 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_ORR:
 	case ARM64_ORRS:
-		il.AddInstruction(
-		    ILSETREG_O(operand1, il.Or(REGSZ_O(operand1), ILREG_O(operand2),
-		                             ReadILOperand(il, operand3, REGSZ_O(operand1)), SETFLAGS)));
+		switch (instr.encoding)
+		{
+		case ENC_ORR_32_LOG_IMM:
+		case ENC_ORR_32_LOG_SHIFT:
+		case ENC_ORR_64_LOG_IMM:
+		case ENC_ORR_64_LOG_SHIFT:
+			il.AddInstruction(
+				ILSETREG_O(operand1, il.Or(REGSZ_O(operand1), ILREG_O(operand2),
+										ReadILOperand(il, operand3, REGSZ_O(operand1)), SETFLAGS)));
+			break;
+		case ENC_ORR_ASIMDIMM_L_HL:
+		case ENC_ORR_ASIMDIMM_L_SL:
+		{
+			Register regs[16];
+			int n = unpack_vector(operand1, regs);
+			for (int i = 0; i < n; ++i)
+				il.AddInstruction(ILSETREG(regs[i], ILCONST_O(get_register_size(regs[i]), operand2)));
+			break;
+		}
+		case ENC_ORR_ASIMDSAME_ONLY:
+			// Let the neon intrinsic lifter take over.
+			break;
+		default:
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
 		break;
 	case ARM64_PSB:
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_PSBCSYNC, {}));
@@ -2194,18 +2507,30 @@ bool GetLowLevelILForInstruction(
 	case ARM64_REV32:
 	case ARM64_REV64:
 	case ARM64_REV:
-		if (IS_SVE_O(operand1))
-		{
-			il.AddInstruction(il.Unimplemented());
+		switch (instr.encoding) {
+		case ENC_REV16_ASIMDMISC_R:
+		case ENC_REV32_ASIMDMISC_R:
+		case ENC_REV64_ASIMDMISC_R:
 			break;
+		default:
+			if (IS_SVE_O(operand1))
+			{
+				il.AddInstruction(il.Unimplemented());
+				break;
+			}
+			// if LLIL_BSWAP ever gets added, replace
+			il.AddInstruction(il.Intrinsic(
+				{RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_REV, {ILREG_O(operand2)}));
 		}
-		// if LLIL_BSWAP ever gets added, replace
-		il.AddInstruction(il.Intrinsic(
-		    {RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_REV, {ILREG_O(operand2)}));
 		break;
 	case ARM64_RBIT:
-		il.AddInstruction(il.Intrinsic(
-		    {RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_RBIT, {ILREG_O(operand2)}));
+		switch (instr.encoding) {
+		case ENC_RBIT_ASIMDMISC_R:
+			break;
+		default:
+			il.AddInstruction(il.Intrinsic(
+				{RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_RBIT, {ILREG_O(operand2)}));
+		}
 		break;
 	case ARM64_ROR:
 		il.AddInstruction(ILSETREG_O(operand1, il.RotateRight(REGSZ_O(operand2), ILREG_O(operand2),
@@ -2233,18 +2558,33 @@ bool GetLowLevelILForInstruction(
 		                  il.Const(1, (REGSZ_O(operand1) * 8) - IMM_O(operand4)))));
 		break;
 	case ARM64_SCVTF:
+	case ARM64_UCVTF:
+	{
+		bool zero_extend = false;
 		switch (instr.encoding)
 		{
 		// Scalar, float
+		case ENC_UCVTF_ASISDMISCFP16_R:
+		case ENC_UCVTF_ASISDMISC_R:
+			zero_extend = true;
 		case ENC_SCVTF_ASISDMISCFP16_R:
 		case ENC_SCVTF_ASISDMISC_R:
 		{
 			il.AddInstruction(ILSETREG_O(
 			    operand1, il.IntToFloat(REGSZ_O(operand1),
-					ILREG_O(operand2))));
+					zero_extend
+					? il.ZeroExtend(REGSZ_O(operand1), ILREG_O(operand2))
+					: il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2)))));
 			break;
 		}
 		// Scalar, integer
+		case ENC_UCVTF_D32_FLOAT2INT:
+		case ENC_UCVTF_D64_FLOAT2INT:
+		case ENC_UCVTF_H32_FLOAT2INT:
+		case ENC_UCVTF_H64_FLOAT2INT:
+		case ENC_UCVTF_S32_FLOAT2INT:
+		case ENC_UCVTF_S64_FLOAT2INT:
+			zero_extend = true;
 		case ENC_SCVTF_D32_FLOAT2INT:
 		case ENC_SCVTF_D64_FLOAT2INT:
 		case ENC_SCVTF_H32_FLOAT2INT:
@@ -2254,23 +2594,72 @@ bool GetLowLevelILForInstruction(
 		{
 			il.AddInstruction(ILSETREG_O(
 			    operand1, il.IntToFloat(REGSZ_O(operand1),
-					il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2)))));
+					zero_extend
+					? il.ZeroExtend(REGSZ_O(operand1), ILREG_O(operand2))
+					: il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2)))));
+			break;
+		}
+		// Vector, single-precision and double-precision unsigned
+		case ENC_UCVTF_ASIMDMISC_R:
+		// Vector, half precision unsigned
+		case ENC_UCVTF_ASIMDMISCFP16_R:
+			zero_extend = true;
+		// Vector, single-precision and double-precision
+		case ENC_SCVTF_ASIMDMISC_R:
+		// Vector, half precision
+		case ENC_SCVTF_ASIMDMISCFP16_R:
+		{
+			if (preferIntrinsics())
+				return true;
+
+			Register cregs[2];
+			if (false && consolidate_vector(operand1, operand2, cregs))
+				il.AddInstruction(ILSETREG(cregs[0],
+					il.IntToFloat(REGSZ(cregs[0]),
+						zero_extend
+						? il.ZeroExtend(REGSZ(cregs[0]), ILREG(cregs[1]))
+						: il.SignExtend(REGSZ(cregs[0]), ILREG(cregs[1])))));
+			else
+			{
+				// SCVTF <Vd>.<T>, <Vn>.<T>
+				Register srcs[16], dsts[16];
+				int dst_n = unpack_vector(operand1, dsts);
+				int src_n = unpack_vector(operand2, srcs);
+				if ((dst_n != src_n) || dst_n == 0)
+					ABORT_LIFT;
+
+				int rsize = get_register_size(dsts[0]);
+				for (int i = 0; i < dst_n; ++i)
+					il.AddInstruction(ILSETREG(dsts[i], il.IntToFloat(rsize,
+						zero_extend
+						? il.ZeroExtend(rsize, ILREG(srcs[i]))
+						: il.SignExtend(rsize, ILREG(srcs[i])))));
+
+			}
 			break;
 		}
 		// Scalar, fixed-point (in SIMD&FP register)
 		case ENC_SCVTF_ASISDSHF_C:
-		// Scalar, fixed-point (in GP register)
+		case ENC_UCVTF_ASISDSHF_C:
+		// Scalar, fixed-point (in GP register) [will fail because no intrinsics]
 		case ENC_SCVTF_D32_FLOAT2FIX:
 		case ENC_SCVTF_D64_FLOAT2FIX:
 		case ENC_SCVTF_H32_FLOAT2FIX:
 		case ENC_SCVTF_H64_FLOAT2FIX:
 		case ENC_SCVTF_S32_FLOAT2FIX:
 		case ENC_SCVTF_S64_FLOAT2FIX:
-		// Vector, integer
-		case ENC_SCVTF_ASIMDMISCFP16_R:
-		case ENC_SCVTF_ASIMDMISC_R:
+		case ENC_UCVTF_D32_FLOAT2FIX:
+		case ENC_UCVTF_D64_FLOAT2FIX:
+		case ENC_UCVTF_H32_FLOAT2FIX:
+		case ENC_UCVTF_H64_FLOAT2FIX:
+		case ENC_UCVTF_S32_FLOAT2FIX:
+		case ENC_UCVTF_S64_FLOAT2FIX:
 		// Vector, fixed-point
 		case ENC_SCVTF_ASIMDSHF_C:
+			// Lift to instrinsics (except there are none)
+		case ENC_UCVTF_ASIMDSHF_C:
+			// Lift to instrinsics
+			break;
 		// SVE: Vector, integer
 		case ENC_SCVTF_Z_P_Z_H2FP16:
 		case ENC_SCVTF_Z_P_Z_W2D:
@@ -2279,12 +2668,19 @@ bool GetLowLevelILForInstruction(
 		case ENC_SCVTF_Z_P_Z_X2D:
 		case ENC_SCVTF_Z_P_Z_X2FP16:
 		case ENC_SCVTF_Z_P_Z_X2S:
-			ABORT_LIFT;
+		case ENC_UCVTF_Z_P_Z_H2FP16:
+		case ENC_UCVTF_Z_P_Z_W2D:
+		case ENC_UCVTF_Z_P_Z_W2FP16:
+		case ENC_UCVTF_Z_P_Z_W2S:
+		case ENC_UCVTF_Z_P_Z_X2D:
+		case ENC_UCVTF_Z_P_Z_X2FP16:
+		case ENC_UCVTF_Z_P_Z_X2S:
 			break;
 		default:
 			break;
 		}
 		break;
+	}
 	case ARM64_SDIV:
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.DivSigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3))));
@@ -2310,6 +2706,102 @@ bool GetLowLevelILForInstruction(
 			il.AddInstruction(il.SetRegister(rsize, dsts[i],
 			    il.ShiftLeft(rsize, il.Register(rsize, srcs[i]), il.Const(1, IMM_O(operand3)))));
 		}
+
+		break;
+	}
+	case ARM64_SSHL:
+	{
+		Register srcs1[16], srcs2[16], dsts[16];
+		int dst_n = unpack_vector(operand1, dsts);
+		int src1_n = unpack_vector(operand2, srcs1);
+		int src2_n = unpack_vector(operand3, srcs2);
+		if ((dst_n != src1_n) || (src1_n != src2_n) || dst_n == 0)
+			ABORT_LIFT;
+
+		int rsize = get_register_size(dsts[0]);
+		for (int i = 0; i < dst_n; ++i)
+		{
+			il.AddInstruction(il.SetRegister(rsize, dsts[i],
+			    il.ShiftLeft(rsize,
+					il.SignExtend(rsize, il.Register(rsize, srcs1[i])),
+					il.Register(1, srcs2[i]))));
+		}
+
+		break;
+	}
+	case ARM64_SSHR:
+	{
+		// Note: we don't lift SRSHR, because it requires rounding the shifted results
+
+		Register srcs[16], dsts[16];
+		int dst_n = unpack_vector(operand1, dsts);
+		int src_n = unpack_vector(operand2, srcs);
+
+		if ((dst_n != src_n) || dst_n == 0)
+			ABORT_LIFT;
+
+		int rsize = get_register_size(dsts[0]);
+		for (int i = 0; i < dst_n; ++i)
+		{
+			il.AddInstruction(il.SetRegister(rsize, dsts[i],
+			    il.ArithShiftRight(rsize, il.Register(rsize, srcs[i]), il.Const(1, IMM_O(operand3)))));
+		}
+
+		break;
+	}
+	case ARM64_SSHLL:
+	case ARM64_SSHLL2:
+	case ARM64_SXTL:
+	case ARM64_SXTL2:
+		if ((instr.encoding == ENC_SSHLL_ASIMDSHF_L || instr.encoding == ENC_SXTL_SSHLL_ASIMDSHF_L) && preferIntrinsics())
+		{
+			// // Not all valid operand combinations have intrinsics and we have to try it here in case it fails
+			// NeonGetLowLevelILForInstruction(arch, addr, il, instr, addrSize);
+			// LogWarn("NeonGetLowLevelILForInstruction: %d -> %d\n", n_instrs_before, il.GetInstructionCount());
+			// if (il.GetInstructionCount() > n_instrs_before)
+			// 	return true;
+			return true;
+		}
+	// SHLL{2} is the same as SHLL{2}, except the extension is signed or unsigned "without change of functionality"
+	// (The shift amount is the element size, but is still disassembled to the immediate value in the third operand)
+	case ARM64_SHLL:
+	case ARM64_SHLL2:
+	{
+		if (preferIntrinsics())
+			return true;
+
+		Register srcs[16], dsts[16];
+		int dst_n = unpack_vector(operand1, dsts);
+		int src_n = unpack_vector(operand2, srcs);
+
+		// We cannot check that the src and dst counts are the same here
+		// because the 2 variants use different count arrange specs, e.g.
+		// sxtl2 v0.2d, v1.4s
+		// (void) src_n;
+
+		int left_shift = 0;
+		if (instr.operation == ARM64_SSHLL || instr.operation == ARM64_SSHLL2 ||
+			instr.operation == ARM64_SHLL || instr.operation == ARM64_SHLL2)
+			left_shift = IMM_O(operand3);
+
+		int two_variant_offset = 0;
+		if (instr.operation == ARM64_SXTL2 || instr.operation == ARM64_SSHLL2 || instr.operation == ARM64_SHLL2)
+			two_variant_offset = src_n / 2;
+
+		int dst_size = get_register_size(dsts[0]);
+		int src_size = get_register_size(srcs[0]);
+
+		for (int i = 0; i < dst_n; ++i)
+			if (left_shift)
+				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
+					il.ShiftLeft(dst_size,
+						il.SignExtend(dst_size,
+							il.Register(src_size, srcs[i + two_variant_offset])),
+						il.Const(1, left_shift))));
+			else
+				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
+					il.SignExtend(dst_size,
+						il.Register(src_size, srcs[i + two_variant_offset]))));
 
 		break;
 	}
@@ -2360,6 +2852,19 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(
 		    il.SetRegister(4, FAKEREG_SYSCALL_INFO, il.Const(4, el_mark | IMM_O(operand1))));
 		il.AddInstruction(il.SystemCall());
+		break;
+	}
+
+	case ARM64_SMOV:
+	{
+		Register srcs[16], dsts[16];
+		int dst_n = unpack_vector(operand1, dsts);
+		int src_n = unpack_vector(operand2, srcs);
+		if ((dst_n != src_n) || dst_n == 0)
+			ABORT_LIFT;
+
+		for (int i = 0; i < dst_n; ++i)
+			il.AddInstruction(ILSETREG(dsts[i], il.SignExtend(REGSZ(dsts[i]), ILREG(srcs[i]))));
 		break;
 	}
 	case ARM64_SWP: /* word (4) or doubleword (8) */
@@ -2432,25 +2937,50 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_UXTL:
 	case ARM64_UXTL2:
+	case ARM64_USHLL:
+	case ARM64_USHLL2:
 	{
+		if ((instr.encoding == ENC_USHLL_ASIMDSHF_L || instr.encoding == ENC_UXTL_USHLL_ASIMDSHF_L) && preferIntrinsics())
+		{
+			// // Not all valid operand combinations have intrinsics and we have to try it here in case it fails
+			// NeonGetLowLevelILForInstruction(arch, addr, il, instr, addrSize);
+			// LogWarn("NeonGetLowLevelILForInstruction: %d -> %d\n", n_instrs_before, il.GetInstructionCount());
+			// if (il.GetInstructionCount() > n_instrs_before)
+			// 	return true;
+			return true;
+		}
+
 		Register srcs[16], dsts[16];
 		int dst_n = unpack_vector(operand1, dsts);
 		int src_n = unpack_vector(operand2, srcs);
 
-		if (src_n == 0 || dst_n == 0)
-			ABORT_LIFT;
-		if (instr.operation == ARM64_UXTL && (src_n != dst_n))
-			ABORT_LIFT;
-		if (instr.operation == ARM64_UXTL2 && (src_n != 2 * dst_n))
-			ABORT_LIFT;
+		// We cannot check that the src and dst counts are the same here
+		// because the 2 variants use different count arrange specs, e.g.
+		// uxtl2 v0.2d, v1.4s
+		(void) src_n;
+
+		int left_shift = 0;
+		if (instr.operation == ARM64_USHLL || instr.operation == ARM64_USHLL2)
+			left_shift = IMM_O(operand3);
+
+		int two_variant_offset = 0;
+		if (instr.operation == ARM64_UXTL2 || instr.operation == ARM64_USHLL2)
+			two_variant_offset = src_n / 2;
+
+		int dst_size = get_register_size(dsts[0]);
+		int src_size = get_register_size(srcs[0]);
 
 		for (int i = 0; i < dst_n; ++i)
-		{
-			if (instr.operation == ARM64_UXTL)
-				il.AddInstruction(ILSETREG(dsts[i], ILREG(srcs[i])));
+			if (left_shift)
+				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
+					il.ShiftLeft(dst_size,
+						il.ZeroExtend(dst_size,
+							il.Register(src_size, srcs[i + two_variant_offset])),
+						il.Const(1, left_shift))));
 			else
-				il.AddInstruction(ILSETREG(dsts[i], ILREG(srcs[i + src_n / 2])));
-		}
+				il.AddInstruction(il.SetRegister(dst_size, dsts[i],
+					il.ZeroExtend(dst_size,
+						il.Register(src_size, srcs[i + two_variant_offset]))));
 
 		break;
 	}
@@ -2459,8 +2989,43 @@ bool GetLowLevelILForInstruction(
 		    il.Add(REGSZ_O(operand1), ILREG_O(operand4),
 		        il.MultDoublePrecSigned(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
 		break;
+	case ARM64_USHL:
+	{
+		switch (instr.encoding)
+		{
+			case ENC_USHL_ASIMDSAME_ONLY:
+				if (preferIntrinsics())
+					return true;
+
+			case ENC_USHL_ASISDSAME_ONLY:
+			default:
+			{
+				Register srcs1[16], srcs2[16], dsts[16];
+				int dst_n = unpack_vector(operand1, dsts);
+				int src1_n = unpack_vector(operand2, srcs1);
+				int src2_n = unpack_vector(operand3, srcs2);
+				if ((dst_n != src1_n) || (src1_n != src2_n) || dst_n == 0)
+					ABORT_LIFT;
+
+				int rsize = get_register_size(dsts[0]);
+				for (int i = 0; i < dst_n; ++i)
+				{
+					il.AddInstruction(il.SetRegister(rsize, dsts[i],
+						il.ShiftLeft(rsize,
+							il.Register(rsize, srcs1[i]),
+							il.Register(1, srcs2[i]))));
+				}
+			}
+		}
+		break;
+	}
 	case ARM64_USHR:
 	{
+		// Note: we don't lift URSHR, because it requires rounding the shifted results
+
+		if (preferIntrinsics())
+			return true;
+
 		Register srcs[16], dsts[16];
 		int dst_n = unpack_vector(operand1, dsts);
 		int src_n = unpack_vector(operand2, srcs);
@@ -2555,19 +3120,6 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(
 		    il.Trap(IMM_O(operand1)));  // FIXME Breakpoint may need a parameter (IMM_O(operand1)));
 		return false;
-	case ARM64_DUP:
-	{
-		if (instr.encoding != ENC_DUP_ASIMDINS_DR_R)
-			break; // Abort lifting and let the neon intrinsic lifter take over.
-		Register regs[16];
-		int regs_n = unpack_vector(operand1, regs);
-		if (regs_n <= 0)
-			ABORT_LIFT;
-		int lane_sz = REGSZ(regs[0]);
-		for (int i = 0; i < regs_n; ++i)
-			il.AddInstruction(ILSETREG(regs[i], ExtractRegister(il, operand2, 0, lane_sz, 0, lane_sz)));
-	}
-	break;
 	case ARM64_DGH:
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_HINT_DGH, {}));
 		break;

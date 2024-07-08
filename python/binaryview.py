@@ -6139,12 +6139,35 @@ class BinaryView:
 	@property
 	def tags(self) -> List[Tuple[int, 'Tag']]:
 		"""
-		``tags`` gets a list of all data :py:class:`Tag` objects in the view.
+		``tags`` gets a list of all data/function :py:class:`Tag` objects in the view.
 		Tags are returned as a list of (address, :py:class:`Tag`) pairs.
 
 		:rtype: list(int, Tag)
 		"""
-		return self.get_tags()
+		return self.get_all_tags()
+
+	def get_all_tags(self) -> List[Tuple[int, 'Tag']]:
+		"""
+		Return all :py:class:`Tag` objects defined in the view. This includes all types of tags
+  		(data tags, function tags, and address tags).
+		Tags are returned as a list of (address, :py:class:`Tag`) pairs.
+
+		:rtype: list(int, Tag)
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetAllTagReferences(self.handle, count)
+		assert tags is not None, "core.BNGetAllTagReferences returned None"
+		
+		result = []
+		try:
+			for i in range(0, count.value):
+				tag_handle = core.BNNewTagReference(tags[i].tag)
+				assert tag_handle is not None, "core.BNNewTagReference is not None"
+				tag = Tag(tag_handle)
+				result.append((tags[i].addr, tag))
+			return result
+		finally:
+			core.BNFreeTagReferences(tags, count.value)
 
 	def get_tags(self, auto: Optional[bool] = None) -> List[Tuple[int, 'Tag']]:
 		"""

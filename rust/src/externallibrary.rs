@@ -51,14 +51,18 @@ impl ExternalLibrary {
     }
 
     /// Get the file backing this external library
-    pub fn backing_file(&self) -> ProjectFile {
+    pub fn backing_file(&self) -> Option<ProjectFile> {
         let result = unsafe { BNExternalLibraryGetBackingFile(self.as_raw()) };
-        unsafe { ProjectFile::from_raw(ptr::NonNull::new(result).unwrap()) }
+        let handle = ptr::NonNull::new(result)?;
+        Some(unsafe { ProjectFile::from_raw(handle) })
     }
 
     /// Set the file backing this external library
-    pub fn set_backing_file(&self, file: &ProjectFile) {
-        unsafe { BNExternalLibrarySetBackingFile(self.as_raw(), file.as_raw()) }
+    pub fn set_backing_file(&self, file: Option<&ProjectFile>) {
+        let file_handle = file
+            .map(|x| unsafe {x.as_raw() as *mut _})
+            .unwrap_or(ptr::null_mut());
+        unsafe { BNExternalLibrarySetBackingFile(self.as_raw(), file_handle) }
     }
 }
 
@@ -124,14 +128,18 @@ impl ExternalLocation {
     }
 
     /// Get the ExternalLibrary that this ExternalLocation targets
-    pub fn library(&self) -> ExternalLibrary {
+    pub fn library(&self) -> Option<ExternalLibrary> {
         let result = unsafe { BNExternalLocationGetExternalLibrary(self.as_raw()) };
-        unsafe { ExternalLibrary::from_raw(ptr::NonNull::new(result).unwrap()) }
+        let handle = ptr::NonNull::new(result)?;
+        Some(unsafe { ExternalLibrary::from_raw(handle) })
     }
 
     /// Set the ExternalLibrary that this ExternalLocation targets
-    pub fn set_external_library(&self, lib: &ExternalLibrary) {
-        unsafe { BNExternalLocationSetExternalLibrary(self.as_raw(), lib.as_raw()) }
+    pub fn set_external_library(&self, lib: Option<&ExternalLibrary>) {
+        let lib_handle = lib
+            .map(|x| unsafe {x.as_raw() as *mut _})
+            .unwrap_or(ptr::null_mut());
+        unsafe { BNExternalLocationSetExternalLibrary(self.as_raw(), lib_handle) }
     }
 
     /// Check if this ExternalLocation has a target address
@@ -169,19 +177,16 @@ impl ExternalLocation {
         })
     }
 
-    /// Remove the symbol pointed to by this ExternalLocation.
-    pub fn remove_target_symbol(&self) -> bool {
-        unsafe { BNExternalLocationSetTargetSymbol(self.as_raw(), ptr::null_mut()) }
-    }
-
     /// Set the symbol pointed to by this ExternalLocation.
     /// ExternalLocations must have a valid target address and/or symbol set.
-    pub fn set_target_symbol<S: BnStrCompatible>(&self, symbol: S) -> bool {
-        let symbol = symbol.into_bytes_with_nul();
+    pub fn set_target_symbol<S: BnStrCompatible>(&self, symbol: Option<S>) -> bool {
+        let symbol = symbol
+            .map(|x| x.into_bytes_with_nul().as_ref().as_ptr() as *const ffi::c_char)
+            .unwrap_or(ptr::null_mut());
         unsafe {
             BNExternalLocationSetTargetSymbol(
                 self.as_raw(),
-                symbol.as_ref().as_ptr() as *const ffi::c_char,
+                symbol,
             )
         }
     }

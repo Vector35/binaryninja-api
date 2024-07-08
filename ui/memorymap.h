@@ -119,7 +119,7 @@ class BINARYNINJAUIAPI SegmentWidget : public QWidget, public BinaryNinja::Binar
 	void removeSegment(SegmentRef segment);
 
 public:
-	SegmentWidget(BinaryViewRef data);
+	SegmentWidget(QWidget* parent, BinaryViewRef data);
 	virtual ~SegmentWidget();
 
 	void updateFont();
@@ -165,7 +165,7 @@ class BINARYNINJAUIAPI SectionWidget : public QWidget, public BinaryNinja::Binar
 	void removeSection(SectionRef section);
 
 public:
-	SectionWidget(BinaryViewRef data);
+	SectionWidget(QWidget* parent, BinaryViewRef data);
 	virtual ~SectionWidget();
 
 	void updateFont();
@@ -195,7 +195,6 @@ class BINARYNINJAUIAPI MemoryMapView : public QWidget, public View
 	Q_OBJECT
 
 	BinaryViewRef m_data;
-	MemoryMapContainer* m_container;
 
 	SectionWidget* m_sectionWidget;
 	SegmentWidget* m_segmentWidget;
@@ -206,7 +205,7 @@ class BINARYNINJAUIAPI MemoryMapView : public QWidget, public View
 	void navigateToRawAddress(uint64_t address);
 
 public:
-	MemoryMapView(BinaryViewRef data, MemoryMapContainer* container);
+	MemoryMapView(QWidget* parent, BinaryViewRef data);
 
 	BinaryViewRef getData() override { return m_data; }
 	uint64_t getCurrentOffset() override;
@@ -231,10 +230,9 @@ class BINARYNINJAUIAPI MemoryMapContainer : public QWidget, public ViewContainer
 	friend class StringsView;
 
 	MemoryMapView* m_memoryMap;
-	MemoryMapSidebarWidget* m_widget;
 
 public:
-	MemoryMapContainer(BinaryViewRef data, MemoryMapSidebarWidget* parent);
+	MemoryMapContainer(QWidget* parent, BinaryViewRef data);
 	virtual View* getView() override { return m_memoryMap; }
 
 	MemoryMapView* getMemoryMapView() { return m_memoryMap; }
@@ -271,7 +269,7 @@ Q_OBJECT
 	MemoryMapContainer* m_container;
 
 public:
-	MemoryMapSidebarWidget(BinaryViewRef data);
+	MemoryMapSidebarWidget(QWidget* parent, BinaryViewRef data);
 	void focus() override;
 };
 

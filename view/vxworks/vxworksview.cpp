@@ -17,7 +17,7 @@ using namespace std;
 
 static const std::map<VxWorks5SymbolType, BNSymbolType> VxWorks5SymbolTypeMap = {
 	{ VxWorks5UndefinedSymbolType, FunctionSymbol },
-	{ VxWorks5GlobalExternalSymbolType, ImportAddressSymbol },
+	{ VxWorks5GlobalExternalSymbolType, ExternalSymbol },
 	{ VxWorks5LocalAbsoluteSymbolType, DataSymbol },
 	{ VxWorks5GlobalAbsoluteSymbolType, DataSymbol },
 	{ VxWorks5LocalTextSymbolType, FunctionSymbol },
@@ -36,7 +36,7 @@ static const std::map<VxWorks5SymbolType, BNSymbolType> VxWorks5SymbolTypeMap = 
 
 static const std::map<VxWorks6SymbolType, BNSymbolType> VxWorks6SymbolTypeMap = {
 	{ VxWorks6UndefinedSymbolType, FunctionSymbol },
-	{ VxWorks6GlobalExternalSymbolType, ImportAddressSymbol },
+	{ VxWorks6GlobalExternalSymbolType, ExternalSymbol },
 	{ VxWorks6LocalAbsoluteSymbolType, DataSymbol },
 	{ VxWorks6GlobalAbsoluteSymbolType, DataSymbol },
 	{ VxWorks6LocalTextSymbolType, FunctionSymbol },
@@ -359,7 +359,6 @@ void VxWorksView::AssignSymbolToSection(std::map<std::string, std::set<uint64_t>
 	{
 	case FunctionSymbol:
 		sections[".text"].insert(address);
-		AddFunctionForAnalysis(m_platform, address);
 		break;
 	case DataSymbol:
 		sections[".data"].insert(address);
@@ -385,6 +384,7 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 	};
 
 	size_t badSymbols = 0;
+	NameSpace nameSpace = GetInternalNameSpace();
 	for (const auto& entry : m_symbols)
 	{
 		reader->Seek(entry.name - m_imageBase);
@@ -445,7 +445,15 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 		if (m_parentView->IsOffsetBackedByFile(entry.address - m_imageBase))
 		{
 			AssignSymbolToSection(sections, bnSymbolType, vxSymbolType, entry.address);
-			DefineAutoSymbol(new Symbol(bnSymbolType, symbolName, entry.address));
+			auto symbol = new Symbol(bnSymbolType, symbolName, entry.address, GlobalBinding, nameSpace);
+			Ref<Type> type = nullptr;
+			if (bnSymbolType == FunctionSymbol)
+				type = m_platform->GetFunctionByName(symbolName);
+			else if (bnSymbolType == DataSymbol)
+				type = m_platform->GetTypeByName(symbolName);
+
+			// TODO: not sure why the type is not being applied here
+			DefineAutoSymbolAndVariableOrFunction(m_platform, symbol, type);
 		}
 	}
 

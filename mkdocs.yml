@@ -1,4 +1,5 @@
 site_name: 'Binary Ninja User Documentation'
+dev_addr: 0.0.0.0:8000
 site_url: 'https://docs.binary.ninja/'
 repo_url: 'https://binary.ninja/'
 repo_name: 'binary.ninja'
@@ -39,9 +40,9 @@ theme:
         - navigation.sections
         - navigation.expand
         - navigation.prune
-        - navigation.indexes
         - navigation.top
         - content.code.copy
+        - search.highlight
 
     shortcuts:
         help: 191    # ?

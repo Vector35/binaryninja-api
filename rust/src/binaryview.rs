@@ -1528,9 +1528,9 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// Recursively imports a type interface given its GUID.
     ///
     /// .. note:: To support this type of lookup a type library must have
-    /// 	contain a metadata key called "type_guids" which is a map
-    /// 	Dict[string_guid, string_type_name] or
-    /// 	Dict[string_guid, Tuple[string_type_name, type_library_name]]
+    ///     contain a metadata key called "type_guids" which is a map
+    ///     Dict[string_guid, string_type_name] or
+    ///     Dict[string_guid, Tuple[string_type_name, type_library_name]]
     fn import_type_by_guid<S: BnStrCompatible>(&self, guid: S) -> Option<Ref<Type>> {
         let guid = guid.into_bytes_with_nul();
         let result = unsafe {
@@ -1560,7 +1560,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// Recursively exports `type_obj` into `lib` as a type with name `name`
     ///
     /// As other referenced types are encountered, they are either copied into the destination type library or
-    /// 	else the type library that provided the referenced type is added as a dependency for the destination library.
+    ///     else the type library that provided the referenced type is added as a dependency for the destination library.
     fn export_object_to_library(&self, lib: &TypeLibrary, name: &QualifiedName, type_obj: &Type) {
         unsafe {
             BNBinaryViewExportObjectToTypeLibrary(

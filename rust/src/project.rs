@@ -493,6 +493,7 @@ impl Project {
     /// * `id` - id unique ID
     /// * `creation_time` - Creation time of the file
     /// * `progress_func` - Progress function that will be called as the file is being added
+    #[allow(clippy::too_many_arguments)]
     pub unsafe fn create_file_from_path_with_progress_unsafe<P, N, D, I, F>(
         &self,
         path: P,
@@ -654,6 +655,7 @@ impl Project {
     /// * `id` - id unique ID
     /// * `creation_time` - Creation time of the file
     /// * `progress_func` - Progress function that will be called as the file is being added
+    #[allow(clippy::too_many_arguments)]
     pub unsafe fn create_file_with_progress_unsafe<N, D, I, F>(
         &self,
         contents: &[u8],

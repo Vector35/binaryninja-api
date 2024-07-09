@@ -240,6 +240,7 @@ impl PartialEq for Component {
         unsafe { BNComponentsEqual(self.as_raw(), other.as_raw()) }
     }
 
+    #[allow(clippy::partialeq_ne_impl)]
     fn ne(&self, other: &Self) -> bool {
         unsafe { BNComponentsNotEqual(self.as_raw(), other.as_raw()) }
     }

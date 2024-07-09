@@ -83,9 +83,9 @@ fn main() {
     for line in BufReader::new(file).lines() {
         let line = line.unwrap();
         if let Some(version) = line.strip_prefix(current_line) {
-            current_version = version.to_owned();
+            version.clone_into(&mut current_version);
         } else if let Some(version) = line.strip_prefix(minimum_line) {
-            minimum_version = version.to_owned();
+            version.clone_into(&mut minimum_version);
         }
     }
 

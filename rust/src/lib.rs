@@ -166,6 +166,7 @@ pub mod symbol;
 pub mod tags;
 pub mod templatesimplifier;
 pub mod types;
+pub mod workflow;
 
 use std::path::PathBuf;
 

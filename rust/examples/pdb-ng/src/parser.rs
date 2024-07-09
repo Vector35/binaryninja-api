@@ -248,7 +248,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         address,
                         name,
                         type_,
-                        locals,
+                        locals: _,
                         ..
                     }) => {
                         self.log(|| {

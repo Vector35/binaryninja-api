@@ -2049,40 +2049,84 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		core.BNRegisterCallingConvention(self.handle, cc.handle)
 
-	def get_default_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+	@property
+	def default_calling_convention(self):
+		"""
+		Default calling convention.
+
+		.. note:: Make sure the calling convention has been registered with `Architecture.register_calling_convention`.
+
+		:getter: returns a CallingConvention object for the default calling convention, if one exists.
+		:setter: sets the default calling convention
+		:type: Optional['callingconvention.CallingConvention']
+		"""
 		cc_handle = core.BNGetArchitectureDefaultCallingConvention(self.handle)
 		if cc_handle is None:
 			return None
 		return callingconvention.CallingConvention(handle=cc_handle)
 
-	def set_default_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+	@default_calling_convention.setter
+	def default_calling_convention(self, cc: 'callingconvention.CallingConvention'):
 		core.BNSetArchitectureDefaultCallingConvention(self.handle, cc.handle)
 
-	def get_cdecl_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+	@property
+	def cdecl_calling_convention(self):
+		"""
+		Cdecl calling convention.
+
+		.. note:: Make sure the calling convention has been registered with `Architecture.register_calling_convention`.
+
+		:getter: returns a CallingConvention object for the cdecl calling convention, if one exists.
+		:setter: sets the cdecl calling convention
+		:type: Optional['callingconvention.CallingConvention']
+		"""
 		cc_handle = core.BNGetArchitectureCdeclCallingConvention(self.handle)
 		if cc_handle is None:
 			return None
 		return callingconvention.CallingConvention(handle=cc_handle)
 
-	def set_cdecl_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+	@cdecl_calling_convention.setter
+	def cdecl_calling_convention(self, cc: 'callingconvention.CallingConvention'):
 		core.BNSetArchitectureCdeclCallingConvention(self.handle, cc.handle)
 
-	def get_stdcall_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+	@property
+	def stdcall_calling_convention(self):
+		"""
+		Stdcall calling convention.
+
+		.. note:: Make sure the calling convention has been registered with `Architecture.register_calling_convention`.
+
+		:getter: returns a CallingConvention object for the stdcall calling convention, if one exists.
+		:setter: sets the stdcall calling convention
+		:type: Optional['callingconvention.CallingConvention']
+		"""
 		cc_handle = core.BNGetArchitectureStdcallCallingConvention(self.handle)
 		if cc_handle is None:
 			return None
 		return callingconvention.CallingConvention(handle=cc_handle)
 
-	def set_stdcall_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+	@stdcall_calling_convention.setter
+	def stdcall_calling_convention(self, cc: 'callingconvention.CallingConvention'):
 		core.BNSetArchitectureStdcallCallingConvention(self.handle, cc.handle)
 
-	def get_fastcall_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+	@property
+	def fastcall_calling_convention(self):
+		"""
+		Fastcall calling convention.
+
+		.. note:: Make sure the calling convention has been registered with `Architecture.register_calling_convention`.
+
+		:getter: returns a CallingConvention object for the fastcall calling convention, if one exists.
+		:setter: sets the fastcall calling convention
+		:type: Optional['callingconvention.CallingConvention']
+		"""
 		cc_handle = core.BNGetArchitectureFastcallCallingConvention(self.handle)
 		if cc_handle is None:
 			return None
 		return callingconvention.CallingConvention(handle=cc_handle)
 
-	def set_fastcall_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+	@fastcall_calling_convention.setter
+	def fastcall_calling_convention(self, cc: 'callingconvention.CallingConvention'):
 		core.BNSetArchitectureFastcallCallingConvention(self.handle, cc.handle)
 
 

@@ -1,4 +1,4 @@
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString, IntoJson};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
@@ -7,6 +7,7 @@ use std::slice;
 
 pub type MetadataType = BNMetadataType;
 
+#[repr(transparent)]
 pub struct Metadata {
     pub(crate) handle: *mut BNMetadata,
 }
@@ -346,15 +347,18 @@ unsafe impl RefCountable for Metadata {
 impl CoreArrayProvider for Metadata {
     type Raw = *mut BNMetadata;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, Metadata>;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for Metadata {
-    unsafe fn free(raw: *mut *mut BNMetadata, _count: usize, _context: &()) {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeMetadataArray(raw);
     }
-    unsafe fn wrap_raw<'a>(raw: &'a *mut BNMetadata, context: &'a ()) -> Self::Wrapped<'a> {
-        Guard::new(Metadata::from_raw(*raw), context)
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        debug_assert!(!raw.is_null());
+        // SAFETY: `Metadata` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 
@@ -432,7 +436,7 @@ impl From<&Array<Metadata>> for Ref<Metadata> {
     fn from(value: &Array<Metadata>) -> Self {
         let mut pointers: Vec<*mut BNMetadata> = vec![];
         for v in value.iter() {
-            pointers.push(v.as_ref().handle);
+            pointers.push(v.handle);
         }
         unsafe {
             Metadata::ref_from_raw(BNCreateMetadataArray(pointers.as_mut_ptr(), pointers.len()))

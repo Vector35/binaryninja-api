@@ -88,8 +88,9 @@ struct ProgressContext(Option<Box<dyn Fn(usize, usize) -> Result<(), ()>>>);
 /// Represents the registered parsers and providers of debug information to Binary Ninja.
 /// See `binaryninja::debuginfo` for more information
 #[derive(PartialEq, Eq, Hash)]
+#[repr(transparent)]
 pub struct DebugInfoParser {
-    pub(crate) handle: *mut BNDebugInfoParser,
+    handle: *mut BNDebugInfoParser,
 }
 
 impl DebugInfoParser {
@@ -273,15 +274,18 @@ impl ToOwned for DebugInfoParser {
 impl CoreArrayProvider for DebugInfoParser {
     type Raw = *mut BNDebugInfoParser;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, DebugInfoParser>;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for DebugInfoParser {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _: &Self::Context) {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeDebugInfoParserList(raw, count);
     }
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self { handle: *raw }, context)
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        debug_assert!(!raw.is_null());
+        // SAFETY: `DebugInfoParser` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 

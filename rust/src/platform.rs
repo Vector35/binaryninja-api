@@ -375,15 +375,17 @@ unsafe impl RefCountable for Platform {
 impl CoreArrayProvider for Platform {
     type Raw = *mut BNPlatform;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, Platform>;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for Platform {
-    unsafe fn free(raw: *mut *mut BNPlatform, count: usize, _context: &()) {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreePlatformList(raw, count);
     }
-    unsafe fn wrap_raw<'a>(raw: &'a *mut BNPlatform, context: &'a ()) -> Self::Wrapped<'a> {
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &Self::Context) -> Self::Wrapped<'a> {
         debug_assert!(!raw.is_null());
-        Guard::new(Platform { handle: *raw }, context)
+        // SAFETY: `Platform` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }

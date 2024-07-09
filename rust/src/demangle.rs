@@ -56,9 +56,9 @@ pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Res
         return Err(());
     }
 
-    let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
+    let names = unsafe { Array::<BnString>::new(out_name, out_size, ()) }
         .iter()
-        .map(str::to_string)
+        .map(|name| name.to_string())
         .collect();
 
     unsafe { BNFreeDemangledName(&mut out_name, out_size) };
@@ -111,9 +111,9 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
         return Err(());
     }
 
-    let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
+    let names = unsafe { Array::<BnString>::new(out_name, out_size, ()) }
         .iter()
-        .map(str::to_string)
+        .map(|name| name.to_string())
         .collect();
 
     unsafe { BNFreeDemangledName(&mut out_name, out_size) };
@@ -167,7 +167,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
         return Err(());
     }
 
-    let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
+    let names = unsafe { Array::<BnString>::new(out_name, out_size, ()) }
         .iter()
         .map(|name| name.to_string())
         .collect();

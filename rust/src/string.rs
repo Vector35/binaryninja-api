@@ -168,7 +168,7 @@ impl fmt::Debug for BnString {
 impl CoreArrayProvider for BnString {
     type Raw = *mut raw::c_char;
     type Context = ();
-    type Wrapped<'a> = &'a str;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for BnString {
@@ -176,8 +176,11 @@ unsafe impl CoreArrayProviderInner for BnString {
         use binaryninjacore_sys::BNFreeStringList;
         BNFreeStringList(raw, count);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        CStr::from_ptr(*raw).to_str().unwrap()
+        debug_assert!(!raw.is_null());
+        // SAFETY: `BnString` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 

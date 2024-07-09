@@ -1,4 +1,3 @@
-use crate::rc::Guard;
 use crate::string::BnStrCompatible;
 use crate::{
     architecture::{Architecture, CoreArchitecture},
@@ -180,6 +179,7 @@ impl Default for RelocationInfo {
     }
 }
 
+#[repr(transparent)]
 pub struct Relocation(*mut BNRelocation);
 
 impl Relocation {
@@ -221,15 +221,18 @@ impl Relocation {
 impl CoreArrayProvider for Relocation {
     type Raw = *mut BNRelocation;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, Relocation>;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for Relocation {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeRelocationList(raw, count);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Relocation(*raw), &())
+        debug_assert!(!raw.is_null());
+        // SAFETY: `Relocation` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 

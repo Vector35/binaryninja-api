@@ -1500,7 +1500,7 @@ unsafe impl CoreArrayProviderInner for MediumLevelILInstruction {
         BNFreeILInstructionList(raw)
     }
 
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &Self::Context) -> Self::Wrapped<'a> {
         context.instruction_from_idx(*raw)
     }
 }
@@ -1576,7 +1576,7 @@ unsafe impl CoreArrayProviderInner for BranchDependence {
         unsafe { BNFreeILBranchDependenceList(raw) };
     }
 
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &Self::Context) -> Self::Wrapped<'a> {
         Self {
             instruction: MediumLevelILInstruction::new(context.clone(), raw.branch),
             dependence: raw.dependence,

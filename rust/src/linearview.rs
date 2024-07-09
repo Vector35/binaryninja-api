@@ -23,8 +23,6 @@ use crate::function::Function;
 use crate::rc::*;
 use std::ops::Deref;
 
-use std::mem;
-
 pub struct LinearViewObject {
     pub(crate) handle: *mut BNLinearViewObject,
 }
@@ -371,18 +369,15 @@ pub type LinearDisassemblyLineType = BNLinearDisassemblyLineType;
 
 pub struct LinearDisassemblyLine {
     t: LinearDisassemblyLineType,
-
-    // These will be cleaned up by BNFreeLinearDisassemblyLines, so we
-    // don't drop them in the relevant deconstructors.
-    function: mem::ManuallyDrop<Ref<Function>>,
-    contents: mem::ManuallyDrop<DisassemblyTextLine>,
+    function: Ref<Function>,
+    contents: DisassemblyTextLine,
 }
 
 impl LinearDisassemblyLine {
     pub(crate) unsafe fn from_raw(raw: &BNLinearDisassemblyLine) -> Self {
         let linetype = raw.type_;
-        let function = mem::ManuallyDrop::new(Function::from_raw(raw.function));
-        let contents = mem::ManuallyDrop::new(DisassemblyTextLine(raw.contents));
+        let function = Function::from_raw(raw.function);
+        let contents = DisassemblyTextLine(raw.contents);
         Self {
             t: linetype,
             function,
@@ -402,7 +397,7 @@ impl LinearDisassemblyLine {
 impl Deref for LinearDisassemblyLine {
     type Target = DisassemblyTextLine;
     fn deref(&self) -> &Self::Target {
-        self.contents.deref()
+        &self.contents
     }
 }
 
@@ -415,14 +410,15 @@ impl std::fmt::Display for LinearDisassemblyLine {
 impl CoreArrayProvider for LinearDisassemblyLine {
     type Raw = BNLinearDisassemblyLine;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, LinearDisassemblyLine>;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl CoreArrayProviderInner for LinearDisassemblyLine {
-    unsafe fn free(raw: *mut BNLinearDisassemblyLine, count: usize, _context: &()) {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeLinearDisassemblyLines(raw, count);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(LinearDisassemblyLine::from_raw(raw), _context)
+        Guard::new(LinearDisassemblyLine::from_raw(raw))
     }
 }

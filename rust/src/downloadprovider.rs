@@ -1,4 +1,4 @@
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
 use crate::settings::Settings;
 use crate::string::{BnStrCompatible, BnString};
 use binaryninjacore_sys::*;
@@ -8,6 +8,7 @@ use std::os::raw::c_char;
 use std::ptr::null_mut;
 use std::slice;
 
+#[repr(transparent)]
 pub struct DownloadProvider {
     handle: *mut BNDownloadProvider,
 }
@@ -43,10 +44,6 @@ impl DownloadProvider {
         Self::get(dp_name).ok_or(())
     }
 
-    pub(crate) fn from_raw(handle: *mut BNDownloadProvider) -> DownloadProvider {
-        Self { handle }
-    }
-
     pub fn create_instance(&self) -> Result<Ref<DownloadInstance>, ()> {
         let result: *mut BNDownloadInstance =
             unsafe { BNCreateDownloadProviderInstance(self.handle) };
@@ -61,15 +58,18 @@ impl DownloadProvider {
 impl CoreArrayProvider for DownloadProvider {
     type Raw = *mut BNDownloadProvider;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, DownloadProvider>;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for DownloadProvider {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeDownloadProviderList(raw);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(DownloadProvider::from_raw(*raw), &())
+        debug_assert!(!raw.is_null());
+        // SAFETY: `DownloadProvider` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 

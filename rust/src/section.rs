@@ -61,6 +61,7 @@ impl From<Semantics> for BNSectionSemantics {
 }
 
 #[derive(PartialEq, Eq, Hash)]
+#[repr(transparent)]
 pub struct Section {
     handle: *mut BNSection,
 }
@@ -174,15 +175,18 @@ unsafe impl RefCountable for Section {
 impl CoreArrayProvider for Section {
     type Raw = *mut BNSection;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, Section>;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for Section {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeSectionList(raw, count);
     }
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Section::from_raw(*raw), context)
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        debug_assert!(!raw.is_null());
+        // SAFETY: `Section` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 

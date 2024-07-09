@@ -23,6 +23,7 @@ use crate::function::Function;
 use crate::rc::*;
 use crate::string::*;
 
+#[repr(transparent)]
 pub struct Tag {
     pub(crate) handle: *mut BNTag,
 }
@@ -82,15 +83,18 @@ impl ToOwned for Tag {
 impl CoreArrayProvider for Tag {
     type Raw = *mut BNTag;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, Self>;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for Tag {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTagList(raw, count)
     }
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self { handle: *raw }, &context)
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        debug_assert!(!raw.is_null());
+        // SAFETY: `Tag` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 
@@ -246,6 +250,7 @@ unsafe impl CoreArrayProviderInner for TagReference {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTagReferences(raw, count)
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Self::from_borrowed_raw(raw)
     }

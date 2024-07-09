@@ -75,18 +75,16 @@ unsafe impl<'a, C: 'a + BlockContext> CoreArrayProviderInner for Edge<'a, C> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeBasicBlockEdgeList(raw, count);
     }
+
     unsafe fn wrap_raw<'b>(raw: &'b Self::Raw, context: &'b Self::Context) -> Self::Wrapped<'b> {
-        let edge_target = Guard::new(
-            BasicBlock::from_raw(raw.target, context.orig_block.context.clone()),
-            raw,
-        );
-        let orig_block = Guard::new(
-            BasicBlock::from_raw(
-                context.orig_block.handle,
-                context.orig_block.context.clone(),
-            ),
-            raw,
-        );
+        let edge_target = Guard::new(BasicBlock::from_raw(
+            raw.target,
+            context.orig_block.context.clone(),
+        ));
+        let orig_block = Guard::new(BasicBlock::from_raw(
+            context.orig_block.handle,
+            context.orig_block.context.clone(),
+        ));
 
         let (source, target) = match context.dir {
             EdgeDirection::Incoming => (edge_target, orig_block),
@@ -112,7 +110,7 @@ pub trait BlockContext: Clone + Sync + Send + Sized {
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct BasicBlock<C: BlockContext> {
-    pub(crate) handle: *mut BNBasicBlock,
+    handle: *mut BNBasicBlock,
     context: C,
 }
 
@@ -297,14 +295,15 @@ unsafe impl<C: BlockContext> RefCountable for BasicBlock<C> {
 impl<C: BlockContext> CoreArrayProvider for BasicBlock<C> {
     type Raw = *mut BNBasicBlock;
     type Context = C;
-    type Wrapped<'a> = Guard<'a, BasicBlock<C>> where C: 'a;
+    type Wrapped<'a> = Guard<'a, Self> where C: 'a;
 }
 
 unsafe impl<C: BlockContext> CoreArrayProviderInner for BasicBlock<C> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeBasicBlockList(raw, count);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(BasicBlock::from_raw(*raw, context.clone()), context)
+        Guard::new(BasicBlock::from_raw(*raw, context.clone()))
     }
 }

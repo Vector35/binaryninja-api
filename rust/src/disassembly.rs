@@ -100,11 +100,7 @@ pub enum InstructionTextTokenContents {
 
 impl InstructionTextToken {
     pub(crate) unsafe fn from_raw(raw: &BNInstructionTextToken) -> &Self {
-        mem::transmute(raw)
-    }
-
-    pub(crate) fn into_raw(self) -> BNInstructionTextToken {
-        mem::ManuallyDrop::new(self).0
+        &*(raw as *const _ as *const Self)
     }
 
     pub fn new(text: &str, contents: InstructionTextTokenContents) -> Self {
@@ -274,27 +270,30 @@ impl CoreArrayProvider for InstructionTextToken {
     type Context = ();
     type Wrapped<'a> = &'a Self;
 }
+
 unsafe impl CoreArrayProviderInner for InstructionTextToken {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeInstructionText(raw, count)
     }
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        core::mem::transmute(raw)
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &Self::Context) -> Self::Wrapped<'a> {
+        Self::from_raw(raw)
     }
 }
 
 impl CoreArrayProvider for Array<InstructionTextToken> {
     type Raw = BNInstructionTextLine;
     type Context = ();
-    type Wrapped<'a> = mem::ManuallyDrop<Self>;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl CoreArrayProviderInner for Array<InstructionTextToken> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeInstructionTextLines(raw, count)
     }
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        mem::ManuallyDrop::new(Self::new(raw.tokens, raw.count, ()))
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &Self::Context) -> Self::Wrapped<'a> {
+        Guard::new(Self::new(raw.tokens, raw.count, ()))
     }
 }
 
@@ -381,11 +380,9 @@ impl From<Vec<InstructionTextToken>> for DisassemblyTextLine {
 
 impl From<&Vec<&str>> for DisassemblyTextLine {
     fn from(string_tokens: &Vec<&str>) -> Self {
-        let mut tokens: Box<[BNInstructionTextToken]> = string_tokens
+        let mut tokens: Box<[_]> = string_tokens
             .iter()
-            .map(|&token| {
-                InstructionTextToken::new(token, InstructionTextTokenContents::Text).into_raw()
-            })
+            .map(|&token| InstructionTextToken::new(token, InstructionTextTokenContents::Text))
             .collect();
 
         // let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() };  // Can't use for now...still a rust nighly feature
@@ -468,8 +465,9 @@ unsafe impl CoreArrayProviderInner for DisassemblyTextLine {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeDisassemblyTextLines(raw, count)
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        core::mem::transmute(raw)
+        &*(raw as *const _ as *const Self)
     }
 }
 

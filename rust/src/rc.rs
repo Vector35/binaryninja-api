@@ -18,7 +18,7 @@ use std::borrow::Borrow;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
-use std::mem;
+use std::mem::{self, ManuallyDrop};
 use std::ops::{Deref, DerefMut};
 use std::ptr;
 use std::slice;
@@ -130,24 +130,23 @@ impl<T: RefCountable + Hash> Hash for Ref<T> {
     }
 }
 
-// Guard provides access to a core-allocated resource whose
-// reference is held indirectly (e.g. a core-allocated array
-// of raw `*mut BNRawT`).
+// A wrapper around an owned `T` that ties it to a given lifetime 'a. Used for providing access to
+// a core-allocated resource whose reference is held indirectly, for example through a raw pointer
+// (e.g. an element of a core-allocated `Array`), such that `T` will never outlive the lifetime 'a
+// of the indirect reference.
 //
-// This wrapper is necessary because `binja-rs` wrappers around
-// core objects can be bigger than the raw pointer to the core
-// object. This lets us create the full wrapper object and ensure
-// that it does not outlive the core-allocated array (or similar)
-// that our object came from.
+// This wrapper is necessary for objects are not simple thin wrappers around core objects, and
+// instead contain additional metadata. As such, Guard can be thought of as a fat pointer even
+// though it owns its `T`, which is why it uses `ManuallyDrop` - to prevent double frees.
 pub struct Guard<'a, T> {
-    contents: T,
+    contents: ManuallyDrop<T>,
     _guard: PhantomData<&'a ()>,
 }
 
 impl<'a, T> Guard<'a, T> {
-    pub(crate) unsafe fn new<O: 'a>(contents: T, _owner: &O) -> Self {
+    pub(crate) unsafe fn new(contents: T) -> Self {
         Self {
-            contents,
+            contents: ManuallyDrop::new(contents),
             _guard: PhantomData,
         }
     }
@@ -276,74 +275,6 @@ impl<P: CoreArrayProviderInner> Drop for Array<P> {
         unsafe {
             P::free(self.contents, self.count, &self.context);
         }
-    }
-}
-
-#[allow(private_bounds)]
-pub struct ArrayGuard<P: CoreArrayProviderInner> {
-    contents: *mut P::Raw,
-    count: usize,
-    context: P::Context,
-}
-
-unsafe impl<P> Sync for ArrayGuard<P>
-where
-    P: CoreArrayProviderInner,
-    P::Context: Sync,
-{
-}
-unsafe impl<P> Send for ArrayGuard<P>
-where
-    P: CoreArrayProviderInner,
-    P::Context: Send,
-{
-}
-
-#[allow(private_bounds)]
-impl<P: CoreArrayProviderInner> ArrayGuard<P> {
-    pub(crate) unsafe fn new(raw: *mut P::Raw, count: usize, context: P::Context) -> Self {
-        Self {
-            contents: raw,
-            count,
-            context,
-        }
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.count
-    }
-
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.count == 0
-    }
-}
-
-#[allow(private_bounds)]
-impl<P: CoreArrayProviderInner> ArrayGuard<P> {
-    #[inline]
-    pub fn get(&self, index: usize) -> P::Wrapped<'_> {
-        unsafe {
-            let backing = slice::from_raw_parts(self.contents, self.count);
-            P::wrap_raw(&backing[index], &self.context)
-        }
-    }
-
-    pub fn iter(&self) -> ArrayIter<P> {
-        ArrayIter {
-            it: unsafe { slice::from_raw_parts(self.contents, self.count).iter() },
-            context: &self.context,
-        }
-    }
-}
-
-impl<'a, P: CoreArrayProviderInner> IntoIterator for &'a ArrayGuard<P> {
-    type Item = P::Wrapped<'a>;
-    type IntoIter = ArrayIter<'a, P>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
     }
 }
 

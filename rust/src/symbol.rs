@@ -215,6 +215,7 @@ impl SymbolBuilder {
 }
 
 #[derive(Eq)]
+#[repr(transparent)]
 pub struct Symbol {
     pub(crate) handle: *mut BNSymbol,
 }
@@ -222,10 +223,6 @@ pub struct Symbol {
 impl Symbol {
     pub(crate) unsafe fn ref_from_raw(raw: *mut BNSymbol) -> Ref<Self> {
         Ref::new(Self { handle: raw })
-    }
-
-    pub(crate) unsafe fn from_raw(raw: *mut BNSymbol) -> Self {
-        Self { handle: raw }
     }
 
     /// To create a new symbol, you need to create a symbol builder, customize that symbol, then add `SymbolBuilder::create` it into a `Ref<Symbol>`:
@@ -319,15 +316,18 @@ unsafe impl RefCountable for Symbol {
 impl CoreArrayProvider for Symbol {
     type Raw = *mut BNSymbol;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, Symbol>;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for Symbol {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeSymbolList(raw, count);
     }
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Symbol::from_raw(*raw), context)
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        debug_assert!(!raw.is_null());
+        // SAFETY: `Symbol` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 

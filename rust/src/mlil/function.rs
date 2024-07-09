@@ -682,11 +682,13 @@ impl CoreArrayProvider for ILReferenceSource {
     type Context = Ref<MediumLevelILFunction>;
     type Wrapped<'a> = Self;
 }
+
 unsafe impl CoreArrayProviderInner for ILReferenceSource {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeILReferences(raw, count)
     }
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &Self::Context) -> Self::Wrapped<'a> {
         Self::from_raw(*raw, context.to_owned())
     }
 }
@@ -718,7 +720,8 @@ unsafe impl CoreArrayProviderInner for VariableReferenceSource {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeVariableReferenceSourceList(raw, count)
     }
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &Self::Context) -> Self::Wrapped<'a> {
         Self {
             var: Variable::from_raw(raw.var),
             source: ILReferenceSource::from_raw(raw.source, context.to_owned()),

@@ -31,7 +31,7 @@ pub struct HighLevelILBlock {
 
 impl core::fmt::Debug for HighLevelILBlock {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "mlil_bb {:?}", self.function)
+        write!(f, "hlil_bb {:?}", self.function)
     }
 }
 

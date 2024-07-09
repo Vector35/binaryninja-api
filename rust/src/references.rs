@@ -56,15 +56,16 @@ impl<'a> CodeReference {
 impl CoreArrayProvider for CodeReference {
     type Raw = BNReferenceSource;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, CodeReference>;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl CoreArrayProviderInner for CodeReference {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeCodeReferences(raw, count)
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(CodeReference::new(raw), &())
+        Guard::new(CodeReference::new(raw))
     }
 }
 
@@ -73,13 +74,14 @@ unsafe impl CoreArrayProviderInner for CodeReference {
 impl CoreArrayProvider for DataReference {
     type Raw = u64;
     type Context = ();
-    type Wrapped<'a> = DataReference;
+    type Wrapped<'a> = Self;
 }
 
 unsafe impl CoreArrayProviderInner for DataReference {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeDataReferences(raw)
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         DataReference { address: *raw }
     }

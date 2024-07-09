@@ -8,7 +8,7 @@ use crate::metadata::Metadata;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::string::{BnStrCompatible, BnString};
 
-#[repr(C)]
+#[repr(transparent)]
 pub struct Project {
     handle: NonNull<BNProject>,
 }
@@ -16,11 +16,6 @@ pub struct Project {
 impl Project {
     pub(crate) unsafe fn from_raw(handle: NonNull<BNProject>) -> Self {
         Project { handle }
-    }
-
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNProject) -> &Self {
-        debug_assert!(!handle.is_null());
-        mem::transmute(handle)
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -770,7 +765,7 @@ impl Clone for Project {
 impl CoreArrayProvider for Project {
     type Raw = *mut BNProject;
     type Context = ();
-    type Wrapped<'a> = &'a Project;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for Project {
@@ -779,7 +774,9 @@ unsafe impl CoreArrayProviderInner for Project {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
+        debug_assert!(!raw.is_null());
+        // SAFETY: `Project` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 
@@ -819,11 +816,6 @@ pub struct ProjectFolder {
 impl ProjectFolder {
     pub(crate) unsafe fn from_raw(handle: NonNull<BNProjectFolder>) -> Self {
         Self { handle }
-    }
-
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNProjectFolder) -> &Self {
-        debug_assert!(!handle.is_null());
-        mem::transmute(handle)
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -949,7 +941,9 @@ unsafe impl CoreArrayProviderInner for ProjectFolder {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
+        debug_assert!(!raw.is_null());
+        // SAFETY: `ProjectFolder` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 
@@ -961,11 +955,6 @@ pub struct ProjectFile {
 impl ProjectFile {
     pub(crate) unsafe fn from_raw(handle: NonNull<BNProjectFile>) -> Self {
         Self { handle }
-    }
-
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNProjectFile) -> &Self {
-        debug_assert!(!handle.is_null());
-        mem::transmute(handle)
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -1082,7 +1071,9 @@ unsafe impl CoreArrayProviderInner for ProjectFile {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
+        debug_assert!(!raw.is_null());
+        // SAFETY: `ProjectFile` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 

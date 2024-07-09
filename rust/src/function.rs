@@ -123,6 +123,7 @@ impl BlockContext for NativeBlock {
 }
 
 #[derive(Eq)]
+#[repr(transparent)]
 pub struct Function {
     pub(crate) handle: *mut BNFunction,
 }
@@ -735,7 +736,7 @@ impl Function {
     }
 
     /// List of function variables: including name, variable and type
-    pub fn variables(&self) -> Array<(&str, Variable, &Type)> {
+    pub fn variables(&self) -> Array<NamedTypedVariable> {
         let mut count = 0;
         let vars = unsafe { BNGetFunctionVariables(self.handle, &mut count) };
         assert!(!vars.is_null());
@@ -2184,15 +2185,18 @@ unsafe impl RefCountable for Function {
 impl CoreArrayProvider for Function {
     type Raw = *mut BNFunction;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, Function>;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for Function {
-    unsafe fn free(raw: *mut *mut BNFunction, count: usize, _context: &()) {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeFunctionList(raw, count);
     }
-    unsafe fn wrap_raw<'a>(raw: &'a *mut BNFunction, context: &'a ()) -> Self::Wrapped<'a> {
-        Guard::new(Function { handle: *raw }, context)
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        debug_assert!(!raw.is_null());
+        // SAFETY: `Function` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 
@@ -2220,7 +2224,7 @@ impl PartialEq for Function {
 // AddressRange
 
 #[repr(transparent)]
-pub struct AddressRange(pub(crate) BNAddressRange);
+pub struct AddressRange(BNAddressRange);
 
 impl AddressRange {
     pub fn start(&self) -> u64 {
@@ -2235,15 +2239,17 @@ impl AddressRange {
 impl CoreArrayProvider for AddressRange {
     type Raw = BNAddressRange;
     type Context = ();
-    type Wrapped<'a> = &'a AddressRange;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for AddressRange {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeAddressRanges(raw);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        mem::transmute(raw)
+        // SAFETY: `AddressRange` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 
@@ -2268,15 +2274,17 @@ impl PerformanceInfo {
 impl CoreArrayProvider for PerformanceInfo {
     type Raw = BNPerformanceInfo;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, PerformanceInfo>;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for PerformanceInfo {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeAnalysisPerformanceInfo(raw, count);
     }
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self(*raw), context)
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        // SAFETY: `PerformanceInfo` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 
@@ -2301,13 +2309,14 @@ impl Comments {
 impl CoreArrayProvider for Comments {
     type Raw = u64;
     type Context = Ref<Function>;
-    type Wrapped<'a> = Comments;
+    type Wrapped<'a> = Self;
 }
 
 unsafe impl CoreArrayProviderInner for Comments {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeAddressList(raw);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, function: &'a Self::Context) -> Self::Wrapped<'a> {
         Comments {
             addr: *raw,

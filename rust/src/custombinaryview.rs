@@ -221,7 +221,8 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
 impl<T: BinaryViewTypeBase> BinaryViewTypeExt for T {}
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
-pub struct BinaryViewType(pub *mut BNBinaryViewType);
+#[repr(transparent)]
+pub struct BinaryViewType(*mut BNBinaryViewType);
 
 impl BinaryViewType {
     pub fn list_all() -> Array<BinaryViewType> {
@@ -289,15 +290,18 @@ impl BinaryViewTypeBase for BinaryViewType {
 impl CoreArrayProvider for BinaryViewType {
     type Raw = *mut BNBinaryViewType;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, BinaryViewType>;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for BinaryViewType {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeBinaryViewTypeList(raw);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(BinaryViewType(*raw), &())
+        debug_assert!(!raw.is_null());
+        // SAFETY: `BinaryViewType` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 

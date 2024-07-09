@@ -1,4 +1,4 @@
-use core::{ffi, mem, ptr};
+use std::{ffi, ptr};
 
 use crate::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
 use crate::function::Function;
@@ -72,11 +72,6 @@ impl Component {
 
     pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNComponent>) -> Self {
         Self { handle }
-    }
-
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNComponent) -> &Self {
-        assert!(!handle.is_null());
-        mem::transmute(handle)
     }
 
     pub fn guid(&self) -> BnString {
@@ -274,7 +269,8 @@ unsafe impl CoreArrayProviderInner for Component {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
+        debug_assert!(!raw.is_null());
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 

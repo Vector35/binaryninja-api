@@ -675,22 +675,20 @@ unsafe impl<A: Architecture> RefCountable for CallingConvention<A> {
 impl<A: Architecture> CoreArrayProvider for CallingConvention<A> {
     type Raw = *mut BNCallingConvention;
     type Context = A::Handle;
-    type Wrapped<'a> = Guard<'a, CallingConvention<A>>;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl<A: Architecture> CoreArrayProviderInner for CallingConvention<A> {
-    unsafe fn free(raw: *mut *mut BNCallingConvention, count: usize, _content: &Self::Context) {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _content: &Self::Context) {
         BNFreeCallingConventionList(raw, count);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(
-            CallingConvention {
-                handle: *raw,
-                arch_handle: context.clone(),
-                _arch: Default::default(),
-            },
-            context,
-        )
+        Guard::new(CallingConvention {
+            handle: *raw,
+            arch_handle: context.clone(),
+            _arch: Default::default(),
+        })
     }
 }
 

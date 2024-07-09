@@ -143,7 +143,7 @@ impl Database {
     pub fn globals(&self) -> HashMap<String, String> {
         self.global_keys()
             .iter()
-            .filter_map(|key| Some((key.to_string(), self.read_global(key)?.to_string())))
+            .filter_map(|key| Some((key.to_string(), self.read_global(key.as_str())?.to_string())))
             .collect()
     }
 

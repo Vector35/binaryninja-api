@@ -24,17 +24,12 @@ use crate::string::*;
 pub type Result<R> = result::Result<R, ()>;
 
 #[derive(PartialEq, Eq, Hash)]
+#[repr(transparent)]
 pub struct BackgroundTask {
-    pub(crate) handle: *mut BNBackgroundTask,
+    handle: *mut BNBackgroundTask,
 }
 
 impl BackgroundTask {
-    pub(crate) unsafe fn from_raw(handle: *mut BNBackgroundTask) -> Self {
-        debug_assert!(!handle.is_null());
-
-        Self { handle }
-    }
-
     pub fn new<S: BnStrCompatible>(initial_text: S, can_cancel: bool) -> Result<Ref<Self>> {
         let text = initial_text.into_bytes_with_nul();
 
@@ -104,15 +99,18 @@ unsafe impl RefCountable for BackgroundTask {
 impl CoreArrayProvider for BackgroundTask {
     type Raw = *mut BNBackgroundTask;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, BackgroundTask>;
+    type Wrapped<'a> = &'a Self;
 }
 
 unsafe impl CoreArrayProviderInner for BackgroundTask {
-    unsafe fn free(raw: *mut *mut BNBackgroundTask, count: usize, _context: &()) {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeBackgroundTaskList(raw, count);
     }
-    unsafe fn wrap_raw<'a>(raw: &'a *mut BNBackgroundTask, context: &'a ()) -> Self::Wrapped<'a> {
-        Guard::new(BackgroundTask::from_raw(*raw), context)
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        debug_assert!(!raw.is_null());
+        // SAFETY: `BackgroundTask` is repr(transparent)
+        unsafe { &*(raw as *const _ as *const Self) }
     }
 }
 

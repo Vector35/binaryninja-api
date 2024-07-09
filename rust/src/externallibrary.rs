@@ -124,7 +124,7 @@ impl ExternalLocation {
     pub fn source_symbol(&self) -> Symbol {
         let result = unsafe { BNExternalLocationGetSourceSymbol(self.as_raw()) };
         assert!(!result.is_null());
-        unsafe { Symbol::from_raw(result) }
+        Symbol { handle: result }
     }
 
     /// Get the ExternalLibrary that this ExternalLocation targets

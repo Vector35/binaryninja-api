@@ -597,7 +597,13 @@ entropy map to navigate to that location in your default view.
 File Info: The file info section contains some summary information for the file, each result can be clicked to copy
 it into your clipboard.
 
-### 3. Base Address Detection (BASE)
+### 3. Headers
+
+This section appears only in BinaryViews and the exact information depends on the view itself. PE headers
+are the most detailed and include such items as checksums, characterstics, and compiler strings. Addresses that
+existing in the virtual memory space of the file can be clicked to navigate to that location.
+
+### 4. Base Address Detection (BASE)
 
 ![BASE](../img/base.png "BASE Address Detection"){ width="800" }
 
@@ -625,12 +631,6 @@ address, otherwise the alignment would need to account for the header.
 |Upper Boundary|Highest address to end search for candidate base address|0xffffffffffffffff|
 |Points of Interest|Specifies types of points-of-interest to use for analysis (all, strings only, functions only)|All|
 |Max Pointers|Maximum amount of pointers to allow in each pointer cluster|0n128|
-
-### 4. Headers
-
-This section appears only in BinaryViews and the exact information depends on the view itself. PE headers
-are the most detailed and include such items as checksums, characterstics, and compiler strings. Addresses that
-existing in the virtual memory space of the file can be clicked to navigate to that location.
 
 ### 5. Libraries
 

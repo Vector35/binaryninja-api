@@ -2451,7 +2451,7 @@ uint32_t mips_decompose(
 		return result;
 	instruction->size = 4;
 	//look for peudoinstructions by disassembling the next instruction too
-	if ((flags & DECOMPOSE_FLAGS_PSEUDO_OP != 0) && size >= 8)
+	if ((flags & DECOMPOSE_FLAGS_PSEUDO_OP) && size >= 8)
 	{
 		if (endianBig == 1)
 			ins.value = bswap32(instructionValue[1]);

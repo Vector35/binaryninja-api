@@ -3634,6 +3634,12 @@ bool BinaryView::ConvertToNop(Architecture* arch, uint64_t addr)
 }
 
 
+bool BinaryView::ConvertToNop(Architecture* arch, uint64_t addr, uint64_t size)
+{
+	return BNConvertToNopWithSize(m_object, arch->GetObject(), addr, size);
+}
+
+
 bool BinaryView::AlwaysBranch(Architecture* arch, uint64_t addr)
 {
 	return BNAlwaysBranch(m_object, arch->GetObject(), addr);

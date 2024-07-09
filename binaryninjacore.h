@@ -3864,6 +3864,7 @@ extern "C"
 	    BNBinaryView* view, BNArchitecture* arch, uint64_t addr);
 
 	BINARYNINJACOREAPI bool BNConvertToNop(BNBinaryView* view, BNArchitecture* arch, uint64_t addr);
+	BINARYNINJACOREAPI bool BNConvertToNopWithSize(BNBinaryView* view, BNArchitecture* arch, uint64_t addr, uint64_t size);
 	BINARYNINJACOREAPI bool BNAlwaysBranch(BNBinaryView* view, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI bool BNInvertBranch(BNBinaryView* view, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI bool BNSkipAndReturnValue(

@@ -5819,6 +5819,15 @@ namespace BinaryNinja {
 		*/
 		bool ConvertToNop(Architecture* arch, uint64_t addr);
 
+		/*! Convert the range at the given address to a nop
+
+			\param arch Architecture of the instruction to convert
+			\param addr Address of the range to be patched
+			\param size Size of the range to be patched
+			\return Whether the patch was successful
+		*/
+		bool ConvertToNop(Architecture* arch, uint64_t addr, uint64_t size);
+
 		/*! Convert the conditional branch at the given address to always branch
 
 			\param arch Architecture of the instruction to convert

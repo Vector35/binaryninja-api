@@ -6625,15 +6625,18 @@ class BinaryView:
 			arch = self.arch
 		return core.BNIsSkipAndReturnValuePatchAvailable(self.handle, arch.handle, addr)
 
-	def convert_to_nop(self, addr: int, arch: Optional['architecture.Architecture'] = None) -> bool:
+	def convert_to_nop(self, addr: int, arch: Optional['architecture.Architecture'] = None, size: Optional[int] = None) -> bool:
 		"""
 		``convert_to_nop`` converts the instruction at virtual address ``addr`` to a nop of the provided architecture.
 
 		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary \
 		file must be saved in order to preserve the changes made.
 
+		.. note:: If a size is specified instruction length is not consulted.
+
 		:param int addr: virtual address of the instruction to convert to nops
 		:param Architecture arch: (optional) the architecture of the instructions if different from the default
+		:param Optional[int] size: size of the range to convert to nops
 		:return: True on success, False on failure.
 		:rtype: bool
 		:Example:
@@ -6661,7 +6664,9 @@ class BinaryView:
 			if self.arch is None:
 				raise Exception("Attempting to call can_assemble without an Architecture specified")
 			arch = self.arch
-		return core.BNConvertToNop(self.handle, arch.handle, addr)
+		if size is None:
+			return core.BNConvertToNop(self.handle, arch.handle, addr)
+		return core.BNConvertToNopWithSize(self.handle, arch.handle, addr, size)
 
 	def always_branch(self, addr: int, arch: Optional['architecture.Architecture'] = None) -> bool:
 		"""

@@ -27,6 +27,7 @@ use binaryninjacore_sys::{
     BNIsAnalysisChanged,
     BNIsBackedByDatabase,
     //BNSetFileMetadataNavigationHandler,
+    BNGetFileMetadataDatabase,
     BNIsFileModified,
     BNMarkFileModified,
     BNMarkFileSaved,
@@ -43,6 +44,7 @@ use binaryninjacore_sys::{
 use binaryninjacore_sys::{BNCreateDatabaseWithProgress, BNOpenExistingDatabaseWithProgress};
 
 use crate::binaryview::BinaryView;
+use crate::database::Database;
 
 use crate::rc::*;
 use crate::string::*;
@@ -282,6 +284,12 @@ impl FileMetadata {
         } else {
             Ok(unsafe { BinaryView::from_raw(view) })
         }
+    }
+
+    /// Get the current database
+    pub fn database(&self) -> Option<Database> {
+        let result = unsafe { BNGetFileMetadataDatabase(self.handle) };
+        ptr::NonNull::new(result).map(|handle| unsafe { Database::from_raw(handle) })
     }
 }
 

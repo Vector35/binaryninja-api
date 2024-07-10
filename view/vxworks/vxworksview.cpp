@@ -441,32 +441,65 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 			continue;
 		}
 
-		if (m_parentView->IsOffsetBackedByFile(entry.address - m_imageBase))
+		if (!m_parentView->IsOffsetBackedByFile(entry.address - m_imageBase))
+			continue;
+
+		NameSpace nameSpace = GetInternalNameSpace();
+		if (bnSymbolType == ExternalSymbol)
+			nameSpace = GetExternalNameSpace();
+
+		Ref<Type> typeRef = nullptr;
+		if (bnSymbolType == FunctionSymbol)
 		{
-			NameSpace nameSpace = GetInternalNameSpace();
-			if (bnSymbolType == ExternalSymbol)
-				nameSpace = GetExternalNameSpace();
-
-			if (bnSymbolType == FunctionSymbol)
-			{
-				auto func = AddFunctionForAnalysis(GetDefaultPlatform(), entry.address);
-				auto typeRef = GetDefaultPlatform()->GetFunctionByName(symbolName);
-				if (func && typeRef)
-					func->ApplyAutoDiscoveredType(typeRef);
-			}
-
-			if (bnSymbolType == DataSymbol)
-			{
-				auto typeRef = GetDefaultPlatform()->GetVariableByName(symbolName);
-				if (typeRef)
-					DefineDataVariable(entry.address, typeRef->WithConfidence(BN_FULL_CONFIDENCE));
-				else
-					DefineDataVariable(entry.address, Type::VoidType()->WithConfidence(0));
-			}
-
-			DefineAutoSymbol(new Symbol(bnSymbolType, symbolName, entry.address, LocalBinding, nameSpace));
-			AssignSymbolToSection(sections, bnSymbolType, vxSymbolType, entry.address);
+			auto func = AddFunctionForAnalysis(GetDefaultPlatform(), entry.address);
+			typeRef = GetDefaultPlatform()->GetFunctionByName(symbolName);
+			if (func && typeRef)
+				func->ApplyAutoDiscoveredType(typeRef);
 		}
+
+		if (bnSymbolType == DataSymbol)
+		{
+			typeRef = GetDefaultPlatform()->GetVariableByName(symbolName);
+			if (typeRef)
+				DefineDataVariable(entry.address, typeRef->WithConfidence(BN_FULL_CONFIDENCE));
+			else
+				DefineDataVariable(entry.address, Type::VoidType()->WithConfidence(0));
+		}
+
+		// If name does not start with alphabetic char or symbol, prepend an underscore
+		string rawName = symbolName;
+		if (!(((symbolName[0] >= 'A') && (symbolName[0] <= 'Z')) || ((symbolName[0] >= 'a') &&
+			(symbolName[0] <= 'z')) || (symbolName[0] == '_') || (symbolName[0] == '?') || (symbolName[0] == '$') ||
+			(symbolName[0] == '@')))
+			rawName = "_" + symbolName;
+
+		string shortName = rawName;
+		string fullName = rawName;
+		QualifiedName varName;
+		if (IsGNU3MangledString(rawName))
+		{
+			Ref<Type> demangledType;
+			if (DemangleGNU3(m_arch, rawName, demangledType, varName))
+			{
+				shortName = varName.GetString();
+				fullName = shortName;
+				if (demangledType)
+				{
+					fullName += demangledType->GetStringAfterName();
+					if (!typeRef)
+						typeRef = demangledType;
+				}
+			}
+			else if (DemangleLLVM(rawName, varName))
+			{
+				shortName = varName.GetString();
+				fullName = shortName;
+			}
+		}
+
+		DefineAutoSymbol(new Symbol(bnSymbolType, shortName, fullName, rawName,
+			entry.address, LocalBinding, nameSpace));
+		AssignSymbolToSection(sections, bnSymbolType, vxSymbolType, entry.address);
 	}
 
 	// Build section info from address ranges of symbols and their types
@@ -670,9 +703,10 @@ Ref<BinaryView> VxWorksViewType::Parse(BinaryView* data)
 
 bool VxWorksViewType::IsTypeValidForData(BinaryView* data)
 {
+	// Every VxWorks image I've seen has "VxWorks" and "Wind River Systems, Inc." (in copyright strings)
 	std::stringstream ss;
 	ss << "{"
-		"\"pattern\":\"VxWorks\","
+		"\"pattern\":\"VxWorks\\u0000|Wind River Systems, Inc.\","
 		"\"start\":0,"
 		"\"end\":" << data->GetLength()-1 << ","
 		"\"raw\":false,"
@@ -681,17 +715,27 @@ bool VxWorksViewType::IsTypeValidForData(BinaryView* data)
 		"\"align\":1"
 	"}";
 
-	bool isValid = false;;
-	auto StringSearchCallback = [&isValid](size_t index, const DataBuffer& dataBuffer) -> bool
+	bool hasVxWorksString = false;
+	bool hasWindRiverString = false;
+	auto StringSearchCallback = [&hasVxWorksString, &hasWindRiverString](size_t index, const DataBuffer& dataBuffer) -> bool
 	{
-		isValid = true;
+		auto data = dataBuffer.GetData();
+		if (!strcmp((const char *)data, "VxWorks"))
+			hasVxWorksString = true;
+		else if (!strcmp((const char *)data, "Wind River Systems, Inc."))
+			hasWindRiverString = true;
 		return true;
 	};
 
 	if (!data->Search(string(ss.str()), StringSearchCallback))
 		m_logger->LogWarn("Error while searching for VxWorks signatures in raw view");
 
-	return isValid;
+	// If we don't find VxWorks-related strings, bail before scanning
+	if (!hasVxWorksString || !hasWindRiverString)
+		return false;
+
+	// TODO: scan for system table (requires rework of VxWorksView::FindSymbolTable)
+	return true;
 }
 
 

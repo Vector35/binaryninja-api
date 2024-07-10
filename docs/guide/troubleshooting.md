@@ -239,6 +239,17 @@ With the addition of [projects](../guide/projects.md) and [type archives](../gui
 1. Re-run the [`linux-setup.sh`](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/linux-setup.sh) script. The appropriate copy is available wherever you installed Binary Ninja inside the `scripts/` subfolder.
 
 
+## Working with Large or Complex Binaries
+
+By default, Binary Ninja does full analysis of the binary and decompiles every function. On large binaries (or binaries that are complex due to e.g. heavy obfuscation), this might not be desirable due to how long it will take and/or how much memory it will use. There are a few settings available that you should look into tweaking to make this a better experience:
+
+* Making `analysis.limits.cacheSize` smaller can help bring down memory utilization by limiting the number of functions Binary Ninja caches analysis for.
+* Changing `analysis.mode` to an option less than `full` will prevent Binary Ninja from doing full decompilation for every function.
+* Turning on `analysis.suppressNewAutoFunctionAnalysis` will prevent new functions from being analyzed at all until they are accessed.
+
+Other [analysis settings](settings.md#all-settings) can also help. Check the descriptions to see what they do.
+
+
 ## Collaboration Issues
 
 !!! note

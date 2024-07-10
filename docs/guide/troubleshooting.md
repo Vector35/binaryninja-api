@@ -1,11 +1,9 @@
 # Troubleshooting
 
-## Basics
-
- - Have you searched [known issues]?
- - Have you tried rebooting? (Kidding!)
- - Did you read all the items on this page?
- - Then you should contact [support]!
+- Have you searched [known issues]?
+- Have you tried rebooting? (Kidding!)
+- Did you read all the items on this page?
+- Then you should contact [support]!
 
 ## Bug Reproduction
 Running Binary Ninja with debug logging will make your bug report more useful.
@@ -21,6 +19,7 @@ Alternatively, it might be easier to save debug logs to a file instead:
 ```
 
 (note that both long and short-form of the command-line arguments are demonstrated in the above examples)
+
 
 ## Troubleshooting Plugins
 
@@ -56,7 +55,15 @@ Binary Ninja will refuse to run as root on Linux and macOS platforms. You can wo
 
 ## Database Issues
 
- - BNDBs may grow in size after repeated saving/loading. To shrink the size of your database, use the `File` / `Save analysis database with options` menu and select one or both of the checkboxes.
+### Cannot Save or Sync
+
+Binary Ninja currently uses SQLite for its analysis databases (`.bndb`), projects (`.bnpr`), and type archives (`.bnta`). This means it is only able to have a single instance of these open at any time.
+
+The message `Error while saving database snapshot: database is locked` means multiple copies are open at the same time. All instances will need to be closed and a new one opened to allow saving again (this includes syncing in Enterprise).
+
+### Large File Size
+
+Analysis databases (`.bndb`) may grow in size after repeated saving/loading due to the accumulation of snapshots, undo actions, and other stored history. You can shrink the size of your database by using `File/Save analysis database with options` menu and selecting one or both of the checkboxes.
 
 ## Platforms
 
@@ -173,7 +180,7 @@ stdenv.mkDerivation rec {
 }
 ```
 
-[known issues]: https://github.com/Vector35/binaryninja-api/issues?q=is%3Aissue
+[known issues]: https://github.com/Vector35/binaryninja-api/issues
 [libcurl-compat]: https://www.archlinux.org/packages/community/x86_64/libcurl-compat/
 [archrepo]: https://wiki.archlinux.org/index.php/Official_repositories
 [recover]: https://binary.ninja/recover.html
@@ -230,3 +237,24 @@ With the addition of [projects](../guide/projects.md) and [type archives](../gui
 ### Linux file associations
 
 1. Re-run the [`linux-setup.sh`](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/linux-setup.sh) script. The appropriate copy is available wherever you installed Binary Ninja inside the `scripts/` subfolder.
+
+
+## Collaboration Issues
+
+!!! note
+    This section only applies to the `Enterprise` edition of Binary Ninja.
+
+### Cannot Connect to Server
+There are a number of reasons why you might not be able to connect to a server, including:
+
+* The server entered doesn't have `https://` on it (this usually manifests as `Connecting to server failed: builder error: relative URL without a base`)
+* The server entered doesn't have the correct port (this usually manifests as `TCP connect error: Connection refused`)
+* The server is not accessible on this network (this usually also manifests as `TCP connect error: Connection refused`)
+* Your host has a significant time difference from the server (this usually manifests as certificate errors)
+* DNS cannot resolve the host that was entered for the server
+
+
+### Cannot Check Out License
+The message `Enterprise Server failed loading metadata` means that the Enterprise server, after connecting, did not provide your client with metadata required to check out a new license. The most common cause of this error is having invalid cached credentials that leave you in a partially logged-in state.
+
+The easiest way to fix this is to close Binary Ninja and move or remove the `keychain` folder that is found in your [user folder](../guide/index.md#user-folder).

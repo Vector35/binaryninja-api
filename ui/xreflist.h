@@ -328,7 +328,7 @@ class BINARYNINJAUIAPI CrossReferenceTreeModel : public QAbstractItemModel
 	ViewFrame* getView() const { return m_view; }
 	virtual void updateMaxUIItems(size_t value) { m_maxUIItems = value; }
 	size_t getMaxUIItems() const { return m_maxUIItems; }
-	void setGraphType(BNFunctionGraphType type) { m_graphType = type; }
+	void setGraphType(BNFunctionGraphType type);
 	void requestAdvancedAnalysis();
 
  Q_SIGNALS:
@@ -393,7 +393,7 @@ class BINARYNINJAUIAPI CrossReferenceTableModel : public QAbstractTableModel
 	ViewFrame* getView() const { return m_view; }
 	virtual void updateMaxUIItems(size_t value) { m_maxUIItems = value; }
 	size_t getMaxUIItems() const { return m_maxUIItems; }
-	void setGraphType(BNFunctionGraphType type) { m_graphType = type; }
+	void setGraphType(BNFunctionGraphType type);
 	void requestAdvancedAnalysis();
  Q_SIGNALS:
 	void needRepaint();

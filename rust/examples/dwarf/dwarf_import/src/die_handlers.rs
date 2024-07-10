@@ -139,11 +139,10 @@ pub(crate) fn handle_typedef(
     //   DW_AT_name
     //   *DW_AT_type
     //   * = Optional
-
     // This will fail in the case where we have a typedef to a type that doesn't exist (failed to parse, incomplete, etc)
     if let Some(entry_type_offset) = entry_type {
         if let Some(t) = debug_info_builder.get_type(entry_type_offset) {
-            return (Some(t.get_type()), typedef_name != t.get_name());
+            return (Some(Type::named_type_from_type(t.get_name(), &t.get_type())), typedef_name != t.get_name());
         }
     }
 

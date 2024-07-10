@@ -15,14 +15,7 @@
 use crate::helpers::{get_uid, resolve_specification, DieReference};
 
 use binaryninja::{
-    binaryview::{BinaryView, BinaryViewBase, BinaryViewExt},
-    debuginfo::{DebugFunctionInfo, DebugInfo},
-    platform::Platform,
-    rc::*,
-    symbol::SymbolType,
-    templatesimplifier::simplify_str_to_fqn,
-    types::{Conf, FunctionParameter, NamedTypedVariable, Type, Variable},
-    binaryninjacore_sys::BNVariableSourceType,
+    binaryninjacore_sys::BNVariableSourceType, binaryview::{BinaryView, BinaryViewBase, BinaryViewExt}, debuginfo::{DebugFunctionInfo, DebugInfo}, platform::Platform, rc::*, symbol::SymbolType, templatesimplifier::simplify_str_to_fqn, types::{Conf, FunctionParameter, NamedTypedVariable, Type, TypeClass, Variable}
 };
 
 use gimli::{DebuggingInformationEntry, Dwarf, Reader, Unit};
@@ -371,7 +364,18 @@ impl DebugInfoBuilder {
 
         // Either get the known type or use a 0 confidence void type so we at least get the name applied
         let t = match type_uid {
-            Some(uid) => Conf::new(self.get_type(uid).unwrap().get_type(), 128),
+            Some(uid) => {
+                let debug_type = self.get_type(uid).unwrap();
+                let t = debug_type.get_type();
+                // If this is a named type reference, we need to wrap it here because otherwise we end up passing the target type instead
+                let final_type = match t.type_class() {
+                    TypeClass::NamedTypeReferenceClass => {
+                        Type::named_type_from_type(debug_type.get_name(), &t)
+                    },
+                    _ => t
+                };
+                Conf::new(final_type, 128)
+            },
             None => Conf::new(Type::void(), 0)
         };
         let function = &mut self.functions[function_index];

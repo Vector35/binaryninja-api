@@ -143,17 +143,16 @@ impl Database {
     pub fn globals(&self) -> HashMap<String, String> {
         self.global_keys()
             .iter()
-            .map(|key| (key.to_string(), self.read_global(key).to_string()))
+            .filter_map(|key| Some((key.to_string(), self.read_global(key)?.to_string())))
             .collect()
     }
 
     /// Get a specific global by key
-    pub fn read_global<S: BnStrCompatible>(&self, key: S) -> BnString {
+    pub fn read_global<S: BnStrCompatible>(&self, key: S) -> Option<BnString> {
         let key_raw = key.into_bytes_with_nul();
         let key_ptr = key_raw.as_ref().as_ptr() as *const ffi::c_char;
         let result = unsafe { BNReadDatabaseGlobal(self.as_raw(), key_ptr) };
-        assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { ptr::NonNull::new(result).map(|_| BnString::from_raw(result)) }
     }
 
     /// Write a global into the database
@@ -166,12 +165,11 @@ impl Database {
     }
 
     /// Get a specific global by key, as a binary buffer
-    pub fn read_global_data<S: BnStrCompatible>(&self, key: S) -> DataBuffer {
+    pub fn read_global_data<S: BnStrCompatible>(&self, key: S) -> Option<DataBuffer> {
         let key_raw = key.into_bytes_with_nul();
         let key_ptr = key_raw.as_ref().as_ptr() as *const ffi::c_char;
         let result = unsafe { BNReadDatabaseGlobalData(self.as_raw(), key_ptr) };
-        assert!(!result.is_null());
-        DataBuffer::from_raw(result)
+        ptr::NonNull::new(result).map(|_| DataBuffer::from_raw(result))
     }
 
     /// Write a binary buffer into a global in the database
@@ -438,12 +436,11 @@ impl KeyValueStore {
     }
 
     /// Get the value for a single key
-    pub fn value<S: BnStrCompatible>(&self, key: S) -> DataBuffer {
+    pub fn value<S: BnStrCompatible>(&self, key: S) -> Option<DataBuffer> {
         let key_raw = key.into_bytes_with_nul();
         let key_ptr = key_raw.as_ref().as_ptr() as *const ffi::c_char;
         let result = unsafe { BNGetKeyValueStoreBuffer(self.as_raw(), key_ptr) };
-        assert!(!result.is_null());
-        DataBuffer::from_raw(result)
+        ptr::NonNull::new(result).map(|_| DataBuffer::from_raw(result))
     }
 
     /// Set the value for a single key

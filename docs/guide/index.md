@@ -107,22 +107,34 @@ You can load files in many ways:
 
 There are five menu items that can be used to save some combination of a raw file or a file's analysis information. Analysis information is saved into files that end in `.bndb` and have the same prefix as the original file. The default behavior for each of the "save" menu choices is described below:
 
-1. "Save" - This menu is the only one bound to a hotkey by default and it is intended to be the "do what I probably want" option.
+### 1. Save
+
+This menu is the only one bound to a hotkey by default and it is intended to be the "do what I probably want" option.
+
     - If you have edited the contents of a file and have not yet confirmed the file name to save over, this will ask you to save the file contents and prompt for a file name (check the save dialog title text to confirm this).
     - If you have edited the file contents and _have_ previously specified the file name, this option will save those changes to that file without a prompt.
     - If you have not edited the contents of the file but have added any analysis information (created functions, comments, changed names types, etc), you will be asked for the name of the `.bndb` analysis database if one does not already exist.
     - If an existing analysis database is currently being opened or previously saved, the existing database will be saved without a prompt.
     - Finally, if you have changed both file contents and analysis information, you'll be prompted as to which you wish to save.
 
-2. "Save As" - Will prompt to save the analysis database or just the file contents.
+### 2. Save As
+
+"Save As" Will prompt to save the analysis database or just the file contents.
+
     - If you choose to save the analysis database, it behaves similarly to "Save" above, except for the cases that save without prompt. In those cases, you will _always_ be prompted for a filename.
     - If you choose to save the file contents only, you will be prompted for a filename to which to save the current contents of the binary view, including any modifications.
 
-3. "Save All" - Used to save multiple tabs worth of analysis data only. Does not save file contents.
+### 3. Save All
 
-4. "Save Analysis Database" - Will prompt to select a database to save analysis information if none is currently selected and in use, and will save without a prompt if one has already been selected.
+"Save All" is used to save multiple tabs worth of analysis data only. Does not save file contents.
 
-5. "Save Analysis Database With Options" - Allows for saving a `.bndb` without additional undo information, or by cleaning up some internal snapshot information to decrease the file size.
+### 4. Save Analysis Database
+
+"Save Analysis Database" will prompt to select a database to save analysis information if none is currently selected and in use, and will save without a prompt if one has already been selected.
+
+### 5. Save Analysis Database With Options
+
+This menu allows for saving a `.bndb` without additional undo information, or by cleaning up some internal snapshot information to decrease the file size.
 
 ![save with options](../img/save-with-options.png "Save With Options"){ width="600" }
 
@@ -692,8 +704,14 @@ Linear view is commonly used for identifying and adding type information for unk
 
 The “Edit Function Properties” dialog provides the ability to easily configure some of a function’s more advanced properties. It can be opened via the context menu when a function is focused in the graph or linear views, or via the command palette. An overview of the UI is as follows:
 
-0. **Function prototype.** The function’s prototype. If the prototype is too long to fit inside the window, a scroll bar will appear.
-1. **Function info.** A list of conditionally-shown tags offering information about the function. Possible tags are as follows:
+### 1. Function Prototype
+
+The function prototype section contains the function’s prototype. If the prototype is too long to fit inside the window, a scroll bar will appear.
+
+### 2. Function Info
+
+This section contains a list of conditionally-shown tags offering information about the function. Possible tags are as follows:
+
     - **Function architecture/platform**: The function's architecture/platform (e.g. `windows-x86_64`)
     - **Analysis skipped (too large)**: Analysis was skipped for this function because it was too large ([`analysis.limits.maxFunctionSize`](settings.md#analysis.limits.maxFunctionSize))
     - **Analysis timed out**: Analysis for this function was skipped because it exceeded the maximum allowed time ([`analysis.limits.maxFunctionAnalysisTime`](settings.md#analysis.limits.maxFunctionAnalysisTime))
@@ -703,15 +721,42 @@ The “Edit Function Properties” dialog provides the ability to easily configu
     - **Intermediate analysis only**: This function only received intermediate analysis ([`analysis.mode`](settings.md#analysis.mode) was 'intermediate')
     - **Unresolved stack usage**: The function has unresolved stack usage
     - **GP = 0xABCD1234**: The global pointer value is 0xABCD1234
-1. **Calling convention.** The calling convention this function uses. All calling conventions for the function’s architecture are available as choices.
-1. **Stack adjustment.** How many _extra_ bytes does this function remove from the stack upon return?
-1. **Has variable arguments.** Does this function accept a variable number of arguments?
-1. **Can return.** Functions that cannot return will halt disassembly on branches where they are called
-1. **Pure.** Functions that are pure are assumed to have no side effects and may be inlined if their return value is trivial
-1. **Inline during analysis.** Causes the function to be [inlined](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.inline_during_analysis) during analysis.
-1. **Clobbered registers.** The list of registers that this function clobbers; individual registers can be checked or unchecked.
-1. **Return registers.** The list of registers that this function returns data in; individual registers can be checked or unchecked.
-1. **Register stack adjustments.** A table containing a row for each register stack (e.g. x87) in the architecture, with the ability to adjust how many registers are removed from each stack when the function returns.
+
+### 3. Calling Convention
+
+This section shows the calling convention this function uses. All calling conventions for the function’s architecture are available as choices.
+
+### 4. Stack Adjustment
+
+The stack adjustment shows how many _extra_ bytes this function removes from the stack upon return.
+
+### 5. Has Variable Arguments
+
+This toggle indicates whether the function accepts a variable number of arguments
+
+### 6. Can Return
+
+This toggle indicates whether the function returns. If it cannot, Binary Ninja will halt disassembly on branches where the function is called.
+
+### 7. Pure
+
+Pure functions are assumed to have no side effects and may be inlined if their return value is trivial.
+
+### 8. Inline During Analysis
+
+When Inline During Analysis is checked, it causes the function to be [inlined](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.inline_during_analysis) during analysis.
+
+### 9. Clobbered Registers
+
+This section contains the list of registers that this function clobbers; individual registers can be checked or unchecked.
+
+### 10. Return Registers
+
+Return registers shows the list of registers that this function returns data in; individual registers can be checked or unchecked.
+
+### 11. Register Stack Adjustments
+
+This element is a table containing a row for each register stack (e.g. x87) in the architecture, with the ability to adjust how many registers are removed from each stack when the function returns.
 
 ## High Level IL
 

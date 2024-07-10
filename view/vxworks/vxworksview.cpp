@@ -384,7 +384,6 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 	};
 
 	size_t badSymbols = 0;
-	NameSpace nameSpace = GetInternalNameSpace();
 	for (const auto& entry : m_symbols)
 	{
 		reader->Seek(entry.name - m_imageBase);
@@ -444,16 +443,29 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 
 		if (m_parentView->IsOffsetBackedByFile(entry.address - m_imageBase))
 		{
-			AssignSymbolToSection(sections, bnSymbolType, vxSymbolType, entry.address);
-			auto symbol = new Symbol(bnSymbolType, symbolName, entry.address, GlobalBinding, nameSpace);
-			Ref<Type> type = nullptr;
-			if (bnSymbolType == FunctionSymbol)
-				type = m_platform->GetFunctionByName(symbolName);
-			else if (bnSymbolType == DataSymbol)
-				type = m_platform->GetTypeByName(symbolName);
+			NameSpace nameSpace = GetInternalNameSpace();
+			if (bnSymbolType == ExternalSymbol)
+				nameSpace = GetExternalNameSpace();
 
-			// TODO: not sure why the type is not being applied here
-			DefineAutoSymbolAndVariableOrFunction(m_platform, symbol, type);
+			if (bnSymbolType == FunctionSymbol)
+			{
+				auto func = AddFunctionForAnalysis(GetDefaultPlatform(), entry.address);
+				auto typeRef = GetDefaultPlatform()->GetFunctionByName(symbolName);
+				if (func && typeRef)
+					func->ApplyAutoDiscoveredType(typeRef);
+			}
+
+			if (bnSymbolType == DataSymbol)
+			{
+				auto typeRef = GetDefaultPlatform()->GetVariableByName(symbolName);
+				if (typeRef)
+					DefineDataVariable(entry.address, typeRef->WithConfidence(BN_FULL_CONFIDENCE));
+				else
+					DefineDataVariable(entry.address, Type::VoidType()->WithConfidence(0));
+			}
+
+			DefineAutoSymbol(new Symbol(bnSymbolType, symbolName, entry.address, LocalBinding, nameSpace));
+			AssignSymbolToSection(sections, bnSymbolType, vxSymbolType, entry.address);
 		}
 	}
 
@@ -575,19 +587,23 @@ bool VxWorksView::Init()
 
 		AddAutoSegment(m_imageBase, m_parentView->GetLength(), 0, m_parentView->GetLength(),
 			SegmentReadable | SegmentWritable | SegmentExecutable);
+		AddSections();
+		AddEntryPointForAnalysis(m_platform, m_entryPoint);
 
 		if (m_hasSymbolTable)
 		{
-			if (m_determinedImageBase != m_imageBase)
-				m_logger->LogWarn("VxWorks image base overriden by user. Not applying symbols...");
-			else
-				ProcessSymbolTable(&reader);
-
 			DefineSymbolTableDataVariable();
+			if (m_determinedImageBase != m_imageBase)
+			{
+				m_logger->LogWarn("VxWorks image base overriden by user. Not applying symbols...");
+			}
+			else
+			{
+				ProcessSymbolTable(&reader);
+				EndBulkModifySymbols();
+			}
 		}
 
-		AddSections();
-		AddEntryPointForAnalysis(m_platform, m_entryPoint);
 		return true;
 	}
 	catch (std::exception& e)

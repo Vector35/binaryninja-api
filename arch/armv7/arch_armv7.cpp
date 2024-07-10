@@ -2263,21 +2263,38 @@ public:
 		uint32_t* dest32 = (uint32_t*)dest;
 
 		auto swap = [&arch](uint32_t x) { return (arch->GetEndianness() == LittleEndian)? x : bswap32(x); };
+		auto ThumbBit = [view, sym]() -> int {
+			if (sym && sym->GetType() == FunctionSymbol)
+			{
+				for (auto& function : view->GetAnalysisFunctionsForAddress(sym->GetAddress()))
+				{
+					if (function->GetArchitecture()->GetName() == "thumb2")
+						return 1;
+				}
+			}
+			return 0;
+		};
 		switch (info.nativeType)
 		{
 			case R_ARM_COPY:
+				dest32[0] = swap(target);
+				break;
 			case R_ARM_GLOB_DAT:
 			case R_ARM_JUMP_SLOT:
+				dest32[0] = swap(target | ThumbBit());
+				break;
 			case R_ARM_BASE_PREL:
 			case R_ARM_GOT_BREL:
 				dest32[0] = swap(target);
 				break;
 			case R_ARM_RELATIVE:
-			case R_ARM_ABS32:
 				dest32[0] = swap(swap(dest32[0]) + target);
 				break;
+			case R_ARM_ABS32:
+				dest32[0] = swap(swap(dest32[0]) + target | ThumbBit());
+				break;
 			case R_ARM_REL32:
-				dest32[0] = swap((uint32_t)((target + (info.implicitAddend ? swap(dest32[0]) : info.addend)) - reloc->GetAddress()));
+				dest32[0] = swap((uint32_t)((target + (info.implicitAddend ? swap(dest32[0]) : info.addend) | ThumbBit() ) - reloc->GetAddress()));
 				break;
 			case R_ARM_CALL:
 			{

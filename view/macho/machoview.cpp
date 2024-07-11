@@ -1838,8 +1838,6 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	BinaryReader virtualReader(this);
 	virtualReader.SetEndianness(m_endian);
 
-	Ref<Platform> platform = m_plat ? m_plat : g_machoViewType->GetPlatform(0, m_arch);
-
 	bool parseObjCStructs = true;
 	bool parseCFStrings = true;
 	if (settings && settings->Contains("loader.macho.processObjectiveC"))
@@ -2025,7 +2023,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	{
 		m_logger->LogDebug("Parsing function starts\n");
 		if (header.functionStartsPresent)
-			ParseFunctionStarts(platform, header.textBase, header.functionStarts);
+			ParseFunctionStarts(GetDefaultPlatform(), header.textBase, header.functionStarts);
 	}
 
 	BeginBulkModifySymbols();

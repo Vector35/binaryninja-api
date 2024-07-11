@@ -1,6 +1,6 @@
+use std::ffi;
 use std::ptr::{null_mut, NonNull};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use std::{ffi, mem};
 
 use binaryninjacore_sys::*;
 
@@ -20,7 +20,7 @@ impl Project {
 
     pub(crate) unsafe fn ref_from_raw(handle: &*mut BNProject) -> &Self {
         debug_assert!(!handle.is_null());
-        mem::transmute(handle)
+        &*(handle as *const _ as *const Self)
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -823,7 +823,7 @@ impl ProjectFolder {
 
     pub(crate) unsafe fn ref_from_raw(handle: &*mut BNProjectFolder) -> &Self {
         debug_assert!(!handle.is_null());
-        mem::transmute(handle)
+        &*(handle as *const _ as *const Self)
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -965,7 +965,7 @@ impl ProjectFile {
 
     pub(crate) unsafe fn ref_from_raw(handle: &*mut BNProjectFile) -> &Self {
         debug_assert!(!handle.is_null());
-        mem::transmute(handle)
+        &*(handle as *const _ as *const Self)
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -1107,7 +1107,7 @@ unsafe extern "C" fn cb_progress_func<F: FnMut(usize, usize) -> bool>(
     if ctxt.is_null() {
         return true;
     }
-    let closure: &mut F = mem::transmute(ctxt);
+    let closure = &mut *(ctxt as *mut F);
     closure(progress, total)
 }
 

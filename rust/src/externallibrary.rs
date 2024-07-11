@@ -1,4 +1,4 @@
-use core::{ffi, mem, ptr};
+use core::{ffi, ptr};
 
 use binaryninjacore_sys::*;
 
@@ -35,7 +35,7 @@ impl ExternalLibrary {
 
     pub(crate) unsafe fn ref_from_raw(handle: &*mut BNExternalLibrary) -> &Self {
         assert!(!handle.is_null());
-        mem::transmute(handle)
+        &*(handle as *const _ as *const Self)
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -60,7 +60,7 @@ impl ExternalLibrary {
     /// Set the file backing this external library
     pub fn set_backing_file(&self, file: Option<&ProjectFile>) {
         let file_handle = file
-            .map(|x| unsafe {x.as_raw() as *mut _})
+            .map(|x| unsafe { x.as_raw() as *mut _ })
             .unwrap_or(ptr::null_mut());
         unsafe { BNExternalLibrarySetBackingFile(self.as_raw(), file_handle) }
     }
@@ -112,7 +112,7 @@ impl ExternalLocation {
 
     pub(crate) unsafe fn ref_from_raw(handle: &*mut BNExternalLocation) -> &Self {
         assert!(!handle.is_null());
-        mem::transmute(handle)
+        &*(handle as *const _ as *const Self)
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -137,7 +137,7 @@ impl ExternalLocation {
     /// Set the ExternalLibrary that this ExternalLocation targets
     pub fn set_external_library(&self, lib: Option<&ExternalLibrary>) {
         let lib_handle = lib
-            .map(|x| unsafe {x.as_raw() as *mut _})
+            .map(|x| unsafe { x.as_raw() as *mut _ })
             .unwrap_or(ptr::null_mut());
         unsafe { BNExternalLocationSetExternalLibrary(self.as_raw(), lib_handle) }
     }
@@ -183,12 +183,7 @@ impl ExternalLocation {
         let symbol = symbol
             .map(|x| x.into_bytes_with_nul().as_ref().as_ptr() as *const ffi::c_char)
             .unwrap_or(ptr::null_mut());
-        unsafe {
-            BNExternalLocationSetTargetSymbol(
-                self.as_raw(),
-                symbol,
-            )
-        }
+        unsafe { BNExternalLocationSetTargetSymbol(self.as_raw(), symbol) }
     }
 }
 

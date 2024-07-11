@@ -1,4 +1,4 @@
-use crate::rc::{Array, CoreArrayProvider, Guard, CoreArrayProviderInner, Ref, RefCountable};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::settings::Settings;
 use crate::string::{BnStrCompatible, BnString};
 use binaryninjacore_sys::*;

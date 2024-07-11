@@ -1,4 +1,4 @@
-use core::{ffi, mem, ptr};
+use core::{ffi, ptr};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use binaryninjacore_sys::*;
@@ -19,7 +19,7 @@ pub struct UpdateChannel {
 
 impl UpdateChannel {
     pub(crate) unsafe fn ref_from_raw(handle: &BNUpdateChannel) -> &Self {
-        mem::transmute(handle)
+        &*(handle as *const _ as *const Self)
     }
 
     pub fn all() -> Result<Array<UpdateChannel>, BnString> {
@@ -190,7 +190,7 @@ pub struct UpdateVersion {
 
 impl UpdateVersion {
     pub(crate) unsafe fn ref_from_raw(handle: &BNUpdateVersion) -> &Self {
-        mem::transmute(handle)
+        &*(handle as *const _ as *const Self)
     }
 
     pub fn time(&self) -> SystemTime {

@@ -37,22 +37,22 @@ use dwarfreader::{
     create_section_reader, get_endian, is_dwo_dwarf, is_non_dwo_dwarf, is_raw_dwo_dwarf,
 };
 
-use gimli::{constants, DebuggingInformationEntry, Dwarf, DwarfFileType, Reader, Section, SectionId, Unit, UnwindSection};
+use gimli::{
+    constants, DebuggingInformationEntry, Dwarf, DwarfFileType, Reader, Section, SectionId, Unit,
+    UnwindSection,
+};
 
 use helpers::{get_build_id, load_debug_info_for_build_id};
 use log::{error, warn, LevelFilter};
 
-
 trait ReaderType: Reader<Offset = usize> {}
 impl<T: Reader<Offset = usize>> ReaderType for T {}
-
 
 fn recover_names<R: ReaderType>(
     dwarf: &Dwarf<R>,
     debug_info_builder_context: &mut DebugInfoBuilderContext<R>,
     progress: &dyn Fn(usize, usize) -> Result<(), ()>,
 ) -> bool {
-
     let mut res = true;
     if let Some(sup_dwarf) = dwarf.sup() {
         res = recover_names_internal(sup_dwarf, debug_info_builder_context, progress);
@@ -242,33 +242,50 @@ fn parse_unit<R: ReaderType>(
             if let Some((_fn_idx, depth)) = functions_by_depth.last() {
                 if current_depth <= *depth {
                     functions_by_depth.pop();
+                } else {
+                    break;
                 }
-                else {
-                    break
-                }
-            }
-            else {
+            } else {
                 break;
             }
         }
 
         match entry.tag() {
             constants::DW_TAG_subprogram => {
-                let fn_idx = parse_function_entry(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
+                let fn_idx = parse_function_entry(
+                    dwarf,
+                    unit,
+                    entry,
+                    debug_info_builder_context,
+                    debug_info_builder,
+                );
                 functions_by_depth.push((fn_idx, current_depth));
-            },
+            }
             constants::DW_TAG_variable => {
                 let current_fn_idx = functions_by_depth.last().and_then(|x| x.0);
-                parse_variable(dwarf, unit, entry, debug_info_builder_context, debug_info_builder, current_fn_idx)
-            },
-            constants::DW_TAG_class_type |
-            constants::DW_TAG_enumeration_type |
-            constants::DW_TAG_structure_type |
-            constants::DW_TAG_union_type |
-            constants::DW_TAG_typedef => {
+                parse_variable(
+                    dwarf,
+                    unit,
+                    entry,
+                    debug_info_builder_context,
+                    debug_info_builder,
+                    current_fn_idx,
+                )
+            }
+            constants::DW_TAG_class_type
+            | constants::DW_TAG_enumeration_type
+            | constants::DW_TAG_structure_type
+            | constants::DW_TAG_union_type
+            | constants::DW_TAG_typedef => {
                 // Ensure types are loaded even if they're unused
-                types::get_type(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
-            },
+                types::get_type(
+                    dwarf,
+                    unit,
+                    entry,
+                    debug_info_builder_context,
+                    debug_info_builder,
+                );
+            }
             _ => (),
         }
     }
@@ -281,16 +298,28 @@ fn parse_eh_frame<R: Reader>(
     eh_frame.set_address_size(view.address_size() as u8);
 
     let mut bases = gimli::BaseAddresses::default();
-    if let Ok(section) = view.section_by_name(".eh_frame_hdr").or(view.section_by_name("__eh_frame_hdr")) {
+    if let Ok(section) = view
+        .section_by_name(".eh_frame_hdr")
+        .or(view.section_by_name("__eh_frame_hdr"))
+    {
         bases = bases.set_eh_frame_hdr(section.start());
     }
-    if let Ok(section) = view.section_by_name(".eh_frame").or(view.section_by_name("__eh_frame")) {
+    if let Ok(section) = view
+        .section_by_name(".eh_frame")
+        .or(view.section_by_name("__eh_frame"))
+    {
         bases = bases.set_eh_frame(section.start());
     }
-    if let Ok(section) = view.section_by_name(".text").or(view.section_by_name("__text")) {
+    if let Ok(section) = view
+        .section_by_name(".text")
+        .or(view.section_by_name("__text"))
+    {
         bases = bases.set_text(section.start());
     }
-    if let Ok(section) = view.section_by_name(".got").or(view.section_by_name("__got")) {
+    if let Ok(section) = view
+        .section_by_name(".got")
+        .or(view.section_by_name("__got"))
+    {
         bases = bases.set_got(section.start());
     }
 
@@ -324,8 +353,8 @@ fn parse_eh_frame<R: Reader>(
 
                 // Store CIE offset for FDE range
                 cie_data_offsets.insert(
-                    fde.initial_address()..fde.initial_address()+fde.len(),
-                    fde.cie().data_alignment_factor()
+                    fde.initial_address()..fde.initial_address() + fde.len(),
+                    fde.cie().data_alignment_factor(),
                 );
             }
         }
@@ -347,11 +376,8 @@ fn get_supplementary_build_id(bv: &BinaryView) -> Option<String> {
             .read_vec(start, len)
             .splitn(2, |x| *x == 0)
             .last()
-            .map(|a| {
-                a.iter().map(|b| format!("{:02x}", b)).collect()
-            })
-    }
-    else {
+            .map(|a| a.iter().map(|b| format!("{:02x}", b)).collect())
+    } else {
         None
     }
 }
@@ -384,28 +410,29 @@ fn parse_dwarf(
     let mut dwarf = Dwarf::load(&mut section_reader).unwrap();
     if dwo_file {
         dwarf.file_type = DwarfFileType::Dwo;
-    }
-    else {
+    } else {
         dwarf.file_type = DwarfFileType::Main;
     }
 
     if let Some(sup_bv) = supplementary_bv {
         let sup_endian = get_endian(sup_bv);
         let sup_dwo_file = is_dwo_dwarf(sup_bv) || is_raw_dwo_dwarf(sup_bv);
-        let sup_section_reader =
-            |section_id: SectionId| -> _ { create_section_reader(section_id, sup_bv, sup_endian, sup_dwo_file) };
+        let sup_section_reader = |section_id: SectionId| -> _ {
+            create_section_reader(section_id, sup_bv, sup_endian, sup_dwo_file)
+        };
         if let Err(e) = dwarf.load_sup(sup_section_reader) {
             error!("Failed to load supplementary file: {}", e);
         }
     }
 
     let eh_frame_endian = get_endian(bv);
-    let mut eh_frame_section_reader =
-        |section_id: SectionId| -> _ { create_section_reader(section_id, bv, eh_frame_endian, dwo_file) };
+    let mut eh_frame_section_reader = |section_id: SectionId| -> _ {
+        create_section_reader(section_id, bv, eh_frame_endian, dwo_file)
+    };
     let eh_frame = gimli::EhFrame::load(&mut eh_frame_section_reader).unwrap();
 
-    let range_data_offsets = parse_eh_frame(bv, eh_frame)
-        .map_err(|e| error!("Error parsing .eh_frame: {}", e))?;
+    let range_data_offsets =
+        parse_eh_frame(bv, eh_frame).map_err(|e| error!("Error parsing .eh_frame: {}", e))?;
 
     // Create debug info builder and recover name mapping first
     //  Since DWARF is stored as a tree with arbitrary implicit edges among leaves,
@@ -475,33 +502,26 @@ impl CustomDebugInfoParser for DWARFParser {
         let (external_file, close_external) = if !dwarfreader::is_valid(bv) {
             if let Ok(build_id) = get_build_id(bv) {
                 helpers::load_debug_info_for_build_id(&build_id, bv)
-            }
-            else {
+            } else {
                 (None, false)
             }
-        }
-        else {
+        } else {
             (None, false)
         };
 
-        let sup_bv = get_supplementary_build_id(
-            external_file
-                .as_deref()
-                .unwrap_or(debug_file)
-            )
+        let sup_bv = get_supplementary_build_id(external_file.as_deref().unwrap_or(debug_file))
             .and_then(|build_id| {
                 load_debug_info_for_build_id(&build_id, bv)
-                .0
-                .map(|x| x.raw_view().unwrap())
+                    .0
+                    .map(|x| x.raw_view().unwrap())
             });
 
         let result = match parse_dwarf(
             bv,
             external_file.as_deref().unwrap_or(debug_file),
             sup_bv.as_deref(),
-            progress
-        )
-        {
+            progress,
+        ) {
             Ok(mut builder) => {
                 builder.post_process(bv, debug_info).commit_info(debug_info);
                 true

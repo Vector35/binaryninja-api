@@ -500,7 +500,9 @@ where
 
     let name = name.into_bytes_with_nul();
 
-    let raw = Box::leak(Box::new(MaybeUninit::<RelocationHandlerBuilder<_>>::zeroed()));
+    let raw = Box::leak(Box::new(
+        MaybeUninit::<RelocationHandlerBuilder<_>>::zeroed(),
+    ));
     let mut custom_handler = BNCustomRelocationHandler {
         context: raw.as_mut_ptr() as *mut _,
         freeObject: Some(cb_free::<R>),

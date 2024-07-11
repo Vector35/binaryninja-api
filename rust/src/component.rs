@@ -1,4 +1,4 @@
-use core::{ffi, mem, ptr};
+use core::{ffi, ptr};
 
 use crate::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
 use crate::function::Function;
@@ -76,7 +76,7 @@ impl Component {
 
     pub(crate) unsafe fn ref_from_raw(handle: &*mut BNComponent) -> &Self {
         assert!(!handle.is_null());
-        mem::transmute(handle)
+        &*(handle as *const _ as *const Self)
     }
 
     pub fn guid(&self) -> BnString {

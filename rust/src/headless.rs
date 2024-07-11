@@ -13,8 +13,7 @@
 // limitations under the License.
 
 use crate::{
-    binaryview,
-    rc,
+    binaryview, rc,
     string::{BnStrCompatible, IntoJson},
 };
 

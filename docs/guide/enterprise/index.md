@@ -122,7 +122,7 @@ Above these buttons is your current server connection status.
 #### Connect to Remote Window
 The "Connect to Remote" window is shown when the Connect button is clicked. Here, you can manage Enterprise servers with the buttons on the right of the window.
 
-![Connect to Remote](../../img/enterprise/connect-to-remote.png){: style="max-width:707px; display: block; margin: auto;"}
+![Connect to Remote](../../img/enterprise/connect-to-remote.png){: style="max-width:429px; display: block; margin: auto;"}
 
 When connecting to a new Enterprise server, a Login dialog will appear. In addition to the obvious username and password fields, the `Remember me` field will store a token in your platform's secret store or keychain. `Automatically connect` will attempt to reconnect to this Enterprise server in the future.
 

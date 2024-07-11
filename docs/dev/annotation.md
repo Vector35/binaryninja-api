@@ -439,6 +439,8 @@ Note that most of the APIs that take a Type object also take a C-style type stri
 
 ### Headers
 
+#### Importing a Header
+
 Importing a header goes through the same code path as parsing source directly. You will just have to read the file and specify the appropriate command-line arguments as an array. See [user type guide](../guide/types/typeimportexport.md#import-header-file) for directions for choosing arguments.
 
 ```python
@@ -446,6 +448,16 @@ Importing a header goes through the same code path as parsing source directly. Y
 ...     TypeParser.default.parse_types_from_source(f.read(), 'stdafx.h', Platform['windows-x86_64'], [], ['--target=x86_64-pc-windows-msvc', '-x', 'c', '-std', 'c99', r'-isystemC:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Tools\MSVC\14.28.29333\include', r'-isystemC:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\ucrt', r'-isystemC:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\shared', r'-isystemC:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um'])
 (<types: [...], variables: [...], functions: [...]>, [])
 ```
+
+Using these APIs will give you a Python object with all of the results, but won't actually apply them to the analysis in any way. If you want to replicate the importing behavior seen in the UI widget, there are a few additional steps you will need to take:
+
+1. Use `BinaryView.define_user_types()` to add all the created types to the analysis
+1. Update the function and data variable types
+    1. Look up matching functions and symbols by using `BinaryView.get_symbol_by_raw_name`. Also look up potentially modified function names starting with `_` or `__`
+    1. Once you have found a function whose name matches one found in the header file, set its type using `Function.type = ftype`
+    1. Similarly for Data Variables, once one is found with a matching name, set its type using `DataVariable.type = dvtype`
+
+#### Exporting a Header
 
 Exporting a header uses the `TypePrinter.print_all_types` api, and outputs a string.
 

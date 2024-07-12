@@ -34,11 +34,6 @@ public:
 		cc = arch->GetCallingConventionByName("thiscall");
 		if (cc)
 			RegisterCallingConvention(cc);
-
-		// Linux-style register convention is commonly used by Borland compilers
-		cc = arch->GetCallingConventionByName("regparm");
-		if (cc)
-			RegisterCallingConvention(cc);
 	}
 
 	static Ref<Platform> Recognize(BinaryView* view, Metadata* metadata)
@@ -76,11 +71,6 @@ public:
 			RegisterStdcallCallingConvention(cc);
 
 		cc = arch->GetCallingConventionByName("thiscall");
-		if (cc)
-			RegisterCallingConvention(cc);
-
-		// Linux-style register convention is commonly used by Borland compilers
-		cc = arch->GetCallingConventionByName("regparm");
 		if (cc)
 			RegisterCallingConvention(cc);
 	}

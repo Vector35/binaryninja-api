@@ -20,7 +20,7 @@ class BINARYNINJAUIAPI HistoryEntryItemModel : public QAbstractItemModel, public
 	std::vector<UndoEntryRef> m_redoEntries;
 
 	FileMetadataRef m_file;
-	BinaryViewRef m_data;
+	std::vector<BinaryViewRef> m_views;
 	std::unordered_set<HistoryOption> m_options;
 	QSettings m_settings;
 

@@ -1854,14 +1854,16 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	}
 	if (parseObjCStructs)
 	{
-
 		if (!settings) // Add our defaults
 		{
 			Ref<Settings> programSettings = Settings::Instance();
-			if (programSettings->Get<bool>("corePlugins.workflows.objc"))
+			if (programSettings->Contains("corePlugins.workflows.objc"))
 			{
-				programSettings->Set("workflows.enable", true, this);
-				programSettings->Set("workflows.functionWorkflow", "core.function.objectiveC", this);
+				if (programSettings->Get<bool>("corePlugins.workflows.objc"))
+				{
+					programSettings->Set("workflows.enable", true, this);
+					programSettings->Set("workflows.functionWorkflow", "core.function.objectiveC", this);
+				}
 			}
 		}
 	}
@@ -3906,10 +3908,13 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 			"description" : "Processes Objective-C structures, applying method names and types from encoded metadata"
 			})");
 		Ref<Settings> programSettings = Settings::Instance();
-		if (programSettings->Get<bool>("corePlugins.workflows.objc"))
+		if (programSettings->Contains("corePlugins.workflows.objc"))
 		{
-			programSettings->Set("workflows.enable", true, viewRef);
-			programSettings->Set("workflows.functionWorkflow", "core.function.objectiveC", viewRef);
+			if (programSettings->Get<bool>("corePlugins.workflows.objc"))
+			{
+				programSettings->Set("workflows.enable", true, viewRef);
+				programSettings->Set("workflows.functionWorkflow", "core.function.objectiveC", viewRef);
+			}
 		}
 	}
 	if (viewRef->GetSectionByName("__cfstring"))

@@ -40,7 +40,7 @@ def main():
 		# Pull every file from every project
 		for project in remote.projects:
 			for file in project.files:
-				bndb_path = file.default_bndb_path
+				bndb_path = file.default_path
 				print(f"{project.name}/{file.name} BNDB at {bndb_path}")
 
 				try:

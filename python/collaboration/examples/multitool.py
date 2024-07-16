@@ -80,7 +80,7 @@ def print_file_info(file: RemoteFile, extended=False):
 		      f"Last snapshot date: {file.last_snapshot}\n"
 		      f"Contents hash: {file.hash}\n"
 		      f"Contents size: {file.size}\n"
-		      f"Default path on disk: {file.default_bndb_path}\n"
+		      f"Default path on disk: {file.default_path}\n"
 		      f"Snapshot count: {len(file.snapshots)}")
 	else:
 		print(f"{file.remote.name}/{file.project.name}/{file.name} @ {file.url} (id: {file.id})")

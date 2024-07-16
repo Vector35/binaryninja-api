@@ -413,6 +413,18 @@ The Variables sidebar panel will show local variables from the currently selecte
 
 The Stack sidebar panel shows the currently selected function's stack layout. You can create variables using the [usual](types/type.md#direct-ui-manipulation) hotkeys as well as using the right-click menu (which also shows the hotkeys).
 
+### History
+
+![History](../img/history.png "History"){ width="700" }
+
+The History sidebar panel shows all annotations made during the history of a database. Note that even changes made prior to the introduction of the UI will be shown. This not only makes it easier to see what changes have been made, but allows you to right-click and revert to a particular point in analysis. Additionally, the right-click menu includes a toggle to hide or show the date of the change.
+
+Note that when plugins or the UI batch multiple changes in one action, they wil be summarized with a count of actions but no further details are possible. 
+
+There is currently no support for branching/forking style of history at this time.
+
+If you save a database [without undo actions](#5-save-analysis-database-with-options) the history view will be empty.
+
 ### Strings
 
 ![Strings](../img/strings.png "Strings"){ width="700" }

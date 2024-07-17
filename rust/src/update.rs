@@ -254,16 +254,12 @@ pub fn updates_checked() {
     unsafe { BNUpdatesChecked() }
 }
 
-unsafe extern "C" fn cb_progress_nop(
-    _ctxt: *mut ::std::os::raw::c_void,
-    _progress: u64,
-    _total: u64,
-) -> bool {
+unsafe extern "C" fn cb_progress_nop(_ctxt: *mut ffi::c_void, _progress: u64, _total: u64) -> bool {
     true
 }
 
 unsafe extern "C" fn cb_progress<F: FnMut(u64, u64) -> bool>(
-    ctxt: *mut ::std::os::raw::c_void,
+    ctxt: *mut ffi::c_void,
     progress: u64,
     total: u64,
 ) -> bool {

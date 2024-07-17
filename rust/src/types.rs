@@ -31,17 +31,15 @@ use crate::{
 };
 
 use lazy_static::lazy_static;
-use std::ptr::null_mut;
 use std::{
     borrow::{Borrow, Cow},
     collections::{HashMap, HashSet},
-    ffi::CStr,
+    ffi::{c_char, CStr},
     fmt::{self, Debug, Display, Formatter},
     hash::{Hash, Hasher},
     iter::{zip, IntoIterator},
     mem::{self, ManuallyDrop},
     ops::Range,
-    os::raw::c_char,
     ptr, result, slice,
     sync::Mutex,
 };
@@ -1252,7 +1250,7 @@ impl fmt::Debug for Type {
 
                 let mut name = QualifiedName::from("");
 
-                let mut lines: *mut BNTypeDefinitionLine = null_mut();
+                let mut lines: *mut BNTypeDefinitionLine = ptr::null_mut();
                 let mut count: usize = 0;
 
                 unsafe {

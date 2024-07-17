@@ -9,8 +9,8 @@ use crate::{
 };
 use binaryninjacore_sys::*;
 use std::borrow::Borrow;
+use std::ffi::c_void;
 use std::mem::MaybeUninit;
-use std::os::raw::c_void;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum RelocationType {
@@ -500,7 +500,9 @@ where
 
     let name = name.into_bytes_with_nul();
 
-    let raw = Box::leak(Box::new(MaybeUninit::<RelocationHandlerBuilder<_>>::zeroed()));
+    let raw = Box::leak(Box::new(
+        MaybeUninit::<RelocationHandlerBuilder<_>>::zeroed(),
+    ));
     let mut custom_handler = BNCustomRelocationHandler {
         context: raw.as_mut_ptr() as *mut _,
         freeObject: Some(cb_free::<R>),

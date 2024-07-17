@@ -1,10 +1,9 @@
-use crate::rc::{Array, CoreArrayProvider, Guard, CoreArrayProviderInner, Ref, RefCountable};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::settings::Settings;
 use crate::string::{BnStrCompatible, BnString};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
-use std::ffi::{c_void, CStr};
-use std::os::raw::c_char;
+use std::ffi::{c_char, c_void, CStr};
 use std::ptr::null_mut;
 use std::slice;
 

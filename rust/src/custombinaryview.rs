@@ -18,10 +18,10 @@ use binaryninjacore_sys::*;
 
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
+use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::mem;
 use std::mem::MaybeUninit;
-use std::os::raw::c_void;
 use std::ptr;
 use std::slice;
 

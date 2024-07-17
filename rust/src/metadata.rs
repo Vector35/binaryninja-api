@@ -2,7 +2,7 @@ use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, Re
 use crate::string::{BnStrCompatible, BnString, IntoJson};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
-use std::os::raw::c_char;
+use std::ffi::c_char;
 use std::slice;
 
 pub type MetadataType = BNMetadataType;

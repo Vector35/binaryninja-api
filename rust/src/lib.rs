@@ -106,7 +106,6 @@
 extern crate log;
 #[doc(hidden)]
 pub extern crate binaryninjacore_sys;
-extern crate libc;
 #[cfg(feature = "rayon")]
 extern crate rayon;
 
@@ -176,10 +175,10 @@ use std::path::PathBuf;
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
 use binaryview::BinaryView;
-use metadata::Metadata;
-use metadata::MetadataType;
-use string::BnStrCompatible;
-use string::IntoJson;
+use metadata::{Metadata, MetadataType};
+use string::{BnStrCompatible, BnString, IntoJson};
+
+use std::ffi::c_char;
 
 // Commented out to suppress unused warnings
 // const BN_MAX_INSTRUCTION_LENGTH: u64 = 256;
@@ -210,7 +209,7 @@ pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::Binar
         binaryninjacore_sys::BNLoadFilename(
             filename.as_ref().as_ptr() as *mut _,
             true,
-            options.as_ptr() as *mut core::ffi::c_char,
+            options.as_ptr() as *mut c_char,
             None,
         )
     };
@@ -264,7 +263,7 @@ pub fn load_with_options<S: BnStrCompatible, O: IntoJson>(
         binaryninjacore_sys::BNLoadFilename(
             filename.as_ref().as_ptr() as *mut _,
             update_analysis_and_wait,
-            options_or_default.as_ptr() as *mut core::ffi::c_char,
+            options_or_default.as_ptr() as *mut c_char,
             None,
         )
     };
@@ -299,7 +298,7 @@ pub fn load_view<O: IntoJson>(
         binaryninjacore_sys::BNLoadBinaryView(
             bv.handle as *mut _,
             update_analysis_and_wait,
-            options_or_default.as_ptr() as *mut core::ffi::c_char,
+            options_or_default.as_ptr() as *mut c_char,
             None,
         )
     };
@@ -312,72 +311,59 @@ pub fn load_view<O: IntoJson>(
 }
 
 pub fn install_directory() -> Result<PathBuf, ()> {
-    let s: *mut std::os::raw::c_char = unsafe { binaryninjacore_sys::BNGetInstallDirectory() };
+    let s = unsafe { binaryninjacore_sys::BNGetInstallDirectory() };
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn bundled_plugin_directory() -> Result<PathBuf, ()> {
-    let s: *mut std::os::raw::c_char =
-        unsafe { binaryninjacore_sys::BNGetBundledPluginDirectory() };
+    let s = unsafe { binaryninjacore_sys::BNGetBundledPluginDirectory() };
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn set_bundled_plugin_directory<S: string::BnStrCompatible>(new_dir: S) {
     unsafe {
         binaryninjacore_sys::BNSetBundledPluginDirectory(
-            new_dir.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
+            new_dir.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
         )
     };
 }
 
 pub fn user_directory() -> Result<PathBuf, ()> {
-    let s: *mut std::os::raw::c_char = unsafe { binaryninjacore_sys::BNGetUserDirectory() };
+    let s = unsafe { binaryninjacore_sys::BNGetUserDirectory() };
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn user_plugin_directory() -> Result<PathBuf, ()> {
-    let s: *mut std::os::raw::c_char = unsafe { binaryninjacore_sys::BNGetUserPluginDirectory() };
+    let s = unsafe { binaryninjacore_sys::BNGetUserPluginDirectory() };
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn repositories_directory() -> Result<PathBuf, ()> {
-    let s: *mut std::os::raw::c_char = unsafe { binaryninjacore_sys::BNGetRepositoriesDirectory() };
+    let s = unsafe { binaryninjacore_sys::BNGetRepositoriesDirectory() };
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn settings_file_name() -> Result<PathBuf, ()> {
-    let s: *mut std::os::raw::c_char = unsafe { binaryninjacore_sys::BNGetSettingsFileName() };
+    let s = unsafe { binaryninjacore_sys::BNGetSettingsFileName() };
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn save_last_run() {
@@ -387,51 +373,45 @@ pub fn save_last_run() {
 pub fn path_relative_to_bundled_plugin_directory<S: string::BnStrCompatible>(
     path: S,
 ) -> Result<PathBuf, ()> {
-    let s: *mut std::os::raw::c_char = unsafe {
+    let s = unsafe {
         binaryninjacore_sys::BNGetPathRelativeToBundledPluginDirectory(
-            path.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
+            path.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
         )
     };
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn path_relative_to_user_plugin_directory<S: string::BnStrCompatible>(
     path: S,
 ) -> Result<PathBuf, ()> {
-    let s: *mut std::os::raw::c_char = unsafe {
+    let s = unsafe {
         binaryninjacore_sys::BNGetPathRelativeToUserPluginDirectory(
-            path.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
+            path.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
         )
     };
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn path_relative_to_user_directory<S: string::BnStrCompatible>(path: S) -> Result<PathBuf, ()> {
-    let s: *mut std::os::raw::c_char = unsafe {
+    let s = unsafe {
         binaryninjacore_sys::BNGetPathRelativeToUserDirectory(
-            path.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
+            path.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
         )
     };
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
-pub fn version() -> string::BnString {
-    unsafe { string::BnString::from_raw(binaryninjacore_sys::BNGetVersionString()) }
+pub fn version() -> BnString {
+    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetVersionString()) }
 }
 
 pub fn plugin_abi_version() -> u32 {
@@ -461,7 +441,7 @@ pub fn plugin_ui_abi_minimum_version() -> u32 {
 pub fn add_required_plugin_dependency<S: string::BnStrCompatible>(name: S) {
     unsafe {
         binaryninjacore_sys::BNAddRequiredPluginDependency(
-            name.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
+            name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
         )
     };
 }
@@ -469,7 +449,7 @@ pub fn add_required_plugin_dependency<S: string::BnStrCompatible>(name: S) {
 pub fn add_optional_plugin_dependency<S: string::BnStrCompatible>(name: S) {
     unsafe {
         binaryninjacore_sys::BNAddOptionalPluginDependency(
-            name.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
+            name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
         )
     };
 }

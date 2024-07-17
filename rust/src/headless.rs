@@ -13,8 +13,7 @@
 // limitations under the License.
 
 use crate::{
-    binaryview,
-    rc,
+    binaryview, rc,
     string::{BnStrCompatible, IntoJson},
 };
 
@@ -23,17 +22,16 @@ use std::path::PathBuf;
 
 #[cfg(not(target_os = "windows"))]
 fn binja_path() -> PathBuf {
-    use std::ffi::{CStr, OsStr};
+    use std::ffi::{c_char, c_void, CStr, OsStr};
     use std::mem;
-    use std::os::raw;
     use std::os::unix::ffi::OsStrExt;
 
     #[repr(C)]
     struct DlInfo {
-        dli_fname: *const raw::c_char,
-        dli_fbase: *mut raw::c_void,
-        dli_sname: *const raw::c_char,
-        dli_saddr: *mut raw::c_void,
+        dli_fname: *const c_char,
+        dli_fbase: *mut c_void,
+        dli_sname: *const c_char,
+        dli_saddr: *mut c_void,
     }
 
     if let Ok(p) = env::var("BINJA_DIR") {
@@ -41,7 +39,7 @@ fn binja_path() -> PathBuf {
     }
 
     extern "C" {
-        fn dladdr(addr: *mut raw::c_void, info: *mut DlInfo) -> raw::c_int;
+        fn dladdr(addr: *mut c_void, info: *mut DlInfo) -> i32;
     }
 
     unsafe {

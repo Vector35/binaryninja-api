@@ -49,6 +49,7 @@ use crate::database::Database;
 use crate::rc::*;
 use crate::string::*;
 
+use std::ffi::c_void;
 use std::ptr;
 
 #[derive(PartialEq, Eq, Hash)]
@@ -224,7 +225,7 @@ impl FileMetadata {
                 BNCreateDatabaseWithProgress(
                     handle,
                     filename_ptr,
-                    func as *mut libc::c_void,
+                    func as *mut c_void,
                     Some(cb_progress_func),
                     ptr::null_mut(),
                 )
@@ -273,7 +274,7 @@ impl FileMetadata {
                 BNOpenExistingDatabaseWithProgress(
                     self.handle,
                     filename_ptr,
-                    func as *mut libc::c_void,
+                    func as *mut c_void,
                     Some(cb_progress_func),
                 )
             },
@@ -313,11 +314,7 @@ unsafe impl RefCountable for FileMetadata {
     }
 }
 
-unsafe extern "C" fn cb_progress_func(
-    ctxt: *mut ::std::os::raw::c_void,
-    progress: usize,
-    total: usize,
-) -> bool {
+unsafe extern "C" fn cb_progress_func(ctxt: *mut c_void, progress: usize, total: usize) -> bool {
     let func: fn(usize, usize) -> bool = core::mem::transmute(ctxt);
     func(progress, total)
 }

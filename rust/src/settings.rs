@@ -16,8 +16,8 @@
 
 pub use binaryninjacore_sys::BNSettingsScope as SettingsScope;
 use binaryninjacore_sys::*;
+use std::ffi::c_char;
 use std::iter::FromIterator;
-use std::os::raw::c_char;
 
 use crate::binaryview::BinaryView;
 use crate::rc::*;

@@ -15,19 +15,17 @@
 //! Contains and provides information about different systems' calling conventions to analysis.
 
 use std::borrow::Borrow;
+use std::ffi::c_void;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::mem;
-use std::os::raw::c_void;
 use std::ptr;
 use std::slice;
 
 use binaryninjacore_sys::*;
 
 use crate::architecture::{Architecture, ArchitectureExt, CoreArchitecture, Register};
-use crate::rc::{
-    CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable,
-};
+use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::*;
 
 // TODO

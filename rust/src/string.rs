@@ -15,17 +15,16 @@
 //! String wrappers for core-owned strings and strings being passed to the core
 
 use std::borrow::Cow;
-use std::ffi::{CStr, CString};
+use std::ffi::{c_char, CStr, CString};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::mem;
 use std::ops::Deref;
-use std::os::raw;
 
 use crate::rc::*;
 use crate::types::QualifiedName;
 
-pub(crate) fn raw_to_string(ptr: *const raw::c_char) -> Option<String> {
+pub(crate) fn raw_to_string(ptr: *const c_char) -> Option<String> {
     if ptr.is_null() {
         None
     } else {
@@ -37,7 +36,7 @@ pub(crate) fn raw_to_string(ptr: *const raw::c_char) -> Option<String> {
 /// functions provided by binaryninja_sys.
 #[repr(transparent)]
 pub struct BnString {
-    raw: *mut raw::c_char,
+    raw: *mut c_char,
 }
 
 /// A nul-terminated C string allocated by the core.
@@ -65,11 +64,11 @@ impl BnString {
     }
 
     /// Construct a BnString from an owned const char* allocated by BNAllocString
-    pub(crate) unsafe fn from_raw(raw: *mut raw::c_char) -> Self {
+    pub(crate) unsafe fn from_raw(raw: *mut c_char) -> Self {
         Self { raw }
     }
 
-    pub(crate) fn into_raw(self) -> *mut raw::c_char {
+    pub(crate) fn into_raw(self) -> *mut c_char {
         let res = self.raw;
 
         // we're surrendering ownership over the *mut c_char to
@@ -162,7 +161,7 @@ impl fmt::Debug for BnString {
 }
 
 impl CoreArrayProvider for BnString {
-    type Raw = *mut raw::c_char;
+    type Raw = *mut c_char;
     type Context = ();
     type Wrapped<'a> = &'a str;
 }

@@ -268,15 +268,11 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn original_base(&self) -> u64 {
-        unsafe {
-            BNGetOriginalBase(self.as_ref().handle)
-        }
+        unsafe { BNGetOriginalBase(self.as_ref().handle) }
     }
 
     fn set_original_base(&self, base: u64) {
-        unsafe {
-            BNSetOriginalBase(self.as_ref().handle, base)
-        }
+        unsafe { BNSetOriginalBase(self.as_ref().handle, base) }
     }
 
     fn end(&self) -> u64 {
@@ -1411,10 +1407,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNRemoveComponentByGuid(self.as_ref().handle, path.as_ptr()) }
     }
 
-    fn data_variable_parent_components(
-        &self,
-        data_variable: &DataVariable,
-    ) -> Array<Component> {
+    fn data_variable_parent_components(&self, data_variable: &DataVariable) -> Array<Component> {
         let mut count = 0;
         let result = unsafe {
             BNGetDataVariableParentComponents(
@@ -1835,7 +1828,7 @@ where
     Handler: BinaryViewEventHandler,
 {
     unsafe extern "C" fn on_event<Handler: BinaryViewEventHandler>(
-        ctx: *mut ::std::os::raw::c_void,
+        ctx: *mut c_void,
         view: *mut BNBinaryView,
     ) {
         ffi_wrap!("EventHandler::on_event", {
@@ -1848,10 +1841,6 @@ where
     let raw = Box::into_raw(boxed);
 
     unsafe {
-        BNRegisterBinaryViewEvent(
-            event_type,
-            Some(on_event::<Handler>),
-            raw as *mut ::std::os::raw::c_void,
-        );
+        BNRegisterBinaryViewEvent(event_type, Some(on_event::<Handler>), raw as *mut c_void);
     }
 }

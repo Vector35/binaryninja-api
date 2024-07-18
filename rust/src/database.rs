@@ -8,7 +8,7 @@ use crate::binaryview::BinaryView;
 use crate::databuffer::DataBuffer;
 use crate::disassembly::InstructionTextToken;
 use crate::filemetadata::FileMetadata;
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::string::{BnStrCompatible, BnString};
 
 #[repr(transparent)]
@@ -180,10 +180,10 @@ impl Database {
     }
 
     /// Get the owning FileMetadata
-    pub fn file(&self) -> FileMetadata {
+    pub fn file(&self) -> Ref<FileMetadata> {
         let result = unsafe { BNGetDatabaseFile(self.as_raw()) };
         assert!(!result.is_null());
-        FileMetadata::from_raw(result)
+        unsafe { Ref::new(FileMetadata::from_raw(result)) }
     }
 
     /// Get the backing analysis cache kvs

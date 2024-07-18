@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::helpers::{get_uid, resolve_specification, DieReference};
+use crate::{helpers::{get_uid, resolve_specification, DieReference}, ReaderType};
 
 use binaryninja::{
     binaryview::{BinaryView, BinaryViewBase, BinaryViewExt},
@@ -25,7 +25,7 @@ use binaryninja::{
     binaryninjacore_sys::BNVariableSourceType,
 };
 
-use gimli::{DebuggingInformationEntry, Dwarf, Reader, Unit};
+use gimli::{DebuggingInformationEntry, Dwarf, Unit};
 
 use log::{debug, error, warn};
 use std::{
@@ -111,16 +111,17 @@ impl DebugType {
     }
 }
 
-pub(crate) struct DebugInfoBuilderContext<R: Reader<Offset = usize>> {
-    dwarf: Dwarf<R>,
+pub(crate) struct DebugInfoBuilderContext<R: ReaderType> {
     units: Vec<Unit<R>>,
+    sup_units: Vec<Unit<R>>,
     names: HashMap<TypeUID, String>,
     default_address_size: usize,
     pub(crate) total_die_count: usize,
 }
 
-impl<R: Reader<Offset = usize>> DebugInfoBuilderContext<R> {
-    pub(crate) fn new(view: &BinaryView, dwarf: Dwarf<R>) -> Option<Self> {
+impl<R: ReaderType> DebugInfoBuilderContext<R> {
+    pub(crate) fn new(view: &BinaryView, dwarf: &Dwarf<R>) -> Option<Self> {
+
         let mut units = vec![];
         let mut iter = dwarf.units();
         while let Ok(Some(header)) = iter.next() {
@@ -132,21 +133,34 @@ impl<R: Reader<Offset = usize>> DebugInfoBuilderContext<R> {
             }
         }
 
+        let mut sup_units = vec![];
+        if let Some(sup_dwarf) = dwarf.sup() {
+            let mut sup_iter = sup_dwarf.units();
+            while let Ok(Some(header)) = sup_iter.next() {
+                if let Ok(unit) = sup_dwarf.unit(header) {
+                    sup_units.push(unit);
+                } else {
+                    error!("Unable to read supplementary DWARF information. File may be malformed or corrupted. Not applying debug info.");
+                    return None;
+                }
+            }
+        }
+
         Some(Self {
-            dwarf,
             units,
+            sup_units,
             names: HashMap::new(),
             default_address_size: view.address_size(),
             total_die_count: 0,
         })
     }
 
-    pub(crate) fn dwarf(&self) -> &Dwarf<R> {
-        &self.dwarf
-    }
-
     pub(crate) fn units(&self) -> &[Unit<R>] {
         &self.units
+    }
+
+    pub(crate) fn sup_units(&self) -> &[Unit<R>] {
+        &self.sup_units
     }
 
     pub(crate) fn default_address_size(&self) -> usize {
@@ -154,18 +168,21 @@ impl<R: Reader<Offset = usize>> DebugInfoBuilderContext<R> {
     }
 
     pub(crate) fn set_name(&mut self, die_uid: TypeUID, name: String) {
+        // die_uids need to be unique here
         assert!(self.names.insert(die_uid, name).is_none());
     }
 
     pub(crate) fn get_name(
         &self,
+        dwarf: &Dwarf<R>,
         unit: &Unit<R>,
         entry: &DebuggingInformationEntry<R>,
     ) -> Option<String> {
-        match resolve_specification(unit, entry, self) {
-            DieReference::UnitAndOffset((entry_unit, entry_offset)) => self
+        match resolve_specification(dwarf, unit, entry, self) {
+            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => self
                 .names
                 .get(&get_uid(
+                    dwarf,
                     entry_unit,
                     &entry_unit.entry(entry_offset).unwrap(),
                 ))

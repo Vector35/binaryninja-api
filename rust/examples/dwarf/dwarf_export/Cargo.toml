@@ -8,6 +8,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 binaryninja = {path="../../../"}
-gimli = "^0.28"
+gimli = "^0.31"
 log = "^0.4"
 object = { version = "0.32.1", features = ["write"] }

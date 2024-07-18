@@ -15,15 +15,16 @@
 use std::sync::OnceLock;
 
 use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
-use crate::helpers::*;
+use crate::{helpers::*, ReaderType};
 use crate::types::get_type;
 
 use binaryninja::templatesimplifier::simplify_str_to_str;
 use cpp_demangle::DemangleOptions;
-use gimli::{constants, DebuggingInformationEntry, Reader, Unit};
+use gimli::{constants, DebuggingInformationEntry, Dwarf, Unit};
 use regex::Regex;
 
-fn get_parameters<R: Reader<Offset = usize>>(
+fn get_parameters<R: ReaderType>(
+    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
@@ -45,9 +46,10 @@ fn get_parameters<R: Reader<Offset = usize>>(
             constants::DW_TAG_formal_parameter => {
                 //TODO: if the param type is a typedef to an anonymous struct (typedef struct {...} foo) then this is reoslved to an anonymous struct instead of foo
                 //  We should still recurse to make sure we load all types this param type depends on, but
-                let name = debug_info_builder_context.get_name(unit, child.entry());
+                let name = debug_info_builder_context.get_name(dwarf, unit, child.entry());
 
                 let type_ = get_type(
+                    dwarf,
                     unit,
                     child.entry(),
                     debug_info_builder_context,
@@ -70,17 +72,18 @@ fn get_parameters<R: Reader<Offset = usize>>(
     (result, variable_arguments)
 }
 
-pub(crate) fn parse_function_entry<R: Reader<Offset = usize>>(
+pub(crate) fn parse_function_entry<R: ReaderType>(
+    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
 ) -> Option<usize> {
     // Collect function properties (if they exist in this DIE)
-    let raw_name = get_raw_name(unit, entry, debug_info_builder_context);
-    let return_type = get_type(unit, entry, debug_info_builder_context, debug_info_builder);
-    let address = get_start_address(unit, entry, debug_info_builder_context);
-    let (parameters, variable_arguments) = get_parameters(unit, entry, debug_info_builder_context, debug_info_builder);
+    let raw_name = get_raw_name(dwarf, unit, entry);
+    let return_type = get_type(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
+    let address = get_start_address(dwarf, unit, entry);
+    let (parameters, variable_arguments) = get_parameters(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
 
     // If we have a raw name, it might be mangled, see if we can demangle it into full_name
     //  raw_name should contain a superset of the info we have in full_name
@@ -111,7 +114,7 @@ pub(crate) fn parse_function_entry<R: Reader<Offset = usize>>(
 
     // If we didn't demangle the raw name, fetch the name given
     if full_name.is_none() {
-        full_name = debug_info_builder_context.get_name(unit, entry)
+        full_name = debug_info_builder_context.get_name(dwarf, unit, entry)
     }
 
     debug_info_builder.insert_function(full_name, raw_name, return_type, address, &parameters, variable_arguments)

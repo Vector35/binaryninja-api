@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
-use crate::helpers::*;
+use crate::{helpers::*, ReaderType};
 use crate::types::get_type;
 
 use binaryninja::{
@@ -21,9 +21,11 @@ use binaryninja::{
     types::{EnumerationBuilder, FunctionParameter, ReferenceType, Type, TypeBuilder},
 };
 
-use gimli::{constants, AttributeValue::Encoding, DebuggingInformationEntry, Reader, Unit};
+use gimli::Dwarf;
+use gimli::{constants, AttributeValue::Encoding, DebuggingInformationEntry, Unit};
 
-pub(crate) fn handle_base_type<R: Reader<Offset = usize>>(
+pub(crate) fn handle_base_type<R: ReaderType>(
+    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
@@ -37,7 +39,7 @@ pub(crate) fn handle_base_type<R: Reader<Offset = usize>>(
     //   *Some indication of signedness?
     //   * = Optional
 
-    let name = debug_info_builder_context.get_name(unit, entry)?;
+    let name = debug_info_builder_context.get_name(dwarf, unit, entry)?;
     let size = get_size_as_usize(entry)?;
     match entry.attr_value(constants::DW_AT_encoding) {
         Ok(Some(Encoding(encoding))) => {
@@ -69,7 +71,8 @@ pub(crate) fn handle_base_type<R: Reader<Offset = usize>>(
     }
 }
 
-pub(crate) fn handle_enum<R: Reader<Offset = usize>>(
+pub(crate) fn handle_enum<R: ReaderType>(
+    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
@@ -107,7 +110,7 @@ pub(crate) fn handle_enum<R: Reader<Offset = usize>>(
     let mut children = tree.root().unwrap().children();
     while let Ok(Some(child)) = children.next() {
         if child.entry().tag() == constants::DW_TAG_enumerator {
-            let name = debug_info_builder_context.get_name(unit, child.entry())?;
+            let name = debug_info_builder_context.get_name(dwarf, unit, child.entry())?;
             let attr = &child
                 .entry()
                 .attr(constants::DW_AT_const_value)
@@ -150,7 +153,7 @@ pub(crate) fn handle_typedef(
     (None, false)
 }
 
-pub(crate) fn handle_pointer<R: Reader<Offset = usize>>(
+pub(crate) fn handle_pointer<R: ReaderType>(
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
@@ -206,7 +209,7 @@ pub(crate) fn handle_pointer<R: Reader<Offset = usize>>(
     }
 }
 
-pub(crate) fn handle_array<R: Reader<Offset = usize>>(
+pub(crate) fn handle_array<R: ReaderType>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder: &mut DebugInfoBuilder,
@@ -252,7 +255,8 @@ pub(crate) fn handle_array<R: Reader<Offset = usize>>(
     }
 }
 
-pub(crate) fn handle_function<R: Reader<Offset = usize>>(
+pub(crate) fn handle_function<R: ReaderType>(
+    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
@@ -292,9 +296,9 @@ pub(crate) fn handle_function<R: Reader<Offset = usize>>(
     };
 
     // Alias function type in the case that it contains itself
-    if let Some(name) = debug_info_builder_context.get_name(unit, entry) {
+    if let Some(name) = debug_info_builder_context.get_name(dwarf, unit, entry) {
         debug_info_builder.add_type(
-            get_uid(unit, entry),
+            get_uid(dwarf, unit, entry),
             &name,
             Type::named_type_from_type(
                 &name,
@@ -315,12 +319,13 @@ pub(crate) fn handle_function<R: Reader<Offset = usize>>(
             if let (Some(child_uid), Some(name)) = {
                 (
                     get_type(
+                        dwarf,
                         unit,
                         child.entry(),
                         debug_info_builder_context,
                         debug_info_builder,
                     ),
-                    debug_info_builder_context.get_name(unit, child.entry()),
+                    debug_info_builder_context.get_name(dwarf, unit, child.entry()),
                 )
             } {
                 let child_type = debug_info_builder.get_type(child_uid).unwrap().get_type();
@@ -331,8 +336,8 @@ pub(crate) fn handle_function<R: Reader<Offset = usize>>(
         }
     }
 
-    if debug_info_builder_context.get_name(unit, entry).is_some() {
-        debug_info_builder.remove_type(get_uid(unit, entry));
+    if debug_info_builder_context.get_name(dwarf, unit, entry).is_some() {
+        debug_info_builder.remove_type(get_uid(dwarf, unit, entry));
     }
 
     Some(Type::function(

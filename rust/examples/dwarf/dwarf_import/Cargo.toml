@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 [dependencies]
 dwarfreader = { path = "../shared/" }
 binaryninja = { path = "../../../" }
-gimli = "0.28"
+gimli = "0.31"
 log = "0.4.20"
 iset = "0.2.2"
 cpp_demangle = "0.4.3"

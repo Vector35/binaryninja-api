@@ -106,6 +106,7 @@ class BINARYNINJAUIAPI FileContext : public FileContextBase, public BinaryNinja:
 	void resumeSync() { m_suspendSync = false; }
 
 	static FileContext* newFile();
+	static FileContext* newMappedFile(PlatformRef platform);
 	static FileContext* openFilename(const QString& path);
 	static const std::set<FileContext*>& getOpenFileContexts();
 };

@@ -945,3 +945,95 @@ unsafe extern "C" fn cb_type_deleted<T: TypeArchiveNotificationCallback>(
         &Type { handle: definition },
     )
 }
+
+#[repr(transparent)]
+pub struct TypeArchiveMergeConflict {
+    handle: ptr::NonNull<BNTypeArchiveMergeConflict>,
+}
+
+impl Drop for TypeArchiveMergeConflict {
+    fn drop(&mut self) {
+        unsafe { BNFreeTypeArchiveMergeConflict(self.as_raw()) }
+    }
+}
+
+impl Clone for TypeArchiveMergeConflict {
+    fn clone(&self) -> Self {
+        unsafe {
+            Self::from_raw(
+                ptr::NonNull::new(BNNewTypeArchiveMergeConflictReference(self.as_raw())).unwrap(),
+            )
+        }
+    }
+}
+
+impl TypeArchiveMergeConflict {
+    pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNTypeArchiveMergeConflict>) -> Self {
+        Self { handle }
+    }
+
+    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNTypeArchiveMergeConflict) -> &Self {
+        assert!(!handle.is_null());
+        mem::transmute(handle)
+    }
+
+    #[allow(clippy::mut_from_ref)]
+    pub(crate) unsafe fn as_raw(&self) -> &mut BNTypeArchiveMergeConflict {
+        &mut *self.handle.as_ptr()
+    }
+
+    pub fn get_type_archive(&self) -> Option<TypeArchive> {
+        let value = unsafe { BNTypeArchiveMergeConflictGetTypeArchive(self.as_raw()) };
+        ptr::NonNull::new(value).map(|handle| unsafe { TypeArchive::from_raw(handle) })
+    }
+
+    pub fn type_id(&self) -> BnString {
+        let value = unsafe { BNTypeArchiveMergeConflictGetTypeId(self.as_raw()) };
+        assert!(!value.is_null());
+        unsafe { BnString::from_raw(value) }
+    }
+
+    pub fn base_snapshot_id(&self) -> BnString {
+        let value = unsafe { BNTypeArchiveMergeConflictGetBaseSnapshotId(self.as_raw()) };
+        assert!(!value.is_null());
+        unsafe { BnString::from_raw(value) }
+    }
+
+    pub fn first_snapshot_id(&self) -> BnString {
+        let value = unsafe { BNTypeArchiveMergeConflictGetFirstSnapshotId(self.as_raw()) };
+        assert!(!value.is_null());
+        unsafe { BnString::from_raw(value) }
+    }
+
+    pub fn second_snapshot_id(&self) -> BnString {
+        let value = unsafe { BNTypeArchiveMergeConflictGetSecondSnapshotId(self.as_raw()) };
+        assert!(!value.is_null());
+        unsafe { BnString::from_raw(value) }
+    }
+
+    pub fn success<S: BnStrCompatible>(&self, value: S) -> bool {
+        let value = value.into_bytes_with_nul();
+        unsafe {
+            BNTypeArchiveMergeConflictSuccess(
+                self.as_raw(),
+                value.as_ref().as_ptr() as *const ffi::c_char,
+            )
+        }
+    }
+}
+
+impl CoreArrayProvider for TypeArchiveMergeConflict {
+    type Raw = *mut BNTypeArchiveMergeConflict;
+    type Context = ();
+    type Wrapped<'a> = &'a Self;
+}
+
+unsafe impl CoreArrayProviderInner for TypeArchiveMergeConflict {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeTypeArchiveMergeConflictList(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::ref_from_raw(raw)
+    }
+}

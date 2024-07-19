@@ -135,7 +135,7 @@ impl RemoteFolder {
         success.then_some(()).ok_or(())
     }
 
-    /// Desciprtion of the folder
+    /// Description of the folder
     pub fn description(&self) -> BnString {
         let result = unsafe { BNRemoteFolderGetDescription(self.as_raw()) };
         assert!(!result.is_null());

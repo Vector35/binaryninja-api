@@ -463,7 +463,7 @@ bool ElfView::Init()
 			initialImageBase = i.virtualAddress;
 	}
 
-	SetOriginalBase(initialImageBase);
+	SetOriginalImageBase(initialImageBase);
 	uint64_t preferredImageBase = initialImageBase;
 	Ref<Settings> viewSettings = Settings::Instance();
 	m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", this);

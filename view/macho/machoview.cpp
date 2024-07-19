@@ -1098,7 +1098,7 @@ bool MachoView::Init()
 		}
 	}
 
-	SetOriginalBase(initialImageBase);
+	SetOriginalImageBase(initialImageBase);
 	uint64_t preferredImageBase = initialImageBase;
 	if (settings)
 	{

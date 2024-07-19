@@ -267,15 +267,15 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNIsOffsetWritableSemantics(self.as_ref().handle, offset) }
     }
 
-    fn original_base(&self) -> u64 {
+    fn original_image_base(&self) -> u64 {
         unsafe {
-            BNGetOriginalBase(self.as_ref().handle)
+            BNGetOriginalImageBase(self.as_ref().handle)
         }
     }
 
-    fn set_original_base(&self, base: u64) {
+    fn set_original_image_base(&self, image_base: u64) {
         unsafe {
-            BNSetOriginalBase(self.as_ref().handle, base)
+            BNSetOriginalImageBase(self.as_ref().handle, image_base)
         }
     }
 

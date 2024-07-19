@@ -536,7 +536,7 @@ impl DebugInfoBuilder {
             }
 
             if let Some(address) = func.address.as_mut() {
-                let diff = bv.start() - bv.original_base();
+                let diff = bv.start() - bv.original_image_base();
                 *address += diff;  // rebase the address
                 let existing_functions = bv.functions_at(*address);
                 match existing_functions.len().cmp(&1) {

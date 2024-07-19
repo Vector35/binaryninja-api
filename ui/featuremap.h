@@ -16,6 +16,7 @@
 
 #include "binaryninjaapi.h"
 #include "dockhandler.h"
+#include "notificationsdispatcher.h"
 #include "uitypes.h"
 
 class ContextMenuManager;
@@ -38,12 +39,14 @@ class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDa
 	Q_OBJECT
 
 	std::vector<uint8_t> m_imageData;
-	QImage* m_image = nullptr;
-	QImage* m_staticImage = nullptr;
-	std::vector<std::pair<uint64_t, uint64_t>> m_regions;
+	std::unique_ptr<QImage> m_image = nullptr;
+	std::unique_ptr<QImage> m_staticImage = nullptr;
+	std::vector<BNAddressRange> m_ranges;
 
 	SplitPaneWidget* m_owner = nullptr;
 	BinaryViewRef m_data;
+	std::unique_ptr<NotificationsDispatcher> m_dispatcher = nullptr;
+	bool m_requestMappedRegionUpdate = false;
 
 	bool m_updatesPending = false;
 	QTimer* m_updateTimer = nullptr;
@@ -65,21 +68,8 @@ class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDa
 	Menu m_menu;
 	ContextMenuManager* m_contextMenuManager;
 
-	class BackgroundRefresh : public BinaryNinja::RefCountObject
-	{
-		std::mutex m_mutex;
-		bool m_valid;
-		QPointer<FeatureMap> m_featureMap;
-
-	  public:
-		BackgroundRefresh(FeatureMap* featureMap);
-		void start();
-		void abort();
-	};
-
-	BinaryNinja::Ref<BackgroundRefresh> m_backgroundRefresh = nullptr;
-
 	void updateCoordinates();
+	void updateMappedRegions();
 
   public:
 	FeatureMap(SplitPaneWidget* owner, BinaryViewRef data, bool vertical = true);
@@ -120,7 +110,6 @@ protected:
 	void notifyThemeUpdated();
 
   private Q_SLOTS:
-	void refresh();
+	void renderAnalysisData();
 	void updateThemeInternal();
-	void updateTimerEvent();
 };

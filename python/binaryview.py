@@ -1528,35 +1528,8 @@ class Segment:
 		return core.BNSegmentGetDataEnd(self.handle)
 
 	@property
-	def relocation_count(self) -> int:
-		return core.BNSegmentGetRelocationsCount(self.handle)
-
-	@property
 	def auto_defined(self) -> bool:
 		return core.BNSegmentIsAutoDefined(self.handle)
-
-	@property
-	def relocation_ranges(self) -> List[Tuple[int, int]]:
-		"""List of relocation range tuples (read-only)"""
-
-		count = ctypes.c_ulonglong()
-		ranges = core.BNSegmentGetRelocationRanges(self.handle, count)
-		assert ranges is not None, "core.BNSegmentGetRelocationRanges returned None"
-		try:
-			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
-		finally:
-			core.BNFreeRelocationRanges(ranges)
-
-	def relocation_ranges_at(self, addr: int) -> List[Tuple[int, int]]:
-		"""List of relocation range tuples (read-only)"""
-
-		count = ctypes.c_ulonglong()
-		ranges = core.BNSegmentGetRelocationRangesAtAddress(self.handle, addr, count)
-		assert ranges is not None, "core.BNSegmentGetRelocationRangesAtAddress returned None"
-		try:
-			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
-		finally:
-			core.BNFreeRelocationRanges(ranges)
 
 
 class Section:
@@ -2135,35 +2108,35 @@ class MemoryMap:
 			<region: 0x10000 - 0x10004>
 				size: 0x4
 				objects:
-					'origin<Mapped>' | Mapped<Absolute>
+					'origin<Mapped>@0x0' | Mapped<Absolute> | <r-x>
 
 			<region: 0xc0000000 - 0xc0001000>
 				size: 0x1000
 				objects:
-					'origin<Mapped>' | Unmapped | FILL<0x0>
+					'origin<Mapped>@0xbfff0000' | Unmapped | <r--> | FILL<0x0>
 
 			<region: 0xc0001000 - 0xc0001014>
 				size: 0x14
 				objects:
-					'origin<Mapped>' | Unmapped | FILL<0x0>
-		>>> view.memory_map.add_memory_region("rom", rom_base, b'\x90' * 4096)
+					'origin<Mapped>@0xbfff1000' | Unmapped | <---> | FILL<0x0>
+		>>> view.memory_map.add_memory_region("rom", rom_base, b'\x90' * 4096, SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
 		True
 		>>> print(view.memory_map)
 			<region: 0x10000 - 0x10004>
 				size: 0x4
 				objects:
-					'origin<Mapped>' | Mapped<Absolute>
+					'origin<Mapped>@0x0' | Mapped<Absolute> | <r-x>
 
 			<region: 0xc0000000 - 0xc0001000>
 				size: 0x1000
 				objects:
-					'rom' | Mapped
-					'origin<Mapped>' | Unmapped | FILL<0x0>
+					'rom' | Mapped<Relative> | <r-x>
+					'origin<Mapped>@0xbfff0000' | Unmapped | <r--> | FILL<0x0>
 
 			<region: 0xc0001000 - 0xc0001014>
 				size: 0x14
 				objects:
-					'origin<Mapped>' | Unmapped | FILL<0x0>
+					'origin<Mapped>@0xbfff1000' | Unmapped | <---> | FILL<0x0>
 		>>> view.read(rom_base, 16)
 		b'\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90'
 		>>> view.memory_map.add_memory_region("pad", rom_base, b'\xa5' * 8)
@@ -2174,25 +2147,25 @@ class MemoryMap:
 			<region: 0x10000 - 0x10004>
 				size: 0x4
 				objects:
-					'origin<Mapped>' | Mapped<Absolute>
+					'origin<Mapped>@0x0' | Mapped<Absolute> | <r-x>
 
 			<region: 0xc0000000 - 0xc0000008>
 				size: 0x8
 				objects:
-					'pad' | Mapped<Relative>
-					'rom' | Mapped<Relative>
-					'origin<Mapped>' | Unmapped | FILL<0x0>
+					'pad' | Mapped<Relative> | <--->
+					'rom' | Mapped<Relative> | <r-x>
+					'origin<Mapped>@0xbfff0000' | Unmapped | <r--> | FILL<0x0>
 
 			<region: 0xc0000008 - 0xc0001000>
 				size: 0xff8
 				objects:
-					'rom' | Mapped<Relative>
-					'origin<Mapped>' | Unmapped | FILL<0x0>
+					'rom' | Mapped<Relative> | <r-x>
+					'origin<Mapped>@0xbfff0000' | Unmapped | <r--> | FILL<0x0>
 
 			<region: 0xc0001000 - 0xc0001014>
 				size: 0x14
 				objects:
-					'origin<Mapped>' | Unmapped | FILL<0x0>
+					'origin<Mapped>@0xbfff1000' | Unmapped | <---> | FILL<0x0>
 	"""
 
 	def __repr__(self):
@@ -2211,6 +2184,10 @@ class MemoryMap:
 				else:
 					mapped_state = "Unmapped"
 				formatted_description += f"\t\t'{obj['name']}' | {mapped_state}"
+				r = "r" if obj['flags'] & SegmentFlag.SegmentReadable else "-"
+				w = "w" if obj['flags'] & SegmentFlag.SegmentWritable else "-"
+				x = "x" if obj['flags'] & SegmentFlag.SegmentExecutable else "-"
+				formatted_description += f" | <{r}{w}{x}>"
 				if not obj['target']:
 					formatted_description += f" | FILL<{hex(obj['fill'])}>"
 				if not obj['enabled']:
@@ -2233,7 +2210,7 @@ class MemoryMap:
 	def description(self):
 		return json.loads(core.BNGetMemoryMapDescription(self.handle))
 
-	def add_memory_region(self, name: str, start: int, source: Union['os.PathLike', str, bytes, bytearray, 'BinaryView', 'databuffer.DataBuffer', 'fileaccessor.FileAccessor']) -> bool:
+	def add_memory_region(self, name: str, start: int, source: Union['os.PathLike', str, bytes, bytearray, 'BinaryView', 'databuffer.DataBuffer', 'fileaccessor.FileAccessor'], flags: SegmentFlag = 0) -> bool:
 		"""
 		Adds a memory region into the memory map. There are three types of memory regions that can be added:
 		- BinaryMemoryRegion(*** Unimplemented ***): Creates a memory region from a loadable binary format and provides persistence across sessions.
@@ -2272,25 +2249,34 @@ class MemoryMap:
 			name = ""
 
 		if isinstance(source, BinaryView):
-			return core.BNAddBinaryMemoryRegion(self.handle, name, start, source.handle)
+			return core.BNAddBinaryMemoryRegion(self.handle, name, start, source.handle, flags)
 		elif isinstance(source, databuffer.DataBuffer):
-			return core.BNAddDataMemoryRegion(self.handle, name, start, source.handle)
+			return core.BNAddDataMemoryRegion(self.handle, name, start, source.handle, flags)
 		elif isinstance(source, fileaccessor.FileAccessor):
-			return core.BNAddRemoteMemoryRegion(self.handle, name, start, source._cb)
+			return core.BNAddRemoteMemoryRegion(self.handle, name, start, source._cb, flags)
 		else:
 			raise NotImplementedError
 
 	def remove_memory_region(self, name: str) -> bool:
 		return core.BNRemoveMemoryRegion(self.handle, name)
 
-	def is_memory_region_enabled(self, name: str, start: int) -> bool:
-		return core.BNIsMemoryRegionEnabled(self.handle, name, start)
+	def get_active_memory_region_at(self, addr: int) -> str:
+		return core.BNGetActiveMemoryRegionAt(self.handle, addr)
 
-	def set_memory_region_enabled(self, name: str, start: int, enabled: bool = True) -> bool:
-		return core.BNSetMemoryRegionEnabled(self.handle, name, start, enabled)
+	def is_memory_region_enabled(self, name: str) -> bool:
+		return core.BNIsMemoryRegionEnabled(self.handle, name)
 
-	def set_memory_region_fill(self, name: str, start: int, fill: int) -> bool:
-		return core.BNSetMemoryRegionFill(self.handle, name, start, fill)
+	def set_memory_region_enabled(self, name: str, enabled: bool = True) -> bool:
+		return core.BNSetMemoryRegionEnabled(self.handle, name, enabled)
+
+	def is_memory_region_rebaseable(self, name: str) -> bool:
+		return core.BNIsMemoryRegionRebaseable(self.handle, name)
+
+	def set_memory_region_rebaseable(self, name: str, rebaseable: bool = True) -> bool:
+		return core.BNSetMemoryRegionRebaseable(self.handle, name, rebaseable)
+
+	def set_memory_region_fill(self, name: str, fill: int) -> bool:
+		return core.BNSetMemoryRegionFill(self.handle, name, fill)
 
 	def reset(self):
 		core.BNResetMemoryMap(self.handle)
@@ -2894,14 +2880,29 @@ class BinaryView:
 		return self._file
 
 	@property
-	def original_base(self) -> int:
+	def image_base(self) -> int:
+		"""Image base of the binary"""
+		return core.BNGetImageBase(self.handle)
+
+	@property
+	def original_image_base(self) -> int:
 		"""Original image base of the binary"""
-		return core.BNGetOriginalBase(self.handle)
+		return core.BNGetOriginalImageBase(self.handle)
+
+	@original_image_base.setter
+	def original_image_base(self, image_base: int) -> None:
+		"""Set original image base of the binary. Only intended for binary view implementations"""
+		return core.BNSetOriginalImageBase(self.handle, image_base)
+
+	@property
+	def original_base(self) -> int:
+		"""Original image base of the binary Deprecated: 4.0.xxxx Use original_image_base instead."""
+		return core.BNGetOriginalImageBase(self.handle)
 
 	@original_base.setter
 	def original_base(self, base: int) -> None:
-		"""Set original image base of the binary. Only intended for binary view implementations"""
-		return core.BNSetOriginalBase(self.handle, base)
+		"""Set original image base of the binary. Only intended for binary view implementations. Deprecated: 4.0.xxxx Use original_image_base instead."""
+		return core.BNSetOriginalImageBase(self.handle, base)
 
 	@property
 	def start(self) -> int:
@@ -3311,10 +3312,38 @@ class BinaryView:
 
 	@property
 	def allocated_ranges(self) -> List['variable.AddressRange']:
-		"""List of valid address ranges for this view (read-only)"""
+		"""List of valid address ranges for this view (read-only) Deprecated: 4.0.xxxx Use mapped_address_ranges instead."""
 		count = ctypes.c_ulonglong(0)
 		range_list = core.BNGetAllocatedRanges(self.handle, count)
 		assert range_list is not None, "core.BNGetAllocatedRanges returned None"
+		result = []
+		try:
+			for i in range(0, count.value):
+				result.append(variable.AddressRange(range_list[i].start, range_list[i].end))
+			return result
+		finally:
+			core.BNFreeAddressRanges(range_list)
+
+	@property
+	def mapped_address_ranges(self) -> List['variable.AddressRange']:
+		"""List of mapped address ranges for this view (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		range_list = core.BNGetMappedAddressRanges(self.handle, count)
+		assert range_list is not None, "core.BNGetMappedAddressRanges returned None"
+		result = []
+		try:
+			for i in range(0, count.value):
+				result.append(variable.AddressRange(range_list[i].start, range_list[i].end))
+			return result
+		finally:
+			core.BNFreeAddressRanges(range_list)
+
+	@property
+	def backed_address_ranges(self) -> List['variable.AddressRange']:
+		"""List of backed address ranges for this view (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		range_list = core.BNGetBackedAddressRanges(self.handle, count)
+		assert range_list is not None, "core.BNGetBackedAddressRanges returned None"
 		result = []
 		try:
 			for i in range(0, count.value):
@@ -3374,6 +3403,17 @@ class BinaryView:
 		count = ctypes.c_ulonglong()
 		ranges = core.BNGetRelocationRangesAtAddress(self.handle, addr, count)
 		assert ranges is not None, "core.BNGetRelocationRangesAtAddress returned None"
+		try:
+			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
+		finally:
+			core.BNFreeRelocationRanges(ranges)
+
+	def relocation_ranges_in_range(self, addr: int, size: int) -> List[Tuple[int, int]]:
+		"""List of relocation range tuples for a given range"""
+
+		count = ctypes.c_ulonglong()
+		ranges = core.BNGetRelocationRangesInRange(self.handle, addr, size, count)
+		assert ranges is not None, "core.BNGetRelocationRangesInRange returned None"
 		try:
 			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
 		finally:
@@ -4177,7 +4217,7 @@ class BinaryView:
 		if not (isinstance(data, bytes) or isinstance(data, bytearray) or isinstance(data, str)):
 			raise TypeError("Must be bytes, bytearray, or str")
 		buf = databuffer.DataBuffer(data)
-		if except_on_relocation and self.range_contains_relocation(addr, addr + len(data)):
+		if except_on_relocation and self.range_contains_relocation(addr, len(data)):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 
 		return core.BNWriteViewBuffer(self.handle, addr, buf.handle)
@@ -10206,7 +10246,7 @@ class BinaryWriter:
 		if address is not None:
 			self.seek(address)
 
-		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + len(value)):
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, len(value)):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		if isinstance(value, str):
 			value = value.decode("utf-8")
@@ -10234,7 +10274,7 @@ class BinaryWriter:
 		if address is not None:
 			self.seek(address)
 
-		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + 1):
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, 1):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		return core.BNWrite8(self._handle, value)
 
@@ -10251,7 +10291,7 @@ class BinaryWriter:
 		if address is not None:
 			self.seek(address)
 
-		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + 2):
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, 2):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		return core.BNWrite16(self._handle, value)
 
@@ -10268,7 +10308,7 @@ class BinaryWriter:
 		if address is not None:
 			self.seek(address)
 
-		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + 4):
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, 4):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		return core.BNWrite32(self._handle, value)
 
@@ -10285,7 +10325,7 @@ class BinaryWriter:
 		if address is not None:
 			self.seek(address)
 
-		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + 8):
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, 8):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		return core.BNWrite64(self._handle, value)
 

@@ -46,7 +46,6 @@ class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDa
 	SplitPaneWidget* m_owner = nullptr;
 	BinaryViewRef m_data;
 	std::unique_ptr<NotificationsDispatcher> m_dispatcher = nullptr;
-	bool m_requestMappedRegionUpdate = false;
 
 	bool m_updatesPending = false;
 	QTimer* m_updateTimer = nullptr;

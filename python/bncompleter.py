@@ -202,8 +202,7 @@ class Completer:
 		while True:
 			for word in words:
 				score = fuzzy_match(word, attr)
-				if score is not None:
-				# if (word[:n] == attr and not (noprefix and word[:n + 1] == noprefix)):
+				if score is not None and (word[:n] == attr and not (noprefix and word[:n + 1] == noprefix)):
 					match = f"{expr}.{word}"
 					try:
 						val = inspect.getattr_static(thisobject, word)

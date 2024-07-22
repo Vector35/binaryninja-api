@@ -1996,6 +1996,8 @@ namespace BinaryNinja {
 
 	std::map<std::string, uint64_t> GetMemoryUsageInfo();
 
+	void SetThreadName(const std::string& name);
+
 	/*!
 		\ingroup databuffer
 	*/

@@ -585,3 +585,9 @@ fmt::format_context::iterator fmt::formatter<BinaryNinja::NameList>::format(cons
 {
 	return fmt::format_to(ctx.out(), "{}", obj.GetString());
 }
+
+
+void BinaryNinja::SetThreadName(const std::string& name)
+{
+	BNSetThreadName(name.c_str());
+}

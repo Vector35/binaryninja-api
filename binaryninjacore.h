@@ -6609,6 +6609,8 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNGetWorkerThreadCount(void);
 	BINARYNINJACOREAPI void BNSetWorkerThreadCount(size_t count);
 
+	BINARYNINJACOREAPI void BNSetThreadName(const char* name);
+
 	// Background task progress reporting
 	BINARYNINJACOREAPI BNBackgroundTask* BNBeginBackgroundTask(const char* initialText, bool canCancel);
 	BINARYNINJACOREAPI void BNFinishBackgroundTask(BNBackgroundTask* task);

@@ -21,8 +21,7 @@ use binaryninja::{
     rc::*,
     symbol::SymbolType,
     templatesimplifier::simplify_str_to_fqn,
-    types::{Conf, FunctionParameter, NamedTypedVariable, Type, Variable},
-    binaryninjacore_sys::BNVariableSourceType,
+    types::{Conf, FunctionParameter, NamedTypedVariable, Type, Variable, VariableSourceType},
 };
 
 use gimli::{DebuggingInformationEntry, Dwarf, Unit};
@@ -415,7 +414,7 @@ impl DebugInfoBuilder {
             return;
         }
 
-        let var = Variable::new(BNVariableSourceType::StackVariableSourceType, 0, adjusted_offset);
+        let var = Variable::new(VariableSourceType::StackVariableSourceType, 0, adjusted_offset);
         function.stack_variables.push(NamedTypedVariable::new(var, name, t, false));
 
     }

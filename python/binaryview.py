@@ -2263,6 +2263,12 @@ class MemoryMap:
 	def get_active_memory_region_at(self, addr: int) -> str:
 		return core.BNGetActiveMemoryRegionAt(self.handle, addr)
 
+	def get_memory_region_flags(self, name: str) -> SegmentFlag:
+		return SegmentFlag(core.BNGetMemoryRegionFlags(self.handle, name))
+
+	def set_memory_region_flags(self, name: str, flags: SegmentFlag) -> bool:
+		return core.BNSetMemoryRegionFlags(self.handle, name, flags)
+
 	def is_memory_region_enabled(self, name: str) -> bool:
 		return core.BNIsMemoryRegionEnabled(self.handle, name)
 
@@ -2274,6 +2280,9 @@ class MemoryMap:
 
 	def set_memory_region_rebaseable(self, name: str, rebaseable: bool = True) -> bool:
 		return core.BNSetMemoryRegionRebaseable(self.handle, name, rebaseable)
+
+	def get_memory_region_fill(self, name: str) -> int:
+		return core.BNGetMemoryRegionFill(self.handle, name)
 
 	def set_memory_region_fill(self, name: str, fill: int) -> bool:
 		return core.BNSetMemoryRegionFill(self.handle, name, fill)

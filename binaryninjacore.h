@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 67
+#define BN_CURRENT_CORE_ABI_VERSION 68
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -3776,10 +3776,13 @@ extern "C"
 	BINARYNINJACOREAPI bool BNAddRemoteMemoryRegion(BNBinaryView* view, const char* name, uint64_t start, BNFileAccessor* accessor, uint32_t flags);
 	BINARYNINJACOREAPI bool BNRemoveMemoryRegion(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI char* BNGetActiveMemoryRegionAt(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint32_t BNGetMemoryRegionFlags(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI bool BNSetMemoryRegionFlags(BNBinaryView* view, const char* name, uint32_t flags);
 	BINARYNINJACOREAPI bool BNIsMemoryRegionEnabled(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI bool BNSetMemoryRegionEnabled(BNBinaryView* view, const char* name, bool enable);
 	BINARYNINJACOREAPI bool BNIsMemoryRegionRebaseable(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI bool BNSetMemoryRegionRebaseable(BNBinaryView* view, const char* name, bool rebaseable);
+	BINARYNINJACOREAPI uint8_t BNGetMemoryRegionFill(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI bool BNSetMemoryRegionFill(BNBinaryView* view, const char* name, uint8_t fill);
 	BINARYNINJACOREAPI void BNResetMemoryMap(BNBinaryView* view);
 

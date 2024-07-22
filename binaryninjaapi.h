@@ -6764,6 +6764,16 @@ namespace BinaryNinja {
 			return result;
 		}
 
+		uint32_t GetMemoryRegionFlags(const std::string& name)
+		{
+			return BNGetMemoryRegionFlags(m_object, name.c_str());
+		}
+
+		bool SetMemoryRegionFlags(const std::string& name, uint32_t flags)
+		{
+			return BNSetMemoryRegionFlags(m_object, name.c_str(), flags);
+		}
+
 		bool IsMemoryRegionEnabled(const std::string& name)
 		{
 			return BNIsMemoryRegionEnabled(m_object, name.c_str());
@@ -6782,6 +6792,11 @@ namespace BinaryNinja {
 		bool SetMemoryRegionRebaseable(const std::string& name, bool rebaseable)
 		{
 			return BNSetMemoryRegionRebaseable(m_object, name.c_str(), rebaseable);
+		}
+
+		uint8_t GetMemoryRegionFill(const std::string& name)
+		{
+			return BNGetMemoryRegionFill(m_object, name.c_str());
 		}
 
 		bool SetMemoryRegionFill(const std::string& name, uint8_t fill)

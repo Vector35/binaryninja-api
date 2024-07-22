@@ -99,6 +99,11 @@ def shutdown():
 
 	.. note:: This will be called automatically on script exit if you import the binaryninja module.
 	"""
+
+	# Release license if we have one
+	global _enterprise_license_checkout
+	_enterprise_license_checkout = None
+
 	core.BNShutdown()
 
 

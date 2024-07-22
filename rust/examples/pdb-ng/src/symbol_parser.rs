@@ -35,13 +35,12 @@ use pdb::{
 };
 
 use binaryninja::architecture::{Architecture, ArchitectureExt, Register};
-use binaryninja::binaryninjacore_sys::BNVariableSourceType;
 use binaryninja::binaryview::BinaryViewBase;
 use binaryninja::demangle::demangle_ms;
 use binaryninja::rc::Ref;
 use binaryninja::types::{
     max_confidence, min_confidence, Conf, ConfMergable, FunctionParameter, QualifiedName,
-    StructureBuilder, Type, TypeClass, Variable,
+    StructureBuilder, Type, TypeClass, Variable, VariableSourceType,
 };
 
 use crate::PDBParserInstance;
@@ -736,7 +735,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let storage = if let Some(reg) = self.convert_register(data.register) {
             vec![ParsedLocation {
                 location: Variable {
-                    t: BNVariableSourceType::RegisterVariableSourceType,
+                    t: VariableSourceType::RegisterVariableSourceType,
                     index: 0,
                     storage: reg,
                 },
@@ -1425,7 +1424,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     type_: self.lookup_type_conf(&data.type_index, false)?,
                     storage: vec![ParsedLocation {
                         location: Variable {
-                            t: BNVariableSourceType::StackVariableSourceType,
+                            t: VariableSourceType::StackVariableSourceType,
                             index: 0,
                             storage: data.offset as i64,
                         },
@@ -1443,7 +1442,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     type_: self.lookup_type_conf(&data.type_index, false)?,
                     storage: vec![ParsedLocation {
                         location: Variable {
-                            t: BNVariableSourceType::StackVariableSourceType,
+                            t: VariableSourceType::StackVariableSourceType,
                             index: 0,
                             storage: data.offset as i64,
                         },
@@ -1587,7 +1586,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         if let Some(reg) = self.convert_register(data.register) {
             Ok(Some(ParsedSymbol::Location(ParsedLocation {
                 location: Variable {
-                    t: BNVariableSourceType::RegisterVariableSourceType,
+                    t: VariableSourceType::RegisterVariableSourceType,
                     index: 0,
                     storage: reg,
                 },
@@ -1654,7 +1653,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             type_: self.lookup_type_conf(&data.type_index, false)?,
             storage: vec![ParsedLocation {
                 location: Variable {
-                    t: BNVariableSourceType::StackVariableSourceType,
+                    t: VariableSourceType::StackVariableSourceType,
                     index: 0,
                     storage: data.offset as i64,
                 },
@@ -1696,14 +1695,14 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     for loc in &new_storage {
                         match loc {
                             Variable {
-                                t: BNVariableSourceType::RegisterVariableSourceType,
+                                t: VariableSourceType::RegisterVariableSourceType,
                                 ..
                             } => {
                                 // Assume register vars are always parameters
                                 really_is_param = true;
                             }
                             Variable {
-                                t: BNVariableSourceType::StackVariableSourceType,
+                                t: VariableSourceType::StackVariableSourceType,
                                 storage,
                                 ..
                             } if *storage >= 0 => {

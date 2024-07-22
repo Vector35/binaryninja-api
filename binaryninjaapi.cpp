@@ -596,3 +596,9 @@ std::optional<size_t> BinaryNinja::FuzzyMatchSingle(const std::string& target, c
 	}
 	return result;
 }
+
+
+void BinaryNinja::SetThreadName(const std::string& name)
+{
+	BNSetThreadName(name.c_str());
+}

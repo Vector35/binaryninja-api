@@ -99,11 +99,6 @@ namespace BinaryNinja
 		uint64_t FindSysInit(BinaryReader *reader, uint64_t imageBase);
 		void AdjustImageBaseForHeaderIfPresent(BinaryReader* reader);
 		void DetermineImageBaseFromSymbols(BinaryReader* reader);
-		bool FunctionAddressesAreValid(VxWorksVersion version);
-		bool TryReadVxWorksSymbolEntry(BinaryReader *reader, uint64_t offset,
-			VxWorksSymbolEntry& entry, VxWorksVersion version);
-		bool ScanForVxWorksSystemTable(BinaryReader *reader, VxWorksVersion version, BNEndianness endianness);
-		bool FindSymbolTable(BinaryReader *reader);
 		void AssignSymbolToSection(std::map<std::string, std::set<uint64_t>>& sections,
 			BNSymbolType bnSymbolType, uint8_t vxSymbolType, uint64_t address);
 		void ProcessSymbolTable(BinaryReader *reader);

@@ -56,7 +56,7 @@ def fuzzy_match(target, query):
 	if binaryninja.Settings().get_bool("ui.scripting.fuzzySearch"):
 		return binaryninja.fuzzy_match_single(target, query)
 	else:
-		return query in target
+		return 1 if target.startswith(query) else None
 
 
 def fnsignature(obj):

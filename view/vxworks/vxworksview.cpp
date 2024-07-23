@@ -62,6 +62,179 @@ static const std::map<std::string, BNSectionSemantics> VxWorksSectionSemanticsMa
 
 static VxWorksViewType* g_vxWorksViewType = nullptr;
 
+
+// Check least significant byte of the first 10 function symbol addresses to make sure they aren't all the same
+static bool FunctionAddressesAreValid(VxWorksVersion version, std::vector<VxWorksSymbolEntry>& symbols)
+{
+	std::vector<uint32_t> funcAddresses;
+	for (const auto& entry : symbols)
+	{
+		uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
+		if (version == VxWorksVersion5 && type != VxWorks5GlobalTextSymbolType)
+			continue;
+
+		if (version == VxWorksVersion6 && type != VxWorks6GlobalTextSymbolType)
+			continue;
+
+		funcAddresses.push_back(entry.address);
+		if (funcAddresses.size() == MAX_ADDRESSES_ENDIANNESS_CHECK)
+		{
+			uint32_t val = 0;
+			for (const auto& addr : funcAddresses)
+				val ^= addr;
+			return (val & 0xff) != 0;
+		}
+	}
+
+	// Too few symbols to check
+	return false;
+}
+
+
+static bool TryReadVxWorksSymbolEntry(BinaryReader *reader, uint64_t offset,
+	VxWorksSymbolEntry& entry, VxWorksVersion version, Logger* logger)
+{
+	reader->Seek(offset + 4); // Skip first unknown field
+	if (!reader->TryRead32(entry.name) || !reader->TryRead32(entry.address))
+		return false;
+
+	if (version == VxWorksVersion6)
+		reader->Seek(offset + 16); // Skip second unknown field (VxWorks 6 only)
+
+	if (!reader->TryReadBE32(entry.flags))
+		return false;
+
+	uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
+	switch (version)
+	{
+	case VxWorksVersion5:
+	{
+		auto it = VxWorks5SymbolTypeMap.find((VxWorks5SymbolType)type);
+		if (entry.name != 0 && entry.flags != 0 && it != VxWorks5SymbolTypeMap.end())
+			return true;
+
+		return false;
+	}
+	case VxWorksVersion6:
+	{
+		auto it = VxWorks6SymbolTypeMap.find((VxWorks6SymbolType)type);
+		if (entry.name != 0 && it != VxWorks6SymbolTypeMap.end())
+			return true;
+
+		return false;
+	}
+	default:
+		logger->LogError("VxWorks version is not set. Please report this issue.");
+		return false;
+	}
+}
+
+
+static bool ScanForVxWorksSymbolTable(BinaryReader* reader, size_t dataSize, VxWorksVersion version,
+	std::vector<VxWorksSymbolEntry>& symbols, uint64_t* symbolTableOffset, Logger* logger)
+{
+	size_t entrySize;
+	BNEndianness endianness = reader->GetEndianness();
+	switch (version)
+	{
+	case VxWorksVersion5:
+		entrySize = VXWORKS5_SYMBOL_ENTRY_SIZE;
+		break;
+	case VxWorksVersion6:
+		entrySize = VXWORKS6_SYMBOL_ENTRY_SIZE;
+		break;
+	default:
+		logger->LogError("VxWorks version is not set. Please report this issue.");
+		return false;
+	}
+
+	VxWorksSymbolEntry entry;
+	ssize_t startOffset = ALIGN4(dataSize - entrySize);
+	ssize_t endOffset = 0;
+	if (dataSize > MAX_SYMBOL_TABLE_REGION_SIZE)
+		endOffset = ALIGN4(dataSize - MAX_SYMBOL_TABLE_REGION_SIZE);
+	ssize_t searchPos = startOffset;
+	std::vector<uint32_t> foundNames;
+
+	logger->LogDebug("Scanning backwards for VxWorks symbol table (0x%016x-0x%016x) (endianess=%s) (version=%d)...",
+		startOffset, endOffset, endianness == BigEndian ? "big" : "little", version == VxWorksVersion5 ? 5 : 6);
+	while (searchPos > endOffset)
+	{
+		if (TryReadVxWorksSymbolEntry(reader, searchPos, entry, version, logger) &&
+			find(foundNames.begin(), foundNames.end(), entry.name) == foundNames.end())
+		{
+			foundNames.push_back(entry.address);
+			symbols.push_back(entry);
+			searchPos -= entrySize;
+			continue;
+		}
+
+		if (symbols.size() > MIN_VALID_SYMBOL_ENTRIES && FunctionAddressesAreValid(version, symbols))
+			break;
+
+		searchPos -= 4;
+		foundNames.clear();
+		symbols.clear();
+	}
+
+	if (symbols.size() < MIN_VALID_SYMBOL_ENTRIES)
+	{
+		symbols.clear();
+		return false;
+	}
+
+	*symbolTableOffset = searchPos + entrySize;
+
+	// Scan algorithm is prone to missing a few entries at the end of the table
+	searchPos = *symbolTableOffset + (entrySize * symbols.size());
+	while (TryReadVxWorksSymbolEntry(reader, searchPos, entry, version, logger))
+	{
+		symbols.push_back(entry);
+		searchPos += entrySize;
+	}
+
+	logger->LogDebug("Found %d VxWorks %d symbol table entries starting at offset 0x%016x",
+		symbols.size(), version == VxWorksVersion5 ? 5 : 6, *symbolTableOffset);
+
+	return true;
+}
+
+
+static bool FindVxWorksSymbolTable(BinaryReader* reader, size_t dataSize, std::vector<VxWorksSymbolEntry>& symbols,
+	VxWorksVersion *version, uint64_t* symbolTableOffset, Logger *logger)
+{
+	reader->SetEndianness(BigEndian);
+	if (ScanForVxWorksSymbolTable(reader, dataSize, VxWorksVersion5, symbols, symbolTableOffset, logger))
+	{
+		*version = VxWorksVersion5;
+		return true;
+	}
+
+	reader->SetEndianness(LittleEndian);
+	if (ScanForVxWorksSymbolTable(reader, dataSize, VxWorksVersion5, symbols, symbolTableOffset, logger))
+	{
+		*version = VxWorksVersion5;
+		return true;
+	}
+
+	reader->SetEndianness(BigEndian);
+	if (ScanForVxWorksSymbolTable(reader, dataSize, VxWorksVersion6, symbols, symbolTableOffset, logger))
+	{
+		*version = VxWorksVersion6;
+		return true;
+	}
+
+	reader->SetEndianness(LittleEndian);
+	if (ScanForVxWorksSymbolTable(reader, dataSize, VxWorksVersion6, symbols, symbolTableOffset, logger))
+	{
+		*version = VxWorksVersion6;
+		return true;
+	}
+
+	return false;
+}
+
+
 void BinaryNinja::InitVxWorksViewType()
 {
 	static VxWorksViewType type;
@@ -81,8 +254,8 @@ VxWorksView::VxWorksView(BinaryView* data, bool parseOnly): BinaryView("VxWorks"
 bool VxWorksView::IsASCIIString(std::string &s)
 {
 	return !std::any_of(s.begin(), s.end(), [](char c) {
-        return static_cast<unsigned char>(c) > 127;
-    });
+		return static_cast<unsigned char>(c) > 127;
+	});
 }
 
 
@@ -196,159 +369,6 @@ void VxWorksView::DetermineImageBaseFromSymbols(BinaryReader* reader)
 	AdjustImageBaseForHeaderIfPresent(reader);
 	m_logger->LogDebug("Determined image base address: 0x%016x", lowestTextAddress);
 	m_imageBase = m_determinedImageBase;
-}
-
-
-// Check least significant byte of the first 10 function symbol addresses to make sure they aren't all the same
-bool VxWorksView::FunctionAddressesAreValid(VxWorksVersion version)
-{
-	std::vector<uint32_t> funcAddresses;
-	for (const auto& entry : m_symbols)
-	{
-		uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
-		if (version == VxWorksVersion5 && type != VxWorks5GlobalTextSymbolType)
-			continue;
-
-		if (version == VxWorksVersion6 && type != VxWorks6GlobalTextSymbolType)
-			continue;
-
-		funcAddresses.push_back(entry.address);
-		if (funcAddresses.size() == MAX_ADDRESSES_ENDIANNESS_CHECK)
-		{
-			uint32_t val = 0;
-			for (const auto& addr : funcAddresses)
-				val ^= addr;
-			return (val & 0xff) != 0;
-		}
-	}
-
-	// Too few symbols to check
-	return false;
-}
-
-
-bool VxWorksView::TryReadVxWorksSymbolEntry(BinaryReader *reader, uint64_t offset,
-	VxWorksSymbolEntry& entry, VxWorksVersion version)
-{
-	reader->Seek(offset + 4); // Skip first unknown field
-	if (!reader->TryRead32(entry.name) || !reader->TryRead32(entry.address))
-		return false;
-
-	if (version == VxWorksVersion6)
-		reader->Seek(offset + 16); // Skip second unknown field (VxWorks 6 only)
-
-	if (!reader->TryReadBE32(entry.flags))
-		return false;
-
-	uint8_t type = VXWORKS_SYMBOL_ENTRY_TYPE(entry.flags);
-	switch (version)
-	{
-	case VxWorksVersion5:
-	{
-		auto it = VxWorks5SymbolTypeMap.find((VxWorks5SymbolType)type);
-		if (entry.name != 0 && entry.flags != 0 && it != VxWorks5SymbolTypeMap.end())
-			return true;
-
-		return false;
-	}
-	case VxWorksVersion6:
-	{
-		auto it = VxWorks6SymbolTypeMap.find((VxWorks6SymbolType)type);
-		if (entry.name != 0 && it != VxWorks6SymbolTypeMap.end())
-			return true;
-
-		return false;
-	}
-	default:
-		m_logger->LogError("VxWorks version is not set. Please report this issue.");
-		return false;
-	}
-}
-
-
-bool VxWorksView::ScanForVxWorksSystemTable(BinaryReader *reader, VxWorksVersion version, BNEndianness endianness)
-{
-	size_t entrySize;
-	m_endianness = endianness;
-	reader->SetEndianness(m_endianness);
-	switch (version)
-	{
-	case VxWorksVersion5:
-		entrySize = VXWORKS5_SYMBOL_ENTRY_SIZE;
-		break;
-	case VxWorksVersion6:
-		entrySize = VXWORKS6_SYMBOL_ENTRY_SIZE;
-		break;
-	default:
-		m_logger->LogError("VxWorks version is not set. Please report this issue.");
-		return false;
-	}
-
-	VxWorksSymbolEntry entry;
-	ssize_t startOffset = ALIGN4(m_parentView->GetLength() - entrySize);
-	ssize_t endOffset = 0;
-	if (m_parentView->GetLength() > MAX_SYMBOL_TABLE_REGION_SIZE)
-		endOffset = ALIGN4(m_parentView->GetLength() - MAX_SYMBOL_TABLE_REGION_SIZE);
-	ssize_t searchPos = startOffset;
-	std::vector<uint32_t> foundNames;
-
-	m_logger->LogDebug("Scanning backwards for VxWorks system table (0x%016x-0x%016x) (endianess=%s) (version=%d)...",
-		startOffset, endOffset, m_endianness == BigEndian ? "big" : "little", version == VxWorksVersion5 ? 5 : 6);
-	while (searchPos > endOffset)
-	{
-		if (TryReadVxWorksSymbolEntry(reader, searchPos, entry, version) &&
-			find(foundNames.begin(), foundNames.end(), entry.name) == foundNames.end())
-		{
-			foundNames.push_back(entry.address);
-			m_symbols.push_back(entry);
-			searchPos -= entrySize;
-			continue;
-		}
-
-		if (m_symbols.size() > MIN_VALID_SYMBOL_ENTRIES && FunctionAddressesAreValid(version))
-			break;
-
-		searchPos -= 4;
-		foundNames.clear();
-		m_symbols.clear();
-	}
-
-	if (m_symbols.size() < MIN_VALID_SYMBOL_ENTRIES)
-	{
-		m_symbols.clear();
-		return false;
-	}
-
-	m_symbolTableOffset = searchPos + entrySize;
-
-	// Scan algorithm is prone to missing a few entries at the end of the table
-	searchPos = m_symbolTableOffset + (entrySize * m_symbols.size());
-	while (TryReadVxWorksSymbolEntry(reader, searchPos, entry, version))
-	{
-		m_symbols.push_back(entry);
-		searchPos += entrySize;
-	}
-
-	m_version = version;
-	m_logger->LogDebug("Found %d VxWorks %d symbol table entries starting at offset 0x%016x",
-		m_symbols.size(), version == VxWorksVersion5 ? 5 : 6, m_symbolTableOffset);
-
-	return true;
-}
-
-
-bool VxWorksView::FindSymbolTable(BinaryReader *reader)
-{
-	if (ScanForVxWorksSystemTable(reader, VxWorksVersion5, BigEndian))
-		return true;
-
-	if (ScanForVxWorksSystemTable(reader, VxWorksVersion5, LittleEndian))
-		return true;
-
-	if (ScanForVxWorksSystemTable(reader, VxWorksVersion6, LittleEndian))
-		return true;
-
-	return ScanForVxWorksSystemTable(reader, VxWorksVersion6, BigEndian);
 }
 
 
@@ -576,9 +596,11 @@ bool VxWorksView::Init()
 		}
 
 		BinaryReader reader(m_parentView, m_endianness);
-		m_hasSymbolTable = FindSymbolTable(&reader);
+		m_hasSymbolTable = FindVxWorksSymbolTable(&reader, m_parentView->GetLength(), m_symbols,
+			&m_version, &m_symbolTableOffset, m_logger);
 		if (m_hasSymbolTable)
 		{
+			m_endianness = reader.GetEndianness();
 			DetermineImageBaseFromSymbols(&reader);
 			uint64_t sysInit = FindSysInit(&reader, m_determinedImageBase);
 			m_entryPoint = sysInit ? sysInit : m_imageBase;
@@ -717,7 +739,8 @@ bool VxWorksViewType::IsTypeValidForData(BinaryView* data)
 
 	bool hasVxWorksString = false;
 	bool hasWindRiverString = false;
-	auto StringSearchCallback = [&hasVxWorksString, &hasWindRiverString](size_t index, const DataBuffer& dataBuffer) -> bool
+	auto StringSearchCallback = [&hasVxWorksString, &hasWindRiverString](
+		size_t index, const DataBuffer& dataBuffer) -> bool
 	{
 		auto data = dataBuffer.GetData();
 		if (!strcmp((const char *)data, "VxWorks"))
@@ -734,8 +757,11 @@ bool VxWorksViewType::IsTypeValidForData(BinaryView* data)
 	if (!hasVxWorksString || !hasWindRiverString)
 		return false;
 
-	// TODO: scan for system table (requires rework of VxWorksView::FindSymbolTable)
-	return true;
+	uint64_t symbolTableOffset;
+	VxWorksVersion version;
+	std::vector<VxWorksSymbolEntry> symbols;
+	return FindVxWorksSymbolTable(new BinaryReader(data), data->GetLength(), symbols,
+		&version, &symbolTableOffset, m_logger);
 }
 
 

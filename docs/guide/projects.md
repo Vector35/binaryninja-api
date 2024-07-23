@@ -77,7 +77,7 @@ In the `External Links` sidebar widget, there is a top level entry for each defi
 
 ### External Libraries
 
-An External Library represents a full library backed by a project file (e.g. `libc.so` which is backed by `libc.bndb`).
+An External Library represents a full library, optionally backed by a project file (e.g. `libc.so` which is backed by `libc.bndb`).
 
 
 #### Creating an External Library

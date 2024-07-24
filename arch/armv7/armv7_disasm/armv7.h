@@ -927,7 +927,7 @@ typedef union _ieee754_double {
 	        uint32_t instructionValue,
 	        Instruction* restrict instruction,
 	        uint32_t address,
-	        uint32_t littleEndian);
+	        uint32_t bigEndian);
 
 	uint32_t armv7_disassemble(
 			Instruction* restrict instruction,

@@ -417,11 +417,6 @@ def load(*args, **kwargs) -> BinaryView:
 	return bv
 
 
-@deprecation.deprecated(deprecated_in="3.5.4378", details='Use :py:func:`load` instead')
-def open_view(*args, **kwargs) -> BinaryView:
-	return load(*args, **kwargs)
-
-
 def connect_pycharm_debugger(port=5678):
 	"""
 	Connect to PyCharm (Professional Edition) for debugging.

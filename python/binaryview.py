@@ -1284,37 +1284,6 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		return self.create(data)
 
 	# TODO : Check if we need binary_view_type's at all after these deprecations? (move add_binaryview_finalized_event and add_binaryview_initial_analysis_completion_event to BinaryView?)
-	@classmethod
-	@deprecation.deprecated(deprecated_in="3.5.4378", details="Use :py:func:`binaryninja.load` instead.")
-	def get_view_of_file(
-	    cls, filename: PathType, update_analysis: bool = True, progress_func: Optional[ProgressFuncType] = None
-	) -> Optional['BinaryView']:
-		return BinaryViewType.load(filename, update_analysis, progress_func)
-
-	@classmethod
-	@deprecation.deprecated(deprecated_in="3.5.4378", details="Use :py:func:`binaryninja.load` instead.")
-	def get_view_of_file_with_options(
-	    cls, filename: Union[str, 'os.PathLike'], update_analysis: Optional[bool] = True, progress_func: Optional[ProgressFuncType] = None,
-	    options: Mapping[str, Any] = {}
-	) -> Optional['BinaryView']:
-		return BinaryViewType.load(filename, update_analysis, progress_func, options)
-
-	@classmethod
-	@deprecation.deprecated(deprecated_in="3.5.4378", details="Use :py:func:`binaryninja.load` instead.")
-	def load_raw_view_with_options(
-	    cls, raw_view: Optional['BinaryView'], update_analysis: Optional[bool] = True, progress_func: Optional[ProgressFuncType] = None,
-	    options: Mapping[str, Any] = {}
-	) -> Optional['BinaryView']:
-		if raw_view is None:
-			return None
-		return BinaryViewType.load(raw_view, update_analysis, progress_func, options)
-
-	@classmethod
-	@deprecation.deprecated(deprecated_in="3.5.4378", details="Use :py:func:`binaryninja.load` instead.")
-	def load(
-	    cls, source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView'], update_analysis: Optional[bool] = True,
-	    progress_func: Optional[ProgressFuncType] = None, options: Mapping[str, Any] = {}) -> Optional['BinaryView']:
-		return BinaryView.load(source, update_analysis, progress_func, options)
 
 	def parse(self, data: 'BinaryView') -> Optional['BinaryView']:
 		view = core.BNParseBinaryViewOfType(self.handle, data.handle)
@@ -1324,13 +1293,6 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 
 	def is_valid_for_data(self, data: 'BinaryView') -> bool:
 		return core.BNIsBinaryViewTypeValidForData(self.handle, data.handle)
-
-	@deprecation.deprecated(deprecated_in="3.5.4378")
-	def get_default_load_settings_for_data(self, data: 'BinaryView') -> Optional['settings.Settings']:
-		load_settings = core.BNGetBinaryViewDefaultLoadSettingsForData(self.handle, data.handle)
-		if load_settings is None:
-			return None
-		return settings.Settings(handle=load_settings)
 
 	def get_load_settings_for_data(self, data: 'BinaryView') -> Optional['settings.Settings']:
 		view_handle = None
@@ -1431,11 +1393,6 @@ class Segment:
 		w = "w" if self.writable else "-"
 		x = "x" if self.executable else "-"
 		return f"<segment: {self.start:#x}-{self.end:#x}, {r}{w}{x}>"
-
-	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use :py:attr:`length` instead. Python disallows the length of an object to "
-									">= 0x8000000000000000. See https://bugs.python.org/issue21444.")
-	def __len__(self):
-		return self.length
 
 	@classmethod
 	def serialize(cls, image_base: int, start: int, length: int, data_offset: int=0, data_length: int=0, flags: 'SegmentFlag'=SegmentFlag.SegmentReadable, auto_defined=True, segments: str="[]"):
@@ -1545,11 +1502,6 @@ class Section:
 
 	def __repr__(self):
 		return f"<section {self.name}: {self.start:#x}-{self.end:#x}>"
-
-	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use :py:attr:`length` instead. Python disallows the length of an object to "
-									">= 0x8000000000000000. See https://bugs.python.org/issue21444.")
-	def __len__(self):
-		return self.length
 
 	def __bool__(self):
 		return True
@@ -2455,11 +2407,6 @@ class BinaryView:
 		if len(filename) > 0:
 			return f"<BinaryView: '{filename}', {size}>"
 		return f"<BinaryView: {size}>"
-
-	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use :py:attr:`length` instead. Python disallows the length of an object to "
-									">= 0x8000000000000000. See https://bugs.python.org/issue21444.")
-	def __len__(self):
-		return int(core.BNGetViewLength(self.handle))
 
 	@property
 	def length(self):
@@ -6146,45 +6093,6 @@ class BinaryView:
 		core.BNAddTag(self.handle, tag.handle, user)
 		core.BNAddUserDataTag(self.handle, addr, tag.handle)
 
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tag_type` instead.')
-	def get_tag_type_by_name(self, name: str) -> Optional['TagType']:
-		tag_type = core.BNGetTagType(self.handle, name)
-		if tag_type is None:
-			return None
-		return TagType(tag_type)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tag_type` instead.')
-	def get_tag_type_by_id(self, id: str) -> Optional['TagType']:
-		tag_type = core.BNGetTagTypeById(self.handle, id)
-		if tag_type is None:
-			return None
-		return TagType(tag_type)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def create_user_tag(self, type: 'TagType', data: str) -> 'Tag':
-		return self.create_tag(type, data, True)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def create_auto_tag(self, type: 'TagType', data: str) -> 'Tag':
-		return self.create_tag(type, data, False)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def create_tag(self, tag_type: 'TagType', data: str, user: bool = True) -> 'Tag':
-		if not isinstance(tag_type, TagType):
-			raise ValueError(f"type is not a TagType instead got {type(tag_type)} : {repr(tag_type)}")
-		tag_handle = core.BNCreateTag(tag_type.handle, data)
-		assert tag_handle is not None, "core.BNCreateTag returned None"
-		tag = Tag(tag_handle)
-		core.BNAddTag(self.handle, tag.handle, user)
-		return tag
-
-	@deprecation.deprecated(deprecated_in="3.4.4146")
-	def get_tag(self, id: str) -> Optional['Tag']:
-		tag = core.BNGetTag(self.handle, id)
-		if tag is None:
-			return None
-		return Tag(tag)
-
 	@property
 	def tags(self) -> List[Tuple[int, 'Tag']]:
 		"""
@@ -6225,48 +6133,6 @@ class BinaryView:
 		finally:
 			core.BNFreeTagReferences(tags, count.value)
 
-	@property
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:attr:`tags` instead.')
-	def data_tags(self) -> List[Tuple[int, 'Tag']]:
-		return self.tags
-
-	@property
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags` instead.')
-	def auto_data_tags(self) -> List[Tuple[int, 'Tag']]:
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetAutoDataTagReferences(self.handle, count)
-		assert tags is not None, "core.BNGetAutoDataTagReferences return None"
-		result = []
-		try:
-			for i in range(0, count.value):
-				handle = tags[i].tag
-				assert handle is not None, "BNGetAutoDataTagReferences returned handle set to None"
-				tag_ref = core.BNNewTagReference(handle)
-				assert tag_ref is not None, "BNNewTagReference returned None"
-				tag = Tag(tag_ref)
-				result.append((tags[i].addr, tag))
-			return result
-		finally:
-			core.BNFreeTagReferences(tags, count.value)
-
-	@property
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags` instead.')
-	def user_data_tags(self) -> List[Tuple[int, 'Tag']]:
-		count = ctypes.c_ulonglong()
-		refs = core.BNGetUserDataTagReferences(self.handle, count)
-		assert refs is not None, "core.BNGetUserDataTagReferences returned None"
-		result = []
-		try:
-			for i in range(0, count.value):
-				tag_handle = refs[i].tag
-				assert tag_handle is not None, "BNGetUserDataTagReferences returned tag with handle set to None"
-				tag_ref = core.BNNewTagReference(tag_handle)
-				assert tag_ref is not None, "BNNewTagReference returned None"
-				tag = Tag(tag_ref)
-				result.append((refs[i].addr, tag))
-			return result
-		finally:
-			core.BNFreeTagReferences(refs, count.value)
 
 	def get_tags_at(self, addr: int, auto: Optional[bool] = None) -> List['Tag']:
 		"""
@@ -6294,76 +6160,6 @@ class BinaryView:
 				tag_handle = core.BNNewTagReference(tags[i])
 				assert tag_handle is not None, "core.BNNewTagReference is not None"
 				result.append(Tag(tag_handle))
-			return result
-		finally:
-			core.BNFreeTagList(tags, count.value)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_at` instead.')
-	def get_data_tags_at(self, addr: int, auto: Optional[bool] = None) -> List['Tag']:
-		return self.get_tags_at(addr, auto)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_at` instead.')
-	def get_auto_data_tags_at(self, addr: int) -> List['Tag']:
-		return self.get_tags_at(addr, True)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_at` instead.')
-	def get_user_data_tags_at(self, addr: int) -> List['Tag']:
-		return self.get_tags_at(addr, False)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_at` instead.')
-	def get_data_tags_of_type(self, addr: int, tag_type: str, auto: Optional[bool] = None) -> List['Tag']:
-		count = ctypes.c_ulonglong()
-
-		tag_type = self.get_tag_type(tag_type)
-		if tag_type is None:
-			return []
-
-		if auto is None:
-			tags = core.BNGetDataTagsOfType(self.handle, addr, tag_type.handle, count)
-			assert tags is not None, "BNGetDataTagsOfType returned None"
-		elif auto:
-			tags = core.BNGetAutoDataTagsOfType(self.handle, addr, tag_type.handle, count)
-			assert tags is not None, "core.BNGetAutoDataTagsOfType returned None"
-		else:
-			tags = core.BNGetUserDataTagsOfType(self.handle, addr, tag_type.handle, count)
-			assert tags is not None, "core.BNGetUserDataTagsOfType returned None"
-
-		result = []
-		try:
-			for i in range(0, count.value):
-				tag_ref = core.BNNewTagReference(tags[i])
-				assert tag_ref is not None, "BNNewTagReference returned None"
-				result.append(Tag(tag_ref))
-			return result
-		finally:
-			core.BNFreeTagList(tags, count.value)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_at` instead.')
-	def get_auto_data_tags_of_type(self, addr: int, tag_type: 'TagType') -> List['Tag']:
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetAutoDataTagsOfType(self.handle, addr, tag_type.handle, count)
-		assert tags is not None, "core.BNGetAutoDataTagsOfType returned None"
-		result = []
-		try:
-			for i in range(0, count.value):
-				tag_handle = core.BNNewTagReference(tags[i])
-				assert tag_handle is not None, "core.BNNewTagReference returned None"
-				result.append(Tag(tag_handle))
-			return result
-		finally:
-			core.BNFreeTagList(tags, count.value)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_at` instead.')
-	def get_user_data_tags_of_type(self, addr: int, tag_type: 'TagType') -> List['Tag']:
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetUserDataTagsOfType(self.handle, addr, tag_type.handle, count)
-		assert tags is not None, "BNGetUserDataTagsOfType returned None"
-		result = []
-		try:
-			for i in range(0, count.value):
-				tag_ref = core.BNNewTagReference(tags[i])
-				assert tag_ref is not None, "BNNewTagReference returned None"
-				result.append(Tag(tag_ref))
 			return result
 		finally:
 			core.BNFreeTagList(tags, count.value)
@@ -6400,34 +6196,6 @@ class BinaryView:
 		finally:
 			core.BNFreeTagReferences(refs, count.value)
 
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_in_range` instead.')
-	def get_data_tags_in_range(self, address_range: 'variable.AddressRange', user: Optional[bool] = None) -> List[Tuple[int, 'Tag']]:
-		return self.get_tags_in_range(address_range, user)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_in_range` instead.')
-	def get_auto_data_tags_in_range(self, address_range: 'variable.AddressRange') -> List[Tuple[int, 'Tag']]:
-		return self.get_tags_in_range(address_range, True)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_in_range` instead.')
-	def get_user_data_tags_in_range(self, address_range: 'variable.AddressRange') -> List[Tuple[int, 'Tag']]:
-		return self.get_tags_in_range(address_range, False)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead')
-	def add_user_data_tag(self, addr: int, tag: 'Tag'):
-		core.BNAddUserDataTag(self.handle, addr, tag.handle)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead')
-	def create_user_data_tag(self, addr: int, type: 'TagType', data: str, unique: bool = False) -> 'Tag':
-		if unique:
-			tags = self.get_data_tags_at(addr)
-			for tag in tags:
-				if tag.type == type and tag.data == data:
-					return tag
-
-		tag = self.create_tag(type, data, True)
-		core.BNAddUserDataTag(self.handle, addr, tag.handle)
-		return tag
-
 	def remove_user_data_tag(self, addr: int, tag: Tag):
 		"""
 		``remove_user_data_tag`` removes a :py:class:`Tag` object at a data address.
@@ -6451,22 +6219,6 @@ class BinaryView:
 		tag_type = self.get_tag_type(tag_type)
 		if tag_type is not None:
 			core.BNRemoveUserDataTagsOfType(self.handle, addr, tag_type.handle)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead')
-	def add_auto_data_tag(self, addr: int, tag: 'Tag'):
-		core.BNAddAutoDataTag(self.handle, addr, tag.handle)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead')
-	def create_auto_data_tag(self, addr: int, type: 'TagType', data: str, unique: bool = False) -> 'Tag':
-		if unique:
-			tags = self.get_data_tags_at(addr)
-			for tag in tags:
-				if tag.type == type and tag.data == data:
-					return tag
-
-		tag = self.create_tag(type, data, False)
-		core.BNAddAutoDataTag(self.handle, addr, tag.handle)
-		return tag
 
 	def remove_auto_data_tag(self, addr: int, tag: 'Tag'):
 		"""
@@ -10464,13 +10216,6 @@ class StructuredDataValue(object):
 	value: bytes
 	endian: Endianness
 
-	@deprecation.deprecated(deprecated_in="3.4.3997")
-	def __init__(self, t: '_type.Type', addr: int, val: bytes, e: Endianness):
-		self.type = t
-		self.address = addr
-		self.value = val
-		self.endian = e
-
 	def __str__(self):
 		decode_str = "{}B".format(self.type.width)
 		return ' '.join([f"{x:02x}" for x in struct.unpack(decode_str, self.value)])
@@ -10504,94 +10249,6 @@ class StructuredDataValue(object):
 	@property
 	def int(self) -> int:
 		return int(self)
-
-
-class StructuredDataView(object):
-	"""
-		``class StructuredDataView`` is a convenience class for reading structured binary data.
-
-		StructuredDataView can be instantiated as follows::
-			>>> from binaryninja import *
-			>>> bv = load("/bin/ls")
-			>>> structure = "Elf64_Header"
-			>>> address = bv.start
-			>>> elf = StructuredDataView(bv, structure, address)
-			>>>
-
-		Once instantiated, members can be accessed::
-			>>> print("{:x}".format(elf.machine))
-			003e
-			>>>
-
-		"""
-	@deprecation.deprecated(deprecated_in="3.4.3997", details='Use :py:class:`TypedDataAccessor` or :py:attr:`DataVariable.value` instead.')
-	def __init__(self, bv: 'BinaryView', structure_name: '_types.QualifiedNameType', address: int):
-		self._bv = bv
-		self._structure_name = structure_name
-		self._address = address
-		self._members = OrderedDict()
-		self._endian = bv.endianness
-
-		s = self._bv.get_type_by_name(self._structure_name)
-		if isinstance(s, _types.NamedTypeReferenceType):
-			s = s.target(self._bv)
-		if s is None:
-			raise ValueError(f"Failed to find type: {structure_name}")
-		if not isinstance(s, _types.StructureType):
-			raise ValueError(f"{self._structure_name} is not a StructureTypeClass, got: {type(s)}")
-		self._structure = s
-
-		for m in self._structure.members:
-			self._members[m.name] = m
-
-	def __repr__(self):
-		return f"<StructuredDataView type:{self._structure_name} size:{len(self._structure):#x} address:{self._address:#x}>"
-
-	def __len__(self):
-		return len(self._structure)
-
-	def __getattr__(self, key):
-		m = self._members.get(key, None)
-		if m is None:
-			return self.__getattribute__(key)
-
-		return self[key]
-
-	def __getitem__(self, key: str) -> Optional[StructuredDataValue]:
-		m = self._members.get(key, None)
-		if m is None:
-			return None
-
-		ty = m.type
-		offset = m.offset
-		width = ty.width
-
-		value = self._bv.read(self._address + offset, width)
-		return StructuredDataValue(ty, self._address + offset, value, self._endian)
-
-	def __str__(self):
-		rv = "struct {name} 0x{addr:x} {{\n".format(name=self._structure_name, addr=self._address)
-		for k in self._members:
-			m = self._members[k]
-
-			ty = m.type
-			offset = m.offset
-
-			formatted_offset = "{:=+x}".format(offset)
-			formatted_type = "{:s} {:s}".format(str(ty), k)
-
-			value = self[k]
-			assert value is not None
-			if value.width in (1, 2, 4, 8):
-				formatted_value = str.zfill("{:x}".format(value.int), value.width * 2)
-			else:
-				formatted_value = str(value)
-
-			rv += "\t{:>6s} {:40s} = {:30s}\n".format(formatted_offset, formatted_type, formatted_value)
-
-		rv += "}\n"
-
-		return rv
 
 
 @dataclass

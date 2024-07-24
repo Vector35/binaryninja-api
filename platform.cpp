@@ -532,6 +532,22 @@ void Platform::AddRelatedPlatform(Architecture* arch, Platform* platform)
 }
 
 
+std::vector<Ref<Platform>> Platform::GetRelatedPlatforms()
+{
+	size_t count;
+	BNPlatform** related = BNGetRelatedPlatforms(m_object, &count);
+
+	std::vector<Ref<Platform>> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back(new CorePlatform(BNNewPlatformReference(related[i])));
+	}
+
+	BNFreePlatformList(related, count);
+	return result;
+}
+
+
 Ref<Platform> Platform::GetAssociatedPlatformByAddress(uint64_t& addr)
 {
 	BNPlatform* platform = BNGetAssociatedPlatformByAddress(m_object, &addr);

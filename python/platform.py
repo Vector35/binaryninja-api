@@ -546,6 +546,21 @@ class Platform(metaclass=_PlatformMetaClass):
 			return None
 		return CorePlatform._from_cache(handle=result)
 
+	def get_related_platforms(self) -> List['Platform']:
+		"""
+		``get_related_platforms`` returns a list of all related platforms for a given platform
+
+		:return:
+		"""
+		count = ctypes.c_ulonglong()
+		platforms = core.BNGetRelatedPlatforms(self.handle, count)
+		assert platforms is not None, "core.BNGetRelatedPlatforms returned None"
+		result = []
+		for i in range(0, count.value):
+			result.append(CorePlatform._from_cache(core.BNNewPlatformReference(platforms[i])))
+		core.BNFreePlatformList(platforms, count.value)
+		return result
+
 	def add_related_platform(self, arch, platform):
 		core.BNAddRelatedPlatform(self.handle, arch.handle, platform.handle)
 

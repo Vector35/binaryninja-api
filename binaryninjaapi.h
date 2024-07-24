@@ -14803,6 +14803,11 @@ namespace BinaryNinja {
 
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);
+		/*! Get the list of related platforms for this platform
+
+		 	\return A vector of Ref<Platform>s
+		 */
+		std::vector<Ref<Platform>> GetRelatedPlatforms();
 		Ref<Platform> GetAssociatedPlatformByAddress(uint64_t& addr);
 
 		/*! Get the list of platform-specific types

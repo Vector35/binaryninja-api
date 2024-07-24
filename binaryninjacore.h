@@ -6465,6 +6465,7 @@ extern "C"
 
 	BINARYNINJACOREAPI BNPlatform* BNGetRelatedPlatform(BNPlatform* platform, BNArchitecture* arch);
 	BINARYNINJACOREAPI void BNAddRelatedPlatform(BNPlatform* platform, BNArchitecture* arch, BNPlatform* related);
+	BINARYNINJACOREAPI BNPlatform** BNGetRelatedPlatforms(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI BNPlatform* BNGetAssociatedPlatformByAddress(BNPlatform* platform, uint64_t* addr);
 
 	BINARYNINJACOREAPI BNTypeContainer* BNGetPlatformTypeContainer(BNPlatform* platform);

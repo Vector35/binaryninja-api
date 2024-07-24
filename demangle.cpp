@@ -13,7 +13,6 @@ namespace BinaryNinja {
 	bool DemangleLLVM(const std::string& mangledName, QualifiedName& outVarName,
 		const bool simplify)
 	{
-		BNType* localType = nullptr;
 		char** localVarName = nullptr;
 		size_t localSize = 0;
 		if (!BNDemangleLLVM(mangledName.c_str(), &localVarName, &localSize, simplify))

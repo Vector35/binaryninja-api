@@ -11,6 +11,7 @@
 #include <utility>
 #include "peview.h"
 #include "coffview.h"
+#include "rtti.h"
 #include "teview.h"
 
 #define STRING_READ_CHUNK_SIZE 32
@@ -2806,6 +2807,24 @@ bool PEView::Init()
 		programSettings->Set("corePlugins.workflows.conditionalNoReturn", true);
 	}
 
+	bool processRtti = true;
+	if (programSettings->Contains("loader.pe.processRtti"))
+		processRtti = programSettings->Get<bool>("loader.pe.processRtti", this);
+	if (processRtti && m_is64)
+	{
+		bool processVFT = true;
+		if (programSettings->Contains("loader.pe.processRttiVtables"))
+			processVFT = programSettings->Get<bool>("loader.pe.processRttiVtables", this);
+		bool processMangled = false;
+		if (programSettings->Contains("loader.pe.processMangledRtti"))
+			processMangled = programSettings->Get<bool>("loader.pe.processMangledRtti", this);
+		bool scanWritableRData = true;
+		if (programSettings->Contains("loader.pe.scanWritableRDataForRtti"))
+			scanWritableRData = programSettings->Get<bool>("loader.pe.scanWritableRDataForRtti", this);
+		auto rtti = MicrosoftRTTIProcessor(this, processVFT, processMangled, scanWritableRData);
+		rtti.ProcessRTTI64();
+	}
+
 	// Add a symbol for the entry point
 	if (m_entryPoint)
 		DefineAutoSymbol(new Symbol(FunctionSymbol, "_start", m_imageBase + m_entryPoint));
@@ -3146,6 +3165,38 @@ Ref<Settings> PEViewType::GetLoadSettingsForData(BinaryView* data)
 			"default" : true,
 			"description" : "Add function starts sourced from the Structured Exception Handling (SEH) table to the core for analysis."
 			})");
+
+	settings->RegisterSetting("loader.pe.processRtti",
+	R"({
+		"title" : "Process MSVC RTTI information",
+		"type" : "boolean",
+		"default" : true,
+		"description" : "Add RTTI types and symbols."
+		})");
+
+	settings->RegisterSetting("loader.pe.processMangledRtti",
+R"({
+		"title" : "Process Mangled MSVC RTTI information",
+		"type" : "boolean",
+		"default" : false,
+		"description" : "Add RTTI information that was unable to be demangled."
+		})");
+
+	settings->RegisterSetting("loader.pe.scanWritableRDataForRtti",
+R"({
+		"title" : "Scan for MSVC RTTI information in writable .rdata",
+		"type" : "boolean",
+		"default" : true,
+		"description" : "Whether or not to force scan .rdata regardless of its permissions."
+		})");
+
+	settings->RegisterSetting("loader.pe.processRttiVtables",
+R"({
+		"title" : "Process MSVC RTTI Virtual Function Tables",
+		"type" : "boolean",
+		"default" : true,
+		"description" : "Add RTTI virtual function tables types and symbols."
+		})");
 
 	return settings;
 }

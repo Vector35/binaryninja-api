@@ -16,7 +16,7 @@ binaryninjacore-sys = { path = "binaryninjacore-sys" }
 
 [patch.crates-io]
 # Patched pdb crate to implement some extra structures
-pdb = { path = "./examples/pdb-ng/pdb-0.8.0-patched" }
+pdb = { git = "https://github.com/Vector35/pdb-rs" }
 
 [workspace]
 members = [

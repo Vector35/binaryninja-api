@@ -691,6 +691,7 @@ checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 [[package]]
 name = "pdb"
 version = "0.8.0"
+source = "git+https://github.com/Vector35/pdb-rs#030477d646bf05c23f5ddcdd23b4d110a04dff05"
 dependencies = [
  "fallible-iterator 0.2.0",
  "scroll",

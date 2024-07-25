@@ -368,7 +368,7 @@ impl PDBParser {
 
         if let Some(info) = parse_pdb_info(view) {
             let pdb_info = &pdb.pdb_information()?;
-            if info.guid.as_slice() != pdb_info.guid.as_ref() {
+            if info.guid != pdb_info.guid.as_bytes() {
                 if check_guid {
                     return Err(anyhow!("PDB GUID does not match"));
                 } else {
@@ -416,7 +416,7 @@ impl PDBParser {
                         cab_path.push(
                             pdb_info
                                 .guid
-                                .as_ref()
+                                .as_bytes()
                                 .iter()
                                 .map(|ch| format!("{:02X}", ch))
                                 .collect::<Vec<_>>()
@@ -451,7 +451,7 @@ impl PDBParser {
                             cab_path.push(
                                 pdb_info
                                     .guid
-                                    .as_ref()
+                                    .as_bytes()
                                     .iter()
                                     .map(|ch| format!("{:02X}", ch))
                                     .collect::<Vec<_>>()

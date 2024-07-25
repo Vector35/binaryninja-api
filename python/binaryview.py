@@ -1303,6 +1303,30 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 			return None
 		return settings.Settings(handle=load_settings)
 
+	def has_children(self, data: 'BinaryView') -> bool:
+		return core.BNBinaryViewTypeHasChildren(self.handle, data.handle)
+
+	def get_children_for_data(self, data: 'BinaryView') -> List[str]:
+		count = ctypes.c_size_t(0)
+		children = core.BNBinaryViewTypeGetChildrenForData(self.handle, data.handle, count)
+		result = []
+		for i in range(count.value):
+			result.append(core.pyNativeStr(children[i]))
+		core.BNFreeStringList(children, count.value)
+		return result
+
+	def get_metadata_for_child(self, data: 'BinaryView', child: str) -> Optional['metadata.Metadata']:
+		handle = core.BNBinaryViewTypeGetMetadataForChild(self.handle, data.handle, child)
+		if handle is None:
+			return None
+		return metadata.Metadata(handle=handle)
+
+	def create_child(self, data: 'BinaryView', child: str) -> Optional['BinaryView']:
+		handle = core.BNBinaryViewTypeCreateChild(self.handle, data.handle, child)
+		if handle is None:
+			return None
+		return BinaryView(handle=handle)
+
 	def register_arch(self, ident: int, endian: Endianness, arch: 'architecture.Architecture') -> None:
 		core.BNRegisterArchitectureForViewType(self.handle, ident, endian, arch.handle)
 
@@ -2298,6 +2322,7 @@ class BinaryView:
 	_associated_data = {}
 	_registered_instances = []
 	_cached_instances = {}
+	_pending_string_lists = {}
 
 	@classmethod
 	def _cache_insert(cls, instance):
@@ -2514,6 +2539,11 @@ class BinaryView:
 		cls._registered_cb.getLoadSettingsForData = cls._registered_cb.getLoadSettingsForData.__class__(
 		    cls._get_load_settings_for_data
 		)
+		cls._registered_cb.hasChildren = cls._registered_cb.hasChildren.__class__(cls._has_children)
+		cls._registered_cb.getChildrenForData = cls._registered_cb.getChildrenForData.__class__(cls._get_children_for_data)
+		cls._registered_cb.getMetadataForChild = cls._registered_cb.getMetadataForChild.__class__(cls._get_metadata_for_child)
+		cls._registered_cb.createChild = cls._registered_cb.createChild.__class__(cls._create_child)
+		cls._registered_cb.freeStringList = cls._registered_cb.freeStringList.__class__(cls._free_string_list)
 		view_handle = core.BNRegisterBinaryViewType(cls.name, cls.long_name, cls._registered_cb)
 		assert view_handle is not None, "core.BNRegisterBinaryViewType returned None"
 		cls.registered_view_type = BinaryViewType(view_handle)
@@ -2595,6 +2625,94 @@ class BinaryView:
 		except:
 			log_error(traceback.format_exc())
 			return None
+
+	@classmethod
+	def _has_children(cls, ctxt, data):
+		try:
+			attr = getattr(cls, "has_children", None)
+			if callable(attr):
+				return cls.has_children(
+					BinaryView(handle=core.BNNewViewReference(data))
+				)  # type: ignore
+			else:
+				return False
+		except:
+			log_error(traceback.format_exc())
+			return False
+
+	@classmethod
+	def _get_children_for_data(cls, ctxt, data, count):
+		try:
+			attr = getattr(cls, "get_children_for_data", None)
+			if callable(attr):
+				result = cls.get_children_for_data(
+					BinaryView(handle=core.BNNewViewReference(data))
+				)
+				count[0] = len(result)
+				children_buf = (ctypes.c_char_p * len(result))()
+				for i, ch in enumerate(result):
+					children_buf[i] = core.cstr(ch)
+				children_ptr = ctypes.cast(children_buf, ctypes.c_void_p)
+				cls._pending_string_lists[children_ptr.value] = (children_ptr.value, children_buf)
+				return children_ptr.value
+			else:
+				count[0] = 0
+				return None
+		except:
+			log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	@classmethod
+	def _get_metadata_for_child(cls, ctxt, data, child):
+		try:
+			attr = getattr(cls, "get_metadata_for_child", None)
+			if callable(attr):
+				result = cls.get_metadata_for_child(
+					BinaryView(handle=core.BNNewViewReference(data)),
+					core.pyNativeStr(child)
+				)
+				if result is None:
+					return None
+				result_handle = core.BNNewMetadataReference(result.handle)
+				assert result_handle is not None, "core.BNNewMetadataReference returned None"
+				return ctypes.cast(result_handle, ctypes.c_void_p).value
+			else:
+				return None
+		except:
+			log_error(traceback.format_exc())
+			return None
+
+	@classmethod
+	def _create_child(cls, ctxt, data, child):
+		try:
+			attr = getattr(cls, "create_child", None)
+			if callable(attr):
+				result = cls.create_child(
+					BinaryView(handle=core.BNNewViewReference(data)),
+					core.pyNativeStr(child)
+				)
+				if result is None:
+					return None
+				result_handle = core.BNNewViewReference(result.handle)
+				assert result_handle is not None, "core.BNNewViewReference returned None"
+				return ctypes.cast(result_handle, ctypes.c_void_p).value
+			else:
+				return None
+		except:
+			log_error(traceback.format_exc())
+			return None
+
+	@classmethod
+	def _free_string_list(cls, ctxt, string_list, count):
+		try:
+			buf = ctypes.cast(string_list, ctypes.c_void_p)
+			if buf is not None:
+				if buf.value not in cls._pending_string_lists:
+					raise ValueError("freeing string list that wasn't allocated")
+				del cls._pending_string_lists[buf.value]
+		except:
+			log_error(traceback.format_exc())
 
 	@staticmethod
 	def open(src, file_metadata=None) -> Optional['BinaryView']:

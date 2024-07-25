@@ -132,6 +132,11 @@ where
         isValidForData: Some(cb_valid::<T>),
         isDeprecated: Some(cb_deprecated::<T>),
         getLoadSettingsForData: Some(cb_load_settings::<T>),
+        hasChildren: None, // TODO
+        getChildrenForData: None, // TODO
+        getMetadataForChild: None, // TODO
+        createChild: None, // TODO
+        freeStringList: None, // TODO
     };
 
     unsafe {

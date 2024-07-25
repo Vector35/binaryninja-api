@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "ffi.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -72,6 +73,50 @@ BNSettings* BinaryViewType::GetSettingsCallback(void* ctxt, BNBinaryView* data)
 }
 
 
+bool BinaryViewType::HasChildrenCallback(void* ctxt, BNBinaryView* data)
+{
+	CallbackRef<BinaryViewType> type(ctxt);
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	return type->HasChildren(view);
+}
+
+
+char** BinaryViewType::GetChildrenForDataCallback(void* ctxt, BNBinaryView* data, size_t* count)
+{
+	CallbackRef<BinaryViewType> type(ctxt);
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	return AllocApiStringList(type->GetChildrenForData(view), count);
+}
+
+
+BNMetadata* BinaryViewType::GetMetadataForChildCallback(void* ctxt, BNBinaryView* data, const char* child)
+{
+	CallbackRef<BinaryViewType> type(ctxt);
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	auto result = type->GetMetadataForChild(view, child);
+	if (!result)
+		return nullptr;
+	return BNNewMetadataReference(result->GetObject());
+}
+
+
+BNBinaryView* BinaryViewType::CreateChildCallback(void* ctxt, BNBinaryView* data, const char* child)
+{
+	CallbackRef<BinaryViewType> type(ctxt);
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	auto result = type->CreateChild(view, child);
+	if (!result)
+		return nullptr;
+	return BNNewViewReference(result->GetObject());
+}
+
+
+void BinaryViewType::FreeStringListCallback(void*, char** stringList, size_t count)
+{
+	FreeApiStringList(stringList, count);
+}
+
+
 BinaryViewType::BinaryViewType(BNBinaryViewType* type)
 {
 	m_object = type;
@@ -94,6 +139,11 @@ void BinaryViewType::Register(BinaryViewType* type)
 	callbacks.isValidForData = IsValidCallback;
 	callbacks.isDeprecated = IsDeprecatedCallback;
 	callbacks.getLoadSettingsForData = GetSettingsCallback;
+	callbacks.hasChildren = HasChildrenCallback;
+	callbacks.getChildrenForData = GetChildrenForDataCallback;
+	callbacks.getMetadataForChild = GetMetadataForChildCallback;
+	callbacks.createChild = CreateChildCallback;
+	callbacks.freeStringList = FreeStringListCallback;
 
 	type->AddRefForRegistration();
 	type->m_object =
@@ -314,6 +364,30 @@ Ref<Settings> BinaryViewType::GetDefaultLoadSettingsForData(BinaryView* data)
 }
 
 
+bool BinaryViewType::HasChildren(BinaryView* data)
+{
+	return false;
+}
+
+
+std::vector<std::string> BinaryViewType::GetChildrenForData(BinaryView* data)
+{
+	return {};
+}
+
+
+Ref<Metadata> BinaryViewType::GetMetadataForChild(BinaryView* data, const std::string& child)
+{
+	return nullptr;
+}
+
+
+Ref<BinaryView> BinaryViewType::CreateChild(BinaryView* data, const std::string& child)
+{
+	return nullptr;
+}
+
+
 CoreBinaryViewType::CoreBinaryViewType(BNBinaryViewType* type) : BinaryViewType(type) {}
 
 
@@ -354,3 +428,38 @@ Ref<Settings> CoreBinaryViewType::GetLoadSettingsForData(BinaryView* data)
 		return nullptr;
 	return new Settings(settings);
 }
+
+
+bool CoreBinaryViewType::HasChildren(BinaryView* data)
+{
+	return BNBinaryViewTypeHasChildren(m_object, data->GetObject());
+}
+
+
+std::vector<std::string> CoreBinaryViewType::GetChildrenForData(BinaryView* data)
+{
+	size_t count;
+	auto apiResult = BNBinaryViewTypeGetChildrenForData(m_object, data->GetObject(), &count);
+	auto result = ParseStringList(apiResult, count);
+	FreeCoreStringList(apiResult, count);
+	return result;
+}
+
+
+Ref<Metadata> CoreBinaryViewType::GetMetadataForChild(BinaryView* data, const std::string& child)
+{
+	BNMetadata* metadata = BNBinaryViewTypeGetMetadataForChild(m_object, data->GetObject(), child.c_str());
+	if (!metadata)
+		return nullptr;
+	return new Metadata(metadata);
+}
+
+
+Ref<BinaryView> CoreBinaryViewType::CreateChild(BinaryView* data, const std::string& child)
+{
+	BNBinaryView* view = BNBinaryViewTypeCreateChild(m_object, data->GetObject(), child.c_str());
+	if (!view)
+		return nullptr;
+	return new BinaryView(view);
+}
+

@@ -1657,6 +1657,11 @@ extern "C"
 		bool (*isValidForData)(void* ctxt, BNBinaryView* data);
 		bool (*isDeprecated)(void* ctxt);
 		BNSettings* (*getLoadSettingsForData)(void* ctxt, BNBinaryView* data);
+		bool (*hasChildren)(void* ctxt, BNBinaryView* data);
+		char** (*getChildrenForData)(void* ctxt, BNBinaryView* data, size_t* count);
+		BNMetadata* (*getMetadataForChild)(void* ctxt, BNBinaryView* data, const char* child);
+		BNBinaryView* (*createChild)(void* ctxt, BNBinaryView* data, const char* child);
+		void (*freeStringList)(void* ctxt, char** stringList, size_t count);
 	} BNCustomBinaryViewType;
 
 	typedef struct BNTransformParameterInfo
@@ -3997,6 +4002,11 @@ extern "C"
 	BINARYNINJACOREAPI BNSettings* BNGetBinaryViewDefaultLoadSettingsForData(
 	    BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI BNSettings* BNGetBinaryViewLoadSettingsForData(BNBinaryViewType* type, BNBinaryView* data);
+
+	BINARYNINJACOREAPI bool BNBinaryViewTypeHasChildren(BNBinaryViewType* type, BNBinaryView* data);
+	BINARYNINJACOREAPI char** BNBinaryViewTypeGetChildrenForData(BNBinaryViewType* type, BNBinaryView* data, size_t* count);
+	BINARYNINJACOREAPI BNMetadata* BNBinaryViewTypeGetMetadataForChild(BNBinaryViewType* type, BNBinaryView* data, const char* child);
+	BINARYNINJACOREAPI BNBinaryView* BNBinaryViewTypeCreateChild(BNBinaryViewType* type, BNBinaryView* data, const char* child);
 
 	BINARYNINJACOREAPI BNBinaryViewType* BNRegisterBinaryViewType(
 	    const char* name, const char* longName, BNCustomBinaryViewType* type);

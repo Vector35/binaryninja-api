@@ -6434,6 +6434,8 @@ namespace BinaryNinja {
 		*/
 		bool GetAddressForDataOffset(uint64_t offset, uint64_t& addr);
 
+		bool GetDataOffsetForAddress(uint64_t addr, uint64_t& offset);
+
 		/*! Creates an analysis-defined section that can help inform analysis by clarifying what types of data exist in
 			what ranges
 

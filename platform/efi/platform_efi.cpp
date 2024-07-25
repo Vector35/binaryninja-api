@@ -11,10 +11,15 @@ Ref<Platform> g_efiX86Windows, g_efiX64Windows, g_efiArm64Windows;
 
 class EFIX86Platform : public Platform
 {
+	uint32_t m_idtr;
+	Ref<Type> m_idtrtype;
+
 public:
 	EFIX86Platform(Architecture* arch) : Platform(arch, "efi-x86")
 	{
 		Ref<CallingConvention> cc;
+
+		m_idtr = arch->GetRegisterByName("idtr");
 
 		cc = arch->GetCallingConventionByName("cdecl");
 		if (cc)
@@ -50,15 +55,35 @@ public:
 			return g_efiX86;
 		return nullptr;
 	}
+
+	virtual void BinaryViewInit(BinaryView* view) override
+	{
+		if (!m_idtrtype)
+			m_idtrtype = Type::NamedType(QualifiedName("IDTR32"), GetTypeByName(QualifiedName("IDTR32")));
+	}
+
+	virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override
+	{
+		if (reg == m_idtr)
+		    return m_idtrtype;
+
+		return nullptr;
+	}
+
 };
 
 
 class EFIX86WindowsPlatform : public Platform
 {
+	uint32_t m_idtr;
+	Ref<Type> m_idtrtype;
+
 public:
 	EFIX86WindowsPlatform(Architecture* arch) : Platform(arch, "efi-windows-x86")
 	{
 		Ref<CallingConvention> cc;
+
+		m_idtr = arch->GetRegisterByName("idtr");
 
 		cc = arch->GetCallingConventionByName("cdecl");
 		if (cc)
@@ -94,16 +119,34 @@ public:
 			return g_efiX86Windows;
 		return nullptr;
 	}
+
+	virtual void BinaryViewInit(BinaryView* view) override
+	{
+		if (!m_idtrtype)
+			m_idtrtype = Type::NamedType(QualifiedName("IDTR32"), GetTypeByName(QualifiedName("IDTR32")));
+	}
+
+	virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override
+	{
+		if (reg == m_idtr)
+		    return m_idtrtype;
+
+		return nullptr;
+	}
 };
 
 
 class EFIX64Platform : public Platform
 {
+	uint32_t m_idtr;
+	Ref<Type> m_idtrtype;
+
 public:
 	EFIX64Platform(Architecture* arch) : Platform(arch, "efi-x86_64")
 	{
 		Ref<CallingConvention> cc;
 
+		m_idtr = arch->GetRegisterByName("idtr");
 		cc = arch->GetCallingConventionByName("win64");
 		if (cc)
 		{
@@ -123,16 +166,34 @@ public:
 			return g_efiX64;
 		return nullptr;
 	}
+
+	virtual void BinaryViewInit(BinaryView* view) override
+	{
+		if (!m_idtrtype)
+			m_idtrtype = Type::NamedType(QualifiedName("IDTR64"), GetTypeByName(QualifiedName("IDTR64")));
+	}
+
+	virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override
+	{
+		if (reg == m_idtr)
+		    return m_idtrtype;
+
+		return nullptr;
+	}
 };
 
 
 class EFIX64WindowsPlatform : public Platform
 {
+	uint32_t m_idtr;
+	Ref<Type> m_idtrtype;
+
 public:
 	EFIX64WindowsPlatform(Architecture* arch) : Platform(arch, "efi-windows-x86_64")
 	{
 		Ref<CallingConvention> cc;
 
+		m_idtr = arch->GetRegisterByName("idtr");
 		cc = arch->GetCallingConventionByName("win64");
 		if (cc)
 		{
@@ -150,6 +211,20 @@ public:
 			return nullptr;
 		if (subsystem->GetUnsignedInteger() == 0x10)  // IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION
 			return g_efiX64Windows;
+		return nullptr;
+	}
+
+	virtual void BinaryViewInit(BinaryView* view) override
+	{
+		if (!m_idtrtype)
+			m_idtrtype = Type::NamedType(QualifiedName("IDTR64"), GetTypeByName(QualifiedName("IDTR64")));
+	}
+
+	virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override
+	{
+		if (reg == m_idtr)
+		    return m_idtrtype;
+
 		return nullptr;
 	}
 };

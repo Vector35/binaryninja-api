@@ -26,24 +26,24 @@ void NavigationLabel::mousePressEvent(QMouseEvent*)
 NavigationAddressLabel::NavigationAddressLabel(const QString& text) :
     NavigationLabel(text, getThemeColor(AddressColor), [this]() { clickEvent(); })
 {
-	m_address = text.toULongLong(nullptr, 0);
 }
 
 
 void NavigationAddressLabel::clickEvent()
 {
+	auto address = text().toULongLong(nullptr, 0);
 	ViewFrame* viewFrame = ViewFrame::viewFrameForWidget(this);
 	if (viewFrame)
 	{
 		if (BinaryNinja::Settings::Instance()->Get<bool>("ui.view.graph.preferred") &&
 			viewFrame->getCurrentBinaryView() &&
-			viewFrame->getCurrentBinaryView()->GetAnalysisFunctionsForAddress(m_address).size() > 0)
+			viewFrame->getCurrentBinaryView()->GetAnalysisFunctionsForAddress(address).size() > 0)
 		{
-			viewFrame->navigate("Graph:" + viewFrame->getCurrentDataType(), m_address);
+			viewFrame->navigate("Graph:" + viewFrame->getCurrentDataType(), address);
 		}
 		else
 		{
-			viewFrame->navigate("Linear:" + viewFrame->getCurrentDataType(), m_address);
+			viewFrame->navigate("Linear:" + viewFrame->getCurrentDataType(), address);
 		}
 	}
 }
@@ -52,24 +52,24 @@ void NavigationAddressLabel::clickEvent()
 NavigationCodeLabel::NavigationCodeLabel(const QString& text) :
     NavigationLabel(text, getThemeColor(CodeSymbolColor), [this]() { clickEvent(); })
 {
-	m_address = text.toULongLong(nullptr, 0);
 }
 
 
 void NavigationCodeLabel::clickEvent()
 {
+	auto address = text().toULongLong(nullptr, 0);
 	ViewFrame* viewFrame = ViewFrame::viewFrameForWidget(this);
 	if (viewFrame)
 	{
 		if (BinaryNinja::Settings::Instance()->Get<bool>("ui.view.graph.preferred") &&
 			viewFrame->getCurrentBinaryView() &&
-			viewFrame->getCurrentBinaryView()->GetAnalysisFunctionsForAddress(m_address).size() > 0)
+			viewFrame->getCurrentBinaryView()->GetAnalysisFunctionsForAddress(address).size() > 0)
 		{
-			viewFrame->navigate("Graph:" + viewFrame->getCurrentDataType(), m_address);
+			viewFrame->navigate("Graph:" + viewFrame->getCurrentDataType(), address);
 		}
 		else
 		{
-			viewFrame->navigate("Linear:" + viewFrame->getCurrentDataType(), m_address);
+			viewFrame->navigate("Linear:" + viewFrame->getCurrentDataType(), address);
 		}
 	}
 }

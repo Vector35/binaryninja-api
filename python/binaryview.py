@@ -3326,6 +3326,60 @@ class BinaryView:
 		return variable.RegisterValue.from_BNRegisterValue(result, self.arch)
 
 	@property
+	def user_global_pointer_value_set(self) -> bool:
+		"""Check whether a user global pointer value has been set"""
+		return core.BNUserGlobalPointerValueSet(self.handle)
+
+	def clear_user_global_pointer_value(self):
+		"""Clear a previously set user global pointer value, so the auto-analysis can calculate a new value"""
+		core.BNClearUserGlobalPointerValue(self.handle)
+
+	def set_user_global_pointer_value(self, value: variable.RegisterValue, confidence = 255):
+		"""
+		Set a user global pointer value. This is useful when the auto analysis fails to find out the value of the global
+		pointer, or the value is wrong. In this case, we can call `set_user_global_pointer_value` with a
+		`ConstantRegisterValue` or `ConstantPointerRegisterValue`to provide a user global pointer value to assist the
+		analysis.
+
+		On the other hand, if the auto analysis figures out a global pointer value, but there should not be one, we can
+		call `set_user_global_pointer_value` with an `Undetermined` value to override it.
+
+		Whenever a user global pointer value is set/cleared, an analysis update must occur for it to take effect and
+		all functions using the global pointer to be updated.
+
+		We can use `user_global_pointer_value_set` to query whether a user global pointer value is set, and use
+		`clear_user_global_pointer_value` to clear a user global pointer value. Note, `clear_user_global_pointer_value`
+		is different from calling `set_user_global_pointer_value` with an `Undetermined` value. The former clears the
+		user global pointer value and let the analysis decide the global pointer value, whereas the latte forces the
+		global pointer value to become undetermined.
+
+		:param variable.RegisterValue value: the user global pointer value to be set
+		:param int confidence: the confidence value of the user global pointer value. In most cases this should be set
+		to 255. Setting a value lower than the confidence of the global pointer value from the auto analysis will cause
+		undesired effect.
+		:return:
+		:Example:
+
+			>>> bv.global_pointer_value
+			<const ptr 0x3fd4>
+			>>> bv.set_user_global_pointer_value(ConstantPointerRegisterValue(0x12345678))
+			>>> bv.global_pointer_value
+			<const ptr 0x12345678>
+			>>> bv.user_global_pointer_value_set
+			True
+			>>> bv.clear_user_global_pointer_value()
+			>>> bv.global_pointer_value
+			<const ptr 0x3fd4>
+			>>> bv.set_user_global_pointer_value(Undetermined())
+			>>> bv.global_pointer_value
+			<undetermined>
+		"""
+		val = core.BNRegisterValueWithConfidence()
+		val.value = value._to_core_struct()
+		val.confidence = confidence
+		core.BNSetUserGlobalPointerValue(self.handle, val)
+
+	@property
 	def parameters_for_analysis(self):
 		return core.BNGetParametersForAnalysis(self.handle)
 

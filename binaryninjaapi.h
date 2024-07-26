@@ -4251,6 +4251,25 @@ namespace BinaryNinja {
 		bool AutoDefined() const;
 	};
 
+	struct RegisterValue
+	{
+		BNRegisterValueType state;
+		int64_t value;
+		int64_t offset;
+		size_t size;
+
+		bool operator==(const RegisterValue& a) const;
+		bool operator!=(const RegisterValue& a) const;
+
+		RegisterValue();
+
+		bool IsConstant() const;
+		bool IsConstantData() const;
+
+		static RegisterValue FromAPIObject(const BNRegisterValue& value);
+		BNRegisterValue ToAPIObject();
+	};
+
 	struct QualifiedNameAndType;
 	struct PossibleValueSet;
 	class Metadata;
@@ -6730,6 +6749,11 @@ namespace BinaryNinja {
 		void RemoveExternalLocation(Ref<Symbol> sourceSymbol);
 		Ref<ExternalLocation> GetExternalLocation(Ref<Symbol> sourceSymbol);
 		std::vector<Ref<ExternalLocation>> GetExternalLocations();
+
+		Confidence<RegisterValue> GetGlobalPointerValue() const;
+		bool UserGlobalPointerValueSet() const;
+		void ClearUserGlobalPointerValue();
+		void SetUserGlobalPointerValue(const Confidence<RegisterValue>& value);
 	};
 
 	class MemoryMap
@@ -10286,22 +10310,6 @@ namespace BinaryNinja {
 	/*!
 		\ingroup function
 	*/
-	struct RegisterValue
-	{
-		BNRegisterValueType state;
-		int64_t value;
-		int64_t offset;
-		size_t size;
-
-		RegisterValue();
-
-		bool IsConstant() const;
-		bool IsConstantData() const;
-
-		static RegisterValue FromAPIObject(const BNRegisterValue& value);
-		BNRegisterValue ToAPIObject();
-	};
-
 	struct ConstantData : public BNRegisterValue
 	{
 		Ref<Function> func = nullptr;

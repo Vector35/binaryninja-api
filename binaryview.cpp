@@ -5297,6 +5297,38 @@ std::vector<Ref<ExternalLocation>> BinaryView::GetExternalLocations()
 }
 
 
+Confidence<RegisterValue> BinaryView::GetGlobalPointerValue() const
+{
+	BNRegisterValueWithConfidence value = BNGetGlobalPointerValue(m_object);
+	return Confidence<RegisterValue>(RegisterValue::FromAPIObject(value.value), value.confidence);
+}
+
+
+bool BinaryView::UserGlobalPointerValueSet() const
+{
+	return BNUserGlobalPointerValueSet(m_object);
+}
+
+
+void BinaryView::ClearUserGlobalPointerValue()
+{
+	return BNClearUserGlobalPointerValue(m_object);
+}
+
+
+void BinaryView::SetUserGlobalPointerValue(const Confidence<RegisterValue>& value)
+{
+	BNRegisterValueWithConfidence v;
+	v.confidence = value.GetConfidence();
+	v.value.value = value.GetValue().value;
+	v.value.state = value.GetValue().state;
+	v.value.size = value.GetValue().size;
+	v.value.offset = value.GetValue().offset;
+	BNSetUserGlobalPointerValue(m_object, v);
+}
+
+
+
 Relocation::Relocation(BNRelocation* reloc)
 {
 	m_object = reloc;

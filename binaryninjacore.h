@@ -3955,6 +3955,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeNameSpace(BNNameSpace* name);
 
 	BINARYNINJACOREAPI BNRegisterValueWithConfidence BNGetGlobalPointerValue(BNBinaryView* view);
+	BINARYNINJACOREAPI bool BNUserGlobalPointerValueSet(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNClearUserGlobalPointerValue(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetUserGlobalPointerValue(BNBinaryView* view, BNRegisterValueWithConfidence value);
 
 	// Raw binary data view
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataView(BNFileMetadata* file);

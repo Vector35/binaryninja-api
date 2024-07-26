@@ -18,6 +18,7 @@ class BINARYNINJAUIAPI PossibleValueSetDialog : public QDialog
 
 	BinaryViewRef m_view;
 	uint64_t m_addr;
+	bool m_registerValueOnly;
 
 	QComboBox* m_combo;
 	QLineEdit* m_input;
@@ -31,7 +32,8 @@ class BINARYNINJAUIAPI PossibleValueSetDialog : public QDialog
 
   public:
 	PossibleValueSetDialog(
-	    QWidget* parent, BinaryViewRef view, uint64_t addr, BinaryNinja::PossibleValueSet existingValue);
+	    QWidget* parent, BinaryViewRef view, uint64_t addr, BinaryNinja::PossibleValueSet existingValue,
+		const QString& title = "Set User Variable Value", bool registerValueOnly = false);
 
 	BinaryNinja::PossibleValueSet getPossibleValueSet() const { return m_valueSet; }
 	void validate(const QString& input);

@@ -20,8 +20,6 @@ class NavigationLabel : public QLabel
 
 class NavigationAddressLabel : public NavigationLabel
 {
-	uint64_t m_address;
-
 	void clickEvent();
 
   public:
@@ -31,8 +29,6 @@ class NavigationAddressLabel : public NavigationLabel
 
 class NavigationCodeLabel : public NavigationLabel
 {
-	uint64_t m_address;
-
 	void clickEvent();
 
   public:

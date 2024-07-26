@@ -104,6 +104,55 @@ Variable Variable::FromIdentifier(uint64_t id)
 RegisterValue::RegisterValue() : state(UndeterminedValue), value(0), offset(0), size(0) {}
 
 
+bool RegisterValue::operator==(const RegisterValue& a) const
+{
+	switch (a.state)
+	{
+	case EntryValue:
+		return (state == EntryValue) && (a.value == value);
+
+	case ConstantValue:
+		return (state == ConstantValue) && (a.value == value);
+
+	case ConstantPointerValue:
+		return (state == ConstantPointerValue) && (a.value == value);
+
+	case ExternalPointerValue:
+		return (state == ExternalPointerValue) && (a.value == value) && (a.offset == offset);
+
+	case StackFrameOffset:
+		 return (state == StackFrameOffset) && (a.value == value);
+
+	case UndeterminedValue:
+		return state == UndeterminedValue;
+
+	case ReturnAddressValue:
+		return state == ReturnAddressValue;
+
+	case ImportedAddressValue:
+		return (state == ImportedAddressValue) && (a.value == value);
+
+	case ConstantDataZeroExtendValue:
+		return (state == ConstantDataZeroExtendValue) && (a.value == value) && (a.size == size);
+
+	case ConstantDataSignExtendValue:
+		return (state == ConstantDataSignExtendValue) && (a.value == value) && (a.size == size);
+
+	case ConstantDataAggregateValue:
+		return (state == ConstantDataAggregateValue) && (a.value == value) && (a.size == size);
+
+	default:
+		return false;
+	}
+}
+
+
+bool RegisterValue::operator!=(const RegisterValue& a) const
+{
+	return !((*this) == a);
+}
+
+
 bool RegisterValue::IsConstant() const
 {
 	return (state == ConstantValue) || (state == ConstantPointerValue);

@@ -77,7 +77,7 @@ impl TypeLibrary {
     }
 
     /// Saves a finalized type library instance to file
-    pub fn write_to_file<S: BnStrCompatible>(&self, path: S) {
+    pub fn write_to_file<S: BnStrCompatible>(&self, path: S) -> bool {
         let path = path.into_bytes_with_nul();
         unsafe {
             BNWriteTypeLibraryToFile(self.as_raw(), path.as_ref().as_ptr() as *const ffi::c_char)

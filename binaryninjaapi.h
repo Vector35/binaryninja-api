@@ -16891,7 +16891,7 @@ namespace BinaryNinja {
 
 			\param path
 		*/
-		void WriteToFile(const std::string& path);
+		bool WriteToFile(const std::string& path);
 
 		/*! The Architecture this type library is associated with
 

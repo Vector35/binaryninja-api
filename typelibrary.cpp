@@ -38,9 +38,9 @@ Ref<TypeLibrary> TypeLibrary::LookupByGuid(Ref<Architecture> arch, const std::st
 }
 
 
-void TypeLibrary::WriteToFile(const std::string& path)
+bool TypeLibrary::WriteToFile(const std::string& path)
 {
-	BNWriteTypeLibraryToFile(m_object, path.c_str());
+	return BNWriteTypeLibraryToFile(m_object, path.c_str());
 }
 
 

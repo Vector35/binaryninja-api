@@ -81,14 +81,14 @@ class TypeLibrary:
 			return None
 		return TypeLibrary(handle)
 
-	def write_to_file(self, path: str) -> None:
+	def write_to_file(self, path: str) -> bool:
 		"""
 		Saves a finalized type library instance to file
 
 		:param str path:
 		:rtype: None
 		"""
-		core.BNWriteTypeLibraryToFile(self.handle, path)
+		return core.BNWriteTypeLibraryToFile(self.handle, path)
 
 	@staticmethod
 	def from_name(arch: architecture.Architecture, name: str):

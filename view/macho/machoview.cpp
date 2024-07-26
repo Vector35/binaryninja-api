@@ -2580,13 +2580,11 @@ void MachoView::ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint
 
 		BNRelocationInfo rebaseRelocation;
 
-		RebaseType type = RebaseTypeInvalid;
 		uint64_t segmentIndex = 0;
 		uint64_t address = segmentActualLoadAddress(0);
 		uint64_t segmentStartAddress = segmentActualLoadAddress(0);
 		uint64_t segmentEndAddress = segmentActualEndAddress(0);
 		uint64_t count;
-		uint64_t size;
 		uint64_t skip;
 		bool done = false;
 		size_t i = 0;
@@ -2603,7 +2601,6 @@ void MachoView::ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint
 				done = true;
 				break;
 			case RebaseOpcodeSetTypeImmediate:
-				type = (RebaseType)immediate;
 				break;
 			case RebaseOpcodeSetSegmentAndOffsetUleb:
 				segmentIndex = immediate;
@@ -2906,11 +2903,6 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 			size_t needed = symbolStubs.size / symbolStubs.reserved2;
 			for (size_t j = 0; (j < needed) && ((j + symbolStubs.reserved1) < indirectSymbols.size()); j++)
 			{
-				// Not exactly sure what the following 3 variables are for but this is the check done in
-				// Apple's source code
-				uint8_t  sectionType  = (symbolStubs.flags & SECTION_TYPE);
-				bool selfModifyingStub = (sectionType == S_SYMBOL_STUBS) && (symbolStubs.flags & S_ATTR_SELF_MODIFYING_CODE) &&
-					(symbolStubs.reserved2 == 5) && (header.ident.cputype == MACHO_CPU_TYPE_X86);
 				auto symNum = indirectSymbols[j + symbolStubs.reserved1];
 				if (symNum == INDIRECT_SYMBOL_ABS)
 					continue;
@@ -2925,11 +2917,6 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 		unordered_map<size_t, vector<std::pair<section_64*, size_t>>> pointerSymbols;
 		for (auto& symbolPointerSection : header.symbolPointerSections)
 		{
-			// Not exactly sure what the following 3 variables are for but this is the check done in
-			// Apple's source code
-			uint8_t  sectionType  = (symbolPointerSection.flags & SECTION_TYPE);
-			bool selfModifyingStub = (sectionType == S_SYMBOL_STUBS) && (symbolPointerSection.flags & S_ATTR_SELF_MODIFYING_CODE) &&
-				(symbolPointerSection.reserved2 == 5) && (header.ident.cputype == MACHO_CPU_TYPE_X86);
 			size_t needed = symbolPointerSection.size / m_addressSize;
 			for (size_t j = 0; (j < needed) && ((j + symbolPointerSection.reserved1) < indirectSymbols.size()); j++)
 			{

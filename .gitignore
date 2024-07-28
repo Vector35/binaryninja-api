@@ -82,9 +82,9 @@ plugins/
 rust/**/*.swp
 rust/**/*.rs.bk
 rust/target/
-rust/binaryninjacore-sys/target/
-rust/examples/*/target/
-rust/examples/dwarf/*/target/
+rust/**/*/target/
+rust/binaryninjacore-sys/Cargo.lock
+rust/Cargo.lock
 
 # Debugger docs
 docs/img/debugger

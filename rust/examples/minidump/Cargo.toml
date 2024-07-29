@@ -8,5 +8,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 binaryninja = {path="../../"}
+binaryninjacore-sys = {path="../../binaryninjacore-sys"}
 log = "0.4.20"
 minidump = "0.18.0"

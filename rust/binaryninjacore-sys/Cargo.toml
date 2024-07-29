@@ -1,8 +1,10 @@
 [package]
 name = "binaryninjacore-sys"
 version = "0.1.0"
+edition = "2021"
 authors = ["Ryan Snyder <ryan@vector35.com>", "Kyle Martin <kyle@vector35.com>"]
 build = "build.rs"
+links = "binaryninjacore"
 
 [build-dependencies]
 bindgen = "^0.69.2"

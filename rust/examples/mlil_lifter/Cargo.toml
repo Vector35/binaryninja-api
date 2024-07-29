@@ -10,6 +10,7 @@ edition = "2021"
 # You can point at the BinaryNinja dependency in one of two ways, via path:
 [dependencies]
 binaryninja = {path="../../"}
+binaryninjacore-sys = {path="../../binaryninjacore-sys"}
 
 # Or directly at the git repo:
 # [dependencies]

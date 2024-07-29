@@ -9,3 +9,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 binaryninja = {path="../../"}
+binaryninjacore-sys = {path="../../binaryninjacore-sys"}

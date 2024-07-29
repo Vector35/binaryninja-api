@@ -6,5 +6,6 @@ edition = "2021"
 
 [dependencies]
 binaryninja = {path="../../"}
+binaryninjacore-sys = {path="../../binaryninjacore-sys"}
 clap = { version = "4.4", features = ["derive"] }
 

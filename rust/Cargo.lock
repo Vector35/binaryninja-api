@@ -115,6 +115,7 @@ name = "basic_script"
 version = "0.1.0"
 dependencies = [
  "binaryninja",
+ "binaryninjacore-sys",
 ]
 
 [[package]]
@@ -319,6 +320,7 @@ name = "decompile"
 version = "0.1.0"
 dependencies = [
  "binaryninja",
+ "binaryninjacore-sys",
  "clap",
 ]
 
@@ -347,6 +349,7 @@ name = "dwarf_export"
 version = "0.1.0"
 dependencies = [
  "binaryninja",
+ "binaryninjacore-sys",
  "gimli 0.31.0",
  "log",
  "object 0.32.2",
@@ -424,6 +427,7 @@ name = "flowgraph"
 version = "0.1.0"
 dependencies = [
  "binaryninja",
+ "binaryninjacore-sys",
 ]
 
 [[package]]
@@ -469,6 +473,7 @@ name = "hlil_lifter"
 version = "0.1.0"
 dependencies = [
  "binaryninja",
+ "binaryninjacore-sys",
 ]
 
 [[package]]
@@ -476,6 +481,7 @@ name = "hlil_visitor"
 version = "0.1.0"
 dependencies = [
  "binaryninja",
+ "binaryninjacore-sys",
 ]
 
 [[package]]
@@ -613,6 +619,7 @@ name = "mlil_lifter"
 version = "0.1.0"
 dependencies = [
  "binaryninja",
+ "binaryninjacore-sys",
 ]
 
 [[package]]
@@ -620,6 +627,7 @@ name = "mlil_visitor"
 version = "0.1.0"
 dependencies = [
  "binaryninja",
+ "binaryninjacore-sys",
 ]
 
 [[package]]

@@ -74,8 +74,8 @@ fn main() {
         println!("cargo:rustc-link-search={}", out_dir);
     }
 
-    println!("cargo:rustc-link-lib=binaryninjacore");
-    println!("cargo:rustc-link-search={}", link_path.to_str().unwrap());
+    // Emit the path to binaryninjacore consumers of this crate should pass to the linker.
+    println!("cargo:path={}", link_path.to_str().unwrap());
 
     let current_line = "#define BN_CURRENT_UI_ABI_VERSION ";
     let minimum_line = "#define BN_MINIMUM_UI_ABI_VERSION ";

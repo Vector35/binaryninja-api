@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Ryan Snyder <ryan@vector35.com>", "Kyle Martin <kyle@vector35.com>"]
 build = "build.rs"
 edition = "2021"
+links = "binaryninjacore"
 
 [build-dependencies]
 bindgen = "0.71.1"

@@ -104,7 +104,7 @@ pub fn is_shutdown_requested() -> bool {
 }
 
 /// Prelued-postlued helper function (calls [`init`] and [`shutdown`] for you)
-/// ```no_run
+/// ```
 /// # use binaryninja::binaryview::BinaryViewExt;
 /// binaryninja::headless::script_helper(|| {
 ///     let cat = binaryninja::load("/bin/cat").expect("Couldn't open `/bin/cat`");
@@ -128,7 +128,7 @@ impl Session {
         Self {}
     }
 
-    /// ```no_run
+    /// ```
     /// let headless_session = binaryninja::headless::Session::new();
     ///
     /// let bv = headless_session.load("/bin/cat").expect("Couldn't open `/bin/cat`");

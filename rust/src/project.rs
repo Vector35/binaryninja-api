@@ -1128,15 +1128,8 @@ mod test {
 
     use super::Project;
 
-    fn unique_project() -> (String, String) {
-        let unique_id = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
-        let tmp_dir = std::env::temp_dir();
-        let project_path = format!("{}/tmp_project_{unique_id}", tmp_dir.to_str().unwrap());
-        let project_name = format!("create_delete_empty_project_{unique_id}");
-        (project_path, project_name)
+    fn unique_project(name: &str) -> String {
+        format!("{}/{}", std::env::temp_dir().to_str().unwrap(), name)
     }
 
     #[test]
@@ -1144,9 +1137,10 @@ mod test {
         use std::fs::canonicalize;
         crate::headless::init();
 
-        let (project_path, project_name) = unique_project();
+        let project_name = "create_delete_empty_project";
+        let project_path = unique_project(project_name);
         // create the project
-        let project = Project::create(&project_path, &project_name);
+        let project = Project::create(&project_path, project_name);
         project.open().unwrap();
         assert!(project.is_open());
 
@@ -1157,7 +1151,7 @@ mod test {
             canonicalize(project_path_received.to_string()).unwrap()
         );
         let project_name_received = project.name();
-        assert_eq!(&project_name, project_name_received.as_str());
+        assert_eq!(project_name, project_name_received.as_str());
 
         // close the project
         project.close().unwrap();
@@ -1174,9 +1168,10 @@ mod test {
     fn create_close_open_close() {
         crate::headless::init();
 
-        let (project_path, project_name) = unique_project();
+        let project_name = "create_close_open_close";
+        let project_path = unique_project(project_name);
         // create the project
-        let project = Project::create(&project_path, &project_name);
+        let project = Project::create(&project_path, project_name);
         project.open().unwrap();
 
         // get the project id
@@ -1205,7 +1200,8 @@ mod test {
     fn modify_project() {
         crate::headless::init();
 
-        let (project_path, project_name) = unique_project();
+        let project_name = "modify_project";
+        let project_path = unique_project(project_name);
         // create the project
         let project = Project::create(&project_path, project_name);
         project.open().unwrap();

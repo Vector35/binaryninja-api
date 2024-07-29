@@ -13,7 +13,7 @@ binaryninja = {path = "../../../"}
 home = "^0.5.5"
 itertools = "^0.11"
 log = "^0.4"
-pdb = "^0.8"
+pdb = { git = "https://github.com/Vector35/pdb-rs", branch = "master" }
 cab = "^0.4"
 regex = "1"
 

@@ -1134,6 +1134,7 @@ mod test {
 
     #[test]
     fn create_delete_empty() {
+        use std::fs::canonicalize;
         crate::headless::init();
 
         let project_name = "create_delete_empty_project";
@@ -1145,7 +1146,10 @@ mod test {
 
         // check project data
         let project_path_received = project.path();
-        assert_eq!(&project_path, project_path_received.as_str());
+        assert_eq!(
+            canonicalize(&project_path).unwrap(),
+            canonicalize(project_path_received.to_string()).unwrap()
+        );
         let project_name_received = project.name();
         assert_eq!(project_name, project_name_received.as_str());
 

@@ -120,7 +120,7 @@ impl Segment {
     /// ```no_run
     /// # use binaryninja::segment::Segment;
     /// # use binaryninja::binaryview::BinaryViewExt;
-    /// let bv = binaryninja::load("example").unwrap();
+    /// let bv = binaryninja::load("/bin/cat").unwrap();
     /// bv.add_segment(Segment::builder(0..0x1000).writable(true).readable(true))
     /// ```
     pub fn builder(ea_range: Range<u64>) -> SegmentBuilder {

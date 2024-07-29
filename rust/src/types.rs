@@ -718,7 +718,7 @@ pub struct Type {
 /// ```no_run
 /// # use crate::binaryninja::binaryview::BinaryViewExt;
 /// # use binaryninja::types::Type;
-/// let bv = binaryninja::load("example.bin").unwrap();
+/// let bv = binaryninja::load("/bin/cat").unwrap();
 /// let my_custom_type_1 = Type::named_int(5, false, "my_w");
 /// let my_custom_type_2 = Type::int(5, false);
 /// bv.define_user_type("int_1", &my_custom_type_1);
@@ -1799,7 +1799,7 @@ pub struct StructureBuilder {
 /// let my_custom_structure_type = Type::structure(&my_custom_struct.finalize());
 ///
 /// // Add the struct to the binary view to use in analysis
-/// let bv = binaryninja::load("example").unwrap();
+/// let bv = binaryninja::load("/bin/cat").unwrap();
 /// bv.define_user_type("my_custom_struct", &my_custom_structure_type);
 /// ```
 impl StructureBuilder {

@@ -230,7 +230,7 @@ impl Symbol {
 
     /// To create a new symbol, you need to create a symbol builder, customize that symbol, then add `SymbolBuilder::create` it into a `Ref<Symbol>`:
     ///
-    /// ```no_run
+    /// ```
     /// # use binaryninja::symbol::Symbol;
     /// # use binaryninja::symbol::SymbolType;
     /// Symbol::builder(SymbolType::Data, "hello", 0x1337).short_name("hello").full_name("hello").create();

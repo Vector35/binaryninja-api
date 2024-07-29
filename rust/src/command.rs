@@ -66,7 +66,7 @@ where
 /// The function call required for generic commands; commands added in this way will be in the `Plugins` submenu of the menu bar.
 ///
 /// # Example
-/// ```no_run
+/// ```
 /// # use binaryninja::command::Command;
 /// # use binaryninja::binaryview::BinaryView;
 /// struct MyCommand;
@@ -167,7 +167,7 @@ where
 /// The function call required for generic commands; commands added in this way will be in the `Plugins` submenu of the menu bar.
 ///
 /// # Example
-/// ```no_run
+/// ```
 /// # use binaryninja::command::AddressCommand;
 /// # use binaryninja::binaryview::BinaryView;
 /// struct MyCommand;
@@ -268,7 +268,7 @@ where
 /// The function call required for generic commands; commands added in this way will be in the `Plugins` submenu of the menu bar.
 ///
 /// # Example
-/// ```no_run
+/// ```
 /// # use std::ops::Range;
 /// # use binaryninja::command::RangeCommand;
 /// # use binaryninja::binaryview::BinaryView;
@@ -375,7 +375,7 @@ where
 /// The function call required for generic commands; commands added in this way will be in the `Plugins` submenu of the menu bar.
 ///
 /// # Example
-/// ```no_run
+/// ```
 /// # use binaryninja::command::FunctionCommand;
 /// # use binaryninja::binaryview::BinaryView;
 /// # use binaryninja::function::Function;

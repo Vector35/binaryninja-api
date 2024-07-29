@@ -1807,7 +1807,7 @@ pub type BinaryViewEventType = BNBinaryViewEventType;
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```
 /// use binaryninja::binaryview::{BinaryView, BinaryViewEventHandler, BinaryViewEventType, register_binary_view_event};
 ///
 /// struct EventHandlerContext {

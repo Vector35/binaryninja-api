@@ -40,7 +40,6 @@ impl Project {
     /// * `path` - Path to the project directory (.bnpr)
     /// * `name` - Name of the new project
     pub fn create<P: BnStrCompatible, S: BnStrCompatible>(path: P, name: S) -> Self {
-        unsafe { BNInitPlugins(true) };
         let path_raw = path.into_bytes_with_nul();
         let name_raw = name.into_bytes_with_nul();
         let handle = unsafe {
@@ -56,7 +55,6 @@ impl Project {
     ///
     /// * `path` - Path to the project directory (.bnpr) or project metadata file (.bnpm)
     pub fn open_project<P: BnStrCompatible>(path: P) -> Self {
-        unsafe { BNInitPlugins(true) };
         let path_raw = path.into_bytes_with_nul();
         let handle = unsafe { BNOpenProject(path_raw.as_ref().as_ptr() as *const ffi::c_char) };
         unsafe { Self::from_raw(NonNull::new(handle).unwrap()) }

@@ -15,10 +15,6 @@ libc = "0.2"
 rayon = { version = "1.8", optional = true }
 binaryninjacore-sys = { path = "binaryninjacore-sys" }
 
-[patch.crates-io]
-# Patched pdb crate to implement some extra structures
-pdb = { path = "./examples/pdb-ng/pdb-0.8.0-patched" }
-
 [workspace]
 members = [
     "examples/basic_script",

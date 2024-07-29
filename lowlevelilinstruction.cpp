@@ -23,6 +23,7 @@
 	#include "lowlevelilfunction.h"
 	#include "lowlevelilssafunction.h"
 	#include "mediumlevelilfunction.h"
+	#include "architecture.h"
 using namespace BinaryNinjaCore;
 #else
 	#include "binaryninjaapi.h"

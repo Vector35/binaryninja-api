@@ -21,11 +21,12 @@
 #pragma once
 
 #include <functional>
-#include <unordered_map>
-#include <vector>
 #ifdef BINARYNINJACORE_LIBRARY
+	#include "possiblevalueset.h"
 	#include "type.h"
 #else
+	#include <vector>
+	#include <unordered_map>
 	#include "binaryninjaapi.h"
 #endif
 

@@ -54,7 +54,9 @@
 //! crate-type = ["cdylib"]
 //!
 //! [dependencies]
-//! binaryninja = {git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev"}
+//! binaryninja = { git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev" }
+//! # If you wish to link to the core, include binaryninjacore-sys as a dependency as well
+//! binaryninjacore-sys = { git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev" }
 //! ```
 //!
 //! In `lib.rs` you'll need to provide a `CorePluginInit` or `UIPluginInit` function for Binary Ninja to call.
@@ -69,7 +71,23 @@
 //!
 //! Because [the only official method of providing linker arguments to a crate is through that crate's `build.rs`], all scripts need to provide their own `build.rs` so they can probably link with Binary Ninja.
 //!
-//! The most up-to-date version of the suggested [`build.rs` is here].
+//! ```no_run
+//! fn main() {
+//!     let link_path =
+//!         std::env::var_os("DEP_BINARYNINJACORE_PATH").expect("DEP_BINARYNINJACORE_PATH specified");
+//! 
+//!     println!("cargo::rustc-link-lib=dylib=binaryninjacore");
+//!     println!("cargo::rustc-link-search={}", link_path.to_str().unwrap());
+//! 
+//!     #[cfg(not(target_os = "windows"))]
+//!     {
+//!         println!(
+//!             "cargo::rustc-link-arg=-Wl,-rpath,{0},-L{0}",
+//!             link_path.to_string_lossy()
+//!         );
+//!     }
+//! }
+//! ```
 //!
 //! ### `main.rs`
 //! Standalone binaries need to initialize Binary Ninja before they can work. You can do this through [`headless::Session`], [`headless::script_helper`], or [`headless::init()`] at start and [`headless::shutdown()`] at shutdown.
@@ -87,7 +105,8 @@
 //! ### `Cargo.toml`
 //! ```toml
 //! [dependencies]
-//! binaryninja = { git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev"}
+//! binaryninja = { git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev" }
+//! binaryninjacore-sys = { git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev" }
 //! ```
 //!
 //! See the [examples] on GitHub for more comprehensive examples.
@@ -98,7 +117,6 @@
 //! [file an issue]: https://github.com/Vector35/binaryninja-api/issues
 //! [submit a PR]: https://github.com/Vector35/binaryninja-api/pulls
 //! [the only official method of providing linker arguments to a crate is through that crate's `build.rs`]: https://github.com/rust-lang/cargo/issues/9554
-//! [`build.rs` is here]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/examples/template/build.rs
 //! [examples]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples
 //!
 

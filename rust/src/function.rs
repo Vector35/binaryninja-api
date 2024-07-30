@@ -40,8 +40,8 @@ pub use binaryninjacore_sys::BNAnalysisSkipReason as AnalysisSkipReason;
 pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisSkipOverride;
 pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
 
-use std::{fmt, mem};
 use std::{ffi::c_char, hash::Hash, ops::Range};
+use std::{fmt, mem};
 
 pub struct Location {
     pub arch: Option<CoreArchitecture>,
@@ -2142,9 +2142,10 @@ impl Function {
 
     pub fn parent_components(&self) -> Array<Component> {
         let mut count = 0;
-        let result = unsafe{ BNGetFunctionParentComponents(self.view().handle, self.handle, &mut count) };
+        let result =
+            unsafe { BNGetFunctionParentComponents(self.view().handle, self.handle, &mut count) };
         assert!(!result.is_null());
-        unsafe{ Array::new(result, count, ()) }
+        unsafe { Array::new(result, count, ()) }
     }
 }
 
@@ -2236,6 +2237,7 @@ impl CoreArrayProvider for AddressRange {
     type Context = ();
     type Wrapped<'a> = &'a AddressRange;
 }
+
 unsafe impl CoreArrayProviderInner for AddressRange {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeAddressRanges(raw);
@@ -2268,6 +2270,7 @@ impl CoreArrayProvider for PerformanceInfo {
     type Context = ();
     type Wrapped<'a> = Guard<'a, PerformanceInfo>;
 }
+
 unsafe impl CoreArrayProviderInner for PerformanceInfo {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeAnalysisPerformanceInfo(raw, count);
@@ -2300,6 +2303,7 @@ impl CoreArrayProvider for Comments {
     type Context = Ref<Function>;
     type Wrapped<'a> = Comments;
 }
+
 unsafe impl CoreArrayProviderInner for Comments {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeAddressList(raw);

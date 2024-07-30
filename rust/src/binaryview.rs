@@ -268,15 +268,11 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn original_image_base(&self) -> u64 {
-        unsafe {
-            BNGetOriginalImageBase(self.as_ref().handle)
-        }
+        unsafe { BNGetOriginalImageBase(self.as_ref().handle) }
     }
 
     fn set_original_image_base(&self, image_base: u64) {
-        unsafe {
-            BNSetOriginalImageBase(self.as_ref().handle, image_base)
-        }
+        unsafe { BNSetOriginalImageBase(self.as_ref().handle, image_base) }
     }
 
     fn end(&self) -> u64 {
@@ -1411,10 +1407,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNRemoveComponentByGuid(self.as_ref().handle, path.as_ptr()) }
     }
 
-    fn data_variable_parent_components(
-        &self,
-        data_variable: &DataVariable,
-    ) -> Array<Component> {
+    fn data_variable_parent_components(&self, data_variable: &DataVariable) -> Array<Component> {
         let mut count = 0;
         let result = unsafe {
             BNGetDataVariableParentComponents(

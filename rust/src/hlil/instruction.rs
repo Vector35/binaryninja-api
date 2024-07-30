@@ -143,6 +143,7 @@ pub enum HighLevelILInstructionKind {
     WhileSsa(WhileSsa),
     DoWhileSsa(WhileSsa),
 }
+
 impl HighLevelILInstruction {
     pub(crate) fn new(function: Ref<HighLevelILFunction>, index: usize) -> Self {
         let op = unsafe { BNGetHighLevelILByIndex(function.handle, index, function.full_ast) };

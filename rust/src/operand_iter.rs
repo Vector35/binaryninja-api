@@ -145,6 +145,7 @@ impl Iterator for OperandIterInner {
         }
     }
 }
+
 impl ExactSizeIterator for OperandIterInner {
     fn len(&self) -> usize {
         4 - self.idx

@@ -210,8 +210,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         type_,
                         ..
                     }) => {
-                        let real_type =
-                            type_.as_ref().unwrap_or(&min_confidence_type);
+                        let real_type = type_.as_ref().unwrap_or(&min_confidence_type);
 
                         if real_type.contents.type_class() == TypeClass::VoidTypeClass {
                             if !allow_void {
@@ -289,9 +288,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         unknown_names: &mut HashMap<String, NamedTypeReferenceClass>,
     ) {
         let used_name = name.name().to_string();
-        if let Some(&found) =
-            unknown_names.get(&used_name)
-        {
+        if let Some(&found) = unknown_names.get(&used_name) {
             if found != name.class() {
                 // Interesting case, not sure we care
                 self.log(|| {
@@ -457,9 +454,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     /// Lazy logging function that prints like 20MB of messages
     pub(crate) fn log<F: FnOnce() -> D, D: Display>(&self, msg: F) {
         static MEM: OnceLock<bool> = OnceLock::new();
-        let debug_pdb = MEM.get_or_init(|| {
-            env::var("BN_DEBUG_PDB").is_ok()
-        });
+        let debug_pdb = MEM.get_or_init(|| env::var("BN_DEBUG_PDB").is_ok());
         if *debug_pdb {
             let space = "\t".repeat(self.type_stack.len()) + &"\t".repeat(self.symbol_stack.len());
             let msg = format!("{}", msg());

@@ -372,11 +372,8 @@ impl PDBParser {
                 if check_guid {
                     return Err(anyhow!("PDB GUID does not match"));
                 } else {
-                    let ask = settings.get_string(
-                        "pdb.features.loadMismatchedPDB",
-                        Some(view),
-                        None,
-                    );
+                    let ask =
+                        settings.get_string("pdb.features.loadMismatchedPDB", Some(view), None);
 
                     match ask.as_str() {
                         "true" => {},
@@ -487,11 +484,7 @@ impl PDBParser {
             if check_guid {
                 return Err(anyhow!("File not compiled with PDB information"));
             } else {
-                let ask = settings.get_string(
-                    "pdb.features.loadMismatchedPDB",
-                    Some(view),
-                    None,
-                );
+                let ask = settings.get_string("pdb.features.loadMismatchedPDB", Some(view), None);
 
                 match ask.as_str() {
                     "true" => {},

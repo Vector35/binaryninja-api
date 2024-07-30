@@ -96,6 +96,7 @@ impl<'a> Iterator for BranchIter<'a> {
 
 #[repr(C)]
 pub struct InstructionInfo(BNInstructionInfo);
+
 impl InstructionInfo {
     pub fn new(len: usize, delay_slots: u8) -> Self {
         InstructionInfo(BNInstructionInfo {
@@ -659,6 +660,7 @@ impl Intrinsic for UnusedIntrinsic {
 }
 
 pub struct CoreRegisterInfo(*mut BNArchitecture, u32, BNRegisterInfo);
+
 impl RegisterInfo for CoreRegisterInfo {
     type RegType = CoreRegister;
 
@@ -685,6 +687,7 @@ impl RegisterInfo for CoreRegisterInfo {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CoreRegister(*mut BNArchitecture, u32);
+
 impl Register for CoreRegister {
     type InfoType = CoreRegisterInfo;
 
@@ -797,6 +800,7 @@ impl RegisterStack for CoreRegisterStack {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CoreFlag(*mut BNArchitecture, u32);
+
 impl Flag for CoreFlag {
     type FlagClass = CoreFlagClass;
 
@@ -832,6 +836,7 @@ impl Flag for CoreFlag {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CoreFlagWrite(*mut BNArchitecture, u32);
+
 impl FlagWrite for CoreFlagWrite {
     type FlagType = CoreFlag;
     type FlagClass = CoreFlagClass;
@@ -888,6 +893,7 @@ impl FlagWrite for CoreFlagWrite {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CoreFlagClass(*mut BNArchitecture, u32);
+
 impl FlagClass for CoreFlagClass {
     fn name(&self) -> Cow<str> {
         unsafe {
@@ -912,6 +918,7 @@ impl FlagClass for CoreFlagClass {
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct CoreFlagGroup(*mut BNArchitecture, u32);
+
 impl FlagGroup for CoreFlagGroup {
     type FlagType = CoreFlag;
     type FlagClass = CoreFlagClass;

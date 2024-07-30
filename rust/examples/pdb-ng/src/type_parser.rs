@@ -413,13 +413,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
 
         static MEM: OnceLock<Regex> = OnceLock::new();
-        let uint_regex = MEM.get_or_init(|| {
-            Regex::new(r"u?int\d+_t").unwrap()
-        });
+        let uint_regex = MEM.get_or_init(|| Regex::new(r"u?int\d+_t").unwrap());
 
-        let float_regex = MEM.get_or_init(|| {
-            Regex::new(r"float\d+").unwrap()
-        });
+        let float_regex = MEM.get_or_init(|| Regex::new(r"float\d+").unwrap());
 
         let mut remove_names = vec![];
         for (name, _) in &self.named_types {

@@ -2539,6 +2539,7 @@ impl CoreArrayProvider for QualifiedName {
     type Context = ();
     type Wrapped<'a> = &'a QualifiedName;
 }
+
 unsafe impl CoreArrayProviderInner for QualifiedName {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTypeNameList(raw, count);
@@ -2577,6 +2578,7 @@ impl CoreArrayProvider for QualifiedNameAndType {
     type Context = ();
     type Wrapped<'a> = &'a QualifiedNameAndType;
 }
+
 unsafe impl CoreArrayProviderInner for QualifiedNameAndType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTypeAndNameList(raw, count);
@@ -2619,6 +2621,7 @@ impl CoreArrayProvider for QualifiedNameTypeAndId {
     type Context = ();
     type Wrapped<'a> = &'a QualifiedNameTypeAndId;
 }
+
 unsafe impl CoreArrayProviderInner for QualifiedNameTypeAndId {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTypeIdList(raw, count);
@@ -2770,6 +2773,7 @@ impl CoreArrayProvider for DataVariable {
     type Context = ();
     type Wrapped<'a> = &'a DataVariable;
 }
+
 unsafe impl CoreArrayProviderInner for DataVariable {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeDataVariables(raw, count);
@@ -2998,6 +3002,7 @@ impl IntoIterator for ValueRange<u64> {
         (self.raw.start..self.raw.end).step_by(self.raw.step.try_into().unwrap())
     }
 }
+
 impl IntoIterator for ValueRange<i64> {
     type Item = i64;
     type IntoIter = core::iter::StepBy<Range<i64>>;
@@ -3281,6 +3286,7 @@ impl LookupTableEntry {
 /// The owned version of the BNLookupTableEntry
 #[repr(transparent)]
 struct LookupTableEntryRaw(BNLookupTableEntry);
+
 impl Drop for LookupTableEntryRaw {
     fn drop(&mut self) {
         let _from_value: Box<[i64]> = unsafe {

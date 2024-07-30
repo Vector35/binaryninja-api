@@ -15,6 +15,8 @@
 use std::marker::PhantomData;
 use std::mem;
 
+use binaryninjacore_sys::{BNRegisterOrConstant, BNLowLevelILLabel};
+
 use crate::architecture::Architecture;
 use crate::architecture::Register as ArchReg;
 use crate::architecture::{
@@ -41,8 +43,6 @@ pub trait LiftableWithSize<'func, A: 'func + Architecture>:
         size: usize,
     ) -> Expression<'func, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>;
 }
-
-use binaryninjacore_sys::BNRegisterOrConstant;
 
 #[derive(Copy, Clone)]
 pub enum RegisterOrConstant<R: ArchReg> {
@@ -610,9 +610,7 @@ where
     pub fn from_expr(expr: Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R>) -> Self {
         use binaryninjacore_sys::BNGetLowLevelILByIndex;
 
-        let instr = unsafe {
-            BNGetLowLevelILByIndex(expr.function.handle, expr.expr_idx)
-        };
+        let instr = unsafe { BNGetLowLevelILByIndex(expr.function.handle, expr.expr_idx) };
 
         ExpressionBuilder {
             function: expr.function,
@@ -623,7 +621,7 @@ where
             op2: instr.operands[1],
             op3: instr.operands[2],
             op4: instr.operands[3],
-            _ty: PhantomData
+            _ty: PhantomData,
         }
     }
 
@@ -1468,10 +1466,9 @@ where
     }
 }
 
-use binaryninjacore_sys::BNLowLevelILLabel;
-
 #[repr(C)]
 pub struct Label(BNLowLevelILLabel);
+
 impl Label {
     pub fn new() -> Self {
         use binaryninjacore_sys::BNLowLevelILInitLabel;

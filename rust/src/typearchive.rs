@@ -36,6 +36,7 @@ impl PartialEq for TypeArchive {
         self.id() == other.id()
     }
 }
+
 impl Eq for TypeArchive {}
 
 impl core::hash::Hash for TypeArchive {

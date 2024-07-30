@@ -27,6 +27,7 @@ pub struct BinaryOpCarry {
     pub right: usize,
     pub carry: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedBinaryOpCarry {
     pub left: Box<HighLevelILLiftedInstruction>,
@@ -40,6 +41,7 @@ pub struct BinaryOp {
     pub left: usize,
     pub right: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedBinaryOp {
     pub left: Box<HighLevelILLiftedInstruction>,
@@ -52,6 +54,7 @@ pub struct ArrayIndex {
     pub src: usize,
     pub index: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedArrayIndex {
     pub src: Box<HighLevelILLiftedInstruction>,
@@ -65,6 +68,7 @@ pub struct ArrayIndexSsa {
     pub src_memory: u64,
     pub index: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedArrayIndexSsa {
     pub src: Box<HighLevelILLiftedInstruction>,
@@ -78,6 +82,7 @@ pub struct Assign {
     pub dest: usize,
     pub src: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedAssign {
     pub dest: Box<HighLevelILLiftedInstruction>,
@@ -92,6 +97,7 @@ pub struct AssignMemSsa {
     pub src: usize,
     pub src_memory: u64,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedAssignMemSsa {
     pub dest: Box<HighLevelILLiftedInstruction>,
@@ -107,6 +113,7 @@ pub struct AssignUnpack {
     pub num_dests: usize,
     pub src: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedAssignUnpack {
     pub dest: Vec<HighLevelILLiftedInstruction>,
@@ -122,6 +129,7 @@ pub struct AssignUnpackMemSsa {
     pub src: usize,
     pub src_memory: u64,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedAssignUnpackMemSsa {
     pub dest: Vec<HighLevelILLiftedInstruction>,
@@ -136,6 +144,7 @@ pub struct Block {
     pub first_param: usize,
     pub num_params: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedBlock {
     pub body: Vec<HighLevelILLiftedInstruction>,
@@ -148,6 +157,7 @@ pub struct Call {
     pub first_param: usize,
     pub num_params: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCall {
     pub dest: Box<HighLevelILLiftedInstruction>,
@@ -163,6 +173,7 @@ pub struct CallSsa {
     pub dest_memory: u64,
     pub src_memory: u64,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCallSsa {
     pub dest: Box<HighLevelILLiftedInstruction>,
@@ -178,6 +189,7 @@ pub struct Case {
     pub num_values: usize,
     pub body: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCase {
     pub values: Vec<HighLevelILLiftedInstruction>,
@@ -197,6 +209,7 @@ pub struct ConstData {
     pub constant_data_value: i64,
     pub size: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedConstData {
     pub constant_data: ConstantData,
@@ -207,6 +220,7 @@ pub struct LiftedConstData {
 pub struct UnaryOp {
     pub src: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedUnaryOp {
     pub src: Box<HighLevelILLiftedInstruction>,
@@ -220,6 +234,7 @@ pub struct DerefFieldSsa {
     pub offset: u64,
     pub member_index: Option<usize>,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedDerefFieldSsa {
     pub src: Box<HighLevelILLiftedInstruction>,
@@ -234,6 +249,7 @@ pub struct DerefSsa {
     pub src: usize,
     pub src_memory: u64,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedDerefSsa {
     pub src: Box<HighLevelILLiftedInstruction>,
@@ -278,6 +294,7 @@ pub struct ForLoopSsa {
     pub update: usize,
     pub body: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedForLoopSsa {
     pub init: Box<HighLevelILLiftedInstruction>,
@@ -292,6 +309,7 @@ pub struct LiftedForLoopSsa {
 pub struct Label {
     pub target: u64,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedLabel {
     pub target: GotoLabel,
@@ -304,6 +322,7 @@ pub struct If {
     pub cond_true: usize,
     pub cond_false: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIf {
     pub condition: Box<HighLevelILLiftedInstruction>,
@@ -318,6 +337,7 @@ pub struct Intrinsic {
     pub first_param: usize,
     pub num_params: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIntrinsic {
     pub intrinsic: CoreIntrinsic,
@@ -333,6 +353,7 @@ pub struct IntrinsicSsa {
     pub dest_memory: u64,
     pub src_memory: u64,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIntrinsicSsa {
     pub intrinsic: CoreIntrinsic,
@@ -346,6 +367,7 @@ pub struct LiftedIntrinsicSsa {
 pub struct Jump {
     pub dest: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedJump {
     pub dest: Box<HighLevelILLiftedInstruction>,
@@ -358,6 +380,7 @@ pub struct MemPhi {
     pub first_src: usize,
     pub num_srcs: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedMemPhi {
     pub dest: u64,
@@ -370,6 +393,7 @@ pub struct Ret {
     pub first_src: usize,
     pub num_srcs: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedRet {
     pub src: Vec<HighLevelILLiftedInstruction>,
@@ -381,6 +405,7 @@ pub struct Split {
     pub high: usize,
     pub low: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSplit {
     pub high: Box<HighLevelILLiftedInstruction>,
@@ -394,6 +419,7 @@ pub struct StructField {
     pub offset: u64,
     pub member_index: Option<usize>,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedStructField {
     pub src: Box<HighLevelILLiftedInstruction>,
@@ -409,6 +435,7 @@ pub struct Switch {
     pub first_case: usize,
     pub num_cases: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSwitch {
     pub condition: Box<HighLevelILLiftedInstruction>,
@@ -422,6 +449,7 @@ pub struct Syscall {
     pub first_param: usize,
     pub num_params: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSyscall {
     pub params: Vec<HighLevelILLiftedInstruction>,
@@ -435,6 +463,7 @@ pub struct SyscallSsa {
     pub dest_memory: u64,
     pub src_memory: u64,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSyscallSsa {
     pub params: Vec<HighLevelILLiftedInstruction>,
@@ -460,6 +489,7 @@ pub struct VarInit {
     pub dest: Variable,
     pub src: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedVarInit {
     pub dest: Variable,
@@ -472,6 +502,7 @@ pub struct VarInitSsa {
     pub dest: SSAVariable,
     pub src: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedVarInitSsa {
     pub dest: SSAVariable,
@@ -485,6 +516,7 @@ pub struct VarPhi {
     pub first_src: usize,
     pub num_srcs: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedVarPhi {
     pub dest: SSAVariable,
@@ -503,6 +535,7 @@ pub struct While {
     pub condition: usize,
     pub body: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedWhile {
     pub condition: Box<HighLevelILLiftedInstruction>,
@@ -516,6 +549,7 @@ pub struct WhileSsa {
     pub condition: usize,
     pub body: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedWhileSsa {
     pub condition_phi: Box<HighLevelILLiftedInstruction>,

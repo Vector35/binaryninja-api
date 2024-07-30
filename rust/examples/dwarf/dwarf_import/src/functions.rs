@@ -15,8 +15,8 @@
 use std::sync::OnceLock;
 
 use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
-use crate::{helpers::*, ReaderType};
 use crate::types::get_type;
+use crate::{helpers::*, ReaderType};
 
 use binaryninja::templatesimplifier::simplify_str_to_str;
 use cpp_demangle::DemangleOptions;
@@ -82,9 +82,21 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
 ) -> Option<usize> {
     // Collect function properties (if they exist in this DIE)
     let raw_name = get_raw_name(dwarf, unit, entry);
-    let return_type = get_type(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
+    let return_type = get_type(
+        dwarf,
+        unit,
+        entry,
+        debug_info_builder_context,
+        debug_info_builder,
+    );
     let address = get_start_address(dwarf, unit, entry);
-    let (parameters, variable_arguments) = get_parameters(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
+    let (parameters, variable_arguments) = get_parameters(
+        dwarf,
+        unit,
+        entry,
+        debug_info_builder_context,
+        debug_info_builder,
+    );
 
     // If we have a raw name, it might be mangled, see if we can demangle it into full_name
     //  raw_name should contain a superset of the info we have in full_name
@@ -100,9 +112,7 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
             });
 
             static ABI_REGEX_MEM: OnceLock<Regex> = OnceLock::new();
-            let abi_regex = ABI_REGEX_MEM.get_or_init(|| {
-                Regex::new(r"\[abi:v\d+\]").unwrap()
-            });
+            let abi_regex = ABI_REGEX_MEM.get_or_init(|| Regex::new(r"\[abi:v\d+\]").unwrap());
             if let Ok(sym) = cpp_demangle::Symbol::new(possibly_mangled_name) {
                 if let Ok(demangled) = sym.demangle(demangle_options) {
                     let cleaned = abi_regex.replace_all(&demangled, "");
@@ -126,5 +136,12 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
         return None;
     }
 
-    debug_info_builder.insert_function(full_name, raw_name, return_type, address, &parameters, variable_arguments)
+    debug_info_builder.insert_function(
+        full_name,
+        raw_name,
+        return_type,
+        address,
+        &parameters,
+        variable_arguments,
+    )
 }

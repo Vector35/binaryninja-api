@@ -294,10 +294,10 @@ where
 pub struct RegSplit;
 
 impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, RegSplit>
-    where
-        A: 'func + Architecture,
-        M: FunctionMutability,
-        V: NonSSAVariant,
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    V: NonSSAVariant,
 {
     pub fn size(&self) -> usize {
         self.op.size

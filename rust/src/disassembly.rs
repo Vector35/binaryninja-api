@@ -288,6 +288,7 @@ impl CoreArrayProvider for Array<InstructionTextToken> {
     type Context = ();
     type Wrapped<'a> = mem::ManuallyDrop<Self>;
 }
+
 unsafe impl CoreArrayProviderInner for Array<InstructionTextToken> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeInstructionTextLines(raw, count)
@@ -382,7 +383,9 @@ impl From<&Vec<&str>> for DisassemblyTextLine {
     fn from(string_tokens: &Vec<&str>) -> Self {
         let mut tokens: Box<[BNInstructionTextToken]> = string_tokens
             .iter()
-            .map(|&token| InstructionTextToken::new(token, InstructionTextTokenContents::Text).into_raw())
+            .map(|&token| {
+                InstructionTextToken::new(token, InstructionTextTokenContents::Text).into_raw()
+            })
             .collect();
 
         // let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() };  // Can't use for now...still a rust nighly feature

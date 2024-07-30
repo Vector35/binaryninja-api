@@ -33,12 +33,12 @@ use crate::Endianness;
 use crate::rc::*;
 use crate::string::*;
 
-/// Registers a custom `BinaryViewType` with the core.
+/// Registers a custom [BinaryViewType] with the core.
 ///
-/// The `constructor` argument is called immediately after successful registration of the type with
-/// the core. The `BinaryViewType` argument passed to `constructor` is the object that the
-/// `AsRef<BinaryViewType>`
-/// implementation of the `CustomBinaryViewType` must return.
+/// The `constructor` is called immediately after successful registration of the type with
+/// the core. The [BinaryViewType] argument passed to `constructor` is the object that the
+/// [AsRef<BinaryViewType>]
+/// implementation of the [CustomBinaryViewType] must return.
 pub fn register_view_type<S, T, F>(name: S, long_name: S, constructor: F) -> &'static T
 where
     S: BnStrCompatible,
@@ -331,8 +331,8 @@ pub unsafe trait CustomBinaryView: 'static + BinaryViewBase + Sync + Sized {
     fn init(&self, args: Self::Args) -> Result<()>;
 }
 
-/// Represents a partially initialized custom `BinaryView` that should be returned to the core
-/// from the `create_custom_view` method of a `CustomBinaryViewType`.
+/// Represents a partially initialized custom [BinaryView] that should be returned to the core
+/// from the `create_custom_view` method of a [CustomBinaryViewType].
 #[must_use]
 pub struct CustomView<'builder> {
     // this object can't actually be treated like a real
@@ -347,7 +347,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
     /// Begins creating a custom BinaryView.
     ///
     /// This function may only be called from the `create_custom_view` function of a
-    /// `CustomBinaryViewType`.
+    /// [CustomBinaryViewType].
     ///
     /// `parent` specifies the view that the core will treat as the parent view, that
     /// Segments created against the created view will be backed by `parent`. It will
@@ -355,25 +355,25 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
     /// callback.
     ///
     /// `constructor` will not be called until well after the value returned by this function
-    /// has been returned by `create_custom_view` callback to the core, and may not ever
-    /// be called if the value returned by this function is dropped or leaked.
+    /// has been returned by the [CustomBinaryViewType::create_custom_view] callback to the core,
+    /// and may not ever be called if the value returned by this function is dropped or leaked.
     ///
     /// # Errors
     ///
-    /// This function will fail if the `FileMetadata` object associated with the *expected* parent
+    /// This function will fail if the [FileMetadata] object associated with the *expected* parent
     /// (i.e., the `data` argument passed to the `create_custom_view` function) already has an
-    /// associated `BinaryView` of the same `CustomBinaryViewType`. Multiple `BinaryView` objects
-    /// of the same `BinaryViewType` belonging to the same `FileMetadata` object is prohibited and
+    /// associated [BinaryView] of the same [CustomBinaryViewType]. Multiple [BinaryView] objects
+    /// of the same [BinaryViewType] belonging to the same [FileMetadata] object is prohibited and
     /// can cause strange, delayed segmentation faults.
     ///
     /// # Safety
     ///
     /// `constructor` should avoid doing anything with the object it returns, especially anything
-    /// that would cause the core to invoke any of the `BinaryViewBase` methods. The core isn't
+    /// that would cause the core to invoke any of the [BinaryViewBase] methods. The core isn't
     /// going to consider the object fully initialized until after that callback has run.
     ///
-    /// The `BinaryView` argument passed to the constructor function is the object that is expected
-    /// to be returned by the `AsRef<BinaryView>` implementation required by the `BinaryViewBase` trait.
+    /// The [BinaryView] argument passed to the constructor function is the object that is expected
+    /// to be returned by the [AsRef<BinaryView>] implementation required by the [BinaryViewBase] trait.
     ///  TODO FIXME welp this is broke going to need 2 init callbacks
     pub fn create<V>(self, parent: &BinaryView, view_args: V::Args) -> Result<CustomView<'a>>
     where

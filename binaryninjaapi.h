@@ -548,34 +548,6 @@ namespace BinaryNinja {
 		{}
 	};
 
-
-
-	class DisassemblySettings :
-	    public CoreRefCountObject<BNDisassemblySettings, BNNewDisassemblySettingsReference, BNFreeDisassemblySettings>
-	{
-	  public:
-		DisassemblySettings();
-		DisassemblySettings(BNDisassemblySettings* settings);
-		DisassemblySettings* Duplicate();
-
-		bool IsOptionSet(BNDisassemblyOption option) const;
-		void SetOption(BNDisassemblyOption option, bool state = true);
-
-		size_t GetWidth() const;
-		void SetWidth(size_t width);
-		size_t GetMaximumSymbolWidth() const;
-		void SetMaximumSymbolWidth(size_t width);
-		size_t GetGutterWidth() const;
-		void SetGutterWidth(size_t width);
-		BNDisassemblyAddressMode GetAddressMode() const;
-		void SetAddressMode(BNDisassemblyAddressMode mode);
-		uint64_t GetAddressBaseOffset() const;
-		void SetAddressBaseOffset(uint64_t addressBaseOffset);
-		BNDisassemblyCallParameterHints GetCallParameterHints() const;
-		void SetCallParameterHints(BNDisassemblyCallParameterHints hints);
-	};
-
-
 	struct LowLevelILInstruction;
 	struct RegisterOrFlag;
 	struct SSARegister;

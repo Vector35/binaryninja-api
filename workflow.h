@@ -4,6 +4,7 @@
 #include "binaryninjacore.h"
 #include "refcount.h"
 #include "json/json.h"
+#include "overload.h"
 #include <functional>
 #include <memory>
 #include <variant>
@@ -87,16 +88,6 @@ namespace BinaryNinja
 		void SetHighLevelILFunction(Ref<HighLevelILFunction> highLevelIL);
 
 		bool Inform(const std::string& request);
-
-#if ((__cplusplus >= 201403L) || (_MSVC_LANG >= 201703L))
-	template <class... Ts>
-	struct overload : Ts...
-	{
-		using Ts::operator()...;
-	};
-	template <class... Ts>
-	overload(Ts...) -> overload<Ts...>;
-#endif
 
 #if ((__cplusplus >= 201403L) || (_MSVC_LANG >= 201703L))
 		template <typename... Args>

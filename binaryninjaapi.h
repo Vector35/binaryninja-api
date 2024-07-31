@@ -88,6 +88,7 @@
 #include "secretsprovider.h"
 #include "tempfile.h"
 #include "transform.h"
+#include "memorymap.h"
 
 #ifdef _MSC_VER
 	#define NOEXCEPT
@@ -799,88 +800,6 @@ namespace BinaryNinja {
 	{
 	  public:
 		QueryMetadataException(const std::string& error) : ExceptionWithStackTrace(error) {}
-	};
-
-	class MemoryMap
-	{
-		BNBinaryView* m_object;
-
-	public:
-		MemoryMap(BNBinaryView* view): m_object(view) {}
-		~MemoryMap() = default;
-
-		bool AddBinaryMemoryRegion(const std::string& name, uint64_t start, Ref<BinaryView> source, uint32_t flags = 0)
-		{
-			return BNAddBinaryMemoryRegion(m_object, name.c_str(), start, source->GetObject(), flags);
-		}
-
-		bool AddDataMemoryRegion(const std::string& name, uint64_t start, const DataBuffer& source, uint32_t flags = 0)
-		{
-			return BNAddDataMemoryRegion(m_object, name.c_str(), start, source.GetBufferObject(), flags);
-		}
-
-		bool AddRemoteMemoryRegion(const std::string& name, uint64_t start, FileAccessor* source, uint32_t flags = 0)
-		{
-			return BNAddRemoteMemoryRegion(m_object, name.c_str(), start, source->GetCallbacks(), flags);
-		}
-
-		bool RemoveMemoryRegion(const std::string& name)
-		{
-			return BNRemoveMemoryRegion(m_object, name.c_str());
-		}
-
-		std::string GetActiveMemoryRegionAt(uint64_t addr)
-		{
-			char* name = BNGetActiveMemoryRegionAt(m_object, addr);
-			std::string result = name;
-			BNFreeString(name);
-			return result;
-		}
-
-		uint32_t GetMemoryRegionFlags(const std::string& name)
-		{
-			return BNGetMemoryRegionFlags(m_object, name.c_str());
-		}
-
-		bool SetMemoryRegionFlags(const std::string& name, uint32_t flags)
-		{
-			return BNSetMemoryRegionFlags(m_object, name.c_str(), flags);
-		}
-
-		bool IsMemoryRegionEnabled(const std::string& name)
-		{
-			return BNIsMemoryRegionEnabled(m_object, name.c_str());
-		}
-
-		bool SetMemoryRegionEnabled(const std::string& name, bool enabled)
-		{
-			return BNSetMemoryRegionEnabled(m_object, name.c_str(), enabled);
-		}
-
-		bool IsMemoryRegionRebaseable(const std::string& name)
-		{
-			return BNIsMemoryRegionRebaseable(m_object, name.c_str());
-		}
-
-		bool SetMemoryRegionRebaseable(const std::string& name, bool rebaseable)
-		{
-			return BNSetMemoryRegionRebaseable(m_object, name.c_str(), rebaseable);
-		}
-
-		uint8_t GetMemoryRegionFill(const std::string& name)
-		{
-			return BNGetMemoryRegionFill(m_object, name.c_str());
-		}
-
-		bool SetMemoryRegionFill(const std::string& name, uint8_t fill)
-		{
-			return BNSetMemoryRegionFill(m_object, name.c_str(), fill);
-		}
-
-		void Reset()
-		{
-			BNResetMemoryMap(m_object);
-		}
 	};
 
 	struct InstructionInfo : public BNInstructionInfo

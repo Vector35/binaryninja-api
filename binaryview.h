@@ -23,7 +23,6 @@ namespace BinaryNinja
 	class BinaryView;
 	class Component;
 	class DataBuffer;
-	struct DataVariable;
 	class DebugInfo;
 	class DisassemblySettings;
 	class ExternalLibrary;
@@ -59,6 +58,84 @@ namespace BinaryNinja
 	class UndoEntry;
 	class Workflow;
 
+
+	/*!
+		\ingroup binaryview
+	*/
+	struct DataVariable
+	{
+		DataVariable() {}
+		DataVariable(uint64_t a, Type* t, bool d) : address(a), type(t), autoDiscovered(d) {}
+
+		uint64_t address;
+		Confidence<Ref<Type>> type;
+		bool autoDiscovered;
+	};
+
+
+	/*!
+		\ingroup binaryview
+	*/
+	struct DataVariableAndName
+	{
+		DataVariableAndName() {}
+		DataVariableAndName(uint64_t a, Type* t, bool d, const std::string& n) :
+		    address(a), type(t), autoDiscovered(d), name(n)
+		{}
+
+		uint64_t address;
+		Confidence<Ref<Type>> type;
+		bool autoDiscovered;
+		std::string name;
+	};
+
+	/*! The Segment object is returned during BinaryView creation and should not be directly instantiated.
+
+		\ingroup binaryview
+	*/
+	class Segment : public CoreRefCountObject<BNSegment, BNNewSegmentReference, BNFreeSegment>
+	{
+	  public:
+		Segment(BNSegment* seg);
+		uint64_t GetStart() const;
+		uint64_t GetLength() const;
+		uint64_t GetEnd() const;
+		uint64_t GetDataEnd() const;
+		uint64_t GetDataOffset() const;
+		uint64_t GetDataLength() const;
+		uint32_t GetFlags() const;
+		bool IsAutoDefined() const;
+
+		void SetLength(uint64_t length);
+		void SetDataOffset(uint64_t dataOffset);
+		void SetDataLength(uint64_t dataLength);
+		void SetFlags(uint32_t flags);
+	};
+
+	/*! The Section object is returned during BinaryView creation and should not be directly instantiated.
+
+		\ingroup binaryview
+	*/
+	class Section : public CoreRefCountObject<BNSection, BNNewSectionReference, BNFreeSection>
+	{
+	  public:
+		Section(BNSection* sec);
+		Section(const std::string& name, uint64_t start, uint64_t length, BNSectionSemantics semantics,
+		    const std::string& type, uint64_t align, uint64_t entrySize, const std::string& linkedSection,
+		    const std::string& infoSection, uint64_t infoData, bool autoDefined);
+		std::string GetName() const;
+		std::string GetType() const;
+		uint64_t GetStart() const;
+		uint64_t GetLength() const;
+		uint64_t GetEnd() const;
+		uint64_t GetInfoData() const;
+		uint64_t GetAlignment() const;
+		uint64_t GetEntrySize() const;
+		std::string GetLinkedSection() const;
+		std::string GetInfoSection() const;
+		BNSectionSemantics GetSemantics() const;
+		bool AutoDefined() const;
+	};
 
 	/*!
 		\ingroup binaryview
@@ -3155,4 +3232,770 @@ namespace BinaryNinja
 	};
 
 
+
+	/*!
+		\ingroup binaryview
+	*/
+	class Relocation : public CoreRefCountObject<BNRelocation, BNNewRelocationReference, BNFreeRelocation>
+	{
+	  public:
+		Relocation(BNRelocation* reloc);
+		BNRelocationInfo GetInfo() const;
+		Architecture* GetArchitecture() const;
+		uint64_t GetTarget() const;
+		uint64_t GetAddress() const;
+		Ref<Symbol> GetSymbol() const;
+	};
+
+
+	/*!
+		\ingroup binaryview
+	*/
+	class BinaryData : public BinaryView
+	{
+		BinaryData(BNBinaryView* view);
+
+	  public:
+		BinaryData(FileMetadata* file);
+		BinaryData(FileMetadata* file, const DataBuffer& data);
+		BinaryData(FileMetadata* file, const void* data, size_t len);
+		BinaryData(FileMetadata* file, const std::string& path);
+		BinaryData(FileMetadata* file, FileAccessor* accessor);
+
+		/*!
+			Open a raw file from a given path.
+			This is lifted out into a method because this operation can fail.
+			\param file Metadata structure
+			\param path Path to file to open
+			\return Reference to binary data if successful, nullptr reference otherwise
+		 */
+		static Ref<BinaryData> CreateFromFilename(FileMetadata* file, const std::string& path);
+
+		/*!
+			Open a raw file from a given path.
+			This is lifted out into a method because this operation can fail.
+			\param file Metadata structure
+			\param accessor File accessor object for reading file contents
+			\return Reference to binary data if successful, nullptr reference otherwise
+		 */
+		static Ref<BinaryData> CreateFromFile(FileMetadata* file, FileAccessor* accessor);
+	};
+
+	class Platform;
+
+	/*! The \c BinaryViewType object is used internally and should not be directly instantiated.
+		\ingroup binaryview
+	*/
+	class BinaryViewType : public StaticCoreRefCountObject<BNBinaryViewType>
+	{
+		struct BinaryViewEvent
+		{
+			std::function<void(BinaryView*)> action;
+		};
+
+		struct PlatformRecognizerFunction
+		{
+			std::function<Ref<Platform>(BinaryView*, Metadata*)> action;
+		};
+
+	  protected:
+		std::string m_nameForRegister, m_longNameForRegister;
+
+		static BNBinaryView* CreateCallback(void* ctxt, BNBinaryView* data);
+		static BNBinaryView* ParseCallback(void* ctxt, BNBinaryView* data);
+		static bool IsValidCallback(void* ctxt, BNBinaryView* data);
+		static bool IsDeprecatedCallback(void* ctxt);
+		static BNSettings* GetSettingsCallback(void* ctxt, BNBinaryView* data);
+
+		BinaryViewType(BNBinaryViewType* type);
+
+	  public:
+		BinaryViewType(const std::string& name, const std::string& longName);
+		virtual ~BinaryViewType() {}
+
+		/*! Register a BinaryViewType
+
+			\param type BinaryViewType to register
+		*/
+		static void Register(BinaryViewType* type);
+
+		/*! Get a BinaryViewType by name
+
+			\param name Name of the registered BinaryViewType
+			\return The BinaryViewType, if one was registered
+		*/
+		static Ref<BinaryViewType> GetByName(const std::string& name);
+
+		/*! Get the list of registered View Types
+
+			\return Get the list of registered View Types
+		*/
+		static std::vector<Ref<BinaryViewType>> GetViewTypes();
+
+		/*! Get the list of valid view types for a BinaryView
+
+			\param data BinaryView for a binary
+			\return List of valid view types
+		*/
+		static std::vector<Ref<BinaryViewType>> GetViewTypesForData(BinaryView* data);
+
+		/*! Register an Architecture for a specific view type
+
+			\param name Name of the view type
+			\param id ID of the architecture
+			\param endian Endianness of the architecture
+			\param arch Architecture
+		*/
+		static void RegisterArchitecture(const std::string& name, uint32_t id, BNEndianness endian, Architecture* arch);
+
+		/*! Register an Architecture for this view type
+
+			\param id ID of the architecture
+			\param endian Endianness of the architecture
+			\param arch Architecture
+		*/
+		void RegisterArchitecture(uint32_t id, BNEndianness endian, Architecture* arch);
+
+		/*! Get an Architecture for this BinaryViewType by id and endianness
+
+		    \param id ID of the architecture
+		    \param endian Endianness of the architecture
+			\return The architecture, if it was found
+		*/
+		Ref<Architecture> GetArchitecture(uint32_t id, BNEndianness endian);
+
+		/*! Register a Platform for a specific view type
+
+			\param name Name of the BinaryViewType
+			\param id ID of the platform
+			\param arch Architecture to register this platform with
+			\param platform The Platform to register
+		*/
+		static void RegisterPlatform(const std::string& name, uint32_t id, Architecture* arch, Platform* platform);
+
+		/*! Register a Platform as a default for a specific view type
+
+			\param name Name of the BinaryViewType
+			\param arch Architecture to register this platform with
+			\param platform The Platform to register
+		*/
+		static void RegisterDefaultPlatform(const std::string& name, Architecture* arch, Platform* platform);
+
+		/*! Register a Platform for this view type
+
+			\param id ID of the platform
+			\param arch Architecture to register this platform with
+			\param platform The Platform to register
+		*/
+		void RegisterPlatform(uint32_t id, Architecture* arch, Platform* platform);
+
+		/*! Register a Platform as a default for this view type
+
+			\param arch Architecture to register this platform with
+			\param platform The Platform to register
+		*/
+		void RegisterDefaultPlatform(Architecture* arch, Platform* platform);
+
+		/*! Get a platform by ID and architecture
+
+			\param id ID of the platform
+			\param arch Architecture of the Platform
+			\return The Platform, if it was found.
+		*/
+		Ref<Platform> GetPlatform(uint32_t id, Architecture* arch);
+
+		void RegisterPlatformRecognizer(uint64_t id, BNEndianness endian,
+		    const std::function<Ref<Platform>(BinaryView* view, Metadata*)>& callback);
+		Ref<Platform> RecognizePlatform(uint64_t id, BNEndianness endian, BinaryView* view, Metadata* metadata);
+
+		/*! Get the name this platform was registered with
+
+			\return The name of the platform
+		*/
+		std::string GetName();
+
+		/*! Get the "Long Name" this platform was registered with
+
+			\return The "Long Name" this platform was registered with
+		*/
+		std::string GetLongName();
+
+		virtual bool IsDeprecated();
+
+		/*! Create a BinaryView for this BinaryViewType given the data from an existing BinaryView
+
+			\param data An existing BinaryView, typically with the \c Raw type
+			\return The BinaryView created by this BinaryViewType
+		*/
+		virtual Ref<BinaryView> Create(BinaryView* data) = 0;
+
+		/*! Create ephemeral BinaryView to generate information for preview
+
+			\param data An existing BinaryView, typically with the \c Raw type
+			\return The BinaryView created by this BinaryViewType
+		*/
+		virtual Ref<BinaryView> Parse(BinaryView* data);
+
+		/*! Check whether this BinaryViewType is valid for given data
+
+			\param data An existing BinaryView, typically with the \c Raw type
+			\return Whether this BinaryViewType is valid for given data
+		*/
+		virtual bool IsTypeValidForData(BinaryView* data) = 0;
+		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data);
+		Ref<Settings> GetDefaultLoadSettingsForData(BinaryView* data);
+
+		static void RegisterBinaryViewFinalizationEvent(const std::function<void(BinaryView* view)>& callback);
+		static void RegisterBinaryViewInitialAnalysisCompletionEvent(
+		    const std::function<void(BinaryView* view)>& callback);
+
+		static void BinaryViewEventCallback(void* ctxt, BNBinaryView* view);
+		static BNPlatform* PlatformRecognizerCallback(void* ctxt, BNBinaryView* view, BNMetadata* metadata);
+	};
+
+	/*!
+		\ingroup binaryview
+	*/
+	class CoreBinaryViewType : public BinaryViewType
+	{
+	  public:
+		CoreBinaryViewType(BNBinaryViewType* type);
+		virtual Ref<BinaryView> Create(BinaryView* data) override;
+		virtual Ref<BinaryView> Parse(BinaryView* data) override;
+		virtual bool IsTypeValidForData(BinaryView* data) override;
+		virtual bool IsDeprecated() override;
+		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
+	};
+
+
+	/*! BinaryReader is a convenience class for reading binary data
+		\ingroup binaryview
+	*/
+	class BinaryReader
+	{
+		Ref<BinaryView> m_view;
+		BNBinaryReader* m_stream;
+
+	  public:
+		/*! Create a BinaryReader instance given a BinaryView and endianness.
+
+			\param data BinaryView to read from
+			\param endian Byte order to read with. One of LittleEndian, BigEndian
+		*/
+		BinaryReader(BinaryView* data, BNEndianness endian = LittleEndian);
+		~BinaryReader();
+
+		/*! Get the endianness set for this reader.
+
+			\return The endianness set for this reader.
+		*/
+		BNEndianness GetEndianness() const;
+
+		/*! Set the endianness for this reader
+
+		    \param endian Byte order to read with. One of LittleEndian, BigEndian
+		*/
+		void SetEndianness(BNEndianness endian);
+
+		/*! Read from the current cursor position into buffer `dest`
+
+		    \throws ReadException
+			\param dest Address to write the read bytes to
+			\param len Number of bytes to write
+		*/
+		void Read(void* dest, size_t len);
+		/*! Read from the current cursor position into a DataBuffer
+
+		    \throws ReadException
+			\param len Number of bytes to read
+			\return DataBuffer containing the bytes read
+		*/
+		DataBuffer Read(size_t len);
+		template <typename T>
+		T Read();
+		template <typename T>
+		std::vector<T> ReadVector(size_t count);
+
+		/*! Read a string of fixed length from the current cursor position
+
+		    \throws ReadException
+			\param len Length of the string
+			\return the string
+		*/
+		std::string ReadString(size_t len);
+
+		/*! Read a null-terminated string from the current cursor position
+
+		    \throws ReadException
+			\param maxLength Maximum length of the string, default is no limit (-1)
+			\return the string
+		*/
+		std::string ReadCString(size_t maxLength = -1);
+
+		/*! Read a uint8_t from the current cursor position and advance the cursor by 1 byte
+
+		    \throws ReadException
+			\return The read value
+		*/
+		uint8_t Read8();
+
+		/*! Read a uint16_t from the current cursor position and advance the cursor by 2 bytes
+
+		    \throws ReadException
+			\return The read value
+		*/
+		uint16_t Read16();
+
+		/*! Read a uint32_t from the current cursor position and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		*/
+		uint32_t Read32();
+
+		/*! Read a uint64_t from the current cursor position and advance the cursor by 8 bytes
+
+		    \throws ReadException
+			\return The read value
+		*/
+		uint64_t Read64();
+
+		/*! Read a pointer (size of BinaryView::GetAddressSize()) from the current cursor position and advance
+		    and advance it that many bytes
+
+		    \throws ReadException
+		    \return The value that was read
+		*/
+		uint64_t ReadPointer();
+
+		/*! Read a uint16_t from the current cursor position, explicitly as a little endian value,
+			and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		*/
+		uint16_t ReadLE16();
+
+		/*! Read a uint16_t from the current cursor position, explicitly as a little endian value,
+			and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		*/
+		uint32_t ReadLE32();
+
+		/*! Read a uint16_t from the current cursor position, explicitly as a little endian value,
+			and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		*/
+		uint64_t ReadLE64();
+
+		/*! Read a pointer (size of BinaryView::GetAddressSize()) as little-endian from the current cursor
+		    position and advance and advance it that many bytes
+
+		    \throws ReadException
+		    \return The value that was read
+		*/
+		uint64_t ReadLEPointer();
+
+		/*! Read a uint16_t from the current cursor position, explicitly as a big endian value,
+			and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		*/
+		uint16_t ReadBE16();
+
+		/*! Read a uint16_t from the current cursor position, explicitly as a big endian value,
+			and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		*/
+		uint32_t ReadBE32();
+
+		/*! Read a uint16_t from the current cursor position, explicitly as a big endian value,
+			and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		*/
+		uint64_t ReadBE64();
+
+		/*! Read a pointer (size of BinaryView::GetAddressSize()) as big-endian from the current cursor
+		    position and advance and advance it that many bytes
+
+		    \throws ReadException
+		    \return The value that was read
+		*/
+		uint64_t ReadBEPointer();
+
+		/*! Try reading a value, returning false whenever that read fails
+
+			\param dest Address to write the bytes to
+			\param len Number of bytes to read
+			\return Whether the read succeeded
+		*/
+		bool TryRead(void* dest, size_t len);
+
+		/*! Try reading a value into a databuffer
+
+			\param dest Reference to a DataBuffer to write to
+			\param len Amount of bytes to read
+			\return Whether the read succeeded
+		*/
+		bool TryRead(DataBuffer& dest, size_t len);
+
+		/*! Try reading a string
+
+			\param dest Reference to a string to write to
+			\param len Length of the string to be read
+			\return Whether the read succeeded
+		*/
+		bool TryReadString(std::string& dest, size_t len);
+
+		/*! Try reading a uint8_t
+
+			\param result Reference to a uint8_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryRead8(uint8_t& result);
+
+		/*! Try reading a uint16_t
+
+		    \param result Reference to a uint16_t to write to
+		    \return Whether the read succeeded.
+		*/
+		bool TryRead16(uint16_t& result);
+
+		/*! Try reading a uint32_t
+
+			\param result Reference to a uint32_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryRead32(uint32_t& result);
+
+		/*! Try reading a uint64_t
+
+			\param result Reference to a uint64_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryRead64(uint64_t& result);
+
+		/*! Try reading a pointer (size of BinaryView::GetAddressSize())
+
+			\param result Reference to a uint64_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryReadPointer(uint64_t& result);
+
+		/*! Try reading a uint16_t, explicitly as little endian
+
+			\param result Reference to a uint16_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryReadLE16(uint16_t& result);
+
+		/*! Try reading a uint32_t, explicitly as little endian
+
+			\param result Reference to a uint32_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryReadLE32(uint32_t& result);
+
+		/*! Try reading a uint64_t, explicitly as little endian
+
+			\param result Reference to a uint64_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryReadLE64(uint64_t& result);
+
+		/*! Try reading a pointer (size of BinaryView::GetAddressSize()) as little-endian
+
+			\param result Reference to a uint64_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryReadLEPointer(uint64_t& result);
+
+		/*! Try reading a uint16_t, explicitly as big endian
+
+			\param result Reference to a uint16_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryReadBE16(uint16_t& result);
+
+		/*! Try reading a uint32_t, explicitly as big endian
+
+			\param result Reference to a uint32_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryReadBE32(uint32_t& result);
+
+		/*! Try reading a uint64_t, explicitly as big endian
+
+			\param result Reference to a uint64_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryReadBE64(uint64_t& result);
+
+		/*! Try reading a pointer (size of BinaryView::GetAddressSize()) as big-endian
+
+			\param result Reference to a uint64_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryReadBEPointer(uint64_t& result);
+
+		/*! Get the current cursor position
+
+			\return The current cursor position
+		*/
+		uint64_t GetOffset() const;
+
+		/*! Set the cursor position
+
+			\param offset The new cursor position
+		*/
+		void Seek(uint64_t offset);
+
+		/*! Set the cursor position, relative to the current position
+
+			\param offset Offset to the current cursor position
+		*/
+		void SeekRelative(int64_t offset);
+
+		/*! Gets the virtual base offset for the stream
+
+			\return The current virtual base
+		*/
+		uint64_t GetVirtualBase();
+
+		/*! Sets a virtual base offset for the stream
+
+			\param base The new virtual base
+		*/
+		void SetVirtualBase(uint64_t base);
+
+		/*! Whether the current cursor position is at the end of the file.
+
+		*/
+		bool IsEndOfFile() const;
+	};
+
+	/*! BinaryWriter is a convenience class for writing binary data
+	 	\ingroup binaryview
+	*/
+	class BinaryWriter
+	{
+		Ref<BinaryView> m_view;
+		BNBinaryWriter* m_stream;
+
+	  public:
+
+		/*! Create a BinaryWriter instance given a BinaryView and endianness.
+
+			\param data BinaryView to write to
+			\param endian Byte order to write with. One of LittleEndian, BigEndian
+		*/
+		BinaryWriter(BinaryView* data, BNEndianness endian = LittleEndian);
+		~BinaryWriter();
+
+
+		/*! Get the endianness set for this writer.
+
+			\return The endianness set for this writer.
+		*/
+		BNEndianness GetEndianness() const;
+
+		/*! Set the endianness for this writer
+
+		    \param endian Byte order to write with. One of LittleEndian, BigEndian
+		*/
+		void SetEndianness(BNEndianness endian);
+
+		/*! Write bytes from an address to the current cursor position
+
+		 	\throws WriteException on out of bounds write
+			\param src Address to read the bytes from
+			\param len Amount of bytes to write
+		*/
+		void Write(const void* src, size_t len);
+
+		/*! Write the contents of a DataBuffer to the current cursor position
+
+		    \throws WriteException on out of bounds write
+			\param buf DataBuffer to write from
+		*/
+		void Write(const DataBuffer& buf);
+
+		/*! Write the contents of a string to the current cursor position
+
+		    \throws WriteException on out of bounds write
+			\param str String to write
+		*/
+		void Write(const std::string& str);
+
+		/*! Write a uint8_t to the current cursor position
+
+		    \throws WriteException on out of bounds write
+			\param val uint8_t to write
+		*/
+		void Write8(uint8_t val);
+
+		/*! Write a uint16_t to the current cursor position
+
+		    \throws WriteException on out of bounds write
+			\param val uint16_t to write
+		*/
+		void Write16(uint16_t val);
+
+		/*! Write a uint32_t to the current cursor position
+
+		    \throws WriteException on out of bounds write
+			\param val uint32_t to write
+		*/
+		void Write32(uint32_t val);
+
+		/*! Write a uint64_t to the current cursor position
+
+		    \throws WriteException on out of bounds write
+			\param val uint64_t to write
+		*/
+		void Write64(uint64_t val);
+
+		/*! Write a uint16_t to the current cursor position, explicitly as little endian
+
+		    \throws WriteException on out of bounds write
+			\param val uint16_t to write
+		*/
+		void WriteLE16(uint16_t val);
+
+		/*! Write a uint32_t to the current cursor position, explicitly as little endian
+
+		    \throws WriteException on out of bounds write
+			\param val uint32_t to write
+		*/
+		void WriteLE32(uint32_t val);
+
+		/*! Write a uint64_t to the current cursor position, explicitly as little endian
+
+		    \throws WriteException on out of bounds write
+			\param val uint64_t to write
+		*/
+		void WriteLE64(uint64_t val);
+
+		/*! Write a uint16_t to the current cursor position, explicitly as big endian
+
+		    \throws WriteException on out of bounds write
+			\param val uint16_t to write
+		*/
+		void WriteBE16(uint16_t val);
+
+		/*! Write a uint32_t to the current cursor position, explicitly as big endian
+
+		    \throws WriteException on out of bounds write
+			\param val uint32_t to write
+		*/
+		void WriteBE32(uint32_t val);
+
+		/*! Write a uint64_t to the current cursor position, explicitly as big endian
+
+		    \throws WriteException on out of bounds write
+			\param val uint64_t to write
+		*/
+		void WriteBE64(uint64_t val);
+
+		/*! Write bytes from an address to the current cursor position
+
+			\param src Address to read the bytes from
+			\param len Amount of bytes to write
+		 	\return Whether the write succeeded
+		*/
+		bool TryWrite(const void* src, size_t len);
+
+		/*! Write from a DataBuffer to the current cursor position
+
+			\param buf DataBuffer to write from
+			\return Whether the write succeeded
+		*/
+		bool TryWrite(const DataBuffer& buf);
+
+		/*! Write a string to the current cursor position
+
+			\param str String to write
+			\return Whether the write succeeded
+		*/
+		bool TryWrite(const std::string& str);
+
+		/*! Write a uint8_t to the current cursor position
+
+			\param val uint8_t to write
+			\return Whether the write succeeded
+		*/
+		bool TryWrite8(uint8_t val);
+
+		/*! Write a uint16_t to the current cursor position
+
+			\param val uint16_t to write
+			\return Whether the write succeeded
+		*/
+		bool TryWrite16(uint16_t val);
+
+		/*! Write a uint32_t to the current cursor position
+
+			\param val uint32_t to write
+			\return Whether the write succeeded
+		*/
+		bool TryWrite32(uint32_t val);
+
+		/*! Write a uint64_t to the current cursor position
+
+			\param val uint64_t to write
+			\return Whether the write succeeded
+		*/
+		bool TryWrite64(uint64_t val);
+		bool TryWriteLE16(uint16_t val);
+		bool TryWriteLE32(uint32_t val);
+		bool TryWriteLE64(uint64_t val);
+		bool TryWriteBE16(uint16_t val);
+		bool TryWriteBE32(uint32_t val);
+		bool TryWriteBE64(uint64_t val);
+
+		/*! Get the current cursor position
+
+			\return The current cursor position
+		*/
+		uint64_t GetOffset() const;
+
+		/*! Set the current cursor position
+
+			\param offset The new cursor position
+		*/
+		void Seek(uint64_t offset);
+
+		/*! Set the cursor position relative to the current cursor position
+
+			\param offset Offset to the current cursor position
+		*/
+		void SeekRelative(int64_t offset);
+	};
+
+	/*!
+	    \ingroup binaryview
+	*/
+	class SymbolQueue
+	{
+		BNSymbolQueue* m_object;
+
+		static void ResolveCallback(void* ctxt, BNSymbol** symbol, BNType** type);
+		static void AddCallback(void* ctxt, BNSymbol* symbol, BNType* type);
+
+	public:
+		SymbolQueue();
+		~SymbolQueue();
+		void Append(const std::function<std::pair<Ref<Symbol>, Ref<Type>>()>& resolve,
+			const std::function<void(Symbol*, Type*)>& add);
+		void Process();
+	};
 }

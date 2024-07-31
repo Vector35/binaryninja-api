@@ -46,3 +46,27 @@ using ExceptionWithStackTrace = BinaryNinjaCore::ExceptionWithStackTrace;
 #else
 using ExceptionWithStackTrace = BinaryNinja::ExceptionWithStackTrace;
 #endif
+
+
+namespace BinaryNinja
+{
+	/*! Raised whenever a write is performed out of bounds.
+
+		\ingroup binaryview
+	*/
+	class WriteException : public ExceptionWithStackTrace
+	{
+	  public:
+		WriteException() : ExceptionWithStackTrace("write out of bounds") {}
+	};
+
+	/*! Thrown whenever a read is performed out of bounds.
+
+		\ingroup binaryview
+	*/
+	class ReadException : public ExceptionWithStackTrace
+	{
+	  public:
+		ReadException() : ExceptionWithStackTrace("read out of bounds") {}
+	};
+}

@@ -84,6 +84,7 @@
 #include "typelibrary.h"
 #include "component.h"
 #include "websocketprovider.h"
+#include "undoaction.h"
 
 #ifdef _MSC_VER
 	#define NOEXCEPT
@@ -612,33 +613,6 @@ namespace BinaryNinja {
 
 	class UndoEntry;
 
-
-	/*!
-
-		\ingroup undo
-	*/
-	class UndoAction : public CoreRefCountObject<BNUndoAction, BNNewUndoActionReference, BNFreeUndoAction>
-	{
-	  public:
-		UndoAction(BNUndoAction* action);
-
-		std::string GetSummaryText();
-		std::vector<InstructionTextToken> GetSummary();
-	};
-
-	/*!
-
-		\ingroup undo
-	*/
-	class UndoEntry : public CoreRefCountObject<BNUndoEntry, BNNewUndoEntryReference, BNFreeUndoEntry>
-	{
-	  public:
-		UndoEntry(BNUndoEntry* entry);
-
-		std::string GetId();
-		std::vector<Ref<UndoAction>> GetActions();
-		uint64_t GetTimestamp();
-	};
 
 	struct DataVariable;
 	class Tag;

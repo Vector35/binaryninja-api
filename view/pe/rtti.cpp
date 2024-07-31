@@ -5,6 +5,7 @@
 using namespace BinaryNinja;
 
 constexpr int COL_SIG_REV1 = 1;
+constexpr int RTTI_CONFIDENCE = 100;
 
 
 ClassHierarchyDescriptor::ClassHierarchyDescriptor(BinaryView *view, uint64_t address)
@@ -289,19 +290,19 @@ std::optional<ClassInfo> MicrosoftRTTIProcessor::ProcessRTTI(uint64_t coLocatorA
 
     auto typeDescSymName = fmt::format("class {} `RTTI Type Descriptor'", classInfo.className);
     m_view->DefineAutoSymbol(new Symbol {DataSymbol, typeDescSymName, typeDescAddr});
-    m_view->DefineDataVariable(typeDescAddr, TypeDescriptorType(m_view, typeDesc.name.length()));
+    m_view->DefineDataVariable(typeDescAddr, Confidence(TypeDescriptorType(m_view, typeDesc.name.length()), RTTI_CONFIDENCE));
 
     auto classHierarchyDescAddr = resolveAddr(coLocator->pClassHeirarchyDescriptor);
     auto classHierarchyDesc = ClassHierarchyDescriptor(m_view, classHierarchyDescAddr);
     auto classHierarchyDescName = fmt::format("{}::`RTTI Class Hierarchy Descriptor'", classInfo.className);
     m_view->DefineAutoSymbol(new Symbol {DataSymbol, classHierarchyDescName, classHierarchyDescAddr});
-    m_view->DefineDataVariable(classHierarchyDescAddr, ClassHierarchyDescriptorType(m_view));
+    m_view->DefineDataVariable(classHierarchyDescAddr, Confidence(ClassHierarchyDescriptorType(m_view), RTTI_CONFIDENCE));
 
     auto baseClassArrayAddr = resolveAddr(classHierarchyDesc.pBaseClassArray);
     auto baseClassArray = BaseClassArray(m_view, baseClassArrayAddr, classHierarchyDesc.numBaseClasses);
     auto baseClassArrayName = fmt::format("{}::`RTTI Base Class Array'", classInfo.className);
     m_view->DefineAutoSymbol(new Symbol {DataSymbol, baseClassArrayName, baseClassArrayAddr});
-    m_view->DefineDataVariable(baseClassArrayAddr, BaseClassArrayType(m_view, baseClassArray.length));
+    m_view->DefineDataVariable(baseClassArrayAddr, Confidence(BaseClassArrayType(m_view, baseClassArray.length), RTTI_CONFIDENCE));
 
     for (auto pBaseClassDescAddr : baseClassArray.descriptors)
     {
@@ -324,7 +325,7 @@ std::optional<ClassInfo> MicrosoftRTTIProcessor::ProcessRTTI(uint64_t coLocatorA
                                              baseClassDesc.where_mdisp, baseClassDesc.where_pdisp,
                                              baseClassDesc.where_vdisp, baseClassDesc.attributes);
         m_view->DefineAutoSymbol(new Symbol {DataSymbol, baseClassDescName, baseClassDescAddr});
-        m_view->DefineDataVariable(baseClassDescAddr, BaseClassDescriptorType(m_view));
+        m_view->DefineDataVariable(baseClassDescAddr, Confidence(BaseClassDescriptorType(m_view), RTTI_CONFIDENCE));
     }
 
     auto coLocatorName = fmt::format("{}::`RTTI Complete Object Locator'", className.value());
@@ -332,7 +333,7 @@ std::optional<ClassInfo> MicrosoftRTTIProcessor::ProcessRTTI(uint64_t coLocatorA
         coLocatorName += fmt::format("{{for `{}'}}", classInfo.baseClassName.value());
     m_view->DefineAutoSymbol(new Symbol {DataSymbol, coLocatorName, coLocatorAddr});
     if (coLocator->signature == COL_SIG_REV1)
-        m_view->DefineDataVariable(coLocatorAddr, CompleteObjectLocator64Type(m_view));
+        m_view->DefineDataVariable(coLocatorAddr, Confidence(CompleteObjectLocator64Type(m_view), RTTI_CONFIDENCE));
     else
         m_logger->LogDebug("COL_SIG_REV0 unsupported symbolizing of colocator...");
 
@@ -373,7 +374,8 @@ void MicrosoftRTTIProcessor::ProcessVFT(uint64_t vftAddr, const ClassInfo& class
                                    classInfo.baseClassName.has_value()
                                        ? classInfo.baseClassName.value()
                                        : classInfo.className);
-    auto typeId = Type::GenerateAutoTypeId("msvc_rtti", vftTypeName);
+    // TODO: Hack the debug type id is used here to allow the PDB type (debug info) to overwrite the RTTI vtable type.
+    auto typeId = Type::GenerateAutoDebugTypeId(vftTypeName);
     Ref<Type> vftType = m_view->GetTypeById(typeId);
 
     if (vftType == nullptr)
@@ -390,7 +392,7 @@ void MicrosoftRTTIProcessor::ProcessVFT(uint64_t vftAddr, const ClassInfo& class
                 Type::PointerType(addrSize, vFunc->GetType(), true), vFuncName);
             vFuncIdx++;
         }
-        m_view->DefineType(typeId, vftTypeName, TypeBuilder::StructureType(&vftBuilder).Finalize());
+        m_view->DefineType(typeId, vftTypeName, Confidence(TypeBuilder::StructureType(&vftBuilder).Finalize(), RTTI_CONFIDENCE));
         vftType = m_view->GetTypeById(typeId);
     }
 
@@ -398,7 +400,7 @@ void MicrosoftRTTIProcessor::ProcessVFT(uint64_t vftAddr, const ClassInfo& class
     if (classInfo.baseClassName.has_value())
         vftName += fmt::format("{{for `{}'}}", classInfo.baseClassName.value());
     m_view->DefineAutoSymbol(new Symbol {DataSymbol, vftName, vftAddr});
-    m_view->DefineDataVariable(vftAddr, vftType);
+    m_view->DefineDataVariable(vftAddr, Confidence(vftType, RTTI_CONFIDENCE));
 }
 
 

@@ -9,7 +9,7 @@
 namespace BinaryNinja
 {
 	class BinaryView;
-	class DataVariable;
+	struct DataVariable;
 	class Function;
 	class Type;
 

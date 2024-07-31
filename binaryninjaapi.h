@@ -245,8 +245,6 @@ namespace BinaryNinja {
 		@}
 	*/
 
-	class BinaryView;
-
 	/*!
 	    @threadsafe
 	*/
@@ -337,16 +335,6 @@ namespace BinaryNinja {
 		std::string GetEmail();
 		std::string GetId();
 	};
-
-	class UndoEntry;
-
-
-	struct DataVariable;
-	class Tag;
-	class TagType;
-	struct TagReference;
-	class Section;
-	class Segment;
 
 	/*!
 		\ingroup fileaccessor
@@ -441,23 +429,6 @@ namespace BinaryNinja {
 		BNTypeReferenceType type;
 	};
 
-
-	class Tag;
-
-
-	class NamedTypeReference;
-
-	class DisassemblySettings;
-
-	struct QualifiedNameAndType;
-	struct PossibleValueSet;
-	class Structure;
-	struct ParsedType;
-	struct TypeParserResult;
-	class DebugInfo;
-	class TypeLibrary;
-	class MemoryMap;
-
 	class QueryMetadataException : public ExceptionWithStackTrace
 	{
 	  public:
@@ -480,19 +451,6 @@ namespace BinaryNinja {
 		NameAndType(const std::string& n, const Confidence<Ref<Type>>& t) : name(n), type(t) {}
 	};
 
-	class LowLevelILFunction;
-	class MediumLevelILFunction;
-	class HighLevelILFunction;
-	class LanguageRepresentationFunction;
-	class FunctionRecognizer;
-	class CallingConvention;
-	class RelocationHandler;
-
-	typedef size_t ExprId;
-
-	class Structure;
-	class NamedTypeReference;
-	class Enumeration;
 
 	struct VariableReferenceSource
 	{
@@ -547,13 +505,6 @@ namespace BinaryNinja {
 		TypeAndId(const std::string& id, const Ref<Type>& type): id(id), type(type)
 		{}
 	};
-
-	struct LowLevelILInstruction;
-	struct RegisterOrFlag;
-	struct SSARegister;
-	struct SSARegisterStack;
-	struct SSAFlag;
-	struct SSARegisterOrFlag;
 
 	/*!
 		\ingroup functionrecognizer

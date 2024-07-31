@@ -60,6 +60,84 @@ namespace BinaryNinja
 
 
 	/*!
+		\ingroup types
+	*/
+	class Symbol : public CoreRefCountObject<BNSymbol, BNNewSymbolReference, BNFreeSymbol>
+	{
+	  public:
+		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName, const std::string& rawName,
+		    uint64_t addr, BNSymbolBinding binding = NoBinding,
+		    const NameSpace& nameSpace = NameSpace(DEFAULT_INTERNAL_NAMESPACE), uint64_t ordinal = 0);
+		Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding = NoBinding,
+		    const NameSpace& nameSpace = NameSpace(DEFAULT_INTERNAL_NAMESPACE), uint64_t ordinal = 0);
+		Symbol(BNSymbol* sym);
+
+		/*!
+			Symbols are defined as one of the following types:
+
+				=========================== =================================================================
+				BNSymbolType                Description
+				=========================== =================================================================
+				FunctionSymbol              Symbol for function that exists in the current binary
+				ImportAddressSymbol         Symbol defined in the Import Address Table
+				ImportedFunctionSymbol      Symbol for a function that is not defined in the current binary
+				DataSymbol                  Symbol for data in the current binary
+				ImportedDataSymbol          Symbol for data that is not defined in the current binary
+				ExternalSymbol              Symbols for data and code that reside outside the BinaryView
+				LibraryFunctionSymbol       Symbols for functions identified as belonging to a shared library
+				SymbolicFunctionSymbol      Symbols for functions without a concrete implementation or which have been abstractly represented
+				LocalLabelSymbol            Symbol for a local label in the current binary
+				=========================== =================================================================
+
+		    \return Symbol type
+		*/
+		BNSymbolType GetType() const;
+
+		/*!
+		    \return Symbol binding
+		*/
+		BNSymbolBinding GetBinding() const;
+
+		/*!
+		    \return Symbol short name
+		*/
+		std::string GetShortName() const;
+
+		/*!
+		    \return Symbol full name
+		*/
+		std::string GetFullName() const;
+
+		/*!
+		    \return Symbol raw name
+		*/
+		std::string GetRawName() const;
+
+		/*!
+			\return Symbol Address
+		*/
+		uint64_t GetAddress() const;
+
+		/*!
+		    \return Symbol ordinal
+		*/
+		uint64_t GetOrdinal() const;
+
+		/*!
+		    \return Whether the symbol was auto-defined
+		*/
+		bool IsAutoDefined() const;
+
+		/*!
+		    \return Symbol NameSpace
+		*/
+		NameSpace GetNameSpace() const;
+
+		static Ref<Symbol> ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_t addr);
+	};
+
+
+	/*!
 		\ingroup binaryview
 	*/
 	struct DataVariable

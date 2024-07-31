@@ -89,6 +89,7 @@
 #include "tempfile.h"
 #include "transform.h"
 #include "memorymap.h"
+#include "basedetection.h"
 
 #ifdef _MSC_VER
 	#define NOEXCEPT
@@ -540,83 +541,6 @@ namespace BinaryNinja {
 		virtual uint64_t GetLength() const override;
 		virtual size_t Read(void* dest, uint64_t offset, size_t len) override;
 		virtual size_t Write(uint64_t offset, const void* src, size_t len) override;
-	};
-
-	/*!
-		\ingroup types
-	*/
-	class Symbol : public CoreRefCountObject<BNSymbol, BNNewSymbolReference, BNFreeSymbol>
-	{
-	  public:
-		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName, const std::string& rawName,
-		    uint64_t addr, BNSymbolBinding binding = NoBinding,
-		    const NameSpace& nameSpace = NameSpace(DEFAULT_INTERNAL_NAMESPACE), uint64_t ordinal = 0);
-		Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding = NoBinding,
-		    const NameSpace& nameSpace = NameSpace(DEFAULT_INTERNAL_NAMESPACE), uint64_t ordinal = 0);
-		Symbol(BNSymbol* sym);
-
-		/*!
-			Symbols are defined as one of the following types:
-
-				=========================== =================================================================
-				BNSymbolType                Description
-				=========================== =================================================================
-				FunctionSymbol              Symbol for function that exists in the current binary
-				ImportAddressSymbol         Symbol defined in the Import Address Table
-				ImportedFunctionSymbol      Symbol for a function that is not defined in the current binary
-				DataSymbol                  Symbol for data in the current binary
-				ImportedDataSymbol          Symbol for data that is not defined in the current binary
-				ExternalSymbol              Symbols for data and code that reside outside the BinaryView
-				LibraryFunctionSymbol       Symbols for functions identified as belonging to a shared library
-				SymbolicFunctionSymbol      Symbols for functions without a concrete implementation or which have been abstractly represented
-				LocalLabelSymbol            Symbol for a local label in the current binary
-				=========================== =================================================================
-
-		    \return Symbol type
-		*/
-		BNSymbolType GetType() const;
-
-		/*!
-		    \return Symbol binding
-		*/
-		BNSymbolBinding GetBinding() const;
-
-		/*!
-		    \return Symbol short name
-		*/
-		std::string GetShortName() const;
-
-		/*!
-		    \return Symbol full name
-		*/
-		std::string GetFullName() const;
-
-		/*!
-		    \return Symbol raw name
-		*/
-		std::string GetRawName() const;
-
-		/*!
-			\return Symbol Address
-		*/
-		uint64_t GetAddress() const;
-
-		/*!
-		    \return Symbol ordinal
-		*/
-		uint64_t GetOrdinal() const;
-
-		/*!
-		    \return Whether the symbol was auto-defined
-		*/
-		bool IsAutoDefined() const;
-
-		/*!
-		    \return Symbol NameSpace
-		*/
-		NameSpace GetNameSpace() const;
-
-		static Ref<Symbol> ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_t addr);
 	};
 
 	// TODO: This describes how the xref source references the target
@@ -1116,61 +1040,6 @@ namespace BinaryNinja {
 		uint64_t totalLength;
 	};
 
-	struct BaseAddressDetectionSettings
-	{
-		std::string Architecture;
-		std::string Analysis;
-		uint32_t MinStrlen;
-		uint32_t Alignment;
-		uint64_t LowerBoundary;
-		uint64_t UpperBoundary;
-		BNBaseAddressDetectionPOISetting POIAnalysis;
-		uint32_t MaxPointersPerCluster;
-	};
-
-	/*!
-		\ingroup baseaddressdetection
-	*/
-	class BaseAddressDetection
-	{
-		BNBaseAddressDetection* m_object;
-
-	public:
-		BaseAddressDetection(Ref<BinaryView> view);
-		~BaseAddressDetection();
-
-		/*! Analyze program, identify pointers and points-of-interest, and detect candidate base addresses
-
-			\param settings Base address detection settings
-			\return true on success, false otherwise
-		 */
-		bool DetectBaseAddress(BaseAddressDetectionSettings& settings);
-
-		/*! Get the top 10 candidate base addresses and thier scores
-
-			\param confidence Confidence level that indicates the likelihood the top base address candidate is correct
-			\param lastTestedBaseAddress Last base address tested before analysis was aborted or completed
-			\return Set of pairs containing candidate base addresses and their scores
-		 */
-		std::set<std::pair<size_t, uint64_t>> GetScores(BNBaseAddressDetectionConfidence* confidence, uint64_t *lastTestedBaseAddress);
-
-		/*! Get a vector of BNBaseAddressDetectionReasons containing information that indicates why a base address was reported as a candidate
-
-			\param baseAddress Base address to query reasons for
-			\return Vector of reason structures containing information about why a base address was reported as a candidate
-		 */
-		std::vector<BNBaseAddressDetectionReason> GetReasonsForBaseAddress(uint64_t baseAddress);
-
-		/*! Abort base address detection
-		 */
-		void Abort();
-
-		/*! Determine if base address detection is aborted
-
-			\return true if aborted by user, false otherwise
-		 */
-		bool IsAborted();
-	};
 }  // namespace BinaryNinja
 
 

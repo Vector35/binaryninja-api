@@ -465,3 +465,68 @@ void MicrosoftRTTIProcessor::ProcessRTTI64()
         }
     }
 }
+
+void MicrosoftRTTIProcessor::ProcessRTTI32()
+{
+    m_logger->LogInfo("Processing 32bit RTTI...");
+    uint64_t startAddr = m_view->GetStart();
+    BinaryReader optReader = BinaryReader(m_view);
+    auto addrSize = m_view->GetAddressSize();
+
+    auto scan32 = [&](const Ref<Segment> &segment) {
+        for (uint64_t coLocatorRefAddr = segment->GetStart(); coLocatorRefAddr < segment->GetEnd() - 0x18;
+             coLocatorRefAddr += addrSize)
+        {
+            optReader.Seek(coLocatorRefAddr);
+            uint64_t coLocatorAddr = optReader.ReadPointer();
+            if (coLocatorAddr > m_view->GetStart() && coLocatorAddr < m_view->GetEnd())
+            {
+                // Make sure we do not read across segment boundary.
+                auto coLocatorSegment = m_view->GetSegmentAt(coLocatorAddr);
+                if (coLocatorSegment != nullptr && coLocatorSegment == segment && coLocatorSegment->GetEnd() -
+                    coLocatorAddr > 0x18)
+                {
+                    optReader.Seek(coLocatorAddr);
+                    uint32_t sigVal = optReader.Read32();
+                    if (sigVal == 0)
+                    {
+                        // Check ?AV
+                        optReader.SeekRelative(8);
+                        uint64_t typeDescNameAddr = optReader.Read32() + 8;
+                        if (typeDescNameAddr > m_view->GetStart() && typeDescNameAddr < m_view->GetEnd())
+                        {
+                            // Make sure we do not read across segment boundary.
+                            auto typeDescSegment = m_view->GetSegmentAt(typeDescNameAddr);
+                            if (typeDescSegment != nullptr && typeDescSegment->GetEnd() - typeDescNameAddr > 4)
+                            {
+                                optReader.Seek(typeDescNameAddr);
+                                if (optReader.ReadString(4) == ".?AV")
+                                {
+                                    auto classInfo = ProcessRTTI(coLocatorAddr);
+                                    if (processVirtualFunctionTables && classInfo.has_value())
+                                        ProcessVFT(coLocatorRefAddr + addrSize, classInfo.value());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    // Scan data sections for colocators.
+    auto rdataSection = m_view->GetSectionByName(".rdata");
+    for (const Ref<Segment>& segment : m_view->GetSegments())
+    {
+        if (segment->GetFlags() == (SegmentReadable | SegmentContainsData))
+        {
+            m_logger->LogDebug("Attempting to find VirtualFunctionTables in segment %llx", segment->GetStart());
+            scan32(segment);
+        } else if (checkWritableRData && rdataSection && rdataSection->GetStart() == segment->GetStart())
+        {
+            m_logger->LogDebug("Attempting to find VirtualFunctionTables in writable rdata segment %llx", segment->GetStart());
+            scan32(segment);
+        }
+    }
+}
+

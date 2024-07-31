@@ -74,8 +74,8 @@ namespace BinaryNinja {
         std::optional<ClassInfo> ProcessRTTI(uint64_t coLocatorAddr);
         void ProcessVFT(uint64_t vftAddr, const ClassInfo& classInfo);
     public:
-        // TODO: Settings? Like.....
         MicrosoftRTTIProcessor(BinaryView* view, bool processVFT, bool useMangled, bool checkRData);
         void ProcessRTTI64();
+        void ProcessRTTI32();
     };
 }

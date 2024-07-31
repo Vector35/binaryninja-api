@@ -1056,4 +1056,22 @@ namespace BinaryNinja
 		*/
 		EnumerationBuilder& ReplaceMember(size_t idx, const std::string& name, uint64_t value);
 	};
+
+	struct TypeDefinitionLine
+	{
+		BNTypeDefinitionLineType lineType;
+		std::vector<InstructionTextToken> tokens;
+		Ref<Type> type, parentType, rootType;
+		std::string rootTypeName;
+		Ref<NamedTypeReference> baseType;
+		uint64_t baseOffset;
+		uint64_t offset;
+		size_t fieldIndex;
+
+		static TypeDefinitionLine FromAPIObject(BNTypeDefinitionLine* line);
+		static BNTypeDefinitionLine* CreateTypeDefinitionLineList(
+		    const std::vector<TypeDefinitionLine>& lines);
+		static void FreeTypeDefinitionLineList(
+		    BNTypeDefinitionLine* lines, size_t count);
+	};
 }

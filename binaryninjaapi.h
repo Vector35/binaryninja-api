@@ -90,6 +90,7 @@
 #include "transform.h"
 #include "memorymap.h"
 #include "basedetection.h"
+#include "mainthread.h"
 
 #ifdef _MSC_VER
 	#define NOEXCEPT
@@ -245,76 +246,6 @@ namespace BinaryNinja {
 	*/
 
 	class BinaryView;
-
-	/*!
-		\ingroup mainthread
-	*/
-	void RegisterMainThread(MainThreadActionHandler* handler);
-
-	/*!
-		@threadsafe
-		\ingroup mainthread
-	*/
-	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
-
-	/*!
-		@threadsafe
-		\ingroup mainthread
-	*/
-	void ExecuteOnMainThreadAndWait(const std::function<void()>& action);
-
-	/*!
-		@threadsafe
-		\ingroup mainthread
-	*/
-	bool IsMainThread();
-
-	/*!
-		@threadsafe
-		\ingroup mainthread
-	*/
-	void WorkerEnqueue(const std::function<void()>& action, const std::string& name = "");
-
-	/*!
-		@threadsafe
-		\ingroup mainthread
-	*/
-	void WorkerEnqueue(RefCountObject* owner, const std::function<void()>& action, const std::string& name = "");
-
-	/*!
-		@threadsafe
-		\ingroup mainthread
-	*/
-	void WorkerPriorityEnqueue(const std::function<void()>& action, const std::string& name = "");
-
-	/*!
-		\ingroup mainthread
-	*/
-	void WorkerPriorityEnqueue(RefCountObject* owner, const std::function<void()>& action, const std::string& name = "");
-
-	/*!
-		@threadsafe
-		\ingroup mainthread
-	*/
-	void WorkerInteractiveEnqueue(const std::function<void()>& action, const std::string& name = "");
-
-	/*!
-		@threadsafe
-		\ingroup mainthread
-	*/
-	void WorkerInteractiveEnqueue(RefCountObject* owner, const std::function<void()>& action, const std::string& name = "");
-
-	/*!
-		@threadsafe
-		\ingroup mainthread
-	*/
-	size_t GetWorkerThreadCount();
-
-	/*!
-		@threadsafe
-		\ingroup mainthread
-	*/
-	void SetWorkerThreadCount(size_t count);
 
 	/*!
 	    @threadsafe
@@ -515,24 +446,6 @@ namespace BinaryNinja {
 
 
 	class NamedTypeReference;
-
-	struct TypeDefinitionLine
-	{
-		BNTypeDefinitionLineType lineType;
-		std::vector<InstructionTextToken> tokens;
-		Ref<Type> type, parentType, rootType;
-		std::string rootTypeName;
-		Ref<NamedTypeReference> baseType;
-		uint64_t baseOffset;
-		uint64_t offset;
-		size_t fieldIndex;
-
-		static TypeDefinitionLine FromAPIObject(BNTypeDefinitionLine* line);
-		static BNTypeDefinitionLine* CreateTypeDefinitionLineList(
-		    const std::vector<TypeDefinitionLine>& lines);
-		static void FreeTypeDefinitionLineList(
-		    BNTypeDefinitionLine* lines, size_t count);
-	};
 
 	class DisassemblySettings;
 

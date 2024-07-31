@@ -33,7 +33,7 @@ pub(crate) fn raw_to_string(ptr: *const raw::c_char) -> Option<String> {
     }
 }
 
-/// Is the quivalent of `core::ffi::CString` but using the allocation and free
+/// Is the equivalent of [CString] but using the allocation and free
 /// functions provided by binaryninja_sys.
 #[repr(transparent)]
 pub struct BnString {
@@ -64,7 +64,7 @@ impl BnString {
         }
     }
 
-    /// Construct a BnString from an owned const char* allocated by BNAllocString
+    /// Construct a [BnString] from an owned `const char*` allocated by `BNAllocString`.
     pub(crate) unsafe fn from_raw(raw: *mut raw::c_char) -> Self {
         Self { raw }
     }

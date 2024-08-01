@@ -973,6 +973,12 @@ public:
 				return "_setLeftPart64";
 			case MIPS_INTRIN_SET_RIGHT_PART64:
 				return "_setRightPart64";
+			case MIPS_INTRIN_TLBSET:
+				return "_writeTLB";
+			case MIPS_INTRIN_TLBGET:
+				return "_readTLB";
+			case MIPS_INTRIN_TLBSEARCH:
+				return "_probeTLB";
 
 			case CNMIPS_INTRIN_SYNCIOBDMA:
 				return "_synciobdma";
@@ -1034,6 +1040,9 @@ public:
 			MIPS_INTRIN_GET_RIGHT_PART64,
 			MIPS_INTRIN_SET_LEFT_PART64,
 			MIPS_INTRIN_SET_RIGHT_PART64,
+			MIPS_INTRIN_TLBSET,
+			MIPS_INTRIN_TLBGET,
+			MIPS_INTRIN_TLBSEARCH,
 
 			CNMIPS_INTRIN_SYNCIOBDMA,
 			CNMIPS_INTRIN_SYNCS,
@@ -1173,6 +1182,24 @@ public:
 				return {
 					NameAndType("rightpart", Type::IntegerType(8, false))
 				};
+			case MIPS_INTRIN_TLBSET:
+				return {
+					// we use the same order as the pseudocode
+					// in the documentation
+					NameAndType("index", Type::IntegerType(8, false)),
+					NameAndType("PageMask", Type::IntegerType(8, false)),
+					NameAndType("EntryHi", Type::IntegerType(8, false)),
+					NameAndType("EntryLo1", Type::IntegerType(8, false)),
+					NameAndType("EntryLo0", Type::IntegerType(8, false))
+				};
+			case MIPS_INTRIN_TLBGET:
+				return {
+					NameAndType("index", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_TLBSEARCH:
+				return {
+					NameAndType("match", Type::IntegerType(8, false)),
+				};
 			default:
 				return vector<NameAndType>();
 		}
@@ -1216,6 +1243,19 @@ public:
 			case MIPS_INTRIN_SET_LEFT_PART64:
 			case MIPS_INTRIN_SET_RIGHT_PART64:
 				return {Type::IntegerType(8, false)};
+			case MIPS_INTRIN_TLBGET:
+				return {
+					// we use the same order as the pseudocode
+					// in the documentation:
+
+					// PageMask, EntryHi, EntryLo1, EntryLo0
+					Type::IntegerType(8, false),
+					Type::IntegerType(8, false),
+					Type::IntegerType(8, false),
+					Type::IntegerType(8, false),
+				};
+			case MIPS_INTRIN_TLBSEARCH:
+				return { Type::IntegerType(8, false) };
 			default:
 				return vector<Confidence<Ref<Type>>>();
 		}

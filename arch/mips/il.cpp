@@ -1842,6 +1842,37 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_CACHE, {il.Const(1, op1.immediate), GetILOperandMemoryAddress(il, op2, addrSize)}));
 			break;
 
+		case MIPS_TLBP:
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_INDEX)}, MIPS_INTRIN_TLBSEARCH, {il.Register(registerSize, REG_ENTRY_HI)}));
+			break;
+		case MIPS_TLBR:
+			il.AddInstruction(il.Intrinsic({
+				RegisterOrFlag::Register(REG_PAGE_MASK),
+				RegisterOrFlag::Register(REG_ENTRY_HI),
+				RegisterOrFlag::Register(REG_ENTRY_LO1),
+				RegisterOrFlag::Register(REG_ENTRY_LO0)
+			}, MIPS_INTRIN_TLBGET, { il.Register(registerSize, REG_INDEX) }));
+			break;
+		case MIPS_TLBWI:
+			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_TLBSET, {
+				il.Register(registerSize, REG_INDEX),
+				il.Register(registerSize, REG_PAGE_MASK),
+				il.Register(registerSize, REG_ENTRY_HI),
+				il.Register(registerSize, REG_ENTRY_LO1),
+				il.Register(registerSize, REG_ENTRY_LO0)
+			}));
+			break;
+		case MIPS_TLBWR:
+			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_TLBSET, {
+				il.Register(registerSize, REG_RANDOM),
+				il.Register(registerSize, REG_PAGE_MASK),
+				il.Register(registerSize, REG_ENTRY_HI),
+				il.Register(registerSize, REG_ENTRY_LO1),
+				il.Register(registerSize, REG_ENTRY_LO0)
+			}));
+			break;
+
+
 		case CNMIPS_BADDU:
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,
 				il.ZeroExtend(registerSize,
@@ -2135,10 +2166,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_MTHC1:
 		case MIPS_MTHC2:
 		case MIPS_PREFX:
-		case MIPS_TLBP:
-		case MIPS_TLBR:
-		case MIPS_TLBWI:
-		case MIPS_TLBWR:
 		case MIPS_WRPGPR:
 		case MIPS_RDPGPR:
 		case MIPS_RECIP1:

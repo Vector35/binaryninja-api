@@ -462,7 +462,7 @@ BNFlagConditionForSemanticClass* Architecture::GetFlagConditionsForSemanticFlagG
 }
 
 
-void Architecture::FreeFlagConditionsForSemanticFlagGroupCallback(void*, BNFlagConditionForSemanticClass* conditions)
+void Architecture::FreeFlagConditionsForSemanticFlagGroupCallback(void*, BNFlagConditionForSemanticClass* conditions, size_t)
 {
 	delete[] conditions;
 }

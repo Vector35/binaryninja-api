@@ -1833,7 +1833,7 @@ extern "C"
 		uint32_t* (*getFlagsRequiredForSemanticFlagGroup)(void* ctxt, uint32_t semGroup, size_t* count);
 		BNFlagConditionForSemanticClass* (*getFlagConditionsForSemanticFlagGroup)(
 		    void* ctxt, uint32_t semGroup, size_t* count);
-		void (*freeFlagConditionsForSemanticFlagGroup)(void* ctxt, BNFlagConditionForSemanticClass* conditions);
+		void (*freeFlagConditionsForSemanticFlagGroup)(void* ctxt, BNFlagConditionForSemanticClass* conditions, size_t count);
 		uint32_t* (*getFlagsWrittenByFlagWriteType)(void* ctxt, uint32_t writeType, size_t* count);
 		uint32_t (*getSemanticClassForFlagWriteType)(void* ctxt, uint32_t writeType);
 		size_t (*getFlagWriteLowLevelIL)(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,

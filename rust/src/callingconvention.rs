@@ -95,13 +95,18 @@ where
     {
         ffi_wrap!("CallingConvention::caller_saved_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let mut regs = ctxt.cc.caller_saved_registers();
+            let mut regs: Vec<_> = ctxt
+                .cc
+                .caller_saved_registers()
+                .iter()
+                .map(|r| r.id())
+                .collect();
 
             // SAFETY: `count` is an out parameter
             unsafe { *count = regs.len() };
             let regs_ptr = regs.as_mut_ptr();
             mem::forget(regs);
-            regs_ptr as *mut _
+            regs_ptr
         })
     }
 
@@ -111,13 +116,18 @@ where
     {
         ffi_wrap!("CallingConvention::callee_saved_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let mut regs = ctxt.cc.callee_saved_registers();
-            
+            let mut regs: Vec<_> = ctxt
+                .cc
+                .callee_saved_registers()
+                .iter()
+                .map(|r| r.id())
+                .collect();
+
             // SAFETY: `count` is an out parameter
             unsafe { *count = regs.len() };
             let regs_ptr = regs.as_mut_ptr();
             mem::forget(regs);
-            regs_ptr as *mut _
+            regs_ptr
         })
     }
 
@@ -127,13 +137,13 @@ where
     {
         ffi_wrap!("CallingConvention::int_arg_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let mut regs = ctxt.cc.int_arg_registers();
+            let mut regs: Vec<_> = ctxt.cc.int_arg_registers().iter().map(|r| r.id()).collect();
 
             // SAFETY: `count` is an out parameter
             unsafe { *count = regs.len() };
             let regs_ptr = regs.as_mut_ptr();
             mem::forget(regs);
-            regs_ptr as *mut _
+            regs_ptr
         })
     }
 
@@ -143,13 +153,18 @@ where
     {
         ffi_wrap!("CallingConvention::float_arg_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let mut regs = ctxt.cc.float_arg_registers();
+            let mut regs: Vec<_> = ctxt
+                .cc
+                .float_arg_registers()
+                .iter()
+                .map(|r| r.id())
+                .collect();
 
             // SAFETY: `count` is an out parameter
             unsafe { *count = regs.len() };
             let regs_ptr = regs.as_mut_ptr();
             mem::forget(regs);
-            regs_ptr as *mut _
+            regs_ptr
         })
     }
 
@@ -265,13 +280,18 @@ where
     {
         ffi_wrap!("CallingConvention::implicitly_defined_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let mut regs = ctxt.cc.implicitly_defined_registers();
+            let mut regs: Vec<_> = ctxt
+                .cc
+                .implicitly_defined_registers()
+                .iter()
+                .map(|r| r.id())
+                .collect();
 
             // SAFETY: `count` is an out parameter
             unsafe { *count = regs.len() };
             let regs_ptr = regs.as_mut_ptr();
             mem::forget(regs);
-            regs_ptr as *mut _
+            regs_ptr
         })
     }
 

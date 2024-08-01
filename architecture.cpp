@@ -515,7 +515,7 @@ size_t Architecture::GetSemanticFlagGroupLowLevelILCallback(void* ctxt, uint32_t
 }
 
 
-void Architecture::FreeRegisterListCallback(void*, uint32_t* regs)
+void Architecture::FreeRegisterListCallback(void*, uint32_t* regs, size_t)
 {
 	delete[] regs;
 }

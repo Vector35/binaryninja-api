@@ -999,7 +999,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			log_error(traceback.format_exc())
 			return 0
 
-	def _free_register_list(self, ctxt, regs):
+	def _free_register_list(self, ctxt, regs, count):
 		try:
 			buf = ctypes.cast(regs, ctypes.c_void_p)
 			if buf.value not in self._pending_reg_lists:

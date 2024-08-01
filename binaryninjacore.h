@@ -1841,7 +1841,7 @@ extern "C"
 		size_t (*getFlagConditionLowLevelIL)(
 		    void* ctxt, BNLowLevelILFlagCondition cond, uint32_t semClass, BNLowLevelILFunction* il);
 		size_t (*getSemanticFlagGroupLowLevelIL)(void* ctxt, uint32_t semGroup, BNLowLevelILFunction* il);
-		void (*freeRegisterList)(void* ctxt, uint32_t* regs);
+		void (*freeRegisterList)(void* ctxt, uint32_t* regs, size_t count);
 		void (*getRegisterInfo)(void* ctxt, uint32_t reg, BNRegisterInfo* result);
 		uint32_t (*getStackPointerRegister)(void* ctxt);
 		uint32_t (*getLinkRegister)(void* ctxt);
@@ -2520,7 +2520,7 @@ extern "C"
 		uint32_t* (*getCalleeSavedRegisters)(void* ctxt, size_t* count);
 		uint32_t* (*getIntegerArgumentRegisters)(void* ctxt, size_t* count);
 		uint32_t* (*getFloatArgumentRegisters)(void* ctxt, size_t* count);
-		void (*freeRegisterList)(void* ctxt, uint32_t* regs);
+		void (*freeRegisterList)(void* ctxt, uint32_t* regs, size_t len);
 
 		bool (*areArgumentRegistersSharedIndex)(void* ctxt);
 		bool (*isStackReservedForArgumentRegisters)(void* ctxt);

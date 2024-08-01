@@ -77,7 +77,7 @@ class BINARYNINJAUIAPI ProjectItemModel: public QStandardItemModel, public Binar
 	void UpdateFile(ProjectFileRef file);
 	void RemoveFile(ProjectFileRef file);
 
-	void CachePathInformation(const QString& path);
+	void CachePathInformation(const QString& path, const QString& fileId);
 	void RemoveCachedPathInformation(const QString& path);
 	void WatchEvent(const QString& path);
 
@@ -306,7 +306,7 @@ class BINARYNINJAUIAPI ProjectBrowser: public QWidget, public UIContextNotificat
 	void AddRecentProjectFile(ProjectFileRef projectFile);
 
 	void UpdateDetails();
-	void LoadProjectData();
+	void LoadProjectData(const std::function<bool(size_t, size_t)>& progress = [](size_t, size_t){ return true; });
 
 	virtual void OnAfterProjectMetadataWritten(BinaryNinja::Project* project, std::string& key, BinaryNinja::Metadata* value) override;
 

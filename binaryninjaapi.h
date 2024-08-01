@@ -99,6 +99,8 @@ namespace BinaryNinja {
 #endif
 #endif
 
+	typedef std::function<bool(uint64_t progress, uint64_t total)> ProgressFunc;
+
 	/*!
 		\ingroup refcount
 	*/
@@ -2675,7 +2677,7 @@ namespace BinaryNinja {
 		void SetDescription(const std::string& description);
 		Ref<ProjectFolder> GetParent() const;
 		void SetParent(Ref<ProjectFolder> parent);
-		bool Export(const std::string& destination, const std::function<bool(size_t progress, size_t total)>& progressCallback = {}) const;
+		bool Export(const std::string& destination, ProgressFunc progressCallback = {}) const;
 	};
 
 	/*!
@@ -2701,6 +2703,10 @@ namespace BinaryNinja {
 		int64_t GetCreationTimestamp() const;
 	};
 
+	namespace Collaboration
+	{
+		class RemoteProject;
+	}
 
 	/*!
 
@@ -2712,10 +2718,10 @@ namespace BinaryNinja {
 		Project(BNProject* project);
 
 		static Ref<Project> CreateProject(const std::string& path, const std::string& name);
-		static Ref<Project> OpenProject(const std::string& path);
+		static Ref<Project> OpenProject(const std::string& path, ProgressFunc progressCallback = {});
 		static std::vector<Ref<Project>> GetOpenProjects();
 
-		bool Open();
+		bool Open(ProgressFunc progressCallback = {});
 		bool Close();
 		std::string GetId() const;
 		bool IsOpen() const;
@@ -2730,18 +2736,18 @@ namespace BinaryNinja {
 		void RemoveMetadata(const std::string& key);
 
 		Ref<ProjectFolder> CreateFolderFromPath(const std::string& path, Ref<ProjectFolder> parent, const std::string& description,
-			const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
+			ProgressFunc progressCallback = {});
 		Ref<ProjectFolder> CreateFolder(Ref<ProjectFolder> parent, const std::string& name, const std::string& description);
 		Ref<ProjectFolder> CreateFolderUnsafe(Ref<ProjectFolder> parent, const std::string& name, const std::string& description, const std::string& id);
 		std::vector<Ref<ProjectFolder>> GetFolders() const;
 		Ref<ProjectFolder> GetFolderById(const std::string& id) const;
 		void PushFolder(Ref<ProjectFolder> folder);
-		bool DeleteFolder(Ref<ProjectFolder> folder, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
+		bool DeleteFolder(Ref<ProjectFolder> folder, ProgressFunc progressCallback = {});
 
-		Ref<ProjectFile> CreateFileFromPath(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
-		Ref<ProjectFile> CreateFileFromPathUnsafe(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
-		Ref<ProjectFile> CreateFile_(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
-		Ref<ProjectFile> CreateFileUnsafe(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
+		Ref<ProjectFile> CreateFileFromPath(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, ProgressFunc progressCallback = {});
+		Ref<ProjectFile> CreateFileFromPathUnsafe(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, ProgressFunc progressCallback = {});
+		Ref<ProjectFile> CreateFile_(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, ProgressFunc progressCallback = {});
+		Ref<ProjectFile> CreateFileUnsafe(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, ProgressFunc progressCallback = {});
 		std::vector<Ref<ProjectFile>> GetFiles() const;
 		Ref<ProjectFile> GetFileById(const std::string& id) const;
 		Ref<ProjectFile> GetFileByPathOnDisk(const std::string& path);
@@ -2753,6 +2759,7 @@ namespace BinaryNinja {
 
 		void BeginBulkOperation();
 		void EndBulkOperation();
+		Ref<Collaboration::RemoteProject> GetRemoteProject();
 	};
 
 	/*!

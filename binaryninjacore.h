@@ -3547,8 +3547,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeProjectList(BNProject** projects, size_t count);
 	BINARYNINJACOREAPI BNProject** BNGetOpenProjects(size_t* count);
 	BINARYNINJACOREAPI BNProject* BNCreateProject(const char* path, const char* name);
-	BINARYNINJACOREAPI BNProject* BNOpenProject(const char* path);
-	BINARYNINJACOREAPI bool BNProjectOpen(BNProject* project);
+	BINARYNINJACOREAPI BNProject* BNOpenProject(const char* path, void* ctxt, bool (*progress)(void* ctxt, size_t progress, size_t total));
+	BINARYNINJACOREAPI bool BNProjectOpen(BNProject* project, void* ctxt, bool (*progress)(void* ctxt, size_t progress, size_t total));
 	BINARYNINJACOREAPI bool BNProjectClose(BNProject* project);
 	BINARYNINJACOREAPI char* BNProjectGetId(BNProject* project);
 	BINARYNINJACOREAPI bool BNProjectIsOpen(BNProject* project);
@@ -3589,6 +3589,7 @@ extern "C"
 
 	BINARYNINJACOREAPI void BNProjectBeginBulkOperation(BNProject* project);
 	BINARYNINJACOREAPI void BNProjectEndBulkOperation(BNProject* project);
+	BINARYNINJACOREAPI BNRemoteProject* BNProjectGetRemoteProject(BNProject* project);
 
 	// ProjectFile object
 	BINARYNINJACOREAPI BNProjectFile* BNNewProjectFileReference(BNProjectFile* file);

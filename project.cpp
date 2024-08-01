@@ -225,9 +225,11 @@ Ref<Project> Project::CreateProject(const std::string& path, const std::string& 
 }
 
 
-Ref<Project> Project::OpenProject(const std::string& path)
+Ref<Project> Project::OpenProject(const std::string& path, ProgressFunc progressCallback)
 {
-	BNProject* bnproj = BNOpenProject(path.c_str());
+	ProgressContext cb;
+	cb.callback = progressCallback;
+	BNProject* bnproj = BNOpenProject(path.c_str(), &cb, ProgressCallback);
 	if (!bnproj)
 		return nullptr;
 	return new Project(bnproj);
@@ -250,9 +252,11 @@ std::vector<Ref<Project>> Project::GetOpenProjects()
 }
 
 
-bool Project::Open()
+bool Project::Open(ProgressFunc progressCallback)
 {
-	return BNProjectOpen(m_object);
+	ProgressContext cb;
+	cb.callback = progressCallback;
+	return BNProjectOpen(m_object, &cb, ProgressCallback);
 }
 
 
@@ -338,7 +342,7 @@ void Project::RemoveMetadata(const std::string& key)
 
 
 Ref<ProjectFolder> Project::CreateFolderFromPath(const std::string& path, Ref<ProjectFolder> parent, const std::string& description,
-	const std::function<bool(size_t progress, size_t total)>& progressCallback)
+	ProgressFunc progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
@@ -399,7 +403,7 @@ void Project::PushFolder(Ref<ProjectFolder> folder)
 }
 
 
-bool Project::DeleteFolder(Ref<ProjectFolder> folder, const std::function<bool(size_t progress, size_t total)>& progressCallback)
+bool Project::DeleteFolder(Ref<ProjectFolder> folder, ProgressFunc progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
@@ -407,7 +411,7 @@ bool Project::DeleteFolder(Ref<ProjectFolder> folder, const std::function<bool(s
 }
 
 
-Ref<ProjectFile> Project::CreateFileFromPath(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::function<bool(size_t progress, size_t total)>& progressCallback)
+Ref<ProjectFile> Project::CreateFileFromPath(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, ProgressFunc progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
@@ -418,7 +422,7 @@ Ref<ProjectFile> Project::CreateFileFromPath(const std::string& path, Ref<Projec
 }
 
 
-Ref<ProjectFile> Project::CreateFileFromPathUnsafe(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const std::function<bool(size_t progress, size_t total)>& progressCallback)
+Ref<ProjectFile> Project::CreateFileFromPathUnsafe(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, ProgressFunc progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
@@ -429,7 +433,7 @@ Ref<ProjectFile> Project::CreateFileFromPathUnsafe(const std::string& path, Ref<
 }
 
 
-Ref<ProjectFile> Project::CreateFile_(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::function<bool(size_t progress, size_t total)>& progressCallback)
+Ref<ProjectFile> Project::CreateFile_(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, ProgressFunc progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
@@ -440,7 +444,7 @@ Ref<ProjectFile> Project::CreateFile_(const std::vector<uint8_t>& contents, Ref<
 }
 
 
-Ref<ProjectFile> Project::CreateFileUnsafe(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const std::function<bool(size_t progress, size_t total)>& progressCallback)
+Ref<ProjectFile> Project::CreateFileUnsafe(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, ProgressFunc progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
@@ -519,6 +523,15 @@ void Project::BeginBulkOperation()
 void Project::EndBulkOperation()
 {
 	BNProjectEndBulkOperation(m_object);
+}
+
+
+Ref<Collaboration::RemoteProject> Project::GetRemoteProject()
+{
+	BNRemoteProject* remoteProject = BNProjectGetRemoteProject(m_object);
+	if (remoteProject == nullptr)
+		return nullptr;
+	return new Collaboration::RemoteProject(remoteProject);
 }
 
 
@@ -681,7 +694,7 @@ void ProjectFolder::SetParent(Ref<ProjectFolder> parent)
 }
 
 
-bool ProjectFolder::Export(const std::string& destination, const std::function<bool(size_t progress, size_t total)>& progressCallback) const
+bool ProjectFolder::Export(const std::string& destination, ProgressFunc progressCallback) const
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;

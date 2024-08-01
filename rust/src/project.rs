@@ -56,7 +56,13 @@ impl Project {
     /// * `path` - Path to the project directory (.bnpr) or project metadata file (.bnpm)
     pub fn open_project<P: BnStrCompatible>(path: P) -> Self {
         let path_raw = path.into_bytes_with_nul();
-        let handle = unsafe { BNOpenProject(path_raw.as_ref().as_ptr() as *const ffi::c_char) };
+        let handle = unsafe {
+            BNOpenProject(
+                path_raw.as_ref().as_ptr() as *const ffi::c_char,
+                null_mut(),
+                Some(cb_progress_func_nop),
+            )
+        };
         unsafe { Self::from_raw(NonNull::new(handle).unwrap()) }
     }
 
@@ -67,7 +73,14 @@ impl Project {
 
     /// Open a closed project
     pub fn open(&self) -> Result<(), ()> {
-        if unsafe { BNProjectOpen(self.as_raw()) } {
+        let result = unsafe {
+            BNProjectOpen(
+                self.as_raw(),
+                null_mut(),
+                Some(cb_progress_func_nop),
+            )
+        };
+        if result {
             Ok(())
         } else {
             Err(())

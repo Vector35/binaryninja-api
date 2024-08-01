@@ -782,6 +782,20 @@ static ExprId Concat3to256(LowLevelILFunction& il, uint32_t regHi, uint32_t regM
 	);
 }
 
+static void SignExtendHiLo(LowLevelILFunction& il, size_t registerSize)
+{
+	if (registerSize == 8)
+	{
+		il.AddInstruction(il.SetRegister(8, REG_HI,
+			il.SignExtend(8, il.LowPart(4, il.Register(registerSize, REG_HI)))
+		));
+
+		il.AddInstruction(il.SetRegister(8, REG_LO,
+			il.SignExtend(8, il.LowPart(4, il.Register(registerSize, REG_LO)))
+		));
+	}
+}
+
 bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize, uint32_t decomposeFlags)
 {
 	LowLevelILLabel trueLabel, falseLabel, doneLabel, dirFlagSet, dirFlagClear, dirFlagDone;
@@ -855,6 +869,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 									il.ModSigned(4,
 										ReadILOperand(il, instr, 1, registerSize, 4),
 										ReadILOperand(il, instr, 2, registerSize, 4))));
+			SignExtendHiLo(il, registerSize);
 			break;
 		case MIPS_DIVU:
 			il.AddInstruction(il.SetRegister(4, REG_LO,
@@ -865,6 +880,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 									il.ModUnsigned(4,
 										ReadILOperand(il, instr, 1, registerSize, 4),
 										ReadILOperand(il, instr, 2, registerSize, 4))));
+			SignExtendHiLo(il, registerSize);
 			break;
 		case MIPS_DDIV:
 			il.AddInstruction(il.SetRegister(8, REG_LO,
@@ -1146,6 +1162,8 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO,
 					il.Sub(8, il.Register(8, LLIL_TEMP(0)),
 					il.MultDoublePrecSigned(4, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize)))));
+
+			SignExtendHiLo(il, registerSize);
 			break;
 		case MIPS_MSUBU:
 			//(HI,LO) = (HI,LO) - (GPR[rs] x GPR[rt])
@@ -1157,12 +1175,16 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO,
 					il.Sub(8, il.Register(8, LLIL_TEMP(0)),
 					il.MultDoublePrecUnsigned(8, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize)))));
+
+			SignExtendHiLo(il, registerSize);
 			break;
 		case MIPS_MULT:
 			il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO, il.MultDoublePrecSigned(8, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize))));
+			SignExtendHiLo(il, registerSize);
 			break;
 		case MIPS_MULTU:
 			il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO, il.MultDoublePrecUnsigned(8, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize))));
+			SignExtendHiLo(il, registerSize);
 			break;
 		case MIPS_DMULT:
 			il.AddInstruction(il.SetRegisterSplit(8, REG_HI, REG_LO, il.MultDoublePrecSigned(16, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize))));
@@ -1561,16 +1583,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				)
 			));
 
-			if (registerSize == 8)
-			{
-				il.AddInstruction(il.SetRegister(8, REG_HI,
-					il.SignExtend(8, il.LowPart(4, il.Register(registerSize, REG_HI)))
-				));
-
-				il.AddInstruction(il.SetRegister(8, REG_LO,
-					il.SignExtend(8, il.LowPart(4, il.Register(registerSize, REG_LO)))
-				));
-			}
+			SignExtendHiLo(il, registerSize);
 			break;
 		case MIPS_MADDU:
 			il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO,
@@ -1583,16 +1596,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				)
 			));
 
-			if (registerSize == 8)
-			{
-				il.AddInstruction(il.SetRegister(8, REG_HI,
-					il.SignExtend(8, il.LowPart(4, il.Register(registerSize, REG_HI)))
-				));
-
-				il.AddInstruction(il.SetRegister(8, REG_LO,
-					il.SignExtend(8, il.LowPart(4, il.Register(registerSize, REG_LO)))
-				));
-			}
+			SignExtendHiLo(il, registerSize);
 			break;
 		case MIPS_ROTR:
 		case MIPS_ROTRV:

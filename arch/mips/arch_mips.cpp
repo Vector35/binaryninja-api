@@ -923,6 +923,8 @@ public:
 				return "moveDwordToCoprocessorUnimplemented";
 			case MIPS_INTRIN_SYNC:
 				return "_sync";
+			case MIPS_INTRIN_SYNCI:
+				return "_SynchronizeCacheLines";
 			case MIPS_INTRIN_EI:
 				return "_enableInterrupts";
 			case MIPS_INTRIN_DI:
@@ -931,6 +933,8 @@ public:
 				return "_clearExecutionHazards";
 			case MIPS_INTRIN_WAIT:
 				return "_enterLowPowerMode";
+			case MIPS_INTRIN_PAUSE:
+				return "_waitForLLbitClear";
 			case MIPS_INTRIN_HWR0:
 				return "_cpuNum";
 			case MIPS_INTRIN_HWR1:
@@ -951,6 +955,8 @@ public:
 				return "_prefetch";
 			case MIPS_INTRIN_CACHE:
 				return "_cache";
+			case MIPS_INTRIN_SDBBP:
+				return "_softwareDebugBreakpoint";
 			case MIPS_INTRIN_GET_LEFT_PART32:
 				return "_getLeftPart32";
 			case MIPS_INTRIN_GET_RIGHT_PART32:
@@ -1004,10 +1010,12 @@ public:
 			MIPS_INTRIN_DMTC0,
 			MIPS_INTRIN_DMTC_UNIMPLEMENTED,
 			MIPS_INTRIN_SYNC,
+			MIPS_INTRIN_SYNCI,
 			MIPS_INTRIN_DI,
 			MIPS_INTRIN_EHB,
 			MIPS_INTRIN_EI,
 			MIPS_INTRIN_WAIT,
+			MIPS_INTRIN_PAUSE,
 			MIPS_INTRIN_HWR0,
 			MIPS_INTRIN_HWR1,
 			MIPS_INTRIN_HWR2,
@@ -1095,6 +1103,10 @@ public:
 				return {
 					NameAndType("stype", Type::IntegerType(4, false)),
 				};
+			case MIPS_INTRIN_SYNCI:
+				return {
+					NameAndType("vaddr", Type::IntegerType(8, false)),
+				};
 			case MIPS_INTRIN_HWR_UNKNOWN:
 				return {
 					NameAndType("hwreg", Type::IntegerType(4, false)),
@@ -1108,6 +1120,11 @@ public:
 				return {
 					NameAndType("op", Type::IntegerType(1, false)),
 					NameAndType("address", Type::IntegerType(m_bits == 64 ? 8 : 4, false)),
+				};
+
+			case MIPS_INTRIN_SDBBP:
+				return {
+					NameAndType("code", Type::IntegerType(1, false)),
 				};
 
 			// NOTE: SET_x_PARTx could potentially benefit from

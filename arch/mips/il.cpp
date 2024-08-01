@@ -1599,7 +1599,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.RotateRight(4, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_SDBBP:
-			il.AddInstruction(il.Unimplemented());
+			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_SDBBP, { il.Const(1, op1.immediate )}));
 			break;
 		case MIPS_SEB:
 			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.SignExtend(registerSize, il.LowPart(1, ReadILOperand(il, instr, 2, registerSize)))));
@@ -1810,6 +1810,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 		}
 
+		case MIPS_SYNCI:
+			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_SYNCI, { GetILOperandMemoryAddress(il, op1, addrSize) }));
+			break;
+
 		case MIPS_DI:
 			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_DI));
 			break;
@@ -1820,6 +1824,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 
 		case MIPS_EI:
 			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_EI));
+			break;
+
+		case MIPS_PAUSE:
+			il.AddInstruction(SimpleIntrinsic(il, MIPS_INTRIN_PAUSE));
 			break;
 
 		case MIPS_WAIT:
@@ -2126,9 +2134,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_JALX: //Special instruction for switching to MIPS32/microMIPS32/MIPS16e
 		case MIPS_MTHC1:
 		case MIPS_MTHC2:
-		case MIPS_PAUSE:
 		case MIPS_PREFX:
-		case MIPS_SYNCI:
 		case MIPS_TLBP:
 		case MIPS_TLBR:
 		case MIPS_TLBWI:

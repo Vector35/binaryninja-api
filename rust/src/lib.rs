@@ -124,7 +124,6 @@
 extern crate log;
 #[doc(hidden)]
 pub extern crate binaryninjacore_sys;
-extern crate libc;
 #[cfg(feature = "rayon")]
 extern crate rayon;
 

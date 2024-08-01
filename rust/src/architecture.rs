@@ -1940,7 +1940,7 @@ where
             None => BnString::new("invalid_flag_group").into_raw(),
         }
     }
-    
+
     extern "C" fn cb_registers_full_width<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
@@ -2101,7 +2101,7 @@ where
 
         if let Some(group) = custom_arch.flag_group_from_id(group) {
             let mut flags = group.flags_required();
-            
+
             // SAFETY: `count` is an out parameter
             unsafe { *count = flags.len() };
             let regs_ptr = flags.as_mut_ptr();
@@ -2127,23 +2127,13 @@ where
 
         if let Some(group) = custom_arch.flag_group_from_id(group) {
             let flag_conditions = group.flag_conditions();
+            let mut flags = flag_conditions.values().collect::<Vec<_>>();
 
-            unsafe {
-                let allocation_size =
-                    mem::size_of::<BNFlagConditionForSemanticClass>() * flag_conditions.len();
-                let result = libc::malloc(allocation_size) as *mut BNFlagConditionForSemanticClass;
-                let out_slice = slice::from_raw_parts_mut(result, flag_conditions.len());
-
-                for (i, (class, cond)) in flag_conditions.iter().enumerate() {
-                    let out = out_slice.get_unchecked_mut(i);
-
-                    out.semanticClass = class.id();
-                    out.condition = *cond;
-                }
-
-                *count = flag_conditions.len();
-                result
-            }
+            // SAFETY: `count` is an out parameter
+            unsafe { *count = flags.len() };
+            let regs_ptr = flags.as_mut_ptr();
+            mem::forget(flags);
+            regs_ptr as *mut _
         } else {
             unsafe {
                 *count = 0;
@@ -2155,11 +2145,17 @@ where
     extern "C" fn cb_free_flag_conditions_for_semantic_flag_group<A>(
         _ctxt: *mut c_void,
         conds: *mut BNFlagConditionForSemanticClass,
+        count: usize,
     ) where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
+        if conds.is_null() {
+            return;
+        }
+
         unsafe {
-            libc::free(conds as *mut _);
+            let regs_ptr = ptr::slice_from_raw_parts_mut(conds, count);
+            let _regs = Box::from_raw(regs_ptr);
         }
     }
 
@@ -2175,7 +2171,7 @@ where
 
         if let Some(write_type) = custom_arch.flag_write_from_id(write_type) {
             let mut written = write_type.flags_written();
-            
+
             // SAFETY: `count` is an out parameter
             unsafe { *count = written.len() };
             let regs_ptr = written.as_mut_ptr();
@@ -2449,7 +2445,7 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let mut intrinsics = custom_arch.intrinsics();
-        
+
         // SAFETY: Passed in to be written
         unsafe { *count = intrinsics.len() };
         let regs_ptr = intrinsics.as_mut_ptr();

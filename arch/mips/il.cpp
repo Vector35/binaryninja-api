@@ -1515,53 +1515,23 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 		case MIPS_DSLL:
 		case MIPS_DSLL32:
-			if (registerSize != 8)
-			{
-				il.AddInstruction(il.Unimplemented());
-				break;
-			}
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ShiftLeft(8, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_DSLLV:
-			if (registerSize != 8)
-			{
-				il.AddInstruction(il.Undefined());
-				break;
-			}
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ShiftLeft(8, ReadILOperand(il, instr, 2, registerSize), il.And(8, ReadILOperand(il, instr, 3, registerSize), il.Const(8, 0x3f)))));
 			break;
 		case MIPS_DSRL:
 		case MIPS_DSRL32:
-			if (registerSize != 8)
-			{
-				il.AddInstruction(il.Unimplemented());
-				break;
-			}
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.LogicalShiftRight(8, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_DSRLV:
-			if (registerSize != 8)
-			{
-				il.AddInstruction(il.Undefined());
-				break;
-			}
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.LogicalShiftRight(8, ReadILOperand(il, instr, 2, registerSize), il.And(8, ReadILOperand(il, instr, 3, registerSize), il.Const(8, 0x3f)))));
 			break;
 		case MIPS_DSRA:
 		case MIPS_DSRA32:
-			if (registerSize != 8)
-			{
-				il.AddInstruction(il.Unimplemented());
-				break;
-			}
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ArithShiftRight(8, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_DSRAV:
-			if (registerSize != 8)
-			{
-				il.AddInstruction(il.Undefined());
-				break;
-			}
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ArithShiftRight(8, ReadILOperand(il, instr, 2, registerSize), il.And(8, ReadILOperand(il, instr, 3, registerSize), il.Const(8, 0x3f)))));
 			break;
 		case MIPS_SB:

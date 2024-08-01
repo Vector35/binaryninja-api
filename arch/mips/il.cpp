@@ -1906,6 +1906,18 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			}));
 			break;
 
+		case MIPS_TLBINV:
+			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_TLBINV, {
+				il.Register(registerSize, REG_INDEX),
+				il.Register(registerSize, REG_ENTRY_HI)
+			}));
+			break;
+
+		case MIPS_TLBINVF:
+			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_TLBINVF, {
+				il.Register(registerSize, REG_INDEX),
+			}));
+			break;
 
 		case CNMIPS_BADDU:
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg,

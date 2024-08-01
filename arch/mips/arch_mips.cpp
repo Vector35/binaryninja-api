@@ -979,6 +979,10 @@ public:
 				return "_readTLB";
 			case MIPS_INTRIN_TLBSEARCH:
 				return "_probeTLB";
+			case MIPS_INTRIN_TLBINV:
+				return "_invalidateTLB";
+			case MIPS_INTRIN_TLBINVF:
+				return "_invalidateTLBFlush";
 
 			case CNMIPS_INTRIN_SYNCIOBDMA:
 				return "_synciobdma";
@@ -1043,6 +1047,8 @@ public:
 			MIPS_INTRIN_TLBSET,
 			MIPS_INTRIN_TLBGET,
 			MIPS_INTRIN_TLBSEARCH,
+			MIPS_INTRIN_TLBINV,
+			MIPS_INTRIN_TLBINVF,
 
 			CNMIPS_INTRIN_SYNCIOBDMA,
 			CNMIPS_INTRIN_SYNCS,
@@ -1199,6 +1205,15 @@ public:
 			case MIPS_INTRIN_TLBSEARCH:
 				return {
 					NameAndType("match", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_TLBINV:
+				return {
+					NameAndType("index", Type::IntegerType(8, false)),
+					NameAndType("match", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_TLBINVF:
+				return {
+					NameAndType("index", Type::IntegerType(8, false)),
 				};
 			default:
 				return vector<NameAndType>();

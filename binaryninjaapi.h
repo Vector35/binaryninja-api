@@ -7743,7 +7743,7 @@ namespace BinaryNinja {
 		static BNFlagConditionForSemanticClass* GetFlagConditionsForSemanticFlagGroupCallback(
 		    void* ctxt, uint32_t semGroup, size_t* count);
 		static void FreeFlagConditionsForSemanticFlagGroupCallback(
-		    void* ctxt, BNFlagConditionForSemanticClass* conditions);
+		    void* ctxt, BNFlagConditionForSemanticClass* conditions, size_t count);
 		static uint32_t* GetFlagsWrittenByFlagWriteTypeCallback(void* ctxt, uint32_t writeType, size_t* count);
 		static uint32_t GetSemanticClassForFlagWriteTypeCallback(void* ctxt, uint32_t writeType);
 		static size_t GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size,

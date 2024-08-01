@@ -914,7 +914,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			count[0] = 0
 			return None
 
-	def _free_flag_conditions_for_semantic_flag_group(self, ctxt, conditions):
+	def _free_flag_conditions_for_semantic_flag_group(self, ctxt, conditions, count):
 		try:
 			buf = ctypes.cast(conditions, ctypes.c_void_p)
 			if buf.value not in self._pending_condition_lists:

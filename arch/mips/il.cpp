@@ -2144,13 +2144,9 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		//unimplemented system functions
 		case MIPS_BC1ANY2:
 		case MIPS_BC1ANY4:
-		case MIPS_BSHFL:
 		case MIPS_C2:
 		case MIPS_CFC1:
 		case MIPS_CFC2:
-		case MIPS_COP0:
-		case MIPS_COP1:
-		case MIPS_COP1X:
 		case MIPS_COP2:
 		case MIPS_COP3:
 		case MIPS_CTC1:
@@ -2176,6 +2172,17 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_SWXC1:
 			il.AddInstruction(il.Unimplemented());
 			break;
+
+		// instructions that are just internal placeholders for other
+		// decode tables; these will never be implemented because they're
+		// not real instructions
+		case MIPS_BSHFL:
+		case MIPS_COP0:
+		case MIPS_COP1:
+		case MIPS_COP1X:
+			il.AddInstruction(il.Undefined());
+			break;
+
 		default:
 			il.AddInstruction(il.Unimplemented());
 			break;

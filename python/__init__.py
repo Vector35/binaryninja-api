@@ -190,6 +190,7 @@ class CoreVersionInfo:
 def get_unique_identifier():
 	"""
 	Generate a GUID
+
 	:return: A GUID string
 	"""
 	return core.BNGetUniqueIdentifierString()
@@ -377,6 +378,7 @@ def core_set_license(licenseData: str) -> None:
 def get_memory_usage_info() -> Mapping[str, int]:
 	"""
 	Get counts of various Binary Ninja objects in memory.
+
 	:return: Dictionary of {class name: count} for objects in memory
 	"""
 	count = ctypes.c_ulonglong()

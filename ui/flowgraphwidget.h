@@ -354,6 +354,9 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void createFuncWithPlatform(PlatformRef platform, bool autoSelect = false);
 	void changeType();
 	void inferStructureType(const UIActionContext& context);
+	void forwardPropagateType();
+	void inferFunctionType();
+	void propagateVariableTypeAndName();
 	void comment();
 	void addUserXref();
 	void functionComment();

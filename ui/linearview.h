@@ -331,6 +331,9 @@ private Q_SLOTS:
 	void editFunctionProperties();
 	void undefineFunc();
 	void reanalyze();
+	void forwardPropagateType();
+	void inferFunctionType();
+	void propagateVariableTypeAndName();
 	void comment();
 	void commentAccepted();
 	void addUserXref();

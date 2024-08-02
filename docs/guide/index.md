@@ -516,6 +516,7 @@ To search in the keybindings list, just click to make sure it's focused and star
  - `i` : Cycle between disassembly, LLIL, MLIL and HLIL
  - `t` : Switch to type view
  - `y` : Change type of currently selected element
+ - `q` : Forward propagate the type of the selected function or variable
  - `a` : Change the data type to an ASCII string
  - `[SHIFT] a` : Change the data type to a `wchar_t` string
  - `[OPT-SHIFT] a` (macOS) : Change the data type to a `wchar32_t` string

@@ -2782,6 +2782,16 @@ bool PEView::Init()
 		m_logger->LogWarn("Failed to parse resource directory: %s\n", e.what());
 	}
 
+	Ref<Settings> programSettings = Settings::Instance();
+	if (programSettings->Contains("core.function.analyzeConditionalNoReturns") &&
+		opt.subsystem != IMAGE_SUBSYSTEM_NATIVE && (
+			GetSymbolByRawName("TerminateProcess", GetExternalNameSpace()) ||
+			GetSymbolByRawName("_TerminateProcess@8", GetExternalNameSpace())))
+	{
+		// TerminateProcess is imported and this is a user mode file
+		programSettings->Set("corePlugins.workflows.conditionalNoReturn", true);
+	}
+
 	// Add a symbol for the entry point
 	if (m_entryPoint)
 		DefineAutoSymbol(new Symbol(FunctionSymbol, "_start", m_imageBase + m_entryPoint));

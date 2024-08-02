@@ -2861,8 +2861,13 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 
 	case XED_ICLASS_PUSH:
 	{
-		const unsigned int stackAdjustment = xed_decoded_inst_get_memop_address_width(xedd, 0) / 8;
-		if (opOneLen != stackAdjustment) // 32-bit push on 64-bit pushes a 64-bit value
+		// Whe the stack adjustment is different from the operand one size, zero-extend it. Note, a "push r16" in either
+		// x86 or x64 pushes the 2-byte register onto the stack, and there is no need to extend. See
+		// https://github.com/Vector35/binaryninja-api/issues/4028 and
+		// https://stackoverflow.com/questions/43435764/64-bit-mode-does-not-support-32-bit-push-and-pop-instructions
+		// for more details
+		const unsigned int stackAdjustment = xed_decoded_inst_get_memory_operand_length(xedd, 0);
+		if (opOneLen != stackAdjustment)
 		{
 			il.AddInstruction(
 				il.Push(stackAdjustment,

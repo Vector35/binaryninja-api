@@ -397,13 +397,15 @@ def load(*args, **kwargs) -> BinaryView:
 
 	:param Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike'] source: a file or byte stream to load into a virtual memory space
 	:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
-	:param callback progress_func: optional function to be called with the current progress and total count
+	:param callback progress_func: optional function to be called with the current progress and total count for BNDB files only
 	:param dict options: a dictionary in the form {setting identifier string : object value}
 	:return: returns a :py:class:`BinaryView` object for the given filename
 	:rtype: :py:class:`BinaryView`
 	:raises Exception: When a BinaryView could not be created
 
 	.. note:: The progress_func callback **must** return True to continue the load operation, False will abort the load operation.
+
+	.. warning:: The progress_func will **only** be called for BNDB files, not for any other file format due to a `design limitation <https://docs.binary.ninja/guide/debugger/index.html#navigating-the-binary>`_.
 
 	:Example:
 		>>> from binaryninja import *

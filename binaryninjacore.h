@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 71
+#define BN_CURRENT_CORE_ABI_VERSION 72
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 71
+#define BN_MINIMUM_CORE_ABI_VERSION 72
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -7014,10 +7014,6 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNSegmentGetDataLength(BNSegment* segment);
 	BINARYNINJACOREAPI uint32_t BNSegmentGetFlags(BNSegment* segment);
 	BINARYNINJACOREAPI bool BNSegmentIsAutoDefined(BNSegment* segment);
-	BINARYNINJACOREAPI void BNSegmentSetLength(BNSegment* segment, uint64_t length);
-	BINARYNINJACOREAPI void BNSegmentSetDataOffset(BNSegment* segment, uint64_t dataOffset);
-	BINARYNINJACOREAPI void BNSegmentSetDataLength(BNSegment* segment, uint64_t dataLength);
-	BINARYNINJACOREAPI void BNSegmentSetFlags(BNSegment* segment, uint32_t flags);
 
 	// Section object methods
 	BINARYNINJACOREAPI BNSection* BNNewSectionReference(BNSection* section);

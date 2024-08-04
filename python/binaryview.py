@@ -2215,8 +2215,9 @@ class MemoryMap:
 	def get_active_memory_region_at(self, addr: int) -> str:
 		return core.BNGetActiveMemoryRegionAt(self.handle, addr)
 
-	def get_memory_region_flags(self, name: str) -> SegmentFlag:
-		return SegmentFlag(core.BNGetMemoryRegionFlags(self.handle, name))
+	def get_memory_region_flags(self, name: str) -> set:
+		flags = core.BNGetMemoryRegionFlags(self.handle, name)
+		return {flag for flag in SegmentFlag if flags & flag}
 
 	def set_memory_region_flags(self, name: str, flags: SegmentFlag) -> bool:
 		return core.BNSetMemoryRegionFlags(self.handle, name, flags)

@@ -1087,30 +1087,6 @@ bool Segment::IsAutoDefined() const
 }
 
 
-void Segment::SetLength(uint64_t length)
-{
-	BNSegmentSetLength(m_object, length);
-}
-
-
-void Segment::SetDataOffset(uint64_t dataOffset)
-{
-	BNSegmentSetDataOffset(m_object, dataOffset);
-}
-
-
-void Segment::SetDataLength(uint64_t dataLength)
-{
-	BNSegmentSetDataLength(m_object, dataLength);
-}
-
-
-void Segment::SetFlags(uint32_t flags)
-{
-	BNSegmentSetFlags(m_object, flags);
-}
-
-
 Section::Section(BNSection* sec)
 {
 	m_object = sec;

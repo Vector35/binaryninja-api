@@ -4219,11 +4219,6 @@ namespace BinaryNinja {
 		uint64_t GetDataLength() const;
 		uint32_t GetFlags() const;
 		bool IsAutoDefined() const;
-
-		void SetLength(uint64_t length);
-		void SetDataOffset(uint64_t dataOffset);
-		void SetDataLength(uint64_t dataLength);
-		void SetFlags(uint32_t flags);
 	};
 
 	/*! The Section object is returned during BinaryView creation and should not be directly instantiated.

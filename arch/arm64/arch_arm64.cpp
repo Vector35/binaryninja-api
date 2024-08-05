@@ -1471,9 +1471,9 @@ class Arm64Architecture : public Architecture
 		case IL_FLAG_GROUP_NE:
 			return GetFlagConditionLowLevelIL(LLFC_NE, IL_FLAG_CLASS_INT, il);
 		case IL_FLAG_GROUP_CS:
-			return GetFlagConditionLowLevelIL(LLFC_UGE, IL_FLAG_CLASS_INT, il);
-		case IL_FLAG_GROUP_CC:
 			return GetFlagConditionLowLevelIL(LLFC_ULT, IL_FLAG_CLASS_INT, il);
+		case IL_FLAG_GROUP_CC:
+			return GetFlagConditionLowLevelIL(LLFC_UGE, IL_FLAG_CLASS_INT, il);
 		case IL_FLAG_GROUP_MI:
 			return GetFlagConditionLowLevelIL(LLFC_NEG, IL_FLAG_CLASS_INT, il);
 		case IL_FLAG_GROUP_PL:

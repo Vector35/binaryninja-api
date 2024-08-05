@@ -293,7 +293,7 @@ class Component:
         """
         Get data variables referenced by this component
 
-        :param recursive: Optional; Get all DataVariables referenced by this component and subcomponents.
+        :param recursive: Optional; Get all DataVariables referenced by this component and sub-components.
         :return: List of DataVariables
         """
         data_vars = []
@@ -315,7 +315,7 @@ class Component:
         """
         Get Types referenced by this component
 
-        :param recursive: Optional; Get all Types referenced by this component and subcomponents.
+        :param recursive: Optional; Get all Types referenced by this component and sub-components.
         :return: List of Types
         """
         _types = []

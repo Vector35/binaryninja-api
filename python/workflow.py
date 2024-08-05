@@ -72,7 +72,7 @@ class AnalysisContext:
 	@property
 	def llil(self) -> lowlevelil.LowLevelILFunction:
 		"""
-		LowLevelILFunction used to represent Low Level IL (writeable)
+		LowLevelILFunction used to represent Low Level IL (writable)
 		"""
 		result = core.BNAnalysisContextGetLowLevelILFunction(self.handle)
 		if not result:
@@ -86,7 +86,7 @@ class AnalysisContext:
 	@property
 	def mlil(self) -> mediumlevelil.MediumLevelILFunction:
 		"""
-		MediumLevelILFunction used to represent Medium Level IL (writeable)
+		MediumLevelILFunction used to represent Medium Level IL (writable)
 		"""
 		result = core.BNAnalysisContextGetMediumLevelILFunction(self.handle)
 		if not result:
@@ -100,7 +100,7 @@ class AnalysisContext:
 	@property
 	def hlil(self) -> highlevelil.HighLevelILFunction:
 		"""
-		HighLevelILFunction used to represent High Level IL (writeable)
+		HighLevelILFunction used to represent High Level IL (writable)
 		"""
 		result = core.BNAnalysisContextGetHighLevelILFunction(self.handle)
 		if not result:
@@ -114,7 +114,7 @@ class AnalysisContext:
 	@property
 	def basic_blocks(self) -> '_function.BasicBlockList':
 		"""
-		function.BasicBlockList of BasicBlocks in the current function (writeable)
+		function.BasicBlockList of BasicBlocks in the current function (writable)
 		"""
 		return _function.BasicBlockList(self.function)
 

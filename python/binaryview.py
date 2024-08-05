@@ -2995,7 +2995,7 @@ class BinaryView:
 	@property
 	def entry_functions(self) -> FunctionList:
 		"""A List of entry functions (read-only)
-		This list contains vanilla entry function, and functions like init_array, fini_arry, and TLS callbacks etc.
+		This list contains vanilla entry function, and functions like init_array, fini_array, and TLS callbacks etc.
 		User-added entry functions(via `add_entry_point`) are also included.
 
 		We see `entry_functions` as good starting points for analysis, these functions normally don't have internal references.
@@ -4133,7 +4133,7 @@ class BinaryView:
 		``navigate`` navigates the UI to the specified virtual address in the specified View
 
 		The View name is created by combining a View type (e.g. "Graph") with a BinaryView type (e.g. "Mach-O"),
-		seperated by a colon, resulting in something like "Graph:Mach-O".
+		separated by a colon, resulting in something like "Graph:Mach-O".
 
 		:param str view_name: view name
 		:param int offset: address to navigate to
@@ -6665,9 +6665,9 @@ class BinaryView:
 
 	def get_component(self, guid: str) -> Optional[component.Component]:
 		"""
-		Lookup a Component by its Guid
+		Lookup a Component by its GUID
 
-		:param guid: Guid of the component to look up
+		:param guid: GUID of the component to look up
 		:return: The Component with that Guid
 		"""
 		bn_component = core.BNGetComponentByGuid(self.handle, guid)
@@ -7959,7 +7959,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	) -> None:
 		"""
 		``record_imported_object_library`` should be called by custom py:py:class:`BinaryView` implementations
-		when they have successfully imported an object from a type library (eg a symbol's type).
+		when they have successfully imported an object from a type library (e.g. a symbol's type).
 		Values recorded with this function will then be queryable via ``lookup_imported_object_library``.
 
 		:param lib: Type Library containing the imported type
@@ -9391,7 +9391,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			  it to a hexadecimal number.
 			- The following operations are valid: ``+, -, \*, /, %, (), &, \|, ^, ~, ==, !=, >, <, >=, <=``
 
-				- Comparision operators return 1 if the condition is true, 0 otherwise.
+				- Comparison operators return 1 if the condition is true, 0 otherwise.
 
 			- In addition to the above operators there are dereference operators similar to BNIL style IL:
 

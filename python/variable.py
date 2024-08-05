@@ -604,7 +604,7 @@ class PossibleValueSet:
 	def lookup_table_value(lookup_table, mapping) -> 'PossibleValueSet':
 		"""
 		Create a PossibleValueSet object for a value which is a member of a
-		lookuptable.
+		lookup table.
 
 		:param list(LookupTableEntry) lookup_table: List of table entries
 		:param dict of (int, int) mapping: Mapping used for resolution

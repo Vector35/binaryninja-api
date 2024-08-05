@@ -3127,7 +3127,7 @@ class Function:
 	    self, target: 'variable.Variable', sources: Union[List['variable.Variable'], 'variable.Variable']
 	) -> None:
 		"""
-		``merge_vars`` merges one or more varibles in ``sources`` into the ``target`` variable. All
+		``merge_vars`` merges one or more variables in ``sources`` into the ``target`` variable. All
 		variable accesses to the variables in ``sources`` will be rewritten to use ``target``.
 
 		:param Variable target: target variable
@@ -3163,7 +3163,7 @@ class Function:
 
 	def split_var(self, var: 'variable.Variable') -> None:
 		"""
-		``split_var`` splits a varible at the definition site. The given ``var`` must be the
+		``split_var`` splits a variable at the definition site. The given ``var`` must be the
 		variable unique to the definition and should be obtained by using
 		``MediumLevelILInstruction.get_split_var_for_definition`` at the definition site.
 
@@ -3182,7 +3182,7 @@ class Function:
 
 	def unsplit_var(self, var: 'variable.Variable') -> None:
 		"""
-		``unsplit_var`` undoes varible splitting performed with ``split_var``. The given ``var``
+		``unsplit_var`` undoes variable splitting performed with ``split_var``. The given ``var``
 		must be the variable unique to the definition and should be obtained by using
 		``MediumLevelILInstruction.get_split_var_for_definition`` at the definition site.
 

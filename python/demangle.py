@@ -48,13 +48,18 @@ def get_qualified_name(names: Iterable[str]):
 
 def demangle_llvm(mangled_name: str, options: Optional[Union[bool, binaryview.BinaryView]] = None) -> Optional[List[str]]:
 	"""
-	``demangle_llvm`` demangles a mangled name to a Type object.
+	``demangle_llvm`` demangles a mangled name using the LLVM demangler.
 
 	:param str mangled_name: a mangled (msvc/itanium/rust/dlang) name
 	:param options: (optional) Whether to simplify demangled names : None falls back to user settings, a BinaryView uses that BinaryView's settings, or a boolean to set it directly
 	:type options: Optional[Union[bool, BinaryView]]
 	:return: returns demangled name or None on error
 	:rtype: Optional[List[str]]
+ 	:Example:
+
+   		>>> demangle_llvm("?testf@Foobar@@SA?AW4foo@1@W421@@Z")
+		['public: static enum Foobar::foo __cdecl Foobar::testf(enum Foobar::foo)']
+  		>>>
 	"""
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()

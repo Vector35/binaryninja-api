@@ -2954,7 +2954,7 @@ class Function:
 	@property
 	def provenance(self):
 		"""
-		``provenance`` returns a string representing the provenance. This portion of the API is under develoment.
+		``provenance`` returns a string representing the provenance. This portion of the API is under development.
 		Currently the provenance information is undocumented, not persistent, and not saved to a database.
 
 		:return: string representation of the provenance

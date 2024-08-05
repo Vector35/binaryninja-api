@@ -152,64 +152,28 @@ impl SymbolBuilder {
     }
 
     pub fn create(self) -> Ref<Symbol> {
-        let raw_name = self.raw_name.into_bytes_with_nul();
-        let short_name = self.short_name.map(|s| s.into_bytes_with_nul());
-        let full_name = self.full_name.map(|s| s.into_bytes_with_nul());
+        let raw_name = self.raw_name.as_cstr();
+        let short_name = self
+            .short_name
+            .as_ref()
+            .map_or(raw_name.clone(), |s| s.as_cstr());
+        let full_name = self
+            .full_name
+            .as_ref()
+            .map_or(raw_name.clone(), |s| s.as_cstr());
 
-        // Lifetimes, man
-        let raw_name = raw_name.as_ptr() as _;
         unsafe {
-            if let Some(short_name) = short_name {
-                if let Some(full_name) = full_name {
-                    let res = BNCreateSymbol(
-                        self.ty.into(),
-                        short_name.as_ptr() as _,
-                        full_name.as_ptr() as _,
-                        raw_name,
-                        self.addr,
-                        self.binding.into(),
-                        ptr::null_mut(),
-                        self.ordinal,
-                    );
-                    Symbol::ref_from_raw(res)
-                } else {
-                    let res = BNCreateSymbol(
-                        self.ty.into(),
-                        short_name.as_ptr() as _,
-                        raw_name,
-                        raw_name,
-                        self.addr,
-                        self.binding.into(),
-                        ptr::null_mut(),
-                        self.ordinal,
-                    );
-                    Symbol::ref_from_raw(res)
-                }
-            } else if let Some(full_name) = full_name {
-                let res = BNCreateSymbol(
-                    self.ty.into(),
-                    raw_name,
-                    full_name.as_ptr() as _,
-                    raw_name,
-                    self.addr,
-                    self.binding.into(),
-                    ptr::null_mut(),
-                    self.ordinal,
-                );
-                Symbol::ref_from_raw(res)
-            } else {
-                let res = BNCreateSymbol(
-                    self.ty.into(),
-                    raw_name,
-                    raw_name,
-                    raw_name,
-                    self.addr,
-                    self.binding.into(),
-                    ptr::null_mut(),
-                    self.ordinal,
-                );
-                Symbol::ref_from_raw(res)
-            }
+            let res = BNCreateSymbol(
+                self.ty.into(),
+                short_name.as_ptr(),
+                full_name.as_ptr(),
+                raw_name.as_ptr(),
+                self.addr,
+                self.binding.into(),
+                ptr::null_mut(),
+                self.ordinal,
+            );
+            Symbol::ref_from_raw(res)
         }
     }
 }

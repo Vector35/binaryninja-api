@@ -74,11 +74,12 @@ use crate::{
     binaryview::BinaryView,
     platform::Platform,
     rc::*,
-    string::{raw_to_string, BnStrCompatible, BnString},
+    string::{raw_to_string, AsCStr, BnString},
     types::{DataVariableAndName, NameAndType, NamedTypedVariable, Type},
 };
 
-use std::{hash::Hash, os::raw::c_void, ptr, slice};
+use std::ffi::c_void;
+use std::{hash::Hash, ptr, slice};
 
 struct ProgressContext(Option<Box<dyn Fn(usize, usize) -> Result<(), ()>>>);
 
@@ -101,9 +102,8 @@ impl DebugInfoParser {
     }
 
     /// Returns debug info parser of the given name, if it exists
-    pub fn from_name<S: BnStrCompatible>(name: S) -> Result<Ref<Self>, ()> {
-        let name = name.into_bytes_with_nul();
-        let parser = unsafe { BNGetDebugInfoParserByName(name.as_ref().as_ptr() as *mut _) };
+    pub fn from_name(name: impl AsCStr) -> Result<Ref<Self>, ()> {
+        let parser = unsafe { BNGetDebugInfoParserByName(name.as_cstr().as_ptr()) };
 
         if parser.is_null() {
             Err(())
@@ -184,9 +184,8 @@ impl DebugInfoParser {
     }
 
     // Registers a DebugInfoParser. See `binaryninja::debuginfo::DebugInfoParser` for more details.
-    pub fn register<S, C>(name: S, parser_callbacks: C) -> Ref<Self>
+    pub fn register<C>(name: impl AsCStr, parser_callbacks: C) -> Ref<Self>
     where
-        S: BnStrCompatible,
         C: CustomDebugInfoParser,
     {
         extern "C" fn cb_is_valid<C>(ctxt: *mut c_void, view: *mut BNBinaryView) -> bool
@@ -236,13 +235,11 @@ impl DebugInfoParser {
             })
         }
 
-        let name = name.into_bytes_with_nul();
-        let name_ptr = name.as_ref().as_ptr() as *mut _;
         let ctxt = Box::into_raw(Box::new(parser_callbacks));
 
         unsafe {
             DebugInfoParser::from_raw(BNRegisterDebugInfoParser(
-                name_ptr,
+                name.as_cstr().as_ptr(),
                 Some(cb_is_valid::<C>),
                 Some(cb_parse_info::<C>),
                 ctxt as *mut _,
@@ -396,17 +393,10 @@ impl DebugInfo {
     }
 
     /// Returns a generator of all types provided by a named DebugInfoParser
-    pub fn types_by_name<S: BnStrCompatible>(&self, parser_name: S) -> Vec<Ref<NameAndType>> {
-        let parser_name = parser_name.into_bytes_with_nul();
-
+    pub fn types_by_name(&self, parser_name: impl AsCStr) -> Vec<Ref<NameAndType>> {
         let mut count: usize = 0;
-        let debug_types_ptr = unsafe {
-            BNGetDebugTypes(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                &mut count,
-            )
-        };
+        let debug_types_ptr =
+            unsafe { BNGetDebugTypes(self.handle, parser_name.as_cstr().as_ptr(), &mut count) };
         let result: Vec<Ref<NameAndType>> = unsafe {
             slice::from_raw_parts_mut(debug_types_ptr, count)
                 .iter()
@@ -434,17 +424,10 @@ impl DebugInfo {
     }
 
     /// Returns a generator of all functions provided by a named DebugInfoParser
-    pub fn functions_by_name<S: BnStrCompatible>(&self, parser_name: S) -> Vec<DebugFunctionInfo> {
-        let parser_name = parser_name.into_bytes_with_nul();
-
+    pub fn functions_by_name(&self, parser_name: impl AsCStr) -> Vec<DebugFunctionInfo> {
         let mut count: usize = 0;
-        let functions_ptr = unsafe {
-            BNGetDebugFunctions(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                &mut count,
-            )
-        };
+        let functions_ptr =
+            unsafe { BNGetDebugFunctions(self.handle, parser_name.as_cstr().as_ptr(), &mut count) };
 
         let result: Vec<DebugFunctionInfo> = unsafe {
             slice::from_raw_parts_mut(functions_ptr, count)
@@ -475,19 +458,13 @@ impl DebugInfo {
     }
 
     /// Returns a generator of all data variables provided by a named DebugInfoParser
-    pub fn data_variables_by_name<S: BnStrCompatible>(
+    pub fn data_variables_by_name(
         &self,
-        parser_name: S,
+        parser_name: impl AsCStr,
     ) -> Vec<DataVariableAndName<String>> {
-        let parser_name = parser_name.into_bytes_with_nul();
-
         let mut count: usize = 0;
         let data_variables_ptr = unsafe {
-            BNGetDebugDataVariables(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                &mut count,
-            )
+            BNGetDebugDataVariables(self.handle, parser_name.as_cstr().as_ptr(), &mut count)
         };
 
         let result: Vec<DataVariableAndName<String>> = unsafe {
@@ -519,15 +496,12 @@ impl DebugInfo {
     }
 
     /// May return nullptr
-    pub fn type_by_name<S: BnStrCompatible>(&self, parser_name: S, name: S) -> Option<Ref<Type>> {
-        let parser_name = parser_name.into_bytes_with_nul();
-        let name = name.into_bytes_with_nul();
-
+    pub fn type_by_name(&self, parser_name: impl AsCStr, name: impl AsCStr) -> Option<Ref<Type>> {
         let result = unsafe {
             BNGetDebugTypeByName(
                 self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                name.as_ref().as_ptr() as *mut _,
+                parser_name.as_cstr().as_ptr(),
+                name.as_cstr().as_ptr(),
             )
         };
         if !result.is_null() {
@@ -537,19 +511,16 @@ impl DebugInfo {
         }
     }
 
-    pub fn get_data_variable_by_name<S: BnStrCompatible>(
+    pub fn get_data_variable_by_name(
         &self,
-        parser_name: S,
-        name: S,
+        parser_name: impl AsCStr,
+        name: impl AsCStr,
     ) -> Option<(u64, Ref<Type>)> {
-        let parser_name = parser_name.into_bytes_with_nul();
-        let name = name.into_bytes_with_nul();
-
         let result = unsafe {
             BNGetDebugDataVariableByName(
                 self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                name.as_ref().as_ptr() as *mut _,
+                parser_name.as_cstr().as_ptr(),
+                name.as_cstr().as_ptr(),
             )
         };
 
@@ -561,18 +532,13 @@ impl DebugInfo {
         }
     }
 
-    pub fn get_data_variable_by_address<S: BnStrCompatible>(
+    pub fn get_data_variable_by_address(
         &self,
-        parser_name: S,
+        parser_name: impl AsCStr,
         address: u64,
     ) -> Option<(String, Ref<Type>)> {
-        let parser_name = parser_name.into_bytes_with_nul();
         let name_and_var = unsafe {
-            BNGetDebugDataVariableByAddress(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                address,
-            )
+            BNGetDebugDataVariableByAddress(self.handle, parser_name.as_cstr().as_ptr(), address)
         };
 
         if !name_and_var.is_null() {
@@ -590,13 +556,10 @@ impl DebugInfo {
     }
 
     // The tuple is (DebugInfoParserName, type)
-    pub fn get_types_by_name<S: BnStrCompatible>(&self, name: S) -> Vec<(String, Ref<Type>)> {
-        let name = name.into_bytes_with_nul();
-
+    pub fn get_types_by_name(&self, name: impl AsCStr) -> Vec<(String, Ref<Type>)> {
         let mut count: usize = 0;
-        let raw_names_and_types = unsafe {
-            BNGetDebugTypesByName(self.handle, name.as_ref().as_ptr() as *mut _, &mut count)
-        };
+        let raw_names_and_types =
+            unsafe { BNGetDebugTypesByName(self.handle, name.as_cstr().as_ptr(), &mut count) };
 
         let names_and_types: &[*mut BNNameAndType] =
             unsafe { slice::from_raw_parts(raw_names_and_types as *mut _, count) };
@@ -617,15 +580,10 @@ impl DebugInfo {
     }
 
     // The tuple is (DebugInfoParserName, address, type)
-    pub fn get_data_variables_by_name<S: BnStrCompatible>(
-        &self,
-        name: S,
-    ) -> Vec<(String, u64, Ref<Type>)> {
-        let name = name.into_bytes_with_nul();
-
+    pub fn get_data_variables_by_name(&self, name: impl AsCStr) -> Vec<(String, u64, Ref<Type>)> {
         let mut count: usize = 0;
         let raw_variables_and_names = unsafe {
-            BNGetDebugDataVariablesByName(self.handle, name.as_ref().as_ptr() as *mut _, &mut count)
+            BNGetDebugDataVariablesByName(self.handle, name.as_cstr().as_ptr(), &mut count)
         };
 
         let variables_and_names: &[*mut BNDataVariableAndName] =
@@ -672,99 +630,59 @@ impl DebugInfo {
         result
     }
 
-    pub fn remove_parser_info<S: BnStrCompatible>(&self, parser_name: S) -> bool {
-        let parser_name = parser_name.into_bytes_with_nul();
-
-        unsafe { BNRemoveDebugParserInfo(self.handle, parser_name.as_ref().as_ptr() as *mut _) }
+    pub fn remove_parser_info(&self, parser_name: impl AsCStr) -> bool {
+        unsafe { BNRemoveDebugParserInfo(self.handle, parser_name.as_cstr().as_ptr()) }
     }
 
-    pub fn remove_parser_types<S: BnStrCompatible>(&self, parser_name: S) -> bool {
-        let parser_name = parser_name.into_bytes_with_nul();
-
-        unsafe { BNRemoveDebugParserTypes(self.handle, parser_name.as_ref().as_ptr() as *mut _) }
+    pub fn remove_parser_types(&self, parser_name: impl AsCStr) -> bool {
+        unsafe { BNRemoveDebugParserTypes(self.handle, parser_name.as_cstr().as_ptr()) }
     }
 
-    pub fn remove_parser_functions<S: BnStrCompatible>(&self, parser_name: S) -> bool {
-        let parser_name = parser_name.into_bytes_with_nul();
-
-        unsafe {
-            BNRemoveDebugParserFunctions(self.handle, parser_name.as_ref().as_ptr() as *mut _)
-        }
+    pub fn remove_parser_functions(&self, parser_name: impl AsCStr) -> bool {
+        unsafe { BNRemoveDebugParserFunctions(self.handle, parser_name.as_cstr().as_ptr()) }
     }
 
-    pub fn remove_parser_data_variables<S: BnStrCompatible>(&self, parser_name: S) -> bool {
-        let parser_name = parser_name.into_bytes_with_nul();
-
-        unsafe {
-            BNRemoveDebugParserDataVariables(self.handle, parser_name.as_ref().as_ptr() as *mut _)
-        }
+    pub fn remove_parser_data_variables(&self, parser_name: impl AsCStr) -> bool {
+        unsafe { BNRemoveDebugParserDataVariables(self.handle, parser_name.as_cstr().as_ptr()) }
     }
 
-    pub fn remove_type_by_name<S: BnStrCompatible>(&self, parser_name: S, name: S) -> bool {
-        let parser_name = parser_name.into_bytes_with_nul();
-        let name = name.into_bytes_with_nul();
-
+    pub fn remove_type_by_name(&self, parser_name: impl AsCStr, name: impl AsCStr) -> bool {
         unsafe {
             BNRemoveDebugTypeByName(
                 self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                name.as_ref().as_ptr() as *mut _,
+                parser_name.as_cstr().as_ptr(),
+                name.as_cstr().as_ptr(),
             )
         }
     }
 
-    pub fn remove_function_by_index<S: BnStrCompatible>(
-        &self,
-        parser_name: S,
-        index: usize,
-    ) -> bool {
-        let parser_name = parser_name.into_bytes_with_nul();
-
-        unsafe {
-            BNRemoveDebugFunctionByIndex(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                index,
-            )
-        }
+    pub fn remove_function_by_index(&self, parser_name: impl AsCStr, index: usize) -> bool {
+        unsafe { BNRemoveDebugFunctionByIndex(self.handle, parser_name.as_cstr().as_ptr(), index) }
     }
 
-    pub fn remove_data_variable_by_address<S: BnStrCompatible>(
-        &self,
-        parser_name: S,
-        address: u64,
-    ) -> bool {
-        let parser_name = parser_name.into_bytes_with_nul();
-
+    pub fn remove_data_variable_by_address(&self, parser_name: impl AsCStr, address: u64) -> bool {
         unsafe {
-            BNRemoveDebugDataVariableByAddress(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                address,
-            )
+            BNRemoveDebugDataVariableByAddress(self.handle, parser_name.as_cstr().as_ptr(), address)
         }
     }
 
     /// Adds a type scoped under the current parser's name to the debug info
-    pub fn add_type<S: BnStrCompatible>(
-        &self,
-        name: S,
-        new_type: &Type,
-        components: &[&str],
-    ) -> bool {
-        let mut components_array: Vec<*const ::std::os::raw::c_char> =
-            Vec::with_capacity(components.len());
-        for component in components {
-            components_array.push(component.as_ptr() as _);
-        }
+    pub fn add_type(&self, name: impl AsCStr, new_type: &Type, components: &[&str]) -> bool {
+        let components = components
+            .iter()
+            .map(|component| component.as_cstr())
+            .collect::<Vec<_>>();
+        let mut components_array = components
+            .iter()
+            .map(|component| component.as_ptr())
+            .collect::<Vec<_>>();
 
-        let name = name.into_bytes_with_nul();
         unsafe {
             BNAddDebugType(
                 self.handle,
-                name.as_ref().as_ptr() as *mut _,
+                name.as_cstr().as_ptr(),
                 new_type.handle,
-                components_array.as_ptr() as _,
+                components_array.as_mut_ptr(),
                 components.len(),
             )
         }
@@ -772,50 +690,36 @@ impl DebugInfo {
 
     /// Adds a function scoped under the current parser's name to the debug info
     pub fn add_function(&self, new_func: DebugFunctionInfo) -> bool {
-        let short_name_bytes = new_func.short_name.map(|name| name.into_bytes_with_nul());
-        let short_name = short_name_bytes
-            .as_ref()
-            .map_or(ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
-        let full_name_bytes = new_func.full_name.map(|name| name.into_bytes_with_nul());
-        let full_name = full_name_bytes
-            .as_ref()
-            .map_or(ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
-        let raw_name_bytes = new_func.raw_name.map(|name| name.into_bytes_with_nul());
-        let raw_name = raw_name_bytes
-            .as_ref()
-            .map_or(ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
+        let short_name = new_func.short_name.as_ref().map(|name| name.as_cstr());
+        let full_name = new_func.full_name.as_ref().map(|name| name.as_cstr());
+        let raw_name = new_func.raw_name.as_ref().map(|name| name.as_cstr());
 
-        let mut components_array: Vec<*mut ::std::os::raw::c_char> =
-            Vec::with_capacity(new_func.components.len());
+        let mut components = new_func
+            .components
+            .iter()
+            .map(|component| unsafe { BNAllocString(component.as_cstr().as_ptr()) })
+            .collect::<Vec<_>>();
 
-        let mut local_variables_array: Vec<BNVariableNameAndType> =
-            Vec::with_capacity(new_func.local_variables.len());
+        let mut local_variables = new_func
+            .local_variables
+            .iter()
+            .map(|local_var| BNVariableNameAndType {
+                var: local_var.var.raw(),
+                autoDefined: local_var.auto_defined,
+                typeConfidence: local_var.ty.confidence,
+                name: unsafe { BNAllocString(local_var.name.as_cstr().as_ptr()) },
+                type_: local_var.ty.contents.handle,
+            })
+            .collect::<Vec<_>>();
 
+        let null_mut = ptr::null_mut();
         unsafe {
-            for component in &new_func.components {
-                components_array.push(BNAllocString(
-                    component.clone().into_bytes_with_nul().as_ptr() as _,
-                ));
-            }
-
-            for local_variable in &new_func.local_variables {
-                local_variables_array.push(BNVariableNameAndType {
-                    var: local_variable.var.raw(),
-                    autoDefined: local_variable.auto_defined,
-                    typeConfidence: local_variable.ty.confidence,
-                    name: BNAllocString(
-                        local_variable.name.clone().into_bytes_with_nul().as_ptr() as _
-                    ),
-                    type_: local_variable.ty.contents.handle,
-                });
-            }
-
             let result = BNAddDebugFunction(
                 self.handle,
                 &mut BNDebugFunctionInfo {
-                    shortName: short_name,
-                    fullName: full_name,
-                    rawName: raw_name,
+                    shortName: short_name.map_or(null_mut, |name| name.as_ptr() as *mut _),
+                    fullName: full_name.map_or(null_mut, |name| name.as_ptr() as *mut _),
+                    rawName: raw_name.map_or(null_mut, |name| name.as_ptr() as *mut _),
                     address: new_func.address,
                     type_: match new_func.type_ {
                         Some(type_) => type_.handle,
@@ -825,18 +729,18 @@ impl DebugInfo {
                         Some(platform) => platform.handle,
                         _ => ptr::null_mut(),
                     },
-                    components: components_array.as_ptr() as _,
+                    components: components.as_mut_ptr(),
                     componentN: new_func.components.len(),
-                    localVariables: local_variables_array.as_ptr() as _,
-                    localVariableN: local_variables_array.len(),
+                    localVariables: local_variables.as_mut_ptr(),
+                    localVariableN: local_variables.len(),
                 },
             );
 
-            for i in components_array {
+            for i in components {
                 BNFreeString(i);
             }
 
-            for i in &local_variables_array {
+            for i in &local_variables {
                 BNFreeString(i.name);
             }
             result
@@ -844,55 +748,46 @@ impl DebugInfo {
     }
 
     /// Adds a data variable scoped under the current parser's name to the debug info
-    pub fn add_data_variable<S: BnStrCompatible>(
+    pub fn add_data_variable(
         &self,
         address: u64,
         t: &Type,
-        name: Option<S>,
+        name: Option<impl AsCStr>,
         components: &[&str],
     ) -> bool {
-        let mut components_array: Vec<*const ::std::os::raw::c_char> =
-            Vec::with_capacity(components.len());
-        for component in components {
-            components_array.push(component.as_ptr() as _);
-        }
+        let name = name.as_ref().map(|name| name.as_cstr());
+        let name = name.map_or(ptr::null_mut(), |name| name.as_ptr() as *mut _);
 
-        match name {
-            Some(name) => {
-                let name = name.into_bytes_with_nul();
-                unsafe {
-                    BNAddDebugDataVariable(
-                        self.handle,
-                        address,
-                        t.handle,
-                        name.as_ref().as_ptr() as *mut _,
-                        components.as_ptr() as _,
-                        components.len(),
-                    )
-                }
-            }
-            None => unsafe {
-                BNAddDebugDataVariable(
-                    self.handle,
-                    address,
-                    t.handle,
-                    ptr::null_mut(),
-                    components.as_ptr() as _,
-                    components.len(),
-                )
-            },
+        let components = components
+            .iter()
+            .map(|component| component.as_cstr())
+            .collect::<Vec<_>>();
+        let mut components_array = components
+            .iter()
+            .map(|component| component.as_ptr())
+            .collect::<Vec<_>>();
+
+        unsafe {
+            BNAddDebugDataVariable(
+                self.handle,
+                address,
+                t.handle,
+                name,
+                components_array.as_mut_ptr(),
+                components_array.len(),
+            )
         }
     }
 
-    pub fn add_data_variable_info<S: BnStrCompatible>(&self, var: DataVariableAndName<S>) -> bool {
-        let name = var.name.into_bytes_with_nul();
+    pub fn add_data_variable_info<S: AsCStr>(&self, var: DataVariableAndName<S>) -> bool {
+        let var_name = var.name.as_cstr();
         unsafe {
             BNAddDebugDataVariableInfo(
                 self.handle,
                 &BNDataVariableAndName {
                     address: var.address,
                     type_: var.t.contents.handle,
-                    name: name.as_ref().as_ptr() as *mut _,
+                    name: var_name.as_ptr() as *mut _,
                     autoDiscovered: var.auto_discovered,
                     typeConfidence: var.t.confidence,
                 },

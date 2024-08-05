@@ -16,11 +16,10 @@
 
 pub use binaryninjacore_sys::BNSettingsScope as SettingsScope;
 use binaryninjacore_sys::*;
-use std::os::raw::c_char;
 
 use crate::binaryview::BinaryView;
 use crate::rc::*;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 use std::ptr;
 
@@ -39,10 +38,9 @@ impl Settings {
         Ref::new(Self { handle })
     }
 
-    pub fn new<S: BnStrCompatible>(instance_id: S) -> Ref<Self> {
-        let instance_id = instance_id.into_bytes_with_nul();
+    pub fn new(instance_id: impl AsCStr) -> Ref<Self> {
         unsafe {
-            let handle = BNCreateSettings(instance_id.as_ref().as_ptr() as *mut _);
+            let handle = BNCreateSettings(instance_id.as_cstr().as_ptr());
 
             debug_assert!(!handle.is_null());
 
@@ -50,483 +48,370 @@ impl Settings {
         }
     }
 
-    pub fn set_resource_id<S: BnStrCompatible>(&self, resource_id: S) {
-        let resource_id = resource_id.into_bytes_with_nul();
-        unsafe { BNSettingsSetResourceId(self.handle, resource_id.as_ref().as_ptr() as *mut _) };
+    pub fn set_resource_id(&self, resource_id: impl AsCStr) {
+        unsafe { BNSettingsSetResourceId(self.handle, resource_id.as_cstr().as_ptr()) };
     }
 
     pub fn serialize_schema(&self) -> BnString {
         unsafe { BnString::from_raw(BNSettingsSerializeSchema(self.handle)) }
     }
 
-    pub fn deserialize_schema<S: BnStrCompatible>(&self, schema: S) -> bool {
-        let schema = schema.into_bytes_with_nul();
+    pub fn deserialize_schema(&self, schema: impl AsCStr) -> bool {
         unsafe {
             BNSettingsDeserializeSchema(
                 self.handle,
-                schema.as_ref().as_ptr() as *mut _,
+                schema.as_cstr().as_ptr(),
                 BNSettingsScope::SettingsAutoScope,
                 true,
             )
         }
     }
 
-    pub fn contains<S: BnStrCompatible>(&self, key: S) -> bool {
-        let key = key.into_bytes_with_nul();
-
-        unsafe { BNSettingsContains(self.handle, key.as_ref().as_ptr() as *mut _) }
+    pub fn contains(&self, key: impl AsCStr) -> bool {
+        unsafe { BNSettingsContains(self.handle, key.as_cstr().as_ptr()) }
     }
 
     // TODO Update the settings API to take an optional BinaryView or Function. Separate functions or...?
 
-    pub fn get_bool<S: BnStrCompatible>(
+    pub fn get_bool(
         &self,
-        key: S,
+        key: impl AsCStr,
         view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> bool {
-        let key = key.into_bytes_with_nul();
-        let view_handle = match view {
-            Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
-        };
-        let scope_ptr = match scope {
-            Some(mut scope) => scope.as_mut(),
-            _ => ptr::null_mut() as *mut _,
-        };
+        let view_handle = view.map_or(ptr::null_mut(), |view| view.handle);
+        let scope_ptr = scope.map_or(ptr::null_mut(), |mut scope| scope.as_mut());
         unsafe {
             BNSettingsGetBool(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
                 view_handle,
-                std::ptr::null_mut(),
+                ptr::null_mut(),
                 scope_ptr,
             )
         }
     }
 
-    pub fn get_double<S: BnStrCompatible>(
+    pub fn get_double(
         &self,
-        key: S,
+        key: impl AsCStr,
         view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> f64 {
-        let key = key.into_bytes_with_nul();
-        let view_handle = match view {
-            Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
-        };
-        let scope_ptr = match scope {
-            Some(mut scope) => scope.as_mut(),
-            _ => ptr::null_mut() as *mut _,
-        };
+        let view_handle = view.map_or(ptr::null_mut(), |view| view.handle);
+        let scope_ptr = scope.map_or(ptr::null_mut(), |mut scope| scope.as_mut());
         unsafe {
             BNSettingsGetDouble(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
                 view_handle,
-                std::ptr::null_mut(),
+                ptr::null_mut(),
                 scope_ptr,
             )
         }
     }
 
-    pub fn get_integer<S: BnStrCompatible>(
+    pub fn get_integer(
         &self,
-        key: S,
+        key: impl AsCStr,
         view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> u64 {
-        let key = key.into_bytes_with_nul();
-        let view_handle = match view {
-            Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
-        };
-        let scope_ptr = match scope {
-            Some(mut scope) => scope.as_mut(),
-            _ => ptr::null_mut() as *mut _,
-        };
+        let view_handle = view.map_or(ptr::null_mut(), |view| view.handle);
+        let scope_ptr = scope.map_or(ptr::null_mut(), |mut scope| scope.as_mut());
         unsafe {
             BNSettingsGetUInt64(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
                 view_handle,
-                std::ptr::null_mut(),
+                ptr::null_mut(),
                 scope_ptr,
             )
         }
     }
 
-    pub fn get_string<S: BnStrCompatible>(
+    pub fn get_string(
         &self,
-        key: S,
+        key: impl AsCStr,
         view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> BnString {
-        let key = key.into_bytes_with_nul();
-        let view_handle = match view {
-            Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
-        };
-        let scope_ptr = match scope {
-            Some(mut scope) => scope.as_mut(),
-            _ => ptr::null_mut() as *mut _,
-        };
+        let view_handle = view.map_or(ptr::null_mut(), |view| view.handle);
+        let scope_ptr = scope.map_or(ptr::null_mut(), |mut scope| scope.as_mut());
         unsafe {
             BnString::from_raw(BNSettingsGetString(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
                 view_handle,
-                std::ptr::null_mut(),
+                ptr::null_mut(),
                 scope_ptr,
             ))
         }
     }
 
-    pub fn get_string_list<S: BnStrCompatible>(
+    pub fn get_string_list(
         &self,
-        key: S,
+        key: impl AsCStr,
         view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> Array<BnString> {
-        let key = key.into_bytes_with_nul();
-        let view_handle = match view {
-            Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
-        };
-        let scope_ptr = match scope {
-            Some(mut scope) => scope.as_mut(),
-            _ => ptr::null_mut() as *mut _,
-        };
+        let view_handle = view.map_or(ptr::null_mut(), |view| view.handle);
+        let scope_ptr = scope.map_or(ptr::null_mut(), |mut scope| scope.as_mut());
         let mut size: usize = 0;
         unsafe {
-            Array::new(
-                BNSettingsGetStringList(
-                    self.handle,
-                    key.as_ref().as_ptr() as *mut _,
-                    view_handle,
-                    std::ptr::null_mut(),
-                    scope_ptr,
-                    &mut size,
-                ) as *mut *mut c_char,
-                size,
-                (),
-            )
+            let string_list = BNSettingsGetStringList(
+                self.handle,
+                key.as_cstr().as_ptr(),
+                view_handle,
+                ptr::null_mut(),
+                scope_ptr,
+                &mut size,
+            ) as *mut *mut _;
+            Array::new(string_list, size, ())
         }
     }
 
-    pub fn get_json<S: BnStrCompatible>(
+    pub fn get_json(
         &self,
-        key: S,
+        key: impl AsCStr,
         view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> BnString {
-        let key = key.into_bytes_with_nul();
-        let view_handle = match view {
-            Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
-        };
-        let scope_ptr = match scope {
-            Some(mut scope) => scope.as_mut(),
-            _ => ptr::null_mut() as *mut _,
-        };
+        let view_handle = view.map_or(ptr::null_mut(), |view| view.handle);
+        let scope_ptr = scope.map_or(ptr::null_mut(), |mut scope| scope.as_mut());
         unsafe {
             BnString::from_raw(BNSettingsGetJson(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
                 view_handle,
-                std::ptr::null_mut(),
+                ptr::null_mut(),
                 scope_ptr,
             ))
         }
     }
 
-    pub fn set_bool<S: BnStrCompatible>(
+    pub fn set_bool(
         &self,
-        key: S,
+        key: impl AsCStr,
         value: bool,
         view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) {
-        let key = key.into_bytes_with_nul();
-        let view_handle = match view {
-            Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
-        };
-        let scope = match scope {
-            Some(scope) => scope,
-            _ => SettingsScope::SettingsAutoScope,
-        };
+        let view_handle = view.map_or(ptr::null_mut(), |view| view.handle);
+        let scope = scope.unwrap_or(SettingsScope::SettingsAutoScope);
         unsafe {
             BNSettingsSetBool(
                 self.handle,
                 view_handle,
-                std::ptr::null_mut(),
+                ptr::null_mut(),
                 scope,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
                 value,
             );
         }
     }
 
-    pub fn set_double<S: BnStrCompatible>(
+    pub fn set_double(
         &self,
-        key: S,
+        key: impl AsCStr,
         value: f64,
         view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) {
-        let key = key.into_bytes_with_nul();
-        let view_handle = match view {
-            Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
-        };
-        let scope = match scope {
-            Some(scope) => scope,
-            _ => SettingsScope::SettingsAutoScope,
-        };
+        let view_handle = view.map_or(ptr::null_mut(), |view| view.handle);
+        let scope = scope.unwrap_or(SettingsScope::SettingsAutoScope);
         unsafe {
             BNSettingsSetDouble(
                 self.handle,
                 view_handle,
-                std::ptr::null_mut(),
+                ptr::null_mut(),
                 scope,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
                 value,
             );
         }
     }
 
-    pub fn set_integer<S: BnStrCompatible>(
+    pub fn set_integer(
         &self,
-        key: S,
+        key: impl AsCStr,
         value: u64,
         view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) {
-        let key = key.into_bytes_with_nul();
-        let view_handle = match view {
-            Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
-        };
-        let scope = match scope {
-            Some(scope) => scope,
-            _ => SettingsScope::SettingsAutoScope,
-        };
+        let view_handle = view.map_or(ptr::null_mut(), |view| view.handle);
+        let scope = scope.unwrap_or(SettingsScope::SettingsAutoScope);
         unsafe {
             BNSettingsSetUInt64(
                 self.handle,
                 view_handle,
-                std::ptr::null_mut(),
+                ptr::null_mut(),
                 scope,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
                 value,
             );
         }
     }
 
-    pub fn set_string<S1: BnStrCompatible, S2: BnStrCompatible>(
+    pub fn set_string(
         &self,
-        key: S1,
-        value: S2,
+        key: impl AsCStr,
+        value: impl AsCStr,
         view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) {
-        let key = key.into_bytes_with_nul();
-        let value = value.into_bytes_with_nul();
-        let view_handle = match view {
-            Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
-        };
-        let scope = match scope {
-            Some(scope) => scope,
-            _ => SettingsScope::SettingsAutoScope,
-        };
+        let view_handle = view.map_or(ptr::null_mut(), |view| view.handle);
+        let scope = scope.unwrap_or(SettingsScope::SettingsAutoScope);
         unsafe {
             BNSettingsSetString(
                 self.handle,
                 view_handle,
-                std::ptr::null_mut(),
+                ptr::null_mut(),
                 scope,
-                key.as_ref().as_ptr() as *mut _,
-                value.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
+                value.as_cstr().as_ptr(),
             );
         }
     }
 
-    pub fn set_string_list<S1: BnStrCompatible, S2: BnStrCompatible, I: Iterator<Item = S2>>(
+    pub fn set_string_list(
         &self,
-        key: S1,
-        value: I,
+        key: impl AsCStr,
+        value: impl IntoIterator<Item = impl AsCStr>,
         view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) -> bool {
-        let key = key.into_bytes_with_nul();
-        let mut list: Vec<_> = value
-            .map(|s| s.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
-            .collect();
-
-        let view_handle = match view {
-            Some(view) => view.handle,
-            None => ptr::null_mut() as *mut _,
-        };
-
-        let scope = match scope {
-            Some(scope) => scope,
-            None => SettingsScope::SettingsAutoScope,
-        };
+        let view_handle = view.map_or(ptr::null_mut(), |view| view.handle);
+        let scope = scope.unwrap_or(SettingsScope::SettingsAutoScope);
+        let value = value.into_iter().map(BnString::new).collect::<Vec<_>>();
+        let mut value = value
+            .into_iter()
+            .map(|item| item.as_raw() as *const _)
+            .collect::<Vec<_>>();
 
         unsafe {
             BNSettingsSetStringList(
                 self.handle,
                 view_handle,
-                std::ptr::null_mut(),
+                ptr::null_mut(),
                 scope,
-                key.as_ref().as_ptr() as *mut _,
-                list.as_mut_ptr(),
-                list.len(),
+                key.as_cstr().as_ptr(),
+                value.as_mut_ptr(),
+                value.len(),
             )
         }
     }
 
-    pub fn set_json<S1: BnStrCompatible, S2: BnStrCompatible>(
+    pub fn set_json(
         &self,
-        key: S1,
-        value: S2,
+        key: impl AsCStr,
+        value: impl AsCStr,
         view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) -> bool {
-        let key = key.into_bytes_with_nul();
-        let value = value.into_bytes_with_nul();
-
-        let view_handle = match view {
-            Some(view) => view.handle,
-            None => ptr::null_mut() as *mut _,
-        };
-
-        let scope = match scope {
-            Some(scope) => scope,
-            None => SettingsScope::SettingsAutoScope,
-        };
+        let view_handle = view.map_or(ptr::null_mut(), |view| view.handle);
+        let scope = scope.unwrap_or(SettingsScope::SettingsAutoScope);
 
         unsafe {
             BNSettingsSetJson(
                 self.handle,
                 view_handle,
-                std::ptr::null_mut(),
+                ptr::null_mut(),
                 scope,
-                key.as_ref().as_ptr() as *mut _,
-                value.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
+                value.as_cstr().as_ptr(),
             )
         }
     }
 
-    pub fn update_bool_property<S: BnStrCompatible>(&self, key: S, property: S, value: bool) {
-        let key = key.into_bytes_with_nul();
-        let property = property.into_bytes_with_nul();
+    pub fn update_bool_property(&self, key: impl AsCStr, property: impl AsCStr, value: bool) {
         unsafe {
             BNSettingsUpdateBoolProperty(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
-                property.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
+                property.as_cstr().as_ptr(),
                 value,
             );
         }
     }
 
-    pub fn update_integer_property<S: BnStrCompatible>(&self, key: S, property: S, value: u64) {
-        let key = key.into_bytes_with_nul();
-        let property = property.into_bytes_with_nul();
+    pub fn update_integer_property(&self, key: impl AsCStr, property: impl AsCStr, value: u64) {
         unsafe {
             BNSettingsUpdateUInt64Property(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
-                property.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
+                property.as_cstr().as_ptr(),
                 value,
             );
         }
     }
 
-    pub fn update_double_property<S: BnStrCompatible>(&self, key: S, property: S, value: f64) {
-        let key = key.into_bytes_with_nul();
-        let property = property.into_bytes_with_nul();
+    pub fn update_double_property(&self, key: impl AsCStr, property: impl AsCStr, value: f64) {
         unsafe {
             BNSettingsUpdateDoubleProperty(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
-                property.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
+                property.as_cstr().as_ptr(),
                 value,
             );
         }
     }
 
-    pub fn update_string_property<S: BnStrCompatible>(&self, key: S, property: S, value: S) {
-        let key = key.into_bytes_with_nul();
-        let property = property.into_bytes_with_nul();
-        let value = value.into_bytes_with_nul();
+    pub fn update_string_property(
+        &self,
+        key: impl AsCStr,
+        property: impl AsCStr,
+        value: impl AsCStr,
+    ) {
         unsafe {
             BNSettingsUpdateStringProperty(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
-                property.as_ref().as_ptr() as *mut _,
-                value.as_ref().as_ptr() as *mut _,
+                key.as_cstr().as_ptr(),
+                property.as_cstr().as_ptr(),
+                value.as_cstr().as_ptr(),
             );
         }
     }
 
-    pub fn update_string_list_property<S: BnStrCompatible, I: Iterator<Item = S>>(
+    pub fn update_string_list_property(
         &self,
-        key: S,
-        property: S,
-        value: I,
+        key: impl AsCStr,
+        property: impl AsCStr,
+        value: impl IntoIterator<Item = impl AsCStr>,
     ) {
-        let key = key.into_bytes_with_nul();
-        let property = property.into_bytes_with_nul();
-        let mut list: Vec<_> = value
-            .map(|s| s.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
-            .collect();
+        let value = value.into_iter().map(BnString::new).collect::<Vec<_>>();
+        let mut value = value
+            .iter()
+            .map(|s| s.as_raw() as *const _)
+            .collect::<Vec<_>>();
 
         unsafe {
             BNSettingsUpdateStringListProperty(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
-                property.as_ref().as_ptr() as *mut _,
-                list.as_mut_ptr(),
-                list.len(),
+                key.as_cstr().as_ptr(),
+                property.as_cstr().as_ptr(),
+                value.as_mut_ptr(),
+                value.len(),
             );
         }
     }
 
-    pub fn register_group<S1: BnStrCompatible, S2: BnStrCompatible>(
-        &self,
-        group: S1,
-        title: S2,
-    ) -> bool {
-        let group = group.into_bytes_with_nul();
-        let title = title.into_bytes_with_nul();
-
+    pub fn register_group(&self, group: impl AsCStr, title: impl AsCStr) -> bool {
         unsafe {
             BNSettingsRegisterGroup(
                 self.handle,
-                group.as_ref().as_ptr() as *mut _,
-                title.as_ref().as_ptr() as *mut _,
+                group.as_cstr().as_ptr(),
+                title.as_cstr().as_ptr(),
             )
         }
     }
 
-    pub fn register_setting_json<S1: BnStrCompatible, S2: BnStrCompatible>(
-        &self,
-        group: S1,
-        properties: S2,
-    ) -> bool {
-        let group = group.into_bytes_with_nul();
-        let properties = properties.into_bytes_with_nul();
-
+    pub fn register_setting_json(&self, group: impl AsCStr, properties: impl AsCStr) -> bool {
         unsafe {
             BNSettingsRegisterSetting(
                 self.handle,
-                group.as_ref().as_ptr() as *mut _,
-                properties.as_ref().as_ptr() as *mut _,
+                group.as_cstr().as_ptr(),
+                properties.as_cstr().as_ptr(),
             )
         }
     }

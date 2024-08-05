@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::ptr::{null_mut, NonNull};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{ffi, mem};
@@ -6,7 +7,7 @@ use binaryninjacore_sys::*;
 
 use crate::metadata::Metadata;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 #[repr(transparent)]
 pub struct Project {
@@ -34,24 +35,18 @@ impl Project {
     ///
     /// * `path` - Path to the project directory (.bnpr)
     /// * `name` - Name of the new project
-    pub fn create<P: BnStrCompatible, S: BnStrCompatible>(path: P, name: S) -> Self {
-        let path_raw = path.into_bytes_with_nul();
-        let name_raw = name.into_bytes_with_nul();
-        let handle = unsafe {
-            BNCreateProject(
-                path_raw.as_ref().as_ptr() as *const ffi::c_char,
-                name_raw.as_ref().as_ptr() as *const ffi::c_char,
-            )
-        };
+    pub fn create(path: impl AsRef<Path>, name: impl AsCStr) -> Self {
+        let path = path.as_ref().to_string_lossy();
+        let handle = unsafe { BNCreateProject(path.as_cstr().as_ptr(), name.as_cstr().as_ptr()) };
         unsafe { Self::from_raw(NonNull::new(handle).unwrap()) }
     }
 
     /// Open an existing project
     ///
     /// * `path` - Path to the project directory (.bnpr) or project metadata file (.bnpm)
-    pub fn open_project<P: BnStrCompatible>(path: P) -> Self {
-        let path_raw = path.into_bytes_with_nul();
-        let handle = unsafe { BNOpenProject(path_raw.as_ref().as_ptr() as *const ffi::c_char) };
+    pub fn open_project(path: impl AsRef<Path>) -> Self {
+        let path = path.as_ref().to_string_lossy();
+        let handle = unsafe { BNOpenProject(path.as_cstr().as_ptr()) };
         unsafe { Self::from_raw(NonNull::new(handle).unwrap()) }
     }
 
@@ -94,9 +89,8 @@ impl Project {
     }
 
     /// Set the name of the project
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) {
-        let value = value.into_bytes_with_nul();
-        unsafe { BNProjectSetName(self.as_raw(), value.as_ref().as_ptr() as *const ffi::c_char) }
+    pub fn set_name(&self, value: impl AsCStr) {
+        unsafe { BNProjectSetName(self.as_raw(), value.as_cstr().as_ptr()) }
     }
 
     /// Get the description of the project
@@ -105,19 +99,13 @@ impl Project {
     }
 
     /// Set the description of the project
-    pub fn set_description<S: BnStrCompatible>(&self, value: S) {
-        let value = value.into_bytes_with_nul();
-        unsafe {
-            BNProjectSetDescription(self.as_raw(), value.as_ref().as_ptr() as *const ffi::c_char)
-        }
+    pub fn set_description(&self, value: impl AsCStr) {
+        unsafe { BNProjectSetDescription(self.as_raw(), value.as_cstr().as_ptr()) }
     }
 
     /// Retrieves metadata stored under a key from the project
-    pub fn query_metadata<S: BnStrCompatible>(&self, key: S) -> Ref<Metadata> {
-        let key = key.into_bytes_with_nul();
-        let result = unsafe {
-            BNProjectQueryMetadata(self.as_raw(), key.as_ref().as_ptr() as *const ffi::c_char)
-        };
+    pub fn query_metadata(&self, key: impl AsCStr) -> Ref<Metadata> {
+        let result = unsafe { BNProjectQueryMetadata(self.as_raw(), key.as_cstr().as_ptr()) };
         unsafe { Metadata::ref_from_raw(result) }
     }
 
@@ -125,26 +113,13 @@ impl Project {
     ///
     /// * `key` - Key under which to store the Metadata object
     /// * `value` - Object to store
-    pub fn store_metadata<S: BnStrCompatible>(&self, key: S, value: &Metadata) -> bool {
-        let key_raw = key.into_bytes_with_nul();
-        unsafe {
-            BNProjectStoreMetadata(
-                self.as_raw(),
-                key_raw.as_ref().as_ptr() as *const ffi::c_char,
-                value.handle,
-            )
-        }
+    pub fn store_metadata(&self, key: impl AsCStr, value: &Metadata) -> bool {
+        unsafe { BNProjectStoreMetadata(self.as_raw(), key.as_cstr().as_ptr(), value.handle) }
     }
 
     /// Removes the metadata associated with this `key` from the project
-    pub fn remove_metadata<S: BnStrCompatible>(&self, key: S) {
-        let key_raw = key.into_bytes_with_nul();
-        unsafe {
-            BNProjectRemoveMetadata(
-                self.as_raw(),
-                key_raw.as_ref().as_ptr() as *const ffi::c_char,
-            )
-        }
+    pub fn remove_metadata(&self, key: impl AsCStr) {
+        unsafe { BNProjectRemoveMetadata(self.as_raw(), key.as_cstr().as_ptr()) }
     }
 
     pub fn push_folder(&self, file: &ProjectFolder) {
@@ -156,18 +131,13 @@ impl Project {
     /// * `path` - Path to folder on disk
     /// * `parent` - Parent folder in the project that will contain the new contents
     /// * `description` - Description for created root folder
-    pub fn create_folder_from_path<P, D>(
+    pub fn create_folder_from_path(
         &self,
-        path: P,
+        path: impl AsRef<Path>,
         parent: Option<&ProjectFolder>,
-        description: D,
-    ) -> Result<ProjectFolder, ()>
-    where
-        P: BnStrCompatible,
-        D: BnStrCompatible,
-    {
-        let path_raw = path.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
+        description: impl AsCStr,
+    ) -> Result<ProjectFolder, ()> {
+        let path = path.as_ref().to_string_lossy();
         let parent_ptr = parent
             .map(|p| unsafe { p.as_raw() as *mut _ })
             .unwrap_or(null_mut());
@@ -175,9 +145,9 @@ impl Project {
         unsafe {
             let result = BNProjectCreateFolderFromPath(
                 self.as_raw(),
-                path_raw.as_ref().as_ptr() as *const ffi::c_char,
+                path.as_cstr().as_ptr(),
                 parent_ptr,
-                description_raw.as_ref().as_ptr() as *const ffi::c_char,
+                description.as_cstr().as_ptr(),
                 null_mut(),
                 Some(cb_progress_func_nop),
             );
@@ -191,20 +161,17 @@ impl Project {
     /// * `parent` - Parent folder in the project that will contain the new contents
     /// * `description` - Description for created root folder
     /// * `progress_func` - Progress function that will be called
-    pub fn create_folder_from_path_with_progress<P, D, F>(
+    pub fn create_folder_from_path_with_progress<F>(
         &self,
-        path: P,
+        path: impl AsRef<Path>,
         parent: Option<&ProjectFolder>,
-        description: D,
+        description: impl AsCStr,
         mut progress_func: F,
     ) -> Result<ProjectFolder, ()>
     where
-        P: BnStrCompatible,
-        D: BnStrCompatible,
         F: FnMut(usize, usize) -> bool,
     {
-        let path_raw = path.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
+        let path = path.as_ref().to_string_lossy();
         let parent_ptr = parent
             .map(|p| unsafe { p.as_raw() as *mut _ })
             .unwrap_or(null_mut());
@@ -213,9 +180,9 @@ impl Project {
         unsafe {
             let result = BNProjectCreateFolderFromPath(
                 self.as_raw(),
-                path_raw.as_ref().as_ptr() as *const ffi::c_char,
+                path.as_cstr().as_ptr(),
                 parent_ptr,
-                description_raw.as_ref().as_ptr() as *const ffi::c_char,
+                description.as_cstr().as_ptr(),
                 progress_ctx,
                 Some(cb_progress_func::<F>),
             );
@@ -228,18 +195,12 @@ impl Project {
     /// * `parent` - Parent folder in the project that will contain the new folder
     /// * `name` - Name for the created folder
     /// * `description` - Description for created folder
-    pub fn create_folder<N, D>(
+    pub fn create_folder(
         &self,
         parent: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-    ) -> Result<ProjectFolder, ()>
-    where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-    {
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
+        name: impl AsCStr,
+        description: impl AsCStr,
+    ) -> Result<ProjectFolder, ()> {
         let parent_ptr = parent
             .map(|p| unsafe { p.as_raw() as *mut _ })
             .unwrap_or(null_mut());
@@ -247,8 +208,8 @@ impl Project {
             let result = BNProjectCreateFolder(
                 self.as_raw(),
                 parent_ptr,
-                name_raw.as_ref().as_ptr() as *const ffi::c_char,
-                description_raw.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_cstr().as_ptr(),
+                description.as_cstr().as_ptr(),
             );
             Ok(ProjectFolder::from_raw(NonNull::new(result).ok_or(())?))
         }
@@ -260,31 +221,23 @@ impl Project {
     /// * `name` - Name for the created folder
     /// * `description` - Description for created folder
     /// * `id` - id unique ID
-    pub unsafe fn create_folder_unsafe<N, D, I>(
+    pub unsafe fn create_folder_unsafe(
         &self,
         parent: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-        id: I,
-    ) -> Result<ProjectFolder, ()>
-    where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-        I: BnStrCompatible,
-    {
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
+        name: impl AsCStr,
+        description: impl AsCStr,
+        id: impl AsCStr,
+    ) -> Result<ProjectFolder, ()> {
         let parent_ptr = parent
             .map(|p| unsafe { p.as_raw() as *mut _ })
             .unwrap_or(null_mut());
-        let id_raw = id.into_bytes_with_nul();
         unsafe {
             let result = BNProjectCreateFolderUnsafe(
                 self.as_raw(),
                 parent_ptr,
-                name_raw.as_ref().as_ptr() as *const ffi::c_char,
-                description_raw.as_ref().as_ptr() as *const ffi::c_char,
-                id_raw.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_cstr().as_ptr(),
+                description.as_cstr().as_ptr(),
+                id.as_cstr().as_ptr(),
             );
             Ok(ProjectFolder::from_raw(NonNull::new(result).ok_or(())?))
         }
@@ -302,11 +255,8 @@ impl Project {
     }
 
     /// Retrieve a folder in the project by unique folder `id`
-    pub fn folder_by_id<S: BnStrCompatible>(&self, id: S) -> Option<ProjectFolder> {
-        let id_raw = id.into_bytes_with_nul();
-        let id_ptr = id_raw.as_ref().as_ptr() as *const ffi::c_char;
-
-        let result = unsafe { BNProjectGetFolderById(self.as_raw(), id_ptr) };
+    pub fn folder_by_id(&self, id: impl AsCStr) -> Option<ProjectFolder> {
+        let result = unsafe { BNProjectGetFolderById(self.as_raw(), id.as_cstr().as_ptr()) };
         let handle = NonNull::new(result)?;
         Some(unsafe { ProjectFolder::from_raw(handle) })
     }
@@ -368,28 +318,21 @@ impl Project {
     /// * `folder` - Folder to place the created file in
     /// * `name` - Name to assign to the created file
     /// * `description` - Description to assign to the created file
-    pub fn create_file_from_path<P, N, D>(
+    pub fn create_file_from_path(
         &self,
-        path: P,
+        path: impl AsRef<Path>,
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-    ) -> Result<ProjectFile, ()>
-    where
-        P: BnStrCompatible,
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-    {
-        let path_raw = path.into_bytes_with_nul();
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
+        name: impl AsCStr,
+        description: impl AsCStr,
+    ) -> Result<ProjectFile, ()> {
+        let path = path.as_ref().to_string_lossy();
         unsafe {
             let result = BNProjectCreateFileFromPath(
                 self.as_raw(),
-                path_raw.as_ref().as_ptr() as *const ffi::c_char,
+                path.as_cstr().as_ptr(),
                 folder.map(|x| x.as_raw() as *mut _).unwrap_or(null_mut()),
-                name_raw.as_ref().as_ptr() as *const ffi::c_char,
-                description_raw.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_cstr().as_ptr(),
+                description.as_cstr().as_ptr(),
                 null_mut(),
                 Some(cb_progress_func_nop),
             );
@@ -404,31 +347,26 @@ impl Project {
     /// * `name` - Name to assign to the created file
     /// * `description` - Description to assign to the created file
     /// * `progress_func` - Progress function that will be called as the file is being added
-    pub fn create_file_from_path_with_progress<P, N, D, F>(
+    pub fn create_file_from_path_with_progress<F>(
         &self,
-        path: P,
+        path: impl AsRef<Path>,
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
+        name: impl AsCStr,
+        description: impl AsCStr,
         mut progress_func: F,
     ) -> Result<ProjectFile, ()>
     where
-        P: BnStrCompatible,
-        N: BnStrCompatible,
-        D: BnStrCompatible,
         F: FnMut(usize, usize) -> bool,
     {
-        let path_raw = path.into_bytes_with_nul();
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
+        let path = path.as_ref().to_string_lossy();
         let progress_ctx = &mut progress_func as *mut F as *mut ffi::c_void;
         unsafe {
             let result = BNProjectCreateFileFromPath(
                 self.as_raw(),
-                path_raw.as_ref().as_ptr() as *const ffi::c_char,
+                path.as_cstr().as_ptr(),
                 folder.map(|x| x.as_raw() as *mut _).unwrap_or(null_mut()),
-                name_raw.as_ref().as_ptr() as *const ffi::c_char,
-                description_raw.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_cstr().as_ptr(),
+                description.as_cstr().as_ptr(),
                 progress_ctx,
                 Some(cb_progress_func::<F>),
             );
@@ -444,33 +382,24 @@ impl Project {
     /// * `description` - Description to assign to the created file
     /// * `id` - id unique ID
     /// * `creation_time` - Creation time of the file
-    pub unsafe fn create_file_from_path_unsafe<P, N, D, I>(
+    pub unsafe fn create_file_from_path_unsafe(
         &self,
-        path: P,
+        path: impl AsRef<Path>,
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-        id: I,
+        name: impl AsCStr,
+        description: impl AsCStr,
+        id: impl AsCStr,
         creation_time: SystemTime,
-    ) -> Result<ProjectFile, ()>
-    where
-        P: BnStrCompatible,
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-        I: BnStrCompatible,
-    {
-        let path_raw = path.into_bytes_with_nul();
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
-        let id_raw = id.into_bytes_with_nul();
+    ) -> Result<ProjectFile, ()> {
+        let path = path.as_ref().to_string_lossy();
         unsafe {
             let result = BNProjectCreateFileFromPathUnsafe(
                 self.as_raw(),
-                path_raw.as_ref().as_ptr() as *const ffi::c_char,
+                path.as_cstr().as_ptr(),
                 folder.map(|x| x.as_raw() as *mut _).unwrap_or(null_mut()),
-                name_raw.as_ref().as_ptr() as *const ffi::c_char,
-                description_raw.as_ref().as_ptr() as *const ffi::c_char,
-                id_raw.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_cstr().as_ptr(),
+                description.as_cstr().as_ptr(),
+                id.as_cstr().as_ptr(),
                 systime_to_bntime(creation_time).unwrap(),
                 null_mut(),
                 Some(cb_progress_func_nop),
@@ -489,36 +418,29 @@ impl Project {
     /// * `creation_time` - Creation time of the file
     /// * `progress_func` - Progress function that will be called as the file is being added
     #[allow(clippy::too_many_arguments)]
-    pub unsafe fn create_file_from_path_with_progress_unsafe<P, N, D, I, F>(
+    pub unsafe fn create_file_from_path_with_progress_unsafe<F>(
         &self,
-        path: P,
+        path: impl AsRef<Path>,
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-        id: I,
+        name: impl AsCStr,
+        description: impl AsCStr,
+        id: impl AsCStr,
         creation_time: SystemTime,
         mut progress_func: F,
     ) -> Result<ProjectFile, ()>
     where
-        P: BnStrCompatible,
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-        I: BnStrCompatible,
         F: FnMut(usize, usize) -> bool,
     {
-        let path_raw = path.into_bytes_with_nul();
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
-        let id_raw = id.into_bytes_with_nul();
+        let path = path.as_ref().to_string_lossy();
         let progress_ctx = &mut progress_func as *mut F as *mut ffi::c_void;
         unsafe {
             let result = BNProjectCreateFileFromPathUnsafe(
                 self.as_raw(),
-                path_raw.as_ref().as_ptr() as *const ffi::c_char,
+                path.as_cstr().as_ptr(),
                 folder.map(|x| x.as_raw() as *mut _).unwrap_or(null_mut()),
-                name_raw.as_ref().as_ptr() as *const ffi::c_char,
-                description_raw.as_ref().as_ptr() as *const ffi::c_char,
-                id_raw.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_cstr().as_ptr(),
+                description.as_cstr().as_ptr(),
+                id.as_cstr().as_ptr(),
                 systime_to_bntime(creation_time).unwrap(),
                 progress_ctx,
                 Some(cb_progress_func::<F>),
@@ -533,27 +455,21 @@ impl Project {
     /// * `folder` - Folder to place the created file in
     /// * `name` - Name to assign to the created file
     /// * `description` - Description to assign to the created file
-    pub fn create_file<N, D>(
+    pub fn create_file(
         &self,
         contents: &[u8],
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-    ) -> Result<ProjectFile, ()>
-    where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-    {
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
+        name: impl AsCStr,
+        description: impl AsCStr,
+    ) -> Result<ProjectFile, ()> {
         unsafe {
             let result = BNProjectCreateFile(
                 self.as_raw(),
                 contents.as_ptr(),
                 contents.len(),
                 folder.map(|x| x.as_raw() as *mut _).unwrap_or(null_mut()),
-                name_raw.as_ref().as_ptr() as *const ffi::c_char,
-                description_raw.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_cstr().as_ptr(),
+                description.as_cstr().as_ptr(),
                 null_mut(),
                 Some(cb_progress_func_nop),
             );
@@ -568,21 +484,17 @@ impl Project {
     /// * `name` - Name to assign to the created file
     /// * `description` - Description to assign to the created file
     /// * `progress_func` - Progress function that will be called as the file is being added
-    pub fn create_file_with_progress<N, D, F>(
+    pub fn create_file_with_progress<F>(
         &self,
         contents: &[u8],
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
+        name: impl AsCStr,
+        description: impl AsCStr,
         mut progress_func: F,
     ) -> Result<ProjectFile, ()>
     where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
         F: FnMut(usize, usize) -> bool,
     {
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
         let progress_ctx = &mut progress_func as *mut F as *mut ffi::c_void;
         unsafe {
             let result = BNProjectCreateFile(
@@ -590,8 +502,8 @@ impl Project {
                 contents.as_ptr(),
                 contents.len(),
                 folder.map(|x| x.as_raw() as *mut _).unwrap_or(null_mut()),
-                name_raw.as_ref().as_ptr() as *const ffi::c_char,
-                description_raw.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_cstr().as_ptr(),
+                description.as_cstr().as_ptr(),
                 progress_ctx,
                 Some(cb_progress_func::<F>),
             );
@@ -607,32 +519,24 @@ impl Project {
     /// * `description` - Description to assign to the created file
     /// * `id` - id unique ID
     /// * `creation_time` - Creation time of the file
-    pub unsafe fn create_file_unsafe<N, D, I>(
+    pub unsafe fn create_file_unsafe(
         &self,
         contents: &[u8],
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-        id: I,
+        name: impl AsCStr,
+        description: impl AsCStr,
+        id: impl AsCStr,
         creation_time: SystemTime,
-    ) -> Result<ProjectFile, ()>
-    where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-        I: BnStrCompatible,
-    {
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
-        let id_raw = id.into_bytes_with_nul();
+    ) -> Result<ProjectFile, ()> {
         unsafe {
             let result = BNProjectCreateFileUnsafe(
                 self.as_raw(),
                 contents.as_ptr(),
                 contents.len(),
                 folder.map(|x| x.as_raw() as *mut _).unwrap_or(null_mut()),
-                name_raw.as_ref().as_ptr() as *const ffi::c_char,
-                description_raw.as_ref().as_ptr() as *const ffi::c_char,
-                id_raw.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_cstr().as_ptr(),
+                description.as_cstr().as_ptr(),
+                id.as_cstr().as_ptr(),
                 systime_to_bntime(creation_time).unwrap(),
                 null_mut(),
                 Some(cb_progress_func_nop),
@@ -651,25 +555,19 @@ impl Project {
     /// * `creation_time` - Creation time of the file
     /// * `progress_func` - Progress function that will be called as the file is being added
     #[allow(clippy::too_many_arguments)]
-    pub unsafe fn create_file_with_progress_unsafe<N, D, I, F>(
+    pub unsafe fn create_file_with_progress_unsafe<F>(
         &self,
         contents: &[u8],
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-        id: I,
+        name: impl AsCStr,
+        description: impl AsCStr,
+        id: impl AsCStr,
         creation_time: SystemTime,
         mut progress_func: F,
     ) -> Result<ProjectFile, ()>
     where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-        I: BnStrCompatible,
         F: FnMut(usize, usize) -> bool,
     {
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
-        let id_raw = id.into_bytes_with_nul();
         let progress_ctx = &mut progress_func as *mut F as *mut ffi::c_void;
         unsafe {
             let result = BNProjectCreateFileUnsafe(
@@ -677,9 +575,9 @@ impl Project {
                 contents.as_ptr(),
                 contents.len(),
                 folder.map(|x| x.as_raw() as *mut _).unwrap_or(null_mut()),
-                name_raw.as_ref().as_ptr() as *const ffi::c_char,
-                description_raw.as_ref().as_ptr() as *const ffi::c_char,
-                id_raw.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_cstr().as_ptr(),
+                description.as_cstr().as_ptr(),
+                id.as_cstr().as_ptr(),
                 systime_to_bntime(creation_time).unwrap(),
                 progress_ctx,
                 Some(cb_progress_func::<F>),
@@ -697,21 +595,16 @@ impl Project {
     }
 
     /// Retrieve a file in the project by unique `id`
-    pub fn file_by_id<S: BnStrCompatible>(&self, id: S) -> Option<ProjectFile> {
-        let id_raw = id.into_bytes_with_nul();
-        let id_ptr = id_raw.as_ref().as_ptr() as *const ffi::c_char;
-
-        let result = unsafe { BNProjectGetFileById(self.as_raw(), id_ptr) };
+    pub fn file_by_id(&self, id: impl AsCStr) -> Option<ProjectFile> {
+        let result = unsafe { BNProjectGetFileById(self.as_raw(), id.as_cstr().as_ptr()) };
         let handle = NonNull::new(result)?;
         Some(unsafe { ProjectFile::from_raw(handle) })
     }
 
     /// Retrieve a file in the project by the `path` on disk
-    pub fn file_by_path<S: BnStrCompatible>(&self, path: S) -> Option<ProjectFile> {
-        let path_raw = path.into_bytes_with_nul();
-        let path_ptr = path_raw.as_ref().as_ptr() as *const ffi::c_char;
-
-        let result = unsafe { BNProjectGetFileByPathOnDisk(self.as_raw(), path_ptr) };
+    pub fn file_by_path(&self, path: impl AsCStr) -> Option<ProjectFile> {
+        let result =
+            unsafe { BNProjectGetFileByPathOnDisk(self.as_raw(), path.as_cstr().as_ptr()) };
         let handle = NonNull::new(result)?;
         Some(unsafe { ProjectFile::from_raw(handle) })
     }
@@ -841,14 +734,8 @@ impl ProjectFolder {
     }
 
     /// Set the name of this folder
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) -> bool {
-        let value_raw = value.into_bytes_with_nul();
-        unsafe {
-            BNProjectFolderSetName(
-                self.as_raw(),
-                value_raw.as_ref().as_ptr() as *const ffi::c_char,
-            )
-        }
+    pub fn set_name(&self, value: impl AsCStr) -> bool {
+        unsafe { BNProjectFolderSetName(self.as_raw(), value.as_cstr().as_ptr()) }
     }
 
     /// Get the description of this folder
@@ -857,14 +744,8 @@ impl ProjectFolder {
     }
 
     /// Set the description of this folder
-    pub fn set_description<S: BnStrCompatible>(&self, value: S) -> bool {
-        let value_raw = value.into_bytes_with_nul();
-        unsafe {
-            BNProjectFolderSetDescription(
-                self.as_raw(),
-                value_raw.as_ref().as_ptr() as *const ffi::c_char,
-            )
-        }
+    pub fn set_description(&self, value: impl AsCStr) -> bool {
+        unsafe { BNProjectFolderSetDescription(self.as_raw(), value.as_cstr().as_ptr()) }
     }
 
     /// Get the folder that contains this folder
@@ -884,12 +765,11 @@ impl ProjectFolder {
     /// Recursively export this folder to disk, returns `true' if the export succeeded
     ///
     /// * `dest` - Destination path for the exported contents
-    pub fn export<S: BnStrCompatible>(&self, dest: S) -> bool {
-        let dest_raw = dest.into_bytes_with_nul();
+    pub fn export(&self, dest: impl AsCStr) -> bool {
         unsafe {
             BNProjectFolderExport(
                 self.as_raw(),
-                dest_raw.as_ref().as_ptr() as *const ffi::c_char,
+                dest.as_cstr().as_ptr(),
                 null_mut(),
                 Some(cb_progress_func_nop),
             )
@@ -900,16 +780,14 @@ impl ProjectFolder {
     ///
     /// * `dest` - Destination path for the exported contents
     /// * `progress_func` - Progress function that will be called as contents are exporting
-    pub fn export_with_progress<S, F>(&self, dest: S, mut progress: F) -> bool
+    pub fn export_with_progress<F>(&self, dest: impl AsCStr, mut progress: F) -> bool
     where
-        S: BnStrCompatible,
         F: FnMut(usize, usize) -> bool,
     {
-        let dest_raw = dest.into_bytes_with_nul();
         unsafe {
             BNProjectFolderExport(
                 self.as_raw(),
-                dest_raw.as_ref().as_ptr() as *const ffi::c_char,
+                dest.as_cstr().as_ptr(),
                 &mut progress as *mut _ as *mut ffi::c_void,
                 Some(cb_progress_func::<F>),
             )
@@ -988,14 +866,8 @@ impl ProjectFile {
     }
 
     /// Set the name of this file
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) -> bool {
-        let value_raw = value.into_bytes_with_nul();
-        unsafe {
-            BNProjectFileSetName(
-                self.as_raw(),
-                value_raw.as_ref().as_ptr() as *const ffi::c_char,
-            )
-        }
+    pub fn set_name(&self, value: impl AsCStr) -> bool {
+        unsafe { BNProjectFileSetName(self.as_raw(), value.as_cstr().as_ptr()) }
     }
 
     /// Get the description of this file
@@ -1004,14 +876,8 @@ impl ProjectFile {
     }
 
     /// Set the description of this file
-    pub fn set_description<S: BnStrCompatible>(&self, value: S) -> bool {
-        let value_raw = value.into_bytes_with_nul();
-        unsafe {
-            BNProjectFileSetDescription(
-                self.as_raw(),
-                value_raw.as_ref().as_ptr() as *const ffi::c_char,
-            )
-        }
+    pub fn set_description(&self, value: impl AsCStr) -> bool {
+        unsafe { BNProjectFileSetDescription(self.as_raw(), value.as_cstr().as_ptr()) }
     }
 
     /// Get the file creation time
@@ -1036,14 +902,8 @@ impl ProjectFile {
     /// Export this file to disk, `true' if the export succeeded
     ///
     /// * `dest` - Destination path for the exported contents
-    pub fn export<S: BnStrCompatible>(&self, dest: S) -> bool {
-        let dest_raw = dest.into_bytes_with_nul();
-        unsafe {
-            BNProjectFileExport(
-                self.as_raw(),
-                dest_raw.as_ref().as_ptr() as *const ffi::c_char,
-            )
-        }
+    pub fn export(&self, dest: impl AsCStr) -> bool {
+        unsafe { BNProjectFileExport(self.as_raw(), dest.as_cstr().as_ptr()) }
     }
 }
 

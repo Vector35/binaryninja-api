@@ -27,7 +27,7 @@ use crate::{
     hlil::HighLevelILFunction,
     mlil::MediumLevelILFunction,
     rc::*,
-    string::{raw_to_string, BnStrCompatible, BnString},
+    string::{raw_to_string, AsCStr, BnString},
     symbol::Symbol,
 };
 
@@ -39,7 +39,7 @@ use std::{
     ffi::CStr,
     fmt::{self, Debug, Display, Formatter},
     hash::{Hash, Hasher},
-    iter::{zip, IntoIterator},
+    iter::IntoIterator,
     mem::{self, ManuallyDrop},
     ops::Range,
     os::raw::c_char,
@@ -527,44 +527,29 @@ impl TypeBuilder {
             Self::from_raw(BNCreateIntegerTypeBuilder(
                 width,
                 &mut is_signed,
-                BnString::new("").as_ptr() as *mut _,
+                c"".as_ptr(),
             ))
         }
     }
 
-    pub fn named_int<S: BnStrCompatible>(width: usize, is_signed: bool, alt_name: S) -> Self {
+    pub fn named_int(width: usize, is_signed: bool, alt_name: impl AsCStr) -> Self {
         let mut is_signed = Conf::new(is_signed, max_confidence()).into();
-        // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.into_bytes_with_nul(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
 
         unsafe {
             Self::from_raw(BNCreateIntegerTypeBuilder(
                 width,
                 &mut is_signed,
-                alt_name.as_ref().as_ptr() as _,
+                alt_name.as_cstr().as_ptr(),
             ))
         }
     }
 
     pub fn float(width: usize) -> Self {
-        unsafe {
-            Self::from_raw(BNCreateFloatTypeBuilder(
-                width,
-                BnString::new("").as_ptr() as *mut _,
-            ))
-        }
+        unsafe { Self::from_raw(BNCreateFloatTypeBuilder(width, c"".as_ptr())) }
     }
 
-    pub fn named_float<S: BnStrCompatible>(width: usize, alt_name: S) -> Self {
-        // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.into_bytes_with_nul(); // See same line in `named_int` above
-
-        unsafe {
-            Self::from_raw(BNCreateFloatTypeBuilder(
-                width,
-                alt_name.as_ref().as_ptr() as _,
-            ))
-        }
+    pub fn named_float(width: usize, alt_name: impl AsCStr) -> Self {
+        unsafe { Self::from_raw(BNCreateFloatTypeBuilder(width, alt_name.as_cstr().as_ptr())) }
     }
 
     pub fn array<'a, T: Into<Conf<&'a Type>>>(t: T, count: u64) -> Self {
@@ -608,12 +593,12 @@ impl TypeBuilder {
         }
     }
 
-    pub fn named_type_from_type<S: BnStrCompatible>(name: S, t: &Type) -> Self {
+    pub fn named_type_from_type(name: impl AsCStr, t: &Type) -> Self {
         let mut name = QualifiedName::from(name);
 
         unsafe {
             Self::from_raw(BNCreateNamedTypeReferenceBuilderFromTypeAndId(
-                BnString::new("").as_ptr() as *mut _,
+                c"".as_ptr(),
                 &mut name.0,
                 t.handle,
             ))
@@ -904,53 +889,32 @@ impl Type {
     }
 
     pub fn wide_char(width: usize) -> Ref<Self> {
-        unsafe {
-            Self::ref_from_raw(BNCreateWideCharType(
-                width,
-                BnString::new("").as_ptr() as *mut _,
-            ))
-        }
+        unsafe { Self::ref_from_raw(BNCreateWideCharType(width, c"".as_ptr())) }
     }
 
     pub fn int(width: usize, is_signed: bool) -> Ref<Self> {
         let mut is_signed = Conf::new(is_signed, max_confidence()).into();
-        unsafe {
-            Self::ref_from_raw(BNCreateIntegerType(
-                width,
-                &mut is_signed,
-                BnString::new("").as_ptr() as *mut _,
-            ))
-        }
+        unsafe { Self::ref_from_raw(BNCreateIntegerType(width, &mut is_signed, c"".as_ptr())) }
     }
 
-    pub fn named_int<S: BnStrCompatible>(width: usize, is_signed: bool, alt_name: S) -> Ref<Self> {
+    pub fn named_int(width: usize, is_signed: bool, alt_name: impl AsCStr) -> Ref<Self> {
         let mut is_signed = Conf::new(is_signed, max_confidence()).into();
-        // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.into_bytes_with_nul(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
 
         unsafe {
             Self::ref_from_raw(BNCreateIntegerType(
                 width,
                 &mut is_signed,
-                alt_name.as_ref().as_ptr() as _,
+                alt_name.as_cstr().as_ptr(),
             ))
         }
     }
 
     pub fn float(width: usize) -> Ref<Self> {
-        unsafe {
-            Self::ref_from_raw(BNCreateFloatType(
-                width,
-                BnString::new("").as_ptr() as *mut _,
-            ))
-        }
+        unsafe { Self::ref_from_raw(BNCreateFloatType(width, c"".as_ptr())) }
     }
 
-    pub fn named_float<S: BnStrCompatible>(width: usize, alt_name: S) -> Ref<Self> {
-        // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.into_bytes_with_nul(); // See same line in `named_int` above
-
-        unsafe { Self::ref_from_raw(BNCreateFloatType(width, alt_name.as_ref().as_ptr() as _)) }
+    pub fn named_float(width: usize, alt_name: impl AsCStr) -> Ref<Self> {
+        unsafe { Self::ref_from_raw(BNCreateFloatType(width, alt_name.as_cstr().as_ptr())) }
     }
 
     pub fn array<'a, T: Into<Conf<&'a Type>>>(t: T, count: u64) -> Ref<Self> {
@@ -995,12 +959,12 @@ impl Type {
         }
     }
 
-    pub fn named_type_from_type<S: BnStrCompatible>(name: S, t: &Type) -> Ref<Self> {
+    pub fn named_type_from_type(name: impl AsCStr, t: &Type) -> Ref<Self> {
         let mut name = QualifiedName::from(name);
 
         unsafe {
             Self::ref_from_raw(BNCreateNamedTypeReferenceFromTypeAndId(
-                BnString::new("").as_ptr() as *mut _,
+                c"".as_ptr(),
                 &mut name.0,
                 t.handle,
             ))
@@ -1024,24 +988,24 @@ impl Type {
             };
 
         let mut stack_adjust = Conf::<i64>::new(0, min_confidence()).into();
-        let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
-        let mut parameter_name_references = Vec::with_capacity(parameters.len());
-        for parameter in parameters {
-            let raw_name = parameter.name.as_str().into_bytes_with_nul();
-            let location = match &parameter.location {
-                Some(location) => location.raw(),
-                None => unsafe { mem::zeroed() },
-            };
+        let parameter_names = parameters.iter().map(|parameter| parameter.name.as_cstr());
+        let mut raw_parameters = parameters
+            .iter()
+            .zip(parameter_names)
+            .map(|(parameter, name)| {
+                let location = parameter
+                    .location
+                    .map_or(unsafe { mem::zeroed() }, |location| location.raw());
+                BNFunctionParameter {
+                    name: name.as_ptr() as *mut _,
+                    type_: parameter.t.contents.handle,
+                    typeConfidence: parameter.t.confidence,
+                    defaultLocation: parameter.location.is_none(),
+                    location,
+                }
+            })
+            .collect::<Vec<_>>();
 
-            raw_parameters.push(BNFunctionParameter {
-                name: raw_name.as_slice().as_ptr() as *mut _,
-                type_: parameter.t.contents.handle,
-                typeConfidence: parameter.t.confidence,
-                defaultLocation: parameter.location.is_none(),
-                location,
-            });
-            parameter_name_references.push(raw_name);
-        }
         let reg_stack_adjust_regs = ptr::null_mut();
         let reg_stack_adjust_values = ptr::null_mut();
 
@@ -1090,29 +1054,23 @@ impl Type {
             calling_convention.into().into();
         let mut stack_adjust = stack_adjust.into();
 
-        let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
-        let mut parameter_name_references = Vec::with_capacity(parameters.len());
-        let mut name_ptrs = vec![];
-        for parameter in parameters {
-            name_ptrs.push(parameter.name.clone());
-        }
-
-        for (name, parameter) in zip(name_ptrs, parameters) {
-            let raw_name = name.as_str().into_bytes_with_nul();
-            let location = match &parameter.location {
-                Some(location) => location.raw(),
-                None => unsafe { mem::zeroed() },
-            };
-
-            raw_parameters.push(BNFunctionParameter {
-                name: raw_name.as_slice().as_ptr() as *mut _,
-                type_: parameter.t.contents.handle,
-                typeConfidence: parameter.t.confidence,
-                defaultLocation: parameter.location.is_none(),
-                location,
-            });
-            parameter_name_references.push(raw_name);
-        }
+        let parameter_names = parameters.iter().map(|parameter| parameter.name.as_cstr());
+        let mut raw_parameters = parameters
+            .iter()
+            .zip(parameter_names)
+            .map(|(parameter, name)| {
+                let location = parameter
+                    .location
+                    .map_or(unsafe { mem::zeroed() }, |location| location.raw());
+                BNFunctionParameter {
+                    name: name.as_ptr() as *mut _,
+                    type_: parameter.t.contents.handle,
+                    typeConfidence: parameter.t.confidence,
+                    defaultLocation: parameter.location.is_none(),
+                    location,
+                }
+            })
+            .collect::<Vec<_>>();
 
         // TODO: Update type signature and include these (will be a breaking change)
         let reg_stack_adjust_regs = ptr::null_mut();
@@ -1214,7 +1172,7 @@ impl Type {
         }
     }
 
-    pub fn generate_auto_demangled_type_id<S: BnStrCompatible>(name: S) -> BnString {
+    pub fn generate_auto_demangled_type_id(name: impl AsCStr) -> BnString {
         let mut name = QualifiedName::from(name);
         unsafe { BnString::from_raw(BNGenerateAutoDemangledTypeId(&mut name.0)) }
     }
@@ -1647,26 +1605,21 @@ impl EnumerationBuilder {
         unsafe { Enumeration::ref_from_raw(BNFinalizeEnumerationBuilder(self.handle)) }
     }
 
-    pub fn append<S: BnStrCompatible>(&self, name: S) -> &Self {
-        let name = name.into_bytes_with_nul();
+    pub fn append(&self, name: impl AsCStr) -> &Self {
+        unsafe { BNAddEnumerationBuilderMember(self.handle, name.as_cstr().as_ptr()) }
+        self
+    }
+
+    pub fn insert(&self, name: impl AsCStr, value: u64) -> &Self {
         unsafe {
-            BNAddEnumerationBuilderMember(self.handle, name.as_ref().as_ptr() as _);
+            BNAddEnumerationBuilderMemberWithValue(self.handle, name.as_cstr().as_ptr(), value)
         }
         self
     }
 
-    pub fn insert<S: BnStrCompatible>(&self, name: S, value: u64) -> &Self {
-        let name = name.into_bytes_with_nul();
+    pub fn replace(&self, id: usize, name: impl AsCStr, value: u64) -> &Self {
         unsafe {
-            BNAddEnumerationBuilderMemberWithValue(self.handle, name.as_ref().as_ptr() as _, value);
-        }
-        self
-    }
-
-    pub fn replace<S: BnStrCompatible>(&self, id: usize, name: S, value: u64) -> &Self {
-        let name = name.into_bytes_with_nul();
-        unsafe {
-            BNReplaceEnumerationBuilderMember(self.handle, id, name.as_ref().as_ptr() as _, value);
+            BNReplaceEnumerationBuilderMember(self.handle, id, name.as_cstr().as_ptr(), value)
         }
         self
     }
@@ -1884,19 +1837,18 @@ impl StructureBuilder {
         self
     }
 
-    pub fn append<'a, S: BnStrCompatible, T: Into<Conf<&'a Type>>>(
+    pub fn append<'a, T: Into<Conf<&'a Type>>>(
         &self,
         t: T,
-        name: S,
+        name: impl AsCStr,
         access: MemberAccess,
         scope: MemberScope,
     ) -> &Self {
-        let name = name.into_bytes_with_nul();
         unsafe {
             BNAddStructureBuilderMember(
                 self.handle,
                 &t.into().into(),
-                name.as_ref().as_ptr() as _,
+                name.as_cstr().as_ptr(),
                 access,
                 scope,
             );
@@ -1918,21 +1870,20 @@ impl StructureBuilder {
         self
     }
 
-    pub fn insert<'a, S: BnStrCompatible, T: Into<Conf<&'a Type>>>(
+    pub fn insert<'a, T: Into<Conf<&'a Type>>>(
         &self,
         t: T,
-        name: S,
+        name: impl AsCStr,
         offset: u64,
         overwrite_existing: bool,
         access: MemberAccess,
         scope: MemberScope,
     ) -> &Self {
-        let name = name.into_bytes_with_nul();
         unsafe {
             BNAddStructureBuilderMemberAtOffset(
                 self.handle,
                 &t.into().into(),
-                name.as_ref().as_ptr() as _,
+                name.as_cstr().as_ptr(),
                 offset,
                 overwrite_existing,
                 access,
@@ -1943,7 +1894,7 @@ impl StructureBuilder {
         self
     }
 
-    pub fn with_members<'a, S: BnStrCompatible, T: Into<Conf<&'a Type>>>(
+    pub fn with_members<'a, S: AsCStr, T: Into<Conf<&'a Type>>>(
         &self,
         members: impl IntoIterator<Item = (T, S)>,
     ) -> &Self {
@@ -2040,16 +1991,19 @@ impl StructureBuilder {
         unsafe { BNRemoveStructureBuilderMember(self.handle, index) }
     }
 
-    pub fn replace(&self, index: usize, type_: Conf<&Type>, name: &str, overwrite: bool) {
-        let name = name.into_bytes_with_nul();
-        let name_ptr = name.as_ptr() as *const _;
-
+    pub fn replace(&self, index: usize, type_: Conf<&Type>, name: impl AsCStr, overwrite: bool) {
         let raw_type_ = BNTypeWithConfidence {
             type_: type_.contents as *const Type as *mut _,
             confidence: type_.confidence,
         };
         unsafe {
-            BNReplaceStructureBuilderMember(self.handle, index, &raw_type_, name_ptr, overwrite)
+            BNReplaceStructureBuilderMember(
+                self.handle,
+                index,
+                &raw_type_,
+                name.as_cstr().as_ptr(),
+                overwrite,
+            )
         }
     }
 }
@@ -2341,16 +2295,14 @@ impl NamedTypeReference {
     /// You should not assign type ids yourself: if you use this to reference a type you are going
     /// to create but have not yet created, you may run into problems when giving your types to
     /// a BinaryView.
-    pub fn new_with_id<S: BnStrCompatible>(
+    pub fn new_with_id(
         type_class: NamedTypeReferenceClass,
-        type_id: S,
+        type_id: impl AsCStr,
         mut name: QualifiedName,
     ) -> Ref<Self> {
-        let type_id = type_id.into_bytes_with_nul();
-
         unsafe {
             RefCountable::inc_ref(&Self {
-                handle: BNCreateNamedType(type_class, type_id.as_ref().as_ptr() as _, &mut name.0),
+                handle: BNCreateNamedType(type_class, type_id.as_cstr().as_ptr(), &mut name.0),
             })
         }
     }
@@ -2461,31 +2413,23 @@ impl QualifiedName {
     }
 }
 
-impl<S: BnStrCompatible> From<S> for QualifiedName {
+impl<S: AsCStr> From<S> for QualifiedName {
     fn from(name: S) -> Self {
         let join = BnString::new("::");
-        let name = name.into_bytes_with_nul();
-        let mut list = vec![name.as_ref().as_ptr() as *const _];
 
         QualifiedName(BNQualifiedName {
-            name: unsafe { BNAllocStringList(list.as_mut_ptr(), 1) },
+            name: unsafe { BNAllocStringList(vec![name.as_cstr().as_ptr()].as_mut_ptr(), 1) },
             join: join.into_raw(),
             nameCount: 1,
         })
     }
 }
 
-impl<S: BnStrCompatible> From<Vec<S>> for QualifiedName {
+impl<S: AsCStr> From<Vec<S>> for QualifiedName {
     fn from(names: Vec<S>) -> Self {
         let join = BnString::new("::");
-        let names = names
-            .into_iter()
-            .map(|n| n.into_bytes_with_nul())
-            .collect::<Vec<_>>();
-        let mut list = names
-            .iter()
-            .map(|n| n.as_ref().as_ptr() as *const _)
-            .collect::<Vec<_>>();
+        let names = names.iter().map(|n| n.as_cstr()).collect::<Vec<_>>();
+        let mut list = names.iter().map(|n| n.as_ptr()).collect::<Vec<_>>();
 
         QualifiedName(BNQualifiedName {
             name: unsafe { BNAllocStringList(list.as_mut_ptr(), list.len()) },
@@ -2653,10 +2597,10 @@ impl NameAndType {
 }
 
 impl NameAndType {
-    pub fn new<S: BnStrCompatible>(name: S, t: &Type, confidence: u8) -> Ref<Self> {
+    pub fn new(name: impl AsCStr, t: &Type, confidence: u8) -> Ref<Self> {
         unsafe {
             Ref::new(Self(BNNameAndType {
-                name: BNAllocString(name.into_bytes_with_nul().as_ref().as_ptr() as *mut _),
+                name: BNAllocString(name.as_cstr().as_ptr()),
                 type_: Ref::into_raw(t.to_owned()).handle,
                 typeConfidence: confidence,
             }))
@@ -2799,7 +2743,7 @@ unsafe impl CoreArrayProviderInner for DataVariable {
 /////////////////////////
 // DataVariableAndName
 
-pub struct DataVariableAndName<S: BnStrCompatible> {
+pub struct DataVariableAndName<S: AsCStr> {
     pub address: u64,
     pub t: Conf<Ref<Type>>,
     pub auto_discovered: bool,
@@ -2817,7 +2761,7 @@ impl DataVariableAndName<String> {
     }
 }
 
-impl<S: BnStrCompatible> DataVariableAndName<S> {
+impl<S: AsCStr> DataVariableAndName<S> {
     pub fn new(address: u64, t: Conf<Ref<Type>>, auto_discovered: bool, name: S) -> Self {
         Self {
             address,
@@ -2964,12 +2908,12 @@ impl ConstantData {
     }
 }
 
-// unsafe impl<S: BnStrCompatible> CoreArrayProvider for DataVariableAndName<S> {
+// unsafe impl<S: AsBnStr> CoreArrayProvider for DataVariableAndName<S> {
 //     type Raw = BNDataVariableAndName;
 //     type Context = ();
 // }
 
-// unsafe impl<S: BnStrCompatible> CoreOwnedArrayProvider for DataVariableAndName<S> {
+// unsafe impl<S: AsBnStr> CoreOwnedArrayProvider for DataVariableAndName<S> {
 //     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
 //         BNFreeDataVariablesAndName(raw, count);
 //     }

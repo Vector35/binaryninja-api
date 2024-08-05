@@ -41,7 +41,7 @@ use crate::string::*;
 /// implementation of the [`CustomBinaryViewType`] must return.
 pub fn register_view_type<S, T, F>(name: S, long_name: S, constructor: F) -> &'static T
 where
-    S: BnStrCompatible,
+    S: AsCStr,
     T: CustomBinaryViewType,
     F: FnOnce(BinaryViewType) -> T,
 {
@@ -138,12 +138,6 @@ where
         })
     }
 
-    let name = name.into_bytes_with_nul();
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-
-    let long_name = long_name.into_bytes_with_nul();
-    let long_name_ptr = long_name.as_ref().as_ptr() as *mut _;
-
     let ctxt = Box::leak(Box::new(MaybeUninit::zeroed()));
 
     let mut bn_obj = BNCustomBinaryViewType {
@@ -156,7 +150,11 @@ where
     };
 
     unsafe {
-        let res = BNRegisterBinaryViewType(name_ptr, long_name_ptr, &mut bn_obj as *mut _);
+        let res = BNRegisterBinaryViewType(
+            name.as_cstr().as_ptr(),
+            long_name.as_cstr().as_ptr(),
+            &mut bn_obj as *mut _,
+        );
 
         if res.is_null() {
             // avoid leaking the space allocated for the type, but also
@@ -275,10 +273,8 @@ impl BinaryViewType {
     }
 
     /// Looks up a BinaryViewType by its short name
-    pub fn by_name<N: BnStrCompatible>(name: N) -> Result<Self> {
-        let bytes = name.into_bytes_with_nul();
-
-        let res = unsafe { BNGetBinaryViewTypeByName(bytes.as_ref().as_ptr() as *const _) };
+    pub fn by_name(name: impl AsCStr) -> Result<Self> {
+        let res = unsafe { BNGetBinaryViewTypeByName(name.as_cstr().as_ptr()) };
 
         match res.is_null() {
             false => Ok(BinaryViewType(res)),
@@ -416,7 +412,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
 
         let view_name = view_type.name();
 
-        if let Ok(bv) = file.get_view_of_type(view_name.as_str()) {
+        if let Ok(bv) = file.get_view_of_type(&view_name) {
             // while it seems to work most of the time, you can get really unlucky
             // if the a free of the existing view of the same type kicks off while
             // BNCreateBinaryViewOfType is still running. the freeObject callback
@@ -428,8 +424,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
             // going to try and stop this from happening in the first place.
             error!(
                 "attempt to create duplicate view of type '{}' (existing: {:?})",
-                view_name.as_str(),
-                bv.handle
+                view_name, bv.handle
             );
 
             return Err(());
@@ -807,7 +802,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
 
         unsafe {
             let res = BNCreateCustomBinaryView(
-                view_name.as_ptr(),
+                view_name.as_cstr().as_ptr(),
                 file.handle,
                 parent.handle,
                 &mut bn_obj,

@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
-    binaryview, rc,
-    string::{BnStrCompatible, IntoJson},
-};
+use crate::string::{AsCStr, IntoJson};
+use crate::{binaryview, rc};
 
 use std::env;
 use std::path::PathBuf;
@@ -82,10 +80,9 @@ use binaryninjacore_sys::{BNInitPlugins, BNInitRepoPlugins, BNSetBundledPluginDi
 /// You can instead call this through [`Session`] or [`script_helper`]
 pub fn init() {
     unsafe {
-        let path = binja_path().join("plugins").into_os_string();
-        let path = path.into_string().unwrap();
+        let path = binja_path().join("plugins");
 
-        BNSetBundledPluginDirectory(path.as_str().into_bytes_with_nul().as_ptr() as *mut _);
+        BNSetBundledPluginDirectory(path.to_str().unwrap().as_cstr().as_ptr());
         BNInitPlugins(true);
         BNInitRepoPlugins();
     }

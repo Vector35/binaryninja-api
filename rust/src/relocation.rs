@@ -1,4 +1,4 @@
-use crate::string::BnStrCompatible;
+use crate::string::AsCStr;
 use crate::{
     architecture::{Architecture, CoreArchitecture},
     binaryview::BinaryView,
@@ -399,9 +399,8 @@ unsafe impl RefCountable for CoreRelocationHandler {
     }
 }
 
-pub(crate) fn register_relocation_handler<S, R, F>(arch: &CoreArchitecture, name: S, func: F)
+pub(crate) fn register_relocation_handler<R, F>(arch: &CoreArchitecture, name: impl AsCStr, func: F)
 where
-    S: BnStrCompatible,
     R: 'static + RelocationHandler<Handle = CustomRelocationHandlerHandle<R>> + Send + Sync + Sized,
     F: FnOnce(CustomRelocationHandlerHandle<R>, CoreRelocationHandler) -> R,
 {
@@ -501,8 +500,6 @@ where
             .into()
     }
 
-    let name = name.into_bytes_with_nul();
-
     let raw = Box::leak(Box::new(
         MaybeUninit::<RelocationHandlerBuilder<_>>::zeroed(),
     ));
@@ -527,7 +524,7 @@ where
 
         BNArchitectureRegisterRelocationHandler(
             arch.handle().as_ref().0,
-            name.as_ref().as_ptr() as *const _,
+            name.as_cstr().as_ptr(),
             handle.handle().as_ref().0,
         );
     }

@@ -35,9 +35,8 @@ impl Tag {
         Ref::new(Self { handle })
     }
 
-    pub fn new<S: BnStrCompatible>(t: &TagType, data: S) -> Ref<Self> {
-        let data = data.into_bytes_with_nul();
-        unsafe { Self::from_raw(BNCreateTag(t.handle, data.as_ref().as_ptr() as *mut _)) }
+    pub fn new(t: &TagType, data: impl AsCStr) -> Ref<Self> {
+        unsafe { Self::from_raw(BNCreateTag(t.handle, data.as_cstr().as_ptr())) }
     }
 
     pub fn id(&self) -> BnString {
@@ -52,11 +51,8 @@ impl Tag {
         unsafe { TagType::from_raw(BNTagGetType(self.handle)) }
     }
 
-    pub fn set_data<S: BnStrCompatible>(&self, data: S) {
-        let data = data.into_bytes_with_nul();
-        unsafe {
-            BNTagSetData(self.handle, data.as_ref().as_ptr() as *mut _);
-        }
+    pub fn set_data(&self, data: impl AsCStr) {
+        unsafe { BNTagSetData(self.handle, data.as_cstr().as_ptr()) }
     }
 }
 
@@ -114,11 +110,7 @@ impl TagType {
         Ref::new(Self { handle })
     }
 
-    pub fn create<N: BnStrCompatible, I: BnStrCompatible>(
-        view: &BinaryView,
-        name: N,
-        icon: I,
-    ) -> Ref<Self> {
+    pub fn create(view: &BinaryView, name: impl AsCStr, icon: impl AsCStr) -> Ref<Self> {
         let tag_type = unsafe { Self::from_raw(BNCreateTagType(view.handle)) };
         tag_type.set_name(name);
         tag_type.set_icon(icon);
@@ -133,22 +125,16 @@ impl TagType {
         unsafe { BnString::from_raw(BNTagTypeGetIcon(self.handle)) }
     }
 
-    pub fn set_icon<S: BnStrCompatible>(&self, icon: S) {
-        let icon = icon.into_bytes_with_nul();
-        unsafe {
-            BNTagTypeSetIcon(self.handle, icon.as_ref().as_ptr() as *mut _);
-        }
+    pub fn set_icon(&self, icon: impl AsCStr) {
+        unsafe { BNTagTypeSetIcon(self.handle, icon.as_cstr().as_ptr()) }
     }
 
     pub fn name(&self) -> BnString {
         unsafe { BnString::from_raw(BNTagTypeGetName(self.handle)) }
     }
 
-    pub fn set_name<S: BnStrCompatible>(&self, name: S) {
-        let name = name.into_bytes_with_nul();
-        unsafe {
-            BNTagTypeSetName(self.handle, name.as_ref().as_ptr() as *mut _);
-        }
+    pub fn set_name(&self, name: impl AsCStr) {
+        unsafe { BNTagTypeSetName(self.handle, name.as_cstr().as_ptr()) }
     }
 
     pub fn visible(&self) -> bool {
@@ -163,11 +149,8 @@ impl TagType {
         unsafe { BNTagTypeGetType(self.handle) }
     }
 
-    pub fn set_type<S: BnStrCompatible>(&self, t: S) {
-        let t = t.into_bytes_with_nul();
-        unsafe {
-            BNTagTypeSetName(self.handle, t.as_ref().as_ptr() as *mut _);
-        }
+    pub fn set_type(&self, t: impl AsCStr) {
+        unsafe { BNTagTypeSetName(self.handle, t.as_cstr().as_ptr()) }
     }
 
     pub fn view(&self) -> Ref<BinaryView> {

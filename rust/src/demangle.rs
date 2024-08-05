@@ -15,25 +15,24 @@
 //! Interfaces for demangling and simplifying mangled names in binaries.
 
 use binaryninjacore_sys::*;
-use std::os::raw::c_char;
-use std::{ffi::CStr, result};
+use std::ptr;
+use std::result;
 
 use crate::architecture::CoreArchitecture;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use crate::types::Type;
 
 use crate::rc::*;
 
 pub type Result<R> = result::Result<R, ()>;
 
-pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Result<Vec<String>> {
-    let mangled_name_bwn = mangled_name.into_bytes_with_nul();
-    let mangled_name_ptr = mangled_name_bwn.as_ref();
-    let mut out_name: *mut *mut std::os::raw::c_char = unsafe { std::mem::zeroed() };
-    let mut out_size: usize = 0;
+pub fn demangle_llvm(mangled_name: impl AsCStr, simplify: bool) -> Result<Vec<String>> {
+    let mangled_name = mangled_name.as_cstr();
+    let mut out_name = ptr::null_mut();
+    let mut out_size = 0;
     let res = unsafe {
         BNDemangleLLVM(
-            mangled_name_ptr.as_ptr() as *const c_char,
+            mangled_name.as_ptr(),
             &mut out_name,
             &mut out_size,
             simplify,
@@ -41,14 +40,7 @@ pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Res
     };
 
     if !res || out_size == 0 {
-        let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
-            Ok(cstr) => cstr,
-            Err(_) => {
-                log::error!("demangle_llvm: failed to parse mangled name");
-                return Err(());
-            }
-        };
-        return Ok(vec![cstr.to_string_lossy().into_owned()]);
+        return Ok(vec![mangled_name.to_string_lossy().into_owned()]);
     }
 
     if out_name.is_null() {
@@ -66,20 +58,19 @@ pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Res
     Ok(names)
 }
 
-pub fn demangle_gnu3<S: BnStrCompatible>(
+pub fn demangle_gnu3(
     arch: &CoreArchitecture,
-    mangled_name: S,
+    mangled_name: impl AsCStr,
     simplify: bool,
 ) -> Result<(Option<Ref<Type>>, Vec<String>)> {
-    let mangled_name_bwn = mangled_name.into_bytes_with_nul();
-    let mangled_name_ptr = mangled_name_bwn.as_ref();
-    let mut out_type: *mut BNType = std::ptr::null_mut();
-    let mut out_name: *mut *mut std::os::raw::c_char = std::ptr::null_mut();
-    let mut out_size: usize = 0;
+    let mangled_name = mangled_name.as_cstr();
+    let mut out_type = ptr::null_mut();
+    let mut out_name = ptr::null_mut();
+    let mut out_size = 0;
     let res = unsafe {
         BNDemangleGNU3(
             arch.0,
-            mangled_name_ptr.as_ptr() as *const c_char,
+            mangled_name.as_ptr(),
             &mut out_type,
             &mut out_name,
             &mut out_size,
@@ -88,14 +79,7 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
     };
 
     if !res || out_size == 0 {
-        let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
-            Ok(cstr) => cstr,
-            Err(_) => {
-                log::error!("demangle_gnu3: failed to parse mangled name");
-                return Err(());
-            }
-        };
-        return Ok((None, vec![cstr.to_string_lossy().into_owned()]));
+        return Ok((None, vec![mangled_name.to_string_lossy().into_owned()]));
     }
 
     let out_type = match out_type.is_null() {
@@ -121,21 +105,19 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
     Ok((out_type, names))
 }
 
-pub fn demangle_ms<S: BnStrCompatible>(
+pub fn demangle_ms(
     arch: &CoreArchitecture,
-    mangled_name: S,
+    mangled_name: impl AsCStr,
     simplify: bool,
 ) -> Result<(Option<Ref<Type>>, Vec<String>)> {
-    let mangled_name_bwn = mangled_name.into_bytes_with_nul();
-    let mangled_name_ptr = mangled_name_bwn.as_ref();
-
-    let mut out_type: *mut BNType = std::ptr::null_mut();
-    let mut out_name: *mut *mut std::os::raw::c_char = std::ptr::null_mut();
-    let mut out_size: usize = 0;
+    let mangled_name = mangled_name.as_cstr();
+    let mut out_type = ptr::null_mut();
+    let mut out_name = ptr::null_mut();
+    let mut out_size = 0;
     let res = unsafe {
         BNDemangleMS(
             arch.0,
-            mangled_name_ptr.as_ptr() as *const c_char,
+            mangled_name.as_ptr(),
             &mut out_type,
             &mut out_name,
             &mut out_size,
@@ -144,14 +126,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
     };
 
     if !res || out_size == 0 {
-        let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
-            Ok(cstr) => cstr,
-            Err(_) => {
-                log::error!("demangle_ms: failed to parse mangled name");
-                return Err(());
-            }
-        };
-        return Ok((None, vec![cstr.to_string_lossy().into_owned()]));
+        return Ok((None, vec![mangled_name.to_string_lossy().into_owned()]));
     }
 
     let out_type = match out_type.is_null() {

@@ -189,12 +189,8 @@ impl Function {
         unsafe { BnString::from_raw(BNGetFunctionComment(self.handle)) }
     }
 
-    pub fn set_comment<S: BnStrCompatible>(&self, comment: S) {
-        let raw = comment.into_bytes_with_nul();
-
-        unsafe {
-            BNSetFunctionComment(self.handle, raw.as_ref().as_ptr() as *mut _);
-        }
+    pub fn set_comment(&self, comment: impl AsCStr) {
+        unsafe { BNSetFunctionComment(self.handle, comment.as_cstr().as_ptr()) }
     }
 
     pub fn set_can_return_auto<T: Into<Conf<bool>>>(&self, can_return: T) {
@@ -211,11 +207,9 @@ impl Function {
         unsafe { BnString::from_raw(BNGetCommentForAddress(self.handle, addr)) }
     }
 
-    pub fn set_comment_at<S: BnStrCompatible>(&self, addr: u64, comment: S) {
-        let raw = comment.into_bytes_with_nul();
-
+    pub fn set_comment_at(&self, addr: u64, comment: impl AsCStr) {
         unsafe {
-            BNSetCommentForAddress(self.handle, addr, raw.as_ref().as_ptr() as *mut _);
+            BNSetCommentForAddress(self.handle, addr, comment.as_cstr().as_ptr());
         }
     }
 
@@ -952,10 +946,10 @@ impl Function {
     /// let crash = bv.create_tag_type("Crashes", "🎯");
     /// fun.add_tag(&crash, "Nullpointer dereference", Some(0x1337), false, None);
     /// ```
-    pub fn add_tag<S: BnStrCompatible>(
+    pub fn add_tag(
         &self,
         tag_type: &TagType,
-        data: S,
+        data: impl AsCStr,
         addr: Option<u64>,
         user: bool,
         arch: Option<CoreArchitecture>,
@@ -1489,20 +1483,18 @@ impl Function {
     /// * `display_type` - Desired display type
     /// * `arch` - (optional) Architecture of the instruction or IL line containing the token
     /// * `enum_display_typeid` - (optional) Whenever passing EnumDisplayType to `display_type`, passing a type ID here will specify the Enumeration display type. Must be a valid type ID and resolve to an enumeration type.
-    pub fn set_int_display_type(
+    pub fn set_int_display_type<S: AsCStr>(
         &self,
         instr_addr: u64,
         value: u64,
         operand: usize,
         display_type: IntegerDisplayType,
         arch: Option<CoreArchitecture>,
-        enum_display_typeid: Option<impl BnStrCompatible>,
+        enum_display_typeid: Option<S>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let enum_display_typeid = enum_display_typeid.map(BnStrCompatible::into_bytes_with_nul);
-        let enum_display_typeid_ptr = enum_display_typeid
-            .map(|x| x.as_ref().as_ptr() as *const c_char)
-            .unwrap_or(core::ptr::null());
+        let type_id = enum_display_typeid.as_ref().map(|x| x.as_cstr());
+        let type_id = type_id.map_or(std::ptr::null(), |x| x.as_ptr());
         unsafe {
             BNSetIntegerConstantDisplayType(
                 self.handle,
@@ -1511,7 +1503,7 @@ impl Function {
                 value,
                 operand,
                 display_type,
-                enum_display_typeid_ptr,
+                type_id,
             )
         }
     }

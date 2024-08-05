@@ -1136,7 +1136,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             let vt_pointer = Type::pointer(
                 &self.arch,
                 &Conf::new(
-                    Type::named_type_from_type(&QualifiedName::from(vt_name), vt_type.as_ref()),
+                    Type::named_type_from_type(
+                        QualifiedName::from(vt_name).string(),
+                        vt_type.as_ref(),
+                    ),
                     max_confidence(),
                 ),
             );

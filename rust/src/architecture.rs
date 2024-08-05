@@ -37,7 +37,6 @@ use crate::{
     platform::Platform,
     rc::*,
     relocation::CoreRelocationHandler,
-    string::BnStrCompatible,
     string::*,
     types::{Conf, NameAndType, Type},
     {BranchType, Endianness},
@@ -1085,8 +1084,8 @@ impl CoreArchitecture {
         CoreArchitectureList(archs, count)
     }
 
-    pub fn by_name(name: &str) -> Option<Self> {
-        let res = unsafe { BNGetArchitectureByName(name.into_bytes_with_nul().as_ptr() as *mut _) };
+    pub fn by_name(name: impl AsCStr) -> Option<Self> {
+        let res = unsafe { BNGetArchitectureByName(name.as_cstr().as_ptr()) };
 
         match res.is_null() {
             false => Some(CoreArchitecture(res)),
@@ -1607,12 +1606,8 @@ macro_rules! cc_func {
 
 /// Contains helper methods for all types implementing 'Architecture'
 pub trait ArchitectureExt: Architecture {
-    fn register_by_name<S: BnStrCompatible>(&self, name: S) -> Option<Self::Register> {
-        let name = name.into_bytes_with_nul();
-
-        match unsafe {
-            BNGetArchitectureRegisterByName(self.as_ref().0, name.as_ref().as_ptr() as *mut _)
-        } {
+    fn register_by_name(&self, name: impl AsCStr) -> Option<Self::Register> {
+        match unsafe { BNGetArchitectureRegisterByName(self.as_ref().0, name.as_cstr().as_ptr()) } {
             0xffff_ffff => None,
             reg => self.register_from_id(reg),
         }
@@ -1677,7 +1672,7 @@ pub trait ArchitectureExt: Architecture {
 
     fn register_relocation_handler<S, R, F>(&self, name: S, func: F)
     where
-        S: BnStrCompatible,
+        S: AsCStr,
         R: 'static
             + RelocationHandler<Handle = CustomRelocationHandlerHandle<R>>
             + Send
@@ -1700,7 +1695,7 @@ impl<T: Architecture> ArchitectureExt for T {}
 
 pub fn register_architecture<S, A, F>(name: S, func: F) -> &'static A
 where
-    S: BnStrCompatible,
+    S: AsCStr,
     A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
     F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
 {
@@ -1889,7 +1884,7 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         match custom_arch.register_from_id(reg) {
-            Some(reg) => BnString::new(reg.name().as_ref()).into_raw(),
+            Some(reg) => BnString::new(reg.name()).into_raw(),
             None => BnString::new("invalid_reg").into_raw(),
         }
     }
@@ -1901,7 +1896,7 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         match custom_arch.flag_from_id(flag) {
-            Some(flag) => BnString::new(flag.name().as_ref()).into_raw(),
+            Some(flag) => BnString::new(flag.name()).into_raw(),
             None => BnString::new("invalid_flag").into_raw(),
         }
     }
@@ -1913,7 +1908,7 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         match custom_arch.flag_write_from_id(flag_write) {
-            Some(flag_write) => BnString::new(flag_write.name().as_ref()).into_raw(),
+            Some(flag_write) => BnString::new(flag_write.name()).into_raw(),
             None => BnString::new("invalid_flag_write").into_raw(),
         }
     }
@@ -1925,7 +1920,7 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         match custom_arch.flag_class_from_id(class) {
-            Some(class) => BnString::new(class.name().as_ref()).into_raw(),
+            Some(class) => BnString::new(class.name()).into_raw(),
             None => BnString::new("invalid_flag_class").into_raw(),
         }
     }
@@ -1937,7 +1932,7 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         match custom_arch.flag_group_from_id(group) {
-            Some(group) => BnString::new(group.name().as_ref()).into_raw(),
+            Some(group) => BnString::new(group.name()).into_raw(),
             None => BnString::new("invalid_flag_group").into_raw(),
         }
     }
@@ -2400,7 +2395,7 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         match custom_arch.register_stack_from_id(stack) {
-            Some(stack) => BnString::new(stack.name().as_ref()).into_raw(),
+            Some(stack) => BnString::new(stack.name()).into_raw(),
             None => BnString::new("invalid_reg_stack").into_raw(),
         }
     }
@@ -2466,7 +2461,7 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         match custom_arch.intrinsic_from_id(intrinsic) {
-            Some(intrinsic) => BnString::new(intrinsic.name().as_ref()).into_raw(),
+            Some(intrinsic) => BnString::new(intrinsic.name()).into_raw(),
             None => BnString::new("invalid_intrinsic").into_raw(),
         }
     }
@@ -2752,8 +2747,6 @@ where
         custom_arch.skip_and_return_value(data, addr, val)
     }
 
-    let name = name.into_bytes_with_nul();
-
     let uninit_arch = ArchitectureBuilder {
         arch: MaybeUninit::zeroed(),
         func: Some(func),
@@ -2841,8 +2834,7 @@ where
     };
 
     unsafe {
-        let res =
-            BNRegisterArchitecture(name.as_ref().as_ptr() as *mut _, &mut custom_arch as *mut _);
+        let res = BNRegisterArchitecture(name.as_cstr().as_ptr(), &mut custom_arch as *mut _);
 
         assert!(!res.is_null());
 

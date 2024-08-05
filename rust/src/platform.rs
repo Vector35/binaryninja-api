@@ -73,10 +73,9 @@ impl Platform {
         Ref::new(Self { handle })
     }
 
-    pub fn by_name<S: BnStrCompatible>(name: S) -> Option<Ref<Self>> {
-        let raw_name = name.into_bytes_with_nul();
+    pub fn by_name(name: impl AsCStr) -> Option<Ref<Self>> {
         unsafe {
-            let res = BNGetPlatformByName(raw_name.as_ref().as_ptr() as *mut _);
+            let res = BNGetPlatformByName(name.as_cstr().as_ptr());
 
             if res.is_null() {
                 None
@@ -104,30 +103,20 @@ impl Platform {
         }
     }
 
-    pub fn list_by_os<S: BnStrCompatible>(name: S) -> Array<Platform> {
-        let raw_name = name.into_bytes_with_nul();
-
+    pub fn list_by_os(name: impl AsCStr) -> Array<Platform> {
         unsafe {
             let mut count = 0;
-            let handles = BNGetPlatformListByOS(raw_name.as_ref().as_ptr() as *mut _, &mut count);
+            let handles = BNGetPlatformListByOS(name.as_cstr().as_ptr(), &mut count);
 
             Array::new(handles, count, ())
         }
     }
 
-    pub fn list_by_os_and_arch<S: BnStrCompatible>(
-        name: S,
-        arch: &CoreArchitecture,
-    ) -> Array<Platform> {
-        let raw_name = name.into_bytes_with_nul();
-
+    pub fn list_by_os_and_arch(name: impl AsCStr, arch: &CoreArchitecture) -> Array<Platform> {
         unsafe {
             let mut count = 0;
-            let handles = BNGetPlatformListByOSAndArchitecture(
-                raw_name.as_ref().as_ptr() as *mut _,
-                arch.0,
-                &mut count,
-            );
+            let handles =
+                BNGetPlatformListByOSAndArchitecture(name.as_cstr().as_ptr(), arch.0, &mut count);
 
             Array::new(handles, count, ())
         }
@@ -142,10 +131,9 @@ impl Platform {
         }
     }
 
-    pub fn new<A: Architecture, S: BnStrCompatible>(arch: &A, name: S) -> Ref<Self> {
-        let name = name.into_bytes_with_nul();
+    pub fn new<A: Architecture>(arch: &A, name: impl AsCStr) -> Ref<Self> {
         unsafe {
-            let handle = BNCreatePlatform(arch.as_ref().0, name.as_ref().as_ptr() as *mut _);
+            let handle = BNCreatePlatform(arch.as_ref().0, name.as_cstr().as_ptr());
 
             assert!(!handle.is_null());
 
@@ -173,11 +161,9 @@ impl Platform {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn register_os<S: BnStrCompatible>(&self, os: S) {
-        let os = os.into_bytes_with_nul();
-
+    pub fn register_os(&self, os: impl AsCStr) {
         unsafe {
-            BNRegisterPlatform(os.as_ref().as_ptr() as *mut _, self.handle);
+            BNRegisterPlatform(os.as_cstr().as_ptr(), self.handle);
         }
     }
 
@@ -254,12 +240,12 @@ impl Platform {
 }
 
 pub trait TypeParser {
-    fn parse_types_from_source<S: BnStrCompatible, P: AsRef<Path>>(
+    fn parse_types_from_source<P: AsRef<Path>>(
         &self,
-        _source: S,
-        _filename: S,
+        _source: impl AsCStr,
+        _filename: impl AsCStr,
         _include_directories: &[P],
-        _auto_type_source: S,
+        _auto_type_source: impl AsCStr,
     ) -> Result<TypeParserResult, String> {
         Err(String::new())
     }
@@ -273,12 +259,12 @@ pub struct TypeParserResult {
 }
 
 impl TypeParser for Platform {
-    fn parse_types_from_source<S: BnStrCompatible, P: AsRef<Path>>(
+    fn parse_types_from_source<P: AsRef<Path>>(
         &self,
-        source: S,
-        filename: S,
+        source: impl AsCStr,
+        filename: impl AsCStr,
         include_directories: &[P],
-        auto_type_source: S,
+        auto_type_source: impl AsCStr,
     ) -> Result<TypeParserResult, String> {
         let mut result = BNTypeParserResult {
             functionCount: 0,
@@ -293,31 +279,25 @@ impl TypeParser for Platform {
 
         let mut error_string: *mut raw::c_char = ptr::null_mut();
 
-        let src = source.into_bytes_with_nul();
-        let filename = filename.into_bytes_with_nul();
-        let auto_type_source = auto_type_source.into_bytes_with_nul();
-
-        let mut include_dirs = vec![];
-
-        for dir in include_directories.iter() {
-            let d = dir
-                .as_ref()
-                .to_string_lossy()
-                .to_string()
-                .into_bytes_with_nul();
-            include_dirs.push(d.as_ptr() as _);
-        }
+        let include_dirs = include_directories
+            .iter()
+            .map(|dir| BnString::new(dir.as_ref().to_string_lossy()))
+            .collect::<Vec<_>>();
+        let mut include_dirs = include_dirs
+            .iter()
+            .map(|dir| dir.as_raw() as *const _)
+            .collect::<Vec<_>>();
 
         unsafe {
             let success = BNParseTypesFromSource(
                 self.handle,
-                src.as_ref().as_ptr() as _,
-                filename.as_ref().as_ptr() as _,
+                source.as_cstr().as_ptr(),
+                filename.as_cstr().as_ptr(),
                 &mut result,
                 &mut error_string,
                 include_dirs.as_mut_ptr(),
                 include_dirs.len(),
-                auto_type_source.as_ref().as_ptr() as _,
+                auto_type_source.as_cstr().as_ptr(),
             );
 
             let error_msg = BnString::from_raw(error_string);

@@ -189,16 +189,16 @@ pub mod typelibrary;
 pub mod types;
 pub mod update;
 
-use std::path::PathBuf;
 use std::ptr;
 
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
 use binaryview::BinaryView;
-use metadata::Metadata;
-use metadata::MetadataType;
-use string::BnStrCompatible;
-use string::IntoJson;
+use metadata::{Metadata, MetadataType};
+use rc::Ref;
+use string::{AsCStr, IntoJson};
+
+use std::path::PathBuf;
 
 // Commented out to suppress unused warnings
 // const BN_MAX_INSTRUCTION_LENGTH: u64 = 256;
@@ -241,18 +241,12 @@ unsafe extern "C" fn cb_progress_nop(
 }
 
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
-pub fn load<S>(filename: S) -> Option<rc::Ref<binaryview::BinaryView>>
-where
-    S: BnStrCompatible,
-{
-    let filename = filename.into_bytes_with_nul();
-    let options = "\x00";
-
+pub fn load(filename: impl AsCStr) -> Option<Ref<BinaryView>> {
     let handle = unsafe {
         binaryninjacore_sys::BNLoadFilename(
-            filename.as_ref().as_ptr() as *mut _,
+            filename.as_cstr().as_ptr(),
             true,
-            options.as_ptr() as *mut core::ffi::c_char,
+            c"".as_ptr(),
             Some(cb_progress_nop),
             ptr::null_mut(),
         )
@@ -265,24 +259,17 @@ where
     }
 }
 
-pub fn load_with_progress<S, F>(
-    filename: S,
-    mut progress: F,
-) -> Option<rc::Ref<binaryview::BinaryView>>
+pub fn load_with_progress<F>(filename: impl AsCStr, mut progress: F) -> Option<Ref<BinaryView>>
 where
-    S: BnStrCompatible,
     F: FnMut(usize, usize) -> bool,
 {
-    let filename = filename.into_bytes_with_nul();
-    let options = "\x00";
-
     let progress_ctx = &mut progress as *mut F as *mut std::ffi::c_void;
 
     let handle = unsafe {
         binaryninjacore_sys::BNLoadFilename(
-            filename.as_ref().as_ptr() as *mut _,
+            filename.as_cstr().as_ptr(),
             true,
-            options.as_ptr() as *mut core::ffi::c_char,
+            c"".as_ptr(),
             Some(cb_progress_func::<F>),
             progress_ctx,
         )
@@ -312,38 +299,26 @@ where
 /// let bv = binaryninja::load_with_options("/bin/cat", true, Some(json!("analysis.linearSweep.autorun": false).to_string()))
 ///     .expect("Couldn't open `/bin/cat`");
 /// ```
-pub fn load_with_options<S, O>(
-    filename: S,
+pub fn load_with_options<O: IntoJson>(
+    filename: impl AsCStr,
     update_analysis_and_wait: bool,
     options: Option<O>,
-) -> Option<rc::Ref<binaryview::BinaryView>>
-where
-    S: BnStrCompatible,
-    O: IntoJson,
-{
-    let filename = filename.into_bytes_with_nul();
-
-    let options_or_default = if let Some(opt) = options {
-        opt.get_json_string()
-            .ok()?
-            .into_bytes_with_nul()
-            .as_ref()
-            .to_vec()
+) -> Option<Ref<BinaryView>> {
+    let options_or_default: &dyn AsCStr = if let Some(opt) = options {
+        &opt.get_json_string().ok()?
     } else {
-        Metadata::new_of_type(MetadataType::KeyValueDataType)
+        &Metadata::new_of_type(MetadataType::KeyValueDataType)
             .get_json_string()
             .ok()?
-            .as_ref()
-            .to_vec()
     };
 
     let handle = unsafe {
         binaryninjacore_sys::BNLoadFilename(
-            filename.as_ref().as_ptr() as *mut _,
+            filename.as_cstr().as_ptr(),
             update_analysis_and_wait,
-            options_or_default.as_ptr() as *mut core::ffi::c_char,
+            options_or_default.as_cstr().as_ptr(),
             Some(cb_progress_nop),
-            core::ptr::null_mut(),
+            ptr::null_mut(),
         )
     };
 
@@ -354,43 +329,34 @@ where
     }
 }
 
-pub fn load_with_options_and_progress<S, O, F>(
-    filename: S,
+pub fn load_with_options_and_progress<O, F>(
+    filename: impl AsCStr,
     update_analysis_and_wait: bool,
     options: Option<O>,
     progress: Option<F>,
-) -> Option<rc::Ref<binaryview::BinaryView>>
+) -> Option<Ref<BinaryView>>
 where
-    S: BnStrCompatible,
     O: IntoJson,
     F: FnMut(usize, usize) -> bool,
 {
-    let filename = filename.into_bytes_with_nul();
-
-    let options_or_default = if let Some(opt) = options {
-        opt.get_json_string()
-            .ok()?
-            .into_bytes_with_nul()
-            .as_ref()
-            .to_vec()
+    let options_or_default: &dyn AsCStr = if let Some(opt) = options {
+        &opt.get_json_string().ok()?
     } else {
-        Metadata::new_of_type(MetadataType::KeyValueDataType)
+        &Metadata::new_of_type(MetadataType::KeyValueDataType)
             .get_json_string()
             .ok()?
-            .as_ref()
-            .to_vec()
     };
 
     let progress_ctx = match progress {
         Some(mut x) => &mut x as *mut F as *mut std::ffi::c_void,
-        None => core::ptr::null_mut(),
+        None => ptr::null_mut(),
     };
 
     let handle = unsafe {
         binaryninjacore_sys::BNLoadFilename(
-            filename.as_ref().as_ptr() as *mut _,
+            filename.as_cstr().as_ptr(),
             update_analysis_and_wait,
-            options_or_default.as_ptr() as *mut core::ffi::c_char,
+            options_or_default.as_cstr().as_ptr(),
             Some(cb_progress_func::<F>),
             progress_ctx,
         )
@@ -403,35 +369,26 @@ where
     }
 }
 
-pub fn load_view<O>(
+pub fn load_view<O: IntoJson>(
     bv: &BinaryView,
     update_analysis_and_wait: bool,
     options: Option<O>,
-) -> Option<rc::Ref<binaryview::BinaryView>>
-where
-    O: IntoJson,
-{
-    let options_or_default = if let Some(opt) = options {
-        opt.get_json_string()
-            .ok()?
-            .into_bytes_with_nul()
-            .as_ref()
-            .to_vec()
+) -> Option<Ref<BinaryView>> {
+    let options_or_default: &dyn AsCStr = if let Some(opt) = options {
+        &opt.get_json_string().ok()?
     } else {
-        Metadata::new_of_type(MetadataType::KeyValueDataType)
+        &Metadata::new_of_type(MetadataType::KeyValueDataType)
             .get_json_string()
             .ok()?
-            .as_ref()
-            .to_vec()
     };
 
     let handle = unsafe {
         binaryninjacore_sys::BNLoadBinaryView(
             bv.handle as *mut _,
             update_analysis_and_wait,
-            options_or_default.as_ptr() as *mut core::ffi::c_char,
+            options_or_default.as_cstr().as_ptr(),
             Some(cb_progress_nop),
-            core::ptr::null_mut(),
+            ptr::null_mut(),
         )
     };
 
@@ -447,35 +404,29 @@ pub fn load_view_with_progress<O, F>(
     update_analysis_and_wait: bool,
     options: Option<O>,
     progress: Option<F>,
-) -> Option<rc::Ref<binaryview::BinaryView>>
+) -> Option<Ref<BinaryView>>
 where
     O: IntoJson,
     F: FnMut(usize, usize) -> bool,
 {
-    let options_or_default = if let Some(opt) = options {
-        opt.get_json_string()
-            .ok()?
-            .into_bytes_with_nul()
-            .as_ref()
-            .to_vec()
+    let options_or_default: &dyn AsCStr = if let Some(opt) = options {
+        &opt.get_json_string().ok()?
     } else {
-        Metadata::new_of_type(MetadataType::KeyValueDataType)
+        &Metadata::new_of_type(MetadataType::KeyValueDataType)
             .get_json_string()
             .ok()?
-            .as_ref()
-            .to_vec()
     };
 
     let progress_ctx = match progress {
         Some(mut x) => &mut x as *mut F as *mut std::ffi::c_void,
-        None => core::ptr::null_mut(),
+        None => ptr::null_mut(),
     };
 
     let handle = unsafe {
         binaryninjacore_sys::BNLoadBinaryView(
-            bv.handle as *mut _,
+            bv.handle,
             update_analysis_and_wait,
-            options_or_default.as_ptr() as *mut core::ffi::c_char,
+            options_or_default.as_cstr().as_ptr(),
             Some(cb_progress_func::<F>),
             progress_ctx,
         )
@@ -509,12 +460,8 @@ pub fn bundled_plugin_directory() -> Result<PathBuf, ()> {
     ))
 }
 
-pub fn set_bundled_plugin_directory<S: string::BnStrCompatible>(new_dir: S) {
-    unsafe {
-        binaryninjacore_sys::BNSetBundledPluginDirectory(
-            new_dir.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
-        )
-    };
+pub fn set_bundled_plugin_directory(new_dir: impl AsCStr) {
+    unsafe { binaryninjacore_sys::BNSetBundledPluginDirectory(new_dir.as_cstr().as_ptr()) };
 }
 
 pub fn user_directory() -> Result<PathBuf, ()> {
@@ -561,13 +508,9 @@ pub fn save_last_run() {
     unsafe { binaryninjacore_sys::BNSaveLastRun() };
 }
 
-pub fn path_relative_to_bundled_plugin_directory<S: string::BnStrCompatible>(
-    path: S,
-) -> Result<PathBuf, ()> {
-    let s: *mut std::os::raw::c_char = unsafe {
-        binaryninjacore_sys::BNGetPathRelativeToBundledPluginDirectory(
-            path.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
-        )
+pub fn path_relative_to_bundled_plugin_directory(path: impl AsCStr) -> Result<PathBuf, ()> {
+    let s = unsafe {
+        binaryninjacore_sys::BNGetPathRelativeToBundledPluginDirectory(path.as_cstr().as_ptr())
     };
     if s.is_null() {
         return Err(());
@@ -577,13 +520,9 @@ pub fn path_relative_to_bundled_plugin_directory<S: string::BnStrCompatible>(
     ))
 }
 
-pub fn path_relative_to_user_plugin_directory<S: string::BnStrCompatible>(
-    path: S,
-) -> Result<PathBuf, ()> {
-    let s: *mut std::os::raw::c_char = unsafe {
-        binaryninjacore_sys::BNGetPathRelativeToUserPluginDirectory(
-            path.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
-        )
+pub fn path_relative_to_user_plugin_directory(path: impl AsCStr) -> Result<PathBuf, ()> {
+    let s = unsafe {
+        binaryninjacore_sys::BNGetPathRelativeToUserPluginDirectory(path.as_cstr().as_ptr())
     };
     if s.is_null() {
         return Err(());
@@ -593,12 +532,9 @@ pub fn path_relative_to_user_plugin_directory<S: string::BnStrCompatible>(
     ))
 }
 
-pub fn path_relative_to_user_directory<S: string::BnStrCompatible>(path: S) -> Result<PathBuf, ()> {
-    let s: *mut std::os::raw::c_char = unsafe {
-        binaryninjacore_sys::BNGetPathRelativeToUserDirectory(
-            path.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
-        )
-    };
+pub fn path_relative_to_user_directory(path: impl AsCStr) -> Result<PathBuf, ()> {
+    let s =
+        unsafe { binaryninjacore_sys::BNGetPathRelativeToUserDirectory(path.as_cstr().as_ptr()) };
     if s.is_null() {
         return Err(());
     }
@@ -649,12 +585,8 @@ pub fn license_count() -> i32 {
     unsafe { binaryninjacore_sys::BNGetLicenseCount() }
 }
 
-pub fn set_license<S: string::BnStrCompatible>(license: S) {
-    let license = license.into_bytes_with_nul();
-    let license_slice = license.as_ref();
-    unsafe {
-        binaryninjacore_sys::BNSetLicense(license_slice.as_ptr() as *const std::os::raw::c_char)
-    }
+pub fn set_license(license: impl AsCStr) {
+    unsafe { binaryninjacore_sys::BNSetLicense(license.as_cstr().as_ptr()) }
 }
 
 pub fn product() -> string::BnString {
@@ -676,12 +608,8 @@ pub fn is_ui_enabled() -> bool {
     unsafe { binaryninjacore_sys::BNIsUIEnabled() }
 }
 
-pub fn is_database<S: string::BnStrCompatible>(filename: S) -> bool {
-    let filename = filename.into_bytes_with_nul();
-    let filename_slice = filename.as_ref();
-    unsafe {
-        binaryninjacore_sys::BNIsDatabase(filename_slice.as_ptr() as *const std::os::raw::c_char)
-    }
+pub fn is_database(filename: impl AsCStr) -> bool {
+    unsafe { binaryninjacore_sys::BNIsDatabase(filename.as_cstr().as_ptr()) }
 }
 
 pub fn plugin_abi_version() -> u32 {
@@ -708,20 +636,12 @@ pub fn plugin_ui_abi_minimum_version() -> u32 {
     binaryninjacore_sys::BN_MINIMUM_UI_ABI_VERSION
 }
 
-pub fn add_required_plugin_dependency<S: string::BnStrCompatible>(name: S) {
-    unsafe {
-        binaryninjacore_sys::BNAddRequiredPluginDependency(
-            name.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
-        )
-    };
+pub fn add_required_plugin_dependency(name: impl AsCStr) {
+    unsafe { binaryninjacore_sys::BNAddRequiredPluginDependency(name.as_cstr().as_ptr()) };
 }
 
-pub fn add_optional_plugin_dependency<S: string::BnStrCompatible>(name: S) {
-    unsafe {
-        binaryninjacore_sys::BNAddOptionalPluginDependency(
-            name.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
-        )
-    };
+pub fn add_optional_plugin_dependency(name: impl AsCStr) {
+    unsafe { binaryninjacore_sys::BNAddOptionalPluginDependency(name.as_cstr().as_ptr()) };
 }
 
 // Provide ABI version automatically so that the core can verify binary compatibility

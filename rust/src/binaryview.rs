@@ -205,10 +205,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn raw_view(&self) -> Result<Ref<BinaryView>> {
-        let raw = "Raw".into_bytes_with_nul();
-
-        let handle =
-            unsafe { BNGetFileViewOfType(self.file().as_ref().handle, raw.as_ptr() as *mut _) };
+        let handle = unsafe { BNGetFileViewOfType(self.file().as_ref().handle, c"Raw".as_ptr()) };
 
         if handle.is_null() {
             return Err(());
@@ -279,13 +276,8 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNGetEndOffset(self.as_ref().handle) }
     }
 
-    fn add_analysis_option(&self, name: impl BnStrCompatible) {
-        unsafe {
-            BNAddAnalysisOption(
-                self.as_ref().handle,
-                name.into_bytes_with_nul().as_ref().as_ptr() as *mut _,
-            )
-        }
+    fn add_analysis_option(&self, name: impl AsCStr) {
+        unsafe { BNAddAnalysisOption(self.as_ref().handle, name.as_cstr().as_ptr()) }
     }
 
     fn has_initial_analysis(&self) -> bool {
@@ -410,13 +402,11 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn symbol_by_raw_name<S: BnStrCompatible>(&self, raw_name: S) -> Result<Ref<Symbol>> {
-        let raw_name = raw_name.into_bytes_with_nul();
-
+    fn symbol_by_raw_name(&self, raw_name: impl AsCStr) -> Result<Ref<Symbol>> {
         unsafe {
             let raw_sym = BNGetSymbolByRawName(
                 self.as_ref().handle,
-                raw_name.as_ref().as_ptr() as *mut _,
+                raw_name.as_cstr().as_ptr(),
                 ptr::null_mut(),
             );
 
@@ -437,14 +427,12 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn symbols_by_name<S: BnStrCompatible>(&self, name: S) -> Array<Symbol> {
-        let raw_name = name.into_bytes_with_nul();
-
+    fn symbols_by_name(&self, name: impl AsCStr) -> Array<Symbol> {
         unsafe {
             let mut count = 0;
             let handles = BNGetSymbolsByName(
                 self.as_ref().handle,
-                raw_name.as_ref().as_ptr() as *mut _,
+                name.as_cstr().as_ptr(),
                 &mut count,
                 ptr::null_mut(),
             );
@@ -593,19 +581,15 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn define_auto_type<S: BnStrCompatible>(
+    fn define_auto_type(
         &self,
-        name: S,
-        source: S,
+        name: impl AsCStr,
+        source: impl AsCStr,
         type_obj: &Type,
     ) -> QualifiedName {
         let mut qualified_name = QualifiedName::from(name);
-        let source_str = source.into_bytes_with_nul();
         let name_handle = unsafe {
-            let id_str = BNGenerateAutoTypeId(
-                source_str.as_ref().as_ptr() as *const _,
-                &mut qualified_name.0,
-            );
+            let id_str = BNGenerateAutoTypeId(source.as_cstr().as_ptr(), &mut qualified_name.0);
             BNDefineAnalysisType(
                 self.as_ref().handle,
                 id_str,
@@ -616,36 +600,30 @@ pub trait BinaryViewExt: BinaryViewBase {
         QualifiedName(name_handle)
     }
 
-    fn define_user_type<S: BnStrCompatible>(&self, name: S, type_obj: &Type) {
+    fn define_user_type(&self, name: impl AsCStr, type_obj: &Type) {
         let mut qualified_name = QualifiedName::from(name);
         unsafe {
             BNDefineUserAnalysisType(self.as_ref().handle, &mut qualified_name.0, type_obj.handle)
         }
     }
 
-    fn define_auto_types<S: BnStrCompatible>(
+    fn define_auto_types<S: AsCStr>(
         &self,
         names_sources_and_types: Vec<(S, S, &Type)>,
         progress: Option<Box<dyn Fn(usize, usize) -> Result<()>>>,
     ) -> HashMap<String, QualifiedName> {
-        let mut names = vec![];
-        let mut ids = vec![];
-        let mut types = vec![];
-        let mut api_types =
-            Vec::<BNQualifiedNameTypeAndId>::with_capacity(names_sources_and_types.len());
-        for (name, source, type_obj) in names_sources_and_types.into_iter() {
-            names.push(QualifiedName::from(name));
-            ids.push(source.into_bytes_with_nul());
-            types.push(type_obj);
-        }
-
-        for ((name, source), type_obj) in names.iter().zip(ids.iter()).zip(types.iter()) {
-            api_types.push(BNQualifiedNameTypeAndId {
+        let names_sources_and_types = names_sources_and_types
+            .iter()
+            .map(|(name, source, type_obj)| (QualifiedName::from(name), source.as_cstr(), type_obj))
+            .collect::<Vec<_>>();
+        let mut api_types = names_sources_and_types
+            .iter()
+            .map(|(name, source, type_obj)| BNQualifiedNameTypeAndId {
                 name: name.0,
-                id: source.as_ref().as_ptr() as *mut _,
+                id: source.as_ptr() as *mut _,
                 type_: type_obj.handle,
-            });
-        }
+            })
+            .collect::<Vec<_>>();
 
         let mut progress_raw = ProgressContext(progress);
         let mut result_ids: *mut *mut c_char = ptr::null_mut();
@@ -662,37 +640,32 @@ pub trait BinaryViewExt: BinaryViewBase {
             )
         };
 
-        let mut result = HashMap::with_capacity(result_count);
-
         let id_array = unsafe { Array::<BnString>::new(result_ids, result_count, ()) };
         let name_array = unsafe { Array::<QualifiedName>::new(result_names, result_count, ()) };
 
-        for (id, name) in id_array.iter().zip(name_array.iter()) {
-            result.insert(id.to_string(), name.clone());
-        }
-
-        result
+        id_array
+            .iter()
+            .map(|s| s.to_string())
+            .zip(name_array.iter().cloned())
+            .collect()
     }
 
-    fn define_user_types<S: BnStrCompatible>(
+    fn define_user_types<S: AsCStr>(
         &self,
         names_and_types: Vec<(S, &Type)>,
         progress: Option<Box<dyn Fn(usize, usize) -> Result<()>>>,
     ) {
-        let mut names = vec![];
-        let mut types = vec![];
-        let mut api_types = Vec::<BNQualifiedNameAndType>::with_capacity(names_and_types.len());
-        for (name, type_obj) in names_and_types.into_iter() {
-            names.push(QualifiedName::from(name));
-            types.push(type_obj);
-        }
-
-        for (name, type_obj) in names.iter().zip(types.iter()) {
-            api_types.push(BNQualifiedNameAndType {
+        let names_and_types = names_and_types
+            .iter()
+            .map(|(name, type_obj)| (QualifiedName::from(name), type_obj))
+            .collect::<Vec<_>>();
+        let mut api_types = names_and_types
+            .iter()
+            .map(|(name, type_obj)| BNQualifiedNameAndType {
                 name: name.0,
                 type_: type_obj.handle,
-            });
-        }
+            })
+            .collect::<Vec<_>>();
 
         let mut progress_raw = ProgressContext(progress);
         unsafe {
@@ -706,14 +679,11 @@ pub trait BinaryViewExt: BinaryViewBase {
         };
     }
 
-    fn undefine_auto_type<S: BnStrCompatible>(&self, id: S) {
-        let id_str = id.into_bytes_with_nul();
-        unsafe {
-            BNUndefineAnalysisType(self.as_ref().handle, id_str.as_ref().as_ptr() as *const _);
-        }
+    fn undefine_auto_type(&self, id: impl AsCStr) {
+        unsafe { BNUndefineAnalysisType(self.as_ref().handle, id.as_cstr().as_ptr()) }
     }
 
-    fn undefine_user_type<S: BnStrCompatible>(&self, name: S) {
+    fn undefine_user_type(&self, name: impl AsCStr) {
         let mut qualified_name = QualifiedName::from(name);
         unsafe { BNUndefineUserAnalysisType(self.as_ref().handle, &mut qualified_name.0) }
     }
@@ -734,7 +704,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_type_by_name<S: BnStrCompatible>(&self, name: S) -> Option<Ref<Type>> {
+    fn get_type_by_name(&self, name: impl AsCStr) -> Option<Ref<Type>> {
         unsafe {
             let mut qualified_name = QualifiedName::from(name);
             let type_handle = BNGetAnalysisTypeByName(self.as_ref().handle, &mut qualified_name.0);
@@ -755,11 +725,9 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_type_by_id<S: BnStrCompatible>(&self, id: S) -> Option<Ref<Type>> {
+    fn get_type_by_id(&self, id: impl AsCStr) -> Option<Ref<Type>> {
         unsafe {
-            let id_str = id.into_bytes_with_nul();
-            let type_handle =
-                BNGetAnalysisTypeById(self.as_ref().handle, id_str.as_ref().as_ptr() as *mut _);
+            let type_handle = BNGetAnalysisTypeById(self.as_ref().handle, id.as_cstr().as_ptr());
             if type_handle.is_null() {
                 return None;
             }
@@ -767,11 +735,10 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_type_name_by_id<S: BnStrCompatible>(&self, id: S) -> Option<QualifiedName> {
+    fn get_type_name_by_id(&self, id: impl AsCStr) -> Option<QualifiedName> {
         unsafe {
-            let id_str = id.into_bytes_with_nul();
             let name_handle =
-                BNGetAnalysisTypeNameById(self.as_ref().handle, id_str.as_ref().as_ptr() as *mut _);
+                BNGetAnalysisTypeNameById(self.as_ref().handle, id.as_cstr().as_ptr());
             let name = QualifiedName(name_handle);
             if name.strings().is_empty() {
                 return None;
@@ -780,7 +747,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_type_id<S: BnStrCompatible>(&self, name: S) -> Option<BnString> {
+    fn get_type_id(&self, name: impl AsCStr) -> Option<BnString> {
         unsafe {
             let mut qualified_name = QualifiedName::from(name);
             let id_cstr = BNGetAnalysisTypeId(self.as_ref().handle, &mut qualified_name.0);
@@ -792,7 +759,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn is_type_auto_defined<S: BnStrCompatible>(&self, name: S) -> bool {
+    fn is_type_auto_defined(&self, name: impl AsCStr) -> bool {
         unsafe {
             let mut qualified_name = QualifiedName::from(name);
             BNIsAnalysisTypeAutoDefined(self.as_ref().handle, &mut qualified_name.0)
@@ -823,33 +790,21 @@ pub trait BinaryViewExt: BinaryViewBase {
         segment.create(self.as_ref());
     }
 
-    fn add_section<S: BnStrCompatible>(&self, section: SectionBuilder<S>) {
+    fn add_section<S: AsCStr>(&self, section: SectionBuilder<S>) {
         section.create(self.as_ref());
     }
 
-    fn remove_auto_section<S: BnStrCompatible>(&self, name: S) {
-        let name = name.into_bytes_with_nul();
-        let name_ptr = name.as_ref().as_ptr() as *mut _;
-
-        unsafe {
-            BNRemoveAutoSection(self.as_ref().handle, name_ptr);
-        }
+    fn remove_auto_section(&self, name: impl AsCStr) {
+        unsafe { BNRemoveAutoSection(self.as_ref().handle, name.as_cstr().as_ptr()) }
     }
 
-    fn remove_user_section<S: BnStrCompatible>(&self, name: S) {
-        let name = name.into_bytes_with_nul();
-        let name_ptr = name.as_ref().as_ptr() as *mut _;
-
-        unsafe {
-            BNRemoveUserSection(self.as_ref().handle, name_ptr);
-        }
+    fn remove_user_section(&self, name: impl AsCStr) {
+        unsafe { BNRemoveUserSection(self.as_ref().handle, name.as_cstr().as_ptr()) }
     }
 
-    fn section_by_name<S: BnStrCompatible>(&self, name: S) -> Result<Section> {
+    fn section_by_name(&self, name: impl AsCStr) -> Result<Section> {
         unsafe {
-            let raw_name = name.into_bytes_with_nul();
-            let name_ptr = raw_name.as_ref().as_ptr() as *mut _;
-            let raw_section = BNGetSectionByName(self.as_ref().handle, name_ptr);
+            let raw_section = BNGetSectionByName(self.as_ref().handle, name.as_cstr().as_ptr());
 
             if raw_section.is_null() {
                 return Err(());
@@ -1059,24 +1014,19 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNApplyDebugInfo(self.as_ref().handle, debug_info.handle) }
     }
 
-    fn show_graph_report<S: BnStrCompatible>(&self, raw_name: S, graph: &FlowGraph) {
-        let raw_name = raw_name.into_bytes_with_nul();
+    fn show_graph_report(&self, raw_name: impl AsCStr, graph: &FlowGraph) {
         unsafe {
             BNShowGraphReport(
                 self.as_ref().handle,
-                raw_name.as_ref().as_ptr() as *mut _,
+                raw_name.as_cstr().as_ptr(),
                 graph.handle,
             );
         }
     }
 
-    fn load_settings<S: BnStrCompatible>(&self, view_type_name: S) -> Result<Ref<Settings>> {
-        let view_type_name = view_type_name.into_bytes_with_nul();
+    fn load_settings(&self, view_type_name: impl AsCStr) -> Result<Ref<Settings>> {
         let settings_handle = unsafe {
-            BNBinaryViewGetLoadSettings(
-                self.as_ref().handle,
-                view_type_name.as_ref().as_ptr() as *mut _,
-            )
+            BNBinaryViewGetLoadSettings(self.as_ref().handle, view_type_name.as_cstr().as_ptr())
         };
 
         if settings_handle.is_null() {
@@ -1086,13 +1036,11 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn set_load_settings<S: BnStrCompatible>(&self, view_type_name: S, settings: &Settings) {
-        let view_type_name = view_type_name.into_bytes_with_nul();
-
+    fn set_load_settings(&self, view_type_name: impl AsCStr, settings: &Settings) {
         unsafe {
             BNBinaryViewSetLoadSettings(
                 self.as_ref().handle,
-                view_type_name.as_ref().as_ptr() as *mut _,
+                view_type_name.as_cstr().as_ptr(),
                 settings.handle,
             )
         };
@@ -1103,11 +1051,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// # Arguments
     /// * `name` - the name for the tag
     /// * `icon` - the icon (recommended 1 emoji or 2 chars) for the tag
-    fn create_tag_type<N: BnStrCompatible, I: BnStrCompatible>(
-        &self,
-        name: N,
-        icon: I,
-    ) -> Ref<TagType> {
+    fn create_tag_type(&self, name: impl AsCStr, icon: impl AsCStr) -> Ref<TagType> {
         let tag_type = TagType::create(self.as_ref(), name, icon);
         unsafe {
             BNAddTagType(self.as_ref().handle, tag_type.handle);
@@ -1121,11 +1065,9 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     /// Get a tag type by its name.
-    fn get_tag_type<S: BnStrCompatible>(&self, name: S) -> Option<Ref<TagType>> {
-        let name = name.into_bytes_with_nul();
-
+    fn get_tag_type(&self, name: impl AsCStr) -> Option<Ref<TagType>> {
         unsafe {
-            let handle = BNGetTagType(self.as_ref().handle, name.as_ref().as_ptr() as *mut _);
+            let handle = BNGetTagType(self.as_ref().handle, name.as_cstr().as_ptr());
             if handle.is_null() {
                 return None;
             }
@@ -1136,10 +1078,9 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// Get a tag by its id.
     ///
     /// Note this does not tell you anything about where it is used.
-    fn get_tag<S: BnStrCompatible>(&self, id: S) -> Option<Ref<Tag>> {
-        let id = id.into_bytes_with_nul();
+    fn get_tag(&self, id: impl AsCStr) -> Option<Ref<Tag>> {
         unsafe {
-            let handle = BNGetTag(self.as_ref().handle, id.as_ref().as_ptr() as *mut _);
+            let handle = BNGetTag(self.as_ref().handle, id.as_cstr().as_ptr());
             if handle.is_null() {
                 return None;
             }
@@ -1150,7 +1091,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// Creates and adds a tag to an address
     ///
     /// User tag creations will be added to the undo buffer
-    fn add_tag<S: BnStrCompatible>(&self, addr: u64, t: &TagType, data: S, user: bool) {
+    fn add_tag(&self, addr: u64, t: &TagType, data: impl AsCStr, user: bool) {
         let tag = Tag::new(t, data);
 
         unsafe { BNAddTag(self.as_ref().handle, tag.handle, user) }
@@ -1185,7 +1126,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         &self,
         pos: &mut LinearViewCursor,
     ) -> Array<LinearDisassemblyLine> {
-        let mut result = unsafe { Array::new(std::ptr::null_mut(), 0, ()) };
+        let mut result = unsafe { Array::new(ptr::null_mut(), 0, ()) };
 
         while result.is_empty() {
             result = pos.lines();
@@ -1209,7 +1150,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         &self,
         pos: &mut LinearViewCursor,
     ) -> Array<LinearDisassemblyLine> {
-        let mut result = unsafe { Array::new(std::ptr::null_mut(), 0, ()) };
+        let mut result = unsafe { Array::new(ptr::null_mut(), 0, ()) };
         while result.is_empty() {
             if !pos.previous() {
                 return result;
@@ -1221,13 +1162,9 @@ pub trait BinaryViewExt: BinaryViewBase {
         result
     }
 
-    fn query_metadata<S: BnStrCompatible>(&self, key: S) -> Option<Ref<Metadata>> {
-        let value: *mut BNMetadata = unsafe {
-            BNBinaryViewQueryMetadata(
-                self.as_ref().handle,
-                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-            )
-        };
+    fn query_metadata(&self, key: impl AsCStr) -> Option<Ref<Metadata>> {
+        let value: *mut BNMetadata =
+            unsafe { BNBinaryViewQueryMetadata(self.as_ref().handle, key.as_cstr().as_ptr()) };
         if value.is_null() {
             None
         } else {
@@ -1235,7 +1172,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_metadata<T, S: BnStrCompatible>(&self, key: S) -> Option<Result<T>>
+    fn get_metadata<T>(&self, key: impl AsCStr) -> Option<Result<T>>
     where
         T: for<'a> TryFrom<&'a Metadata>,
     {
@@ -1243,7 +1180,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             .map(|md| T::try_from(md.as_ref()).map_err(|_| ()))
     }
 
-    fn store_metadata<V, S: BnStrCompatible>(&self, key: S, value: V, is_auto: bool)
+    fn store_metadata<V>(&self, key: impl AsCStr, value: V, is_auto: bool)
     where
         V: Into<Ref<Metadata>>,
     {
@@ -1251,20 +1188,15 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             BNBinaryViewStoreMetadata(
                 self.as_ref().handle,
-                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                key.as_cstr().as_ptr(),
                 md.as_ref().handle,
                 is_auto,
             )
         };
     }
 
-    fn remove_metadata<S: BnStrCompatible>(&self, key: S) {
-        unsafe {
-            BNBinaryViewRemoveMetadata(
-                self.as_ref().handle,
-                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-            )
-        };
+    fn remove_metadata(&self, key: impl AsCStr) {
+        unsafe { BNBinaryViewRemoveMetadata(self.as_ref().handle, key.as_cstr().as_ptr()) };
     }
 
     /// Retrieves a list of [CodeReference]s pointing to a given address.
@@ -1328,15 +1260,12 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// used its name instead of this slightly-gross [QualifiedName] hack. Since the returned
     /// object doesn't have any [QualifiedName], I'm assuming the core does not alias
     /// the [QualifiedName] we pass to it and it is safe to destroy it on [Drop], as in this function.
-    fn get_code_refs_for_type<B: BnStrCompatible>(&self, name: B) -> Array<CodeReference> {
+    fn get_code_refs_for_type(&self, name: impl AsCStr) -> Array<CodeReference> {
+        let mut count = 0;
+        let mut q_name = QualifiedName::from(name);
         unsafe {
-            let mut count = 0;
-            let q_name = &mut QualifiedName::from(name).0;
-            let handle = BNGetCodeReferencesForType(
-                self.as_ref().handle,
-                q_name as *mut BNQualifiedName,
-                &mut count,
-            );
+            let handle =
+                BNGetCodeReferencesForType(self.as_ref().handle, &mut q_name.0, &mut count);
             Array::new(handle, count, ())
         }
     }
@@ -1346,15 +1275,12 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// used its name instead of this slightly-gross [QualifiedName] hack. Since the returned
     /// object doesn't have any [QualifiedName], I'm assuming the core does not alias
     /// the [QualifiedName] we pass to it and it is safe to destroy it on [Drop], as in this function.
-    fn get_data_refs_for_type<B: BnStrCompatible>(&self, name: B) -> Array<DataReference> {
+    fn get_data_refs_for_type(&self, name: impl AsCStr) -> Array<DataReference> {
+        let mut count = 0;
+        let mut q_name = QualifiedName::from(name);
         unsafe {
-            let mut count = 0;
-            let q_name = &mut QualifiedName::from(name).0;
-            let handle = BNGetDataReferencesForType(
-                self.as_ref().handle,
-                q_name as *mut BNQualifiedName,
-                &mut count,
-            );
+            let handle =
+                BNGetDataReferencesForType(self.as_ref().handle, &mut q_name.0, &mut count);
             Array::new(handle, count, ())
         }
     }
@@ -1386,14 +1312,8 @@ pub trait BinaryViewExt: BinaryViewBase {
             .collect()
     }
 
-    fn component_by_guid<S: BnStrCompatible>(&self, guid: S) -> Option<Component> {
-        let name = guid.into_bytes_with_nul();
-        let result = unsafe {
-            BNGetComponentByGuid(
-                self.as_ref().handle,
-                name.as_ref().as_ptr() as *const core::ffi::c_char,
-            )
-        };
+    fn component_by_guid(&self, guid: impl AsCStr) -> Option<Component> {
+        let result = unsafe { BNGetComponentByGuid(self.as_ref().handle, guid.as_cstr().as_ptr()) };
         core::ptr::NonNull::new(result).map(|h| unsafe { Component::from_raw(h) })
     }
 
@@ -1406,14 +1326,8 @@ pub trait BinaryViewExt: BinaryViewBase {
         ComponentBuilder::new_from_raw(self.as_ref().handle)
     }
 
-    fn component_by_path<P: BnStrCompatible>(&self, path: P) -> Option<Component> {
-        let path = path.into_bytes_with_nul();
-        let result = unsafe {
-            BNGetComponentByPath(
-                self.as_ref().handle,
-                path.as_ref().as_ptr() as *const core::ffi::c_char,
-            )
-        };
+    fn component_by_path(&self, path: impl AsCStr) -> Option<Component> {
+        let result = unsafe { BNGetComponentByPath(self.as_ref().handle, path.as_cstr().as_ptr()) };
         core::ptr::NonNull::new(result).map(|h| unsafe { Component::from_raw(h) })
     }
 
@@ -1423,7 +1337,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     fn remove_component_by_guid<P: IntoComponentGuid>(&self, guid: P) -> bool {
         let path = guid.component_guid();
-        unsafe { BNRemoveComponentByGuid(self.as_ref().handle, path.as_ptr()) }
+        unsafe { BNRemoveComponentByGuid(self.as_ref().handle, path.as_cstr().as_ptr()) }
     }
 
     fn data_variable_parent_components(&self, data_variable: &DataVariable) -> Array<Component> {
@@ -1443,14 +1357,9 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNAddBinaryViewTypeLibrary(self.as_ref().handle, library.as_raw()) }
     }
 
-    fn type_library_by_name<S: BnStrCompatible>(&self, name: S) -> Option<TypeLibrary> {
-        let name = name.into_bytes_with_nul();
-        let result = unsafe {
-            BNGetBinaryViewTypeLibrary(
-                self.as_ref().handle,
-                name.as_ref().as_ptr() as *const core::ffi::c_char,
-            )
-        };
+    fn type_library_by_name(&self, name: impl AsCStr) -> Option<TypeLibrary> {
+        let result =
+            unsafe { BNGetBinaryViewTypeLibrary(self.as_ref().handle, name.as_cstr().as_ptr()) };
         core::ptr::NonNull::new(result).map(|h| unsafe { TypeLibrary::from_raw(h) })
     }
 
@@ -1543,13 +1452,9 @@ pub trait BinaryViewExt: BinaryViewBase {
     ///     contain a metadata key called "type_guids" which is a map
     ///     Dict[string_guid, string_type_name] or
     ///     Dict[string_guid, Tuple[string_type_name, type_library_name]]
-    fn import_type_by_guid<S: BnStrCompatible>(&self, guid: S) -> Option<Ref<Type>> {
-        let guid = guid.into_bytes_with_nul();
+    fn import_type_by_guid(&self, guid: impl AsCStr) -> Option<Ref<Type>> {
         let result = unsafe {
-            BNBinaryViewImportTypeLibraryTypeByGuid(
-                self.as_ref().handle,
-                guid.as_ref().as_ptr() as *const c_char,
-            )
+            BNBinaryViewImportTypeLibraryTypeByGuid(self.as_ref().handle, guid.as_cstr().as_ptr())
         };
         (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
     }
@@ -1653,15 +1558,9 @@ impl BinaryView {
         Ref::new(Self { handle })
     }
 
-    pub fn from_filename<S: BnStrCompatible>(
-        meta: &mut FileMetadata,
-        filename: S,
-    ) -> Result<Ref<Self>> {
-        let file = filename.into_bytes_with_nul();
-
-        let handle = unsafe {
-            BNCreateBinaryDataViewFromFilename(meta.handle, file.as_ref().as_ptr() as *mut _)
-        };
+    pub fn from_filename(meta: &mut FileMetadata, filename: impl AsCStr) -> Result<Ref<Self>> {
+        let handle =
+            unsafe { BNCreateBinaryDataViewFromFilename(meta.handle, filename.as_cstr().as_ptr()) };
 
         if handle.is_null() {
             return Err(());

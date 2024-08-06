@@ -392,7 +392,7 @@ unsafe impl CustomBinaryView for MinidumpBinaryView {
         Ok(MinidumpBinaryView::new(handle))
     }
 
-    fn init(&self, _args: Self::Args) -> BinaryViewResult<()> {
-        self.init()
+    fn init(&mut self, _args: Self::Args) -> BinaryViewResult<()> {
+        MinidumpBinaryView::init(self)
     }
 }

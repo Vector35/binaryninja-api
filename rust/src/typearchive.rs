@@ -58,7 +58,7 @@ impl TypeArchive {
 
     pub(crate) unsafe fn ref_from_raw(handle: &*mut BNTypeArchive) -> &Self {
         assert!(!handle.is_null());
-        mem::transmute(handle)
+        &*(handle as *const _ as *const Self)
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -205,10 +205,12 @@ impl TypeArchive {
     ///
     /// * `new_types` - Names and definitions of new types
     pub fn add_types(&self, new_types: &[QualifiedNameAndType]) {
-        // SAFETY BNQualifiedNameAndType and QualifiedNameAndType are transparent
-        let new_types_raw: &[BNQualifiedNameAndType] = unsafe { mem::transmute(new_types) };
         let result = unsafe {
-            BNAddTypeArchiveTypes(self.as_raw(), new_types_raw.as_ptr(), new_types.len())
+            BNAddTypeArchiveTypes(
+                self.as_raw(),
+                new_types.as_ptr() as *const _,
+                new_types.len(),
+            )
         };
         assert!(result);
     }

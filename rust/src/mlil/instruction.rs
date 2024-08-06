@@ -5,8 +5,8 @@ use crate::disassembly::InstructionTextToken;
 use crate::operand_iter::OperandIter;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::types::{
-    Conf, ConstantData, DataFlowQueryOption, ILBranchDependence, PossibleValueSet,
-    RegisterValue, RegisterValueType, SSAVariable, Type, Variable,
+    Conf, ConstantData, DataFlowQueryOption, ILBranchDependence, PossibleValueSet, RegisterValue,
+    RegisterValueType, SSAVariable, Type, Variable,
 };
 
 use super::lift::*;

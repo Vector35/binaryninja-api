@@ -1354,7 +1354,7 @@ unsafe impl CoreArrayProviderInner for ComponentReferencedTypes {
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         // SAFETY: BNType and Type are trasparent
-        core::mem::transmute(raw)
+        &*(raw as *const _ as *const Type)
     }
 }
 
@@ -1475,7 +1475,7 @@ unsafe impl CoreArrayProviderInner for (&str, Variable, &Type) {
     ) -> (&'a str, Variable, &'a Type) {
         let name = CStr::from_ptr(raw.name).to_str().unwrap();
         let var = Variable::from_raw(raw.var);
-        let var_type = core::mem::transmute(&raw.type_);
+        let var_type = &*(&raw.type_ as *const _ as *const Type);
         (name, var, var_type)
     }
 }
@@ -2422,6 +2422,10 @@ impl Debug for NamedTypeReference {
 pub struct QualifiedName(pub(crate) BNQualifiedName);
 
 impl QualifiedName {
+    fn ref_from_raw(handle: &BNQualifiedName) -> &Self {
+        unsafe { &*(handle as *const _ as *const Self) }
+    }
+
     // TODO : I think this is bad
     pub fn string(&self) -> String {
         unsafe {
@@ -2544,7 +2548,7 @@ unsafe impl CoreArrayProviderInner for QualifiedName {
         BNFreeTypeNameList(raw, count);
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        mem::transmute(raw)
+        Self::ref_from_raw(raw)
     }
 }
 
@@ -2556,7 +2560,7 @@ pub struct QualifiedNameAndType(pub(crate) BNQualifiedNameAndType);
 
 impl QualifiedNameAndType {
     pub fn name(&self) -> &QualifiedName {
-        unsafe { mem::transmute(&self.0.name) }
+        QualifiedName::ref_from_raw(&self.0.name)
     }
 
     pub fn type_object(&self) -> Guard<Type> {
@@ -2582,7 +2586,7 @@ unsafe impl CoreArrayProviderInner for QualifiedNameAndType {
         BNFreeTypeAndNameList(raw, count);
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        mem::transmute(raw)
+        &*(raw as *const _ as *const Self)
     }
 }
 
@@ -2594,7 +2598,7 @@ pub struct QualifiedNameTypeAndId(pub(crate) BNQualifiedNameTypeAndId);
 
 impl QualifiedNameTypeAndId {
     pub fn name(&self) -> &QualifiedName {
-        unsafe { mem::transmute(&self.0.name) }
+        QualifiedName::ref_from_raw(&self.0.name)
     }
 
     pub fn id(&self) -> &str {
@@ -2624,7 +2628,7 @@ unsafe impl CoreArrayProviderInner for QualifiedNameTypeAndId {
         BNFreeTypeIdList(raw, count);
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        mem::transmute(raw)
+        &*(raw as *const _ as *const Self)
     }
 }
 
@@ -2656,7 +2660,7 @@ impl NameAndType {
     }
 
     pub fn t(&self) -> &Type {
-        unsafe { mem::transmute::<_, &Type>(&self.0.type_) }
+        unsafe { &*(&self.0.type_ as *const _ as *const Type) }
     }
 
     pub fn type_with_confidence(&self) -> Conf<&Type> {
@@ -2730,7 +2734,7 @@ impl DataVariable {
     }
 
     pub fn t(&self) -> &Type {
-        unsafe { mem::transmute(&self.0.type_) }
+        unsafe { &*(&self.0.type_ as *const _ as *const Type) }
     }
 
     pub fn type_with_confidence(&self) -> Conf<&Type> {
@@ -2775,7 +2779,7 @@ unsafe impl CoreArrayProviderInner for DataVariable {
         BNFreeDataVariables(raw, count);
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        mem::transmute(raw)
+        &*(raw as *const _ as *const Self)
     }
 }
 

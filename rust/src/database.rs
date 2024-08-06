@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use std::{ffi, mem, ptr};
+use std::{ffi, ptr};
 
 use binaryninjacore_sys::*;
 
@@ -232,7 +232,7 @@ impl Snapshot {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: &*mut BNSnapshot) -> &Self {
-        mem::transmute(handle)
+        &*(handle as *const _ as *const Self)
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -520,7 +520,7 @@ impl UndoEntry {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: &*mut BNUndoEntry) -> &Self {
-        mem::transmute(handle)
+        &*(handle as *const _ as *const Self)
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -588,7 +588,7 @@ impl UndoAction {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: &*mut BNUndoAction) -> &Self {
-        mem::transmute(handle)
+        &*(handle as *const _ as *const Self)
     }
 
     #[allow(clippy::mut_from_ref)]

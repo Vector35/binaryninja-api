@@ -40,8 +40,8 @@ pub use binaryninjacore_sys::BNAnalysisSkipReason as AnalysisSkipReason;
 pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisSkipOverride;
 pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
 
-use std::{fmt, mem};
 use std::{ffi::c_char, hash::Hash, ops::Range};
+use std::{fmt, mem};
 
 pub struct Location {
     pub arch: Option<CoreArchitecture>,
@@ -2142,9 +2142,10 @@ impl Function {
 
     pub fn parent_components(&self) -> Array<Component> {
         let mut count = 0;
-        let result = unsafe{ BNGetFunctionParentComponents(self.view().handle, self.handle, &mut count) };
+        let result =
+            unsafe { BNGetFunctionParentComponents(self.view().handle, self.handle, &mut count) };
         assert!(!result.is_null());
-        unsafe{ Array::new(result, count, ()) }
+        unsafe { Array::new(result, count, ()) }
     }
 }
 
@@ -2241,7 +2242,7 @@ unsafe impl CoreArrayProviderInner for AddressRange {
         BNFreeAddressRanges(raw);
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        mem::transmute(raw)
+        &*(raw as *const _ as *const Self)
     }
 }
 

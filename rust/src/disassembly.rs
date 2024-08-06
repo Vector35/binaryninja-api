@@ -100,7 +100,7 @@ pub enum InstructionTextTokenContents {
 
 impl InstructionTextToken {
     pub(crate) unsafe fn from_raw(raw: &BNInstructionTextToken) -> &Self {
-        mem::transmute(raw)
+        &*(raw as *const _ as *const Self)
     }
 
     pub(crate) fn into_raw(self) -> BNInstructionTextToken {
@@ -279,7 +279,7 @@ unsafe impl CoreArrayProviderInner for InstructionTextToken {
         BNFreeInstructionText(raw, count)
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        core::mem::transmute(raw)
+        Self::from_raw(raw)
     }
 }
 
@@ -382,7 +382,9 @@ impl From<&Vec<&str>> for DisassemblyTextLine {
     fn from(string_tokens: &Vec<&str>) -> Self {
         let mut tokens: Box<[BNInstructionTextToken]> = string_tokens
             .iter()
-            .map(|&token| InstructionTextToken::new(token, InstructionTextTokenContents::Text).into_raw())
+            .map(|&token| {
+                InstructionTextToken::new(token, InstructionTextTokenContents::Text).into_raw()
+            })
             .collect();
 
         // let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() };  // Can't use for now...still a rust nighly feature
@@ -466,7 +468,7 @@ unsafe impl CoreArrayProviderInner for DisassemblyTextLine {
         BNFreeDisassemblyTextLines(raw, count)
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        core::mem::transmute(raw)
+        &*(raw as *const _ as *const Self)
     }
 }
 

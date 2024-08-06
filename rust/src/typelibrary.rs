@@ -1,6 +1,6 @@
 use binaryninjacore_sys::*;
 
-use core::{ffi, mem, ptr};
+use core::{ffi, ptr};
 
 use crate::{
     architecture::CoreArchitecture,
@@ -23,7 +23,7 @@ impl TypeLibrary {
 
     pub(crate) unsafe fn ref_from_raw(handle: &*mut BNTypeLibrary) -> &Self {
         assert!(!handle.is_null());
-        mem::transmute(handle)
+        &*(handle as *const _ as *const Self)
     }
 
     #[allow(clippy::mut_from_ref)]

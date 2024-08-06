@@ -311,14 +311,11 @@ impl From<&BNDebugFunctionInfo> for DebugFunctionInfo {
             .map(|component| raw_to_string(*component as *const _).unwrap())
             .collect();
 
-        let local_variables: Vec<NamedTypedVariable> = unsafe { slice::from_raw_parts(raw.localVariables, raw.localVariableN) }
-            .iter()
-            .map(|local_variable| {
-                unsafe {
-                    NamedTypedVariable::from_raw(local_variable)
-                }
-            })
-            .collect();
+        let local_variables: Vec<NamedTypedVariable> =
+            unsafe { slice::from_raw_parts(raw.localVariables, raw.localVariableN) }
+                .iter()
+                .map(|local_variable| unsafe { NamedTypedVariable::from_raw(local_variable) })
+                .collect();
 
         Self {
             short_name: raw_to_string(raw.shortName),
@@ -433,10 +430,7 @@ impl DebugInfo {
     }
 
     /// Returns a generator of all functions provided by a named DebugInfoParser
-    pub fn functions_by_name<S: BnStrCompatible>(
-        &self,
-        parser_name: S
-    ) -> Vec<DebugFunctionInfo> {
+    pub fn functions_by_name<S: BnStrCompatible>(&self, parser_name: S) -> Vec<DebugFunctionInfo> {
         let parser_name = parser_name.into_bytes_with_nul();
 
         let mut count: usize = 0;
@@ -790,25 +784,26 @@ impl DebugInfo {
         let mut components_array: Vec<*mut ::std::os::raw::c_char> =
             Vec::with_capacity(new_func.components.len());
 
-
         let mut local_variables_array: Vec<BNVariableNameAndType> =
             Vec::with_capacity(new_func.local_variables.len());
 
         unsafe {
             for component in &new_func.components {
-                components_array.push(BNAllocString(component.clone().into_bytes_with_nul().as_ptr() as _));
+                components_array.push(BNAllocString(
+                    component.clone().into_bytes_with_nul().as_ptr() as _,
+                ));
             }
 
             for local_variable in &new_func.local_variables {
-                local_variables_array.push(
-                    BNVariableNameAndType {
-                        var: local_variable.var.raw(),
-                        autoDefined: local_variable.auto_defined,
-                        typeConfidence: local_variable.ty.confidence,
-                        name: BNAllocString(local_variable.name.clone().into_bytes_with_nul().as_ptr() as _),
-                        type_: local_variable.ty.contents.handle,
-                    }
-                );
+                local_variables_array.push(BNVariableNameAndType {
+                    var: local_variable.var.raw(),
+                    autoDefined: local_variable.auto_defined,
+                    typeConfidence: local_variable.ty.confidence,
+                    name: BNAllocString(
+                        local_variable.name.clone().into_bytes_with_nul().as_ptr() as _
+                    ),
+                    type_: local_variable.ty.contents.handle,
+                });
             }
 
             let result = BNAddDebugFunction(

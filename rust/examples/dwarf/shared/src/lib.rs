@@ -19,8 +19,8 @@ use binaryninja::binaryninjacore_sys::*;
 use binaryninja::{
     binaryview::{BinaryView, BinaryViewBase, BinaryViewExt},
     databuffer::DataBuffer,
-    Endianness,
     settings::Settings,
+    Endianness,
 };
 
 use std::{ffi::CString, rc::Rc};
@@ -54,14 +54,13 @@ pub fn is_raw_dwo_dwarf(view: &BinaryView) -> bool {
 }
 
 pub fn can_use_debuginfod(view: &BinaryView) -> bool {
-    has_build_id_section(view) &&
-    Settings::new("")
-        .get_bool("network.enableDebuginfod", Some(view), None)
+    has_build_id_section(view)
+        && Settings::new("").get_bool("network.enableDebuginfod", Some(view), None)
 }
 
 pub fn has_build_id_section(view: &BinaryView) -> bool {
     if let Ok(raw_view) = view.raw_view() {
-        return raw_view.section_by_name(".note.gnu.build-id").is_ok()
+        return raw_view.section_by_name(".note.gnu.build-id").is_ok();
     }
     false
 }
@@ -114,22 +113,20 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
                     .find(|section_header| {
                         if view.address_size() == 4 {
                             endian.read_u32(&section_header[16..20]) as u64 == section.start()
-                        }
-                        else {
+                        } else {
                             endian.read_u64(&section_header[24..32]) == section.start()
                         }
                     })
                 {
                     let section_flags = if view.address_size() == 4 {
                         endian.read_u32(&current_section_header[8..12]) as u64
-                    }
-                    else {
+                    } else {
                         endian.read_u64(&current_section_header[8..16])
                     };
                     // If the section has the compressed bit set
                     if (section_flags & 2048) != 0 {
                         // Get section, trim header, decompress, return
-                        let compressed_header_size = view.address_size()*3;
+                        let compressed_header_size = view.address_size() * 3;
 
                         let offset = section.start() + compressed_header_size as u64;
                         let len = section.len() - compressed_header_size;

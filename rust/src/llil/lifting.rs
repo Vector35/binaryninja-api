@@ -610,9 +610,7 @@ where
     pub fn from_expr(expr: Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R>) -> Self {
         use binaryninjacore_sys::BNGetLowLevelILByIndex;
 
-        let instr = unsafe {
-            BNGetLowLevelILByIndex(expr.function.handle, expr.expr_idx)
-        };
+        let instr = unsafe { BNGetLowLevelILByIndex(expr.function.handle, expr.expr_idx) };
 
         ExpressionBuilder {
             function: expr.function,
@@ -623,7 +621,7 @@ where
             op2: instr.operands[1],
             op3: instr.operands[2],
             op4: instr.operands[3],
-            _ty: PhantomData
+            _ty: PhantomData,
         }
     }
 

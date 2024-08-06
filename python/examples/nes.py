@@ -87,7 +87,7 @@ class M6502(Architecture):
 	flags = [c_flag, z_flag, i_flag, d_flag, b_flag, v_flag, s_flag]
 	flag_write_types = [FlagWriteTypeName("*"), FlagWriteTypeName("czs"), FlagWriteTypeName("zvs"),FlagWriteTypeName( "zs")]
 	flag_roles = {
-	  c_flag: FlagRole.SpecialFlagRole,  # Not a normal carry flag, subtract result is inverted
+	  c_flag: FlagRole.CarryFlagWithInvertedSubtractRole,
 	  z_flag: FlagRole.ZeroFlagRole, v_flag: FlagRole.OverflowFlagRole, s_flag: FlagRole.NegativeSignFlagRole
 	}
 	flags_required_for_flag_condition = {
@@ -104,8 +104,8 @@ class M6502(Architecture):
 		Mnemonic("asl"):lambda il, operand: il.store(1, operand, il.shift_left(1, il.load(1, operand), il.const(1, 1), flags=FlagName("czs"))),
 		Mnemonic("asl@"):lambda il, operand: il.set_reg(1, a_reg, il.shift_left(1, operand, il.const(1, 1), flags=FlagName("czs"))),
 		Mnemonic("and"):lambda il, operand: il.set_reg(1, a_reg, il.and_expr(1, il.reg(1, a_reg), operand, flags=FlagName("zs"))),
-		Mnemonic("bcc"):lambda il, operand: M6502.cond_branch(il, il.flag_condition(LowLevelILFlagCondition.LLFC_UGE), operand),
-		Mnemonic("bcs"):lambda il, operand: M6502.cond_branch(il, il.flag_condition(LowLevelILFlagCondition.LLFC_ULT), operand),
+		Mnemonic("bcc"):lambda il, operand: M6502.cond_branch(il, il.flag_condition(LowLevelILFlagCondition.LLFC_ULT), operand),
+		Mnemonic("bcs"):lambda il, operand: M6502.cond_branch(il, il.flag_condition(LowLevelILFlagCondition.LLFC_UGE), operand),
 		Mnemonic("beq"):lambda il, operand: M6502.cond_branch(il, il.flag_condition(LowLevelILFlagCondition.LLFC_E), operand),
 		Mnemonic("bit"):lambda il, operand: il.and_expr(1, il.reg(1, a_reg), operand, flags=FlagName("czs")),
 		Mnemonic("bmi"):lambda il, operand: M6502.cond_branch(il, il.flag_condition(LowLevelILFlagCondition.LLFC_NEG), operand),
@@ -528,15 +528,6 @@ class M6502(Architecture):
 			il.append(i)
 		return length
 
-	def get_flag_write_low_level_il(self, op: LowLevelILOperation, size: int, write_type: Optional[FlagWriteTypeName], flag: FlagType, operands: List[ILRegisterType], il: LowLevelILFunction) -> ExpressionIndex:
-		if flag == 'c':
-			if (op == LowLevelILOperation.LLIL_SUB) or (op == LowLevelILOperation.LLIL_SBB):
-				# Subtraction carry flag is inverted from the commom implementation
-				return il.not_expr(0, self.get_default_flag_write_low_level_il(op, size, FlagRole.CarryFlagRole, operands, il))
-			# Other operations use a normal carry flag
-			return self.get_default_flag_write_low_level_il(op, size, FlagRole.CarryFlagRole, operands, il)
-		return Architecture.get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il)
-
 	def is_never_branch_patch_available(self, data:bytes, addr:int) -> bool:
 		if (data[0:1] == b"\x10") or (data[0:1] == b"\x30") or (data[0:1] == b"\x50") or (data[0:1] == b"\x70") or (
 		  data[0:1] == b"\x90"
@@ -708,7 +699,7 @@ class NESView(BinaryView):
 		return True
 
 	def perform_get_address_size(self) -> int:
-		return self.address_size
+		return 2
 
 	def perform_get_entry_point(self) -> int:
 		return struct.unpack("<H", self.read(0xfffc, 2))[0]

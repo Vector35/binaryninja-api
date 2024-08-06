@@ -1511,7 +1511,7 @@ class Arm64Architecture : public Architecture
 		case IL_FLAG_Z:
 			return ZeroFlagRole;
 		case IL_FLAG_C:
-			return CarryFlagRole;
+			return CarryFlagWithInvertedSubtractRole;
 		case IL_FLAG_V:
 			return OverflowFlagRole;
 		default:

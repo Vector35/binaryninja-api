@@ -18,6 +18,8 @@ use std::collections::BTreeMap;
 use std::marker::PhantomData;
 use std::mem;
 
+use crate::architecture::{FlagGroupId, FlagWriteId, IntrinsicId};
+
 use super::*;
 
 pub struct Operation<'func, A, M, F, O>
@@ -61,7 +63,7 @@ where
     pub fn flag_write(&self) -> Option<A::FlagWrite> {
         match self.op.flags {
             0 => None,
-            id => self.function.arch().flag_write_from_id(id),
+            id => self.function.arch().flag_write_from_id(FlagWriteId(id)),
         }
     }
 }
@@ -98,7 +100,7 @@ where
     // TODO: Support register and expression lists
     pub fn intrinsic(&self) -> Option<A::Intrinsic> {
         let raw_id = self.op.operands[2] as u32;
-        self.function.arch().intrinsic_from_id(raw_id)
+        self.function.arch().intrinsic_from_id(IntrinsicId(raw_id))
     }
 }
 
@@ -123,7 +125,7 @@ where
         } else {
             self.function
                 .arch()
-                .register_from_id(raw_id)
+                .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
                     error!(
@@ -162,7 +164,7 @@ where
         } else {
             self.function
                 .arch()
-                .register_from_id(raw_id)
+                .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
                     error!(
@@ -183,7 +185,7 @@ where
         } else {
             self.function
                 .arch()
-                .register_from_id(raw_id)
+                .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
                     error!(
@@ -276,7 +278,7 @@ where
         } else {
             self.function
                 .arch()
-                .register_from_id(raw_id)
+                .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
                     error!(
@@ -538,7 +540,10 @@ where
 {
     pub fn flag_group(&self) -> A::FlagGroup {
         let id = self.op.operands[0] as u32;
-        self.function.arch().flag_group_from_id(id).unwrap()
+        self.function
+            .arch()
+            .flag_group_from_id(FlagGroupId(id))
+            .unwrap()
     }
 }
 

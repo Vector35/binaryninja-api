@@ -45,7 +45,7 @@ pub struct PDBParserInstance<'a, S: Source<'a> + 'a> {
     /// Parent binary view (usually during BinaryView::Finalize)
     pub(crate) bv: &'a BinaryView,
     /// Default arch of self.bv
-    pub(crate) arch: CoreArchitecture,
+    pub(crate) arch: &'static CoreArchitecture,
     /// Default calling convention for self.arch
     pub(crate) default_cc: Ref<CallingConvention<CoreArchitecture>>,
     /// Thiscall calling convention for self.bv, or default_cc if we can't find one

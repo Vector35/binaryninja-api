@@ -375,7 +375,7 @@ where
     let expr_idx = unsafe {
         use binaryninjacore_sys::BNGetDefaultArchitectureFlagWriteLowLevelIL;
         BNGetDefaultArchitectureFlagWriteLowLevelIL(
-            arch.as_ref().0,
+            arch.core().as_ptr(),
             operation,
             size,
             role,
@@ -399,12 +399,12 @@ where
 {
     use binaryninjacore_sys::BNGetDefaultArchitectureFlagConditionLowLevelIL;
 
-    let handle = arch.as_ref();
+    let handle = arch.core().as_ptr();
     let class_id = class.map(|c| c.id()).unwrap_or(0);
 
     unsafe {
         let expr_idx =
-            BNGetDefaultArchitectureFlagConditionLowLevelIL(handle.0, cond, class_id, il.handle);
+            BNGetDefaultArchitectureFlagConditionLowLevelIL(handle, cond, class_id, il.handle);
 
         Expression::new(il, expr_idx)
     }
@@ -1437,10 +1437,10 @@ where
         use binaryninjacore_sys::BNLowLevelILSetCurrentAddress;
 
         let loc: Location = loc.into();
-        let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
+        let arch = loc.arch.unwrap_or_else(|| self.arch().core());
 
         unsafe {
-            BNLowLevelILSetCurrentAddress(self.handle, arch.0, loc.addr);
+            BNLowLevelILSetCurrentAddress(self.handle, arch.as_ptr(), loc.addr);
         }
     }
 
@@ -1448,9 +1448,9 @@ where
         use binaryninjacore_sys::BNGetLowLevelILLabelForAddress;
 
         let loc: Location = loc.into();
-        let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
+        let arch = loc.arch.unwrap_or_else(|| self.arch().core());
 
-        let res = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.0, loc.addr) };
+        let res = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.as_ptr(), loc.addr) };
 
         if res.is_null() {
             None

@@ -906,7 +906,7 @@ impl MediumLevelILInstruction {
                 output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
                     .vars()
                     .collect(),
-                intrinsic: CoreIntrinsic(self.function.get_function().arch().0, op.intrinsic),
+                intrinsic: CoreIntrinsic(self.function.get_function().arch(), op.intrinsic),
                 params: OperandIter::new(&*self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())
@@ -925,7 +925,7 @@ impl MediumLevelILInstruction {
                 output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
                     .ssa_vars()
                     .collect(),
-                intrinsic: CoreIntrinsic(self.function.get_function().arch().0, op.intrinsic),
+                intrinsic: CoreIntrinsic(self.function.get_function().arch(), op.intrinsic),
                 params: OperandIter::new(&*self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())
@@ -1040,7 +1040,7 @@ impl MediumLevelILInstruction {
         assert!(unsafe {
             BNGetMediumLevelILExprText(
                 self.function.handle,
-                self.function.get_function().arch().0,
+                self.function.get_function().arch().as_ptr(),
                 self.index,
                 &mut tokens,
                 &mut count,

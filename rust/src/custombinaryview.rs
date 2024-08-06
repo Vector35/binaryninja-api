@@ -329,7 +329,7 @@ pub unsafe trait CustomBinaryView: 'static + BinaryViewBase + Sync + Sized {
     type Args: Send;
 
     fn new(handle: &BinaryView, args: &Self::Args) -> Result<Self>;
-    fn init(&self, args: Self::Args) -> Result<()>;
+    fn init(&mut self, args: Self::Args) -> Result<()>;
 }
 
 /// Represents a partially initialized custom `BinaryView` that should be returned to the core
@@ -432,7 +432,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
 
                         match context
                             .view
-                            .assume_init_ref()
+                            .assume_init_mut()
                             .init(ptr::read(&context.args))
                         {
                             Ok(_) => true,

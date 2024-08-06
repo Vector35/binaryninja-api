@@ -1,9 +1,8 @@
 #include "rtti.h"
 
-#include <utility>
-
 using namespace BinaryNinja;
 
+constexpr int COL_SIG_REV0 = 0;
 constexpr int COL_SIG_REV1 = 1;
 constexpr int RTTI_CONFIDENCE = 100;
 
@@ -84,7 +83,7 @@ std::optional<CompleteObjectLocator> ReadCompleteObjectorLocator(BinaryView *vie
 
     if (coLocator.signature == COL_SIG_REV1)
     {
-        if (coLocator.pSelf != address - startAddr)
+        if (coLocator.pSelf + startAddr != address)
             return std::nullopt;
 
         // Relative addrs
@@ -130,8 +129,8 @@ Ref<Type> GetPMDType(BinaryView* view)
 }
 
 
-Ref<Type> ClassHierarchyDescriptorType(BinaryView* view);
-Ref<Type> BaseClassDescriptorType(BinaryView* view)
+Ref<Type> ClassHierarchyDescriptorType(BinaryView* view, BNPointerBaseType ptrBaseTy);
+Ref<Type> BaseClassDescriptorType(BinaryView* view, BNPointerBaseType ptrBaseTy)
 {
     auto typeId = Type::GenerateAutoTypeId("msvc_rtti", QualifiedName("RTTIBaseClassDescriptor"));
     Ref<Type> typeCache = view->GetTypeById(typeId);
@@ -143,14 +142,14 @@ Ref<Type> BaseClassDescriptorType(BinaryView* view)
         StructureBuilder baseClassDescriptorBuilder;
         // Would require creating a new type for every type descriptor length. Instead just use void*
         Ref<Type> pTypeDescType = TypeBuilder::PointerType(4, Type::VoidType())
-            .SetPointerBase(RelativeToBinaryStartPointerBaseType, 0)
+            .SetPointerBase(ptrBaseTy, 0)
             .Finalize();
         baseClassDescriptorBuilder.AddMember(pTypeDescType, "pTypeDescriptor");
         baseClassDescriptorBuilder.AddMember(uintType, "numContainedBases");
         baseClassDescriptorBuilder.AddMember(GetPMDType(view), "where");
         baseClassDescriptorBuilder.AddMember(uintType, "attributes");
-        Ref<Type> pClassDescType = TypeBuilder::PointerType(4, ClassHierarchyDescriptorType(view))
-            .SetPointerBase(RelativeToBinaryStartPointerBaseType, 0)
+        Ref<Type> pClassDescType = TypeBuilder::PointerType(4, ClassHierarchyDescriptorType(view, ptrBaseTy))
+            .SetPointerBase(ptrBaseTy, 0)
             .Finalize();
         baseClassDescriptorBuilder.AddMember(pClassDescType, "pClassDescriptor");
 
@@ -163,11 +162,11 @@ Ref<Type> BaseClassDescriptorType(BinaryView* view)
 }
 
 
-Ref<Type> BaseClassArrayType(BinaryView* view, const uint64_t length)
+Ref<Type> BaseClassArrayType(BinaryView* view, const uint64_t length, BNPointerBaseType ptrBaseTy)
 {
     StructureBuilder baseClassArrayBuilder;
-    Ref<Type> pBaseClassDescType = TypeBuilder::PointerType(4, BaseClassDescriptorType(view))
-        .SetPointerBase(RelativeToBinaryStartPointerBaseType, 0)
+    Ref<Type> pBaseClassDescType = TypeBuilder::PointerType(4, BaseClassDescriptorType(view, ptrBaseTy))
+        .SetPointerBase(ptrBaseTy, 0)
         .Finalize();
     baseClassArrayBuilder.AddMember(
         Type::ArrayType(pBaseClassDescType, length), "arrayOfBaseClassDescriptors");
@@ -175,7 +174,7 @@ Ref<Type> BaseClassArrayType(BinaryView* view, const uint64_t length)
 }
 
 
-Ref<Type> ClassHierarchyDescriptorType(BinaryView* view)
+Ref<Type> ClassHierarchyDescriptorType(BinaryView* view, BNPointerBaseType ptrBaseTy)
 {
     auto typeId = Type::GenerateAutoTypeId("msvc_rtti", QualifiedName("RTTIClassHierarchyDescriptor"));
     Ref<Type> typeCache = view->GetTypeById(typeId);
@@ -189,7 +188,7 @@ Ref<Type> ClassHierarchyDescriptorType(BinaryView* view)
         classHierarchyDescriptorBuilder.AddMember(uintType, "attributes");
         classHierarchyDescriptorBuilder.AddMember(uintType, "numBaseClasses");
         Ref<Type> pBaseClassArrayType = TypeBuilder::PointerType(4, Type::VoidType())
-            .SetPointerBase(RelativeToBinaryStartPointerBaseType, 0)
+            .SetPointerBase(ptrBaseTy, 0)
             .Finalize();
         classHierarchyDescriptorBuilder.AddMember(pBaseClassArrayType, "pBaseClassArray");
 
@@ -215,25 +214,63 @@ Ref<Type> CompleteObjectLocator64Type(BinaryView *view)
 
         StructureBuilder completeObjectLocatorBuilder;
         Ref<Enumeration> sigEnum = EnumerationBuilder()
-            .AddMemberWithValue("COL_SIG_REV0", 0)
-            .AddMemberWithValue("COL_SIG_REV1", 1)
-            .Finalize();
+                .AddMemberWithValue("COL_SIG_REV0", 0)
+                .AddMemberWithValue("COL_SIG_REV1", 1)
+                .Finalize();
         Ref<Type> sigType = Type::EnumerationType(arch, sigEnum, 4);
         completeObjectLocatorBuilder.AddMember(sigType, "signature");
         completeObjectLocatorBuilder.AddMember(uintType, "offset");
         completeObjectLocatorBuilder.AddMember(uintType, "cdOffset");
         Ref<Type> pTypeDescType = TypeBuilder::PointerType(4, Type::VoidType())
-            .SetPointerBase(RelativeToBinaryStartPointerBaseType, 0)
-            .Finalize();
+                .SetPointerBase(RelativeToBinaryStartPointerBaseType, 0)
+                .Finalize();
         completeObjectLocatorBuilder.AddMember(pTypeDescType, "pTypeDescriptor");
-        Ref<Type> pClassHierarchyDescType = TypeBuilder::PointerType(4, ClassHierarchyDescriptorType(view))
-            .SetPointerBase(RelativeToBinaryStartPointerBaseType, 0)
-            .Finalize();
+        Ref<Type> pClassHierarchyDescType = TypeBuilder::PointerType(
+                    4, ClassHierarchyDescriptorType(view, RelativeToBinaryStartPointerBaseType))
+                .SetPointerBase(RelativeToBinaryStartPointerBaseType, 0)
+                .Finalize();
         completeObjectLocatorBuilder.AddMember(pClassHierarchyDescType, "pClassHierarchyDescriptor");
         Ref<Type> pSelfType = TypeBuilder::PointerType(4, Type::NamedType(view, typeId))
-            .SetPointerBase(RelativeToBinaryStartPointerBaseType, 0)
-            .Finalize();
+                .SetPointerBase(RelativeToBinaryStartPointerBaseType, 0)
+                .Finalize();
         completeObjectLocatorBuilder.AddMember(pSelfType, "pSelf");
+
+        view->DefineType(typeId, QualifiedName("_RTTICompleteObjectLocator"),
+                         TypeBuilder::StructureType(&completeObjectLocatorBuilder).Finalize());
+
+        typeCache = view->GetTypeById(typeId);
+    }
+
+    return typeCache;
+}
+
+
+Ref<Type> CompleteObjectLocator32Type(BinaryView *view)
+{
+    auto typeId = Type::GenerateAutoTypeId("msvc_rtti", QualifiedName("RTTICompleteObjectLocator32"));
+    Ref<Type> typeCache = view->GetTypeById(typeId);
+
+    if (typeCache == nullptr)
+    {
+        Ref<Architecture> arch = view->GetDefaultArchitecture();
+        Ref<Type> uintType = Type::IntegerType(4, false);
+
+        StructureBuilder completeObjectLocatorBuilder;
+        Ref<Enumeration> sigEnum = EnumerationBuilder()
+                .AddMemberWithValue("COL_SIG_REV0", 0)
+                .AddMemberWithValue("COL_SIG_REV1", 1)
+                .Finalize();
+        Ref<Type> sigType = Type::EnumerationType(arch, sigEnum, 4);
+        completeObjectLocatorBuilder.AddMember(sigType, "signature");
+        completeObjectLocatorBuilder.AddMember(uintType, "offset");
+        completeObjectLocatorBuilder.AddMember(uintType, "cdOffset");
+        Ref<Type> pTypeDescType = TypeBuilder::PointerType(4, Type::VoidType())
+                .Finalize();
+        completeObjectLocatorBuilder.AddMember(pTypeDescType, "pTypeDescriptor");
+        Ref<Type> pClassHierarchyDescType = TypeBuilder::PointerType(
+                    4, ClassHierarchyDescriptorType(view, AbsolutePointerBaseType))
+                .Finalize();
+        completeObjectLocatorBuilder.AddMember(pClassHierarchyDescType, "pClassHierarchyDescriptor");
 
         view->DefineType(typeId, QualifiedName("_RTTICompleteObjectLocator"),
                          TypeBuilder::StructureType(&completeObjectLocatorBuilder).Finalize());
@@ -262,7 +299,19 @@ std::optional<std::string> MicrosoftRTTIProcessor::DemangleName(const std::strin
     QualifiedName demangledName = {};
     Ref<Type> outType = {};
     if (!DemangleMS(m_view->GetDefaultArchitecture(), mangledName, outType, demangledName, true))
-        return allowMangledClassNames ? std::optional(mangledName) : std::nullopt;
+    {
+        // Try to use LLVM demangler.
+        if (!DemangleLLVM(mangledName, demangledName, true))
+            return allowMangledClassNames ? std::optional(mangledName) : std::nullopt;
+        auto demangledNameStr = demangledName.GetString();
+        size_t beginFind = demangledNameStr.find_first_of(' ');
+        if (beginFind != std::string::npos)
+            demangledNameStr.erase(0, beginFind + 1);
+        size_t endFind = demangledNameStr.find(" `RTTI Type Descriptor Name'");
+        if (endFind != std::string::npos)
+            demangledNameStr.erase(endFind, demangledNameStr.length());
+        return demangledNameStr;
+    }
     return demangledName.GetString();
 }
 
@@ -278,6 +327,8 @@ std::optional<ClassInfo> MicrosoftRTTIProcessor::ProcessRTTI(uint64_t coLocatorA
     auto resolveAddr = [&](const uint64_t relAddr) {
         return coLocator->signature == COL_SIG_REV1 ? startAddr + relAddr : relAddr;
     };
+
+    auto ptrBaseTy = coLocator->signature ? RelativeToBinaryStartPointerBaseType : AbsolutePointerBaseType;
 
     // Get type descriptor then check to see if the class name was demangled.
     auto typeDescAddr = resolveAddr(coLocator->pTypeDescriptor);
@@ -296,13 +347,13 @@ std::optional<ClassInfo> MicrosoftRTTIProcessor::ProcessRTTI(uint64_t coLocatorA
     auto classHierarchyDesc = ClassHierarchyDescriptor(m_view, classHierarchyDescAddr);
     auto classHierarchyDescName = fmt::format("{}::`RTTI Class Hierarchy Descriptor'", classInfo.className);
     m_view->DefineAutoSymbol(new Symbol {DataSymbol, classHierarchyDescName, classHierarchyDescAddr});
-    m_view->DefineDataVariable(classHierarchyDescAddr, Confidence(ClassHierarchyDescriptorType(m_view), RTTI_CONFIDENCE));
+    m_view->DefineDataVariable(classHierarchyDescAddr, Confidence(ClassHierarchyDescriptorType(m_view, ptrBaseTy), RTTI_CONFIDENCE));
 
     auto baseClassArrayAddr = resolveAddr(classHierarchyDesc.pBaseClassArray);
     auto baseClassArray = BaseClassArray(m_view, baseClassArrayAddr, classHierarchyDesc.numBaseClasses);
     auto baseClassArrayName = fmt::format("{}::`RTTI Base Class Array'", classInfo.className);
     m_view->DefineAutoSymbol(new Symbol {DataSymbol, baseClassArrayName, baseClassArrayAddr});
-    m_view->DefineDataVariable(baseClassArrayAddr, Confidence(BaseClassArrayType(m_view, baseClassArray.length), RTTI_CONFIDENCE));
+    m_view->DefineDataVariable(baseClassArrayAddr, Confidence(BaseClassArrayType(m_view, baseClassArray.length, ptrBaseTy), RTTI_CONFIDENCE));
 
     for (auto pBaseClassDescAddr : baseClassArray.descriptors)
     {
@@ -325,7 +376,7 @@ std::optional<ClassInfo> MicrosoftRTTIProcessor::ProcessRTTI(uint64_t coLocatorA
                                              baseClassDesc.where_mdisp, baseClassDesc.where_pdisp,
                                              baseClassDesc.where_vdisp, baseClassDesc.attributes);
         m_view->DefineAutoSymbol(new Symbol {DataSymbol, baseClassDescName, baseClassDescAddr});
-        m_view->DefineDataVariable(baseClassDescAddr, Confidence(BaseClassDescriptorType(m_view), RTTI_CONFIDENCE));
+        m_view->DefineDataVariable(baseClassDescAddr, Confidence(BaseClassDescriptorType(m_view, ptrBaseTy), RTTI_CONFIDENCE));
     }
 
     auto coLocatorName = fmt::format("{}::`RTTI Complete Object Locator'", className.value());
@@ -335,7 +386,7 @@ std::optional<ClassInfo> MicrosoftRTTIProcessor::ProcessRTTI(uint64_t coLocatorA
     if (coLocator->signature == COL_SIG_REV1)
         m_view->DefineDataVariable(coLocatorAddr, Confidence(CompleteObjectLocator64Type(m_view), RTTI_CONFIDENCE));
     else
-        m_logger->LogDebug("COL_SIG_REV0 unsupported symbolizing of colocator...");
+        m_view->DefineDataVariable(coLocatorAddr, Confidence(CompleteObjectLocator32Type(m_view), RTTI_CONFIDENCE));
 
     return classInfo;
 }
@@ -370,6 +421,9 @@ void MicrosoftRTTIProcessor::ProcessVFT(uint64_t vftAddr, const ClassInfo& class
     }
 
     // Create virtual function table type
+    // TODO: Using the base classes vtable type is fine because we dont ascribe any virtual functions with said type
+    // TODO: They actually need to a seperate vtable so that the param points to the class, in case of overrides it needs to
+    // TODO: Substract off the pointer and get the override from the inherited class.
     auto vftTypeName = fmt::format("{}::VTable",
                                    classInfo.baseClassName.has_value()
                                        ? classInfo.baseClassName.value()
@@ -413,39 +467,66 @@ MicrosoftRTTIProcessor::MicrosoftRTTIProcessor(BinaryView *view, bool processVFT
 }
 
 
-void MicrosoftRTTIProcessor::ProcessRTTI64()
+void MicrosoftRTTIProcessor::ProcessRTTI()
 {
-    m_logger->LogInfo("Processing 64bit RTTI...");
+    m_logger->LogInfo("Processing RTTI...");
     uint64_t startAddr = m_view->GetStart();
+    uint64_t endAddr = m_view->GetEnd();
     BinaryReader optReader = BinaryReader(m_view);
     auto addrSize = m_view->GetAddressSize();
 
-    auto scan64 = [&](const Ref<Segment> &segment) {
-        for (uint64_t coLocatorRefAddr = segment->GetStart(); coLocatorRefAddr < segment->GetEnd() - 0x18;
-             coLocatorRefAddr += addrSize)
+    std::map<uint64_t, ClassInfo> coLocators = {};
+    auto scan = [&](const Ref<Segment> &segment) {
+        for (uint64_t coLocatorAddr = segment->GetStart(); coLocatorAddr < segment->GetEnd() - 0x18;
+             coLocatorAddr += addrSize)
         {
-            optReader.Seek(coLocatorRefAddr);
-            uint64_t coLocatorAddr = optReader.ReadPointer();
-            if (coLocatorAddr > m_view->GetStart() && coLocatorAddr < m_view->GetEnd())
+            optReader.Seek(coLocatorAddr);
+            uint32_t sigVal = optReader.Read32();
+            if (sigVal == COL_SIG_REV1)
             {
-                // Make sure we do not read across segment boundary.
-                auto coLocatorSegment = m_view->GetSegmentAt(coLocatorAddr);
-                if (coLocatorSegment != nullptr && coLocatorSegment == segment && coLocatorSegment->GetEnd() -
-                    coLocatorAddr > 0x18)
+                // Check for self reference
+                optReader.SeekRelative(16);
+                if (optReader.Read32() == coLocatorAddr - startAddr)
                 {
-                    optReader.Seek(coLocatorAddr);
-                    uint32_t sigVal = optReader.Read32();
-                    if (sigVal == COL_SIG_REV1)
+                    if (auto classInfo = ProcessRTTI(coLocatorAddr))
+                        coLocators.insert({coLocatorAddr, classInfo.value()});
+                }
+            }
+            else if (sigVal == COL_SIG_REV0)
+            {
+                // Check ?AV
+                optReader.SeekRelative(8);
+                uint64_t typeDescNameAddr = optReader.Read32() + 8;
+                if (typeDescNameAddr > startAddr && typeDescNameAddr < endAddr)
+                {
+                    // Make sure we do not read across segment boundary.
+                    auto typeDescSegment = m_view->GetSegmentAt(typeDescNameAddr);
+                    if (typeDescSegment != nullptr && typeDescSegment->GetEnd() - typeDescNameAddr > 4)
                     {
-                        optReader.SeekRelative(16);
-                        if (optReader.Read32() == coLocatorAddr - startAddr)
+                        optReader.Seek(typeDescNameAddr);
+                        auto typeDescNameStart = optReader.ReadString(4);
+                        if (typeDescNameStart == ".?AV" || typeDescNameStart == ".?AU" || typeDescNameStart == ".?AW")
                         {
-                            auto classInfo = ProcessRTTI(coLocatorAddr);
-                            if (processVirtualFunctionTables && classInfo.has_value())
-                                ProcessVFT(coLocatorRefAddr + addrSize, classInfo.value());
+                            if (auto classInfo = ProcessRTTI(coLocatorAddr))
+                                coLocators.insert({coLocatorAddr, classInfo.value()});
                         }
                     }
                 }
+            }
+        }
+
+        if (processVirtualFunctionTables)
+        {
+            for (uint64_t vtableAddr = segment->GetStart(); vtableAddr < segment->GetEnd() - 0x18;
+            vtableAddr += addrSize)
+            {
+                optReader.Seek(vtableAddr);
+                uint64_t coLocatorAddr = optReader.ReadPointer();
+                auto coLocator = coLocators.find(coLocatorAddr);
+                if (coLocator == coLocators.end())
+                    continue;
+                // Found a vtable reference to colocator.
+                ProcessVFT(vtableAddr + addrSize, coLocator->second);
             }
         }
     };
@@ -457,76 +538,11 @@ void MicrosoftRTTIProcessor::ProcessRTTI64()
         if (segment->GetFlags() == (SegmentReadable | SegmentContainsData))
         {
             m_logger->LogDebug("Attempting to find VirtualFunctionTables in segment %llx", segment->GetStart());
-            scan64(segment);
+            scan(segment);
         } else if (checkWritableRData && rdataSection && rdataSection->GetStart() == segment->GetStart())
         {
             m_logger->LogDebug("Attempting to find VirtualFunctionTables in writable rdata segment %llx", segment->GetStart());
-            scan64(segment);
+            scan(segment);
         }
     }
 }
-
-void MicrosoftRTTIProcessor::ProcessRTTI32()
-{
-    m_logger->LogInfo("Processing 32bit RTTI...");
-    uint64_t startAddr = m_view->GetStart();
-    BinaryReader optReader = BinaryReader(m_view);
-    auto addrSize = m_view->GetAddressSize();
-
-    auto scan32 = [&](const Ref<Segment> &segment) {
-        for (uint64_t coLocatorRefAddr = segment->GetStart(); coLocatorRefAddr < segment->GetEnd() - 0x18;
-             coLocatorRefAddr += addrSize)
-        {
-            optReader.Seek(coLocatorRefAddr);
-            uint64_t coLocatorAddr = optReader.ReadPointer();
-            if (coLocatorAddr > m_view->GetStart() && coLocatorAddr < m_view->GetEnd())
-            {
-                // Make sure we do not read across segment boundary.
-                auto coLocatorSegment = m_view->GetSegmentAt(coLocatorAddr);
-                if (coLocatorSegment != nullptr && coLocatorSegment == segment && coLocatorSegment->GetEnd() -
-                    coLocatorAddr > 0x18)
-                {
-                    optReader.Seek(coLocatorAddr);
-                    uint32_t sigVal = optReader.Read32();
-                    if (sigVal == 0)
-                    {
-                        // Check ?AV
-                        optReader.SeekRelative(8);
-                        uint64_t typeDescNameAddr = optReader.Read32() + 8;
-                        if (typeDescNameAddr > m_view->GetStart() && typeDescNameAddr < m_view->GetEnd())
-                        {
-                            // Make sure we do not read across segment boundary.
-                            auto typeDescSegment = m_view->GetSegmentAt(typeDescNameAddr);
-                            if (typeDescSegment != nullptr && typeDescSegment->GetEnd() - typeDescNameAddr > 4)
-                            {
-                                optReader.Seek(typeDescNameAddr);
-                                if (optReader.ReadString(4) == ".?AV")
-                                {
-                                    auto classInfo = ProcessRTTI(coLocatorAddr);
-                                    if (processVirtualFunctionTables && classInfo.has_value())
-                                        ProcessVFT(coLocatorRefAddr + addrSize, classInfo.value());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    };
-
-    // Scan data sections for colocators.
-    auto rdataSection = m_view->GetSectionByName(".rdata");
-    for (const Ref<Segment>& segment : m_view->GetSegments())
-    {
-        if (segment->GetFlags() == (SegmentReadable | SegmentContainsData))
-        {
-            m_logger->LogDebug("Attempting to find VirtualFunctionTables in segment %llx", segment->GetStart());
-            scan32(segment);
-        } else if (checkWritableRData && rdataSection && rdataSection->GetStart() == segment->GetStart())
-        {
-            m_logger->LogDebug("Attempting to find VirtualFunctionTables in writable rdata segment %llx", segment->GetStart());
-            scan32(segment);
-        }
-    }
-}
-

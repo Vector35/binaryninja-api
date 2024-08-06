@@ -75,7 +75,6 @@ namespace BinaryNinja {
         void ProcessVFT(uint64_t vftAddr, const ClassInfo& classInfo);
     public:
         MicrosoftRTTIProcessor(BinaryView* view, bool processVFT, bool useMangled, bool checkRData);
-        void ProcessRTTI64();
-        void ProcessRTTI32();
+        void ProcessRTTI();
     };
 }

@@ -2822,14 +2822,7 @@ bool PEView::Init()
 		if (programSettings->Contains("loader.pe.scanWritableRDataForRtti"))
 			scanWritableRData = programSettings->Get<bool>("loader.pe.scanWritableRDataForRtti", this);
 		auto rtti = MicrosoftRTTIProcessor(this, processVFT, processMangled, scanWritableRData);
-		if (m_is64)
-		{
-			rtti.ProcessRTTI64();
-		}
-		else
-		{
-			rtti.ProcessRTTI32();
-		}
+		rtti.ProcessRTTI();
 	}
 
 	// Add a symbol for the entry point

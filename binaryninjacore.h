@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 72
+#define BN_CURRENT_CORE_ABI_VERSION 73
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -671,7 +671,8 @@ extern "C"
 		EvenParityFlagRole = 7,
 		OddParityFlagRole = 8,
 		OrderedFlagRole = 9,
-		UnorderedFlagRole = 10
+		UnorderedFlagRole = 10,
+		CarryFlagWithInvertedSubtractRole = 11,
 	} BNFlagRole;
 
 	typedef enum BNFunctionGraphType

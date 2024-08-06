@@ -32,8 +32,6 @@ class BINARYNINJAUIAPI OptionsDialog : public QDialog
 	QString m_fileName;
 	QLabel* m_fileLabel;
 	QComboBox* m_loadAsCombo;
-	QPushButton* m_loadAsButton;
-	QLabel* m_loadAsLabel;
 	QLabel* m_objectLabel;
 	QComboBox* m_objectCombo;
 	QTabWidget* m_tab;
@@ -67,5 +65,5 @@ class BINARYNINJAUIAPI OptionsDialog : public QDialog
 	void removeTabAndSettingsView(int index);
 	void viewTabChanged(int index);
 	void viewTabCloseRequested(int index);
-	void loadAsButtonPushed();
+	void viewTypeSelectionChanged();
 };

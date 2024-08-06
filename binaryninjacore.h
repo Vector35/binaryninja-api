@@ -291,6 +291,7 @@ extern "C"
 	typedef struct BNCollaborationUndoEntry BNCollaborationUndoEntry;
 	typedef struct BNCollaborationUser BNCollaborationUser;
 	typedef struct BNAnalysisMergeConflict BNAnalysisMergeConflict;
+	typedef struct BNAnalysisMergeConflictSplitter BNAnalysisMergeConflictSplitter;
 	typedef struct BNTypeArchiveMergeConflict BNTypeArchiveMergeConflict;
 	typedef struct BNCollaborationLazyT BNCollaborationLazyT;
 	typedef struct BNUndoAction BNUndoAction;
@@ -3301,6 +3302,18 @@ extern "C"
 		BinaryConflictDataType
 	} BNMergeConflictDataType;
 
+	typedef struct BNAnalysisMergeConflictSplitterCallbacks
+	{
+		void* context;
+		char* (*getName)(void* context);
+		void (*reset)(void* context);
+		void (*finished)(void* context);
+		bool (*canSplit)(void* context, const char* key, const BNAnalysisMergeConflict* conflict);
+		bool (*split)(void* context, const char* originalKey, const BNAnalysisMergeConflict* originalConflict, BNKeyValueStore* result, char*** newKeys, BNAnalysisMergeConflict*** newConflicts, size_t* newCount);
+		void (*freeName)(void* context, char* name);
+		void (*freeKeyList)(void* context, char** keyList, size_t count);
+		void (*freeConflictList)(void* context, BNAnalysisMergeConflict** conflictList, size_t count);
+	} BNAnalysisMergeConflictSplitterCallbacks;
 
 	typedef bool(*BNProgressFunction)(void*, size_t, size_t);
 	typedef bool(*BNCollaborationAnalysisConflictHandler)(void*, const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount);
@@ -7575,6 +7588,13 @@ extern "C"
 	BINARYNINJACOREAPI char* BNCollaborationChangesetGetName(BNCollaborationChangeset* changeset);
 	BINARYNINJACOREAPI bool BNCollaborationChangesetSetName(BNCollaborationChangeset* changeset, const char* name);
 
+	// AnalysisMergeConflictSplitter
+	BINARYNINJACOREAPI BNAnalysisMergeConflictSplitter* BNRegisterAnalysisMergeConflictSplitter(BNAnalysisMergeConflictSplitterCallbacks* callbacks);
+	BINARYNINJACOREAPI BNAnalysisMergeConflictSplitter** BNGetAnalysisMergeConflictSplitterList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeAnalysisMergeConflictSplitterList(BNAnalysisMergeConflictSplitter** splitters, size_t count);
+	BINARYNINJACOREAPI char* BNAnalysisMergeConflictSplitterGetName(BNAnalysisMergeConflictSplitter* splitter);
+	BINARYNINJACOREAPI bool BNAnalysisMergeConflictSplitterCanSplit(BNAnalysisMergeConflictSplitter* splitter, const char* key, BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI bool BNAnalysisMergeConflictSplitterSplit(BNAnalysisMergeConflictSplitter* splitter, const char* originalKey, BNAnalysisMergeConflict* originalConflict, BNKeyValueStore* result, char*** newKeys, BNAnalysisMergeConflict*** newConflicts, size_t* newCount);
 
 #ifdef __cplusplus
 }

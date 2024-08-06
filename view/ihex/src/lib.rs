@@ -3,7 +3,6 @@ use core::cmp::Ordering;
 use binaryninja::binaryview::*;
 use binaryninja::custombinaryview::*;
 use binaryninja::rc::Ref;
-use binaryninja::section::SectionBuilder;
 use binaryninja::segment::SegmentBuilder;
 
 pub struct IHexViewConstructor {
@@ -279,16 +278,15 @@ unsafe impl CustomBinaryView for IHexView {
     fn init(&mut self, IHexViewData { data, start }: Self::Args) -> Result<()> {
         self.data = data;
         self.start = start;
-        //TODO this will cause a Segmentation Fault
-        //for chunk in self.data.iter() {
-        //    self.add_segment(
-        //        SegmentBuilder::new(chunk.address.into()..chunk.end().into())
-        //            .executable(true)
-        //            .readable(true)
-        //            .contains_data(true)
-        //            .contains_code(true),
-        //    );
-        //}
+        for chunk in self.data.iter() {
+            self.add_segment(
+                SegmentBuilder::new(chunk.address.into()..chunk.end().into())
+                    .executable(true)
+                    .readable(true)
+                    .contains_data(true)
+                    .contains_code(true),
+            );
+        }
         Ok(())
     }
 }
@@ -303,7 +301,7 @@ impl BinaryViewBase for IHexView {
     }
 
     fn default_endianness(&self) -> binaryninja::Endianness {
-        self.core.default_endianness()
+        binaryninja::Endianness::LittleEndian
     }
 
     fn address_size(&self) -> usize {

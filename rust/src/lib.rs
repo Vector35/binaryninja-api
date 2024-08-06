@@ -153,6 +153,7 @@ pub mod interaction;
 pub mod linearview;
 pub mod llil;
 pub mod logger;
+pub mod mainthread;
 pub mod metadata;
 pub mod mlil;
 pub mod platform;

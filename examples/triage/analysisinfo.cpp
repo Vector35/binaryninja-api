@@ -55,7 +55,10 @@ void AnalysisInfoWidget::timerExpired()
 
 void AnalysisInfoWidget::updateDisplay()
 {
-	auto callingConvention = m_data->GetDefaultPlatform()->GetDefaultCallingConvention();
+	auto defaultPlatform = m_data->GetDefaultPlatform();
+	if (!defaultPlatform)
+		return;
+	auto callingConvention = defaultPlatform->GetDefaultCallingConvention();
 	auto gpRegister = callingConvention->GetGlobalPointerRegister();
 	std::string gpString, gpExtraString;
 	if (gpRegister == BN_INVALID_REGISTER)

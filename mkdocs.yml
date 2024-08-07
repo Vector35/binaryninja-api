@@ -55,6 +55,7 @@ theme:
 plugins:
     - search
     - offline
+    - privacy
     - glightbox:
         background: none
         shadow: false

@@ -1,4 +1,5 @@
 use core::cmp::Ordering;
+use std::ops::Range;
 
 use binaryninja::binaryview::*;
 use binaryninja::custombinaryview::*;
@@ -91,24 +92,9 @@ impl CustomBinaryViewType for IHexViewConstructor {
                     start = Some(IHexStart::Linear(offset));
                 }
                 ihex::Record::ExtendedSegmentAddress(segment_offset) => {
-                    match offset {
-                        Some(IHexOffset::Linear(_)) => {
-                            log::error!("Mixing ExtendedSegmentAddress and ExtendedLinearAddress");
-                            return Err(());
-                        }
-                        Some(IHexOffset::Segment(_)) | None => {}
-                    }
                     offset = Some(IHexOffset::Segment(segment_offset))
                 }
                 ihex::Record::ExtendedLinearAddress(linear_offset) => {
-                    match offset {
-                        // can't mix linear and segment offsets
-                        Some(IHexOffset::Segment(_)) => {
-                            log::error!("Mixing ExtendedSegmentAddress and ExtendedLinearAddress");
-                            return Err(());
-                        }
-                        Some(IHexOffset::Linear(_)) | None => {}
-                    }
                     offset = Some(IHexOffset::Linear(linear_offset))
                 }
             }
@@ -122,38 +108,43 @@ impl CustomBinaryViewType for IHexViewConstructor {
         // condensate the blocks
         // sort blocks by address and len
         unmerged_data.sort_unstable_by(|(addr_a, data_a), (addr_b, data_b)| {
+            // order by address
             match addr_a.cmp(addr_b) {
                 std::cmp::Ordering::Equal => {}
                 x => return x,
             };
+            // if save address, put the biggest first, so it's easy to error later
             data_a.len().cmp(&data_b.len())
         });
         // make sure they don't overlap and merge then if they extend each other
-        let mut data: Vec<IHexChunk> = Vec::with_capacity(unmerged_data.len());
+        let mut data: Vec<u8> =
+            Vec::with_capacity(unmerged_data.iter().map(|(_addr, chunk)| chunk.len()).sum());
+        let mut segments: Vec<IHexViewSegment> = Vec::with_capacity(unmerged_data.len());
         for (chunk_addr, chunk_data) in unmerged_data.into_iter() {
-            if let Some(last) = data.last_mut() {
-                let chunk_addr = usize::try_from(chunk_addr).unwrap();
-                let last_addr = usize::try_from(last.address).unwrap();
-                let chunk_range = chunk_addr..chunk_addr + chunk_data.len();
-                let last_range = last_addr..last_addr + last.data.len();
-                // if the current chunk just extend the last chunk, merge both
-                if chunk_range.start == last_range.end {
-                    last.data.extend(chunk_data);
-                    continue;
-                };
-                // the same chucks overlap, then the data was defined multiple times.
-                if last_range.contains(&chunk_range.start) || last_range.contains(&chunk_range.end)
-                {
+            match segments.last_mut() {
+                // if have a last segment and the current chunk just extend it, merge both
+                Some(last) if chunk_addr == last.end() => {
+                    last.len += chunk_data.len();
+                }
+                // the same sector overlap, then the data was defined multiple times.
+                Some(last) if chunk_addr < last.end() => {
                     log::error!("Chunks of data overlap");
                     return Err(());
                 }
+                // otherwise just create a new segment
+                _ => {
+                    segments.push(IHexViewSegment {
+                        address: chunk_addr,
+                        len: chunk_data.len(),
+                        data_offset: data.len(),
+                    });
+                }
             }
-            data.push(IHexChunk {
-                address: chunk_addr,
-                data: chunk_data,
-            });
+            data.extend(chunk_data);
         }
-        builder.create::<IHexView>(parent, IHexViewData { data, start })
+
+        let parent_bin = BinaryView::from_data(&parent.file(), &data)?;
+        builder.create::<IHexView>(&parent_bin, IHexViewData { segments, start })
     }
 }
 
@@ -210,25 +201,40 @@ impl BinaryViewTypeBase for IHexViewConstructor {
 
 pub struct IHexView {
     core: Ref<BinaryView>,
-    data: Vec<IHexChunk>,
+    segments: Vec<IHexViewSegment>,
     start: Option<IHexStart>,
+}
+
+pub struct IHexViewSegment {
+    address: u32,
+    len: usize,
+    data_offset: usize,
+}
+
+impl IHexViewSegment {
+    fn address_range(&self) -> Range<u64> {
+        self.address.into()..u64::from(self.address) + u64::try_from(self.len).unwrap()
+    }
+
+    fn data_range(&self) -> Range<usize> {
+        let start = self.data_offset;
+        let end = start + self.len;
+        start..end
+    }
+
+    fn data_range_u64(&self) -> Range<u64> {
+        let range = self.data_range();
+        range.start.try_into().unwrap()..range.end.try_into().unwrap()
+    }
+
+    fn end(&self) -> u32 {
+        self.address + u32::try_from(self.len).unwrap()
+    }
 }
 
 pub struct IHexViewData {
-    data: Vec<IHexChunk>,
+    segments: Vec<IHexViewSegment>,
     start: Option<IHexStart>,
-}
-
-#[derive(Clone, Debug)]
-pub struct IHexChunk {
-    address: u32,
-    data: Vec<u8>,
-}
-
-impl IHexChunk {
-    pub fn end(&self) -> u32 {
-        self.address + u32::try_from(self.data.len()).unwrap()
-    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -250,16 +256,17 @@ impl AsRef<BinaryView> for IHexView {
 }
 
 impl IHexView {
-    fn chunk_from_address(&self, offset: u32) -> Option<usize> {
-        self.data
-            .binary_search_by(|chunk| {
-                let range = chunk.address..chunk.address + u32::try_from(chunk.data.len()).unwrap();
+    fn sector_from_address(&self, offset: u64) -> Option<&IHexViewSegment> {
+        self.segments
+            .binary_search_by(|sector| {
+                let range = sector.address_range();
                 if range.contains(&offset) {
                     return Ordering::Equal;
                 }
                 offset.cmp(&range.start)
             })
             .ok()
+            .map(|idx| &self.segments[idx])
     }
 }
 
@@ -270,17 +277,19 @@ unsafe impl CustomBinaryView for IHexView {
         Ok(Self {
             core: handle.to_owned(),
             // NOTE dummy values, final values are added on init
-            data: vec![],
             start: None,
+            segments: vec![],
         })
     }
 
-    fn init(&mut self, IHexViewData { data, start }: Self::Args) -> Result<()> {
-        self.data = data;
+    fn init(&mut self, IHexViewData { start, segments }: Self::Args) -> Result<()> {
         self.start = start;
-        for chunk in self.data.iter() {
+        self.segments = segments;
+
+        for segment in self.segments.iter() {
             self.add_segment(
-                SegmentBuilder::new(chunk.address.into()..chunk.end().into())
+                SegmentBuilder::new(segment.address_range())
+                    .parent_backing(segment.data_range_u64())
                     .executable(true)
                     .readable(true)
                     .contains_data(true)
@@ -308,59 +317,24 @@ impl BinaryViewBase for IHexView {
         4
     }
 
-    fn start(&self) -> u64 {
-        self.data
-            .first()
-            .map(|chunk| chunk.address.into())
-            .unwrap_or(0)
-    }
-
-    fn read(&self, buf: &mut [u8], offset: u64) -> usize {
-        let Ok(offset) = u32::try_from(offset) else {
-            return 0;
-        };
-        let Some(chunk_idx) = self.chunk_from_address(offset) else {
-            return 0;
-        };
-
-        let chunk = &self.data[chunk_idx];
-        let chunk_data_offset = usize::try_from(offset - chunk.address).unwrap();
-        let chunk_data = &chunk.data[chunk_data_offset..];
-
-        let copy_len = chunk_data.len().min(buf.len());
-        buf[..copy_len].copy_from_slice(&chunk_data[..copy_len]);
-        copy_len
-    }
-
     fn offset_valid(&self, offset: u64) -> bool {
-        let Ok(offset) = u32::try_from(offset) else {
-            return false;
-        };
-        self.chunk_from_address(offset).is_some()
-    }
-
-    fn len(&self) -> usize {
-        match (self.data.first(), self.data.last()) {
-            (Some(first), Some(last)) => (last.end() - first.address).try_into().unwrap(),
-            (Some(single), None) | (None, Some(single)) => single.data.len(),
-            (None, None) => 0,
-        }
+        self.sector_from_address(offset).is_some()
     }
 
     fn next_valid_offset_after(&self, offset: u64) -> u64 {
         let Ok(offset) = u32::try_from(offset) else {
             return offset;
         };
-        let chunk = self.data.iter().find_map(|chunk| {
-            if chunk.address >= offset {
-                Some(chunk.address)
-            } else if chunk.end() < offset {
+        let sector = self.segments.iter().find_map(|sector| {
+            if sector.address >= offset {
+                Some(sector.address)
+            } else if sector.end() < offset {
                 Some(offset)
             } else {
                 None
             }
         });
-        chunk.unwrap_or(offset).into()
+        sector.unwrap_or(offset).into()
     }
 }
 

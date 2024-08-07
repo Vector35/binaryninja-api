@@ -33,6 +33,12 @@ bool Settings::LoadSettingsFile(const string& fileName, BNSettingsScope scope, R
 }
 
 
+bool Settings::HasFileLoadError()
+{
+	return BNSettingsHasFileLoadError(m_object);
+}
+
+
 void Settings::SetResourceId(const string& resourceId)
 {
 	return BNSettingsSetResourceId(m_object, resourceId.c_str());

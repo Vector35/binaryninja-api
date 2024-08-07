@@ -16071,6 +16071,14 @@ namespace BinaryNinja {
 		*/
 		bool LoadSettingsFile(const std::string& fileName, BNSettingsScope scope = SettingsAutoScope, Ref<BinaryView> view = nullptr);
 
+		/*! This function returns whether there was a problem loading settings.json when the application was started.
+
+			This can be useful in circumstances where, for example, we load the settings file before the UI is available.
+
+			\return True if an error occurred, False otherwise
+		*/
+		bool HasFileLoadError();
+
 		/*! Sets the resource identifier for this \c Settings instance. When accessing setting values at the
 			\c SettingsResourceScope level, the resource identifier is passed along through the backing store interface.
 

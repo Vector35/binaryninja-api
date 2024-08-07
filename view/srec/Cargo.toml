@@ -1,0 +1,18 @@
+[package]
+name = "view-srec"
+version = "0.1.0"
+authors = ["Rubens Brandao <git@rubens.io>"]
+edition = "2021"
+
+[dependencies]
+binaryninja = { path = "../../rust" }
+srec = "0.2.0"
+log = "*"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+panic = "abort"
+lto = true
+debug = 1

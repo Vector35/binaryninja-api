@@ -2010,6 +2010,18 @@ void BinaryView::SetAnalysisHold(bool enable)
 }
 
 
+bool BinaryView::GetFunctionAnalysisUpdateDisabled()
+{
+	return BNGetFunctionAnalysisUpdateDisabled(m_object);
+}
+
+
+void BinaryView::SetFunctionAnalysisUpdateDisabled(bool disabled)
+{
+	BNSetFunctionAnalysisUpdateDisabled(m_object, disabled);
+}
+
+
 void BinaryView::UpdateAnalysisAndWait()
 {
 	BNUpdateAnalysisAndWait(m_object);

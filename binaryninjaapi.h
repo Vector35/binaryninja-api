@@ -6905,6 +6905,7 @@ namespace BinaryNinja {
 		static BNBinaryView* ParseCallback(void* ctxt, BNBinaryView* data);
 		static bool IsValidCallback(void* ctxt, BNBinaryView* data);
 		static bool IsDeprecatedCallback(void* ctxt);
+		static bool IsForceLoadableCallback(void *ctxt);
 		static BNSettings* GetSettingsCallback(void* ctxt, BNBinaryView* data);
 
 		BinaryViewType(BNBinaryViewType* type);
@@ -7042,6 +7043,13 @@ namespace BinaryNinja {
 			\return Whether this BinaryViewType is valid for given data
 		*/
 		virtual bool IsTypeValidForData(BinaryView* data) = 0;
+
+		/*! Check whether this BinaryViewType can be forced to load a binary, even if IsTypeValidForData returns false
+
+			\return Whether this BinaryViewType can be forced to load a binary
+		*/
+		virtual bool IsForceLoadable();
+
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data);
 		Ref<Settings> GetDefaultLoadSettingsForData(BinaryView* data);
 
@@ -7064,6 +7072,7 @@ namespace BinaryNinja {
 		virtual Ref<BinaryView> Parse(BinaryView* data) override;
 		virtual bool IsTypeValidForData(BinaryView* data) override;
 		virtual bool IsDeprecated() override;
+		virtual bool IsForceLoadable() override;
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
 	};
 

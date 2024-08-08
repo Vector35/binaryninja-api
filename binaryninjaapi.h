@@ -5038,6 +5038,9 @@ namespace BinaryNinja {
 		*/
 		void SetAnalysisHold(bool enable);
 
+		bool GetFunctionAnalysisUpdateDisabled();
+		void SetFunctionAnalysisUpdateDisabled(bool disabled);
+
 		/*! start the analysis running and dont return till it is complete
 
 			Analysis of BinaryViews does not occur automatically, the user must start analysis by calling either

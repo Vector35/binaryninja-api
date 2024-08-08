@@ -4253,6 +4253,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNRemoveUserFunction(BNBinaryView* view, BNFunction* func);
 	BINARYNINJACOREAPI bool BNHasInitialAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSetAnalysisHold(BNBinaryView* view, bool enable);
+	BINARYNINJACOREAPI bool BNGetFunctionAnalysisUpdateDisabled(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetFunctionAnalysisUpdateDisabled(BNBinaryView* view, bool disabled);
 	BINARYNINJACOREAPI void BNUpdateAnalysisAndWait(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNUpdateAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNAbortAnalysis(BNBinaryView* view);

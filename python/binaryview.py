@@ -4599,6 +4599,27 @@ class BinaryView:
 		"""
 		core.BNSetAnalysisHold(self.handle, enable)
 
+	def get_function_analysis_update_disabled(self) -> bool:
+		"""
+		Returns True when functions are prevented from being marked as updates required, False otherwise.
+		:return:
+		"""
+		return core.BNGetFunctionAnalysisUpdateDisabled(self.handle)
+
+	def set_function_analysis_update_disabled(self, disabled: bool) -> None:
+		"""
+		``set_function_analysis_update_disabled`` prevents any function from being marked as updates required, so that
+		they would NOT be re-analyzed when the analysis is updated. The main difference between this API and
+		``set_analysis_hold`` is that ``set_analysis_hold`` only temporarily holds the analysis, and the functions
+		are still arranged to be updated when the hold is turned off. However, with
+		``set_function_analysis_update_disabled``, functions would not be put into the analysis queue at all.
+
+		Use with caution -- in most cases, this is NOT what you want, and you should use ``set_analysis_hold`` instead.
+		:param disabled:
+		:return:
+		"""
+		core.BNSetFunctionAnalysisUpdateDisabled(self.handle, disabled)
+
 	def update_analysis(self) -> None:
 		"""
 		``update_analysis`` asynchronously starts the analysis running and returns immediately.

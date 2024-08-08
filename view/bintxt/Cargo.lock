@@ -280,6 +280,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
+name = "srec"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17c3a0538ec242e3cd333cdcdc8b720faa2fa0a9d7f444cf1ff63e7d3303adfb"
+
+[[package]]
 name = "syn"
 version = "2.0.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -297,12 +303,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
 
 [[package]]
-name = "view-ihex"
+name = "view-bintxt"
 version = "0.1.0"
 dependencies = [
  "binaryninja",
  "ihex",
  "log",
+ "srec",
 ]
 
 [[package]]

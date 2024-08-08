@@ -1,6 +1,3 @@
-use core::cmp::Ordering;
-use std::ops::Range;
-
 use binaryninja::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::custombinaryview::{
     BinaryViewType, BinaryViewTypeBase, CustomBinaryView, CustomBinaryViewType, CustomView,
@@ -10,19 +7,14 @@ use binaryninja::rc::Ref;
 use binaryninja::segment::SegmentBuilder;
 use srec::Record;
 
-pub struct SRecViewConstructor {
-    core: BinaryViewType,
-}
-
-impl AsRef<BinaryViewType> for SRecViewConstructor {
-    fn as_ref(&self) -> &BinaryViewType {
-        &self.core
-    }
-}
+use crate::{
+    segment_after_address, segment_from_address, sort_and_merge_segments, MergedSegment,
+    UnmergedSegment,
+};
 
 struct SRecParser<I> {
     reader: I,
-    sectors: Vec<(u32, Vec<u8>)>,
+    segments: Vec<UnmergedSegment>,
     sector_counter: u32,
     start: u32,
 }
@@ -71,15 +63,18 @@ impl<I: Iterator<Item = Result<Record, srec::ReaderError>>> SRecParser<I> {
                 log::error!("Invalid second record type");
                 return Err(());
             }
-            Record::S1(s) => (RecordLen::R16, s.address.into(), s.data),
-            Record::S2(s) => (RecordLen::R24, s.address.into(), s.data),
-            Record::S3(s) => (RecordLen::R32, s.address.into(), s.data),
+            Record::S1(s) => (RecordLen::R16, u32::from(s.address).into(), s.data),
+            Record::S2(s) => (RecordLen::R24, u32::from(s.address).into(), s.data),
+            Record::S3(s) => (RecordLen::R32, u32::from(s.address).into(), s.data),
         };
         self.sector_counter = 1;
-        self.sectors.push((first_data_addr, first_data));
+        self.segments.push(UnmergedSegment {
+            address: first_data_addr,
+            data: first_data,
+        });
 
         // parse zero or more data after the first until hit a Count (S5, S6)
-        // or Start Address (S7, S8, S9) Records
+        // or Start Address (S7, S8, S9) Record
         let next = loop {
             let record = self
                 .reader
@@ -96,13 +91,13 @@ impl<I: Iterator<Item = Result<Record, srec::ReaderError>>> SRecParser<I> {
                     return Err(());
                 }
                 Record::S1(s) if addr_len == RecordLen::R16 => {
-                    self.add_record_data(s.address.into(), s.data)
+                    self.add_record_data(u32::from(s.address).into(), s.data)
                 }
                 Record::S2(s) if addr_len == RecordLen::R24 => {
-                    self.add_record_data(s.address.into(), s.data)
+                    self.add_record_data(u32::from(s.address).into(), s.data)
                 }
                 Record::S3(s) if addr_len == RecordLen::R32 => {
-                    self.add_record_data(s.address.into(), s.data)
+                    self.add_record_data(u32::from(s.address).into(), s.data)
                 }
                 Record::S1(_) | Record::S2(_) | Record::S3(_) => {
                     log::error!("Data record with invalid len");
@@ -159,18 +154,16 @@ impl<I: Iterator<Item = Result<Record, srec::ReaderError>>> SRecParser<I> {
         Ok(())
     }
 
-    fn add_record_data(&mut self, address: u32, value: Vec<u8>) {
+    fn add_record_data(&mut self, address: u64, data: Vec<u8>) {
         self.sector_counter += 1;
-        match self.sectors.last_mut() {
+        match self.segments.last_mut() {
             // check if the block is just extending the previous one, merge both
-            Some((last_address, last_data))
-                if *last_address + u32::try_from(last_data.len()).unwrap() == address =>
-            {
-                last_data.extend(value);
+            Some(last) if last.end() == address => {
+                last.data.extend(data);
             }
             // otherwise just add a new block
             _ => {
-                self.sectors.push((address, value));
+                self.segments.push(UnmergedSegment { address, data });
             }
         }
     }
@@ -188,60 +181,31 @@ impl<I: Iterator<Item = Result<Record, srec::ReaderError>>> SRecParser<I> {
 fn parse_srec(data: &str) -> Result<(Vec<u8>, SRecViewData), ()> {
     let mut parser = SRecParser {
         reader: srec::reader::read_records(&data),
-        sectors: vec![],
+        segments: vec![],
         sector_counter: 0,
         start: 0,
     };
     parser.parse()?;
 
-    let mut unmerged_sectors = parser.sectors;
-    let start = parser.start;
-
-    // condensate the blocks
-    // sort blocks by address and len
-    unmerged_sectors.sort_unstable_by(|(addr_a, data_a), (addr_b, data_b)| {
-        // order by address
-        match addr_a.cmp(addr_b) {
-            std::cmp::Ordering::Equal => {}
-            x => return x,
-        };
-        // if save address, put the biggest first, so it's easy to error later
-        data_a.len().cmp(&data_b.len())
-    });
-    // make sure they don't overlap and merge then if they extend each other
-    let mut data: Vec<u8> = Vec::with_capacity(
-        unmerged_sectors
-            .iter()
-            .map(|(_addr, chunk)| chunk.len())
-            .sum(),
-    );
-    let mut segments: Vec<SRecViewSegment> = Vec::with_capacity(unmerged_sectors.len());
-    for (chunk_addr, chunk_data) in unmerged_sectors.into_iter() {
-        match segments.last_mut() {
-            // if have a last segment and the current chunk just extend it, merge both
-            Some(last) if chunk_addr == last.end() => {
-                last.len += chunk_data.len();
-            }
-            // the same sector overlap, then the data was defined multiple times.
-            Some(last) if chunk_addr < last.end() => {
-                log::error!("Chunks of data overlap");
-                return Err(());
-            }
-            // otherwise just create a new segment
-            _ => {
-                segments.push(SRecViewSegment {
-                    address: chunk_addr,
-                    len: chunk_data.len(),
-                    data_offset: data.len(),
-                });
-            }
-        }
-        data.extend(chunk_data);
-    }
-
-    Ok((data, SRecViewData { segments, start }))
+    let segments = sort_and_merge_segments(parser.segments)?;
+    Ok((
+        segments.data,
+        SRecViewData {
+            segments: segments.segments,
+            start: parser.start,
+        },
+    ))
 }
 
+pub struct SRecViewConstructor {
+    pub core: BinaryViewType,
+}
+
+impl AsRef<BinaryViewType> for SRecViewConstructor {
+    fn as_ref(&self) -> &BinaryViewType {
+        &self.core
+    }
+}
 impl CustomBinaryViewType for SRecViewConstructor {
     fn create_custom_view<'builder>(
         &self,
@@ -295,60 +259,18 @@ impl BinaryViewTypeBase for SRecViewConstructor {
 
 pub struct SRecView {
     core: Ref<BinaryView>,
-    segments: Vec<SRecViewSegment>,
+    segments: Vec<MergedSegment>,
     start: u32,
 }
 
-pub struct SRecViewSegment {
-    address: u32,
-    len: usize,
-    data_offset: usize,
-}
-
-impl SRecViewSegment {
-    fn address_range(&self) -> Range<u64> {
-        self.address.into()..u64::from(self.address) + u64::try_from(self.len).unwrap()
-    }
-
-    fn data_range(&self) -> Range<usize> {
-        let start = usize::try_from(self.data_offset).unwrap();
-        let end = start + self.len;
-        start..end
-    }
-
-    fn data_range_u64(&self) -> Range<u64> {
-        let range = self.data_range();
-        range.start.try_into().unwrap()..range.end.try_into().unwrap()
-    }
-
-    fn end(&self) -> u32 {
-        self.address + u32::try_from(self.len).unwrap()
-    }
-}
-
 pub struct SRecViewData {
-    segments: Vec<SRecViewSegment>,
+    segments: Vec<MergedSegment>,
     start: u32,
 }
 
 impl AsRef<BinaryView> for SRecView {
     fn as_ref(&self) -> &BinaryView {
         &self.core
-    }
-}
-
-impl SRecView {
-    fn sector_from_address(&self, offset: u64) -> Option<&SRecViewSegment> {
-        self.segments
-            .binary_search_by(|sector| {
-                let range = sector.address_range();
-                if range.contains(&offset) {
-                    return Ordering::Equal;
-                }
-                offset.cmp(&range.start)
-            })
-            .ok()
-            .map(|idx| &self.segments[idx])
     }
 }
 
@@ -370,8 +292,7 @@ unsafe impl CustomBinaryView for SRecView {
 
         for segment in self.segments.iter() {
             self.add_segment(
-                SegmentBuilder::new(segment.address_range())
-                    .parent_backing(segment.data_range_u64())
+                SegmentBuilder::from(*segment)
                     .executable(true)
                     .readable(true)
                     .contains_data(true)
@@ -396,32 +317,10 @@ impl BinaryViewBase for SRecView {
     }
 
     fn offset_valid(&self, offset: u64) -> bool {
-        self.sector_from_address(offset).is_some()
+        segment_from_address(&self.segments, offset).is_some()
     }
 
     fn next_valid_offset_after(&self, offset: u64) -> u64 {
-        let Ok(offset) = u32::try_from(offset) else {
-            return offset;
-        };
-        let sector = self.segments.iter().find_map(|sector| {
-            if sector.address >= offset {
-                Some(sector.address)
-            } else if sector.end() < offset {
-                Some(offset)
-            } else {
-                None
-            }
-        });
-        sector.unwrap_or(offset).into()
+        segment_after_address(&self.segments, offset)
     }
-}
-
-#[no_mangle]
-#[allow(non_snake_case)]
-pub extern "C" fn CorePluginInit() -> bool {
-    binaryninja::logger::init(log::LevelFilter::Error).expect("Unable to initialize logger");
-    binaryninja::custombinaryview::register_view_type(c"srec", c"Motorola S-record", |core| {
-        SRecViewConstructor { core }
-    });
-    true
 }

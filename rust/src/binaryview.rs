@@ -1367,6 +1367,25 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    fn get_relocation_ranges(&self) -> Vec<Range<u64>> {
+        let ranges = unsafe {
+            let mut count = 0;
+            let reloc_ranges_ptr = BNGetRelocationRanges(self.as_ref().handle, &mut count);
+            let ranges = std::slice::from_raw_parts(reloc_ranges_ptr, count).clone();
+            BNFreeRelocationRanges(reloc_ranges_ptr);
+            ranges
+        };
+
+        // TODO: impl From BNRange for Range?
+        ranges
+            .iter()
+            .map(|range| Range {
+                start: range.start,
+                end: range.end,
+            })
+            .collect()
+    }
+
     fn component_by_guid<S: BnStrCompatible>(&self, guid: S) -> Option<Component> {
         let name = guid.into_bytes_with_nul();
         let result = unsafe {

@@ -98,6 +98,8 @@ where
         LLIL_CONST => ExprInfo::Const(Operation::new(function, op)),
         LLIL_CONST_PTR => ExprInfo::ConstPtr(Operation::new(function, op)),
 
+        LLIL_EXTERN_PTR => ExprInfo::ExternPtr(Operation::new(function, op)),
+
         LLIL_ADD => ExprInfo::Add(Operation::new(function, op)),
         LLIL_ADC => ExprInfo::Adc(Operation::new(function, op)),
         LLIL_SUB => ExprInfo::Sub(Operation::new(function, op)),
@@ -392,6 +394,7 @@ where
     ConstPtr(Operation<'func, A, M, F, operation::Const>),
     Flag(Operation<'func, A, M, F, operation::Flag>),
     FlagBit(Operation<'func, A, M, F, operation::FlagBit>),
+    ExternPtr(Operation<'func, A, M, F, operation::Extern>),
 
     Add(Operation<'func, A, M, F, operation::BinaryOp>),
     Adc(Operation<'func, A, M, F, operation::BinaryOpCarry>),
@@ -608,6 +611,8 @@ where
 
             Const(ref op) | ConstPtr(ref op) => &op.op,
 
+            ExternPtr(ref op) => &op.op,
+
             Adc(ref op) | Sbb(ref op) | Rlc(ref op) | Rrc(ref op) => &op.op,
 
             Add(ref op) | Sub(ref op) | And(ref op) | Or(ref op) | Xor(ref op) | Lsl(ref op)
@@ -662,6 +667,8 @@ where
             FlagBit(ref op) => op.flag_write(),
 
             Const(ref op) | ConstPtr(ref op) => op.flag_write(),
+
+            ExternPtr(ref op) => op.flag_write(),
 
             Adc(ref op) | Sbb(ref op) | Rlc(ref op) | Rrc(ref op) => op.flag_write(),
 
@@ -774,6 +781,8 @@ where
             FlagBit(ref _op) => write!(f, "flag_bit"), // TODO
 
             Const(ref op) | ConstPtr(ref op) => write!(f, "0x{:x}", op.value()),
+
+            ExternPtr(ref op) => write!(f, "0x{:x}", op.value()),
 
             Adc(ref op) | Sbb(ref op) | Rlc(ref op) | Rrc(ref op) => {
                 let left = op.left();

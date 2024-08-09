@@ -607,6 +607,48 @@ where
     }
 }
 
+// LLIL_EXTERN_PTR
+pub struct Extern;
+
+impl<'func, A, M, F> Operation<'func, A, M, F, Extern>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn value(&self) -> u64 {
+        #[cfg(debug_assertions)]
+        {
+            let raw = self.op.operands[0] as i64;
+
+            let is_safe = match raw.overflowing_shr(self.op.size as u32 * 8) {
+                (_, true) => true,
+                (res, false) => [-1, 0].contains(&res),
+            };
+
+            if !is_safe {
+                error!(
+                    "il expr @ {:x} contains extern 0x{:x} as {} byte value (doesn't fit!)",
+                    self.op.address, self.op.operands[0], self.op.size
+                );
+            }
+        }
+
+        let mut mask = -1i64 as u64;
+
+        if self.op.size < mem::size_of::<u64>() {
+            mask <<= self.op.size * 8;
+            mask = !mask;
+        }
+
+        self.op.operands[0] & mask
+    }
+}
+
 // LLIL_ADD, LLIL_SUB, LLIL_AND, LLIL_OR
 // LLIL_XOR, LLIL_LSL, LLIL_LSR, LLIL_ASR
 // LLIL_ROL, LLIL_ROR, LLIL_MUL, LLIL_MULU_DP,
@@ -774,6 +816,7 @@ impl OperationArguments for RegPhi {}
 impl OperationArguments for FlagPhi {}
 impl OperationArguments for MemPhi {}
 impl OperationArguments for Const {}
+impl OperationArguments for Extern {}
 impl OperationArguments for BinaryOp {}
 impl OperationArguments for BinaryOpCarry {}
 impl OperationArguments for DoublePrecDivOp {}

@@ -15,7 +15,7 @@
 use std::marker::PhantomData;
 use std::mem;
 
-use binaryninjacore_sys::{BNRegisterOrConstant, BNLowLevelILLabel};
+use binaryninjacore_sys::{BNLowLevelILLabel, BNRegisterOrConstant};
 
 use crate::architecture::Architecture;
 use crate::architecture::Register as ArchReg;

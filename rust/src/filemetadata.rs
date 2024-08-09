@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ffi::c_void;
 use binaryninjacore_sys::{
     BNBeginUndoActions,
     BNCloseFile,
@@ -43,6 +42,7 @@ use binaryninjacore_sys::{
     BNUndo,
 };
 use binaryninjacore_sys::{BNCreateDatabaseWithProgress, BNOpenExistingDatabaseWithProgress};
+use std::ffi::c_void;
 
 use crate::binaryview::BinaryView;
 use crate::database::Database;

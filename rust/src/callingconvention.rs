@@ -84,7 +84,7 @@ where
             if regs.is_null() {
                 return;
             }
-            
+
             let _regs = Box::from_raw(ptr::slice_from_raw_parts_mut(regs, count));
         })
     }

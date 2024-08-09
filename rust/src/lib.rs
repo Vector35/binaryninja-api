@@ -75,10 +75,10 @@
 //! fn main() {
 //!     let link_path =
 //!         std::env::var_os("DEP_BINARYNINJACORE_PATH").expect("DEP_BINARYNINJACORE_PATH specified");
-//! 
+//!
 //!     println!("cargo::rustc-link-lib=dylib=binaryninjacore");
 //!     println!("cargo::rustc-link-search={}", link_path.to_str().unwrap());
-//! 
+//!
 //!     #[cfg(not(target_os = "windows"))]
 //!     {
 //!         println!(

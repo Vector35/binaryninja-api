@@ -6754,6 +6754,8 @@ namespace BinaryNinja {
 		bool UserGlobalPointerValueSet() const;
 		void ClearUserGlobalPointerValue();
 		void SetUserGlobalPointerValue(const Confidence<RegisterValue>& value);
+
+		void ToggleRegion(const std::string& id, uint64_t address);
 	};
 
 	class MemoryMap

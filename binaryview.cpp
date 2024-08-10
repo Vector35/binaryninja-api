@@ -5316,6 +5316,11 @@ void BinaryView::SetUserGlobalPointerValue(const Confidence<RegisterValue>& valu
 }
 
 
+void BinaryView::ToggleRegion(const std::string& id, uint64_t address)
+{
+	BNBinaryViewToggleRegion(m_object, id.c_str(), address);
+}
+
 
 Relocation::Relocation(BNRelocation* reloc)
 {
@@ -5453,7 +5458,6 @@ Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis, con
 		return nullptr;
 	return new BinaryView(handle);
 }
-
 
 SymbolQueue::SymbolQueue()
 {

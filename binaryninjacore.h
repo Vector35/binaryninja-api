@@ -390,6 +390,7 @@ extern "C"
 		BaseStructureNameToken = 37,
 		BaseStructureSeparatorToken = 38,
 		BraceToken = 39,
+		CollapsedInformationToken = 40,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,
@@ -6215,6 +6216,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNBinaryViewRemoveExternalLocation(BNBinaryView* view, BNSymbol* sourceSymbol);
 	BINARYNINJACOREAPI BNExternalLocation* BNBinaryViewGetExternalLocation(BNBinaryView* view, BNSymbol* sourceSymbol);
 	BINARYNINJACOREAPI BNExternalLocation** BNBinaryViewGetExternalLocations(BNBinaryView* view, size_t* count);
+
+	BINARYNINJACOREAPI void BNBinaryViewToggleRegion(BNBinaryView* view, const char* id, uint64_t address);
 
 	// Source code processing
 	BINARYNINJACOREAPI bool BNPreprocessSource(const char* source, const char* fileName, char** output, char** errors,

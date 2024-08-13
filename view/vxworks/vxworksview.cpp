@@ -148,12 +148,18 @@ static bool ScanForVxWorksSymbolTable(BinaryReader* reader, size_t dataSize, VxW
 		return false;
 	}
 
+	if (dataSize < entrySize)
+	{
+		logger->LogWarn("Data size is less than a single VxWorks symbol table entry size");
+		return false;
+	}
+
 	VxWorksSymbolEntry entry;
-	ssize_t startOffset = ALIGN4(dataSize - entrySize);
-	ssize_t endOffset = 0;
+	int64_t startOffset = ALIGN4(dataSize - entrySize);
+	int64_t endOffset = 0;
 	if (dataSize > MAX_SYMBOL_TABLE_REGION_SIZE)
 		endOffset = ALIGN4(dataSize - MAX_SYMBOL_TABLE_REGION_SIZE);
-	ssize_t searchPos = startOffset;
+	int64_t searchPos = startOffset;
 	std::vector<uint32_t> foundNames;
 
 	logger->LogDebug("Scanning backwards for VxWorks symbol table (0x%016x-0x%016x) (endianess=%s) (version=%d)...",
@@ -539,6 +545,8 @@ void VxWorksView::ProcessSymbolTable(BinaryReader *reader)
 			continue;
 		}
 
+		m_logger->LogDebug("symbol section %s ranges from 0x%016x-0x%016x", section.first.c_str(),
+			*section.second.begin(), *section.second.rbegin());
 		m_sections.push_back({
 			{ *section.second.begin(), *section.second.rbegin() },
 			section.first,
@@ -642,9 +650,6 @@ bool VxWorksView::Init()
 
 		AddAutoSegment(m_imageBase, m_parentView->GetLength(), 0, m_parentView->GetLength(),
 			SegmentReadable | SegmentWritable | SegmentExecutable);
-		AddSections();
-		AddEntryPointForAnalysis(m_platform, m_entryPoint);
-
 		if (m_hasSymbolTable)
 		{
 			DefineSymbolTableDataVariable();
@@ -659,6 +664,8 @@ bool VxWorksView::Init()
 			}
 		}
 
+		AddSections();
+		AddEntryPointForAnalysis(m_platform, m_entryPoint);
 		return true;
 	}
 	catch (std::exception& e)

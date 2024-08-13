@@ -132,10 +132,10 @@ where
         isValidForData: Some(cb_valid::<T>),
         isDeprecated: Some(cb_deprecated::<T>),
         getLoadSettingsForData: Some(cb_load_settings::<T>),
-        hasChildren: None, // TODO
+        hasChildrenForData: None, // TODO
         getChildrenForData: None, // TODO
         getMetadataForChild: None, // TODO
-        createChild: None, // TODO
+        createChildForData: None, // TODO
         freeStringList: None, // TODO
     };
 

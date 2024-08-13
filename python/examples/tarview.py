@@ -63,7 +63,7 @@ class TarView(BinaryView):
             return False
 
     @classmethod
-    def has_children(cls, data):
+    def has_children_for_data(cls, data):
         return True
 
     @classmethod
@@ -88,7 +88,7 @@ class TarView(BinaryView):
         return None
 
     @classmethod
-    def create_child(cls, data, child):
+    def create_child_for_data(cls, data, child):
         # TODO: Better way of doing this
         load_settings = data.get_load_settings("Adapter")
         load_settings.set_string("loader.adapter.childName", child)

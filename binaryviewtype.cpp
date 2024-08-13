@@ -73,11 +73,11 @@ BNSettings* BinaryViewType::GetSettingsCallback(void* ctxt, BNBinaryView* data)
 }
 
 
-bool BinaryViewType::HasChildrenCallback(void* ctxt, BNBinaryView* data)
+bool BinaryViewType::HasChildrenForDataCallback(void* ctxt, BNBinaryView* data)
 {
 	CallbackRef<BinaryViewType> type(ctxt);
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
-	return type->HasChildren(view);
+	return type->HasChildrenForData(view);
 }
 
 
@@ -100,11 +100,11 @@ BNMetadata* BinaryViewType::GetMetadataForChildCallback(void* ctxt, BNBinaryView
 }
 
 
-BNBinaryView* BinaryViewType::CreateChildCallback(void* ctxt, BNBinaryView* data, const char* child)
+BNBinaryView* BinaryViewType::CreateChildForDataCallback(void* ctxt, BNBinaryView* data, const char* child)
 {
 	CallbackRef<BinaryViewType> type(ctxt);
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
-	auto result = type->CreateChild(view, child);
+	auto result = type->CreateChildForData(view, child);
 	if (!result)
 		return nullptr;
 	return BNNewViewReference(result->GetObject());
@@ -139,10 +139,10 @@ void BinaryViewType::Register(BinaryViewType* type)
 	callbacks.isValidForData = IsValidCallback;
 	callbacks.isDeprecated = IsDeprecatedCallback;
 	callbacks.getLoadSettingsForData = GetSettingsCallback;
-	callbacks.hasChildren = HasChildrenCallback;
+	callbacks.hasChildrenForData = HasChildrenForDataCallback;
 	callbacks.getChildrenForData = GetChildrenForDataCallback;
 	callbacks.getMetadataForChild = GetMetadataForChildCallback;
-	callbacks.createChild = CreateChildCallback;
+	callbacks.createChildForData = CreateChildForDataCallback;
 	callbacks.freeStringList = FreeStringListCallback;
 
 	type->AddRefForRegistration();
@@ -364,7 +364,7 @@ Ref<Settings> BinaryViewType::GetDefaultLoadSettingsForData(BinaryView* data)
 }
 
 
-bool BinaryViewType::HasChildren(BinaryView* data)
+bool BinaryViewType::HasChildrenForData(BinaryView* data)
 {
 	return false;
 }
@@ -382,7 +382,7 @@ Ref<Metadata> BinaryViewType::GetMetadataForChild(BinaryView* data, const std::s
 }
 
 
-Ref<BinaryView> BinaryViewType::CreateChild(BinaryView* data, const std::string& child)
+Ref<BinaryView> BinaryViewType::CreateChildForData(BinaryView* data, const std::string& child)
 {
 	return nullptr;
 }
@@ -430,9 +430,9 @@ Ref<Settings> CoreBinaryViewType::GetLoadSettingsForData(BinaryView* data)
 }
 
 
-bool CoreBinaryViewType::HasChildren(BinaryView* data)
+bool CoreBinaryViewType::HasChildrenForData(BinaryView* data)
 {
-	return BNBinaryViewTypeHasChildren(m_object, data->GetObject());
+	return BNBinaryViewTypeHasChildrenForData(m_object, data->GetObject());
 }
 
 
@@ -455,9 +455,9 @@ Ref<Metadata> CoreBinaryViewType::GetMetadataForChild(BinaryView* data, const st
 }
 
 
-Ref<BinaryView> CoreBinaryViewType::CreateChild(BinaryView* data, const std::string& child)
+Ref<BinaryView> CoreBinaryViewType::CreateChildForData(BinaryView* data, const std::string& child)
 {
-	BNBinaryView* view = BNBinaryViewTypeCreateChild(m_object, data->GetObject(), child.c_str());
+	BNBinaryView* view = BNBinaryViewTypeCreateChildForData(m_object, data->GetObject(), child.c_str());
 	if (!view)
 		return nullptr;
 	return new BinaryView(view);

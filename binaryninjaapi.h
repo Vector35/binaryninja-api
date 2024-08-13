@@ -6909,10 +6909,10 @@ namespace BinaryNinja {
 		static bool IsValidCallback(void* ctxt, BNBinaryView* data);
 		static bool IsDeprecatedCallback(void* ctxt);
 		static BNSettings* GetSettingsCallback(void* ctxt, BNBinaryView* data);
-		static bool HasChildrenCallback(void* ctxt, BNBinaryView* data);
+		static bool HasChildrenForDataCallback(void* ctxt, BNBinaryView* data);
 		static char** GetChildrenForDataCallback(void* ctxt, BNBinaryView* data, size_t* count);
 		static BNMetadata* GetMetadataForChildCallback(void* ctxt, BNBinaryView* data, const char* child);
-		static BNBinaryView* CreateChildCallback(void* ctxt, BNBinaryView* data, const char* child);
+		static BNBinaryView* CreateChildForDataCallback(void* ctxt, BNBinaryView* data, const char* child);
 		static void FreeStringListCallback(void* ctxt, char** stringList, size_t count);
 
 		BinaryViewType(BNBinaryViewType* type);
@@ -7056,7 +7056,7 @@ namespace BinaryNinja {
 		/*!
 			TODO
 		 */
-		virtual bool HasChildren(BinaryView* data);
+		virtual bool HasChildrenForData(BinaryView* data);
 		/*!
 			TODO
 		 */
@@ -7068,7 +7068,7 @@ namespace BinaryNinja {
 		/*!
 			TODO
 		 */
-		virtual Ref<BinaryView> CreateChild(BinaryView* data, const std::string& child);
+		virtual Ref<BinaryView> CreateChildForData(BinaryView* data, const std::string& child);
 
 		static void RegisterBinaryViewFinalizationEvent(const std::function<void(BinaryView* view)>& callback);
 		static void RegisterBinaryViewInitialAnalysisCompletionEvent(
@@ -7090,10 +7090,10 @@ namespace BinaryNinja {
 		virtual bool IsTypeValidForData(BinaryView* data) override;
 		virtual bool IsDeprecated() override;
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
-		virtual bool HasChildren(BinaryView* data) override;
+		virtual bool HasChildrenForData(BinaryView* data) override;
 		virtual std::vector<std::string> GetChildrenForData(BinaryView* data) override;
 		virtual Ref<Metadata> GetMetadataForChild(BinaryView* data, const std::string& child) override;
-		virtual Ref<BinaryView> CreateChild(BinaryView* data, const std::string& child) override;
+		virtual Ref<BinaryView> CreateChildForData(BinaryView* data, const std::string& child) override;
 	};
 
 	/*! Thrown whenever a read is performed out of bounds.

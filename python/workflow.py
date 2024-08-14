@@ -268,6 +268,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		assert _handle is not None
 		self.handle = _handle
 		self._name = core.BNGetWorkflowName(self.handle)
+		self._machine = None
 		if function_handle is not None:
 			self._machine = WorkflowMachine(function_handle)
 

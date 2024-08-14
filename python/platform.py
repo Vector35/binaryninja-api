@@ -161,7 +161,6 @@ class Platform(metaclass=_PlatformMetaClass):
 			reg_name = self.arch.get_reg_name(reg)
 			if reg_name in self.global_reg_types:
 				type_obj = self.global_reg_types[reg_name]
-				log_error(f"aaaa {type_obj}")
 				handle = core.BNNewTypeReference(type_obj.handle)
 				return ctypes.cast(handle, ctypes.c_void_p).value
 			return None

@@ -3806,10 +3806,14 @@ extern "C"
 	// Binary view access
 	BINARYNINJACOREAPI BNBinaryView* BNNewViewReference(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNFreeBinaryView(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNFreeBinaryViewList(BNBinaryView** views, size_t count);
 	BINARYNINJACOREAPI BNFileMetadata* BNGetFileForView(BNBinaryView* view);
 	BINARYNINJACOREAPI char* BNGetViewType(BNBinaryView* view);
 
 	BINARYNINJACOREAPI BNBinaryView* BNGetParentView(BNBinaryView* view);
+	BINARYNINJACOREAPI char* BNGetViewId(BNBinaryView* view);
+	BINARYNINJACOREAPI BNBinaryView** BNGetChildViews(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI char** BNGetAvailableChildren(BNBinaryView* view, size_t* count);
 
 	BINARYNINJACOREAPI size_t BNReadViewData(BNBinaryView* view, void* dest, uint64_t offset, size_t len);
 	BINARYNINJACOREAPI BNDataBuffer* BNReadViewBuffer(BNBinaryView* view, uint64_t offset, size_t len);

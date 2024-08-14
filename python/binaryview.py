@@ -2915,6 +2915,35 @@ class BinaryView:
 		return BinaryView(handle=result)
 
 	@property
+	def id(self) -> Optional[str]:
+		"""Unique id of Binary View. Available after view is registered with a file (after finalization) (read-only)"""
+		return core.BNGetViewId(self.handle)
+
+	@property
+	def child_views(self) -> List['BinaryView']:
+		"""Created child views of this view (read-only)"""
+		count = ctypes.c_size_t(0)
+		views = core.BNGetChildViews(self.handle, count)
+		assert views is not None
+		result = []
+		for i in range(count.value):
+			result.append(BinaryView(handle=core.BNNewViewReference(views[i])))
+		core.BNFreeBinaryViewList(views, count.value)
+		return result
+
+	@property
+	def available_children(self) -> List['str']:
+		"""Names of available children to this view, which could be initialized, some of which may already be initialized (read-only)"""
+		count = ctypes.c_size_t(0)
+		children = core.BNGetAvailableChildren(self.handle, count)
+		assert children is not None
+		result = []
+		for i in range(count.value):
+			result.append(core.pyNativeStr(children[i]))
+		core.BNFreeStringList(children, count.value)
+		return result
+
+	@property
 	def modified(self) -> bool:
 		"""boolean modification state of the BinaryView (read/write)"""
 		return self._file.modified

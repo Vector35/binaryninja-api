@@ -1,0 +1,12 @@
+[package]
+name = "idb-rs"
+version = "0.1.0"
+authors = ["Rubens Brandao <git@rubens.io>"]
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.86"
+bincode = "1.3.3"
+flate2 = "1.0.31"
+serde = { version = "1.0.205", features = ["derive"] }
+serde_repr = "0.1.19"

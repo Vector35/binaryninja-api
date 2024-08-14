@@ -1,0 +1,14 @@
+[package]
+name = "idb_import"
+version = "0.1.0"
+authors = ["Rubens Brandao <git@rubens.io>"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = "1.0.86"
+binaryninja = { path = "../../../" }
+idb-rs = { path = "../shared" }
+log = "0.4.20"

@@ -72,7 +72,7 @@ class AnalysisContext:
 	@property
 	def llil(self) -> lowlevelil.LowLevelILFunction:
 		"""
-		LowLevelILFunction used to represent Low Level IL (writeable)
+		LowLevelILFunction used to represent Low Level IL (writable)
 		"""
 		result = core.BNAnalysisContextGetLowLevelILFunction(self.handle)
 		if not result:
@@ -86,7 +86,7 @@ class AnalysisContext:
 	@property
 	def mlil(self) -> mediumlevelil.MediumLevelILFunction:
 		"""
-		MediumLevelILFunction used to represent Medium Level IL (writeable)
+		MediumLevelILFunction used to represent Medium Level IL (writable)
 		"""
 		result = core.BNAnalysisContextGetMediumLevelILFunction(self.handle)
 		if not result:
@@ -100,7 +100,7 @@ class AnalysisContext:
 	@property
 	def hlil(self) -> highlevelil.HighLevelILFunction:
 		"""
-		HighLevelILFunction used to represent High Level IL (writeable)
+		HighLevelILFunction used to represent High Level IL (writable)
 		"""
 		result = core.BNAnalysisContextGetHighLevelILFunction(self.handle)
 		if not result:
@@ -114,7 +114,7 @@ class AnalysisContext:
 	@property
 	def basic_blocks(self) -> '_function.BasicBlockList':
 		"""
-		function.BasicBlockList of BasicBlocks in the current function (writeable)
+		function.BasicBlockList of BasicBlocks in the current function (writable)
 		"""
 		return _function.BasicBlockList(self.function)
 
@@ -268,6 +268,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		assert _handle is not None
 		self.handle = _handle
 		self._name = core.BNGetWorkflowName(self.handle)
+		self._machine = None
 		if function_handle is not None:
 			self._machine = WorkflowMachine(function_handle)
 
@@ -314,7 +315,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNRegisterWorkflow(self.handle, str(configuration))
 
-	def clone(self, name: str, activity: ActivityType = "") -> "Workflow":
+	def clone(self, name: str = None, activity: ActivityType = "") -> "Workflow":
 		"""
 		``clone`` Clone a new Workflow, copying all Activities and the execution strategy.
 
@@ -323,6 +324,8 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		:return: a new Workflow
 		:rtype: Workflow
 		"""
+		if name is None:
+			name = ""
 		workflow = core.BNWorkflowClone(self.handle, str(name), str(activity))
 		return Workflow(handle=workflow)
 

@@ -75,6 +75,10 @@ from .typecontainer import *
 from .exceptions import *
 from .project import *
 from .basedetection import *
+from .debuginfo import *
+from .externallibrary import *
+from .undo import *
+from .fileaccessor import *
 # We import each of these by name to prevent conflicts between
 # log.py and the function 'log' which we don't import below
 from .log import (
@@ -186,6 +190,7 @@ class CoreVersionInfo:
 def get_unique_identifier():
 	"""
 	Generate a GUID
+
 	:return: A GUID string
 	"""
 	return core.BNGetUniqueIdentifierString()
@@ -373,6 +378,7 @@ def core_set_license(licenseData: str) -> None:
 def get_memory_usage_info() -> Mapping[str, int]:
 	"""
 	Get counts of various Binary Ninja objects in memory.
+
 	:return: Dictionary of {class name: count} for objects in memory
 	"""
 	count = ctypes.c_ulonglong()
@@ -391,13 +397,15 @@ def load(*args, **kwargs) -> BinaryView:
 
 	:param Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike'] source: a file or byte stream to load into a virtual memory space
 	:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
-	:param callback progress_func: optional function to be called with the current progress and total count
+	:param callback progress_func: optional function to be called with the current progress and total count for BNDB files only
 	:param dict options: a dictionary in the form {setting identifier string : object value}
 	:return: returns a :py:class:`BinaryView` object for the given filename
 	:rtype: :py:class:`BinaryView`
 	:raises Exception: When a BinaryView could not be created
 
 	.. note:: The progress_func callback **must** return True to continue the load operation, False will abort the load operation.
+
+	.. warning:: The progress_func will **only** be called for BNDB files, not for any other file format due to a `design limitation <https://docs.binary.ninja/guide/debugger/index.html#navigating-the-binary>`_.
 
 	:Example:
 		>>> from binaryninja import *
@@ -421,7 +429,7 @@ def connect_pycharm_debugger(port=5678):
 	"""
 	Connect to PyCharm (Professional Edition) for debugging.
 
-	.. note:: See https://docs.binary.ninja/dev/plugins.html#remote-debugging-with-intellij-pycharm for step-by-step instructions on how to set up Python debugging.
+	.. note:: See the `user documentation <https://docs.binary.ninja/dev/plugins.html#remote-debugging-with-intellij-pycharm>`_ for step-by-step instructions on how to set up Python debugging.
 
 	:param port: Port number for connecting to the debugger.
 	"""
@@ -437,7 +445,7 @@ def connect_vscode_debugger(port=5678):
 	Connect to Visual Studio Code for debugging. This function blocks until the debugger
 	is connected! Not recommended for use in startup.py
 
-	.. note:: See https://docs.binary.ninja/dev/plugins.html#remote-debugging-with-vscode for step-by-step instructions on how to set up Python debugging.
+	.. note:: See the `user documentation <https://docs.binary.ninja/dev/plugins.html#remote-debugging-with-vscode>`_ for step-by-step instructions on how to set up Python debugging.
 
 	:param port: Port number for connecting to the debugger.
 	"""

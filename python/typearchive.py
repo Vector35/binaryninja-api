@@ -125,7 +125,7 @@ class TypeArchive:
 	@property
 	def id(self) -> Optional[str]:
 		"""
-		Get the guid for a Type Archive
+		Get the GUID for a Type Archive
 
 		:return: Guid string
 		"""
@@ -222,7 +222,7 @@ class TypeArchive:
 
 	def add_type(self, name: '_types.QualifiedNameType', type: '_types.Type') -> None:
 		"""
-		Add named types to the type archive. Type must have all dependant named types added
+		Add named types to the type archive. Type must have all dependent named types added
 		prior to being added, or this function will fail.
 		If the type already exists, it will be overwritten.
 
@@ -233,9 +233,9 @@ class TypeArchive:
 
 	def add_types(self, new_types: List[Tuple['_types.QualifiedNameType', '_types.Type']]) -> None:
 		"""
-		Add named types to the type archive. Types must have all dependant named
-		types prior to being added, or included in the list, or this function will fail.
-		Types already existing with any added names will be overwritten.
+		Add named types to the type archive. Types must have all dependent named
+		types added prior to the parent types being added (or included in the list) or this 
+		function will fail. Types already existing with any added names will be overwritten.
 
 		:param new_types: Names and definitions of new types
 		"""

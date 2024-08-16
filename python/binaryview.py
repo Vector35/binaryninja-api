@@ -2215,8 +2215,9 @@ class MemoryMap:
 	def get_active_memory_region_at(self, addr: int) -> str:
 		return core.BNGetActiveMemoryRegionAt(self.handle, addr)
 
-	def get_memory_region_flags(self, name: str) -> SegmentFlag:
-		return SegmentFlag(core.BNGetMemoryRegionFlags(self.handle, name))
+	def get_memory_region_flags(self, name: str) -> set:
+		flags = core.BNGetMemoryRegionFlags(self.handle, name)
+		return {flag for flag in SegmentFlag if flags & flag}
 
 	def set_memory_region_flags(self, name: str, flags: SegmentFlag) -> bool:
 		return core.BNSetMemoryRegionFlags(self.handle, name, flags)
@@ -2994,7 +2995,7 @@ class BinaryView:
 	@property
 	def entry_functions(self) -> FunctionList:
 		"""A List of entry functions (read-only)
-		This list contains vanilla entry function, and functions like init_array, fini_arry, and TLS callbacks etc.
+		This list contains vanilla entry function, and functions like init_array, fini_array, and TLS callbacks etc.
 		User-added entry functions(via `add_entry_point`) are also included.
 
 		We see `entry_functions` as good starting points for analysis, these functions normally don't have internal references.
@@ -3324,6 +3325,60 @@ class BinaryView:
 		"""Discovered value of the global pointer register, if the binary uses one (read-only)"""
 		result = core.BNGetGlobalPointerValue(self.handle)
 		return variable.RegisterValue.from_BNRegisterValue(result, self.arch)
+
+	@property
+	def user_global_pointer_value_set(self) -> bool:
+		"""Check whether a user global pointer value has been set"""
+		return core.BNUserGlobalPointerValueSet(self.handle)
+
+	def clear_user_global_pointer_value(self):
+		"""Clear a previously set user global pointer value, so the auto-analysis can calculate a new value"""
+		core.BNClearUserGlobalPointerValue(self.handle)
+
+	def set_user_global_pointer_value(self, value: variable.RegisterValue, confidence = 255):
+		"""
+		Set a user global pointer value. This is useful when the auto analysis fails to find out the value of the global
+		pointer, or the value is wrong. In this case, we can call `set_user_global_pointer_value` with a
+		`ConstantRegisterValue` or `ConstantPointerRegisterValue`to provide a user global pointer value to assist the
+		analysis.
+
+		On the other hand, if the auto analysis figures out a global pointer value, but there should not be one, we can
+		call `set_user_global_pointer_value` with an `Undetermined` value to override it.
+
+		Whenever a user global pointer value is set/cleared, an analysis update must occur for it to take effect and
+		all functions using the global pointer to be updated.
+
+		We can use `user_global_pointer_value_set` to query whether a user global pointer value is set, and use
+		`clear_user_global_pointer_value` to clear a user global pointer value. Note, `clear_user_global_pointer_value`
+		is different from calling `set_user_global_pointer_value` with an `Undetermined` value. The former clears the
+		user global pointer value and let the analysis decide the global pointer value, whereas the latte forces the
+		global pointer value to become undetermined.
+
+		:param variable.RegisterValue value: the user global pointer value to be set
+		:param int confidence: the confidence value of the user global pointer value. In most cases this should be set
+		to 255. Setting a value lower than the confidence of the global pointer value from the auto analysis will cause
+		undesired effect.
+		:return:
+		:Example:
+
+			>>> bv.global_pointer_value
+			<const ptr 0x3fd4>
+			>>> bv.set_user_global_pointer_value(ConstantPointerRegisterValue(0x12345678))
+			>>> bv.global_pointer_value
+			<const ptr 0x12345678>
+			>>> bv.user_global_pointer_value_set
+			True
+			>>> bv.clear_user_global_pointer_value()
+			>>> bv.global_pointer_value
+			<const ptr 0x3fd4>
+			>>> bv.set_user_global_pointer_value(Undetermined())
+			>>> bv.global_pointer_value
+			<undetermined>
+		"""
+		val = core.BNRegisterValueWithConfidence()
+		val.value = value._to_core_struct()
+		val.confidence = confidence
+		core.BNSetUserGlobalPointerValue(self.handle, val)
 
 	@property
 	def parameters_for_analysis(self):
@@ -4078,7 +4133,7 @@ class BinaryView:
 		``navigate`` navigates the UI to the specified virtual address in the specified View
 
 		The View name is created by combining a View type (e.g. "Graph") with a BinaryView type (e.g. "Mach-O"),
-		seperated by a colon, resulting in something like "Graph:Mach-O".
+		separated by a colon, resulting in something like "Graph:Mach-O".
 
 		:param str view_name: view name
 		:param int offset: address to navigate to
@@ -4543,6 +4598,27 @@ class BinaryView:
 		:rtype: None
 		"""
 		core.BNSetAnalysisHold(self.handle, enable)
+
+	def get_function_analysis_update_disabled(self) -> bool:
+		"""
+		Returns True when functions are prevented from being marked as updates required, False otherwise.
+		:return:
+		"""
+		return core.BNGetFunctionAnalysisUpdateDisabled(self.handle)
+
+	def set_function_analysis_update_disabled(self, disabled: bool) -> None:
+		"""
+		``set_function_analysis_update_disabled`` prevents any function from being marked as updates required, so that
+		they would NOT be re-analyzed when the analysis is updated. The main difference between this API and
+		``set_analysis_hold`` is that ``set_analysis_hold`` only temporarily holds the analysis, and the functions
+		are still arranged to be updated when the hold is turned off. However, with
+		``set_function_analysis_update_disabled``, functions would not be put into the analysis queue at all.
+
+		Use with caution -- in most cases, this is NOT what you want, and you should use ``set_analysis_hold`` instead.
+		:param disabled:
+		:return:
+		"""
+		core.BNSetFunctionAnalysisUpdateDisabled(self.handle, disabled)
 
 	def update_analysis(self) -> None:
 		"""
@@ -6610,9 +6686,9 @@ class BinaryView:
 
 	def get_component(self, guid: str) -> Optional[component.Component]:
 		"""
-		Lookup a Component by its Guid
+		Lookup a Component by its GUID
 
-		:param guid: Guid of the component to look up
+		:param guid: GUID of the component to look up
 		:return: The Component with that Guid
 		"""
 		bn_component = core.BNGetComponentByGuid(self.handle, guid)
@@ -7904,7 +7980,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	) -> None:
 		"""
 		``record_imported_object_library`` should be called by custom py:py:class:`BinaryView` implementations
-		when they have successfully imported an object from a type library (eg a symbol's type).
+		when they have successfully imported an object from a type library (e.g. a symbol's type).
 		Values recorded with this function will then be queryable via ``lookup_imported_object_library``.
 
 		:param lib: Type Library containing the imported type
@@ -9336,7 +9412,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			  it to a hexadecimal number.
 			- The following operations are valid: ``+, -, \*, /, %, (), &, \|, ^, ~, ==, !=, >, <, >=, <=``
 
-				- Comparision operators return 1 if the condition is true, 0 otherwise.
+				- Comparison operators return 1 if the condition is true, 0 otherwise.
 
 			- In addition to the above operators there are dereference operators similar to BNIL style IL:
 

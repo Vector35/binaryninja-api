@@ -21,6 +21,7 @@ use crate::types::get_type;
 use binaryninja::templatesimplifier::simplify_str_to_str;
 use cpp_demangle::DemangleOptions;
 use gimli::{constants, DebuggingInformationEntry, Dwarf, Unit};
+use log::debug;
 use regex::Regex;
 
 fn get_parameters<R: ReaderType>(
@@ -115,6 +116,14 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
     // If we didn't demangle the raw name, fetch the name given
     if full_name.is_none() {
         full_name = debug_info_builder_context.get_name(dwarf, unit, entry)
+    }
+
+    if raw_name.is_none() && full_name.is_none() {
+        debug!(
+            "Function entry in DWARF without full or raw name: .debug_info offset {:?}",
+            entry.offset().to_debug_info_offset(&unit.header)
+        );
+        return None;
     }
 
     debug_info_builder.insert_function(full_name, raw_name, return_type, address, &parameters, variable_arguments)

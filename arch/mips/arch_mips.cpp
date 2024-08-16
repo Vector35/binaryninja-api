@@ -928,6 +928,8 @@ public:
 				return "moveDwordToCoprocessorUnimplemented";
 			case MIPS_INTRIN_SYNC:
 				return "_sync";
+			case MIPS_INTRIN_SYNCI:
+				return "_SynchronizeCacheLines";
 			case MIPS_INTRIN_EI:
 				return "_enableInterrupts";
 			case MIPS_INTRIN_DI:
@@ -936,6 +938,8 @@ public:
 				return "_clearExecutionHazards";
 			case MIPS_INTRIN_WAIT:
 				return "_enterLowPowerMode";
+			case MIPS_INTRIN_PAUSE:
+				return "_waitForLLbitClear";
 			case MIPS_INTRIN_HWR0:
 				return "_cpuNum";
 			case MIPS_INTRIN_HWR1:
@@ -956,6 +960,8 @@ public:
 				return "_prefetch";
 			case MIPS_INTRIN_CACHE:
 				return "_cache";
+			case MIPS_INTRIN_SDBBP:
+				return "_softwareDebugBreakpoint";
 			case MIPS_INTRIN_GET_LEFT_PART32:
 				return "_getLeftPart32";
 			case MIPS_INTRIN_GET_RIGHT_PART32:
@@ -972,6 +978,16 @@ public:
 				return "_setLeftPart64";
 			case MIPS_INTRIN_SET_RIGHT_PART64:
 				return "_setRightPart64";
+			case MIPS_INTRIN_TLBSET:
+				return "_writeTLB";
+			case MIPS_INTRIN_TLBGET:
+				return "_readTLB";
+			case MIPS_INTRIN_TLBSEARCH:
+				return "_probeTLB";
+			case MIPS_INTRIN_TLBINV:
+				return "_invalidateTLB";
+			case MIPS_INTRIN_TLBINVF:
+				return "_invalidateTLBFlush";
 
 			case CNMIPS_INTRIN_SYNCIOBDMA:
 				return "_synciobdma";
@@ -1009,10 +1025,12 @@ public:
 			MIPS_INTRIN_DMTC0,
 			MIPS_INTRIN_DMTC_UNIMPLEMENTED,
 			MIPS_INTRIN_SYNC,
+			MIPS_INTRIN_SYNCI,
 			MIPS_INTRIN_DI,
 			MIPS_INTRIN_EHB,
 			MIPS_INTRIN_EI,
 			MIPS_INTRIN_WAIT,
+			MIPS_INTRIN_PAUSE,
 			MIPS_INTRIN_HWR0,
 			MIPS_INTRIN_HWR1,
 			MIPS_INTRIN_HWR2,
@@ -1031,6 +1049,11 @@ public:
 			MIPS_INTRIN_GET_RIGHT_PART64,
 			MIPS_INTRIN_SET_LEFT_PART64,
 			MIPS_INTRIN_SET_RIGHT_PART64,
+			MIPS_INTRIN_TLBSET,
+			MIPS_INTRIN_TLBGET,
+			MIPS_INTRIN_TLBSEARCH,
+			MIPS_INTRIN_TLBINV,
+			MIPS_INTRIN_TLBINVF,
 
 			CNMIPS_INTRIN_SYNCIOBDMA,
 			CNMIPS_INTRIN_SYNCS,
@@ -1100,6 +1123,10 @@ public:
 				return {
 					NameAndType("stype", Type::IntegerType(4, false)),
 				};
+			case MIPS_INTRIN_SYNCI:
+				return {
+					NameAndType("vaddr", Type::IntegerType(8, false)),
+				};
 			case MIPS_INTRIN_HWR_UNKNOWN:
 				return {
 					NameAndType("hwreg", Type::IntegerType(4, false)),
@@ -1113,6 +1140,11 @@ public:
 				return {
 					NameAndType("op", Type::IntegerType(1, false)),
 					NameAndType("address", Type::IntegerType(m_bits == 64 ? 8 : 4, false)),
+				};
+
+			case MIPS_INTRIN_SDBBP:
+				return {
+					NameAndType("code", Type::IntegerType(1, false)),
 				};
 
 			// NOTE: SET_x_PARTx could potentially benefit from
@@ -1161,6 +1193,33 @@ public:
 				return {
 					NameAndType("rightpart", Type::IntegerType(8, false))
 				};
+			case MIPS_INTRIN_TLBSET:
+				return {
+					// we use the same order as the pseudocode
+					// in the documentation
+					NameAndType("index", Type::IntegerType(8, false)),
+					NameAndType("PageMask", Type::IntegerType(8, false)),
+					NameAndType("EntryHi", Type::IntegerType(8, false)),
+					NameAndType("EntryLo1", Type::IntegerType(8, false)),
+					NameAndType("EntryLo0", Type::IntegerType(8, false))
+				};
+			case MIPS_INTRIN_TLBGET:
+				return {
+					NameAndType("index", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_TLBSEARCH:
+				return {
+					NameAndType("match", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_TLBINV:
+				return {
+					NameAndType("index", Type::IntegerType(8, false)),
+					NameAndType("match", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_TLBINVF:
+				return {
+					NameAndType("index", Type::IntegerType(8, false)),
+				};
 			default:
 				return vector<NameAndType>();
 		}
@@ -1204,6 +1263,19 @@ public:
 			case MIPS_INTRIN_SET_LEFT_PART64:
 			case MIPS_INTRIN_SET_RIGHT_PART64:
 				return {Type::IntegerType(8, false)};
+			case MIPS_INTRIN_TLBGET:
+				return {
+					// we use the same order as the pseudocode
+					// in the documentation:
+
+					// PageMask, EntryHi, EntryLo1, EntryLo0
+					Type::IntegerType(8, false),
+					Type::IntegerType(8, false),
+					Type::IntegerType(8, false),
+					Type::IntegerType(8, false),
+				};
+			case MIPS_INTRIN_TLBSEARCH:
+				return { Type::IntegerType(8, false) };
 			default:
 				return vector<Confidence<Ref<Type>>>();
 		}

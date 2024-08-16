@@ -2085,7 +2085,7 @@ impl Function {
     }
 
     /// Returns a string representing the provenance. This portion of the API
-    /// is under develoment. Currently the provenance information is
+    /// is under development. Currently the provenance information is
     /// undocumented, not persistent, and not saved to a database.
     pub fn provenance(&self) -> BnString {
         unsafe { BnString::from_raw(BNGetProvenanceString(self.handle)) }

@@ -4219,11 +4219,6 @@ namespace BinaryNinja {
 		uint64_t GetDataLength() const;
 		uint32_t GetFlags() const;
 		bool IsAutoDefined() const;
-
-		void SetLength(uint64_t length);
-		void SetDataOffset(uint64_t dataOffset);
-		void SetDataLength(uint64_t dataLength);
-		void SetFlags(uint32_t flags);
 	};
 
 	/*! The Section object is returned during BinaryView creation and should not be directly instantiated.
@@ -4249,6 +4244,25 @@ namespace BinaryNinja {
 		std::string GetInfoSection() const;
 		BNSectionSemantics GetSemantics() const;
 		bool AutoDefined() const;
+	};
+
+	struct RegisterValue
+	{
+		BNRegisterValueType state;
+		int64_t value;
+		int64_t offset;
+		size_t size;
+
+		bool operator==(const RegisterValue& a) const;
+		bool operator!=(const RegisterValue& a) const;
+
+		RegisterValue();
+
+		bool IsConstant() const;
+		bool IsConstantData() const;
+
+		static RegisterValue FromAPIObject(const BNRegisterValue& value);
+		BNRegisterValue ToAPIObject();
 	};
 
 	struct QualifiedNameAndType;
@@ -5023,6 +5037,9 @@ namespace BinaryNinja {
 		    \param enable Whether to enable or disable the analysis hold
 		*/
 		void SetAnalysisHold(bool enable);
+
+		bool GetFunctionAnalysisUpdateDisabled();
+		void SetFunctionAnalysisUpdateDisabled(bool disabled);
 
 		/*! start the analysis running and dont return till it is complete
 
@@ -6730,6 +6747,11 @@ namespace BinaryNinja {
 		void RemoveExternalLocation(Ref<Symbol> sourceSymbol);
 		Ref<ExternalLocation> GetExternalLocation(Ref<Symbol> sourceSymbol);
 		std::vector<Ref<ExternalLocation>> GetExternalLocations();
+
+		Confidence<RegisterValue> GetGlobalPointerValue() const;
+		bool UserGlobalPointerValueSet() const;
+		void ClearUserGlobalPointerValue();
+		void SetUserGlobalPointerValue(const Confidence<RegisterValue>& value);
 	};
 
 	class MemoryMap
@@ -10286,22 +10308,6 @@ namespace BinaryNinja {
 	/*!
 		\ingroup function
 	*/
-	struct RegisterValue
-	{
-		BNRegisterValueType state;
-		int64_t value;
-		int64_t offset;
-		size_t size;
-
-		RegisterValue();
-
-		bool IsConstant() const;
-		bool IsConstantData() const;
-
-		static RegisterValue FromAPIObject(const BNRegisterValue& value);
-		BNRegisterValue ToAPIObject();
-	};
-
 	struct ConstantData : public BNRegisterValue
 	{
 		Ref<Function> func = nullptr;

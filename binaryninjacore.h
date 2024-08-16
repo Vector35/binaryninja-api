@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 71
+#define BN_CURRENT_CORE_ABI_VERSION 73
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 71
+#define BN_MINIMUM_CORE_ABI_VERSION 72
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -291,6 +291,7 @@ extern "C"
 	typedef struct BNCollaborationUndoEntry BNCollaborationUndoEntry;
 	typedef struct BNCollaborationUser BNCollaborationUser;
 	typedef struct BNAnalysisMergeConflict BNAnalysisMergeConflict;
+	typedef struct BNAnalysisMergeConflictSplitter BNAnalysisMergeConflictSplitter;
 	typedef struct BNTypeArchiveMergeConflict BNTypeArchiveMergeConflict;
 	typedef struct BNCollaborationLazyT BNCollaborationLazyT;
 	typedef struct BNUndoAction BNUndoAction;
@@ -671,7 +672,8 @@ extern "C"
 		EvenParityFlagRole = 7,
 		OddParityFlagRole = 8,
 		OrderedFlagRole = 9,
-		UnorderedFlagRole = 10
+		UnorderedFlagRole = 10,
+		CarryFlagWithInvertedSubtractRole = 11,
 	} BNFlagRole;
 
 	typedef enum BNFunctionGraphType
@@ -3300,6 +3302,18 @@ extern "C"
 		BinaryConflictDataType
 	} BNMergeConflictDataType;
 
+	typedef struct BNAnalysisMergeConflictSplitterCallbacks
+	{
+		void* context;
+		char* (*getName)(void* context);
+		void (*reset)(void* context);
+		void (*finished)(void* context);
+		bool (*canSplit)(void* context, const char* key, const BNAnalysisMergeConflict* conflict);
+		bool (*split)(void* context, const char* originalKey, const BNAnalysisMergeConflict* originalConflict, BNKeyValueStore* result, char*** newKeys, BNAnalysisMergeConflict*** newConflicts, size_t* newCount);
+		void (*freeName)(void* context, char* name);
+		void (*freeKeyList)(void* context, char** keyList, size_t count);
+		void (*freeConflictList)(void* context, BNAnalysisMergeConflict** conflictList, size_t count);
+	} BNAnalysisMergeConflictSplitterCallbacks;
 
 	typedef bool(*BNProgressFunction)(void*, size_t, size_t);
 	typedef bool(*BNCollaborationAnalysisConflictHandler)(void*, const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount);
@@ -3955,6 +3969,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeNameSpace(BNNameSpace* name);
 
 	BINARYNINJACOREAPI BNRegisterValueWithConfidence BNGetGlobalPointerValue(BNBinaryView* view);
+	BINARYNINJACOREAPI bool BNUserGlobalPointerValueSet(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNClearUserGlobalPointerValue(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetUserGlobalPointerValue(BNBinaryView* view, BNRegisterValueWithConfidence value);
 
 	// Raw binary data view
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataView(BNFileMetadata* file);
@@ -4236,6 +4253,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNRemoveUserFunction(BNBinaryView* view, BNFunction* func);
 	BINARYNINJACOREAPI bool BNHasInitialAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSetAnalysisHold(BNBinaryView* view, bool enable);
+	BINARYNINJACOREAPI bool BNGetFunctionAnalysisUpdateDisabled(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetFunctionAnalysisUpdateDisabled(BNBinaryView* view, bool disabled);
 	BINARYNINJACOREAPI void BNUpdateAnalysisAndWait(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNUpdateAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNAbortAnalysis(BNBinaryView* view);
@@ -7011,10 +7030,6 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNSegmentGetDataLength(BNSegment* segment);
 	BINARYNINJACOREAPI uint32_t BNSegmentGetFlags(BNSegment* segment);
 	BINARYNINJACOREAPI bool BNSegmentIsAutoDefined(BNSegment* segment);
-	BINARYNINJACOREAPI void BNSegmentSetLength(BNSegment* segment, uint64_t length);
-	BINARYNINJACOREAPI void BNSegmentSetDataOffset(BNSegment* segment, uint64_t dataOffset);
-	BINARYNINJACOREAPI void BNSegmentSetDataLength(BNSegment* segment, uint64_t dataLength);
-	BINARYNINJACOREAPI void BNSegmentSetFlags(BNSegment* segment, uint32_t flags);
 
 	// Section object methods
 	BINARYNINJACOREAPI BNSection* BNNewSectionReference(BNSection* section);
@@ -7580,6 +7595,13 @@ extern "C"
 	BINARYNINJACOREAPI char* BNCollaborationChangesetGetName(BNCollaborationChangeset* changeset);
 	BINARYNINJACOREAPI bool BNCollaborationChangesetSetName(BNCollaborationChangeset* changeset, const char* name);
 
+	// AnalysisMergeConflictSplitter
+	BINARYNINJACOREAPI BNAnalysisMergeConflictSplitter* BNRegisterAnalysisMergeConflictSplitter(BNAnalysisMergeConflictSplitterCallbacks* callbacks);
+	BINARYNINJACOREAPI BNAnalysisMergeConflictSplitter** BNGetAnalysisMergeConflictSplitterList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeAnalysisMergeConflictSplitterList(BNAnalysisMergeConflictSplitter** splitters, size_t count);
+	BINARYNINJACOREAPI char* BNAnalysisMergeConflictSplitterGetName(BNAnalysisMergeConflictSplitter* splitter);
+	BINARYNINJACOREAPI bool BNAnalysisMergeConflictSplitterCanSplit(BNAnalysisMergeConflictSplitter* splitter, const char* key, BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI bool BNAnalysisMergeConflictSplitterSplit(BNAnalysisMergeConflictSplitter* splitter, const char* originalKey, BNAnalysisMergeConflict* originalConflict, BNKeyValueStore* result, char*** newKeys, BNAnalysisMergeConflict*** newConflicts, size_t* newCount);
 
 #ifdef __cplusplus
 }

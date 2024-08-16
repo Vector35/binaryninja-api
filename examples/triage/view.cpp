@@ -12,6 +12,7 @@
 #include "strings.h"
 #include "baseaddress.h"
 #include "fontsettings.h"
+#include "analysisinfo.h"
 #include <binaryninjacore.h>
 
 TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent)
@@ -107,6 +108,12 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 		layout->addWidget(sectionsGroup);
 		if (sectionsWidget->GetSections().size() == 0)
 			sectionsGroup->hide();
+
+		QGroupBox* analysisInfoGroup = new QGroupBox("Analysis Info", container);
+		QVBoxLayout* analysisInfoLayout = new QVBoxLayout();
+		analysisInfoLayout->addWidget(new AnalysisInfoWidget(analysisInfoGroup, m_data));
+		analysisInfoGroup->setLayout(analysisInfoLayout);
+		layout->addWidget(analysisInfoGroup);
 
 		QGroupBox* stringsGroup = new QGroupBox("Strings", container);
 		QVBoxLayout* stringsLayout = new QVBoxLayout();

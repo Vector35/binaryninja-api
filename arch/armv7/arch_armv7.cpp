@@ -1734,7 +1734,7 @@ BNFlagRole ArmCommonArchitecture::GetFlagRole(uint32_t flag, uint32_t)
 	case IL_FLAG_Z:
 		return ZeroFlagRole;
 	case IL_FLAG_C:
-		return CarryFlagRole;
+		return CarryFlagWithInvertedSubtractRole;
 	case IL_FLAG_V:
 		return OverflowFlagRole;
 	default:

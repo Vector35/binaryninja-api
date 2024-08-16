@@ -980,7 +980,7 @@ class BackgroundTask(metaclass=_BackgroundTaskMetaclass):
 	available via the :py:class:`.BackgroundTaskThread` class.
 
 	:param initial_progress_text: text description of the task to display in the status bar in the UI, defaults to `""`
-	:param can_cancel: whether to enable cancelation of the task, defaults to `False`
+	:param can_cancel: whether to enable cancellation of the task, defaults to `False`
 	"""
 	def __init__(self, initial_progress_text="", can_cancel=False, handle=None):
 		if handle is None:
@@ -1041,7 +1041,7 @@ class BackgroundTaskThread(BackgroundTask):
 	See the :py:class:`.BackgroundTask` for additional information.
 
 	:param initial_progress_text: text description of the task to display in the status bar in the UI, defaults to `""`
-	:param can_cancel: whether to enable cancelation of the task, defaults to `False`
+	:param can_cancel: whether to enable cancellation of the task, defaults to `False`
 	"""
 	def __init__(self, initial_progress_text: str = "", can_cancel: bool = False):
 		class _Thread(threading.Thread):

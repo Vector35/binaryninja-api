@@ -604,7 +604,7 @@ class PossibleValueSet:
 	def lookup_table_value(lookup_table, mapping) -> 'PossibleValueSet':
 		"""
 		Create a PossibleValueSet object for a value which is a member of a
-		lookuptable.
+		lookup table.
 
 		:param list(LookupTableEntry) lookup_table: List of table entries
 		:param dict of (int, int) mapping: Mapping used for resolution
@@ -795,7 +795,7 @@ class Variable(CoreVariable):
 
 	@property
 	def name(self) -> str:
-		"""Name of the variable, Settings thisslow because it ensures that analysis has been updated. """
+		"""Name of the variable, Settings this property is slow because it ensures that analysis has been updated. If you are renaming many variables, use :py:meth:`set_name_async`, then call :py:meth:`update_analysis` when complete."""
 		return core.BNGetVariableNameOrDefault(self._function.handle, self.to_BNVariable())
 
 	@name.setter

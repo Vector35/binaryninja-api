@@ -38,7 +38,7 @@ void BinaryNinja::InitElfViewType()
 		"type" : "boolean",
 		"default" : true,
 		"description" : "Enable ARM BE8 binary detection for mixed little/big endianness for code/data",
-		"ignore" : ["SettingsProjectScope"]
+		"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
 		})");
 }
 

@@ -476,7 +476,7 @@ pub fn license_count() -> i32 {
 pub fn set_license<S: string::BnStrCompatible>(license: S) {
     let license = license.into_bytes_with_nul();
     let license_slice = license.as_ref();
-    unsafe { binaryninjacore_sys::BNSetLicense(license_slice.as_ptr() as *const i8) }
+    unsafe { binaryninjacore_sys::BNSetLicense(license_slice.as_ptr() as *const std::os::raw::c_char) }
 }
 
 pub fn product() -> string::BnString {
@@ -501,7 +501,7 @@ pub fn is_ui_enabled() -> bool {
 pub fn is_database<S: string::BnStrCompatible>(filename: S) -> bool {
     let filename = filename.into_bytes_with_nul();
     let filename_slice = filename.as_ref();
-    unsafe { binaryninjacore_sys::BNIsDatabase(filename_slice.as_ptr() as *const i8) }
+    unsafe { binaryninjacore_sys::BNIsDatabase(filename_slice.as_ptr() as *const std::os::raw::c_char) }
 }
 
 pub fn plugin_abi_version() -> u32 {

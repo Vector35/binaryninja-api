@@ -260,7 +260,6 @@ impl DebugInfoBuilder {
                 return Some(*idx);
             }
         }
-
         else if let Some(ident) = &full_name {
             // check if we already know about this full name's index
             // if we do, and the raw name will change, remove the known raw index if it exists
@@ -282,9 +281,8 @@ impl DebugInfoBuilder {
                 return Some(*idx);
             }
         }
-
-        if raw_name.is_none() && full_name.is_none() {
-            error!("Function entry in DWARF without full or raw name. Please report this issue.");
+        else {
+            debug!("Function entry in DWARF without full or raw name.");
             return None;
         }
 

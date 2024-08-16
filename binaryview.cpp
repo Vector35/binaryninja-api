@@ -1087,30 +1087,6 @@ bool Segment::IsAutoDefined() const
 }
 
 
-void Segment::SetLength(uint64_t length)
-{
-	BNSegmentSetLength(m_object, length);
-}
-
-
-void Segment::SetDataOffset(uint64_t dataOffset)
-{
-	BNSegmentSetDataOffset(m_object, dataOffset);
-}
-
-
-void Segment::SetDataLength(uint64_t dataLength)
-{
-	BNSegmentSetDataLength(m_object, dataLength);
-}
-
-
-void Segment::SetFlags(uint32_t flags)
-{
-	BNSegmentSetFlags(m_object, flags);
-}
-
-
 Section::Section(BNSection* sec)
 {
 	m_object = sec;
@@ -2031,6 +2007,18 @@ bool BinaryView::HasInitialAnalysis()
 void BinaryView::SetAnalysisHold(bool enable)
 {
 	BNSetAnalysisHold(m_object, enable);
+}
+
+
+bool BinaryView::GetFunctionAnalysisUpdateDisabled()
+{
+	return BNGetFunctionAnalysisUpdateDisabled(m_object);
+}
+
+
+void BinaryView::SetFunctionAnalysisUpdateDisabled(bool disabled)
+{
+	BNSetFunctionAnalysisUpdateDisabled(m_object, disabled);
 }
 
 
@@ -5295,6 +5283,38 @@ std::vector<Ref<ExternalLocation>> BinaryView::GetExternalLocations()
 	BNFreeExternalLocationList(locs, count);
 	return result;
 }
+
+
+Confidence<RegisterValue> BinaryView::GetGlobalPointerValue() const
+{
+	BNRegisterValueWithConfidence value = BNGetGlobalPointerValue(m_object);
+	return Confidence<RegisterValue>(RegisterValue::FromAPIObject(value.value), value.confidence);
+}
+
+
+bool BinaryView::UserGlobalPointerValueSet() const
+{
+	return BNUserGlobalPointerValueSet(m_object);
+}
+
+
+void BinaryView::ClearUserGlobalPointerValue()
+{
+	return BNClearUserGlobalPointerValue(m_object);
+}
+
+
+void BinaryView::SetUserGlobalPointerValue(const Confidence<RegisterValue>& value)
+{
+	BNRegisterValueWithConfidence v;
+	v.confidence = value.GetConfidence();
+	v.value.value = value.GetValue().value;
+	v.value.state = value.GetValue().state;
+	v.value.size = value.GetValue().size;
+	v.value.offset = value.GetValue().offset;
+	BNSetUserGlobalPointerValue(m_object, v);
+}
+
 
 
 Relocation::Relocation(BNRelocation* reloc)

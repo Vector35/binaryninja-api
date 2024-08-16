@@ -15,7 +15,7 @@ pub fn server_url() -> BnString {
 pub fn set_server_url<S: BnStrCompatible>(url: S) -> Result<(), ()> {
     let url = url.into_bytes_with_nul();
     let result = unsafe {
-        binaryninjacore_sys::BNSetEnterpriseServerUrl(url.as_ref().as_ptr() as *const i8)
+        binaryninjacore_sys::BNSetEnterpriseServerUrl(url.as_ref().as_ptr() as *const std::os::raw::c_char)
     };
     if result {
         Ok(())
@@ -76,8 +76,8 @@ where
     let password = password.into_bytes_with_nul();
     unsafe {
         binaryninjacore_sys::BNAuthenticateEnterpriseServerWithCredentials(
-            username.as_ref().as_ptr() as *const i8,
-            password.as_ref().as_ptr() as *const i8,
+            username.as_ref().as_ptr() as *const std::os::raw::c_char,
+            password.as_ref().as_ptr() as *const std::os::raw::c_char,
             remember,
         )
     }
@@ -87,7 +87,7 @@ pub fn authenticate_server_with_method<S: BnStrCompatible>(method: S, remember: 
     let method = method.into_bytes_with_nul();
     unsafe {
         binaryninjacore_sys::BNAuthenticateEnterpriseServerWithMethod(
-            method.as_ref().as_ptr() as *const i8,
+            method.as_ref().as_ptr() as *const std::os::raw::c_char,
             remember,
         )
     }

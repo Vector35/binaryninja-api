@@ -795,6 +795,13 @@ bool ElfView::Init()
 			while (!end)
 			{
 				uint64_t tag, value;
+				if (i >= m_dynamicTable.fileSize)
+				{
+					// Prevent reading past end of dynamic table in file
+					end = true;
+					break;
+				}
+
 				if (m_elf32) // 32-bit ELF
 				{
 					tag = reader.Read32();

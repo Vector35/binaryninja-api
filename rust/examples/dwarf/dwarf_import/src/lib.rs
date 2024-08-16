@@ -459,8 +459,13 @@ impl CustomDebugInfoParser for DWARFParser {
         }
         if dwarfreader::has_build_id_section(view) {
             if let Ok(build_id) = get_build_id(view) {
-                return helpers::find_local_debug_file(&build_id, view).is_some();
+                if helpers::find_local_debug_file_for_build_id(&build_id, view).is_some() {
+                    return true;
+                }
             }
+        }
+        if helpers::find_sibling_debug_file(view).is_some() {
+            return true;
         }
         false
     }
@@ -473,7 +478,10 @@ impl CustomDebugInfoParser for DWARFParser {
         progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool {
         let (external_file, close_external) = if !dwarfreader::is_valid(bv) {
-            if let Ok(build_id) = get_build_id(bv) {
+            if let (Some(debug_view), x) = helpers::load_sibling_debug_file(bv) {
+                (Some(debug_view), x)
+            }
+            else if let Ok(build_id) = get_build_id(bv) {
                 helpers::load_debug_info_for_build_id(&build_id, bv)
             }
             else {
@@ -529,7 +537,7 @@ pub extern "C" fn CorePluginInit() -> bool {
             "title" : "Enable Debuginfod Support",
             "type" : "boolean",
             "default" : false,
-            "description" : "Enable using debuginfod servers to fetch debug info for files with a .note.gnu.build-id section.",
+            "description" : "Enable using Debuginfod servers to fetch DWARF debug info for files with a .note.gnu.build-id section.",
             "ignore" : []
         }"#,
     );
@@ -541,7 +549,18 @@ pub extern "C" fn CorePluginInit() -> bool {
             "type" : "array",
 			"elementType" : "string",
 			"default" : [],
-            "description" : "Servers to use for fetching debug info for files with a .note.gnu.build-id section.",
+            "description" : "Servers to use for fetching DWARF debug info for files with a .note.gnu.build-id section.",
+            "ignore" : []
+        }"#,
+    );
+
+    settings.register_setting_json(
+        "analysis.debugInfo.enableDebugDirectories",
+        r#"{
+            "title" : "Enable Debug File Directories",
+            "type" : "boolean",
+            "default" : true,
+            "description" : "Enable searching local debug directories for DWARF debug info.",
             "ignore" : []
         }"#,
     );
@@ -553,7 +572,18 @@ pub extern "C" fn CorePluginInit() -> bool {
             "type" : "array",
 			"elementType" : "string",
             "default" : [],
-            "description" : "Paths to folder containing debug info stored by build id.",
+            "description" : "Paths to folder containing DWARF debug info stored by build id.",
+            "ignore" : []
+        }"#,
+    );
+
+    settings.register_setting_json(
+        "analysis.debugInfo.loadSiblingDebugFiles",
+        r#"{
+            "title" : "Enable Loading of Sibling Debug Files",
+            "type" : "boolean",
+            "default" : true,
+            "description" : "Enable automatic loading of X.debug and X.dSYM files next to a file named X.",
             "ignore" : []
         }"#,
     );

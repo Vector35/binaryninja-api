@@ -1861,8 +1861,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			{
 				if (programSettings->Get<bool>("corePlugins.workflows.objc"))
 				{
-					programSettings->Set("workflows.enable", true, this);
-					programSettings->Set("workflows.functionWorkflow", "core.function.objectiveC", this);
+					programSettings->Set("analysis.workflows.functionWorkflow", "core.function.objectiveC", this);
 				}
 			}
 		}
@@ -3912,8 +3911,7 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 		{
 			if (programSettings->Get<bool>("corePlugins.workflows.objc"))
 			{
-				programSettings->Set("workflows.enable", true, viewRef);
-				programSettings->Set("workflows.functionWorkflow", "core.function.objectiveC", viewRef);
+				programSettings->Set("analysis.workflows.functionWorkflow", "core.function.objectiveC", viewRef);
 			}
 		}
 	}

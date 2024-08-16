@@ -41,13 +41,7 @@ Binary Ninja Workflows is an analysis orchestration framework which simplifies t
 # Getting Started
 ---
 
-## Enable
 
-By default, Binary Ninja Workflows is disabled. Enable the feature via *Settings* in the UI, or with the following:
-
-```
-Settings().set_bool('workflows.enable', True)
-```
 
 ## Explore
 

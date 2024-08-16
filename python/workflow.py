@@ -228,10 +228,6 @@ class Workflow(metaclass=_WorkflowMetaclass):
 	it's possible to add and remove activities, as well as change the execution strategy. In order to use the Workflow on a binary it must be \
 	registered. Once registered the Workflow is immutable and available for use.
 
-	Currently, Workflows is disabled by default and can be enabled via Settings::
-
-		>>> Settings().set_bool('workflows.enable', True)
-
 	Retrieve the default Workflow by creating a Workflow object::
 
 		>>> Workflow()

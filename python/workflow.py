@@ -315,7 +315,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNRegisterWorkflow(self.handle, str(configuration))
 
-	def clone(self, name: str, activity: ActivityType = "") -> "Workflow":
+	def clone(self, name: str = None, activity: ActivityType = "") -> "Workflow":
 		"""
 		``clone`` Clone a new Workflow, copying all Activities and the execution strategy.
 
@@ -324,6 +324,8 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		:return: a new Workflow
 		:rtype: Workflow
 		"""
+		if name is None:
+			name = ""
 		workflow = core.BNWorkflowClone(self.handle, str(name), str(activity))
 		return Workflow(handle=workflow)
 

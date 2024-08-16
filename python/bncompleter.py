@@ -41,12 +41,22 @@ Notes:
 """
 
 import atexit
+import binaryninja
 import __main__
 import inspect
 import sys
 from typing import Optional
 
 __all__ = ["Completer"]
+
+
+def fuzzy_match(target, query):
+	if query == "":
+		return 1
+	if binaryninja.Settings().get_bool("ui.scripting.fuzzySearch"):
+		return binaryninja.fuzzy_match_single(target, query)
+	else:
+		return 1 if target.startswith(query) else None
 
 
 def fnsignature(obj):
@@ -128,24 +138,29 @@ class Completer:
 		seen = {"__builtins__"}
 		n = len(text)
 		for word in keyword.kwlist:
-			if word[:n] == text:
+			score = fuzzy_match(word, text)
+			if score is not None:
 				seen.add(word)
 				if word in {'finally', 'try'}:
 					word = word + ':'
 				elif word not in {'False', 'None', 'True', 'break', 'continue', 'pass', 'else'}:
 					word = word + ' '
-				matches.append(word)
+				matches.append((-score, word))
 		#Not sure why in the console builtins becomes a dict but this works for now.
 		if hasattr(__builtins__, '__dict__'):  # type: ignore # remove this ignore > pyright 1.1.149
 			builtins = __builtins__.__dict__  # type: ignore # remove this ignore > pyright 1.1.149
 		else:
 			builtins = __builtins__  # type: ignore # remove this ignore > pyright 1.1.149
+
 		for nspace in [self.namespace, builtins]:
 			for word, val in nspace.items():
-				if word[:n] == text and word not in seen:
+				score = fuzzy_match(word, text)
+				if score is not None and word not in seen:
+				# if word[:n] == text and word not in seen:
 					seen.add(word)
-					matches.append(self._callable_postfix(val, word))
-		return matches
+					matches.append((-score, self._callable_postfix(val, word)))
+		matches.sort()
+		return [match for (_, match) in matches]
 
 	def attr_matches(self, text):
 		"""Compute matches when text contains a dot.
@@ -186,7 +201,8 @@ class Completer:
 			noprefix = None
 		while True:
 			for word in words:
-				if (word[:n] == attr and not (noprefix and word[:n + 1] == noprefix)):
+				score = fuzzy_match(word, attr)
+				if score is not None and (word[:n] == attr and not (noprefix and word[:n + 1] == noprefix)):
 					match = f"{expr}.{word}"
 					try:
 						val = inspect.getattr_static(thisobject, word)
@@ -194,7 +210,7 @@ class Completer:
 						pass  # Include even if attribute not set
 					else:
 						match = self._callable_postfix(val, match)
-					matches.append(match)
+					matches.append((-score, match))
 			if matches or not noprefix:
 				break
 			if noprefix == '_':
@@ -202,7 +218,7 @@ class Completer:
 			else:
 				noprefix = None
 		matches.sort()
-		return matches
+		return [match for (_, match) in matches]
 
 
 def get_class_members(klass):

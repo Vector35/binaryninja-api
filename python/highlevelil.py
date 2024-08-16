@@ -2400,25 +2400,6 @@ ILInstruction = {
 }
 
 
-class HighLevelILExpr:
-	"""
-	``class HighLevelILExpr`` hold the index of IL Expressions.
-
-	.. note:: Use ExpressionIndex instead
-	"""
-
-	@deprecation.deprecated(deprecated_in="3.4.3997", details='Use ExpressionIndex instead')
-	def __init__(self, index: ExpressionIndex):
-		self._index = index
-
-	def __int__(self):
-		return self._index
-
-	@property
-	def index(self) -> ExpressionIndex:
-		return self._index
-
-
 class HighLevelILFunction:
 	"""
 	``class HighLevelILFunction`` contains the a HighLevelILInstruction object that makes up the abstract syntax tree of
@@ -2478,11 +2459,9 @@ class HighLevelILFunction:
 	def __len__(self):
 		return int(core.BNGetHighLevelILInstructionCount(self.handle))
 
-	def __getitem__(self, i: Union[HighLevelILExpr, int]) -> HighLevelILInstruction:
+	def __getitem__(self, i: int) -> HighLevelILInstruction:
 		if isinstance(i, slice) or isinstance(i, tuple):
-			raise IndexError("expected integer instruction index")
-		if isinstance(i, HighLevelILExpr):
-			return HighLevelILInstruction.create(self, i.index)
+			raise IndexError("expected integer index")
 		if i < -len(self) or i >= len(self):
 			raise IndexError("index out of range")
 		if i < 0:

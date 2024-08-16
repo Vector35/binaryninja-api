@@ -258,7 +258,7 @@ const std::string BaseAddressDetectionWidget::GetRebaseViewName()
 
 	for (const auto& viewName : fileMetadata->GetExistingViews())
 	{
-		if (viewName != "Raw" && viewName != "Debugger")
+		if (viewName != "Raw")
 			return viewName;
 	}
 

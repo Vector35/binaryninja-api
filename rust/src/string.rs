@@ -79,6 +79,10 @@ impl BnString {
         res
     }
 
+    pub(crate) fn as_raw(&self) -> &raw::c_char {
+        unsafe { &*self.raw }
+    }
+
     pub fn as_str(&self) -> &str {
         unsafe { CStr::from_ptr(self.raw).to_str().unwrap() }
     }

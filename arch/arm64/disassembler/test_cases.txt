@@ -22944,6 +22944,7 @@ AA87DFC4 orr x4, x30, x7, asr #0x37
 AACAA00F orr x15, x0, x10, ror #0x28
 AADF5572 orr x18, x11, xzr, ror #0x15
 // ORR_asimdimm_L_hl 0x00111100000xxx10x1xxxxxxxxxxxx
+4F04B676 orr v22.8h, #0x93, lsl #0x8
 0F04B676 orr v22.4h, #0x93, lsl #0x8
 0F059527 orr v7.4h, #0xa9
 4F0494CA orr v10.8h, #0x86

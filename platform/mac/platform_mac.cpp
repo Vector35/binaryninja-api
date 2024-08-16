@@ -108,10 +108,19 @@ public:
 
 	static Ref<Platform> Recognize(BinaryView* view, Metadata* metadata)
 	{
+		bool shouldRecognizeOnIOS = false;
+		if (view->GetFile()->IsBackedByDatabase())
+		{
+			if (auto database = view->GetFile()->GetDatabase())
+			{
+				if (database->HasGlobal("original_version") && database->ReadGlobal("original_version").asInt64() < 6)
+					shouldRecognizeOnIOS = true;
+			}
+		}
 		auto machoPlatform = metadata->Get("machoplatform");
 		if (!machoPlatform || !machoPlatform->IsUnsignedInteger())
 			return nullptr;
-		if (machoPlatform->GetUnsignedInteger() != 2)
+		if (machoPlatform->GetUnsignedInteger() != 2 || shouldRecognizeOnIOS)
 			return g_macArmv7;
 
 		return nullptr;
@@ -143,10 +152,19 @@ public:
 
 	static Ref<Platform> Recognize(BinaryView* view, Metadata* metadata)
 	{
+		bool shouldRecognizeOnIOS = false;
+		if (view->GetFile()->IsBackedByDatabase())
+		{
+			if (auto database = view->GetFile()->GetDatabase())
+			{
+				if (database->HasGlobal("original_version") && database->ReadGlobal("original_version").asInt64() < 6)
+					shouldRecognizeOnIOS = true;
+			}
+		}
 		auto machoPlatform = metadata->Get("machoplatform");
 		if (!machoPlatform || !machoPlatform->IsUnsignedInteger())
 			return nullptr;
-		if (machoPlatform->GetUnsignedInteger() != 2)
+		if (machoPlatform->GetUnsignedInteger() != 2 || shouldRecognizeOnIOS)
 			return g_macArm64;
 
 		return nullptr;
@@ -179,12 +197,23 @@ public:
 	static Ref<Platform> Recognize(BinaryView* view, Metadata* metadata)
 	{
 		auto machoPlatform = metadata->Get("machoplatform");
+		if (machoPlatform->GetUnsignedInteger() != 2)
+			return nullptr;
 		if (!machoPlatform || !machoPlatform->IsUnsignedInteger())
 			return nullptr;
-		if (machoPlatform->GetUnsignedInteger() == 2)
-			return g_iosArmv7;
-
-		return nullptr;
+		if (view->GetFile()->IsBackedByDatabase())
+		{
+			if (auto database = view->GetFile()->GetDatabase())
+			{
+				if (database->HasGlobal("original_version") && database->ReadGlobal("original_version").asInt64() < 6)
+				{
+					LogError("%s", "iOS database was saved with mac platform. Unable to upgrade. For iOS typelibs to"
+						" function properly, this binary must be reopened.");
+					return nullptr;
+				}
+			}
+		}
+		return g_iosArmv7;
 	}
 };
 
@@ -215,10 +244,21 @@ public:
 		auto machoPlatform = metadata->Get("machoplatform");
 		if (!machoPlatform || !machoPlatform->IsUnsignedInteger())
 			return nullptr;
-		if (machoPlatform->GetUnsignedInteger() == 2)
-			return g_iosArm64;
-
-		return nullptr;
+		if (machoPlatform->GetUnsignedInteger() != 2)
+			return nullptr;
+		if (view->GetFile()->IsBackedByDatabase())
+		{
+			if (auto database = view->GetFile()->GetDatabase())
+			{
+				if (database->HasGlobal("original_version") && database->ReadGlobal("original_version").asInt64() < 6)
+				{
+					LogError("%s", "iOS database was saved with mac platform. Unable to upgrade. For iOS typelibs to"
+						" function properly, this binary must be reopened.");
+					return nullptr;
+				}
+			}
+		}
+		return g_iosArm64;
 	}
 };
 

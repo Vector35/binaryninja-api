@@ -504,6 +504,18 @@ bool MediumLevelILFunction::IsSSAVarLive(const SSAVariable& var) const
 }
 
 
+bool MediumLevelILFunction::IsSSAVarLiveAt(const SSAVariable& var, const size_t instr) const
+{
+	return BNIsMediumLevelILSSAVarLiveAt(m_object, &var.var, var.version, instr);
+}
+
+
+bool MediumLevelILFunction::IsVarLiveAt(const Variable& var, const size_t instr) const
+{
+	return BNIsMediumLevelILVarLiveAt(m_object, &var, instr);
+}
+
+
 set<size_t> MediumLevelILFunction::GetVariableSSAVersions(const Variable& var) const
 {
 	size_t count;

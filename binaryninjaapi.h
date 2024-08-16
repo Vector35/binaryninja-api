@@ -1215,6 +1215,8 @@ namespace BinaryNinja {
 		return result;
 	}
 
+	std::optional<size_t> FuzzyMatchSingle(const std::string& target, const std::string& query);
+
 	/*!
 		@}
 	*/
@@ -1995,6 +1997,8 @@ namespace BinaryNinja {
 	std::string GetUniqueIdentifierString();
 
 	std::map<std::string, uint64_t> GetMemoryUsageInfo();
+
+	void SetThreadName(const std::string& name);
 
 	/*!
 		\ingroup databuffer
@@ -4216,11 +4220,6 @@ namespace BinaryNinja {
 		uint32_t GetFlags() const;
 		bool IsAutoDefined() const;
 
-		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRanges() const;
-		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRangesAtAddress(uint64_t addr) const;
-		std::vector<Ref<Relocation>> GetRelocationsInRange(uint64_t addr, uint64_t size) const;
-		uint64_t GetRelocationsCount() const;
-
 		void SetLength(uint64_t length);
 		void SetDataOffset(uint64_t dataOffset);
 		void SetDataLength(uint64_t dataLength);
@@ -4821,7 +4820,29 @@ namespace BinaryNinja {
 		*/
 		uint64_t GetNextValidOffset(uint64_t offset) const;
 
+		/*! GetImageBase queries for the image base in the BinaryView
+
+		    \return the image base of the BinaryView
+		*/
+		uint64_t GetImageBase() const;
+
+		/*! GetOriginalImageBase queries for the original image base in the BinaryView, unaffected by any rebasing operations
+
+		    \return the original image base of the BinaryView
+		*/
+		uint64_t GetOriginalImageBase() const;
+
+		/*! SetOriginalBase sets the original image base in the BinaryView, unaffected by any rebasing operations.
+		 * This is only intended to be used by Binary View implementations to provide this value. Regular users should
+		 * NOT change this value.
+
+		    \param imageBase the original image base of the binary view
+		*/
+		void SetOriginalImageBase(uint64_t imageBase);
+
+
 		/*! GetOriginalBase queries for the original image base in the BinaryView, unaffected by any rebasing operations
+		    \deprecated This API has been deprecated in favor of GetOriginalImageBase in 4.0.xxxx
 
 		    \return the original image base of the BinaryView
 		*/
@@ -4830,6 +4851,7 @@ namespace BinaryNinja {
 		/*! SetOriginalBase sets the original image base in the BinaryView, unaffected by any rebasing operations.
 		 * This is only intended to be used by Binary View implementations to provide this value. Regular users should
 		 * NOT change this value.
+		    \deprecated This API has been deprecated in favor of SetOriginalImageBase in 4.0.xxxx
 
 		    \param base the original image base of the binary view
 		*/
@@ -4924,6 +4946,7 @@ namespace BinaryNinja {
 		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, Ref<Symbol> target, uint64_t reloc);
 		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRanges() const;
 		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRangesAtAddress(uint64_t addr) const;
+		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRangesInRange(uint64_t addr, size_t size) const;
 		bool RangeContainsRelocation(uint64_t addr, size_t size) const;
 		std::vector<Ref<Relocation>> GetRelocationsAt(uint64_t addr) const;
 
@@ -6411,6 +6434,8 @@ namespace BinaryNinja {
 		*/
 		bool GetAddressForDataOffset(uint64_t offset, uint64_t& addr);
 
+		bool GetDataOffsetForAddress(uint64_t addr, uint64_t& offset);
+
 		/*! Creates an analysis-defined section that can help inform analysis by clarifying what types of data exist in
 			what ranges
 
@@ -6497,6 +6522,25 @@ namespace BinaryNinja {
 		*/
 		std::vector<std::string> GetUniqueSectionNames(const std::vector<std::string>& names);
 
+		/*! Get the list of allocated ranges
+		   \deprecated This API has been deprecated in favor of GetMappedAddressRanges in 4.0.xxxx
+
+			\return The list of allocated ranges
+		*/
+		std::vector<BNAddressRange> GetAllocatedRanges();
+
+		/*! Get the list of ranges mapped into the address space
+
+			\return The list of mapped ranges
+		*/
+		std::vector<BNAddressRange> GetMappedAddressRanges();
+
+		/*! Get the list of ranges that are mapped into the address space and are backed by a target object
+
+			\return The list of backed ranges
+		*/
+		std::vector<BNAddressRange> GetBackedAddressRanges();
+
 		/*! Get the comment placed at an address
 
 			\param addr Address at which to check for a comment
@@ -6516,12 +6560,6 @@ namespace BinaryNinja {
 			\param comment Comment to place
 		*/
 		void SetCommentForAddress(uint64_t addr, const std::string& comment);
-
-		/*! Get the list of allocated ranges
-
-			\return The list of allocated ranges
-		*/
-		std::vector<BNAddressRange> GetAllocatedRanges();
 
 		void StoreMetadata(const std::string& key, Ref<Metadata> value, bool isAuto = false);
 		Ref<Metadata> QueryMetadata(const std::string& key);
@@ -6702,19 +6740,19 @@ namespace BinaryNinja {
 		MemoryMap(BNBinaryView* view): m_object(view) {}
 		~MemoryMap() = default;
 
-		bool AddBinaryMemoryRegion(const std::string& name, uint64_t start, Ref<BinaryView> source)
+		bool AddBinaryMemoryRegion(const std::string& name, uint64_t start, Ref<BinaryView> source, uint32_t flags = 0)
 		{
-			return BNAddBinaryMemoryRegion(m_object, name.c_str(), start, source->GetObject());
+			return BNAddBinaryMemoryRegion(m_object, name.c_str(), start, source->GetObject(), flags);
 		}
 
-		bool AddDataMemoryRegion(const std::string& name, uint64_t start, const DataBuffer& source)
+		bool AddDataMemoryRegion(const std::string& name, uint64_t start, const DataBuffer& source, uint32_t flags = 0)
 		{
-			return BNAddDataMemoryRegion(m_object, name.c_str(), start, source.GetBufferObject());
+			return BNAddDataMemoryRegion(m_object, name.c_str(), start, source.GetBufferObject(), flags);
 		}
 
-		bool AddRemoteMemoryRegion(const std::string& name, uint64_t start, FileAccessor* source)
+		bool AddRemoteMemoryRegion(const std::string& name, uint64_t start, FileAccessor* source, uint32_t flags = 0)
 		{
-			return BNAddRemoteMemoryRegion(m_object, name.c_str(), start, source->GetCallbacks());
+			return BNAddRemoteMemoryRegion(m_object, name.c_str(), start, source->GetCallbacks(), flags);
 		}
 
 		bool RemoveMemoryRegion(const std::string& name)
@@ -6722,19 +6760,52 @@ namespace BinaryNinja {
 			return BNRemoveMemoryRegion(m_object, name.c_str());
 		}
 
-		bool IsMemoryRegionEnabled(const std::string& name, uint64_t start)
+		std::string GetActiveMemoryRegionAt(uint64_t addr)
 		{
-			return BNIsMemoryRegionEnabled(m_object, name.c_str(), start);
+			char* name = BNGetActiveMemoryRegionAt(m_object, addr);
+			std::string result = name;
+			BNFreeString(name);
+			return result;
 		}
 
-		bool SetMemoryRegionEnabled(const std::string& name, uint64_t start, bool enabled)
+		uint32_t GetMemoryRegionFlags(const std::string& name)
 		{
-			return BNSetMemoryRegionEnabled(m_object, name.c_str(), start, enabled);
+			return BNGetMemoryRegionFlags(m_object, name.c_str());
 		}
 
-		bool SetMemoryRegionFill(const std::string& name, uint64_t start, uint8_t fill)
+		bool SetMemoryRegionFlags(const std::string& name, uint32_t flags)
 		{
-			return BNSetMemoryRegionFill(m_object, name.c_str(), start, fill);
+			return BNSetMemoryRegionFlags(m_object, name.c_str(), flags);
+		}
+
+		bool IsMemoryRegionEnabled(const std::string& name)
+		{
+			return BNIsMemoryRegionEnabled(m_object, name.c_str());
+		}
+
+		bool SetMemoryRegionEnabled(const std::string& name, bool enabled)
+		{
+			return BNSetMemoryRegionEnabled(m_object, name.c_str(), enabled);
+		}
+
+		bool IsMemoryRegionRebaseable(const std::string& name)
+		{
+			return BNIsMemoryRegionRebaseable(m_object, name.c_str());
+		}
+
+		bool SetMemoryRegionRebaseable(const std::string& name, bool rebaseable)
+		{
+			return BNSetMemoryRegionRebaseable(m_object, name.c_str(), rebaseable);
+		}
+
+		uint8_t GetMemoryRegionFill(const std::string& name)
+		{
+			return BNGetMemoryRegionFill(m_object, name.c_str());
+		}
+
+		bool SetMemoryRegionFill(const std::string& name, uint8_t fill)
+		{
+			return BNSetMemoryRegionFill(m_object, name.c_str(), fill);
 		}
 
 		void Reset()
@@ -8109,16 +8180,13 @@ namespace BinaryNinja {
 
 		// These three binary view type constant APIs are deprecated and should no longer be used. Their implementations
 		// have been removed, and they now have no effects.
-		/*! \deprecated This API has been deprecated. The implementation has been removed, and this function no
-		 		longer has any effect
+		/*! \deprecated This API has been deprecated. The implementation has been removed, and this function no longer has any effect
 		*/
 		bool IsBinaryViewTypeConstantDefined(const std::string& type, const std::string& name);
-		/*! \deprecated This API has been deprecated. The implementation has been removed, and this function no
-		 		longer has any effect
+		/*! \deprecated This API has been deprecated. The implementation has been removed, and this function no longer has any effect
 		*/
 		uint64_t GetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t defaultValue = 0);
-		/*! \deprecated This API has been deprecated. The implementation has been removed, and this function no
-		 		longer has any effect
+		/*! \deprecated This API has been deprecated. The implementation has been removed, and this function no longer has any effect
 		*/
 		void SetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t value);
 
@@ -10793,6 +10861,7 @@ namespace BinaryNinja {
 		std::vector<DisassemblyTextLine> GetTypeTokens(DisassemblySettings* settings = nullptr);
 
 		Confidence<RegisterValue> GetGlobalPointerValue() const;
+		bool UsesIncomingGlobalPointer() const;
 		Confidence<RegisterValue> GetRegisterValueAtExit(uint32_t reg) const;
 
 		/*! Whether the function is too large to automatically perform analysis
@@ -12970,6 +13039,8 @@ namespace BinaryNinja {
 		std::set<size_t> GetSSAVarUses(const SSAVariable& var) const;
 		std::set<size_t> GetSSAMemoryUses(size_t version) const;
 		bool IsSSAVarLive(const SSAVariable& var) const;
+		bool IsSSAVarLiveAt(const SSAVariable& var, const size_t instr) const;
+		bool IsVarLiveAt(const Variable& var, const size_t instr) const;
 
 		std::set<size_t> GetVariableSSAVersions(const Variable& var) const;
 		std::set<size_t> GetVariableDefinitions(const Variable& var) const;
@@ -14738,6 +14809,11 @@ namespace BinaryNinja {
 
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);
+		/*! Get the list of related platforms for this platform
+
+		 	\return A vector of Ref<Platform>s
+		 */
+		std::vector<Ref<Platform>> GetRelatedPlatforms();
 		Ref<Platform> GetAssociatedPlatformByAddress(uint64_t& addr);
 
 		/*! Get the list of platform-specific types
@@ -16815,7 +16891,7 @@ namespace BinaryNinja {
 
 			\param path
 		*/
-		void WriteToFile(const std::string& path);
+		bool WriteToFile(const std::string& path);
 
 		/*! The Architecture this type library is associated with
 

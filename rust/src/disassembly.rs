@@ -103,6 +103,10 @@ impl InstructionTextToken {
         mem::transmute(raw)
     }
 
+    pub(crate) fn into_raw(self) -> BNInstructionTextToken {
+        mem::ManuallyDrop::new(self).0
+    }
+
     pub fn new(text: &str, contents: InstructionTextTokenContents) -> Self {
         let (value, address) = match contents {
             InstructionTextTokenContents::Integer(v) => (v, 0),
@@ -268,28 +272,28 @@ impl Drop for InstructionTextToken {
 impl CoreArrayProvider for InstructionTextToken {
     type Raw = BNInstructionTextToken;
     type Context = ();
-    type Wrapped<'a> = Self;
+    type Wrapped<'a> = &'a Self;
 }
 unsafe impl CoreArrayProviderInner for InstructionTextToken {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeInstructionText(raw, count)
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self(*raw)
+        core::mem::transmute(raw)
     }
 }
 
 impl CoreArrayProvider for Array<InstructionTextToken> {
     type Raw = BNInstructionTextLine;
     type Context = ();
-    type Wrapped<'a> = Self;
+    type Wrapped<'a> = mem::ManuallyDrop<Self>;
 }
 unsafe impl CoreArrayProviderInner for Array<InstructionTextToken> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeInstructionTextLines(raw, count)
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::new(raw.tokens, raw.count, ())
+        mem::ManuallyDrop::new(Self::new(raw.tokens, raw.count, ()))
     }
 }
 
@@ -378,7 +382,7 @@ impl From<&Vec<&str>> for DisassemblyTextLine {
     fn from(string_tokens: &Vec<&str>) -> Self {
         let mut tokens: Box<[BNInstructionTextToken]> = string_tokens
             .iter()
-            .map(|&token| InstructionTextToken::new(token, InstructionTextTokenContents::Text).0)
+            .map(|&token| InstructionTextToken::new(token, InstructionTextTokenContents::Text).into_raw())
             .collect();
 
         // let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() };  // Can't use for now...still a rust nighly feature

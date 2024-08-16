@@ -255,21 +255,6 @@ def update_license(duration, _cache=True):
 		raise RuntimeError(last_error())
 
 
-@deprecation.deprecated(deprecated_in="3.4.4137", details="Use .update_license instead.")
-def acquire_license(duration, _cache=True):
-	"""
-	Function deprecated. Use update_license instead.
-
-	Check out and activate a license from the Enterprise Server.
-
-	.. note:: You must authenticate with the Enterprise Server before calling this.
-
-	:param int duration: Desired length of license checkout, in seconds.
-	:param bool _cache: Deprecated but left in for compatibility
-	"""
-	update_license(duration, _cache)
-
-
 def release_license():
 	"""
 	Release the currently checked out license back to the Enterprise Server.

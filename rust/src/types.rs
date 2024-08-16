@@ -55,6 +55,7 @@ pub type MemberAccess = BNMemberAccess;
 pub type MemberScope = BNMemberScope;
 pub type ILBranchDependence = BNILBranchDependence;
 pub type DataFlowQueryOption = BNDataFlowQueryOption;
+pub type VariableSourceType = BNVariableSourceType;
 
 ////////////////
 // Confidence
@@ -1339,6 +1340,24 @@ impl ToOwned for Type {
     }
 }
 
+pub struct ComponentReferencedTypes;
+impl CoreArrayProvider for ComponentReferencedTypes {
+    type Raw = *mut BNType;
+    type Context = ();
+    type Wrapped<'a> = &'a Type;
+}
+
+unsafe impl CoreArrayProviderInner for ComponentReferencedTypes {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNComponentFreeReferencedTypes(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        // SAFETY: BNType and Type are trasparent
+        core::mem::transmute(raw)
+    }
+}
+
 ///////////////////////
 // FunctionParameter
 
@@ -1360,9 +1379,9 @@ impl FunctionParameter {
 
     pub(crate) fn from_raw(member: BNFunctionParameter) -> Self {
         let name = if member.name.is_null() {
-            if member.location.type_ == BNVariableSourceType::RegisterVariableSourceType {
+            if member.location.type_ == VariableSourceType::RegisterVariableSourceType {
                 format!("reg_{}", member.location.storage)
-            } else if member.location.type_ == BNVariableSourceType::StackVariableSourceType {
+            } else if member.location.type_ == VariableSourceType::StackVariableSourceType {
                 format!("arg_{}", member.location.storage)
             } else {
                 String::new()
@@ -1394,13 +1413,13 @@ impl FunctionParameter {
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct Variable {
-    pub t: BNVariableSourceType,
+    pub t: VariableSourceType,
     pub index: u32,
     pub storage: i64,
 }
 
 impl Variable {
-    pub fn new(t: BNVariableSourceType, index: u32, storage: i64) -> Self {
+    pub fn new(t: VariableSourceType, index: u32, storage: i64) -> Self {
         Self { t, index, storage }
     }
 
@@ -1523,7 +1542,6 @@ pub struct NamedTypedVariable {
 }
 
 impl NamedTypedVariable {
-
     pub fn new(var: Variable, name: String, ty: Conf<Ref<Type>>, auto_defined: bool) -> Self {
         Self {
             name,
@@ -1538,7 +1556,7 @@ impl NamedTypedVariable {
             var: Variable::from_raw(var.var),
             auto_defined: var.autoDefined,
             name: CStr::from_ptr(var.name).to_str().unwrap().to_string(),
-            ty: Conf::new(Type::ref_from_raw(var.type_), var.typeConfidence)
+            ty: Conf::new(Type::ref_from_raw(var.type_), var.typeConfidence),
         }
     }
 

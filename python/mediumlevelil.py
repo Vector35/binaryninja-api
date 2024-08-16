@@ -3671,6 +3671,18 @@ class MediumLevelILFunction:
 		var_data = ssa_var.var.to_BNVariable()
 		return core.BNIsMediumLevelILSSAVarLive(self.handle, var_data, ssa_var.version)
 
+	def is_ssa_var_live_at(self, ssa_var: SSAVariable, instr: InstructionIndex) -> bool:
+		"""
+		``is_ssa_var_live_at`` determines if ``ssa_var`` is live at a given point in the function; counts phi's as uses
+		"""
+		return core.BNIsMediumLevelILSSAVarLiveAt(self.handle, ssa_var.var.to_BNVariable(), ssa_var.version, instr)
+
+	def is_var_live_at(self, var: 'variable.Variable', instr: InstructionIndex) -> bool:
+		"""
+		``is_var_live_at`` determines if ``var`` is live at a given point in the function
+		"""
+		return core.BNIsMediumLevelILVarLiveAt(self.handle, var.to_BNVariable(), instr)
+
 	def get_var_definitions(self, var: 'variable.Variable') -> List[MediumLevelILInstruction]:
 		count = ctypes.c_ulonglong()
 		var_data = var.to_BNVariable()

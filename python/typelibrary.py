@@ -87,8 +87,10 @@ class TypeLibrary:
 
 		:param str path:
 		:rtype: None
+		:raises: OSError if saving the file fails
 		"""
-		core.BNWriteTypeLibraryToFile(self.handle, path)
+		if not core.BNWriteTypeLibraryToFile(self.handle, path):
+			raise OSError(f"Failed to write type library to '{path}'")
 
 	@staticmethod
 	def from_name(arch: architecture.Architecture, name: str):

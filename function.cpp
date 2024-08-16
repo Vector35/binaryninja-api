@@ -2399,6 +2399,12 @@ Confidence<RegisterValue> Function::GetGlobalPointerValue() const
 }
 
 
+bool Function::UsesIncomingGlobalPointer() const
+{
+	return BNFunctionUsesIncomingGlobalPointer(m_object);
+}
+
+
 Confidence<RegisterValue> Function::GetRegisterValueAtExit(uint32_t reg) const
 {
 	BNRegisterValueWithConfidence value = BNGetFunctionRegisterValueAtExit(m_object, reg);

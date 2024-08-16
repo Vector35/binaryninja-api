@@ -1374,7 +1374,7 @@ void ObjCProcessor::ProcessObjCData()
 	m_symbolQueue->Process();
 	m_data->EndBulkModifySymbols();
 	delete m_symbolQueue;
-	m_data->CommitUndoActions(id);
+	m_data->ForgetUndoActions(id);
 
 	auto meta = SerializeMetadata();
 	m_data->StoreMetadata("Objective-C", meta, true);
@@ -1470,7 +1470,7 @@ void ObjCProcessor::ProcessCFStrings()
 		auto id = m_data->BeginUndoActions();
 		m_symbolQueue->Process();
 		m_data->EndBulkModifySymbols();
-		m_data->CommitUndoActions(id);
+		m_data->ForgetUndoActions(id);
 	}
 	delete m_symbolQueue;
 }

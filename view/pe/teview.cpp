@@ -259,7 +259,19 @@ bool TEView::Init()
 			}
 		}
 
+		if (!platform)
+		{
+			LogError("Platform not supported by this version of Binary Ninja");
+			return false;
+		}
+
 		m_arch = platform->GetArchitecture();
+		if (!m_arch)
+		{
+			LogError("Architecture not supported by this version of Binary Ninja");
+			return false;
+		}
+
 		SetDefaultPlatform(platform);
 		SetDefaultArchitecture(m_arch);
 

@@ -463,7 +463,7 @@ bool ElfView::Init()
 			initialImageBase = i.virtualAddress;
 	}
 
-	SetOriginalBase(initialImageBase);
+	SetOriginalImageBase(initialImageBase);
 	uint64_t preferredImageBase = initialImageBase;
 	Ref<Settings> viewSettings = Settings::Instance();
 	m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", this);
@@ -1152,13 +1152,14 @@ bool ElfView::Init()
 						Ref<Symbol> sym = GetSymbolByAddress(gotEntry);
 						if (entry.value && sym && (sym->GetType() == ImportAddressSymbol))
 						{
-							Ref<Platform> targetPlatform = platform->GetAssociatedPlatformByAddress(entry.value);
-							Ref<Function> func = AddFunctionForAnalysis(targetPlatform, entry.value);
+							uint64_t adjustedAddress = entry.value + imageBaseAdjustment;
+							Ref<Platform> targetPlatform = platform->GetAssociatedPlatformByAddress(adjustedAddress);
+							Ref<Function> func = AddFunctionForAnalysis(targetPlatform, adjustedAddress);
 							if (func)
 							{
 								Ref<Symbol> funcSym = new Symbol(ImportedFunctionSymbol,
 										sym->GetShortName(), sym->GetFullName(), sym->GetRawName(),
-										entry.value, NoBinding, sym->GetNameSpace(), sym->GetOrdinal());
+										adjustedAddress, NoBinding, sym->GetNameSpace(), sym->GetOrdinal());
 								DefineAutoSymbol(funcSym);
 								func->ApplyImportedTypes(funcSym);
 							}
@@ -1851,6 +1852,7 @@ bool ElfView::Init()
 	programHeaderTypeBuilder.AddMemberWithValue("PT_GNU_EH_FRAME", ELF_PT_GNU_EH_FRAME);
 	programHeaderTypeBuilder.AddMemberWithValue("PT_GNU_STACK", ELF_PT_GNU_STACK);
 	programHeaderTypeBuilder.AddMemberWithValue("PT_GNU_RELRO", ELF_PT_GNU_RELRO);
+	programHeaderTypeBuilder.AddMemberWithValue("PT_GNU_PROPERTY", ELF_PT_GNU_PROPERTY);
 	programHeaderTypeBuilder.AddMemberWithValue("PT_LOSUNW", ELF_PT_LOSUNW);
 	programHeaderTypeBuilder.AddMemberWithValue("PT_SUNWBSS", ELF_PT_SUNWBSS);
 	programHeaderTypeBuilder.AddMemberWithValue("PT_SUNWSTACK", ELF_PT_SUNWSTACK);

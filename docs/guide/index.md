@@ -107,22 +107,34 @@ You can load files in many ways:
 
 There are five menu items that can be used to save some combination of a raw file or a file's analysis information. Analysis information is saved into files that end in `.bndb` and have the same prefix as the original file. The default behavior for each of the "save" menu choices is described below:
 
-1. "Save" - This menu is the only one bound to a hotkey by default and it is intended to be the "do what I probably want" option.
+### 1. Save
+
+This menu is the only one bound to a hotkey by default and it is intended to be the "do what I probably want" option.
+
     - If you have edited the contents of a file and have not yet confirmed the file name to save over, this will ask you to save the file contents and prompt for a file name (check the save dialog title text to confirm this).
     - If you have edited the file contents and _have_ previously specified the file name, this option will save those changes to that file without a prompt.
     - If you have not edited the contents of the file but have added any analysis information (created functions, comments, changed names types, etc), you will be asked for the name of the `.bndb` analysis database if one does not already exist.
     - If an existing analysis database is currently being opened or previously saved, the existing database will be saved without a prompt.
     - Finally, if you have changed both file contents and analysis information, you'll be prompted as to which you wish to save.
 
-2. "Save As" - Will prompt to save the analysis database or just the file contents.
+### 2. Save As
+
+"Save As" Will prompt to save the analysis database or just the file contents.
+
     - If you choose to save the analysis database, it behaves similarly to "Save" above, except for the cases that save without prompt. In those cases, you will _always_ be prompted for a filename.
     - If you choose to save the file contents only, you will be prompted for a filename to which to save the current contents of the binary view, including any modifications.
 
-3. "Save All" - Used to save multiple tabs worth of analysis data only. Does not save file contents.
+### 3. Save All
 
-4. "Save Analysis Database" - Will prompt to select a database to save analysis information if none is currently selected and in use, and will save without a prompt if one has already been selected.
+"Save All" is used to save multiple tabs worth of analysis data only. Does not save file contents.
 
-5. "Save Analysis Database With Options" - Allows for saving a `.bndb` without additional undo information, or by cleaning up some internal snapshot information to decrease the file size.
+### 4. Save Analysis Database
+
+"Save Analysis Database" will prompt to select a database to save analysis information if none is currently selected and in use, and will save without a prompt if one has already been selected.
+
+### 5. Save Analysis Database With Options
+
+This menu allows for saving a `.bndb` without additional undo information, or by cleaning up some internal snapshot information to decrease the file size.
 
 ![save with options](../img/save-with-options.png "Save With Options"){ width="600" }
 
@@ -211,7 +223,7 @@ There's also [many](#using-the-keyboard) keyboard-based navigation options.
 Switching views happens multiple ways. In some instances, it is automatic, such as clicking a data reference from graph view. This will navigate to linear view as data is not shown in the graph view. While navigating, you can use the [view hotkeys](#default-hotkeys) to switch to a specific view at the same location as the current selection. Next you can use the [command palette](#command-palette). Additionally, the view menu in the header at the top of each pane can be used to change views without navigating to any given location. Finally, you can also use the `View` application menu.
 
 ???+ Tip "Tip"
-    Any loaded BinaryView will show up in the upper-left of the main pane. You can switch between (for example), `ELF` and `Raw` to switch between multiple loaded [BinaryViews](../dev/concepts.md#Binary-Views).
+    Any loaded BinaryView will show up in the upper-left of the main pane. You can switch between (for example), `ELF` and `Raw` to switch between multiple loaded [BinaryViews](../dev/concepts.md#binary-views).
 
 ## The Sidebar
 
@@ -401,6 +413,18 @@ The Variables sidebar panel will show local variables from the currently selecte
 
 The Stack sidebar panel shows the currently selected function's stack layout. You can create variables using the [usual](types/type.md#direct-ui-manipulation) hotkeys as well as using the right-click menu (which also shows the hotkeys).
 
+### History
+
+![History](../img/history.png "History"){ width="700" }
+
+The History sidebar panel shows all annotations made during the history of a database. Note that even changes made prior to the introduction of the UI will be shown. This not only makes it easier to see what changes have been made, but allows you to right-click and revert to a particular point in analysis. Additionally, the right-click menu includes a toggle to hide or show the date of the change.
+
+Note that when plugins or the UI batch multiple changes in one action, they wil be summarized with a count of actions but no further details are possible. 
+
+There is currently no support for branching/forking style of history at this time.
+
+If you save a database [without undo actions](#5-save-analysis-database-with-options) the history view will be empty.
+
 ### Strings
 
 ![Strings](../img/strings.png "Strings"){ width="700" }
@@ -571,6 +595,99 @@ Current options include:
         - Show IL Opcodes
         - Show Stack Pointer Value (LLIL only)
 
+## Triage Summary
+
+![triage summary](../img/triagesummary.png "Triage Summary"){ width="800" }
+
+The Triage Summary view is intended to give a quick overview of a file. There is even a special way to open multiple
+files for triage (`File/Open for Triage`) so a high level overview can be viewed before deciding whether to trigger a
+full analysis. If a file is opened in this way, a button at the bottom appears titled, "Start Full Analysis".
+
+Triage Summary was originally a [python
+plugin](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples/triage) implemented as a proof-of-concept
+for extending the UI. The functionality was so useful it was re-written in C++ and integrated into the official UI,
+however the python plugin contains a feature that the C++ one does not: the ability to resolve some dynamic imports. To
+use this version, copy the folder linked above into your [plugins folder](#user-folder) and disable the built-in C++ UI
+using the [`corePlugins.triage`](settings.md#corePlugins.triage) setting.
+
+### 1. Entropy
+
+This image shows the overall entropy of the file. Brighter areas indicate regions of higher entropy
+(encrypted, compressed, etc), while darker regions indicate places of lower entropy. You can click anywhere in the
+entropy map to navigate to that location in your default view.
+
+### 2. File Info
+
+File Info: The file info section contains some summary information for the file, each result can be clicked to copy
+it into your clipboard.
+
+### 3. Headers
+
+This section appears only in BinaryViews and the exact information depends on the view itself. PE headers
+are the most detailed and include such items as checksums, characterstics, and compiler strings. Addresses that
+existing in the virtual memory space of the file can be clicked to navigate to that location.
+
+### 4. Base Address Detection (BASE)
+
+![BASE](../img/base.png "BASE Address Detection"){ width="800" }
+
+The Base Address Scan Engine (or BASE) is used to automatically identify load addresses for embedded files or
+other formats where the load address isn't known and the file isn't relocatable. BASE is only visible in the triage
+summary when the file doesn't specify a load address such as a raw or mapped file. For BinaryViews like PE or MachO,
+switching the view in the upper-left from the BinaryView name to `raw` will force the BASE UI to show up in the
+Triage Summary.
+
+See our recent [blog
+post](https://binary.ninja/2024/05/21/automatically-identifying-base-addresses.html) for more information on how
+BASE works. The following settings describe the advanced settings and how they influence the process.
+
+Note that you can cancel the analysis at any time and the current results will be displayed which may be useful for
+large files or files with many pointers being analyzed.
+
+If the file format has a header that can be identified before analysis that may help BASE identify the proper load
+address, otherwise the alignment would need to account for the header. 
+
+|Setting|Description|Default|
+|--- |--- |--- |
+|Min. String Length|Minimum length of string to be considered a point-of-interest|0n10|
+|Alignment|Byte boundary to align the base address while scanning|0n1024|
+|Lower Boundary|Lowest address to begin search for candidate base address|0x0|
+|Upper Boundary|Highest address to end search for candidate base address|0xffffffffffffffff|
+|Points of Interest|Specifies types of points-of-interest to use for analysis (all, strings only, functions only)|All|
+|Max Pointers|Maximum amount of pointers to allow in each pointer cluster|0n128|
+
+### 5. Libraries
+
+For file formats that include explicit linking information to a particular library (like PE), the
+libraries linked will be listed in this section and are available in the [API as well](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.libraries).
+
+### 6. Imports / Exports
+
+The Imports and Exports sections show any imports and exports. The lists are sortable by clicking
+the table headers. 
+
+### 7. Sections
+
+If the file format contains section information, they will be listed here. All mapped addresses are
+clickable to navigate to the virtual address.
+
+### 8. Strings
+
+Strings can be double clicked to navigate to them, and the table can be sorted or the list filtered by
+typing in the search box.
+
+## Byte Overview
+
+![byte overview](../img/byteoverview.png "Byte Overview"){ width="800" }
+
+The Byte Overview (or "Bytes" when selected in the view switcher) shows the binary (mapped or raw, depending on the
+top-level selection) as a [Code Page 437](https://en.wikipedia.org/wiki/Code_page_437) view. This view is commonly used
+by malware analysis researchers using the [Hiew](http://hiew.ru) tool.
+
+While this view is less featureful than the Hex view, it allows for a much higher information density as every byte is
+represented by one character as opposted to four total characters when in Hex view (including the space between hex
+digits and the ASCII representation).
+
 ## Hex View
 
 ![hex](../img/hex.png "hex view"){ width="800" }
@@ -582,7 +699,8 @@ The hex view is particularly good for transforming data in various ways via the 
 If you're using the hex view for a Binary View like ELF, Mach-O or PE, you probably want to make sure you're also in the `Raw` view if you want to see the file as it exists on disk in hex view.
 
 ### Live Preview
-    Any changes made in the Hex view will take effect immediately in any other views open into the same file (new views can be created via the `Split to new tab`, or `Split to new window` options under `View`, or via [splitting panes](#tiling-panes)). This can, however, cause large amounts of re-analysis so be warned before making large edits or transformations in a large binary file.
+
+Any changes made in the Hex view will take effect immediately in any other views open into the same file (new views can be created via the `Split to new tab`, or `Split to new window` options under `View`, or via [splitting panes](#tiling-panes)). This can, however, cause large amounts of re-analysis so be warned before making large edits or transformations in a large binary file.
 
 ## Linear View
 
@@ -598,8 +716,14 @@ Linear view is commonly used for identifying and adding type information for unk
 
 The “Edit Function Properties” dialog provides the ability to easily configure some of a function’s more advanced properties. It can be opened via the context menu when a function is focused in the graph or linear views, or via the command palette. An overview of the UI is as follows:
 
-0. **Function prototype.** The function’s prototype. If the prototype is too long to fit inside the window, a scroll bar will appear.
-1. **Function info.** A list of conditionally-shown tags offering information about the function. Possible tags are as follows:
+### 1. Function Prototype
+
+The function prototype section contains the function’s prototype. If the prototype is too long to fit inside the window, a scroll bar will appear.
+
+### 2. Function Info
+
+This section contains a list of conditionally-shown tags offering information about the function. Possible tags are as follows:
+
     - **Function architecture/platform**: The function's architecture/platform (e.g. `windows-x86_64`)
     - **Analysis skipped (too large)**: Analysis was skipped for this function because it was too large ([`analysis.limits.maxFunctionSize`](settings.md#analysis.limits.maxFunctionSize))
     - **Analysis timed out**: Analysis for this function was skipped because it exceeded the maximum allowed time ([`analysis.limits.maxFunctionAnalysisTime`](settings.md#analysis.limits.maxFunctionAnalysisTime))
@@ -609,15 +733,42 @@ The “Edit Function Properties” dialog provides the ability to easily configu
     - **Intermediate analysis only**: This function only received intermediate analysis ([`analysis.mode`](settings.md#analysis.mode) was 'intermediate')
     - **Unresolved stack usage**: The function has unresolved stack usage
     - **GP = 0xABCD1234**: The global pointer value is 0xABCD1234
-1. **Calling convention.** The calling convention this function uses. All calling conventions for the function’s architecture are available as choices.
-1. **Stack adjustment.** How many _extra_ bytes does this function remove from the stack upon return?
-1. **Has variable arguments.** Does this function accept a variable number of arguments?
-1. **Can return.** Functions that cannot return will halt disassembly on branches where they are called
-1. **Pure.** Functions that are pure are assumed to have no side effects and may be inlined if their return value is trivial
-1. **Inline during analysis.** Causes the function to be [inlined](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.inline_during_analysis) during analysis.
-1. **Clobbered registers.** The list of registers that this function clobbers; individual registers can be checked or unchecked.
-1. **Return registers.** The list of registers that this function returns data in; individual registers can be checked or unchecked.
-1. **Register stack adjustments.** A table containing a row for each register stack (e.g. x87) in the architecture, with the ability to adjust how many registers are removed from each stack when the function returns.
+
+### 3. Calling Convention
+
+This section shows the calling convention this function uses. All calling conventions for the function’s architecture are available as choices.
+
+### 4. Stack Adjustment
+
+The stack adjustment shows how many _extra_ bytes this function removes from the stack upon return.
+
+### 5. Has Variable Arguments
+
+This toggle indicates whether the function accepts a variable number of arguments
+
+### 6. Can Return
+
+This toggle indicates whether the function returns. If it cannot, Binary Ninja will halt disassembly on branches where the function is called.
+
+### 7. Pure
+
+Pure functions are assumed to have no side effects and may be inlined if their return value is trivial.
+
+### 8. Inline During Analysis
+
+When Inline During Analysis is checked, it causes the function to be [inlined](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.inline_during_analysis) during analysis.
+
+### 9. Clobbered Registers
+
+This section contains the list of registers that this function clobbers; individual registers can be checked or unchecked.
+
+### 10. Return Registers
+
+Return registers shows the list of registers that this function returns data in; individual registers can be checked or unchecked.
+
+### 11. Register Stack Adjustments
+
+This element is a table containing a row for each register stack (e.g. x87) in the architecture, with the ability to adjust how many registers are removed from each stack when the function returns.
 
 ## High Level IL
 
@@ -680,7 +831,7 @@ dialog and deselect the variables that should no longer be merged.
 
 ### Split Variables
 
-![Split Variable >](../img/split-var.png "Split Variable"){ width="200" }
+![Split Variable >](../img/split-var.png "Split Variable"){ width="400" }
 
 Variables that have multiple definitions can be manually split into multiple variables by clicking on the
 variable at a definition site and selecting "Split Variable at Definition" from the context menu.
@@ -695,6 +846,21 @@ Manually split variables will initially provide the selected definition as a sep
 definitions will be automatically resolved into one or more other variables. If some of the definitions should
 have been included as part of the same variable, use "Merge Variables..." from the context menu after splitting
 to select which of the other definitions should be merged.
+
+## Tooltips
+
+![tooltip](../img/tooltip.png "Tooltip"){ width="800" }
+
+Tooltips show the destination of jumps, calls, or global data variables.  In the case of a code target, the tooltip will
+show the same level of IL or disassembly, but the target will be rendered in graph view regardless of whether the source
+was a different view or not.
+
+If you wish to disable tooltips, you can unset the [`ui.manualTooltip`](https://docs.binary.ninja/guide/settings.html#ui.manualTooltip) setting.
+
+You can even navigate within the tooltip that pops up. First, hold the `Alt` or `Option` key on your keyboard and the
+tooltip will become sticky and not disappear when your mouse moves. You can then interact with the popup by clicking or
+mouse-wheeling. Shift-mouse-wheel will scroll horizontally.
+
 
 ## Script (Python) Console
 

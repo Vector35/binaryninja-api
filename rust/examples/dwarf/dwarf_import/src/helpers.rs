@@ -20,125 +20,169 @@ use std::{
     str::FromStr
 };
 
-use crate::DebugInfoBuilderContext;
+use crate::{DebugInfoBuilderContext, ReaderType};
 use binaryninja::binaryview::BinaryViewBase;
 use binaryninja::filemetadata::FileMetadata;
 use binaryninja::Endianness;
 use binaryninja::{binaryview::{BinaryView, BinaryViewExt}, downloadprovider::{DownloadInstanceInputOutputCallbacks, DownloadProvider}, rc::Ref, settings::Settings};
+use gimli::Dwarf;
 use gimli::{
     constants, Attribute, AttributeValue,
-    AttributeValue::{DebugInfoRef, UnitRef},
-    DebuggingInformationEntry, Operation, Reader, Unit, UnitOffset, UnitSectionOffset,
+    AttributeValue::{DebugInfoRef, DebugInfoRefSup, UnitRef},
+    DebuggingInformationEntry, Operation, Unit, UnitOffset, UnitSectionOffset,
 };
 
 use log::warn;
 
-pub(crate) fn get_uid<R: Reader<Offset = usize>>(
+pub(crate) fn get_uid<R: ReaderType>(
+    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
 ) -> usize {
-    match entry.offset().to_unit_section_offset(unit) {
+    // We set a large gap between supplementary and main entries
+    let adj = dwarf.sup().map_or(0, |_| 0x1000000000000000);
+    let entry_offset = match entry.offset().to_unit_section_offset(unit) {
         UnitSectionOffset::DebugInfoOffset(o) => o.0,
         UnitSectionOffset::DebugTypesOffset(o) => o.0,
-    }
+    };
+    entry_offset + adj
 }
 
 ////////////////////////////////////
 // DIE attr convenience functions
 
-pub(crate) enum DieReference<'a, R: Reader<Offset = usize>> {
-    UnitAndOffset((&'a Unit<R>, UnitOffset)),
+pub(crate) enum DieReference<'a, R: ReaderType> {
+    UnitAndOffset((&'a Dwarf<R>, &'a Unit<R>, UnitOffset)),
     Err,
 }
 
-pub(crate) fn get_attr_die<'a, R: Reader<Offset = usize>>(
+pub(crate) fn get_attr_die<'a, R: ReaderType>(
+    dwarf: &'a Dwarf<R>,
     unit: &'a Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &'a DebugInfoBuilderContext<R>,
     attr: constants::DwAt,
 ) -> Option<DieReference<'a, R>> {
     match entry.attr_value(attr) {
-        Ok(Some(UnitRef(offset))) => Some(DieReference::UnitAndOffset((unit, offset))),
+        Ok(Some(UnitRef(offset))) => Some(DieReference::UnitAndOffset((dwarf, unit, offset))),
         Ok(Some(DebugInfoRef(offset))) => {
-            for source_unit in debug_info_builder_context.units() {
-                if let Some(new_offset) = offset.to_unit_offset(&source_unit.header) {
-                    return Some(DieReference::UnitAndOffset((source_unit, new_offset)));
+            if dwarf.sup().is_some() {
+                for source_unit in debug_info_builder_context.units() {
+                    if let Some(new_offset) = offset.to_unit_offset(&source_unit.header) {
+                        return Some(DieReference::UnitAndOffset((dwarf, source_unit, new_offset)));
+                    }
                 }
             }
-            warn!("Failed to fetch DIE. Debug information may be incomplete.");
+            else {
+                // This could either have no supplementary file because it is one or because it just doesn't have one
+                // operate on supplementary file if dwarf is a supplementary file, else self
+
+                // It's possible this is a reference in the supplementary file to itself
+                for source_unit in debug_info_builder_context.sup_units() {
+                    if let Some(new_offset) = offset.to_unit_offset(&source_unit.header) {
+                        return Some(DieReference::UnitAndOffset((dwarf, source_unit, new_offset)));
+                    }
+                }
+
+                // ... or it just doesn't have a supplementary file
+                for source_unit in debug_info_builder_context.units() {
+                    if let Some(new_offset) = offset.to_unit_offset(&source_unit.header) {
+                        return Some(DieReference::UnitAndOffset((dwarf, source_unit, new_offset)));
+                    }
+                }
+            }
+
             None
-        }
-        // Ok(Some(DebugInfoRefSup(offset))) TODO - dwarf 5 stuff
+        },
+        Ok(Some(DebugInfoRefSup(offset))) => {
+            for source_unit in debug_info_builder_context.sup_units() {
+                if let Some(new_offset) = offset.to_unit_offset(&source_unit.header) {
+                    return Some(DieReference::UnitAndOffset((dwarf.sup().unwrap(), source_unit, new_offset)));
+                }
+            }
+            warn!("Failed to fetch DIE. Supplementary debug information may be incomplete.");
+            None
+        },
         _ => None,
     }
 }
 
-pub(crate) fn resolve_specification<'a, R: Reader<Offset = usize>>(
+pub(crate) fn resolve_specification<'a, R: ReaderType>(
+    dwarf: &'a Dwarf<R>,
     unit: &'a Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &'a DebugInfoBuilderContext<R>,
 ) -> DieReference<'a, R> {
     if let Some(die_reference) = get_attr_die(
+        dwarf,
         unit,
         entry,
         debug_info_builder_context,
         constants::DW_AT_specification,
     ) {
         match die_reference {
-            DieReference::UnitAndOffset((entry_unit, entry_offset)) => {
+            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
                 if let Ok(entry) = entry_unit.entry(entry_offset) {
-                    resolve_specification(entry_unit, &entry, debug_info_builder_context)
+                    resolve_specification(dwarf, entry_unit, &entry, debug_info_builder_context)
                 } else {
-                    warn!("Failed to fetch DIE. Debug information may be incomplete.");
+                    warn!("Failed to fetch DIE for attr DW_AT_specification. Debug information may be incomplete.");
                     DieReference::Err
                 }
             }
             DieReference::Err => DieReference::Err,
         }
     } else if let Some(die_reference) = get_attr_die(
+        dwarf,
         unit,
         entry,
         debug_info_builder_context,
         constants::DW_AT_abstract_origin,
     ) {
         match die_reference {
-            DieReference::UnitAndOffset((entry_unit, entry_offset)) => {
-                if entry_offset == entry.offset() {
+            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
+                if entry_offset == entry.offset() && unit.header.offset() == entry_unit.header.offset() {
                     warn!("DWARF information is invalid (infinite abstract origin reference cycle). Debug information may be incomplete.");
                     DieReference::Err
                 } else if let Ok(new_entry) = entry_unit.entry(entry_offset) {
-                    resolve_specification(entry_unit, &new_entry, debug_info_builder_context)
+                    resolve_specification(dwarf, entry_unit, &new_entry, debug_info_builder_context)
                 } else {
-                    warn!("Failed to fetch DIE. Debug information may be incomplete.");
+                    warn!("Failed to fetch DIE for attr DW_AT_abstract_origin. Debug information may be incomplete.");
                     DieReference::Err
                 }
             }
             DieReference::Err => DieReference::Err,
         }
     } else {
-        DieReference::UnitAndOffset((unit, entry.offset()))
+        DieReference::UnitAndOffset((dwarf, unit, entry.offset()))
     }
 }
 
 // Get name from DIE, or referenced dependencies
-pub(crate) fn get_name<R: Reader<Offset = usize>>(
+pub(crate) fn get_name<R: ReaderType>(
+    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
 ) -> Option<String> {
-    match resolve_specification(unit, entry, debug_info_builder_context) {
-        DieReference::UnitAndOffset((entry_unit, entry_offset)) => {
+    match resolve_specification(dwarf, unit, entry, debug_info_builder_context) {
+        DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
             if let Ok(Some(attr_val)) = entry_unit
                 .entry(entry_offset)
                 .unwrap()
                 .attr_value(constants::DW_AT_name)
             {
-                if let Ok(attr_string) = debug_info_builder_context
-                    .dwarf()
-                    .attr_string(entry_unit, attr_val)
+                if let Ok(attr_string) = dwarf.attr_string(entry_unit, attr_val.clone())
                 {
                     if let Ok(attr_string) = attr_string.to_string() {
                         return Some(attr_string.to_string());
+                    }
+                }
+                else if let Some(dwarf) = &dwarf.sup {
+                    if let Ok(attr_string) = dwarf.attr_string(entry_unit, attr_val)
+                    {
+                        if let Ok(attr_string) = attr_string.to_string() {
+                            return Some(attr_string.to_string());
+                        }
                     }
                 }
             }
@@ -157,18 +201,24 @@ pub(crate) fn get_name<R: Reader<Offset = usize>>(
 }
 
 // Get raw name from DIE, or referenced dependencies
-pub(crate) fn get_raw_name<R: Reader<Offset = usize>>(
+pub(crate) fn get_raw_name<R: ReaderType>(
+    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
-    debug_info_builder_context: &DebugInfoBuilderContext<R>,
 ) -> Option<String> {
     if let Ok(Some(attr_val)) = entry.attr_value(constants::DW_AT_linkage_name) {
-        if let Ok(attr_string) = debug_info_builder_context
-            .dwarf()
-            .attr_string(unit, attr_val)
+        if let Ok(attr_string) = dwarf.attr_string(unit, attr_val.clone())
         {
             if let Ok(attr_string) = attr_string.to_string() {
                 return Some(attr_string.to_string());
+            }
+        }
+        else if let Some(dwarf) = dwarf.sup() {
+            if let Ok(attr_string) = dwarf.attr_string(unit, attr_val)
+            {
+                if let Ok(attr_string) = attr_string.to_string() {
+                    return Some(attr_string.to_string());
+                }
             }
         }
     }
@@ -176,7 +226,7 @@ pub(crate) fn get_raw_name<R: Reader<Offset = usize>>(
 }
 
 // Get the size of an object as a usize
-pub(crate) fn get_size_as_usize<R: Reader<Offset = usize>>(
+pub(crate) fn get_size_as_usize<R: ReaderType>(
     entry: &DebuggingInformationEntry<R>,
 ) -> Option<usize> {
     if let Ok(Some(attr)) = entry.attr(constants::DW_AT_byte_size) {
@@ -189,7 +239,7 @@ pub(crate) fn get_size_as_usize<R: Reader<Offset = usize>>(
 }
 
 // Get the size of an object as a u64
-pub(crate) fn get_size_as_u64<R: Reader<Offset = usize>>(
+pub(crate) fn get_size_as_u64<R: ReaderType>(
     entry: &DebuggingInformationEntry<R>,
 ) -> Option<u64> {
     if let Ok(Some(attr)) = entry.attr(constants::DW_AT_byte_size) {
@@ -202,7 +252,7 @@ pub(crate) fn get_size_as_u64<R: Reader<Offset = usize>>(
 }
 
 // Get the size of a subrange as a u64
-pub(crate) fn get_subrange_size<R: Reader<Offset = usize>>(
+pub(crate) fn get_subrange_size<R: ReaderType>(
     entry: &DebuggingInformationEntry<R>,
 ) -> u64 {
     if let Ok(Some(attr)) = entry.attr(constants::DW_AT_upper_bound) {
@@ -217,35 +267,27 @@ pub(crate) fn get_subrange_size<R: Reader<Offset = usize>>(
 }
 
 // Get the start address of a function
-pub(crate) fn get_start_address<R: Reader<Offset = usize>>(
+pub(crate) fn get_start_address<R: ReaderType>(
+    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
-    debug_info_builder_context: &DebugInfoBuilderContext<R>,
 ) -> Option<u64> {
     if let Ok(Some(attr_val)) = entry.attr_value(constants::DW_AT_low_pc) {
-        match debug_info_builder_context
-            .dwarf()
-            .attr_address(unit, attr_val)
+        match dwarf.attr_address(unit, attr_val)
         {
             Ok(Some(val)) => Some(val),
             _ => None,
         }
     } else if let Ok(Some(attr_val)) = entry.attr_value(constants::DW_AT_entry_pc) {
-        match debug_info_builder_context
-            .dwarf()
-            .attr_address(unit, attr_val)
+        match dwarf.attr_address(unit, attr_val)
         {
             Ok(Some(val)) => Some(val),
             _ => None,
         }
     } else if let Ok(Some(attr_value)) = entry.attr_value(constants::DW_AT_ranges) {
-        if let Ok(Some(ranges_offset)) = debug_info_builder_context
-            .dwarf()
-            .attr_ranges_offset(unit, attr_value)
+        if let Ok(Some(ranges_offset)) = dwarf.attr_ranges_offset(unit, attr_value)
         {
-            if let Ok(mut ranges) = debug_info_builder_context
-                .dwarf()
-                .ranges(unit, ranges_offset)
+            if let Ok(mut ranges) = dwarf.ranges(unit, ranges_offset)
             {
                 if let Ok(Some(range)) = ranges.next() {
                     return Some(range.begin);
@@ -259,20 +301,26 @@ pub(crate) fn get_start_address<R: Reader<Offset = usize>>(
 }
 
 // Get an attribute value as a u64 if it can be coerced
-pub(crate) fn get_attr_as_u64<R: Reader<Offset = usize>>(attr: &Attribute<R>) -> Option<u64> {
-    if let Some(value) = attr.u8_value() {
-        Some(value.into())
-    } else if let Some(value) = attr.u16_value() {
-        Some(value.into())
-    } else if let Some(value) = attr.udata_value() {
+pub(crate) fn get_attr_as_u64<R: ReaderType>(attr: &Attribute<R>) -> Option<u64> {
+    if let Some(value) = attr.udata_value() {
         Some(value)
+    } else if let Some(value) = attr.sdata_value() {
+        Some(value as u64)
+    } else if let AttributeValue::Block(mut data) = attr.value() {
+        match data.len() {
+            1 => data.read_u8().map(u64::from).ok(),
+            2 => data.read_u16().map(u64::from).ok(),
+            4 => data.read_u32().map(u64::from).ok(),
+            8 => data.read_u64().ok(),
+            _ => None
+        }
     } else {
-        attr.sdata_value().map(|value| value as u64)
+        None
     }
 }
 
 // Get an attribute value as a usize if it can be coerced
-pub(crate) fn get_attr_as_usize<R: Reader<Offset = usize>>(attr: Attribute<R>) -> Option<usize> {
+pub(crate) fn get_attr_as_usize<R: ReaderType>(attr: Attribute<R>) -> Option<usize> {
     if let Some(value) = attr.u8_value() {
         Some(value.into())
     } else if let Some(value) = attr.u16_value() {
@@ -286,7 +334,7 @@ pub(crate) fn get_attr_as_usize<R: Reader<Offset = usize>>(attr: Attribute<R>) -
 
 // Get an attribute value as a usize if it can be coerced
 // Parses DW_OP_address, DW_OP_const
-pub(crate) fn get_expr_value<R: Reader<Offset = usize>>(
+pub(crate) fn get_expr_value<R: ReaderType>(
     unit: &Unit<R>,
     attr: Attribute<R>,
 ) -> Option<u64> {
@@ -359,10 +407,8 @@ pub(crate) fn get_build_id(view: &BinaryView) -> Result<String, String> {
 }
 
 
-pub(crate) fn download_debug_info(view: &BinaryView) -> Result<Ref<BinaryView>, String> {
+pub(crate) fn download_debug_info(build_id: &String, view: &BinaryView) -> Result<Ref<BinaryView>, String> {
     let settings = Settings::new("");
-
-    let build_id = get_build_id(view)?;
 
     let debug_server_urls = settings.get_string_list("network.debuginfodServers", Some(view), None);
 
@@ -432,18 +478,13 @@ pub(crate) fn download_debug_info(view: &BinaryView) -> Result<Ref<BinaryView>, 
 }
 
 
-pub(crate) fn find_local_debug_file(view: &BinaryView) -> Option<String> {
+pub(crate) fn find_local_debug_file(build_id: &String, view: &BinaryView) -> Option<String> {
     let settings = Settings::new("");
     let debug_info_paths = settings.get_string_list("analysis.debugInfo.debugDirectories", Some(view), None);
 
     if debug_info_paths.is_empty() {
         return None
     }
-
-    let build_id = match get_build_id(view) {
-        Ok(x) => x,
-        Err(_) => return None,
-    };
 
     for debug_info_path in debug_info_paths.into_iter() {
         if let Ok(path) = PathBuf::from_str(&debug_info_path.to_string())
@@ -476,17 +517,23 @@ pub(crate) fn find_local_debug_file(view: &BinaryView) -> Option<String> {
 }
 
 
-pub(crate) fn load_debug_info_for_build_id(view: &BinaryView) -> Result<Option<Ref<BinaryView>>, String> {
-    if let Some(debug_file_path) = find_local_debug_file(view) {
-        Ok(
+pub(crate) fn load_debug_info_for_build_id(build_id: &String, view: &BinaryView) -> (Option<Ref<BinaryView>>, bool) {
+    if let Some(debug_file_path) = find_local_debug_file(build_id, view) {
+        return
+        (
             binaryninja::load_with_options(
                 debug_file_path,
                 false,
                 Some("{\"analysis.debugInfo.internal\": false}")
-            )
-        )
+            ),
+            false
+        );
     }
-    else {
-        Ok(None)
+    else if Settings::new("").get_bool("network.enableDebuginfod", Some(view), None) {
+        return (
+            download_debug_info(build_id, view).ok(),
+            true
+        );
     }
+    (None, false)
 }

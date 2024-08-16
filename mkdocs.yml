@@ -1,4 +1,5 @@
 site_name: 'Binary Ninja User Documentation'
+dev_addr: 0.0.0.0:8000
 site_url: 'https://docs.binary.ninja/'
 repo_url: 'https://binary.ninja/'
 repo_name: 'binary.ninja'
@@ -39,9 +40,9 @@ theme:
         - navigation.sections
         - navigation.expand
         - navigation.prune
-        - navigation.indexes
         - navigation.top
         - content.code.copy
+        - search.highlight
 
     shortcuts:
         help: 191    # ?
@@ -79,13 +80,9 @@ nav:
         - Plugins: 'guide/plugins.md'
         - Settings: 'guide/settings.md'
         - Projects: 'guide/projects.md'
+        - Enterprise: 'guide/enterprise/index.md'
         - Troubleshooting: 'guide/troubleshooting.md'
         - Objective-C (Experimental): 'guide/objectivec.md'
-        - Enterprise:
-            - 'guide/enterprise/index.md'
-            - User Interface: 'guide/enterprise/user-interface.md'
-            - Functionality: 'guide/enterprise/functionality.md'
-            - Troubleshooting: 'guide/enterprise/troubleshooting.md'
         - Debugger:
             - Overview: 'guide/debugger/index.md'
             - Remote Debugging: 'guide/debugger/remote-debugging.md'

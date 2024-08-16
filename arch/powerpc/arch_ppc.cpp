@@ -714,7 +714,7 @@ getil:
 		}
 
 		auto liftOps = [&]() {
-			if (op == LLIL_SUB)
+			if ((op == LLIL_SUB) || (op == LLIL_FSUB))
 			{
 				left = il.GetExprForRegisterOrConstant(operands[0], size);
 				right = il.GetExprForRegisterOrConstant(operands[1], size);

@@ -99,6 +99,11 @@ def shutdown():
 
 	.. note:: This will be called automatically on script exit if you import the binaryninja module.
 	"""
+
+	# Release license if we have one
+	global _enterprise_license_checkout
+	_enterprise_license_checkout = None
+
 	core.BNShutdown()
 
 
@@ -224,12 +229,12 @@ def _init_plugins():
 	global _plugin_init
 	global _enterprise_license_checkout
 
-	if not core_ui_enabled() and core.BNGetProduct() == "Binary Ninja Enterprise Client":
-		# Enterprise client needs to checkout a license reservation or else BNInitPlugins will fail
-		_enterprise_license_checkout = enterprise.LicenseCheckout()
-		_enterprise_license_checkout.acquire()
-
 	if not _plugin_init:
+		if not core_ui_enabled() and core.BNGetProduct() == "Binary Ninja Enterprise Client":
+			# Enterprise client needs to checkout a license reservation or else BNInitPlugins will fail
+			_enterprise_license_checkout = enterprise.LicenseCheckout()
+			_enterprise_license_checkout.acquire()
+
 		# The first call to BNInitCorePlugins returns True for successful initialization and True in this context indicates headless operation.
 		# The result is pulled from BNInitPlugins as that now wraps BNInitCorePlugins.
 		is_headless_init_once = core.BNInitPlugins(not os.environ.get('BN_DISABLE_USER_PLUGINS'))
@@ -412,11 +417,6 @@ def load(*args, **kwargs) -> BinaryView:
 	return bv
 
 
-@deprecation.deprecated(deprecated_in="3.5.4378", details='Use :py:func:`load` instead')
-def open_view(*args, **kwargs) -> BinaryView:
-	return load(*args, **kwargs)
-
-
 def connect_pycharm_debugger(port=5678):
 	"""
 	Connect to PyCharm (Professional Edition) for debugging.
@@ -459,6 +459,21 @@ class UIPluginInHeadlessError(Exception):
 	"""
 	def __init__(self, *args, **kwargs):
 		Exception.__init__(self, *args, **kwargs)
+
+
+def fuzzy_match_single(target, query) -> Optional[int]:
+	"""
+	Fuzzy match a string against a query string. Returns a score that is higher for
+	a more confident match, or None if the query does not match the target string.
+
+	:param target: Target (larger) string
+	:param query: Query (smaller) string
+	:return: Confidence of match, or None if the string doesn't match
+	"""
+	result = core.BNFuzzyMatchSingle(target, query)
+	if result == 0:
+		return None
+	return result
 
 
 # Load Collaboration scripts from Enterprise (they are bundled in shipping builds)

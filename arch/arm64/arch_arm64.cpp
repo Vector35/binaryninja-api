@@ -266,6 +266,7 @@ class Arm64Architecture : public Architecture
  protected:
 	size_t m_bits;
 	bool m_onlyDisassembleOnAlignedAddresses;
+	bool m_preferIntrinsics;
 
 	virtual bool Disassemble(const uint8_t* data, uint64_t addr, size_t maxLen, Instruction& result)
 	{
@@ -717,6 +718,7 @@ class Arm64Architecture : public Architecture
 	{
 		Ref<Settings> settings = Settings::Instance();
 		m_onlyDisassembleOnAlignedAddresses = settings->Get<bool>("arch.aarch64.disassembly.alignRequired") ? 1 : 0;
+		m_preferIntrinsics = settings->Get<bool>("arch.aarch64.disassembly.preferIntrinsics") ? 1 : 0;
 	}
 
 	bool CanAssemble() override { return true; }
@@ -1238,7 +1240,15 @@ class Arm64Architecture : public Architecture
 		}
 
 		len = 4;
-		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_onlyDisassembleOnAlignedAddresses);
+		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_onlyDisassembleOnAlignedAddresses, [&]() -> bool
+			{
+				Ref<Function> f = il.GetFunction();
+				Ref<BinaryView> v;
+				Ref<Settings> s = Settings::Instance();
+				if (s && f && (v = f->GetView()))
+					return m_preferIntrinsics && s->Get<bool>("arch.aarch64.disassembly.preferIntrinsics", v);
+				return true;
+			});
 	}
 
 
@@ -3512,6 +3522,13 @@ static void InitAarch64Settings()
 			"type" : "boolean",
 			"default" : true,
 			"description" : "Require instructions be on 4-byte aligned addresses to be disassembled."
+			})");
+	settings->RegisterSetting("arch.aarch64.disassembly.preferIntrinsics",
+			R"({
+			"title" : "AARCH64 Prefer Intrinsics for Vector Operations",
+			"type" : "boolean",
+			"default" : true,
+			"description" : "Prefer generating calls to intrinsics (where one is available) to lifting vector operations as unrolled loops (where available). Note that not all vector operations are currently lifted as either intrinsics or unrolled loops."
 			})");
 }
 

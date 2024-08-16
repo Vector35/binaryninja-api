@@ -39,15 +39,39 @@ use dwarfreader::{
 
 use gimli::{constants, DebuggingInformationEntry, Dwarf, DwarfFileType, Reader, Section, SectionId, Unit, UnwindSection};
 
+use helpers::{get_build_id, load_debug_info_for_build_id};
 use log::{error, warn, LevelFilter};
 
-fn recover_names<R: Reader<Offset = usize>>(
+
+trait ReaderType: Reader<Offset = usize> {}
+impl<T: Reader<Offset = usize>> ReaderType for T {}
+
+
+fn recover_names<R: ReaderType>(
+    dwarf: &Dwarf<R>,
     debug_info_builder_context: &mut DebugInfoBuilderContext<R>,
     progress: &dyn Fn(usize, usize) -> Result<(), ()>,
 ) -> bool {
-    let mut iter = debug_info_builder_context.dwarf().units();
+
+    let mut res = true;
+    if let Some(sup_dwarf) = dwarf.sup() {
+        res = recover_names_internal(sup_dwarf, debug_info_builder_context, progress);
+    }
+
+    if res {
+        res = recover_names_internal(dwarf, debug_info_builder_context, progress);
+    }
+    res
+}
+
+fn recover_names_internal<R: ReaderType>(
+    dwarf: &Dwarf<R>,
+    debug_info_builder_context: &mut DebugInfoBuilderContext<R>,
+    progress: &dyn Fn(usize, usize) -> Result<(), ()>,
+) -> bool {
+    let mut iter = dwarf.units();
     while let Ok(Some(header)) = iter.next() {
-        let unit = debug_info_builder_context.dwarf().unit(header).unwrap();
+        let unit = dwarf.unit(header).unwrap();
         let mut namespace_qualifiers: Vec<(isize, String)> = vec![];
         let mut entries = unit.entries();
         let mut depth = 0;
@@ -76,7 +100,8 @@ fn recover_names<R: Reader<Offset = usize>>(
 
             match entry.tag() {
                 constants::DW_TAG_namespace => {
-                    fn resolve_namespace_name<R: Reader<Offset = usize>>(
+                    fn resolve_namespace_name<R: ReaderType>(
+                        dwarf: &Dwarf<R>,
                         unit: &Unit<R>,
                         entry: &DebuggingInformationEntry<R>,
                         debug_info_builder_context: &DebugInfoBuilderContext<R>,
@@ -84,18 +109,20 @@ fn recover_names<R: Reader<Offset = usize>>(
                         depth: isize,
                     ) {
                         if let Some(namespace_qualifier) =
-                            get_name(unit, entry, debug_info_builder_context)
+                            get_name(dwarf, unit, entry, debug_info_builder_context)
                         {
                             namespace_qualifiers.push((depth, namespace_qualifier));
                         } else if let Some(die_reference) = get_attr_die(
+                            dwarf,
                             unit,
                             entry,
                             debug_info_builder_context,
                             constants::DW_AT_extension,
                         ) {
                             match die_reference {
-                                DieReference::UnitAndOffset((entry_unit, entry_offset)) => {
+                                DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
                                     resolve_namespace_name(
+                                        dwarf,
                                         entry_unit,
                                         &entry_unit.entry(entry_offset).unwrap(),
                                         debug_info_builder_context,
@@ -105,7 +132,7 @@ fn recover_names<R: Reader<Offset = usize>>(
                                 }
                                 DieReference::Err => {
                                     warn!(
-                                        "Failed to fetch DIE. Debug information may be incomplete."
+                                        "Failed to fetch DIE when resolving namespace. Debug information may be incomplete."
                                     );
                                 }
                             }
@@ -115,6 +142,7 @@ fn recover_names<R: Reader<Offset = usize>>(
                     }
 
                     resolve_namespace_name(
+                        dwarf,
                         &unit,
                         entry,
                         debug_info_builder_context,
@@ -125,7 +153,7 @@ fn recover_names<R: Reader<Offset = usize>>(
                 constants::DW_TAG_class_type
                 | constants::DW_TAG_structure_type
                 | constants::DW_TAG_union_type => {
-                    if let Some(name) = get_name(&unit, entry, debug_info_builder_context) {
+                    if let Some(name) = get_name(dwarf, &unit, entry, debug_info_builder_context) {
                         namespace_qualifiers.push((depth, name))
                     } else {
                         namespace_qualifiers.push((
@@ -141,7 +169,7 @@ fn recover_names<R: Reader<Offset = usize>>(
                         ))
                     }
                     debug_info_builder_context.set_name(
-                        get_uid(&unit, entry),
+                        get_uid(dwarf, &unit, entry),
                         simplify_str_to_str(
                             namespace_qualifiers
                                 .iter()
@@ -155,9 +183,9 @@ fn recover_names<R: Reader<Offset = usize>>(
                 constants::DW_TAG_typedef
                 | constants::DW_TAG_subprogram
                 | constants::DW_TAG_enumeration_type => {
-                    if let Some(name) = get_name(&unit, entry, debug_info_builder_context) {
+                    if let Some(name) = get_name(dwarf, &unit, entry, debug_info_builder_context) {
                         debug_info_builder_context.set_name(
-                            get_uid(&unit, entry),
+                            get_uid(dwarf, &unit, entry),
                             simplify_str_to_str(
                                 namespace_qualifiers
                                     .iter()
@@ -171,8 +199,8 @@ fn recover_names<R: Reader<Offset = usize>>(
                     }
                 }
                 _ => {
-                    if let Some(name) = get_name(&unit, entry, debug_info_builder_context) {
-                        debug_info_builder_context.set_name(get_uid(&unit, entry), name);
+                    if let Some(name) = get_name(dwarf, &unit, entry, debug_info_builder_context) {
+                        debug_info_builder_context.set_name(get_uid(dwarf, &unit, entry), name);
                     }
                 }
             }
@@ -182,7 +210,8 @@ fn recover_names<R: Reader<Offset = usize>>(
     true
 }
 
-fn parse_unit<R: Reader<Offset = usize>>(
+fn parse_unit<R: ReaderType>(
+    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
@@ -225,12 +254,12 @@ fn parse_unit<R: Reader<Offset = usize>>(
 
         match entry.tag() {
             constants::DW_TAG_subprogram => {
-                let fn_idx = parse_function_entry(unit, entry, debug_info_builder_context, debug_info_builder);
+                let fn_idx = parse_function_entry(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
                 functions_by_depth.push((fn_idx, current_depth));
             },
             constants::DW_TAG_variable => {
                 let current_fn_idx = functions_by_depth.last().and_then(|x| x.0);
-                parse_variable(unit, entry, debug_info_builder_context, debug_info_builder, current_fn_idx)
+                parse_variable(dwarf, unit, entry, debug_info_builder_context, debug_info_builder, current_fn_idx)
             },
             constants::DW_TAG_class_type |
             constants::DW_TAG_enumeration_type |
@@ -238,7 +267,7 @@ fn parse_unit<R: Reader<Offset = usize>>(
             constants::DW_TAG_union_type |
             constants::DW_TAG_typedef => {
                 // Ensure types are loaded even if they're unused
-                types::get_type(unit, entry, debug_info_builder_context, debug_info_builder);
+                types::get_type(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
             },
             _ => (),
         }
@@ -303,11 +332,38 @@ fn parse_eh_frame<R: Reader>(
     }
 }
 
+fn get_supplementary_build_id(bv: &BinaryView) -> Option<String> {
+    let raw_view = bv.raw_view().ok()?;
+    if let Ok(section) = raw_view.section_by_name(".gnu_debugaltlink") {
+        let start = section.start();
+        let len = section.len();
+
+        if len < 20 {
+            // Not large enough to hold a build id
+            return None;
+        }
+
+        raw_view
+            .read_vec(start, len)
+            .splitn(2, |x| *x == 0)
+            .last()
+            .map(|a| {
+                a.iter().map(|b| format!("{:02x}", b)).collect()
+            })
+    }
+    else {
+        None
+    }
+}
+
 fn parse_dwarf(
     bv: &BinaryView,
     debug_bv: &BinaryView,
+    supplementary_bv: Option<&BinaryView>,
     progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
 ) -> Result<DebugInfoBuilder, ()> {
+    // TODO: warn if no supplementary file and .gnu_debugaltlink section present
+
     // Determine if this is a DWO
     // TODO : Make this more robust...some DWOs follow non-DWO conventions
 
@@ -329,6 +385,19 @@ fn parse_dwarf(
     if dwo_file {
         dwarf.file_type = DwarfFileType::Dwo;
     }
+    else {
+        dwarf.file_type = DwarfFileType::Main;
+    }
+
+    if let Some(sup_bv) = supplementary_bv {
+        let sup_endian = get_endian(sup_bv);
+        let sup_dwo_file = is_dwo_dwarf(sup_bv) || is_raw_dwo_dwarf(sup_bv);
+        let sup_section_reader =
+            |section_id: SectionId| -> _ { create_section_reader(section_id, sup_bv, sup_endian, sup_dwo_file) };
+        if let Err(e) = dwarf.load_sup(sup_section_reader) {
+            error!("Failed to load supplementary file: {}", e);
+        }
+    }
 
     let eh_frame_endian = get_endian(bv);
     let mut eh_frame_section_reader =
@@ -336,7 +405,7 @@ fn parse_dwarf(
     let eh_frame = gimli::EhFrame::load(&mut eh_frame_section_reader).unwrap();
 
     let range_data_offsets = parse_eh_frame(bv, eh_frame)
-        .map_err(|e| println!("Error parsing .eh_frame: {}", e))?;
+        .map_err(|e| error!("Error parsing .eh_frame: {}", e))?;
 
     // Create debug info builder and recover name mapping first
     //  Since DWARF is stored as a tree with arbitrary implicit edges among leaves,
@@ -344,8 +413,9 @@ fn parse_dwarf(
     //   so we just do it up front
     let mut debug_info_builder = DebugInfoBuilder::new();
     debug_info_builder.set_range_data_offsets(range_data_offsets);
-    if let Some(mut debug_info_builder_context) = DebugInfoBuilderContext::new(view, dwarf) {
-        if !recover_names(&mut debug_info_builder_context, &progress)
+
+    if let Some(mut debug_info_builder_context) = DebugInfoBuilderContext::new(view, &dwarf) {
+        if !recover_names(&dwarf, &mut debug_info_builder_context, &progress)
             || debug_info_builder_context.total_die_count == 0
         {
             return Ok(debug_info_builder);
@@ -353,9 +423,22 @@ fn parse_dwarf(
 
         // Parse all the compilation units
         let mut current_die_number = 0;
+
+        for unit in debug_info_builder_context.sup_units() {
+            parse_unit(
+                dwarf.sup().unwrap(),
+                &unit,
+                &debug_info_builder_context,
+                &mut debug_info_builder,
+                &progress,
+                &mut current_die_number,
+            );
+        }
+
         for unit in debug_info_builder_context.units() {
             parse_unit(
-                unit,
+                &dwarf,
+                &unit,
                 &debug_info_builder_context,
                 &mut debug_info_builder,
                 &progress,
@@ -363,6 +446,7 @@ fn parse_dwarf(
             );
         }
     }
+
     Ok(debug_info_builder)
 }
 
@@ -370,9 +454,15 @@ struct DWARFParser;
 
 impl CustomDebugInfoParser for DWARFParser {
     fn is_valid(&self, view: &BinaryView) -> bool {
-        dwarfreader::is_valid(view) ||
-        dwarfreader::can_use_debuginfod(view) ||
-        (dwarfreader::has_build_id_section(view) && helpers::find_local_debug_file(view).is_some())
+        if dwarfreader::is_valid(view) || dwarfreader::can_use_debuginfod(view) {
+            return true;
+        }
+        if dwarfreader::has_build_id_section(view) {
+            if let Ok(build_id) = get_build_id(view) {
+                return helpers::find_local_debug_file(&build_id, view).is_some();
+            }
+        }
+        false
     }
 
     fn parse_info(
@@ -383,28 +473,34 @@ impl CustomDebugInfoParser for DWARFParser {
         progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool {
         let (external_file, close_external) = if !dwarfreader::is_valid(bv) {
-            if dwarfreader::has_build_id_section(bv) {
-                if let Ok(Some(debug_view)) = helpers::load_debug_info_for_build_id(bv) {
-                    (Some(debug_view), false)
-                } else {
-                    if dwarfreader::can_use_debuginfod(bv) {
-                        if let Ok(debug_view) = helpers::download_debug_info(bv) {
-                            (Some(debug_view), true)
-                        } else {
-                            (None, false)
-                        }
-                    } else {
-                        (None, false)
-                    }
-                }
-            } else {
+            if let Ok(build_id) = get_build_id(bv) {
+                helpers::load_debug_info_for_build_id(&build_id, bv)
+            }
+            else {
                 (None, false)
             }
-        } else {
+        }
+        else {
             (None, false)
         };
 
-        let result = match parse_dwarf(bv, external_file.as_deref().unwrap_or(debug_file), progress)
+        let sup_bv = get_supplementary_build_id(
+            external_file
+                .as_deref()
+                .unwrap_or(debug_file)
+            )
+            .and_then(|build_id| {
+                load_debug_info_for_build_id(&build_id, bv)
+                .0
+                .map(|x| x.raw_view().unwrap())
+            });
+
+        let result = match parse_dwarf(
+            bv,
+            external_file.as_deref().unwrap_or(debug_file),
+            sup_bv.as_deref(),
+            progress
+        )
         {
             Ok(mut builder) => {
                 builder.post_process(bv, debug_info).commit_info(debug_info);

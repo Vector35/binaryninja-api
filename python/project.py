@@ -83,7 +83,7 @@ class ProjectFile:
 		return f'<ProjectFile: {self.project.name}/{path}>'
 
 	@property
-	def project(self):
+	def project(self) -> 'Project':
 		"""
 		Get the project that owns this file
 
@@ -133,7 +133,7 @@ class ProjectFile:
 		return core.BNProjectFileGetName(self._handle) # type: ignore
 
 	@name.setter
-	def name(self, new_name: str):
+	def name(self, new_name: str) -> bool:
 		"""
 		Set the name of this file
 
@@ -151,7 +151,7 @@ class ProjectFile:
 		return core.BNProjectFileGetDescription(self._handle) # type: ignore
 
 	@description.setter
-	def description(self, new_description: str):
+	def description(self, new_description: str) -> bool:
 		"""
 		Set the description of this file
 
@@ -172,14 +172,14 @@ class ProjectFile:
 		return ProjectFolder(handle=folder_handle)
 
 	@folder.setter
-	def folder(self, new_folder: Optional['ProjectFolder']):
+	def folder(self, new_folder: Optional['ProjectFolder']) -> bool:
 		"""
 		Set the folder that contains this file
 
 		:param new_parent: The folder that will contain this file, or None
 		"""
 		folder_handle = None if new_folder is None else new_folder._handle
-		core.BNProjectFileSetFolder(self._handle, folder_handle)
+		return core.BNProjectFileSetFolder(self._handle, folder_handle)
 
 	def export(self, dest: AsPath) -> bool:
 		"""
@@ -219,7 +219,7 @@ class ProjectFolder:
 		return f'<ProjectFolder: {self.project.name}/{path}>'
 
 	@property
-	def project(self):
+	def project(self) -> 'Project':
 		"""
 		Get the project that owns this folder
 
@@ -251,7 +251,7 @@ class ProjectFolder:
 		return core.BNProjectFolderGetName(self._handle) # type: ignore
 
 	@name.setter
-	def name(self, new_name: str):
+	def name(self, new_name: str) -> bool:
 		"""
 		Set the name of this folder
 
@@ -269,7 +269,7 @@ class ProjectFolder:
 		return core.BNProjectFolderGetDescription(self._handle) # type: ignore
 
 	@description.setter
-	def description(self, new_description: str):
+	def description(self, new_description: str) -> bool:
 		"""
 		Set the description of this folder
 
@@ -290,14 +290,14 @@ class ProjectFolder:
 		return ProjectFolder(handle=folder_handle)
 
 	@parent.setter
-	def parent(self, new_parent: Optional['ProjectFolder']):
+	def parent(self, new_parent: Optional['ProjectFolder']) -> bool:
 		"""
 		Set the parent folder of this folder
 
 		:param new_parent: The folder that will contain this folder, or None
 		"""
 		parent_handle = None if new_parent is None else new_parent._handle
-		core.BNProjectFolderSetParent(self._handle, parent_handle)
+		return core.BNProjectFolderSetParent(self._handle, parent_handle)
 
 	def export(self, dest: AsPath, progress_func: ProgressFuncType = _nop) -> bool:
 		"""

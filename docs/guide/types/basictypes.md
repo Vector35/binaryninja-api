@@ -94,7 +94,7 @@ All of the type containers described in the [type introduction](index.md) are av
 
 The Type Editor is the primary interface for editing types used in your analysis. It shows
 whichever types you select in the Type List above, and allows you to edit them in many ways.
-Types are shown in C syntax with various [annotations](#type-annotations). Structure members
+Types are shown in C syntax with various [annotations](attributes.md). Structure members
 have their offsets indicated on the left, and empty space between structure members is shown
 with `??` marks indicating individual bytes. Selecting members in a structure will show
 [cross-references](../index.md#cross-references) to those members, and double-clicking

@@ -1984,62 +1984,6 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		return NotImplemented
 
-	@deprecation.deprecated(deprecated_in="3.1.3724")
-	def is_view_type_constant_defined(self, type_name: str, const_name: str) -> bool:
-		"""
-		:param str type_name: the BinaryView type name of the constant to query
-		:param str const_name: the constant name to query
-		:rtype: None
-		:Example:
-
-			>>> ELF_RELOC_COPY = 5
-			>>> arch.set_view_type_constant("ELF", "R_COPY", ELF_RELOC_COPY)
-			>>> arch.is_view_type_constant_defined("ELF", "R_COPY")
-			True
-			>>> arch.is_view_type_constant_defined("ELF", "NOT_THERE")
-			False
-			>>>
-		"""
-		return False
-
-	@deprecation.deprecated(deprecated_in="3.1.3724")
-	def get_view_type_constant(self, type_name: str, const_name: str, default_value: int = 0) -> int:
-		"""
-		``get_view_type_constant`` retrieves the view type constant for the given type_name and const_name.
-
-		:param str type_name: the BinaryView type name of the constant to be retrieved
-		:param str const_name: the constant name to retrieved
-		:param int default_value: optional default value if the type_name is not present. default value is zero.
-		:return: The BinaryView type constant or the default_value if not found
-		:rtype: int
-		:Example:
-
-			>>> ELF_RELOC_COPY = 5
-			>>> arch.set_view_type_constant("ELF", "R_COPY", ELF_RELOC_COPY)
-			>>> arch.get_view_type_constant("ELF", "R_COPY")
-			5
-			>>> arch.get_view_type_constant("ELF", "NOT_HERE", 100)
-			100
-		"""
-		return 0
-
-	@deprecation.deprecated(deprecated_in="3.1.3724")
-	def set_view_type_constant(self, type_name: str, const_name: str, value: int) -> None:
-		"""
-		``set_view_type_constant`` creates a new binaryview type constant.
-
-		:param str type_name: the BinaryView type name of the constant to be registered
-		:param str const_name: the constant name to register
-		:param int value: the value of the constant
-		:rtype: None
-		:Example:
-
-			>>> ELF_RELOC_COPY = 5
-			>>> arch.set_view_type_constant("ELF", "R_COPY", ELF_RELOC_COPY)
-			>>>
-		"""
-		pass
-
 	def register_calling_convention(self, cc: 'callingconvention.CallingConvention') -> None:
 		"""
 		``register_calling_convention`` registers a new calling convention for the Architecture.
@@ -2049,40 +1993,84 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		core.BNRegisterCallingConvention(self.handle, cc.handle)
 
-	def get_default_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+	@property
+	def default_calling_convention(self):
+		"""
+		Default calling convention.
+
+		.. note:: Make sure the calling convention has been registered with `Architecture.register_calling_convention`.
+
+		:getter: returns a CallingConvention object for the default calling convention, if one exists.
+		:setter: sets the default calling convention
+		:type: Optional['callingconvention.CallingConvention']
+		"""
 		cc_handle = core.BNGetArchitectureDefaultCallingConvention(self.handle)
 		if cc_handle is None:
 			return None
 		return callingconvention.CallingConvention(handle=cc_handle)
 
-	def set_default_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+	@default_calling_convention.setter
+	def default_calling_convention(self, cc: 'callingconvention.CallingConvention'):
 		core.BNSetArchitectureDefaultCallingConvention(self.handle, cc.handle)
 
-	def get_cdecl_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+	@property
+	def cdecl_calling_convention(self):
+		"""
+		Cdecl calling convention.
+
+		.. note:: Make sure the calling convention has been registered with `Architecture.register_calling_convention`.
+
+		:getter: returns a CallingConvention object for the cdecl calling convention, if one exists.
+		:setter: sets the cdecl calling convention
+		:type: Optional['callingconvention.CallingConvention']
+		"""
 		cc_handle = core.BNGetArchitectureCdeclCallingConvention(self.handle)
 		if cc_handle is None:
 			return None
 		return callingconvention.CallingConvention(handle=cc_handle)
 
-	def set_cdecl_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+	@cdecl_calling_convention.setter
+	def cdecl_calling_convention(self, cc: 'callingconvention.CallingConvention'):
 		core.BNSetArchitectureCdeclCallingConvention(self.handle, cc.handle)
 
-	def get_stdcall_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+	@property
+	def stdcall_calling_convention(self):
+		"""
+		Stdcall calling convention.
+
+		.. note:: Make sure the calling convention has been registered with `Architecture.register_calling_convention`.
+
+		:getter: returns a CallingConvention object for the stdcall calling convention, if one exists.
+		:setter: sets the stdcall calling convention
+		:type: Optional['callingconvention.CallingConvention']
+		"""
 		cc_handle = core.BNGetArchitectureStdcallCallingConvention(self.handle)
 		if cc_handle is None:
 			return None
 		return callingconvention.CallingConvention(handle=cc_handle)
 
-	def set_stdcall_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+	@stdcall_calling_convention.setter
+	def stdcall_calling_convention(self, cc: 'callingconvention.CallingConvention'):
 		core.BNSetArchitectureStdcallCallingConvention(self.handle, cc.handle)
 
-	def get_fastcall_calling_convention(self) -> Optional['callingconvention.CallingConvention']:
+	@property
+	def fastcall_calling_convention(self):
+		"""
+		Fastcall calling convention.
+
+		.. note:: Make sure the calling convention has been registered with `Architecture.register_calling_convention`.
+
+		:getter: returns a CallingConvention object for the fastcall calling convention, if one exists.
+		:setter: sets the fastcall calling convention
+		:type: Optional['callingconvention.CallingConvention']
+		"""
 		cc_handle = core.BNGetArchitectureFastcallCallingConvention(self.handle)
 		if cc_handle is None:
 			return None
 		return callingconvention.CallingConvention(handle=cc_handle)
 
-	def set_fastcall_calling_convention(self, cc: 'callingconvention.CallingConvention'):
+	@fastcall_calling_convention.setter
+	def fastcall_calling_convention(self, cc: 'callingconvention.CallingConvention'):
 		core.BNSetArchitectureFastcallCallingConvention(self.handle, cc.handle)
 
 

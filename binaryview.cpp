@@ -1039,40 +1039,6 @@ Segment::Segment(BNSegment* seg)
 }
 
 
-vector<pair<uint64_t, uint64_t>> Segment::GetRelocationRanges() const
-{
-	size_t count = 0;
-	BNRange* ranges = BNSegmentGetRelocationRanges(m_object, &count);
-	vector<pair<uint64_t, uint64_t>> result(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		result.push_back({ranges[i].start, ranges[i].end});
-	}
-	BNFreeRelocationRanges(ranges);
-	return result;
-}
-
-
-vector<pair<uint64_t, uint64_t>> Segment::GetRelocationRangesAtAddress(uint64_t addr) const
-{
-	size_t count = 0;
-	BNRange* ranges = BNSegmentGetRelocationRangesAtAddress(m_object, addr, &count);
-	vector<pair<uint64_t, uint64_t>> result(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		result.push_back({ranges[i].start, ranges[i].end});
-	}
-	BNFreeRelocationRanges(ranges);
-	return result;
-}
-
-
-uint64_t Segment::GetRelocationsCount() const
-{
-	return BNSegmentGetRelocationsCount(m_object);
-}
-
-
 uint64_t Segment::GetStart() const
 {
 	return BNSegmentGetStart(m_object);
@@ -1761,6 +1727,21 @@ vector<pair<uint64_t, uint64_t>> BinaryView::GetRelocationRangesAtAddress(uint64
 }
 
 
+vector<pair<uint64_t, uint64_t>> BinaryView::GetRelocationRangesInRange(uint64_t addr, size_t size) const
+{
+	size_t count = 0;
+	BNRange* ranges = BNGetRelocationRangesInRange(m_object, addr, size, &count);
+	vector<pair<uint64_t, uint64_t>> result(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back({ranges[i].start, ranges[i].end});
+	}
+	BNFreeRelocationRanges(ranges);
+	return result;
+
+}
+
+
 bool BinaryView::RangeContainsRelocation(uint64_t addr, size_t size) const
 {
 	return BNRangeContainsRelocation(m_object, addr, size);
@@ -1878,15 +1859,33 @@ uint64_t BinaryView::GetNextValidOffset(uint64_t offset) const
 }
 
 
+uint64_t BinaryView::GetImageBase() const
+{
+	return BNGetImageBase(m_object);
+}
+
+
+uint64_t BinaryView::GetOriginalImageBase() const
+{
+	return BNGetOriginalImageBase(m_object);
+}
+
+
+void BinaryView::SetOriginalImageBase(uint64_t imageBase)
+{
+	return BNSetOriginalImageBase(m_object, imageBase);
+}
+
+
 uint64_t BinaryView::GetOriginalBase() const
 {
-	return BNGetOriginalBase(m_object);
+	return BNGetOriginalImageBase(m_object);
 }
 
 
 void BinaryView::SetOriginalBase(uint64_t base)
 {
-	return BNSetOriginalBase(m_object, base);
+	return BNSetOriginalImageBase(m_object, base);
 }
 
 
@@ -4796,6 +4795,19 @@ bool BinaryView::GetAddressForDataOffset(uint64_t offset, uint64_t& addr)
 }
 
 
+bool BinaryView::GetDataOffsetForAddress(uint64_t addr, uint64_t& offset)
+{
+	auto segment = GetSegmentAt(addr);
+	if (segment && segment->GetStart() <= addr && addr < segment->GetEnd())
+	{
+		offset = 0;
+		offset = addr - segment->GetStart() + segment->GetDataOffset();
+		return true;
+	}
+	return false;
+}
+
+
 void BinaryView::AddAutoSection(const string& name, uint64_t start, uint64_t length, BNSectionSemantics semantics,
     const string& type, uint64_t align, uint64_t entrySize, const string& linkedSection, const string& infoSection,
     uint64_t infoData)
@@ -4885,6 +4897,42 @@ vector<string> BinaryView::GetUniqueSectionNames(const vector<string>& names)
 }
 
 
+vector<BNAddressRange> BinaryView::GetAllocatedRanges()
+{
+	size_t count;
+	BNAddressRange* ranges = BNGetAllocatedRanges(m_object, &count);
+
+	vector<BNAddressRange> result;
+	copy(&ranges[0], &ranges[count], back_inserter(result));
+	BNFreeAddressRanges(ranges);
+	return result;
+}
+
+
+vector<BNAddressRange> BinaryView::GetMappedAddressRanges()
+{
+	size_t count;
+	BNAddressRange* ranges = BNGetMappedAddressRanges(m_object, &count);
+
+	vector<BNAddressRange> result;
+	copy(&ranges[0], &ranges[count], back_inserter(result));
+	BNFreeAddressRanges(ranges);
+	return result;
+}
+
+
+vector<BNAddressRange> BinaryView::GetBackedAddressRanges()
+{
+	size_t count;
+	BNAddressRange* ranges = BNGetBackedAddressRanges(m_object, &count);
+
+	vector<BNAddressRange> result;
+	copy(&ranges[0], &ranges[count], back_inserter(result));
+	BNFreeAddressRanges(ranges);
+	return result;
+}
+
+
 string BinaryView::GetCommentForAddress(uint64_t addr) const
 {
 	char* comment = BNGetGlobalCommentForAddress(m_object, addr);
@@ -4908,18 +4956,6 @@ vector<uint64_t> BinaryView::GetCommentedAddresses() const
 void BinaryView::SetCommentForAddress(uint64_t addr, const string& comment)
 {
 	BNSetGlobalCommentForAddress(m_object, addr, comment.c_str());
-}
-
-
-vector<BNAddressRange> BinaryView::GetAllocatedRanges()
-{
-	size_t count;
-	BNAddressRange* ranges = BNGetAllocatedRanges(m_object, &count);
-
-	vector<BNAddressRange> result;
-	copy(&ranges[0], &ranges[count], back_inserter(result));
-	BNFreeAddressRanges(ranges);
-	return result;
 }
 
 

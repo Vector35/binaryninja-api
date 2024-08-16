@@ -493,6 +493,7 @@ impl Project {
     /// * `id` - id unique ID
     /// * `creation_time` - Creation time of the file
     /// * `progress_func` - Progress function that will be called as the file is being added
+    #[allow(clippy::too_many_arguments)]
     pub unsafe fn create_file_from_path_with_progress_unsafe<P, N, D, I, F>(
         &self,
         path: P,
@@ -654,6 +655,7 @@ impl Project {
     /// * `id` - id unique ID
     /// * `creation_time` - Creation time of the file
     /// * `progress_func` - Progress function that will be called as the file is being added
+    #[allow(clippy::too_many_arguments)]
     pub unsafe fn create_file_with_progress_unsafe<N, D, I, F>(
         &self,
         contents: &[u8],
@@ -847,7 +849,7 @@ impl ProjectFolder {
     }
 
     /// Set the name of this folder
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) {
+    pub fn set_name<S: BnStrCompatible>(&self, value: S) -> bool {
         let value_raw = value.into_bytes_with_nul();
         unsafe {
             BNProjectFolderSetName(
@@ -863,7 +865,7 @@ impl ProjectFolder {
     }
 
     /// Set the description of this folder
-    pub fn set_description<S: BnStrCompatible>(&self, value: S) {
+    pub fn set_description<S: BnStrCompatible>(&self, value: S) -> bool {
         let value_raw = value.into_bytes_with_nul();
         unsafe {
             BNProjectFolderSetDescription(
@@ -880,7 +882,7 @@ impl ProjectFolder {
     }
 
     /// Set the folder that contains this folder
-    pub fn set_folder(&self, folder: Option<&ProjectFolder>) {
+    pub fn set_folder(&self, folder: Option<&ProjectFolder>) -> bool {
         let folder_handle = folder
             .map(|x| unsafe { x.as_raw() as *mut _ })
             .unwrap_or(null_mut());
@@ -997,7 +999,7 @@ impl ProjectFile {
     }
 
     /// Set the name of this file
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) {
+    pub fn set_name<S: BnStrCompatible>(&self, value: S) -> bool {
         let value_raw = value.into_bytes_with_nul();
         unsafe {
             BNProjectFileSetName(
@@ -1013,7 +1015,7 @@ impl ProjectFile {
     }
 
     /// Set the description of this file
-    pub fn set_description<S: BnStrCompatible>(&self, value: S) {
+    pub fn set_description<S: BnStrCompatible>(&self, value: S) -> bool {
         let value_raw = value.into_bytes_with_nul();
         unsafe {
             BNProjectFileSetDescription(
@@ -1035,7 +1037,7 @@ impl ProjectFile {
     }
 
     /// Set the folder that contains this file
-    pub fn set_folder(&self, folder: Option<&ProjectFolder>) {
+    pub fn set_folder(&self, folder: Option<&ProjectFolder>) -> bool {
         let folder_handle = folder
             .map(|x| unsafe { x.as_raw() as *mut _ })
             .unwrap_or(null_mut());
@@ -1126,24 +1128,18 @@ mod test {
 
     use super::Project;
 
-    fn unique_project() -> (String, String) {
-        let unique_id = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
-        let tmp_dir = std::env::temp_dir();
-        let project_path = format!("{}/tmp_project_{unique_id}", tmp_dir.to_str().unwrap());
-        let project_name = format!("create_delete_empty_project_{unique_id}");
-        (project_path, project_name)
+    fn unique_project(name: &str) -> String {
+        format!("{}/{}", std::env::temp_dir().to_str().unwrap(), name)
     }
 
     #[test]
     fn create_delete_empty() {
         crate::headless::init();
 
-        let (project_path, project_name) = unique_project();
+        let project_name = "create_delete_empty_project";
+        let project_path = unique_project(project_name);
         // create the project
-        let project = Project::create(&project_path, &project_name);
+        let project = Project::create(&project_path, project_name);
         project.open().unwrap();
         assert!(project.is_open());
 
@@ -1151,7 +1147,7 @@ mod test {
         let project_path_received = project.path();
         assert_eq!(&project_path, project_path_received.as_str());
         let project_name_received = project.name();
-        assert_eq!(&project_name, project_name_received.as_str());
+        assert_eq!(project_name, project_name_received.as_str());
 
         // close the project
         project.close().unwrap();
@@ -1168,9 +1164,10 @@ mod test {
     fn create_close_open_close() {
         crate::headless::init();
 
-        let (project_path, project_name) = unique_project();
+        let project_name = "create_close_open_close";
+        let project_path = unique_project(project_name);
         // create the project
-        let project = Project::create(&project_path, &project_name);
+        let project = Project::create(&project_path, project_name);
         project.open().unwrap();
 
         // get the project id
@@ -1199,7 +1196,8 @@ mod test {
     fn modify_project() {
         crate::headless::init();
 
-        let (project_path, project_name) = unique_project();
+        let project_name = "modify_project";
+        let project_path = unique_project(project_name);
         // create the project
         let project = Project::create(&project_path, project_name);
         project.open().unwrap();

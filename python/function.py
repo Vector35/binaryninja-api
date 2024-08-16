@@ -598,12 +598,6 @@ class Function:
 		core.BNSetUserFunctionPure(self.handle, bc)
 
 	@property
-	@deprecation.deprecated(deprecated_in="3.4.4049", details="Use :py:attr:`Function.has_explicitly_defined_type` instead.")
-	def explicitly_defined_type(self) -> bool:
-		"""Whether function has explicitly defined types (read-only)"""
-		return self.has_explicitly_defined_type
-
-	@property
 	def has_explicitly_defined_type(self) -> bool:
 		"""Whether function has explicitly defined types (read-only)"""
 		return core.BNFunctionHasExplicitlyDefinedType(self.handle)
@@ -825,68 +819,6 @@ class Function:
 			else:
 				core.BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def create_user_tag(self, type: 'binaryview.TagType', data: str = "") -> 'binaryview.Tag':
-		return self.create_tag(type, data, True)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def create_auto_tag(self, type: 'binaryview.TagType', data: str = "") -> 'binaryview.Tag':
-		return self.create_tag(type, data, False)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def create_tag(self, type: 'binaryview.TagType', data: str = "", auto: bool = False) -> 'binaryview.Tag':
-		return self.view.create_tag(type, data, auto)
-
-	@property
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:attr:`Function.tags` instead.')
-	def address_tags(self) -> TagList:
-		return TagList(self)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_at` instead.')
-	def get_address_tags_at(self, addr: int,
-	                        arch: Optional['architecture.Architecture'] = None) -> List['binaryview.Tag']:
-		if arch is None:
-			arch = self.arch
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetAddressTags(self.handle, arch.handle, addr, count)
-		assert tags is not None, "core.BNGetAddressTags returned None"
-		result = []
-		try:
-			for i in range(0, count.value):
-				core_tag = core.BNNewTagReference(tags[i])
-				assert core_tag is not None, "core.BNNewTagReference returned None"
-				result.append(binaryview.Tag(core_tag))
-			return result
-		finally:
-			core.BNFreeTagList(tags, count.value)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def add_user_address_tag(
-	    self, addr: int, tag: 'binaryview.Tag', arch: Optional['architecture.Architecture'] = None
-	) -> None:
-		if arch is None:
-			arch = self.arch
-		core.BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def create_user_address_tag(
-	    self, addr: int, tag_type: 'binaryview.TagType', data: str, unique: bool = False,
-	    arch: Optional['architecture.Architecture'] = None
-	) -> 'binaryview.Tag':
-		if not isinstance(tag_type, binaryview.TagType):
-			raise TypeError(f"type is not a TagType instead got {type(tag_type)} : {repr(tag_type)}")
-		if arch is None:
-			arch = self.arch
-		if unique:
-			tags = self.get_address_tags_at(addr, arch)
-			for tag in tags:
-				if tag.type == tag_type and tag.data == data:
-					return tag
-
-		tag = self.create_tag(tag_type, data, True)
-		core.BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
-		return tag
-
 	def remove_user_address_tag(
 	    self, addr: int, tag: 'binaryview.Tag', arch: Optional['architecture.Architecture'] = None
 	) -> None:
@@ -903,62 +835,6 @@ class Function:
 			arch = self.arch
 		core.BNRemoveUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def add_auto_address_tag(
-	    self, addr: int, tag: 'binaryview.Tag', arch: Optional['architecture.Architecture'] = None
-	) -> None:
-		if arch is None:
-			arch = self.arch
-		core.BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def create_auto_address_tag(
-	    self, addr: int, type: 'binaryview.TagType', data: str, unique: bool = False,
-	    arch: Optional['architecture.Architecture'] = None
-	) -> 'binaryview.Tag':
-		if arch is None:
-			arch = self.arch
-		if unique:
-			tags = self.get_address_tags_at(addr, arch)
-			for tag in tags:
-				if tag.type == type and tag.data == data:
-					return tag
-
-		tag = self.create_tag(type, data, False)
-		core.BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
-		return tag
-
-	@property
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py;func:`get_function_tags` instead.')
-	def function_tags(self) -> List['binaryview.Tag']:
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetFunctionTags(self.handle, count)
-		assert tags is not None, "core.BNGetFunctionTags returned None"
-		try:
-			result = []
-			for i in range(count.value):
-				core_tag = core.BNNewTagReference(tags[i])
-				assert core_tag is not None, "core.BNNewTagReference returned None"
-				result.append(binaryview.Tag(core_tag))
-			return result
-		finally:
-			core.BNFreeTagList(tags, count.value)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def add_user_function_tag(self, tag: 'binaryview.Tag') -> None:
-		core.BNAddUserFunctionTag(self.handle, tag.handle)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def create_user_function_tag(self, type: 'binaryview.TagType', data: str, unique: bool = False) -> 'binaryview.Tag':
-		if unique:
-			for tag in self.function_tags:
-				if tag.type == type and tag.data == data:
-					return tag
-
-		tag = self.create_tag(type, data, True)
-		core.BNAddUserFunctionTag(self.handle, tag.handle)
-		return tag
-
 	def remove_user_function_tag(self, tag: 'binaryview.Tag') -> None:
 		"""
 		``remove_user_function_tag`` removes a Tag object as a function tag.
@@ -968,214 +844,6 @@ class Function:
 		:rtype: None
 		"""
 		core.BNRemoveUserFunctionTag(self.handle, tag.handle)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def add_auto_function_tag(self, tag: 'binaryview.Tag') -> None:
-		core.BNAddAutoFunctionTag(self.handle, tag.handle)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`add_tag` instead.')
-	def create_auto_function_tag(self, type: 'binaryview.TagType', data: str, unique: bool = False) -> 'binaryview.Tag':
-		if unique:
-			for tag in self.function_tags:
-				if tag.type == type and tag.data == data:
-					return tag
-
-		tag = self.create_tag(type, data, False)
-		core.BNAddAutoFunctionTag(self.handle, tag.handle)
-		return tag
-
-	@property
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:attr:`tags` instead.')
-	def auto_address_tags(self) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetAutoAddressTagReferences(self.handle, count)
-		assert tags is not None, "core.BNGetAutoAddressTagReferences returned None"
-		try:
-			result = []
-			for i in range(0, count.value):
-				arch = architecture.CoreArchitecture._from_cache(tags[i].arch)
-				tag_ref = core.BNNewTagReference(tags[i].tag)
-				assert tag_ref is not None, "core.BNNewTagReference returned None"
-				tag = binaryview.Tag(tag_ref)
-				result.append((arch, tags[i].addr, tag))
-			return result
-		finally:
-			core.BNFreeTagReferences(tags, count.value)
-
-	@property
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:attr:`tags` instead.')
-	def user_address_tags(self):
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetUserAddressTagReferences(self.handle, count)
-		assert tags is not None, "core.BNGetUserAddressTagReferences returned"
-		try:
-			result = []
-			for i in range(0, count.value):
-				arch = architecture.CoreArchitecture._from_cache(tags[i].arch)
-				tag_ref = core.BNNewTagReference(tags[i].tag)
-				assert tag_ref is not None, "core.BNNewTagReference returned None"
-				tag = binaryview.Tag(tag_ref)
-				result.append((arch, tags[i].addr, tag))
-			return result
-		finally:
-			core.BNFreeTagReferences(tags, count.value)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_at` instead.')
-	def get_auto_address_tags_at(self, addr, arch=None):
-		if arch is None:
-			assert self.arch is not None, "Can't call get_auto_address_tags_at for function with no architecture specified"
-			arch = self.arch
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetAutoAddressTags(self.handle, arch.handle, addr, count)
-		assert tags is not None, "core.BNGetAutoAddressTags returned None"
-		try:
-			result = []
-			for i in range(0, count.value):
-				tag_ref = core.BNNewTagReference(tags[i])
-				assert tag_ref is not None, "core.BNNewTagReference returned None"
-				result.append(binaryview.Tag(tag_ref))
-			return result
-		finally:
-			core.BNFreeTagList(tags, count.value)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_at` instead.')
-	def get_user_address_tags_at(self, addr, arch=None):
-		if arch is None:
-			assert self.arch is not None, "Can't call get_user_address_tags_at for function with no architecture specified"
-			arch = self.arch
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetUserAddressTags(self.handle, arch.handle, addr, count)
-		assert tags is not None, "core.BNGetUserAddressTags returned None"
-		try:
-			result = []
-			for i in range(0, count.value):
-				tag_ref = core.BNNewTagReference(tags[i])
-				assert tag_ref is not None, "core.BNNewTagReference returned None"
-				result.append(binaryview.Tag(tag_ref))
-			return result
-		finally:
-			core.BNFreeTagList(tags, count.value)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_at` instead.')
-	def get_address_tags_of_type(self, addr: int, tag_type: 'binaryview.TagType', arch=None):
-		if arch is None:
-			assert self.arch is not None, "Can't call get_address_tags_of_type for function with no architecture specified"
-			arch = self.arch
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle, count)
-		assert tags is not None, "core.BNGetAddressTagsOfType returned None"
-		try:
-			result = []
-			for i in range(0, count.value):
-				tag_ref = core.BNNewTagReference(tags[i])
-				assert tag_ref is not None, "core.BNNewTagReference returned None"
-				result.append(binaryview.Tag(tag_ref))
-			return result
-		finally:
-			core.BNFreeTagList(tags, count.value)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_at` instead.')
-	def get_auto_address_tags_of_type(
-	    self, addr: int, tag_type: 'binaryview.TagType', arch: Optional['architecture.Architecture'] = None
-	):
-		if arch is None:
-			assert self.arch is not None, "Can't call get_auto_address_tags_of_type for function with no architecture specified"
-			arch = self.arch
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetAutoAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle, count)
-		assert tags is not None, "core.BNGetAutoAddressTagsOfType returned None"
-		try:
-			result = []
-			for i in range(0, count.value):
-				tag_ref = core.BNNewTagReference(tags[i])
-				assert tag_ref is not None, "core.BNNewTagReference returned None"
-				result.append(binaryview.Tag(tag_ref))
-			return result
-		finally:
-			core.BNFreeTagList(tags, count.value)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_at` instead.')
-	def get_user_address_tags_of_type(
-	    self, addr: int, tag_type: 'binaryview.TagType', arch: Optional['architecture.Architecture'] = None
-	):
-		if arch is None:
-			assert self.arch is not None, "Can't get_user_address_tags_of_type for function with no architecture specified"
-			arch = self.arch
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetUserAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle, count)
-		assert tags is not None, "core.BNGetUserAddressTagsOfType returned None"
-		try:
-			result = []
-			for i in range(0, count.value):
-				tag_ref = core.BNNewTagReference(tags[i])
-				assert tag_ref is not None, "core.BNNewTagReference returned None"
-				result.append(binaryview.Tag(tag_ref))
-			return result
-		finally:
-			core.BNFreeTagList(tags, count.value)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_in_range` instead.')
-	def get_address_tags_in_range(
-	    self, address_range: 'variable.AddressRange', arch: Optional['architecture.Architecture'] = None
-	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
-		if arch is None:
-			assert self.arch is not None, "Can't call get_address_tags_in_range for function with no architecture specified"
-			arch = self.arch
-		count = ctypes.c_ulonglong()
-		refs = core.BNGetAddressTagsInRange(self.handle, arch.handle, address_range.start, address_range.end, count)
-		assert refs is not None, "core.BNGetAddressTagsInRange returned None"
-		try:
-			result = []
-			for i in range(0, count.value):
-				tag_ref = core.BNNewTagReference(refs[i].tag)
-				assert tag_ref is not None, "core.BNNewTagReference returned None"
-				tag = binaryview.Tag(tag_ref)
-				result.append((arch, refs[i].addr, tag))
-			return result
-		finally:
-			core.BNFreeTagReferences(refs, count.value)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_in_range` instead.')
-	def get_auto_address_tags_in_range(
-	    self, address_range: 'variable.AddressRange', arch: Optional['architecture.Architecture'] = None
-	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
-		if arch is None:
-			assert self.arch is not None, "Can't call get_auto_address_tags_in_range for function with no architecture specified"
-			arch = self.arch
-		count = ctypes.c_ulonglong()
-		refs = core.BNGetAutoAddressTagsInRange(self.handle, arch.handle, address_range.start, address_range.end, count)
-		assert refs is not None, "core.BNGetAutoAddressTagsInRange returned None"
-		try:
-			result = []
-			for i in range(0, count.value):
-				tag_ref = core.BNNewTagReference(refs[i].tag)
-				assert tag_ref is not None, "core.BNNewTagReference returned None"
-				tag = binaryview.Tag(tag_ref)
-				result.append((arch, refs[i].addr, tag))
-			return result
-		finally:
-			core.BNFreeTagReferences(refs, count.value)
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_tags_in_range` instead.')
-	def get_user_address_tags_in_range(
-	    self, address_range: 'variable.AddressRange', arch: Optional['architecture.Architecture'] = None
-	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
-		if arch is None:
-			assert self.arch is not None, "Can't call get_user_address_tags_in_range for function with no architecture specified"
-			arch = self.arch
-		count = ctypes.c_ulonglong()
-		refs = core.BNGetUserAddressTagsInRange(self.handle, arch.handle, address_range.start, address_range.end, count)
-		assert refs is not None, "core.BNGetUserAddressTagsInRange returned None"
-		try:
-			result = []
-			for i in range(0, count.value):
-				tag_ref = core.BNNewTagReference(refs[i].tag)
-				assert tag_ref is not None, "core.BNNewTagReference returned None"
-				tag = binaryview.Tag(tag_ref)
-				result.append((arch, refs[i].addr, tag))
-			return result
-		finally:
-			core.BNFreeTagReferences(refs, count.value)
 
 	def remove_user_address_tags_of_type(self, addr: int, tag_type: str, arch=None):
 		"""
@@ -1222,73 +890,6 @@ class Function:
 		tag_type = self.view.get_tag_type(tag_type)
 		if tag_type is not None:
 			core.BNRemoveAutoAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle)
-
-	@property
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_function_tags` instead.')
-	def auto_function_tags(self):
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetAutoFunctionTags(self.handle, count)
-		assert tags is not None, "core.BNGetAutoFunctionTags returned None"
-		result = []
-		for i in range(0, count.value):
-			tag_ref = core.BNNewTagReference(tags[i])
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			result.append(binaryview.Tag(tag_ref))
-		core.BNFreeTagList(tags, count.value)
-		return result
-
-	@property
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_function_tags` instead.')
-	def user_function_tags(self):
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetUserFunctionTags(self.handle, count)
-		assert tags is not None, "core.BNGetUserFunctionTags returned None"
-		result = []
-		for i in range(0, count.value):
-			tag_ref = core.BNNewTagReference(tags[i])
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			result.append(binaryview.Tag(tag_ref))
-		core.BNFreeTagList(tags, count.value)
-		return result
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_function_tags` instead.')
-	def get_function_tags_of_type(self, tag_type):
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetFunctionTagsOfType(self.handle, tag_type.handle, count)
-		assert tags is not None, "core.BNGetFunctionTagsOfType returned None"
-		result = []
-		for i in range(0, count.value):
-			tag_ref = core.BNNewTagReference(tags[i])
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			result.append(binaryview.Tag(tag_ref))
-		core.BNFreeTagList(tags, count.value)
-		return result
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_function_tags` instead.')
-	def get_auto_function_tags_of_type(self, tag_type):
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetAutoFunctionTagsOfType(self.handle, tag_type.handle, count)
-		assert tags is not None, "core.BNGetAutoFunctionTagsOfType returned None"
-		result = []
-		for i in range(0, count.value):
-			tag_ref = core.BNNewTagReference(tags[i])
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			result.append(binaryview.Tag(tag_ref))
-		core.BNFreeTagList(tags, count.value)
-		return result
-
-	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use :py:func:`get_function_tags` instead.')
-	def get_user_function_tags_of_type(self, tag_type):
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetUserFunctionTagsOfType(self.handle, tag_type.handle, count)
-		assert tags is not None, "core.BNGetUserFunctionTagsOfType returned None"
-		result = []
-		for i in range(0, count.value):
-			tag_ref = core.BNNewTagReference(tags[i])
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			result.append(binaryview.Tag(tag_ref))
-		core.BNFreeTagList(tags, count.value)
-		return result
 
 	def remove_user_function_tags_of_type(self, tag_type: str):
 		"""
@@ -1466,20 +1067,6 @@ class Function:
 		if not result:
 			return None
 		return highlevelil.HighLevelILFunction(self.arch, result, self)
-
-	@property
-	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use :py:attr:`type` instead", current_version=__version__)
-	def function_type(self) -> 'types.FunctionType':
-		"""
-		Function type object, can be set with either a string representing the function prototype
-		(`str(function)` shows examples) or a :py:class:`Type` object
-		"""
-		return self.type
-
-	@function_type.setter
-	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use :py:attr:`type` instead", current_version=__version__)
-	def function_type(self, value: Union['types.FunctionType', str]) -> None:
-		self.type = value
 
 	@property
 	def type(self) -> 'types.FunctionType':
@@ -1822,6 +1409,11 @@ class Function:
 		return variable.RegisterValue.from_BNRegisterValue(result, self.arch)
 
 	@property
+	def uses_incoming_global_pointer(self) -> bool:
+		"""Whether the function uses the incoming global pointer value"""
+		return core.BNFunctionUsesIncomingGlobalPointer(self.handle)
+
+	@property
 	def comment(self) -> str:
 		"""Gets the comment for the current function"""
 		return core.BNGetFunctionComment(self.handle)
@@ -1851,22 +1443,6 @@ class Function:
 			for i in block:
 				yield i[0], start
 				start += i[1]
-
-	@property
-	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use :py:attr:`LowLevelIlFunction.instructions` instead.")
-	def llil_instructions(self) -> Generator['lowlevelil.LowLevelILInstruction', None, None]:
-		"""
-		.. note:: Use :py:meth:`LowLevelIlFunction.instructions` instead.
-		"""
-		return self.llil.instructions
-
-	@property
-	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use :py:attr:`MediumLevelIlFunction.instructions` instead.")
-	def mlil_instructions(self) -> Generator['mediumlevelil.MediumLevelILInstruction', None, None]:
-		"""
-		.. note:: Use :py:meth:`MediumLevelIlFunction.instructions` instead.
-		"""
-		return self.mlil.instructions
 
 	@property
 	def too_large(self) -> bool:
@@ -1961,13 +1537,6 @@ class Function:
 
 	def get_comment_at(self, addr: int) -> str:
 		return core.BNGetCommentForAddress(self.handle, addr)
-
-	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use :py:func:`Function.set_comment_at` instead.")
-	def set_comment(self, addr: int, comment: str) -> None:
-		"""
-		.. note:: Use :py:meth:`set_comment_at` instead.
-		"""
-		self.set_comment_at(addr, comment)
 
 	def set_comment_at(self, addr: int, comment: str) -> None:
 		"""

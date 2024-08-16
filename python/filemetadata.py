@@ -604,27 +604,6 @@ class FileMetadata:
 			)
 
 	# TODO : When this is removed, you can probably remove `BNOpenExistingDatabase` and `BNOpenExistingDatabaseWithProgress` too
-	@deprecation.deprecated(deprecated_in="3.5.4378")
-	def open_existing_database(self, filename: str, progress_func: Optional[Callable[[int, int], bool]] = None):
-		if progress_func is None:
-			view = core.BNOpenExistingDatabase(self.handle, str(filename))
-		else:
-			view = core.BNOpenExistingDatabaseWithProgress(
-			    self.handle, str(filename), None,
-			    ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong,
-			                     ctypes.c_ulonglong)(lambda ctxt, cur, total: progress_func(cur, total))
-			)
-		if view is None:
-			return None
-		return binaryview.BinaryView(file_metadata=self, handle=view)
-
-	# TODO : When this is removed, you can probably remove `BNOpenDatabaseForConfiguration` too
-	@deprecation.deprecated(deprecated_in="3.5.4378")
-	def open_database_for_configuration(self, filename: str) -> Optional['binaryview.BinaryView']:
-		view = core.BNOpenDatabaseForConfiguration(self.handle, str(filename))
-		if view is None:
-			return None
-		return binaryview.BinaryView(file_metadata=self, handle=view)
 
 	def save_auto_snapshot(self, progress_func: Optional[ProgressFuncType] = None, settings: Optional[SaveSettings] = None) -> bool:
 		_settings = None

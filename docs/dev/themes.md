@@ -130,7 +130,7 @@ Colors marked "*required*" must be specified. Unmarked colors will hold default 
 16. `exportColor` - Used to color exported symbols, not shown in picture above
 17. `nameSpaceColor` - Used to color a namespace, not shown in picture above
 18. `nameSpaceSeparatorColor` - Used to color the separator between a namespace and the rest of the symbol, not shown in picture above
-19. `operationColor` - *Currently unused*
+19. `operationColor` - Used to color operations such as `+`, `@`, `&`, etc.
 20. `gotoLabelColor` - Used to color a `goto`'s label, not shown in picture above
 21. `tokenSelectionColor` - Used to draw the background of tokens selected with click-and-drag
 22. `outlineColor` (*required*) - Used to draw a box around tokens selected with click-and-drag

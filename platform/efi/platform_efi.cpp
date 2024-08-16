@@ -112,10 +112,6 @@ public:
 			RegisterFastcallCallingConvention(cc);
 			RegisterStdcallCallingConvention(cc);
 		}
-
-		// Linux-style calling convention is sometimes used internally by EFI applications
-		cc = arch->GetCallingConventionByName("sysv");
-		RegisterCallingConvention(cc);
 	}
 
 	static Ref<Platform> Recognize(BinaryView* view, Metadata* metadata)
@@ -145,10 +141,6 @@ public:
 			RegisterFastcallCallingConvention(cc);
 			RegisterStdcallCallingConvention(cc);
 		}
-
-		// Linux-style calling convention is sometimes used internally by EFI applications
-		cc = arch->GetCallingConventionByName("sysv");
-		RegisterCallingConvention(cc);
 	}
 
 	static Ref<Platform> Recognize(BinaryView* view, Metadata* metadata)

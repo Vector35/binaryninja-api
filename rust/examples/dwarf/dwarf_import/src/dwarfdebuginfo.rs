@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::helpers::{get_uid, resolve_specification, DieReference};
+use crate::{helpers::{get_uid, resolve_specification, DieReference}, ReaderType};
 
 use binaryninja::{
     binaryview::{BinaryView, BinaryViewBase, BinaryViewExt},
@@ -21,11 +21,10 @@ use binaryninja::{
     rc::*,
     symbol::SymbolType,
     templatesimplifier::simplify_str_to_fqn,
-    types::{Conf, FunctionParameter, NamedTypedVariable, Type, Variable},
-    binaryninjacore_sys::BNVariableSourceType,
+    types::{Conf, FunctionParameter, NamedTypedVariable, Type, Variable, VariableSourceType},
 };
 
-use gimli::{DebuggingInformationEntry, Dwarf, Reader, Unit};
+use gimli::{DebuggingInformationEntry, Dwarf, Unit};
 
 use log::{debug, error, warn};
 use std::{
@@ -101,16 +100,27 @@ pub(crate) struct DebugType {
     commit: bool,
 }
 
-pub(crate) struct DebugInfoBuilderContext<R: Reader<Offset = usize>> {
-    dwarf: Dwarf<R>,
+impl DebugType {
+    pub fn get_name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn get_type(&self) -> Ref<Type> {
+        self.t.clone()
+    }
+}
+
+pub(crate) struct DebugInfoBuilderContext<R: ReaderType> {
     units: Vec<Unit<R>>,
+    sup_units: Vec<Unit<R>>,
     names: HashMap<TypeUID, String>,
     default_address_size: usize,
     pub(crate) total_die_count: usize,
 }
 
-impl<R: Reader<Offset = usize>> DebugInfoBuilderContext<R> {
-    pub(crate) fn new(view: &BinaryView, dwarf: Dwarf<R>) -> Option<Self> {
+impl<R: ReaderType> DebugInfoBuilderContext<R> {
+    pub(crate) fn new(view: &BinaryView, dwarf: &Dwarf<R>) -> Option<Self> {
+
         let mut units = vec![];
         let mut iter = dwarf.units();
         while let Ok(Some(header)) = iter.next() {
@@ -122,21 +132,34 @@ impl<R: Reader<Offset = usize>> DebugInfoBuilderContext<R> {
             }
         }
 
+        let mut sup_units = vec![];
+        if let Some(sup_dwarf) = dwarf.sup() {
+            let mut sup_iter = sup_dwarf.units();
+            while let Ok(Some(header)) = sup_iter.next() {
+                if let Ok(unit) = sup_dwarf.unit(header) {
+                    sup_units.push(unit);
+                } else {
+                    error!("Unable to read supplementary DWARF information. File may be malformed or corrupted. Not applying debug info.");
+                    return None;
+                }
+            }
+        }
+
         Some(Self {
-            dwarf,
             units,
+            sup_units,
             names: HashMap::new(),
             default_address_size: view.address_size(),
             total_die_count: 0,
         })
     }
 
-    pub(crate) fn dwarf(&self) -> &Dwarf<R> {
-        &self.dwarf
-    }
-
     pub(crate) fn units(&self) -> &[Unit<R>] {
         &self.units
+    }
+
+    pub(crate) fn sup_units(&self) -> &[Unit<R>] {
+        &self.sup_units
     }
 
     pub(crate) fn default_address_size(&self) -> usize {
@@ -144,18 +167,21 @@ impl<R: Reader<Offset = usize>> DebugInfoBuilderContext<R> {
     }
 
     pub(crate) fn set_name(&mut self, die_uid: TypeUID, name: String) {
+        // die_uids need to be unique here
         assert!(self.names.insert(die_uid, name).is_none());
     }
 
     pub(crate) fn get_name(
         &self,
+        dwarf: &Dwarf<R>,
         unit: &Unit<R>,
         entry: &DebuggingInformationEntry<R>,
     ) -> Option<String> {
-        match resolve_specification(unit, entry, self) {
-            DieReference::UnitAndOffset((entry_unit, entry_offset)) => self
+        match resolve_specification(dwarf, unit, entry, self) {
+            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => self
                 .names
                 .get(&get_uid(
+                    dwarf,
                     entry_unit,
                     &entry_unit.entry(entry_offset).unwrap(),
                 ))
@@ -293,7 +319,7 @@ impl DebugInfoBuilder {
         self.types.values()
     }
 
-    pub(crate) fn add_type(&mut self, type_uid: TypeUID, name: String, t: Ref<Type>, commit: bool) {
+    pub(crate) fn add_type(&mut self, type_uid: TypeUID, name: &String, t: Ref<Type>, commit: bool) {
         if let Some(DebugType {
             name: existing_name,
             t: existing_type,
@@ -321,15 +347,12 @@ impl DebugInfoBuilder {
         self.types.remove(&type_uid);
     }
 
-    // TODO : Non-copy?
-    pub(crate) fn get_type(&self, type_uid: TypeUID) -> Option<(String, Ref<Type>)> {
-        self.types
-            .get(&type_uid)
-            .map(|type_ref_ref| (type_ref_ref.name.clone(), type_ref_ref.t.clone()))
+    pub(crate) fn get_type(&self, type_uid: TypeUID) -> Option<&DebugType> {
+        self.types.get(&type_uid)
     }
 
     pub(crate) fn contains_type(&self, type_uid: TypeUID) -> bool {
-        self.types.get(&type_uid).is_some()
+        self.types.contains_key(&type_uid)
     }
 
 
@@ -364,7 +387,7 @@ impl DebugInfoBuilder {
 
         // Either get the known type or use a 0 confidence void type so we at least get the name applied
         let t = match type_uid {
-            Some(uid) => Conf::new(self.get_type(uid).unwrap().1, 128),
+            Some(uid) => Conf::new(self.get_type(uid).unwrap().get_type(), 128),
             None => Conf::new(Type::void(), 0)
         };
         let function = &mut self.functions[function_index];
@@ -391,7 +414,7 @@ impl DebugInfoBuilder {
             return;
         }
 
-        let var = Variable::new(BNVariableSourceType::StackVariableSourceType, 0, adjusted_offset);
+        let var = Variable::new(VariableSourceType::StackVariableSourceType, 0, adjusted_offset);
         function.stack_variables.push(NamedTypedVariable::new(var, name, t, false));
 
     }
@@ -405,14 +428,14 @@ impl DebugInfoBuilder {
         if let Some((_existing_name, existing_type_uid)) =
             self.data_variables.insert(address, (name, type_uid))
         {
-            let existing_type = self.get_type(existing_type_uid).unwrap().1;
-            let new_type = self.get_type(type_uid).unwrap().1;
+            let existing_type = self.get_type(existing_type_uid).unwrap().get_type();
+            let new_type = self.get_type(type_uid).unwrap().get_type();
 
             if existing_type_uid != type_uid || existing_type != new_type {
                 warn!("DWARF info contains duplicate data variable definition. Overwriting data variable at 0x{:08x} (`{}`) with `{}`",
                     address,
-                    self.get_type(existing_type_uid).unwrap().1,
-                    self.get_type(type_uid).unwrap().1
+                    existing_type,
+                    new_type
                 );
             }
         }
@@ -432,7 +455,7 @@ impl DebugInfoBuilder {
         for (&address, (name, type_uid)) in &self.data_variables {
             assert!(debug_info.add_data_variable(
                 address,
-                &self.get_type(*type_uid).unwrap().1,
+                &self.get_type(*type_uid).unwrap().t,
                 name.clone(),
                 &[] // TODO : Components
             ));
@@ -441,7 +464,7 @@ impl DebugInfoBuilder {
 
     fn get_function_type(&self, function: &FunctionInfoBuilder) -> Ref<Type> {
         let return_type = match function.return_type {
-            Some(return_type_id) => Conf::new(self.get_type(return_type_id).unwrap().1.clone(), 0),
+            Some(return_type_id) => Conf::new(self.get_type(return_type_id).unwrap().get_type(), 128),
             _ => Conf::new(binaryninja::types::Type::void(), 0),
         };
 
@@ -451,7 +474,7 @@ impl DebugInfoBuilder {
             .filter_map(|parameter| match parameter {
                 Some((name, 0)) => Some(FunctionParameter::new(Type::void(), name.clone(), None)),
                 Some((name, uid)) => Some(FunctionParameter::new(
-                    self.get_type(*uid).unwrap().1,
+                    self.get_type(*uid).unwrap().get_type(),
                     name.clone(),
                     None,
                 )),
@@ -512,7 +535,7 @@ impl DebugInfoBuilder {
             }
 
             if let Some(address) = func.address.as_mut() {
-                let diff = bv.start() - bv.original_base();
+                let diff = bv.start() - bv.original_image_base();
                 *address += diff;  // rebase the address
                 let existing_functions = bv.functions_at(*address);
                 match existing_functions.len().cmp(&1) {

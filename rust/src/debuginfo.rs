@@ -342,6 +342,7 @@ impl From<&BNDebugFunctionInfo> for DebugFunctionInfo {
 }
 
 impl DebugFunctionInfo {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         short_name: Option<String>,
         full_name: Option<String>,
@@ -357,10 +358,7 @@ impl DebugFunctionInfo {
             full_name,
             raw_name,
             type_,
-            address: match address {
-                Some(address) => address,
-                _ => 0,
-            },
+            address: address.unwrap_or(0),
             platform,
             components,
             local_variables,

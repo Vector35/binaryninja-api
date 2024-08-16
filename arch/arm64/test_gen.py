@@ -5,9 +5,9 @@
 
 import re, sys, codecs
 
-N_SAMPLES = 8  # number of samples for each encoding
+N_SAMPLES = 4  # number of samples for each encoding
 
-from arm64test import lift
+from arm64test import lift, ATTR_PTR_AUTH, path_il_h
 
 if not sys.argv[1:]:
     sys.exit(-1)
@@ -28,15 +28,26 @@ def disassemble(addr, data):
 def print_case(data, comment=""):
     ilstr, attributes = lift(data)
     il_lines = ilstr.split(";")
-    print("\t(b'%s', " % ("".join(["\\x%02X" % b for b in data])), end="")
+    if len(il_lines) == 2 and len(ilstr) < 60:
+        il_lines = [ilstr]
+    # print("\t(b'%s', " % ("".join(["\\x%02X" % b for b in data])), end="")
+    print("    (b'%s', " % ("".join(["\\x%02X" % b for b in data])), end="")
     for i, line in enumerate(il_lines):
         if i != 0:
-            print("\t\t\t\t\t\t ", end="")
+            # print("\t\t\t\t\t\t ", end="")
+            print(" " * (4 * 6 + 1), end="")
         print("'%s" % line, end="")
         if i != len(il_lines) - 1:
             print(";' + \\")
+    # comment = comment or ""
+    # comment += " %s" % len(il_lines)
     comment = " # " + comment if comment else ""
-    print("'),%s" % comment)
+    attr = ''
+    if attributes:
+        # attr = ", \"%s\"" % repr(list(attributes)[0])
+        if ATTR_PTR_AUTH in attributes:
+            attr = ", ATTR_PTR_AUTH"
+    print("'%s),%s" % (attr, comment))
 
 
 def gather_samples(mnems, encodings):
@@ -44,43 +55,50 @@ def gather_samples(mnems, encodings):
 
     global N_SAMPLES
     fpath = "./disassembler/test_cases.txt"
-    with open(fpath) as fp:
-        lines = fp.readlines()
+    with open(fpath, "rt") as fp:
+        lines_read = fp.read()
 
     mnems = [re.compile(x, re.IGNORECASE) for x in mnems]
 
     samples = 0
     current_encoding = None
-    for line in lines:
-        if line.startswith("// NOTE:"):
+    # not_sample_line_pat = re.compile(r"^// (\w*) .*", re.IGNORECASE)
+    encoding_line_pat = re.compile(r"^// (\w*_\w*?) .*", re.IGNORECASE)
+    # sample_line_pat = re.compile(r"^(..)(..)(..)(..) (.*)$")
+    sample_line_pat = re.compile(r"^([\dA-F]{2})([\dA-F]{2})([\dA-F]{2})([\dA-F]{2}) (.*)$", re.IGNORECASE)
+    for i, line in enumerate(lines_read.splitlines()):
+        _line = line.strip().upper()
+        if _line.startswith("// NOTE:"):
             continue
-        if line.startswith("// SYNTAX:"):
+        if _line.startswith("// SYNTAX:"):
             continue
-        if line.startswith("// https:"):
+        if _line.startswith("// https:"):
             continue
-        if line.startswith(
-            "// 1101010100|L=0|OP0=00|OP1=011|CRN=0011|CRM=0100|1|OPC=00|RT=11111"
-        ):
+        if _line.startswith("// HTTPS:"):
             continue
-        if line.strip().endswith("// TCOMMIT"):
+        if _line.startswith("// 1101010100|L=0|OP0=00|OP1=011|CRN=0011|CRM=0100|1|OPC=00|RT=11111"):
             continue
-        if line.strip().endswith("// DRPS"):
+        if _line.endswith("// TCOMMIT"):
             continue
-        if line.strip().endswith("// ERET"):
+        if _line.endswith("// DRPS"):
             continue
-        if line.strip().endswith("// ERETAA"):
+        if _line.endswith("// ERET"):
             continue
-        if line.strip().endswith("// ERETAB"):
+        if _line.endswith("// ERETAA"):
             continue
-        if line.strip().endswith("// PSSBB"):
+        if _line.endswith("// ERETAB"):
             continue
-        if line.strip().endswith("// SSBB"):
+        if _line.endswith("// PSSBB"):
             continue
-        if line.strip().endswith("// PSSBB_DSB_BO_BARRIERS"):
+        if _line.endswith("// SSBB"):
+            continue
+        if _line.endswith("// PSSBB_DSB_BO_BARRIERS"):
             continue
 
-        if re.match(r"^// .*? .*", line):
-            m = re.match(r"^// (.*?) .*", line)
+        # if re.match(r"^// .*? .*", line):
+        m = encoding_line_pat.match(line)
+        if m:
+            # m = re.match(r"^// (.*?) .*", line)
 
             # example:
             # // BFCVT_Z_P_Z_S2BF 01100101|opc=10|0010|opc2=10|101|Pg=xxx|Zn=xxxxx|Zd=xxxxx
@@ -88,7 +106,13 @@ def gather_samples(mnems, encodings):
             samples = 0
             continue
 
-        m = re.match(r"^(..)(..)(..)(..) (.*)$", line)
+        # if not_sample_line_pat.match(line):
+        #     continue
+        if line.startswith("//"):
+            continue
+
+        # m = re.match(r"^(..)(..)(..)(..) (.*)$", line)
+        m = sample_line_pat.match(line)
         if m:
             # example:
             # 658AB9BB bfcvt z27.h, p6/m, z13.s
@@ -108,13 +132,14 @@ def gather_samples(mnems, encodings):
 
             # if samples == 0:
             # 	print('\t# %s' % encoding)
-            print("\t# %s %s" % (instxt.ljust(64), current_encoding))
+            # print("\t# %s %s" % (instxt.ljust(64), current_encoding))
+            print("    # %s %s" % (instxt.ljust(64), current_encoding))
             print_case(data)
 
             samples += 1
             continue
 
-        print("unable to parse line: %r" % line)
+        print("unable to parse line (%d): %r" % (i + 1, line))
         sys.exit(-1)
 
 
@@ -164,8 +189,33 @@ elif sys.argv[1] == "recompute_arm64test":
         lines = [x.rstrip() for x in fp.readlines()]
 
     i = 0
+    preserve = False
+    with open(path_il_h, "rt") as f:
+        LIFT_PAC_AS_INTRINSIC = "'#define LIFT_PAC_AS_INTRINSIC 1\n'" in f.readlines()
+        # print(f"{LIFT_PAC_AS_INTRINSIC=!r}", file=sys.stdout)
     while i < len(lines):
-        m = re.match(r"^\t\(b\'\\x(..)\\x(..)\\x(..)\\x(..)\'.*$", lines[i])
+        if "testing that select PAC instructions lift to " in lines[i]:
+            if "testing that select PAC instructions lift to intrinsics" in lines[i]:
+                preserve = not LIFT_PAC_AS_INTRINSIC
+            elif "testing that select PAC instructions lift to NOP" in lines[i]:
+                preserve = LIFT_PAC_AS_INTRINSIC
+            # print(f"{LIFT_PAC_AS_INTRINSIC=!r} {preserve=!r}", file=sys.stdout)
+        if preserve:
+            print(lines[i])
+            i += 1
+            continue
+        m = re.match(r"^(?:\t| {4})\(b\'\\x(..)\\x(..)\\x(..)\\x(..)\'.*$", lines[i])
+        if m:
+            while i + 1 < len(lines) and re.match(r"^\s+\'.*$", lines[i + 1]):
+                lines[i] += lines[i + 1]
+                del lines[i + 1]
+            # if i + 1 < len(lines):
+            #     if re.match(r"^\s+\'.*$", lines[i + 1]):
+            #         while i + 1 < len(lines) and re.match(r"^\s+\'.*$", lines[i + 1]):
+            #             lines[i] += lines[i + 1]
+            #             del lines[i + 1]
+
+        # m = re.match(r"^(?:\t| {4})\(b\'\\x(..)\\x(..)\\x(..)\\x(..)\'.*($\n^.*)*?$\n(?=^ {4}\(b)", lines[i], re.M)
         if not m:
             print(lines[i])
             i += 1
@@ -182,5 +232,5 @@ elif sys.argv[1] == "recompute_arm64test":
         print_case(data, comment)
 
         i += 1
-        while lines[i].startswith("\t\t\t\t\t\t"):
+        while lines[i].startswith("\t\t\t\t\t\t") or lines[i].startswith(" " * (4 * 6)):
             i += 1

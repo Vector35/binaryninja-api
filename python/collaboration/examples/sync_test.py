@@ -19,12 +19,19 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+import platform
 import shutil
 from pathlib import Path
 
 import binaryninja
 import binaryninja.enterprise as enterprise
 import binaryninja.collaboration as collaboration
+
+
+if platform.system() == 'Windows':
+	TEST_FILE = 'C:\\Windows\\System32\\printui.exe'
+else:
+	TEST_FILE = '/bin/ls'
 
 
 def main():
@@ -43,13 +50,13 @@ def main():
 		project_dir = None
 		try:
 			print(f'Created project {project.name}')
-			file = project.upload_new_file('/bin/ls')
+			file = project.upload_new_file(TEST_FILE)
 			print(f'Created file {project.name}/{file.name}')
 
-			project_dir = Path(file.default_bndb_path).parent
+			project_dir = Path(file.default_path).parent
 
 			print(f'Snapshots: {[snapshot.id for snapshot in file.snapshots]}')
-			bv = binaryninja.load(file.default_bndb_path)
+			bv = binaryninja.load(file.default_path)
 			view_type = bv.view_type
 			assert collaboration.RemoteFile.get_for_bv(bv) == file
 
@@ -62,18 +69,21 @@ def main():
 
 			# Try deleting the bndb, redownload and see if the function name is preserved
 			bv.file.close()
-			Path(file.default_bndb_path).unlink()
+			Path(file.default_path).unlink()
 
 			print(f'Redownloading {project.name}/{file.name}...')
 			metadata = file.download_to_bndb()
 			bv = metadata.get_view_of_type(view_type)
 			print(f'Entry function name: {bv.entry_function.name}')
 			assert bv.entry_function.name == 'entry_function'
+			bv.file.close()
 
 		finally:
 			# Clean up
 			if file is not None:
 				project.delete_file(file)
+			if project.is_open:
+				project.core_project.close()
 			remote.delete_project(project)
 			if project_dir is not None:
 				shutil.rmtree(project_dir)

@@ -262,6 +262,8 @@ class TypeArchive:
 		:param new_name: New type name
 		"""
 		id = self.get_type_id(old_name)
+		if id is None:
+			raise RuntimeError(f"Unknown type {old_name}")
 		return self.rename_type_by_id(id, new_name)
 
 	def rename_type_by_id(self, id: str, new_name: '_types.QualifiedNameType') -> None:

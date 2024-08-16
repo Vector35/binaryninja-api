@@ -590,7 +590,7 @@ bool PEView::Init()
 			platform = m_arch->GetStandalonePlatform();
 
 		m_imageBase = m_peImageBase = opt.imageBase;
-		SetOriginalBase(m_peImageBase);
+		SetOriginalImageBase(m_peImageBase);
 		m_entryPoint = opt.addressOfEntry;
 
 		Ref<Settings> viewSettings = Settings::Instance();

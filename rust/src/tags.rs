@@ -132,7 +132,7 @@ impl TagType {
     pub fn set_icon<S: BnStrCompatible>(&self, icon: S) {
         let icon = icon.into_bytes_with_nul();
         unsafe {
-            BNTagTypeSetName(self.handle, icon.as_ref().as_ptr() as *mut _);
+            BNTagTypeSetIcon(self.handle, icon.as_ref().as_ptr() as *mut _);
         }
     }
 

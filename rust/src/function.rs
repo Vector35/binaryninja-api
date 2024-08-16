@@ -19,6 +19,7 @@ use crate::{
     basicblock::{BasicBlock, BlockContext},
     binaryview::{BinaryView, BinaryViewExt},
     callingconvention::CallingConvention,
+    component::Component,
     disassembly::{DisassemblySettings, DisassemblyTextLine},
     flowgraph::FlowGraph,
     hlil, llil,
@@ -2137,6 +2138,13 @@ impl Function {
         let settings_raw = settings.map(|s| s.handle).unwrap_or(core::ptr::null_mut());
         let result = unsafe { BNCreateFunctionGraph(self.handle, graph_type, settings_raw) };
         unsafe { Ref::new(FlowGraph::from_raw(result)) }
+    }
+
+    pub fn parent_components(&self) -> Array<Component> {
+        let mut count = 0;
+        let result = unsafe{ BNGetFunctionParentComponents(self.view().handle, self.handle, &mut count) };
+        assert!(!result.is_null());
+        unsafe{ Array::new(result, count, ()) }
     }
 }
 

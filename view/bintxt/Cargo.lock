@@ -17,7 +17,6 @@ version = "0.1.0"
 dependencies = [
  "binaryninjacore-sys",
  "lazy_static",
- "libc",
  "log",
 ]
 

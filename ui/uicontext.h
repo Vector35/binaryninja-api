@@ -323,6 +323,29 @@ class BINARYNINJAUIAPI UIContextNotification
 		(void)ctx;
 		(void)action;
 	}
+
+	/*!
+	    Callback when a context menu is created, allowing plugins to modify the menu,
+	    e.g., registering and adding new actions into it. This allow plugins to add
+	    new entries into the top-level context menu in a non-hacky way. However, it
+	    is advised that the plugin should only use this instead of PluginCommand::Register
+	    or similar APIs when it is necessary. Besides, if a plugins wishes to add multiple
+	    actions, it is better to put them as sub-menus under a single top-level entry,
+	    avoiding making the context menu crowded.
+
+		This only works for linear/graph/hex/types/stack view due to the way other views
+	 	create the context menus.
+
+	    \param context
+	    \param view
+	    \param menu
+	 */
+	virtual void OnContextMenuCreated(UIContext* context, View* view, Menu& menu)
+	{
+		(void)context;
+		(void)view;
+		(void)menu;
+	}
 };
 
 /*!
@@ -528,6 +551,7 @@ public:
 	void NotifyOnAddressChange(ViewFrame* frame, View* view, const ViewLocation& location);
 	void updateCrossReferences(ViewFrame* frame, View* view, const SelectionInfoForXref& selection);
 	void NotifyOnActionExecuted(UIActionHandler* handler, const QString& name, const UIActionContext& ctx, std::function<void(const UIActionContext&)>& action);
+	void NotifyOnContextMenuCreated(View* view, Menu& menu);
 
 	virtual void findAll(const BinaryNinja::FindParameters& params);
 

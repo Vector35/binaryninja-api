@@ -207,72 +207,6 @@ bool UniversalViewType::ParseHeaders(BinaryView* data, FatHeader& fatHeader, vec
 }
 
 
-Ref<Settings> UniversalViewType::GetLoadSettingsForData(BinaryView* data)
-{
-	FatHeader fatHeader;
-	vector<FatArch64> fatArchEntries;
-	bool isFat64;
-	string errorMsg;
-	if (!g_universalViewType->ParseHeaders(data, fatHeader, fatArchEntries, isFat64, errorMsg))
-		return nullptr;
-
-	if (!fatArchEntries.size()) // TODO other validation?
-		return nullptr;
-
-	Ref<Settings> settings = Settings::Instance(GetUniqueIdentifierString());
-	settings->RegisterGroup("loader", "Load Options");
-	settings->RegisterSetting("loader.universal.architectures",
-			R"({
-			"title" : "Universal Mach-O Multi-Architecture Binary Description",
-			"type" : "string",
-			"default" : "[]",
-			"description" : "Describes the available object files in the Universal Multi-Architecture binary.",
-			"readOnly" : true
-			})");
-
-	Ref<Settings> entrySettings = Settings::Instance(GetUniqueIdentifierString());
-	entrySettings->RegisterGroup("loader", "Load Options");
-	entrySettings->RegisterSetting("loader.macho.universalImageOffset",
-			R"({
-			"title" : "Universal Mach-O Object File Offset",
-			"type" : "number",
-			"default" : 0,
-			"description" : "The offset to the object file within the Universal Mach-O file.",
-			"minValue" : 0,
-			"maxValue" : 18446744073709551615,
-			"readOnly" : true
-			})");
-
-	rapidjson::Document entries(rapidjson::kArrayType);
-	int count = 0;
-	for (const auto& entry : fatArchEntries)
-	{
-		rapidjson::Value result(rapidjson::kObjectType);
-		bool is64Bit;
-		string archDesc = ArchitectureToString(entry.cputype, entry.cpusubtype, is64Bit);
-		string bitDesc = is64Bit ? "64-bit" : "32-bit";
-		result.AddMember("id", count++, entries.GetAllocator());
-		result.AddMember("architecture", archDesc, entries.GetAllocator());
-		result.AddMember("is64Bit", is64Bit, entries.GetAllocator());
-		result.AddMember("binaryViewType", "Mach-O", entries.GetAllocator());
-		result.AddMember("description", "Mach-O " + bitDesc + " executable " + archDesc, entries.GetAllocator());
-		result.AddMember("offset", ToLE64(entry.offset), entries.GetAllocator());
-		result.AddMember("size", ToLE64(entry.size), entries.GetAllocator());
-		entrySettings->UpdateProperty("loader.macho.universalImageOffset", "default", ToLE64(entry.offset));
-		result.AddMember("loadSchema", entrySettings->SerializeSchema(), entries.GetAllocator());
-		entries.PushBack(result, entries.GetAllocator());
-	}
-
-	rapidjson::StringBuffer buffer;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-	entries.Accept(writer);
-
-	settings->UpdateProperty("loader.universal.architectures", "default", buffer.GetString());
-
-	return settings;
-}
-
-
 bool UniversalViewType::HasChildrenForData(BinaryView* data)
 {
 	return IsTypeValidForData(data);
@@ -339,6 +273,29 @@ Ref<Metadata> UniversalViewType::GetMetadataForChild(BinaryView* data, const std
 
 Ref<BinaryView> UniversalViewType::CreateChildForData(BinaryView* data, const std::string& child, bool updateAnalysis, const std::string& options, ProgressFunction progress)
 {
+	FatHeader fatHeader;
+	vector<FatArch64> fatArchEntries;
+	bool isFat64;
+	string errorMsg;
+	if (!g_universalViewType->ParseHeaders(data, fatHeader, fatArchEntries, isFat64, errorMsg))
+		return nullptr;
+
+	if (!fatArchEntries.size()) // TODO other validation?
+		return nullptr;
+
+	for (const auto& entry : fatArchEntries)
+	{
+		bool is64Bit;
+		string archDesc = ArchitectureToString(entry.cputype, entry.cpusubtype, is64Bit);
+		if (archDesc == child)
+		{
+			Ref<BinaryView> rawChild = new BinaryData(data->GetFile(), data, entry.offset, entry.size);
+			// TODO: How do we register the child Mach-O?
+			Load(rawChild, updateAnalysis, options, progress);
+			return rawChild;
+		}
+	}
+
 	return nullptr;
 }
 

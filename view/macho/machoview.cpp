@@ -200,66 +200,16 @@ uint64_t readValidULEB128(DataBuffer& buffer, size_t& cursor)
 
 
 MachoView::MachoView(const string& typeName, BinaryView* data, bool parseOnly): BinaryView(typeName, data->GetFile(), data),
-	m_universalImageOffset(0), m_parseOnly(parseOnly)
+	m_parseOnly(parseOnly)
 {
 	CreateLogger("BinaryView");
 	m_logger = CreateLogger("BinaryView.MachoView");
 
 	m_backedByDatabase = data->GetFile()->IsBackedByDatabase(typeName);
 
-	Ref<BinaryViewType> universalViewType = BinaryViewType::GetByName("Universal");
-	bool isUniversal = (universalViewType && universalViewType->IsTypeValidForData(data));
-
 	Ref<Settings> viewSettings = Settings::Instance();
 	m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", data);
 	m_simplifyTemplates = viewSettings->Get<bool>("analysis.types.templateSimplifier", data);
-
-	Ref<Settings> settings = data->GetLoadSettings(typeName);
-	if (settings && settings->Contains("loader.macho.universalImageOffset"))
-	{
-		settings->SetResourceId(typeName);
-		m_universalImageOffset = settings->Get<uint64_t>("loader.macho.universalImageOffset", data);
-	}
-	else if (isUniversal)
-	{
-		Ref<Settings> loadSettings = universalViewType->GetLoadSettingsForData(data);
-		if (loadSettings && loadSettings->Contains("loader.universal.architectures"))
-		{
-			string json = loadSettings->Get<string>("loader.universal.architectures");
-			rapidjson::Document jsonArchitectures;
-			jsonArchitectures.Parse(json.data(), json.size());
-			if (!json.size() || jsonArchitectures.HasParseError())
-				throw MachoFormatException("Mach-O view could not be created! Json parse error.");
-			if (!jsonArchitectures.IsArray() || jsonArchitectures.Empty())
-				throw MachoFormatException("Mach-O view could not be created! Json data error.");
-
-			// Select the object file based on architecture preference.
-			// Note: This code is duplicated in options.cpp
-			vector<string> architectures;
-			for (const auto& entry : jsonArchitectures.GetArray())
-				architectures.push_back(entry["architecture"].GetString());
-			auto archPref = Settings::Instance()->Get<vector<string>>("files.universal.architecturePreference");
-			int archIndex = 0;
-			if (auto result = find_first_of(archPref.begin(), archPref.end(), architectures.begin(), architectures.end()); result != archPref.end())
-				archIndex = std::find(architectures.begin(), architectures.end(), *result) - architectures.begin();
-
-			const auto& archEntry = jsonArchitectures[archIndex];
-			loadSettings = Settings::Instance(GetUniqueIdentifierString());
-			loadSettings->SetResourceId(typeName);
-			loadSettings->DeserializeSchema(archEntry["loadSchema"].GetString());
-			data->SetLoadSettings(typeName, loadSettings);
-			if (!m_file->IsBackedByDatabase(typeName))
-			{
-				auto defaultSettings = loadSettings->SerializeSettings(Ref<BinaryView>(), SettingsDefaultScope);
-				loadSettings->DeserializeSettings(defaultSettings, data, SettingsResourceScope);
-			}
-
-			m_universalImageOffset = loadSettings->Get<uint64_t>("loader.macho.universalImageOffset", data);
-
-			// NOTE: this silences the 'Updated load schema detected' warning. There is some chicken/egg stuff here.
-			loadSettings->UpdateProperty("loader.macho.universalImageOffset", "default", m_universalImageOffset);
-		}
-	}
 
 	m_header = HeaderForAddress(data, 0, true);
 }
@@ -275,7 +225,7 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 
 	std::string errorMsg;
 	if (isMainHeader) {
-		header.loadCommandOffset = g_machoViewType->ParseHeaders(data, m_universalImageOffset + address, header.ident, &m_arch, &m_plat, errorMsg);
+		header.loadCommandOffset = g_machoViewType->ParseHeaders(data, address, header.ident, &m_arch, &m_plat, errorMsg);
 		if (!header.loadCommandOffset)
 			throw MachoFormatException(errorMsg);
 	}
@@ -328,7 +278,6 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 
 	BinaryReader reader(data);
 	reader.SetEndianness(m_endian);
-	reader.SetVirtualBase(m_universalImageOffset);
 	reader.Seek(header.loadCommandOffset);
 
 	if (isMainHeader)
@@ -375,7 +324,7 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 				reader.Read(&segment64.segname, 16);
 				segment64.vmaddr = reader.Read32();
 				segment64.vmsize = reader.Read32();
-				segment64.fileoff = reader.Read32() + m_universalImageOffset;
+				segment64.fileoff = reader.Read32();
 				segment64.filesize = reader.Read32();
 				segment64.maxprot = reader.Read32();
 				segment64.initprot = reader.Read32();
@@ -473,7 +422,7 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 				reader.Read(&segment64.segname, 16);
 				segment64.vmaddr = reader.Read64();
 				segment64.vmsize = reader.Read64();
-				segment64.fileoff = reader.Read64() + m_universalImageOffset;
+				segment64.fileoff = reader.Read64();
 				segment64.filesize = reader.Read64();
 				segment64.maxprot = reader.Read32();
 				segment64.initprot = reader.Read32();
@@ -974,7 +923,6 @@ void MachoView::ParseFunctionStarts(Platform* platform, uint64_t textBase, funct
 {
 	BinaryReader reader(GetParentView());
 	reader.SetEndianness(m_endian);
-	reader.SetVirtualBase(m_universalImageOffset);
 	try
 	{
 		if (m_header.ident.filetype == MH_DSYM)
@@ -1073,7 +1021,6 @@ bool MachoView::Init()
 	std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
 	BinaryReader reader(GetParentView());
 	reader.SetEndianness(m_endian);
-	reader.SetVirtualBase(m_universalImageOffset);
 	BinaryReader virtualReader(this);
 	virtualReader.SetEndianness(m_endian);
 
@@ -1580,7 +1527,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 		if ((segment.initprot & MACHO_VM_PROT_EXECUTE) == MACHO_VM_PROT_EXECUTE)
 		{
-			if ((segment.fileoff == (0 + m_universalImageOffset)) && (segment.filesize != 0))
+			if ((segment.fileoff == 0) && (segment.filesize != 0))
 				header.textBase = segment.vmaddr;
 			for (auto& entryPoint : header.entryPoints)
 			{
@@ -1834,7 +1781,6 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 	BinaryReader reader(GetParentView());
 	reader.SetEndianness(m_endian);
-	reader.SetVirtualBase(m_universalImageOffset);
 	BinaryReader virtualReader(this);
 	virtualReader.SetEndianness(m_endian);
 
@@ -2509,7 +2455,7 @@ void MachoView::ParseExportTrie(BinaryReader& reader, linkedit_data_command expo
 {
 	try {
 		uint32_t endGuard = exportTrie.datasize;
-		DataBuffer buffer = GetParentView()->ReadBuffer(m_universalImageOffset + exportTrie.dataoff, exportTrie.datasize);
+		DataBuffer buffer = GetParentView()->ReadBuffer(exportTrie.dataoff, exportTrie.datasize);
 
 		ReadExportNode(GetStart(), buffer, "", 0, endGuard);
 	}
@@ -3105,7 +3051,7 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 
 	try {
 		dyld_chained_fixups_header fixupsHeader {};
-		uint64_t fixupHeaderAddress = m_universalImageOffset + chainedFixups.dataoff;
+		uint64_t fixupHeaderAddress = chainedFixups.dataoff;
 		parentReader.Seek(fixupHeaderAddress);
 		fixupsHeader.fixups_version = parentReader.Read32();
 		fixupsHeader.starts_offset = parentReader.Read32();
@@ -3296,7 +3242,7 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 			for (auto pageStarts : pageStartOffsets)
 			{
 				i++;
-				uint64_t pageAddress = m_universalImageOffset + starts.segment_offset + (i * starts.page_size);
+				uint64_t pageAddress = starts.segment_offset + (i * starts.page_size);
 				for (uint16_t start : pageStarts)
 				{
 					if (start == DYLD_CHAINED_PTR_START_NONE)
@@ -3310,7 +3256,7 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 					{
 						ChainedFixupPointer pointer;
 						parentReader.Seek(chainEntryAddress);
-						mappedReader.Seek(chainEntryAddress - m_universalImageOffset + GetStart());
+						mappedReader.Seek(chainEntryAddress + GetStart());
 						if (format == Generic32FixupFormat || format == Firmware32FixupFormat)
 							pointer.raw32 = (uint32_t)(uintptr_t)mappedReader.Read32();
 						else
@@ -3340,7 +3286,7 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 						}
 
 						m_logger->LogTrace("Chained Fixups: @ 0x%llx ( 0x%llx ) - %d 0x%llx", chainEntryAddress,
-							GetStart() + (chainEntryAddress - m_universalImageOffset),
+							GetStart() + chainEntryAddress,
 							bind, nextEntryStrideCount);
 
 						if (bind && processBinds)
@@ -3369,13 +3315,13 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 								break;
 							default:
 								m_logger->LogWarn("Chained Fixups: Unknown Bind Pointer Format at %llx",
-									GetStart() + (chainEntryAddress - m_universalImageOffset));
+									GetStart() + chainEntryAddress);
 
 								chainEntryAddress += (nextEntryStrideCount * strideSize);
 								if (chainEntryAddress > pageAddress + starts.page_size)
 								{
 									m_logger->LogDebug("Chained Fixups: Pointer at %llx left page",
-										GetStart() + ((chainEntryAddress - (nextEntryStrideCount * strideSize))) - m_universalImageOffset);
+										GetStart() + (chainEntryAddress - (nextEntryStrideCount * strideSize)));
 									fixupsDone = true;
 								}
 								if (nextEntryStrideCount == 0)
@@ -3387,7 +3333,7 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 							if (ordinal < importTable.size())
 							{
 								import_entry entry = importTable.at(ordinal);
-								uint64_t targetAddress = GetStart() + (chainEntryAddress - m_universalImageOffset);
+								uint64_t targetAddress = GetStart() + chainEntryAddress;
 
 								if (!entry.name.empty())
 								{
@@ -3451,7 +3397,7 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 								break;
 							}
 
-							reloc.address = GetStart() + (chainEntryAddress - m_universalImageOffset);
+							reloc.address = GetStart() + chainEntryAddress;
 							DefineRelocation(m_arch, reloc, entryOffset, reloc.address);
 
 							if (m_objcProcessor)
@@ -3467,7 +3413,7 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 							// Something is seriously wrong here. likely malformed binary, or our parsing failed elsewhere.
 							// This will log the pointer in mapped memory.
 							m_logger->LogError("Chained Fixups: Pointer at %llx left page",
-								GetStart() + ((chainEntryAddress - (nextEntryStrideCount * strideSize))) - m_universalImageOffset);
+								GetStart() + (chainEntryAddress - (nextEntryStrideCount * strideSize)));
 							fixupsDone = true;
 						}
 
@@ -3505,7 +3451,7 @@ void MachoView::ParseChainedStarts(MachOHeader& header, section_64 chainedStarts
 	BinaryReader mappedReader(this);
 
 	try {
-		uint64_t fixupHeaderAddress = m_universalImageOffset + chainedStarts.offset;
+		uint64_t fixupHeaderAddress = chainedStarts.offset;
 		parentReader.Seek(fixupHeaderAddress);
 
 		uint32_t pointerFormat = parentReader.Read32();
@@ -3562,7 +3508,7 @@ void MachoView::ParseChainedStarts(MachOHeader& header, section_64 chainedStarts
 
 		for (uint32_t offset : startsOffsets)
 		{
-			uint64_t chainEntryAddress = m_universalImageOffset + offset;
+			uint64_t chainEntryAddress = offset;
 
 			bool fixupsDone = false;
 
@@ -3570,7 +3516,7 @@ void MachoView::ParseChainedStarts(MachOHeader& header, section_64 chainedStarts
 			{
 				ChainedFixupPointer pointer;
 				parentReader.Seek(chainEntryAddress);
-				mappedReader.Seek(chainEntryAddress - m_universalImageOffset + GetStart());
+				mappedReader.Seek(chainEntryAddress + GetStart());
 				if (format == Generic32FixupFormat || format == Firmware32FixupFormat)
 					pointer.raw32 = (uint32_t)(uintptr_t)mappedReader.Read32();
 				else
@@ -3600,7 +3546,7 @@ void MachoView::ParseChainedStarts(MachOHeader& header, section_64 chainedStarts
 				}
 
 				m_logger->LogTrace("Chained Starts: @ 0x%llx ( 0x%llx ) - %d 0x%llx", chainEntryAddress,
-					GetStart() + (chainEntryAddress - m_universalImageOffset),
+					GetStart() + chainEntryAddress,
 					bind, nextEntryStrideCount);
 
 				if (bind && processBinds)
@@ -3650,7 +3596,7 @@ void MachoView::ParseChainedStarts(MachOHeader& header, section_64 chainedStarts
 						break;
 					}
 
-					reloc.address = GetStart() + (chainEntryAddress - m_universalImageOffset);
+					reloc.address = GetStart() + chainEntryAddress;
 					DefineRelocation(m_arch, reloc, entryOffset, reloc.address);
 					m_logger->LogDebug("Chained Starts: Adding relocated pointer %llx -> %llx", reloc.address, entryOffset);
 
@@ -3763,7 +3709,6 @@ uint64_t MachoViewType::ParseHeaders(BinaryView* data, uint64_t imageOffset, mac
 	}
 
 	BinaryReader reader(data);
-	reader.SetVirtualBase(imageOffset);
 	ident.magic = reader.Read32();
 
 	BNEndianness endianness;

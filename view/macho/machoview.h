@@ -1332,7 +1332,6 @@ namespace BinaryNinja
 
 		ObjCProcessor* m_objcProcessor = nullptr;
 
-		uint64_t m_universalImageOffset;
 		bool m_parseOnly, m_backedByDatabase;
 		int64_t m_imageBaseAdjustment;
 		size_t m_addressSize;	 //Address size in bytes 4/8

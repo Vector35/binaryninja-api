@@ -273,6 +273,76 @@ Ref<Settings> UniversalViewType::GetLoadSettingsForData(BinaryView* data)
 }
 
 
+bool UniversalViewType::HasChildrenForData(BinaryView* data)
+{
+	return IsTypeValidForData(data);
+}
+
+
+std::vector<std::string> UniversalViewType::GetChildrenForData(BinaryView* data)
+{
+	FatHeader fatHeader;
+	vector<FatArch64> fatArchEntries;
+	bool isFat64;
+	string errorMsg;
+	if (!g_universalViewType->ParseHeaders(data, fatHeader, fatArchEntries, isFat64, errorMsg))
+		return {};
+
+	if (!fatArchEntries.size()) // TODO other validation?
+		return {};
+
+	vector<string> children;
+	for (const auto& entry : fatArchEntries)
+	{
+		bool is64Bit;
+		string archDesc = ArchitectureToString(entry.cputype, entry.cpusubtype, is64Bit);
+		children.push_back(archDesc);
+	}
+
+	return children;
+}
+
+
+Ref<Metadata> UniversalViewType::GetMetadataForChild(BinaryView* data, const std::string& child)
+{
+	FatHeader fatHeader;
+	vector<FatArch64> fatArchEntries;
+	bool isFat64;
+	string errorMsg;
+	if (!g_universalViewType->ParseHeaders(data, fatHeader, fatArchEntries, isFat64, errorMsg))
+		return nullptr;
+
+	if (!fatArchEntries.size()) // TODO other validation?
+		return nullptr;
+
+	for (const auto& entry : fatArchEntries)
+	{
+		bool is64Bit;
+		string archDesc = ArchitectureToString(entry.cputype, entry.cpusubtype, is64Bit);
+		if (archDesc == child)
+		{
+			Ref<Metadata> md = new Metadata(KeyValueDataType);
+			string bitDesc = is64Bit ? "64-bit" : "32-bit";
+			md->SetValueForKey("architecture", new Metadata(archDesc));
+			md->SetValueForKey("is64Bit", new Metadata(is64Bit));
+			md->SetValueForKey("binaryViewType", new Metadata("Mach-O"));
+			md->SetValueForKey("description", new Metadata("Mach-O " + bitDesc + " executable " + archDesc));
+			md->SetValueForKey("offset", new Metadata(ToLE64(entry.offset)));
+			md->SetValueForKey("size", new Metadata(ToLE64(entry.size)));
+			return md;
+		}
+	}
+
+	return nullptr;
+}
+
+
+Ref<BinaryView> UniversalViewType::CreateChildForData(BinaryView* data, const std::string& child, bool updateAnalysis, const std::string& options, ProgressFunction progress)
+{
+	return nullptr;
+}
+
+
 UniversalView::UniversalView(BinaryView* data, bool parseOnly): BinaryView("Universal", data->GetFile(), data)
 {
 	FatHeader fatHeader;

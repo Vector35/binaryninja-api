@@ -3748,9 +3748,6 @@ bool MachoViewType::IsTypeValidForData(BinaryView* data)
 	if (magic == MH_CIGAM || magic == MH_CIGAM_64 || magic == MH_MAGIC || magic == MH_MAGIC_64)
 		return true;
 	magic = ToBE32(magic);
-	if ((magic == FAT_MAGIC) || (magic == FAT_MAGIC_64))
-		return true;
-
 	return data->GetLoadSettings(GetName()) ? true : false;
 }
 

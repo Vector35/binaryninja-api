@@ -24,6 +24,10 @@ namespace BinaryNinja
 		virtual bool IsTypeValidForData(BinaryView* data) override;
 		virtual bool ParseHeaders(BinaryView* data, FatHeader& fatHeader, std::vector<FatArch64>& fatArchEntries, bool& isFat64, std::string& errorMsg);
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
+		virtual bool HasChildrenForData(BinaryView* data) override;
+		virtual std::vector<std::string> GetChildrenForData(BinaryView* data) override;
+		virtual Ref<Metadata> GetMetadataForChild(BinaryView* data, const std::string& child) override;
+		virtual Ref<BinaryView> CreateChildForData(BinaryView* data, const std::string& child, bool updateAnalysis, const std::string& options, ProgressFunction progress) override;
 	};
 
 	class UniversalView: public BinaryView

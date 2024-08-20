@@ -100,11 +100,11 @@ BNMetadata* BinaryViewType::GetMetadataForChildCallback(void* ctxt, BNBinaryView
 }
 
 
-BNBinaryView* BinaryViewType::CreateChildForDataCallback(void* ctxt, BNBinaryView* data, const char* child)
+BNBinaryView* BinaryViewType::CreateChildForDataCallback(void* ctxt, BNBinaryView* data, const char* child, bool updateAnalysis, const char* options, BNProgressFunction progress, void* progressContext)
 {
 	CallbackRef<BinaryViewType> type(ctxt);
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
-	auto result = type->CreateChildForData(view, child);
+	auto result = type->CreateChildForData(view, child, updateAnalysis, options, [=](size_t cur, size_t total) { return progress(progressContext, cur, total); });
 	if (!result)
 		return nullptr;
 	return BNNewViewReference(result->GetObject());
@@ -382,7 +382,7 @@ Ref<Metadata> BinaryViewType::GetMetadataForChild(BinaryView* data, const std::s
 }
 
 
-Ref<BinaryView> BinaryViewType::CreateChildForData(BinaryView* data, const std::string& child)
+Ref<BinaryView> BinaryViewType::CreateChildForData(BinaryView* data, const std::string& child, bool updateAnalysis, const string& options, ProgressFunction progress)
 {
 	return nullptr;
 }
@@ -455,9 +455,12 @@ Ref<Metadata> CoreBinaryViewType::GetMetadataForChild(BinaryView* data, const st
 }
 
 
-Ref<BinaryView> CoreBinaryViewType::CreateChildForData(BinaryView* data, const std::string& child)
+Ref<BinaryView> CoreBinaryViewType::CreateChildForData(BinaryView* data, const string& child, bool updateAnalysis, const string& options, ProgressFunction progress)
 {
-	BNBinaryView* view = BNBinaryViewTypeCreateChildForData(m_object, data->GetObject(), child.c_str());
+	ProgressContext progressContext;
+	progressContext.callback = progress;
+
+	BNBinaryView* view = BNBinaryViewTypeCreateChildForData(m_object, data->GetObject(), child.c_str(), updateAnalysis, options.c_str(), ProgressCallback, &progressContext);
 	if (!view)
 		return nullptr;
 	return new BinaryView(view);

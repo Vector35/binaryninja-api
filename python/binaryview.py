@@ -1321,8 +1321,14 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 			return None
 		return metadata.Metadata(handle=handle)
 
-	def create_child_for_data(self, data: 'BinaryView', child: str) -> Optional['BinaryView']:
-		handle = core.BNBinaryViewTypeCreateChildForData(self.handle, data.handle, child)
+	def create_child_for_data(self, data: 'BinaryView', child: str, update_analysis: bool = True, progress_func: Optional[ProgressFuncType] = None, options: Optional[Mapping[str, Any]] = None) -> Optional['BinaryView']:
+		if progress_func is None:
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda cur, total: True)
+		else:
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda cur, total: progress_func(cur, total))
+		if options is None:
+			options = {}
+		handle = core.BNBinaryViewTypeCreateChildForData(self.handle, data.handle, child, update_analysis, json.dumps(options), progress_cfunc)
 		if handle is None:
 			return None
 		return BinaryView(handle=handle)
@@ -2684,13 +2690,16 @@ class BinaryView:
 			return None
 
 	@classmethod
-	def _create_child_for_data(cls, ctxt, data, child):
+	def _create_child_for_data(cls, ctxt, data, child, update_analysis, options, progress_func, progress_context):
 		try:
 			attr = getattr(cls, "create_child_for_data", None)
 			if callable(attr):
 				result = cls.create_child_for_data(
 					BinaryView(handle=core.BNNewViewReference(data)),
-					core.pyNativeStr(child)
+					core.pyNativeStr(child),
+					update_analysis,
+					progress_func=lambda cur, max: progress_func(progress_context, cur, max),
+					options=json.loads(options)
 				)
 				if result is None:
 					return None
@@ -2942,6 +2951,32 @@ class BinaryView:
 			result.append(core.pyNativeStr(children[i]))
 		core.BNFreeStringList(children, count.value)
 		return result
+
+	def create_child_view(self, child: str, update_analysis: bool = True, progress_func: Optional[ProgressFuncType] = None, options: Optional[Mapping[str, Any]] = None) -> Optional['BinaryView']:
+		"""
+		Create and load the child view named ``child`` adding it as a child view to
+		this BinaryView.
+
+		Rest of the arguments are as documented in :py:func:`load`
+
+		:param child: Name of child view, from :py:func:`available_children`
+		:param bool update_analysis: whether or not to run :py:func:`~BinaryView.update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
+		:param callback progress_func: optional function to be called with the current progress and total count
+		:param dict options: a dictionary in the form {setting identifier string : object value}
+		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
+		:rtype: :py:class:`BinaryView` or ``None``
+		"""
+		if progress_func is None:
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: True)
+		else:
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: progress_func(cur, total))
+		if options is None:
+			options = {}
+
+		handle = core.BNCreateChildView(self.handle, child, update_analysis, json.dumps(options), progress_cfunc, None)
+		if handle is None:
+			return None
+		return BinaryView(handle=handle)
 
 	@property
 	def modified(self) -> bool:

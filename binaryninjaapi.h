@@ -578,6 +578,8 @@ namespace BinaryNinja {
 	class ReportCollection;
 	struct FormInputField;
 
+	typedef std::function<bool(size_t, size_t)> ProgressFunction;
+
 	/*! Logs to the error console with the given BNLogLevel.
 
 	    @threadsafe
@@ -6912,7 +6914,7 @@ namespace BinaryNinja {
 		static bool HasChildrenForDataCallback(void* ctxt, BNBinaryView* data);
 		static char** GetChildrenForDataCallback(void* ctxt, BNBinaryView* data, size_t* count);
 		static BNMetadata* GetMetadataForChildCallback(void* ctxt, BNBinaryView* data, const char* child);
-		static BNBinaryView* CreateChildForDataCallback(void* ctxt, BNBinaryView* data, const char* child);
+		static BNBinaryView* CreateChildForDataCallback(void* ctxt, BNBinaryView* data, const char* child, bool updateAnalysis, const char* options, BNProgressFunction progress, void* progressContext);
 		static void FreeStringListCallback(void* ctxt, char** stringList, size_t count);
 
 		BinaryViewType(BNBinaryViewType* type);
@@ -7068,7 +7070,7 @@ namespace BinaryNinja {
 		/*!
 			TODO
 		 */
-		virtual Ref<BinaryView> CreateChildForData(BinaryView* data, const std::string& child);
+		virtual Ref<BinaryView> CreateChildForData(BinaryView* data, const std::string& child, bool updateAnalysis, const std::string& options, ProgressFunction progress);
 
 		static void RegisterBinaryViewFinalizationEvent(const std::function<void(BinaryView* view)>& callback);
 		static void RegisterBinaryViewInitialAnalysisCompletionEvent(
@@ -7093,7 +7095,7 @@ namespace BinaryNinja {
 		virtual bool HasChildrenForData(BinaryView* data) override;
 		virtual std::vector<std::string> GetChildrenForData(BinaryView* data) override;
 		virtual Ref<Metadata> GetMetadataForChild(BinaryView* data, const std::string& child) override;
-		virtual Ref<BinaryView> CreateChildForData(BinaryView* data, const std::string& child) override;
+		virtual Ref<BinaryView> CreateChildForData(BinaryView* data, const std::string& child, bool updateAnalysis, const std::string& options, ProgressFunction progress) override;
 	};
 
 	/*! Thrown whenever a read is performed out of bounds.
@@ -18618,7 +18620,6 @@ namespace BinaryNinja::Collaboration
 	};
 
 	typedef std::function<bool(Ref<CollabChangeset>)> NameChangesetFunction;
-	typedef std::function<bool(size_t, size_t)> ProgressFunction;
 	typedef std::function<bool(const std::unordered_map<std::string, Ref<AnalysisMergeConflict>>& conflicts)> AnalysisConflictHandler;
 	typedef std::function<bool(const std::vector<Ref<TypeArchiveMergeConflict>>& conflicts)> TypeArchiveConflictHandler;
 

@@ -88,7 +88,7 @@ class TarView(BinaryView):
         return None
 
     @classmethod
-    def create_child_for_data(cls, data, child):
+    def create_child_for_data(cls, data, child, update_analysis, progress_func, options):
         # TODO: Better way of doing this
         load_settings = data.get_load_settings("Adapter")
         load_settings.set_string("loader.adapter.childName", child)
@@ -96,7 +96,7 @@ class TarView(BinaryView):
 
         # TODO: Is this a good way of doing adapter views?
         view = BinaryViewType["Adapter"].create(data)
-        result = binaryninja.load(view)
+        result = binaryninja.load(view, update_analysis, progress_func, options)
         return result
 
     def init(self):

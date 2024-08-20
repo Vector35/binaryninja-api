@@ -297,6 +297,8 @@ extern "C"
 	typedef struct BNUndoAction BNUndoAction;
 	typedef struct BNUndoEntry BNUndoEntry;
 
+	typedef bool(*BNProgressFunction)(void*, size_t, size_t);
+
 	//! Console log levels
 	typedef enum BNLogLevel
 	{
@@ -1660,7 +1662,7 @@ extern "C"
 		bool (*hasChildrenForData)(void* ctxt, BNBinaryView* data);
 		char** (*getChildrenForData)(void* ctxt, BNBinaryView* data, size_t* count);
 		BNMetadata* (*getMetadataForChild)(void* ctxt, BNBinaryView* data, const char* child);
-		BNBinaryView* (*createChildForData)(void* ctxt, BNBinaryView* data, const char* child);
+		BNBinaryView* (*createChildForData)(void* ctxt, BNBinaryView* data, const char* child, bool updateAnalysis, const char* options, BNProgressFunction progress, void* progressContext);
 		void (*freeStringList)(void* ctxt, char** stringList, size_t count);
 	} BNCustomBinaryViewType;
 
@@ -3320,7 +3322,6 @@ extern "C"
 		void (*freeConflictList)(void* context, BNAnalysisMergeConflict** conflictList, size_t count);
 	} BNAnalysisMergeConflictSplitterCallbacks;
 
-	typedef bool(*BNProgressFunction)(void*, size_t, size_t);
 	typedef bool(*BNCollaborationAnalysisConflictHandler)(void*, const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount);
 	typedef bool(*BNCollaborationNameChangesetFunction)(void*, BNCollaborationChangeset*);
 
@@ -3814,6 +3815,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetViewId(BNBinaryView* view);
 	BINARYNINJACOREAPI BNBinaryView** BNGetChildViews(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI char** BNGetAvailableChildren(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI BNBinaryView* BNCreateChildView(BNBinaryView* view, const char* child, bool updateAnalysis, const char* options, BNProgressFunction progress, void* progressContext);
 
 	BINARYNINJACOREAPI size_t BNReadViewData(BNBinaryView* view, void* dest, uint64_t offset, size_t len);
 	BINARYNINJACOREAPI BNDataBuffer* BNReadViewBuffer(BNBinaryView* view, uint64_t offset, size_t len);
@@ -4010,7 +4012,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNBinaryViewTypeHasChildrenForData(BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI char** BNBinaryViewTypeGetChildrenForData(BNBinaryViewType* type, BNBinaryView* data, size_t* count);
 	BINARYNINJACOREAPI BNMetadata* BNBinaryViewTypeGetMetadataForChild(BNBinaryViewType* type, BNBinaryView* data, const char* child);
-	BINARYNINJACOREAPI BNBinaryView* BNBinaryViewTypeCreateChildForData(BNBinaryViewType* type, BNBinaryView* data, const char* child);
+	BINARYNINJACOREAPI BNBinaryView* BNBinaryViewTypeCreateChildForData(BNBinaryViewType* type, BNBinaryView* data, const char* child, bool updateAnalysis, const char* options, BNProgressFunction progress, void* progressContext);
 
 	BINARYNINJACOREAPI BNBinaryViewType* BNRegisterBinaryViewType(
 	    const char* name, const char* longName, BNCustomBinaryViewType* type);

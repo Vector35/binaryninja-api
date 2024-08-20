@@ -250,7 +250,7 @@ MachoView::MachoView(const string& typeName, BinaryView* data, bool parseOnly): 
 			data->SetLoadSettings(typeName, loadSettings);
 			if (!m_file->IsBackedByDatabase(typeName))
 			{
-				auto defaultSettings = loadSettings->SerializeSettings(nullptr, SettingsDefaultScope);
+				auto defaultSettings = loadSettings->SerializeSettings(Ref<BinaryView>(), SettingsDefaultScope);
 				loadSettings->DeserializeSettings(defaultSettings, data, SettingsResourceScope);
 			}
 

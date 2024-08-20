@@ -16191,6 +16191,28 @@ namespace BinaryNinja {
 		    BNSettingsScope scope = SettingsAutoScope);
 		bool SetJson(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr,
 		    BNSettingsScope scope = SettingsAutoScope);
+
+		// Function Settings
+		bool DeserializeSettings(const std::string& contents, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		std::string SerializeSettings(Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+
+		bool Reset(const std::string& key, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool ResetAll(Ref<Function> func, BNSettingsScope scope = SettingsAutoScope, bool schemaOnly = true);
+
+		template <typename T>
+		T Get(const std::string& key, Ref<Function> func, BNSettingsScope* scope = nullptr);
+
+		std::string GetJson(const std::string& key, Ref<Function> func, BNSettingsScope* scope = nullptr);
+
+		bool Set(const std::string& key, bool value, Ref<Function> func,  BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, double value, Ref<Function> func,  BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, int value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, int64_t value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, uint64_t value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const char* value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const std::string& value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const std::vector<std::string>& value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool SetJson(const std::string& key, const std::string& value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
 	};
 
 	// explicit specializations
@@ -16214,6 +16236,19 @@ namespace BinaryNinja {
 	std::vector<std::string> Settings::Get<std::vector<std::string>>(
 	    const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
 	/*! \endcond*/
+
+	template <>
+	bool Settings::Get<bool>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	double Settings::Get<double>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	int64_t Settings::Get<int64_t>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	uint64_t Settings::Get<uint64_t>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	std::string Settings::Get<std::string>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	std::vector<std::string> Settings::Get<std::vector<std::string>>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
 
 	typedef BNMetadataType MetadataType;
 

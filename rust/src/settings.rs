@@ -78,6 +78,8 @@ impl Settings {
         unsafe { BNSettingsContains(self.handle, key.as_ref().as_ptr() as *mut _) }
     }
 
+    // TODO Update the settings API to take an optional BinaryView or Function. Separate functions or...?
+
     pub fn get_bool<S: BnStrCompatible>(
         &self,
         key: S,
@@ -98,6 +100,7 @@ impl Settings {
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
                 view_handle,
+                std::ptr::null_mut(),
                 scope_ptr,
             )
         }
@@ -123,6 +126,7 @@ impl Settings {
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
                 view_handle,
+                std::ptr::null_mut(),
                 scope_ptr,
             )
         }
@@ -148,6 +152,7 @@ impl Settings {
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
                 view_handle,
+                std::ptr::null_mut(),
                 scope_ptr,
             )
         }
@@ -173,6 +178,7 @@ impl Settings {
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
                 view_handle,
+                std::ptr::null_mut(),
                 scope_ptr,
             ))
         }
@@ -200,6 +206,7 @@ impl Settings {
                     self.handle,
                     key.as_ref().as_ptr() as *mut _,
                     view_handle,
+                    std::ptr::null_mut(),
                     scope_ptr,
                     &mut size,
                 ) as *mut *mut c_char,
@@ -229,6 +236,7 @@ impl Settings {
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
                 view_handle,
+                std::ptr::null_mut(),
                 scope_ptr,
             ))
         }
@@ -254,6 +262,7 @@ impl Settings {
             BNSettingsSetBool(
                 self.handle,
                 view_handle,
+                std::ptr::null_mut(),
                 scope,
                 key.as_ref().as_ptr() as *mut _,
                 value,
@@ -281,6 +290,7 @@ impl Settings {
             BNSettingsSetDouble(
                 self.handle,
                 view_handle,
+                std::ptr::null_mut(),
                 scope,
                 key.as_ref().as_ptr() as *mut _,
                 value,
@@ -308,6 +318,7 @@ impl Settings {
             BNSettingsSetUInt64(
                 self.handle,
                 view_handle,
+                std::ptr::null_mut(),
                 scope,
                 key.as_ref().as_ptr() as *mut _,
                 value,
@@ -336,6 +347,7 @@ impl Settings {
             BNSettingsSetString(
                 self.handle,
                 view_handle,
+                std::ptr::null_mut(),
                 scope,
                 key.as_ref().as_ptr() as *mut _,
                 value.as_ref().as_ptr() as *mut _,
@@ -372,6 +384,7 @@ impl Settings {
             BNSettingsSetStringList(
                 self.handle,
                 view_handle,
+                std::ptr::null_mut(),
                 scope,
                 key.as_ref().as_ptr() as *mut _,
                 value.as_mut_ptr(),
@@ -404,6 +417,7 @@ impl Settings {
             BNSettingsSetJson(
                 self.handle,
                 view_handle,
+                std::ptr::null_mut(),
                 scope,
                 key.as_ref().as_ptr() as *mut _,
                 value.as_ref().as_ptr() as *mut _,

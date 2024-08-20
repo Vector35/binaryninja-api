@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 73
+#define BN_CURRENT_CORE_ABI_VERSION 74
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 72
+#define BN_MINIMUM_CORE_ABI_VERSION 74
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -6887,44 +6887,44 @@ extern "C"
 	    BNSettings* settings, const char* schema, BNSettingsScope scope, bool merge);
 	BINARYNINJACOREAPI char* BNSettingsSerializeSchema(BNSettings* settings);
 	BINARYNINJACOREAPI bool BNDeserializeSettings(
-	    BNSettings* settings, const char* contents, BNBinaryView* view, BNSettingsScope scope);
-	BINARYNINJACOREAPI char* BNSerializeSettings(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope);
+	    BNSettings* settings, const char* contents, BNBinaryView* view, BNFunction* func, BNSettingsScope scope);
+	BINARYNINJACOREAPI char* BNSerializeSettings(BNSettings* settings, BNBinaryView* view, BNFunction* func, BNSettingsScope scope);
 
 	BINARYNINJACOREAPI bool BNSettingsReset(
-	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope scope);
+	    BNSettings* settings, const char* key, BNBinaryView* view, BNFunction* func, BNSettingsScope scope);
 	BINARYNINJACOREAPI bool BNSettingsResetAll(
-	    BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, bool schemaOnly);
+	    BNSettings* settings, BNBinaryView* view, BNFunction* func, BNSettingsScope scope, bool schemaOnly);
 
 	BINARYNINJACOREAPI bool BNSettingsGetBool(
-	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
+	    BNSettings* settings, const char* key, BNBinaryView* view, BNFunction* func, BNSettingsScope* scope);
 	BINARYNINJACOREAPI double BNSettingsGetDouble(
-	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
+	    BNSettings* settings, const char* key, BNBinaryView* view, BNFunction* func, BNSettingsScope* scope);
 	BINARYNINJACOREAPI int64_t BNSettingsGetInt64(
-	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
+	    BNSettings* settings, const char* key, BNBinaryView* view, BNFunction* func, BNSettingsScope* scope);
 	BINARYNINJACOREAPI uint64_t BNSettingsGetUInt64(
-	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
+	    BNSettings* settings, const char* key, BNBinaryView* view, BNFunction* func, BNSettingsScope* scope);
 	BINARYNINJACOREAPI char* BNSettingsGetString(
-	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
+	    BNSettings* settings, const char* key, BNBinaryView* view, BNFunction* func, BNSettingsScope* scope);
 	BINARYNINJACOREAPI const char** BNSettingsGetStringList(
-	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope, size_t* inoutSize);
+	    BNSettings* settings, const char* key, BNBinaryView* view, BNFunction* func, BNSettingsScope* scope, size_t* inoutSize);
 
 	BINARYNINJACOREAPI char* BNSettingsGetJson(
-	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
+	    BNSettings* settings, const char* key, BNBinaryView* view, BNFunction* func, BNSettingsScope* scope);
 
 	BINARYNINJACOREAPI bool BNSettingsSetBool(
-	    BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, bool value);
+	    BNSettings* settings, BNBinaryView* view, BNFunction* func, BNSettingsScope scope, const char* key, bool value);
 	BINARYNINJACOREAPI bool BNSettingsSetDouble(
-	    BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, double value);
+	    BNSettings* settings, BNBinaryView* view, BNFunction* func, BNSettingsScope scope, const char* key, double value);
 	BINARYNINJACOREAPI bool BNSettingsSetInt64(
-	    BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, int64_t value);
+	    BNSettings* settings, BNBinaryView* view, BNFunction* func, BNSettingsScope scope, const char* key, int64_t value);
 	BINARYNINJACOREAPI bool BNSettingsSetUInt64(
-	    BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, uint64_t value);
+	    BNSettings* settings, BNBinaryView* view, BNFunction* func, BNSettingsScope scope, const char* key, uint64_t value);
 	BINARYNINJACOREAPI bool BNSettingsSetString(
-	    BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, const char* value);
-	BINARYNINJACOREAPI bool BNSettingsSetStringList(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope,
+	    BNSettings* settings, BNBinaryView* view, BNFunction* func, BNSettingsScope scope, const char* key, const char* value);
+	BINARYNINJACOREAPI bool BNSettingsSetStringList(BNSettings* settings, BNBinaryView* view, BNFunction* func, BNSettingsScope scope,
 	    const char* key, const char** value, size_t size);
 	BINARYNINJACOREAPI bool BNSettingsSetJson(
-	    BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, const char* value);
+	    BNSettings* settings, BNBinaryView* view, BNFunction* func, BNSettingsScope scope, const char* key, const char* value);
 
 	// Metadata APIs
 

@@ -5382,6 +5382,11 @@ BinaryData::BinaryData(FileMetadata* file, FileAccessor* accessor) :
 {}
 
 
+BinaryData::BinaryData(FileMetadata* file, BinaryView* view, size_t offset, size_t length) :
+	BinaryView(BNCreateBinaryDataViewFromView(file->GetObject(), view->GetObject(), offset, length))
+{}
+
+
 Ref<BinaryData> BinaryData::CreateFromFilename(FileMetadata* file, const std::string& path)
 {
 	// This can fail, and throwing an exception in a c++ ctor is Ugly, so now there's a helper method here

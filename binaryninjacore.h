@@ -3990,6 +3990,7 @@ extern "C"
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromData(BNFileMetadata* file, const void* data, size_t len);
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromFilename(BNFileMetadata* file, const char* filename);
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromFile(BNFileMetadata* file, BNFileAccessor* accessor);
+	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromView(BNFileMetadata* file, BNBinaryView* view, size_t offset, size_t length);
 
 	// Creation of new types of binary views
 	BINARYNINJACOREAPI BNBinaryView* BNCreateCustomBinaryView(

@@ -6866,6 +6866,7 @@ namespace BinaryNinja {
 		BinaryData(FileMetadata* file, const void* data, size_t len);
 		BinaryData(FileMetadata* file, const std::string& path);
 		BinaryData(FileMetadata* file, FileAccessor* accessor);
+		BinaryData(FileMetadata* file, BinaryView* view, size_t offset, size_t length);
 
 		/*!
 			Open a raw file from a given path.

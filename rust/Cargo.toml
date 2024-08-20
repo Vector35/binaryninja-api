@@ -3,7 +3,7 @@ name = "binaryninja"
 version = "0.1.0"
 authors = ["Ryan Snyder <ryan@vector35.com>", "Kyle Martin <kyle@vector35.com>"]
 edition = "2021"
-rust-version = "1.77.0"
+rust-version = "1.80.0"
 
 [features]
 noexports = []

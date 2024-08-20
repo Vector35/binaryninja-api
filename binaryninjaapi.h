@@ -16623,7 +16623,7 @@ namespace BinaryNinja {
 	class CustomDebugInfoParser : public DebugInfoParser
 	{
 		static bool IsValidCallback(void* ctxt, BNBinaryView* view);
-		static bool ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view, BNBinaryView* debugFile, bool (*progress)(void*, size_t, size_t), void* progressCtxt);
+		static bool ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view, BNBinaryView* debugFile, BNProgressFunction progress, void* progressCtxt);
 		BNDebugInfoParser* Register(const std::string& name);
 
 	  public:

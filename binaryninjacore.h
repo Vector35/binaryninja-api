@@ -3517,18 +3517,18 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNCreateDatabase(BNBinaryView* data, const char* path, BNSaveSettings* settings);
 	BINARYNINJACOREAPI bool BNCreateDatabaseWithProgress(BNBinaryView* data, const char* path, void* ctxt,
-	    bool (*progress)(void* ctxt, size_t progress, size_t total), BNSaveSettings* settings);
+	    BNProgressFunction progress, BNSaveSettings* settings);
 	BINARYNINJACOREAPI BNBinaryView* BNOpenExistingDatabase(BNFileMetadata* file, const char* path);
 	BINARYNINJACOREAPI BNBinaryView* BNOpenExistingDatabaseWithProgress(BNFileMetadata* file, const char* path,
-	    void* ctxt, bool (*progress)(void* ctxt, size_t progress, size_t total));
+	    void* ctxt, BNProgressFunction progress);
 	BINARYNINJACOREAPI BNBinaryView* BNOpenDatabaseForConfiguration(BNFileMetadata* file, const char* path);
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshot(BNBinaryView* data, BNSaveSettings* settings);
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshotWithProgress(BNBinaryView* data, void* ctxt,
-	    bool (*progress)(void* ctxt, size_t progress, size_t total), BNSaveSettings* settings);
+	    BNProgressFunction progress, BNSaveSettings* settings);
 	BINARYNINJACOREAPI void BNGetSnapshotData(BNFileMetadata* file, BNKeyValueStore* data, BNKeyValueStore* cache,
-	    void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total));
+	    void* ctxt, BNProgressFunction progress);
 	BINARYNINJACOREAPI void BNApplySnapshotData(BNFileMetadata* file, BNBinaryView* view, BNKeyValueStore* data,
-	    BNKeyValueStore* cache, void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total),
+	    BNKeyValueStore* cache, void* ctxt, BNProgressFunction progress,
 	    bool openForConfiguration, bool restoreRawView);
 	BINARYNINJACOREAPI BNDatabase* BNGetFileMetadataDatabase(BNFileMetadata* file);
 
@@ -3577,13 +3577,13 @@ extern "C"
 	BINARYNINJACOREAPI void BNProjectRemoveMetadata(BNProject* project, const char* key);
 
 	BINARYNINJACOREAPI BNProjectFile* BNProjectCreateFileFromPath(BNProject* project, const char* path, BNProjectFolder* folder, const char* name, const char* description, void* ctxt,
-		bool (*progress)(void* ctxt, size_t progress, size_t total));
+		BNProgressFunction progress);
 	BINARYNINJACOREAPI BNProjectFile* BNProjectCreateFileFromPathUnsafe(BNProject* project, const char* path, BNProjectFolder* folder, const char* name, const char* description, const char* id, int64_t creationTimestamp, void* ctxt,
-		bool (*progress)(void* ctxt, size_t progress, size_t total));
+		BNProgressFunction progress);
 	BINARYNINJACOREAPI BNProjectFile* BNProjectCreateFile(BNProject* project, const uint8_t* contents, size_t contentsSize, BNProjectFolder* folder, const char* name, const char* description, void* ctxt,
-		bool (*progress)(void* ctxt, size_t progress, size_t total));
+		BNProgressFunction progress);
 	BINARYNINJACOREAPI BNProjectFile* BNProjectCreateFileUnsafe(BNProject* project, const uint8_t* contents, size_t contentsSize, BNProjectFolder* folder, const char* name, const char* description, const char* id, int64_t creationTimestamp, void* ctxt,
-		bool (*progress)(void* ctxt, size_t progress, size_t total));
+		BNProgressFunction progress);
 	BINARYNINJACOREAPI BNProjectFile** BNProjectGetFiles(BNProject* project, size_t* count);
 	BINARYNINJACOREAPI BNProjectFile* BNProjectGetFileById(BNProject* project, const char* id);
 	BINARYNINJACOREAPI BNProjectFile* BNProjectGetFileByPathOnDisk(BNProject* project, const char* path);
@@ -3592,14 +3592,14 @@ extern "C"
 	BINARYNINJACOREAPI bool BNProjectDeleteFile(BNProject* project, BNProjectFile* file);
 
 	BINARYNINJACOREAPI BNProjectFolder* BNProjectCreateFolderFromPath(BNProject* project, const char* path, BNProjectFolder* parent, const char* description, void* ctxt,
-		bool (*progress)(void* ctxt, size_t progress, size_t total));
+		BNProgressFunction progress);
 	BINARYNINJACOREAPI BNProjectFolder* BNProjectCreateFolder(BNProject* project, BNProjectFolder* parent, const char* name, const char* description);
 	BINARYNINJACOREAPI BNProjectFolder* BNProjectCreateFolderUnsafe(BNProject* project, BNProjectFolder* parent, const char* name, const char* description, const char* id);
 	BINARYNINJACOREAPI BNProjectFolder** BNProjectGetFolders(BNProject* project, size_t* count);
 	BINARYNINJACOREAPI BNProjectFolder* BNProjectGetFolderById(BNProject* project, const char* id);
 	BINARYNINJACOREAPI void BNProjectPushFolder(BNProject* project, BNProjectFolder* folder);
 	BINARYNINJACOREAPI bool BNProjectDeleteFolder(BNProject* project, BNProjectFolder* folder, void* ctxt,
-		bool (*progress)(void* ctxt, size_t progress, size_t total));
+		BNProgressFunction progress);
 
 	BINARYNINJACOREAPI void BNProjectBeginBulkOperation(BNProject* project);
 	BINARYNINJACOREAPI void BNProjectEndBulkOperation(BNProject* project);
@@ -3635,7 +3635,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNProjectFolderSetParent(BNProjectFolder* folder, BNProjectFolder* parent);
 	BINARYNINJACOREAPI BNProject* BNProjectFolderGetProject(BNProjectFolder* folder);
 	BINARYNINJACOREAPI bool BNProjectFolderExport(BNProjectFolder* folder, const char* destination, void* ctxt,
-		bool (*progress)(void* ctxt, size_t progress, size_t total));
+		BNProgressFunction progress);
 
 	// ExternalLibrary object
 	BINARYNINJACOREAPI BNExternalLibrary* BNNewExternalLibraryReference(BNExternalLibrary* lib);
@@ -3701,11 +3701,11 @@ extern "C"
 	BINARYNINJACOREAPI BNDataBuffer* BNGetSnapshotFileContentsHash(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI BNKeyValueStore* BNReadSnapshotData(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI BNKeyValueStore* BNReadSnapshotDataWithProgress(
-	    BNSnapshot* snapshot, void* ctxt, bool (*progress)(void* ctxt, size_t progress, size_t total));
+	    BNSnapshot* snapshot, void* ctxt, BNProgressFunction progress);
 	BINARYNINJACOREAPI BNDataBuffer* BNGetSnapshotUndoData(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI BNUndoEntry** BNGetSnapshotUndoEntries(BNSnapshot* snapshot, size_t* count);
 	BINARYNINJACOREAPI BNUndoEntry** BNGetSnapshotUndoEntriesWithProgress(
-	    BNSnapshot* snapshot, void* ctxt, bool (*progress)(void* ctxt, size_t progress, size_t total), size_t* count);
+	    BNSnapshot* snapshot, void* ctxt, BNProgressFunction progress, size_t* count);
 	BINARYNINJACOREAPI bool BNSnapshotHasAncestor(BNSnapshot* snapshot, BNSnapshot* other);
 	BINARYNINJACOREAPI bool BNSnapshotStoreData(BNSnapshot* snapshot, BNKeyValueStore* data,
 		void* ctxt, BNProgressFunction progress);
@@ -3727,10 +3727,10 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNRebase(BNBinaryView* data, uint64_t address);
 	BINARYNINJACOREAPI bool BNRebaseWithProgress(
-	    BNBinaryView* data, uint64_t address, void* ctxt, bool (*progress)(void* ctxt, size_t progress, size_t total));
+	    BNBinaryView* data, uint64_t address, void* ctxt, BNProgressFunction progress);
 	BINARYNINJACOREAPI bool BNCreateSnapshotedView(BNBinaryView* data, const char* viewName);
 	BINARYNINJACOREAPI bool BNCreateSnapshotedViewWithProgress(BNBinaryView* data, const char* viewName, void* ctxt,
-															   bool (*progress)(void* ctxt, size_t progress, size_t total));
+															   BNProgressFunction progress);
 
 	BINARYNINJACOREAPI char* BNGetOriginalFilename(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNSetOriginalFilename(BNFileMetadata* file, const char* name);
@@ -3901,24 +3901,24 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNFindNextDataWithProgress(BNBinaryView* view, uint64_t start, uint64_t end,
 	    BNDataBuffer* data, uint64_t* result, BNFindFlag flags, void* ctxt,
-	    bool (*progress)(void* ctxt, size_t current, size_t total));
+	    BNProgressFunction progress);
 	BINARYNINJACOREAPI bool BNFindNextTextWithProgress(BNBinaryView* view, uint64_t start, uint64_t end,
 	    const char* data, uint64_t* result, BNDisassemblySettings* settings, BNFindFlag flags,
-	    BNFunctionGraphType graph, void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total));
+	    BNFunctionGraphType graph, void* ctxt, BNProgressFunction progress);
 	BINARYNINJACOREAPI bool BNFindNextConstantWithProgress(BNBinaryView* view, uint64_t start, uint64_t end,
 	    uint64_t constant, uint64_t* result, BNDisassemblySettings* settings, BNFunctionGraphType graph, void* ctxt,
-	    bool (*progress)(void* ctxt, size_t current, size_t total));
+	    BNProgressFunction progress);
 
 	BINARYNINJACOREAPI bool BNFindAllDataWithProgress(BNBinaryView* view, uint64_t start, uint64_t end,
-	    BNDataBuffer* data, BNFindFlag flags, void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total),
+	    BNDataBuffer* data, BNFindFlag flags, void* ctxt, BNProgressFunction progress,
 	    void* matchCtxt, bool (*matchCallback)(void* matchCtxt, uint64_t addr, BNDataBuffer* match));
 	BINARYNINJACOREAPI bool BNFindAllTextWithProgress(BNBinaryView* view, uint64_t start, uint64_t end,
 	    const char* data, BNDisassemblySettings* settings, BNFindFlag flags, BNFunctionGraphType graph, void* ctxt,
-	    bool (*progress)(void* ctxt, size_t current, size_t total), void* matchCtxt,
+	    BNProgressFunction progress, void* matchCtxt,
 	    bool (*matchCallback)(void* matchCtxt, uint64_t addr, const char* match, BNLinearDisassemblyLine* line));
 	BINARYNINJACOREAPI bool BNFindAllConstantWithProgress(BNBinaryView* view, uint64_t start, uint64_t end,
 	    uint64_t constant, BNDisassemblySettings* settings, BNFunctionGraphType graph, void* ctxt,
-	    bool (*progress)(void* ctxt, size_t current, size_t total), void* matchCtxt,
+	    BNProgressFunction progress, void* matchCtxt,
 	    bool (*matchCallback)(void* matchCtxt, uint64_t addr, BNLinearDisassemblyLine* line));
 
 	BINARYNINJACOREAPI bool BNSearch(BNBinaryView* view, const char* query, void* context, bool (*callback)(void*, uint64_t, BNDataBuffer*));
@@ -6288,9 +6288,9 @@ extern "C"
 	    const char* channel, uint64_t* expireTime, uint64_t* serverTime, char** errors);
 
 	BINARYNINJACOREAPI BNUpdateResult BNUpdateToVersion(const char* channel, const char* version, char** errors,
-	    bool (*progress)(void* ctxt, uint64_t progress, uint64_t total), void* context);
+	    BNProgressFunction progress, void* context);
 	BINARYNINJACOREAPI BNUpdateResult BNUpdateToLatestVersion(const char* channel, char** errors,
-	    bool (*progress)(void* ctxt, uint64_t progress, uint64_t total), void* context);
+	    BNProgressFunction progress, void* context);
 
 	BINARYNINJACOREAPI bool BNAreAutoUpdatesEnabled(void);
 	BINARYNINJACOREAPI void BNSetAutoUpdatesEnabled(bool enabled);
@@ -7081,7 +7081,7 @@ extern "C"
 
 	BINARYNINJACOREAPI BNDebugInfoParser* BNRegisterDebugInfoParser(const char* name,
 		bool (*isValid)(void*, BNBinaryView*),
-		bool (*parseInfo)(void*, BNDebugInfo*, BNBinaryView*, BNBinaryView*, bool (*)(void*, size_t, size_t), void*),
+		bool (*parseInfo)(void*, BNDebugInfo*, BNBinaryView*, BNBinaryView*, BNProgressFunction, void*),
 		void* context);
 	BINARYNINJACOREAPI void BNUnregisterDebugInfoParser(const char* rawName);
 	BINARYNINJACOREAPI BNDebugInfoParser* BNGetDebugInfoParserByName(const char* name);
@@ -7332,7 +7332,7 @@ extern "C"
 	BINARYNINJACOREAPI BNRemoteProject* BNRemoteGetProjectByName(BNRemote* remote, const char* name);
 	BINARYNINJACOREAPI bool BNRemotePullProjects(BNRemote* remote, BNProgressFunction progress, void* progressContext);
 	BINARYNINJACOREAPI BNRemoteProject* BNRemoteCreateProject(BNRemote* remote, const char* name, const char* description);
-	BINARYNINJACOREAPI BNRemoteProject* BNRemoteImportLocalProject(BNRemote* remote, BNProject* localProject, bool (*progress)(void*, size_t, size_t), void* progressCtxt);
+	BINARYNINJACOREAPI BNRemoteProject* BNRemoteImportLocalProject(BNRemote* remote, BNProject* localProject, BNProgressFunction progress, void* progressCtxt);
 	BINARYNINJACOREAPI bool BNRemotePushProject(BNRemote* remote, BNRemoteProject* project, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
 	BINARYNINJACOREAPI bool BNRemoteDeleteProject(BNRemote* remote, BNRemoteProject* project);
 	BINARYNINJACOREAPI BNCollaborationGroup** BNRemoteGetGroups(BNRemote* remote, size_t* count);
@@ -7387,7 +7387,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeRemoteProjectList(BNRemoteProject** projects, size_t count);
 	BINARYNINJACOREAPI BNProject* BNRemoteProjectGetCoreProject(BNRemoteProject* project);
 	BINARYNINJACOREAPI bool BNRemoteProjectIsOpen(BNRemoteProject* project);
-	BINARYNINJACOREAPI bool BNRemoteProjectOpen(BNRemoteProject* project, bool (*progress)(void*, size_t, size_t), void* progressCtxt);
+	BINARYNINJACOREAPI bool BNRemoteProjectOpen(BNRemoteProject* project, BNProgressFunction progress, void* progressCtxt);
 	BINARYNINJACOREAPI void BNRemoteProjectClose(BNRemoteProject* project);
 	BINARYNINJACOREAPI BNRemote* BNRemoteProjectGetRemote(BNRemoteProject* project);
 	BINARYNINJACOREAPI char* BNRemoteProjectGetUrl(BNRemoteProject* project);

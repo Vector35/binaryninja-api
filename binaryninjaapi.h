@@ -13495,9 +13495,9 @@ namespace BinaryNinja {
 
 		BNUpdateResult UpdateToVersion(const std::string& version);
 		BNUpdateResult UpdateToVersion(
-		    const std::string& version, const std::function<bool(uint64_t progress, uint64_t total)>& progress);
+		    const std::string& version, const std::function<bool(size_t progress, size_t total)>& progress);
 		BNUpdateResult UpdateToLatestVersion();
-		BNUpdateResult UpdateToLatestVersion(const std::function<bool(uint64_t progress, uint64_t total)>& progress);
+		BNUpdateResult UpdateToLatestVersion(const std::function<bool(size_t progress, size_t total)>& progress);
 	};
 
 	/*! UpdateVersion documentation

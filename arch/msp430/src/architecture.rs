@@ -631,9 +631,9 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
             }
             2 => {
                 let num_text = if *i >= 0 {
-                    &format!("{i:#x}")
+                    format!("{i:#x}")
                 } else {
-                    &format!("-{:#x}", -i)
+                    format!("-{:#x}", -i)
                 };
                 vec![
                     InstructionTextToken::new(

@@ -1,0 +1,13 @@
+[package]
+name = "arch_msp430"
+version = "0.1.0"
+authors = ["jrozner"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+binaryninja = { git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev" }
+log = "0.4.14"
+msp430-asm = "^0.2"

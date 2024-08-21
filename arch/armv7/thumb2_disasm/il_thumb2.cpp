@@ -1033,9 +1033,9 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 	case armv7::ARMV7_REV:
 		il.AddInstruction(WriteILOperand(il, instr, 0,
 			il.Or(4, il.LogicalShiftRight(4, ReadILOperand(il, instr, 1), il.Const(4, 24)),
-				 il.Or(4, il.And(4, il.LogicalShiftRight(4, ReadILOperand(il, instr, 1), il.Const(4, 16)), il.Const(4, 0xff)),
-					  il.Or(4, il.And(4, il.LogicalShiftRight(4, ReadILOperand(il, instr, 1), il.Const(4, 8)), il.Const(4, 0xff)),
-						   il.And(4, ReadILOperand(il, instr, 1), il.Const(4, 0xff)))))));
+				 il.Or(4, il.ShiftLeft(4, il.And(4, il.LogicalShiftRight(4, ReadILOperand(il, instr, 1), il.Const(4, 16)), il.Const(4, 0xff)), il.Const(1, 8)),
+					  il.Or(4, il.ShiftLeft(4, il.And(4, il.LogicalShiftRight(4, ReadILOperand(il, instr, 1), il.Const(4, 8)), il.Const(4, 0xff)), il.Const(1, 16)),
+						   il.ShiftLeft(4, il.And(4, ReadILOperand(il, instr, 1), il.Const(4, 0xff)), il.Const(1, 24)))))));
 		break;
 	case armv7::ARMV7_REV16:
 		il.AddInstruction(il.SetRegister(2, LLIL_TEMP(0), il.RotateRight(2, il.LowPart(2, ReadILOperand(il, instr, 1)), il.Const(1, 16))));

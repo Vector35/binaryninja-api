@@ -173,6 +173,7 @@ pub mod types;
 pub mod update;
 
 use std::path::PathBuf;
+use std::ptr;
 
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
@@ -202,17 +203,76 @@ use string::IntoJson;
 const BN_FULL_CONFIDENCE: u8 = 255;
 const BN_INVALID_EXPR: usize = usize::MAX;
 
+unsafe extern "C" fn cb_progress_func<F: FnMut(usize, usize) -> bool>(
+    ctxt: *mut std::ffi::c_void,
+    progress: usize,
+    total: usize,
+) -> bool {
+    if ctxt.is_null() {
+        return true;
+    }
+    let closure: &mut F = std::mem::transmute(ctxt);
+    closure(progress, total)
+}
+
+
+unsafe extern "C" fn cb_progress_nop(
+    _ctxt: *mut std::ffi::c_void,
+    _arg1: usize,
+    _arg2: usize
+) -> bool {
+    true
+}
+
+
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
-pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::BinaryView>> {
+pub fn load<S>(
+    filename: S,
+) -> Option<rc::Ref<binaryview::BinaryView>>
+where
+    S: BnStrCompatible,
+{
     let filename = filename.into_bytes_with_nul();
     let options = "\x00";
+
 
     let handle = unsafe {
         binaryninjacore_sys::BNLoadFilename(
             filename.as_ref().as_ptr() as *mut _,
             true,
             options.as_ptr() as *mut core::ffi::c_char,
-            None,
+            Some(cb_progress_nop),
+            ptr::null_mut(),
+        )
+    };
+
+    if handle.is_null() {
+        None
+    } else {
+        Some(unsafe { BinaryView::from_raw(handle) })
+    }
+}
+
+pub fn load_with_progress<S, F>(
+    filename: S,
+    mut progress: F,
+) -> Option<rc::Ref<binaryview::BinaryView>>
+where
+    S: BnStrCompatible,
+    F: FnMut(usize, usize) -> bool,
+{
+    let filename = filename.into_bytes_with_nul();
+    let options = "\x00";
+
+    let progress_ctx = &mut progress as *mut F as *mut std::ffi::c_void;
+
+    let handle = unsafe {
+        binaryninjacore_sys::BNLoadFilename(
+            filename.as_ref().as_ptr() as *mut _,
+            true,
+            options.as_ptr() as *mut core::ffi::c_char,
+            Some(cb_progress_func::<F>),
+            progress_ctx,
         )
     };
 
@@ -240,11 +300,15 @@ pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::Binar
 /// let bv = binaryninja::load_with_options("/bin/cat", true, Some(json!("analysis.linearSweep.autorun": false).to_string()))
 ///     .expect("Couldn't open `/bin/cat`");
 /// ```
-pub fn load_with_options<S: BnStrCompatible, O: IntoJson>(
+pub fn load_with_options<S, O>(
     filename: S,
     update_analysis_and_wait: bool,
     options: Option<O>,
-) -> Option<rc::Ref<binaryview::BinaryView>> {
+) -> Option<rc::Ref<binaryview::BinaryView>>
+where
+    S: BnStrCompatible,
+    O: IntoJson,
+{
     let filename = filename.into_bytes_with_nul();
 
     let options_or_default = if let Some(opt) = options {
@@ -266,7 +330,8 @@ pub fn load_with_options<S: BnStrCompatible, O: IntoJson>(
             filename.as_ref().as_ptr() as *mut _,
             update_analysis_and_wait,
             options_or_default.as_ptr() as *mut core::ffi::c_char,
-            None,
+            Some(cb_progress_nop),
+            core::ptr::null_mut(),
         )
     };
 
@@ -277,11 +342,63 @@ pub fn load_with_options<S: BnStrCompatible, O: IntoJson>(
     }
 }
 
-pub fn load_view<O: IntoJson>(
+pub fn load_with_options_and_progress<S, O, F>(
+    filename: S,
+    update_analysis_and_wait: bool,
+    options: Option<O>,
+    progress: Option<F>,
+) -> Option<rc::Ref<binaryview::BinaryView>>
+where
+    S: BnStrCompatible,
+    O: IntoJson,
+    F: FnMut(usize, usize) -> bool,
+{
+    let filename = filename.into_bytes_with_nul();
+
+    let options_or_default = if let Some(opt) = options {
+        opt.get_json_string()
+            .ok()?
+            .into_bytes_with_nul()
+            .as_ref()
+            .to_vec()
+    } else {
+        Metadata::new_of_type(MetadataType::KeyValueDataType)
+            .get_json_string()
+            .ok()?
+            .as_ref()
+            .to_vec()
+    };
+
+    let progress_ctx = match progress {
+        Some(mut x) => &mut x as *mut F as *mut std::ffi::c_void,
+        None => core::ptr::null_mut()
+    };
+
+    let handle = unsafe {
+        binaryninjacore_sys::BNLoadFilename(
+            filename.as_ref().as_ptr() as *mut _,
+            update_analysis_and_wait,
+            options_or_default.as_ptr() as *mut core::ffi::c_char,
+            Some(cb_progress_func::<F>),
+            progress_ctx,
+        )
+    };
+
+    if handle.is_null() {
+        None
+    } else {
+        Some(unsafe { BinaryView::from_raw(handle) })
+    }
+}
+
+pub fn load_view<O>(
     bv: &BinaryView,
     update_analysis_and_wait: bool,
     options: Option<O>,
-) -> Option<rc::Ref<binaryview::BinaryView>> {
+) -> Option<rc::Ref<binaryview::BinaryView>>
+where
+    O: IntoJson,
+{
     let options_or_default = if let Some(opt) = options {
         opt.get_json_string()
             .ok()?
@@ -301,7 +418,54 @@ pub fn load_view<O: IntoJson>(
             bv.handle as *mut _,
             update_analysis_and_wait,
             options_or_default.as_ptr() as *mut core::ffi::c_char,
-            None,
+            Some(cb_progress_nop),
+            core::ptr::null_mut(),
+        )
+    };
+
+    if handle.is_null() {
+        None
+    } else {
+        Some(unsafe { BinaryView::from_raw(handle) })
+    }
+}
+
+pub fn load_view_with_progress<O, F>(
+    bv: &BinaryView,
+    update_analysis_and_wait: bool,
+    options: Option<O>,
+    progress: Option<F>,
+) -> Option<rc::Ref<binaryview::BinaryView>>
+where
+    O: IntoJson,
+    F: FnMut(usize, usize) -> bool,
+{
+    let options_or_default = if let Some(opt) = options {
+        opt.get_json_string()
+            .ok()?
+            .into_bytes_with_nul()
+            .as_ref()
+            .to_vec()
+    } else {
+        Metadata::new_of_type(MetadataType::KeyValueDataType)
+            .get_json_string()
+            .ok()?
+            .as_ref()
+            .to_vec()
+    };
+
+    let progress_ctx = match progress {
+        Some(mut x) => &mut x as *mut F as *mut std::ffi::c_void,
+        None => core::ptr::null_mut()
+    };
+
+    let handle = unsafe {
+        binaryninjacore_sys::BNLoadBinaryView(
+            bv.handle as *mut _,
+            update_analysis_and_wait,
+            options_or_default.as_ptr() as *mut core::ffi::c_char,
+            Some(cb_progress_func::<F>),
+            progress_ctx,
         )
     };
 

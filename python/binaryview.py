@@ -2646,7 +2646,7 @@ class BinaryView:
 		return BinaryView(file_metadata=file_metadata, handle=view)
 
 	@staticmethod
-	def load(source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView', 'project.ProjectFile'], update_analysis: Optional[bool] = True,
+	def load(source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView', 'project.ProjectFile'], update_analysis: bool = True,
 	    progress_func: Optional[ProgressFuncType] = None, options: Mapping[str, Any] = {}) -> Optional['BinaryView']:
 		"""
 		``load`` opens, generates default load options (which are overridable), and returns the first available \
@@ -2687,21 +2687,21 @@ class BinaryView:
 		binaryninja._init_plugins()
 
 		if progress_func is None:
-			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda cur, total: True)
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: True)
 		else:
-			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda cur, total: progress_func(cur, total))
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: progress_func(cur, total))
 
 		if isinstance(source, os.PathLike):
 			source = str(source)
 		if isinstance(source, BinaryView):
-			handle = core.BNLoadBinaryView(source.handle, update_analysis, json.dumps(options), progress_cfunc)
+			handle = core.BNLoadBinaryView(source.handle, update_analysis, json.dumps(options), progress_cfunc, None)
 		elif isinstance(source, project.ProjectFile):
-			handle = core.BNLoadProjectFile(source._handle, update_analysis, json.dumps(options), progress_cfunc)
+			handle = core.BNLoadProjectFile(source._handle, update_analysis, json.dumps(options), progress_cfunc, None)
 		elif isinstance(source, str):
-			handle = core.BNLoadFilename(source, update_analysis, json.dumps(options), progress_cfunc)
+			handle = core.BNLoadFilename(source, update_analysis, json.dumps(options), progress_cfunc, None)
 		elif isinstance(source, bytes) or isinstance(source, bytearray) or isinstance(source, databuffer.DataBuffer):
 			raw_view = BinaryView.new(source)
-			handle = core.BNLoadBinaryView(raw_view.handle, update_analysis, json.dumps(options), progress_cfunc)
+			handle = core.BNLoadBinaryView(raw_view.handle, update_analysis, json.dumps(options), progress_cfunc, None)
 		else:
 			raise NotImplementedError
 		return BinaryView(handle=handle) if handle else None

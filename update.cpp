@@ -85,12 +85,12 @@ bool UpdateChannel::AreUpdatesAvailable(uint64_t* expireTime, uint64_t* serverTi
 
 BNUpdateResult UpdateChannel::UpdateToVersion(const string& version)
 {
-	return UpdateToVersion(version, [](uint64_t, uint64_t) { return true; });
+	return UpdateToVersion(version, [](size_t, size_t) { return true; });
 }
 
 
 BNUpdateResult UpdateChannel::UpdateToVersion(
-    const string& version, const function<bool(uint64_t progress, uint64_t total)>& progress)
+    const string& version, const function<bool(size_t progress, size_t total)>& progress)
 {
 	UpdateProgress up;
 	up.func = progress;
@@ -112,11 +112,11 @@ BNUpdateResult UpdateChannel::UpdateToVersion(
 
 BNUpdateResult UpdateChannel::UpdateToLatestVersion()
 {
-	return UpdateToLatestVersion([](uint64_t, uint64_t) { return true; });
+	return UpdateToLatestVersion([](size_t, size_t) { return true; });
 }
 
 
-BNUpdateResult UpdateChannel::UpdateToLatestVersion(const function<bool(uint64_t progress, uint64_t total)>& progress)
+BNUpdateResult UpdateChannel::UpdateToLatestVersion(const function<bool(size_t progress, size_t total)>& progress)
 {
 	UpdateProgress up;
 	up.func = progress;

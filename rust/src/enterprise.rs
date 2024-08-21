@@ -15,7 +15,9 @@ pub fn server_url() -> BnString {
 pub fn set_server_url<S: BnStrCompatible>(url: S) -> Result<(), ()> {
     let url = url.into_bytes_with_nul();
     let result = unsafe {
-        binaryninjacore_sys::BNSetEnterpriseServerUrl(url.as_ref().as_ptr() as *const std::os::raw::c_char)
+        binaryninjacore_sys::BNSetEnterpriseServerUrl(
+            url.as_ref().as_ptr() as *const std::os::raw::c_char
+        )
     };
     if result {
         Ok(())

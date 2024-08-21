@@ -285,8 +285,7 @@ impl DebugInfoBuilder {
 
                 return Some(*idx);
             }
-        }
-        else {
+        } else {
             debug!("Function entry in DWARF without full or raw name.");
             return None;
         }

@@ -305,11 +305,8 @@ where
         C: CallingConventionBase,
     {
         ffi_wrap!("CallingConvention::incoming_reg_value", unsafe {
-            //let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let val = &mut *val;
-
-            val.state = BNRegisterValueType::EntryValue;
-            val.value = _reg as i64;
+            (*val).state = BNRegisterValueType::EntryValue;
+            (*val).value = _reg as i64;
         })
     }
 
@@ -323,11 +320,8 @@ where
         C: CallingConventionBase,
     {
         ffi_wrap!("CallingConvention::incoming_flag_value", unsafe {
-            //let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let val = &mut *val;
-
-            val.state = BNRegisterValueType::EntryValue;
-            val.value = _flag as i64;
+            (*val).state = BNRegisterValueType::EntryValue;
+            (*val).value = _flag as i64;
         })
     }
 
@@ -341,10 +335,7 @@ where
     {
         ffi_wrap!("CallingConvention::incoming_var_for_param", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            ptr::write(
-                param,
-                BNGetDefaultIncomingVariableForParameterVariable(ctxt.raw_handle, var),
-            );
+            *param = BNGetDefaultIncomingVariableForParameterVariable(ctxt.raw_handle, var);
         })
     }
 
@@ -358,10 +349,7 @@ where
     {
         ffi_wrap!("CallingConvention::incoming_param_for_var", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            ptr::write(
-                param,
-                BNGetDefaultParameterVariableForIncomingVariable(ctxt.raw_handle, var),
-            );
+            *param = BNGetDefaultParameterVariableForIncomingVariable(ctxt.raw_handle, var);
         })
     }
 

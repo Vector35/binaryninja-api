@@ -27,9 +27,9 @@ using namespace std;
 namespace BinaryNinja {
 	struct UpdateProgress
 	{
-		function<bool(uint64_t progress, uint64_t total)> func;
+		function<bool(size_t progress, size_t total)> func;
 
-		static bool UpdateCallback(void* ctxt, uint64_t progress, uint64_t total)
+		static bool UpdateCallback(void* ctxt, size_t progress, size_t total)
 		{
 			UpdateProgress* self = (UpdateProgress*)ctxt;
 			return self->func(progress, total);

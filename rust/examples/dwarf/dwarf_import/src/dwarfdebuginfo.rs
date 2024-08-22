@@ -533,8 +533,8 @@ impl DebugInfoBuilder {
             }
 
             if let Some(address) = func.address.as_mut() {
-                let diff = bv.start() - bv.original_image_base();
-                *address += diff;  // rebase the address
+                let diff = bv.start().overflowing_sub(bv.original_image_base()).0;
+                *address = (*address).overflowing_add(diff).0;  // rebase the address
                 let existing_functions = bv.functions_at(*address);
                 match existing_functions.len().cmp(&1) {
                     Ordering::Greater => {

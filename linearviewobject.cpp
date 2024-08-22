@@ -273,10 +273,11 @@ Ref<LinearViewObject> LinearViewObject::CreateHighLevelILSSAForm(BinaryView* vie
 }
 
 
-Ref<LinearViewObject> LinearViewObject::CreateLanguageRepresentation(BinaryView* view, DisassemblySettings* settings)
+Ref<LinearViewObject> LinearViewObject::CreateLanguageRepresentation(BinaryView* view, DisassemblySettings* settings,
+	const string& language)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewLanguageRepresentation(view->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewLanguageRepresentation(view->GetObject(), settings ? settings->GetObject() : nullptr, language.c_str()));
 }
 
 
@@ -363,8 +364,8 @@ Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionHighLevelILSSAForm(
 
 
 Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionLanguageRepresentation(
-    Function* func, DisassemblySettings* settings)
+    Function* func, DisassemblySettings* settings, const string& language)
 {
 	return new LinearViewObject(BNCreateLinearViewSingleFunctionLanguageRepresentation(
-	    func->GetObject(), settings ? settings->GetObject() : nullptr));
+	    func->GetObject(), settings ? settings->GetObject() : nullptr, language.c_str()));
 }

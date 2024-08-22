@@ -1116,6 +1116,19 @@ BNIntegerDisplayType Type::GetIntegerTypeDisplayType() const
 	return BNGetIntegerTypeDisplayType(m_object);
 }
 
+
+BNNameType Type::GetNameType() const
+{
+	return BNTypeGetNameType(m_object);
+}
+
+
+bool Type::ShouldDisplayReturnType() const
+{
+	return BNTypeShouldDisplayReturnType(m_object);
+}
+
+
 string Type::GenerateAutoTypeId(const string& source, const QualifiedName& name)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
@@ -1212,6 +1225,15 @@ Ref<NamedTypeReference> Type::GetRegisteredName() const
 	if (!name)
 		return nullptr;
 	return new NamedTypeReference(name);
+}
+
+
+string Type::GetAlternateName() const
+{
+	char* name = BNGetTypeAlternateName(m_object);
+	string result = name;
+	BNFreeString(name);
+	return result;
 }
 
 
@@ -2541,6 +2563,40 @@ Ref<Structure> Structure::WithReplacedNamedTypeReference(NamedTypeReference* fro
 		return this;
 	}
 	return new Structure(result);
+}
+
+
+struct ResolveMemberCallbackInfo
+{
+	const std::function<void(NamedTypeReference*, Structure*, size_t,
+		uint64_t, uint64_t, const StructureMember&)>* callback;
+};
+
+
+static void ResolveMemberCallback(void* ctxt, BNNamedTypeReference* baseName, BNStructure* resolvedStruct,
+	size_t memberIndex, uint64_t structOffset, uint64_t adjustedOffset, BNStructureMember member)
+{
+	ResolveMemberCallbackInfo* resolveFunc = (ResolveMemberCallbackInfo*)ctxt;
+	Ref<NamedTypeReference> baseNameRef = baseName ? new NamedTypeReference(BNNewNamedTypeReference(baseName)) : nullptr;
+	Ref<Structure> resolvedStructRef = resolvedStruct ? new Structure(BNNewStructureReference(resolvedStruct)) : nullptr;
+	StructureMember apiMember;
+	apiMember.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(member.type)), member.typeConfidence);
+	apiMember.name = member.name;
+	apiMember.offset = member.offset;
+	apiMember.access = member.access;
+	apiMember.scope = member.scope;
+	(*resolveFunc->callback)(baseNameRef, resolvedStructRef, memberIndex, structOffset, adjustedOffset, apiMember);
+}
+
+
+bool Structure::ResolveMemberOrBaseMember(BinaryView* data, uint64_t offset, size_t size,
+	const std::function<void(NamedTypeReference* baseName, Structure* s, size_t memberIndex,
+		uint64_t structOffset, uint64_t adjustedOffset, const StructureMember& member)>& resolveFunc,
+	std::optional<size_t> memberIndexHint)
+{
+	ResolveMemberCallbackInfo callbackInfo = { &resolveFunc };
+	return BNResolveStructureMemberOrBaseMember(m_object, data ? data->GetObject() : nullptr, offset, size,
+		&callbackInfo, ResolveMemberCallback, memberIndexHint.has_value(), memberIndexHint.value_or(0));
 }
 
 

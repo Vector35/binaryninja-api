@@ -907,6 +907,10 @@ class HighLevelILInstruction(BaseILInstruction):
 						return False
 		return True
 
+	@property
+	def has_side_effects(self) -> bool:
+		return core.BNHighLevelILHasSideEffects(self.function.handle, self.expr_index)
+
 
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILUnaryBase(HighLevelILInstruction, UnaryOperation):

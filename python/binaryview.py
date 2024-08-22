@@ -8533,7 +8533,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	def find_next_text(
 	    self, start: int, text: str, settings: Optional[_function.DisassemblySettings] = None,
 	    flags: FindFlag = FindFlag.FindCaseSensitive,
-	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph
+	    graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph
 	) -> Optional[int]:
 		"""
 		``find_next_text`` searches for string ``text`` occurring in the linear view output starting at the virtual
@@ -8550,7 +8550,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			FindCaseSensitive    Case-sensitive search
 			FindCaseInsensitive  Case-insensitive search
 			==================== ============================
-		:param FunctionGraphType graph_type: the IL to search within
+		:param FunctionViewType graph_type: the IL to search within
 		"""
 		if not isinstance(text, str):
 			raise TypeError("text parameter is not str type")
@@ -8560,13 +8560,14 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			raise TypeError("settings parameter is not DisassemblySettings type")
 
 		result = ctypes.c_ulonglong()
+		graph_type = _function.FunctionViewType(graph_type)._to_core_struct()
 		if not core.BNFindNextText(self.handle, start, text, result, settings.handle, flags, graph_type):
 			return None
 		return result.value
 
 	def find_next_constant(
 	    self, start: int, constant: int, settings: Optional[_function.DisassemblySettings] = None,
-	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph
+	    graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph
 	) -> Optional[int]:
 		"""
 		``find_next_constant`` searches for integer constant ``constant`` occurring in the linear view output starting at the virtual
@@ -8575,7 +8576,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		:param int start: virtual address to start searching from.
 		:param int constant: constant to search for
 		:param DisassemblySettings settings: disassembly settings
-		:param FunctionGraphType graph_type: the IL to search within
+		:param FunctionViewType graph_type: the IL to search within
 		"""
 		if not isinstance(constant, int):
 			raise TypeError("constant parameter is not integral type")
@@ -8585,6 +8586,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			raise TypeError("settings parameter is not DisassemblySettings type")
 
 		result = ctypes.c_ulonglong()
+		graph_type = _function.FunctionViewType(graph_type)._to_core_struct()
 		if not core.BNFindNextConstant(self.handle, start, constant, result, settings.handle, graph_type):
 			return None
 		return result.value
@@ -8694,7 +8696,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 
 	def find_all_text(
 	    self, start: int, end: int, text: str, settings: Optional[_function.DisassemblySettings] = None,
-	    flags=FindFlag.FindCaseSensitive, graph_type=FunctionGraphType.NormalFunctionGraph, progress_func=None,
+	    flags=FindFlag.FindCaseSensitive, graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph, progress_func=None,
 	    match_callback=None
 	) -> QueueGenerator:
 		"""
@@ -8715,7 +8717,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			FindCaseSensitive    Case-sensitive search
 			FindCaseInsensitive  Case-insensitive search
 			==================== ============================
-		:param FunctionGraphType graph_type: the IL to search within
+		:param FunctionViewType graph_type: the IL to search within
 		:param callback progress_func: optional function to be called with the current progress \
 		and total count. This function should return a boolean value that decides whether the \
 		search should continue or stop
@@ -8740,6 +8742,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			raise TypeError("settings parameter is not DisassemblySettings type")
 		if not isinstance(flags, FindFlag):
 			raise TypeError('flag parameter must have type FindFlag')
+		graph_type = _function.FunctionViewType(graph_type)._to_core_struct()
 
 		if progress_func:
 			progress_func_obj = ctypes.CFUNCTYPE(
@@ -8787,7 +8790,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 
 	def find_all_constant(
 	    self, start: int, end: int, constant: int, settings: Optional[_function.DisassemblySettings] = None,
-	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph, progress_func: Optional[ProgressFuncType] = None,
+	    graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph, progress_func: Optional[ProgressFuncType] = None,
 	    match_callback: Optional[LineMatchCallbackType] = None
 	) -> QueueGenerator:
 		"""
@@ -8805,7 +8808,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		:param int constant: constant to search for
 		:param DisassemblySettings settings: DisassemblySettings object used to render the text \
 		to be searched
-		:param FunctionGraphType graph_type: the IL to search within
+		:param FunctionViewType graph_type: the IL to search within
 		:param callback progress_func: optional function to be called with the current progress \
 		and total count. This function should return a boolean value that decides whether the \
 		search should continue or stop
@@ -8827,6 +8830,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			settings.set_option(DisassemblyOption.WaitForIL, True)
 		if not isinstance(settings, _function.DisassemblySettings):
 			raise TypeError("settings parameter is not DisassemblySettings type")
+		graph_type = _function.FunctionViewType(graph_type)._to_core_struct()
 
 		if progress_func:
 			progress_func_obj = ctypes.CFUNCTYPE(

@@ -125,12 +125,14 @@ class StickyHeader: public QWidget
 	uint64_t m_gutterWidthChars;
 
 	LinearViewLine m_line;
+	BinaryNinja::FunctionViewType m_viewType;
 	QProgressIndicator* m_updateIndicator;
 
 public:
 	StickyHeader(BinaryViewRef data, LinearView* parent);
 
 	void updateLine(const LinearViewLine& line);
+	void updateViewType(const BinaryNinja::FunctionViewType& viewType);
 	void updateFonts();
 
 	virtual void paintEvent(QPaintEvent* event) override;
@@ -209,7 +211,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 
 	SettingsRef m_settings;
 	DisassemblySettingsRef m_options;
-	BNFunctionGraphType m_ilViewType, m_prevILViewType = InvalidILViewType;
+	BinaryNinja::FunctionViewType m_ilViewType, m_prevILViewType = InvalidILViewType;
 	HexEditorHighlightState m_highlightState;
 	bool m_singleFunctionView = false;
 
@@ -476,8 +478,8 @@ public:
 	virtual HighlightTokenState getHighlightTokenState() override { return m_highlight; }
 	void setHighlightTokenState(const HighlightTokenState& hts);
 
-	virtual BNFunctionGraphType getILViewType() override { return m_ilViewType; };
-	virtual void setILViewType(BNFunctionGraphType ilViewType) override;
+	virtual BinaryNinja::FunctionViewType getILViewType() override { return m_ilViewType; };
+	virtual void setILViewType(const BinaryNinja::FunctionViewType& ilViewType) override;
 
 	void setHighlightMode(HexEditorHighlightMode mode);
 	void setColorMode(HexEditorColorMode mode);

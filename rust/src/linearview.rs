@@ -103,11 +103,17 @@ impl LinearViewObject {
         }
     }
 
-    pub fn language_representation(view: &BinaryView, settings: &DisassemblySettings) -> Ref<Self> {
+    pub fn language_representation(
+        view: &BinaryView,
+        settings: &DisassemblySettings,
+        language: &str,
+    ) -> Ref<Self> {
         unsafe {
+            let language = std::ffi::CString::new(language).unwrap();
             let handle = binaryninjacore_sys::BNCreateLinearViewLanguageRepresentation(
                 view.handle,
                 settings.handle,
+                language.as_ptr(),
             );
 
             Self::from_raw(handle)
@@ -195,12 +201,15 @@ impl LinearViewObject {
     pub fn single_function_language_representation(
         function: &Function,
         settings: &DisassemblySettings,
+        language: &str,
     ) -> Ref<Self> {
         unsafe {
+            let language = std::ffi::CString::new(language).unwrap();
             let handle =
                 binaryninjacore_sys::BNCreateLinearViewSingleFunctionLanguageRepresentation(
                     function.handle,
                     settings.handle,
+                    language.as_ptr(),
                 );
 
             Self::from_raw(handle)

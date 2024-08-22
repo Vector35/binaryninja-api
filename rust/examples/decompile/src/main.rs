@@ -18,7 +18,7 @@ fn decompile_to_c(view: &BinaryView, func: &Function) {
     settings.set_option(DisassemblyOption::ShowAddress, false);
     settings.set_option(DisassemblyOption::WaitForIL, true);
 
-    let linearview = LinearViewObject::language_representation(view, &settings);
+    let linearview = LinearViewObject::language_representation(view, &settings, "Pseudo C");
 
     let mut cursor = LinearViewCursor::new(&linearview);
     cursor.seek_to_address(func.highest_address());

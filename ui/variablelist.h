@@ -101,7 +101,7 @@ class BINARYNINJAUIAPI VariableListModel : public QAbstractListModel
 	ViewFrame* m_view;
 	BinaryViewRef m_data;
 	FunctionRef m_func;
-	BNFunctionGraphType m_funcType;
+	BinaryNinja::FunctionViewType m_funcType;
 	bool m_funcExceedsComplexity = false;
 	BinaryNinja::AdvancedFunctionAnalysisDataRequestor m_analysisRequestor;
 	std::vector<VariableListItem> m_items;
@@ -123,13 +123,13 @@ class BINARYNINJAUIAPI VariableListModel : public QAbstractListModel
 	FunctionRef function() const;
 
 	//! Get the current function type.
-	BNFunctionGraphType functionType() const;
+	const BinaryNinja::FunctionViewType& functionType() const;
 
 	//! Whether or not the function exceeds the set complexity threshold
 	bool functionExceedsComplexity() const { return m_funcExceedsComplexity; }
 
 	//! Set the focused function and update the content of the list.
-	void setFunction(FunctionRef func, BNFunctionGraphType il, const HighlightTokenState& hts);
+	void setFunction(FunctionRef func, const BinaryNinja::FunctionViewType& il, const HighlightTokenState& hts);
 
 	//! Set the selection model, should correspond to the parent widget's.
 	void setSelectionModel(QItemSelectionModel* model);

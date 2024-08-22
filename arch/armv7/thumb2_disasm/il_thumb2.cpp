@@ -1476,6 +1476,45 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 	case armv7::ARMV7_VSUB:
 		il.AddInstruction(WriteArithOperand(il, instr, il.Sub(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
 		break;
+	case armv7::ARMV7_VMOV:
+		if (instr->format->operandCount == 4)
+		{
+			// s1 <- r2, s2 <- r4
+			// r1 <- s0, r7 <- s1
+			il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 2)));
+			il.AddInstruction(WriteILOperand(il, instr, 1, ReadILOperand(il, instr, 3)));
+		}
+		if (instr->format->operandCount == 3)
+		{
+			if (instr->format->operands[2].type == OPERAND_FORMAT_REG_FP)
+			{
+				// r3:r2 <- d12
+				// The set reg will constrain the 8 byte to 4 byte _probably_.
+				il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 2)));
+				il.AddInstruction(WriteILOperand(il, instr, 1, il.LogicalShiftRight(4, ReadILOperand(il, instr, 2), il.Const(1, 32))));
+			} else
+			{
+				// d9 <- r1:r0
+				il.AddInstruction(WriteILOperand(il, instr, 0, il.Or(4,
+					il.ShiftLeft(4, ReadILOperand(il, instr, 2), il.Const(1, 32)),
+					ReadILOperand(il, instr, 1))));
+			}
+		}
+		else
+		{
+			if (instr->format->operands[1].type == OPERAND_FORMAT_IMM64 && strcmp(instr->format->operands[0].prefix, "q") == 0)
+			{
+				// Load immediate in high and low
+				il.AddInstruction(WriteILOperand(il, instr, 0,
+				                                 il.Or(16, ReadILOperand(il, instr, 1),
+				                                       il.ShiftLeft(16, ReadILOperand(il, instr, 1),
+				                                                    il.Const(8, 64)))));
+			}
+			// r2 <= s4
+			// s12 <- r8
+			il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1)));
+		}
+		break;
 	case armv7::ARMV7_VPUSH:
 		{
 		// TODO: Clean this code up...

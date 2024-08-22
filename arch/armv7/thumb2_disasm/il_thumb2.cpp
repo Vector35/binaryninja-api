@@ -16,11 +16,11 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 static uint32_t GetRegisterByIndex(uint32_t i, const char* prefix = "")
 {
 	if (strcmp(prefix, "s") == 0)
-		return REG_R0 + (i/2) + (i%2) + REG_S0;
+		return REG_S0 + i;
 	if (strcmp(prefix, "d") == 0)
-		return REG_R0 + (i/2) + (i%2) + REG_D0;
+		return REG_D0 + i;
 	if (strcmp(prefix, "q") == 0)
-		return REG_R0 + (i/2) + (i%2) + REG_Q0;
+		return REG_R0 + (i/2) + (i%2) + REG_Q0; // TODO: This might be the same as above.
 	return REG_R0 + i;
 }
 

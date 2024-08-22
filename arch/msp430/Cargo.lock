@@ -23,7 +23,6 @@ dependencies = [
 [[package]]
 name = "binaryninja"
 version = "0.1.0"
-source = "git+https://github.com/Vector35/binaryninja-api.git?branch=dev#46b26cf9f4a8eee8e94f86532220e61120c2a54d"
 dependencies = [
  "binaryninjacore-sys",
  "lazy_static",
@@ -34,7 +33,6 @@ dependencies = [
 [[package]]
 name = "binaryninjacore-sys"
 version = "0.1.0"
-source = "git+https://github.com/Vector35/binaryninja-api.git?branch=dev#46b26cf9f4a8eee8e94f86532220e61120c2a54d"
 dependencies = [
  "bindgen",
 ]

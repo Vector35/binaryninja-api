@@ -2,12 +2,7 @@ extern crate binaryninja;
 extern crate log;
 extern crate msp430_asm;
 
-use binaryninja::{
-    architecture::ArchitectureExt,
-    callingconvention,
-    custombinaryview::{BinaryViewType, BinaryViewTypeExt},
-    Endianness,
-};
+use binaryninja::{add_optional_plugin_dependency, architecture::ArchitectureExt, callingconvention, custombinaryview::{BinaryViewType, BinaryViewTypeExt}, Endianness};
 
 mod architecture;
 mod flag;
@@ -47,9 +42,15 @@ pub extern "C" fn CorePluginInit() -> bool {
 
     arch.set_default_calling_convention(&default);
 
-    if let Ok(bv) = BinaryViewType::by_name("ELF") {
-        bv.register_arch(105, Endianness::LittleEndian, arch);
+    if let Ok(bvt) = BinaryViewType::by_name("ELF") {
+        bvt.register_arch(105, Endianness::LittleEndian, arch);
     }
 
     true
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "C" fn CorePluginDependencies() {
+    add_optional_plugin_dependency("view_elf");
 }

@@ -1807,23 +1807,23 @@ def _get_current_il_function(instance: PythonScriptingInstance):
 	from binaryninja import FunctionGraphType
 	if instance.interpreter.locals["current_ui_view_location"] is not None:
 		ilType = instance.interpreter.locals["current_ui_view_location"].getILViewType()
-		if ilType == FunctionGraphType.LowLevelILFunctionGraph:
+		if ilType.view_type == FunctionGraphType.LowLevelILFunctionGraph:
 			return instance.interpreter.locals["current_llil"]
-		elif ilType == FunctionGraphType.LiftedILFunctionGraph:
+		elif ilType.view_type == FunctionGraphType.LiftedILFunctionGraph:
 			return instance.interpreter.locals["current_lifted_il"]
-		elif ilType == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
+		elif ilType.view_type == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
 			return instance.interpreter.locals["current_llil_ssa"]
-		elif ilType == FunctionGraphType.MappedMediumLevelILFunctionGraph:
+		elif ilType.view_type == FunctionGraphType.MappedMediumLevelILFunctionGraph:
 			return instance.interpreter.locals["current_mapped_mlil"]
-		elif ilType == FunctionGraphType.MappedMediumLevelILSSAFormFunctionGraph:
+		elif ilType.view_type == FunctionGraphType.MappedMediumLevelILSSAFormFunctionGraph:
 			return instance.interpreter.locals["current_mapped_mlil_ssa"]
-		elif ilType == FunctionGraphType.MediumLevelILFunctionGraph:
+		elif ilType.view_type == FunctionGraphType.MediumLevelILFunctionGraph:
 			return instance.interpreter.locals["current_mlil"]
-		elif ilType == FunctionGraphType.MediumLevelILSSAFormFunctionGraph:
+		elif ilType.view_type == FunctionGraphType.MediumLevelILSSAFormFunctionGraph:
 			return instance.interpreter.locals["current_mlil_ssa"]
-		elif ilType == FunctionGraphType.HighLevelILFunctionGraph:
+		elif ilType.view_type == FunctionGraphType.HighLevelILFunctionGraph:
 			return instance.interpreter.locals["current_hlil"]
-		elif ilType == FunctionGraphType.HighLevelILSSAFormFunctionGraph:
+		elif ilType.view_type == FunctionGraphType.HighLevelILSSAFormFunctionGraph:
 			return instance.interpreter.locals["current_hlil_ssa"]
 	return None
 

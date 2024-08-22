@@ -39,6 +39,7 @@ use crate::{databuffer::DataBuffer, disassembly::InstructionTextToken, rc::*};
 pub use binaryninjacore_sys::BNAnalysisSkipReason as AnalysisSkipReason;
 pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisSkipOverride;
 pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
+pub use binaryninjacore_sys::BNBuiltinType as BuiltinType;
 
 use std::{fmt, mem};
 use std::{ffi::c_char, hash::Hash, ops::Range};
@@ -118,6 +119,78 @@ impl BlockContext for NativeBlock {
             bv: block.function().view(),
             cur: block.raw_start(),
             end: block.raw_end(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum FunctionViewType {
+    Normal,
+    LowLevelIL,
+    LiftedIL,
+    LowLevelILSSAForm,
+    MediumLevelIL,
+    MediumLevelILSSAForm,
+    MappedMediumLevelIL,
+    MappedMediumLevelILSSAForm,
+    HighLevelIL,
+    HighLevelILSSAForm,
+    HighLevelLanguageRepresentation(String),
+}
+
+pub(crate) struct RawFunctionViewType(pub BNFunctionViewType);
+
+impl FunctionViewType {
+    pub(crate) fn as_raw(&self) -> RawFunctionViewType {
+        let view_type = match self {
+            FunctionViewType::Normal => BNFunctionGraphType::NormalFunctionGraph,
+            FunctionViewType::LowLevelIL => BNFunctionGraphType::LowLevelILFunctionGraph,
+            FunctionViewType::LiftedIL => BNFunctionGraphType::LiftedILFunctionGraph,
+            FunctionViewType::LowLevelILSSAForm => BNFunctionGraphType::LowLevelILSSAFormFunctionGraph,
+            FunctionViewType::MediumLevelIL => BNFunctionGraphType::MediumLevelILFunctionGraph,
+            FunctionViewType::MediumLevelILSSAForm => BNFunctionGraphType::MediumLevelILSSAFormFunctionGraph,
+            FunctionViewType::MappedMediumLevelIL => BNFunctionGraphType::MappedMediumLevelILFunctionGraph,
+            FunctionViewType::MappedMediumLevelILSSAForm => BNFunctionGraphType::MappedMediumLevelILSSAFormFunctionGraph,
+            FunctionViewType::HighLevelIL => BNFunctionGraphType::HighLevelILFunctionGraph,
+            FunctionViewType::HighLevelILSSAForm => BNFunctionGraphType::HighLevelILSSAFormFunctionGraph,
+            FunctionViewType::HighLevelLanguageRepresentation(_) => BNFunctionGraphType::HighLevelLanguageRepresentationFunctionGraph,
+        };
+        RawFunctionViewType(BNFunctionViewType {
+            type_: view_type,
+            name: if let FunctionViewType::HighLevelLanguageRepresentation(ref name) = self {
+                std::ffi::CString::new(name.to_string()).unwrap().into_raw()
+            } else {
+                std::ptr::null()
+            },
+        })
+    }
+}
+
+impl Into<FunctionViewType> for FunctionGraphType {
+    fn into(self) -> FunctionViewType {
+        match self {
+            BNFunctionGraphType::LowLevelILFunctionGraph => FunctionViewType::LowLevelIL,
+            BNFunctionGraphType::LiftedILFunctionGraph => FunctionViewType::LiftedIL,
+            BNFunctionGraphType::LowLevelILSSAFormFunctionGraph => FunctionViewType::LowLevelILSSAForm,
+            BNFunctionGraphType::MediumLevelILFunctionGraph => FunctionViewType::MediumLevelIL,
+            BNFunctionGraphType::MediumLevelILSSAFormFunctionGraph => FunctionViewType::MediumLevelILSSAForm,
+            BNFunctionGraphType::MappedMediumLevelILFunctionGraph => FunctionViewType::MappedMediumLevelIL,
+            BNFunctionGraphType::MappedMediumLevelILSSAFormFunctionGraph => FunctionViewType::MappedMediumLevelILSSAForm,
+            BNFunctionGraphType::HighLevelILFunctionGraph => FunctionViewType::HighLevelIL,
+            BNFunctionGraphType::HighLevelILSSAFormFunctionGraph => FunctionViewType::HighLevelILSSAForm,
+            BNFunctionGraphType::HighLevelLanguageRepresentationFunctionGraph => {
+                FunctionViewType::HighLevelLanguageRepresentation("Pseudo C".into()
+                )
+            }
+            _ => FunctionViewType::Normal,
+        }
+    }
+}
+
+impl Drop for RawFunctionViewType {
+    fn drop(&mut self) {
+        if !self.0.name.is_null() {
+            unsafe { let _ = std::ffi::CString::from_raw(self.0.name as *mut _); }
         }
     }
 }
@@ -1196,10 +1269,12 @@ impl Function {
         state: RegisterValueType,
         value: u64,
         size: Option<usize>,
-    ) -> DataBuffer {
+    ) -> (DataBuffer, BuiltinType) {
         let size = size.unwrap_or(0);
         let state_raw = state.into_raw_value();
-        DataBuffer::from_raw(unsafe { BNGetConstantData(self.handle, state_raw, value, size) })
+        let mut builtin_type = BuiltinType::BuiltinNone;
+        let buffer = DataBuffer::from_raw(unsafe { BNGetConstantData(self.handle, state_raw, value, size, &mut builtin_type) });
+        (buffer, builtin_type)
     }
 
     pub fn constants_referenced_by(
@@ -2132,11 +2207,11 @@ impl Function {
 
     pub fn create_graph(
         &self,
-        graph_type: FunctionGraphType,
+        view_type: FunctionViewType,
         settings: Option<DisassemblySettings>,
     ) -> Ref<FlowGraph> {
         let settings_raw = settings.map(|s| s.handle).unwrap_or(core::ptr::null_mut());
-        let result = unsafe { BNCreateFunctionGraph(self.handle, graph_type, settings_raw) };
+        let result = unsafe { BNCreateFunctionGraph(self.handle, view_type.as_raw().0, settings_raw) };
         unsafe { Ref::new(FlowGraph::from_raw(result)) }
     }
 

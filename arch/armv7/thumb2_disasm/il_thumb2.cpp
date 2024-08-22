@@ -37,7 +37,7 @@ static uint32_t RegisterSizeFromPrefix(const char* prefix = "")
 
 static ExprId ReadRegister(LowLevelILFunction& il, decomp_result* instr, uint32_t reg, size_t size = 4, const char* prefix = "")
 {
-	if (reg == armv7::REG_PC)
+	if (reg == armv7::REG_PC && strcmp(prefix, "") == 0)
 		return il.ConstPointer(size, instr->pc);
 	return il.Register(RegisterSizeFromPrefix(prefix), GetRegisterByIndex(reg, prefix));
 }
@@ -116,7 +116,7 @@ static ExprId ReadILOperand(LowLevelILFunction& il, decomp_result* instr, size_t
 		return il.Const(size, 0);
 	case OPERAND_FORMAT_REG:
 		value = instr->fields[instr->format->operands[operand].field0];
-		return ReadRegister(il, instr, GetRegisterByIndex(value), size);
+		return ReadRegister(il, instr, GetRegisterByIndex(value), size, instr->format->operands[operand].prefix);
 	case OPERAND_FORMAT_REG_FP:
 		value = instr->fields[instr->format->operands[operand].field0];
 		return ReadRegister(il, instr, value, size, instr->format->operands[operand].prefix);

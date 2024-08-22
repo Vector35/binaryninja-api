@@ -73,6 +73,7 @@ macro_rules! one_operand {
                 )
                 .append()
             }
+            Operand::Constant(val) => $il.store(2, $il.const_int(2, *val as u64), $op).append(),
             _ => {
                 unreachable!()
             }
@@ -222,7 +223,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &Lifter<Msp430
                 None => 2,
             };
             let src = lift_source_operand(inst.source(), size, il);
-            il.push(2, src).append();
+            il.push(size, src).append();
             auto_increment!(inst.source(), il);
         }
         Instruction::Call(inst) => {

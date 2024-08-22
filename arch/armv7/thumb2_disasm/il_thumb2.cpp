@@ -24,17 +24,22 @@ static uint32_t GetRegisterByIndex(uint32_t i, const char* prefix = "")
 	return REG_R0 + i;
 }
 
+static uint32_t RegisterSizeFromPrefix(const char* prefix = "")
+{
+	if (strcmp(prefix, "s") == 0)
+		return 4;
+	if (strcmp(prefix, "d") == 0)
+		return 8;
+	if (strcmp(prefix, "q") == 0)
+		return 16;
+	return 4;
+}
+
 static ExprId ReadRegister(LowLevelILFunction& il, decomp_result* instr, uint32_t reg, size_t size = 4, const char* prefix = "")
 {
 	if (reg == armv7::REG_PC)
 		return il.ConstPointer(size, instr->pc);
-	if (strcmp(prefix, "s") == 0)
-		size = 4;
-	if (strcmp(prefix, "d") == 0)
-		size = 8;
-	if (strcmp(prefix, "q") == 0)
-		size = 16;
-	return il.Register(size, GetRegisterByIndex(reg, prefix));
+	return il.Register(RegisterSizeFromPrefix(prefix), GetRegisterByIndex(reg, prefix));
 }
 
 static int GetSpecialRegister(LowLevelILFunction& il, decomp_result* instr, size_t operand)
@@ -128,13 +133,7 @@ static ExprId ReadILOperand(LowLevelILFunction& il, decomp_result* instr, size_t
 
 static uint32_t GetRegisterSize(decomp_result* instr, size_t operand)
 {
-	if (strcmp(instr->format->operands[operand].prefix, "q") == 0)
-		return 16;
-	if (strcmp(instr->format->operands[operand].prefix, "d") == 0)
-		return 8;
-	if (strcmp(instr->format->operands[operand].prefix, "s") == 0)
-		return 4;
-	return 4;
+	return RegisterSizeFromPrefix(instr->format->operands[operand].prefix);
 }
 
 static ExprId ReadShiftedOperand(LowLevelILFunction& il, decomp_result* instr, size_t operand, size_t size = 4)
@@ -1476,6 +1475,52 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		break;
 	case armv7::ARMV7_VSUB:
 		il.AddInstruction(WriteArithOperand(il, instr, il.Sub(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
+		break;
+	case armv7::ARMV7_VPUSH:
+		{
+		// TODO: Clean this code up...
+		const char* prefix = "d";
+		if (IS_FIELD_PRESENT(instr, FIELD_single_regs)){
+			if (instr->fields[FIELD_single_regs] == 1) {
+				prefix = "s";
+			}
+		}
+		auto regSize = RegisterSizeFromPrefix(prefix);
+		unsigned int d = instr->fields[FIELD_d];
+		unsigned int inc = 1;
+		if(IS_FIELD_PRESENT(instr, FIELD_inc))
+			inc = instr->fields[FIELD_inc];
+		int regs = instr->fields[FIELD_regs];
+		for(int i=0; i<regs; ++i) {
+			if (d+(i*inc) >= 32 && strcmp(prefix, "s") == 0) break;
+			if (i >= 16 && strcmp(prefix, "d") == 0) break;
+			int regIdx = (d + i * inc) % 32;
+			il.AddInstruction(il.Push(regSize, il.Register(regSize, GetRegisterByIndex(regIdx, prefix))));
+		}
+		}
+		break;
+	case armv7::ARMV7_VPOP:
+		{
+		// TODO: Clean this code up...
+		const char* prefix = "d";
+		if (IS_FIELD_PRESENT(instr, FIELD_single_regs)){
+			if (instr->fields[FIELD_single_regs] == 1) {
+				prefix = "s";
+			}
+		}
+		auto regSize = RegisterSizeFromPrefix(prefix);
+		unsigned int d = instr->fields[FIELD_d];
+		unsigned int inc = 1;
+		if(IS_FIELD_PRESENT(instr, FIELD_inc))
+			inc = instr->fields[FIELD_inc];
+		int regs = instr->fields[FIELD_regs];
+		for(int i=0; i<regs; ++i) {
+			if (d+(i*inc) >= 32 && strcmp(prefix, "s") == 0) break;
+			if (i >= 16 && strcmp(prefix, "d") == 0) break;
+			int regIdx = (d + i * inc) % 32;
+			il.AddInstruction(il.Pop(regSize));
+		}
+		}
 		break;
 	default:
 		il.AddInstruction(il.Unimplemented());

@@ -31,11 +31,11 @@
 */
 class BINARYNINJAUIAPI DisassemblyHistoryEntry : public FlowGraphHistoryEntry
 {
-	BNFunctionGraphType m_graphType;
+	BinaryNinja::FunctionViewType m_graphType;
 
   public:
-	BNFunctionGraphType getGraphType() const { return m_graphType; }
-	void setGraphType(BNFunctionGraphType type) { m_graphType = type; }
+	const BinaryNinja::FunctionViewType& getGraphType() const { return m_graphType; }
+	void setGraphType(const BinaryNinja::FunctionViewType& type) { m_graphType = type; }
 
 	virtual Json::Value serialize() const override;
 	virtual bool deserialize(const Json::Value& value) override;
@@ -71,8 +71,8 @@ class BINARYNINJAUIAPI DisassemblyView : public FlowGraphWidget
 	virtual ViewPaneHeaderSubtypeWidget* getHeaderSubtypeWidget() override;
 	virtual QWidget* getHeaderOptionsWidget() override;
 
-	virtual BNFunctionGraphType getILViewType() override { return m_ilViewType; };
-	virtual void setILViewType(BNFunctionGraphType ilViewType) override;
+	virtual BinaryNinja::FunctionViewType getILViewType() override { return m_ilViewType; };
+	virtual void setILViewType(const BinaryNinja::FunctionViewType& ilViewType) override;
 
 	void setOption(BNDisassemblyOption option, bool state = true);
 	void toggleOption(BNDisassemblyOption option);
@@ -132,7 +132,7 @@ class BINARYNINJAUIAPI DisassemblyView : public FlowGraphWidget
 	void bindActions();
 	static void addOptionsMenuActions(Menu& menu);
 
-	BNFunctionGraphType m_ilViewType;
+	BinaryNinja::FunctionViewType m_ilViewType;
 	std::set<BNDisassemblyOption> m_options;
 	BNDisassemblyAddressMode m_addressMode;
 	BNDisassemblyCallParameterHints m_callParamHints;
@@ -202,7 +202,7 @@ class BINARYNINJAUIAPI DisassemblyFunctionHeader : public QWidget
 
 	void updateFonts();
 	void setCurrentFunction(FunctionRef func);
-	void setILViewType(BNFunctionGraphType ilViewType);
+	void setILViewType(const BinaryNinja::FunctionViewType& ilViewType);
 	void setHighlightToken(const HighlightTokenState& state);
 	void notifyRefresh();
 
@@ -235,7 +235,7 @@ class BINARYNINJAUIAPI DisassemblyContainer : public QWidget, public ViewContain
 	void updateFonts();
 	void refreshHeader(FunctionRef func);
 	void setCurrentFunction(FunctionRef func);
-	void setILViewType(BNFunctionGraphType ilViewType);
+	void setILViewType(const BinaryNinja::FunctionViewType& ilViewType);
 	void setHeaderHighlightToken(const HighlightTokenState& state);
 
   protected:

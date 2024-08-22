@@ -27,8 +27,9 @@ from dataclasses import dataclass
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import (
-    AnalysisSkipReason, FunctionGraphType, SymbolType, InstructionTextTokenType, HighlightStandardColor,
-    HighlightColorStyle, DisassemblyOption, IntegerDisplayType, FunctionAnalysisSkipOverride, FunctionUpdateType
+	AnalysisSkipReason, FunctionGraphType, SymbolType, InstructionTextTokenType, HighlightStandardColor,
+	HighlightColorStyle, DisassemblyOption, IntegerDisplayType, FunctionAnalysisSkipOverride, FunctionUpdateType,
+	BuiltinType
 )
 from .exceptions import ILException
 
@@ -45,6 +46,7 @@ from . import variable
 from . import flowgraph
 from . import callingconvention
 from . import workflow
+from . import languagerepresentation
 from . import deprecation
 from . import __version__
 
@@ -76,6 +78,7 @@ ILFunctionType = Union['lowlevelil.LowLevelILFunction', 'mediumlevelil.MediumLev
 ILInstructionType = Union['lowlevelil.LowLevelILInstruction', 'mediumlevelil.MediumLevelILInstruction',
                           'highlevelil.HighLevelILInstruction']
 StringOrType = Union[str, 'types.Type', 'types.TypeBuilder']
+FunctionViewTypeOrName = Union['FunctionViewType', FunctionGraphType, str]
 
 
 def _function_name_():
@@ -179,6 +182,39 @@ class VariableReferenceSource:
 
 	def __repr__(self):
 		return f"<var: {repr(self.var)}, src: {repr(self.src)}>"
+
+
+@dataclass
+class FunctionViewType:
+	view_type: FunctionGraphType
+	name: Optional[str]
+
+	def __init__(self, view_type: FunctionViewTypeOrName):
+		if isinstance(view_type, FunctionViewType):
+			self.view_type = view_type.view_type
+			self.name = view_type.name
+		if isinstance(view_type, FunctionGraphType):
+			self.view_type = view_type
+			self.name = None
+		else:
+			self.view_type = FunctionGraphType.HighLevelLanguageRepresentationFunctionGraph
+			self.name = str(view_type)
+
+	@staticmethod
+	def _from_core_struct(view_type: core.BNFunctionViewType) -> 'FunctionViewType':
+		if view_type.type == FunctionGraphType.HighLevelLanguageRepresentationFunctionGraph:
+			if view_type.name is None:
+				return FunctionViewType("Pseudo C")
+			else:
+				return FunctionViewType(view_type.name)
+		else:
+			return FunctionViewType(view_type.type)
+
+	def _to_core_struct(self) -> core.BNFunctionViewType:
+		result = core.BNFunctionViewType()
+		result.type = self.view_type
+		result.name = self.name
+		return result
 
 
 class BasicBlockList:
@@ -1069,6 +1105,30 @@ class Function:
 		return highlevelil.HighLevelILFunction(self.arch, result, self)
 
 	@property
+	def pseudo_c(self) -> Optional['languagerepresentation.LanguageRepresentationFunction']:
+		return self.language_representation("Pseudo C")
+
+	@property
+	def pseudo_c_if_available(self) -> Optional['languagerepresentation.LanguageRepresentationFunction']:
+		return self.language_representation_if_available("Pseudo C")
+
+	def language_representation(
+			self, language: str
+	) -> Optional['languagerepresentation.LanguageRepresentationFunction']:
+		result = core.BNGetFunctionLanguageRepresentation(self.handle, language)
+		if result is None:
+			return None
+		return languagerepresentation.LanguageRepresentationFunction(handle=result)
+
+	def language_representation_if_available(
+			self, language: str
+	) -> Optional['languagerepresentation.LanguageRepresentationFunction']:
+		result = core.BNGetFunctionLanguageRepresentationIfAvailable(self.handle, language)
+		if result is None:
+			return None
+		return languagerepresentation.LanguageRepresentationFunction(handle=result)
+
+	@property
 	def type(self) -> 'types.FunctionType':
 		"""
 		Function type object, can be set with either a string representing the function prototype
@@ -1787,7 +1847,15 @@ class Function:
 			core.BNFreeILInstructionList(exits)
 
 	def get_constant_data(self, state: RegisterValueType, value: int, size: int = 0) -> databuffer.DataBuffer:
-		return databuffer.DataBuffer(handle=core.BNGetConstantData(self.handle, state, value, size))
+		return databuffer.DataBuffer(handle=core.BNGetConstantData(self.handle, state, value, size, None))
+
+	def get_constant_data_and_builtin(
+			self, state: RegisterValueType, value: int, size: int = 0
+	) -> Tuple[databuffer.DataBuffer, BuiltinType]:
+		builtin = ctypes.c_int()
+		db = databuffer.DataBuffer(
+			handle=core.BNGetConstantData(self.handle, state, value, size, ctypes.byref(builtin)))
+		return db, BuiltinType(builtin.value)
 
 	def get_reg_value_at(
 	    self, addr: int, reg: 'architecture.RegisterType', arch: Optional['architecture.Architecture'] = None
@@ -2078,13 +2146,14 @@ class Function:
 		return result
 
 	def create_graph(
-	    self, graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph,
+	    self, graph_type: FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph,
 	    settings: Optional['DisassemblySettings'] = None
 	) -> flowgraph.CoreFlowGraph:
 		if settings is not None:
 			settings_obj = settings.handle
 		else:
 			settings_obj = None
+		graph_type = FunctionViewType(graph_type)._to_core_struct()
 		return flowgraph.CoreFlowGraph(core.BNCreateFunctionGraph(self.handle, graph_type, settings_obj))
 
 	def apply_imported_types(self, sym: 'types.CoreSymbol', type: Optional[StringOrType] = None) -> None:

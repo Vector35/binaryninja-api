@@ -35,7 +35,7 @@ PlatformRef BINARYNINJAUIAPI getOrAskForPlatform(QWidget* parent, BinaryViewRef 
 PlatformRef BINARYNINJAUIAPI getOrAskForPlatform(QWidget* parent, PlatformRef defaultValue);
 
 std::optional<std::string> BINARYNINJAUIAPI getStringForGraphType(BNFunctionGraphType type);
-std::optional<BNFunctionGraphType> BINARYNINJAUIAPI getGraphTypeForString(const std::string& type);
+std::optional<BinaryNinja::FunctionViewType> BINARYNINJAUIAPI getGraphTypeForString(const std::string& type);
 
 namespace fmt
 {

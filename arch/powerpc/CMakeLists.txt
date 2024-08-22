@@ -13,6 +13,8 @@ file(GLOB SOURCES
 	il.cpp
 	util.cpp
 	*.h
+	decode/*.c
+	decode/*.h
 )
 
 if(DEMO)

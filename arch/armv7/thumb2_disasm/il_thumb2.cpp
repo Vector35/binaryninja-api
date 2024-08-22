@@ -1425,6 +1425,9 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 	case ARMV7_WFI:
 		il.AddInstruction(il.Intrinsic({}, ARMV7_INTRIN_WFI, {}));
 		break;
+	case ARMV7_RRX:
+		il.AddInstruction(WriteILOperand(il, instr, 0, ReadShiftedOperand(il, instr, 1)));
+		break;
 	default:
 		GetLowLevelILForNEONInstruction(arch, il, instr, ifThenBlock);
 		break;
@@ -1437,6 +1440,9 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 	(void)arch;
 	(void)ifThenBlock;
 	switch (instr->mnem){
+	case armv7::ARMV7_VABS:
+		il.AddInstruction(WriteILOperand(il, instr, 0, il.FloatAbs(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
+		break;
 	case armv7::ARMV7_VADD:
 		il.AddInstruction(WriteArithOperand(il, instr, il.Add(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
 		break;
@@ -1475,6 +1481,25 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		break;
 	case armv7::ARMV7_VSUB:
 		il.AddInstruction(WriteArithOperand(il, instr, il.Sub(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
+		break;
+	case armv7::ARMV7_VMRS:
+		// TODO: If this sets the apsr register we do not track that in the core flag group.
+		il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1), GetRegisterSize(instr, 1)));
+		break;
+	case armv7::ARMV7_VCVT:
+		// TODO: This is not the correct way to get the vcvt format right lol?
+		if (strcmp(instr->format->operation, "vcvt.u32.f32") == 0 || strcmp(instr->format->operation, "vcvt.s32.f32") == 0)
+		{
+			il.AddInstruction(WriteILOperand(il, instr, 0, il.FloatToInt(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
+		}
+		else if (strcmp(instr->format->operation, "vcvt.u32.f32") == 0 || strcmp(instr->format->operation, "vcvt.s32.f32") == 0)
+		{
+			il.AddInstruction(WriteILOperand(il, instr, 0, il.FloatToInt(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
+		}
+		else
+		{
+			il.AddInstruction(il.Unimplemented());
+		}
 		break;
 	case armv7::ARMV7_VMOV:
 		if (instr->format->operandCount == 4)

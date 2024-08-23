@@ -1540,6 +1540,55 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 			il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1)));
 		}
 		break;
+	case armv7::ARMV7_VSTMDB:
+		{
+		// TODO: Clean this code up...
+		const char* prefix = "d";
+		if (IS_FIELD_PRESENT(instr, FIELD_single_regs)){
+			if (instr->fields[FIELD_single_regs] == 1) {
+				prefix = "s";
+			}
+		}
+		auto regSize = RegisterSizeFromPrefix(prefix);
+		unsigned int d = instr->fields[FIELD_d];
+		unsigned int inc = 1;
+		if(IS_FIELD_PRESENT(instr, FIELD_inc))
+			inc = instr->fields[FIELD_inc];
+		int regs = instr->fields[FIELD_regs];
+		for(int i=0; i<regs; ++i) {
+			if (d+(i*inc) >= 32 && strcmp(prefix, "s") == 0) break;
+			if (i >= 16 && strcmp(prefix, "d") == 0) break;
+			int regIdx = (d + i * inc) % 32;
+			il.Store(regSize, il.Add(4, ReadILOperand(il, instr, 0), il.Const(4, i * regSize)),
+			         il.Register(regSize, GetRegisterByIndex(regIdx, prefix)));
+		}
+		}
+		break;
+	case armv7::ARMV7_VLDMDB:
+		{
+		// TODO: Clean this code up...
+		const char* prefix = "d";
+		if (IS_FIELD_PRESENT(instr, FIELD_single_regs)){
+			if (instr->fields[FIELD_single_regs] == 1) {
+				prefix = "s";
+			}
+		}
+		auto regSize = RegisterSizeFromPrefix(prefix);
+		unsigned int d = instr->fields[FIELD_d];
+		unsigned int inc = 1;
+		if(IS_FIELD_PRESENT(instr, FIELD_inc))
+			inc = instr->fields[FIELD_inc];
+		int regs = instr->fields[FIELD_regs];
+		for(int i=0; i<regs; ++i) {
+			if (d+(i*inc) >= 32 && strcmp(prefix, "s") == 0) break;
+			if (i >= 16 && strcmp(prefix, "d") == 0) break;
+			int regIdx = (d + i * inc) % 32;
+			il.AddInstruction(il.SetRegister(regSize, GetRegisterByIndex(regIdx, prefix),
+			                                 il.Load(regSize, il.Add(4, ReadILOperand(il, instr, 0),
+			                                                         il.Const(4, i * regSize)))));
+			}
+		}
+		break;
 	case armv7::ARMV7_VPUSH:
 		{
 		// TODO: Clean this code up...

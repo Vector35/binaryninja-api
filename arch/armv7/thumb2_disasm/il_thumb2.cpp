@@ -1455,10 +1455,24 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 	(void)ifThenBlock;
 	switch (instr->mnem){
 	case armv7::ARMV7_VABS:
-		il.AddInstruction(WriteILOperand(il, instr, 0, il.FloatAbs(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
+		if (strcmp(instr->format->operation, "vabs.f64") == 0 || strcmp(instr->format->operation, "vabs.f32") == 0)
+		{
+			il.AddInstruction(WriteILOperand(il, instr, 0, il.FloatAbs(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
+		}
+		else
+		{
+			il.AddInstruction(il.Unimplemented());
+		}
 		break;
 	case armv7::ARMV7_VADD:
-		il.AddInstruction(WriteArithOperand(il, instr, il.Add(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
+		if (strcmp(instr->format->operation, "vadd.f64") == 0 || strcmp(instr->format->operation, "vadd.f32") == 0)
+		{
+			il.AddInstruction(WriteArithOperand(il, instr, il.FloatAdd(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
+		}
+		else
+		{
+			il.AddInstruction(il.Unimplemented());
+		}
 		break;
 	case armv7::ARMV7_VBIF:
 		il.AddInstruction(WriteArithOperand(il, instr, il.Or(GetRegisterSize(instr, 0),

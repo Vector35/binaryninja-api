@@ -1702,6 +1702,65 @@ public:
 
 	/*************************************************************************/
 
+	virtual std::vector<uint32_t> GetSystemRegisters() override
+	{
+		return vector<uint32_t>{
+			// Special registers (and global)
+			REGS_APSR,
+			REGS_APSR_G,
+			REGS_APSR_NZCVQ,
+			REGS_APSR_NZCVQG,
+			REGS_CPSR,
+			REGS_CPSR_C,
+			REGS_CPSR_X,
+			REGS_CPSR_XC,
+			REGS_CPSR_S,
+			REGS_CPSR_SC,
+			REGS_CPSR_SX,
+			REGS_CPSR_SXC,
+			REGS_CPSR_F,
+			REGS_CPSR_FC,
+			REGS_CPSR_FX,
+			REGS_CPSR_FXC,
+			REGS_CPSR_FS,
+			REGS_CPSR_FSC,
+			REGS_CPSR_FSX,
+			REGS_CPSR_FSXC,
+			REGS_SPSR,
+			REGS_SPSR_C,
+			REGS_SPSR_X,
+			REGS_SPSR_XC,
+			REGS_SPSR_S,
+			REGS_SPSR_SC,
+			REGS_SPSR_SX,
+			REGS_SPSR_SXC,
+			REGS_SPSR_F,
+			REGS_SPSR_FC,
+			REGS_SPSR_FX,
+			REGS_SPSR_FXC,
+			REGS_SPSR_FS,
+			REGS_SPSR_FSC,
+			REGS_SPSR_FSX,
+			REGS_SPSR_FSXC,
+			REGS_APSR_NZCV,
+			REGS_FPSID, // 0
+			REGS_FPSCR, // 1
+			REGS_MVFR2, // 5
+			REGS_MVFR1, // 6
+			REGS_MVFR0, // 7
+			REGS_FPEXC, // 8
+			REGS_FPINST, // 9
+			REGS_FPINST2, //10
+			REGS_MSP,
+			REGS_PSP,
+
+			// these are M-profile only (special)
+			REGS_PRIMASK,
+			REGS_BASEPRI,
+			REGS_FAULTMASK,
+			REGS_CONTROL,
+		};
+	}
 };
 
 ArmCommonArchitecture* InitThumb2Architecture(const char* name, BNEndianness endian)

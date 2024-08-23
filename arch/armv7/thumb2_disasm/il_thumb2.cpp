@@ -1480,7 +1480,54 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		il.AddInstruction(WriteArithOperand(il, instr, il.Xor(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
 		break;
 	case armv7::ARMV7_VSUB:
-		il.AddInstruction(WriteArithOperand(il, instr, il.Sub(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
+		if (strcmp(instr->format->operation, "vsub.f64") == 0 || strcmp(instr->format->operation, "vsub.f32") == 0)
+		{
+			il.AddInstruction(WriteArithOperand(
+				il, instr, il.FloatSub(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1),
+				                       ReadILOperand(il, instr, 2))));
+		} else
+		{
+			il.AddInstruction(il.Unimplemented());
+		}
+		break;
+	case armv7::ARMV7_VFMA:
+		if (strcmp(instr->format->operation, "vfma.f64") == 0 || strcmp(instr->format->operation, "vfma.f32") == 0)
+		{
+			il.AddInstruction(WriteArithOperand(il, instr,il.FloatAdd(
+				GetRegisterSize(instr, 0), ReadILOperand(il, instr, 0),
+					il.FloatMult(GetRegisterSize(instr, 0),
+						ReadILOperand(il, instr, 1),
+						ReadILOperand(il, instr, 2)))));
+		}
+		else if (strcmp(instr->format->operation, "vfms.f64") == 0 || strcmp(instr->format->operation, "vfms.f32") == 0)
+		{
+			il.AddInstruction(WriteArithOperand(il, instr,il.FloatSub(
+				GetRegisterSize(instr, 0), ReadILOperand(il, instr, 0),
+					il.FloatMult(GetRegisterSize(instr, 0),
+						ReadILOperand(il, instr, 1),
+						ReadILOperand(il, instr, 2)))));
+		}
+		else
+		{
+			il.AddInstruction(il.Unimplemented());
+		}
+		break;
+	case armv7::ARMV7_VMUL:
+		// TODO: This is not the correct way to get the vmul format right lol?
+		if (strcmp(instr->format->operation, "vmul.f64") == 0 || strcmp(instr->format->operation, "vmul.f32") == 0)
+		{
+			il.AddInstruction(WriteArithOperand(
+				il, instr, il.FloatMult(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1),
+				                        ReadILOperand(il, instr, 2))));
+		} else
+		{
+			il.AddInstruction(il.Unimplemented());
+		}
+		break;
+	case armv7::ARMV7_VDIV:
+		il.AddInstruction(WriteArithOperand(
+			il, instr, il.FloatDiv(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1),
+			                       ReadILOperand(il, instr, 2))));
 		break;
 	case armv7::ARMV7_VMRS:
 		// TODO: If this sets the apsr register we do not track that in the core flag group.

@@ -2954,7 +2954,7 @@ class BinaryView:
 
 	def create_child_view(self, child: str, update_analysis: bool = True, progress_func: Optional[ProgressFuncType] = None, options: Optional[Mapping[str, Any]] = None) -> Optional['BinaryView']:
 		"""
-		Create and load the child view named ``child`` adding it as a child view to
+		Create and load the child view named ``child``, adding it as a child view to
 		this BinaryView.
 
 		Rest of the arguments are as documented in :py:func:`load`
@@ -2974,6 +2974,32 @@ class BinaryView:
 			options = {}
 
 		handle = core.BNCreateChildView(self.handle, child, update_analysis, json.dumps(options), progress_cfunc, None)
+		if handle is None:
+			return None
+		return BinaryView(handle=handle)
+
+	def create_child_view_of_type(self, child_type: str, update_analysis: bool = True, progress_func: Optional[ProgressFuncType] = None, options: Optional[Mapping[str, Any]] = None) -> Optional['BinaryView']:
+		"""
+		Create and load a child BinaryView with type ``child_type``, adding it as a child view to
+		this BinaryView.
+
+		Rest of the arguments are as documented in :py:func:`load`
+
+		:param child_type: Type name of child view, from :py:func:`available_view_types`
+		:param bool update_analysis: whether or not to run :py:func:`~BinaryView.update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
+		:param callback progress_func: optional function to be called with the current progress and total count
+		:param dict options: a dictionary in the form {setting identifier string : object value}
+		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
+		:rtype: :py:class:`BinaryView` or ``None``
+		"""
+		if progress_func is None:
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: True)
+		else:
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: progress_func(cur, total))
+		if options is None:
+			options = {}
+
+		handle = core.BNCreateChildViewOfType(self.handle, child_type, update_analysis, json.dumps(options), progress_cfunc, None)
 		if handle is None:
 			return None
 		return BinaryView(handle=handle)

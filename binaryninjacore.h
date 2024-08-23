@@ -3816,6 +3816,7 @@ extern "C"
 	BINARYNINJACOREAPI BNBinaryView** BNGetChildViews(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI char** BNGetAvailableChildren(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI BNBinaryView* BNCreateChildView(BNBinaryView* view, const char* child, bool updateAnalysis, const char* options, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNBinaryView* BNCreateChildViewOfType(BNBinaryView* view, const char* type, bool updateAnalysis, const char* options, BNProgressFunction progress, void* progressContext);
 
 	BINARYNINJACOREAPI size_t BNReadViewData(BNBinaryView* view, void* dest, uint64_t offset, size_t len);
 	BINARYNINJACOREAPI BNDataBuffer* BNReadViewBuffer(BNBinaryView* view, uint64_t offset, size_t len);

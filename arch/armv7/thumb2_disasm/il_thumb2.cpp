@@ -1490,11 +1490,19 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		// TODO: This is not the correct way to get the vcvt format right lol?
 		if (strcmp(instr->format->operation, "vcvt.u32.f32") == 0 || strcmp(instr->format->operation, "vcvt.s32.f32") == 0)
 		{
-			il.AddInstruction(WriteILOperand(il, instr, 0, il.FloatToInt(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
+			il.AddInstruction(WriteILOperand(il, instr, 0,
+			                                 il.FloatToInt(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
 		}
-		else if (strcmp(instr->format->operation, "vcvt.u32.f32") == 0 || strcmp(instr->format->operation, "vcvt.s32.f32") == 0)
+		else if (strcmp(instr->format->operation, "vcvt.f32.u32") == 0 || strcmp(instr->format->operation, "vcvt.f32.s32") == 0)
 		{
-			il.AddInstruction(WriteILOperand(il, instr, 0, il.FloatToInt(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
+			il.AddInstruction(WriteILOperand(il, instr, 0,
+			                                 il.IntToFloat(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
+		}
+		else if (strcmp(instr->format->operation, "vcvt.f32") == 0 || instr->format->operandCount == 2)
+		{
+			// TODO: This a vector to float thing.
+			il.AddInstruction(WriteILOperand(il, instr, 0,
+			                                 il.FloatConvert(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
 		}
 		else
 		{

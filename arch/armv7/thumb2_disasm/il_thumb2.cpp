@@ -1553,9 +1553,27 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		}
 		break;
 	case armv7::ARMV7_VDIV:
-		il.AddInstruction(WriteArithOperand(
-			il, instr, il.FloatDiv(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1),
-			                       ReadILOperand(il, instr, 2))));
+		if (strcmp(instr->format->operation, "vdiv.f64") == 0 || strcmp(instr->format->operation, "vdiv.f32") == 0)
+		{
+			il.AddInstruction(WriteArithOperand(
+				il, instr, il.FloatDiv(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1),
+									   ReadILOperand(il, instr, 2))));
+		}
+		else
+		{
+			il.AddInstruction(il.Unimplemented());
+		}
+		break;
+	case armv7::ARMV7_VNEG:
+		if (strcmp(instr->format->operation, "vneg.f64") == 0 || strcmp(instr->format->operation, "vneg.f32") == 0)
+		{
+			il.AddInstruction(WriteArithOperand(
+				il, instr, il.FloatNeg(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
+		}
+		else
+		{
+			il.AddInstruction(il.Unimplemented());
+		}
 		break;
 	case armv7::ARMV7_VMRS:
 		// TODO: If this sets the apsr register we do not track that in the core flag group.

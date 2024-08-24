@@ -481,15 +481,23 @@ pub(crate) fn download_debug_info(
     }
     return Err("Could not find a server with debug info for this file".to_string());
 }
-pub(crate) fn find_local_debug_file_for_build_id(build_id: &String, view: &BinaryView) -> Option<String> {
+pub(crate) fn find_local_debug_file_for_build_id(
+    build_id: &String,
+    view: &BinaryView,
+) -> Option<String> {
     let settings = Settings::new("");
-    let debug_dirs_enabled = settings.get_bool("analysis.debugInfo.enableDebugDirectories", Some(view), None);
+    let debug_dirs_enabled = settings.get_bool(
+        "analysis.debugInfo.enableDebugDirectories",
+        Some(view),
+        None,
+    );
 
     if !debug_dirs_enabled {
         return None;
     }
 
-    let debug_info_paths = settings.get_string_list("analysis.debugInfo.debugDirectories", Some(view), None);
+    let debug_info_paths =
+        settings.get_string_list("analysis.debugInfo.debugDirectories", Some(view), None);
 
     if debug_info_paths.is_empty() {
         return None;
@@ -536,10 +544,10 @@ pub(crate) fn load_debug_info_for_build_id(
     (None, false)
 }
 
-
 pub(crate) fn find_sibling_debug_file(view: &BinaryView) -> Option<String> {
     let settings = Settings::new("");
-    let load_sibling_debug = settings.get_bool("analysis.debugInfo.loadSiblingDebugFiles", Some(view), None);
+    let load_sibling_debug =
+        settings.get_bool("analysis.debugInfo.loadSiblingDebugFiles", Some(view), None);
 
     if !load_sibling_debug {
         return None;
@@ -554,9 +562,7 @@ pub(crate) fn find_sibling_debug_file(view: &BinaryView) -> Option<String> {
     }
 
     if dsym_folder.exists() && dsym_folder.is_dir() {
-        let dsym_file = dsym_folder
-            .join("Contents/Resources/DWARF/")
-            .join(filename); // TODO: should this just pull any file out? Can there be multiple files?
+        let dsym_file = dsym_folder.join("Contents/Resources/DWARF/").join(filename); // TODO: should this just pull any file out? Can there be multiple files?
         if dsym_file.exists() {
             return Some(dsym_file.to_string_lossy().to_string());
         }
@@ -565,23 +571,21 @@ pub(crate) fn find_sibling_debug_file(view: &BinaryView) -> Option<String> {
     None
 }
 
-
 pub(crate) fn load_sibling_debug_file(view: &BinaryView) -> (Option<Ref<BinaryView>>, bool) {
     let Some(debug_file) = find_sibling_debug_file(view) else {
         return (None, false);
     };
 
     let load_settings = match view.default_platform() {
-        Some(plat) => format!("{{\"analysis.debugInfo.internal\": false, \"loader.platform\": \"{}\"}}", plat.name()),
-        None => "{\"analysis.debugInfo.internal\": false}".to_string()
+        Some(plat) => format!(
+            "{{\"analysis.debugInfo.internal\": false, \"loader.platform\": \"{}\"}}",
+            plat.name()
+        ),
+        None => "{\"analysis.debugInfo.internal\": false}".to_string(),
     };
 
     (
-        binaryninja::load_with_options(
-            debug_file,
-            false,
-            Some(load_settings)
-        ),
-        false
+        binaryninja::load_with_options(debug_file, false, Some(load_settings)),
+        false,
     )
 }

@@ -65,11 +65,7 @@ fn main() {
         // Make a symlink "libbinaryninjacore.so" pointing to "libbinaryninjacore.so.1"
         if symlink_target.exists() && symlink_source.symlink_metadata().is_err() {
             use std::os::unix::fs;
-            fs::symlink(
-                symlink_target,
-                symlink_source,
-            )
-            .expect("failed to create required symlink");
+            fs::symlink(symlink_target, symlink_source).expect("failed to create required symlink");
         }
         println!("cargo:rustc-link-search={}", out_dir);
     }

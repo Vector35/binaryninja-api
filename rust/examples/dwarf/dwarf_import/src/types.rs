@@ -285,15 +285,13 @@ pub(crate) fn get_type<R: ReaderType>(
     ) {
         // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
         match die_reference {
-            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
-                get_type(
-                    dwarf,
-                    entry_unit,
-                    &entry_unit.entry(entry_offset).unwrap(),
-                    debug_info_builder_context,
-                    debug_info_builder,
-                )
-            }
+            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => get_type(
+                dwarf,
+                entry_unit,
+                &entry_unit.entry(entry_offset).unwrap(),
+                debug_info_builder_context,
+                debug_info_builder,
+            ),
             DieReference::Err => {
                 warn!("Failed to fetch DIE when getting type through DW_AT_abstract_origin. Debug information may be incomplete.");
                 None

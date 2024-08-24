@@ -3141,9 +3141,7 @@ pub trait RiscVDisassembler: Sized + Copy + Clone {
                                     f if (f & 0xfe0) == 0x120 => {
                                         Op::SfenceVma(RTypeIntInst::new(inst)?)
                                     }
-                                    0x104 => {
-                                        Op::SfenceVm(RTypeIntInst::new(inst)?)
-                                    }
+                                    0x104 => Op::SfenceVm(RTypeIntInst::new(inst)?),
 
                                     0x000 => Op::Ecall,
                                     0x001 => Op::Ebreak,

@@ -5,8 +5,7 @@ project(arch_msp430)
 file(GLOB PLUGIN_SOURCES CONFIGURE_DEPENDS
         ../../binaryninjacore.h
         ${PROJECT_SOURCE_DIR}/Cargo.toml
-        ${PROJECT_SOURCE_DIR}/src/*.rs
-        ${PROJECT_SOURCE_DIR}/disasm/src/*.rs)
+        ${PROJECT_SOURCE_DIR}/src/*.rs)
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
     set(TARGET_DIR ${PROJECT_BINARY_DIR}/target/debug)

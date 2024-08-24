@@ -726,7 +726,7 @@ impl Project {
     /// and the project on disk vs in memory may not agree on state
     /// if an exception occurs while a bulk operation is happening.
     ///
-    /// ```
+    /// ```no_run
     /// # use binaryninja::project::Project;
     /// # let project: Project = todo!();
     /// if let Ok(bulk) = project.bulk_operation() {

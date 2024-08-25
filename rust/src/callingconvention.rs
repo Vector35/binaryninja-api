@@ -74,18 +74,18 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::free", unsafe {
-            let _ctxt = Box::from_raw(ctxt as *mut CustomCallingConventionContext<C>);
+        ffi_wrap!("CallingConvention::free", {
+            let _ctxt = unsafe { Box::from_raw(ctxt as *mut CustomCallingConventionContext<C>) };
         })
     }
 
     extern "C" fn cb_free_register_list(_ctxt: *mut c_void, regs: *mut u32, count: usize) {
-        ffi_wrap!("CallingConvention::free_register_list", unsafe {
+        ffi_wrap!("CallingConvention::free_register_list", {
             if regs.is_null() {
                 return;
             }
 
-            let _regs = Box::from_raw(ptr::slice_from_raw_parts_mut(regs, count));
+            let _regs = unsafe { Box::from_raw(ptr::slice_from_raw_parts_mut(regs, count)) };
         })
     }
 
@@ -93,8 +93,8 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::caller_saved_registers", unsafe {
-            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+        ffi_wrap!("CallingConvention::caller_saved_registers", {
+            let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
             let mut regs: Vec<_> = ctxt
                 .cc
                 .caller_saved_registers()
@@ -114,8 +114,8 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::callee_saved_registers", unsafe {
-            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+        ffi_wrap!("CallingConvention::callee_saved_registers", {
+            let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
             let mut regs: Vec<_> = ctxt
                 .cc
                 .callee_saved_registers()
@@ -135,8 +135,8 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::int_arg_registers", unsafe {
-            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+        ffi_wrap!("CallingConvention::int_arg_registers", {
+            let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
             let mut regs: Vec<_> = ctxt.cc.int_arg_registers().iter().map(|r| r.id()).collect();
 
             // SAFETY: `count` is an out parameter
@@ -151,8 +151,8 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::float_arg_registers", unsafe {
-            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+        ffi_wrap!("CallingConvention::float_arg_registers", {
+            let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
             let mut regs: Vec<_> = ctxt
                 .cc
                 .float_arg_registers()
@@ -172,9 +172,8 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::arg_registers_shared_index", unsafe {
-            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-
+        ffi_wrap!("CallingConvention::arg_registers_shared_index", {
+            let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
             ctxt.cc.arg_registers_shared_index()
         })
     }
@@ -185,9 +184,8 @@ where
     {
         ffi_wrap!(
             "CallingConvention::reserved_stack_space_for_arg_registers",
-            unsafe {
-                let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-
+            {
+                let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
                 ctxt.cc.reserved_stack_space_for_arg_registers()
             }
         )
@@ -197,9 +195,8 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::stack_adjusted_on_return", unsafe {
-            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-
+        ffi_wrap!("CallingConvention::stack_adjusted_on_return", {
+            let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
             ctxt.cc.stack_adjusted_on_return()
         })
     }
@@ -208,9 +205,8 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::is_eligible_for_heuristics", unsafe {
-            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-
+        ffi_wrap!("CallingConvention::is_eligible_for_heuristics", {
+            let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
             ctxt.cc.is_eligible_for_heuristics()
         })
     }
@@ -219,9 +215,8 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::return_int_reg", unsafe {
-            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-
+        ffi_wrap!("CallingConvention::return_int_reg", {
+            let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
             match ctxt.cc.return_int_reg() {
                 Some(r) => r.id(),
                 _ => 0xffff_ffff,
@@ -233,9 +228,8 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::return_hi_int_reg", unsafe {
-            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-
+        ffi_wrap!("CallingConvention::return_hi_int_reg", {
+            let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
             match ctxt.cc.return_hi_int_reg() {
                 Some(r) => r.id(),
                 _ => 0xffff_ffff,
@@ -247,9 +241,8 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::return_float_reg", unsafe {
-            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-
+        ffi_wrap!("CallingConvention::return_float_reg", {
+            let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
             match ctxt.cc.return_float_reg() {
                 Some(r) => r.id(),
                 _ => 0xffff_ffff,
@@ -261,9 +254,8 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::global_pointer_reg", unsafe {
-            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-
+        ffi_wrap!("CallingConvention::global_pointer_reg", {
+            let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
             match ctxt.cc.global_pointer_reg() {
                 Some(r) => r.id(),
                 _ => 0xffff_ffff,
@@ -278,8 +270,8 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::implicitly_defined_registers", unsafe {
-            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+        ffi_wrap!("CallingConvention::implicitly_defined_registers", {
+            let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
             let mut regs: Vec<_> = ctxt
                 .cc
                 .implicitly_defined_registers()
@@ -359,9 +351,8 @@ where
     {
         ffi_wrap!(
             "CallingConvention::are_argument_registers_used_for_var_args",
-            unsafe {
-                let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-
+            {
+                let ctxt = unsafe { &*(ctxt as *mut CustomCallingConventionContext<C>) };
                 ctxt.cc.are_argument_registers_used_for_var_args()
             }
         )

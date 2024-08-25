@@ -22,13 +22,12 @@ use std::fmt;
 
 use crate::architecture::Architecture;
 use crate::architecture::Register as ArchReg;
-use crate::function::Location;
 
-mod block;
-mod expression;
-mod function;
-mod instruction;
-mod lifting;
+pub mod block;
+pub mod expression;
+pub mod function;
+pub mod instruction;
+pub mod lifting;
 pub mod operation;
 
 pub use self::expression::*;

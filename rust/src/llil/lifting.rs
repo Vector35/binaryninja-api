@@ -17,6 +17,7 @@ use std::mem;
 
 use binaryninjacore_sys::{BNLowLevelILLabel, BNRegisterOrConstant};
 
+use crate::function::Location;
 use crate::architecture::Architecture;
 use crate::architecture::Register as ArchReg;
 use crate::architecture::{

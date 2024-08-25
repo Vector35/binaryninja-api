@@ -1,7 +1,7 @@
-mod block;
-mod function;
-mod instruction;
-mod lift;
+pub mod block;
+pub mod function;
+pub mod instruction;
+pub mod lift;
 pub mod operation;
 
 pub use self::block::*;

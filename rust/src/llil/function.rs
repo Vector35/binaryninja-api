@@ -20,6 +20,7 @@ use binaryninjacore_sys::BNNewLowLevelILFunctionReference;
 use std::borrow::Borrow;
 use std::marker::PhantomData;
 
+use crate::function::Location;
 use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
 use crate::rc::*;

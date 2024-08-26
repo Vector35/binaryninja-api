@@ -403,6 +403,24 @@ impl TranslateIDBTypes<'_> {
         let mut current_field_bits: u32 = first_field.width.into();
         let mut start_idx = 0;
 
+        let create_field = |start_idx, i, bytes| {
+            let name = if start_idx == i - 1 {
+                let member: &idb_rs::til::StructMember = &members_slice[i - 1];
+                let name: &Option<String> = &member.name;
+                name.to_owned()
+                    .unwrap_or_else(|| format!("bitfield_{}", offset + start_idx))
+            } else {
+                format!("bitfield_{}_{}", offset + start_idx, offset + (i - 1))
+            };
+            let field = field_from_bytes(bytes);
+            struct_builder.append(
+                &field,
+                name,
+                BNMemberAccess::NoAccess,
+                BNMemberScope::NoScope,
+            );
+        };
+
         for (i, member) in members {
             // starting a new field
             let max_bits = u32::try_from(current_field_bytes).unwrap() * 8;
@@ -411,21 +429,7 @@ impl TranslateIDBTypes<'_> {
             if current_field_bytes != member.nbytes
                 || max_bits < current_field_bits + u32::from(member.width)
             {
-                let name = if start_idx == i - 1 {
-                    members_slice[i - 1]
-                        .name
-                        .to_owned()
-                        .unwrap_or_else(|| format!("bitfield_{}", offset + start_idx))
-                } else {
-                    format!("bitfield_{}_{}", offset + start_idx, offset + (i - 1))
-                };
-                let field = field_from_bytes(current_field_bytes);
-                struct_builder.append(
-                    &field,
-                    name,
-                    BNMemberAccess::NoAccess,
-                    BNMemberScope::NoScope,
-                );
+                create_field(start_idx, i, current_field_bytes);
                 current_field_bytes = member.nbytes;
                 current_field_bits = 0;
                 start_idx = i;
@@ -434,6 +438,11 @@ impl TranslateIDBTypes<'_> {
             // just add the current bitfield into the field
             current_field_bits += u32::from(member.width);
         }
+
+        if current_field_bits != 0 {
+            create_field(start_idx, members_slice.len(), current_field_bytes);
+        }
+
         Ok(())
     }
 
@@ -442,6 +451,10 @@ impl TranslateIDBTypes<'_> {
         members: &[idb_rs::til::StructMember],
         effective_alignment: u16,
     ) -> TranslateTypeResult {
+        if members.is_empty() {
+            // fix the core crashing if create an emtpy struct
+            return TranslateTypeResult::Translated(Type::void());
+        }
         let mut is_partial = false;
         let structure = StructureBuilder::new();
         structure.set_alignment(effective_alignment.into());

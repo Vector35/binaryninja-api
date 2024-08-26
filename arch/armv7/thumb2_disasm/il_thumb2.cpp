@@ -1732,7 +1732,7 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 			if (d+(i*inc) >= 32 && strcmp(prefix, "s") == 0) break;
 			if (i >= 16 && strcmp(prefix, "d") == 0) break;
 			int regIdx = (d + i * inc) % 32;
-			il.AddInstruction(il.Pop(regSize));
+			il.AddInstruction(il.SetRegister(regSize, GetRegisterByIndex(regIdx, prefix), il.Pop(regSize)));
 		}
 		}
 		break;

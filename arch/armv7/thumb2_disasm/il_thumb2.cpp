@@ -1455,22 +1455,26 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 	(void)ifThenBlock;
 	switch (instr->mnem){
 	case armv7::ARMV7_VABS:
-		if (strcmp(instr->format->operation, "vabs.f64") == 0 || strcmp(instr->format->operation, "vabs.f32") == 0)
-		{
-			il.AddInstruction(WriteILOperand(il, instr, 0, il.FloatAbs(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
+		if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64)) {
+			il.AddInstruction(WriteILOperand(il, instr, 0,
+			                                 il.FloatAbs(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
 		}
 		else
 		{
+			// Non scalar unsupported.
 			il.AddInstruction(il.Unimplemented());
 		}
 		break;
 	case armv7::ARMV7_VADD:
-		if (strcmp(instr->format->operation, "vadd.f64") == 0 || strcmp(instr->format->operation, "vadd.f32") == 0)
+		if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64))
 		{
-			il.AddInstruction(WriteArithOperand(il, instr, il.FloatAdd(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
+			il.AddInstruction(WriteArithOperand(
+				il, instr, il.FloatAdd(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1),
+				                       ReadILOperand(il, instr, 2))));
 		}
 		else
 		{
+			// Non scalar unsupported.
 			il.AddInstruction(il.Unimplemented());
 		}
 		break;
@@ -1508,17 +1512,20 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		il.AddInstruction(WriteArithOperand(il, instr, il.Xor(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
 		break;
 	case armv7::ARMV7_VSUB:
-		if (strcmp(instr->format->operation, "vsub.f64") == 0 || strcmp(instr->format->operation, "vsub.f32") == 0)
+		if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64))
 		{
 			il.AddInstruction(WriteArithOperand(
 				il, instr, il.FloatSub(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1),
 				                       ReadILOperand(il, instr, 2))));
-		} else
+		}
+		else
 		{
+			// Non scalar unsupported.
 			il.AddInstruction(il.Unimplemented());
 		}
 		break;
 	case armv7::ARMV7_VFMA:
+		// TODO: Find a better way to disambiguate between add and sub variants.
 		if (strcmp(instr->format->operation, "vfma.f64") == 0 || strcmp(instr->format->operation, "vfma.f32") == 0)
 		{
 			il.AddInstruction(WriteArithOperand(il, instr,il.FloatAdd(
@@ -1537,41 +1544,42 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		}
 		else
 		{
+			// Non scalar unsupported.
 			il.AddInstruction(il.Unimplemented());
 		}
 		break;
 	case armv7::ARMV7_VMUL:
-		// TODO: This is not the correct way to get the vmul format right lol?
-		if (strcmp(instr->format->operation, "vmul.f64") == 0 || strcmp(instr->format->operation, "vmul.f32") == 0)
-		{
+		if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64)) {
 			il.AddInstruction(WriteArithOperand(
 				il, instr, il.FloatMult(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1),
 				                        ReadILOperand(il, instr, 2))));
-		} else
+		}
+		else
 		{
+			// Non scalar unsupported.
 			il.AddInstruction(il.Unimplemented());
 		}
 		break;
 	case armv7::ARMV7_VDIV:
-		if (strcmp(instr->format->operation, "vdiv.f64") == 0 || strcmp(instr->format->operation, "vdiv.f32") == 0)
-		{
+		if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64)) {
 			il.AddInstruction(WriteArithOperand(
 				il, instr, il.FloatDiv(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1),
-									   ReadILOperand(il, instr, 2))));
+				                       ReadILOperand(il, instr, 2))));
 		}
 		else
 		{
+			// Non scalar unsupported.
 			il.AddInstruction(il.Unimplemented());
 		}
 		break;
 	case armv7::ARMV7_VNEG:
-		if (strcmp(instr->format->operation, "vneg.f64") == 0 || strcmp(instr->format->operation, "vneg.f32") == 0)
-		{
-			il.AddInstruction(WriteArithOperand(
-				il, instr, il.FloatNeg(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
+		if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64)) {
+			il.AddInstruction(
+				WriteArithOperand(il, instr, il.FloatNeg(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
 		}
 		else
 		{
+			// Non scalar unsupported.
 			il.AddInstruction(il.Unimplemented());
 		}
 		break;
@@ -1580,26 +1588,49 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1), GetRegisterSize(instr, 1)));
 		break;
 	case armv7::ARMV7_VCVT:
-		// TODO: This is not the correct way to get the vcvt format right lol?
-		if (strcmp(instr->format->operation, "vcvt.u32.f32") == 0 || strcmp(instr->format->operation, "vcvt.s32.f32") == 0)
+		if (instr->format->operandCount == 3)
 		{
-			il.AddInstruction(WriteILOperand(il, instr, 0,
-			                                 il.FloatToInt(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
+			// TODO: Fixed point unsupported.
+			il.AddInstruction(il.Unimplemented());
 		}
-		else if (strcmp(instr->format->operation, "vcvt.f32.u32") == 0 || strcmp(instr->format->operation, "vcvt.f32.s32") == 0)
+		else if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64))
 		{
-			il.AddInstruction(WriteILOperand(il, instr, 0,
-			                                 il.IntToFloat(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
-		}
-		else if (strcmp(instr->format->operation, "vcvt.f32") == 0 || instr->format->operandCount == 2)
-		{
-			// TODO: This a vector to float thing.
 			il.AddInstruction(WriteILOperand(il, instr, 0,
 			                                 il.FloatConvert(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
 		}
+		else if (IS_FIELD_PRESENT(instr, FIELD_td))
+		{
+			switch (instr->fields[FIELD_dt])
+			{
+			case VFP_DATA_SIZE_S32F32:
+			case VFP_DATA_SIZE_U32F32:
+				il.AddInstruction(WriteILOperand(il, instr, 0,
+				                                 il.IntToFloat(GetRegisterSize(instr, 1),
+				                                               ReadILOperand(il, instr, 1))));
+				break;
+			case VFP_DATA_SIZE_F32S32:
+			case VFP_DATA_SIZE_F32U32:
+				il.AddInstruction(WriteILOperand(il, instr, 0,
+				                                 il.FloatToInt(GetRegisterSize(instr, 1),
+				                                               ReadILOperand(il, instr, 1))));
+				break;
+			default:
+				il.AddInstruction(il.Unimplemented());
+			}
+		}
 		else
 		{
-			il.AddInstruction(il.Unimplemented());
+			switch (instr->fields[FIELD_dt])
+			{
+			case VFP_DATA_SIZE_F32:
+			case VFP_DATA_SIZE_S32:
+				il.AddInstruction(WriteILOperand(il, instr, 0,
+				                                 il.FloatConvert(GetRegisterSize(instr, 1),
+				                                                 ReadILOperand(il, instr, 1))));
+				break;
+			default:
+				il.AddInstruction(il.Unimplemented());
+			}
 		}
 		break;
 	case armv7::ARMV7_VMOV:

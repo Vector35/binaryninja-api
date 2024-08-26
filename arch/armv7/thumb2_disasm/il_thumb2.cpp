@@ -1615,15 +1615,14 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 			if (instr->format->operands[2].type == OPERAND_FORMAT_REG_FP)
 			{
 				// r3:r2 <- d12
-				// The set reg will constrain the 8 byte to 4 byte _probably_.
-				il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 2)));
-				il.AddInstruction(WriteILOperand(il, instr, 1, il.LogicalShiftRight(4, ReadILOperand(il, instr, 2), il.Const(1, 32))));
+				il.SetRegisterSplit(4, ReadILOperand(il, instr, 0), ReadILOperand(il, instr, 1),
+				                    ReadILOperand(il, instr, 3));
 			} else
 			{
 				// d9 <- r1:r0
-				il.AddInstruction(WriteILOperand(il, instr, 0, il.Or(4,
-					il.ShiftLeft(4, ReadILOperand(il, instr, 2), il.Const(1, 32)),
-					ReadILOperand(il, instr, 1))));
+				il.AddInstruction(WriteILOperand(il, instr, 0,
+				                                 il.RegisterSplit(8, ReadILOperand(il, instr, 1),
+				                                                  ReadILOperand(il, instr, 2))));
 			}
 		}
 		else

@@ -1,5 +1,5 @@
 [package]
-name = "view-bintxt"
+name = "view_bintxt"
 version = "0.1.0"
 authors = ["Rubens Brandao <git@rubens.io>"]
 edition = "2021"

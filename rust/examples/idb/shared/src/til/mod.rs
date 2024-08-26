@@ -376,7 +376,7 @@ impl TILTypeInfo {
         let is_u64 = (flags >> 31) != 0;
         let ordinal = match (header.format, is_u64) {
             // formats below 0x12 doesn't have 64 bits ord
-            (0..0x12, _) | (_, false) => bincode::deserialize_from::<_, u32>(&mut *input)?.into(),
+            (0..=0x11, _) | (_, false) => bincode::deserialize_from::<_, u32>(&mut *input)?.into(),
             (_, true) => bincode::deserialize_from(&mut *input)?,
         };
         let tinfo_raw =

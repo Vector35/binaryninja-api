@@ -460,12 +460,14 @@ impl TranslateIDBTypes<'_> {
                 (_, Some(start_idx)) => {
                     first_bitfield_seq = None;
                     let members_bitrange = &members[start_idx..i];
-                    if let Err(error) =
-                        self.translate_bitfields_into_struct(i, members_bitrange, &structure)
-                    {
+                    if let Err(error) = self.translate_bitfields_into_struct(
+                        start_idx,
+                        members_bitrange,
+                        &structure,
+                    ) {
                         return TranslateTypeResult::Error(BnTypeError::StructMember(
                             Box::new(error),
-                            i,
+                            start_idx,
                         ));
                     }
                 }
@@ -492,6 +494,17 @@ impl TranslateIDBTypes<'_> {
                 .to_owned()
                 .unwrap_or_else(|| format!("member_{i}"));
             structure.append(&mem, name, BNMemberAccess::NoAccess, BNMemberScope::NoScope);
+        }
+        if let Some(start_idx) = first_bitfield_seq {
+            let members_bitrange = &members[start_idx..];
+            if let Err(error) =
+                self.translate_bitfields_into_struct(start_idx, members_bitrange, &structure)
+            {
+                return TranslateTypeResult::Error(BnTypeError::StructMember(
+                    Box::new(error),
+                    start_idx,
+                ));
+            }
         }
         let bn_ty = Type::structure(&structure.finalize());
         if is_partial {

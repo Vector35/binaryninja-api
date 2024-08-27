@@ -549,7 +549,7 @@ impl TranslateIDBTypes<'_> {
             let mem = match self.translate_type(&member.member_type) {
                 TranslateTypeResult::Translated(ty) => ty,
                 TranslateTypeResult::PartiallyTranslated(partial_ty, error) => {
-                    is_partial = true;
+                    is_partial |= true;
                     if let Some(error) = error {
                         errors.push((i, error));
                     }
@@ -602,7 +602,7 @@ impl TranslateIDBTypes<'_> {
                     }
                     TranslateTypeResult::NotYet => return TranslateTypeResult::NotYet,
                     TranslateTypeResult::PartiallyTranslated(partial, error) => {
-                        is_partial = true;
+                        is_partial |= true;
                         if let Some(error) = error {
                             errors.push((i, error));
                         }
@@ -794,6 +794,7 @@ fn parse_til_section_info(
                 }
                 TranslateTypeResult::PartiallyTranslated(_, None) => {
                     let result = translator.translate_type(&translator.types[i].og_ty.tinfo);
+                    assert!(!matches!(&result, TranslateTypeResult::NotYet));
                     did_something |=
                         !matches!(&result, TranslateTypeResult::PartiallyTranslated(_, None));
                     translator.types[i].ty = result;
@@ -841,7 +842,7 @@ fn parse_til_section_info(
                 if let Some(error) = error {
                     error!("Unable to parse type `{}` correctly: {error}", &ty.name);
                 } else {
-                    error!("Unable to parse type `{}` correctly", &ty.name);
+                    warn!("Type `{}` maybe not be fully translated", &ty.name);
                 }
             }
             TranslateTypeResult::Translated(_) => {}

@@ -73,6 +73,8 @@ fn take_byte_line(input: &[u8]) -> Result<(Vec<u8>, &[u8]), ()> {
         bytes.push(byte);
 
         match current_input {
+            // space with newline ends this line
+            [b' ', b'\r', b'\n', rest @ ..] | [b' ', b'\n', rest @ ..] => return Ok((bytes, rest)),
             // bytes are separated by space
             [b' ', rest @ ..] => current_input = rest,
             // newline ends this line

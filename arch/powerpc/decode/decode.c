@@ -5870,8 +5870,8 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_BDZFLRx: return LkMnemonic(instruction, SubMnemBDZFLRx);
 		case PPC_ID_BDZLRx: return LkHintMnemonic(instruction, SubMnemBDZLRx);
 		case PPC_ID_BDZTx: return AaLkMnemonic(instruction, SubMnemBDZTx);
-		case PPC_ID_BDZTCTRx: return AaLkMnemonic(instruction, SubMnemBDZTCTRx);
-		case PPC_ID_BDZTLRx: return AaLkMnemonic(instruction, SubMnemBDZTLRx);
+		case PPC_ID_BDZTCTRx: return LkMnemonic(instruction, SubMnemBDZTCTRx);
+		case PPC_ID_BDZTLRx: return LkMnemonic(instruction, SubMnemBDZTLRx);
 		case PPC_ID_BEQx: return AaLkHintMnemonic(instruction, SubMnemBEQx);
 		case PPC_ID_BEQLRx: return LkHintMnemonic(instruction, SubMnemBEQLRx);
 		case PPC_ID_BEQCTRx: return LkHintMnemonic(instruction, SubMnemBEQCTRx);

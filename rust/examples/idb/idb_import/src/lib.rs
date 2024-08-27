@@ -24,12 +24,19 @@ enum BnTypeError {
     OrdinalNotFound(u32),
     NameNotFound(String),
 
-    //TypedefNameNotFound(String),
-    FunctionReturn(Box<BnTypeError>),
-    FunctionArg(Box<BnTypeError>, usize),
+    Typedef(Box<BnTypeError>),
+    Function(FunctionError),
     Array(Box<BnTypeError>),
-    StructMember(Box<BnTypeError>, usize),
-    UnionMember(Box<BnTypeError>, usize),
+    Pointer(Box<BnTypeError>),
+    /// Error for members
+    Struct(Vec<(usize, BnTypeError)>),
+    Union(Vec<(usize, BnTypeError)>),
+}
+
+#[derive(Default, Debug, Clone)]
+struct FunctionError {
+    ret: Option<Box<BnTypeError>>,
+    args: Vec<(usize, BnTypeError)>,
 }
 
 impl std::fmt::Display for BnTypeError {
@@ -37,19 +44,30 @@ impl std::fmt::Display for BnTypeError {
         match self {
             BnTypeError::OrdinalNotFound(i) => write!(f, "Reference to non existing Ordinal {i}"),
             BnTypeError::NameNotFound(name) => write!(f, "Reference to non existing name {name}"),
-            BnTypeError::FunctionReturn(error) => {
-                write!(f, "Function return: {error}")
-            }
-            BnTypeError::FunctionArg(error, i) => {
-                write!(f, "Function argument {i}: {error}")
+            BnTypeError::Typedef(error) => write!(f, "Typedef: {error}"),
+            BnTypeError::Function(FunctionError { ret, args }) => {
+                if let Some(error) = ret {
+                    write!(f, "Function return: {error} ")?;
+                }
+                for (i, error) in args {
+                    write!(f, "Function argument {i}: {error} ")?;
+                }
+                Ok(())
             }
             BnTypeError::Array(error) => write!(f, "Array: {error}"),
-            BnTypeError::StructMember(error, i) => {
-                write!(f, "StructMember {i}: {error}")
+            BnTypeError::Struct(errors) => {
+                for (i, error) in errors {
+                    write!(f, "Struct Member {i}: {error} ")?;
+                }
+                Ok(())
             }
-            BnTypeError::UnionMember(error, i) => {
-                write!(f, "Union member {i}: {error}")
+            BnTypeError::Union(errors) => {
+                for (i, error) in errors {
+                    write!(f, "Union Member {i}: {error} ")?;
+                }
+                Ok(())
             }
+            BnTypeError::Pointer(error) => write!(f, "Pointer: {error}"),
         }
     }
 }
@@ -228,9 +246,11 @@ fn parse_til_info(
 enum TranslateTypeResult {
     #[default]
     NotYet,
+    /// Unable to solve type, there is no point in trying again
     Error(BnTypeError),
-    // a type that is not final, but equivalent to the final type
-    PartiallyTranslated(Ref<Type>),
+    /// a type that is not final, but equivalent to the final type, if error, there is no
+    /// point in trying again
+    PartiallyTranslated(Ref<Type>, Option<BnTypeError>),
     Translated(Ref<Type>),
 }
 
@@ -310,9 +330,19 @@ impl TranslateIDBTypes<'_> {
         // only return a typedef, if it's solved, at least partially
         match &ty.ty {
             TranslateTypeResult::NotYet => TranslateTypeResult::NotYet,
-            TranslateTypeResult::Error(error) => TranslateTypeResult::Error(error.to_owned()),
-            TranslateTypeResult::PartiallyTranslated(og_ty)
-            | TranslateTypeResult::Translated(og_ty) => TranslateTypeResult::Translated(
+            TranslateTypeResult::Error(error) => {
+                TranslateTypeResult::Error(BnTypeError::Typedef(Box::new(error.to_owned())))
+            }
+            TranslateTypeResult::PartiallyTranslated(og_ty, error) => {
+                TranslateTypeResult::PartiallyTranslated(
+                    Type::named_type_from_type(ty.name.as_str(), &og_ty),
+                    error
+                        .as_ref()
+                        .map(|x| BnTypeError::Typedef(Box::new(x.clone())))
+                        .clone(),
+                )
+            }
+            TranslateTypeResult::Translated(og_ty) => TranslateTypeResult::Translated(
                 Type::named_type_from_type(ty.name.as_str(), &og_ty),
             ),
         }
@@ -323,46 +353,66 @@ impl TranslateIDBTypes<'_> {
             TranslateTypeResult::Translated(trans) => {
                 TranslateTypeResult::Translated(Type::pointer(&self.arch, &trans))
             }
-            TranslateTypeResult::PartiallyTranslated(trans) => {
-                TranslateTypeResult::PartiallyTranslated(Type::pointer(&self.arch, &trans))
+            TranslateTypeResult::PartiallyTranslated(trans, error) => {
+                TranslateTypeResult::PartiallyTranslated(
+                    Type::pointer(&self.arch, &trans),
+                    error.map(|e| BnTypeError::Pointer(Box::new(e))),
+                )
             }
-            // NOTE don't propagate the error, just return an partial representation of the
-            // type, AKA void*
-            TranslateTypeResult::Error(_) | TranslateTypeResult::NotYet => {
-                TranslateTypeResult::PartiallyTranslated(Type::pointer(&self.arch, &Type::void()))
-            }
+            TranslateTypeResult::Error(error) => TranslateTypeResult::PartiallyTranslated(
+                Type::pointer(&self.arch, &Type::void()),
+                Some(error),
+            ),
+            TranslateTypeResult::NotYet => TranslateTypeResult::PartiallyTranslated(
+                Type::pointer(&self.arch, &Type::void()),
+                None,
+            ),
         }
     }
 
     fn translate_function(&self, fun: &idb_rs::til::Function) -> TranslateTypeResult {
         let mut is_partial = false;
+        let mut errors: FunctionError = Default::default();
         // funtions are always 0 len, so it's translated or partial(void)
         let return_ty = match self.translate_type(&fun.ret) {
             TranslateTypeResult::Translated(trans) => trans,
-            TranslateTypeResult::PartiallyTranslated(trans) => {
-                is_partial = true;
+            TranslateTypeResult::PartiallyTranslated(trans, error) => {
+                is_partial |= true;
+                errors.ret = error.map(Box::new);
                 trans
             }
             TranslateTypeResult::Error(error) => {
-                return TranslateTypeResult::Error(BnTypeError::FunctionReturn(Box::new(error)))
+                errors.ret = Some(Box::new(error));
+                return TranslateTypeResult::PartiallyTranslated(
+                    Type::void(),
+                    Some(BnTypeError::Function(errors)),
+                );
             }
             TranslateTypeResult::NotYet => {
-                return TranslateTypeResult::PartiallyTranslated(Type::void())
+                return TranslateTypeResult::PartiallyTranslated(Type::void(), None)
             }
         };
+        let mut partial_error_args = vec![];
         let mut bn_args = Vec::with_capacity(fun.args.len());
         for (i, (arg_name, arg_type, _arg_loc)) in fun.args.iter().enumerate() {
             let arg = match self.translate_type(arg_type) {
                 TranslateTypeResult::Translated(trans) => trans,
-                TranslateTypeResult::PartiallyTranslated(trans) => {
+                TranslateTypeResult::PartiallyTranslated(trans, error) => {
                     is_partial = true;
+                    if let Some(error) = error {
+                        errors.args.push((i, error));
+                    }
                     trans
                 }
                 TranslateTypeResult::NotYet => {
-                    return TranslateTypeResult::PartiallyTranslated(Type::void())
+                    return TranslateTypeResult::PartiallyTranslated(Type::void(), None)
                 }
                 TranslateTypeResult::Error(error) => {
-                    return TranslateTypeResult::Error(BnTypeError::FunctionArg(Box::new(error), i))
+                    partial_error_args.push((i, error));
+                    return TranslateTypeResult::PartiallyTranslated(
+                        Type::void(),
+                        Some(BnTypeError::Function(errors)),
+                    );
                 }
             };
             // TODO create location from `arg_loc`?
@@ -373,8 +423,11 @@ impl TranslateIDBTypes<'_> {
 
         let ty = Type::function(&return_ty, &bn_args, false);
         if is_partial {
-            TranslateTypeResult::PartiallyTranslated(ty)
+            let error = (errors.ret.is_some() || !errors.args.is_empty())
+                .then(|| BnTypeError::Function(errors));
+            TranslateTypeResult::PartiallyTranslated(ty, error)
         } else {
+            assert!(errors.ret.is_none() && errors.args.is_empty());
             TranslateTypeResult::Translated(ty)
         }
     }
@@ -385,8 +438,11 @@ impl TranslateIDBTypes<'_> {
             TranslateTypeResult::Translated(ty) => {
                 TranslateTypeResult::Translated(Type::array(&ty, array.nelem.into()))
             }
-            TranslateTypeResult::PartiallyTranslated(ty) => {
-                TranslateTypeResult::PartiallyTranslated(Type::array(&ty, array.nelem.into()))
+            TranslateTypeResult::PartiallyTranslated(ty, error) => {
+                TranslateTypeResult::PartiallyTranslated(
+                    Type::array(&ty, array.nelem.into()),
+                    error.map(Box::new).map(BnTypeError::Array),
+                )
             }
             TranslateTypeResult::Error(error) => {
                 TranslateTypeResult::Error(BnTypeError::Array(Box::new(error)))
@@ -469,6 +525,7 @@ impl TranslateIDBTypes<'_> {
         let structure = StructureBuilder::new();
         structure.set_alignment(effective_alignment.into());
 
+        let mut errors = vec![];
         let mut first_bitfield_seq = None;
         for (i, member) in members.iter().enumerate() {
             match (&member.member_type, first_bitfield_seq) {
@@ -491,16 +548,17 @@ impl TranslateIDBTypes<'_> {
 
             let mem = match self.translate_type(&member.member_type) {
                 TranslateTypeResult::Translated(ty) => ty,
-                TranslateTypeResult::PartiallyTranslated(partial_ty) => {
+                TranslateTypeResult::PartiallyTranslated(partial_ty, error) => {
                     is_partial = true;
+                    if let Some(error) = error {
+                        errors.push((i, error));
+                    }
                     partial_ty
                 }
                 TranslateTypeResult::NotYet => return TranslateTypeResult::NotYet,
                 TranslateTypeResult::Error(error) => {
-                    return TranslateTypeResult::Error(BnTypeError::StructMember(
-                        Box::new(error),
-                        i,
-                    ))
+                    errors.push((i, error));
+                    return TranslateTypeResult::Error(BnTypeError::Struct(errors));
                 }
             };
             let name = member
@@ -515,8 +573,10 @@ impl TranslateIDBTypes<'_> {
         }
         let bn_ty = Type::structure(&structure.finalize());
         if is_partial {
-            TranslateTypeResult::PartiallyTranslated(bn_ty)
+            let partial_error = (!errors.is_empty()).then_some(BnTypeError::Struct(errors));
+            TranslateTypeResult::PartiallyTranslated(bn_ty, partial_error)
         } else {
+            assert!(errors.is_empty());
             TranslateTypeResult::Translated(bn_ty)
         }
     }
@@ -529,6 +589,7 @@ impl TranslateIDBTypes<'_> {
         let mut is_partial = false;
         let structure = StructureBuilder::new();
         structure.set_structure_type(StructureType::UnionStructureType);
+        let mut errors = vec![];
         for (i, (member_name, member_type)) in members.iter().enumerate() {
             // bitfields can be translated into complete fields
             let mem = match member_type {
@@ -536,14 +597,15 @@ impl TranslateIDBTypes<'_> {
                 member_type => match self.translate_type(member_type) {
                     TranslateTypeResult::Translated(ty) => ty,
                     TranslateTypeResult::Error(error) => {
-                        return TranslateTypeResult::Error(BnTypeError::UnionMember(
-                            Box::new(error),
-                            i,
-                        ))
+                        errors.push((i, error));
+                        return TranslateTypeResult::Error(BnTypeError::Union(errors));
                     }
                     TranslateTypeResult::NotYet => return TranslateTypeResult::NotYet,
-                    TranslateTypeResult::PartiallyTranslated(partial) => {
+                    TranslateTypeResult::PartiallyTranslated(partial, error) => {
                         is_partial = true;
+                        if let Some(error) = error {
+                            errors.push((i, error));
+                        }
                         partial
                     }
                 },
@@ -558,8 +620,10 @@ impl TranslateIDBTypes<'_> {
 
         let bn_ty = Type::structure(&str_ref);
         if is_partial {
-            TranslateTypeResult::PartiallyTranslated(bn_ty)
+            let partial_error = (!errors.is_empty()).then_some(BnTypeError::Struct(errors));
+            TranslateTypeResult::PartiallyTranslated(bn_ty, partial_error)
         } else {
+            assert!(errors.is_empty());
             TranslateTypeResult::Translated(bn_ty)
         }
     }
@@ -715,7 +779,8 @@ fn parse_til_section_info(
                     translator.types[i].ty = result;
                     // if originaly NotKnow and now translated, update the result on bn
                     match &translator.types[i].ty {
-                        TranslateTypeResult::PartiallyTranslated(bn_ty)
+                        // ignore partial errors here, they will be printed below
+                        TranslateTypeResult::PartiallyTranslated(bn_ty, _)
                         | TranslateTypeResult::Translated(bn_ty) => {
                             let name = &translator.types[i].name;
                             let success =
@@ -727,12 +792,15 @@ fn parse_til_section_info(
                         _ => {}
                     }
                 }
-                TranslateTypeResult::PartiallyTranslated(_) => {
+                TranslateTypeResult::PartiallyTranslated(_, None) => {
                     let result = translator.translate_type(&translator.types[i].og_ty.tinfo);
                     did_something |=
-                        !matches!(&result, TranslateTypeResult::PartiallyTranslated(_));
+                        !matches!(&result, TranslateTypeResult::PartiallyTranslated(_, None));
                     translator.types[i].ty = result;
+                    // don't need to add again they will be fixed on the loop below
                 }
+                // if an error was produced, there is no point in try again
+                TranslateTypeResult::PartiallyTranslated(_, Some(_)) => {}
                 // NOTE for now we are just accumulating errors, just try to translate the max number
                 // of types as possible
                 TranslateTypeResult::Error(_) => {}
@@ -760,14 +828,21 @@ fn parse_til_section_info(
     // print any errors
     for ty in &translator.types {
         match &ty.ty {
+            TranslateTypeResult::NotYet => {
+                panic!(
+                    "type could not be processed `{}`: {:#?}",
+                    &ty.name, &ty.og_ty
+                );
+            }
             TranslateTypeResult::Error(error) => {
                 error!("Unable to parse type `{}`: {error}", &ty.name);
             }
-            TranslateTypeResult::NotYet => {
-                error!("Unable to parse type `{}`", &ty.name);
-            }
-            TranslateTypeResult::PartiallyTranslated(_) => {
-                error!("Unable to parse type `{}` correctly", &ty.name);
+            TranslateTypeResult::PartiallyTranslated(_, error) => {
+                if let Some(error) = error {
+                    error!("Unable to parse type `{}` correctly: {error}", &ty.name);
+                } else {
+                    error!("Unable to parse type `{}` correctly", &ty.name);
+                }
             }
             TranslateTypeResult::Translated(_) => {}
         };
@@ -777,7 +852,7 @@ fn parse_til_section_info(
     for ty in &translator.types {
         match &ty.ty {
             TranslateTypeResult::Translated(bn_ty)
-            | TranslateTypeResult::PartiallyTranslated(bn_ty) => {
+            | TranslateTypeResult::PartiallyTranslated(bn_ty, _) => {
                 let success = translator
                     .debug_info
                     .add_type(&ty.name, &bn_ty, &[/* TODO */]);

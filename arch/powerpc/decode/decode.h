@@ -229,50 +229,52 @@ extern "C" {
 
 	enum OperandClass
 	{
-		NONE = 0,
-		UIMM,
-		SIMM,
-		LABEL,
-		MEM_RA,
-		BI,
+		PPC_OP_NONE = 0,
+		PPC_OP_UIMM,
+		PPC_OP_SIMM,
+		PPC_OP_LABEL,
+		PPC_OP_MEM_RA,
+		PPC_OP_BI,
 
-		REG_RA,
-		REG_RB,
-		REG_RD,
-		REG_RS,
-		REG_FRA,
-		REG_FRB,
-		REG_FRC,
-		REG_FRD,
-		REG_FRS,
-		REG_CRFD,
-		REG_CRFS,
-		REG_CRBA,
-		REG_CRBB,
-		REG_CRBD,
+		PPC_OP_REG_RA,
+		PPC_OP_REG_RB,
+		PPC_OP_REG_RD,
+		PPC_OP_REG_RS,
 
-		REG_AV_VA,
-		REG_AV_VB,
-		REG_AV_VC,
-		REG_AV_VD,
-		REG_AV_VS,
+		PPC_OP_REG_FRA,
+		PPC_OP_REG_FRB,
+		PPC_OP_REG_FRC,
+		PPC_OP_REG_FRD,
+		PPC_OP_REG_FRS,
+
+		PPC_OP_REG_CRFD,
+		PPC_OP_REG_CRFS,
+		PPC_OP_REG_CRBA,
+		PPC_OP_REG_CRBB,
+		PPC_OP_REG_CRBD,
+
+		PPC_OP_REG_AV_VA,
+		PPC_OP_REG_AV_VB,
+		PPC_OP_REG_AV_VC,
+		PPC_OP_REG_AV_VD,
+		PPC_OP_REG_AV_VS,
 
 		// DWORD0 means that only the 0th dword is affected, which
 		// has an overlap with floating registers
-		REG_VSX_RA,
-		REG_VSX_RA_DWORD0,
+		PPC_OP_REG_VSX_RA,
+		PPC_OP_REG_VSX_RA_DWORD0,
 
-		REG_VSX_RB,
-		REG_VSX_RB_DWORD0,
+		PPC_OP_REG_VSX_RB,
+		PPC_OP_REG_VSX_RB_DWORD0,
 
-		REG_VSX_RC,
-		REG_VSX_RC_DWORD0,
+		PPC_OP_REG_VSX_RC,
+		PPC_OP_REG_VSX_RC_DWORD0,
 
-		REG_VSX_RD,
-		REG_VSX_RD_DWORD0,
+		PPC_OP_REG_VSX_RD,
+		PPC_OP_REG_VSX_RD_DWORD0,
 
-		REG_VSX_RS,
-		REG_VSX_RS_DWORD0,
+		PPC_OP_REG_VSX_RS,
+		PPC_OP_REG_VSX_RS_DWORD0,
 	};
 
 #ifndef __cplusplus

@@ -111,8 +111,8 @@ where
             let data = BinaryView::from_raw(BNNewViewReference(data));
 
             match view_type.load_settings_for_data(&data) {
-                Ok(settings) => Ref::into_raw(settings).handle,
-                _ => ptr::null_mut() as *mut _,
+                Some(settings) => Ref::into_raw(settings).handle,
+                None => ptr::null_mut() as *mut _,
             }
         })
     }
@@ -156,28 +156,23 @@ where
 pub trait BinaryViewTypeBase: AsRef<BinaryViewType> {
     fn is_valid_for(&self, data: &BinaryView) -> bool;
 
-    fn is_deprecated(&self) -> bool;
+    fn is_deprecated(&self) -> bool {
+        false
+    }
 
-    fn default_load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
+    fn default_load_settings_for_data(&self, data: &BinaryView) -> Option<Ref<Settings>> {
         let settings_handle =
             unsafe { BNGetBinaryViewDefaultLoadSettingsForData(self.as_ref().0, data.handle) };
 
         if settings_handle.is_null() {
-            Err(())
+            None
         } else {
-            unsafe { Ok(Settings::from_raw(settings_handle)) }
+            unsafe { Some(Settings::from_raw(settings_handle)) }
         }
     }
-
-    fn load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
-        let settings_handle =
-            unsafe { BNGetBinaryViewLoadSettingsForData(self.as_ref().0, data.handle) };
-
-        if settings_handle.is_null() {
-            Err(())
-        } else {
-            unsafe { Ok(Settings::from_raw(settings_handle)) }
-        }
+    
+    fn load_settings_for_data(&self, _data: &BinaryView) -> Option<Ref<Settings>> {
+        None
     }
 }
 
@@ -265,24 +260,13 @@ impl BinaryViewTypeBase for BinaryViewType {
         unsafe { BNIsBinaryViewTypeDeprecated(self.0) }
     }
 
-    fn default_load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
-        let settings_handle =
-            unsafe { BNGetBinaryViewDefaultLoadSettingsForData(self.0, data.handle) };
-
-        if settings_handle.is_null() {
-            Err(())
-        } else {
-            unsafe { Ok(Settings::from_raw(settings_handle)) }
-        }
-    }
-
-    fn load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
+    fn load_settings_for_data(&self, data: &BinaryView) -> Option<Ref<Settings>> {
         let settings_handle = unsafe { BNGetBinaryViewLoadSettingsForData(self.0, data.handle) };
 
         if settings_handle.is_null() {
-            Err(())
+            None
         } else {
-            unsafe { Ok(Settings::from_raw(settings_handle)) }
+            unsafe { Some(Settings::from_raw(settings_handle)) }
         }
     }
 }

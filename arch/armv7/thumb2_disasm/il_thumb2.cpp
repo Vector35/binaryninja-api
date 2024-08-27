@@ -1648,34 +1648,58 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 			il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 2)));
 			il.AddInstruction(WriteILOperand(il, instr, 1, ReadILOperand(il, instr, 3)));
 		}
-		if (instr->format->operandCount == 3)
+		else if (instr->format->operandCount == 3)
 		{
 			if (instr->format->operands[2].type == OPERAND_FORMAT_REG_FP)
 			{
+
+				uint32_t RdLo = GetRegisterByIndex(instr->fields[instr->format->operands[0].field0]);
+				uint32_t RdHi = GetRegisterByIndex(instr->fields[instr->format->operands[1].field0]);
+
 				// r3:r2 <- d12
-				il.SetRegisterSplit(
-					4, ReadILOperand(il, instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 3));
+				il.AddInstruction(il.SetRegisterSplit(
+					4, RdHi, RdLo, ReadILOperand(il, instr, 2, 8)));
 			}
 			else
 			{
+				uint32_t Rm = GetRegisterByIndex(instr->fields[instr->format->operands[1].field0]);
+				uint32_t Rn = GetRegisterByIndex(instr->fields[instr->format->operands[2].field0]);
+
 				// d9 <- r1:r0
 				il.AddInstruction(WriteILOperand(
-					il, instr, 0, il.RegisterSplit(8, ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
+					il, instr, 0, il.RegisterSplit(4, Rn, Rm), 8));
 			}
 		}
-		else
+		else /* if (instr->format->operandCount == 2) */
 		{
-			if (instr->format->operands[1].type == OPERAND_FORMAT_IMM64
-				&& strcmp(instr->format->operands[0].prefix, "q") == 0)
-			{
+			if (instr->format->operands[1].type == OPERAND_FORMAT_IMM64 && strcmp(instr->format->operands[0].prefix, "q") == 0)
 				// Load immediate in high and low
 				il.AddInstruction(WriteILOperand(il, instr, 0,
 					il.Or(16, ReadILOperand(il, instr, 1),
-						il.ShiftLeft(16, ReadILOperand(il, instr, 1), il.Const(8, 64)))));
-			}
-			// r2 <= s4
-			// s12 <- r8
-			il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1)));
+						il.ShiftLeft(16, ReadILOperand(il, instr, 1), il.Const(8, 64)), 16)));
+			else
+				// Load immediate or reg -> reg
+				// r2 <= s4
+				// s12 <- r8
+				il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1)));
+			// Note: the code below is more exlicit about the logic, but equivalent to the above:
+			// if (instr->format->operands[1].type == OPERAND_FORMAT_IMM64)
+			// {
+			// 	if (strcmp(instr->format->operands[0].prefix, "q") == 0)
+			// 		// Load immediate in high and low
+			// 		il.AddInstruction(WriteILOperand(il, instr, 0,
+			// 			il.Or(16, ReadILOperand(il, instr, 1),
+			// 				il.ShiftLeft(16, ReadILOperand(il, instr, 1), il.Const(8, 64)), 16)));
+			// 	else
+			// 		// Load immediate
+			// 		il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1)));
+			// }
+			// else
+			// {
+			// 	// r2 <= s4
+			// 	// s12 <- r8
+			// 	il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1)));
+			// }
 		}
 		break;
 	case armv7::ARMV7_VSTMDB:

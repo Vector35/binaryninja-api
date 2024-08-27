@@ -247,6 +247,9 @@ impl BinaryViewTypeBase for SRecViewConstructor {
         let mut first_bytes = [0u8; READ_LEN];
         let read_bytes = data.read(&mut first_bytes, 0);
         let line = String::from_utf8_lossy(&first_bytes[0..read_bytes]);
+        if !line.is_ascii() {
+            return false;
+        }
         let first_record: Result<Record, _> = line.parse();
         // first record need to be and S0
         matches!(first_record, Ok(Record::S0(_)))

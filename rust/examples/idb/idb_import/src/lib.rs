@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use binaryninja::architecture::{Architecture, CoreArchitecture};
+use binaryninja::architecture::CoreArchitecture;
 use binaryninja::binaryninjacore_sys::{BNMemberAccess, BNMemberScope};
 use binaryninja::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser};
@@ -171,7 +171,7 @@ fn parse_idb_info(
     };
     trace!("Parsing the TIL section");
     let til = parser.read_til_section(til_section)?;
-    parse_til_section_info(debug_info, debug_file, &til, progress)
+    parse_til_section_info(debug_info, debug_file, til, progress)
 }
 
 fn translate_enum(members: &[(Option<String>, u64)], bytesize: u64) -> Ref<Type> {
@@ -187,18 +187,18 @@ fn translate_enum(members: &[(Option<String>, u64)], bytesize: u64) -> Ref<Type>
     )
 }
 
-fn translate_basic(mdata: &idb_rs::til::Basic, arch: CoreArchitecture) -> Ref<Type> {
-    match mdata {
+fn translate_basic(mdata: &idb_rs::til::Basic) -> Ref<Type> {
+    match *mdata {
         idb_rs::til::Basic::Void => Type::void(),
         idb_rs::til::Basic::Unknown { bytes } => {
-            if let Some(bytes) = bytes {
-                Type::array(&Type::char(), bytes.get().into())
+            if bytes != 0 {
+                Type::array(&Type::char(), bytes.into())
             } else {
                 Type::void()
             }
         }
         idb_rs::til::Basic::Bool { bytes } => {
-            if let Some(bytes) = bytes {
+            if bytes.get() > 1 {
                 // NOTE Binja don't have any representation for bool other then the default
                 Type::int(bytes.get().into(), false)
             } else {
@@ -211,18 +211,9 @@ fn translate_basic(mdata: &idb_rs::til::Basic, arch: CoreArchitecture) -> Ref<Ty
         idb_rs::til::Basic::Int { bytes, is_signed } => {
             // default into signed
             let is_signed = is_signed.as_ref().copied().unwrap_or(true);
-            let bytes = bytes
-                .map(|x| x.get().into())
-                .unwrap_or_else(|| arch.default_integer_size());
-            Type::int(bytes, is_signed)
+            Type::int(bytes.get().into(), is_signed)
         }
-        idb_rs::til::Basic::Float { bytes } => {
-            // TODO find a beter way to define the default float size
-            let bytes = bytes
-                .map(|x| x.get().into())
-                .unwrap_or_else(|| arch.default_integer_size());
-            Type::float(bytes)
-        }
+        idb_rs::til::Basic::Float { bytes } => Type::float(bytes.get().into()),
     }
 }
 
@@ -239,7 +230,7 @@ fn parse_til_info(
     let file = std::io::BufReader::new(file);
     trace!("Parsing the TIL section");
     let til = idb_rs::TILSection::parse(file)?;
-    parse_til_section_info(debug_info, debug_file, &til, progress)
+    parse_til_section_info(debug_info, debug_file, til, progress)
 }
 
 #[derive(Default)]
@@ -275,11 +266,11 @@ struct TranslatesIDBType<'a> {
 }
 
 struct TranslateIDBTypes<'a> {
+    arch: CoreArchitecture,
     debug_info: &'a mut DebugInfo,
     _debug_file: &'a BinaryView,
-    arch: CoreArchitecture,
     progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
-    _til: &'a TILSection,
+    til: &'a TILSection,
     // note it's mapped 1:1 with the same index from til types.chain(symbols)
     types: Vec<TranslatesIDBType<'a>>,
     // ordinals with index to types
@@ -313,9 +304,16 @@ impl TranslateIDBTypes<'_> {
         match name {
             "Unkown" | "uint8_t" => Some(TranslateTypeResult::Translated(Type::int(1, false))),
             "IUnkown" | "int8_t" => Some(TranslateTypeResult::Translated(Type::int(1, true))),
-            // TODO SHORT changes with ARCH?
-            "SHORT" | "int16_t" => Some(TranslateTypeResult::Translated(Type::int(2, true))),
-            "USHORT" | "uint16_t" => Some(TranslateTypeResult::Translated(Type::int(2, false))),
+            "SHORT" | "USHORT" => Some(TranslateTypeResult::Translated(Type::int(
+                self.til
+                    .sizes
+                    .map(|x| x.size_short.get())
+                    .unwrap_or(2)
+                    .into(),
+                name == "SHORT",
+            ))),
+            "int16_t" => Some(TranslateTypeResult::Translated(Type::int(2, true))),
+            "uint16_t" => Some(TranslateTypeResult::Translated(Type::int(2, false))),
             "int32_t" => Some(TranslateTypeResult::Translated(Type::int(4, true))),
             "uint32_t" => Some(TranslateTypeResult::Translated(Type::int(4, false))),
             "int64_t" => Some(TranslateTypeResult::Translated(Type::int(8, true))),
@@ -632,7 +630,7 @@ impl TranslateIDBTypes<'_> {
         match &ty {
             // types that are always translatable
             idb_rs::til::Type::Basic(meta) => {
-                TranslateTypeResult::Translated(translate_basic(meta, self.arch))
+                TranslateTypeResult::Translated(translate_basic(meta))
             }
             idb_rs::til::Type::Bitfield(bit) => {
                 TranslateTypeResult::Translated(field_from_bytes(bit.nbytes))
@@ -696,7 +694,7 @@ fn field_from_bytes(bytes: i32) -> Ref<Type> {
 fn parse_til_section_info(
     debug_info: &mut DebugInfo,
     debug_file: &BinaryView,
-    til: &TILSection,
+    til: TILSection,
     progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
 ) -> Result<()> {
     let total = til.symbols.len() + til.types.len();
@@ -756,7 +754,7 @@ fn parse_til_section_info(
         _debug_file: debug_file,
         arch: debug_file.default_arch().unwrap(/* TODO */),
         progress,
-        _til: til,
+        til: &til,
         types,
         types_by_ord,
         types_by_name,

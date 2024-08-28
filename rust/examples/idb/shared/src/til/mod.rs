@@ -36,17 +36,19 @@ pub struct TILSection {
     pub symbols: Vec<TILTypeInfo>,
     pub type_ordinal_numbers: Option<u32>,
     pub types: Vec<TILTypeInfo>,
+    pub size_i: NonZeroU8,
+    pub size_b: NonZeroU8,
     pub sizes: Option<TILSizes>,
     pub size_long_double: Option<u8>,
     pub macros: Option<Vec<TILMacro>>,
     pub is_universal: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct TILSizes {
-    pub size_short: u8,
-    pub size_long: u8,
-    pub size_long_long: u8,
+    pub size_short: NonZeroU8,
+    pub size_long: NonZeroU8,
+    pub size_long_long: NonZeroU8,
 }
 
 #[derive(Debug, Clone)]
@@ -57,12 +59,12 @@ pub(crate) struct TILSectionHeader {
     description: String,
     id: u8,
     cm: u8,
-    _size_i: u8,
-    _size_b: u8,
-    size_e: u8,
+    size_enum: u8,
+    size_i: NonZeroU8,
+    size_b: NonZeroU8,
     def_align: u8,
-    size_s_l_ll: Option<(u8, u8, u8)>,
-    size_long_double: Option<u8>,
+    size_s_l_ll: Option<TILSizes>,
+    size_long_double: Option<NonZeroU8>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
@@ -78,7 +80,7 @@ struct TILSectionHeader2 {
     cm: u8,
     size_i: u8,
     size_b: u8,
-    size_e: u8,
+    size_enum: u8,
     def_align: u8,
 }
 
@@ -112,12 +114,6 @@ impl TILSection {
             .then(|| Self::read_macros(&mut *input, &header))
             .transpose()?;
 
-        let sizes = header.size_s_l_ll.map(|(s, l, ll)| TILSizes {
-            size_short: s,
-            size_long: l,
-            size_long_long: ll,
-        });
-
         // TODO verify that is always false?
         let _mod = header.flags.is_mod();
         let _uni = header.flags.is_universal();
@@ -132,9 +128,11 @@ impl TILSection {
             id: header.id,
             cm: header.cm,
             def_align: header.def_align,
-            size_long_double: header.size_long_double,
+            size_long_double: header.size_long_double.map(|x| x.try_into()).transpose()?,
             is_universal: header.flags.is_universal(),
-            sizes,
+            size_b: header.size_b.try_into()?,
+            size_i: header.size_i.try_into()?,
+            sizes: header.size_s_l_ll,
             symbols,
             type_ordinal_numbers,
             types,
@@ -153,15 +151,25 @@ impl TILSection {
         let description = read_string_len_u8(&mut *input)?;
 
         let header2: TILSectionHeader2 = bincode::deserialize_from(&mut *input)?;
-        let size_s_l_ll: Option<(u8, u8, u8)> = header1
+        let size_s_l_ll = header1
             .flags
             .have_size_short_long_longlong()
             .then(|| bincode::deserialize_from(&mut *input))
+            .transpose()?
+            .map(|(s, l, ll): (u8, u8, u8)| -> anyhow::Result<_> {
+                Ok(TILSizes {
+                    size_short: s.try_into()?,
+                    size_long: l.try_into()?,
+                    size_long_long: ll.try_into()?,
+                })
+            })
             .transpose()?;
-        let size_long_double: Option<u8> = header1
+        let size_long_double = header1
             .flags
             .has_size_long_double()
-            .then(|| bincode::deserialize_from(&mut *input))
+            .then(|| bincode::deserialize_from::<_, u8>(&mut *input))
+            .transpose()?
+            .map(|size| size.try_into())
             .transpose()?;
         Ok(TILSectionHeader {
             format: header1.format,
@@ -169,9 +177,9 @@ impl TILSection {
             title,
             description,
             id: header2.id,
-            _size_i: header2.size_i,
-            _size_b: header2.size_b,
-            size_e: header2.size_e,
+            size_enum: header2.size_enum,
+            size_i: header2.size_i.try_into()?,
+            size_b: header2.size_b.try_into()?,
             cm: header2.cm,
             def_align: header2.def_align,
             size_s_l_ll,
@@ -211,9 +219,9 @@ impl TILSection {
         let header2 = TILSectionHeader2 {
             id: header.id,
             cm: header.cm,
-            size_i: header._size_i,
-            size_b: header._size_b,
-            size_e: header.size_e,
+            size_i: header.size_i.get(),
+            size_b: header.size_b.get(),
+            size_enum: header.size_enum,
             def_align: header.def_align,
         };
         bincode::serialize_into(&mut *output, &header1)?;
@@ -222,7 +230,16 @@ impl TILSection {
         bincode::serialize_into(&mut *output, &header2)?;
         header
             .size_s_l_ll
-            .map(|value| bincode::serialize_into(&mut *output, &value))
+            .map(|value| {
+                bincode::serialize_into(
+                    &mut *output,
+                    &(
+                        value.size_short.get(),
+                        value.size_long.get(),
+                        value.size_long_long.get(),
+                    ),
+                )
+            })
             .transpose()?;
         header
             .size_long_double
@@ -456,24 +473,23 @@ pub struct TILTypeInfo {
 }
 
 impl TILTypeInfo {
-    pub(crate) fn read<I: BufRead>(input: &mut I, header: &TILSectionHeader) -> Result<Self> {
+    pub(crate) fn read<I: BufRead>(input: &mut I, til: &TILSectionHeader) -> Result<Self> {
         let flags: u32 = bincode::deserialize_from(&mut *input)?;
         let name = read_c_string(&mut *input)?;
         let is_u64 = (flags >> 31) != 0;
-        let ordinal = match (header.format, is_u64) {
+        let ordinal = match (til.format, is_u64) {
             // formats below 0x12 doesn't have 64 bits ord
             (0..=0x11, _) | (_, false) => bincode::deserialize_from::<_, u32>(&mut *input)?.into(),
             (_, true) => bincode::deserialize_from(&mut *input)?,
         };
-        let tinfo_raw =
-            TypeRaw::read(&mut *input, header).context("parsing `TILTypeInfo::tiinfo`")?;
+        let tinfo_raw = TypeRaw::read(&mut *input, til).context("parsing `TILTypeInfo::tiinfo`")?;
         let _info = read_c_string(&mut *input)?;
         let cmt = read_c_string(&mut *input)?;
         let fields = read_c_string_vec(&mut *input)?;
         let fieldcmts = read_c_string(&mut *input)?;
         let sclass: u8 = bincode::deserialize_from(&mut *input)?;
 
-        let tinfo = Type::new(tinfo_raw, Some(fields))?;
+        let tinfo = Type::new(til, tinfo_raw, Some(fields))?;
 
         Ok(Self {
             _flags: flags,
@@ -500,9 +516,13 @@ pub enum Type {
     Bitfield(Bitfield),
 }
 impl Type {
-    fn new(tinfo_raw: TypeRaw, fields: Option<Vec<String>>) -> Result<Self> {
+    fn new(
+        til: &TILSectionHeader,
+        tinfo_raw: TypeRaw,
+        fields: Option<Vec<String>>,
+    ) -> Result<Self> {
         match tinfo_raw {
-            TypeRaw::Basic(x) => Basic::new(x, fields).map(Type::Basic),
+            TypeRaw::Basic(x) => Basic::new(til, x, fields).map(Type::Basic),
             TypeRaw::Bitfield(x) => {
                 if matches!(fields, Some(f) if !f.is_empty()) {
                     return Err(anyhow!("fields in a Bitfield"));
@@ -515,12 +535,12 @@ impl Type {
                 }
                 Ok(Type::Typedef(x))
             }
-            TypeRaw::Pointer(x) => Pointer::new(x, fields).map(Type::Pointer),
-            TypeRaw::Function(x) => Function::new(x, fields).map(Type::Function),
-            TypeRaw::Array(x) => Array::new(x, fields).map(Type::Array),
-            TypeRaw::Struct(x) => Struct::new(x, fields).map(Type::Struct),
-            TypeRaw::Union(x) => Union::new(x, fields).map(Type::Union),
-            TypeRaw::Enum(x) => Enum::new(x, fields).map(Type::Enum),
+            TypeRaw::Pointer(x) => Pointer::new(til, x, fields).map(Type::Pointer),
+            TypeRaw::Function(x) => Function::new(til, x, fields).map(Type::Function),
+            TypeRaw::Array(x) => Array::new(til, x, fields).map(Type::Array),
+            TypeRaw::Struct(x) => Struct::new(til, x, fields).map(Type::Struct),
+            TypeRaw::Union(x) => Union::new(til, x, fields).map(Type::Union),
+            TypeRaw::Enum(x) => Enum::new(til, x, fields).map(Type::Enum),
         }
     }
 }
@@ -603,27 +623,31 @@ impl TypeRaw {
 #[derive(Debug, Clone, Copy)]
 pub enum Basic {
     Void,
-    // NOTE Unknown with None bytes is NOT the same as Void
+    // NOTE Unknown with 0 bytes is NOT the same as Void
     Unknown {
-        bytes: Option<NonZeroU8>,
+        bytes: u8,
     },
 
     Bool {
-        bytes: Option<NonZeroU8>,
+        bytes: NonZeroU8,
     },
     Char,
     SegReg,
     Int {
-        bytes: Option<NonZeroU8>,
+        bytes: NonZeroU8,
         is_signed: Option<bool>,
     },
     Float {
-        bytes: Option<NonZeroU8>,
+        bytes: NonZeroU8,
     },
 }
 
 impl Basic {
-    fn new(mdata: TypeMetadata, fields: Option<Vec<String>>) -> Result<Self> {
+    fn new(
+        til: &TILSectionHeader,
+        mdata: TypeMetadata,
+        fields: Option<Vec<String>>,
+    ) -> Result<Self> {
         const fn bytes(bytes: u8) -> NonZeroU8 {
             if bytes == 0 {
                 unreachable!()
@@ -641,9 +665,9 @@ impl Basic {
                 let bytes = match btmt {
                     // special case, void
                     BTMT_SIZE0 => return Ok(Self::Void),
-                    BTMT_SIZE12 => Some(bytes(1)),
-                    BTMT_SIZE48 => Some(bytes(4)),
-                    BTMT_SIZE128 => Some(bytes(16)),
+                    BTMT_SIZE12 => 1,
+                    BTMT_SIZE48 => 4,
+                    BTMT_SIZE128 => 16,
                     _ => unreachable!(),
                 };
                 Ok(Self::Unknown { bytes })
@@ -651,9 +675,9 @@ impl Basic {
             BT_UNK => {
                 let bytes = match btmt {
                     BTMT_SIZE0 => return Err(anyhow!("forbidden use of BT_UNK")),
-                    BTMT_SIZE12 => Some(bytes(2)),
-                    BTMT_SIZE48 => Some(bytes(8)),
-                    BTMT_SIZE128 => None,
+                    BTMT_SIZE12 => 2,
+                    BTMT_SIZE48 => 8,
+                    BTMT_SIZE128 => 0,
                     _ => unreachable!(),
                 };
                 Ok(Self::Unknown { bytes })
@@ -675,12 +699,12 @@ impl Basic {
                     _ => unreachable!(),
                 };
                 let bytes = match bt_int {
-                    BT_INT8 => Some(bytes(1)),
-                    BT_INT16 => Some(bytes(2)),
-                    BT_INT32 => Some(bytes(4)),
-                    BT_INT64 => Some(bytes(8)),
-                    BT_INT128 => Some(bytes(16)),
-                    BT_INT => None,
+                    BT_INT8 => bytes(1),
+                    BT_INT16 => bytes(2),
+                    BT_INT32 => bytes(4),
+                    BT_INT64 => bytes(8),
+                    BT_INT128 => bytes(16),
+                    BT_INT => til.size_i,
                     _ => unreachable!(),
                 };
                 Ok(Self::Int { bytes, is_signed })
@@ -688,13 +712,13 @@ impl Basic {
 
             BT_BOOL => {
                 let bytes = match btmt {
-                    BTMT_DEFBOOL => None,
-                    BTMT_BOOL1 => Some(bytes(1)),
-                    BTMT_BOOL4 => Some(bytes(4)),
+                    BTMT_DEFBOOL => til.size_b,
+                    BTMT_BOOL1 => bytes(1),
+                    BTMT_BOOL4 => bytes(4),
                     // TODO get the inf_is_64bit  field
                     //BTMT_BOOL2 if !inf_is_64bit => Some(bytes(2)),
                     //BTMT_BOOL8 if inf_is_64bit => Some(bytes(8)),
-                    BTMT_BOOL8 => Some(bytes(2)), // delete this
+                    BTMT_BOOL8 => bytes(2), // delete this
                     _ => unreachable!(),
                 };
                 Ok(Self::Bool { bytes })
@@ -702,13 +726,13 @@ impl Basic {
 
             BT_FLOAT => {
                 let bytes = match btmt {
-                    BTMT_FLOAT => Some(bytes(4)),
-                    BTMT_DOUBLE => Some(bytes(8)),
-                    BTMT_LNGDBL => None,
+                    BTMT_FLOAT => bytes(4),
+                    BTMT_DOUBLE => bytes(8),
+                    // TODO error if none?
+                    BTMT_LNGDBL => til.size_long_double.unwrap_or(bytes(8)),
                     // TODO find the tbyte_size field
-                    //(BTMT_SPECFLT, Some(bytes)) => Some(bytes),
-                    //(BTMT_SPECFLT, None) => Some(bytes(2)),
-                    BTMT_SPECFLT => Some(bytes(8)), // delete this
+                    //BTMT_SPECFLT if til.tbyte_size() => Some(bytes),
+                    BTMT_SPECFLT => bytes(2),
                     _ => unreachable!(),
                 };
                 Ok(Self::Float { bytes })
@@ -726,11 +750,11 @@ pub struct Pointer {
 }
 
 impl Pointer {
-    fn new(raw: PointerRaw, fields: Option<Vec<String>>) -> Result<Self> {
+    fn new(til: &TILSectionHeader, raw: PointerRaw, fields: Option<Vec<String>>) -> Result<Self> {
         Ok(Self {
-            closure: raw.closure.map(Closure::new).transpose()?,
+            closure: raw.closure.map(|x| Closure::new(til, x)).transpose()?,
             tah: raw.tah,
-            typ: Type::new(*raw.typ, fields).map(Box::new)?,
+            typ: Type::new(til, *raw.typ, fields).map(Box::new)?,
         })
     }
 }
@@ -742,9 +766,9 @@ pub enum Closure {
 }
 
 impl Closure {
-    fn new(raw: ClosureRaw) -> Result<Self> {
+    fn new(til: &TILSectionHeader, raw: ClosureRaw) -> Result<Self> {
         match raw {
-            ClosureRaw::Closure(c) => Type::new(*c, None).map(Box::new).map(Self::Closure),
+            ClosureRaw::Closure(c) => Type::new(til, *c, None).map(Box::new).map(Self::Closure),
             ClosureRaw::PointerBased(p) => Ok(Self::PointerBased(p)),
         }
     }
@@ -804,13 +828,17 @@ pub struct Function {
     pub retloc: Option<ArgLoc>,
 }
 impl Function {
-    fn new(value: FunctionRaw, fields: Option<Vec<String>>) -> Result<Self> {
+    fn new(
+        til: &TILSectionHeader,
+        value: FunctionRaw,
+        fields: Option<Vec<String>>,
+    ) -> Result<Self> {
         let args = associate_field_name_and_member(fields, value.args)
             .context("Function")?
-            .map(|(n, (t, a))| Type::new(t, None).map(|t| (n, t, a)))
+            .map(|(n, (t, a))| Type::new(til, t, None).map(|t| (n, t, a)))
             .collect::<Result<_, _>>()?;
         Ok(Self {
-            ret: Type::new(*value.ret, None).map(Box::new)?,
+            ret: Type::new(til, *value.ret, None).map(Box::new)?,
             args,
             retloc: value.retloc,
         })
@@ -1019,7 +1047,7 @@ pub struct Array {
     pub elem_type: Box<Type>,
 }
 impl Array {
-    fn new(value: ArrayRaw, fields: Option<Vec<String>>) -> Result<Self> {
+    fn new(til: &TILSectionHeader, value: ArrayRaw, fields: Option<Vec<String>>) -> Result<Self> {
         if matches!(&fields, Some(f) if !f.is_empty()) {
             return Err(anyhow!("fields in a Array"));
         }
@@ -1027,7 +1055,7 @@ impl Array {
             base: value.base,
             nelem: value.nelem,
             tah: value.tah,
-            elem_type: Type::new(*value.elem_type, None).map(Box::new)?,
+            elem_type: Type::new(til, *value.elem_type, None).map(Box::new)?,
         })
     }
 }
@@ -1100,7 +1128,7 @@ pub enum Struct {
     },
 }
 impl Struct {
-    fn new(value: StructRaw, fields: Option<Vec<String>>) -> Result<Self> {
+    fn new(til: &TILSectionHeader, value: StructRaw, fields: Option<Vec<String>>) -> Result<Self> {
         match value {
             StructRaw::Ref {
                 ref_type,
@@ -1110,7 +1138,7 @@ impl Struct {
                     return Err(anyhow!("fields in a Ref Struct"));
                 }
                 Ok(Struct::Ref {
-                    ref_type: Type::new(*ref_type, None).map(Box::new)?,
+                    ref_type: Type::new(til, *ref_type, None).map(Box::new)?,
                     taudt_bits,
                 })
             }
@@ -1121,7 +1149,7 @@ impl Struct {
             } => {
                 let members = associate_field_name_and_member(fields, members)
                     .context("Struct")?
-                    .map(|(n, m)| StructMember::new(n, m))
+                    .map(|(n, m)| StructMember::new(til, n, m))
                     .collect::<Result<_, _>>()?;
                 Ok(Struct::NonRef {
                     effective_alignment,
@@ -1186,7 +1214,7 @@ pub enum Union {
     },
 }
 impl Union {
-    fn new(value: UnionRaw, fields: Option<Vec<String>>) -> Result<Self> {
+    fn new(til: &TILSectionHeader, value: UnionRaw, fields: Option<Vec<String>>) -> Result<Self> {
         match value {
             UnionRaw::Ref {
                 ref_type,
@@ -1196,7 +1224,7 @@ impl Union {
                     return Err(anyhow!("fields in a Ref Union"));
                 }
                 Ok(Union::Ref {
-                    ref_type: Type::new(*ref_type, None).map(Box::new)?,
+                    ref_type: Type::new(til, *ref_type, None).map(Box::new)?,
                     taudt_bits,
                 })
             }
@@ -1207,7 +1235,7 @@ impl Union {
             } => {
                 let members = associate_field_name_and_member(fields, members)
                     .context("Union")?
-                    .map(|(n, m)| Type::new(m, None).map(|m| (n, m)))
+                    .map(|(n, m)| Type::new(til, m, None).map(|m| (n, m)))
                     .collect::<Result<_, _>>()?;
                 Ok(Union::NonRef {
                     taudt_bits,
@@ -1275,7 +1303,7 @@ pub enum Enum {
     },
 }
 impl Enum {
-    fn new(value: EnumRaw, fields: Option<Vec<String>>) -> Result<Self> {
+    fn new(til: &TILSectionHeader, value: EnumRaw, fields: Option<Vec<String>>) -> Result<Self> {
         match value {
             EnumRaw::Ref {
                 ref_type,
@@ -1285,7 +1313,7 @@ impl Enum {
                     return Err(anyhow!("fields in a Ref Enum"));
                 }
                 Ok(Enum::Ref {
-                    ref_type: Type::new(*ref_type, None).map(Box::new)?,
+                    ref_type: Type::new(til, *ref_type, None).map(Box::new)?,
                     taenum_bits,
                 })
             }
@@ -1344,7 +1372,7 @@ impl EnumRaw {
         let mut cur: u64 = 0;
         let emsize = bte & flag::tf_enum::BTE_SIZE_MASK;
         let bytesize: u32 = match emsize {
-            0 if header.size_e != 0 => header.size_e.into(),
+            0 if header.size_enum != 0 => header.size_enum.into(),
             0 => return Err(anyhow!("BTE emsize is 0 without header")),
             5 | 6 | 7 => return Err(anyhow!("BTE emsize with reserved values")),
             _ => 1u32 << (emsize - 1),
@@ -1420,10 +1448,10 @@ pub struct StructMember {
 }
 
 impl StructMember {
-    fn new(name: Option<String>, m: StructMemberRaw) -> Result<Self> {
+    fn new(til: &TILSectionHeader, name: Option<String>, m: StructMemberRaw) -> Result<Self> {
         Ok(Self {
             name,
-            member_type: Type::new(m.0, None)?,
+            member_type: Type::new(til, m.0, None)?,
             sdacl: m.1,
         })
     }

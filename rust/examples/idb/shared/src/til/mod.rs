@@ -25,15 +25,28 @@ const TIL_SECTION_MAGIC: &[u8; 6] = b"IDATIL";
 #[derive(Debug, Clone)]
 pub struct TILSection {
     pub format: u32,
-    pub flags: TILSectionFlag,
+    /// short file name (without path and extension)
     pub title: String,
-    pub base: String,
+    /// human readable til description
+    pub description: String,
     pub id: u8,
+    /// information about the target compiler
     pub cm: u8,
     pub def_align: u8,
     pub symbols: Vec<TILTypeInfo>,
     pub type_ordinal_numbers: Option<u32>,
     pub types: Vec<TILTypeInfo>,
+    pub sizes: Option<TILSizes>,
+    pub size_long_double: Option<u8>,
+    pub macros: Option<Vec<TILMacro>>,
+    pub is_universal: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct TILSizes {
+    pub size_short: u8,
+    pub size_long: u8,
+    pub size_long_long: u8,
 }
 
 #[derive(Debug, Clone)]
@@ -41,15 +54,15 @@ pub(crate) struct TILSectionHeader {
     format: u32,
     flags: TILSectionFlag,
     title: String,
-    base: String,
+    description: String,
     id: u8,
     cm: u8,
     _size_i: u8,
     _size_b: u8,
     size_e: u8,
     def_align: u8,
-    _size_s_l_ll: Option<(u8, u8, u8)>,
-    _size_ldbl: Option<u8>,
+    size_s_l_ll: Option<(u8, u8, u8)>,
+    size_long_double: Option<u8>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
@@ -86,33 +99,46 @@ impl TILSection {
 
     fn read_inner<I: BufRead>(input: &mut I) -> Result<Self> {
         let header = Self::read_header(&mut *input)?;
-        let symbols = if header.flags.is_zip() {
-            Self::read_bucket_zip(&mut *input, &header)?
-        } else {
-            Self::read_bucket_normal(&mut *input, &header)?
-        };
+        let symbols = Self::read_bucket(&mut *input, &header)?;
         let type_ordinal_numbers = header
             .flags
-            .is_ord()
+            .has_ordinal()
             .then(|| bincode::deserialize_from(&mut *input))
             .transpose()?;
-        let types = if header.flags.is_zip() {
-            Self::read_bucket_zip(&mut *input, &header)?
-        } else {
-            Self::read_bucket_normal(&mut *input, &header)?
-        };
+        let types = Self::read_bucket(&mut *input, &header)?;
+        let macros = header
+            .flags
+            .has_macro_table()
+            .then(|| Self::read_macros(&mut *input, &header))
+            .transpose()?;
+
+        let sizes = header.size_s_l_ll.map(|(s, l, ll)| TILSizes {
+            size_short: s,
+            size_long: l,
+            size_long_long: ll,
+        });
+
+        // TODO verify that is always false?
+        let _mod = header.flags.is_mod();
+        let _uni = header.flags.is_universal();
+        let _ord = header.flags.has_ordinal();
+        let _ali = header.flags.has_type_aliases();
+        let _stm = header.flags.has_extra_stream();
 
         Ok(TILSection {
             format: header.format,
-            flags: header.flags,
             title: header.title,
-            base: header.base,
+            description: header.description,
             id: header.id,
             cm: header.cm,
             def_align: header.def_align,
+            size_long_double: header.size_long_double,
+            is_universal: header.flags.is_universal(),
+            sizes,
             symbols,
             type_ordinal_numbers,
             types,
+            macros,
         })
     }
 
@@ -124,32 +150,32 @@ impl TILSection {
         );
 
         let title = read_string_len_u8(&mut *input)?;
-        let base = read_string_len_u8(&mut *input)?;
+        let description = read_string_len_u8(&mut *input)?;
 
         let header2: TILSectionHeader2 = bincode::deserialize_from(&mut *input)?;
         let size_s_l_ll: Option<(u8, u8, u8)> = header1
             .flags
-            .is_esi()
+            .have_size_short_long_longlong()
             .then(|| bincode::deserialize_from(&mut *input))
             .transpose()?;
-        let size_ldbl: Option<u8> = header1
+        let size_long_double: Option<u8> = header1
             .flags
-            .size_long_double()
+            .has_size_long_double()
             .then(|| bincode::deserialize_from(&mut *input))
             .transpose()?;
         Ok(TILSectionHeader {
             format: header1.format,
             flags: header1.flags,
             title,
-            base,
+            description,
             id: header2.id,
             _size_i: header2.size_i,
             _size_b: header2.size_b,
             size_e: header2.size_e,
             cm: header2.cm,
             def_align: header2.def_align,
-            _size_s_l_ll: size_s_l_ll,
-            _size_ldbl: size_ldbl,
+            size_s_l_ll,
+            size_long_double,
         })
     }
 
@@ -192,14 +218,14 @@ impl TILSection {
         };
         bincode::serialize_into(&mut *output, &header1)?;
         crate::write_string_len_u8(&mut *output, &header.title)?;
-        crate::write_string_len_u8(&mut *output, &header.base)?;
+        crate::write_string_len_u8(&mut *output, &header.description)?;
         bincode::serialize_into(&mut *output, &header2)?;
         header
-            ._size_s_l_ll
+            .size_s_l_ll
             .map(|value| bincode::serialize_into(&mut *output, &value))
             .transpose()?;
         header
-            ._size_ldbl
+            .size_long_double
             .map(|value| bincode::serialize_into(&mut *output, &value))
             .transpose()?;
 
@@ -214,7 +240,7 @@ impl TILSection {
         Self::decompress_bucket(&mut *input, &mut *output)?;
         let _type_ordinal_numbers: Option<u32> = header
             .flags
-            .is_ord()
+            .has_ordinal()
             .then(|| -> Result<u32> {
                 let result: u32 = bincode::deserialize_from(&mut *input)?;
                 bincode::serialize_into(&mut *output, &result)?;
@@ -223,6 +249,12 @@ impl TILSection {
             .transpose()?;
         // types
         Self::decompress_bucket(&mut *input, &mut *output)?;
+        // macros
+        header
+            .flags
+            .has_macro_table()
+            .then(|| Self::decompress_bucket(&mut *input, &mut *output))
+            .transpose()?;
 
         Ok(())
     }
@@ -245,19 +277,19 @@ impl TILSectionFlag {
         self.0 & flag::TIL_MAC != 0
     }
     /// extended sizeof info (short, long, longlong)
-    pub fn is_esi(&self) -> bool {
+    pub fn have_size_short_long_longlong(&self) -> bool {
         self.0 & flag::TIL_ESI != 0
     }
     /// universal til for any compiler
-    pub fn is_uni(&self) -> bool {
+    pub fn is_universal(&self) -> bool {
         self.0 & flag::TIL_UNI != 0
     }
     /// type ordinal numbers are present
-    pub fn is_ord(&self) -> bool {
+    pub fn has_ordinal(&self) -> bool {
         self.0 & flag::TIL_ORD != 0
     }
     /// type aliases are present
-    pub fn is_ali(&self) -> bool {
+    pub fn has_type_aliases(&self) -> bool {
         self.0 & flag::TIL_ALI != 0
     }
     /// til has been modified, should be saved
@@ -265,11 +297,11 @@ impl TILSectionFlag {
         self.0 & flag::TIL_MOD != 0
     }
     /// til has extra streams
-    pub fn is_stm(&self) -> bool {
+    pub fn has_extra_stream(&self) -> bool {
         self.0 & flag::TIL_STM != 0
     }
     /// sizeof(long double)
-    pub fn size_long_double(&self) -> bool {
+    pub fn has_size_long_double(&self) -> bool {
         self.0 & flag::TIL_SLD != 0
     }
 }
@@ -291,6 +323,17 @@ impl TILSection {
         let (ndefs, len) = Self::read_bucket_header(&mut *input)?;
         let compressed_len = bincode::deserialize_from(&mut *input)?;
         Ok((ndefs, len, compressed_len))
+    }
+
+    fn read_bucket<I: BufRead>(
+        input: &mut I,
+        header: &TILSectionHeader,
+    ) -> Result<Vec<TILTypeInfo>> {
+        if header.flags.is_zip() {
+            Self::read_bucket_zip(&mut *input, &header)
+        } else {
+            Self::read_bucket_normal(&mut *input, &header)
+        }
     }
 
     fn read_bucket_normal<I: BufRead>(
@@ -330,6 +373,49 @@ impl TILSection {
         ensure!(
             compressed_input.limit() == 0,
             "TypeBucket compressed data is smaller then expected"
+        );
+        Ok(type_info)
+    }
+
+    fn read_macros<I: BufRead>(input: &mut I, header: &TILSectionHeader) -> Result<Vec<TILMacro>> {
+        if header.flags.is_zip() {
+            Self::read_macros_zip(&mut *input)
+        } else {
+            Self::read_macros_normal(&mut *input)
+        }
+    }
+
+    fn read_macros_normal<I: BufRead>(input: &mut I) -> Result<Vec<TILMacro>> {
+        let (ndefs, len) = Self::read_bucket_header(&mut *input)?;
+        let mut input = input.take(len.into());
+        let type_info = (0..ndefs)
+            .map(|_| TILMacro::read(&mut input))
+            .collect::<Result<_, _>>()?;
+        ensure!(
+            input.limit() == 0,
+            "TypeBucket macro total data is smaller then expected"
+        );
+        Ok(type_info)
+    }
+
+    fn read_macros_zip<I: BufRead>(input: &mut I) -> Result<Vec<TILMacro>> {
+        let (ndefs, len, compressed_len) = Self::read_bucket_zip_header(&mut *input)?;
+        // make sure the decompressor don't read out-of-bounds
+        let mut compressed_input = input.take(compressed_len.into());
+        let inflate = BufReader::new(flate2::read::ZlibDecoder::new(&mut compressed_input));
+        // make sure only the defined size is decompressed
+        let mut decompressed_input = inflate.take(len.into());
+        let type_info = (0..ndefs.try_into().unwrap())
+            .map(|_| TILMacro::read(&mut decompressed_input))
+            .collect::<Result<Vec<_>, _>>()?;
+        // make sure the input was fully consumed
+        ensure!(
+            decompressed_input.limit() == 0,
+            "TypeBucket macros data is smaller then expected"
+        );
+        ensure!(
+            compressed_input.limit() == 0,
+            "TypeBucket macros compressed data is smaller then expected"
         );
         Ok(type_info)
     }
@@ -1349,6 +1435,22 @@ impl StructMemberRaw {
         let member_type = TypeRaw::read(&mut *input, header)?;
         let sdacl = SDACL::read(&mut *input)?;
         Ok(Self(member_type, sdacl))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TILMacro {
+    pub name: String,
+    pub value: String,
+}
+
+impl TILMacro {
+    fn read<I: BufRead>(input: &mut I) -> Result<Self> {
+        let name = read_c_string(&mut *input)?;
+        // TODO find what this is
+        let _flag: u16 = bincode::deserialize_from(&mut *input)?;
+        let value = read_c_string(&mut *input)?;
+        Ok(Self { name, value })
     }
 }
 

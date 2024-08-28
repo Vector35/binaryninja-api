@@ -1,7 +1,9 @@
 use std::ffi::OsStr;
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::{BufReader, BufWriter, Seek};
 use std::path::{Path, PathBuf};
+
+use anyhow::ensure;
 
 use crate::{IDBParser, IDBSectionCompression, TILSection};
 
@@ -57,7 +59,15 @@ fn parse_til_file(file: &Path) -> anyhow::Result<()> {
     let mut input = BufReader::new(std::fs::File::open(file).unwrap());
     // TODO make a SmartReader
     match TILSection::read(&mut input, IDBSectionCompression::None) {
-        Ok(_til) => Ok(()),
+        Ok(_til) => {
+            let current = input.seek(std::io::SeekFrom::Current(0))?;
+            let end = input.seek(std::io::SeekFrom::End(0))?;
+            ensure!(
+                current == end,
+                "unable to consume the entire TIL file, {current} != {end}"
+            );
+            Ok(())
+        }
         Err(e) => Err(e),
     }
 }

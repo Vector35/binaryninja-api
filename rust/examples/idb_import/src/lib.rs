@@ -190,21 +190,11 @@ fn translate_enum(members: &[(Option<String>, u64)], bytesize: u64) -> Ref<Type>
 fn translate_basic(mdata: &idb_rs::til::Basic) -> Ref<Type> {
     match *mdata {
         idb_rs::til::Basic::Void => Type::void(),
-        idb_rs::til::Basic::Unknown { bytes } => {
-            if bytes != 0 {
-                Type::array(&Type::char(), bytes.into())
-            } else {
-                Type::void()
-            }
-        }
-        idb_rs::til::Basic::Bool { bytes } => {
-            if bytes.get() > 1 {
-                // NOTE Binja don't have any representation for bool other then the default
-                Type::int(bytes.get().into(), false)
-            } else {
-                Type::bool()
-            }
-        }
+        idb_rs::til::Basic::Unknown { bytes: 0 } => Type::void(),
+        idb_rs::til::Basic::Unknown { bytes } => Type::array(&Type::char(), bytes.into()),
+        idb_rs::til::Basic::Bool { bytes } if bytes.get() == 1 => Type::bool(),
+        // NOTE Binja don't have any representation for bool other then the default
+        idb_rs::til::Basic::Bool { bytes } => Type::int(bytes.get().into(), false),
         idb_rs::til::Basic::Char => Type::char(),
         // TODO what exacly is Segment Register?
         idb_rs::til::Basic::SegReg => Type::char(),

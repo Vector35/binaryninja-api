@@ -18217,6 +18217,15 @@ namespace BinaryNinja::Collaboration
 	{
 	public:
 		RemoteFolder(BNRemoteFolder* remoteFolder);
+
+		Ref<ProjectFolder> GetCoreFolder();
+		Ref<RemoteProject> GetProject();
+		Ref<RemoteFolder> GetParent();
+		Ref<Remote> GetRemote();
+		std::string GetId();
+		std::string GetUrl();
+		std::string GetName();
+		std::string GetDescription();
 	};
 
 	class RemoteFile;

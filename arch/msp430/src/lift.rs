@@ -74,9 +74,6 @@ macro_rules! one_operand {
                 .append()
             }
             Operand::Constant(val) => $il.store(2, $il.const_int(2, *val as u64), $op).append(),
-            _ => {
-                unreachable!()
-            }
         };
     };
 }

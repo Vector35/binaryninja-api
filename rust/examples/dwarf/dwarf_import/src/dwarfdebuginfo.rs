@@ -533,15 +533,17 @@ impl DebugInfoBuilder {
             }
 
             if let Some(address) = func.address.as_mut() {
-                let diff = bv.start().overflowing_sub(bv.original_image_base()).0;
-                *address = (*address).overflowing_add(diff).0;  // rebase the address
-                let existing_functions = bv.functions_at(*address);
-                match existing_functions.len().cmp(&1) {
-                    Ordering::Greater => {
-                        warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");
+                let (diff, overflowed) = bv.start().overflowing_sub(bv.original_image_base());
+                if !overflowed {
+                    *address = (*address).overflowing_add(diff).0;  // rebase the address
+                    let existing_functions = bv.functions_at(*address);
+                    match existing_functions.len().cmp(&1) {
+                        Ordering::Greater => {
+                            warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");
+                        }
+                        Ordering::Equal => func.platform = Some(existing_functions.get(0).platform()),
+                        Ordering::Less => {}
                     }
-                    Ordering::Equal => func.platform = Some(existing_functions.get(0).platform()),
-                    Ordering::Less => {}
                 }
             }
         }

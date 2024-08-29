@@ -81,25 +81,47 @@ where
                 actual_parent: &data,
             };
 
-            if let Ok(bv) = view_type.create_custom_view(&data, builder) {
-                // force a leak of the Ref; failure to do this would result
-                // in the refcount going to 0 in the process of returning it
-                // to the core -- we're transferring ownership of the Ref here
-                Ref::into_raw(bv.handle).handle
-            } else {
-                error!("CustomBinaryViewType::create_custom_view returned Err");
-
-                ptr::null_mut()
+            match view_type.create_custom_view(&data, builder) {
+                Ok(bv) => {
+                    // force a leak of the Ref; failure to do this would result
+                    // in the refcount going to 0 in the process of returning it
+                    // to the core -- we're transferring ownership of the Ref here
+                    Ref::into_raw(bv.handle).handle
+                },
+                Err(_) => {
+                    error!("CustomBinaryViewType::create_custom_view returned Err");
+                    ptr::null_mut()
+                }
             }
         })
     }
-
-    #[allow(clippy::extra_unused_type_parameters)] // TODO : This is bad; need to finish this stub
-    extern "C" fn cb_parse<T>(_ctxt: *mut c_void, _data: *mut BNBinaryView) -> *mut BNBinaryView
+    
+    extern "C" fn cb_parse<T>(ctxt: *mut c_void, data: *mut BNBinaryView) -> *mut BNBinaryView
     where
         T: CustomBinaryViewType,
     {
-        ffi_wrap!("BinaryViewTypeBase::parse", ptr::null_mut())
+        ffi_wrap!("BinaryViewTypeBase::parse", unsafe {
+            let view_type = &*(ctxt as *mut T);
+            let data = BinaryView::from_raw(BNNewViewReference(data));
+
+            let builder = CustomViewBuilder {
+                view_type,
+                actual_parent: &data,
+            };
+            
+            match view_type.parse_custom_view(&data, builder) {
+                Ok(bv) => {
+                    // force a leak of the Ref; failure to do this would result
+                    // in the refcount going to 0 in the process of returning it
+                    // to the core -- we're transferring ownership of the Ref here
+                    Ref::into_raw(bv.handle).handle
+                },
+                Err(_) => {
+                    error!("CustomBinaryViewType::parse returned Err");
+                    ptr::null_mut()
+                }
+            }
+        })
     }
 
     extern "C" fn cb_load_settings<T>(ctxt: *mut c_void, data: *mut BNBinaryView) -> *mut BNSettings
@@ -212,6 +234,20 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
 
         unsafe { Ok(BinaryView::from_raw(handle)) }
     }
+
+    fn parse(&self, data: &BinaryView) -> Result<Ref<BinaryView>> {
+        let handle = unsafe { BNParseBinaryViewOfType(self.as_ref().0, data.handle) };
+
+        if handle.is_null() {
+            error!(
+                "failed to parse BinaryView of BinaryViewType '{}'",
+                self.name()
+            );
+            return Err(());
+        }
+
+        unsafe { Ok(BinaryView::from_raw(handle)) }
+    }
 }
 
 impl<T: BinaryViewTypeBase> BinaryViewTypeExt for T {}
@@ -301,6 +337,15 @@ pub trait CustomBinaryViewType: 'static + BinaryViewTypeBase + Sync {
         data: &BinaryView,
         builder: CustomViewBuilder<'builder, Self>,
     ) -> Result<CustomView<'builder>>;
+
+    fn parse_custom_view<'builder>(
+        &self,
+        data: &BinaryView,
+        builder: CustomViewBuilder<'builder, Self>,
+    ) -> Result<CustomView<'builder>> {
+        // TODO: Check to make sure data.type_name is not Self::type_name ?
+        self.create_custom_view(data, builder)
+    }
 }
 
 /// Represents a request from the core to instantiate a custom BinaryView

@@ -16,7 +16,6 @@
 
 pub use binaryninjacore_sys::BNSettingsScope as SettingsScope;
 use binaryninjacore_sys::*;
-use std::iter::FromIterator;
 use std::os::raw::c_char;
 
 use crate::binaryview::BinaryView;
@@ -363,12 +362,9 @@ impl Settings {
         scope: Option<SettingsScope>,
     ) -> bool {
         let key = key.into_bytes_with_nul();
-        let v = Vec::from_iter(value);
-
-        let mut value = vec![];
-        for item in v {
-            value.push(item.into_bytes_with_nul().as_ref().as_ptr() as *const c_char);
-        }
+        let mut list: Vec<_> = value
+            .map(|s| s.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
+            .collect();
 
         let view_handle = match view {
             Some(view) => view.handle,
@@ -387,8 +383,8 @@ impl Settings {
                 std::ptr::null_mut(),
                 scope,
                 key.as_ref().as_ptr() as *mut _,
-                value.as_mut_ptr(),
-                value.len(),
+                list.as_mut_ptr(),
+                list.len(),
             )
         }
     }
@@ -422,6 +418,82 @@ impl Settings {
                 key.as_ref().as_ptr() as *mut _,
                 value.as_ref().as_ptr() as *mut _,
             )
+        }
+    }
+
+    pub fn update_bool_property<S: BnStrCompatible>(&self, key: S, property: S, value: bool) {
+        let key = key.into_bytes_with_nul();
+        let property = property.into_bytes_with_nul();
+        unsafe {
+            BNSettingsUpdateBoolProperty(
+                self.handle,
+                key.as_ref().as_ptr() as *mut _,
+                property.as_ref().as_ptr() as *mut _,
+                value,
+            );
+        }
+    }
+
+    pub fn update_integer_property<S: BnStrCompatible>(&self, key: S, property: S, value: u64) {
+        let key = key.into_bytes_with_nul();
+        let property = property.into_bytes_with_nul();
+        unsafe {
+            BNSettingsUpdateUInt64Property(
+                self.handle,
+                key.as_ref().as_ptr() as *mut _,
+                property.as_ref().as_ptr() as *mut _,
+                value,
+            );
+        }
+    }
+
+    pub fn update_double_property<S: BnStrCompatible>(&self, key: S, property: S, value: f64) {
+        let key = key.into_bytes_with_nul();
+        let property = property.into_bytes_with_nul();
+        unsafe {
+            BNSettingsUpdateDoubleProperty(
+                self.handle,
+                key.as_ref().as_ptr() as *mut _,
+                property.as_ref().as_ptr() as *mut _,
+                value,
+            );
+        }
+    }
+
+    pub fn update_string_property<S: BnStrCompatible>(&self, key: S, property: S, value: S) {
+        let key = key.into_bytes_with_nul();
+        let property = property.into_bytes_with_nul();
+        let value = value.into_bytes_with_nul();
+        unsafe {
+            BNSettingsUpdateStringProperty(
+                self.handle,
+                key.as_ref().as_ptr() as *mut _,
+                property.as_ref().as_ptr() as *mut _,
+                value.as_ref().as_ptr() as *mut _,
+            );
+        }
+    }
+
+    pub fn update_string_list_property<S: BnStrCompatible, I: Iterator<Item = S>>(
+        &self,
+        key: S,
+        property: S,
+        value: I,
+    ) {
+        let key = key.into_bytes_with_nul();
+        let property = property.into_bytes_with_nul();
+        let mut list: Vec<_> = value
+            .map(|s| s.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
+            .collect();
+
+        unsafe {
+            BNSettingsUpdateStringListProperty(
+                self.handle,
+                key.as_ref().as_ptr() as *mut _,
+                property.as_ref().as_ptr() as *mut _,
+                list.as_mut_ptr(),
+                list.len(),
+            );
         }
     }
 

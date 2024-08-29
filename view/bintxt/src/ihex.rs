@@ -3,7 +3,8 @@ use binaryninja::custombinaryview::*;
 use binaryninja::rc::Ref;
 use binaryninja::segment::SegmentBuilder;
 use ihex::Record;
-
+use binaryninja::platform::Platform;
+use binaryninja::settings::Settings;
 use crate::segment_after_address;
 use crate::segment_from_address;
 use crate::sort_and_merge_segments;
@@ -150,6 +151,15 @@ impl BinaryViewTypeBase for IHexViewConstructor {
     fn is_deprecated(&self) -> bool {
         false
     }
+
+    fn load_settings_for_data(&self, data: &BinaryView) -> Option<Ref<Settings>> {
+        self.default_load_settings_for_data(&data).map(|s| {
+            s.update_bool_property("loader.platform", "readOnly", false);
+            s.update_bool_property("loader.imageBase", "readOnly", false);
+            s.update_bool_property("loader.segments", "readOnly", false);
+            s
+        })
+    }
 }
 
 pub struct IHexView {
@@ -206,6 +216,15 @@ unsafe impl CustomBinaryView for IHexView {
                     .contains_code(true),
             );
         }
+        
+        // TODO: Because we detached from the raw view this setting will never be set.
+        let _ = self.core.load_settings(self.type_name()).map(|s| {
+            let platform_name = s.get_string("loader.platform", Some(&self.core), None);
+            if let Some(platform) = Platform::by_name(platform_name) {
+                self.set_default_platform(&platform);
+            }
+        });
+        
         Ok(())
     }
 }

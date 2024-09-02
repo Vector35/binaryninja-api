@@ -18,6 +18,11 @@ static int32_t sign_extend(uint32_t x, unsigned numBits)
 	return (x ^ m) - m;
 }
 
+static void CopyOperand(Operand* dst, const Operand* src)
+{
+	memcpy(dst, src, sizeof *dst);
+}
+
 static Register Gpr(uint32_t value)
 {
 	return NUPPC_REG_GPR0 + value;
@@ -1057,79 +1062,12 @@ static InstructionId Decode0x13(uint32_t word32, uint32_t decodeFlags)
 
 		case 0x020:
 		case 0x021:
-		{
 			// for PowerPC, this is 0x0000f800, but POWER
 			// introduces BH bits
 			if ((word32 & 0x0000e000) != 0)
 				return PPC_ID_INVALID;
 
-			// these are the only values that capstone recognizes
-			// as BLR/BLRL
-			if ((word32 & 0xfffffffe) == 0x4e800020)
-				return PPC_ID_BLRx;
-
-			uint32_t bo = GetBO(word32);
-			uint32_t bi = GetBI(word32);
-
-			// mask away the "y" bit
-			switch (bo & 0x1e)
-			{
-				case 0:  return PPC_ID_BDNZFLRx;
-				case 2:  return PPC_ID_BDZFLRx;
-
-				case 4:
-				case 6:
-					switch (bi & 0x3)
-					{
-						case 0: return PPC_ID_BGELRx;
-						case 1: return PPC_ID_BLELRx;
-						case 2: return PPC_ID_BNELRx;
-						case 3: return PPC_ID_BNSLRx;
-
-						// should be unreachable
-						default: return PPC_ID_BFLRx;
-					}
-
-				case 8:  return PPC_ID_BDNZTLRx;
-				case 10: return PPC_ID_BDZTLRx;
-
-				case 12:
-				case 14:
-					switch (bi & 0x3)
-					{
-						case 0: return PPC_ID_BLTLRx;
-						case 1: return PPC_ID_BGTLRx;
-						case 2: return PPC_ID_BEQLRx;
-						case 3: return PPC_ID_BSOLRx;
-
-						// should be unreachable
-						default: return PPC_ID_BTLRx;
-					}
-
-				// technically these aren't terribly well defined
-				// when BI != 0, since these BOs don't involve
-				// a condition bit to test in BI to test against
-				case 16:
-				case 24:
-					return PPC_ID_BDNZLRx;
-
-				case 18:
-				case 26:
-					return PPC_ID_BDZLRx;
-
-				// these are to match capstone's behavior, but
-				// not super sure why since they seem to match
-				// the "Branch always" part of the BO table
-				case 20:
-				case 28:
-					return PPC_ID_BDNZLRx;
-				case 22:
-				case 30:
-					return PPC_ID_BDZLRx;
-
-				default: return PPC_ID_BCLRx;
-			}
-		}
+			return PPC_ID_BCLRx;
 
 		case 0x024:
 			if ((word32 & 0x03fff800) != 0)
@@ -1205,79 +1143,16 @@ static InstructionId Decode0x13(uint32_t word32, uint32_t decodeFlags)
 
 		case 0x420:
 		case 0x421:
+			// TODO: return invalid when BO[2] == 0 (ie when & 0x00800000 == 0)
+			//       keeping it in makes it easier to compare against capstone
+			//       for now
+
 			// for PowerPC, this is 0x0000f800, but POWER
 			// introduces BH bits
 			if ((word32 & 0x0000e000) != 0)
 				return PPC_ID_INVALID;
 
-			// these are the only values that capstone recognizes
-			// as BLR/BLRL
-			if ((word32 & 0xfffffffe) == 0x4e800420)
-				return PPC_ID_BCTRx;
-
-			uint32_t bo = GetBO(word32);
-			uint32_t bi = GetBI(word32);
-
-			// mask away the "y" bit
-			switch (bo & 0x1e)
-			{
-				case 0:  return PPC_ID_BDNZFCTRx;
-				case 2:  return PPC_ID_BDZFCTRx;
-
-				case 4:
-				case 6:
-					switch (bi & 0x3)
-					{
-						case 0: return PPC_ID_BGECTRx;
-						case 1: return PPC_ID_BLECTRx;
-						case 2: return PPC_ID_BNECTRx;
-						case 3: return PPC_ID_BNSCTRx;
-
-						// should be unreachable
-						default: return PPC_ID_BFCTRx;
-					}
-
-				case 8:  return PPC_ID_BDNZTCTRx;
-				case 10: return PPC_ID_BDZTCTRx;
-
-				case 12:
-				case 14:
-					switch (bi & 0x3)
-					{
-						case 0: return PPC_ID_BLTCTRx;
-						case 1: return PPC_ID_BGTCTRx;
-						case 2: return PPC_ID_BEQCTRx;
-						case 3: return PPC_ID_BSOCTRx;
-
-						// should be unreachable
-						default: return PPC_ID_BTCTRx;
-					}
-
-				// technically these aren't terribly well defined
-				// when BI != 0, since these BOs don't involve
-				// a condition bit to test in BI to test against
-				case 16:
-				case 24:
-					return PPC_ID_BDNZCTRx;
-
-				// these represent "branch always" in the BO field, so it's
-				// not super clear why these disassemble to bdnzctr
-				case 20:
-				case 28:
-					 return PPC_ID_BDNZCTRx;
-
-				case 18:
-				case 22:
-				case 26:
-					return PPC_ID_BDZCTRx;
-
-				// these represent "branch always" in the BO field, so it's
-				// not super clear why these disassemble to bdzctr
-				case 30:
-					return PPC_ID_BDZCTRx;
-
-				default: return PPC_ID_BCCTRx;
-			}
+			return PPC_ID_BCCTRx;
 
 		default:
 			return PPC_ID_INVALID;
@@ -3607,71 +3482,7 @@ static InstructionId Decode(uint32_t word32, uint32_t decodeFlags)
 				return PPC_ID_ADDIS;
 
 		case 0x10:
-		{
-			uint32_t bo = GetBO(word32);
-			uint32_t bi = GetBI(word32);
-
-			// mask away the "y" bit
-			switch (bo & 0x1e)
-			{
-				case 0:  return PPC_ID_BDNZFx;
-				case 2:  return PPC_ID_BDZFx;
-
-				case 4:
-				case 6:
-					switch (bi & 0x3)
-					{
-						case 0: return PPC_ID_BGEx;
-						case 1: return PPC_ID_BLEx;
-						case 2: return PPC_ID_BNEx;
-						case 3: return PPC_ID_BNSx;
-
-						// should be unreachable
-						default: return PPC_ID_BFx;
-					}
-					 
-				case 8:  return PPC_ID_BDNZTx;
-				case 10: return PPC_ID_BDZTx;
-
-				case 12:
-				case 14:
-					switch (bi & 0x3)
-					{
-						case 0: return PPC_ID_BLTx;
-						case 1: return PPC_ID_BGTx;
-						case 2: return PPC_ID_BEQx;
-						case 3: return PPC_ID_BSOx;
-
-						// should be unreachable
-						default: return PPC_ID_BTx;
-					}
-
-				// technically these aren't terribly well defined
-				// when BI != 0, since these BOs don't involve
-				// a condition bit to test in BI to test against
-				case 16:
-				case 24:
-					return PPC_ID_BDNZx;
-
-				// these represent "branch always" in the BO field, so it's
-				// not super clear why these disassemble to bdnz
-				case 20:
-				case 28:
-					 return PPC_ID_BDNZx;
-
-				case 18:
-				case 22:
-				case 26:
-					return PPC_ID_BDZx;
-
-				// these represent "branch always" in the BO field, so it's
-				// not super clear why these disassemble to bdz
-				case 30:
-					return PPC_ID_BDZx;
-
-				default: return PPC_ID_BCx;
-			}
-		}
+			return PPC_ID_BCx;
 
 		case 0x11:
 			if ((word32 & 0x03fff01f) != 2)
@@ -4096,109 +3907,13 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			instruction->flags.lk = word32 & 0x1;
 			instruction->flags.aa = (word32 & 0x2) != 0;
 
+			// not all BCx have hints, but if they don't, then those
+			// hints won't be read by anything anyways
+			FillBranchLikelyHint(instruction, word32);
+
 			PushUIMMValue(instruction, bo);
 			PushUIMMValue(instruction, bi);
 			PushBranchTarget(instruction, address, word32);
-
-			break;
-		}
-
-		case PPC_ID_BDNZFx:
-		case PPC_ID_BDNZTx:
-		case PPC_ID_BDZFx:
-		case PPC_ID_BDZTx:
-		case PPC_ID_BFx:
-		case PPC_ID_BTx:
-		{
-			uint32_t bi = GetBI(word32);
-
-			instruction->flags.lk = word32 & 0x1;
-			instruction->flags.aa = (word32 & 0x2) != 0;
-
-			PushUIMMValue(instruction, bi);
-			PushBranchTarget(instruction, address, word32);
-			break;
-		}
-
-		case PPC_ID_BEQx:
-		case PPC_ID_BGEx:
-		case PPC_ID_BGTx:
-		case PPC_ID_BLEx:
-		case PPC_ID_BLTx:
-		case PPC_ID_BNEx:
-		case PPC_ID_BNSx:
-		case PPC_ID_BSOx:
-		{
-			uint32_t crn = GetBI(word32) >> 2;
-
-			instruction->flags.lk = word32 & 0x1;
-			instruction->flags.aa = (word32 & 0x2) != 0;
-			FillBranchLikelyHint(instruction, word32);
-
-			if (crn != 0)
-				PushRegister(instruction, PPC_OP_REG_CRFS, Crf(crn));
-
-			PushBranchTarget(instruction, address, word32);
-			break;
-		}
-
-		case PPC_ID_BDZx:
-		case PPC_ID_BDNZx:
-			instruction->flags.lk = word32 & 0x1;
-			instruction->flags.aa = (word32 & 0x2) != 0;
-			FillBranchLikelyHint(instruction, word32);
-
-			PushBranchTarget(instruction, address, word32);
-			break;
-
-		case PPC_ID_BDNZFCTRx:
-		case PPC_ID_BDNZFLRx:
-		case PPC_ID_BDNZTCTRx:
-		case PPC_ID_BDNZTLRx:
-		case PPC_ID_BDZFCTRx:
-		case PPC_ID_BDZFLRx:
-		case PPC_ID_BDZTCTRx:
-		case PPC_ID_BDZTLRx:
-			instruction->flags.lk = word32 & 0x1;
-
-			PushUIMMValue(instruction, GetBI(word32));
-			break;
-
-		case PPC_ID_BCTRx:
-		case PPC_ID_BDNZCTRx:
-		case PPC_ID_BDNZLRx:
-		case PPC_ID_BDZCTRx:
-		case PPC_ID_BDZLRx:
-		case PPC_ID_BLRx:
-			// these don't test any conditions, so no operands
-			instruction->flags.lk = word32 & 0x1;
-			FillBranchLikelyHint(instruction, word32);
-			break;
-
-		case PPC_ID_BEQCTRx:
-		case PPC_ID_BEQLRx:
-		case PPC_ID_BGECTRx:
-		case PPC_ID_BGELRx:
-		case PPC_ID_BGTCTRx:
-		case PPC_ID_BGTLRx:
-		case PPC_ID_BLECTRx:
-		case PPC_ID_BLELRx:
-		case PPC_ID_BLTCTRx:
-		case PPC_ID_BLTLRx:
-		case PPC_ID_BNECTRx:
-		case PPC_ID_BNELRx:
-		case PPC_ID_BNSCTRx:
-		case PPC_ID_BNSLRx:
-		case PPC_ID_BSOCTRx:
-		case PPC_ID_BSOLRx:
-		{
-			uint32_t crn = GetBI(word32) >> 2;
-
-			instruction->flags.lk = word32 & 0x1;
-			FillBranchLikelyHint(instruction, word32);
-
-			if (crn != 0)
-				PushRegister(instruction, PPC_OP_REG_CRFS, Crf(crn));
 
 			break;
 		}
@@ -4517,7 +4232,13 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		// conditional branches to registers
 		case PPC_ID_BCLRx:
 		case PPC_ID_BCCTRx:
-			// TODO BO, BI
+			// not all BC<reg>x have hints, but if they don't, then those
+			// hints won't be read by anything anyways
+			FillBranchLikelyHint(instruction, word32);
+
+			PushUIMMValue(instruction, GetBO(word32));
+			PushUIMMValue(instruction, GetBI(word32));
+
 			instruction->flags.lk = word32 & 0x1;
 			break;
 
@@ -5627,23 +5348,17 @@ DEFINE_SUBMNEM_LK(SubMnemBCTRx, "bctr")
 DEFINE_SUBMNEM_LK(SubMnemBCCTRx, "bcctr")
 DEFINE_SUBMNEM_LK(SubMnemBCLRx, "bclr")
 DEFINE_SUBMNEM_AA_LK_HINT(SubMnemBDZx, "bdz")
-DEFINE_SUBMNEM_LK_HINT(SubMnemBDZCTRx, "bdzctr")
 DEFINE_SUBMNEM_LK_HINT(SubMnemBDZLRx, "bdzlr")
 DEFINE_SUBMNEM_AA_LK_HINT(SubMnemBDNZx, "bdnz")
-DEFINE_SUBMNEM_LK_HINT(SubMnemBDNZCTRx, "bdnzctr")
 DEFINE_SUBMNEM_LK_HINT(SubMnemBDNZLRx, "bdnzlr")
 DEFINE_SUBMNEM_AA_LK(SubMnemBDNZFx, "bdnzf")
-DEFINE_SUBMNEM_LK(SubMnemBDNZFCTRx, "bdnzfctr")
 DEFINE_SUBMNEM_LK(SubMnemBDNZFLRx, "bdnzflr")
 DEFINE_SUBMNEM_AA_LK(SubMnemBDNZTx, "bdnzt")
-DEFINE_SUBMNEM_LK(SubMnemBDNZTCTRx, "bdnztctr")
 DEFINE_SUBMNEM_LK(SubMnemBDNZTLRx, "bdnztlr")
 DEFINE_SUBMNEM_AA_LK(SubMnemBDZFx, "bdzf")
-DEFINE_SUBMNEM_LK(SubMnemBDZFCTRx, "bdzfctr")
 DEFINE_SUBMNEM_LK(SubMnemBDZFLRx, "bdzflr")
 DEFINE_SUBMNEM_LK(SubMnemBDFLRx, "bdzlr")
 DEFINE_SUBMNEM_AA_LK(SubMnemBDZTx, "bdzt")
-DEFINE_SUBMNEM_LK(SubMnemBDZTCTRx, "bdztctr")
 DEFINE_SUBMNEM_LK(SubMnemBDZTLRx, "bdztlr")
 DEFINE_SUBMNEM_AA_LK_HINT(SubMnemBEQx, "beq")
 DEFINE_SUBMNEM_LK_HINT(SubMnemBEQCTRx, "beqctr")
@@ -5835,6 +5550,163 @@ static const char* AaLkHintMnemonic(const Instruction* instruction, const char* 
 	return names[4*instruction->flags.branchLikelyHint + 2*instruction->flags.aa + instruction->flags.lk];
 }
 
+void FillBcxOperands(OperandsList* bcx, const Instruction* instruction)
+{
+	memset(bcx, 0, sizeof *bcx);
+
+	if (instruction->id != PPC_ID_BCx)
+		return;
+
+	uint32_t bo = instruction->operands[0].uimm;
+	uint32_t bi = instruction->operands[1].uimm;
+
+	switch (bo & 0x1e)
+	{
+		// copy BI, target
+		case 0:
+		case 2:
+		case 8:
+		case 10:
+			CopyOperand(&bcx->operands[0], &instruction->operands[1]);
+			CopyOperand(&bcx->operands[1], &instruction->operands[2]);
+			bcx->numOperands = 2;
+			break;
+
+		// copy BI, target
+		case 4:
+		case 6:
+		case 12:
+		case 14:
+		{
+			uint32_t crn = bi >> 2;
+
+			bcx->operands[0].cls = PPC_OP_REG_CRFS;
+			bcx->operands[0].reg = Crf(crn);
+			CopyOperand(&bcx->operands[1], &instruction->operands[2]);
+			bcx->numOperands = 2;
+			break;
+		}
+
+		// just copy target
+		case 16:
+		case 18:
+		case 20:
+		case 22:
+		case 24:
+		case 26:
+		case 28:
+		case 30:
+			CopyOperand(&bcx->operands[0], &instruction->operands[2]);
+			bcx->numOperands = 1;
+			break;
+
+		// copy BO, BI, target
+		default:
+			CopyOperand(&bcx->operands[0], &instruction->operands[0]);
+			CopyOperand(&bcx->operands[1], &instruction->operands[1]);
+			CopyOperand(&bcx->operands[2], &instruction->operands[2]);
+			bcx->numOperands = 3;
+
+			break;
+	}
+}
+
+void FillBcctrxOperands(OperandsList* bcctrx, const Instruction* instruction)
+{
+	memset(bcctrx, 0, sizeof *bcctrx);
+
+	if (instruction->id != PPC_ID_BCCTRx)
+		return;
+
+	uint32_t bo = instruction->operands[0].uimm;
+	uint32_t bi = instruction->operands[1].uimm;
+
+	switch (bo & 0x1e)
+	{
+		// copy BI --> crn
+		case 4:
+		case 6:
+		case 12:
+		case 14:
+		{
+			uint32_t crn = bi >> 2;
+
+			bcctrx->operands[0].cls = PPC_OP_REG_CRFS;
+			bcctrx->operands[0].reg = Crf(crn);
+			bcctrx->numOperands = 1;
+			break;
+		}
+
+		// no ops (BCTR, BCTRL)
+		case 20:
+			break;
+
+		// copy BO, BI
+		default:
+			CopyOperand(&bcctrx->operands[0], &instruction->operands[0]);
+			CopyOperand(&bcctrx->operands[1], &instruction->operands[1]);
+			bcctrx->numOperands = 2;
+
+			break;
+	}
+
+}
+
+void FillBclrxOperands(OperandsList* bclrx, const Instruction* instruction)
+{
+	memset(bclrx, 0, sizeof *bclrx);
+
+	if (instruction->id != PPC_ID_BCLRx)
+		return;
+
+	uint32_t bo = instruction->operands[0].uimm;
+	uint32_t bi = instruction->operands[1].uimm;
+
+	switch (bo & 0x1e)
+	{
+		// copy BI
+		case 0:
+		case 2:
+		case 8:
+		case 10:
+			CopyOperand(&bclrx->operands[0], &instruction->operands[1]);
+			bclrx->numOperands = 1;
+			break;
+
+		// copy BI --> crn
+		case 4:
+		case 6:
+		case 12:
+		case 14:
+		{
+			uint32_t crn = bi >> 2;
+
+			bclrx->operands[0].cls = PPC_OP_REG_CRFS;
+			bclrx->operands[0].reg = Crf(crn);
+			bclrx->numOperands = 1;
+			break;
+		}
+
+		// no ops (decrement CTR, compare to 0, but no condition check)
+		case 16:
+		case 18:
+		case 24:
+		case 26:
+
+		// no ops (BLR, BLRL)
+		case 20:
+			break;
+
+		// copy BO, BI
+		default:
+			CopyOperand(&bclrx->operands[0], &instruction->operands[0]);
+			CopyOperand(&bclrx->operands[1], &instruction->operands[1]);
+			bclrx->numOperands = 2;
+
+			break;
+	}
+}
+
 const char* GetMnemonic(const Instruction* instruction)
 {
 	unsigned int index;
@@ -5855,55 +5727,235 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_ANDIS: return "andis.";
 		case PPC_ID_ATTN: return "attn";
 		case PPC_ID_Bx: return AaLkMnemonic(instruction, SubMnemBx);
-		case PPC_ID_BCx: return AaLkMnemonic(instruction, SubMnemBCx);
-		case PPC_ID_BCTRx: return LkMnemonic(instruction, SubMnemBCTRx);
-		case PPC_ID_BCCTRx: return LkMnemonic(instruction, SubMnemBCCTRx);
-		case PPC_ID_BCLRx: return LkMnemonic(instruction, SubMnemBCLRx);
-		case PPC_ID_BDZx: return AaLkHintMnemonic(instruction, SubMnemBDZx);
-		case PPC_ID_BDZCTRx: return LkHintMnemonic(instruction, SubMnemBDZCTRx);
-		case PPC_ID_BDNZx: return AaLkHintMnemonic(instruction, SubMnemBDNZx);
-		case PPC_ID_BDNZCTRx: return LkHintMnemonic(instruction, SubMnemBDNZCTRx);
-		case PPC_ID_BDNZLRx: return LkHintMnemonic(instruction, SubMnemBDNZLRx);
-		case PPC_ID_BDNZFx: return AaLkMnemonic(instruction, SubMnemBDNZFx);
-		case PPC_ID_BDNZFCTRx: return LkMnemonic(instruction, SubMnemBDNZFCTRx);
-		case PPC_ID_BDNZFLRx: return LkMnemonic(instruction, SubMnemBDNZFLRx);
-		case PPC_ID_BDNZTx: return AaLkMnemonic(instruction, SubMnemBDNZTx);
-		case PPC_ID_BDNZTCTRx: return LkMnemonic(instruction, SubMnemBDNZTCTRx);
-		case PPC_ID_BDNZTLRx: return LkMnemonic(instruction, SubMnemBDNZTLRx);
-		case PPC_ID_BDZFx: return AaLkMnemonic(instruction, SubMnemBDZFx);
-		case PPC_ID_BDZFCTRx: return LkMnemonic(instruction, SubMnemBDZFCTRx);
-		case PPC_ID_BDZFLRx: return LkMnemonic(instruction, SubMnemBDZFLRx);
-		case PPC_ID_BDZLRx: return LkHintMnemonic(instruction, SubMnemBDZLRx);
-		case PPC_ID_BDZTx: return AaLkMnemonic(instruction, SubMnemBDZTx);
-		case PPC_ID_BDZTCTRx: return LkMnemonic(instruction, SubMnemBDZTCTRx);
-		case PPC_ID_BDZTLRx: return LkMnemonic(instruction, SubMnemBDZTLRx);
-		case PPC_ID_BEQx: return AaLkHintMnemonic(instruction, SubMnemBEQx);
-		case PPC_ID_BEQLRx: return LkHintMnemonic(instruction, SubMnemBEQLRx);
-		case PPC_ID_BEQCTRx: return LkHintMnemonic(instruction, SubMnemBEQCTRx);
-		case PPC_ID_BFx: return AaLkMnemonic(instruction, SubMnemBFx);
-		case PPC_ID_BGEx: return AaLkHintMnemonic(instruction, SubMnemBGEx);
-		case PPC_ID_BGECTRx: return LkHintMnemonic(instruction, SubMnemBGECTRx);
-		case PPC_ID_BGELRx: return LkHintMnemonic(instruction, SubMnemBGELRx);
-		case PPC_ID_BGTx: return AaLkHintMnemonic(instruction, SubMnemBGTx);
-		case PPC_ID_BGTCTRx: return LkHintMnemonic(instruction, SubMnemBGTCTRx);
-		case PPC_ID_BGTLRx: return LkHintMnemonic(instruction, SubMnemBGTLRx);
-		case PPC_ID_BLEx: return AaLkHintMnemonic(instruction, SubMnemBLEx);
-		case PPC_ID_BLECTRx: return LkHintMnemonic(instruction, SubMnemBLECTRx);
-		case PPC_ID_BLELRx: return LkHintMnemonic(instruction, SubMnemBLELRx);
-		case PPC_ID_BLTx: return AaLkHintMnemonic(instruction, SubMnemBLTx);
-		case PPC_ID_BLTCTRx: return LkHintMnemonic(instruction, SubMnemBLTCTRx);
-		case PPC_ID_BLTLRx: return LkHintMnemonic(instruction, SubMnemBLTLRx);
-		case PPC_ID_BLRx: return LkHintMnemonic(instruction, SubMnemBLRx);
-		case PPC_ID_BNEx: return AaLkHintMnemonic(instruction, SubMnemBNEx);
-		case PPC_ID_BNECTRx: return LkHintMnemonic(instruction, SubMnemBNECTRx);
-		case PPC_ID_BNELRx: return LkHintMnemonic(instruction, SubMnemBNELRx);
-		case PPC_ID_BNSx: return AaLkHintMnemonic(instruction, SubMnemBNSx);
-		case PPC_ID_BNSCTRx: return LkHintMnemonic(instruction, SubMnemBNSCTRx);
-		case PPC_ID_BNSLRx: return LkHintMnemonic(instruction, SubMnemBNSLRx);
-		case PPC_ID_BSOx: return AaLkHintMnemonic(instruction, SubMnemBSOx);
-		case PPC_ID_BSOCTRx: return LkHintMnemonic(instruction, SubMnemBSOCTRx);
-		case PPC_ID_BSOLRx: return LkHintMnemonic(instruction, SubMnemBSOLRx);
-		case PPC_ID_BTx: return AaLkMnemonic(instruction, SubMnemBTx);
+		case PPC_ID_BCx:
+		{
+			uint32_t bo = instruction->operands[0].uimm;
+			uint32_t bi = instruction->operands[1].uimm;
+
+			const char** mnemonics = NULL;
+			const char** mnemonicsHint = NULL;
+
+			// mask away the "y" bit
+			switch (bo & 0x1e)
+			{
+				case 0:
+					mnemonics = SubMnemBDNZFx;
+					break;
+
+				case 2:
+					mnemonics = SubMnemBDZFx;
+					break;
+
+				case 4:
+				case 6:
+					switch (bi & 0x3)
+					{
+						case 0:
+							mnemonicsHint = SubMnemBGEx;
+							break;
+						case 1:
+							mnemonicsHint = SubMnemBLEx;
+							break;
+						case 2:
+							mnemonicsHint = SubMnemBNEx;
+							break;
+						case 3:
+							mnemonicsHint = SubMnemBNSx;
+							break;
+
+						// should be unreachable
+						default:
+							return NULL;
+					}
+
+					break;
+
+				case 8:
+					mnemonics = SubMnemBDNZTx;
+					break;
+
+				case 10:
+					mnemonics = SubMnemBDZTx;
+					break;
+
+				case 12:
+				case 14:
+					switch (bi & 0x3)
+					{
+						case 0:
+						       mnemonicsHint = SubMnemBLTx;
+						       break;
+
+						case 1:
+						       mnemonicsHint = SubMnemBGTx;
+						       break;
+
+						case 2:
+						       mnemonicsHint = SubMnemBEQx;
+						       break;
+
+						case 3:
+						       mnemonicsHint = SubMnemBSOx;
+						       break;
+
+						// should be unreachable
+						default:
+						       return NULL;
+					}
+					break;
+
+				// technically these aren't terribly well defined
+				// when BI != 0, since these BOs don't involve
+				// a condition bit to test in BI to test against
+				case 16:
+				case 24:
+					mnemonicsHint = SubMnemBDNZx;
+					break;
+
+				// these represent "branch always" in the BO field, so it's
+				// not super clear why these disassemble to bdnz
+				case 20:
+				case 28:
+					 mnemonicsHint = SubMnemBDNZx;
+					 break;
+
+				case 18:
+				case 22:
+				case 26:
+					mnemonicsHint = SubMnemBDZx;
+					break;
+
+				// these represent "branch always" in the BO field, so it's
+				// not super clear why these disassemble to bdz
+				case 30:
+					mnemonicsHint = SubMnemBDZx;
+					break;
+
+				default:
+					mnemonics = SubMnemBCx;
+			}
+
+			if (mnemonicsHint)
+				return AaLkHintMnemonic(instruction, mnemonicsHint);
+
+			if (mnemonics)
+				return AaLkMnemonic(instruction, mnemonics);
+
+			// should be unreachable
+			return NULL;
+		}
+
+		case PPC_ID_BCCTRx:
+		{
+			uint32_t bo = instruction->operands[0].uimm;
+			uint32_t bi = instruction->operands[1].uimm;
+
+			// mask away the "y" bit
+			switch (bo & 0x1e)
+			{
+				case 4:
+				case 6:
+					switch (bi & 0x3)
+					{
+						case 0: return LkHintMnemonic(instruction, SubMnemBGECTRx);
+						case 1: return LkHintMnemonic(instruction, SubMnemBLECTRx);
+						case 2: return LkHintMnemonic(instruction, SubMnemBNECTRx);
+						case 3: return LkHintMnemonic(instruction, SubMnemBNSCTRx);
+
+						// should be unreachable
+						default: return NULL;
+					}
+
+					break;
+
+				case 12:
+				case 14:
+					switch (bi & 0x3)
+					{
+						case 0: return LkHintMnemonic(instruction, SubMnemBLTCTRx);
+						case 1: return LkHintMnemonic(instruction, SubMnemBGTCTRx);
+						case 2: return LkHintMnemonic(instruction, SubMnemBEQCTRx);
+						case 3: return LkHintMnemonic(instruction, SubMnemBSOCTRx);
+
+						// should be unreachable
+						default: return NULL;
+					}
+
+					break;
+
+				case 20:
+					return LkMnemonic(instruction, SubMnemBCTRx);
+
+				default:
+					return LkMnemonic(instruction, SubMnemBCCTRx);
+			}
+		}
+
+		case PPC_ID_BCLRx:
+		{
+			uint32_t bo = instruction->operands[0].uimm;
+			uint32_t bi = instruction->operands[1].uimm;
+
+			// mask away the "y" bit
+			switch (bo & 0x1e)
+			{
+				case 0:
+					return LkMnemonic(instruction, SubMnemBDNZFLRx);
+
+				case 2:
+					return LkMnemonic(instruction, SubMnemBDZFLRx);
+
+				case 4:
+				case 6:
+					switch (bi & 0x3)
+					{
+						case 0: return LkHintMnemonic(instruction, SubMnemBGELRx);
+						case 1: return LkHintMnemonic(instruction, SubMnemBLELRx);
+						case 2: return LkHintMnemonic(instruction, SubMnemBNELRx);
+						case 3: return LkHintMnemonic(instruction, SubMnemBNSLRx);
+
+						// should be unreachable
+						default: return NULL;
+					}
+
+				case 8:
+					return LkMnemonic(instruction, SubMnemBDNZTLRx);
+
+				case 10:
+					return LkMnemonic(instruction, SubMnemBDZTLRx);
+
+				case 12:
+				case 14:
+					switch (bi & 0x3)
+					{
+						case 0: return LkHintMnemonic(instruction, SubMnemBLTLRx);
+						case 1: return LkHintMnemonic(instruction, SubMnemBGTLRx);
+						case 2: return LkHintMnemonic(instruction, SubMnemBEQLRx);
+						case 3: return LkHintMnemonic(instruction, SubMnemBSOLRx);
+
+						// should be unreachable
+						default: return NULL;
+					}
+
+				// technically these aren't terribly well defined
+				// when BI != 0, since these BOs don't involve
+				// a condition bit to test in BI to test against
+				case 16:
+				case 24:
+					return LkHintMnemonic(instruction, SubMnemBDNZLRx);
+
+				case 18:
+				case 26:
+					return LkHintMnemonic(instruction, SubMnemBDZLRx);
+
+				case 20:
+					return LkHintMnemonic(instruction, SubMnemBLRx);
+
+				default:
+					return LkMnemonic(instruction, SubMnemBCLRx);
+			}
+		}
+
 		case PPC_ID_CLRLDIx: return RcMnemonic(instruction, SubMnemCLRLDIx);
 		case PPC_ID_CLRLWIx: return RcMnemonic(instruction, SubMnemCLRLWIx);
 		case PPC_ID_CLRRWIx: return RcMnemonic(instruction, SubMnemCLRRWIx);

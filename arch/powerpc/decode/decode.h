@@ -321,6 +321,16 @@ extern "C" {
 	typedef struct Operand Operand;
 #endif
 
+	struct OperandsList
+	{
+		size_t numOperands;
+		Operand operands[8];
+	};
+
+#ifndef __cplusplus
+	typedef struct OperandsList OperandsList;
+#endif
+
 	// trailing lowercase 'x' indicates potential other mnemonics (rc, oe, lk,
 	// etc. bits)
 	enum InstructionId
@@ -344,56 +354,6 @@ extern "C" {
 		PPC_ID_BCx,
 		PPC_ID_BCCTRx,
 		PPC_ID_BCLRx,
-		PPC_ID_BCTRx,
-		PPC_ID_BDZx,
-		PPC_ID_BDZCTRx,
-		PPC_ID_BDZLRx,
-		PPC_ID_BDNZx,
-		PPC_ID_BDNZCTRx,
-		PPC_ID_BDNZLRx,
-		PPC_ID_BDNZFx,
-		PPC_ID_BDNZFCTRx,
-		PPC_ID_BDNZFLRx,
-		PPC_ID_BDNZTx,
-		PPC_ID_BDNZTCTRx,
-		PPC_ID_BDNZTLRx,
-		PPC_ID_BDZFx,
-		PPC_ID_BDZFCTRx,
-		PPC_ID_BDZFLRx,
-		PPC_ID_BDZTx,
-		PPC_ID_BDZTCTRx,
-		PPC_ID_BDZTLRx,
-		PPC_ID_BEQx,
-		PPC_ID_BEQCTRx,
-		PPC_ID_BEQLRx,
-		PPC_ID_BFx,
-		PPC_ID_BFCTRx,
-		PPC_ID_BFLRx,
-		PPC_ID_BGEx,
-		PPC_ID_BGECTRx,
-		PPC_ID_BGELRx,
-		PPC_ID_BGTx,
-		PPC_ID_BGTCTRx,
-		PPC_ID_BGTLRx,
-		PPC_ID_BLEx,
-		PPC_ID_BLECTRx,
-		PPC_ID_BLELRx,
-		PPC_ID_BLTx,
-		PPC_ID_BLTCTRx,
-		PPC_ID_BLTLRx,
-		PPC_ID_BLRx,
-		PPC_ID_BNEx,
-		PPC_ID_BNECTRx,
-		PPC_ID_BNELRx,
-		PPC_ID_BNSx,
-		PPC_ID_BNSCTRx,
-		PPC_ID_BNSLRx,
-		PPC_ID_BSOx,
-		PPC_ID_BSOCTRx,
-		PPC_ID_BSOLRx,
-		PPC_ID_BTx,
-		PPC_ID_BTCTRx,
-		PPC_ID_BTLRx,
 		PPC_ID_CLRLDIx,
 		PPC_ID_CLRLWIx,
 		PPC_ID_CLRRWIx,
@@ -1151,6 +1111,9 @@ extern "C" {
 #endif
 
 	bool Decompose(Instruction* instruction, uint32_t word32, uint64_t address, uint32_t flags);
+	void FillBcxOperands(OperandsList* bcx, const Instruction* instruction);
+	void FillBcctrxOperands(OperandsList* bcctrx, const Instruction* instruction);
+	void FillBclrxOperands(OperandsList* bclrx, const Instruction* instruction);
 	const char* GetMnemonic(const Instruction* instruction);
 
 #ifdef __cplusplus

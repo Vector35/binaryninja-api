@@ -56,11 +56,13 @@ pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Res
         return Err(());
     }
 
-    let names = unsafe { Array::<BnString>::new(out_name, out_size, ()) }
+    let core_names =  unsafe { Array::<BnString>::new(out_name, out_size, ()) };
+    let names = core_names
         .iter()
-        .map(|name| name.to_string())
+        .map(BnString::to_string)
         .collect();
-
+    std::mem::forget(core_names);
+    // SAFETY: We already forgot `core_names` above.
     unsafe { BNFreeDemangledName(&mut out_name, out_size) };
 
     Ok(names)
@@ -111,11 +113,13 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
         return Err(());
     }
 
-    let names = unsafe { Array::<BnString>::new(out_name, out_size, ()) }
+    let core_names =  unsafe { Array::<BnString>::new(out_name, out_size, ()) };
+    let names = core_names
         .iter()
-        .map(|name| name.to_string())
+        .map(BnString::to_string)
         .collect();
-
+    std::mem::forget(core_names);
+    // SAFETY: We already forgot `core_names` above.
     unsafe { BNFreeDemangledName(&mut out_name, out_size) };
 
     Ok((out_type, names))
@@ -167,11 +171,13 @@ pub fn demangle_ms<S: BnStrCompatible>(
         return Err(());
     }
 
-    let names = unsafe { Array::<BnString>::new(out_name, out_size, ()) }
+    let core_names =  unsafe { Array::<BnString>::new(out_name, out_size, ()) };
+    let names = core_names
         .iter()
-        .map(|name| name.to_string())
+        .map(BnString::to_string)
         .collect();
-
+    std::mem::forget(core_names);
+    // SAFETY: We already forgot `core_names` above.
     unsafe { BNFreeDemangledName(&mut out_name, out_size) };
 
     Ok((out_type, names))

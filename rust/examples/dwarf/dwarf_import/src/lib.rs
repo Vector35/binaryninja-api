@@ -322,11 +322,15 @@ fn parse_eh_frame<R: Reader>(
                     return Ok(cie_data_offsets);
                 }
 
-                // Store CIE offset for FDE range
-                cie_data_offsets.insert(
-                    fde.initial_address()..fde.initial_address()+fde.len(),
-                    fde.cie().data_alignment_factor()
-                );
+                if fde.initial_address().overflowing_add(fde.len()).1 {
+                    warn!("FDE at offset {:?} exceeds bounds of memory space! {:#x} + length {:#x}", fde.offset(), fde.initial_address(), fde.len());
+                } else {
+                    // Store CIE offset for FDE range
+                    cie_data_offsets.insert(
+                        fde.initial_address()..fde.initial_address() + fde.len(),
+                        fde.cie().data_alignment_factor(),
+                    );
+                }
             }
         }
     }

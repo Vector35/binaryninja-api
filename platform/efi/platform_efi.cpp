@@ -245,7 +245,7 @@ extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
 
-#ifndef DEMO_VERSION
+#ifndef DEMO_EDITION
 	BINARYNINJAPLUGIN void CorePluginDependencies()
 	{
 		AddOptionalPluginDependency("arch_x86");
@@ -255,7 +255,7 @@ extern "C"
 	}
 #endif
 
-#ifdef DEMO_VERSION
+#ifdef DEMO_EDITION
 	bool EFIPluginInit()
 #else
 	BINARYNINJAPLUGIN bool CorePluginInit()

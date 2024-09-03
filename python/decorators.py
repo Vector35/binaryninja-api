@@ -14,7 +14,7 @@ def passive(cls):
 
 def enterprise(cls):
 	enterprise_note = '''
-	.. note: This object is only available in the Enterprise edition of Binary Ninja.
+	.. note: This object is only available in the Ultimate edition of Binary Ninja.
 '''
 
 	if hasattr(cls, "__doc__") and cls.__doc__:

@@ -2456,7 +2456,7 @@ extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
 
-#ifndef DEMO_VERSION
+#ifndef DEMO_EDITION
 	BINARYNINJAPLUGIN void CorePluginDependencies()
 	{
 		AddOptionalPluginDependency("view_elf");

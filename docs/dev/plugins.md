@@ -33,7 +33,7 @@ The [`add_repository`](https://api.binary.ninja/binaryninja.pluginmanager-module
 
 ### Testing
 
-It's useful to be able to reload your plugin during testing. On the Commercial edition of Binary Ninja, this is easily accomplished with a stand-alone headless install using `import binaryninja` after [installing the API](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/install_api.py).  (install_api.py is included in each platforms respective [installation folder](../guide/index.md#binary-path))
+It's useful to be able to reload your plugin during testing. On the Commercial or Ultimate editions of Binary Ninja, this is easily accomplished with a stand-alone headless install using `import binaryninja` after [installing the API](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/install_api.py).  (install_api.py is included in each platforms respective [installation folder](../guide/index.md#binary-path))
 
 Additionally, some plugin types like Architectures or BinaryViews are only loaded at launch and cannot be reloaded during a running session.
 
@@ -49,7 +49,7 @@ Then just `[UP] [ENTER]` to trigger the reload when the plugin has changed.
 
 ## Writing plugins using other IDEs (tab completion)
 
-Even though non-commercial licenses don't have headless automation, the [install API](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/install_api.py) script (which is included in the installation directory) allows you to add the binaryninja module to your python environment. Once you do that, you should get automatic completion in any editor that supports it even on non-commercial! Of course, on commercial and enterprise installations, the script is even more useful, allowing for headless scripts with your existing python interpreter.
+Even though non-commercial licenses don't have headless automation, the [install API](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/install_api.py) script (which is included in the installation directory) allows you to add the binaryninja module to your python environment. Once you do that, you should get automatic completion in any editor that supports it even on non-commercial! Of course, on Commercial and Ultimate installations, the script is even more useful, allowing for headless scripts with your existing python interpreter.
 
 ## Debugging using other IDEs
 

@@ -1767,7 +1767,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			string archName = UniversalViewType::ArchitectureToString(m_archId, 0, is64Bit);
 			if (!archName.empty())
 			{
-				#ifdef DEMO_VERSION
+				#ifdef DEMO_EDITION
 				if ((archName == "arm64")			/* MACHO_CPU_TYPE_ARM64 */
 					|| (archName == "arm64v8")
 					|| (archName == "arm64e")
@@ -3961,7 +3961,7 @@ extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
 
-#ifdef DEMO_VERSION
+#ifdef DEMO_EDITION
 	bool MachoPluginInit()
 #else
 	BINARYNINJAPLUGIN bool CorePluginInit()

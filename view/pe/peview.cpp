@@ -629,7 +629,7 @@ bool PEView::Init()
 				m_logger->LogError("Support for PE architecture 'x86_64' is not present");
 				break;
 			case 0xaa64:
-				#ifndef DEMO_VERSION
+				#ifndef DEMO_EDITION
 				m_logger->LogError("Support for PE architecture 'arm64' is not present");
 				#else
 				m_logger->LogError("Binary Ninja free does not support PE architecture 'arm64'. "
@@ -3141,7 +3141,7 @@ extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
 
-#ifdef DEMO_VERSION
+#ifdef DEMO_EDITION
 	bool PEPluginInit()
 #else
 	BINARYNINJAPLUGIN bool CorePluginInit()

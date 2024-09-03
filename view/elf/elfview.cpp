@@ -695,7 +695,7 @@ bool ElfView::Init()
 			m_logger->LogError("Support for ELF architecture 'x86' is not present");
 			break;
 		case 8:
-			#ifndef DEMO_VERSION
+			#ifndef DEMO_EDITION
 			m_logger->LogError("Support for ELF architecture 'mips' is not present");
 			#else
 			m_logger->LogError("Binary Ninja free does not support ELF architecture 'mips'. "
@@ -703,7 +703,7 @@ bool ElfView::Init()
 			#endif
 			break;
 		case 20:
-			#ifndef DEMO_VERSION
+			#ifndef DEMO_EDITION
 			m_logger->LogError("Support for ELF architecture 'ppc' is not present");
 			#else
 			m_logger->LogError("Binary Ninja free does not support ELF architecture 'ppc'. "
@@ -711,7 +711,7 @@ bool ElfView::Init()
 			#endif
 			break;
 		case 21:
-			#ifndef DEMO_VERSION
+			#ifndef DEMO_EDITION
 			m_logger->LogError("Support for ELF architecture 'ppc64' is not present");
 			#else
 			m_logger->LogError("Binary Ninja free does not support ELF architecture 'ppc64'. "
@@ -725,7 +725,7 @@ bool ElfView::Init()
 			m_logger->LogError("Support for ELF architecture 'x86_64' is not present");
 			break;
 		case 183:
-			#ifndef DEMO_VERSION
+			#ifndef DEMO_EDITION
 			m_logger->LogError("Support for ELF architecture 'arm64' is not present");
 			#else
 			m_logger->LogError("Binary Ninja free does not support ELF architecture 'arm64'. "
@@ -2888,7 +2888,7 @@ extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
 
-#ifdef DEMO_VERSION
+#ifdef DEMO_EDITION
 	bool ElfPluginInit()
 #else
 	BINARYNINJAPLUGIN bool CorePluginInit()

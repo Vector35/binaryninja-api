@@ -23,7 +23,7 @@
 	#endif
 #else
 	#ifdef _MSC_VER
-		#ifndef DEMO_VERSION
+		#ifndef DEMO_EDITION
 			#ifdef BINARYNINJAUI_LIBRARY
 				#define BINARYNINJAUIAPI __declspec(dllexport)
 			#else
@@ -43,7 +43,7 @@
 
 // The BN_DECLARE_UI_ABI_VERSION must be included in native UI plugin modules. If
 // the ABI version is not declared, the UI will not load the plugin.
-#ifdef DEMO_VERSION
+#ifdef DEMO_EDITION
 	#define BN_DECLARE_UI_ABI_VERSION
 #else
 	#define BN_DECLARE_UI_ABI_VERSION \

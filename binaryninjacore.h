@@ -55,7 +55,7 @@
 	#define BINARYNINJAPLUGIN __attribute__((visibility("default")))
 #else
 	#ifdef _MSC_VER
-		#ifndef DEMO_VERSION
+		#ifndef DEMO_EDITION
 			#ifdef BINARYNINJACORE_LIBRARY
 				#define BINARYNINJACOREAPI __declspec(dllexport)
 			#else
@@ -143,7 +143,7 @@
 
 // The BN_DECLARE_CORE_ABI_VERSION must be included in native plugin modules. If
 // the ABI version is not declared, the core will not load the plugin.
-#ifdef DEMO_VERSION
+#ifdef DEMO_EDITION
 	#define BN_DECLARE_CORE_ABI_VERSION
 #else
 	#ifdef __cplusplus

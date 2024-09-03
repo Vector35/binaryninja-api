@@ -3229,7 +3229,7 @@ extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
 
-#ifndef DEMO_VERSION
+#ifndef DEMO_EDITION
 	BINARYNINJAPLUGIN void CorePluginDependencies()
 	{
 		AddOptionalPluginDependency("view_elf");
@@ -3238,7 +3238,7 @@ extern "C"
 	}
 #endif
 
-#ifdef DEMO_VERSION
+#ifdef DEMO_EDITION
 	bool ARMv7PluginInit()
 #else
 	BINARYNINJAPLUGIN bool CorePluginInit()

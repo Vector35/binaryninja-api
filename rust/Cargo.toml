@@ -9,7 +9,6 @@ rust-version = "1.80.0"
 noexports = []
 
 [dependencies]
-lazy_static = "1.4.0"
 log = "0.4"
 rayon = { version = "1.8", optional = true }
 binaryninjacore-sys = { path = "binaryninjacore-sys" }

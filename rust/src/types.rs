@@ -31,8 +31,6 @@ use crate::{
     symbol::Symbol,
 };
 
-use lazy_static::lazy_static;
-use std::ptr::null_mut;
 use std::{
     borrow::{Borrow, Cow},
     collections::{HashMap, HashSet},
@@ -44,7 +42,7 @@ use std::{
     ops::Range,
     os::raw::c_char,
     ptr, result, slice,
-    sync::Mutex,
+    sync::LazyLock,
 };
 
 pub type Result<R> = result::Result<R, ()>;
@@ -1232,77 +1230,71 @@ impl fmt::Display for Type {
     }
 }
 
-lazy_static! {
-    static ref TYPE_DEBUG_BV: Mutex<Option<Ref<BinaryView>>> =
-        Mutex::new(BinaryView::from_data(&FileMetadata::new(), &[]).ok());
-}
+static TYPE_DEBUG_BV: LazyLock<Option<Ref<BinaryView>>> =
+    LazyLock::new(|| BinaryView::from_data(&FileMetadata::new(), &[]).ok());
 
 impl fmt::Debug for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Ok(lock) = TYPE_DEBUG_BV.lock() {
-            if let Some(bv) = &*lock {
-                let container = unsafe { BNGetAnalysisTypeContainer(bv.handle) };
+        let Some(bv) = &*TYPE_DEBUG_BV else {
+            return Err(fmt::Error);
+        };
 
-                let printer = if f.alternate() {
-                    unsafe { BNGetTypePrinterByName(c"_DebugTypePrinter".as_ptr()) }
-                } else {
-                    unsafe { BNGetTypePrinterByName(c"CoreTypePrinter".as_ptr()) }
-                };
-                if printer.is_null() {
-                    return Err(fmt::Error);
-                }
+        let container = unsafe { BNGetAnalysisTypeContainer(bv.handle) };
 
-                let mut name = QualifiedName::from("");
+        let printer = if f.alternate() {
+            unsafe { BNGetTypePrinterByName(c"_DebugTypePrinter".as_ptr()) }
+        } else {
+            unsafe { BNGetTypePrinterByName(c"CoreTypePrinter".as_ptr()) }
+        };
+        if printer.is_null() {
+            return Err(fmt::Error);
+        }
 
-                let mut lines: *mut BNTypeDefinitionLine = null_mut();
-                let mut count: usize = 0;
+        let mut name = QualifiedName::from("");
 
-                unsafe {
-                    BNGetTypePrinterTypeLines(
-                        printer,
-                        self.handle,
-                        container,
-                        &mut name.0,
-                        64,
-                        false,
-                        BNTokenEscapingType::NoTokenEscapingType,
-                        &mut lines,
-                        &mut count,
-                    )
-                };
-                unsafe {
-                    BNFreeTypeContainer(container);
-                }
+        let mut lines = ptr::null_mut();
+        let mut count = 0;
 
-                if lines.is_null() {
-                    return Err(fmt::Error);
-                }
+        unsafe {
+            BNGetTypePrinterTypeLines(
+                printer,
+                self.handle,
+                container,
+                &mut name.0,
+                64,
+                false,
+                BNTokenEscapingType::NoTokenEscapingType,
+                &mut lines,
+                &mut count,
+            )
+        };
+        unsafe {
+            BNFreeTypeContainer(container);
+        }
 
-                let line_slice: &[BNTypeDefinitionLine] =
-                    unsafe { slice::from_raw_parts(lines, count) };
+        if lines.is_null() {
+            return Err(fmt::Error);
+        }
 
-                for (i, line) in line_slice.iter().enumerate() {
-                    if i > 0 {
-                        writeln!(f)?;
-                    }
+        let line_slice = unsafe { slice::from_raw_parts(lines, count) };
 
-                    let tokens: &[BNInstructionTextToken] =
-                        unsafe { slice::from_raw_parts(line.tokens, line.count) };
+        for (i, line) in line_slice.iter().enumerate() {
+            if i > 0 {
+                writeln!(f)?;
+            }
 
-                    for token in tokens {
-                        let text: *const c_char = token.text;
-                        let str = unsafe { CStr::from_ptr(text) };
-                        write!(f, "{}", str.to_string_lossy())?;
-                    }
-                }
+            let tokens = unsafe { slice::from_raw_parts(line.tokens, line.count) };
 
-                unsafe {
-                    BNFreeTypeDefinitionLineList(lines, count);
-                }
-                return Ok(());
+            for token in tokens {
+                let text = unsafe { CStr::from_ptr(token.text) };
+                write!(f, "{}", text.to_string_lossy())?;
             }
         }
-        Err(fmt::Error)
+
+        unsafe {
+            BNFreeTypeDefinitionLineList(lines, count);
+        }
+        Ok(())
     }
 }
 

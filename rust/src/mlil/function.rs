@@ -1,5 +1,4 @@
 use core::hash::{Hash, Hasher};
-use std::ffi::c_char;
 
 use binaryninjacore_sys::*;
 
@@ -9,7 +8,7 @@ use crate::disassembly::DisassemblySettings;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, Location};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
-use crate::string::BnStrCompatible;
+use crate::string::AsCStr;
 use crate::types::{
     Conf, MediumLevelILSSAVariable, PossibleValueSet, RegisterValue, SSAVariable, Type,
     UserVariableValues, Variable,
@@ -119,21 +118,20 @@ impl MediumLevelILFunction {
         }
     }
 
-    pub fn create_user_stack_var<'a, S: BnStrCompatible, C: Into<Conf<&'a Type>>>(
+    pub fn create_user_stack_var<'a, C: Into<Conf<&'a Type>>>(
         self,
         offset: i64,
         var_type: C,
-        name: S,
+        name: impl AsCStr,
     ) {
         let var_type = var_type.into();
         let mut raw_var_type: BNTypeWithConfidence = var_type.into();
-        let name = name.into_bytes_with_nul();
         unsafe {
             BNCreateUserStackVariable(
                 self.get_function().handle,
                 offset,
                 &mut raw_var_type,
-                name.as_ref().as_ptr() as *const c_char,
+                name.as_cstr().as_ptr(),
             )
         }
     }
@@ -142,22 +140,21 @@ impl MediumLevelILFunction {
         unsafe { BNDeleteUserStackVariable(self.get_function().handle, offset) }
     }
 
-    pub fn create_user_var<'a, S: BnStrCompatible, C: Into<Conf<&'a Type>>>(
+    pub fn create_user_var<'a, C: Into<Conf<&'a Type>>>(
         &self,
         var: &Variable,
         var_type: C,
-        name: S,
+        name: impl AsCStr,
         ignore_disjoint_uses: bool,
     ) {
         let var_type = var_type.into();
         let raw_var_type: BNTypeWithConfidence = var_type.into();
-        let name = name.into_bytes_with_nul();
         unsafe {
             BNCreateUserVariable(
                 self.get_function().handle,
                 &var.raw(),
                 &raw_var_type as *const _ as *mut _,
-                name.as_ref().as_ptr() as *const _,
+                name.as_cstr().as_ptr(),
                 ignore_disjoint_uses,
             )
         }
@@ -261,22 +258,20 @@ impl MediumLevelILFunction {
         Ok(())
     }
 
-    pub fn create_auto_stack_var<'a, T: Into<Conf<&'a Type>>, S: BnStrCompatible>(
+    pub fn create_auto_stack_var<'a, T: Into<Conf<&'a Type>>>(
         &self,
         offset: i64,
         var_type: T,
-        name: S,
+        name: impl AsCStr,
     ) {
         let var_type: Conf<&Type> = var_type.into();
         let mut var_type = var_type.into();
-        let name = name.into_bytes_with_nul();
-        let name_c_str = name.as_ref();
         unsafe {
             BNCreateAutoStackVariable(
                 self.get_function().handle,
                 offset,
                 &mut var_type,
-                name_c_str.as_ptr() as *const c_char,
+                name.as_cstr().as_ptr(),
             )
         }
     }
@@ -285,23 +280,21 @@ impl MediumLevelILFunction {
         unsafe { BNDeleteAutoStackVariable(self.get_function().handle, offset) }
     }
 
-    pub fn create_auto_var<'a, S: BnStrCompatible, C: Into<Conf<&'a Type>>>(
+    pub fn create_auto_var<'a, C: Into<Conf<&'a Type>>>(
         &self,
         var: &Variable,
         var_type: C,
-        name: S,
+        name: impl AsCStr,
         ignore_disjoint_uses: bool,
     ) {
         let var_type: Conf<&Type> = var_type.into();
         let mut var_type = var_type.into();
-        let name = name.into_bytes_with_nul();
-        let name_c_str = name.as_ref();
         unsafe {
             BNCreateAutoVariable(
                 self.get_function().handle,
                 &var.raw(),
                 &mut var_type,
-                name_c_str.as_ptr() as *const c_char,
+                name.as_cstr().as_ptr(),
                 ignore_disjoint_uses,
             )
         }

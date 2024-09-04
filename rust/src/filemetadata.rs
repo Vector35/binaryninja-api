@@ -73,7 +73,7 @@ impl FileMetadata {
         }
     }
 
-    pub fn with_filename<S: BnStrCompatible>(name: S) -> Ref<Self> {
+    pub fn with_filename(name: impl AsCStr) -> Ref<Self> {
         let ret = FileMetadata::new();
         ret.set_filename(name);
         ret
@@ -92,12 +92,8 @@ impl FileMetadata {
         }
     }
 
-    pub fn set_filename<S: BnStrCompatible>(&self, name: S) {
-        let name = name.into_bytes_with_nul();
-
-        unsafe {
-            BNSetFilename(self.handle, name.as_ref().as_ptr() as *mut _);
-        }
+    pub fn set_filename(&self, name: impl AsCStr) {
+        unsafe { BNSetFilename(self.handle, name.as_cstr().as_ptr()) }
     }
 
     pub fn modified(&self) -> bool {
@@ -120,10 +116,8 @@ impl FileMetadata {
         unsafe { BNIsAnalysisChanged(self.handle) }
     }
 
-    pub fn is_database_backed<S: BnStrCompatible>(&self, view_type: S) -> bool {
-        let view_type = view_type.into_bytes_with_nul();
-
-        unsafe { BNIsBackedByDatabase(self.handle, view_type.as_ref().as_ptr() as *const _) }
+    pub fn is_database_backed(&self, view_type: impl AsCStr) -> bool {
+        unsafe { BNIsBackedByDatabase(self.handle, view_type.as_cstr().as_ptr()) }
     }
 
     pub fn run_undoable_transaction<F: FnOnce() -> Result<T, E>, T, E>(
@@ -148,18 +142,12 @@ impl FileMetadata {
         unsafe { BnString::from_raw(BNBeginUndoActions(self.handle, anonymous_allowed)) }
     }
 
-    pub fn commit_undo_actions<S: BnStrCompatible>(&self, id: S) {
-        let id = id.into_bytes_with_nul();
-        unsafe {
-            BNCommitUndoActions(self.handle, id.as_ref().as_ptr() as *const _);
-        }
+    pub fn commit_undo_actions(&self, id: impl AsCStr) {
+        unsafe { BNCommitUndoActions(self.handle, id.as_cstr().as_ptr()) }
     }
 
-    pub fn revert_undo_actions<S: BnStrCompatible>(&self, id: S) {
-        let id = id.into_bytes_with_nul();
-        unsafe {
-            BNRevertUndoActions(self.handle, id.as_ref().as_ptr() as *const _);
-        }
+    pub fn revert_undo_actions(&self, id: impl AsCStr) {
+        unsafe { BNRevertUndoActions(self.handle, id.as_cstr().as_ptr()) }
     }
 
     pub fn undo(&self) {
@@ -182,11 +170,9 @@ impl FileMetadata {
         unsafe { BNGetCurrentOffset(self.handle) }
     }
 
-    pub fn navigate_to<S: BnStrCompatible>(&self, view: S, offset: u64) -> Result<(), ()> {
-        let view = view.into_bytes_with_nul();
-
+    pub fn navigate_to(&self, view: impl AsCStr, offset: u64) -> Result<(), ()> {
         unsafe {
-            if BNNavigate(self.handle, view.as_ref().as_ptr() as *const _, offset) {
+            if BNNavigate(self.handle, view.as_cstr().as_ptr(), offset) {
                 Ok(())
             } else {
                 Err(())
@@ -194,11 +180,9 @@ impl FileMetadata {
         }
     }
 
-    pub fn get_view_of_type<S: BnStrCompatible>(&self, view: S) -> Result<Ref<BinaryView>, ()> {
-        let view = view.into_bytes_with_nul();
-
+    pub fn get_view_of_type(&self, view: impl AsCStr) -> Result<Ref<BinaryView>, ()> {
         unsafe {
-            let res = BNGetFileViewOfType(self.handle, view.as_ref().as_ptr() as *const _);
+            let res = BNGetFileViewOfType(self.handle, view.as_cstr().as_ptr());
 
             if res.is_null() {
                 Err(())
@@ -208,23 +192,20 @@ impl FileMetadata {
         }
     }
 
-    pub fn create_database<S: BnStrCompatible>(
+    pub fn create_database(
         &self,
-        filename: S,
+        filename: impl AsCStr,
         progress_func: Option<fn(usize, usize) -> bool>,
     ) -> bool {
-        let filename = filename.into_bytes_with_nul();
-        let filename_ptr = filename.as_ref().as_ptr() as *mut _;
-        let raw = "Raw".into_bytes_with_nul();
-        let raw_ptr = raw.as_ptr() as *mut _;
+        let filename = filename.as_cstr();
 
-        let handle = unsafe { BNGetFileViewOfType(self.handle, raw_ptr) };
+        let handle = unsafe { BNGetFileViewOfType(self.handle, c"Raw".as_ptr()) };
         match progress_func {
-            None => unsafe { BNCreateDatabase(handle, filename_ptr, ptr::null_mut()) },
+            None => unsafe { BNCreateDatabase(handle, filename.as_ptr(), ptr::null_mut()) },
             Some(func) => unsafe {
                 BNCreateDatabaseWithProgress(
                     handle,
-                    filename_ptr,
+                    filename.as_ptr(),
                     func as *mut c_void,
                     Some(cb_progress_func),
                     ptr::null_mut(),
@@ -234,23 +215,20 @@ impl FileMetadata {
     }
 
     pub fn save_auto_snapshot(&self) -> bool {
-        let raw = "Raw".into_bytes_with_nul();
         unsafe {
             BNSaveAutoSnapshot(
-                BNGetFileViewOfType(self.handle, raw.as_ptr() as *mut _),
-                ptr::null_mut() as *mut _,
+                BNGetFileViewOfType(self.handle, c"Raw".as_ptr()),
+                ptr::null_mut(),
             )
         }
     }
 
-    pub fn open_database_for_configuration<S: BnStrCompatible>(
+    pub fn open_database_for_configuration(
         &self,
-        filename: S,
+        filename: impl AsCStr,
     ) -> Result<Ref<BinaryView>, ()> {
-        let filename = filename.into_bytes_with_nul();
         unsafe {
-            let bv =
-                BNOpenDatabaseForConfiguration(self.handle, filename.as_ref().as_ptr() as *const _);
+            let bv = BNOpenDatabaseForConfiguration(self.handle, filename.as_cstr().as_ptr());
 
             if bv.is_null() {
                 Err(())
@@ -260,13 +238,12 @@ impl FileMetadata {
         }
     }
 
-    pub fn open_database<S: BnStrCompatible>(
+    pub fn open_database(
         &self,
-        filename: S,
+        filename: impl AsCStr,
         progress_func: Option<fn(usize, usize) -> bool>,
     ) -> Result<Ref<BinaryView>, ()> {
-        let filename = filename.into_bytes_with_nul();
-        let filename_ptr = filename.as_ref().as_ptr() as *mut _;
+        let filename_ptr = filename.as_cstr().as_ptr();
 
         let view = match progress_func {
             None => unsafe { BNOpenExistingDatabase(self.handle, filename_ptr) },

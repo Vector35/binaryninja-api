@@ -4,7 +4,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use binaryninjacore_sys::*;
 
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
-use crate::string::BnString;
+use crate::string::{AsCStr, BnString};
 
 pub type UpdateResult = BNUpdateResult;
 
@@ -38,8 +38,9 @@ impl UpdateChannel {
     pub fn versions(&self) -> Result<Array<UpdateVersion>, BnString> {
         let mut count = 0;
         let mut errors = ptr::null_mut();
-        let result =
-            unsafe { BNGetUpdateChannelVersions(self.name.as_ptr(), &mut count, &mut errors) };
+        let result = unsafe {
+            BNGetUpdateChannelVersions(self.name.as_cstr().as_ptr(), &mut count, &mut errors)
+        };
         if !errors.is_null() {
             Err(unsafe { BnString::from_raw(errors) })
         } else {
@@ -65,7 +66,7 @@ impl UpdateChannel {
         let mut errors = ptr::null_mut();
         let result = unsafe {
             BNAreUpdatesAvailable(
-                self.name.as_ptr(),
+                self.name.as_cstr().as_ptr(),
                 ptr::null_mut(),
                 ptr::null_mut(),
                 &mut errors,
@@ -82,7 +83,7 @@ impl UpdateChannel {
         let mut errors = ptr::null_mut();
         let result = unsafe {
             BNUpdateToLatestVersion(
-                self.name.as_ptr(),
+                self.name.as_cstr().as_ptr(),
                 &mut errors,
                 Some(cb_progress_nop),
                 ptr::null_mut(),
@@ -105,7 +106,7 @@ impl UpdateChannel {
         let mut errors = ptr::null_mut();
         let result = unsafe {
             BNUpdateToLatestVersion(
-                self.name.as_ptr(),
+                self.name.as_cstr().as_ptr(),
                 &mut errors,
                 Some(cb_progress::<F>),
                 &mut progress as *mut _ as *mut ffi::c_void,
@@ -122,8 +123,8 @@ impl UpdateChannel {
         let mut errors = ptr::null_mut();
         let result = unsafe {
             BNUpdateToVersion(
-                self.name.as_ptr(),
-                version.version.as_ptr(),
+                self.name.as_cstr().as_ptr(),
+                version.version.as_cstr().as_ptr(),
                 &mut errors,
                 Some(cb_progress_nop),
                 ptr::null_mut(),
@@ -147,8 +148,8 @@ impl UpdateChannel {
         let mut errors = ptr::null_mut();
         let result = unsafe {
             BNUpdateToVersion(
-                self.name.as_ptr(),
-                version.version.as_ptr(),
+                self.name.as_cstr().as_ptr(),
+                version.version.as_cstr().as_ptr(),
                 &mut errors,
                 Some(cb_progress::<F>),
                 &mut progress as *mut _ as *mut ffi::c_void,

@@ -30,10 +30,8 @@ pub struct BackgroundTask {
 }
 
 impl BackgroundTask {
-    pub fn new<S: BnStrCompatible>(initial_text: S, can_cancel: bool) -> Result<Ref<Self>> {
-        let text = initial_text.into_bytes_with_nul();
-
-        let handle = unsafe { BNBeginBackgroundTask(text.as_ref().as_ptr() as *mut _, can_cancel) };
+    pub fn new(initial_text: impl AsCStr, can_cancel: bool) -> Result<Ref<Self>> {
+        let handle = unsafe { BNBeginBackgroundTask(initial_text.as_cstr().as_ptr(), can_cancel) };
 
         if handle.is_null() {
             return Err(());
@@ -66,12 +64,8 @@ impl BackgroundTask {
         unsafe { BNFinishBackgroundTask(self.handle) }
     }
 
-    pub fn set_progress_text<S: BnStrCompatible>(&self, text: S) {
-        let progress_text = text.into_bytes_with_nul();
-
-        unsafe {
-            BNSetBackgroundTaskProgressText(self.handle, progress_text.as_ref().as_ptr() as *mut _)
-        }
+    pub fn set_progress_text(&self, text: impl AsCStr) {
+        unsafe { BNSetBackgroundTaskProgressText(self.handle, text.as_cstr().as_ptr()) }
     }
 
     pub fn running_tasks() -> Array<BackgroundTask> {

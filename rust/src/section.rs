@@ -79,7 +79,7 @@ impl Section {
     /// let bv = binaryninja::load("/bin/cat").unwrap();
     /// bv.add_section(Section::builder("example", 0..1024).align(4).entry_size(4))
     /// ```
-    pub fn builder<S: BnStrCompatible>(name: S, range: Range<u64>) -> SectionBuilder<S> {
+    pub fn builder<S: AsCStr>(name: S, range: Range<u64>) -> SectionBuilder<S> {
         SectionBuilder::new(name, range)
     }
 
@@ -191,7 +191,7 @@ unsafe impl CoreArrayProviderInner for Section {
 }
 
 #[must_use]
-pub struct SectionBuilder<S: BnStrCompatible> {
+pub struct SectionBuilder<S: AsCStr> {
     is_auto: bool,
     name: S,
     range: Range<u64>,
@@ -204,7 +204,7 @@ pub struct SectionBuilder<S: BnStrCompatible> {
     info_data: u64,
 }
 
-impl<S: BnStrCompatible> SectionBuilder<S> {
+impl<S: AsCStr> SectionBuilder<S> {
     pub fn new(name: S, range: Range<u64>) -> Self {
         Self {
             is_auto: false,
@@ -261,51 +261,35 @@ impl<S: BnStrCompatible> SectionBuilder<S> {
     }
 
     pub(crate) fn create(self, view: &BinaryView) {
-        let name = self.name.into_bytes_with_nul();
-        let ty = self._ty.map(|s| s.into_bytes_with_nul());
-        let linked_section = self.linked_section.map(|s| s.into_bytes_with_nul());
-        let info_section = self.info_section.map(|s| s.into_bytes_with_nul());
+        let ty = self._ty.as_ref().map(|s| s.as_cstr());
+        let linked_section = self.linked_section.as_ref().map(|s| s.as_cstr());
+        let info_section = self.info_section.as_ref().map(|s| s.as_cstr());
 
         let start = self.range.start;
         let len = self.range.end.wrapping_sub(start);
 
-        unsafe {
-            let nul_str = std::ffi::CStr::from_bytes_with_nul_unchecked(b"\x00").as_ptr();
-            let name_ptr = name.as_ref().as_ptr() as *mut _;
-            let ty_ptr = ty.map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
-            let linked_section_ptr =
-                linked_section.map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
-            let info_section_ptr = info_section.map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
+        let add_section = if self.is_auto {
+            BNAddAutoSection
+        } else {
+            BNAddUserSection
+        };
 
-            if self.is_auto {
-                BNAddAutoSection(
-                    view.handle,
-                    name_ptr,
-                    start,
-                    len,
-                    self.semantics.into(),
-                    ty_ptr,
-                    self.align,
-                    self.entry_size,
-                    linked_section_ptr,
-                    info_section_ptr,
-                    self.info_data,
-                );
-            } else {
-                BNAddUserSection(
-                    view.handle,
-                    name_ptr,
-                    start,
-                    len,
-                    self.semantics.into(),
-                    ty_ptr,
-                    self.align,
-                    self.entry_size,
-                    linked_section_ptr,
-                    info_section_ptr,
-                    self.info_data,
-                );
-            }
+        let nul_str = c"".as_ptr();
+
+        unsafe {
+            add_section(
+                view.handle,
+                self.name.as_cstr().as_ptr(),
+                start,
+                len,
+                self.semantics.into(),
+                ty.map_or(nul_str, |s| s.as_ptr()),
+                self.align,
+                self.entry_size,
+                linked_section.map_or(nul_str, |s| s.as_ptr()),
+                info_section.map_or(nul_str, |s| s.as_ptr()),
+                self.info_data,
+            )
         }
     }
 }

@@ -9,7 +9,7 @@ use crate::databuffer::DataBuffer;
 use crate::disassembly::InstructionTextToken;
 use crate::filemetadata::FileMetadata;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 #[repr(transparent)]
 pub struct Database {
@@ -50,23 +50,21 @@ impl Database {
         unsafe { BNSetDatabaseCurrentSnapshot(self.as_raw(), value.id()) }
     }
 
-    pub fn write_snapshot_data<N: BnStrCompatible>(
+    pub fn write_snapshot_data(
         &self,
         parents: &[i64],
         file: &BinaryView,
-        name: N,
+        name: impl AsCStr,
         data: &KeyValueStore,
         auto_save: bool,
     ) -> i64 {
-        let name_raw = name.into_bytes_with_nul();
-        let name_ptr = name_raw.as_ref().as_ptr() as *const ffi::c_char;
         unsafe {
             BNWriteDatabaseSnapshotData(
                 self.as_raw(),
                 parents.as_ptr() as *mut _,
                 parents.len(),
                 file.handle,
-                name_ptr,
+                name.as_cstr().as_ptr(),
                 data.as_raw(),
                 auto_save,
                 ptr::null_mut(),
@@ -75,21 +73,18 @@ impl Database {
         }
     }
 
-    pub fn write_snapshot_data_with_progress<N, F>(
+    pub fn write_snapshot_data_with_progress<F>(
         &self,
         parents: &[i64],
         file: &BinaryView,
-        name: N,
+        name: impl AsCStr,
         data: &KeyValueStore,
         auto_save: bool,
         mut progress: F,
     ) -> i64
     where
-        N: BnStrCompatible,
         F: FnMut(usize, usize) -> bool,
     {
-        let name_raw = name.into_bytes_with_nul();
-        let name_ptr = name_raw.as_ref().as_ptr() as *const ffi::c_char;
         let ctxt = &mut progress as *mut _ as *mut ffi::c_void;
         unsafe {
             BNWriteDatabaseSnapshotData(
@@ -97,7 +92,7 @@ impl Database {
                 parents.as_ptr() as *mut _,
                 parents.len(),
                 file.handle,
-                name_ptr,
+                name.as_cstr().as_ptr(),
                 data.as_raw(),
                 auto_save,
                 ctxt,
@@ -125,10 +120,8 @@ impl Database {
             Err(())
         }
     }
-    pub fn has_global<S: BnStrCompatible>(&self, key: S) -> bool {
-        let key_raw = key.into_bytes_with_nul();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const ffi::c_char;
-        unsafe { BNDatabaseHasGlobal(self.as_raw(), key_ptr) != 0 }
+    pub fn has_global(&self, key: impl AsCStr) -> bool {
+        unsafe { BNDatabaseHasGlobal(self.as_raw(), key.as_cstr().as_ptr()) != 0 }
     }
 
     /// Get a list of keys for all globals in the database
@@ -143,40 +136,36 @@ impl Database {
     pub fn globals(&self) -> HashMap<String, String> {
         self.global_keys()
             .iter()
-            .filter_map(|key| Some((key.to_string(), self.read_global(key.as_str())?.to_string())))
+            .filter_map(|key| Some((key.to_string(), self.read_global(key)?.to_string())))
             .collect()
     }
 
     /// Get a specific global by key
-    pub fn read_global<S: BnStrCompatible>(&self, key: S) -> Option<BnString> {
-        let key_raw = key.into_bytes_with_nul();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const ffi::c_char;
-        let result = unsafe { BNReadDatabaseGlobal(self.as_raw(), key_ptr) };
+    pub fn read_global(&self, key: impl AsCStr) -> Option<BnString> {
+        let result = unsafe { BNReadDatabaseGlobal(self.as_raw(), key.as_cstr().as_ptr()) };
         unsafe { ptr::NonNull::new(result).map(|_| BnString::from_raw(result)) }
     }
 
     /// Write a global into the database
-    pub fn write_global<K: BnStrCompatible, V: BnStrCompatible>(&self, key: K, value: V) -> bool {
-        let key_raw = key.into_bytes_with_nul();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const ffi::c_char;
-        let value_raw = value.into_bytes_with_nul();
-        let value_ptr = value_raw.as_ref().as_ptr() as *const ffi::c_char;
-        unsafe { BNWriteDatabaseGlobal(self.as_raw(), key_ptr, value_ptr) }
+    pub fn write_global(&self, key: impl AsCStr, value: impl AsCStr) -> bool {
+        unsafe {
+            BNWriteDatabaseGlobal(
+                self.as_raw(),
+                key.as_cstr().as_ptr(),
+                value.as_cstr().as_ptr(),
+            )
+        }
     }
 
     /// Get a specific global by key, as a binary buffer
-    pub fn read_global_data<S: BnStrCompatible>(&self, key: S) -> Option<DataBuffer> {
-        let key_raw = key.into_bytes_with_nul();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const ffi::c_char;
-        let result = unsafe { BNReadDatabaseGlobalData(self.as_raw(), key_ptr) };
+    pub fn read_global_data(&self, key: impl AsCStr) -> Option<DataBuffer> {
+        let result = unsafe { BNReadDatabaseGlobalData(self.as_raw(), key.as_cstr().as_ptr()) };
         ptr::NonNull::new(result).map(|_| DataBuffer::from_raw(result))
     }
 
     /// Write a binary buffer into a global in the database
-    pub fn write_global_data<K: BnStrCompatible>(&self, key: K, value: &DataBuffer) -> bool {
-        let key_raw = key.into_bytes_with_nul();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const ffi::c_char;
-        unsafe { BNWriteDatabaseGlobalData(self.as_raw(), key_ptr, value.as_raw()) }
+    pub fn write_global_data(&self, key: impl AsCStr, value: &DataBuffer) -> bool {
+        unsafe { BNWriteDatabaseGlobalData(self.as_raw(), key.as_cstr().as_ptr(), value.as_raw()) }
     }
 
     /// Get the owning FileMetadata
@@ -258,10 +247,8 @@ impl Snapshot {
     }
 
     /// Set the displayed snapshot name
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) {
-        let value_raw = value.into_bytes_with_nul();
-        let value_ptr = value_raw.as_ref().as_ptr() as *const ffi::c_char;
-        unsafe { BNSetSnapshotName(self.as_raw(), value_ptr) }
+    pub fn set_name(&self, value: impl AsCStr) {
+        unsafe { BNSetSnapshotName(self.as_raw(), value.as_cstr().as_ptr()) }
     }
 
     /// If the snapshot was the result of an auto-save
@@ -436,18 +423,14 @@ impl KeyValueStore {
     }
 
     /// Get the value for a single key
-    pub fn value<S: BnStrCompatible>(&self, key: S) -> Option<DataBuffer> {
-        let key_raw = key.into_bytes_with_nul();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const ffi::c_char;
-        let result = unsafe { BNGetKeyValueStoreBuffer(self.as_raw(), key_ptr) };
+    pub fn value(&self, key: impl AsCStr) -> Option<DataBuffer> {
+        let result = unsafe { BNGetKeyValueStoreBuffer(self.as_raw(), key.as_cstr().as_ptr()) };
         ptr::NonNull::new(result).map(|_| DataBuffer::from_raw(result))
     }
 
     /// Set the value for a single key
-    pub fn set_value<S: BnStrCompatible>(&self, key: S, value: &DataBuffer) -> bool {
-        let key_raw = key.into_bytes_with_nul();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const ffi::c_char;
-        unsafe { BNSetKeyValueStoreBuffer(self.as_raw(), key_ptr, value.as_raw()) }
+    pub fn set_value(&self, key: impl AsCStr, value: &DataBuffer) -> bool {
+        unsafe { BNSetKeyValueStoreBuffer(self.as_raw(), key.as_cstr().as_ptr(), value.as_raw()) }
     }
 
     /// Get the stored representation of the kvs
@@ -458,10 +441,8 @@ impl KeyValueStore {
     }
 
     /// Begin storing new keys into a namespace
-    pub fn begin_namespace<S: BnStrCompatible>(&self, name: S) {
-        let name_raw = name.into_bytes_with_nul();
-        let name_ptr = name_raw.as_ref().as_ptr() as *const ffi::c_char;
-        unsafe { BNBeginKeyValueStoreNamespace(self.as_raw(), name_ptr) }
+    pub fn begin_namespace(&self, name: impl AsCStr) {
+        unsafe { BNBeginKeyValueStoreNamespace(self.as_raw(), name.as_cstr().as_ptr()) }
     }
 
     /// End storing new keys into a namespace

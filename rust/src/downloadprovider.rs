@@ -1,6 +1,6 @@
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
 use crate::settings::Settings;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::ffi::{c_void, CStr};
@@ -14,12 +14,8 @@ pub struct DownloadProvider {
 }
 
 impl DownloadProvider {
-    pub fn get<S: BnStrCompatible>(name: S) -> Option<DownloadProvider> {
-        let result = unsafe {
-            BNGetDownloadProviderByName(
-                name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char
-            )
-        };
+    pub fn get(name: impl AsCStr) -> Option<DownloadProvider> {
+        let result = unsafe { BNGetDownloadProviderByName(name.as_cstr().as_ptr()) };
         if result.is_null() {
             return None;
         }
@@ -129,9 +125,9 @@ impl DownloadInstance {
         }
     }
 
-    pub fn perform_request<S: BnStrCompatible>(
+    pub fn perform_request(
         &mut self,
-        url: S,
+        url: impl AsCStr,
         callbacks: DownloadInstanceOutputCallbacks,
     ) -> Result<(), BnString> {
         let callbacks = Box::into_raw(Box::new(callbacks));
@@ -145,7 +141,7 @@ impl DownloadInstance {
         let result = unsafe {
             BNPerformDownloadRequest(
                 self.handle,
-                url.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                url.as_cstr().as_ptr(),
                 &mut cbs as *mut BNDownloadInstanceOutputCallbacks,
             )
         };
@@ -194,33 +190,24 @@ impl DownloadInstance {
         }
     }
 
-    pub fn perform_custom_request<
-        M: BnStrCompatible,
-        U: BnStrCompatible,
-        HK: BnStrCompatible,
-        HV: BnStrCompatible,
-        I: IntoIterator<Item = (HK, HV)>,
-    >(
+    pub fn perform_custom_request<K: AsCStr, V: AsCStr>(
         &mut self,
-        method: M,
-        url: U,
-        headers: I,
+        method: impl AsCStr,
+        url: impl AsCStr,
+        headers: impl IntoIterator<Item = (K, V)>,
         callbacks: DownloadInstanceInputOutputCallbacks,
     ) -> Result<DownloadResponse, BnString> {
-        let mut header_keys = vec![];
-        let mut header_values = vec![];
+        let mut keys = vec![];
+        let mut values = vec![];
         for (key, value) in headers {
-            header_keys.push(key.into_bytes_with_nul());
-            header_values.push(value.into_bytes_with_nul());
+            keys.push(key.as_cstr().into_owned());
+            values.push(value.as_cstr().into_owned());
         }
-
-        let mut header_key_ptrs = vec![];
-        let mut header_value_ptrs = vec![];
-
-        for (key, value) in header_keys.iter().zip(header_values.iter()) {
-            header_key_ptrs.push(key.as_ref().as_ptr() as *const c_char);
-            header_value_ptrs.push(value.as_ref().as_ptr() as *const c_char);
-        }
+        let header_keys = keys.iter().map(|key| key.as_ptr()).collect::<Vec<_>>();
+        let header_values = values
+            .iter()
+            .map(|value| value.as_ptr())
+            .collect::<Vec<_>>();
 
         let callbacks = Box::into_raw(Box::new(callbacks));
         let mut cbs = BNDownloadInstanceInputOutputCallbacks {
@@ -237,11 +224,11 @@ impl DownloadInstance {
         let result = unsafe {
             BNPerformCustomRequest(
                 self.handle,
-                method.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-                url.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-                header_key_ptrs.len() as u64,
-                header_key_ptrs.as_ptr(),
-                header_value_ptrs.as_ptr(),
+                method.as_cstr().as_ptr(),
+                url.as_cstr().as_ptr(),
+                header_keys.len() as u64,
+                header_keys.as_ptr(),
+                header_values.as_ptr(),
                 &mut response as *mut *mut BNDownloadInstanceResponse,
                 &mut cbs as *mut BNDownloadInstanceInputOutputCallbacks,
             )

@@ -66,7 +66,7 @@ impl<R: ArchReg> Register<R> {
 impl<R: ArchReg> fmt::Debug for Register<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Register::ArchReg(ref r) => write!(f, "{}", r.name().as_ref()),
+            Register::ArchReg(ref r) => write!(f, "{}", r.name()),
             Register::Temp(id) => write!(f, "temp{}", id),
         }
     }

@@ -1,5 +1,5 @@
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString, IntoJson};
+use crate::string::{AsCStr, BnString, IntoJson};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::os::raw::c_char;
@@ -266,16 +266,11 @@ impl Metadata {
         Ok(Some(unsafe { Self::ref_from_raw(ptr) }))
     }
 
-    pub fn get<S: BnStrCompatible>(&self, key: S) -> Result<Option<Ref<Metadata>>, ()> {
+    pub fn get(&self, key: impl AsCStr) -> Result<Option<Ref<Metadata>>, ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
-        let ptr: *mut BNMetadata = unsafe {
-            BNMetadataGetForKey(
-                self.handle,
-                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let ptr = unsafe { BNMetadataGetForKey(self.handle, key.as_cstr().as_ptr()) };
         if ptr.is_null() {
             return Ok(None);
         }
@@ -290,18 +285,12 @@ impl Metadata {
         Ok(())
     }
 
-    pub fn insert<S: BnStrCompatible>(&self, key: S, value: &Metadata) -> Result<(), ()> {
+    pub fn insert(&self, key: impl AsCStr, value: &Metadata) -> Result<(), ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
 
-        unsafe {
-            BNMetadataSetValueForKey(
-                self.handle,
-                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-                value.handle,
-            )
-        };
+        unsafe { BNMetadataSetValueForKey(self.handle, key.as_cstr().as_ptr(), value.handle) };
         Ok(())
     }
 
@@ -314,17 +303,12 @@ impl Metadata {
         Ok(())
     }
 
-    pub fn remove_key<S: BnStrCompatible>(&self, key: S) -> Result<(), ()> {
+    pub fn remove_key(&self, key: impl AsCStr) -> Result<(), ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
 
-        unsafe {
-            BNMetadataRemoveKey(
-                self.handle,
-                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-            )
-        };
+        unsafe { BNMetadataRemoveKey(self.handle, key.as_cstr().as_ptr()) };
         Ok(())
     }
 }
@@ -396,21 +380,13 @@ impl From<f64> for Ref<Metadata> {
 
 impl From<String> for Ref<Metadata> {
     fn from(value: String) -> Self {
-        unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataStringData(
-                value.into_bytes_with_nul().as_ptr() as *const c_char,
-            ))
-        }
+        unsafe { Metadata::ref_from_raw(BNCreateMetadataStringData(value.as_cstr().as_ptr())) }
     }
 }
 
 impl From<&str> for Ref<Metadata> {
     fn from(value: &str) -> Self {
-        unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataStringData(
-                value.into_bytes_with_nul().as_ptr() as *const c_char,
-            ))
-        }
+        unsafe { Metadata::ref_from_raw(BNCreateMetadataStringData(value.as_cstr().as_ptr())) }
     }
 }
 
@@ -444,17 +420,11 @@ impl From<&Array<Metadata>> for Ref<Metadata> {
     }
 }
 
-impl<S: BnStrCompatible> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
+impl<S: AsCStr> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
     fn from(value: HashMap<S, Ref<Metadata>>) -> Self {
-        let data: Vec<(S::Result, Ref<Metadata>)> = value
-            .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v))
-            .collect();
-        let mut keys: Vec<*const c_char> = data
-            .iter()
-            .map(|(k, _)| k.as_ref().as_ptr() as *const c_char)
-            .collect();
-        let mut values: Vec<*mut BNMetadata> = data.iter().map(|(_, v)| v.handle).collect();
+        let keys = value.keys().map(|k| k.as_cstr()).collect::<Vec<_>>();
+        let mut keys = keys.iter().map(|k| k.as_ptr()).collect::<Vec<_>>();
+        let mut values = value.values().map(|v| v.handle).collect::<Vec<_>>();
 
         unsafe {
             Metadata::ref_from_raw(BNCreateMetadataValueStore(
@@ -468,19 +438,16 @@ impl<S: BnStrCompatible> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
 
 impl<S, T> From<&[(S, T)]> for Ref<Metadata>
 where
-    S: BnStrCompatible + Copy,
+    S: AsCStr,
     for<'a> &'a T: Into<Ref<Metadata>>,
 {
     fn from(value: &[(S, T)]) -> Self {
-        let data: Vec<(S::Result, Ref<Metadata>)> = value
+        let keys = value.iter().map(|(k, _)| k.as_cstr()).collect::<Vec<_>>();
+        let mut keys = keys.iter().map(|k| k.as_ptr()).collect::<Vec<_>>();
+        let mut values = value
             .iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into()))
-            .collect();
-        let mut keys: Vec<*const c_char> = data
-            .iter()
-            .map(|(k, _)| k.as_ref().as_ptr() as *const c_char)
-            .collect();
-        let mut values: Vec<*mut BNMetadata> = data.iter().map(|(_, v)| v.handle).collect();
+            .map(|(_, v)| v.into().handle)
+            .collect::<Vec<_>>();
 
         unsafe {
             Metadata::ref_from_raw(BNCreateMetadataValueStore(
@@ -494,7 +461,7 @@ where
 
 impl<S, T, const N: usize> From<[(S, T); N]> for Ref<Metadata>
 where
-    S: BnStrCompatible + Copy,
+    S: AsCStr,
     for<'a> &'a T: Into<Ref<Metadata>>,
 {
     fn from(value: [(S, T); N]) -> Self {
@@ -548,19 +515,13 @@ impl From<&Vec<f64>> for Ref<Metadata> {
     }
 }
 
-impl<S: BnStrCompatible> From<Vec<S>> for Ref<Metadata> {
+impl<S: AsCStr> From<Vec<S>> for Ref<Metadata> {
     fn from(value: Vec<S>) -> Self {
-        let mut refs = vec![];
-        for v in value {
-            refs.push(v.into_bytes_with_nul());
-        }
-        let mut pointers = vec![];
-        for r in &refs {
-            pointers.push(r.as_ref().as_ptr() as *const c_char);
-        }
+        let value = value.iter().map(|s| s.as_cstr()).collect::<Vec<_>>();
+        let mut pointers = value.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
         unsafe {
             Metadata::ref_from_raw(BNCreateMetadataStringListData(
-                pointers.as_ptr() as *mut *const c_char,
+                pointers.as_mut_ptr(),
                 pointers.len(),
             ))
         }
@@ -707,16 +668,18 @@ impl TryFrom<&Metadata> for HashMap<String, Ref<Metadata>> {
     }
 }
 
-impl IntoJson for &Metadata {
+impl IntoJson for Metadata {
     type Output = BnString;
-    fn get_json_string(self) -> Result<BnString, ()> {
-        Metadata::get_json_string(self)
+
+    fn get_json_string(self) -> Result<Self::Output, ()> {
+        Metadata::get_json_string(&self)
     }
 }
 
 impl IntoJson for Ref<Metadata> {
     type Output = BnString;
-    fn get_json_string(self) -> Result<BnString, ()> {
+
+    fn get_json_string(self) -> Result<Self::Output, ()> {
         Metadata::get_json_string(&self)
     }
 }

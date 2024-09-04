@@ -1,10 +1,10 @@
-use core::{ffi, mem, ptr};
+use core::{mem, ptr};
 
 use binaryninjacore_sys::*;
 
 use crate::project::ProjectFile;
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use crate::symbol::Symbol;
 
 /// An ExternalLibrary is an abstraction for a library that is optionally backed
@@ -179,10 +179,9 @@ impl ExternalLocation {
 
     /// Set the symbol pointed to by this ExternalLocation.
     /// ExternalLocations must have a valid target address and/or symbol set.
-    pub fn set_target_symbol<S: BnStrCompatible>(&self, symbol: Option<S>) -> bool {
-        let symbol = symbol
-            .map(|x| x.into_bytes_with_nul().as_ref().as_ptr() as *const ffi::c_char)
-            .unwrap_or(ptr::null_mut());
+    pub fn set_target_symbol<S: AsCStr>(&self, symbol: Option<S>) -> bool {
+        let symbol = symbol.as_ref().map(|x| x.as_cstr());
+        let symbol = symbol.map_or(ptr::null_mut(), |x| x.as_ptr() as *mut _);
         unsafe { BNExternalLocationSetTargetSymbol(self.as_raw(), symbol) }
     }
 }

@@ -7234,8 +7234,10 @@ class BinaryView:
 		``get_linear_disassembly`` gets an iterator for all lines in the linear disassembly of the view for the given
 		disassembly settings.
 
-		.. note:: linear_disassembly doesn't just return disassembly; it will return a single line from the linear view,\
-		 and thus will contain both data views, and disassembly.
+		.. note::
+			- linear_disassembly doesn't just return disassembly; it will return a single line from the linear view,\
+				and thus will contain both data views, and disassembly.
+			- **Warning:** In order to get deterministic output, the WaitForIL `DisassemblyOption` should be set to True.
 
 		:param DisassemblySettings settings: instance specifying the desired output formatting. Defaults to None which will use default settings.
 		:return: An iterator containing formatted disassembly lines.

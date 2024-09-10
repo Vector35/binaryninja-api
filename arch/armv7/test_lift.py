@@ -122,7 +122,9 @@ test_cases = \
     ('T', b'\x41\xf3\x41\x00', 'LLIL_SET_REG.d(r0,LLIL_ASR.d(LLIL_LSL.d(LLIL_REG.d(r1),LLIL_CONST.b(0x1D)),LLIL_CONST.b(0x1E)))'),
     # sbfx r0, r1, 20, 30 (starting at b20, width 30... gets clamped, so b31b30...b20
     # just r0 = r1 >> 20, no left shift required
-    ('T', b'\x41\xf3\x1d\x50', 'LLIL_SET_REG.d(r0,LLIL_ASR.d(LLIL_REG.d(r1),LLIL_CONST.b(0x14)))')
+    ('T', b'\x41\xf3\x1d\x50', 'LLIL_SET_REG.d(r0,LLIL_ASR.d(LLIL_REG.d(r1),LLIL_CONST.b(0x14)))'),
+    # rev r1, r1
+    ('T', b'\x09\xba',         'LLIL_SET_REG.d(r1,LLIL_OR.d(LLIL_LSR.d(LLIL_REG.d(r1),LLIL_CONST.d(0x18)),LLIL_OR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_LSR.d(LLIL_REG.d(r1),LLIL_CONST.d(0x10)),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x8)),LLIL_OR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_LSR.d(LLIL_REG.d(r1),LLIL_CONST.d(0x8)),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x10)),LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x18))))))'),
 ]
 
 import re

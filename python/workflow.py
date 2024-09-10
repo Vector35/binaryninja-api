@@ -228,10 +228,6 @@ class Workflow(metaclass=_WorkflowMetaclass):
 	it's possible to add and remove activities, as well as change the execution strategy. In order to use the Workflow on a binary it must be \
 	registered. Once registered the Workflow is immutable and available for use.
 
-	Currently, Workflows is disabled by default and can be enabled via Settings::
-
-		>>> Settings().set_bool('workflows.enable', True)
-
 	Retrieve the default Workflow by creating a Workflow object::
 
 		>>> Workflow()
@@ -268,6 +264,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		assert _handle is not None
 		self.handle = _handle
 		self._name = core.BNGetWorkflowName(self.handle)
+		self._machine = None
 		if function_handle is not None:
 			self._machine = WorkflowMachine(function_handle)
 
@@ -314,7 +311,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNRegisterWorkflow(self.handle, str(configuration))
 
-	def clone(self, name: str, activity: ActivityType = "") -> "Workflow":
+	def clone(self, name: str = None, activity: ActivityType = "") -> "Workflow":
 		"""
 		``clone`` Clone a new Workflow, copying all Activities and the execution strategy.
 
@@ -323,6 +320,8 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		:return: a new Workflow
 		:rtype: Workflow
 		"""
+		if name is None:
+			name = ""
 		workflow = core.BNWorkflowClone(self.handle, str(name), str(activity))
 		return Workflow(handle=workflow)
 

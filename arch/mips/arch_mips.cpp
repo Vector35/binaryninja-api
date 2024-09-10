@@ -923,6 +923,8 @@ public:
 				return "moveDwordToCoprocessorUnimplemented";
 			case MIPS_INTRIN_SYNC:
 				return "_sync";
+			case MIPS_INTRIN_SYNCI:
+				return "_SynchronizeCacheLines";
 			case MIPS_INTRIN_EI:
 				return "_enableInterrupts";
 			case MIPS_INTRIN_DI:
@@ -931,6 +933,8 @@ public:
 				return "_clearExecutionHazards";
 			case MIPS_INTRIN_WAIT:
 				return "_enterLowPowerMode";
+			case MIPS_INTRIN_PAUSE:
+				return "_waitForLLbitClear";
 			case MIPS_INTRIN_HWR0:
 				return "_cpuNum";
 			case MIPS_INTRIN_HWR1:
@@ -951,6 +955,8 @@ public:
 				return "_prefetch";
 			case MIPS_INTRIN_CACHE:
 				return "_cache";
+			case MIPS_INTRIN_SDBBP:
+				return "_softwareDebugBreakpoint";
 			case MIPS_INTRIN_GET_LEFT_PART32:
 				return "_getLeftPart32";
 			case MIPS_INTRIN_GET_RIGHT_PART32:
@@ -967,6 +973,16 @@ public:
 				return "_setLeftPart64";
 			case MIPS_INTRIN_SET_RIGHT_PART64:
 				return "_setRightPart64";
+			case MIPS_INTRIN_TLBSET:
+				return "_writeTLB";
+			case MIPS_INTRIN_TLBGET:
+				return "_readTLB";
+			case MIPS_INTRIN_TLBSEARCH:
+				return "_probeTLB";
+			case MIPS_INTRIN_TLBINV:
+				return "_invalidateTLB";
+			case MIPS_INTRIN_TLBINVF:
+				return "_invalidateTLBFlush";
 
 			case CNMIPS_INTRIN_SYNCIOBDMA:
 				return "_synciobdma";
@@ -1004,10 +1020,12 @@ public:
 			MIPS_INTRIN_DMTC0,
 			MIPS_INTRIN_DMTC_UNIMPLEMENTED,
 			MIPS_INTRIN_SYNC,
+			MIPS_INTRIN_SYNCI,
 			MIPS_INTRIN_DI,
 			MIPS_INTRIN_EHB,
 			MIPS_INTRIN_EI,
 			MIPS_INTRIN_WAIT,
+			MIPS_INTRIN_PAUSE,
 			MIPS_INTRIN_HWR0,
 			MIPS_INTRIN_HWR1,
 			MIPS_INTRIN_HWR2,
@@ -1026,6 +1044,11 @@ public:
 			MIPS_INTRIN_GET_RIGHT_PART64,
 			MIPS_INTRIN_SET_LEFT_PART64,
 			MIPS_INTRIN_SET_RIGHT_PART64,
+			MIPS_INTRIN_TLBSET,
+			MIPS_INTRIN_TLBGET,
+			MIPS_INTRIN_TLBSEARCH,
+			MIPS_INTRIN_TLBINV,
+			MIPS_INTRIN_TLBINVF,
 
 			CNMIPS_INTRIN_SYNCIOBDMA,
 			CNMIPS_INTRIN_SYNCS,
@@ -1095,6 +1118,10 @@ public:
 				return {
 					NameAndType("stype", Type::IntegerType(4, false)),
 				};
+			case MIPS_INTRIN_SYNCI:
+				return {
+					NameAndType("vaddr", Type::IntegerType(8, false)),
+				};
 			case MIPS_INTRIN_HWR_UNKNOWN:
 				return {
 					NameAndType("hwreg", Type::IntegerType(4, false)),
@@ -1108,6 +1135,11 @@ public:
 				return {
 					NameAndType("op", Type::IntegerType(1, false)),
 					NameAndType("address", Type::IntegerType(m_bits == 64 ? 8 : 4, false)),
+				};
+
+			case MIPS_INTRIN_SDBBP:
+				return {
+					NameAndType("code", Type::IntegerType(1, false)),
 				};
 
 			// NOTE: SET_x_PARTx could potentially benefit from
@@ -1156,6 +1188,33 @@ public:
 				return {
 					NameAndType("rightpart", Type::IntegerType(8, false))
 				};
+			case MIPS_INTRIN_TLBSET:
+				return {
+					// we use the same order as the pseudocode
+					// in the documentation
+					NameAndType("index", Type::IntegerType(8, false)),
+					NameAndType("PageMask", Type::IntegerType(8, false)),
+					NameAndType("EntryHi", Type::IntegerType(8, false)),
+					NameAndType("EntryLo1", Type::IntegerType(8, false)),
+					NameAndType("EntryLo0", Type::IntegerType(8, false))
+				};
+			case MIPS_INTRIN_TLBGET:
+				return {
+					NameAndType("index", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_TLBSEARCH:
+				return {
+					NameAndType("match", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_TLBINV:
+				return {
+					NameAndType("index", Type::IntegerType(8, false)),
+					NameAndType("match", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_TLBINVF:
+				return {
+					NameAndType("index", Type::IntegerType(8, false)),
+				};
 			default:
 				return vector<NameAndType>();
 		}
@@ -1199,6 +1258,19 @@ public:
 			case MIPS_INTRIN_SET_LEFT_PART64:
 			case MIPS_INTRIN_SET_RIGHT_PART64:
 				return {Type::IntegerType(8, false)};
+			case MIPS_INTRIN_TLBGET:
+				return {
+					// we use the same order as the pseudocode
+					// in the documentation:
+
+					// PageMask, EntryHi, EntryLo1, EntryLo0
+					Type::IntegerType(8, false),
+					Type::IntegerType(8, false),
+					Type::IntegerType(8, false),
+					Type::IntegerType(8, false),
+				};
+			case MIPS_INTRIN_TLBSEARCH:
+				return { Type::IntegerType(8, false) };
 			default:
 				return vector<Confidence<Ref<Type>>>();
 		}
@@ -3142,17 +3214,20 @@ extern "C"
 
 		Architecture* mipsel = new MipsArchitecture("mipsel32", LittleEndian, 32);
 		Architecture* mipseb = new MipsArchitecture("mips32", BigEndian, 32);
+		Architecture* mips64el = new MipsArchitecture("mipsel64", LittleEndian, 64);
 		Architecture* mips64eb = new MipsArchitecture("mips64", BigEndian, 64);
 		Architecture* cnmips64eb = new MipsArchitecture("cavium-mips64", BigEndian, 64, DECOMPOSE_FLAGS_CAVIUM);
 
 		Architecture::Register(mipsel);
 		Architecture::Register(mipseb);
+		Architecture::Register(mips64el);
 		Architecture::Register(mips64eb);
 		Architecture::Register(cnmips64eb);
 
 		/* calling conventions */
 		MipsO32CallingConvention* o32LE = new MipsO32CallingConvention(mipsel);
 		MipsO32CallingConvention* o32BE = new MipsO32CallingConvention(mipseb);
+		MipsN64CallingConvention* n64LE = new MipsN64CallingConvention(mips64el);
 		MipsN64CallingConvention* n64BE = new MipsN64CallingConvention(mips64eb);
 		MipsN64CallingConvention* n64BEc = new MipsN64CallingConvention(cnmips64eb);
 
@@ -3160,6 +3235,8 @@ extern "C"
 		mipseb->RegisterCallingConvention(o32BE);
 		mipsel->SetDefaultCallingConvention(o32LE);
 		mipseb->SetDefaultCallingConvention(o32BE);
+		mips64el->RegisterCallingConvention(n64LE);
+		mips64el->SetDefaultCallingConvention(n64LE);
 		mips64eb->RegisterCallingConvention(n64BE);
 		mips64eb->SetDefaultCallingConvention(n64BE);
 		cnmips64eb->RegisterCallingConvention(n64BEc);
@@ -3172,6 +3249,7 @@ extern "C"
 
 		mipsel->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mipsel));
 		mipseb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mipseb));
+		mips64el->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips64el));
 		mips64eb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips64eb));
 		cnmips64eb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(cnmips64eb));
 
@@ -3181,6 +3259,7 @@ extern "C"
 
 		mipsel->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mipseb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
+		mips64el->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mips64eb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		cnmips64eb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 
@@ -3194,13 +3273,17 @@ extern "C"
 		#define EI_CLASS_64 (2)
 		#define ARCH_ID_MIPS32 ((EI_CLASS_32<<16)|EM_MIPS) /* 0x10008 */
 		#define ARCH_ID_MIPS64 ((EI_CLASS_64<<16)|EM_MIPS) /* 0x20008 */
+		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS64, LittleEndian, mips64el);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS64, BigEndian, mips64eb);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, LittleEndian, mipsel);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, BigEndian, mipseb);
 
 		Ref<BinaryViewType> elf = BinaryViewType::GetByName("ELF");
 		if (elf)
+		{
+			elf->RegisterPlatformRecognizer(ARCH_ID_MIPS64, LittleEndian, ElfFlagsRecognize);
 			elf->RegisterPlatformRecognizer(ARCH_ID_MIPS64, BigEndian, ElfFlagsRecognize);
+		}
 
 		BinaryViewType::RegisterArchitecture("PE", 0x166, LittleEndian, mipsel);
 		return true;

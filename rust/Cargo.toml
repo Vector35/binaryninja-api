@@ -27,6 +27,7 @@ members = [
     "examples/dwarf/dwarf_import",
     "examples/dwarf/dwarfdump",
     "examples/dwarf/shared",
+    "examples/idb_import",
     "examples/flowgraph",
     "examples/minidump",
     "examples/mlil_visitor",

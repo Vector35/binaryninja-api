@@ -15,13 +15,9 @@ Online documentation is available for the following APIs:
 - [Rust API, Stable Branch](https://rust.binary.ninja/)
 - [Rust API, Dev Branch](https://rust-dev.binary.ninja/)
 
-## Branches
-
-This repository has two primary branches [`dev`](/Vector35/binaryninja-api/tree/dev/) and [`master`](/Vector35/binaryninja-api/tree/master/).
-
-The `dev` branch has the latest updates and tracks the latest development build of Binary Ninja; pull requests should be made against this branch. The `master` branch tracks the stable build of Binary Ninja. If you have just installed Binary Ninja for the first time, you are likely on the stable release channel.
-
 ## Usage and Build Instructions
+
+**In order to build the Binary Ninja API, you will need to use the specific revision that matches the hash from the file `api_REVISION.txt`.** This file should be located in the root install folder for Linux and Windows or the `Contents/Resources` sub-folder of the app on macOS. The easiest way to do this is by cloning this repository (or adding it as a submodule) and doing something like `git checkout $(cat api_REVISION.txt | awk -F/ '{print $NF}')`. Documentation for how to set this up with something like `cmake` can be found [here](https://docs.binary.ninja/dev/plugins.html?h=api_#cmake-setup).
 
 To write Binary Ninja plugins using C++, you'll need to build the C++ API. Building the API library is done similarly to most CMake-based projects; the basic steps are outlined as follows:
 
@@ -70,12 +66,17 @@ There are many examples available. The [Python examples folder](https://github.c
 
 The issue tracker for this repository tracks not only issues with the source code contained here but also the broader Binary Ninja product.
 
+## Branches
+
+This repository has two primary branches [`dev`](/Vector35/binaryninja-api/tree/dev/) and [`master`](/Vector35/binaryninja-api/tree/master/).
+
+The `dev` branch has the latest updates and tracks the latest development build of Binary Ninja; pull requests should be made against this branch. The `master` branch tracks the stable build of Binary Ninja. If you have just installed Binary Ninja for the first time, you are likely on the stable release channel.
+
 ## Contributing
 
 Public contributions are welcome to this repository. Most of the API and documentation in this repository is licensed under an MIT license, however, the API interfaces with a closed-source commercial application, [Binary Ninja](https://binary.ninja). Additionally, the [Rust API](https://github.com/Vector35/binaryninja-api/tree/dev/rust) is [licensed](https://github.com/Vector35/binaryninja-api/tree/dev/rust/LICENSE) under a Apache 2.0 license.
 
 If you're interested in contributing when you submit your first PR, you'll receive a notice from [CLA Assistant](https://cla-assistant.io/) that allows you to sign our [Contribution License Agreement](https://binary.ninja/cla.pdf) online.
-
 
 ## Platforms
 
@@ -95,10 +96,11 @@ This repository contains all of our Architecture plugins available here:
 
 * [ARMv7](https://github.com/Vector35/binaryninja-api/tree/dev/arch/armv7)
 * [PPC](https://github.com/Vector35/binaryninja-api/tree/dev/arch/powerpc)
-* [MIPS32](https://github.com/Vector35/binaryninja-api/tree/dev/arch/mips)
+* [MIPS](https://github.com/Vector35/binaryninja-api/tree/dev/arch/mips)
 * [ARM64](https://github.com/Vector35/binaryninja-api/tree/dev/arch/arm64)
 * [x86/x86_64](https://github.com/Vector35/binaryninja-api/tree/dev/arch/x86)
-* [RISCV](https://github.com/Vector35/binaryninja-api/tree/dev/arch/riscv)
+* [RISC-V](https://github.com/Vector35/binaryninja-api/tree/dev/arch/riscv)
+* [MSP430](https://github.com/Vector35/binaryninja-api/tree/dev/arch/msp430)
 
 
 ## BinaryViewTypes

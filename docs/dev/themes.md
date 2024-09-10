@@ -117,7 +117,7 @@ Colors marked "*required*" must be specified. Unmarked colors will hold default 
 3. `numberColor` (*required*) - Used to color number literals (e.g. `0xf0`)
 4. `codeSymbolColor` (*required*) - Used to color local function names (e.g. `sub_100003c50`)
 5. `dataSymbolColor` (*required*) - Used to color data symbols (e.g. `data_100003e2c`)
-6. `stackVariableColor` (*required*) - Used to color stack variables (e.g `var_8`)
+6. `stackVariableColor` (*required*) - Used to color stack variables (e.g `var_8`) in disassembly and LLIL (the stack [does not exist](bnil-mlil.md) in MLIL and above)
 7. `importColor` (*required*) - Used to color imported function names (e.g. `printf`)
 8. `annotationColor` (*required*) - Used to color annotations (e.g. hints), not shown in picture above
 9. `commentColor` - Used to color code comments

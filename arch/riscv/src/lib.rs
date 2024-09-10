@@ -2337,10 +2337,19 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
                     reloc.size = 2;
                     reloc.truncate_size = 2;
                 }
-                Self::R_RISCV_TLS_TPREL32 | Self::R_RISCV_TLS_TPREL64 => {
+                Self::R_RISCV_TLS_TPREL32 => {
                     reloc.type_ = RelocationType::UnhandledRelocation;
                     log::warn!(
-                        "Unhandled relocation type R_RISCV_TLS_TPREL at {:x?}",
+                        "Unhandled relocation type {:?} (R_RISCV_TLS_TPREL32) at {:x?}",
+                        reloc.native_type,
+                        reloc.address
+                    )
+                }
+                Self::R_RISCV_TLS_TPREL64 => {
+                    reloc.type_ = RelocationType::UnhandledRelocation;
+                    log::warn!(
+                        "Unhandled relocation type {:?} (R_RISCV_TLS_TPREL64) at {:x?}",
+                        reloc.native_type,
                         reloc.address
                     )
                 }

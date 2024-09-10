@@ -2646,7 +2646,7 @@ class BinaryView:
 		return BinaryView(file_metadata=file_metadata, handle=view)
 
 	@staticmethod
-	def load(source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView', 'project.ProjectFile'], update_analysis: Optional[bool] = True,
+	def load(source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView', 'project.ProjectFile'], update_analysis: bool = True,
 	    progress_func: Optional[ProgressFuncType] = None, options: Mapping[str, Any] = {}) -> Optional['BinaryView']:
 		"""
 		``load`` opens, generates default load options (which are overridable), and returns the first available \
@@ -2687,21 +2687,21 @@ class BinaryView:
 		binaryninja._init_plugins()
 
 		if progress_func is None:
-			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda cur, total: True)
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: True)
 		else:
-			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda cur, total: progress_func(cur, total))
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: progress_func(cur, total))
 
 		if isinstance(source, os.PathLike):
 			source = str(source)
 		if isinstance(source, BinaryView):
-			handle = core.BNLoadBinaryView(source.handle, update_analysis, json.dumps(options), progress_cfunc)
+			handle = core.BNLoadBinaryView(source.handle, update_analysis, json.dumps(options), progress_cfunc, None)
 		elif isinstance(source, project.ProjectFile):
-			handle = core.BNLoadProjectFile(source._handle, update_analysis, json.dumps(options), progress_cfunc)
+			handle = core.BNLoadProjectFile(source._handle, update_analysis, json.dumps(options), progress_cfunc, None)
 		elif isinstance(source, str):
-			handle = core.BNLoadFilename(source, update_analysis, json.dumps(options), progress_cfunc)
+			handle = core.BNLoadFilename(source, update_analysis, json.dumps(options), progress_cfunc, None)
 		elif isinstance(source, bytes) or isinstance(source, bytearray) or isinstance(source, databuffer.DataBuffer):
 			raw_view = BinaryView.new(source)
-			handle = core.BNLoadBinaryView(raw_view.handle, update_analysis, json.dumps(options), progress_cfunc)
+			handle = core.BNLoadBinaryView(raw_view.handle, update_analysis, json.dumps(options), progress_cfunc, None)
 		else:
 			raise NotImplementedError
 		return BinaryView(handle=handle) if handle else None
@@ -4598,6 +4598,27 @@ class BinaryView:
 		:rtype: None
 		"""
 		core.BNSetAnalysisHold(self.handle, enable)
+
+	def get_function_analysis_update_disabled(self) -> bool:
+		"""
+		Returns True when functions are prevented from being marked as updates required, False otherwise.
+		:return:
+		"""
+		return core.BNGetFunctionAnalysisUpdateDisabled(self.handle)
+
+	def set_function_analysis_update_disabled(self, disabled: bool) -> None:
+		"""
+		``set_function_analysis_update_disabled`` prevents any function from being marked as updates required, so that
+		they would NOT be re-analyzed when the analysis is updated. The main difference between this API and
+		``set_analysis_hold`` is that ``set_analysis_hold`` only temporarily holds the analysis, and the functions
+		are still arranged to be updated when the hold is turned off. However, with
+		``set_function_analysis_update_disabled``, functions would not be put into the analysis queue at all.
+
+		Use with caution -- in most cases, this is NOT what you want, and you should use ``set_analysis_hold`` instead.
+		:param disabled:
+		:return:
+		"""
+		core.BNSetFunctionAnalysisUpdateDisabled(self.handle, disabled)
 
 	def update_analysis(self) -> None:
 		"""
@@ -7213,8 +7234,10 @@ class BinaryView:
 		``get_linear_disassembly`` gets an iterator for all lines in the linear disassembly of the view for the given
 		disassembly settings.
 
-		.. note:: linear_disassembly doesn't just return disassembly; it will return a single line from the linear view,\
-		 and thus will contain both data views, and disassembly.
+		.. note::
+			- linear_disassembly doesn't just return disassembly; it will return a single line from the linear view,\
+				and thus will contain both data views, and disassembly.
+			- **Warning:** In order to get deterministic output, the WaitForIL `DisassemblyOption` should be set to True.
 
 		:param DisassemblySettings settings: instance specifying the desired output formatting. Defaults to None which will use default settings.
 		:return: An iterator containing formatted disassembly lines.

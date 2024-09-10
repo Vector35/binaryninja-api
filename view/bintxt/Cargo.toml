@@ -1,0 +1,19 @@
+[package]
+name = "view_bintxt"
+version = "0.1.0"
+authors = ["Rubens Brandao <git@rubens.io>"]
+edition = "2021"
+
+[dependencies]
+binaryninja = { path = "../../rust" }
+ihex = "3.0.0"
+log = "*"
+srec = "0.2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+panic = "abort"
+lto = true
+debug = 1

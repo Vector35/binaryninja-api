@@ -1878,6 +1878,80 @@ RemoteFolder::RemoteFolder(BNRemoteFolder* folder)
 }
 
 
+Ref<ProjectFolder> RemoteFolder::GetCoreFolder()
+{
+	BNProjectFolder* res = BNRemoteFolderGetCoreFolder(m_object);
+	if (!res)
+		return nullptr;
+	return new ProjectFolder(res);
+}
+
+
+Ref<RemoteProject> RemoteFolder::GetProject()
+{
+	BNRemoteProject* res = BNRemoteFolderGetProject(m_object);
+	if (!res)
+		return nullptr;
+	return new RemoteProject(res);
+}
+
+
+Ref<RemoteFolder> RemoteFolder::GetParent()
+{
+	BNRemoteFolder* res = nullptr;
+	if (!BNRemoteFolderGetParent(m_object, &res))
+		return nullptr;
+	if (!res)
+		return nullptr;
+	return new RemoteFolder(res);
+}
+
+
+Ref<Remote> RemoteFolder::GetRemote()
+{
+	BNRemote* res = BNRemoteFolderGetRemote(m_object);
+	if (!res)
+		return nullptr;
+	return new Remote(res);
+}
+
+
+std::string RemoteFolder::GetId()
+{
+	char* res = BNRemoteFolderGetId(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFolder::GetUrl()
+{
+	char* res = BNRemoteFolderGetUrl(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFolder::GetName()
+{
+	char* res = BNRemoteFolderGetName(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFolder::GetDescription()
+{
+	char* res = BNRemoteFolderGetDescription(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
 CollabPermission::CollabPermission(BNCollaborationPermission* permission)
 {
 	m_object = permission;

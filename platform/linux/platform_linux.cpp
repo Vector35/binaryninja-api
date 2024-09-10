@@ -240,6 +240,7 @@ extern "C"
 		AddOptionalPluginDependency("arch_mips");
 		AddOptionalPluginDependency("arch_ppc");
 		AddOptionalPluginDependency("arch_riscv");
+		AddOptionalPluginDependency("arch_msp430");
 		AddOptionalPluginDependency("view_elf");
 	}
 #endif

@@ -5038,6 +5038,9 @@ namespace BinaryNinja {
 		*/
 		void SetAnalysisHold(bool enable);
 
+		bool GetFunctionAnalysisUpdateDisabled();
+		void SetFunctionAnalysisUpdateDisabled(bool disabled);
+
 		/*! start the analysis running and dont return till it is complete
 
 			Analysis of BinaryViews does not occur automatically, the user must start analysis by calling either
@@ -13492,9 +13495,9 @@ namespace BinaryNinja {
 
 		BNUpdateResult UpdateToVersion(const std::string& version);
 		BNUpdateResult UpdateToVersion(
-		    const std::string& version, const std::function<bool(uint64_t progress, uint64_t total)>& progress);
+		    const std::string& version, const std::function<bool(size_t progress, size_t total)>& progress);
 		BNUpdateResult UpdateToLatestVersion();
-		BNUpdateResult UpdateToLatestVersion(const std::function<bool(uint64_t progress, uint64_t total)>& progress);
+		BNUpdateResult UpdateToLatestVersion(const std::function<bool(size_t progress, size_t total)>& progress);
 	};
 
 	/*! UpdateVersion documentation
@@ -16188,6 +16191,28 @@ namespace BinaryNinja {
 		    BNSettingsScope scope = SettingsAutoScope);
 		bool SetJson(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr,
 		    BNSettingsScope scope = SettingsAutoScope);
+
+		// Function Settings
+		bool DeserializeSettings(const std::string& contents, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		std::string SerializeSettings(Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+
+		bool Reset(const std::string& key, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool ResetAll(Ref<Function> func, BNSettingsScope scope = SettingsAutoScope, bool schemaOnly = true);
+
+		template <typename T>
+		T Get(const std::string& key, Ref<Function> func, BNSettingsScope* scope = nullptr);
+
+		std::string GetJson(const std::string& key, Ref<Function> func, BNSettingsScope* scope = nullptr);
+
+		bool Set(const std::string& key, bool value, Ref<Function> func,  BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, double value, Ref<Function> func,  BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, int value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, int64_t value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, uint64_t value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const char* value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const std::string& value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const std::vector<std::string>& value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool SetJson(const std::string& key, const std::string& value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
 	};
 
 	// explicit specializations
@@ -16211,6 +16236,19 @@ namespace BinaryNinja {
 	std::vector<std::string> Settings::Get<std::vector<std::string>>(
 	    const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
 	/*! \endcond*/
+
+	template <>
+	bool Settings::Get<bool>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	double Settings::Get<double>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	int64_t Settings::Get<int64_t>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	uint64_t Settings::Get<uint64_t>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	std::string Settings::Get<std::string>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	std::vector<std::string> Settings::Get<std::vector<std::string>>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
 
 	typedef BNMetadataType MetadataType;
 
@@ -16585,7 +16623,7 @@ namespace BinaryNinja {
 	class CustomDebugInfoParser : public DebugInfoParser
 	{
 		static bool IsValidCallback(void* ctxt, BNBinaryView* view);
-		static bool ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view, BNBinaryView* debugFile, bool (*progress)(void*, size_t, size_t), void* progressCtxt);
+		static bool ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view, BNBinaryView* debugFile, BNProgressFunction progress, void* progressCtxt);
 		BNDebugInfoParser* Register(const std::string& name);
 
 	  public:
@@ -18179,6 +18217,15 @@ namespace BinaryNinja::Collaboration
 	{
 	public:
 		RemoteFolder(BNRemoteFolder* remoteFolder);
+
+		Ref<ProjectFolder> GetCoreFolder();
+		Ref<RemoteProject> GetProject();
+		Ref<RemoteFolder> GetParent();
+		Ref<Remote> GetRemote();
+		std::string GetId();
+		std::string GetUrl();
+		std::string GetName();
+		std::string GetDescription();
 	};
 
 	class RemoteFile;

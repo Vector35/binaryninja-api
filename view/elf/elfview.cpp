@@ -38,7 +38,7 @@ void BinaryNinja::InitElfViewType()
 		"type" : "boolean",
 		"default" : true,
 		"description" : "Enable ARM BE8 binary detection for mixed little/big endianness for code/data",
-		"ignore" : ["SettingsProjectScope"]
+		"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
 		})");
 }
 
@@ -795,6 +795,13 @@ bool ElfView::Init()
 			while (!end)
 			{
 				uint64_t tag, value;
+				if (i >= m_dynamicTable.fileSize)
+				{
+					// Prevent reading past end of dynamic table in file
+					end = true;
+					break;
+				}
+
 				if (m_elf32) // 32-bit ELF
 				{
 					tag = reader.Read32();

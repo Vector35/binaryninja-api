@@ -60,12 +60,14 @@ fn main() {
     // and add it to the library search path.
     #[cfg(target_os = "linux")]
     {
-        let symlink_target = PathBuf::from(&out_dir).join("libbinaryninjacore.so");
-        if link_path.join("libbinaryninjacore.so.1").exists() && !symlink_target.exists() {
+        let symlink_source = PathBuf::from(&out_dir).join("libbinaryninjacore.so");
+        let symlink_target = link_path.join("libbinaryninjacore.so.1");
+        // Make a symlink "libbinaryninjacore.so" pointing to "libbinaryninjacore.so.1"
+        if symlink_target.exists() && symlink_source.symlink_metadata().is_err() {
             use std::os::unix::fs;
             fs::symlink(
-                link_path.join("libbinaryninjacore.so.1"),
-                PathBuf::from(&out_dir).join("libbinaryninjacore.so"),
+                symlink_target,
+                symlink_source,
             )
             .expect("failed to create required symlink");
         }

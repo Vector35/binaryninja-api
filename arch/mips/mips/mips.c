@@ -743,6 +743,8 @@ static const char* const OperationStrings[] = {
 		"tgei",
 		"tgeiu",
 		"tgeu",
+		"tlbinv",
+		"tlbinvf",
 		"tlbp",
 		"tlbr",
 		"tlbwi",
@@ -1400,13 +1402,15 @@ uint32_t mips_decompose_instruction(
 				{
 					switch (ins.r.function)
 					{
-						case 1:  instruction->operation = MIPS_TLBR;  break;
-						case 2:  instruction->operation = MIPS_TLBWI; break;
- 						case 6:  instruction->operation = MIPS_TLBWR; break;
- 						case 8:  instruction->operation = MIPS_TLBP;  break;
- 						case 24: instruction->operation = MIPS_ERET;  break;
- 						case 31: instruction->operation = MIPS_DERET; break;
- 						case 32: instruction->operation = MIPS_WAIT;  break;
+						case 1:  instruction->operation = MIPS_TLBR;    break;
+						case 2:  instruction->operation = MIPS_TLBWI;   break;
+						case 3:  instruction->operation = MIPS_TLBINV;  break;
+						case 4:  instruction->operation = MIPS_TLBINVF; break;
+						case 6:  instruction->operation = MIPS_TLBWR;   break;
+						case 8:  instruction->operation = MIPS_TLBP;    break;
+						case 24: instruction->operation = MIPS_ERET;    break;
+						case 31: instruction->operation = MIPS_DERET;   break;
+						case 32: instruction->operation = MIPS_WAIT;    break;
 					}
 				}
 				break;
@@ -1674,6 +1678,8 @@ uint32_t mips_decompose_instruction(
 		case MIPS_TLBWI:
 		case MIPS_TLBR:
 		case MIPS_TLBP:
+		case MIPS_TLBINV:
+		case MIPS_TLBINVF:
 			if (((ins.value >> 6) & 0x7ff) != 0 || ins.bits.bit25 != 1)
 				return 1;
 			break;

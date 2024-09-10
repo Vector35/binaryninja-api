@@ -1868,7 +1868,7 @@ impl<D: RiscVDisassembler> Instr<D> {
                     ops.push(Operand::R(j.rd()));
                     ops.push(Operand::I(j.imm()));
                 }
-                Op::SfenceVm(ref r) => {}
+                Op::SfenceVm(ref _r) => {}
                 Op::SfenceVma(ref r) => {
                     ops.push(Operand::R(r.rs1()));
                     ops.push(Operand::R(r.rs2()));

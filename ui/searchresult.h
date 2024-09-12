@@ -220,7 +220,9 @@ class BINARYNINJAUIAPI SearchResultTable : public QTableView
 
 	SearchResultModel* model() const { return m_table; }
 
-    void StopTimer();
+	void StopTimer();
+
+	void copy();
 
   public Q_SLOTS:
 	void resultActivated(const QModelIndex& idx);

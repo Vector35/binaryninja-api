@@ -16,6 +16,7 @@
 #include "expandablegroup.h"
 #include "sidebar.h"
 #include "tabwidget.h"
+#include "copyableselection.h"
 
 #define FIND_RESULT_LIST_UPDATE_INTERVAL 250
 #define COLUMN_MIN_WIDTH_IN_CHAR         10
@@ -173,7 +174,7 @@ class SearchResultWidget;
 /*!
     \ingroup searchresult
 */
-class BINARYNINJAUIAPI SearchResultTable : public QTableView
+class BINARYNINJAUIAPI SearchResultTable : public QTableView, public CopyableSelection
 {
 	Q_OBJECT
 
@@ -223,6 +224,8 @@ class BINARYNINJAUIAPI SearchResultTable : public QTableView
 	void StopTimer();
 
 	void copy();
+
+	QModelIndexList selectionList() override { return selectionModel()->selectedIndexes(); };
 
   public Q_SLOTS:
 	void resultActivated(const QModelIndex& idx);

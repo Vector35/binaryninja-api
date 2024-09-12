@@ -1,5 +1,6 @@
 #pragma once
 
+#include <copyableselection.h>
 #include <QtCore/QAbstractItemModel>
 #include <QtCore/QItemSelectionModel>
 #include <QtCore/QSortFilterProxyModel>
@@ -498,7 +499,8 @@ class BINARYNINJAUIAPI CrossReferenceContainer
 
 	\ingroup xreflist
 */
-class BINARYNINJAUIAPI CrossReferenceTree : public QTreeView, public CrossReferenceContainer, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI CrossReferenceTree : public QTreeView, public CrossReferenceContainer,
+                                            public BinaryNinja::BinaryDataNotification, public CopyableSelection
 {
 	Q_OBJECT
 
@@ -533,6 +535,8 @@ public:
 	void setGraphType(BNFunctionGraphType type) { m_tree->setGraphType(type); }
 	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;
 
+	QModelIndexList selectionList() override { return selectedIndexes(); };
+
   Q_SIGNALS:
 	void newSelection();
 	void modelUpdated();
@@ -546,7 +550,8 @@ public:
 
 	\ingroup xreflist
 */
-class BINARYNINJAUIAPI CrossReferenceTable : public QTableView, public CrossReferenceContainer, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI CrossReferenceTable : public QTableView, public CrossReferenceContainer,
+                                             public BinaryNinja::BinaryDataNotification, public CopyableSelection
 {
 	Q_OBJECT
 
@@ -576,6 +581,8 @@ class BINARYNINJAUIAPI CrossReferenceTable : public QTableView, public CrossRefe
 	virtual void updateMaxUIItems(size_t count) override;
 	void setGraphType(BNFunctionGraphType type) { m_table->setGraphType(type); }
 	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;
+
+	QModelIndexList selectionList() override { return selectedIndexes(); };
 
   public Q_SLOTS:
 	void doRepaint();

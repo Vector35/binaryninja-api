@@ -11,6 +11,7 @@
 #include "viewframe.h"
 #include "filter.h"
 #include "tagtypelist.h"
+#include "copyableselection.h"
 
 /*!
 
@@ -108,7 +109,7 @@ class BINARYNINJAUIAPI TagItemDelegate : public QStyledItemDelegate
 
     \ingroup taglist
 */
-class BINARYNINJAUIAPI TagList : public QTreeView, public BinaryNinja::BinaryDataNotification, public FilterTarget
+class BINARYNINJAUIAPI TagList : public QTreeView, public BinaryNinja::BinaryDataNotification, public FilterTarget, public CopyableSelection
 {
 	Q_OBJECT
 
@@ -180,7 +181,6 @@ class BINARYNINJAUIAPI TagList : public QTreeView, public BinaryNinja::BinaryDat
 
 	void notifyFontChanged();
 	void removeSelection();
-	void copySelection();
 
 	void clearFilter();
 	void setFilter(FilterFn filter);
@@ -196,6 +196,8 @@ class BINARYNINJAUIAPI TagList : public QTreeView, public BinaryNinja::BinaryDat
 	void scrollToCurrentItem() override;
 	void selectFirstItem() override;
 	void activateFirstItem() override;
+
+	QModelIndexList selectionList() override { return selectedIndexes(); };
 };
 
 /*!

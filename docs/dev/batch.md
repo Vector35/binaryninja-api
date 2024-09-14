@@ -82,7 +82,7 @@ A common workflow is to analyze a single (or small number) of functions in a par
 
 ```python
 from binaryninja import load
-with load("/bin/ls", options={'analysis.limits.maxFunctionSize': 0}) as bv:
+with load("/bin/ls", options={'analysis.limits.maxFunctionSize': 1}) as bv:
     fn = bv.entry_function
     # Alternatively, use add_user_function at a particular address to first
     # create the function

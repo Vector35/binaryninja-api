@@ -264,6 +264,7 @@ const char *get_system_register_name(enum SystemReg sr)
 		case 38944: return "dbgdtr_el0";
 		case 38952: return "dbgdtrtx_el0";
 		case 41016: return "dbgvcr32_el2";
+		case 49157: return "mpidr_el1";
 		case 49280: return "sctlr_el1";
 		case 49281: return "actlr_el1";
 		case 49282: return "cpacr_el1";

@@ -1040,7 +1040,7 @@ class Arm64Architecture : public Architecture
 		// on it to fill the next array.
 		static_assert(Arm64Intrinsic::ARM64_INTRIN_AUTDA == 0,
 			"Invalid first Arm64Intrinsic value. Please add your intrinsic further in the enum.");
-		
+
 		// Normal intrinsics.
 		for (uint32_t id = Arm64Intrinsic::ARM64_INTRIN_AUTDA; id < Arm64Intrinsic::ARM64_INTRIN_NORMAL_END; id++) {
 			result.push_back(id);
@@ -1856,7 +1856,7 @@ class Arm64Architecture : public Architecture
 			REG_TRCCIDCVR5, REG_TRCVMIDCVR5, REG_TRCCIDCVR6, REG_TRCVMIDCVR6,
 			REG_TRCCIDCVR7, REG_TRCVMIDCVR7, REG_TRCITCTRL, REG_TRCCLAIMSET,
 			REG_TRCCLAIMCLR, REG_TRCLAR, REG_TEECR32_EL1, REG_TEEHBR32_EL1, REG_DBGDTR_EL0,
-			REG_DBGDTRTX_EL0, REG_DBGVCR32_EL2, REG_SCTLR_EL1, REG_ACTLR_EL1,
+			REG_DBGDTRTX_EL0, REG_DBGVCR32_EL2, REG_MPIDR_EL1, REG_SCTLR_EL1, REG_ACTLR_EL1,
 			REG_CPACR_EL1, REG_RGSR_EL1, REG_GCR_EL1, REG_TRFCR_EL1, REG_TTBR0_EL1,
 			REG_TTBR1_EL1, REG_TCR_EL1, REG_APIAKEYLO_EL1, REG_APIAKEYHI_EL1,
 			REG_APIBKEYLO_EL1, REG_APIBKEYHI_EL1, REG_APDAKEYLO_EL1, REG_APDAKEYHI_EL1,

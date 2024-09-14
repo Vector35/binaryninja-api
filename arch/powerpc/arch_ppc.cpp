@@ -680,7 +680,7 @@ class PowerpcArchitecture: public Architecture
 						case PPC_INS_BCL:
 						case PPC_INS_BL:
 						case PPC_INS_BLA:
-							snprintf(buf, sizeof(buf), "0x%llx", op->imm);
+							snprintf(buf, sizeof(buf), "0x%" PRIx64, op->imm);
 							result.emplace_back(CodeRelativeAddressToken, buf, (uint32_t) op->imm, 4);
 							break;
 						case PPC_INS_ADDIS:
@@ -693,9 +693,9 @@ class PowerpcArchitecture: public Architecture
 							break;
 						default:
 							if (op->imm < 0 && op->imm > -0x10000)
-								snprintf(buf, sizeof(buf), "-0x%llx", -op->imm);
+								snprintf(buf, sizeof(buf), "-0x%" PRIx64, -op->imm);
 							else
-								snprintf(buf, sizeof(buf), "0x%llx", op->imm);
+								snprintf(buf, sizeof(buf), "0x%" PRIx64, op->imm);
 							result.emplace_back(IntegerToken, buf, op->imm, 4);
 					}
 

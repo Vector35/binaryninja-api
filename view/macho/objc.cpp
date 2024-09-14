@@ -422,7 +422,7 @@ void ObjCProcessor::LoadClasses(BinaryReader* reader, Ref<Section> classPtrSecti
 				classPtr);
 			char hexString[9];
 			hexString[8] = 0;
-			snprintf(hexString, sizeof(hexString), "%llx", classPtr);
+			snprintf(hexString, sizeof(hexString), "%" PRIx64, classPtr);
 			name = "0x" + std::string(hexString);
 		}
 
@@ -548,7 +548,7 @@ void ObjCProcessor::LoadCategories(BinaryReader* reader, Ref<Section> classPtrSe
 	if (size == 0)
 		return;
 	auto ptrSize = m_data->GetAddressSize();
-	auto ptrCount = size / m_data->GetAddressSize();
+	//auto ptrCount = size / m_data->GetAddressSize();
 
 	auto classPtrSectionStart = classPtrSection->GetStart();
 	auto classPtrSectionEnd = classPtrSection->GetEnd();

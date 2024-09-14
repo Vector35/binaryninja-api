@@ -7,6 +7,7 @@ b mips_disassemble
 
 #include <stdio.h>
 #include <stdint.h>
+#include <inttypes.h>
 
 #include "mips.h"
 
@@ -75,6 +76,6 @@ int main(int ac, char **av)
 	}
 
 	if(0 == disassemble(insword, address, MIPS_32, instxt)) {
-		printf("%08llX: %08X %s\n", address, insword, instxt);
+		printf("%08" PRIX64 ": %08X %s\n", address, insword, instxt);
 	}
 }

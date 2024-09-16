@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use binaryninja::architecture::CoreArchitecture;
 use binaryninja::binaryninjacore_sys::{BNMemberAccess, BNMemberScope};
 use binaryninja::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
-use binaryninja::debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser};
+use binaryninja::debuginfo::{
+    CustomDebugInfoParser, DebugFunctionInfo, DebugInfo, DebugInfoParser,
+};
 use binaryninja::logger;
 use binaryninja::rc::Ref;
 use binaryninja::types::{
@@ -11,6 +13,7 @@ use binaryninja::types::{
     StructureType, Type,
 };
 
+use idb_rs::id0::ID0Section;
 use idb_rs::til::{
     array::Array as TILArray, function::Function as TILFunction, r#enum::Enum as TILEnum,
     r#struct::Struct as TILStruct, r#struct::StructMember as TILStructMember, section::TILSection,
@@ -86,11 +89,11 @@ impl CustomDebugInfoParser for IDBDebugInfoParser {
     fn parse_info(
         &self,
         debug_info: &mut DebugInfo,
-        _bv: &BinaryView,
+        bv: &BinaryView,
         debug_file: &BinaryView,
         progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool {
-        match parse_idb_info(debug_info, debug_file, progress) {
+        match parse_idb_info(debug_info, bv, debug_file, progress) {
             Ok(()) => true,
             Err(error) => {
                 error!("Unable to parse IDB file: {error}");
@@ -159,6 +162,7 @@ impl std::io::Seek for BinaryViewReader<'_> {
 
 fn parse_idb_info(
     debug_info: &mut DebugInfo,
+    bv: &BinaryView,
     debug_file: &BinaryView,
     progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
 ) -> Result<()> {
@@ -170,12 +174,26 @@ fn parse_idb_info(
     trace!("Parsing a IDB file");
     let file = std::io::BufReader::new(file);
     let mut parser = idb_rs::IDBParser::new(file)?;
-    let Some(til_section) = parser.til_section_offset() else {
-        return Ok(());
-    };
-    trace!("Parsing the TIL section");
-    let til = parser.read_til_section(til_section)?;
-    parse_til_section_info(debug_info, debug_file, til, progress)
+    if let Some(til_section) = parser.til_section_offset() {
+        trace!("Parsing the TIL section");
+        let til = parser.read_til_section(til_section)?;
+        // progress 0%-50%
+        parse_til_section_info(debug_info, debug_file, til, |value, total| {
+            progress(value, total.wrapping_mul(2))
+        })?;
+    }
+
+    if let Some(id0_section) = parser.id0_section_offset() {
+        trace!("Parsing the ID0 section");
+        let id0 = parser.read_id0_section(id0_section)?;
+        // progress 50%-100%
+        parse_id0_section_info(debug_info, bv, debug_file, id0, |value, old_total| {
+            let new_total = old_total.wrapping_mul(2);
+            progress(value + old_total, new_total)
+        })?;
+    }
+
+    Ok(())
 }
 
 fn translate_enum(members: &[(Option<String>, u64)], bytesize: u64) -> Ref<Type> {
@@ -259,11 +277,11 @@ struct TranslatesIDBType<'a> {
     is_symbol: bool,
 }
 
-struct TranslateIDBTypes<'a> {
+struct TranslateIDBTypes<'a, F: Fn(usize, usize) -> Result<(), ()>> {
     arch: CoreArchitecture,
     debug_info: &'a mut DebugInfo,
     _debug_file: &'a BinaryView,
-    progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
+    progress: F,
     til: &'a TILSection,
     // note it's mapped 1:1 with the same index from til types.chain(symbols)
     types: Vec<TranslatesIDBType<'a>>,
@@ -273,7 +291,7 @@ struct TranslateIDBTypes<'a> {
     types_by_name: HashMap<String, usize>,
 }
 
-impl TranslateIDBTypes<'_> {
+impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
     fn find_typedef_by_ordinal(&self, ord: u64) -> Option<TranslateTypeResult> {
         self.types_by_ord
             .get(&ord)
@@ -683,7 +701,7 @@ fn parse_til_section_info(
     debug_info: &mut DebugInfo,
     debug_file: &BinaryView,
     til: TILSection,
-    progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
+    progress: impl Fn(usize, usize) -> Result<(), ()>,
 ) -> Result<()> {
     let total = til.symbols.len() + til.types.len();
     let mut types = Vec::with_capacity(total);
@@ -851,6 +869,88 @@ fn parse_til_section_info(
         }
     }
 
+    Ok(())
+}
+
+fn parse_id0_section_info(
+    debug_info: &mut DebugInfo,
+    bv: &BinaryView,
+    _debug_file: &BinaryView,
+    id0: ID0Section,
+    progress: impl Fn(usize, usize) -> Result<(), ()>,
+) -> Result<()> {
+    // TODO verify the best way to add comments, try to use the debug_info instead
+    for fc in id0.functions_and_comments()? {
+        match fc? {
+            idb_rs::id0::FunctionsAndComments::Name => {}
+            // function will be create bellow using the entry points
+            idb_rs::id0::FunctionsAndComments::Function(_) => {}
+            idb_rs::id0::FunctionsAndComments::RepeatableComment { address, value }
+            | idb_rs::id0::FunctionsAndComments::Comment { address, value } => {
+                let funcs_at = bv.functions_at(address);
+                if !funcs_at.is_empty() {
+                    for function in &funcs_at {
+                        function.set_comment(value);
+                    }
+                } else {
+                    // No functions directly at the address we can annotate containing functions instead.
+                    for function in &bv.functions_containing(address) {
+                        function.set_comment_at(address, value);
+                    }
+                }
+            }
+            idb_rs::id0::FunctionsAndComments::Unknown { .. } => {}
+        }
+    }
+
+    #[derive(Debug, Default)]
+    struct ID0Function {
+        address: Option<u64>,
+        name: Option<String>,
+        symbol: Option<String>,
+    }
+    let mut functions: HashMap<u64, ID0Function> = HashMap::new();
+    for entry_point in id0.entry_points()? {
+        // TODO check for duplication
+        match entry_point? {
+            idb_rs::id0::EntryPoint::Name => {}
+            idb_rs::id0::EntryPoint::Unknown { .. } => {}
+            // TODO take ordinal in consideration if the order of the functions is important
+            idb_rs::id0::EntryPoint::Ordinal { .. } => {}
+            idb_rs::id0::EntryPoint::Function { key, address } => {
+                let fun = functions.entry(key).or_default();
+                let _ = fun.address.insert(address);
+            }
+            idb_rs::id0::EntryPoint::ForwardedSymbol { key, symbol } => {
+                let fun = functions.entry(key).or_default();
+                let _ = fun.symbol.insert(symbol.to_string());
+            }
+            idb_rs::id0::EntryPoint::FunctionName { key, name } => {
+                let fun = functions.entry(key).or_default();
+                let _ = fun.name.insert(name.to_string());
+            }
+        }
+    }
+    let total = functions.len();
+    for (i, function) in functions.into_values().enumerate() {
+        if progress(i, total).is_err() {
+            warn!("Aborted while adding the functions");
+            break;
+        }
+        let name = function.name.clone();
+        if !debug_info.add_function(DebugFunctionInfo::new(
+            None,
+            None,
+            function.name.clone(),
+            None,
+            function.address,
+            None,
+            vec![],
+            vec![],
+        )) {
+            error!("Unable to add the function {name:?}")
+        }
+    }
     Ok(())
 }
 

@@ -116,6 +116,7 @@ This repository contains all of our Binary View Type plugins available here:
 ## DebugInfo
 
 * [DWARF Import](https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/dwarf/dwarf_import)
+* [PDB Import](https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/pdb-ng)
 
 
 ## Related Repositories

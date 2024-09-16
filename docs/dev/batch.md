@@ -78,25 +78,19 @@ Notice that we have far fewer functions in `/bin/ls` this time. By shortcutting 
 
 ### Single Function Analysis
 
-A common workflow is to analyze a single (or small number) of functions in a particular binaries. If we both the [maxFunctionSize](https://docs.binary.ninja/getting-started.html#analysis.limits.maxFunctionSize) setting in conjunction with the [analysis_skipped](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.analysis_skipped) function property we can select specific functions to analyze:
+A common workflow is to analyze a single (or small number) of functions in a particular binaries. This can be done using the analysis hold feature. If we both the [maxFunctionSize](https://docs.binary.ninja/getting-started.html#analysis.limits.maxFunctionSize) setting in conjunction with the [analysis_skipped](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.analysis_skipped) function property we can select specific functions to analyze:
 
 ```python
 from binaryninja import load
-with load("/bin/ls", options={'analysis.limits.maxFunctionSize': 1}) as bv:
+with load("/bin/ls", options={'analysis.initialAnalysisHold': True}) as bv:
     fn = bv.entry_function
     # Alternatively, use add_user_function at a particular address to first
     # create the function
     if fn:
-        if fn.mlil:
-            print("Entry function has MLIL")
-        else:
-            print(f"No MLIL entry function")
-        fn.analysis_skipped = False
-        bv.update_analysis_and_wait()
-        if fn.mlil:
-            print("Entry function has MLIL")
-        else:
-            print(f"No MLIL entry function")
+        if fn.hlil_if_available:
+            print("This will not fire because analysis hold has analyzed nothing so no HLIL exists.")
+        if fn.hlil:
+            print("This will work because HLIL is explicitly being requested via the API and will override the hold.")
 ```
 
 ### Running Plugins

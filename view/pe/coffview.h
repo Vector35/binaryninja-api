@@ -328,6 +328,7 @@ namespace BinaryNinja
 		std::vector<COFFSection> m_sections;
 		std::vector<COFFRelocation> m_relocs;
 		Ref<Architecture> m_arch;
+		Ref<Logger> m_logger;
 		bool m_is64;
 		bool m_extractMangledTypes;
 		bool m_simplifyTemplates;
@@ -358,6 +359,7 @@ namespace BinaryNinja
 
 	class COFFViewType: public BinaryViewType
 	{
+		Ref<Logger> m_logger;
 	public:
 		COFFViewType();
 		virtual Ref<BinaryView> Create(BinaryView* data) override;

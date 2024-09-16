@@ -254,13 +254,27 @@ bool COFFView::Init()
 			string resolvedName = name;
 			if (name[0] == '/' && header.coffSymbolTable)
 			{
-				uint32_t stringTableBase = header.coffSymbolTable + (header.coffSymbolCount * 18);
 				errno = 0;
 				uint32_t offset = strtoul(name+1, nullptr, 10);
-				if (errno == 0 && offset > 0 && stringTableBase + offset < GetParentView()->GetEnd())
+				if (errno == 0 && offset > 0)
 				{
-					sectionNameReader.Seek(stringTableBase + offset);
-					resolvedName = sectionNameReader.ReadCString();
+					BinaryReader stringReader(GetParentView(), LittleEndian);
+					uint64_t stringTableBase = header.coffSymbolTable + (header.coffSymbolCount * 18);
+					stringReader.Seek(stringTableBase);
+					uint32_t stringTableLen = stringReader.Read32();
+					if ((stringTableBase + stringTableLen) > GetParentView()->GetEnd())
+					{
+						LogError("Cannot resolve section name \"%s\": String table is invalid length", name);
+					}
+					else if (stringTableBase + offset < GetParentView()->GetEnd())
+					{
+						sectionNameReader.Seek(stringTableBase + offset);
+						resolvedName = sectionNameReader.ReadCString();
+					}
+					else
+					{
+						LogError("Cannot resolve section name \"%s\": Offset is past end of string table", name);
+					}
 				}
 			}
 			section.name = resolvedName;

@@ -125,9 +125,15 @@ pub(crate) fn handle_enum<R: ReaderType>(
         }
     }
 
+    let width = match get_size_as_usize(entry).unwrap_or(8)
+    {
+        0 => debug_info_builder_context.default_address_size(),
+        x => x
+    };
+
     Some(Type::enumeration(
         &enumeration_builder.finalize(),
-        get_size_as_usize(entry).unwrap_or(8),
+        width,
         false,
     ))
 }

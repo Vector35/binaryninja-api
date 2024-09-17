@@ -78,7 +78,7 @@ Notice that we have far fewer functions in `/bin/ls` this time. By shortcutting 
 
 ### Single Function Analysis
 
-A common workflow is to analyze a single (or small number) of functions in a particular binaries. This can be done using the analysis hold feature. If we both the [maxFunctionSize](https://docs.binary.ninja/getting-started.html#analysis.limits.maxFunctionSize) setting in conjunction with the [analysis_skipped](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.analysis_skipped) function property we can select specific functions to analyze:
+A common workflow is to analyze a single (or small number) of functions in a particular binaries. This can be done using the analysis hold feature:
 
 ```python
 from binaryninja import load

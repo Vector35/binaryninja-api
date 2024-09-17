@@ -92,13 +92,13 @@ This repository contains all of our Platform plugins available here:
 
 ## Architectures
 
-This repository contains all of our Architecture plugins available here:
+This repository contains all of the Architecture plugins available in Personal and Commercial editions of Binary Ninja. You can find each architecture here:
 
+* [x86/x86_64](https://github.com/Vector35/binaryninja-api/tree/dev/arch/x86)
+* [ARM64](https://github.com/Vector35/binaryninja-api/tree/dev/arch/arm64)
 * [ARMv7](https://github.com/Vector35/binaryninja-api/tree/dev/arch/armv7)
 * [PPC](https://github.com/Vector35/binaryninja-api/tree/dev/arch/powerpc)
 * [MIPS](https://github.com/Vector35/binaryninja-api/tree/dev/arch/mips)
-* [ARM64](https://github.com/Vector35/binaryninja-api/tree/dev/arch/arm64)
-* [x86/x86_64](https://github.com/Vector35/binaryninja-api/tree/dev/arch/x86)
 * [RISC-V](https://github.com/Vector35/binaryninja-api/tree/dev/arch/riscv)
 * [MSP430](https://github.com/Vector35/binaryninja-api/tree/dev/arch/msp430)
 

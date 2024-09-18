@@ -538,6 +538,8 @@ namespace BinaryNinja
 		void GetRelocEntries(BinaryReader& reader, const std::vector<Elf64SectionHeader>& sections,
 			bool implicit, std::vector<ELFRelocEntry>& result);
 		bool DerefPpc64Descriptor(BinaryReader& reader, uint64_t addr, uint64_t& result);
+
+		void ParseMiniDebugInfo();
 	public:
 		ElfView(BinaryView* data, bool parseOnly = false);
 		~ElfView();

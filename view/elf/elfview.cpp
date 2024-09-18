@@ -1325,6 +1325,8 @@ bool ElfView::Init()
 		}
 	}
 
+	ParseMiniDebugInfo();
+
 	// Process the queued symbols
 	m_symbolQueue->Process();
 	delete m_symbolQueue;
@@ -2605,6 +2607,44 @@ bool ElfView::DerefPpc64Descriptor(BinaryReader& reader, uint64_t addr, uint64_t
 	bool read_success = reader.TryRead64(result);;
 	reader.Seek(saved);
 	return read_success;
+}
+
+
+void ElfView::ParseMiniDebugInfo()
+{
+	Ref<Section> gnuDebugdata = GetParentView()->GetSectionByName(".gnu_debugdata");
+	if (!gnuDebugdata)
+		return;
+
+	BinaryReader debugdataReader(GetParentView());
+	debugdataReader.Seek(gnuDebugdata->GetStart());
+
+	DataBuffer compressedDebug = debugdataReader.Read(gnuDebugdata->GetLength());
+
+	DataBuffer debugElf;
+	if (!compressedDebug.XzDecompress(debugElf))
+	{
+		m_logger->LogError("Invalid .gnu_debugdata contents: Failed to decompress");
+		return;
+	}
+
+	Ref<BinaryView> debugBv = Load(debugElf, false);
+	if (!debugBv)
+	{
+		m_logger->LogError("Invalid .gnu_debugdata contents: Failed to create BinaryView");
+		return;
+	}
+
+	for (const auto& symbol : debugBv->GetSymbols())
+	{
+		DefineElfSymbol(
+			symbol->GetType(),
+			symbol->GetRawName(),
+			GetStart() + symbol->GetAddress(),
+			false,
+			symbol->GetBinding()
+		);
+	}
 }
 
 

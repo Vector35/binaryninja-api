@@ -11005,6 +11005,18 @@ namespace BinaryNinja {
 		*/
 		void SetBasicBlock(BasicBlock* block);
 
+		/*! Set flow graph block X position
+
+			\param x Flow graph block X position
+		*/
+		void SetX(int x);
+
+		/*! Set flow graph block Y position
+
+			\param y Flow graph block Y position
+		*/
+		void SetY(int y);
+
 		/*! Flow graph block X position
 
 			\return Flow graph block X position
@@ -11079,6 +11091,8 @@ namespace BinaryNinja {
 		void SetHighlight(const BNHighlightColor& color);
 
 		bool IsValidForGraph(FlowGraph* graph) const;
+
+		void SetVisibilityRegion(int x, int y, int w, int h);
 	};
 
 	/*!
@@ -11200,17 +11214,22 @@ namespace BinaryNinja {
 		*/
 		size_t AddNode(FlowGraphNode* node);
 
+
+
 		/*! Flow graph width
 
 			\return Flow graph width
 		*/
 		int GetWidth() const;
+		void SetWidth(int width);
 
 		/*! Flow graph height
 
 			\return Flow graph height
 		*/
 		int GetHeight() const;
+		void SetHeight(int height);
+
 		std::vector<Ref<FlowGraphNode>> GetNodesInRegion(int left, int top, int right, int bottom);
 
 		/*! Whether this graph is representing IL.
@@ -11296,6 +11315,34 @@ namespace BinaryNinja {
 		CoreFlowGraph(BNFlowGraph* graph);
 		virtual bool HasUpdates() const override;
 		virtual Ref<FlowGraph> Update() override;
+	};
+
+	class FlowGraphLayout : public StaticCoreRefCountObject<BNFlowGraphLayout>
+	{
+	  protected:
+		FlowGraphLayout(BNFlowGraphLayout* layout);
+
+		static bool LayoutCallback(void* ctxt, BNFlowGraph* graph, BNFlowGraphNode** nodes, size_t nodeCount);
+
+		std::string m_nameForRegister;
+
+	  public:
+		FlowGraphLayout(const std::string& name);
+
+		static void Register(FlowGraphLayout* layout);
+		static Ref<FlowGraphLayout> GetByName(const std::string& name);
+		static std::vector<Ref<FlowGraphLayout>> GetFlowGraphLayouts();
+
+		std::string GetName() const;
+		virtual bool Layout(Ref<FlowGraph> graph, std::vector<Ref<FlowGraphNode>>& nodes);
+	};
+
+	class CoreFlowGraphLayout : public FlowGraphLayout
+	{
+	  public:
+		CoreFlowGraphLayout(BNFlowGraphLayout* layout);
+
+		virtual bool Layout(Ref<FlowGraph> graph, std::vector<Ref<FlowGraphNode>>& nodes) override;
 	};
 
 	/*!

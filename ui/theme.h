@@ -6,6 +6,7 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 #include <QPushButton>
+#include <QToolButton>
 
 /*!
     @addtogroup Theme
@@ -13,12 +14,21 @@
     @{
 */
 
-class BINARYNINJAUIAPI CustomStyleFlatButton : public QPushButton
+class BINARYNINJAUIAPI CustomStyleFlatPushButton : public QPushButton
 {
 	Q_OBJECT
 public:
-	CustomStyleFlatButton(QWidget* parent = nullptr) : QPushButton(parent) {}
+	CustomStyleFlatPushButton(QWidget* parent = nullptr) : QPushButton(parent) {}
 };
+
+
+class BINARYNINJAUIAPI CustomStyleFlatToolButton : public QToolButton
+{
+Q_OBJECT
+public:
+	CustomStyleFlatToolButton(QWidget* parent = nullptr) : QToolButton(parent) {}
+};
+
 
 class BINARYNINJAUIAPI CustomFusionStyle : public QProxyStyle
 {

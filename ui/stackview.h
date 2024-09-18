@@ -281,6 +281,9 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 	//! Set the base offset to a register (or clear on nullopt)
 	void setBaseRegister(ArchitectureRef arch, std::optional<std::string> regName);
 
+	//! Get the base offset
+	int64_t getBaseOffset(FunctionRef func);
+
 	//! Set the base offset to a constant (or clear on nullopt)
 	void setBaseOffset(FunctionRef func, std::optional<int64_t> offset);
 

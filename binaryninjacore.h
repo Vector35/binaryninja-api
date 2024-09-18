@@ -216,6 +216,7 @@ extern "C"
 	typedef struct BNTypePrinter BNTypePrinter;
 	typedef struct BNFlowGraph BNFlowGraph;
 	typedef struct BNFlowGraphNode BNFlowGraphNode;
+	typedef struct BNFlowGraphLayout BNFlowGraphLayout;
 	typedef struct BNFlowGraphLayoutRequest BNFlowGraphLayoutRequest;
 	typedef struct BNSymbol BNSymbol;
 	typedef struct BNTemporaryFile BNTemporaryFile;
@@ -3102,6 +3103,12 @@ extern "C"
 		void (*externalRefReleased)(void* ctxt);
 	} BNCustomFlowGraph;
 
+	typedef struct BNCustomFlowGraphLayout
+	{
+		void* context;
+		bool (*layout)(void* ctxt, BNFlowGraph* graph, BNFlowGraphNode** nodes, size_t nodeCount);
+	} BNCustomFlowGraphLayout;
+
 	typedef struct BNRange
 	{
 		uint64_t start;
@@ -5271,6 +5278,8 @@ extern "C"
 
 	BINARYNINJACOREAPI int BNGetFlowGraphWidth(BNFlowGraph* graph);
 	BINARYNINJACOREAPI int BNGetFlowGraphHeight(BNFlowGraph* graph);
+	BINARYNINJACOREAPI void BNFlowGraphSetWidth(BNFlowGraph* graph, int width);
+	BINARYNINJACOREAPI void BNFlowGraphSetHeight(BNFlowGraph* graph, int height);
 
 	BINARYNINJACOREAPI BNFlowGraphNode* BNCreateFlowGraphNode(BNFlowGraph* graph);
 	BINARYNINJACOREAPI BNFlowGraphNode* BNNewFlowGraphNodeReference(BNFlowGraphNode* node);
@@ -5279,6 +5288,10 @@ extern "C"
 
 	BINARYNINJACOREAPI BNBasicBlock* BNGetFlowGraphBasicBlock(BNFlowGraphNode* node);
 	BINARYNINJACOREAPI void BNSetFlowGraphBasicBlock(BNFlowGraphNode* node, BNBasicBlock* block);
+
+	BINARYNINJACOREAPI void BNFlowGraphNodeSetX(BNFlowGraphNode* node, int x);
+	BINARYNINJACOREAPI void BNFlowGraphNodeSetY(BNFlowGraphNode* node, int y);
+
 	BINARYNINJACOREAPI int BNGetFlowGraphNodeX(BNFlowGraphNode* node);
 	BINARYNINJACOREAPI int BNGetFlowGraphNodeY(BNFlowGraphNode* node);
 	BINARYNINJACOREAPI int BNGetFlowGraphNodeWidth(BNFlowGraphNode* node);
@@ -5306,6 +5319,16 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsFlowGraphOptionSet(BNFlowGraph* graph, BNFlowGraphOption option);
 
 	BINARYNINJACOREAPI bool BNIsNodeValidForFlowGraph(BNFlowGraph* graph, BNFlowGraphNode* node);
+
+	BINARYNINJACOREAPI void BNFlowGraphNodeSetVisibilityRegion(BNFlowGraphNode* node, int x, int y, int w, int h);
+	BINARYNINJACOREAPI void BNFlowGraphNodeSetOutgoingEdgePoints(BNFlowGraphNode* node, size_t edgeNum, BNPoint* points, size_t pointCount);
+
+	BINARYNINJACOREAPI BNFlowGraphLayout** BNGetFlowGraphLayouts(size_t* count);
+	BINARYNINJACOREAPI void BNFreeFlowGraphLayoutList(BNFlowGraphLayout** layouts);
+	BINARYNINJACOREAPI BNFlowGraphLayout* BNRegisterFlowGraphLayout(const char* name, BNCustomFlowGraphLayout* callbacks);
+	BINARYNINJACOREAPI BNFlowGraphLayout* BNGetFlowGraphLayoutByName(const char* name);
+	BINARYNINJACOREAPI char* BNGetFlowGraphLayoutName(BNFlowGraphLayout* layout);
+	BINARYNINJACOREAPI bool BNFlowGraphLayoutLayout(BNFlowGraphLayout* layout, BNFlowGraph* graph, BNFlowGraphNode** nodes, size_t nodeCount);
 
 	// Symbols
 	BINARYNINJACOREAPI BNSymbol* BNCreateSymbol(BNSymbolType type, const char* shortName, const char* fullName,

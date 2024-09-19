@@ -173,6 +173,7 @@ class BINARYNINJAUIAPI TagTypeSelectDialog : public QDialog
 	BinaryViewRef m_data;
 	TagTypeDialogModel* m_model;
 	QComboBox* m_tagTypeList;
+	QLineEdit* m_tagTextInput;
 
   private Q_SLOTS:
 	void select();
@@ -181,5 +182,5 @@ class BINARYNINJAUIAPI TagTypeSelectDialog : public QDialog
 	TagTypeSelectDialog(QWidget* parent, BinaryViewRef data);
 
   Q_SIGNALS:
-	void selected(TagTypeRef tagType);
+	void selected(TagTypeRef tagType, QString text);
 };

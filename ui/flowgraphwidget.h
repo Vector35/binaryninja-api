@@ -360,7 +360,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void bookmarkAddress();
 	void unbookmarkAddress();
 	void tagAddress();
-	void tagAddressAccepted(TagTypeRef tt);
+	void tagAddressAccepted(TagTypeRef tt, const QString& text);
 	void manageAddressTags();
 	void mergeVariables();
 	void mergeVariablesAtCurrentLocation();

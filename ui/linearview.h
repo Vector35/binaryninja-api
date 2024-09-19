@@ -335,7 +335,7 @@ private Q_SLOTS:
 	void bookmarkAddress();
 	void unbookmarkAddress();
 	void tagAddress();
-	void tagAddressAccepted(TagTypeRef tt);
+	void tagAddressAccepted(TagTypeRef tt, const QString& text);
 	void manageAddressTags();
 
 	void createExternalLink();

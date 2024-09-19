@@ -339,6 +339,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void zoomPauseTimerEvent();
 
 	void goToAddress();
+	void goToEntryPoint();
 	void goToAddressAtFileOffset();
 	void followPointer();
 	void defineName();

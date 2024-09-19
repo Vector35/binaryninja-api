@@ -287,6 +287,8 @@ ExportsTreeView::ExportsTreeView(ExportsWidget* parent, TriageView* view, Binary
 	m_actionHandler.setupActionHandler(this);
 	m_actionHandler.setActionContext([=]() { return m_view->actionContext(); });
 
+	setFont(getMonospaceFont(this));
+
 	m_model = new GenericExportsModel(this, m_data);
 	setModel(m_model);
 	setRootIsDecorated(false);
@@ -300,7 +302,6 @@ ExportsTreeView::ExportsTreeView(ExportsWidget* parent, TriageView* view, Binary
 		setColumnHidden(i, !m_model->headerData(i, Qt::Horizontal, ColumnVisibleRole).toBool());
 	}
 
-	setFont(getMonospaceFont(this));
 
 	connect(selectionModel(), &QItemSelectionModel::currentChanged, this, &ExportsTreeView::exportSelected);
 	connect(this, &QTreeView::doubleClicked, this, &ExportsTreeView::exportDoubleClicked);

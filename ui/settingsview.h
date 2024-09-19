@@ -170,7 +170,6 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 	QDoubleSpinBox* m_doubleSpinBox = nullptr;
 	QSpinBox* m_spinBox = nullptr;
 	QComboBox* m_comboBox = nullptr;
-	QLineEdit* m_arrayText = nullptr;
 	QTableWidget* m_objectTable = nullptr;
 	std::set<QString> m_validComboSelections;
 	std::vector<std::pair<std::string, Json::ValueType>> m_objectTableColumns;
@@ -212,9 +211,8 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 	void updateFormatedNumberSetting();
 	void updateDoubleNumberSetting(double value);
 	void updateIntNumberSetting(int value);
-	void updateArraySetting();
 	void updateObjectSetting();
-	void addArrayStringSetting(const QString& text);
+	void addArraySetting(const QString& text);
 	void resetSetting();
 	void resetAllSettings(BNSettingsScope scope);
 

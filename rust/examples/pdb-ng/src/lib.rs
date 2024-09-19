@@ -755,7 +755,6 @@ fn init_plugin() -> bool {
         r#"{
             "title" : "Symbol Server List",
             "type" : "array",
-            "elementType" : "string",
             "sorted" : false,
             "default" : ["https://msdl.microsoft.com/download/symbols"],
             "aliases" : ["pdb.symbol-server-list", "pdb.symbolServerList"],

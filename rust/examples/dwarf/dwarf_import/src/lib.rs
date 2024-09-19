@@ -551,8 +551,8 @@ pub extern "C" fn CorePluginInit() -> bool {
         r#"{
             "title" : "Debuginfod Server URLs",
             "type" : "array",
-			"elementType" : "string",
-			"default" : [],
+            "sorted" : true,
+            "default" : [],
             "description" : "Servers to use for fetching DWARF debug info for files with a .note.gnu.build-id section.",
             "ignore" : []
         }"#,
@@ -574,7 +574,7 @@ pub extern "C" fn CorePluginInit() -> bool {
         r#"{
             "title" : "Debug File Directories",
             "type" : "array",
-			"elementType" : "string",
+            "sorted" : true,
             "default" : [],
             "description" : "Paths to folder containing DWARF debug info stored by build id.",
             "ignore" : []

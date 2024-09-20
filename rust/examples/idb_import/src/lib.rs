@@ -875,7 +875,7 @@ fn parse_til_section_info(
 fn parse_id0_section_info(
     debug_info: &mut DebugInfo,
     bv: &BinaryView,
-    _debug_file: &BinaryView,
+    debug_file: &BinaryView,
     id0: ID0Section,
     progress: impl Fn(usize, usize) -> Result<(), ()>,
 ) -> Result<()> {
@@ -887,73 +887,126 @@ fn parse_id0_section_info(
             idb_rs::id0::FunctionsAndComments::Function(_) => {}
             idb_rs::id0::FunctionsAndComments::RepeatableComment { address, value }
             | idb_rs::id0::FunctionsAndComments::Comment { address, value } => {
-                let funcs_at = bv.functions_at(address);
-                if !funcs_at.is_empty() {
-                    for function in &funcs_at {
-                        function.set_comment(value);
-                    }
-                } else {
-                    // No functions directly at the address we can annotate containing functions instead.
-                    for function in &bv.functions_containing(address) {
-                        function.set_comment_at(address, value);
-                    }
+                for function in &bv.functions_containing(address) {
+                    function.set_comment_at(address, value);
                 }
             }
             idb_rs::id0::FunctionsAndComments::Unknown { .. } => {}
         }
     }
 
-    #[derive(Debug, Default)]
-    struct ID0Function {
-        address: Option<u64>,
-        name: Option<String>,
-        symbol: Option<String>,
-    }
-    let mut functions: HashMap<u64, ID0Function> = HashMap::new();
-    for entry_point in id0.entry_points()? {
-        // TODO check for duplication
-        match entry_point? {
-            idb_rs::id0::EntryPoint::Name => {}
-            idb_rs::id0::EntryPoint::Unknown { .. } => {}
-            // TODO take ordinal in consideration if the order of the functions is important
-            idb_rs::id0::EntryPoint::Ordinal { .. } => {}
-            idb_rs::id0::EntryPoint::Function { key, address } => {
-                let fun = functions.entry(key).or_default();
-                let _ = fun.address.insert(address);
-            }
-            idb_rs::id0::EntryPoint::ForwardedSymbol { key, symbol } => {
-                let fun = functions.entry(key).or_default();
-                let _ = fun.symbol.insert(symbol.to_string());
-            }
-            idb_rs::id0::EntryPoint::FunctionName { key, name } => {
-                let fun = functions.entry(key).or_default();
-                let _ = fun.name.insert(name.to_string());
-            }
-        }
-    }
-    let total = functions.len();
-    for (i, function) in functions.into_values().enumerate() {
+    let entry_points = id0.entry_points()?;
+    let total = entry_points.len();
+    for (i, entry_point) in entry_points.into_iter().enumerate() {
         if progress(i, total).is_err() {
             warn!("Aborted while adding the functions");
             break;
         }
-        let name = function.name.clone();
-        if !debug_info.add_function(DebugFunctionInfo::new(
-            None,
-            None,
-            function.name.clone(),
-            None,
-            function.address,
-            None,
-            vec![],
-            vec![],
-        )) {
-            error!("Unable to add the function {name:?}")
+        // TODO handle entry_point.forwarded type currently on the til section
+        //if let Some(forwarded) = entry_point.forwarded {
+        //    todo!()
+        //}
+        match entry_point.entry_type {
+            None => {
+                // TODO add label without type
+            }
+            Some(ty @ TILType::Function(_)) => {
+                let ty = translate_ephemeral_type(
+                    &mut *debug_info,
+                    debug_file,
+                    &ty,
+                    entry_point.address,
+                );
+                if !debug_info.add_function(DebugFunctionInfo::new(
+                    None,
+                    None,
+                    Some(entry_point.name),
+                    ty,
+                    Some(entry_point.address),
+                    None,
+                    vec![],
+                    vec![],
+                )) {
+                    error!("Unable to add the function at {:#x}", entry_point.address)
+                }
+            }
+            Some(ty) => {
+                let ty = translate_ephemeral_type(
+                    &mut *debug_info,
+                    debug_file,
+                    &ty,
+                    entry_point.address,
+                );
+                if let Some(ty) = ty {
+                    if !debug_info.add_data_variable(
+                        entry_point.address,
+                        &ty,
+                        Some(entry_point.name),
+                        &[],
+                    ) {
+                        error!("Unable to add the type at {:#x}", entry_point.address)
+                    }
+                }
+                todo!();
+            }
         }
     }
     Ok(())
 }
 
+fn translate_ephemeral_type(
+    debug_info: &mut DebugInfo,
+    debug_file: &BinaryView,
+    ty: &TILType,
+    address: u64,
+) -> Option<Ref<Type>> {
+    // in case we need to translate types
+    let translator = TranslateIDBTypes {
+        debug_info: &mut *debug_info,
+        _debug_file: debug_file,
+        arch: debug_file.default_arch().unwrap(/* TODO */),
+        progress: |_, _| Ok(()),
+        // TODO it's unclear what to do here
+        til: &TILSection {
+            format: 12,
+            title: String::new(),
+            description: String::new(),
+            id: 0,
+            cm: 0,
+            def_align: 1,
+            symbols: vec![],
+            type_ordinal_numbers: None,
+            types: vec![],
+            size_i: 4.try_into().unwrap(),
+            size_b: 1.try_into().unwrap(),
+            sizes: None,
+            size_long_double: None,
+            macros: None,
+            is_universal: false,
+        },
+        types: vec![],
+        types_by_ord: HashMap::new(),
+        types_by_name: HashMap::new(),
+    };
+
+    match translator.translate_type(ty) {
+        TranslateTypeResult::Translated(result) => Some(result),
+        TranslateTypeResult::PartiallyTranslated(_, None) | TranslateTypeResult::NotYet => {
+            error!("Unable to translate the type at {:#x}", address);
+            None
+        }
+        TranslateTypeResult::PartiallyTranslated(_, Some(bn_type_error))
+        | TranslateTypeResult::Error(bn_type_error) => {
+            error!(
+                "Unable to translate the type at {:#x}: {bn_type_error}",
+                address
+            );
+            None
+        }
+    }
+}
+
+#[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
     let _logger = logger::init(LevelFilter::Error);

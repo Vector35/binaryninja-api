@@ -1564,11 +1564,29 @@ namespace BinaryNinja {
 	*/
 	Ref<BinaryView> Load(Ref<BinaryView> rawData, bool updateAnalysis, std::function<bool(size_t, size_t)> progress, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType), bool isDatabase = false);
 
+	/*! Attempt to demangle a mangled name, trying all relevant demanglers and using whichever one accepts it
+
+		\see Demangler::Demangle for a discussion on which demangler will be used.
+
+		\param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
+		\param[in] mangledName a mangled Microsoft Visual Studio C++ name
+		\param[out] outType Pointer to Type to output
+		\param[out] outVarName QualifiedName reference to write the output name to.
+		\param[in] view (Optional) view of the binary containing the mangled name
+		\param[in] simplify (Optional) Whether to simplify demangled names.
+		\return True if the name was demangled and written to the out* parameters
+
+		\ingroup demangle
+	*/
+	bool DemangleGeneric(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
+	                     Ref<BinaryView> view = nullptr, const bool simplify = false);
+
 	/*! Demangles using LLVM's demangler
 
 		\param[in] mangledName a mangled (msvc/itanium/rust/dlang) name
 		\param[out] outVarName QualifiedName reference to write the output name to.
 		\param[in] simplify Whether to simplify demangled names.
+	    \return True if the name was demangled and written to the out* parameters
 
 		\ingroup demangle
 	*/
@@ -1579,6 +1597,7 @@ namespace BinaryNinja {
 		\param[in] mangledName a mangled (msvc/itanium/rust/dlang) name
 		\param[out] outVarName QualifiedName reference to write the output name to.
 		\param[in] view View to check the analysis.types.templateSimplifier for
+	    \return True if the name was demangled and written to the out* parameters
 
 		\ingroup demangle
 	*/
@@ -1591,6 +1610,7 @@ namespace BinaryNinja {
 	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] simplify Whether to simplify demangled names.
+	    \return True if the name was demangled and written to the out* parameters
 
 	    \ingroup demangle
 	*/
@@ -1607,6 +1627,7 @@ namespace BinaryNinja {
 	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] view View to check the analysis.types.templateSimplifier for
+	    \return True if the name was demangled and written to the out* parameters
 
 	    \ingroup demangle
 	*/
@@ -1620,6 +1641,7 @@ namespace BinaryNinja {
 	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] simplify Whether to simplify demangled names.
+	    \return True if the name was demangled and written to the out* parameters
 
 	    \ingroup demangle
 	*/
@@ -1636,6 +1658,7 @@ namespace BinaryNinja {
 	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] view View to check the analysis.types.templateSimplifier for
+	    \return True if the name was demangled and written to the out* parameters
 
 	    \ingroup demangle
 	*/
@@ -17966,6 +17989,98 @@ namespace BinaryNinja {
 			\return true if aborted by user, false otherwise
 		 */
 		bool IsAborted();
+	};
+
+	/*!
+		\ingroup demangler
+	*/
+	class Demangler: public StaticCoreRefCountObject<BNDemangler>
+	{
+		std::string m_nameForRegister;
+
+	protected:
+		explicit Demangler(const std::string& name);
+		Demangler(BNDemangler* demangler);
+		virtual ~Demangler() = default;
+
+		static bool IsMangledStringCallback(void* ctxt, const char* name);
+		static bool DemangleCallback(void* ctxt, BNArchitecture* arch, const char* name, BNType** outType,
+			BNQualifiedName* outVarName, BNBinaryView* view);
+		static void FreeVarNameCallback(void* ctxt, BNQualifiedName* name);
+
+	public:
+		/*! Register a custom Demangler. Newly registered demanglers will get priority over
+			previously registered demanglers and built-in demanglers.
+		 */
+		static void Register(Demangler* demangler);
+
+		/*! Get the list of currently registered demanglers, sorted by lowest to highest priority.
+
+			\return List of demanglers
+		 */
+		static std::vector<Ref<Demangler>> GetList();
+		static Ref<Demangler> GetByName(const std::string& name);
+
+		/*! Promote a demangler to the highest-priority position.
+
+			\param demangler Demangler to promote
+		 */
+		static void Promote(Ref<Demangler> demangler);
+
+		std::string GetName() const;
+
+		/*! Determine if a given name is mangled and this demangler can process it
+
+			The most recently registered demangler that claims a name is a mangled string
+			(returns true from this function), and then returns a value from Demangle will
+			determine the result of a call to DemangleGeneric. Returning True from this
+			does not require the demangler to succeed the call to Demangle, but simply
+			implies that it may succeed.
+
+			\param name Raw mangled name string
+			\return True if the demangler thinks it can handle the name
+		 */
+		virtual bool IsMangledString(const std::string& name) = 0;
+
+		/*! Demangle a raw name into a Type and QualifiedName.
+
+			Any unresolved named types referenced by the resulting Type will be created as
+			empty structures or void typedefs in the view, if the result is used on
+			a data structure in the view. Given this, the call to Demangle should NOT
+			cause any side-effects creating types in the view trying to resolve this
+			and instead just return a type with unresolved named type references.
+
+			The most recently registered demangler that claims a name is a mangled string
+			(returns true from IsMangledString), and then returns a value from
+			this function will determine the result of a call to DemangleGeneric.
+			If this call returns None, the next most recently used demangler(s) will be tried instead.
+
+			If the mangled name has no type information, but a name is still possible to extract,
+			this function may return a successful result with outType=nullptr, which will be accepted.
+
+			\param arch Architecture for context in which the name exists, eg for pointer sizes
+			\param name Raw mangled name
+			\param outType Resulting type, if one can be deduced, will be written here. Otherwise nullptr will be written
+			\param outVarName Resulting variable name
+			\param view (Optional) BinaryView context in which the name exists, eg for type lookup
+			\return True if demangling was successful and results were stored into out-parameters
+		 */
+		virtual bool Demangle(Ref<Architecture> arch, const std::string& name, Ref<Type>& outType,
+			QualifiedName& outVarName, Ref<BinaryView> view = nullptr) = 0;
+	};
+
+	/*!
+		\ingroup demangler
+	*/
+	class CoreDemangler: public Demangler
+	{
+	public:
+		CoreDemangler(BNDemangler* demangler);
+		virtual ~CoreDemangler() = default;
+
+		virtual bool IsMangledString(const std::string& name);
+		virtual bool Demangle(Ref<Architecture> arch, const std::string& name, Ref<Type>& outType,
+			QualifiedName& outVarName, Ref<BinaryView> view);
 	};
 
 	namespace Unicode

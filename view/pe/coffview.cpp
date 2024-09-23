@@ -1518,22 +1518,23 @@ void COFFView::AddCOFFSymbol(BNSymbolType type, const string& dll, const string&
 	string shortName = rawName;
 	string fullName = rawName;
 
-	if (m_arch && name.size() > 0 && name[0] == '?')
+	if (m_arch && name.size() > 0)
 	{
-		QualifiedName demangleName;
+		QualifiedName demangledName;
 		Ref<Type> demangledType;
-		if (DemangleMS(m_arch, name, demangledType, demangleName, m_simplifyTemplates))
+		bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
+		if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, simplify))
 		{
-			shortName = demangleName.GetString();
-			fullName = shortName + demangledType->GetStringAfterName();
+			shortName = demangledName.GetString();
+			fullName = shortName;
+			if (demangledType)
+				fullName += demangledType->GetStringAfterName();
 			if (!symbolTypeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
 				symbolTypeRef = demangledType;
 		}
 		else
 		{
-			// TODO: This is happening a lot, so figure out why the demangler can't handle symbols like "??_C@_0M@LLLPOAKG@hasChildren@"
-			// For now, disable the message because it's very noisy for some binaries
-			DEBUG_COFF(m_logger->LogDebug("COFF: Failed to demangle: '%s'\n", name.c_str()));
+			m_logger->LogDebug("Failed to demangle: '%s'\n", name.c_str());
 		}
 	}
 

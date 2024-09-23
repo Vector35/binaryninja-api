@@ -2443,27 +2443,19 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 		string shortName = rawName;
 		string fullName = rawName;
 		Ref<Type> typeRef = symbolTypeRef;
-		if (m_arch && IsGNU3MangledString(rawName))
+		if (m_arch)
 		{
-			QualifiedName varName;
+			QualifiedName demangledName;
 			Ref<Type> demangledType;
-			if (DemangleGNU3(m_arch, rawName, demangledType, varName, m_simplifyTemplates))
+			bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
+			if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, simplify))
 			{
-				shortName = varName.GetString();
+				shortName = demangledName.GetString();
 				fullName = shortName;
 				if (demangledType)
 					fullName += demangledType->GetStringAfterName();
 				if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
 					typeRef = demangledType;
-			}
-			else if (!m_extractMangledTypes && DemangleLLVM(rawName, varName, m_simplifyTemplates))
-			{
-				shortName = varName.GetString();
-				fullName = shortName;
-			}
-			else
-			{
-				m_logger->LogDebug("Failed to demangle name: '%s'\n", rawName.c_str());
 			}
 		}
 

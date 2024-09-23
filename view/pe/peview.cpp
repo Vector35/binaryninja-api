@@ -2965,49 +2965,22 @@ void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& nam
 
 			if (m_arch && name.size() > 0)
 			{
-				QualifiedName demangleName;
+				QualifiedName demangledName;
 				Ref<Type> demangledType;
-				if (name[0] == '?')
+				bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
+				if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, simplify))
 				{
-					if (DemangleMS(m_arch, name, demangledType, demangleName, m_simplifyTemplates))
-					{
-						shortName = demangleName.GetString();
-						fullName = shortName + demangledType->GetStringAfterName();
-						if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
-							typeRef = demangledType;
-					}
-					else if (!m_extractMangledTypes && DemangleLLVM(rawName, demangleName, m_simplifyTemplates))
-					{
-						shortName = demangleName.GetString();
-						fullName = shortName;
-					}
-					else
-					{
-						m_logger->LogDebug("Failed to demangle: '%s'\n", name.c_str());
-					}
+					shortName = demangledName.GetString();
+					fullName = shortName;
+					if (demangledType)
+						fullName += demangledType->GetStringAfterName();
+					if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
+						typeRef = demangledType;
 				}
-				else if (IsGNU3MangledString(rawName))
+				else
 				{
-					if (DemangleGNU3(m_arch, rawName, demangledType, demangleName, m_simplifyTemplates))
-					{
-						shortName = demangleName.GetString();
-						fullName = shortName;
-						if (demangledType)
-							fullName += demangledType->GetStringAfterName();
-						if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
-							typeRef = demangledType;
-					}
-					else if (!m_extractMangledTypes && DemangleLLVM(rawName, demangleName, m_simplifyTemplates))
-					{
-						shortName = demangleName.GetString();
-						fullName = shortName;
-					}
-					else
-					{
-						m_logger->LogDebug("Failed to demangle name: '%s'\n", rawName.c_str());
-					}
+					m_logger->LogDebug("Failed to demangle: '%s'\n", name.c_str());
 				}
-				// Not a mangled string
 			}
 
 			NameSpace ns(dll);

@@ -2428,30 +2428,23 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 		string fullName = rawName;
 		Ref<Type> typeRef = symbolTypeRef;
 
-		QualifiedName varName;
 		if (m_arch)
 		{
-			if (IsGNU3MangledString(rawName))
+			QualifiedName demangledName;
+			Ref<Type> demangledType;
+			bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
+			if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, simplify))
 			{
-				Ref<Type> demangledType;
-				if (DemangleGNU3(m_arch, rawName, demangledType, varName, m_simplifyTemplates))
-				{
-					shortName = varName.GetString();
-					fullName = shortName;
-					if (demangledType)
-						fullName += demangledType->GetStringAfterName();
-					if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
-						typeRef = demangledType;
-				}
-				else if (!m_extractMangledTypes && DemangleLLVM(rawName, varName, m_simplifyTemplates))
-				{
-					shortName = varName.GetString();
-					fullName = shortName;
-				}
-				else
-				{
-					m_logger->LogDebug("Failed to demangle name: '%s'\n", rawName.c_str());
-				}
+				shortName = demangledName.GetString();
+				fullName = shortName;
+				if (demangledType)
+					fullName += demangledType->GetStringAfterName();
+				if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
+					typeRef = demangledType;
+			}
+			else
+			{
+				m_logger->LogDebug("Failed to demangle name: '%s'\n", rawName.c_str());
 			}
 		}
 

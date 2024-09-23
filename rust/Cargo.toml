@@ -36,7 +36,8 @@ members = [
     "examples/hlil_lifter",
     "examples/pdb-ng",
     "examples/pdb-ng/demo",
-    "examples/template"
+    "examples/template",
+    "examples/test_demangler",
 ]
 
 [profile.release]

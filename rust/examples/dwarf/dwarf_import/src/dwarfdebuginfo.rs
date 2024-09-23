@@ -26,10 +26,11 @@ use binaryninja::{
 
 use gimli::{DebuggingInformationEntry, Dwarf, Unit};
 
+use indexmap::{map::Values, IndexMap};
 use log::{debug, error, warn};
 use std::{
     cmp::Ordering,
-    collections::{hash_map::Values, HashMap},
+    collections::HashMap,
     hash::Hash,
 };
 
@@ -198,7 +199,7 @@ pub(crate) struct DebugInfoBuilder {
     functions: Vec<FunctionInfoBuilder>,
     raw_function_name_indices: HashMap<String, usize>,
     full_function_name_indices: HashMap<String, usize>,
-    types: HashMap<TypeUID, DebugType>,
+    types: IndexMap<TypeUID, DebugType>,
     data_variables: HashMap<u64, (Option<String>, TypeUID)>,
     range_data_offsets: iset::IntervalMap<u64, i64>
 }
@@ -209,7 +210,7 @@ impl DebugInfoBuilder {
             functions: vec![],
             raw_function_name_indices: HashMap::new(),
             full_function_name_indices: HashMap::new(),
-            types: HashMap::new(),
+            types: IndexMap::new(),
             data_variables: HashMap::new(),
             range_data_offsets: iset::IntervalMap::new(),
         }
@@ -313,6 +314,7 @@ impl DebugInfoBuilder {
         &self.functions
     }
 
+    #[allow(dead_code)]
     pub(crate) fn types(&self) -> Values<'_, TypeUID, DebugType> {
         self.types.values()
     }
@@ -342,7 +344,7 @@ impl DebugInfoBuilder {
     }
 
     pub(crate) fn remove_type(&mut self, type_uid: TypeUID) {
-        self.types.remove(&type_uid);
+        self.types.swap_remove(&type_uid);
     }
 
     pub(crate) fn get_type(&self, type_uid: TypeUID) -> Option<&DebugType> {
@@ -440,11 +442,59 @@ impl DebugInfoBuilder {
     }
 
     fn commit_types(&self, debug_info: &mut DebugInfo) {
-        for debug_type in self.types() {
-            if debug_type.commit {
-                debug_info.add_type(debug_type.name.clone(), debug_type.t.as_ref(), &[]);
-                // TODO : Components
+        let mut type_uids_by_name: HashMap<String, TypeUID> = HashMap::new();
+
+        for (debug_type_uid, debug_type) in self.types.iter() {
+            if !debug_type.commit {
+                continue;
             }
+
+            let mut debug_type_name = debug_type.name.clone();
+
+            // Prevent storing two types with the same name and differing definitions
+            if let Some(stored_uid) = type_uids_by_name.get(&debug_type_name) {
+                let Some(stored_debug_type) = self.types.get(stored_uid) else {
+                    error!("Stored type name without storing a type! Please report this error. UID: {}, name: {}", stored_uid, debug_type_name);
+                    continue;
+                };
+
+                let mut skip_adding_type = false;
+                if stored_debug_type.t != debug_type.t {
+                    // We already stored a type with this name and it's a different type, deconflict the name and try again
+                    let mut i = 1;
+                    loop {
+                        if let Some(stored_uid) = type_uids_by_name.get(&debug_type_name) {
+                            if debug_type_uid == stored_uid {
+                                // We already have a type with this name but it's the same type so we're ok
+                                skip_adding_type = true;
+                                break;
+                            }
+                            if let Some(stored_debug_type) = self.types.get(stored_uid) {
+                                if stored_debug_type.t == debug_type.t {
+                                    // We already have a type with this name but it's the same type so we're ok
+                                    skip_adding_type = true;
+                                    break;
+                                }
+                            }
+
+                            debug_type_name = format!("{}_{}", debug_type.name, i);
+                            i += 1;
+                        }
+                        else {
+                            // We found a unique name
+                            break;
+                        }
+                    }
+                }
+
+                if skip_adding_type {
+                    continue;
+                }
+            };
+
+            type_uids_by_name.insert(debug_type_name.clone(), *debug_type_uid);
+            debug_info.add_type(debug_type_name, debug_type.t.as_ref(), &[]);
+            // TODO : Components
         }
     }
 

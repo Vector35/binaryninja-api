@@ -906,48 +906,48 @@ fn parse_id0_section_info(
         //if let Some(forwarded) = entry_point.forwarded {
         //    todo!()
         //}
-        match entry_point.entry_type {
-            None => {
+        match (entry_point.entry_type, entry_point.forwarded) {
+            (None, _) => {
                 // TODO add label without type
             }
-            Some(ty @ TILType::Function(_)) => {
-                let ty = translate_ephemeral_type(
+            // TODO handle forwarded types/functions
+            (Some(_ty), Some(_forw)) => {}
+            // regular type
+            (Some(ty), None) => {
+                let bnty = translate_ephemeral_type(
                     &mut *debug_info,
                     debug_file,
                     &ty,
                     entry_point.address,
                 );
-                if !debug_info.add_function(DebugFunctionInfo::new(
-                    None,
-                    None,
-                    Some(entry_point.name),
-                    ty,
-                    Some(entry_point.address),
-                    None,
-                    vec![],
-                    vec![],
-                )) {
-                    error!("Unable to add the function at {:#x}", entry_point.address)
-                }
-            }
-            Some(ty) => {
-                let ty = translate_ephemeral_type(
-                    &mut *debug_info,
-                    debug_file,
-                    &ty,
-                    entry_point.address,
-                );
-                if let Some(ty) = ty {
-                    if !debug_info.add_data_variable(
-                        entry_point.address,
-                        &ty,
-                        Some(entry_point.name),
-                        &[],
-                    ) {
-                        error!("Unable to add the type at {:#x}", entry_point.address)
+                match (bnty, ty) {
+                    // TODO handle types that can't be translated
+                    (None, _) => {}
+                    (Some(bnty), TILType::Function(_)) => {
+                        if !debug_info.add_function(DebugFunctionInfo::new(
+                            None,
+                            None,
+                            Some(entry_point.name),
+                            Some(bnty),
+                            Some(entry_point.address),
+                            None,
+                            vec![],
+                            vec![],
+                        )) {
+                            error!("Unable to add the function at {:#x}", entry_point.address)
+                        }
+                    }
+                    (Some(bnty), _) => {
+                        if !debug_info.add_data_variable(
+                            entry_point.address,
+                            &bnty,
+                            Some(entry_point.name),
+                            &[],
+                        ) {
+                            error!("Unable to add the type at {:#x}", entry_point.address)
+                        }
                     }
                 }
-                todo!();
             }
         }
     }

@@ -19,14 +19,18 @@
 # IN THE SOFTWARE.
 
 import ctypes
+import traceback
 
 # Binary Ninja components
+import binaryninja
 from . import _binaryninjacore as core
 from . import binaryview
 from . import types
-from .architecture import Architecture
+from .log import log_error
+from .architecture import Architecture, CoreArchitecture
 from .platform import Platform
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Union, Tuple
+
 
 def get_qualified_name(names: Iterable[str]):
 	"""
@@ -44,6 +48,48 @@ def get_qualified_name(names: Iterable[str]):
 		>>>
 	"""
 	return "::".join(names)
+
+
+def demangle_name(archOrPlatform: Union[Architecture, Platform], mangled_name: str,
+			 view: Optional['binaryview.BinaryView'] = None, simplify: bool = False) -> Optional[Tuple[Optional['types.Type'], 'types.QualifiedName']]:
+	"""
+	``demangle_name`` demangles a mangled symbol name to a Type object.
+
+	:param Union[Architecture, Platform] archOrPlatform: Architecture or Platform for the symbol. Required for pointer/integer sizes and calling conventions.
+	:param str mangled_name: a mangled symbol name
+	:param view: (optional) view of the binary containing the mangled name
+	:param simplify: (optional) Whether to simplify demangled names
+	:return: returns tuple of (Optional[Type], demangled_name) or None on error
+	:rtype: Tuple
+	:Example:
+
+		>>> demangle_name(Architecture["x86_64"], "?testf@Foobar@@SA?AW4foo@1@W421@@Z")
+		(<type: public: static enum Foobar::foo __cdecl (enum Foobar::foo)>, ['Foobar', 'testf'])
+		>>>
+	"""
+	arch = None
+	if isinstance(archOrPlatform, Architecture):
+		arch = archOrPlatform
+	elif isinstance(archOrPlatform, Platform):
+		arch = archOrPlatform.arch
+	else:
+		raise TypeError("Unexpected arch or platform type")
+
+	out_type = ctypes.POINTER(core.BNType)()
+	out_var_name = core.BNQualifiedName()
+
+	view_handle = None
+	if view is not None:
+		view_handle = view.handle
+
+	if not core.BNDemangleGeneric(arch.handle, mangled_name, out_type, out_var_name, view_handle, simplify):
+		return None
+
+	result_type = None
+	if out_type:
+		result_type = types.Type.create(handle=out_type)
+	result_var_name = types.QualifiedName._from_core_struct(out_var_name)
+	return result_type, result_var_name
 
 
 def demangle_llvm(mangled_name: str, options: Optional[Union[bool, binaryview.BinaryView]] = None) -> Optional[List[str]]:
@@ -225,3 +271,127 @@ def simplify_name_to_qualified_name(input_name: Union[str, types.QualifiedName],
 		return None
 	return result
 
+
+class _DemanglerMetaclass(type):
+	def __iter__(self):
+		binaryninja._init_plugins()
+		count = ctypes.c_ulonglong()
+		types = core.BNGetDemanglerList(count)
+		try:
+			for i in range(0, count.value):
+				yield CoreDemangler(types[i])
+		finally:
+			core.BNFreeDemanglerList(types)
+
+	def __getitem__(self, value):
+		binaryninja._init_plugins()
+		handle = core.BNGetDemanglerByName(str(value))
+		if handle is None:
+			raise KeyError(f"'{value}' is not a valid Demangler")
+		return CoreDemangler(handle)
+
+
+class Demangler(metaclass=_DemanglerMetaclass):
+	name = None
+	_registered_demanglers = []
+	_cached_name = None
+
+	def __init__(self, handle=None):
+		if handle is not None:
+			self.handle = core.handle_of_type(handle, core.BNDemangler)
+			self.__dict__["name"] = core.BNGetDemanglerName(handle)
+		else:
+			self.handle = None
+
+	def register(self):
+		assert self.__class__.name is not None
+		assert self.handle is None
+
+		self._cb = core.BNDemanglerCallbacks()
+		self._cb.context = 0
+		self._cb.isMangledString = self._cb.isMangledString.__class__(self._is_mangled_string)
+		self._cb.demangle = self._cb.demangle.__class__(self._demangle)
+		self._cb.freeVarName = self._cb.freeVarName.__class__(self._free_var_name)
+		self.handle = core.BNRegisterDemangler(self.__class__.name, self._cb)
+		self.__class__._registered_demanglers.append(self)
+
+	def __eq__(self, other):
+		if not isinstance(other, Demangler):
+			return False
+		return self.name == other.name
+
+	def __str__(self):
+		return f'<Demangler: {self.name}>'
+
+	def __repr__(self):
+		return f'<Demangler: {self.name}>'
+
+	def _is_mangled_string(self, ctxt, name):
+		try:
+			return self.is_mangled_string(core.pyNativeStr(name))
+		except:
+			log_error(traceback.format_exc())
+			return False
+
+	def _demangle(self, ctxt, arch, name, out_type, out_var_name, view, simplify):
+		try:
+			api_arch = CoreArchitecture._from_cache(arch)
+			api_view = None
+			if view is not None:
+				api_view = binaryview.BinaryView(handle=core.BNNewViewReference(view))
+
+			result = self.demangle(api_arch, core.pyNativeStr(name), api_view, simplify)
+			if result is None:
+				return False
+			type, var_name = result
+
+			if not isinstance(var_name, types.QualifiedName):
+				var_name = types.QualifiedName(var_name)
+
+			Demangler._cached_name = var_name._to_core_struct()
+			if type:
+				out_type[0] = type.handle
+			else:
+				out_type[0] = None
+			out_var_name[0] = Demangler._cached_name
+			return True
+		except:
+			log_error(traceback.format_exc())
+			return False
+
+	def _free_var_name(self, ctxt, name):
+		try:
+			Demangler._cached_name = None
+		except:
+			log_error(traceback.format_exc())
+
+	def is_mangled_string(self, name: str) -> bool:
+		raise NotImplementedError()
+
+	def demangle(self, arch: Architecture, name: str, view: Optional['binaryview.BinaryView'] = None,
+				 simplify: bool = False) -> Optional[Tuple['types.Type', 'types.QualifiedName']]:
+		raise NotImplementedError()
+
+
+class CoreDemangler(Demangler):
+
+	def is_mangled_string(self, name: str) -> bool:
+		return core.BNIsDemanglerMangledName(self.handle, name)
+
+	def demangle(self, arch: Architecture, name: str, view: Optional['binaryview.BinaryView'] = None,
+				 simplify: bool = False) -> Optional[Tuple[Optional['types.Type'], 'types.QualifiedName']]:
+		out_type = ctypes.POINTER(core.BNType)()
+		out_var_name = core.BNQualifiedName()
+
+		view_handle = None
+		if view is not None:
+			view_handle = view.handle
+
+		if not core.BNDemanglerDemangle(self.handle, arch.handle, name, out_type, out_var_name, view_handle, simplify):
+			return None
+
+		result_type = None
+		if out_type:
+			result_type = types.Type.create(handle=out_type)
+		result_var_name = types.QualifiedName._from_core_struct(out_var_name)
+		return result_type, result_var_name

@@ -1542,11 +1542,27 @@ namespace BinaryNinja {
 	*/
 	Ref<BinaryView> Load(Ref<BinaryView> rawData, bool updateAnalysis, std::function<bool(size_t, size_t)> progress, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType), bool isDatabase = false);
 
+	/*! Attempt to demangle a mangled name, trying all relevant demanglers and using whichever one accepts it
+
+	    \param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
+	    \param[in] mangledName a mangled Microsoft Visual Studio C++ name
+	    \param[out] outType Pointer to Type to output
+	    \param[out] outVarName QualifiedName reference to write the output name to.
+	    \param[in] view (Optional) view of the binary containing the mangled name
+	    \param[in] simplify (Optional) Whether to simplify demangled names.
+	    \return True if the name was demangled and written to the out* parameters
+
+	    \ingroup demangle
+	*/
+	bool DemangleGeneric(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
+	                     Ref<BinaryView> view = nullptr, const bool simplify = false);
+
 	/*! Demangles using LLVM's demangler
 
 		\param[in] mangledName a mangled (msvc/itanium/rust/dlang) name
 		\param[out] outVarName QualifiedName reference to write the output name to.
 		\param[in] simplify Whether to simplify demangled names.
+	    \return True if the name was demangled and written to the out* parameters
 
 		\ingroup demangle
 	*/
@@ -1557,6 +1573,7 @@ namespace BinaryNinja {
 		\param[in] mangledName a mangled (msvc/itanium/rust/dlang) name
 		\param[out] outVarName QualifiedName reference to write the output name to.
 		\param[in] view View to check the analysis.types.templateSimplifier for
+	    \return True if the name was demangled and written to the out* parameters
 
 		\ingroup demangle
 	*/
@@ -1569,6 +1586,7 @@ namespace BinaryNinja {
 	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] simplify Whether to simplify demangled names.
+	    \return True if the name was demangled and written to the out* parameters
 
 	    \ingroup demangle
 	*/
@@ -1585,6 +1603,7 @@ namespace BinaryNinja {
 	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] view View to check the analysis.types.templateSimplifier for
+	    \return True if the name was demangled and written to the out* parameters
 
 	    \ingroup demangle
 	*/
@@ -1598,6 +1617,7 @@ namespace BinaryNinja {
 	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] simplify Whether to simplify demangled names.
+	    \return True if the name was demangled and written to the out* parameters
 
 	    \ingroup demangle
 	*/
@@ -1614,6 +1634,7 @@ namespace BinaryNinja {
 	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] view View to check the analysis.types.templateSimplifier for
+	    \return True if the name was demangled and written to the out* parameters
 
 	    \ingroup demangle
 	*/
@@ -17884,6 +17905,65 @@ namespace BinaryNinja {
 			\return true if aborted by user, false otherwise
 		 */
 		bool IsAborted();
+	};
+
+	/*!
+		\ingroup demangler
+	*/
+	class Demangler: public StaticCoreRefCountObject<BNDemangler>
+	{
+		std::string m_nameForRegister;
+
+	protected:
+		explicit Demangler(const std::string& name);
+		Demangler(BNDemangler* demangler);
+		virtual ~Demangler() = default;
+
+		static bool IsMangledStringCallback(void* ctxt, const char* name);
+		static bool DemangleCallback(void* ctxt, BNArchitecture* arch, const char* name, BNType** outType,
+			BNQualifiedName* outVarName, BNBinaryView* view, bool simplify);
+		static void FreeVarNameCallback(void* ctxt, BNQualifiedName* name);
+
+	public:
+		static void Register(Demangler* demangler);
+		static std::vector<Ref<Demangler>> GetList();
+		static Ref<Demangler> GetByName(const std::string& name);
+
+		std::string GetName() const;
+
+		/*!
+		    Determine if a given name is mangled and this demangler can process it
+		    \param name Mangled name
+		    \return True if we can demangle it
+		 */
+		virtual bool IsMangledString(const std::string& name) = 0;
+
+		/*!
+		    Demangle a mangled name.
+		    \param arch Architecture of the binary containing the name
+		    \param name Mangled name
+		    \param outType Resulting type, if one can be deduced it will be written here, otherwise nullptr will be written
+		    \param outVarName Resulting variable name
+		    \param view (Optional) view of the binary containing the mangled name
+		    \param simplify (Optional) Whether to run the type simplifier
+		    \return True if demangling was successful and results were stored into out* parameters
+		 */
+		virtual bool Demangle(Ref<Architecture> arch, const std::string& name, Ref<Type>& outType,
+			QualifiedName& outVarName, Ref<BinaryView> view, bool simplify) = 0;
+	};
+
+	/*!
+		\ingroup demangler
+	*/
+	class CoreDemangler: public Demangler
+	{
+	public:
+		CoreDemangler(BNDemangler* demangler);
+		virtual ~CoreDemangler() = default;
+
+		virtual bool IsMangledString(const std::string& name);
+		virtual bool Demangle(Ref<Architecture> arch, const std::string& name, Ref<Type>& outType,
+			QualifiedName& outVarName, Ref<BinaryView> view, bool simplify);
 	};
 }  // namespace BinaryNinja
 

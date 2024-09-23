@@ -480,7 +480,7 @@ dependencies = [
 [[package]]
 name = "idb-rs"
 version = "0.1.0"
-source = "git+https://github.com/Vector35/idb-rs?rev=fec57b6#fec57b66ae3692b934f32ca1f6fcc6416ee3a522"
+source = "git+https://github.com/Vector35/idb-rs?rev=88e33ae#88e33ae12a4099dbf3663eb4ec1cfe6a75f7253b"
 dependencies = [
  "anyhow",
  "bincode",

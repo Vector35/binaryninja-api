@@ -9142,6 +9142,8 @@ namespace BinaryNinja {
 		Ref<Enumeration> GetEnumeration() const;
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
 		Confidence<BNMemberScope> GetScope() const;
+		BNNameType GetNameType() const;
+		bool HasTemplateArguments() const;
 		TypeBuilder& SetWidth(size_t width);
 		TypeBuilder& SetAlignment(size_t alignment);
 		TypeBuilder& SetNamedTypeReference(NamedTypeReference* ntr);
@@ -9153,6 +9155,8 @@ namespace BinaryNinja {
 		TypeBuilder& SetTypeName(const QualifiedName& name);
 		TypeBuilder& SetAlternateName(const std::string& name);
 		TypeBuilder& SetSystemCall(bool sc, uint32_t n = 0);
+		TypeBuilder& SetNameType(BNNameType type);
+		TypeBuilder& SetHasTemplateArguments(bool hasTemplateArguments);
 		Confidence<int64_t> GetStackAdjustment() const;
 		QualifiedName GetStructureName() const;
 

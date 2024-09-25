@@ -6051,6 +6051,10 @@ extern "C"
 	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeBuilderPointerSuffixTokens(BNTypeBuilder* type, uint8_t baseConfidence, size_t* count);
 	BINARYNINJACOREAPI void BNAddTypeBuilderPointerSuffix(BNTypeBuilder* type, BNPointerSuffix ps);
 	BINARYNINJACOREAPI void BNSetTypeBuilderPointerSuffix(BNTypeBuilder* type, BNPointerSuffix* suffix, size_t count);
+	BINARYNINJACOREAPI BNNameType BNGetTypeBuilderNameType(BNTypeBuilder* type);
+	BINARYNINJACOREAPI bool BNTypeBuilderHasTemplateArguments(BNTypeBuilder* type);
+	BINARYNINJACOREAPI void BNSetTypeBuilderNameType(BNTypeBuilder* type, BNNameType nameType);
+	BINARYNINJACOREAPI void BNSetTypeBuilderHasTemplateArguments(BNTypeBuilder* type, bool hasTemplateArguments);
 
 	BINARYNINJACOREAPI char* BNGetTypeBuilderString(BNTypeBuilder* type, BNPlatform* platform);
 	BINARYNINJACOREAPI char* BNGetTypeBuilderStringBeforeName(BNTypeBuilder* type, BNPlatform* platform);

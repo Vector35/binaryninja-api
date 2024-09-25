@@ -1556,6 +1556,32 @@ TypeBuilder& TypeBuilder::SetNamedTypeReference(NamedTypeReference* ntr)
 }
 
 
+BNNameType TypeBuilder::GetNameType() const
+{
+	return BNGetTypeBuilderNameType(m_object);
+}
+
+
+bool TypeBuilder::HasTemplateArguments() const
+{
+	return BNTypeBuilderHasTemplateArguments(m_object);
+}
+
+
+TypeBuilder& TypeBuilder::SetNameType(BNNameType type)
+{
+	BNSetTypeBuilderNameType(m_object, type);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetHasTemplateArguments(bool hasTemplateArguments)
+{
+	BNSetTypeBuilderHasTemplateArguments(m_object, hasTemplateArguments);
+	return *this;
+}
+
+
 uint64_t TypeBuilder::GetElementCount() const
 {
 	return BNGetTypeBuilderElementCount(m_object);

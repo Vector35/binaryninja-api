@@ -1647,6 +1647,26 @@ namespace BinaryNinja {
 	bool IsGNU3MangledString(const std::string& mangledName);
 
 	/*!
+		\ingroup demangle
+	*/
+	std::string SimplifyToString(const std::string& input);
+
+	/*!
+		\ingroup demangle
+	*/
+	std::string SimplifyToString(const QualifiedName& input);
+
+	/*!
+		\ingroup demangle
+	*/
+	QualifiedName SimplifyToQualifiedName(const std::string& input, bool simplify);
+
+	/*!
+		\ingroup demangle
+	*/
+	QualifiedName SimplifyToQualifiedName(const QualifiedName& input);
+
+	/*!
 		\ingroup mainthread
 	*/
 	void RegisterMainThread(MainThreadActionHandler* handler);

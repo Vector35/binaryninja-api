@@ -6758,6 +6758,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeDemanglerList(BNDemangler** demanglers);
 	BINARYNINJACOREAPI BNDemangler* BNGetDemanglerByName(const char* name);
 	BINARYNINJACOREAPI char* BNGetDemanglerName(BNDemangler* demangler);
+	BINARYNINJACOREAPI void BNPromoteDemangler(BNDemangler* demangler);
 
 	BINARYNINJACOREAPI bool BNIsDemanglerMangledName(BNDemangler* demangler, const char* name);
 	BINARYNINJACOREAPI bool BNDemanglerDemangle(BNDemangler* demangler, BNArchitecture* arch, const char* name,

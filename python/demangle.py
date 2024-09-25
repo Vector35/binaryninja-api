@@ -65,6 +65,8 @@ def demangle_name(archOrPlatform: Union[Architecture, Platform], mangled_name: s
 
 		>>> demangle_name(Architecture["x86_64"], "?testf@Foobar@@SA?AW4foo@1@W421@@Z")
 		(<type: public: static enum Foobar::foo __cdecl (enum Foobar::foo)>, ['Foobar', 'testf'])
+		>>> demangle_name(Architecture["x86_64"], "__ZN20ArmCallingConvention27GetIntegerArgumentRegistersEv")
+		(<type: immutable:FunctionTypeClass 'int64_t()'>, 'ArmCallingConvention::GetIntegerArgumentRegisters')
 		>>>
 	"""
 	arch = None
@@ -292,6 +294,16 @@ class _DemanglerMetaclass(type):
 
 
 class Demangler(metaclass=_DemanglerMetaclass):
+	"""
+	Pluggable name demangling interface. See :py:func:`register` and :py:func:`demangle`
+	for details on the process of this interface.
+
+	The list of Demanglers can be queried:
+
+		>>> list(Demangler)
+		[<Demangler: MS>, <Demangler: GNU3>]
+	"""
+
 	name = None
 	_registered_demanglers = []
 	_cached_name = None
@@ -303,17 +315,39 @@ class Demangler(metaclass=_DemanglerMetaclass):
 		else:
 			self.handle = None
 
-	def register(self):
-		assert self.__class__.name is not None
-		assert self.handle is None
+	@classmethod
+	def register(cls):
+		"""
+		Register a custom Demangler. Newly registered demanglers will get priority over
+		previously registered demanglers and built-in demanglers.
+		"""
+		demangler = cls()
 
-		self._cb = core.BNDemanglerCallbacks()
-		self._cb.context = 0
-		self._cb.isMangledString = self._cb.isMangledString.__class__(self._is_mangled_string)
-		self._cb.demangle = self._cb.demangle.__class__(self._demangle)
-		self._cb.freeVarName = self._cb.freeVarName.__class__(self._free_var_name)
-		self.handle = core.BNRegisterDemangler(self.__class__.name, self._cb)
-		self.__class__._registered_demanglers.append(self)
+		assert demangler.__class__.name is not None
+		assert demangler.handle is None
+
+		demangler._cb = core.BNDemanglerCallbacks()
+		demangler._cb.context = 0
+		demangler._cb.isMangledString = demangler._cb.isMangledString.__class__(demangler._is_mangled_string)
+		demangler._cb.demangle = demangler._cb.demangle.__class__(demangler._demangle)
+		demangler._cb.freeVarName = demangler._cb.freeVarName.__class__(demangler._free_var_name)
+		demangler.handle = core.BNRegisterDemangler(cls.name, demangler._cb)
+		cls._registered_demanglers.append(demangler)
+
+	@classmethod
+	def promote(cls, demangler):
+		"""
+		Promote a demangler to the highest-priority position.
+
+			>>> list(Demangler)
+			[<Demangler: MS>, <Demangler: GNU3>]
+			>>> Demangler.promote(list(Demangler)[0])
+			>>> list(Demangler)
+			[<Demangler: GNU3>, <Demangler: MS>]
+
+		:param demangler: Demangler to promote
+		"""
+		core.BNPromoteDemangler(demangler.handle)
 
 	def __eq__(self, other):
 		if not isinstance(other, Demangler):
@@ -366,10 +400,49 @@ class Demangler(metaclass=_DemanglerMetaclass):
 			log_error(traceback.format_exc())
 
 	def is_mangled_string(self, name: str) -> bool:
+		"""
+		Determine if a given name is mangled and this demangler can process it
+
+		The most recently registered demangler that claims a name is a mangled string
+		(returns true from this function), and then returns a value from
+		:py:func:`demangle` will determine the result of a call to :py:func:`demangle_generic`.
+		Returning True from this does not require the demangler to succeed the call to
+		:py:func:`demangle`, but simply implies that it may succeed.
+
+		:param name: Raw mangled name string
+		:return: True if the demangler thinks it can handle the name
+		"""
 		raise NotImplementedError()
 
 	def demangle(self, arch: Architecture, name: str, view: Optional['binaryview.BinaryView'] = None,
 				 simplify: bool = False) -> Optional[Tuple['types.Type', 'types.QualifiedName']]:
+		"""
+		Demangle a raw name into a Type and QualifiedName.
+
+		The result of this function is a (Type, QualifiedName) tuple for the demangled
+		name's details.
+
+		Any unresolved named types referenced by the resulting Type will be created as
+		empty structures or void typedefs in the view, if the result is used on
+		a data structure in the view. Given this, the call to :py:func:`demangle`
+		should NOT cause any side-effects creating types in the view trying to resolve this
+		and instead just return a type with unresolved named type references.
+
+		The most recently registered demangler that claims a name is a mangled string
+		(returns true from :py:func:`is_mangled_string`), and then returns a value from
+		this function will determine the result of a call to :py:func:`demangle_generic`.
+		If this call returns None, the next most recently used demangler(s) will be tried instead.
+
+		If the mangled name has no type information, but a name is still possible to extract,
+		this function may return a successful (None, <name>) result, which will be accepted.
+
+		:param arch: Architecture for context in which the name exists, eg for pointer sizes
+		:param name: Raw mangled name
+		:param view: (Optional) BinaryView context in which the name exists, eg for type lookup
+		:param simplify: If the demangling should use the C++ name simplifier
+		:return: Tuple of (Type, Name) if successful, None if not. Type may be None if only
+		         a demangled name can be recovered from the raw name.
+		"""
 		raise NotImplementedError()
 
 

@@ -201,6 +201,11 @@ namespace BinaryNinja {
 		return new CoreDemangler(result);
 	}
 
+	void Demangler::Promote(Ref<Demangler> demangler)
+	{
+		BNPromoteDemangler(demangler->m_object);
+	}
+
 	std::string Demangler::GetName() const
 	{
 		char* name = BNGetDemanglerName(m_object);

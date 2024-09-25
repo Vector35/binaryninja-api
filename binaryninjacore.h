@@ -3449,6 +3449,9 @@ extern "C"
 
 	BINARYNINJACOREAPI char* BNLoggerGetName(BNLogger* logger);
 	BINARYNINJACOREAPI size_t BNLoggerGetSessionId(BNLogger* logger);
+	BINARYNINJACOREAPI void BNLoggerIndent(BNLogger* logger);
+	BINARYNINJACOREAPI void BNLoggerDedent(BNLogger* logger);
+	BINARYNINJACOREAPI void BNLoggerResetIndent(BNLogger* logger);
 	BINARYNINJACOREAPI BNLogger* BNLogCreateLogger(const char* loggerName, size_t sessionId);
 	BINARYNINJACOREAPI BNLogger* BNLogGetLogger(const char* loggerName, size_t sessionId);
 	BINARYNINJACOREAPI char** BNLogGetLoggerNames(size_t* count);

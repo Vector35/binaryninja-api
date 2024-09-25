@@ -2221,18 +2221,13 @@ std::string AnalysisMergeConflict::GetPathItem<std::string>(const std::string& p
 template <>
 nlohmann::json AnalysisMergeConflict::GetPathItem<nlohmann::json>(const std::string& path)
 {
-	std::any anyVal = GetPathItem<std::any>(path);
-	try
-	{
-		return std::any_cast<nlohmann::json>(anyVal);
-	}
-	catch (const std::exception& e)
-	{
-		throw SyncException(fmt::format(
-			"Failed to cast merge conflict path item \"{}\" from \"{}\" to \"{}\": {}",
-			path, anyVal.type().name(), typeid(nlohmann::json).name(), e.what()
-		));
-	}
+	char* val = BNAnalysisMergeConflictGetPathItemSerialized(m_object, path.c_str());
+	if (val == nullptr)
+		throw SyncException(fmt::format("Failed to find merge conflict path item \"{}\"", path));
+
+	std::string strVal = val;
+	BNFreeString(val);
+	return nlohmann::json::parse(strVal);
 }
 
 

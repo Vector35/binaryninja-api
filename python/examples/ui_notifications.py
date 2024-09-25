@@ -94,6 +94,10 @@ class UINotification(UIContextNotification):
 		print(f"py GetNameForPath {path} {name}")
 		return False
 
+	def OnContextMenuCreated(self, context, view, menu):
+		# This function only works in C++: Name is an out param (cpp: &name), and not modifiable by python.
+		print(f"py OnContextMenuCreated {context} {view} {menu}")
+
 
 # Register as a global so it doesn't get destructed
 notif = UINotification()

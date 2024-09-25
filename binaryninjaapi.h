@@ -1055,6 +1055,10 @@ namespace BinaryNinja {
 				\return The logger session ID
 			*/
 			size_t GetSessionId();
+
+			void Indent();
+			void Dedent();
+			void ResetIndent();
 	};
 
 	/*! A class allowing registering and retrieving Loggers

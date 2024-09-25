@@ -380,6 +380,24 @@ size_t Logger::GetSessionId()
 }
 
 
+void Logger::Indent()
+{
+	BNLoggerIndent(m_object);
+}
+
+
+void Logger::Dedent()
+{
+	BNLoggerDedent(m_object);
+}
+
+
+void Logger::ResetIndent()
+{
+	BNLoggerResetIndent(m_object);
+}
+
+
 Ref<Logger> LogRegistry::CreateLogger(const std::string& loggerName, size_t sessionId)
 {
 	return new Logger(BNLogCreateLogger(loggerName.c_str(), sessionId));

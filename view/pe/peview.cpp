@@ -759,8 +759,12 @@ bool PEView::Init()
 					BinaryReader stringReader(GetParentView(), LittleEndian);
 					uint64_t stringTableBase = header.coffSymbolTable + (header.coffSymbolCount * 18);
 					stringReader.Seek(stringTableBase);
-					uint32_t stringTableLen = stringReader.Read32();
-					if ((stringTableBase + stringTableLen) > GetParentView()->GetEnd())
+					uint32_t stringTableLen;
+					if (!stringReader.TryRead32(stringTableLen))
+					{
+						m_logger->LogError("Cannot resolve section name \"%s\": String table has invalid start", name);
+					}
+					else if ((stringTableBase + stringTableLen) > GetParentView()->GetEnd())
 					{
 						m_logger->LogError("Cannot resolve section name \"%s\": String table is invalid length", name);
 					}

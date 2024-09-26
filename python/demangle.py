@@ -50,10 +50,14 @@ def get_qualified_name(names: Iterable[str]):
 	return "::".join(names)
 
 
-def demangle_name(archOrPlatform: Union[Architecture, Platform], mangled_name: str,
-			 view: Optional['binaryview.BinaryView'] = None, simplify: bool = False) -> Optional[Tuple[Optional['types.Type'], 'types.QualifiedName']]:
+def demangle_generic(
+		archOrPlatform: Union[Architecture, Platform],
+		mangled_name: str,
+		view: Optional['binaryview.BinaryView'] = None,
+		simplify: bool = False
+) -> Optional[Tuple[Optional['types.Type'], 'types.QualifiedName']]:
 	"""
-	``demangle_name`` demangles a mangled symbol name to a Type object.
+	``demangle_generic`` demangles a mangled symbol name to a Type object.
 
 	:param Union[Architecture, Platform] archOrPlatform: Architecture or Platform for the symbol. Required for pointer/integer sizes and calling conventions.
 	:param str mangled_name: a mangled symbol name
@@ -63,9 +67,9 @@ def demangle_name(archOrPlatform: Union[Architecture, Platform], mangled_name: s
 	:rtype: Tuple
 	:Example:
 
-		>>> demangle_name(Architecture["x86_64"], "?testf@Foobar@@SA?AW4foo@1@W421@@Z")
+		>>> demangle_generic(Architecture["x86_64"], "?testf@Foobar@@SA?AW4foo@1@W421@@Z")
 		(<type: public: static enum Foobar::foo __cdecl (enum Foobar::foo)>, ['Foobar', 'testf'])
-		>>> demangle_name(Architecture["x86_64"], "__ZN20ArmCallingConvention27GetIntegerArgumentRegistersEv")
+		>>> demangle_generic(Architecture["x86_64"], "__ZN20ArmCallingConvention27GetIntegerArgumentRegistersEv")
 		(<type: immutable:FunctionTypeClass 'int64_t()'>, 'ArmCallingConvention::GetIntegerArgumentRegisters')
 		>>>
 	"""
@@ -367,14 +371,14 @@ class Demangler(metaclass=_DemanglerMetaclass):
 			log_error(traceback.format_exc())
 			return False
 
-	def _demangle(self, ctxt, arch, name, out_type, out_var_name, view, simplify):
+	def _demangle(self, ctxt, arch, name, out_type, out_var_name, view):
 		try:
 			api_arch = CoreArchitecture._from_cache(arch)
 			api_view = None
 			if view is not None:
 				api_view = binaryview.BinaryView(handle=core.BNNewViewReference(view))
 
-			result = self.demangle(api_arch, core.pyNativeStr(name), api_view, simplify)
+			result = self.demangle(api_arch, core.pyNativeStr(name), api_view)
 			if result is None:
 				return False
 			type, var_name = result
@@ -414,8 +418,12 @@ class Demangler(metaclass=_DemanglerMetaclass):
 		"""
 		raise NotImplementedError()
 
-	def demangle(self, arch: Architecture, name: str, view: Optional['binaryview.BinaryView'] = None,
-				 simplify: bool = False) -> Optional[Tuple['types.Type', 'types.QualifiedName']]:
+	def demangle(
+			self,
+			arch: Architecture,
+			name: str,
+			view: Optional['binaryview.BinaryView'] = None
+	) -> Optional[Tuple['types.Type', 'types.QualifiedName']]:
 		"""
 		Demangle a raw name into a Type and QualifiedName.
 
@@ -439,7 +447,6 @@ class Demangler(metaclass=_DemanglerMetaclass):
 		:param arch: Architecture for context in which the name exists, eg for pointer sizes
 		:param name: Raw mangled name
 		:param view: (Optional) BinaryView context in which the name exists, eg for type lookup
-		:param simplify: If the demangling should use the C++ name simplifier
 		:return: Tuple of (Type, Name) if successful, None if not. Type may be None if only
 		         a demangled name can be recovered from the raw name.
 		"""
@@ -451,8 +458,7 @@ class CoreDemangler(Demangler):
 	def is_mangled_string(self, name: str) -> bool:
 		return core.BNIsDemanglerMangledName(self.handle, name)
 
-	def demangle(self, arch: Architecture, name: str, view: Optional['binaryview.BinaryView'] = None,
-				 simplify: bool = False) -> Optional[Tuple[Optional['types.Type'], 'types.QualifiedName']]:
+	def demangle(self, arch: Architecture, name: str, view: Optional['binaryview.BinaryView'] = None) -> Optional[Tuple[Optional['types.Type'], 'types.QualifiedName']]:
 		out_type = ctypes.POINTER(core.BNType)()
 		out_var_name = core.BNQualifiedName()
 
@@ -460,7 +466,7 @@ class CoreDemangler(Demangler):
 		if view is not None:
 			view_handle = view.handle
 
-		if not core.BNDemanglerDemangle(self.handle, arch.handle, name, out_type, out_var_name, view_handle, simplify):
+		if not core.BNDemanglerDemangle(self.handle, arch.handle, name, out_type, out_var_name, view_handle):
 			return None
 
 		result_type = None

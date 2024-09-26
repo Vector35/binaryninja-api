@@ -17951,7 +17951,7 @@ namespace BinaryNinja {
 
 		static bool IsMangledStringCallback(void* ctxt, const char* name);
 		static bool DemangleCallback(void* ctxt, BNArchitecture* arch, const char* name, BNType** outType,
-			BNQualifiedName* outVarName, BNBinaryView* view, bool simplify);
+			BNQualifiedName* outVarName, BNBinaryView* view);
 		static void FreeVarNameCallback(void* ctxt, BNQualifiedName* name);
 
 	public:
@@ -18009,11 +18009,10 @@ namespace BinaryNinja {
 			\param outType Resulting type, if one can be deduced, will be written here. Otherwise nullptr will be written
 			\param outVarName Resulting variable name
 			\param view (Optional) BinaryView context in which the name exists, eg for type lookup
-			\param simplify (Optional) If the demangling should use the C++ name simplifier
 			\return True if demangling was successful and results were stored into out-parameters
 		 */
 		virtual bool Demangle(Ref<Architecture> arch, const std::string& name, Ref<Type>& outType,
-			QualifiedName& outVarName, Ref<BinaryView> view = nullptr, bool simplify = false) = 0;
+			QualifiedName& outVarName, Ref<BinaryView> view = nullptr) = 0;
 	};
 
 	/*!
@@ -18027,7 +18026,7 @@ namespace BinaryNinja {
 
 		virtual bool IsMangledString(const std::string& name);
 		virtual bool Demangle(Ref<Architecture> arch, const std::string& name, Ref<Type>& outType,
-			QualifiedName& outVarName, Ref<BinaryView> view, bool simplify);
+			QualifiedName& outVarName, Ref<BinaryView> view);
 	};
 }  // namespace BinaryNinja
 

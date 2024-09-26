@@ -145,7 +145,7 @@ namespace BinaryNinja {
 	}
 
 	bool Demangler::DemangleCallback(void* ctxt, BNArchitecture* arch, const char* name, BNType** outType,
-	                                 BNQualifiedName* outVarName, BNBinaryView* view, bool simplify)
+	                                 BNQualifiedName* outVarName, BNBinaryView* view)
 	{
 		Demangler* demangler = (Demangler*)ctxt;
 
@@ -154,7 +154,7 @@ namespace BinaryNinja {
 
 		Ref<Type> apiType;
 		QualifiedName apiVarName;
-		bool success = demangler->Demangle(apiArch, name, apiType, apiVarName, apiView, simplify);
+		bool success = demangler->Demangle(apiArch, name, apiType, apiVarName, apiView);
 		if (!success)
 			return false;
 
@@ -224,12 +224,12 @@ namespace BinaryNinja {
 	}
 
 	bool CoreDemangler::Demangle(Ref<Architecture> arch, const std::string& name, Ref<Type>& outType,
-		QualifiedName& outVarName, Ref<BinaryView> view, bool simplify)
+		QualifiedName& outVarName, Ref<BinaryView> view)
 	{
 		BNType* apiType;
 		BNQualifiedName apiVarName;
 		bool success = BNDemanglerDemangle(
-			m_object, arch->m_object, name.c_str(), &apiType, &apiVarName, view ? view->m_object : nullptr, simplify);
+			m_object, arch->m_object, name.c_str(), &apiType, &apiVarName, view ? view->m_object : nullptr);
 
 		if (!success)
 			return false;

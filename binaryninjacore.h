@@ -3328,7 +3328,7 @@ extern "C"
 		void* context;
 		bool (*isMangledString)(void* ctxt, const char* name);
 		bool (*demangle)(void* ctxt, BNArchitecture* arch, const char* name, BNType** outType,
-			BNQualifiedName* outVarName, BNBinaryView* view, bool simplify);
+			BNQualifiedName* outVarName, BNBinaryView* view);
 		void (*freeVarName)(void* ctxt, BNQualifiedName* name);
 	} BNDemanglerCallbacks;
 
@@ -6769,7 +6769,7 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNIsDemanglerMangledName(BNDemangler* demangler, const char* name);
 	BINARYNINJACOREAPI bool BNDemanglerDemangle(BNDemangler* demangler, BNArchitecture* arch, const char* name,
-	    BNType** outType, BNQualifiedName* outVarName, BNBinaryView* view, bool simplify);
+	    BNType** outType, BNQualifiedName* outVarName, BNBinaryView* view);
 	BINARYNINJACOREAPI bool BNDemangleGeneric(BNArchitecture* arch, const char* name,
 	    BNType** outType, BNQualifiedName* outVarName, BNBinaryView* view, bool simplify);
 

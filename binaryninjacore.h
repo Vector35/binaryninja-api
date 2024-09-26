@@ -5966,9 +5966,11 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsTypeFloatingPoint(BNType* type);
 	BINARYNINJACOREAPI BNTypeWithConfidence BNGetChildType(BNType* type);
 	BINARYNINJACOREAPI BNCallingConventionWithConfidence BNGetTypeCallingConvention(BNType* type);
+	BINARYNINJACOREAPI BNCallingConventionName BNGetTypeCallingConventionName(BNType* type);
 	BINARYNINJACOREAPI BNFunctionParameter* BNGetTypeParameters(BNType* type, size_t* count);
 	BINARYNINJACOREAPI void BNFreeTypeParameterList(BNFunctionParameter* types, size_t count);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNTypeHasVariableArguments(BNType* type);
+	BINARYNINJACOREAPI bool BNTypeHasTemplateArguments(BNType* type);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNFunctionTypeCanReturn(BNType* type);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNIsTypePure(BNType* type);
 	BINARYNINJACOREAPI BNStructure* BNGetTypeStructure(BNType* type);
@@ -6023,6 +6025,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsTypeBuilderFloatingPoint(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNTypeWithConfidence BNGetTypeBuilderChildType(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNCallingConventionWithConfidence BNGetTypeBuilderCallingConvention(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNCallingConventionName BNGetTypeBuilderCallingConventionName(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNFunctionParameter* BNGetTypeBuilderParameters(BNTypeBuilder* type, size_t* count);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNTypeBuilderHasVariableArguments(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNFunctionTypeBuilderCanReturn(BNTypeBuilder* type);
@@ -6045,6 +6048,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNTypeBuilderSetVolatile(BNTypeBuilder* type, BNBoolWithConfidence* vltl);
 	BINARYNINJACOREAPI void BNTypeBuilderSetSigned(BNTypeBuilder* type, BNBoolWithConfidence* sign);
 	BINARYNINJACOREAPI void BNTypeBuilderSetChildType(BNTypeBuilder* type, BNTypeWithConfidence* child);
+	BINARYNINJACOREAPI void BNTypeBuilderSetCallingConvention(BNTypeBuilder* type, BNCallingConventionWithConfidence* cc);
+	BINARYNINJACOREAPI void BNTypeBuilderSetCallingConventionName(BNTypeBuilder* type, BNCallingConventionName cc);
 	BINARYNINJACOREAPI BNOffsetWithConfidence BNGetTypeBuilderStackAdjustment(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNQualifiedName BNTypeBuilderGetStructureName(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNReferenceType BNTypeBuilderGetReferenceType(BNTypeBuilder* type);

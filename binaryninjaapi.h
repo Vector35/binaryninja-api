@@ -8721,6 +8721,12 @@ namespace BinaryNinja {
 		*/
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
 
+		/*! For Function Types, get the calling convention name
+
+		    \return The calling convention name
+		 */
+		BNCallingConventionName GetCallingConventionName() const;
+
 		/*! For Function Types, get a list of parameters
 
 		    \return A vector of FunctionParameters
@@ -8732,6 +8738,12 @@ namespace BinaryNinja {
 		    \return Whether the function has variable arguments
 		*/
 		Confidence<bool> HasVariableArguments() const;
+
+		/*! Has no effect currently, just used by the demangler
+
+		    \return If the type has the "has template arguments" flag set
+		 */
+		bool HasTemplateArguments() const;
 
 		/*! For Function Types, whether a function can return (is not marked noreturn)
 
@@ -9142,6 +9154,7 @@ namespace BinaryNinja {
 
 		Confidence<Ref<Type>> GetChildType() const;
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
+		BNCallingConventionName GetCallingConventionName() const;
 		std::vector<FunctionParameter> GetParameters() const;
 		Confidence<bool> HasVariableArguments() const;
 		Confidence<bool> CanReturn() const;
@@ -9159,6 +9172,8 @@ namespace BinaryNinja {
 		TypeBuilder& SetConst(const Confidence<bool>& cnst);
 		TypeBuilder& SetVolatile(const Confidence<bool>& vltl);
 		TypeBuilder& SetChildType(const Confidence<Ref<Type>>& child);
+		TypeBuilder& SetCallingConvention(const Confidence<Ref<CallingConvention>>& cc);
+		TypeBuilder& SetCallingConventionName(BNCallingConventionName cc);
 		TypeBuilder& SetSigned(const Confidence<bool>& vltl);
 		TypeBuilder& SetTypeName(const QualifiedName& name);
 		TypeBuilder& SetAlternateName(const std::string& name);

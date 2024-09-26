@@ -162,6 +162,10 @@ namespace BinaryNinja {
 		{
 			*outType = BNNewTypeReference(apiType->m_object);
 		}
+		else
+		{
+			*outType = nullptr;
+		}
 		*outVarName = apiVarName.GetAPIObject();
 
 		return true;

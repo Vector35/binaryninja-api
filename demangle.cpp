@@ -160,8 +160,7 @@ namespace BinaryNinja {
 
 		if (apiType)
 		{
-			apiType->AddRefForRegistration();
-			*outType = apiType->m_object;
+			*outType = BNNewTypeReference(apiType->m_object);
 		}
 		*outVarName = apiVarName.GetAPIObject();
 
@@ -176,6 +175,7 @@ namespace BinaryNinja {
 	void Demangler::Register(Demangler* demangler)
 	{
 		BNDemanglerCallbacks cb;
+		cb.context = (void*)demangler;
 		cb.isMangledString = IsMangledStringCallback;
 		cb.demangle = DemangleCallback;
 		cb.freeVarName = FreeVarNameCallback;

@@ -388,7 +388,7 @@ class Demangler(metaclass=_DemanglerMetaclass):
 
 			Demangler._cached_name = var_name._to_core_struct()
 			if type:
-				out_type[0] = type.handle
+				out_type[0] = core.BNNewTypeReference(type.handle)
 			else:
 				out_type[0] = None
 			out_var_name[0] = Demangler._cached_name

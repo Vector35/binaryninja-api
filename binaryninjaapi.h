@@ -8953,6 +8953,8 @@ namespace BinaryNinja {
 		    const Confidence<std::vector<uint32_t>>& returnRegs = Confidence<std::vector<uint32_t>>(std::vector<uint32_t>(), 0),
 		    BNNameType ft = NoNameType,
 		    const Confidence<bool>& pure = Confidence<bool>(false, 0));
+		static Ref<Type> VarArgsType();
+		static Ref<Type> ValueType(const std::string& value);
 
 		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
@@ -9236,6 +9238,8 @@ namespace BinaryNinja {
 		    const Confidence<std::vector<uint32_t>>& returnRegs = Confidence<std::vector<uint32_t>>(std::vector<uint32_t>(), 0),
 		    BNNameType ft = NoNameType,
 		    const Confidence<bool>& pure = Confidence<bool>(false, 0));
+		static TypeBuilder VarArgsType();
+		static TypeBuilder ValueType(const std::string& value);
 
 		bool IsReferenceOfType(BNNamedTypeReferenceClass refType);
 		bool IsStructReference() { return IsReferenceOfType(StructNamedTypeClass); }

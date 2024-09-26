@@ -1076,6 +1076,20 @@ Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 }
 
 
+Ref<Type> Type::VarArgsType()
+{
+	Type* type = new Type(BNCreateVarArgsType());
+	return type;
+}
+
+
+Ref<Type> Type::ValueType(const std::string& value)
+{
+	Type* type = new Type(BNCreateValueType(value.c_str()));
+	return type;
+}
+
+
 BNIntegerDisplayType Type::GetIntegerTypeDisplayType() const
 {
 	return BNGetIntegerTypeDisplayType(m_object);
@@ -1970,6 +1984,20 @@ TypeBuilder TypeBuilder::FunctionType(const Confidence<Ref<Type>>& returnValue,
 		&canReturnConf, &stackAdjustConf, regStackAdjustRegs.data(),
 		regStackAdjustValues.data(), regStackAdjust.size(), &returnRegsConf, NoNameType, &pureConf));
 	delete[] paramArray;
+	return type;
+}
+
+
+TypeBuilder TypeBuilder::VarArgsType()
+{
+	TypeBuilder type(BNCreateVarArgsTypeBuilder());
+	return type;
+}
+
+
+TypeBuilder TypeBuilder::ValueType(const std::string& value)
+{
+	TypeBuilder type(BNCreateValueTypeBuilder(value.c_str()));
 	return type;
 }
 

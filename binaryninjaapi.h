@@ -17967,6 +17967,28 @@ namespace BinaryNinja {
 		 */
 		bool IsAborted();
 	};
+
+	namespace Unicode
+	{
+		std::string UTF16ToUTF8(const uint8_t* utf16, const size_t len);
+		std::string UTF32ToUTF8(const uint8_t* utf32);
+		bool GetBlockRange(const std::string& name, std::pair<uint32_t, uint32_t>& range);
+		std::vector<std::vector<std::pair<uint32_t, uint32_t>>> GetBlocksForNames(const std::vector<std::string>& names);
+		std::vector<std::string> GetBlockNames();
+		std::map<std::string, std::pair<uint32_t, uint32_t>> GetBlockRanges();
+		std::string GetUTF8String(
+			const std::vector<std::vector<std::pair<uint32_t, uint32_t>>>& unicodeBlocks,
+			const uint8_t* data,
+			const size_t offset,
+			const size_t dataLen
+		);
+		std::string ToEscapedString(
+			const std::vector<std::vector<std::pair<uint32_t, uint32_t>>>& unicodeBlocks,
+			bool utf8Enabled,
+			const void* data,
+			const size_t dataLen
+		);
+	} // namespace Unicode
 }  // namespace BinaryNinja
 
 

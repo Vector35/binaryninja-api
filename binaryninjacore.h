@@ -7288,6 +7288,18 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsBaseAddressDetectionAborted(BNBaseAddressDetection* bad);
 	BINARYNINJACOREAPI void BNFreeBaseAddressDetection(BNBaseAddressDetection* bad);
 
+	// Unicode
+	BINARYNINJACOREAPI char* BNUnicodeUTF16ToUTF8(const uint8_t* utf16, const size_t len);
+	BINARYNINJACOREAPI char* BNUnicodeUTF32ToUTF8(const uint8_t* utf32);
+	BINARYNINJACOREAPI bool BNUnicodeGetBlockRange(const char* name, uint32_t* rangeStart, uint32_t* rangeEnd);
+	BINARYNINJACOREAPI void BNUnicodeGetBlocksForNames(const char* const* names, size_t nameCount, uint32_t*** starts, uint32_t*** ends, size_t** blockListCounts, size_t* blockCount);
+	BINARYNINJACOREAPI void BNFreeUnicodeBlockList(uint32_t** starts, uint32_t** ends, size_t* blockCounts, size_t blockListCounts);
+	BINARYNINJACOREAPI void BNUnicodeGetBlockNames(char*** names, size_t* count);
+	BINARYNINJACOREAPI void BNUnicodeGetBlockRanges(char*** names, uint32_t** rangeStarts, uint32_t** rangeEnds, size_t* count);
+	BINARYNINJACOREAPI void BNFreeUnicodeRangeList(uint32_t* starts, uint32_t* ends);
+	BINARYNINJACOREAPI char* BNUnicodeGetUTF8String(uint32_t** starts, uint32_t** ends, size_t* blockListCounts, size_t blockCount, const uint8_t* data, const size_t offset, const size_t dataLen);
+	BINARYNINJACOREAPI char* BNUnicodeToEscapedString(uint32_t** starts, uint32_t** ends, size_t* blockListCounts, size_t blockCount, bool utf8Enabled, const void* data, const size_t dataLen);
+
 	// Collaboration
 	BINARYNINJACOREAPI BNRemote* BNCollaborationGetActiveRemote();
 	BINARYNINJACOREAPI void BNCollaborationSetActiveRemote(BNRemote* remote);

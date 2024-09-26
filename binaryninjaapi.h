@@ -8950,6 +8950,8 @@ namespace BinaryNinja {
 		static Ref<Type> VarArgsType();
 		static Ref<Type> ValueType(const std::string& value);
 
+		static std::string GetNameTypeString(BNNameType classFunctionType);
+
 		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
 		static std::string GetAutoDemangledTypeIdSource();
@@ -18001,9 +18003,9 @@ namespace BinaryNinja {
 			and instead just return a type with unresolved named type references.
 
 			The most recently registered demangler that claims a name is a mangled string
-			(returns true from IsMangledString), and then returns a value from
+			(returns true from IsMangledString), and then returns true from
 			this function will determine the result of a call to DemangleGeneric.
-			If this call returns None, the next most recently used demangler(s) will be tried instead.
+			If this call returns false, the next most recently used demangler(s) will be tried instead.
 
 			If the mangled name has no type information, but a name is still possible to extract,
 			this function may return a successful result with outType=nullptr, which will be accepted.

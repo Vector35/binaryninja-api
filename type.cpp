@@ -1090,6 +1090,15 @@ Ref<Type> Type::ValueType(const std::string& value)
 }
 
 
+std::string Type::GetNameTypeString(BNNameType classFunctionType)
+{
+	char* value = BNGetNameTypeString(classFunctionType);
+	std::string result(value);
+	BNFreeString(value);
+	return result;
+}
+
+
 BNIntegerDisplayType Type::GetIntegerTypeDisplayType() const
 {
 	return BNGetIntegerTypeDisplayType(m_object);

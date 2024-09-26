@@ -13,10 +13,15 @@
 
 // FFI Helpers
 
+#ifdef __clang__
 /*! Pointer is allocated by the core */
 #define BN_CORE_PTR __attribute__((annotate("bn_core_ptr")))
 /*! Pointer is allocated by the api */
 #define BN_API_PTR __attribute__((annotate("bn_api_ptr")))
+#else
+#define BN_CORE_PTR
+#define BN_API_PTR
+#endif
 
 namespace BinaryNinja
 {

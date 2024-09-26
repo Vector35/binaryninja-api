@@ -11,6 +11,7 @@
     @{
 */
 
+bool BINARYNINJAUIAPI undefineForAddress(BinaryViewRef data, uint64_t addr);
 bool BINARYNINJAUIAPI undefineNameForAddress(BinaryViewRef data, uint64_t addr);
 bool BINARYNINJAUIAPI undefineNameForLocalVariable(
     BinaryViewRef data, FunctionRef func, const BinaryNinja::Variable& var);

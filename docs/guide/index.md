@@ -509,7 +509,7 @@ To search in the keybindings list, just click to make sure it's focused and star
  - `[F5]`, `[TAB]` : Toggle between Pseudo C and disassembly view
  - `g` : Go To Address dialog
  - `n` : Name a symbol
- - `u` : Undefine an existing symbol (only for removing new user-defined names)
+ - `u` : Undefine selected function(s)/data variable(s)/user symbols(s)
  - `e` : Edit an instruction (by modifying the original binary -- currently only enabled for x86, and x64)
  - `x` : Focus the cross-reference pane
  - `;` : Add a comment

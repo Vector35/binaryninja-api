@@ -344,12 +344,11 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void goToAddressAtFileOffset();
 	void followPointer();
 	void defineName();
-	void undefineName();
+	void undefine();
 	void setUserVariableValue();
 	void clearUserVariableValue();
 	void defineFuncName();
 	void editFunctionProperties();
-	void undefineFunc();
 	void createFunc(const UIActionContext& context);
 	void createFuncWithPlatform(PlatformRef platform, bool autoSelect = false);
 	void changeType();

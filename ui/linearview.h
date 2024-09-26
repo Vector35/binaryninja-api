@@ -322,14 +322,13 @@ private Q_SLOTS:
 	void goToAddressAtFileOffset();
 	void defineNameAtAddr(uint64_t addr);
 	void defineName();
-	void undefineName();
+	void undefine();
 	void setUserVariableValue();
 	void clearUserVariableValue();
 	void createFunc(const UIActionContext& context);
 	void createFuncWithPlatform(PlatformRef platform, bool autoSelect = false);
 	void defineFuncName();
 	void editFunctionProperties();
-	void undefineFunc();
 	void reanalyze();
 	void forwardPropagateType();
 	void inferFunctionType();
@@ -366,7 +365,7 @@ private Q_SLOTS:
 	void makePtr();
 	void makeString(size_t charSize = 1);
 	void changeType(const UIActionContext& context);
-	void undefineVariable();
+	void undefineInRange();
 	void displayAs(const UIActionContext& context, BNIntegerDisplayType displayType) override;
 	void createStructOrInferStructureType();
 	bool autoCreateArray();

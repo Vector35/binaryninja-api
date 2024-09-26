@@ -2984,6 +2984,11 @@ void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& nam
 				}
 			}
 
+			if (typeRef)
+			{
+				DefineUnresolvedReferencedTypes(typeRef);
+			}
+
 			NameSpace ns(dll);
 			if (type == ExternalSymbol)
 				ns = GetExternalNameSpace();

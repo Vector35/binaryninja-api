@@ -4179,6 +4179,12 @@ void BinaryView::RenameType(const QualifiedName& oldName, const QualifiedName& n
 }
 
 
+void BinaryView::DefineUnresolvedReferencedTypes(Ref<Type> source)
+{
+	BNDefineUnresolvedReferencedTypes(m_object, source->GetObject());
+}
+
+
 void BinaryView::RegisterPlatformTypes(Platform* platform)
 {
 	BNRegisterPlatformTypes(m_object, platform->GetObject());

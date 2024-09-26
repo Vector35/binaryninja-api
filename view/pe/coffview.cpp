@@ -1542,6 +1542,10 @@ void COFFView::AddCOFFSymbol(BNSymbolType type, const string& dll, const string&
 			m_logger->LogDebug("Failed to demangle: '%s'\n", name.c_str());
 		}
 	}
+	if (symbolTypeRef)
+	{
+		DefineUnresolvedReferencedTypes(symbolTypeRef);
+	}
 
 	DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(),
 		new Symbol(type, shortName, fullName, rawName, address, binding, nameSpace, ordinal), symbolTypeRef);

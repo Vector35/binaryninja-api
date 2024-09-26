@@ -1847,8 +1847,15 @@ public:
 	                      Ref<BinaryView> view) override
 	{
 		if (view)
-			return Demangle::DemangleMS(arch, name, outType, outVarName, view);
-		return Demangle::DemangleMS(arch, name, outType, outVarName);
+		{
+			if (!Demangle::DemangleMS(arch, name, outType, outVarName, view))
+				return false;
+		}
+		if (!Demangle::DemangleMS(arch, name, outType, outVarName))
+			return false;
+
+		LogDebugF("DemangleMS: {} --> {} {}", name, outType->GetString(), outVarName);
+		return true;
 	}
 };
 

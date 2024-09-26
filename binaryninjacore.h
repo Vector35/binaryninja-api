@@ -4922,6 +4922,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNUndefineUserAnalysisType(BNBinaryView* view, BNQualifiedName* name);
 	BINARYNINJACOREAPI void BNRenameAnalysisType(
 	    BNBinaryView* view, BNQualifiedName* oldName, BNQualifiedName* newName);
+	BINARYNINJACOREAPI void BNDefineUnresolvedReferencedTypes(BNBinaryView* view, BNType* type);
 	BINARYNINJACOREAPI char* BNGenerateAutoTypeId(const char* source, BNQualifiedName* name);
 	BINARYNINJACOREAPI char* BNGenerateAutoPlatformTypeId(BNPlatform* platform, BNQualifiedName* name);
 	BINARYNINJACOREAPI char* BNGenerateAutoDemangledTypeId(BNQualifiedName* name);

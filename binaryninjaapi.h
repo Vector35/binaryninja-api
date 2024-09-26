@@ -6128,6 +6128,7 @@ namespace BinaryNinja {
 		void UndefineType(const std::string& id);
 		void UndefineUserType(const QualifiedName& name);
 		void RenameType(const QualifiedName& oldName, const QualifiedName& newName);
+		void DefineUnresolvedReferencedTypes(Ref<Type> source);
 
 		void RegisterPlatformTypes(Platform* platform);
 

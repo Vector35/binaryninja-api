@@ -2452,6 +2452,10 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 				m_logger->LogDebug("Failed to demangle name: '%s'\n", rawName.c_str());
 			}
 		}
+		if (typeRef)
+		{
+			DefineUnresolvedReferencedTypes(typeRef);
+		}
 
 		return std::pair<Ref<Symbol>, Ref<Type>>(
 			new Symbol(type, shortName, fullName, rawName, addr, binding, nameSpace), typeRef);

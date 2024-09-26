@@ -2463,7 +2463,10 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 				fullName = shortName;
 			}
 		}
-
+		if (typeRef)
+		{
+			DefineUnresolvedReferencedTypes(typeRef);
+		}
 		if (!typeRef && (size > 0 && size <= 8))
 		{
 			typeRef = Type::IntegerType(size, false);

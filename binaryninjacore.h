@@ -5915,6 +5915,7 @@ extern "C"
 	    BNRegisterSetWithConfidence* returnRegs, BNNameType ft, BNBoolWithConfidence* pure);
 	BINARYNINJACOREAPI BNType* BNCreateVarArgsType();
 	BINARYNINJACOREAPI BNType* BNCreateValueType(const char* value);
+	BINARYNINJACOREAPI char* BNGetNameTypeString(BNNameType classFunctionType);
 	BINARYNINJACOREAPI BNType* BNNewTypeReference(BNType* type);
 	BINARYNINJACOREAPI BNType* BNDuplicateType(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeAndName(BNType* type, BNQualifiedName* name, BNTokenEscapingType escaping);

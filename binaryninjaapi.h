@@ -8956,6 +8956,8 @@ namespace BinaryNinja {
 		static Ref<Type> VarArgsType();
 		static Ref<Type> ValueType(const std::string& value);
 
+		static std::string GetNameTypeString(BNNameType classFunctionType);
+
 		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
 		static std::string GetAutoDemangledTypeIdSource();

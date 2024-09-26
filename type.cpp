@@ -602,6 +602,12 @@ Confidence<Ref<CallingConvention>> Type::GetCallingConvention() const
 }
 
 
+BNCallingConventionName Type::GetCallingConventionName() const
+{
+	return BNGetTypeCallingConventionName(m_object);
+}
+
+
 vector<FunctionParameter> Type::GetParameters() const
 {
 	size_t count;
@@ -630,6 +636,12 @@ Confidence<bool> Type::HasVariableArguments() const
 {
 	BNBoolWithConfidence result = BNTypeHasVariableArguments(m_object);
 	return Confidence<bool>(result.value, result.confidence);
+}
+
+
+bool Type::HasTemplateArguments() const
+{
+	return BNTypeHasTemplateArguments(m_object);
 }
 
 
@@ -1491,12 +1503,35 @@ TypeBuilder& TypeBuilder::SetChildType(const Confidence<Ref<Type>>& child)
 }
 
 
+TypeBuilder& TypeBuilder::SetCallingConvention(const Confidence<Ref<CallingConvention>>& cc)
+{
+	BNCallingConventionWithConfidence ccwc;
+	ccwc.convention = cc->GetObject();
+	ccwc.confidence = cc.GetConfidence();
+	BNTypeBuilderSetCallingConvention(m_object, &ccwc);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetCallingConventionName(BNCallingConventionName cc)
+{
+	BNTypeBuilderSetCallingConventionName(m_object, cc);
+	return *this;
+}
+
+
 Confidence<Ref<CallingConvention>> TypeBuilder::GetCallingConvention() const
 {
 	BNCallingConventionWithConfidence cc = BNGetTypeBuilderCallingConvention(m_object);
 	if (cc.convention)
 		return Confidence<Ref<CallingConvention>>(new CoreCallingConvention(cc.convention), cc.confidence);
 	return nullptr;
+}
+
+
+BNCallingConventionName TypeBuilder::GetCallingConventionName() const
+{
+	return BNGetTypeBuilderCallingConventionName(m_object);
 }
 
 

@@ -354,7 +354,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn default_arch(&self) -> Option<CoreArchitecture> {
+    fn default_arch(&self) -> Option<&'static CoreArchitecture> {
         unsafe {
             let raw = BNGetDefaultArchitecture(self.as_ref().handle);
 
@@ -368,7 +368,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     fn set_default_arch<A: Architecture>(&self, arch: &A) {
         unsafe {
-            BNSetDefaultArchitecture(self.as_ref().handle, arch.as_ref().0);
+            BNSetDefaultArchitecture(self.as_ref().handle, arch.core().as_ptr());
         }
     }
 
@@ -392,7 +392,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     fn instruction_len<A: Architecture>(&self, arch: &A, addr: u64) -> Option<usize> {
         unsafe {
-            let size = BNGetInstructionLength(self.as_ref().handle, arch.as_ref().0, addr);
+            let size = BNGetInstructionLength(self.as_ref().handle, arch.core().as_ptr(), addr);
 
             if size > 0 {
                 Some(size)

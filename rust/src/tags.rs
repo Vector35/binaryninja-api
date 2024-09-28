@@ -200,7 +200,7 @@ pub struct TagReference {
     ref_type: TagReferenceType,
     auto_defined: bool,
     tag: Ref<Tag>,
-    arch: CoreArchitecture,
+    arch: &'static CoreArchitecture,
     func: Ref<Function>,
     addr: u64,
 }
@@ -225,7 +225,7 @@ impl TagReference {
     pub fn tag(&self) -> &Tag {
         &self.tag
     }
-    pub fn arch(&self) -> CoreArchitecture {
+    pub fn arch(&self) -> &'static CoreArchitecture {
         self.arch
     }
     pub fn functions(&self) -> &Function {

@@ -27,8 +27,9 @@ from dataclasses import dataclass
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import (
-    AnalysisSkipReason, FunctionGraphType, SymbolType, InstructionTextTokenType, HighlightStandardColor,
-    HighlightColorStyle, DisassemblyOption, IntegerDisplayType, FunctionAnalysisSkipOverride, FunctionUpdateType
+	AnalysisSkipReason, FunctionGraphType, SymbolType, InstructionTextTokenType, HighlightStandardColor,
+	HighlightColorStyle, DisassemblyOption, IntegerDisplayType, FunctionAnalysisSkipOverride, FunctionUpdateType,
+	BuiltinType
 )
 from .exceptions import ILException
 
@@ -1847,6 +1848,14 @@ class Function:
 
 	def get_constant_data(self, state: RegisterValueType, value: int, size: int = 0) -> databuffer.DataBuffer:
 		return databuffer.DataBuffer(handle=core.BNGetConstantData(self.handle, state, value, size, None))
+
+	def get_constant_data_and_builtin(
+			self, state: RegisterValueType, value: int, size: int = 0
+	) -> Tuple[databuffer.DataBuffer, BuiltinType]:
+		builtin = ctypes.c_int()
+		db = databuffer.DataBuffer(
+			handle=core.BNGetConstantData(self.handle, state, value, size, ctypes.byref(builtin)))
+		return db, BuiltinType(builtin.value)
 
 	def get_reg_value_at(
 	    self, addr: int, reg: 'architecture.RegisterType', arch: Optional['architecture.Architecture'] = None

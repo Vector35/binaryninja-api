@@ -20,14 +20,14 @@
 # IN THE SOFTWARE.
 
 import ctypes
-from typing import List, Generator, Optional, Union, Set, Dict
+from typing import List, Generator, Optional, Union, Set, Dict, Tuple
 from dataclasses import dataclass
 
 import binaryninja
 from . import _binaryninjacore as core
 from . import databuffer
 from . import decorators
-from .enums import RegisterValueType, VariableSourceType, DeadStoreElimination, FunctionGraphType
+from .enums import RegisterValueType, VariableSourceType, DeadStoreElimination, FunctionGraphType, BuiltinType
 
 FunctionOrILFunction = Union["binaryninja.function.Function", "binaryninja.lowlevelil.LowLevelILFunction",
                              "binaryninja.mediumlevelil.MediumLevelILFunction",
@@ -222,6 +222,12 @@ class ConstantData(RegisterValue):
 		if self.function is None:
 			raise ValueError(f"ConstantData requires a Function instance: {self.size}")
 		return self.function.get_constant_data(self.type, self.value, self.size)
+
+	@property
+	def data_and_builtin(self) -> Tuple[databuffer.DataBuffer, BuiltinType]:
+		if self.function is None:
+			raise ValueError(f"ConstantData requires a Function instance: {self.size}")
+		return self.function.get_constant_data_and_builtin(self.type, self.value, self.size)
 
 
 @dataclass(frozen=True)

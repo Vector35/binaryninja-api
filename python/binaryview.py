@@ -9620,6 +9620,21 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	def memory_map(self):
 		return MemoryMap(handle=self.handle)
 
+	def stringify_unicode_data(
+			self, arch: Optional['architecture.Architecture'], buffer: 'databuffer.DataBuffer',
+			allow_short_strings: bool = False
+	) -> Tuple[Optional[str], Optional[StringType]]:
+		string = ctypes.c_char_p()
+		string_type = ctypes.c_int()
+		if arch is not None:
+			arch = arch.handle
+		if not core.BNStringifyUnicodeData(
+				self.handle, arch, buffer.handle, allow_short_strings, ctypes.byref(string), ctypes.byref(string_type)):
+			return None, None
+		result = string.value
+		core.BNFreeString(string)
+		return result, StringType(string_type.value)
+
 class BinaryReader:
 	"""
 	``class BinaryReader`` is a convenience class for reading binary data.

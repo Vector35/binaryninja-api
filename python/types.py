@@ -3105,6 +3105,30 @@ class FunctionType(Type):
 		return result
 
 	@property
+	def parameters_with_all_locations(self) -> List[FunctionParameter]:
+		"""Type parameters list with default locations filled in with values (read-only)"""
+		count = ctypes.c_ulonglong()
+		params = core.BNGetTypeParameters(self._handle, count)
+		assert params is not None, "core.BNGetTypeParameters returned None"
+		result = []
+		for i in range(0, count.value):
+			param_type = Type.create(
+				core.BNNewTypeReference(params[i].type), platform=self._platform, confidence=params[i].typeConfidence
+			)
+			name = params[i].name
+			if (params[i].location.type
+				== VariableSourceType.RegisterVariableSourceType) and (self._platform is not None):
+				name = self._platform.arch.get_reg_name(params[i].location.storage)
+			elif params[i].location.type == VariableSourceType.StackVariableSourceType:
+				name = "arg_%x" % params[i].location.storage
+			param_location = variable.VariableNameAndType(
+				params[i].location.type, params[i].location.index, params[i].location.storage, name, param_type
+			)
+			result.append(FunctionParameter(param_type, params[i].name, param_location))
+		core.BNFreeTypeParameterList(params, count.value)
+		return result
+
+	@property
 	def has_variable_arguments(self) -> BoolWithConfidence:
 		"""Whether type has variable arguments (read-only)"""
 		result = core.BNTypeHasVariableArguments(self._handle)

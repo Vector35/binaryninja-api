@@ -15952,6 +15952,7 @@ namespace BinaryNinja {
 		BNVersionInfo GetMinimumVersionInfo() const;
 		BNVersionInfo GetMaximumVersionInfo() const;
 		uint64_t GetLastUpdate();
+		bool IsViewOnly() const;
 		bool IsBeingDeleted() const;
 		bool IsBeingUpdated() const;
 		bool IsInstalled() const;

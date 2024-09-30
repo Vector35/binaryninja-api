@@ -138,6 +138,11 @@ string RepoPlugin::GetCommit() const
 	RETURN_STRING(BNPluginGetCommit(m_object));
 }
 
+bool RepoPlugin::IsViewOnly() const
+{
+	BNPluginGetViewOnly(m_object);
+}
+
 
 string RepoPlugin::GetRepository() const
 {

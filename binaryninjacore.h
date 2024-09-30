@@ -6757,6 +6757,7 @@ extern "C"
 	BINARYNINJACOREAPI const char* BNPluginGetAuthorUrl(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetVersion(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetCommit(BNRepoPlugin* p);
+	BINARYNINJACOREAPI const bool BNPluginGetViewOnly(BNRepoPlugin* p);
 	BINARYNINJACOREAPI void BNFreePluginTypes(BNPluginType* r);
 	BINARYNINJACOREAPI BNRepoPlugin* BNNewPluginReference(BNRepoPlugin* r);
 	BINARYNINJACOREAPI void BNFreePlugin(BNRepoPlugin* plugin);

@@ -79,6 +79,16 @@ vector<string> Settings::Keys()
 
 
 template <>
+string Settings::QueryProperty<string>(const string& key, const string& property)
+{
+	char* outBuffer = BNSettingsQueryPropertyString(m_object, key.c_str(), property.c_str());
+	string result(outBuffer);
+	BNFreeString(outBuffer);
+	return result;
+}
+
+
+template <>
 vector<string> Settings::QueryProperty<vector<string>>(const string& key, const string& property)
 {
 	size_t size = 0;

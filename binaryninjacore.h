@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 76
+#define BN_CURRENT_CORE_ABI_VERSION 77
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -6889,8 +6889,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNSettingsContains(BNSettings* settings, const char* key);
 	BINARYNINJACOREAPI bool BNSettingsIsEmpty(BNSettings* settings);
 	BINARYNINJACOREAPI const char** BNSettingsKeysList(BNSettings* settings, size_t* inoutSize);
-	BINARYNINJACOREAPI const char** BNSettingsQueryPropertyStringList(
-	    BNSettings* settings, const char* key, const char* property, size_t* inoutSize);
+	BINARYNINJACOREAPI char* BNSettingsQueryPropertyString(BNSettings* settings, const char* key, const char* property);
+	BINARYNINJACOREAPI const char** BNSettingsQueryPropertyStringList(BNSettings* settings, const char* key, const char* property, size_t* inoutSize);
 	BINARYNINJACOREAPI bool BNSettingsUpdateProperty(BNSettings* settings, const char* key, const char* property);
 	BINARYNINJACOREAPI bool BNSettingsUpdateBoolProperty(
 	    BNSettings* settings, const char* key, const char* property, bool value);

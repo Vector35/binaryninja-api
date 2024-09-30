@@ -268,6 +268,9 @@ class Settings:
 		core.BNFreeStringList(result, length)
 		return out_list
 
+	def query_property_string(self, key: str, property_name: str) -> str:
+		return core.BNSettingsQueryPropertyString(self.handle, key, property_name)
+
 	def query_property_string_list(self, key: str, property_name: str) -> List[str]:
 		length = ctypes.c_ulonglong()
 		result = core.BNSettingsQueryPropertyStringList(self.handle, key, property_name, ctypes.byref(length))

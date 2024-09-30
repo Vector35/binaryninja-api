@@ -259,6 +259,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	void scrollLines(int count);
 
 	void bindActions();
+	void bindDynamicActions();
 	static void addOptionsMenuActions(Menu& menu);
 
 	void getHexDumpLineBytes(

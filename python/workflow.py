@@ -522,6 +522,24 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		core.BNWorkflowShowReport(self.handle, "trace")
 
+	def eligibility_settings(self) -> List[str]:
+		"""
+		``eligibility_settings`` Retrieve the list of eligibility settings for the Workflow.
+
+		:return: list of eligibility settings
+		:rtype: list[str]
+		"""
+		length = ctypes.c_ulonglong()
+		result = core.BNWorkflowGetEligibilitySettings(self.handle, ctypes.byref(length))
+		assert result is not None, "core.BNWorkflowGetEligibilitySettings returned None"
+		out_list = []
+		try:
+			for i in range(length.value):
+				out_list.append(result[i].decode('utf-8'))
+			return out_list
+		finally:
+			core.BNFreeStringList(result, length.value)
+
 	@property
 	def machine(self):
 		if self._machine is not None:

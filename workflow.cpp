@@ -325,3 +325,18 @@ void Workflow::ShowReport(const string& name)
 {
 	BNWorkflowShowReport(m_object, name.c_str());
 }
+
+
+vector<string> Workflow::GetEligibilitySettings()
+{
+	size_t size = 0;
+	char** outBuffer = (char**)BNWorkflowGetEligibilitySettings(m_object, &size);
+
+	vector<string> result;
+	result.reserve(size);
+	for (size_t i = 0; i < size; i++)
+		result.emplace_back(outBuffer[i]);
+
+	BNFreeStringList(outBuffer, size);
+	return result;
+}

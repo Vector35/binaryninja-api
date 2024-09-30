@@ -9943,6 +9943,8 @@ namespace BinaryNinja {
 		*/
 		Ref<FlowGraph> GetGraph(const std::string& activity = "", bool sequential = false);
 		void ShowReport(const std::string& name);
+
+		std::vector<std::string> GetEligibilitySettings();
 	};
 
 	class DisassemblySettings :

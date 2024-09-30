@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 75
+#define BN_CURRENT_CORE_ABI_VERSION 76
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -5188,20 +5188,18 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNWorkflowSize(BNWorkflow* workflow);
 
 	BINARYNINJACOREAPI BNActivity* BNWorkflowGetActivity(BNWorkflow* workflow, const char* activity);
-	BINARYNINJACOREAPI const char** BNWorkflowGetActivityRoots(
-	    BNWorkflow* workflow, const char* activity, size_t* inoutSize);
-	BINARYNINJACOREAPI const char** BNWorkflowGetSubactivities(
-	    BNWorkflow* workflow, const char* activity, bool immediate, size_t* inoutSize);
-	BINARYNINJACOREAPI bool BNWorkflowAssignSubactivities(
-	    BNWorkflow* workflow, const char* activity, const char** activities, size_t size);
+	BINARYNINJACOREAPI const char** BNWorkflowGetActivityRoots(BNWorkflow* workflow, const char* activity, size_t* inoutSize);
+	BINARYNINJACOREAPI const char** BNWorkflowGetSubactivities(BNWorkflow* workflow, const char* activity, bool immediate, size_t* inoutSize);
+	BINARYNINJACOREAPI bool BNWorkflowAssignSubactivities(BNWorkflow* workflow, const char* activity, const char** activities, size_t size);
 	BINARYNINJACOREAPI bool BNWorkflowClear(BNWorkflow* workflow);
-	BINARYNINJACOREAPI bool BNWorkflowInsert(
-	    BNWorkflow* workflow, const char* activity, const char** activities, size_t size);
+	BINARYNINJACOREAPI bool BNWorkflowInsert(BNWorkflow* workflow, const char* activity, const char** activities, size_t size);
 	BINARYNINJACOREAPI bool BNWorkflowRemove(BNWorkflow* workflow, const char* activity);
 	BINARYNINJACOREAPI bool BNWorkflowReplace(BNWorkflow* workflow, const char* activity, const char* newActivity);
 
 	BINARYNINJACOREAPI BNFlowGraph* BNWorkflowGetGraph(BNWorkflow* workflow, const char* activity, bool sequential);
 	BINARYNINJACOREAPI void BNWorkflowShowReport(BNWorkflow* workflow, const char* name);
+
+	BINARYNINJACOREAPI const char** BNWorkflowGetEligibilitySettings(BNWorkflow* workflow, size_t* inoutSize);
 
 	// Disassembly settings
 	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);

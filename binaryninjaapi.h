@@ -9746,7 +9746,7 @@ namespace BinaryNinja {
 		    MyClass::MyActionMethod(Ref<AnalysisContext> ac);
 		    ...
 		 	// Create a clone of the default workflow named "core.function.myWorkflowName"
-		    Ref<Workflow> wf = BinaryNinja::Workflow::Instance()->Clone("core.function.myWorkflowName");
+		    Ref<Workflow> wf = BinaryNinja::Workflow::Instance("core.function.defaultAnalysis")->Clone("core.function.myWorkflowName");
 		 	wf->RegisterActivity(new BinaryNinja::Activity("core.function.myWorkflowName.resolveMethodCalls", &MyClass::MyActionMethod));
 		 	\endcode
 

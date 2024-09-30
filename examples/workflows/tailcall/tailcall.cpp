@@ -117,7 +117,7 @@ extern "C"
 
 	BINARYNINJAPLUGIN bool CorePluginInit()
 	{
-		Ref<Workflow> customTailCallWorkflow = Workflow::Instance()->Clone("CustomTailCallWorkflow");
+		Ref<Workflow> customTailCallWorkflow = Workflow::Instance("core.function.defaultAnalysis")->Clone("CustomTailCallWorkflow");
 		customTailCallWorkflow->RegisterActivity(new Activity("extension.translateTailCalls", &TailCallTranslation));
 		customTailCallWorkflow->Replace("core.function.translateTailCalls", "extension.translateTailCalls");
 		customTailCallWorkflow->Remove("core.function.translateTailCalls");

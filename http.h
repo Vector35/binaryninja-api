@@ -207,7 +207,7 @@ namespace BinaryNinja::Http
 		    \param downloadProgress Function to call for download progress updates
 		    \param uploadProgress Function to call for upload progress updates
 		 */
-		Request(_STD_STRING method, _STD_STRING url, _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING> headers = {},
+		Request(_STD_STRING method, _STD_STRING url, const _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING>& headers = {},
 		    _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>> params = {},
 		    std::function<bool(size_t, size_t)> downloadProgress = {},
 		    std::function<bool(size_t, size_t)> uploadProgress = {});
@@ -223,7 +223,7 @@ namespace BinaryNinja::Http
 		    \param downloadProgress Function to call for download progress updates
 		    \param uploadProgress Function to call for upload progress updates
 		 */
-		Request(_STD_STRING method, _STD_STRING url, _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING> headers,
+		Request(_STD_STRING method, _STD_STRING url, const _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING>& headers,
 		    _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>> params, _STD_VECTOR<uint8_t> body,
 		    std::function<bool(size_t, size_t)> downloadProgress = {},
 		    std::function<bool(size_t, size_t)> uploadProgress = {});
@@ -239,7 +239,7 @@ namespace BinaryNinja::Http
 		    \param downloadProgress Function to call for download progress updates
 		    \param uploadProgress Function to call for upload progress updates
 		 */
-		Request(_STD_STRING method, _STD_STRING url, _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING> headers,
+		Request(_STD_STRING method, _STD_STRING url, const _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING>& headers,
 		    _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>> params,
 		    _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>> formFields,
 		    std::function<bool(size_t, size_t)> downloadProgress = {},
@@ -256,7 +256,7 @@ namespace BinaryNinja::Http
 		    \param downloadProgress Function to call for download progress updates
 		    \param uploadProgress Function to call for upload progress updates
 		 */
-		Request(_STD_STRING method, _STD_STRING url, _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING> headers,
+		Request(_STD_STRING method, _STD_STRING url, const _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING>& headers,
 		    _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>> params, _STD_VECTOR<MultipartField> formFields,
 		    std::function<bool(size_t, size_t)> downloadProgress = {},
 		    std::function<bool(size_t, size_t)> uploadProgress = {});
@@ -271,8 +271,8 @@ namespace BinaryNinja::Http
 		    \param uploadProgress Function to call for upload progress updates
 		    \return Request structure with specified fields
 		 */
-		static Request Get(_STD_STRING url, _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING> headers = {},
-		    _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>> params = {},
+		static Request Get(_STD_STRING url, const _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING>& headers = {},
+		    const _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>>& params = {},
 		    std::function<bool(size_t, size_t)> downloadProgress = {},
 		    std::function<bool(size_t, size_t)> uploadProgress = {});
 
@@ -287,8 +287,8 @@ namespace BinaryNinja::Http
 		    \param uploadProgress Function to call for upload progress updates
 		    \return Request structure with specified fields
 		 */
-		static Request Post(_STD_STRING url, _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING> headers = {},
-		    _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>> params = {}, _STD_VECTOR<uint8_t> body = {},
+		static Request Post(_STD_STRING url, const _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING>& headers = {},
+		    const _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>>& params = {}, const _STD_VECTOR<uint8_t>& body = {},
 		    std::function<bool(size_t, size_t)> downloadProgress = {},
 		    std::function<bool(size_t, size_t)> uploadProgress = {});
 
@@ -303,9 +303,9 @@ namespace BinaryNinja::Http
 		    \param uploadProgress Function to call for upload progress updates
 		    \return Request structure with specified fields
 		 */
-		static Request Post(_STD_STRING url, _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING> headers,
-		    _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>> params,
-		    _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>> formFields,
+		static Request Post(_STD_STRING url, const _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING>& headers,
+		    const _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>>& params,
+		    const _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>>& formFields,
 		    std::function<bool(size_t, size_t)> downloadProgress = {},
 		    std::function<bool(size_t, size_t)> uploadProgress = {});
 
@@ -320,8 +320,8 @@ namespace BinaryNinja::Http
 		    \param uploadProgress Function to call for upload progress updates
 		    \return Request structure with specified fields
 		 */
-		static Request Post(_STD_STRING url, _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING> headers,
-		    _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>> params, _STD_VECTOR<MultipartField> formFields,
+		static Request Post(_STD_STRING url, const _STD_UNORDERED_MAP<_STD_STRING, _STD_STRING>& headers,
+		    const _STD_VECTOR<std::pair<_STD_STRING, _STD_STRING>>& params, const _STD_VECTOR<MultipartField>& formFields,
 		    std::function<bool(size_t, size_t)> downloadProgress = {},
 		    std::function<bool(size_t, size_t)> uploadProgress = {});
 	};

@@ -48,6 +48,10 @@ impl BinaryViewTypeBase for MinidumpBinaryViewType {
         false
     }
 
+    fn is_force_loadable(&self) -> bool {
+        false
+    }
+
     fn is_valid_for(&self, data: &BinaryView) -> bool {
         let mut magic_number = Vec::<u8>::new();
         data.read_into_vec(&mut magic_number, 0, 4);

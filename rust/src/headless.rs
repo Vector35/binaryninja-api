@@ -20,6 +20,7 @@ use crate::{
 
 use std::env;
 use std::path::PathBuf;
+use std::time::Duration;
 
 #[cfg(not(target_os = "windows"))]
 fn binja_path() -> PathBuf {
@@ -82,6 +83,13 @@ use binaryninjacore_sys::{BNInitPlugins, BNInitRepoPlugins, BNSetBundledPluginDi
 ///
 /// You can instead call this through [`Session`] or [`script_helper`]
 pub fn init() {
+    match crate::product().as_str() {
+        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => {
+            crate::enterprise::checkout_license(Duration::from_secs(900)).expect("Failed to checkout license");
+        },
+        _ => {}
+    }
+    
     unsafe {
         let path = binja_path().join("plugins").into_os_string();
         let path = path.into_string().unwrap();
@@ -96,6 +104,13 @@ pub fn init() {
 ///
 /// ⚠️ Important! Must be called at the end of scripts. ⚠️
 pub fn shutdown() {
+    match crate::product().as_str() {
+        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => {
+            crate::enterprise::release_license()
+        },
+        _ => {}
+    }
+    
     unsafe { binaryninjacore_sys::BNShutdown() };
 }
 

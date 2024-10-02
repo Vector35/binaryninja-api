@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 77
+#define BN_CURRENT_CORE_ABI_VERSION 78
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -1657,6 +1657,7 @@ extern "C"
 		BNBinaryView* (*parse)(void* ctxt, BNBinaryView* data);
 		bool (*isValidForData)(void* ctxt, BNBinaryView* data);
 		bool (*isDeprecated)(void* ctxt);
+		bool (*isForceLoadable)(void* ctxt);
 		BNSettings* (*getLoadSettingsForData)(void* ctxt, BNBinaryView* data);
 	} BNCustomBinaryViewType;
 
@@ -4001,6 +4002,7 @@ extern "C"
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryViewOfType(BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI BNBinaryView* BNParseBinaryViewOfType(BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI bool BNIsBinaryViewTypeValidForData(BNBinaryViewType* type, BNBinaryView* data);
+	BINARYNINJACOREAPI bool BNIsBinaryViewTypeForceLoadable(BNBinaryViewType* type);
 	BINARYNINJACOREAPI BNSettings* BNGetBinaryViewDefaultLoadSettingsForData(
 	    BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI BNSettings* BNGetBinaryViewLoadSettingsForData(BNBinaryViewType* type, BNBinaryView* data);

@@ -1271,6 +1271,11 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		"""returns if the BinaryViewType is deprecated (read-only)"""
 		return core.BNIsBinaryViewTypeDeprecated(self.handle)
 
+	@property
+	def is_force_loadable(self) -> bool:
+		"""returns if the BinaryViewType is force loadable (read-only)"""
+		return core.BNIsBinaryViewTypeForceLoadable(self.handle)
+
 	def create(self, data: 'BinaryView') -> Optional['BinaryView']:
 		view = core.BNCreateBinaryViewOfType(self.handle, data.handle)
 		if view is None:
@@ -2511,6 +2516,7 @@ class BinaryView:
 		cls._registered_cb.parse = cls._registered_cb.parse.__class__(cls._parse)
 		cls._registered_cb.isValidForData = cls._registered_cb.isValidForData.__class__(cls._is_valid_for_data)
 		cls._registered_cb.isDeprecated = cls._registered_cb.isDeprecated.__class__(cls._is_deprecated)
+		cls._registered_cb.isForceLoadable = cls._registered_cb.isForceLoadable.__class__(cls._is_force_loadable)
 		cls._registered_cb.getLoadSettingsForData = cls._registered_cb.getLoadSettingsForData.__class__(
 		    cls._get_load_settings_for_data
 		)
@@ -2575,6 +2581,17 @@ class BinaryView:
 
 		try:
 			return cls.is_deprecated()  # type: ignore
+		except:
+			log_error(traceback.format_exc())
+			return False
+
+	@classmethod
+	def _is_force_loadable(cls, ctxt):
+		if not callable(getattr(cls, 'is_force_loadable', None)):
+			return False
+
+		try:
+			return cls.is_force_loadable()  # type: ignore
 		except:
 			log_error(traceback.format_exc())
 			return False

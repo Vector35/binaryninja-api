@@ -229,7 +229,8 @@ author = u'Vector 35 Inc'
 #
 # The short X.Y version.
 version = u'.'.join(str(binaryninja.core_version()).split('.')[0:2])
-release = str(binaryninja.core_version())
+# The longer X.Y.Z-channel version. (We intentionally strip the edition.)
+release = str(binaryninja.core_version().split(' ')[0])
 
 language = 'en'
 

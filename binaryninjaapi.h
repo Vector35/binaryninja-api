@@ -5080,8 +5080,10 @@ namespace BinaryNinja {
 		/*! Undefine a DataVariable at a given address
 
 		    \param addr virtual address of the DataVariable
+		    \param blacklist whether to add the address to the data variable black list so that the auto analysis would
+		    not recreate the variable on re-analysis
 		*/
-		void UndefineDataVariable(uint64_t addr);
+		void UndefineDataVariable(uint64_t addr, bool blacklist = true);
 
 		/*! Undefine a user DataVariable at a given address
 

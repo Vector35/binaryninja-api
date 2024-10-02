@@ -4719,18 +4719,20 @@ class BinaryView:
 
 		return self.get_data_var_at(addr)
 
-	def undefine_data_var(self, addr: int) -> None:
+	def undefine_data_var(self, addr: int, blacklist: bool = True) -> None:
 		"""
 		``undefine_data_var`` removes the non-user data variable at the virtual address ``addr``.
 
 		:param int addr: virtual address to define the data variable to be removed
+		:param bool blacklist: whether to add the address to the data variable black list so that the auto analysis
+			would not recreat the variable on re-analysis
 		:rtype: None
 		:Example:
 
 			>>> bv.undefine_data_var(bv.entry_point)
 			>>>
 		"""
-		core.BNUndefineDataVariable(self.handle, addr)
+		core.BNUndefineDataVariable(self.handle, addr, blacklist)
 
 	def undefine_user_data_var(self, addr: int) -> None:
 		"""

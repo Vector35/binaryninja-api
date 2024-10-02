@@ -2058,9 +2058,9 @@ void BinaryView::DefineUserDataVariable(uint64_t addr, const Confidence<Ref<Type
 }
 
 
-void BinaryView::UndefineDataVariable(uint64_t addr)
+void BinaryView::UndefineDataVariable(uint64_t addr, bool blacklist)
 {
-	BNUndefineDataVariable(m_object, addr);
+	BNUndefineDataVariable(m_object, addr, blacklist);
 }
 
 

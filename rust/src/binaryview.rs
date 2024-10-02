@@ -585,9 +585,9 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn undefine_auto_data_var(&self, addr: u64) {
+    fn undefine_auto_data_var(&self, addr: u64, blacklist: Option<bool>) {
         unsafe {
-            BNUndefineDataVariable(self.as_ref().handle, addr);
+            BNUndefineDataVariable(self.as_ref().handle, addr, blacklist.unwrap_or(true));
         }
     }
 

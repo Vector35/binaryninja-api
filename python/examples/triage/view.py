@@ -124,7 +124,7 @@ class TriageView(QScrollArea, View):
 
 	def setCurrentOffset(self, offset):
 		self.currentOffset = offset
-		UIContext.updateStatus(True)
+		UIContext.updateStatus()
 
 	def getFont(self):
 		return binaryninjaui.getMonospaceFont(self)
@@ -180,7 +180,7 @@ class TriageViewType(ViewType):
 		prefer_for_raw = Settings().get_bool("triage.preferSummaryViewForRaw", data)
 		if data.executable and (always_prefer or not is_full):
 			return 100
-		if len(data) > 0:
+		if data.length > 0:
 			if always_prefer or data.executable or prefer_for_raw:
 				return 25
 			return 1

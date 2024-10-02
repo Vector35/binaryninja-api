@@ -53,107 +53,106 @@ class GenericHeaders(object):
 
 class PEHeaders(object):
 	def __init__(self, data):
-		dos = StructuredDataView(data, "DOS_Header", data.start)
-		pe_offset = data.start + int(dos.e_lfanew)
-		coff = StructuredDataView(data, "COFF_Header", pe_offset)
-		pe_magic = data.read(pe_offset + len(coff), 2)
+		dos = data.get_data_var_at(data.start)
+		pe_offset = data.start + int(dos['e_lfanew'].value)
+		coff = data.get_data_var_at(pe_offset)
+		pe_magic = data.read(pe_offset + data.start, 2)
 		self.fields = []
+		peopt = data.get_data_var_at(coff.address + 0x18)
+		is64bit = True
 		if pe_magic == b"\x0b\x01":
-			peopt = StructuredDataView(data, "PE32_Optional_Header", pe_offset + len(coff))
 			self.fields.append(("Type", "PE 32-bit"))
 			is64bit = False
 		elif pe_magic == b"\x0b\x02":
-			peopt = StructuredDataView(data, "PE64_Optional_Header", pe_offset + len(coff))
 			self.fields.append(("Type", "PE 64-bit"))
-			is64bit = True
 
-		machine_value = int(coff.machine)
+		machine_value = int(coff['machine'].value)
 		machine_enum = data.get_type_by_name("coff_machine")
 		machine_name = str(machine_value)
-		for member in machine_enum.enumeration.members:
+		for member in machine_enum.members:
 			if member.value == machine_value:
 				machine_name = member.name
 		if machine_name.startswith("IMAGE_FILE_MACHINE_"):
 			machine_name = machine_name[len("IMAGE_FILE_MACHINE_"):]
 		self.fields.append(("Machine", machine_name))
 
-		subsys_value = int(peopt.subsystem)
+		subsys_value = int(peopt['subsystem'].value)
 		subsys_enum = data.get_type_by_name("pe_subsystem")
 		subsys_name = str(subsys_value)
-		for member in subsys_enum.enumeration.members:
+		for member in subsys_enum.members:
 			if member.value == subsys_value:
 				subsys_name = member.name
 		if subsys_name.startswith("IMAGE_SUBSYSTEM_"):
 			subsys_name = subsys_name[len("IMAGE_SUBSYSTEM_"):]
 		self.fields.append(("Subsystem", subsys_name))
 
-		self.fields.append(("Timestamp", time.strftime("%c", time.localtime(int(coff.timeDateStamp)))))
+		self.fields.append(("Timestamp", time.strftime("%c", time.localtime(int(coff['timeDateStamp'].value)))))
 
-		base = int(peopt.imageBase)
+		base = int(peopt['imageBase'].value)
 		self.fields.append(("Image Base", "0x%x" % base, "ptr"))
 
-		entry_point = base + int(peopt.addressOfEntryPoint)
+		entry_point = base + int(peopt['addressOfEntryPoint'].value)
 		self.fields.append(("Entry Point", "0x%x" % entry_point, "code"))
 
-		section_align = int(peopt.sectionAlignment)
+		section_align = int(peopt['sectionAlignment'].value)
 		self.fields.append(("Section Alignment", "0x%x" % section_align))
 
-		file_align = int(peopt.fileAlignment)
+		file_align = int(peopt['fileAlignment'].value)
 		self.fields.append(("File Alignment", "0x%x" % file_align))
 
-		checksum = int(peopt.checkSum)
+		checksum = int(peopt['checkSum'].value)
 		self.fields.append(("Checksum", "0x%.8x" % checksum))
 
-		code_base = base + int(peopt.baseOfCode)
+		code_base = base + int(peopt['baseOfCode'].value)
 		self.fields.append(("Base of Code", "0x%x" % code_base, "ptr"))
 
 		if not is64bit:
-			data_base = base + int(peopt.baseOfData)
+			data_base = base + int(peopt['baseOfData'].value)
 			self.fields.append(("Base of Data", "0x%x" % data_base, "ptr"))
 
-		code_size = int(peopt.sizeOfCode)
+		code_size = int(peopt['sizeOfCode'].value)
 		self.fields.append(("Size of Code", "0x%x" % code_size))
 
-		init_data_size = int(peopt.sizeOfInitializedData)
+		init_data_size = int(peopt['sizeOfInitializedData'].value)
 		self.fields.append(("Size of Init Data", "0x%x" % init_data_size))
 
-		uninit_data_size = int(peopt.sizeOfUninitializedData)
+		uninit_data_size = int(peopt['sizeOfUninitializedData'].value)
 		self.fields.append(("Size of Uninit Data", "0x%x" % uninit_data_size))
 
-		header_size = int(peopt.sizeOfHeaders)
+		header_size = int(peopt['sizeOfHeaders'].value)
 		self.fields.append(("Size of Headers", "0x%x" % header_size))
 
-		image_size = int(peopt.sizeOfImage)
+		image_size = int(peopt['sizeOfImage'].value)
 		self.fields.append(("Size of Image", "0x%x" % image_size))
 
-		stack_commit = int(peopt.sizeOfStackCommit)
-		stack_reserve = int(peopt.sizeOfStackReserve)
+		stack_commit = int(peopt['sizeOfStackCommit'].value)
+		stack_reserve = int(peopt['sizeOfStackReserve'].value)
 		self.fields.append(("Stack Size", "0x%x / 0x%x" % (stack_commit, stack_reserve)))
 
-		heap_commit = int(peopt.sizeOfHeapCommit)
-		heap_reserve = int(peopt.sizeOfHeapReserve)
+		heap_commit = int(peopt['sizeOfHeapCommit'].value)
+		heap_reserve = int(peopt['sizeOfHeapReserve'].value)
 		self.fields.append(("Heap Size", "0x%x / 0x%x" % (heap_commit, heap_reserve)))
 
-		linker_major = int(peopt.majorLinkerVersion)
-		linker_minor = int(peopt.minorLinkerVersion)
+		linker_major = int(peopt['majorLinkerVersion'].value)
+		linker_minor = int(peopt['minorLinkerVersion'].value)
 		self.fields.append(("Linker Version", "%d.%.2d" % (linker_major, linker_minor)))
 
-		image_major = int(peopt.majorImageVersion)
-		image_minor = int(peopt.minorImageVersion)
+		image_major = int(peopt['majorImageVersion'].value)
+		image_minor = int(peopt['minorImageVersion'].value)
 		self.fields.append(("Image Version", "%d.%.2d" % (image_major, image_minor)))
 
-		os_major = int(peopt.majorOperatingSystemVersion)
-		os_minor = int(peopt.minorOperatingSystemVersion)
+		os_major = int(peopt['majorOperatingSystemVersion'].value)
+		os_minor = int(peopt['minorOperatingSystemVersion'].value)
 		self.fields.append(("OS Version", "%d.%.2d" % (os_major, os_minor)))
 
-		sub_major = int(peopt.majorSubsystemVersion)
-		sub_minor = int(peopt.minorSubsystemVersion)
+		sub_major = int(peopt['majorSubsystemVersion'].value)
+		sub_minor = int(peopt['minorSubsystemVersion'].value)
 		self.fields.append(("Subsystem Version", "%d.%.2d" % (sub_major, sub_minor)))
 
-		coff_char_value = int(coff.characteristics)
+		coff_char_value = int(coff['characteristics'].value)
 		coff_char_enum = data.get_type_by_name("coff_characteristics")
 		coff_char_values = []
-		for member in coff_char_enum.enumeration.members:
+		for member in coff_char_enum.members:
 			if (coff_char_value & member.value) != 0:
 				if member.name.startswith("IMAGE_FILE_"):
 					coff_char_values.append(member.name[len("IMAGE_FILE_"):])
@@ -162,10 +161,10 @@ class PEHeaders(object):
 		if len(coff_char_values) > 0:
 			self.fields.append(("COFF Characteristics", coff_char_values))
 
-		dll_char_value = int(peopt.dllCharacteristics)
+		dll_char_value = int(peopt['dllCharacteristics'].value)
 		dll_char_enum = data.get_type_by_name("pe_dll_characteristics")
 		dll_char_values = []
-		for member in dll_char_enum.enumeration.members:
+		for member in dll_char_enum.members:
 			if (dll_char_value & member.value) != 0:
 				if member.name.startswith("IMAGE_DLLCHARACTERISTICS_"):
 					dll_char_values.append(member.name[len("IMAGE_DLLCHARACTERISTICS_"):])

@@ -61,6 +61,11 @@ plugins:
         shadow: false
     - htmlproofer:
         enabled: !ENV [VALIDATE, False]
+    - redirects:
+        redirect_maps:
+            'guide/debugger.md': 'guide/debugger/index.md'
+            'guide/remote-debugging.md': 'guide/debugger/remote-debugging.md'
+            'guide/dbgeng-ttd.md': 'guide/debugger/dbgeng-ttd.md'
 
 markdown_extensions:
     - attr_list

@@ -10425,7 +10425,7 @@ class TypedDataAccessor:
 		for i in range(_type.count):
 			yield self[i]
 
-	def __getitem__(self, key: Union[str, int]) -> 'TypedDataAccessor':
+	def __getitem__(self, key: Union[str, int, slice]) -> Union['TypedDataAccessor', List['TypedDataAccessor']]:
 		_type = self.type
 		if isinstance(_type, _types.NamedTypeReferenceType):
 			_type = _type.target(self.view)
@@ -10433,6 +10433,8 @@ class TypedDataAccessor:
 			if key >= _type.count:
 				raise ValueError(f"Index {key} out of bounds array has {_type.count} elements")
 			return TypedDataAccessor(_type.element_type, self.address + key * len(_type.element_type), self.view, self.endian)
+		if isinstance(_type, _types.ArrayType) and isinstance(key, slice):
+			return [self[i] for i in range(*key.indices(len(self.value)))]
 		if not isinstance(_type, _types.StructureType):
 			raise ValueError("Can't get member of non-structure")
 		if not isinstance(key, str):

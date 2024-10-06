@@ -237,7 +237,7 @@ class BasicBlockList:
 		return self._count.value
 
 	def __iter__(self):
-		return self
+		return BasicBlockList(self._function)
 
 	def __next__(self) -> 'basicblock.BasicBlock':
 		if self._n >= len(self):

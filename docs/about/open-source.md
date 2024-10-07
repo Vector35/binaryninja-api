@@ -265,6 +265,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [Architectures] ([architectures license] - Apache License 2.0) Architecture support included with the product
     - [DWARF Import] - ([dwarf import license] - Apache License 2.0)
     - [DWARF Export] - ([dwarf export license] - Apache License 2.0)
+    - [IDB Import] - ([idb import license] - Apache License 2.0)
 
 ## Building Qt
 
@@ -369,6 +370,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [dwarf import license]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/LICENSE
 [DWARF Export]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/dwarf/dwarf_export
 [dwarf export license]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/LICENSE
+[IDB Import]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/idb_import
+[idb import license]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/LICENSE
 
 [Rust]: https://www.rust-lang.org/
 [Rust license]: https://github.com/rust-lang/rust/blob/master/LICENSE-MIT

@@ -385,7 +385,15 @@ fn parse_dwarf(
     let endian = get_endian(view);
     let mut section_reader =
         |section_id: SectionId| -> _ { create_section_reader(section_id, view, endian, dwo_file) };
-    let mut dwarf = Dwarf::load(&mut section_reader).unwrap();
+
+    let mut dwarf = match  Dwarf::load(&mut section_reader) {
+        Ok(x) => x,
+        Err(e) => {
+            error!("Failed to load DWARF info: {}", e);
+            return Err(());
+        }
+    };
+
     if dwo_file {
         dwarf.file_type = DwarfFileType::Dwo;
     }

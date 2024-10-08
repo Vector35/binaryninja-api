@@ -247,6 +247,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [which] ([which license] - MIT)
     - [x509-signature] ([x509-signature license] - APACHE 2.0 / MIT)
     - [zerocopy] ([zerocopy license] - APACHE 2.0 / MIT)
+    - [zstd-rs] ([zstd-rs license] - MIT)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
@@ -356,6 +357,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [JSON for Modern C++ license]: https://github.com/nlohmann/json/blob/develop/LICENSE.MIT
 [zstd]: https://github.com/facebook/zstd/
 [zstd license]: https://github.com/facebook/zstd/blob/dev/LICENSE
+[zstd-rs]: https://github.com/gyscos/zstd-rs
+[zstd-rs license]: https://github.com/gyscos/zstd-rs/blob/main/LICENSE
 [deprecation]: https://github.com/briancurtin/deprecation
 [deprecation license]: https://github.com/briancurtin/deprecation/blob/master/LICENSE
 [API / Documentation]: https://github.com/vector35/binaryninja-api

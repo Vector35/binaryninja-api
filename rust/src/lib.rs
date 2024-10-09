@@ -160,6 +160,7 @@ pub mod project;
 pub mod rc;
 pub mod references;
 pub mod relocation;
+pub mod scriptingprovider;
 pub mod section;
 pub mod segment;
 pub mod settings;

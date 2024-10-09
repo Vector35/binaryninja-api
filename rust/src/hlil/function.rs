@@ -1,18 +1,12 @@
 use std::hash::{Hash, Hasher};
 
-use binaryninjacore_sys::BNFreeHighLevelILFunction;
-use binaryninjacore_sys::BNGetHighLevelILBasicBlockList;
-use binaryninjacore_sys::BNGetHighLevelILIndexForInstruction;
-use binaryninjacore_sys::BNGetHighLevelILInstructionCount;
-use binaryninjacore_sys::BNGetHighLevelILOwnerFunction;
-use binaryninjacore_sys::BNGetHighLevelILRootExpr;
-use binaryninjacore_sys::BNGetHighLevelILSSAForm;
-use binaryninjacore_sys::BNHighLevelILFunction;
-use binaryninjacore_sys::BNNewHighLevelILFunctionReference;
+use binaryninjacore_sys::*;
 
+use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
 use crate::function::Function;
 use crate::rc::{Array, Ref, RefCountable};
+use crate::types::{HighLevelILSSAVariable, SSAVariable, Variable};
 
 use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelILLiftedInstruction};
 
@@ -73,6 +67,10 @@ impl HighLevelILFunction {
         })
     }
 
+    pub fn set_root(&self, new_root: &HighLevelILInstruction) {
+        unsafe { BNSetHighLevelILRootExpr(self.handle, new_root.index) }
+    }
+
     pub fn lifted_root(&self) -> HighLevelILLiftedInstruction {
         self.root().lift()
     }
@@ -121,6 +119,136 @@ impl HighLevelILFunction {
             full_ast: false,
         }
         .to_owned()
+    }
+
+    pub fn current_address(&self) -> u64 {
+        unsafe { BNHighLevelILGetCurrentAddress(self.handle) }
+    }
+
+    pub fn set_current_address(&self, address: u64, arch: Option<CoreArchitecture>) {
+        let arch = arch.unwrap_or_else(|| self.get_function().arch()).0;
+        unsafe { BNHighLevelILSetCurrentAddress(self.handle, arch, address) }
+    }
+
+    /// Gets the instruction that contains the given SSA variable's definition.
+    ///
+    /// Since SSA variables can only be defined once, this will return the single instruction where that occurs.
+    /// For SSA variable version 0s, which don't have definitions, this will return None instead.
+    pub fn ssa_variable_definition(&self, variable: SSAVariable) -> Option<HighLevelILInstruction> {
+        let index = unsafe {
+            BNGetHighLevelILSSAVarDefinition(
+                self.handle,
+                &variable.variable.raw(),
+                variable.version,
+            )
+        };
+        (index < self.instruction_count())
+            .then(|| HighLevelILInstruction::new(self.to_owned(), index))
+    }
+
+    pub fn ssa_memory_definition(&self, version: usize) -> Option<HighLevelILInstruction> {
+        let index = unsafe { BNGetHighLevelILSSAMemoryDefinition(self.handle, version) };
+        (index < self.instruction_count())
+            .then(|| HighLevelILInstruction::new(self.to_owned(), index))
+    }
+
+    /// Gets all the instructions that use the given SSA variable.
+    pub fn ssa_variable_uses(&self, variable: SSAVariable) -> Array<HighLevelILInstruction> {
+        let mut count = 0;
+        let instrs = unsafe {
+            BNGetHighLevelILSSAVarUses(
+                self.handle,
+                &variable.variable.raw(),
+                variable.version,
+                &mut count,
+            )
+        };
+        assert!(!instrs.is_null());
+        unsafe { Array::new(instrs, count, self.to_owned()) }
+    }
+
+    pub fn ssa_memory_uses(&self, version: usize) -> Array<HighLevelILInstruction> {
+        let mut count = 0;
+        let instrs = unsafe { BNGetHighLevelILSSAMemoryUses(self.handle, version, &mut count) };
+        assert!(!instrs.is_null());
+        unsafe { Array::new(instrs, count, self.to_owned()) }
+    }
+
+    /// Determines if `variable` is live at any point in the function
+    pub fn is_ssa_variable_live(&self, variable: SSAVariable) -> bool {
+        unsafe {
+            BNIsHighLevelILSSAVarLive(self.handle, &variable.variable.raw(), variable.version)
+        }
+    }
+
+    /// Determines if `variable` is live at a given point in the function
+    pub fn is_ssa_variable_live_at(
+        &self,
+        variable: SSAVariable,
+        instr: &HighLevelILInstruction,
+    ) -> bool {
+        unsafe {
+            BNIsHighLevelILSSAVarLiveAt(
+                self.handle,
+                &variable.variable.raw(),
+                variable.version,
+                instr.index,
+            )
+        }
+    }
+
+    pub fn variable_definitions(&self, variable: Variable) -> Array<HighLevelILInstruction> {
+        let mut count = 0;
+        let defs = unsafe {
+            BNGetHighLevelILVariableDefinitions(self.handle, &variable.raw(), &mut count)
+        };
+        assert!(!defs.is_null());
+        unsafe { Array::new(defs, count, self.to_owned()) }
+    }
+
+    pub fn variable_uses(&self, variable: Variable) -> Array<HighLevelILInstruction> {
+        let mut count = 0;
+        let instrs =
+            unsafe { BNGetHighLevelILVariableUses(self.handle, &variable.raw(), &mut count) };
+        assert!(!instrs.is_null());
+        unsafe { Array::new(instrs, count, self.to_owned()) }
+    }
+
+    /// Determines if `variable` is live at a given point in the function
+    pub fn is_variable_live_at(&self, variable: Variable, instr: &HighLevelILInstruction) -> bool {
+        unsafe { BNIsHighLevelILVarLiveAt(self.handle, &variable.raw(), instr.index) }
+    }
+
+    /// This gets just the HLIL variables - you may be interested in the union
+    /// of [crate::function::Function::parameter_variables] and
+    /// [crate::mlil::function::MediumLevelILFunction::aliased_variables] as well for all the
+    /// variables used in the function
+    pub fn variables(&self) -> Array<Variable> {
+        let mut count = 0;
+        let variables = unsafe { BNGetHighLevelILVariables(self.handle, &mut count) };
+        assert!(!variables.is_null());
+        unsafe { Array::new(variables, count, ()) }
+    }
+
+    /// This returns a list of Variables that are taken reference to and used
+    /// elsewhere. You may also wish to consider [HighLevelILFunction::variables]
+    /// and [crate::function::Function::parameter_variables]
+    pub fn aliased_variables(&self) -> Array<Variable> {
+        let mut count = 0;
+        let variables = unsafe { BNGetHighLevelILAliasedVariables(self.handle, &mut count) };
+        assert!(!variables.is_null());
+        unsafe { Array::new(variables, count, ()) }
+    }
+
+    /// This gets just the HLIL SSA variables - you may be interested in the union
+    /// of [crate::function::Function::parameter_variables] and
+    /// [crate::mlil::function::MediumLevelILFunction::aliased_variables] as well for all the
+    /// variables used in the function
+    pub fn ssa_variables(&self) -> Array<HighLevelILSSAVariable> {
+        let mut count = 0;
+        let variables = unsafe { BNGetHighLevelILVariables(self.handle, &mut count) };
+        assert!(!variables.is_null());
+        unsafe { Array::new(variables, count, self.to_owned()) }
     }
 }
 

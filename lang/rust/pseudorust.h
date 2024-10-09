@@ -60,6 +60,9 @@ protected:
 
 public:
 	PseudoRustFunction(BinaryNinja::Architecture* arch, BinaryNinja::Function* owner, BinaryNinja::HighLevelILFunction* highLevelILFunction);
+
+	std::string GetAnnotationStartString() const override;
+	std::string GetAnnotationEndString() const override;
 };
 
 class PseudoRustFunctionType: public BinaryNinja::LanguageRepresentationFunctionType

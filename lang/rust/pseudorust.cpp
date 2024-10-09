@@ -2777,6 +2777,18 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 }
 
 
+string PseudoRustFunction::GetAnnotationStartString() const
+{
+	return "/* ";
+}
+
+
+string PseudoRustFunction::GetAnnotationEndString() const
+{
+	return " */";
+}
+
+
 PseudoRustFunctionType::PseudoRustFunctionType(): LanguageRepresentationFunctionType("Pseudo Rust")
 {
 	m_typePrinter =  new RustTypePrinter();

@@ -2744,6 +2744,18 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 }
 
 
+string PseudoCFunction::GetAnnotationStartString() const
+{
+	return "/* ";
+}
+
+
+string PseudoCFunction::GetAnnotationEndString() const
+{
+	return " */";
+}
+
+
 PseudoCFunctionType::PseudoCFunctionType(): LanguageRepresentationFunctionType("Pseudo C")
 {
 }

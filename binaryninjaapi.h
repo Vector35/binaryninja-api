@@ -13541,6 +13541,11 @@ namespace BinaryNinja {
 		virtual void BeginLines(const HighLevelILInstruction& instr, HighLevelILTokenEmitter& tokens);
 		virtual void EndLines(const HighLevelILInstruction& instr, HighLevelILTokenEmitter& tokens);
 
+		virtual std::string GetCommentStartString() const { return "// "; }
+		virtual std::string GetCommentEndString() const { return ""; }
+		virtual std::string GetAnnotationStartString() const { return "{"; }
+		virtual std::string GetAnnotationEndString() const { return "}"; }
+
 	private:
 		static void FreeCallback(void* ctxt);
 		static void InitTokenEmitterCallback(void* ctxt, BNHighLevelILTokenEmitter* tokens);
@@ -13551,6 +13556,10 @@ namespace BinaryNinja {
 			BNHighLevelILTokenEmitter* tokens);
 		static void EndLinesCallback(void* ctxt, BNHighLevelILFunction* il, size_t exprIndex,
 			BNHighLevelILTokenEmitter* tokens);
+		static char* GetCommentStartStringCallback(void* ctxt);
+		static char* GetCommentEndStringCallback(void* ctxt);
+		static char* GetAnnotationStartStringCallback(void* ctxt);
+		static char* GetAnnotationEndStringCallback(void* ctxt);
 	};
 
 	/*!
@@ -13565,6 +13574,10 @@ namespace BinaryNinja {
 		void GetExprText(const HighLevelILInstruction& instr, HighLevelILTokenEmitter& tokens,
 			DisassemblySettings* settings, bool asFullAst = true,
 			BNOperatorPrecedence precedence = TopLevelOperatorPrecedence, bool statement = false) override;
+		std::string GetCommentStartString() const override;
+		std::string GetCommentEndString() const override;
+		std::string GetAnnotationStartString() const override;
+		std::string GetAnnotationEndString() const override;
 	};
 
 	class TypePrinter;

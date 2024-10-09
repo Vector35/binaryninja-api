@@ -15,6 +15,10 @@ LanguageRepresentationFunction::LanguageRepresentationFunction(Architecture* arc
 	callbacks.getExprText = GetExprTextCallback;
 	callbacks.beginLines = BeginLinesCallback;
 	callbacks.endLines = EndLinesCallback;
+	callbacks.getCommentStartString = GetCommentStartStringCallback;
+	callbacks.getCommentEndString = GetCommentEndStringCallback;
+	callbacks.getAnnotationStartString = GetAnnotationStartStringCallback;
+	callbacks.getAnnotationEndString = GetAnnotationEndStringCallback;
 	AddRefForRegistration();
 	m_object = BNCreateCustomLanguageRepresentationFunction(arch->GetObject(), func->GetObject(),
 		highLevelIL->GetObject(), &callbacks);
@@ -192,6 +196,34 @@ void LanguageRepresentationFunction::EndLinesCallback(void* ctxt, BNHighLevelILF
 }
 
 
+char* LanguageRepresentationFunction::GetCommentStartStringCallback(void* ctxt)
+{
+	LanguageRepresentationFunction* func = (LanguageRepresentationFunction*)ctxt;
+	return BNAllocString(func->GetCommentStartString().c_str());
+}
+
+
+char* LanguageRepresentationFunction::GetCommentEndStringCallback(void* ctxt)
+{
+	LanguageRepresentationFunction* func = (LanguageRepresentationFunction*)ctxt;
+	return BNAllocString(func->GetCommentEndString().c_str());
+}
+
+
+char* LanguageRepresentationFunction::GetAnnotationStartStringCallback(void* ctxt)
+{
+	LanguageRepresentationFunction* func = (LanguageRepresentationFunction*)ctxt;
+	return BNAllocString(func->GetAnnotationStartString().c_str());
+}
+
+
+char* LanguageRepresentationFunction::GetAnnotationEndStringCallback(void* ctxt)
+{
+	LanguageRepresentationFunction* func = (LanguageRepresentationFunction*)ctxt;
+	return BNAllocString(func->GetAnnotationEndString().c_str());
+}
+
+
 CoreLanguageRepresentationFunction::CoreLanguageRepresentationFunction(BNLanguageRepresentationFunction* func):
     LanguageRepresentationFunction(func)
 {
@@ -201,6 +233,42 @@ CoreLanguageRepresentationFunction::CoreLanguageRepresentationFunction(BNLanguag
 void CoreLanguageRepresentationFunction::GetExprText(const HighLevelILInstruction&, HighLevelILTokenEmitter&,
 	DisassemblySettings*, bool, BNOperatorPrecedence, bool statement)
 {
+}
+
+
+string CoreLanguageRepresentationFunction::GetCommentStartString() const
+{
+	char* result = BNGetLanguageRepresentationFunctionCommentStartString(m_object);
+	string resultStr(result);
+	BNFreeString(result);
+	return resultStr;
+}
+
+
+string CoreLanguageRepresentationFunction::GetCommentEndString() const
+{
+	char* result = BNGetLanguageRepresentationFunctionCommentEndString(m_object);
+	string resultStr(result);
+	BNFreeString(result);
+	return resultStr;
+}
+
+
+string CoreLanguageRepresentationFunction::GetAnnotationStartString() const
+{
+	char* result = BNGetLanguageRepresentationFunctionAnnotationStartString(m_object);
+	string resultStr(result);
+	BNFreeString(result);
+	return resultStr;
+}
+
+
+string CoreLanguageRepresentationFunction::GetAnnotationEndString() const
+{
+	char* result = BNGetLanguageRepresentationFunctionAnnotationEndString(m_object);
+	string resultStr(result);
+	BNFreeString(result);
+	return resultStr;
 }
 
 

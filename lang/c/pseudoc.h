@@ -52,6 +52,9 @@ protected:
 
 public:
 	PseudoCFunction(BinaryNinja::Architecture* arch, BinaryNinja::Function* owner, BinaryNinja::HighLevelILFunction* highLevelILFunction);
+
+	std::string GetAnnotationStartString() const override;
+	std::string GetAnnotationEndString() const override;
 };
 
 class PseudoCFunctionType: public BinaryNinja::LanguageRepresentationFunctionType

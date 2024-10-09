@@ -406,6 +406,7 @@ impl DebugInfoBuilder {
             return;
         };
 
+        // TODO: offset should be calculated based off reference address and not function start
         let adjusted_offset = offset - offset_adjustment;
 
         if adjusted_offset > 0 {

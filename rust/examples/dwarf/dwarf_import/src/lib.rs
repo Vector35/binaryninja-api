@@ -37,10 +37,10 @@ use dwarfreader::{
     create_section_reader, get_endian, is_dwo_dwarf, is_non_dwo_dwarf, is_raw_dwo_dwarf,
 };
 
-use gimli::{constants, DebuggingInformationEntry, Dwarf, DwarfFileType, Reader, Section, SectionId, Unit, UnwindSection};
+use gimli::{constants, CfaRule, DebuggingInformationEntry, Dwarf, DwarfFileType, Reader, Section, SectionId, Unit, UnwindContext, UnwindSection};
 
 use helpers::{get_build_id, load_debug_info_for_build_id};
-use log::{error, warn, LevelFilter};
+use log::{debug, error, warn, LevelFilter};
 
 
 trait ReaderType: Reader<Offset = usize> {}
@@ -274,22 +274,27 @@ fn parse_unit<R: ReaderType>(
     }
 }
 
-fn parse_eh_frame<R: Reader>(
+fn parse_unwind_section<R: Reader, U: UnwindSection<R>>(
     view: &BinaryView,
-    mut eh_frame: gimli::EhFrame<R>,
-) -> gimli::Result<iset::IntervalMap<u64, i64>> {
-    eh_frame.set_address_size(view.address_size() as u8);
-
+    unwind_section: U,
+) -> gimli::Result<iset::IntervalMap<u64, i64>>
+where <U as UnwindSection<R>>::Offset: std::hash::Hash {
     let mut bases = gimli::BaseAddresses::default();
+
     if let Ok(section) = view.section_by_name(".eh_frame_hdr").or(view.section_by_name("__eh_frame_hdr")) {
         bases = bases.set_eh_frame_hdr(section.start());
     }
+
     if let Ok(section) = view.section_by_name(".eh_frame").or(view.section_by_name("__eh_frame")) {
         bases = bases.set_eh_frame(section.start());
+    } else if let Ok(section) = view.section_by_name(".debug_frame").or(view.section_by_name("__debug_frame")) {
+        bases = bases.set_eh_frame(section.start());
     }
+
     if let Ok(section) = view.section_by_name(".text").or(view.section_by_name("__text")) {
         bases = bases.set_text(section.start());
     }
+
     if let Ok(section) = view.section_by_name(".got").or(view.section_by_name("__got")) {
         bases = bases.set_got(section.start());
     }
@@ -297,7 +302,8 @@ fn parse_eh_frame<R: Reader>(
     let mut cies = HashMap::new();
     let mut cie_data_offsets = iset::IntervalMap::new();
 
-    let mut entries = eh_frame.entries(&bases);
+    let mut entries = unwind_section.entries(&bases);
+    let mut unwind_context = UnwindContext::new();
     loop {
         match entries.next()? {
             None => return Ok(cie_data_offsets),
@@ -307,7 +313,7 @@ fn parse_eh_frame<R: Reader>(
             Some(gimli::CieOrFde::Fde(partial)) => {
                 let fde = match partial.parse(|_, bases, o| {
                     cies.entry(o)
-                        .or_insert_with(|| eh_frame.cie_from_offset(bases, o))
+                        .or_insert_with(|| unwind_section.cie_from_offset(bases, o))
                         .clone()
                 }) {
                     Ok(fde) => fde,
@@ -325,11 +331,23 @@ fn parse_eh_frame<R: Reader>(
                 if fde.initial_address().overflowing_add(fde.len()).1 {
                     warn!("FDE at offset {:?} exceeds bounds of memory space! {:#x} + length {:#x}", fde.offset(), fde.initial_address(), fde.len());
                 } else {
-                    // Store CIE offset for FDE range
-                    cie_data_offsets.insert(
-                        fde.initial_address()..fde.initial_address() + fde.len(),
-                        fde.cie().data_alignment_factor(),
-                    );
+                    // Walk the FDE table rows and store their CFA
+                    let mut fde_table = fde.rows(&unwind_section, &bases, &mut unwind_context)?;
+                    while let Some(row) = fde_table.next_row()? {
+                        match row.cfa() {
+                            CfaRule::RegisterAndOffset {register: _, offset} => {
+                                // TODO: this offset could be wrong because register might be something wacky
+                                cie_data_offsets.insert(
+                                    row.start_address()..row.end_address(),
+                                    *offset,
+                                );
+                            },
+                            CfaRule::Expression(_) => {
+                                debug!("Unhandled CFA expression when determining offset");
+                            }
+                        };
+
+                    }
                 }
             }
         }
@@ -361,7 +379,7 @@ fn get_supplementary_build_id(bv: &BinaryView) -> Option<String> {
 }
 
 fn parse_dwarf(
-    bv: &BinaryView,
+    _bv: &BinaryView,
     debug_bv: &BinaryView,
     supplementary_bv: Option<&BinaryView>,
     progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
@@ -411,13 +429,29 @@ fn parse_dwarf(
         }
     }
 
-    let eh_frame_endian = get_endian(bv);
-    let mut eh_frame_section_reader =
-        |section_id: SectionId| -> _ { create_section_reader(section_id, bv, eh_frame_endian, dwo_file) };
-    let eh_frame = gimli::EhFrame::load(&mut eh_frame_section_reader).unwrap();
+    let range_data_offsets;
+    if view.section_by_name(".eh_frame").is_ok() || view.section_by_name("__eh_frame").is_ok() {
+        let eh_frame_endian = get_endian(view);
+        let mut eh_frame_section_reader =
+            |section_id: SectionId| -> _ { create_section_reader(section_id, view, eh_frame_endian, dwo_file) };
+        let mut eh_frame = gimli::EhFrame::load(&mut eh_frame_section_reader).unwrap();
+        eh_frame.set_address_size(view.address_size() as u8);
+        range_data_offsets = parse_unwind_section(view, eh_frame)
+            .map_err(|e| error!("Error parsing .eh_frame: {}", e))?;
+    }
+    else if view.section_by_name(".debug_frame").is_ok() || view.section_by_name("__debug_frame").is_ok() {
+        let debug_frame_endian = get_endian(view);
+        let mut debug_frame_section_reader =
+            |section_id: SectionId| -> _ { create_section_reader(section_id, view, debug_frame_endian, dwo_file) };
+        let mut debug_frame = gimli::DebugFrame::load(&mut debug_frame_section_reader).unwrap();
+        debug_frame.set_address_size(view.address_size() as u8);
+        range_data_offsets = parse_unwind_section(view, debug_frame)
+            .map_err(|e| error!("Error parsing .debug_frame: {}", e))?;
+    }
+    else {
+        range_data_offsets = Default::default();
+    }
 
-    let range_data_offsets = parse_eh_frame(bv, eh_frame)
-        .map_err(|e| error!("Error parsing .eh_frame: {}", e))?;
 
     // Create debug info builder and recover name mapping first
     //  Since DWARF is stored as a tree with arbitrary implicit edges among leaves,

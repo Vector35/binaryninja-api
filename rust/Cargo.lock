@@ -3,6 +3,13 @@
 version = 3
 
 [[package]]
+name = "abstract-type"
+version = "0.1.0"
+dependencies = [
+ "binaryninja",
+]
+
+[[package]]
 name = "adler"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -100,11 +107,23 @@ dependencies = [
 name = "binaryninja"
 version = "0.1.0"
 dependencies = [
+ "binaryninja-derive",
  "binaryninjacore-sys",
+ "elain",
  "lazy_static",
  "libc",
  "log",
  "rayon",
+]
+
+[[package]]
+name = "binaryninja-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "proc-macro2-diagnostics",
+ "quote",
+ "syn 2.0.52",
 ]
 
 [[package]]
@@ -381,6 +400,12 @@ name = "either"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11157ac094ffbdde99aa67b23417ebdd801842852b500e395a45a9c0aac03e4a"
+
+[[package]]
+name = "elain"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3522094fae7d65c8313a135fe45fa7e22ec2110c9d387063b66d235281f7f771"
 
 [[package]]
 name = "encoding_rs"
@@ -814,6 +839,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e835ff2298f5721608eb1a980ecaee1aef2c132bf95ecc026a11b7bf3c01c02e"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "proc-macro2-diagnostics"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af066a9c399a26e020ada66a034357a868728e72cd426f3adcd35f80d88d88c8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.52",
+ "version_check",
 ]
 
 [[package]]

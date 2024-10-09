@@ -3404,6 +3404,10 @@ extern "C"
 			BNDisassemblySettings* settings, bool asFullAst, BNOperatorPrecedence precedence, bool statement);
 		void (*beginLines)(void* ctxt, BNHighLevelILFunction* il, size_t exprIndex, BNHighLevelILTokenEmitter* tokens);
 		void (*endLines)(void* ctxt, BNHighLevelILFunction* il, size_t exprIndex, BNHighLevelILTokenEmitter* tokens);
+		char* (*getCommentStartString)(void* ctxt);
+		char* (*getCommentEndString)(void* ctxt);
+		char* (*getAnnotationStartString)(void* ctxt);
+		char* (*getAnnotationEndString)(void* ctxt);
 	} BNCustomLanguageRepresentationFunction;
 
 	typedef struct BNCustomLanguageRepresentationFunctionType
@@ -6034,6 +6038,14 @@ extern "C"
 		BNLanguageRepresentationFunction* func, BNBasicBlock* block, BNDisassemblySettings* settings, size_t* count);
 	BINARYNINJACOREAPI BNHighlightColor BNGetLanguageRepresentationFunctionHighlight(
 		BNLanguageRepresentationFunction* func, BNBasicBlock* block);
+	BINARYNINJACOREAPI char* BNGetLanguageRepresentationFunctionCommentStartString(
+		BNLanguageRepresentationFunction* func);
+	BINARYNINJACOREAPI char* BNGetLanguageRepresentationFunctionCommentEndString(
+		BNLanguageRepresentationFunction* func);
+	BINARYNINJACOREAPI char* BNGetLanguageRepresentationFunctionAnnotationStartString(
+		BNLanguageRepresentationFunction* func);
+	BINARYNINJACOREAPI char* BNGetLanguageRepresentationFunctionAnnotationEndString(
+		BNLanguageRepresentationFunction* func);
 
 	// Types
 	BINARYNINJACOREAPI bool BNTypesEqual(BNType* a, BNType* b);

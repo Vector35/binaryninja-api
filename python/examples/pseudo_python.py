@@ -10,6 +10,8 @@ import struct
 
 
 class PseudoPythonFunction(LanguageRepresentationFunction):
+    comment_start_string = "# "
+
     def perform_init_token_emitter(self, emitter):
         emitter.brace_requirement = BraceRequirement.BracesNotAllowed
 

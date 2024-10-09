@@ -256,6 +256,10 @@ class LanguageRepresentationFunction:
 	``class LanguageRepresentationFunction`` represents a single function in a registered high level language.
 	"""
 	_registered_instances = []
+	comment_start_string = "// "
+	comment_end_string = ""
+	annotation_start_string = "{"
+	annotation_end_string = "}"
 
 	def __init__(
 			self, arch: Optional['architecture.Architecture'] = None, owner: Optional['function.Function'] = None,
@@ -276,9 +280,22 @@ class LanguageRepresentationFunction:
 			self._cb.getExprText = self._cb.getExprText.__class__(self._get_expr_text)
 			self._cb.beginLines = self._cb.beginLines.__class__(self._begin_lines)
 			self._cb.endLines = self._cb.endLines.__class__(self._end_lines)
+			self._cb.getCommentStartString = self._cb.getCommentStartString.__class__(self._comment_start_string)
+			self._cb.getCommentEndString = self._cb.getCommentEndString.__class__(self._comment_end_string)
+			self._cb.getAnnotationStartString = self._cb.getAnnotationStartString.__class__(
+				self._annotation_start_string)
+			self._cb.getAnnotationEndString = self._cb.getAnnotationEndString.__class__(self._annotation_end_string)
+			self.comment_start_string = self.__class__.comment_start_string
+			self.comment_end_string = self.__class__.comment_end_string
+			self.annotation_start_string = self.__class__.annotation_start_string
+			self.annotation_end_string = self.__class__.annotation_end_string
 			_handle = core.BNCreateCustomLanguageRepresentationFunction(arch.handle, owner.handle, hlil.handle, self._cb)
 			assert _handle is not None
 		else:
+			self.comment_start_string = core.BNGetLanguageRepresentationFunctionCommentStartString(handle)
+			self.comment_end_string = core.BNGetLanguageRepresentationFunctionCommentEndString(handle)
+			self.annotation_start_string = core.BNGetLanguageRepresentationFunctionAnnotationStartString(handle)
+			self.annotation_end_string = core.BNGetLanguageRepresentationFunctionAnnotationEndString(handle)
 			_handle = handle
 		assert _handle is not None
 		self.handle: core.BNLanguageRepresentationFunctionHandle = _handle
@@ -344,6 +361,34 @@ class LanguageRepresentationFunction:
 			self.perform_end_lines(instr, tokens)
 		except:
 			log_error(traceback.format_exc())
+
+	def _comment_start_string(self, ctxt):
+		try:
+			return core.BNAllocString(self.comment_start_string)
+		except:
+			log_error(traceback.format_exc())
+			return core.BNAllocString("// ")
+
+	def _comment_end_string(self, ctxt):
+		try:
+			return core.BNAllocString(self.comment_end_string)
+		except:
+			log_error(traceback.format_exc())
+			return core.BNAllocString("")
+
+	def _annotation_start_string(self, ctxt):
+		try:
+			return core.BNAllocString(self.annotation_start_string)
+		except:
+			log_error(traceback.format_exc())
+			return core.BNAllocString("{")
+
+	def _annotation_end_string(self, ctxt):
+		try:
+			return core.BNAllocString(self.annotation_end_string)
+		except:
+			log_error(traceback.format_exc())
+			return core.BNAllocString("}")
 
 	def perform_init_token_emitter(self, emitter: HighLevelILTokenEmitter):
 		pass

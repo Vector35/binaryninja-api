@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 78
+#define BN_CURRENT_CORE_ABI_VERSION 79
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -297,6 +297,7 @@ extern "C"
 	typedef struct BNCollaborationLazyT BNCollaborationLazyT;
 	typedef struct BNUndoAction BNUndoAction;
 	typedef struct BNUndoEntry BNUndoEntry;
+	typedef struct BNFirmwareNinja BNFirmwareNinja;
 
 	//! Console log levels
 	typedef enum BNLogLevel
@@ -3326,6 +3327,14 @@ extern "C"
 	typedef bool(*BNProgressFunction)(void*, size_t, size_t);
 	typedef bool(*BNCollaborationAnalysisConflictHandler)(void*, const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount);
 	typedef bool(*BNCollaborationNameChangesetFunction)(void*, BNCollaborationChangeset*);
+
+	typedef struct BNFirmwareNinjaDevice
+	{
+		char* name;
+		uint64_t start;
+		uint64_t end;
+		char* info;
+	} BNFirmwareNinjaDevice;
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
@@ -7628,6 +7637,15 @@ extern "C"
 	BINARYNINJACOREAPI bool BNAnalysisMergeConflictSplitterCanSplit(BNAnalysisMergeConflictSplitter* splitter, const char* key, BNAnalysisMergeConflict* conflict);
 	BINARYNINJACOREAPI bool BNAnalysisMergeConflictSplitterSplit(BNAnalysisMergeConflictSplitter* splitter, const char* originalKey, BNAnalysisMergeConflict* originalConflict, BNKeyValueStore* result, char*** newKeys, BNAnalysisMergeConflict*** newConflicts, size_t* newCount);
 
+	// FirmwareNinja
+	BINARYNINJACOREAPI BNFirmwareNinja* BNCreateFirmwareNinja(BNBinaryView *view);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaAddCustomDevice(BNFirmwareNinja* fn, const char* name, uint64_t start, uint64_t end, const char* info);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaDeleteCustomDevice(BNFirmwareNinja* fn, const char* name);
+	BINARYNINJACOREAPI int BNFirmwareNinjaQueryCustomDevices(BNFirmwareNinja* fn, BNFirmwareNinjaDevice** devices);
+	BINARYNINJACOREAPI void BNFirmwareNinjaFreeDevices(BNFirmwareNinjaDevice *devices, int size);
+	BINARYNINJACOREAPI int BNFirmwareNinjaQueryBoardNamesForArchitecture(BNFirmwareNinja* fn, BNArchitecture* arch, char ***boards);
+	BINARYNINJACOREAPI void BNFirmwareNinjaFreeBoardNames(char **boards, int size);
+	BINARYNINJACOREAPI int BNFirmwareNinjaQueryBoardDevices(BNFirmwareNinja* fn, BNArchitecture* arch, const char* board, BNFirmwareNinjaDevice** devices);
 #ifdef __cplusplus
 }
 #endif

@@ -3336,6 +3336,30 @@ extern "C"
 		char* info;
 	} BNFirmwareNinjaDevice;
 
+	typedef enum BNFirmwareNinjaSectionType
+	{
+		CodeSectionType,
+		DataSectionType,
+		CompressionSectionType,
+		PaddingSectionType,
+	} BNFirmwareNinjaSectionType;
+
+
+	typedef enum BNFirmwareNinjaSectionAnalysisMode
+	{
+		DefaultSectionAnalysisMode,
+		IgnorePaddingSectionAnalysisMode,
+		DetectStringsSectionAnalysisMode,
+	} BNFirmwareNinjaSectionAnalysisMode;
+
+	typedef struct BNFirmwareNinjaSection
+	{
+		BNFirmwareNinjaSectionType type;
+		uint64_t start;
+		uint64_t end;
+		float entropy;
+	} BNFirmwareNinjaSection;
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
@@ -7646,6 +7670,9 @@ extern "C"
 	BINARYNINJACOREAPI int BNFirmwareNinjaQueryBoardNamesForArchitecture(BNFirmwareNinja* fn, BNArchitecture* arch, char ***boards);
 	BINARYNINJACOREAPI void BNFirmwareNinjaFreeBoardNames(char **boards, int size);
 	BINARYNINJACOREAPI int BNFirmwareNinjaQueryBoardDevices(BNFirmwareNinja* fn, BNArchitecture* arch, const char* board, BNFirmwareNinjaDevice** devices);
+	BINARYNINJACOREAPI int BNFirmwareNinjaFindSectionsWithEntropy(BNFirmwareNinja* fn, BNFirmwareNinjaSection** sections,
+		float highCodeEntropyThreshold, float lowCodeEntropyThreshold, size_t blockSize, BNFirmwareNinjaSectionAnalysisMode mode);
+	BINARYNINJACOREAPI void BNFirmwareNinjaFreeSections(BNFirmwareNinjaSection *sections, int size);
 #ifdef __cplusplus
 }
 #endif

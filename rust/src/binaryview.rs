@@ -1375,7 +1375,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         let ranges = unsafe {
             let mut count = 0;
             let reloc_ranges_ptr = BNGetRelocationRanges(self.as_ref().handle, &mut count);
-            let ranges = std::slice::from_raw_parts(reloc_ranges_ptr, count).clone();
+            let ranges = std::slice::from_raw_parts(reloc_ranges_ptr, count).to_vec();
             BNFreeRelocationRanges(reloc_ranges_ptr);
             ranges
         };

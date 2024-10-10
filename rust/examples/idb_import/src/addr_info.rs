@@ -8,7 +8,7 @@ use idb_rs::til;
 #[derive(Default)]
 pub struct AddrInfo<'a> {
     // TODO does binja diferenciate comments types on the API?
-    pub comments: Vec<&'a str>,
+    pub comments: Vec<&'a [u8]>,
     pub label: Option<&'a str>,
     // TODO make this a ref
     pub ty: Option<til::Type>,

@@ -8,7 +8,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = { version = "1.0.86", features = ["backtrace"] }
 binaryninja = { path = "../../" }
-idb-rs = { git = "https://github.com/rbran/idb-rs", version = "0.1.3" }
+idb-rs = { git = "https://github.com/Vector35/idb-rs", version = "0.1.4" }
 log = "0.4.20"

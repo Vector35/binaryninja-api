@@ -92,7 +92,7 @@ impl From<Result<Ref<Type>, BnTypeError>> for TranslateTypeResult {
 
 pub struct TranslatesIDBType<'a> {
     // sanitized name from IDB
-    pub name: String,
+    pub name: Vec<u8>,
     // the result, if converted
     pub ty: TranslateTypeResult,
     pub og_ty: &'a TILTypeInfo,
@@ -108,7 +108,7 @@ pub struct TranslateIDBTypes<'a, F: Fn(usize, usize) -> Result<(), ()>> {
     // ordinals with index to types
     pub types_by_ord: HashMap<u64, usize>,
     // original names with index to types
-    pub types_by_name: HashMap<String, usize>,
+    pub types_by_name: HashMap<Vec<u8>, usize>,
 }
 
 impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
@@ -118,7 +118,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             .map(|idx| self.find_typedef(&self.types[*idx]))
     }
 
-    fn find_typedef_by_name(&self, name: &str) -> Option<TranslateTypeResult> {
+    fn find_typedef_by_name(&self, name: &[u8]) -> Option<TranslateTypeResult> {
         if name.is_empty() {
             // TODO this is my assumption, maybe an empty names Typedef means something else.
             return Some(TranslateTypeResult::Translated(Type::void()));
@@ -134,24 +134,24 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
 
         // check for types that ar usually not defined directly
         match name {
-            "Unkown" | "uint8_t" => Some(TranslateTypeResult::Translated(Type::int(1, false))),
-            "IUnkown" | "int8_t" => Some(TranslateTypeResult::Translated(Type::int(1, true))),
-            "SHORT" | "USHORT" => Some(TranslateTypeResult::Translated(Type::int(
+            b"Unkown" | b"uint8_t" => Some(TranslateTypeResult::Translated(Type::int(1, false))),
+            b"IUnkown" | b"int8_t" => Some(TranslateTypeResult::Translated(Type::int(1, true))),
+            b"SHORT" | b"USHORT" => Some(TranslateTypeResult::Translated(Type::int(
                 self.til
                     .sizes
                     .map(|x| x.size_short.get())
                     .unwrap_or(2)
                     .into(),
-                name == "SHORT",
+                name == b"SHORT",
             ))),
-            "int16_t" => Some(TranslateTypeResult::Translated(Type::int(2, true))),
-            "uint16_t" => Some(TranslateTypeResult::Translated(Type::int(2, false))),
-            "int32_t" => Some(TranslateTypeResult::Translated(Type::int(4, true))),
-            "uint32_t" => Some(TranslateTypeResult::Translated(Type::int(4, false))),
-            "int64_t" => Some(TranslateTypeResult::Translated(Type::int(8, true))),
-            "uint64_t" => Some(TranslateTypeResult::Translated(Type::int(8, false))),
-            "int128_t" => Some(TranslateTypeResult::Translated(Type::int(16, true))),
-            "uint128_t" => Some(TranslateTypeResult::Translated(Type::int(16, false))),
+            b"int16_t" => Some(TranslateTypeResult::Translated(Type::int(2, true))),
+            b"uint16_t" => Some(TranslateTypeResult::Translated(Type::int(2, false))),
+            b"int32_t" => Some(TranslateTypeResult::Translated(Type::int(4, true))),
+            b"uint32_t" => Some(TranslateTypeResult::Translated(Type::int(4, false))),
+            b"int64_t" => Some(TranslateTypeResult::Translated(Type::int(8, true))),
+            b"uint64_t" => Some(TranslateTypeResult::Translated(Type::int(8, false))),
+            b"int128_t" => Some(TranslateTypeResult::Translated(Type::int(16, true))),
+            b"uint128_t" => Some(TranslateTypeResult::Translated(Type::int(16, false))),
             _ => None,
         }
     }
@@ -165,7 +165,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             }
             TranslateTypeResult::PartiallyTranslated(og_ty, error) => {
                 TranslateTypeResult::PartiallyTranslated(
-                    Type::named_type_from_type(ty.name.as_str(), &og_ty),
+                    Type::named_type_from_type(&String::from_utf8_lossy(&ty.name), &og_ty),
                     error
                         .as_ref()
                         .map(|x| BnTypeError::Typedef(Box::new(x.clone())))
@@ -173,7 +173,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 )
             }
             TranslateTypeResult::Translated(og_ty) => TranslateTypeResult::Translated(
-                Type::named_type_from_type(ty.name.as_str(), &og_ty),
+                Type::named_type_from_type(&String::from_utf8_lossy(&ty.name), &og_ty),
             ),
         }
     }
@@ -247,7 +247,10 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             };
             // TODO create location from `arg_loc`?
             let loc = None;
-            let name = arg_name.to_owned().unwrap_or_else(|| format!("arg_{i}"));
+            let name = arg_name
+                .as_ref()
+                .map(|name| String::from_utf8_lossy(name).to_string())
+                .unwrap_or_else(|| format!("arg_{i}"));
             bn_args.push(FunctionParameter::new(arg, name, loc));
         }
 
@@ -304,8 +307,10 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         let create_field = |start_idx, i, bytes| {
             let name = if start_idx == i - 1 {
                 let member: &TILStructMember = &members_slice[i - 1];
-                let name: &Option<String> = &member.name;
-                name.to_owned()
+                member
+                    .name
+                    .as_ref()
+                    .map(|name| String::from_utf8_lossy(name).to_string())
                     .unwrap_or_else(|| format!("bitfield_{}", offset + start_idx))
             } else {
                 format!("bitfield_{}_{}", offset + start_idx, offset + (i - 1))
@@ -393,7 +398,8 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             };
             let name = member
                 .name
-                .to_owned()
+                .as_ref()
+                .map(|name| String::from_utf8_lossy(name).to_string())
                 .unwrap_or_else(|| format!("member_{i}"));
             structure.append(&mem, name, BNMemberAccess::NoAccess, BNMemberScope::NoScope);
         }
@@ -413,7 +419,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
 
     fn translate_union(
         &self,
-        members: &[(Option<String>, TILType)],
+        members: &[(Option<Vec<u8>>, TILType)],
         _effective_alignment: u16,
     ) -> TranslateTypeResult {
         let mut is_partial = false;
@@ -442,7 +448,8 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             };
 
             let name = member_name
-                .to_owned()
+                .as_ref()
+                .map(|name| String::from_utf8_lossy(name).to_string())
                 .unwrap_or_else(|| format!("member_{i}"));
             structure.append(&mem, name, BNMemberAccess::NoAccess, BNMemberScope::NoScope);
         }
@@ -458,10 +465,13 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         }
     }
 
-    fn translate_enum(members: &[(Option<String>, u64)], bytesize: u64) -> Ref<Type> {
+    fn translate_enum(members: &[(Option<Vec<u8>>, u64)], bytesize: u64) -> Ref<Type> {
         let eb = EnumerationBuilder::new();
         for (i, (name, bytesize)) in members.iter().enumerate() {
-            let name = name.to_owned().unwrap_or_else(|| format!("member_{i}"));
+            let name = name
+                .as_ref()
+                .map(|name| String::from_utf8_lossy(name).to_string())
+                .unwrap_or_else(|| format!("member_{i}"));
             eb.insert(name, *bytesize);
         }
         Type::enumeration(
@@ -504,7 +514,9 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 .unwrap_or_else(|| TranslateTypeResult::Error(BnTypeError::OrdinalNotFound(*ord))),
             TILType::Typedef(TILTypedef::Name(name)) => {
                 self.find_typedef_by_name(name).unwrap_or_else(|| {
-                    TranslateTypeResult::Error(BnTypeError::NameNotFound(name.to_owned()))
+                    TranslateTypeResult::Error(BnTypeError::NameNotFound(
+                        String::from_utf8_lossy(name).to_string(),
+                    ))
                 })
             }
 
@@ -540,8 +552,8 @@ pub fn translate_ephemeral_type(debug_file: &BinaryView, ty: &TILType) -> Transl
         // TODO it's unclear what to do here
         til: &TILSection {
             format: 12,
-            title: String::new(),
-            description: String::new(),
+            title: Vec::new(),
+            description: Vec::new(),
             id: 0,
             cm: 0,
             def_align: 1,
@@ -601,7 +613,7 @@ pub fn translate_til_types<'a>(
                 )
             }
         }
-        if ty.name != "" {
+        if !ty.name.is_empty() {
             let dup2 = types_by_name.insert(ty.name.to_owned(), i);
             if let Some(old) = dup2 {
                 let old_type = &types[old];
@@ -611,7 +623,7 @@ pub fn translate_til_types<'a>(
                     "dup name {}:{}: {}:\n{:?}\n{:?}",
                     old_type.is_symbol,
                     new_type.is_symbol,
-                    &ty.name,
+                    &String::from_utf8_lossy(&ty.name),
                     &old_type.og_ty,
                     &new_type.og_ty,
                 )

@@ -159,17 +159,27 @@ pub fn import_til_section(
             TranslateTypeResult::NotYet => {
                 panic!(
                     "type could not be processed `{}`: {:#?}",
-                    &ty.name, &ty.og_ty
+                    &String::from_utf8_lossy(&ty.name),
+                    &ty.og_ty
                 );
             }
             TranslateTypeResult::Error(error) => {
-                error!("Unable to parse type `{}`: {error}", &ty.name);
+                error!(
+                    "Unable to parse type `{}`: {error}",
+                    &String::from_utf8_lossy(&ty.name)
+                );
             }
             TranslateTypeResult::PartiallyTranslated(_, error) => {
                 if let Some(error) = error {
-                    error!("Unable to parse type `{}` correctly: {error}", &ty.name);
+                    error!(
+                        "Unable to parse type `{}` correctly: {error}",
+                        &String::from_utf8_lossy(&ty.name)
+                    );
                 } else {
-                    warn!("Type `{}` maybe not be fully translated", &ty.name);
+                    warn!(
+                        "Type `{}` maybe not be fully translated",
+                        &String::from_utf8_lossy(&ty.name)
+                    );
                 }
             }
             TranslateTypeResult::Translated(_) => {}
@@ -181,8 +191,11 @@ pub fn import_til_section(
         if let TranslateTypeResult::Translated(bn_ty)
         | TranslateTypeResult::PartiallyTranslated(bn_ty, _) = &ty.ty
         {
-            if !debug_info.add_type(&ty.name, &bn_ty, &[/* TODO */]) {
-                error!("Unable to add type `{}`", &ty.name)
+            if !debug_info.add_type(&String::from_utf8_lossy(&ty.name), &bn_ty, &[/* TODO */]) {
+                error!(
+                    "Unable to add type `{}`",
+                    &String::from_utf8_lossy(&ty.name)
+                )
             }
         }
     }
@@ -192,8 +205,11 @@ pub fn import_til_section(
         if let TranslateTypeResult::Translated(bn_ty)
         | TranslateTypeResult::PartiallyTranslated(bn_ty, _) = &ty.ty
         {
-            if !debug_info.add_type(&ty.name, &bn_ty, &[/* TODO */]) {
-                error!("Unable to fix type `{}`", &ty.name)
+            if !debug_info.add_type(&String::from_utf8_lossy(&ty.name), &bn_ty, &[/* TODO */]) {
+                error!(
+                    "Unable to fix type `{}`",
+                    &String::from_utf8_lossy(&ty.name)
+                )
             }
         }
     }
@@ -222,7 +238,10 @@ fn parse_id0_section_info(
         } = info;
         // TODO set comments to address here
         for function in &bv.functions_containing(addr) {
-            function.set_comment_at(addr, comments.join("\n"));
+            function.set_comment_at(
+                addr,
+                String::from_utf8_lossy(&comments.join(&b"\n"[..])).to_string(),
+            );
         }
 
         let bnty = ty

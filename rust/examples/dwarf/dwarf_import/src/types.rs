@@ -34,6 +34,7 @@ pub(crate) fn parse_variable<R: ReaderType>(
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
     function_index: Option<usize>,
+    lexical_block: Option<&iset::IntervalSet<u64>>,
 ) {
     let full_name = debug_info_builder_context.get_name(dwarf, unit, entry);
     let type_uid = get_type(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
@@ -48,7 +49,7 @@ pub(crate) fn parse_variable<R: ReaderType>(
 
     match Operation::parse(&mut expression.0, unit.encoding()) {
         Ok(Operation::FrameOffset { offset }) => {
-            debug_info_builder.add_stack_variable(function_index, offset, full_name, type_uid);
+            debug_info_builder.add_stack_variable(function_index, offset, full_name, type_uid, lexical_block);
         },
         //Ok(Operation::RegisterOffset { register: _, offset: _, base_type: _ }) => {
         //    //TODO: look up register by index (binja register indexes don't match processor indexes?)

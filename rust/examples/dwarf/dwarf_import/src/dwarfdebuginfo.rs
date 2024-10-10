@@ -50,6 +50,7 @@ pub(crate) struct FunctionInfoBuilder {
     pub(crate) platform: Option<Ref<Platform>>,
     pub(crate) variable_arguments: bool,
     pub(crate) stack_variables: Vec<NamedTypedVariable>,
+    pub(crate) use_cfa: bool, //TODO actually store more info about the frame base
 }
 
 impl FunctionInfoBuilder {
@@ -229,6 +230,7 @@ impl DebugInfoBuilder {
         address: Option<u64>,
         parameters: &Vec<Option<(String, TypeUID)>>,
         variable_arguments: bool,
+        use_cfa: bool,
     ) -> Option<usize> {
         // Returns the index of the function
         // Raw names should be the primary key, but if they don't exist, use the full name
@@ -296,6 +298,7 @@ impl DebugInfoBuilder {
             platform: None,
             variable_arguments,
             stack_variables: vec![],
+            use_cfa,
         };
 
         if let Some(n) = &function.full_name {
@@ -362,6 +365,7 @@ impl DebugInfoBuilder {
         offset: i64,
         name: Option<String>,
         type_uid: Option<TypeUID>,
+        lexical_block: Option<&iset::IntervalSet<u64>>,
     ) {
         let name = match name {
             Some(x) => {
@@ -400,18 +404,39 @@ impl DebugInfoBuilder {
             return;
         };
 
-        let Some(offset_adjustment) = self.range_data_offsets.values_overlap(func_addr).next() else {
+        let adjusted_offset;
+        let Some(adjustment_at_variable_lifetime_start) = lexical_block.and_then(|block_ranges| {
+            block_ranges
+            .unsorted_iter()
+            .find_map(|x| self.range_data_offsets.values_overlap(x.start).next())
+        }).or_else(|| {
+            self.range_data_offsets.values_overlap(func_addr).next()
+        }) else {
             // Unknown why, but this is happening with MachO + external dSYM
             debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CIE offset.", name, offset, func_addr);
             return;
         };
 
-        // TODO: offset should be calculated based off reference address and not function start
-        let adjusted_offset = offset - offset_adjustment;
+        // TODO: handle non-sp frame bases
+        // TODO: if not in a lexical block these can be wrong, see https://github.com/Vector35/binaryninja-api/issues/5882#issuecomment-2406065057
+        if function.use_cfa {
+            // Apply CFA offset to variable storage offset if DW_AT_frame_base is frame base is CFA
+            adjusted_offset = offset + adjustment_at_variable_lifetime_start;
+        }
+        else {
+            // If it's using SP, we know the SP offset is <SP offset> + (<entry SP CFA offset> - <SP CFA offset>)
+            let Some(adjustment_at_entry) = self.range_data_offsets.values_overlap(func_addr).next() else {
+                // Unknown why, but this is happening with MachO + external dSYM
+                debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CIE offset for function start.", name, offset, func_addr);
+                return;
+            };
+
+            adjusted_offset = offset + (adjustment_at_entry - adjustment_at_variable_lifetime_start);
+        }
 
         if adjusted_offset > 0 {
             // If we somehow end up with a positive sp offset
-            error!("Trying to add a local variable at positive storage offset {}. Please report this issue.", adjusted_offset);
+            error!("Trying to add a local variable \"{}\" in function at {:#x} at positive storage offset {}. Please report this issue.", name, func_addr, adjusted_offset);
             return;
         }
 

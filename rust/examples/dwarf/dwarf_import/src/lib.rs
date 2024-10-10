@@ -37,6 +37,7 @@ use dwarfreader::{
     create_section_reader, get_endian, is_dwo_dwarf, is_non_dwo_dwarf, is_raw_dwo_dwarf,
 };
 
+use functions::parse_lexical_block;
 use gimli::{constants, CfaRule, DebuggingInformationEntry, Dwarf, DwarfFileType, Reader, Section, SectionId, Unit, UnwindContext, UnwindSection};
 
 use helpers::{get_build_id, load_debug_info_for_build_id};
@@ -222,6 +223,7 @@ fn parse_unit<R: ReaderType>(
 
     let mut current_depth: isize = 0;
     let mut functions_by_depth: Vec<(Option<usize>, isize)> = vec![];
+    let mut lexical_blocks_by_depth: Vec<(iset::IntervalSet<u64>, isize)> = vec![];
 
     // Really all we care about as we iterate the entries in a given unit is how they modify state (our perception of the file)
     // There's a lot of junk we don't care about in DWARF info, so we choose a couple DIEs and mutate state (add functions (which adds the types it uses) and keep track of what namespace we're in)
@@ -250,6 +252,18 @@ fn parse_unit<R: ReaderType>(
             else {
                 break;
             }
+
+            if let Some((_lexical_block, depth)) = lexical_blocks_by_depth.last() {
+                if current_depth <= *depth {
+                    lexical_blocks_by_depth.pop();
+                }
+                else {
+                    break
+                }
+            }
+            else {
+                break;
+            }
         }
 
         match entry.tag() {
@@ -257,9 +271,15 @@ fn parse_unit<R: ReaderType>(
                 let fn_idx = parse_function_entry(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
                 functions_by_depth.push((fn_idx, current_depth));
             },
+            constants::DW_TAG_lexical_block => {
+                if let Some(block_ranges) = parse_lexical_block(dwarf, unit, entry) {
+                    lexical_blocks_by_depth.push((block_ranges, current_depth));
+                }
+            },
             constants::DW_TAG_variable => {
                 let current_fn_idx = functions_by_depth.last().and_then(|x| x.0);
-                parse_variable(dwarf, unit, entry, debug_info_builder_context, debug_info_builder, current_fn_idx)
+                let current_lexical_block = lexical_blocks_by_depth.last().and_then(|x| Some(&x.0));
+                parse_variable(dwarf, unit, entry, debug_info_builder_context, debug_info_builder, current_fn_idx, current_lexical_block)
             },
             constants::DW_TAG_class_type |
             constants::DW_TAG_enumeration_type |
@@ -300,13 +320,13 @@ where <U as UnwindSection<R>>::Offset: std::hash::Hash {
     }
 
     let mut cies = HashMap::new();
-    let mut cie_data_offsets = iset::IntervalMap::new();
+    let mut cfa_offsets = iset::IntervalMap::new();
 
     let mut entries = unwind_section.entries(&bases);
     let mut unwind_context = UnwindContext::new();
     loop {
         match entries.next()? {
-            None => return Ok(cie_data_offsets),
+            None => return Ok(cfa_offsets),
             Some(gimli::CieOrFde::Cie(_cie)) => {
                 // TODO: do we want to do anything with standalone CIEs?
             }
@@ -325,7 +345,7 @@ where <U as UnwindSection<R>>::Offset: std::hash::Hash {
 
                 if fde.len() == 0 {
                     // This FDE is a terminator
-                    return Ok(cie_data_offsets);
+                    return Ok(cfa_offsets);
                 }
 
                 if fde.initial_address().overflowing_add(fde.len()).1 {
@@ -333,11 +353,12 @@ where <U as UnwindSection<R>>::Offset: std::hash::Hash {
                 } else {
                     // Walk the FDE table rows and store their CFA
                     let mut fde_table = fde.rows(&unwind_section, &bases, &mut unwind_context)?;
+
                     while let Some(row) = fde_table.next_row()? {
                         match row.cfa() {
                             CfaRule::RegisterAndOffset {register: _, offset} => {
-                                // TODO: this offset could be wrong because register might be something wacky
-                                cie_data_offsets.insert(
+                                // TODO: we should store offsets by register
+                                cfa_offsets.insert(
                                     row.start_address()..row.end_address(),
                                     *offset,
                                 );

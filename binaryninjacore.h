@@ -390,7 +390,6 @@ extern "C"
 		BaseStructureNameToken = 37,
 		BaseStructureSeparatorToken = 38,
 		BraceToken = 39,
-		CollapsedInformationToken = 40,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,
@@ -401,7 +400,9 @@ extern "C"
 		IndirectImportToken = 69,
 		ExternalSymbolToken = 70,
 		StackVariableToken = 71,
-		AddressSeparatorToken = 72
+		AddressSeparatorToken = 72,
+		CollapsedInformationToken = 73,
+		CollapseStateIndicatorToken = 74,
 	} BNInstructionTextTokenType;
 
 	typedef enum BNInstructionTextTokenContext

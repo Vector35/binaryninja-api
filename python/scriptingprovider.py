@@ -48,11 +48,13 @@ from . import settings
 from . import binaryview
 from . import basicblock
 from . import function
-from .log import log_info, log_warn, log_error, is_output_redirected_to_log
+from . import log
 from .pluginmanager import RepositoryManager
 from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
 
 _WARNING_REGEX = re.compile(r'^\S+:\d+: \w+Warning: ')
+
+logger = log.Logger(0, "ScriptingProvider")
 
 class _ThreadActionContext:
 	_actions = []
@@ -94,26 +96,26 @@ class ScriptingOutputListener:
 		try:
 			self.notify_output(text)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 
 	def _warning(self, ctxt, text):
 		try:
 			self.notify_warning(text)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 
 
 	def _error(self, ctxt, text):
 		try:
 			self.notify_error(text)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 
 	def _input_ready_state_changed(self, ctxt, state):
 		try:
 			self.notify_input_ready_state_changed(state)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 
 	def notify_output(self, text):
 		pass
@@ -163,40 +165,40 @@ class ScriptingInstance:
 		try:
 			self.__class__._registered_instances.append(self)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 
 	def _external_ref_released(self, ctxt):
 		try:
 			self.__class__._registered_instances.remove(self)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 
 	def _execute_script_input(self, ctxt, text):
 		try:
 			return self.perform_execute_script_input(text)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 			return ScriptingProviderExecuteResult.InvalidScriptInput
 
 	def _execute_script_input_from_filename(self, ctxt, filename):
 		try:
 			return self.perform_execute_script_input_from_filename(filename)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 			return ScriptingProviderExecuteResult.InvalidScriptInput
 
 	def _cancel_script_input(self, ctxt):
 		try:
 			return self.perform_cancel_script_input()
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 			return ScriptingProviderExecuteResult.ScriptExecutionCancelled
 
 	def _release_binary_view(self, ctxt, view):
 		try:
 			binaryview.BinaryView._cache_remove(view)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 
 	def _set_current_binary_view(self, ctxt, view):
 		try:
@@ -207,7 +209,7 @@ class ScriptingInstance:
 				view = None
 			self.perform_set_current_binary_view(view)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 
 	def _set_current_function(self, ctxt, func):
 		try:
@@ -217,7 +219,7 @@ class ScriptingInstance:
 				func = None
 			self.perform_set_current_function(func)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 
 	def _set_current_basic_block(self, ctxt, block):
 		try:
@@ -236,19 +238,19 @@ class ScriptingInstance:
 				block = None
 			self.perform_set_current_basic_block(block)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 
 	def _set_current_address(self, ctxt, addr):
 		try:
 			self.perform_set_current_address(addr)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 
 	def _set_current_selection(self, ctxt, begin, end):
 		try:
 			self.perform_set_current_selection(begin, end)
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 
 	def _complete_input(self, ctxt, text, state):
 		try:
@@ -256,14 +258,14 @@ class ScriptingInstance:
 				text = text.decode("utf-8")
 			return core.BNAllocString(self.perform_complete_input(text, state))
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
 	def _stop(self, ctxt):
 		try:
 			self.perform_stop()
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 
 	@abc.abstractmethod
 	def perform_execute_script_input(self, text):
@@ -427,7 +429,7 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 			assert script_instance is not None, "core.BNNewScriptingInstanceReference returned None"
 			return ctypes.cast(script_instance, ctypes.c_void_p).value
 		except:
-			log_error(traceback.format_exc())
+			logger.log_error(traceback.format_exc())
 			return None
 
 	def create_instance(self) -> Optional[ScriptingInstance]:
@@ -502,7 +504,7 @@ class _PythonScriptingInstanceOutput:
 			interpreter = PythonScriptingInstance._interpreter.value
 
 		if interpreter is None:
-			if is_output_redirected_to_log():
+			if log.is_output_redirected_to_log():
 				self.buffer += data
 				while True:
 					i = self.buffer.find('\n')
@@ -513,11 +515,11 @@ class _PythonScriptingInstanceOutput:
 
 					if self.is_error_output:
 						if _WARNING_REGEX.match(line):
-							log_warn(line)
+							logger.log_warn(line)
 						else:
-							log_error(line)
+							logger.log_error(line)
 					else:
-						log_info(line)
+						logger.log_info(line)
 			else:
 				self.orig.write(data)
 		else:
@@ -1090,11 +1092,11 @@ class PythonScriptingProvider(ScriptingProvider):
 				__import__(module)
 			return True
 		except KeyError:
-			log_error(f"Failed to find python plugin: {repo_path}/{module}")
+			logger.log_error(f"Failed to find python plugin: {repo_path}/{module}")
 		except ImportError as ie:
-			log_error(f"Failed to import python plugin: {repo_path}/{module}: {ie}")
+			logger.log_error(f"Failed to import python plugin: {repo_path}/{module}: {ie}")
 		except binaryninja.UIPluginInHeadlessError:
-			log_info(f"Ignored python UI plugin: {repo_path}/{module}")
+			logger.log_info(f"Ignored python UI plugin: {repo_path}/{module}")
 		return False
 
 	# This function can only be used to execute commands that return ASCII-only output, otherwise the decoding will fail
@@ -1209,13 +1211,13 @@ class PythonScriptingProvider(ScriptingProvider):
 		python_env = self._get_python_environment(using_bundled_python=not python_lib)
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override, python_env=python_env)
 		if python_bin is not None and not self._pip_exists(str(python_bin), python_env=python_env):
-			log_error(
+			logger.log_error(
 			    f"Pip not installed for configured python: {python_bin}.\n"
 			    "Please install pip or switch python versions."
 			)
 			return False
 		if python_bin is None:
-			log_error(
+			logger.log_error(
 			    f"Unable to discover python executable required for installing python modules: {status}\n"
 			    "Please specify a path to a python binary in the 'Python Path Override'"
 			)
@@ -1226,7 +1228,7 @@ class PythonScriptingProvider(ScriptingProvider):
 		], env=python_env).decode("utf-8")
 		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 		if (python_bin_version != python_lib_version):
-			log_error(
+			logger.log_error(
 			    f"Python Binary Setting {python_bin_version} incompatible with python library {python_lib_version}"
 			)
 			return False
@@ -1251,12 +1253,12 @@ class PythonScriptingProvider(ScriptingProvider):
 			site_package_dir.mkdir(parents=True, exist_ok=True)
 			args.extend(["--target", str(site_package_dir)])
 		args.extend(list(filter(len, modules.split("\n"))))
-		log_info(f"Running pip {args}")
+		logger.log_info(f"Running pip {args}")
 		status, result = self._run_args(args, env=python_env)
 		if status:
 			importlib.invalidate_caches()
 		else:
-			log_error(f"Error while attempting to install requirements {result}")
+			logger.log_error(f"Error while attempting to install requirements {result}")
 		return status
 
 	def _module_installed(self, ctx, module: str) -> bool:

@@ -183,7 +183,7 @@ enum class Direction
 
     \ingroup stackview
 */
-class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
+class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View, public UIContextNotification
 {
 	Q_OBJECT
 
@@ -221,6 +221,7 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 
   public:
 	StackView(ViewFrame* view, BinaryViewRef data);
+	~StackView();
 
 	//! Refresh the stack view's content.
 	void refresh();
@@ -304,6 +305,8 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 	bool navigate(uint64_t offset) override;
 	QFont getFont() override;
 	void updateFonts() override;
+
+	virtual void OnNewSelectionForXref(UIContext* context, ViewFrame* frame, View* view, const SelectionInfoForXref& selection) override;
 };
 
 /*! Stack view sidebar widget wrapper.

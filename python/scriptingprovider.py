@@ -1823,7 +1823,7 @@ def _get_current_il_function(instance: PythonScriptingInstance):
 			return instance.interpreter.locals["current_mlil"]
 		elif ilType.view_type == FunctionGraphType.MediumLevelILSSAFormFunctionGraph:
 			return instance.interpreter.locals["current_mlil_ssa"]
-		elif ilType.view_type == FunctionGraphType.HighLevelILFunctionGraph:
+		elif ilType.view_type == FunctionGraphType.HighLevelILFunctionGraph or ilType.view_type == FunctionGraphType.HighLevelLanguageRepresentationFunctionGraph:
 			return instance.interpreter.locals["current_hlil"]
 		elif ilType.view_type == FunctionGraphType.HighLevelILSSAFormFunctionGraph:
 			return instance.interpreter.locals["current_hlil_ssa"]

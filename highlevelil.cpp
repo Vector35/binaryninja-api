@@ -717,7 +717,7 @@ void HighLevelILTokenEmitter::EndForceZeroConfidence()
 
 HighLevelILTokenEmitter::CurrentExprGuard HighLevelILTokenEmitter::SetCurrentExpr(const HighLevelILInstruction& expr)
 {
-	return CurrentExprGuard(*this, {expr.address, expr.sourceOperand, expr.exprIndex, expr.instructionIndex});
+	return CurrentExprGuard(*this, {expr.address, expr.sourceOperand, expr.exprIndex, expr.GetInstructionIndex()});
 }
 
 

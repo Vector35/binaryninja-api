@@ -207,28 +207,35 @@ impl FileMetadata {
         }
     }
 
-    pub fn create_database<S: BnStrCompatible>(
-        &self,
-        filename: S,
-        progress_func: Option<fn(usize, usize) -> bool>,
-    ) -> bool {
+    pub fn create_database<S: BnStrCompatible>(&self, filename: S) -> bool {
         let filename = filename.into_bytes_with_nul();
         let filename_ptr = filename.as_ref().as_ptr() as *mut _;
         let raw = "Raw".into_bytes_with_nul();
         let raw_ptr = raw.as_ptr() as *mut _;
 
         let handle = unsafe { BNGetFileViewOfType(self.handle, raw_ptr) };
-        match progress_func {
-            None => unsafe { BNCreateDatabase(handle, filename_ptr, ptr::null_mut()) },
-            Some(func) => unsafe {
-                BNCreateDatabaseWithProgress(
-                    handle,
-                    filename_ptr,
-                    func as *mut libc::c_void,
-                    Some(cb_progress_func),
-                    ptr::null_mut(),
-                )
-            },
+        unsafe { BNCreateDatabase(handle, filename_ptr, ptr::null_mut()) }
+    }
+
+    pub fn create_database_with_progress<S, F>(&self, filename: S, mut progress_func: F) -> bool
+    where
+        S: BnStrCompatible,
+        F: FnMut(usize, usize) -> bool,
+    {
+        let filename = filename.into_bytes_with_nul();
+        let filename_ptr = filename.as_ref().as_ptr() as *mut _;
+        let raw = "Raw".into_bytes_with_nul();
+        let raw_ptr = raw.as_ptr() as *mut _;
+
+        let handle = unsafe { BNGetFileViewOfType(self.handle, raw_ptr) };
+        unsafe {
+            BNCreateDatabaseWithProgress(
+                handle,
+                filename_ptr,
+                &mut progress_func as *mut F as *mut libc::c_void,
+                Some(cb_progress_func::<F>),
+                ptr::null_mut(),
+            )
         }
     }
 
@@ -259,24 +266,38 @@ impl FileMetadata {
         }
     }
 
-    pub fn open_database<S: BnStrCompatible>(
-        &self,
-        filename: S,
-        progress_func: Option<fn(usize, usize) -> bool>,
-    ) -> Result<Ref<BinaryView>, ()> {
+    pub fn open_database<S: BnStrCompatible>(&self, filename: S) -> Result<Ref<BinaryView>, ()> {
         let filename = filename.into_bytes_with_nul();
         let filename_ptr = filename.as_ref().as_ptr() as *mut _;
 
-        let view = match progress_func {
-            None => unsafe { BNOpenExistingDatabase(self.handle, filename_ptr) },
-            Some(func) => unsafe {
-                BNOpenExistingDatabaseWithProgress(
-                    self.handle,
-                    filename_ptr,
-                    func as *mut libc::c_void,
-                    Some(cb_progress_func),
-                )
-            },
+        let view = unsafe { BNOpenExistingDatabase(self.handle, filename_ptr) };
+
+        if view.is_null() {
+            Err(())
+        } else {
+            Ok(unsafe { BinaryView::from_raw(view) })
+        }
+    }
+
+    pub fn open_database_with_progress<S, F>(
+        &self,
+        filename: S,
+        mut progress_func: F,
+    ) -> Result<Ref<BinaryView>, ()>
+    where
+        S: BnStrCompatible,
+        F: FnMut(usize, usize) -> bool,
+    {
+        let filename = filename.into_bytes_with_nul();
+        let filename_ptr = filename.as_ref().as_ptr() as *mut _;
+
+        let view = unsafe {
+            BNOpenExistingDatabaseWithProgress(
+                self.handle,
+                filename_ptr,
+                &mut progress_func as *mut F as *mut libc::c_void,
+                Some(cb_progress_func::<F>),
+            )
         };
 
         if view.is_null() {
@@ -313,11 +334,11 @@ unsafe impl RefCountable for FileMetadata {
     }
 }
 
-unsafe extern "C" fn cb_progress_func(
+unsafe extern "C" fn cb_progress_func<F: FnMut(usize, usize) -> bool>(
     ctxt: *mut ::std::os::raw::c_void,
     progress: usize,
     total: usize,
 ) -> bool {
-    let func: fn(usize, usize) -> bool = core::mem::transmute(ctxt);
+    let func: &mut F = &mut *(ctxt as *mut F);
     func(progress, total)
 }

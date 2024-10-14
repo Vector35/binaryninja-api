@@ -5455,6 +5455,17 @@ Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis, con
 }
 
 
+Ref<BinaryView> BinaryNinja::Load(Ref<ProjectFile> projectFile, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
+{
+	ProgressContext cb;
+	cb.callback = progress;
+	BNBinaryView* handle = BNLoadProjectFile(projectFile->GetObject(), updateAnalysis, options.c_str(), ProgressCallback, &cb);
+	if (!handle)
+		return nullptr;
+	return new BinaryView(handle);
+}
+
+
 SymbolQueue::SymbolQueue()
 {
 	m_object = BNCreateSymbolQueue();

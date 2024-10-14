@@ -1456,6 +1456,7 @@ namespace BinaryNinja {
 	};
 
 	class BinaryView;
+	class ProjectFile;
 
 	/*! OpenView opens a file on disk and returns a BinaryView, attempting to use the most
 	    relevant BinaryViewType and generating default load options (which are overridable).
@@ -1526,6 +1527,23 @@ namespace BinaryNinja {
 	    \return Constructed view, or a nullptr Ref<BinaryView>
 	*/
 	Ref<BinaryView> Load(Ref<BinaryView> rawData, bool updateAnalysis = true, const std::string& options = "{}", std::function<bool(size_t, size_t)> progress = {});
+
+	/*! Open a BinaryView from a ProjectFile, initializing data views and loading settings.
+
+	    @threadmainonly
+
+	    \see BinaryNinja::Load(const std::string&, bool, std::function<bool(size_t, size_t)>, Json::Value)
+	    for discussion of this function.
+
+	    \param rawData BinaryView with raw binary data to load
+	    \param updateAnalysis If true, UpdateAnalysisAndWait() will be called after opening
+	                          a BinaryView.
+	    \param options A Json string whose keys are setting identifiers and whose values are the desired settings.
+	    \param progress Optional function to be called with progress updates as the view is
+	                    being loaded. If the function returns false, it will cancel Load.
+	    \return Constructed view, or a nullptr Ref<BinaryView>
+	*/
+	Ref<BinaryView> Load(Ref<ProjectFile> rawData, bool updateAnalysis = true, const std::string& options = "{}", std::function<bool(size_t, size_t)> progress = {});
 
 	/*!
 		Deprecated. Use non-metadata version.

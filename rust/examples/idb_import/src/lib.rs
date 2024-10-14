@@ -20,8 +20,14 @@ use anyhow::Result;
 struct IDBDebugInfoParser;
 impl CustomDebugInfoParser for IDBDebugInfoParser {
     fn is_valid(&self, view: &BinaryView) -> bool {
-        view.file().filename().as_str().ends_with(".i64")
-            || view.file().filename().as_str().ends_with(".idb")
+        if let Some(project_file) = view.file().get_project_file() {
+            project_file.name().as_str().ends_with(".i64")
+                || project_file.name().as_str().ends_with(".idb")
+        }
+        else {
+            view.file().filename().as_str().ends_with(".i64")
+                || view.file().filename().as_str().ends_with(".idb")
+        }
     }
 
     fn parse_info(
@@ -44,7 +50,12 @@ impl CustomDebugInfoParser for IDBDebugInfoParser {
 struct TILDebugInfoParser;
 impl CustomDebugInfoParser for TILDebugInfoParser {
     fn is_valid(&self, view: &BinaryView) -> bool {
-        view.file().filename().as_str().ends_with(".til")
+        if let Some(project_file) = view.file().get_project_file() {
+            project_file.name().as_str().ends_with(".til")
+        }
+        else {
+            view.file().filename().as_str().ends_with(".til")
+        }
     }
 
     fn parse_info(

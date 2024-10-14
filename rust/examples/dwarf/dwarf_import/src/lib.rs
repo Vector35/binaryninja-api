@@ -358,10 +358,15 @@ where <U as UnwindSection<R>>::Offset: std::hash::Hash {
                         match row.cfa() {
                             CfaRule::RegisterAndOffset {register: _, offset} => {
                                 // TODO: we should store offsets by register
-                                cfa_offsets.insert(
-                                    row.start_address()..row.end_address(),
-                                    *offset,
-                                );
+                                if row.start_address() < row.end_address() {
+                                    cfa_offsets.insert(
+                                        row.start_address()..row.end_address(),
+                                        *offset,
+                                    );
+                                }
+                                else {
+                                    debug!("Invalid FDE table row addresses: {:#x}..{:#x}", row.start_address(), row.end_address());
+                                }
                             },
                             CfaRule::Expression(_) => {
                                 debug!("Unhandled CFA expression when determining offset");

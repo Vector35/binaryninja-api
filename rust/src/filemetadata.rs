@@ -22,12 +22,12 @@ use binaryninjacore_sys::{
     BNFreeFileMetadata,
     BNGetCurrentOffset,
     BNGetCurrentView,
+    BNGetFileMetadataDatabase,
     BNGetFileViewOfType,
     BNGetFilename,
+    BNGetProjectFile,
     BNIsAnalysisChanged,
     BNIsBackedByDatabase,
-    //BNSetFileMetadataNavigationHandler,
-    BNGetFileMetadataDatabase,
     BNIsFileModified,
     BNMarkFileModified,
     BNMarkFileSaved,
@@ -39,17 +39,18 @@ use binaryninjacore_sys::{
     BNRevertUndoActions,
     BNSaveAutoSnapshot,
     BNSetFilename,
-    BNUndo,
+    BNUndo
 };
 use binaryninjacore_sys::{BNCreateDatabaseWithProgress, BNOpenExistingDatabaseWithProgress};
 
 use crate::binaryview::BinaryView;
 use crate::database::Database;
+use crate::project::ProjectFile;
 
 use crate::rc::*;
 use crate::string::*;
 
-use std::ptr;
+use std::ptr::{self, NonNull};
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct FileMetadata {
@@ -204,6 +205,13 @@ impl FileMetadata {
             } else {
                 Ok(BinaryView::from_raw(res))
             }
+        }
+    }
+
+    pub fn get_project_file(&self) -> Option<ProjectFile> {
+        unsafe {
+            let res = NonNull::new(BNGetProjectFile(self.handle))?;
+            Some(ProjectFile::from_raw(res))
         }
     }
 

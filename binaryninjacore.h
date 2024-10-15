@@ -3360,6 +3360,39 @@ extern "C"
 		float entropy;
 	} BNFirmwareNinjaSection;
 
+	typedef enum BNFirmwareNinjaMMIOHeuristic
+	{
+		NoMMIOHeuristic,
+		HasReadBarrierMMIOHeuristic,
+		HasWriteBarrierMMIOHeuristic,
+		StoreToOOBMemoryMMIOHeuristic,
+		LoadFromOOBMemoryMMIOHeuristic,
+		RepeatLoadStoreMMIOHeuristic,
+	} BNFirmwareNinjaMMIOHeuristic;
+
+	typedef enum BNFirmwareNinjaMMIOAccessType
+	{
+		NoMMIOAccessType,
+		ReadMMIOAccessType,
+		WriteMMIOAccessType,
+	} BNFirmwareNinjaMMIOAccessType;
+
+	typedef struct BNFirmwareNinjaMMIOAccess
+	{
+		uint64_t instrAddress;
+		BNRegisterValue reg;
+		BNFirmwareNinjaMMIOHeuristic heuristic;
+		BNFirmwareNinjaMMIOAccessType type;
+	} BNFirmwareNinjaMMIOAccess;
+
+	typedef struct BNFirmwareNinjaFunctionMMIOInfo
+	{
+		uint64_t start;
+		size_t count;
+		BNFirmwareNinjaMMIOAccess** accesses;
+	} BNFirmwareNinjaFunctionMMIOInfo;
+
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
@@ -7673,6 +7706,8 @@ extern "C"
 	BINARYNINJACOREAPI int BNFirmwareNinjaFindSectionsWithEntropy(BNFirmwareNinja* fn, BNFirmwareNinjaSection** sections,
 		float highCodeEntropyThreshold, float lowCodeEntropyThreshold, size_t blockSize, BNFirmwareNinjaSectionAnalysisMode mode);
 	BINARYNINJACOREAPI void BNFirmwareNinjaFreeSections(BNFirmwareNinjaSection *sections, int size);
+	BINARYNINJACOREAPI int BNFirmwareNinjaFindMMIOAccesses(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMMIOInfo*** mmio, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI void BNFirmwareNinjaFreeMMIOAccesses(BNFirmwareNinjaFunctionMMIOInfo **mmio, int size);
 #ifdef __cplusplus
 }
 #endif

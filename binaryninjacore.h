@@ -402,7 +402,7 @@ extern "C"
 		StackVariableToken = 71,
 		AddressSeparatorToken = 72,
 		CollapsedInformationToken = 73,
-		CollapseStateIndicatorToken = 74,
+		CollapseStateIndicatorToken = 74
 	} BNInstructionTextTokenType;
 
 	typedef enum BNInstructionTextTokenContext
@@ -417,7 +417,10 @@ extern "C"
 		ConstStringDataTokenContext = 7, // For ConstData strings
 		StringReferenceTokenContext = 8, // For References to strings
 		StringDataVariableTokenContext = 9, // For String DataVariables
-		StringDisplayTokenContext = 10 // For displaying strings which aren't associated with an address
+		StringDisplayTokenContext = 10, // For displaying strings which aren't associated with an address
+		ContentCollapsedContext = 11,
+		ContentExpandedContext = 12,
+		ContentCollapsiblePadding = 13
 	} BNInstructionTextTokenContext;
 
 	typedef enum BNLinearDisassemblyLineType
@@ -441,7 +444,8 @@ extern "C"
 		SectionEndLineType,
 		SectionSeparatorLineType,
 		NonContiguousSeparatorLineType,
-		AnalysisWarningLineType
+		AnalysisWarningLineType,
+		CollapsedFunctionEndLineType
 	} BNLinearDisassemblyLineType;
 
 	typedef enum BNTokenEscapingType
@@ -6218,7 +6222,8 @@ extern "C"
 	BINARYNINJACOREAPI BNExternalLocation* BNBinaryViewGetExternalLocation(BNBinaryView* view, BNSymbol* sourceSymbol);
 	BINARYNINJACOREAPI BNExternalLocation** BNBinaryViewGetExternalLocations(BNBinaryView* view, size_t* count);
 
-	BINARYNINJACOREAPI void BNBinaryViewToggleRegion(BNBinaryView* view, const char* id, uint64_t address);
+	BINARYNINJACOREAPI void BNBinaryViewToggleRegion(BNBinaryView* view, uint64_t hash);
+	BINARYNINJACOREAPI bool BNBinaryViewIsRegionCollapsed(BNBinaryView* view, uint64_t hash);
 
 	// Source code processing
 	BINARYNINJACOREAPI bool BNPreprocessSource(const char* source, const char* fileName, char** output, char** errors,

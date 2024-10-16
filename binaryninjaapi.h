@@ -6755,7 +6755,8 @@ namespace BinaryNinja {
 		void ClearUserGlobalPointerValue();
 		void SetUserGlobalPointerValue(const Confidence<RegisterValue>& value);
 
-		void ToggleRegion(const std::string& id, uint64_t address);
+		void ToggleRegion(uint64_t hash);
+		bool IsRegionCollapsed(uint64_t hash) const;
 	};
 
 	class MemoryMap

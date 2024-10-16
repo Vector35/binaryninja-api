@@ -388,6 +388,12 @@ namespace BinaryNinja
 
 		bool HasParent() const;
 		HighLevelILInstruction GetParent() const;
+		uint64_t GetInstructionHash(size_t discriminator = 0) const
+		{
+			return operation ^ address ^ discriminator;
+		}
+
+		bool IsInstructionCollapsed(size_t discriminator = 0) const;
 
 		template <BNHighLevelILOperation N>
 		HighLevelILInstructionAccessor<N>& As()
@@ -764,6 +770,7 @@ namespace BinaryNinja
 		size_t GetSourceMemoryVersion() const;
 		HighLevelILIndexList GetSourceMemoryVersions() const;
 		size_t GetDestMemoryVersion() const;
+		bool CanCollapse() const;
 	};
 
 	/*!

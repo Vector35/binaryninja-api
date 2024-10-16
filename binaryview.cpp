@@ -5316,9 +5316,15 @@ void BinaryView::SetUserGlobalPointerValue(const Confidence<RegisterValue>& valu
 }
 
 
-void BinaryView::ToggleRegion(const std::string& id, uint64_t address)
+void BinaryView::ToggleRegion(uint64_t hash)
 {
-	BNBinaryViewToggleRegion(m_object, id.c_str(), address);
+	BNBinaryViewToggleRegion(m_object, hash);
+}
+
+
+bool BinaryView::IsRegionCollapsed(uint64_t hash) const
+{
+	return BNBinaryViewIsRegionCollapsed(m_object, hash);
 }
 
 

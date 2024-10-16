@@ -1037,6 +1037,17 @@ HighLevelILInstruction HighLevelILInstructionBase::GetParent() const
 }
 
 
+bool HighLevelILInstructionBase::IsInstructionCollapsed(size_t discriminator) const
+{
+	if (!function)
+		return false;
+#ifdef BINARYNINJACORE_LIBRARY
+	return function->GetFunction()->GetData()->IsRegionCollapsed(GetInstructionHash(discriminator));
+#else
+	return function->GetFunction()->GetView()->IsRegionCollapsed(GetInstructionHash(discriminator));
+#endif
+}
+
 void HighLevelILInstruction::CollectSubExprs(stack<size_t>& toProcess) const
 {
 	vector<HighLevelILInstruction> exprs;
@@ -2479,6 +2490,25 @@ size_t HighLevelILInstruction::GetDestMemoryVersion() const
 	throw HighLevelILInstructionAccessException();
 }
 
+
+bool HighLevelILInstruction::CanCollapse() const
+{
+	switch (operation)
+	{
+		case HLIL_IF:
+		case HLIL_WHILE:
+		case HLIL_WHILE_SSA:
+		case HLIL_DO_WHILE:
+		case HLIL_DO_WHILE_SSA:
+		case HLIL_FOR:
+		case HLIL_FOR_SSA:
+		case HLIL_SWITCH:
+		case HLIL_CASE:
+			return true;
+		default:
+			return false;
+	}
+}
 
 ExprId HighLevelILFunction::Nop(const ILSourceLocation& loc)
 {

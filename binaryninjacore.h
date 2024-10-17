@@ -7708,6 +7708,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNFirmwareNinjaFreeSections(BNFirmwareNinjaSection *sections, int size);
 	BINARYNINJACOREAPI int BNFirmwareNinjaFindMMIOAccesses(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMMIOInfo*** mmio, BNProgressFunction progress, void* progressContext);
 	BINARYNINJACOREAPI void BNFirmwareNinjaFreeMMIOAccesses(BNFirmwareNinjaFunctionMMIOInfo **mmio, int size);
+	BINARYNINJACOREAPI void BNFirmwareNinjaSaveMMIOAccessesToMetadata(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMMIOInfo** mmio, int size);
+	BINARYNINJACOREAPI int BNFirmwareNinjaLoadMMIOAccessesFromMetadata(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMMIOInfo*** mmio);
 #ifdef __cplusplus
 }
 #endif

@@ -3392,6 +3392,13 @@ extern "C"
 		BNFirmwareNinjaMMIOAccess** accesses;
 	} BNFirmwareNinjaFunctionMMIOInfo;
 
+	typedef struct BNFirmwareNinjaDeviceAccesses
+	{
+		char* name;
+		size_t total;
+		size_t unique;
+	} BNFirmwareNinjaDeviceAccesses;
+
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
@@ -7710,6 +7717,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNFirmwareNinjaFreeMMIOAccesses(BNFirmwareNinjaFunctionMMIOInfo **mmio, int size);
 	BINARYNINJACOREAPI void BNFirmwareNinjaSaveMMIOAccessesToMetadata(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMMIOInfo** mmio, int size);
 	BINARYNINJACOREAPI int BNFirmwareNinjaLoadMMIOAccessesFromMetadata(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMMIOInfo*** mmio);
+	BINARYNINJACOREAPI int BNFirmwareNinjaGetBoardDeviceAccesses(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMMIOInfo** mmio, int size,
+		BNFirmwareNinjaDeviceAccesses** accesses, BNArchitecture* arch);
+	BINARYNINJACOREAPI void BNFirmwareNinjaFreeBoardDeviceAccesses(BNFirmwareNinjaDeviceAccesses *accesses, int size);
 #ifdef __cplusplus
 }
 #endif

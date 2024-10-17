@@ -7,7 +7,11 @@ file(GLOB SOURCES
 	*.c
 	*.h)
 
-add_library(${PROJECT_NAME} SHARED ${SOURCES})
+if(DEMO)
+	add_library(${PROJECT_NAME} STATIC ${SOURCES})
+else()
+	add_library(${PROJECT_NAME} SHARED ${SOURCES})
+endif()
 
 if(NOT BN_INTERNAL_BUILD)
     # Out-of-tree build

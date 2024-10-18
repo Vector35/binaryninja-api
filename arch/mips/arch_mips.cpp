@@ -21,7 +21,7 @@ using namespace std;
 
 uint32_t bswap32(uint32_t x)
 {
-	return	((x << 24) & 0xff000000 ) |
+	return ((x << 24) & 0xff000000 ) |
 		((x <<  8) & 0x00ff0000 ) |
 		((x >>  8) & 0x0000ff00 ) |
 		((x >> 24) & 0x000000ff );
@@ -29,7 +29,7 @@ uint32_t bswap32(uint32_t x)
 
 uint64_t bswap64(uint64_t x)
 {
-	return	((x << 56) & 0xff00000000000000UL) |
+	return ((x << 56) & 0xff00000000000000UL) |
 		((x << 40) & 0x00ff000000000000UL) |
 		((x << 24) & 0x0000ff0000000000UL) |
 		((x <<  8) & 0x000000ff00000000UL) |
@@ -2750,6 +2750,7 @@ private:
 		auto value = il->GetExprValue(tmp); // accept if Binja has resolved to a value
 		//if (value.state != ConstantValue) return false;
 		//uint64_t got_base = value.value;
+        //break;
 
 		// test instruction1
 		tmp = il->GetInstruction(1); // $t7 = $ra
@@ -2955,24 +2956,25 @@ public:
 		return true;
 	}
 
-
 	virtual bool ApplyRelocation(Ref<BinaryView> view, Ref<Architecture> arch, Ref<Relocation> reloc, uint8_t* dest, size_t len) override
 	{
 		if (len < 4)
 			return false;
-		// All ELF MIPS relocations are implicitAddend
+
 		auto info = reloc->GetInfo();
 		auto addr = reloc->GetAddress();
 		auto symbol = reloc->GetSymbol();
-		uint64_t target = reloc->GetTarget();
+		uint64_t target = reloc->GetTarget() + info.addend;
 
-		uint32_t* dest32 = (uint32_t*)dest;
+		int32_t gpAddr = 0;
 		uint64_t* dest64 = (uint64_t*)dest;
-		auto swap = [&arch](uint32_t x) { return (arch->GetEndianness() == LittleEndian)? x : bswap32(x); };
-		auto swap64 = [&arch](uint64_t x) { return (arch->GetEndianness() == LittleEndian)? x : bswap64(x); };
+		uint32_t* dest32 = (uint32_t*)dest;
+		auto swap = [&arch](uint32_t x) { return (arch->GetEndianness() == LittleEndian) ? x : bswap32(x); };
+		auto swap64 = [&arch](uint64_t x) { return (arch->GetEndianness() == LittleEndian) ? x : bswap64(x); };
 		uint32_t inst = swap(dest32[0]);
 		uint64_t inst64 = swap64(dest64[0]);
-		switch (info.nativeType)
+
+ 		switch (info.nativeType)
 		{
 		case R_MIPS_JUMP_SLOT:
 		case R_MIPS_COPY:
@@ -2987,67 +2989,41 @@ public:
 		case R_MIPS_64:
 			dest64[0] = swap64(inst64 + target);
 			break;
+		case R_MIPS_HIGHEST:
+		{
+			dest64[0] = swap64(inst64 & 0xffff0000ffffffff) | (((target + 0x800080008000) >> 16) & 0xffff00000000 );
+			break;
+		}
+		case R_MIPS_HIGHER:
+		{
+			dest64[0] = swap64(inst64 & 0xffff0000ffffffff) | (((target + 0x80008000)) & 0xffff00000000 );
+			break;
+		}
 		case R_MIPS_HI16:
 		{
-			// Find the first _LO16 in the list of relocations
-			BNRelocationInfo* cur = info.next;
-			while (cur && (cur->nativeType != R_MIPS_LO16))
-			{
-				cur = cur->next;
-			}
-
-			if (cur)
-			{
-				uint32_t inst2 = *(uint32_t*)(cur->relocationDataCache);
-				Instruction instruction;
-				memset(&instruction, 0, sizeof(instruction));
-				if (mips_decompose(&inst2, sizeof(uint32_t), &instruction, MIPS_32, cur->address, arch->GetEndianness(), DECOMPOSE_FLAGS_PSEUDO_OP))
-					break;
-
-				int32_t immediate = swap(inst2) & 0xffff;
-				// ADDIU and LW has a signed immediate we have to subtract
-				if (instruction.operation == MIPS_ADDIU)
-				{
-					immediate = instruction.operands[2].immediate;
-				}
-				else if (instruction.operation == MIPS_LW)
-				{
-					immediate = instruction.operands[1].immediate;
-				}
-				uint32_t ahl = ((inst & 0xffff) << 16) + immediate;
-
-				// ((AHL + S) – (short)(AHL + S)) >> 16
-				dest32[0] = swap((uint32_t)(
-					(inst & ~0xffff) |
-					(((ahl + target) - (short)(ahl + target)) >> 16)
-				));
-			}
-			else
-			{
-				LogError("No corresponding R_MIPS_LO16 relocation for R_MIPS_HI16 relocation");
-			}
-			break;
+			dest64[0] = swap64(inst64 & 0xffff0000ffffffff | (((target + 0x8000) << 16) & 0xffff00000000 ));
+		 	break;
 		}
 		case R_MIPS_LO16:
 		{
-			uint32_t ahl = ((inst & 0xffff) + target) & 0xffff;
-			dest32[0] = swap((inst & ~0xffff) | (ahl & 0xffff));
+			uint64_t ahl = (((inst64 & 0xffff00000000) >> 32) + target) & 0xffff;
+			dest64[0] = swap64((inst64 & 0xffff0000ffffffff) | ((ahl << 32) & 0xffff00000000) );
 			break;
 		}
 		case R_MIPS_26:
 		{
-			// ((A << 2) | (P & 0xf0000000) + S) >> 2
-			uint32_t A = (inst & ~0xfc000000) << 2;
-			uint32_t P = (uint32_t)addr;
-			uint32_t S = (uint32_t)target;
-			uint32_t realTarget = (A | (P & 0xf0000000)) + S;
-			dest32[0] = swap(((realTarget >> 2) & ~0xfc000000) | (inst & 0xfc000000));
+		 	// ((A << 2) | (P & 0xf0000000) + S) >> 2
+		 	uint32_t A = (inst & ~0xfc000000) << 2;
+		 	uint32_t P = (uint32_t)addr;
+		 	uint32_t S = (uint32_t)target;
+		 	uint32_t realTarget = (A | (P & 0xf0000000)) + S;
+		 	dest32[0] = swap(((realTarget >> 2) & ~0xfc000000) | (inst & 0xfc000000));
 			break;
 		}
 		case R_MIPS_GOT16:
+		case R_MIPS_GPREL16:
 		case R_MIPS_CALL16:
 		{
-			int32_t gpAddr;
 			if (!GetGpAddr(view, gpAddr))
 				break;
 			int32_t vRel16 = (int32_t)(target - gpAddr);
@@ -3058,12 +3034,28 @@ public:
 		{
 			uint32_t originalValue = inst;
 			uint64_t displacement = target;
-			dest32[0] = swap((uint32_t)(originalValue + displacement));
+			dest32[0] = swap((uint32_t)(originalValue + displacement));	
+			break;
+		}
+		case (R_MIPS_64 << 8) | R_MIPS_REL32:
+		{
+			uint64_t originalValue = inst64;
+			uint64_t displacement = target;
+			dest64[0] = swap64(originalValue + displacement);
+			break;
+		}
+		case R_MIPS_GPREL32:
+		{
+			if (!GetGpAddr(view, gpAddr))
+				break;
+			int32_t vRel32 = (int32_t)(target - gpAddr);
+			dest32[0] = swap(vRel32);
 			break;
 		}
 		default:
 			break;
 		}
+
 		return true;
 	}
 
@@ -3076,79 +3068,61 @@ public:
 			result[i].size = 4;
 			result[i].pcRelative = false;
 			result[i].dataRelocation = true;
-			switch (result[i].nativeType)
-			{
-			case R_MIPS_NONE:
-			case R_MIPS_JALR: // Note: optimization hint that can safely be ignored TODO: link-time mutable opcode bytes
-				result[i].type = IgnoredRelocation;
+    		switch (result[i].nativeType)
+    		{
+    		case R_MIPS_NONE:
+    		case R_MIPS_JALR: // Note: optimization hint that can safely be ignored TODO: link-time mutable opcode bytes
+    			result[i].type = IgnoredRelocation;
+    			break;
+    		case R_MIPS_COPY:
+    		case R_MIPS64_COPY:
+    			result[i].type = ELFCopyRelocationType;
+    			break;
+    		case R_MIPS_JUMP_SLOT:
+    			result[i].type = ELFJumpSlotRelocationType;
+    			break;
+    		case R_MIPS_HI16:
+    			result[i].dataRelocation = false;
+    			result[i].pcRelative = false;
+    			break;
+    		case R_MIPS_LO16:
+    			result[i].pcRelative = false;
+    			result[i].dataRelocation = false;
+    			break;
+    		case R_MIPS_26:
+    			result[i].pcRelative = true;
+    			result[i].dataRelocation = false;
+    			break;
+    		case R_MIPS_GOT16:
+			case R_MIPS_GPREL16:
+    		case R_MIPS_CALL16:
+			case R_MIPS_GPREL32:
+    		{
+    			// Note: GP addr not avaiable pre-view-finalization, however symbol may exist
+    			int32_t gpAddr;
+    			if (!GetGpAddr(view, gpAddr))
+    			{
+    				result[i].type = UnhandledRelocation;
+    				LogWarn("Unsupported relocation type: %s : Unable to locate _gp symbol.", GetRelocationString((ElfMipsRelocationType)result[i].nativeType));
+    			}
+    			break;
+    		}
+    		case R_MIPS_32:
+    		case R_MIPS_64:
+    			break;
+			case (R_MIPS_64 << 8) | R_MIPS_REL32:
+    		case R_MIPS_REL32:
+                break;
+			case R_MIPS_HIGHER:
+			case R_MIPS_HIGHEST:
 				break;
-			case R_MIPS_COPY:
-			case R_MIPS64_COPY:
-				result[i].type = ELFCopyRelocationType;
-				break;
-			case R_MIPS_JUMP_SLOT:
-				result[i].type = ELFJumpSlotRelocationType;
-				break;
-			case R_MIPS_HI16:
-			{
-				result[i].dataRelocation = false;
-				result[i].pcRelative = false;
-				// MIPS_HI16 relocations can have multiple MIPS_LO16 relocations following them
-				for (size_t j = i + 1; j < result.size(); j++)
-				{
-					if (result[j].nativeType == R_MIPS_LO16 && result[j].symbolIndex == result[i].symbolIndex)
-					{
-						result[j].type = StandardRelocationType;
-						result[j].size = 4;
-						result[j].pcRelative = false;
-						result[j].dataRelocation = false;
-						result[i].next = new BNRelocationInfo(result[j]);
-						break;
-					}
-				}
-				break;
-			}
-			case R_MIPS_LO16:
-				result[i].pcRelative = false;
-				result[i].dataRelocation = false;
-				break;
-			case R_MIPS_26:
-				result[i].pcRelative = true;
-				result[i].dataRelocation = false;
-				break;
-			case R_MIPS_GOT16:
-			case R_MIPS_CALL16:
-			{
-				// Note: GP addr not avaiable pre-view-finalization, however symbol may exist
-				int32_t gpAddr;
-				if (!GetGpAddr(view, gpAddr))
-				{
-					result[i].type = UnhandledRelocation;
-					LogWarn("Unsupported relocation type: %s : Unable to locate _gp symbol.", GetRelocationString((ElfMipsRelocationType)result[i].nativeType));
-				}
-				break;
-			}
-			case R_MIPS_32:
-			case R_MIPS_64:
-				break;
-
-			case R_MIPS_REL32:
-				/* elfview delivers relocs on a symbol's GOT entry with symbolIndex populated */
-				if (result[i].symbolIndex)
-				{
-					/* UNSUPPORTED! need a binary with R_MIPS_REL32 on GOT entry to test */
-					while(0);
-				}
-				else
-				{
-					break;
-				}
-			default:
-				result[i].type = UnhandledRelocation;
-				LogWarn("Unsupported relocation type: %llu (%s) @0x%llX", result[i].nativeType,
-					GetRelocationString((ElfMipsRelocationType)result[i].nativeType), result[i].address);
-			}
+    		default:
+    			result[i].type = UnhandledRelocation;
+    			LogWarn("Unsupported relocation type: %llu (%s) @0x%llX", result[i].nativeType,
+    				GetRelocationString((ElfMipsRelocationType)result[i].nativeType), result[i].address);
+    		}
 		}
+
 		return true;
 	}
 

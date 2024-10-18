@@ -2250,7 +2250,7 @@ bool ElfView::Init()
 		}
 	}
 
-	if (m_relocSection.size)
+	if (m_relocSection.size && m_relocSection.entrySize > 0)
 	{
 		StructureBuilder relocationTableBuilder;
 		if (m_elf32)
@@ -2274,7 +2274,7 @@ bool ElfView::Init()
 		DefineAutoSymbol(new Symbol(DataSymbol, "__elf_rel_table", m_relocSection.offset, NoBinding));
 	}
 
-	if (m_relocaSection.size)
+	if (m_relocaSection.size && m_relocaSection.entrySize > 0)
 	{
 		StructureBuilder relocationATableBuilder;
 		if (m_elf32)

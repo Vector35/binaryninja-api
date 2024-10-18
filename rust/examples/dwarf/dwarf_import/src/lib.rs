@@ -48,6 +48,56 @@ trait ReaderType: Reader<Offset = usize> {}
 impl<T: Reader<Offset = usize>> ReaderType for T {}
 
 
+pub(crate) fn split_progress<'b, F: Fn(usize, usize) -> Result<(), ()> + 'b>(
+    original_fn: F,
+    subpart: usize,
+    subpart_weights: &[f64],
+) -> Box<dyn Fn(usize, usize) -> Result<(), ()> + 'b> {
+    // Normalize weights
+    let weight_sum: f64 = subpart_weights.iter().sum();
+    if weight_sum < 0.0001 {
+        return Box::new(|_, _| Ok(()));
+    }
+
+    // Keep a running count of weights for the start
+    let mut subpart_starts = vec![];
+    let mut start = 0f64;
+    for w in subpart_weights {
+        subpart_starts.push(start);
+        start += *w;
+    }
+
+    let subpart_start = subpart_starts[subpart] / weight_sum;
+    let weight = subpart_weights[subpart] / weight_sum;
+
+    Box::new(move |cur: usize, max: usize| {
+        // Just use a large number for easy divisibility
+        let steps = 1000000f64;
+        let subpart_size = steps * weight;
+        let subpart_progress = ((cur as f64) / (max as f64)) * subpart_size;
+
+        original_fn(
+            (subpart_start * steps + subpart_progress) as usize,
+            steps as usize,
+        )
+    })
+}
+
+
+fn calculate_total_unit_bytes<R: ReaderType>(
+    dwarf: &Dwarf<R>,
+    debug_info_builder_context: &mut DebugInfoBuilderContext<R>,
+)
+{
+    let mut iter = dwarf.units();
+    let mut total_size: usize = 0;
+    while let (Ok(Some(header))) = iter.next()
+    {
+        total_size += header.length_including_self();
+    }
+    debug_info_builder_context.total_unit_size_bytes = total_size;
+}
+
 fn recover_names<R: ReaderType>(
     dwarf: &Dwarf<R>,
     debug_info_builder_context: &mut DebugInfoBuilderContext<R>,
@@ -71,7 +121,9 @@ fn recover_names_internal<R: ReaderType>(
     progress: &dyn Fn(usize, usize) -> Result<(), ()>,
 ) -> bool {
     let mut iter = dwarf.units();
+    let mut current_byte_offset: usize = 0;
     while let Ok(Some(header)) = iter.next() {
+        let unit_offset = header.offset().as_debug_info_offset().unwrap().0;
         let unit = dwarf.unit(header).unwrap();
         let mut namespace_qualifiers: Vec<(isize, String)> = vec![];
         let mut entries = unit.entries();
@@ -86,9 +138,10 @@ fn recover_names_internal<R: ReaderType>(
         while let Ok(Some((delta_depth, entry))) = entries.next_dfs() {
             debug_info_builder_context.total_die_count += 1;
 
-            if (*progress)(0, debug_info_builder_context.total_die_count).is_err() {
+            if (*progress)(current_byte_offset, debug_info_builder_context.total_unit_size_bytes).is_err() {
                 return false; // Parsing canceled
             };
+            current_byte_offset = unit_offset + entry.offset().0;
 
             depth += delta_depth;
             if depth < 0 {
@@ -487,7 +540,13 @@ fn parse_dwarf(
     debug_info_builder.set_range_data_offsets(range_data_offsets);
 
     if let Some(mut debug_info_builder_context) = DebugInfoBuilderContext::new(view, &dwarf) {
-        if !recover_names(&dwarf, &mut debug_info_builder_context, &progress)
+        calculate_total_unit_bytes(&dwarf, &mut debug_info_builder_context);
+
+        let progress_weights = [0.5, 0.5];
+        let name_progress = split_progress(&progress, 0, &progress_weights);
+        let parse_progress = split_progress(&progress, 1, &progress_weights);
+
+        if !recover_names(&dwarf, &mut debug_info_builder_context, &name_progress)
             || debug_info_builder_context.total_die_count == 0
         {
             return Ok(debug_info_builder);
@@ -502,7 +561,7 @@ fn parse_dwarf(
                 &unit,
                 &debug_info_builder_context,
                 &mut debug_info_builder,
-                &progress,
+                &parse_progress,
                 &mut current_die_number,
             );
         }
@@ -513,7 +572,7 @@ fn parse_dwarf(
                 &unit,
                 &debug_info_builder_context,
                 &mut debug_info_builder,
-                &progress,
+                &parse_progress,
                 &mut current_die_number,
             );
         }

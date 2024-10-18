@@ -118,6 +118,7 @@ pub(crate) struct DebugInfoBuilderContext<R: ReaderType> {
     names: HashMap<TypeUID, String>,
     default_address_size: usize,
     pub(crate) total_die_count: usize,
+    pub(crate) total_unit_size_bytes: usize,
 }
 
 impl<R: ReaderType> DebugInfoBuilderContext<R> {
@@ -153,6 +154,7 @@ impl<R: ReaderType> DebugInfoBuilderContext<R> {
             names: HashMap::new(),
             default_address_size: view.address_size(),
             total_die_count: 0,
+            total_unit_size_bytes: 0,
         })
     }
 

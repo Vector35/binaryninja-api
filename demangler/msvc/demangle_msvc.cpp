@@ -115,7 +115,7 @@ string Demangle::BackrefList::GetStringBackref(size_t reference)
 	// LogDebug("type: %llx - ref: %d\n", this, reference);
 	if (reference < nameList.size())
 		return nameList[reference];
-	LogDebug("type: %llx - Backref too large: %d/%d\n", this, nameList.size(), reference);
+	LogDebug("type: %p - Backref too large: %zu/%zu\n", this, nameList.size(), reference);
 	throw DemangleException(string("Backref too large " + std::to_string(reference)));
 }
 
@@ -132,7 +132,7 @@ void Demangle::BackrefList::PushStringBackref(string& s)
 {
 	if (s.size() > MAX_DEMANGLE_LENGTH)
 		throw DemangleException();
-	LogDebug("this: %llx - Backref: %lld - %s\n", this, nameList.size(), s.c_str());
+	LogDebug("this: %p - Backref: %zu - %s\n", this, nameList.size(), s.c_str());
 	for (const auto& name : nameList)
 		if (name == s)
 			return;

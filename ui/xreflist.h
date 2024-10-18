@@ -651,6 +651,7 @@ class BINARYNINJAUIAPI CrossReferenceWidget : public SidebarWidget, public UICon
 	virtual void startHoverTimer(QMouseEvent* e);
 	virtual void keyPressEvent(QKeyEvent* e) override;
 	virtual bool keyPressHandler(QKeyEvent* e);
+	void showEvent(QShowEvent* event) override;
 	void useTableView(bool tableView, bool init, bool updateSetting);
 	bool tableView() const { return m_useTableView; }
 	bool uiMaxItemsExceeded() const { return m_uiMaxItemsExceeded; }

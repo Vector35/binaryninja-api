@@ -620,6 +620,25 @@ pub trait BinaryViewExt: BinaryViewBase {
         QualifiedName(name_handle)
     }
 
+    fn define_auto_type_with_id<S: BnStrCompatible>(
+        &self,
+        name: S,
+        id: S,
+        type_obj: &Type,
+    ) -> QualifiedName {
+        let mut qualified_name = QualifiedName::from(name);
+        let id_str = id.into_bytes_with_nul();
+        let name_handle = unsafe {
+            BNDefineAnalysisType(
+                self.as_ref().handle,
+                id_str.as_ref().as_ptr() as *const _,
+                &mut qualified_name.0,
+                type_obj.handle,
+            )
+        };
+        QualifiedName(name_handle)
+    }
+
     fn define_user_type<S: BnStrCompatible>(&self, name: S, type_obj: &Type) {
         let mut qualified_name = QualifiedName::from(name);
         unsafe {

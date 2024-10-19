@@ -960,7 +960,9 @@ extern "C"
 		FlowGraphIncludesUserComments,
 		FlowGraphAllowsPatching,
 		FlowGraphAllowsInlineInstructionEditing,
-		FlowGraphShowsSecondaryRegisterHighlighting
+		FlowGraphShowsSecondaryRegisterHighlighting,
+		FlowGraphIsAddressable,
+		FlowGraphIsWorkflowGraph
 	} BNFlowGraphOption;
 
 	typedef enum BNILInstructionAttribute

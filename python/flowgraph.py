@@ -770,6 +770,24 @@ class FlowGraph:
 	def shows_secondary_reg_highlighting(self, value):
 		self.set_option(FlowGraphOption.FlowGraphShowsSecondaryRegisterHighlighting, value)
 
+	@property
+	def is_addressable(self):
+		"""Set if flow graph should make use of address information"""
+		return self.is_option_set(FlowGraphOption.FlowGraphIsAddressable)
+
+	@is_addressable.setter
+	def is_addressable(self, value):
+		self.set_option(FlowGraphOption.FlowGraphIsAddressable, value)
+
+	@property
+	def is_workflow_graph(self):
+		"""Set if flow graph should be treated as a workflow graph"""
+		return self.is_option_set(FlowGraphOption.FlowGraphIsWorkflowGraph)
+
+	@is_workflow_graph.setter
+	def is_workflow_graph(self, value):
+		self.set_option(FlowGraphOption.FlowGraphIsWorkflowGraph, value)
+
 	def layout(self, callback=None):
 		"""
 		``layout`` starts rendering a graph for display. Once a layout is complete, each node will contain

@@ -11401,6 +11401,8 @@ namespace BinaryNinja {
 		*/
 		void Show(const std::string& title);
 
+		bool IsQueryModeEnabled() const { return m_queryMode; }
+
 		virtual bool HasUpdates() const;
 
 		virtual Ref<FlowGraph> Update();

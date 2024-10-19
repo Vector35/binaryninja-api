@@ -1610,6 +1610,14 @@ pub trait ArchitectureExt: Architecture {
         }
     }
 
+    fn calling_conventions(&self) -> Array<CallingConvention<Self>> {
+        unsafe {
+            let mut count = 0;
+            let calling_convs = BNGetArchitectureCallingConventions(self.as_ref().0, &mut count);
+            Array::new(calling_convs, count, self.handle())
+        }
+    }
+
     cc_func!(
         get_default_calling_convention,
         BNGetArchitectureDefaultCallingConvention,

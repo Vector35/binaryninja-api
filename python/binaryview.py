@@ -223,7 +223,7 @@ class BinaryDataNotification:
 	with a `BinaryView` using the `register_notification` method.
 
 	By default, a `BinaryDataNotification` instance receives notifications for all available notification types. It
-	is recommended for users of this interface to initialize the `BinaryDataNotification` base class with with specific
+	is recommended for users of this interface to initialize the `BinaryDataNotification` base class with specific
 	callbacks of interest by passing the appropriate `NotificationType` flags into the `__init__` constructor.
 
 	Handlers provided by the user should aim to limit the amount of processing within the callback. The
@@ -293,9 +293,15 @@ class BinaryDataNotification:
 		pass
 
 	def function_added(self, view: 'BinaryView', func: '_function.Function') -> None:
+		"""
+		.. note:: `function_updated` will be triggered instead when a user function is added over an auto function.
+		"""
 		pass
 
 	def function_removed(self, view: 'BinaryView', func: '_function.Function') -> None:
+		"""
+		.. note:: `function_updated` will be triggered instead when a user function is removed over an auto function.
+		"""
 		pass
 
 	def function_updated(self, view: 'BinaryView', func: '_function.Function') -> None:
@@ -305,9 +311,15 @@ class BinaryDataNotification:
 		pass
 
 	def data_var_added(self, view: 'BinaryView', var: 'DataVariable') -> None:
+		"""
+		.. note:: `data_var_updated` will be triggered instead when a user data variable is added over an auto data variable.
+		"""
 		pass
 
 	def data_var_removed(self, view: 'BinaryView', var: 'DataVariable') -> None:
+		"""
+		.. note:: `data_var_updated` will be triggered instead when a user data variable is removed over an auto data variable.
+		"""
 		pass
 
 	def data_var_updated(self, view: 'BinaryView', var: 'DataVariable') -> None:

@@ -42,6 +42,8 @@ pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
 
 use std::{fmt, mem};
 use std::{ffi::c_char, hash::Hash, ops::Range};
+use std::ptr::NonNull;
+use crate::workflow::Workflow;
 
 pub struct Location {
     pub arch: Option<CoreArchitecture>,
@@ -160,6 +162,13 @@ impl Function {
         unsafe {
             let sym = BNGetFunctionSymbol(self.handle);
             Symbol::ref_from_raw(sym)
+        }
+    }
+
+    pub fn workflow(&self) -> Option<Ref<Workflow>> {
+        unsafe {
+            let workflow = NonNull::new(BNGetWorkflowForFunction(self.handle))?;
+            Some(Workflow::ref_from_raw(workflow))
         }
     }
 

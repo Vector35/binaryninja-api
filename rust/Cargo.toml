@@ -38,6 +38,7 @@ members = [
     "examples/pdb-ng/demo",
     "examples/template",
     "examples/test_demangler",
+	"examples/workflow"
 ]
 
 [profile.release]

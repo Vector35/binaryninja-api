@@ -48,13 +48,13 @@ struct BINARYNINJAUIAPI LogListItem
 {
 	size_t sessionId;
 	BNLogLevel level;
-	std::string text;
+	QString text;
 	LogTokenList tokens;
 	bool selected;
-	std::string logger;
+	QString logger;
 	size_t threadId{0};
 
-	LogListItem(size_t sessionId, BNLogLevel level, std::string text, const std::string& logger_name = "", size_t tid = 0);
+	LogListItem(size_t sessionId, BNLogLevel level, const QString& text, const QString& logger_name = QString(), size_t tid = 0);
 };
 
 /*!

@@ -20,8 +20,8 @@ use crate::types::get_type;
 
 use binaryninja::templatesimplifier::simplify_str_to_str;
 use cpp_demangle::DemangleOptions;
-use gimli::{constants, DebuggingInformationEntry, Dwarf, Unit};
-use log::debug;
+use gimli::{constants, AttributeValue, DebuggingInformationEntry, Dwarf, Operation, Unit};
+use log::{debug, error};
 use regex::Regex;
 
 fn get_parameters<R: ReaderType>(
@@ -126,5 +126,79 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
         return None;
     }
 
-    debug_info_builder.insert_function(full_name, raw_name, return_type, address, &parameters, variable_arguments)
+    let use_cfa;
+    if let Ok(Some(AttributeValue::Exprloc(mut expression))) = entry.attr_value(constants::DW_AT_frame_base) {
+        use_cfa = match Operation::parse(&mut expression.0, unit.encoding()) {
+            Ok(Operation::Register { register: _ }) => false, // TODO: handle register-relative encodings later
+            Ok(Operation::CallFrameCFA) => true,
+            _ => false
+        };
+    }
+    else {
+        use_cfa = false;
+    }
+
+    debug_info_builder.insert_function(full_name, raw_name, return_type, address, &parameters, variable_arguments, use_cfa)
+}
+
+
+pub(crate) fn parse_lexical_block<R: ReaderType>(
+    dwarf: &Dwarf<R>,
+    unit: &Unit<R>,
+    entry: &DebuggingInformationEntry<R>,
+) -> Option<iset::IntervalSet<u64>> {
+    // Return lexical block ranges
+    // Must have either DW_AT_ranges or DW_AT_low_pc and DW_AT_high_pc
+    let mut result = iset::IntervalSet::new();
+    if let Ok(Some(attr_value)) = entry.attr_value(constants::DW_AT_ranges) {
+        if let Ok(Some(ranges_offset)) = dwarf.attr_ranges_offset(unit, attr_value)
+        {
+            if let Ok(mut ranges) = dwarf.ranges(unit, ranges_offset)
+            {
+                while let Ok(Some(range)) = ranges.next() {
+                    // Ranges where start == end may be ignored (DWARFv5 spec, 2.17.3 line 17)
+                    if range.begin == range.end {
+                        continue
+                    }
+                    result.insert(range.begin..range.end);
+                }
+            }
+        }
+    }
+    else if let Ok(Some(low_pc_value)) = entry.attr_value(constants::DW_AT_low_pc) {
+        let Ok(Some(low_pc)) = dwarf.attr_address(unit, low_pc_value.clone()) else {
+            let unit_base: usize = unit.header.offset().as_debug_info_offset().unwrap().0;
+            error!("Failed to read lexical block low_pc for entry {:#x}, please report this bug.", unit_base + entry.offset().0);
+            return None;
+        };
+
+        let Ok(Some(high_pc_value)) = entry.attr_value(constants::DW_AT_high_pc) else {
+            let unit_base: usize = unit.header.offset().as_debug_info_offset().unwrap().0;
+            error!("Failed to read lexical block high_pc attribute for entry {:#x}, please report this bug.", unit_base + entry.offset().0);
+            return None;
+        };
+
+        let Some(high_pc) = high_pc_value
+            .udata_value()
+            .and_then(|x| Some(low_pc + x))
+            .or_else(|| dwarf.attr_address(unit, high_pc_value).unwrap_or(None))
+        else {
+            let unit_base: usize = unit.header.offset().as_debug_info_offset().unwrap().0;
+            error!("Failed to read lexical block high_pc for entry {:#x}, please report this bug.", unit_base + entry.offset().0);
+            return None;
+        };
+
+        if low_pc < high_pc {
+            result.insert(low_pc..high_pc);
+        }
+        else {
+            error!("Invalid lexical block range: {:#x} -> {:#x}", low_pc, high_pc);
+        }
+    }
+    else {
+        // If neither case is hit the lexical block doesn't define any ranges and we should ignore it
+        return None;
+    }
+
+    Some(result)
 }

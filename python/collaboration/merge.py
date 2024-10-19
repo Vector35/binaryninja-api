@@ -220,10 +220,10 @@ class ConflictHandler:
 	"""
 	Helper class that resolves conflicts
 	"""
-	def _handle(self, ctxt: ctypes.c_void_p, keys: ctypes.POINTER(ctypes.c_char_p), conflicts: ctypes.POINTER(core.BNAnalysisMergeConflictHandle), count: ctypes.c_ulonglong) -> bool:
+	def _handle(self, ctxt: ctypes.c_void_p, keys: ctypes.POINTER(ctypes.c_char_p), conflicts: ctypes.POINTER(core.BNAnalysisMergeConflictHandle), count: int) -> bool:
 		try:
 			py_conflicts = {}
-			for i in range(count.value):
+			for i in range(count):
 				py_conflicts[core.pyNativeStr(keys[i])] = MergeConflict(handle=conflicts[i])
 			return self.handle(py_conflicts)
 		except:

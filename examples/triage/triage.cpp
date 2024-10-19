@@ -8,7 +8,7 @@ extern "C"
 {
 	BN_DECLARE_UI_ABI_VERSION
 
-#ifdef DEMO_VERSION
+#ifdef DEMO_EDITION
 	bool TriagePluginInit()
 #else
 	BINARYNINJAPLUGIN bool UIPluginInit()

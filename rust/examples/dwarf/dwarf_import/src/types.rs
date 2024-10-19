@@ -34,6 +34,7 @@ pub(crate) fn parse_variable<R: ReaderType>(
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
     function_index: Option<usize>,
+    lexical_block: Option<&iset::IntervalSet<u64>>,
 ) {
     let full_name = debug_info_builder_context.get_name(dwarf, unit, entry);
     let type_uid = get_type(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
@@ -48,7 +49,7 @@ pub(crate) fn parse_variable<R: ReaderType>(
 
     match Operation::parse(&mut expression.0, unit.encoding()) {
         Ok(Operation::FrameOffset { offset }) => {
-            debug_info_builder.add_stack_variable(function_index, offset, full_name, type_uid);
+            debug_info_builder.add_stack_variable(function_index, offset, full_name, type_uid, lexical_block);
         },
         //Ok(Operation::RegisterOffset { register: _, offset: _, base_type: _ }) => {
         //    //TODO: look up register by index (binja register indexes don't match processor indexes?)
@@ -266,6 +267,29 @@ pub(crate) fn get_type<R: ReaderType>(
             }
             DieReference::Err => {
                 warn!("Failed to fetch DIE when getting type through DW_AT_type. Debug information may be incomplete.");
+                None
+            }
+        }
+    } else if let Some(die_reference) = get_attr_die(
+        dwarf,
+        unit,
+        entry,
+        debug_info_builder_context,
+        constants::DW_AT_abstract_origin,
+    ) {
+        // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
+        match die_reference {
+            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
+                get_type(
+                    dwarf,
+                    entry_unit,
+                    &entry_unit.entry(entry_offset).unwrap(),
+                    debug_info_builder_context,
+                    debug_info_builder,
+                )
+            }
+            DieReference::Err => {
+                warn!("Failed to fetch DIE when getting type through DW_AT_abstract_origin. Debug information may be incomplete.");
                 None
             }
         }

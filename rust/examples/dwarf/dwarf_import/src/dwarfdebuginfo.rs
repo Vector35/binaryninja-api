@@ -26,10 +26,11 @@ use binaryninja::{
 
 use gimli::{DebuggingInformationEntry, Dwarf, Unit};
 
+use indexmap::{map::Values, IndexMap};
 use log::{debug, error, warn};
 use std::{
     cmp::Ordering,
-    collections::{hash_map::Values, HashMap},
+    collections::HashMap,
     hash::Hash,
 };
 
@@ -49,6 +50,7 @@ pub(crate) struct FunctionInfoBuilder {
     pub(crate) platform: Option<Ref<Platform>>,
     pub(crate) variable_arguments: bool,
     pub(crate) stack_variables: Vec<NamedTypedVariable>,
+    pub(crate) use_cfa: bool, //TODO actually store more info about the frame base
 }
 
 impl FunctionInfoBuilder {
@@ -116,6 +118,7 @@ pub(crate) struct DebugInfoBuilderContext<R: ReaderType> {
     names: HashMap<TypeUID, String>,
     default_address_size: usize,
     pub(crate) total_die_count: usize,
+    pub(crate) total_unit_size_bytes: usize,
 }
 
 impl<R: ReaderType> DebugInfoBuilderContext<R> {
@@ -151,6 +154,7 @@ impl<R: ReaderType> DebugInfoBuilderContext<R> {
             names: HashMap::new(),
             default_address_size: view.address_size(),
             total_die_count: 0,
+            total_unit_size_bytes: 0,
         })
     }
 
@@ -198,7 +202,7 @@ pub(crate) struct DebugInfoBuilder {
     functions: Vec<FunctionInfoBuilder>,
     raw_function_name_indices: HashMap<String, usize>,
     full_function_name_indices: HashMap<String, usize>,
-    types: HashMap<TypeUID, DebugType>,
+    types: IndexMap<TypeUID, DebugType>,
     data_variables: HashMap<u64, (Option<String>, TypeUID)>,
     range_data_offsets: iset::IntervalMap<u64, i64>
 }
@@ -209,7 +213,7 @@ impl DebugInfoBuilder {
             functions: vec![],
             raw_function_name_indices: HashMap::new(),
             full_function_name_indices: HashMap::new(),
-            types: HashMap::new(),
+            types: IndexMap::new(),
             data_variables: HashMap::new(),
             range_data_offsets: iset::IntervalMap::new(),
         }
@@ -228,6 +232,7 @@ impl DebugInfoBuilder {
         address: Option<u64>,
         parameters: &Vec<Option<(String, TypeUID)>>,
         variable_arguments: bool,
+        use_cfa: bool,
     ) -> Option<usize> {
         // Returns the index of the function
         // Raw names should be the primary key, but if they don't exist, use the full name
@@ -295,6 +300,7 @@ impl DebugInfoBuilder {
             platform: None,
             variable_arguments,
             stack_variables: vec![],
+            use_cfa,
         };
 
         if let Some(n) = &function.full_name {
@@ -313,6 +319,7 @@ impl DebugInfoBuilder {
         &self.functions
     }
 
+    #[allow(dead_code)]
     pub(crate) fn types(&self) -> Values<'_, TypeUID, DebugType> {
         self.types.values()
     }
@@ -342,7 +349,7 @@ impl DebugInfoBuilder {
     }
 
     pub(crate) fn remove_type(&mut self, type_uid: TypeUID) {
-        self.types.remove(&type_uid);
+        self.types.swap_remove(&type_uid);
     }
 
     pub(crate) fn get_type(&self, type_uid: TypeUID) -> Option<&DebugType> {
@@ -360,6 +367,7 @@ impl DebugInfoBuilder {
         offset: i64,
         name: Option<String>,
         type_uid: Option<TypeUID>,
+        lexical_block: Option<&iset::IntervalSet<u64>>,
     ) {
         let name = match name {
             Some(x) => {
@@ -398,17 +406,39 @@ impl DebugInfoBuilder {
             return;
         };
 
-        let Some(offset_adjustment) = self.range_data_offsets.values_overlap(func_addr).next() else {
+        let adjusted_offset;
+        let Some(adjustment_at_variable_lifetime_start) = lexical_block.and_then(|block_ranges| {
+            block_ranges
+            .unsorted_iter()
+            .find_map(|x| self.range_data_offsets.values_overlap(x.start).next())
+        }).or_else(|| {
+            self.range_data_offsets.values_overlap(func_addr).next()
+        }) else {
             // Unknown why, but this is happening with MachO + external dSYM
             debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CIE offset.", name, offset, func_addr);
             return;
         };
 
-        let adjusted_offset = offset - offset_adjustment;
+        // TODO: handle non-sp frame bases
+        // TODO: if not in a lexical block these can be wrong, see https://github.com/Vector35/binaryninja-api/issues/5882#issuecomment-2406065057
+        if function.use_cfa {
+            // Apply CFA offset to variable storage offset if DW_AT_frame_base is frame base is CFA
+            adjusted_offset = offset + adjustment_at_variable_lifetime_start;
+        }
+        else {
+            // If it's using SP, we know the SP offset is <SP offset> + (<entry SP CFA offset> - <SP CFA offset>)
+            let Some(adjustment_at_entry) = self.range_data_offsets.values_overlap(func_addr).next() else {
+                // Unknown why, but this is happening with MachO + external dSYM
+                debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CIE offset for function start.", name, offset, func_addr);
+                return;
+            };
+
+            adjusted_offset = offset + (adjustment_at_entry - adjustment_at_variable_lifetime_start);
+        }
 
         if adjusted_offset > 0 {
             // If we somehow end up with a positive sp offset
-            error!("Trying to add a local variable at positive storage offset {}. Please report this issue.", adjusted_offset);
+            error!("Trying to add a local variable \"{}\" in function at {:#x} at positive storage offset {}. Please report this issue.", name, func_addr, adjusted_offset);
             return;
         }
 
@@ -440,11 +470,59 @@ impl DebugInfoBuilder {
     }
 
     fn commit_types(&self, debug_info: &mut DebugInfo) {
-        for debug_type in self.types() {
-            if debug_type.commit {
-                debug_info.add_type(debug_type.name.clone(), debug_type.t.as_ref(), &[]);
-                // TODO : Components
+        let mut type_uids_by_name: HashMap<String, TypeUID> = HashMap::new();
+
+        for (debug_type_uid, debug_type) in self.types.iter() {
+            if !debug_type.commit {
+                continue;
             }
+
+            let mut debug_type_name = debug_type.name.clone();
+
+            // Prevent storing two types with the same name and differing definitions
+            if let Some(stored_uid) = type_uids_by_name.get(&debug_type_name) {
+                let Some(stored_debug_type) = self.types.get(stored_uid) else {
+                    error!("Stored type name without storing a type! Please report this error. UID: {}, name: {}", stored_uid, debug_type_name);
+                    continue;
+                };
+
+                let mut skip_adding_type = false;
+                if stored_debug_type.t != debug_type.t {
+                    // We already stored a type with this name and it's a different type, deconflict the name and try again
+                    let mut i = 1;
+                    loop {
+                        if let Some(stored_uid) = type_uids_by_name.get(&debug_type_name) {
+                            if debug_type_uid == stored_uid {
+                                // We already have a type with this name but it's the same type so we're ok
+                                skip_adding_type = true;
+                                break;
+                            }
+                            if let Some(stored_debug_type) = self.types.get(stored_uid) {
+                                if stored_debug_type.t == debug_type.t {
+                                    // We already have a type with this name but it's the same type so we're ok
+                                    skip_adding_type = true;
+                                    break;
+                                }
+                            }
+
+                            debug_type_name = format!("{}_{}", debug_type.name, i);
+                            i += 1;
+                        }
+                        else {
+                            // We found a unique name
+                            break;
+                        }
+                    }
+                }
+
+                if skip_adding_type {
+                    continue;
+                }
+            };
+
+            type_uids_by_name.insert(debug_type_name.clone(), *debug_type_uid);
+            debug_info.add_type(debug_type_name, debug_type.t.as_ref(), &[]);
+            // TODO : Components
         }
     }
 
@@ -533,15 +611,17 @@ impl DebugInfoBuilder {
             }
 
             if let Some(address) = func.address.as_mut() {
-                let diff = bv.start() - bv.original_image_base();
-                *address += diff;  // rebase the address
-                let existing_functions = bv.functions_at(*address);
-                match existing_functions.len().cmp(&1) {
-                    Ordering::Greater => {
-                        warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");
+                let (diff, overflowed) = bv.start().overflowing_sub(bv.original_image_base());
+                if !overflowed {
+                    *address = (*address).overflowing_add(diff).0;  // rebase the address
+                    let existing_functions = bv.functions_at(*address);
+                    match existing_functions.len().cmp(&1) {
+                        Ordering::Greater => {
+                            warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");
+                        }
+                        Ordering::Equal => func.platform = Some(existing_functions.get(0).platform()),
+                        Ordering::Less => {}
                     }
-                    Ordering::Equal => func.platform = Some(existing_functions.get(0).platform()),
-                    Ordering::Less => {}
                 }
             }
         }

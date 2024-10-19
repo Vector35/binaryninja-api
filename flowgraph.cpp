@@ -275,9 +275,21 @@ int FlowGraph::GetWidth() const
 }
 
 
+void FlowGraph::SetWidth(int width)
+{
+	BNFlowGraphSetWidth(m_object, width);
+}
+
+
 int FlowGraph::GetHeight() const
 {
 	return BNGetFlowGraphHeight(m_object);
+}
+
+
+void FlowGraph::SetHeight(int height)
+{
+	BNFlowGraphSetHeight(m_object, height);
 }
 
 

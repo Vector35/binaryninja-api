@@ -452,7 +452,7 @@ bool CustomDebugInfoParser::IsValidCallback(void* ctxt, BNBinaryView* view)
 
 
 bool CustomDebugInfoParser::ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view,
-	BNBinaryView* debugFile, bool (*progress)(void*, size_t, size_t), void* progressCtxt)
+	BNBinaryView* debugFile, BNProgressFunction progress, void* progressCtxt)
 {
 	CustomDebugInfoParser* parser = (CustomDebugInfoParser*)ctxt;
 	return parser->ParseInfo(new DebugInfo(debugInfo), new BinaryView(view), new BinaryView(debugFile),

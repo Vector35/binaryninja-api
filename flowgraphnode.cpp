@@ -66,6 +66,18 @@ void FlowGraphNode::SetBasicBlock(BasicBlock* block)
 }
 
 
+void FlowGraphNode::SetX(int x)
+{
+	BNFlowGraphNodeSetX(m_object, x);
+}
+
+
+void FlowGraphNode::SetY(int y)
+{
+	BNFlowGraphNodeSetY(m_object, y);
+}
+
+
 int FlowGraphNode::GetX() const
 {
 	return BNGetFlowGraphNodeX(m_object);
@@ -224,4 +236,10 @@ void FlowGraphNode::SetHighlight(const BNHighlightColor& color)
 bool FlowGraphNode::IsValidForGraph(FlowGraph* graph) const
 {
 	return BNIsNodeValidForFlowGraph(graph->GetObject(), m_object);
+}
+
+
+void FlowGraphNode::SetVisibilityRegion(int x, int y, int w, int h)
+{
+	BNFlowGraphNodeSetVisibilityRegion(m_object, x, y, w, h);
 }

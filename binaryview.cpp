@@ -2058,9 +2058,9 @@ void BinaryView::DefineUserDataVariable(uint64_t addr, const Confidence<Ref<Type
 }
 
 
-void BinaryView::UndefineDataVariable(uint64_t addr)
+void BinaryView::UndefineDataVariable(uint64_t addr, bool blacklist)
 {
-	BNUndefineDataVariable(m_object, addr);
+	BNUndefineDataVariable(m_object, addr, blacklist);
 }
 
 
@@ -5427,7 +5427,9 @@ Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis,
 
 Ref<BinaryView> BinaryNinja::Load(const std::string& filename, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
 {
-	BNBinaryView* handle = BNLoadFilename(filename.c_str(), updateAnalysis, options.c_str(), (bool (*)(size_t, size_t))progress.target<bool (*)(size_t, size_t)>());
+	ProgressContext cb;
+	cb.callback = progress;
+	BNBinaryView* handle = BNLoadFilename(filename.c_str(), updateAnalysis, options.c_str(), ProgressCallback, &cb);
 	if (!handle)
 		return nullptr;
 	return new BinaryView(handle);
@@ -5444,7 +5446,20 @@ Ref<BinaryView> BinaryNinja::Load(const DataBuffer& rawData, bool updateAnalysis
 
 Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
 {
-	BNBinaryView* handle = BNLoadBinaryView(view->GetObject(), updateAnalysis, options.c_str(), (bool (*)(size_t, size_t))progress.target<bool (*)(size_t, size_t)>());
+	ProgressContext cb;
+	cb.callback = progress;
+	BNBinaryView* handle = BNLoadBinaryView(view->GetObject(), updateAnalysis, options.c_str(), ProgressCallback, &cb);
+	if (!handle)
+		return nullptr;
+	return new BinaryView(handle);
+}
+
+
+Ref<BinaryView> BinaryNinja::Load(Ref<ProjectFile> projectFile, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
+{
+	ProgressContext cb;
+	cb.callback = progress;
+	BNBinaryView* handle = BNLoadProjectFile(projectFile->GetObject(), updateAnalysis, options.c_str(), ProgressCallback, &cb);
 	if (!handle)
 		return nullptr;
 	return new BinaryView(handle);

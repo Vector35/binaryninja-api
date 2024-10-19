@@ -180,6 +180,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 
 	virtual void contextMenuEvent(QContextMenuEvent*) override;
 	void bindActions();
+	void bindDynamicActions();
 
 	void navigateToAddress(uint64_t addr);
 	void navigateToGotoLabel(uint64_t label);
@@ -261,6 +262,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	virtual bool canCopyWithTransform() override;
 	virtual bool canCut() override;
 	virtual bool canCopy() override;
+	virtual bool canCopyAddress() override;
 	virtual bool canPaste() override;
 	virtual void cut() override;
 	virtual void copy(TransformRef xform) override;
@@ -311,7 +313,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target) override;
 
-	void setHighlightToken(const HighlightTokenState& state, bool notify = true);
+	void setHighlightToken(const HighlightTokenState& state, bool notify = true, bool update = false);
 
 	virtual void notifyUpdateInProgress(FunctionRef func);
 	virtual void onFunctionSelected(FunctionRef func);
@@ -322,8 +324,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	// and they have out parameters (and thus need to be re-implemented) they must be public
 	bool getNodeForMouseEvent(QMouseEvent* event, FlowGraphNodeRef& node);
 	bool getLineForMouseEvent(QMouseEvent* event, CursorPosition& pos);
-	bool getEdgeForMouseEvent(
-	    QMouseEvent* event, FlowGraphNodeRef& source, BinaryNinja::FlowGraphEdge& edge, bool& incoming);
+	bool getEdgeForMouseEvent(QMouseEvent* event, FlowGraphNodeRef& source, BinaryNinja::FlowGraphEdge& edge, bool& incoming);
 
 	FlowGraphWidget* duplicate();
 
@@ -339,19 +340,22 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void zoomPauseTimerEvent();
 
 	void goToAddress();
+	void goToEntryPoint();
 	void goToAddressAtFileOffset();
 	void followPointer();
 	void defineName();
-	void undefineName();
+	void undefine();
 	void setUserVariableValue();
 	void clearUserVariableValue();
 	void defineFuncName();
 	void editFunctionProperties();
-	void undefineFunc();
 	void createFunc(const UIActionContext& context);
 	void createFuncWithPlatform(PlatformRef platform, bool autoSelect = false);
 	void changeType();
 	void inferStructureType(const UIActionContext& context);
+	void forwardPropagateType();
+	void inferFunctionType();
+	void propagateVariableTypeAndName();
 	void comment();
 	void addUserXref();
 	void functionComment();
@@ -360,7 +364,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void bookmarkAddress();
 	void unbookmarkAddress();
 	void tagAddress();
-	void tagAddressAccepted(TagTypeRef tt);
+	void tagAddressAccepted(TagTypeRef tt, const QString& text);
 	void manageAddressTags();
 	void mergeVariables();
 	void mergeVariablesAtCurrentLocation();

@@ -1055,6 +1055,10 @@ namespace BinaryNinja {
 				\return The logger session ID
 			*/
 			size_t GetSessionId();
+
+			void Indent();
+			void Dedent();
+			void ResetIndent();
 	};
 
 	/*! A class allowing registering and retrieving Loggers
@@ -1456,6 +1460,7 @@ namespace BinaryNinja {
 	};
 
 	class BinaryView;
+	class ProjectFile;
 
 	/*! OpenView opens a file on disk and returns a BinaryView, attempting to use the most
 	    relevant BinaryViewType and generating default load options (which are overridable).
@@ -1527,6 +1532,23 @@ namespace BinaryNinja {
 	*/
 	Ref<BinaryView> Load(Ref<BinaryView> rawData, bool updateAnalysis = true, const std::string& options = "{}", std::function<bool(size_t, size_t)> progress = {});
 
+	/*! Open a BinaryView from a ProjectFile, initializing data views and loading settings.
+
+	    @threadmainonly
+
+	    \see BinaryNinja::Load(const std::string&, bool, std::function<bool(size_t, size_t)>, Json::Value)
+	    for discussion of this function.
+
+	    \param rawData BinaryView with raw binary data to load
+	    \param updateAnalysis If true, UpdateAnalysisAndWait() will be called after opening
+	                          a BinaryView.
+	    \param options A Json string whose keys are setting identifiers and whose values are the desired settings.
+	    \param progress Optional function to be called with progress updates as the view is
+	                    being loaded. If the function returns false, it will cancel Load.
+	    \return Constructed view, or a nullptr Ref<BinaryView>
+	*/
+	Ref<BinaryView> Load(Ref<ProjectFile> rawData, bool updateAnalysis = true, const std::string& options = "{}", std::function<bool(size_t, size_t)> progress = {});
+
 	/*!
 		Deprecated. Use non-metadata version.
 	*/
@@ -1542,11 +1564,29 @@ namespace BinaryNinja {
 	*/
 	Ref<BinaryView> Load(Ref<BinaryView> rawData, bool updateAnalysis, std::function<bool(size_t, size_t)> progress, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType), bool isDatabase = false);
 
+	/*! Attempt to demangle a mangled name, trying all relevant demanglers and using whichever one accepts it
+
+		\see Demangler::Demangle for a discussion on which demangler will be used.
+
+		\param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
+		\param[in] mangledName a mangled Microsoft Visual Studio C++ name
+		\param[out] outType Pointer to Type to output
+		\param[out] outVarName QualifiedName reference to write the output name to.
+		\param[in] view (Optional) view of the binary containing the mangled name
+		\param[in] simplify (Optional) Whether to simplify demangled names.
+		\return True if the name was demangled and written to the out* parameters
+
+		\ingroup demangle
+	*/
+	bool DemangleGeneric(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
+	                     Ref<BinaryView> view = nullptr, const bool simplify = false);
+
 	/*! Demangles using LLVM's demangler
 
 		\param[in] mangledName a mangled (msvc/itanium/rust/dlang) name
 		\param[out] outVarName QualifiedName reference to write the output name to.
 		\param[in] simplify Whether to simplify demangled names.
+	    \return True if the name was demangled and written to the out* parameters
 
 		\ingroup demangle
 	*/
@@ -1557,6 +1597,7 @@ namespace BinaryNinja {
 		\param[in] mangledName a mangled (msvc/itanium/rust/dlang) name
 		\param[out] outVarName QualifiedName reference to write the output name to.
 		\param[in] view View to check the analysis.types.templateSimplifier for
+	    \return True if the name was demangled and written to the out* parameters
 
 		\ingroup demangle
 	*/
@@ -1569,6 +1610,7 @@ namespace BinaryNinja {
 	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] simplify Whether to simplify demangled names.
+	    \return True if the name was demangled and written to the out* parameters
 
 	    \ingroup demangle
 	*/
@@ -1585,6 +1627,7 @@ namespace BinaryNinja {
 	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] view View to check the analysis.types.templateSimplifier for
+	    \return True if the name was demangled and written to the out* parameters
 
 	    \ingroup demangle
 	*/
@@ -1598,6 +1641,7 @@ namespace BinaryNinja {
 	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] simplify Whether to simplify demangled names.
+	    \return True if the name was demangled and written to the out* parameters
 
 	    \ingroup demangle
 	*/
@@ -1614,6 +1658,7 @@ namespace BinaryNinja {
 	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] view View to check the analysis.types.templateSimplifier for
+	    \return True if the name was demangled and written to the out* parameters
 
 	    \ingroup demangle
 	*/
@@ -1627,6 +1672,26 @@ namespace BinaryNinja {
 	    \ingroup demangle
 	*/
 	bool IsGNU3MangledString(const std::string& mangledName);
+
+	/*!
+		\ingroup demangle
+	*/
+	std::string SimplifyToString(const std::string& input);
+
+	/*!
+		\ingroup demangle
+	*/
+	std::string SimplifyToString(const QualifiedName& input);
+
+	/*!
+		\ingroup demangle
+	*/
+	QualifiedName SimplifyToQualifiedName(const std::string& input, bool simplify);
+
+	/*!
+		\ingroup demangle
+	*/
+	QualifiedName SimplifyToQualifiedName(const QualifiedName& input);
 
 	/*!
 		\ingroup mainthread
@@ -5080,8 +5145,10 @@ namespace BinaryNinja {
 		/*! Undefine a DataVariable at a given address
 
 		    \param addr virtual address of the DataVariable
+		    \param blacklist whether to add the address to the data variable black list so that the auto analysis would
+		    not recreate the variable on re-analysis
 		*/
-		void UndefineDataVariable(uint64_t addr);
+		void UndefineDataVariable(uint64_t addr, bool blacklist = true);
 
 		/*! Undefine a user DataVariable at a given address
 
@@ -6908,6 +6975,7 @@ namespace BinaryNinja {
 		static BNBinaryView* ParseCallback(void* ctxt, BNBinaryView* data);
 		static bool IsValidCallback(void* ctxt, BNBinaryView* data);
 		static bool IsDeprecatedCallback(void* ctxt);
+		static bool IsForceLoadableCallback(void *ctxt);
 		static BNSettings* GetSettingsCallback(void* ctxt, BNBinaryView* data);
 
 		BinaryViewType(BNBinaryViewType* type);
@@ -7045,6 +7113,13 @@ namespace BinaryNinja {
 			\return Whether this BinaryViewType is valid for given data
 		*/
 		virtual bool IsTypeValidForData(BinaryView* data) = 0;
+
+		/*! Check whether this BinaryViewType can be forced to load a binary, even if IsTypeValidForData returns false
+
+			\return Whether this BinaryViewType can be forced to load a binary
+		*/
+		virtual bool IsForceLoadable();
+
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data);
 		Ref<Settings> GetDefaultLoadSettingsForData(BinaryView* data);
 
@@ -7067,6 +7142,7 @@ namespace BinaryNinja {
 		virtual Ref<BinaryView> Parse(BinaryView* data) override;
 		virtual bool IsTypeValidForData(BinaryView* data) override;
 		virtual bool IsDeprecated() override;
+		virtual bool IsForceLoadable() override;
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
 	};
 
@@ -8668,6 +8744,12 @@ namespace BinaryNinja {
 		*/
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
 
+		/*! For Function Types, get the calling convention name
+
+		    \return The calling convention name
+		 */
+		BNCallingConventionName GetCallingConventionName() const;
+
 		/*! For Function Types, get a list of parameters
 
 		    \return A vector of FunctionParameters
@@ -8679,6 +8761,12 @@ namespace BinaryNinja {
 		    \return Whether the function has variable arguments
 		*/
 		Confidence<bool> HasVariableArguments() const;
+
+		/*! Has no effect currently, just used by the demangler
+
+		    \return If the type has the "has template arguments" flag set
+		 */
+		bool HasTemplateArguments() const;
 
 		/*! For Function Types, whether a function can return (is not marked noreturn)
 
@@ -8900,6 +8988,10 @@ namespace BinaryNinja {
 		    const Confidence<std::vector<uint32_t>>& returnRegs = Confidence<std::vector<uint32_t>>(std::vector<uint32_t>(), 0),
 		    BNNameType ft = NoNameType,
 		    const Confidence<bool>& pure = Confidence<bool>(false, 0));
+		static Ref<Type> VarArgsType();
+		static Ref<Type> ValueType(const std::string& value);
+
+		static std::string GetNameTypeString(BNNameType classFunctionType);
 
 		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
@@ -9085,6 +9177,7 @@ namespace BinaryNinja {
 
 		Confidence<Ref<Type>> GetChildType() const;
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
+		BNCallingConventionName GetCallingConventionName() const;
 		std::vector<FunctionParameter> GetParameters() const;
 		Confidence<bool> HasVariableArguments() const;
 		Confidence<bool> CanReturn() const;
@@ -9093,6 +9186,8 @@ namespace BinaryNinja {
 		Ref<Enumeration> GetEnumeration() const;
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
 		Confidence<BNMemberScope> GetScope() const;
+		BNNameType GetNameType() const;
+		bool HasTemplateArguments() const;
 		TypeBuilder& SetWidth(size_t width);
 		TypeBuilder& SetAlignment(size_t alignment);
 		TypeBuilder& SetNamedTypeReference(NamedTypeReference* ntr);
@@ -9100,10 +9195,14 @@ namespace BinaryNinja {
 		TypeBuilder& SetConst(const Confidence<bool>& cnst);
 		TypeBuilder& SetVolatile(const Confidence<bool>& vltl);
 		TypeBuilder& SetChildType(const Confidence<Ref<Type>>& child);
+		TypeBuilder& SetCallingConvention(const Confidence<Ref<CallingConvention>>& cc);
+		TypeBuilder& SetCallingConventionName(BNCallingConventionName cc);
 		TypeBuilder& SetSigned(const Confidence<bool>& vltl);
 		TypeBuilder& SetTypeName(const QualifiedName& name);
 		TypeBuilder& SetAlternateName(const std::string& name);
 		TypeBuilder& SetSystemCall(bool sc, uint32_t n = 0);
+		TypeBuilder& SetNameType(BNNameType type);
+		TypeBuilder& SetHasTemplateArguments(bool hasTemplateArguments);
 		Confidence<int64_t> GetStackAdjustment() const;
 		QualifiedName GetStructureName() const;
 
@@ -9179,6 +9278,8 @@ namespace BinaryNinja {
 		    const Confidence<std::vector<uint32_t>>& returnRegs = Confidence<std::vector<uint32_t>>(std::vector<uint32_t>(), 0),
 		    BNNameType ft = NoNameType,
 		    const Confidence<bool>& pure = Confidence<bool>(false, 0));
+		static TypeBuilder VarArgsType();
+		static TypeBuilder ValueType(const std::string& value);
 
 		bool IsReferenceOfType(BNNamedTypeReferenceClass refType);
 		bool IsStructReference() { return IsReferenceOfType(StructNamedTypeClass); }
@@ -9746,7 +9847,7 @@ namespace BinaryNinja {
 		    MyClass::MyActionMethod(Ref<AnalysisContext> ac);
 		    ...
 		 	// Create a clone of the default workflow named "core.function.myWorkflowName"
-		    Ref<Workflow> wf = BinaryNinja::Workflow::Instance()->Clone("core.function.myWorkflowName");
+		    Ref<Workflow> wf = BinaryNinja::Workflow::Instance("core.function.defaultAnalysis")->Clone("core.function.myWorkflowName");
 		 	wf->RegisterActivity(new BinaryNinja::Activity("core.function.myWorkflowName.resolveMethodCalls", &MyClass::MyActionMethod));
 		 	\endcode
 
@@ -9943,6 +10044,8 @@ namespace BinaryNinja {
 		*/
 		Ref<FlowGraph> GetGraph(const std::string& activity = "", bool sequential = false);
 		void ShowReport(const std::string& name);
+
+		std::vector<std::string> GetEligibilitySettings();
 	};
 
 	class DisassemblySettings :
@@ -11005,6 +11108,18 @@ namespace BinaryNinja {
 		*/
 		void SetBasicBlock(BasicBlock* block);
 
+		/*! Set flow graph block X position
+
+			\param x Flow graph block X position
+		*/
+		void SetX(int x);
+
+		/*! Set flow graph block Y position
+
+			\param y Flow graph block Y position
+		*/
+		void SetY(int y);
+
 		/*! Flow graph block X position
 
 			\return Flow graph block X position
@@ -11079,6 +11194,8 @@ namespace BinaryNinja {
 		void SetHighlight(const BNHighlightColor& color);
 
 		bool IsValidForGraph(FlowGraph* graph) const;
+
+		void SetVisibilityRegion(int x, int y, int w, int h);
 	};
 
 	/*!
@@ -11200,17 +11317,22 @@ namespace BinaryNinja {
 		*/
 		size_t AddNode(FlowGraphNode* node);
 
+
+
 		/*! Flow graph width
 
 			\return Flow graph width
 		*/
 		int GetWidth() const;
+		void SetWidth(int width);
 
 		/*! Flow graph height
 
 			\return Flow graph height
 		*/
 		int GetHeight() const;
+		void SetHeight(int height);
+
 		std::vector<Ref<FlowGraphNode>> GetNodesInRegion(int left, int top, int right, int bottom);
 
 		/*! Whether this graph is representing IL.
@@ -11279,6 +11401,8 @@ namespace BinaryNinja {
 		*/
 		void Show(const std::string& title);
 
+		bool IsQueryModeEnabled() const { return m_queryMode; }
+
 		virtual bool HasUpdates() const;
 
 		virtual Ref<FlowGraph> Update();
@@ -11296,6 +11420,34 @@ namespace BinaryNinja {
 		CoreFlowGraph(BNFlowGraph* graph);
 		virtual bool HasUpdates() const override;
 		virtual Ref<FlowGraph> Update() override;
+	};
+
+	class FlowGraphLayout : public StaticCoreRefCountObject<BNFlowGraphLayout>
+	{
+	  protected:
+		FlowGraphLayout(BNFlowGraphLayout* layout);
+
+		static bool LayoutCallback(void* ctxt, BNFlowGraph* graph, BNFlowGraphNode** nodes, size_t nodeCount);
+
+		std::string m_nameForRegister;
+
+	  public:
+		FlowGraphLayout(const std::string& name);
+
+		static void Register(FlowGraphLayout* layout);
+		static Ref<FlowGraphLayout> GetByName(const std::string& name);
+		static std::vector<Ref<FlowGraphLayout>> GetFlowGraphLayouts();
+
+		std::string GetName() const;
+		virtual bool Layout(Ref<FlowGraph> graph, std::vector<Ref<FlowGraphNode>>& nodes);
+	};
+
+	class CoreFlowGraphLayout : public FlowGraphLayout
+	{
+	  public:
+		CoreFlowGraphLayout(BNFlowGraphLayout* layout);
+
+		virtual bool Layout(Ref<FlowGraph> graph, std::vector<Ref<FlowGraphNode>>& nodes) override;
 	};
 
 	/*!
@@ -13495,9 +13647,9 @@ namespace BinaryNinja {
 
 		BNUpdateResult UpdateToVersion(const std::string& version);
 		BNUpdateResult UpdateToVersion(
-		    const std::string& version, const std::function<bool(uint64_t progress, uint64_t total)>& progress);
+		    const std::string& version, const std::function<bool(size_t progress, size_t total)>& progress);
 		BNUpdateResult UpdateToLatestVersion();
-		BNUpdateResult UpdateToLatestVersion(const std::function<bool(uint64_t progress, uint64_t total)>& progress);
+		BNUpdateResult UpdateToLatestVersion(const std::function<bool(size_t progress, size_t total)>& progress);
 	};
 
 	/*! UpdateVersion documentation
@@ -15903,6 +16055,7 @@ namespace BinaryNinja {
 		BNVersionInfo GetMinimumVersionInfo() const;
 		BNVersionInfo GetMaximumVersionInfo() const;
 		uint64_t GetLastUpdate();
+		bool IsViewOnly() const;
 		bool IsBeingDeleted() const;
 		bool IsBeingUpdated() const;
 		bool IsInstalled() const;
@@ -15994,8 +16147,9 @@ namespace BinaryNinja {
 			Property             JSON Data Type                           Prerequisite         Optional   {Allowed Values} and Notes
 			==================   ======================================   ==================   ========   =======================================================================
 			"title"              string                                   None                 No         Concise Setting Title
-			"type"               string                                   None                 No         {"array", "boolean", "number", "string"}
-			"elementType"        string                                   "type" is "array"    No         {"string"}
+			"type"               string                                   None                 No         {"array", "boolean", "number", "string", "object"}
+			"sorted"             boolean                                  "type" is "array"    Yes        Automatically sort list items (default is false)
+			"isSerialized"       boolean                                  "type" is "string"   Yes        Treat the string as a serialized JSON object
 			"enum"               array : {string}                         "type" is "array"    Yes        Enumeration definitions
 			"enumDescriptions"   array : {string}                         "type" is "array"    Yes        Enumeration descriptions that match "enum" array
 			"minValue"           number                                   "type" is "number"   Yes        Specify 0 to infer unsigned (default is signed)
@@ -16191,6 +16345,28 @@ namespace BinaryNinja {
 		    BNSettingsScope scope = SettingsAutoScope);
 		bool SetJson(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr,
 		    BNSettingsScope scope = SettingsAutoScope);
+
+		// Function Settings
+		bool DeserializeSettings(const std::string& contents, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		std::string SerializeSettings(Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+
+		bool Reset(const std::string& key, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool ResetAll(Ref<Function> func, BNSettingsScope scope = SettingsAutoScope, bool schemaOnly = true);
+
+		template <typename T>
+		T Get(const std::string& key, Ref<Function> func, BNSettingsScope* scope = nullptr);
+
+		std::string GetJson(const std::string& key, Ref<Function> func, BNSettingsScope* scope = nullptr);
+
+		bool Set(const std::string& key, bool value, Ref<Function> func,  BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, double value, Ref<Function> func,  BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, int value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, int64_t value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, uint64_t value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const char* value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const std::string& value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const std::vector<std::string>& value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool SetJson(const std::string& key, const std::string& value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
 	};
 
 	// explicit specializations
@@ -16198,8 +16374,9 @@ namespace BinaryNinja {
 		Prevent these from having docs autogenerated twice, due to an odd quirk with doxygen
 	*/
 	template <>
-	std::vector<std::string> Settings::QueryProperty<std::vector<std::string>>(
-	    const std::string& key, const std::string& property);
+	std::string Settings::QueryProperty<std::string>(const std::string& key, const std::string& property);
+	template <>
+	std::vector<std::string> Settings::QueryProperty<std::vector<std::string>>(const std::string& key, const std::string& property);
 	template <>
 	bool Settings::Get<bool>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
 	template <>
@@ -16214,6 +16391,19 @@ namespace BinaryNinja {
 	std::vector<std::string> Settings::Get<std::vector<std::string>>(
 	    const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
 	/*! \endcond*/
+
+	template <>
+	bool Settings::Get<bool>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	double Settings::Get<double>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	int64_t Settings::Get<int64_t>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	uint64_t Settings::Get<uint64_t>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	std::string Settings::Get<std::string>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	std::vector<std::string> Settings::Get<std::vector<std::string>>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
 
 	typedef BNMetadataType MetadataType;
 
@@ -16588,7 +16778,7 @@ namespace BinaryNinja {
 	class CustomDebugInfoParser : public DebugInfoParser
 	{
 		static bool IsValidCallback(void* ctxt, BNBinaryView* view);
-		static bool ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view, BNBinaryView* debugFile, bool (*progress)(void*, size_t, size_t), void* progressCtxt);
+		static bool ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view, BNBinaryView* debugFile, BNProgressFunction progress, void* progressCtxt);
 		BNDebugInfoParser* Register(const std::string& name);
 
 	  public:
@@ -17802,6 +17992,120 @@ namespace BinaryNinja {
 		 */
 		bool IsAborted();
 	};
+
+	/*!
+		\ingroup demangler
+	*/
+	class Demangler: public StaticCoreRefCountObject<BNDemangler>
+	{
+		std::string m_nameForRegister;
+
+	protected:
+		explicit Demangler(const std::string& name);
+		Demangler(BNDemangler* demangler);
+		virtual ~Demangler() = default;
+
+		static bool IsMangledStringCallback(void* ctxt, const char* name);
+		static bool DemangleCallback(void* ctxt, BNArchitecture* arch, const char* name, BNType** outType,
+			BNQualifiedName* outVarName, BNBinaryView* view);
+		static void FreeVarNameCallback(void* ctxt, BNQualifiedName* name);
+
+	public:
+		/*! Register a custom Demangler. Newly registered demanglers will get priority over
+			previously registered demanglers and built-in demanglers.
+		 */
+		static void Register(Demangler* demangler);
+
+		/*! Get the list of currently registered demanglers, sorted by lowest to highest priority.
+
+			\return List of demanglers
+		 */
+		static std::vector<Ref<Demangler>> GetList();
+		static Ref<Demangler> GetByName(const std::string& name);
+
+		/*! Promote a demangler to the highest-priority position.
+
+			\param demangler Demangler to promote
+		 */
+		static void Promote(Ref<Demangler> demangler);
+
+		std::string GetName() const;
+
+		/*! Determine if a given name is mangled and this demangler can process it
+
+			The most recently registered demangler that claims a name is a mangled string
+			(returns true from this function), and then returns a value from Demangle will
+			determine the result of a call to DemangleGeneric. Returning True from this
+			does not require the demangler to succeed the call to Demangle, but simply
+			implies that it may succeed.
+
+			\param name Raw mangled name string
+			\return True if the demangler thinks it can handle the name
+		 */
+		virtual bool IsMangledString(const std::string& name) = 0;
+
+		/*! Demangle a raw name into a Type and QualifiedName.
+
+			Any unresolved named types referenced by the resulting Type will be created as
+			empty structures or void typedefs in the view, if the result is used on
+			a data structure in the view. Given this, the call to Demangle should NOT
+			cause any side-effects creating types in the view trying to resolve this
+			and instead just return a type with unresolved named type references.
+
+			The most recently registered demangler that claims a name is a mangled string
+			(returns true from IsMangledString), and then returns a value from
+			this function will determine the result of a call to DemangleGeneric.
+			If this call returns None, the next most recently used demangler(s) will be tried instead.
+
+			If the mangled name has no type information, but a name is still possible to extract,
+			this function may return a successful result with outType=nullptr, which will be accepted.
+
+			\param arch Architecture for context in which the name exists, eg for pointer sizes
+			\param name Raw mangled name
+			\param outType Resulting type, if one can be deduced, will be written here. Otherwise nullptr will be written
+			\param outVarName Resulting variable name
+			\param view (Optional) BinaryView context in which the name exists, eg for type lookup
+			\return True if demangling was successful and results were stored into out-parameters
+		 */
+		virtual bool Demangle(Ref<Architecture> arch, const std::string& name, Ref<Type>& outType,
+			QualifiedName& outVarName, Ref<BinaryView> view = nullptr) = 0;
+	};
+
+	/*!
+		\ingroup demangler
+	*/
+	class CoreDemangler: public Demangler
+	{
+	public:
+		CoreDemangler(BNDemangler* demangler);
+		virtual ~CoreDemangler() = default;
+
+		virtual bool IsMangledString(const std::string& name);
+		virtual bool Demangle(Ref<Architecture> arch, const std::string& name, Ref<Type>& outType,
+			QualifiedName& outVarName, Ref<BinaryView> view);
+	};
+
+	namespace Unicode
+	{
+		std::string UTF16ToUTF8(const uint8_t* utf16, const size_t len);
+		std::string UTF32ToUTF8(const uint8_t* utf32);
+		bool GetBlockRange(const std::string& name, std::pair<uint32_t, uint32_t>& range);
+		std::vector<std::vector<std::pair<uint32_t, uint32_t>>> GetBlocksForNames(const std::vector<std::string>& names);
+		std::vector<std::string> GetBlockNames();
+		std::map<std::string, std::pair<uint32_t, uint32_t>> GetBlockRanges();
+		std::string GetUTF8String(
+			const std::vector<std::vector<std::pair<uint32_t, uint32_t>>>& unicodeBlocks,
+			const uint8_t* data,
+			const size_t offset,
+			const size_t dataLen
+		);
+		std::string ToEscapedString(
+			const std::vector<std::vector<std::pair<uint32_t, uint32_t>>>& unicodeBlocks,
+			bool utf8Enabled,
+			const void* data,
+			const size_t dataLen
+		);
+	} // namespace Unicode
 }  // namespace BinaryNinja
 
 
@@ -18182,6 +18486,15 @@ namespace BinaryNinja::Collaboration
 	{
 	public:
 		RemoteFolder(BNRemoteFolder* remoteFolder);
+
+		Ref<ProjectFolder> GetCoreFolder();
+		Ref<RemoteProject> GetProject();
+		Ref<RemoteFolder> GetParent();
+		Ref<Remote> GetRemote();
+		std::string GetId();
+		std::string GetUrl();
+		std::string GetName();
+		std::string GetDescription();
 	};
 
 	class RemoteFile;

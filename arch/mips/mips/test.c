@@ -8,6 +8,7 @@ b mips_disassemble
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include "mips.h"
 

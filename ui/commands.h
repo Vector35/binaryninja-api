@@ -11,6 +11,7 @@
     @{
 */
 
+bool BINARYNINJAUIAPI undefineForAddress(BinaryViewRef data, uint64_t addr);
 bool BINARYNINJAUIAPI undefineNameForAddress(BinaryViewRef data, uint64_t addr);
 bool BINARYNINJAUIAPI undefineNameForLocalVariable(
     BinaryViewRef data, FunctionRef func, const BinaryNinja::Variable& var);
@@ -61,6 +62,9 @@ std::optional<size_t> getVariableDefinitionInstructionIndex(
 std::optional<size_t> getVariableDefinitionAddress(
     FunctionRef func, BNFunctionGraphType funcType, const BinaryNinja::Variable& var, size_t ilInstructionIndex);
 
+bool IsDefaultArgumentOrParameterName(const std::string& name);
+std::optional<std::string> GetVariableNameFromExpr(BinaryNinja::Function* func,
+	const BinaryNinja::HighLevelILInstruction& instr);
 
 /*!
 	@}

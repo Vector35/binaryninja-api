@@ -21,7 +21,7 @@
 import ctypes
 import threading
 import traceback
-from typing import Optional
+from typing import List, Optional, Tuple
 
 # Binary Ninja components
 import binaryninja
@@ -61,14 +61,14 @@ class FlowGraphEdge:
 
 
 class EdgeStyle:
-	def __init__(self, style=None, width=None, theme_color=None):
+	def __init__(self, style: Optional[EdgePenStyle] = None, width: Optional[int] = None, theme_color: Optional[ThemeColor] = None):
 		self.style = style if style is not None else EdgePenStyle.SolidLine
 		self.width = width if width is not None else 0
 		self.color = theme_color if theme_color is not None else ThemeColor.AddressColor
 
 	def _to_core_struct(self) -> core.BNEdgeStyle:
 		result = core.BNEdgeStyle()
-		result.style = self.style
+		result.style = int(self.style)
 		result.width = self.width
 		result.color = self.color
 		return result
@@ -190,13 +190,21 @@ class FlowGraphNode:
 
 	@property
 	def x(self):
-		"""Flow graph block X (read-only)"""
+		"""Flow graph block X"""
 		return core.BNGetFlowGraphNodeX(self.handle)
+
+	@x.setter
+	def x(self, x: int):
+		return core.BNFlowGraphNodeSetX(self.handle, x)
 
 	@property
 	def y(self):
-		"""Flow graph block Y (read-only)"""
+		"""Flow graph block Y"""
 		return core.BNGetFlowGraphNodeY(self.handle)
+
+	@y.setter
+	def y(self, y: int):
+		return core.BNFlowGraphNodeSetY(self.handle, y)
 
 	@property
 	def width(self):
@@ -263,7 +271,7 @@ class FlowGraphNode:
 		core.BNSetFlowGraphNodeLines(self.handle, line_buf, len(lines))
 
 	@property
-	def outgoing_edges(self):
+	def outgoing_edges(self) -> List[FlowGraphEdge]:
 		"""Flow graph block list of outgoing edges (read-only)"""
 		count = ctypes.c_ulonglong()
 		edges = core.BNGetFlowGraphNodeOutgoingEdges(self.handle, count)
@@ -345,6 +353,16 @@ class FlowGraphNode:
 
 	def is_valid_for_graph(self, graph):
 		return core.BNIsNodeValidForFlowGraph(graph.handle, self.handle)
+
+	def set_visibility_region(self, x: int, y: int, w: int, h: int):
+		core.BNFlowGraphNodeSetVisibilityRegion(self.handle, x, y, w, h)
+
+	def set_outgoing_edge_points(self, edge_num: int, points: List[Tuple[float, float]]):
+		point_buf = (core.BNPoint * len(points))()
+		for i in range(0, len(points)):
+			point_buf[i].x = points[i][0]
+			point_buf[i].y = points[i][1]
+		core.BNFlowGraphNodeSetOutgoingEdgePoints(self.handle, edge_num, point_buf, len(points))
 
 
 class FlowGraphLayoutRequest:
@@ -601,13 +619,21 @@ class FlowGraph:
 
 	@property
 	def width(self):
-		"""Flow graph width (read-only)"""
+		"""Flow graph width"""
 		return core.BNGetFlowGraphWidth(self.handle)
+
+	@width.setter
+	def width(self, width: int):
+		return core.BNFlowGraphSetWidth(self.handle, width)
 
 	@property
 	def height(self):
-		"""Flow graph height (read-only)"""
+		"""Flow graph height"""
 		return core.BNGetFlowGraphHeight(self.handle)
+
+	@height.setter
+	def height(self, height: int):
+		return core.BNFlowGraphSetHeight(self.handle, height)
 
 	@property
 	def horizontal_block_margin(self):
@@ -744,6 +770,24 @@ class FlowGraph:
 	def shows_secondary_reg_highlighting(self, value):
 		self.set_option(FlowGraphOption.FlowGraphShowsSecondaryRegisterHighlighting, value)
 
+	@property
+	def is_addressable(self):
+		"""Set if flow graph should make use of address information"""
+		return self.is_option_set(FlowGraphOption.FlowGraphIsAddressable)
+
+	@is_addressable.setter
+	def is_addressable(self, value):
+		self.set_option(FlowGraphOption.FlowGraphIsAddressable, value)
+
+	@property
+	def is_workflow_graph(self):
+		"""Set if flow graph should be treated as a workflow graph"""
+		return self.is_option_set(FlowGraphOption.FlowGraphIsWorkflowGraph)
+
+	@is_workflow_graph.setter
+	def is_workflow_graph(self, value):
+		self.set_option(FlowGraphOption.FlowGraphIsWorkflowGraph, value)
+
 	def layout(self, callback=None):
 		"""
 		``layout`` starts rendering a graph for display. Once a layout is complete, each node will contain
@@ -835,3 +879,32 @@ class CoreFlowGraph(FlowGraph):
 		if not graph:
 			return None
 		return CoreFlowGraph(graph)
+
+
+class FlowGraphLayout:
+	def __init__(self, handle: Optional[core.BNCustomFlowGraphLayout] = None):
+		if handle is not None:
+			self.handle = core.handle_of_type(handle, core.BNFlowGraphLayout)
+
+	def register(self, name: str):
+		"""
+		Register a custom layout with the API
+		"""
+		self._cb = core.BNCustomFlowGraphLayout()
+		self._cb.context = 0
+		self._cb.layout = self._cb.layout.__class__(self._layout)
+		self.handle = core.BNRegisterFlowGraphLayout(name, self._cb)
+
+	def _layout(self, ctxt, graph_handle: core.BNFlowGraphHandle, node_handles: 'ctypes.pointer[core.BNFlowGraphNodeHandle]', node_handle_count: int) -> bool:
+		try:
+			graph = FlowGraph(handle=graph_handle)
+			nodes = []
+			for i in range(node_handle_count):
+				nodes.append(FlowGraphNode(graph=graph, handle=node_handles[i]))
+			return self.layout(graph, nodes)
+		except:
+			log_error(traceback.format_exc())
+			return False
+
+	def layout(self, graph: FlowGraph, nodes: List[FlowGraphNode]) -> bool:
+		return False

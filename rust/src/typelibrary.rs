@@ -298,7 +298,7 @@ impl TypeLibrary {
     ///
     /// Use this api with extreme caution.
     ///
-    /// </div/
+    /// </div>
     pub fn add_type_source<S: BnStrCompatible>(&self, name: &QualifiedName, source: S) {
         let source = source.into_bytes_with_nul();
         unsafe {

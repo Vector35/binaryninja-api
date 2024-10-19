@@ -222,6 +222,8 @@ void GenericImportsModel::setFilter(const std::string& filterText)
 
 ImportsTreeView::ImportsTreeView(ImportsWidget* parent, TriageView* view, BinaryViewRef data) : QTreeView(parent)
 {
+	setFont(getMonospaceFont(this));
+
 	m_data = data;
 	m_parent = parent;
 	m_view = view;
@@ -240,8 +242,6 @@ ImportsTreeView::ImportsTreeView(ImportsWidget* parent, TriageView* view, Binary
 		setColumnWidth(m_model->GetOrdinalCol(), 55);
 	setColumnWidth(m_model->GetTypeLibCol(), 90);
 	resizeColumnToContents(m_model->GetNameCol());
-
-	setFont(getMonospaceFont(this));
 
 	connect(selectionModel(), &QItemSelectionModel::currentChanged, this, &ImportsTreeView::importSelected);
 	connect(this, &QTreeView::doubleClicked, this, &ImportsTreeView::importDoubleClicked);

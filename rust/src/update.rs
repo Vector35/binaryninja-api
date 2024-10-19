@@ -100,7 +100,7 @@ impl UpdateChannel {
         mut progress: F,
     ) -> Result<UpdateResult, BnString>
     where
-        F: FnMut(u64, u64) -> bool,
+        F: FnMut(usize, usize) -> bool,
     {
         let mut errors = ptr::null_mut();
         let result = unsafe {
@@ -142,7 +142,7 @@ impl UpdateChannel {
         mut progress: F,
     ) -> Result<UpdateResult, BnString>
     where
-        F: FnMut(u64, u64) -> bool,
+        F: FnMut(usize, usize) -> bool,
     {
         let mut errors = ptr::null_mut();
         let result = unsafe {
@@ -256,16 +256,16 @@ pub fn updates_checked() {
 
 unsafe extern "C" fn cb_progress_nop(
     _ctxt: *mut ::std::os::raw::c_void,
-    _progress: u64,
-    _total: u64,
+    _progress: usize,
+    _total: usize,
 ) -> bool {
     true
 }
 
-unsafe extern "C" fn cb_progress<F: FnMut(u64, u64) -> bool>(
+unsafe extern "C" fn cb_progress<F: FnMut(usize, usize) -> bool>(
     ctxt: *mut ::std::os::raw::c_void,
-    progress: u64,
-    total: u64,
+    progress: usize,
+    total: usize,
 ) -> bool {
     let ctxt: &mut F = &mut *(ctxt as *mut F);
     ctxt(progress, total)

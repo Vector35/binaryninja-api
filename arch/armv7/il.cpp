@@ -4874,7 +4874,7 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 					il.DivUnsigned(get_register_size(op2.reg), ReadRegisterOrPointer(il, op2, addr), ReadRegisterOrPointer(il, op3, addr))));
 			break;
 		case ARMV7_VADD:
-			if((instr.dataType != DT_F32) && (instr.dataType != DT_F32) && (instr.dataType != DT_F64))
+			if((instr.dataType != DT_F32) && (instr.dataType != DT_F64))
 				break;
 
 			ConditionExecute(il, instr.cond,
@@ -4887,7 +4887,7 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 			);
 			break;
 		case ARMV7_VDIV:
-			if((instr.dataType != DT_F32) && (instr.dataType != DT_F32) && (instr.dataType != DT_F64))
+			if((instr.dataType != DT_F32) && (instr.dataType != DT_F64))
 				break;
 
 			ConditionExecute(il, instr.cond,
@@ -4935,7 +4935,7 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 			}
 			break;
 		case ARMV7_VMUL:
-			if((instr.dataType != DT_F32) && (instr.dataType != DT_F32) && (instr.dataType != DT_F64))
+			if((instr.dataType != DT_F32) && (instr.dataType != DT_F64))
 				break;
 
 			ConditionExecute(il, instr.cond,
@@ -4957,7 +4957,7 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 					});
 			break;
 		case ARMV7_VSUB:
-			if((instr.dataType != DT_F32) && (instr.dataType != DT_F32) && (instr.dataType != DT_F64))
+			if((instr.dataType != DT_F32) && (instr.dataType != DT_F64))
 				break;
 
 			ConditionExecute(il, instr.cond,

@@ -20,11 +20,8 @@
 
 import abc
 import ctypes
-from json import loads, dumps
 import sys
 import traceback
-
-from urllib.parse import urlencode
 
 # Binary Ninja Components
 import binaryninja._binaryninjacore as core

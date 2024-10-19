@@ -37,7 +37,7 @@ class BINARYNINJAUIAPI AddressDialogWithPreview : public QDialog
 	QTimer* m_updateTimer;
 	QStringList m_historyEntries;
 	int m_historySize;
-	GetSymbolsListThread* m_updateThread;
+	GetSymbolsListThread* m_updateThread = nullptr;
 	QColor m_defaultColor;
 	QFont m_defaultFont;
 	QString m_prompt;
@@ -46,9 +46,8 @@ class BINARYNINJAUIAPI AddressDialogWithPreview : public QDialog
 	bool m_resultAmbiguous = false;
 
 	void commitHistory();
-	void customEvent(QEvent* event);
 
-  private Q_SLOTS:
+private Q_SLOTS:
 	void updateTimerEvent();
 	void accepted();
 	void updateRelativeState(int state);
@@ -56,10 +55,11 @@ class BINARYNINJAUIAPI AddressDialogWithPreview : public QDialog
 	void updatePreviewText();
 	void updatePreviewWithText(QString data);
 
-  public:
+public:
 	AddressDialogWithPreview(QWidget* parent, BinaryViewRef view, uint64_t here, const QString& title = "Go to Address",
 	    const QString& prompt = "Enter Expression", bool defaultToCurrent = false);
 	~AddressDialogWithPreview();
+
 	uint64_t getOffset() const { return m_addr; }
 };
 
@@ -88,18 +88,19 @@ class BINARYNINJAUIAPI FileOffsetDialogWithPreview : public QDialog
 
 	void commitHistory();
 
-  private Q_SLOTS:
+private Q_SLOTS:
 	void updateTimerEvent();
 	void accepted();
 	void updatePreview();
 	void updatePreviewText();
 	void updatePreview(QString data);
 
-  public:
+public:
 	FileOffsetDialogWithPreview(QWidget* parent, BinaryViewRef view, uint64_t here,
 	    const QString& title = "Go to File Offset", const QString& prompt = "Enter Expression",
 	    bool defaultToCurrent = false);
 	~FileOffsetDialogWithPreview() {}
+
 	uint64_t getOffset() const { return m_fileOffset; }
 };
 
@@ -122,7 +123,7 @@ class BINARYNINJAUIAPI AddUserXrefDialog : public QDialog
 	QTimer* m_updateTimer;
 	QStringList m_historyEntries;
 	int m_historySize;
-	GetSymbolsListThread* m_updateThread;
+	GetSymbolsListThread* m_updateThread = nullptr;
 	QColor m_defaultColor;
 	QFont m_defaultFont;
 	QString m_prompt;
@@ -131,21 +132,21 @@ class BINARYNINJAUIAPI AddUserXrefDialog : public QDialog
 	bool m_resultAmbiguous = false;
 
 	void commitHistory();
-	void customEvent(QEvent* event);
 
-  private Q_SLOTS:
+private Q_SLOTS:
 	void updateTimerEvent();
 	void accepted();
 	void updatePreview();
 	void updatePreviewText();
 	void updatePreviewWithText(QString data);
 
-  public:
+public:
 	AddUserXrefDialog(QWidget* parent, BinaryViewRef view, uint64_t here = 0, size_t size = 0,
 	    const QString& title = "Add User Type Field Cross Reference",
 	    const QString& sizeTitle = "Size of Reference (optional)", const QString& prompt = "Enter Expression",
 	    bool defaultToCurrent = false);
 	~AddUserXrefDialog();
+
 	uint64_t getOffset() const { return m_addr; }
 	size_t getSize() const { return m_size; }
 };

@@ -12,21 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use gimli::{EndianRcSlice, Endianity, Error, RunTimeEndian, SectionId};
-
-use binaryninja::binaryninjacore_sys::*;
+use gimli::{EndianRcSlice, Endianity, RunTimeEndian, SectionId};
 
 use binaryninja::{
     binaryview::{BinaryView, BinaryViewBase, BinaryViewExt},
-    databuffer::DataBuffer,
     Endianness,
     settings::Settings,
 };
 
-use std::{ffi::CString, rc::Rc};
+use std::rc::Rc;
 
 //////////////////////
 // Dwarf Validation
+
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("unknown section compression method {0:#x}")]
+    UnknownCompressionMethod(u32),
+
+    #[error("{0}")]
+    GimliError(#[from] gimli::Error),
+
+    #[error("{0}")]
+    IoError(#[from] std::io::Error),
+}
 
 pub fn is_non_dwo_dwarf(view: &BinaryView) -> bool {
     view.section_by_name(".debug_info").is_ok() || view.section_by_name("__debug_info").is_ok()
@@ -134,32 +143,26 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
                         let offset = section.start() + compressed_header_size as u64;
                         let len = section.len() - compressed_header_size;
 
+                        let ch_type_vec = view.read_vec(section.start(), 4);
+                        let ch_type = endian.read_u32(&ch_type_vec);
+
                         if let Ok(buffer) = view.read_buffer(offset, len) {
-                            use std::ptr;
-                            let transform_name =
-                                CString::new("Zlib").unwrap().into_bytes_with_nul();
-                            let transform =
-                                unsafe { BNGetTransformByName(transform_name.as_ptr() as *mut _) };
-
-                            // Omega broke
-                            let raw_buf: *mut BNDataBuffer =
-                                unsafe { BNCreateDataBuffer(ptr::null_mut(), 0) };
-                            if unsafe {
-                                BNDecode(
-                                    transform,
-                                    std::mem::transmute(buffer),
-                                    raw_buf,
-                                    ptr::null_mut(),
-                                    0,
-                                )
-                            } {
-                                let output_buffer: DataBuffer =
-                                    unsafe { std::mem::transmute(raw_buf) };
-
-                                return Ok(EndianRcSlice::new(
-                                    output_buffer.get_data().into(),
-                                    endian,
-                                ));
+                            match ch_type {
+                                1 => {
+                                    return Ok(EndianRcSlice::new(
+                                        buffer.zlib_decompress().get_data().into(),
+                                        endian,
+                                    ));
+                                },
+                                2 => {
+                                    return Ok(EndianRcSlice::new(
+                                        zstd::decode_all(buffer.get_data())?.as_slice().into(),
+                                        endian
+                                    ));
+                                },
+                                x => {
+                                    return Err(Error::UnknownCompressionMethod(x));
+                                }
                             }
                         }
                     }

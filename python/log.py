@@ -38,7 +38,7 @@ def is_output_redirected_to_log():
 	return _output_to_log
 
 
-def log(level: LogLevel, text: Union[str, Any], logger: Optional[str]="", session:int=0):
+def log(level: LogLevel, text: Any, logger: str = "", session: int = 0):
 	"""
 	``log`` writes messages to the log console for the given log level.
 
@@ -61,7 +61,7 @@ def log(level: LogLevel, text: Union[str, Any], logger: Optional[str]="", sessio
 	core.BNLogString(session, level, logger, threading.current_thread().ident, text)
 
 
-def log_debug(text: Union[str, Any], logger: Optional[str]=""):
+def log_debug(text: Any, logger: str = ""):
 	"""
 	``log_debug`` Logs debugging information messages to the console.
 
@@ -78,7 +78,7 @@ def log_debug(text: Union[str, Any], logger: Optional[str]=""):
 	core.BNLogString(0, LogLevel.DebugLog, logger, threading.current_thread().ident, text)
 
 
-def log_info(text: Union[str, Any], logger: Optional[str]=""):
+def log_info(text: Any, logger: str = ""):
 	"""
 	``log_info`` Logs general information messages to the console.
 
@@ -95,7 +95,7 @@ def log_info(text: Union[str, Any], logger: Optional[str]=""):
 	core.BNLogString(0, LogLevel.InfoLog, logger, threading.current_thread().ident, text)
 
 
-def log_warn(text: Union[str, Any], logger: Optional[str]=""):
+def log_warn(text: Any, logger: str = ""):
 	"""
 	``log_warn`` Logs message to console, if run through the GUI it logs with **Warning** icon.
 
@@ -113,7 +113,7 @@ def log_warn(text: Union[str, Any], logger: Optional[str]=""):
 	core.BNLogString(0, LogLevel.WarningLog, logger, threading.current_thread().ident, text)
 
 
-def log_error(text: Union[str, Any], logger: Optional[str]=""):
+def log_error(text: Any, logger: str = ""):
 	"""
 	``log_error`` Logs message to console, if run through the GUI it logs with **Error** icon, focusing the error console.
 
@@ -131,7 +131,7 @@ def log_error(text: Union[str, Any], logger: Optional[str]=""):
 	core.BNLogString(0, LogLevel.ErrorLog, logger, threading.current_thread().ident, text)
 
 
-def log_alert(text: Union[str, Any], logger: Optional[str]=""):
+def log_alert(text: Any, logger: str = ""):
 	"""
 	``log_alert`` Logs message console and to a pop up window if run through the GUI.
 
@@ -149,7 +149,7 @@ def log_alert(text: Union[str, Any], logger: Optional[str]=""):
 	core.BNLogString(0, LogLevel.AlertLog, logger, threading.current_thread().ident, text)
 
 
-def log_to_stdout(min_level: Optional[LogLevel]=LogLevel.InfoLog):
+def log_to_stdout(min_level: LogLevel = LogLevel.InfoLog):
 	"""
 	``log_to_stdout`` redirects minimum log level to standard out.
 
@@ -198,25 +198,25 @@ def close_logs():
 
 
 class Logger:
-	def __init__(self, session_id:int, logger_name:str):
+	def __init__(self, session_id: int, logger_name: str):
 		self.session_id = session_id
 		self.logger_name = logger_name
 		self.handle = core.BNLogCreateLogger(logger_name, session_id)
 
-	def log(self, level:LogLevel, message:str) -> None:
+	def log(self, level: LogLevel, message: str) -> None:
 		log(level, message, self.logger_name, self.session_id)
 
-	def log_debug(self, message:str) -> None:
+	def log_debug(self, message: str) -> None:
 		log(LogLevel.DebugLog, message, self.logger_name, self.session_id)
 
-	def log_info(self, message:str) -> None:
+	def log_info(self, message: str) -> None:
 		log(LogLevel.InfoLog, message, self.logger_name, self.session_id)
 
-	def log_warn(self, message:str) -> None:
+	def log_warn(self, message: str) -> None:
 		log(LogLevel.WarningLog, message, self.logger_name, self.session_id)
 
-	def log_error(self, message:str) -> None:
+	def log_error(self, message: str) -> None:
 		log(LogLevel.ErrorLog, message, self.logger_name, self.session_id)
 
-	def log_alert(self, message:str) -> None:
+	def log_alert(self, message: str) -> None:
 		log(LogLevel.AlertLog, message, self.logger_name, self.session_id)

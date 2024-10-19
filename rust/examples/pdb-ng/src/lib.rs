@@ -168,15 +168,15 @@ fn parse_sym_srv(
     Ok(Box::new(sym_srv_results.into_iter()))
 }
 
-fn read_from_sym_store(path: &String) -> Result<(bool, Vec<u8>)> {
-    info!("Read file: {}", path);
+fn read_from_sym_store(bv: &BinaryView, path: &String) -> Result<(bool, Vec<u8>)> {
     if !path.contains("://") {
         // Local file
+        info!("Read local file: {}", path);
         let conts = fs::read(path)?;
         return Ok((false, conts));
     }
 
-    if !Settings::new("").get_bool("network.pdbAutoDownload", None, None) {
+    if !Settings::new("").get_bool("network.pdbAutoDownload", Some(bv), None) {
         return Err(anyhow!("Auto download disabled"));
     }
 
@@ -238,7 +238,7 @@ fn read_from_sym_store(path: &String) -> Result<(bool, Vec<u8>)> {
     Ok((true, data))
 }
 
-fn search_sym_store(store_path: &String, pdb_info: &PDBInfo) -> Result<Option<Vec<u8>>> {
+fn search_sym_store(bv: &BinaryView, store_path: &String, pdb_info: &PDBInfo) -> Result<Option<Vec<u8>>> {
     // https://www.technlg.net/windows/symbol-server-path-windbg-debugging/
     // For symbol servers, to identify the files path easily, Windbg uses the format
     // binaryname.pdb/GUID
@@ -261,16 +261,16 @@ fn search_sym_store(store_path: &String, pdb_info: &PDBInfo) -> Result<Option<Ve
     // We don't care about #3 because it says we don't
 
     let direct_path = base_path.clone() + "/" + &pdb_info.file_name;
-    if let Ok((_remote, conts)) = read_from_sym_store(&direct_path) {
+    if let Ok((_remote, conts)) = read_from_sym_store(bv, &direct_path) {
         return Ok(Some(conts));
     }
 
     let file_ptr = base_path.clone() + "/" + "file.ptr";
-    if let Ok((_remote, conts)) = read_from_sym_store(&file_ptr) {
+    if let Ok((_remote, conts)) = read_from_sym_store(bv, &file_ptr) {
         let path = String::from_utf8(conts)?;
         // PATH:https://full/path
         if path.starts_with("PATH:") {
-            if let Ok((_remote, conts)) = read_from_sym_store(&path[5..].to_string()) {
+            if let Ok((_remote, conts)) = read_from_sym_store(bv, &path[5..].to_string()) {
                 return Ok(Some(conts));
             }
         }
@@ -582,7 +582,7 @@ impl CustomDebugInfoParser for PDBParser {
                 };
                 if let Ok(stores) = stores {
                     for store in stores {
-                        match search_sym_store(&store, &info) {
+                        match search_sym_store(view, &store, &info) {
                             Ok(Some(conts)) => {
                                 match self
                                     .load_from_file(&conts, debug_info, view, &progress, true, true)
@@ -639,7 +639,7 @@ impl CustomDebugInfoParser for PDBParser {
 
             // Check the local symbol store
             if let Ok(local_store_path) = active_local_cache(Some(view)) {
-                match search_sym_store(&local_store_path, &info) {
+                match search_sym_store(view, &local_store_path, &info) {
                     Ok(Some(conts)) => {
                         match self.load_from_file(&conts, debug_info, view, &progress, true, false)
                         {
@@ -661,7 +661,7 @@ impl CustomDebugInfoParser for PDBParser {
                 Settings::new("").get_string_list("pdb.files.symbolServerList", Some(view), None);
 
             for server in server_list.iter() {
-                match search_sym_store(&server.to_string(), &info) {
+                match search_sym_store(view, &server.to_string(), &info) {
                     Ok(Some(conts)) => {
                         match self.load_from_file(&conts, debug_info, view, &progress, true, true) {
                             Ok(_) => return true,
@@ -755,7 +755,6 @@ fn init_plugin() -> bool {
         r#"{
             "title" : "Symbol Server List",
             "type" : "array",
-            "elementType" : "string",
             "sorted" : false,
             "default" : ["https://msdl.microsoft.com/download/symbols"],
             "aliases" : ["pdb.symbol-server-list", "pdb.symbolServerList"],

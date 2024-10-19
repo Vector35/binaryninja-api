@@ -1878,6 +1878,80 @@ RemoteFolder::RemoteFolder(BNRemoteFolder* folder)
 }
 
 
+Ref<ProjectFolder> RemoteFolder::GetCoreFolder()
+{
+	BNProjectFolder* res = BNRemoteFolderGetCoreFolder(m_object);
+	if (!res)
+		return nullptr;
+	return new ProjectFolder(res);
+}
+
+
+Ref<RemoteProject> RemoteFolder::GetProject()
+{
+	BNRemoteProject* res = BNRemoteFolderGetProject(m_object);
+	if (!res)
+		return nullptr;
+	return new RemoteProject(res);
+}
+
+
+Ref<RemoteFolder> RemoteFolder::GetParent()
+{
+	BNRemoteFolder* res = nullptr;
+	if (!BNRemoteFolderGetParent(m_object, &res))
+		return nullptr;
+	if (!res)
+		return nullptr;
+	return new RemoteFolder(res);
+}
+
+
+Ref<Remote> RemoteFolder::GetRemote()
+{
+	BNRemote* res = BNRemoteFolderGetRemote(m_object);
+	if (!res)
+		return nullptr;
+	return new Remote(res);
+}
+
+
+std::string RemoteFolder::GetId()
+{
+	char* res = BNRemoteFolderGetId(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFolder::GetUrl()
+{
+	char* res = BNRemoteFolderGetUrl(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFolder::GetName()
+{
+	char* res = BNRemoteFolderGetName(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFolder::GetDescription()
+{
+	char* res = BNRemoteFolderGetDescription(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
 CollabPermission::CollabPermission(BNCollaborationPermission* permission)
 {
 	m_object = permission;
@@ -2147,18 +2221,13 @@ std::string AnalysisMergeConflict::GetPathItem<std::string>(const std::string& p
 template <>
 nlohmann::json AnalysisMergeConflict::GetPathItem<nlohmann::json>(const std::string& path)
 {
-	std::any anyVal = GetPathItem<std::any>(path);
-	try
-	{
-		return std::any_cast<nlohmann::json>(anyVal);
-	}
-	catch (const std::exception& e)
-	{
-		throw SyncException(fmt::format(
-			"Failed to cast merge conflict path item \"{}\" from \"{}\" to \"{}\": {}",
-			path, anyVal.type().name(), typeid(nlohmann::json).name(), e.what()
-		));
-	}
+	char* val = BNAnalysisMergeConflictGetPathItemSerialized(m_object, path.c_str());
+	if (val == nullptr)
+		throw SyncException(fmt::format("Failed to find merge conflict path item \"{}\"", path));
+
+	std::string strVal = val;
+	BNFreeString(val);
+	return nlohmann::json::parse(strVal);
 }
 
 

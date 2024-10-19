@@ -92,8 +92,8 @@ import warnings
 # https://docs.python.org/3/library/warnings.html#default-warning-filter
 warnings.filterwarnings('once', '', DeprecatedWarning)
 
-# Only load Enterprise Client support on Enterprise builds
-if core.BNGetProduct() == "Binary Ninja Enterprise Client":
+# Only load Enterprise Client support on Ultimate builds
+if core.BNGetProduct() == "Binary Ninja Enterprise Client" or core.BNGetProduct() == "Binary Ninja Ultimate":
 	from .enterprise import *
 
 
@@ -235,8 +235,8 @@ def _init_plugins():
 	global _enterprise_license_checkout
 
 	if not _plugin_init:
-		if not core_ui_enabled() and core.BNGetProduct() == "Binary Ninja Enterprise Client":
-			# Enterprise client needs to checkout a license reservation or else BNInitPlugins will fail
+		if not core_ui_enabled() and (core.BNGetProduct() == "Binary Ninja Enterprise Client" or core.BNGetProduct() == "Binary Ninja Ultimate"):
+			# Enterprise client needs to reserve a license or else BNInitPlugins will fail
 			_enterprise_license_checkout = enterprise.LicenseCheckout()
 			_enterprise_license_checkout.acquire()
 
@@ -484,7 +484,7 @@ def fuzzy_match_single(target, query) -> Optional[int]:
 	return result
 
 
-# Load Collaboration scripts from Enterprise (they are bundled in shipping builds)
+# Load Collaboration scripts from Ultimate (they are bundled in shipping builds)
 try:
 	from . import collaboration
 except ImportError:

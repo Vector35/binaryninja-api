@@ -165,11 +165,11 @@ The Recent files list can be cleared via using the Command Palette (`[CTRL] + P`
 
 Hotkeys (macOS: `[CMD] + 0` - `[CMD] + 9`, Windows/Linux: `[CTRL] + 0` - `[CTRL + 9]`) can also be used to quickly open a file. The hotkey for a given entry will be shown on the right.
 
-### Commercial/Enterprise Features
+### Commercial/Ultimate Features
 
 ![new tab](../img/newtab-projects.png "New Tab Projects Version"){ width="700" }
 
-On Commercial and Enterprise, the New Tab file list also contains a separate tab for Recent Projects. These tabs can be docked, rearranged, split, or unified, and their split is adjustable. Layout changes will be saved.
+On Commercial and Ultimate, the New Tab file list also contains a separate tab for Recent Projects. These tabs can be docked, rearranged, split, or unified, and their split is adjustable. Layout changes will be saved.
 
 While Projects themselves are presented in their own tab, files opened in Projects will be located in the usual Recent Files list.
 
@@ -509,13 +509,14 @@ To search in the keybindings list, just click to make sure it's focused and star
  - `[F5]`, `[TAB]` : Toggle between Pseudo C and disassembly view
  - `g` : Go To Address dialog
  - `n` : Name a symbol
- - `u` : Undefine an existing symbol (only for removing new user-defined names)
+ - `u` : Undefine selected function(s)/data variable(s)/user symbols(s)
  - `e` : Edit an instruction (by modifying the original binary -- currently only enabled for x86, and x64)
  - `x` : Focus the cross-reference pane
  - `;` : Add a comment
  - `i` : Cycle between disassembly, LLIL, MLIL and HLIL
  - `t` : Switch to type view
  - `y` : Change type of currently selected element
+ - `q` : Forward propagate the type of the selected function or variable
  - `a` : Change the data type to an ASCII string
  - `[SHIFT] a` : Change the data type to a `wchar_t` string
  - `[OPT-SHIFT] a` (macOS) : Change the data type to a `wchar32_t` string

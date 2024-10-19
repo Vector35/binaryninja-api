@@ -33,10 +33,41 @@ add_library(binaryninjaapi STATIC ${BN_API_SOURCES})
 target_include_directories(binaryninjaapi
     PUBLIC ${PROJECT_SOURCE_DIR})
 
-find_package(BinaryNinjaCore REQUIRED)
-target_link_libraries(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARIES})
-target_link_directories(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARY_DIRS})
-target_compile_definitions(binaryninjaapi PUBLIC ${BinaryNinjaCore_DEFINITIONS})
+find_package(BinaryNinjaCore)
+if(BinaryNinjaCore_FOUND)
+    target_link_libraries(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARIES})
+    target_link_directories(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARY_DIRS})
+    target_compile_definitions(binaryninjaapi PUBLIC ${BinaryNinjaCore_DEFINITIONS})
+else()
+    if(APPLE)
+        target_link_options(binaryninjaapi PUBLIC -undefined dynamic_lookup)
+    elseif(MSVC)
+        # Generate stubs.cpp with implementations of all the BNAPI functions
+        execute_process(COMMAND python ${PROJECT_SOURCE_DIR}/cmake/generate_stubs.py ${PROJECT_SOURCE_DIR}/binaryninjacore.h ${PROJECT_BINARY_DIR}/stubs)
+        
+        # Compile those stubs into a stub library we can use to fool the linker
+        add_library(binaryninjacore SHARED ${PROJECT_BINARY_DIR}/stubs/stubs.cpp)
+        set_target_properties(binaryninjacore
+            PROPERTIES OUTPUT_NAME binaryninjacore
+            SOVERSION 1
+            ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/stubs
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/stubs
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/stubs
+        )
+        target_include_directories(binaryninjacore PUBLIC ${PROJECT_SOURCE_DIR})
+        
+        # Be sure to only link against the stubs archive file
+        add_dependencies(binaryninjaapi binaryninjacore)
+        if(${CMAKE_GENERATOR} MATCHES "^Visual Studio")
+            # Visual Studio's generator adds the config to the file path
+            target_link_libraries(binaryninjaapi PUBLIC "$<TARGET_PROPERTY:binaryninjacore,ARCHIVE_OUTPUT_DIRECTORY>/$<CONFIG>/$<TARGET_PROPERTY:binaryninjacore,OUTPUT_NAME>.lib")
+        else()
+            target_link_libraries(binaryninjaapi PUBLIC "$<TARGET_PROPERTY:binaryninjacore,ARCHIVE_OUTPUT_DIRECTORY>/$<TARGET_PROPERTY:binaryninjacore,OUTPUT_NAME>.lib")
+        endif()
+    else()
+        target_link_options(binaryninjaapi PUBLIC "LINKER:--allow-shlib-undefined")
+    endif()
+endif()
 
 if(BN_REF_COUNT_DEBUG)
     target_compile_definitions(binaryninjaapi PUBLIC BN_REF_COUNT_DEBUG)
@@ -94,16 +125,18 @@ function(bn_install_plugin target)
         list(APPEND CMAKE_MODULE_PATH "${BN_API_SOURCE_DIR}/cmake")
 
         # BinaryNinjaCore has the user plugins dir define that we want
-        find_package(BinaryNinjaCore REQUIRED)
-        if(WIN32)
-            install(TARGETS ${target} RUNTIME
-                DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR})
+        find_package(BinaryNinjaCore)
+        if(BinaryNinjaCore_FOUND)
+            if(WIN32)
+                install(TARGETS ${target} RUNTIME
+                    DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR})
 
-            install(FILES $<TARGET_PDB_FILE:${target}>
-                DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR} OPTIONAL)
-        else()
-            install(TARGETS ${target} LIBRARY
-                DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR})
+                install(FILES $<TARGET_PDB_FILE:${target}>
+                    DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR} OPTIONAL)
+            else()
+                install(TARGETS ${target} LIBRARY
+                    DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR})
+            endif()
         endif()
     endif()
 endfunction()

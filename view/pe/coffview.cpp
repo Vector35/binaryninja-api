@@ -62,6 +62,8 @@ void BinaryNinja::InitCOFFViewType()
 
 COFFView::COFFView(BinaryView* data, bool parseOnly): BinaryView("COFF", data->GetFile(), data), m_parseOnly(parseOnly)
 {
+	CreateLogger("BinaryView");
+	m_logger = CreateLogger("BinaryView.COFFView");
 }
 
 bool COFFView::Init()
@@ -108,16 +110,16 @@ bool COFFView::Init()
 				reader.Read(&header2.UUID, sizeof(header2.UUID));
 				if (memcmp(&header2.UUID, BigObjMagic, sizeof(BigObjMagic)) == 0)
 				{
-					LogDebug("COFF Header UUID is big object");
+					m_logger->LogDebug("COFF Header UUID is big object");
 				}
 				else if (memcmp(&header2.UUID, ClGlObjMagic, sizeof(ClGlObjMagic)) == 0)
 				{
-					LogError("COFF: header UUID is CL.exe LTO object, no native code to disassemble.");
+					m_logger->LogError("COFF: header UUID is CL.exe LTO object, no native code to disassemble.");
 					return false;
 				}
 				else
 				{
-					LogError("COFF: header UUID unknown, probably COFF import library (unsupported).");
+					m_logger->LogError("COFF: header UUID unknown, probably COFF import library (unsupported).");
 					return false;
 				}
 				header2.unused1 = reader.Read32();
@@ -127,7 +129,7 @@ bool COFFView::Init()
 				sectionCount = header2.sectionCount = reader.Read32();
 				header.coffSymbolTable = header2.coffSymbolTable = reader.Read32();
 				header.coffSymbolCount = header2.coffSymbolCount = reader.Read32();
-				LogDebug("COFFHeader (big):\n"
+				m_logger->LogDebug("COFFHeader (big):\n"
 						"\tsig1:               0x%04x\n"
 						"\tsig2:               0x%04x\n"
 						"\tmachine:            0x%04x\n"
@@ -159,7 +161,7 @@ bool COFFView::Init()
 			header.coffSymbolCount = reader.Read32();
 			header.optionalHeaderSize = reader.Read16();
 			header.characteristics = reader.Read16();
-			LogDebug("COFFHeader:\n"
+			m_logger->LogDebug("COFFHeader:\n"
 					"\tmachine:            0x%04x\n"
 					"\tsectionCount:       0x%04x\n"
 					"\ttimestamp:          0x%08x\n"
@@ -187,10 +189,10 @@ bool COFFView::Init()
 		m_arch = g_coffViewType->GetArchitecture(header.machine, LittleEndian);
 		if (!m_arch)
 		{
-			LogError("COFF: Invalid or unknown machine type %#" PRIx16, header.machine);
+			m_logger->LogError("COFF: Invalid or unknown machine type %#" PRIx16, header.machine);
 			return false;
 		}
-		LogDebug("COFF: Architecture(%#x): %s", header.machine, m_arch->GetName().c_str());
+		m_logger->LogDebug("COFF: Architecture(%#x): %s", header.machine, m_arch->GetName().c_str());
 
 		m_is64 = m_arch->GetAddressSize() == 8;
 
@@ -208,11 +210,11 @@ bool COFFView::Init()
 				if (platform)
 				{
 					m_arch = platform->GetArchitecture();
-					LogDebug("COFF: loader.platform override (%#x, arch: %s): %s", header.machine, m_arch->GetName().c_str(), platformName.c_str());
+					m_logger->LogDebug("COFF: loader.platform override (%#x, arch: %s): %s", header.machine, m_arch->GetName().c_str(), platformName.c_str());
 				}
 				else
 				{
-					LogError("COFF: Cannot find platform \"%s\" specified in loader.platform override", platformName.c_str());
+					m_logger->LogError("COFF: Cannot find platform \"%s\" specified in loader.platform override", platformName.c_str());
 				}
 			}
 		}
@@ -230,7 +232,7 @@ bool COFFView::Init()
 		}
 		else
 		{
-			LogWarn("COFF header sectionCount is 0, no sections added");
+			m_logger->LogWarn("COFF header sectionCount is 0, no sections added");
 			return false;
 		}
 
@@ -254,13 +256,27 @@ bool COFFView::Init()
 			string resolvedName = name;
 			if (name[0] == '/' && header.coffSymbolTable)
 			{
-				uint32_t stringTableBase = header.coffSymbolTable + (header.coffSymbolCount * 18);
 				errno = 0;
 				uint32_t offset = strtoul(name+1, nullptr, 10);
-				if (errno == 0 && offset > 0 && stringTableBase + offset < GetParentView()->GetEnd())
+				if (errno == 0 && offset > 0)
 				{
-					sectionNameReader.Seek(stringTableBase + offset);
-					resolvedName = sectionNameReader.ReadCString();
+					BinaryReader stringReader(GetParentView(), LittleEndian);
+					uint64_t stringTableBase = header.coffSymbolTable + (header.coffSymbolCount * 18);
+					stringReader.Seek(stringTableBase);
+					uint32_t stringTableLen = stringReader.Read32();
+					if ((stringTableBase + stringTableLen) > GetParentView()->GetEnd())
+					{
+						m_logger->LogError("Cannot resolve section name \"%s\": String table is invalid length", name);
+					}
+					else if (stringTableBase + offset < GetParentView()->GetEnd())
+					{
+						sectionNameReader.Seek(stringTableBase + offset);
+						resolvedName = sectionNameReader.ReadCString();
+					}
+					else
+					{
+						m_logger->LogError("Cannot resolve section name \"%s\": Offset is past end of string table", name);
+					}
 				}
 			}
 			section.name = resolvedName;
@@ -287,7 +303,7 @@ bool COFFView::Init()
 			if (i > 0)
 			{
 				auto previous = m_sections[i-1];
-				DEBUG_COFF(LogDebug("COFF: previous section (%#" PRIx32 ", %#" PRIx32 ", %#" PRIx32 ") new section: %#" PRIx32 ", %#" PRIx32 ")",
+				DEBUG_COFF(m_logger->LogDebug("COFF: previous section (%#" PRIx32 ", %#" PRIx32 ", %#" PRIx32 ") new section: %#" PRIx32 ", %#" PRIx32 ")",
 					previous.virtualAddress,
 					previous.virtualSize,
 					previous.virtualAddress + previous.virtualSize + previous.relocCount * sizeof(COFFRelocation),
@@ -314,16 +330,16 @@ bool COFFView::Init()
 				flags |= SegmentContainsCode;
 
 			uint32_t align_characteristic = (section.characteristics & (0x00F00000));
-			DEBUG_COFF(LogDebug("COFF: align_characteristic: %#" PRIx32 ", %#" PRIx32 "\n", align_characteristic, align_characteristic >> 20));
+			DEBUG_COFF(m_logger->LogDebug("COFF: align_characteristic: %#" PRIx32 ", %#" PRIx32 "\n", align_characteristic, align_characteristic >> 20));
 			if (align_characteristic != 0)
 			{
 				uint32_t alignment = 1 << ((align_characteristic >> 20) - 1);
 				uint32_t mask = alignment - 1;
-				DEBUG_COFF(LogDebug("COFF: section alignment: %#" PRIx32 ", mask: %#" PRIx32 "\n", alignment, mask));
+				DEBUG_COFF(m_logger->LogDebug("COFF: section alignment: %#" PRIx32 ", mask: %#" PRIx32 "\n", alignment, mask));
 				section.virtualAddress += (-section.virtualAddress & mask);
 			}
 
-			LogDebug("COFF: Section [%d]\n"
+			m_logger->LogDebug("COFF: Section [%d]\n"
 				"\tsection.name                  %s\n"\
 				"\tsection.virtualSize:          %#" PRIx32 "\n"\
 				/* "\tsection.physicalAddress:      %#" PRIx32 "\n" */\
@@ -348,7 +364,7 @@ bool COFFView::Init()
 				section.virtualAddress
 				);
 
-			LogDebug("COFF: Segment: Vaddr: %08" PRIx64 " Vsize: %08" PRIx32 \
+			m_logger->LogDebug("COFF: Segment: Vaddr: %08" PRIx64 " Vsize: %08" PRIx32 \
 					" Offset: %08" PRIx32 " Rawsize: %08" PRIx32 " %c%c%c %s\n",
 				section.virtualAddress + m_imageBase,
 				section.virtualSize,
@@ -399,7 +415,7 @@ bool COFFView::Init()
 			transform(shortName.begin(), shortName.end(), shortName.begin(), ::tolower);
 			if (auto itr = promotedSectionSemantics.find(shortName); (itr != promotedSectionSemantics.end()) && (itr->second != semantics))
 			{
-				LogInfo("COFF: %s section semantics have been promoted to facilitate analysis.", section.name.c_str());
+				m_logger->LogInfo("COFF: %s section semantics have been promoted to facilitate analysis.", section.name.c_str());
 				semantics = itr->second;
 			}
 
@@ -422,22 +438,22 @@ bool COFFView::Init()
 			switch (header.machine)
 			{
 			case IMAGE_FILE_MACHINE_I386:
-				LogError("Support for COFF architecture 'x86' is not present");
+				m_logger->LogError("Support for COFF architecture 'x86' is not present");
 				break;
 			case IMAGE_FILE_MACHINE_ARM:
-				LogError("Support for COFF architecture 'armv7' is not present");
+				m_logger->LogError("Support for COFF architecture 'armv7' is not present");
 				break;
 			case IMAGE_FILE_MACHINE_ARMNT:
-				LogError("Support for COFF architecture 'thumb2' is not present");
+				m_logger->LogError("Support for COFF architecture 'thumb2' is not present");
 				break;
 			case IMAGE_FILE_MACHINE_AMD64:
-				LogError("Support for COFF architecture 'x86_64' is not present");
+				m_logger->LogError("Support for COFF architecture 'x86_64' is not present");
 				break;
 			case IMAGE_FILE_MACHINE_ARM64:
-				LogError("Support for COFF architecture 'aarch64' is not present");
+				m_logger->LogError("Support for COFF architecture 'aarch64' is not present");
 				break;
 			default:
-				LogError("COFF architecture '0x%x' is not supported", header.machine);
+				m_logger->LogError("COFF architecture '0x%x' is not supported", header.machine);
 				break;
 			}
 			return false;
@@ -451,7 +467,7 @@ bool COFFView::Init()
 			// entry point address to have its low bit set,
 			// otherwise GetAssociatedPlatformByAddress will say it's armv7
 			entryPointAddress |= 1;
-			LogDebug("COFF: IMAGE_FILE_MACHINE_ARMNT, setting low bit in entry point %#" PRIx64 " to %#" PRIx64 "", m_entryPoint, entryPointAddress);
+			m_logger->LogDebug("COFF: IMAGE_FILE_MACHINE_ARMNT, setting low bit in entry point %#" PRIx64 " to %#" PRIx64 "", m_entryPoint, entryPointAddress);
 			m_entryPoint = entryPointAddress;
 		}
 
@@ -463,16 +479,16 @@ bool COFFView::Init()
 		if (!platform)
 		{
 			platform = g_coffViewType->GetPlatform(IMAGE_SUBSYSTEM_UNKNOWN, m_arch);
-			LogDebug("COFF: initial platform (%#x, arch: %s): %s", header.machine, m_arch->GetName().c_str(), platform->GetName().c_str());
+			m_logger->LogDebug("COFF: initial platform (%#x, arch: %s): %s", header.machine, m_arch->GetName().c_str(), platform->GetName().c_str());
 		}
 
 		platform = platform->GetAssociatedPlatformByAddress(entryPointAddress);
 		entryPointAddress = m_entryPoint;
-		LogDebug("COFF: entry point %#" PRIx64 " associated platform (%#x, arch: %s): %s", entryPointAddress, header.machine, m_arch->GetName().c_str(), platform->GetName().c_str());
+		m_logger->LogDebug("COFF: entry point %#" PRIx64 " associated platform (%#x, arch: %s): %s", entryPointAddress, header.machine, m_arch->GetName().c_str(), platform->GetName().c_str());
 
 		SetDefaultPlatform(platform);
 		SetDefaultArchitecture(platform->GetArchitecture());
-		LogDebug("COFF: final entry point %#" PRIx64 " default (%#x, arch: %s): %s", entryPointAddress, header.machine, platform->GetName().c_str(), GetDefaultPlatform()->GetName().c_str());
+		m_logger->LogDebug("COFF: final entry point %#" PRIx64 " default (%#x, arch: %s): %s", entryPointAddress, header.machine, platform->GetName().c_str(), GetDefaultPlatform()->GetName().c_str());
 
 		// Finished for parse only mode
 		if (m_parseOnly)
@@ -660,7 +676,7 @@ bool COFFView::Init()
 	}
 	catch (std::exception& e)
 	{
-		LogError("Failed to parse COFF headers: %s\n", e.what());
+		m_logger->LogError("Failed to parse COFF headers: %s\n", e.what());
 		return false;
 	}
 
@@ -1063,7 +1079,7 @@ bool COFFView::Init()
 	}
 	catch (std::exception& e)
 	{
-		LogError("Failed to parse COFF symbol table: %s\n", e.what());
+		m_logger->LogError("Failed to parse COFF symbol table: %s\n", e.what());
 	}
 
 	// From elfview.cpp:
@@ -1184,11 +1200,11 @@ bool COFFView::Init()
 			if (relocationEnumTypes.find(m_arch->GetName()) != relocationEnumTypes.end())
 			{
 				coffRelocBuilder.AddMember(Type::NamedType(this, relocationEnumTypes[m_arch->GetName()]), "type");
-				DEBUG_COFF(LogDebug("COFF: using relocation type '%s' for architecture '%s'", relocationEnumTypes[m_arch->GetName()].GetString().c_str(), m_arch->GetName().c_str()));
+				DEBUG_COFF(m_logger->LogDebug("COFF: using relocation type '%s' for architecture '%s'", relocationEnumTypes[m_arch->GetName()].GetString().c_str(), m_arch->GetName().c_str()));
 			}
 			else {
 				coffRelocBuilder.AddMember(Type::IntegerType(2, false), "type");
-				LogDebug("COFF: no relocation type found for architecture '%s', using uint16_t", m_arch->GetName().c_str());
+				m_logger->LogDebug("COFF: no relocation type found for architecture '%s', using uint16_t", m_arch->GetName().c_str());
 			}
 
 			Ref<Structure> coffRelocStruct = coffRelocBuilder.Finalize();
@@ -1206,7 +1222,7 @@ bool COFFView::Init()
 				{
 					uint32_t relocsFileOffset = section.pointerToRelocs;
 					auto relocsVirtualOffset = relocsFileOffset - section.pointerToRawData + section.virtualAddress;
-					DEBUG_COFF(LogDebug("COFF: section %d reading %d relocations from raw_data: 0x%" PRIx32 " relocs: 0x%" PRIx32 " adjusted offset: %#" PRIx32 " final address: %#" PRIx32,
+					DEBUG_COFF(m_logger->LogDebug("COFF: section %d reading %d relocations from raw_data: 0x%" PRIx32 " relocs: 0x%" PRIx32 " adjusted offset: %#" PRIx32 " final address: %#" PRIx32,
 						i, section.relocCount, section.pointerToRawData, relocsFileOffset, relocsVirtualOffset, m_imageBase + relocsVirtualOffset));
 					AddAutoSegment(m_imageBase + relocsVirtualOffset, section.relocCount * sizeof(COFFRelocation), relocsFileOffset, section.relocCount * sizeof(COFFRelocation), SegmentReadable);
 
@@ -1225,7 +1241,7 @@ bool COFFView::Init()
 
 						uint64_t itemAddress = section.virtualAddress + virtualAddress;
 
-						DEBUG_COFF(LogDebug("COFF: section %d reloc %d at: 0x%" PRIx32 " va: 0x%x, index: %d, type: 0x%hx, item at: 0x%x",
+						DEBUG_COFF(m_logger->LogDebug("COFF: section %d reloc %d at: 0x%" PRIx32 " va: 0x%x, index: %d, type: 0x%hx, item at: 0x%x",
 							i, j, relocationOffset, virtualAddress, symbolTableIndex, relocType, itemAddress));
 
 						DEBUG_COFF(AddUserDataReference(m_imageBase + relocationOffset, m_imageBase + itemAddress));
@@ -1237,7 +1253,7 @@ bool COFFView::Init()
 						const auto symbol = GetSymbolByAddress(m_imageBase + symbolOffset);
 						if (!symbol)
 						{
-							LogWarn("COFF: skipping relocation at 0x%" PRIx64 " with invalid symbol address 0x%" PRIx64,
+							m_logger->LogWarn("COFF: skipping relocation at 0x%" PRIx64 " with invalid symbol address 0x%" PRIx64,
 								relocationOffset, m_imageBase + symbolOffset);
 							continue;
 						}
@@ -1258,7 +1274,7 @@ bool COFFView::Init()
 						coffSymbol.storageClass = reader.Read8();
 
 						DEBUG_COFF(AddUserDataReference(m_imageBase + itemAddress, m_imageBase + symbolOffset));
-						DEBUG_COFF(LogDebug("COFF: CREATING RELOC SYMBOL REF from 0x%" PRIx64 " to 0x%" PRIx64 " for \"%s\"", m_imageBase + itemAddress, m_imageBase + symbolOffset, symbolName.c_str()));
+						DEBUG_COFF(m_logger->LogDebug("COFF: CREATING RELOC SYMBOL REF from 0x%" PRIx64 " to 0x%" PRIx64 " for \"%s\"", m_imageBase + itemAddress, m_imageBase + symbolOffset, symbolName.c_str()));
 
 						DefineAutoSymbol(new Symbol(DataSymbol, "__reloc(" + symbolName + ")", m_imageBase + relocationOffset));
 
@@ -1278,7 +1294,7 @@ bool COFFView::Init()
 							reloc.sectionIndex = sectionIndex - 1;
 						else
 							reloc.sectionIndex = SIZE_MAX;
-						DEBUG_COFF(if (sectionIndex <= 0) LogDebug("COFF: sectionIndex <= 0 (%d) at 0x%" PRIx64 " for symbol at 0x%" PRIx64, sectionIndex, m_imageBase + relocationOffset,  m_imageBase + symbolOffset));
+						DEBUG_COFF(if (sectionIndex <= 0) m_logger->LogDebug("COFF: sectionIndex <= 0 (%d) at 0x%" PRIx64 " for symbol at 0x%" PRIx64, sectionIndex, m_imageBase + relocationOffset,  m_imageBase + symbolOffset));
 						if (coffSymbol.storageClass == IMAGE_SYM_CLASS_EXTERNAL || coffSymbol.storageClass == IMAGE_SYM_CLASS_STATIC)
 						{
 							vector<BNRelocationInfo> relocs;
@@ -1289,17 +1305,17 @@ bool COFFView::Init()
 							{
 								uint64_t relocTargetOffset = m_sections[reloc.sectionIndex].virtualAddress + coffSymbol.value;
 
-								DEBUG_COFF(LogError("COFF: CREATING RELOC (%d) REF from 0x%" PRIx64 " to 0x%" PRIx64 " for %s", relocType, m_imageBase + itemAddress, m_imageBase + relocTargetOffset, symbolName.c_str()));
+								DEBUG_COFF(m_logger->LogError("COFF: CREATING RELOC (%d) REF from 0x%" PRIx64 " to 0x%" PRIx64 " for %s", relocType, m_imageBase + itemAddress, m_imageBase + relocTargetOffset, symbolName.c_str()));
 								DEBUG_COFF(AddUserDataReference(m_imageBase + itemAddress, m_imageBase + relocTargetOffset));
 
 								DefineRelocation(m_arch, reloc, m_imageBase + relocTargetOffset, m_imageBase + reloc.address);
 
 								DEBUG_COFF(AddUserDataReference(m_imageBase + relocTargetOffset, m_imageBase + itemAddress));
-								DEBUG_COFF(LogError("COFF: DEFINED RELOCATION for 0x%" PRIx64 ":0x%" PRIx64 " to 0x%" PRIx64 " reloc type %#04x", reloc.base, reloc.address, m_imageBase + relocTargetOffset, reloc.nativeType));
+								DEBUG_COFF(m_logger->LogError("COFF: DEFINED RELOCATION for 0x%" PRIx64 ":0x%" PRIx64 " to 0x%" PRIx64 " reloc type %#04x", reloc.base, reloc.address, m_imageBase + relocTargetOffset, reloc.nativeType));
 							}
 							else if (coffSymbol.storageClass == IMAGE_SYM_CLASS_EXTERNAL)
 							{
-								DEBUG_COFF(LogDebug("COFF: EXTERNAL RELOCATION for 0x%" PRIx64 ":0x%" PRIx64 " reloc type %#04x", reloc.base, reloc.address, reloc.nativeType));
+								DEBUG_COFF(m_logger->LogDebug("COFF: EXTERNAL RELOCATION for 0x%" PRIx64 ":0x%" PRIx64 " reloc type %#04x", reloc.base, reloc.address, reloc.nativeType));
 								reloc.external = true;
 								Ref<Symbol> targetSymbol;
 								reloc.size = m_is64 ? 8 : 4;
@@ -1317,7 +1333,7 @@ bool COFFView::Init()
 											{
 												targetSymbol = externSymbol;
 												DefineRelocation(m_arch, reloc, targetSymbol, m_imageBase + reloc.address);
-												DEBUG_COFF(LogDebug("COFF: created external relocation at %#" PRIx64 " for %#" PRIx64 ": %s", m_imageBase + relocationOffset, m_imageBase + reloc.address, name.c_str()));
+												DEBUG_COFF(m_logger->LogDebug("COFF: created external relocation at %#" PRIx64 " for %#" PRIx64 ": %s", m_imageBase + relocationOffset, m_imageBase + reloc.address, name.c_str()));
 												break;
 											}
 										}
@@ -1328,7 +1344,7 @@ bool COFFView::Init()
 								if (! targetSymbol)
 								{
 									// TODO: determine whether this is actually worth logging -- may only be happening for NB (non-based) relocations?
-									LogError("COFF: no defined external symbol found for relocation at %#" PRIx64 " for symbol %s", m_imageBase + relocationOffset, symbolName.c_str());
+									m_logger->LogError("COFF: no defined external symbol found for relocation at %#" PRIx64 " for symbol %s", m_imageBase + relocationOffset, symbolName.c_str());
 								}
 							}
 						}
@@ -1339,7 +1355,7 @@ bool COFFView::Init()
 	}
 	catch (std::exception& e)
 	{
-		LogError("Failed to parse COFF relocations: %s\n", e.what());
+		m_logger->LogError("Failed to parse COFF relocations: %s\n", e.what());
 	}
 
 	// Add a symbol for the entry point
@@ -1347,7 +1363,7 @@ bool COFFView::Init()
 	// 	DefineAutoSymbol(new Symbol(FunctionSymbol, "_start", m_imageBase + entryPointAddress));
 	std::chrono::steady_clock::time_point endTime = std::chrono::steady_clock::now();
 	double t = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count() / 1000.0;
-	LogInfo("COFF parsing took %.3f seconds\n", t);
+	m_logger->LogInfo("COFF parsing took %.3f seconds\n", t);
 
 	return true;
 }
@@ -1473,7 +1489,7 @@ void COFFView::AddCOFFSymbol(BNSymbolType type, const string& dll, const string&
 		}
 		if (!ok)
 		{
-			LogDebug("COFF: %s symbol %s at %#" PRIx64 " is not in any section", __func__, name.c_str(), addr);
+			m_logger->LogDebug("COFF: %s symbol %s at %#" PRIx64 " is not in any section", __func__, name.c_str(), addr);
 			return;
 		}
 	}
@@ -1487,7 +1503,7 @@ void COFFView::AddCOFFSymbol(BNSymbolType type, const string& dll, const string&
 		symbolTypeRef = ImportTypeLibraryObject(appliedLib, n);
 		if (symbolTypeRef && type != ExternalSymbol)
 		{
-			LogDebug("COFF: type library '%s' found hit for '%s'", lib->GetGuid().c_str(), name.c_str());
+			m_logger->LogDebug("COFF: type library '%s' found hit for '%s'", lib->GetGuid().c_str(), name.c_str());
 			RecordImportedObjectLibrary(GetDefaultPlatform(), m_imageBase + addr, appliedLib, n);
 		}
 	}
@@ -1502,22 +1518,23 @@ void COFFView::AddCOFFSymbol(BNSymbolType type, const string& dll, const string&
 	string shortName = rawName;
 	string fullName = rawName;
 
-	if (m_arch && name.size() > 0 && name[0] == '?')
+	if (m_arch && name.size() > 0)
 	{
-		QualifiedName demangleName;
+		QualifiedName demangledName;
 		Ref<Type> demangledType;
-		if (DemangleMS(m_arch, name, demangledType, demangleName, m_simplifyTemplates))
+		bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
+		if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, simplify))
 		{
-			shortName = demangleName.GetString();
-			fullName = shortName + demangledType->GetStringAfterName();
+			shortName = demangledName.GetString();
+			fullName = shortName;
+			if (demangledType)
+				fullName += demangledType->GetStringAfterName();
 			if (!symbolTypeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
 				symbolTypeRef = demangledType;
 		}
 		else
 		{
-			// TODO: This is happening a lot, so figure out why the demangler can't handle symbols like "??_C@_0M@LLLPOAKG@hasChildren@"
-			// For now, disable the message because it's very noisy for some binaries
-			DEBUG_COFF(LogDebug("COFF: Failed to demangle: '%s'\n", name.c_str()));
+			m_logger->LogDebug("Failed to demangle: '%s'\n", name.c_str());
 		}
 	}
 
@@ -1540,6 +1557,7 @@ size_t COFFView::PerformGetAddressSize() const
 
 COFFViewType::COFFViewType(): BinaryViewType("COFF", "COFF")
 {
+	m_logger = LogRegistry::CreateLogger("BinaryView");
 }
 
 
@@ -1551,7 +1569,7 @@ Ref<BinaryView> COFFViewType::Create(BinaryView* data)
 	}
 	catch (std::exception& e)
 	{
-		LogError("%s<BinaryViewType> failed to create view! '%s'", GetName().c_str(), e.what());
+		m_logger->LogError("%s<BinaryViewType> failed to create view! '%s'", GetName().c_str(), e.what());
 		return nullptr;
 	}
 }
@@ -1565,7 +1583,7 @@ Ref<BinaryView> COFFViewType::Parse(BinaryView* data)
 	}
 	catch (std::exception& e)
 	{
-		LogError("%s<BinaryViewType> failed to create view! '%s'", GetName().c_str(), e.what());
+		m_logger->LogError("%s<BinaryViewType> failed to create view! '%s'", GetName().c_str(), e.what());
 		return nullptr;
 	}
 }
@@ -1638,7 +1656,7 @@ Ref<Settings> COFFViewType::GetLoadSettingsForData(BinaryView* data)
 	Ref<BinaryView> viewRef = Parse(data);
 	if (!viewRef || !viewRef->Init())
 	{
-		LogError("View type '%s' could not be created", GetName().c_str());
+		m_logger->LogError("View type '%s' could not be created", GetName().c_str());
 		return nullptr;
 	}
 

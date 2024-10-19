@@ -76,6 +76,7 @@ class BINARYNINJAUIAPI TokenizedTextView :
 	void scrollLines(int count);
 
 	void bindActions();
+	void bindDynamicActions();
 	void getHexDumpLineBytes(const BinaryNinja::LinearDisassemblyLine& line, size_t& skippedBytes, size_t& totalBytes, size_t& totalCols);
 
 	void setSectionSemantics(const std::string& name, BNSectionSemantics semantics);
@@ -85,11 +86,10 @@ class BINARYNINJAUIAPI TokenizedTextView :
 	void goToAddress();
 	void defineNameAtAddr(uint64_t addr);
 	void defineName();
-	void undefineName();
+	void undefine();
 	void createFunc(const UIActionContext& context);
 	void defineFuncName();
 	void editFunctionProperties();
-	void undefineFunc();
 	void reanalyze();
 	void comment();
 	void commentAccepted();

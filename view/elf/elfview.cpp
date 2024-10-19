@@ -695,7 +695,7 @@ bool ElfView::Init()
 			m_logger->LogError("Support for ELF architecture 'x86' is not present");
 			break;
 		case 8:
-			#ifndef DEMO_VERSION
+			#ifndef DEMO_EDITION
 			m_logger->LogError("Support for ELF architecture 'mips' is not present");
 			#else
 			m_logger->LogError("Binary Ninja free does not support ELF architecture 'mips'. "
@@ -703,7 +703,7 @@ bool ElfView::Init()
 			#endif
 			break;
 		case 20:
-			#ifndef DEMO_VERSION
+			#ifndef DEMO_EDITION
 			m_logger->LogError("Support for ELF architecture 'ppc' is not present");
 			#else
 			m_logger->LogError("Binary Ninja free does not support ELF architecture 'ppc'. "
@@ -711,7 +711,7 @@ bool ElfView::Init()
 			#endif
 			break;
 		case 21:
-			#ifndef DEMO_VERSION
+			#ifndef DEMO_EDITION
 			m_logger->LogError("Support for ELF architecture 'ppc64' is not present");
 			#else
 			m_logger->LogError("Binary Ninja free does not support ELF architecture 'ppc64'. "
@@ -725,7 +725,7 @@ bool ElfView::Init()
 			m_logger->LogError("Support for ELF architecture 'x86_64' is not present");
 			break;
 		case 183:
-			#ifndef DEMO_VERSION
+			#ifndef DEMO_EDITION
 			m_logger->LogError("Support for ELF architecture 'arm64' is not present");
 			#else
 			m_logger->LogError("Binary Ninja free does not support ELF architecture 'arm64'. "
@@ -795,6 +795,13 @@ bool ElfView::Init()
 			while (!end)
 			{
 				uint64_t tag, value;
+				if (i >= m_dynamicTable.fileSize)
+				{
+					// Prevent reading past end of dynamic table in file
+					end = true;
+					break;
+				}
+
 				if (m_elf32) // 32-bit ELF
 				{
 					tag = reader.Read32();
@@ -1317,6 +1324,8 @@ bool ElfView::Init()
 			}
 		}
 	}
+
+	ParseMiniDebugInfo();
 
 	// Process the queued symbols
 	m_symbolQueue->Process();
@@ -2241,7 +2250,7 @@ bool ElfView::Init()
 		}
 	}
 
-	if (m_relocSection.size)
+	if (m_relocSection.size && m_relocSection.entrySize > 0)
 	{
 		StructureBuilder relocationTableBuilder;
 		if (m_elf32)
@@ -2265,7 +2274,7 @@ bool ElfView::Init()
 		DefineAutoSymbol(new Symbol(DataSymbol, "__elf_rel_table", m_relocSection.offset, NoBinding));
 	}
 
-	if (m_relocaSection.size)
+	if (m_relocaSection.size && m_relocaSection.entrySize > 0)
 	{
 		StructureBuilder relocationATableBuilder;
 		if (m_elf32)
@@ -2434,27 +2443,19 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 		string shortName = rawName;
 		string fullName = rawName;
 		Ref<Type> typeRef = symbolTypeRef;
-		if (m_arch && IsGNU3MangledString(rawName))
+		if (m_arch)
 		{
-			QualifiedName varName;
+			QualifiedName demangledName;
 			Ref<Type> demangledType;
-			if (DemangleGNU3(m_arch, rawName, demangledType, varName, m_simplifyTemplates))
+			bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
+			if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, simplify))
 			{
-				shortName = varName.GetString();
+				shortName = demangledName.GetString();
 				fullName = shortName;
 				if (demangledType)
 					fullName += demangledType->GetStringAfterName();
 				if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
 					typeRef = demangledType;
-			}
-			else if (!m_extractMangledTypes && DemangleLLVM(rawName, varName, m_simplifyTemplates))
-			{
-				shortName = varName.GetString();
-				fullName = shortName;
-			}
-			else
-			{
-				m_logger->LogDebug("Failed to demangle name: '%s'\n", rawName.c_str());
 			}
 		}
 
@@ -2598,6 +2599,44 @@ bool ElfView::DerefPpc64Descriptor(BinaryReader& reader, uint64_t addr, uint64_t
 	bool read_success = reader.TryRead64(result);;
 	reader.Seek(saved);
 	return read_success;
+}
+
+
+void ElfView::ParseMiniDebugInfo()
+{
+	Ref<Section> gnuDebugdata = GetParentView()->GetSectionByName(".gnu_debugdata");
+	if (!gnuDebugdata)
+		return;
+
+	BinaryReader debugdataReader(GetParentView());
+	debugdataReader.Seek(gnuDebugdata->GetStart());
+
+	DataBuffer compressedDebug = debugdataReader.Read(gnuDebugdata->GetLength());
+
+	DataBuffer debugElf;
+	if (!compressedDebug.XzDecompress(debugElf))
+	{
+		m_logger->LogError("Invalid .gnu_debugdata contents: Failed to decompress");
+		return;
+	}
+
+	Ref<BinaryView> debugBv = Load(debugElf, false);
+	if (!debugBv)
+	{
+		m_logger->LogError("Invalid .gnu_debugdata contents: Failed to create BinaryView");
+		return;
+	}
+
+	for (const auto& symbol : debugBv->GetSymbols())
+	{
+		DefineElfSymbol(
+			symbol->GetType(),
+			symbol->GetRawName(),
+			GetStart() + symbol->GetAddress(),
+			false,
+			symbol->GetBinding()
+		);
+	}
 }
 
 
@@ -2881,7 +2920,7 @@ extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
 
-#ifdef DEMO_VERSION
+#ifdef DEMO_EDITION
 	bool ElfPluginInit()
 #else
 	BINARYNINJAPLUGIN bool CorePluginInit()

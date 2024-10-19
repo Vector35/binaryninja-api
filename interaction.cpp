@@ -719,7 +719,7 @@ struct TaskContext
 };
 
 
-static void TaskCallback(void* taskCtxt, bool (*progress)(void*, size_t, size_t), void* progressCtxt)
+static void TaskCallback(void* taskCtxt, BNProgressFunction progress, void* progressCtxt)
 {
 	TaskContext* context = (TaskContext*)taskCtxt;
 	context->callback([=](size_t cur, size_t max) {

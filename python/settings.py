@@ -23,7 +23,10 @@ import ctypes
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import SettingsScope
+from . import binaryview
+from . import function
 
+from typing import List, Optional, Union
 
 class Settings:
 	"""
@@ -63,9 +66,9 @@ class Settings:
 		Property              JSON Data Type                           Prerequisite         Optional   {Allowed Values} and Notes
 		===================   ======================================   ==================   ========   =======================================================================
 		"title"               string                                   None                 No         Concise Setting Title
-		"type"                string                                   None                 No         {"array", "boolean", "number", "string"}
-		"elementType"         string                                   "type" is "array"    No         {"string"}
-		"sorted"              boolean                                  "type" is "array"    Yes        Automatically sort list items (default is true)
+		"type"                string                                   None                 No         {"array", "boolean", "number", "string", "object"}
+		"sorted"              boolean                                  "type" is "array"    Yes        Automatically sort list items (default is false)
+		"isSerialized"        boolean                                  "type" is "string"   Yes        Treat the string as a serialized JSON object
 		"enum"                array : {string}                         "type" is "string"   Yes        Enumeration definitions
 		"enumDescriptions"    array : {string}                         "type" is "string"   Yes        Enumeration descriptions that match "enum" array
 		"minValue"            number                                   "type" is "number"   Yes        Specify 0 to infer unsigned (default is signed)
@@ -157,7 +160,7 @@ class Settings:
 		return hash((self.instance_id, ctypes.addressof(self.handle.contents)))
 
 	@property
-	def instance_id(self):
+	def instance_id(self) -> str:
 		"""Returns the ``instance_id`` for this :class:`Settings` repository (read-only)"""
 		return self._instance_id
 
@@ -173,14 +176,14 @@ class Settings:
 		:param BinaryView view: a BinaryView object
 		:rtype: bool
 		"""
-	def load_settings_file(self, filename=None, scope=SettingsScope.SettingsAutoScope, view=None):
+	def load_settings_file(self, filename: str=None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope, view: Optional['binaryview.BinaryView'] = None) -> bool:
 		if filename is None:
 			filename = ""
 		if view is not None:
 			view = view.handle
 		return core.BNLoadSettingsFile(self.handle, filename, scope, view)
 
-	def set_resource_id(self, resource_id=None):
+	def set_resource_id(self, resource_id: str = None):
 		"""
 		``set_resource_id`` Sets the resource identifier for this class:`Settings` instance. When accessing setting values at the \
 		``SettingsResourceScope`` level, the resource identifier is passed along through the backing store interface.
@@ -197,7 +200,7 @@ class Settings:
 			resource_id = ""
 		core.BNSettingsSetResourceId(self.handle, resource_id)
 
-	def register_group(self, group, title):
+	def register_group(self, group: str, title: str) -> bool:
 		"""
 		``register_group`` registers a group in the schema for this :class:`Settings` instance
 
@@ -213,7 +216,7 @@ class Settings:
 		"""
 		return core.BNSettingsRegisterGroup(self.handle, group, title)
 
-	def register_setting(self, key, properties):
+	def register_setting(self, key: str, properties: str) -> bool:
 		"""
 		``register_setting`` registers a new setting with this :class:`Settings` instance
 
@@ -230,7 +233,7 @@ class Settings:
 		"""
 		return core.BNSettingsRegisterSetting(self.handle, key, properties)
 
-	def contains(self, key):
+	def contains(self, key: str) -> bool:
 		"""
 		``contains`` determine if a setting identifier exists in the active settings schema
 
@@ -240,7 +243,7 @@ class Settings:
 		"""
 		return core.BNSettingsContains(self.handle, key)
 
-	def is_empty(self):
+	def is_empty(self) -> bool:
 		"""
 		``is_empty`` determine if the active settings schema is empty
 
@@ -249,7 +252,7 @@ class Settings:
 		"""
 		return core.BNSettingsIsEmpty(self.handle)
 
-	def keys(self):
+	def keys(self) -> List[str]:
 		"""
 		``keys`` retrieve the list of setting identifiers in the active settings schema
 
@@ -265,7 +268,10 @@ class Settings:
 		core.BNFreeStringList(result, length)
 		return out_list
 
-	def query_property_string_list(self, key, property_name):
+	def query_property_string(self, key: str, property_name: str) -> str:
+		return core.BNSettingsQueryPropertyString(self.handle, key, property_name)
+
+	def query_property_string_list(self, key: str, property_name: str) -> List[str]:
 		length = ctypes.c_ulonglong()
 		result = core.BNSettingsQueryPropertyStringList(self.handle, key, property_name, ctypes.byref(length))
 		assert result is not None, "core.BNSettingsQueryPropertyStringList returned None"
@@ -275,60 +281,123 @@ class Settings:
 		core.BNFreeStringList(result, length)
 		return out_list
 
-	def update_property(self, key, setting_property):
+	def update_property(self, key: str, setting_property: str) -> bool:
 		return core.BNSettingsUpdateProperty(self.handle, key, setting_property)
 
-	def deserialize_schema(self, schema, scope=SettingsScope.SettingsAutoScope, merge=True):
+	def deserialize_schema(self, schema: str, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope, merge: bool = True) -> bool:
 		return core.BNSettingsDeserializeSchema(self.handle, schema, scope, merge)
 
-	def serialize_schema(self):
+	def serialize_schema(self) -> str:
 		return core.BNSettingsSerializeSchema(self.handle)
 
-	def deserialize_settings(self, contents, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
-		return core.BNDeserializeSettings(self.handle, contents, view, scope)
+	def deserialize_settings(self, contents: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> bool:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNDeserializeSettings(self.handle, contents, view_handle, func_handle, scope)
 
-	def serialize_settings(self, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
-		return core.BNSerializeSettings(self.handle, view, scope)
+	def serialize_settings(self, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> str:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNSerializeSettings(self.handle, view_handle, func_handle, scope)
 
-	def reset(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
-		return core.BNSettingsReset(self.handle, key, view, scope)
+	def reset(self, key: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> bool:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNSettingsReset(self.handle, key, view_handle, func_handle, scope)
 
-	def reset_all(self, view=None, scope=SettingsScope.SettingsAutoScope, schema_only=True):
-		if view is not None:
-			view = view.handle
-		return core.BNSettingsResetAll(self.handle, view, scope, schema_only)
+	def reset_all(self, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope, schema_only=True) -> bool:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNSettingsResetAll(self.handle, view_handle, func_handle, scope, schema_only)
 
-	def get_bool(self, key, view=None):
-		if view is not None:
-			view = view.handle
-		return core.BNSettingsGetBool(self.handle, key, view, None)
+	def get_bool(self, key: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None) -> bool:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNSettingsGetBool(self.handle, key, view_handle, func_handle, None)
 
-	def get_double(self, key, view=None):
-		if view is not None:
-			view = view.handle
-		return core.BNSettingsGetDouble(self.handle, key, view, None)
+	def get_double(self, key: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None) -> float:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNSettingsGetDouble(self.handle, key, view_handle, func_handle, None)
 
-	def get_integer(self, key, view=None):
-		if view is not None:
-			view = view.handle
-		return core.BNSettingsGetUInt64(self.handle, key, view, None)
+	def get_integer(self, key: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None) -> int:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNSettingsGetUInt64(self.handle, key, view_handle, func_handle, None)
 
-	def get_string(self, key, view=None):
-		if view is not None:
-			view = view.handle
-		return core.BNSettingsGetString(self.handle, key, view, None)
+	def get_string(self, key: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None) -> str:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNSettingsGetString(self.handle, key, view_handle, func_handle, None)
 
-	def get_string_list(self, key, view=None):
-		if view is not None:
-			view = view.handle
+	def get_string_list(self, key: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None) -> List[str]:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
 		length = ctypes.c_ulonglong()
-		result = core.BNSettingsGetStringList(self.handle, key, view, None, ctypes.byref(length))
+		result = core.BNSettingsGetStringList(self.handle, key, view_handle, func_handle, None, ctypes.byref(length))
 		assert result is not None, "core.BNSettingsGetStringList returned None"
 		out_list = []
 		for i in range(length.value):
@@ -336,45 +405,87 @@ class Settings:
 		core.BNFreeStringList(result, length)
 		return out_list
 
-	def get_json(self, key, view=None):
-		if view is not None:
-			view = view.handle
-		return core.BNSettingsGetJson(self.handle, key, view, None)
+	def get_json(self, key: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None) -> str:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNSettingsGetJson(self.handle, key, view_handle, func_handle, None)
 
-	def get_bool_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
+	def get_bool_with_scope(self, key: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> (bool, SettingsScope):
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
 		c_scope = core.SettingsScopeEnum(scope)
-		result = core.BNSettingsGetBool(self.handle, key, view, ctypes.byref(c_scope))
+		result = core.BNSettingsGetBool(self.handle, key, view_handle, func_handle, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def get_double_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
+	def get_double_with_scope(self, key: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> (float, SettingsScope):
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
 		c_scope = core.SettingsScopeEnum(scope)
-		result = core.BNSettingsGetDouble(self.handle, key, view, ctypes.byref(c_scope))
+		result = core.BNSettingsGetDouble(self.handle, key, view_handle, func_handle, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def get_integer_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
+	def get_integer_with_scope(self, key: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> (int, SettingsScope):
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
 		c_scope = core.SettingsScopeEnum(scope)
-		result = core.BNSettingsGetUInt64(self.handle, key, view, ctypes.byref(c_scope))
+		result = core.BNSettingsGetUInt64(self.handle, key, view_handle, func_handle, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def get_string_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
+	def get_string_with_scope(self, key: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> (str, SettingsScope):
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
 		c_scope = core.SettingsScopeEnum(scope)
-		result = core.BNSettingsGetString(self.handle, key, view, ctypes.byref(c_scope))
+		result = core.BNSettingsGetString(self.handle, key, view_handle, func_handle, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def get_string_list_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
+	def get_string_list_with_scope(self, key: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> (List[str], SettingsScope):
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
 		c_scope = core.SettingsScopeEnum(scope)
 		length = ctypes.c_ulonglong()
-		result = core.BNSettingsGetStringList(self.handle, key, view, ctypes.byref(c_scope), ctypes.byref(length))
+		result = core.BNSettingsGetStringList(self.handle, key, view_handle, func_handle, ctypes.byref(c_scope), ctypes.byref(length))
 		assert result is not None, "core.BNSettingsGetStringList returned None"
 		out_list = []
 		for i in range(length.value):
@@ -382,44 +493,93 @@ class Settings:
 		core.BNFreeStringList(result, length)
 		return (out_list, SettingsScope(c_scope.value))
 
-	def get_json_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
+	def get_json_with_scope(self, key: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> (str, SettingsScope):
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
 		c_scope = core.SettingsScopeEnum(scope)
-		result = core.BNSettingsGetJson(self.handle, key, view, ctypes.byref(c_scope))
+		result = core.BNSettingsGetJson(self.handle, key, view_handle, func_handle, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def set_bool(self, key, value, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
-		return core.BNSettingsSetBool(self.handle, view, scope, key, value)
+	def set_bool(self, key: str, value: bool, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> bool:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNSettingsSetBool(self.handle, view_handle, func_handle, scope, key, value)
 
-	def set_double(self, key, value, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
-		return core.BNSettingsSetDouble(self.handle, view, scope, key, value)
+	def set_double(self, key: str, value: float, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> bool:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNSettingsSetDouble(self.handle, view_handle, func_handle, scope, key, value)
 
-	def set_integer(self, key, value, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
-		return core.BNSettingsSetUInt64(self.handle, view, scope, key, value)
+	def set_integer(self, key: str, value: int, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> bool:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNSettingsSetUInt64(self.handle, view_handle, func_handle, scope, key, value)
 
-	def set_string(self, key, value, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
-		return core.BNSettingsSetString(self.handle, view, scope, key, value)
+	def set_string(self, key: str, value: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> bool:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNSettingsSetString(self.handle, view_handle, func_handle, scope, key, value)
 
-	def set_string_list(self, key, value, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
+	def set_string_list(self, key: str, value: List[str], resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> bool:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
 		length = ctypes.c_ulonglong()
 		length.value = len(value)
 		string_list = (ctypes.c_char_p * len(value))()
 		for i in range(len(value)):
 			string_list[i] = value[i].encode('charmap')
-		return core.BNSettingsSetStringList(self.handle, view, scope, key, string_list, length)
+		return core.BNSettingsSetStringList(self.handle, view_handle, func_handle, scope, key, string_list, length)
 
-	def set_json(self, key, value, view=None, scope=SettingsScope.SettingsAutoScope):
-		if view is not None:
-			view = view.handle
-		return core.BNSettingsSetJson(self.handle, view, scope, key, value)
+	def set_json(self, key: str, value: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> bool:
+		view_handle = None
+		func_handle = None
+		if resource is not None:
+			if isinstance(resource, binaryview.BinaryView):
+				view_handle = resource.handle
+			elif isinstance(resource, function.Function):
+				func_handle = resource.handle
+			else:
+				raise TypeError("Expected resource to be either a BinaryView or a Function.")
+		return core.BNSettingsSetJson(self.handle, view_handle, func_handle, scope, key, value)

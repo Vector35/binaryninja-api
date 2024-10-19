@@ -99,10 +99,10 @@ def validate_path(path: str) -> bool:
     return True
 
 
-def install(interactive=False, on_root=False, on_pyenv=False) -> bool:
+def install(interactive=False, on_root=False, on_pyenv=False, force=False) -> bool:
 
-    if binaryninja_installed():
-        print_error("Binary Ninja API already in the path.")
+    if binaryninja_installed() and not force:
+        print_error("Binary Ninja API already in the path. Use --force to overwrite.")
         return False
 
     api_path = get_expected_binaryninja_installed_directory()
@@ -204,6 +204,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--silent", action='store_true')
     parser.add_argument("-u", "--uninstall", action='store_true')
+    parser.add_argument("-f", "--force", action='store_true')
     parser.add_argument("--install-on-root", action='store_true')
     parser.add_argument("--install-on-pyenv", action='store_true')
     args = parser.parse_args()
@@ -219,7 +220,8 @@ if __name__ == '__main__':
         install_result = install(
             interactive=(not args.silent),
             on_root=args.install_on_root,
-            on_pyenv=args.install_on_pyenv
+            on_pyenv=args.install_on_pyenv,
+            force=args.force
         )
         if not install_result:
             print(f"Binary Ninja API installation failed.")

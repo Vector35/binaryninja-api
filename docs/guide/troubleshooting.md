@@ -36,7 +36,7 @@ In addition to the above-mentioned method of disabling user-plugins, you can als
 
 While third party plugins are not officially supported, there are a number of troubleshooting tips that can help identify the cause. The most important is to enable debug logging as suggested in the previous section. This will often highlight problems with python paths or any other issues that prevent plugins from running.
 
-Additionally, if you're having trouble running a plugin in headless mode (without a GUI calling directly into the core), make sure you're running the Commercial version of Binary Ninja as the Student/Non-Commercial edition does not support headless processing.
+Additionally, if you're having trouble running a plugin in headless mode (without a GUI calling directly into the core), make sure you're running the Commercial or Ultimate edition of Binary Ninja as the Non-Commercial edition does not support headless processing.
 
 Next, if running a python plugin, make sure the python requirements are met by your existing installation. Note that on Windows, the bundled python is used and python requirements should be installed either by manually copying the modules to the `plugins` [folder](./index.md#directories), or by switching to a different interpreter in the settings.
 
@@ -59,7 +59,7 @@ Binary Ninja will refuse to run as root on Linux and macOS platforms. You can wo
 
 Binary Ninja currently uses SQLite for its analysis databases (`.bndb`), projects (`.bnpr`), and type archives (`.bnta`). This means it is only able to have a single instance of these open at any time.
 
-The message `Error while saving database snapshot: database is locked` means multiple copies are open at the same time. All instances will need to be closed and a new one opened to allow saving again (this includes syncing in Enterprise).
+The message `Error while saving database snapshot: database is locked` means multiple copies are open at the same time. All instances will need to be closed and a new one opened to allow saving again (this includes syncing to an Enterprise server).
 
 ### Large File Size
 
@@ -253,7 +253,7 @@ Other [analysis settings](settings.md#all-settings) can also help. Check the des
 ## Collaboration Issues
 
 !!! note
-    This section only applies to the `Enterprise` edition of Binary Ninja.
+    This section only applies to the Binary Ninja Ultimate edition when being used with the Enterprise server.
 
 ### Cannot Connect to Server
 There are a number of reasons why you might not be able to connect to a server, including:

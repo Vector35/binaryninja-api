@@ -1,5 +1,5 @@
 """
-.. note: This module is only available in the Enterprise edition of Binary Ninja.
+.. note: This module is only available in the Ultimate edition of Binary Ninja.
 """
 
 import ctypes
@@ -13,9 +13,9 @@ import binaryninja
 from . import decorators
 from . import deprecation
 
-if core.BNGetProduct() != "Binary Ninja Enterprise Client":
+if core.BNGetProduct() != "Binary Ninja Enterprise Client" and core.BNGetProduct() != "Binary Ninja Ultimate":
 	# None of these functions exist on other builds, so just raise here to notify anyone who tries to use this
-	raise RuntimeError("Cannot use Binary Ninja Enterprise client functionality with a non-Enterprise client.")
+	raise RuntimeError("Binary Ninja Enterprise client functionality requires the Binary Ninja Ultimate edition.")
 
 
 def is_initialized() -> bool:

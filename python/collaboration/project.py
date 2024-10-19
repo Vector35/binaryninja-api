@@ -399,8 +399,11 @@ class RemoteProject:
 		if not self.open():
 			raise RuntimeError("Failed to open project")
 
+		buf = (ctypes.c_ubyte * len(contents))()
+		ctypes.memmove(buf, contents, len(contents))
+
 		folder_handle = parent_folder._handle if parent_folder is not None else None
-		value = core.BNRemoteProjectCreateFile(self._handle, filename, contents, len(contents), name, description, folder_handle, file_type.value, util.wrap_progress(progress), None)
+		value = core.BNRemoteProjectCreateFile(self._handle, filename, buf, len(contents), name, description, folder_handle, file_type.value, util.wrap_progress(progress), None)
 		if value is None:
 			raise RuntimeError(util._last_error())
 		return file.RemoteFile(value)

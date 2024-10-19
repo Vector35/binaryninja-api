@@ -585,9 +585,9 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn undefine_auto_data_var(&self, addr: u64) {
+    fn undefine_auto_data_var(&self, addr: u64, blacklist: Option<bool>) {
         unsafe {
-            BNUndefineDataVariable(self.as_ref().handle, addr);
+            BNUndefineDataVariable(self.as_ref().handle, addr, blacklist.unwrap_or(true));
         }
     }
 
@@ -1369,6 +1369,25 @@ pub trait BinaryViewExt: BinaryViewBase {
             let handle = BNGetRelocationsAt(self.as_ref().handle, addr, &mut count);
             Array::new(handle, count, ())
         }
+    }
+
+    fn get_relocation_ranges(&self) -> Vec<Range<u64>> {
+        let ranges = unsafe {
+            let mut count = 0;
+            let reloc_ranges_ptr = BNGetRelocationRanges(self.as_ref().handle, &mut count);
+            let ranges = std::slice::from_raw_parts(reloc_ranges_ptr, count).to_vec();
+            BNFreeRelocationRanges(reloc_ranges_ptr);
+            ranges
+        };
+
+        // TODO: impl From BNRange for Range?
+        ranges
+            .iter()
+            .map(|range| Range {
+                start: range.start,
+                end: range.end,
+            })
+            .collect()
     }
 
     fn component_by_guid<S: BnStrCompatible>(&self, guid: S) -> Option<Component> {

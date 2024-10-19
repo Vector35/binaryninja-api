@@ -137,17 +137,17 @@ def find_dynamically_linked_funcs(bv):
 		mlil_ssa = f.medium_level_il.ssa_form
 
 		for call in find_mlil_calls_to_targets(mlil_ssa, platform_info["sym_lookups"]):
-			if len(call.params) < 2 or len(call.output.vars_written) < 1:
+			if len(call.params) < 2 or len(call.output) < 1:
 				continue
 
 			symbol_name_addr = call.params[1].value
 			if symbol_name_addr.type not in [RegisterValueType.ConstantPointerValue, RegisterValueType.ConstantValue]:
 				continue
 
-			output_var = call.output.vars_written[0]
+			output_var = call.output[0]
 			symbol_name = bv.get_ascii_string_at(symbol_name_addr.value).value
-			#Add confidence to both the args and the return of zero
-			symbol_type = Type.pointer(bv.parse_type_string("void foo()")[0], arch=bv.arch)
+			# Add confidence to both the args and the return of zero
+			symbol_type = Type.pointer(bv.arch, bv.parse_type_string("void foo()")[0])
 
 			if len(symbol_name) == 0:
 				continue

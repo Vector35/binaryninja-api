@@ -444,7 +444,7 @@ extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
 
-#ifdef DEMO_VERSION
+#ifdef DEMO_EDITION
 	bool Md1RomPluginInit()
 #else
 	BINARYNINJAPLUGIN bool CorePluginInit()

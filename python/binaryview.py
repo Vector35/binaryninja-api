@@ -1271,6 +1271,11 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		"""returns if the BinaryViewType is deprecated (read-only)"""
 		return core.BNIsBinaryViewTypeDeprecated(self.handle)
 
+	@property
+	def is_force_loadable(self) -> bool:
+		"""returns if the BinaryViewType is force loadable (read-only)"""
+		return core.BNIsBinaryViewTypeForceLoadable(self.handle)
+
 	def create(self, data: 'BinaryView') -> Optional['BinaryView']:
 		view = core.BNCreateBinaryViewOfType(self.handle, data.handle)
 		if view is None:
@@ -2511,6 +2516,7 @@ class BinaryView:
 		cls._registered_cb.parse = cls._registered_cb.parse.__class__(cls._parse)
 		cls._registered_cb.isValidForData = cls._registered_cb.isValidForData.__class__(cls._is_valid_for_data)
 		cls._registered_cb.isDeprecated = cls._registered_cb.isDeprecated.__class__(cls._is_deprecated)
+		cls._registered_cb.isForceLoadable = cls._registered_cb.isForceLoadable.__class__(cls._is_force_loadable)
 		cls._registered_cb.getLoadSettingsForData = cls._registered_cb.getLoadSettingsForData.__class__(
 		    cls._get_load_settings_for_data
 		)
@@ -2575,6 +2581,17 @@ class BinaryView:
 
 		try:
 			return cls.is_deprecated()  # type: ignore
+		except:
+			log_error(traceback.format_exc())
+			return False
+
+	@classmethod
+	def _is_force_loadable(cls, ctxt):
+		if not callable(getattr(cls, 'is_force_loadable', None)):
+			return False
+
+		try:
+			return cls.is_force_loadable()  # type: ignore
 		except:
 			log_error(traceback.format_exc())
 			return False
@@ -2646,7 +2663,7 @@ class BinaryView:
 		return BinaryView(file_metadata=file_metadata, handle=view)
 
 	@staticmethod
-	def load(source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView', 'project.ProjectFile'], update_analysis: Optional[bool] = True,
+	def load(source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView', 'project.ProjectFile'], update_analysis: bool = True,
 	    progress_func: Optional[ProgressFuncType] = None, options: Mapping[str, Any] = {}) -> Optional['BinaryView']:
 		"""
 		``load`` opens, generates default load options (which are overridable), and returns the first available \
@@ -2687,21 +2704,21 @@ class BinaryView:
 		binaryninja._init_plugins()
 
 		if progress_func is None:
-			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda cur, total: True)
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: True)
 		else:
-			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda cur, total: progress_func(cur, total))
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: progress_func(cur, total))
 
 		if isinstance(source, os.PathLike):
 			source = str(source)
 		if isinstance(source, BinaryView):
-			handle = core.BNLoadBinaryView(source.handle, update_analysis, json.dumps(options), progress_cfunc)
+			handle = core.BNLoadBinaryView(source.handle, update_analysis, json.dumps(options), progress_cfunc, None)
 		elif isinstance(source, project.ProjectFile):
-			handle = core.BNLoadProjectFile(source._handle, update_analysis, json.dumps(options), progress_cfunc)
+			handle = core.BNLoadProjectFile(source._handle, update_analysis, json.dumps(options), progress_cfunc, None)
 		elif isinstance(source, str):
-			handle = core.BNLoadFilename(source, update_analysis, json.dumps(options), progress_cfunc)
+			handle = core.BNLoadFilename(source, update_analysis, json.dumps(options), progress_cfunc, None)
 		elif isinstance(source, bytes) or isinstance(source, bytearray) or isinstance(source, databuffer.DataBuffer):
 			raw_view = BinaryView.new(source)
-			handle = core.BNLoadBinaryView(raw_view.handle, update_analysis, json.dumps(options), progress_cfunc)
+			handle = core.BNLoadBinaryView(raw_view.handle, update_analysis, json.dumps(options), progress_cfunc, None)
 		else:
 			raise NotImplementedError
 		return BinaryView(handle=handle) if handle else None
@@ -4719,18 +4736,20 @@ class BinaryView:
 
 		return self.get_data_var_at(addr)
 
-	def undefine_data_var(self, addr: int) -> None:
+	def undefine_data_var(self, addr: int, blacklist: bool = True) -> None:
 		"""
 		``undefine_data_var`` removes the non-user data variable at the virtual address ``addr``.
 
 		:param int addr: virtual address to define the data variable to be removed
+		:param bool blacklist: whether to add the address to the data variable black list so that the auto analysis
+			would not recreat the variable on re-analysis
 		:rtype: None
 		:Example:
 
 			>>> bv.undefine_data_var(bv.entry_point)
 			>>>
 		"""
-		core.BNUndefineDataVariable(self.handle, addr)
+		core.BNUndefineDataVariable(self.handle, addr, blacklist)
 
 	def undefine_user_data_var(self, addr: int) -> None:
 		"""
@@ -7234,8 +7253,10 @@ class BinaryView:
 		``get_linear_disassembly`` gets an iterator for all lines in the linear disassembly of the view for the given
 		disassembly settings.
 
-		.. note:: linear_disassembly doesn't just return disassembly; it will return a single line from the linear view,\
-		 and thus will contain both data views, and disassembly.
+		.. note::
+			- linear_disassembly doesn't just return disassembly; it will return a single line from the linear view,\
+				and thus will contain both data views, and disassembly.
+			- **Warning:** In order to get deterministic output, the WaitForIL `DisassemblyOption` should be set to True.
 
 		:param DisassemblySettings settings: instance specifying the desired output formatting. Defaults to None which will use default settings.
 		:return: An iterator containing formatted disassembly lines.

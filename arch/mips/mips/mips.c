@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include "mips.h"
 
 #ifdef __cplusplus
@@ -2389,7 +2390,7 @@ uint32_t mips_disassemble(
 				if (instruction->operands[i].immediate >= 0x80000000)
 					snprintf(operandPtr, 64, "-%#x", -(int32_t)instruction->operands[i].immediate);
 				else
-					snprintf(operandPtr, 64, "%#llx", instruction->operands[i].immediate);
+					snprintf(operandPtr, 64, "%#" PRIx64 "", instruction->operands[i].immediate);
 				break;
 			case MEM_IMM:
 				if (instruction->operands[i].immediate != 0)
@@ -2402,7 +2403,7 @@ uint32_t mips_disassemble(
 					}
 					else
 					{
-						snprintf(operandPtr, 64, "%#llx(%s)",
+						snprintf(operandPtr, 64, "%#" PRIx64 "(%s)",
 							instruction->operands[i].immediate,
 							RegisterStrings[instruction->operands[i].reg]);
 					}

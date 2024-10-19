@@ -250,7 +250,7 @@ MachoView::MachoView(const string& typeName, BinaryView* data, bool parseOnly): 
 			data->SetLoadSettings(typeName, loadSettings);
 			if (!m_file->IsBackedByDatabase(typeName))
 			{
-				auto defaultSettings = loadSettings->SerializeSettings(nullptr, SettingsDefaultScope);
+				auto defaultSettings = loadSettings->SerializeSettings(Ref<BinaryView>(), SettingsDefaultScope);
 				loadSettings->DeserializeSettings(defaultSettings, data, SettingsResourceScope);
 			}
 
@@ -1767,7 +1767,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			string archName = UniversalViewType::ArchitectureToString(m_archId, 0, is64Bit);
 			if (!archName.empty())
 			{
-				#ifdef DEMO_VERSION
+				#ifdef DEMO_EDITION
 				if ((archName == "arm64")			/* MACHO_CPU_TYPE_ARM64 */
 					|| (archName == "arm64v8")
 					|| (archName == "arm64e")
@@ -1861,8 +1861,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			{
 				if (programSettings->Get<bool>("corePlugins.workflows.objc"))
 				{
-					programSettings->Set("workflows.enable", true, this);
-					programSettings->Set("workflows.functionWorkflow", "core.function.objectiveC", this);
+					programSettings->Set("analysis.workflows.functionWorkflow", "core.function.objectiveC", this);
 				}
 			}
 		}
@@ -2429,30 +2428,23 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 		string fullName = rawName;
 		Ref<Type> typeRef = symbolTypeRef;
 
-		QualifiedName varName;
 		if (m_arch)
 		{
-			if (IsGNU3MangledString(rawName))
+			QualifiedName demangledName;
+			Ref<Type> demangledType;
+			bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
+			if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, simplify))
 			{
-				Ref<Type> demangledType;
-				if (DemangleGNU3(m_arch, rawName, demangledType, varName, m_simplifyTemplates))
-				{
-					shortName = varName.GetString();
-					fullName = shortName;
-					if (demangledType)
-						fullName += demangledType->GetStringAfterName();
-					if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
-						typeRef = demangledType;
-				}
-				else if (!m_extractMangledTypes && DemangleLLVM(rawName, varName, m_simplifyTemplates))
-				{
-					shortName = varName.GetString();
-					fullName = shortName;
-				}
-				else
-				{
-					m_logger->LogDebug("Failed to demangle name: '%s'\n", rawName.c_str());
-				}
+				shortName = demangledName.GetString();
+				fullName = shortName;
+				if (demangledType)
+					fullName += demangledType->GetStringAfterName();
+				if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
+					typeRef = demangledType;
+			}
+			else
+			{
+				m_logger->LogDebug("Failed to demangle name: '%s'\n", rawName.c_str());
 			}
 		}
 
@@ -2580,13 +2572,11 @@ void MachoView::ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint
 
 		BNRelocationInfo rebaseRelocation;
 
-		RebaseType type = RebaseTypeInvalid;
 		uint64_t segmentIndex = 0;
 		uint64_t address = segmentActualLoadAddress(0);
 		uint64_t segmentStartAddress = segmentActualLoadAddress(0);
 		uint64_t segmentEndAddress = segmentActualEndAddress(0);
 		uint64_t count;
-		uint64_t size;
 		uint64_t skip;
 		bool done = false;
 		size_t i = 0;
@@ -2603,7 +2593,6 @@ void MachoView::ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint
 				done = true;
 				break;
 			case RebaseOpcodeSetTypeImmediate:
-				type = (RebaseType)immediate;
 				break;
 			case RebaseOpcodeSetSegmentAndOffsetUleb:
 				segmentIndex = immediate;
@@ -2906,11 +2895,6 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 			size_t needed = symbolStubs.size / symbolStubs.reserved2;
 			for (size_t j = 0; (j < needed) && ((j + symbolStubs.reserved1) < indirectSymbols.size()); j++)
 			{
-				// Not exactly sure what the following 3 variables are for but this is the check done in
-				// Apple's source code
-				uint8_t  sectionType  = (symbolStubs.flags & SECTION_TYPE);
-				bool selfModifyingStub = (sectionType == S_SYMBOL_STUBS) && (symbolStubs.flags & S_ATTR_SELF_MODIFYING_CODE) &&
-					(symbolStubs.reserved2 == 5) && (header.ident.cputype == MACHO_CPU_TYPE_X86);
 				auto symNum = indirectSymbols[j + symbolStubs.reserved1];
 				if (symNum == INDIRECT_SYMBOL_ABS)
 					continue;
@@ -2925,11 +2909,6 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 		unordered_map<size_t, vector<std::pair<section_64*, size_t>>> pointerSymbols;
 		for (auto& symbolPointerSection : header.symbolPointerSections)
 		{
-			// Not exactly sure what the following 3 variables are for but this is the check done in
-			// Apple's source code
-			uint8_t  sectionType  = (symbolPointerSection.flags & SECTION_TYPE);
-			bool selfModifyingStub = (sectionType == S_SYMBOL_STUBS) && (symbolPointerSection.flags & S_ATTR_SELF_MODIFYING_CODE) &&
-				(symbolPointerSection.reserved2 == 5) && (header.ident.cputype == MACHO_CPU_TYPE_X86);
 			size_t needed = symbolPointerSection.size / m_addressSize;
 			for (size_t j = 0; (j < needed) && ((j + symbolPointerSection.reserved1) < indirectSymbols.size()); j++)
 			{
@@ -3912,8 +3891,7 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 		{
 			if (programSettings->Get<bool>("corePlugins.workflows.objc"))
 			{
-				programSettings->Set("workflows.enable", true, viewRef);
-				programSettings->Set("workflows.functionWorkflow", "core.function.objectiveC", viewRef);
+				programSettings->Set("analysis.workflows.functionWorkflow", "core.function.objectiveC", viewRef);
 			}
 		}
 	}
@@ -3963,7 +3941,7 @@ extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
 
-#ifdef DEMO_VERSION
+#ifdef DEMO_EDITION
 	bool MachoPluginInit()
 #else
 	BINARYNINJAPLUGIN bool CorePluginInit()

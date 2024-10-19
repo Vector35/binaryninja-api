@@ -113,7 +113,6 @@ void BinaryNinja::InitUniversalViewType()
 			R"({
 			"title" : "Universal Mach-O Architecture Preference",
 			"type" : "array",
-			"elementType" : "string",
 			"sorted" : false,
 			"default" : [],
 			"description" : "Specify an architecture preference for automatic loading of a Mach-O file from a Universal archive. By default, the first object file in the listing is loaded.",

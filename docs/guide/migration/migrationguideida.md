@@ -15,6 +15,20 @@ It's worth digging into Binary Ninja's [settings](../settings.md) and seeing wha
 <!-- TODO : Can you analyze a file while IDA is running its analysis?
 ## Analyzing While Analyzing -->
 
+## Importing Data
+
+Importing IDA IDB (`.idb`) and TIL (`.til`) files into Binary Ninja allows you to automatically transfer analysis data, saving you from manually moving over information.
+
+There are two ways through the UI to import IDB and TIL files:
+
+1. Prior to opening the binary, selecting _Open with Options_, allows you to set the IDB file you want to import with the  _External Debug Info File_ setting (`analysis.debugInfo.external`).
+2. After opening a binary, selecting _Import Debug Info from External File_ (`Analysis\\Import Debug Info from External File...`) allows you to apply IDB/TIL files after analysis has already started.
+
+The following data will be imported:
+
+- Function information (name, comments, function type)
+- Type information
+
 ## Keybindings
 
 Most of the keybindings you're used to are the same. Any "actions" (renaming, setting types, opening cross-references, etc) you might want to perform can be found in the [command palette](../index.md#command-palette), which will save you from digging through unfamiliar right-click menus and help you learn any new keybindings. You can even [add your own actions](https://binary.ninja/2024/02/15/command-palette.html#how-do-i-register-actions-with-the-command-palette-myself) with ease. All actions can have their keybinding set, changed, or removed in the [keybindings menu](../index.md#default-hotkeys).

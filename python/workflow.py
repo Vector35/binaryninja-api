@@ -228,10 +228,6 @@ class Workflow(metaclass=_WorkflowMetaclass):
 	it's possible to add and remove activities, as well as change the execution strategy. In order to use the Workflow on a binary it must be \
 	registered. Once registered the Workflow is immutable and available for use.
 
-	Currently, Workflows is disabled by default and can be enabled via Settings::
-
-		>>> Settings().set_bool('workflows.enable', True)
-
 	Retrieve the default Workflow by creating a Workflow object::
 
 		>>> Workflow()
@@ -525,6 +521,24 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		:rtype: None
 		"""
 		core.BNWorkflowShowReport(self.handle, "trace")
+
+	def eligibility_settings(self) -> List[str]:
+		"""
+		``eligibility_settings`` Retrieve the list of eligibility settings for the Workflow.
+
+		:return: list of eligibility settings
+		:rtype: list[str]
+		"""
+		length = ctypes.c_ulonglong()
+		result = core.BNWorkflowGetEligibilitySettings(self.handle, ctypes.byref(length))
+		assert result is not None, "core.BNWorkflowGetEligibilitySettings returned None"
+		out_list = []
+		try:
+			for i in range(length.value):
+				out_list.append(result[i].decode('utf-8'))
+			return out_list
+		finally:
+			core.BNFreeStringList(result, length.value)
 
 	@property
 	def machine(self):

@@ -1,6 +1,6 @@
 # Batch Processing and Other Automation Tips
 
-An often asked question of Binary Ninja is "How do I enable batch-processing mode?". The answer is that we don't have one--but the good news is because it doesn't need it! We have an even better solution. BN is simply a library that is trivial to include in your own scripts for batch analysis. As long as you have a Commercial license (or a [headless](https://binary.ninja/purchase/#container:~:text=This%20works%20especially%20well%20with%20our,that%20are%20designed%20for%20headless%2Donly%20installs.) license), it's possible to invoke the core analysis library with all of its APIs without even launching the UI.
+An often asked question of Binary Ninja is "How do I enable batch-processing mode?". The answer is that we don't have one--but the good news is because it doesn't need it! We have an even better solution. BN is simply a library that is trivial to include in your own scripts for batch analysis. As long as you have a Commercial or Ultimate license (or a [headless](https://binary.ninja/purchase/#container:~:text=This%20works%20especially%20well%20with%20our,that%20are%20designed%20for%20headless%2Donly%20installs.) license), it's possible to invoke the core analysis library with all of its APIs without even launching the UI.
 
 This document describes some general tips and tricks for effective batch processing. In particular, because Binary Ninja is multi-threaded, some methods for faster processing like [multiprocessing](https://docs.python.org/3/library/multiprocessing.html) can have dangerous consequences.
 
@@ -78,25 +78,19 @@ Notice that we have far fewer functions in `/bin/ls` this time. By shortcutting 
 
 ### Single Function Analysis
 
-A common workflow is to analyze a single (or small number) of functions in a particular binaries. If we both the [maxFunctionSize](https://docs.binary.ninja/getting-started.html#analysis.limits.maxFunctionSize) setting in conjunction with the [analysis_skipped](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.analysis_skipped) function property we can select specific functions to analyze:
+A common workflow is to analyze a single (or small number) of functions in a particular binaries. This can be done using the analysis hold feature:
 
 ```python
 from binaryninja import load
-with load("/bin/ls", options={'analysis.limits.maxFunctionSize': 0}) as bv:
+with load("/bin/ls", options={'analysis.initialAnalysisHold': True}) as bv:
     fn = bv.entry_function
     # Alternatively, use add_user_function at a particular address to first
     # create the function
     if fn:
-        if fn.mlil:
-            print("Entry function has MLIL")
-        else:
-            print(f"No MLIL entry function")
-        fn.analysis_skipped = False
-        bv.update_analysis_and_wait()
-        if fn.mlil:
-            print("Entry function has MLIL")
-        else:
-            print(f"No MLIL entry function")
+        if fn.hlil_if_available:
+            print("This will not fire because analysis hold has analyzed nothing so no HLIL exists.")
+        if fn.hlil:
+            print("This will work because HLIL is explicitly being requested via the API and will override the hold.")
 ```
 
 ### Running Plugins

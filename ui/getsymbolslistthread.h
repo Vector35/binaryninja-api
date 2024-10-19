@@ -2,7 +2,6 @@
 
 #ifndef BINARYNINJAUI_BINDINGS
 	#include <QtCore/QThread>
-	#include <QtCore/QEvent>
 #endif
 #include "binaryninjaapi.h"
 #include "uitypes.h"
@@ -21,22 +20,18 @@ class BINARYNINJAUIAPI GetSymbolsListThread : public QThread
 {
 	Q_OBJECT
 
-	QStringList m_allSymbols;
-	std::function<void()> m_completeFunc;
-	std::mutex m_mutex;
-	bool m_done;
 	BinaryViewRef m_view;
+	QStringList m_symbolsList;
+	QStringList m_additionalListEntries;
 
-  protected:
+protected:
 	virtual void run() override;
 
-  public:
-	GetSymbolsListThread(BinaryViewRef view, const std::function<void()>& completeFunc);
+public:
+	GetSymbolsListThread(BinaryViewRef view, QStringList additionalListEntries);
 	void cancel();
 
-	static int m_eventType;
-	int GetEventType() { return GetSymbolsListThread::m_eventType; }
-
-	const QStringList& getSymbols() const { return m_allSymbols; }
+signals:
+	void symbolsListReady(const QStringList& symbolsList);
 };
 #endif

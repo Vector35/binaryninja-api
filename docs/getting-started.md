@@ -10,7 +10,7 @@ The download links you receive after purchasing expire after 72 hours but as lon
 
 ### Linux
 
-Because Linux install locations can vary widely, we do not assume that Binary Ninja has been installed in any particular folder on Linux. Instead, first unzip the installation zip wherever you wish to install Binary Ninja. Next, for paid versions, run `./binaryninja/scripts/linux-setup.sh`. This sets up file associations, icons, and adds Binary Ninja's Python library to your Python path. Adding the library to your path is most helpful for headless functionality in the commercial editions, but even on the Non-Commercial edition it can help your IDE find the api sources to make plugin development easier. Run the script with `-h` to see customization options.
+Because Linux install locations can vary widely, we do not assume that Binary Ninja has been installed in any particular folder on Linux. Instead, first unzip the installation zip wherever you wish to install Binary Ninja. Next, for paid versions, run `./binaryninja/scripts/linux-setup.sh`. This sets up file associations, icons, and adds Binary Ninja's Python library to your Python path. Adding the library to your path is most helpful for headless functionality in the Commercial and Ultimate editions, but even on the Non-Commercial edition it can help your IDE find the api sources to make plugin development easier. Run the script with `-h` to see customization options.
 
 ### macOS
 

@@ -867,7 +867,7 @@ macro_rules! binary_op_carry_lifter {
 
             let left = L::lift_with_size(self, left, size);
             let right = R::lift_with_size(self, right, size);
-            let carry = C::lift_with_size(self, carry, 1); // TODO 0?
+            let carry = C::lift_with_size(self, carry, 0);
 
             ExpressionBuilder {
                 function: self,

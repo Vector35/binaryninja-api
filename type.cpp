@@ -602,6 +602,12 @@ Confidence<Ref<CallingConvention>> Type::GetCallingConvention() const
 }
 
 
+BNCallingConventionName Type::GetCallingConventionName() const
+{
+	return BNGetTypeCallingConventionName(m_object);
+}
+
+
 vector<FunctionParameter> Type::GetParameters() const
 {
 	size_t count;
@@ -630,6 +636,12 @@ Confidence<bool> Type::HasVariableArguments() const
 {
 	BNBoolWithConfidence result = BNTypeHasVariableArguments(m_object);
 	return Confidence<bool>(result.value, result.confidence);
+}
+
+
+bool Type::HasTemplateArguments() const
+{
+	return BNTypeHasTemplateArguments(m_object);
 }
 
 
@@ -1076,6 +1088,29 @@ Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 }
 
 
+Ref<Type> Type::VarArgsType()
+{
+	Type* type = new Type(BNCreateVarArgsType());
+	return type;
+}
+
+
+Ref<Type> Type::ValueType(const std::string& value)
+{
+	Type* type = new Type(BNCreateValueType(value.c_str()));
+	return type;
+}
+
+
+std::string Type::GetNameTypeString(BNNameType classFunctionType)
+{
+	char* value = BNGetNameTypeString(classFunctionType);
+	std::string result(value);
+	BNFreeString(value);
+	return result;
+}
+
+
 BNIntegerDisplayType Type::GetIntegerTypeDisplayType() const
 {
 	return BNGetIntegerTypeDisplayType(m_object);
@@ -1468,12 +1503,35 @@ TypeBuilder& TypeBuilder::SetChildType(const Confidence<Ref<Type>>& child)
 }
 
 
+TypeBuilder& TypeBuilder::SetCallingConvention(const Confidence<Ref<CallingConvention>>& cc)
+{
+	BNCallingConventionWithConfidence ccwc;
+	ccwc.convention = cc->GetObject();
+	ccwc.confidence = cc.GetConfidence();
+	BNTypeBuilderSetCallingConvention(m_object, &ccwc);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetCallingConventionName(BNCallingConventionName cc)
+{
+	BNTypeBuilderSetCallingConventionName(m_object, cc);
+	return *this;
+}
+
+
 Confidence<Ref<CallingConvention>> TypeBuilder::GetCallingConvention() const
 {
 	BNCallingConventionWithConfidence cc = BNGetTypeBuilderCallingConvention(m_object);
 	if (cc.convention)
 		return Confidence<Ref<CallingConvention>>(new CoreCallingConvention(cc.convention), cc.confidence);
 	return nullptr;
+}
+
+
+BNCallingConventionName TypeBuilder::GetCallingConventionName() const
+{
+	return BNGetTypeBuilderCallingConventionName(m_object);
 }
 
 
@@ -1552,6 +1610,32 @@ Ref<NamedTypeReference> TypeBuilder::GetNamedTypeReference() const
 TypeBuilder& TypeBuilder::SetNamedTypeReference(NamedTypeReference* ntr)
 {
 	BNSetTypeBuilderNamedTypeReference(m_object, ntr ? ntr->GetObject() : nullptr);
+	return *this;
+}
+
+
+BNNameType TypeBuilder::GetNameType() const
+{
+	return BNGetTypeBuilderNameType(m_object);
+}
+
+
+bool TypeBuilder::HasTemplateArguments() const
+{
+	return BNTypeBuilderHasTemplateArguments(m_object);
+}
+
+
+TypeBuilder& TypeBuilder::SetNameType(BNNameType type)
+{
+	BNSetTypeBuilderNameType(m_object, type);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetHasTemplateArguments(bool hasTemplateArguments)
+{
+	BNSetTypeBuilderHasTemplateArguments(m_object, hasTemplateArguments);
 	return *this;
 }
 
@@ -1944,6 +2028,20 @@ TypeBuilder TypeBuilder::FunctionType(const Confidence<Ref<Type>>& returnValue,
 		&canReturnConf, &stackAdjustConf, regStackAdjustRegs.data(),
 		regStackAdjustValues.data(), regStackAdjust.size(), &returnRegsConf, NoNameType, &pureConf));
 	delete[] paramArray;
+	return type;
+}
+
+
+TypeBuilder TypeBuilder::VarArgsType()
+{
+	TypeBuilder type(BNCreateVarArgsTypeBuilder());
+	return type;
+}
+
+
+TypeBuilder TypeBuilder::ValueType(const std::string& value)
+{
+	TypeBuilder type(BNCreateValueTypeBuilder(value.c_str()));
 	return type;
 }
 

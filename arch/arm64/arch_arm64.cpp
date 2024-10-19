@@ -1040,7 +1040,7 @@ class Arm64Architecture : public Architecture
 		// on it to fill the next array.
 		static_assert(Arm64Intrinsic::ARM64_INTRIN_AUTDA == 0,
 			"Invalid first Arm64Intrinsic value. Please add your intrinsic further in the enum.");
-		
+
 		// Normal intrinsics.
 		for (uint32_t id = Arm64Intrinsic::ARM64_INTRIN_AUTDA; id < Arm64Intrinsic::ARM64_INTRIN_NORMAL_END; id++) {
 			result.push_back(id);
@@ -1856,7 +1856,7 @@ class Arm64Architecture : public Architecture
 			REG_TRCCIDCVR5, REG_TRCVMIDCVR5, REG_TRCCIDCVR6, REG_TRCVMIDCVR6,
 			REG_TRCCIDCVR7, REG_TRCVMIDCVR7, REG_TRCITCTRL, REG_TRCCLAIMSET,
 			REG_TRCCLAIMCLR, REG_TRCLAR, REG_TEECR32_EL1, REG_TEEHBR32_EL1, REG_DBGDTR_EL0,
-			REG_DBGDTRTX_EL0, REG_DBGVCR32_EL2, REG_SCTLR_EL1, REG_ACTLR_EL1,
+			REG_DBGDTRTX_EL0, REG_DBGVCR32_EL2, REG_MPIDR_EL1, REG_SCTLR_EL1, REG_ACTLR_EL1,
 			REG_CPACR_EL1, REG_RGSR_EL1, REG_GCR_EL1, REG_TRFCR_EL1, REG_TTBR0_EL1,
 			REG_TTBR1_EL1, REG_TCR_EL1, REG_APIAKEYLO_EL1, REG_APIAKEYHI_EL1,
 			REG_APIBKEYLO_EL1, REG_APIBKEYHI_EL1, REG_APDAKEYLO_EL1, REG_APDAKEYHI_EL1,
@@ -3021,11 +3021,18 @@ class Arm64ElfRelocationHandler : public RelocationHandler
 		auto info = reloc->GetInfo();
 		if (len < info.size)
 			return false;
-		uint64_t* dest64 = (uint64_t*)dest;
-		uint32_t* dest32 = (uint32_t*)dest;
-		uint16_t* dest16 = (uint16_t*)dest;
-		// auto swap = [&arch](uint32_t x) { return (arch->GetEndianness() == LittleEndian)? x :
-		// bswap32(x); };
+
+		BNEndianness endianness = view->GetDefaultEndianness();
+		auto write64 = [&endianness](uint64_t* dest64, uint64_t val) {
+			*dest64 = endianness == LittleEndian ? val : ToBE64(val);
+		};
+		auto write32 = [&endianness](uint32_t* dest32, uint32_t val) {
+			*dest32 = endianness == LittleEndian ? val : ToBE32(val);
+		};
+		auto write16 = [&endianness](uint16_t* dest16, uint16_t val) {
+			*dest16 = endianness == LittleEndian ? val : ToBE16(val);
+		};
+
 		uint64_t target = reloc->GetTarget();
 		Instruction inst;
 		switch (info.nativeType)
@@ -3036,12 +3043,12 @@ class Arm64ElfRelocationHandler : public RelocationHandler
 		case R_AARCH64_P32_COPY:
 		case R_AARCH64_P32_GLOB_DAT:
 		case R_AARCH64_P32_JUMP_SLOT:
-			dest32[0] = target;
+			write32((uint32_t*)dest, target);
 			break;
 		case R_AARCH64_COPY:
 		case R_AARCH64_GLOB_DAT:
 		case R_AARCH64_JUMP_SLOT:
-			dest64[0] = target;
+			write64((uint64_t*)dest, target);
 			break;
 		case R_AARCH64_ADR_PREL_LO21:
 			break;
@@ -3058,7 +3065,7 @@ class Arm64ElfRelocationHandler : public RelocationHandler
 		case R_AARCH64_ADD_ABS_LO12_NC:
 		{
 			ADD_SUB_IMM* decode = (ADD_SUB_IMM*)dest;
-			aarch64_decompose(dest32[0], &inst, reloc->GetAddress());
+			aarch64_decompose(*(uint32_t*)dest, &inst, reloc->GetAddress());
 			decode->imm = target + info.addend;
 			break;
 		}
@@ -3066,33 +3073,33 @@ class Arm64ElfRelocationHandler : public RelocationHandler
 		case R_AARCH64_JUMP26:
 		{
 			UNCONDITIONAL_BRANCH* decode = (UNCONDITIONAL_BRANCH*)dest;
-			aarch64_decompose(dest32[0], &inst, 0);
+			aarch64_decompose(*(uint32_t*)dest, &inst, 0);
 			decode->imm = (target + info.addend - reloc->GetAddress()) >> 2;
 			break;
 		}
 		case R_AARCH64_ABS16:
-			dest16[0] = (uint16_t)(target + info.addend);
+			write16((uint16_t*)dest, target + info.addend);
 			break;
 		case R_AARCH64_ABS32:
-			dest32[0] = (uint32_t)(target + info.addend);
+			write32((uint32_t*)dest, target + info.addend);
 			break;
 		case R_AARCH64_ABS64:
-			dest64[0] = target + info.addend;
+			write64((uint64_t*)dest, target + info.addend);
 			break;
 		case R_AARCH64_PREL16:
-			dest16[0] = (uint16_t)(info.addend + target - reloc->GetAddress());
+			write16((uint16_t*)dest, info.addend + target - reloc->GetAddress());
 			break;
 		case R_AARCH64_PREL32:
-			dest32[0] = (uint32_t)(info.addend + target - reloc->GetAddress());
+			write32((uint32_t*)dest, info.addend + target - reloc->GetAddress());
 			break;
 		case R_AARCH64_PREL64:
-			dest64[0] = info.addend + target - reloc->GetAddress();
+			write64((uint64_t*)dest, info.addend + target - reloc->GetAddress());
 			break;
 		case R_AARCH64_P32_RELATIVE:
-			dest32[0] = target + info.addend;
+			write32((uint32_t*)dest, target + info.addend);
 			break;
 		case R_AARCH64_RELATIVE:
-			dest64[0] = target + info.addend;
+			write64((uint64_t*)dest, target + info.addend);
 			break;
 		case R_AARCH64_LDST8_ABS_LO12_NC:
 		{
@@ -3537,7 +3544,7 @@ extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
 
-#ifndef DEMO_VERSION
+#ifndef DEMO_EDITION
 	BINARYNINJAPLUGIN void CorePluginDependencies()
 	{
 		AddOptionalPluginDependency("view_elf");
@@ -3546,7 +3553,7 @@ extern "C"
 	}
 #endif
 
-#ifdef DEMO_VERSION
+#ifdef DEMO_EDITION
 	bool Arm64PluginInit()
 #else
 	BINARYNINJAPLUGIN bool CorePluginInit()

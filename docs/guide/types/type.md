@@ -86,3 +86,9 @@ The `s` hotkey also works when working with structures in the linear view. Its b
 In linear view, if the selection is a single byte outside any function, it will pop up the create structure dialog. If the selection is a range of bytes, a structure of the selection size is created and the start of the selection. If the selection covers any existing data variables, these data variables will become members within the newly created structure.
 
 This also works within data variables with structure type. For example, if the selection is a range of bytes within a structure, a new structure will be created within the existing structure.
+
+## Special Characters
+
+Many characters commonly used in function naming are not valid C characters. For example, `::` in C++ types, braces or brackets. While we use clang's type-parser for such APIs as [parse_type_string](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.parse_type_string) (note there's also [another version](https://api.binary.ninja/binaryninja.typeparser-module.html#binaryninja.typeparser.TypeParser.parse_type_string) of that API independent of the BinaryView off of the TypeParser module).
+
+To resolve this, we use `` ` `` (the backtick character) to enclose strings that should be treated as atomic units in the type-parser. You may notice this yourself if you by creating a struct with `:` in the name and then using `n` on the variable to see how it is escaped in the change name dialog.

@@ -247,6 +247,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [which] ([which license] - MIT)
     - [x509-signature] ([x509-signature license] - APACHE 2.0 / MIT)
     - [zerocopy] ([zerocopy license] - APACHE 2.0 / MIT)
+    - [zstd-rs] ([zstd-rs license] - MIT)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
@@ -265,6 +266,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [Architectures] ([architectures license] - Apache License 2.0) Architecture support included with the product
     - [DWARF Import] - ([dwarf import license] - Apache License 2.0)
     - [DWARF Export] - ([dwarf export license] - Apache License 2.0)
+    - [IDB Import] - ([idb import license] - Apache License 2.0)
 
 ## Building Qt
 
@@ -355,6 +357,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [JSON for Modern C++ license]: https://github.com/nlohmann/json/blob/develop/LICENSE.MIT
 [zstd]: https://github.com/facebook/zstd/
 [zstd license]: https://github.com/facebook/zstd/blob/dev/LICENSE
+[zstd-rs]: https://github.com/gyscos/zstd-rs
+[zstd-rs license]: https://github.com/gyscos/zstd-rs/blob/main/LICENSE
 [deprecation]: https://github.com/briancurtin/deprecation
 [deprecation license]: https://github.com/briancurtin/deprecation/blob/master/LICENSE
 [API / Documentation]: https://github.com/vector35/binaryninja-api
@@ -369,6 +373,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [dwarf import license]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/LICENSE
 [DWARF Export]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/dwarf/dwarf_export
 [dwarf export license]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/LICENSE
+[IDB Import]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/idb_import
+[idb import license]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/LICENSE
 
 [Rust]: https://www.rust-lang.org/
 [Rust license]: https://github.com/rust-lang/rust/blob/master/LICENSE-MIT

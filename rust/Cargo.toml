@@ -27,6 +27,7 @@ members = [
     "examples/dwarf/dwarf_import",
     "examples/dwarf/dwarfdump",
     "examples/dwarf/shared",
+    "examples/idb_import",
     "examples/flowgraph",
     "examples/minidump",
     "examples/mlil_visitor",
@@ -35,7 +36,8 @@ members = [
     "examples/hlil_lifter",
     "examples/pdb-ng",
     "examples/pdb-ng/demo",
-    "examples/template"
+    "examples/template",
+    "examples/test_demangler",
 ]
 
 [profile.release]

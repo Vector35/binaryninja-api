@@ -781,7 +781,7 @@ impl Command for MyCommand {
 
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
-    init(LevelFilter::Debug).expect("Unable to initialize logger");
+    init(LevelFilter::Debug);
 
     register(
         "Export as DWARF",

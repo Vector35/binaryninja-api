@@ -75,11 +75,13 @@ impl log::Log for Logger {
     fn flush(&self) {}
 }
 
-/// Uses BinaryNinja's logging functionality as the sink for
-/// Rust's `log` crate.
-pub fn init(filter: log::LevelFilter) -> Result<(), log::SetLoggerError> {
+/// Uses BinaryNinja's logging functionality as the sink for Rust's `log` crate.
+/// 
+/// NOTE: There is no guarantee that logs will be sent to BinaryNinja as another log sink
+/// may have already been initialized beforehand.
+pub fn init(filter: log::LevelFilter) {
     log::set_max_level(filter);
-    log::set_logger(&LOGGER)
+    let _ = log::set_logger(&LOGGER);
 }
 
 pub trait LogListener: 'static + Sync {

@@ -697,7 +697,7 @@ pub extern "C" fn PDBPluginInit() -> bool {
 }
 
 fn init_plugin() -> bool {
-    let _ = logger::init(LevelFilter::Debug);
+    logger::init(LevelFilter::Debug);
     DebugInfoParser::register("PDB", PDBParser {});
 
     let settings = Settings::new("");

@@ -12,7 +12,7 @@ use std::ops::Range;
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginInit() -> bool {
-    binaryninja::logger::init(log::LevelFilter::Error).expect("Unable to initialize logger");
+    binaryninja::logger::init(log::LevelFilter::Error);
 
     binaryninja::custombinaryview::register_view_type(c"ti-txt", c"TI-TXT", |core| {
         TiTxtViewConstructor { core }

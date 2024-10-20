@@ -658,7 +658,7 @@ impl CustomDebugInfoParser for DWARFParser {
 
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
-    logger::init(LevelFilter::Debug).unwrap();
+    logger::init(LevelFilter::Debug);
 
     let settings = Settings::new("");
 

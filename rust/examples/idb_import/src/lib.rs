@@ -337,7 +337,7 @@ fn parse_id0_section_info(
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
-    let _logger = logger::init(LevelFilter::Error);
+    logger::init(LevelFilter::Error);
     DebugInfoParser::register("IDB Parser", IDBDebugInfoParser);
     DebugInfoParser::register("TIL Parser", TILDebugInfoParser);
     true

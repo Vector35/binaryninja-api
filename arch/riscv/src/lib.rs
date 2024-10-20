@@ -2891,7 +2891,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginInit() -> bool {
-    binaryninja::logger::init(log::LevelFilter::Trace).expect("Failed to set up logging");
+    binaryninja::logger::init(log::LevelFilter::Trace);
 
     use riscv_dis::{RiscVIMACDisassembler, Rv32GRegs, Rv64GRegs};
     let arch32 =

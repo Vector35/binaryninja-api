@@ -57,7 +57,7 @@ impl Command for DemangleCommand {
 
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
-    let _ = logger::init(LevelFilter::Info);
+    logger::init(LevelFilter::Info);
     Demangler::register("Test", TestDemangler {});
     command::register("Demangle Test", "Test", DemangleCommand {});
     true

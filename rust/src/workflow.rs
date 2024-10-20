@@ -24,6 +24,7 @@ impl AnalysisContext {
         Self { handle }
     }
 
+    #[allow(unused)]
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNAnalysisContext>) -> Ref<Self> {
         Ref::new(Self { handle })
     }
@@ -156,6 +157,7 @@ impl Activity {
         Self { handle }
     }
 
+    #[allow(unused)]
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNActivity>) -> Ref<Self> {
         Ref::new(Self { handle })
     }

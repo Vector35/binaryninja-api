@@ -91,7 +91,7 @@ fn calculate_total_unit_bytes<R: ReaderType>(
 {
     let mut iter = dwarf.units();
     let mut total_size: usize = 0;
-    while let (Ok(Some(header))) = iter.next()
+    while let Ok(Some(header)) = iter.next()
     {
         total_size += header.length_including_self();
     }

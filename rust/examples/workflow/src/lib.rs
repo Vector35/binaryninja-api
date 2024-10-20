@@ -1,6 +1,5 @@
-use binaryninja::architecture::CoreArchitecture;
 use binaryninja::llil::{
-    ExprInfo, LiftedNonSSA, Mutable, NonSSA, RegularNonSSA, VisitorAction, SSA,
+    ExprInfo, LiftedNonSSA, NonSSA, VisitorAction,
 };
 use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
 use log::LevelFilter;
@@ -32,7 +31,7 @@ fn example_activity(analysis_context: &AnalysisContext) {
                 if let Some(llil_instr) = llil.instruction_at(instr) {
                     llil_instr.visit_tree(&mut |expr, info| {
                         match info {
-                            ExprInfo::Const(op) => {
+                            ExprInfo::Const(_op) => {
                                 // Replace all consts with 0x1337.
                                 log::info!(
                                     "Replacing llil expression @ 0x{:x} : {}",

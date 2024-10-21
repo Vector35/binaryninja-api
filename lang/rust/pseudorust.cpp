@@ -27,6 +27,8 @@ void PseudoRustFunction::InitTokenEmitter(HighLevelILTokenEmitter& tokens)
 
 	// Rust doesn't allow omitting the braces around conditional bodies
 	tokens.SetSimpleScopeAllowed(false);
+
+	tokens.SetHasCollapsableRegions(false);
 }
 
 

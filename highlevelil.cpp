@@ -648,6 +648,42 @@ HighLevelILTokenEmitter::HighLevelILTokenEmitter(BNHighLevelILTokenEmitter* emit
 	m_object = emitter;
 }
 
+void HighLevelILTokenEmitter::PrependCollapseIndicator()
+{
+	BNHighLevelILTokenPrependCollapseBlankIndicator(m_object);
+}
+
+
+void HighLevelILTokenEmitter::PrependCollapseIndicator(Ref<Function> function, const HighLevelILInstruction& instr, uint64_t designator)
+{
+	if (!HasCollapsableRegions())
+		return;
+
+	// Insert the collapse indicator at the beginning of the line if one isn't already there or the
+	// one that is there is empty
+	auto context  = HighLevelILInstruction::CanCollapse(instr.operation) ?
+					(function && function->IsInstructionCollapsed(instr, designator) ? ContentCollapsedContext : ContentExpandedContext) :
+					ContentCollapsiblePadding;
+
+	PrependCollapseIndicator(context, instr.GetInstructionHash(designator));
+}
+
+void HighLevelILTokenEmitter::PrependCollapseIndicator(BNInstructionTextTokenContext context, uint64_t hash)
+{
+	BNHighLevelILTokenPrependCollapseIndicator(m_object, context, hash);
+}
+
+bool HighLevelILTokenEmitter::HasCollapsableRegions()
+{
+	return BNHighLevelILTokenEmitterHasCollapsableRegions(m_object);
+}
+
+
+void HighLevelILTokenEmitter::SetHasCollapsableRegions(bool state)
+{
+	BNHighLevelILTokenEmitterSetHasCollapsableRegions(m_object, state);
+}
+
 
 void HighLevelILTokenEmitter::NewLine()
 {

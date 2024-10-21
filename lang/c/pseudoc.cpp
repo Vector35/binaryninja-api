@@ -21,6 +21,8 @@ void PseudoCFunction::InitTokenEmitter(HighLevelILTokenEmitter& tokens)
 	// For switch cases in C, declarations inside aren't scoped by default. Add braces around the cases
 	// to give them scope.
 	tokens.SetBracesAroundSwitchCases(true);
+
+	tokens.SetHasCollapsableRegions(true);
 }
 
 
@@ -674,6 +676,9 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 		tokens.Append(TextToken, " ");
 	}
 
+	auto function = m_highLevelIL->GetFunction();
+	if (instr.ast)
+		tokens.PrependCollapseIndicator(function, instr);
 	switch (instr.operation)
 	{
 	case HLIL_BLOCK:
@@ -744,11 +749,19 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 				if (updateExpr.operation != HLIL_NOP)
 					GetExprTextInternal(updateExpr, tokens, settings, asFullAst);
 				tokens.AppendCloseParen();
-				auto scopeType = HighLevelILFunction::GetExprScopeType(loopExpr);
-				tokens.BeginScope(scopeType);
-				GetExprTextInternal(loopExpr, tokens, settings, asFullAst, TopLevelOperatorPrecedence, true);
-				tokens.EndScope(scopeType);
-				tokens.FinalizeScope();
+				if (function->IsInstructionCollapsed(instr))
+				{
+					tokens.Append(CollapsedInformationToken, " {...}");
+				}
+				else
+				{
+					auto scopeType = HighLevelILFunction::GetExprScopeType(loopExpr);
+					tokens.BeginScope(scopeType);
+					GetExprTextInternal(loopExpr, tokens, settings, asFullAst, TopLevelOperatorPrecedence, true);
+					tokens.EndScope(scopeType);
+					tokens.FinalizeScope();
+				}
+
 			}
 			else
 			{
@@ -761,7 +774,8 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 		break;
 
 	case HLIL_IF:
-		[&]() {
+		[&]()
+		{
 			const auto condExpr = instr.GetConditionExpr<HLIL_IF>();
 			const auto trueExpr = instr.GetTrueExpr<HLIL_IF>();
 			const auto falseExpr = instr.GetFalseExpr<HLIL_IF>();
@@ -773,11 +787,17 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			if (!asFullAst)
 				return;
 
-			auto scopeType = HighLevelILFunction::GetExprScopeType(trueExpr);
-			tokens.BeginScope(scopeType);
-
-			GetExprTextInternal(trueExpr, tokens, settings, asFullAst, TopLevelOperatorPrecedence, true);
-			tokens.EndScope(scopeType);
+			if (function->IsInstructionCollapsed(instr))
+			{
+				tokens.Append(CollapsedInformationToken, " {...}");
+			}
+			else
+			{
+				auto scopeType = HighLevelILFunction::GetExprScopeType(trueExpr);
+				tokens.BeginScope(scopeType);
+				GetExprTextInternal(trueExpr, tokens, settings, asFullAst, TopLevelOperatorPrecedence, true);
+				tokens.EndScope(scopeType);
+			}
 			//tokens.SetCurrentExpr(falseExpr);
 			if (falseExpr.operation == HLIL_IF)
 			{
@@ -788,12 +808,20 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			else if (falseExpr.operation != HLIL_NOP)
 			{
 				tokens.ScopeContinuation(false);
+				tokens.PrependCollapseIndicator(function, instr, 1);
 				tokens.Append(KeywordToken, "else");
-				scopeType = HighLevelILFunction::GetExprScopeType(falseExpr);
-				tokens.BeginScope(scopeType);
-				GetExprTextInternal(falseExpr, tokens, settings, asFullAst, TopLevelOperatorPrecedence, true);
-				tokens.EndScope(scopeType);
-				tokens.FinalizeScope();
+				if (function->IsInstructionCollapsed(instr, 1))
+				{
+					tokens.Append(CollapsedInformationToken, " {...}");
+				}
+				else
+				{
+					auto scopeType = HighLevelILFunction::GetExprScopeType(falseExpr);
+					tokens.BeginScope(scopeType);
+					GetExprTextInternal(falseExpr, tokens, settings, asFullAst, TopLevelOperatorPrecedence, true);
+					tokens.EndScope(scopeType);
+					tokens.FinalizeScope();
+				}
 			}
 			else
 			{
@@ -814,11 +842,18 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			if (!asFullAst)
 				return;
 
-			auto scopeType = HighLevelILFunction::GetExprScopeType(loopExpr);
-			tokens.BeginScope(scopeType);
-			GetExprTextInternal(loopExpr, tokens, settings, true, TopLevelOperatorPrecedence, true);
-			tokens.EndScope(scopeType);
-			tokens.FinalizeScope();
+			if (function->IsInstructionCollapsed(instr))
+			{
+				tokens.Append(CollapsedInformationToken, " {...}");
+			}
+			else
+			{
+				auto scopeType = HighLevelILFunction::GetExprScopeType(loopExpr);
+				tokens.BeginScope(scopeType);
+				GetExprTextInternal(loopExpr, tokens, settings, true, TopLevelOperatorPrecedence, true);
+				tokens.EndScope(scopeType);
+				tokens.FinalizeScope();
+			}
 
 		}();
 		break;
@@ -830,17 +865,31 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			if (asFullAst)
 			{
 				tokens.Append(KeywordToken, "do");
-				auto scopeType = HighLevelILFunction::GetExprScopeType(loopExpr);
-				tokens.BeginScope(scopeType);
-				GetExprTextInternal(loopExpr, tokens, settings, true, TopLevelOperatorPrecedence, true);
-				tokens.EndScope(scopeType);
-				tokens.ScopeContinuation(true);
-				tokens.Append(KeywordToken, "while ");
-				tokens.AppendOpenParen();
-				GetExprTextInternal(condExpr, tokens, settings);
-				tokens.AppendCloseParen();
-				tokens.Append(KeywordToken, ";");
-				tokens.FinalizeScope();
+				if (function->IsInstructionCollapsed(instr))
+				{
+					tokens.Append(CollapsedInformationToken, " {...}");
+					tokens.NewLine();
+					tokens.Append(KeywordToken, "while ");
+					tokens.AppendOpenParen();
+					GetExprTextInternal(condExpr, tokens, settings);
+					tokens.AppendCloseParen();
+					tokens.Append(KeywordToken, ";");
+				}
+				else
+				{
+					auto scopeType = HighLevelILFunction::GetExprScopeType(loopExpr);
+					tokens.BeginScope(scopeType);
+					GetExprTextInternal(loopExpr, tokens, settings, true, TopLevelOperatorPrecedence, true);
+					tokens.EndScope(scopeType);
+
+					tokens.ScopeContinuation(true);
+					tokens.Append(KeywordToken, "while ");
+					tokens.AppendOpenParen();
+					GetExprTextInternal(condExpr, tokens, settings);
+					tokens.AppendCloseParen();
+					tokens.Append(KeywordToken, ";");
+					tokens.FinalizeScope();
+				}
 			}
 			else
 			{
@@ -863,28 +912,42 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			tokens.AppendOpenParen();
 			GetExprTextInternal(condExpr, tokens, settings, asFullAst);
 			tokens.AppendCloseParen();
-			tokens.BeginScope(SwitchScopeType);
 			if (!asFullAst)
 				return;
 
-			for (const auto caseExpr : caseExprs)
+			if (function->IsInstructionCollapsed(instr))
 			{
-				GetExprTextInternal(caseExpr, tokens, settings, asFullAst, TopLevelOperatorPrecedence, true);
-				tokens.NewLine();
+				tokens.Append(CollapsedInformationToken, " {...}");
 			}
-
-			if (defaultExpr.operation != HLIL_NOP && defaultExpr.operation != HLIL_UNREACHABLE)
+			else
 			{
-				tokens.Append(KeywordToken, "default");
-				tokens.Append(TextToken, ":");
-				tokens.BeginScope(CaseScopeType);
-				GetExprTextInternal(defaultExpr, tokens, settings, asFullAst, TopLevelOperatorPrecedence, true);
-				tokens.EndScope(CaseScopeType);
+				tokens.BeginScope(SwitchScopeType);
+				for (const auto caseExpr: caseExprs)
+				{
+					GetExprTextInternal(caseExpr, tokens, settings, asFullAst, TopLevelOperatorPrecedence, true);
+					tokens.NewLine();
+				}
+
+				if (defaultExpr.operation != HLIL_NOP && defaultExpr.operation != HLIL_UNREACHABLE)
+				{
+					tokens.PrependCollapseIndicator(function, instr, 1);
+					tokens.Append(KeywordToken, "default");
+					tokens.Append(TextToken, ":");
+					if (function->IsInstructionCollapsed(instr, 1))
+					{
+						tokens.Append(CollapsedInformationToken, " {...}");
+					}
+					else
+					{
+						tokens.BeginScope(CaseScopeType);
+						GetExprTextInternal(defaultExpr, tokens, settings, asFullAst, TopLevelOperatorPrecedence, true);
+						tokens.EndScope(CaseScopeType);
+						tokens.FinalizeScope();
+					}
+				}
+				tokens.EndScope(SwitchScopeType);
 				tokens.FinalizeScope();
 			}
-
-			tokens.EndScope(SwitchScopeType);
-			tokens.FinalizeScope();
 
 		}();
 		break;
@@ -907,43 +970,52 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			if (!asFullAst)
 				return;
 
-			tokens.BeginScope(CaseScopeType);
-			GetExprTextInternal(trueExpr, tokens, settings, asFullAst, TopLevelOperatorPrecedence, true);
-
-			static const std::vector<BNHighLevelILOperation> operations {
-				HLIL_CONTINUE, HLIL_NORET, HLIL_UNREACHABLE, HLIL_JUMP, HLIL_GOTO, HLIL_TAILCALL};
-
-			// If the case doesn't have an instruction that implicitly exits the case, append a break statement
-			// at the end of the case
-			if (trueExpr.operation == HLIL_BLOCK)
+			if (function->IsInstructionCollapsed(instr))
 			{
-				const auto& blockExprs = trueExpr.GetBlockExprs<HLIL_BLOCK>();
-				bool disallowedOperation = false;
-				for (const auto expr : blockExprs)
+				tokens.Append(CollapsedInformationToken, " {...}");
+			}
+			else
+			{
+				tokens.PrependCollapseIndicator(function, instr);
+				tokens.BeginScope(CaseScopeType);
+				GetExprTextInternal(trueExpr, tokens, settings, asFullAst, TopLevelOperatorPrecedence, true);
+
+				static const std::vector<BNHighLevelILOperation> operations {
+						HLIL_CONTINUE, HLIL_NORET, HLIL_UNREACHABLE, HLIL_JUMP, HLIL_GOTO, HLIL_TAILCALL};
+
+				// If the case doesn't have an instruction that implicitly exits the case, append a break statement
+				// at the end of the case
+				if (trueExpr.operation == HLIL_BLOCK)
 				{
-					if (std::find(operations.begin(), operations.end(), expr.operation) != operations.end())
+					const auto& blockExprs = trueExpr.GetBlockExprs<HLIL_BLOCK>();
+					bool disallowedOperation = false;
+					for (const auto expr : blockExprs)
 					{
-						disallowedOperation = true;
-						break;
+						if (std::find(operations.begin(), operations.end(), expr.operation) != operations.end())
+						{
+							disallowedOperation = true;
+							break;
+						}
+					}
+					if (!disallowedOperation)
+					{
+						tokens.NewLine();
+						tokens.PrependCollapseIndicator();
+						tokens.Append(KeywordToken, "break");
+						tokens.Append(TextToken, ";");
 					}
 				}
-
-				if (!disallowedOperation)
+				else if (std::find(operations.begin(), operations.end(), trueExpr.operation) == operations.end())
 				{
 					tokens.NewLine();
+					tokens.PrependCollapseIndicator();
 					tokens.Append(KeywordToken, "break");
 					tokens.Append(TextToken, ";");
 				}
-			}
-			else if (std::find(operations.begin(), operations.end(), trueExpr.operation) == operations.end())
-			{
-				tokens.NewLine();
-				tokens.Append(KeywordToken, "break");
-				tokens.Append(TextToken, ";");
-			}
 
-			tokens.EndScope(CaseScopeType);
-			tokens.FinalizeScope();
+				tokens.EndScope(CaseScopeType);
+				tokens.FinalizeScope();
+			}
 		}();
 		break;
 

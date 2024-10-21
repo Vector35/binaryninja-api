@@ -388,6 +388,17 @@ namespace BinaryNinja
 
 		bool HasParent() const;
 		HighLevelILInstruction GetParent() const;
+		uint64_t GetInstructionHash(size_t discriminator = 0) const
+		{
+			constexpr auto rotl = [](uint64_t value, int shift)
+			{ return (value << shift) | (value >> (64 - shift)); };
+			std::hash<uint64_t> hasher;
+			uint64_t hash = hasher(operation);
+			hash ^= rotl(hasher(address), 23);
+			hash ^= rotl(hasher(discriminator), 47);
+
+			return hash;
+		}
 
 		template <BNHighLevelILOperation N>
 		HighLevelILInstructionAccessor<N>& As()
@@ -764,6 +775,7 @@ namespace BinaryNinja
 		size_t GetSourceMemoryVersion() const;
 		HighLevelILIndexList GetSourceMemoryVersions() const;
 		size_t GetDestMemoryVersion() const;
+		static bool CanCollapse(int operand);
 	};
 
 	/*!

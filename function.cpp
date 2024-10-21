@@ -20,6 +20,7 @@
 
 #include "binaryninjaapi.h"
 #include "mediumlevelilinstruction.h"
+#include "highlevelilinstruction.h"
 #include <cstring>
 
 using namespace BinaryNinja;
@@ -3260,6 +3261,47 @@ void Function::SetUserInlinedDuringAnalysis(Confidence<bool> inlined)
 	BNSetUserFunctionInlinedDuringAnalysis(m_object, bc);
 }
 
+
+void Function::ToggleRegion(uint64_t hash)
+{
+	BNFunctionToggleRegion(m_object, hash);
+}
+
+
+void Function::CollapseRegion(uint64_t hash)
+{
+	BNFunctionCollapseRegion(m_object, hash);
+}
+
+
+void Function::ExpandRegion(uint64_t hash)
+{
+	BNFunctionExpandRegion(m_object, hash);
+}
+
+
+bool Function::IsCollapsed() const
+{
+	return IsRegionCollapsed(GetStart());
+}
+
+
+bool Function::IsInstructionCollapsed(const HighLevelILInstruction& instr, uint64_t designator) const
+{
+	return IsRegionCollapsed(instr.GetInstructionHash(designator));
+}
+
+
+bool Function::IsRegionCollapsed(uint64_t hash) const
+{
+	return BNFunctionIsRegionCollapsed(m_object, hash);
+}
+
+
+void Function::ExpandAll()
+{
+	BNFunctionExpandAll(m_object);
+}
 
 AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(Function* func) : m_func(func)
 {

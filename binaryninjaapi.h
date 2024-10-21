@@ -4367,6 +4367,7 @@ namespace BinaryNinja {
 	class TypeLibrary;
 	class TypeArchive;
 	class MemoryMap;
+	struct HighLevelILInstruction;
 
 	class QueryMetadataException : public ExceptionWithStackTrace
 	{
@@ -10501,6 +10502,8 @@ namespace BinaryNinja {
 	{
 		int m_advancedAnalysisRequests;
 
+		bool IsRegionCollapsed(uint64_t hash) const;
+
 	  public:
 		Function(BNFunction* func);
 		virtual ~Function();
@@ -11094,6 +11097,14 @@ namespace BinaryNinja {
 		Confidence<bool> IsInlinedDuringAnalysis();
 		void SetAutoInlinedDuringAnalysis(Confidence<bool> inlined);
 		void SetUserInlinedDuringAnalysis(Confidence<bool> inlined);
+
+		// TODO: Documentation
+		bool IsInstructionCollapsed(const HighLevelILInstruction& instr, uint64_t designator = 0) const;
+		bool IsCollapsed() const;
+		void ToggleRegion(uint64_t hash);
+		void CollapseRegion(uint64_t hash);
+		void ExpandRegion(uint64_t hash);
+		void ExpandAll();
 	};
 
 	/*!
@@ -18444,6 +18455,12 @@ namespace BinaryNinja {
 			BNHighLevelILTokenEmitterAppend(m_object, &converted);
 			InstructionTextToken::FreeInstructionTextToken(&converted);
 		}
+
+		void PrependCollapseIndicator();
+		void PrependCollapseIndicator(Ref<Function> function, const HighLevelILInstruction& instr, uint64_t designator = 0);
+		void PrependCollapseIndicator(BNInstructionTextTokenContext context, uint64_t hash);
+		bool HasCollapsableRegions();
+		void SetHasCollapsableRegions(bool state);
 
 		/*! Starts a new line in the output. */
 		void NewLine();

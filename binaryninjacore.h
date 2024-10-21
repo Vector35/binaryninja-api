@@ -403,7 +403,9 @@ extern "C"
 		IndirectImportToken = 69,
 		ExternalSymbolToken = 70,
 		StackVariableToken = 71,
-		AddressSeparatorToken = 72
+		AddressSeparatorToken = 72,
+		CollapsedInformationToken = 73,
+		CollapseStateIndicatorToken = 74
 	} BNInstructionTextTokenType;
 
 	typedef enum BNInstructionTextTokenContext
@@ -418,7 +420,10 @@ extern "C"
 		ConstStringDataTokenContext = 7, // For ConstData strings
 		StringReferenceTokenContext = 8, // For References to strings
 		StringDataVariableTokenContext = 9, // For String DataVariables
-		StringDisplayTokenContext = 10 // For displaying strings which aren't associated with an address
+		StringDisplayTokenContext = 10, // For displaying strings which aren't associated with an address
+		ContentCollapsedContext = 11,
+		ContentExpandedContext = 12,
+		ContentCollapsiblePadding = 13
 	} BNInstructionTextTokenContext;
 
 	typedef enum BNLinearDisassemblyLineType
@@ -442,7 +447,8 @@ extern "C"
 		SectionEndLineType,
 		SectionSeparatorLineType,
 		NonContiguousSeparatorLineType,
-		AnalysisWarningLineType
+		AnalysisWarningLineType,
+		CollapsedFunctionEndLineType
 	} BNLinearDisassemblyLineType;
 
 	typedef enum BNTokenEscapingType
@@ -4830,6 +4836,12 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t* BNGetUnresolvedIndirectBranches(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI bool BNHasUnresolvedIndirectBranches(BNFunction* func);
 
+	BINARYNINJACOREAPI void BNFunctionToggleRegion(BNFunction* func, uint64_t hash);
+	BINARYNINJACOREAPI bool BNFunctionIsRegionCollapsed(BNFunction* func, uint64_t hash);
+	BINARYNINJACOREAPI void BNFunctionExpandAll(BNFunction* func);
+	BINARYNINJACOREAPI void BNFunctionCollapseRegion(BNFunction* func,  uint64_t hash);
+	BINARYNINJACOREAPI void BNFunctionExpandRegion(BNFunction* func, uint64_t hash);
+
 	BINARYNINJACOREAPI void BNSetAutoCallTypeAdjustment(
 	    BNFunction* func, BNArchitecture* arch, uint64_t addr, BNTypeWithConfidence* type);
 	BINARYNINJACOREAPI void BNSetUserCallTypeAdjustment(
@@ -7860,6 +7872,10 @@ extern "C"
 
 	// High level token emitter
 	BINARYNINJACOREAPI BNHighLevelILTokenEmitter* BNNewHighLevelILTokenEmitterReference(BNHighLevelILTokenEmitter* emitter);
+	BINARYNINJACOREAPI void BNHighLevelILTokenPrependCollapseBlankIndicator(BNHighLevelILTokenEmitter* emitter);
+	BINARYNINJACOREAPI void BNHighLevelILTokenPrependCollapseIndicator(BNHighLevelILTokenEmitter* emitter, BNInstructionTextTokenContext context, uint64_t hash);
+	BINARYNINJACOREAPI bool BNHighLevelILTokenEmitterHasCollapsableRegions(BNHighLevelILTokenEmitter* emitter);
+	BINARYNINJACOREAPI void BNHighLevelILTokenEmitterSetHasCollapsableRegions(BNHighLevelILTokenEmitter* emitter, bool state);
 	BINARYNINJACOREAPI void BNFreeHighLevelILTokenEmitter(BNHighLevelILTokenEmitter* emitter);
 	BINARYNINJACOREAPI void BNHighLevelILTokenEmitterAppend(BNHighLevelILTokenEmitter* emitter, BNInstructionTextToken* token);
 	BINARYNINJACOREAPI void BNHighLevelILTokenEmitterNewLine(BNHighLevelILTokenEmitter* emitter);

@@ -11,7 +11,8 @@ use crate::function::{Function, Location};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
 use crate::string::BnStrCompatible;
 use crate::types::{
-    Conf, PossibleValueSet, RegisterValue, SSAVariable, Type, UserVariableValues, Variable,
+    Conf, MediumLevelILSSAVariable, PossibleValueSet, RegisterValue, SSAVariable, Type,
+    UserVariableValues, Variable,
 };
 
 use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
@@ -571,7 +572,7 @@ impl MediumLevelILFunction {
     /// union of [MediumLevelILFunction::aliased_variables] and
     /// [crate::function::Function::parameter_variables] for all the
     /// variables used in the function.
-    pub fn ssa_variables(&self) -> Array<Array<SSAVariable>> {
+    pub fn ssa_variables(&self) -> Array<MediumLevelILSSAVariable> {
         let mut count = 0;
         let vars = unsafe { BNGetMediumLevelILVariables(self.handle, &mut count) };
         unsafe { Array::new(vars, count, self.to_owned()) }

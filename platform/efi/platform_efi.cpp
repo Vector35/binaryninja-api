@@ -11,10 +11,15 @@ Ref<Platform> g_efiX86Windows, g_efiX64Windows, g_efiArm64Windows;
 
 class EFIX86Platform : public Platform
 {
+	uint32_t m_idtr;
+	Ref<Type> m_idtrtype;
+
 public:
 	EFIX86Platform(Architecture* arch) : Platform(arch, "efi-x86")
 	{
 		Ref<CallingConvention> cc;
+
+		m_idtr = arch->GetRegisterByName("idtr");
 
 		cc = arch->GetCallingConventionByName("cdecl");
 		if (cc)
@@ -50,15 +55,46 @@ public:
 			return g_efiX86;
 		return nullptr;
 	}
+
+	virtual void BinaryViewInit(BinaryView* view) override
+	{
+		if (!m_idtrtype)
+			m_idtrtype = Type::NamedType(QualifiedName("IDTR32"), GetTypeByName(QualifiedName("IDTR32")));
+
+		auto ctx = PluginCommandContext();
+        ctx.binaryView = view;
+		auto commandList = PluginCommand::GetValidList(ctx);
+		for (auto command : commandList)
+		{
+			if (command.GetName() == "EFI Resolver\\Resolve EFI Types And Protocols")
+			{
+				command.Execute(ctx);
+			}
+		}
+	}
+
+	virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override
+	{
+		if (reg == m_idtr)
+		    return m_idtrtype;
+
+		return nullptr;
+	}
+
 };
 
 
 class EFIX86WindowsPlatform : public Platform
 {
+	uint32_t m_idtr;
+	Ref<Type> m_idtrtype;
+
 public:
 	EFIX86WindowsPlatform(Architecture* arch) : Platform(arch, "efi-windows-x86")
 	{
 		Ref<CallingConvention> cc;
+
+		m_idtr = arch->GetRegisterByName("idtr");
 
 		cc = arch->GetCallingConventionByName("cdecl");
 		if (cc)
@@ -94,16 +130,45 @@ public:
 			return g_efiX86Windows;
 		return nullptr;
 	}
+
+	virtual void BinaryViewInit(BinaryView* view) override
+	{
+		if (!m_idtrtype)
+			m_idtrtype = Type::NamedType(QualifiedName("IDTR32"), GetTypeByName(QualifiedName("IDTR32")));
+
+		auto ctx = PluginCommandContext();
+        ctx.binaryView = view;
+		auto commandList = PluginCommand::GetValidList(ctx);
+		for (auto command : commandList)
+		{
+			if (command.GetName() == "EFI Resolver\\Resolve EFI Types And Protocols")
+			{
+				command.Execute(ctx);
+			}
+		}
+	}
+
+	virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override
+	{
+		if (reg == m_idtr)
+		    return m_idtrtype;
+
+		return nullptr;
+	}
 };
 
 
 class EFIX64Platform : public Platform
 {
+	uint32_t m_idtr;
+	Ref<Type> m_idtrtype;
+
 public:
 	EFIX64Platform(Architecture* arch) : Platform(arch, "efi-x86_64")
 	{
 		Ref<CallingConvention> cc;
 
+		m_idtr = arch->GetRegisterByName("idtr");
 		cc = arch->GetCallingConventionByName("win64");
 		if (cc)
 		{
@@ -123,16 +188,45 @@ public:
 			return g_efiX64;
 		return nullptr;
 	}
+
+	virtual void BinaryViewInit(BinaryView* view) override
+	{
+		if (!m_idtrtype)
+			m_idtrtype = Type::NamedType(QualifiedName("IDTR64"), GetTypeByName(QualifiedName("IDTR64")));
+				
+		auto ctx = PluginCommandContext();
+        ctx.binaryView = view;
+		auto commandList = PluginCommand::GetValidList(ctx);
+		for (auto command : commandList)
+		{
+			if (command.GetName() == "EFI Resolver\\Resolve EFI Types And Protocols")
+			{
+				command.Execute(ctx);
+			}
+		}
+	}
+
+	virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override
+	{
+		if (reg == m_idtr)
+		    return m_idtrtype;
+
+		return nullptr;
+	}
 };
 
 
 class EFIX64WindowsPlatform : public Platform
 {
+	uint32_t m_idtr;
+	Ref<Type> m_idtrtype;
+
 public:
 	EFIX64WindowsPlatform(Architecture* arch) : Platform(arch, "efi-windows-x86_64")
 	{
 		Ref<CallingConvention> cc;
 
+		m_idtr = arch->GetRegisterByName("idtr");
 		cc = arch->GetCallingConventionByName("win64");
 		if (cc)
 		{
@@ -150,6 +244,31 @@ public:
 			return nullptr;
 		if (subsystem->GetUnsignedInteger() == 0x10)  // IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION
 			return g_efiX64Windows;
+		return nullptr;
+	}
+
+	virtual void BinaryViewInit(BinaryView* view) override
+	{
+		if (!m_idtrtype)
+			m_idtrtype = Type::NamedType(QualifiedName("IDTR64"), GetTypeByName(QualifiedName("IDTR64")));
+				
+		auto ctx = PluginCommandContext();
+        ctx.binaryView = view;
+		auto commandList = PluginCommand::GetValidList(ctx);
+		for (auto command : commandList)
+		{
+			if (command.GetName() == "EFI Resolver\\Resolve EFI Types And Protocols")
+			{
+				command.Execute(ctx);
+			}
+		}
+	}
+
+	virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override
+	{
+		if (reg == m_idtr)
+		    return m_idtrtype;
+
 		return nullptr;
 	}
 };
@@ -186,11 +305,15 @@ public:
 
 class EFIArm64Platform : public Platform
 {
+	uint32_t m_tpidrel0;
+	Ref<Type> m_tpidrel0type;
+
 public:
 	EFIArm64Platform(Architecture* arch) : Platform(arch, "efi-aarch64")
 	{
 		Ref<CallingConvention> cc;
 
+		m_tpidrel0 = arch->GetRegisterByName("tpidr_el0");
 		cc = arch->GetCallingConventionByName("cdecl");
 		if (cc)
 		{
@@ -198,6 +321,26 @@ public:
 			RegisterCdeclCallingConvention(cc);
 			RegisterFastcallCallingConvention(cc);
 			RegisterStdcallCallingConvention(cc);
+		}
+	}
+
+	virtual void BinaryViewInit(BinaryView* view) override
+	{
+		if (!m_tpidrel0type)
+			m_tpidrel0type = Type::NamedType(QualifiedName("EFI_PEI_SERVICES"),
+				Type::PointerType(view->GetDefaultArchitecture(),
+					Type::PointerType(
+						view->GetDefaultArchitecture(), GetTypeByName(QualifiedName("EFI_PEI_SERVICES")))));
+				
+		auto ctx = PluginCommandContext();
+        ctx.binaryView = view;
+		auto commandList = PluginCommand::GetValidList(ctx);
+		for (auto command : commandList)
+		{
+			if (command.GetName() == "EFI Resolver\\Resolve EFI Types And Protocols")
+			{
+				command.Execute(ctx);
+			}
 		}
 	}
 
@@ -210,16 +353,27 @@ public:
 			return g_efiArm64;
 		return nullptr;
 	}
+
+	virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override
+	{
+		if (reg == m_tpidrel0)
+		    return m_tpidrel0type;
+
+		return nullptr;
+	}
 };
 
 
 class EFIArm64WindowsPlatform : public Platform
 {
+	uint32_t m_tpidrel0;
+	Ref<Type> m_tpidrel0type;
 public:
 	EFIArm64WindowsPlatform(Architecture* arch) : Platform(arch, "efi-windows-aarch64")
 	{
 		Ref<CallingConvention> cc;
 
+		m_tpidrel0 = arch->GetRegisterByName("tpidr_el0");
 		cc = arch->GetCallingConventionByName("cdecl");
 		if (cc)
 		{
@@ -230,6 +384,26 @@ public:
 		}
 	}
 
+	virtual void BinaryViewInit(BinaryView* view) override
+	{
+		if (!m_tpidrel0type)
+			m_tpidrel0type = Type::NamedType(QualifiedName("EFI_PEI_SERVICES"),
+				Type::PointerType(view->GetDefaultArchitecture(),
+					Type::PointerType(
+						view->GetDefaultArchitecture(), GetTypeByName(QualifiedName("EFI_PEI_SERVICES")))));
+			
+		auto ctx = PluginCommandContext();
+        ctx.binaryView = view;
+		auto commandList = PluginCommand::GetValidList(ctx);
+		for (auto command : commandList)
+		{
+			if (command.GetName() == "EFI Resolver\\Resolve EFI Types And Protocols")
+			{
+				command.Execute(ctx);
+			}
+		}
+	}
+
 	static Ref<Platform> Recognize(BinaryView* view, Metadata* metadata)
 	{
 		Ref<Metadata> subsystem = metadata->Get("Subsystem");
@@ -237,6 +411,14 @@ public:
 			return nullptr;
 		if (subsystem->GetUnsignedInteger() == 0x10)  // IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION
 			return g_efiArm64Windows;
+		return nullptr;
+	}
+
+	virtual Ref<Type> GetGlobalRegisterType(uint32_t reg) override
+	{
+		if (reg == m_tpidrel0)
+		    return m_tpidrel0type;
+
 		return nullptr;
 	}
 };

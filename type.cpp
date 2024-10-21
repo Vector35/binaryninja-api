@@ -1360,6 +1360,12 @@ TypeBuilder::TypeBuilder()
 }
 
 
+TypeBuilder::~TypeBuilder()
+{
+	BNFreeTypeBuilder(m_object);
+}
+
+
 TypeBuilder::TypeBuilder(BNTypeBuilder* type)
 {
 	m_object = type;

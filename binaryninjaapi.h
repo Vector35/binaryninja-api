@@ -9187,6 +9187,7 @@ namespace BinaryNinja {
 
 	  public:
 		TypeBuilder();
+		~TypeBuilder();
 		TypeBuilder(BNTypeBuilder* type);
 		TypeBuilder(const TypeBuilder& type);
 		TypeBuilder(TypeBuilder&& type);

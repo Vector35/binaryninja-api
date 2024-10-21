@@ -451,6 +451,9 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 {
 	int i;
 	bool rc = true;
+	struct cs_insn *insn = 0;
+	struct cs_detail *detail = 0;
+	struct cs_ppc *ppc = 0;
 
 	/* bypass capstone path for *all* branching instructions; capstone
 	 * is too difficult to work with and is outright broken for some
@@ -459,9 +462,9 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 	if (LiftBranches(arch, il, data, addr, le))
 		return true;
 
-	struct cs_insn *insn = &(res->insn);
-	struct cs_detail *detail = &(res->detail);
-	struct cs_ppc *ppc = &(detail->ppc);
+	insn = &(res->insn);
+	detail = &(res->detail);
+	ppc = &(detail->ppc);
 
 	/* There is a simplifying reduction available for:
 	 *   rlwinm <reg>, <reg>, <rol_amt>, <mask_begin>, <mask_end>
@@ -714,11 +717,26 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 	//	il.AddInstruction(ei2);
 	//	break;
 
-	//	case PPC_INS_FCMPU:
-	//		REQUIRE3OPS
-	//		ei0 = il.FloatSub(4, il.Unimplemented(), il.Unimplemented(), (oper0->reg - PPC_REG_CR0) + IL_FLAGWRITE_INVL0);
-	//		il.AddInstruction(ei0);
-	//		break;
+		// TODO: high level IL is sometimes assuming incorrect variables, and setting floating points to
+		// 	standard registers.
+		// TODO: high level IL is accidentilly adding an extra subtract operand and assigning it to no one.
+		// TODO: final assignment for the fcmp is whether or not the sub is 0, not greater than 0.
+		case PPC_INS_FCMPU:
+			REQUIRE3OPS
+			ei0 = il.FloatSub(4, operToIL(il, oper1), operToIL(il, oper2), crxToFlagWriteType(oper0->reg));
+			il.AddInstruction(ei0);
+			break;
+
+		case PPC_INS_BN_FCMPO:
+			REQUIRE3OPS
+			ei0 = il.FloatSub(4, operToIL(il, oper1), operToIL(il, oper2), crxToFlagWriteType(oper0->reg));
+			il.AddInstruction(ei0);
+			break;
+
+		case PPC_INS_FMR:
+			REQUIRE2OPS
+			il.AddInstruction(il.SetRegister(4, oper0->reg, operToIL(il, oper1)));
+			break;
 
 		case PPC_INS_CRAND:
 		case PPC_INS_CRANDC:
@@ -1695,6 +1713,53 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(il.Trap(0));
 			break;
 
+		case PPC_INS_STFS:
+			REQUIRE2OPS
+			ei0 = il.Store(4,
+				operToIL(il, oper1),
+				operToIL(il, oper0)
+			);
+			il.AddInstruction(ei0);
+
+			break;
+
+		case PPC_INS_STFD:
+			REQUIRE2OPS
+			ei0 = il.Store(8,
+				operToIL(il, oper1),
+				operToIL(il, oper0)
+			);
+			il.AddInstruction(ei0);
+
+			break;
+
+		case PPC_INS_LFS:
+			REQUIRE2OPS
+			ei0 = operToIL(il, oper1); // d(rA) or 0
+			ei0 = il.Load(4, ei0);                    // [d(rA)]
+			ei0 = il.SetRegister(4, oper0->reg, ei0); // rD = [d(rA)]
+			il.AddInstruction(ei0);
+
+			break;
+
+		case PPC_INS_LFD:
+			REQUIRE2OPS
+			ei0 = operToIL(il, oper1); // d(rA) or 0
+			ei0 = il.Load(8, ei0);                    // [d(rA)]
+			ei0 = il.SetRegister(8, oper0->reg, ei0); // rD = [d(rA)]
+			il.AddInstruction(ei0);
+
+			break;
+
+		// case PPC_INS_FCMPO: /* compare (signed) word(32-bit) */
+		// 	REQUIRE2OPS
+		// 	ei0 = operToIL(il, oper2 ? oper1 : oper0);
+		// 	ei1 = operToIL(il, oper2 ? oper2 : oper1);
+		// 	ei2 = il.Sub(4, ei0, ei1, crxToFlagWriteType(oper2 ? oper0->reg : PPC_REG_CR0));
+		// 	il.AddInstruction(ei2);
+		// 	break;
+
+
 		case PPC_INS_BCL:
 		case PPC_INS_BCLR:
 		case PPC_INS_BCLRL:
@@ -1907,7 +1972,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_INS_FDIVS:
 		case PPC_INS_FMADD:
 		case PPC_INS_FMADDS:
-		case PPC_INS_FMR:
 		case PPC_INS_FMSUB:
 		case PPC_INS_FMSUBS:
 		case PPC_INS_FMUL:
@@ -1937,13 +2001,11 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_INS_ISYNC:
 		case PPC_INS_LDARX:
 		case PPC_INS_LDBRX:
-		case PPC_INS_LFD:
 		case PPC_INS_LFDU:
 		case PPC_INS_LFDUX:
 		case PPC_INS_LFDX:
 		case PPC_INS_LFIWAX:
 		case PPC_INS_LFIWZX:
-		case PPC_INS_LFS:
 		case PPC_INS_LFSU:
 		case PPC_INS_LFSUX:
 		case PPC_INS_LFSX:
@@ -2007,12 +2069,10 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_INS_SLBMTE:
 		case PPC_INS_STDBRX:
 		case PPC_INS_STDCX:
-		case PPC_INS_STFD:
 		case PPC_INS_STFDU:
 		case PPC_INS_STFDUX:
 		case PPC_INS_STFDX:
 		case PPC_INS_STFIWX:
-		case PPC_INS_STFS:
 		case PPC_INS_STFSU:
 		case PPC_INS_STFSUX:
 		case PPC_INS_STFSX:

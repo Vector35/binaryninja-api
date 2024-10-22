@@ -1862,7 +1862,7 @@ impl StructureBuilder {
 
     pub fn set_base_structures(&self, bases: Vec<BaseStructure>) -> &Self {
         let mut bases_api = vec![];
-        for base in bases {
+        for base in &bases {
             bases_api.push(BNBaseStructure {
                 type_: base.ty.handle,
                 offset: base.offset,

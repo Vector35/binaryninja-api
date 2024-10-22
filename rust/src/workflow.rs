@@ -288,7 +288,9 @@ impl Workflow {
         let name = name.into_bytes_with_nul();
         let activity = root_activity.activity_name();
         // I can't think of a single reason as to why we should let users pass a workflow handle into this.
-        let placeholder_workflow = Workflow::instance("");
+        // TODO: [Default] Workflow::Instance() called without specifying a workflow name. Defaulting to 'core.function.defaultAnalysis'.
+        // To prevent warning being emitted we default to `core.function.defaultAnalysis`.
+        let placeholder_workflow = Workflow::instance("core.function.defaultAnalysis");
         unsafe {
             Self::from_raw(
                 NonNull::new(BNWorkflowClone(

@@ -1032,6 +1032,14 @@ pub trait BinaryViewExt: BinaryViewBase {
             Ok(Function::from_raw(handle))
         }
     }
+    
+    fn function_start_before(&self, addr: u64) -> u64 {
+        unsafe { BNGetPreviousFunctionStartBeforeAddress(self.as_ref().handle, addr) }
+    }
+
+    fn function_start_after(&self, addr: u64) -> u64 {
+        unsafe { BNGetNextFunctionStartAfterAddress(self.as_ref().handle, addr) }
+    }
 
     fn basic_blocks_containing(&self, addr: u64) -> Array<BasicBlock<NativeBlock>> {
         unsafe {

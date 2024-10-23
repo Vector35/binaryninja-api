@@ -4733,6 +4733,12 @@ void BinaryView::AddAutoSegment(
 }
 
 
+void BinaryView::AddAutoSegments(const vector<BNSegmentInfo>& segments)
+{
+	BNAddAutoSegments(m_object, segments.data(), segments.size());
+}
+
+
 void BinaryView::RemoveAutoSegment(uint64_t start, uint64_t length)
 {
 	BNRemoveAutoSegment(m_object, start, length);

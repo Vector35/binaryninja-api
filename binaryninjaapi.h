@@ -6489,6 +6489,8 @@ namespace BinaryNinja {
 
 		/*! Add an analysis segment that specifies how data from the raw file is mapped into a virtual address space
 
+			Note that the segment added may have different size attributes than requested
+
 			\param start Starting virtual address
 			\param length Length within the virtual address space
 			\param dataOffset Data offset in the raw file
@@ -6496,6 +6498,14 @@ namespace BinaryNinja {
 			\param flags Segment r/w/x flags
 		*/
 		void AddAutoSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
+
+		/*! Add analysis segments that specify how data from the raw file is mapped into a virtual address space
+
+			\param segments Segments to add to the BinaryView
+
+			Note that the segments added may have different size attributes than requested
+		*/
+		void AddAutoSegments(const std::vector<BNSegmentInfo>& segments);
 
 		/*! Removes an automatically generated segment from the current segment mapping
 

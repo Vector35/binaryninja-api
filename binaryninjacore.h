@@ -3445,6 +3445,14 @@ extern "C"
 		BuiltinWcscpy
 	} BNBuiltinType;
 
+	typedef struct BNSegmentInfo {
+		uint64_t start;
+		uint64_t length;
+		uint64_t dataOffset;
+		uint64_t dataLength;
+		uint32_t flags;
+	} BNSegmentInfo;
+
 	typedef bool(*BNProgressFunction)(void*, size_t, size_t);
 	typedef bool(*BNCollaborationAnalysisConflictHandler)(void*, const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount);
 	typedef bool(*BNCollaborationNameChangesetFunction)(void*, BNCollaborationChangeset*);
@@ -4058,6 +4066,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNPerformSearch(const char* query, const uint8_t* buffer, size_t size, bool(*callback)(void*, size_t, size_t), void* context);
 
 	BINARYNINJACOREAPI void BNAddAutoSegment(BNBinaryView* view, uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
+	BINARYNINJACOREAPI void BNAddAutoSegments(BNBinaryView* view, const BNSegmentInfo* segmentInfo, size_t count);
 	BINARYNINJACOREAPI void BNRemoveAutoSegment(BNBinaryView* view, uint64_t start, uint64_t length);
 	BINARYNINJACOREAPI void BNAddUserSegment(BNBinaryView* view, uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
 	BINARYNINJACOREAPI void BNRemoveUserSegment(BNBinaryView* view, uint64_t start, uint64_t length);

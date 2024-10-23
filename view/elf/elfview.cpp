@@ -496,21 +496,37 @@ bool ElfView::Init()
 
 	m_entryPoint = m_entryPoint + imageBaseAdjustment;
 
+	// Add segments in bulk first
+	{
+		vector<BNSegmentInfo> segmentsToAdd;
+		for (auto& i : m_programHeaders)
+		{
+			uint64_t adjustedVirtualAddr = i.virtualAddress + imageBaseAdjustment;
+			if (i.type == ELF_PT_LOAD) // || i.type == ELF_PT_GNU_RELRO)
+			{
+				uint32_t flags = 0;
+				if (i.flags & 1)
+					flags |= SegmentExecutable;
+				if (i.flags & 2)
+					flags |= SegmentWritable;
+				if (i.flags & 4)
+					flags |= SegmentReadable;
+
+				BNSegmentInfo segmentInfo;
+				segmentInfo.start = adjustedVirtualAddr;
+				segmentInfo.length = i.memorySize;
+				segmentInfo.dataOffset = i.offset;
+				segmentInfo.dataLength = i.fileSize;
+				segmentInfo.flags = flags;
+				segmentsToAdd.push_back(segmentInfo);
+			}
+		}
+		AddAutoSegments(segmentsToAdd);
+	}
+
 	for (auto& i : m_programHeaders)
 	{
 		uint64_t adjustedVirtualAddr = i.virtualAddress + imageBaseAdjustment;
-
-		if (i.type == ELF_PT_LOAD) // || i.type == ELF_PT_GNU_RELRO)
-		{
-			uint32_t flags = 0;
-			if (i.flags & 1)
-				flags |= SegmentExecutable;
-			if (i.flags & 2)
-				flags |= SegmentWritable;
-			if (i.flags & 4)
-				flags |= SegmentReadable;
-			AddAutoSegment(adjustedVirtualAddr, i.memorySize, i.offset, i.fileSize, flags);
-		}
 
 		// Create sections for the program headers with the standard section names. This will ensure that
 		// the standard name for sections such as .dynamic will always refer to what the loader actually uses.

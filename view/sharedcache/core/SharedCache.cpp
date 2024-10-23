@@ -1080,7 +1080,6 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 				{
 					file->Read(
 						&map.slideInfoV2, mappingAndSlideInfo.slideInfoFileOffset, sizeof(dyld_cache_slide_info_v2));
-					map.slideInfoV2.value_add = base;
 				}
 				else if (map.slideInfoVersion == 3)
 				{

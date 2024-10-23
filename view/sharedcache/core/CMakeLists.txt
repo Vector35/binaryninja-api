@@ -47,11 +47,16 @@ get_recursive_include_dirs(binaryninjaapi INCLUDES)
 
 
 if (VIEW_NAME)
-    target_compile_definitions(sharedcachecore PRIVATE VIEW_NAME="${VIEW_NAME}" SHAREDCACHE_LIBRARY)
+    if (SLIDEINFO_DEBUG_TAGS)
+        target_compile_definitions(sharedcachecore PRIVATE VIEW_NAME="${VIEW_NAME}" SHAREDCACHE_LIBRARY SLIDEINFO_DEBUG_TAGS)
+    else()
+        target_compile_definitions(sharedcachecore PRIVATE VIEW_NAME="${VIEW_NAME}" SHAREDCACHE_LIBRARY)
+    endif()
     message(STATUS "VIEW_NAME: ${VIEW_NAME}")
 else()
     error("VIEW_NAME must be defined")
 endif()
+
 
 target_include_directories(sharedcachecore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${INCLUDES})
 

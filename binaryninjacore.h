@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 79
+#define BN_CURRENT_CORE_ABI_VERSION 80
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 79
+#define BN_MINIMUM_CORE_ABI_VERSION 80
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -300,6 +300,7 @@ extern "C"
 	typedef struct BNUndoAction BNUndoAction;
 	typedef struct BNUndoEntry BNUndoEntry;
 	typedef struct BNDemangler BNDemangler;
+	typedef struct BNFirmwareNinja BNFirmwareNinja;
 
 	//! Console log levels
 	typedef enum BNLogLevel
@@ -3462,6 +3463,78 @@ extern "C"
 	typedef bool(*BNProgressFunction)(void*, size_t, size_t);
 	typedef bool(*BNCollaborationAnalysisConflictHandler)(void*, const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount);
 	typedef bool(*BNCollaborationNameChangesetFunction)(void*, BNCollaborationChangeset*);
+
+	typedef struct BNFirmwareNinjaDevice
+	{
+		char* name;
+		uint64_t start;
+		uint64_t end;
+		char* info;
+	} BNFirmwareNinjaDevice;
+
+	typedef enum BNFirmwareNinjaSectionType
+	{
+		CodeSectionType,
+		DataSectionType,
+		CompressionSectionType,
+		PaddingSectionType,
+	} BNFirmwareNinjaSectionType;
+
+
+	typedef enum BNFirmwareNinjaSectionAnalysisMode
+	{
+		DefaultSectionAnalysisMode,
+		IgnorePaddingSectionAnalysisMode,
+		DetectStringsSectionAnalysisMode,
+	} BNFirmwareNinjaSectionAnalysisMode;
+
+	typedef struct BNFirmwareNinjaSection
+	{
+		BNFirmwareNinjaSectionType type;
+		uint64_t start;
+		uint64_t end;
+		float entropy;
+	} BNFirmwareNinjaSection;
+
+	typedef enum BNFirmwareNinjaMMIOHeuristic
+	{
+		NoMMIOHeuristic,
+		HasReadBarrierMMIOHeuristic,
+		HasWriteBarrierMMIOHeuristic,
+		StoreToOOBMemoryMMIOHeuristic,
+		LoadFromOOBMemoryMMIOHeuristic,
+		RepeatLoadStoreMMIOHeuristic,
+	} BNFirmwareNinjaMMIOHeuristic;
+
+	typedef enum BNFirmwareNinjaMMIOAccessType
+	{
+		NoMMIOAccessType,
+		ReadMMIOAccessType,
+		WriteMMIOAccessType,
+	} BNFirmwareNinjaMMIOAccessType;
+
+	typedef struct BNFirmwareNinjaMMIOAccess
+	{
+		uint64_t instrAddress;
+		BNRegisterValue reg;
+		BNFirmwareNinjaMMIOHeuristic heuristic;
+		BNFirmwareNinjaMMIOAccessType type;
+	} BNFirmwareNinjaMMIOAccess;
+
+	typedef struct BNFirmwareNinjaFunctionMMIOInfo
+	{
+		uint64_t start;
+		size_t count;
+		BNFirmwareNinjaMMIOAccess** accesses;
+	} BNFirmwareNinjaFunctionMMIOInfo;
+
+	typedef struct BNFirmwareNinjaDeviceAccesses
+	{
+		char* name;
+		size_t total;
+		size_t unique;
+	} BNFirmwareNinjaDeviceAccesses;
+
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
@@ -7934,6 +8007,25 @@ extern "C"
 	BINARYNINJACOREAPI int64_t BNMaskToSize(int64_t value, size_t size);
 	BINARYNINJACOREAPI int64_t BNGetMaskForSize(size_t size);
 
+	// FirmwareNinja
+	BINARYNINJACOREAPI BNFirmwareNinja* BNCreateFirmwareNinja(BNBinaryView *view);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaAddCustomDevice(BNFirmwareNinja* fn, const char* name, uint64_t start, uint64_t end, const char* info);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaDeleteCustomDevice(BNFirmwareNinja* fn, const char* name);
+	BINARYNINJACOREAPI int BNFirmwareNinjaQueryCustomDevices(BNFirmwareNinja* fn, BNFirmwareNinjaDevice** devices);
+	BINARYNINJACOREAPI void BNFirmwareNinjaFreeDevices(BNFirmwareNinjaDevice *devices, int size);
+	BINARYNINJACOREAPI int BNFirmwareNinjaQueryBoardNamesForArchitecture(BNFirmwareNinja* fn, BNArchitecture* arch, char ***boards);
+	BINARYNINJACOREAPI void BNFirmwareNinjaFreeBoardNames(char **boards, int size);
+	BINARYNINJACOREAPI int BNFirmwareNinjaQueryBoardDevices(BNFirmwareNinja* fn, BNArchitecture* arch, const char* board, BNFirmwareNinjaDevice** devices);
+	BINARYNINJACOREAPI int BNFirmwareNinjaFindSectionsWithEntropy(BNFirmwareNinja* fn, BNFirmwareNinjaSection** sections,
+		float highCodeEntropyThreshold, float lowCodeEntropyThreshold, size_t blockSize, BNFirmwareNinjaSectionAnalysisMode mode);
+	BINARYNINJACOREAPI void BNFirmwareNinjaFreeSections(BNFirmwareNinjaSection *sections, int size);
+	BINARYNINJACOREAPI int BNFirmwareNinjaFindMMIOAccesses(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMMIOInfo*** mmio, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI void BNFirmwareNinjaFreeMMIOAccesses(BNFirmwareNinjaFunctionMMIOInfo **mmio, int size);
+	BINARYNINJACOREAPI void BNFirmwareNinjaSaveMMIOAccessesToMetadata(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMMIOInfo** mmio, int size);
+	BINARYNINJACOREAPI int BNFirmwareNinjaLoadMMIOAccessesFromMetadata(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMMIOInfo*** mmio);
+	BINARYNINJACOREAPI int BNFirmwareNinjaGetBoardDeviceAccesses(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMMIOInfo** mmio, int size,
+		BNFirmwareNinjaDeviceAccesses** accesses, BNArchitecture* arch);
+	BINARYNINJACOREAPI void BNFirmwareNinjaFreeBoardDeviceAccesses(BNFirmwareNinjaDeviceAccesses *accesses, int size);
 #ifdef __cplusplus
 }
 #endif

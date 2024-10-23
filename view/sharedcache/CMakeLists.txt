@@ -29,7 +29,7 @@ endif()
 
 set(HARD_FAIL_MODE OFF CACHE BOOL "Enable hard fail mode")
 set(SLIDEINFO_DEBUG_TAGS OFF CACHE BOOL "Enable debug tags in slideinfo")
-set(VIEW_NAME VIEW_NAME CACHE STRING "Name of the view")
+set(VIEW_NAME "DSCViewAlpha" CACHE STRING "Name of the view")
 
 add_subdirectory(core)
 add_subdirectory(api)

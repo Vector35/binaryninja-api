@@ -5,6 +5,7 @@
 #include "dsctriage.h"
 #include "ui/fontsettings.h"
 #include <QPainter>
+#include <QTextBrowser>
 #include "tabwidget.h"
 #include "globalarea.h"
 #include "progresstask.h"
@@ -16,6 +17,7 @@
 #define QSETTINGS_KEY_SELECTED_TAB "DSCTriage-SelectedTab"
 #define QSETTINGS_KEY_TAB_LAYOUT "DSCTriage-TabLayout"
 #define QSETTINGS_KEY_IMAGELOAD_TAB_LAYOUT "DSCTriage-ImageLoadTabLayout"
+#define QSETTINGS_KEY_ALPHA_POPUP_SEEN "DSCTriage-AlphaPopupSeen"
 
 
 DSCCacheBlocksView::DSCCacheBlocksView(QWidget* parent, BinaryViewRef data, SharedCacheAPI::SCRef<SharedCacheAPI::SharedCache> cache)
@@ -114,7 +116,7 @@ DSCCacheBlocksView::DSCCacheBlocksView(QWidget* parent, BinaryViewRef data, Shar
 	})
 	->thenOnEnd([this](QAbstractAnimation::Direction)
 	{
-		emit selectionChanged(m_backingCaches[0]);
+		emit selectionChanged(m_backingCaches[0], true);
 	});
 
 	m_blockWaveAnimation->setDirection(QAbstractAnimation::Backward);
@@ -129,6 +131,11 @@ DSCCacheBlocksView::~DSCCacheBlocksView()
 
 void DSCCacheBlocksView::mousePressEvent(QMouseEvent* event)
 {
+	if (m_currentProgress != BNDSCViewLoadProgress::LoadProgressFinished
+		|| m_selectedBlock == -1)
+	{
+		return;
+	}
 	int blockIndex = getBlockIndexAtPosition(event->pos());
 	blockSelected(blockIndex);
 	QWidget::mousePressEvent(event);
@@ -359,7 +366,7 @@ void DSCCacheBlocksView::blockSelected(int index)
 		m_blockLuminance[index] = 255;
 	update();
 	if (index != -1)
-		emit selectionChanged(m_backingCaches[index]);
+		emit selectionChanged(m_backingCaches[index], false);
 }
 
 
@@ -562,9 +569,10 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 
 	cacheInfo->setMinimumHeight(170);
 
-	connect(cacheBlocksView, &DSCCacheBlocksView::selectionChanged, [this, sectionModel, cacheInfo, cacheInfoWidget, mappingModel](const SharedCacheAPI::BackingCache& index)
+	connect(cacheBlocksView, &DSCCacheBlocksView::selectionChanged, [this, sectionModel, cacheInfo, cacheInfoWidget, mappingModel](const SharedCacheAPI::BackingCache& index, bool _auto)
 	{
-		m_triageTabs->selectWidget(cacheInfoWidget);
+		if (!_auto)
+			m_triageTabs->selectWidget(cacheInfoWidget);
 		mappingModel->removeRows(0, mappingModel->rowCount());
 		sectionModel->removeRows(0, sectionModel->rowCount());
 		auto basename = index.path.substr(index.path.find_last_of('/') + 1);
@@ -622,6 +630,53 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 	});
 
 	containerWidget->addWidget(cacheInfo);
+
+	QWidget* defaultWidget;
+
+	// check for alpha popup qsetting
+	QSettings settings;
+	if (!(settings.contains(QSETTINGS_KEY_ALPHA_POPUP_SEEN) && settings.value(QSETTINGS_KEY_ALPHA_POPUP_SEEN).toBool()))
+	{
+
+		QTextBrowser *tb = new QTextBrowser(this);
+		{
+			tb->setOpenExternalLinks(true);
+			auto alphaHtml =
+				R"(
+<br>
+<h1>Shared Cache Alpha</h1>
+
+<p> This is the alpha release of the sharedcache viewer! We are hard at work improving this and adding features, but we wanted
+to make it available for users to play with as soon as possible. </p>
+
+<h2> Supported Platforms </h2>
+<ul>
+	<li> iOS 11-17 (full) </li>
+	<li> iOS 18 (partial, Objective-C optimization parsing is not implemented yet.) </li>
+	<li> macOS x86/arm64e (partial) </li>
+</ul>
+
+<p> iOS parsing should work well for now. macOS parsing should be usable, but is still a work in progress. </p>
+
+<h2> Getting the latest version of the plugin </h2>
+
+<p> We frequently release "dev" builds which will contain the latest version of the SharedCache plugin (and many other things).
+
+You can find instructions on how to install these builds <a href="https://docs.binary.ninja/guide/index.html#development-branch">here</a>. </p>
+
+<h3> Reading / building the source </h3>
+<p>You can read the source and find instructions for building it <a href="https://github.com/Vector35/binaryninja-api/tree/dev/view/sharedcache">here</a>.
+
+Contributions are always welcome! </p>
+)";
+			tb->setHtml(alphaHtml);
+
+			m_triageTabs->addTab(tb, "Shared Cache Alpha");
+
+		}
+		settings.setValue(QSETTINGS_KEY_ALPHA_POPUP_SEEN, true);
+		defaultWidget = tb;
+	}
 
 	m_bottomRegionCollection = new DockableTabCollection();
 	m_bottomRegionTabs = new SplitTabWidget(m_bottomRegionCollection);
@@ -713,6 +768,9 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 		loadImageTable->setSelectionMode(QAbstractItemView::SingleSelection);
 
 		m_triageTabs->addTab(loadImageWidget, "Images");
+		if (!defaultWidget)
+			defaultWidget = loadImageWidget;
+		m_triageTabs->setCanCloseTab(loadImageWidget, false);
 	} // loadImageTable
 
 	auto symbolSearch = new SymbolTableView(this, m_cache);
@@ -759,6 +817,7 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 			});
 
 		m_triageTabs->addTab(symbolWidget, "Symbol Search");
+		m_triageTabs->setCanCloseTab(symbolWidget, false);
 	} // symbolSearch
 
 	auto loadedRegions = new QTreeView;
@@ -795,11 +854,14 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 	containerWidget->addWidget(m_bottomRegionTabs);
 
 	m_triageTabs->addTab(cacheInfoWidget, "Cache Info");
+	m_triageTabs->setCanCloseTab(cacheInfoWidget, false);
 
 	m_layout = new QVBoxLayout(this);
 	m_layout->addWidget(cacheBlocksView);
 	m_layout->addWidget(m_triageTabs);
 	setLayout(m_layout);
+
+	m_triageTabs->selectWidget(defaultWidget);
 }
 
 
@@ -918,7 +980,7 @@ void CollapsibleSection::setCollapsed(bool collapsed, bool animated)
 
 
 DSCTriageViewType::DSCTriageViewType()
-	: ViewType("DSCTriage", "Shared Cache")
+	: ViewType("DSCTriage", "Shared Cache Triage")
 {
 
 }

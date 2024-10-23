@@ -68,7 +68,7 @@ public:
 
 signals:
 	void loadDone();
-	void selectionChanged(const SharedCacheAPI::BackingCache& index);
+	void selectionChanged(const SharedCacheAPI::BackingCache& index, bool automatic);
 };
 
 

@@ -5,6 +5,8 @@
 // TODO We could use an LLIL/MLIL workflow to rewrite off-image value-loads
 //  	(i.e. MLIL_VAR_LOAD.MLIL_DEREF.MLIL_CONST_PTR) to just read the value out of the cache and replace the load
 // 		in stub regions.
+//
+// This is a pretty rough workflow and has huge room for improvements all around.
 
 #include "SharedCacheWorkflow.h"
 #include "lowlevelilinstruction.h"

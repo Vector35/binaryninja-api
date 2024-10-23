@@ -48,6 +48,7 @@ get_recursive_include_dirs(binaryninjaapi INCLUDES)
 
 if (VIEW_NAME)
     target_compile_definitions(sharedcachecore PRIVATE VIEW_NAME="${VIEW_NAME}" SHAREDCACHE_LIBRARY)
+    message(STATUS "VIEW_NAME: ${VIEW_NAME}")
 else()
     error("VIEW_NAME must be defined")
 endif()

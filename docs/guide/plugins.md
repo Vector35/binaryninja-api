@@ -37,6 +37,7 @@ In addition to finding plugins by name or description content, the search box in
  - `@installed` to only show installed plugins
  - `@enabled` to only show enabled plugins
  - `@disabled` to show plugins that are installed but not enabled)
+ - `@update_available` to show plugins that have updates to install
 
 The following plugin categories are also searchable:
 

@@ -85,8 +85,8 @@ struct ViewStateCacheStore {
 
 	std::string m_baseFilePath;
 
-	std::vector<std::pair<uint64_t, std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>>> m_exportInfos;
-	std::vector<std::pair<uint64_t, std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>>> m_symbolInfos;
+	std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>> m_exportInfos;
+	std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>> m_symbolInfos;
 };
 
 static std::recursive_mutex viewStateMutex;
@@ -2595,7 +2595,7 @@ void SharedCache::InitializeHeader(
 				view->DefineAutoSymbol(symbolObj);
 			symbolInfos.push_back({sym.n_value, {type, symbol}});
 		}
-		m_symbolInfos.push_back({header.textBase, symbolInfos});
+		m_symbolInfos[header.textBase] = symbolInfos;
 	}
 
 	if (header.exportTriePresent && header.linkeditPresent && vm->AddressIsMapped(header.linkeditSegment.vmaddr))
@@ -2641,7 +2641,7 @@ void SharedCache::InitializeHeader(
 			else
 				view->DefineAutoSymbol(symbol);
 		}
-		m_exportInfos.push_back({header.textBase, exportMapping});
+		m_exportInfos[header.textBase] = exportMapping;
 	}
 	view->EndBulkModifySymbols();
 
@@ -2774,11 +2774,13 @@ std::vector<std::pair<std::string, Ref<Symbol>>> SharedCache::LoadAllSymbolsAndW
 			continue;
 		}
 		auto exportList = SharedCache::ParseExportTrie(mapping, *header);
+		std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>> exportMapping;
 		for (const auto& sym : exportList)
 		{
-			m_exportInfos.push_back({header->textBase, {{sym->GetAddress(), {sym->GetType(), sym->GetRawName()}}}});
+			exportMapping.push_back({sym->GetAddress(), {sym->GetType(), sym->GetRawName()}});
 			symbols.push_back({img.installName, sym});
 		}
+		m_exportInfos[header->textBase] = exportMapping;
 	}
 
 	SaveToDSCView();
@@ -2897,7 +2899,7 @@ void SharedCache::FindSymbolAtAddrAndApplyToAddr(uint64_t symbolLocation, uint64
 		}
 		{
 			std::unique_lock<std::mutex> _lock(viewSpecificMutexes[m_dscView->GetFile()->GetSessionId()].viewOperationsThatInfluenceMetadataMutex);
-			m_exportInfos.push_back({header->textBase, exportMapping});
+			m_exportInfos[header->textBase] = exportMapping;
 		}
 		m_dscView->EndBulkModifySymbols();
 		m_dscView->ForgetUndoActions(id);

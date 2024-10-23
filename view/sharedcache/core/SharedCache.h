@@ -1046,7 +1046,7 @@ namespace SharedCacheCore {
 					exportInfoVec.push_back({exportInfoPair[0].GetUint64(),
 						{(BNSymbolType)exportInfoPair[1].GetUint(), exportInfoPair[2].GetString()}});
 				}
-				m_exportInfos.push_back({exportInfo[0].GetUint64(), exportInfoVec});
+				m_exportInfos[exportInfo[0].GetUint64()] = exportInfoVec;
 			}
 			m_symbolInfos.clear();
 			for (auto& symbolInfo : m_activeDeserContext.doc["symbolInfos"].GetArray())
@@ -1057,7 +1057,7 @@ namespace SharedCacheCore {
 					symbolInfoVec.push_back({symbolInfoPair[0].GetUint64(),
 						{(BNSymbolType)symbolInfoPair[1].GetUint(), symbolInfoPair[2].GetString()}});
 				}
-				m_symbolInfos.push_back({symbolInfo[0].GetUint64(), symbolInfoVec});
+				m_symbolInfos[symbolInfo[0].GetUint64()] = symbolInfoVec;
 			}
 			m_backingCaches.clear();
 			for (auto& bcV : m_activeDeserContext.doc["backingCaches"].GetArray())
@@ -1109,9 +1109,9 @@ namespace SharedCacheCore {
 
 		// Updated as the view is loaded further, more images are added, etc
 		DSCViewState m_viewState;
-		std::vector<std::pair<uint64_t, std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>>>
+		std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>>
 			m_exportInfos;
-		std::vector<std::pair<uint64_t, std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>>>
+		std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>>
 			m_symbolInfos;
 		// ---
 

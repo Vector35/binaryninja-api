@@ -11,7 +11,9 @@ tests_mfcr = [
 
 tests_basics = [
     # li 3, 100
-    (b'\x38\x60\x00\x64', 'LLIL_SET_REG.d{none}(r3,LLIL_CONST.d(0x64))')
+    (b'\x38\x60\x00\x64', 'LLIL_SET_REG.d{none}(r3,LLIL_CONST.d(0x64))'),
+    # xori r12, r12, 0x1431
+    (b'\x69\x8c\x14\x31', 'LLIL_SET_REG.d{none}(r12,LLIL_XOR.d{none}(LLIL_REG.d{none}(r12),LLIL_CONST.d(0x1431)))')
 ]
 
 test_cases = \

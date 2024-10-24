@@ -1441,6 +1441,11 @@ impl Variable {
             storage: self.storage,
         }
     }
+
+    /// A UID for a variable within a function.
+    pub fn identifier(&self) -> u64 {
+        unsafe { BNToVariableIdentifier(&self.raw()) }
+    }
 }
 
 impl CoreArrayProvider for Variable {
@@ -3598,7 +3603,7 @@ pub type IntegerDisplayType = binaryninjacore_sys::BNIntegerDisplayType;
 
 #[derive(Debug, Clone)]
 pub struct StackVariableReference {
-    _source_operand: u32,
+    source_operand: u32,
     var_type: Conf<Ref<Type>>,
     name: BnString,
     var: Variable,
@@ -3617,7 +3622,7 @@ impl StackVariableReference {
         let offset = value.referencedOffset;
         let size = value.size;
         Self {
-            _source_operand: value.sourceOperand,
+            source_operand: value.sourceOperand,
             var_type,
             name,
             var,
@@ -3639,6 +3644,9 @@ impl StackVariableReference {
     }
     pub fn size(&self) -> usize {
         self.size
+    }
+    pub fn source_operand(&self) -> Option<u32> {
+        (self.source_operand != 0xffffffff).then_some(self.source_operand)
     }
 }
 

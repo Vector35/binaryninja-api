@@ -17,7 +17,6 @@ use binaryninjacore_sys::BNGetLowLevelILOwnerFunction;
 use binaryninjacore_sys::BNLowLevelILFunction;
 use binaryninjacore_sys::BNNewLowLevelILFunctionReference;
 
-use std::borrow::Borrow;
 use std::marker::PhantomData;
 
 use crate::architecture::CoreArchitecture;
@@ -54,9 +53,8 @@ impl FunctionForm for SSA {}
 impl<V: NonSSAVariant> FunctionForm for NonSSA<V> {}
 
 pub struct Function<A: Architecture, M: FunctionMutability, F: FunctionForm> {
-    pub(crate) borrower: A::Handle,
+    pub(crate) borrower: &'static A,
     pub(crate) handle: *mut BNLowLevelILFunction,
-    _arch: PhantomData<*mut A>,
     _mutability: PhantomData<M>,
     _form: PhantomData<F>,
 }
@@ -85,7 +83,7 @@ where
     F: FunctionForm,
 {
     pub(crate) unsafe fn from_raw(
-        borrower: A::Handle,
+        borrower: &'static A,
         handle: *mut BNLowLevelILFunction,
     ) -> Ref<Self> {
         debug_assert!(!handle.is_null());
@@ -93,15 +91,14 @@ where
         Self {
             borrower,
             handle,
-            _arch: PhantomData,
             _mutability: PhantomData,
             _form: PhantomData,
         }
         .to_owned()
     }
 
-    pub(crate) fn arch(&self) -> &A {
-        self.borrower.borrow()
+    pub(crate) fn arch(&self) -> &'static A {
+        self.borrower
     }
 
     pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<Instruction<A, M, F>> {
@@ -109,10 +106,11 @@ where
         use binaryninjacore_sys::BNLowLevelILGetInstructionStart;
 
         let loc: Location = loc.into();
-        let arch_handle = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
+        let arch_handle = loc.arch.unwrap_or_else(|| self.arch().core());
 
         unsafe {
-            let instr_idx = BNLowLevelILGetInstructionStart(self.handle, arch_handle.0, loc.addr);
+            let instr_idx =
+                BNLowLevelILGetInstructionStart(self.handle, arch_handle.as_ptr(), loc.addr);
 
             if instr_idx >= BNGetLowLevelILInstructionCount(self.handle) {
                 None
@@ -178,7 +176,7 @@ where
 // Allow instantiating Lifted IL functions for querying Lifted IL from Architectures
 impl Function<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
     pub fn new(
-        arch: CoreArchitecture,
+        arch: &'static CoreArchitecture,
         source_func: Option<crate::function::Function>,
     ) -> Result<Ref<Self>, ()> {
         use binaryninjacore_sys::BNCreateLowLevelILFunction;
@@ -186,8 +184,8 @@ impl Function<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
 
         let handle = unsafe {
             match source_func {
-                Some(func) => BNCreateLowLevelILFunction(arch.0, func.handle),
-                None => BNCreateLowLevelILFunction(arch.0, null_mut()),
+                Some(func) => BNCreateLowLevelILFunction(arch.core().as_ptr(), func.handle),
+                None => BNCreateLowLevelILFunction(arch.core().as_ptr(), null_mut()),
             }
         };
         if handle.is_null() {
@@ -198,7 +196,6 @@ impl Function<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
             Ref::new(Self {
                 borrower: arch,
                 handle,
-                _arch: PhantomData,
                 _mutability: PhantomData,
                 _form: PhantomData,
             })
@@ -227,9 +224,8 @@ where
 {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
         Ref::new(Self {
-            borrower: handle.borrower.clone(),
+            borrower: handle.borrower,
             handle: BNNewLowLevelILFunctionReference(handle.handle),
-            _arch: PhantomData,
             _mutability: PhantomData,
             _form: PhantomData,
         })

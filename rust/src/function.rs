@@ -47,7 +47,7 @@ use std::ptr::NonNull;
 use crate::workflow::Workflow;
 
 pub struct Location {
-    pub arch: Option<CoreArchitecture>,
+    pub arch: Option<&'static CoreArchitecture>,
     pub addr: u64,
 }
 
@@ -57,8 +57,8 @@ impl From<u64> for Location {
     }
 }
 
-impl From<(CoreArchitecture, u64)> for Location {
-    fn from(loc: (CoreArchitecture, u64)) -> Self {
+impl From<(&'static CoreArchitecture, u64)> for Location {
+    fn from(loc: (&'static CoreArchitecture, u64)) -> Self {
         Location {
             arch: Some(loc.0),
             addr: loc.1,
@@ -67,7 +67,7 @@ impl From<(CoreArchitecture, u64)> for Location {
 }
 
 pub struct NativeBlockIter {
-    arch: CoreArchitecture,
+    arch: &'static CoreArchitecture,
     bv: Ref<BinaryView>,
     cur: u64,
     end: u64,
@@ -83,7 +83,7 @@ impl Iterator for NativeBlockIter {
             None
         } else {
             self.bv
-                .instruction_len(&self.arch, res)
+                .instruction_len(self.arch, res)
                 .map(|x| {
                     self.cur += x as u64;
                     res
@@ -210,7 +210,7 @@ impl Function {
         Ref::new(Self { handle })
     }
 
-    pub fn arch(&self) -> CoreArchitecture {
+    pub fn arch(&self) -> &'static CoreArchitecture {
         unsafe {
             let arch = BNGetFunctionArchitecture(self.handle);
             CoreArchitecture::from_raw(arch)
@@ -331,11 +331,11 @@ impl Function {
     pub fn basic_block_containing(
         &self,
         addr: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Option<Ref<BasicBlock<NativeBlock>>> {
         let arch = arch.unwrap_or_else(|| self.arch());
         unsafe {
-            let block = BNGetFunctionBasicBlockAtAddress(self.handle, arch.0, addr);
+            let block = BNGetFunctionBasicBlockAtAddress(self.handle, arch.as_ptr(), addr);
             let context = NativeBlock { _priv: () };
 
             if block.is_null() {
@@ -349,11 +349,11 @@ impl Function {
     pub fn block_annotations(
         &self,
         addr: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Array<Array<InstructionTextToken>> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
-        let lines = unsafe { BNGetFunctionBlockAnnotations(self.handle, arch.0, addr, &mut count) };
+        let lines = unsafe { BNGetFunctionBlockAnnotations(self.handle, arch.as_ptr(), addr, &mut count) };
         assert!(!lines.is_null());
         unsafe { Array::new(lines, count, ()) }
     }
@@ -545,9 +545,9 @@ impl Function {
         unsafe { BNSetAutoFunctionStackAdjustment(self.handle, &mut value_raw) }
     }
 
-    pub fn call_stack_adjustment(&self, addr: u64, arch: Option<CoreArchitecture>) -> Conf<i64> {
+    pub fn call_stack_adjustment(&self, addr: u64, arch: Option<&'static CoreArchitecture>) -> Conf<i64> {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let result = unsafe { BNGetCallStackAdjustment(self.handle, arch.0, addr) };
+        let result = unsafe { BNGetCallStackAdjustment(self.handle, arch.as_ptr(), addr) };
         result.into()
     }
 
@@ -555,7 +555,7 @@ impl Function {
         &self,
         addr: u64,
         adjust: I,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) where
         I: Into<Conf<i64>>,
     {
@@ -564,7 +564,7 @@ impl Function {
         unsafe {
             BNSetUserCallStackAdjustment(
                 self.handle,
-                arch.0,
+                arch.as_ptr(),
                 addr,
                 adjust.contents,
                 adjust.confidence,
@@ -576,7 +576,7 @@ impl Function {
         &self,
         addr: u64,
         adjust: I,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) where
         I: Into<Conf<i64>>,
     {
@@ -585,7 +585,7 @@ impl Function {
         unsafe {
             BNSetAutoCallStackAdjustment(
                 self.handle,
-                arch.0,
+                arch.as_ptr(),
                 addr,
                 adjust.contents,
                 adjust.confidence,
@@ -596,10 +596,10 @@ impl Function {
     pub fn call_type_adjustment(
         &self,
         addr: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Option<Conf<Ref<Type>>> {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let result = unsafe { BNGetCallTypeAdjustment(self.handle, arch.0, addr) };
+        let result = unsafe { BNGetCallTypeAdjustment(self.handle, arch.as_ptr(), addr) };
         (!result.type_.is_null())
             .then(|| unsafe { Conf::new(Type::ref_from_raw(result.type_), result.confidence) })
     }
@@ -613,7 +613,7 @@ impl Function {
         &self,
         addr: u64,
         adjust_type: Option<I>,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) where
         I: Into<Conf<&'a Type>>,
     {
@@ -629,14 +629,14 @@ impl Function {
             .as_mut()
             .map(|x| x as *mut _)
             .unwrap_or(core::ptr::null_mut());
-        unsafe { BNSetUserCallTypeAdjustment(self.handle, arch.0, addr, adjust_ptr) }
+        unsafe { BNSetUserCallTypeAdjustment(self.handle, arch.as_ptr(), addr, adjust_ptr) }
     }
 
     pub fn set_auto_call_type_adjustment<'a, I>(
         &self,
         addr: u64,
         adjust_type: I,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) where
         I: Into<Conf<&'a Type>>,
     {
@@ -645,7 +645,7 @@ impl Function {
         unsafe {
             BNSetAutoCallTypeAdjustment(
                 self.handle,
-                arch.0,
+                arch.as_ptr(),
                 addr,
                 &mut BNTypeWithConfidence {
                     type_: adjust_type.contents.handle,
@@ -658,21 +658,21 @@ impl Function {
     pub fn call_reg_stack_adjustment(
         &self,
         addr: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Array<RegisterStackAdjustment<CoreArchitecture>> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
         let adjust =
-            unsafe { BNGetCallRegisterStackAdjustment(self.handle, arch.0, addr, &mut count) };
+            unsafe { BNGetCallRegisterStackAdjustment(self.handle, arch.as_ptr(), addr, &mut count) };
         assert!(!adjust.is_null());
-        unsafe { Array::new(adjust, count, arch.handle()) }
+        unsafe { Array::new(adjust, count, arch) }
     }
 
     pub fn set_user_call_reg_stack_adjustment<I>(
         self,
         addr: u64,
         adjust: I,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) where
         I: IntoIterator<Item = RegisterStackAdjustment<CoreArchitecture>>,
     {
@@ -682,7 +682,7 @@ impl Function {
         unsafe {
             BNSetUserCallRegisterStackAdjustment(
                 self.handle,
-                arch.0,
+                arch.as_ptr(),
                 addr,
                 adjust_buf.as_mut_ptr(),
                 adjust_buf.len(),
@@ -694,7 +694,7 @@ impl Function {
         &self,
         addr: u64,
         adjust: I,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) where
         I: IntoIterator<Item = RegisterStackAdjustment<CoreArchitecture>>,
     {
@@ -705,7 +705,7 @@ impl Function {
         unsafe {
             BNSetAutoCallRegisterStackAdjustment(
                 self.handle,
-                arch.0,
+                arch.as_ptr(),
                 addr,
                 adjust_buf.as_mut_ptr(),
                 adjust_buf.len(),
@@ -717,13 +717,13 @@ impl Function {
         &self,
         addr: u64,
         reg_stack_id: u32,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> RegisterStackAdjustment<CoreArchitecture> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let adjust = unsafe {
             BNGetCallRegisterStackAdjustmentForRegisterStack(
                 self.handle,
-                arch.0,
+                arch.as_ptr(),
                 addr,
                 reg_stack_id,
             )
@@ -736,7 +736,7 @@ impl Function {
         addr: u64,
         reg_stack_id: u32,
         adjust: I,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) where
         I: Into<Conf<i32>>,
     {
@@ -745,7 +745,7 @@ impl Function {
         unsafe {
             BNSetUserCallRegisterStackAdjustmentForRegisterStack(
                 self.handle,
-                arch.0,
+                arch.as_ptr(),
                 addr,
                 reg_stack_id,
                 adjust.contents,
@@ -759,7 +759,7 @@ impl Function {
         addr: u64,
         reg_stack_id: u32,
         adjust: I,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) where
         I: Into<Conf<i32>>,
     {
@@ -768,7 +768,7 @@ impl Function {
         unsafe {
             BNSetAutoCallRegisterStackAdjustmentForRegisterStack(
                 self.handle,
-                arch.0,
+                arch.as_ptr(),
                 addr,
                 reg_stack_id,
                 adjust.contents,
@@ -781,7 +781,7 @@ impl Function {
         let mut count = 0;
         let adjust = unsafe { BNGetFunctionRegisterStackAdjustments(self.handle, &mut count) };
         assert!(!adjust.is_null());
-        unsafe { Array::new(adjust, count, self.arch().handle()) }
+        unsafe { Array::new(adjust, count, self.arch()) }
     }
 
     pub fn set_user_reg_stack_adjustments<I, A>(&self, values: I)
@@ -886,12 +886,12 @@ impl Function {
         addr: u64,
         func_type: Option<&Type>,
         i: usize,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
         let func_type = func_type.map(|f| f.handle).unwrap_or(core::ptr::null_mut());
         let value =
-            unsafe { BNGetParameterValueAtInstruction(self.handle, arch.0, addr, func_type, i) };
+            unsafe { BNGetParameterValueAtInstruction(self.handle, arch.as_ptr(), addr, func_type, i) };
         value.into()
     }
 
@@ -1039,7 +1039,7 @@ impl Function {
         data: S,
         addr: Option<u64>,
         user: bool,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
 
@@ -1051,9 +1051,9 @@ impl Function {
         unsafe {
             match (user, addr) {
                 (false, None) => BNAddAutoFunctionTag(self.handle, tag.handle),
-                (false, Some(addr)) => BNAddAutoAddressTag(self.handle, arch.0, addr, tag.handle),
+                (false, Some(addr)) => BNAddAutoAddressTag(self.handle, arch.as_ptr(), addr, tag.handle),
                 (true, None) => BNAddUserFunctionTag(self.handle, tag.handle),
-                (true, Some(addr)) => BNAddUserAddressTag(self.handle, arch.0, addr, tag.handle),
+                (true, Some(addr)) => BNAddUserAddressTag(self.handle, arch.as_ptr(), addr, tag.handle),
             }
         }
     }
@@ -1068,17 +1068,17 @@ impl Function {
         tag: &Tag,
         addr: Option<u64>,
         user: bool,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
         unsafe {
             match (user, addr) {
                 (false, None) => BNRemoveAutoFunctionTag(self.handle, tag.handle),
                 (false, Some(addr)) => {
-                    BNRemoveAutoAddressTag(self.handle, arch.0, addr, tag.handle)
+                    BNRemoveAutoAddressTag(self.handle, arch.as_ptr(), addr, tag.handle)
                 }
                 (true, None) => BNRemoveUserFunctionTag(self.handle, tag.handle),
-                (true, Some(addr)) => BNRemoveUserAddressTag(self.handle, arch.0, addr, tag.handle),
+                (true, Some(addr)) => BNRemoveUserAddressTag(self.handle, arch.as_ptr(), addr, tag.handle),
             }
         }
     }
@@ -1094,18 +1094,18 @@ impl Function {
         tag_type: &TagType,
         addr: Option<u64>,
         user: bool,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
         unsafe {
             match (user, addr) {
                 (false, None) => BNRemoveAutoFunctionTagsOfType(self.handle, tag_type.handle),
                 (false, Some(addr)) => {
-                    BNRemoveAutoAddressTagsOfType(self.handle, arch.0, addr, tag_type.handle)
+                    BNRemoveAutoAddressTagsOfType(self.handle, arch.as_ptr(), addr, tag_type.handle)
                 }
                 (true, None) => BNRemoveUserFunctionTagsOfType(self.handle, tag_type.handle),
                 (true, Some(addr)) => {
-                    BNRemoveUserAddressTagsOfType(self.handle, arch.0, addr, tag_type.handle)
+                    BNRemoveUserAddressTagsOfType(self.handle, arch.as_ptr(), addr, tag_type.handle)
                 }
             }
         }
@@ -1127,9 +1127,9 @@ impl Function {
     /// # let fun: Function = todo!();
     /// fun.add_user_code_ref(0x1337, 0x400000, None);
     /// ```
-    pub fn add_user_code_ref(&self, from_addr: u64, to_addr: u64, arch: Option<CoreArchitecture>) {
+    pub fn add_user_code_ref(&self, from_addr: u64, to_addr: u64, arch: Option<&'static CoreArchitecture>) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        unsafe { BNAddUserCodeReference(self.handle, arch.0, from_addr, to_addr) }
+        unsafe { BNAddUserCodeReference(self.handle, arch.as_ptr(), from_addr, to_addr) }
     }
 
     /// Removes a user-defined cross-reference.
@@ -1151,10 +1151,10 @@ impl Function {
         self,
         from_addr: u64,
         to_addr: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        unsafe { BNRemoveUserCodeReference(self.handle, arch.0, from_addr, to_addr) }
+        unsafe { BNRemoveUserCodeReference(self.handle, arch.as_ptr(), from_addr, to_addr) }
     }
 
     /// Places a user-defined type cross-reference from the instruction at
@@ -1176,11 +1176,11 @@ impl Function {
         &self,
         from_addr: u64,
         name: &QualifiedName,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
         let name_ptr = &name.0 as *const BNQualifiedName as *mut _;
-        unsafe { BNAddUserTypeReference(self.handle, arch.0, from_addr, name_ptr) }
+        unsafe { BNAddUserTypeReference(self.handle, arch.as_ptr(), from_addr, name_ptr) }
     }
 
     /// Removes a user-defined type cross-reference.
@@ -1201,11 +1201,11 @@ impl Function {
         &self,
         from_addr: u64,
         name: &QualifiedName,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
         let name_ptr = &name.0 as *const BNQualifiedName as *mut _;
-        unsafe { BNRemoveUserTypeReference(self.handle, arch.0, from_addr, name_ptr) }
+        unsafe { BNRemoveUserTypeReference(self.handle, arch.as_ptr(), from_addr, name_ptr) }
     }
 
     /// Places a user-defined type field cross-reference from the
@@ -1230,14 +1230,14 @@ impl Function {
         from_addr: u64,
         name: &QualifiedName,
         offset: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
         size: Option<usize>,
     ) {
         let size = size.unwrap_or(0);
         let arch = arch.unwrap_or_else(|| self.arch());
         let name_ptr = &name.0 as *const _ as *mut _;
         unsafe {
-            BNAddUserTypeFieldReference(self.handle, arch.0, from_addr, name_ptr, offset, size)
+            BNAddUserTypeFieldReference(self.handle, arch.as_ptr(), from_addr, name_ptr, offset, size)
         }
     }
 
@@ -1262,14 +1262,14 @@ impl Function {
         from_addr: u64,
         name: &QualifiedName,
         offset: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
         size: Option<usize>,
     ) {
         let size = size.unwrap_or(0);
         let arch = arch.unwrap_or_else(|| self.arch());
         let name_ptr = &name.0 as *const _ as *mut _;
         unsafe {
-            BNRemoveUserTypeFieldReference(self.handle, arch.0, from_addr, name_ptr, offset, size)
+            BNRemoveUserTypeFieldReference(self.handle, arch.as_ptr(), from_addr, name_ptr, offset, size)
         }
     }
 
@@ -1289,12 +1289,12 @@ impl Function {
     pub fn constants_referenced_by(
         &self,
         addr: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Array<ConstantReference> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
         let refs =
-            unsafe { BNGetConstantsReferencedByInstruction(self.handle, arch.0, addr, &mut count) };
+            unsafe { BNGetConstantsReferencedByInstruction(self.handle, arch.as_ptr(), addr, &mut count) };
         assert!(!refs.is_null());
         unsafe { Array::new(refs, count, ()) }
     }
@@ -1302,12 +1302,12 @@ impl Function {
     pub fn constants_referenced_by_address_if_available(
         &self,
         addr: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Array<ConstantReference> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
         let refs = unsafe {
-            BNGetConstantsReferencedByInstructionIfAvailable(self.handle, arch.0, addr, &mut count)
+            BNGetConstantsReferencedByInstructionIfAvailable(self.handle, arch.as_ptr(), addr, &mut count)
         };
         assert!(!refs.is_null());
         unsafe { Array::new(refs, count, ()) }
@@ -1362,15 +1362,15 @@ impl Function {
         &self,
         addr: u64,
         auto: Option<bool>,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Array<Tag> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
 
         let tags = match auto {
-            None => unsafe { BNGetAddressTags(self.handle, arch.0, addr, &mut count) },
-            Some(true) => unsafe { BNGetAutoAddressTags(self.handle, arch.0, addr, &mut count) },
-            Some(false) => unsafe { BNGetUserAddressTags(self.handle, arch.0, addr, &mut count) },
+            None => unsafe { BNGetAddressTags(self.handle, arch.as_ptr(), addr, &mut count) },
+            Some(true) => unsafe { BNGetAutoAddressTags(self.handle, arch.as_ptr(), addr, &mut count) },
+            Some(false) => unsafe { BNGetUserAddressTags(self.handle, arch.as_ptr(), addr, &mut count) },
         };
         assert!(!tags.is_null());
         unsafe { Array::new(tags, count, ()) }
@@ -1384,20 +1384,20 @@ impl Function {
         &self,
         range: Range<u64>,
         auto: Option<bool>,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Array<TagReference> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
 
         let tags = match auto {
             None => unsafe {
-                BNGetAddressTagsInRange(self.handle, arch.0, range.start, range.end, &mut count)
+                BNGetAddressTagsInRange(self.handle, arch.as_ptr(), range.start, range.end, &mut count)
             },
             Some(true) => unsafe {
-                BNGetAutoAddressTagsInRange(self.handle, arch.0, range.start, range.end, &mut count)
+                BNGetAutoAddressTagsInRange(self.handle, arch.as_ptr(), range.start, range.end, &mut count)
             },
             Some(false) => unsafe {
-                BNGetUserAddressTagsInRange(self.handle, arch.0, range.start, range.end, &mut count)
+                BNGetUserAddressTagsInRange(self.handle, arch.as_ptr(), range.start, range.end, &mut count)
             },
         };
         assert!(!tags.is_null());
@@ -1416,7 +1416,7 @@ impl Function {
         &self,
         source: u64,
         branches: I,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) where
         I: IntoIterator<Item = u64>,
     {
@@ -1425,13 +1425,13 @@ impl Function {
             .into_iter()
             .map(|address| BNArchitectureAndAddress {
                 address,
-                arch: arch.0,
+                arch: arch.as_ptr(),
             })
             .collect();
         unsafe {
             BNSetUserIndirectBranches(
                 self.handle,
-                arch.0,
+                arch.as_ptr(),
                 source,
                 branches.as_mut_ptr(),
                 branches.len(),
@@ -1443,7 +1443,7 @@ impl Function {
         &self,
         source: u64,
         branches: I,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) where
         I: IntoIterator<Item = u64>,
     {
@@ -1452,13 +1452,13 @@ impl Function {
             .into_iter()
             .map(|address| BNArchitectureAndAddress {
                 address,
-                arch: arch.0,
+                arch: arch.as_ptr(),
             })
             .collect();
         unsafe {
             BNSetAutoIndirectBranches(
                 self.handle,
-                arch.0,
+                arch.as_ptr(),
                 source,
                 branches.as_mut_ptr(),
                 branches.len(),
@@ -1470,11 +1470,11 @@ impl Function {
     pub fn indirect_branches_at(
         &self,
         addr: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Array<IndirectBranchInfo> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
-        let branches = unsafe { BNGetIndirectBranchesAt(self.handle, arch.0, addr, &mut count) };
+        let branches = unsafe { BNGetIndirectBranchesAt(self.handle, arch.as_ptr(), addr, &mut count) };
         assert!(!branches.is_null());
         unsafe { Array::new(branches, count, ()) }
     }
@@ -1484,9 +1484,9 @@ impl Function {
     /// # let fun: binaryninja::function::Function = todo!();
     /// let color = fun.instr_highlight(0x1337, None);
     /// ```
-    pub fn instr_highlight(&self, addr: u64, arch: Option<CoreArchitecture>) -> HighlightColor {
+    pub fn instr_highlight(&self, addr: u64, arch: Option<&'static CoreArchitecture>) -> HighlightColor {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let color = unsafe { BNGetInstructionHighlight(self.handle, arch.0, addr) };
+        let color = unsafe { BNGetInstructionHighlight(self.handle, arch.as_ptr(), addr) };
         HighlightColor::from_raw(color)
     }
 
@@ -1501,11 +1501,11 @@ impl Function {
         &self,
         addr: u64,
         color: HighlightColor,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
         let color_raw = color.into_raw();
-        unsafe { BNSetAutoInstructionHighlight(self.handle, arch.0, addr, color_raw) }
+        unsafe { BNSetAutoInstructionHighlight(self.handle, arch.as_ptr(), addr, color_raw) }
     }
 
     /// Sets the highlights the instruction at the specified address with the supplied color
@@ -1525,11 +1525,11 @@ impl Function {
         &self,
         addr: u64,
         color: HighlightColor,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
         let color_raw = color.into_raw();
-        unsafe { BNSetUserInstructionHighlight(self.handle, arch.0, addr, color_raw) }
+        unsafe { BNSetUserInstructionHighlight(self.handle, arch.as_ptr(), addr, color_raw) }
     }
 
     /// return the address, if any, of the instruction that contains the
@@ -1537,11 +1537,11 @@ impl Function {
     pub fn instruction_containing_address(
         &self,
         addr: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Option<u64> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut start = 0;
-        unsafe { BNGetInstructionContainingAddress(self.handle, arch.0, addr, &mut start) }
+        unsafe { BNGetInstructionContainingAddress(self.handle, arch.as_ptr(), addr, &mut start) }
             .then_some(start)
     }
 
@@ -1558,10 +1558,10 @@ impl Function {
         instr_addr: u64,
         value: u64,
         operand: usize,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> IntegerDisplayType {
         let arch = arch.unwrap_or_else(|| self.arch());
-        unsafe { BNGetIntegerConstantDisplayType(self.handle, arch.0, instr_addr, value, operand) }
+        unsafe { BNGetIntegerConstantDisplayType(self.handle, arch.as_ptr(), instr_addr, value, operand) }
     }
 
     /// Change the text display type for an integer token in the disassembly or IL views
@@ -1578,7 +1578,7 @@ impl Function {
         value: u64,
         operand: usize,
         display_type: IntegerDisplayType,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
         enum_display_typeid: Option<impl BnStrCompatible>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
@@ -1589,7 +1589,7 @@ impl Function {
         unsafe {
             BNSetIntegerConstantDisplayType(
                 self.handle,
-                arch.0,
+                arch.as_ptr(),
                 instr_addr,
                 value,
                 operand,
@@ -1612,13 +1612,13 @@ impl Function {
         instr_addr: u64,
         value: u64,
         operand: usize,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> BnString {
         let arch = arch.unwrap_or_else(|| self.arch());
         unsafe {
             BnString::from_raw(BNGetIntegerConstantDisplayTypeEnumerationType(
                 self.handle,
-                arch.0,
+                arch.as_ptr(),
                 instr_addr,
                 value,
                 operand,
@@ -1637,7 +1637,7 @@ impl Function {
         instr_addr: u64,
         value: u64,
         operand: usize,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> (IntegerDisplayType, BnString) {
         let arch = arch.unwrap_or_else(|| self.arch());
         let name = self.int_enum_display_typeid(instr_addr, value, operand, Some(arch));
@@ -1662,10 +1662,10 @@ impl Function {
         &self,
         addr: u64,
         reg: u32,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let register = unsafe { BNGetRegisterValueAtInstruction(self.handle, arch.0, addr, reg) };
+        let register = unsafe { BNGetRegisterValueAtInstruction(self.handle, arch.as_ptr(), addr, reg) };
         register.into()
     }
 
@@ -1686,11 +1686,11 @@ impl Function {
         &self,
         addr: u64,
         reg: u32,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
         let register =
-            unsafe { BNGetRegisterValueAfterInstruction(self.handle, arch.0, addr, reg) };
+            unsafe { BNGetRegisterValueAfterInstruction(self.handle, arch.as_ptr(), addr, reg) };
         register.into()
     }
 
@@ -1702,12 +1702,12 @@ impl Function {
     pub fn registers_read_by(
         &self,
         addr: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Array<CoreRegister> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
         let regs =
-            unsafe { BNGetRegistersReadByInstruction(self.handle, arch.0, addr, &mut count) };
+            unsafe { BNGetRegistersReadByInstruction(self.handle, arch.as_ptr(), addr, &mut count) };
         assert!(!regs.is_null());
         unsafe { Array::new(regs, count, arch) }
     }
@@ -1715,12 +1715,12 @@ impl Function {
     pub fn registers_written_by(
         &self,
         addr: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Array<CoreRegister> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
         let regs =
-            unsafe { BNGetRegistersWrittenByInstruction(self.handle, arch.0, addr, &mut count) };
+            unsafe { BNGetRegistersWrittenByInstruction(self.handle, arch.as_ptr(), addr, &mut count) };
         assert!(!regs.is_null());
         unsafe { Array::new(regs, count, arch) }
     }
@@ -1729,7 +1729,7 @@ impl Function {
     pub fn clobbered_registers(&self) -> Conf<Array<CoreRegister>> {
         let result = unsafe { BNGetFunctionClobberedRegisters(self.handle) };
 
-        let reg_set = unsafe { Array::new(result.regs, result.count, self.arch().handle()) };
+        let reg_set = unsafe { Array::new(result.regs, result.count, self.arch()) };
         Conf::new(reg_set, result.confidence)
     }
 
@@ -1764,11 +1764,11 @@ impl Function {
         addr: u64,
         offset: i64,
         size: usize,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
         let value =
-            unsafe { BNGetStackContentsAtInstruction(self.handle, arch.0, addr, offset, size) };
+            unsafe { BNGetStackContentsAtInstruction(self.handle, arch.as_ptr(), addr, offset, size) };
         value.into()
     }
 
@@ -1777,11 +1777,11 @@ impl Function {
         addr: u64,
         offset: i64,
         size: usize,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
         let value =
-            unsafe { BNGetStackContentsAfterInstruction(self.handle, arch.0, addr, offset, size) };
+            unsafe { BNGetStackContentsAfterInstruction(self.handle, arch.as_ptr(), addr, offset, size) };
         value.into()
     }
 
@@ -1789,12 +1789,12 @@ impl Function {
         &self,
         addr: u64,
         offset: i64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Option<(Variable, BnString, Conf<Ref<Type>>)> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut found_value: BNVariableNameAndType = unsafe { mem::zeroed() };
         let found = unsafe {
-            BNGetStackVariableAtFrameOffset(self.handle, arch.0, addr, offset, &mut found_value)
+            BNGetStackVariableAtFrameOffset(self.handle, arch.as_ptr(), addr, offset, &mut found_value)
         };
         if !found {
             return None;
@@ -1811,12 +1811,12 @@ impl Function {
     pub fn stack_variables_referenced_by(
         &self,
         addr: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Array<StackVariableReference> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
         let refs = unsafe {
-            BNGetStackVariablesReferencedByInstruction(self.handle, arch.0, addr, &mut count)
+            BNGetStackVariablesReferencedByInstruction(self.handle, arch.as_ptr(), addr, &mut count)
         };
         assert!(!refs.is_null());
         unsafe { Array::new(refs, count, ()) }
@@ -1825,14 +1825,14 @@ impl Function {
     pub fn stack_variables_referenced_by_address_if_available(
         &self,
         addr: u64,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Array<StackVariableReference> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
         let refs = unsafe {
             BNGetStackVariablesReferencedByInstructionIfAvailable(
                 self.handle,
-                arch.0,
+                arch.as_ptr(),
                 addr,
                 &mut count,
             )
@@ -1858,9 +1858,9 @@ impl Function {
         unsafe { Array::new(lines, count, ()) }
     }
 
-    pub fn is_call_instruction(&self, addr: u64, arch: Option<CoreArchitecture>) -> bool {
+    pub fn is_call_instruction(&self, addr: u64, arch: Option<&'static CoreArchitecture>) -> bool {
         let arch = arch.unwrap_or_else(|| self.arch());
-        unsafe { BNIsCallInstruction(self.handle, arch.0, addr) }
+        unsafe { BNIsCallInstruction(self.handle, arch.as_ptr(), addr) }
     }
 
     pub fn is_variable_user_defined(&self, var: &Variable) -> bool {
@@ -2178,7 +2178,7 @@ impl Function {
     /// Get registers that are used for the return value
     pub fn return_registers(&self) -> Conf<Array<CoreRegister>> {
         let result = unsafe { BNGetFunctionReturnRegisters(self.handle) };
-        let regs = unsafe { Array::new(result.regs, result.count, self.arch().handle()) };
+        let regs = unsafe { Array::new(result.regs, result.count, self.arch()) };
         Conf::new(regs, result.confidence)
     }
 
@@ -2294,7 +2294,7 @@ impl PartialEq for Function {
             return true;
         }
         self.start() == other.start()
-            && self.arch() == other.arch()
+            && self.arch().as_ptr() as usize == other.arch().as_ptr() as usize
             && self.platform() == other.platform()
     }
 }

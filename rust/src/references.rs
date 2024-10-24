@@ -11,7 +11,7 @@ use std::mem::ManuallyDrop;
 /// the enclosing array object.
 #[derive(Debug)]
 pub struct CodeReference {
-    arch: CoreArchitecture,
+    arch: &'static CoreArchitecture,
     func: ManuallyDrop<Ref<Function>>,
     pub address: u64,
 }
@@ -46,7 +46,7 @@ impl<'a> CodeReference {
 
     /// A handle to the [CodeReference]'s [CoreArchitecture]. This type is [Copy] so reference
     /// shenanigans are not needed here.
-    pub fn architecture(&self) -> CoreArchitecture {
+    pub fn architecture(&self) -> &'static CoreArchitecture {
         self.arch
     }
 }

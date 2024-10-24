@@ -3,7 +3,7 @@ use std::ffi::c_char;
 
 use binaryninjacore_sys::*;
 
-use crate::architecture::CoreArchitecture;
+use crate::architecture::{Architecture, CoreArchitecture};
 use crate::basicblock::BasicBlock;
 use crate::disassembly::DisassemblySettings;
 use crate::flowgraph::FlowGraph;
@@ -47,8 +47,9 @@ impl MediumLevelILFunction {
         let loc: Location = loc.into();
         let arch_handle = loc.arch.unwrap();
 
-        let expr_idx =
-            unsafe { BNMediumLevelILGetInstructionStart(self.handle, arch_handle.0, loc.addr) };
+        let expr_idx = unsafe {
+            BNMediumLevelILGetInstructionStart(self.handle, arch_handle.core().as_ptr(), loc.addr)
+        };
 
         if expr_idx >= self.instruction_count() {
             None
@@ -208,7 +209,7 @@ impl MediumLevelILFunction {
         };
         let function = self.get_function();
         let def_site = BNArchitectureAndAddress {
-            arch: function.arch().0,
+            arch: function.arch().as_ptr(),
             address: addr,
         };
         let value = value.into_raw();
@@ -232,7 +233,7 @@ impl MediumLevelILFunction {
 
         let function = self.get_function();
         let def_site = BNArchitectureAndAddress {
-            arch: function.arch().0,
+            arch: function.arch().as_ptr(),
             address: addr,
         };
 
@@ -351,7 +352,7 @@ impl MediumLevelILFunction {
         &self,
         addr: u64,
         length: Option<u64>,
-        arch: Option<CoreArchitecture>,
+        arch: Option<&'static CoreArchitecture>,
     ) -> Array<VariableReferenceSource> {
         let function = self.get_function();
         let arch = arch.unwrap_or_else(|| function.arch());
@@ -361,7 +362,7 @@ impl MediumLevelILFunction {
             unsafe {
                 BNGetMediumLevelILVariableReferencesInRange(
                     function.handle,
-                    arch.0,
+                    arch.as_ptr(),
                     addr,
                     length,
                     &mut count,
@@ -369,7 +370,12 @@ impl MediumLevelILFunction {
             }
         } else {
             unsafe {
-                BNGetMediumLevelILVariableReferencesFrom(function.handle, arch.0, addr, &mut count)
+                BNGetMediumLevelILVariableReferencesFrom(
+                    function.handle,
+                    arch.as_ptr(),
+                    addr,
+                    &mut count,
+                )
             }
         };
         assert!(!refs.is_null());
@@ -382,11 +388,9 @@ impl MediumLevelILFunction {
     }
 
     /// Set the current IL Address
-    pub fn set_current_address(&self, value: u64, arch: Option<CoreArchitecture>) {
-        let arch = arch
-            .map(|x| x.0)
-            .unwrap_or_else(|| self.get_function().arch().0);
-        unsafe { BNMediumLevelILSetCurrentAddress(self.handle, arch, value) }
+    pub fn set_current_address(&self, value: u64, arch: Option<&'static CoreArchitecture>) {
+        let arch = arch.unwrap_or_else(|| self.get_function().arch());
+        unsafe { BNMediumLevelILSetCurrentAddress(self.handle, arch.as_ptr(), value) }
     }
 
     /// Returns the BasicBlock at the given MLIL `instruction`.
@@ -649,7 +653,7 @@ pub type FunctionGraphType = binaryninjacore_sys::BNFunctionGraphType;
 pub struct ILReferenceSource {
     mlil: Ref<MediumLevelILFunction>,
     _func: Ref<Function>,
-    _arch: CoreArchitecture,
+    _arch: &'static CoreArchitecture,
     addr: u64,
     type_: FunctionGraphType,
     expr_id: usize,

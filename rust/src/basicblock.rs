@@ -132,7 +132,7 @@ impl<C: BlockContext> BasicBlock<C> {
         }
     }
 
-    pub fn arch(&self) -> CoreArchitecture {
+    pub fn arch(&self) -> &'static CoreArchitecture {
         unsafe {
             let arch = BNGetBasicBlockArchitecture(self.handle);
             CoreArchitecture::from_raw(arch)

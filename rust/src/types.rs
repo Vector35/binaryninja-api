@@ -627,7 +627,7 @@ impl TypeBuilder {
 
         unsafe {
             Self::from_raw(BNCreatePointerTypeBuilder(
-                arch.as_ref().0,
+                arch.core().as_ptr(),
                 &t.into().into(),
                 &mut is_const,
                 &mut is_volatile,
@@ -642,7 +642,7 @@ impl TypeBuilder {
 
         unsafe {
             Self::from_raw(BNCreatePointerTypeBuilder(
-                arch.as_ref().0,
+                arch.core().as_ptr(),
                 &t.into().into(),
                 &mut is_const,
                 &mut is_volatile,
@@ -683,7 +683,7 @@ impl TypeBuilder {
         let mut is_volatile = Conf::new(is_volatile, max_confidence()).into();
         unsafe {
             Self::from_raw(BNCreatePointerTypeBuilder(
-                arch.as_ref().0,
+                arch.core().as_ptr(),
                 &t.into().into(),
                 &mut is_const,
                 &mut is_volatile,
@@ -1147,7 +1147,7 @@ impl Type {
         let mut is_volatile = Conf::new(false, min_confidence()).into();
         unsafe {
             Self::ref_from_raw(BNCreatePointerType(
-                arch.as_ref().0,
+                arch.core().as_ptr(),
                 &t.into().into(),
                 &mut is_const,
                 &mut is_volatile,
@@ -1164,7 +1164,7 @@ impl Type {
         let mut is_volatile = Conf::new(false, min_confidence()).into();
         unsafe {
             Self::ref_from_raw(BNCreatePointerType(
-                arch.as_ref().0,
+                arch.core().as_ptr(),
                 &t.into().into(),
                 &mut is_const,
                 &mut is_volatile,
@@ -1204,7 +1204,7 @@ impl Type {
         let mut is_volatile = Conf::new(is_volatile, max_confidence()).into();
         unsafe {
             Self::ref_from_raw(BNCreatePointerType(
-                arch.as_ref().0,
+                arch.core().as_ptr(),
                 &t.into().into(),
                 &mut is_const,
                 &mut is_volatile,
@@ -2812,6 +2812,36 @@ impl<S: BnStrCompatible> DataVariableAndName<S> {
 }
 
 /////////////////////////
+// ILIntrinsic
+
+#[derive(Clone, Copy, Debug)]
+pub struct ILIntrinsic {
+    arch: &'static CoreArchitecture,
+    index: u32,
+}
+
+impl PartialEq for ILIntrinsic {
+    fn eq(&self, other: &Self) -> bool {
+        self.arch.as_ptr() as usize == other.arch.as_ptr() as usize && self.index == other.index
+    }
+}
+impl Eq for ILIntrinsic {}
+
+impl ILIntrinsic {
+    pub(crate) fn new(arch: &'static CoreArchitecture, index: u32) -> Self {
+        Self { arch, index }
+    }
+
+    pub fn name(&self) -> &str {
+        let name_ptr = unsafe { BNGetArchitectureIntrinsicName(self.arch.core().as_ptr(), self.index) };
+        let name_raw = unsafe { core::ffi::CStr::from_ptr(name_ptr) };
+        name_raw.to_str().unwrap()
+    }
+
+    // TODO impl inputs and outputs function
+}
+
+/////////////////////////
 // RegisterValueType
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
@@ -3293,7 +3323,7 @@ impl Drop for LookupTableEntryRaw {
 
 #[derive(Copy, Clone, Eq, Hash, PartialEq)]
 pub struct ArchAndAddr {
-    pub arch: CoreArchitecture,
+    pub arch: &'static CoreArchitecture,
     pub address: u64,
 }
 
@@ -3392,9 +3422,9 @@ unsafe impl CoreArrayProviderInner for ConstantReference {
 // IndirectBranchInfo
 
 pub struct IndirectBranchInfo {
-    pub source_arch: CoreArchitecture,
+    pub source_arch: &'static CoreArchitecture,
     pub source_addr: u64,
-    pub dest_arch: CoreArchitecture,
+    pub dest_arch: &'static CoreArchitecture,
     pub dest_addr: u64,
     pub auto_defined: bool,
 }
@@ -3411,9 +3441,9 @@ impl IndirectBranchInfo {
     }
     pub fn into_raw(self) -> BNIndirectBranchInfo {
         BNIndirectBranchInfo {
-            sourceArch: self.source_arch.0,
+            sourceArch: self.source_arch.as_ptr(),
             sourceAddr: self.source_addr,
-            destArch: self.dest_arch.0,
+            destArch: self.dest_arch.as_ptr(),
             destAddr: self.dest_addr,
             autoDefined: self.auto_defined,
         }
@@ -3664,11 +3694,11 @@ unsafe impl CoreArrayProviderInner for StackVariableReference {
 pub struct RegisterStackAdjustment<A: Architecture> {
     reg_id: u32,
     adjustment: Conf<i32>,
-    arch: A::Handle,
+    arch: &'static A,
 }
 
 impl<A: Architecture> RegisterStackAdjustment<A> {
-    pub(crate) unsafe fn from_raw(value: BNRegisterStackAdjustment, arch: A::Handle) -> Self {
+    pub(crate) unsafe fn from_raw(value: BNRegisterStackAdjustment, arch: &'static A) -> Self {
         RegisterStackAdjustment {
             reg_id: value.regStack,
             adjustment: Conf::new(value.adjustment, value.confidence),
@@ -3682,7 +3712,7 @@ impl<A: Architecture> RegisterStackAdjustment<A> {
             confidence: self.adjustment.confidence,
         }
     }
-    pub fn new<I>(reg_id: u32, adjustment: I, arch_handle: A::Handle) -> Self
+    pub fn new<I>(reg_id: u32, adjustment: I, arch_handle: &'static A) -> Self
     where
         I: Into<Conf<i32>>,
     {
@@ -3702,7 +3732,7 @@ impl<A: Architecture> RegisterStackAdjustment<A> {
 
 impl<A: Architecture> CoreArrayProvider for RegisterStackAdjustment<A> {
     type Raw = BNRegisterStackAdjustment;
-    type Context = A::Handle;
+    type Context = &'static A;
     type Wrapped<'a> = Self;
 }
 
@@ -3711,7 +3741,7 @@ unsafe impl<A: Architecture> CoreArrayProviderInner for RegisterStackAdjustment<
         BNFreeRegisterStackAdjustments(raw)
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::from_raw(*raw, context.clone())
+        Self::from_raw(*raw, context)
     }
 }
 

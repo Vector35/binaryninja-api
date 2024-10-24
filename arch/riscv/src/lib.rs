@@ -624,14 +624,11 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
 }
 
 struct RiscVArch<D: 'static + RiscVDisassembler + Send + Sync> {
-    handle: CoreArchitecture,
-    custom_handle: CustomArchitectureHandle<RiscVArch<D>>,
+    handle: &'static CoreArchitecture,
     _dis: PhantomData<D>,
 }
 
 impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture for RiscVArch<D> {
-    type Handle = CustomArchitectureHandle<Self>;
-
     type RegisterInfo = Register<D>;
     type Register = Register<D>;
     type RegisterStackInfo = UnusedRegisterStackInfo<Self::Register>;
@@ -674,7 +671,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         self.max_instr_len()
     }
 
-    fn associated_arch_by_addr(&self, _addr: &mut u64) -> CoreArchitecture {
+    fn associated_arch_by_addr(&self, _addr: &mut u64) -> &'static CoreArchitecture {
         self.handle
     }
 
@@ -2140,8 +2137,8 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         true
     }
 
-    fn handle(&self) -> CustomArchitectureHandle<Self> {
-        self.custom_handle
+    fn core(&self) -> &'static CoreArchitecture {
+        self.handle
     }
 }
 
@@ -2894,22 +2891,18 @@ pub extern "C" fn CorePluginInit() -> bool {
     binaryninja::logger::init(log::LevelFilter::Trace).expect("Failed to set up logging");
 
     use riscv_dis::{RiscVIMACDisassembler, Rv32GRegs, Rv64GRegs};
-    let arch32 =
-        architecture::register_architecture("rv32gc", |custom_handle, core_arch| RiscVArch::<
-            RiscVIMACDisassembler<Rv32GRegs>,
-        > {
-            handle: core_arch,
-            custom_handle,
-            _dis: PhantomData,
-        });
-    let arch64 =
-        architecture::register_architecture("rv64gc", |custom_handle, core_arch| RiscVArch::<
-            RiscVIMACDisassembler<Rv64GRegs>,
-        > {
-            handle: core_arch,
-            custom_handle,
-            _dis: PhantomData,
-        });
+    let arch32 = architecture::register_architecture("rv32gc", |core_arch| RiscVArch::<
+        RiscVIMACDisassembler<Rv32GRegs>,
+    > {
+        handle: core_arch,
+        _dis: PhantomData,
+    });
+    let arch64 = architecture::register_architecture("rv64gc", |core_arch| RiscVArch::<
+        RiscVIMACDisassembler<Rv64GRegs>,
+    > {
+        handle: core_arch,
+        _dis: PhantomData,
+    });
 
     arch32.register_relocation_handler("ELF", |custom_handle, core_handler| {
         RiscVELFRelocationHandler::<RiscVIMACDisassembler<Rv32GRegs>> {

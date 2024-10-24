@@ -1,4 +1,3 @@
-use crate::architecture::Architecture;
 use crate::{
     architecture::CoreArchitecture, binaryview::BinaryView, function::Function, llil, mlil,
 };
@@ -99,9 +98,6 @@ where
 {
     let mut recognizer = create_function_recognizer_registration::<R>(recognizer);
     unsafe {
-        BNRegisterArchitectureFunctionRecognizer(
-            arch.handle().as_ref().0,
-            &mut recognizer as *mut _,
-        );
+        BNRegisterArchitectureFunctionRecognizer(arch.as_ptr(), &mut recognizer as *mut _);
     }
 }

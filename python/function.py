@@ -3021,7 +3021,7 @@ class Function:
 		handle = core.BNGetWorkflowForFunction(self.handle)
 		if handle is None:
 			return None
-		return workflow.Workflow(handle=handle, function_handle=self.handle)
+		return workflow.Workflow(handle=handle, object_handle=self.handle)
 
 	@property
 	def provenance(self):

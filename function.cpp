@@ -2483,12 +2483,12 @@ void Function::MarkCallerUpdatesRequired(BNFunctionUpdateType type)
 }
 
 
-Ref<Workflow> Function::GetWorkflow() const
+Ref<Workflow> Function::GetWorkflow()
 {
 	BNWorkflow* workflow = BNGetWorkflowForFunction(m_object);
 	if (!workflow)
 		return nullptr;
-	return new Workflow(workflow);
+	return new Workflow(workflow, this);
 }
 
 

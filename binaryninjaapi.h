@@ -6419,7 +6419,7 @@ namespace BinaryNinja {
 
 		void Reanalyze();
 
-		Ref<Workflow> GetWorkflow() const;
+		Ref<Workflow> GetWorkflow();
 
 		/*! Displays contents to the user in the UI or on the command-line
 
@@ -9914,6 +9914,20 @@ namespace BinaryNinja {
 		std::string GetName() const;
 	};
 
+	class WorkflowMachine
+	{
+		Ref<BinaryView> m_view;
+		Ref<Function> m_function;
+
+	public:
+		WorkflowMachine(Ref<BinaryView> view);
+		WorkflowMachine(Ref<Function> function);
+
+		std::optional<bool> QueryOverride(const std::string& activity);
+		bool SetOverride(const std::string& activity, bool enable);
+		bool ClearOverride(const std::string& activity);
+	};
+
 	/*! A Binary Ninja Workflow is an abstraction of a computational binary analysis pipeline and it provides the extensibility
 		mechanism needed for tailored binary analysis and decompilation. More specifically, a Workflow is a repository of activities along with a
 		unique strategy to execute them. Binary Ninja provides two Workflows named ``core.module.defaultAnalysis`` and ``core.function.defaultAnalysis``
@@ -9927,9 +9941,13 @@ namespace BinaryNinja {
 	*/
 	class Workflow : public CoreRefCountObject<BNWorkflow, BNNewWorkflowReference, BNFreeWorkflow>
 	{
+		std::unique_ptr<WorkflowMachine> m_machine;
+
 	  public:
 		Workflow(const std::string& name = "");
 		Workflow(BNWorkflow* workflow);
+		Workflow(BNWorkflow* workflow, Ref<BinaryView> view);
+		Workflow(BNWorkflow* workflow, Ref<Function> function);
 		virtual ~Workflow() {}
 
 		/*! Get a list of all workflows
@@ -10095,6 +10113,8 @@ namespace BinaryNinja {
 		void ShowReport(const std::string& name);
 
 		std::vector<std::string> GetEligibilitySettings();
+
+		WorkflowMachine* GetWorkflowMachine() const { return m_machine.get(); }
 	};
 
 	class DisassemblySettings :
@@ -11012,7 +11032,7 @@ namespace BinaryNinja {
 		void MarkUpdatesRequired(BNFunctionUpdateType type = UserFunctionUpdate);
 		void MarkCallerUpdatesRequired(BNFunctionUpdateType type = UserFunctionUpdate);
 
-		Ref<Workflow> GetWorkflow() const;
+		Ref<Workflow> GetWorkflow();
 
 		void RequestAdvancedAnalysisData();
 		void ReleaseAdvancedAnalysisData();

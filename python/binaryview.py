@@ -8945,7 +8945,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		handle = core.BNGetWorkflowForBinaryView(self.handle)
 		if handle is None:
 			return None
-		return _workflow.Workflow(handle=handle)
+		return _workflow.Workflow(handle=handle, object_handle=self.handle)
 
 	def rebase(self, address: int, force: Optional[bool] = False,
 	           progress_func: Optional[ProgressFuncType] = None) -> Optional['BinaryView']:

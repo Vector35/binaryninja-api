@@ -4678,12 +4678,12 @@ void BinaryView::Reanalyze()
 }
 
 
-Ref<Workflow> BinaryView::GetWorkflow() const
+Ref<Workflow> BinaryView::GetWorkflow()
 {
 	BNWorkflow* workflow = BNGetWorkflowForBinaryView(m_object);
 	if (!workflow)
 		return nullptr;
-	return new Workflow(workflow);
+	return new Workflow(workflow, this);
 }
 
 

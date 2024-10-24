@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 80
+#define BN_CURRENT_CORE_ABI_VERSION 81
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 80
+#define BN_MINIMUM_CORE_ABI_VERSION 81
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -5157,11 +5157,6 @@ extern "C"
 	BINARYNINJACOREAPI void BNMarkUpdatesRequired(BNFunction* func, BNFunctionUpdateType type);
 	BINARYNINJACOREAPI void BNMarkCallerUpdatesRequired(BNFunction* func, BNFunctionUpdateType type);
 
-	BINARYNINJACOREAPI BNWorkflow* BNGetWorkflowForBinaryView(BNBinaryView* view);
-	BINARYNINJACOREAPI BNWorkflow* BNGetWorkflowForFunction(BNFunction* func);
-	BINARYNINJACOREAPI char* BNPostWorkflowRequestForFunction(BNFunction* func, const char* request);
-	BINARYNINJACOREAPI char* BNGetProvenanceString(BNFunction* func);
-
 	BINARYNINJACOREAPI BNHighlightColor BNGetInstructionHighlight(
 	    BNFunction* func, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI void BNSetAutoInstructionHighlight(
@@ -5432,6 +5427,19 @@ extern "C"
 	BINARYNINJACOREAPI void BNWorkflowShowReport(BNWorkflow* workflow, const char* name);
 
 	BINARYNINJACOREAPI const char** BNWorkflowGetEligibilitySettings(BNWorkflow* workflow, size_t* inoutSize);
+
+	// BinaryView Workflow Machine
+	BINARYNINJACOREAPI BNWorkflow* BNGetWorkflowForBinaryView(BNBinaryView* view);
+	BINARYNINJACOREAPI char* BNPostWorkflowRequestForBinaryView(BNBinaryView* view, const char* request);
+	BINARYNINJACOREAPI void BNShowWorkflowReportForBinaryView(BNBinaryView* view, const char* name);
+
+	// Function Workflow Machine
+	BINARYNINJACOREAPI BNWorkflow* BNGetWorkflowForFunction(BNFunction* func);
+	BINARYNINJACOREAPI char* BNPostWorkflowRequestForFunction(BNFunction* func, const char* request);
+	BINARYNINJACOREAPI void BNShowWorkflowReportForFunction(BNFunction* func, const char* name);
+
+	// Provenance
+	BINARYNINJACOREAPI char* BNGetProvenanceString(BNFunction* func);
 
 	// Disassembly settings
 	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);

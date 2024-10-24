@@ -253,7 +253,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 	.. note:: Binary Ninja Workflows is currently under development and available as an early feature preview. For additional documentation see Help / User Guide / Developer Guide / Workflows
 
 	"""
-	def __init__(self, name: str = "", handle: core.BNWorkflowHandle = None, query_registry: bool = True, function_handle: core.BNFunctionHandle = None):
+	def __init__(self, name: str = "", handle: core.BNWorkflowHandle = None, query_registry: bool = True, object_handle: Union[core.BNFunctionHandle, core.BNBinaryViewHandle] = None):
 		if handle is None:
 			if query_registry:
 				_handle = core.BNWorkflowInstance(str(name))
@@ -265,8 +265,8 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		self.handle = _handle
 		self._name = core.BNGetWorkflowName(self.handle)
 		self._machine = None
-		if function_handle is not None:
-			self._machine = WorkflowMachine(function_handle)
+		if object_handle is not None:
+			self._machine = WorkflowMachine(object_handle)
 
 	def __del__(self):
 		if core is not None:
@@ -498,14 +498,6 @@ class Workflow(metaclass=_WorkflowMetaclass):
 			core.BNShowGraphReport(None, f'{self.name} <{activity}>' if activity else self.name, graph.handle)
 		return graph
 
-	def show_metrics(self) -> None:
-		"""
-		``show_metrics`` Not yet implemented.
-
-		:rtype: None
-		"""
-		core.BNWorkflowShowReport(self.handle, "metrics")
-
 	def show_topology(self) -> None:
 		"""
 		``show_topology`` Show the Workflow topology in the UI.
@@ -513,14 +505,6 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		:rtype: None
 		"""
 		core.BNWorkflowShowReport(self.handle, "topology")
-
-	def show_trace(self) -> None:
-		"""
-		``show_trace`` Not yet implemented.
-
-		:rtype: None
-		"""
-		core.BNWorkflowShowReport(self.handle, "trace")
 
 	def eligibility_settings(self) -> List[str]:
 		"""
@@ -548,28 +532,67 @@ class Workflow(metaclass=_WorkflowMetaclass):
 			raise AttributeError("Machine does not exist.")
 
 class WorkflowMachine:
-	def __init__(self, handle: core.BNFunctionHandle = None):
+	def __init__(self, handle: Union[core.BNFunctionHandle, core.BNBinaryViewHandle] = None):
+		if isinstance(handle, core.BNFunctionHandle):
+			self.is_function_machine = True
+		elif isinstance(handle, core.BNBinaryViewHandle):
+			self.is_function_machine = False
+		else:
+			raise ValueError("WorkflowMachine requires a Function or BinaryView handle!")
 		self.handle = handle
+
+	def show_metrics(self) -> None:
+		if self.is_function_machine:
+			core.BNShowWorkflowReportForFunction(self.handle, "metrics")
+		else:
+			core.BNShowWorkflowReportForBinaryView(self.handle, "metrics")
+
+	def show_topology(self) -> None:
+		if self.is_function_machine:
+			core.BNShowWorkflowReportForFunction(self.handle, "topology")
+		else:
+			core.BNShowWorkflowReportForBinaryView(self.handle, "topology")
+
+	def show_trace(self) -> None:
+		if self.is_function_machine:
+			core.BNShowWorkflowReportForFunction(self.handle, "trace")
+		else:
+			core.BNShowWorkflowReportForBinaryView(self.handle, "trace")
 
 	def log(self, enable: bool = True, is_global: bool = False):
 		request = json.dumps({"command": "log", "enable": enable, "global": is_global})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def metrics(self, enable: bool = True, is_global: bool = False):
 		request = json.dumps({"command": "metrics", "enable": enable, "global": is_global})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def dump(self):
 		request = json.dumps({"command": "dump"})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def configure(self, advanced: bool = True, incremental: bool = False):
 		request = json.dumps({"command": "configure", "advanced": advanced, "incremental": incremental})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def resume(self):
 		request = json.dumps({"command": "run"})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def run(self):
 		status = self.status()
@@ -580,62 +603,109 @@ class WorkflowMachine:
 			raise AttributeError("Unknown status response!")
 
 		request = json.dumps({"command": "run"})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def abort(self):
 		request = json.dumps({"command": "abort"})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def halt(self):
 		request = json.dumps({"command": "halt"})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def reset(self):
 		request = json.dumps({"command": "reset"})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def enable(self):
 		request = json.dumps({"command": "enable"})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def disable(self):
 		request = json.dumps({"command": "disable"})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def step(self):
 		request = json.dumps({"command": "step"})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def breakpoint_delete(self, activities):
 		request = json.dumps({"command": "breakpoint", "action": "delete", "activities": activities})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def breakpoint_query(self):
 		request = json.dumps({"command": "breakpoint", "action": "query"})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def breakpoint_set(self, activities):
 		request = json.dumps({"command": "breakpoint", "action": "set", "activities": activities})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def status(self):
 		request = json.dumps({"command": "status"})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def override_clear(self, activity):
 		request = json.dumps({"command": "override", "action": "clear", "activity": activity})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
-	def override_query(self):
-		request = json.dumps({"command": "override", "action": "query"})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+	def override_query(self, activity = None):
+		if activity is None:
+			activity = ""
+		request = json.dumps({"command": "override", "action": "query", "activity": activity})
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def override_set(self, activity, enable):
 		request = json.dumps({"command": "override", "action": "set", "activity": activity, "enable": enable})
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def request(self, request):
-		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		if self.is_function_machine:
+			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+		else:
+			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def cli(self):
 		WorkflowMachineCLI(self).cmdloop()
@@ -811,7 +881,7 @@ class WorkflowMachineCLI(cmd.Cmd):
 				status = self.machine.override_clear(args.activity)
 				print(json.dumps(status, indent=4))
 			elif args.action == "query":
-				status = self.machine.override_query()
+				status = self.machine.override_query(args.activity)
 				accepted = status.get('commandStatus', {}).get('accepted', False)
 				if accepted:
 					response = status.pop("response", None)

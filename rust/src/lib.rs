@@ -126,6 +126,7 @@ mod operand_iter;
 
 pub mod architecture;
 pub mod backgroundtask;
+pub mod basedetection;
 pub mod basicblock;
 pub mod binaryreader;
 pub mod binaryview;

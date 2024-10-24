@@ -22,7 +22,7 @@ pub static GUID_CACHE: OnceLock<DashMap<ViewID, GUIDCache>> = OnceLock::new();
 pub fn cached_function<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
     function: &BNFunction,
     llil: &llil::Function<A, M, NonSSA<V>>,
-) -> Option<Function> {
+) -> Function {
     let view = function.view();
     let view_id = ViewID::from(view.as_ref());
     let function_cache = FUNCTION_CACHE.get_or_init(Default::default);
@@ -70,7 +70,7 @@ pub fn cached_adjacency_constraints(function: &BNFunction) -> HashSet<FunctionCo
 pub fn cached_function_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
     function: &BNFunction,
     llil: &llil::Function<A, M, NonSSA<V>>,
-) -> Option<FunctionGUID> {
+) -> FunctionGUID {
     let view = function.view();
     let view_id = ViewID::from(view);
     let guid_cache = GUID_CACHE.get_or_init(Default::default);
@@ -87,7 +87,7 @@ pub fn cached_function_guid<A: Architecture, M: FunctionMutability, V: NonSSAVar
 
 #[derive(Clone, Debug, Default)]
 pub struct FunctionCache {
-    pub cache: DashMap<FunctionID, Option<Function>>,
+    pub cache: DashMap<FunctionID, Function>,
 }
 
 impl FunctionCache {
@@ -95,7 +95,7 @@ impl FunctionCache {
         &self,
         function: &BNFunction,
         llil: &llil::Function<A, M, NonSSA<V>>,
-    ) -> Option<Function> {
+    ) -> Function {
         let function_id = FunctionID::from(function);
         match self.cache.try_get_mut(&function_id) {
             TryResult::Present(function) => function.value().to_owned(),
@@ -111,7 +111,7 @@ impl FunctionCache {
 
 #[derive(Clone, Debug, Default)]
 pub struct GUIDCache {
-    pub cache: DashMap<FunctionID, Option<FunctionGUID>>,
+    pub cache: DashMap<FunctionID, FunctionGUID>,
 }
 
 impl GUIDCache {
@@ -125,16 +125,16 @@ impl GUIDCache {
                 let cs_ref_func = cs_ref.function();
                 let cs_ref_func_id = FunctionID::from(cs_ref_func);
                 if cs_ref_func_id != func_id {
-                    if let Some(cs_ref_func_llil) = cs_ref_func.low_level_il_if_available() {
-                        // Function references another function, constrain on the pattern.
-                        // TODO: If function is trivial thunk we should _also_ insert the tailcall target as a constraint.
-                        let call_site_offset: i64 = func_start as i64 - call_site.address as i64;
-                        constraints.insert(self.function_constraint(
+                    let call_site_offset: i64 = func_start as i64 - call_site.address as i64;
+                    let function_constraint = match cs_ref_func.low_level_il_if_available() {
+                        Some(cs_ref_func_llil) => self.function_constraint_with_guid(
                             cs_ref_func,
                             &cs_ref_func_llil,
                             call_site_offset,
-                        ));
-                    }
+                        ),
+                        None => self.function_constraint(cs_ref_func, call_site_offset),
+                    };
+                    constraints.insert(function_constraint);
                 }
             }
         }
@@ -154,15 +154,17 @@ impl GUIDCache {
                 if curr_func_id != func_id {
                     // NOTE: We have to get the llil here for the function which is problematic for running
                     // NOTE: within a workflow (before analysis has finished)
-                    if let Some(curr_func_llil) = curr_func.low_level_il_if_available() {
-                        // Function adjacent to another function, constrain on the pattern.
-                        let curr_addr_offset = (func_start_addr as i64) - func_start as i64;
-                        constraints.insert(self.function_constraint(
+                    // Function adjacent to another function, constrain on the pattern.
+                    let curr_addr_offset = (func_start_addr as i64) - func_start as i64;
+                    let function_constraint = match curr_func.low_level_il_if_available() {
+                        Some(curr_func_llil) => self.function_constraint_with_guid(
                             &curr_func,
                             &curr_func_llil,
                             curr_addr_offset,
-                        ));
-                    }
+                        ),
+                        None => self.function_constraint(&curr_func, curr_addr_offset),
+                    };
+                    constraints.insert(function_constraint);
                 }
             }
         };
@@ -183,7 +185,21 @@ impl GUIDCache {
     }
 
     /// Construct a function constraint, must pass the offset at which it is located.
-    pub fn function_constraint<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
+    pub fn function_constraint(&self, function: &BNFunction, offset: i64) -> FunctionConstraint {
+        let symbol = from_bn_symbol(&function.symbol());
+        FunctionConstraint {
+            guid: None,
+            symbol: Some(symbol),
+            offset,
+        }
+    }
+
+    /// Construct a function constraint, must pass the offset at which it is located.
+    pub fn function_constraint_with_guid<
+        A: Architecture,
+        M: FunctionMutability,
+        V: NonSSAVariant,
+    >(
         &self,
         function: &BNFunction,
         llil: &llil::Function<A, M, NonSSA<V>>,
@@ -192,7 +208,7 @@ impl GUIDCache {
         let guid = self.function_guid(function, llil);
         let symbol = from_bn_symbol(&function.symbol());
         FunctionConstraint {
-            guid,
+            guid: Some(guid),
             symbol: Some(symbol),
             offset,
         }
@@ -202,7 +218,7 @@ impl GUIDCache {
         &self,
         function: &BNFunction,
         llil: &llil::Function<A, M, NonSSA<V>>,
-    ) -> Option<FunctionGUID> {
+    ) -> FunctionGUID {
         let function_id = FunctionID::from(function);
         match self.cache.try_get_mut(&function_id) {
             TryResult::Present(function_guid) => function_guid.value().to_owned(),

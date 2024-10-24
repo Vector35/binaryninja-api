@@ -286,26 +286,25 @@ impl Matcher {
         let entry_block = entry_basic_block_guid(function, llil).map(BasicBlock::new);
         if self.basic_block_filter.contains(&entry_block) {
             // Build the full function guid now
-            if let Some(warp_func_guid) = cached_function_guid(function, llil) {
-                if let Some(matched) = self.functions.get(&warp_func_guid) {
-                    if matched.len() == 1 && !is_function_trivial {
-                        on_new_match(&matched[0]);
-                    } else if let Some(matched_function) =
-                        self.match_function_from_constraints(function, &matched)
-                    {
-                        log::info!(
-                            "Found best matching function `{}`... 0x{:x}",
-                            matched_function.symbol.name,
-                            function.start()
-                        );
-                        on_new_match(matched_function);
-                    } else {
-                        log::error!(
-                            "Failed to find matching function `{}`... 0x{:x}",
-                            matched.len(),
-                            function.start()
-                        );
-                    }
+            let warp_func_guid = cached_function_guid(function, llil);
+            if let Some(matched) = self.functions.get(&warp_func_guid) {
+                if matched.len() == 1 && !is_function_trivial {
+                    on_new_match(&matched[0]);
+                } else if let Some(matched_function) =
+                    self.match_function_from_constraints(function, &matched)
+                {
+                    log::info!(
+                        "Found best matching function `{}`... 0x{:x}",
+                        matched_function.symbol.name,
+                        function.start()
+                    );
+                    on_new_match(matched_function);
+                } else {
+                    log::error!(
+                        "Failed to find matching function `{}`... 0x{:x}",
+                        matched.len(),
+                        function.start()
+                    );
                 }
             }
         }

@@ -54,9 +54,7 @@ struct DebugFunction;
 impl FunctionCommand for DebugFunction {
     fn action(&self, _view: &BinaryView, func: &Function) {
         if let Ok(llil) = func.low_level_il() {
-            if let Some(function) = build_function(func, &llil) {
-                log::info!("{:#?}", function);
-            }
+            log::info!("{:#?}", build_function(func, &llil));
         }
     }
 

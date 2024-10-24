@@ -37,7 +37,7 @@ impl Command for FindFunctionFromGUID {
                 .filter_map(|func| {
                     Some((
                         func.clone(),
-                        cached_function_guid(&func, func.low_level_il_if_available()?.as_ref())?,
+                        cached_function_guid(&func, func.low_level_il_if_available()?.as_ref()),
                     ))
                 })
                 .filter(|(_func, guid)| guid.eq(&searched_guid))

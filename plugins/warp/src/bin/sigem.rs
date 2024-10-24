@@ -78,7 +78,7 @@ fn data_from_view(view: &BinaryView) -> Data {
         .filter(|f| !f.symbol().short_name().as_str().contains("sub_") || f.has_user_annotations())
         .filter_map(|f| {
             let llil = f.low_level_il().ok()?;
-            warp_ninja::cache::cached_function(&f, &llil)
+            Some(warp_ninja::cache::cached_function(&f, &llil))
         })
         .collect::<Vec<_>>();
 

@@ -31,11 +31,11 @@ impl Command for CreateSignatureFile {
             let start = Instant::now();
 
             let mut data = warp::signature::Data::default();
-            data.functions.par_extend(
-                view.functions()
-                    .par_iter()
-                    .filter_map(|func| cached_function(&func, func.low_level_il().ok()?.as_ref())),
-            );
+            data.functions
+                .par_extend(view.functions().par_iter().filter_map(|func| {
+                    let llil = func.low_level_il().ok()?;
+                    Some(cached_function(&func, &llil))
+                }));
             data.types.extend(view.types().iter().map(|ty| {
                 let ref_ty = ty.type_object().to_owned();
                 ComputedType::new(from_bn_type(&view, ref_ty, u8::MAX))

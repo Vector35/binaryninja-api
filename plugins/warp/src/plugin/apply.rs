@@ -60,7 +60,7 @@ impl Command for ApplySignatureFile {
             .par_iter()
             .filter_map(|func| {
                 let llil = func.low_level_il_if_available()?;
-                let pattern = cached_function_guid(&func, &llil)?;
+                let pattern = cached_function_guid(&func, &llil);
                 Some((func, data_functions.get(&pattern)?))
             })
             .filter(|(_, sig)| sig.len() == 1)

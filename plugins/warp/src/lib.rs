@@ -23,10 +23,10 @@ mod plugin;
 pub fn build_function<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
     func: &BNFunction,
     llil: &llil::Function<A, M, NonSSA<V>>,
-) -> Option<Function> {
+) -> Function {
     let bn_fn_ty = func.function_type();
-    Some(Function {
-        guid: cached_function_guid(func, llil)?,
+    Function {
+        guid: cached_function_guid(func, llil),
         symbol: from_bn_symbol(&func.symbol()),
         // TODO: Confidence should be derived from function type.
         ty: from_bn_type(&func.view(), bn_fn_ty, 255),
@@ -40,7 +40,7 @@ pub fn build_function<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
         },
         // TODO: We need more than one entry block.
         entry: entry_basic_block_guid(func, llil).map(BasicBlock::new),
-    })
+    }
 }
 
 pub fn entry_basic_block_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
@@ -49,7 +49,7 @@ pub fn entry_basic_block_guid<A: Architecture, M: FunctionMutability, V: NonSSAV
 ) -> Option<BasicBlockGUID> {
     // NOTE: This is not actually the entry point. This is the highest basic block.
     let first_basic_block = sorted_basic_blocks(func).into_iter().next()?;
-    basic_block_guid(&first_basic_block, llil)
+    Some(basic_block_guid(&first_basic_block, llil))
 }
 
 /// Basic blocks sorted from high to low.
@@ -66,20 +66,20 @@ pub fn sorted_basic_blocks(func: &BNFunction) -> Vec<BNRef<BNBasicBlock<NativeBl
 pub fn function_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
     func: &BNFunction,
     llil: &llil::Function<A, M, NonSSA<V>>,
-) -> Option<FunctionGUID> {
+) -> FunctionGUID {
     // TODO: Sort the basic blocks.
     let basic_blocks = sorted_basic_blocks(func);
     let basic_block_guids = basic_blocks
         .iter()
-        .filter_map(|bb| basic_block_guid(bb, llil))
+        .map(|bb| basic_block_guid(bb, llil))
         .collect::<Vec<_>>();
-    Some(FunctionGUID::from_basic_blocks(&basic_block_guids))
+    FunctionGUID::from_basic_blocks(&basic_block_guids)
 }
 
 pub fn basic_block_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
     basic_block: &BNBasicBlock<NativeBlock>,
     llil: &llil::Function<A, M, NonSSA<V>>,
-) -> Option<BasicBlockGUID> {
+) -> BasicBlockGUID {
     let func = basic_block.function();
     let view = func.view();
     let arch = func.arch();
@@ -112,7 +112,7 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant
         }
     }
 
-    Some(BasicBlockGUID::from(basic_block_bytes.as_slice()))
+    BasicBlockGUID::from(basic_block_bytes.as_slice())
 }
 
 #[cfg(test)]
@@ -146,9 +146,7 @@ mod tests {
                             let mut functions = inital_bv
                                 .functions()
                                 .iter()
-                                .map(|f| {
-                                    cached_function_guid(&f, &f.low_level_il().unwrap()).unwrap()
-                                })
+                                .map(|f| cached_function_guid(&f, &f.low_level_il().unwrap()))
                                 .collect::<Vec<_>>();
                             functions.sort_by_key(|guid| guid.guid);
                             insta::assert_debug_snapshot!(functions);

@@ -223,7 +223,7 @@ class BinaryDataNotification:
 	with a `BinaryView` using the `register_notification` method.
 
 	By default, a `BinaryDataNotification` instance receives notifications for all available notification types. It
-	is recommended for users of this interface to initialize the `BinaryDataNotification` base class with with specific
+	is recommended for users of this interface to initialize the `BinaryDataNotification` base class with specific
 	callbacks of interest by passing the appropriate `NotificationType` flags into the `__init__` constructor.
 
 	Handlers provided by the user should aim to limit the amount of processing within the callback. The
@@ -293,9 +293,15 @@ class BinaryDataNotification:
 		pass
 
 	def function_added(self, view: 'BinaryView', func: '_function.Function') -> None:
+		"""
+		.. note:: `function_updated` will be triggered instead when a user function is added over an auto function.
+		"""
 		pass
 
 	def function_removed(self, view: 'BinaryView', func: '_function.Function') -> None:
+		"""
+		.. note:: `function_updated` will be triggered instead when a user function is removed over an auto function.
+		"""
 		pass
 
 	def function_updated(self, view: 'BinaryView', func: '_function.Function') -> None:
@@ -305,9 +311,15 @@ class BinaryDataNotification:
 		pass
 
 	def data_var_added(self, view: 'BinaryView', var: 'DataVariable') -> None:
+		"""
+		.. note:: `data_var_updated` will be triggered instead when a user data variable is added over an auto data variable.
+		"""
 		pass
 
 	def data_var_removed(self, view: 'BinaryView', var: 'DataVariable') -> None:
+		"""
+		.. note:: `data_var_updated` will be triggered instead when a user data variable is removed over an auto data variable.
+		"""
 		pass
 
 	def data_var_updated(self, view: 'BinaryView', var: 'DataVariable') -> None:
@@ -8533,7 +8545,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	def find_next_text(
 	    self, start: int, text: str, settings: Optional[_function.DisassemblySettings] = None,
 	    flags: FindFlag = FindFlag.FindCaseSensitive,
-	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph
+	    graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph
 	) -> Optional[int]:
 		"""
 		``find_next_text`` searches for string ``text`` occurring in the linear view output starting at the virtual
@@ -8550,7 +8562,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			FindCaseSensitive    Case-sensitive search
 			FindCaseInsensitive  Case-insensitive search
 			==================== ============================
-		:param FunctionGraphType graph_type: the IL to search within
+		:param FunctionViewType graph_type: the IL to search within
 		"""
 		if not isinstance(text, str):
 			raise TypeError("text parameter is not str type")
@@ -8560,13 +8572,14 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			raise TypeError("settings parameter is not DisassemblySettings type")
 
 		result = ctypes.c_ulonglong()
+		graph_type = _function.FunctionViewType(graph_type)._to_core_struct()
 		if not core.BNFindNextText(self.handle, start, text, result, settings.handle, flags, graph_type):
 			return None
 		return result.value
 
 	def find_next_constant(
 	    self, start: int, constant: int, settings: Optional[_function.DisassemblySettings] = None,
-	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph
+	    graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph
 	) -> Optional[int]:
 		"""
 		``find_next_constant`` searches for integer constant ``constant`` occurring in the linear view output starting at the virtual
@@ -8575,7 +8588,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		:param int start: virtual address to start searching from.
 		:param int constant: constant to search for
 		:param DisassemblySettings settings: disassembly settings
-		:param FunctionGraphType graph_type: the IL to search within
+		:param FunctionViewType graph_type: the IL to search within
 		"""
 		if not isinstance(constant, int):
 			raise TypeError("constant parameter is not integral type")
@@ -8585,6 +8598,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			raise TypeError("settings parameter is not DisassemblySettings type")
 
 		result = ctypes.c_ulonglong()
+		graph_type = _function.FunctionViewType(graph_type)._to_core_struct()
 		if not core.BNFindNextConstant(self.handle, start, constant, result, settings.handle, graph_type):
 			return None
 		return result.value
@@ -8694,7 +8708,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 
 	def find_all_text(
 	    self, start: int, end: int, text: str, settings: Optional[_function.DisassemblySettings] = None,
-	    flags=FindFlag.FindCaseSensitive, graph_type=FunctionGraphType.NormalFunctionGraph, progress_func=None,
+	    flags=FindFlag.FindCaseSensitive, graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph, progress_func=None,
 	    match_callback=None
 	) -> QueueGenerator:
 		"""
@@ -8715,7 +8729,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			FindCaseSensitive    Case-sensitive search
 			FindCaseInsensitive  Case-insensitive search
 			==================== ============================
-		:param FunctionGraphType graph_type: the IL to search within
+		:param FunctionViewType graph_type: the IL to search within
 		:param callback progress_func: optional function to be called with the current progress \
 		and total count. This function should return a boolean value that decides whether the \
 		search should continue or stop
@@ -8740,6 +8754,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			raise TypeError("settings parameter is not DisassemblySettings type")
 		if not isinstance(flags, FindFlag):
 			raise TypeError('flag parameter must have type FindFlag')
+		graph_type = _function.FunctionViewType(graph_type)._to_core_struct()
 
 		if progress_func:
 			progress_func_obj = ctypes.CFUNCTYPE(
@@ -8787,7 +8802,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 
 	def find_all_constant(
 	    self, start: int, end: int, constant: int, settings: Optional[_function.DisassemblySettings] = None,
-	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph, progress_func: Optional[ProgressFuncType] = None,
+	    graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph, progress_func: Optional[ProgressFuncType] = None,
 	    match_callback: Optional[LineMatchCallbackType] = None
 	) -> QueueGenerator:
 		"""
@@ -8805,7 +8820,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		:param int constant: constant to search for
 		:param DisassemblySettings settings: DisassemblySettings object used to render the text \
 		to be searched
-		:param FunctionGraphType graph_type: the IL to search within
+		:param FunctionViewType graph_type: the IL to search within
 		:param callback progress_func: optional function to be called with the current progress \
 		and total count. This function should return a boolean value that decides whether the \
 		search should continue or stop
@@ -8827,6 +8842,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			settings.set_option(DisassemblyOption.WaitForIL, True)
 		if not isinstance(settings, _function.DisassemblySettings):
 			raise TypeError("settings parameter is not DisassemblySettings type")
+		graph_type = _function.FunctionViewType(graph_type)._to_core_struct()
 
 		if progress_func:
 			progress_func_obj = ctypes.CFUNCTYPE(
@@ -8929,7 +8945,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		handle = core.BNGetWorkflowForBinaryView(self.handle)
 		if handle is None:
 			return None
-		return _workflow.Workflow(handle=handle)
+		return _workflow.Workflow(handle=handle, object_handle=self.handle)
 
 	def rebase(self, address: int, force: Optional[bool] = False,
 	           progress_func: Optional[ProgressFuncType] = None) -> Optional['BinaryView']:
@@ -9039,7 +9055,21 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		return value.value
 
 	def add_auto_segment(self, start: int, length: int, data_offset: int, data_length: int, flags: SegmentFlag) -> None:
+		"""
+		``add_auto_segment`` Adds an analysis segment that specifies how data from the raw file is mapped into a virtual address space
+
+		Note that the segments added may have different size attributes than requested
+		"""
 		core.BNAddAutoSegment(self.handle, start, length, data_offset, data_length, flags)
+
+	def add_auto_segments(self, segments: List[core.BNSegmentInfo]) -> None:
+		"""
+		``add_auto_segments`` Adds analysis segments that specify how data from the raw file is mapped into a virtual address space
+
+		Note that the segments added may have different size attributes than requested
+		"""
+		segment_arr = (core.BNSegmentInfo * len(segments))(*segments)
+		core.BNAddAutoSegments(self.handle, segment_arr, len(segments))
 
 	def remove_auto_segment(self, start: int, length: int) -> None:
 		"""
@@ -9615,6 +9645,21 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	@property
 	def memory_map(self):
 		return MemoryMap(handle=self.handle)
+
+	def stringify_unicode_data(
+			self, arch: Optional['architecture.Architecture'], buffer: 'databuffer.DataBuffer',
+			allow_short_strings: bool = False
+	) -> Tuple[Optional[str], Optional[StringType]]:
+		string = ctypes.c_char_p()
+		string_type = ctypes.c_int()
+		if arch is not None:
+			arch = arch.handle
+		if not core.BNStringifyUnicodeData(
+				self.handle, arch, buffer.handle, allow_short_strings, ctypes.byref(string), ctypes.byref(string_type)):
+			return None, None
+		result = string.value
+		core.BNFreeString(string)
+		return result, StringType(string_type.value)
 
 class BinaryReader:
 	"""
@@ -10394,7 +10439,7 @@ class TypedDataAccessor:
 		for i in range(_type.count):
 			yield self[i]
 
-	def __getitem__(self, key: Union[str, int]) -> 'TypedDataAccessor':
+	def __getitem__(self, key: Union[str, int, slice]) -> Union['TypedDataAccessor', List['TypedDataAccessor']]:
 		_type = self.type
 		if isinstance(_type, _types.NamedTypeReferenceType):
 			_type = _type.target(self.view)
@@ -10402,6 +10447,8 @@ class TypedDataAccessor:
 			if key >= _type.count:
 				raise ValueError(f"Index {key} out of bounds array has {_type.count} elements")
 			return TypedDataAccessor(_type.element_type, self.address + key * len(_type.element_type), self.view, self.endian)
+		if isinstance(_type, _types.ArrayType) and isinstance(key, slice):
+			return [self[i] for i in range(*key.indices(len(self.value)))]
 		if not isinstance(_type, _types.StructureType):
 			raise ValueError("Can't get member of non-structure")
 		if not isinstance(key, str):

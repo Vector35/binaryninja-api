@@ -407,11 +407,17 @@ impl DebugInfoBuilder {
         };
 
         let adjusted_offset;
+
         let Some(adjustment_at_variable_lifetime_start) = lexical_block.and_then(|block_ranges| {
             block_ranges
             .unsorted_iter()
             .find_map(|x| self.range_data_offsets.values_overlap(x.start).next())
         }).or_else(|| {
+            // Try using the offset at the adjustment 4 bytes after the function start, in case the function starts with a stack adjustment
+            // TODO: This is a decent heuristic but not perfect, since further adjustments could still be made
+            self.range_data_offsets.values_overlap(func_addr+4).next()
+        }).or_else(|| {
+            // If all else fails, use the function start address
             self.range_data_offsets.values_overlap(func_addr).next()
         }) else {
             // Unknown why, but this is happening with MachO + external dSYM

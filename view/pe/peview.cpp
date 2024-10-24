@@ -2807,7 +2807,7 @@ bool PEView::Init()
 			GetSymbolByRawName("_TerminateProcess@8", GetExternalNameSpace())))
 	{
 		// TerminateProcess is imported and this is a user mode file
-		programSettings->Set("corePlugins.workflows.conditionalNoReturn", true);
+		programSettings->Set("core.function.analyzeConditionalNoReturns", true);
 	}
 
 	// Add a symbol for the entry point

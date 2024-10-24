@@ -1,5 +1,6 @@
 #include "binaryninjaapi.h"
 #include "json/json.h"
+#include "rapidjsonwrapper.h"
 #include <string>
 #include <variant>
 
@@ -100,6 +101,97 @@ bool AnalysisContext::Inform(const string& request)
 }
 
 
+WorkflowMachine::WorkflowMachine(Ref<BinaryView> view): m_view(view)
+{
+
+}
+
+
+WorkflowMachine::WorkflowMachine(Ref<Function> function): m_function(function)
+{
+
+}
+
+
+std::optional<bool> WorkflowMachine::QueryOverride(const string& activity)
+{
+	rapidjson::Document request(rapidjson::kObjectType);
+	rapidjson::Document::AllocatorType& allocator = request.GetAllocator();
+	request.AddMember("command", "override", allocator);
+	request.AddMember("action", "query", allocator);
+	request.AddMember("activity", rapidjson::Value(activity.c_str(), allocator), allocator);
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	request.Accept(writer);
+
+	string jsonResult;
+	if (m_function)
+		jsonResult = BNPostWorkflowRequestForFunction(m_function->GetObject(), buffer.GetString());
+	else
+		jsonResult = BNPostWorkflowRequestForBinaryView(m_view->GetObject(), buffer.GetString());
+
+	rapidjson::Document response(rapidjson::kObjectType);
+	response.Parse(jsonResult.c_str());
+	if (response.HasMember("response") && response["response"].HasMember("activity") && response["response"]["activity"].HasMember("override"))
+		return response["response"]["activity"]["override"].GetBool();
+
+	return std::nullopt;
+}
+
+
+bool WorkflowMachine::SetOverride(const string& activity, bool enable)
+{
+	rapidjson::Document request(rapidjson::kObjectType);
+	rapidjson::Document::AllocatorType& allocator = request.GetAllocator();
+	request.AddMember("command", "override", allocator);
+	request.AddMember("action", "set", allocator);
+	request.AddMember("activity", rapidjson::Value(activity.c_str(), allocator), allocator);
+	request.AddMember("enable", enable, allocator);
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	request.Accept(writer);
+
+	string jsonResult;
+	if (m_function)
+		jsonResult = BNPostWorkflowRequestForFunction(m_function->GetObject(), buffer.GetString());
+	else
+		jsonResult = BNPostWorkflowRequestForBinaryView(m_view->GetObject(), buffer.GetString());
+
+	rapidjson::Document response(rapidjson::kObjectType);
+	response.Parse(jsonResult.c_str());
+	if (response.HasMember("commandStatus") && response["commandStatus"].HasMember("accepted"))
+		return response["commandStatus"]["accepted"].GetBool();
+
+	return false;
+}
+
+
+bool WorkflowMachine::ClearOverride(const string& activity)
+{
+	rapidjson::Document request(rapidjson::kObjectType);
+	rapidjson::Document::AllocatorType& allocator = request.GetAllocator();
+	request.AddMember("command", "override", allocator);
+	request.AddMember("action", "clear", allocator);
+	request.AddMember("activity", rapidjson::Value(activity.c_str(), allocator), allocator);
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	request.Accept(writer);
+
+	string jsonResult;
+	if (m_function)
+		jsonResult = BNPostWorkflowRequestForFunction(m_function->GetObject(), buffer.GetString());
+	else
+		jsonResult = BNPostWorkflowRequestForBinaryView(m_view->GetObject(), buffer.GetString());
+
+	rapidjson::Document response(rapidjson::kObjectType);
+	response.Parse(jsonResult.c_str());
+	if (response.HasMember("commandStatus") && response["commandStatus"].HasMember("accepted"))
+		return response["commandStatus"]["accepted"].GetBool();
+
+	return false;
+}
+
+
 Workflow::Workflow(const string& name)
 {
 	m_object = BNCreateWorkflow(name.c_str());
@@ -109,6 +201,20 @@ Workflow::Workflow(const string& name)
 Workflow::Workflow(BNWorkflow* workflow)
 {
 	m_object = BNNewWorkflowReference(workflow);
+}
+
+
+Workflow::Workflow(BNWorkflow* workflow, Ref<BinaryView> view)
+{
+	m_object = BNNewWorkflowReference(workflow);
+	m_machine = make_unique<WorkflowMachine>(view);
+}
+
+
+Workflow::Workflow(BNWorkflow* workflow, Ref<Function> function)
+{
+	m_object = BNNewWorkflowReference(workflow);
+	m_machine = make_unique<WorkflowMachine>(function);
 }
 
 

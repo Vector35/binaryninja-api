@@ -1862,7 +1862,7 @@ impl StructureBuilder {
 
     pub fn set_base_structures(&self, bases: Vec<BaseStructure>) -> &Self {
         let mut bases_api = vec![];
-        for base in bases {
+        for base in &bases {
             bases_api.push(BNBaseStructure {
                 type_: base.ty.handle,
                 offset: base.offset,
@@ -2326,9 +2326,7 @@ impl NamedTypeReference {
     /// the core will do the id stuff for you.
     pub fn new(type_class: NamedTypeReferenceClass, mut name: QualifiedName) -> Ref<Self> {
         unsafe {
-            RefCountable::inc_ref(&Self {
-                handle: BNCreateNamedType(type_class, ptr::null() as *const _, &mut name.0),
-            })
+            Self::ref_from_raw(BNCreateNamedType(type_class, ptr::null() as *const _, &mut name.0))
         }
     }
 
@@ -2345,9 +2343,7 @@ impl NamedTypeReference {
         let type_id = type_id.into_bytes_with_nul();
 
         unsafe {
-            RefCountable::inc_ref(&Self {
-                handle: BNCreateNamedType(type_class, type_id.as_ref().as_ptr() as _, &mut name.0),
-            })
+            Self::ref_from_raw(BNCreateNamedType(type_class, type_id.as_ref().as_ptr() as _, &mut name.0))
         }
     }
 

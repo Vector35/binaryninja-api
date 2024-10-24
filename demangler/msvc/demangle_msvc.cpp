@@ -15,12 +15,18 @@
 // Includes snippets from LLVM, which is under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 
-#include "binaryninjaapi.h"
 #include "demangle_msvc.h"
 #include <memory>
 
+
+#ifdef BINARYNINJACORE_LIBRARY
+using namespace BinaryNinjaCore;
+#define GetClass GetTypeClass
+#else
 using namespace BinaryNinja;
 using namespace std;
+#endif
+
 
 #define MAX_DEMANGLE_LENGTH 4096
 
@@ -115,7 +121,7 @@ string Demangle::BackrefList::GetStringBackref(size_t reference)
 	// LogDebug("type: %llx - ref: %d\n", this, reference);
 	if (reference < nameList.size())
 		return nameList[reference];
-	LogDebug("type: %llx - Backref too large: %d/%d\n", this, nameList.size(), reference);
+	LogDebug("type: %p - Backref too large: %zu/%zu\n", this, nameList.size(), reference);
 	throw DemangleException(string("Backref too large " + std::to_string(reference)));
 }
 
@@ -132,7 +138,7 @@ void Demangle::BackrefList::PushStringBackref(string& s)
 {
 	if (s.size() > MAX_DEMANGLE_LENGTH)
 		throw DemangleException();
-	LogDebug("this: %llx - Backref: %lld - %s\n", this, nameList.size(), s.c_str());
+	LogDebug("this: %p - Backref: %zu - %s\n", this, nameList.size(), s.c_str());
 	for (const auto& name : nameList)
 		if (name == s)
 			return;
@@ -1860,8 +1866,13 @@ public:
 		return name[0] == '?';
 	}
 
+#ifdef BINARYNINJACORE_LIBRARY
+	virtual bool Demangle(Architecture* arch, const string& name, Ref<Type>& outType, QualifiedName& outVarName,
+	                      BinaryView* view) override
+#else
 	virtual bool Demangle(Ref<Architecture> arch, const string& name, Ref<Type>& outType, QualifiedName& outVarName,
 	                      Ref<BinaryView> view) override
+#endif
 	{
 		if (view)
 			return Demangle::DemangleMS(arch, name, outType, outVarName, view);
@@ -1869,12 +1880,15 @@ public:
 	}
 };
 
-
 extern "C"
 {
+#ifndef BINARYNINJACORE_LIBRARY
 	BN_DECLARE_CORE_ABI_VERSION
+#endif
 
-#ifdef DEMO_EDITION
+#ifdef BINARYNINJACORE_LIBRARY
+	bool DemangleMSVCPluginInit()
+#elif defined(DEMO_EDITION)
 	bool DemangleMSVCPluginInit()
 #else
 	BINARYNINJAPLUGIN bool CorePluginInit()

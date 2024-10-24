@@ -100,11 +100,17 @@ application/x-sharedlib=${APP}.desktop
 EOF
 	echo "${DESKTOP}" | $SUDO tee ${DESKTOPFILE} >/dev/null
 	echo "${MIMEAPPS}" | $SUDO tee -a ${MIMEFILE} >/dev/null
-	$SUDO chmod +x ${DESKTOPFILE}
 	if [ -f ${OLDDESKTOPFILE} ]
 	then
 		rm ${OLDDESKTOPFILE}
 	fi
+	settrusted "${DESKTOPFILE}"
+	$SUDO update-desktop-database ${SHARE}/applications
+}
+
+settrusted()
+{
+	$SUDO chmod +x "$1"
 	GNOMEVERSION=`gnome-shell --version|awk '{print $3}'`
 	MINVERSION=3.36
 	# This check is dumb. Thanks Gnome for not only imitating the worst
@@ -119,8 +125,11 @@ EOF
 		DBFLAG="yes"
 	fi
 	echo -e "\n\nWARNING: Note that the desktop icon that was created may not be usable until you login again or reboot depending on your GNOME version.\n"
-	$SUDO dbus-launch gio set "${DESKTOPFILE}" "metadata::trusted" $DBFLAG
-	$SUDO update-desktop-database ${SHARE}/applications
+	DBUS_LAUNCH=dbus-launch
+	if ! (which dbus-launch > /dev/null); then
+		DBUS_LAUNCH=""
+	fi
+	$SUDO $DBUS_LAUNCH gio set "$1" "metadata::trusted" $DBFLAG
 }
 
 createmime()
@@ -153,6 +162,7 @@ createmime()
 addtodesktop()
 {
 	cp "$DESKTOPFILE" "${HOME}/Desktop/${APP}.desktop"
+	settrusted "${HOME}/Desktop/${APP}.desktop"
 }
 
 uninstall()

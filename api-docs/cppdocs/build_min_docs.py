@@ -10,17 +10,17 @@
 # python3 build_min_docs.py
 # =-=--
 
-__DOXYGEN_REQUIRED_VERSION__ = "1.9.4"
+__DOXYGEN_REQUIRED_VERSION__ = "1.12.0"
 
 import argparse
 import os
 import sys
 import json
 from collections import namedtuple
-from typing import List
 import subprocess
 import shutil
 
+doxygen = "doxygen" #to make testing other versions easier
 
 def system_with_output(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
 	proc = subprocess.Popen("" + cmd,
@@ -66,7 +66,7 @@ def load_items_in_file(filename):
 	"""
 	Recursively load in the text of file {filename} and all subfiles referenced by it.
 
-	:param filename: Target root filename. e.g. 'modules.js'
+	:param filename: Target root filename. e.g. 'topics.js'
 	:return: Combined text of javascript file tree.
 	"""
 	items = []
@@ -87,7 +87,7 @@ def minifier():
 	# 	add them to the top of the navbar.js file itself.
 
 	navtree_built_data = ""
-	for mod in load_items_in_file("html/modules.js"):
+	for mod in load_items_in_file("html/topics.js"):
 		navtree_built_data += mod + "\n"
 	for mod in load_items_in_file("html/namespaces.js"):
 		navtree_built_data += mod + "\n"
@@ -115,8 +115,8 @@ def minifier():
 	# Here, we just want to skip the whole process and immediately call the callback.
 	nav_tree_fixed_get_script = "function getScript(scriptName,func,show) { func(); }"
 
-	navtree_before_get_script = navtree_orig.split("function getScript(scriptName,func,show)")[0]
-	navtree_after_get_script = navtree_orig.split("function getScript(scriptName,func,show)")[1].split('}', 1)[1]
+	navtree_before_get_script = navtree_orig.split("const getScript = function(scriptName,func) {")[0]
+	navtree_after_get_script = navtree_orig.split("const getScript = function(scriptName,func) {")[1].split('}', 1)[1]
 
 	nav_tree_fixed = navtree_before_get_script + nav_tree_fixed_get_script + navtree_after_get_script
 	navtree = navtree_built_data + "\n" + nav_tree_fixed
@@ -130,9 +130,8 @@ def build_doxygen(args):
 	if not os.path.exists('./Doxyfile-HTML'):
 		print('No Doxyfile found. Are you in the right directory?')
 		sys.exit(1)
-	_, vers, _ = system_with_output("doxygen -V")
+	_, vers, _ = system_with_output(f"{doxygen} -V")
 	if __DOXYGEN_REQUIRED_VERSION__ not in vers.strip():
-		print(f'Please use Doxygen {__DOXYGEN_REQUIRED_VERSION__} to build documentation')
 		print(f'Please use Doxygen {__DOXYGEN_REQUIRED_VERSION__} to build documentation')
 		sys.exit(1)
 
@@ -154,9 +153,9 @@ def build_doxygen(args):
 	print(f'Building doxygen docs...')
 
 	if args.docset:
-		stat, out, err = system_with_output("doxygen Doxyfile-Docset")
+		stat, out, err = system_with_output(f"{doxygen} Doxyfile-Docset")
 	else:
-		stat, out, err = system_with_output("doxygen Doxyfile-HTML")
+		stat, out, err = system_with_output(f"{doxygen} Doxyfile-HTML")
 	print(f"Built Doxygen with status code {stat}")
 	print("Output dir is ./html/")
 	stat, out, err = system_with_output("cp _static/img/* html/")

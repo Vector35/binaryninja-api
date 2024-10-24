@@ -620,6 +620,25 @@ pub trait BinaryViewExt: BinaryViewBase {
         QualifiedName(name_handle)
     }
 
+    fn define_auto_type_with_id<S: BnStrCompatible>(
+        &self,
+        name: S,
+        id: S,
+        type_obj: &Type,
+    ) -> QualifiedName {
+        let mut qualified_name = QualifiedName::from(name);
+        let id_str = id.into_bytes_with_nul();
+        let name_handle = unsafe {
+            BNDefineAnalysisType(
+                self.as_ref().handle,
+                id_str.as_ref().as_ptr() as *const _,
+                &mut qualified_name.0,
+                type_obj.handle,
+            )
+        };
+        QualifiedName(name_handle)
+    }
+
     fn define_user_type<S: BnStrCompatible>(&self, name: S, type_obj: &Type) {
         let mut qualified_name = QualifiedName::from(name);
         unsafe {
@@ -1012,6 +1031,14 @@ pub trait BinaryViewExt: BinaryViewBase {
 
             Ok(Function::from_raw(handle))
         }
+    }
+    
+    fn function_start_before(&self, addr: u64) -> u64 {
+        unsafe { BNGetPreviousFunctionStartBeforeAddress(self.as_ref().handle, addr) }
+    }
+
+    fn function_start_after(&self, addr: u64) -> u64 {
+        unsafe { BNGetNextFunctionStartAfterAddress(self.as_ref().handle, addr) }
     }
 
     fn basic_blocks_containing(&self, addr: u64) -> Array<BasicBlock<NativeBlock>> {

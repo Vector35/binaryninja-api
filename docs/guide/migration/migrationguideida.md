@@ -42,6 +42,12 @@ Some major exceptions are:
     - `H` to toggle to/from Hex View
     - `[TAB]` to toggle to/from disassembly
 
+## Cross-References
+
+![xref icon >](../../img/xref-icon.png "Xref Icon")
+
+If you prefer the pop-up style cross-references from IDA or Ghidra, you can enable that behavior by right-clicking on the xref-icon and selecting "Window". Whenever you navigate from the window by double-clicking or pressing enter the main window will be focused. ESC can also be used to close the xref window.
+
 ## Theme
 
 We like our dark themes, but understand they're not for everyone. We have an expansive list of [community themes](https://github.com/Vector35/community-themes), and [a guide](../../dev/themes.md) and a [blog post](https://binary.ninja/2021/07/08/creating-great-themes.html) on how to make your own. The built-in "Classic" theme should feel nostalgic, but if you're looking for a light theme that's slightly easier on the eyes, try out Summer or Solarized Light.

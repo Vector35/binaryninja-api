@@ -109,8 +109,8 @@ impl DataBuffer {
         }
     }
 
-    pub fn to_escaped_string(&self, null_terminates: bool) -> BnString {
-        unsafe { BnString::from_raw(BNDataBufferToEscapedString(self.0, null_terminates)) }
+    pub fn to_escaped_string(&self, null_terminates: bool, escape_printable: bool) -> BnString {
+        unsafe { BnString::from_raw(BNDataBufferToEscapedString(self.0, null_terminates, escape_printable)) }
     }
 
     pub fn from_escaped_string(value: &BnString) -> Self {

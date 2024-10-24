@@ -22,6 +22,14 @@ public:
 };
 
 
+class BINARYNINJAUIAPI CustomStyleFlatToolButtonWithBackground : public QToolButton
+{
+Q_OBJECT
+public:
+	CustomStyleFlatToolButtonWithBackground(QWidget* parent = nullptr) : QToolButton(parent) {}
+};
+
+
 class BINARYNINJAUIAPI CustomStyleFlatToolButton : public QToolButton
 {
 Q_OBJECT

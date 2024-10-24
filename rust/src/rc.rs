@@ -134,7 +134,7 @@ impl<T: RefCountable + Hash> Hash for Ref<T> {
 // reference is held indirectly (e.g. a core-allocated array
 // of raw `*mut BNRawT`).
 //
-// This wrapper is necessary because `binja-rs` wrappers around
+// This wrapper is necessary because rust wrappers around
 // core objects can be bigger than the raw pointer to the core
 // object. This lets us create the full wrapper object and ensure
 // that it does not outlive the core-allocated array (or similar)

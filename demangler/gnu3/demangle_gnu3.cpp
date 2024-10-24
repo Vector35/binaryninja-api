@@ -15,15 +15,19 @@
 // Includes snippets from LLVM, which is under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 
-#include "binaryninjaapi.h"
+#include "demangle_gnu3.h"
 #include <stdarg.h>
 #include <algorithm>
 #include <memory>
-#include "demangle_gnu3.h"
 
 
+#ifdef BINARYNINJACORE_LIBRARY
+using namespace BinaryNinjaCore;
+#define GetClass GetTypeClass
+#else
 using namespace BinaryNinja;
 using namespace std;
+#endif
 
 
 #define MAX_DEMANGLE_LENGTH    4096
@@ -2346,8 +2350,13 @@ public:
 		return DemangleGNU3::IsGNU3MangledString(name);
 	}
 
+#ifdef BINARYNINJACORE_LIBRARY
+	virtual bool Demangle(Architecture* arch, const string& name, Ref<Type>& outType, QualifiedName& outVarName,
+	                      BinaryView* view) override
+#else
 	virtual bool Demangle(Ref<Architecture> arch, const string& name, Ref<Type>& outType, QualifiedName& outVarName,
 	                      Ref<BinaryView> view) override
+#endif
 	{
 		if (view)
 			return DemangleGNU3::DemangleStringGNU3(arch, name, outType, outVarName, view);
@@ -2358,9 +2367,13 @@ public:
 
 extern "C"
 {
+#ifndef BINARYNINJACORE_LIBRARY
 	BN_DECLARE_CORE_ABI_VERSION
+#endif
 
-#ifdef DEMO_EDITION
+#ifdef BINARYNINJACORE_LIBRARY
+	bool DemangleGNU3PluginInit()
+#elif defined(DEMO_EDITION)
 	bool DemangleGNU3PluginInit()
 #else
 	BINARYNINJAPLUGIN bool CorePluginInit()

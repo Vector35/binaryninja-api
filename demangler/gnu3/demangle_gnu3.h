@@ -15,14 +15,31 @@
 #pragma once
 #include <stdexcept>
 #include <exception>
-#include "binaryninjaapi.h"
 
+// XXX: Compiled directly into the core for performance reasons
+// Will still work fine compiled independently, just at about a
+// 50-100% performance penalty due to FFI overhead
+#ifdef BINARYNINJACORE_LIBRARY
+#include "qualifiedname.h"
+#include "type.h"
+#include "architecture.h"
+#include "binaryview.h"
+#include "demangle.h"
+#define BN BinaryNinjaCore
+#define _STD_STRING BinaryNinjaCore::string
+#define _STD_VECTOR BinaryNinjaCore::vector
+#else
+#include "binaryninjaapi.h"
+#define BN BinaryNinja
+#define _STD_STRING std::string
+#define _STD_VECTOR std::vector
+#endif
 
 class DemangleException: public std::exception
 {
-	std::string m_message;
+	_STD_STRING m_message;
 public:
-	DemangleException(std::string msg="Attempt to read beyond bounds or missing expected character"): m_message(msg){}
+	DemangleException(_STD_STRING msg="Attempt to read beyond bounds or missing expected character"): m_message(msg){}
 	virtual const char* what() const noexcept { return m_message.c_str(); }
 };
 
@@ -31,43 +48,43 @@ class DemangleGNU3
 	class Reader
 	{
 	public:
-		Reader(const std::string& data);
-		std::string PeekString(size_t count=1);
+		Reader(const _STD_STRING& data);
+		_STD_STRING PeekString(size_t count=1);
 		char Peek();
-		bool NextIsOneOf(const std::string& list);
-		std::string GetRaw();
+		bool NextIsOneOf(const _STD_STRING& list);
+		_STD_STRING GetRaw();
 		char Read();
-		std::string ReadString(size_t count=1);
-		std::string ReadUntil(char sentinal);
+		_STD_STRING ReadString(size_t count=1);
+		_STD_STRING ReadUntil(char sentinal);
 		void Consume(size_t count=1);
 		size_t Length() const;
 		void UnRead(size_t count=1);
 	private:
-		std::string m_data;
+		_STD_STRING m_data;
 		size_t m_offset;
 	};
 
 	class SubstitutionList
 	{
-		std::vector<BinaryNinja::TypeBuilder> m_typeList;
+		_STD_VECTOR<BN::TypeBuilder> m_typeList;
 	public:
 		SubstitutionList();
 		~SubstitutionList();
-		void PushType(BinaryNinja::TypeBuilder t);
+		void PushType(BN::TypeBuilder t);
 		void PopType();
-		const BinaryNinja::TypeBuilder& GetType(size_t reference) const;
+		const BN::TypeBuilder& GetType(size_t reference) const;
 		void PrintSubstitutionTable() const;
 		size_t Size() const { return m_typeList.size(); }
 		void Clear() { m_typeList.clear(); }
 	};
 
-	BinaryNinja::QualifiedName m_varName;
+	BN::QualifiedName m_varName;
 	Reader m_reader;
-	BinaryNinja::Architecture* m_arch;
-	std::vector<BinaryNinja::TypeBuilder> m_substitute;
-	std::vector<BinaryNinja::TypeBuilder> m_templateSubstitute;
-	std::vector<std::vector<BinaryNinja::TypeBuilder>> m_functionSubstitute;
-	std::string m_lastName;
+	BN::Architecture* m_arch;
+	_STD_VECTOR<BN::TypeBuilder> m_substitute;
+	_STD_VECTOR<BN::TypeBuilder> m_templateSubstitute;
+	_STD_VECTOR<_STD_VECTOR<BN::TypeBuilder>> m_functionSubstitute;
+	_STD_STRING m_lastName;
 	BNNameType m_nameType;
 	bool m_localType;
 	bool m_hasReturnType;
@@ -76,47 +93,47 @@ class DemangleGNU3
 	bool m_topLevel;
 	bool m_isOperatorOverload;
 	enum SymbolType { Function, FunctionWithReturn, Data, VTable, Rtti, Name};
-	BinaryNinja::QualifiedName DemangleBaseUnresolvedName();
-	BinaryNinja::TypeBuilder DemangleUnresolvedType();
-	std::string DemangleUnarySuffixExpression(const std::string& op);
-	std::string DemangleUnaryPrefixExpression(const std::string& op);
-	std::string DemangleBinaryExpression(const std::string& op);
-	std::string DemangleUnaryPrefixType(const std::string& op);
-	std::string DemangleTypeString();
-	std::string DemangleExpressionList();
-	BinaryNinja::TypeBuilder DemangleUnqualifiedName();
-	std::string DemangleSourceName();
-	std::string DemangleNumberAsString();
-	std::string DemangleInitializer();
-	std::string DemangleExpression();
-	std::string DemanglePrimaryExpression();
-	BinaryNinja::TypeBuilder DemangleName();
-	BinaryNinja::TypeBuilder DemangleLocalName();
+	BN::QualifiedName DemangleBaseUnresolvedName();
+	BN::TypeBuilder DemangleUnresolvedType();
+	_STD_STRING DemangleUnarySuffixExpression(const _STD_STRING& op);
+	_STD_STRING DemangleUnaryPrefixExpression(const _STD_STRING& op);
+	_STD_STRING DemangleBinaryExpression(const _STD_STRING& op);
+	_STD_STRING DemangleUnaryPrefixType(const _STD_STRING& op);
+	_STD_STRING DemangleTypeString();
+	_STD_STRING DemangleExpressionList();
+	BN::TypeBuilder DemangleUnqualifiedName();
+	_STD_STRING DemangleSourceName();
+	_STD_STRING DemangleNumberAsString();
+	_STD_STRING DemangleInitializer();
+	_STD_STRING DemangleExpression();
+	_STD_STRING DemanglePrimaryExpression();
+	BN::TypeBuilder DemangleName();
+	BN::TypeBuilder DemangleLocalName();
 
 	void DemangleCVQualifiers(bool& cnst, bool& vltl, bool& rstrct);
-	BinaryNinja::TypeBuilder DemangleSubstitution();
-	const BinaryNinja::TypeBuilder& DemangleTemplateSubstitution();
-	void DemangleTemplateArgs(std::vector<BinaryNinja::FunctionParameter>& args);
-	bool DemangleEncoding(BinaryNinja::Type** type, BinaryNinja::QualifiedName& outName);
-	BinaryNinja::TypeBuilder DemangleFunction(bool cnst, bool vltl);
-	BinaryNinja::TypeBuilder DemangleType();
+	BN::TypeBuilder DemangleSubstitution();
+	const BN::TypeBuilder& DemangleTemplateSubstitution();
+	void DemangleTemplateArgs(_STD_VECTOR<BN::FunctionParameter>& args);
+	bool DemangleEncoding(BN::Type** type, BN::QualifiedName& outName);
+	BN::TypeBuilder DemangleFunction(bool cnst, bool vltl);
+	BN::TypeBuilder DemangleType();
 	int64_t DemangleNumber();
-	BinaryNinja::TypeBuilder DemangleNestedName();
-	void PushTemplateType(BinaryNinja::TypeBuilder type);
-	const BinaryNinja::TypeBuilder& GetTemplateType(size_t ref);
-	void PushType(BinaryNinja::TypeBuilder type);
-	const BinaryNinja::TypeBuilder& GetType(size_t ref);
-	static bool DemangleGlobalHeader(std::string& name, std::string& header);
+	BN::TypeBuilder DemangleNestedName();
+	void PushTemplateType(BN::TypeBuilder type);
+	const BN::TypeBuilder& GetTemplateType(size_t ref);
+	void PushType(BN::TypeBuilder type);
+	const BN::TypeBuilder& GetType(size_t ref);
+	static bool DemangleGlobalHeader(_STD_STRING& name, _STD_STRING& header);
 
 public:
-	DemangleGNU3(BinaryNinja::Architecture* arch, const std::string& mangledName);
-	BinaryNinja::TypeBuilder DemangleSymbol(BinaryNinja::QualifiedName& varName);
-	BinaryNinja::QualifiedName GetVarName() const { return m_varName; }
-	static bool IsGNU3MangledString(const std::string& name);
+	DemangleGNU3(BN::Architecture* arch, const _STD_STRING& mangledName);
+	BN::TypeBuilder DemangleSymbol(BN::QualifiedName& varName);
+	BN::QualifiedName GetVarName() const { return m_varName; }
+	static bool IsGNU3MangledString(const _STD_STRING& name);
 
-	// Tread lightly on this landmine; a BinaryView* will be converted to a bool; use an explicit (BinaryNinja::Ref<BinaryNinja::BinaryView>)view cast
-	static bool DemangleStringGNU3(BinaryNinja::Architecture* arch, const std::string& name, BinaryNinja::Ref<BinaryNinja::Type>& outType, BinaryNinja::QualifiedName& outVarName, const BinaryNinja::Ref<BinaryNinja::BinaryView>& view);
-	static bool DemangleStringGNU3(BinaryNinja::Architecture* arch, const std::string& name, BinaryNinja::Ref<BinaryNinja::Type>& outType, BinaryNinja::QualifiedName& outVarName, BinaryNinja::BinaryView* view);
-	static bool DemangleStringGNU3(BinaryNinja::Architecture* arch, const std::string& name, BinaryNinja::Ref<BinaryNinja::Type>& outType, BinaryNinja::QualifiedName& outVarName);
+	// Tread lightly on this landmine; a BinaryView* will be converted to a bool; use an explicit (BN::Ref<BN::BinaryView>)view cast
+	static bool DemangleStringGNU3(BN::Architecture* arch, const _STD_STRING& name, BN::Ref<BN::Type>& outType, BN::QualifiedName& outVarName, const BN::Ref<BN::BinaryView>& view);
+	static bool DemangleStringGNU3(BN::Architecture* arch, const _STD_STRING& name, BN::Ref<BN::Type>& outType, BN::QualifiedName& outVarName, BN::BinaryView* view);
+	static bool DemangleStringGNU3(BN::Architecture* arch, const _STD_STRING& name, BN::Ref<BN::Type>& outType, BN::QualifiedName& outVarName);
 	void PrintTables();
 };

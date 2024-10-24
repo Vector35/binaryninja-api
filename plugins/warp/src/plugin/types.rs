@@ -23,6 +23,11 @@ impl Command for LoadTypesCommand {
             log::error!("Could not get data from signature file: {:?}", file);
             return;
         };
+        
+        let Some(arch) = view.default_arch() else {
+            log::error!("Could not get default architecture");
+            return;
+        };
 
         let view = view.to_owned();
         std::thread::spawn(move || {
@@ -36,8 +41,6 @@ impl Command for LoadTypesCommand {
             for comp_ty in data.types {
                 let ty_id = comp_ty.guid.to_string();
                 let ty_name = comp_ty.ty.name.to_owned().unwrap_or_else(|| ty_id.clone());
-                // TODO: Using arch here is problematic.
-                let arch = view.default_arch().unwrap();
                 view.define_auto_type_with_id(ty_name, ty_id, &to_bn_type(&arch, &comp_ty.ty));
             }
 

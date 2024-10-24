@@ -200,6 +200,9 @@ class FunctionViewType:
 			self.view_type = FunctionGraphType.HighLevelLanguageRepresentationFunctionGraph
 			self.name = str(view_type)
 
+	def __hash__(self):
+		return hash((self.view_type, self.name))
+
 	@staticmethod
 	def _from_core_struct(view_type: core.BNFunctionViewType) -> 'FunctionViewType':
 		if view_type.type == FunctionGraphType.HighLevelLanguageRepresentationFunctionGraph:

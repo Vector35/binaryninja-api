@@ -95,6 +95,7 @@ namespace BinaryNinja {
 		Ref<Logger> m_logger;
 		bool allowMangledClassNames;
 		bool checkWritableRData;
+		bool virtualFunctionTableSweep;
 
 		std::map<uint64_t, ClassInfo> m_classInfo;
 
@@ -107,7 +108,7 @@ namespace BinaryNinja {
 		std::optional<VirtualFunctionTableInfo> ProcessVFT(uint64_t vftAddr, const ClassInfo &classInfo);
 
 	public:
-		MicrosoftRTTIProcessor(const Ref<BinaryView> &view, bool useMangled = true, bool checkRData = true);
+		MicrosoftRTTIProcessor(const Ref<BinaryView> &view, bool useMangled = true, bool checkRData = true, bool vftSweep = true);
 
 		Ref<Metadata> SerializedMetadata();
 

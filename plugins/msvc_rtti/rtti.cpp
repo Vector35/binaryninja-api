@@ -569,13 +569,15 @@ std::optional<VirtualFunctionTableInfo> MicrosoftRTTIProcessor::ProcessVFT(uint6
 }
 
 
-MicrosoftRTTIProcessor::MicrosoftRTTIProcessor(const Ref<BinaryView> &view, bool useMangled, bool checkRData) : m_view(
+MicrosoftRTTIProcessor::MicrosoftRTTIProcessor(const Ref<BinaryView> &view, bool useMangled, bool checkRData,
+                                               bool vftSweep) : m_view(
     view)
 {
     m_logger = new Logger("Microsoft RTTI");
     allowMangledClassNames = useMangled;
     checkWritableRData = checkRData;
     m_classInfo = {};
+    virtualFunctionTableSweep = vftSweep;
     auto metadata = view->QueryMetadata(VIEW_METADATA_MSVC);
     if (metadata != nullptr)
     {
@@ -663,6 +665,42 @@ void MicrosoftRTTIProcessor::ProcessVFT()
             auto vftAddr = ref + m_view->GetAddressSize();
             if (auto vftInfo = ProcessVFT(vftAddr, classInfo))
                 m_classInfo[coLocatorAddr].vft = vftInfo.value();
+        }
+    }
+
+    if (virtualFunctionTableSweep)
+    {
+        BinaryReader optReader = BinaryReader(m_view);
+        auto addrSize = m_view->GetAddressSize();
+        auto scan = [&](const Ref<Segment> &segment) {
+            uint64_t startAddr = segment->GetStart();
+            uint64_t endAddr = segment->GetEnd();
+            for (uint64_t vtableAddr = startAddr; vtableAddr < endAddr - 0x18; vtableAddr += addrSize)
+            {
+                optReader.Seek(vtableAddr);
+                uint64_t coLocatorAddr = optReader.ReadPointer();
+                auto coLocator = m_classInfo.find(coLocatorAddr);
+                if (coLocator == m_classInfo.end())
+                    continue;
+                // Found a vtable reference to colocator.
+                ProcessVFT(vtableAddr + addrSize, coLocator->second);
+            }
+        };
+
+        // Scan data sections for virtual function tables.
+        auto rdataSection = m_view->GetSectionByName(".rdata");
+        for (const Ref<Segment> &segment: m_view->GetSegments())
+        {
+            if (segment->GetFlags() == (SegmentReadable | SegmentContainsData))
+            {
+                m_logger->LogDebug("Attempting to find VirtualFunctionTables in segment %llx", segment->GetStart());
+                scan(segment);
+            } else if (checkWritableRData && rdataSection && rdataSection->GetStart() == segment->GetStart())
+            {
+                m_logger->LogDebug("Attempting to find VirtualFunctionTables in writable rdata segment %llx",
+                                   segment->GetStart());
+                scan(segment);
+            }
         }
     }
 

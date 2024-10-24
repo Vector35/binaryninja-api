@@ -22,6 +22,7 @@ use std::fmt;
 
 use crate::architecture::Architecture;
 use crate::architecture::Register as ArchReg;
+use crate::architecture::RegisterId;
 use crate::function::Location;
 
 mod block;
@@ -56,10 +57,10 @@ pub enum Register<R: ArchReg> {
 }
 
 impl<R: ArchReg> Register<R> {
-    fn id(&self) -> u32 {
+    fn id(&self) -> RegisterId {
         match *self {
             Register::ArchReg(ref r) => r.id(),
-            Register::Temp(id) => 0x8000_0000 | id,
+            Register::Temp(id) => RegisterId(0x8000_0000 | id),
         }
     }
 }

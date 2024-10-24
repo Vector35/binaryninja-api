@@ -24,10 +24,8 @@ use std::slice;
 
 use binaryninjacore_sys::*;
 
-use crate::architecture::{Architecture, ArchitectureExt, CoreArchitecture, Register};
-use crate::rc::{
-    CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable,
-};
+use crate::architecture::{Architecture, ArchitectureExt, CoreArchitecture, Register, RegisterId};
+use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::*;
 
 // TODO
@@ -81,10 +79,12 @@ where
         })
     }
 
-    fn alloc_register_list<I: Iterator<Item = u32> + ExactSizeIterator>(
-        items: I,
-        count: &mut usize,
-    ) -> *mut u32 {
+    fn alloc_ids_list<I>(items: I, count: &mut usize) -> *mut u32
+    where
+        I: IntoIterator<Item = u32>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        let items = items.into_iter();
         let len = items.len();
         *count = len;
 
@@ -120,7 +120,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             let regs = ctxt.cc.caller_saved_registers();
 
-            alloc_register_list(regs.iter().map(|r| r.id()), &mut *count)
+            alloc_ids_list(regs.iter().map(|r| r.id().0), &mut *count)
         })
     }
 
@@ -132,7 +132,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             let regs = ctxt.cc.callee_saved_registers();
 
-            alloc_register_list(regs.iter().map(|r| r.id()), &mut *count)
+            alloc_ids_list(regs.iter().map(|r| r.id().0), &mut *count)
         })
     }
 
@@ -144,7 +144,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             let regs = ctxt.cc.int_arg_registers();
 
-            alloc_register_list(regs.iter().map(|r| r.id()), &mut *count)
+            alloc_ids_list(regs.iter().map(|r| r.id().0), &mut *count)
         })
     }
 
@@ -156,7 +156,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             let regs = ctxt.cc.float_arg_registers();
 
-            alloc_register_list(regs.iter().map(|r| r.id()), &mut *count)
+            alloc_ids_list(regs.iter().map(|r| r.id().0), &mut *count)
         })
     }
 
@@ -215,7 +215,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
 
             match ctxt.cc.return_int_reg() {
-                Some(r) => r.id(),
+                Some(r) => r.id().0,
                 _ => 0xffff_ffff,
             }
         })
@@ -229,7 +229,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
 
             match ctxt.cc.return_hi_int_reg() {
-                Some(r) => r.id(),
+                Some(r) => r.id().0,
                 _ => 0xffff_ffff,
             }
         })
@@ -243,7 +243,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
 
             match ctxt.cc.return_float_reg() {
-                Some(r) => r.id(),
+                Some(r) => r.id().0,
                 _ => 0xffff_ffff,
             }
         })
@@ -257,7 +257,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
 
             match ctxt.cc.global_pointer_reg() {
-                Some(r) => r.id(),
+                Some(r) => r.id().0,
                 _ => 0xffff_ffff,
             }
         })
@@ -274,7 +274,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             let regs = ctxt.cc.implicitly_defined_registers();
 
-            alloc_register_list(regs.iter().map(|r| r.id()), &mut *count)
+            alloc_ids_list(regs.iter().map(|r| r.id().0), &mut *count)
         })
     }
 
@@ -466,7 +466,7 @@ impl<A: Architecture> CallingConvention<A> {
         let vars: *mut BNVariable = if let Some(permitted_args) = permitted_registers {
             let mut permitted_regs = vec![];
             for r in permitted_args {
-                permitted_regs.push(r.id());
+                permitted_regs.push(r.id().0);
             }
 
             unsafe {
@@ -529,7 +529,7 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
             let res = slice::from_raw_parts(regs, count)
                 .iter()
                 .map(|&r| {
-                    arch.register_from_id(r)
+                    arch.register_from_id(RegisterId(r))
                         .expect("bad reg id from CallingConvention")
                 })
                 .collect();
@@ -549,7 +549,7 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
             let res = slice::from_raw_parts(regs, count)
                 .iter()
                 .map(|&r| {
-                    arch.register_from_id(r)
+                    arch.register_from_id(RegisterId(r))
                         .expect("bad reg id from CallingConvention")
                 })
                 .collect();
@@ -569,7 +569,7 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
             let res = slice::from_raw_parts(regs, count)
                 .iter()
                 .map(|&r| {
-                    arch.register_from_id(r)
+                    arch.register_from_id(RegisterId(r))
                         .expect("bad reg id from CallingConvention")
                 })
                 .collect();
@@ -589,7 +589,7 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
             let res = slice::from_raw_parts(regs, count)
                 .iter()
                 .map(|&r| {
-                    arch.register_from_id(r)
+                    arch.register_from_id(RegisterId(r))
                         .expect("bad reg id from CallingConvention")
                 })
                 .collect();
@@ -618,28 +618,28 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
 
     fn return_int_reg(&self) -> Option<A::Register> {
         match unsafe { BNGetIntegerReturnValueRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(id),
+            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
             _ => None,
         }
     }
 
     fn return_hi_int_reg(&self) -> Option<A::Register> {
         match unsafe { BNGetHighIntegerReturnValueRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(id),
+            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
             _ => None,
         }
     }
 
     fn return_float_reg(&self) -> Option<A::Register> {
         match unsafe { BNGetFloatReturnValueRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(id),
+            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
             _ => None,
         }
     }
 
     fn global_pointer_reg(&self) -> Option<A::Register> {
         match unsafe { BNGetGlobalPointerRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(id),
+            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
             _ => None,
         }
     }

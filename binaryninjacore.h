@@ -732,6 +732,7 @@ extern "C"
 		ShowStackPointer = 129,
 		ShowILTypes = 130,
 		ShowILOpcodes = 131,
+		ShowCollapseIndicators = 132,
 	} BNDisassemblyOption;
 
 	typedef enum BNDisassemblyAddressMode

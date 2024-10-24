@@ -31,6 +31,7 @@ void PseudoCFunction::BeginLines(const HighLevelILInstruction& instr, HighLevelI
 	if (instr.exprIndex == m_highLevelIL->GetRootExpr().exprIndex)
 	{
 		// At top level, add braces around the entire function
+		tokens.PrependCollapseIndicator();
 		tokens.AppendOpenBrace();
 		tokens.NewLine();
 		tokens.IncreaseIndent();
@@ -45,6 +46,7 @@ void PseudoCFunction::EndLines(const HighLevelILInstruction& instr, HighLevelILT
 		// At top level, add braces around the entire function
 		tokens.NewLine();
 		tokens.DecreaseIndent();
+		tokens.PrependCollapseIndicator();
 		tokens.AppendCloseBrace();
 	}
 }
@@ -813,6 +815,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 				if (function->IsInstructionCollapsed(instr, 1))
 				{
 					tokens.Append(CollapsedInformationToken, " {...}");
+					tokens.NewLine();
 				}
 				else
 				{

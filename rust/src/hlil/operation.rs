@@ -1,9 +1,11 @@
-use binaryninjacore_sys::BNGetGotoLabelName;
+use core::ffi;
+
+use binaryninjacore_sys::*;
 
 use crate::architecture::CoreIntrinsic;
 use crate::function::Function;
 use crate::rc::Ref;
-use crate::string::BnString;
+use crate::string::{BnStrCompatible, BnString};
 use crate::types::{ConstantData, SSAVariable, Variable};
 
 use super::HighLevelILLiftedInstruction;
@@ -17,6 +19,17 @@ pub struct GotoLabel {
 impl GotoLabel {
     pub fn name(&self) -> BnString {
         unsafe { BnString::from_raw(BNGetGotoLabelName(self.function.handle, self.target)) }
+    }
+
+    fn set_name<S: BnStrCompatible>(&self, name: S) {
+        let raw = name.into_bytes_with_nul();
+        unsafe {
+            BNSetUserGotoLabelName(
+                self.function.handle,
+                self.target,
+                raw.as_ref().as_ptr() as *const ffi::c_char,
+            )
+        }
     }
 }
 
@@ -295,6 +308,16 @@ pub struct Label {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedLabel {
     pub target: GotoLabel,
+}
+
+impl LiftedLabel {
+    pub fn name(&self) -> BnString {
+        self.target.name()
+    }
+
+    pub fn set_name<S: BnStrCompatible>(&self, name: S) {
+        self.target.set_name(name)
+    }
 }
 
 // IF

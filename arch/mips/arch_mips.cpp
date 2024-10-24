@@ -181,20 +181,25 @@ class MipsArchitecture: public Architecture
 protected:
 	size_t m_bits;
 	BNEndianness m_endian;
+	MipsVersion version_overwrite;
 	uint32_t m_decomposeFlags;
 
 	virtual bool Disassemble(const uint8_t* data, uint64_t addr, size_t maxLen, Instruction& result)
 	{
+		MipsVersion version = version_overwrite;
+
 		memset(&result, 0, sizeof(result));
-		if (mips_decompose((uint32_t*)data, maxLen,  &result, m_bits == 64 ? MIPS_64 : MIPS_32, addr, m_endian, m_decomposeFlags) != 0)
+		if (m_bits == 64)
+		{
+			version = MIPS_64;
+		}
+
+		if (mips_decompose((uint32_t*)data, maxLen, &result, version, addr, m_endian, m_decomposeFlags) != 0)
 			return false;
 		return true;
 	}
 
-	virtual size_t GetAddressSize() const override
-	{
-		return m_bits / 8;
-	}
+	virtual size_t GetAddressSize() const override { return m_bits / 8; }
 
 	size_t InstructionHasBranchDelay(const Instruction& instr)
 	{
@@ -402,8 +407,8 @@ protected:
 	}
 
 public:
-	MipsArchitecture(const std::string& name, BNEndianness endian, size_t bits, uint32_t decomposeFlags = 0)
-		: Architecture(name), m_bits(bits), m_endian(endian), m_decomposeFlags(decomposeFlags)
+	MipsArchitecture(const std::string& name, BNEndianness endian, size_t bits, MipsVersion version_in, uint32_t decomposeFlags = 0)
+		: Architecture(name), m_bits(bits), m_endian(endian), version_overwrite(version_in), m_decomposeFlags(decomposeFlags)
 	{
 		Ref<Settings> settings = Settings::Instance();
 		uint32_t flag_pseudo_ops = settings->Get<bool>("arch.mips.disassembly.pseudoOps") ? DECOMPOSE_FLAGS_PSEUDO_OP : 0;
@@ -3238,18 +3243,20 @@ extern "C"
 	{
 		InitMipsSettings();
 
-		Architecture* mipsel = new MipsArchitecture("mipsel32", LittleEndian, 32);
-		Architecture* mipseb = new MipsArchitecture("mips32", BigEndian, 32);
-		Architecture* mips64el = new MipsArchitecture("mipsel64", LittleEndian, 64);
-		Architecture* mips64eb = new MipsArchitecture("mips64", BigEndian, 64);
-		Architecture* cnmips64eb = new MipsArchitecture("cavium-mips64", BigEndian, 64, DECOMPOSE_FLAGS_CAVIUM);
+		Architecture* mipsel = new MipsArchitecture("mipsel32", LittleEndian, 32, MIPS_32);
+		Architecture* mipseb = new MipsArchitecture("mips32", BigEndian, 32, MIPS_32);
+		Architecture* mips3 = new MipsArchitecture("mips3", BigEndian, 32, MIPS_3);
+		Architecture* mips64el = new MipsArchitecture("mipsel64", LittleEndian, 64, MIPS_64);
+		Architecture* mips64eb = new MipsArchitecture("mips64", BigEndian, 64, MIPS_64);
+		Architecture* cnmips64eb = new MipsArchitecture("cavium-mips64", BigEndian, 64, MIPS_64, DECOMPOSE_FLAGS_CAVIUM);
 
 		Architecture::Register(mipsel);
 		Architecture::Register(mipseb);
+		Architecture::Register(mips3);
 		Architecture::Register(mips64el);
 		Architecture::Register(mips64eb);
 		Architecture::Register(cnmips64eb);
-
+		
 		/* calling conventions */
 		MipsO32CallingConvention* o32LE = new MipsO32CallingConvention(mipsel);
 		MipsO32CallingConvention* o32BE = new MipsO32CallingConvention(mipseb);
@@ -3258,9 +3265,11 @@ extern "C"
 		MipsN64CallingConvention* n64BEc = new MipsN64CallingConvention(cnmips64eb);
 
 		mipsel->RegisterCallingConvention(o32LE);
-		mipseb->RegisterCallingConvention(o32BE);
 		mipsel->SetDefaultCallingConvention(o32LE);
+		mipseb->RegisterCallingConvention(o32BE);
 		mipseb->SetDefaultCallingConvention(o32BE);
+		mips3->RegisterCallingConvention(o32BE);
+		mips3->SetDefaultCallingConvention(o32BE);
 		mips64el->RegisterCallingConvention(n64LE);
 		mips64el->SetDefaultCallingConvention(n64LE);
 		mips64eb->RegisterCallingConvention(n64BE);
@@ -3272,9 +3281,11 @@ extern "C"
 		MipsLinuxSyscallCallingConvention* linuxSyscallBE = new MipsLinuxSyscallCallingConvention(mipseb);
 		mipsel->RegisterCallingConvention(linuxSyscallLE);
 		mipseb->RegisterCallingConvention(linuxSyscallBE);
+		mips3->RegisterCallingConvention(linuxSyscallBE);
 
 		mipsel->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mipsel));
 		mipseb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mipseb));
+		mips3->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips3));
 		mips64el->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips64el));
 		mips64eb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips64eb));
 		cnmips64eb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(cnmips64eb));
@@ -3282,9 +3293,11 @@ extern "C"
 		/* function recognizers */
 		mipsel->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
 		mipseb->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
+		mips3->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
 
 		mipsel->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mipseb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
+		mips3->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mips64el->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mips64eb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		cnmips64eb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
@@ -3303,6 +3316,7 @@ extern "C"
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS64, BigEndian, mips64eb);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, LittleEndian, mipsel);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, BigEndian, mipseb);
+		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, BigEndian, mips3);
 
 		Ref<BinaryViewType> elf = BinaryViewType::GetByName("ELF");
 		if (elf)

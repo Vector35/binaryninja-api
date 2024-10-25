@@ -204,9 +204,9 @@ impl Matcher {
                     let mut resolved = false;
                     if let Some(ref_guid) = c.guid {
                         // NOTE: We do not need to check for cyclic reference here because
-                        // NOTE: GUID references are unable to be referenced.
+                        // NOTE: GUID references are unable to be referenced by themselves.
                         if view.get_type_by_id(ref_guid.to_string()).is_none() {
-                            // Add the ref to the view if it is in the Matcher types
+                            // Add the referrer to the view if it is in the Matcher types
                             if let Some(ref_ty) = matcher.types.get(&ref_guid) {
                                 inner_add_type_to_view(matcher, view, arch, visited_refs, &ref_ty);
                                 resolved = true;
@@ -228,12 +228,13 @@ impl Matcher {
                             visited_refs.remove(ref_name);
                         }
                     }
+
+                    // All nested types _should_ be added now, we can add this type.
+                    let ty_name = ty.name.to_owned().unwrap_or_else(|| ty_id_str.clone());
+                    view.define_auto_type_with_id(ty_name, ty_id_str, &to_bn_type(arch, ty));
                 }
                 _ => {}
             }
-            // All nested types _should_ be added now, we can add this type.
-            let ty_name = ty.name.to_owned().unwrap_or_else(|| ty_id_str.clone());
-            view.define_auto_type_with_id(ty_name, ty_id_str, &to_bn_type(arch, ty));
         }
         inner_add_type_to_view(self, view, arch, &mut HashSet::new(), ty)
     }
@@ -253,7 +254,7 @@ impl Matcher {
         let on_new_match = |matched: &Function| {
             // We also want to resolve the types here.
             if let TypeClass::Function(c) = matched.ty.class.as_ref() {
-                // Recursively go through the function type and resolve the uuids
+                // Recursively go through the function type and resolve referrers
                 let view = function.view();
                 let arch = function.arch();
                 for out_member in &c.out_members {
@@ -293,14 +294,14 @@ impl Matcher {
                 } else if let Some(matched_function) =
                     self.match_function_from_constraints(function, &matched)
                 {
-                    log::info!(
+                    log::debug!(
                         "Found best matching function `{}`... 0x{:x}",
                         matched_function.symbol.name,
                         function.start()
                     );
                     on_new_match(matched_function);
                 } else {
-                    log::error!(
+                    log::debug!(
                         "Failed to find matching function `{}`... 0x{:x}",
                         matched.len(),
                         function.start()

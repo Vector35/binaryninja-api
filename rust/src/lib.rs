@@ -173,6 +173,8 @@ pub mod types;
 pub mod update;
 pub mod workflow;
 
+use std::collections::HashMap;
+use std::ffi::CStr;
 use std::path::PathBuf;
 use std::ptr;
 
@@ -594,6 +596,21 @@ pub fn path_relative_to_user_directory<S: string::BnStrCompatible>(path: S) -> R
     Ok(PathBuf::from(
         unsafe { string::BnString::from_raw(s) }.to_string(),
     ))
+}
+
+pub fn memory_info() -> HashMap<String, u64> {
+    let mut count = 0;
+    let mut usage = HashMap::new();
+    unsafe {
+        let info_ptr = binaryninjacore_sys::BNGetMemoryUsageInfo(&mut count);
+        let info_list = std::slice::from_raw_parts(info_ptr, count);
+        for info in info_list {
+            let info_name = CStr::from_ptr(info.name).to_str().unwrap().to_string();
+            usage.insert(info_name, info.value);
+        }
+        binaryninjacore_sys::BNFreeMemoryUsageInfo(info_ptr, count);
+    }
+    usage
 }
 
 pub fn version() -> string::BnString {

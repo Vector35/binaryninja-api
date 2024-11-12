@@ -453,16 +453,14 @@ int64_t MMappedFileAccessor::ReadLong(size_t address)
 	return ((int64_t*)(&(((uint8_t*)m_mmap._mmap)[address])))[0];
 }
 
-BinaryNinja::DataBuffer* MMappedFileAccessor::ReadBuffer(size_t address, size_t length)
+BinaryNinja::DataBuffer MMappedFileAccessor::ReadBuffer(size_t address, size_t length)
 {
 	if (address > m_mmap.len)
 		throw MappingReadException();
 	if (address + length > m_mmap.len)
 		throw MappingReadException();
 	void* data = (void*)(&(((uint8_t*)m_mmap._mmap)[address]));
-	void* dataCopy = malloc(length);
-	memcpy(dataCopy, data, length);
-	return new BinaryNinja::DataBuffer(dataCopy, length);
+	return BinaryNinja::DataBuffer(data, length);
 }
 
 void MMappedFileAccessor::Read(void* dest, size_t address, size_t length)
@@ -656,7 +654,7 @@ int64_t VM::ReadLong(size_t address)
 	return mapping.first.fileAccessor->lock()->ReadLong(mapping.second);
 }
 
-BinaryNinja::DataBuffer* VM::ReadBuffer(size_t addr, size_t length)
+BinaryNinja::DataBuffer VM::ReadBuffer(size_t addr, size_t length)
 {
 	auto mapping = MappingAtAddress(addr);
 	return mapping.first.fileAccessor->lock()->ReadBuffer(mapping.second, length);
@@ -767,14 +765,14 @@ size_t VMReader::ReadPointer()
 	return 0;
 }
 
-BinaryNinja::DataBuffer* VMReader::ReadBuffer(size_t length)
+BinaryNinja::DataBuffer VMReader::ReadBuffer(size_t length)
 {
 	auto mapping = m_vm->MappingAtAddress(m_cursor);
 	m_cursor += length;
 	return mapping.first.fileAccessor->lock()->ReadBuffer(mapping.second, length);
 }
 
-BinaryNinja::DataBuffer* VMReader::ReadBuffer(size_t addr, size_t length)
+BinaryNinja::DataBuffer VMReader::ReadBuffer(size_t addr, size_t length)
 {
 	auto mapping = m_vm->MappingAtAddress(addr);
 	m_cursor = addr + length;

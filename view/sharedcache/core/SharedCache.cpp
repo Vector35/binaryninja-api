@@ -223,7 +223,7 @@ void SharedCache::PerformInitialLoad()
 
 	m_baseFilePath = path;
 
-	DataBuffer sig = *baseFile->ReadBuffer(0, 4);
+	DataBuffer sig = baseFile->ReadBuffer(0, 4);
 	if (sig.GetLength() != 4)
 		abort();
 	const char* magic = (char*)sig.GetData();
@@ -1571,13 +1571,13 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
 
 				auto name = stubIsland.prettyName;
 				m_dscView->GetParentView()->GetParentView()->WriteBuffer(
-					m_dscView->GetParentView()->GetParentView()->GetEnd(), *buff);
+					m_dscView->GetParentView()->GetParentView()->GetEnd(), buff);
 				m_dscView->GetParentView()->AddAutoSegment(rawViewEnd, stubIsland.size, rawViewEnd, stubIsland.size,
 					SegmentReadable | SegmentExecutable);
 				m_dscView->AddUserSegment(stubIsland.start, stubIsland.size, rawViewEnd, stubIsland.size,
 					SegmentReadable | SegmentExecutable);
 				m_dscView->AddUserSection(name, stubIsland.start, stubIsland.size, ReadOnlyCodeSectionSemantics);
-				m_dscView->WriteBuffer(stubIsland.start, *buff);
+				m_dscView->WriteBuffer(stubIsland.start, buff);
 
 				stubIsland.loaded = true;
 
@@ -1611,13 +1611,13 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
 
 				auto name = dyldData.prettyName;
 				m_dscView->GetParentView()->GetParentView()->WriteBuffer(
-					m_dscView->GetParentView()->GetParentView()->GetEnd(), *buff);
-				m_dscView->GetParentView()->WriteBuffer(rawViewEnd, *buff);
+					m_dscView->GetParentView()->GetParentView()->GetEnd(), buff);
+				m_dscView->GetParentView()->WriteBuffer(rawViewEnd, buff);
 				m_dscView->GetParentView()->AddAutoSegment(rawViewEnd, dyldData.size, rawViewEnd, dyldData.size,
 					SegmentReadable);
 				m_dscView->AddUserSegment(dyldData.start, dyldData.size, rawViewEnd, dyldData.size, SegmentReadable);
 				m_dscView->AddUserSection(name, dyldData.start, dyldData.size, ReadOnlyDataSectionSemantics);
-				m_dscView->WriteBuffer(dyldData.start, *buff);
+				m_dscView->WriteBuffer(dyldData.start, buff);
 
 				dyldData.loaded = true;
 				dyldData.rawViewOffsetIfLoaded = rawViewEnd;
@@ -1650,12 +1650,12 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
 
 				auto name = region.prettyName;
 				m_dscView->GetParentView()->GetParentView()->WriteBuffer(
-					m_dscView->GetParentView()->GetParentView()->GetEnd(), *buff);
-				m_dscView->GetParentView()->WriteBuffer(rawViewEnd, *buff);
+					m_dscView->GetParentView()->GetParentView()->GetEnd(), buff);
+				m_dscView->GetParentView()->WriteBuffer(rawViewEnd, buff);
 				m_dscView->GetParentView()->AddAutoSegment(rawViewEnd, region.size, rawViewEnd, region.size, region.flags);
 				m_dscView->AddUserSegment(region.start, region.size, rawViewEnd, region.size, region.flags);
 				m_dscView->AddUserSection(name, region.start, region.size, ReadOnlyCodeSectionSemantics);
-				m_dscView->WriteBuffer(region.start, *buff);
+				m_dscView->WriteBuffer(region.start, buff);
 
 				region.loaded = true;
 				region.rawViewOffsetIfLoaded = rawViewEnd;
@@ -1685,13 +1685,13 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
 	ParseAndApplySlideInfoForFile(targetFile);
 	auto buff = reader.ReadBuffer(targetSegment->start, targetSegment->size);
 	m_dscView->GetParentView()->GetParentView()->WriteBuffer(
-		m_dscView->GetParentView()->GetParentView()->GetEnd(), *buff);
-	m_dscView->GetParentView()->WriteBuffer(rawViewEnd, *buff);
+		m_dscView->GetParentView()->GetParentView()->GetEnd(), buff);
+	m_dscView->GetParentView()->WriteBuffer(rawViewEnd, buff);
 	m_dscView->GetParentView()->AddAutoSegment(
 		rawViewEnd, targetSegment->size, rawViewEnd, targetSegment->size, SegmentReadable);
 	m_dscView->AddUserSegment(
 		targetSegment->start, targetSegment->size, rawViewEnd, targetSegment->size, targetSegment->flags);
-	m_dscView->WriteBuffer(targetSegment->start, *buff);
+	m_dscView->WriteBuffer(targetSegment->start, buff);
 
 	targetSegment->loaded = true;
 	targetSegment->rawViewOffsetIfLoaded = rawViewEnd;
@@ -1764,8 +1764,8 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
 		auto rawViewEnd = m_dscView->GetParentView()->GetEnd();
 
 		auto buff = reader.ReadBuffer(region.start, region.size);
-		m_dscView->GetParentView()->GetParentView()->WriteBuffer(rawViewEnd, *buff);
-		m_dscView->GetParentView()->WriteBuffer(rawViewEnd, *buff);
+		m_dscView->GetParentView()->GetParentView()->WriteBuffer(rawViewEnd, buff);
+		m_dscView->GetParentView()->WriteBuffer(rawViewEnd, buff);
 
 		region.loaded = true;
 		region.rawViewOffsetIfLoaded = rawViewEnd;
@@ -1774,7 +1774,7 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
 
 		m_dscView->GetParentView()->AddAutoSegment(rawViewEnd, region.size, rawViewEnd, region.size, region.flags);
 		m_dscView->AddUserSegment(region.start, region.size, rawViewEnd, region.size, region.flags);
-		m_dscView->WriteBuffer(region.start, *buff);
+		m_dscView->WriteBuffer(region.start, buff);
 
 		regionsToLoad.push_back(&region);
 	}
@@ -2530,7 +2530,7 @@ void SharedCache::InitializeHeader(
 
 		while (i < header.functionStarts.funcsize)
 		{
-			curOffset = readLEB128(*funcStarts, header.functionStarts.funcsize, i);
+			curOffset = readLEB128(funcStarts, header.functionStarts.funcsize, i);
 			bool addFunction = false;
 			for (const auto& region : regionsToLoad)
 			{
@@ -2569,7 +2569,7 @@ void SharedCache::InitializeHeader(
 			if (sym.n_strx >= header.symtab.strsize || ((sym.n_type & N_TYPE) == N_INDR))
 				continue;
 
-			std::string symbol((char*)strtab->GetDataAt(sym.n_strx));
+			std::string symbol((char*)strtab.GetDataAt(sym.n_strx));
 			// BNLogError("%s: 0x%llx", symbol.c_str(), sym.n_value);
 			if (symbol == "<redacted>")
 				continue;
@@ -2769,8 +2769,8 @@ std::vector<Ref<Symbol>> SharedCache::ParseExportTrie(std::shared_ptr<MMappedFil
 
 		std::vector<ExportNode> nodes;
 
-		DataBuffer* buffer = reader->ReadBuffer(header.exportTrie.dataoff, header.exportTrie.datasize);
-		ReadExportNode(symbols, header, *buffer, header.textBase, "", 0, header.exportTrie.datasize);
+		DataBuffer buffer = reader->ReadBuffer(header.exportTrie.dataoff, header.exportTrie.datasize);
+		ReadExportNode(symbols, header, buffer, header.textBase, "", 0, header.exportTrie.datasize);
 	}
 	catch (std::exception& e)
 	{

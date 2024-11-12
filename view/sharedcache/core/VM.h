@@ -172,7 +172,7 @@ public:
 
     int64_t ReadLong(size_t address);
 
-    BinaryNinja::DataBuffer *ReadBuffer(size_t addr, size_t length);
+    BinaryNinja::DataBuffer ReadBuffer(size_t addr, size_t length);
 
     void Read(void *dest, size_t addr, size_t length);
 };
@@ -252,7 +252,7 @@ public:
 
     int64_t ReadLong(size_t address);
 
-    BinaryNinja::DataBuffer *ReadBuffer(size_t addr, size_t length);
+    BinaryNinja::DataBuffer ReadBuffer(size_t addr, size_t length);
 
     void Read(void *dest, size_t addr, size_t length);
 };
@@ -320,9 +320,9 @@ public:
 
     size_t ReadPointer(size_t address);
 
-    BinaryNinja::DataBuffer *ReadBuffer(size_t length);
+    BinaryNinja::DataBuffer ReadBuffer(size_t length);
 
-    BinaryNinja::DataBuffer *ReadBuffer(size_t addr, size_t length);
+    BinaryNinja::DataBuffer ReadBuffer(size_t addr, size_t length);
 
     void Read(void *dest, size_t length);
 

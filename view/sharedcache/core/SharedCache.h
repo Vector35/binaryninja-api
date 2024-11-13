@@ -967,7 +967,7 @@ namespace SharedCacheCore {
 						m_activeContext.allocator);
 					exportInfoArr.PushBack(exportInfoPairArr, m_activeContext.allocator);
 				}
-				exportInfoArr.PushBack(exportInfoArr, m_activeContext.allocator);
+				exportInfos.PushBack(exportInfoArr, m_activeContext.allocator);
 			}
 			m_activeContext.doc.AddMember("exportInfos", exportInfos, m_activeContext.allocator);
 			// std::vector<std::pair<uint64_t, std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>>> m_symbolInfos
@@ -985,7 +985,7 @@ namespace SharedCacheCore {
 						m_activeContext.allocator);
 					symbolInfoArr.PushBack(symbolInfoPairArr, m_activeContext.allocator);
 				}
-				symbolInfoArr.PushBack(symbolInfoArr, m_activeContext.allocator);
+				symbolInfos.PushBack(symbolInfoArr, m_activeContext.allocator);
 			}
 			m_activeContext.doc.AddMember("symbolInfos", symbolInfos, m_activeContext.allocator);
 

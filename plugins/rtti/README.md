@@ -18,7 +18,7 @@ struct _RTTICompleteObjectLocator MapTrackView::`RTTI Complete Object Locator'{f
 }
 ```
 
-_The above listing includes type information deduced seperately through demangled names_
+_The above listing includes type information deduced separately through demangled names_
 
 ## Example Virtual Function Table Listing
 
@@ -38,7 +38,7 @@ struct QPaintDevice::MapTrackView::VTable MapTrackView::`vftable'{for `QPaintDev
 }
 ```
 
-_The above listing includes type information deduced seperately through demangled names_
+_The above listing includes type information deduced separately through demangled names_
 
 ## Exposed Metadata
 

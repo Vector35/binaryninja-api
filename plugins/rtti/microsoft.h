@@ -1,10 +1,9 @@
 #pragma once
 
 #include "binaryninjaapi.h"
+#include "rtti.h"
 
-constexpr const char *VIEW_METADATA_MSVC = "msvc";
-
-namespace BinaryNinja {
+namespace BinaryNinja::RTTI::Microsoft {
 	struct BaseClassArray
 	{
 		uint32_t length;
@@ -58,38 +57,6 @@ namespace BinaryNinja {
 		CompleteObjectLocator(BinaryView *view, uint64_t address);
 	};
 
-	struct VirtualFunctionInfo
-	{
-		uint64_t funcAddr;
-
-		Ref<Metadata> SerializedMetadata();
-
-		static VirtualFunctionInfo DeserializedMetadata(const Ref<Metadata> &metadata);
-	};
-
-	struct VirtualFunctionTableInfo
-	{
-		uint64_t address;
-		std::vector<VirtualFunctionInfo> virtualFunctions;
-
-		Ref<Metadata> SerializedMetadata();
-
-		static VirtualFunctionTableInfo DeserializedMetadata(const Ref<Metadata> &metadata);
-	};
-
-	struct ClassInfo
-	{
-		std::string className;
-		std::optional<std::string> baseClassName;
-		std::optional<uint64_t> classOffset;
-		std::optional<VirtualFunctionTableInfo> vft;
-		std::optional<VirtualFunctionTableInfo> baseVft;
-
-		Ref<Metadata> SerializedMetadata();
-
-		static ClassInfo DeserializedMetadata(const Ref<Metadata> &metadata);
-	};
-
 	class MicrosoftRTTIProcessor
 	{
 		Ref<BinaryView> m_view;
@@ -104,8 +71,6 @@ namespace BinaryNinja {
 		std::set<uint64_t> m_visitedClassHierarchyDescAddrs;
 
 		void DeserializedMetadata(const Ref<Metadata> &metadata);
-
-		std::optional<std::string> DemangleName(const std::string &mangledName);
 
 		std::optional<ClassInfo> ProcessRTTI(uint64_t coLocatorAddr);
 

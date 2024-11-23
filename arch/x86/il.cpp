@@ -2939,8 +2939,8 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
 				il.RotateRight(opOneLen,
-					ReadILOperand(il, xedd, addr, 0, 0),
-					ReadILOperand(il, xedd, addr, 1, 1)
+					ReadILOperand(il, xedd, addr, 1, 1),
+					ReadILOperand(il, xedd, addr, 2, 2)
 				)));
 		break;
 
@@ -2957,8 +2957,8 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
 				il.ArithShiftRight(opOneLen,
-					ReadILOperand(il, xedd, addr, 0, 0),
-					ReadILOperand(il, xedd, addr, 1, 1)
+					ReadILOperand(il, xedd, addr, 1, 1),
+					ReadILOperand(il, xedd, addr, 2, 2)
 				)));
 		break;
 
@@ -3128,8 +3128,8 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
 				il.ShiftLeft(opOneLen,
-					ReadILOperand(il, xedd, addr, 0, 0),
-					ReadILOperand(il, xedd, addr, 1, 1)
+					ReadILOperand(il, xedd, addr, 1, 1),
+					ReadILOperand(il, xedd, addr, 2, 2)
 				)));
 		break;
 
@@ -3137,8 +3137,8 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
 				il.LogicalShiftRight(opOneLen,
-					ReadILOperand(il, xedd, addr, 0, 0),
-					ReadILOperand(il, xedd, addr, 1, 1)
+					ReadILOperand(il, xedd, addr, 1, 1),
+					ReadILOperand(il, xedd, addr, 2, 2)
 				)));
 		break;
 

@@ -83,10 +83,17 @@ std::unordered_map<uint64_t, BNDSCViewLoadProgress> progressMap;
 
 struct ViewSpecificMutexes {
 	std::mutex viewOperationsThatInfluenceMetadataMutex;
-	std::mutex typeLibraryLookupAndApplicationMutex;
 };
 
 static std::unordered_map<uint64_t, ViewSpecificMutexes> viewSpecificMutexes;
+
+// TODO: I believe this leaks memory due to no cleanup when a view is closed
+struct ViewSpecificCaches {
+	std::map<std::string, Ref<TypeLibrary>> typeLibraryCache;
+	std::mutex typeLibraryCacheMutex;
+};
+
+static std::unordered_map<uint64_t, ViewSpecificCaches> viewSpecificCaches;
 
 
 std::string base_name(std::string const& path)
@@ -1785,21 +1792,27 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
 		return false;
 	}
 
-	std::unique_lock<std::mutex> typelibLock(viewSpecificMutexes[m_dscView->GetFile()->GetSessionId()].typeLibraryLookupAndApplicationMutex);
-	auto typeLib = m_dscView->GetTypeLibrary(header.installName);
-
-	if (!typeLib)
+	Ref<TypeLibrary> typeLib;
+	std::unique_lock<std::mutex> typeLibraryCacheLock(viewSpecificCaches[m_dscView->GetFile()->GetSessionId()].typeLibraryCacheMutex);
+	auto typeLibraryCache = viewSpecificCaches[m_dscView->GetFile()->GetSessionId()].typeLibraryCache;
+	if (auto it = typeLibraryCache.find(header.installName); it != typeLibraryCache.end()) {
+		typeLib = it->second;
+	}
+	else
 	{
-		auto typeLibs = m_dscView->GetDefaultPlatform()->GetTypeLibrariesByName(header.installName);
-		if (!typeLibs.empty())
+		typeLib = m_dscView->GetTypeLibrary(header.installName);
+		if (!typeLib)
 		{
-			typeLib = typeLibs[0];
-			m_dscView->AddTypeLibrary(typeLib);
-			m_logger->LogInfo("shared-cache: adding type library for '%s': %s (%s)",
-				targetImage->installName.c_str(), typeLib->GetName().c_str(), typeLib->GetGuid().c_str());
+			auto typeLibs = m_dscView->GetDefaultPlatform()->GetTypeLibrariesByName(header.installName);
+			if (!typeLibs.empty())
+			{
+				typeLib = typeLibs[0];
+				typeLibraryCache[header.installName] = typeLib;
+				m_dscView->AddTypeLibrary(typeLib);
+			}
 		}
 	}
-	typelibLock.unlock();
+	typeLibraryCacheLock.unlock();
 
 	SaveToDSCView();
 
@@ -2885,18 +2898,29 @@ void SharedCache::FindSymbolAtAddrAndApplyToAddr(uint64_t symbolLocation, uint64
 		}
 		auto exportList = SharedCache::ParseExportTrie(mapping, *header);
 		std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>> exportMapping;
-		std::unique_lock<std::mutex> lock(viewSpecificMutexes[m_dscView->GetFile()->GetSessionId()].typeLibraryLookupAndApplicationMutex);
-		auto typeLib = m_dscView->GetTypeLibrary(header->installName);
-		if (!typeLib)
+
+		Ref<TypeLibrary> typeLib;
+		std::unique_lock<std::mutex> typeLibraryCacheLock(viewSpecificCaches[m_dscView->GetFile()->GetSessionId()].typeLibraryCacheMutex);
+		auto typeLibraryCache = viewSpecificCaches[m_dscView->GetFile()->GetSessionId()].typeLibraryCache;
+		if (auto it = typeLibraryCache.find(header->installName); it != typeLibraryCache.end()) {
+			typeLib = it->second;
+		}
+		else
 		{
-			auto typeLibs = m_dscView->GetDefaultPlatform()->GetTypeLibrariesByName(header->installName);
-			if (!typeLibs.empty())
+			typeLib = m_dscView->GetTypeLibrary(header->installName);
+			if (!typeLib)
 			{
-				typeLib = typeLibs[0];
-				m_dscView->AddTypeLibrary(typeLib);
+				auto typeLibs = m_dscView->GetDefaultPlatform()->GetTypeLibrariesByName(header->installName);
+				if (!typeLibs.empty())
+				{
+					typeLib = typeLibs[0];
+					typeLibraryCache[header->installName] = typeLib;
+					m_dscView->AddTypeLibrary(typeLib);
+				}
 			}
 		}
-		lock.unlock();
+		typeLibraryCacheLock.unlock();
+
 		id = m_dscView->BeginUndoActions();
 		m_dscView->BeginBulkModifySymbols();
 		for (const auto& sym : exportList)

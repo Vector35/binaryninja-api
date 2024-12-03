@@ -31,9 +31,10 @@ void RTTIAnalysis(const Ref<AnalysisContext>& analysisContext)
 	else
 	{
 		// TODO: We currently only want to check for itanium rtti on non windows platforms
+		// TODO: This needs to always run.
 		auto processor = RTTI::Itanium::ItaniumRTTIProcessor(view);
 		processor.ProcessRTTI();
-		// view->StoreMetadata(VIEW_METADATA_RTTI, processor.SerializedMetadata(), true);
+		view->StoreMetadata(VIEW_METADATA_RTTI, processor.SerializedMetadata(), true);
 	}
 }
 
@@ -46,15 +47,17 @@ void VFTAnalysis(const Ref<AnalysisContext>& analysisContext)
 	// TODO: Run for both itanium and ms (depending on platform)
 	auto processor = RTTI::Microsoft::MicrosoftRTTIProcessor(view);
 	processor.ProcessVFT();
+	auto itaniumProcessor = RTTI::Itanium::ItaniumRTTIProcessor(view);
+	itaniumProcessor.ProcessVTT();
 	view->StoreMetadata(VIEW_METADATA_RTTI, processor.SerializedMetadata(), true);
 }
+
 
 void MakeItaniumRTTIHere(Ref<BinaryView> view, uint64_t addr)
 {
 	auto processor = RTTI::Itanium::ItaniumRTTIProcessor(view);
 	processor.ProcessRTTI(addr);
 }
-
 
 
 extern "C" {

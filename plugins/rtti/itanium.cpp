@@ -238,6 +238,35 @@ std::optional<TypeInfoVariant> ReadTypeInfoVariant(BinaryView *view, uint64_t ob
 }
 
 
+Ref<Metadata> ItaniumRTTIProcessor::SerializedMetadata()
+{
+    std::map<std::string, Ref<Metadata> > classesMeta;
+    for (auto &[coLocatorAddr, classInfo]: m_classInfo)
+    {
+        auto addrStr = std::to_string(coLocatorAddr);
+        classesMeta[addrStr] = classInfo.SerializedMetadata();
+    }
+
+    std::map<std::string, Ref<Metadata> > msvcMeta;
+    msvcMeta["classes"] = new Metadata(classesMeta);
+    return new Metadata(msvcMeta);
+}
+
+
+void ItaniumRTTIProcessor::DeserializedMetadata(const Ref<Metadata> &metadata)
+{
+    std::map<std::string, Ref<Metadata> > msvcMeta = metadata->GetKeyValueStore();
+    if (msvcMeta.find("classes") != msvcMeta.end())
+    {
+        for (auto &[objectAddrStr, classInfoMeta]: msvcMeta["classes"]->GetKeyValueStore())
+        {
+            uint64_t objectAddr = std::stoull(objectAddrStr);
+            m_classInfo[objectAddr] = ClassInfo::DeserializedMetadata(classInfoMeta);
+        }
+    }
+}
+
+
 std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
 {
     // TODO: You cant get subobject offsets from rtti, its stored above this ptr in vtable.
@@ -292,6 +321,122 @@ std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
 }
 
 
+std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVTT(uint64_t vttAddr, const ClassInfo &classInfo)
+{
+    VirtualFunctionTableInfo vttInfo = {vttAddr};
+    // Gather all virtual functions
+    BinaryReader reader = BinaryReader(m_view);
+    reader.Seek(vttAddr);
+    std::vector<Ref<Function> > virtualFunctions = {};
+    while (true)
+    {
+        uint64_t vFuncAddr = reader.ReadPointer();
+        auto funcs = m_view->GetAnalysisFunctionsForAddress(vFuncAddr);
+        if (funcs.empty())
+        {
+            Ref<Segment> segment = m_view->GetSegmentAt(vFuncAddr);
+            if (segment == nullptr || !(segment->GetFlags() & (SegmentExecutable | SegmentDenyWrite)))
+            {
+                // Last CompleteObjectLocator or hit the next CompleteObjectLocator
+                break;
+            }
+            // TODO: Is likely a function check here?
+            m_logger->LogDebug("Discovered function from virtual function table... %llx", vFuncAddr);
+            auto vFunc = m_view->AddFunctionForAnalysis(m_view->GetDefaultPlatform(), vFuncAddr, true);
+            funcs.emplace_back(vFunc);
+        }
+        // Only ever add one function.
+        virtualFunctions.emplace_back(funcs.front());
+    }
+
+    if (virtualFunctions.empty())
+    {
+        m_logger->LogDebug("Skipping empty virtual function table... %llx", vttAddr);
+        return std::nullopt;
+    }
+
+    for (auto &func: virtualFunctions)
+        vttInfo.virtualFunctions.emplace_back(VirtualFunctionInfo{func->GetStart()});
+
+    // Create virtual function table type
+    auto vftTypeName = fmt::format("{}::VTable", classInfo.className);
+    if (classInfo.baseClassName.has_value())
+    {
+        vftTypeName = fmt::format("{}::{}", classInfo.baseClassName.value(), vftTypeName);
+        // TODO: What is the correct form for the name?
+    }
+    // TODO: Hack the debug type id is used here to allow the PDB type (debug info) to overwrite the RTTI vtable type.
+    auto typeId = Type::GenerateAutoDebugTypeId(vftTypeName);
+    Ref<Type> vftType = m_view->GetTypeById(typeId);
+
+    if (vftType == nullptr)
+    {
+        size_t addrSize = m_view->GetAddressSize();
+        StructureBuilder vftBuilder = {};
+        vftBuilder.SetPropagateDataVariableReferences(true);
+        size_t vFuncIdx = 0;
+
+        // Until https://github.com/Vector35/binaryninja-api/issues/5982 is fixed
+        auto vftSize = virtualFunctions.size() * addrSize;
+        vftBuilder.SetWidth(vftSize);
+
+        if (auto baseVft = classInfo.baseVft)
+        {
+            if (classInfo.baseVft->virtualFunctions.size() <= virtualFunctions.size())
+            {
+                // Adjust the current vFunc index to the end of the shared vFuncs.
+                vFuncIdx = classInfo.baseVft->virtualFunctions.size();
+                virtualFunctions.erase(virtualFunctions.begin(), virtualFunctions.begin() + vFuncIdx);
+                // We should set the vtable as a base class so that xrefs are propagated (among other things).
+                // NOTE: this means that `this` params will be assumed pre-adjusted, this is normally fine assuming type propagation
+                // NOTE: never occurs on the vft types. Other-wise we need to change this.
+                auto baseVftTypeName = fmt::format("{}::VTable", classInfo.baseClassName.value());
+                NamedTypeReferenceBuilder baseVftNTR;
+                baseVftNTR.SetName(baseVftTypeName);
+                // Width is unresolved here so that we can keep non-base vfuncs un-inherited.
+                auto baseVftSize = vFuncIdx * addrSize;
+                vftBuilder.SetBaseStructures({ BaseStructure(baseVftNTR.Finalize(), 0, baseVftSize) });
+            }
+            else
+            {
+                LogWarn("Skipping adjustments for base VFT with more functions than sub VFT... %llx", vttAddr);
+            }
+        }
+
+        for (auto &&vFunc: virtualFunctions)
+        {
+            auto vFuncName = fmt::format("vFunc_{}", vFuncIdx);
+            // If we have a better name, use it.
+            auto vFuncSymName = vFunc->GetSymbol()->GetShortName();
+            if (vFuncSymName.compare(0, 4, "sub_") != 0)
+                vFuncName = vFunc->GetSymbol()->GetShortName();
+            // MyClass::func -> func
+            std::size_t pos = vFuncName.rfind("::");
+            if (pos != std::string::npos)
+                vFuncName = vFuncName.substr(pos + 2);
+
+            // NOTE: The analyzed function type might not be available here.
+            auto vFuncOffset = vFuncIdx * addrSize;
+            vftBuilder.AddMemberAtOffset(
+                Type::PointerType(addrSize, vFunc->GetType(), true), vFuncName, vFuncOffset);
+            vFuncIdx++;
+        }
+        m_view->DefineType(typeId, vftTypeName,
+                           Confidence(TypeBuilder::StructureType(vftBuilder.Finalize()).Finalize(), RTTI_CONFIDENCE));
+    }
+
+    auto vftName = fmt::format("_vtable_for_", classInfo.className);
+    if (classInfo.baseClassName.has_value())
+        vftName += fmt::format("{{for `{}'}}", classInfo.baseClassName.value());
+    auto vttSymbol = m_view->GetSymbolByAddress(vttAddr);
+    if (vttSymbol != nullptr)
+        m_view->UndefineAutoSymbol(vttSymbol);
+    m_view->DefineAutoSymbol(new Symbol{DataSymbol, vftName, vttAddr});
+    m_view->DefineDataVariable(vttAddr, Confidence(Type::NamedType(m_view, vftTypeName), RTTI_CONFIDENCE));
+    return vttInfo;
+}
+
+
 ItaniumRTTIProcessor::ItaniumRTTIProcessor(const Ref<BinaryView> &view, bool useMangled, bool checkRData, bool vftSweep) : m_view(view)
 {
     m_logger = new Logger("Itanium RTTI");
@@ -303,9 +448,8 @@ ItaniumRTTIProcessor::ItaniumRTTIProcessor(const Ref<BinaryView> &view, bool use
     auto metadata = view->QueryMetadata(VIEW_METADATA_RTTI);
     if (metadata != nullptr)
     {
-        // TODO: This will pull in microsoft RTTI, which is really weird behavior possibly.
         // Load in metadata to the processor.
-        // DeserializedMetadata(metadata);
+        DeserializedMetadata(metadata);
     }
 }
 
@@ -338,4 +482,96 @@ void ItaniumRTTIProcessor::ProcessRTTI()
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_time = end_time - start_time;
     m_logger->LogInfo("ProcessRTTI took %f seconds", elapsed_time.count());
+}
+
+
+void ItaniumRTTIProcessor::ProcessVTT()
+{
+   std::map<uint64_t, uint64_t> vftMap = {};
+    std::map<uint64_t, std::optional<VirtualFunctionTableInfo>> vftFinishedMap = {};
+    auto start_time = std::chrono::high_resolution_clock::now();
+    for (auto &[coLocatorAddr, classInfo]: m_classInfo)
+    {
+        for (auto &ref: m_view->GetDataReferences(coLocatorAddr))
+        {
+            // TODO: This is not pointing at where it should, remember that the vtable will be inside another structure.
+            auto vftAddr = ref + m_view->GetAddressSize();
+            vftMap[coLocatorAddr] = vftAddr;
+        }
+    }
+
+    if (virtualFunctionTableSweep)
+    {
+        BinaryReader optReader = BinaryReader(m_view);
+        auto addrSize = m_view->GetAddressSize();
+        auto scan = [&](const Ref<Segment> &segment) {
+            uint64_t startAddr = segment->GetStart();
+            uint64_t endAddr = segment->GetEnd();
+            for (uint64_t vtableAddr = startAddr; vtableAddr < endAddr - 0x10; vtableAddr += addrSize)
+            {
+                optReader.Seek(vtableAddr);
+                uint64_t coLocatorAddr = optReader.ReadPointer();
+                auto coLocator = m_classInfo.find(coLocatorAddr);
+                if (coLocator == m_classInfo.end())
+                    continue;
+                // Found a vtable reference to colocator.
+                vftMap[coLocatorAddr] = vtableAddr + addrSize;
+            }
+        };
+
+        // Scan data sections for virtual function tables.
+        auto rdataSection = m_view->GetSectionByName(".rdata");
+        for (const Ref<Segment> &segment: m_view->GetSegments())
+        {
+            if (segment->GetFlags() == (SegmentReadable | SegmentContainsData))
+            {
+                m_logger->LogDebug("Attempting to find VirtualFunctionTables in segment %llx", segment->GetStart());
+                scan(segment);
+            }
+            else if (checkWritableRData && rdataSection && rdataSection->GetStart() == segment->GetStart())
+            {
+                m_logger->LogDebug("Attempting to find VirtualFunctionTables in writable rdata segment %llx",
+                                   segment->GetStart());
+                scan(segment);
+            }
+        }
+    }
+
+    auto GetCachedVFTInfo = [&](uint64_t vftAddr, const ClassInfo& classInfo) {
+        // Check in the cache so that we don't process vfts more than once.
+        auto cachedVftInfo = vftFinishedMap.find(vftAddr);
+        if (cachedVftInfo != vftFinishedMap.end())
+            return cachedVftInfo->second;
+        auto vftInfo = ProcessVTT(vftAddr, classInfo);
+        vftFinishedMap[vftAddr] = vftInfo;
+        return vftInfo;
+    };
+
+    for (const auto &[coLocatorAddr, vftAddr]: vftMap)
+    {
+        auto classInfo = m_classInfo.find(coLocatorAddr)->second;
+        if (classInfo.baseClassName.has_value())
+        {
+            // Process base vtable and add it to the class info.
+            for (auto& [baseCoLocAddr, baseClassInfo] : m_classInfo)
+            {
+                if (baseClassInfo.className == classInfo.baseClassName.value())
+                {
+                    uint64_t baseVftAddr = vftMap[baseCoLocAddr];
+                    if (auto baseVftInfo = GetCachedVFTInfo(baseVftAddr, baseClassInfo))
+                    {
+                        classInfo.baseVft = baseVftInfo.value();
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (auto vftInfo = GetCachedVFTInfo(vftAddr, classInfo))
+            classInfo.vft = vftInfo.value();
+    }
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_time = end_time - start_time;
+    m_logger->LogInfo("ProcessVFT took %f seconds", elapsed_time.count());
 }

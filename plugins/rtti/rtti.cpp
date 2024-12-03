@@ -14,13 +14,26 @@ std::optional<std::string> RTTI::DemangleNameMS(BinaryView* view, bool allowMang
 }
 
 
-std::optional<std::string> RTTI::DemangleNameGNU3(BinaryView* view, bool allowMangled, const std::string &mangledName)
+std::string RemoveItaniumPrefix(const std::string& name) {
+    // Remove class prefixes.
+    // 7 is class_type
+    // 9 is si_class_type
+    // 14 is vmi_class_type
+    if (name.rfind('7', 0) == 0)
+        return name.substr(1);
+    if (name.rfind('9', 0) == 0)
+        return name.substr(1);
+    if (name.rfind("14", 0) == 0)
+        return name.substr(2);
+    return name;
+}
+
+
+std::optional<std::string> RTTI::DemangleNameItanium(BinaryView* view, bool allowMangled, const std::string &mangledName)
 {
-    QualifiedName demangledName = {};
-    Ref<Type> outType = {};
-    if (!DemangleGNU3(view->GetDefaultArchitecture(), mangledName, outType, demangledName, true))
-        return DemangleNameLLVM(allowMangled, mangledName);
-    return demangledName.GetString();
+    if (auto demangledName = DemangleNameLLVM(allowMangled, mangledName))
+        return RemoveItaniumPrefix(demangledName.value());
+    return std::nullopt;
 }
 
 

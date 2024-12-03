@@ -247,17 +247,15 @@ std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
         return std::nullopt;
 
     auto typeInfo = TypeInfo(m_view, objectAddr);
-    auto className = DemangleNameGNU3(m_view, allowMangledClassNames, typeInfo.type_name);
+    auto className = DemangleNameItanium(m_view, allowMangledClassNames, typeInfo.type_name);
     if (!className.has_value())
         return std::nullopt;
     auto classInfo = ClassInfo{className.value()};
 
-    // TODO: className starts with 7, 9, 14
-    // 7 == class_type
-    // 9 == si_class_type
-    // 14 == vmi_class_type
-
     auto typeInfoName = fmt::format("_typeinfo_for_{}", classInfo.className);
+    auto typeInfoSymbol = m_view->GetSymbolByAddress(objectAddr);
+    if (typeInfoSymbol != nullptr)
+        m_view->UndefineAutoSymbol(typeInfoSymbol);
     m_view->DefineAutoSymbol(new Symbol{DataSymbol, typeInfoName, objectAddr});
 
     if (typeInfoVariant == TIVSIClass)
@@ -269,7 +267,7 @@ std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
             return std::nullopt;
         auto subTypeInfo = TypeInfo(m_view, siClassTypeInfo.base_type);
         // Demangle base class name and set
-        auto baseClassName = DemangleNameGNU3(m_view, allowMangledClassNames, subTypeInfo.type_name);
+        auto baseClassName = DemangleNameItanium(m_view, allowMangledClassNames, subTypeInfo.type_name);
         if (!baseClassName.has_value())
         {
             m_logger->LogWarn("Skipping base class with mangled name %llx", siClassTypeInfo.base_type);

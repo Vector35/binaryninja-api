@@ -208,14 +208,17 @@ std::optional<TypeInfoVariant> ReadTypeInfoVariant(BinaryView *view, uint64_t ob
     // If there is a symbol at objectAddr pointing to a symbol starting with "vtable for __cxxabiv1"
     auto baseSym = view->GetSymbolByAddress(typeInfo.base);
     if (baseSym == nullptr)
-        return std::nullopt;
+    {
+        // Check relocation at objectAddr for symbol
+        for (const auto& r : view->GetRelocationsAt(objectAddr))
+            if (auto relocSym = r->GetSymbol())
+                baseSym = relocSym;
+        if (baseSym == nullptr)
+            return std::nullopt;
+    }
     if (baseSym->GetType() != ExternalSymbol)
         return std::nullopt;
     auto baseSymName = baseSym->GetShortName();
-
-    // TODO: __vmi_class_type_info seems to point to operator delete(void*)
-    // TODO: For now we just bruteforce it with the type_name check...
-
     if (baseSymName.find("__cxxabiv1") != std::string::npos)
     {
         // symbol takes the form of `abi::base_name`
@@ -229,22 +232,6 @@ std::optional<TypeInfoVariant> ReadTypeInfoVariant(BinaryView *view, uint64_t ob
             return TIVSIClass;
         if (baseSymName == "__vmi_class_type_info")
             return TIVVMIClass;   
-    }
-    else if (typeInfo.type_name.length() > 2)
-    {
-        // TODO: This is so ugly
-        switch (typeInfo.type_name.at(0))
-        {
-            case '7':
-                return TIVClass;
-            case '9':
-                return TIVSIClass;
-            case '1':
-                if (typeInfo.type_name.at(1) == '4')
-                    return TIVVMIClass;
-            default:
-                return std::nullopt;
-        }
     }
 
     return std::nullopt;

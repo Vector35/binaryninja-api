@@ -16,14 +16,16 @@ std::optional<std::string> RTTI::DemangleNameMS(BinaryView* view, bool allowMang
 
 std::string RemoveItaniumPrefix(const std::string& name) {
     // Remove class prefixes.
-    // 7 is class_type
+    // 1 and 7 is class_type
     // 9 is si_class_type
-    // 14 is vmi_class_type
+    // 1..4 is vmi_class_type
+    if (name.rfind('1', 0) == 0)
+        return name.substr(1);
     if (name.rfind('7', 0) == 0)
         return name.substr(1);
     if (name.rfind('9', 0) == 0)
         return name.substr(1);
-    if (name.rfind("14", 0) == 0)
+    if (name.rfind("4", 0) == 0)
         return name.substr(2);
     return name;
 }
@@ -57,6 +59,7 @@ std::optional<std::string> RTTI::DemangleNameLLVM(bool allowMangled, const std::
 Ref<Metadata> ClassInfo::SerializedMetadata()
 {
     std::map<std::string, Ref<Metadata> > classInfoMeta;
+    classInfoMeta["processor"] = new Metadata(static_cast<uint64_t>(processor));
     classInfoMeta["className"] = new Metadata(className);
     if (baseClassName.has_value())
         classInfoMeta["baseClassName"] = new Metadata(baseClassName.value());
@@ -72,7 +75,9 @@ Ref<Metadata> ClassInfo::SerializedMetadata()
 ClassInfo ClassInfo::DeserializedMetadata(const Ref<Metadata> &metadata)
 {
     std::map<std::string, Ref<Metadata> > classInfoMeta = metadata->GetKeyValueStore();
-    ClassInfo info = {classInfoMeta["className"]->GetString()};
+    std::string className = classInfoMeta["className"]->GetString();
+    RTTIProcessorType processor = static_cast<RTTIProcessorType>(classInfoMeta["processor"]->GetUnsignedInteger());
+    ClassInfo info = {processor, className};
     if (classInfoMeta.find("baseClassName") != classInfoMeta.end())
         info.baseClassName = classInfoMeta["baseClassName"]->GetString();
     if (classInfoMeta.find("classOffset") != classInfoMeta.end())
@@ -122,4 +127,45 @@ VirtualFunctionInfo VirtualFunctionInfo::DeserializedMetadata(const Ref<Metadata
     std::map<std::string, Ref<Metadata> > vFuncMeta = metadata->GetKeyValueStore();
     VirtualFunctionInfo vFuncInfo = {vFuncMeta["address"]->GetUnsignedInteger()};
     return vFuncInfo;
+}
+
+
+Ref<Metadata> RTTIProcessor::SerializedMetadata()
+{
+    std::map<std::string, Ref<Metadata> > classesMeta;
+    for (auto &[objectAddr, classInfo]: m_classInfo)
+    {
+        auto addrStr = std::to_string(objectAddr);
+        classesMeta[addrStr] = classInfo.SerializedMetadata();
+    }
+
+    for (auto &[objectAddr, classInfo]: m_unhandledClassInfo)
+    {
+        auto addrStr = std::to_string(objectAddr);
+        // Unhandled class info will be discarded if handled class info exists for the same address.
+        if (classesMeta.find(addrStr) == classesMeta.end())
+            classesMeta[addrStr] = classInfo.SerializedMetadata();
+    }
+
+    std::map<std::string, Ref<Metadata> > itaniumMeta;
+    itaniumMeta["classes"] = new Metadata(classesMeta);
+    return new Metadata(itaniumMeta);
+}
+
+
+void RTTIProcessor::DeserializedMetadata(RTTIProcessorType type, const Ref<Metadata> &metadata)
+{
+    std::map<std::string, Ref<Metadata> > msvcMeta = metadata->GetKeyValueStore();
+    if (msvcMeta.find("classes") != msvcMeta.end())
+    {
+        for (auto &[objectAddrStr, classInfoMeta]: msvcMeta["classes"]->GetKeyValueStore())
+        {
+            uint64_t objectAddr = std::stoull(objectAddrStr);
+            auto classInfo = ClassInfo::DeserializedMetadata(classInfoMeta);
+            if (classInfo.processor == type)
+                m_classInfo[objectAddr] = classInfo;
+            else
+                m_unhandledClassInfo[objectAddr] = classInfo;
+        }
+    }
 }

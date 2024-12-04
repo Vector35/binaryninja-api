@@ -31,9 +31,16 @@ namespace BinaryNinja::RTTI {
 		static VirtualFunctionTableInfo DeserializedMetadata(const Ref<Metadata> &metadata);
 	};
 
+	enum class RTTIProcessorType
+	{
+		Microsoft = 0,
+		Itanium = 1,
+	};
+
 	// TODO: This needs to have some flags. Virtual, pure iirc.
 	struct ClassInfo
 	{
+		RTTIProcessorType processor;
 		std::string className;
 		std::optional<std::string> baseClassName;
 		std::optional<uint64_t> classOffset;
@@ -43,5 +50,29 @@ namespace BinaryNinja::RTTI {
 		Ref<Metadata> SerializedMetadata();
 
 		static ClassInfo DeserializedMetadata(const Ref<Metadata> &metadata);
+	};
+
+	class RTTIProcessor
+	{
+	protected:
+		Ref<BinaryView> m_view;
+		Ref<Logger> m_logger;
+
+		std::map<uint64_t, ClassInfo> m_classInfo;
+		std::map<uint64_t, ClassInfo> m_unhandledClassInfo;
+
+		virtual std::optional<ClassInfo> ProcessRTTI(uint64_t objectAddr) = 0;
+
+		virtual std::optional<VirtualFunctionTableInfo> ProcessVFT(uint64_t vftAddr, ClassInfo &classInfo) = 0;
+	public:
+		virtual ~RTTIProcessor() = default;
+
+		void DeserializedMetadata(RTTIProcessorType type, const Ref<Metadata> &metadata);
+
+		Ref<Metadata> SerializedMetadata();
+
+		virtual void ProcessRTTI() = 0;
+
+		virtual void ProcessVFT() = 0;
 	};
 }

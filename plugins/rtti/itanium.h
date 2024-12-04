@@ -108,29 +108,20 @@ namespace BinaryNinja::RTTI::Itanium {
 		PointerToMemberTypeInfo(BinaryView *view, uint64_t address);
 	};
 
-	class ItaniumRTTIProcessor
+	class ItaniumRTTIProcessor : public RTTIProcessor
 	{
-		Ref<BinaryView> m_view;
-		Ref<Logger> m_logger;
 		bool allowMangledClassNames;
 		bool checkWritableRData;
 		bool virtualFunctionTableSweep;
 
-		std::map<uint64_t, ClassInfo> m_classInfo;
+		std::optional<ClassInfo> ProcessRTTI(uint64_t objectAddr) override;
 
-		void DeserializedMetadata(const Ref<Metadata> &metadata);
-
-		std::optional<VirtualFunctionTableInfo> ProcessVTT(uint64_t vttAddr, const ClassInfo &classInfo);
-
+		std::optional<VirtualFunctionTableInfo> ProcessVFT(uint64_t vftAddr, ClassInfo &classInfo) override;
 	public:
-		ItaniumRTTIProcessor(const Ref<BinaryView> &view, bool useMangled = true, bool checkRData = true, bool vttSweep = true);
+		explicit ItaniumRTTIProcessor(const Ref<BinaryView> &view, bool useMangled = true, bool checkRData = true, bool vttSweep = true);
 
-		Ref<Metadata> SerializedMetadata();
+		void ProcessRTTI() override;
 
-		void ProcessRTTI();
-
-		std::optional<ClassInfo> ProcessRTTI(uint64_t objectAddr);
-
-		void ProcessVTT();
+		void ProcessVFT() override;
 	};
 }

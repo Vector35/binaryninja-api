@@ -238,35 +238,6 @@ std::optional<TypeInfoVariant> ReadTypeInfoVariant(BinaryView *view, uint64_t ob
 }
 
 
-Ref<Metadata> ItaniumRTTIProcessor::SerializedMetadata()
-{
-    std::map<std::string, Ref<Metadata> > classesMeta;
-    for (auto &[coLocatorAddr, classInfo]: m_classInfo)
-    {
-        auto addrStr = std::to_string(coLocatorAddr);
-        classesMeta[addrStr] = classInfo.SerializedMetadata();
-    }
-
-    std::map<std::string, Ref<Metadata> > msvcMeta;
-    msvcMeta["classes"] = new Metadata(classesMeta);
-    return new Metadata(msvcMeta);
-}
-
-
-void ItaniumRTTIProcessor::DeserializedMetadata(const Ref<Metadata> &metadata)
-{
-    std::map<std::string, Ref<Metadata> > msvcMeta = metadata->GetKeyValueStore();
-    if (msvcMeta.find("classes") != msvcMeta.end())
-    {
-        for (auto &[objectAddrStr, classInfoMeta]: msvcMeta["classes"]->GetKeyValueStore())
-        {
-            uint64_t objectAddr = std::stoull(objectAddrStr);
-            m_classInfo[objectAddr] = ClassInfo::DeserializedMetadata(classInfoMeta);
-        }
-    }
-}
-
-
 std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
 {
     // TODO: You cant get subobject offsets from rtti, its stored above this ptr in vtable.
@@ -279,7 +250,7 @@ std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
     auto className = DemangleNameItanium(m_view, allowMangledClassNames, typeInfo.type_name);
     if (!className.has_value())
         return std::nullopt;
-    auto classInfo = ClassInfo{className.value()};
+    auto classInfo = ClassInfo{RTTIProcessorType::Itanium, className.value()};
 
     auto typeInfoName = fmt::format("_typeinfo_for_{}", classInfo.className);
     auto typeInfoSymbol = m_view->GetSymbolByAddress(objectAddr);
@@ -303,6 +274,8 @@ std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
             return std::nullopt;
         }
         classInfo.baseClassName = baseClassName;
+        // NOTE: The base class offset is not able to be resolved here.
+        // NOTE: To resolve the base class offset you must go to the vtable.
         m_view->DefineDataVariable(objectAddr, Confidence(SIClassTypeInfoType(m_view), 255));
     }
     else if (typeInfoVariant == TIVVMIClass)
@@ -321,12 +294,12 @@ std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
 }
 
 
-std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVTT(uint64_t vttAddr, const ClassInfo &classInfo)
+std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVFT(uint64_t vftAddr, ClassInfo &classInfo)
 {
-    VirtualFunctionTableInfo vttInfo = {vttAddr};
-    // Gather all virtual functions
+    VirtualFunctionTableInfo vftInfo = {vftAddr};
     BinaryReader reader = BinaryReader(m_view);
-    reader.Seek(vttAddr);
+    reader.Seek(vftAddr);
+    // Gather all virtual functions
     std::vector<Ref<Function> > virtualFunctions = {};
     while (true)
     {
@@ -340,6 +313,7 @@ std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVTT(uint64_
                 // Last CompleteObjectLocator or hit the next CompleteObjectLocator
                 break;
             }
+            // TODO: Sometimes vFunc idx will be zeroed.
             // TODO: Is likely a function check here?
             m_logger->LogDebug("Discovered function from virtual function table... %llx", vFuncAddr);
             auto vFunc = m_view->AddFunctionForAnalysis(m_view->GetDefaultPlatform(), vFuncAddr, true);
@@ -351,19 +325,33 @@ std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVTT(uint64_
 
     if (virtualFunctions.empty())
     {
-        m_logger->LogDebug("Skipping empty virtual function table... %llx", vttAddr);
+        m_logger->LogDebug("Skipping empty virtual function table... %llx", vftAddr);
         return std::nullopt;
     }
 
+    // All vft verification has been done, we can write the classOffset now.
+    if (classInfo.baseClassName.has_value() && !classInfo.classOffset.has_value())
+    {
+        // Because we have this we _need_ to have the adjustment stuff.
+        // NOTE: We assume two 0x4 ints with the first being what we want.
+        // NOTE: This is where we actually classOffset is pulled.
+        reader.Seek(vftAddr - 0x10);
+        auto adjustmentOffset = static_cast<int32_t>(reader.Read32());
+        auto _what = static_cast<int32_t>(reader.Read32());
+        uint64_t classOffset = std::abs(adjustmentOffset);
+        classInfo.classOffset = classOffset;
+    }
+
+
     for (auto &func: virtualFunctions)
-        vttInfo.virtualFunctions.emplace_back(VirtualFunctionInfo{func->GetStart()});
+        vftInfo.virtualFunctions.emplace_back(VirtualFunctionInfo{func->GetStart()});
 
     // Create virtual function table type
     auto vftTypeName = fmt::format("{}::VTable", classInfo.className);
     if (classInfo.baseClassName.has_value())
     {
-        vftTypeName = fmt::format("{}::{}", classInfo.baseClassName.value(), vftTypeName);
         // TODO: What is the correct form for the name?
+        vftTypeName = fmt::format("{}::{}", classInfo.baseClassName.value(), vftTypeName);
     }
     // TODO: Hack the debug type id is used here to allow the PDB type (debug info) to overwrite the RTTI vtable type.
     auto typeId = Type::GenerateAutoDebugTypeId(vftTypeName);
@@ -376,16 +364,16 @@ std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVTT(uint64_
         vftBuilder.SetPropagateDataVariableReferences(true);
         size_t vFuncIdx = 0;
 
-        // Until https://github.com/Vector35/binaryninja-api/issues/5982 is fixed
+        // TODO: Until https://github.com/Vector35/binaryninja-api/issues/5982 is fixed
         auto vftSize = virtualFunctions.size() * addrSize;
         vftBuilder.SetWidth(vftSize);
 
         if (auto baseVft = classInfo.baseVft)
         {
-            if (classInfo.baseVft->virtualFunctions.size() <= virtualFunctions.size())
+            if (baseVft->virtualFunctions.size() <= virtualFunctions.size())
             {
                 // Adjust the current vFunc index to the end of the shared vFuncs.
-                vFuncIdx = classInfo.baseVft->virtualFunctions.size();
+                vFuncIdx = baseVft->virtualFunctions.size();
                 virtualFunctions.erase(virtualFunctions.begin(), virtualFunctions.begin() + vFuncIdx);
                 // We should set the vtable as a base class so that xrefs are propagated (among other things).
                 // NOTE: this means that `this` params will be assumed pre-adjusted, this is normally fine assuming type propagation
@@ -399,7 +387,7 @@ std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVTT(uint64_
             }
             else
             {
-                LogWarn("Skipping adjustments for base VFT with more functions than sub VFT... %llx", vttAddr);
+                LogWarn("Skipping adjustments for base VFT with more functions than sub VFT... %llx", vftAddr);
             }
         }
 
@@ -425,20 +413,22 @@ std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVTT(uint64_
                            Confidence(TypeBuilder::StructureType(vftBuilder.Finalize()).Finalize(), RTTI_CONFIDENCE));
     }
 
-    auto vftName = fmt::format("_vtable_for_", classInfo.className);
+    auto vftName = fmt::format("_vtable_for_{}", classInfo.className);
+    // TODO: How to display base classes?
     if (classInfo.baseClassName.has_value())
         vftName += fmt::format("{{for `{}'}}", classInfo.baseClassName.value());
-    auto vttSymbol = m_view->GetSymbolByAddress(vttAddr);
-    if (vttSymbol != nullptr)
-        m_view->UndefineAutoSymbol(vttSymbol);
-    m_view->DefineAutoSymbol(new Symbol{DataSymbol, vftName, vttAddr});
-    m_view->DefineDataVariable(vttAddr, Confidence(Type::NamedType(m_view, vftTypeName), RTTI_CONFIDENCE));
-    return vttInfo;
+    auto vftSymbol = m_view->GetSymbolByAddress(vftAddr);
+    if (vftSymbol != nullptr)
+        m_view->UndefineAutoSymbol(vftSymbol);
+    m_view->DefineAutoSymbol(new Symbol{DataSymbol, vftName, vftAddr});
+    m_view->DefineDataVariable(vftAddr, Confidence(Type::NamedType(m_view, vftTypeName), RTTI_CONFIDENCE));
+    return vftInfo;
 }
 
 
-ItaniumRTTIProcessor::ItaniumRTTIProcessor(const Ref<BinaryView> &view, bool useMangled, bool checkRData, bool vftSweep) : m_view(view)
+ItaniumRTTIProcessor::ItaniumRTTIProcessor(const Ref<BinaryView> &view, bool useMangled, bool checkRData, bool vftSweep)
 {
+    m_view = view;
     m_logger = new Logger("Itanium RTTI");
     allowMangledClassNames = useMangled;
     checkWritableRData = checkRData;
@@ -449,7 +439,7 @@ ItaniumRTTIProcessor::ItaniumRTTIProcessor(const Ref<BinaryView> &view, bool use
     if (metadata != nullptr)
     {
         // Load in metadata to the processor.
-        DeserializedMetadata(metadata);
+        DeserializedMetadata(RTTIProcessorType::Itanium, metadata);
     }
 }
 
@@ -485,7 +475,7 @@ void ItaniumRTTIProcessor::ProcessRTTI()
 }
 
 
-void ItaniumRTTIProcessor::ProcessVTT()
+void ItaniumRTTIProcessor::ProcessVFT()
 {
    std::map<uint64_t, uint64_t> vftMap = {};
     std::map<uint64_t, std::optional<VirtualFunctionTableInfo>> vftFinishedMap = {};
@@ -494,6 +484,10 @@ void ItaniumRTTIProcessor::ProcessVTT()
     {
         for (auto &ref: m_view->GetDataReferences(coLocatorAddr))
         {
+            // Skip refs from other type info.
+            DataVariable dv;
+            if (m_view->GetDataVariableAtAddress(ref, dv) && m_classInfo.find(dv.address) != m_classInfo.end())
+                continue;
             // TODO: This is not pointing at where it should, remember that the vtable will be inside another structure.
             auto vftAddr = ref + m_view->GetAddressSize();
             vftMap[coLocatorAddr] = vftAddr;
@@ -537,12 +531,12 @@ void ItaniumRTTIProcessor::ProcessVTT()
         }
     }
 
-    auto GetCachedVFTInfo = [&](uint64_t vftAddr, const ClassInfo& classInfo) {
+    auto GetCachedVFTInfo = [&](uint64_t vftAddr, ClassInfo& classInfo) {
         // Check in the cache so that we don't process vfts more than once.
         auto cachedVftInfo = vftFinishedMap.find(vftAddr);
         if (cachedVftInfo != vftFinishedMap.end())
             return cachedVftInfo->second;
-        auto vftInfo = ProcessVTT(vftAddr, classInfo);
+        auto vftInfo = ProcessVFT(vftAddr, classInfo);
         vftFinishedMap[vftAddr] = vftInfo;
         return vftInfo;
     };
@@ -553,7 +547,7 @@ void ItaniumRTTIProcessor::ProcessVTT()
         if (classInfo.baseClassName.has_value())
         {
             // Process base vtable and add it to the class info.
-            for (auto& [baseCoLocAddr, baseClassInfo] : m_classInfo)
+            for (auto [baseCoLocAddr, baseClassInfo] : m_classInfo)
             {
                 if (baseClassInfo.className == classInfo.baseClassName.value())
                 {
@@ -569,6 +563,8 @@ void ItaniumRTTIProcessor::ProcessVTT()
 
         if (auto vftInfo = GetCachedVFTInfo(vftAddr, classInfo))
             classInfo.vft = vftInfo.value();
+
+        m_classInfo[coLocatorAddr] = classInfo;
     }
 
     auto end_time = std::chrono::high_resolution_clock::now();

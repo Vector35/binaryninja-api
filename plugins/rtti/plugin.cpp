@@ -2,11 +2,8 @@
 #include "microsoft.h"
 #include "itanium.h"
 
-#include <thread>
-
 using namespace BinaryNinja;
 
-// TODO: Split the activities so that there is two for microsoft and itanium.
 
 bool MetadataExists(const Ref<BinaryView>& view)
 {
@@ -28,14 +25,10 @@ void RTTIAnalysis(const Ref<AnalysisContext>& analysisContext)
 		processor.ProcessRTTI();
 		view->StoreMetadata(VIEW_METADATA_RTTI, processor.SerializedMetadata(), true);
 	}
-	else
-	{
-		// TODO: We currently only want to check for itanium rtti on non windows platforms
-		// TODO: This needs to always run.
-		auto processor = RTTI::Itanium::ItaniumRTTIProcessor(view);
-		processor.ProcessRTTI();
-		view->StoreMetadata(VIEW_METADATA_RTTI, processor.SerializedMetadata(), true);
-	}
+
+	auto processor = RTTI::Itanium::ItaniumRTTIProcessor(view);
+	processor.ProcessRTTI();
+	view->StoreMetadata(VIEW_METADATA_RTTI, processor.SerializedMetadata(), true);
 }
 
 
@@ -44,19 +37,13 @@ void VFTAnalysis(const Ref<AnalysisContext>& analysisContext)
 	auto view = analysisContext->GetBinaryView();
 	if (!MetadataExists(view))
 		return;
-	// TODO: Run for both itanium and ms (depending on platform)
-	auto processor = RTTI::Microsoft::MicrosoftRTTIProcessor(view);
-	processor.ProcessVFT();
+	auto microsoftProcessor = RTTI::Microsoft::MicrosoftRTTIProcessor(view);
+	microsoftProcessor.ProcessVFT();
+	// TODO: We have to store the data for the second processor to pick up the info.
+	view->StoreMetadata(VIEW_METADATA_RTTI, microsoftProcessor.SerializedMetadata(), true);
 	auto itaniumProcessor = RTTI::Itanium::ItaniumRTTIProcessor(view);
-	itaniumProcessor.ProcessVTT();
-	view->StoreMetadata(VIEW_METADATA_RTTI, processor.SerializedMetadata(), true);
-}
-
-
-void MakeItaniumRTTIHere(Ref<BinaryView> view, uint64_t addr)
-{
-	auto processor = RTTI::Itanium::ItaniumRTTIProcessor(view);
-	processor.ProcessRTTI(addr);
+	itaniumProcessor.ProcessVFT();
+	view->StoreMetadata(VIEW_METADATA_RTTI, itaniumProcessor.SerializedMetadata(), true);
 }
 
 
@@ -72,8 +59,6 @@ extern "C" {
 		// TODO:	3. Identify functions which address a VFT and are probably a constructor (alloc use), retyping if true
 		// TODO:	4. Identify functions which address a VFT and are probably a deconstructor (free use), retyping if true
 		Ref<Workflow> rttiMetaWorkflow = Workflow::Instance("core.module.metaAnalysis")->Clone("core.module.metaAnalysis");
-
-		PluginCommand::RegisterForAddress("Itanium\\Make RTTI Here", "", MakeItaniumRTTIHere);
 
 		// Add RTTI analysis.
 		rttiMetaWorkflow->RegisterActivity(R"~({

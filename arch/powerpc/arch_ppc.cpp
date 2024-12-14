@@ -322,7 +322,7 @@ class PowerpcArchitecture: public Architecture
 	virtual size_t GetDefaultIntegerSize() const override
 	{
 		MYLOG("%s()\n", __func__);
-		return 4;
+		return addressSize;
 	}
 
 	virtual size_t GetInstructionAlignment() const override
@@ -364,7 +364,7 @@ class PowerpcArchitecture: public Architecture
 		}
 
 		/* decompose the instruction to get branch info */
-		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
+		if(powerpc_decompose(data, 4, addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			return false;
 		}
@@ -378,15 +378,17 @@ class PowerpcArchitecture: public Architecture
 		{
 			case 18: /* b (b, ba, bl, bla) */
 			{
-				uint32_t target = raw_insn & 0x03fffffc;
+				uint64_t target = raw_insn & 0x03fffffc;
 
 				/* sign extend target */
-				if ((target >> 25) & 1)
-					target |= 0xfc000000;
+				target = sign_extend(addressSize, target, 25);
 
 				/* account for absolute addressing */
 				if (!(raw_insn & 2))
-					target += (uint32_t) addr;
+				{
+					target += addr;
+					ADDRMASK(addressSize, target);
+				}
 
 				if (raw_insn & 1)
 					result.AddBranch(CallDestination, target);
@@ -397,17 +399,19 @@ class PowerpcArchitecture: public Architecture
 			}
 			case 16: /* bc */
 			{
-				uint32_t target = raw_insn & 0xfffc;
+				uint64_t target = raw_insn & 0xfffc;
 				uint8_t bo = (raw_insn >> 21) & 0x1f;
 				bool lk = raw_insn & 1;
 
 				/* sign extend target */
-				if ((target >> 15) & 1)
-					target |= 0xffff0000;
+				target = sign_extend(addressSize, target, 15);
 
 				/* account for absolute addressing */
 				if (!(raw_insn & 2))
-					target += (uint32_t) addr;
+				{
+					target += addr;
+					ADDRMASK(addressSize, target);
+				}
 
 				if (target != addr + 4)
 				{
@@ -535,7 +539,7 @@ class PowerpcArchitecture: public Architecture
 			// PerformLocalDisassembly(data, addr, len, &res, endian == BigEndian);
 			return PrintLocalDisassembly(data, addr, len, result, &res);
 		}
-		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
+		if(powerpc_decompose(data, 4, addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			goto cleanup;
 		}
@@ -782,7 +786,7 @@ class PowerpcArchitecture: public Architecture
 		if (DoesQualifyForLocalDisassembly(data, endian == BigEndian)) {
 			PerformLocalDisassembly(data, addr, len, &res, endian == BigEndian);
 		}
-		else if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
+		else if(powerpc_decompose(data, 4, addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			il.AddInstruction(il.Undefined());
 			goto cleanup;
@@ -1629,72 +1633,72 @@ class PowerpcArchitecture: public Architecture
 			case PPC_REG_CR5: return RegisterInfo(PPC_REG_CR5, 0, 4);
 			case PPC_REG_CR6: return RegisterInfo(PPC_REG_CR6, 0, 4);
 			case PPC_REG_CR7: return RegisterInfo(PPC_REG_CR7, 0, 4);
-			case PPC_REG_CTR: return RegisterInfo(PPC_REG_CTR, 0, 4);
-			case PPC_REG_F0: return RegisterInfo(PPC_REG_F0, 0, 4);
-			case PPC_REG_F1: return RegisterInfo(PPC_REG_F1, 0, 4);
-			case PPC_REG_F2: return RegisterInfo(PPC_REG_F2, 0, 4);
-			case PPC_REG_F3: return RegisterInfo(PPC_REG_F3, 0, 4);
-			case PPC_REG_F4: return RegisterInfo(PPC_REG_F4, 0, 4);
-			case PPC_REG_F5: return RegisterInfo(PPC_REG_F5, 0, 4);
-			case PPC_REG_F6: return RegisterInfo(PPC_REG_F6, 0, 4);
-			case PPC_REG_F7: return RegisterInfo(PPC_REG_F7, 0, 4);
-			case PPC_REG_F8: return RegisterInfo(PPC_REG_F8, 0, 4);
-			case PPC_REG_F9: return RegisterInfo(PPC_REG_F9, 0, 4);
-			case PPC_REG_F10: return RegisterInfo(PPC_REG_F10, 0, 4);
-			case PPC_REG_F11: return RegisterInfo(PPC_REG_F11, 0, 4);
-			case PPC_REG_F12: return RegisterInfo(PPC_REG_F12, 0, 4);
-			case PPC_REG_F13: return RegisterInfo(PPC_REG_F13, 0, 4);
-			case PPC_REG_F14: return RegisterInfo(PPC_REG_F14, 0, 4);
-			case PPC_REG_F15: return RegisterInfo(PPC_REG_F15, 0, 4);
-			case PPC_REG_F16: return RegisterInfo(PPC_REG_F16, 0, 4);
-			case PPC_REG_F17: return RegisterInfo(PPC_REG_F17, 0, 4);
-			case PPC_REG_F18: return RegisterInfo(PPC_REG_F18, 0, 4);
-			case PPC_REG_F19: return RegisterInfo(PPC_REG_F19, 0, 4);
-			case PPC_REG_F20: return RegisterInfo(PPC_REG_F20, 0, 4);
-			case PPC_REG_F21: return RegisterInfo(PPC_REG_F21, 0, 4);
-			case PPC_REG_F22: return RegisterInfo(PPC_REG_F22, 0, 4);
-			case PPC_REG_F23: return RegisterInfo(PPC_REG_F23, 0, 4);
-			case PPC_REG_F24: return RegisterInfo(PPC_REG_F24, 0, 4);
-			case PPC_REG_F25: return RegisterInfo(PPC_REG_F25, 0, 4);
-			case PPC_REG_F26: return RegisterInfo(PPC_REG_F26, 0, 4);
-			case PPC_REG_F27: return RegisterInfo(PPC_REG_F27, 0, 4);
-			case PPC_REG_F28: return RegisterInfo(PPC_REG_F28, 0, 4);
-			case PPC_REG_F29: return RegisterInfo(PPC_REG_F29, 0, 4);
-			case PPC_REG_F30: return RegisterInfo(PPC_REG_F30, 0, 4);
-			case PPC_REG_F31: return RegisterInfo(PPC_REG_F31, 0, 4);
-			case PPC_REG_LR: return RegisterInfo(PPC_REG_LR, 0, 4);
-			case PPC_REG_R0: return RegisterInfo(PPC_REG_R0, 0, 4);
-			case PPC_REG_R1: return RegisterInfo(PPC_REG_R1, 0, 4);
-			case PPC_REG_R2: return RegisterInfo(PPC_REG_R2, 0, 4);
-			case PPC_REG_R3: return RegisterInfo(PPC_REG_R3, 0, 4);
-			case PPC_REG_R4: return RegisterInfo(PPC_REG_R4, 0, 4);
-			case PPC_REG_R5: return RegisterInfo(PPC_REG_R5, 0, 4);
-			case PPC_REG_R6: return RegisterInfo(PPC_REG_R6, 0, 4);
-			case PPC_REG_R7: return RegisterInfo(PPC_REG_R7, 0, 4);
-			case PPC_REG_R8: return RegisterInfo(PPC_REG_R8, 0, 4);
-			case PPC_REG_R9: return RegisterInfo(PPC_REG_R9, 0, 4);
-			case PPC_REG_R10: return RegisterInfo(PPC_REG_R10, 0, 4);
-			case PPC_REG_R11: return RegisterInfo(PPC_REG_R11, 0, 4);
-			case PPC_REG_R12: return RegisterInfo(PPC_REG_R12, 0, 4);
-			case PPC_REG_R13: return RegisterInfo(PPC_REG_R13, 0, 4);
-			case PPC_REG_R14: return RegisterInfo(PPC_REG_R14, 0, 4);
-			case PPC_REG_R15: return RegisterInfo(PPC_REG_R15, 0, 4);
-			case PPC_REG_R16: return RegisterInfo(PPC_REG_R16, 0, 4);
-			case PPC_REG_R17: return RegisterInfo(PPC_REG_R17, 0, 4);
-			case PPC_REG_R18: return RegisterInfo(PPC_REG_R18, 0, 4);
-			case PPC_REG_R19: return RegisterInfo(PPC_REG_R19, 0, 4);
-			case PPC_REG_R20: return RegisterInfo(PPC_REG_R20, 0, 4);
-			case PPC_REG_R21: return RegisterInfo(PPC_REG_R21, 0, 4);
-			case PPC_REG_R22: return RegisterInfo(PPC_REG_R22, 0, 4);
-			case PPC_REG_R23: return RegisterInfo(PPC_REG_R23, 0, 4);
-			case PPC_REG_R24: return RegisterInfo(PPC_REG_R24, 0, 4);
-			case PPC_REG_R25: return RegisterInfo(PPC_REG_R25, 0, 4);
-			case PPC_REG_R26: return RegisterInfo(PPC_REG_R26, 0, 4);
-			case PPC_REG_R27: return RegisterInfo(PPC_REG_R27, 0, 4);
-			case PPC_REG_R28: return RegisterInfo(PPC_REG_R28, 0, 4);
-			case PPC_REG_R29: return RegisterInfo(PPC_REG_R29, 0, 4);
-			case PPC_REG_R30: return RegisterInfo(PPC_REG_R30, 0, 4);
-			case PPC_REG_R31: return RegisterInfo(PPC_REG_R31, 0, 4);
+			case PPC_REG_CTR: return RegisterInfo(PPC_REG_CTR, 0, addressSize);
+			case PPC_REG_F0: return RegisterInfo(PPC_REG_F0, 0, 8);
+			case PPC_REG_F1: return RegisterInfo(PPC_REG_F1, 0, 8);
+			case PPC_REG_F2: return RegisterInfo(PPC_REG_F2, 0, 8);
+			case PPC_REG_F3: return RegisterInfo(PPC_REG_F3, 0, 8);
+			case PPC_REG_F4: return RegisterInfo(PPC_REG_F4, 0, 8);
+			case PPC_REG_F5: return RegisterInfo(PPC_REG_F5, 0, 8);
+			case PPC_REG_F6: return RegisterInfo(PPC_REG_F6, 0, 8);
+			case PPC_REG_F7: return RegisterInfo(PPC_REG_F7, 0, 8);
+			case PPC_REG_F8: return RegisterInfo(PPC_REG_F8, 0, 8);
+			case PPC_REG_F9: return RegisterInfo(PPC_REG_F9, 0, 8);
+			case PPC_REG_F10: return RegisterInfo(PPC_REG_F10, 0, 8);
+			case PPC_REG_F11: return RegisterInfo(PPC_REG_F11, 0, 8);
+			case PPC_REG_F12: return RegisterInfo(PPC_REG_F12, 0, 8);
+			case PPC_REG_F13: return RegisterInfo(PPC_REG_F13, 0, 8);
+			case PPC_REG_F14: return RegisterInfo(PPC_REG_F14, 0, 8);
+			case PPC_REG_F15: return RegisterInfo(PPC_REG_F15, 0, 8);
+			case PPC_REG_F16: return RegisterInfo(PPC_REG_F16, 0, 8);
+			case PPC_REG_F17: return RegisterInfo(PPC_REG_F17, 0, 8);
+			case PPC_REG_F18: return RegisterInfo(PPC_REG_F18, 0, 8);
+			case PPC_REG_F19: return RegisterInfo(PPC_REG_F19, 0, 8);
+			case PPC_REG_F20: return RegisterInfo(PPC_REG_F20, 0, 8);
+			case PPC_REG_F21: return RegisterInfo(PPC_REG_F21, 0, 8);
+			case PPC_REG_F22: return RegisterInfo(PPC_REG_F22, 0, 8);
+			case PPC_REG_F23: return RegisterInfo(PPC_REG_F23, 0, 8);
+			case PPC_REG_F24: return RegisterInfo(PPC_REG_F24, 0, 8);
+			case PPC_REG_F25: return RegisterInfo(PPC_REG_F25, 0, 8);
+			case PPC_REG_F26: return RegisterInfo(PPC_REG_F26, 0, 8);
+			case PPC_REG_F27: return RegisterInfo(PPC_REG_F27, 0, 8);
+			case PPC_REG_F28: return RegisterInfo(PPC_REG_F28, 0, 8);
+			case PPC_REG_F29: return RegisterInfo(PPC_REG_F29, 0, 8);
+			case PPC_REG_F30: return RegisterInfo(PPC_REG_F30, 0, 8);
+			case PPC_REG_F31: return RegisterInfo(PPC_REG_F31, 0, 8);
+			case PPC_REG_LR: return RegisterInfo(PPC_REG_LR, 0, addressSize);
+			case PPC_REG_R0: return RegisterInfo(PPC_REG_R0, 0, addressSize);
+			case PPC_REG_R1: return RegisterInfo(PPC_REG_R1, 0, addressSize);
+			case PPC_REG_R2: return RegisterInfo(PPC_REG_R2, 0, addressSize);
+			case PPC_REG_R3: return RegisterInfo(PPC_REG_R3, 0, addressSize);
+			case PPC_REG_R4: return RegisterInfo(PPC_REG_R4, 0, addressSize);
+			case PPC_REG_R5: return RegisterInfo(PPC_REG_R5, 0, addressSize);
+			case PPC_REG_R6: return RegisterInfo(PPC_REG_R6, 0, addressSize);
+			case PPC_REG_R7: return RegisterInfo(PPC_REG_R7, 0, addressSize);
+			case PPC_REG_R8: return RegisterInfo(PPC_REG_R8, 0, addressSize);
+			case PPC_REG_R9: return RegisterInfo(PPC_REG_R9, 0, addressSize);
+			case PPC_REG_R10: return RegisterInfo(PPC_REG_R10, 0, addressSize);
+			case PPC_REG_R11: return RegisterInfo(PPC_REG_R11, 0, addressSize);
+			case PPC_REG_R12: return RegisterInfo(PPC_REG_R12, 0, addressSize);
+			case PPC_REG_R13: return RegisterInfo(PPC_REG_R13, 0, addressSize);
+			case PPC_REG_R14: return RegisterInfo(PPC_REG_R14, 0, addressSize);
+			case PPC_REG_R15: return RegisterInfo(PPC_REG_R15, 0, addressSize);
+			case PPC_REG_R16: return RegisterInfo(PPC_REG_R16, 0, addressSize);
+			case PPC_REG_R17: return RegisterInfo(PPC_REG_R17, 0, addressSize);
+			case PPC_REG_R18: return RegisterInfo(PPC_REG_R18, 0, addressSize);
+			case PPC_REG_R19: return RegisterInfo(PPC_REG_R19, 0, addressSize);
+			case PPC_REG_R20: return RegisterInfo(PPC_REG_R20, 0, addressSize);
+			case PPC_REG_R21: return RegisterInfo(PPC_REG_R21, 0, addressSize);
+			case PPC_REG_R22: return RegisterInfo(PPC_REG_R22, 0, addressSize);
+			case PPC_REG_R23: return RegisterInfo(PPC_REG_R23, 0, addressSize);
+			case PPC_REG_R24: return RegisterInfo(PPC_REG_R24, 0, addressSize);
+			case PPC_REG_R25: return RegisterInfo(PPC_REG_R25, 0, addressSize);
+			case PPC_REG_R26: return RegisterInfo(PPC_REG_R26, 0, addressSize);
+			case PPC_REG_R27: return RegisterInfo(PPC_REG_R27, 0, addressSize);
+			case PPC_REG_R28: return RegisterInfo(PPC_REG_R28, 0, addressSize);
+			case PPC_REG_R29: return RegisterInfo(PPC_REG_R29, 0, addressSize);
+			case PPC_REG_R30: return RegisterInfo(PPC_REG_R30, 0, addressSize);
+			case PPC_REG_R31: return RegisterInfo(PPC_REG_R31, 0, addressSize);
 			case PPC_REG_V0: return RegisterInfo(PPC_REG_V0, 0, 4);
 			case PPC_REG_V1: return RegisterInfo(PPC_REG_V1, 0, 4);
 			case PPC_REG_V2: return RegisterInfo(PPC_REG_V2, 0, 4);

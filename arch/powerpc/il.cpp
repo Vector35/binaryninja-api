@@ -763,6 +763,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 		case PPC_INS_CMPI:
 		case PPC_INS_CMPWI: /* compare (signed) word(32-bit) immediate */
+		case PPC_INS_CMPDI:
 			REQUIRE2OPS
 			EXTOPTS(rawInsn, addressSize_l, extend_l);
 			ei0 = operToIL_a(il, oper2 ? oper1 : oper0, addressSize_l);

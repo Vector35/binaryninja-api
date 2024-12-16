@@ -9,11 +9,11 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QStyledItemDelegate>
 
-#include "dockhandler.h"
 #include "render.h"
 #include "sidebar.h"
 #include "uitypes.h"
 #include "fontsettings.h"
+#include "viewframe.h"
 
 /*!
 
@@ -87,6 +87,7 @@ class BINARYNINJAUIAPI SectionDialog : public QDialog
 
 	void Submit();
 public:
+	void SetDefaultValues(const QString& name, uint64_t start, uint64_t length, BNSectionSemantics semantics);
 	SectionDialog(QWidget* parent, BinaryViewRef data, SectionRef section = nullptr);
 };
 

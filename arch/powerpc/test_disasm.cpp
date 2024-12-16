@@ -28,7 +28,7 @@ int disas_instr_word(uint32_t instr_word, char *buf)
 	struct cs_detail *detail = &(res.detail);
 	struct cs_ppc *ppc = &(detail->ppc);
 
-	if(powerpc_decompose((const uint8_t *)&instr_word, 4, 0, true, &res)) {
+	if(powerpc_decompose((const uint8_t *)&instr_word, 4, 0, true, &res, false)) {
 		if(print_errors) printf("ERROR: powerpc_decompose()\n");
 		goto cleanup;
 	}

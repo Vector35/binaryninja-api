@@ -310,7 +310,7 @@ class Database:
 		result = []
 		try:
 			for i in range(0, count.value):
-				result.append(value[i])
+				result.append(core.pyNativeStr(value[i]))
 			return result
 		finally:
 			core.BNFreeStringList(value, count)
@@ -325,7 +325,7 @@ class Database:
 		result = {}
 		try:
 			for i in range(0, count.value):
-				key = value[i]
+				key = core.pyNativeStr(value[i])
 				result[key] = self.read_global(key)
 			return result
 		finally:

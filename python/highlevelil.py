@@ -696,7 +696,10 @@ class HighLevelILInstruction(BaseILInstruction):
 		return variable.ConstantData(value, 0, state, core.max_confidence, self.core_instr.size, self.function.source_function)
 
 	def get_expr(self, operand_index: int) -> 'HighLevelILInstruction':
-		return HighLevelILInstruction.create(self.function, ExpressionIndex(self.core_instr.operands[operand_index]))
+		return HighLevelILInstruction.create(
+			self.function, ExpressionIndex(self.core_instr.operands[operand_index]),
+			self.as_ast
+		)
 
 	def get_intrinsic(self, operand_index: int) -> 'lowlevelil.ILIntrinsic':
 		if self.function.arch is None:
@@ -775,7 +778,11 @@ class HighLevelILInstruction(BaseILInstruction):
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		"""Operands for the instruction"""
+		"""
+		Operands for the instruction
+
+		Consider using more specific APIs for ``src``, ``dest``, ``params``, etc where appropriate.
+		"""
 		return list(map(lambda x: x[1], self.detailed_operands))
 
 	@property
@@ -906,6 +913,10 @@ class HighLevelILInstruction(BaseILInstruction):
 					if not i.visit(cb, name, self): # type: ignore
 						return False
 		return True
+
+	@property
+	def has_side_effects(self) -> bool:
+		return core.BNHighLevelILHasSideEffects(self.function.handle, self.expr_index)
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2797,7 +2808,7 @@ class HighLevelILFunction:
 		"""
 		return core.BNGetHighLevelILExprCount(self.handle)
 
-	def get_expr(self, index: ExpressionIndex) -> Optional[HighLevelILInstruction]:
+	def get_expr(self, index: ExpressionIndex, as_ast: bool = True) -> Optional[HighLevelILInstruction]:
 		"""
 		``get_expr`` retrieves the IL expression at a given expression index in the function.
 
@@ -2805,12 +2816,13 @@ class HighLevelILFunction:
 		              they might not be used by the function and might not contain properly structured data.
 
 		:param index: Index of desired expression in function
+		:param as_ast: Whether to return the expression as a full AST or a single instruction (defaults to AST)
 		:return: A HighLevelILInstruction object for the expression, if it exists. Otherwise, None
 		"""
 		if index >= self.get_expr_count():
 			return None
 
-		return HighLevelILInstruction.create(self, index)
+		return HighLevelILInstruction.create(self, index, as_ast)
 
 	def copy_expr(self, original: HighLevelILInstruction) -> ExpressionIndex:
 		"""

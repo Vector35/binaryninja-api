@@ -860,7 +860,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			REQUIRE4OPS
 			{
 				LowLevelILLabel trueLabel, falseLabel, doneLabel;
-				uint32_t crBit = oper3->reg - PPC_REG_R0;
+				uint32_t crBit = powerpc_crx_to_reg(oper3->reg);
 				uint32_t cr = crBit / 4;
 
 				switch (crBit % 4)

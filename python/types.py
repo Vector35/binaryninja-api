@@ -20,7 +20,7 @@
 
 import ctypes
 import typing
-from typing import Generator, List, Union, Tuple, Optional, Iterable, Dict, Generic, TypeVar
+from typing import Generator, List, Union, Tuple, Optional, Iterable, Dict, Generic, TypeVar, Callable
 from dataclasses import dataclass
 import uuid
 
@@ -53,6 +53,7 @@ SomeType = Union['TypeBuilder', 'Type']
 TypeContainerType = Union['binaryview.BinaryView', 'typelibrary.TypeLibrary']
 NameSpaceType = Optional[Union[str, List[str], 'NameSpace']]
 TypeParserResult = typeparser.TypeParserResult
+ResolveMemberCallback = Callable[['NamedTypeReferenceType', 'StructureType', int, int, int, 'StructureMember'], None]
 # The following are needed to prevent the type checker from getting
 # confused as we have member functions in `Type` named the same thing
 _int = int
@@ -383,6 +384,12 @@ class CoreSymbol:
 	@property
 	def handle(self):
 		return self._handle
+
+	def imported_function_from_import_address_symbol(self, addr: int) -> Optional['CoreSymbol']:
+		sym = core.BNImportedFunctionFromImportAddressSymbol(self._handle, addr)
+		if sym is None:
+			return None
+		return CoreSymbol(sym)
 
 
 class Symbol(CoreSymbol):
@@ -2717,6 +2724,40 @@ class StructureType(Type):
 		    ntr_type, guid, name, self.alignment, self.width, self.platform, self.confidence
 		)
 
+	def resolve_member_or_base_member(
+			self, view: Optional['binaryview.BinaryView'], offset: int, size: int,
+			resolve_func: ResolveMemberCallback, member_index_hint: Optional[int] = None
+	) -> bool:
+		if view is not None:
+			view = view.handle
+
+		def resolve_member_callback(
+				ctxt, base_name: core.BNNamedTypeReferenceHandle, resolved_struct: core.BNStructureHandle,
+				member_index: int, struct_offset: int, adjusted_offset: int, member: core.BNStructureMember
+		):
+			if base_name:
+				base_name = NamedTypeReferenceType.create_from_handle(core.BNNewNamedTypeReference(base_name))
+			if resolved_struct:
+				resolved_struct = StructureType.from_core_struct(core.BNNewStructureReference(resolved_struct))
+			t = Type.create(core.BNNewTypeReference(member.type), confidence=member.typeConfidence)
+			struct_member = StructureMember(
+				t, member.name, member.offset, MemberAccess(member.access), MemberScope(member.scope)
+			)
+			resolve_func(base_name, resolved_struct, member_index, struct_offset, adjusted_offset, struct_member)
+
+		member_index_hint_value = 0
+		if member_index_hint is not None:
+			member_index_hint_value = member_index_hint
+		return core.BNResolveStructureMemberOrBaseMember(
+			self.struct_handle, view, offset, size, None,
+			ctypes.CFUNCTYPE(
+				None, ctypes.c_void_p, core.BNNamedTypeReferenceHandle, core.BNStructureHandle, ctypes.c_size_t,
+				ctypes.c_uint64, ctypes.c_uint64, core.BNStructureMember
+			)(resolve_member_callback),
+			member_index_hint is not None,
+			member_index_hint_value
+		)
+
 	@property
 	def children(self) -> List[Type]:
 		return [member.type for member in self.members]
@@ -3059,6 +3100,30 @@ class FunctionType(Type):
 				param_location = variable.VariableNameAndType(
 				    params[i].location.type, params[i].location.index, params[i].location.storage, name, param_type
 				)
+			result.append(FunctionParameter(param_type, params[i].name, param_location))
+		core.BNFreeTypeParameterList(params, count.value)
+		return result
+
+	@property
+	def parameters_with_all_locations(self) -> List[FunctionParameter]:
+		"""Type parameters list with default locations filled in with values (read-only)"""
+		count = ctypes.c_ulonglong()
+		params = core.BNGetTypeParameters(self._handle, count)
+		assert params is not None, "core.BNGetTypeParameters returned None"
+		result = []
+		for i in range(0, count.value):
+			param_type = Type.create(
+				core.BNNewTypeReference(params[i].type), platform=self._platform, confidence=params[i].typeConfidence
+			)
+			name = params[i].name
+			if (params[i].location.type
+				== VariableSourceType.RegisterVariableSourceType) and (self._platform is not None):
+				name = self._platform.arch.get_reg_name(params[i].location.storage)
+			elif params[i].location.type == VariableSourceType.StackVariableSourceType:
+				name = "arg_%x" % params[i].location.storage
+			param_location = variable.VariableNameAndType(
+				params[i].location.type, params[i].location.index, params[i].location.storage, name, param_type
+			)
 			result.append(FunctionParameter(param_type, params[i].name, param_location))
 		core.BNFreeTypeParameterList(params, count.value)
 		return result

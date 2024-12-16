@@ -97,7 +97,6 @@ class BINARYNINJAUIAPI HistoryEntry : public BinaryNinja::RefCountObject
 class AssembleDialog;
 class ClickableStateLabel;
 class CompileDialog;
-class DockHandler;
 class FeatureMap;
 class StatusBarWidget;
 class ViewNavigationMode;
@@ -150,21 +149,21 @@ class BINARYNINJAUIAPI View
 	virtual bool findNextData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, uint64_t& addr,
 	    BNFindFlag flags, const std::function<bool(size_t current, size_t total)>& cb);
 	virtual bool findNextText(uint64_t start, uint64_t end, const std::string& text, uint64_t& addr,
-	    DisassemblySettingsRef settings, BNFindFlag flags, BNFunctionGraphType graph,
+	    DisassemblySettingsRef settings, BNFindFlag flags, const BinaryNinja::FunctionViewType& graph,
 	    const std::function<bool(size_t current, size_t total)>& cb);
 	virtual bool findNextConstant(uint64_t start, uint64_t end, uint64_t constant, uint64_t& addr,
-	    DisassemblySettingsRef settings, BNFunctionGraphType graph,
+	    DisassemblySettingsRef settings, const BinaryNinja::FunctionViewType& graph,
 	    const std::function<bool(size_t current, size_t total)>& cb);
 
 	virtual bool findAllData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, BNFindFlag flags,
 	    const std::function<bool(size_t current, size_t total)>& cb,
 	    const std::function<bool(uint64_t addr, const BinaryNinja::DataBuffer& match)>& matchCallback);
 	virtual bool findAllText(uint64_t start, uint64_t end, const std::string& data, DisassemblySettingsRef settings,
-	    BNFindFlag flags, BNFunctionGraphType graph, const std::function<bool(size_t current, size_t total)>& cb,
+	    BNFindFlag flags, const BinaryNinja::FunctionViewType& graph, const std::function<bool(size_t current, size_t total)>& cb,
 	    const std::function<bool(
 	        uint64_t addr, const std::string& match, const BinaryNinja::LinearDisassemblyLine& line)>& matchCallback);
 	virtual bool findAllConstant(uint64_t start, uint64_t end, uint64_t constant, DisassemblySettingsRef settings,
-	    BNFunctionGraphType graph, const std::function<bool(size_t current, size_t total)>& cb,
+	    const BinaryNinja::FunctionViewType& graph, const std::function<bool(size_t current, size_t total)>& cb,
 	    const std::function<bool(uint64_t addr, const BinaryNinja::LinearDisassemblyLine& line)>& matchCallback);
 
 	virtual BinaryViewRef getData() = 0;
@@ -228,8 +227,8 @@ class BINARYNINJAUIAPI View
 	virtual LowLevelILFunctionRef getCurrentLowLevelILFunction() { return nullptr; }
 	virtual MediumLevelILFunctionRef getCurrentMediumLevelILFunction() { return nullptr; }
 	virtual HighLevelILFunctionRef getCurrentHighLevelILFunction() { return nullptr; }
-	virtual BNFunctionGraphType getILViewType() { return InvalidILViewType; }
-	virtual void setILViewType(BNFunctionGraphType ilViewType) {}
+	virtual BinaryNinja::FunctionViewType getILViewType() { return InvalidILViewType; }
+	virtual void setILViewType(const BinaryNinja::FunctionViewType& ilViewType) {}
 	virtual size_t getCurrentILInstructionIndex() { return BN_INVALID_EXPR; }
 	virtual size_t getSelectionStartILInstructionIndex() { return BN_INVALID_EXPR; }
 	virtual BNILIndexRange getILIndexRange() { return {BN_INVALID_EXPR, BN_INVALID_EXPR}; }
@@ -290,25 +289,25 @@ class BINARYNINJAUIAPI ViewLocation
 	QString m_viewType;
 	FunctionRef m_function = nullptr;
 	uint64_t m_offset = 0;
-	BNFunctionGraphType m_ilViewType = InvalidILViewType;
+	BinaryNinja::FunctionViewType m_ilViewType = InvalidILViewType;
 	size_t m_instrIndex = BN_INVALID_EXPR;
 
   public:
 	ViewLocation() {}
 	ViewLocation(const QString& viewType, uint64_t offset) : m_valid(true), m_viewType(viewType), m_offset(offset) {}
-	ViewLocation(const QString& viewType, uint64_t offset, BNFunctionGraphType ilViewType) :
+	ViewLocation(const QString& viewType, uint64_t offset, const BinaryNinja::FunctionViewType& ilViewType) :
 	    m_valid(true), m_viewType(viewType), m_offset(offset), m_ilViewType(ilViewType)
 	{}
-	ViewLocation(const QString& viewType, uint64_t offset, BNFunctionGraphType ilViewType, size_t instrIndex) :
+	ViewLocation(const QString& viewType, uint64_t offset, const BinaryNinja::FunctionViewType& ilViewType, size_t instrIndex) :
 	    m_valid(true), m_viewType(viewType), m_offset(offset), m_ilViewType(ilViewType), m_instrIndex(instrIndex)
 	{}
-	ViewLocation(const QString& viewType, FunctionRef function, uint64_t offset, BNFunctionGraphType ilViewType,
+	ViewLocation(const QString& viewType, FunctionRef function, uint64_t offset, const BinaryNinja::FunctionViewType& ilViewType,
 	    size_t instrIndex) :
 	    m_valid(true),
 	    m_viewType(viewType), m_function(function), m_offset(offset), m_ilViewType(ilViewType), m_instrIndex(instrIndex)
 	{}
 	ViewLocation(
-	    FunctionRef function, uint64_t offset, BNFunctionGraphType ilViewType, size_t instrIndex = BN_INVALID_EXPR) :
+	    FunctionRef function, uint64_t offset, const BinaryNinja::FunctionViewType& ilViewType, size_t instrIndex = BN_INVALID_EXPR) :
 	    m_valid(true),
 	    m_function(function), m_offset(offset), m_ilViewType(ilViewType), m_instrIndex(instrIndex)
 	{}
@@ -316,13 +315,13 @@ class BINARYNINJAUIAPI ViewLocation
 	bool isValid() const { return m_valid; }
 	QString getViewType() const { return m_viewType; }
 	uint64_t getOffset() const { return m_offset; }
-	BNFunctionGraphType getILViewType() const { return m_ilViewType; }
+	const BinaryNinja::FunctionViewType& getILViewType() const { return m_ilViewType; }
 	size_t getInstrIndex() const { return m_instrIndex; }
 	FunctionRef getFunction() const { return m_function; }
 
 	void setViewType(const QString& viewType) { m_viewType = viewType; }
 	void setOffset(uint64_t offset) { m_offset = offset; }
-	void setILViewType(BNFunctionGraphType ilViewType) { m_ilViewType = ilViewType; }
+	void setILViewType(const BinaryNinja::FunctionViewType& ilViewType) { m_ilViewType = ilViewType; }
 	void setInstrIndex(uint64_t index) { m_instrIndex = index; }
 	void setFunction(FunctionRef function) { m_function = function; }
 
@@ -382,7 +381,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	Q_OBJECT
 
   private:
-	QWidget* createView(const QString& typeName, ViewType* type, BinaryViewRef data, bool createDynamicWidgets = true);
+	QWidget* createView(const QString& typeName, ViewType* type, BinaryViewRef data);
 	BinaryNinja::Ref<HistoryEntry> getHistoryEntry();
 	ViewFrame* searchForOtherPane(const std::function<void(const std::function<void(ViewPane*)>&)>& enumerator);
 
@@ -392,7 +391,6 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	QWidget* m_view = nullptr;
 	QWidget* m_viewContainer;
 	QVBoxLayout* m_viewLayout;
-	std::map<QString, std::map<QString, QPointer<QWidget>>> m_extViewCache;
 	std::map<QString, QWidget*> m_viewCache;
 	std::list<BinaryNinja::Ref<HistoryEntry>> m_back, m_forward;
 	bool m_graphViewPreferred = false;
@@ -421,14 +419,12 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	bool tryMainSymbolsNavigation();
 
   public:
-	explicit ViewFrame(QWidget* parent, FileContext* file, const QString& type, bool createDynamicWidgets = false);
+	explicit ViewFrame(QWidget* parent, FileContext* file, const QString& type);
 	virtual ~ViewFrame();
 
 	FileContext* getFileContext() const { return m_context; }
 	bool areFileContentsLocked(bool showToolTip = false);
 	void setFileContentsLocked(bool enable);
-
-	DockHandler* getDockHandler();
 
 	QString getTabName();
 	QString getShortFileName();
@@ -450,8 +446,6 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	void setPriorityView(const QString& viewType);
 	bool setViewType(const QString& viewType);
 	void focus();
-
-	QWidget* getExtendedView(const QString& name, bool create = false);
 
 	Sidebar* getSidebar();
 
@@ -484,7 +478,6 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	bool isAboutToClose() { return m_aboutToClose; }
 	bool closeRequest();
 	void closing();
-	void clearViewLocation();
 
 	void updateFonts();
 	void updateTheme();

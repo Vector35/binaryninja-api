@@ -81,34 +81,13 @@ where
         })
     }
 
-    fn alloc_register_list<I: Iterator<Item = u32> + ExactSizeIterator>(
-        items: I,
-        count: &mut usize,
-    ) -> *mut u32 {
-        let len = items.len();
-        *count = len;
-
-        if len == 0 {
-            return ptr::null_mut();
-        }
-
-        let res: Box<[_]> = [len as u32].into_iter().chain(items).collect();
-        debug_assert!(res.len() == len + 1);
-
-        // it's free on the function below: `cb_free_register_list`
-        let raw = Box::leak(res);
-        &mut raw[1]
-    }
-
-    extern "C" fn cb_free_register_list(_ctxt: *mut c_void, regs: *mut u32) {
+    extern "C" fn cb_free_register_list(_ctxt: *mut c_void, regs: *mut u32, count: usize) {
         ffi_wrap!("CallingConvention::free_register_list", unsafe {
             if regs.is_null() {
                 return;
             }
-
-            let actual_start = regs.offset(-1);
-            let len = (*actual_start) + 1;
-            let _regs = Box::from_raw(ptr::slice_from_raw_parts_mut(actual_start, len as usize));
+            
+            let _regs = Box::from_raw(ptr::slice_from_raw_parts_mut(regs, count));
         })
     }
 
@@ -118,9 +97,18 @@ where
     {
         ffi_wrap!("CallingConvention::caller_saved_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let regs = ctxt.cc.caller_saved_registers();
+            let mut regs: Vec<_> = ctxt
+                .cc
+                .caller_saved_registers()
+                .iter()
+                .map(|r| r.id())
+                .collect();
 
-            alloc_register_list(regs.iter().map(|r| r.id()), &mut *count)
+            // SAFETY: `count` is an out parameter
+            *count = regs.len();
+            let regs_ptr = regs.as_mut_ptr();
+            mem::forget(regs);
+            regs_ptr
         })
     }
 
@@ -130,9 +118,18 @@ where
     {
         ffi_wrap!("CallingConvention::callee_saved_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let regs = ctxt.cc.callee_saved_registers();
+            let mut regs: Vec<_> = ctxt
+                .cc
+                .callee_saved_registers()
+                .iter()
+                .map(|r| r.id())
+                .collect();
 
-            alloc_register_list(regs.iter().map(|r| r.id()), &mut *count)
+            // SAFETY: `count` is an out parameter
+            *count = regs.len();
+            let regs_ptr = regs.as_mut_ptr();
+            mem::forget(regs);
+            regs_ptr
         })
     }
 
@@ -142,9 +139,13 @@ where
     {
         ffi_wrap!("CallingConvention::int_arg_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let regs = ctxt.cc.int_arg_registers();
+            let mut regs: Vec<_> = ctxt.cc.int_arg_registers().iter().map(|r| r.id()).collect();
 
-            alloc_register_list(regs.iter().map(|r| r.id()), &mut *count)
+            // SAFETY: `count` is an out parameter
+            *count = regs.len();
+            let regs_ptr = regs.as_mut_ptr();
+            mem::forget(regs);
+            regs_ptr
         })
     }
 
@@ -154,9 +155,18 @@ where
     {
         ffi_wrap!("CallingConvention::float_arg_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let regs = ctxt.cc.float_arg_registers();
+            let mut regs: Vec<_> = ctxt
+                .cc
+                .float_arg_registers()
+                .iter()
+                .map(|r| r.id())
+                .collect();
 
-            alloc_register_list(regs.iter().map(|r| r.id()), &mut *count)
+            // SAFETY: `count` is an out parameter
+            *count = regs.len();
+            let regs_ptr = regs.as_mut_ptr();
+            mem::forget(regs);
+            regs_ptr
         })
     }
 
@@ -272,9 +282,18 @@ where
     {
         ffi_wrap!("CallingConvention::implicitly_defined_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let regs = ctxt.cc.implicitly_defined_registers();
+            let mut regs: Vec<_> = ctxt
+                .cc
+                .implicitly_defined_registers()
+                .iter()
+                .map(|r| r.id())
+                .collect();
 
-            alloc_register_list(regs.iter().map(|r| r.id()), &mut *count)
+            // SAFETY: `count` is an out parameter
+            *count = regs.len();
+            let regs_ptr = regs.as_mut_ptr();
+            mem::forget(regs);
+            regs_ptr
         })
     }
 

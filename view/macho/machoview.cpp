@@ -1593,6 +1593,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 	if (!(m_header.ident.filetype == MH_FILESET && isMainHeader)) \
 	{
+		BeginBulkAddSegments();
 		for (auto &segment: header.segments) {
 			if ((segment.initprot == MACHO_VM_PROT_NONE) || (!segment.vmsize))
 				continue;
@@ -1619,6 +1620,8 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 			AddAutoSegment(segment.vmaddr, segment.vmsize, segment.fileoff, segment.filesize, flags);
 		}
+		EndBulkAddSegments();
+
 		for (auto& section : header.sections)
 		{
 			char sectionName[17];

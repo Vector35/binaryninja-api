@@ -1299,7 +1299,7 @@ map<string, info> lookup = {
 {            "addc . GPR , GPR , GPR",{0x7C000015,0x03FFF800}}, // 011111xxxxxxxxxxxxxxx00000010101  addc. r0, r0, r0
 {            "mulhwu GPR , GPR , GPR",{0x7C000016,0x03FFF800}}, // 011111xxxxxxxxxxxxxxx00000010110  mulhwu r0, r0, r0
 {          "mulhwu . GPR , GPR , GPR",{0x7C000017,0x03FFF800}}, // 011111xxxxxxxxxxxxxxx00000010111  mulhwu. r0, r0, r0
-{        "isel GPR , NUM , GPR , NUM",{0x7C00001E,0x03E0FFC0}}, // 011111xxxxx00000xxxxxxxxxx011110  isel r0, 0, r0, 0
+{        "isel GPR , NUM , GPR , CREG FLAG",{0x7C00001E,0x03E0FFC0}}, // 011111xxxxx00000xxxxxxxxxx011110  isel r0, 0, r0, 0
 {                          "mfcr GPR",{0x7C000026,0x03E00000}}, // 011111xxxxx000000000000000100110  mfcr r0
 {             "lwarx GPR , NUM , GPR",{0x7C000028,0x03E0F800}}, // 011111xxxxx00000xxxxx00000101000  lwarx r0, 0, r0
 {               "ldx GPR , NUM , GPR",{0x7C00002A,0x03E0F800}}, // 011111xxxxx00000xxxxx00000101010  ldx r0, 0, r0
@@ -1498,7 +1498,7 @@ map<string, info> lookup = {
 {                     "mtspefscr GPR",{0x7C0083A6,0x03E00000}}, // 011111xxxxx000001000001110100110  mtspefscr r0
 {             "lvsl VREG , GPR , GPR",{0x7C01000C,0x03FFF800}}, // 011111xxxxxxxxxxxxxxx00000001100  lvsl v0, r1, r0
 {            "lvebx VREG , GPR , GPR",{0x7C01000E,0x03FFF800}}, // 011111xxxxxxxxxxxxxxx00000001110  lvebx v0, r1, r0
-{        "isel GPR , GPR , GPR , NUM",{0x7C01001E,0x03FFFFC0}}, // 011111xxxxxxxxxxxxxxxxxxxx011110  isel r0, r1, r0, 0
+{        "isel GPR , GPR , GPR , CREG FLAG",{0x7C01001E,0x03FFFFC0}}, // 011111xxxxxxxxxxxxxxxxxxxx011110  isel r0, r1, r0, cr0eq
 {             "lwarx GPR , GPR , GPR",{0x7C010028,0x03FFF800}}, // 011111xxxxxxxxxxxxxxx00000101000  lwarx r0, r1, r0
 {               "ldx GPR , GPR , GPR",{0x7C01002A,0x03FFF800}}, // 011111xxxxxxxxxxxxxxx00000101010  ldx r0, r1, r0
 {              "lwzx GPR , GPR , GPR",{0x7C01002E,0x03FFF800}}, // 011111xxxxxxxxxxxxxxx00000101110  lwzx r0, r1, r0
@@ -2312,7 +2312,7 @@ int tokenize(string src, vector<token>& result, string& err)
 		}
 		/* wtf? */
 		else {
-			err = "error at: " + string(inbuf);
+			err = "error at: " + string(inbuf) + " in " + src;
 			goto cleanup;
 		}
 	}
@@ -2776,7 +2776,7 @@ int assemble_single(string src, uint32_t addr, uint8_t *result, string& err,
 	vector<token> toks_child;
 
 	if(tokenize(src, toks_src, err)) {
-		err = "invalid syntax";
+		err += "invalid syntax in " + src;
 		return -1;
 	}
 
@@ -2786,7 +2786,7 @@ int assemble_single(string src, uint32_t addr, uint8_t *result, string& err,
 	MYLOG("src:%s has signature:%s\n", src.c_str(), sig_src.c_str());
 
 	if(lookup.find(sig_src) == lookup.end()) {
-		err = "invalid syntax";
+		err = "invalid syntax in " + sig_src;
 		return -1;
 	}
 

@@ -6,7 +6,6 @@
 #include <QtWidgets/QLineEdit>
 #include <optional>
 
-#include "dockhandler.h"
 #include "render.h"
 #include "sidebar.h"
 #include "uitypes.h"

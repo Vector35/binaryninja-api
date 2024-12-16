@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::path::PathBuf;
+use std::ffi::OsStr;
+use std::path::{Path, PathBuf};
 use std::{
     collections::HashMap,
     ops::Deref,
@@ -553,15 +554,19 @@ pub(crate) fn find_sibling_debug_file(view: &BinaryView) -> Option<String> {
         return None;
     }
 
-    let filename = view.file().filename().to_string();
+    let full_file_path = view.file().filename().to_string();
 
-    let debug_file = PathBuf::from(format!("{}.debug", filename));
-    let dsym_folder = PathBuf::from(format!("{}.dSYM/", filename));
+    let debug_file = PathBuf::from(format!("{}.debug", full_file_path));
+    let dsym_folder = PathBuf::from(format!("{}.dSYM", full_file_path));
     if debug_file.exists() && debug_file.is_file() {
         return Some(debug_file.to_string_lossy().to_string());
     }
 
     if dsym_folder.exists() && dsym_folder.is_dir() {
+        let filename = Path::new(&full_file_path)
+            .file_name()
+            .unwrap_or(OsStr::new(""));
+
         let dsym_file = dsym_folder
             .join("Contents/Resources/DWARF/")
             .join(filename); // TODO: should this just pull any file out? Can there be multiple files?

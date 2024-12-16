@@ -742,6 +742,8 @@ bool PEView::Init()
 		reader.Seek(optionalHeaderOffset + header.optionalHeaderSize);
 		// Read sections
 		BinaryReader sectionNameReader(GetParentView(), LittleEndian);
+		BeginBulkAddSegments();
+
 		for (uint16_t i = 0; i < header.sectionCount; i++)
 		{
 			PESection section;
@@ -899,6 +901,8 @@ bool PEView::Init()
 				AddAutoSection(ss.str(), section.virtualAddress + m_imageBase, section.virtualSize, semantics);
 			}
 		}
+
+		EndBulkAddSegments();
 
 		// Finished for parse only mode
 		if (m_parseOnly)
@@ -2807,7 +2811,7 @@ bool PEView::Init()
 			GetSymbolByRawName("_TerminateProcess@8", GetExternalNameSpace())))
 	{
 		// TerminateProcess is imported and this is a user mode file
-		programSettings->Set("corePlugins.workflows.conditionalNoReturn", true);
+		programSettings->Set("core.function.analyzeConditionalNoReturns", true);
 	}
 
 	// Add a symbol for the entry point

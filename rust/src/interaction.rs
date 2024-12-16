@@ -16,8 +16,7 @@
 
 use binaryninjacore_sys::*;
 
-use std::ffi::CStr;
-use std::os::raw::{c_char, c_void};
+use std::ffi::{c_char, c_void, CStr};
 use std::path::PathBuf;
 
 use crate::binaryview::BinaryView;
@@ -25,7 +24,7 @@ use crate::rc::Ref;
 use crate::string::{BnStrCompatible, BnString};
 
 pub fn get_text_line_input(prompt: &str, title: &str) -> Option<String> {
-    let mut value: *mut libc::c_char = std::ptr::null_mut();
+    let mut value: *mut c_char = std::ptr::null_mut();
 
     let result = unsafe {
         BNGetTextLineInput(
@@ -80,7 +79,7 @@ pub fn get_address_input(prompt: &str, title: &str) -> Option<u64> {
 }
 
 pub fn get_open_filename_input(prompt: &str, extension: &str) -> Option<PathBuf> {
-    let mut value: *mut libc::c_char = std::ptr::null_mut();
+    let mut value: *mut c_char = std::ptr::null_mut();
 
     let result = unsafe {
         BNGetOpenFileNameInput(
@@ -97,14 +96,14 @@ pub fn get_open_filename_input(prompt: &str, extension: &str) -> Option<PathBuf>
     Some(PathBuf::from(string.as_str()))
 }
 
-pub fn get_save_filename_input(prompt: &str, title: &str, default_name: &str) -> Option<PathBuf> {
-    let mut value: *mut libc::c_char = std::ptr::null_mut();
+pub fn get_save_filename_input(prompt: &str, extension: &str, default_name: &str) -> Option<PathBuf> {
+    let mut value: *mut c_char = std::ptr::null_mut();
 
     let result = unsafe {
         BNGetSaveFileNameInput(
             &mut value,
             prompt.into_bytes_with_nul().as_ptr() as *mut _,
-            title.into_bytes_with_nul().as_ptr() as *mut _,
+            extension.into_bytes_with_nul().as_ptr() as *mut _,
             default_name.into_bytes_with_nul().as_ptr() as *mut _,
         )
     };
@@ -117,7 +116,7 @@ pub fn get_save_filename_input(prompt: &str, title: &str, default_name: &str) ->
 }
 
 pub fn get_directory_name_input(prompt: &str, default_name: &str) -> Option<PathBuf> {
-    let mut value: *mut libc::c_char = std::ptr::null_mut();
+    let mut value: *mut c_char = std::ptr::null_mut();
 
     let result = unsafe {
         BNGetDirectoryNameInput(

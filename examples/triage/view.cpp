@@ -3,6 +3,7 @@
 #include <QtWidgets/QSplitter>
 #include "view.h"
 #include "entropy.h"
+#include "entry.h"
 #include "imports.h"
 #include "exports.h"
 #include "sections.h"
@@ -80,12 +81,21 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 		importGroup->setLayout(importLayout);
 		importExportSplitter->addWidget(importGroup);
 
+		QSplitter* exportEntrySplitter = new QSplitter(Qt::Vertical);
+
 		QGroupBox* exportGroup = new QGroupBox("Exports", container);
 		QVBoxLayout* exportLayout = new QVBoxLayout();
 		exportLayout->addWidget(new ExportsWidget(exportGroup, this, m_data));
 		exportGroup->setLayout(exportLayout);
-		importExportSplitter->addWidget(exportGroup);
+		exportEntrySplitter->addWidget(exportGroup);
 
+		QGroupBox* entryGroup = new QGroupBox("Entry Functions", container);
+		QVBoxLayout* entryLayout = new QVBoxLayout();
+		entryLayout->addWidget(new EntryWidget(entryGroup, this, m_data));
+		entryGroup->setLayout(entryLayout);
+		exportEntrySplitter->addWidget(entryGroup);
+
+		importExportSplitter->addWidget(exportEntrySplitter);
 		layout->addWidget(importExportSplitter);
 
 		if (m_data->GetTypeName() != "PE")

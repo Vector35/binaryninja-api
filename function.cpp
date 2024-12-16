@@ -20,6 +20,7 @@
 
 #include "binaryninjaapi.h"
 #include "mediumlevelilinstruction.h"
+#include "highlevelilinstruction.h"
 #include <cstring>
 
 using namespace BinaryNinja;
@@ -200,12 +201,12 @@ ConstantData::ConstantData(BNRegisterValueType _state, uint64_t _value, size_t _
 }
 
 
-DataBuffer ConstantData::ToDataBuffer() const
+pair<DataBuffer, BNBuiltinType> ConstantData::ToDataBuffer() const
 {
 	if (func)
 		return func->GetConstantData(state, value, size);
 
-	return DataBuffer();
+	return make_pair(DataBuffer(), BuiltinNone);
 }
 
 
@@ -612,9 +613,11 @@ void PossibleValueSet::FreeAPIObject(BNPossibleValueSet* value)
 }
 
 
-DataBuffer Function::GetConstantData(BNRegisterValueType state, uint64_t value, size_t size)
+pair<DataBuffer, BNBuiltinType> Function::GetConstantData(BNRegisterValueType state, uint64_t value, size_t size)
 {
-	return DataBuffer(BNGetConstantData(m_object, state, value, size));
+	BNBuiltinType builtin;
+	auto buffer = DataBuffer(BNGetConstantData(m_object, state, value, size, &builtin));
+	return make_pair(buffer, builtin);
 }
 
 
@@ -908,21 +911,22 @@ Ref<HighLevelILFunction> Function::GetHighLevelILIfAvailable() const
 }
 
 
-Ref<LanguageRepresentationFunction> Function::GetLanguageRepresentation() const
+Ref<LanguageRepresentationFunction> Function::GetLanguageRepresentation(const string& language) const
 {
-	BNLanguageRepresentationFunction* function = BNGetFunctionLanguageRepresentation(m_object);
+	BNLanguageRepresentationFunction* function = BNGetFunctionLanguageRepresentation(m_object, language.c_str());
 	if (!function)
 		return nullptr;
-	return new LanguageRepresentationFunction(function);
+	return new CoreLanguageRepresentationFunction(function);
 }
 
 
-Ref<LanguageRepresentationFunction> Function::GetLanguageRepresentationIfAvailable() const
+Ref<LanguageRepresentationFunction> Function::GetLanguageRepresentationIfAvailable(const string& language) const
 {
-	BNLanguageRepresentationFunction* function = BNGetFunctionLanguageRepresentationIfAvailable(m_object);
+	BNLanguageRepresentationFunction* function =
+		BNGetFunctionLanguageRepresentationIfAvailable(m_object, language.c_str());
 	if (!function)
 		return nullptr;
-	return new LanguageRepresentationFunction(function);
+	return new CoreLanguageRepresentationFunction(function);
 }
 
 
@@ -1275,9 +1279,9 @@ void Function::ApplyAutoDiscoveredType(Type* type)
 }
 
 
-Ref<FlowGraph> Function::CreateFunctionGraph(BNFunctionGraphType type, DisassemblySettings* settings)
+Ref<FlowGraph> Function::CreateFunctionGraph(const FunctionViewType& type, DisassemblySettings* settings)
 {
-	BNFlowGraph* graph = BNCreateFunctionGraph(m_object, type, settings ? settings->GetObject() : nullptr);
+	BNFlowGraph* graph = BNCreateFunctionGraph(m_object, type.ToAPIObject(), settings ? settings->GetObject() : nullptr);
 	return new CoreFlowGraph(graph);
 }
 
@@ -2479,12 +2483,12 @@ void Function::MarkCallerUpdatesRequired(BNFunctionUpdateType type)
 }
 
 
-Ref<Workflow> Function::GetWorkflow() const
+Ref<Workflow> Function::GetWorkflow()
 {
 	BNWorkflow* workflow = BNGetWorkflowForFunction(m_object);
 	if (!workflow)
 		return nullptr;
-	return new Workflow(workflow);
+	return new Workflow(workflow, this);
 }
 
 
@@ -3257,6 +3261,47 @@ void Function::SetUserInlinedDuringAnalysis(Confidence<bool> inlined)
 	BNSetUserFunctionInlinedDuringAnalysis(m_object, bc);
 }
 
+
+void Function::ToggleRegion(uint64_t hash)
+{
+	BNFunctionToggleRegion(m_object, hash);
+}
+
+
+void Function::CollapseRegion(uint64_t hash)
+{
+	BNFunctionCollapseRegion(m_object, hash);
+}
+
+
+void Function::ExpandRegion(uint64_t hash)
+{
+	BNFunctionExpandRegion(m_object, hash);
+}
+
+
+bool Function::IsCollapsed() const
+{
+	return IsRegionCollapsed(GetStart());
+}
+
+
+bool Function::IsInstructionCollapsed(const HighLevelILInstruction& instr, uint64_t designator) const
+{
+	return IsRegionCollapsed(instr.GetInstructionHash(designator));
+}
+
+
+bool Function::IsRegionCollapsed(uint64_t hash) const
+{
+	return BNFunctionIsRegionCollapsed(m_object, hash);
+}
+
+
+void Function::ExpandAll()
+{
+	BNFunctionExpandAll(m_object);
+}
 
 AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(Function* func) : m_func(func)
 {

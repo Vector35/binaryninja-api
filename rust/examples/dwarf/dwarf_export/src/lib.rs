@@ -15,13 +15,13 @@ use binaryninja::{
     command::{register, Command},
     interaction,
     interaction::{FormResponses, FormResponses::Index},
-    logger::init,
     rc::Ref,
     string::BnString,
     symbol::SymbolType,
     types::{Conf, MemberAccess, StructureType, Type, TypeClass},
 };
 use log::{error, info, LevelFilter};
+use binaryninja::logger::Logger;
 
 fn export_type(
     name: String,
@@ -287,7 +287,7 @@ fn export_type(
 
                 dwarf.unit.get_mut(array_dimension_die_uid).set(
                     gimli::DW_AT_upper_bound,
-                    AttributeValue::Data8((current_t.width() / element_type.width()) - 1),
+                    AttributeValue::Data8(current_t.count() - 1),
                 );
 
                 if element_type.type_class() != TypeClass::ArrayTypeClass {
@@ -781,7 +781,7 @@ impl Command for MyCommand {
 
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
-    init(LevelFilter::Debug).expect("Unable to initialize logger");
+    Logger::new("DWARF Export").with_level(LevelFilter::Debug).init();
 
     register(
         "Export as DWARF",

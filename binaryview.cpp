@@ -950,6 +950,24 @@ TagReference::TagReference(const BNTagReference& ref)
 }
 
 
+bool TagReference::EqualsByData(const TagReference& other) const
+{
+	if (refType != other.refType)
+		return false;
+	if (autoDefined != other.autoDefined)
+		return false;
+	if (addr != other.addr)
+		return false;
+	if (func != other.func)
+		return false;
+	if (arch != other.arch)
+		return false;
+	if (tag->GetData() != other.tag->GetData())
+		return false;
+	return true;
+}
+
+
 bool TagReference::operator==(const TagReference& other) const
 {
 	if (refType != other.refType)
@@ -1732,7 +1750,7 @@ std::vector<Ref<Relocation>> BinaryView::GetRelocationsAt(uint64_t addr) const
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
-		result.push_back(new Relocation(relocations[i]));
+		result.push_back(new Relocation(BNNewRelocationReference(relocations[i])));
 	}
 	BNFreeRelocationList(relocations, count);
 	return result;
@@ -4533,15 +4551,15 @@ bool BinaryView::FindNextData(uint64_t start, const DataBuffer& data, uint64_t& 
 }
 
 bool BinaryView::FindNextText(uint64_t start, const std::string& data, uint64_t& result,
-    Ref<DisassemblySettings> settings, BNFindFlag flags, BNFunctionGraphType graph)
+    Ref<DisassemblySettings> settings, BNFindFlag flags, const FunctionViewType& viewType)
 {
-	return BNFindNextText(m_object, start, data.c_str(), &result, settings->GetObject(), flags, graph);
+	return BNFindNextText(m_object, start, data.c_str(), &result, settings->GetObject(), flags, viewType.ToAPIObject());
 }
 
 bool BinaryView::FindNextConstant(
-    uint64_t start, uint64_t constant, uint64_t& result, Ref<DisassemblySettings> settings, BNFunctionGraphType graph)
+    uint64_t start, uint64_t constant, uint64_t& result, Ref<DisassemblySettings> settings, const FunctionViewType& viewType)
 {
-	return BNFindNextConstant(m_object, start, constant, &result, settings->GetObject(), graph);
+	return BNFindNextConstant(m_object, start, constant, &result, settings->GetObject(), viewType.ToAPIObject());
 }
 
 
@@ -4603,24 +4621,24 @@ bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& da
 
 
 bool BinaryView::FindNextText(uint64_t start, uint64_t end, const std::string& data, uint64_t& addr,
-    Ref<DisassemblySettings> settings, BNFindFlag flags, BNFunctionGraphType graph,
+    Ref<DisassemblySettings> settings, BNFindFlag flags, const FunctionViewType& viewType,
     const std::function<bool(size_t current, size_t total)>& progress)
 {
 	ProgressContext fp;
 	fp.callback = progress;
 	return BNFindNextTextWithProgress(
-	    m_object, start, end, data.c_str(), &addr, settings->GetObject(), flags, graph, &fp, ProgressCallback);
+	    m_object, start, end, data.c_str(), &addr, settings->GetObject(), flags, viewType.ToAPIObject(), &fp, ProgressCallback);
 }
 
 
 bool BinaryView::FindNextConstant(uint64_t start, uint64_t end, uint64_t constant, uint64_t& addr,
-    Ref<DisassemblySettings> settings, BNFunctionGraphType graph,
+    Ref<DisassemblySettings> settings, const FunctionViewType& viewType,
     const std::function<bool(size_t current, size_t total)>& progress)
 {
 	ProgressContext fp;
 	fp.callback = progress;
 	return BNFindNextConstantWithProgress(
-	    m_object, start, end, constant, &addr, settings->GetObject(), graph, &fp, ProgressCallback);
+	    m_object, start, end, constant, &addr, settings->GetObject(), viewType.ToAPIObject(), &fp, ProgressCallback);
 }
 
 
@@ -4638,7 +4656,7 @@ bool BinaryView::FindAllData(uint64_t start, uint64_t end, const DataBuffer& dat
 
 
 bool BinaryView::FindAllText(uint64_t start, uint64_t end, const std::string& data, Ref<DisassemblySettings> settings,
-    BNFindFlag flags, BNFunctionGraphType graph, const std::function<bool(size_t current, size_t total)>& progress,
+    BNFindFlag flags, const FunctionViewType& viewType, const std::function<bool(size_t current, size_t total)>& progress,
     const std::function<bool(uint64_t addr, const std::string& match, const LinearDisassemblyLine& line)>&
         matchCallback)
 {
@@ -4646,20 +4664,20 @@ bool BinaryView::FindAllText(uint64_t start, uint64_t end, const std::string& da
 	fp.callback = progress;
 	MatchCallbackContextForText mc;
 	mc.func = matchCallback;
-	return BNFindAllTextWithProgress(m_object, start, end, data.c_str(), settings->GetObject(), flags, graph, &fp,
+	return BNFindAllTextWithProgress(m_object, start, end, data.c_str(), settings->GetObject(), flags, viewType.ToAPIObject(), &fp,
 	    ProgressCallback, &mc, MatchCallbackForText);
 }
 
 
 bool BinaryView::FindAllConstant(uint64_t start, uint64_t end, uint64_t constant, Ref<DisassemblySettings> settings,
-    BNFunctionGraphType graph, const std::function<bool(size_t current, size_t total)>& progress,
+    const FunctionViewType& viewType, const std::function<bool(size_t current, size_t total)>& progress,
     const std::function<bool(uint64_t addr, const LinearDisassemblyLine& line)>& matchCallback)
 {
 	ProgressContext fp;
 	fp.callback = progress;
 	MatchCallbackContextForConstant mc;
 	mc.func = matchCallback;
-	return BNFindAllConstantWithProgress(m_object, start, end, constant, settings->GetObject(), graph, &fp,
+	return BNFindAllConstantWithProgress(m_object, start, end, constant, settings->GetObject(), viewType.ToAPIObject(), &fp,
 	    ProgressCallback, &mc, MatchCallbackForConstant);
 }
 
@@ -4678,12 +4696,12 @@ void BinaryView::Reanalyze()
 }
 
 
-Ref<Workflow> BinaryView::GetWorkflow() const
+Ref<Workflow> BinaryView::GetWorkflow()
 {
 	BNWorkflow* workflow = BNGetWorkflowForBinaryView(m_object);
 	if (!workflow)
 		return nullptr;
-	return new Workflow(workflow);
+	return new Workflow(workflow, this);
 }
 
 
@@ -4726,10 +4744,33 @@ bool BinaryView::GetAddressInput(uint64_t& result, const string& prompt, const s
 }
 
 
-void BinaryView::AddAutoSegment(
-    uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags)
+void BinaryView::BeginBulkAddSegments()
+{
+	BNBeginBulkAddSegments(m_object);
+}
+
+
+void BinaryView::EndBulkAddSegments()
+{
+	BNEndBulkAddSegments(m_object);
+}
+
+
+void BinaryView::CancelBulkAddSegments()
+{
+	BNCancelBulkAddSegments(m_object);
+}
+
+
+void BinaryView::AddAutoSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags)
 {
 	BNAddAutoSegment(m_object, start, length, dataOffset, dataLength, flags);
+}
+
+
+void BinaryView::AddAutoSegments(const vector<BNSegmentInfo>& segments)
+{
+	BNAddAutoSegments(m_object, segments.data(), segments.size());
 }
 
 
@@ -4739,10 +4780,15 @@ void BinaryView::RemoveAutoSegment(uint64_t start, uint64_t length)
 }
 
 
-void BinaryView::AddUserSegment(
-    uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags)
+void BinaryView::AddUserSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags)
 {
 	BNAddUserSegment(m_object, start, length, dataOffset, dataLength, flags);
+}
+
+
+void BinaryView::AddUserSegments(const vector<BNSegmentInfo>& segments)
+{
+	BNAddUserSegments(m_object, segments.data(), segments.size());
 }
 
 
@@ -5315,6 +5361,20 @@ void BinaryView::SetUserGlobalPointerValue(const Confidence<RegisterValue>& valu
 	BNSetUserGlobalPointerValue(m_object, v);
 }
 
+
+optional<pair<string, BNStringType>> BinaryView::StringifyUnicodeData(Architecture* arch,
+	const DataBuffer& buffer, bool allowShortStrings)
+{
+	char* str = nullptr;
+	BNStringType type = AsciiString;
+	if (!BNStringifyUnicodeData(m_object, arch ? arch->GetObject() : nullptr, buffer.GetBufferObject(),
+		allowShortStrings, &str, &type))
+		return nullopt;
+
+	string result(str);
+	BNFreeString(str);
+	return make_pair(result, type);
+}
 
 
 Relocation::Relocation(BNRelocation* reloc)

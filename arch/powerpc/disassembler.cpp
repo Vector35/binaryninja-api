@@ -106,7 +106,7 @@ powerpc_decompose(const uint8_t *data, int size, uint32_t addr, bool lil_end,
 	//   bool update_cr0;
 	//   uint8_t op_count;
 	//   cs_ppc_op operands[8];
-    // } cs_ppc;
+	// } cs_ppc;
 
 	// and each operand is:
 	// typedef struct cs_ppc_op {
@@ -181,5 +181,20 @@ powerpc_reg_to_str(uint32_t rid)
 	}
 
 	return cs_reg_name(handle_lil, rid);
+}
+
+extern "C" const uint32_t
+powerpc_crx_to_reg(uint32_t rid)
+{
+	if (rid >= PPC_REG_CR0EQ && rid <= PPC_REG_CR7EQ)
+		return (rid - PPC_REG_CR0EQ) * 4 + 2;
+	else if (rid >= PPC_REG_CR0GT && rid <= PPC_REG_CR7GT)
+		return (rid - PPC_REG_CR0GT) * 4 + 1;
+	else if (rid >= PPC_REG_CR0LT && rid <= PPC_REG_CR7LT)
+		return (rid - PPC_REG_CR0LT) * 4 + 0;
+	else if (rid >= PPC_REG_CR0UN && rid <= PPC_REG_CR7UN)
+		return (rid - PPC_REG_CR0UN) * 4 + 3;
+	else
+		return rid;
 }
 

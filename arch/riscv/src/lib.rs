@@ -4,11 +4,6 @@
 // do the amo max/min instructions
 // Platform api
 
-use std::borrow::Cow;
-use std::fmt;
-use std::hash::Hash;
-use std::marker::PhantomData;
-
 use binaryninja::relocation::{Relocation, RelocationHandlerExt};
 use binaryninja::{
     add_optional_plugin_dependency, architecture,
@@ -37,7 +32,13 @@ use binaryninja::{
     symbol::{Symbol, SymbolType},
     types::{max_confidence, min_confidence, Conf, NameAndType, Type},
 };
+use log::LevelFilter;
+use std::borrow::Cow;
+use std::fmt;
+use std::hash::Hash;
+use std::marker::PhantomData;
 
+use binaryninja::logger::Logger;
 use riscv_dis::{
     FloatReg, FloatRegType, Instr, IntRegType, Op, RegFile, Register as RiscVRegister,
     RiscVDisassembler, RoundMode,
@@ -570,11 +571,7 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
                 )]
             }
             Intrinsic::Fence => {
-                vec![NameAndType::new(
-                    "",
-                    &Type::int(4, false),
-                    min_confidence(),
-                )]
+                vec![NameAndType::new("", &Type::int(4, false), min_confidence())]
             }
         }
     }
@@ -977,10 +974,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     Text,
                 ));
             } else {
-                res.push(InstructionTextToken::new(
-                    ",",
-                    OperandSeparator,
-                ));
+                res.push(InstructionTextToken::new(",", OperandSeparator));
                 res.push(InstructionTextToken::new(" ", Text));
             }
 
@@ -988,18 +982,12 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 Operand::R(r) => {
                     let reg = self::Register::from(r);
 
-                    res.push(InstructionTextToken::new(
-                        &reg.name(),
-                        Register,
-                    ));
+                    res.push(InstructionTextToken::new(&reg.name(), Register));
                 }
                 Operand::F(r) => {
                     let reg = self::Register::from(r);
 
-                    res.push(InstructionTextToken::new(
-                        &reg.name(),
-                        Register,
-                    ));
+                    res.push(InstructionTextToken::new(&reg.name(), Register));
                 }
                 Operand::I(i) => {
                     match op {
@@ -1032,10 +1020,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 Operand::M(i, b) => {
                     let reg = self::Register::from(b);
 
-                    res.push(InstructionTextToken::new(
-                        "",
-                        BeginMemoryOperand,
-                    ));
+                    res.push(InstructionTextToken::new("", BeginMemoryOperand));
                     res.push(InstructionTextToken::new(
                         &if i < 0 {
                             format!("-0x{:x}", -i)
@@ -1046,15 +1031,9 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     ));
 
                     res.push(InstructionTextToken::new("(", Brace));
-                    res.push(InstructionTextToken::new(
-                        &reg.name(),
-                        Register,
-                    ));
+                    res.push(InstructionTextToken::new(&reg.name(), Register));
                     res.push(InstructionTextToken::new(")", Brace));
-                    res.push(InstructionTextToken::new(
-                        "",
-                        EndMemoryOperand,
-                    ));
+                    res.push(InstructionTextToken::new("", EndMemoryOperand));
                 }
                 Operand::RM(r) => {
                     res.push(InstructionTextToken::new(r.name(), Register));
@@ -1183,11 +1162,28 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             Op::SraW(r) => simple_r!(r, |rs1, rs2| il.sx(max_width, il.asr(4, rs1, rs2))),
 
             Op::Mul(r) => simple_r!(r, |rs1, rs2| il.mul(max_width, rs1, rs2)),
-            /*
-            Op::MulH(r) =>
-            Op::MulHU(r) =>
-            Op::MulHSU(r) =>
-            */
+            Op::MulH(r) => simple_r!(r, |rs1, rs2| {
+                let extended_width = max_width * 2;
+                let extended_rs1 = il.sx(extended_width, rs1);
+                let extended_rs2 = il.sx(extended_width, rs2);
+                let mul_expr = il.mul(extended_width, extended_rs1, extended_rs2);
+                il.asr(max_width, mul_expr, il.const_int(1, 8 * (max_width as u64)))
+            }),
+            Op::MulHU(r) => simple_r!(r, |rs1, rs2| {
+                let extended_width = max_width * 2;
+                let extended_rs1 = il.zx(extended_width, rs1);
+                let extended_rs2 = il.zx(extended_width, rs2);
+                let mul_expr = il.mul(extended_width, extended_rs1, extended_rs2);
+                il.lsr(max_width, mul_expr, il.const_int(1, 8 * (max_width as u64)))
+            }),
+            Op::MulHSU(r) => simple_r!(r, |rs1, rs2| {
+                let extended_width = max_width * 2;
+                let extended_rs1 = il.sx(extended_width, rs1);
+                let extended_rs2 = il.zx(extended_width, rs2);
+                let mul_expr = il.mul(extended_width, extended_rs1, extended_rs2);
+                il.asr(max_width, mul_expr, il.const_int(1, 8 * (max_width as u64)))
+            }),
+
             Op::Div(r) => simple_r!(r, |rs1, rs2| il.divs(max_width, rs1, rs2)),
             Op::DivU(r) => simple_r!(r, |rs1, rs2| il.divu(max_width, rs1, rs2)),
             Op::Rem(r) => simple_r!(r, |rs1, rs2| il.mods(max_width, rs1, rs2)),
@@ -1223,6 +1219,19 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     (0, 1, 0) => il.ret(target).append(),  // jalr zero, ra, 0
                     (1, _, _) => il.call(target).append(), // indirect call
                     (0, _, _) => il.jump(target).append(), // indirect jump
+                    (rd_id, rs1_id, _) if rd_id == rs1_id => {
+                        // store the target in a temporary register so we don't clobber it when rd == rs1
+                        let tmp_reg: llil::Register<Register<D>> = llil::Register::Temp(0);
+                        il.set_reg(max_width, tmp_reg, target).append();
+                        // indirect jump with storage of next address to non-`ra` register
+                        il.set_reg(
+                            max_width,
+                            Register::from(rd),
+                            il.const_ptr(addr.wrapping_add(inst_len)),
+                        )
+                        .append();
+                        il.jump(tmp_reg).append();
+                    }
                     (_, _, _) => {
                         // indirect jump with storage of next address to non-`ra` register
                         il.set_reg(
@@ -2768,15 +2777,18 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         // Look for the following code pattern:
         // t3 = plt
         // t3 = [t3 + pltoffset] || t3 = [t3]
+        // temp0 = t3 (optional)
         // t1 = next instruction
-        // jump(t3)
+        // jump(t3 || temp0)
 
         if llil.instruction_count() < 4 {
             return false;
         }
 
+        let mut next_llil_instr = llil.basic_blocks().iter().next().unwrap().iter();
+
         // Match instruction that fetches PC-relative PLT address range
-        let auipc = llil.instruction_from_idx(0).info();
+        let auipc = next_llil_instr.next().unwrap().info();
         let (auipc_dest, plt_base) = match auipc {
             InstrInfo::SetReg(r) => {
                 let value = match r.source_expr().info() {
@@ -2789,8 +2801,8 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         };
 
         // Match load instruction that loads the imported address
-        let load = llil.instruction_from_idx(1).info();
-        let (mut entry, target_reg) = match load {
+        let load = next_llil_instr.next().unwrap().info();
+        let (mut entry, mut target_reg) = match load {
             InstrInfo::SetReg(r) => match r.source_expr().info() {
                 ExprInfo::Load(l) => {
                     let target_reg = r.dest_reg();
@@ -2838,8 +2850,24 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
             return false;
         }
 
+        // (OPTIONAL) Check if we are storing in temp0, adjust target reg if so
+        let mut temp_reg_inst = next_llil_instr.next().unwrap().info();
+        match &temp_reg_inst {
+            InstrInfo::SetReg(r) if llil.instruction_count() >= 5 => {
+                match r.source_expr().info() {
+                    ExprInfo::Reg(op) if target_reg == op.source_reg() => {
+                        // Update the target_reg to the temp reg.
+                        target_reg = r.dest_reg();
+                        temp_reg_inst = next_llil_instr.next().unwrap().info()
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        };
+
         // Match instruction that stores the next instruction address into a register
-        let next_pc_inst = llil.instruction_from_idx(2).info();
+        let next_pc_inst = temp_reg_inst;
         let (next_pc_dest, next_pc, cur_pc) = match next_pc_inst {
             InstrInfo::SetReg(r) => {
                 let value = match r.source_expr().info() {
@@ -2855,7 +2883,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         }
 
         // Match tail call at the end and make sure it is going to the import
-        let jump = llil.instruction_from_idx(3).info();
+        let jump = next_llil_instr.next().unwrap().info();
         match jump {
             InstrInfo::TailCall(j) => {
                 match j.target().info() {
@@ -2891,7 +2919,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginInit() -> bool {
-    binaryninja::logger::init(log::LevelFilter::Trace).expect("Failed to set up logging");
+    Logger::new("RISCV").with_level(LevelFilter::Trace).init();
 
     use riscv_dis::{RiscVIMACDisassembler, Rv32GRegs, Rv64GRegs};
     let arch32 =

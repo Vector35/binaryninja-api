@@ -183,6 +183,8 @@ class TypeLibrary:
 
 	def add_alternate_name(self, name: str) -> None:
 		"""Adds an extra name to this type library used during library lookups and dependency resolution"""
+		if not isinstance(name, str):
+			raise ValueError(f"Expected name to be str, got {type(name)}")
 		core.BNAddTypeLibraryAlternateName(self.handle, name)
 
 	@property

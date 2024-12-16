@@ -58,7 +58,7 @@ The following files and folders may be created in the user folder but are not cr
 - `snippets/`: Used to store snippets created using the official Snippet plugin
 - `themes/`: For user themes or user-modified versions of official themes (see [Creating Themes](../dev/themes.md))
 - `types/platform`: This folder can contain additional user [platform types](types/platformtypes.md)
-- `typelib`: This folder can contain additional user [Type Libraries](../dev/annotation.md#type-libraries)
+- `typelib`: This folder can contain additional user [Type Libraries](../dev/typelibraries.md)
 - `community-themes/`: Can also be used to store themes, particularly so you can clone the [community theme collection](https://github.com/vector35/community-themes) directly into your user folder
 
 ### QSettings Locations
@@ -164,6 +164,20 @@ Recent files can be opened on double click. They can also be navigated using the
 The Recent files list can be cleared via using the Command Palette (`[CTRL] + P`) action `Clear Recently Opened`.
 
 Hotkeys (macOS: `[CMD] + 0` - `[CMD] + 9`, Windows/Linux: `[CTRL] + 0` - `[CTRL + 9]`) can also be used to quickly open a file. The hotkey for a given entry will be shown on the right.
+
+### Plugins
+
+The status of currently installed plugins will be displayed in the bottom right.
+
+![plugin status ><](../img/plugin-status-widget.png "Plugin Status Widget"){ width="400" }
+
+Pressing each of the icons will navigate you to the the Plugin Manager with the corresponding filter:
+
+- Green Circle: `@installed`
+- Error Symbol: `@failed_to_load`
+- Update Icon: `@update_available`
+
+Pressing the gear or using the hotkeys (macOS: `[CMD+SHIFT] + M` , Windows/Linux: `[CTRL+SHIFT] + M`) will open the plugin manager with no filters so you can browse available plugins.
 
 ### Commercial/Ultimate Features
 
@@ -676,6 +690,37 @@ clickable to navigate to the virtual address.
 
 Strings can be double clicked to navigate to them, and the table can be sorted or the list filtered by
 typing in the search box.
+
+## Dyld Shared Cache Triage (Alpha)
+
+The Dyld Shared Cache Triage View (or DSCView) allows loading dyld shared cache files from macOS and iOS. You can selectively load specific images, search for specific symbols, and follow analysis between specific images, search for specific symbols, and follow analysis references between any loaded images in one view.
+
+!!! note "Dyld Shared Cache Tabs"
+
+    === "Image List"
+
+        ![Dyld Shared Cache Image List](../img/dsc/images.png "Dyld Shared Cache Image List"){ width="800" }
+
+        The image list shows a list of all images within the dyld shared cache and their virtual addresses. Double clicking on an image will load the image and begin analyzing it.
+
+    === "Symbol Search"
+
+        ![Dyld Shared Cache Symbol Search](../img/dsc/symbols.png "Dyld Shared Cache Symbol List"){ width="800" }
+
+        All symbols exported by each of the shared libraries in the cache can be searched from this view. Double clicking any line will prompt the user whether to load the associated library for that symbol.
+
+    === "Cache"
+
+        ![Dyld Shared Cache Cache](../img/dsc/cache.png "Dyld Shared Cache Cache"){ width="800" }
+
+        The cache view shows currently loaded shared objects and is informational only.
+
+    === "Alpha"
+
+        ![Dyld Shared Cache Alpha](../img/dsc/alpha.png "Dyld Shared Cache Alpha"){ width="800" }
+
+        The current DSCView is considered an Alpha feature and more details on the limitations and known-issues is included in this tab. As the DSCView leaves alpha state, this tab will be removed.
+
 
 ## Byte Overview
 

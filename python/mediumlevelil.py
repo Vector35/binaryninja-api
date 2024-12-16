@@ -447,7 +447,11 @@ class MediumLevelILInstruction(BaseILInstruction):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		"""Operands for the instruction"""
+		"""
+		Operands for the instruction
+
+		Consider using more specific APIs for ``src``, ``dest``, ``params``, etc where appropriate.
+		"""
 		return list(map(lambda x: x[1], self.detailed_operands))
 
 	@property

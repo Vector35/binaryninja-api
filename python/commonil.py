@@ -44,7 +44,7 @@ class BaseILInstruction:
 				parent.prepend_parent(graph, parent_node, nodes)
 
 	@classmethod
-	def add_subgraph(cls, graph, nodes):
+	def add_subgraph(cls, graph: FlowGraph, nodes) -> FlowGraph:
 		node = FlowGraphNode(graph)
 		node.lines = [f"{cls.__name__}"]
 		graph.append(node)

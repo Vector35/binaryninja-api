@@ -109,6 +109,7 @@ void TEView::ReadTEImageSectionHeaders(BinaryReader& reader, uint32_t numSection
 
 void TEView::CreateSections()
 {
+	BeginBulkAddSegments();
 	for (size_t i = 0; i < m_sections.size(); i++)
 	{
 		auto section = m_sections[i];
@@ -138,6 +139,7 @@ void TEView::CreateSections()
 			semantics = ReadWriteDataSectionSemantics;
 		AddAutoSection(section.name, section.virtualAddress + m_imageBase, section.virtualSize, semantics);
 	}
+	EndBulkAddSegments();
 }
 
 void TEView::AssignHeaderTypes()

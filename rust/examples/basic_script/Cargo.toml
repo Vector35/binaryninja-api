@@ -1,7 +1,6 @@
 [package]
 name = "basic_script"
 version = "0.1.0"
-authors = ["KyleMiles <kyle@vector35.com>"]
 edition = "2021"
 
 [dependencies]

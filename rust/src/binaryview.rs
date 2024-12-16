@@ -620,6 +620,25 @@ pub trait BinaryViewExt: BinaryViewBase {
         QualifiedName(name_handle)
     }
 
+    fn define_auto_type_with_id<S: BnStrCompatible>(
+        &self,
+        name: S,
+        id: S,
+        type_obj: &Type,
+    ) -> QualifiedName {
+        let mut qualified_name = QualifiedName::from(name);
+        let id_str = id.into_bytes_with_nul();
+        let name_handle = unsafe {
+            BNDefineAnalysisType(
+                self.as_ref().handle,
+                id_str.as_ref().as_ptr() as *const _,
+                &mut qualified_name.0,
+                type_obj.handle,
+            )
+        };
+        QualifiedName(name_handle)
+    }
+
     fn define_user_type<S: BnStrCompatible>(&self, name: S, type_obj: &Type) {
         let mut qualified_name = QualifiedName::from(name);
         unsafe {
@@ -823,9 +842,51 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    /// Adds a segment to the view.
+    /// 
+    /// NOTE: Consider using [BinaryViewExt::begin_bulk_add_segments] and [BinaryViewExt::end_bulk_add_segments] 
+    /// if you plan on adding a number of segments all at once, to avoid unnecessary MemoryMap updates.
     fn add_segment(&self, segment: SegmentBuilder) {
         segment.create(self.as_ref());
     }
+    
+    /// Start adding segments in bulk. Useful for adding large numbers of segments.
+    /// 
+    /// After calling this any call to [BinaryViewExt::add_segment] will be uncommited until a call to 
+    /// [BinaryViewExt::end_bulk_add_segments] 
+    /// 
+    /// If you wish to discard the uncommited segments you can call [BinaryViewExt::cancel_bulk_add_segments].
+    /// 
+    /// NOTE: This **must** be paired with a later call to [BinaryViewExt::end_bulk_add_segments] or 
+    /// [BinaryViewExt::cancel_bulk_add_segments], otherwise segments added after this call will stay uncommited.
+    fn begin_bulk_add_segments(&self) {
+        unsafe {
+            BNBeginBulkAddSegments(self.as_ref().handle)
+        }
+    }
+
+    /// Commit all auto and user segments that have been added since the call to [Self::begin_bulk_add_segments].
+    /// 
+    /// NOTE: This **must** be paired with a prior call to [Self::begin_bulk_add_segments], otherwise this
+    /// does nothing and segments are added individually.
+    fn end_bulk_add_segments(&self) {
+        unsafe {
+            BNEndBulkAddSegments(self.as_ref().handle)
+        }
+    }
+
+    /// Flushes the auto and user segments that have yet to be committed.
+    /// 
+    /// This is to be used in conjunction with [Self::begin_bulk_add_segments]
+    /// and [Self::end_bulk_add_segments], where the latter will commit the segments
+    /// which have been added since [Self::begin_bulk_add_segments], this function
+    /// will discard them so that they do not get added to the view.
+    fn cancel_bulk_add_segments(&self) {
+        unsafe {
+            BNCancelBulkAddSegments(self.as_ref().handle)
+        }
+    }
+
 
     fn add_section<S: BnStrCompatible>(&self, section: SectionBuilder<S>) {
         section.create(self.as_ref());
@@ -1012,6 +1073,14 @@ pub trait BinaryViewExt: BinaryViewBase {
 
             Ok(Function::from_raw(handle))
         }
+    }
+    
+    fn function_start_before(&self, addr: u64) -> u64 {
+        unsafe { BNGetPreviousFunctionStartBeforeAddress(self.as_ref().handle, addr) }
+    }
+
+    fn function_start_after(&self, addr: u64) -> u64 {
+        unsafe { BNGetNextFunctionStartAfterAddress(self.as_ref().handle, addr) }
     }
 
     fn basic_blocks_containing(&self, addr: u64) -> Array<BasicBlock<NativeBlock>> {
@@ -1277,6 +1346,25 @@ pub trait BinaryViewExt: BinaryViewBase {
             let mut count = 0;
             let handle = BNGetCodeReferences(self.as_ref().handle, addr, &mut count);
             Array::new(handle, count, ())
+        }
+    }
+
+    /// Retrieves a list of addresses pointed to by a given address.
+    fn get_code_refs_from(&self, addr: u64, func: Option<&Function>) -> Vec<u64> {
+        unsafe {
+            let mut count = 0;
+            // TODO: We could have done a [CodeReference] however it seems to be poorly written.
+            // TODO: It uses manually drop on a ref that only gets dropped in the array, insane behavior.
+            // TODO: For now just construct it manually.
+            let mut src = BNReferenceSource {
+                func: func.map(|f| f.handle).unwrap_or(std::ptr::null_mut()),
+                arch: func.map(|f| f.arch().0).unwrap_or(std::ptr::null_mut()),
+                addr,
+            };
+            let addresses = BNGetCodeReferencesFrom(self.as_ref().handle, &mut src, &mut count);
+            let res = std::slice::from_raw_parts(addresses, count).to_vec();
+            BNFreeAddressList(addresses);
+            res
         }
     }
 

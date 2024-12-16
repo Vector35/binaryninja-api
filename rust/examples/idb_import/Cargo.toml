@@ -10,5 +10,5 @@ crate-type = ["cdylib"]
 [dependencies]
 anyhow = { version = "1.0.86", features = ["backtrace"] }
 binaryninja = { path = "../../" }
-idb-rs = { git = "https://github.com/Vector35/idb-rs", version = "0.1.4" }
+idb-rs = { git = "https://github.com/Vector35/idb-rs", version = "0.1.6" }
 log = "0.4.20"

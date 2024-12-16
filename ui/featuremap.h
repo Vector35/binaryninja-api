@@ -15,12 +15,11 @@
 #include <vector>
 
 #include "binaryninjaapi.h"
-#include "dockhandler.h"
+#include "action.h"
 #include "notificationsdispatcher.h"
 #include "uitypes.h"
 
 class ContextMenuManager;
-class Menu;
 class View;
 class SplitPaneWidget;
 
@@ -47,7 +46,7 @@ class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDa
 	BinaryViewRef m_data;
 	std::unique_ptr<NotificationsDispatcher> m_dispatcher = nullptr;
 
-	bool m_updatesPending = false;
+	std::atomic<bool> m_updatesPending = false;
 	QTimer* m_updateTimer = nullptr;
 	size_t m_imgWidth = 0;
 	size_t m_imgHeight = 0;

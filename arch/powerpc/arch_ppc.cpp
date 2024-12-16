@@ -666,7 +666,7 @@ class PowerpcArchitecture: public Architecture
 				case PPC_OP_REG:
 					//MYLOG("pushing a register\n");
 					if (capstoneWorkaround || (insn->id == PPC_INS_ISEL && i == 3))
-						result.emplace_back(RegisterToken, GetFlagName(op->reg - PPC_REG_R0));
+						result.emplace_back(RegisterToken, GetFlagName(op->reg));
 					else
 						result.emplace_back(RegisterToken, GetRegisterName(op->reg));
 					break;
@@ -965,43 +965,45 @@ class PowerpcArchitecture: public Architecture
 	{
 		MYLOG("%s(%d)\n", __func__, flag);
 
-		switch(flag) {
+		switch(powerpc_crx_to_reg(flag)) {
 			case IL_FLAG_LT: return "lt";
 			case IL_FLAG_GT: return "gt";
 			case IL_FLAG_EQ: return "eq";
 			case IL_FLAG_SO: return "so";
-			case IL_FLAG_LT_1: return "cr1_lt";
-			case IL_FLAG_GT_1: return "cr1_gt";
-			case IL_FLAG_EQ_1: return "cr1_eq";
-			case IL_FLAG_SO_1: return "cr1_so";
-			case IL_FLAG_LT_2: return "cr2_lt";
-			case IL_FLAG_GT_2: return "cr2_gt";
-			case IL_FLAG_EQ_2: return "cr2_eq";
-			case IL_FLAG_SO_2: return "cr2_so";
-			case IL_FLAG_LT_3: return "cr3_lt";
-			case IL_FLAG_GT_3: return "cr3_gt";
-			case IL_FLAG_EQ_3: return "cr3_eq";
-			case IL_FLAG_SO_3: return "cr3_so";
-			case IL_FLAG_LT_4: return "cr4_lt";
-			case IL_FLAG_GT_4: return "cr4_gt";
-			case IL_FLAG_EQ_4: return "cr4_eq";
-			case IL_FLAG_SO_4: return "cr4_so";
-			case IL_FLAG_LT_5: return "cr5_lt";
-			case IL_FLAG_GT_5: return "cr5_gt";
-			case IL_FLAG_EQ_5: return "cr5_eq";
-			case IL_FLAG_SO_5: return "cr5_so";
-			case IL_FLAG_LT_6: return "cr6_lt";
-			case IL_FLAG_GT_6: return "cr6_gt";
-			case IL_FLAG_EQ_6: return "cr6_eq";
-			case IL_FLAG_SO_6: return "cr6_so";
-			case IL_FLAG_LT_7: return "cr7_lt";
-			case IL_FLAG_GT_7: return "cr7_gt";
-			case IL_FLAG_EQ_7: return "cr7_eq";
-			case IL_FLAG_SO_7: return "cr7_so";
+			case IL_FLAG_LT_1: return "cr1lt";
+			case IL_FLAG_GT_1: return "cr1gt";
+			case IL_FLAG_EQ_1: return "cr1eq";
+			case IL_FLAG_SO_1: return "cr1so";
+			case IL_FLAG_LT_2: return "cr2lt";
+			case IL_FLAG_GT_2: return "cr2gt";
+			case IL_FLAG_EQ_2: return "cr2eq";
+			case IL_FLAG_SO_2: return "cr2so";
+			case IL_FLAG_LT_3: return "cr3lt";
+			case IL_FLAG_GT_3: return "cr3gt";
+			case IL_FLAG_EQ_3: return "cr3eq";
+			case IL_FLAG_SO_3: return "cr3so";
+			case IL_FLAG_LT_4: return "cr4lt";
+			case IL_FLAG_GT_4: return "cr4gt";
+			case IL_FLAG_EQ_4: return "cr4eq";
+			case IL_FLAG_SO_4: return "cr4so";
+			case IL_FLAG_LT_5: return "cr5lt";
+			case IL_FLAG_GT_5: return "cr5gt";
+			case IL_FLAG_EQ_5: return "cr5eq";
+			case IL_FLAG_SO_5: return "cr5so";
+			case IL_FLAG_LT_6: return "cr6lt";
+			case IL_FLAG_GT_6: return "cr6gt";
+			case IL_FLAG_EQ_6: return "cr6eq";
+			case IL_FLAG_SO_6: return "cr6so";
+			case IL_FLAG_LT_7: return "cr7lt";
+			case IL_FLAG_GT_7: return "cr7gt";
+			case IL_FLAG_EQ_7: return "cr7eq";
+			case IL_FLAG_SO_7: return "cr7so";
 			case IL_FLAG_XER_SO: return "xer_so";
 			case IL_FLAG_XER_OV: return "xer_ov";
 			case IL_FLAG_XER_CA: return "xer_ca";
-			default: return "ERR_FLAG_NAME";
+			default:
+				// LogWarn("Unknown flag: %#x/%d", flag, flag);
+				return "ERR_FLAG_NAME";
 		}
 	}
 

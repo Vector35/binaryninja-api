@@ -22,10 +22,10 @@ class BINARYNINJAUIAPI ILChooserWidget : public MenuHelper
 
   public:
 	ILChooserWidget(QWidget* parent, UIActionHandler* handler, bool longDescription);
-	void updateStatus(BNFunctionGraphType current);
+	void updateStatus(const BinaryNinja::FunctionViewType& current);
 
-	static QString shortNameForILType(BNFunctionGraphType type);
-	static QString longNameForILType(BNFunctionGraphType type);
+	static QString shortNameForILType(const BinaryNinja::FunctionViewType& type);
+	static QString longNameForILType(const BinaryNinja::FunctionViewType& type);
 
   protected:
 	virtual void showMenu() override;

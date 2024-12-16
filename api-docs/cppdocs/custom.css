@@ -67,6 +67,10 @@ input#MSearchField {
     top: -1px;
 }
 
+#MSearchSelect {
+    background-repeat: no-repeat !important;
+}
+
 /* Replicating an "undecorated root node" */
 
 .children_ul a.index\.html {

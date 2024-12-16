@@ -150,12 +150,11 @@ macro_rules! conditional_jump {
             false_label.unwrap_or_else(|| &new_false),
         )
         .append();
-
+        
         if true_label.is_none() {
             $il.mark_label(&mut new_true);
+            $il.jump($il.const_ptr(true_addr)).append();
         }
-
-        $il.goto(true_label.unwrap_or_else(|| &new_true)).append();
 
         if false_label.is_none() {
             $il.mark_label(&mut new_false);

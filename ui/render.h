@@ -122,7 +122,7 @@ class BINARYNINJAUIAPI RenderContext
 		QPainter& p, BNLinearDisassemblyLineType type, const QRect& rect, const QRect& dirtyRect, int gutterWidth);
 	int drawDisassemblyLine(QPainter& p, int left, int top,
 	    const std::vector<BinaryNinja::InstructionTextToken>& tokens, HighlightTokenState& highlight,
-	    bool highlightOnly = false) const;
+	    bool highlightOnly = false, bool renderCollapseIndicator = false) const;
 
 	void drawHexEditorLine(QPainter& p, int left, int top, const HexEditorHighlightState& highlight, BinaryViewRef view,
 	    uint64_t lineStartAddr, size_t cols, size_t firstCol, size_t count, bool cursorVisible, bool cursorAscii,

@@ -2480,6 +2480,25 @@ size_t HighLevelILInstruction::GetDestMemoryVersion() const
 }
 
 
+bool HighLevelILInstruction::CanCollapse(int operation)
+{
+	switch (operation)
+	{
+		case HLIL_IF:
+		case HLIL_WHILE:
+		case HLIL_WHILE_SSA:
+		case HLIL_DO_WHILE:
+		case HLIL_DO_WHILE_SSA:
+		case HLIL_FOR:
+		case HLIL_FOR_SSA:
+		case HLIL_SWITCH:
+		case HLIL_CASE:
+			return true;
+		default:
+			return false;
+	}
+}
+
 ExprId HighLevelILFunction::Nop(const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_NOP, loc, 0);

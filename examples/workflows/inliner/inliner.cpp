@@ -158,14 +158,14 @@ extern "C"
 		    },
 		    inlinerIsValid);
 
-		Ref<Workflow> inlinerWorkflow = Workflow::Instance("core.function.defaultAnalysis")->Clone("InlinerWorkflow");
+		Ref<Workflow> inlinerWorkflow = Workflow::Instance("core.function.baseAnalysis")->Clone("InlinerWorkflow");
 		inlinerWorkflow->RegisterActivity(new Activity("extension.functionInliner", &FunctionInliner));
 		inlinerWorkflow->Insert("core.function.translateTailCalls", "extension.functionInliner");
 		Workflow::RegisterWorkflow(inlinerWorkflow,
 		    R"#({
 			"title" : "Function Inliner (Example)",
-			"description" : "This analysis stands in as an example to demonstrate Binary Ninja's extensible analysis APIs. ***Note** this feature is under active development and subject to change without notice.",
-			"capabilities" : []
+			"description" : "This analysis stands in as an example to demonstrate Binary Ninja's extensible analysis APIs.",
+			"targetType" : "function"
 			})#");
 
 		return true;

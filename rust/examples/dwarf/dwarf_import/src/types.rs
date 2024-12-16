@@ -61,6 +61,17 @@ pub(crate) fn parse_variable<R: ReaderType>(
                 debug_info_builder.add_data_variable(address, full_name, uid)
             }
         },
+        Ok(Operation::AddressIndex { index }) => {
+            if let Some(uid) = type_uid {
+                if let Ok(address) = dwarf.address(unit, index) {
+                    debug_info_builder.add_data_variable(address, full_name, uid)
+                }
+                else
+                {
+                    warn!("Invalid index into IAT: {}", index.0);
+                }
+            }
+        },
         Ok(op) => {
             debug!("Unhandled operation type for variable: {:?}", op);
         },

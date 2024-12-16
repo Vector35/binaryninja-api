@@ -117,15 +117,15 @@ extern "C"
 
 	BINARYNINJAPLUGIN bool CorePluginInit()
 	{
-		Ref<Workflow> customTailCallWorkflow = Workflow::Instance("core.function.defaultAnalysis")->Clone("CustomTailCallWorkflow");
+		Ref<Workflow> customTailCallWorkflow = Workflow::Instance("core.function.baseAnalysis")->Clone("CustomTailCallWorkflow");
 		customTailCallWorkflow->RegisterActivity(new Activity("extension.translateTailCalls", &TailCallTranslation));
 		customTailCallWorkflow->Replace("core.function.translateTailCalls", "extension.translateTailCalls");
 		customTailCallWorkflow->Remove("core.function.translateTailCalls");
 		Workflow::RegisterWorkflow(customTailCallWorkflow,
 		    R"#({
 			"title" : "Tail Call Translation (Example)",
-			"description" : "This analysis stands in as an example to demonstrate Binary Ninja's extensible analysis APIs. ***Note** this feature is under active development and subject to change without notice.",
-			"capabilities" : []
+			"description" : "This analysis stands in as an example to demonstrate Binary Ninja's extensible analysis APIs.",
+			"targetType" : "function"
 			})#");
 
 		return true;

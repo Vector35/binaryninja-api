@@ -10,7 +10,7 @@ To contribute to the Binary Ninja documentation, first sign the [contribution li
 - [breathe]
 - [mkdocs]
 - [doxygen]
-- The following mkdocs plugins: `mkdocs-callouts mkdocs-click mkdocs-include-markdown-plugin mkdocs-material mkdocs-glightbox mkdocs-htmlproofer-plugin`
+- The following mkdocs plugins: `mkdocs-callouts mkdocs-click mkdocs-include-markdown-plugin mkdocs-material mkdocs-glightbox mkdocs-htmlproofer-plugin mkdocs-redirects`
 
 ## Building
 

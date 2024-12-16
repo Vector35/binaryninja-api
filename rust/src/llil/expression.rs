@@ -181,7 +181,7 @@ where
         LLIL_UNIMPL => ExprInfo::Unimpl(Operation::new(function, op)),
         LLIL_UNIMPL_MEM => ExprInfo::UnimplMem(Operation::new(function, op)),
 
-        // TODO TEST_BIT ADD_OVERFLOW
+        // TODO TEST_BIT ADD_OVERFLOW LLIL_REG_STACK_PUSH LLIL_REG_STACK_POP
         _ => {
             #[cfg(debug_assertions)]
             {

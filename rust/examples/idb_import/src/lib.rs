@@ -7,7 +7,6 @@ use binaryninja::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::debuginfo::{
     CustomDebugInfoParser, DebugFunctionInfo, DebugInfo, DebugInfoParser,
 };
-use binaryninja::logger;
 
 use idb_rs::id0::{ID0Section, IDBParam1, IDBParam2};
 use idb_rs::til::section::TILSection;
@@ -16,6 +15,7 @@ use idb_rs::til::Type as TILType;
 use log::{error, trace, warn, LevelFilter};
 
 use anyhow::Result;
+use binaryninja::logger::Logger;
 
 struct IDBDebugInfoParser;
 impl CustomDebugInfoParser for IDBDebugInfoParser {
@@ -23,8 +23,7 @@ impl CustomDebugInfoParser for IDBDebugInfoParser {
         if let Some(project_file) = view.file().get_project_file() {
             project_file.name().as_str().ends_with(".i64")
                 || project_file.name().as_str().ends_with(".idb")
-        }
-        else {
+        } else {
             view.file().filename().as_str().ends_with(".i64")
                 || view.file().filename().as_str().ends_with(".idb")
         }
@@ -52,8 +51,7 @@ impl CustomDebugInfoParser for TILDebugInfoParser {
     fn is_valid(&self, view: &BinaryView) -> bool {
         if let Some(project_file) = view.file().get_project_file() {
             project_file.name().as_str().ends_with(".til")
-        }
-        else {
+        } else {
             view.file().filename().as_str().ends_with(".til")
         }
     }
@@ -202,7 +200,7 @@ pub fn import_til_section(
         if let TranslateTypeResult::Translated(bn_ty)
         | TranslateTypeResult::PartiallyTranslated(bn_ty, _) = &ty.ty
         {
-            if !debug_info.add_type(&String::from_utf8_lossy(&ty.name), &bn_ty, &[/* TODO */]) {
+            if !debug_info.add_type(&String::from_utf8_lossy(&ty.name), bn_ty, &[/* TODO */]) {
                 error!(
                     "Unable to add type `{}`",
                     &String::from_utf8_lossy(&ty.name)
@@ -216,7 +214,7 @@ pub fn import_til_section(
         if let TranslateTypeResult::Translated(bn_ty)
         | TranslateTypeResult::PartiallyTranslated(bn_ty, _) = &ty.ty
         {
-            if !debug_info.add_type(&String::from_utf8_lossy(&ty.name), &bn_ty, &[/* TODO */]) {
+            if !debug_info.add_type(&String::from_utf8_lossy(&ty.name), bn_ty, &[/* TODO */]) {
                 error!(
                     "Unable to fix type `{}`",
                     &String::from_utf8_lossy(&ty.name)
@@ -257,7 +255,7 @@ fn parse_id0_section_info(
 
         let bnty = ty
             .as_ref()
-            .and_then(|ty| match translate_ephemeral_type(debug_file, &ty) {
+            .and_then(|ty| match translate_ephemeral_type(debug_file, ty) {
                 TranslateTypeResult::Translated(result) => Some(result),
                 TranslateTypeResult::PartiallyTranslated(result, None) => {
                     warn!("Unable to fully translate the type at {addr:#x}");
@@ -337,7 +335,9 @@ fn parse_id0_section_info(
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
-    let _logger = logger::init(LevelFilter::Error);
+    Logger::new("IDB Import")
+        .with_level(LevelFilter::Error)
+        .init();
     DebugInfoParser::register("IDB Parser", IDBDebugInfoParser);
     DebugInfoParser::register("TIL Parser", TILDebugInfoParser);
     true

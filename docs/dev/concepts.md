@@ -159,6 +159,37 @@ But what if the code takes multiple paths and could have different values depend
 
 Binary Ninja uses this capability internally for its own value set analysis and constant dataflow propagation but plugins can also leverage this information to great effect. For example, want to find an uninitialized value? Simply look for an SSA variable being read from with a version of zero that isn't in the list of arguments to the function. Want to implement your own inter-procedural data-flow system? Binary Ninja does not for performance reasons, but in instances where you can prevent the state space explosion problem, you can build on top of the existing SSA forms to implement exactly this. A simple example might look for vulnerable function calls like printf() where the first argument is user-data. While most trivial cases of this type of flaw tend to be found quickly, it's often the case that subtler versions with functions that wrap functions that wrap functions that call a printf with user data are more tedious to identify. However, using an SSA-based script, it's super easy to see that, for example, the first parameter to a `printf` call originated in a calling function as the second parameter, and THAT function was called with input that came directly from some sort of user input. While one or two layers might be easy to check by hand with few cross-references, with a large embedded firmware, there might be hundreds or thousands of potential locations to check out, and a script using SSA can dramatically reduce the number of cases to investigate. 
 
+## Memory Permissions Impact on Analysis
+
+Memory permissions and annotations directly impact Binary Ninja's analysis. The system employs a **most-specific-wins** strategy for memory granularity.
+
+So, for example, an annotation such as `const` takes precedence over a memory [section](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Section) with [ReadWriteDataSectionSemantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics). Additionally, a section with ReadOnlyDataSectionSemantics over a [segment](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Segment) with a [SegmentExecutable](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SegmentFlag) flag will still block linear sweep from creating functions in that region of memory.
+
+This is most notable for how the data flow system works and for how linear sweep/code identification works.
+
+## Permissions Impact on Data Flow
+
+Binary Ninja utilizes two distinct data flow systems that are influenced by memory permissions:
+
+1. **Constant Propagation:** This system runs continuously and performs constant propagation across the code. It is less computationally intensive and is always active, ensuring that constant values are propagated wherever applicable.
+
+2. **Possible Value Set System:** This more computationally expensive system is executed on-demand and is used to identify switch statement targets in cases of indirect control flow, among other uses. It constructs possible value sets for variables to determine potential execution paths.
+
+The distinction between readable and writable values affects how data flow analysis is performed:
+- **Readable Values:** Variables marked as readable are analyzed primarily for the flow of data without modification, aiding in tracking data dependencies.
+- **Writable Values:** Writable variables are treated as mutable and thus no assumptions are made about the values being the same in a given function. 
+
+By overriding variable annotations or memory flags, you can alter Binary Ninja's assumptions about data. For instance, marking a writable variable as `const` forces the analysis to treat its value as immutable, potentially simplifying the data flow but risking misinterpretation if the assumption is incorrect.
+
+## Permissions Impact on Linear Sweep
+
+Memory permissions at the segment or section level directly influence how the linear sweep analysis operates:
+- **Executable Segments:** Segments marked as executable ([SegmentExecutable](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SegmentFlag)) allow the linear sweep to interpret the region as code, enabling function creation and disassembly.
+- **Non-Executable Segments:** If a segment is marked as non-executable, linear sweep will not create functions within that region. If the initial segment analysis is incorrect, or is changed at runtime and you want to mirror that, you can [override](../guide/index.md#memory-map) it by creating a new section.
+- **Read-Only vs Read-Write Sections:** Sections with [ReadOnlyCodeSectionSemantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics) allow for the creation of functions, while any other semantics will not.
+
+By modifying memory permissions, you can guide Binary Ninja's linear sweep analysis to more accurately analyze a given binary.
+
 ## UI Elements
 
 There are several ways to create UI elements in Binary Ninja. The first is to use the simplified [interaction](https://api.binary.ninja/binaryninja.interaction-module.html) API which lets you make simple UI elements for use in GUI plugins in Binary Ninja. As an added bonus, they all have fallbacks that will work in headless console-based applications as well. Plugins that use these API include the [angr](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/angr_plugin.py) and [nampa](https://github.com/kenoph/nampa) plugins.

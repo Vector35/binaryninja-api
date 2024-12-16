@@ -27,8 +27,9 @@ from dataclasses import dataclass
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import (
-    AnalysisSkipReason, FunctionGraphType, SymbolType, InstructionTextTokenType, HighlightStandardColor,
-    HighlightColorStyle, DisassemblyOption, IntegerDisplayType, FunctionAnalysisSkipOverride, FunctionUpdateType
+	AnalysisSkipReason, FunctionGraphType, SymbolType, InstructionTextTokenType, HighlightStandardColor,
+	HighlightColorStyle, DisassemblyOption, IntegerDisplayType, FunctionAnalysisSkipOverride, FunctionUpdateType,
+	BuiltinType
 )
 from .exceptions import ILException
 
@@ -45,6 +46,7 @@ from . import variable
 from . import flowgraph
 from . import callingconvention
 from . import workflow
+from . import languagerepresentation
 from . import deprecation
 from . import __version__
 
@@ -76,6 +78,7 @@ ILFunctionType = Union['lowlevelil.LowLevelILFunction', 'mediumlevelil.MediumLev
 ILInstructionType = Union['lowlevelil.LowLevelILInstruction', 'mediumlevelil.MediumLevelILInstruction',
                           'highlevelil.HighLevelILInstruction']
 StringOrType = Union[str, 'types.Type', 'types.TypeBuilder']
+FunctionViewTypeOrName = Union['FunctionViewType', FunctionGraphType, str]
 
 
 def _function_name_():
@@ -181,6 +184,42 @@ class VariableReferenceSource:
 		return f"<var: {repr(self.var)}, src: {repr(self.src)}>"
 
 
+@dataclass
+class FunctionViewType:
+	view_type: FunctionGraphType
+	name: Optional[str]
+
+	def __init__(self, view_type: FunctionViewTypeOrName):
+		if isinstance(view_type, FunctionViewType):
+			self.view_type = view_type.view_type
+			self.name = view_type.name
+		if isinstance(view_type, FunctionGraphType):
+			self.view_type = view_type
+			self.name = None
+		else:
+			self.view_type = FunctionGraphType.HighLevelLanguageRepresentationFunctionGraph
+			self.name = str(view_type)
+
+	def __hash__(self):
+		return hash((self.view_type, self.name))
+
+	@staticmethod
+	def _from_core_struct(view_type: core.BNFunctionViewType) -> 'FunctionViewType':
+		if view_type.type == FunctionGraphType.HighLevelLanguageRepresentationFunctionGraph:
+			if view_type.name is None:
+				return FunctionViewType("Pseudo C")
+			else:
+				return FunctionViewType(view_type.name)
+		else:
+			return FunctionViewType(view_type.type)
+
+	def _to_core_struct(self) -> core.BNFunctionViewType:
+		result = core.BNFunctionViewType()
+		result.type = self.view_type
+		result.name = self.name
+		return result
+
+
 class BasicBlockList:
 	def __init__(
 	    self, function: Union['Function', 'lowlevelil.LowLevelILFunction', 'mediumlevelil.MediumLevelILFunction',
@@ -201,7 +240,7 @@ class BasicBlockList:
 		return self._count.value
 
 	def __iter__(self):
-		return self
+		return BasicBlockList(self._function)
 
 	def __next__(self) -> 'basicblock.BasicBlock':
 		if self._n >= len(self):
@@ -794,7 +833,9 @@ class Function:
 
 			>>> current_function.add_tag("Important", "I think this is the main function")
 			>>> current_function.add_tag("Crashes", "Nullpointer dereference", here)
-			>>>
+
+		Warning: For performance reasons, this function does not ensure the address you
+		have supplied is within the function's bounds.
 		"""
 		tag_type = self.view.get_tag_type(tag_type)
 		if tag_type is None:
@@ -1067,6 +1108,30 @@ class Function:
 		if not result:
 			return None
 		return highlevelil.HighLevelILFunction(self.arch, result, self)
+
+	@property
+	def pseudo_c(self) -> Optional['languagerepresentation.LanguageRepresentationFunction']:
+		return self.language_representation("Pseudo C")
+
+	@property
+	def pseudo_c_if_available(self) -> Optional['languagerepresentation.LanguageRepresentationFunction']:
+		return self.language_representation_if_available("Pseudo C")
+
+	def language_representation(
+			self, language: str
+	) -> Optional['languagerepresentation.LanguageRepresentationFunction']:
+		result = core.BNGetFunctionLanguageRepresentation(self.handle, language)
+		if result is None:
+			return None
+		return languagerepresentation.LanguageRepresentationFunction(handle=result)
+
+	def language_representation_if_available(
+			self, language: str
+	) -> Optional['languagerepresentation.LanguageRepresentationFunction']:
+		result = core.BNGetFunctionLanguageRepresentationIfAvailable(self.handle, language)
+		if result is None:
+			return None
+		return languagerepresentation.LanguageRepresentationFunction(handle=result)
 
 	@property
 	def type(self) -> 'types.FunctionType':
@@ -1787,7 +1852,15 @@ class Function:
 			core.BNFreeILInstructionList(exits)
 
 	def get_constant_data(self, state: RegisterValueType, value: int, size: int = 0) -> databuffer.DataBuffer:
-		return databuffer.DataBuffer(handle=core.BNGetConstantData(self.handle, state, value, size))
+		return databuffer.DataBuffer(handle=core.BNGetConstantData(self.handle, state, value, size, None))
+
+	def get_constant_data_and_builtin(
+			self, state: RegisterValueType, value: int, size: int = 0
+	) -> Tuple[databuffer.DataBuffer, BuiltinType]:
+		builtin = ctypes.c_int()
+		db = databuffer.DataBuffer(
+			handle=core.BNGetConstantData(self.handle, state, value, size, ctypes.byref(builtin)))
+		return db, BuiltinType(builtin.value)
 
 	def get_reg_value_at(
 	    self, addr: int, reg: 'architecture.RegisterType', arch: Optional['architecture.Architecture'] = None
@@ -2078,13 +2151,14 @@ class Function:
 		return result
 
 	def create_graph(
-	    self, graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph,
+	    self, graph_type: FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph,
 	    settings: Optional['DisassemblySettings'] = None
 	) -> flowgraph.CoreFlowGraph:
 		if settings is not None:
 			settings_obj = settings.handle
 		else:
 			settings_obj = None
+		graph_type = FunctionViewType(graph_type)._to_core_struct()
 		return flowgraph.CoreFlowGraph(core.BNCreateFunctionGraph(self.handle, graph_type, settings_obj))
 
 	def apply_imported_types(self, sym: 'types.CoreSymbol', type: Optional[StringOrType] = None) -> None:
@@ -2488,6 +2562,9 @@ class Function:
 
 			>>> current_function.set_user_instr_highlight(here, HighlightStandardColor.BlueHighlightColor)
 			>>> current_function.set_user_instr_highlight(here, highlight.HighlightColor(red=0xff, blue=0xff, green=0))
+
+		Warning: For performance reasons, this function does not ensure the address you have supplied is within the
+		function's bounds.
 		"""
 		if arch is None:
 			arch = self.arch
@@ -2756,16 +2833,20 @@ class Function:
 			>>> var_value = PossibleValueSet.constant(5)
 			>>> current_function.set_user_var_value(mlil_var, def_address, var_value)
 		"""
-		var_defs = self.mlil.get_var_definitions(var)
-		if var_defs is None:
-			raise ValueError("Could not get definition for Variable")
-		found = False
-		for site in var_defs:
-			if site.address == def_addr:
-				found = True
-				break
-		if not found:
-			raise ValueError("No definition for Variable found at given address")
+		if var.index == 0:
+			# Special case: function parameters have index 0 and are defined at the start of the function
+			def_addr = self.start
+		else:
+			var_defs = self.mlil.get_var_definitions(var)
+			if var_defs is None:
+				raise ValueError("Could not get definition for Variable")
+			found = False
+			for site in var_defs:
+				if site.address == def_addr:
+					found = True
+					break
+			if not found:
+				raise ValueError("No definition for Variable found at given address")
 		def_site = core.BNArchitectureAndAddress()
 		def_site.arch = self.arch.handle
 		def_site.address = def_addr
@@ -2780,17 +2861,21 @@ class Function:
 		:param int def_addr: Address of the definition site of the variable
 		:rtype: None
 		"""
-		var_defs = self.mlil.get_var_definitions(var)
-		if var_defs is None:
-			raise ValueError("Could not get definition for Variable")
+		if var.index == 0:
+			# Special case: function parameters have index 0 and are defined at the start of the function
+			def_addr = self.start
+		else:
+			var_defs = self.mlil.get_var_definitions(var)
+			if var_defs is None:
+				raise ValueError("Could not get definition for Variable")
 
-		found = False
-		for site in var_defs:
-			if site.address == def_addr:
-				found = True
-				break
-		if not found:
-			raise ValueError("No definition for Variable found at given address")
+			found = False
+			for site in var_defs:
+				if site.address == def_addr:
+					found = True
+					break
+			if not found:
+				raise ValueError("No definition for Variable found at given address")
 		def_site = core.BNArchitectureAndAddress()
 		def_site.arch = self.arch.handle
 		def_site.address = def_addr
@@ -2949,7 +3034,7 @@ class Function:
 		handle = core.BNGetWorkflowForFunction(self.handle)
 		if handle is None:
 			return None
-		return workflow.Workflow(handle=handle, function_handle=self.handle)
+		return workflow.Workflow(handle=handle, object_handle=self.handle)
 
 	@property
 	def provenance(self):

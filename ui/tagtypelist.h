@@ -7,7 +7,6 @@
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QComboBox>
 #include "binaryninjaapi.h"
-#include "dockhandler.h"
 #include "viewframe.h"
 
 #define TAGS_UPDATE_CHECK_INTERVAL 200

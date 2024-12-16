@@ -8,11 +8,13 @@ use srec::*;
 use titxt::*;
 
 use std::ops::Range;
+use log::LevelFilter;
+use binaryninja::logger::Logger;
 
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginInit() -> bool {
-    binaryninja::logger::init(log::LevelFilter::Error).expect("Unable to initialize logger");
+    Logger::new("BINTXT").with_level(LevelFilter::Info).init();
 
     binaryninja::custombinaryview::register_view_type(c"ti-txt", c"TI-TXT", |core| {
         TiTxtViewConstructor { core }

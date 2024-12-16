@@ -103,8 +103,14 @@ tests_movd = [
     ),
 ]
 
+test_shiftx = [
+    (b'\xc4\xe2\x4b\xf7\xc0', 'LLIL_SET_REG.d(eax,LLIL_LSR.d(LLIL_REG.d(eax),LLIL_REG.d(esi)))'), # shrx eax, eax, esi
+    (b'\xc4\xe2\x49\xf7\xc0', 'LLIL_SET_REG.d(eax,LLIL_LSL.d(LLIL_REG.d(eax),LLIL_REG.d(esi)))'), # shlx eax, eax, esi
+    (b'\xc4\xe2\x4a\xf7\xc0', 'LLIL_SET_REG.d(eax,LLIL_ASR.d(LLIL_REG.d(eax),LLIL_REG.d(esi)))'), # sarx eax, eax, esi
+    (b'\xc4\xe3\x7b\xf0\xc0\x05', 'LLIL_SET_REG.d(eax,LLIL_ROR.d(LLIL_REG.d(eax),LLIL_CONST.d(0x5)))'), # rorx eax, eax, 5
+]
 
-test_cases = tests_interrupts + tests_basics + tests_movd
+test_cases = tests_interrupts + tests_basics + tests_movd + test_shiftx
 
 import re
 import sys

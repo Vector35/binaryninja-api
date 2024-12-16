@@ -4,7 +4,7 @@
   <navindex>
     <tab type="mainpage" visible="yes" title="Binary Ninja API"/>
     <tab type="pages" visible="yes" title="Binary Ninja API" intro=""/>
-    <tab type="modules" visible="yes" title="" intro=""/>
+    <tab type="topics" visible="yes" title="" intro=""/>
     <tab type="namespacelist" visible="yes" title="Namespaces" intro=""/>
     <tab type="interfaces" visible="yes" title="">
       <tab type="interfacelist" visible="yes" title="" intro=""/>

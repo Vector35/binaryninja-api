@@ -44,7 +44,8 @@ from . import _binaryninjacore as core
 from . import decorators
 from .enums import (
     AnalysisState, SymbolType, Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
-    TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, DisassemblyOption
+    TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, DisassemblyOption,
+	RelocationType
 )
 from .exceptions import RelocationWriteException, ILException, ExternalLinkException
 
@@ -223,7 +224,7 @@ class BinaryDataNotification:
 	with a `BinaryView` using the `register_notification` method.
 
 	By default, a `BinaryDataNotification` instance receives notifications for all available notification types. It
-	is recommended for users of this interface to initialize the `BinaryDataNotification` base class with with specific
+	is recommended for users of this interface to initialize the `BinaryDataNotification` base class with specific
 	callbacks of interest by passing the appropriate `NotificationType` flags into the `__init__` constructor.
 
 	Handlers provided by the user should aim to limit the amount of processing within the callback. The
@@ -293,9 +294,15 @@ class BinaryDataNotification:
 		pass
 
 	def function_added(self, view: 'BinaryView', func: '_function.Function') -> None:
+		"""
+		.. note:: `function_updated` will be triggered instead when a user function is added over an auto function.
+		"""
 		pass
 
 	def function_removed(self, view: 'BinaryView', func: '_function.Function') -> None:
+		"""
+		.. note:: `function_updated` will be triggered instead when a user function is removed over an auto function.
+		"""
 		pass
 
 	def function_updated(self, view: 'BinaryView', func: '_function.Function') -> None:
@@ -305,9 +312,15 @@ class BinaryDataNotification:
 		pass
 
 	def data_var_added(self, view: 'BinaryView', var: 'DataVariable') -> None:
+		"""
+		.. note:: `data_var_updated` will be triggered instead when a user data variable is added over an auto data variable.
+		"""
 		pass
 
 	def data_var_removed(self, view: 'BinaryView', var: 'DataVariable') -> None:
+		"""
+		.. note:: `data_var_updated` will be triggered instead when a user data variable is removed over an auto data variable.
+		"""
 		pass
 
 	def data_var_updated(self, view: 'BinaryView', var: 'DataVariable') -> None:
@@ -1729,6 +1742,101 @@ class Tag:
 		core.BNTagSetData(self.handle, value)
 
 
+@dataclass
+class RelocationInfo:
+	type: RelocationType
+	pc_relative: bool
+	base_relative: bool
+	base: int
+	size: int
+	truncate_size: int
+	native_type: int
+	addend: int
+	has_sign: bool
+	implicit_addend: bool
+	external: bool
+	symbol_index: int
+	section_index: int
+	address: int
+	target: int
+	data_relocation: bool
+
+	def __init__(self, info: core.BNRelocationInfo):
+		self.type = RelocationType(info.type)
+		self.pc_relative = info.pcRelative
+		self.base_relative = info.baseRelative
+		self.base = info.base
+		self.size = info.size
+		self.truncate_size = info.truncateSize
+		self.native_type = info.nativeType
+		self.addend = info.addend
+		self.has_sign = info.hasSign
+		self.implicit_addend = info.implicitAddend
+		self.external = info.external
+		self.symbol_index = info.symbolIndex
+		self.section_index = info.sectionIndex
+		self.address = info.address
+		self.target = info.target
+		self.data_relocation = info.dataRelocation
+
+
+class Relocation:
+	def __init__(self, handle: core.BNRelocationHandle):
+		self.handle = handle
+
+	def __del__(self):
+		if core is not None:
+			core.BNFreeRelocation(self.handle)
+
+	def __repr__(self):
+		if self.symbol is None:
+			return f"<Relocation: {self.target:#x}>"
+		try:
+			return f"<Relocation: \"{self.symbol.full_name}\" @ {self.target:#x}>"
+		except UnicodeDecodeError:
+			return f"<Relocation: \"{self.symbol.raw_bytes}\" @ {self.target:#x}>"
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
+
+	@property
+	def info(self) -> RelocationInfo:
+		return RelocationInfo(core.BNRelocationGetInfo(self.handle))
+
+	@property
+	def arch(self) -> Optional['architecture.Architecture']:
+		"""The architecture associated with the :py:class:`Relocation` (read/write)"""
+		core_arch = core.BNRelocationGetArchitecture(self.handle)
+		return architecture.CoreArchitecture._from_cache(handle=core_arch)
+
+	@property
+	def target(self) -> int:
+		"""Where the reloc needs to point to"""
+		return core.BNRelocationGetTarget(self.handle)
+
+	@property
+	def reloc(self) -> int:
+		"""The actual pointer that needs to be relocated"""
+		return core.BNRelocationGetReloc(self.handle)
+
+	@property
+	def symbol(self) -> Optional['_types.CoreSymbol']:
+		core_symbol = core.BNRelocationGetSymbol(self.handle)
+		if core_symbol is None:
+			return None
+		return _types.CoreSymbol(core_symbol)
+
+
 class _BinaryViewAssociatedDataStore(associateddatastore._AssociatedDataStore):
 	_defaults = {}
 
@@ -2061,7 +2169,7 @@ class MemoryMap:
 		>>> segments = Segment.serialize(image_base=base, start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
 		>>> segments = Segment.serialize(image_base=base, start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable, segments=segments)
 		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': segments})
-		>>> print(view.memory_map)
+		>>> view.memory_map
 			<region: 0x10000 - 0x10004>
 				size: 0x4
 				objects:
@@ -2078,7 +2186,7 @@ class MemoryMap:
 					'origin<Mapped>@0xbfff1000' | Unmapped | <---> | FILL<0x0>
 		>>> view.memory_map.add_memory_region("rom", rom_base, b'\x90' * 4096, SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
 		True
-		>>> print(view.memory_map)
+		>>> view.memory_map
 			<region: 0x10000 - 0x10004>
 				size: 0x4
 				objects:
@@ -2100,7 +2208,7 @@ class MemoryMap:
 		True
 		>>> view.read(rom_base, 16)
 		b'\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\x90\x90\x90\x90\x90\x90\x90\x90'
-		>>> print(view.memory_map)
+		>>> view.memory_map
 			<region: 0x10000 - 0x10004>
 				size: 0x4
 				objects:
@@ -2126,10 +2234,23 @@ class MemoryMap:
 	"""
 
 	def __repr__(self):
-		return pprint.pformat(self.description())
+		return self.__str__()
 
 	def __str__(self):
 		description = self.description()
+		return self.format_description(description)
+
+	def __len__(self):
+		mm_json = self.description()
+		if 'MemoryMap' in mm_json:
+			return len(mm_json['MemoryMap'])
+		else:
+			return 0
+
+	def __init__(self, handle: 'BinaryView'):
+		self.handle = handle
+
+	def format_description(self, description: dict) -> str:
 		formatted_description = ""
 		for entry in description['MemoryMap']:
 			formatted_description += f"<region: {hex(entry['address'])} - {hex(entry['address'] + entry['length'])}>\n"
@@ -2154,45 +2275,59 @@ class MemoryMap:
 
 		return formatted_description
 
-	def __init__(self, handle: 'BinaryView'):
-		self.handle = handle
-
-	def __len__(self):
-		mm_json = self.description()
-		if 'MemoryMap' in mm_json:
-			return len(mm_json['MemoryMap'])
-		else:
-			return 0
-
-	def description(self):
+	def description(self, base: bool = False) -> dict:
+		if base:
+			return json.loads(core.BNGetBaseMemoryMapDescription(self.handle))
 		return json.loads(core.BNGetMemoryMapDescription(self.handle))
+
+	@property
+	def base(self):
+		"""Formatted string of the base memory map, consisting of unresolved auto and user segments (read-only)."""
+		return self.format_description(self.description(base=True))
+
+	def set_logical_memory_map_enabled(self, enabled: bool) -> None:
+		"""
+		Enable or disable the logical memory map.
+
+		When enabled, the memory map will present a simplified, logical view that merges and abstracts virtual memory
+		regions based on criteria such as contiguity and flag consistency. This view is designed to provide a higher-level
+		representation for user analysis, hiding underlying mapping details.
+
+		When disabled, the memory map will revert to displaying the virtual view, which corresponds directly to the individual
+		segments mapped from the raw file without any merging or abstraction.
+
+		:param enabled: True to enable the logical view, False to revert to the virtual view.
+		"""
+		core.BNSetLogicalMemoryMapEnabled(self.handle, enabled)
 
 	def add_memory_region(self, name: str, start: int, source: Union['os.PathLike', str, bytes, bytearray, 'BinaryView', 'databuffer.DataBuffer', 'fileaccessor.FileAccessor'], flags: SegmentFlag = 0) -> bool:
 		"""
-		Adds a memory region into the memory map. There are three types of memory regions that can be added:
-		- BinaryMemoryRegion(*** Unimplemented ***): Creates a memory region from a loadable binary format and provides persistence across sessions.
-		- DataMemoryRegion: Creates a memory region from a flat file or bytes and provide persistence across sessions.
-		- RemoteMemoryRegion: Creates a memory region from a proxy callback interface. This region is ephemeral and not saved across sessions.
+		Adds a memory region to the memory map. Depending on the source parameter, the memory region is created as one of the following types:
 
-		The type of memory region added depends on the source parameter:
-		- `os.PathLike`, `str`, : Treats the source as a file path which is read and loaded into memory as a DataMemoryRegion.
-		- `bytes`, `bytearray`: Directly loads these byte formats into memory as a DataMemoryRegion.
-		- `databuffer.DataBuffer`: Directly loads a data buffer into memory as a DataMemoryRegion.
-		- `fileaccessor.FileAccessor`: Utilizes a file accessor to establish a RemoteMemoryRegion, managing data fetched from a remote source.
+		- **BinaryMemoryRegion** (***Unimplemented***): Represents a memory region loaded from a binary format, providing persistence across sessions.
+		- **DataMemoryRegion**: Represents a memory region loaded from flat files or raw bytes, providing persistence across sessions.
+		- **RemoteMemoryRegion**: Represents a memory region managed via a proxy callback interface. This region is ephemeral and not persisted across sessions.
+
+		The type of memory region created is determined by the `source` parameter:
+		- `os.PathLike` or `str`: Treated as a file path to be loaded into memory as a `DataMemoryRegion`.
+		- `bytes` or `bytearray`: Directly loaded into memory as a `DataMemoryRegion`.
+		- `databuffer.DataBuffer`: Loaded as a `DataMemoryRegion`.
+		- `fileaccessor.FileAccessor`: Creates a `RemoteMemoryRegion` that fetches data via a remote source.
+		- `BinaryView`: (Not yet implemented) Intended for future exploration.
+
+		.. note:: If no flags are specified and the new memory region overlaps with one or more existing regions, the overlapping portions of the new region will inherit the flags of the respective underlying regions.
 
 		Parameters:
-			name (str): A unique name of the memory region.
-			start (int): The start address in memory where the region will be loaded.
+			name (str): A unique name for the memory region.
+			start (int): The starting address in memory for the region.
 			source (Union[os.PathLike, str, bytes, bytearray, BinaryView, databuffer.DataBuffer, fileaccessor.FileAccessor]): The source from which the memory is loaded.
+			flags (SegmentFlag, optional): Flags to apply to the memory region. Defaults to 0 (no flags).
 
 		Returns:
-			bool: True if the memory region was successfully added, False otherwise.
+			bool: `True` if the memory region was successfully added, `False` otherwise.
 
 		Raises:
-			NotImplementedError: If the source type is not supported.
-
-		Notes:
-			If parts of the new memory region do not overlap with existing segments, new segments will be automatically created for each non-overlapping area, each with the SegmentFlag.SegmentReadable flag set.
+			NotImplementedError: If the specified `source` type is unsupported.
 		"""
 		if isinstance(source, os.PathLike):
 			source = str(source)
@@ -2870,12 +3005,12 @@ class BinaryView:
 
 	@property
 	def original_base(self) -> int:
-		"""Original image base of the binary Deprecated: 4.0.xxxx Use original_image_base instead."""
+		"""Original image base of the binary. Deprecated: 4.1.5902 Use `original_image_base` instead."""
 		return core.BNGetOriginalImageBase(self.handle)
 
 	@original_base.setter
 	def original_base(self, base: int) -> None:
-		"""Set original image base of the binary. Only intended for binary view implementations. Deprecated: 4.0.xxxx Use original_image_base instead."""
+		"""Set original image base of the binary. Only intended for binary view implementations. Deprecated: 4.1.5902 Use `original_image_base` instead."""
 		return core.BNSetOriginalImageBase(self.handle, base)
 
 	@property
@@ -3254,7 +3389,7 @@ class BinaryView:
 
 	@property
 	def segments(self) -> List['Segment']:
-		"""List of segments (read-only)"""
+		"""List of resolved segments (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		segment_list = core.BNGetSegments(self.handle, count)
 		assert segment_list is not None, "core.BNGetSegments returned None"
@@ -3286,7 +3421,7 @@ class BinaryView:
 
 	@property
 	def allocated_ranges(self) -> List['variable.AddressRange']:
-		"""List of valid address ranges for this view (read-only) Deprecated: 4.0.xxxx Use mapped_address_ranges instead."""
+		"""List of valid address ranges for this view (read-only) Deprecated: 4.1.5902 Use mapped_address_ranges instead."""
 		count = ctypes.c_ulonglong(0)
 		range_list = core.BNGetAllocatedRanges(self.handle, count)
 		assert range_list is not None, "core.BNGetAllocatedRanges returned None"
@@ -3413,6 +3548,21 @@ class BinaryView:
 	@max_function_size_for_analysis.setter
 	def max_function_size_for_analysis(self, size: int) -> None:
 		core.BNSetMaxFunctionSizeForAnalysis(self.handle, size)
+
+	def relocations_at(self, addr: int) -> List[Relocation]:
+		"""List of relocations for a given address"""
+		count = ctypes.c_ulonglong()
+		relocs = core.BNGetRelocationsAt(self.handle, addr, count)
+		assert relocs is not None, "core.BNGetRelocationRanges returned None"
+		result = []
+		try:
+			for i in range(0, count.value):
+				reloc_handle = core.BNNewRelocationReference(relocs[i])
+				assert reloc_handle is not None, "core.BNNewRelocationReference is not None"
+				result.append(Relocation(reloc_handle))
+			return result
+		finally:
+			core.BNFreeRelocationList(relocs, count)
 
 	@property
 	def relocation_ranges(self) -> List[Tuple[int, int]]:
@@ -4639,9 +4789,12 @@ class BinaryView:
 
 	def update_analysis(self) -> None:
 		"""
-		``update_analysis`` asynchronously starts the analysis running and returns immediately.
-		An analysis update **must** be run after changes are made which could change analysis
-		results such as adding functions.
+		``update_analysis`` asynchronously starts the analysis process and returns immediately.
+
+		**Usage**:
+		Call ``update_analysis`` after making changes that could affect the analysis results, such as adding or modifying
+		functions. This ensures that the analysis is updated to reflect the latest changes. The analysis runs in the background,
+		allowing other operations to continue.
 
 		:rtype: None
 		"""
@@ -4649,8 +4802,21 @@ class BinaryView:
 
 	def update_analysis_and_wait(self) -> None:
 		"""
-		``update_analysis_and_wait`` blocking call to update the analysis, this call returns when the analysis is
-		complete. An analysis update **must** be run after changes are made which could change analysis results such as adding functions.
+		``update_analysis_and_wait`` starts the analysis process and blocks until it is complete. This method should be
+		used when it is necessary to ensure that analysis results are fully updated before proceeding with further operations.
+		If an update is already in progress, this method chains a new update request to ensure that the update processes
+		all pending changes before the call was made.
+
+		**Usage**:
+		Call ``update_analysis_and_wait`` after making changes that could affect the analysis results, such as adding or modifying
+		functions, to ensure that the analysis reflects the latest changes. Unlike ``update_analysis``, this method waits for the
+		analysis to finish before returning.
+
+		**Thread Restrictions**:
+		- **Worker Threads**: This function cannot be called from a worker thread. If called from a worker thread, an error will be
+		logged, and the function will return immediately.
+		- **UI Threads**: This function cannot be called from a UI thread. If called from a UI thread, an error will be logged, and
+		the function will return immediately.
 
 		:rtype: None
 		"""
@@ -6187,6 +6353,83 @@ class BinaryView:
 		tag = Tag(tag_handle)
 		core.BNAddTag(self.handle, tag.handle, user)
 		core.BNAddUserDataTag(self.handle, addr, tag.handle)
+
+	def _fetch_tags(self, c_api_func, *args) -> List[Tuple[int, 'Tag']]:
+		"""
+		Internal helper to fetch tags using the specified core API function.
+
+		:param c_api_func: The C API function to call.
+		:param args: Arguments for the C API function.
+		:return: List of (address, Tag) pairs.
+		"""
+		count = ctypes.c_ulonglong()
+		tags = c_api_func(self.handle, *args, count)
+		assert tags is not None, f"{c_api_func.__name__} returned None"
+
+		result = []
+		try:
+			for i in range(count.value):
+				tag_handle = core.BNNewTagReference(tags[i].tag)
+				assert tag_handle is not None, "core.BNNewTagReference returned None"
+				tag = Tag(tag_handle)
+				result.append((tags[i].addr, tag))
+			return result
+		finally:
+			core.BNFreeTagReferences(tags, count.value)
+
+	@property
+	def tags_all_scopes(self) -> List[Tuple[int, 'Tag']]:
+		"""``tags_all_scopes`` fetches all tags in all scopes."""
+		return self._fetch_tags(core.BNGetAllTagReferences)
+
+	@property
+	def tags_for_address(self) -> List[Tuple[int, 'Tag']]:
+		"""``tags_for_address`` fetches all address-specific tags."""
+		return self._fetch_tags(core.BNGetAllAddressTagReferences)
+
+	@property
+	def tags_for_function(self) -> List[Tuple[int, 'Tag']]:
+		"""``tags_for_function`` fetches all function-specific tags."""
+		return self._fetch_tags(core.BNGetAllFunctionTagReferences)
+
+	@property
+	def tags_for_data(self) -> List[Tuple[int, 'Tag']]:
+		"""
+		``tags_for_data`` fetches all data-specific tags."""
+		return self._fetch_tags(core.BNGetDataTagReferences)
+
+	def tags_by_type(self, tag_type: 'TagType') -> List[Tuple[int, 'Tag']]:
+		"""
+		``tags_by_type`` fetches tags of a specific type.
+
+		:param tag_type: The type of tags to fetch.
+		"""
+		return self._fetch_tags(core.BNGetAllTagReferencesOfType, tag_type.handle)
+
+	def tags_for_data_by_type(self, tag_type: 'TagType') -> List[Tuple[int, 'Tag']]:
+		"""
+		``tags_for_data_by_type`` fetches data-specific tags of a specific type.
+
+		:param tag_type: The type of tags to filter by.
+		:rtype: list(int, Tag)
+		"""
+		return self._fetch_tags(core.BNGetTagReferencesOfType, tag_type.handle)
+
+	def tags_for_data_with_source(self, auto: bool = True) -> List[Tuple[int, 'Tag']]:
+		"""
+		``tags_for_data_with_source`` fetches data-specific tags filtered by source.
+
+		:param auto: If True, fetch auto tags. If False, fetch user tags.
+		:rtype: list(int, Tag)
+		"""
+		if auto:
+			return self._fetch_tags(core.BNGetAutoDataTagReferences)
+		else:
+			return self._fetch_tags(core.BNGetUserDataTagReferences)
+
+	# Note: The 'Tags' APIs above have been added to expose the ability to fetch tags for various scopes in a
+	# in an efficient manner. By default, the 'tags' property on both `BinaryView` and `Function` objects returns
+	# all tags scoped to the object.
 
 	@property
 	def tags(self) -> List[Tuple[int, 'Tag']]:
@@ -7897,7 +8140,11 @@ class BinaryView:
 
 	def export_type_to_library(self, lib: typelibrary.TypeLibrary, name: Optional[str], type_obj: StringOrType) -> None:
 		"""
-		``export_type_to_library`` recursively exports ``type_obj`` into ``lib`` as a type with name ``name``
+		Recursively exports ``type_obj`` into ``lib`` as a type with a ``name``.
+
+		This should be used to store type definitions with no symbol information. For example, `color` might be a type
+		of `enum {RED=0, ORANGE=1, YELLOW=2, ...}` used by this library. If you have a function, variable, or other
+		object that is exported, you probably want :py:meth:`export_object_to_library` instead.
 
 		As other referenced types are encountered, they are either copied into the destination type library or
 		else the type library that provided the referenced type is added as a dependency for the destination library.
@@ -7926,7 +8173,11 @@ class BinaryView:
 	    self, lib: typelibrary.TypeLibrary, name: Optional[str], type_obj: StringOrType
 	) -> None:
 		"""
-		``export_object_to_library`` recursively exports ``type_obj`` into ``lib`` as an object with name ``name``
+		Recursively exports ``type_obj`` into ``lib`` as an object with a ``name``.
+
+		This should be used to store definitions for functions, variables, and other things that are named symbols.
+		For example, `MessageBoxA` might be the name of a function with the type `int ()(HWND, LPCSTR, LPCSTR, UINT)`.
+		If you just want to store a type definition, you probably want :py:meth:`export_type_to_library`.
 
 		As other referenced types are encountered, they are either copied into the destination type library or
 		else the type library that provided the referenced type is added as a dependency for the destination library.
@@ -8533,7 +8784,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	def find_next_text(
 	    self, start: int, text: str, settings: Optional[_function.DisassemblySettings] = None,
 	    flags: FindFlag = FindFlag.FindCaseSensitive,
-	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph
+	    graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph
 	) -> Optional[int]:
 		"""
 		``find_next_text`` searches for string ``text`` occurring in the linear view output starting at the virtual
@@ -8550,7 +8801,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			FindCaseSensitive    Case-sensitive search
 			FindCaseInsensitive  Case-insensitive search
 			==================== ============================
-		:param FunctionGraphType graph_type: the IL to search within
+		:param FunctionViewType graph_type: the IL to search within
 		"""
 		if not isinstance(text, str):
 			raise TypeError("text parameter is not str type")
@@ -8560,13 +8811,14 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			raise TypeError("settings parameter is not DisassemblySettings type")
 
 		result = ctypes.c_ulonglong()
+		graph_type = _function.FunctionViewType(graph_type)._to_core_struct()
 		if not core.BNFindNextText(self.handle, start, text, result, settings.handle, flags, graph_type):
 			return None
 		return result.value
 
 	def find_next_constant(
 	    self, start: int, constant: int, settings: Optional[_function.DisassemblySettings] = None,
-	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph
+	    graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph
 	) -> Optional[int]:
 		"""
 		``find_next_constant`` searches for integer constant ``constant`` occurring in the linear view output starting at the virtual
@@ -8575,7 +8827,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		:param int start: virtual address to start searching from.
 		:param int constant: constant to search for
 		:param DisassemblySettings settings: disassembly settings
-		:param FunctionGraphType graph_type: the IL to search within
+		:param FunctionViewType graph_type: the IL to search within
 		"""
 		if not isinstance(constant, int):
 			raise TypeError("constant parameter is not integral type")
@@ -8585,6 +8837,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			raise TypeError("settings parameter is not DisassemblySettings type")
 
 		result = ctypes.c_ulonglong()
+		graph_type = _function.FunctionViewType(graph_type)._to_core_struct()
 		if not core.BNFindNextConstant(self.handle, start, constant, result, settings.handle, graph_type):
 			return None
 		return result.value
@@ -8694,7 +8947,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 
 	def find_all_text(
 	    self, start: int, end: int, text: str, settings: Optional[_function.DisassemblySettings] = None,
-	    flags=FindFlag.FindCaseSensitive, graph_type=FunctionGraphType.NormalFunctionGraph, progress_func=None,
+	    flags=FindFlag.FindCaseSensitive, graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph, progress_func=None,
 	    match_callback=None
 	) -> QueueGenerator:
 		"""
@@ -8715,7 +8968,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			FindCaseSensitive    Case-sensitive search
 			FindCaseInsensitive  Case-insensitive search
 			==================== ============================
-		:param FunctionGraphType graph_type: the IL to search within
+		:param FunctionViewType graph_type: the IL to search within
 		:param callback progress_func: optional function to be called with the current progress \
 		and total count. This function should return a boolean value that decides whether the \
 		search should continue or stop
@@ -8740,6 +8993,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			raise TypeError("settings parameter is not DisassemblySettings type")
 		if not isinstance(flags, FindFlag):
 			raise TypeError('flag parameter must have type FindFlag')
+		graph_type = _function.FunctionViewType(graph_type)._to_core_struct()
 
 		if progress_func:
 			progress_func_obj = ctypes.CFUNCTYPE(
@@ -8787,7 +9041,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 
 	def find_all_constant(
 	    self, start: int, end: int, constant: int, settings: Optional[_function.DisassemblySettings] = None,
-	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph, progress_func: Optional[ProgressFuncType] = None,
+	    graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph, progress_func: Optional[ProgressFuncType] = None,
 	    match_callback: Optional[LineMatchCallbackType] = None
 	) -> QueueGenerator:
 		"""
@@ -8805,7 +9059,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		:param int constant: constant to search for
 		:param DisassemblySettings settings: DisassemblySettings object used to render the text \
 		to be searched
-		:param FunctionGraphType graph_type: the IL to search within
+		:param FunctionViewType graph_type: the IL to search within
 		:param callback progress_func: optional function to be called with the current progress \
 		and total count. This function should return a boolean value that decides whether the \
 		search should continue or stop
@@ -8827,6 +9081,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			settings.set_option(DisassemblyOption.WaitForIL, True)
 		if not isinstance(settings, _function.DisassemblySettings):
 			raise TypeError("settings parameter is not DisassemblySettings type")
+		graph_type = _function.FunctionViewType(graph_type)._to_core_struct()
 
 		if progress_func:
 			progress_func_obj = ctypes.CFUNCTYPE(
@@ -8929,7 +9184,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		handle = core.BNGetWorkflowForBinaryView(self.handle)
 		if handle is None:
 			return None
-		return _workflow.Workflow(handle=handle)
+		return _workflow.Workflow(handle=handle, object_handle=self.handle)
 
 	def rebase(self, address: int, force: Optional[bool] = False,
 	           progress_func: Optional[ProgressFuncType] = None) -> Optional['BinaryView']:
@@ -9038,15 +9293,69 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			return None
 		return value.value
 
+	def begin_bulk_add_segments(self) -> None:
+		"""
+		``begin_bulk_add_segments`` Begins a bulk segment addition operation.
+
+		This function prepares the `BinaryView` for bulk addition of both auto and user-defined segments.
+		During the bulk operation, segments can be added using `add_auto_segment` or similar functions
+		without immediately triggering the MemoryMap update process. The queued segments will not take
+		effect until `end_bulk_add_segments` is called.
+		"""
+		core.BNBeginBulkAddSegments(self.handle)
+
+
+	def end_bulk_add_segments(self) -> None:
+		"""
+		``end_bulk_add_segments`` Finalizes and applies all queued segments (auto and user)
+		added during a bulk segment addition operation.
+
+		This function commits all segments that were queued since the last call to `begin_bulk_add_segments`.
+		The MemoryMap update process is executed at this point, applying all changes in one batch for
+		improved performance.
+
+		Note: This function must be called after `begin_bulk_add_segments` to apply the queued segments.
+		"""
+		core.BNEndBulkAddSegments(self.handle)
+
+
+	def cancel_bulk_add_segments(self) -> None:
+		"""
+		``cancel_bulk_add_segments`` Cancels a bulk segment addition operation.
+
+		This function discards all auto and user segments that were queued since the last call to
+		`begin_bulk_add_segments` without applying them. It allows you to abandon the changes in case
+		they are no longer needed.
+
+		Note: If no bulk operation is in progress, calling this function has no effect.
+		"""
+		core.BNCancelBulkAddSegments(self.handle)
+
+
 	def add_auto_segment(self, start: int, length: int, data_offset: int, data_length: int, flags: SegmentFlag) -> None:
+		"""
+		``add_auto_segment`` Adds an analysis segment that specifies how data from the raw file is mapped into a virtual address space
+
+		Note that the segments added may have different size attributes than requested
+		"""
 		core.BNAddAutoSegment(self.handle, start, length, data_offset, data_length, flags)
 
-	def remove_auto_segment(self, start: int, length: int) -> None:
+	def add_auto_segments(self, segments: List[core.BNSegmentInfo]) -> None:
 		"""
-		``remove_auto_segment`` removes an automatically generated segment from the current segment mapping.
+		``add_auto_segments`` Adds analysis segments that specify how data from the raw file is mapped into a virtual address space
+
+		:param List[core.BNSegmentInfo] segments: list of segments to add
+		:rtype: None
+		"""
+		segment_list = (core.BNSegmentInfo * len(segments))(*segments)
+		core.BNAddAutoSegments(self.handle, segment_list, len(segments))
+
+	def remove_auto_segment(self, start: int, length: int = 0) -> None:
+		"""
+		``remove_auto_segment`` Removes an automatically generated segment from the current segment mapping. This method removes the most recently added 'auto' segment that either matches the specified start address or contains it.
 
 		:param int start: virtual address of the start of the segment
-		:param int length: length of the segment
+		:param int length: length of the segment (unused)
 		:rtype: None
 
 		.. warning:: This action is not persistent across saving of a BNDB and must be re-applied each time a BNDB is loaded.
@@ -9067,7 +9376,24 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		"""
 		core.BNAddUserSegment(self.handle, start, length, data_offset, data_length, flags)
 
-	def remove_user_segment(self, start: int, length: int) -> None:
+	def add_user_segments(self, segments: List[core.BNSegmentInfo]) -> None:
+		"""
+		``add_user_segments`` Adds user-defined segments that specify how data from the raw file is mapped into a virtual address space
+
+		:param List[core.BNSegmentInfo] segments: list of segments to add
+		:rtype: None
+		"""
+		segment_list = (core.BNSegmentInfo * len(segments))(*segments)
+		core.BNAddUserSegments(self.handle, segment_list, len(segments))
+
+	def remove_user_segment(self, start: int, length: int = 0) -> None:
+		"""
+		``remove_user_segment`` Removes a user-defined segment from the current segment mapping. This method removes the most recently added 'user' segment that either matches the specified start address or contains it.
+
+		:param int start: virtual address of the start of the segment
+		:param int length: length of the segment (unused)
+		:rtype: None
+		"""
 		core.BNRemoveUserSegment(self.handle, start, length)
 
 	def get_segment_at(self, addr: int) -> Optional[Segment]:
@@ -9401,7 +9727,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			return None
 		return settings.Settings(handle=settings_handle)
 
-	def set_load_settings(self, type_name: str, settings: settings.Settings) -> None:
+	def set_load_settings(self, type_name: str, settings: Optional[settings.Settings]) -> None:
 		"""
 		``set_load_settings`` set a :py:class:`~binaryninja.settings.Settings` object which defines the load settings for the given :py:class:`BinaryViewType` ``type_name``
 
@@ -9614,7 +9940,27 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 
 	@property
 	def memory_map(self):
+		"""
+		``memory_map`` returns the MemoryMap object for the current BinaryView. The `MemoryMap` object is a proxy object
+		that provides a high-level view of the memory map, allowing you to query and manipulate memory regions. This proxy
+		ensures that the memory map always reflects the latest state of the core `MemoryMap` object in the underlying `BinaryView`.
+		"""
 		return MemoryMap(handle=self.handle)
+
+	def stringify_unicode_data(
+			self, arch: Optional['architecture.Architecture'], buffer: 'databuffer.DataBuffer',
+			allow_short_strings: bool = False
+	) -> Tuple[Optional[str], Optional[StringType]]:
+		string = ctypes.c_char_p()
+		string_type = ctypes.c_int()
+		if arch is not None:
+			arch = arch.handle
+		if not core.BNStringifyUnicodeData(
+				self.handle, arch, buffer.handle, allow_short_strings, ctypes.byref(string), ctypes.byref(string_type)):
+			return None, None
+		result = string.value
+		core.BNFreeString(string)
+		return result, StringType(string_type.value)
 
 class BinaryReader:
 	"""
@@ -10394,7 +10740,7 @@ class TypedDataAccessor:
 		for i in range(_type.count):
 			yield self[i]
 
-	def __getitem__(self, key: Union[str, int]) -> 'TypedDataAccessor':
+	def __getitem__(self, key: Union[str, int, slice]) -> Union['TypedDataAccessor', List['TypedDataAccessor']]:
 		_type = self.type
 		if isinstance(_type, _types.NamedTypeReferenceType):
 			_type = _type.target(self.view)
@@ -10402,6 +10748,8 @@ class TypedDataAccessor:
 			if key >= _type.count:
 				raise ValueError(f"Index {key} out of bounds array has {_type.count} elements")
 			return TypedDataAccessor(_type.element_type, self.address + key * len(_type.element_type), self.view, self.endian)
+		if isinstance(_type, _types.ArrayType) and isinstance(key, slice):
+			return [self[i] for i in range(*key.indices(len(self.value)))]
 		if not isinstance(_type, _types.StructureType):
 			raise ValueError("Can't get member of non-structure")
 		if not isinstance(key, str):

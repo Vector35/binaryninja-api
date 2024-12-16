@@ -15,15 +15,19 @@
 // Includes snippets from LLVM, which is under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 
-#include "binaryninjaapi.h"
+#include "demangle_gnu3.h"
 #include <stdarg.h>
 #include <algorithm>
 #include <memory>
-#include "demangle_gnu3.h"
 
 
+#ifdef BINARYNINJACORE_LIBRARY
+using namespace BinaryNinjaCore;
+#define GetClass GetTypeClass
+#else
 using namespace BinaryNinja;
 using namespace std;
+#endif
 
 
 #define MAX_DEMANGLE_LENGTH    4096
@@ -84,7 +88,9 @@ static void ExtendTypeName(TypeBuilder& type, const string& extend)
 		qn.back() += extend;
 	else
 		qn.push_back(extend);
-	type.SetTypeName(qn);
+	type.SetNamedTypeReference(
+		NamedTypeReference::GenerateAutoDemangledTypeReference(type.GetNamedTypeReference()->GetTypeReferenceClass(), qn)
+	);
 }
 
 
@@ -1766,7 +1772,9 @@ TypeBuilder DemangleGNU3::DemangleNestedName()
 			QualifiedName newName = type.GetTypeName() + newType.GetTypeName();
 			if (newName.StringSize() > MAX_DEMANGLE_LENGTH)
 				throw DemangleException("Detected adversarial mangled string");
-			type.SetTypeName(newName);
+			type.SetNamedTypeReference(
+				NamedTypeReference::GenerateAutoDemangledTypeReference(type.GetNamedTypeReference()->GetTypeReferenceClass(), newName)
+			);
 			type.SetHasTemplateArguments(false);
 		}
 		if (substitute && m_reader.Peek() != 'E')
@@ -2346,8 +2354,13 @@ public:
 		return DemangleGNU3::IsGNU3MangledString(name);
 	}
 
+#ifdef BINARYNINJACORE_LIBRARY
+	virtual bool Demangle(Architecture* arch, const string& name, Ref<Type>& outType, QualifiedName& outVarName,
+	                      BinaryView* view) override
+#else
 	virtual bool Demangle(Ref<Architecture> arch, const string& name, Ref<Type>& outType, QualifiedName& outVarName,
 	                      Ref<BinaryView> view) override
+#endif
 	{
 		if (view)
 			return DemangleGNU3::DemangleStringGNU3(arch, name, outType, outVarName, view);
@@ -2358,9 +2371,13 @@ public:
 
 extern "C"
 {
+#ifndef BINARYNINJACORE_LIBRARY
 	BN_DECLARE_CORE_ABI_VERSION
+#endif
 
-#ifdef DEMO_EDITION
+#ifdef BINARYNINJACORE_LIBRARY
+	bool DemangleGNU3PluginInit()
+#elif defined(DEMO_EDITION)
 	bool DemangleGNU3PluginInit()
 #else
 	BINARYNINJAPLUGIN bool CorePluginInit()

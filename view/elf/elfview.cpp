@@ -496,6 +496,7 @@ bool ElfView::Init()
 
 	m_entryPoint = m_entryPoint + imageBaseAdjustment;
 
+	BeginBulkAddSegments();
 	for (auto& i : m_programHeaders)
 	{
 		uint64_t adjustedVirtualAddr = i.virtualAddress + imageBaseAdjustment;
@@ -566,6 +567,8 @@ bool ElfView::Init()
 			DefineAutoSymbol(new Symbol(DataSymbol, "__elf_interp", adjustedVirtualAddr, LocalBinding));
 		}
 	}
+
+	EndBulkAddSegments();
 
 	// Gather names for the sections
 	vector<string> sectionNames {""};
@@ -1198,8 +1201,48 @@ bool ElfView::Init()
 		combinedSymbolTable.insert(combinedSymbolTable.end(), dynamicSymbolTable.begin() + 1, dynamicSymbolTable.end());
 	if (auxSymbolTable.size() > 1)
 		combinedSymbolTable.insert(combinedSymbolTable.end(), auxSymbolTable.begin() + 1, auxSymbolTable.end());
+
+	// Walk the symbol table a first time to collect the information we need to create a .common section
+	size_t commonSectionSize = 0;
 	for (auto entry = combinedSymbolTable.begin(); entry != combinedSymbolTable.end(); entry++)
 	{
+		if (entry->section == ELF_SHN_COMMON)
+		{
+			// account for required alignment, stored in entry->value;
+			auto alignedExistingSize = commonSectionSize + (entry->value - 1);
+			alignedExistingSize &= ~(entry->value - 1);
+			commonSectionSize = alignedExistingSize + entry->size;
+		}
+	}
+
+	// If the common section exists create a mock segment/section.
+	size_t commonSegmentStartAddr = 0;
+	if (commonSectionSize > 0) {
+		// Find the end of the existing segment definitions to stick the SHN_COMMON segment
+		for (const auto& segment : GetSegments()) {
+			if (commonSegmentStartAddr < segment->GetEnd()) {
+				commonSegmentStartAddr = segment->GetEnd();
+			}
+		}
+		// Align the common segment to 16 bytes
+		commonSegmentStartAddr = (commonSegmentStartAddr + 0xf) & (~0xf);
+		AddAutoSegment(commonSegmentStartAddr, commonSectionSize, 0, 0, SegmentReadable | SegmentWritable);
+		AddAutoSection(".common", commonSegmentStartAddr, commonSectionSize, ReadWriteDataSectionSemantics);
+	}
+
+	size_t commonSegmentOffset = 0;
+	for (auto entry = combinedSymbolTable.begin(); entry != combinedSymbolTable.end(); entry++)
+	{
+		if (entry->section == ELF_SHN_COMMON)
+		{
+			// Common symbols are special as their entry value holds the alignment of the entry instead of an offset.
+			auto alignedExistingOffset = commonSegmentOffset + (entry->value - 1);
+			alignedExistingOffset &= ~(entry->value - 1);
+			DefineElfSymbol(DataSymbol, entry->name, commonSegmentStartAddr + alignedExistingOffset, false, entry->binding, entry->size);
+			commonSegmentOffset = alignedExistingOffset + entry->size;
+			continue;
+		}
+
 		if (m_objectFile)
 		{
 			if (entry->section >= m_elfSections.size())
@@ -2409,6 +2452,13 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 	{
 		name = name.substr(0, pos);
 	}
+
+	pos = name.rfind("@CXXABI");
+	if (type == ExternalSymbol && pos != string::npos)
+	{
+		name = name.substr(0, pos);
+	}
+
 
 	// Deprioritize local label symbol names
 	if (type == DataSymbol && binding == LocalBinding && !name.empty() && name[0] == '.')

@@ -168,14 +168,12 @@ Each byte in hex view is given a background color based on its value. Values bet
 
 ![Linear View Theme Diagram](../img/themes-linear.png)
 
-1. `linearDisassemblyFunctionHeaderColor` (*required*) - Used as the background for function
-  headers in linear view
-2. `linearDisassemblyBlockColor` (*required*) - Used as the background for function bodies in
-  linear view
-3. `linearDisassemblyNoteColor` (*required*) - Used as the background color for note blocks in
-  linear view, such as the info block found at the start of linear view
-4. `linearDisassemblySeparatorColor` (*required*) - Used as the separator/border color between
-  major elements in linear view
+1. `linearDisassemblyFunctionHeaderColor` (*required*) - Used as the background for function headers in linear view
+2. `linearDisassemblyBlockColor` (*required*) - Used as the background for function bodies in linear view
+3. `linearDisassemblyNoteColor` (*required*) - Used as the background color for note blocks in linear view, such as the info block found at the start of linear view
+4. `linearDisassemblySeparatorColor` (*required*) - Used as the separator/border color between major elements in linear view
+5. `indentationLineColor` - Used to color the indentation line, not shown in picture above
+6. `indentationLineHighlightColor` - Used to highlight the indentation line (such as when selecting it), not shown in picture above
 
 #### Graph View
 

@@ -126,7 +126,7 @@ class Settings:
 	"""
 	default_handle = core.BNCreateSettings("default")
 
-	def __init__(self, instance_id: str = "default", handle=None):
+	def __init__(self, instance_id: Optional[str] = None, handle=None):
 		if handle is None:
 			if instance_id is None or instance_id == "":
 				instance_id = "default"
@@ -176,14 +176,14 @@ class Settings:
 		:param BinaryView view: a BinaryView object
 		:rtype: bool
 		"""
-	def load_settings_file(self, filename: str=None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope, view: Optional['binaryview.BinaryView'] = None) -> bool:
+	def load_settings_file(self, filename: str = '', scope: 'SettingsScope' = SettingsScope.SettingsAutoScope, view: Optional['binaryview.BinaryView'] = None) -> bool:
 		if filename is None:
 			filename = ""
 		if view is not None:
 			view = view.handle
 		return core.BNLoadSettingsFile(self.handle, filename, scope, view)
 
-	def set_resource_id(self, resource_id: str = None):
+	def set_resource_id(self, resource_id: str = ''):
 		"""
 		``set_resource_id`` Sets the resource identifier for this class:`Settings` instance. When accessing setting values at the \
 		``SettingsResourceScope`` level, the resource identifier is passed along through the backing store interface.

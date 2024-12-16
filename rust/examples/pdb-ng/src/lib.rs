@@ -21,7 +21,7 @@ use std::sync::mpsc;
 use std::{env, fs};
 
 use anyhow::{anyhow, Result};
-use log::{debug, error, info, LevelFilter};
+use log::{debug, error, info};
 use pdb::PDB;
 
 use binaryninja::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
@@ -30,7 +30,8 @@ use binaryninja::downloadprovider::{DownloadInstanceInputOutputCallbacks, Downlo
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet};
 use binaryninja::settings::Settings;
 use binaryninja::string::BnString;
-use binaryninja::{add_optional_plugin_dependency, interaction, logger, user_directory};
+use binaryninja::{add_optional_plugin_dependency, interaction, user_directory};
+use binaryninja::logger::Logger;
 use parser::PDBParserInstance;
 
 /// PDB Parser!!
@@ -697,7 +698,7 @@ pub extern "C" fn PDBPluginInit() -> bool {
 }
 
 fn init_plugin() -> bool {
-    let _ = logger::init(LevelFilter::Debug);
+    Logger::new("PDB").init();
     DebugInfoParser::register("PDB", PDBParser {});
 
     let settings = Settings::new("");

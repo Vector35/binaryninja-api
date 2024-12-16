@@ -2722,6 +2722,26 @@ public:
 };
 
 
+class AppleArm64ObjcFastARCCallingConvention: public Arm64CallingConvention
+{
+	uint32_t m_reg;
+	 public:
+	AppleArm64ObjcFastARCCallingConvention(Architecture* arch, uint32_t reg): Arm64CallingConvention(arch, "apple-arm64-objc-fast-arc-" + to_string(reg - REG_X0)), m_reg(reg)
+	{
+	}
+
+	virtual vector<uint32_t> GetIntegerArgumentRegisters() override
+	{
+		return vector<uint32_t> {m_reg};
+	}
+
+	virtual bool AreArgumentRegistersUsedForVarArgs() override
+	{
+		return false;
+	}
+};
+
+
 class LinuxArm64SystemCallConvention: public CallingConvention
 {
  public:
@@ -3582,6 +3602,14 @@ extern "C"
 
 		conv = new AppleArm64CallingConvention(arm64);
 		arm64->RegisterCallingConvention(conv);
+
+		for (uint32_t i = REG_X0; i <= REG_X28; i++)
+		{
+			if (i == REG_X16 || i == REG_X17 || i == REG_X18) // reserved by os.
+				continue;
+			conv = new AppleArm64ObjcFastARCCallingConvention(arm64, i);
+			arm64->RegisterCallingConvention(conv);
+		}
 
 		// Register ARM64 specific PLT trampoline recognizer
 		arm64->RegisterFunctionRecognizer(new Arm64ImportedFunctionRecognizer());

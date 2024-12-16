@@ -246,6 +246,7 @@ bool COFFView::Init()
 		// Read sections
 		reader.Seek(sectionHeadersOffset);
 		BinaryReader sectionNameReader(GetParentView(), LittleEndian);
+		BeginBulkAddSegments();
 
 		for (uint32_t i = 0; i < sectionCount; i++)
 		{
@@ -431,6 +432,8 @@ bool COFFView::Init()
 				AddAutoSection(ss.str(), section.virtualAddress + m_imageBase, section.virtualSize, semantics);
 			}
 		}
+
+		EndBulkAddSegments();
 
 		// Apply architecture and platform
 		if (!m_arch)
@@ -1214,6 +1217,7 @@ bool COFFView::Init()
 			QualifiedName coffRelocTypeName = DefineType(coffRelocTypeId, coffRelocName, coffRelocStructType);
 
 			auto relocHandler = m_arch->GetRelocationHandler("COFF");
+			BeginBulkAddSegments();
 
 			for (uint32_t i = 0; i < sectionCount; i++)
 			{
@@ -1351,6 +1355,8 @@ bool COFFView::Init()
 					}
 				}
 			}
+
+			EndBulkAddSegments();
 		}
 	}
 	catch (std::exception& e)

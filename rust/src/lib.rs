@@ -35,7 +35,7 @@
 //!
 //! > ⚠️ **These bindings are in a very early beta, only have partial support for the core APIs and are still actively under development. Compatibility _will_ break and conventions _will_ change! They are being used for core Binary Ninja features however, so we expect much of what is already there to be reliable enough to build on, just don't be surprised if your plugins/scripts need to hit a moving target.**
 //!
-//! > ⚠️ This project runs on Rust version `1.77.0`
+//! > ⚠️ This project runs on Rust version `1.83.0`
 //!
 //! ---
 //!
@@ -106,7 +106,6 @@
 extern crate log;
 #[doc(hidden)]
 pub extern crate binaryninjacore_sys;
-extern crate libc;
 #[cfg(feature = "rayon")]
 extern crate rayon;
 
@@ -171,10 +170,13 @@ pub mod typelibrary;
 pub mod typearchive;
 pub mod types;
 pub mod update;
+pub mod workflow;
 
+use std::collections::HashMap;
+use std::ffi::{c_void, CStr};
 use std::path::PathBuf;
 use std::ptr;
-
+use binaryninjacore_sys::{BNBinaryView, BNFileMetadata, BNFunction, BNObjectDestructionCallbacks, BNRegisterObjectDestructionCallbacks, BNUnregisterObjectDestructionCallbacks};
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
 use binaryview::BinaryView;
@@ -182,7 +184,8 @@ use metadata::Metadata;
 use metadata::MetadataType;
 use string::BnStrCompatible;
 use string::IntoJson;
-
+use crate::filemetadata::FileMetadata;
+use crate::function::Function;
 // Commented out to suppress unused warnings
 // const BN_MAX_INSTRUCTION_LENGTH: u64 = 256;
 // const BN_DEFAULT_INSTRUCTION_LENGTH: u64 = 16;
@@ -593,6 +596,72 @@ pub fn path_relative_to_user_directory<S: string::BnStrCompatible>(path: S) -> R
     Ok(PathBuf::from(
         unsafe { string::BnString::from_raw(s) }.to_string(),
     ))
+}
+
+pub fn memory_info() -> HashMap<String, u64> {
+    let mut count = 0;
+    let mut usage = HashMap::new();
+    unsafe {
+        let info_ptr = binaryninjacore_sys::BNGetMemoryUsageInfo(&mut count);
+        let info_list = std::slice::from_raw_parts(info_ptr, count);
+        for info in info_list {
+            let info_name = CStr::from_ptr(info.name).to_str().unwrap().to_string();
+            usage.insert(info_name, info.value);
+        }
+        binaryninjacore_sys::BNFreeMemoryUsageInfo(info_ptr, count);
+    }
+    usage
+}
+
+/// The trait required for receiving core object destruction callbacks.
+pub trait ObjectDestructor: 'static + Sync + Sized {
+    fn destruct_view(&self, _view: &BinaryView) {}
+    fn destruct_file_metadata(&self, _metadata: &FileMetadata) {}
+    fn destruct_function(&self, _func: &Function) {}
+
+    unsafe extern "C" fn cb_destruct_binary_view(ctxt: *mut c_void, view: *mut BNBinaryView)
+    {
+        ffi_wrap!("ObjectDestructor::destruct_view", {
+            let view_type = &*(ctxt as *mut Self);
+            let view = BinaryView { handle: view };
+            view_type.destruct_view(&view);
+        })
+    }
+
+    unsafe extern "C" fn cb_destruct_file_metadata(ctxt: *mut c_void, file: *mut BNFileMetadata)
+    {
+        ffi_wrap!("ObjectDestructor::destruct_file_metadata", {
+            let view_type = &*(ctxt as *mut Self);
+            let file = FileMetadata::from_raw(file);
+            view_type.destruct_file_metadata(&file);
+        })
+    }
+
+    unsafe extern "C" fn cb_destruct_function(ctxt: *mut c_void, func: *mut BNFunction)
+    {
+        ffi_wrap!("ObjectDestructor::destruct_function", {
+            let view_type = &*(ctxt as *mut Self);
+            let func = Function { handle: func };
+            view_type.destruct_function(&func);
+        })
+    }
+    
+    unsafe fn as_callbacks(&'static mut self) -> BNObjectDestructionCallbacks {
+        BNObjectDestructionCallbacks {
+            context: std::mem::transmute(&self),
+            destructBinaryView: Some(Self::cb_destruct_binary_view),
+            destructFileMetadata: Some(Self::cb_destruct_file_metadata),
+            destructFunction: Some(Self::cb_destruct_function),
+        }
+    }
+    
+    fn register(&'static mut self) {
+        unsafe { BNRegisterObjectDestructionCallbacks(&mut self.as_callbacks()) };
+    }
+    
+    fn unregister(&'static mut self) {
+        unsafe { BNUnregisterObjectDestructionCallbacks(&mut self.as_callbacks()) };
+    }
 }
 
 pub fn version() -> string::BnString {

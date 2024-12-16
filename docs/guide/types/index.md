@@ -13,6 +13,6 @@ Additionally, several types of containers for type information are documented he
 - [Type Libraries](typelibraries.md): Type Libraries contain types from commonly-used dynamic libraries 
 - [Platform Types](platformtypes.md): Types that automatically apply to a platform
 - [Type Archives](typearchives.md): How you can use type archives to share types between analysis databases
-- [Signature Libraries](../../dev/annotation.md#signature-library): Signature libraries are used to match names of functions with signatures for code that is statically compiled
+- [Signature Libraries](../../dev/annotation.md#signature-libraries): Signature libraries are used to match names of functions with signatures for code that is statically compiled
 
 Additionally, make sure to see the [applying annotations](../../dev/annotation.md) section of the developer guide for information about using the API with types and covering the creation of many of the items described below.

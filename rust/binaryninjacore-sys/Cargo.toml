@@ -3,6 +3,10 @@ name = "binaryninjacore-sys"
 version = "0.1.0"
 authors = ["Ryan Snyder <ryan@vector35.com>", "Kyle Martin <kyle@vector35.com>"]
 build = "build.rs"
+edition = "2021"
 
 [build-dependencies]
-bindgen = "^0.70.1"
+bindgen = "0.71.1"
+# TODO: Remove this once bindgen correctly pins the version.
+# proc-macro2 v1.0.79 does not have https://docs.rs/proc-macro2/1.0.80/proc_macro2/struct.Literal.html#method.c_string
+proc-macro2 = ">=1.0.80"

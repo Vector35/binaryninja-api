@@ -207,7 +207,6 @@ class BINARYNINJAUIAPI ScriptingConsole : public SidebarWidget, BinaryNinja::Scr
 	bool getScriptIsActive() const { return m_scriptActive; }
 
 	void clearConsole();
-	void hideConsole();
 
 	void addInput(const std::string& text);
 

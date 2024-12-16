@@ -79,6 +79,7 @@ from .debuginfo import *
 from .externallibrary import *
 from .undo import *
 from .fileaccessor import *
+from .languagerepresentation import *
 # We import each of these by name to prevent conflicts between
 # log.py and the function 'log' which we don't import below
 from .log import (
@@ -95,6 +96,7 @@ warnings.filterwarnings('once', '', DeprecatedWarning)
 # Only load Enterprise Client support on Ultimate builds
 if core.BNGetProduct() == "Binary Ninja Enterprise Client" or core.BNGetProduct() == "Binary Ninja Ultimate":
 	from .enterprise import *
+	from .firmwareninja import *
 
 
 def shutdown():

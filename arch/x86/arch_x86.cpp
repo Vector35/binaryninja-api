@@ -4489,11 +4489,12 @@ public:
 		// Note: info.base contains preferred base address and the base where the image is actually loaded
 		(void)view;
 		(void)arch;
-		(void)len;
 		uint64_t* data64 = (uint64_t*)dest;
 		uint32_t* data32 = (uint32_t*)dest;
 		uint16_t* data16 = (uint16_t*)dest;
 		auto info = reloc->GetInfo();
+		if (len < info.size)
+			return false;
 		uint64_t offset = 0;
 
 		if (info.pcRelative)

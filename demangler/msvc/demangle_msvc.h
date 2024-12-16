@@ -15,17 +15,34 @@
 #pragma once
 #include <stdexcept>
 #include <exception>
-#include <string>
-#include <vector>
-#include <set>
-#include "binaryninjaapi.h"
 
+// XXX: Compiled directly into the core for performance reasons
+// Will still work fine compiled independently, just at about a
+// 50-100% performance penalty due to FFI overhead
+#ifdef BINARYNINJACORE_LIBRARY
+#include "qualifiedname.h"
+#include "type.h"
+#include "architecture.h"
+#include "binaryview.h"
+#include "demangle.h"
+#include "unicode.h"
+#define BN BinaryNinjaCore
+#define _STD_STRING BinaryNinjaCore::string
+#define _STD_VECTOR BinaryNinjaCore::vector
+#define _STD_SET BinaryNinjaCore::set
+#else
+#include "binaryninjaapi.h"
+#define BN BinaryNinja
+#define _STD_STRING std::string
+#define _STD_VECTOR std::vector
+#define _STD_SET std::set
+#endif
 
 class DemangleException: public std::exception
 {
-	std::string m_message;
+	_STD_STRING m_message;
 public:
-	DemangleException(std::string msg="Attempt to read beyond bounds or missing expected character"): m_message(msg){}
+	DemangleException(_STD_STRING msg="Attempt to read beyond bounds or missing expected character"): m_message(msg){}
 	virtual const char* what() const noexcept { return m_message.c_str(); }
 };
 
@@ -67,96 +84,96 @@ class Demangle
 	class Reader
 	{
 	public:
-		Reader(std::string data);
-		std::string PeekString(size_t count=1);
+		Reader(_STD_STRING data);
+		_STD_STRING PeekString(size_t count=1);
 		char Peek();
 		const char* GetRaw();
 		char Read();
-		std::string ReadString(size_t count=1);
-		std::string ReadUntil(char sentinal);
+		_STD_STRING ReadString(size_t count=1);
+		_STD_STRING ReadUntil(char sentinal);
 		void Consume(size_t count=1);
 		size_t Length();
 	private:
-		std::string m_data;
+		_STD_STRING m_data;
 	};
 
 	class BackrefList
 	{
 	public:
-		std::vector<BinaryNinja::TypeBuilder> typeList;
-		std::vector<std::string> nameList;
-		const BinaryNinja::TypeBuilder& GetTypeBackref(size_t reference);
-		std::string GetStringBackref(size_t reference);
-		void PushTypeBackref(BinaryNinja::TypeBuilder t);
-		void PushStringBackref(std::string& s);
-		void PushFrontStringBackref(std::string& s);
+		_STD_VECTOR<BN::TypeBuilder> typeList;
+		_STD_VECTOR<_STD_STRING> nameList;
+		const BN::TypeBuilder& GetTypeBackref(size_t reference);
+		_STD_STRING GetStringBackref(size_t reference);
+		void PushTypeBackref(BN::TypeBuilder t);
+		void PushStringBackref(_STD_STRING& s);
+		void PushFrontStringBackref(_STD_STRING& s);
 	};
 
 	Reader reader;
 	BackrefList m_backrefList;
-	BinaryNinja::Architecture* m_arch;
-	BinaryNinja::Ref<BinaryNinja::Platform> m_platform;
-	BinaryNinja::Ref<BinaryNinja::BinaryView> m_view;
-	BinaryNinja::QualifiedName m_varName;
-	BinaryNinja::Ref<BinaryNinja::Logger> m_logger;
+	BN::Architecture* m_arch;
+	BN::Ref<BN::Platform> m_platform;
+	BN::Ref<BN::BinaryView> m_view;
+	BN::QualifiedName m_varName;
+	BN::Ref<BN::Logger> m_logger;
 
 	NameType GetNameType();
-	BinaryNinja::TypeBuilder DemangleVarType(BackrefList& varList, bool isReturn, BinaryNinja::QualifiedName& name);
+	BN::TypeBuilder DemangleVarType(BackrefList& varList, bool isReturn, BN::QualifiedName& name);
 	void DemangleNumber(int64_t& num);
 	void DemangleChar(char& ch);
 	void DemangleWideChar(uint16_t& wch);
 	void DemangleModifiers(bool& _const, bool& _volatile, bool& isMember);
-	std::set<BNPointerSuffix> DemanglePointerSuffix();
-	void DemangleVariableList(std::vector<BinaryNinja::FunctionParameter>& paramList, BackrefList& varList);
+	_STD_SET<BNPointerSuffix> DemanglePointerSuffix();
+	void DemangleVariableList(_STD_VECTOR<BN::FunctionParameter>& paramList, BackrefList& varList);
 	void DemangleNameTypeRtti(BNNameType& classFunctionType,
 	                          BackrefList& nameBackrefList,
-	                          std::string& out,
-	                          std::string& rttiTypeName);
-	void DemangleTypeNameLookup(std::string& out, BNNameType& functionType);
-	void DemangleNameTypeString(std::string& out);
-	void DemangleNameTypeBackref(std::string& out, const std::vector<std::string>& backrefList);
-	void DemangleName(BinaryNinja::QualifiedName& nameList,
+	                          _STD_STRING& out,
+	                          _STD_STRING& rttiTypeName);
+	void DemangleTypeNameLookup(_STD_STRING& out, BNNameType& functionType);
+	void DemangleNameTypeString(_STD_STRING& out);
+	void DemangleNameTypeBackref(_STD_STRING& out, const _STD_VECTOR<_STD_STRING>& backrefList);
+	void DemangleName(BN::QualifiedName& nameList,
 	                  BNNameType& classFunctionType,
 	                  BackrefList& nameBackrefList);
-	BinaryNinja::Ref<BinaryNinja::CallingConvention> GetCallingConventionForType(BNCallingConventionName ccName);
+	BN::Ref<BN::CallingConvention> GetCallingConventionForType(BNCallingConventionName ccName);
 	BNCallingConventionName DemangleCallingConvention();
-	BinaryNinja::TypeBuilder DemangleFunction(BNNameType classFunctionType, bool pointerSuffix, BackrefList& varList, int funcClass = NoneFunctionClass);
-	BinaryNinja::TypeBuilder DemangleData();
+	BN::TypeBuilder DemangleFunction(BNNameType classFunctionType, bool pointerSuffix, BackrefList& varList, int funcClass = NoneFunctionClass);
+	BN::TypeBuilder DemangleData();
 	void DemangleNameTypeRtti(BNNameType& classFunctionType,
 	                          BackrefList& nameBackrefList,
-	                          std::string& out);
-	BinaryNinja::TypeBuilder DemangleVTable();
-	BinaryNinja::TypeBuilder DemanagleRTTI(BNNameType classFunctionType);
-	std::string DemangleTemplateInstantiationName(BackrefList& nameBackrefList);
-	std::string DemangleTemplateParams(std::vector<BinaryNinja::FunctionParameter>& params, BackrefList& nameBackrefList, std::string& out);
-	std::string DemangleUnqualifiedSymbolName(BinaryNinja::QualifiedName& nameList, BackrefList& nameBackrefList, BNNameType& classFunctionType);
-	BinaryNinja::TypeBuilder DemangleString();
-	BinaryNinja::TypeBuilder DemangleTypeInfoName();
+	                          _STD_STRING& out);
+	BN::TypeBuilder DemangleVTable();
+	BN::TypeBuilder DemanagleRTTI(BNNameType classFunctionType);
+	_STD_STRING DemangleTemplateInstantiationName(BackrefList& nameBackrefList);
+	_STD_STRING DemangleTemplateParams(_STD_VECTOR<BN::FunctionParameter>& params, BackrefList& nameBackrefList, _STD_STRING& out);
+	_STD_STRING DemangleUnqualifiedSymbolName(BN::QualifiedName& nameList, BackrefList& nameBackrefList, BNNameType& classFunctionType);
+	BN::TypeBuilder DemangleString();
+	BN::TypeBuilder DemangleTypeInfoName();
 
 public:
 	struct DemangleContext
 	{
-		BinaryNinja::TypeBuilder type;
+		BN::TypeBuilder type;
 		BNMemberAccess access;
 		BNMemberScope scope;
 	};
-	Demangle(BinaryNinja::Architecture* arch, std::string mangledName);
-	Demangle(BinaryNinja::Ref<BinaryNinja::BinaryView> view, std::string mangledName);
-	Demangle(BinaryNinja::Ref<BinaryNinja::Platform> platform, std::string mangledName);
+	Demangle(BN::Architecture* arch, _STD_STRING mangledName);
+	Demangle(BN::Ref<BN::BinaryView> view, _STD_STRING mangledName);
+	Demangle(BN::Ref<BN::Platform> platform, _STD_STRING mangledName);
 	DemangleContext DemangleSymbol();
-	BinaryNinja::QualifiedName GetVarName() const { return m_varName; }
+	BN::QualifiedName GetVarName() const { return m_varName; }
 
 	// Be careful not to accidentally implicitly cast a BinaryView* to a bool
-	static bool DemangleMS(BinaryNinja::Architecture* arch, const std::string& mangledName, BinaryNinja::Ref<BinaryNinja::Type>& outType,
-	                       BinaryNinja::QualifiedName& outVarName, const BinaryNinja::Ref<BinaryNinja::BinaryView>& view);
-	static bool DemangleMS(BinaryNinja::Architecture* arch, const std::string& mangledName, BinaryNinja::Ref<BinaryNinja::Type>& outType,
-	                       BinaryNinja::QualifiedName& outVarName, BinaryNinja::BinaryView* view);
-	static bool DemangleMS(BinaryNinja::Architecture* arch, const std::string& mangledName, BinaryNinja::Ref<BinaryNinja::Type>& outType,
-	                       BinaryNinja::QualifiedName& outVarName);
+	static bool DemangleMS(BN::Architecture* arch, const _STD_STRING& mangledName, BN::Ref<BN::Type>& outType,
+	                       BN::QualifiedName& outVarName, const BN::Ref<BN::BinaryView>& view);
+	static bool DemangleMS(BN::Architecture* arch, const _STD_STRING& mangledName, BN::Ref<BN::Type>& outType,
+	                       BN::QualifiedName& outVarName, BN::BinaryView* view);
+	static bool DemangleMS(BN::Architecture* arch, const _STD_STRING& mangledName, BN::Ref<BN::Type>& outType,
+	                       BN::QualifiedName& outVarName);
 
-	static bool DemangleMS(const std::string& mangledName, BinaryNinja::Ref<BinaryNinja::Type>& outType,
-	                       BinaryNinja::QualifiedName& outVarName, const BinaryNinja::Ref<BinaryNinja::BinaryView>& view);
-	static bool DemangleMS(const std::string& mangledName, BinaryNinja::Ref<BinaryNinja::Type>& outType,
-	                       BinaryNinja::QualifiedName& outVarName, BinaryNinja::BinaryView* view);
+	static bool DemangleMS(const _STD_STRING& mangledName, BN::Ref<BN::Type>& outType,
+	                       BN::QualifiedName& outVarName, const BN::Ref<BN::BinaryView>& view);
+	static bool DemangleMS(const _STD_STRING& mangledName, BN::Ref<BN::Type>& outType,
+	                       BN::QualifiedName& outVarName, BN::BinaryView* view);
 };
 

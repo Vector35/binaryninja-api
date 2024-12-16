@@ -1729,7 +1729,7 @@ template<> struct fmt::formatter<IL_INS_NS::MediumLevelILInstruction>
 		auto it = ctx.begin(), end = ctx.end();
 		if (it != end && *it == '?')
 			presentation = *it++;
-		if (it != end && *it != '}') detail::throw_format_error("invalid format");
+		if (it != end && *it != '}') report_error("invalid format");
 		return it;
 	}
 };

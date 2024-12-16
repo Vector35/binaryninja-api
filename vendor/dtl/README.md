@@ -1,7 +1,5 @@
 # dtl
 
-[![Build Status](https://travis-ci.org/cubicdaiya/dtl.png?branch=master)](https://travis-ci.org/cubicdaiya/dtl)
-
 `dtl` is the diff template library written in C++. The name of template is derived C++'s Template.
 
 # Table of contents
@@ -253,7 +251,7 @@ dtl::Diff<elem, sequence> d(A, B);
 d.compose();
 d.composeUnifiedHunks()
 string s1(A);
-string s2 = d.UniPatch(s1);
+string s2 = d.uniPatch(s1);
 ```
 
 When the above code is run, s2 becomes "abd".

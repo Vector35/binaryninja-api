@@ -24,6 +24,7 @@
 	#define NOMINMAX
 #endif
 	#include <windows.h>
+	#define FMT_UNICODE 0
 #endif
 #include <cstddef>
 #include <string>
@@ -243,9 +244,9 @@ namespace BinaryNinja {
 #endif
 
 	  public:
-		Ref<T>() : m_obj(nullptr) {}
+		Ref() : m_obj(nullptr) {}
 
-		Ref<T>(T* obj) : m_obj(obj)
+		Ref(T* obj) : m_obj(obj)
 		{
 			if (m_obj)
 			{
@@ -256,7 +257,7 @@ namespace BinaryNinja {
 			}
 		}
 
-		Ref<T>(const Ref<T>& obj) : m_obj(obj.m_obj)
+		Ref(const Ref<T>& obj) : m_obj(obj.m_obj)
 		{
 			if (m_obj)
 			{
@@ -267,7 +268,7 @@ namespace BinaryNinja {
 			}
 		}
 
-		Ref<T>(Ref<T>&& other) : m_obj(other.m_obj)
+		Ref(Ref<T>&& other) : m_obj(other.m_obj)
 		{
 			other.m_obj = 0;
 #ifdef BN_REF_COUNT_DEBUG
@@ -275,7 +276,7 @@ namespace BinaryNinja {
 #endif
 		}
 
-		~Ref<T>()
+		~Ref()
 		{
 			if (m_obj)
 			{
@@ -369,8 +370,8 @@ namespace BinaryNinja {
 		T* m_obj;
 
 	public:
-		CallbackRef<T>(void* obj) : m_obj((T*)obj) { m_obj->AddRefForCallback(); }
-		~CallbackRef<T>() { m_obj->ReleaseForCallback(); }
+		CallbackRef(void* obj) : m_obj((T*)obj) { m_obj->AddRefForCallback(); }
+		~CallbackRef() { m_obj->ReleaseForCallback(); }
 		operator T*() const { return m_obj; }
 		T* operator->() const { return m_obj; }
 		T& operator*() const { return *m_obj; }
@@ -19983,7 +19984,7 @@ struct fmt::formatter<T, char, std::enable_if_t<std::is_enum_v<T>, void>>
 	{
 		auto it = ctx.begin(), end = ctx.end();
 		if (it != end && (*it == 's' || *it == 'S' || *it == 'd' || *it == 'x')) presentation = *it++;
-		if (it != end && *it != '}') detail::throw_format_error("invalid format");
+		if (it != end && *it != '}') report_error("invalid format");
 		return it;
 	}
 };

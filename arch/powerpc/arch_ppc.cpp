@@ -6,8 +6,8 @@
 
 #include <binaryninjaapi.h>
 #define MYLOG(...) while(0);
-//#define MYLOG BinaryNinja::LogDebug
-//#define MYLOG printf
+// #define MYLOG BinaryNinja::LogWarn
+// #define MYLOG printf
 
 #include "lowlevelilinstruction.h"
 using namespace BinaryNinja; // for ::LogDebug, etc.
@@ -281,6 +281,7 @@ class PowerpcArchitecture: public Architecture
 {
 	private:
 	BNEndianness endian;
+	int cs_mode_local;
 	size_t addressSize;
 
 	/* this can maybe be moved to the API later */
@@ -297,10 +298,11 @@ class PowerpcArchitecture: public Architecture
 	public:
 
 	/* initialization list */
-	PowerpcArchitecture(const char* name, BNEndianness endian_, size_t addressSize_=4): Architecture(name)
+	PowerpcArchitecture(const char* name, BNEndianness endian_, size_t addressSize_=4, int cs_mode_=0): Architecture(name)
 	{
 		endian = endian_;
 		addressSize = addressSize_;
+		cs_mode_local = cs_mode_;
 	}
 
 	/*************************************************************************/
@@ -320,7 +322,7 @@ class PowerpcArchitecture: public Architecture
 	virtual size_t GetDefaultIntegerSize() const override
 	{
 		MYLOG("%s()\n", __func__);
-		return 4;
+		return addressSize;
 	}
 
 	virtual size_t GetInstructionAlignment() const override
@@ -356,13 +358,13 @@ class PowerpcArchitecture: public Architecture
 			return false;
 		}
 
-		if (DoesQualifyForLocalDisassembly(data)) {
+		if (DoesQualifyForLocalDisassembly(data, endian == BigEndian)) {
 			result.length = 4;
 			return true;
 		}
 
 		/* decompose the instruction to get branch info */
-		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, GetAddressSize() == 8)) {
+		if(powerpc_decompose(data, 4, addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			return false;
 		}
@@ -376,15 +378,17 @@ class PowerpcArchitecture: public Architecture
 		{
 			case 18: /* b (b, ba, bl, bla) */
 			{
-				uint32_t target = raw_insn & 0x03fffffc;
+				uint64_t target = raw_insn & 0x03fffffc;
 
 				/* sign extend target */
-				if ((target >> 25) & 1)
-					target |= 0xfc000000;
+				target = sign_extend(addressSize, target, 25);
 
 				/* account for absolute addressing */
 				if (!(raw_insn & 2))
-					target += (uint32_t) addr;
+				{
+					target += addr;
+					ADDRMASK(addressSize, target);
+				}
 
 				if (raw_insn & 1)
 					result.AddBranch(CallDestination, target);
@@ -395,17 +399,19 @@ class PowerpcArchitecture: public Architecture
 			}
 			case 16: /* bc */
 			{
-				uint32_t target = raw_insn & 0xfffc;
+				uint64_t target = raw_insn & 0xfffc;
 				uint8_t bo = (raw_insn >> 21) & 0x1f;
 				bool lk = raw_insn & 1;
 
 				/* sign extend target */
-				if ((target >> 15) & 1)
-					target |= 0xffff0000;
+				target = sign_extend(addressSize, target, 15);
 
 				/* account for absolute addressing */
 				if (!(raw_insn & 2))
-					target += (uint32_t) addr;
+				{
+					target += addr;
+					ADDRMASK(addressSize, target);
+				}
 
 				if (target != addr + 4)
 				{
@@ -455,149 +461,56 @@ class PowerpcArchitecture: public Architecture
 		return true;
 	}
 
-	bool DoesQualifyForLocalDisassembly(const uint8_t *data)
-	{
-		uint32_t insword = *(uint32_t *)data;
-		if(endian == BigEndian)
-			insword = bswap32(insword);
-
-		// 111111xxx00xxxxxxxxxx00001000000 <- fcmpo
-		uint32_t tmp = insword & 0xFC6007FF;
-		if (tmp==0xFC000040)
-			return true;
-		// 111100xxxxxxxxxxxxxxx00111010xxx <- xxpermr
-		if((insword & 0xFC0007F8) == 0xF00001D0)
-			return true;
-		// 000100xxxxxxxxxxxxxxxxxxx000110x <- psq_lx
-		// 000100xxxxxxxxxxxxxxxxxxx000111x <- psq_stx
-		// 000100xxxxxxxxxxxxxxxxxxx100110x <- psq_lux
-		// 000100xxxxxxxxxxxxxxxxxxx100111x <- psq_stux
-		tmp = insword & 0xFC00007E;
-		if (tmp==0x1000000C || tmp==0x1000000E || tmp==0x1000004C || tmp==0x1000004E)
-			return true;
-		// 000100xxxxxxxxxx00000xxxxx011000 <- ps_muls0
-		// 000100xxxxxxxxxx00000xxxxx011001 <- ps_muls0.
-		// 000100xxxxxxxxxx00000xxxxx011010 <- ps_muls1
-		// 000100xxxxxxxxxx00000xxxxx011011 <- ps_muls1.
-		tmp = insword & 0xFC00F83F;
-		if (tmp==0x10000018 || tmp==0x10000019 || tmp==0x1000001A || tmp==0x1000001B)
-			return true;
-
-		return false;
-	}
-
-	bool PerformLocalDisassembly(const uint8_t *data, uint64_t addr, size_t &len, vector<InstructionTextToken> &result)
+	bool PrintLocalDisassembly(const uint8_t *data, uint64_t addr, size_t &len, vector<InstructionTextToken> &result, decomp_result* res)
 	{
 		(void)addr;
+		char buf[16];
+		uint32_t local_op = PPC_INS_INVALID;
 
-		if (len < 4) return false;
-		uint32_t insword = *(uint32_t *)data;
-		if(endian == BigEndian)
-			insword = bswap32(insword);
+		struct cs_detail *detail = 0;
+		struct cs_ppc *ppc = 0;
+		struct cs_insn *insn = &(res->insn);
 
+		detail = &(res->detail);
+		ppc = &(detail->ppc);
+
+		if (len < 4)
+			return false;
 		len = 4;
 
-		char buf[16];
+		local_op = DoesQualifyForLocalDisassembly(data, endian == BigEndian);
+		PerformLocalDisassembly(data, addr, len, res, endian == BigEndian);		
 
-		// 111111AAA00BBBBBCCCCC00001000000 "fcmpo crA,fB,fC"
-		uint32_t tmp = insword & 0xFC6007FF;
-		if (tmp==0xFC000040) {
-			result.emplace_back(InstructionToken, "fcmpo");
+		switch (local_op)
+		{
+		case PPC_INS_BN_FCMPO:
+			result.emplace_back(InstructionToken, insn->mnemonic);
 			result.emplace_back(TextToken, "   ");
-			snprintf(buf, sizeof(buf), "cr%d", (insword >> 23) & 7);
+			snprintf(buf, sizeof(buf), "cr%d", ppc->operands[0].reg - PPC_REG_CR0);
 			result.emplace_back(RegisterToken, buf);
 			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "f%d", (insword >> 16) & 31);
+			snprintf(buf, sizeof(buf), "f%d", ppc->operands[1].reg - PPC_REG_F0);
 			result.emplace_back(RegisterToken, buf);
 			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "f%d", (insword >> 11) & 31);
+			snprintf(buf, sizeof(buf), "f%d", ppc->operands[2].reg - PPC_REG_F0);
 			result.emplace_back(RegisterToken, buf);
-			return true;
-		}
-
-		// 111100AAAAABBBBBCCCCC00011010BCA "xxpermr vsA,vsB,vsC"
-		if ((insword & 0xFC0007F8)==0xF00001D0) {
-			int a = ((insword & 0x3E00000)>>21)|((insword & 0x1)<<5);
-			int b = ((insword & 0x1F0000)>>16)|((insword & 0x4)<<3);
-			int c = ((insword & 0xF800)>>11)|((insword & 0x2)<<4);
-			result.emplace_back(InstructionToken, "xxpermr");
+			break;
+		case PPC_INS_BN_XXPERMR:
+			result.emplace_back(InstructionToken, insn->mnemonic);
 			result.emplace_back(TextToken, " ");
-			snprintf(buf, sizeof(buf), "vs%d", a);
+			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[0].reg - PPC_REG_VS0);
 			result.emplace_back(RegisterToken, buf);
 			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "vs%d", b);
+			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[1].reg - PPC_REG_VS0);
 			result.emplace_back(RegisterToken, buf);
 			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "vs%d", c);
+			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[2].reg - PPC_REG_VS0);
 			result.emplace_back(RegisterToken, buf);
-			return true;
+			break;
+		default:
+			return false;
 		}
-
-		// 000100AAAAABBBBBCCCCCDEEE000110x psq_lx FREG,GPR,GPR,NUM,NUM
-		// 000100AAAAABBBBBCCCCCDEEE000111x psq_stx FREG,GPR,GPR,NUM,NUM
-		// 000100AAAAABBBBBCCCCCDEEE100110x psq_lux FREG,GPR,GPR,NUM,NUM
-		// 000100AAAAABBBBBCCCCCDEEE100111x psq_stux FREG,GPR,GPR,NUM,NUM
-		tmp = insword & 0xFC00007E;
-		if (tmp==0x1000000C || tmp==0x1000000E || tmp==0x1000004C || tmp==0x1000004E) {
-			switch(tmp) {
-				case 0x1000000C:
-					result.emplace_back(InstructionToken, "psq_lx");
-					result.emplace_back(TextToken, "  ");
-					break;
-				case 0x1000000E: result.emplace_back(InstructionToken, "psq_stx");
-					result.emplace_back(TextToken, " ");
-					break;
-				case 0x1000004C: result.emplace_back(InstructionToken, "psq_lux");
-					result.emplace_back(TextToken, " ");
-					break;
-				case 0x1000004E: result.emplace_back(InstructionToken, "psq_stux");
-					result.emplace_back(TextToken, " ");
-					break;
-			}
-			snprintf(buf, sizeof(buf), "f%d", (insword & 0x3E00000) >> 21);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "r%d", (insword & 0x1F0000) >> 16);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "r%d", (insword & 0xF800) >> 11);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			tmp = (insword & 0x400)>>10;
-			snprintf(buf, sizeof(buf), "%d", tmp);
-			result.emplace_back(IntegerToken, buf, tmp, 1);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			tmp = (insword & 0x380)>>7;
-			snprintf(buf, sizeof(buf), "%d", tmp);
-			result.emplace_back(IntegerToken, buf, tmp, 1);
-			return true;
-		}
-
-		// 000100AAAAABBBBB00000CCCCC011000 ps_muls0 FREG,FREG,FREG
-		// 000100AAAAABBBBB00000CCCCC011001 ps_muls0. FREG,FREG,FREG
-		// 000100AAAAABBBBB00000CCCCC011010 ps_muls1 FREG,FREG,FREG
-		// 000100AAAAABBBBB00000CCCCC011011 ps_muls1. FREG,FREG,FREG
-		tmp = insword & 0xFC00F83F;
-		if (tmp==0x10000018 || tmp==0x10000019 || tmp==0x1000001A || tmp==0x1000001B) {
-			switch(tmp) {
-				case 0x10000018: result.emplace_back(InstructionToken, "ps_muls0"); break;
-				case 0x10000019: result.emplace_back(InstructionToken, "ps_muls0."); break;
-				case 0x1000001A: result.emplace_back(InstructionToken, "ps_muls1"); break;
-				case 0x1000001B: result.emplace_back(InstructionToken, "ps_muls1."); break;
-			}
-			result.emplace_back(TextToken, " ");
-			snprintf(buf, sizeof(buf), "f%d", (insword & 0x3E00000) >> 21);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "f%d", (insword & 0x1F0000) >> 16);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "f%d", (insword & 0x7C0) >> 6);
-			result.emplace_back(RegisterToken, buf);
-			return true;
-		}
-
-		return false;
+		return true;
 	}
 
 	/* populate the vector result with InstructionTextToken
@@ -621,10 +534,12 @@ class PowerpcArchitecture: public Architecture
 			goto cleanup;
 		}
 
-		if (DoesQualifyForLocalDisassembly(data))
-			return PerformLocalDisassembly(data, addr, len, result);
-
-		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, GetAddressSize() == 8)) {
+		if (DoesQualifyForLocalDisassembly(data, endian == BigEndian))
+		{
+			// PerformLocalDisassembly(data, addr, len, &res, endian == BigEndian);
+			return PrintLocalDisassembly(data, addr, len, result, &res);
+		}
+		if(powerpc_decompose(data, 4, addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			goto cleanup;
 		}
@@ -728,9 +643,136 @@ class PowerpcArchitecture: public Architecture
 		return rc;
 	}
 
+	static string GetIntrinsicName_ppc_ps(uint32_t intrinsic)
+	{
+		switch (intrinsic)
+		{
+		case PPC_PS_INTRIN_QUANTIZE:
+			return "quantize";
+		case PPC_PS_INTRIN_DEQUANTIZE:
+			return "dequantize";
+		default:
+			break;
+		}
+		return "";
+	}
+
+	virtual string GetIntrinsicName(uint32_t intrinsic) override
+	{
+		switch (intrinsic)
+		{
+		case PPC_INTRIN_CNTLZW:
+			return "__builtin_clz";
+		case PPC_INTRIN_FRSP:
+			return "float_round";
+		default:
+			if (cs_mode_local == CS_MODE_PS)
+			{
+				return GetIntrinsicName_ppc_ps(intrinsic);
+			}
+			break;
+		}
+		return "";
+	}
+
+
+	virtual std::vector<uint32_t> GetAllIntrinsics() override
+	{
+		// Highest intrinsic number currently is PPC_PS_INTRIN_END.
+		// If new extensions are added please update this code.
+		std::vector<uint32_t> result{PPC_PS_INTRIN_END};
+
+		// Double check someone didn't insert a new intrinsic at the beginning of our enum since we rely
+		// on it to fill the next array.
+		static_assert(PPCIntrinsic::PPC_INTRIN_CNTLZW == 0,
+			"Invalid first PPCIntrinsic value. Please add your intrinsic further in the enum.");
+
+		// Normal intrinsics.
+		for (uint32_t id = PPC_INTRIN_CNTLZW; id < PPCIntrinsic::PPC_INTRIN_END; id++) {
+			result.push_back(id);
+		}
+
+		// PPC_PS intrinsics.
+		for (uint32_t id = PPC_PS_INTRIN_QUANTIZE; id < PPCIntrinsic::PPC_PS_INTRIN_END; id++) {
+			result.push_back(id);
+		}
+
+		// consider populating with separate architecture stuff, like ppc_ps stuff or something
+		return result;
+	}
+
+	static vector<NameAndType> GetIntrinsicInputs_ppc_ps(uint32_t intrinsic)
+	{
+		switch (intrinsic)
+		{
+		// for now, quantize is operating on the float in, and the gqr that holds the scale
+		case PPC_PS_INTRIN_QUANTIZE:
+			return {NameAndType(Type::FloatType(4)), NameAndType(Type::IntegerType(4, false))};
+		case PPC_PS_INTRIN_DEQUANTIZE:
+			return {NameAndType(Type::IntegerType(4, false)), NameAndType(Type::FloatType(8)), NameAndType(Type::IntegerType(4, false))};
+		default:
+			break;
+		}
+		return vector<NameAndType>();
+	}
+
+	virtual vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic) override
+	{
+		switch (intrinsic)
+		{
+		case PPC_INTRIN_CNTLZW:		// rs
+			return {NameAndType(Type::IntegerType(4, false))};
+		case PPC_INTRIN_FRSP:
+			return {NameAndType(Type::FloatType(4))};
+		// for now, quantize is operating on the float in, and the gqr that holds the scale
+		default:
+			if (cs_mode_local == CS_MODE_PS)
+			{
+				return GetIntrinsicInputs_ppc_ps(intrinsic);
+			}
+			break;
+		}
+		return vector<NameAndType>();
+	}
+
+	static vector<Confidence<Ref<Type>>> GetIntrinsicOutputs_ppc_ps(uint32_t intrinsic)
+	{
+		switch(intrinsic)
+		{
+		case PPC_PS_INTRIN_QUANTIZE:
+			// quantize returns the quantized float
+			return {Type::FloatType(4)};
+		case PPC_PS_INTRIN_DEQUANTIZE:
+			return {Type::FloatType(4)};
+		default:
+			break;
+		}
+		return vector<Confidence<Ref<Type>>>();
+	}
+
+	virtual vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic) override
+	{
+		switch (intrinsic)
+		{
+		case PPC_INTRIN_CNTLZW:		// ra
+			return {Type::IntegerType(4, false)};
+		case PPC_INTRIN_FRSP:
+			return {Type::FloatType(4)};
+		default:
+			if (cs_mode_local == CS_MODE_PS)
+			{
+				return GetIntrinsicOutputs_ppc_ps(intrinsic);
+			}
+			break;
+		}
+		return vector<Confidence<Ref<Type>>>();
+	}
+
+
 	virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override
 	{
 		bool rc = false;
+		struct decomp_result res = {0};
 
 		if (len < 4) {
 			MYLOG("ERROR: need at least 4 bytes\n");
@@ -741,21 +783,16 @@ class PowerpcArchitecture: public Architecture
 		//	MYLOG("%s(data, 0x%llX, 0x%zX, il)\n", __func__, addr, len);
 		//}
 
-		struct decomp_result res;
-
-		if (DoesQualifyForLocalDisassembly(data)) {
-			il.AddInstruction(il.Unimplemented());
-			rc = true;
-			len = 4;
-			goto cleanup;
+		if (DoesQualifyForLocalDisassembly(data, endian == BigEndian)) {
+			PerformLocalDisassembly(data, addr, len, &res, endian == BigEndian);
 		}
-
-		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, GetAddressSize() == 8)) {
+		else if(powerpc_decompose(data, 4, addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			il.AddInstruction(il.Undefined());
 			goto cleanup;
 		}
 
+// getil:
 		rc = GetLowLevelILForPPCInstruction(this, il, data, addr, &res, endian == LittleEndian);
 		len = 4;
 
@@ -766,24 +803,14 @@ class PowerpcArchitecture: public Architecture
 	virtual size_t GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 		uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il) override
 	{
-		MYLOG("%s()\n", __func__);
-
-		bool signedWrite = true;
+		// MYLOG("%s(), op:%d, flagwritetype:%d, flag:%d\n", __func__, op, flagWriteType, flag);
 		ExprId left, right;
+		ppc_suf suf = (ppc_suf)0;
+
+		suf = (ppc_suf)((flagWriteType - 1) % PPC_SUF_SZ);
 
 		switch (flagWriteType)
 		{
-			case IL_FLAGWRITE_CR0_U:
-			case IL_FLAGWRITE_CR1_U:
-			case IL_FLAGWRITE_CR2_U:
-			case IL_FLAGWRITE_CR3_U:
-			case IL_FLAGWRITE_CR4_U:
-			case IL_FLAGWRITE_CR5_U:
-			case IL_FLAGWRITE_CR6_U:
-			case IL_FLAGWRITE_CR7_U:
-				signedWrite = false;
-				break;
-
 			case IL_FLAGWRITE_MTCR0:
 			case IL_FLAGWRITE_MTCR1:
 			case IL_FLAGWRITE_MTCR2:
@@ -807,7 +834,7 @@ class PowerpcArchitecture: public Architecture
 		}
 
 		auto liftOps = [&]() {
-			if (op == LLIL_SUB)
+			if ((op == LLIL_SUB) || (op == LLIL_FSUB))
 			{
 				left = il.GetExprForRegisterOrConstant(operands[0], size);
 				right = il.GetExprForRegisterOrConstant(operands[1], size);
@@ -868,10 +895,12 @@ class PowerpcArchitecture: public Architecture
 			case IL_FLAG_LT_7:
 				liftOps();
 
-				if (signedWrite)
+				if (suf == PPC_SUF_S)
 					return il.CompareSignedLessThan(size, left, right);
-				else
+				else if (suf == PPC_SUF_U)
 					return il.CompareUnsignedLessThan(size, left, right);
+				else if (suf == PPC_SUF_F)
+					return il.FloatCompareLessThan(size, left, right);
 
 			case IL_FLAG_GT:
 			case IL_FLAG_GT_1:
@@ -883,10 +912,12 @@ class PowerpcArchitecture: public Architecture
 			case IL_FLAG_GT_7:
 				liftOps();
 
-				if (signedWrite)
+				if (suf == PPC_SUF_S)
 					return il.CompareSignedGreaterThan(size, left, right);
-				else
+				else if (suf == PPC_SUF_U)
 					return il.CompareUnsignedGreaterThan(size, left, right);
+				else if (suf == PPC_SUF_F)
+					return il.FloatCompareGreaterThan(size, left, right);
 
 			case IL_FLAG_EQ:
 			case IL_FLAG_EQ_1:
@@ -897,7 +928,10 @@ class PowerpcArchitecture: public Architecture
 			case IL_FLAG_EQ_6:
 			case IL_FLAG_EQ_7:
 				liftOps();
-				return il.CompareEqual(size, left, right);
+				if (suf == PPC_SUF_F)
+					return il.FloatCompareEqual(size, left, right);
+				else
+					return il.CompareEqual(size, left, right);
 		}
 
 		BNFlagRole role = GetFlagRole(flag, GetSemanticClassForFlagWriteType(flagWriteType));
@@ -907,6 +941,7 @@ class PowerpcArchitecture: public Architecture
 
 	virtual ExprId GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il) override
 	{
+		// MYLOG("%s() semgroup:%d\n", __func__, semGroup);
 		uint32_t flagBase = (semGroup / 10) * 4; // get to flags from the right cr
 
 		switch (semGroup % 10)
@@ -924,7 +959,7 @@ class PowerpcArchitecture: public Architecture
 
 	virtual string GetRegisterName(uint32_t regId) override
 	{
-		const char *result = powerpc_reg_to_str(regId);
+		const char *result = powerpc_reg_to_str(regId, cs_mode_local);
 
 		if(result == NULL)
 			result = "";
@@ -947,7 +982,7 @@ class PowerpcArchitecture: public Architecture
 	*/
 	virtual vector<uint32_t> GetAllFlags() override
 	{
-		MYLOG("%s()\n", __func__);
+		// MYLOG("%s()\n", __func__);
 		return vector<uint32_t> {
 			IL_FLAG_LT, IL_FLAG_GT, IL_FLAG_EQ, IL_FLAG_SO,
 			IL_FLAG_LT_1, IL_FLAG_GT_1, IL_FLAG_EQ_1, IL_FLAG_SO_1,
@@ -963,7 +998,7 @@ class PowerpcArchitecture: public Architecture
 
 	virtual string GetFlagName(uint32_t flag) override
 	{
-		MYLOG("%s(%d)\n", __func__, flag);
+		// MYLOG("%s() flag:%d\n", __func__, flag);
 
 		switch(powerpc_crx_to_reg(flag)) {
 			case IL_FLAG_LT: return "lt";
@@ -1021,6 +1056,9 @@ class PowerpcArchitecture: public Architecture
 			IL_FLAGWRITE_CR0_U, IL_FLAGWRITE_CR1_U, IL_FLAGWRITE_CR2_U, IL_FLAGWRITE_CR3_U,
 			IL_FLAGWRITE_CR4_U, IL_FLAGWRITE_CR5_U, IL_FLAGWRITE_CR6_U, IL_FLAGWRITE_CR7_U,
 
+			IL_FLAGWRITE_CR0_F, IL_FLAGWRITE_CR1_F, IL_FLAGWRITE_CR2_F, IL_FLAGWRITE_CR3_F,
+			IL_FLAGWRITE_CR4_F, IL_FLAGWRITE_CR5_F, IL_FLAGWRITE_CR6_F, IL_FLAGWRITE_CR7_F,
+
 			IL_FLAGWRITE_XER, IL_FLAGWRITE_XER_CA, IL_FLAGWRITE_XER_OV_SO,
 
 			IL_FLAGWRITE_MTCR0, IL_FLAGWRITE_MTCR1, IL_FLAGWRITE_MTCR2, IL_FLAGWRITE_MTCR3,
@@ -1035,7 +1073,7 @@ class PowerpcArchitecture: public Architecture
 
 	virtual string GetFlagWriteTypeName(uint32_t writeType) override
 	{
-		MYLOG("%s(%d)\n", __func__, writeType);
+		// MYLOG("%s() writeType:%d\n", __func__, writeType);
 
 		switch (writeType)
 		{
@@ -1072,6 +1110,23 @@ class PowerpcArchitecture: public Architecture
 				return "cr6_unsigned";
 			case IL_FLAGWRITE_CR7_U:
 				return "cr7_unsigned";
+
+			case IL_FLAGWRITE_CR0_F:
+				return "cr0_float";
+			case IL_FLAGWRITE_CR1_F:
+				return "cr1_float";
+			case IL_FLAGWRITE_CR2_F:
+				return "cr2_float";
+			case IL_FLAGWRITE_CR3_F:
+				return "cr3_floatt";
+			case IL_FLAGWRITE_CR4_F:
+				return "cr4_float";
+			case IL_FLAGWRITE_CR5_F:
+				return "cr5_float";
+			case IL_FLAGWRITE_CR6_F:
+				return "cr6_float";
+			case IL_FLAGWRITE_CR7_F:
+				return "cr7_float";
 
 			case IL_FLAGWRITE_XER:
 				return "xer";
@@ -1125,12 +1180,13 @@ class PowerpcArchitecture: public Architecture
 
 	virtual vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType) override
 	{
-		MYLOG("%s(%d)\n", __func__, writeType);
+		// MYLOG("%s() writeType:%d\n", __func__, writeType);
 
 		switch (writeType)
 		{
 			case IL_FLAGWRITE_CR0_S:
 			case IL_FLAGWRITE_CR0_U:
+			case IL_FLAGWRITE_CR0_F:
 			case IL_FLAGWRITE_MTCR0:
 			case IL_FLAGWRITE_INVL0:
 				return vector<uint32_t> {
@@ -1139,6 +1195,7 @@ class PowerpcArchitecture: public Architecture
 
 			case IL_FLAGWRITE_CR1_S:
 			case IL_FLAGWRITE_CR1_U:
+			case IL_FLAGWRITE_CR1_F:
 			case IL_FLAGWRITE_MTCR1:
 			case IL_FLAGWRITE_INVL1:
 				return vector<uint32_t> {
@@ -1147,6 +1204,7 @@ class PowerpcArchitecture: public Architecture
 
 			case IL_FLAGWRITE_CR2_S:
 			case IL_FLAGWRITE_CR2_U:
+			case IL_FLAGWRITE_CR2_F:
 			case IL_FLAGWRITE_MTCR2:
 			case IL_FLAGWRITE_INVL2:
 				return vector<uint32_t> {
@@ -1155,6 +1213,7 @@ class PowerpcArchitecture: public Architecture
 
 			case IL_FLAGWRITE_CR3_S:
 			case IL_FLAGWRITE_CR3_U:
+			case IL_FLAGWRITE_CR3_F:
 			case IL_FLAGWRITE_MTCR3:
 			case IL_FLAGWRITE_INVL3:
 				return vector<uint32_t> {
@@ -1163,6 +1222,7 @@ class PowerpcArchitecture: public Architecture
 
 			case IL_FLAGWRITE_CR4_S:
 			case IL_FLAGWRITE_CR4_U:
+			case IL_FLAGWRITE_CR4_F:
 			case IL_FLAGWRITE_MTCR4:
 			case IL_FLAGWRITE_INVL4:
 				return vector<uint32_t> {
@@ -1171,6 +1231,7 @@ class PowerpcArchitecture: public Architecture
 
 			case IL_FLAGWRITE_CR5_S:
 			case IL_FLAGWRITE_CR5_U:
+			case IL_FLAGWRITE_CR5_F:
 			case IL_FLAGWRITE_MTCR5:
 			case IL_FLAGWRITE_INVL5:
 				return vector<uint32_t> {
@@ -1179,6 +1240,7 @@ class PowerpcArchitecture: public Architecture
 
 			case IL_FLAGWRITE_CR6_S:
 			case IL_FLAGWRITE_CR6_U:
+			case IL_FLAGWRITE_CR6_F:
 			case IL_FLAGWRITE_MTCR6:
 			case IL_FLAGWRITE_INVL6:
 				return vector<uint32_t> {
@@ -1187,6 +1249,7 @@ class PowerpcArchitecture: public Architecture
 
 			case IL_FLAGWRITE_CR7_S:
 			case IL_FLAGWRITE_CR7_U:
+			case IL_FLAGWRITE_CR7_F:
 			case IL_FLAGWRITE_MTCR7:
 			case IL_FLAGWRITE_INVL7:
 				return vector<uint32_t> {
@@ -1217,27 +1280,19 @@ class PowerpcArchitecture: public Architecture
 	}
 	virtual uint32_t GetSemanticClassForFlagWriteType(uint32_t writeType) override
 	{
-		switch (writeType)
-		{
-			case IL_FLAGWRITE_CR0_S: return IL_FLAGCLASS_CR0_S;
-			case IL_FLAGWRITE_CR0_U: return IL_FLAGCLASS_CR0_U;
-			case IL_FLAGWRITE_CR1_S: return IL_FLAGCLASS_CR1_S;
-			case IL_FLAGWRITE_CR1_U: return IL_FLAGCLASS_CR1_U;
-			case IL_FLAGWRITE_CR2_S: return IL_FLAGCLASS_CR2_S;
-			case IL_FLAGWRITE_CR2_U: return IL_FLAGCLASS_CR2_U;
-			case IL_FLAGWRITE_CR3_S: return IL_FLAGCLASS_CR3_S;
-			case IL_FLAGWRITE_CR3_U: return IL_FLAGCLASS_CR3_U;
-			case IL_FLAGWRITE_CR4_S: return IL_FLAGCLASS_CR4_S;
-			case IL_FLAGWRITE_CR4_U: return IL_FLAGCLASS_CR4_U;
-			case IL_FLAGWRITE_CR5_S: return IL_FLAGCLASS_CR5_S;
-			case IL_FLAGWRITE_CR5_U: return IL_FLAGCLASS_CR5_U;
-			case IL_FLAGWRITE_CR6_S: return IL_FLAGCLASS_CR6_S;
-			case IL_FLAGWRITE_CR6_U: return IL_FLAGCLASS_CR6_U;
-			case IL_FLAGWRITE_CR7_S: return IL_FLAGCLASS_CR7_S;
-			case IL_FLAGWRITE_CR7_U: return IL_FLAGCLASS_CR7_U;
-		}
+		// MYLOG("%s() writetype:%d", __func__, writeType);
+		uint32_t flag_out = 0;
 
-		return IL_FLAGCLASS_NONE;
+		if ((writeType < IL_FLAGWRITE_CR0_S) || (writeType > IL_FLAGWRITE_CR7_F))
+		{
+			flag_out = IL_FLAGCLASS_NONE;
+		}
+		else
+		{
+			flag_out = IL_FLAGCLASS_CR0_S + (writeType - IL_FLAGWRITE_CR0_S);
+		}
+		
+		return flag_out;
 	}
 
 	/*
@@ -1253,6 +1308,9 @@ class PowerpcArchitecture: public Architecture
 
 			IL_FLAGCLASS_CR0_U, IL_FLAGCLASS_CR1_U, IL_FLAGCLASS_CR2_U, IL_FLAGCLASS_CR3_U,
 			IL_FLAGCLASS_CR4_U, IL_FLAGCLASS_CR5_U, IL_FLAGCLASS_CR6_U, IL_FLAGCLASS_CR7_U,
+
+			IL_FLAGCLASS_CR0_F, IL_FLAGCLASS_CR1_F, IL_FLAGCLASS_CR2_F, IL_FLAGCLASS_CR3_F,
+			IL_FLAGCLASS_CR4_F, IL_FLAGCLASS_CR5_F, IL_FLAGCLASS_CR6_F, IL_FLAGCLASS_CR7_F,
 		};
 	}
 
@@ -1318,7 +1376,9 @@ class PowerpcArchitecture: public Architecture
 
 	virtual std::map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup) override
 	{
-		uint32_t flagClassBase = IL_FLAGCLASS_CR0_S + ((semGroup / 10) * 2);
+		// MYLOG("%s() semgroup:%d", __func__, semGroup);
+		
+		uint32_t flagClassBase = IL_FLAGCLASS_CR0_S + ((semGroup / 10) * PPC_SUF_SZ);
 		uint32_t groupType = semGroup % 10;
 
 		switch (groupType)
@@ -1326,32 +1386,38 @@ class PowerpcArchitecture: public Architecture
 		case IL_FLAGGROUP_CR0_LT:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
 				{flagClassBase    , LLFC_SLT},
-				{flagClassBase + 1, LLFC_ULT}
+				{flagClassBase + PPC_SUF_U, LLFC_ULT},
+				{flagClassBase + PPC_SUF_F, LLFC_FLT},
 			};
 		case IL_FLAGGROUP_CR0_LE:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
 				{flagClassBase    , LLFC_SLE},
-				{flagClassBase + 1, LLFC_ULE}
+				{flagClassBase + PPC_SUF_U, LLFC_ULE},
+				{flagClassBase + PPC_SUF_F, LLFC_FLE}
 			};
 		case IL_FLAGGROUP_CR0_GT:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
 				{flagClassBase    , LLFC_SGT},
-				{flagClassBase + 1, LLFC_UGT}
+				{flagClassBase + PPC_SUF_U, LLFC_UGT},
+				{flagClassBase + PPC_SUF_F, LLFC_FGT}
 			};
 		case IL_FLAGGROUP_CR0_GE:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
 				{flagClassBase    , LLFC_SGE},
-				{flagClassBase + 1, LLFC_UGE}
+				{flagClassBase + PPC_SUF_U, LLFC_UGE},
+				{flagClassBase + PPC_SUF_F, LLFC_FGE}
 			};
 		case IL_FLAGGROUP_CR0_EQ:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
 				{flagClassBase    , LLFC_E},
-				{flagClassBase + 1, LLFC_E}
+				{flagClassBase + PPC_SUF_U, LLFC_E},
+				{flagClassBase + PPC_SUF_F, LLFC_FE}
 			};
 		case IL_FLAGGROUP_CR0_NE:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
 				{flagClassBase    , LLFC_NE},
-				{flagClassBase + 1, LLFC_NE}
+				{flagClassBase + PPC_SUF_U, LLFC_NE},
+				{flagClassBase + PPC_SUF_F, LLFC_FNE}
 			};
 		default:
 			return map<uint32_t, BNLowLevelILFlagCondition>();
@@ -1364,22 +1430,11 @@ class PowerpcArchitecture: public Architecture
 
 	virtual BNFlagRole GetFlagRole(uint32_t flag, uint32_t semClass) override
 	{
-		MYLOG("%s(%d)\n", __func__, flag);
+		// MYLOG("%s() flag:%d, semclass:%d\n", __func__, flag, semClass);
 
-		bool signedClass = true;
+		ppc_suf suf = (ppc_suf)0;
 
-		switch (semClass)
-		{
-			case IL_FLAGCLASS_CR0_U:
-			case IL_FLAGCLASS_CR1_U:
-			case IL_FLAGCLASS_CR2_U:
-			case IL_FLAGCLASS_CR3_U:
-			case IL_FLAGCLASS_CR4_U:
-			case IL_FLAGCLASS_CR5_U:
-			case IL_FLAGCLASS_CR6_U:
-			case IL_FLAGCLASS_CR7_U:
-				signedClass = false;
-		}
+		suf = (ppc_suf)((semClass - 1) % PPC_SUF_SZ);
 
 		switch (flag)
 		{
@@ -1391,7 +1446,7 @@ class PowerpcArchitecture: public Architecture
 			case IL_FLAG_LT_5:
 			case IL_FLAG_LT_6:
 			case IL_FLAG_LT_7:
-				return signedClass ? NegativeSignFlagRole : SpecialFlagRole;
+				return (suf == PPC_SUF_S) ? NegativeSignFlagRole : SpecialFlagRole;
 			case IL_FLAG_GT:
 			case IL_FLAG_GT_1:
 			case IL_FLAG_GT_2:
@@ -1434,24 +1489,30 @@ class PowerpcArchitecture: public Architecture
 	*/
 	virtual vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond, uint32_t) override
 	{
-		MYLOG("%s(%d)\n", __func__, cond);
+		// MYLOG("%s() cond:%d\n", __func__, cond);
 
 		switch (cond)
 		{
 			case LLFC_E: /* equal */
 			case LLFC_NE: /* not equal */
+			case LLFC_FE:
+			case LLFC_FNE:
 				return vector<uint32_t>{ IL_FLAG_EQ };
 
 			case LLFC_ULT: /* (unsigned) less than == LT */
 			case LLFC_SLT: /* (signed) less than == LT */
 			case LLFC_SGE: /* (signed) greater-or-equal == !LT */
 			case LLFC_UGE: /* (unsigned) greater-or-equal == !LT */
+			case LLFC_FLT:
+			case LLFC_FGE:
 				return vector<uint32_t>{ IL_FLAG_LT };
 
 			case LLFC_SGT: /* (signed) greater-than == GT */
 			case LLFC_UGT: /* (unsigned) greater-than == GT */
 			case LLFC_ULE: /* (unsigned) less-or-equal == !GT */
 			case LLFC_SLE: /* (signed) lesser-or-equal == !GT */
+			case LLFC_FGT:
+			case LLFC_FLE:
 				return vector<uint32_t>{ IL_FLAG_GT };
 
 			case LLFC_NEG:
@@ -1484,7 +1545,7 @@ class PowerpcArchitecture: public Architecture
 
 	virtual vector<uint32_t> GetFullWidthRegisters() override
 	{
-		MYLOG("%s()\n", __func__);
+		// MYLOG("%s()\n", __func__);
 
 		return vector<uint32_t>{
 			PPC_REG_R0,   PPC_REG_R1,   PPC_REG_R2,   PPC_REG_R3,   PPC_REG_R4,   PPC_REG_R5,   PPC_REG_R6,   PPC_REG_R7,
@@ -1528,8 +1589,18 @@ class PowerpcArchitecture: public Architecture
 			PPC_REG_VS32, PPC_REG_VS33, PPC_REG_VS34, PPC_REG_VS35, PPC_REG_VS36, PPC_REG_VS37, PPC_REG_VS38, PPC_REG_VS39,
 			PPC_REG_VS40, PPC_REG_VS41, PPC_REG_VS42, PPC_REG_VS43, PPC_REG_VS44, PPC_REG_VS45, PPC_REG_VS46, PPC_REG_VS47,
 			PPC_REG_VS48, PPC_REG_VS49, PPC_REG_VS50, PPC_REG_VS51, PPC_REG_VS52, PPC_REG_VS53, PPC_REG_VS54, PPC_REG_VS55,
-			PPC_REG_VS56, PPC_REG_VS57, PPC_REG_VS58, PPC_REG_VS59, PPC_REG_VS60, PPC_REG_VS61, PPC_REG_VS62, PPC_REG_VS63
+			PPC_REG_VS56, PPC_REG_VS57, PPC_REG_VS58, PPC_REG_VS59, PPC_REG_VS60, PPC_REG_VS61, PPC_REG_VS62, PPC_REG_VS63,
 		};
+
+		vector<uint32_t> gqrarray = {
+			PPC_REG_BN_GQR0, PPC_REG_BN_GQR1, PPC_REG_BN_GQR2, PPC_REG_BN_GQR3,
+			PPC_REG_BN_GQR4, PPC_REG_BN_GQR5, PPC_REG_BN_GQR6, PPC_REG_BN_GQR7};
+
+
+		if ((cs_mode_local & CS_MODE_PS) != 0)
+		{
+			result.insert(result.end(), gqrarray.begin(), gqrarray.end());
+		}
 
 		return result;
 	}
@@ -1562,72 +1633,72 @@ class PowerpcArchitecture: public Architecture
 			case PPC_REG_CR5: return RegisterInfo(PPC_REG_CR5, 0, 4);
 			case PPC_REG_CR6: return RegisterInfo(PPC_REG_CR6, 0, 4);
 			case PPC_REG_CR7: return RegisterInfo(PPC_REG_CR7, 0, 4);
-			case PPC_REG_CTR: return RegisterInfo(PPC_REG_CTR, 0, 4);
-			case PPC_REG_F0: return RegisterInfo(PPC_REG_F0, 0, 4);
-			case PPC_REG_F1: return RegisterInfo(PPC_REG_F1, 0, 4);
-			case PPC_REG_F2: return RegisterInfo(PPC_REG_F2, 0, 4);
-			case PPC_REG_F3: return RegisterInfo(PPC_REG_F3, 0, 4);
-			case PPC_REG_F4: return RegisterInfo(PPC_REG_F4, 0, 4);
-			case PPC_REG_F5: return RegisterInfo(PPC_REG_F5, 0, 4);
-			case PPC_REG_F6: return RegisterInfo(PPC_REG_F6, 0, 4);
-			case PPC_REG_F7: return RegisterInfo(PPC_REG_F7, 0, 4);
-			case PPC_REG_F8: return RegisterInfo(PPC_REG_F8, 0, 4);
-			case PPC_REG_F9: return RegisterInfo(PPC_REG_F9, 0, 4);
-			case PPC_REG_F10: return RegisterInfo(PPC_REG_F10, 0, 4);
-			case PPC_REG_F11: return RegisterInfo(PPC_REG_F11, 0, 4);
-			case PPC_REG_F12: return RegisterInfo(PPC_REG_F12, 0, 4);
-			case PPC_REG_F13: return RegisterInfo(PPC_REG_F13, 0, 4);
-			case PPC_REG_F14: return RegisterInfo(PPC_REG_F14, 0, 4);
-			case PPC_REG_F15: return RegisterInfo(PPC_REG_F15, 0, 4);
-			case PPC_REG_F16: return RegisterInfo(PPC_REG_F16, 0, 4);
-			case PPC_REG_F17: return RegisterInfo(PPC_REG_F17, 0, 4);
-			case PPC_REG_F18: return RegisterInfo(PPC_REG_F18, 0, 4);
-			case PPC_REG_F19: return RegisterInfo(PPC_REG_F19, 0, 4);
-			case PPC_REG_F20: return RegisterInfo(PPC_REG_F20, 0, 4);
-			case PPC_REG_F21: return RegisterInfo(PPC_REG_F21, 0, 4);
-			case PPC_REG_F22: return RegisterInfo(PPC_REG_F22, 0, 4);
-			case PPC_REG_F23: return RegisterInfo(PPC_REG_F23, 0, 4);
-			case PPC_REG_F24: return RegisterInfo(PPC_REG_F24, 0, 4);
-			case PPC_REG_F25: return RegisterInfo(PPC_REG_F25, 0, 4);
-			case PPC_REG_F26: return RegisterInfo(PPC_REG_F26, 0, 4);
-			case PPC_REG_F27: return RegisterInfo(PPC_REG_F27, 0, 4);
-			case PPC_REG_F28: return RegisterInfo(PPC_REG_F28, 0, 4);
-			case PPC_REG_F29: return RegisterInfo(PPC_REG_F29, 0, 4);
-			case PPC_REG_F30: return RegisterInfo(PPC_REG_F30, 0, 4);
-			case PPC_REG_F31: return RegisterInfo(PPC_REG_F31, 0, 4);
-			case PPC_REG_LR: return RegisterInfo(PPC_REG_LR, 0, 4);
-			case PPC_REG_R0: return RegisterInfo(PPC_REG_R0, 0, 4);
-			case PPC_REG_R1: return RegisterInfo(PPC_REG_R1, 0, 4);
-			case PPC_REG_R2: return RegisterInfo(PPC_REG_R2, 0, 4);
-			case PPC_REG_R3: return RegisterInfo(PPC_REG_R3, 0, 4);
-			case PPC_REG_R4: return RegisterInfo(PPC_REG_R4, 0, 4);
-			case PPC_REG_R5: return RegisterInfo(PPC_REG_R5, 0, 4);
-			case PPC_REG_R6: return RegisterInfo(PPC_REG_R6, 0, 4);
-			case PPC_REG_R7: return RegisterInfo(PPC_REG_R7, 0, 4);
-			case PPC_REG_R8: return RegisterInfo(PPC_REG_R8, 0, 4);
-			case PPC_REG_R9: return RegisterInfo(PPC_REG_R9, 0, 4);
-			case PPC_REG_R10: return RegisterInfo(PPC_REG_R10, 0, 4);
-			case PPC_REG_R11: return RegisterInfo(PPC_REG_R11, 0, 4);
-			case PPC_REG_R12: return RegisterInfo(PPC_REG_R12, 0, 4);
-			case PPC_REG_R13: return RegisterInfo(PPC_REG_R13, 0, 4);
-			case PPC_REG_R14: return RegisterInfo(PPC_REG_R14, 0, 4);
-			case PPC_REG_R15: return RegisterInfo(PPC_REG_R15, 0, 4);
-			case PPC_REG_R16: return RegisterInfo(PPC_REG_R16, 0, 4);
-			case PPC_REG_R17: return RegisterInfo(PPC_REG_R17, 0, 4);
-			case PPC_REG_R18: return RegisterInfo(PPC_REG_R18, 0, 4);
-			case PPC_REG_R19: return RegisterInfo(PPC_REG_R19, 0, 4);
-			case PPC_REG_R20: return RegisterInfo(PPC_REG_R20, 0, 4);
-			case PPC_REG_R21: return RegisterInfo(PPC_REG_R21, 0, 4);
-			case PPC_REG_R22: return RegisterInfo(PPC_REG_R22, 0, 4);
-			case PPC_REG_R23: return RegisterInfo(PPC_REG_R23, 0, 4);
-			case PPC_REG_R24: return RegisterInfo(PPC_REG_R24, 0, 4);
-			case PPC_REG_R25: return RegisterInfo(PPC_REG_R25, 0, 4);
-			case PPC_REG_R26: return RegisterInfo(PPC_REG_R26, 0, 4);
-			case PPC_REG_R27: return RegisterInfo(PPC_REG_R27, 0, 4);
-			case PPC_REG_R28: return RegisterInfo(PPC_REG_R28, 0, 4);
-			case PPC_REG_R29: return RegisterInfo(PPC_REG_R29, 0, 4);
-			case PPC_REG_R30: return RegisterInfo(PPC_REG_R30, 0, 4);
-			case PPC_REG_R31: return RegisterInfo(PPC_REG_R31, 0, 4);
+			case PPC_REG_CTR: return RegisterInfo(PPC_REG_CTR, 0, addressSize);
+			case PPC_REG_F0: return RegisterInfo(PPC_REG_F0, 0, 8);
+			case PPC_REG_F1: return RegisterInfo(PPC_REG_F1, 0, 8);
+			case PPC_REG_F2: return RegisterInfo(PPC_REG_F2, 0, 8);
+			case PPC_REG_F3: return RegisterInfo(PPC_REG_F3, 0, 8);
+			case PPC_REG_F4: return RegisterInfo(PPC_REG_F4, 0, 8);
+			case PPC_REG_F5: return RegisterInfo(PPC_REG_F5, 0, 8);
+			case PPC_REG_F6: return RegisterInfo(PPC_REG_F6, 0, 8);
+			case PPC_REG_F7: return RegisterInfo(PPC_REG_F7, 0, 8);
+			case PPC_REG_F8: return RegisterInfo(PPC_REG_F8, 0, 8);
+			case PPC_REG_F9: return RegisterInfo(PPC_REG_F9, 0, 8);
+			case PPC_REG_F10: return RegisterInfo(PPC_REG_F10, 0, 8);
+			case PPC_REG_F11: return RegisterInfo(PPC_REG_F11, 0, 8);
+			case PPC_REG_F12: return RegisterInfo(PPC_REG_F12, 0, 8);
+			case PPC_REG_F13: return RegisterInfo(PPC_REG_F13, 0, 8);
+			case PPC_REG_F14: return RegisterInfo(PPC_REG_F14, 0, 8);
+			case PPC_REG_F15: return RegisterInfo(PPC_REG_F15, 0, 8);
+			case PPC_REG_F16: return RegisterInfo(PPC_REG_F16, 0, 8);
+			case PPC_REG_F17: return RegisterInfo(PPC_REG_F17, 0, 8);
+			case PPC_REG_F18: return RegisterInfo(PPC_REG_F18, 0, 8);
+			case PPC_REG_F19: return RegisterInfo(PPC_REG_F19, 0, 8);
+			case PPC_REG_F20: return RegisterInfo(PPC_REG_F20, 0, 8);
+			case PPC_REG_F21: return RegisterInfo(PPC_REG_F21, 0, 8);
+			case PPC_REG_F22: return RegisterInfo(PPC_REG_F22, 0, 8);
+			case PPC_REG_F23: return RegisterInfo(PPC_REG_F23, 0, 8);
+			case PPC_REG_F24: return RegisterInfo(PPC_REG_F24, 0, 8);
+			case PPC_REG_F25: return RegisterInfo(PPC_REG_F25, 0, 8);
+			case PPC_REG_F26: return RegisterInfo(PPC_REG_F26, 0, 8);
+			case PPC_REG_F27: return RegisterInfo(PPC_REG_F27, 0, 8);
+			case PPC_REG_F28: return RegisterInfo(PPC_REG_F28, 0, 8);
+			case PPC_REG_F29: return RegisterInfo(PPC_REG_F29, 0, 8);
+			case PPC_REG_F30: return RegisterInfo(PPC_REG_F30, 0, 8);
+			case PPC_REG_F31: return RegisterInfo(PPC_REG_F31, 0, 8);
+			case PPC_REG_LR: return RegisterInfo(PPC_REG_LR, 0, addressSize);
+			case PPC_REG_R0: return RegisterInfo(PPC_REG_R0, 0, addressSize);
+			case PPC_REG_R1: return RegisterInfo(PPC_REG_R1, 0, addressSize);
+			case PPC_REG_R2: return RegisterInfo(PPC_REG_R2, 0, addressSize);
+			case PPC_REG_R3: return RegisterInfo(PPC_REG_R3, 0, addressSize);
+			case PPC_REG_R4: return RegisterInfo(PPC_REG_R4, 0, addressSize);
+			case PPC_REG_R5: return RegisterInfo(PPC_REG_R5, 0, addressSize);
+			case PPC_REG_R6: return RegisterInfo(PPC_REG_R6, 0, addressSize);
+			case PPC_REG_R7: return RegisterInfo(PPC_REG_R7, 0, addressSize);
+			case PPC_REG_R8: return RegisterInfo(PPC_REG_R8, 0, addressSize);
+			case PPC_REG_R9: return RegisterInfo(PPC_REG_R9, 0, addressSize);
+			case PPC_REG_R10: return RegisterInfo(PPC_REG_R10, 0, addressSize);
+			case PPC_REG_R11: return RegisterInfo(PPC_REG_R11, 0, addressSize);
+			case PPC_REG_R12: return RegisterInfo(PPC_REG_R12, 0, addressSize);
+			case PPC_REG_R13: return RegisterInfo(PPC_REG_R13, 0, addressSize);
+			case PPC_REG_R14: return RegisterInfo(PPC_REG_R14, 0, addressSize);
+			case PPC_REG_R15: return RegisterInfo(PPC_REG_R15, 0, addressSize);
+			case PPC_REG_R16: return RegisterInfo(PPC_REG_R16, 0, addressSize);
+			case PPC_REG_R17: return RegisterInfo(PPC_REG_R17, 0, addressSize);
+			case PPC_REG_R18: return RegisterInfo(PPC_REG_R18, 0, addressSize);
+			case PPC_REG_R19: return RegisterInfo(PPC_REG_R19, 0, addressSize);
+			case PPC_REG_R20: return RegisterInfo(PPC_REG_R20, 0, addressSize);
+			case PPC_REG_R21: return RegisterInfo(PPC_REG_R21, 0, addressSize);
+			case PPC_REG_R22: return RegisterInfo(PPC_REG_R22, 0, addressSize);
+			case PPC_REG_R23: return RegisterInfo(PPC_REG_R23, 0, addressSize);
+			case PPC_REG_R24: return RegisterInfo(PPC_REG_R24, 0, addressSize);
+			case PPC_REG_R25: return RegisterInfo(PPC_REG_R25, 0, addressSize);
+			case PPC_REG_R26: return RegisterInfo(PPC_REG_R26, 0, addressSize);
+			case PPC_REG_R27: return RegisterInfo(PPC_REG_R27, 0, addressSize);
+			case PPC_REG_R28: return RegisterInfo(PPC_REG_R28, 0, addressSize);
+			case PPC_REG_R29: return RegisterInfo(PPC_REG_R29, 0, addressSize);
+			case PPC_REG_R30: return RegisterInfo(PPC_REG_R30, 0, addressSize);
+			case PPC_REG_R31: return RegisterInfo(PPC_REG_R31, 0, addressSize);
 			case PPC_REG_V0: return RegisterInfo(PPC_REG_V0, 0, 4);
 			case PPC_REG_V1: return RegisterInfo(PPC_REG_V1, 0, 4);
 			case PPC_REG_V2: return RegisterInfo(PPC_REG_V2, 0, 4);
@@ -1725,6 +1796,14 @@ class PowerpcArchitecture: public Architecture
 			case PPC_REG_VS61: return RegisterInfo(PPC_REG_VS61, 0, 4);
 			case PPC_REG_VS62: return RegisterInfo(PPC_REG_VS62, 0, 4);
 			case PPC_REG_VS63: return RegisterInfo(PPC_REG_VS63, 0, 4);
+			case PPC_REG_BN_GQR0: return RegisterInfo(PPC_REG_BN_GQR0, 0, 4);
+			case PPC_REG_BN_GQR1: return RegisterInfo(PPC_REG_BN_GQR1, 0, 4);
+			case PPC_REG_BN_GQR2: return RegisterInfo(PPC_REG_BN_GQR2, 0, 4);
+			case PPC_REG_BN_GQR3: return RegisterInfo(PPC_REG_BN_GQR3, 0, 4);
+			case PPC_REG_BN_GQR4: return RegisterInfo(PPC_REG_BN_GQR4, 0, 4);
+			case PPC_REG_BN_GQR5: return RegisterInfo(PPC_REG_BN_GQR5, 0, 4);
+			case PPC_REG_BN_GQR6: return RegisterInfo(PPC_REG_BN_GQR6, 0, 4);
+			case PPC_REG_BN_GQR7: return RegisterInfo(PPC_REG_BN_GQR7, 0, 4);
 			default:
 				//LogError("%s(%d == \"%s\") invalid argument", __func__,
 				//  regId, powerpc_reg_to_str(regId));
@@ -2475,6 +2554,15 @@ extern "C"
 		Architecture* ppc = new PowerpcArchitecture("ppc", BigEndian);
 		Architecture::Register(ppc);
 
+		Architecture* ppc_qpx = new PowerpcArchitecture("ppc_qpx", BigEndian, 4, CS_MODE_QPX);
+		Architecture::Register(ppc_qpx);
+
+		Architecture* ppc_spe = new PowerpcArchitecture("ppc_spe", BigEndian, 4, CS_MODE_SPE);
+		Architecture::Register(ppc_spe);
+
+		Architecture* ppc_ps = new PowerpcArchitecture("ppc_ps", BigEndian, 4, CS_MODE_PS);
+		Architecture::Register(ppc_ps);
+
 		Architecture* ppc64 = new PowerpcArchitecture("ppc64", BigEndian, 8);
 		Architecture::Register(ppc64);
 
@@ -2489,10 +2577,19 @@ extern "C"
 		conv = new PpcSvr4CallingConvention(ppc);
 		ppc->RegisterCallingConvention(conv);
 		ppc->SetDefaultCallingConvention(conv);
+		ppc_qpx->RegisterCallingConvention(conv);
+		ppc_qpx->SetDefaultCallingConvention(conv);
+		ppc_spe->RegisterCallingConvention(conv);
+		ppc_spe->SetDefaultCallingConvention(conv);
+		ppc_ps->RegisterCallingConvention(conv);
+		ppc_ps->SetDefaultCallingConvention(conv);
 		ppc64->RegisterCallingConvention(conv);
 		ppc64->SetDefaultCallingConvention(conv);
 		conv = new PpcLinuxSyscallCallingConvention(ppc);
 		ppc->RegisterCallingConvention(conv);
+		ppc_qpx->RegisterCallingConvention(conv);
+		ppc_spe->RegisterCallingConvention(conv);
+		ppc_ps->RegisterCallingConvention(conv);
 		ppc64->RegisterCallingConvention(conv);
 
 		conv = new PpcSvr4CallingConvention(ppc_le);
@@ -2506,9 +2603,15 @@ extern "C"
 
 		/* function recognizer */
 		ppc->RegisterFunctionRecognizer(new PpcImportedFunctionRecognizer());
+		ppc_qpx->RegisterFunctionRecognizer(new PpcImportedFunctionRecognizer());
+		ppc_spe->RegisterFunctionRecognizer(new PpcImportedFunctionRecognizer());
+		ppc_ps->RegisterFunctionRecognizer(new PpcImportedFunctionRecognizer());
 		ppc_le->RegisterFunctionRecognizer(new PpcImportedFunctionRecognizer());
 
 		ppc->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
+		ppc_qpx->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
+		ppc_spe->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
+		ppc_ps->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
 		ppc_le->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
 		ppc_le->RegisterRelocationHandler("Mach-O", new PpcMachoRelocationHandler());
 		/* call the STATIC RegisterArchitecture with "Mach-O"

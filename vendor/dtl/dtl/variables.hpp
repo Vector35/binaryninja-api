@@ -44,7 +44,6 @@
 #include <algorithm>
 #include <iostream>
 
-
 #ifdef BINARYNINJACORE_LIBRARY
 #include "binaryninjacore_global.h"
 #endif
@@ -75,7 +74,7 @@ namespace dtl {
     /**
      * version string
      */
-    const string version = "1.19";
+    const string version = "1.21";
 
     /**
      * type of edit for SES

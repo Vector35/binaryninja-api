@@ -90,7 +90,7 @@ bool PerformLocalDisassembly(const uint8_t *data, uint64_t addr, size_t &len, de
 
 extern "C" int powerpc_init(int);
 extern "C" void powerpc_release(void);
-extern "C" int powerpc_decompose(const uint8_t *data, int size, uint32_t addr, 
+extern "C" int powerpc_decompose(const uint8_t *data, int size, uint64_t addr, 
 	bool lil_end, struct decomp_result *result, bool is_64bit, int cs_mode);
 extern "C" int powerpc_disassemble(struct decomp_result *, char *buf, size_t len);
 

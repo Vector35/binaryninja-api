@@ -7931,7 +7931,7 @@ namespace BinaryNinja {
 		static BNFlagConditionForSemanticClass* GetFlagConditionsForSemanticFlagGroupCallback(
 		    void* ctxt, uint32_t semGroup, size_t* count);
 		static void FreeFlagConditionsForSemanticFlagGroupCallback(
-		    void* ctxt, BNFlagConditionForSemanticClass* conditions);
+		    void* ctxt, BNFlagConditionForSemanticClass* conditions, size_t count);
 		static uint32_t* GetFlagsWrittenByFlagWriteTypeCallback(void* ctxt, uint32_t writeType, size_t* count);
 		static uint32_t GetSemanticClassForFlagWriteTypeCallback(void* ctxt, uint32_t writeType);
 		static size_t GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size,
@@ -7940,7 +7940,7 @@ namespace BinaryNinja {
 		static size_t GetFlagConditionLowLevelILCallback(
 		    void* ctxt, BNLowLevelILFlagCondition cond, uint32_t semClass, BNLowLevelILFunction* il);
 		static size_t GetSemanticFlagGroupLowLevelILCallback(void* ctxt, uint32_t semGroup, BNLowLevelILFunction* il);
-		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
+		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs, size_t len);
 		static void GetRegisterInfoCallback(void* ctxt, uint32_t reg, BNRegisterInfo* result);
 		static uint32_t GetStackPointerRegisterCallback(void* ctxt);
 		static uint32_t GetLinkRegisterCallback(void* ctxt);
@@ -15026,7 +15026,7 @@ namespace BinaryNinja {
 		static uint32_t* GetCalleeSavedRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetIntegerArgumentRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetFloatArgumentRegistersCallback(void* ctxt, size_t* count);
-		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
+		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs, size_t len);
 
 		static bool AreArgumentRegistersSharedIndexCallback(void* ctxt);
 		static bool AreArgumentRegistersUsedForVarArgsCallback(void* ctxt);

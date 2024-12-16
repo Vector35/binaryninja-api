@@ -13,7 +13,7 @@ if(NOT BN_API_BUILD_EXAMPLES AND NOT BN_INTERNAL_BUILD)
                 REQUIRED
         )
     endif()
-    set(CARGO_STABLE_VERSION 1.77.0)
+    set(CARGO_STABLE_VERSION 1.83.0)
     add_subdirectory(${BN_API_PATH} binaryninjaapi)
 endif()
 

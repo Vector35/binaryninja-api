@@ -4,7 +4,7 @@
 
 > :warning: **These bindings are in a very early beta, only have partial support for the core APIs and are still actively under development. Compatibility _will_ break and conventions _will_ change! They are being used for core Binary Ninja features however, so we expect much of what is already there to be reliable enough to build on, just don't be surprised if your plugins/scripts need to hit a moving target.**
 
-> :warning: This project runs on Rust version `1.77.0`
+> :warning: This project runs on Rust version `1.83.0`
 
 
 ## Contributing

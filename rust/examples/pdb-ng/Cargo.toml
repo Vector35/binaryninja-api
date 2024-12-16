@@ -9,11 +9,9 @@ crate-type = ["cdylib"]
 [dependencies]
 anyhow = "^1.0"
 binaryninja = {path = "../../"}
-home = "^0.5.5"
 itertools = "^0.11"
 log = "^0.4"
 pdb = "^0.8"
-cab = "^0.4"
 regex = "1"
 
 [features]

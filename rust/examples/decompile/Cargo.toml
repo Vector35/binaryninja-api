@@ -6,5 +6,5 @@ edition = "2021"
 
 [dependencies]
 binaryninja = {path="../../"}
-clap = { version = "4.4", features = ["derive"] }
+clap = { version = "4.5", features = ["derive"] }
 

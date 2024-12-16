@@ -24,6 +24,7 @@ use crate::cache::{
 };
 use crate::convert::to_bn_type;
 use crate::plugin::on_matched_function;
+use crate::{core_signature_dir, user_signature_dir};
 
 pub static PLAT_MATCHER_CACHE: OnceLock<DashMap<PlatformID, Matcher>> = OnceLock::new();
 
@@ -61,24 +62,12 @@ impl Matcher {
     /// Create a matcher from the platforms signature subdirectory.
     pub fn from_platform(platform: BNRef<Platform>) -> Self {
         let platform_name = platform.name().to_string();
-        // Get core signatures for the given platform
-        let install_dir = binaryninja::install_directory().unwrap();
-        #[cfg(target_os = "macos")]
-        let root_core_sig_dir = install_dir
-            .parent()
-            .unwrap()
-            .join("Resources")
-            .join("signatures");
-        #[cfg(not(target_os = "macos"))]
-        let root_core_sig_dir = install_dir.join("signatures");
-        let plat_core_sig_dir = root_core_sig_dir.join(&platform_name);
-        let mut data = get_data_from_dir(&plat_core_sig_dir);
 
-        // Get user signatures for the given platform
-        let user_dir = binaryninja::user_directory().unwrap();
-        let root_user_sig_dir = user_dir.join("signatures");
-        let plat_user_sig_dir = root_user_sig_dir.join(&platform_name);
-        // If the dir has not been created, create it.
+        // Get core and user signatures.
+        // TODO: Separate each file into own bucket for filtering?
+        let plat_core_sig_dir = core_signature_dir().join(&platform_name);
+        let mut data = get_data_from_dir(&plat_core_sig_dir);
+        let plat_user_sig_dir = user_signature_dir().join(&platform_name);
         let user_data = get_data_from_dir(&plat_user_sig_dir);
 
         data.extend(user_data);

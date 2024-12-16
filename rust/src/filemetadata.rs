@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::ffi::c_void;
 use binaryninjacore_sys::{BNBeginUndoActions, BNCloseFile, BNCommitUndoActions, BNCreateDatabase, BNCreateFileMetadata, BNFileMetadata, BNFileMetadataGetSessionId, BNFreeFileMetadata, BNGetCurrentOffset, BNGetCurrentView, BNGetFileMetadataDatabase, BNGetFileViewOfType, BNGetFilename, BNGetProjectFile, BNIsAnalysisChanged, BNIsBackedByDatabase, BNIsFileModified, BNMarkFileModified, BNMarkFileSaved, BNNavigate, BNNewFileReference, BNOpenDatabaseForConfiguration, BNOpenExistingDatabase, BNRedo, BNRevertUndoActions, BNSaveAutoSnapshot, BNSetFilename, BNUndo};
 use binaryninjacore_sys::{BNCreateDatabaseWithProgress, BNOpenExistingDatabaseWithProgress};
 
@@ -210,7 +211,7 @@ impl FileMetadata {
                 BNCreateDatabaseWithProgress(
                     handle,
                     filename_ptr,
-                    func as *mut libc::c_void,
+                    func as *mut c_void,
                     Some(cb_progress_func),
                     ptr::null_mut(),
                 )
@@ -259,7 +260,7 @@ impl FileMetadata {
                 BNOpenExistingDatabaseWithProgress(
                     self.handle,
                     filename_ptr,
-                    func as *mut libc::c_void,
+                    func as *mut c_void,
                     Some(cb_progress_func),
                 )
             },

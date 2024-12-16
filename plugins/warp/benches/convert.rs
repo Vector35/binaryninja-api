@@ -17,7 +17,7 @@ pub fn type_conversion_benchmark(c: &mut Criterion) {
                 c.bench_function("type conversion all functions", |b| {
                     b.iter(|| {
                         for func in &functions {
-                            from_bn_type(&bv, func.function_type(), u8::MAX);
+                            from_bn_type(&bv, &func.function_type(), u8::MAX);
                         }
                     })
                 });
@@ -26,7 +26,7 @@ pub fn type_conversion_benchmark(c: &mut Criterion) {
                 c.bench_function("type conversion all types", |b| {
                     b.iter(|| {
                         for ty in &types {
-                            from_bn_type(&bv, ty.type_object().clone(), u8::MAX);
+                            from_bn_type(&bv, &ty.type_object(), u8::MAX);
                         }
                     })
                 });

@@ -16,6 +16,7 @@ arboard = "3.4"
 rayon = "1.10"
 dashmap = "6.1"
 walkdir = "2.5"
+rfd = "0.15"
 # For sigem
 env_logger = "0.11.5"
 clap = { version = "4.5.16", features = ["derive"] }

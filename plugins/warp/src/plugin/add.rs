@@ -1,15 +1,17 @@
 use crate::cache::{cached_function, cached_type_references};
 use crate::matcher::invalidate_function_matcher_cache;
+use crate::user_signature_dir;
 use binaryninja::binaryview::BinaryView;
 use binaryninja::command::FunctionCommand;
 use binaryninja::function::Function;
-use std::io::Write;
 use std::thread;
 
 pub struct AddFunctionSignature;
 
 impl FunctionCommand for AddFunctionSignature {
     fn action(&self, view: &BinaryView, func: &Function) {
+        let func_plat_name = func.platform().name().to_string();
+        let signature_dir = user_signature_dir().join(func_plat_name);
         let view = view.to_owned();
         let func = func.to_owned();
         thread::spawn(move || {
@@ -18,11 +20,14 @@ impl FunctionCommand for AddFunctionSignature {
                 return;
             };
 
-            let Some(save_file) = binaryninja::interaction::get_save_filename_input(
-                "Use Signature File",
-                "*.sbin",
-                "user.sbin",
-            ) else {
+            // NOTE: Because we only can consume signatures from a specific directory, we don't need to use the interaction API.
+            // If we did need to save signature files to a project than this would need to change.
+            let Some(save_file) = rfd::FileDialog::new()
+                .add_filter("Signature Files", &["sbin"])
+                .set_file_name("user.sbin")
+                .set_directory(signature_dir)
+                .save_file()
+            else {
                 return;
             };
 
@@ -50,17 +55,13 @@ impl FunctionCommand for AddFunctionSignature {
                 data.types.extend(referenced_types);
             }
 
-            if let Ok(mut file) = std::fs::File::create(&save_file) {
-                match file.write_all(&data.to_bytes()) {
-                    Ok(_) => {
-                        log::info!("Signature file saved successfully.");
-                        // Force rebuild platform matcher.
-                        invalidate_function_matcher_cache();
-                    }
-                    Err(e) => log::error!("Failed to write data to signature file: {:?}", e),
+            match std::fs::write(&save_file, data.to_bytes()) {
+                Ok(_) => {
+                    log::info!("Signature file saved successfully.");
+                    // Force rebuild platform matcher.
+                    invalidate_function_matcher_cache();
                 }
-            } else {
-                log::error!("Could not create signature file: {:?}", save_file);
+                Err(e) => log::error!("Failed to write data to signature file: {:?}", e),
             }
         });
     }

@@ -3,7 +3,7 @@ name = "binaryninja"
 version = "0.1.0"
 authors = ["Ryan Snyder <ryan@vector35.com>", "Kyle Martin <kyle@vector35.com>"]
 edition = "2021"
-rust-version = "1.77.0"
+rust-version = "1.83.0"
 
 [features]
 noexports = []
@@ -11,7 +11,6 @@ noexports = []
 [dependencies]
 lazy_static = "1.4.0"
 log = { version = "0.4", features = ["std"] }
-libc = "0.2"
 rayon = { version = "1.8", optional = true }
 binaryninjacore-sys = { path = "binaryninjacore-sys" }
 
@@ -29,7 +28,8 @@ members = [
     "examples/dwarf/shared",
     "examples/idb_import",
     "examples/flowgraph",
-    "examples/minidump",
+    # TODO: Disabled until they can update time dependency.
+    # "examples/minidump",
     "examples/mlil_visitor",
     "examples/mlil_lifter",
     "examples/hlil_visitor",

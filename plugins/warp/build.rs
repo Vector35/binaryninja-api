@@ -1,6 +1,45 @@
 #![allow(unused_imports)]
+use std::env;
 use std::path::PathBuf;
 use std::process::Command;
+
+#[cfg(target_os = "macos")]
+static LASTRUN_PATH: (&str, &str) = ("HOME", "Library/Application Support/Binary Ninja/lastrun");
+
+#[cfg(target_os = "linux")]
+static LASTRUN_PATH: (&str, &str) = ("HOME", ".binaryninja/lastrun");
+
+#[cfg(windows)]
+static LASTRUN_PATH: (&str, &str) = ("APPDATA", "Binary Ninja\\lastrun");
+
+// Check last run location for path to BinaryNinja; Otherwise check the default install locations
+fn link_path() -> PathBuf {
+    use std::io::prelude::*;
+    use std::io::BufReader;
+
+    let home = PathBuf::from(env::var(LASTRUN_PATH.0).unwrap());
+    let lastrun = PathBuf::from(&home).join(LASTRUN_PATH.1);
+
+    std::fs::File::open(lastrun)
+        .and_then(|f| {
+            let mut binja_path = String::new();
+            let mut reader = BufReader::new(f);
+
+            reader.read_line(&mut binja_path)?;
+            Ok(PathBuf::from(binja_path.trim()))
+        })
+        .unwrap_or_else(|_| {
+            #[cfg(target_os = "macos")]
+            return PathBuf::from("/Applications/Binary Ninja.app/Contents/MacOS");
+
+            #[cfg(target_os = "linux")]
+            return home.join("binaryninja");
+
+            #[cfg(windows)]
+            return PathBuf::from(env::var("PROGRAMFILES").unwrap())
+                .join("Vector35\\BinaryNinja\\");
+        })
+}
 
 #[cfg(feature = "test")]
 fn compile_rust(file: PathBuf) -> bool {
@@ -18,14 +57,16 @@ fn compile_rust(file: PathBuf) -> bool {
 }
 
 fn main() {
-    if let Some(link_path) = option_env!("BINARYNINJADIR") {
-        println!("cargo::rustc-link-lib=dylib=binaryninjacore");
-        println!("cargo::rustc-link-search={}", link_path);
-
-        #[cfg(not(target_os = "windows"))]
-        {
-            println!("cargo::rustc-link-arg=-Wl,-rpath,{0},-L{0}", link_path);
-        }
+    // Use BINARYNINJADIR first for custom BN builds/configurations (BN devs/build server), fallback on defaults
+    let link_path = env::var("BINARYNINJADIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| link_path());
+    let link_path_str = link_path.to_str().unwrap();
+    println!("cargo::rustc-link-lib=dylib=binaryninjacore");
+    println!("cargo::rustc-link-search={}", link_path_str);
+    #[cfg(not(target_os = "windows"))]
+    {
+        println!("cargo::rustc-link-arg=-Wl,-rpath,{0},-L{0}", link_path_str);
     }
 
     #[cfg(feature = "test")]

@@ -15,14 +15,14 @@ Duplicate functions will be removed to save space, any input will always produce
 > Assuming you have the following:
 > - A compatible Binary Ninja with headless usage (see [this documentation](https://docs.binary.ninja/dev/batch.html#batch-processing-and-other-automation-tips) for more information)
 > - Clang
-> - Rust (currently tested for 1.77.0)
-> - Set `DEP_BINARYNINJACORE_PATH` env variable to your install directory (see [here](https://docs.binary.ninja/guide/#binary-path) for more details)
+> - Rust (currently tested for 1.83.0)
+> - Set `BINARYNINJADIR` env variable to your install directory (see [here](https://docs.binary.ninja/guide/#binary-path) for more details)
 
 1. Clone this repository (`git clone https://github.com/Vector35/binaryninja-api/tree/dev`)
 2. Navigate to this plugin (`cd plugins/warp`)
 3. Build in release (`cargo build --release`)
 
-If compilation fails because it could not link against binaryninjacore than you should double-check you set `DEP_BINARYNINJACORE_PATH` correctly.
+If compilation fails because it could not link against binaryninjacore than you should double-check you set `BINARYNINJADIR` correctly.
 
 Once it finishes you now will have a `sigem` binary in `target/release` for use.
 

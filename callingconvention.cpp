@@ -119,7 +119,7 @@ uint32_t* CallingConvention::GetFloatArgumentRegistersCallback(void* ctxt, size_
 }
 
 
-void CallingConvention::FreeRegisterListCallback(void*, uint32_t* regs)
+void CallingConvention::FreeRegisterListCallback(void*, uint32_t* regs, size_t)
 {
 	delete[] regs;
 }

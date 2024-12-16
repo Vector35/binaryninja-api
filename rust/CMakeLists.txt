@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
 project(rust_api)
 
-set(CARGO_API_VERSION 1.77.0)
+set(CARGO_API_VERSION 1.83.0)
 
 file(GLOB RUST_API_SOURCES CONFIGURE_DEPENDS
 	../binaryninjacore.h

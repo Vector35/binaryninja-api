@@ -23,8 +23,8 @@ use crate::cache::{
     try_cached_function_guid,
 };
 use crate::convert::to_bn_type;
-use crate::{core_signature_dir, user_signature_dir};
 use crate::plugin::on_matched_function;
+use crate::{core_signature_dir, user_signature_dir};
 
 pub static PLAT_MATCHER_CACHE: OnceLock<DashMap<PlatformID, Matcher>> = OnceLock::new();
 
@@ -62,7 +62,7 @@ impl Matcher {
     /// Create a matcher from the platforms signature subdirectory.
     pub fn from_platform(platform: BNRef<Platform>) -> Self {
         let platform_name = platform.name().to_string();
-        
+
         // Get core and user signatures.
         // TODO: Separate each file into own bucket for filtering?
         let plat_core_sig_dir = core_signature_dir().join(&platform_name);

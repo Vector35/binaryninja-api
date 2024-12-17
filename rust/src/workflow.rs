@@ -4,13 +4,13 @@ use std::ptr::NonNull;
 
 use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
+use crate::binaryview::BinaryView;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
 use crate::llil::{self, FunctionForm, Mutable};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 use crate::{hlil, mlil};
-use crate::binaryview::BinaryView;
 
 #[repr(transparent)]
 /// The AnalysisContext struct is used to represent the current state of
@@ -236,22 +236,6 @@ unsafe impl RefCountable for Activity {
     }
 }
 
-pub trait IntoActivityName {
-    fn activity_name(self) -> BnString;
-}
-
-impl IntoActivityName for &Activity {
-    fn activity_name(self) -> BnString {
-        self.name()
-    }
-}
-
-impl<S: BnStrCompatible> IntoActivityName for S {
-    fn activity_name(self) -> BnString {
-        BnString::new(self)
-    }
-}
-
 // TODO: We need to hide the JSON here behind a sensible/typed API.
 #[repr(transparent)]
 pub struct Workflow {
@@ -289,12 +273,12 @@ impl Workflow {
     /// * `name` - the name for the new [Workflow]
     /// * `root_activity` - perform the clone operation with this activity as the root
     #[must_use]
-    pub fn new_from_copy_with_root<S: BnStrCompatible + Clone, A: IntoActivityName>(
+    pub fn new_from_copy_with_root<S: BnStrCompatible + Clone, A: BnStrCompatible>(
         name: S,
         root_activity: A,
     ) -> Workflow {
         let raw_name = name.clone().into_bytes_with_nul();
-        let activity = root_activity.activity_name();
+        let activity = root_activity.into_bytes_with_nul();
         // I can't think of a single reason as to why we should let users pass a workflow handle into this.
         // To prevent warning being emitted we default to the name.
         let placeholder_workflow = Workflow::instance(name);
@@ -366,14 +350,16 @@ impl Workflow {
     ) -> Result<Activity, ()>
     where
         I: IntoIterator,
-        I::Item: IntoActivityName,
+        I::Item: BnStrCompatible,
     {
-        let subactivities_raw: Vec<BnString> = subactivities
+        let subactivities_raw: Vec<_> = subactivities
             .into_iter()
-            .map(|x| x.activity_name())
+            .map(|x| x.into_bytes_with_nul())
             .collect();
-        let mut subactivities_ptr: Vec<*const _> =
-            subactivities_raw.iter().map(|x| x.as_ptr()).collect();
+        let mut subactivities_ptr: Vec<*const _> = subactivities_raw
+            .iter()
+            .map(|x| x.as_ref().as_ptr() as *const _)
+            .collect();
         let result = unsafe {
             BNWorkflowRegisterActivity(
                 self.handle.as_ptr(),
@@ -387,17 +373,26 @@ impl Workflow {
     }
 
     /// Determine if an Activity exists in this [Workflow].
-    pub fn contains<A: IntoActivityName>(&self, activity: A) -> bool {
-        unsafe { BNWorkflowContains(self.handle.as_ptr(), activity.activity_name().as_ptr()) }
+    pub fn contains<A: BnStrCompatible>(&self, activity: A) -> bool {
+        unsafe {
+            BNWorkflowContains(
+                self.handle.as_ptr(),
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const _,
+            )
+        }
     }
 
     /// Retrieve the configuration as an adjacency list in JSON for the
     /// [Workflow], or if specified just for the given `activity`.
     ///
     /// `activity` - if specified, return the configuration for the `activity`
-    pub fn configuration<A: IntoActivityName>(&self, activity: A) -> BnString {
-        let result =
-            unsafe { BNWorkflowGetConfiguration(self.handle.as_ptr(), activity.activity_name().as_ptr()) };
+    pub fn configuration<A: BnStrCompatible>(&self, activity: A) -> BnString {
+        let result = unsafe {
+            BNWorkflowGetConfiguration(
+                self.handle.as_ptr(),
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const _,
+            )
+        };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
@@ -424,10 +419,14 @@ impl Workflow {
     /// specified just for the given `activity`.
     ///
     /// * `activity` - if specified, return the roots for the `activity`
-    pub fn activity_roots<A: IntoActivityName>(&self, activity: A) -> Array<BnString> {
+    pub fn activity_roots<A: BnStrCompatible>(&self, activity: A) -> Array<BnString> {
         let mut count = 0;
         let result = unsafe {
-            BNWorkflowGetActivityRoots(self.handle.as_ptr(), activity.activity_name().as_ptr(), &mut count)
+            BNWorkflowGetActivityRoots(
+                self.handle.as_ptr(),
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const _,
+                &mut count,
+            )
         };
         assert!(!result.is_null());
         unsafe { Array::new(result as *mut *mut c_char, count, ()) }
@@ -437,7 +436,7 @@ impl Workflow {
     ///
     /// * `activity` - if specified, return the direct children and optionally the descendants of the `activity` (includes `activity`)
     /// * `immediate` - whether to include only direct children of `activity` or all descendants
-    pub fn subactivities<A: IntoActivityName>(
+    pub fn subactivities<A: BnStrCompatible>(
         &self,
         activity: A,
         immediate: bool,
@@ -446,7 +445,7 @@ impl Workflow {
         let result = unsafe {
             BNWorkflowGetSubactivities(
                 self.handle.as_ptr(),
-                activity.activity_name().as_ptr(),
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const _,
                 immediate,
                 &mut count,
             )
@@ -461,20 +460,23 @@ impl Workflow {
     /// * `activities` - the list of Activities to assign
     pub fn assign_subactivities<A, I>(&self, activity: A, activities: I) -> bool
     where
-        A: IntoActivityName,
+        A: BnStrCompatible,
         I: IntoIterator,
-        I::Item: IntoActivityName,
+        I::Item: BnStrCompatible,
     {
-        let mut input_list: Vec<BnString> =
-            activities.into_iter().map(|a| a.activity_name()).collect();
-        // SAFETY: this works because BnString and *mut ffi::c_char are
-        // transmutable
-        let input_list_ptr = input_list.as_mut_ptr() as *mut *const c_char;
+        let input_list: Vec<_> = activities
+            .into_iter()
+            .map(|a| a.into_bytes_with_nul())
+            .collect();
+        let mut input_list: Vec<_> = input_list
+            .into_iter()
+            .map(|s| s.as_ref().as_ptr() as *const _)
+            .collect();
         unsafe {
             BNWorkflowAssignSubactivities(
                 self.handle.as_ptr(),
-                activity.activity_name().as_ptr(),
-                input_list_ptr,
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const _,
+                input_list.as_mut_ptr(),
                 input_list.len(),
             )
         }
@@ -491,35 +493,43 @@ impl Workflow {
     /// * `activities` - the list of Activities to insert
     pub fn insert<A, I>(&self, activity: A, activities: I) -> bool
     where
-        A: IntoActivityName,
+        A: BnStrCompatible,
         I: IntoIterator,
-        I::Item: IntoActivityName,
+        I::Item: BnStrCompatible,
     {
-        let mut input_list: Vec<BnString> =
-            activities.into_iter().map(|a| a.activity_name()).collect();
-        // SAFETY: this works because BnString and *mut ffi::c_char are
-        // transmutable
-        let input_list_ptr = input_list.as_mut_ptr() as *mut *const c_char;
+        let input_list: Vec<_> = activities
+            .into_iter()
+            .map(|a| a.into_bytes_with_nul())
+            .collect();
+        let mut input_list: Vec<_> = input_list
+            .into_iter()
+            .map(|s| s.as_ref().as_ptr() as *const _)
+            .collect();
         unsafe {
             BNWorkflowInsert(
                 self.handle.as_ptr(),
-                activity.activity_name().as_ptr(),
-                input_list_ptr,
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const _,
+                input_list.as_mut_ptr(),
                 input_list.len(),
             )
         }
     }
 
     /// Remove the specified `activity`
-    pub fn remove<A: IntoActivityName>(&self, activity: A) -> bool {
-        unsafe { BNWorkflowRemove(self.handle.as_ptr(), activity.activity_name().as_ptr()) }
+    pub fn remove<A: BnStrCompatible>(&self, activity: A) -> bool {
+        unsafe {
+            BNWorkflowRemove(
+                self.handle.as_ptr(),
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const _,
+            )
+        }
     }
 
     /// Replace the specified `activity`.
     ///
     /// * `activity` - the Activity to replace
     /// * `new_activity` - the replacement Activity
-    pub fn replace<A: IntoActivityName, N: IntoActivityName>(
+    pub fn replace<A: BnStrCompatible, N: BnStrCompatible>(
         &self,
         activity: A,
         new_activity: N,
@@ -527,8 +537,8 @@ impl Workflow {
         unsafe {
             BNWorkflowReplace(
                 self.handle.as_ptr(),
-                activity.activity_name().as_ptr(),
-                new_activity.activity_name().as_ptr(),
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const _,
+                new_activity.into_bytes_with_nul().as_ref().as_ptr() as *const _,
             )
         }
     }
@@ -537,15 +547,20 @@ impl Workflow {
     ///
     /// * `activity` - if specified, generate the Flowgraph using `activity` as the root
     /// * `sequential` - whether to generate a **Composite** or **Sequential** style graph
-    pub fn graph<A: IntoActivityName>(
+    pub fn graph<A: BnStrCompatible>(
         &self,
         activity: A,
         sequential: Option<bool>,
     ) -> Option<FlowGraph> {
         let sequential = sequential.unwrap_or(false);
-        let activity_name = activity.activity_name();
-        let graph =
-            unsafe { BNWorkflowGetGraph(self.handle.as_ptr(), activity_name.as_ptr(), sequential) };
+        let activity_name = activity.into_bytes_with_nul();
+        let graph = unsafe {
+            BNWorkflowGetGraph(
+                self.handle.as_ptr(),
+                activity_name.as_ref().as_ptr() as *const _,
+                sequential,
+            )
+        };
         if graph.is_null() {
             return None;
         }

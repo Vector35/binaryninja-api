@@ -1,0 +1,15 @@
+[package]
+name = "idb_import"
+version = "0.1.0"
+authors = ["Rubens Brandao <git@rubens.io>"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = { version = "1.0.86", features = ["backtrace"] }
+binaryninja.workspace = true
+binaryninjacore-sys.workspace = true
+idb-rs = { git = "https://github.com/Vector35/idb-rs", tag = "0.1.6" }
+log = "0.4"

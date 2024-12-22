@@ -16,39 +16,56 @@ use binaryninjacore_sys::*;
 
 use crate::{
     architecture::{Architecture, CoreArchitecture, CoreRegister, Register},
-    basicblock::{BasicBlock, BlockContext},
-    binaryview::{BinaryView, BinaryViewExt},
-    callingconvention::CallingConvention,
+    basic_block::{BasicBlock, BlockContext},
+    binary_view::{BinaryView, BinaryViewExt},
+    calling_convention::CoreCallingConvention,
     component::Component,
     disassembly::{DisassemblySettings, DisassemblyTextLine},
     flowgraph::FlowGraph,
-    hlil, llil,
-    mlil::{self, FunctionGraphType},
+    medium_level_il::FunctionGraphType,
     platform::Platform,
     references::CodeReference,
     string::*,
     symbol::Symbol,
     tags::{Tag, TagReference, TagType},
-    types::{
-        Conf, ConstantReference, HighlightColor, IndirectBranchInfo, IntegerDisplayType,
-        MergedVariable, NamedTypedVariable, QualifiedName, RegisterStackAdjustment, RegisterValue,
-        RegisterValueType, StackVariableReference, Type, UnresolvedIndirectBranches, Variable,
-    },
+    types::{IntegerDisplayType, QualifiedName, Type},
 };
-use crate::{databuffer::DataBuffer, disassembly::InstructionTextToken, rc::*};
+use crate::{data_buffer::DataBuffer, disassembly::InstructionTextToken, rc::*};
 pub use binaryninjacore_sys::BNAnalysisSkipReason as AnalysisSkipReason;
+pub use binaryninjacore_sys::BNBuiltinType as BuiltinType;
 pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisSkipOverride;
 pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
-pub use binaryninjacore_sys::BNBuiltinType as BuiltinType;
+pub use binaryninjacore_sys::BNHighlightStandardColor as HighlightStandardColor;
 
-use std::{fmt, mem};
-use std::{ffi::c_char, hash::Hash, ops::Range};
-use std::ptr::NonNull;
+use crate::architecture::RegisterId;
+use crate::confidence::Conf;
+use crate::high_level_il::HighLevelILFunction;
+use crate::low_level_il::{LiftedILFunction, RegularLowLevelILFunction};
+use crate::medium_level_il::MediumLevelILFunction;
+use crate::variable::{
+    IndirectBranchInfo, MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType,
+    StackVariableReference, Variable,
+};
 use crate::workflow::Workflow;
+use std::fmt::{Debug, Formatter};
+use std::ptr::NonNull;
+use std::time::Duration;
+use std::{ffi::c_char, hash::Hash, ops::Range};
 
+/// Used to describe a location within a [`Function`].
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Location {
     pub arch: Option<CoreArchitecture>,
     pub addr: u64,
+}
+
+impl Location {
+    pub(crate) fn from_raw(addr: u64, arch: *mut BNArchitecture) -> Self {
+        Self {
+            addr,
+            arch: Some(unsafe { CoreArchitecture::from_raw(arch) }),
+        }
+    }
 }
 
 impl From<u64> for Location {
@@ -62,6 +79,21 @@ impl From<(CoreArchitecture, u64)> for Location {
         Location {
             arch: Some(loc.0),
             addr: loc.1,
+        }
+    }
+}
+
+impl From<BNArchitectureAndAddress> for Location {
+    fn from(value: BNArchitectureAndAddress) -> Self {
+        Self::from_raw(value.address, value.arch)
+    }
+}
+
+impl From<Location> for BNArchitectureAndAddress {
+    fn from(value: Location) -> Self {
+        Self {
+            arch: value.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut()),
+            address: value.addr,
         }
     }
 }
@@ -108,19 +140,20 @@ impl NativeBlock {
 }
 
 impl BlockContext for NativeBlock {
-    type Iter = NativeBlockIter;
     type Instruction = u64;
+    type InstructionIndex = u64;
+    type Iter = NativeBlockIter;
 
     fn start(&self, block: &BasicBlock<Self>) -> u64 {
-        block.raw_start()
+        block.start_index()
     }
 
     fn iter(&self, block: &BasicBlock<Self>) -> NativeBlockIter {
         NativeBlockIter {
             arch: block.arch(),
             bv: block.function().view(),
-            cur: block.raw_start(),
-            end: block.raw_end(),
+            cur: block.start_index(),
+            end: block.end_index(),
         }
     }
 }
@@ -140,59 +173,119 @@ pub enum FunctionViewType {
     HighLevelLanguageRepresentation(String),
 }
 
-pub(crate) struct RawFunctionViewType(pub BNFunctionViewType);
-
+#[allow(unused)]
 impl FunctionViewType {
-    pub(crate) fn as_raw(&self) -> RawFunctionViewType {
-        let view_type = match self {
+    pub(crate) fn from_raw(value: &BNFunctionViewType) -> Option<Self> {
+        match value.type_ {
+            BNFunctionGraphType::InvalidILViewType => None,
+            BNFunctionGraphType::NormalFunctionGraph => Some(FunctionViewType::Normal),
+            BNFunctionGraphType::LowLevelILFunctionGraph => Some(FunctionViewType::LowLevelIL),
+            BNFunctionGraphType::LiftedILFunctionGraph => Some(FunctionViewType::LiftedIL),
+            BNFunctionGraphType::LowLevelILSSAFormFunctionGraph => {
+                Some(FunctionViewType::LowLevelILSSAForm)
+            }
+            BNFunctionGraphType::MediumLevelILFunctionGraph => {
+                Some(FunctionViewType::MediumLevelIL)
+            }
+            BNFunctionGraphType::MediumLevelILSSAFormFunctionGraph => {
+                Some(FunctionViewType::MediumLevelILSSAForm)
+            }
+            BNFunctionGraphType::MappedMediumLevelILFunctionGraph => {
+                Some(FunctionViewType::MappedMediumLevelIL)
+            }
+            BNFunctionGraphType::MappedMediumLevelILSSAFormFunctionGraph => {
+                Some(FunctionViewType::MappedMediumLevelILSSAForm)
+            }
+            BNFunctionGraphType::HighLevelILFunctionGraph => Some(FunctionViewType::HighLevelIL),
+            BNFunctionGraphType::HighLevelILSSAFormFunctionGraph => {
+                Some(FunctionViewType::HighLevelILSSAForm)
+            }
+            BNFunctionGraphType::HighLevelLanguageRepresentationFunctionGraph => {
+                Some(FunctionViewType::HighLevelLanguageRepresentation(
+                    raw_to_string(value.name).unwrap(),
+                ))
+            }
+        }
+    }
+
+    pub(crate) fn from_owned_raw(value: BNFunctionViewType) -> Option<Self> {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNFunctionViewType {
+        let view_type = match value {
             FunctionViewType::Normal => BNFunctionGraphType::NormalFunctionGraph,
             FunctionViewType::LowLevelIL => BNFunctionGraphType::LowLevelILFunctionGraph,
             FunctionViewType::LiftedIL => BNFunctionGraphType::LiftedILFunctionGraph,
-            FunctionViewType::LowLevelILSSAForm => BNFunctionGraphType::LowLevelILSSAFormFunctionGraph,
-            FunctionViewType::MediumLevelIL => BNFunctionGraphType::MediumLevelILFunctionGraph,
-            FunctionViewType::MediumLevelILSSAForm => BNFunctionGraphType::MediumLevelILSSAFormFunctionGraph,
-            FunctionViewType::MappedMediumLevelIL => BNFunctionGraphType::MappedMediumLevelILFunctionGraph,
-            FunctionViewType::MappedMediumLevelILSSAForm => BNFunctionGraphType::MappedMediumLevelILSSAFormFunctionGraph,
-            FunctionViewType::HighLevelIL => BNFunctionGraphType::HighLevelILFunctionGraph,
-            FunctionViewType::HighLevelILSSAForm => BNFunctionGraphType::HighLevelILSSAFormFunctionGraph,
-            FunctionViewType::HighLevelLanguageRepresentation(_) => BNFunctionGraphType::HighLevelLanguageRepresentationFunctionGraph,
-        };
-        RawFunctionViewType(BNFunctionViewType {
-            type_: view_type,
-            name: if let FunctionViewType::HighLevelLanguageRepresentation(ref name) = self {
-                std::ffi::CString::new(name.to_string()).unwrap().into_raw()
-            } else {
-                std::ptr::null()
-            },
-        })
-    }
-}
-
-impl Into<FunctionViewType> for FunctionGraphType {
-    fn into(self) -> FunctionViewType {
-        match self {
-            BNFunctionGraphType::LowLevelILFunctionGraph => FunctionViewType::LowLevelIL,
-            BNFunctionGraphType::LiftedILFunctionGraph => FunctionViewType::LiftedIL,
-            BNFunctionGraphType::LowLevelILSSAFormFunctionGraph => FunctionViewType::LowLevelILSSAForm,
-            BNFunctionGraphType::MediumLevelILFunctionGraph => FunctionViewType::MediumLevelIL,
-            BNFunctionGraphType::MediumLevelILSSAFormFunctionGraph => FunctionViewType::MediumLevelILSSAForm,
-            BNFunctionGraphType::MappedMediumLevelILFunctionGraph => FunctionViewType::MappedMediumLevelIL,
-            BNFunctionGraphType::MappedMediumLevelILSSAFormFunctionGraph => FunctionViewType::MappedMediumLevelILSSAForm,
-            BNFunctionGraphType::HighLevelILFunctionGraph => FunctionViewType::HighLevelIL,
-            BNFunctionGraphType::HighLevelILSSAFormFunctionGraph => FunctionViewType::HighLevelILSSAForm,
-            BNFunctionGraphType::HighLevelLanguageRepresentationFunctionGraph => {
-                FunctionViewType::HighLevelLanguageRepresentation("Pseudo C".into()
-                )
+            FunctionViewType::LowLevelILSSAForm => {
+                BNFunctionGraphType::LowLevelILSSAFormFunctionGraph
             }
-            _ => FunctionViewType::Normal,
+            FunctionViewType::MediumLevelIL => BNFunctionGraphType::MediumLevelILFunctionGraph,
+            FunctionViewType::MediumLevelILSSAForm => {
+                BNFunctionGraphType::MediumLevelILSSAFormFunctionGraph
+            }
+            FunctionViewType::MappedMediumLevelIL => {
+                BNFunctionGraphType::MappedMediumLevelILFunctionGraph
+            }
+            FunctionViewType::MappedMediumLevelILSSAForm => {
+                BNFunctionGraphType::MappedMediumLevelILSSAFormFunctionGraph
+            }
+            FunctionViewType::HighLevelIL => BNFunctionGraphType::HighLevelILFunctionGraph,
+            FunctionViewType::HighLevelILSSAForm => {
+                BNFunctionGraphType::HighLevelILSSAFormFunctionGraph
+            }
+            FunctionViewType::HighLevelLanguageRepresentation(_) => {
+                BNFunctionGraphType::HighLevelLanguageRepresentationFunctionGraph
+            }
+        };
+        let view_name = match value {
+            FunctionViewType::HighLevelLanguageRepresentation(name) => Some(BnString::new(name)),
+            _ => None,
+        };
+        BNFunctionViewType {
+            type_: view_type,
+            name: view_name
+                .map(|n| BnString::into_raw(n) as *mut _)
+                .unwrap_or(std::ptr::null_mut()),
         }
     }
+
+    pub(crate) fn free_raw(value: BNFunctionViewType) {
+        let _ = unsafe { BnString::from_raw(value.name as *mut _) };
+    }
 }
 
-impl Drop for RawFunctionViewType {
-    fn drop(&mut self) {
-        if !self.0.name.is_null() {
-            unsafe { let _ = std::ffi::CString::from_raw(self.0.name as *mut _); }
+impl From<FunctionGraphType> for FunctionViewType {
+    fn from(view_type: FunctionGraphType) -> Self {
+        match view_type {
+            BNFunctionGraphType::LowLevelILFunctionGraph => FunctionViewType::LowLevelIL,
+            BNFunctionGraphType::LiftedILFunctionGraph => FunctionViewType::LiftedIL,
+            BNFunctionGraphType::LowLevelILSSAFormFunctionGraph => {
+                FunctionViewType::LowLevelILSSAForm
+            }
+            BNFunctionGraphType::MediumLevelILFunctionGraph => FunctionViewType::MediumLevelIL,
+            BNFunctionGraphType::MediumLevelILSSAFormFunctionGraph => {
+                FunctionViewType::MediumLevelILSSAForm
+            }
+            BNFunctionGraphType::MappedMediumLevelILFunctionGraph => {
+                FunctionViewType::MappedMediumLevelIL
+            }
+            BNFunctionGraphType::MappedMediumLevelILSSAFormFunctionGraph => {
+                FunctionViewType::MappedMediumLevelILSSAForm
+            }
+            BNFunctionGraphType::HighLevelILFunctionGraph => FunctionViewType::HighLevelIL,
+            BNFunctionGraphType::HighLevelILSSAFormFunctionGraph => {
+                FunctionViewType::HighLevelILSSAForm
+            }
+            BNFunctionGraphType::HighLevelLanguageRepresentationFunctionGraph => {
+                // Historically this was the only language representation.
+                FunctionViewType::HighLevelLanguageRepresentation("Pseudo C".into())
+            }
+            BNFunctionGraphType::InvalidILViewType | BNFunctionGraphType::NormalFunctionGraph => {
+                FunctionViewType::Normal
+            }
         }
     }
 }
@@ -202,11 +295,14 @@ pub struct Function {
     pub(crate) handle: *mut BNFunction,
 }
 
-unsafe impl Send for Function {}
-unsafe impl Sync for Function {}
-
 impl Function {
-    pub(crate) unsafe fn from_raw(handle: *mut BNFunction) -> Ref<Self> {
+    pub(crate) unsafe fn from_raw(handle: *mut BNFunction) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle }
+    }
+
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNFunction) -> Ref<Self> {
+        debug_assert!(!handle.is_null());
         Ref::new(Self { handle })
     }
 
@@ -227,7 +323,7 @@ impl Function {
     pub fn view(&self) -> Ref<BinaryView> {
         unsafe {
             let view = BNGetFunctionData(self.handle);
-            BinaryView::from_raw(view)
+            BinaryView::ref_from_raw(view)
         }
     }
 
@@ -301,7 +397,7 @@ impl Function {
     }
 
     /// All comments in the function
-    pub fn comments(&self) -> Array<Comments> {
+    pub fn comments(&self) -> Array<Comment> {
         let mut count = 0;
         let lines = unsafe { BNGetCommentedAddresses(self.handle, &mut count) };
         unsafe { Array::new(lines, count, self.to_owned()) }
@@ -335,14 +431,12 @@ impl Function {
     ) -> Option<Ref<BasicBlock<NativeBlock>>> {
         let arch = arch.unwrap_or_else(|| self.arch());
         unsafe {
-            let block = BNGetFunctionBasicBlockAtAddress(self.handle, arch.0, addr);
+            let basic_block_ptr = BNGetFunctionBasicBlockAtAddress(self.handle, arch.handle, addr);
             let context = NativeBlock { _priv: () };
-
-            if block.is_null() {
-                return None;
+            match basic_block_ptr.is_null() {
+                false => Some(BasicBlock::ref_from_raw(basic_block_ptr, context)),
+                true => None,
             }
-
-            Some(Ref::new(BasicBlock::from_raw(block, context)))
         }
     }
 
@@ -353,147 +447,135 @@ impl Function {
     ) -> Array<Array<InstructionTextToken>> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
-        let lines = unsafe { BNGetFunctionBlockAnnotations(self.handle, arch.0, addr, &mut count) };
+        let lines =
+            unsafe { BNGetFunctionBlockAnnotations(self.handle, arch.handle, addr, &mut count) };
         assert!(!lines.is_null());
         unsafe { Array::new(lines, count, ()) }
     }
 
-    pub fn get_variable_name(&self, var: &Variable) -> BnString {
+    pub fn variable_name(&self, var: &Variable) -> BnString {
         unsafe {
-            let raw_var = var.raw();
+            let raw_var = BNVariable::from(var);
             let raw_name = BNGetVariableName(self.handle, &raw_var);
             BnString::from_raw(raw_name)
         }
     }
 
-    pub fn high_level_il(&self, full_ast: bool) -> Result<Ref<hlil::HighLevelILFunction>, ()> {
+    pub fn high_level_il(&self, full_ast: bool) -> Result<Ref<HighLevelILFunction>, ()> {
         unsafe {
-            let hlil = BNGetFunctionHighLevelIL(self.handle);
-
-            if hlil.is_null() {
-                return Err(());
+            let hlil_ptr = BNGetFunctionHighLevelIL(self.handle);
+            match hlil_ptr.is_null() {
+                false => Ok(HighLevelILFunction::ref_from_raw(hlil_ptr, full_ast)),
+                true => Err(()),
             }
-
-            Ok(hlil::HighLevelILFunction::ref_from_raw(hlil, full_ast))
         }
     }
 
-    pub fn high_level_il_if_available(&self) -> Option<Ref<hlil::HighLevelILFunction>> {
-        let hlil = unsafe { BNGetFunctionHighLevelILIfAvailable(self.handle) };
-        (!hlil.is_null()).then(|| unsafe { hlil::HighLevelILFunction::ref_from_raw(hlil, true) })
+    pub fn high_level_il_if_available(&self) -> Option<Ref<HighLevelILFunction>> {
+        let hlil_ptr = unsafe { BNGetFunctionHighLevelILIfAvailable(self.handle) };
+        match hlil_ptr.is_null() {
+            false => Some(unsafe { HighLevelILFunction::ref_from_raw(hlil_ptr, true) }),
+            true => None,
+        }
     }
 
     /// MediumLevelILFunction used to represent Function mapped medium level IL
-    pub fn mapped_medium_level_il(&self) -> Result<Ref<mlil::MediumLevelILFunction>, ()> {
-        let mlil = unsafe { BNGetFunctionMappedMediumLevelIL(self.handle) };
-        if mlil.is_null() {
-            return Err(());
+    pub fn mapped_medium_level_il(&self) -> Result<Ref<MediumLevelILFunction>, ()> {
+        let mlil_ptr = unsafe { BNGetFunctionMappedMediumLevelIL(self.handle) };
+        match mlil_ptr.is_null() {
+            false => Ok(unsafe { MediumLevelILFunction::ref_from_raw(mlil_ptr) }),
+            true => Err(()),
         }
-        Ok(unsafe { mlil::MediumLevelILFunction::ref_from_raw(mlil) })
     }
 
-    pub fn mapped_medium_level_il_if_available(
-        &self,
-    ) -> Result<Ref<mlil::MediumLevelILFunction>, ()> {
-        let mlil = unsafe { BNGetFunctionMappedMediumLevelILIfAvailable(self.handle) };
-        if mlil.is_null() {
-            return Err(());
+    pub fn mapped_medium_level_il_if_available(&self) -> Option<Ref<MediumLevelILFunction>> {
+        let mlil_ptr = unsafe { BNGetFunctionMappedMediumLevelILIfAvailable(self.handle) };
+        match mlil_ptr.is_null() {
+            false => Some(unsafe { MediumLevelILFunction::ref_from_raw(mlil_ptr) }),
+            true => None,
         }
-        Ok(unsafe { mlil::MediumLevelILFunction::ref_from_raw(mlil) })
     }
 
-    pub fn medium_level_il(&self) -> Result<Ref<mlil::MediumLevelILFunction>, ()> {
+    pub fn medium_level_il(&self) -> Result<Ref<MediumLevelILFunction>, ()> {
         unsafe {
-            let mlil = BNGetFunctionMediumLevelIL(self.handle);
-
-            if mlil.is_null() {
-                return Err(());
+            let mlil_ptr = BNGetFunctionMediumLevelIL(self.handle);
+            match mlil_ptr.is_null() {
+                false => Ok(MediumLevelILFunction::ref_from_raw(mlil_ptr)),
+                true => Err(()),
             }
-
-            Ok(mlil::MediumLevelILFunction::ref_from_raw(mlil))
         }
     }
 
-    pub fn medium_level_il_if_available(&self) -> Option<Ref<mlil::MediumLevelILFunction>> {
-        let mlil = unsafe { BNGetFunctionMediumLevelILIfAvailable(self.handle) };
-        (!mlil.is_null()).then(|| unsafe { mlil::MediumLevelILFunction::ref_from_raw(mlil) })
+    pub fn medium_level_il_if_available(&self) -> Option<Ref<MediumLevelILFunction>> {
+        let mlil_ptr = unsafe { BNGetFunctionMediumLevelILIfAvailable(self.handle) };
+        match mlil_ptr.is_null() {
+            false => Some(unsafe { MediumLevelILFunction::ref_from_raw(mlil_ptr) }),
+            true => None,
+        }
     }
 
-    pub fn low_level_il(&self) -> Result<Ref<llil::RegularFunction<CoreArchitecture>>, ()> {
+    pub fn low_level_il(&self) -> Result<Ref<RegularLowLevelILFunction<CoreArchitecture>>, ()> {
         unsafe {
-            let llil = BNGetFunctionLowLevelIL(self.handle);
-
-            if llil.is_null() {
-                return Err(());
+            let llil_ptr = BNGetFunctionLowLevelIL(self.handle);
+            match llil_ptr.is_null() {
+                false => Ok(RegularLowLevelILFunction::ref_from_raw(
+                    self.arch(),
+                    llil_ptr,
+                )),
+                true => Err(()),
             }
-
-            Ok(llil::RegularFunction::ref_from_raw(self.arch(), llil))
         }
     }
 
     pub fn low_level_il_if_available(
         &self,
-    ) -> Option<Ref<llil::RegularFunction<CoreArchitecture>>> {
-        let llil = unsafe { BNGetFunctionLowLevelILIfAvailable(self.handle) };
-        (!llil.is_null()).then(|| unsafe { llil::RegularFunction::ref_from_raw(self.arch(), llil) })
-    }
-
-    pub fn lifted_il(&self) -> Result<Ref<llil::LiftedFunction<CoreArchitecture>>, ()> {
-        unsafe {
-            let llil = BNGetFunctionLiftedIL(self.handle);
-
-            if llil.is_null() {
-                return Err(());
+    ) -> Option<Ref<RegularLowLevelILFunction<CoreArchitecture>>> {
+        let llil_ptr = unsafe { BNGetFunctionLowLevelILIfAvailable(self.handle) };
+        match llil_ptr.is_null() {
+            false => {
+                Some(unsafe { RegularLowLevelILFunction::ref_from_raw(self.arch(), llil_ptr) })
             }
-
-            Ok(llil::LiftedFunction::ref_from_raw(self.arch(), llil))
+            true => None,
         }
     }
 
-    pub fn lifted_il_if_available(&self) -> Option<Ref<llil::LiftedFunction<CoreArchitecture>>> {
-        let llil = unsafe { BNGetFunctionLiftedILIfAvailable(self.handle) };
-        (!llil.is_null()).then(|| unsafe { llil::LiftedFunction::ref_from_raw(self.arch(), llil) })
+    pub fn lifted_il(&self) -> Result<Ref<LiftedILFunction<CoreArchitecture>>, ()> {
+        unsafe {
+            let llil_ptr = BNGetFunctionLiftedIL(self.handle);
+            match llil_ptr.is_null() {
+                false => Ok(LiftedILFunction::ref_from_raw(self.arch(), llil_ptr)),
+                true => Err(()),
+            }
+        }
+    }
+
+    pub fn lifted_il_if_available(&self) -> Option<Ref<LiftedILFunction<CoreArchitecture>>> {
+        let llil_ptr = unsafe { BNGetFunctionLiftedILIfAvailable(self.handle) };
+        match llil_ptr.is_null() {
+            false => Some(unsafe { LiftedILFunction::ref_from_raw(self.arch(), llil_ptr) }),
+            true => None,
+        }
     }
 
     pub fn return_type(&self) -> Conf<Ref<Type>> {
-        let result = unsafe { BNGetFunctionReturnType(self.handle) };
-
-        Conf::new(
-            unsafe { Type::ref_from_raw(result.type_) },
-            result.confidence,
-        )
+        let raw_return_type = unsafe { BNGetFunctionReturnType(self.handle) };
+        Conf::<Ref<Type>>::from_owned_raw(raw_return_type)
     }
 
     pub fn set_auto_return_type<'a, C>(&self, return_type: C)
     where
         C: Into<Conf<&'a Type>>,
     {
-        let return_type: Conf<&Type> = return_type.into();
-        unsafe {
-            BNSetAutoFunctionReturnType(
-                self.handle,
-                &mut BNTypeWithConfidence {
-                    type_: return_type.contents.handle,
-                    confidence: return_type.confidence,
-                },
-            )
-        }
+        let mut raw_return_type = Conf::<&Type>::into_raw(return_type.into());
+        unsafe { BNSetAutoFunctionReturnType(self.handle, &mut raw_return_type) }
     }
 
     pub fn set_user_return_type<'a, C>(&self, return_type: C)
     where
         C: Into<Conf<&'a Type>>,
     {
-        let return_type: Conf<&Type> = return_type.into();
-        unsafe {
-            BNSetUserFunctionReturnType(
-                self.handle,
-                &mut BNTypeWithConfidence {
-                    type_: return_type.contents.handle,
-                    confidence: return_type.confidence,
-                },
-            )
-        }
+        let mut raw_return_type = Conf::<&Type>::into_raw(return_type.into());
+        unsafe { BNSetUserFunctionReturnType(self.handle, &mut raw_return_type) }
     }
 
     pub fn function_type(&self) -> Ref<Type> {
@@ -512,7 +594,7 @@ impl Function {
         unsafe { BNSetFunctionAutoType(self.handle, t.handle) }
     }
 
-    pub fn stack_layout(&self) -> Array<NamedTypedVariable> {
+    pub fn stack_layout(&self) -> Array<NamedVariableWithType> {
         let mut count = 0;
         unsafe {
             let variables = BNGetStackLayout(self.handle, &mut count);
@@ -547,7 +629,7 @@ impl Function {
 
     pub fn call_stack_adjustment(&self, addr: u64, arch: Option<CoreArchitecture>) -> Conf<i64> {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let result = unsafe { BNGetCallStackAdjustment(self.handle, arch.0, addr) };
+        let result = unsafe { BNGetCallStackAdjustment(self.handle, arch.handle, addr) };
         result.into()
     }
 
@@ -564,7 +646,7 @@ impl Function {
         unsafe {
             BNSetUserCallStackAdjustment(
                 self.handle,
-                arch.0,
+                arch.handle,
                 addr,
                 adjust.contents,
                 adjust.confidence,
@@ -585,7 +667,7 @@ impl Function {
         unsafe {
             BNSetAutoCallStackAdjustment(
                 self.handle,
-                arch.0,
+                arch.handle,
                 addr,
                 adjust.contents,
                 adjust.confidence,
@@ -599,9 +681,11 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> Option<Conf<Ref<Type>>> {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let result = unsafe { BNGetCallTypeAdjustment(self.handle, arch.0, addr) };
-        (!result.type_.is_null())
-            .then(|| unsafe { Conf::new(Type::ref_from_raw(result.type_), result.confidence) })
+        let result = unsafe { BNGetCallTypeAdjustment(self.handle, arch.handle, addr) };
+        match result.type_.is_null() {
+            false => Some(Conf::<Ref<Type>>::from_owned_raw(result)),
+            true => None,
+        }
     }
 
     /// Sets or removes the call type override at a call site to the given type.
@@ -628,8 +712,8 @@ impl Function {
         let adjust_ptr = adjust_type
             .as_mut()
             .map(|x| x as *mut _)
-            .unwrap_or(core::ptr::null_mut());
-        unsafe { BNSetUserCallTypeAdjustment(self.handle, arch.0, addr, adjust_ptr) }
+            .unwrap_or(std::ptr::null_mut());
+        unsafe { BNSetUserCallTypeAdjustment(self.handle, arch.handle, addr, adjust_ptr) }
     }
 
     pub fn set_auto_call_type_adjustment<'a, I>(
@@ -645,7 +729,7 @@ impl Function {
         unsafe {
             BNSetAutoCallTypeAdjustment(
                 self.handle,
-                arch.0,
+                arch.handle,
                 addr,
                 &mut BNTypeWithConfidence {
                     type_: adjust_type.contents.handle,
@@ -659,13 +743,13 @@ impl Function {
         &self,
         addr: u64,
         arch: Option<CoreArchitecture>,
-    ) -> Array<RegisterStackAdjustment<CoreArchitecture>> {
+    ) -> Array<RegisterStackAdjustment> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
         let adjust =
-            unsafe { BNGetCallRegisterStackAdjustment(self.handle, arch.0, addr, &mut count) };
+            unsafe { BNGetCallRegisterStackAdjustment(self.handle, arch.handle, addr, &mut count) };
         assert!(!adjust.is_null());
-        unsafe { Array::new(adjust, count, arch.handle()) }
+        unsafe { Array::new(adjust, count, ()) }
     }
 
     pub fn set_user_call_reg_stack_adjustment<I>(
@@ -674,18 +758,18 @@ impl Function {
         adjust: I,
         arch: Option<CoreArchitecture>,
     ) where
-        I: IntoIterator<Item = RegisterStackAdjustment<CoreArchitecture>>,
+        I: IntoIterator<Item = RegisterStackAdjustment>,
     {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let mut adjust_buf: Box<[BNRegisterStackAdjustment]> =
-            adjust.into_iter().map(|adjust| adjust.into_raw()).collect();
+        let adjustments: Vec<BNRegisterStackAdjustment> =
+            adjust.into_iter().map(Into::into).collect();
         unsafe {
             BNSetUserCallRegisterStackAdjustment(
                 self.handle,
-                arch.0,
+                arch.handle,
                 addr,
-                adjust_buf.as_mut_ptr(),
-                adjust_buf.len(),
+                adjustments.as_ptr() as *mut _,
+                adjustments.len(),
             )
         }
     }
@@ -696,19 +780,18 @@ impl Function {
         adjust: I,
         arch: Option<CoreArchitecture>,
     ) where
-        I: IntoIterator<Item = RegisterStackAdjustment<CoreArchitecture>>,
+        I: IntoIterator<Item = RegisterStackAdjustment>,
     {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let mut adjust_buf: Box<[BNRegisterStackAdjustment]> =
-            adjust.into_iter().map(|reg| reg.into_raw()).collect();
-
+        let adjustments: Vec<BNRegisterStackAdjustment> =
+            adjust.into_iter().map(Into::into).collect();
         unsafe {
             BNSetAutoCallRegisterStackAdjustment(
                 self.handle,
-                arch.0,
+                arch.handle,
                 addr,
-                adjust_buf.as_mut_ptr(),
-                adjust_buf.len(),
+                adjustments.as_ptr() as *mut _,
+                adjustments.len(),
             )
         }
     }
@@ -718,17 +801,17 @@ impl Function {
         addr: u64,
         reg_stack_id: u32,
         arch: Option<CoreArchitecture>,
-    ) -> RegisterStackAdjustment<CoreArchitecture> {
+    ) -> RegisterStackAdjustment {
         let arch = arch.unwrap_or_else(|| self.arch());
         let adjust = unsafe {
             BNGetCallRegisterStackAdjustmentForRegisterStack(
                 self.handle,
-                arch.0,
+                arch.handle,
                 addr,
                 reg_stack_id,
             )
         };
-        unsafe { RegisterStackAdjustment::from_raw(adjust, arch) }
+        RegisterStackAdjustment::from(adjust)
     }
 
     pub fn set_user_call_reg_stack_adjustment_for_reg_stack<I>(
@@ -745,7 +828,7 @@ impl Function {
         unsafe {
             BNSetUserCallRegisterStackAdjustmentForRegisterStack(
                 self.handle,
-                arch.0,
+                arch.handle,
                 addr,
                 reg_stack_id,
                 adjust.contents,
@@ -768,7 +851,7 @@ impl Function {
         unsafe {
             BNSetAutoCallRegisterStackAdjustmentForRegisterStack(
                 self.handle,
-                arch.0,
+                arch.handle,
                 addr,
                 reg_stack_id,
                 adjust.contents,
@@ -777,45 +860,42 @@ impl Function {
         }
     }
 
-    pub fn reg_stack_adjustments(&self) -> Array<RegisterStackAdjustment<CoreArchitecture>> {
+    pub fn reg_stack_adjustments(&self) -> Array<RegisterStackAdjustment> {
         let mut count = 0;
         let adjust = unsafe { BNGetFunctionRegisterStackAdjustments(self.handle, &mut count) };
         assert!(!adjust.is_null());
-        unsafe { Array::new(adjust, count, self.arch().handle()) }
+        unsafe { Array::new(adjust, count, ()) }
     }
 
-    pub fn set_user_reg_stack_adjustments<I, A>(&self, values: I)
+    pub fn set_user_reg_stack_adjustments<I>(&self, values: I)
     where
-        I: IntoIterator<Item = RegisterStackAdjustment<A>>,
-        A: Architecture,
+        I: IntoIterator<Item = RegisterStackAdjustment>,
     {
-        let mut values: Box<[BNRegisterStackAdjustment]> =
-            values.into_iter().map(|r| r.into_raw()).collect();
+        let values: Vec<BNRegisterStackAdjustment> = values.into_iter().map(Into::into).collect();
         unsafe {
             BNSetUserFunctionRegisterStackAdjustments(
                 self.handle,
-                values.as_mut_ptr(),
+                values.as_ptr() as *mut _,
                 values.len(),
             )
         }
     }
 
-    pub fn set_auto_reg_stack_adjustments<I, A>(&self, values: I)
+    pub fn set_auto_reg_stack_adjustments<I>(&self, values: I)
     where
-        I: IntoIterator<Item = RegisterStackAdjustment<A>>,
-        A: Architecture,
+        I: IntoIterator<Item = RegisterStackAdjustment>,
     {
-        let mut values: Box<[BNRegisterStackAdjustment]> =
-            values.into_iter().map(|r| r.into_raw()).collect();
+        let values: Vec<BNRegisterStackAdjustment> = values.into_iter().map(Into::into).collect();
         unsafe {
             BNSetAutoFunctionRegisterStackAdjustments(
                 self.handle,
-                values.as_mut_ptr(),
+                values.as_ptr() as *mut _,
                 values.len(),
             )
         }
     }
 
+    // TODO: Turn this into an actual type?
     /// List of function variables: including name, variable and type
     pub fn variables(&self) -> Array<(&str, Variable, &Type)> {
         let mut count = 0;
@@ -833,17 +913,12 @@ impl Function {
 
     pub fn parameter_variables(&self) -> Conf<Vec<Variable>> {
         unsafe {
-            let mut variables = BNGetFunctionParameterVariables(self.handle);
-            let mut result = Vec::with_capacity(variables.count);
-            let confidence = variables.confidence;
-            let vars = std::slice::from_raw_parts(variables.vars, variables.count);
-
-            for var in vars.iter().take(variables.count) {
-                result.push(Variable::from_raw(*var));
-            }
-
-            BNFreeParameterVariables(&mut variables);
-            Conf::new(result, confidence)
+            let mut raw_variables = BNGetFunctionParameterVariables(self.handle);
+            let raw_var_list = std::slice::from_raw_parts(raw_variables.vars, raw_variables.count);
+            let variables: Vec<Variable> = raw_var_list.iter().map(Into::into).collect();
+            let confidence = raw_variables.confidence;
+            BNFreeParameterVariables(&mut raw_variables);
+            Conf::new(variables, confidence)
         }
     }
 
@@ -851,12 +926,12 @@ impl Function {
     where
         I: IntoIterator<Item = Variable>,
     {
-        let mut vars: Box<[BNVariable]> = values.into_iter().map(|var| var.raw()).collect();
+        let vars: Vec<BNVariable> = values.into_iter().map(Into::into).collect();
         unsafe {
             BNSetUserFunctionParameterVariables(
                 self.handle,
                 &mut BNParameterVariablesWithConfidence {
-                    vars: vars.as_mut_ptr(),
+                    vars: vars.as_ptr() as *mut _,
                     count: vars.len(),
                     confidence,
                 },
@@ -868,12 +943,12 @@ impl Function {
     where
         I: IntoIterator<Item = Variable>,
     {
-        let mut vars: Box<[BNVariable]> = values.into_iter().map(|var| var.raw()).collect();
+        let vars: Vec<BNVariable> = values.into_iter().map(Into::into).collect();
         unsafe {
             BNSetAutoFunctionParameterVariables(
                 self.handle,
                 &mut BNParameterVariablesWithConfidence {
-                    vars: vars.as_mut_ptr(),
+                    vars: vars.as_ptr() as *mut _,
                     count: vars.len(),
                     confidence,
                 },
@@ -889,9 +964,10 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let func_type = func_type.map(|f| f.handle).unwrap_or(core::ptr::null_mut());
-        let value =
-            unsafe { BNGetParameterValueAtInstruction(self.handle, arch.0, addr, func_type, i) };
+        let func_type = func_type.map(|f| f.handle).unwrap_or(std::ptr::null_mut());
+        let value = unsafe {
+            BNGetParameterValueAtInstruction(self.handle, arch.handle, addr, func_type, i)
+        };
         value.into()
     }
 
@@ -912,11 +988,7 @@ impl Function {
             BNApplyImportedTypes(
                 self.handle,
                 sym.handle,
-                if let Some(t) = t {
-                    t.handle
-                } else {
-                    core::ptr::null_mut()
-                },
+                t.map(|t| t.handle).unwrap_or(std::ptr::null_mut()),
             );
         }
     }
@@ -972,15 +1044,7 @@ impl Function {
         C: Into<Conf<bool>>,
     {
         let value: Conf<bool> = value.into();
-        unsafe {
-            BNSetAutoFunctionInlinedDuringAnalysis(
-                self.handle,
-                BNBoolWithConfidence {
-                    value: value.contents,
-                    confidence: value.confidence,
-                },
-            )
-        }
+        unsafe { BNSetAutoFunctionInlinedDuringAnalysis(self.handle, value.into()) }
     }
 
     pub fn set_user_inline_during_analysis<C>(&self, value: C)
@@ -988,15 +1052,7 @@ impl Function {
         C: Into<Conf<bool>>,
     {
         let value: Conf<bool> = value.into();
-        unsafe {
-            BNSetUserFunctionInlinedDuringAnalysis(
-                self.handle,
-                BNBoolWithConfidence {
-                    value: value.contents,
-                    confidence: value.confidence,
-                },
-            )
-        }
+        unsafe { BNSetUserFunctionInlinedDuringAnalysis(self.handle, value.into()) }
     }
 
     pub fn analysis_performance_info(&self) -> Array<PerformanceInfo> {
@@ -1024,12 +1080,18 @@ impl Function {
     /// # Example
     ///
     /// ```no_run
-    /// # use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+    /// # use binaryninja::binary_view::{BinaryView, BinaryViewExt};
     /// # use binaryninja::function::Function;
     /// # let fun: Function = todo!();
     /// # let bv: BinaryView = todo!();
     /// let important = bv.create_tag_type("Important", "⚠️");
-    /// fun.add_tag(&important, "I think this is the main function", None, false, None);
+    /// fun.add_tag(
+    ///     &important,
+    ///     "I think this is the main function",
+    ///     None,
+    ///     false,
+    ///     None,
+    /// );
     /// let crash = bv.create_tag_type("Crashes", "🎯");
     /// fun.add_tag(&crash, "Nullpointer dereference", Some(0x1337), false, None);
     /// ```
@@ -1045,15 +1107,19 @@ impl Function {
 
         // Create tag
         let tag = Tag::new(tag_type, data);
-        let binaryview = unsafe { BinaryView::from_raw(BNGetFunctionData(self.handle)) };
+        let binaryview = unsafe { BinaryView::ref_from_raw(BNGetFunctionData(self.handle)) };
         unsafe { BNAddTag(binaryview.handle, tag.handle, user) };
 
         unsafe {
             match (user, addr) {
                 (false, None) => BNAddAutoFunctionTag(self.handle, tag.handle),
-                (false, Some(addr)) => BNAddAutoAddressTag(self.handle, arch.0, addr, tag.handle),
+                (false, Some(addr)) => {
+                    BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
+                }
                 (true, None) => BNAddUserFunctionTag(self.handle, tag.handle),
-                (true, Some(addr)) => BNAddUserAddressTag(self.handle, arch.0, addr, tag.handle),
+                (true, Some(addr)) => {
+                    BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
+                }
             }
         }
     }
@@ -1075,10 +1141,12 @@ impl Function {
             match (user, addr) {
                 (false, None) => BNRemoveAutoFunctionTag(self.handle, tag.handle),
                 (false, Some(addr)) => {
-                    BNRemoveAutoAddressTag(self.handle, arch.0, addr, tag.handle)
+                    BNRemoveAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
                 }
                 (true, None) => BNRemoveUserFunctionTag(self.handle, tag.handle),
-                (true, Some(addr)) => BNRemoveUserAddressTag(self.handle, arch.0, addr, tag.handle),
+                (true, Some(addr)) => {
+                    BNRemoveUserAddressTag(self.handle, arch.handle, addr, tag.handle)
+                }
             }
         }
     }
@@ -1101,11 +1169,11 @@ impl Function {
             match (user, addr) {
                 (false, None) => BNRemoveAutoFunctionTagsOfType(self.handle, tag_type.handle),
                 (false, Some(addr)) => {
-                    BNRemoveAutoAddressTagsOfType(self.handle, arch.0, addr, tag_type.handle)
+                    BNRemoveAutoAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle)
                 }
                 (true, None) => BNRemoveUserFunctionTagsOfType(self.handle, tag_type.handle),
                 (true, Some(addr)) => {
-                    BNRemoveUserAddressTagsOfType(self.handle, arch.0, addr, tag_type.handle)
+                    BNRemoveUserAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle)
                 }
             }
         }
@@ -1129,7 +1197,7 @@ impl Function {
     /// ```
     pub fn add_user_code_ref(&self, from_addr: u64, to_addr: u64, arch: Option<CoreArchitecture>) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        unsafe { BNAddUserCodeReference(self.handle, arch.0, from_addr, to_addr) }
+        unsafe { BNAddUserCodeReference(self.handle, arch.handle, from_addr, to_addr) }
     }
 
     /// Removes a user-defined cross-reference.
@@ -1154,7 +1222,7 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        unsafe { BNRemoveUserCodeReference(self.handle, arch.0, from_addr, to_addr) }
+        unsafe { BNRemoveUserCodeReference(self.handle, arch.handle, from_addr, to_addr) }
     }
 
     /// Places a user-defined type cross-reference from the instruction at
@@ -1170,17 +1238,18 @@ impl Function {
     /// ```no_run
     /// # use binaryninja::function::Function;
     /// # let fun: Function = todo!();
-    /// fun.add_user_type_ref(0x1337, &"A".into(), None);
+    /// fun.add_user_type_ref(0x1337, "A", None);
     /// ```
-    pub fn add_user_type_ref(
+    pub fn add_user_type_ref<T: Into<QualifiedName>>(
         &self,
         from_addr: u64,
-        name: &QualifiedName,
+        name: T,
         arch: Option<CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = &name.0 as *const BNQualifiedName as *mut _;
-        unsafe { BNAddUserTypeReference(self.handle, arch.0, from_addr, name_ptr) }
+        let mut raw_name = QualifiedName::into_raw(name.into());
+        unsafe { BNAddUserTypeReference(self.handle, arch.handle, from_addr, &mut raw_name) };
+        QualifiedName::free_raw(raw_name);
     }
 
     /// Removes a user-defined type cross-reference.
@@ -1195,17 +1264,18 @@ impl Function {
     /// ```no_run
     /// # use binaryninja::function::Function;
     /// # let fun: Function = todo!();
-    /// fun.remove_user_type_ref(0x1337, &"A".into(), None);
+    /// fun.remove_user_type_ref(0x1337, "A", None);
     /// ```
-    pub fn remove_user_type_ref(
+    pub fn remove_user_type_ref<T: Into<QualifiedName>>(
         &self,
         from_addr: u64,
-        name: &QualifiedName,
+        name: T,
         arch: Option<CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = &name.0 as *const BNQualifiedName as *mut _;
-        unsafe { BNRemoveUserTypeReference(self.handle, arch.0, from_addr, name_ptr) }
+        let mut raw_name = QualifiedName::into_raw(name.into());
+        unsafe { BNRemoveUserTypeReference(self.handle, arch.handle, from_addr, &mut raw_name) };
+        QualifiedName::free_raw(raw_name);
     }
 
     /// Places a user-defined type field cross-reference from the
@@ -1223,22 +1293,30 @@ impl Function {
     /// ```no_run
     /// # use binaryninja::function::Function;
     /// # let fun: Function = todo!();
-    /// fun.add_user_type_field_ref(0x1337, &"A".into(), 0x8, None, None);
+    /// fun.add_user_type_field_ref(0x1337, "A", 0x8, None, None);
     /// ```
-    pub fn add_user_type_field_ref(
+    pub fn add_user_type_field_ref<T: Into<QualifiedName>>(
         &self,
         from_addr: u64,
-        name: &QualifiedName,
+        name: T,
         offset: u64,
         arch: Option<CoreArchitecture>,
         size: Option<usize>,
     ) {
         let size = size.unwrap_or(0);
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = &name.0 as *const _ as *mut _;
+        let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
-            BNAddUserTypeFieldReference(self.handle, arch.0, from_addr, name_ptr, offset, size)
-        }
+            BNAddUserTypeFieldReference(
+                self.handle,
+                arch.handle,
+                from_addr,
+                &mut raw_name,
+                offset,
+                size,
+            )
+        };
+        QualifiedName::free_raw(raw_name);
     }
 
     /// Removes a user-defined type field cross-reference.
@@ -1255,22 +1333,30 @@ impl Function {
     /// ```no_run
     /// # use binaryninja::function::Function;
     /// # let fun: Function = todo!();
-    /// fun.remove_user_type_field_ref(0x1337, &"A".into(), 0x8, None, None);
+    /// fun.remove_user_type_field_ref(0x1337, "A", 0x8, None, None);
     /// ```
-    pub fn remove_user_type_field_ref(
+    pub fn remove_user_type_field_ref<T: Into<QualifiedName>>(
         &self,
         from_addr: u64,
-        name: &QualifiedName,
+        name: T,
         offset: u64,
         arch: Option<CoreArchitecture>,
         size: Option<usize>,
     ) {
         let size = size.unwrap_or(0);
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = &name.0 as *const _ as *mut _;
+        let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
-            BNRemoveUserTypeFieldReference(self.handle, arch.0, from_addr, name_ptr, offset, size)
+            BNRemoveUserTypeFieldReference(
+                self.handle,
+                arch.handle,
+                from_addr,
+                &mut raw_name,
+                offset,
+                size,
+            )
         }
+        QualifiedName::free_raw(raw_name);
     }
 
     pub fn constant_data(
@@ -1280,9 +1366,11 @@ impl Function {
         size: Option<usize>,
     ) -> (DataBuffer, BuiltinType) {
         let size = size.unwrap_or(0);
-        let state_raw = state.into_raw_value();
+        // TODO: Adjust `BuiltinType`?
         let mut builtin_type = BuiltinType::BuiltinNone;
-        let buffer = DataBuffer::from_raw(unsafe { BNGetConstantData(self.handle, state_raw, value, size, &mut builtin_type) });
+        let buffer = DataBuffer::from_raw(unsafe {
+            BNGetConstantData(self.handle, state, value, size, &mut builtin_type)
+        });
         (buffer, builtin_type)
     }
 
@@ -1293,8 +1381,9 @@ impl Function {
     ) -> Array<ConstantReference> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
-        let refs =
-            unsafe { BNGetConstantsReferencedByInstruction(self.handle, arch.0, addr, &mut count) };
+        let refs = unsafe {
+            BNGetConstantsReferencedByInstruction(self.handle, arch.handle, addr, &mut count)
+        };
         assert!(!refs.is_null());
         unsafe { Array::new(refs, count, ()) }
     }
@@ -1307,7 +1396,12 @@ impl Function {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
         let refs = unsafe {
-            BNGetConstantsReferencedByInstructionIfAvailable(self.handle, arch.0, addr, &mut count)
+            BNGetConstantsReferencedByInstructionIfAvailable(
+                self.handle,
+                arch.handle,
+                addr,
+                &mut count,
+            )
         };
         assert!(!refs.is_null());
         unsafe { Array::new(refs, count, ()) }
@@ -1320,12 +1414,12 @@ impl Function {
     pub fn function_tags(&self, auto: Option<bool>, tag_type: Option<&str>) -> Array<Tag> {
         let mut count = 0;
 
-        let tag_type = tag_type.map(|tag_type| self.view().get_tag_type(tag_type));
+        let tag_type = tag_type.map(|tag_type| self.view().tag_type_by_name(tag_type));
 
         let tags = unsafe {
             match (tag_type, auto) {
                 // received a tag_type, BinaryView found none
-                (Some(None), _) => return Array::new(core::ptr::null_mut(), 0, ()),
+                (Some(None), _) => return Array::new(std::ptr::null_mut(), 0, ()),
 
                 // with tag_type
                 (Some(Some(tag_type)), None) => {
@@ -1368,9 +1462,13 @@ impl Function {
         let mut count = 0;
 
         let tags = match auto {
-            None => unsafe { BNGetAddressTags(self.handle, arch.0, addr, &mut count) },
-            Some(true) => unsafe { BNGetAutoAddressTags(self.handle, arch.0, addr, &mut count) },
-            Some(false) => unsafe { BNGetUserAddressTags(self.handle, arch.0, addr, &mut count) },
+            None => unsafe { BNGetAddressTags(self.handle, arch.handle, addr, &mut count) },
+            Some(true) => unsafe {
+                BNGetAutoAddressTags(self.handle, arch.handle, addr, &mut count)
+            },
+            Some(false) => unsafe {
+                BNGetUserAddressTags(self.handle, arch.handle, addr, &mut count)
+            },
         };
         assert!(!tags.is_null());
         unsafe { Array::new(tags, count, ()) }
@@ -1391,13 +1489,31 @@ impl Function {
 
         let tags = match auto {
             None => unsafe {
-                BNGetAddressTagsInRange(self.handle, arch.0, range.start, range.end, &mut count)
+                BNGetAddressTagsInRange(
+                    self.handle,
+                    arch.handle,
+                    range.start,
+                    range.end,
+                    &mut count,
+                )
             },
             Some(true) => unsafe {
-                BNGetAutoAddressTagsInRange(self.handle, arch.0, range.start, range.end, &mut count)
+                BNGetAutoAddressTagsInRange(
+                    self.handle,
+                    arch.handle,
+                    range.start,
+                    range.end,
+                    &mut count,
+                )
             },
             Some(false) => unsafe {
-                BNGetUserAddressTagsInRange(self.handle, arch.0, range.start, range.end, &mut count)
+                BNGetUserAddressTagsInRange(
+                    self.handle,
+                    arch.handle,
+                    range.start,
+                    range.end,
+                    &mut count,
+                )
             },
         };
         assert!(!tags.is_null());
@@ -1425,13 +1541,13 @@ impl Function {
             .into_iter()
             .map(|address| BNArchitectureAndAddress {
                 address,
-                arch: arch.0,
+                arch: arch.handle,
             })
             .collect();
         unsafe {
             BNSetUserIndirectBranches(
                 self.handle,
-                arch.0,
+                arch.handle,
                 source,
                 branches.as_mut_ptr(),
                 branches.len(),
@@ -1452,13 +1568,13 @@ impl Function {
             .into_iter()
             .map(|address| BNArchitectureAndAddress {
                 address,
-                arch: arch.0,
+                arch: arch.handle,
             })
             .collect();
         unsafe {
             BNSetAutoIndirectBranches(
                 self.handle,
-                arch.0,
+                arch.handle,
                 source,
                 branches.as_mut_ptr(),
                 branches.len(),
@@ -1474,7 +1590,8 @@ impl Function {
     ) -> Array<IndirectBranchInfo> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
-        let branches = unsafe { BNGetIndirectBranchesAt(self.handle, arch.0, addr, &mut count) };
+        let branches =
+            unsafe { BNGetIndirectBranchesAt(self.handle, arch.handle, addr, &mut count) };
         assert!(!branches.is_null());
         unsafe { Array::new(branches, count, ()) }
     }
@@ -1486,8 +1603,8 @@ impl Function {
     /// ```
     pub fn instr_highlight(&self, addr: u64, arch: Option<CoreArchitecture>) -> HighlightColor {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let color = unsafe { BNGetInstructionHighlight(self.handle, arch.0, addr) };
-        HighlightColor::from_raw(color)
+        let color = unsafe { BNGetInstructionHighlight(self.handle, arch.handle, addr) };
+        HighlightColor::from(color)
     }
 
     /// Sets the highlights the instruction at the specified address with the supplied color
@@ -1504,22 +1621,24 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let color_raw = color.into_raw();
-        unsafe { BNSetAutoInstructionHighlight(self.handle, arch.0, addr, color_raw) }
+        unsafe { BNSetAutoInstructionHighlight(self.handle, arch.handle, addr, color.into()) }
     }
 
     /// Sets the highlights the instruction at the specified address with the supplied color
     ///
     /// * `addr` - virtual address of the instruction to be highlighted
     /// * `color` - Color value to use for highlighting
-    /// * `arch` - (optional) Architecture of the instruction if different from self.arch
+    /// * `arch` - (optional) Architecture of the instruction, pass this if not views default arch
     ///
     /// # Example
     /// ```no_run
-    /// # use binaryninja::types::HighlightColor;
-    /// # let fun: binaryninja::function::Function = todo!();
-    /// let color = HighlightColor::NoHighlightColor { alpha: u8::MAX };
-    /// fun.set_user_instr_highlight(0x1337, color, None);
+    /// # use binaryninja::function::{HighlightColor, HighlightStandardColor};
+    /// # let function: binaryninja::function::Function = todo!();
+    /// let color = HighlightColor::StandardHighlightColor {
+    ///     color: HighlightStandardColor::RedHighlightColor,
+    ///     alpha: u8::MAX,
+    /// };
+    /// function.set_user_instr_highlight(0x1337, color, None);
     /// ```
     pub fn set_user_instr_highlight(
         &self,
@@ -1528,8 +1647,7 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let color_raw = color.into_raw();
-        unsafe { BNSetUserInstructionHighlight(self.handle, arch.0, addr, color_raw) }
+        unsafe { BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color.into()) }
     }
 
     /// return the address, if any, of the instruction that contains the
@@ -1541,7 +1659,7 @@ impl Function {
     ) -> Option<u64> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut start = 0;
-        unsafe { BNGetInstructionContainingAddress(self.handle, arch.0, addr, &mut start) }
+        unsafe { BNGetInstructionContainingAddress(self.handle, arch.handle, addr, &mut start) }
             .then_some(start)
     }
 
@@ -1561,7 +1679,9 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> IntegerDisplayType {
         let arch = arch.unwrap_or_else(|| self.arch());
-        unsafe { BNGetIntegerConstantDisplayType(self.handle, arch.0, instr_addr, value, operand) }
+        unsafe {
+            BNGetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand)
+        }
     }
 
     /// Change the text display type for an integer token in the disassembly or IL views
@@ -1585,11 +1705,11 @@ impl Function {
         let enum_display_typeid = enum_display_typeid.map(BnStrCompatible::into_bytes_with_nul);
         let enum_display_typeid_ptr = enum_display_typeid
             .map(|x| x.as_ref().as_ptr() as *const c_char)
-            .unwrap_or(core::ptr::null());
+            .unwrap_or(std::ptr::null());
         unsafe {
             BNSetIntegerConstantDisplayType(
                 self.handle,
-                arch.0,
+                arch.handle,
                 instr_addr,
                 value,
                 operand,
@@ -1618,7 +1738,7 @@ impl Function {
         unsafe {
             BnString::from_raw(BNGetIntegerConstantDisplayTypeEnumerationType(
                 self.handle,
-                arch.0,
+                arch.handle,
                 instr_addr,
                 value,
                 operand,
@@ -1661,11 +1781,12 @@ impl Function {
     pub fn register_value_at(
         &self,
         addr: u64,
-        reg: u32,
+        reg: RegisterId,
         arch: Option<CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let register = unsafe { BNGetRegisterValueAtInstruction(self.handle, arch.0, addr, reg) };
+        let register =
+            unsafe { BNGetRegisterValueAtInstruction(self.handle, arch.handle, addr, reg.0) };
         register.into()
     }
 
@@ -1685,12 +1806,12 @@ impl Function {
     pub fn register_value_after(
         &self,
         addr: u64,
-        reg: u32,
+        reg: RegisterId,
         arch: Option<CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
         let register =
-            unsafe { BNGetRegisterValueAfterInstruction(self.handle, arch.0, addr, reg) };
+            unsafe { BNGetRegisterValueAfterInstruction(self.handle, arch.handle, addr, reg.0) };
         register.into()
     }
 
@@ -1707,7 +1828,7 @@ impl Function {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
         let regs =
-            unsafe { BNGetRegistersReadByInstruction(self.handle, arch.0, addr, &mut count) };
+            unsafe { BNGetRegistersReadByInstruction(self.handle, arch.handle, addr, &mut count) };
         assert!(!regs.is_null());
         unsafe { Array::new(regs, count, arch) }
     }
@@ -1719,8 +1840,9 @@ impl Function {
     ) -> Array<CoreRegister> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
-        let regs =
-            unsafe { BNGetRegistersWrittenByInstruction(self.handle, arch.0, addr, &mut count) };
+        let regs = unsafe {
+            BNGetRegistersWrittenByInstruction(self.handle, arch.handle, addr, &mut count)
+        };
         assert!(!regs.is_null());
         unsafe { Array::new(regs, count, arch) }
     }
@@ -1737,7 +1859,7 @@ impl Function {
     where
         I: IntoIterator<Item = CoreRegister>,
     {
-        let mut regs: Box<[u32]> = registers.into_iter().map(|reg| reg.id()).collect();
+        let mut regs: Box<[u32]> = registers.into_iter().map(|reg| reg.id().0).collect();
         let mut regs = BNRegisterSetWithConfidence {
             regs: regs.as_mut_ptr(),
             count: regs.len(),
@@ -1750,7 +1872,7 @@ impl Function {
     where
         I: IntoIterator<Item = CoreRegister>,
     {
-        let mut regs: Box<[u32]> = registers.into_iter().map(|reg| reg.id()).collect();
+        let mut regs: Box<[u32]> = registers.into_iter().map(|reg| reg.id().0).collect();
         let mut regs = BNRegisterSetWithConfidence {
             regs: regs.as_mut_ptr(),
             count: regs.len(),
@@ -1767,8 +1889,9 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let value =
-            unsafe { BNGetStackContentsAtInstruction(self.handle, arch.0, addr, offset, size) };
+        let value = unsafe {
+            BNGetStackContentsAtInstruction(self.handle, arch.handle, addr, offset, size)
+        };
         value.into()
     }
 
@@ -1780,8 +1903,9 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let value =
-            unsafe { BNGetStackContentsAfterInstruction(self.handle, arch.0, addr, offset, size) };
+        let value = unsafe {
+            BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, offset, size)
+        };
         value.into()
     }
 
@@ -1792,14 +1916,20 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> Option<(Variable, BnString, Conf<Ref<Type>>)> {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let mut found_value: BNVariableNameAndType = unsafe { mem::zeroed() };
+        let mut found_value = BNVariableNameAndType::default();
         let found = unsafe {
-            BNGetStackVariableAtFrameOffset(self.handle, arch.0, addr, offset, &mut found_value)
+            BNGetStackVariableAtFrameOffset(
+                self.handle,
+                arch.handle,
+                addr,
+                offset,
+                &mut found_value,
+            )
         };
         if !found {
             return None;
         }
-        let var = unsafe { Variable::from_raw(found_value.var) };
+        let var = Variable::from(found_value.var);
         let name = unsafe { BnString::from_raw(found_value.name) };
         let var_type = Conf::new(
             unsafe { Type::ref_from_raw(found_value.type_) },
@@ -1816,7 +1946,7 @@ impl Function {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
         let refs = unsafe {
-            BNGetStackVariablesReferencedByInstruction(self.handle, arch.0, addr, &mut count)
+            BNGetStackVariablesReferencedByInstruction(self.handle, arch.handle, addr, &mut count)
         };
         assert!(!refs.is_null());
         unsafe { Array::new(refs, count, ()) }
@@ -1832,7 +1962,7 @@ impl Function {
         let refs = unsafe {
             BNGetStackVariablesReferencedByInstructionIfAvailable(
                 self.handle,
-                arch.0,
+                arch.handle,
                 addr,
                 &mut count,
             )
@@ -1851,7 +1981,7 @@ impl Function {
         &self,
         settings: Option<&DisassemblySettings>,
     ) -> Array<DisassemblyTextLine> {
-        let settings = settings.map(|s| s.handle).unwrap_or(core::ptr::null_mut());
+        let settings = settings.map(|s| s.handle).unwrap_or(std::ptr::null_mut());
         let mut count = 0;
         let lines = unsafe { BNGetFunctionTypeTokens(self.handle, settings, &mut count) };
         assert!(!lines.is_null());
@@ -1860,11 +1990,12 @@ impl Function {
 
     pub fn is_call_instruction(&self, addr: u64, arch: Option<CoreArchitecture>) -> bool {
         let arch = arch.unwrap_or_else(|| self.arch());
-        unsafe { BNIsCallInstruction(self.handle, arch.0, addr) }
+        unsafe { BNIsCallInstruction(self.handle, arch.handle, addr) }
     }
 
     pub fn is_variable_user_defined(&self, var: &Variable) -> bool {
-        unsafe { BNIsVariableUserDefined(self.handle, &var.raw()) }
+        let raw_var = BNVariable::from(var);
+        unsafe { BNIsVariableUserDefined(self.handle, &raw_var) }
     }
 
     pub fn is_pure(&self) -> Conf<bool> {
@@ -1906,7 +2037,7 @@ impl Function {
 
     /// Indicates that callers of this function need to be reanalyzed during the next update cycle
     ///
-    /// * `uppdate_type` - Desired update type
+    /// * `update_type` - Desired update type
     pub fn mark_caller_updates_required(&self, update_type: FunctionUpdateType) {
         unsafe { BNMarkCallerUpdatesRequired(self.handle, update_type) }
     }
@@ -1923,7 +2054,7 @@ impl Function {
         unsafe { Array::new(vars, count, ()) }
     }
 
-    /// Merge one or more varibles in `sources` into the `target` variable. All
+    /// Merge one or more variables in `sources` into the `target` variable. All
     /// variable accesses to the variables in `sources` will be rewritten to use `target`.
     ///
     /// * `target` - target variable
@@ -1933,11 +2064,12 @@ impl Function {
         target: &Variable,
         sources: impl IntoIterator<Item = &'a Variable>,
     ) {
-        let sources_raw: Box<[BNVariable]> = sources.into_iter().map(|s| s.raw()).collect();
+        let raw_target_var = BNVariable::from(target);
+        let sources_raw: Vec<BNVariable> = sources.into_iter().copied().map(Into::into).collect();
         unsafe {
             BNMergeVariables(
                 self.handle,
-                &target.raw(),
+                &raw_target_var,
                 sources_raw.as_ptr(),
                 sources_raw.len(),
             )
@@ -1954,20 +2086,21 @@ impl Function {
         target: &Variable,
         sources: impl IntoIterator<Item = &'a Variable>,
     ) {
-        let sources_raw: Box<[BNVariable]> = sources.into_iter().map(|s| s.raw()).collect();
+        let raw_target_var = BNVariable::from(target);
+        let sources_raw: Vec<BNVariable> = sources.into_iter().copied().map(Into::into).collect();
         unsafe {
             BNUnmergeVariables(
                 self.handle,
-                &target.raw(),
+                &raw_target_var,
                 sources_raw.as_ptr(),
                 sources_raw.len(),
             )
         }
     }
 
-    /// Splits a varible at the definition site. The given `var` must be the
+    /// Splits a variable at the definition site. The given `var` must be the
     /// variable unique to the definition and should be obtained by using
-    /// [mlil::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
+    /// [crate::medium_level_il::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
     ///
     /// This function is not meant to split variables that have been previously merged. Use
     /// [Function::unmerge_variables] to split previously merged variables.
@@ -1984,16 +2117,18 @@ impl Function {
     ///
     /// * `var` - variable to split
     pub fn split_variable(&self, var: &Variable) {
-        unsafe { BNSplitVariable(self.handle, &var.raw()) }
+        let raw_var = BNVariable::from(var);
+        unsafe { BNSplitVariable(self.handle, &raw_var) }
     }
 
-    /// Undoes varible splitting performed with [Function::split_variable]. The given `var`
+    /// Undoes variable splitting performed with [Function::split_variable]. The given `var`
     /// must be the variable unique to the definition and should be obtained by using
-    /// [mlil::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
+    /// [crate::medium_level_il::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
     ///
     /// * `var` - variable to unsplit
     pub fn unsplit_variable(&self, var: &Variable) {
-        unsafe { BNUnsplitVariable(self.handle, &var.raw()) }
+        let raw_var = BNVariable::from(var);
+        unsafe { BNUnsplitVariable(self.handle, &raw_var) }
     }
 
     /// Causes this function to be reanalyzed. This function does not wait for the analysis to finish.
@@ -2043,7 +2178,7 @@ impl Function {
     /// 'user' functions may or may not have been created by a user through the or API. For instance the entry point
     /// into a function is always created a 'user' function. 'user' functions should be considered the root of auto
     /// analysis.
-    pub fn auto(&self) -> bool {
+    pub fn is_auto(&self) -> bool {
         unsafe { BNWasFunctionAutomaticallyDiscovered(self.handle) }
     }
 
@@ -2061,15 +2196,15 @@ impl Function {
     /// Returns a list of ReferenceSource objects corresponding to the addresses
     /// in functions which reference this function
     pub fn caller_sites(&self) -> Array<CodeReference> {
-        self.view().get_code_refs(self.start())
+        self.view().code_refs_to_addr(self.start())
     }
 
     /// Calling convention used by the function
-    pub fn calling_convention(&self) -> Option<Conf<Ref<CallingConvention<CoreArchitecture>>>> {
+    pub fn calling_convention(&self) -> Option<Conf<Ref<CoreCallingConvention>>> {
         let result = unsafe { BNGetFunctionCallingConvention(self.handle) };
         (!result.convention.is_null()).then(|| {
             Conf::new(
-                unsafe { CallingConvention::ref_from_raw(result.convention, self.arch()) },
+                unsafe { CoreCallingConvention::ref_from_raw(result.convention, self.arch()) },
                 result.confidence,
             )
         })
@@ -2078,9 +2213,9 @@ impl Function {
     /// Set the User calling convention used by the function
     pub fn set_user_calling_convention<'a, I>(&self, value: Option<I>)
     where
-        I: Into<Conf<&'a CallingConvention<CoreArchitecture>>>,
+        I: Into<Conf<&'a CoreCallingConvention>>,
     {
-        let mut conv_conf: BNCallingConventionWithConfidence = unsafe { mem::zeroed() };
+        let mut conv_conf = BNCallingConventionWithConfidence::default();
         if let Some(value) = value {
             let value = value.into();
             conv_conf.convention = value.contents.handle;
@@ -2092,9 +2227,9 @@ impl Function {
     /// Set the calling convention used by the function
     pub fn set_auto_calling_convention<'a, I>(&self, value: Option<I>)
     where
-        I: Into<Conf<&'a CallingConvention<CoreArchitecture>>>,
+        I: Into<Conf<&'a CoreCallingConvention>>,
     {
-        let mut conv_conf: BNCallingConventionWithConfidence = unsafe { mem::zeroed() };
+        let mut conv_conf = BNCallingConventionWithConfidence::default();
         if let Some(value) = value {
             let value = value.into();
             conv_conf.convention = value.contents.handle;
@@ -2186,7 +2321,7 @@ impl Function {
     where
         I: IntoIterator<Item = CoreRegister>,
     {
-        let mut regs: Box<[u32]> = values.into_iter().map(|reg| reg.id()).collect();
+        let mut regs: Box<[u32]> = values.into_iter().map(|reg| reg.id().0).collect();
         let mut regs = BNRegisterSetWithConfidence {
             regs: regs.as_mut_ptr(),
             count: regs.len(),
@@ -2199,7 +2334,7 @@ impl Function {
     where
         I: IntoIterator<Item = CoreRegister>,
     {
-        let mut regs: Box<[u32]> = values.into_iter().map(|reg| reg.id()).collect();
+        let mut regs: Box<[u32]> = values.into_iter().map(|reg| reg.id().0).collect();
         let mut regs = BNRegisterSetWithConfidence {
             regs: regs.as_mut_ptr(),
             count: regs.len(),
@@ -2217,32 +2352,41 @@ impl Function {
     pub fn create_graph(
         &self,
         view_type: FunctionViewType,
-        settings: Option<DisassemblySettings>,
+        settings: Option<&DisassemblySettings>,
     ) -> Ref<FlowGraph> {
-        let settings_raw = settings.map(|s| s.handle).unwrap_or(core::ptr::null_mut());
-        let result = unsafe { BNCreateFunctionGraph(self.handle, view_type.as_raw().0, settings_raw) };
+        let settings_raw = settings.map(|s| s.handle).unwrap_or(std::ptr::null_mut());
+        let raw_view_type = FunctionViewType::into_raw(view_type);
+        let result = unsafe { BNCreateFunctionGraph(self.handle, raw_view_type, settings_raw) };
+        FunctionViewType::free_raw(raw_view_type);
         unsafe { Ref::new(FlowGraph::from_raw(result)) }
     }
 
     pub fn parent_components(&self) -> Array<Component> {
         let mut count = 0;
-        let result = unsafe{ BNGetFunctionParentComponents(self.view().handle, self.handle, &mut count) };
+        let result =
+            unsafe { BNGetFunctionParentComponents(self.view().handle, self.handle, &mut count) };
         assert!(!result.is_null());
-        unsafe{ Array::new(result, count, ()) }
+        unsafe { Array::new(result, count, ()) }
     }
 }
 
-impl fmt::Debug for Function {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "<func '{}' ({}) {:x}>",
-            self.symbol().full_name(),
-            self.platform().name(),
-            self.start()
-        )
+impl Debug for Function {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        // TODO: I am sure there is more we should add to this.
+        f.debug_struct("Function")
+            .field("start", &self.start())
+            .field("arch", &self.arch())
+            .field("platform", &self.platform())
+            .field("symbol", &self.symbol())
+            .field("is_auto", &self.is_auto())
+            .field("tags", &self.tags().to_vec())
+            .field("comments", &self.comments().to_vec())
+            .finish()
     }
 }
+
+unsafe impl Send for Function {}
+unsafe impl Sync for Function {}
 
 impl ToOwned for Function {
     type Owned = Ref<Self>;
@@ -2271,11 +2415,12 @@ impl CoreArrayProvider for Function {
 }
 
 unsafe impl CoreArrayProviderInner for Function {
-    unsafe fn free(raw: *mut *mut BNFunction, count: usize, _context: &()) {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeFunctionList(raw, count);
     }
-    unsafe fn wrap_raw<'a>(raw: &'a *mut BNFunction, context: &'a ()) -> Self::Wrapped<'a> {
-        Guard::new(Function { handle: *raw }, context)
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Guard::new(Self::from_raw(*raw), context)
     }
 }
 
@@ -2299,97 +2444,315 @@ impl PartialEq for Function {
     }
 }
 
-/////////////////
-// AddressRange
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct AddressRange {
+    pub start: u64,
+    pub end: u64,
+}
 
-#[repr(transparent)]
-pub struct AddressRange(pub(crate) BNAddressRange);
-
-impl AddressRange {
-    pub fn start(&self) -> u64 {
-        self.0.start
+impl From<BNAddressRange> for AddressRange {
+    fn from(raw: BNAddressRange) -> Self {
+        Self {
+            start: raw.start,
+            end: raw.end,
+        }
     }
+}
 
-    pub fn end(&self) -> u64 {
-        self.0.end
+impl From<AddressRange> for BNAddressRange {
+    fn from(raw: AddressRange) -> Self {
+        Self {
+            start: raw.start,
+            end: raw.end,
+        }
     }
 }
 
 impl CoreArrayProvider for AddressRange {
     type Raw = BNAddressRange;
     type Context = ();
-    type Wrapped<'a> = &'a AddressRange;
+    type Wrapped<'a> = Self;
 }
+
 unsafe impl CoreArrayProviderInner for AddressRange {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeAddressRanges(raw);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        mem::transmute(raw)
+        Self::from(*raw)
     }
 }
 
-/////////////////
-// PerformanceInfo
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct PerformanceInfo {
+    pub name: String,
+    pub seconds: Duration,
+}
 
-// NOTE only exists as Array<PerformanceInfo>, cant be owned
-#[repr(transparent)]
-pub struct PerformanceInfo(BNPerformanceInfo);
-
-impl PerformanceInfo {
-    pub fn name(&self) -> &str {
-        unsafe { std::ffi::CStr::from_ptr(self.0.name) }
-            .to_str()
-            .unwrap()
+impl From<BNPerformanceInfo> for PerformanceInfo {
+    fn from(value: BNPerformanceInfo) -> Self {
+        Self {
+            name: unsafe { BnString::from_raw(value.name) }.to_string(),
+            seconds: Duration::from_secs_f64(value.seconds),
+        }
     }
-    pub fn seconds(&self) -> f64 {
-        self.0.seconds
+}
+
+impl From<&BNPerformanceInfo> for PerformanceInfo {
+    fn from(value: &BNPerformanceInfo) -> Self {
+        Self {
+            // TODO: Name will be freed by this. FIX!
+            name: unsafe { BnString::from_raw(value.name) }.to_string(),
+            seconds: Duration::from_secs_f64(value.seconds),
+        }
     }
 }
 
 impl CoreArrayProvider for PerformanceInfo {
     type Raw = BNPerformanceInfo;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, PerformanceInfo>;
+    type Wrapped<'a> = Self;
 }
+
 unsafe impl CoreArrayProviderInner for PerformanceInfo {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeAnalysisPerformanceInfo(raw, count);
     }
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self(*raw), context)
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        // TODO: Swap this to the ref version.
+        Self::from(*raw)
     }
 }
 
-/////////////////
-// Comments
+// NOTE: only exists as part of an Array, never owned
+pub struct UnresolvedIndirectBranches(u64);
+
+impl UnresolvedIndirectBranches {
+    pub fn address(&self) -> u64 {
+        self.0
+    }
+}
+
+impl CoreArrayProvider for UnresolvedIndirectBranches {
+    type Raw = u64;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for UnresolvedIndirectBranches {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeAddressList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self(*raw)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+pub struct ConstantReference {
+    pub value: i64,
+    pub size: usize,
+    pub pointer: bool,
+    pub intermediate: bool,
+}
+
+impl From<BNConstantReference> for ConstantReference {
+    fn from(value: BNConstantReference) -> Self {
+        Self {
+            value: value.value,
+            size: value.size,
+            pointer: value.pointer,
+            intermediate: value.intermediate,
+        }
+    }
+}
+
+impl From<ConstantReference> for BNConstantReference {
+    fn from(value: ConstantReference) -> Self {
+        Self {
+            value: value.value,
+            size: value.size,
+            pointer: value.pointer,
+            intermediate: value.intermediate,
+        }
+    }
+}
+
+impl CoreArrayProvider for ConstantReference {
+    type Raw = BNConstantReference;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for ConstantReference {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeConstantReferenceList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from(*raw)
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct RegisterStackAdjustment {
+    pub register_id: u32,
+    pub adjustment: Conf<i32>,
+}
+
+impl RegisterStackAdjustment {
+    pub fn new(register_id: u32, adjustment: impl Into<Conf<i32>>) -> Self {
+        Self {
+            register_id,
+            adjustment: adjustment.into(),
+        }
+    }
+}
+
+impl From<BNRegisterStackAdjustment> for RegisterStackAdjustment {
+    fn from(value: BNRegisterStackAdjustment) -> Self {
+        Self {
+            register_id: value.regStack,
+            adjustment: Conf::new(value.adjustment, value.confidence),
+        }
+    }
+}
+
+impl From<RegisterStackAdjustment> for BNRegisterStackAdjustment {
+    fn from(value: RegisterStackAdjustment) -> Self {
+        Self {
+            regStack: value.register_id,
+            adjustment: value.adjustment.contents,
+            confidence: value.adjustment.confidence,
+        }
+    }
+}
+
+impl CoreArrayProvider for RegisterStackAdjustment {
+    type Raw = BNRegisterStackAdjustment;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for RegisterStackAdjustment {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeRegisterStackAdjustments(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from(*raw)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+pub enum HighlightColor {
+    StandardHighlightColor {
+        color: HighlightStandardColor,
+        alpha: u8,
+    },
+    MixedHighlightColor {
+        color: HighlightStandardColor,
+        mix_color: HighlightStandardColor,
+        mix: u8,
+        alpha: u8,
+    },
+    CustomHighlightColor {
+        r: u8,
+        g: u8,
+        b: u8,
+        alpha: u8,
+    },
+}
+
+impl From<BNHighlightColor> for HighlightColor {
+    fn from(value: BNHighlightColor) -> Self {
+        match value.style {
+            BNHighlightColorStyle::StandardHighlightColor => Self::StandardHighlightColor {
+                color: value.color,
+                alpha: value.alpha,
+            },
+            BNHighlightColorStyle::MixedHighlightColor => Self::MixedHighlightColor {
+                color: value.color,
+                mix_color: value.mixColor,
+                mix: value.mix,
+                alpha: value.alpha,
+            },
+            BNHighlightColorStyle::CustomHighlightColor => Self::CustomHighlightColor {
+                r: value.r,
+                g: value.g,
+                b: value.b,
+                alpha: value.alpha,
+            },
+        }
+    }
+}
+
+impl From<HighlightColor> for BNHighlightColor {
+    fn from(value: HighlightColor) -> Self {
+        match value {
+            HighlightColor::StandardHighlightColor { color, alpha } => BNHighlightColor {
+                style: BNHighlightColorStyle::StandardHighlightColor,
+                color,
+                alpha,
+                ..Default::default()
+            },
+            HighlightColor::MixedHighlightColor {
+                color,
+                mix_color,
+                mix,
+                alpha,
+            } => BNHighlightColor {
+                style: BNHighlightColorStyle::MixedHighlightColor,
+                color,
+                mixColor: mix_color,
+                mix,
+                alpha,
+                ..Default::default()
+            },
+            HighlightColor::CustomHighlightColor { r, g, b, alpha } => BNHighlightColor {
+                style: BNHighlightColorStyle::CustomHighlightColor,
+                r,
+                g,
+                b,
+                alpha,
+                ..Default::default()
+            },
+        }
+    }
+}
+
+impl Default for HighlightColor {
+    fn default() -> Self {
+        Self::StandardHighlightColor {
+            color: HighlightStandardColor::NoHighlightColor,
+            alpha: 0,
+        }
+    }
+}
 
 // NOTE only exists as Array<Comments>, cant be owned
-pub struct Comments {
-    addr: u64,
-    comment: BnString,
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub struct Comment {
+    pub addr: u64,
+    pub comment: BnString,
 }
 
-impl Comments {
-    pub fn address(&self) -> u64 {
-        self.addr
-    }
-    pub fn comment(&self) -> &str {
-        self.comment.as_str()
-    }
-}
-
-impl CoreArrayProvider for Comments {
+impl CoreArrayProvider for Comment {
     type Raw = u64;
     type Context = Ref<Function>;
-    type Wrapped<'a> = Comments;
+    type Wrapped<'a> = Comment;
 }
-unsafe impl CoreArrayProviderInner for Comments {
+
+unsafe impl CoreArrayProviderInner for Comment {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeAddressList(raw);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, function: &'a Self::Context) -> Self::Wrapped<'a> {
-        Comments {
+        Comment {
             addr: *raw,
             comment: function.comment_at(*raw),
         }

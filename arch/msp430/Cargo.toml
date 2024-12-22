@@ -5,14 +5,10 @@ authors = ["jrozner"]
 edition = "2021"
 
 [dependencies]
-binaryninja = { path = "../../rust" }
+binaryninja.workspace = true
+binaryninjacore-sys.workspace = true
 log = "0.4"
 msp430-asm = "^0.2"
 
 [lib]
 crate-type = ["cdylib"]
-
-[profile.release]
-panic = "abort"
-lto = true
-debug = 1

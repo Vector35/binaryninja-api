@@ -27,93 +27,6 @@ pub type EdgePenStyle = BNEdgePenStyle;
 pub type ThemeColor = BNThemeColor;
 pub type FlowGraphOption = BNFlowGraphOption;
 
-#[repr(transparent)]
-pub struct EdgeStyle(pub(crate) BNEdgeStyle);
-
-impl EdgeStyle {
-    pub fn new(style: EdgePenStyle, width: usize, color: ThemeColor) -> Self {
-        EdgeStyle(BNEdgeStyle {
-            style,
-            width,
-            color,
-        })
-    }
-}
-
-impl Default for EdgeStyle {
-    fn default() -> Self {
-        EdgeStyle(BNEdgeStyle {
-            style: EdgePenStyle::SolidLine,
-            width: 0,
-            color: ThemeColor::AddressColor,
-        })
-    }
-}
-
-#[derive(PartialEq, Eq, Hash)]
-pub struct FlowGraphNode<'a> {
-    pub(crate) handle: *mut BNFlowGraphNode,
-    _data: PhantomData<&'a ()>,
-}
-
-impl<'a> FlowGraphNode<'a> {
-    pub(crate) unsafe fn from_raw(raw: *mut BNFlowGraphNode) -> Self {
-        Self {
-            handle: raw,
-            _data: PhantomData,
-        }
-    }
-
-    pub fn new(graph: &FlowGraph) -> Self {
-        unsafe { FlowGraphNode::from_raw(BNCreateFlowGraphNode(graph.handle)) }
-    }
-
-    pub fn set_disassembly_lines(&self, lines: &'a [DisassemblyTextLine]) {
-        unsafe {
-            BNSetFlowGraphNodeLines(self.handle, lines.as_ptr() as *mut _, lines.len());
-            // BNFreeDisassemblyTextLines(lines.as_ptr() as *mut _, lines.len());  // Shouldn't need...would be a double free?
-        }
-    }
-
-    pub fn set_lines(&self, lines: Vec<&str>) {
-        let lines = lines
-            .iter()
-            .map(|&line| DisassemblyTextLine::from(&vec![line]))
-            .collect::<Vec<_>>();
-        self.set_disassembly_lines(&lines);
-    }
-
-    pub fn add_outgoing_edge(
-        &self,
-        type_: BranchType,
-        target: &'a FlowGraphNode,
-        edge_style: &'a EdgeStyle,
-    ) {
-        unsafe { BNAddFlowGraphNodeOutgoingEdge(self.handle, type_, target.handle, edge_style.0) }
-    }
-}
-
-unsafe impl<'a> RefCountable for FlowGraphNode<'a> {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewFlowGraphNodeReference(handle.handle),
-            _data: PhantomData,
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeFlowGraphNode(handle.handle);
-    }
-}
-
-impl<'a> ToOwned for FlowGraphNode<'a> {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
-    }
-}
-
 #[derive(PartialEq, Eq, Hash)]
 pub struct FlowGraph {
     pub(crate) handle: *mut BNFlowGraph,
@@ -158,5 +71,109 @@ impl ToOwned for FlowGraph {
 
     fn to_owned(&self) -> Self::Owned {
         unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+#[derive(PartialEq, Eq, Hash)]
+pub struct FlowGraphNode<'a> {
+    pub(crate) handle: *mut BNFlowGraphNode,
+    _data: PhantomData<&'a ()>,
+}
+
+impl<'a> FlowGraphNode<'a> {
+    pub(crate) unsafe fn from_raw(raw: *mut BNFlowGraphNode) -> Self {
+        Self {
+            handle: raw,
+            _data: PhantomData,
+        }
+    }
+
+    pub fn new(graph: &FlowGraph) -> Self {
+        unsafe { FlowGraphNode::from_raw(BNCreateFlowGraphNode(graph.handle)) }
+    }
+
+    pub fn set_lines(&self, lines: impl IntoIterator<Item = DisassemblyTextLine>) {
+        // NOTE: This will create allocations and increment tag refs, we must call DisassemblyTextLine::free_raw
+        let mut raw_lines: Vec<BNDisassemblyTextLine> = lines
+            .into_iter()
+            .map(DisassemblyTextLine::into_raw)
+            .collect();
+        unsafe {
+            BNSetFlowGraphNodeLines(self.handle, raw_lines.as_mut_ptr(), raw_lines.len());
+            for raw_line in raw_lines {
+                DisassemblyTextLine::free_raw(raw_line);
+            }
+        }
+    }
+
+    pub fn add_outgoing_edge(
+        &self,
+        type_: BranchType,
+        target: &'a FlowGraphNode,
+        edge_style: EdgeStyle,
+    ) {
+        unsafe {
+            BNAddFlowGraphNodeOutgoingEdge(self.handle, type_, target.handle, edge_style.into())
+        }
+    }
+}
+
+unsafe impl RefCountable for FlowGraphNode<'_> {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: BNNewFlowGraphNodeReference(handle.handle),
+            _data: PhantomData,
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeFlowGraphNode(handle.handle);
+    }
+}
+
+impl ToOwned for FlowGraphNode<'_> {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct EdgeStyle {
+    style: EdgePenStyle,
+    width: usize,
+    color: ThemeColor,
+}
+
+impl EdgeStyle {
+    pub fn new(style: EdgePenStyle, width: usize, color: ThemeColor) -> Self {
+        Self {
+            style,
+            width,
+            color,
+        }
+    }
+}
+
+impl Default for EdgeStyle {
+    fn default() -> Self {
+        Self::new(EdgePenStyle::SolidLine, 0, ThemeColor::AddressColor)
+    }
+}
+
+impl From<BNEdgeStyle> for EdgeStyle {
+    fn from(style: BNEdgeStyle) -> Self {
+        Self::new(style.style, style.width, style.color)
+    }
+}
+
+impl From<EdgeStyle> for BNEdgeStyle {
+    fn from(style: EdgeStyle) -> Self {
+        Self {
+            style: style.style,
+            width: style.width,
+            color: style.color,
+        }
     }
 }

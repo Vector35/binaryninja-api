@@ -1,30 +1,88 @@
-use core::{ffi, mem, ptr};
+#![allow(dead_code)]
+use std::ffi::{c_char, c_void};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use binaryninjacore_sys::*;
-
+use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
-use crate::string::BnString;
+use crate::string::{raw_to_string, BnString};
+use binaryninjacore_sys::*;
 
 pub type UpdateResult = BNUpdateResult;
 
-#[repr(C)]
+pub fn auto_updates_enabled() -> bool {
+    unsafe { BNAreAutoUpdatesEnabled() }
+}
+
+pub fn set_auto_updates_enabled(enabled: bool) {
+    unsafe { BNSetAutoUpdatesEnabled(enabled) }
+}
+
+pub fn time_since_last_update_check() -> Duration {
+    Duration::from_secs(unsafe { BNGetTimeSinceLastUpdateCheck() })
+}
+
+/// Whether an update has been downloaded and is waiting installation
+pub fn is_update_installation_pending() -> bool {
+    unsafe { BNIsUpdateInstallationPending() }
+}
+
+/// Installs any pending updates
+pub fn install_pending_update() -> Result<(), BnString> {
+    let mut errors = std::ptr::null_mut();
+    unsafe { BNInstallPendingUpdate(&mut errors) };
+    if !errors.is_null() {
+        Err(unsafe { BnString::from_raw(errors) })
+    } else {
+        Ok(())
+    }
+}
+
+pub fn updates_checked() {
+    unsafe { BNUpdatesChecked() }
+}
+
+#[derive(Clone, Debug)]
 pub struct UpdateChannel {
-    pub name: BnString,
-    pub description: BnString,
-    pub latest_version: BnString,
-    // NOTE don't allow the user to create his own UpdateChannel
-    _lock: core::marker::PhantomData<()>,
+    pub name: String,
+    pub description: String,
+    pub latest_version: String,
 }
 
 impl UpdateChannel {
-    pub(crate) unsafe fn ref_from_raw(handle: &BNUpdateChannel) -> &Self {
-        mem::transmute(handle)
+    pub(crate) fn from_raw(value: &BNUpdateChannel) -> Self {
+        Self {
+            name: raw_to_string(value.name as *mut _).unwrap(),
+            description: raw_to_string(value.description as *mut _).unwrap(),
+            latest_version: raw_to_string(value.latestVersion as *mut _).unwrap(),
+        }
+    }
+
+    pub(crate) fn from_owned_raw(value: BNUpdateChannel) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNUpdateChannel {
+        let bn_name = BnString::new(value.name);
+        let bn_description = BnString::new(value.description);
+        let bn_latest_version = BnString::new(value.latest_version);
+        BNUpdateChannel {
+            name: BnString::into_raw(bn_name),
+            description: BnString::into_raw(bn_description),
+            latestVersion: BnString::into_raw(bn_latest_version),
+        }
+    }
+
+    pub(crate) fn free_raw(value: BNUpdateChannel) {
+        let _ = unsafe { BnString::from_raw(value.name) };
+        let _ = unsafe { BnString::from_raw(value.description) };
+        let _ = unsafe { BnString::from_raw(value.latestVersion) };
     }
 
     pub fn all() -> Result<Array<UpdateChannel>, BnString> {
         let mut count = 0;
-        let mut errors = ptr::null_mut();
+        let mut errors = std::ptr::null_mut();
         let result = unsafe { BNGetUpdateChannels(&mut count, &mut errors) };
         if !errors.is_null() {
             Err(unsafe { BnString::from_raw(errors) })
@@ -37,9 +95,10 @@ impl UpdateChannel {
     /// List of versions
     pub fn versions(&self) -> Result<Array<UpdateVersion>, BnString> {
         let mut count = 0;
-        let mut errors = ptr::null_mut();
-        let result =
-            unsafe { BNGetUpdateChannelVersions(self.name.as_ptr(), &mut count, &mut errors) };
+        let mut errors = std::ptr::null_mut();
+        let result = unsafe {
+            BNGetUpdateChannelVersions(self.name.as_ptr() as *const c_char, &mut count, &mut errors)
+        };
         if !errors.is_null() {
             Err(unsafe { BnString::from_raw(errors) })
         } else {
@@ -54,20 +113,20 @@ impl UpdateChannel {
         let versions = self.versions()?;
         for version in &versions {
             if &version.version == last_version {
-                return Ok(version.clone());
+                return Ok(version);
             }
         }
-        panic!();
+        Err(BnString::new("Could not find latest version"))
     }
 
     /// Whether updates are available
     pub fn updates_available(&self) -> Result<bool, BnString> {
-        let mut errors = ptr::null_mut();
+        let mut errors = std::ptr::null_mut();
         let result = unsafe {
             BNAreUpdatesAvailable(
-                self.name.as_ptr(),
-                ptr::null_mut(),
-                ptr::null_mut(),
+                self.name.as_ptr() as *const c_char,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
                 &mut errors,
             )
         };
@@ -79,38 +138,24 @@ impl UpdateChannel {
     }
 
     pub fn update_to_latest(&self) -> Result<UpdateResult, BnString> {
-        let mut errors = ptr::null_mut();
-        let result = unsafe {
-            BNUpdateToLatestVersion(
-                self.name.as_ptr(),
-                &mut errors,
-                Some(cb_progress_nop),
-                ptr::null_mut(),
-            )
-        };
-        if !errors.is_null() {
-            Err(unsafe { BnString::from_raw(errors) })
-        } else {
-            Ok(result)
-        }
+        self.update_to_latest_with_progress(NoProgressCallback)
     }
 
-    pub fn update_to_latest_with_progress<F>(
+    pub fn update_to_latest_with_progress<P: ProgressCallback>(
         &self,
-        mut progress: F,
-    ) -> Result<UpdateResult, BnString>
-    where
-        F: FnMut(usize, usize) -> bool,
-    {
-        let mut errors = ptr::null_mut();
+        mut progress: P,
+    ) -> Result<UpdateResult, BnString> {
+        let mut errors = std::ptr::null_mut();
+
         let result = unsafe {
             BNUpdateToLatestVersion(
-                self.name.as_ptr(),
+                self.name.as_ptr() as *const c_char,
                 &mut errors,
-                Some(cb_progress::<F>),
-                &mut progress as *mut _ as *mut ffi::c_void,
+                Some(P::cb_progress_callback),
+                &mut progress as *mut P as *mut c_void,
             )
         };
+
         if !errors.is_null() {
             Err(unsafe { BnString::from_raw(errors) })
         } else {
@@ -119,41 +164,26 @@ impl UpdateChannel {
     }
 
     pub fn update(&self, version: &UpdateVersion) -> Result<UpdateResult, BnString> {
-        let mut errors = ptr::null_mut();
-        let result = unsafe {
-            BNUpdateToVersion(
-                self.name.as_ptr(),
-                version.version.as_ptr(),
-                &mut errors,
-                Some(cb_progress_nop),
-                ptr::null_mut(),
-            )
-        };
-        if !errors.is_null() {
-            Err(unsafe { BnString::from_raw(errors) })
-        } else {
-            Ok(result)
-        }
+        self.update_with_progress(version, NoProgressCallback)
     }
 
-    pub fn update_with_progress<F>(
+    pub fn update_with_progress<P: ProgressCallback>(
         &self,
         version: &UpdateVersion,
-        mut progress: F,
-    ) -> Result<UpdateResult, BnString>
-    where
-        F: FnMut(usize, usize) -> bool,
-    {
-        let mut errors = ptr::null_mut();
+        mut progress: P,
+    ) -> Result<UpdateResult, BnString> {
+        let mut errors = std::ptr::null_mut();
+
         let result = unsafe {
             BNUpdateToVersion(
-                self.name.as_ptr(),
-                version.version.as_ptr(),
+                self.name.as_ptr() as *const c_char,
+                version.version.as_ptr() as *const c_char,
                 &mut errors,
-                Some(cb_progress::<F>),
-                &mut progress as *mut _ as *mut ffi::c_void,
+                Some(P::cb_progress_callback),
+                &mut progress as *mut P as *mut c_void,
             )
         };
+
         if !errors.is_null() {
             Err(unsafe { BnString::from_raw(errors) })
         } else {
@@ -165,7 +195,7 @@ impl UpdateChannel {
 impl CoreArrayProvider for UpdateChannel {
     type Raw = BNUpdateChannel;
     type Context = ();
-    type Wrapped<'a> = &'a Self;
+    type Wrapped<'a> = Self;
 }
 
 unsafe impl CoreArrayProviderInner for UpdateChannel {
@@ -174,39 +204,53 @@ unsafe impl CoreArrayProviderInner for UpdateChannel {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        UpdateChannel::ref_from_raw(raw)
+        UpdateChannel::from_raw(raw)
     }
 }
 
-#[repr(C)]
 #[derive(Clone)]
 pub struct UpdateVersion {
-    pub version: BnString,
-    pub notes: BnString,
-    time: u64,
-    // NOTE don't allow the user to create his own UpdateVersion
-    _lock: core::marker::PhantomData<()>,
+    pub version: String,
+    pub notes: String,
+    pub time: SystemTime,
 }
 
 impl UpdateVersion {
-    pub(crate) unsafe fn ref_from_raw(handle: &BNUpdateVersion) -> &Self {
-        mem::transmute(handle)
+    pub(crate) fn from_raw(value: &BNUpdateVersion) -> Self {
+        Self {
+            version: raw_to_string(value.version as *mut _).unwrap(),
+            notes: raw_to_string(value.notes as *mut _).unwrap(),
+            time: UNIX_EPOCH + Duration::from_secs(value.time),
+        }
     }
 
-    pub fn time(&self) -> SystemTime {
-        UNIX_EPOCH + Duration::from_secs(self.time)
+    pub(crate) fn from_owned_raw(value: BNUpdateVersion) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
     }
 
-    pub fn set_time(&mut self, time: SystemTime) {
-        let epoch = time.duration_since(UNIX_EPOCH).unwrap();
-        self.time = epoch.as_secs();
+    pub(crate) fn into_raw(value: Self) -> BNUpdateVersion {
+        let bn_version = BnString::new(value.version);
+        let bn_notes = BnString::new(value.notes);
+        let epoch = value.time.duration_since(UNIX_EPOCH).unwrap();
+        BNUpdateVersion {
+            version: BnString::into_raw(bn_version),
+            notes: BnString::into_raw(bn_notes),
+            time: epoch.as_secs(),
+        }
+    }
+
+    pub(crate) fn free_raw(value: BNUpdateVersion) {
+        let _ = unsafe { BnString::from_raw(value.version) };
+        let _ = unsafe { BnString::from_raw(value.notes) };
     }
 }
 
 impl CoreArrayProvider for UpdateVersion {
     type Raw = BNUpdateVersion;
     type Context = ();
-    type Wrapped<'a> = &'a Self;
+    type Wrapped<'a> = Self;
 }
 
 unsafe impl CoreArrayProviderInner for UpdateVersion {
@@ -215,58 +259,6 @@ unsafe impl CoreArrayProviderInner for UpdateVersion {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        UpdateVersion::ref_from_raw(raw)
+        UpdateVersion::from_raw(raw)
     }
-}
-
-/// queries if auto updates are enabled.
-pub fn are_auto_updates_enabled() -> bool {
-    unsafe { BNAreAutoUpdatesEnabled() }
-}
-
-/// sets auto update enabled status.
-pub fn set_auto_updates_enabled(enabled: bool) {
-    unsafe { BNSetAutoUpdatesEnabled(enabled) }
-}
-
-/// returns the time stamp for the last time updates were checked.
-pub fn get_time_since_last_update_check() -> u64 {
-    unsafe { BNGetTimeSinceLastUpdateCheck() }
-}
-
-/// whether an update has been downloaded and is waiting installation
-pub fn is_update_installation_pending() -> bool {
-    unsafe { BNIsUpdateInstallationPending() }
-}
-
-/// installs any pending updates
-pub fn install_pending_update() -> Result<(), BnString> {
-    let mut errors = ptr::null_mut();
-    unsafe { BNInstallPendingUpdate(&mut errors) };
-    if !errors.is_null() {
-        Err(unsafe { BnString::from_raw(errors) })
-    } else {
-        Ok(())
-    }
-}
-
-pub fn updates_checked() {
-    unsafe { BNUpdatesChecked() }
-}
-
-unsafe extern "C" fn cb_progress_nop(
-    _ctxt: *mut ::std::os::raw::c_void,
-    _progress: usize,
-    _total: usize,
-) -> bool {
-    true
-}
-
-unsafe extern "C" fn cb_progress<F: FnMut(usize, usize) -> bool>(
-    ctxt: *mut ::std::os::raw::c_void,
-    progress: usize,
-    total: usize,
-) -> bool {
-    let ctxt: &mut F = &mut *(ctxt as *mut F);
-    ctxt(progress, total)
 }

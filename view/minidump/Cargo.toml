@@ -1,0 +1,13 @@
+[package]
+name = "minidump_bn"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+binaryninja.workspace = true
+binaryninjacore-sys.workspace = true
+log = "0.4"
+minidump = "0.23.0"

@@ -1,10 +1,10 @@
-use binaryninja::binaryview::BinaryViewExt;
+use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use criterion::{criterion_group, criterion_main, Criterion};
 use warp_ninja::function_guid;
 
 pub fn guid_benchmark(c: &mut Criterion) {
-    let session = Session::new();
+    let session = Session::new().expect("Failed to initialize session");
     let bv = session.load(env!("TEST_BIN_LIBRARY_OBJ")).unwrap();
     let functions = bv.functions();
     assert_eq!(functions.len(), 6);

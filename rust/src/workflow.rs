@@ -3,14 +3,16 @@ use std::ffi::{c_char, c_void};
 use std::ptr::NonNull;
 
 use crate::architecture::CoreArchitecture;
-use crate::basicblock::BasicBlock;
+use crate::basic_block::BasicBlock;
+use crate::binary_view::BinaryView;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
-use crate::llil::{self, FunctionForm, Mutable};
+use crate::high_level_il::HighLevelILFunction;
+use crate::low_level_il::function::{LowLevelILFunction, Mutable, NonSSA, NonSSAVariant};
+use crate::low_level_il::MutableLiftedILFunction;
+use crate::medium_level_il::MediumLevelILFunction;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
-use crate::{hlil, mlil};
-use crate::binaryview::BinaryView;
 
 #[repr(transparent)]
 /// The AnalysisContext struct is used to represent the current state of
@@ -34,78 +36,79 @@ impl AnalysisContext {
     pub fn view(&self) -> Ref<BinaryView> {
         let result = unsafe { BNAnalysisContextGetBinaryView(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BinaryView::from_raw(result) }
+        unsafe { BinaryView::ref_from_raw(result) }
     }
 
-    /// Function for the current AnalysisContext
+    /// [`Function`] for the current AnalysisContext
     pub fn function(&self) -> Ref<Function> {
         let result = unsafe { BNAnalysisContextGetFunction(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { Function::from_raw(result) }
+        unsafe { Function::ref_from_raw(result) }
     }
 
-    /// LowLevelILFunction used to represent Low Level IL
-    pub unsafe fn lifted_il_function<F: FunctionForm>(
+    /// [`LowLevelILFunction`] used to represent Low Level IL
+    pub unsafe fn lifted_il_function(
         &self,
-    ) -> Option<Ref<llil::Function<CoreArchitecture, Mutable, F>>> {
+    ) -> Option<Ref<MutableLiftedILFunction<CoreArchitecture>>> {
         let func = self.function();
         let result = unsafe { BNGetFunctionLiftedIL(func.handle) };
         let arch = self.function().arch();
         unsafe {
-            Some(llil::Function::ref_from_raw(
+            Some(LowLevelILFunction::ref_from_raw(
                 arch,
                 NonNull::new(result)?.as_ptr(),
             ))
         }
     }
 
-    pub fn set_lifted_il_function<F: FunctionForm>(
-        &self,
-        value: &llil::Function<CoreArchitecture, Mutable, F>,
-    ) {
+    pub fn set_lifted_il_function(&self, value: &MutableLiftedILFunction<CoreArchitecture>) {
         unsafe { BNSetLiftedILFunction(self.handle.as_ptr(), value.handle) }
     }
 
-    /// LowLevelILFunction used to represent Low Level IL
-    pub unsafe fn llil_function<F: FunctionForm>(
+    // TODO: This returns LiftedNonSSA because the lifting code was written before we could patch the IL
+    // TODO: At some point we need to take the lifting code and make it available to regular IL.
+    /// [`LowLevelILFunction`] used to represent Low Level IL
+    pub unsafe fn llil_function<V: NonSSAVariant>(
         &self,
-    ) -> Option<Ref<llil::Function<CoreArchitecture, Mutable, F>>> {
+    ) -> Option<Ref<LowLevelILFunction<CoreArchitecture, Mutable, NonSSA<V>>>> {
         let result = unsafe { BNAnalysisContextGetLowLevelILFunction(self.handle.as_ptr()) };
         let arch = self.function().arch();
         unsafe {
-            Some(llil::Function::ref_from_raw(
+            Some(LowLevelILFunction::ref_from_raw(
                 arch,
                 NonNull::new(result)?.as_ptr(),
             ))
         }
     }
 
-    pub fn set_llil_function<F: FunctionForm>(
+    // TODO: This returns LiftedNonSSA because the lifting code was written before we could patch the IL
+    // TODO: At some point we need to take the lifting code and make it available to regular IL.
+    pub fn set_llil_function<V: NonSSAVariant>(
         &self,
-        value: &llil::Function<CoreArchitecture, Mutable, F>,
+        value: &LowLevelILFunction<CoreArchitecture, Mutable, NonSSA<V>>,
     ) {
         unsafe { BNSetLowLevelILFunction(self.handle.as_ptr(), value.handle) }
     }
 
-    /// MediumLevelILFunction used to represent Medium Level IL
-    pub fn mlil_function(&self) -> Option<Ref<mlil::MediumLevelILFunction>> {
+    /// [`MediumLevelILFunction`] used to represent Medium Level IL
+    pub fn mlil_function(&self) -> Option<Ref<MediumLevelILFunction>> {
         let result = unsafe { BNAnalysisContextGetMediumLevelILFunction(self.handle.as_ptr()) };
         unsafe {
-            Some(mlil::MediumLevelILFunction::ref_from_raw(
+            Some(MediumLevelILFunction::ref_from_raw(
                 NonNull::new(result)?.as_ptr(),
             ))
         }
     }
 
-    pub fn set_mlil_function(&self, value: &mlil::MediumLevelILFunction) {
+    pub fn set_mlil_function(&self, value: &MediumLevelILFunction) {
         unsafe { BNSetMediumLevelILFunction(self.handle.as_ptr(), value.handle) }
     }
 
-    /// HighLevelILFunction used to represent High Level IL
-    pub fn hlil_function(&self, full_ast: bool) -> Option<Ref<hlil::HighLevelILFunction>> {
+    /// [`HighLevelILFunction`] used to represent High Level IL
+    pub fn hlil_function(&self, full_ast: bool) -> Option<Ref<HighLevelILFunction>> {
         let result = unsafe { BNAnalysisContextGetHighLevelILFunction(self.handle.as_ptr()) };
         unsafe {
-            Some(hlil::HighLevelILFunction::ref_from_raw(
+            Some(HighLevelILFunction::ref_from_raw(
                 NonNull::new(result)?.as_ptr(),
                 full_ast,
             ))
@@ -126,7 +129,7 @@ impl AnalysisContext {
     where
         I: IntoIterator<Item = BasicBlock<NativeBlock>>,
     {
-        let blocks: Vec<_> = blocks.into_iter().map(|block| block).collect();
+        let blocks: Vec<_> = blocks.into_iter().collect();
         let mut blocks_raw: Vec<*mut BNBasicBlock> =
             blocks.iter().map(|block| block.handle).collect();
         unsafe { BNSetBasicBlockList(self.handle.as_ptr(), blocks_raw.as_mut_ptr(), blocks.len()) }
@@ -192,7 +195,7 @@ impl Activity {
             ctxt: *mut c_void,
             analysis: *mut BNAnalysisContext,
         ) {
-            let ctxt: &mut F = core::mem::transmute(ctxt);
+            let ctxt = &mut *(ctxt as *mut F);
             if let Some(analysis) = NonNull::new(analysis) {
                 ctxt(&AnalysisContext::from_raw(analysis))
             }
@@ -236,22 +239,6 @@ unsafe impl RefCountable for Activity {
     }
 }
 
-pub trait IntoActivityName {
-    fn activity_name(self) -> BnString;
-}
-
-impl IntoActivityName for &Activity {
-    fn activity_name(self) -> BnString {
-        self.name()
-    }
-}
-
-impl<S: BnStrCompatible> IntoActivityName for S {
-    fn activity_name(self) -> BnString {
-        BnString::new(self)
-    }
-}
-
 // TODO: We need to hide the JSON here behind a sensible/typed API.
 #[repr(transparent)]
 pub struct Workflow {
@@ -269,7 +256,7 @@ impl Workflow {
 
     /// Create a new unregistered [Workflow] with no activities.
     ///
-    /// To get a copy of an existing registered [Workflow] use [Workflow::new_from_copy].
+    /// To get a copy of an existing registered [Workflow] use [Workflow::clone].
     pub fn new<S: BnStrCompatible>(name: S) -> Self {
         let name = name.into_bytes_with_nul();
         let result = unsafe { BNCreateWorkflow(name.as_ref().as_ptr() as *const c_char) };
@@ -280,8 +267,8 @@ impl Workflow {
     ///
     /// * `name` - the name for the new [Workflow]
     #[must_use]
-    pub fn new_from_copy<S: BnStrCompatible + Clone>(name: S) -> Workflow {
-        Self::new_from_copy_with_root(name, "")
+    pub fn clone<S: BnStrCompatible + Clone>(&self, name: S) -> Workflow {
+        self.clone_with_root(name, "")
     }
 
     /// Make a new unregistered [Workflow], copying all activities, within `root_activity`, and the execution strategy.
@@ -289,19 +276,17 @@ impl Workflow {
     /// * `name` - the name for the new [Workflow]
     /// * `root_activity` - perform the clone operation with this activity as the root
     #[must_use]
-    pub fn new_from_copy_with_root<S: BnStrCompatible + Clone, A: IntoActivityName>(
+    pub fn clone_with_root<S: BnStrCompatible, A: BnStrCompatible>(
+        &self,
         name: S,
         root_activity: A,
     ) -> Workflow {
-        let raw_name = name.clone().into_bytes_with_nul();
-        let activity = root_activity.activity_name();
-        // I can't think of a single reason as to why we should let users pass a workflow handle into this.
-        // To prevent warning being emitted we default to the name.
-        let placeholder_workflow = Workflow::instance(name);
+        let raw_name = name.into_bytes_with_nul();
+        let activity = root_activity.into_bytes_with_nul();
         unsafe {
             Self::from_raw(
                 NonNull::new(BNWorkflowClone(
-                    placeholder_workflow.handle.as_ptr(),
+                    self.handle.as_ptr(),
                     raw_name.as_ref().as_ptr() as *const c_char,
                     activity.as_ref().as_ptr() as *const c_char,
                 ))
@@ -341,7 +326,12 @@ impl Workflow {
     /// * `configuration` - a JSON representation of the workflow configuration
     pub fn register_with_config<S: BnStrCompatible>(&self, config: S) -> Result<(), ()> {
         let config = config.into_bytes_with_nul();
-        if unsafe { BNRegisterWorkflow(self.handle.as_ptr(), config.as_ref().as_ptr() as *const c_char) } {
+        if unsafe {
+            BNRegisterWorkflow(
+                self.handle.as_ptr(),
+                config.as_ref().as_ptr() as *const c_char,
+            )
+        } {
             Ok(())
         } else {
             Err(())
@@ -366,14 +356,16 @@ impl Workflow {
     ) -> Result<Activity, ()>
     where
         I: IntoIterator,
-        I::Item: IntoActivityName,
+        I::Item: BnStrCompatible,
     {
-        let subactivities_raw: Vec<BnString> = subactivities
+        let subactivities_raw: Vec<_> = subactivities
             .into_iter()
-            .map(|x| x.activity_name())
+            .map(|x| x.into_bytes_with_nul())
             .collect();
-        let mut subactivities_ptr: Vec<*const _> =
-            subactivities_raw.iter().map(|x| x.as_ptr()).collect();
+        let mut subactivities_ptr: Vec<*const _> = subactivities_raw
+            .iter()
+            .map(|x| x.as_ref().as_ptr() as *const c_char)
+            .collect();
         let result = unsafe {
             BNWorkflowRegisterActivity(
                 self.handle.as_ptr(),
@@ -387,17 +379,31 @@ impl Workflow {
     }
 
     /// Determine if an Activity exists in this [Workflow].
-    pub fn contains<A: IntoActivityName>(&self, activity: A) -> bool {
-        unsafe { BNWorkflowContains(self.handle.as_ptr(), activity.activity_name().as_ptr()) }
+    pub fn contains<A: BnStrCompatible>(&self, activity: A) -> bool {
+        unsafe {
+            BNWorkflowContains(
+                self.handle.as_ptr(),
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+            )
+        }
+    }
+
+    /// Retrieve the configuration as an adjacency list in JSON for the [Workflow].
+    pub fn configuration(&self) -> BnString {
+        self.configuration_with_activity("")
     }
 
     /// Retrieve the configuration as an adjacency list in JSON for the
-    /// [Workflow], or if specified just for the given `activity`.
+    /// [Workflow], just for the given `activity`.
     ///
-    /// `activity` - if specified, return the configuration for the `activity`
-    pub fn configuration<A: IntoActivityName>(&self, activity: A) -> BnString {
-        let result =
-            unsafe { BNWorkflowGetConfiguration(self.handle.as_ptr(), activity.activity_name().as_ptr()) };
+    /// `activity` - return the configuration for the `activity`
+    pub fn configuration_with_activity<A: BnStrCompatible>(&self, activity: A) -> BnString {
+        let result = unsafe {
+            BNWorkflowGetConfiguration(
+                self.handle.as_ptr(),
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+            )
+        };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
@@ -415,7 +421,10 @@ impl Workflow {
     pub fn activity<A: BnStrCompatible>(&self, name: A) -> Option<Activity> {
         let name = name.into_bytes_with_nul();
         let result = unsafe {
-            BNWorkflowGetActivity(self.handle.as_ptr(), name.as_ref().as_ptr() as *const c_char)
+            BNWorkflowGetActivity(
+                self.handle.as_ptr(),
+                name.as_ref().as_ptr() as *const c_char,
+            )
         };
         NonNull::new(result).map(|a| unsafe { Activity::from_raw(a) })
     }
@@ -424,10 +433,14 @@ impl Workflow {
     /// specified just for the given `activity`.
     ///
     /// * `activity` - if specified, return the roots for the `activity`
-    pub fn activity_roots<A: IntoActivityName>(&self, activity: A) -> Array<BnString> {
+    pub fn activity_roots<A: BnStrCompatible>(&self, activity: A) -> Array<BnString> {
         let mut count = 0;
         let result = unsafe {
-            BNWorkflowGetActivityRoots(self.handle.as_ptr(), activity.activity_name().as_ptr(), &mut count)
+            BNWorkflowGetActivityRoots(
+                self.handle.as_ptr(),
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                &mut count,
+            )
         };
         assert!(!result.is_null());
         unsafe { Array::new(result as *mut *mut c_char, count, ()) }
@@ -437,7 +450,7 @@ impl Workflow {
     ///
     /// * `activity` - if specified, return the direct children and optionally the descendants of the `activity` (includes `activity`)
     /// * `immediate` - whether to include only direct children of `activity` or all descendants
-    pub fn subactivities<A: IntoActivityName>(
+    pub fn subactivities<A: BnStrCompatible>(
         &self,
         activity: A,
         immediate: bool,
@@ -446,7 +459,7 @@ impl Workflow {
         let result = unsafe {
             BNWorkflowGetSubactivities(
                 self.handle.as_ptr(),
-                activity.activity_name().as_ptr(),
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
                 immediate,
                 &mut count,
             )
@@ -461,20 +474,23 @@ impl Workflow {
     /// * `activities` - the list of Activities to assign
     pub fn assign_subactivities<A, I>(&self, activity: A, activities: I) -> bool
     where
-        A: IntoActivityName,
+        A: BnStrCompatible,
         I: IntoIterator,
-        I::Item: IntoActivityName,
+        I::Item: BnStrCompatible,
     {
-        let mut input_list: Vec<BnString> =
-            activities.into_iter().map(|a| a.activity_name()).collect();
-        // SAFETY: this works because BnString and *mut ffi::c_char are
-        // transmutable
-        let input_list_ptr = input_list.as_mut_ptr() as *mut *const c_char;
+        let input_list: Vec<_> = activities
+            .into_iter()
+            .map(|a| a.into_bytes_with_nul())
+            .collect();
+        let mut input_list_ptr: Vec<*const _> = input_list
+            .iter()
+            .map(|x| x.as_ref().as_ptr() as *const c_char)
+            .collect();
         unsafe {
             BNWorkflowAssignSubactivities(
                 self.handle.as_ptr(),
-                activity.activity_name().as_ptr(),
-                input_list_ptr,
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                input_list_ptr.as_mut_ptr(),
                 input_list.len(),
             )
         }
@@ -491,35 +507,43 @@ impl Workflow {
     /// * `activities` - the list of Activities to insert
     pub fn insert<A, I>(&self, activity: A, activities: I) -> bool
     where
-        A: IntoActivityName,
+        A: BnStrCompatible,
         I: IntoIterator,
-        I::Item: IntoActivityName,
+        I::Item: BnStrCompatible,
     {
-        let mut input_list: Vec<BnString> =
-            activities.into_iter().map(|a| a.activity_name()).collect();
-        // SAFETY: this works because BnString and *mut ffi::c_char are
-        // transmutable
-        let input_list_ptr = input_list.as_mut_ptr() as *mut *const c_char;
+        let input_list: Vec<_> = activities
+            .into_iter()
+            .map(|a| a.into_bytes_with_nul())
+            .collect();
+        let mut input_list_ptr: Vec<*const _> = input_list
+            .iter()
+            .map(|x| x.as_ref().as_ptr() as *const c_char)
+            .collect();
         unsafe {
             BNWorkflowInsert(
                 self.handle.as_ptr(),
-                activity.activity_name().as_ptr(),
-                input_list_ptr,
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                input_list_ptr.as_mut_ptr(),
                 input_list.len(),
             )
         }
     }
 
     /// Remove the specified `activity`
-    pub fn remove<A: IntoActivityName>(&self, activity: A) -> bool {
-        unsafe { BNWorkflowRemove(self.handle.as_ptr(), activity.activity_name().as_ptr()) }
+    pub fn remove<A: BnStrCompatible>(&self, activity: A) -> bool {
+        unsafe {
+            BNWorkflowRemove(
+                self.handle.as_ptr(),
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+            )
+        }
     }
 
     /// Replace the specified `activity`.
     ///
     /// * `activity` - the Activity to replace
     /// * `new_activity` - the replacement Activity
-    pub fn replace<A: IntoActivityName, N: IntoActivityName>(
+    pub fn replace<A: BnStrCompatible, N: BnStrCompatible>(
         &self,
         activity: A,
         new_activity: N,
@@ -527,8 +551,8 @@ impl Workflow {
         unsafe {
             BNWorkflowReplace(
                 self.handle.as_ptr(),
-                activity.activity_name().as_ptr(),
-                new_activity.activity_name().as_ptr(),
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                new_activity.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
             )
         }
     }
@@ -537,15 +561,20 @@ impl Workflow {
     ///
     /// * `activity` - if specified, generate the Flowgraph using `activity` as the root
     /// * `sequential` - whether to generate a **Composite** or **Sequential** style graph
-    pub fn graph<A: IntoActivityName>(
+    pub fn graph<A: BnStrCompatible>(
         &self,
         activity: A,
         sequential: Option<bool>,
     ) -> Option<FlowGraph> {
         let sequential = sequential.unwrap_or(false);
-        let activity_name = activity.activity_name();
-        let graph =
-            unsafe { BNWorkflowGetGraph(self.handle.as_ptr(), activity_name.as_ptr(), sequential) };
+        let activity_name = activity.into_bytes_with_nul();
+        let graph = unsafe {
+            BNWorkflowGetGraph(
+                self.handle.as_ptr(),
+                activity_name.as_ref().as_ptr() as *const c_char,
+                sequential,
+            )
+        };
         if graph.is_null() {
             return None;
         }
@@ -554,17 +583,17 @@ impl Workflow {
 
     /// Not yet implemented.
     pub fn show_metrics(&self) {
-        unsafe { BNWorkflowShowReport(self.handle.as_ptr(), b"metrics\x00".as_ptr() as *const c_char) }
+        unsafe { BNWorkflowShowReport(self.handle.as_ptr(), c"metrics".as_ptr()) }
     }
 
     /// Show the Workflow topology in the UI.
     pub fn show_topology(&self) {
-        unsafe { BNWorkflowShowReport(self.handle.as_ptr(), b"topology\x00".as_ptr() as *const c_char) }
+        unsafe { BNWorkflowShowReport(self.handle.as_ptr(), c"topology".as_ptr()) }
     }
 
     /// Not yet implemented.
     pub fn show_trace(&self) {
-        unsafe { BNWorkflowShowReport(self.handle.as_ptr(), b"trace\x00".as_ptr() as *const c_char) }
+        unsafe { BNWorkflowShowReport(self.handle.as_ptr(), c"trace".as_ptr()) }
     }
 }
 

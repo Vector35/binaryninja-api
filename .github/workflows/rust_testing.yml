@@ -1,0 +1,47 @@
+name: Rust Testing
+
+# This workflow will have access to two secrets, `BN_SERIAL` and `BN_LICENSE`, they are exposed only for the test job
+# and only if workflow has been approved to run. If there is no approval they workflow won't run.
+# What security issues arise from this? If a person makes a PR that leaks the `BN_SERIAL` or `BN_LICENSE` and a maintainer
+# approves it than the those secrets would leak.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'rust/**'
+  # Pull request target allows us to use the bn license and serial for PR's
+  # to insure we do not leak the license the workflow is required to be approved manually.
+  pull_request_target:
+    paths:
+      - 'rust/**'
+
+jobs:
+  # Check that code compiles and tests pass
+  test:
+    # Using the testing environment gives us the needed secrets, it also requires a maintainer to approve it to run.
+    environment: testing
+    name: cargo test
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+        # We need to add wayland as it's used for file picker in the WARP integration
+      - name: Install system dependencies
+        run: sudo apt-get install libwayland-dev
+        # Pull in Binary Ninja
+      - name: Setup Binary Ninja
+        id: setup-binja
+        uses: Vector35/setup-binary-ninja@v1-beta
+        with:
+          license: '${{ secrets.BN_SERIAL }}'
+          python-support: 'false'
+          dev-branch: 'true'
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Test
+        # For now, we run the tests single threaded, there are some data races in core around platform types
+        run: cargo test --all-features -- --test-threads=1
+        env:
+          BINARYNINJADIR: ${{ steps.setup-binja.outputs.install-path }}
+          BN_LICENSE: ${{ secrets.BN_LICENSE }}

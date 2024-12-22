@@ -13,170 +13,295 @@
 // limitations under the License.
 
 use crate::{
-    binaryview,
-    rc,
-    string::{BnStrCompatible, IntoJson},
+    binary_view, bundled_plugin_directory, enterprise, is_license_validated, is_main_thread,
+    license_path, set_bundled_plugin_directory, set_license, string::IntoJson,
 };
+use std::io;
+use std::path::{Path, PathBuf};
+use thiserror::Error;
 
-use std::env;
-use std::path::PathBuf;
+use crate::enterprise::release_license;
+use crate::main_thread::{MainThreadAction, MainThreadHandler};
+use crate::rc::Ref;
+use binaryninjacore_sys::{BNInitPlugins, BNInitRepoPlugins};
+use std::sync::mpsc::Sender;
+use std::sync::Mutex;
+use std::thread::JoinHandle;
 use std::time::Duration;
 
-#[cfg(not(target_os = "windows"))]
-fn binja_path() -> PathBuf {
-    use std::ffi::{CStr, OsStr};
-    use std::mem;
-    use std::os::raw;
-    use std::os::unix::ffi::OsStrExt;
+static MAIN_THREAD_HANDLE: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 
-    #[repr(C)]
-    struct DlInfo {
-        dli_fname: *const raw::c_char,
-        dli_fbase: *mut raw::c_void,
-        dli_sname: *const raw::c_char,
-        dli_saddr: *mut raw::c_void,
-    }
-
-    if let Ok(p) = env::var("BINJA_DIR") {
-        return PathBuf::from(p);
-    }
-
-    extern "C" {
-        fn dladdr(addr: *mut raw::c_void, info: *mut DlInfo) -> raw::c_int;
-    }
-
-    unsafe {
-        let mut info: DlInfo = mem::zeroed();
-
-        if dladdr(BNSetBundledPluginDirectory as *mut _, &mut info) == 0 {
-            panic!("Failed to find libbinaryninjacore path!");
-        }
-
-        if info.dli_fname.is_null() {
-            panic!("Failed to find libbinaryninjacore path!");
-        }
-
-        let path = CStr::from_ptr(info.dli_fname);
-        let path = OsStr::from_bytes(path.to_bytes());
-        let mut path = PathBuf::from(path);
-        while path.is_symlink() {
-            path = path
-                .read_link()
-                .expect("Failed to find libbinaryninjacore path!");
-        }
-
-        path.pop();
-        path
-    }
+#[derive(Error, Debug)]
+pub enum InitializationError {
+    #[error("main thread could not be started: {0}")]
+    MainThreadNotStarted(#[from] io::Error),
+    #[error("enterprise license checkout failed: {0:?}")]
+    FailedEnterpriseCheckout(#[from] enterprise::EnterpriseCheckoutError),
+    #[error("invalid license")]
+    InvalidLicense,
+    #[error("no license could located, please see `binaryninja::set_license` for details")]
+    NoLicenseFound,
 }
-
-#[cfg(target_os = "windows")]
-fn binja_path() -> PathBuf {
-    PathBuf::from(env::var("PROGRAMFILES").unwrap()).join("Vector35\\BinaryNinja\\")
-}
-
-use binaryninjacore_sys::{BNInitPlugins, BNInitRepoPlugins, BNSetBundledPluginDirectory};
 
 /// Loads plugins, core architecture, platform, etc.
 ///
 /// ⚠️ Important! Must be called at the beginning of scripts.  Plugins do not need to call this. ⚠️
 ///
-/// You can instead call this through [`Session`] or [`script_helper`]
-pub fn init() {
-    match crate::product().as_str() {
-        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => {
-            crate::enterprise::checkout_license(Duration::from_secs(900)).expect("Failed to checkout license");
-        },
-        _ => {}
-    }
-    
-    unsafe {
-        let path = binja_path().join("plugins").into_os_string();
-        let path = path.into_string().unwrap();
-
-        BNSetBundledPluginDirectory(path.as_str().into_bytes_with_nul().as_ptr() as *mut _);
-        BNInitPlugins(true);
-        BNInitRepoPlugins();
-    }
+/// You can instead call this through [`Session`].
+///
+/// If you need to customize initialization, use [`init_with_opts`] instead.
+pub fn init() -> Result<(), InitializationError> {
+    let options = InitializationOptions::default();
+    init_with_opts(options)
 }
 
-/// Unloads plugins, stops all worker threads, and closes open logs
+/// Unloads plugins, stops all worker threads, and closes open logs.
+///
+/// If the core was initialized using an enterprise license, that will also be freed.
 ///
 /// ⚠️ Important! Must be called at the end of scripts. ⚠️
 pub fn shutdown() {
     match crate::product().as_str() {
-        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => {
-            crate::enterprise::release_license()
-        },
+        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => enterprise::release_license(),
         _ => {}
     }
-    
     unsafe { binaryninjacore_sys::BNShutdown() };
+    release_license();
+    // TODO: We might want to drop the main thread here, however that requires getting the handler ctx to drop the sender.
 }
 
 pub fn is_shutdown_requested() -> bool {
     unsafe { binaryninjacore_sys::BNIsShutdownRequested() }
 }
 
-/// Prelued-postlued helper function (calls [`init`] and [`shutdown`] for you)
-/// ```no_run
-/// # use binaryninja::binaryview::BinaryViewExt;
-/// binaryninja::headless::script_helper(|| {
-///     let cat = binaryninja::load("/bin/cat").expect("Couldn't open `/bin/cat`");
-///     for function in cat.functions().iter() {
-///         println!("  `{}`", function.symbol().full_name());
-///     }
-/// });
-/// ```
-pub fn script_helper(func: fn()) {
-    init();
-    func();
-    shutdown();
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct InitializationOptions {
+    /// A license to override with, you can use this to make sure you initialize with a specific license.
+    pub license: Option<String>,
+    /// If you need to make sure that you do not check out a license set this to false.
+    ///
+    /// This is really only useful if you have a headless license but are using an enterprise enabled core.
+    pub checkout_license: bool,
+    /// Whether to register the default main thread handler.
+    ///
+    /// Set this to false if you have your own main thread handler.
+    pub register_main_thread_handler: bool,
+    /// How long you want to check out for.
+    pub floating_license_duration: Duration,
+    /// The bundled plugin directory to use.
+    pub bundled_plugin_directory: PathBuf,
+}
+
+impl InitializationOptions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// A license to override with, you can use this to make sure you initialize with a specific license.
+    ///
+    /// This takes the form of a JSON array. The string should be formed like:
+    /// ```json
+    /// [{ /* json object with license data */ }]
+    /// ```
+    pub fn with_license(mut self, license: impl Into<String>) -> Self {
+        self.license = Some(license.into());
+        self
+    }
+
+    /// If you need to make sure that you do not check out a license set this to false.
+    ///
+    /// This is really only useful if you have a headless license but are using an enterprise enabled core.
+    pub fn with_checkout_license(mut self, should_checkout: bool) -> Self {
+        self.checkout_license = should_checkout;
+        self
+    }
+
+    /// Whether to register the default main thread handler.
+    ///
+    /// Set this to false if you have your own main thread handler.
+    pub fn with_main_thread_handler(mut self, should_register: bool) -> Self {
+        self.register_main_thread_handler = should_register;
+        self
+    }
+
+    /// How long you want to check out for, only used if you are using a floating license.
+    pub fn with_floating_license_duration(mut self, duration: Duration) -> Self {
+        self.floating_license_duration = duration;
+        self
+    }
+}
+
+impl Default for InitializationOptions {
+    fn default() -> Self {
+        Self {
+            license: None,
+            checkout_license: true,
+            register_main_thread_handler: true,
+            floating_license_duration: Duration::from_secs(900),
+            bundled_plugin_directory: bundled_plugin_directory()
+                .expect("Failed to get bundled plugin directory"),
+        }
+    }
+}
+
+/// This initializes the core with the given [`InitializationOptions`].
+pub fn init_with_opts(options: InitializationOptions) -> Result<(), InitializationError> {
+    // If we are the main thread that means there is no main thread, we should register a main thread handler.
+    if options.register_main_thread_handler
+        && is_main_thread()
+        && MAIN_THREAD_HANDLE.lock().unwrap().is_none()
+    {
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let main_thread = HeadlessMainThreadSender::new(sender);
+
+        // This thread will act as our main thread.
+        let main_thread_handle = std::thread::Builder::new()
+            .name("HeadlessMainThread".to_string())
+            .spawn(move || {
+                // We must register the main thread within said thread.
+                main_thread.register();
+                while let Ok(action) = receiver.recv() {
+                    action.execute();
+                }
+            })?;
+
+        // Set the static MAIN_THREAD_HANDLER so that we can close the thread on shutdown.
+        *MAIN_THREAD_HANDLE.lock().unwrap() = Some(main_thread_handle);
+    }
+
+    match crate::product().as_str() {
+        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => {
+            if options.checkout_license {
+                // We are allowed to check out a license, so do it!
+                enterprise::checkout_license(options.floating_license_duration)?;
+            }
+        }
+        _ => {}
+    }
+
+    if let Some(license) = options.license {
+        // We were given a license override, use it!
+        set_license(Some(license));
+    }
+
+    set_bundled_plugin_directory(options.bundled_plugin_directory);
+
+    unsafe {
+        BNInitPlugins(true);
+        BNInitRepoPlugins();
+    }
+
+    if !is_license_validated() {
+        // Unfortunately you must have a valid license to use Binary Ninja.
+        Err(InitializationError::InvalidLicense)
+    } else {
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct HeadlessMainThreadSender {
+    sender: Sender<Ref<MainThreadAction>>,
+}
+
+impl HeadlessMainThreadSender {
+    pub fn new(sender: Sender<Ref<MainThreadAction>>) -> Self {
+        Self { sender }
+    }
+}
+
+impl MainThreadHandler for HeadlessMainThreadSender {
+    fn add_action(&self, action: Ref<MainThreadAction>) {
+        self.sender
+            .send(action)
+            .expect("Failed to send action to main thread");
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub enum LicenseLocation {
+    /// The license used when initializing will be the environment variable `BN_LICENSE`.
+    EnvironmentVariable,
+    /// The license used when initializing will be the file in the Binary Ninja user directory.
+    File,
+}
+
+/// Attempts to identify the license location type, this follows the same order as core initialization.
+///
+/// This is useful if you want to know whether the core will use your license. If this returns `None`
+/// you should look setting the `BN_LICENSE` environment variable, or calling [`set_license`].
+pub fn license_location() -> Option<LicenseLocation> {
+    match std::env::var("BN_LICENSE") {
+        Ok(_) => Some(LicenseLocation::EnvironmentVariable),
+        Err(_) => {
+            // Check the license_path to see if a file is there.
+            if license_path().exists() {
+                Some(LicenseLocation::File)
+            } else {
+                None
+            }
+        }
+    }
 }
 
 /// Wrapper for [`init`] and [`shutdown`]. Instantiating this at the top of your script will initialize everything correctly and then clean itself up at exit as well.
 pub struct Session {}
 
 impl Session {
-    pub fn new() -> Self {
-        init();
-        Self {}
+    /// Before calling new you must make sure that the license is retrievable, otherwise the core won't be able to initialize.
+    ///
+    /// If you cannot otherwise provide a license via `BN_LICENSE_FILE` environment variable or the Binary Ninja user directory
+    /// you can call [`Session::new_with_opts`] instead of this function.
+    pub fn new() -> Result<Self, InitializationError> {
+        if license_location().is_some() {
+            // We were able to locate a license, continue with initialization.
+            init()?;
+            Ok(Self {})
+        } else {
+            // There was no license that could be automatically retrieved, you must call [Self::new_with_license].
+            Err(InitializationError::NoLicenseFound)
+        }
+    }
+
+    /// Initialize with options, the same rules apply as [`Session::new`], see [`InitializationOptions::default`] for the regular options passed.
+    ///
+    /// This differs from [`Session::new`] in that it does not check to see if there is a license that the core
+    /// can discover by itself, therefor it is expected that you know where your license is when calling this directly.
+    pub fn new_with_opts(options: InitializationOptions) -> Result<Self, InitializationError> {
+        init_with_opts(options)?;
+        Ok(Self {})
     }
 
     /// ```no_run
-    /// let headless_session = binaryninja::headless::Session::new();
+    /// let headless_session = binaryninja::headless::Session::new().unwrap();
     ///
-    /// let bv = headless_session.load("/bin/cat").expect("Couldn't open `/bin/cat`");
+    /// let bv = headless_session
+    ///     .load("/bin/cat")
+    ///     .expect("Couldn't open `/bin/cat`");
     /// ```
-    pub fn load(&self, filename: &str) -> Option<rc::Ref<binaryview::BinaryView>> {
-        crate::load(filename)
+    pub fn load(&self, file_path: impl AsRef<Path>) -> Option<Ref<binary_view::BinaryView>> {
+        crate::load(file_path)
     }
 
     /// ```no_run
     /// use binaryninja::{metadata::Metadata, rc::Ref};
     /// use std::collections::HashMap;
     ///
-    /// let settings: Ref<Metadata> = HashMap::from([
-    ///     ("analysis.linearSweep.autorun", false.into()),
-    /// ]).into();
-    /// let headless_session = binaryninja::headless::Session::new();
+    /// let settings: Ref<Metadata> =
+    ///     HashMap::from([("analysis.linearSweep.autorun", false.into())]).into();
+    /// let headless_session = binaryninja::headless::Session::new().unwrap();
     ///
-    /// let bv = headless_session.load_with_options("/bin/cat", true, Some(settings))
+    /// let bv = headless_session
+    ///     .load_with_options("/bin/cat", true, Some(settings))
     ///     .expect("Couldn't open `/bin/cat`");
     /// ```
     pub fn load_with_options<O: IntoJson>(
         &self,
-        filename: &str,
+        file_path: impl AsRef<Path>,
         update_analysis_and_wait: bool,
         options: Option<O>,
-    ) -> Option<rc::Ref<binaryview::BinaryView>> {
-        crate::load_with_options(filename, update_analysis_and_wait, options)
-    }
-}
-
-impl Default for Session {
-    fn default() -> Self {
-        Self::new()
+    ) -> Option<Ref<binary_view::BinaryView>> {
+        crate::load_with_options(file_path, update_analysis_and_wait, options)
     }
 }
 

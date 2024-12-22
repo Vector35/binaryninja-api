@@ -119,12 +119,12 @@ pub struct SymbolBuilder {
 }
 
 impl SymbolBuilder {
-    pub fn new(ty: SymbolType, raw_name: &str, addr: u64) -> Self {
+    pub fn new<T: Into<String>>(ty: SymbolType, raw_name: T, addr: u64) -> Self {
         Self {
             ty,
             binding: Binding::None,
             addr,
-            raw_name: raw_name.to_owned(),
+            raw_name: raw_name.into(),
             short_name: None,
             full_name: None,
             ordinal: 0,
@@ -136,13 +136,13 @@ impl SymbolBuilder {
         self
     }
 
-    pub fn short_name(mut self, short_name: &str) -> Self {
-        self.short_name = Some(short_name.to_owned());
+    pub fn short_name<T: Into<String>>(mut self, short_name: T) -> Self {
+        self.short_name = Some(short_name.into());
         self
     }
 
-    pub fn full_name(mut self, full_name: &str) -> Self {
-        self.full_name = Some(full_name.to_owned());
+    pub fn full_name<T: Into<String>>(mut self, full_name: T) -> Self {
+        self.full_name = Some(full_name.into());
         self
     }
 
@@ -233,7 +233,10 @@ impl Symbol {
     /// ```no_run
     /// # use binaryninja::symbol::Symbol;
     /// # use binaryninja::symbol::SymbolType;
-    /// Symbol::builder(SymbolType::Data, "hello", 0x1337).short_name("hello").full_name("hello").create();
+    /// Symbol::builder(SymbolType::Data, "hello", 0x1337)
+    ///     .short_name("hello")
+    ///     .full_name("hello")
+    ///     .create();
     /// ```
     pub fn builder(ty: SymbolType, raw_name: &str, addr: u64) -> SymbolBuilder {
         SymbolBuilder::new(ty, raw_name, addr)
@@ -267,7 +270,7 @@ impl Symbol {
         unsafe { BNIsSymbolAutoDefined(self.handle) }
     }
 
-    /// Wether this symbol has external linkage
+    /// Whether this symbol has external linkage
     pub fn external(&self) -> bool {
         self.binding() == Binding::Weak || self.binding() == Binding::Global
     }
@@ -326,6 +329,7 @@ unsafe impl CoreArrayProviderInner for Symbol {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeSymbolList(raw, count);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Symbol::from_raw(*raw), context)
     }

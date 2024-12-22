@@ -1,0 +1,14 @@
+[package]
+name = "dwarf_export"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+binaryninja.workspace = true
+binaryninjacore-sys.workspace = true
+gimli = "^0.31"
+log = "0.4"
+object = { version = "0.32.1", features = ["write"] }

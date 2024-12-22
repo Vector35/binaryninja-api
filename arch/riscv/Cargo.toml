@@ -5,7 +5,8 @@ authors = ["Ryan Snyder <ryan.snyder.or@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-binaryninja = { path = "../../rust" }
+binaryninja.workspace = true
+binaryninjacore-sys.workspace = true
 riscv-dis = { path = "disasm" }
 log = "0.4"
 rayon = { version = "1.0", optional = true }
@@ -16,8 +17,3 @@ liftcheck = ["rayon", "binaryninja/rayon"]
 
 [lib]
 crate-type = ["cdylib"]
-
-[profile.release]
-panic = "abort"
-lto = true
-debug = 1

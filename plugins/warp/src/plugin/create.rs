@@ -1,7 +1,7 @@
 use crate::cache::{cached_function, cached_type_references};
 use crate::matcher::invalidate_function_matcher_cache;
 use crate::user_signature_dir;
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
 use binaryninja::function::Function;
 use binaryninja::rc::Guard;
@@ -30,11 +30,10 @@ impl Command for CreateSignatureFile {
         thread::spawn(move || {
             let total_functions = view.functions().len();
             let done_functions = AtomicUsize::default();
-            let background_task = binaryninja::backgroundtask::BackgroundTask::new(
+            let background_task = binaryninja::background_task::BackgroundTask::new(
                 format!("Generating signatures... ({}/{})", 0, total_functions),
                 true,
-            )
-            .unwrap();
+            );
 
             let start = Instant::now();
 

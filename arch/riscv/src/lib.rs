@@ -1,3 +1,4 @@
+#![allow(clippy::unusual_byte_groupings)]
 // Option -> Result
 // rework operands/instruction text
 // helper func for reading/writing to registers
@@ -13,24 +14,19 @@ use binaryninja::{
         LlvmServicesRelocMode, Register as Reg, RegisterInfo, UnusedFlag, UnusedRegisterStack,
         UnusedRegisterStackInfo,
     },
-    binaryview::{BinaryView, BinaryViewExt},
-    callingconvention::{register_calling_convention, CallingConventionBase, ConventionBuilder},
-    custombinaryview::{BinaryViewType, BinaryViewTypeExt},
-    disassembly::{InstructionTextToken, InstructionTextTokenContents},
+    binary_view::{BinaryView, BinaryViewExt},
+    calling_convention::{register_calling_convention, CallingConvention, ConventionBuilder},
+    custom_binary_view::{BinaryViewType, BinaryViewTypeExt},
+    disassembly::{InstructionTextToken, InstructionTextTokenKind},
     function::Function,
-    functionrecognizer::FunctionRecognizer,
-    llil,
-    llil::{
-        ExprInfo, InstrInfo, Label, Liftable, LiftableWithSize, LiftedNonSSA, Lifter, Mutable,
-        NonSSA,
-    },
+    function_recognizer::FunctionRecognizer,
     rc::Ref,
     relocation::{
         CoreRelocationHandler, CustomRelocationHandlerHandle, RelocationHandler, RelocationInfo,
         RelocationType,
     },
     symbol::{Symbol, SymbolType},
-    types::{max_confidence, min_confidence, Conf, NameAndType, Type},
+    types::{NameAndType, Type},
 };
 use log::LevelFilter;
 use std::borrow::Cow;
@@ -38,7 +34,18 @@ use std::fmt;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
+use binaryninja::architecture::{BranchKind, IntrinsicId, RegisterId};
+use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use binaryninja::logger::Logger;
+use binaryninja::low_level_il::expression::{LowLevelILExpressionKind, ValueExpr};
+use binaryninja::low_level_il::instruction::LowLevelILInstructionKind;
+use binaryninja::low_level_il::lifting::{
+    LiftableLowLevelIL, LiftableLowLevelILWithSize, LowLevelILLabel,
+};
+use binaryninja::low_level_il::{
+    expression::ExpressionHandler, instruction::InstructionHandler, LowLevelILRegister,
+    MutableLiftedILExpr, MutableLiftedILFunction, RegularLowLevelILFunction,
+};
 use riscv_dis::{
     FloatReg, FloatRegType, Instr, IntRegType, Op, RegFile, Register as RiscVRegister,
     RiscVDisassembler, RoundMode,
@@ -82,18 +89,18 @@ enum Intrinsic {
 
 #[derive(Copy, Clone)]
 struct Register<D: 'static + RiscVDisassembler> {
-    id: u32,
+    id: RegisterId,
     _dis: PhantomData<D>,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 struct RiscVIntrinsic<D: 'static + RiscVDisassembler> {
     id: Intrinsic,
     _dis: PhantomData<D>,
 }
 
 impl<D: 'static + RiscVDisassembler> Register<D> {
-    fn new(id: u32) -> Self {
+    fn new(id: RegisterId) -> Self {
         Self {
             id,
             _dis: PhantomData,
@@ -103,10 +110,10 @@ impl<D: 'static + RiscVDisassembler> Register<D> {
     fn reg_type(&self) -> RegType {
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
 
-        if self.id < int_reg_count {
-            RegType::Integer(self.id)
+        if self.id.0 < int_reg_count {
+            RegType::Integer(self.id.0)
         } else {
-            RegType::Float(self.id - int_reg_count)
+            RegType::Float(self.id.0 - int_reg_count)
         }
     }
 }
@@ -114,7 +121,7 @@ impl<D: 'static + RiscVDisassembler> Register<D> {
 impl<D: 'static + RiscVDisassembler> From<riscv_dis::IntReg<D>> for Register<D> {
     fn from(reg: riscv_dis::IntReg<D>) -> Self {
         Self {
-            id: reg.id(),
+            id: RegisterId(reg.id()),
             _dis: PhantomData,
         }
     }
@@ -125,15 +132,15 @@ impl<D: 'static + RiscVDisassembler> From<FloatReg<D>> for Register<D> {
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
 
         Self {
-            id: reg.id() + int_reg_count,
+            id: RegisterId(reg.id() + int_reg_count),
             _dis: PhantomData,
         }
     }
 }
 
-impl<D: 'static + RiscVDisassembler> Into<llil::Register<Register<D>>> for Register<D> {
-    fn into(self) -> llil::Register<Register<D>> {
-        llil::Register::ArchReg(self)
+impl<D: 'static + RiscVDisassembler> From<Register<D>> for LowLevelILRegister<Register<D>> {
+    fn from(reg: Register<D>) -> Self {
+        LowLevelILRegister::ArchReg(reg)
     }
 }
 
@@ -192,18 +199,20 @@ impl<D: 'static + RiscVDisassembler> architecture::Register for Register<D> {
         *self
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> RegisterId {
         self.id
     }
 }
 
-impl<'a, D: 'static + RiscVDisassembler + Send + Sync> Liftable<'a, RiscVArch<D>> for Register<D> {
-    type Result = llil::ValueExpr;
+impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableLowLevelIL<'a, RiscVArch<D>>
+    for Register<D>
+{
+    type Result = ValueExpr;
 
     fn lift(
-        il: &'a llil::Lifter<RiscVArch<D>>,
+        il: &'a MutableLiftedILFunction<RiscVArch<D>>,
         reg: Self,
-    ) -> llil::Expression<'a, RiscVArch<D>, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
+    ) -> MutableLiftedILExpr<'a, RiscVArch<D>, Self::Result> {
         match reg.reg_type() {
             RegType::Integer(0) => il.const_int(reg.size(), 0),
             RegType::Integer(_) => il.reg(reg.size(), reg),
@@ -212,14 +221,14 @@ impl<'a, D: 'static + RiscVDisassembler + Send + Sync> Liftable<'a, RiscVArch<D>
     }
 }
 
-impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableWithSize<'a, RiscVArch<D>>
+impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableLowLevelILWithSize<'a, RiscVArch<D>>
     for Register<D>
 {
     fn lift_with_size(
-        il: &'a llil::Lifter<RiscVArch<D>>,
+        il: &'a MutableLiftedILFunction<RiscVArch<D>>,
         reg: Self,
         size: usize,
-    ) -> llil::Expression<'a, RiscVArch<D>, Mutable, NonSSA<LiftedNonSSA>, llil::ValueExpr> {
+    ) -> MutableLiftedILExpr<'a, RiscVArch<D>, ValueExpr> {
         #[cfg(debug_assertions)]
         {
             if reg.size() < size {
@@ -262,14 +271,19 @@ impl<D: 'static + RiscVDisassembler> PartialEq for Register<D> {
 
 impl<D: 'static + RiscVDisassembler> Eq for Register<D> {}
 
-impl<D: 'static + RiscVDisassembler + Send + Sync> fmt::Debug for Register<D> {
+impl<D: 'static + RiscVDisassembler> fmt::Debug for Register<D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(self.name().as_ref())
     }
 }
 
 impl<D: RiscVDisassembler> RiscVIntrinsic<D> {
-    fn id_from_parts(id: u32, sz1: Option<u8>, sz2: Option<u8>, rm: Option<RoundMode>) -> u32 {
+    fn id_from_parts(
+        id: u32,
+        sz1: Option<u8>,
+        sz2: Option<u8>,
+        rm: Option<RoundMode>,
+    ) -> IntrinsicId {
         let sz1 = sz1.unwrap_or(0);
         let sz2 = sz2.unwrap_or(0);
         let rm = match rm {
@@ -285,10 +299,11 @@ impl<D: RiscVDisassembler> RiscVIntrinsic<D> {
         id |= sz1 as u32;
         id |= (sz2 as u32) << 8;
         id |= (rm as u32) << 16;
-        id
+        IntrinsicId(id)
     }
 
-    fn parts_from_id(id: u32) -> Option<(u32, u8, u8, RoundMode)> {
+    fn parts_from_id(id: IntrinsicId) -> Option<(u32, u8, u8, RoundMode)> {
+        let id = id.0;
         let sz1 = (id & 0xff) as u8;
         let sz2 = ((id >> 8) & 0xff) as u8;
         let rm = match (id >> 16) & 0xf {
@@ -303,7 +318,7 @@ impl<D: RiscVDisassembler> RiscVIntrinsic<D> {
         Some(((id >> 20) & 0xfff, sz1, sz2, rm))
     }
 
-    fn from_id(id: u32) -> Option<RiscVIntrinsic<D>> {
+    fn from_id(id: IntrinsicId) -> Option<RiscVIntrinsic<D>> {
         match Self::parts_from_id(id) {
             Some((0, _, _, _)) => Some(Intrinsic::Uret.into()),
             Some((1, _, _, _)) => Some(Intrinsic::Sret.into()),
@@ -468,7 +483,7 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
         }
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> IntrinsicId {
         match self.id {
             Intrinsic::Uret => Self::id_from_parts(0, None, None, None),
             Intrinsic::Sret => Self::id_from_parts(1, None, None, None),
@@ -509,7 +524,7 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
         }
     }
 
-    fn inputs(&self) -> Vec<Ref<NameAndType>> {
+    fn inputs(&self) -> Vec<NameAndType> {
         match self.id {
             Intrinsic::Uret | Intrinsic::Sret | Intrinsic::Mret | Intrinsic::Wfi => {
                 vec![]
@@ -517,17 +532,18 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             Intrinsic::Csrrd => {
                 vec![NameAndType::new(
                     "csr",
-                    &Type::int(4, false),
-                    max_confidence(),
+                    Conf::new(Type::int(4, false), MAX_CONFIDENCE),
                 )]
             }
             Intrinsic::Csrrw | Intrinsic::Csrwr | Intrinsic::Csrrs | Intrinsic::Csrrc => {
                 vec![
-                    NameAndType::new("csr", &Type::int(4, false), max_confidence()),
+                    NameAndType::new("csr", Conf::new(Type::int(4, false), MAX_CONFIDENCE)),
                     NameAndType::new(
                         "value",
-                        &Type::int(<D::RegFile as RegFile>::Int::width(), false),
-                        min_confidence(),
+                        Conf::new(
+                            Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                            MIN_CONFIDENCE,
+                        ),
                     ),
                 ]
             }
@@ -541,8 +557,8 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::Fmin(size)
             | Intrinsic::Fmax(size) => {
                 vec![
-                    NameAndType::new("", &Type::float(size as usize), max_confidence()),
-                    NameAndType::new("", &Type::float(size as usize), max_confidence()),
+                    NameAndType::new("", Conf::new(Type::float(size as usize), MAX_CONFIDENCE)),
+                    NameAndType::new("", Conf::new(Type::float(size as usize), MAX_CONFIDENCE)),
                 ]
             }
             Intrinsic::Fsqrt(size, _)
@@ -552,26 +568,26 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::FcvtFToU(size, _, _) => {
                 vec![NameAndType::new(
                     "",
-                    &Type::float(size as usize),
-                    max_confidence(),
+                    Conf::new(Type::float(size as usize), MAX_CONFIDENCE),
                 )]
             }
             Intrinsic::FcvtIToF(size, _, _) => {
                 vec![NameAndType::new(
                     "",
-                    &Type::int(size as usize, true),
-                    max_confidence(),
+                    Conf::new(Type::int(size as usize, true), MAX_CONFIDENCE),
                 )]
             }
             Intrinsic::FcvtUToF(size, _, _) => {
                 vec![NameAndType::new(
                     "",
-                    &Type::int(size as usize, false),
-                    max_confidence(),
+                    Conf::new(Type::int(size as usize, false), MAX_CONFIDENCE),
                 )]
             }
             Intrinsic::Fence => {
-                vec![NameAndType::new("", &Type::int(4, false), min_confidence())]
+                vec![NameAndType::new(
+                    "",
+                    Conf::new(Type::int(4, false), MIN_CONFIDENCE),
+                )]
             }
         }
     }
@@ -589,7 +605,7 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             Intrinsic::Csrrw | Intrinsic::Csrrd | Intrinsic::Csrrs | Intrinsic::Csrrc => {
                 vec![Conf::new(
                     Type::int(<D::RegFile as RegFile>::Int::width(), false),
-                    min_confidence(),
+                    MIN_CONFIDENCE,
                 )]
             }
             Intrinsic::Fadd(size, _)
@@ -605,16 +621,16 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::FcvtFToF(_, size, _)
             | Intrinsic::FcvtIToF(_, size, _)
             | Intrinsic::FcvtUToF(_, size, _) => {
-                vec![Conf::new(Type::float(size as usize), max_confidence())]
+                vec![Conf::new(Type::float(size as usize), MAX_CONFIDENCE)]
             }
             Intrinsic::Fclass(_) => {
-                vec![Conf::new(Type::int(4, false), min_confidence())]
+                vec![Conf::new(Type::int(4, false), MIN_CONFIDENCE)]
             }
             Intrinsic::FcvtFToI(_, size, _) => {
-                vec![Conf::new(Type::int(size as usize, true), max_confidence())]
+                vec![Conf::new(Type::int(size as usize, true), MAX_CONFIDENCE)]
             }
             Intrinsic::FcvtFToU(_, size, _) => {
-                vec![Conf::new(Type::int(size as usize, false), max_confidence())]
+                vec![Conf::new(Type::int(size as usize, false), MAX_CONFIDENCE)]
             }
         }
     }
@@ -671,13 +687,11 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         self.max_instr_len()
     }
 
-    fn associated_arch_by_addr(&self, _addr: &mut u64) -> CoreArchitecture {
+    fn associated_arch_by_addr(&self, _addr: u64) -> CoreArchitecture {
         self.handle
     }
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
-        use architecture::BranchInfo;
-
         let (inst_len, op) = match D::decode(addr, data) {
             Ok(Instr::Rv16(op)) => (2, op),
             Ok(Instr::Rv32(op)) => (4, op),
@@ -691,23 +705,23 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let target = addr.wrapping_add(j.imm() as i64 as u64);
 
                 let branch = if j.rd().id() == 0 {
-                    BranchInfo::Unconditional(target)
+                    BranchKind::Unconditional(target)
                 } else {
-                    BranchInfo::Call(target)
+                    BranchKind::Call(target)
                 };
 
-                res.add_branch(branch, None);
+                res.add_branch(branch);
             }
             Op::Jalr(ref i) => {
                 // TODO handle the calls with rs1 == 0?
                 if i.rd().id() == 0 {
                     let branch_type = if i.rs1().id() == 1 {
-                        BranchInfo::FunctionReturn
+                        BranchKind::FunctionReturn
                     } else {
-                        BranchInfo::Unresolved
+                        BranchKind::Unresolved
                     };
 
-                    res.add_branch(branch_type, None);
+                    res.add_branch(branch_type);
                 }
             }
             Op::Beq(ref b)
@@ -716,21 +730,18 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             | Op::Bge(ref b)
             | Op::BltU(ref b)
             | Op::BgeU(ref b) => {
-                res.add_branch(BranchInfo::False(addr.wrapping_add(inst_len as u64)), None);
-                res.add_branch(
-                    BranchInfo::True(addr.wrapping_add(b.imm() as i64 as u64)),
-                    None,
-                );
+                res.add_branch(BranchKind::False(addr.wrapping_add(inst_len as u64)));
+                res.add_branch(BranchKind::True(addr.wrapping_add(b.imm() as i64 as u64)));
             }
             Op::Ecall => {
-                res.add_branch(BranchInfo::SystemCall, None);
+                res.add_branch(BranchKind::SystemCall);
             }
             Op::Ebreak => {
                 // TODO is this valid, or should lifting handle this?
-                res.add_branch(BranchInfo::Unresolved, None);
+                res.add_branch(BranchKind::Unresolved);
             }
             Op::Uret | Op::Sret | Op::Mret => {
-                res.add_branch(BranchInfo::FunctionReturn, None);
+                res.add_branch(BranchKind::FunctionReturn);
             }
             _ => {}
         }
@@ -744,7 +755,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         addr: u64,
     ) -> Option<(usize, Vec<InstructionTextToken>)> {
         use riscv_dis::Operand;
-        use InstructionTextTokenContents::*;
+        use InstructionTextTokenKind::*;
 
         let inst = match D::decode(addr, data) {
             Ok(i) => i,
@@ -982,12 +993,12 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 Operand::R(r) => {
                     let reg = self::Register::from(r);
 
-                    res.push(InstructionTextToken::new(&reg.name(), Register));
+                    res.push(InstructionTextToken::new(reg.name(), Register));
                 }
                 Operand::F(r) => {
                     let reg = self::Register::from(r);
 
-                    res.push(InstructionTextToken::new(&reg.name(), Register));
+                    res.push(InstructionTextToken::new(reg.name(), Register));
                 }
                 Operand::I(i) => {
                     match op {
@@ -1002,8 +1013,11 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                             let target = addr.wrapping_add(i as i64 as u64);
 
                             res.push(InstructionTextToken::new(
-                                &format!("0x{:x}", target),
-                                CodeRelativeAddress(target),
+                                format!("0x{:x}", target),
+                                CodeRelativeAddress {
+                                    value: target,
+                                    size: Some(self.address_size()),
+                                },
                             ));
                         }
                         _ => {
@@ -1012,7 +1026,10 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                                     -0x8_0000..=-1 => format!("-0x{:x}", -i),
                                     _ => format!("0x{:x}", i),
                                 },
-                                Integer(i as u64),
+                                Integer {
+                                    value: i as u64,
+                                    size: None,
+                                },
                             ));
                         }
                     }
@@ -1027,12 +1044,15 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                         } else {
                             format!("0x{:x}", i)
                         },
-                        Integer(i as u64),
+                        Integer {
+                            value: i as u64,
+                            size: None,
+                        },
                     ));
 
-                    res.push(InstructionTextToken::new("(", Brace));
-                    res.push(InstructionTextToken::new(&reg.name(), Register));
-                    res.push(InstructionTextToken::new(")", Brace));
+                    res.push(InstructionTextToken::new("(", Brace { hash: None }));
+                    res.push(InstructionTextToken::new(reg.name(), Register));
+                    res.push(InstructionTextToken::new(")", Brace { hash: None }));
                     res.push(InstructionTextToken::new("", EndMemoryOperand));
                 }
                 Operand::RM(r) => {
@@ -1048,7 +1068,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         &self,
         data: &[u8],
         addr: u64,
-        il: &mut llil::Lifter<Self>,
+        il: &mut MutableLiftedILFunction<Self>,
     ) -> Option<(usize, bool)> {
         let max_width = self.default_integer_size();
 
@@ -1061,7 +1081,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         macro_rules! set_reg_or_append_fallback {
             ($op:ident, $t:expr, $f:expr) => {{
                 let rd = Register::from($op.rd());
-                match rd.id {
+                match rd.id.0 {
                     0 => $f.append(),
                     _ => il.set_reg(rd.size(), rd, $t).append(),
                 }
@@ -1202,7 +1222,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let target = addr.wrapping_add(j.imm() as i64 as u64);
 
                 match (j.rd().id(), il.label_for_address(target)) {
-                    (0, Some(l)) => il.goto(l),
+                    (0, Some(mut l)) => il.goto(&mut l),
                     (0, None) => il.jump(il.const_ptr(target)),
                     (_, _) => il.call(il.const_ptr(target)),
                 }
@@ -1221,7 +1241,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     (0, _, _) => il.jump(target).append(), // indirect jump
                     (rd_id, rs1_id, _) if rd_id == rs1_id => {
                         // store the target in a temporary register so we don't clobber it when rd == rs1
-                        let tmp_reg: llil::Register<Register<D>> = llil::Register::Temp(0);
+                        let tmp_reg: LowLevelILRegister<Register<D>> = LowLevelILRegister::Temp(0);
                         il.set_reg(max_width, tmp_reg, target).append();
                         // indirect jump with storage of next address to non-`ra` register
                         il.set_reg(
@@ -1259,34 +1279,31 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     _ => unreachable!(),
                 };
 
-                let mut new_false: Option<Label> = None;
-                let mut new_true: Option<Label> = None;
+                let mut new_false = false;
+                let mut new_true = false;
 
                 let ft = addr.wrapping_add(inst_len);
                 let tt = addr.wrapping_add(b.imm() as i64 as u64);
 
-                {
-                    let f = il.label_for_address(ft).unwrap_or_else(|| {
-                        new_false = Some(Label::new());
-                        new_false.as_ref().unwrap()
-                    });
+                let mut f = il.label_for_address(ft).unwrap_or_else(|| {
+                    new_false = true;
+                    LowLevelILLabel::new()
+                });
 
-                    let t = il.label_for_address(tt).unwrap_or_else(|| {
-                        new_true = Some(Label::new());
-                        new_true.as_ref().unwrap()
-                    });
+                let mut t = il.label_for_address(tt).unwrap_or_else(|| {
+                    new_true = true;
+                    LowLevelILLabel::new()
+                });
 
-                    il.if_expr(cond_expr, t, f).append();
-                }
+                il.if_expr(cond_expr, &mut t, &mut f).append();
 
-                if let Some(t) = new_true.as_mut() {
-                    il.mark_label(t);
-
+                if new_true {
+                    il.mark_label(&mut t);
                     il.jump(il.const_ptr(tt)).append();
                 }
 
-                if let Some(f) = new_false.as_mut() {
-                    il.mark_label(f);
+                if new_false {
+                    il.mark_label(&mut f);
                 }
             }
 
@@ -1294,41 +1311,41 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             Op::Ebreak => il.bp().append(),
             Op::Uret => {
                 il.intrinsic(
-                    Lifter::<Self>::NO_OUTPUTS,
+                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
                     Intrinsic::Uret,
-                    Lifter::<Self>::NO_INPUTS,
+                    MutableLiftedILFunction::<Self>::NO_INPUTS,
                 )
                 .append();
                 il.no_ret().append();
             }
             Op::Sret => {
                 il.intrinsic(
-                    Lifter::<Self>::NO_OUTPUTS,
+                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
                     Intrinsic::Sret,
-                    Lifter::<Self>::NO_INPUTS,
+                    MutableLiftedILFunction::<Self>::NO_INPUTS,
                 )
                 .append();
                 il.no_ret().append();
             }
             Op::Mret => {
                 il.intrinsic(
-                    Lifter::<Self>::NO_OUTPUTS,
+                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
                     Intrinsic::Mret,
-                    Lifter::<Self>::NO_INPUTS,
+                    MutableLiftedILFunction::<Self>::NO_INPUTS,
                 )
                 .append();
                 il.no_ret().append();
             }
             Op::Wfi => il
                 .intrinsic(
-                    Lifter::<Self>::NO_OUTPUTS,
+                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
                     Intrinsic::Wfi,
-                    Lifter::<Self>::NO_INPUTS,
+                    MutableLiftedILFunction::<Self>::NO_INPUTS,
                 )
                 .append(),
             Op::Fence(i) => il
                 .intrinsic(
-                    Lifter::<Self>::NO_OUTPUTS,
+                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
                     Intrinsic::Fence,
                     [il.const_int(4, i.imm() as u32 as u64)],
                 )
@@ -1336,19 +1353,23 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
 
             Op::Csrrw(i) => {
                 let rd = Register::from(i.rd());
-                let rs1 = Liftable::lift(il, Register::from(i.rs1()));
+                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
                 let csr = il.const_int(4, i.csr() as u64);
 
                 if i.rd().id() == 0 {
-                    il.intrinsic(Lifter::<Self>::NO_OUTPUTS, Intrinsic::Csrwr, [csr, rs1])
-                        .append();
+                    il.intrinsic(
+                        MutableLiftedILFunction::<Self>::NO_OUTPUTS,
+                        Intrinsic::Csrwr,
+                        [csr, rs1],
+                    )
+                    .append();
                 } else {
                     il.intrinsic([rd], Intrinsic::Csrrw, [rs1]).append();
                 }
             }
             Op::Csrrs(i) => {
                 let rd = Register::from(i.rd());
-                let rs1 = Liftable::lift(il, Register::from(i.rs1()));
+                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
                 let csr = il.const_int(4, i.csr() as u64);
 
                 if i.rs1().id() == 0 {
@@ -1359,7 +1380,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             }
             Op::Csrrc(i) => {
                 let rd = Register::from(i.rd());
-                let rs1 = Liftable::lift(il, Register::from(i.rs1()));
+                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
                 let csr = il.const_int(4, i.csr() as u64);
 
                 if i.rs1().id() == 0 {
@@ -1374,8 +1395,12 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let imm = il.const_int(max_width, i.imm() as u64);
 
                 if i.rd().id() == 0 {
-                    il.intrinsic(Lifter::<Self>::NO_OUTPUTS, Intrinsic::Csrwr, [csr, imm])
-                        .append();
+                    il.intrinsic(
+                        MutableLiftedILFunction::<Self>::NO_OUTPUTS,
+                        Intrinsic::Csrwr,
+                        [csr, imm],
+                    )
+                    .append();
                 } else {
                     il.intrinsic([rd], Intrinsic::Csrrw, [csr, imm]).append();
                 }
@@ -1418,7 +1443,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let rd = a.rd();
 
                 let dest_reg = match rd.id() {
-                    0 => llil::Register::Temp(0),
+                    0 => LowLevelILRegister::Temp(0),
                     _ => Register::from(rd).into(),
                 };
 
@@ -1429,29 +1454,26 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 // nature of the store -- dataflow will give up
                 il.set_reg(max_width, dest_reg, il.unimplemented()).append();
 
-                let mut new_false: Option<Label> = None;
-                let mut t = Label::new();
+                let mut new_false = false;
+                let mut t = LowLevelILLabel::new();
 
-                {
-                    let cond_expr = il.cmp_e(max_width, dest_reg, 0u64);
+                let cond_expr = il.cmp_e(max_width, dest_reg, 0u64);
 
-                    let ft = addr.wrapping_add(inst_len);
-                    let f = il.label_for_address(ft).unwrap_or_else(|| {
-                        new_false = Some(Label::new());
-                        new_false.as_ref().unwrap()
-                    });
+                let ft = addr.wrapping_add(inst_len);
+                let mut f = il.label_for_address(ft).unwrap_or_else(|| {
+                    new_false = true;
+                    LowLevelILLabel::new()
+                });
 
-                    il.if_expr(cond_expr, &t, f).append();
-                }
+                il.if_expr(cond_expr, &mut t, &mut f).append();
 
                 il.mark_label(&mut t);
-
                 il.store(size, Register::from(a.rs1()), Register::from(a.rs2()))
                     .with_source_operand(2)
                     .append();
 
-                if let Some(f) = new_false.as_mut() {
-                    il.mark_label(f);
+                if new_false {
+                    il.mark_label(&mut f);
                 }
             }
             Op::AmoSwap(a)
@@ -1469,14 +1491,14 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let rs2 = a.rs2();
 
                 let dest_reg = match rd.id() {
-                    0 => llil::Register::Temp(0),
+                    0 => LowLevelILRegister::Temp(0),
                     _ => Register::from(rd).into(),
                 };
 
                 let mut next_temp_reg = 1;
                 let mut alloc_reg = |rs: riscv_dis::IntReg<D>| match (rs.id(), rd.id()) {
                     (id, r) if id != 0 && id == r => {
-                        let reg = llil::Register::Temp(next_temp_reg);
+                        let reg = LowLevelILRegister::Temp(next_temp_reg);
                         next_temp_reg += 1;
 
                         il.set_reg(max_width, reg, Register::from(rs)).append();
@@ -1497,8 +1519,8 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
 
                 il.set_reg(max_width, dest_reg, load_expr).append();
 
-                let val_expr = LiftableWithSize::lift_with_size(il, reg_with_val, size);
-                let dest_reg_val = LiftableWithSize::lift_with_size(il, dest_reg, size);
+                let val_expr = LiftableLowLevelILWithSize::lift_with_size(il, reg_with_val, size);
+                let dest_reg_val = LiftableLowLevelILWithSize::lift_with_size(il, dest_reg, size);
 
                 let val_to_store = match op {
                     Op::AmoSwap(..) => val_expr,
@@ -1556,7 +1578,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     };
                     il.set_reg(width, rd, result).append();
                 } else {
-                    let product = llil::Register::Temp(0);
+                    let product = LowLevelILRegister::Temp(0);
                     il.intrinsic(
                         [product],
                         Intrinsic::Fmul(f.width(), f.rm()),
@@ -1711,7 +1733,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             }
             Op::Fle(f) | Op::Flt(f) | Op::Feq(f) => {
                 let rd = match f.rd().id() {
-                    0 => llil::Register::Temp(0),
+                    0 => LowLevelILRegister::Temp(0),
                     _ => Register::from(f.rd()).into(),
                 };
                 let left = Register::from(f.rs1());
@@ -1745,7 +1767,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             }
             Op::FcvtToInt(f) => {
                 let rd = match f.rd().id() {
-                    0 => llil::Register::Temp(0),
+                    0 => LowLevelILRegister::Temp(0),
                     _ => Register::from(f.rd()).into(),
                 };
                 let rs1 = Register::from(f.rs1());
@@ -1780,7 +1802,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let rs1 = Register::from(f.rs1());
                 let rd_width = f.rd_width() as usize;
                 let rs1_width = f.rs1_width() as usize;
-                let rs1 = LiftableWithSize::lift_with_size(il, rs1, rs1_width);
+                let rs1 = LiftableLowLevelILWithSize::lift_with_size(il, rs1, rs1_width);
                 if f.zx() {
                     il.intrinsic(
                         [rd],
@@ -1802,7 +1824,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             }
             Op::FmvToInt(f) => {
                 let rd = match f.rd().id() {
-                    0 => llil::Register::Temp(0),
+                    0 => LowLevelILRegister::Temp(0),
                     _ => Register::from(f.rd()).into(),
                 };
                 let rs1 = Register::from(f.rs1());
@@ -1818,7 +1840,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let rd = Register::from(f.rd());
                 let rs1 = Register::from(f.rs1());
                 let width = f.width() as usize;
-                let rs1 = LiftableWithSize::lift_with_size(il, rs1, width);
+                let rs1 = LiftableLowLevelILWithSize::lift_with_size(il, rs1, width);
                 il.set_reg(width, rd, rs1).append();
             }
             Op::Fclass(f) => {
@@ -1845,7 +1867,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         let mut res = Vec::with_capacity(reg_count as usize);
 
         for i in 0..reg_count {
-            res.push(Register::new(i));
+            res.push(Register::new(RegisterId(i)));
         }
 
         res
@@ -1859,28 +1881,28 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         let mut regs = Vec::with_capacity(2);
 
         for i in &[3, 4] {
-            regs.push(Register::new(*i));
+            regs.push(Register::new(RegisterId(*i)));
         }
 
         regs
     }
 
     fn stack_pointer_reg(&self) -> Option<Self::Register> {
-        Some(Register::new(2))
+        Some(Register::new(RegisterId(2)))
     }
 
     fn link_reg(&self) -> Option<Self::Register> {
-        Some(Register::new(1))
+        Some(Register::new(RegisterId(1)))
     }
 
-    fn register_from_id(&self, id: u32) -> Option<Self::Register> {
+    fn register_from_id(&self, id: RegisterId) -> Option<Self::Register> {
         let mut reg_count = <D::RegFile as RegFile>::int_reg_count();
 
         if <D::RegFile as RegFile>::Float::present() {
             reg_count += 32;
         }
 
-        if id > reg_count {
+        if id.0 > reg_count {
             None
         } else {
             Some(Register::new(id))
@@ -1960,7 +1982,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         res.iter().map(|i| (*i).into()).collect()
     }
 
-    fn intrinsic_from_id(&self, id: u32) -> Option<Self::Intrinsic> {
+    fn intrinsic_from_id(&self, id: IntrinsicId) -> Option<Self::Intrinsic> {
         RiscVIntrinsic::from_id(id)
     }
 
@@ -2454,7 +2476,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
                 // Actual target symbol is on the associated R_RISCV_PCREL_HI20 relocation, which
                 // is pointed to by `reloc.target()`.
                 let target = match bv
-                    .get_relocations_at(reloc.target())
+                    .relocations_at(reloc.target())
                     .iter()
                     .find(|r| r.info().native_type == Self::R_RISCV_PCREL_HI20)
                 {
@@ -2648,10 +2670,8 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RiscVCC<D> {
     }
 }
 
-impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConventionBase for RiscVCC<D> {
-    type Arch = RiscVArch<D>;
-
-    fn caller_saved_registers(&self) -> Vec<Register<D>> {
+impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConvention for RiscVCC<D> {
+    fn caller_saved_registers(&self) -> Vec<RegisterId> {
         let mut regs = Vec::with_capacity(36);
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
 
@@ -2659,7 +2679,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConventionBase for Ris
             1u32, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 28, 29, 30, 31,
         ] {
             if i < &int_reg_count {
-                regs.push(Register::new(*i));
+                regs.push(RegisterId(*i));
             }
         }
 
@@ -2667,52 +2687,52 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConventionBase for Ris
             for i in &[
                 0u32, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 28, 29, 30, 31,
             ] {
-                regs.push(Register::new(*i + int_reg_count));
+                regs.push(RegisterId(*i + int_reg_count));
             }
         }
 
         regs
     }
 
-    fn callee_saved_registers(&self) -> Vec<Register<D>> {
+    fn callee_saved_registers(&self) -> Vec<RegisterId> {
         let mut regs = Vec::with_capacity(24);
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
 
         for i in &[8u32, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] {
             if i < &int_reg_count {
-                regs.push(Register::new(*i));
+                regs.push(RegisterId(*i));
             }
         }
 
         if <D::RegFile as RegFile>::Float::present() {
             for i in &[8u32, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] {
-                regs.push(Register::new(*i + int_reg_count));
+                regs.push(RegisterId(*i + int_reg_count));
             }
         }
 
         regs
     }
 
-    fn int_arg_registers(&self) -> Vec<Register<D>> {
+    fn int_arg_registers(&self) -> Vec<RegisterId> {
         let mut regs = Vec::with_capacity(8);
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
 
         for i in &[10, 11, 12, 13, 14, 15, 16, 17] {
             if i < &int_reg_count {
-                regs.push(Register::new(*i));
+                regs.push(RegisterId(*i));
             }
         }
 
         regs
     }
 
-    fn float_arg_registers(&self) -> Vec<Register<D>> {
+    fn float_arg_registers(&self) -> Vec<RegisterId> {
         let mut regs = Vec::with_capacity(8);
 
         if <D::RegFile as RegFile>::Float::present() {
             let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
             for i in &[10, 11, 12, 13, 14, 15, 16, 17] {
-                regs.push(Register::new(*i + int_reg_count));
+                regs.push(RegisterId(*i + int_reg_count));
             }
         }
 
@@ -2735,29 +2755,29 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConventionBase for Ris
     }
 
     // a0 == x10
-    fn return_int_reg(&self) -> Option<Register<D>> {
-        Some(Register::new(10))
+    fn return_int_reg(&self) -> Option<RegisterId> {
+        Some(RegisterId(10))
     }
     // a1 == x11
-    fn return_hi_int_reg(&self) -> Option<Register<D>> {
-        Some(Register::new(11))
+    fn return_hi_int_reg(&self) -> Option<RegisterId> {
+        Some(RegisterId(11))
     }
 
-    fn return_float_reg(&self) -> Option<Register<D>> {
+    fn return_float_reg(&self) -> Option<RegisterId> {
         if <D::RegFile as RegFile>::Float::present() {
             let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
-            Some(Register::new(10 + int_reg_count))
+            Some(RegisterId(10 + int_reg_count))
         } else {
             None
         }
     }
 
     // gp == x3
-    fn global_pointer_reg(&self) -> Option<Register<D>> {
-        Some(Register::new(3))
+    fn global_pointer_reg(&self) -> Option<RegisterId> {
+        Some(RegisterId(3))
     }
 
-    fn implicitly_defined_registers(&self) -> Vec<Register<D>> {
+    fn implicitly_defined_registers(&self) -> Vec<RegisterId> {
         Vec::new()
     }
     fn are_argument_registers_used_for_var_args(&self) -> bool {
@@ -2772,7 +2792,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         &self,
         bv: &BinaryView,
         func: &Function,
-        llil: &llil::RegularFunction<CoreArchitecture>,
+        llil: &RegularLowLevelILFunction<CoreArchitecture>,
     ) -> bool {
         // Look for the following code pattern:
         // t3 = plt
@@ -2788,11 +2808,13 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         let mut next_llil_instr = llil.basic_blocks().iter().next().unwrap().iter();
 
         // Match instruction that fetches PC-relative PLT address range
-        let auipc = next_llil_instr.next().unwrap().info();
+        let auipc = next_llil_instr.next().unwrap().kind();
         let (auipc_dest, plt_base) = match auipc {
-            InstrInfo::SetReg(r) => {
-                let value = match r.source_expr().info() {
-                    ExprInfo::Const(v) | ExprInfo::ConstPtr(v) => v.value(),
+            LowLevelILInstructionKind::SetReg(r) => {
+                let value = match r.source_expr().kind() {
+                    LowLevelILExpressionKind::Const(v) | LowLevelILExpressionKind::ConstPtr(v) => {
+                        v.value()
+                    }
                     _ => return false,
                 };
                 (r.dest_reg(), value)
@@ -2801,34 +2823,46 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         };
 
         // Match load instruction that loads the imported address
-        let load = next_llil_instr.next().unwrap().info();
+        let load = next_llil_instr.next().unwrap().kind();
         let (mut entry, mut target_reg) = match load {
-            InstrInfo::SetReg(r) => match r.source_expr().info() {
-                ExprInfo::Load(l) => {
+            LowLevelILInstructionKind::SetReg(r) => match r.source_expr().kind() {
+                LowLevelILExpressionKind::Load(l) => {
                     let target_reg = r.dest_reg();
-                    let entry = match l.source_mem_expr().info() {
-                        ExprInfo::Reg(lr) if lr.source_reg() == auipc_dest => plt_base,
-                        ExprInfo::Add(a) => match (a.left().info(), a.right().info()) {
-                            (ExprInfo::Reg(a), ExprInfo::Const(b) | ExprInfo::ConstPtr(b))
-                                if a.source_reg() == auipc_dest =>
-                            {
-                                plt_base.wrapping_add(b.value())
+                    let entry = match l.source_mem_expr().kind() {
+                        LowLevelILExpressionKind::Reg(lr) if lr.source_reg() == auipc_dest => {
+                            plt_base
+                        }
+                        LowLevelILExpressionKind::Add(a) => {
+                            match (a.left().kind(), a.right().kind()) {
+                                (
+                                    LowLevelILExpressionKind::Reg(a),
+                                    LowLevelILExpressionKind::Const(b)
+                                    | LowLevelILExpressionKind::ConstPtr(b),
+                                ) if a.source_reg() == auipc_dest => {
+                                    plt_base.wrapping_add(b.value())
+                                }
+                                (
+                                    LowLevelILExpressionKind::Const(b)
+                                    | LowLevelILExpressionKind::ConstPtr(b),
+                                    LowLevelILExpressionKind::Reg(a),
+                                ) if a.source_reg() == auipc_dest => {
+                                    plt_base.wrapping_add(b.value())
+                                }
+                                _ => return false,
                             }
-                            (ExprInfo::Const(b) | ExprInfo::ConstPtr(b), ExprInfo::Reg(a))
-                                if a.source_reg() == auipc_dest =>
-                            {
-                                plt_base.wrapping_add(b.value())
+                        }
+                        LowLevelILExpressionKind::Sub(a) => {
+                            match (a.left().kind(), a.right().kind()) {
+                                (
+                                    LowLevelILExpressionKind::Reg(a),
+                                    LowLevelILExpressionKind::Const(b)
+                                    | LowLevelILExpressionKind::ConstPtr(b),
+                                ) if a.source_reg() == auipc_dest => {
+                                    plt_base.wrapping_sub(b.value())
+                                }
+                                _ => return false,
                             }
-                            _ => return false,
-                        },
-                        ExprInfo::Sub(a) => match (a.left().info(), a.right().info()) {
-                            (ExprInfo::Reg(a), ExprInfo::Const(b) | ExprInfo::ConstPtr(b))
-                                if a.source_reg() == auipc_dest =>
-                            {
-                                plt_base.wrapping_sub(b.value())
-                            }
-                            _ => return false,
-                        },
+                        }
                         _ => return false,
                     };
                     (entry, target_reg)
@@ -2843,22 +2877,22 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
 
         // Ensure that load is pointing at an import address
         let sym = match bv.symbol_by_address(entry) {
-            Ok(sym) => sym,
-            Err(_) => return false,
+            Some(sym) => sym,
+            None => return false,
         };
         if sym.sym_type() != SymbolType::ImportAddress {
             return false;
         }
 
         // (OPTIONAL) Check if we are storing in temp0, adjust target reg if so
-        let mut temp_reg_inst = next_llil_instr.next().unwrap().info();
+        let mut temp_reg_inst = next_llil_instr.next().unwrap().kind();
         match &temp_reg_inst {
-            InstrInfo::SetReg(r) if llil.instruction_count() >= 5 => {
-                match r.source_expr().info() {
-                    ExprInfo::Reg(op) if target_reg == op.source_reg() => {
+            LowLevelILInstructionKind::SetReg(r) if llil.instruction_count() >= 5 => {
+                match r.source_expr().kind() {
+                    LowLevelILExpressionKind::Reg(op) if target_reg == op.source_reg() => {
                         // Update the target_reg to the temp reg.
                         target_reg = r.dest_reg();
-                        temp_reg_inst = next_llil_instr.next().unwrap().info()
+                        temp_reg_inst = next_llil_instr.next().unwrap().kind()
                     }
                     _ => {}
                 }
@@ -2869,9 +2903,11 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         // Match instruction that stores the next instruction address into a register
         let next_pc_inst = temp_reg_inst;
         let (next_pc_dest, next_pc, cur_pc) = match next_pc_inst {
-            InstrInfo::SetReg(r) => {
-                let value = match r.source_expr().info() {
-                    ExprInfo::Const(v) | ExprInfo::ConstPtr(v) => v.value(),
+            LowLevelILInstructionKind::SetReg(r) => {
+                let value = match r.source_expr().kind() {
+                    LowLevelILExpressionKind::Const(v) | LowLevelILExpressionKind::ConstPtr(v) => {
+                        v.value()
+                    }
                     _ => return false,
                 };
                 (r.dest_reg(), value, r.address())
@@ -2883,17 +2919,17 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         }
 
         // Match tail call at the end and make sure it is going to the import
-        let jump = next_llil_instr.next().unwrap().info();
+        let jump = next_llil_instr.next().unwrap().kind();
         match jump {
-            InstrInfo::TailCall(j) => {
-                match j.target().info() {
-                    ExprInfo::Reg(r) if r.source_reg() == target_reg => (),
+            LowLevelILInstructionKind::TailCall(j) => {
+                match j.target().kind() {
+                    LowLevelILExpressionKind::Reg(r) if r.source_reg() == target_reg => (),
                     _ => return false,
                 };
             }
-            InstrInfo::Jump(j) => {
-                match j.target().info() {
-                    ExprInfo::Reg(r) if r.source_reg() == target_reg => (),
+            LowLevelILInstructionKind::Jump(j) => {
+                match j.target().kind() {
+                    LowLevelILExpressionKind::Reg(r) if r.source_reg() == target_reg => (),
                     _ => return false,
                 };
             }
@@ -2907,7 +2943,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         for ext_sym in &bv.symbols_by_name(func_sym.raw_name()) {
             if ext_sym.sym_type() == SymbolType::External {
                 if let Some(var) = bv.data_variable_at_address(ext_sym.address()) {
-                    func.apply_imported_types(func_sym.as_ref(), Some(var.t()));
+                    func.apply_imported_types(func_sym.as_ref(), Some(&var.ty.contents));
                     return true;
                 }
             }
@@ -2957,9 +2993,17 @@ pub extern "C" fn CorePluginInit() -> bool {
     arch32.register_function_recognizer(RiscVELFPLTRecognizer);
     arch64.register_function_recognizer(RiscVELFPLTRecognizer);
 
-    let cc32 = register_calling_convention(arch32, "default", RiscVCC::new());
+    let cc32 = register_calling_convention(
+        arch32,
+        "default",
+        RiscVCC::<RiscVIMACDisassembler<Rv32GRegs>>::new(),
+    );
     arch32.set_default_calling_convention(&cc32);
-    let cc64 = register_calling_convention(arch64, "default", RiscVCC::new());
+    let cc64 = register_calling_convention(
+        arch64,
+        "default",
+        RiscVCC::<RiscVIMACDisassembler<Rv64GRegs>>::new(),
+    );
     arch64.set_default_calling_convention(&cc64);
 
     if let Ok(bvt) = BinaryViewType::by_name("ELF") {

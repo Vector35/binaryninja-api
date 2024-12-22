@@ -15,10 +15,11 @@
 //! Labeled segments in a binary file that aren't loaded in to memory
 
 use binaryninjacore_sys::*;
+use std::fmt::{Debug, Formatter};
 
 use std::ops::Range;
 
-use crate::binaryview::BinaryView;
+use crate::binary_view::BinaryView;
 use crate::rc::*;
 
 fn set_bit(val: u32, bit_mask: u32, new_val: bool) -> u32 {
@@ -111,15 +112,21 @@ pub struct Segment {
 }
 
 impl Segment {
-    pub(crate) unsafe fn from_raw(raw: *mut BNSegment) -> Self {
-        Self { handle: raw }
+    pub(crate) unsafe fn from_raw(handle: *mut BNSegment) -> Self {
+        assert!(!handle.is_null());
+        Self { handle }
+    }
+
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNSegment) -> Ref<Self> {
+        assert!(!handle.is_null());
+        Ref::new(Self { handle })
     }
 
     /// You need to create a segment builder, customize that segment, then add it to a binary view:
     ///
     /// ```no_run
     /// # use binaryninja::segment::Segment;
-    /// # use binaryninja::binaryview::BinaryViewExt;
+    /// # use binaryninja::binary_view::BinaryViewExt;
     /// let bv = binaryninja::load("example").unwrap();
     /// bv.add_segment(Segment::builder(0..0x1000).writable(true).readable(true))
     /// ```
@@ -181,6 +188,23 @@ impl Segment {
     }
 }
 
+impl Debug for Segment {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Segment")
+            .field("address_range", &self.address_range())
+            .field("parent_backing", &self.parent_backing())
+            .field("executable", &self.executable())
+            .field("writable", &self.writable())
+            .field("readable", &self.readable())
+            .field("contains_data", &self.contains_data())
+            .field("contains_code", &self.contains_code())
+            .field("deny_write", &self.deny_write())
+            .field("deny_execute", &self.deny_execute())
+            .field("auto_defined", &self.auto_defined())
+            .finish()
+    }
+}
+
 impl ToOwned for Segment {
     type Owned = Ref<Self>;
 
@@ -211,6 +235,7 @@ unsafe impl CoreArrayProviderInner for Segment {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeSegmentList(raw, count);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Segment::from_raw(*raw), context)
     }

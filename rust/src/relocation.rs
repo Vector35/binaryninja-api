@@ -1,9 +1,9 @@
+use crate::low_level_il::RegularLowLevelILFunction;
 use crate::rc::Guard;
 use crate::string::BnStrCompatible;
 use crate::{
-    architecture::{Architecture, CoreArchitecture},
-    binaryview::BinaryView,
-    llil,
+    architecture::CoreArchitecture,
+    binary_view::BinaryView,
     rc::{CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable},
     symbol::Symbol,
 };
@@ -168,6 +168,7 @@ impl RelocationInfo {
             target: self.target,
             dataRelocation: self.data_relocation,
             relocationDataCache: self.relocation_data_cache,
+            // TODO: How to handle this?
             prev: core::ptr::null_mut(),
             next: core::ptr::null_mut(),
         }
@@ -180,6 +181,9 @@ impl Default for RelocationInfo {
     }
 }
 
+// TODO: There is NO freeing of the relocation
+// TODO: A quick look it seem that the relocation ptr is always not owned so this is _fine_
+// TODO: REALLY need to come back to this at some point.
 pub struct Relocation(*mut BNRelocation);
 
 impl Relocation {
@@ -228,6 +232,7 @@ unsafe impl CoreArrayProviderInner for Relocation {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeRelocationList(raw, count);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Relocation(*raw), &())
     }
@@ -259,7 +264,8 @@ pub trait RelocationHandler: 'static + Sized + AsRef<CoreRelocationHandler> {
         &self,
         _data: &[u8],
         _addr: u64,
-        _il: &llil::RegularFunction<CoreArchitecture>,
+        // TODO: Are we sure this is not a liftedilfunction?
+        _il: &RegularLowLevelILFunction<CoreArchitecture>,
         _reloc: &Relocation,
     ) -> RelocationOperand {
         RelocationOperand::AutocoerceExternPtr
@@ -280,7 +286,7 @@ pub trait RelocationHandlerExt: RelocationHandler {
             BNRelocationHandlerDefaultApplyRelocation(
                 self.as_ref().0,
                 bv.handle,
-                arch.handle().as_ref().0,
+                arch.handle,
                 reloc.0,
                 dest.as_mut_ptr(),
                 dest.len(),
@@ -323,7 +329,7 @@ impl RelocationHandler for CoreRelocationHandler {
             BNRelocationHandlerGetRelocationInfo(
                 self.0,
                 bv.handle,
-                arch.handle().as_ref().0,
+                arch.handle,
                 raw_info.as_mut_ptr(),
                 raw_info.len(),
             )
@@ -345,7 +351,7 @@ impl RelocationHandler for CoreRelocationHandler {
             BNRelocationHandlerApplyRelocation(
                 self.0,
                 bv.handle,
-                arch.handle().as_ref().0,
+                arch.handle,
                 reloc.0,
                 dest.as_mut_ptr(),
                 dest.len(),
@@ -357,7 +363,7 @@ impl RelocationHandler for CoreRelocationHandler {
         &self,
         data: &[u8],
         addr: u64,
-        il: &llil::RegularFunction<CoreArchitecture>,
+        il: &RegularLowLevelILFunction<CoreArchitecture>,
         reloc: &Relocation,
     ) -> RelocationOperand {
         unsafe {
@@ -430,7 +436,7 @@ where
         R: 'static + RelocationHandler<Handle = CustomRelocationHandlerHandle<R>> + Send + Sync,
     {
         let custom_handler = unsafe { &*(ctxt as *mut R) };
-        let bv = unsafe { BinaryView::from_raw(BNNewViewReference(bv)) };
+        let bv = unsafe { BinaryView::ref_from_raw(BNNewViewReference(bv)) };
         let arch = unsafe { CoreArchitecture::from_raw(arch) };
         let result = unsafe { core::slice::from_raw_parts_mut(result, count) };
         let mut info = result
@@ -457,7 +463,7 @@ where
         R: 'static + RelocationHandler<Handle = CustomRelocationHandlerHandle<R>> + Send + Sync,
     {
         let custom_handler = unsafe { &*(ctxt as *mut R) };
-        let bv = unsafe { BinaryView::from_raw(BNNewViewReference(bv)) };
+        let bv = unsafe { BinaryView::ref_from_raw(BNNewViewReference(bv)) };
         let arch = unsafe { CoreArchitecture::from_raw(arch) };
         let reloc = unsafe { Relocation::from_raw(reloc) };
         let dest = unsafe { core::slice::from_raw_parts_mut(dest, len) };
@@ -490,8 +496,7 @@ where
             return RelocationOperand::Invalid.into();
         }
         let arch = unsafe { CoreArchitecture::from_raw(arch) };
-
-        let il = unsafe { llil::RegularFunction::from_raw(arch, il) };
+        let il = unsafe { RegularLowLevelILFunction::from_raw(arch, il) };
 
         custom_handler
             .get_operand_for_external_relocation(data, addr, &il, &reloc)
@@ -500,7 +505,9 @@ where
 
     let name = name.into_bytes_with_nul();
 
-    let raw = Box::leak(Box::new(MaybeUninit::<RelocationHandlerBuilder<_>>::zeroed()));
+    let raw = Box::leak(Box::new(
+        MaybeUninit::<RelocationHandlerBuilder<_>>::zeroed(),
+    ));
     let mut custom_handler = BNCustomRelocationHandler {
         context: raw.as_mut_ptr() as *mut _,
         freeObject: Some(cb_free::<R>),
@@ -521,7 +528,7 @@ where
         });
 
         BNArchitectureRegisterRelocationHandler(
-            arch.handle().as_ref().0,
+            arch.handle,
             name.as_ref().as_ptr() as *const _,
             handle.handle().as_ref().0,
         );

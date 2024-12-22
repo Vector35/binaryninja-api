@@ -1,59 +1,68 @@
-use std::marker::PhantomData;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
 use crate::rc::Array;
 use crate::string::{BnStrCompatible, BnString};
+use std::marker::PhantomData;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use thiserror::Error;
 
-
-#[derive(Debug)]
-pub struct EnterpriseCheckoutError(pub String);
-
-impl std::fmt::Display for EnterpriseCheckoutError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
+#[derive(Error, Debug)]
+pub enum EnterpriseCheckoutError {
+    #[error("enterprise server returned error: {0}")]
+    ServerError(String),
+    #[error("no username set for credential authentication")]
+    NoUsername,
+    #[error("no password set for credential authentication")]
+    NoPassword,
+    #[error("failed to authenticate with username and password")]
+    NotAuthenticated,
+    #[error("failed to refresh expired license")]
+    RefreshExpiredLicenseFailed,
 }
 
-impl std::error::Error for EnterpriseCheckoutError {}
-
+/// Initialize the enterprise server connection to check out a floating license.
 pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutError> {
     if crate::is_ui_enabled() {
+        // We only need to check out a license if running headlessly.
         return Ok(());
     }
 
+    #[allow(clippy::collapsible_if)]
     if !is_server_initialized() {
+        // We need to first initialize the server.
         if !initialize_server() && is_server_floating_license() {
-            return Err(EnterpriseCheckoutError(server_last_error().to_string()));
+            let last_error = server_last_error().to_string();
+            return Err(EnterpriseCheckoutError::ServerError(last_error));
         }
     }
 
     if is_server_floating_license() {
         if !is_server_connected() && !connect_server() {
-            return Err(EnterpriseCheckoutError(server_last_error().to_string()));
+            let last_error = server_last_error().to_string();
+            return Err(EnterpriseCheckoutError::ServerError(last_error));
         }
 
+        #[allow(clippy::collapsible_if)]
         if !is_server_authenticated() {
+            // We have yet to authenticate with the server, we should try all available authentication methods.
             if !authenticate_server_with_method("Keychain", false) {
-                let Some(username) = std::env::var("BN_ENTERPRISE_USERNAME").ok() else {
-                    return Err(EnterpriseCheckoutError("BN_ENTERPRISE_USERNAME not set when attempting to authenticate with credentials".to_string()));
-                };
-                let Some(password) = std::env::var("BN_ENTERPRISE_PASSWORD").ok() else {
-                    return Err(EnterpriseCheckoutError("BN_ENTERPRISE_PASSWORD not set when attempting to authenticate with credentials".to_string()));
-                };
+                // We could not authenticate with the system keychain, we should try with credentials.
+                let username = std::env::var("BN_ENTERPRISE_USERNAME")
+                    .map_err(|_| EnterpriseCheckoutError::NoUsername)?;
+                let password = std::env::var("BN_ENTERPRISE_PASSWORD")
+                    .map_err(|_| EnterpriseCheckoutError::NoPassword)?;
                 if !authenticate_server_with_credentials(username, password, true) {
-                    let failed_message = "Could not checkout a license: Not authenticated. Try one of the following: \n \
-                         - Log in and check out a license for an extended time\n \
-                         - Set BN_ENTERPRISE_USERNAME and BN_ENTERPRISE_PASSWORD environment variables\n \
-                         - Use binaryninja::enterprise::{authenticate_server_with_method OR authenticate_server_with_credentials} in your code";
-                    return Err(EnterpriseCheckoutError(failed_message.to_string()));
+                    return Err(EnterpriseCheckoutError::NotAuthenticated);
                 }
             }
         }
     }
-    
-    if !is_server_license_still_activated() || (!is_server_floating_license() && crate::license_expiration_time() < SystemTime::now()) {
+
+    #[allow(clippy::collapsible_if)]
+    if !is_server_license_still_activated()
+        || (!is_server_floating_license() && crate::license_expiration_time() < SystemTime::now())
+    {
+        // If the license is expired we should refresh the license.
         if !update_server_license(duration) {
-            return Err(EnterpriseCheckoutError("Failed to refresh expired license".to_string()));
+            return Err(EnterpriseCheckoutError::RefreshExpiredLicenseFailed);
         }
     }
 
@@ -62,14 +71,27 @@ pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutErro
 
 pub fn release_license() {
     if !crate::is_ui_enabled() {
+        // This might look dumb, why would we want to connect to the server, would that not just mean
+        // we don't need to release the license? Well no, you could have run a script, acquired a license for 10 hours
+        // then you WOULD want to call release license, and your expectation is that acquired license
+        // will now be released. To release that you must have an active connection which is what this does.
+        if !is_server_initialized() {
+            initialize_server();
+        }
+        if !is_server_connected() {
+            connect_server();
+        }
+        // We should only release the license if we are running headlessly.
         release_server_license();
     }
 }
 
+// TODO: If "" string return None
 pub fn server_username() -> BnString {
     unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerUsername()) }
 }
 
+// TODO: If "" string return None
 pub fn server_url() -> BnString {
     unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerUrl()) }
 }
@@ -77,7 +99,9 @@ pub fn server_url() -> BnString {
 pub fn set_server_url<S: BnStrCompatible>(url: S) -> Result<(), ()> {
     let url = url.into_bytes_with_nul();
     let result = unsafe {
-        binaryninjacore_sys::BNSetEnterpriseServerUrl(url.as_ref().as_ptr() as *const std::os::raw::c_char)
+        binaryninjacore_sys::BNSetEnterpriseServerUrl(
+            url.as_ref().as_ptr() as *const std::os::raw::c_char
+        )
     };
     if result {
         Ok(())

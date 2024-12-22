@@ -198,8 +198,8 @@ pub trait BinaryViewExt: BinaryViewBase {
     fn parent_view(&self) -> Option<Ref<BinaryView>> {
         let raw_view_ptr = unsafe { BNGetParentView(self.as_ref().handle) };
         match raw_view_ptr.is_null() {
-            false => None,
-            true => Some(unsafe { BinaryView::ref_from_raw(raw_view_ptr) }),
+            false => Some(unsafe { BinaryView::ref_from_raw(raw_view_ptr) }),
+            true => None,
         }
     }
 
@@ -396,8 +396,8 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let raw_sym_ptr = BNGetSymbolByAddress(self.as_ref().handle, addr, ptr::null_mut());
             match raw_sym_ptr.is_null() {
-                false => None,
-                true => Some(Symbol::ref_from_raw(raw_sym_ptr)),
+                false => Some(Symbol::ref_from_raw(raw_sym_ptr)),
+                true => None,
             }
         }
     }
@@ -412,8 +412,8 @@ pub trait BinaryViewExt: BinaryViewBase {
                 ptr::null_mut(),
             );
             match raw_sym_ptr.is_null() {
-                false => None,
-                true => Some(Symbol::ref_from_raw(raw_sym_ptr)),
+                false => Some(Symbol::ref_from_raw(raw_sym_ptr)),
+                true => None,
             }
         }
     }
@@ -902,8 +902,8 @@ pub trait BinaryViewExt: BinaryViewBase {
             let name_ptr = raw_name.as_ref().as_ptr() as *mut _;
             let raw_section_ptr = BNGetSectionByName(self.as_ref().handle, name_ptr);
             match raw_section_ptr.is_null() {
-                false => None,
-                true => Some(Section::ref_from_raw(raw_section_ptr)),
+                false => Some(Section::ref_from_raw(raw_section_ptr)),
+                true => None,
             }
         }
     }
@@ -999,8 +999,8 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let raw_func_ptr = BNGetAnalysisEntryPoint(self.as_ref().handle);
             match raw_func_ptr.is_null() {
-                false => None,
-                true => Some(Function::ref_from_raw(raw_func_ptr)),
+                false => Some(Function::ref_from_raw(raw_func_ptr)),
+                true => None,
             }
         }
     }
@@ -1049,8 +1049,8 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let raw_func_ptr = BNGetAnalysisFunction(self.as_ref().handle, platform.handle, addr);
             match raw_func_ptr.is_null() {
-                false => None,
-                true => Some(Function::ref_from_raw(raw_func_ptr)),
+                false => Some(Function::ref_from_raw(raw_func_ptr)),
+                true => None,
             }
         }
     }

@@ -179,8 +179,8 @@ impl FileMetadata {
         unsafe {
             let raw_view_ptr = BNGetFileViewOfType(self.handle, view.as_ref().as_ptr() as *const _);
             match raw_view_ptr.is_null() {
-                false => None,
-                true => Some(BinaryView::ref_from_raw(raw_view_ptr)),
+                false => Some(BinaryView::ref_from_raw(raw_view_ptr)),
+                true => None,
             }
         }
     }
@@ -199,15 +199,17 @@ impl FileMetadata {
     ) -> bool {
         let filename = filename.into_bytes_with_nul();
         let filename_ptr = filename.as_ref().as_ptr() as *mut _;
-        let raw = "Raw".into_bytes_with_nul();
-        let raw_ptr = raw.as_ptr() as *mut _;
-
-        let handle = unsafe { BNGetFileViewOfType(self.handle, raw_ptr) };
+        
+        // Databases are created with the root view (Raw).
+        let Some(raw_view) = self.get_view_of_type("Raw") else {
+            return false;
+        };
+        
         match progress_func {
-            None => unsafe { BNCreateDatabase(handle, filename_ptr, ptr::null_mut()) },
+            None => unsafe { BNCreateDatabase(raw_view.handle, filename_ptr, ptr::null_mut()) },
             Some(func) => unsafe {
                 BNCreateDatabaseWithProgress(
-                    handle,
+                    raw_view.handle,
                     filename_ptr,
                     func as *mut c_void,
                     Some(cb_progress_func),
@@ -218,10 +220,14 @@ impl FileMetadata {
     }
 
     pub fn save_auto_snapshot(&self) -> bool {
-        let raw = "Raw".into_bytes_with_nul();
+        // Snapshots are saved with the root view (Raw).
+        let Some(raw_view) = self.get_view_of_type("Raw") else {
+            return false;
+        };
+        
         unsafe {
             BNSaveAutoSnapshot(
-                BNGetFileViewOfType(self.handle, raw.as_ptr() as *mut _),
+                raw_view.handle,
                 ptr::null_mut() as *mut _,
             )
         }

@@ -494,31 +494,29 @@ pub(crate) fn find_local_debug_file_for_build_id(build_id: &String, view: &Binar
     }
 
     for debug_info_path in debug_info_paths.into_iter() {
-        if let Ok(path) = PathBuf::from_str(&debug_info_path.to_string())
-        {
-            let elf_path = path
-                .join(&build_id[..2])
-                .join(&build_id[2..])
-                .join("elf");
+        let path = PathBuf::from(debug_info_path);
+        let elf_path = path
+            .join(&build_id[..2])
+            .join(&build_id[2..])
+            .join("elf");
 
-            let debug_ext_path = path
-                .join(&build_id[..2])
-                .join(format!("{}.debug", &build_id[2..]));
+        let debug_ext_path = path
+            .join(&build_id[..2])
+            .join(format!("{}.debug", &build_id[2..]));
 
-            let final_path = if debug_ext_path.exists() {
-                debug_ext_path
-            }
-            else if elf_path.exists() {
-                elf_path
-            }
-            else {
-                // No paths exist in this dir, try the next one
-                continue;
-            };
-            return final_path
-                .to_str()
-                .and_then(|x| Some(x.to_string()));
+        let final_path = if debug_ext_path.exists() {
+            debug_ext_path
         }
+        else if elf_path.exists() {
+            elf_path
+        }
+        else {
+            // No paths exist in this dir, try the next one
+            continue;
+        };
+        return final_path
+            .to_str()
+            .and_then(|x| Some(x.to_string()));
     }
     None
 }

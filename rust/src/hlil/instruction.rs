@@ -4,8 +4,7 @@ use binaryninjacore_sys::BNHighLevelILOperation;
 use crate::architecture::CoreIntrinsic;
 use crate::operand_iter::OperandIter;
 use crate::rc::Ref;
-use crate::types::{ConstantData, RegisterValue, RegisterValueType, SSAVariable, Variable};
-
+use crate::variable::{ConstantData, RegisterValue, SSAVariable, Variable};
 use super::operation::*;
 use super::{HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLiftedInstructionKind};
 
@@ -750,7 +749,10 @@ impl HighLevelILInstruction {
                 constant_data: ConstantData::new(
                     self.function.get_function(),
                     RegisterValue {
-                        state: RegisterValueType::from_raw_value(op.constant_data_kind).unwrap(),
+                        // TODO: Replace with a From<u32> for RegisterValueType.
+                        // TODO: We might also want to change the type of `op.constant_data_kind`
+                        // TODO: To RegisterValueType and do the conversion when creating instruction.
+                        state: unsafe { std::mem::transmute(op.constant_data_kind) },
                         value: op.constant_data_value,
                         offset: 0,
                         size: op.size,
@@ -811,11 +813,11 @@ impl HighLevelILInstruction {
                 cond_false: self.lift_operand(op.cond_false),
             }),
             Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
-                intrinsic: CoreIntrinsic(self.function.get_function().arch().0, op.intrinsic),
+                intrinsic: CoreIntrinsic::new(self.function.get_function().arch().handle, op.intrinsic),
                 params: self.lift_instruction_list(op.first_param, op.num_params),
             }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
-                intrinsic: CoreIntrinsic(self.function.get_function().arch().0, op.intrinsic),
+                intrinsic: CoreIntrinsic::new(self.function.get_function().arch().handle, op.intrinsic),
                 params: self.lift_instruction_list(op.first_param, op.num_params),
                 dest_memory: op.dest_memory,
                 src_memory: op.src_memory,
@@ -983,7 +985,7 @@ fn get_float(value: u64, size: usize) -> f64 {
 }
 
 fn get_var(id: u64) -> Variable {
-    unsafe { Variable::from_identifier(id) }
+    Variable::from_identifier(id)
 }
 
 fn get_member_index(idx: u64) -> Option<usize> {

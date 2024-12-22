@@ -155,7 +155,7 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant
     for instr_addr in basic_block.into_iter() {
         let mut instr_bytes = view.read_vec(instr_addr, max_instr_len);
         if let Some(instr_info) = arch.instruction_info(&instr_bytes, instr_addr) {
-            instr_bytes.truncate(instr_info.len());
+            instr_bytes.truncate(instr_info.length);
             if let Some(instr_llil) = llil.instruction_at(instr_addr) {
                 // If instruction is blacklisted don't include the bytes.
                 if !is_blacklisted_instr(&instr_llil) {

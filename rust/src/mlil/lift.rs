@@ -2,8 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::architecture::CoreIntrinsic;
 use crate::rc::Ref;
-use crate::types::{ConstantData, SSAVariable, Variable};
-
+use crate::variable::{ConstantData, SSAVariable, Variable};
 use super::operation::*;
 use super::MediumLevelILFunction;
 

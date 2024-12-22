@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use binaryninja::confidence::ConfMergable;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::sync::OnceLock;
@@ -36,13 +37,14 @@ use pdb::{
 
 use binaryninja::architecture::{Architecture, ArchitectureExt, Register};
 use binaryninja::binaryview::BinaryViewBase;
+use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use binaryninja::demangle::demangle_ms;
 use binaryninja::rc::Ref;
 use binaryninja::types::{
-    max_confidence, min_confidence, Conf, ConfMergable, FunctionParameter, QualifiedName,
-    StructureBuilder, Type, TypeClass, Variable, VariableSourceType,
+    FunctionParameter, QualifiedName,
+    StructureBuilder, Type, TypeClass,
 };
-
+use binaryninja::variable::{Variable, VariableSourceType};
 use crate::PDBParserInstance;
 
 const DEMANGLE_CONFIDENCE: u8 = 32;
@@ -230,7 +232,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
                     let this_confidence = match type_ {
                         Some(Conf { confidence, .. }) => *confidence,
-                        _ => min_confidence(),
+                        _ => MIN_CONFIDENCE,
                     };
                     let (new_better, old_exists) = match best_symbols.get(raw_name) {
                         Some(ParsedSymbol::Data(ParsedDataSymbol {
@@ -288,7 +290,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
                     let this_confidence = match type_ {
                         Some(Conf { confidence, .. }) => *confidence,
-                        _ => min_confidence(),
+                        _ => MIN_CONFIDENCE,
                     };
                     let (new_better, old_exists) = match best_functions.get(raw_name) {
                         Some(ParsedSymbol::Procedure(ParsedProcedure {
@@ -735,7 +737,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let storage = if let Some(reg) = self.convert_register(data.register) {
             vec![ParsedLocation {
                 location: Variable {
-                    t: VariableSourceType::RegisterVariableSourceType,
+                    ty: VariableSourceType::RegisterVariableSourceType,
                     index: 0,
                     storage: reg,
                 },
@@ -953,11 +955,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let raw_params = raw_type
             .contents
             .parameters()
-            .map_err(|_| anyhow!("no params"))?;
+            .ok_or(anyhow!("no params"))?;
         let mut fancy_params = fancy_type
             .contents
             .parameters()
-            .map_err(|_| anyhow!("no params"))?;
+            .ok_or(anyhow!("no params"))?;
 
         // Collect all the parameters we are expecting from the symbols
         let mut parsed_params = vec![];
@@ -965,7 +967,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             let param = FunctionParameter::new(
                 p.type_.clone().merge(Conf::new(
                     Type::int(self.arch.address_size(), false),
-                    min_confidence(),
+                    MIN_CONFIDENCE,
                 )),
                 p.name.clone(),
                 p.storage.get(0).map(|loc| loc.location.clone()),
@@ -980,7 +982,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             let param = FunctionParameter::new(
                 p.type_.clone().merge(Conf::new(
                     Type::int(self.arch.address_size(), false),
-                    min_confidence(),
+                    MIN_CONFIDENCE,
                 )),
                 p.name.clone(),
                 p.storage.get(0).map(|loc| loc.location.clone()),
@@ -1028,7 +1030,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let mut i = 0;
         for p in fancy_params.iter_mut() {
             if p.name.as_str().is_empty() {
-                if p.t.contents != expected_parsed_params[i].t.contents {
+                if p.ty.contents != expected_parsed_params[i].ty.contents {
                     self.log(|| {
                         format!(
                             "Suspicious parameter {}: {:?} vs {:?}",
@@ -1049,7 +1051,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let cc = fancy_type
             .contents
             .calling_convention()
-            .map_or_else(|_| Conf::new(self.default_cc.clone(), 0), |cc| cc);
+            .map_or_else(|| Conf::new(self.default_cc.clone(), 0), |cc| cc);
 
         self.log(|| {
             format!(
@@ -1069,17 +1071,17 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         // Use the new locals we've parsed to make the Real Definitely True function type
         let fancy_type = Conf::new(
-            Type::function_with_options(
+            Type::function_with_opts(
                 &fancy_type
                     .contents
                     .return_value()
-                    .map_err(|_| anyhow!("no ret"))?,
+                    .ok_or(anyhow!("no ret"))?,
                 fancy_params.as_slice(),
                 fancy_type.contents.has_variable_arguments().contents,
                 &cc,
                 fancy_type.contents.stack_adjustment(),
             ),
-            max_confidence(),
+            MAX_CONFIDENCE,
         );
 
         let fancier_type = fancy_type
@@ -1424,7 +1426,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     type_: self.lookup_type_conf(&data.type_index, false)?,
                     storage: vec![ParsedLocation {
                         location: Variable {
-                            t: VariableSourceType::StackVariableSourceType,
+                            ty: VariableSourceType::StackVariableSourceType,
                             index: 0,
                             storage: data.offset as i64,
                         },
@@ -1442,7 +1444,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     type_: self.lookup_type_conf(&data.type_index, false)?,
                     storage: vec![ParsedLocation {
                         location: Variable {
-                            t: VariableSourceType::StackVariableSourceType,
+                            ty: VariableSourceType::StackVariableSourceType,
                             index: 0,
                             storage: data.offset as i64,
                         },
@@ -1586,7 +1588,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         if let Some(reg) = self.convert_register(data.register) {
             Ok(Some(ParsedSymbol::Location(ParsedLocation {
                 location: Variable {
-                    t: VariableSourceType::RegisterVariableSourceType,
+                    ty: VariableSourceType::RegisterVariableSourceType,
                     index: 0,
                     storage: reg,
                 },
@@ -1653,7 +1655,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             type_: self.lookup_type_conf(&data.type_index, false)?,
             storage: vec![ParsedLocation {
                 location: Variable {
-                    t: VariableSourceType::StackVariableSourceType,
+                    ty: VariableSourceType::StackVariableSourceType,
                     index: 0,
                     storage: data.offset as i64,
                 },
@@ -1695,14 +1697,14 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     for loc in &new_storage {
                         match loc {
                             Variable {
-                                t: VariableSourceType::RegisterVariableSourceType,
+                                ty: VariableSourceType::RegisterVariableSourceType,
                                 ..
                             } => {
                                 // Assume register vars are always parameters
                                 really_is_param = true;
                             }
                             Variable {
-                                t: VariableSourceType::StackVariableSourceType,
+                                ty: VariableSourceType::StackVariableSourceType,
                                 storage,
                                 ..
                             } if *storage >= 0 => {
@@ -1795,14 +1797,14 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 let parameters = ty
                     .contents
                     .parameters()
-                    .map_err(|_| anyhow!("no parameters"))?;
+                    .ok_or(anyhow!("no parameters"))?;
                 if let [p] = parameters.as_slice() {
-                    if p.t.contents.type_class() == TypeClass::VoidTypeClass {
+                    if p.ty.contents.type_class() == TypeClass::VoidTypeClass {
                         t = Some(Conf::new(
                             Type::function::<_>(
                                 &ty.contents
                                     .return_value()
-                                    .map_err(|_| anyhow!("no return value"))?,
+                                    .ok_or(anyhow!("no return value"))?,
                                 &[],
                                 ty.contents.has_variable_arguments().contents,
                             ),
@@ -1979,13 +1981,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
         let structure = base_type
             .get_structure()
-            .map_err(|_| anyhow!("Expected structure"))?;
+            .ok_or(anyhow!("Expected structure"))?;
         let mut members = structure
             .members()
-            .map_err(|_| anyhow!("Expected structure to have members"))?;
+            .ok_or(anyhow!("Expected structure to have members"))?;
         let last_member = members
             .last_mut()
-            .ok_or_else(|| anyhow!("Not enough members"))?;
+            .ok_or(anyhow!("Not enough members"))?;
 
         if last_member.ty.contents.type_class() != TypeClass::ArrayTypeClass {
             return Ok(None);
@@ -1998,7 +2000,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             .ty
             .contents
             .element_type()
-            .map_err(|_| anyhow!("Last member has no type"))?
+            .ok_or(anyhow!("Last member has no type"))?
             .contents;
         let member_width = member_element.width();
 

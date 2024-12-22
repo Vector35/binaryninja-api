@@ -52,7 +52,7 @@ where
     {
         ffi_wrap!("BinaryViewTypeBase::is_valid_for", unsafe {
             let view_type = &*(ctxt as *mut T);
-            let data = BinaryView::from_raw(BNNewViewReference(data));
+            let data = BinaryView::ref_from_raw(BNNewViewReference(data));
 
             view_type.is_valid_for(&data)
         })
@@ -84,7 +84,7 @@ where
     {
         ffi_wrap!("BinaryViewTypeBase::create", unsafe {
             let view_type = &*(ctxt as *mut T);
-            let data = BinaryView::from_raw(BNNewViewReference(data));
+            let data = BinaryView::ref_from_raw(BNNewViewReference(data));
 
             let builder = CustomViewBuilder {
                 view_type,
@@ -112,7 +112,7 @@ where
     {
         ffi_wrap!("BinaryViewTypeBase::parse", unsafe {
             let view_type = &*(ctxt as *mut T);
-            let data = BinaryView::from_raw(BNNewViewReference(data));
+            let data = BinaryView::ref_from_raw(BNNewViewReference(data));
 
             let builder = CustomViewBuilder {
                 view_type,
@@ -140,7 +140,7 @@ where
     {
         ffi_wrap!("BinaryViewTypeBase::load_settings", unsafe {
             let view_type = &*(ctxt as *mut T);
-            let data = BinaryView::from_raw(BNNewViewReference(data));
+            let data = BinaryView::ref_from_raw(BNNewViewReference(data));
 
             match view_type.load_settings_for_data(&data) {
                 Some(settings) => Ref::into_raw(settings).handle,
@@ -168,9 +168,8 @@ where
     };
 
     unsafe {
-        let res = BNRegisterBinaryViewType(name_ptr, long_name_ptr, &mut bn_obj as *mut _);
-
-        if res.is_null() {
+        let handle = BNRegisterBinaryViewType(name_ptr, long_name_ptr, &mut bn_obj as *mut _);
+        if handle.is_null() {
             // avoid leaking the space allocated for the type, but also
             // avoid running its Drop impl (if any -- not that there should
             // be one since view types live for the life of the process) as
@@ -180,8 +179,7 @@ where
             panic!("bvt registration failed");
         }
 
-        ctxt.write(constructor(BinaryViewType(res)));
-
+        ctxt.write(constructor(BinaryViewType { handle }));
         ctxt.assume_init_mut()
     }
 }
@@ -199,7 +197,7 @@ pub trait BinaryViewTypeBase: AsRef<BinaryViewType> {
 
     fn default_load_settings_for_data(&self, data: &BinaryView) -> Option<Ref<Settings>> {
         let settings_handle =
-            unsafe { BNGetBinaryViewDefaultLoadSettingsForData(self.as_ref().0, data.handle) };
+            unsafe { BNGetBinaryViewDefaultLoadSettingsForData(self.as_ref().handle, data.handle) };
 
         if settings_handle.is_null() {
             None
@@ -215,16 +213,16 @@ pub trait BinaryViewTypeBase: AsRef<BinaryViewType> {
 
 pub trait BinaryViewTypeExt: BinaryViewTypeBase {
     fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetBinaryViewTypeName(self.as_ref().0)) }
+        unsafe { BnString::from_raw(BNGetBinaryViewTypeName(self.as_ref().handle)) }
     }
 
     fn long_name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetBinaryViewTypeLongName(self.as_ref().0)) }
+        unsafe { BnString::from_raw(BNGetBinaryViewTypeLongName(self.as_ref().handle)) }
     }
 
     fn register_arch<A: Architecture>(&self, id: u32, endianness: Endianness, arch: &A) {
         unsafe {
-            BNRegisterArchitectureForViewType(self.as_ref().0, id, endianness, arch.as_ref().0);
+            BNRegisterArchitectureForViewType(self.as_ref().handle, id, endianness, arch.as_ref().handle);
         }
     }
 
@@ -232,12 +230,12 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
         let arch = plat.arch();
 
         unsafe {
-            BNRegisterPlatformForViewType(self.as_ref().0, id, arch.0, plat.handle);
+            BNRegisterPlatformForViewType(self.as_ref().handle, id, arch.handle, plat.handle);
         }
     }
 
     fn open(&self, data: &BinaryView) -> Result<Ref<BinaryView>> {
-        let handle = unsafe { BNCreateBinaryViewOfType(self.as_ref().0, data.handle) };
+        let handle = unsafe { BNCreateBinaryViewOfType(self.as_ref().handle, data.handle) };
 
         if handle.is_null() {
             error!(
@@ -247,11 +245,11 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
             return Err(());
         }
 
-        unsafe { Ok(BinaryView::from_raw(handle)) }
+        unsafe { Ok(BinaryView::ref_from_raw(handle)) }
     }
 
     fn parse(&self, data: &BinaryView) -> Result<Ref<BinaryView>> {
-        let handle = unsafe { BNParseBinaryViewOfType(self.as_ref().0, data.handle) };
+        let handle = unsafe { BNParseBinaryViewOfType(self.as_ref().handle, data.handle) };
 
         if handle.is_null() {
             error!(
@@ -261,21 +259,22 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
             return Err(());
         }
 
-        unsafe { Ok(BinaryView::from_raw(handle)) }
+        unsafe { Ok(BinaryView::ref_from_raw(handle)) }
     }
 }
 
 impl<T: BinaryViewTypeBase> BinaryViewTypeExt for T {}
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
-pub struct BinaryViewType(pub *mut BNBinaryViewType);
+pub struct BinaryViewType {
+    pub handle: *mut BNBinaryViewType
+}
 
 impl BinaryViewType {
     pub fn list_all() -> Array<BinaryViewType> {
         unsafe {
             let mut count: usize = 0;
             let types = BNGetBinaryViewTypes(&mut count as *mut _);
-
             Array::new(types, count, ())
         }
     }
@@ -284,7 +283,6 @@ impl BinaryViewType {
         unsafe {
             let mut count: usize = 0;
             let types = BNGetBinaryViewTypesForData(data.handle, &mut count as *mut _);
-
             Array::new(types, count, ())
         }
     }
@@ -292,11 +290,9 @@ impl BinaryViewType {
     /// Looks up a BinaryViewType by its short name
     pub fn by_name<N: BnStrCompatible>(name: N) -> Result<Self> {
         let bytes = name.into_bytes_with_nul();
-
-        let res = unsafe { BNGetBinaryViewTypeByName(bytes.as_ref().as_ptr() as *const _) };
-
-        match res.is_null() {
-            false => Ok(BinaryViewType(res)),
+        let handle = unsafe { BNGetBinaryViewTypeByName(bytes.as_ref().as_ptr() as *const _) };
+        match handle.is_null() {
+            false => Ok(BinaryViewType { handle }),
             true => Err(()),
         }
     }
@@ -304,19 +300,19 @@ impl BinaryViewType {
 
 impl BinaryViewTypeBase for BinaryViewType {
     fn is_valid_for(&self, data: &BinaryView) -> bool {
-        unsafe { BNIsBinaryViewTypeValidForData(self.0, data.handle) }
+        unsafe { BNIsBinaryViewTypeValidForData(self.handle, data.handle) }
     }
 
     fn is_deprecated(&self) -> bool {
-        unsafe { BNIsBinaryViewTypeDeprecated(self.0) }
+        unsafe { BNIsBinaryViewTypeDeprecated(self.handle) }
     }
 
     fn is_force_loadable(&self) -> bool {
-        unsafe { BNIsBinaryViewTypeForceLoadable(self.0) }
+        unsafe { BNIsBinaryViewTypeForceLoadable(self.handle) }
     }
 
     fn load_settings_for_data(&self, data: &BinaryView) -> Option<Ref<Settings>> {
-        let settings_handle = unsafe { BNGetBinaryViewLoadSettingsForData(self.0, data.handle) };
+        let settings_handle = unsafe { BNGetBinaryViewLoadSettingsForData(self.handle, data.handle) };
 
         if settings_handle.is_null() {
             None
@@ -337,7 +333,7 @@ unsafe impl CoreArrayProviderInner for BinaryViewType {
         BNFreeBinaryViewTypeList(raw);
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(BinaryViewType(*raw), &())
+        Guard::new(BinaryViewType { handle: *raw }, &())
     }
 }
 
@@ -433,7 +429,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
 
         let view_name = view_type.name();
 
-        if let Ok(bv) = file.get_view_of_type(view_name.as_str()) {
+        if let Some(bv) = file.get_view_of_type(view_name.as_str()) {
             // while it seems to work most of the time, you can get really unlucky
             // if the a free of the existing view of the same type kicks off while
             // BNCreateBinaryViewOfType is still running. the freeObject callback
@@ -471,7 +467,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
         {
             ffi_wrap!("BinaryViewBase::init", unsafe {
                 let context = &mut *(ctxt as *mut CustomViewContext<V>);
-                let handle = BinaryView::from_raw(context.raw_handle);
+                let handle = BinaryView::ref_from_raw(context.raw_handle);
 
                 match V::new(handle.as_ref(), &context.args) {
                     Ok(v) => {
@@ -837,7 +833,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
             (*ctxt).raw_handle = res;
 
             Ok(CustomView {
-                handle: BinaryView::from_raw(res),
+                handle: BinaryView::ref_from_raw(res),
                 _builder: PhantomData,
             })
         }

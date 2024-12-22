@@ -16,11 +16,9 @@
 
 use std::borrow::Borrow;
 use std::fmt::{Debug, Formatter};
+use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
-use std::mem;
-use std::os::raw::c_void;
-use std::ptr;
-use std::slice;
+use std::ffi::c_void;
 
 use binaryninjacore_sys::*;
 
@@ -29,7 +27,8 @@ use crate::rc::{
     CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable,
 };
 use crate::string::*;
-
+use crate::types::FunctionParameter;
+use crate::variable::Variable;
 // TODO
 // force valid registers once Arch has _from_id methods
 // CallingConvention impl
@@ -87,7 +86,7 @@ where
                 return;
             }
             
-            let _regs = Box::from_raw(ptr::slice_from_raw_parts_mut(regs, count));
+            let _regs = Box::from_raw(std::ptr::slice_from_raw_parts_mut(regs, count));
         })
     }
 
@@ -107,7 +106,7 @@ where
             // SAFETY: `count` is an out parameter
             *count = regs.len();
             let regs_ptr = regs.as_mut_ptr();
-            mem::forget(regs);
+            std::mem::forget(regs);
             regs_ptr
         })
     }
@@ -128,7 +127,7 @@ where
             // SAFETY: `count` is an out parameter
             *count = regs.len();
             let regs_ptr = regs.as_mut_ptr();
-            mem::forget(regs);
+            std::mem::forget(regs);
             regs_ptr
         })
     }
@@ -144,7 +143,7 @@ where
             // SAFETY: `count` is an out parameter
             *count = regs.len();
             let regs_ptr = regs.as_mut_ptr();
-            mem::forget(regs);
+            std::mem::forget(regs);
             regs_ptr
         })
     }
@@ -165,7 +164,7 @@ where
             // SAFETY: `count` is an out parameter
             *count = regs.len();
             let regs_ptr = regs.as_mut_ptr();
-            mem::forget(regs);
+            std::mem::forget(regs);
             regs_ptr
         })
     }
@@ -292,7 +291,7 @@ where
             // SAFETY: `count` is an out parameter
             *count = regs.len();
             let regs_ptr = regs.as_mut_ptr();
-            mem::forget(regs);
+            std::mem::forget(regs);
             regs_ptr
         })
     }
@@ -343,7 +342,7 @@ where
     {
         ffi_wrap!("CallingConvention::incoming_var_for_param", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            ptr::write(
+            std::ptr::write(
                 param,
                 BNGetDefaultIncomingVariableForParameterVariable(ctxt.raw_handle, var),
             );
@@ -360,7 +359,7 @@ where
     {
         ffi_wrap!("CallingConvention::incoming_param_for_var", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            ptr::write(
+            std::ptr::write(
                 param,
                 BNGetDefaultParameterVariableForIncomingVariable(ctxt.raw_handle, var),
             );
@@ -383,7 +382,7 @@ where
 
     let name = name.into_bytes_with_nul();
     let raw = Box::into_raw(Box::new(CustomCallingConventionContext {
-        raw_handle: ptr::null_mut(),
+        raw_handle: std::ptr::null_mut(),
         cc,
     }));
     let mut cc = BNCustomCallingConvention {
@@ -418,13 +417,13 @@ where
 
     unsafe {
         let cc_name = name.as_ref().as_ptr() as *mut _;
-        let result = BNCreateCallingConvention(arch.as_ref().0, cc_name, &mut cc);
+        let result = BNCreateCallingConvention(arch.as_ref().handle, cc_name, &mut cc);
 
         assert!(!result.is_null());
 
         (*raw).raw_handle = result;
 
-        BNRegisterCallingConvention(arch.as_ref().0, result);
+        BNRegisterCallingConvention(arch.as_ref().handle, result);
 
         Ref::new(CallingConvention {
             handle: result,
@@ -439,9 +438,6 @@ pub struct CallingConvention<A: Architecture> {
     pub(crate) arch_handle: A::Handle,
     _arch: PhantomData<*mut A>,
 }
-
-unsafe impl<A: Architecture> Send for CallingConvention<A> {}
-unsafe impl<A: Architecture> Sync for CallingConvention<A> {}
 
 impl<A: Architecture> CallingConvention<A> {
     pub(crate) unsafe fn ref_from_raw(
@@ -464,35 +460,16 @@ impl<A: Architecture> CallingConvention<A> {
         params: &[FunctionParameter],
         permitted_registers: Option<&[A::Register]>,
     ) -> Vec<Variable> {
-        let mut bn_params: Vec<BNFunctionParameter> = vec![];
-        let name_strings = params.iter().map(|parameter| &parameter.name);
-
-        for (parameter, raw_name) in params.iter().zip(name_strings) {
-            let location = match &parameter.location {
-                Some(location) => location.raw(),
-                None => unsafe { mem::zeroed() },
-            };
-            bn_params.push(BNFunctionParameter {
-                name: BnString::new(raw_name).into_raw(),
-                type_: parameter.t.contents.handle,
-                typeConfidence: parameter.t.confidence,
-                defaultLocation: parameter.location.is_none(),
-                location,
-            });
-        }
-
         let mut count: usize = 0;
-        let vars: *mut BNVariable = if let Some(permitted_args) = permitted_registers {
-            let mut permitted_regs = vec![];
-            for r in permitted_args {
-                permitted_regs.push(r.id());
-            }
+        let raw_params: Vec<BNFunctionParameter> = params.iter().cloned().map(Into::into).collect();
+        let raw_vars_ptr: *mut BNVariable = if let Some(permitted_args) = permitted_registers {
+            let permitted_regs = permitted_args.iter().map(|r| r.id()).collect::<Vec<_>>();
 
             unsafe {
                 BNGetVariablesForParameters(
                     self.handle,
-                    bn_params.as_ptr(),
-                    bn_params.len(),
+                    raw_params.as_ptr(),
+                    raw_params.len(),
                     permitted_regs.as_ptr(),
                     permitted_regs.len(),
                     &mut count,
@@ -502,23 +479,22 @@ impl<A: Architecture> CallingConvention<A> {
             unsafe {
                 BNGetVariablesForParametersDefaultPermittedArgs(
                     self.handle,
-                    bn_params.as_ptr(),
-                    bn_params.len(),
+                    raw_params.as_ptr(),
+                    raw_params.len(),
                     &mut count,
                 )
             }
         };
 
-        let vars_slice = unsafe { slice::from_raw_parts(vars, count) };
-        let mut result = vec![];
-        for var in vars_slice {
-            result.push(unsafe { Variable::from_raw(*var) });
-        }
-
-        unsafe { BNFreeVariableList(vars) };
-        result
+        let raw_vars = unsafe { std::slice::from_raw_parts(raw_vars_ptr, count) };
+        let vars: Vec<_> = raw_vars.iter().copied().map(Into::into).collect();
+        unsafe { BNFreeVariableList(raw_vars_ptr) };
+        vars
     }
 }
+
+unsafe impl<A: Architecture> Send for CallingConvention<A> {}
+unsafe impl<A: Architecture> Sync for CallingConvention<A> {}
 
 impl<A: Architecture> Eq for CallingConvention<A> {}
 impl<A: Architecture> PartialEq for CallingConvention<A> {
@@ -526,9 +502,6 @@ impl<A: Architecture> PartialEq for CallingConvention<A> {
         self.handle == rhs.handle
     }
 }
-
-use crate::types::{FunctionParameter, Variable};
-use std::hash::{Hash, Hasher};
 
 impl<A: Architecture> Hash for CallingConvention<A> {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -545,7 +518,7 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
             let regs = BNGetCallerSavedRegisters(self.handle, &mut count);
             let arch = self.arch_handle.borrow();
 
-            let res = slice::from_raw_parts(regs, count)
+            let res = std::slice::from_raw_parts(regs, count)
                 .iter()
                 .map(|&r| {
                     arch.register_from_id(r)
@@ -565,7 +538,7 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
             let regs = BNGetCalleeSavedRegisters(self.handle, &mut count);
             let arch = self.arch_handle.borrow();
 
-            let res = slice::from_raw_parts(regs, count)
+            let res = std::slice::from_raw_parts(regs, count)
                 .iter()
                 .map(|&r| {
                     arch.register_from_id(r)
@@ -585,7 +558,7 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
             let regs = BNGetIntegerArgumentRegisters(self.handle, &mut count);
             let arch = self.arch_handle.borrow();
 
-            let res = slice::from_raw_parts(regs, count)
+            let res = std::slice::from_raw_parts(regs, count)
                 .iter()
                 .map(|&r| {
                     arch.register_from_id(r)
@@ -605,7 +578,7 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
             let regs = BNGetFloatArgumentRegisters(self.handle, &mut count);
             let arch = self.arch_handle.borrow();
 
-            let res = slice::from_raw_parts(regs, count)
+            let res = std::slice::from_raw_parts(regs, count)
                 .iter()
                 .map(|&r| {
                     arch.register_from_id(r)

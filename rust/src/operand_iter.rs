@@ -6,7 +6,7 @@ use binaryninjacore_sys::BNMediumLevelILOperation;
 use crate::hlil::{HighLevelILFunction, HighLevelILInstruction};
 use crate::mlil::{MediumLevelILFunction, MediumLevelILInstruction};
 use crate::rc::{Ref, RefCountable};
-use crate::types::{SSAVariable, Variable};
+use crate::variable::{SSAVariable, Variable};
 
 pub trait ILFunction {
     type Instruction;
@@ -82,6 +82,7 @@ impl<F: ILFunction + RefCountable> OperandIter<F> {
 
 impl<F: ILFunction + RefCountable> Iterator for OperandIter<F> {
     type Item = u64;
+    
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(item) = self.current_iter.next() {
             self.remaining -= 1;
@@ -104,6 +105,7 @@ impl<F: ILFunction + RefCountable> Iterator for OperandIter<F> {
         }
     }
 }
+
 impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandIter<F> {
     fn len(&self) -> usize {
         self.remaining + self.current_iter.len()
@@ -145,6 +147,7 @@ impl Iterator for OperandIterInner {
         }
     }
 }
+
 impl ExactSizeIterator for OperandIterInner {
     fn len(&self) -> usize {
         4 - self.idx
@@ -152,6 +155,7 @@ impl ExactSizeIterator for OperandIterInner {
 }
 
 pub struct OperandPairIter<F: ILFunction + RefCountable>(OperandIter<F>);
+
 impl<F: ILFunction + RefCountable> Iterator for OperandPairIter<F> {
     type Item = (u64, u64);
 
@@ -168,6 +172,7 @@ impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandPairIter<F> {
 }
 
 pub struct OperandExprIter<F: ILFunction + RefCountable>(OperandIter<F>);
+
 impl<F: ILFunction + RefCountable> Iterator for OperandExprIter<F> {
     type Item = F::Instruction;
 
@@ -177,6 +182,7 @@ impl<F: ILFunction + RefCountable> Iterator for OperandExprIter<F> {
             .map(|idx| self.0.function.il_instruction_from_idx(idx as usize))
     }
 }
+
 impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandExprIter<F> {
     fn len(&self) -> usize {
         self.0.len()
@@ -184,11 +190,12 @@ impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandExprIter<F> {
 }
 
 pub struct OperandVarIter<F: ILFunction + RefCountable>(OperandIter<F>);
+
 impl<F: ILFunction + RefCountable> Iterator for OperandVarIter<F> {
     type Item = Variable;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(get_var)
+        self.0.next().map(Variable::from_identifier)
     }
 }
 impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandVarIter<F> {
@@ -198,25 +205,22 @@ impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandVarIter<F> {
 }
 
 pub struct OperandSSAVarIter<F: ILFunction + RefCountable>(OperandPairIter<F>);
+
 impl<F: ILFunction + RefCountable> Iterator for OperandSSAVarIter<F> {
     type Item = SSAVariable;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0
             .next()
-            .map(|(id, version)| get_var_ssa(id, version as usize))
+            .map(|(id, version)| {
+                let var = Variable::from_identifier(id);
+                SSAVariable::new(var, version as _)
+            })
     }
 }
+
 impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandSSAVarIter<F> {
     fn len(&self) -> usize {
         self.0.len()
     }
-}
-
-pub fn get_var(id: u64) -> Variable {
-    unsafe { Variable::from_identifier(id) }
-}
-
-pub fn get_var_ssa(id: u64, version: usize) -> SSAVariable {
-    SSAVariable::new(get_var(id), version)
 }

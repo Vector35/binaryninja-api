@@ -18,6 +18,7 @@ use msp430_asm::{
 };
 
 use log::error;
+use binaryninja::architecture::BranchKind;
 
 const MIN_MNEMONIC: usize = 9;
 
@@ -71,7 +72,7 @@ impl Architecture for Msp430 {
         self.max_instr_len()
     }
 
-    fn associated_arch_by_addr(&self, _addr: &mut u64) -> CoreArchitecture {
+    fn associated_arch_by_addr(&self, _addr: u64) -> CoreArchitecture {
         self.handle
     }
 
@@ -83,136 +84,118 @@ impl Architecture for Msp430 {
                 match inst {
                     Instruction::Jnz(inst) => {
                         info.add_branch(
-                            BranchInfo::True(offset_to_absolute(addr, inst.offset())),
-                            Some(self.handle),
+                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
                         );
                         info.add_branch(
-                            BranchInfo::False(addr + inst.size() as u64),
-                            Some(self.handle),
+                            BranchKind::False(addr + inst.size() as u64),
                         );
                     }
                     Instruction::Jz(inst) => {
                         info.add_branch(
-                            BranchInfo::True(offset_to_absolute(addr, inst.offset())),
-                            Some(self.handle),
+                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
                         );
                         info.add_branch(
-                            BranchInfo::False(addr + inst.size() as u64),
-                            Some(self.handle),
+                            BranchKind::False(addr + inst.size() as u64),
                         );
                     }
                     Instruction::Jlo(inst) => {
                         info.add_branch(
-                            BranchInfo::True(offset_to_absolute(addr, inst.offset())),
-                            Some(self.handle),
+                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
                         );
                         info.add_branch(
-                            BranchInfo::False(addr + inst.size() as u64),
-                            Some(self.handle),
+                            BranchKind::False(addr + inst.size() as u64),
                         );
                     }
                     Instruction::Jc(inst) => {
                         info.add_branch(
-                            BranchInfo::True(offset_to_absolute(addr, inst.offset())),
-                            Some(self.handle),
+                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
                         );
                         info.add_branch(
-                            BranchInfo::False(addr + inst.size() as u64),
-                            Some(self.handle),
+                            BranchKind::False(addr + inst.size() as u64),
                         );
                     }
                     Instruction::Jn(inst) => {
                         info.add_branch(
-                            BranchInfo::True(offset_to_absolute(addr, inst.offset())),
-                            Some(self.handle),
+                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
                         );
                         info.add_branch(
-                            BranchInfo::False(addr + inst.size() as u64),
-                            Some(self.handle),
+                            BranchKind::False(addr + inst.size() as u64),
                         );
                     }
                     Instruction::Jge(inst) => {
                         info.add_branch(
-                            BranchInfo::True(offset_to_absolute(addr, inst.offset())),
-                            Some(self.handle),
+                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
                         );
                         info.add_branch(
-                            BranchInfo::False(addr + inst.size() as u64),
-                            Some(self.handle),
+                            BranchKind::False(addr + inst.size() as u64),
                         );
                     }
                     Instruction::Jl(inst) => {
                         info.add_branch(
-                            BranchInfo::True(offset_to_absolute(addr, inst.offset())),
-                            Some(self.handle),
+                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
                         );
                         info.add_branch(
-                            BranchInfo::False(addr + inst.size() as u64),
-                            Some(self.handle),
+                            BranchKind::False(addr + inst.size() as u64),
                         );
                     }
                     Instruction::Jmp(inst) => {
                         info.add_branch(
-                            BranchInfo::Unconditional(offset_to_absolute(addr, inst.offset())),
-                            Some(self.handle),
+                            BranchKind::Unconditional(offset_to_absolute(addr, inst.offset())),
                         );
                     }
                     Instruction::Br(inst) => match inst.destination() {
                         Some(Operand::RegisterDirect(_)) => {
-                            info.add_branch(BranchInfo::Indirect, Some(self.handle))
+                            info.add_branch(BranchKind::Indirect)
                         }
                         Some(Operand::Indexed(_)) => {
-                            info.add_branch(BranchInfo::Indirect, Some(self.handle))
+                            info.add_branch(BranchKind::Indirect)
                         }
                         Some(Operand::Absolute(value)) => info.add_branch(
-                            BranchInfo::Unconditional(*value as u64),
-                            Some(self.handle),
+                            BranchKind::Unconditional(*value as u64),
                         ),
                         Some(Operand::Symbolic(offset)) => info.add_branch(
-                            BranchInfo::Unconditional((addr as i64 + *offset as i64) as u64),
-                            Some(self.handle),
+                            BranchKind::Unconditional((addr as i64 + *offset as i64) as u64),
                         ),
                         Some(Operand::Immediate(addr)) => info
-                            .add_branch(BranchInfo::Unconditional(*addr as u64), Some(self.handle)),
+                            .add_branch(BranchKind::Unconditional(*addr as u64)),
                         Some(Operand::Constant(_)) => {
-                            info.add_branch(BranchInfo::Unconditional(addr), Some(self.handle))
+                            info.add_branch(BranchKind::Unconditional(addr))
                         }
                         Some(Operand::RegisterIndirect(_))
                         | Some(Operand::RegisterIndirectAutoIncrement(_)) => {
-                            info.add_branch(BranchInfo::Indirect, Some(self.handle))
+                            info.add_branch(BranchKind::Indirect)
                         }
                         None => {}
                     },
                     Instruction::Call(inst) => match inst.source() {
                         Operand::RegisterDirect(_) => {
-                            info.add_branch(BranchInfo::Indirect, Some(self.handle))
+                            info.add_branch(BranchKind::Indirect)
                         }
                         Operand::Indexed(_) => {
-                            info.add_branch(BranchInfo::Indirect, Some(self.handle))
+                            info.add_branch(BranchKind::Indirect)
                         }
                         Operand::Absolute(value) => {
-                            info.add_branch(BranchInfo::Call(*value as u64), Some(self.handle))
+                            info.add_branch(BranchKind::Call(*value as u64))
                         }
                         Operand::Symbolic(offset) => info.add_branch(
-                            BranchInfo::Call((addr as i64 + *offset as i64) as u64),
-                            Some(self.handle),
+                            BranchKind::Call((addr as i64 + *offset as i64) as u64),
                         ),
                         Operand::Immediate(addr) => {
-                            info.add_branch(BranchInfo::Call(*addr as u64), Some(self.handle))
+                            info.add_branch(BranchKind::Call(*addr as u64))
                         }
                         Operand::Constant(_) => {
-                            info.add_branch(BranchInfo::Call(addr), Some(self.handle))
+                            info.add_branch(BranchKind::Call(addr))
                         }
                         Operand::RegisterIndirect(_)
                         | Operand::RegisterIndirectAutoIncrement(_) => {
-                            info.add_branch(BranchInfo::Indirect, Some(self.handle))
+                            info.add_branch(BranchKind::Indirect)
                         }
                     },
                     Instruction::Reti(_) => {
-                        info.add_branch(BranchInfo::FunctionReturn, Some(self.handle));
+                        info.add_branch(BranchKind::FunctionReturn);
                     }
                     Instruction::Ret(_) => {
-                        info.add_branch(BranchInfo::FunctionReturn, Some(self.handle));
+                        info.add_branch(BranchKind::FunctionReturn);
                     }
                     _ => {}
                 }

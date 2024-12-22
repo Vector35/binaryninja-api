@@ -3,7 +3,7 @@ use super::HighLevelILFunction;
 
 use crate::architecture::CoreIntrinsic;
 use crate::rc::Ref;
-use crate::types::{ConstantData, SSAVariable, Variable};
+use crate::variable::{ConstantData, SSAVariable, Variable};
 
 #[derive(Clone)]
 pub enum HighLevelILLiftedOperand {

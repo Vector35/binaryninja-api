@@ -112,10 +112,10 @@ where
         use binaryninjacore_sys::BNLowLevelILGetInstructionStart;
 
         let loc: Location = loc.into();
-        let arch_handle = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
+        let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
 
         unsafe {
-            let instr_idx = BNLowLevelILGetInstructionStart(self.handle, arch_handle.0, loc.addr);
+            let instr_idx = BNLowLevelILGetInstructionStart(self.handle, arch.handle, loc.addr);
 
             if instr_idx >= BNGetLowLevelILInstructionCount(self.handle) {
                 None
@@ -152,7 +152,7 @@ where
     pub fn get_function(&self) -> Ref<crate::function::Function> {
         unsafe {
             let func = BNGetLowLevelILOwnerFunction(self.handle);
-            crate::function::Function::from_raw(func)
+            crate::function::Function::ref_from_raw(func)
         }
     }
 }
@@ -189,8 +189,8 @@ impl Function<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
 
         let handle = unsafe {
             match source_func {
-                Some(func) => BNCreateLowLevelILFunction(arch.0, func.handle),
-                None => BNCreateLowLevelILFunction(arch.0, null_mut()),
+                Some(func) => BNCreateLowLevelILFunction(arch.handle, func.handle),
+                None => BNCreateLowLevelILFunction(arch.handle, null_mut()),
             }
         };
         if handle.is_null() {

@@ -93,7 +93,7 @@ impl HighLevelILFunction {
     pub fn get_function(&self) -> Ref<Function> {
         unsafe {
             let func = BNGetHighLevelILOwnerFunction(self.handle);
-            Function::from_raw(func)
+            Function::ref_from_raw(func)
         }
     }
 

@@ -13,15 +13,12 @@
 // limitations under the License.
 
 use std::marker::PhantomData;
-use std::mem;
 
 use crate::architecture::Architecture;
 use crate::architecture::Register as ArchReg;
 use crate::architecture::{
     Flag, FlagClass, FlagCondition, FlagGroup, FlagRole, FlagWrite, Intrinsic,
 };
-
-use super::*;
 
 pub trait Liftable<'func, A: 'func + Architecture> {
     type Result: ExpressionResultType;
@@ -42,7 +39,7 @@ pub trait LiftableWithSize<'func, A: 'func + Architecture>:
     ) -> Expression<'func, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>;
 }
 
-use binaryninjacore_sys::BNRegisterOrConstant;
+use binaryninjacore_sys::{BNLowLevelILLabel, BNRegisterOrConstant};
 
 #[derive(Copy, Clone)]
 pub enum RegisterOrConstant<R: ArchReg> {
@@ -50,15 +47,15 @@ pub enum RegisterOrConstant<R: ArchReg> {
     Constant(usize, u64),
 }
 
-impl<R: ArchReg> RegisterOrConstant<R> {
-    pub(crate) fn into_api(self) -> BNRegisterOrConstant {
-        match self {
-            RegisterOrConstant::Register(_, r) => BNRegisterOrConstant {
+impl<R: ArchReg> From<RegisterOrConstant<R>> for BNRegisterOrConstant {
+    fn from(value: RegisterOrConstant<R>) -> Self {
+        match value {
+            RegisterOrConstant::Register(_, r) => Self {
                 constant: false,
                 reg: r.id(),
                 value: 0,
             },
-            RegisterOrConstant::Constant(_, value) => BNRegisterOrConstant {
+            RegisterOrConstant::Constant(_, value) => Self {
                 constant: true,
                 reg: 0,
                 value,
@@ -296,7 +293,7 @@ impl<R: ArchReg> FlagWriteOp<R> {
     pub(crate) fn api_operands(&self) -> (usize, [BNRegisterOrConstant; 5]) {
         use self::FlagWriteOp::*;
 
-        let mut operands: [BNRegisterOrConstant; 5] = unsafe { mem::zeroed() };
+        let mut operands: [BNRegisterOrConstant; 5] = [BNRegisterOrConstant::default(); 5];
 
         let count = match *self {
             Pop(_) => 0,
@@ -311,7 +308,7 @@ impl<R: ArchReg> FlagWriteOp<R> {
             | LowPart(_, op0)
             | BoolToInt(_, op0)
             | FloatToInt(_, op0) => {
-                operands[0] = op0.into_api();
+                operands[0] = op0.into();
                 1
             }
 
@@ -340,8 +337,8 @@ impl<R: ArchReg> FlagWriteOp<R> {
             | ModsDp(_, op0, op1)
             | TestBit(_, op0, op1)
             | AddOverflow(_, op0, op1) => {
-                operands[0] = op0.into_api();
-                operands[1] = op1.into_api();
+                operands[0] = op0.into();
+                operands[1] = op1.into();
                 2
             }
 
@@ -349,9 +346,9 @@ impl<R: ArchReg> FlagWriteOp<R> {
             | Sbb(_, op0, op1, op2)
             | Rlc(_, op0, op1, op2)
             | Rrc(_, op0, op1, op2) => {
-                operands[0] = op0.into_api();
-                operands[1] = op1.into_api();
-                operands[2] = op2.into_api();
+                operands[0] = op0.into();
+                operands[1] = op1.into();
+                operands[2] = op2.into();
                 3
             }
         };
@@ -375,7 +372,7 @@ where
     let expr_idx = unsafe {
         use binaryninjacore_sys::BNGetDefaultArchitectureFlagWriteLowLevelIL;
         BNGetDefaultArchitectureFlagWriteLowLevelIL(
-            arch.as_ref().0,
+            arch.as_ref().handle,
             operation,
             size,
             role,
@@ -398,13 +395,11 @@ where
     A: 'func + Architecture,
 {
     use binaryninjacore_sys::BNGetDefaultArchitectureFlagConditionLowLevelIL;
-
-    let handle = arch.as_ref();
     let class_id = class.map(|c| c.id()).unwrap_or(0);
 
     unsafe {
         let expr_idx =
-            BNGetDefaultArchitectureFlagConditionLowLevelIL(handle.0, cond, class_id, il.handle);
+            BNGetDefaultArchitectureFlagConditionLowLevelIL(arch.as_ref().handle, cond, class_id, il.handle);
 
         Expression::new(il, expr_idx)
     }
@@ -418,7 +413,7 @@ macro_rules! prim_int_lifter {
             fn lift(il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>, val: Self)
                 -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result>
             {
-                il.const_int(mem::size_of::<Self>(), val as i64 as u64)
+                il.const_int(std::mem::size_of::<Self>(), val as i64 as u64)
             }
         }
 
@@ -586,6 +581,9 @@ where
 }
 
 use binaryninjacore_sys::BNLowLevelILOperation;
+use crate::function::Location;
+use crate::llil::{Expression, ExpressionResultType, Function, LiftedExpr, LiftedNonSSA, Lifter, Mutable, NonSSA, Register, ValueExpr, VoidExpr};
+
 pub struct ExpressionBuilder<'func, A, R>
 where
     A: 'func + Architecture,
@@ -983,8 +981,8 @@ where
     pub fn if_expr<'a: 'b, 'b, C>(
         &'a self,
         cond: C,
-        t: &'b Label,
-        f: &'b Label,
+        true_label: &'b Label,
+        false_label: &'b Label,
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, VoidExpr>
     where
         C: Liftable<'b, A, Result = ValueExpr>,
@@ -993,25 +991,29 @@ where
 
         let cond = C::lift(self, cond);
 
+        let mut raw_true_label = BNLowLevelILLabel::from(true_label);
+        let mut raw_false_label = BNLowLevelILLabel::from(false_label);
         let expr_idx = unsafe {
             BNLowLevelILIf(
                 self.handle,
                 cond.expr_idx as u64,
-                &t.0 as *const _ as *mut _,
-                &f.0 as *const _ as *mut _,
+                &mut raw_true_label,
+                &mut raw_false_label,
             )
         };
 
         Expression::new(self, expr_idx)
     }
 
+    // TODO: Wtf are these lifetimes??
     pub fn goto<'a: 'b, 'b>(
         &'a self,
-        l: &'b Label,
+        label: &'b Label,
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, VoidExpr> {
         use binaryninjacore_sys::BNLowLevelILGoto;
 
-        let expr_idx = unsafe { BNLowLevelILGoto(self.handle, &l.0 as *const _ as *mut _) };
+        let mut raw_label = BNLowLevelILLabel::from(label);
+        let expr_idx = unsafe { BNLowLevelILGoto(self.handle, &mut raw_label) };
 
         Expression::new(self, expr_idx)
     }
@@ -1440,7 +1442,7 @@ where
         let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
 
         unsafe {
-            BNLowLevelILSetCurrentAddress(self.handle, arch.0, loc.addr);
+            BNLowLevelILSetCurrentAddress(self.handle, arch.handle, loc.addr);
         }
     }
 
@@ -1450,7 +1452,7 @@ where
         let loc: Location = loc.into();
         let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
 
-        let res = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.0, loc.addr) };
+        let res = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
 
         if res.is_null() {
             None
@@ -1462,26 +1464,56 @@ where
     pub fn mark_label(&self, label: &mut Label) {
         use binaryninjacore_sys::BNLowLevelILMarkLabel;
 
-        unsafe {
-            BNLowLevelILMarkLabel(self.handle, &mut label.0 as *mut _);
-        }
+        let mut raw_label = BNLowLevelILLabel::from(*label);
+        unsafe { BNLowLevelILMarkLabel(self.handle, &mut raw_label) };
+        *label = Label::from(raw_label);
     }
 }
 
-use binaryninjacore_sys::BNLowLevelILLabel;
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Label {
+    pub resolved: bool,
+    // TODO: Rename this to something more sensible?
+    pub expr_ref: usize,
+    pub operand: usize,
+}
 
-#[repr(C)]
-pub struct Label(BNLowLevelILLabel);
 impl Label {
     pub fn new() -> Self {
         use binaryninjacore_sys::BNLowLevelILInitLabel;
 
         unsafe {
             // This is one instance where it'd be easy to use mem::MaybeUninit, but *shrug* this is easier
-            let mut res = Label(mem::zeroed());
-            BNLowLevelILInitLabel(&mut res.0 as *mut _);
-            res
+            let mut raw_label = BNLowLevelILLabel::default();
+            BNLowLevelILInitLabel(&mut raw_label);
+            raw_label.into()
         }
+    }
+}
+
+impl From<BNLowLevelILLabel> for Label {
+    fn from(value: BNLowLevelILLabel) -> Self {
+        Self {
+            resolved: value.resolved,
+            expr_ref: value.ref_,
+            operand: value.operand,
+        }
+    }
+}
+
+impl From<Label> for BNLowLevelILLabel {
+    fn from(value: Label) -> Self {
+        Self {
+            resolved: value.resolved,
+            ref_: value.expr_ref,
+            operand: value.operand,
+        }
+    }
+}
+
+impl From<&Label> for BNLowLevelILLabel {
+    fn from(value: &Label) -> Self {
+        Self::from(*value)
     }
 }
 

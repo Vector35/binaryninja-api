@@ -6,8 +6,9 @@ use binaryninja::binaryview::{BinaryView, BinaryViewExt};
 use binaryninja::callingconvention::CallingConvention as BNCallingConvention;
 use binaryninja::rc::Ref as BNRef;
 use binaryninja::symbol::{Symbol as BNSymbol, SymbolType as BNSymbolType};
+use binaryninja::confidence::Conf as BNConf;
 use binaryninja::types::{
-    BaseStructure as BNBaseStructure, Conf as BNConf, EnumerationBuilder as BNEnumerationBuilder,
+    BaseStructure as BNBaseStructure, EnumerationBuilder as BNEnumerationBuilder,
     FunctionParameter as BNFunctionParameter, MemberAccess as BNMemberAccess, MemberAccess,
     MemberScope as BNMemberScope, NamedTypeReference, NamedTypeReference as BNNamedTypeReference,
     NamedTypeReferenceClass, StructureBuilder as BNStructureBuilder,
@@ -184,7 +185,7 @@ pub fn from_bn_type_internal(
                 .collect::<Vec<_>>();
 
             // Add base structures as flattened members
-            if let Ok(base_structs) = raw_struct.base_structures() {
+            if let Some(base_structs) = raw_struct.base_structures() {
                 let base_to_member_iter = base_structs.iter().map(|base_struct| {
                     let bit_offset = bytes_to_bits(base_struct.offset);
                     let mut modifiers = StructureMemberModifiers::empty();
@@ -275,8 +276,8 @@ pub fn from_bn_type_internal(
                         ty: from_bn_type_internal(
                             view,
                             visited_refs,
-                            &raw_member.t.contents,
-                            raw_member.t.confidence,
+                            &raw_member.ty.contents,
+                            raw_member.ty.confidence,
                         ),
                         // TODO: Just omit location for now?
                         // TODO: Location should be optional...
@@ -286,7 +287,7 @@ pub fn from_bn_type_internal(
                 .collect();
 
             let mut out_members = Vec::new();
-            if let Ok(return_ty) = raw_ty.return_value() {
+            if let Some(return_ty) = raw_ty.return_value() {
                 out_members.push(FunctionMember {
                     name: None,
                     ty: from_bn_type_internal(
@@ -301,8 +302,7 @@ pub fn from_bn_type_internal(
 
             let calling_convention = raw_ty
                 .calling_convention()
-                .map(|bn_cc| from_bn_calling_convention(bn_cc.contents))
-                .ok();
+                .map(|bn_cc| from_bn_calling_convention(bn_cc.contents));
 
             let func_class = FunctionClass {
                 calling_convention,
@@ -338,7 +338,7 @@ pub fn from_bn_type_internal(
         }
     };
 
-    let name = raw_ty.registered_name().map(|n| n.name().to_string()).ok();
+    let name = raw_ty.registered_name().map(|n| n.name().to_string());
 
     Type {
         name,
@@ -485,9 +485,10 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                 builder.insert(member_name, member_value);
             }
             // TODO: Warn if enumeration has no size.
-            let width = bits_to_bytes(c.member_type.size().unwrap()) as _;
+            let width = bits_to_bytes(c.member_type.size().unwrap()) as usize;
             let signed = matches!(*c.member_type.class, TypeClass::Integer(c) if c.signed);
-            BNType::enumeration(&builder.finalize(), width, signed)
+            // TODO: Passing width like this is weird.
+            BNType::enumeration(&builder.finalize(), width.try_into().unwrap(), signed)
         }
         TypeClass::Union(c) => {
             let builder = BNStructureBuilder::new();
@@ -533,7 +534,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
             match c.calling_convention.as_ref() {
                 Some(cc) => {
                     let calling_convention = to_bn_calling_convention(arch, cc);
-                    BNType::function_with_options(
+                    BNType::function_with_opts(
                         &return_type,
                         &params,
                         variable_args,

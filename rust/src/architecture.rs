@@ -21,12 +21,11 @@ use binaryninjacore_sys::*;
 use std::{
     borrow::{Borrow, Cow},
     collections::HashMap,
-    ffi::{c_char, c_int, CStr, CString},
+    ffi::{c_char, c_void, c_int, CStr, CString},
     hash::Hash,
-    mem::{zeroed, MaybeUninit},
-    ops, ptr, slice,
+    mem::MaybeUninit,
 };
-
+use std::ops::Deref;
 use crate::{
     callingconvention::CallingConvention,
     databuffer::DataBuffer,
@@ -39,12 +38,22 @@ use crate::{
     relocation::CoreRelocationHandler,
     string::BnStrCompatible,
     string::*,
-    types::{Conf, NameAndType, Type},
-    {BranchType, Endianness},
+    types::{NameAndType, Type},
+    Endianness,
 };
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum BranchInfo {
+use crate::functionrecognizer::FunctionRecognizer;
+use crate::relocation::{CustomRelocationHandlerHandle, RelocationHandler};
+
+pub use binaryninjacore_sys::BNFlagRole as FlagRole;
+pub use binaryninjacore_sys::BNImplicitRegisterExtend as ImplicitRegisterExtend;
+pub use binaryninjacore_sys::BNLowLevelILFlagCondition as FlagCondition;
+use crate::confidence::Conf;
+
+#[derive(Default, Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum BranchKind {
+    #[default]
+    Unresolved,
     Unconditional(u64),
     False(u64),
     True(u64),
@@ -53,133 +62,166 @@ pub enum BranchInfo {
     SystemCall,
     Indirect,
     Exception,
-    Unresolved,
     UserDefined,
 }
 
-pub struct BranchIter<'a>(&'a InstructionInfo, ops::Range<usize>);
-impl<'a> Iterator for BranchIter<'a> {
-    type Item = (BranchInfo, Option<CoreArchitecture>);
+#[derive(Default, Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct BranchInfo {
+    pub arch: Option<CoreArchitecture>,
+    pub kind: BranchKind,
+}
 
-    fn next(&mut self) -> Option<Self::Item> {
-        use crate::BranchType::*;
+impl BranchInfo {
+    /// Branches to an instruction with the current architecture.
+    pub fn new(kind: BranchKind) -> Self {
+        Self {
+            arch: None,
+            kind,
+        }
+    }
 
-        match self.1.next() {
-            Some(i) => {
-                let target = (self.0).0.branchTarget[i];
-                let arch = (self.0).0.branchArch[i];
-                let arch = if arch.is_null() {
-                    None
-                } else {
-                    Some(CoreArchitecture(arch))
-                };
-
-                let res = match (self.0).0.branchType[i] {
-                    UnconditionalBranch => BranchInfo::Unconditional(target),
-                    FalseBranch => BranchInfo::False(target),
-                    TrueBranch => BranchInfo::True(target),
-                    CallDestination => BranchInfo::Call(target),
-                    FunctionReturn => BranchInfo::FunctionReturn,
-                    SystemCall => BranchInfo::SystemCall,
-                    IndirectBranch => BranchInfo::Indirect,
-                    ExceptionBranch => BranchInfo::Exception,
-                    UnresolvedBranch => BranchInfo::Unresolved,
-                    UserDefinedBranch => BranchInfo::UserDefined,
-                };
-
-                Some((res, arch))
-            }
+    /// Branches to an instruction with an explicit architecture.
+    /// 
+    /// Use this if your architecture can transition to another architecture with a branch.
+    pub fn new_with_arch(kind: BranchKind, arch: CoreArchitecture) -> Self {
+        Self {
+            arch: Some(arch),
+            kind,
+        }
+    }
+    
+    pub fn target(&self) -> Option<u64> {
+        match self.kind {
+            BranchKind::Unconditional(target) => Some(target),
+            BranchKind::False(target) => Some(target),
+            BranchKind::True(target) => Some(target),
+            BranchKind::Call(target) => Some(target),
             _ => None,
         }
     }
 }
 
-#[repr(C)]
-pub struct InstructionInfo(BNInstructionInfo);
-impl InstructionInfo {
-    pub fn new(len: usize, delay_slots: u8) -> Self {
-        InstructionInfo(BNInstructionInfo {
-            length: len,
-            archTransitionByTargetAddr: false,
-            delaySlots: delay_slots,
-            branchCount: 0usize,
-            branchType: [BranchType::UnresolvedBranch; 3],
-            branchTarget: [0u64; 3],
-            branchArch: [ptr::null_mut(); 3],
-        })
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.length
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.length == 0
-    }
-
-    pub fn branch_count(&self) -> usize {
-        self.0.branchCount
-    }
-
-    pub fn delay_slots(&self) -> u8 {
-        self.0.delaySlots
-    }
-
-    pub fn branches(&self) -> BranchIter {
-        BranchIter(self, 0..self.branch_count())
-    }
-
-    pub fn allow_arch_transition_by_target_addr(&mut self, transition: bool) {
-        self.0.archTransitionByTargetAddr = transition;
-    }
-
-    pub fn add_branch(&mut self, branch: BranchInfo, arch: Option<CoreArchitecture>) {
-        if self.0.branchCount < self.0.branchType.len() {
-            let idx = self.0.branchCount;
-
-            let ty = match branch {
-                BranchInfo::Unconditional(t) => {
-                    self.0.branchTarget[idx] = t;
-                    BranchType::UnconditionalBranch
-                }
-                BranchInfo::False(t) => {
-                    self.0.branchTarget[idx] = t;
-                    BranchType::FalseBranch
-                }
-                BranchInfo::True(t) => {
-                    self.0.branchTarget[idx] = t;
-                    BranchType::TrueBranch
-                }
-                BranchInfo::Call(t) => {
-                    self.0.branchTarget[idx] = t;
-                    BranchType::CallDestination
-                }
-                BranchInfo::FunctionReturn => BranchType::FunctionReturn,
-                BranchInfo::SystemCall => BranchType::SystemCall,
-                BranchInfo::Indirect => BranchType::IndirectBranch,
-                BranchInfo::Exception => BranchType::ExceptionBranch,
-                BranchInfo::Unresolved => BranchType::UnresolvedBranch,
-                BranchInfo::UserDefined => BranchType::UserDefinedBranch,
-            };
-
-            self.0.branchType[idx] = ty;
-            self.0.branchArch[idx] = match arch {
-                Some(a) => a.0,
-                _ => ptr::null_mut(),
-            };
-
-            self.0.branchCount += 1;
-        } else {
-            error!("Attempt to branch to instruction with no additional branch space!");
+impl From<BranchInfo> for BNBranchType {
+    fn from(value: BranchInfo) -> Self {
+        match value.kind {
+            BranchKind::Unresolved => BNBranchType::UnresolvedBranch,
+            BranchKind::Unconditional(_) => BNBranchType::UnconditionalBranch,
+            BranchKind::False(_) => BNBranchType::FalseBranch,
+            BranchKind::True(_) => BNBranchType::TrueBranch,
+            BranchKind::Call(_) => BNBranchType::CallDestination,
+            BranchKind::FunctionReturn => BNBranchType::FunctionReturn,
+            BranchKind::SystemCall => BNBranchType::SystemCall,
+            BranchKind::Indirect => BNBranchType::IndirectBranch,
+            BranchKind::Exception => BNBranchType::ExceptionBranch,
+            BranchKind::UserDefined => BNBranchType::UserDefinedBranch,
         }
     }
 }
 
-use crate::functionrecognizer::FunctionRecognizer;
-use crate::relocation::{CustomRelocationHandlerHandle, RelocationHandler};
-pub use binaryninjacore_sys::BNFlagRole as FlagRole;
-pub use binaryninjacore_sys::BNImplicitRegisterExtend as ImplicitRegisterExtend;
-pub use binaryninjacore_sys::BNLowLevelILFlagCondition as FlagCondition;
+impl From<BranchKind> for BranchInfo {
+    fn from(value: BranchKind) -> Self {
+        Self {
+            arch: None,
+            kind: value,
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InstructionInfo {
+    pub length: usize,
+    pub arch_transition_by_target_addr: bool,
+    pub delay_slots: u8,
+    pub branches: [Option<BranchInfo>; 3]
+}
+
+impl InstructionInfo {
+    pub fn new(length: usize, delay_slots: u8) -> Self {
+        Self {
+            length,
+            arch_transition_by_target_addr: false,
+            delay_slots,
+            branches: Default::default(),
+        }
+    }
+    
+    pub fn add_branch(&mut self, branch_info: impl Into<BranchInfo>) {
+        // Will go through each slot and attempt to add the branch info.
+        // TODO: Return a result with BranchInfoSlotsFilled error.
+        for branch in &mut self.branches {
+            if branch.is_none() {
+                *branch = Some(branch_info.into());
+                return;
+            }
+        }
+    }
+}
+
+impl From<BNInstructionInfo> for InstructionInfo {
+    fn from(value: BNInstructionInfo) -> Self {
+        // TODO: This is quite ugly, but we destructure the branch info so this will have to do.
+        let mut branch_info = [None; 3];
+        for i in 0..value.branchCount {
+            let branch_target = value.branchTarget[i];
+            branch_info[i] = Some(BranchInfo {
+                kind: match value.branchType[i] {
+                    BNBranchType::UnconditionalBranch => BranchKind::Unconditional(branch_target),
+                    BNBranchType::FalseBranch => BranchKind::False(branch_target),
+                    BNBranchType::TrueBranch => BranchKind::True(branch_target),
+                    BNBranchType::CallDestination => BranchKind::Call(branch_target),
+                    BNBranchType::FunctionReturn => BranchKind::FunctionReturn,
+                    BNBranchType::SystemCall => BranchKind::SystemCall,
+                    BNBranchType::IndirectBranch => BranchKind::Indirect,
+                    BNBranchType::ExceptionBranch => BranchKind::Exception,
+                    BNBranchType::UnresolvedBranch => BranchKind::Unresolved,
+                    BNBranchType::UserDefinedBranch => BranchKind::UserDefined,
+                },
+                arch: if value.branchArch[i].is_null() {
+                    None
+                } else {
+                    Some(unsafe { CoreArchitecture::from_raw(value.branchArch[i]) })
+                },
+            });
+        }
+        Self {
+            length: value.length,
+            arch_transition_by_target_addr: value.archTransitionByTargetAddr,
+            delay_slots: value.delaySlots,
+            branches: branch_info,
+        }
+    }
+}
+
+impl From<InstructionInfo> for BNInstructionInfo {
+    fn from(value: InstructionInfo) -> Self {
+        let branch_count = value.branches.into_iter().filter(Option::is_some).count();
+        // TODO: This is quite ugly, but we destructure the branch info so this will have to do.
+        let branch_info_0 = value.branches[0].unwrap_or_default();
+        let branch_info_1 = value.branches[1].unwrap_or_default();
+        let branch_info_2 = value.branches[2].unwrap_or_default();
+        Self {
+            length: value.length,
+            branchCount: branch_count,
+            archTransitionByTargetAddr: value.arch_transition_by_target_addr,
+            delaySlots: value.delay_slots,
+            branchType: [
+                branch_info_0.into(),
+                branch_info_1.into(),
+                branch_info_2.into(),
+            ],
+            branchTarget: [
+                branch_info_0.target().unwrap_or_default(),
+                branch_info_1.target().unwrap_or_default(),
+                branch_info_2.target().unwrap_or_default(),
+            ],
+            branchArch: [
+                branch_info_0.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut()),
+                branch_info_1.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut()),
+                branch_info_2.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut()),
+            ],
+        }
+    }
+}
 
 pub trait RegisterInfo: Sized {
     type RegType: Register<InfoType = Self>;
@@ -312,10 +354,11 @@ pub trait Intrinsic: Sized + Clone + Copy {
     /// Unique identifier for this `Intrinsic`.
     fn id(&self) -> u32;
 
-    /// Reeturns the list of the input names and types for this intrinsic.
-    fn inputs(&self) -> Vec<Ref<NameAndType>>;
+    // TODO: Maybe just return `(String, Conf<Ref<Type>>)`?
+    /// List of the input names and types for this intrinsic.
+    fn inputs(&self) -> Vec<NameAndType>;
 
-    /// Returns the list of the output types for this intrinsic.
+    /// List of the output types for this intrinsic.
     fn outputs(&self) -> Vec<Conf<Ref<Type>>>;
 }
 
@@ -349,7 +392,7 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn max_instr_len(&self) -> usize;
     fn opcode_display_len(&self) -> usize;
 
-    fn associated_arch_by_addr(&self, addr: &mut u64) -> CoreArchitecture;
+    fn associated_arch_by_addr(&self, addr: u64) -> CoreArchitecture;
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo>;
     fn instruction_text(
@@ -640,7 +683,7 @@ impl FlagGroup for UnusedFlag {
 }
 
 /// Type for architrectures that do not use intrinsics. Will panic if accessed as an intrinsic.
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct UnusedIntrinsic;
 
 impl Intrinsic for UnusedIntrinsic {
@@ -650,7 +693,7 @@ impl Intrinsic for UnusedIntrinsic {
     fn id(&self) -> u32 {
         unreachable!()
     }
-    fn inputs(&self) -> Vec<Ref<NameAndType>> {
+    fn inputs(&self) -> Vec<NameAndType> {
         unreachable!()
     }
     fn outputs(&self) -> Vec<Conf<Ref<Type>>> {
@@ -658,39 +701,65 @@ impl Intrinsic for UnusedIntrinsic {
     }
 }
 
-pub struct CoreRegisterInfo(*mut BNArchitecture, u32, BNRegisterInfo);
+#[derive(Debug, Copy, Clone)]
+pub struct CoreRegisterInfo {
+    arch: *mut BNArchitecture,
+    id: u32,
+    info: BNRegisterInfo,
+}
+
+impl CoreRegisterInfo {
+    pub fn new(arch: *mut BNArchitecture, id: u32, info: BNRegisterInfo) -> Self {
+        Self {
+            arch,
+            id,
+            info,
+        }
+    }
+}
+
 impl RegisterInfo for CoreRegisterInfo {
     type RegType = CoreRegister;
 
     fn parent(&self) -> Option<CoreRegister> {
-        if self.1 != self.2.fullWidthRegister {
-            Some(CoreRegister(self.0, self.2.fullWidthRegister))
+        if self.id != self.info.fullWidthRegister {
+            Some(CoreRegister::new(self.arch, self.info.fullWidthRegister))
         } else {
             None
         }
     }
 
     fn size(&self) -> usize {
-        self.2.size
+        self.info.size
     }
 
     fn offset(&self) -> usize {
-        self.2.offset
+        self.info.offset
     }
 
     fn implicit_extend(&self) -> ImplicitRegisterExtend {
-        self.2.extend
+        self.info.extend
     }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub struct CoreRegister(*mut BNArchitecture, u32);
+pub struct CoreRegister {
+    arch: *mut BNArchitecture,
+    id: u32,
+}
+
+impl CoreRegister {
+    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
+        Self { arch, id }
+    }
+}
+
 impl Register for CoreRegister {
     type InfoType = CoreRegisterInfo;
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureRegisterName(self.0, self.1);
+            let name = BNGetArchitectureRegisterName(self.arch, self.id);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -705,13 +774,13 @@ impl Register for CoreRegister {
     }
 
     fn info(&self) -> CoreRegisterInfo {
-        CoreRegisterInfo(self.0, self.1, unsafe {
-            BNGetArchitectureRegisterInfo(self.0, self.1)
+        CoreRegisterInfo::new(self.arch, self.id, unsafe {
+            BNGetArchitectureRegisterInfo(self.arch, self.id)
         })
     }
 
     fn id(&self) -> u32 {
-        self.1
+        self.id
     }
 }
 
@@ -725,12 +794,23 @@ unsafe impl CoreArrayProviderInner for CoreRegister {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeRegisterList(raw)
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self(context.0, *raw)
+        Self::new(context.handle, *raw)
     }
 }
 
-pub struct CoreRegisterStackInfo(*mut BNArchitecture, BNRegisterStackInfo);
+#[derive(Debug, Copy, Clone)]
+pub struct CoreRegisterStackInfo {
+    arch: *mut BNArchitecture,
+    info: BNRegisterStackInfo,
+}
+
+impl CoreRegisterStackInfo {
+    pub fn new(arch: *mut BNArchitecture, info: BNRegisterStackInfo) -> Self {
+        Self { arch, info }
+    }
+}
 
 impl RegisterStackInfo for CoreRegisterStackInfo {
     type RegStackType = CoreRegisterStack;
@@ -739,29 +819,38 @@ impl RegisterStackInfo for CoreRegisterStackInfo {
 
     fn storage_regs(&self) -> (Self::RegType, u32) {
         (
-            CoreRegister(self.0, self.1.firstStorageReg),
-            self.1.storageCount,
+            CoreRegister::new(self.arch, self.info.firstStorageReg),
+            self.info.storageCount,
         )
     }
 
     fn top_relative_regs(&self) -> Option<(Self::RegType, u32)> {
-        if self.1.topRelativeCount == 0 {
+        if self.info.topRelativeCount == 0 {
             None
         } else {
             Some((
-                CoreRegister(self.0, self.1.firstTopRelativeReg),
-                self.1.topRelativeCount,
+                CoreRegister::new(self.arch, self.info.firstTopRelativeReg),
+                self.info.topRelativeCount,
             ))
         }
     }
 
     fn stack_top_reg(&self) -> Self::RegType {
-        CoreRegister(self.0, self.1.stackTopReg)
+        CoreRegister::new(self.arch, self.info.stackTopReg)
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub struct CoreRegisterStack(*mut BNArchitecture, u32);
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct CoreRegisterStack {
+    arch: *mut BNArchitecture,
+    id: u32
+}
+
+impl CoreRegisterStack {
+    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
+        Self { arch, id }
+    }
+}
 
 impl RegisterStack for CoreRegisterStack {
     type InfoType = CoreRegisterStackInfo;
@@ -770,7 +859,7 @@ impl RegisterStack for CoreRegisterStack {
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureRegisterStackName(self.0, self.1);
+            let name = BNGetArchitectureRegisterStackName(self.arch, self.id);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -785,24 +874,34 @@ impl RegisterStack for CoreRegisterStack {
     }
 
     fn info(&self) -> CoreRegisterStackInfo {
-        CoreRegisterStackInfo(self.0, unsafe {
-            BNGetArchitectureRegisterStackInfo(self.0, self.1)
+        CoreRegisterStackInfo::new(self.arch, unsafe {
+            BNGetArchitectureRegisterStackInfo(self.arch, self.id)
         })
     }
 
     fn id(&self) -> u32 {
-        self.1
+        self.id
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub struct CoreFlag(*mut BNArchitecture, u32);
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct CoreFlag {
+    arch: *mut BNArchitecture,
+    id: u32
+}
+
+impl CoreFlag {
+    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
+        Self { arch, id }
+    }
+}
+
 impl Flag for CoreFlag {
     type FlagClass = CoreFlagClass;
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureFlagName(self.0, self.1);
+            let name = BNGetArchitectureFlagName(self.arch, self.id);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -818,27 +917,37 @@ impl Flag for CoreFlag {
 
     fn role(&self, class: Option<CoreFlagClass>) -> FlagRole {
         let class_id = match class {
-            Some(class) => class.1,
+            Some(class) => class.id,
             _ => 0,
         };
 
-        unsafe { BNGetArchitectureFlagRole(self.0, self.1, class_id) }
+        unsafe { BNGetArchitectureFlagRole(self.arch, self.id, class_id) }
     }
 
     fn id(&self) -> u32 {
-        self.1
+        self.id
     }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub struct CoreFlagWrite(*mut BNArchitecture, u32);
+pub struct CoreFlagWrite {
+    arch: *mut BNArchitecture,
+    id: u32
+}
+
+impl CoreFlagWrite {
+    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
+        Self { arch, id }
+    }
+}
+
 impl FlagWrite for CoreFlagWrite {
     type FlagType = CoreFlag;
     type FlagClass = CoreFlagClass;
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureFlagWriteTypeName(self.0, self.1);
+            let name = BNGetArchitectureFlagWriteTypeName(self.arch, self.id);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -852,20 +961,29 @@ impl FlagWrite for CoreFlagWrite {
         }
     }
 
+    fn class(&self) -> Option<CoreFlagClass> {
+        let class = unsafe { BNGetArchitectureSemanticClassForFlagWriteType(self.arch, self.id) };
+
+        match class {
+            0 => None,
+            class_id => Some(CoreFlagClass::new(self.arch, class_id)),
+        }
+    }
+
     fn id(&self) -> u32 {
-        self.1
+        self.id
     }
 
     fn flags_written(&self) -> Vec<CoreFlag> {
         let mut count: usize = 0;
         let regs: *mut u32 = unsafe {
-            BNGetArchitectureFlagsWrittenByFlagWriteType(self.0, self.1, &mut count as *mut _)
+            BNGetArchitectureFlagsWrittenByFlagWriteType(self.arch, self.id, &mut count)
         };
 
         let ret = unsafe {
-            slice::from_raw_parts_mut(regs, count)
+            std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|reg| CoreFlag(self.0, *reg))
+                .map(|&reg| CoreFlag::new(self.arch, reg))
                 .collect()
         };
 
@@ -875,23 +993,24 @@ impl FlagWrite for CoreFlagWrite {
 
         ret
     }
+}
 
-    fn class(&self) -> Option<CoreFlagClass> {
-        let class = unsafe { BNGetArchitectureSemanticClassForFlagWriteType(self.0, self.1) };
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct CoreFlagClass {
+    arch: *mut BNArchitecture,
+    id: u32
+}
 
-        match class {
-            0 => None,
-            id => Some(CoreFlagClass(self.0, id)),
-        }
+impl CoreFlagClass {
+    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
+        Self { arch, id }
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub struct CoreFlagClass(*mut BNArchitecture, u32);
 impl FlagClass for CoreFlagClass {
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureSemanticFlagClassName(self.0, self.1);
+            let name = BNGetArchitectureSemanticFlagClassName(self.arch, self.id);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -906,19 +1025,29 @@ impl FlagClass for CoreFlagClass {
     }
 
     fn id(&self) -> u32 {
-        self.1
+        self.id
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub struct CoreFlagGroup(*mut BNArchitecture, u32);
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct CoreFlagGroup {
+    arch: *mut BNArchitecture,
+    id: u32
+}
+
+impl CoreFlagGroup {
+    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
+        Self { arch, id }
+    }
+}
+
 impl FlagGroup for CoreFlagGroup {
     type FlagType = CoreFlag;
     type FlagClass = CoreFlagClass;
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureSemanticFlagGroupName(self.0, self.1);
+            let name = BNGetArchitectureSemanticFlagGroupName(self.arch, self.id);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -933,19 +1062,19 @@ impl FlagGroup for CoreFlagGroup {
     }
 
     fn id(&self) -> u32 {
-        self.1
+        self.id
     }
 
     fn flags_required(&self) -> Vec<CoreFlag> {
         let mut count: usize = 0;
         let regs: *mut u32 = unsafe {
-            BNGetArchitectureFlagsRequiredForSemanticFlagGroup(self.0, self.1, &mut count as *mut _)
+            BNGetArchitectureFlagsRequiredForSemanticFlagGroup(self.arch, self.id, &mut count)
         };
 
         let ret = unsafe {
-            slice::from_raw_parts_mut(regs, count)
+            std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|reg| CoreFlag(self.0, *reg))
+                .map(|&reg| CoreFlag::new(self.arch, reg))
                 .collect()
         };
 
@@ -961,16 +1090,16 @@ impl FlagGroup for CoreFlagGroup {
 
         unsafe {
             let flag_conds = BNGetArchitectureFlagConditionsForSemanticFlagGroup(
-                self.0,
-                self.1,
-                &mut count as *mut _,
+                self.arch,
+                self.id,
+                &mut count,
             );
 
-            let ret = slice::from_raw_parts_mut(flag_conds, count)
+            let ret = std::slice::from_raw_parts_mut(flag_conds, count)
                 .iter()
                 .map(|class_cond| {
                     (
-                        CoreFlagClass(self.0, class_cond.semanticClass),
+                        CoreFlagClass::new(self.arch, class_cond.semanticClass),
                         class_cond.condition,
                     )
                 })
@@ -984,16 +1113,26 @@ impl FlagGroup for CoreFlagGroup {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct CoreIntrinsic(pub(crate) *mut BNArchitecture, pub(crate) u32);
+pub struct CoreIntrinsic {
+    pub arch: *mut BNArchitecture,
+    pub id: u32,
+}
 
-impl Intrinsic for crate::architecture::CoreIntrinsic {
+impl CoreIntrinsic {
+    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
+        Self { arch, id }
+    }
+}
+
+impl Intrinsic for CoreIntrinsic {
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureIntrinsicName(self.0, self.1);
+            let name = BNGetArchitectureIntrinsicName(self.arch, self.id);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
             // memory.
+            // TODO: ^ the above assertion nullifies any benefit to passing back Cow tho?
             let res = CStr::from_ptr(name);
             let res = res.to_string_lossy().into_owned().into();
 
@@ -1004,18 +1143,18 @@ impl Intrinsic for crate::architecture::CoreIntrinsic {
     }
 
     fn id(&self) -> u32 {
-        self.1
+        self.id
     }
 
-    fn inputs(&self) -> Vec<Ref<NameAndType>> {
+    fn inputs(&self) -> Vec<NameAndType> {
         let mut count: usize = 0;
-
         unsafe {
-            let inputs = BNGetArchitectureIntrinsicInputs(self.0, self.1, &mut count as *mut _);
+            let inputs = BNGetArchitectureIntrinsicInputs(self.arch, self.id, &mut count);
 
-            let ret = slice::from_raw_parts_mut(inputs, count)
+            let ret = std::slice::from_raw_parts_mut(inputs, count)
                 .iter()
-                .map(|x| NameAndType::from_raw(x).to_owned())
+                .copied()
+                .map(Into::into)
                 .collect();
 
             BNFreeNameAndTypeList(inputs, count);
@@ -1026,11 +1165,10 @@ impl Intrinsic for crate::architecture::CoreIntrinsic {
 
     fn outputs(&self) -> Vec<Conf<Ref<Type>>> {
         let mut count: usize = 0;
-
         unsafe {
-            let inputs = BNGetArchitectureIntrinsicOutputs(self.0, self.1, &mut count as *mut _);
+            let inputs = BNGetArchitectureIntrinsicOutputs(self.arch, self.id, &mut count);
 
-            let ret = slice::from_raw_parts_mut(inputs, count)
+            let ret = std::slice::from_raw_parts_mut(inputs, count)
                 .iter()
                 .map(|input| (*input).into())
                 .collect();
@@ -1042,12 +1180,14 @@ impl Intrinsic for crate::architecture::CoreIntrinsic {
     }
 }
 
+// TODO: WTF?!?!?!?
 pub struct CoreArchitectureList(*mut *mut BNArchitecture, usize);
-impl ops::Deref for CoreArchitectureList {
+
+impl Deref for CoreArchitectureList {
     type Target = [CoreArchitecture];
 
     fn deref(&self) -> &Self::Target {
-        unsafe { slice::from_raw_parts_mut(self.0 as *mut CoreArchitecture, self.1) }
+        unsafe { std::slice::from_raw_parts_mut(self.0 as *mut CoreArchitecture, self.1) }
     }
 }
 
@@ -1060,36 +1200,38 @@ impl Drop for CoreArchitectureList {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
-pub struct CoreArchitecture(pub(crate) *mut BNArchitecture);
-
-unsafe impl Send for CoreArchitecture {}
-unsafe impl Sync for CoreArchitecture {}
+pub struct CoreArchitecture {
+    pub(crate) handle: *mut BNArchitecture   
+}
 
 impl CoreArchitecture {
-    pub(crate) unsafe fn from_raw(raw: *mut BNArchitecture) -> Self {
-        CoreArchitecture(raw)
+    pub(crate) unsafe fn from_raw(handle: *mut BNArchitecture) -> Self {
+        debug_assert!(!handle.is_null());
+        CoreArchitecture { handle }
     }
 
     pub fn list_all() -> CoreArchitectureList {
         let mut count: usize = 0;
-        let archs = unsafe { BNGetArchitectureList(&mut count as *mut _) };
+        let archs = unsafe { BNGetArchitectureList(&mut count) };
 
         CoreArchitectureList(archs, count)
     }
 
     pub fn by_name(name: &str) -> Option<Self> {
-        let res = unsafe { BNGetArchitectureByName(name.into_bytes_with_nul().as_ptr() as *mut _) };
-
-        match res.is_null() {
-            false => Some(CoreArchitecture(res)),
+        let handle = unsafe { BNGetArchitectureByName(name.into_bytes_with_nul().as_ptr() as *mut _) };
+        match handle.is_null() {
+            false => Some(CoreArchitecture { handle }),
             true => None,
         }
     }
 
     pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetArchitectureName(self.0)) }
+        unsafe { BnString::from_raw(BNGetArchitectureName(self.handle)) }
     }
 }
+
+unsafe impl Send for CoreArchitecture {}
+unsafe impl Sync for CoreArchitecture {}
 
 impl AsRef<CoreArchitecture> for CoreArchitecture {
     fn as_ref(&self) -> &Self {
@@ -1111,49 +1253,48 @@ impl Architecture for CoreArchitecture {
     type Intrinsic = CoreIntrinsic;
 
     fn endianness(&self) -> Endianness {
-        unsafe { BNGetArchitectureEndianness(self.0) }
+        unsafe { BNGetArchitectureEndianness(self.handle) }
     }
 
     fn address_size(&self) -> usize {
-        unsafe { BNGetArchitectureAddressSize(self.0) }
+        unsafe { BNGetArchitectureAddressSize(self.handle) }
     }
 
     fn default_integer_size(&self) -> usize {
-        unsafe { BNGetArchitectureDefaultIntegerSize(self.0) }
+        unsafe { BNGetArchitectureDefaultIntegerSize(self.handle) }
     }
 
     fn instruction_alignment(&self) -> usize {
-        unsafe { BNGetArchitectureInstructionAlignment(self.0) }
+        unsafe { BNGetArchitectureInstructionAlignment(self.handle) }
     }
 
     fn max_instr_len(&self) -> usize {
-        unsafe { BNGetArchitectureMaxInstructionLength(self.0) }
+        unsafe { BNGetArchitectureMaxInstructionLength(self.handle) }
     }
 
     fn opcode_display_len(&self) -> usize {
-        unsafe { BNGetArchitectureOpcodeDisplayLength(self.0) }
+        unsafe { BNGetArchitectureOpcodeDisplayLength(self.handle) }
     }
 
-    fn associated_arch_by_addr(&self, addr: &mut u64) -> CoreArchitecture {
-        let arch = unsafe { BNGetAssociatedArchitectureByAddress(self.0, addr as *mut _) };
-
-        CoreArchitecture(arch)
+    fn associated_arch_by_addr(&self, addr: u64) -> CoreArchitecture {
+        let handle = unsafe { BNGetAssociatedArchitectureByAddress(self.handle, addr as *mut _) };
+        CoreArchitecture { handle }
     }
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
-        let mut info = unsafe { zeroed::<InstructionInfo>() };
+        let mut info = BNInstructionInfo::default();
         let success = unsafe {
             BNGetInstructionInfo(
-                self.0,
+                self.handle,
                 data.as_ptr(),
                 addr,
                 data.len(),
-                &mut (info.0) as *mut _,
+                &mut info,
             )
         };
 
         if success {
-            Some(info)
+            Some(info.into())
         } else {
             None
         }
@@ -1166,18 +1307,18 @@ impl Architecture for CoreArchitecture {
     ) -> Option<(usize, Vec<InstructionTextToken>)> {
         let mut consumed = data.len();
         let mut count: usize = 0;
-        let mut result: *mut BNInstructionTextToken = ptr::null_mut();
+        let mut result: *mut BNInstructionTextToken = std::ptr::null_mut();
 
         unsafe {
             if BNGetInstructionText(
-                self.0,
+                self.handle,
                 data.as_ptr(),
                 addr,
-                &mut consumed as *mut _,
-                &mut result as *mut _,
-                &mut count as *mut _,
+                &mut consumed,
+                &mut result,
+                &mut count,
             ) {
-                let vec = slice::from_raw_parts(result, count)
+                let vec = std::slice::from_raw_parts(result, count)
                     .iter()
                     .map(|x| InstructionTextToken::from_raw(x).to_owned())
                     .collect();
@@ -1197,7 +1338,7 @@ impl Architecture for CoreArchitecture {
     ) -> Option<(usize, bool)> {
         let mut size = data.len();
         let success = unsafe {
-            BNGetInstructionLowLevelIL(self.0, data.as_ptr(), addr, &mut size as *mut _, il.handle)
+            BNGetInstructionLowLevelIL(self.handle, data.as_ptr(), addr, &mut size as *mut _, il.handle)
         };
 
         if !success {
@@ -1237,11 +1378,11 @@ impl Architecture for CoreArchitecture {
     fn registers_all(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureRegisters(self.0, &mut count as *mut _);
+            let regs = BNGetAllArchitectureRegisters(self.handle, &mut count);
 
-            let ret = slice::from_raw_parts_mut(regs, count)
+            let ret = std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|reg| CoreRegister(self.0, *reg))
+                .map(|&reg| CoreRegister::new(self.handle, reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1253,11 +1394,11 @@ impl Architecture for CoreArchitecture {
     fn registers_full_width(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetFullWidthArchitectureRegisters(self.0, &mut count as *mut _);
+            let regs = BNGetFullWidthArchitectureRegisters(self.handle, &mut count);
 
-            let ret = slice::from_raw_parts_mut(regs, count)
+            let ret = std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|reg| CoreRegister(self.0, *reg))
+                .map(|&reg| CoreRegister::new(self.handle, reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1269,11 +1410,11 @@ impl Architecture for CoreArchitecture {
     fn registers_global(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetArchitectureGlobalRegisters(self.0, &mut count as *mut _);
+            let regs = BNGetArchitectureGlobalRegisters(self.handle, &mut count);
 
-            let ret = slice::from_raw_parts_mut(regs, count)
+            let ret = std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|reg| CoreRegister(self.0, *reg))
+                .map(|&reg| CoreRegister::new(self.handle, reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1285,11 +1426,11 @@ impl Architecture for CoreArchitecture {
     fn registers_system(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetArchitectureSystemRegisters(self.0, &mut count as *mut _);
+            let regs = BNGetArchitectureSystemRegisters(self.handle, &mut count);
 
-            let ret = slice::from_raw_parts_mut(regs, count)
+            let ret = std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|reg| CoreRegister(self.0, *reg))
+                .map(|&reg| CoreRegister::new(self.handle, reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1301,11 +1442,11 @@ impl Architecture for CoreArchitecture {
     fn register_stacks(&self) -> Vec<CoreRegisterStack> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureRegisterStacks(self.0, &mut count as *mut _);
+            let regs = BNGetAllArchitectureRegisterStacks(self.handle, &mut count);
 
-            let ret = slice::from_raw_parts_mut(regs, count)
+            let ret = std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|reg| CoreRegisterStack(self.0, *reg))
+                .map(|&reg| CoreRegisterStack::new(self.handle, reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1317,11 +1458,11 @@ impl Architecture for CoreArchitecture {
     fn flags(&self) -> Vec<CoreFlag> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureFlags(self.0, &mut count as *mut _);
+            let regs = BNGetAllArchitectureFlags(self.handle, &mut count);
 
-            let ret = slice::from_raw_parts_mut(regs, count)
+            let ret = std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|reg| CoreFlag(self.0, *reg))
+                .map(|&reg| CoreFlag::new(self.handle, reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1333,11 +1474,11 @@ impl Architecture for CoreArchitecture {
     fn flag_write_types(&self) -> Vec<CoreFlagWrite> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureFlagWriteTypes(self.0, &mut count as *mut _);
+            let regs = BNGetAllArchitectureFlagWriteTypes(self.handle, &mut count);
 
-            let ret = slice::from_raw_parts_mut(regs, count)
+            let ret = std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|reg| CoreFlagWrite(self.0, *reg))
+                .map(|&reg| CoreFlagWrite::new(self.handle, reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1349,11 +1490,11 @@ impl Architecture for CoreArchitecture {
     fn flag_classes(&self) -> Vec<CoreFlagClass> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureSemanticFlagClasses(self.0, &mut count as *mut _);
+            let regs = BNGetAllArchitectureSemanticFlagClasses(self.handle, &mut count);
 
-            let ret = slice::from_raw_parts_mut(regs, count)
+            let ret = std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|reg| CoreFlagClass(self.0, *reg))
+                .map(|&reg| CoreFlagClass::new(self.handle, reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1365,11 +1506,11 @@ impl Architecture for CoreArchitecture {
     fn flag_groups(&self) -> Vec<CoreFlagGroup> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureSemanticFlagGroups(self.0, &mut count as *mut _);
+            let regs = BNGetAllArchitectureSemanticFlagGroups(self.handle, &mut count);
 
-            let ret = slice::from_raw_parts_mut(regs, count)
+            let ret = std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|reg| CoreFlagGroup(self.0, *reg))
+                .map(|&reg| CoreFlagGroup::new(self.handle, reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1388,15 +1529,15 @@ impl Architecture for CoreArchitecture {
         unsafe {
             let mut count: usize = 0;
             let flags = BNGetArchitectureFlagsRequiredForFlagCondition(
-                self.0,
+                self.handle,
                 condition,
                 class_id,
-                &mut count as *mut _,
+                &mut count,
             );
 
-            let ret = slice::from_raw_parts_mut(flags, count)
+            let ret = std::slice::from_raw_parts(flags, count)
                 .iter()
-                .map(|flag| CoreFlag(self.0, *flag))
+                .map(|&flag| CoreFlag::new(self.handle, flag))
                 .collect();
 
             BNFreeRegisterList(flags);
@@ -1406,57 +1547,57 @@ impl Architecture for CoreArchitecture {
     }
 
     fn stack_pointer_reg(&self) -> Option<CoreRegister> {
-        match unsafe { BNGetArchitectureStackPointerRegister(self.0) } {
+        match unsafe { BNGetArchitectureStackPointerRegister(self.handle) } {
             0xffff_ffff => None,
-            reg => Some(CoreRegister(self.0, reg)),
+            reg => Some(CoreRegister::new(self.handle, reg)),
         }
     }
 
     fn link_reg(&self) -> Option<CoreRegister> {
-        match unsafe { BNGetArchitectureLinkRegister(self.0) } {
+        match unsafe { BNGetArchitectureLinkRegister(self.handle) } {
             0xffff_ffff => None,
-            reg => Some(CoreRegister(self.0, reg)),
+            reg => Some(CoreRegister::new(self.handle, reg)),
         }
     }
 
     fn register_from_id(&self, id: u32) -> Option<CoreRegister> {
         // TODO validate in debug builds
-        Some(CoreRegister(self.0, id))
+        Some(CoreRegister::new(self.handle, id))
     }
 
     fn register_stack_from_id(&self, id: u32) -> Option<CoreRegisterStack> {
         // TODO validate in debug builds
-        Some(CoreRegisterStack(self.0, id))
+        Some(CoreRegisterStack::new(self.handle, id))
     }
 
     fn flag_from_id(&self, id: u32) -> Option<CoreFlag> {
         // TODO validate in debug builds
-        Some(CoreFlag(self.0, id))
+        Some(CoreFlag::new(self.handle, id))
     }
 
     fn flag_write_from_id(&self, id: u32) -> Option<CoreFlagWrite> {
         // TODO validate in debug builds
-        Some(CoreFlagWrite(self.0, id))
+        Some(CoreFlagWrite::new(self.handle, id))
     }
 
     fn flag_class_from_id(&self, id: u32) -> Option<CoreFlagClass> {
         // TODO validate in debug builds
-        Some(CoreFlagClass(self.0, id))
+        Some(CoreFlagClass::new(self.handle, id))
     }
 
     fn flag_group_from_id(&self, id: u32) -> Option<CoreFlagGroup> {
         // TODO validate in debug builds
-        Some(CoreFlagGroup(self.0, id))
+        Some(CoreFlagGroup::new(self.handle, id))
     }
 
     fn intrinsics(&self) -> Vec<CoreIntrinsic> {
         unsafe {
             let mut count: usize = 0;
-            let intrinsics = BNGetAllArchitectureIntrinsics(self.0, &mut count as *mut _);
+            let intrinsics = BNGetAllArchitectureIntrinsics(self.handle, &mut count);
 
-            let ret = slice::from_raw_parts_mut(intrinsics, count)
+            let ret = std::slice::from_raw_parts_mut(intrinsics, count)
                 .iter()
-                .map(|reg| CoreIntrinsic(self.0, *reg))
+                .map(|&reg| CoreIntrinsic::new(self.handle, reg))
                 .collect();
 
             BNFreeRegisterList(intrinsics);
@@ -1465,17 +1606,17 @@ impl Architecture for CoreArchitecture {
         }
     }
 
-    fn intrinsic_class(&self, id: u32) -> binaryninjacore_sys::BNIntrinsicClass {
-        unsafe { BNGetArchitectureIntrinsicClass(self.0, id) }
+    fn intrinsic_class(&self, id: u32) -> BNIntrinsicClass {
+        unsafe { BNGetArchitectureIntrinsicClass(self.handle, id) }
     }
 
     fn intrinsic_from_id(&self, id: u32) -> Option<CoreIntrinsic> {
         // TODO validate in debug builds
-        Some(CoreIntrinsic(self.0, id))
+        Some(CoreIntrinsic::new(self.handle, id))
     }
 
     fn can_assemble(&self) -> bool {
-        unsafe { BNCanArchitectureAssemble(self.0) }
+        unsafe { BNCanArchitectureAssemble(self.handle) }
     }
 
     fn assemble(&self, code: &str, addr: u64) -> Result<Vec<u8>, String> {
@@ -1485,10 +1626,10 @@ impl Architecture for CoreArchitecture {
             Ok(result) => result,
             Err(_) => return Err("Result buffer allocation failed".to_string()),
         };
-        let mut error_raw: *mut c_char = ptr::null_mut();
+        let mut error_raw: *mut c_char = std::ptr::null_mut();
         let res = unsafe {
             BNAssemble(
-                self.0,
+                self.handle,
                 code.as_ptr(),
                 addr,
                 result.as_raw(),
@@ -1510,32 +1651,32 @@ impl Architecture for CoreArchitecture {
 
     fn is_never_branch_patch_available(&self, data: &[u8], addr: u64) -> bool {
         unsafe {
-            BNIsArchitectureNeverBranchPatchAvailable(self.0, data.as_ptr(), addr, data.len())
+            BNIsArchitectureNeverBranchPatchAvailable(self.handle, data.as_ptr(), addr, data.len())
         }
     }
 
     fn is_always_branch_patch_available(&self, data: &[u8], addr: u64) -> bool {
         unsafe {
-            BNIsArchitectureAlwaysBranchPatchAvailable(self.0, data.as_ptr(), addr, data.len())
+            BNIsArchitectureAlwaysBranchPatchAvailable(self.handle, data.as_ptr(), addr, data.len())
         }
     }
 
     fn is_invert_branch_patch_available(&self, data: &[u8], addr: u64) -> bool {
         unsafe {
-            BNIsArchitectureInvertBranchPatchAvailable(self.0, data.as_ptr(), addr, data.len())
+            BNIsArchitectureInvertBranchPatchAvailable(self.handle, data.as_ptr(), addr, data.len())
         }
     }
 
     fn is_skip_and_return_zero_patch_available(&self, data: &[u8], addr: u64) -> bool {
         unsafe {
-            BNIsArchitectureSkipAndReturnZeroPatchAvailable(self.0, data.as_ptr(), addr, data.len())
+            BNIsArchitectureSkipAndReturnZeroPatchAvailable(self.handle, data.as_ptr(), addr, data.len())
         }
     }
 
     fn is_skip_and_return_value_patch_available(&self, data: &[u8], addr: u64) -> bool {
         unsafe {
             BNIsArchitectureSkipAndReturnValuePatchAvailable(
-                self.0,
+                self.handle,
                 data.as_ptr(),
                 addr,
                 data.len(),
@@ -1544,20 +1685,20 @@ impl Architecture for CoreArchitecture {
     }
 
     fn convert_to_nop(&self, data: &mut [u8], addr: u64) -> bool {
-        unsafe { BNArchitectureConvertToNop(self.0, data.as_mut_ptr(), addr, data.len()) }
+        unsafe { BNArchitectureConvertToNop(self.handle, data.as_mut_ptr(), addr, data.len()) }
     }
 
     fn always_branch(&self, data: &mut [u8], addr: u64) -> bool {
-        unsafe { BNArchitectureAlwaysBranch(self.0, data.as_mut_ptr(), addr, data.len()) }
+        unsafe { BNArchitectureAlwaysBranch(self.handle, data.as_mut_ptr(), addr, data.len()) }
     }
 
     fn invert_branch(&self, data: &mut [u8], addr: u64) -> bool {
-        unsafe { BNArchitectureInvertBranch(self.0, data.as_mut_ptr(), addr, data.len()) }
+        unsafe { BNArchitectureInvertBranch(self.handle, data.as_mut_ptr(), addr, data.len()) }
     }
 
     fn skip_and_return_value(&self, data: &mut [u8], addr: u64, value: u64) -> bool {
         unsafe {
-            BNArchitectureSkipAndReturnValue(self.0, data.as_mut_ptr(), addr, data.len(), value)
+            BNArchitectureSkipAndReturnValue(self.handle, data.as_mut_ptr(), addr, data.len(), value)
         }
     }
 
@@ -1569,10 +1710,10 @@ impl Architecture for CoreArchitecture {
 macro_rules! cc_func {
     ($get_name:ident, $get_api:ident, $set_name:ident, $set_api:ident) => {
         fn $get_name(&self) -> Option<Ref<CallingConvention<Self>>> {
-            let handle = self.as_ref();
+            let arch = self.as_ref();
 
             unsafe {
-                let cc = $get_api(handle.0);
+                let cc = $get_api(arch.handle);
 
                 if cc.is_null() {
                     None
@@ -1583,15 +1724,15 @@ macro_rules! cc_func {
         }
 
         fn $set_name(&self, cc: &CallingConvention<Self>) {
-            let handle = self.as_ref();
+            let arch = self.as_ref();
 
             assert!(
-                cc.arch_handle.borrow().as_ref().0 == handle.0,
+                cc.arch_handle.borrow().as_ref().handle == arch.handle,
                 "use of calling convention with non-matching architecture!"
             );
 
             unsafe {
-                $set_api(handle.0, cc.handle);
+                $set_api(arch.handle, cc.handle);
             }
         }
     };
@@ -1603,7 +1744,7 @@ pub trait ArchitectureExt: Architecture {
         let name = name.into_bytes_with_nul();
 
         match unsafe {
-            BNGetArchitectureRegisterByName(self.as_ref().0, name.as_ref().as_ptr() as *mut _)
+            BNGetArchitectureRegisterByName(self.as_ref().handle, name.as_ref().as_ptr() as *mut _)
         } {
             0xffff_ffff => None,
             reg => self.register_from_id(reg),
@@ -1613,7 +1754,7 @@ pub trait ArchitectureExt: Architecture {
     fn calling_conventions(&self) -> Array<CallingConvention<Self>> {
         unsafe {
             let mut count = 0;
-            let calling_convs = BNGetArchitectureCallingConventions(self.as_ref().0, &mut count);
+            let calling_convs = BNGetArchitectureCallingConventions(self.as_ref().handle, &mut count);
             Array::new(calling_convs, count, self.handle())
         }
     }
@@ -1648,7 +1789,7 @@ pub trait ArchitectureExt: Architecture {
 
     fn standalone_platform(&self) -> Option<Ref<Platform>> {
         unsafe {
-            let handle = BNGetArchitectureStandalonePlatform(self.as_ref().0);
+            let handle = BNGetArchitectureStandalonePlatform(self.as_ref().handle);
 
             if handle.is_null() {
                 return None;
@@ -1665,7 +1806,7 @@ pub trait ArchitectureExt: Architecture {
         };
 
         unsafe {
-            let handle = BNArchitectureGetRelocationHandler(self.as_ref().0, view_name.as_ptr());
+            let handle = BNArchitectureGetRelocationHandler(self.as_ref().handle, view_name.as_ptr());
 
             if handle.is_null() {
                 return None;
@@ -1704,9 +1845,6 @@ where
     A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
     F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
 {
-    use std::mem;
-    use std::os::raw::{c_char, c_void};
-
     #[repr(C)]
     struct ArchitectureBuilder<A, F>
     where
@@ -1731,7 +1869,7 @@ where
             let create = custom_arch.func.take().unwrap();
             custom_arch
                 .arch
-                .write(create(custom_arch_handle, CoreArchitecture(obj)));
+                .write(create(custom_arch_handle, CoreArchitecture::from_raw(obj)));
         }
     }
 
@@ -1791,9 +1929,9 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let addr = unsafe { &mut *(addr) };
+        let addr = unsafe { *(addr) };
 
-        custom_arch.associated_arch_by_addr(addr).0
+        custom_arch.associated_arch_by_addr(addr).handle
     }
 
     extern "C" fn cb_instruction_info<A>(
@@ -1807,12 +1945,12 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let data = unsafe { slice::from_raw_parts(data, len) };
-        let result = unsafe { &mut *(result as *mut InstructionInfo) };
+        let data = unsafe { std::slice::from_raw_parts(data, len) };
 
         match custom_arch.instruction_info(data, addr) {
             Some(info) => {
-                result.0 = info.0;
+                // SAFETY: Passed in to be written to
+                unsafe { *result = info.into() };
                 true
             }
             None => false,
@@ -1831,7 +1969,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let data = unsafe { slice::from_raw_parts(data, *len) };
+        let data = unsafe { std::slice::from_raw_parts(data, *len) };
         let result = unsafe { &mut *result };
 
         let Some((res_size, res_tokens)) = custom_arch.instruction_text(data, addr) else {
@@ -1852,7 +1990,7 @@ where
     }
 
     extern "C" fn cb_free_instruction_text(tokens: *mut BNInstructionTextToken, count: usize) {
-        let _tokens = unsafe { Box::from_raw(ptr::slice_from_raw_parts_mut(tokens, count)) };
+        let _tokens = unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(tokens, count)) };
     }
 
     extern "C" fn cb_instruction_llil<A>(
@@ -1870,7 +2008,7 @@ where
             handle: ctxt as *mut A,
         };
 
-        let data = unsafe { slice::from_raw_parts(data, *len) };
+        let data = unsafe { std::slice::from_raw_parts(data, *len) };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
         match custom_arch.instruction_llil(data, addr, &mut lifter) {
@@ -1947,7 +2085,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut regs: Vec<_> = custom_arch
+        let mut regs: Box<[_]> = custom_arch
             .registers_full_width()
             .iter()
             .map(|r| r.id())
@@ -1956,7 +2094,7 @@ where
         // SAFETY: `count` is an out parameter
         unsafe { *count = regs.len() };
         let regs_ptr = regs.as_mut_ptr();
-        mem::forget(regs);
+        std::mem::forget(regs);
         regs_ptr
     }
 
@@ -1965,12 +2103,12 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut regs: Vec<_> = custom_arch.registers_all().iter().map(|r| r.id()).collect();
+        let mut regs: Box<[_]> = custom_arch.registers_all().iter().map(|r| r.id()).collect();
 
         // SAFETY: `count` is an out parameter
         unsafe { *count = regs.len() };
         let regs_ptr = regs.as_mut_ptr();
-        mem::forget(regs);
+        std::mem::forget(regs);
         regs_ptr
     }
 
@@ -1979,7 +2117,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut regs: Vec<_> = custom_arch
+        let mut regs: Box<[_]> = custom_arch
             .registers_global()
             .iter()
             .map(|r| r.id())
@@ -1988,7 +2126,7 @@ where
         // SAFETY: `count` is an out parameter
         unsafe { *count = regs.len() };
         let regs_ptr = regs.as_mut_ptr();
-        mem::forget(regs);
+        std::mem::forget(regs);
         regs_ptr
     }
 
@@ -1997,7 +2135,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut regs: Vec<_> = custom_arch
+        let mut regs: Box<[_]> = custom_arch
             .registers_system()
             .iter()
             .map(|r| r.id())
@@ -2006,7 +2144,7 @@ where
         // SAFETY: `count` is an out parameter
         unsafe { *count = regs.len() };
         let regs_ptr = regs.as_mut_ptr();
-        mem::forget(regs);
+        std::mem::forget(regs);
         regs_ptr
     }
 
@@ -2015,12 +2153,12 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut flags: Vec<_> = custom_arch.flags().iter().map(|f| f.id()).collect();
+        let mut flags: Box<[_]> = custom_arch.flags().iter().map(|f| f.id()).collect();
 
         // SAFETY: `count` is an out parameter
         unsafe { *count = flags.len() };
         let flags_ptr = flags.as_mut_ptr();
-        mem::forget(flags);
+        std::mem::forget(flags);
         flags_ptr
     }
 
@@ -2029,7 +2167,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut flag_writes: Vec<_> = custom_arch
+        let mut flag_writes: Box<[_]> = custom_arch
             .flag_write_types()
             .iter()
             .map(|f| f.id())
@@ -2038,7 +2176,7 @@ where
         // SAFETY: `count` is an out parameter
         unsafe { *count = flag_writes.len() };
         let flags_ptr = flag_writes.as_mut_ptr();
-        mem::forget(flag_writes);
+        std::mem::forget(flag_writes);
         flags_ptr
     }
 
@@ -2047,12 +2185,12 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut flag_classes: Vec<_> = custom_arch.flag_classes().iter().map(|f| f.id()).collect();
+        let mut flag_classes: Box<[_]> = custom_arch.flag_classes().iter().map(|f| f.id()).collect();
 
         // SAFETY: `count` is an out parameter
         unsafe { *count = flag_classes.len() };
         let flags_ptr = flag_classes.as_mut_ptr();
-        mem::forget(flag_classes);
+        std::mem::forget(flag_classes);
         flags_ptr
     }
 
@@ -2061,12 +2199,12 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut flag_groups: Vec<_> = custom_arch.flag_groups().iter().map(|f| f.id()).collect();
+        let mut flag_groups: Box<[_]> = custom_arch.flag_groups().iter().map(|f| f.id()).collect();
 
         // SAFETY: `count` is an out parameter
         unsafe { *count = flag_groups.len() };
         let flags_ptr = flag_groups.as_mut_ptr();
-        mem::forget(flag_groups);
+        std::mem::forget(flag_groups);
         flags_ptr
     }
 
@@ -2097,7 +2235,7 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let class = custom_arch.flag_class_from_id(class);
-        let mut flags: Vec<_> = custom_arch
+        let mut flags: Box<[_]> = custom_arch
             .flags_required_for_flag_condition(cond, class)
             .iter()
             .map(|f| f.id())
@@ -2106,7 +2244,7 @@ where
         // SAFETY: `count` is an out parameter
         unsafe { *count = flags.len() };
         let flags_ptr = flags.as_mut_ptr();
-        mem::forget(flags);
+        std::mem::forget(flags);
         flags_ptr
     }
 
@@ -2121,18 +2259,18 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         if let Some(group) = custom_arch.flag_group_from_id(group) {
-            let mut flags: Vec<_> = group.flags_required().iter().map(|f| f.id()).collect();
+            let mut flags: Box<[_]> = group.flags_required().iter().map(|f| f.id()).collect();
 
             // SAFETY: `count` is an out parameter
             unsafe { *count = flags.len() };
             let flags_ptr = flags.as_mut_ptr();
-            mem::forget(flags);
+            std::mem::forget(flags);
             flags_ptr
         } else {
             unsafe {
                 *count = 0;
             }
-            ptr::null_mut()
+            std::ptr::null_mut()
         }
     }
 
@@ -2148,24 +2286,24 @@ where
 
         if let Some(group) = custom_arch.flag_group_from_id(group) {
             let flag_conditions = group.flag_conditions();
-            let mut flags = flag_conditions
+            let mut flags: Box<[_]> = flag_conditions
                 .iter()
                 .map(|(&class, &condition)| BNFlagConditionForSemanticClass {
                     semanticClass: class.id(),
                     condition,
                 })
-                .collect::<Vec<_>>();
+                .collect();
 
             // SAFETY: `count` is an out parameter
             unsafe { *count = flags.len() };
             let flags_ptr = flags.as_mut_ptr();
-            mem::forget(flags);
+            std::mem::forget(flags);
             flags_ptr
         } else {
             unsafe {
                 *count = 0;
             }
-            ptr::null_mut()
+            std::ptr::null_mut()
         }
     }
 
@@ -2181,7 +2319,7 @@ where
         }
 
         unsafe {
-            let flags_ptr = ptr::slice_from_raw_parts_mut(conds, count);
+            let flags_ptr = std::ptr::slice_from_raw_parts_mut(conds, count);
             let _flags = Box::from_raw(flags_ptr);
         }
     }
@@ -2197,19 +2335,19 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         if let Some(write_type) = custom_arch.flag_write_from_id(write_type) {
-            let mut flags_written: Vec<_> =
+            let mut flags_written: Box<[_]> =
                 write_type.flags_written().iter().map(|f| f.id()).collect();
 
             // SAFETY: `count` is an out parameter
             unsafe { *count = flags_written.len() };
             let flags_ptr = flags_written.as_mut_ptr();
-            mem::forget(flags_written);
+            std::mem::forget(flags_written);
             flags_ptr
         } else {
             unsafe {
                 *count = 0;
             }
-            ptr::null_mut()
+            std::ptr::null_mut()
         }
     }
 
@@ -2248,7 +2386,7 @@ where
 
         let flag_write = custom_arch.flag_write_from_id(flag_write);
         let flag = custom_arch.flag_from_id(flag);
-        let operands = unsafe { slice::from_raw_parts(operands_raw, operand_count) };
+        let operands = unsafe { std::slice::from_raw_parts(operands_raw, operand_count) };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
         if let (Some(flag_write), Some(flag)) = (flag_write, flag) {
@@ -2269,7 +2407,7 @@ where
 
             unsafe {
                 BNGetDefaultArchitectureFlagWriteLowLevelIL(
-                    custom_arch.as_ref().0,
+                    custom_arch.as_ref().handle,
                     op,
                     size,
                     role,
@@ -2341,7 +2479,7 @@ where
         }
 
         unsafe {
-            let regs_ptr = ptr::slice_from_raw_parts_mut(regs, count);
+            let regs_ptr = std::ptr::slice_from_raw_parts_mut(regs, count);
             let _regs = Box::from_raw(regs_ptr);
         }
     }
@@ -2410,7 +2548,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut regs: Vec<_> = custom_arch
+        let mut regs: Box<[_]> = custom_arch
             .register_stacks()
             .iter()
             .map(|r| r.id())
@@ -2419,7 +2557,7 @@ where
         // SAFETY: Passed in to be written
         unsafe { *count = regs.len() };
         let regs_ptr = regs.as_mut_ptr();
-        mem::forget(regs);
+        std::mem::forget(regs);
         regs_ptr
     }
 
@@ -2476,12 +2614,12 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut intrinsics: Vec<_> = custom_arch.intrinsics().iter().map(|i| i.id()).collect();
+        let mut intrinsics: Box<[_]> = custom_arch.intrinsics().iter().map(|i| i.id()).collect();
 
         // SAFETY: Passed in to be written
         unsafe { *count = intrinsics.len() };
         let intrinsics_ptr = intrinsics.as_mut_ptr();
-        mem::forget(intrinsics);
+        std::mem::forget(intrinsics);
         intrinsics_ptr
     }
 
@@ -2496,44 +2634,42 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         let Some(intrinsic) = custom_arch.intrinsic_from_id(intrinsic) else {
-            unsafe {
-                *count = 0;
-            }
-            return ptr::null_mut();
+            // SAFETY: Passed in to be written
+            unsafe { *count = 0; }
+            return std::ptr::null_mut();
         };
 
         let inputs = intrinsic.inputs();
-        let mut res: Box<[_]> = inputs
+        let mut raw_inputs: Box<[_]> = inputs
             .into_iter()
-            .map(|input| unsafe { Ref::into_raw(input) }.0)
+            .map(Into::into)
             .collect();
-
-        unsafe {
-            *count = res.len();
-            if res.is_empty() {
-                ptr::null_mut()
-            } else {
-                let raw = res.as_mut_ptr();
-                mem::forget(res);
-                raw
-            }
+        
+        // SAFETY: Passed in to be written
+        unsafe { *count = raw_inputs.len(); }
+        
+        if raw_inputs.is_empty() {
+            std::ptr::null_mut()
+        } else {
+            let raw_ptr = raw_inputs.as_mut_ptr();
+            // Core is responsible for calling back to `cb_free_name_and_types`.
+            std::mem::forget(raw_inputs);
+            raw_ptr
         }
     }
 
-    extern "C" fn cb_free_name_and_types<A>(ctxt: *mut c_void, nt: *mut BNNameAndType, count: usize)
+    extern "C" fn cb_free_name_and_types<A>(_ctxt: *mut c_void, nt: *mut BNNameAndType, count: usize)
     where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
-        let _custom_arch = unsafe { &*(ctxt as *mut A) };
-
-        if !nt.is_null() {
-            unsafe {
-                let name_and_types = Box::from_raw(ptr::slice_from_raw_parts_mut(nt, count));
-                for nt in name_and_types.iter() {
-                    Ref::new(NameAndType::from_raw(nt));
-                }
-            }
+        if nt.is_null() {
+            return;
         }
+
+        // Reconstruct the box and drop.
+        let nt_ptr = std::ptr::slice_from_raw_parts_mut(nt, count);
+        // SAFETY: nt_ptr is a pointer to a Box.
+        let _ = unsafe { Box::from_raw(nt_ptr) };
     }
 
     extern "C" fn cb_intrinsic_outputs<A>(
@@ -2546,25 +2682,28 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        if let Some(intrinsic) = custom_arch.intrinsic_from_id(intrinsic) {
-            let inputs = intrinsic.outputs();
-            let mut res: Box<[_]> = inputs.iter().map(|input| input.as_ref().into()).collect();
+        let Some(intrinsic) = custom_arch.intrinsic_from_id(intrinsic) else {
+            // SAFETY: Passed in to be written
+            unsafe { *count = 0; }
+            return std::ptr::null_mut();
+        };
 
-            unsafe {
-                *count = res.len();
-                if res.is_empty() {
-                    ptr::null_mut()
-                } else {
-                    let raw = res.as_mut_ptr();
-                    mem::forget(res);
-                    raw
-                }
-            }
+        let outputs = intrinsic.outputs();
+        let mut raw_outputs: Box<[BNTypeWithConfidence]> = outputs
+            .into_iter()
+            .map(|o| o.as_ref().into())
+            .collect();
+
+        // SAFETY: Passed in to be written
+        unsafe { *count = raw_outputs.len(); }
+
+        if raw_outputs.is_empty() {
+            std::ptr::null_mut()
         } else {
-            unsafe {
-                *count = 0;
-            }
-            ptr::null_mut()
+            let raw_ptr = raw_outputs.as_mut_ptr();
+            // Core is responsible for calling back to `cb_free_name_and_types`.
+            std::mem::forget(raw_outputs);
+            raw_ptr
         }
     }
 
@@ -2577,7 +2716,7 @@ where
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
         if !tl.is_null() {
-            let _type_list = unsafe { Box::from_raw(ptr::slice_from_raw_parts_mut(tl, count)) };
+            let _type_list = unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(tl, count)) };
         }
     }
 
@@ -2620,7 +2759,7 @@ where
         };
 
         // Caller owns the data buffer, don't free it
-        mem::forget(buffer);
+        std::mem::forget(buffer);
 
         result
     }
@@ -2635,7 +2774,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let data = unsafe { slice::from_raw_parts(data, len) };
+        let data = unsafe { std::slice::from_raw_parts(data, len) };
         custom_arch.is_never_branch_patch_available(data, addr)
     }
 
@@ -2649,7 +2788,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let data = unsafe { slice::from_raw_parts(data, len) };
+        let data = unsafe { std::slice::from_raw_parts(data, len) };
         custom_arch.is_always_branch_patch_available(data, addr)
     }
 
@@ -2663,7 +2802,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let data = unsafe { slice::from_raw_parts(data, len) };
+        let data = unsafe { std::slice::from_raw_parts(data, len) };
         custom_arch.is_invert_branch_patch_available(data, addr)
     }
 
@@ -2677,7 +2816,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let data = unsafe { slice::from_raw_parts(data, len) };
+        let data = unsafe { std::slice::from_raw_parts(data, len) };
         custom_arch.is_skip_and_return_zero_patch_available(data, addr)
     }
 
@@ -2691,7 +2830,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let data = unsafe { slice::from_raw_parts(data, len) };
+        let data = unsafe { std::slice::from_raw_parts(data, len) };
         custom_arch.is_skip_and_return_value_patch_available(data, addr)
     }
 
@@ -2705,7 +2844,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let data = unsafe { slice::from_raw_parts_mut(data, len) };
+        let data = unsafe { std::slice::from_raw_parts_mut(data, len) };
         custom_arch.convert_to_nop(data, addr)
     }
 
@@ -2719,7 +2858,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let data = unsafe { slice::from_raw_parts_mut(data, len) };
+        let data = unsafe { std::slice::from_raw_parts_mut(data, len) };
         custom_arch.always_branch(data, addr)
     }
 
@@ -2733,7 +2872,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let data = unsafe { slice::from_raw_parts_mut(data, len) };
+        let data = unsafe { std::slice::from_raw_parts_mut(data, len) };
         custom_arch.invert_branch(data, addr)
     }
 
@@ -2748,7 +2887,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let data = unsafe { slice::from_raw_parts_mut(data, len) };
+        let data = unsafe { std::slice::from_raw_parts_mut(data, len) };
         custom_arch.skip_and_return_value(data, addr, val)
     }
 
@@ -2923,9 +3062,9 @@ pub fn llvm_assemble(
     let code = CString::new(code).map_err(|_| "Invalid encoding in code string".to_string())?;
     let arch_triple = CString::new(arch_triple)
         .map_err(|_| "Invalid encoding in architecture triple string".to_string())?;
-    let mut out_bytes: *mut c_char = ptr::null_mut();
+    let mut out_bytes: *mut c_char = std::ptr::null_mut();
     let mut out_bytes_len: c_int = 0;
-    let mut err_bytes: *mut c_char = ptr::null_mut();
+    let mut err_bytes: *mut c_char = std::ptr::null_mut();
     let mut err_len: c_int = 0;
 
     unsafe {
@@ -2950,7 +3089,7 @@ pub fn llvm_assemble(
         Vec::new()
     } else {
         unsafe {
-            slice::from_raw_parts(
+            std::slice::from_raw_parts(
                 out_bytes as *const c_char as *const u8,
                 out_bytes_len as usize,
             )
@@ -2962,7 +3101,7 @@ pub fn llvm_assemble(
         "".into()
     } else {
         String::from_utf8_lossy(unsafe {
-            slice::from_raw_parts(err_bytes as *const c_char as *const u8, err_len as usize)
+            std::slice::from_raw_parts(err_bytes as *const c_char as *const u8, err_len as usize)
         })
         .into_owned()
     };

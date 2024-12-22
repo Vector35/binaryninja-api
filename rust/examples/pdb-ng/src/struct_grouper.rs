@@ -15,12 +15,11 @@
 use std::cmp::Ordering;
 use std::env;
 use std::fmt::{Debug, Display, Formatter};
-
 use anyhow::{anyhow, Result};
 use log::{debug, warn};
-
+use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use binaryninja::types::{
-    max_confidence, Conf, MemberAccess, MemberScope, StructureBuilder, StructureType, Type,
+    MemberAccess, MemberScope, StructureBuilder, StructureType, Type,
 };
 
 use crate::type_parser::ParsedMember;
@@ -414,7 +413,7 @@ fn apply_groups(
                 let mut inner = StructureBuilder::new();
                 apply_groups(members, &mut inner, children, inner_offset);
                 structure.insert(
-                    &Conf::new(Type::structure(inner.finalize().as_ref()), max_confidence()),
+                    &Conf::new(Type::structure(inner.finalize().as_ref()), MAX_CONFIDENCE),
                     format!("__inner{}", i),
                     inner_offset - offset,
                     false,
@@ -427,7 +426,7 @@ fn apply_groups(
                 inner.set_structure_type(StructureType::UnionStructureType);
                 apply_groups(members, &mut inner, children, inner_offset);
                 structure.insert(
-                    &Conf::new(Type::structure(inner.finalize().as_ref()), max_confidence()),
+                    &Conf::new(Type::structure(inner.finalize().as_ref()), MAX_CONFIDENCE),
                     format!("__inner{}", i),
                     inner_offset - offset,
                     false,

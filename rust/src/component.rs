@@ -4,9 +4,10 @@ use crate::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
 use crate::function::Function;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::string::{BnStrCompatible, BnString};
-use crate::types::{ComponentReferencedTypes, DataVariable};
+use crate::types::{ComponentReferencedType};
 
 use binaryninjacore_sys::*;
+use crate::variable::DataVariable;
 
 pub struct ComponentBuilder {
     bv: *mut BNBinaryView,
@@ -124,17 +125,17 @@ impl Component {
 
     /// Add data variable to this component.
     pub fn add_data_variable(&self, data_variable: &DataVariable) -> bool {
-        unsafe { BNComponentAddDataVariable(self.as_raw(), data_variable.address()) }
+        unsafe { BNComponentAddDataVariable(self.as_raw(), data_variable.address) }
     }
 
     /// Check whether this component contains a data variable.
     pub fn contains_data_variable(&self, data_variable: &DataVariable) -> bool {
-        unsafe { BNComponentContainsDataVariable(self.as_raw(), data_variable.address()) }
+        unsafe { BNComponentContainsDataVariable(self.as_raw(), data_variable.address) }
     }
 
     /// Remove data variable from this component.
     pub fn remove_data_variable(&self, data_variable: &DataVariable) -> bool {
-        unsafe { BNComponentRemoveDataVariable(self.as_raw(), data_variable.address()) }
+        unsafe { BNComponentRemoveDataVariable(self.as_raw(), data_variable.address) }
     }
 
     /// Original name of the component
@@ -173,7 +174,7 @@ impl Component {
 
     pub fn view(&self) -> Option<Ref<BinaryView>> {
         let result = unsafe { BNComponentGetView(self.as_raw()) };
-        (!result.is_null()).then(|| unsafe { BinaryView::from_raw(result) })
+        (!result.is_null()).then(|| unsafe { BinaryView::ref_from_raw(result) })
     }
 
     /// Is an iterator for all Components contained within this Component
@@ -216,7 +217,7 @@ impl Component {
     /// Get Types referenced by this component
     ///
     /// * `recursive` - Get all Types referenced by this component and subcomponents.
-    pub fn get_referenced_types(&self, recursive: bool) -> Array<ComponentReferencedTypes> {
+    pub fn get_referenced_types(&self, recursive: bool) -> Array<ComponentReferencedType> {
         let mut count = 0;
         let result = if recursive {
             unsafe { BNComponentGetReferencedTypesRecursive(self.as_raw(), &mut count) }
@@ -278,6 +279,7 @@ unsafe impl CoreArrayProviderInner for Component {
     }
 }
 
+// TODO: Should we keep this?
 pub trait IntoComponentGuid {
     fn component_guid(self) -> BnString;
 }

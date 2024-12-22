@@ -66,8 +66,14 @@ pub struct Section {
 }
 
 impl Section {
-    pub(crate) unsafe fn from_raw(raw: *mut BNSection) -> Self {
-        Self { handle: raw }
+    unsafe fn from_raw(handle: *mut BNSection) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle }
+    }
+
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNSection) -> Ref<Self> {
+        debug_assert!(!handle.is_null());
+        Ref::new(Self { handle })
     }
 
     /// You need to create a section builder, customize that section, then add it to a binary view:

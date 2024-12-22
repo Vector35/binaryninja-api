@@ -1,6 +1,5 @@
 use binaryninja::binaryview::BinaryViewExt;
 use binaryninja::headless::Session;
-use binaryninja::types::Conf;
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::path::PathBuf;
 use warp_ninja::convert::from_bn_type;

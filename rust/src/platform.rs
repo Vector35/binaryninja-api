@@ -55,7 +55,7 @@ macro_rules! cc_func {
             let arch = self.arch();
 
             assert!(
-                cc.arch_handle.borrow().as_ref().0 == arch.0,
+                cc.arch_handle.borrow().as_ref().handle == arch.handle,
                 "use of calling convention with non-matching Platform architecture!"
             );
 
@@ -69,7 +69,6 @@ macro_rules! cc_func {
 impl Platform {
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNPlatform) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-
         Ref::new(Self { handle })
     }
 
@@ -98,7 +97,7 @@ impl Platform {
     pub fn list_by_arch(arch: &CoreArchitecture) -> Array<Platform> {
         unsafe {
             let mut count = 0;
-            let handles = BNGetPlatformListByArchitecture(arch.0, &mut count);
+            let handles = BNGetPlatformListByArchitecture(arch.handle, &mut count);
 
             Array::new(handles, count, ())
         }
@@ -125,7 +124,7 @@ impl Platform {
             let mut count = 0;
             let handles = BNGetPlatformListByOSAndArchitecture(
                 raw_name.as_ref().as_ptr() as *mut _,
-                arch.0,
+                arch.handle,
                 &mut count,
             );
 
@@ -145,7 +144,7 @@ impl Platform {
     pub fn new<A: Architecture, S: BnStrCompatible>(arch: &A, name: S) -> Ref<Self> {
         let name = name.into_bytes_with_nul();
         unsafe {
-            let handle = BNCreatePlatform(arch.as_ref().0, name.as_ref().as_ptr() as *mut _);
+            let handle = BNCreatePlatform(arch.as_ref().handle, name.as_ref().as_ptr() as *mut _);
 
             assert!(!handle.is_null());
 

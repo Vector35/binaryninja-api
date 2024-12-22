@@ -18,7 +18,8 @@ use binaryninja::{
     rc::Ref,
     string::BnString,
     symbol::SymbolType,
-    types::{Conf, MemberAccess, StructureType, Type, TypeClass},
+    confidence::Conf,
+    types::{MemberAccess, StructureType, Type, TypeClass},
 };
 use log::{error, info, LevelFilter};
 use binaryninja::logger::Logger;
@@ -214,7 +215,7 @@ fn export_type(
                 gimli::DW_AT_byte_size,
                 AttributeValue::Data1(t.width() as u8),
             );
-            if let Ok(Conf {
+            if let Some(Conf {
                 contents: target_type,
                 ..
             }) = t.target()
@@ -242,7 +243,7 @@ fn export_type(
             );
 
             // Element type
-            if let Ok(Conf {
+            if let Some(Conf {
                 contents: element_type,
                 ..
             }) = t.element_type()
@@ -271,7 +272,7 @@ fn export_type(
 
             // Array length and multidimensional arrays
             let mut current_t = t.to_owned();
-            while let Ok(Conf {
+            while let Some(Conf {
                 contents: element_type,
                 ..
             }) = current_t.element_type()
@@ -407,7 +408,7 @@ fn export_functions(
 
         // TODO : (DW_AT_main_subprogram VS DW_TAG_entry_point)
         // TODO : This attribute seems maybe usually unused?
-        if let Ok(entry_point_function) = &entry_point {
+        if let Some(entry_point_function) = &entry_point {
             if entry_point_function.as_ref() == function.as_ref() {
                 dwarf
                     .unit
@@ -425,19 +426,19 @@ fn export_functions(
             let address_range = address_ranges.get(0);
             dwarf.unit.get_mut(function_die_uid).set(
                 gimli::DW_AT_low_pc,
-                AttributeValue::Address(Address::Constant(address_range.start())), // TODO: Relocations
+                AttributeValue::Address(Address::Constant(address_range.start)), // TODO: Relocations
             );
             dwarf.unit.get_mut(function_die_uid).set(
                 gimli::DW_AT_high_pc,
-                AttributeValue::Address(Address::Constant(address_range.end())),
+                AttributeValue::Address(Address::Constant(address_range.end)),
             );
         } else {
             let range_list = RangeList(
                 address_ranges
                     .into_iter()
                     .map(|range| Range::StartLength {
-                        begin: Address::Constant(range.start()), // TODO: Relocations?
-                        length: range.end() - range.start(),
+                        begin: Address::Constant(range.start), // TODO: Relocations?
+                        length: range.end - range.start,
                     })
                     .collect(),
             );
@@ -449,7 +450,7 @@ fn export_functions(
         }
 
         // DWARFv4 2.18: " If no DW_AT_entry_pc attribute is present, then the entry address is assumed to be the same as the value of the DW_AT_low_pc attribute"
-        if address_ranges.get(0).start() != function.start() {
+        if address_ranges.get(0).start != function.start() {
             dwarf.unit.get_mut(function_die_uid).set(
                 gimli::DW_AT_entry_pc,
                 AttributeValue::Address(Address::Constant(function.start())),
@@ -482,8 +483,8 @@ fn export_functions(
             );
 
             if let Some(target_die_uid) = export_type(
-                format!("{}", parameter.t.contents),
-                &parameter.t.contents,
+                format!("{}", parameter.ty.contents),
+                &parameter.ty.contents,
                 bv,
                 defined_types,
                 dwarf,
@@ -521,7 +522,8 @@ fn export_data_vars(
     let root = dwarf.unit.root();
 
     for data_variable in &bv.data_variables() {
-        if let Some(symbol) = data_variable.symbol(bv) {
+        let data_var_sym = bv.symbol_by_address(data_variable.address);
+        if let Some(symbol) = &data_var_sym {
             if let SymbolType::External
             | SymbolType::Function
             | SymbolType::ImportedFunction
@@ -533,7 +535,7 @@ fn export_data_vars(
 
         let var_die_uid = dwarf.unit.add(root, constants::DW_TAG_variable);
 
-        if let Some(symbol) = data_variable.symbol(bv) {
+        if let Some(symbol) = data_var_sym {
             dwarf.unit.get_mut(var_die_uid).set(
                 gimli::DW_AT_name,
                 AttributeValue::String(symbol.full_name().as_bytes().to_vec()),
@@ -549,7 +551,7 @@ fn export_data_vars(
             dwarf.unit.get_mut(var_die_uid).set(
                 gimli::DW_AT_name,
                 AttributeValue::String(
-                    format!("data_{:x}", data_variable.address())
+                    format!("data_{:x}", data_variable.address)
                         .as_bytes()
                         .to_vec(),
                 ),
@@ -557,15 +559,15 @@ fn export_data_vars(
         }
 
         let mut variable_location = Expression::new();
-        variable_location.op_addr(Address::Constant(data_variable.address()));
+        variable_location.op_addr(Address::Constant(data_variable.address));
         dwarf.unit.get_mut(var_die_uid).set(
             gimli::DW_AT_location,
             AttributeValue::Exprloc(variable_location),
         );
 
         if let Some(target_die_uid) = export_type(
-            format!("{}", data_variable.t()),
-            data_variable.t(),
+            format!("{}", data_variable.ty),
+            &data_variable.ty.contents,
             bv,
             defined_types,
             dwarf,

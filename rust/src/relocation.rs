@@ -1,7 +1,7 @@
 use crate::rc::Guard;
 use crate::string::BnStrCompatible;
 use crate::{
-    architecture::{Architecture, CoreArchitecture},
+    architecture::{CoreArchitecture},
     binaryview::BinaryView,
     llil,
     rc::{CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable},
@@ -280,7 +280,7 @@ pub trait RelocationHandlerExt: RelocationHandler {
             BNRelocationHandlerDefaultApplyRelocation(
                 self.as_ref().0,
                 bv.handle,
-                arch.handle().as_ref().0,
+                arch.as_ref().handle,
                 reloc.0,
                 dest.as_mut_ptr(),
                 dest.len(),
@@ -323,7 +323,7 @@ impl RelocationHandler for CoreRelocationHandler {
             BNRelocationHandlerGetRelocationInfo(
                 self.0,
                 bv.handle,
-                arch.handle().as_ref().0,
+                arch.as_ref().handle,
                 raw_info.as_mut_ptr(),
                 raw_info.len(),
             )
@@ -345,7 +345,7 @@ impl RelocationHandler for CoreRelocationHandler {
             BNRelocationHandlerApplyRelocation(
                 self.0,
                 bv.handle,
-                arch.handle().as_ref().0,
+                arch.as_ref().handle,
                 reloc.0,
                 dest.as_mut_ptr(),
                 dest.len(),
@@ -430,7 +430,7 @@ where
         R: 'static + RelocationHandler<Handle = CustomRelocationHandlerHandle<R>> + Send + Sync,
     {
         let custom_handler = unsafe { &*(ctxt as *mut R) };
-        let bv = unsafe { BinaryView::from_raw(BNNewViewReference(bv)) };
+        let bv = unsafe { BinaryView::ref_from_raw(BNNewViewReference(bv)) };
         let arch = unsafe { CoreArchitecture::from_raw(arch) };
         let result = unsafe { core::slice::from_raw_parts_mut(result, count) };
         let mut info = result
@@ -457,7 +457,7 @@ where
         R: 'static + RelocationHandler<Handle = CustomRelocationHandlerHandle<R>> + Send + Sync,
     {
         let custom_handler = unsafe { &*(ctxt as *mut R) };
-        let bv = unsafe { BinaryView::from_raw(BNNewViewReference(bv)) };
+        let bv = unsafe { BinaryView::ref_from_raw(BNNewViewReference(bv)) };
         let arch = unsafe { CoreArchitecture::from_raw(arch) };
         let reloc = unsafe { Relocation::from_raw(reloc) };
         let dest = unsafe { core::slice::from_raw_parts_mut(dest, len) };
@@ -521,7 +521,7 @@ where
         });
 
         BNArchitectureRegisterRelocationHandler(
-            arch.handle().as_ref().0,
+            arch.as_ref().handle,
             name.as_ref().as_ptr() as *const _,
             handle.handle().as_ref().0,
         );

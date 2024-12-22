@@ -45,13 +45,13 @@ impl TypeLibrary {
     pub fn new<S: BnStrCompatible>(arch: CoreArchitecture, name: S) -> TypeLibrary {
         let name = name.into_bytes_with_nul();
         let new_lib =
-            unsafe { BNNewTypeLibrary(arch.0, name.as_ref().as_ptr() as *const ffi::c_char) };
+            unsafe { BNNewTypeLibrary(arch.handle, name.as_ref().as_ptr() as *const ffi::c_char) };
         unsafe { TypeLibrary::from_raw(ptr::NonNull::new(new_lib).unwrap()) }
     }
 
     pub fn all(arch: CoreArchitecture) -> Array<TypeLibrary> {
         let mut count = 0;
-        let result = unsafe { BNGetArchitectureTypeLibraries(arch.0, &mut count) };
+        let result = unsafe { BNGetArchitectureTypeLibraries(arch.handle, &mut count) };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
     }
@@ -89,7 +89,7 @@ impl TypeLibrary {
     pub fn from_name<S: BnStrCompatible>(arch: CoreArchitecture, name: S) -> Option<TypeLibrary> {
         let name = name.into_bytes_with_nul();
         let handle = unsafe {
-            BNLookupTypeLibraryByName(arch.0, name.as_ref().as_ptr() as *const ffi::c_char)
+            BNLookupTypeLibraryByName(arch.handle, name.as_ref().as_ptr() as *const ffi::c_char)
         };
         ptr::NonNull::new(handle).map(|h| unsafe { TypeLibrary::from_raw(h) })
     }
@@ -98,7 +98,7 @@ impl TypeLibrary {
     pub fn from_guid<S: BnStrCompatible>(arch: CoreArchitecture, guid: S) -> Option<TypeLibrary> {
         let guid = guid.into_bytes_with_nul();
         let handle = unsafe {
-            BNLookupTypeLibraryByGuid(arch.0, guid.as_ref().as_ptr() as *const ffi::c_char)
+            BNLookupTypeLibraryByGuid(arch.handle, guid.as_ref().as_ptr() as *const ffi::c_char)
         };
         ptr::NonNull::new(handle).map(|h| unsafe { TypeLibrary::from_raw(h) })
     }
@@ -107,7 +107,7 @@ impl TypeLibrary {
     pub fn arch(&self) -> CoreArchitecture {
         let arch = unsafe { BNGetTypeLibraryArchitecture(self.as_raw()) };
         assert!(!arch.is_null());
-        CoreArchitecture(arch)
+        unsafe { CoreArchitecture::from_raw(arch) }
     }
 
     /// The primary name associated with this type library

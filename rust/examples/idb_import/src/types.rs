@@ -6,13 +6,14 @@ use binaryninja::binaryninjacore_sys::{BNMemberAccess, BNMemberScope};
 use binaryninja::binaryview::{BinaryView, BinaryViewExt};
 use binaryninja::rc::Ref;
 use binaryninja::types::{
-    Conf, EnumerationBuilder, FunctionParameter, StructureBuilder, StructureType, Type,
+    EnumerationBuilder, FunctionParameter, StructureBuilder, StructureType, Type,
 };
 use idb_rs::til::{
     array::Array as TILArray, function::Function as TILFunction, r#enum::Enum as TILEnum,
     r#struct::Struct as TILStruct, r#struct::StructMember as TILStructMember, section::TILSection,
     union::Union as TILUnion, TILTypeInfo, Type as TILType, Typedef as TILTypedef,
 };
+use binaryninja::confidence::Conf;
 
 #[derive(Debug, Clone)]
 pub enum BnTypeError {
@@ -472,7 +473,8 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         }
         Type::enumeration(
             &eb.finalize(),
-            usize::try_from(bytesize).unwrap(),
+            // TODO: This looks bad, look at the comment in [`Type::width`].
+            (bytesize as usize).try_into().unwrap(),
             Conf::new(false, 0),
         )
     }
@@ -637,7 +639,7 @@ pub fn translate_til_types(
         types_by_ord,
         types_by_name,
     };
-    if (translator.progress)(0, total).is_err() {
+    if (&translator.progress)(0, total).is_err() {
         return Err(anyhow!("IDB import aborted"));
     }
 
@@ -681,7 +683,7 @@ pub fn translate_til_types(
             // means we acomplilshed nothing during this loop, there is no point in trying again
             break;
         }
-        if (translator.progress)(num_translated, total).is_err() {
+        if (&translator.progress)(num_translated, total).is_err() {
             // error means the user aborted the progress
             break;
         }

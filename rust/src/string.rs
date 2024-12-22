@@ -15,17 +15,16 @@
 //! String wrappers for core-owned strings and strings being passed to the core
 
 use std::borrow::Cow;
-use std::ffi::{CStr, CString};
+use std::ffi::{c_char, CStr, CString};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::mem;
 use std::ops::Deref;
-use std::os::raw;
 
 use crate::rc::*;
 use crate::types::QualifiedName;
 
-pub(crate) fn raw_to_string(ptr: *const raw::c_char) -> Option<String> {
+pub(crate) fn raw_to_string(ptr: *const c_char) -> Option<String> {
     if ptr.is_null() {
         None
     } else {
@@ -33,11 +32,10 @@ pub(crate) fn raw_to_string(ptr: *const raw::c_char) -> Option<String> {
     }
 }
 
-/// Is the quivalent of `core::ffi::CString` but using the allocation and free
-/// functions provided by binaryninja_sys.
+/// Is the equivalent of `core::ffi::CString` but using the alloc and free from `binaryninjacore-sys`.
 #[repr(transparent)]
 pub struct BnString {
-    raw: *mut raw::c_char,
+    raw: *mut c_char,
 }
 
 /// A nul-terminated C string allocated by the core.
@@ -52,35 +50,30 @@ pub struct BnString {
 impl BnString {
     pub fn new<S: BnStrCompatible>(s: S) -> Self {
         use binaryninjacore_sys::BNAllocString;
-
         let raw = s.into_bytes_with_nul();
-
         unsafe {
             let ptr = raw.as_ref().as_ptr() as *mut _;
-
-            Self {
-                raw: BNAllocString(ptr),
-            }
+            Self::from_raw(BNAllocString(ptr))
         }
     }
 
     /// Construct a BnString from an owned const char* allocated by BNAllocString
-    pub(crate) unsafe fn from_raw(raw: *mut raw::c_char) -> Self {
+    pub(crate) unsafe fn from_raw(raw: *mut c_char) -> Self {
         Self { raw }
     }
 
-    pub(crate) fn into_raw(self) -> *mut raw::c_char {
+    /// Consumes the `BnString`, returning a raw pointer to the string.
+    /// 
+    /// After calling this function, the caller is responsible for the
+    /// memory previously managed by the `BnString`.
+    /// 
+    /// This is typically used to pass a string back through the core where the core is expected to free.
+    pub(crate) fn into_raw(self) -> *mut c_char {
         let res = self.raw;
-
         // we're surrendering ownership over the *mut c_char to
         // the core, so ensure we don't free it
         mem::forget(self);
-
         res
-    }
-
-    pub(crate) fn as_raw(&self) -> &raw::c_char {
-        unsafe { &*self.raw }
     }
 
     pub fn as_str(&self) -> &str {
@@ -107,7 +100,6 @@ impl BnString {
 impl Drop for BnString {
     fn drop(&mut self) {
         use binaryninjacore_sys::BNFreeString;
-
         unsafe {
             BNFreeString(self.raw);
         }
@@ -166,7 +158,7 @@ impl fmt::Debug for BnString {
 }
 
 impl CoreArrayProvider for BnString {
-    type Raw = *mut raw::c_char;
+    type Raw = *mut c_char;
     type Context = ();
     type Wrapped<'a> = &'a str;
 }
@@ -176,6 +168,7 @@ unsafe impl CoreArrayProviderInner for BnString {
         use binaryninjacore_sys::BNFreeStringList;
         BNFreeStringList(raw, count);
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         CStr::from_ptr(*raw).to_str().unwrap()
     }
@@ -183,6 +176,7 @@ unsafe impl CoreArrayProviderInner for BnString {
 
 pub unsafe trait BnStrCompatible {
     type Result: AsRef<[u8]>;
+    
     fn into_bytes_with_nul(self) -> Self::Result;
 }
 
@@ -253,11 +247,13 @@ unsafe impl BnStrCompatible for &QualifiedName {
 
 pub trait IntoJson {
     type Output: BnStrCompatible;
+    
     fn get_json_string(self) -> Result<Self::Output, ()>;
 }
 
 impl<S: BnStrCompatible> IntoJson for S {
     type Output = S;
+    
     fn get_json_string(self) -> Result<Self::Output, ()> {
         Ok(self)
     }

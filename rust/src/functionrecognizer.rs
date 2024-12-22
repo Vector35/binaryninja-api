@@ -1,4 +1,3 @@
-use crate::architecture::Architecture;
 use crate::{
     architecture::CoreArchitecture, binaryview::BinaryView, function::Function, llil, mlil,
 };
@@ -47,9 +46,9 @@ where
         R: 'static + FunctionRecognizer + Send + Sync,
     {
         let custom_handler = unsafe { &*(ctxt as *mut R) };
-        let bv = unsafe { BinaryView::from_raw(BNNewViewReference(bv)) };
+        let bv = unsafe { BinaryView::ref_from_raw(BNNewViewReference(bv)) };
         let arch = unsafe { BNGetFunctionArchitecture(func) };
-        let func = unsafe { Function::from_raw(BNNewFunctionReference(func)) };
+        let func = unsafe { Function::ref_from_raw(func) };
         if arch.is_null() {
             return false;
         }
@@ -68,8 +67,8 @@ where
         R: 'static + FunctionRecognizer + Send + Sync,
     {
         let custom_handler = unsafe { &*(ctxt as *mut R) };
-        let bv = unsafe { BinaryView::from_raw(BNNewViewReference(bv)) };
-        let func = unsafe { Function::from_raw(BNNewFunctionReference(func)) };
+        let bv = unsafe { BinaryView::ref_from_raw(BNNewViewReference(bv)) };
+        let func = unsafe { Function::ref_from_raw(func) };
         let mlil = unsafe { mlil::MediumLevelILFunction::ref_from_raw(mlil) };
         custom_handler.recognize_medium_level_il(bv.as_ref(), func.as_ref(), &mlil)
     }
@@ -100,7 +99,7 @@ where
     let mut recognizer = create_function_recognizer_registration::<R>(recognizer);
     unsafe {
         BNRegisterArchitectureFunctionRecognizer(
-            arch.handle().as_ref().0,
+            arch.as_ref().handle,
             &mut recognizer as *mut _,
         );
     }

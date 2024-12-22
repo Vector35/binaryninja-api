@@ -3,7 +3,7 @@ use std::env;
 use binaryninja::binaryview::BinaryViewExt;
 use binaryninja::hlil::HighLevelILLiftedOperand;
 use binaryninja::hlil::{HighLevelILFunction, HighLevelILLiftedInstruction};
-use binaryninja::types::Variable;
+use binaryninja::variable::Variable;
 
 fn print_indent(indent: usize) {
     print!("{:<indent$}", "")

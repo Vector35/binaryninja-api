@@ -1,0 +1,842 @@
+use crate::function::{Function, Location};
+use crate::mlil::MediumLevelILFunction;
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref};
+use crate::string::BnString;
+use crate::types::Type;
+use binaryninjacore_sys::{BNDataVariable, BNDataVariableAndName, BNFreeDataVariables, BNFreeILInstructionList, BNFreeIndirectBranchList, BNFreeMergedVariableList, BNFreeStackVariableReferenceList, BNFreeUserVariableValues, BNFreeVariableList, BNFreeVariableNameAndTypeList, BNFromVariableIdentifier, BNGetMediumLevelILVariableSSAVersions, BNIndirectBranchInfo, BNLookupTableEntry, BNMergedVariable, BNPossibleValueSet, BNRegisterValue, BNRegisterValueType, BNStackVariableReference, BNToVariableIdentifier, BNUserVariableValue, BNValueRange, BNVariable, BNVariableNameAndType, BNVariableSourceType};
+use std::collections::HashSet;
+use crate::confidence::Conf;
+
+pub type VariableSourceType = BNVariableSourceType;
+pub type RegisterValueType = BNRegisterValueType;
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct DataVariable {
+    pub address: u64,
+    pub ty: Conf<Ref<Type>>,
+    pub auto_discovered: bool,
+}
+
+impl DataVariable {
+    pub fn new(address: u64, ty: Conf<Ref<Type>>, auto_discovered: bool) -> Self {
+        Self {
+            address,
+            ty,
+            auto_discovered,
+        }
+    }
+}
+
+impl From<BNDataVariable> for DataVariable {
+    fn from(value: BNDataVariable) -> Self {
+        Self {
+            address: value.address,
+            ty: Conf::new(
+                unsafe { Type::ref_from_raw(value.type_) },
+                value.typeConfidence,
+            ),
+            auto_discovered: value.autoDiscovered,
+        }
+    }
+}
+
+impl CoreArrayProvider for DataVariable {
+    type Raw = BNDataVariable;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for DataVariable {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeDataVariables(raw, count);
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from(*raw)
+    }
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct NamedDataVariableWithType {
+    pub address: u64,
+    pub ty: Conf<Ref<Type>>,
+    pub name: String,
+    pub auto_discovered: bool,
+}
+
+impl NamedDataVariableWithType {
+    pub fn new(address: u64, ty: Conf<Ref<Type>>, name: String, auto_discovered: bool) -> Self {
+        Self {
+            address,
+            ty,
+            name,
+            auto_discovered,
+        }
+    }
+}
+
+impl From<BNDataVariableAndName> for NamedDataVariableWithType {
+    fn from(value: BNDataVariableAndName) -> Self {
+        Self {
+            address: value.address,
+            ty: Conf::new(
+                unsafe { Type::ref_from_raw(value.type_) },
+                value.typeConfidence,
+            ),
+            name: unsafe { BnString::from_raw(value.name) }.to_string(),
+            auto_discovered: value.autoDiscovered,
+        }
+    }
+}
+
+impl From<NamedDataVariableWithType> for BNDataVariableAndName {
+    fn from(value: NamedDataVariableWithType) -> Self {
+        let bn_name = BnString::new(value.name);
+        Self {
+            address: value.address,
+            type_: value.ty.contents.handle,
+            name: bn_name.into_raw(),
+            autoDiscovered: value.auto_discovered,
+            typeConfidence: value.ty.confidence,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct NamedVariableWithType {
+    pub variable: Variable,
+    pub ty: Conf<Ref<Type>>,
+    pub name: String,
+    pub auto_defined: bool,
+}
+
+impl NamedVariableWithType {
+    pub fn new(variable: Variable, ty: Conf<Ref<Type>>, name: String, auto_defined: bool) -> Self {
+        Self {
+            variable,
+            ty,
+            name,
+            auto_defined,
+        }
+    }
+}
+
+impl From<BNVariableNameAndType> for NamedVariableWithType {
+    fn from(value: BNVariableNameAndType) -> Self {
+        Self {
+            variable: value.var.into(),
+            ty: Conf::new(
+                unsafe { Type::ref_from_raw(value.type_) },
+                value.typeConfidence,
+            ),
+            name: unsafe { BnString::from_raw(value.name) }.to_string(),
+            auto_defined: value.autoDefined,
+        }
+    }
+}
+
+impl From<NamedVariableWithType> for BNVariableNameAndType {
+    fn from(value: NamedVariableWithType) -> Self {
+        let bn_name = BnString::new(value.name);
+        Self {
+            var: value.variable.into(),
+            type_: value.ty.contents.handle,
+            name: bn_name.into_raw(),
+            autoDefined: value.auto_defined,
+            typeConfidence: value.ty.confidence,
+        }
+    }
+}
+
+impl CoreArrayProvider for NamedVariableWithType {
+    type Raw = BNVariableNameAndType;
+    type Context = ();
+    type Wrapped<'a> = Guard<'a, NamedVariableWithType>;
+}
+
+unsafe impl CoreArrayProviderInner for NamedVariableWithType {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeVariableNameAndTypeList(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        unsafe { Guard::new(NamedVariableWithType::from(*raw), raw) }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UserVariableValue {
+    pub variable: Variable,
+    pub def_site: Location,
+    pub value: PossibleValueSet,
+}
+
+impl From<BNUserVariableValue> for UserVariableValue {
+    fn from(value: BNUserVariableValue) -> Self {
+        Self {
+            variable: value.var.into(),
+            def_site: value.defSite.into(),
+            value: value.value.into(),
+        }
+    }
+}
+
+impl From<UserVariableValue> for BNUserVariableValue {
+    fn from(value: UserVariableValue) -> Self {
+        Self {
+            var: value.variable.into(),
+            defSite: value.def_site.into(),
+            value: value.value.into(),
+        }
+    }
+}
+
+impl CoreArrayProvider for UserVariableValue {
+    type Raw = BNUserVariableValue;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for UserVariableValue {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeUserVariableValues(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        UserVariableValue::from(*raw)
+    }
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct StackVariableReference {
+    source_operand: u32,
+    pub variable_type: Conf<Ref<Type>>,
+    pub name: String,
+    pub variable: Variable,
+    pub offset: i64,
+    pub size: usize,
+}
+
+impl From<BNStackVariableReference> for StackVariableReference {
+    fn from(value: BNStackVariableReference) -> Self {
+        Self {
+            source_operand: value.sourceOperand,
+            variable_type: Conf::new(
+                unsafe { Type::ref_from_raw(value.type_) },
+                value.typeConfidence,
+            ),
+            name: unsafe { BnString::from_raw(value.name) }.to_string(),
+            // TODO: It might be beneficial to newtype the identifier as VariableIdentifier.
+            variable: Variable::from_identifier(value.varIdentifier),
+            offset: value.referencedOffset,
+            size: value.size,
+        }
+    }
+}
+
+impl From<StackVariableReference> for BNStackVariableReference {
+    fn from(value: StackVariableReference) -> Self {
+        let bn_name = BnString::new(value.name);
+        Self {
+            sourceOperand: value.source_operand,
+            typeConfidence: value.variable_type.confidence,
+            type_: value.variable_type.contents.handle,
+            name: bn_name.into_raw(),
+            varIdentifier: value.variable.to_identifier(),
+            referencedOffset: value.offset,
+            size: value.size,
+        }
+    }
+}
+
+impl CoreArrayProvider for StackVariableReference {
+    type Raw = BNStackVariableReference;
+    type Context = ();
+    type Wrapped<'a> = Guard<'a, Self>;
+}
+
+unsafe impl CoreArrayProviderInner for StackVariableReference {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeStackVariableReferenceList(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Guard::new(Self::from(*raw), context)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+pub struct SSAVariable {
+    pub variable: Variable,
+    pub version: usize,
+}
+
+impl SSAVariable {
+    pub fn new(variable: Variable, version: usize) -> Self {
+        Self { variable, version }
+    }
+}
+
+impl CoreArrayProvider for SSAVariable {
+    type Raw = usize;
+    type Context = Variable;
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for SSAVariable {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeILInstructionList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        SSAVariable::new(*context, *raw)
+    }
+}
+
+impl CoreArrayProvider for Array<SSAVariable> {
+    type Raw = BNVariable;
+    type Context = Ref<MediumLevelILFunction>;
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for Array<SSAVariable> {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeVariableList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let mut count = 0;
+        let versions =
+            unsafe { BNGetMediumLevelILVariableSSAVersions(context.handle, raw, &mut count) };
+        Array::new(versions, count, Variable::from(*raw))
+    }
+}
+
+/// Variables exist within functions at Medium Level IL or higher.
+///
+/// As such, they are to be used within the context of a [`crate::Function`].
+/// See [`crate::Function::get_variable_name`] as an example of how to interact with variables.
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct Variable {
+    pub ty: VariableSourceType,
+    pub index: u32,
+    // TODO: Type this to `VariableStorage`
+    pub storage: i64,
+}
+
+impl Variable {
+    pub fn new(ty: VariableSourceType, index: u32, storage: i64) -> Self {
+        Self { ty, index, storage }
+    }
+
+    // TODO: Retype this...
+    // TODO: Add VariableIdentifier
+    // TODO: StackVariableReference has a varIdentifier, i think thats really it.
+    pub fn from_identifier(ident: u64) -> Self {
+        unsafe { BNFromVariableIdentifier(ident) }.into()
+    }
+
+    pub fn to_identifier(&self) -> u64 {
+        let raw = BNVariable::from(*self);
+        unsafe { BNToVariableIdentifier(&raw) }
+    }
+}
+
+impl From<BNVariable> for Variable {
+    fn from(value: BNVariable) -> Self {
+        Self {
+            ty: value.type_,
+            index: value.index,
+            storage: value.storage,
+        }
+    }
+}
+
+impl From<Variable> for BNVariable {
+    fn from(value: Variable) -> Self {
+        Self {
+            type_: value.ty,
+            index: value.index,
+            storage: value.storage,
+        }
+    }
+}
+
+impl From<&Variable> for BNVariable {
+    fn from(value: &Variable) -> Self {
+        BNVariable::from(*value)
+    }
+}
+
+impl CoreArrayProvider for Variable {
+    type Raw = BNVariable;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for Variable {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeVariableList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Variable::from(*raw)
+    }
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct MergedVariable {
+    pub target: Variable,
+    pub sources: Vec<Variable>,
+}
+
+impl From<BNMergedVariable> for MergedVariable {
+    fn from(value: BNMergedVariable) -> Self {
+        let sources = unsafe {
+            std::slice::from_raw_parts(value.sources, value.sourceCount)
+                .iter()
+                .copied()
+                .map(Into::into)
+                .collect()
+        };
+        Self {
+            target: value.target.into(),
+            sources,
+        }
+    }
+}
+
+impl CoreArrayProvider for MergedVariable {
+    type Raw = BNMergedVariable;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for MergedVariable {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeMergedVariableList(raw, count)
+    }
+    
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from(*raw)
+    }
+}
+
+// TODO: This is used in MLIL and HLIL, this really should exist in each of those.
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub struct ConstantData {
+    // TODO: We really do not want to store a ref to function here.
+    pub function: Ref<Function>,
+    pub value: RegisterValue,
+}
+
+impl ConstantData {
+    pub fn new(function: Ref<Function>, value: RegisterValue) -> Self {
+        Self { function, value }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+pub struct RegisterValue {
+    pub state: RegisterValueType,
+    // TODO: This value can be anything. Make `T`
+    pub value: i64,
+    pub offset: i64,
+    pub size: usize,
+}
+
+impl RegisterValue {
+    pub fn new(state: RegisterValueType, value: i64, offset: i64, size: usize) -> Self {
+        Self {
+            state,
+            value,
+            offset,
+            size,
+        }
+    }
+}
+
+impl From<BNRegisterValue> for RegisterValue {
+    fn from(value: BNRegisterValue) -> Self {
+        Self {
+            state: value.state.into(),
+            value: value.value,
+            offset: value.offset,
+            size: value.size,
+        }
+    }
+}
+
+impl From<RegisterValue> for BNRegisterValue {
+    fn from(value: RegisterValue) -> Self {
+        Self {
+            state: value.state.into(),
+            value: value.value,
+            offset: value.offset,
+            size: value.size,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct ValueRange<T> {
+    pub start: T,
+    pub end: T,
+    pub step: u64,
+}
+
+impl From<BNValueRange> for ValueRange<u64> {
+    fn from(value: BNValueRange) -> Self {
+        Self {
+            start: value.start,
+            end: value.end,
+            step: value.step,
+        }
+    }
+}
+
+impl From<ValueRange<u64>> for BNValueRange {
+    fn from(value: ValueRange<u64>) -> Self {
+        Self {
+            start: value.start,
+            end: value.end,
+            step: value.step,
+        }
+    }
+}
+
+impl From<BNValueRange> for ValueRange<i64> {
+    fn from(value: BNValueRange) -> Self {
+        Self {
+            start: value.start as i64,
+            end: value.end as i64,
+            step: value.step,
+        }
+    }
+}
+
+impl From<ValueRange<i64>> for BNValueRange {
+    fn from(value: ValueRange<i64>) -> Self {
+        Self {
+            start: value.start as u64,
+            end: value.end as u64,
+            step: value.step,
+        }
+    }
+}
+
+// TODO: Document where its used and why it exists.
+// TODO: What if we are looking up u64?
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LookupTableEntry {
+    /// The set of integers that correspond with [`Self::to`].
+    from: HashSet<i64>,
+    /// The associated "mapped" value.
+    to: i64,
+}
+
+impl From<BNLookupTableEntry> for LookupTableEntry {
+    fn from(value: BNLookupTableEntry) -> Self {
+        let from_values = unsafe { std::slice::from_raw_parts(value.fromValues, value.fromCount) };
+        Self {
+            // TODO: Better way to construct HashSet<i64>?
+            from: from_values.iter().copied().collect(),
+            to: value.toValue,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PossibleValueSet {
+    UndeterminedValue,
+    EntryValue {
+        // TODO: This is actually the BNVariable storage.
+        // TODO: Type this to `VariableStorage` or something.
+        reg: i64,
+    },
+    ConstantValue {
+        // TODO: Make this T
+        // TODO: This can be really anything (signed, unsigned or even a float).
+        value: i64,
+    },
+    ConstantPointerValue {
+        // TODO: Shouldn't this be u64?
+        value: i64,
+    },
+    ExternalPointerValue {
+        // TODO: Shouldn't this be u64?
+        value: i64,
+        offset: i64,
+    },
+    StackFrameOffset {
+        value: i64,
+    },
+    ReturnAddressValue,
+    ImportedAddressValue,
+    SignedRangeValue {
+        value: i64,
+        ranges: Vec<ValueRange<i64>>,
+    },
+    UnsignedRangeValue {
+        value: i64,
+        ranges: Vec<ValueRange<u64>>,
+    },
+    LookupTableValue {
+        table: Vec<LookupTableEntry>,
+    },
+    InSetOfValues {
+        values: HashSet<i64>,
+    },
+    NotInSetOfValues {
+        values: HashSet<i64>,
+    },
+    // TODO: Can you even get _just_ a constant data value?
+    ConstantDataValue {
+        value: i64,
+        size: usize,
+    },
+    ConstantDataZeroExtendValue {
+        // TODO: Zero extend should be u64?
+        value: i64,
+        size: usize,
+    },
+    ConstantDataSignExtendValue {
+        value: i64,
+        size: usize,
+    },
+    ConstantDataAggregateValue {
+        // WTF is aggregate??
+        value: i64,
+        size: usize,
+    },
+}
+
+impl PossibleValueSet {
+    pub fn value_type(&self) -> RegisterValueType {
+        match self {
+            PossibleValueSet::UndeterminedValue => RegisterValueType::UndeterminedValue,
+            PossibleValueSet::EntryValue { .. } => RegisterValueType::EntryValue,
+            PossibleValueSet::ConstantValue { .. } => RegisterValueType::ConstantValue,
+            PossibleValueSet::ConstantPointerValue { .. } => {
+                RegisterValueType::ConstantPointerValue
+            }
+            PossibleValueSet::ExternalPointerValue { .. } => {
+                RegisterValueType::ExternalPointerValue
+            }
+            PossibleValueSet::StackFrameOffset { .. } => RegisterValueType::StackFrameOffset,
+            PossibleValueSet::ReturnAddressValue => RegisterValueType::ReturnAddressValue,
+            PossibleValueSet::ImportedAddressValue => RegisterValueType::ImportedAddressValue,
+            PossibleValueSet::SignedRangeValue { .. } => RegisterValueType::SignedRangeValue,
+            PossibleValueSet::UnsignedRangeValue { .. } => RegisterValueType::UnsignedRangeValue,
+            PossibleValueSet::LookupTableValue { .. } => RegisterValueType::LookupTableValue,
+            PossibleValueSet::InSetOfValues { .. } => RegisterValueType::InSetOfValues,
+            PossibleValueSet::NotInSetOfValues { .. } => RegisterValueType::NotInSetOfValues,
+            PossibleValueSet::ConstantDataValue { .. } => RegisterValueType::ConstantDataValue,
+            PossibleValueSet::ConstantDataZeroExtendValue { .. } => {
+                RegisterValueType::ConstantDataZeroExtendValue
+            }
+            PossibleValueSet::ConstantDataSignExtendValue { .. } => {
+                RegisterValueType::ConstantDataSignExtendValue
+            }
+            PossibleValueSet::ConstantDataAggregateValue { .. } => {
+                RegisterValueType::ConstantDataAggregateValue
+            }
+        }
+    }
+}
+
+impl From<BNPossibleValueSet> for PossibleValueSet {
+    fn from(value: BNPossibleValueSet) -> Self {
+        match value.state {
+            RegisterValueType::UndeterminedValue => Self::UndeterminedValue,
+            RegisterValueType::EntryValue => Self::EntryValue { reg: value.value },
+            RegisterValueType::ConstantValue => Self::ConstantValue { value: value.value },
+            RegisterValueType::ConstantPointerValue => {
+                Self::ConstantPointerValue { value: value.value }
+            }
+            RegisterValueType::ExternalPointerValue => Self::ExternalPointerValue {
+                value: value.value,
+                offset: value.offset,
+            },
+            RegisterValueType::StackFrameOffset => Self::StackFrameOffset { value: value.value },
+            RegisterValueType::ReturnAddressValue => Self::ReturnAddressValue,
+            RegisterValueType::ImportedAddressValue => Self::ImportedAddressValue,
+            RegisterValueType::SignedRangeValue => {
+                let raw_ranges = unsafe { std::slice::from_raw_parts(value.ranges, value.count) };
+                Self::SignedRangeValue {
+                    value: value.value,
+                    ranges: raw_ranges.iter().map(|&r| r.into()).collect(),
+                }
+            }
+            RegisterValueType::UnsignedRangeValue => {
+                let raw_ranges = unsafe { std::slice::from_raw_parts(value.ranges, value.count) };
+                Self::UnsignedRangeValue {
+                    value: value.value,
+                    ranges: raw_ranges.iter().map(|&r| r.into()).collect(),
+                }
+            }
+            RegisterValueType::LookupTableValue => {
+                let raw_entries = unsafe { std::slice::from_raw_parts(value.table, value.count) };
+                Self::LookupTableValue {
+                    table: raw_entries.iter().map(|&r| r.into()).collect(),
+                }
+            }
+            RegisterValueType::InSetOfValues => {
+                let raw_values = unsafe { std::slice::from_raw_parts(value.valueSet, value.count) };
+                Self::InSetOfValues {
+                    values: raw_values.iter().copied().collect(),
+                }
+            }
+            RegisterValueType::NotInSetOfValues => {
+                let raw_values = unsafe { std::slice::from_raw_parts(value.valueSet, value.count) };
+                Self::NotInSetOfValues {
+                    values: raw_values.iter().copied().collect(),
+                }
+            }
+            RegisterValueType::ConstantDataValue => Self::ConstantDataValue {
+                value: value.value,
+                size: value.size,
+            },
+            RegisterValueType::ConstantDataZeroExtendValue => Self::ConstantDataZeroExtendValue {
+                value: value.value,
+                size: value.size,
+            },
+            RegisterValueType::ConstantDataSignExtendValue => Self::ConstantDataSignExtendValue {
+                value: value.value,
+                size: value.size,
+            },
+            RegisterValueType::ConstantDataAggregateValue => Self::ConstantDataAggregateValue {
+                value: value.value,
+                size: value.size,
+            },
+        }
+    }
+}
+
+// TODO: Anything requiring core allocation is missing!
+impl From<PossibleValueSet> for BNPossibleValueSet {
+    fn from(value: PossibleValueSet) -> Self {
+        let mut raw = BNPossibleValueSet::default();
+        raw.state = value.value_type().into();
+        match value {
+            PossibleValueSet::UndeterminedValue => {}
+            PossibleValueSet::EntryValue { reg } => {
+                raw.value = reg;
+            }
+            PossibleValueSet::ConstantValue { value } => {
+                raw.value = value;
+            }
+            PossibleValueSet::ConstantPointerValue { value } => {
+                raw.value = value;
+            }
+            PossibleValueSet::ExternalPointerValue { value, offset } => {
+                raw.value = value;
+                raw.offset = offset;
+            }
+            PossibleValueSet::StackFrameOffset { value } => {
+                raw.value = value;
+            }
+            PossibleValueSet::ReturnAddressValue => {}
+            PossibleValueSet::ImportedAddressValue => {}
+            PossibleValueSet::SignedRangeValue { value, .. } => {
+                raw.value = value;
+                // TODO: raw.ranges
+                // TODO: requires core allocation and freeing.
+                // TODO: See `BNFreePossibleValueSet` for why this sucks.
+            }
+            PossibleValueSet::UnsignedRangeValue { value, .. } => {
+                raw.value = value;
+                // TODO: raw.ranges
+                // TODO: requires core allocation and freeing.
+                // TODO: See `BNFreePossibleValueSet` for why this sucks.
+            }
+            PossibleValueSet::LookupTableValue { .. } => {
+                // TODO: raw.table
+                // TODO: requires core allocation and freeing.
+                // TODO: See `BNFreePossibleValueSet` for why this sucks.
+            }
+            PossibleValueSet::InSetOfValues { .. } => {
+                // TODO: raw.valueSet
+                // TODO: requires core allocation and freeing.
+                // TODO: See `BNFreePossibleValueSet` for why this sucks.
+            }
+            PossibleValueSet::NotInSetOfValues { .. } => {
+                // TODO: raw.valueSet
+                // TODO: requires core allocation and freeing.
+                // TODO: See `BNFreePossibleValueSet` for why this sucks.
+            }
+            PossibleValueSet::ConstantDataValue { value, size } => {
+                raw.value = value;
+                raw.size = size;
+            }
+            PossibleValueSet::ConstantDataZeroExtendValue { value, size } => {
+                raw.value = value;
+                raw.size = size;
+            }
+            PossibleValueSet::ConstantDataSignExtendValue { value, size } => {
+                raw.value = value;
+                raw.size = size;
+            }
+            PossibleValueSet::ConstantDataAggregateValue { value, size } => {
+                raw.value = value;
+                raw.size = size;
+            }
+        };
+        raw
+    }
+}
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct IndirectBranchInfo {
+    pub source: Location,
+    pub dest: Location,
+    pub auto_defined: bool,
+}
+
+impl From<BNIndirectBranchInfo> for IndirectBranchInfo {
+    fn from(value: BNIndirectBranchInfo) -> Self {
+        Self {
+            source: Location::from_raw(value.sourceAddr, value.sourceArch),
+            dest: Location::from_raw(value.destAddr, value.destArch),
+            auto_defined: value.autoDefined,
+        }
+    }
+}
+
+impl From<IndirectBranchInfo> for BNIndirectBranchInfo {
+    fn from(value: IndirectBranchInfo) -> Self {
+        let source_arch = value
+            .source
+            .arch
+            .map(|a| a.handle)
+            .unwrap_or(std::ptr::null_mut());
+        let dest_arch = value
+            .source
+            .arch
+            .map(|a| a.handle)
+            .unwrap_or(std::ptr::null_mut());
+        Self {
+            sourceArch: source_arch,
+            sourceAddr: value.source.addr,
+            destArch: dest_arch,
+            destAddr: value.dest.addr,
+            autoDefined: value.auto_defined,
+        }
+    }
+}
+
+impl CoreArrayProvider for IndirectBranchInfo {
+    type Raw = BNIndirectBranchInfo;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for IndirectBranchInfo {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeIndirectBranchList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from(*raw)
+    }
+}

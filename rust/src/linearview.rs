@@ -390,7 +390,7 @@ pub struct LinearDisassemblyLine {
 impl LinearDisassemblyLine {
     pub(crate) unsafe fn from_raw(raw: &BNLinearDisassemblyLine) -> Self {
         let linetype = raw.type_;
-        let function = mem::ManuallyDrop::new(Function::from_raw(raw.function));
+        let function = mem::ManuallyDrop::new(Function::ref_from_raw(raw.function));
         let contents = mem::ManuallyDrop::new(DisassemblyTextLine(raw.contents));
         Self {
             t: linetype,

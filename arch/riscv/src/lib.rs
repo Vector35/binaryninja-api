@@ -30,7 +30,7 @@ use binaryninja::{
         RelocationType,
     },
     symbol::{Symbol, SymbolType},
-    types::{max_confidence, min_confidence, Conf, NameAndType, Type},
+    types::{NameAndType, Type},
 };
 use log::LevelFilter;
 use std::borrow::Cow;
@@ -43,6 +43,8 @@ use riscv_dis::{
     FloatReg, FloatRegType, Instr, IntRegType, Op, RegFile, Register as RiscVRegister,
     RiscVDisassembler, RoundMode,
 };
+use binaryninja::architecture::BranchKind;
+use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 
 enum RegType {
     Integer(u32),
@@ -509,7 +511,7 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
         }
     }
 
-    fn inputs(&self) -> Vec<Ref<NameAndType>> {
+    fn inputs(&self) -> Vec<NameAndType> {
         match self.id {
             Intrinsic::Uret | Intrinsic::Sret | Intrinsic::Mret | Intrinsic::Wfi => {
                 vec![]
@@ -517,17 +519,15 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             Intrinsic::Csrrd => {
                 vec![NameAndType::new(
                     "csr",
-                    &Type::int(4, false),
-                    max_confidence(),
+                    Conf::new(Type::int(4, false), MAX_CONFIDENCE)
                 )]
             }
             Intrinsic::Csrrw | Intrinsic::Csrwr | Intrinsic::Csrrs | Intrinsic::Csrrc => {
                 vec![
-                    NameAndType::new("csr", &Type::int(4, false), max_confidence()),
+                    NameAndType::new("csr", Conf::new(Type::int(4, false), MAX_CONFIDENCE)),
                     NameAndType::new(
                         "value",
-                        &Type::int(<D::RegFile as RegFile>::Int::width(), false),
-                        min_confidence(),
+                        Conf::new(Type::int(<D::RegFile as RegFile>::Int::width(), false), MIN_CONFIDENCE)
                     ),
                 ]
             }
@@ -541,8 +541,8 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::Fmin(size)
             | Intrinsic::Fmax(size) => {
                 vec![
-                    NameAndType::new("", &Type::float(size as usize), max_confidence()),
-                    NameAndType::new("", &Type::float(size as usize), max_confidence()),
+                    NameAndType::new("", Conf::new(Type::float(size as usize), MAX_CONFIDENCE)),
+                    NameAndType::new("", Conf::new(Type::float(size as usize), MAX_CONFIDENCE)),
                 ]
             }
             Intrinsic::Fsqrt(size, _)
@@ -552,26 +552,23 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::FcvtFToU(size, _, _) => {
                 vec![NameAndType::new(
                     "",
-                    &Type::float(size as usize),
-                    max_confidence(),
+                    Conf::new(Type::float(size as usize), MAX_CONFIDENCE)
                 )]
             }
             Intrinsic::FcvtIToF(size, _, _) => {
                 vec![NameAndType::new(
                     "",
-                    &Type::int(size as usize, true),
-                    max_confidence(),
+                    Conf::new(Type::int(size as usize, true), MAX_CONFIDENCE)
                 )]
             }
             Intrinsic::FcvtUToF(size, _, _) => {
                 vec![NameAndType::new(
                     "",
-                    &Type::int(size as usize, false),
-                    max_confidence(),
+                    Conf::new(Type::int(size as usize, false), MAX_CONFIDENCE)
                 )]
             }
             Intrinsic::Fence => {
-                vec![NameAndType::new("", &Type::int(4, false), min_confidence())]
+                vec![NameAndType::new("", Conf::new(Type::int(4, false), MIN_CONFIDENCE))]
             }
         }
     }
@@ -589,7 +586,7 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             Intrinsic::Csrrw | Intrinsic::Csrrd | Intrinsic::Csrrs | Intrinsic::Csrrc => {
                 vec![Conf::new(
                     Type::int(<D::RegFile as RegFile>::Int::width(), false),
-                    min_confidence(),
+                    MIN_CONFIDENCE,
                 )]
             }
             Intrinsic::Fadd(size, _)
@@ -605,16 +602,16 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::FcvtFToF(_, size, _)
             | Intrinsic::FcvtIToF(_, size, _)
             | Intrinsic::FcvtUToF(_, size, _) => {
-                vec![Conf::new(Type::float(size as usize), max_confidence())]
+                vec![Conf::new(Type::float(size as usize), MAX_CONFIDENCE)]
             }
             Intrinsic::Fclass(_) => {
-                vec![Conf::new(Type::int(4, false), min_confidence())]
+                vec![Conf::new(Type::int(4, false), MIN_CONFIDENCE)]
             }
             Intrinsic::FcvtFToI(_, size, _) => {
-                vec![Conf::new(Type::int(size as usize, true), max_confidence())]
+                vec![Conf::new(Type::int(size as usize, true), MAX_CONFIDENCE)]
             }
             Intrinsic::FcvtFToU(_, size, _) => {
-                vec![Conf::new(Type::int(size as usize, false), max_confidence())]
+                vec![Conf::new(Type::int(size as usize, false), MAX_CONFIDENCE)]
             }
         }
     }
@@ -671,13 +668,11 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         self.max_instr_len()
     }
 
-    fn associated_arch_by_addr(&self, _addr: &mut u64) -> CoreArchitecture {
+    fn associated_arch_by_addr(&self, _addr: u64) -> CoreArchitecture {
         self.handle
     }
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
-        use architecture::BranchInfo;
-
         let (inst_len, op) = match D::decode(addr, data) {
             Ok(Instr::Rv16(op)) => (2, op),
             Ok(Instr::Rv32(op)) => (4, op),
@@ -691,23 +686,23 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let target = addr.wrapping_add(j.imm() as i64 as u64);
 
                 let branch = if j.rd().id() == 0 {
-                    BranchInfo::Unconditional(target)
+                    BranchKind::Unconditional(target)
                 } else {
-                    BranchInfo::Call(target)
+                    BranchKind::Call(target)
                 };
 
-                res.add_branch(branch, None);
+                res.add_branch(branch);
             }
             Op::Jalr(ref i) => {
                 // TODO handle the calls with rs1 == 0?
                 if i.rd().id() == 0 {
                     let branch_type = if i.rs1().id() == 1 {
-                        BranchInfo::FunctionReturn
+                        BranchKind::FunctionReturn
                     } else {
-                        BranchInfo::Unresolved
+                        BranchKind::Unresolved
                     };
 
-                    res.add_branch(branch_type, None);
+                    res.add_branch(branch_type);
                 }
             }
             Op::Beq(ref b)
@@ -716,21 +711,20 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             | Op::Bge(ref b)
             | Op::BltU(ref b)
             | Op::BgeU(ref b) => {
-                res.add_branch(BranchInfo::False(addr.wrapping_add(inst_len as u64)), None);
+                res.add_branch(BranchKind::False(addr.wrapping_add(inst_len as u64)));
                 res.add_branch(
-                    BranchInfo::True(addr.wrapping_add(b.imm() as i64 as u64)),
-                    None,
+                    BranchKind::True(addr.wrapping_add(b.imm() as i64 as u64)),
                 );
             }
             Op::Ecall => {
-                res.add_branch(BranchInfo::SystemCall, None);
+                res.add_branch(BranchKind::SystemCall);
             }
             Op::Ebreak => {
                 // TODO is this valid, or should lifting handle this?
-                res.add_branch(BranchInfo::Unresolved, None);
+                res.add_branch(BranchKind::Unresolved);
             }
             Op::Uret | Op::Sret | Op::Mret => {
-                res.add_branch(BranchInfo::FunctionReturn, None);
+                res.add_branch(BranchKind::FunctionReturn);
             }
             _ => {}
         }
@@ -2843,8 +2837,8 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
 
         // Ensure that load is pointing at an import address
         let sym = match bv.symbol_by_address(entry) {
-            Ok(sym) => sym,
-            Err(_) => return false,
+            Some(sym) => sym,
+            None => return false,
         };
         if sym.sym_type() != SymbolType::ImportAddress {
             return false;
@@ -2907,7 +2901,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         for ext_sym in &bv.symbols_by_name(func_sym.raw_name()) {
             if ext_sym.sym_type() == SymbolType::External {
                 if let Some(var) = bv.data_variable_at_address(ext_sym.address()) {
-                    func.apply_imported_types(func_sym.as_ref(), Some(var.t()));
+                    func.apply_imported_types(func_sym.as_ref(), Some(&var.ty.contents));
                     return true;
                 }
             }

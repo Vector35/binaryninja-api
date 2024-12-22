@@ -17,7 +17,7 @@ use std::fmt;
 use crate::architecture::CoreArchitecture;
 use crate::function::Function;
 use binaryninjacore_sys::*;
-
+use crate::BranchType;
 use crate::rc::*;
 
 enum EdgeDirection {
@@ -26,7 +26,7 @@ enum EdgeDirection {
 }
 
 pub struct Edge<'a, C: 'a + BlockContext> {
-    branch: super::BranchType,
+    branch: BranchType,
     back_edge: bool,
     source: Guard<'a, BasicBlock<C>>,
     target: Guard<'a, BasicBlock<C>>,
@@ -128,7 +128,7 @@ impl<C: BlockContext> BasicBlock<C> {
     pub fn function(&self) -> Ref<Function> {
         unsafe {
             let func = BNGetBasicBlockFunction(self.handle);
-            Function::from_raw(func)
+            Function::ref_from_raw(func)
         }
     }
 

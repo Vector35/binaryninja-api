@@ -244,7 +244,7 @@ fn process_tree<R: Reader>(
 }
 
 fn dump_dwarf(bv: &BinaryView) {
-    let view = if bv.section_by_name(".debug_info").is_ok() {
+    let view = if bv.section_by_name(".debug_info").is_some() {
         bv.to_owned()
     } else {
         bv.parent_view().unwrap()

@@ -4,7 +4,7 @@ use binaryninja::architecture::Intrinsic;
 use binaryninja::binaryview::BinaryViewExt;
 use binaryninja::mlil::MediumLevelILLiftedOperand;
 use binaryninja::mlil::{MediumLevelILFunction, MediumLevelILLiftedInstruction};
-use binaryninja::types::Variable;
+use binaryninja::variable::Variable;
 
 fn print_indent(indent: usize) {
     print!("{:<indent$}", "")

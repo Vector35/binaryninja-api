@@ -21,7 +21,8 @@ use binaryninja::{
     rc::*,
     symbol::SymbolType,
     templatesimplifier::simplify_str_to_fqn,
-    types::{Conf, FunctionParameter, NamedTypedVariable, Type, Variable, VariableSourceType},
+    variable::NamedVariableWithType,
+    types::{FunctionParameter, Type},
 };
 
 use gimli::{DebuggingInformationEntry, Dwarf, Unit};
@@ -33,6 +34,8 @@ use std::{
     collections::HashMap,
     hash::Hash,
 };
+use binaryninja::confidence::Conf;
+use binaryninja::variable::{Variable, VariableSourceType};
 
 pub(crate) type TypeUID = usize;
 
@@ -49,7 +52,7 @@ pub(crate) struct FunctionInfoBuilder {
     pub(crate) parameters: Vec<Option<(String, TypeUID)>>,
     pub(crate) platform: Option<Ref<Platform>>,
     pub(crate) variable_arguments: bool,
-    pub(crate) stack_variables: Vec<NamedTypedVariable>,
+    pub(crate) stack_variables: Vec<NamedVariableWithType>,
     pub(crate) use_cfa: bool, //TODO actually store more info about the frame base
 }
 
@@ -392,7 +395,7 @@ impl DebugInfoBuilder {
         };
 
         // Either get the known type or use a 0 confidence void type so we at least get the name applied
-        let t = match type_uid {
+        let ty = match type_uid {
             Some(uid) => Conf::new(self.get_type(uid).unwrap().get_type(), 128),
             None => Conf::new(Type::void(), 0)
         };
@@ -449,7 +452,7 @@ impl DebugInfoBuilder {
         }
 
         let var = Variable::new(VariableSourceType::StackVariableSourceType, 0, adjusted_offset);
-        function.stack_variables.push(NamedTypedVariable::new(var, name, t, false));
+        function.stack_variables.push(NamedVariableWithType::new(var, ty, name, false));
 
     }
 
@@ -547,7 +550,7 @@ impl DebugInfoBuilder {
     fn get_function_type(&self, function: &FunctionInfoBuilder) -> Ref<Type> {
         let return_type = match function.return_type {
             Some(return_type_id) => Conf::new(self.get_type(return_type_id).unwrap().get_type(), 128),
-            _ => Conf::new(binaryninja::types::Type::void(), 0),
+            _ => Conf::new(Type::void(), 0),
         };
 
         let parameters: Vec<FunctionParameter> = function
@@ -564,7 +567,7 @@ impl DebugInfoBuilder {
             })
             .collect();
 
-        binaryninja::types::Type::function(&return_type, &parameters, function.variable_arguments)
+        Type::function(&return_type, &parameters, function.variable_arguments)
     }
 
     fn commit_functions(&self, debug_info: &mut DebugInfo) {
@@ -593,7 +596,7 @@ impl DebugInfoBuilder {
         for func in &mut self.functions {
             // If the function's raw name already exists in the binary...
             if let Some(raw_name) = &func.raw_name {
-                if let Ok(symbol) = bv.symbol_by_raw_name(raw_name) {
+                if let Some(symbol) = bv.symbol_by_raw_name(raw_name) {
                     // Link mangled names without addresses to existing symbols in the binary
                     if func.address.is_none() && func.raw_name.is_some() {
                         // DWARF doesn't contain GOT info, so remove any entries there...they will be wrong (relying on Binja's mechanisms for the GOT is good )

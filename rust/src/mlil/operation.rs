@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
-
-use crate::{architecture::CoreIntrinsic, types::{ConstantData, SSAVariable, Variable}};
-
+use crate::architecture::CoreIntrinsic;
+use crate::variable::{ConstantData, SSAVariable, Variable};
 use super::MediumLevelILLiftedInstruction;
 
 // IF

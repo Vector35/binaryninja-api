@@ -4,8 +4,7 @@ use crate::architecture::CoreIntrinsic;
 use crate::function::Function;
 use crate::rc::Ref;
 use crate::string::BnString;
-use crate::types::{ConstantData, SSAVariable, Variable};
-
+use crate::variable::{ConstantData, SSAVariable, Variable};
 use super::HighLevelILLiftedInstruction;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -197,6 +196,7 @@ pub struct ConstData {
     pub constant_data_value: i64,
     pub size: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedConstData {
     pub constant_data: ConstantData,
@@ -220,6 +220,7 @@ pub struct DerefFieldSsa {
     pub offset: u64,
     pub member_index: Option<usize>,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedDerefFieldSsa {
     pub src: Box<HighLevelILLiftedInstruction>,
@@ -234,6 +235,7 @@ pub struct DerefSsa {
     pub src: usize,
     pub src_memory: u64,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedDerefSsa {
     pub src: Box<HighLevelILLiftedInstruction>,
@@ -261,6 +263,7 @@ pub struct ForLoop {
     pub update: usize,
     pub body: usize,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedForLoop {
     pub init: Box<HighLevelILLiftedInstruction>,

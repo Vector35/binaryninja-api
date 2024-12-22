@@ -62,7 +62,7 @@ struct PDBInfo {
 
 fn is_pdb(view: &BinaryView) -> bool {
     let pdb_magic_bytes = "Microsoft C/C++ MSF 7.00\r\n\x1A\x44\x53\x00\x00\x00";
-    if let Ok(raw_view) = view.raw_view() {
+    if let Some(raw_view) = view.raw_view() {
         raw_view.read_vec(0, pdb_magic_bytes.len()) == pdb_magic_bytes.as_bytes()
     } else {
         false

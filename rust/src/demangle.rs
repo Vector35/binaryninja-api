@@ -15,9 +15,7 @@
 //! Interfaces for demangling and simplifying mangled names in binaries.
 
 use binaryninjacore_sys::*;
-use std::os::raw::c_char;
-use std::{ffi::CStr, result};
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void, CStr};
 
 use crate::architecture::CoreArchitecture;
 use crate::binaryview::BinaryView;
@@ -26,7 +24,7 @@ use crate::types::{QualifiedName, Type};
 
 use crate::rc::*;
 
-pub type Result<R> = result::Result<R, ()>;
+pub type Result<R> = std::result::Result<R, ()>;
 
 pub fn demangle_generic<S: BnStrCompatible>(
     arch: &CoreArchitecture,
@@ -48,7 +46,7 @@ pub fn demangle_generic<S: BnStrCompatible>(
     };
     let res = unsafe {
         BNDemangleGeneric(
-            arch.0,
+            arch.handle,
             mangled_name_ptr.as_ptr() as *const c_char,
             &mut out_type,
             &mut out_name,
@@ -141,7 +139,7 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
     let mut out_size: usize = 0;
     let res = unsafe {
         BNDemangleGNU3(
-            arch.0,
+            arch.handle,
             mangled_name_ptr.as_ptr() as *const c_char,
             &mut out_type,
             &mut out_name,
@@ -197,7 +195,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
     let mut out_size: usize = 0;
     let res = unsafe {
         BNDemangleMS(
-            arch.0,
+            arch.handle,
             mangled_name_ptr.as_ptr() as *const c_char,
             &mut out_type,
             &mut out_name,
@@ -277,7 +275,7 @@ impl Demangler {
             None => std::ptr::null_mut()
         };
 
-        if !unsafe { BNDemanglerDemangle(self.handle, arch.0, name_bytes.as_ref().as_ptr() as *const _, &mut out_type, &mut out_var_name, view_ptr) } {
+        if !unsafe { BNDemanglerDemangle(self.handle, arch.handle, name_bytes.as_ref().as_ptr() as *const _, &mut out_type, &mut out_var_name, view_ptr) } {
             return Err(());
         }
 
@@ -348,7 +346,7 @@ impl Demangler {
                 let view = if view.is_null() {
                     None
                 } else {
-                    Some(BinaryView::from_raw(BNNewViewReference(view)))
+                    Some(BinaryView::ref_from_raw(BNNewViewReference(view)))
                 };
 
                 match cmd.demangle(&arch, &name, view) {

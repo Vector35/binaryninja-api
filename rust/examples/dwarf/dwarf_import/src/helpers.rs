@@ -356,8 +356,8 @@ pub(crate) fn get_expr_value<R: ReaderType>(
 pub(crate) fn get_build_id(view: &BinaryView) -> Result<String, String> {
     let mut build_id: Option<String> = None;
 
-    if let Ok(raw_view) = view.raw_view() {
-        if let Ok(build_id_section) = raw_view.section_by_name(".note.gnu.build-id") {
+    if let Some(raw_view) = view.raw_view() {
+        if let Some(build_id_section) = raw_view.section_by_name(".note.gnu.build-id") {
             // Name size - 4 bytes
             // Desc size - 4 bytes
             // Type - 4 bytes

@@ -133,7 +133,8 @@ pub(crate) fn handle_enum<R: ReaderType>(
 
     Some(Type::enumeration(
         &enumeration_builder.finalize(),
-        width,
+        // TODO: This looks bad, look at the comment in [`Type::width`].
+        width.try_into().unwrap(),
         false,
     ))
 }

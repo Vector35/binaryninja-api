@@ -12,20 +12,14 @@ use std::mem::ManuallyDrop;
 #[derive(Debug)]
 pub struct CodeReference {
     arch: CoreArchitecture,
+    // TODO: What about when we construct a code ref?
     func: ManuallyDrop<Ref<Function>>,
-    pub address: u64,
-}
-
-/// A struct representing a single data cross-reference.
-/// Data references have no associated metadata, so this object has only
-/// a single [`DataReference::address`] attribute.
-pub struct DataReference {
     pub address: u64,
 }
 
 impl CodeReference {
     pub(crate) unsafe fn new(handle: &BNReferenceSource) -> Self {
-        let func = ManuallyDrop::new(Function::from_raw(handle.func));
+        let func = ManuallyDrop::new(Function::ref_from_raw(handle.func));
         let arch = CoreArchitecture::from_raw(handle.arch);
         let address = handle.addr;
         Self {
@@ -68,7 +62,14 @@ unsafe impl CoreArrayProviderInner for CodeReference {
     }
 }
 
-// Data Reference Array<T> boilerplate
+// TODO: This only exists so that Array can free.
+// TODO: Is there any way we can have this instead be Array<Location> of some sort?
+/// A struct representing a single data cross-reference.
+/// Data references have no associated metadata, so this object has only
+/// a single [`DataReference::address`] attribute.
+pub struct DataReference {
+    pub address: u64,
+}
 
 impl CoreArrayProvider for DataReference {
     type Raw = u64;
@@ -80,6 +81,7 @@ unsafe impl CoreArrayProviderInner for DataReference {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeDataReferences(raw)
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         DataReference { address: *raw }
     }

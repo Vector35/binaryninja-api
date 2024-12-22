@@ -22,7 +22,7 @@ use binaryninja::callingconvention::CallingConvention;
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::types::{
-    max_confidence, BaseStructure, Conf, EnumerationBuilder, EnumerationMember, FunctionParameter,
+    BaseStructure, EnumerationBuilder, EnumerationMember, FunctionParameter,
     MemberAccess, MemberScope, NamedTypeReference, NamedTypeReferenceClass, QualifiedName,
     StructureBuilder, StructureMember, StructureType, Type, TypeBuilder, TypeClass,
 };
@@ -37,7 +37,7 @@ use pdb::{
     VirtualFunctionTablePointerType, VirtualFunctionTableType, VirtualTableShapeType,
 };
 use regex::Regex;
-
+use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use crate::struct_grouper::group_structure;
 use crate::PDBParserInstance;
 
@@ -351,7 +351,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     // See if we have this type
                     let name = ty
                         .get_named_type_reference()
-                        .map_err(|_| anyhow!("expected ntr"))?
+                        .ok_or(anyhow!("expected ntr"))?
                         .name()
                         .to_string();
                     if Self::is_name_anonymous(&name) {
@@ -368,7 +368,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     self.log(|| format!("Got undefined but referenced named type: {}", &name));
                     let type_class = ty
                         .get_named_type_reference()
-                        .map_err(|_| anyhow!("expected ntr"))?
+                        .ok_or(anyhow!("expected ntr"))?
                         .class();
 
                     let bare_type = match type_class {
@@ -392,7 +392,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         ),
                         NamedTypeReferenceClass::EnumNamedTypeClass => Type::enumeration(
                             EnumerationBuilder::new().finalize().as_ref(),
-                            self.arch.default_integer_size(),
+                            self.arch.default_integer_size().try_into()?,
                             false,
                         ),
                     };
@@ -482,14 +482,14 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         match self.lookup_type(index, fancy_procs)? {
             Some(ty) if ty.type_class() == TypeClass::VoidTypeClass => Ok(Some(Conf::new(ty, 0))),
             Some(ty) => {
-                let mut confidence = max_confidence();
+                let mut confidence = MAX_CONFIDENCE;
 
                 // Extra check here for void(void) functions, they should get minimum confidence since this
                 // is the signature PDB uses when it doesn't actually know the signature
                 if ty.type_class() == TypeClass::FunctionTypeClass {
-                    if let Ok(ret) = ty.return_value() {
+                    if let Some(ret) = ty.return_value() {
                         if ret.contents.type_class() == TypeClass::VoidTypeClass {
-                            if let Ok(params) = ty.parameters() {
+                            if let Some(params) = ty.parameters() {
                                 if params.len() == 0 {
                                     confidence = 0;
                                 }
@@ -503,9 +503,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 // the types of their contents
 
                 if ty.type_class() == TypeClass::ArrayTypeClass {
-                    if let Ok(ptr) = ty.element_type() {
+                    if let Some(ptr) = ty.element_type() {
                         if ptr.contents.type_class() == TypeClass::PointerTypeClass {
-                            if let Ok(fun) = ptr.contents.target() {
+                            if let Some(fun) = ptr.contents.target() {
                                 if fun.contents.type_class() == TypeClass::FunctionTypeClass
                                     && fun
                                         .contents
@@ -514,7 +514,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                         .unwrap_or(0)
                                         == 0
                                 {
-                                    if let Ok(ret) = fun.contents.return_value() {
+                                    if let Some(ret) = fun.contents.return_value() {
                                         if ret.contents.type_class() == TypeClass::VoidTypeClass {
                                             confidence = 0;
                                         }
@@ -879,7 +879,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                             combined_bitfield_members.push(ParsedMember {
                                 ty: Conf::new(
                                     Type::structure(builder.finalize().as_ref()),
-                                    max_confidence(),
+                                    MAX_CONFIDENCE,
                                 ),
                                 name: bitfield_name(last_bitfield_offset, last_bitfield_idx),
                                 offset: last_bitfield_offset,
@@ -913,7 +913,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         combined_bitfield_members.push(ParsedMember {
                             ty: Conf::new(
                                 Type::structure(builder.finalize().as_ref()),
-                                max_confidence(),
+                                MAX_CONFIDENCE,
                             ),
                             name: bitfield_name(last_bitfield_offset, last_bitfield_idx),
                             offset: last_bitfield_offset,
@@ -934,7 +934,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             combined_bitfield_members.push(ParsedMember {
                 ty: Conf::new(
                     Type::structure(builder.finalize().as_ref()),
-                    max_confidence(),
+                    MAX_CONFIDENCE,
                 ),
                 name: bitfield_name(last_bitfield_offset, last_bitfield_idx),
                 offset: last_bitfield_offset,
@@ -964,13 +964,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     let ntr_class = match self.named_types.get(name) {
                         Some(ty) if ty.type_class() == TypeClass::StructureTypeClass => {
                             match ty.get_structure() {
-                                Ok(str)
+                                Some(str)
                                     if str.structure_type()
                                         == StructureType::StructStructureType =>
                                 {
                                     NamedTypeReferenceClass::StructNamedTypeClass
                                 }
-                                Ok(str)
+                                Some(str)
                                     if str.structure_type()
                                         == StructureType::ClassStructureType =>
                                 {
@@ -996,13 +996,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     let ntr_class = match self.named_types.get(base_name) {
                         Some(ty) if ty.type_class() == TypeClass::StructureTypeClass => {
                             match ty.get_structure() {
-                                Ok(str)
+                                Some(str)
                                     if str.structure_type()
                                         == StructureType::StructStructureType =>
                                 {
                                     NamedTypeReferenceClass::StructNamedTypeClass
                                 }
-                                Ok(str)
+                                Some(str)
                                     if str.structure_type()
                                         == StructureType::ClassStructureType =>
                                 {
@@ -1066,13 +1066,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                 let ntr_class =
                                     if vt_base_type.type_class() == TypeClass::StructureTypeClass {
                                         match vt_base_type.get_structure() {
-                                            Ok(str)
+                                            Some(str)
                                                 if str.structure_type()
                                                     == StructureType::StructStructureType =>
                                             {
                                                 NamedTypeReferenceClass::StructNamedTypeClass
                                             }
-                                            Ok(str)
+                                            Some(str)
                                                 if str.structure_type()
                                                     == StructureType::ClassStructureType =>
                                             {
@@ -1113,8 +1113,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             for (offset, (name, method)) in virt_methods {
                 vt.insert(
                     &Conf::new(
-                        Type::pointer(&self.arch, &Conf::new(method.method_type, max_confidence())),
-                        max_confidence(),
+                        Type::pointer(&self.arch, &Conf::new(method.method_type, MAX_CONFIDENCE)),
+                        MAX_CONFIDENCE,
                     ),
                     &name,
                     offset as u64,
@@ -1141,12 +1141,12 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 &self.arch,
                 &Conf::new(
                     Type::named_type_from_type(&QualifiedName::from(vt_name), vt_type.as_ref()),
-                    max_confidence(),
+                    MAX_CONFIDENCE,
                 ),
             );
 
             structure.insert(
-                &Conf::new(vt_pointer, max_confidence()),
+                &Conf::new(vt_pointer, MAX_CONFIDENCE),
                 "vtable",
                 0,
                 true,
@@ -1180,7 +1180,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         match self.try_type_index_to_bare(data.field_type, finder, true)? {
             Some(ty) => Ok(Some(Box::new(ParsedType::Member(ParsedMember {
-                ty: Conf::new(ty, max_confidence()),
+                ty: Conf::new(ty, MAX_CONFIDENCE),
                 name: member_name.into_owned(),
                 offset: member_offset,
                 access,
@@ -1191,7 +1191,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             None => match self.handle_type_index(data.field_type, finder)? {
                 Some(ParsedType::BitfieldType(bitfield)) => {
                     Ok(Some(Box::new(ParsedType::Member(ParsedMember {
-                        ty: Conf::new(bitfield.ty.clone(), max_confidence()),
+                        ty: Conf::new(bitfield.ty.clone(), MAX_CONFIDENCE),
                         name: member_name.into_owned(),
                         offset: member_offset,
                         access,
@@ -1216,7 +1216,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let class_name = match self.handle_type_index(data.class_type, finder)? {
             Some(ParsedType::Bare(ty)) if ty.type_class() == TypeClass::NamedTypeReferenceClass => {
                 ty.get_named_type_reference()
-                    .map_err(|_| anyhow!("Expected NTR to have NTR"))?
+                    .ok_or(anyhow!("Expected NTR to have NTR"))?
                     .name()
                     .to_string()
             }
@@ -1240,7 +1240,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         // It looks like pdb stores varargs by having the final argument be void
         let mut is_varargs = false;
         if let Some(last) = arguments.pop() {
-            if last.t.contents.as_ref().type_class() == TypeClass::VoidTypeClass {
+            if last.ty.contents.as_ref().type_class() == TypeClass::VoidTypeClass {
                 is_varargs = true;
             } else {
                 arguments.push(last);
@@ -1257,12 +1257,12 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             // This probably means the return value got pushed to the stack
             fancy_return_type = Type::pointer(
                 &self.arch,
-                &Conf::new(return_type.clone(), max_confidence()),
+                &Conf::new(return_type.clone(), MAX_CONFIDENCE),
             );
             fancy_arguments.insert(
                 0,
                 FunctionParameter::new(
-                    Conf::new(fancy_return_type.clone(), max_confidence()),
+                    Conf::new(fancy_return_type.clone(), MAX_CONFIDENCE),
                     "__return".to_string(),
                     None,
                 ),
@@ -1275,27 +1275,27 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         let convention = self
             .cv_call_t_to_calling_convention(data.attributes.calling_convention())
-            .map(|cc| Conf::new(cc, max_confidence()))
+            .map(|cc| Conf::new(cc, MAX_CONFIDENCE))
             .unwrap_or({
                 if is_varargs {
-                    Conf::new(self.cdecl_cc.clone(), max_confidence())
+                    Conf::new(self.cdecl_cc.clone(), MAX_CONFIDENCE)
                 } else if this_pointer_type.is_some() {
-                    Conf::new(self.thiscall_cc.clone(), max_confidence())
+                    Conf::new(self.thiscall_cc.clone(), MAX_CONFIDENCE)
                 } else {
                     Conf::new(self.default_cc.clone(), 16)
                 }
             });
 
-        let func = Type::function_with_options(
-            &Conf::new(return_type, max_confidence()),
+        let func = Type::function_with_opts(
+            &Conf::new(return_type, MAX_CONFIDENCE),
             arguments.as_slice(),
             is_varargs,
             &convention,
             Conf::new(0, 0),
         );
 
-        let fancy_func = Type::function_with_options(
-            &Conf::new(fancy_return_type, max_confidence()),
+        let fancy_func = Type::function_with_opts(
+            &Conf::new(fancy_return_type, MAX_CONFIDENCE),
             fancy_arguments.as_slice(),
             is_varargs,
             &convention,
@@ -1392,7 +1392,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             Some(ParsedType::Bare(t)) if t.type_class() == TypeClass::NamedTypeReferenceClass => {
                 let name = t
                     .get_named_type_reference()
-                    .map_err(|_| anyhow!("Expected NTR to have NTR"))?
+                    .ok_or(anyhow!("Expected NTR to have NTR"))?
                     .name()
                     .to_string();
                 (name, t.clone())
@@ -1417,7 +1417,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         Ok(Some(Box::new(ParsedType::BaseClass(
             member_name.clone(),
             StructureMember::new(
-                Conf::new(resolved_type, max_confidence()),
+                Conf::new(resolved_type, MAX_CONFIDENCE),
                 member_name,
                 base_offset as u64,
                 access,
@@ -1438,7 +1438,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             Some(ParsedType::Bare(t)) if t.type_class() == TypeClass::NamedTypeReferenceClass => {
                 let name = t
                     .get_named_type_reference()
-                    .map_err(|_| anyhow!("Expected NTR to have NTR"))?
+                    .ok_or(anyhow!("Expected NTR to have NTR"))?
                     .name()
                     .to_string();
                 (name, t.clone())
@@ -1511,7 +1511,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         } else {
             None
         }
-        .map(|r| Conf::new(r, max_confidence()))
+        .map(|r| Conf::new(r, MAX_CONFIDENCE))
         .unwrap_or(Conf::new(Type::void(), 0));
 
         let mut arguments = match self.handle_type_index(data.argument_list, finder)? {
@@ -1522,7 +1522,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         // It looks like pdb stores varargs by having the final argument be void
         let mut is_varargs = false;
         if let Some(last) = arguments.pop() {
-            if last.t.contents.as_ref().type_class() == TypeClass::VoidTypeClass {
+            if last.ty.contents.as_ref().type_class() == TypeClass::VoidTypeClass {
                 is_varargs = true;
             } else {
                 arguments.push(last);
@@ -1539,7 +1539,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         if return_stacky {
             // Stack return via a pointer in the first parameter
             fancy_return_type =
-                Conf::new(Type::pointer(&self.arch, &return_type), max_confidence());
+                Conf::new(Type::pointer(&self.arch, &return_type), MAX_CONFIDENCE);
             fancy_arguments.insert(
                 0,
                 FunctionParameter::new(fancy_return_type.clone(), "__return".to_string(), None),
@@ -1548,11 +1548,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         let convention = self
             .cv_call_t_to_calling_convention(data.attributes.calling_convention())
-            .map(|cc| Conf::new(cc, max_confidence()))
+            .map(|cc| Conf::new(cc, MAX_CONFIDENCE))
             .unwrap_or(Conf::new(self.default_cc.clone(), 0));
         self.log(|| format!("Convention: {:?}", convention));
 
-        let func = Type::function_with_options(
+        let func = Type::function_with_opts(
             &return_type,
             arguments.as_slice(),
             is_varargs,
@@ -1560,7 +1560,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             Conf::new(0, 0),
         );
 
-        let fancy_func = Type::function_with_options(
+        let fancy_func = Type::function_with_opts(
             &fancy_return_type,
             fancy_arguments.as_slice(),
             is_varargs,
@@ -1670,7 +1670,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         let new_type = Type::enumeration(
             enumeration.finalize().as_ref(),
-            underlying.width() as usize,
+            // TODO: This looks bad, look at the comment in [`Type::width`].
+            (underlying.width() as usize).try_into()?,
             underlying.is_signed().contents,
         );
 
@@ -1695,7 +1696,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 Variant::I32(v) => (v as i64) as u64,
                 Variant::I64(v) => (v as i64) as u64,
             },
-            is_default: false,
+            default: false,
         }))))
     }
 
@@ -1843,7 +1844,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 structure.insert(
                     &Conf::new(
                         Type::structure(inner_struct.finalize().as_ref()),
-                        max_confidence(),
+                        MAX_CONFIDENCE,
                     ),
                     format!("__inner{:x}", i),
                     0,
@@ -1923,7 +1924,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     // TODO: Ugly hack
                     if self.arch.address_size() == 4 || Self::size_can_fit_in_register(ty.width()) {
                         args.push(FunctionParameter::new(
-                            Conf::new(ty.clone(), max_confidence()),
+                            Conf::new(ty.clone(), MAX_CONFIDENCE),
                             "".to_string(),
                             None,
                         ));
@@ -1931,7 +1932,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         args.push(FunctionParameter::new(
                             Conf::new(
                                 Type::pointer(self.arch.as_ref(), ty.as_ref()),
-                                max_confidence(),
+                                MAX_CONFIDENCE,
                             ),
                             "".to_string(),
                             None,
@@ -2014,7 +2015,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 // Replace empty NTR with fully parsed NTR, if we can
                 let name = type_
                     .get_named_type_reference()
-                    .map_err(|_| anyhow!("expected ntr"))?
+                    .ok_or(anyhow!("expected ntr"))?
                     .name()
                     .to_string();
                 if let Some(full_ntr) = self.named_types.get(&name) {
@@ -2058,7 +2059,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             // some_type::<anonymous-tag>
             let name = type_
                 .get_named_type_reference()
-                .map_err(|_| anyhow!("expected ntr"))?
+                .ok_or(anyhow!("expected ntr"))?
                 .name()
                 .to_string();
             if Self::is_name_anonymous(&name) {
@@ -2178,7 +2179,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         parameters.insert(
             0,
             FunctionParameter::new(
-                Conf::new(this_type, max_confidence()),
+                Conf::new(this_type, MAX_CONFIDENCE),
                 "this".to_string(),
                 None,
             ),

@@ -30,6 +30,7 @@ use std::{ops, ptr, result, slice};
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::basicblock::BasicBlock;
 use crate::component::{Component, ComponentBuilder, IntoComponentGuid};
+use crate::confidence::Conf;
 use crate::databuffer::DataBuffer;
 use crate::debuginfo::DebugInfo;
 use crate::fileaccessor::FileAccessor;
@@ -47,14 +48,14 @@ use crate::symbol::{Symbol, SymbolType};
 use crate::tags::{Tag, TagType};
 use crate::typelibrary::TypeLibrary;
 use crate::types::{
-    Conf, DataVariable, NamedTypeReference, QualifiedName, QualifiedNameAndType, Type,
+    NamedTypeReference, QualifiedName, QualifiedNameAndType, Type,
 };
 use crate::Endianness;
 
 use crate::rc::*;
 use crate::references::{CodeReference, DataReference};
 use crate::string::*;
-
+use crate::variable::DataVariable;
 // TODO : general reorg of modules related to bv
 
 pub type Result<R> = result::Result<R, ()>;
@@ -194,27 +195,16 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BnString::from_raw(ptr) }
     }
 
-    fn parent_view(&self) -> Result<Ref<BinaryView>> {
-        let handle = unsafe { BNGetParentView(self.as_ref().handle) };
-
-        if handle.is_null() {
-            return Err(());
+    fn parent_view(&self) -> Option<Ref<BinaryView>> {
+        let raw_view_ptr = unsafe { BNGetParentView(self.as_ref().handle) };
+        match raw_view_ptr.is_null() {
+            false => None,
+            true => Some(unsafe { BinaryView::ref_from_raw(raw_view_ptr) }),
         }
-
-        unsafe { Ok(BinaryView::from_raw(handle)) }
     }
 
-    fn raw_view(&self) -> Result<Ref<BinaryView>> {
-        let raw = "Raw".into_bytes_with_nul();
-
-        let handle =
-            unsafe { BNGetFileViewOfType(self.file().as_ref().handle, raw.as_ptr() as *mut _) };
-
-        if handle.is_null() {
-            return Err(());
-        }
-
-        unsafe { Ok(BinaryView::from_raw(handle)) }
+    fn raw_view(&self) -> Option<Ref<BinaryView>> {
+        self.file().get_view_of_type("Raw")
     }
 
     fn view_type(&self) -> BnString {
@@ -326,7 +316,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
         let mut active_info_list = vec![];
         for active_info in active_infos {
-            let func = unsafe { Function::from_raw(BNNewFunctionReference(active_info.func)) };
+            let func = unsafe { Function::ref_from_raw(active_info.func) };
             active_info_list.push(ActiveAnalysisInfo {
                 func,
                 analysis_time: active_info.analysisTime,
@@ -368,7 +358,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     fn set_default_arch<A: Architecture>(&self, arch: &A) {
         unsafe {
-            BNSetDefaultArchitecture(self.as_ref().handle, arch.as_ref().0);
+            BNSetDefaultArchitecture(self.as_ref().handle, arch.as_ref().handle);
         }
     }
 
@@ -392,7 +382,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     fn instruction_len<A: Architecture>(&self, arch: &A, addr: u64) -> Option<usize> {
         unsafe {
-            let size = BNGetInstructionLength(self.as_ref().handle, arch.as_ref().0, addr);
+            let size = BNGetInstructionLength(self.as_ref().handle, arch.as_ref().handle, addr);
 
             if size > 0 {
                 Some(size)
@@ -402,33 +392,29 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn symbol_by_address(&self, addr: u64) -> Result<Ref<Symbol>> {
+    fn symbol_by_address(&self, addr: u64) -> Option<Ref<Symbol>> {
         unsafe {
-            let raw_sym = BNGetSymbolByAddress(self.as_ref().handle, addr, ptr::null_mut());
-
-            if raw_sym.is_null() {
-                return Err(());
+            let raw_sym_ptr = BNGetSymbolByAddress(self.as_ref().handle, addr, ptr::null_mut());
+            match raw_sym_ptr.is_null() {
+                false => None,
+                true => Some(Symbol::ref_from_raw(raw_sym_ptr)),
             }
-
-            Ok(Symbol::ref_from_raw(raw_sym))
         }
     }
 
-    fn symbol_by_raw_name<S: BnStrCompatible>(&self, raw_name: S) -> Result<Ref<Symbol>> {
+    fn symbol_by_raw_name<S: BnStrCompatible>(&self, raw_name: S) -> Option<Ref<Symbol>> {
         let raw_name = raw_name.into_bytes_with_nul();
 
         unsafe {
-            let raw_sym = BNGetSymbolByRawName(
+            let raw_sym_ptr = BNGetSymbolByRawName(
                 self.as_ref().handle,
                 raw_name.as_ref().as_ptr() as *mut _,
                 ptr::null_mut(),
             );
-
-            if raw_sym.is_null() {
-                return Err(());
+            match raw_sym_ptr.is_null() {
+                false => None,
+                true => Some(Symbol::ref_from_raw(raw_sym_ptr)),
             }
-
-            Ok(Symbol::ref_from_raw(raw_sym))
         }
     }
 
@@ -561,11 +547,11 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn data_variable_at_address(&self, addr: u64) -> Option<Ref<DataVariable>> {
-        let dv = BNDataVariable::default();
+    fn data_variable_at_address(&self, addr: u64) -> Option<DataVariable> {
+        let mut dv = BNDataVariable::default();
         unsafe {
-            if BNGetDataVariableAtAddress(self.as_ref().handle, addr, std::mem::transmute(&dv)) {
-                Some(DataVariable(dv).to_owned())
+            if BNGetDataVariableAtAddress(self.as_ref().handle, addr, &mut dv) {
+                Some(DataVariable::from(dv))
             } else {
                 None
             }
@@ -910,17 +896,15 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn section_by_name<S: BnStrCompatible>(&self, name: S) -> Result<Section> {
+    fn section_by_name<S: BnStrCompatible>(&self, name: S) -> Option<Ref<Section>> {
         unsafe {
             let raw_name = name.into_bytes_with_nul();
             let name_ptr = raw_name.as_ref().as_ptr() as *mut _;
-            let raw_section = BNGetSectionByName(self.as_ref().handle, name_ptr);
-
-            if raw_section.is_null() {
-                return Err(());
+            let raw_section_ptr = BNGetSectionByName(self.as_ref().handle, name_ptr);
+            match raw_section_ptr.is_null() {
+                false => None,
+                true => Some(Section::ref_from_raw(raw_section_ptr)),
             }
-
-            Ok(Section::from_raw(raw_section))
         }
     }
 
@@ -956,7 +940,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 return None;
             }
 
-            Some(Function::from_raw(handle))
+            Some(Function::ref_from_raw(handle))
         }
     }
 
@@ -985,7 +969,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 return None;
             }
 
-            Some(Function::from_raw(handle))
+            Some(Function::ref_from_raw(handle))
         }
     }
 
@@ -1003,7 +987,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 return Err(());
             }
 
-            Ok(Function::from_raw(func))
+            Ok(Function::ref_from_raw(func))
         }
     }
 
@@ -1011,15 +995,13 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNHasFunctions(self.as_ref().handle) }
     }
 
-    fn entry_point_function(&self) -> Result<Ref<Function>> {
+    fn entry_point_function(&self) -> Option<Ref<Function>> {
         unsafe {
-            let func = BNGetAnalysisEntryPoint(self.as_ref().handle);
-
-            if func.is_null() {
-                return Err(());
+            let raw_func_ptr = BNGetAnalysisEntryPoint(self.as_ref().handle);
+            match raw_func_ptr.is_null() {
+                false => None,
+                true => Some(Function::ref_from_raw(raw_func_ptr)),
             }
-
-            Ok(Function::from_raw(func))
         }
     }
 
@@ -1063,15 +1045,13 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn function_at(&self, platform: &Platform, addr: u64) -> Result<Ref<Function>> {
+    fn function_at(&self, platform: &Platform, addr: u64) -> Option<Ref<Function>> {
         unsafe {
-            let handle = BNGetAnalysisFunction(self.as_ref().handle, platform.handle, addr);
-
-            if handle.is_null() {
-                return Err(());
+            let raw_func_ptr = BNGetAnalysisFunction(self.as_ref().handle, platform.handle, addr);
+            match raw_func_ptr.is_null() {
+                false => None,
+                true => Some(Function::ref_from_raw(raw_func_ptr)),
             }
-
-            Ok(Function::from_raw(handle))
         }
     }
     
@@ -1121,7 +1101,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn debug_info(&self) -> Ref<DebugInfo> {
-        unsafe { DebugInfo::from_raw(BNGetDebugInfo(self.as_ref().handle)) }
+        unsafe { DebugInfo::ref_from_raw(BNGetDebugInfo(self.as_ref().handle)) }
     }
 
     fn set_debug_info(&self, debug_info: &DebugInfo) {
@@ -1358,7 +1338,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             // TODO: For now just construct it manually.
             let mut src = BNReferenceSource {
                 func: func.map(|f| f.handle).unwrap_or(std::ptr::null_mut()),
-                arch: func.map(|f| f.arch().0).unwrap_or(std::ptr::null_mut()),
+                arch: func.map(|f| f.arch().handle).unwrap_or(std::ptr::null_mut()),
                 addr,
             };
             let addresses = BNGetCodeReferencesFrom(self.as_ref().handle, &mut src, &mut count);
@@ -1526,7 +1506,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         let result = unsafe {
             BNGetDataVariableParentComponents(
                 self.as_ref().handle,
-                data_variable.address(),
+                data_variable.address,
                 &mut count,
             )
         };
@@ -1742,9 +1722,8 @@ pub struct BinaryView {
 }
 
 impl BinaryView {
-    pub(crate) unsafe fn from_raw(handle: *mut BNBinaryView) -> Ref<Self> {
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNBinaryView) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-
         Ref::new(Self { handle })
     }
 
@@ -1947,7 +1926,7 @@ where
     ) {
         ffi_wrap!("EventHandler::on_event", {
             let context = unsafe { &*(ctx as *const Handler) };
-            context.on_event(&BinaryView::from_raw(BNNewViewReference(view)));
+            context.on_event(&BinaryView::ref_from_raw(BNNewViewReference(view)));
         })
     }
 

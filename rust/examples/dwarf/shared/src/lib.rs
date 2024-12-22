@@ -38,25 +38,25 @@ pub enum Error {
 }
 
 pub fn is_non_dwo_dwarf(view: &BinaryView) -> bool {
-    view.section_by_name(".debug_info").is_ok() || view.section_by_name("__debug_info").is_ok()
+    view.section_by_name(".debug_info").is_some() || view.section_by_name("__debug_info").is_some()
 }
 
 pub fn is_dwo_dwarf(view: &BinaryView) -> bool {
-    view.section_by_name(".debug_info.dwo").is_ok()
+    view.section_by_name(".debug_info.dwo").is_some()
 }
 
 pub fn is_raw_non_dwo_dwarf(view: &BinaryView) -> bool {
-    if let Ok(raw_view) = view.raw_view() {
-        raw_view.section_by_name(".debug_info").is_ok()
-            || view.section_by_name("__debug_info").is_ok()
+    if let Some(raw_view) = view.raw_view() {
+        raw_view.section_by_name(".debug_info").is_some()
+            || view.section_by_name("__debug_info").is_some()
     } else {
         false
     }
 }
 
 pub fn is_raw_dwo_dwarf(view: &BinaryView) -> bool {
-    if let Ok(raw_view) = view.raw_view() {
-        raw_view.section_by_name(".debug_info.dwo").is_ok()
+    if let Some(raw_view) = view.raw_view() {
+        raw_view.section_by_name(".debug_info.dwo").is_some()
     } else {
         false
     }
@@ -69,8 +69,8 @@ pub fn can_use_debuginfod(view: &BinaryView) -> bool {
 }
 
 pub fn has_build_id_section(view: &BinaryView) -> bool {
-    if let Ok(raw_view) = view.raw_view() {
-        return raw_view.section_by_name(".note.gnu.build-id").is_ok()
+    if let Some(raw_view) = view.raw_view() {
+        return raw_view.section_by_name(".note.gnu.build-id").is_some()
     }
     false
 }
@@ -101,7 +101,7 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
         section_id.name()
     };
 
-    if let Ok(section) = view.section_by_name(section_name) {
+    if let Some(section) = view.section_by_name(section_name) {
         // TODO : This is kinda broke....should add rust wrappers for some of this
         if let Some(symbol) = view
             .symbols()
@@ -111,11 +111,11 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
             if let Some(data_var) = view
                 .data_variables()
                 .iter()
-                .find(|var| var.address() == symbol.address())
+                .find(|var| var.address == symbol.address())
             {
                 // TODO : This should eventually be wrapped by some DataView sorta thingy thing, like how python does it
-                let data_type = data_var.t();
-                let data = view.read_vec(data_var.address(), data_type.width() as usize);
+                let data_type = data_var.ty.contents;
+                let data = view.read_vec(data_var.address, data_type.width() as usize);
                 let element_type = data_type.element_type().unwrap().contents;
 
                 if let Some(current_section_header) = data
@@ -179,7 +179,7 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
                 endian,
             ))
         }
-    } else if let Ok(section) = view.section_by_name("__".to_string() + &section_name[1..]) {
+    } else if let Some(section) = view.section_by_name("__".to_string() + &section_name[1..]) {
         Ok(EndianRcSlice::new(
             Rc::from(view.read_vec(section.start(), section.len()).as_slice()),
             endian,

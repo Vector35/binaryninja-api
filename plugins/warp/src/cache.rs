@@ -230,7 +230,7 @@ impl GUIDCache {
         for call_site in &function.call_sites() {
             for cs_ref_addr in view.get_code_refs_from(call_site.address, Some(function)) {
                 match view.function_at(&func_platform, cs_ref_addr) {
-                    Ok(cs_ref_func) => {
+                    Some(cs_ref_func) => {
                         // Call site is a function, constrain on it.
                         let cs_ref_func_id = FunctionID::from(cs_ref_func.as_ref());
                         if cs_ref_func_id != func_id {
@@ -241,11 +241,11 @@ impl GUIDCache {
                                 .insert(self.function_constraint(&cs_ref_func, call_site_offset));
                         }
                     }
-                    Err(_) => {
+                    None => {
                         // We could be dealing with an extern symbol, get the symbol as a constraint.
                         let call_site_offset: i64 =
                             call_site.address.wrapping_sub(func_start) as i64;
-                        if let Ok(call_site_sym) = view.symbol_by_address(cs_ref_addr) {
+                        if let Some(call_site_sym) = view.symbol_by_address(cs_ref_addr) {
                             constraints.insert(
                                 self.function_constraint_from_symbol(
                                     &call_site_sym,

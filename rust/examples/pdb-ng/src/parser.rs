@@ -24,15 +24,16 @@ use pdb::*;
 use binaryninja::architecture::{Architecture, CoreArchitecture};
 use binaryninja::binaryview::{BinaryView, BinaryViewExt};
 use binaryninja::callingconvention::CallingConvention;
+use binaryninja::confidence::{Conf, MIN_CONFIDENCE};
 use binaryninja::debuginfo::{DebugFunctionInfo, DebugInfo};
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::settings::Settings;
 use binaryninja::types::{
-    min_confidence, Conf, DataVariableAndName, EnumerationBuilder, NamedTypeReference,
+    EnumerationBuilder, NamedTypeReference,
     NamedTypeReferenceClass, StructureBuilder, StructureType, Type, TypeClass,
 };
-
+use binaryninja::variable::NamedDataVariableWithType;
 use crate::symbol_parser::{ParsedDataSymbol, ParsedProcedure, ParsedSymbol};
 use crate::type_parser::ParsedType;
 
@@ -201,8 +202,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 self.settings
                     .get_bool("pdb.features.allowVoidGlobals", Some(self.bv), None);
 
-            let min_confidence_type = Conf::new(Type::void(), min_confidence());
-            for sym in symbols.iter() {
+            let min_confidence_type = Conf::new(Type::void(), MIN_CONFIDENCE);
+            for sym in symbols {
                 match sym {
                     ParsedSymbol::Data(ParsedDataSymbol {
                         address,
@@ -229,11 +230,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                             )
                         });
                         self.debug_info
-                            .add_data_variable_info(DataVariableAndName::new(
-                                *address,
+                            .add_data_variable_info(NamedDataVariableWithType::new(
+                                address,
                                 real_type.clone(),
+                                name.full_name.unwrap_or(name.raw_name),
                                 true,
-                                name.full_name.as_ref().unwrap_or(&name.raw_name),
                             ));
                     }
                     s => {
@@ -315,13 +316,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     ) {
         match ty.type_class() {
             TypeClass::StructureTypeClass => {
-                if let Ok(structure) = ty.get_structure() {
-                    if let Ok(members) = structure.members() {
+                if let Some(structure) = ty.get_structure() {
+                    if let Some(members) = structure.members() {
                         for member in members {
                             self.collect_names(member.ty.contents.as_ref(), unknown_names);
                         }
                     }
-                    if let Ok(bases) = structure.base_structures() {
+                    if let Some(bases) = structure.base_structures() {
                         for base in bases {
                             self.collect_name(base.ty.as_ref(), unknown_names);
                         }
@@ -329,27 +330,27 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 }
             }
             TypeClass::PointerTypeClass => {
-                if let Ok(target) = ty.target() {
+                if let Some(target) = ty.target() {
                     self.collect_names(target.contents.as_ref(), unknown_names);
                 }
             }
             TypeClass::ArrayTypeClass => {
-                if let Ok(element_type) = ty.element_type() {
+                if let Some(element_type) = ty.element_type() {
                     self.collect_names(element_type.contents.as_ref(), unknown_names);
                 }
             }
             TypeClass::FunctionTypeClass => {
-                if let Ok(return_value) = ty.return_value() {
+                if let Some(return_value) = ty.return_value() {
                     self.collect_names(return_value.contents.as_ref(), unknown_names);
                 }
-                if let Ok(params) = ty.parameters() {
+                if let Some(params) = ty.parameters() {
                     for param in params {
-                        self.collect_names(param.t.contents.as_ref(), unknown_names);
+                        self.collect_names(param.ty.contents.as_ref(), unknown_names);
                     }
                 }
             }
             TypeClass::NamedTypeReferenceClass => {
-                if let Ok(ntr) = ty.get_named_type_reference() {
+                if let Some(ntr) = ty.get_named_type_reference() {
                     self.collect_name(ntr.as_ref(), unknown_names);
                 }
             }
@@ -396,7 +397,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 }
                 _ => {}
             }
-            (progress)(i, count)?;
+            (&progress)(i, count)?;
         }
 
         for (name, class) in unknown_names.into_iter() {
@@ -441,7 +442,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         name,
                         Type::enumeration(
                             enumeration.finalize().as_ref(),
-                            self.arch.default_integer_size(),
+                            self.arch.default_integer_size().try_into()?,
                             false,
                         )
                         .as_ref(),

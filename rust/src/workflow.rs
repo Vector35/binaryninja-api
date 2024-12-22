@@ -34,14 +34,14 @@ impl AnalysisContext {
     pub fn view(&self) -> Ref<BinaryView> {
         let result = unsafe { BNAnalysisContextGetBinaryView(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BinaryView::from_raw(result) }
+        unsafe { BinaryView::ref_from_raw(result) }
     }
 
     /// Function for the current AnalysisContext
     pub fn function(&self) -> Ref<Function> {
         let result = unsafe { BNAnalysisContextGetFunction(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { Function::from_raw(result) }
+        unsafe { Function::ref_from_raw(result) }
     }
 
     /// LowLevelILFunction used to represent Low Level IL

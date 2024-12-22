@@ -167,7 +167,7 @@ impl TagType {
     }
 
     pub fn view(&self) -> Ref<BinaryView> {
-        unsafe { BinaryView::from_raw(BNTagTypeGetView(self.handle)) }
+        unsafe { BinaryView::ref_from_raw(BNTagTypeGetView(self.handle)) }
     }
 }
 

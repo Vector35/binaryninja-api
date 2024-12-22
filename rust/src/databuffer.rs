@@ -27,6 +27,7 @@ impl DataBuffer {
     pub(crate) fn from_raw(raw: *mut BNDataBuffer) -> Self {
         DataBuffer(raw)
     }
+    
     pub(crate) fn as_raw(&self) -> *mut BNDataBuffer {
         self.0
     }
@@ -114,7 +115,7 @@ impl DataBuffer {
     }
 
     pub fn from_escaped_string(value: &BnString) -> Self {
-        Self(unsafe { BNDecodeEscapedString(value.as_raw()) })
+        Self(unsafe { BNDecodeEscapedString(value.as_ptr()) })
     }
 
     pub fn to_base64(&self) -> BnString {
@@ -122,7 +123,7 @@ impl DataBuffer {
     }
 
     pub fn from_base64(value: &BnString) -> Self {
-        Self(unsafe { BNDecodeBase64(value.as_raw()) })
+        Self(unsafe { BNDecodeBase64(value.as_ptr()) })
     }
 
     pub fn zlib_compress(&self) -> Self {

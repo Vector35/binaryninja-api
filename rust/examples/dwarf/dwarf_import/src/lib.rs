@@ -353,21 +353,21 @@ fn parse_unwind_section<R: Reader, U: UnwindSection<R>>(
 where <U as UnwindSection<R>>::Offset: std::hash::Hash {
     let mut bases = gimli::BaseAddresses::default();
 
-    if let Ok(section) = view.section_by_name(".eh_frame_hdr").or(view.section_by_name("__eh_frame_hdr")) {
+    if let Some(section) = view.section_by_name(".eh_frame_hdr").or(view.section_by_name("__eh_frame_hdr")) {
         bases = bases.set_eh_frame_hdr(section.start());
     }
 
-    if let Ok(section) = view.section_by_name(".eh_frame").or(view.section_by_name("__eh_frame")) {
+    if let Some(section) = view.section_by_name(".eh_frame").or(view.section_by_name("__eh_frame")) {
         bases = bases.set_eh_frame(section.start());
-    } else if let Ok(section) = view.section_by_name(".debug_frame").or(view.section_by_name("__debug_frame")) {
+    } else if let Some(section) = view.section_by_name(".debug_frame").or(view.section_by_name("__debug_frame")) {
         bases = bases.set_eh_frame(section.start());
     }
 
-    if let Ok(section) = view.section_by_name(".text").or(view.section_by_name("__text")) {
+    if let Some(section) = view.section_by_name(".text").or(view.section_by_name("__text")) {
         bases = bases.set_text(section.start());
     }
 
-    if let Ok(section) = view.section_by_name(".got").or(view.section_by_name("__got")) {
+    if let Some(section) = view.section_by_name(".got").or(view.section_by_name("__got")) {
         bases = bases.set_got(section.start());
     }
 
@@ -433,8 +433,8 @@ where <U as UnwindSection<R>>::Offset: std::hash::Hash {
 }
 
 fn get_supplementary_build_id(bv: &BinaryView) -> Option<String> {
-    let raw_view = bv.raw_view().ok()?;
-    if let Ok(section) = raw_view.section_by_name(".gnu_debugaltlink") {
+    let raw_view = bv.raw_view()?;
+    if let Some(section) = raw_view.section_by_name(".gnu_debugaltlink") {
         let start = section.start();
         let len = section.len();
 
@@ -508,7 +508,7 @@ fn parse_dwarf(
     }
 
     let range_data_offsets;
-    if view.section_by_name(".eh_frame").is_ok() || view.section_by_name("__eh_frame").is_ok() {
+    if view.section_by_name(".eh_frame").is_some() || view.section_by_name("__eh_frame").is_some() {
         let eh_frame_endian = get_endian(view);
         let mut eh_frame_section_reader =
             |section_id: SectionId| -> _ { create_section_reader(section_id, view, eh_frame_endian, dwo_file) };
@@ -517,7 +517,7 @@ fn parse_dwarf(
         range_data_offsets = parse_unwind_section(view, eh_frame)
             .map_err(|e| error!("Error parsing .eh_frame: {}", e))?;
     }
-    else if view.section_by_name(".debug_frame").is_ok() || view.section_by_name("__debug_frame").is_ok() {
+    else if view.section_by_name(".debug_frame").is_some() || view.section_by_name("__debug_frame").is_some() {
         let debug_frame_endian = get_endian(view);
         let mut debug_frame_section_reader =
             |section_id: SectionId| -> _ { create_section_reader(section_id, view, debug_frame_endian, dwo_file) };

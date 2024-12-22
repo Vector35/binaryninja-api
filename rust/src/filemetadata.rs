@@ -173,16 +173,14 @@ impl FileMetadata {
         }
     }
 
-    pub fn get_view_of_type<S: BnStrCompatible>(&self, view: S) -> Result<Ref<BinaryView>, ()> {
+    pub fn get_view_of_type<S: BnStrCompatible>(&self, view: S) -> Option<Ref<BinaryView>> {
         let view = view.into_bytes_with_nul();
 
         unsafe {
-            let res = BNGetFileViewOfType(self.handle, view.as_ref().as_ptr() as *const _);
-
-            if res.is_null() {
-                Err(())
-            } else {
-                Ok(BinaryView::from_raw(res))
+            let raw_view_ptr = BNGetFileViewOfType(self.handle, view.as_ref().as_ptr() as *const _);
+            match raw_view_ptr.is_null() {
+                false => None,
+                true => Some(BinaryView::ref_from_raw(raw_view_ptr)),
             }
         }
     }
@@ -241,7 +239,7 @@ impl FileMetadata {
             if bv.is_null() {
                 Err(())
             } else {
-                Ok(BinaryView::from_raw(bv))
+                Ok(BinaryView::ref_from_raw(bv))
             }
         }
     }
@@ -269,14 +267,14 @@ impl FileMetadata {
         if view.is_null() {
             Err(())
         } else {
-            Ok(unsafe { BinaryView::from_raw(view) })
+            Ok(unsafe { BinaryView::ref_from_raw(view) })
         }
     }
 
     /// Get the current database
     pub fn database(&self) -> Option<Database> {
         let result = unsafe { BNGetFileMetadataDatabase(self.handle) };
-        ptr::NonNull::new(result).map(|handle| unsafe { Database::from_raw(handle) })
+        NonNull::new(result).map(|handle| unsafe { Database::from_raw(handle) })
     }
 }
 

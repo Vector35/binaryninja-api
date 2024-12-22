@@ -5,15 +5,14 @@ use binaryninjacore_sys::*;
 
 use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
+use crate::confidence::Conf;
 use crate::disassembly::DisassemblySettings;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, Location};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
 use crate::string::BnStrCompatible;
-use crate::types::{
-    Conf, PossibleValueSet, RegisterValue, SSAVariable, Type, UserVariableValues, Variable,
-};
-
+use crate::types::Type;
+use crate::variable::{PossibleValueSet, RegisterValue, SSAVariable, UserVariableValue, Variable};
 use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
 
 pub struct MediumLevelILFunction {
@@ -48,7 +47,7 @@ impl MediumLevelILFunction {
         let arch_handle = loc.arch.unwrap();
 
         let expr_idx =
-            unsafe { BNMediumLevelILGetInstructionStart(self.handle, arch_handle.0, loc.addr) };
+            unsafe { BNMediumLevelILGetInstructionStart(self.handle, arch_handle.handle, loc.addr) };
 
         if expr_idx >= self.instruction_count() {
             None
@@ -91,7 +90,7 @@ impl MediumLevelILFunction {
     pub fn get_function(&self) -> Ref<Function> {
         unsafe {
             let func = BNGetMediumLevelILOwnerFunction(self.handle);
-            Function::from_raw(func)
+            Function::ref_from_raw(func)
         }
     }
 
@@ -107,8 +106,9 @@ impl MediumLevelILFunction {
 
     pub fn get_var_definitions<'a>(&'a self, var: &Variable) -> MediumLevelILInstructionList<'a> {
         let mut count = 0;
+        let raw_var = BNVariable::from(var);
         let raw_instrs =
-            unsafe { BNGetMediumLevelILVariableDefinitions(self.handle, &var.raw(), &mut count) };
+            unsafe { BNGetMediumLevelILVariableDefinitions(self.handle, &raw_var, &mut count) };
         assert!(!raw_instrs.is_null());
         let instrs = unsafe { core::slice::from_raw_parts(raw_instrs, count) };
         MediumLevelILInstructionList {
@@ -149,12 +149,13 @@ impl MediumLevelILFunction {
         ignore_disjoint_uses: bool,
     ) {
         let var_type = var_type.into();
+        let raw_var = BNVariable::from(var);
         let raw_var_type: BNTypeWithConfidence = var_type.into();
         let name = name.into_bytes_with_nul();
         unsafe {
             BNCreateUserVariable(
                 self.get_function().handle,
-                &var.raw(),
+                &raw_var,
                 &raw_var_type as *const _ as *mut _,
                 name.as_ref().as_ptr() as *const _,
                 ignore_disjoint_uses,
@@ -163,11 +164,13 @@ impl MediumLevelILFunction {
     }
 
     pub fn delete_user_var(&self, var: &Variable) {
-        unsafe { BNDeleteUserVariable(self.get_function().handle, &var.raw()) }
+        let raw_var = BNVariable::from(var);
+        unsafe { BNDeleteUserVariable(self.get_function().handle, &raw_var) }
     }
 
     pub fn is_var_user_defined(&self, var: &Variable) -> bool {
-        unsafe { BNIsVariableUserDefined(self.get_function().handle, &var.raw()) }
+        let raw_var = BNVariable::from(var);
+        unsafe { BNIsVariableUserDefined(self.get_function().handle, &raw_var) }
     }
 
     /// Allows the user to specify a PossibleValueSet value for an MLIL
@@ -186,12 +189,12 @@ impl MediumLevelILFunction {
     /// # Example
     /// ```no_run
     /// # use binaryninja::mlil::MediumLevelILFunction;
-    /// # use binaryninja::types::PossibleValueSet;
+    /// # use binaryninja::variable::PossibleValueSet;
     /// # let mlil_fun: MediumLevelILFunction = todo!();
-    /// let (mlil_var, arch_addr, _val) = mlil_fun.user_var_values().all().next().unwrap();
-    /// let def_address = arch_addr.address;
+    /// let user_var_val = mlil_fun.user_var_values().iter().next().unwrap();
+    /// let def_address = user_var_val.def_site.addr;
     /// let var_value = PossibleValueSet::ConstantValue{value: 5};
-    /// mlil_fun.set_user_var_value(&mlil_var, def_address, var_value).unwrap();
+    /// mlil_fun.set_user_var_value(&user_var_val.variable, def_address, var_value).unwrap();
     /// ```
     pub fn set_user_var_value(
         &self,
@@ -208,12 +211,13 @@ impl MediumLevelILFunction {
         };
         let function = self.get_function();
         let def_site = BNArchitectureAndAddress {
-            arch: function.arch().0,
+            arch: function.arch().handle,
             address: addr,
         };
-        let value = value.into_raw();
+        let raw_var = BNVariable::from(var);
+        let raw_value = BNPossibleValueSet::from(value);
 
-        unsafe { BNSetUserVariableValue(function.handle, &var.raw(), &def_site, value.as_ffi()) }
+        unsafe { BNSetUserVariableValue(function.handle, &raw_var, &def_site, &raw_value) }
         Ok(())
     }
 
@@ -231,31 +235,30 @@ impl MediumLevelILFunction {
         };
 
         let function = self.get_function();
+        let raw_var = BNVariable::from(var);
         let def_site = BNArchitectureAndAddress {
-            arch: function.arch().0,
+            arch: function.arch().handle,
             address: addr,
         };
 
-        unsafe { BNClearUserVariableValue(function.handle, &var.raw(), &def_site) };
+        unsafe { BNClearUserVariableValue(function.handle, &raw_var, &def_site) };
         Ok(())
     }
 
     /// Returns a map of current defined user variable values.
     /// Returns a Map of user current defined user variable values and their definition sites.
-    pub fn user_var_values(&self) -> UserVariableValues {
+    pub fn user_var_values(&self) -> Array<UserVariableValue> {
         let mut count = 0;
         let function = self.get_function();
         let var_values = unsafe { BNGetAllUserVariableValues(function.handle, &mut count) };
         assert!(!var_values.is_null());
-        UserVariableValues {
-            vars: core::ptr::slice_from_raw_parts(var_values, count),
-        }
+        unsafe { Array::new(var_values, count, ()) }
     }
 
     /// Clear all user defined variable values.
     pub fn clear_user_var_values(&self) -> Result<(), ()> {
-        for (var, arch_and_addr, _value) in self.user_var_values().all() {
-            self.clear_user_var_value(&var, arch_and_addr.address)?;
+        for user_var_val in &self.user_var_values() {
+            self.clear_user_var_value(&user_var_val.variable, user_var_val.def_site.addr)?;
         }
         Ok(())
     }
@@ -291,6 +294,7 @@ impl MediumLevelILFunction {
         name: S,
         ignore_disjoint_uses: bool,
     ) {
+        let raw_var = BNVariable::from(var);
         let var_type: Conf<&Type> = var_type.into();
         let mut var_type = var_type.into();
         let name = name.into_bytes_with_nul();
@@ -298,7 +302,7 @@ impl MediumLevelILFunction {
         unsafe {
             BNCreateAutoVariable(
                 self.get_function().handle,
-                &var.raw(),
+                &raw_var,
                 &mut var_type,
                 name_c_str.as_ptr() as *const c_char,
                 ignore_disjoint_uses,
@@ -325,10 +329,12 @@ impl MediumLevelILFunction {
     /// ```
     pub fn var_refs(&self, var: &Variable) -> Array<ILReferenceSource> {
         let mut count = 0;
+        // TODO: I don't think this needs to be mutable
+        let mut raw_var = BNVariable::from(var);
         let refs = unsafe {
             BNGetMediumLevelILVariableReferences(
                 self.get_function().handle,
-                &mut var.raw(),
+                &mut raw_var,
                 &mut count,
             )
         };
@@ -336,57 +342,52 @@ impl MediumLevelILFunction {
         unsafe { Array::new(refs, count, self.to_owned()) }
     }
 
-    /// Returns a list of variables referenced by code in the function ``func``,
-    /// of the architecture ``arch``, and at the address ``addr``. If no function is specified, references from
-    /// all functions and containing the address will be returned. If no architecture is specified, the
-    /// architecture of the function will be used.
-    /// This function is related to get_hlil_var_refs_from(), which returns variable references collected
-    /// from HLIL. The two can be different in several cases, e.g., multiple variables in MLIL can be merged
-    /// into a single variable in HLIL.
-    ///
-    /// * `addr` - virtual address to query for variable references
-    /// * `length` - optional length of query
-    /// * `arch` - optional architecture of query
+    /// Retrieves variable references from a specified location or range within a medium-level IL function.
+    /// 
+    /// Passing in a `length` will query a range for variable references, instead of just the address
+    /// specified in `location`.
     pub fn var_refs_from(
         &self,
-        addr: u64,
+        location: impl Into<Location>,
         length: Option<u64>,
-        arch: Option<CoreArchitecture>,
     ) -> Array<VariableReferenceSource> {
+        let location = location.into();
+        let raw_arch = location.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut());
         let function = self.get_function();
-        let arch = arch.unwrap_or_else(|| function.arch());
         let mut count = 0;
 
         let refs = if let Some(length) = length {
             unsafe {
                 BNGetMediumLevelILVariableReferencesInRange(
                     function.handle,
-                    arch.0,
-                    addr,
+                    raw_arch,
+                    location.addr,
                     length,
                     &mut count,
                 )
             }
         } else {
             unsafe {
-                BNGetMediumLevelILVariableReferencesFrom(function.handle, arch.0, addr, &mut count)
+                BNGetMediumLevelILVariableReferencesFrom(function.handle, raw_arch, location.addr, &mut count)
             }
         };
         assert!(!refs.is_null());
         unsafe { Array::new(refs, count, self.to_owned()) }
     }
 
+    // TODO: Rename to `current_location`?
     /// Current IL Address
-    pub fn current_address(&self) -> u64 {
-        unsafe { BNMediumLevelILGetCurrentAddress(self.handle) }
+    pub fn current_address(&self) -> Location {
+        let addr = unsafe { BNMediumLevelILGetCurrentAddress(self.handle) };
+        Location::from(addr)
     }
 
+    // TODO: Rename to `set_current_location`?
     /// Set the current IL Address
-    pub fn set_current_address(&self, value: u64, arch: Option<CoreArchitecture>) {
-        let arch = arch
-            .map(|x| x.0)
-            .unwrap_or_else(|| self.get_function().arch().0);
-        unsafe { BNMediumLevelILSetCurrentAddress(self.handle, arch, value) }
+    pub fn set_current_address(&self, location: impl Into<Location>) {
+        let location = location.into();
+        let arch = location.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut());
+        unsafe { BNMediumLevelILSetCurrentAddress(self.handle, arch, location.addr) }
     }
 
     /// Returns the BasicBlock at the given MLIL `instruction`.
@@ -405,46 +406,40 @@ impl MediumLevelILFunction {
             )
         })
     }
-    /// ends the function and computes the list of basic blocks.
+    
+    /// Ends the function and computes the list of basic blocks.
+    /// 
+    /// NOTE: This should be called after updating MLIL.
     pub fn finalize(&self) {
         unsafe { BNFinalizeMediumLevelILFunction(self.handle) }
     }
 
-    /// Generate SSA form given the current MLIL
+    /// Generate SSA form given the current MLIL.
+    /// 
+    /// NOTE: This should be called after updating MLIL.
     ///
-    /// * `analyze_conditionals` - whether or not to analyze conditionals
-    /// * `handle_aliases` - whether or not to handle aliases
-    /// * `known_not_aliases` - optional list of variables known to be not aliased
-    /// * `known_aliases` - optional list of variables known to be aliased
+    /// * `analyze_conditionals` - whether to analyze conditionals
+    /// * `handle_aliases` - whether to handle aliases
+    /// * `non_aliased_vars` - optional list of variables known to be not aliased
+    /// * `aliased_vars` - optional list of variables known to be aliased
     pub fn generate_ssa_form(
         &self,
         analyze_conditionals: bool,
         handle_aliases: bool,
-        known_not_aliases: impl IntoIterator<Item = Variable>,
-        known_aliases: impl IntoIterator<Item = Variable>,
+        non_aliased_vars: impl IntoIterator<Item = Variable>,
+        aliased_vars: impl IntoIterator<Item = Variable>,
     ) {
-        let mut known_not_aliases: Box<[_]> =
-            known_not_aliases.into_iter().map(|x| x.raw()).collect();
-        let mut known_aliases: Box<[_]> = known_aliases.into_iter().map(|x| x.raw()).collect();
-        let (known_not_aliases_ptr, known_not_aliases_len) = if known_not_aliases.is_empty() {
-            (core::ptr::null_mut(), 0)
-        } else {
-            (known_not_aliases.as_mut_ptr(), known_not_aliases.len())
-        };
-        let (known_aliases_ptr, known_aliases_len) = if known_not_aliases.is_empty() {
-            (core::ptr::null_mut(), 0)
-        } else {
-            (known_aliases.as_mut_ptr(), known_aliases.len())
-        };
+        let raw_non_aliased_vars: Vec<BNVariable> = non_aliased_vars.into_iter().map(Into::into).collect();
+        let raw_aliased_vars: Vec<BNVariable> = aliased_vars.into_iter().map(Into::into).collect();
         unsafe {
             BNGenerateMediumLevelILSSAForm(
                 self.handle,
                 analyze_conditionals,
                 handle_aliases,
-                known_not_aliases_ptr,
-                known_not_aliases_len,
-                known_aliases_ptr,
-                known_aliases_len,
+                raw_non_aliased_vars.as_ptr() as *mut _,
+                raw_non_aliased_vars.len(),
+                raw_aliased_vars.as_ptr() as *mut _,
+                raw_aliased_vars.len(),
             )
         }
     }
@@ -452,10 +447,11 @@ impl MediumLevelILFunction {
     /// Gets the instruction that contains the given SSA variable's definition.
     ///
     /// Since SSA variables can only be defined once, this will return the single instruction where that occurs.
-    /// For SSA variable version 0s, which don't have definitions, this will return None instead.
-    pub fn ssa_variable_definition(&self, var: SSAVariable) -> Option<MediumLevelILInstruction> {
+    /// For SSA variable version 0s, which don't have definitions, this will return `None` instead.
+    pub fn ssa_variable_definition(&self, ssa_variable: &SSAVariable) -> Option<MediumLevelILInstruction> {
+        let raw_var = BNVariable::from(ssa_variable.variable);
         let result = unsafe {
-            BNGetMediumLevelILSSAVarDefinition(self.handle, &var.variable.raw(), var.version)
+            BNGetMediumLevelILSSAVarDefinition(self.handle, &raw_var, ssa_variable.version)
         };
         (result < self.instruction_count())
             .then(|| MediumLevelILInstruction::new(self.to_owned(), result))
@@ -467,14 +463,15 @@ impl MediumLevelILFunction {
             .then(|| MediumLevelILInstruction::new(self.to_owned(), result))
     }
 
-    ///Gets all the instructions that use the given SSA variable.
-    pub fn ssa_variable_uses(&self, ssa_var: SSAVariable) -> Array<MediumLevelILInstruction> {
+    /// Gets all the instructions that use the given SSA variable.
+    pub fn ssa_variable_uses(&self, ssa_variable: &SSAVariable) -> Array<MediumLevelILInstruction> {
         let mut count = 0;
+        let raw_var = BNVariable::from(ssa_variable.variable);
         let uses = unsafe {
             BNGetMediumLevelILSSAVarUses(
                 self.handle,
-                &ssa_var.variable.raw(),
-                ssa_var.version,
+                &raw_var,
+                ssa_variable.version,
                 &mut count,
             )
         };
@@ -489,25 +486,28 @@ impl MediumLevelILFunction {
         unsafe { Array::new(uses, count, self.to_owned()) }
     }
 
-    /// determines if `ssa_var` is live at any point in the function
-    pub fn is_ssa_variable_live(&self, ssa_var: SSAVariable) -> bool {
+    /// Determines if `variable` is live at any point in the function
+    pub fn is_ssa_variable_live(&self, ssa_variable: &SSAVariable) -> bool {
+        let raw_var = BNVariable::from(ssa_variable.variable);
         unsafe {
-            BNIsMediumLevelILSSAVarLive(self.handle, &ssa_var.variable.raw(), ssa_var.version)
+            BNIsMediumLevelILSSAVarLive(self.handle, &raw_var, ssa_variable.version)
         }
     }
 
-    pub fn variable_definitions(&self, variable: Variable) -> Array<MediumLevelILInstruction> {
+    pub fn variable_definitions(&self, variable: &Variable) -> Array<MediumLevelILInstruction> {
         let mut count = 0;
+        let raw_var = BNVariable::from(variable);
         let defs = unsafe {
-            BNGetMediumLevelILVariableDefinitions(self.handle, &variable.raw(), &mut count)
+            BNGetMediumLevelILVariableDefinitions(self.handle, &raw_var, &mut count)
         };
         unsafe { Array::new(defs, count, self.to_owned()) }
     }
 
-    pub fn variable_uses(&self, variable: Variable) -> Array<MediumLevelILInstruction> {
+    pub fn variable_uses(&self, variable: &Variable) -> Array<MediumLevelILInstruction> {
         let mut count = 0;
+        let raw_var = BNVariable::from(variable);
         let uses =
-            unsafe { BNGetMediumLevelILVariableUses(self.handle, &variable.raw(), &mut count) };
+            unsafe { BNGetMediumLevelILVariableUses(self.handle, &raw_var, &mut count) };
         unsafe { Array::new(uses, count, self.to_owned()) }
     }
 
@@ -520,14 +520,15 @@ impl MediumLevelILFunction {
     /// `include_last_use` - whether to include the last use of the variable in the list of instructions
     pub fn live_instruction_for_variable(
         &self,
-        variable: Variable,
+        variable: &Variable,
         include_last_user: bool,
     ) -> Array<MediumLevelILInstruction> {
         let mut count = 0;
+        let raw_var = BNVariable::from(variable);
         let uses = unsafe {
             BNGetMediumLevelILLiveInstructionsForVariable(
                 self.handle,
-                &variable.raw(),
+                &raw_var,
                 include_last_user,
                 &mut count,
             )
@@ -535,9 +536,10 @@ impl MediumLevelILFunction {
         unsafe { Array::new(uses, count, self.to_owned()) }
     }
 
-    pub fn ssa_variable_value(&self, ssa_var: SSAVariable) -> RegisterValue {
+    pub fn ssa_variable_value(&self, ssa_variable: &SSAVariable) -> RegisterValue {
+        let raw_var = BNVariable::from(ssa_variable.variable);
         unsafe {
-            BNGetMediumLevelILSSAVarValue(self.handle, &ssa_var.variable.raw(), ssa_var.version)
+            BNGetMediumLevelILSSAVarValue(self.handle, &raw_var, ssa_variable.version)
         }
         .into()
     }
@@ -659,7 +661,7 @@ impl ILReferenceSource {
     unsafe fn from_raw(value: BNILReferenceSource, mlil: Ref<MediumLevelILFunction>) -> Self {
         Self {
             mlil,
-            _func: Function::from_raw(value.func),
+            _func: Function::ref_from_raw(value.func),
             _arch: CoreArchitecture::from_raw(value.arch),
             addr: value.addr,
             type_: value.type_,
@@ -720,7 +722,7 @@ unsafe impl CoreArrayProviderInner for VariableReferenceSource {
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Self {
-            var: Variable::from_raw(raw.var),
+            var: Variable::from(raw.var),
             source: ILReferenceSource::from_raw(raw.source, context.to_owned()),
         }
     }

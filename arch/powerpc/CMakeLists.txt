@@ -9,9 +9,7 @@ endif()
 file(GLOB SOURCES
 	arch_ppc.cpp
 	assembler.cpp
-	disassembler.cpp
 	il.cpp
-	util.cpp
 	*.h
 	decode/*.c
 	decode/*.h

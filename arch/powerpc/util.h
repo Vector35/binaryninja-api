@@ -38,6 +38,4 @@ inline uint32_t bswap32(uint32_t x)
 		((x&0xFF000000)>>24);
 }
 
-void printOperandVerbose(decomp_result *res, cs_ppc_op *opers);
-void printInstructionVerbose(decomp_result *res);
 uint64_t sign_extend(size_t addressSize_local, uint64_t target, int signBit);

@@ -12,8 +12,9 @@
 #include "lowlevelilinstruction.h"
 using namespace BinaryNinja; // for ::LogDebug, etc.
 
-#include "disassembler.h"
 #include "assembler.h"
+
+#include "decode/decode.h"
 
 #include "il.h"
 #include "util.h"
@@ -281,8 +282,8 @@ class PowerpcArchitecture: public Architecture
 {
 	private:
 	BNEndianness endian;
-	int cs_mode_local;
 	size_t addressSize;
+	uint32_t decodeFlags;
 
 	/* this can maybe be moved to the API later */
 	BNRegisterInfo RegisterInfo(uint32_t fullWidthReg, size_t offset, size_t size, bool zeroExtend = false)
@@ -298,11 +299,13 @@ class PowerpcArchitecture: public Architecture
 	public:
 
 	/* initialization list */
-	PowerpcArchitecture(const char* name, BNEndianness endian_, size_t addressSize_=4, int cs_mode_=0): Architecture(name)
+	PowerpcArchitecture(const char* name, BNEndianness endian_, size_t addressSize_=4, uint32_t decodeFlags_=DECODE_FLAGS_ALTIVEC | DECODE_FLAGS_VSX): Architecture(name)
 	{
 		endian = endian_;
 		addressSize = addressSize_;
-		cs_mode_local = cs_mode_;
+		decodeFlags = decodeFlags_;
+		if (addressSize == 8)
+			decodeFlags |= DECODE_FLAGS_PPC64;
 	}
 
 	/*************************************************************************/
@@ -335,6 +338,16 @@ class PowerpcArchitecture: public Architecture
 		return 4;
 	}
 
+	bool FillInstruction(Instruction* instruction, const uint8_t* data, size_t length, uint64_t address)
+	{
+		uint32_t word32 = *(const uint32_t *) data;
+
+		if (endian == BigEndian)
+			word32 = bswap32(word32);
+
+		return Decompose(instruction, word32, address, decodeFlags);
+	}
+
 	/* think "GetInstructionBranchBehavior()"
 
 	   populates struct Instruction Info (api/binaryninjaapi.h)
@@ -348,76 +361,48 @@ class PowerpcArchitecture: public Architecture
 	virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr,
 		size_t maxLen, InstructionInfo& result) override
 	{
-		struct decomp_result res;
-		struct cs_insn *insn = &(res.insn);
+		Instruction instruction;
 
-		//MYLOG("%s()\n", __func__);
-
-		if (maxLen < 4) {
+		if (maxLen < 4)
+		{
 			MYLOG("ERROR: need at least 4 bytes\n");
 			return false;
 		}
 
-		if (DoesQualifyForLocalDisassembly(data, endian == BigEndian)) {
-			result.length = 4;
-			return true;
-		}
+		result.length = 4;
 
-		/* decompose the instruction to get branch info */
-		if(powerpc_decompose(data, 4, addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
-			MYLOG("ERROR: powerpc_decompose()\n");
+		if (!FillInstruction(&instruction, data, maxLen, addr))
+		{
+			MYLOG("ERROR: FillInstruction()\n");
 			return false;
 		}
 
-		uint32_t raw_insn = *(const uint32_t *) data;
-
-		if (endian == BigEndian)
-			raw_insn = bswap32(raw_insn);
-
-		switch (raw_insn >> 26)
+		switch (instruction.id)
 		{
-			case 18: /* b (b, ba, bl, bla) */
+			case PPC_ID_Bx:
 			{
-				uint64_t target = raw_insn & 0x03fffffc;
+				uint64_t target = instruction.operands[0].label;
 
-				/* sign extend target */
-				target = sign_extend(addressSize, target, 25);
-
-				/* account for absolute addressing */
-				if (!(raw_insn & 2))
-				{
-					target += addr;
-					ADDRMASK(addressSize, target);
-				}
-
-				if (raw_insn & 1)
+				if (instruction.flags.lk)
 					result.AddBranch(CallDestination, target);
 				else
 					result.AddBranch(UnconditionalBranch, target);
 
 				break;
 			}
-			case 16: /* bc */
+
+			case PPC_ID_BCx:
 			{
-				uint64_t target = raw_insn & 0xfffc;
-				uint8_t bo = (raw_insn >> 21) & 0x1f;
-				bool lk = raw_insn & 1;
-
-				/* sign extend target */
-				target = sign_extend(addressSize, target, 15);
-
-				/* account for absolute addressing */
-				if (!(raw_insn & 2))
-				{
-					target += addr;
-					ADDRMASK(addressSize, target);
-				}
+				uint32_t bo = instruction.operands[0].uimm;
+				uint64_t target = instruction.operands[2].label;
 
 				if (target != addr + 4)
 				{
 					if ((bo & 0x14) == 0x14)
-						result.AddBranch(lk ? CallDestination : UnconditionalBranch, target);
-					else if (!lk)
+					{
+						result.AddBranch(instruction.flags.lk ? CallDestination : UnconditionalBranch, target);
+					}
+					else if (!instruction.flags.lk)
 					{
 						result.AddBranch(FalseBranch, addr + 4);
 						result.AddBranch(TrueBranch, target);
@@ -426,90 +411,120 @@ class PowerpcArchitecture: public Architecture
 
 				break;
 			}
-			case 19: /* bcctr, bclr */
-			{
-				uint8_t bo = (raw_insn >> 21) & 0x1f;
-				bool lk = raw_insn & 1;
-				bool blr = false;
 
-				switch ((raw_insn >> 1) & 0x3ff)
-				{
-					case 16:
-						blr = true;
-						FALL_THROUGH
-					case 528:
-						if ((bo & 0x14) == 0x14 && !lk)
-							result.AddBranch(blr ? FunctionReturn : UnresolvedBranch);
-
-						break;
-				}
+			case PPC_ID_BCLRx:
+				if (!instruction.flags.lk)
+					result.AddBranch(FunctionReturn);
+				else
+					result.AddBranch(UnresolvedBranch);
 
 				break;
-			}
-		}
 
-		switch(insn->id) {
-			case PPC_INS_TRAP:
+			case PPC_ID_BCCTRx:
 				result.AddBranch(UnresolvedBranch);
 				break;
-			case PPC_INS_RFI:
+
+			case PPC_ID_TWU:
+				result.AddBranch(UnresolvedBranch);
+				break;
+
+			case PPC_ID_RFI:
 				result.AddBranch(UnresolvedBranch);
 				break;
 		}
 
-		result.length = 4;
 		return true;
 	}
 
-	bool PrintLocalDisassembly(const uint8_t *data, uint64_t addr, size_t &len, vector<InstructionTextToken> &result, decomp_result* res)
+	// Returns whether any token was pushed (ie if operand is implied)
+	bool PushOperandTokens(vector<InstructionTextToken>& result, const Operand* op)
 	{
-		(void)addr;
-		char buf[16];
-		uint32_t local_op = PPC_INS_INVALID;
-
-		struct cs_detail *detail = 0;
-		struct cs_ppc *ppc = 0;
-		struct cs_insn *insn = &(res->insn);
-
-		detail = &(res->detail);
-		ppc = &(detail->ppc);
-
-		if (len < 4)
-			return false;
-		len = 4;
-
-		local_op = DoesQualifyForLocalDisassembly(data, endian == BigEndian);
-		PerformLocalDisassembly(data, addr, len, res, endian == BigEndian);		
-
-		switch (local_op)
+		char buf[32];
+		switch (op->cls)
 		{
-		case PPC_INS_BN_FCMPO:
-			result.emplace_back(InstructionToken, insn->mnemonic);
-			result.emplace_back(TextToken, "   ");
-			snprintf(buf, sizeof(buf), "cr%d", ppc->operands[0].reg - PPC_REG_CR0);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "f%d", ppc->operands[1].reg - PPC_REG_F0);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "f%d", ppc->operands[2].reg - PPC_REG_F0);
-			result.emplace_back(RegisterToken, buf);
-			break;
-		case PPC_INS_BN_XXPERMR:
-			result.emplace_back(InstructionToken, insn->mnemonic);
-			result.emplace_back(TextToken, " ");
-			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[0].reg - PPC_REG_VS0);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[1].reg - PPC_REG_VS0);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[2].reg - PPC_REG_VS0);
-			result.emplace_back(RegisterToken, buf);
-			break;
-		default:
-			return false;
+			case PPC_OP_REG_CRFD_IMPLY0:
+			case PPC_OP_REG_CRFS_IMPLY0:
+				if (op->reg == PPC_REG_CRF0)
+					return false;
+
+				result.emplace_back(RegisterToken, GetRegisterName(op->reg));
+
+				break;
+
+			case PPC_OP_REG_RA:
+			case PPC_OP_REG_RB:
+			case PPC_OP_REG_RD:
+			case PPC_OP_REG_RS:
+			case PPC_OP_REG_FRA:
+			case PPC_OP_REG_FRB:
+			case PPC_OP_REG_FRC:
+			case PPC_OP_REG_FRD:
+			case PPC_OP_REG_FRS:
+			case PPC_OP_REG_CRFD:
+			case PPC_OP_REG_CRFS:
+			case PPC_OP_REG_AV_VA:
+			case PPC_OP_REG_AV_VB:
+			case PPC_OP_REG_AV_VC:
+			case PPC_OP_REG_AV_VD:
+			case PPC_OP_REG_AV_VS:
+			case PPC_OP_REG_VSX_RA:
+			case PPC_OP_REG_VSX_RA_DWORD0:
+			case PPC_OP_REG_VSX_RB:
+			case PPC_OP_REG_VSX_RB_DWORD0:
+			case PPC_OP_REG_VSX_RC:
+			case PPC_OP_REG_VSX_RC_DWORD0:
+			case PPC_OP_REG_VSX_RD:
+			case PPC_OP_REG_VSX_RD_DWORD0:
+			case PPC_OP_REG_VSX_RS:
+			case PPC_OP_REG_VSX_RS_DWORD0:
+				result.emplace_back(RegisterToken, GetRegisterName(op->reg));
+				break;
+
+			case PPC_OP_UIMM:
+				snprintf(buf, sizeof(buf), "0x%x", op->uimm);
+				result.emplace_back(IntegerToken, buf,  op->uimm, 4);
+				break;
+
+			case PPC_OP_SIMM:
+				if (op->simm < 0 && op->simm > -0x10000)
+					snprintf(buf, sizeof(buf), "-0x%llx", -op->simm);
+				else
+					snprintf(buf, sizeof(buf), "0x%llx", op->simm);
+				result.emplace_back(IntegerToken, buf, op->simm, 4);
+				break;
+
+			case PPC_OP_LABEL:
+				snprintf(buf, sizeof(buf), "0x%llx", op->label);
+				result.emplace_back(CodeRelativeAddressToken, buf, op->label, 4);
+				break;
+
+			case PPC_OP_CRBIT_A:
+			case PPC_OP_CRBIT_B:
+			case PPC_OP_CRBIT_D:
+				result.emplace_back(RegisterToken, GetCRBitName(op->crbit));
+				break;
+
+			case PPC_OP_MEM_RA:
+				// eg: lwz r11, 8(r11)
+				//
+				// TODO: it would be nice to have the option to print these
+				//       in hex; printed in decimal now for backwards compatibility
+				snprintf(buf, sizeof(buf), "%d", op->mem.offset);
+				result.emplace_back(IntegerToken, buf, op->mem.offset, 4);
+
+				result.emplace_back(BraceToken, "(");
+				if (op->mem.reg == PPC_REG_GPR0)
+					result.emplace_back(PossibleAddressToken, "0", 0, 4);
+				else
+					result.emplace_back(RegisterToken, GetRegisterName(op->mem.reg));
+				result.emplace_back(BraceToken, ")");
+				break;
+
+			default:
+				//MYLOG("pushing a ???\n");
+				result.emplace_back(TextToken, "???");
 		}
+
 		return true;
 	}
 
@@ -519,128 +534,82 @@ class PowerpcArchitecture: public Architecture
 	virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, vector<InstructionTextToken>& result) override
 	{
 		bool rc = false;
-		bool capstoneWorkaround = false;
 		char buf[32];
 		size_t strlenMnem;
-		struct decomp_result res;
-		struct cs_insn *insn = &(res.insn);
-		struct cs_detail *detail = &(res.detail);
-		struct cs_ppc *ppc = &(detail->ppc);
+		Instruction instruction;
+		const char* mnemonic = NULL;
 
 		//MYLOG("%s()\n", __func__);
 
-		if (len < 4) {
+		if (len < 4)
+		{
 			MYLOG("ERROR: need at least 4 bytes\n");
-			goto cleanup;
+			return false;
 		}
 
-		if (DoesQualifyForLocalDisassembly(data, endian == BigEndian))
+		len = 4;
+		if (!FillInstruction(&instruction, data, len, addr))
 		{
-			// PerformLocalDisassembly(data, addr, len, &res, endian == BigEndian);
-			return PrintLocalDisassembly(data, addr, len, result, &res);
-		}
-		if(powerpc_decompose(data, 4, addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
-			MYLOG("ERROR: powerpc_decompose()\n");
-			goto cleanup;
-		}
-
-		switch (insn->id)
-		{
-			case PPC_INS_CRAND:
-			case PPC_INS_CRANDC:
-			case PPC_INS_CRNAND:
-			case PPC_INS_CROR:
-			case PPC_INS_CRORC:
-			case PPC_INS_CRNOR:
-			case PPC_INS_CREQV:
-			case PPC_INS_CRXOR:
-			case PPC_INS_CRSET:
-			case PPC_INS_CRCLR:
-			case PPC_INS_CRNOT:
-			case PPC_INS_CRMOVE:
-				capstoneWorkaround = true;
+			MYLOG("ERROR: FillInstruction()\n");
+			return false;
 		}
 
 		/* mnemonic */
-		result.emplace_back(InstructionToken, insn->mnemonic);
+		mnemonic = GetMnemonic(&instruction);
+		result.emplace_back(InstructionToken, mnemonic);
 
 		/* padding between mnemonic and operands */
 		memset(buf, ' ', 8);
-		strlenMnem = strlen(insn->mnemonic);
-		if(strlenMnem < 8)
+		strlenMnem = strlen(mnemonic);
+		if (strlenMnem < 8)
 			buf[8-strlenMnem] = '\0';
 		else
 			buf[1] = '\0';
 		result.emplace_back(TextToken, buf);
 
-		/* operands */
-		for(int i=0; i<ppc->op_count; ++i) {
-			struct cs_ppc_op *op = &(ppc->operands[i]);
+		// To make IL easier to reason about, sometimes an instruction's
+		// internal representation always has an operand that's omitted
+		// in assembly; we take care of overriding those cases here
+		OperandsList operand_list;
+		memset(&operand_list, 0, sizeof(operand_list));
 
-			switch(op->type) {
-				case PPC_OP_REG:
-					//MYLOG("pushing a register\n");
-					if (capstoneWorkaround || (insn->id == PPC_INS_ISEL && i == 3))
-						result.emplace_back(RegisterToken, GetFlagName(op->reg));
-					else
-						result.emplace_back(RegisterToken, GetRegisterName(op->reg));
-					break;
-				case PPC_OP_IMM:
-					//MYLOG("pushing an integer\n");
+		// The default is to just copy every operand, to simplify the
+		// alternate code path for special cases
+		operand_list.numOperands = instruction.numOperands;
+		for (int i = 0; i < instruction.numOperands; ++i)
+		{
+			operand_list.operands[i] = instruction.operands[i];
+		}
 
-					switch(insn->id) {
-						case PPC_INS_B:
-						case PPC_INS_BA:
-						case PPC_INS_BC:
-						case PPC_INS_BCL:
-						case PPC_INS_BL:
-						case PPC_INS_BLA:
-							snprintf(buf, sizeof(buf), "0x%" PRIx64, op->imm);
-							result.emplace_back(CodeRelativeAddressToken, buf, (uint32_t) op->imm, 4);
-							break;
-						case PPC_INS_ADDIS:
-						case PPC_INS_LIS:
-						case PPC_INS_ORIS:
-						case PPC_INS_XORIS:
-						case PPC_INS_ORI:
-							snprintf(buf, sizeof(buf), "0x%x", (uint16_t)op->imm);
-							result.emplace_back(IntegerToken, buf, (uint16_t) op->imm, 4);
-							break;
-						default:
-							if (op->imm < 0 && op->imm > -0x10000)
-								snprintf(buf, sizeof(buf), "-0x%" PRIx64, -op->imm);
-							else
-								snprintf(buf, sizeof(buf), "0x%" PRIx64, op->imm);
-							result.emplace_back(IntegerToken, buf, op->imm, 4);
-					}
+		switch(instruction.id)
+		{
+			case PPC_ID_BCx:
+				FillBcxOperands(&operand_list, &instruction);
+				break;
+			case PPC_ID_BCCTRx:
+				FillBcctrxOperands(&operand_list, &instruction);
+				break;
+			case PPC_ID_BCLRx:
+				FillBclrxOperands(&operand_list, &instruction);
+				break;
+			default:
+				// Already copied by default
+				;
+		}
 
-					break;
-				case PPC_OP_MEM:
-					// eg: lwz r11, 8(r11)
-					snprintf(buf, sizeof(buf), "%d", op->mem.disp);
-					result.emplace_back(IntegerToken, buf, op->mem.disp, 4);
+		for (int i = 0; i < operand_list.numOperands; ++i)
+		{
+			Operand* op = &(operand_list.operands[i]);
+			bool was_pushed = PushOperandTokens(result, op);
 
-					result.emplace_back(BraceToken, "(");
-					result.emplace_back(RegisterToken, GetRegisterName(op->mem.base));
-					result.emplace_back(BraceToken, ")");
-					break;
-				case PPC_OP_CRX:
-				case PPC_OP_INVALID:
-				default:
-					//MYLOG("pushing a ???\n");
-					result.emplace_back(TextToken, "???");
-			}
-
-			if(i < ppc->op_count-1) {
+			if (was_pushed && i < operand_list.numOperands - 1)
+			{
 				//MYLOG("pushing a comma\n");
 				result.emplace_back(OperandSeparatorToken, ", ");
 			}
 		}
 
-		rc = true;
-		len = 4;
-		cleanup:
-		return rc;
+		return true;
 	}
 
 	static string GetIntrinsicName_ppc_ps(uint32_t intrinsic)
@@ -666,7 +635,7 @@ class PowerpcArchitecture: public Architecture
 		case PPC_INTRIN_FRSP:
 			return "float_round";
 		default:
-			if (cs_mode_local == CS_MODE_PS)
+			if ((decodeFlags & DECODE_FLAGS_PS))
 			{
 				return GetIntrinsicName_ppc_ps(intrinsic);
 			}
@@ -726,7 +695,7 @@ class PowerpcArchitecture: public Architecture
 			return {NameAndType(Type::FloatType(4))};
 		// for now, quantize is operating on the float in, and the gqr that holds the scale
 		default:
-			if (cs_mode_local == CS_MODE_PS)
+			if ((decodeFlags & DECODE_FLAGS_PS))
 			{
 				return GetIntrinsicInputs_ppc_ps(intrinsic);
 			}
@@ -759,7 +728,7 @@ class PowerpcArchitecture: public Architecture
 		case PPC_INTRIN_FRSP:
 			return {Type::FloatType(4)};
 		default:
-			if (cs_mode_local == CS_MODE_PS)
+			if ((decodeFlags & DECODE_FLAGS_PS))
 			{
 				return GetIntrinsicOutputs_ppc_ps(intrinsic);
 			}
@@ -771,29 +740,23 @@ class PowerpcArchitecture: public Architecture
 
 	virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override
 	{
+		Instruction instruction;
 		bool rc = false;
-		struct decomp_result res = {0};
 
-		if (len < 4) {
+		if (len < 4)
+		{
 			MYLOG("ERROR: need at least 4 bytes\n");
 			goto cleanup;
 		}
 
-		//if(addr >= 0x10000300 && addr <= 0x10000320) {
-		//	MYLOG("%s(data, 0x%llX, 0x%zX, il)\n", __func__, addr, len);
-		//}
-
-		if (DoesQualifyForLocalDisassembly(data, endian == BigEndian)) {
-			PerformLocalDisassembly(data, addr, len, &res, endian == BigEndian);
-		}
-		else if(powerpc_decompose(data, 4, addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
-			MYLOG("ERROR: powerpc_decompose()\n");
+		if (!FillInstruction(&instruction, data, len, addr))
+		{
+			MYLOG("ERROR: FillInstruction()\n");
 			il.AddInstruction(il.Undefined());
 			goto cleanup;
 		}
 
-// getil:
-		rc = GetLowLevelILForPPCInstruction(this, il, data, addr, &res, endian == LittleEndian);
+		rc = GetLowLevelILForPPCInstruction(this, il, &instruction, addr);
 		len = 4;
 
 		cleanup:
@@ -959,9 +922,9 @@ class PowerpcArchitecture: public Architecture
 
 	virtual string GetRegisterName(uint32_t regId) override
 	{
-		const char *result = powerpc_reg_to_str(regId, cs_mode_local);
+		const char *result = PowerPCRegisterName(regId);
 
-		if(result == NULL)
+		if (result == NULL)
 			result = "";
 
 		//MYLOG("%s(%d) returns %s\n", __func__, regId, result);
@@ -999,8 +962,7 @@ class PowerpcArchitecture: public Architecture
 	virtual string GetFlagName(uint32_t flag) override
 	{
 		// MYLOG("%s() flag:%d\n", __func__, flag);
-
-		switch(powerpc_crx_to_reg(flag)) {
+		switch(flag) {
 			case IL_FLAG_LT: return "lt";
 			case IL_FLAG_GT: return "gt";
 			case IL_FLAG_EQ: return "eq";
@@ -1548,10 +1510,14 @@ class PowerpcArchitecture: public Architecture
 		// MYLOG("%s()\n", __func__);
 
 		return vector<uint32_t>{
-			PPC_REG_R0,   PPC_REG_R1,   PPC_REG_R2,   PPC_REG_R3,   PPC_REG_R4,   PPC_REG_R5,   PPC_REG_R6,   PPC_REG_R7,
-			PPC_REG_R8,   PPC_REG_R9,   PPC_REG_R10,  PPC_REG_R11,  PPC_REG_R12,  PPC_REG_R13,  PPC_REG_R14,  PPC_REG_R15,
-			PPC_REG_R16,  PPC_REG_R17,  PPC_REG_R18,  PPC_REG_R19,  PPC_REG_R20,  PPC_REG_R21,  PPC_REG_R22,  PPC_REG_R23,
-			PPC_REG_R24,  PPC_REG_R25,  PPC_REG_R26,  PPC_REG_R27,  PPC_REG_R28,  PPC_REG_R29,  PPC_REG_R30,  PPC_REG_R31
+			PPC_REG_GPR0,   PPC_REG_GPR1,   PPC_REG_GPR2,   PPC_REG_GPR3,
+			PPC_REG_GPR4,   PPC_REG_GPR5,   PPC_REG_GPR6,   PPC_REG_GPR7,
+			PPC_REG_GPR8,   PPC_REG_GPR9,   PPC_REG_GPR10,  PPC_REG_GPR11,
+			PPC_REG_GPR12,  PPC_REG_GPR13,  PPC_REG_GPR14,  PPC_REG_GPR15,
+			PPC_REG_GPR16,  PPC_REG_GPR17,  PPC_REG_GPR18,  PPC_REG_GPR19,
+			PPC_REG_GPR20,  PPC_REG_GPR21,  PPC_REG_GPR22,  PPC_REG_GPR23,
+			PPC_REG_GPR24,  PPC_REG_GPR25,  PPC_REG_GPR26,  PPC_REG_GPR27,
+			PPC_REG_GPR28,  PPC_REG_GPR29,  PPC_REG_GPR30,  PPC_REG_GPR31
 		};
 	}
 
@@ -1559,45 +1525,63 @@ class PowerpcArchitecture: public Architecture
 	virtual vector<uint32_t> GetAllRegisters() override
 	{
 		vector<uint32_t> result = {
-			PPC_REG_CARRY,
+			PPC_REG_GPR0,  PPC_REG_GPR1,  PPC_REG_GPR2,  PPC_REG_GPR3,
+			PPC_REG_GPR4,  PPC_REG_GPR5,  PPC_REG_GPR6,  PPC_REG_GPR7,
+			PPC_REG_GPR8,  PPC_REG_GPR9,  PPC_REG_GPR10, PPC_REG_GPR11,
+			PPC_REG_GPR12, PPC_REG_GPR13, PPC_REG_GPR14, PPC_REG_GPR15,
+			PPC_REG_GPR16, PPC_REG_GPR17, PPC_REG_GPR18, PPC_REG_GPR19,
+			PPC_REG_GPR20, PPC_REG_GPR21, PPC_REG_GPR22, PPC_REG_GPR23,
+			PPC_REG_GPR24, PPC_REG_GPR25, PPC_REG_GPR26, PPC_REG_GPR27,
+			PPC_REG_GPR28, PPC_REG_GPR29, PPC_REG_GPR30, PPC_REG_GPR31,
 
-			PPC_REG_CR0, PPC_REG_CR1, PPC_REG_CR2, PPC_REG_CR3, PPC_REG_CR4, PPC_REG_CR5, PPC_REG_CR6, PPC_REG_CR7,
+			PPC_REG_XER, PPC_REG_LR, PPC_REG_CTR,
 
-			PPC_REG_CTR,
+			PPC_REG_FR0,  PPC_REG_FR1,  PPC_REG_FR2,  PPC_REG_FR3,
+			PPC_REG_FR4,  PPC_REG_FR5,  PPC_REG_FR6,  PPC_REG_FR7,
+			PPC_REG_FR8,  PPC_REG_FR9,  PPC_REG_FR10, PPC_REG_FR11,
+			PPC_REG_FR12, PPC_REG_FR13, PPC_REG_FR14, PPC_REG_FR15,
+			PPC_REG_FR16, PPC_REG_FR17, PPC_REG_FR18, PPC_REG_FR19,
+			PPC_REG_FR20, PPC_REG_FR21, PPC_REG_FR22, PPC_REG_FR23,
+			PPC_REG_FR24, PPC_REG_FR25, PPC_REG_FR26, PPC_REG_FR27,
+			PPC_REG_FR28, PPC_REG_FR29, PPC_REG_FR30, PPC_REG_FR31,
 
-			PPC_REG_F0, PPC_REG_F1, PPC_REG_F2, PPC_REG_F3,  PPC_REG_F4, PPC_REG_F5, PPC_REG_F6, PPC_REG_F7,
-			PPC_REG_F8, PPC_REG_F9, PPC_REG_F10, PPC_REG_F11, PPC_REG_F12, PPC_REG_F13, PPC_REG_F14, PPC_REG_F15,
-			PPC_REG_F16, PPC_REG_F17, PPC_REG_F18, PPC_REG_F19, PPC_REG_F20, PPC_REG_F21, PPC_REG_F22, PPC_REG_F23,
-			PPC_REG_F24, PPC_REG_F25, PPC_REG_F26, PPC_REG_F27, PPC_REG_F28, PPC_REG_F29, PPC_REG_F30, PPC_REG_F31,
+			PPC_REG_CRF0, PPC_REG_CRF1, PPC_REG_CRF2, PPC_REG_CRF3,
+			PPC_REG_CRF4, PPC_REG_CRF5, PPC_REG_CRF6, PPC_REG_CRF7,
 
-			PPC_REG_LR,
+			PPC_REG_AV_VR0,  PPC_REG_AV_VR1,  PPC_REG_AV_VR2,  PPC_REG_AV_VR3,
+			PPC_REG_AV_VR4,  PPC_REG_AV_VR5,  PPC_REG_AV_VR6,  PPC_REG_AV_VR7,
+			PPC_REG_AV_VR8,  PPC_REG_AV_VR9,  PPC_REG_AV_VR10, PPC_REG_AV_VR11,
+			PPC_REG_AV_VR12, PPC_REG_AV_VR13, PPC_REG_AV_VR14, PPC_REG_AV_VR15,
+			PPC_REG_AV_VR16, PPC_REG_AV_VR17, PPC_REG_AV_VR18, PPC_REG_AV_VR19,
+			PPC_REG_AV_VR20, PPC_REG_AV_VR21, PPC_REG_AV_VR22, PPC_REG_AV_VR23,
+			PPC_REG_AV_VR24, PPC_REG_AV_VR25, PPC_REG_AV_VR26, PPC_REG_AV_VR27,
+			PPC_REG_AV_VR28, PPC_REG_AV_VR29, PPC_REG_AV_VR30, PPC_REG_AV_VR31,
 
-			PPC_REG_R0, PPC_REG_R1, PPC_REG_R2, PPC_REG_R3, PPC_REG_R4, PPC_REG_R5,  PPC_REG_R6, PPC_REG_R7,
-			PPC_REG_R8, PPC_REG_R9, PPC_REG_R10, PPC_REG_R11, PPC_REG_R12, PPC_REG_R13, PPC_REG_R14, PPC_REG_R15,
-			PPC_REG_R16, PPC_REG_R17, PPC_REG_R18, PPC_REG_R19, PPC_REG_R20, PPC_REG_R21, PPC_REG_R22, PPC_REG_R23,
-			PPC_REG_R24, PPC_REG_R25, PPC_REG_R26, PPC_REG_R27, PPC_REG_R28, PPC_REG_R29, PPC_REG_R30, PPC_REG_R31,
-
-			PPC_REG_V0, PPC_REG_V1, PPC_REG_V2, PPC_REG_V3, PPC_REG_V4, PPC_REG_V5, PPC_REG_V6, PPC_REG_V7,
-			PPC_REG_V8, PPC_REG_V9, PPC_REG_V10, PPC_REG_V11, PPC_REG_V12, PPC_REG_V13, PPC_REG_V14, PPC_REG_V15,
-			PPC_REG_V16, PPC_REG_V17, PPC_REG_V18, PPC_REG_V19, PPC_REG_V20, PPC_REG_V21, PPC_REG_V22, PPC_REG_V23,
-			PPC_REG_V24, PPC_REG_V25, PPC_REG_V26, PPC_REG_V27, PPC_REG_V28, PPC_REG_V29, PPC_REG_V30, PPC_REG_V31,
-			PPC_REG_VRSAVE,
-			PPC_REG_VS0, PPC_REG_VS1, PPC_REG_VS2, PPC_REG_VS3, PPC_REG_VS4, PPC_REG_VS5, PPC_REG_VS6, PPC_REG_VS7,
-			PPC_REG_VS8, PPC_REG_VS9, PPC_REG_VS10, PPC_REG_VS11, PPC_REG_VS12, PPC_REG_VS13, PPC_REG_VS14, PPC_REG_VS15,
-			PPC_REG_VS16, PPC_REG_VS17, PPC_REG_VS18, PPC_REG_VS19, PPC_REG_VS20, PPC_REG_VS21, PPC_REG_VS22, PPC_REG_VS23,
-			PPC_REG_VS24, PPC_REG_VS25, PPC_REG_VS26, PPC_REG_VS27, PPC_REG_VS28, PPC_REG_VS29, PPC_REG_VS30, PPC_REG_VS31,
-			PPC_REG_VS32, PPC_REG_VS33, PPC_REG_VS34, PPC_REG_VS35, PPC_REG_VS36, PPC_REG_VS37, PPC_REG_VS38, PPC_REG_VS39,
-			PPC_REG_VS40, PPC_REG_VS41, PPC_REG_VS42, PPC_REG_VS43, PPC_REG_VS44, PPC_REG_VS45, PPC_REG_VS46, PPC_REG_VS47,
-			PPC_REG_VS48, PPC_REG_VS49, PPC_REG_VS50, PPC_REG_VS51, PPC_REG_VS52, PPC_REG_VS53, PPC_REG_VS54, PPC_REG_VS55,
-			PPC_REG_VS56, PPC_REG_VS57, PPC_REG_VS58, PPC_REG_VS59, PPC_REG_VS60, PPC_REG_VS61, PPC_REG_VS62, PPC_REG_VS63,
+			PPC_REG_VSX_VR0,  PPC_REG_VSX_VR1,  PPC_REG_VSX_VR2,  PPC_REG_VSX_VR3,
+			PPC_REG_VSX_VR4,  PPC_REG_VSX_VR5,  PPC_REG_VSX_VR6,  PPC_REG_VSX_VR7,
+			PPC_REG_VSX_VR8,  PPC_REG_VSX_VR9,  PPC_REG_VSX_VR10, PPC_REG_VSX_VR11,
+			PPC_REG_VSX_VR12, PPC_REG_VSX_VR13, PPC_REG_VSX_VR14, PPC_REG_VSX_VR15,
+			PPC_REG_VSX_VR16, PPC_REG_VSX_VR17, PPC_REG_VSX_VR18, PPC_REG_VSX_VR19,
+			PPC_REG_VSX_VR20, PPC_REG_VSX_VR21, PPC_REG_VSX_VR22, PPC_REG_VSX_VR23,
+			PPC_REG_VSX_VR24, PPC_REG_VSX_VR25, PPC_REG_VSX_VR26, PPC_REG_VSX_VR27,
+			PPC_REG_VSX_VR28, PPC_REG_VSX_VR29, PPC_REG_VSX_VR30, PPC_REG_VSX_VR31,
+			PPC_REG_VSX_VR32, PPC_REG_VSX_VR33, PPC_REG_VSX_VR34, PPC_REG_VSX_VR35,
+			PPC_REG_VSX_VR36, PPC_REG_VSX_VR37, PPC_REG_VSX_VR38, PPC_REG_VSX_VR39,
+			PPC_REG_VSX_VR40, PPC_REG_VSX_VR41, PPC_REG_VSX_VR42, PPC_REG_VSX_VR43,
+			PPC_REG_VSX_VR44, PPC_REG_VSX_VR45, PPC_REG_VSX_VR46, PPC_REG_VSX_VR47,
+			PPC_REG_VSX_VR48, PPC_REG_VSX_VR49, PPC_REG_VSX_VR50, PPC_REG_VSX_VR51,
+			PPC_REG_VSX_VR52, PPC_REG_VSX_VR53, PPC_REG_VSX_VR54, PPC_REG_VSX_VR55,
+			PPC_REG_VSX_VR56, PPC_REG_VSX_VR57, PPC_REG_VSX_VR58, PPC_REG_VSX_VR59,
+			PPC_REG_VSX_VR60, PPC_REG_VSX_VR61, PPC_REG_VSX_VR62, PPC_REG_VSX_VR63,
 		};
 
 		vector<uint32_t> gqrarray = {
-			PPC_REG_BN_GQR0, PPC_REG_BN_GQR1, PPC_REG_BN_GQR2, PPC_REG_BN_GQR3,
-			PPC_REG_BN_GQR4, PPC_REG_BN_GQR5, PPC_REG_BN_GQR6, PPC_REG_BN_GQR7};
+			PPC_REG_GQR0, PPC_REG_GQR1, PPC_REG_GQR2, PPC_REG_GQR3,
+			PPC_REG_GQR4, PPC_REG_GQR5, PPC_REG_GQR6, PPC_REG_GQR7
+		};
 
 
-		if ((cs_mode_local & CS_MODE_PS) != 0)
+		if ((decodeFlags & DECODE_FLAGS_PS) != 0)
 		{
 			result.insert(result.end(), gqrarray.begin(), gqrarray.end());
 		}
@@ -1608,7 +1592,7 @@ class PowerpcArchitecture: public Architecture
 
 	virtual std::vector<uint32_t> GetGlobalRegisters() override
 	{
-		return vector<uint32_t>{ PPC_REG_R2, PPC_REG_R13 };
+		return vector<uint32_t>{ PPC_REG_GPR2, PPC_REG_GPR13 };
 	}
 
 
@@ -1618,195 +1602,199 @@ class PowerpcArchitecture: public Architecture
 		and our size */
 	virtual BNRegisterInfo GetRegisterInfo(uint32_t regId) override
 	{
-		//MYLOG("%s(%s)\n", __func__, powerpc_reg_to_str(regId));
+		//MYLOG("%s(%s)\n", __func__, PowerPCRegisterName(regId));
 
 		switch(regId) {
-			// BNRegisterInfo RegisterInfo(uint32_t fullWidthReg, size_t offset,
-			//   size_t size, bool zeroExtend = false)
+			case PPC_REG_GPR0: return RegisterInfo(PPC_REG_GPR0, 0, addressSize);
+			case PPC_REG_GPR1: return RegisterInfo(PPC_REG_GPR1, 0, addressSize);
+			case PPC_REG_GPR2: return RegisterInfo(PPC_REG_GPR2, 0, addressSize);
+			case PPC_REG_GPR3: return RegisterInfo(PPC_REG_GPR3, 0, addressSize);
+			case PPC_REG_GPR4: return RegisterInfo(PPC_REG_GPR4, 0, addressSize);
+			case PPC_REG_GPR5: return RegisterInfo(PPC_REG_GPR5, 0, addressSize);
+			case PPC_REG_GPR6: return RegisterInfo(PPC_REG_GPR6, 0, addressSize);
+			case PPC_REG_GPR7: return RegisterInfo(PPC_REG_GPR7, 0, addressSize);
+			case PPC_REG_GPR8: return RegisterInfo(PPC_REG_GPR8, 0, addressSize);
+			case PPC_REG_GPR9: return RegisterInfo(PPC_REG_GPR9, 0, addressSize);
+			case PPC_REG_GPR10: return RegisterInfo(PPC_REG_GPR10, 0, addressSize);
+			case PPC_REG_GPR11: return RegisterInfo(PPC_REG_GPR11, 0, addressSize);
+			case PPC_REG_GPR12: return RegisterInfo(PPC_REG_GPR12, 0, addressSize);
+			case PPC_REG_GPR13: return RegisterInfo(PPC_REG_GPR13, 0, addressSize);
+			case PPC_REG_GPR14: return RegisterInfo(PPC_REG_GPR14, 0, addressSize);
+			case PPC_REG_GPR15: return RegisterInfo(PPC_REG_GPR15, 0, addressSize);
+			case PPC_REG_GPR16: return RegisterInfo(PPC_REG_GPR16, 0, addressSize);
+			case PPC_REG_GPR17: return RegisterInfo(PPC_REG_GPR17, 0, addressSize);
+			case PPC_REG_GPR18: return RegisterInfo(PPC_REG_GPR18, 0, addressSize);
+			case PPC_REG_GPR19: return RegisterInfo(PPC_REG_GPR19, 0, addressSize);
+			case PPC_REG_GPR20: return RegisterInfo(PPC_REG_GPR20, 0, addressSize);
+			case PPC_REG_GPR21: return RegisterInfo(PPC_REG_GPR21, 0, addressSize);
+			case PPC_REG_GPR22: return RegisterInfo(PPC_REG_GPR22, 0, addressSize);
+			case PPC_REG_GPR23: return RegisterInfo(PPC_REG_GPR23, 0, addressSize);
+			case PPC_REG_GPR24: return RegisterInfo(PPC_REG_GPR24, 0, addressSize);
+			case PPC_REG_GPR25: return RegisterInfo(PPC_REG_GPR25, 0, addressSize);
+			case PPC_REG_GPR26: return RegisterInfo(PPC_REG_GPR26, 0, addressSize);
+			case PPC_REG_GPR27: return RegisterInfo(PPC_REG_GPR27, 0, addressSize);
+			case PPC_REG_GPR28: return RegisterInfo(PPC_REG_GPR28, 0, addressSize);
+			case PPC_REG_GPR29: return RegisterInfo(PPC_REG_GPR29, 0, addressSize);
+			case PPC_REG_GPR30: return RegisterInfo(PPC_REG_GPR30, 0, addressSize);
+			case PPC_REG_GPR31: return RegisterInfo(PPC_REG_GPR31, 0, addressSize);
 
-			case PPC_REG_CARRY: return RegisterInfo(PPC_REG_CARRY, 0, 4);
-			case PPC_REG_CR0: return RegisterInfo(PPC_REG_CR0, 0, 4);
-			case PPC_REG_CR1: return RegisterInfo(PPC_REG_CR1, 0, 4);
-			case PPC_REG_CR2: return RegisterInfo(PPC_REG_CR2, 0, 4);
-			case PPC_REG_CR3: return RegisterInfo(PPC_REG_CR3, 0, 4);
-			case PPC_REG_CR4: return RegisterInfo(PPC_REG_CR4, 0, 4);
-			case PPC_REG_CR5: return RegisterInfo(PPC_REG_CR5, 0, 4);
-			case PPC_REG_CR6: return RegisterInfo(PPC_REG_CR6, 0, 4);
-			case PPC_REG_CR7: return RegisterInfo(PPC_REG_CR7, 0, 4);
-			case PPC_REG_CTR: return RegisterInfo(PPC_REG_CTR, 0, addressSize);
-			case PPC_REG_F0: return RegisterInfo(PPC_REG_F0, 0, 8);
-			case PPC_REG_F1: return RegisterInfo(PPC_REG_F1, 0, 8);
-			case PPC_REG_F2: return RegisterInfo(PPC_REG_F2, 0, 8);
-			case PPC_REG_F3: return RegisterInfo(PPC_REG_F3, 0, 8);
-			case PPC_REG_F4: return RegisterInfo(PPC_REG_F4, 0, 8);
-			case PPC_REG_F5: return RegisterInfo(PPC_REG_F5, 0, 8);
-			case PPC_REG_F6: return RegisterInfo(PPC_REG_F6, 0, 8);
-			case PPC_REG_F7: return RegisterInfo(PPC_REG_F7, 0, 8);
-			case PPC_REG_F8: return RegisterInfo(PPC_REG_F8, 0, 8);
-			case PPC_REG_F9: return RegisterInfo(PPC_REG_F9, 0, 8);
-			case PPC_REG_F10: return RegisterInfo(PPC_REG_F10, 0, 8);
-			case PPC_REG_F11: return RegisterInfo(PPC_REG_F11, 0, 8);
-			case PPC_REG_F12: return RegisterInfo(PPC_REG_F12, 0, 8);
-			case PPC_REG_F13: return RegisterInfo(PPC_REG_F13, 0, 8);
-			case PPC_REG_F14: return RegisterInfo(PPC_REG_F14, 0, 8);
-			case PPC_REG_F15: return RegisterInfo(PPC_REG_F15, 0, 8);
-			case PPC_REG_F16: return RegisterInfo(PPC_REG_F16, 0, 8);
-			case PPC_REG_F17: return RegisterInfo(PPC_REG_F17, 0, 8);
-			case PPC_REG_F18: return RegisterInfo(PPC_REG_F18, 0, 8);
-			case PPC_REG_F19: return RegisterInfo(PPC_REG_F19, 0, 8);
-			case PPC_REG_F20: return RegisterInfo(PPC_REG_F20, 0, 8);
-			case PPC_REG_F21: return RegisterInfo(PPC_REG_F21, 0, 8);
-			case PPC_REG_F22: return RegisterInfo(PPC_REG_F22, 0, 8);
-			case PPC_REG_F23: return RegisterInfo(PPC_REG_F23, 0, 8);
-			case PPC_REG_F24: return RegisterInfo(PPC_REG_F24, 0, 8);
-			case PPC_REG_F25: return RegisterInfo(PPC_REG_F25, 0, 8);
-			case PPC_REG_F26: return RegisterInfo(PPC_REG_F26, 0, 8);
-			case PPC_REG_F27: return RegisterInfo(PPC_REG_F27, 0, 8);
-			case PPC_REG_F28: return RegisterInfo(PPC_REG_F28, 0, 8);
-			case PPC_REG_F29: return RegisterInfo(PPC_REG_F29, 0, 8);
-			case PPC_REG_F30: return RegisterInfo(PPC_REG_F30, 0, 8);
-			case PPC_REG_F31: return RegisterInfo(PPC_REG_F31, 0, 8);
+			case PPC_REG_XER: return RegisterInfo(PPC_REG_XER, 0, 4);
 			case PPC_REG_LR: return RegisterInfo(PPC_REG_LR, 0, addressSize);
-			case PPC_REG_R0: return RegisterInfo(PPC_REG_R0, 0, addressSize);
-			case PPC_REG_R1: return RegisterInfo(PPC_REG_R1, 0, addressSize);
-			case PPC_REG_R2: return RegisterInfo(PPC_REG_R2, 0, addressSize);
-			case PPC_REG_R3: return RegisterInfo(PPC_REG_R3, 0, addressSize);
-			case PPC_REG_R4: return RegisterInfo(PPC_REG_R4, 0, addressSize);
-			case PPC_REG_R5: return RegisterInfo(PPC_REG_R5, 0, addressSize);
-			case PPC_REG_R6: return RegisterInfo(PPC_REG_R6, 0, addressSize);
-			case PPC_REG_R7: return RegisterInfo(PPC_REG_R7, 0, addressSize);
-			case PPC_REG_R8: return RegisterInfo(PPC_REG_R8, 0, addressSize);
-			case PPC_REG_R9: return RegisterInfo(PPC_REG_R9, 0, addressSize);
-			case PPC_REG_R10: return RegisterInfo(PPC_REG_R10, 0, addressSize);
-			case PPC_REG_R11: return RegisterInfo(PPC_REG_R11, 0, addressSize);
-			case PPC_REG_R12: return RegisterInfo(PPC_REG_R12, 0, addressSize);
-			case PPC_REG_R13: return RegisterInfo(PPC_REG_R13, 0, addressSize);
-			case PPC_REG_R14: return RegisterInfo(PPC_REG_R14, 0, addressSize);
-			case PPC_REG_R15: return RegisterInfo(PPC_REG_R15, 0, addressSize);
-			case PPC_REG_R16: return RegisterInfo(PPC_REG_R16, 0, addressSize);
-			case PPC_REG_R17: return RegisterInfo(PPC_REG_R17, 0, addressSize);
-			case PPC_REG_R18: return RegisterInfo(PPC_REG_R18, 0, addressSize);
-			case PPC_REG_R19: return RegisterInfo(PPC_REG_R19, 0, addressSize);
-			case PPC_REG_R20: return RegisterInfo(PPC_REG_R20, 0, addressSize);
-			case PPC_REG_R21: return RegisterInfo(PPC_REG_R21, 0, addressSize);
-			case PPC_REG_R22: return RegisterInfo(PPC_REG_R22, 0, addressSize);
-			case PPC_REG_R23: return RegisterInfo(PPC_REG_R23, 0, addressSize);
-			case PPC_REG_R24: return RegisterInfo(PPC_REG_R24, 0, addressSize);
-			case PPC_REG_R25: return RegisterInfo(PPC_REG_R25, 0, addressSize);
-			case PPC_REG_R26: return RegisterInfo(PPC_REG_R26, 0, addressSize);
-			case PPC_REG_R27: return RegisterInfo(PPC_REG_R27, 0, addressSize);
-			case PPC_REG_R28: return RegisterInfo(PPC_REG_R28, 0, addressSize);
-			case PPC_REG_R29: return RegisterInfo(PPC_REG_R29, 0, addressSize);
-			case PPC_REG_R30: return RegisterInfo(PPC_REG_R30, 0, addressSize);
-			case PPC_REG_R31: return RegisterInfo(PPC_REG_R31, 0, addressSize);
-			case PPC_REG_V0: return RegisterInfo(PPC_REG_V0, 0, 4);
-			case PPC_REG_V1: return RegisterInfo(PPC_REG_V1, 0, 4);
-			case PPC_REG_V2: return RegisterInfo(PPC_REG_V2, 0, 4);
-			case PPC_REG_V3: return RegisterInfo(PPC_REG_V3, 0, 4);
-			case PPC_REG_V4: return RegisterInfo(PPC_REG_V4, 0, 4);
-			case PPC_REG_V5: return RegisterInfo(PPC_REG_V5, 0, 4);
-			case PPC_REG_V6: return RegisterInfo(PPC_REG_V6, 0, 4);
-			case PPC_REG_V7: return RegisterInfo(PPC_REG_V7, 0, 4);
-			case PPC_REG_V8: return RegisterInfo(PPC_REG_V8, 0, 4);
-			case PPC_REG_V9: return RegisterInfo(PPC_REG_V9, 0, 4);
-			case PPC_REG_V10: return RegisterInfo(PPC_REG_V10, 0, 4);
-			case PPC_REG_V11: return RegisterInfo(PPC_REG_V11, 0, 4);
-			case PPC_REG_V12: return RegisterInfo(PPC_REG_V12, 0, 4);
-			case PPC_REG_V13: return RegisterInfo(PPC_REG_V13, 0, 4);
-			case PPC_REG_V14: return RegisterInfo(PPC_REG_V14, 0, 4);
-			case PPC_REG_V15: return RegisterInfo(PPC_REG_V15, 0, 4);
-			case PPC_REG_V16: return RegisterInfo(PPC_REG_V16, 0, 4);
-			case PPC_REG_V17: return RegisterInfo(PPC_REG_V17, 0, 4);
-			case PPC_REG_V18: return RegisterInfo(PPC_REG_V18, 0, 4);
-			case PPC_REG_V19: return RegisterInfo(PPC_REG_V19, 0, 4);
-			case PPC_REG_V20: return RegisterInfo(PPC_REG_V20, 0, 4);
-			case PPC_REG_V21: return RegisterInfo(PPC_REG_V21, 0, 4);
-			case PPC_REG_V22: return RegisterInfo(PPC_REG_V22, 0, 4);
-			case PPC_REG_V23: return RegisterInfo(PPC_REG_V23, 0, 4);
-			case PPC_REG_V24: return RegisterInfo(PPC_REG_V24, 0, 4);
-			case PPC_REG_V25: return RegisterInfo(PPC_REG_V25, 0, 4);
-			case PPC_REG_V26: return RegisterInfo(PPC_REG_V26, 0, 4);
-			case PPC_REG_V27: return RegisterInfo(PPC_REG_V27, 0, 4);
-			case PPC_REG_V28: return RegisterInfo(PPC_REG_V28, 0, 4);
-			case PPC_REG_V29: return RegisterInfo(PPC_REG_V29, 0, 4);
-			case PPC_REG_V30: return RegisterInfo(PPC_REG_V30, 0, 4);
-			case PPC_REG_V31: return RegisterInfo(PPC_REG_V31, 0, 4);
-			case PPC_REG_VRSAVE: return RegisterInfo(PPC_REG_VRSAVE, 0, 4);
-			case PPC_REG_VS0: return RegisterInfo(PPC_REG_VS0, 0, 4);
-			case PPC_REG_VS1: return RegisterInfo(PPC_REG_VS1, 0, 4);
-			case PPC_REG_VS2: return RegisterInfo(PPC_REG_VS2, 0, 4);
-			case PPC_REG_VS3: return RegisterInfo(PPC_REG_VS3, 0, 4);
-			case PPC_REG_VS4: return RegisterInfo(PPC_REG_VS4, 0, 4);
-			case PPC_REG_VS5: return RegisterInfo(PPC_REG_VS5, 0, 4);
-			case PPC_REG_VS6: return RegisterInfo(PPC_REG_VS6, 0, 4);
-			case PPC_REG_VS7: return RegisterInfo(PPC_REG_VS7, 0, 4);
-			case PPC_REG_VS8: return RegisterInfo(PPC_REG_VS8, 0, 4);
-			case PPC_REG_VS9: return RegisterInfo(PPC_REG_VS9, 0, 4);
-			case PPC_REG_VS10: return RegisterInfo(PPC_REG_VS10, 0, 4);
-			case PPC_REG_VS11: return RegisterInfo(PPC_REG_VS11, 0, 4);
-			case PPC_REG_VS12: return RegisterInfo(PPC_REG_VS12, 0, 4);
-			case PPC_REG_VS13: return RegisterInfo(PPC_REG_VS13, 0, 4);
-			case PPC_REG_VS14: return RegisterInfo(PPC_REG_VS14, 0, 4);
-			case PPC_REG_VS15: return RegisterInfo(PPC_REG_VS15, 0, 4);
-			case PPC_REG_VS16: return RegisterInfo(PPC_REG_VS16, 0, 4);
-			case PPC_REG_VS17: return RegisterInfo(PPC_REG_VS17, 0, 4);
-			case PPC_REG_VS18: return RegisterInfo(PPC_REG_VS18, 0, 4);
-			case PPC_REG_VS19: return RegisterInfo(PPC_REG_VS19, 0, 4);
-			case PPC_REG_VS20: return RegisterInfo(PPC_REG_VS20, 0, 4);
-			case PPC_REG_VS21: return RegisterInfo(PPC_REG_VS21, 0, 4);
-			case PPC_REG_VS22: return RegisterInfo(PPC_REG_VS22, 0, 4);
-			case PPC_REG_VS23: return RegisterInfo(PPC_REG_VS23, 0, 4);
-			case PPC_REG_VS24: return RegisterInfo(PPC_REG_VS24, 0, 4);
-			case PPC_REG_VS25: return RegisterInfo(PPC_REG_VS25, 0, 4);
-			case PPC_REG_VS26: return RegisterInfo(PPC_REG_VS26, 0, 4);
-			case PPC_REG_VS27: return RegisterInfo(PPC_REG_VS27, 0, 4);
-			case PPC_REG_VS28: return RegisterInfo(PPC_REG_VS28, 0, 4);
-			case PPC_REG_VS29: return RegisterInfo(PPC_REG_VS29, 0, 4);
-			case PPC_REG_VS30: return RegisterInfo(PPC_REG_VS30, 0, 4);
-			case PPC_REG_VS31: return RegisterInfo(PPC_REG_VS31, 0, 4);
-			case PPC_REG_VS32: return RegisterInfo(PPC_REG_VS32, 0, 4);
-			case PPC_REG_VS33: return RegisterInfo(PPC_REG_VS33, 0, 4);
-			case PPC_REG_VS34: return RegisterInfo(PPC_REG_VS34, 0, 4);
-			case PPC_REG_VS35: return RegisterInfo(PPC_REG_VS35, 0, 4);
-			case PPC_REG_VS36: return RegisterInfo(PPC_REG_VS36, 0, 4);
-			case PPC_REG_VS37: return RegisterInfo(PPC_REG_VS37, 0, 4);
-			case PPC_REG_VS38: return RegisterInfo(PPC_REG_VS38, 0, 4);
-			case PPC_REG_VS39: return RegisterInfo(PPC_REG_VS39, 0, 4);
-			case PPC_REG_VS40: return RegisterInfo(PPC_REG_VS40, 0, 4);
-			case PPC_REG_VS41: return RegisterInfo(PPC_REG_VS41, 0, 4);
-			case PPC_REG_VS42: return RegisterInfo(PPC_REG_VS42, 0, 4);
-			case PPC_REG_VS43: return RegisterInfo(PPC_REG_VS43, 0, 4);
-			case PPC_REG_VS44: return RegisterInfo(PPC_REG_VS44, 0, 4);
-			case PPC_REG_VS45: return RegisterInfo(PPC_REG_VS45, 0, 4);
-			case PPC_REG_VS46: return RegisterInfo(PPC_REG_VS46, 0, 4);
-			case PPC_REG_VS47: return RegisterInfo(PPC_REG_VS47, 0, 4);
-			case PPC_REG_VS48: return RegisterInfo(PPC_REG_VS48, 0, 4);
-			case PPC_REG_VS49: return RegisterInfo(PPC_REG_VS49, 0, 4);
-			case PPC_REG_VS50: return RegisterInfo(PPC_REG_VS50, 0, 4);
-			case PPC_REG_VS51: return RegisterInfo(PPC_REG_VS51, 0, 4);
-			case PPC_REG_VS52: return RegisterInfo(PPC_REG_VS52, 0, 4);
-			case PPC_REG_VS53: return RegisterInfo(PPC_REG_VS53, 0, 4);
-			case PPC_REG_VS54: return RegisterInfo(PPC_REG_VS54, 0, 4);
-			case PPC_REG_VS55: return RegisterInfo(PPC_REG_VS55, 0, 4);
-			case PPC_REG_VS56: return RegisterInfo(PPC_REG_VS56, 0, 4);
-			case PPC_REG_VS57: return RegisterInfo(PPC_REG_VS57, 0, 4);
-			case PPC_REG_VS58: return RegisterInfo(PPC_REG_VS58, 0, 4);
-			case PPC_REG_VS59: return RegisterInfo(PPC_REG_VS59, 0, 4);
-			case PPC_REG_VS60: return RegisterInfo(PPC_REG_VS60, 0, 4);
-			case PPC_REG_VS61: return RegisterInfo(PPC_REG_VS61, 0, 4);
-			case PPC_REG_VS62: return RegisterInfo(PPC_REG_VS62, 0, 4);
-			case PPC_REG_VS63: return RegisterInfo(PPC_REG_VS63, 0, 4);
-			case PPC_REG_BN_GQR0: return RegisterInfo(PPC_REG_BN_GQR0, 0, 4);
-			case PPC_REG_BN_GQR1: return RegisterInfo(PPC_REG_BN_GQR1, 0, 4);
-			case PPC_REG_BN_GQR2: return RegisterInfo(PPC_REG_BN_GQR2, 0, 4);
-			case PPC_REG_BN_GQR3: return RegisterInfo(PPC_REG_BN_GQR3, 0, 4);
-			case PPC_REG_BN_GQR4: return RegisterInfo(PPC_REG_BN_GQR4, 0, 4);
-			case PPC_REG_BN_GQR5: return RegisterInfo(PPC_REG_BN_GQR5, 0, 4);
-			case PPC_REG_BN_GQR6: return RegisterInfo(PPC_REG_BN_GQR6, 0, 4);
-			case PPC_REG_BN_GQR7: return RegisterInfo(PPC_REG_BN_GQR7, 0, 4);
+			case PPC_REG_CTR: return RegisterInfo(PPC_REG_CTR, 0, addressSize);
+
+			case PPC_REG_FR0: return RegisterInfo(PPC_REG_FR0, 0, 4);
+			case PPC_REG_FR1: return RegisterInfo(PPC_REG_FR1, 0, 4);
+			case PPC_REG_FR2: return RegisterInfo(PPC_REG_FR2, 0, 4);
+			case PPC_REG_FR3: return RegisterInfo(PPC_REG_FR3, 0, 4);
+			case PPC_REG_FR4: return RegisterInfo(PPC_REG_FR4, 0, 4);
+			case PPC_REG_FR5: return RegisterInfo(PPC_REG_FR5, 0, 4);
+			case PPC_REG_FR6: return RegisterInfo(PPC_REG_FR6, 0, 4);
+			case PPC_REG_FR7: return RegisterInfo(PPC_REG_FR7, 0, 4);
+			case PPC_REG_FR8: return RegisterInfo(PPC_REG_FR8, 0, 4);
+			case PPC_REG_FR9: return RegisterInfo(PPC_REG_FR9, 0, 4);
+			case PPC_REG_FR10: return RegisterInfo(PPC_REG_FR10, 0, 4);
+			case PPC_REG_FR11: return RegisterInfo(PPC_REG_FR11, 0, 4);
+			case PPC_REG_FR12: return RegisterInfo(PPC_REG_FR12, 0, 4);
+			case PPC_REG_FR13: return RegisterInfo(PPC_REG_FR13, 0, 4);
+			case PPC_REG_FR14: return RegisterInfo(PPC_REG_FR14, 0, 4);
+			case PPC_REG_FR15: return RegisterInfo(PPC_REG_FR15, 0, 4);
+			case PPC_REG_FR16: return RegisterInfo(PPC_REG_FR16, 0, 4);
+			case PPC_REG_FR17: return RegisterInfo(PPC_REG_FR17, 0, 4);
+			case PPC_REG_FR18: return RegisterInfo(PPC_REG_FR18, 0, 4);
+			case PPC_REG_FR19: return RegisterInfo(PPC_REG_FR19, 0, 4);
+			case PPC_REG_FR20: return RegisterInfo(PPC_REG_FR20, 0, 4);
+			case PPC_REG_FR21: return RegisterInfo(PPC_REG_FR21, 0, 4);
+			case PPC_REG_FR22: return RegisterInfo(PPC_REG_FR22, 0, 4);
+			case PPC_REG_FR23: return RegisterInfo(PPC_REG_FR23, 0, 4);
+			case PPC_REG_FR24: return RegisterInfo(PPC_REG_FR24, 0, 4);
+			case PPC_REG_FR25: return RegisterInfo(PPC_REG_FR25, 0, 4);
+			case PPC_REG_FR26: return RegisterInfo(PPC_REG_FR26, 0, 4);
+			case PPC_REG_FR27: return RegisterInfo(PPC_REG_FR27, 0, 4);
+			case PPC_REG_FR28: return RegisterInfo(PPC_REG_FR28, 0, 4);
+			case PPC_REG_FR29: return RegisterInfo(PPC_REG_FR29, 0, 4);
+			case PPC_REG_FR30: return RegisterInfo(PPC_REG_FR30, 0, 4);
+			case PPC_REG_FR31: return RegisterInfo(PPC_REG_FR31, 0, 4);
+
+			case PPC_REG_CRF0: return RegisterInfo(PPC_REG_CRF0, 0, 4);
+			case PPC_REG_CRF1: return RegisterInfo(PPC_REG_CRF1, 0, 4);
+			case PPC_REG_CRF2: return RegisterInfo(PPC_REG_CRF2, 0, 4);
+			case PPC_REG_CRF3: return RegisterInfo(PPC_REG_CRF3, 0, 4);
+			case PPC_REG_CRF4: return RegisterInfo(PPC_REG_CRF4, 0, 4);
+			case PPC_REG_CRF5: return RegisterInfo(PPC_REG_CRF5, 0, 4);
+			case PPC_REG_CRF6: return RegisterInfo(PPC_REG_CRF6, 0, 4);
+			case PPC_REG_CRF7: return RegisterInfo(PPC_REG_CRF7, 0, 4);
+
+			// TODO: make these subregisters of VSX registers
+			case PPC_REG_AV_VR0: return RegisterInfo(PPC_REG_AV_VR0, 0, 4);
+			case PPC_REG_AV_VR1: return RegisterInfo(PPC_REG_AV_VR1, 0, 4);
+			case PPC_REG_AV_VR2: return RegisterInfo(PPC_REG_AV_VR2, 0, 4);
+			case PPC_REG_AV_VR3: return RegisterInfo(PPC_REG_AV_VR3, 0, 4);
+			case PPC_REG_AV_VR4: return RegisterInfo(PPC_REG_AV_VR4, 0, 4);
+			case PPC_REG_AV_VR5: return RegisterInfo(PPC_REG_AV_VR5, 0, 4);
+			case PPC_REG_AV_VR6: return RegisterInfo(PPC_REG_AV_VR6, 0, 4);
+			case PPC_REG_AV_VR7: return RegisterInfo(PPC_REG_AV_VR7, 0, 4);
+			case PPC_REG_AV_VR8: return RegisterInfo(PPC_REG_AV_VR8, 0, 4);
+			case PPC_REG_AV_VR9: return RegisterInfo(PPC_REG_AV_VR9, 0, 4);
+			case PPC_REG_AV_VR10: return RegisterInfo(PPC_REG_AV_VR10, 0, 4);
+			case PPC_REG_AV_VR11: return RegisterInfo(PPC_REG_AV_VR11, 0, 4);
+			case PPC_REG_AV_VR12: return RegisterInfo(PPC_REG_AV_VR12, 0, 4);
+			case PPC_REG_AV_VR13: return RegisterInfo(PPC_REG_AV_VR13, 0, 4);
+			case PPC_REG_AV_VR14: return RegisterInfo(PPC_REG_AV_VR14, 0, 4);
+			case PPC_REG_AV_VR15: return RegisterInfo(PPC_REG_AV_VR15, 0, 4);
+			case PPC_REG_AV_VR16: return RegisterInfo(PPC_REG_AV_VR16, 0, 4);
+			case PPC_REG_AV_VR17: return RegisterInfo(PPC_REG_AV_VR17, 0, 4);
+			case PPC_REG_AV_VR18: return RegisterInfo(PPC_REG_AV_VR18, 0, 4);
+			case PPC_REG_AV_VR19: return RegisterInfo(PPC_REG_AV_VR19, 0, 4);
+			case PPC_REG_AV_VR20: return RegisterInfo(PPC_REG_AV_VR20, 0, 4);
+			case PPC_REG_AV_VR21: return RegisterInfo(PPC_REG_AV_VR21, 0, 4);
+			case PPC_REG_AV_VR22: return RegisterInfo(PPC_REG_AV_VR22, 0, 4);
+			case PPC_REG_AV_VR23: return RegisterInfo(PPC_REG_AV_VR23, 0, 4);
+			case PPC_REG_AV_VR24: return RegisterInfo(PPC_REG_AV_VR24, 0, 4);
+			case PPC_REG_AV_VR25: return RegisterInfo(PPC_REG_AV_VR25, 0, 4);
+			case PPC_REG_AV_VR26: return RegisterInfo(PPC_REG_AV_VR26, 0, 4);
+			case PPC_REG_AV_VR27: return RegisterInfo(PPC_REG_AV_VR27, 0, 4);
+			case PPC_REG_AV_VR28: return RegisterInfo(PPC_REG_AV_VR28, 0, 4);
+			case PPC_REG_AV_VR29: return RegisterInfo(PPC_REG_AV_VR29, 0, 4);
+			case PPC_REG_AV_VR30: return RegisterInfo(PPC_REG_AV_VR30, 0, 4);
+			case PPC_REG_AV_VR31: return RegisterInfo(PPC_REG_AV_VR31, 0, 4);
+
+			case PPC_REG_VSX_VR0: return RegisterInfo(PPC_REG_VSX_VR0, 0, 8);
+			case PPC_REG_VSX_VR1: return RegisterInfo(PPC_REG_VSX_VR1, 0, 8);
+			case PPC_REG_VSX_VR2: return RegisterInfo(PPC_REG_VSX_VR2, 0, 8);
+			case PPC_REG_VSX_VR3: return RegisterInfo(PPC_REG_VSX_VR3, 0, 8);
+			case PPC_REG_VSX_VR4: return RegisterInfo(PPC_REG_VSX_VR4, 0, 8);
+			case PPC_REG_VSX_VR5: return RegisterInfo(PPC_REG_VSX_VR5, 0, 8);
+			case PPC_REG_VSX_VR6: return RegisterInfo(PPC_REG_VSX_VR6, 0, 8);
+			case PPC_REG_VSX_VR7: return RegisterInfo(PPC_REG_VSX_VR7, 0, 8);
+			case PPC_REG_VSX_VR8: return RegisterInfo(PPC_REG_VSX_VR8, 0, 8);
+			case PPC_REG_VSX_VR9: return RegisterInfo(PPC_REG_VSX_VR9, 0, 8);
+			case PPC_REG_VSX_VR10: return RegisterInfo(PPC_REG_VSX_VR10, 0, 8);
+			case PPC_REG_VSX_VR11: return RegisterInfo(PPC_REG_VSX_VR11, 0, 8);
+			case PPC_REG_VSX_VR12: return RegisterInfo(PPC_REG_VSX_VR12, 0, 8);
+			case PPC_REG_VSX_VR13: return RegisterInfo(PPC_REG_VSX_VR13, 0, 8);
+			case PPC_REG_VSX_VR14: return RegisterInfo(PPC_REG_VSX_VR14, 0, 8);
+			case PPC_REG_VSX_VR15: return RegisterInfo(PPC_REG_VSX_VR15, 0, 8);
+			case PPC_REG_VSX_VR16: return RegisterInfo(PPC_REG_VSX_VR16, 0, 8);
+			case PPC_REG_VSX_VR17: return RegisterInfo(PPC_REG_VSX_VR17, 0, 8);
+			case PPC_REG_VSX_VR18: return RegisterInfo(PPC_REG_VSX_VR18, 0, 8);
+			case PPC_REG_VSX_VR19: return RegisterInfo(PPC_REG_VSX_VR19, 0, 8);
+			case PPC_REG_VSX_VR20: return RegisterInfo(PPC_REG_VSX_VR20, 0, 8);
+			case PPC_REG_VSX_VR21: return RegisterInfo(PPC_REG_VSX_VR21, 0, 8);
+			case PPC_REG_VSX_VR22: return RegisterInfo(PPC_REG_VSX_VR22, 0, 8);
+			case PPC_REG_VSX_VR23: return RegisterInfo(PPC_REG_VSX_VR23, 0, 8);
+			case PPC_REG_VSX_VR24: return RegisterInfo(PPC_REG_VSX_VR24, 0, 8);
+			case PPC_REG_VSX_VR25: return RegisterInfo(PPC_REG_VSX_VR25, 0, 8);
+			case PPC_REG_VSX_VR26: return RegisterInfo(PPC_REG_VSX_VR26, 0, 8);
+			case PPC_REG_VSX_VR27: return RegisterInfo(PPC_REG_VSX_VR27, 0, 8);
+			case PPC_REG_VSX_VR28: return RegisterInfo(PPC_REG_VSX_VR28, 0, 8);
+			case PPC_REG_VSX_VR29: return RegisterInfo(PPC_REG_VSX_VR29, 0, 8);
+			case PPC_REG_VSX_VR30: return RegisterInfo(PPC_REG_VSX_VR30, 0, 8);
+			case PPC_REG_VSX_VR31: return RegisterInfo(PPC_REG_VSX_VR31, 0, 8);
+			case PPC_REG_VSX_VR32: return RegisterInfo(PPC_REG_VSX_VR32, 0, 8);
+			case PPC_REG_VSX_VR33: return RegisterInfo(PPC_REG_VSX_VR33, 0, 8);
+			case PPC_REG_VSX_VR34: return RegisterInfo(PPC_REG_VSX_VR34, 0, 8);
+			case PPC_REG_VSX_VR35: return RegisterInfo(PPC_REG_VSX_VR35, 0, 8);
+			case PPC_REG_VSX_VR36: return RegisterInfo(PPC_REG_VSX_VR36, 0, 8);
+			case PPC_REG_VSX_VR37: return RegisterInfo(PPC_REG_VSX_VR37, 0, 8);
+			case PPC_REG_VSX_VR38: return RegisterInfo(PPC_REG_VSX_VR38, 0, 8);
+			case PPC_REG_VSX_VR39: return RegisterInfo(PPC_REG_VSX_VR39, 0, 8);
+			case PPC_REG_VSX_VR40: return RegisterInfo(PPC_REG_VSX_VR40, 0, 8);
+			case PPC_REG_VSX_VR41: return RegisterInfo(PPC_REG_VSX_VR41, 0, 8);
+			case PPC_REG_VSX_VR42: return RegisterInfo(PPC_REG_VSX_VR42, 0, 8);
+			case PPC_REG_VSX_VR43: return RegisterInfo(PPC_REG_VSX_VR43, 0, 8);
+			case PPC_REG_VSX_VR44: return RegisterInfo(PPC_REG_VSX_VR44, 0, 8);
+			case PPC_REG_VSX_VR45: return RegisterInfo(PPC_REG_VSX_VR45, 0, 8);
+			case PPC_REG_VSX_VR46: return RegisterInfo(PPC_REG_VSX_VR46, 0, 8);
+			case PPC_REG_VSX_VR47: return RegisterInfo(PPC_REG_VSX_VR47, 0, 8);
+			case PPC_REG_VSX_VR48: return RegisterInfo(PPC_REG_VSX_VR48, 0, 8);
+			case PPC_REG_VSX_VR49: return RegisterInfo(PPC_REG_VSX_VR49, 0, 8);
+			case PPC_REG_VSX_VR50: return RegisterInfo(PPC_REG_VSX_VR50, 0, 8);
+			case PPC_REG_VSX_VR51: return RegisterInfo(PPC_REG_VSX_VR51, 0, 8);
+			case PPC_REG_VSX_VR52: return RegisterInfo(PPC_REG_VSX_VR52, 0, 8);
+			case PPC_REG_VSX_VR53: return RegisterInfo(PPC_REG_VSX_VR53, 0, 8);
+			case PPC_REG_VSX_VR54: return RegisterInfo(PPC_REG_VSX_VR54, 0, 8);
+			case PPC_REG_VSX_VR55: return RegisterInfo(PPC_REG_VSX_VR55, 0, 8);
+			case PPC_REG_VSX_VR56: return RegisterInfo(PPC_REG_VSX_VR56, 0, 8);
+			case PPC_REG_VSX_VR57: return RegisterInfo(PPC_REG_VSX_VR57, 0, 8);
+			case PPC_REG_VSX_VR58: return RegisterInfo(PPC_REG_VSX_VR58, 0, 8);
+			case PPC_REG_VSX_VR59: return RegisterInfo(PPC_REG_VSX_VR59, 0, 8);
+			case PPC_REG_VSX_VR60: return RegisterInfo(PPC_REG_VSX_VR60, 0, 8);
+			case PPC_REG_VSX_VR61: return RegisterInfo(PPC_REG_VSX_VR61, 0, 8);
+			case PPC_REG_VSX_VR62: return RegisterInfo(PPC_REG_VSX_VR62, 0, 8);
+			case PPC_REG_VSX_VR63: return RegisterInfo(PPC_REG_VSX_VR63, 0, 8);
+
+			case PPC_REG_GQR0: return RegisterInfo(PPC_REG_GQR0, 0, 4);
+			case PPC_REG_GQR1: return RegisterInfo(PPC_REG_GQR1, 0, 4);
+			case PPC_REG_GQR2: return RegisterInfo(PPC_REG_GQR2, 0, 4);
+			case PPC_REG_GQR3: return RegisterInfo(PPC_REG_GQR3, 0, 4);
+			case PPC_REG_GQR4: return RegisterInfo(PPC_REG_GQR4, 0, 4);
+			case PPC_REG_GQR5: return RegisterInfo(PPC_REG_GQR5, 0, 4);
+			case PPC_REG_GQR6: return RegisterInfo(PPC_REG_GQR6, 0, 4);
+			case PPC_REG_GQR7: return RegisterInfo(PPC_REG_GQR7, 0, 4);
+
 			default:
 				//LogError("%s(%d == \"%s\") invalid argument", __func__,
-				//  regId, powerpc_reg_to_str(regId));
+				//  regId, PowerPCRegisterName(regId));
 				return RegisterInfo(0,0,0);
 		}
 	}
@@ -1814,7 +1802,7 @@ class PowerpcArchitecture: public Architecture
 	virtual uint32_t GetStackPointerRegister() override
 	{
 		//MYLOG("%s()\n", __func__);
-		return PPC_REG_R1;
+		return PPC_REG_GPR1;
 	}
 
 	virtual uint32_t GetLinkRegister() override
@@ -2257,8 +2245,8 @@ public:
 	virtual vector<uint32_t> GetIntegerArgumentRegisters() override
 	{
 		return vector<uint32_t>{
-			PPC_REG_R3, PPC_REG_R4, PPC_REG_R5, PPC_REG_R6,
-			PPC_REG_R7, PPC_REG_R8, PPC_REG_R9, PPC_REG_R10
+			PPC_REG_GPR3, PPC_REG_GPR4, PPC_REG_GPR5, PPC_REG_GPR6,
+			PPC_REG_GPR7, PPC_REG_GPR8, PPC_REG_GPR9, PPC_REG_GPR10
 			/* remaining arguments onto stack */
 		};
 	}
@@ -2267,10 +2255,10 @@ public:
 	virtual vector<uint32_t> GetFloatArgumentRegisters() override
 	{
 		return vector<uint32_t>{
-			PPC_REG_F1, PPC_REG_F2, PPC_REG_F3, PPC_REG_F4,
-			PPC_REG_F5, PPC_REG_F6, PPC_REG_F7, PPC_REG_F8,
-			PPC_REG_F9, PPC_REG_F10, PPC_REG_F11, PPC_REG_F12,
-			PPC_REG_F13
+			PPC_REG_FR1, PPC_REG_FR2, PPC_REG_FR3, PPC_REG_FR4,
+			PPC_REG_FR5, PPC_REG_FR6, PPC_REG_FR7, PPC_REG_FR8,
+			PPC_REG_FR9, PPC_REG_FR10, PPC_REG_FR11, PPC_REG_FR12,
+			PPC_REG_FR13
 		};
 	}
 
@@ -2278,14 +2266,14 @@ public:
 	virtual vector<uint32_t> GetCallerSavedRegisters() override
 	{
 		return vector<uint32_t>{
-			PPC_REG_R0, PPC_REG_R2, PPC_REG_R3, PPC_REG_R4,
-			PPC_REG_R5, PPC_REG_R6, PPC_REG_R7, PPC_REG_R8,
-			PPC_REG_R9, PPC_REG_R10, PPC_REG_R12,
+			PPC_REG_GPR0, PPC_REG_GPR2, PPC_REG_GPR3, PPC_REG_GPR4,
+			PPC_REG_GPR5, PPC_REG_GPR6, PPC_REG_GPR7, PPC_REG_GPR8,
+			PPC_REG_GPR9, PPC_REG_GPR10, PPC_REG_GPR12,
 
-			PPC_REG_F0, PPC_REG_F1, PPC_REG_F2, PPC_REG_F3,
-			PPC_REG_F4, PPC_REG_F5, PPC_REG_F6, PPC_REG_F7,
-			PPC_REG_F8, PPC_REG_F9, PPC_REG_F10, PPC_REG_F11,
-			PPC_REG_F12, PPC_REG_F13,
+			PPC_REG_FR0, PPC_REG_FR1, PPC_REG_FR2, PPC_REG_FR3,
+			PPC_REG_FR4, PPC_REG_FR5, PPC_REG_FR6, PPC_REG_FR7,
+			PPC_REG_FR8, PPC_REG_FR9, PPC_REG_FR10, PPC_REG_FR11,
+			PPC_REG_FR12, PPC_REG_FR13,
 
 			PPC_REG_LR, PPC_REG_CTR,
 		};
@@ -2295,30 +2283,30 @@ public:
 	virtual vector<uint32_t> GetCalleeSavedRegisters() override
 	{
 		return vector<uint32_t>{
-			PPC_REG_R14, PPC_REG_R15, PPC_REG_R16, PPC_REG_R17,
-			PPC_REG_R18, PPC_REG_R19, PPC_REG_R20, PPC_REG_R21,
-			PPC_REG_R22, PPC_REG_R23, PPC_REG_R24, PPC_REG_R25,
-			PPC_REG_R26, PPC_REG_R27, PPC_REG_R28, PPC_REG_R29,
-			PPC_REG_R30, PPC_REG_R31
+			PPC_REG_GPR14, PPC_REG_GPR15, PPC_REG_GPR16, PPC_REG_GPR17,
+			PPC_REG_GPR18, PPC_REG_GPR19, PPC_REG_GPR20, PPC_REG_GPR21,
+			PPC_REG_GPR22, PPC_REG_GPR23, PPC_REG_GPR24, PPC_REG_GPR25,
+			PPC_REG_GPR26, PPC_REG_GPR27, PPC_REG_GPR28, PPC_REG_GPR29,
+			PPC_REG_GPR30, PPC_REG_GPR31
 		};
 	}
 
 
 	virtual uint32_t GetGlobalPointerRegister() override
 	{
-		return PPC_REG_R13;
+		return PPC_REG_GPR13;
 	}
 
 
 	virtual uint32_t GetIntegerReturnValueRegister() override
 	{
-		return PPC_REG_R3;
+		return PPC_REG_GPR3;
 	}
 
 
 	virtual uint32_t GetFloatReturnValueRegister() override
 	{
-		return PPC_REG_F1;
+		return PPC_REG_FR1;
 	}
 };
 
@@ -2332,33 +2320,33 @@ public:
 	virtual vector<uint32_t> GetIntegerArgumentRegisters() override
 	{
 		return vector<uint32_t>{
-			PPC_REG_R0,
-			PPC_REG_R3, PPC_REG_R4, PPC_REG_R5, PPC_REG_R6,
-			PPC_REG_R7, PPC_REG_R8, PPC_REG_R9, PPC_REG_R10
+			PPC_REG_GPR0,
+			PPC_REG_GPR3, PPC_REG_GPR4, PPC_REG_GPR5, PPC_REG_GPR6,
+			PPC_REG_GPR7, PPC_REG_GPR8, PPC_REG_GPR9, PPC_REG_GPR10
 		};
 	}
 
 	virtual vector<uint32_t> GetCallerSavedRegisters() override
 	{
 		return vector<uint32_t>{
-			PPC_REG_R3
+			PPC_REG_GPR3
 		};
 	}
 
 	virtual vector<uint32_t> GetCalleeSavedRegisters() override
 	{
-		return vector<uint32_t>{
-			PPC_REG_R14, PPC_REG_R15, PPC_REG_R16, PPC_REG_R17,
-			PPC_REG_R18, PPC_REG_R19, PPC_REG_R20, PPC_REG_R21,
-			PPC_REG_R22, PPC_REG_R23, PPC_REG_R24, PPC_REG_R25,
-			PPC_REG_R26, PPC_REG_R27, PPC_REG_R28, PPC_REG_R29,
-			PPC_REG_R30, PPC_REG_R31
+		return vector<uint32_t> {
+			PPC_REG_GPR14, PPC_REG_GPR15, PPC_REG_GPR16, PPC_REG_GPR17,
+			PPC_REG_GPR18, PPC_REG_GPR19, PPC_REG_GPR20, PPC_REG_GPR21,
+			PPC_REG_GPR22, PPC_REG_GPR23, PPC_REG_GPR24, PPC_REG_GPR25,
+			PPC_REG_GPR26, PPC_REG_GPR27, PPC_REG_GPR28, PPC_REG_GPR29,
+			PPC_REG_GPR30, PPC_REG_GPR31
 		};
 	}
 
 	virtual uint32_t GetIntegerReturnValueRegister() override
 	{
-		return PPC_REG_R3;
+		return PPC_REG_GPR3;
 	}
 
 	virtual bool IsEligibleForHeuristics() override
@@ -2554,13 +2542,13 @@ extern "C"
 		Architecture* ppc = new PowerpcArchitecture("ppc", BigEndian);
 		Architecture::Register(ppc);
 
-		Architecture* ppc_qpx = new PowerpcArchitecture("ppc_qpx", BigEndian, 4, CS_MODE_QPX);
+		Architecture* ppc_qpx = new PowerpcArchitecture("ppc_qpx", BigEndian, 4, DECODE_FLAGS_QPX);
 		Architecture::Register(ppc_qpx);
 
-		Architecture* ppc_spe = new PowerpcArchitecture("ppc_spe", BigEndian, 4, CS_MODE_SPE);
+		Architecture* ppc_spe = new PowerpcArchitecture("ppc_spe", BigEndian, 4, DECODE_FLAGS_SPE);
 		Architecture::Register(ppc_spe);
 
-		Architecture* ppc_ps = new PowerpcArchitecture("ppc_ps", BigEndian, 4, CS_MODE_PS);
+		Architecture* ppc_ps = new PowerpcArchitecture("ppc_ps", BigEndian, 4, DECODE_FLAGS_PS);
 		Architecture::Register(ppc_ps);
 
 		Architecture* ppc64 = new PowerpcArchitecture("ppc64", BigEndian, 8);

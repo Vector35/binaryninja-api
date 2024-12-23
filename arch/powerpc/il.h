@@ -1,3 +1,5 @@
+#include "decode/decode.h"
+
 /* these are the flags in cr0
 	(the default condition field in condition register CR)
 
@@ -219,4 +221,4 @@ enum PPCIntrinsic : uint32_t
 };
 
 
-bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction& il, const uint8_t *data, uint64_t addr, decomp_result *res, bool le);
+bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction& il, Instruction* instruction, uint64_t addr);

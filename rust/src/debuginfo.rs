@@ -281,6 +281,7 @@ unsafe impl CoreArrayProviderInner for DebugInfoParser {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _: &Self::Context) {
         BNFreeDebugInfoParserList(raw, count);
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Self { handle: *raw }, context)
     }

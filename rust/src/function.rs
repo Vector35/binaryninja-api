@@ -21,9 +21,8 @@ use crate::{
     callingconvention::CallingConvention,
     component::Component,
     disassembly::{DisassemblySettings, DisassemblyTextLine},
-    flowgraph::FlowGraph,
-    hlil, llil,
-    mlil::{self, FunctionGraphType},
+    flowgraph::FlowGraph, llil,
+    mlil::FunctionGraphType,
     platform::Platform,
     references::CodeReference,
     string::*,
@@ -42,11 +41,13 @@ pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
 pub use binaryninjacore_sys::BNBuiltinType as BuiltinType;
 pub use binaryninjacore_sys::BNHighlightStandardColor as HighlightStandardColor;
 
-use std::{fmt, mem};
 use std::{ffi::c_char, hash::Hash, ops::Range};
+use std::fmt::{Debug, Formatter};
 use std::ptr::NonNull;
 use std::time::Duration;
 use crate::confidence::Conf;
+use crate::hlil::HighLevelILFunction;
+use crate::mlil::MediumLevelILFunction;
 use crate::variable::{IndirectBranchInfo, MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType, StackVariableReference, Variable};
 use crate::workflow::Workflow;
 
@@ -236,7 +237,13 @@ unsafe impl Send for Function {}
 unsafe impl Sync for Function {}
 
 impl Function {
+    pub(crate) unsafe fn from_raw(handle: *mut BNFunction) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle }
+    }
+
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNFunction) -> Ref<Self> {
+        debug_assert!(!handle.is_null());
         Ref::new(Self { handle })
     }
 
@@ -365,14 +372,12 @@ impl Function {
     ) -> Option<Ref<BasicBlock<NativeBlock>>> {
         let arch = arch.unwrap_or_else(|| self.arch());
         unsafe {
-            let block = BNGetFunctionBasicBlockAtAddress(self.handle, arch.handle, addr);
+            let basic_block_ptr = BNGetFunctionBasicBlockAtAddress(self.handle, arch.handle, addr);
             let context = NativeBlock { _priv: () };
-
-            if block.is_null() {
-                return None;
+            match basic_block_ptr.is_null() {
+                false => Some(BasicBlock::ref_from_raw(basic_block_ptr, context)),
+                true => None,
             }
-
-            Some(Ref::new(BasicBlock::from_raw(block, context)))
         }
     }
 
@@ -396,102 +401,101 @@ impl Function {
         }
     }
 
-    pub fn high_level_il(&self, full_ast: bool) -> Result<Ref<hlil::HighLevelILFunction>, ()> {
+    pub fn high_level_il(&self, full_ast: bool) -> Result<Ref<HighLevelILFunction>, ()> {
         unsafe {
-            let hlil = BNGetFunctionHighLevelIL(self.handle);
-
-            if hlil.is_null() {
-                return Err(());
+            let hlil_ptr = BNGetFunctionHighLevelIL(self.handle);
+            match hlil_ptr.is_null() {
+                false => Ok(HighLevelILFunction::ref_from_raw(hlil_ptr, full_ast)),
+                true => Err(()),
             }
-
-            Ok(hlil::HighLevelILFunction::ref_from_raw(hlil, full_ast))
         }
     }
 
-    pub fn high_level_il_if_available(&self) -> Option<Ref<hlil::HighLevelILFunction>> {
-        let hlil = unsafe { BNGetFunctionHighLevelILIfAvailable(self.handle) };
-        (!hlil.is_null()).then(|| unsafe { hlil::HighLevelILFunction::ref_from_raw(hlil, true) })
+    pub fn high_level_il_if_available(&self) -> Option<Ref<HighLevelILFunction>> {
+        let hlil_ptr = unsafe { BNGetFunctionHighLevelILIfAvailable(self.handle) };
+        match hlil_ptr.is_null() {
+            false => Some(unsafe { HighLevelILFunction::ref_from_raw(hlil_ptr, true) }),
+            true => None,
+        }
     }
 
     /// MediumLevelILFunction used to represent Function mapped medium level IL
-    pub fn mapped_medium_level_il(&self) -> Result<Ref<mlil::MediumLevelILFunction>, ()> {
-        let mlil = unsafe { BNGetFunctionMappedMediumLevelIL(self.handle) };
-        if mlil.is_null() {
-            return Err(());
+    pub fn mapped_medium_level_il(&self) -> Result<Ref<MediumLevelILFunction>, ()> {
+        let mlil_ptr = unsafe { BNGetFunctionMappedMediumLevelIL(self.handle) };
+        match mlil_ptr.is_null() {
+            false => Ok(unsafe { MediumLevelILFunction::ref_from_raw(mlil_ptr) }),
+            true => Err(()),
         }
-        Ok(unsafe { mlil::MediumLevelILFunction::ref_from_raw(mlil) })
     }
 
     pub fn mapped_medium_level_il_if_available(
         &self,
-    ) -> Result<Ref<mlil::MediumLevelILFunction>, ()> {
-        let mlil = unsafe { BNGetFunctionMappedMediumLevelILIfAvailable(self.handle) };
-        if mlil.is_null() {
-            return Err(());
+    ) -> Option<Ref<MediumLevelILFunction>> {
+        let mlil_ptr = unsafe { BNGetFunctionMappedMediumLevelILIfAvailable(self.handle) };
+        match mlil_ptr.is_null() {
+            false => Some(unsafe { MediumLevelILFunction::ref_from_raw(mlil_ptr) }),
+            true => None,
         }
-        Ok(unsafe { mlil::MediumLevelILFunction::ref_from_raw(mlil) })
     }
 
-    pub fn medium_level_il(&self) -> Result<Ref<mlil::MediumLevelILFunction>, ()> {
+    pub fn medium_level_il(&self) -> Result<Ref<MediumLevelILFunction>, ()> {
         unsafe {
-            let mlil = BNGetFunctionMediumLevelIL(self.handle);
-
-            if mlil.is_null() {
-                return Err(());
+            let mlil_ptr = BNGetFunctionMediumLevelIL(self.handle);
+            match mlil_ptr.is_null() {
+                false => Ok(MediumLevelILFunction::ref_from_raw(mlil_ptr)),
+                true => Err(()),
             }
-
-            Ok(mlil::MediumLevelILFunction::ref_from_raw(mlil))
         }
     }
 
-    pub fn medium_level_il_if_available(&self) -> Option<Ref<mlil::MediumLevelILFunction>> {
-        let mlil = unsafe { BNGetFunctionMediumLevelILIfAvailable(self.handle) };
-        (!mlil.is_null()).then(|| unsafe { mlil::MediumLevelILFunction::ref_from_raw(mlil) })
+    pub fn medium_level_il_if_available(&self) -> Option<Ref<MediumLevelILFunction>> {
+        let mlil_ptr = unsafe { BNGetFunctionMediumLevelILIfAvailable(self.handle) };
+        match mlil_ptr.is_null() {
+            false => Some(unsafe { MediumLevelILFunction::ref_from_raw(mlil_ptr) }),
+            true => None,
+        }
     }
 
     pub fn low_level_il(&self) -> Result<Ref<llil::RegularFunction<CoreArchitecture>>, ()> {
         unsafe {
-            let llil = BNGetFunctionLowLevelIL(self.handle);
-
-            if llil.is_null() {
-                return Err(());
+            let llil_ptr = BNGetFunctionLowLevelIL(self.handle);
+            match llil_ptr.is_null() {
+                false => Ok(llil::RegularFunction::ref_from_raw(self.arch(), llil_ptr)),
+                true => Err(()),
             }
-
-            Ok(llil::RegularFunction::ref_from_raw(self.arch(), llil))
         }
     }
 
     pub fn low_level_il_if_available(
         &self,
     ) -> Option<Ref<llil::RegularFunction<CoreArchitecture>>> {
-        let llil = unsafe { BNGetFunctionLowLevelILIfAvailable(self.handle) };
-        (!llil.is_null()).then(|| unsafe { llil::RegularFunction::ref_from_raw(self.arch(), llil) })
+        let llil_ptr = unsafe { BNGetFunctionLowLevelILIfAvailable(self.handle) };
+        match llil_ptr.is_null() {
+            false => Some(unsafe { llil::RegularFunction::ref_from_raw(self.arch(), llil_ptr) }),
+            true => None,
+        }
     }
 
     pub fn lifted_il(&self) -> Result<Ref<llil::LiftedFunction<CoreArchitecture>>, ()> {
         unsafe {
-            let llil = BNGetFunctionLiftedIL(self.handle);
-
-            if llil.is_null() {
-                return Err(());
+            let llil_ptr = BNGetFunctionLiftedIL(self.handle);
+            match llil_ptr.is_null() {
+                false => Ok(llil::LiftedFunction::ref_from_raw(self.arch(), llil_ptr)),
+                true => Err(()),
             }
-
-            Ok(llil::LiftedFunction::ref_from_raw(self.arch(), llil))
         }
     }
 
     pub fn lifted_il_if_available(&self) -> Option<Ref<llil::LiftedFunction<CoreArchitecture>>> {
-        let llil = unsafe { BNGetFunctionLiftedILIfAvailable(self.handle) };
-        (!llil.is_null()).then(|| unsafe { llil::LiftedFunction::ref_from_raw(self.arch(), llil) })
+        let llil_ptr = unsafe { BNGetFunctionLiftedILIfAvailable(self.handle) };
+        match llil_ptr.is_null() {
+            false => Some(unsafe { llil::LiftedFunction::ref_from_raw(self.arch(), llil_ptr) }),
+            true => None,
+        }
     }
 
     pub fn return_type(&self) -> Conf<Ref<Type>> {
-        let result = unsafe { BNGetFunctionReturnType(self.handle) };
-
-        Conf::new(
-            unsafe { Type::ref_from_raw(result.type_) },
-            result.confidence,
-        )
+        unsafe { BNGetFunctionReturnType(self.handle) }.into()
     }
 
     pub fn set_auto_return_type<'a, C>(&self, return_type: C)
@@ -499,13 +503,11 @@ impl Function {
         C: Into<Conf<&'a Type>>,
     {
         let return_type: Conf<&Type> = return_type.into();
+        let mut raw_return_type = BNTypeWithConfidence::from(return_type);
         unsafe {
             BNSetAutoFunctionReturnType(
                 self.handle,
-                &mut BNTypeWithConfidence {
-                    type_: return_type.contents.handle,
-                    confidence: return_type.confidence,
-                },
+                &mut raw_return_type,
             )
         }
     }
@@ -515,13 +517,11 @@ impl Function {
         C: Into<Conf<&'a Type>>,
     {
         let return_type: Conf<&Type> = return_type.into();
+        let mut raw_return_type = BNTypeWithConfidence::from(return_type);
         unsafe {
             BNSetUserFunctionReturnType(
                 self.handle,
-                &mut BNTypeWithConfidence {
-                    type_: return_type.contents.handle,
-                    confidence: return_type.confidence,
-                },
+                &mut raw_return_type,
             )
         }
     }
@@ -630,8 +630,10 @@ impl Function {
     ) -> Option<Conf<Ref<Type>>> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let result = unsafe { BNGetCallTypeAdjustment(self.handle, arch.handle, addr) };
-        (!result.type_.is_null())
-            .then(|| unsafe { Conf::new(Type::ref_from_raw(result.type_), result.confidence) })
+        match result.type_.is_null() {
+            false => Some(result.into()),
+            true => None,
+        }
     }
 
     /// Sets or removes the call type override at a call site to the given type.
@@ -839,6 +841,7 @@ impl Function {
         }
     }
 
+    // TODO: Turn this into an actual type?
     /// List of function variables: including name, variable and type
     pub fn variables(&self) -> Array<(&str, Variable, &Type)> {
         let mut count = 0;
@@ -856,17 +859,12 @@ impl Function {
 
     pub fn parameter_variables(&self) -> Conf<Vec<Variable>> {
         unsafe {
-            let mut variables = BNGetFunctionParameterVariables(self.handle);
-            let mut result = Vec::with_capacity(variables.count);
-            let confidence = variables.confidence;
-            let vars = std::slice::from_raw_parts(variables.vars, variables.count);
-
-            for var in vars.iter().take(variables.count) {
-                result.push(Variable::from(*var));
-            }
-
-            BNFreeParameterVariables(&mut variables);
-            Conf::new(result, confidence)
+            let mut raw_variables = BNGetFunctionParameterVariables(self.handle);
+            let raw_var_list = std::slice::from_raw_parts(raw_variables.vars, raw_variables.count);
+            let variables: Vec<Variable> = raw_var_list.iter().map(Into::into).collect();
+            let confidence = raw_variables.confidence;
+            BNFreeParameterVariables(&mut raw_variables);
+            Conf::new(variables, confidence)
         }
     }
 
@@ -935,11 +933,7 @@ impl Function {
             BNApplyImportedTypes(
                 self.handle,
                 sym.handle,
-                if let Some(t) = t {
-                    t.handle
-                } else {
-                    core::ptr::null_mut()
-                },
+                t.map(|t| t.handle).unwrap_or(std::ptr::null_mut()),
             );
         }
     }
@@ -998,10 +992,7 @@ impl Function {
         unsafe {
             BNSetAutoFunctionInlinedDuringAnalysis(
                 self.handle,
-                BNBoolWithConfidence {
-                    value: value.contents,
-                    confidence: value.confidence,
-                },
+                value.into(),
             )
         }
     }
@@ -1014,10 +1005,7 @@ impl Function {
         unsafe {
             BNSetUserFunctionInlinedDuringAnalysis(
                 self.handle,
-                BNBoolWithConfidence {
-                    value: value.contents,
-                    confidence: value.confidence,
-                },
+                value.into(),
             )
         }
     }
@@ -1816,7 +1804,7 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> Option<(Variable, BnString, Conf<Ref<Type>>)> {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let mut found_value: BNVariableNameAndType = unsafe { mem::zeroed() };
+        let mut found_value = BNVariableNameAndType::default();
         let found = unsafe {
             BNGetStackVariableAtFrameOffset(self.handle, arch.handle, addr, offset, &mut found_value)
         };
@@ -2109,7 +2097,7 @@ impl Function {
     where
         I: Into<Conf<&'a CallingConvention<CoreArchitecture>>>,
     {
-        let mut conv_conf: BNCallingConventionWithConfidence = unsafe { mem::zeroed() };
+        let mut conv_conf = BNCallingConventionWithConfidence::default();
         if let Some(value) = value {
             let value = value.into();
             conv_conf.convention = value.contents.handle;
@@ -2123,7 +2111,7 @@ impl Function {
     where
         I: Into<Conf<&'a CallingConvention<CoreArchitecture>>>,
     {
-        let mut conv_conf: BNCallingConventionWithConfidence = unsafe { mem::zeroed() };
+        let mut conv_conf = BNCallingConventionWithConfidence::default();
         if let Some(value) = value {
             let value = value.into();
             conv_conf.convention = value.contents.handle;
@@ -2261,8 +2249,8 @@ impl Function {
     }
 }
 
-impl fmt::Debug for Function {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Debug for Function {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
             "<func '{}' ({}) {:x}>",
@@ -2300,10 +2288,11 @@ impl CoreArrayProvider for Function {
 }
 
 unsafe impl CoreArrayProviderInner for Function {
-    unsafe fn free(raw: *mut *mut BNFunction, count: usize, _context: &()) {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeFunctionList(raw, count);
     }
-    unsafe fn wrap_raw<'a>(raw: &'a *mut BNFunction, context: &'a ()) -> Self::Wrapped<'a> {
+    
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Function { handle: *raw }, context)
     }
 }
@@ -2383,6 +2372,16 @@ impl From<BNPerformanceInfo> for PerformanceInfo {
     }
 }
 
+impl From<&BNPerformanceInfo> for PerformanceInfo {
+    fn from(value: &BNPerformanceInfo) -> Self {
+        Self {
+            // TODO: Name will be freed by this. FIX!
+            name: unsafe { BnString::from_raw(value.name) }.to_string(),
+            seconds: Duration::from_secs_f64(value.seconds),
+        }
+    }
+}
+
 impl CoreArrayProvider for PerformanceInfo {
     type Raw = BNPerformanceInfo;
     type Context = ();
@@ -2395,6 +2394,7 @@ unsafe impl CoreArrayProviderInner for PerformanceInfo {
     }
     
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        // TODO: Swap this to the ref version.
         Self::from(*raw)
     }
 }

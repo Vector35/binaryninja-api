@@ -3,6 +3,7 @@ use crate::{
 };
 use binaryninjacore_sys::*;
 use std::os::raw::c_void;
+use crate::rc::RefCountable;
 
 pub trait FunctionRecognizer {
     fn recognize_low_level_il(
@@ -46,15 +47,12 @@ where
         R: 'static + FunctionRecognizer + Send + Sync,
     {
         let custom_handler = unsafe { &*(ctxt as *mut R) };
-        let bv = unsafe { BinaryView::ref_from_raw(BNNewViewReference(bv)) };
-        let arch = unsafe { BNGetFunctionArchitecture(func) };
-        let func = unsafe { Function::ref_from_raw(func) };
-        if arch.is_null() {
-            return false;
-        }
-        let arch = unsafe { CoreArchitecture::from_raw(arch) };
-        let llil = unsafe { llil::RegularFunction::from_raw(arch, llil) };
-        custom_handler.recognize_low_level_il(bv.as_ref(), func.as_ref(), &llil)
+        let bv = unsafe { BinaryView::inc_ref(&BinaryView::from_raw(bv)) };
+        let func = unsafe { Function::inc_ref(&Function::from_raw(func)) };
+        let llil = unsafe { 
+            llil::RegularFunction::inc_ref(&llil::RegularFunction::from_raw(func.arch(), llil))
+        };
+        custom_handler.recognize_low_level_il(&bv, &func, &llil)
     }
 
     extern "C" fn cb_recognize_medium_level_il<R>(
@@ -67,10 +65,12 @@ where
         R: 'static + FunctionRecognizer + Send + Sync,
     {
         let custom_handler = unsafe { &*(ctxt as *mut R) };
-        let bv = unsafe { BinaryView::ref_from_raw(BNNewViewReference(bv)) };
-        let func = unsafe { Function::ref_from_raw(func) };
-        let mlil = unsafe { mlil::MediumLevelILFunction::ref_from_raw(mlil) };
-        custom_handler.recognize_medium_level_il(bv.as_ref(), func.as_ref(), &mlil)
+        let bv = unsafe { BinaryView::inc_ref(&BinaryView::from_raw(bv)) };
+        let func = unsafe { Function::inc_ref(&Function::from_raw(func)) };
+        let mlil = unsafe {
+            mlil::MediumLevelILFunction::inc_ref(&mlil::MediumLevelILFunction::from_raw(mlil))
+        };
+        custom_handler.recognize_medium_level_il(&bv, &func, &mlil)
     }
 
     let recognizer = FunctionRecognizerHandlerContext { recognizer };

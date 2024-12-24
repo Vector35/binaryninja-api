@@ -187,6 +187,7 @@ unsafe impl CoreArrayProviderInner for Section {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeSectionList(raw, count);
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Section::from_raw(*raw), context)
     }

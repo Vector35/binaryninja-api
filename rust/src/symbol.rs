@@ -326,6 +326,7 @@ unsafe impl CoreArrayProviderInner for Symbol {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeSymbolList(raw, count);
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Symbol::from_raw(*raw), context)
     }

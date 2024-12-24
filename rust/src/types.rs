@@ -39,6 +39,7 @@ use std::{
 };
 use std::num::NonZeroUsize;
 use crate::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
+use crate::string::raw_to_string;
 use crate::variable::{Variable, VariableSourceType};
 
 pub type ReferenceType = BNReferenceType;
@@ -445,7 +446,7 @@ pub struct Type {
 /// bv.define_user_type("int_2", &my_custom_type_2);
 /// ```
 impl Type {
-    unsafe fn from_raw(handle: *mut BNType) -> Self {
+    pub(crate) unsafe fn from_raw(handle: *mut BNType) -> Self {
         debug_assert!(!handle.is_null());
         Self { handle }
     }
@@ -523,12 +524,12 @@ impl Type {
     pub fn parameters(&self) -> Option<Vec<FunctionParameter>> {
         unsafe {
             let mut count = 0;
-            let parameters_raw_ptr = BNGetTypeParameters(self.handle, &mut count);
-            match parameters_raw_ptr.is_null() {
+            let raw_parameters_ptr = BNGetTypeParameters(self.handle, &mut count);
+            match raw_parameters_ptr.is_null() {
                 false => {
-                    let raw_parameters = std::slice::from_raw_parts(parameters_raw_ptr, count);
+                    let raw_parameters = std::slice::from_raw_parts(raw_parameters_ptr, count);
                     let parameters = raw_parameters.iter().map(Into::into).collect();
-                    BNFreeTypeParameterList(parameters_raw_ptr, count);
+                    //BNFreeTypeParameterList(raw_parameters_ptr, count);
                     Some(parameters)
                 }
                 true => None
@@ -1085,7 +1086,31 @@ impl From<BNFunctionParameter> for FunctionParameter {
 
 impl From<&BNFunctionParameter> for FunctionParameter {
     fn from(value: &BNFunctionParameter) -> Self {
-        Self::from(*value)
+        // TODO: I copied this from the original `from_raw` function.
+        // TODO: So this actually needs to be audited later.
+        let name = if value.name.is_null() {
+            if value.location.type_ == VariableSourceType::RegisterVariableSourceType {
+                format!("reg_{}", value.location.storage)
+            } else if value.location.type_ == VariableSourceType::StackVariableSourceType {
+                format!("arg_{}", value.location.storage)
+            } else {
+                String::new()
+            }
+        } else {
+            raw_to_string(value.name as *const _).unwrap()
+        };
+
+        Self {
+            ty: Conf::new(
+                unsafe { Type::from_raw(value.type_).to_owned() },
+                value.typeConfidence,
+            ),
+            name,
+            location: match value.defaultLocation {
+                false => Some(Variable::from(value.location)),
+                true => None,
+            },
+        }
     }
 }
 
@@ -1631,16 +1656,17 @@ impl Structure {
         unsafe { BNGetStructureType(self.handle) }
     }
 
-    // TODO: Omit `Option` and pass empty vec?
+    // TODO: Omit `Option` and pass empty vec? Actually the core will only nullptr on failed allocation, use debug_assert.
     pub fn members(&self) -> Option<Vec<StructureMember>> {
         unsafe {
             let mut count = 0;
             let members_raw_ptr: *mut BNStructureMember =
                 BNGetStructureMembers(self.handle, &mut count);
+            // TODO: Debug assert members_raw_ptr.
             match members_raw_ptr.is_null() {
                 false => {
                     let members_raw = std::slice::from_raw_parts(members_raw_ptr, count);
-                    let members = members_raw.iter().copied().map(Into::into).collect();
+                    let members = members_raw.iter().map(Into::into).collect();
                     BNFreeStructureMemberList(members_raw_ptr, count);
                     Some(members)
                 },
@@ -1681,7 +1707,7 @@ impl Debug for Structure {
 
 unsafe impl RefCountable for Structure {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self::from_raw(BNNewStructureReference(handle.handle)))
+        Self::ref_from_raw(BNNewStructureReference(handle.handle))
     }
 
     unsafe fn dec_ref(handle: &Self) {
@@ -1739,9 +1765,26 @@ impl From<BNStructureMember> for StructureMember {
     }
 }
 
+impl From<&BNStructureMember> for StructureMember {
+    fn from(value: &BNStructureMember) -> Self {
+        Self {
+            ty: Conf::new(
+                unsafe { Type::from_raw(value.type_).to_owned() },
+                value.typeConfidence,
+            ),
+            // TODO: I dislike using this function here.
+            name: raw_to_string(value.name as *mut _).unwrap(),
+            offset: value.offset,
+            access: value.access,
+            scope: value.scope,
+        }
+    }
+}
+
 impl From<StructureMember> for BNStructureMember {
     fn from(value: StructureMember) -> Self {
         let bn_name = BnString::new(value.name);
+        // TODO: Dec ref here?
         Self {
             type_: value.ty.contents.handle,
             name: bn_name.into_raw(),
@@ -1756,7 +1799,7 @@ impl From<StructureMember> for BNStructureMember {
 impl CoreArrayProvider for StructureMember {
     type Raw = BNStructureMember;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, StructureMember>;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl CoreArrayProviderInner for StructureMember {
@@ -1765,7 +1808,7 @@ unsafe impl CoreArrayProviderInner for StructureMember {
     }
     
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(StructureMember::from(*raw), &())
+        Guard::new(Self::from(raw), raw)
     }
 }
 
@@ -2162,6 +2205,19 @@ impl From<BNNameAndType> for NameAndType {
     }
 }
 
+impl From<&BNNameAndType> for NameAndType {
+    fn from(value: &BNNameAndType) -> Self {
+        Self  {
+            // TODO: I dislike using this function here.
+            name: raw_to_string(value.name as *mut _).unwrap(),
+            ty: Conf::new(
+                unsafe { Type::from_raw(value.type_).to_owned() },
+                value.typeConfidence,
+            ),
+        }
+    }
+}
+
 impl From<NameAndType> for BNNameAndType {
     fn from(value: NameAndType) -> Self {
         let bn_name = BnString::new(value.name);
@@ -2185,6 +2241,6 @@ unsafe impl CoreArrayProviderInner for NameAndType {
     }
     
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        NameAndType::from(*raw)
+        raw.into()
     }
 }

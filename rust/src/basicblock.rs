@@ -75,7 +75,9 @@ unsafe impl<'a, C: 'a + BlockContext> CoreArrayProviderInner for Edge<'a, C> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeBasicBlockEdgeList(raw, count);
     }
+    
     unsafe fn wrap_raw<'b>(raw: &'b Self::Raw, context: &'b Self::Context) -> Self::Wrapped<'b> {
+        // TODO: Why not just take a ref to this? Why do we store a guard in Edge?
         let edge_target = Guard::new(
             BasicBlock::from_raw(raw.target, context.orig_block.context.clone()),
             raw,
@@ -122,6 +124,10 @@ unsafe impl<C: BlockContext> Sync for BasicBlock<C> {}
 impl<C: BlockContext> BasicBlock<C> {
     pub(crate) unsafe fn from_raw(handle: *mut BNBasicBlock, context: C) -> Self {
         Self { handle, context }
+    }
+
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNBasicBlock, context: C) -> Ref<Self> {
+        Ref::new(Self::from_raw(handle, context))
     }
 
     // TODO native bb vs il bbs
@@ -304,6 +310,7 @@ unsafe impl<C: BlockContext> CoreArrayProviderInner for BasicBlock<C> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeBasicBlockList(raw, count);
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(BasicBlock::from_raw(*raw, context.clone()), context)
     }

@@ -350,10 +350,10 @@ impl CoreArrayProvider for Metadata {
 }
 
 unsafe impl CoreArrayProviderInner for Metadata {
-    unsafe fn free(raw: *mut *mut BNMetadata, _count: usize, _context: &()) {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeMetadataArray(raw);
     }
-    unsafe fn wrap_raw<'a>(raw: &'a *mut BNMetadata, context: &'a ()) -> Self::Wrapped<'a> {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Metadata::from_raw(*raw), context)
     }
 }

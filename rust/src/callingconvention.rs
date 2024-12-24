@@ -677,6 +677,7 @@ unsafe impl<A: Architecture> CoreArrayProviderInner for CallingConvention<A> {
     unsafe fn free(raw: *mut *mut BNCallingConvention, count: usize, _content: &Self::Context) {
         BNFreeCallingConventionList(raw, count);
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(
             CallingConvention {

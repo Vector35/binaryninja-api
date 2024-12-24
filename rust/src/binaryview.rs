@@ -836,6 +836,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         segment.create(self.as_ref());
     }
     
+    // TODO: Replace with BulkModify guard.
     /// Start adding segments in bulk. Useful for adding large numbers of segments.
     /// 
     /// After calling this any call to [BinaryViewExt::add_segment] will be uncommited until a call to 
@@ -851,6 +852,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    // TODO: Replace with BulkModify guard.
     /// Commit all auto and user segments that have been added since the call to [Self::begin_bulk_add_segments].
     /// 
     /// NOTE: This **must** be paired with a prior call to [Self::begin_bulk_add_segments], otherwise this
@@ -861,6 +863,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    // TODO: Replace with BulkModify guard.
     /// Flushes the auto and user segments that have yet to be committed.
     /// 
     /// This is to be used in conjunction with [Self::begin_bulk_add_segments]
@@ -1722,6 +1725,11 @@ pub struct BinaryView {
 }
 
 impl BinaryView {
+    pub(crate) unsafe fn from_raw(handle: *mut BNBinaryView) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle }
+    }
+    
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNBinaryView) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Ref::new(Self { handle })

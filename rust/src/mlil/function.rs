@@ -15,6 +15,9 @@ use crate::types::Type;
 use crate::variable::{PossibleValueSet, RegisterValue, SSAVariable, UserVariableValue, Variable};
 use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
 
+// TODO: Does this belong here?
+pub use binaryninjacore_sys::BNFunctionGraphType as FunctionGraphType;
+
 pub struct MediumLevelILFunction {
     pub(crate) handle: *mut BNMediumLevelILFunction,
 }
@@ -36,10 +39,14 @@ impl Hash for MediumLevelILFunction {
 }
 
 impl MediumLevelILFunction {
+    pub(crate) unsafe fn from_raw(handle: *mut BNMediumLevelILFunction) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle }
+    }
+    
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNMediumLevelILFunction) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-
-        Self { handle }.to_owned()
+        Ref::new(Self::from_raw(handle))
     }
 
     pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<MediumLevelILInstruction> {
@@ -65,7 +72,7 @@ impl MediumLevelILFunction {
     }
 
     pub fn instruction_from_instruction_idx(&self, instr_idx: usize) -> MediumLevelILInstruction {
-        MediumLevelILInstruction::new(self.to_owned(), unsafe {
+        self.instruction_from_idx(unsafe {
             BNGetMediumLevelILIndexForInstruction(self.handle, instr_idx)
         })
     }
@@ -325,11 +332,10 @@ impl MediumLevelILFunction {
     /// # use binaryninja::types::Variable;
     /// # let mlil_fun: MediumLevelILFunction = todo!();
     /// # let mlil_var: Variable = todo!();
-    /// let instr = mlil_fun.var_refs(&mlil_var).get(0).expr();
+    /// let instr_idx = mlil_fun.var_refs(&mlil_var).get(0).expr_idx;
     /// ```
     pub fn var_refs(&self, var: &Variable) -> Array<ILReferenceSource> {
         let mut count = 0;
-        // TODO: I don't think this needs to be mutable
         let mut raw_var = BNVariable::from(var);
         let refs = unsafe {
             BNGetMediumLevelILVariableReferences(
@@ -339,7 +345,7 @@ impl MediumLevelILFunction {
             )
         };
         assert!(!refs.is_null());
-        unsafe { Array::new(refs, count, self.to_owned()) }
+        unsafe { Array::new(refs, count, ()) }
     }
 
     /// Retrieves variable references from a specified location or range within a medium-level IL function.
@@ -372,7 +378,7 @@ impl MediumLevelILFunction {
             }
         };
         assert!(!refs.is_null());
-        unsafe { Array::new(refs, count, self.to_owned()) }
+        unsafe { Array::new(refs, count, ()) }
     }
 
     // TODO: Rename to `current_location`?
@@ -569,14 +575,12 @@ impl MediumLevelILFunction {
         unsafe { Array::new(uses, count, ()) }
     }
 
-    /// This gets just the MLIL SSA variables - you may be interested in the
-    /// union of [MediumLevelILFunction::aliased_variables] and
-    /// [crate::function::Function::parameter_variables] for all the
-    /// variables used in the function.
-    pub fn ssa_variables(&self) -> Array<Array<SSAVariable>> {
+    /// This gets the MLIL SSA variables for a given [`Variable`].
+    pub fn ssa_variables(&self, variable: &Variable) -> Array<SSAVariable> {
         let mut count = 0;
-        let vars = unsafe { BNGetMediumLevelILVariables(self.handle, &mut count) };
-        unsafe { Array::new(vars, count, self.to_owned()) }
+        let raw_variable = BNVariable::from(variable);
+        let versions = unsafe { BNGetMediumLevelILVariableSSAVersions(self.handle, &raw_variable, &mut count) };
+        unsafe { Array::new(versions, count, *variable) }
     }
 }
 
@@ -640,79 +644,82 @@ impl DoubleEndedIterator for MediumLevelILInstructionList<'_> {
 impl ExactSizeIterator for MediumLevelILInstructionList<'_> {}
 impl core::iter::FusedIterator for MediumLevelILInstructionList<'_> {}
 
-/////////////////////////
-// FunctionGraphType
-
-pub type FunctionGraphType = binaryninjacore_sys::BNFunctionGraphType;
-
-/////////////////////////
-// ILReferenceSource
-
 pub struct ILReferenceSource {
-    mlil: Ref<MediumLevelILFunction>,
-    _func: Ref<Function>,
-    _arch: CoreArchitecture,
-    addr: u64,
-    type_: FunctionGraphType,
-    expr_id: usize,
+    pub function: Ref<Function>,
+    pub arch: CoreArchitecture,
+    pub addr: u64,
+    pub graph_type: FunctionGraphType,
+    pub expr_idx: usize,
 }
 
-impl ILReferenceSource {
-    unsafe fn from_raw(value: BNILReferenceSource, mlil: Ref<MediumLevelILFunction>) -> Self {
+impl From<BNILReferenceSource> for ILReferenceSource {
+    fn from(value: BNILReferenceSource) -> Self {
         Self {
-            mlil,
-            _func: Function::ref_from_raw(value.func),
-            _arch: CoreArchitecture::from_raw(value.arch),
+            function: unsafe { Function::ref_from_raw(value.func) },
+            arch: unsafe { CoreArchitecture::from_raw(value.arch) },
             addr: value.addr,
-            type_: value.type_,
-            expr_id: value.exprId,
+            graph_type: value.type_,
+            expr_idx: value.exprId,
         }
     }
-    pub fn addr(&self) -> u64 {
-        self.addr
-    }
-    pub fn graph_type(&self) -> FunctionGraphType {
-        self.type_
-    }
-    pub fn expr(&self) -> MediumLevelILInstruction {
-        self.mlil.instruction_from_idx(self.expr_id)
+}
+
+impl From<&BNILReferenceSource> for ILReferenceSource {
+    fn from(value: &BNILReferenceSource) -> Self {
+        Self {
+            function: unsafe { Function::from_raw(value.func).to_owned() },
+            arch: unsafe { CoreArchitecture::from_raw(value.arch) },
+            addr: value.addr,
+            graph_type: value.type_,
+            expr_idx: value.exprId,
+        }
     }
 }
 
 impl CoreArrayProvider for ILReferenceSource {
     type Raw = BNILReferenceSource;
-    type Context = Ref<MediumLevelILFunction>;
+    type Context = ();
     type Wrapped<'a> = Self;
 }
+
 unsafe impl CoreArrayProviderInner for ILReferenceSource {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeILReferences(raw, count)
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::from_raw(*raw, context.to_owned())
+        raw.into()
     }
 }
-
-/////////////////////////
-// VariableReferenceSource
 
 pub struct VariableReferenceSource {
-    var: Variable,
-    source: ILReferenceSource,
+    pub variable: Variable,
+    pub source: ILReferenceSource,
 }
 
-impl VariableReferenceSource {
-    pub fn variable(&self) -> &Variable {
-        &self.var
+impl From<BNVariableReferenceSource> for VariableReferenceSource {
+    fn from(value: BNVariableReferenceSource) -> Self {
+        Self {
+            variable: Variable::from(value.var),
+            source: value.source.into(),
+        }
     }
-    pub fn source(&self) -> &ILReferenceSource {
-        &self.source
+}
+
+impl From<&BNVariableReferenceSource> for VariableReferenceSource {
+    fn from(value: &BNVariableReferenceSource) -> Self {
+        Self {
+            variable: Variable::from(value.var),
+            // TODO: We really need to document this better, or have some other facility for this.
+            // NOTE: We take this as a ref to increment the function ref.
+            source: ILReferenceSource::from(&value.source),
+        }
     }
 }
 
 impl CoreArrayProvider for VariableReferenceSource {
     type Raw = BNVariableReferenceSource;
-    type Context = Ref<MediumLevelILFunction>;
+    type Context = ();
     type Wrapped<'a> = Self;
 }
 
@@ -720,10 +727,8 @@ unsafe impl CoreArrayProviderInner for VariableReferenceSource {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeVariableReferenceSourceList(raw, count)
     }
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self {
-            var: Variable::from(raw.var),
-            source: ILReferenceSource::from_raw(raw.source, context.to_owned()),
-        }
+    
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        raw.into()
     }
 }

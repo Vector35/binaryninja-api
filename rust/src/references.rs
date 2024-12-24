@@ -57,6 +57,7 @@ unsafe impl CoreArrayProviderInner for CodeReference {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeCodeReferences(raw, count)
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(CodeReference::new(raw), &())
     }

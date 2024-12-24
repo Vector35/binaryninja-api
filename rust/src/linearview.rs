@@ -383,6 +383,7 @@ pub struct LinearDisassemblyLine {
 
     // These will be cleaned up by BNFreeLinearDisassemblyLines, so we
     // don't drop them in the relevant deconstructors.
+    // TODO: This is insane!
     function: mem::ManuallyDrop<Ref<Function>>,
     contents: mem::ManuallyDrop<DisassemblyTextLine>,
 }
@@ -390,6 +391,7 @@ pub struct LinearDisassemblyLine {
 impl LinearDisassemblyLine {
     pub(crate) unsafe fn from_raw(raw: &BNLinearDisassemblyLine) -> Self {
         let linetype = raw.type_;
+        // TODO: We must remove this behavior.
         let function = mem::ManuallyDrop::new(Function::ref_from_raw(raw.function));
         let contents = mem::ManuallyDrop::new(DisassemblyTextLine(raw.contents));
         Self {
@@ -428,10 +430,12 @@ impl CoreArrayProvider for LinearDisassemblyLine {
 }
 
 unsafe impl CoreArrayProviderInner for LinearDisassemblyLine {
-    unsafe fn free(raw: *mut BNLinearDisassemblyLine, count: usize, _context: &()) {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeLinearDisassemblyLines(raw, count);
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        // TODO: Cant remove this guard until we remove those manual drops... INSANE!
         Guard::new(LinearDisassemblyLine::from_raw(raw), _context)
     }
 }

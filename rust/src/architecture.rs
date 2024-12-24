@@ -67,6 +67,7 @@ pub enum BranchKind {
 
 #[derive(Default, Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BranchInfo {
+    /// If `None` the target architecture is the same as the branch instruction.
     pub arch: Option<CoreArchitecture>,
     pub kind: BranchKind,
 }
@@ -127,15 +128,20 @@ impl From<BranchKind> for BranchInfo {
     }
 }
 
+/// This is the number of branches that can be specified in an [`InstructionInfo`].
+pub const NUM_BRANCH_INFO: usize = 3;
+
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InstructionInfo {
     pub length: usize,
+    // TODO: This field name is really long...
     pub arch_transition_by_target_addr: bool,
     pub delay_slots: u8,
-    pub branches: [Option<BranchInfo>; 3]
+    pub branches: [Option<BranchInfo>; NUM_BRANCH_INFO]
 }
 
 impl InstructionInfo {
+    // TODO: `new_with_delay_slot`?
     pub fn new(length: usize, delay_slots: u8) -> Self {
         Self {
             length,
@@ -160,8 +166,8 @@ impl InstructionInfo {
 impl From<BNInstructionInfo> for InstructionInfo {
     fn from(value: BNInstructionInfo) -> Self {
         // TODO: This is quite ugly, but we destructure the branch info so this will have to do.
-        let mut branch_info = [None; 3];
-        for i in 0..value.branchCount {
+        let mut branch_info = [None; NUM_BRANCH_INFO];
+        for i in 0..value.branchCount.min(NUM_BRANCH_INFO) {
             let branch_target = value.branchTarget[i];
             branch_info[i] = Some(BranchInfo {
                 kind: match value.branchType[i] {
@@ -1205,6 +1211,7 @@ pub struct CoreArchitecture {
 }
 
 impl CoreArchitecture {
+    // TODO: Leave a note on architecture lifetimes. Specifically that they are never freed.
     pub(crate) unsafe fn from_raw(handle: *mut BNArchitecture) -> Self {
         debug_assert!(!handle.is_null());
         CoreArchitecture { handle }

@@ -228,6 +228,7 @@ unsafe impl CoreArrayProviderInner for Relocation {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeRelocationList(raw, count);
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Relocation(*raw), &())
     }

@@ -1,7 +1,7 @@
 use crate::function::{Function, Location};
 use crate::mlil::MediumLevelILFunction;
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref};
-use crate::string::BnString;
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
+use crate::string::{raw_to_string, BnString};
 use crate::types::Type;
 use binaryninjacore_sys::{BNDataVariable, BNDataVariableAndName, BNFreeDataVariables, BNFreeILInstructionList, BNFreeIndirectBranchList, BNFreeMergedVariableList, BNFreeStackVariableReferenceList, BNFreeUserVariableValues, BNFreeVariableList, BNFreeVariableNameAndTypeList, BNFromVariableIdentifier, BNGetMediumLevelILVariableSSAVersions, BNIndirectBranchInfo, BNLookupTableEntry, BNMergedVariable, BNPossibleValueSet, BNRegisterValue, BNRegisterValueType, BNStackVariableReference, BNToVariableIdentifier, BNUserVariableValue, BNValueRange, BNVariable, BNVariableNameAndType, BNVariableSourceType};
 use std::collections::HashSet;
@@ -40,10 +40,23 @@ impl From<BNDataVariable> for DataVariable {
     }
 }
 
+impl From<&BNDataVariable> for DataVariable {
+    fn from(value: &BNDataVariable) -> Self {
+        Self {
+            address: value.address,
+            ty: Conf::new(
+                unsafe { Type::ref_from_raw(value.type_).to_owned() },
+                value.typeConfidence,
+            ),
+            auto_discovered: value.autoDiscovered,
+        }
+    }
+}
+
 impl CoreArrayProvider for DataVariable {
     type Raw = BNDataVariable;
     type Context = ();
-    type Wrapped<'a> = Self;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl CoreArrayProviderInner for DataVariable {
@@ -52,7 +65,7 @@ unsafe impl CoreArrayProviderInner for DataVariable {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::from(*raw)
+        Guard::new(Self::from(raw), raw)
     }
 }
 
@@ -84,6 +97,21 @@ impl From<BNDataVariableAndName> for NamedDataVariableWithType {
                 value.typeConfidence,
             ),
             name: unsafe { BnString::from_raw(value.name) }.to_string(),
+            auto_discovered: value.autoDiscovered,
+        }
+    }
+}
+
+impl From<&BNDataVariableAndName> for NamedDataVariableWithType {
+    fn from(value: &BNDataVariableAndName) -> Self {
+        Self {
+            address: value.address,
+            ty: Conf::new(
+                unsafe { Type::from_raw(value.type_).to_owned() },
+                value.typeConfidence,
+            ),
+            // TODO: I dislike using this function here.
+            name: raw_to_string(value.name as *mut _).unwrap(),
             auto_discovered: value.autoDiscovered,
         }
     }
@@ -135,6 +163,21 @@ impl From<BNVariableNameAndType> for NamedVariableWithType {
     }
 }
 
+impl From<&BNVariableNameAndType> for NamedVariableWithType {
+    fn from(value: &BNVariableNameAndType) -> Self {
+        Self {
+            variable: value.var.into(),
+            ty: Conf::new(
+                unsafe { Type::from_raw(value.type_).to_owned() },
+                value.typeConfidence,
+            ),
+            // TODO: I dislike using this function here.
+            name: raw_to_string(value.name as *mut _).unwrap(),
+            auto_defined: value.autoDefined,
+        }
+    }
+}
+
 impl From<NamedVariableWithType> for BNVariableNameAndType {
     fn from(value: NamedVariableWithType) -> Self {
         let bn_name = BnString::new(value.name);
@@ -151,7 +194,7 @@ impl From<NamedVariableWithType> for BNVariableNameAndType {
 impl CoreArrayProvider for NamedVariableWithType {
     type Raw = BNVariableNameAndType;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, NamedVariableWithType>;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl CoreArrayProviderInner for NamedVariableWithType {
@@ -160,7 +203,7 @@ unsafe impl CoreArrayProviderInner for NamedVariableWithType {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        unsafe { Guard::new(NamedVariableWithType::from(*raw), raw) }
+        unsafe { Guard::new(Self::from(raw), raw) }
     }
 }
 
@@ -234,6 +277,25 @@ impl From<BNStackVariableReference> for StackVariableReference {
     }
 }
 
+impl From<&BNStackVariableReference> for StackVariableReference {
+    fn from(value: &BNStackVariableReference) -> Self {
+        Self {
+            source_operand: value.sourceOperand,
+            variable_type: Conf::new(
+                unsafe { Type::from_raw(value.type_).to_owned() },
+                value.typeConfidence,
+            ),
+            // TODO: I dislike using this function here.
+            name: raw_to_string(value.name as *mut _).unwrap(),
+            // TODO: It might be beneficial to newtype the identifier as VariableIdentifier.
+            variable: Variable::from_identifier(value.varIdentifier),
+            offset: value.referencedOffset,
+            size: value.size,
+        }
+    }
+}
+
+
 impl From<StackVariableReference> for BNStackVariableReference {
     fn from(value: StackVariableReference) -> Self {
         let bn_name = BnString::new(value.name);
@@ -252,7 +314,7 @@ impl From<StackVariableReference> for BNStackVariableReference {
 impl CoreArrayProvider for StackVariableReference {
     type Raw = BNStackVariableReference;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, Self>;
+    type Wrapped<'a> = Self;
 }
 
 unsafe impl CoreArrayProviderInner for StackVariableReference {
@@ -260,8 +322,8 @@ unsafe impl CoreArrayProviderInner for StackVariableReference {
         BNFreeStackVariableReferenceList(raw, count)
     }
 
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self::from(*raw), context)
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        raw.into()
     }
 }
 
@@ -293,29 +355,10 @@ unsafe impl CoreArrayProviderInner for SSAVariable {
     }
 }
 
-impl CoreArrayProvider for Array<SSAVariable> {
-    type Raw = BNVariable;
-    type Context = Ref<MediumLevelILFunction>;
-    type Wrapped<'a> = Self;
-}
-
-unsafe impl CoreArrayProviderInner for Array<SSAVariable> {
-    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeVariableList(raw)
-    }
-
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let mut count = 0;
-        let versions =
-            unsafe { BNGetMediumLevelILVariableSSAVersions(context.handle, raw, &mut count) };
-        Array::new(versions, count, Variable::from(*raw))
-    }
-}
-
 /// Variables exist within functions at Medium Level IL or higher.
 ///
-/// As such, they are to be used within the context of a [`crate::Function`].
-/// See [`crate::Function::get_variable_name`] as an example of how to interact with variables.
+/// As such, they are to be used within the context of a [`Function`].
+/// See [`Function::get_variable_name`] as an example of how to interact with variables.
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct Variable {
     pub ty: VariableSourceType,
@@ -349,6 +392,12 @@ impl From<BNVariable> for Variable {
             index: value.index,
             storage: value.storage,
         }
+    }
+}
+
+impl From<&BNVariable> for Variable {
+    fn from(value: &BNVariable) -> Self {
+        Self::from(*value)
     }
 }
 

@@ -23,8 +23,6 @@ use crate::rc::*;
 
 use std::convert::From;
 use std::ffi::CStr;
-use std::mem;
-use std::ptr;
 
 pub type InstructionTextTokenType = BNInstructionTextTokenType;
 pub type InstructionTextTokenContext = BNInstructionTextTokenContext;
@@ -73,6 +71,7 @@ pub type InstructionTextTokenContext = BNInstructionTextTokenContext;
 // IndirectImportToken = 69,
 // ExternalSymbolToken = 70,
 
+// TODO: How about we new type this pls.
 #[repr(transparent)]
 pub struct InstructionTextToken(pub(crate) BNInstructionTextToken);
 
@@ -100,11 +99,13 @@ pub enum InstructionTextTokenContents {
 
 impl InstructionTextToken {
     pub(crate) unsafe fn from_raw(raw: &BNInstructionTextToken) -> &Self {
-        mem::transmute(raw)
+        // TODO: Insane!!!
+        std::mem::transmute(raw)
     }
 
     pub(crate) fn into_raw(self) -> BNInstructionTextToken {
-        mem::ManuallyDrop::new(self).0
+        // TODO: This is insane.
+        std::mem::ManuallyDrop::new(self).0
     }
 
     pub fn new(text: &str, contents: InstructionTextTokenContents) -> Self {
@@ -162,7 +163,7 @@ impl InstructionTextToken {
             context: InstructionTextTokenContext::NoTokenContext,
             confidence: BN_FULL_CONFIDENCE,
             address,
-            typeNames: ptr::null_mut(),
+            typeNames: std::ptr::null_mut(),
             namesCount: 0,
             exprIndex: BN_INVALID_EXPR,
         })
@@ -224,7 +225,7 @@ impl Default for InstructionTextToken {
     fn default() -> Self {
         InstructionTextToken(BNInstructionTextToken {
             type_: InstructionTextTokenType::TextToken,
-            text: ptr::null_mut(),
+            text: std::ptr::null_mut(),
             value: 0,
             width: 0,
             size: 0,
@@ -232,7 +233,7 @@ impl Default for InstructionTextToken {
             context: InstructionTextTokenContext::NoTokenContext,
             confidence: BN_FULL_CONFIDENCE,
             address: 0,
-            typeNames: ptr::null_mut(),
+            typeNames: std::ptr::null_mut(),
             namesCount: 0,
             exprIndex: BN_INVALID_EXPR,
         })
@@ -251,7 +252,7 @@ impl Clone for InstructionTextToken {
             width: 0,
             text: BnString::new(self.text()).into_raw(),
             confidence: 0xff,
-            typeNames: ptr::null_mut(),
+            typeNames: std::ptr::null_mut(),
             namesCount: 0,
             exprIndex: self.0.exprIndex,
         })
@@ -274,29 +275,35 @@ impl CoreArrayProvider for InstructionTextToken {
     type Context = ();
     type Wrapped<'a> = &'a Self;
 }
+
 unsafe impl CoreArrayProviderInner for InstructionTextToken {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeInstructionText(raw, count)
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        core::mem::transmute(raw)
+        // TODO: This MUST be removed.
+        std::mem::transmute(raw)
     }
 }
 
 impl CoreArrayProvider for Array<InstructionTextToken> {
     type Raw = BNInstructionTextLine;
     type Context = ();
-    type Wrapped<'a> = mem::ManuallyDrop<Self>;
+    type Wrapped<'a> = std::mem::ManuallyDrop<Self>;
 }
 unsafe impl CoreArrayProviderInner for Array<InstructionTextToken> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeInstructionTextLines(raw, count)
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        mem::ManuallyDrop::new(Self::new(raw.tokens, raw.count, ()))
+        // TODO: This is insane.
+        std::mem::ManuallyDrop::new(Self::new(raw.tokens, raw.count, ()))
     }
 }
 
+// TODO: How about we new type this please!
 #[repr(transparent)]
 pub struct DisassemblyTextLine(pub(crate) BNDisassemblyTextLine);
 
@@ -349,7 +356,7 @@ impl From<Vec<InstructionTextToken>> for DisassemblyTextLine {
         // TODO: let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() }; // Can't use for now...still a rust nightly feature
         let tokens_pointer = tokens.as_mut_ptr();
         let tokens_len = tokens.len();
-        mem::forget(tokens);
+        std::mem::forget(tokens);
 
         DisassemblyTextLine(BNDisassemblyTextLine {
             addr: 0,
@@ -366,11 +373,11 @@ impl From<Vec<InstructionTextToken>> for DisassemblyTextLine {
                 b: 0,
                 alpha: 0,
             },
-            tags: ptr::null_mut(),
+            tags: std::ptr::null_mut(),
             tagCount: 0,
             typeInfo: BNDisassemblyTextLineTypeInfo {
                 hasTypeInfo: false,
-                parentType: ptr::null_mut(),
+                parentType: std::ptr::null_mut(),
                 fieldIndex: usize::MAX,
                 offset: 0,
             },
@@ -388,7 +395,8 @@ impl From<&Vec<&str>> for DisassemblyTextLine {
         // let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() };  // Can't use for now...still a rust nighly feature
         let tokens_pointer = tokens.as_mut_ptr();
         let tokens_len = tokens.len();
-        mem::forget(tokens);
+        // TODO: ????
+        std::mem::forget(tokens);
 
         DisassemblyTextLine(BNDisassemblyTextLine {
             addr: 0,
@@ -405,11 +413,11 @@ impl From<&Vec<&str>> for DisassemblyTextLine {
                 b: 0,
                 alpha: 0,
             },
-            tags: ptr::null_mut(),
+            tags: std::ptr::null_mut(),
             tagCount: 0,
             typeInfo: BNDisassemblyTextLineTypeInfo {
                 hasTypeInfo: false,
-                parentType: ptr::null_mut(),
+                parentType: std::ptr::null_mut(),
                 fieldIndex: usize::MAX,
                 offset: 0,
             },
@@ -422,7 +430,7 @@ impl Default for DisassemblyTextLine {
         DisassemblyTextLine(BNDisassemblyTextLine {
             addr: 0,
             instrIndex: BN_INVALID_EXPR,
-            tokens: ptr::null_mut(),
+            tokens: std::ptr::null_mut(),
             count: 0,
             highlight: BNHighlightColor {
                 style: BNHighlightColorStyle::StandardHighlightColor,
@@ -434,11 +442,11 @@ impl Default for DisassemblyTextLine {
                 b: 0,
                 alpha: 0,
             },
-            tags: ptr::null_mut(),
+            tags: std::ptr::null_mut(),
             tagCount: 0,
             typeInfo: BNDisassemblyTextLineTypeInfo {
                 hasTypeInfo: false,
-                parentType: ptr::null_mut(),
+                parentType: std::ptr::null_mut(),
                 fieldIndex: usize::MAX,
                 offset: 0,
             },
@@ -449,7 +457,7 @@ impl Default for DisassemblyTextLine {
 impl Drop for DisassemblyTextLine {
     fn drop(&mut self) {
         if !self.0.tokens.is_null() {
-            let ptr = core::ptr::slice_from_raw_parts_mut(self.0.tokens, self.0.count);
+            let ptr = std::ptr::slice_from_raw_parts_mut(self.0.tokens, self.0.count);
             let _ = unsafe { Box::from_raw(ptr) };
         }
     }
@@ -465,8 +473,10 @@ unsafe impl CoreArrayProviderInner for DisassemblyTextLine {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeDisassemblyTextLines(raw, count)
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        core::mem::transmute(raw)
+        // TODO: This MUST be removed.
+        std::mem::transmute(raw)
     }
 }
 

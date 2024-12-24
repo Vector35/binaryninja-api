@@ -100,6 +100,7 @@ where
         borrower: A::Handle,
         handle: *mut BNLowLevelILFunction,
     ) -> Ref<Self> {
+        debug_assert!(!handle.is_null());
         Ref::new(Self::from_raw(borrower, handle))
     }
 

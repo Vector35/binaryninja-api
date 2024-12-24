@@ -114,7 +114,7 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
                 .find(|var| var.address == symbol.address())
             {
                 // TODO : This should eventually be wrapped by some DataView sorta thingy thing, like how python does it
-                let data_type = data_var.ty.contents;
+                let data_type = &data_var.ty.contents;
                 let data = view.read_vec(data_var.address, data_type.width() as usize);
                 let element_type = data_type.element_type().unwrap().contents;
 

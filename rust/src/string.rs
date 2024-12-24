@@ -24,6 +24,7 @@ use std::ops::Deref;
 use crate::rc::*;
 use crate::types::QualifiedName;
 
+// TODO: Remove or refactor this.
 pub(crate) fn raw_to_string(ptr: *const c_char) -> Option<String> {
     if ptr.is_null() {
         None

@@ -1051,6 +1051,1031 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 	}
 }
 
+static InstructionId DecodeSpe0x04(uint32_t word32, uint32_t decodeFlags)
+{
+	uint32_t a = GetA(word32);
+	uint32_t b = GetB(word32);
+	uint32_t d = GetD(word32);
+	uint32_t subop = word32 & 0x7ff;
+
+	switch (subop)
+	{
+		case 512:
+			return PPC_ID_SPE_EVADDW;
+
+		case 514:
+			return PPC_ID_SPE_EVADDIW;
+
+		case 516:
+			return PPC_ID_SPE_EVSUBFW;
+
+		case 518:
+			return PPC_ID_SPE_EVSUBIFW;
+
+		case 520:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVABS;
+
+		case 521:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVNEG;
+
+		case 522:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVEXTSB;
+
+		case 523:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVEXTSH;
+
+		case 524:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVRNDW;
+
+		case 525:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVCNTLZW;
+
+		case 526:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVCNTLSW;
+
+		case 527:
+			return PPC_ID_SPE_BRINC;
+
+		case 529:
+			return PPC_ID_SPE_EVAND;
+
+		case 530:
+			return PPC_ID_SPE_EVANDC;
+
+		case 534:
+			return PPC_ID_SPE_EVXOR;
+
+		case 535:
+			if (a == b)
+				return PPC_ID_SPE_EVMR;
+			else
+				return PPC_ID_SPE_EVOR;
+
+		case 536:
+			if (a == b)
+				return PPC_ID_SPE_EVNOT;
+			else
+				return PPC_ID_SPE_EVNOR;
+
+		case 537:
+			return PPC_ID_SPE_EVEQV;
+
+		case 539:
+			return PPC_ID_SPE_EVORC;
+
+		case 542:
+			return PPC_ID_SPE_EVNAND;
+
+		case 544:
+			return PPC_ID_SPE_EVSRWU;
+
+		case 545:
+			return PPC_ID_SPE_EVSRWS;
+
+		case 546:
+			return PPC_ID_SPE_EVSRWIU;
+
+		case 547:
+			return PPC_ID_SPE_EVSRWIS;
+
+		case 548:
+			return PPC_ID_SPE_EVSLW;
+
+		case 550:
+			return PPC_ID_SPE_EVSLWI;
+
+		case 552:
+			return PPC_ID_SPE_EVRLW;
+
+		case 553:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVSPLATI;
+
+		case 554:
+			return PPC_ID_SPE_EVRLWI;
+
+		case 555:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVSPLATFI;
+
+		case 556:
+			return PPC_ID_SPE_EVMERGEHI;
+
+		case 557:
+			return PPC_ID_SPE_EVMERGELO;
+
+		case 558:
+			return PPC_ID_SPE_EVMERGEHILO;
+
+		case 559:
+			return PPC_ID_SPE_EVMERGELOHI;
+
+		case 560:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVCMPGTU;
+
+		case 561:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVCMPGTS;
+
+		case 562:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVCMPLTU;
+
+		case 563:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVCMPLTS;
+
+		case 564:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVCMPEQ;
+
+		case 632:
+			return PPC_ID_SPE_EVSEL;
+
+		case 633:
+			return PPC_ID_SPE_EVSEL;
+
+		case 634:
+			return PPC_ID_SPE_EVSEL;
+
+		case 635:
+			return PPC_ID_SPE_EVSEL;
+
+		case 636:
+			return PPC_ID_SPE_EVSEL;
+
+		case 637:
+			return PPC_ID_SPE_EVSEL;
+
+		case 638:
+			return PPC_ID_SPE_EVSEL;
+
+		case 639:
+			return PPC_ID_SPE_EVSEL;
+
+		case 640:
+			return PPC_ID_SPE_EVFSADD;
+
+		case 641:
+			return PPC_ID_SPE_EVFSSUB;
+
+		case 644:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSABS;
+
+		case 645:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSNABS;
+
+		case 646:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSNEG;
+
+		case 648:
+			return PPC_ID_SPE_EVFSMUL;
+
+		case 649:
+			return PPC_ID_SPE_EVFSDIV;
+
+		case 652:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSCMPGT;
+
+		case 653:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSCMPLT;
+
+		case 654:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSCMPEQ;
+
+		case 656:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSCFUI;
+
+		case 657:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSCFSI;
+
+		case 658:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSCFUF;
+
+		case 659:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSCFSF;
+
+		case 660:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSCTUI;
+
+		case 661:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSCTSI;
+
+		case 662:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSCTUF;
+
+		case 663:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSCTSF;
+
+		case 664:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSCTUIZ;
+
+		case 666:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSCTSIZ;
+
+		case 668:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSTSTGT;
+
+		case 669:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSTSTLT;
+
+		case 670:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVFSTSTEQ;
+
+		case 704:
+			return PPC_ID_SPE_EFSADD;
+
+		case 705:
+			return PPC_ID_SPE_EFSSUB;
+
+		case 708:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSABS;
+
+		case 709:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSNABS;
+
+		case 710:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSNEG;
+
+		case 712:
+			return PPC_ID_SPE_EFSMUL;
+
+		case 713:
+			return PPC_ID_SPE_EFSDIV;
+
+		case 716:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSCMPGT;
+
+		case 717:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSCMPLT;
+
+		case 718:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSCMPEQ;
+
+		case 719:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSCFD;
+
+		case 720:
+			return PPC_ID_SPE_EFSCFUI;
+
+		case 721:
+			return PPC_ID_SPE_EFSCFSI;
+
+		case 722:
+			return PPC_ID_SPE_EFSCFUF;
+
+		case 723:
+			return PPC_ID_SPE_EFSCFSF;
+
+		case 724:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSCTUI;
+
+		case 725:
+			return PPC_ID_SPE_EFSCTSI;
+
+		case 726:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSCTUF;
+
+		case 727:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSCTSF;
+
+		case 728:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSCTUIZ;
+
+		case 730:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSCTSIZ;
+
+		case 732:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSTSTGT;
+
+		case 733:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSTSTLT;
+
+		case 734:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFSTSTEQ;
+
+		case 736:
+			return PPC_ID_SPE_EFDADD;
+
+		case 737:
+			return PPC_ID_SPE_EFDSUB;
+
+		case 738:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCFUID;
+
+		case 739:
+			return PPC_ID_SPE_EFDCFSID;
+
+		case 740:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDABS;
+
+		case 741:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDNABS;
+
+		case 742:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDNEG;
+
+		case 744:
+			return PPC_ID_SPE_EFDMUL;
+
+		case 745:
+			return PPC_ID_SPE_EFDDIV;
+
+		case 746:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCTUIDZ;
+
+		case 747:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCTSIDZ;
+
+		case 748:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCMPGT;
+
+		case 749:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCMPLT;
+
+		case 750:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCMPEQ;
+
+		case 751:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCFS;
+
+		case 752:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCFUI;
+
+		case 753:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCFSI;
+
+		case 754:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCFUF;
+
+		case 755:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCFSF;
+
+		case 756:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCTUI;
+
+		case 757:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCTSI;
+
+		case 758:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCTUF;
+
+		case 759:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCTSF;
+
+		case 760:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCTUIZ;
+
+		case 762:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDCTSIZ;
+
+		case 764:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDTSTGT;
+
+		case 765:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDTSTLT;
+
+		case 766:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EFDTSTEQ;
+
+		case 768:
+			return PPC_ID_SPE_EVLDDX;
+
+		case 769:
+			return PPC_ID_SPE_EVLDD;
+
+		case 770:
+			return PPC_ID_SPE_EVLDWX;
+
+		case 771:
+			return PPC_ID_SPE_EVLDW;
+
+		case 772:
+			return PPC_ID_SPE_EVLDHX;
+
+		case 773:
+			return PPC_ID_SPE_EVLDH;
+
+		case 776:
+			return PPC_ID_SPE_EVLHHESPLATX;
+
+		case 777:
+			return PPC_ID_SPE_EVLHHESPLAT;
+
+		case 780:
+			return PPC_ID_SPE_EVLHHOUSPLATX;
+
+		case 781:
+			return PPC_ID_SPE_EVLHHOUSPLAT;
+
+		case 782:
+			return PPC_ID_SPE_EVLHHOSSPLATX;
+
+		case 783:
+			return PPC_ID_SPE_EVLHHOSSPLAT;
+
+		case 784:
+			return PPC_ID_SPE_EVLWHEX;
+
+		case 785:
+			return PPC_ID_SPE_EVLWHE;
+
+		case 788:
+			return PPC_ID_SPE_EVLWHOUX;
+
+		case 789:
+			return PPC_ID_SPE_EVLWHOU;
+
+		case 790:
+			return PPC_ID_SPE_EVLWHOSX;
+
+		case 791:
+			return PPC_ID_SPE_EVLWHOS;
+
+		case 792:
+			return PPC_ID_SPE_EVLWWSPLATX;
+
+		case 793:
+			return PPC_ID_SPE_EVLWWSPLAT;
+
+		case 796:
+			return PPC_ID_SPE_EVLWHSPLATX;
+
+		case 797:
+			return PPC_ID_SPE_EVLWHSPLAT;
+
+		case 800:
+			return PPC_ID_SPE_EVSTDDX;
+
+		case 801:
+			return PPC_ID_SPE_EVSTDD;
+
+		case 802:
+			return PPC_ID_SPE_EVSTDWX;
+
+		case 803:
+			return PPC_ID_SPE_EVSTDW;
+
+		case 804:
+			return PPC_ID_SPE_EVSTDHX;
+
+		case 805:
+			return PPC_ID_SPE_EVSTDH;
+
+		case 816:
+			return PPC_ID_SPE_EVSTWHEX;
+
+		case 817:
+			return PPC_ID_SPE_EVSTWHE;
+
+		case 820:
+			return PPC_ID_SPE_EVSTWHOX;
+
+		case 821:
+			return PPC_ID_SPE_EVSTWHO;
+
+		case 824:
+			return PPC_ID_SPE_EVSTWWEX;
+
+		case 825:
+			return PPC_ID_SPE_EVSTWWE;
+
+		case 828:
+			return PPC_ID_SPE_EVSTWWOX;
+
+		case 829:
+			return PPC_ID_SPE_EVSTWWO;
+
+		case 1027:
+			return PPC_ID_SPE_EVMHESSF;
+
+		case 1031:
+			return PPC_ID_SPE_EVMHOSSF;
+
+		case 1032:
+			return PPC_ID_SPE_EVMHEUMI;
+
+		case 1033:
+			return PPC_ID_SPE_EVMHESMI;
+
+		case 1035:
+			return PPC_ID_SPE_EVMHESMF;
+
+		case 1036:
+			return PPC_ID_SPE_EVMHOUMI;
+
+		case 1037:
+			return PPC_ID_SPE_EVMHOSMI;
+
+		case 1039:
+			return PPC_ID_SPE_EVMHOSMF;
+
+		case 1059:
+			return PPC_ID_SPE_EVMHESSFA;
+
+		case 1063:
+			return PPC_ID_SPE_EVMHOSSFA;
+
+		case 1064:
+			return PPC_ID_SPE_EVMHEUMIA;
+
+		case 1065:
+			return PPC_ID_SPE_EVMHESMIA;
+
+		case 1067:
+			return PPC_ID_SPE_EVMHESMFA;
+
+		case 1068:
+			return PPC_ID_SPE_EVMHOUMIA;
+
+		case 1069:
+			return PPC_ID_SPE_EVMHOSMIA;
+
+		case 1071:
+			return PPC_ID_SPE_EVMHOSMFA;
+
+		case 1095:
+			return PPC_ID_SPE_EVMWHSSF;
+
+		case 1096:
+			return PPC_ID_SPE_EVMWLUMI;
+
+		case 1100:
+			return PPC_ID_SPE_EVMWHUMI;
+
+		case 1101:
+			return PPC_ID_SPE_EVMWHSMI;
+
+		case 1103:
+			return PPC_ID_SPE_EVMWHSMF;
+
+		case 1107:
+			return PPC_ID_SPE_EVMWSSF;
+
+		case 1112:
+			return PPC_ID_SPE_EVMWUMI;
+
+		case 1113:
+			return PPC_ID_SPE_EVMWSMI;
+
+		case 1115:
+			return PPC_ID_SPE_EVMWSMF;
+
+		case 1127:
+			return PPC_ID_SPE_EVMWHSSFA;
+
+		case 1128:
+			return PPC_ID_SPE_EVMWLUMIA;
+
+		case 1132:
+			return PPC_ID_SPE_EVMWHUMIA;
+
+		case 1133:
+			return PPC_ID_SPE_EVMWHSMIA;
+
+		case 1135:
+			return PPC_ID_SPE_EVMWHSMFA;
+
+		case 1139:
+			return PPC_ID_SPE_EVMWSSFA;
+
+		case 1144:
+			return PPC_ID_SPE_EVMWUMIA;
+
+		case 1145:
+			return PPC_ID_SPE_EVMWSMIA;
+
+		case 1147:
+			return PPC_ID_SPE_EVMWSMFA;
+
+		case 1216:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVADDUSIAAW;
+
+		case 1217:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVADDSSIAAW;
+
+		case 1218:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVSUBFUSIAAW;
+
+		case 1219:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVSUBFSSIAAW;
+
+		case 1220:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVMRA;
+
+		case 1222:
+			return PPC_ID_SPE_EVDIVWS;
+
+		case 1223:
+			return PPC_ID_SPE_EVDIVWU;
+
+		case 1224:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVADDUMIAAW;
+
+		case 1225:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVADDSMIAAW;
+
+		case 1226:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVSUBFUMIAAW;
+
+		case 1227:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SPE_EVSUBFSMIAAW;
+
+		case 1280:
+			return PPC_ID_SPE_EVMHEUSIAAW;
+
+		case 1281:
+			return PPC_ID_SPE_EVMHESSIAAW;
+
+		case 1283:
+			return PPC_ID_SPE_EVMHESSFAAW;
+
+		case 1284:
+			return PPC_ID_SPE_EVMHOUSIAAW;
+
+		case 1285:
+			return PPC_ID_SPE_EVMHOSSIAAW;
+
+		case 1287:
+			return PPC_ID_SPE_EVMHOSSFAAW;
+
+		case 1288:
+			return PPC_ID_SPE_EVMHEUMIAAW;
+
+		case 1289:
+			return PPC_ID_SPE_EVMHESMIAAW;
+
+		case 1291:
+			return PPC_ID_SPE_EVMHESMFAAW;
+
+		case 1292:
+			return PPC_ID_SPE_EVMHOUMIAAW;
+
+		case 1293:
+			return PPC_ID_SPE_EVMHOSMIAAW;
+
+		case 1295:
+			return PPC_ID_SPE_EVMHOSMFAAW;
+
+		case 1320:
+			return PPC_ID_SPE_EVMHEGUMIAA;
+
+		case 1321:
+			return PPC_ID_SPE_EVMHEGSMIAA;
+
+		case 1323:
+			return PPC_ID_SPE_EVMHEGSMFAA;
+
+		case 1324:
+			return PPC_ID_SPE_EVMHOGUMIAA;
+
+		case 1325:
+			return PPC_ID_SPE_EVMHOGSMIAA;
+
+		case 1327:
+			return PPC_ID_SPE_EVMHOGSMFAA;
+
+		case 1344:
+			return PPC_ID_SPE_EVMWLUSIAAW;
+
+		case 1345:
+			return PPC_ID_SPE_EVMWLSSIAAW;
+
+		case 1352:
+			return PPC_ID_SPE_EVMWLUMIAAW;
+
+		case 1353:
+			return PPC_ID_SPE_EVMWLSMIAAW;
+
+		case 1363:
+			return PPC_ID_SPE_EVMWSSFAA;
+
+		case 1368:
+			return PPC_ID_SPE_EVMWUMIAA;
+
+		case 1369:
+			return PPC_ID_SPE_EVMWSMIAA;
+
+		case 1371:
+			return PPC_ID_SPE_EVMWSMFAA;
+
+		case 1408:
+			return PPC_ID_SPE_EVMHEUSIANW;
+
+		case 1409:
+			return PPC_ID_SPE_EVMHESSIANW;
+
+		case 1411:
+			return PPC_ID_SPE_EVMHESSFANW;
+
+		case 1412:
+			return PPC_ID_SPE_EVMHOUSIANW;
+
+		case 1413:
+			return PPC_ID_SPE_EVMHOSSIANW;
+
+		case 1415:
+			return PPC_ID_SPE_EVMHOSSFANW;
+
+		case 1416:
+			return PPC_ID_SPE_EVMHEUMIANW;
+
+		case 1417:
+			return PPC_ID_SPE_EVMHESMIANW;
+
+		case 1419:
+			return PPC_ID_SPE_EVMHESMFANW;
+
+		case 1420:
+			return PPC_ID_SPE_EVMHOUMIANW;
+
+		case 1421:
+			return PPC_ID_SPE_EVMHOSMIANW;
+
+		case 1423:
+			return PPC_ID_SPE_EVMHOSMFANW;
+
+		case 1448:
+			return PPC_ID_SPE_EVMHEGUMIAN;
+
+		case 1449:
+			return PPC_ID_SPE_EVMHEGSMIAN;
+
+		case 1451:
+			return PPC_ID_SPE_EVMHEGSMFAN;
+
+		case 1452:
+			return PPC_ID_SPE_EVMHOGUMIAN;
+
+		case 1453:
+			return PPC_ID_SPE_EVMHOGSMIAN;
+
+		case 1455:
+			return PPC_ID_SPE_EVMHOGSMFAN;
+
+		case 1472:
+			return PPC_ID_SPE_EVMWLUSIANW;
+
+		case 1473:
+			return PPC_ID_SPE_EVMWLSSIANW;
+
+		case 1480:
+			return PPC_ID_SPE_EVMWLUMIANW;
+
+		case 1481:
+			return PPC_ID_SPE_EVMWLSMIANW;
+
+		case 1491:
+			return PPC_ID_SPE_EVMWSSFAN;
+
+		case 1496:
+			return PPC_ID_SPE_EVMWUMIAN;
+
+		case 1497:
+			return PPC_ID_SPE_EVMWSMIAN;
+
+		case 1499:
+			return PPC_ID_SPE_EVMWSMFAN;
+
+		default:
+			   return PPC_ID_INVALID;
+	}
+}
+
 static InstructionId Decode0x13(uint32_t word32, uint32_t decodeFlags)
 {
 	uint32_t a = GetA(word32);
@@ -3429,10 +4454,12 @@ static InstructionId Decode(uint32_t word32, uint32_t decodeFlags)
 
 		case 0x04:
 		{
-			if ((decodeFlags & DECODE_FLAGS_ALTIVEC) == 0)
+			if ((decodeFlags & DECODE_FLAGS_ALTIVEC))
+				return DecodeAltivec0x04(word32, decodeFlags);
+			else if ((decodeFlags & DECODE_FLAGS_SPE))
+				return DecodeSpe0x04(word32, decodeFlags);
+			else
 				return PPC_ID_INVALID;
-
-			return DecodeAltivec0x04(word32, decodeFlags);
 		}
 
 		case 0x07:
@@ -5270,6 +6297,335 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			PushVsxC(instruction, word32, VSX_WIDTH_FULL);
 			break;
 
+		// SPE INSTRUCTIONS
+
+		// SPE rD, rA, rB
+		case PPC_ID_SPE_BRINC:
+		case PPC_ID_SPE_EFDADD:
+		case PPC_ID_SPE_EFDDIV:
+		case PPC_ID_SPE_EFDMUL:
+		case PPC_ID_SPE_EFDSUB:
+		case PPC_ID_SPE_EFSADD:
+		case PPC_ID_SPE_EFSDIV:
+		case PPC_ID_SPE_EFSMUL:
+		case PPC_ID_SPE_EFSSUB:
+		case PPC_ID_SPE_EVADDW:
+		case PPC_ID_SPE_EVAND:
+		case PPC_ID_SPE_EVANDC:
+		case PPC_ID_SPE_EVDIVWS:
+		case PPC_ID_SPE_EVDIVWU:
+		case PPC_ID_SPE_EVEQV:
+		case PPC_ID_SPE_EVFSADD:
+		case PPC_ID_SPE_EVFSDIV:
+		case PPC_ID_SPE_EVFSMUL:
+		case PPC_ID_SPE_EVFSSUB:
+		case PPC_ID_SPE_EVLDDX:
+		case PPC_ID_SPE_EVLDHX:
+		case PPC_ID_SPE_EVLDWX:
+		case PPC_ID_SPE_EVLHHESPLATX:
+		case PPC_ID_SPE_EVLHHOSSPLATX:
+		case PPC_ID_SPE_EVLHHOUSPLATX:
+		case PPC_ID_SPE_EVLWHEX:
+		case PPC_ID_SPE_EVLWHOSX:
+		case PPC_ID_SPE_EVLWHOUX:
+		case PPC_ID_SPE_EVLWHSPLATX:
+		case PPC_ID_SPE_EVLWWSPLATX:
+		case PPC_ID_SPE_EVMERGEHI:
+		case PPC_ID_SPE_EVMERGEHILO:
+		case PPC_ID_SPE_EVMERGELO:
+		case PPC_ID_SPE_EVMERGELOHI:
+		case PPC_ID_SPE_EVMHEGSMFAA:
+		case PPC_ID_SPE_EVMHEGSMFAN:
+		case PPC_ID_SPE_EVMHEGSMIAA:
+		case PPC_ID_SPE_EVMHEGSMIAN:
+		case PPC_ID_SPE_EVMHEGUMIAA:
+		case PPC_ID_SPE_EVMHEGUMIAN:
+		case PPC_ID_SPE_EVMHESMF:
+		case PPC_ID_SPE_EVMHESMFA:
+		case PPC_ID_SPE_EVMHESMFAAW:
+		case PPC_ID_SPE_EVMHESMFANW:
+		case PPC_ID_SPE_EVMHESMI:
+		case PPC_ID_SPE_EVMHESMIA:
+		case PPC_ID_SPE_EVMHESMIAAW:
+		case PPC_ID_SPE_EVMHESMIANW:
+		case PPC_ID_SPE_EVMHESSF:
+		case PPC_ID_SPE_EVMHESSFA:
+		case PPC_ID_SPE_EVMHESSFAAW:
+		case PPC_ID_SPE_EVMHESSFANW:
+		case PPC_ID_SPE_EVMHESSIAAW:
+		case PPC_ID_SPE_EVMHESSIANW:
+		case PPC_ID_SPE_EVMHEUMI:
+		case PPC_ID_SPE_EVMHEUMIA:
+		case PPC_ID_SPE_EVMHEUMIAAW:
+		case PPC_ID_SPE_EVMHEUMIANW:
+		case PPC_ID_SPE_EVMHEUSIAAW:
+		case PPC_ID_SPE_EVMHEUSIANW:
+		case PPC_ID_SPE_EVMHOGSMFAA:
+		case PPC_ID_SPE_EVMHOGSMFAN:
+		case PPC_ID_SPE_EVMHOGSMIAA:
+		case PPC_ID_SPE_EVMHOGSMIAN:
+		case PPC_ID_SPE_EVMHOGUMIAA:
+		case PPC_ID_SPE_EVMHOGUMIAN:
+		case PPC_ID_SPE_EVMHOSMF:
+		case PPC_ID_SPE_EVMHOSMFA:
+		case PPC_ID_SPE_EVMHOSMFAAW:
+		case PPC_ID_SPE_EVMHOSMFANW:
+		case PPC_ID_SPE_EVMHOSMI:
+		case PPC_ID_SPE_EVMHOSMIA:
+		case PPC_ID_SPE_EVMHOSMIAAW:
+		case PPC_ID_SPE_EVMHOSMIANW:
+		case PPC_ID_SPE_EVMHOSSF:
+		case PPC_ID_SPE_EVMHOSSFA:
+		case PPC_ID_SPE_EVMHOSSFAAW:
+		case PPC_ID_SPE_EVMHOSSFANW:
+		case PPC_ID_SPE_EVMHOSSIAAW:
+		case PPC_ID_SPE_EVMHOSSIANW:
+		case PPC_ID_SPE_EVMHOUMI:
+		case PPC_ID_SPE_EVMHOUMIA:
+		case PPC_ID_SPE_EVMHOUMIAAW:
+		case PPC_ID_SPE_EVMHOUMIANW:
+		case PPC_ID_SPE_EVMHOUSIAAW:
+		case PPC_ID_SPE_EVMHOUSIANW:
+		case PPC_ID_SPE_EVMWHSMF:
+		case PPC_ID_SPE_EVMWHSMFA:
+		case PPC_ID_SPE_EVMWHSMI:
+		case PPC_ID_SPE_EVMWHSMIA:
+		case PPC_ID_SPE_EVMWHSSF:
+		case PPC_ID_SPE_EVMWHSSFA:
+		case PPC_ID_SPE_EVMWLSMIAAW:
+		case PPC_ID_SPE_EVMWLSMIANW:
+		case PPC_ID_SPE_EVMWLSSIAAW:
+		case PPC_ID_SPE_EVMWLSSIANW:
+		case PPC_ID_SPE_EVMWHUMI:
+		case PPC_ID_SPE_EVMWHUMIA:
+		case PPC_ID_SPE_EVMWHUSIAAW:
+		case PPC_ID_SPE_EVMWHUSIANW:
+		case PPC_ID_SPE_EVMWLUMI:
+		case PPC_ID_SPE_EVMWLUMIA:
+		case PPC_ID_SPE_EVMWLUMIAAW:
+		case PPC_ID_SPE_EVMWLUMIANW:
+		case PPC_ID_SPE_EVMWLUSIAAW:
+		case PPC_ID_SPE_EVMWLUSIANW:
+		case PPC_ID_SPE_EVMWSMF:
+		case PPC_ID_SPE_EVMWSMFA:
+		case PPC_ID_SPE_EVMWSMFAA:
+		case PPC_ID_SPE_EVMWSMFAN:
+		case PPC_ID_SPE_EVMWSMI:
+		case PPC_ID_SPE_EVMWSMIA:
+		case PPC_ID_SPE_EVMWSMIAA:
+		case PPC_ID_SPE_EVMWSMIAN:
+		case PPC_ID_SPE_EVMWSSF:
+		case PPC_ID_SPE_EVMWSSFA:
+		case PPC_ID_SPE_EVMWSSFAA:
+		case PPC_ID_SPE_EVMWSSFAN:
+		case PPC_ID_SPE_EVMWUMI:
+		case PPC_ID_SPE_EVMWUMIA:
+		case PPC_ID_SPE_EVMWUMIAA:
+		case PPC_ID_SPE_EVMWUMIAN:
+		case PPC_ID_SPE_EVNAND:
+		case PPC_ID_SPE_EVNOR:
+		case PPC_ID_SPE_EVOR:
+		case PPC_ID_SPE_EVORC:
+		case PPC_ID_SPE_EVRLW:
+		case PPC_ID_SPE_EVSLW:
+		case PPC_ID_SPE_EVSRWS:
+		case PPC_ID_SPE_EVSRWU:
+		case PPC_ID_SPE_EVSUBFW:
+		case PPC_ID_SPE_EVXOR:
+			PushRD(instruction, word32);
+			PushRA(instruction, word32);
+			PushRB(instruction, word32);
+			break;
+
+		// rD, rA, ///
+		case PPC_ID_SPE_EFDABS:
+		case PPC_ID_SPE_EFDNABS:
+		case PPC_ID_SPE_EFDNEG:
+		case PPC_ID_SPE_EFSABS:
+		case PPC_ID_SPE_EFSNABS:
+		case PPC_ID_SPE_EFSNEG:
+		case PPC_ID_SPE_EVABS:
+		case PPC_ID_SPE_EVADDSMIAAW:
+		case PPC_ID_SPE_EVADDSSIAAW:
+		case PPC_ID_SPE_EVADDUMIAAW:
+		case PPC_ID_SPE_EVADDUSIAAW:
+		case PPC_ID_SPE_EVCNTLSW:
+		case PPC_ID_SPE_EVCNTLZW:
+		case PPC_ID_SPE_EVEXTSB:
+		case PPC_ID_SPE_EVEXTSH:
+		case PPC_ID_SPE_EVFSABS:
+		case PPC_ID_SPE_EVFSNABS:
+		case PPC_ID_SPE_EVFSNEG:
+		case PPC_ID_SPE_EVMRA:
+		case PPC_ID_SPE_EVNEG:
+		case PPC_ID_SPE_EVSUBFSMIAAW:
+		case PPC_ID_SPE_EVSUBFSSIAAW:
+		case PPC_ID_SPE_EVSUBFUMIAAW:
+		case PPC_ID_SPE_EVSUBFUSIAAW:
+			PushRD(instruction, word32);
+			PushRA(instruction, word32);
+			break;
+
+		// rD, ///, rB
+		case PPC_ID_SPE_EFDCFS:
+		case PPC_ID_SPE_EFDCFSF:
+		case PPC_ID_SPE_EFDCFSI:
+		case PPC_ID_SPE_EFDCFSID:
+		case PPC_ID_SPE_EFDCFUF:
+		case PPC_ID_SPE_EFDCFUI:
+		case PPC_ID_SPE_EFDCFUID:
+		case PPC_ID_SPE_EFDCTSF:
+		case PPC_ID_SPE_EFDCTSI:
+		case PPC_ID_SPE_EFDCTSIDZ:
+		case PPC_ID_SPE_EFDCTSIZ:
+		case PPC_ID_SPE_EFDCTUF:
+		case PPC_ID_SPE_EFDCTUI:
+		case PPC_ID_SPE_EFDCTUIDZ:
+		case PPC_ID_SPE_EFDCTUIZ:
+		case PPC_ID_SPE_EFSCFD:
+		case PPC_ID_SPE_EFSCFSF:
+		case PPC_ID_SPE_EFSCFSI:
+		case PPC_ID_SPE_EFSCFUF:
+		case PPC_ID_SPE_EFSCFUI:
+		case PPC_ID_SPE_EFSCTSF:
+		case PPC_ID_SPE_EFSCTSI:
+		case PPC_ID_SPE_EFSCTSIZ:
+		case PPC_ID_SPE_EFSCTUF:
+		case PPC_ID_SPE_EFSCTUI:
+		case PPC_ID_SPE_EFSCTUIZ:
+		case PPC_ID_SPE_EVFSCFSF:
+		case PPC_ID_SPE_EVFSCFSI:
+		case PPC_ID_SPE_EVFSCFUF:
+		case PPC_ID_SPE_EVFSCFUI:
+		case PPC_ID_SPE_EVFSCTSF:
+		case PPC_ID_SPE_EVFSCTSI:
+		case PPC_ID_SPE_EVFSCTSIZ:
+		case PPC_ID_SPE_EVFSCTUF:
+		case PPC_ID_SPE_EVFSCTUI:
+		case PPC_ID_SPE_EVFSCTUIZ:
+			PushRD(instruction, word32);
+			PushRA(instruction, word32);
+			break;
+
+		// crfD//, rA, rB
+		case PPC_ID_SPE_EFDCMPEQ:
+		case PPC_ID_SPE_EFDCMPGT:
+		case PPC_ID_SPE_EFDCMPLT:
+		case PPC_ID_SPE_EFDTSTEQ:
+		case PPC_ID_SPE_EFDTSTGT:
+		case PPC_ID_SPE_EFDTSTLT:
+		case PPC_ID_SPE_EFSCMPEQ:
+		case PPC_ID_SPE_EFSCMPGT:
+		case PPC_ID_SPE_EFSCMPLT:
+		case PPC_ID_SPE_EFSTSTEQ:
+		case PPC_ID_SPE_EFSTSTGT:
+		case PPC_ID_SPE_EFSTSTLT:
+		case PPC_ID_SPE_EVCMPEQ:
+		case PPC_ID_SPE_EVCMPGTS:
+		case PPC_ID_SPE_EVCMPGTU:
+		case PPC_ID_SPE_EVCMPLTS:
+		case PPC_ID_SPE_EVCMPLTU:
+		case PPC_ID_SPE_EVFSCMPEQ:
+		case PPC_ID_SPE_EVFSCMPGT:
+		case PPC_ID_SPE_EVFSCMPLT:
+		case PPC_ID_SPE_EVFSTSTEQ:
+		case PPC_ID_SPE_EVFSTSTGT:
+		case PPC_ID_SPE_EVFSTSTLT:
+			PushCRFDImplyCR0(instruction, word32);
+			PushRA(instruction, word32);
+			PushRB(instruction, word32);
+			break;
+
+		// rD, UIMM, rB
+		case PPC_ID_SPE_EVADDIW:
+		case PPC_ID_SPE_EVSUBIFW:
+			PushRD(instruction, word32);
+			PushUIMMValue(instruction, (word32 >> 16) & 0x1f);
+			PushRB(instruction, word32);
+			break;
+
+		// rD, SIMM, ///
+		case PPC_ID_SPE_EVSPLATFI:
+		case PPC_ID_SPE_EVSPLATI:
+		{
+			int32_t simm = sign_extend((word32 >> 16) & 0x1f, 5);
+			PushRD(instruction, word32);
+			PushSIMMValue(instruction, simm);
+			break;
+		}
+
+		// rD, rA, UIMM (SPE)
+		case PPC_ID_SPE_EVRLWI:
+		case PPC_ID_SPE_EVSLWI:
+		case PPC_ID_SPE_EVSRWIS:
+		case PPC_ID_SPE_EVSRWIU:
+			PushRD(instruction, word32);
+			PushRA(instruction, word32);
+			PushUIMMValue(instruction, (word32 >> 11) & 0x1f);
+			break;
+
+		// rD, rA, UIMM (SPE loads)
+		case PPC_ID_SPE_EVLDD:
+		case PPC_ID_SPE_EVLDH:
+		case PPC_ID_SPE_EVLDW:
+		case PPC_ID_SPE_EVLHHESPLAT:
+		case PPC_ID_SPE_EVLHHOSSPLAT:
+		case PPC_ID_SPE_EVLHHOUSPLAT:
+		case PPC_ID_SPE_EVLWHE:
+		case PPC_ID_SPE_EVLWHOS:
+		case PPC_ID_SPE_EVLWHOU:
+		case PPC_ID_SPE_EVLWHSPLAT:
+		case PPC_ID_SPE_EVLWWSPLAT:
+			PushRD(instruction, word32);
+			PushRAor0(instruction, word32);
+			PushUIMMValue(instruction, (word32 >> 11) & 0x1f);
+			break;
+
+		// rS, rA, UIMM (SPE)
+		case PPC_ID_SPE_EVSTDD:
+		case PPC_ID_SPE_EVSTDH:
+		case PPC_ID_SPE_EVSTDW:
+		case PPC_ID_SPE_EVSTWHE:
+		case PPC_ID_SPE_EVSTWHO:
+		case PPC_ID_SPE_EVSTWWE:
+		case PPC_ID_SPE_EVSTWWO:
+			PushRS(instruction, word32);
+			PushRAor0(instruction, word32);
+			PushUIMMValue(instruction, (word32 >> 11) & 0x1f);
+			break;
+
+		// rS, rA, rB (SPE store-indexed)
+		case PPC_ID_SPE_EVSTDDX:
+		case PPC_ID_SPE_EVSTDHX:
+		case PPC_ID_SPE_EVSTDWX:
+		case PPC_ID_SPE_EVSTWHEX:
+		case PPC_ID_SPE_EVSTWHOX:
+		case PPC_ID_SPE_EVSTWWEX:
+		case PPC_ID_SPE_EVSTWWOX:
+			PushRS(instruction, word32);
+			PushRA(instruction, word32);
+			PushUIMMValue(instruction, (word32 >> 11) & 0x1f);
+			break;
+
+		// rD, rA
+		case PPC_ID_SPE_EVMR:
+		case PPC_ID_SPE_EVNOT:
+		case PPC_ID_SPE_EVRNDW:
+			PushRD(instruction, word32);
+			PushRA(instruction, word32);
+			break;
+
+		// rD, rA, rB, crfS
+		case PPC_ID_SPE_EVSEL:
+		{
+			PushRD(instruction, word32);
+			PushRA(instruction, word32);
+			PushRB(instruction, word32);
+			uint32_t crfs = word32 & 0x7;
+			PushRegister(instruction, PPC_OP_REG_CRFS, Crf(crfs));
+			break;
+		}
+
 		default:
 			break;
 	}
@@ -6700,6 +8056,260 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_PSQ_STU: return "psq_stu";
 		case PPC_ID_PSQ_STUX: return "psq_stux";
 		case PPC_ID_PSQ_STX: return "psq_stx";
+
+		case PPC_ID_SPE_BRINC: return "brinc";
+		case PPC_ID_SPE_EFDABS: return "efdabs";
+		case PPC_ID_SPE_EFDADD: return "efdadd";
+		case PPC_ID_SPE_EFDCFS: return "efdcfs";
+		case PPC_ID_SPE_EFDCFSF: return "efdcfsf";
+		case PPC_ID_SPE_EFDCFSI: return "efdcfsi";
+		case PPC_ID_SPE_EFDCFSID: return "efdcfsid";
+		case PPC_ID_SPE_EFDCFUF: return "efdcfuf";
+		case PPC_ID_SPE_EFDCFUI: return "efdcfui";
+		case PPC_ID_SPE_EFDCFUID: return "efdcfuid";
+		case PPC_ID_SPE_EFDCMPEQ: return "efdcmpeq";
+		case PPC_ID_SPE_EFDCMPGT: return "efdcmpgt";
+		case PPC_ID_SPE_EFDCMPLT: return "efdcmplt";
+		case PPC_ID_SPE_EFDCTSF: return "efdctsf";
+		case PPC_ID_SPE_EFDCTSI: return "efdctsi";
+		case PPC_ID_SPE_EFDCTSIDZ: return "efdctsidz";
+		case PPC_ID_SPE_EFDCTSIZ: return "efdctsiz";
+		case PPC_ID_SPE_EFDCTUF: return "efdctuf";
+		case PPC_ID_SPE_EFDCTUI: return "efdctui";
+		case PPC_ID_SPE_EFDCTUIDZ: return "efdctuidz";
+		case PPC_ID_SPE_EFDCTUIZ: return "efdctuiz";
+		case PPC_ID_SPE_EFDDIV: return "efddiv";
+		case PPC_ID_SPE_EFDMUL: return "efdmul";
+		case PPC_ID_SPE_EFDNABS: return "efdnabs";
+		case PPC_ID_SPE_EFDNEG: return "efdneg";
+		case PPC_ID_SPE_EFDSUB: return "efdsub";
+		case PPC_ID_SPE_EFDTSTEQ: return "efdtsteq";
+		case PPC_ID_SPE_EFDTSTGT: return "efdtstgt";
+		case PPC_ID_SPE_EFDTSTLT: return "efdtstlt";
+		case PPC_ID_SPE_EFSABS: return "efsabs";
+		case PPC_ID_SPE_EFSADD: return "efsadd";
+		case PPC_ID_SPE_EFSCFD: return "efscfd";
+		case PPC_ID_SPE_EFSCFSF: return "efscfsf";
+		case PPC_ID_SPE_EFSCFSI: return "efscfsi";
+		case PPC_ID_SPE_EFSCFUF: return "efscfuf";
+		case PPC_ID_SPE_EFSCFUI: return "efscfui";
+		case PPC_ID_SPE_EFSCMPEQ: return "efscmpeq";
+		case PPC_ID_SPE_EFSCMPGT: return "efscmpgt";
+		case PPC_ID_SPE_EFSCMPLT: return "efscmplt";
+		case PPC_ID_SPE_EFSCTSF: return "efsctsf";
+		case PPC_ID_SPE_EFSCTSI: return "efsctsi";
+		case PPC_ID_SPE_EFSCTSIZ: return "efsctsiz";
+		case PPC_ID_SPE_EFSCTUF: return "efsctuf";
+		case PPC_ID_SPE_EFSCTUI: return "efsctui";
+		case PPC_ID_SPE_EFSCTUIZ: return "efsctuiz";
+		case PPC_ID_SPE_EFSDIV: return "efsdiv";
+		case PPC_ID_SPE_EFSMUL: return "efsmul";
+		case PPC_ID_SPE_EFSNABS: return "efsnabs";
+		case PPC_ID_SPE_EFSNEG: return "efsneg";
+		case PPC_ID_SPE_EFSSUB: return "efssub";
+		case PPC_ID_SPE_EFSTSTEQ: return "efststeq";
+		case PPC_ID_SPE_EFSTSTGT: return "efststgt";
+		case PPC_ID_SPE_EFSTSTLT: return "efststlt";
+		case PPC_ID_SPE_EVABS: return "evabs";
+		case PPC_ID_SPE_EVADDIW: return "evaddiw";
+		case PPC_ID_SPE_EVADDSMIAAW: return "evaddsmiaaw";
+		case PPC_ID_SPE_EVADDSSIAAW: return "evaddssiaaw";
+		case PPC_ID_SPE_EVADDUMIAAW: return "evaddumiaaw";
+		case PPC_ID_SPE_EVADDUSIAAW: return "evaddusiaaw";
+		case PPC_ID_SPE_EVADDW: return "evaddw";
+		case PPC_ID_SPE_EVAND: return "evand";
+		case PPC_ID_SPE_EVANDC: return "evandc";
+		case PPC_ID_SPE_EVCMPEQ: return "evcmpeq";
+		case PPC_ID_SPE_EVCMPGTS: return "evcmpgts";
+		case PPC_ID_SPE_EVCMPGTU: return "evcmpgtu";
+		case PPC_ID_SPE_EVCMPLTS: return "evcmplts";
+		case PPC_ID_SPE_EVCMPLTU: return "evcmpltu";
+		case PPC_ID_SPE_EVCNTLSW: return "evcntlsw";
+		case PPC_ID_SPE_EVCNTLZW: return "evcntlzw";
+		case PPC_ID_SPE_EVDIVWS: return "evdivws";
+		case PPC_ID_SPE_EVDIVWU: return "evdivwu";
+		case PPC_ID_SPE_EVEQV: return "eveqv";
+		case PPC_ID_SPE_EVEXTSB: return "evextsb";
+		case PPC_ID_SPE_EVEXTSH: return "evextsh";
+		case PPC_ID_SPE_EVFSABS: return "evfsabs";
+		case PPC_ID_SPE_EVFSADD: return "evfsadd";
+		case PPC_ID_SPE_EVFSCFSF: return "evfscfsf";
+		case PPC_ID_SPE_EVFSCFSI: return "evfscfsi";
+		case PPC_ID_SPE_EVFSCFUF: return "evfscfuf";
+		case PPC_ID_SPE_EVFSCFUI: return "evfscfui";
+		case PPC_ID_SPE_EVSCFUI: return "evscfui";
+		case PPC_ID_SPE_EVFSCMPEQ: return "evfscmpeq";
+		case PPC_ID_SPE_EVFSCMPGT: return "evfscmpgt";
+		case PPC_ID_SPE_EVFSCMPLT: return "evfscmplt";
+		case PPC_ID_SPE_EVFSCTSF: return "evfsctsf";
+		case PPC_ID_SPE_EVFSCTSI: return "evfsctsi";
+		case PPC_ID_SPE_EVFSCTSIZ: return "evfsctsiz";
+		case PPC_ID_SPE_EVFSCTUF: return "evfsctuf";
+		case PPC_ID_SPE_EVFSCTUI: return "evfsctui";
+		case PPC_ID_SPE_EVFSCTUIZ: return "evfsctuiz";
+		case PPC_ID_SPE_EVFSDIV: return "evfsdiv";
+		case PPC_ID_SPE_EVFSMUL: return "evfsmul";
+		case PPC_ID_SPE_EVFSNABS: return "evfsnabs";
+		case PPC_ID_SPE_EVFSNEG: return "evfsneg";
+		case PPC_ID_SPE_EVFSSUB: return "evfssub";
+		case PPC_ID_SPE_EVFSTSTEQ: return "evfststeq";
+		case PPC_ID_SPE_EVFSTSTGT: return "evfststgt";
+		case PPC_ID_SPE_EVFSTSTLT: return "evfststlt";
+		case PPC_ID_SPE_EVLDD: return "evldd";
+		case PPC_ID_SPE_EVLDDX: return "evlddx";
+		case PPC_ID_SPE_EVLDH: return "evldh";
+		case PPC_ID_SPE_EVLDHX: return "evldhx";
+		case PPC_ID_SPE_EVLDW: return "evldw";
+		case PPC_ID_SPE_EVLDWX: return "evldwx";
+		case PPC_ID_SPE_EVLHHESPLAT: return "evlhhesplat";
+		case PPC_ID_SPE_EVLHHESPLATX: return "evlhhesplatx";
+		case PPC_ID_SPE_EVLHHOSSPLAT: return "evlhhossplat";
+		case PPC_ID_SPE_EVLHHOSSPLATX: return "evlhhossplatx";
+		case PPC_ID_SPE_EVLHHOUSPLAT: return "evlhhousplat";
+		case PPC_ID_SPE_EVLHHOUSPLATX: return "evlhhousplatx";
+		case PPC_ID_SPE_EVLWHE: return "evlwhe";
+		case PPC_ID_SPE_EVLWHEX: return "evlwhex";
+		case PPC_ID_SPE_EVLWHOS: return "evlwhos";
+		case PPC_ID_SPE_EVLWHOSX: return "evlwhosx";
+		case PPC_ID_SPE_EVLWHOU: return "evlwhou";
+		case PPC_ID_SPE_EVLWHOUX: return "evlwhoux";
+		case PPC_ID_SPE_EVLWHSPLAT: return "evlwhsplat";
+		case PPC_ID_SPE_EVLWHSPLATX: return "evlwhsplatx";
+		case PPC_ID_SPE_EVLWWSPLAT: return "evlwwsplat";
+		case PPC_ID_SPE_EVLWWSPLATX: return "evlwwsplatx";
+		case PPC_ID_SPE_EVMERGEHI: return "evmergehi";
+		case PPC_ID_SPE_EVMERGEHILO: return "evmergehilo";
+		case PPC_ID_SPE_EVMERGELO: return "evmergelo";
+		case PPC_ID_SPE_EVMERGELOHI: return "evmergelohi";
+		case PPC_ID_SPE_EVMHEGSMFAA: return "evmhegsmfaa";
+		case PPC_ID_SPE_EVMHEGSMFAN: return "evmhegsmfan";
+		case PPC_ID_SPE_EVMHEGSMIAA: return "evmhegsmiaa";
+		case PPC_ID_SPE_EVMHEGSMIAN: return "evmhegsmian";
+		case PPC_ID_SPE_EVMHEGUMIAA: return "evmhegumiaa";
+		case PPC_ID_SPE_EVMHEGUMIAN: return "evmhegumian";
+		case PPC_ID_SPE_EVMHESMF: return "evmhesmf";
+		case PPC_ID_SPE_EVMHESMFA: return "evmhesmfa";
+		case PPC_ID_SPE_EVMHESMFAAW: return "evmhesmfaaw";
+		case PPC_ID_SPE_EVMHESMFANW: return "evmhesmfanw";
+		case PPC_ID_SPE_EVMHESMI: return "evmhesmi";
+		case PPC_ID_SPE_EVMHESMIA: return "evmhesmia";
+		case PPC_ID_SPE_EVMHESMIAAW: return "evmhesmiaaw";
+		case PPC_ID_SPE_EVMHESMIANW: return "evmhesmianw";
+		case PPC_ID_SPE_EVMHESSF: return "evmhessf";
+		case PPC_ID_SPE_EVMHESSFA: return "evmhessfa";
+		case PPC_ID_SPE_EVMHESSFAAW: return "evmhessfaaw";
+		case PPC_ID_SPE_EVMHESSFANW: return "evmhessfanw";
+		case PPC_ID_SPE_EVMHESSIAAW: return "evmhessiaaw";
+		case PPC_ID_SPE_EVMHESSIANW: return "evmhessianw";
+		case PPC_ID_SPE_EVMHEUMI: return "evmheumi";
+		case PPC_ID_SPE_EVMHEUMIA: return "evmheumia";
+		case PPC_ID_SPE_EVMHEUMIAAW: return "evmheumiaaw";
+		case PPC_ID_SPE_EVMHEUMIANW: return "evmheumianw";
+		case PPC_ID_SPE_EVMHEUSIAAW: return "evmheusiaaw";
+		case PPC_ID_SPE_EVMHEUSIANW: return "evmheusianw";
+		case PPC_ID_SPE_EVMHOGSMFAA: return "evmhogsmfaa";
+		case PPC_ID_SPE_EVMHOGSMFAN: return "evmhogsmfan";
+		case PPC_ID_SPE_EVMHOGSMIAA: return "evmhogsmiaa";
+		case PPC_ID_SPE_EVMHOGSMIAN: return "evmhogsmian";
+		case PPC_ID_SPE_EVMHOGUMIAA: return "evmhogumiaa";
+		case PPC_ID_SPE_EVMHOGUMIAN: return "evmhogumian";
+		case PPC_ID_SPE_EVMHOSMF: return "evmhosmf";
+		case PPC_ID_SPE_EVMHOSMFA: return "evmhosmfa";
+		case PPC_ID_SPE_EVMHOSMFAAW: return "evmhosmfaaw";
+		case PPC_ID_SPE_EVMHOSMFANW: return "evmhosmfanw";
+		case PPC_ID_SPE_EVMHOSMI: return "evmhosmi";
+		case PPC_ID_SPE_EVMHOSMIA: return "evmhosmia";
+		case PPC_ID_SPE_EVMHOSMIAAW: return "evmhosmiaaw";
+		case PPC_ID_SPE_EVMHOSMIANW: return "evmhosmianw";
+		case PPC_ID_SPE_EVMHOSSF: return "evmhossf";
+		case PPC_ID_SPE_EVMHOSSFA: return "evmhossfa";
+		case PPC_ID_SPE_EVMHOSSFAAW: return "evmhossfaaw";
+		case PPC_ID_SPE_EVMHOSSFANW: return "evmhossfanw";
+		case PPC_ID_SPE_EVMHOSSIAAW: return "evmhossiaaw";
+		case PPC_ID_SPE_EVMHOSSIANW: return "evmhossianw";
+		case PPC_ID_SPE_EVMHOUMI: return "evmhoumi";
+		case PPC_ID_SPE_EVMHOUMIA: return "evmhoumia";
+		case PPC_ID_SPE_EVMHOUMIAAW: return "evmhoumiaaw";
+		case PPC_ID_SPE_EVMHOUMIANW: return "evmhoumianw";
+		case PPC_ID_SPE_EVMHOUSIAAW: return "evmhousiaaw";
+		case PPC_ID_SPE_EVMHOUSIANW: return "evmhousianw";
+		case PPC_ID_SPE_EVMR: return "evmr";
+		case PPC_ID_SPE_EVMRA: return "evmra";
+		case PPC_ID_SPE_EVMWHSMF: return "evmwhsmf";
+		case PPC_ID_SPE_EVMWHSMFA: return "evmwhsmfa";
+		case PPC_ID_SPE_EVMWHSMI: return "evmwhsmi";
+		case PPC_ID_SPE_EVMWHSMIA: return "evmwhsmia";
+		case PPC_ID_SPE_EVMWHSSF: return "evmwhssf";
+		case PPC_ID_SPE_EVMWHSSFA: return "evmwhssfa";
+		case PPC_ID_SPE_EVMWHUMI: return "evmwhumi";
+		case PPC_ID_SPE_EVMWHUMIA: return "evmwhumia";
+		case PPC_ID_SPE_EVMWHUSIAAW: return "evmwhusiaaw";
+		case PPC_ID_SPE_EVMWHUSIANW: return "evmwhusianw";
+		case PPC_ID_SPE_EVMWLSMIAAW: return "evmwlsmiaaw";
+		case PPC_ID_SPE_EVMWLSMIANW: return "evmwlsmianw";
+		case PPC_ID_SPE_EVMWLSSIANW: return "evmwlssianw";
+		case PPC_ID_SPE_EVMWLSSIAAW: return "evmwlssiaaw";
+		case PPC_ID_SPE_EVMWLUMI: return "evmwlumi";
+		case PPC_ID_SPE_EVMWLUMIA: return "evmwlumia";
+		case PPC_ID_SPE_EVMWLUMIAAW: return "evmwlumiaaw";
+		case PPC_ID_SPE_EVMWLUMIANW: return "evmwlumianw";
+		case PPC_ID_SPE_EVMWLUSIAAW: return "evmwlusiaaw";
+		case PPC_ID_SPE_EVMWLUSIANW: return "evmwlusianw";
+		case PPC_ID_SPE_EVMWSMF: return "evmwsmf";
+		case PPC_ID_SPE_EVMWSMFA: return "evmwsmfa";
+		case PPC_ID_SPE_EVMWSMFAA: return "evmwsmfaa";
+		case PPC_ID_SPE_EVMWSMFAN: return "evmwsmfan";
+		case PPC_ID_SPE_EVMWSMI: return "evmwsmi";
+		case PPC_ID_SPE_EVMWSMIA: return "evmwsmia";
+		case PPC_ID_SPE_EVMWSMIAA: return "evmwsmiaa";
+		case PPC_ID_SPE_EVMWSMIAN: return "evmwsmian";
+		case PPC_ID_SPE_EVMWSSF: return "evmwssf";
+		case PPC_ID_SPE_EVMWSSFA: return "evmwssfa";
+		case PPC_ID_SPE_EVMWSSFAA: return "evmwssfaa";
+		case PPC_ID_SPE_EVMWSSFAN: return "evmwssfan";
+		case PPC_ID_SPE_EVMWUMI: return "evmwumi";
+		case PPC_ID_SPE_EVMWUMIA: return "evmwumia";
+		case PPC_ID_SPE_EVMWUMIAA: return "evmwumiaa";
+		case PPC_ID_SPE_EVMWUMIAN: return "evmwumian";
+		case PPC_ID_SPE_EVNAND: return "evnand";
+		case PPC_ID_SPE_EVNEG: return "evneg";
+		case PPC_ID_SPE_EVNOR: return "evnor";
+		case PPC_ID_SPE_EVNOT: return "evnot";
+		case PPC_ID_SPE_EVOR: return "evor";
+		case PPC_ID_SPE_EVORC: return "evorc";
+		case PPC_ID_SPE_EVRLW: return "evrlw";
+		case PPC_ID_SPE_EVRLWI: return "evrlwi";
+		case PPC_ID_SPE_EVRNDW: return "evrndw";
+		case PPC_ID_SPE_EVSEL: return "evsel";
+		case PPC_ID_SPE_EVSLW: return "evslw";
+		case PPC_ID_SPE_EVSLWI: return "evslwi";
+		case PPC_ID_SPE_EVSPLATFI: return "evsplatfi";
+		case PPC_ID_SPE_EVSPLATI: return "evsplati";
+		case PPC_ID_SPE_EVSRWIS: return "evsrwis";
+		case PPC_ID_SPE_EVSRWIU: return "evsrwiu";
+		case PPC_ID_SPE_EVSRWS: return "evsrws";
+		case PPC_ID_SPE_EVSRWU: return "evsrwu";
+		case PPC_ID_SPE_EVSTDD: return "evstdd";
+		case PPC_ID_SPE_EVSTDDX: return "evstddx";
+		case PPC_ID_SPE_EVSTDH: return "evstdh";
+		case PPC_ID_SPE_EVSTDHX: return "evstdhx";
+		case PPC_ID_SPE_EVSTDW: return "evstdw";
+		case PPC_ID_SPE_EVSTDWX: return "evstdwx";
+		case PPC_ID_SPE_EVSTWHE: return "evstwhe";
+		case PPC_ID_SPE_EVSTWHEX: return "evstwhex";
+		case PPC_ID_SPE_EVSTWHO: return "evstwho";
+		case PPC_ID_SPE_EVSTWHOX: return "evstwhox";
+		case PPC_ID_SPE_EVSTWWE: return "evstwwe";
+		case PPC_ID_SPE_EVSTWWEX: return "evstwwex";
+		case PPC_ID_SPE_EVSTWWO: return "evstwwo";
+		case PPC_ID_SPE_EVSTWWOX: return "evstwwox";
+		case PPC_ID_SPE_EVSUBFSMIAAW: return "evsubfsmiaaw";
+		case PPC_ID_SPE_EVSUBFSSIAAW: return "evsubfssiaaw";
+		case PPC_ID_SPE_EVSUBFUMIAAW: return "evsubfumiaaw";
+		case PPC_ID_SPE_EVSUBFUSIAAW: return "evsubfusiaaw";
+		case PPC_ID_SPE_EVSUBFW: return "evsubfw";
+		case PPC_ID_SPE_EVSUBIFW: return "evsubifw";
+		case PPC_ID_SPE_EVXOR: return "evxor";
 
 		default: return NULL;
 	}

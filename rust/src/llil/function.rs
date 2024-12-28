@@ -19,9 +19,11 @@ use binaryninjacore_sys::BNNewLowLevelILFunctionReference;
 
 use std::borrow::Borrow;
 use std::marker::PhantomData;
+use std::hash::{Hash, Hasher};
 
 use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
+use crate::function::Function;
 use crate::rc::*;
 
 use super::*;
@@ -53,7 +55,7 @@ pub trait FunctionForm: 'static {}
 impl FunctionForm for SSA {}
 impl<V: NonSSAVariant> FunctionForm for NonSSA<V> {}
 
-pub struct Function<A: Architecture, M: FunctionMutability, F: FunctionForm> {
+pub struct LowLevelILFunction<A: Architecture, M: FunctionMutability, F: FunctionForm> {
     pub(crate) borrower: A::Handle,
     pub(crate) handle: *mut BNLowLevelILFunction,
     _arch: PhantomData<*mut A>,
@@ -61,24 +63,7 @@ pub struct Function<A: Architecture, M: FunctionMutability, F: FunctionForm> {
     _form: PhantomData<F>,
 }
 
-unsafe impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Send for Function<A, M, F> {}
-unsafe impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Sync for Function<A, M, F> {}
-
-impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Eq for Function<A, M, F> {}
-impl<A: Architecture, M: FunctionMutability, F: FunctionForm> PartialEq for Function<A, M, F> {
-    fn eq(&self, rhs: &Self) -> bool {
-        self.get_function().eq(&rhs.get_function())
-    }
-}
-
-use std::hash::{Hash, Hasher};
-impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Hash for Function<A, M, F> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.get_function().hash(state)
-    }
-}
-
-impl<'func, A, M, F> Function<A, M, F>
+impl<'func, A, M, F> LowLevelILFunction<A, M, F>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
@@ -150,10 +135,10 @@ where
         }
     }
 
-    pub fn get_function(&self) -> Ref<crate::function::Function> {
+    pub fn get_function(&self) -> Ref<Function> {
         unsafe {
             let func = BNGetLowLevelILOwnerFunction(self.handle);
-            crate::function::Function::ref_from_raw(func)
+            Function::ref_from_raw(func)
         }
     }
 }
@@ -161,7 +146,7 @@ where
 // LLIL basic blocks are not available until the function object
 // is finalized, so ensure we can't try requesting basic blocks
 // during lifting
-impl<'func, A, F> Function<A, Finalized, F>
+impl<'func, A, F> LowLevelILFunction<A, Finalized, F>
 where
     A: 'func + Architecture,
     F: FunctionForm,
@@ -173,44 +158,37 @@ where
             let mut count = 0;
             let blocks = BNGetLowLevelILBasicBlockList(self.handle, &mut count);
             let context = LowLevelBlock { function: self };
-
             Array::new(blocks, count, context)
         }
     }
 }
 
 // Allow instantiating Lifted IL functions for querying Lifted IL from Architectures
-impl Function<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
+impl LowLevelILFunction<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
+    // TODO: Document what happens when you pass None for `source_func`.
+    // TODO: Doing so would construct a LowLevelILFunction with no basic blocks
+    // TODO: Document why you would want to do that.
     pub fn new(
         arch: CoreArchitecture,
-        source_func: Option<crate::function::Function>,
-    ) -> Result<Ref<Self>, ()> {
+        source_func: Option<Function>,
+    ) -> Ref<Self> {
         use binaryninjacore_sys::BNCreateLowLevelILFunction;
-        use std::ptr::null_mut;
 
         let handle = unsafe {
             match source_func {
                 Some(func) => BNCreateLowLevelILFunction(arch.handle, func.handle),
-                None => BNCreateLowLevelILFunction(arch.handle, null_mut()),
+                None => BNCreateLowLevelILFunction(arch.handle, std::ptr::null_mut()),
             }
         };
-        if handle.is_null() {
-            return Err(());
-        }
+        
+        // BNCreateLowLevelILFunction should always return a valid object.
+        assert!(!handle.is_null());
 
-        Ok(unsafe {
-            Ref::new(Self {
-                borrower: arch,
-                handle,
-                _arch: PhantomData,
-                _mutability: PhantomData,
-                _form: PhantomData,
-            })
-        })
+        unsafe { Self::ref_from_raw(arch, handle) }
     }
 }
 
-impl<'func, A, M, F> ToOwned for Function<A, M, F>
+impl<'func, A, M, F> ToOwned for LowLevelILFunction<A, M, F>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
@@ -223,7 +201,7 @@ where
     }
 }
 
-unsafe impl<'func, A, M, F> RefCountable for Function<A, M, F>
+unsafe impl<'func, A, M, F> RefCountable for LowLevelILFunction<A, M, F>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
@@ -244,13 +222,31 @@ where
     }
 }
 
-impl<'func, A, M, F> fmt::Debug for Function<A, M, F>
+impl<'func, A, M, F> fmt::Debug for LowLevelILFunction<A, M, F>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // TODO: Make this better
         write!(f, "<llil func handle {:p}>", self.handle)
+    }
+}
+
+unsafe impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Send for LowLevelILFunction<A, M, F> {}
+unsafe impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Sync for LowLevelILFunction<A, M, F> {}
+
+impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Eq for LowLevelILFunction<A, M, F> {}
+
+impl<A: Architecture, M: FunctionMutability, F: FunctionForm> PartialEq for LowLevelILFunction<A, M, F> {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.get_function().eq(&rhs.get_function())
+    }
+}
+
+impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Hash for LowLevelILFunction<A, M, F> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.get_function().hash(state)
     }
 }

@@ -473,7 +473,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                     );
                 }
             }
-            builder.set_base_structures(base_structs);
+            builder.set_base_structures(&base_structs);
             BNType::structure(&builder.finalize())
         }
         TypeClass::Enumeration(c) => {

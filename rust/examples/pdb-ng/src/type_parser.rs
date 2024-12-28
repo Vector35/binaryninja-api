@@ -1037,7 +1037,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     .ok_or_else(|| anyhow!("Expected class in ns stack"))?
             );
         }
-        structure.set_base_structures(bases);
+        structure.set_base_structures(&bases);
 
         if self
             .settings
@@ -1107,7 +1107,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 min_width = min_width.max(base.width);
             }
 
-            vt.set_base_structures(vt_bases);
+            vt.set_base_structures(&vt_bases);
             vt.set_propagates_data_var_refs(true);
 
             for (offset, (name, method)) in virt_methods {

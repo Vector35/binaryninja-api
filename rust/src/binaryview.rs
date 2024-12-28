@@ -14,7 +14,11 @@
 
 //! A view on binary data and queryable interface of a binary file.
 //!
-//! One key job of BinaryView is file format parsing which allows Binary Ninja to read, write, insert, remove portions of the file given a virtual address. For the purposes of this documentation we define a virtual address as the memory address that the various pieces of the physical file will be loaded at.
+//! One key job of BinaryView is file format parsing which allows Binary Ninja to read, write, 
+//! insert, remove portions of the file given a virtual address. 
+//! 
+//! For the purposes of this documentation we define a virtual address as the memory address that 
+//! the various pieces of the physical file will be loaded at.
 //! TODO : Mirror the Python docs for this
 
 use binaryninjacore_sys::*;
@@ -25,8 +29,8 @@ pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void};
 use std::ops::Range;
-use std::{ops, ptr, result, slice};
-
+use std::{ops, result, slice};
+use std::ptr::NonNull;
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::basicblock::BasicBlock;
 use crate::component::{Component, ComponentBuilder, IntoComponentGuid};
@@ -394,7 +398,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     fn symbol_by_address(&self, addr: u64) -> Option<Ref<Symbol>> {
         unsafe {
-            let raw_sym_ptr = BNGetSymbolByAddress(self.as_ref().handle, addr, ptr::null_mut());
+            let raw_sym_ptr = BNGetSymbolByAddress(self.as_ref().handle, addr, std::ptr::null_mut());
             match raw_sym_ptr.is_null() {
                 false => Some(Symbol::ref_from_raw(raw_sym_ptr)),
                 true => None,
@@ -409,7 +413,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             let raw_sym_ptr = BNGetSymbolByRawName(
                 self.as_ref().handle,
                 raw_name.as_ref().as_ptr() as *mut _,
-                ptr::null_mut(),
+                std::ptr::null_mut(),
             );
             match raw_sym_ptr.is_null() {
                 false => Some(Symbol::ref_from_raw(raw_sym_ptr)),
@@ -421,7 +425,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     fn symbols(&self) -> Array<Symbol> {
         unsafe {
             let mut count = 0;
-            let handles = BNGetSymbols(self.as_ref().handle, &mut count, ptr::null_mut());
+            let handles = BNGetSymbols(self.as_ref().handle, &mut count, std::ptr::null_mut());
 
             Array::new(handles, count, ())
         }
@@ -436,7 +440,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 self.as_ref().handle,
                 raw_name.as_ref().as_ptr() as *mut _,
                 &mut count,
-                ptr::null_mut(),
+                std::ptr::null_mut(),
             );
 
             Array::new(handles, count, ())
@@ -452,7 +456,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 range.start,
                 len,
                 &mut count,
-                ptr::null_mut(),
+                std::ptr::null_mut(),
             );
 
             Array::new(handles, count, ())
@@ -463,7 +467,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let mut count = 0;
             let handles =
-                BNGetSymbolsOfType(self.as_ref().handle, ty.into(), &mut count, ptr::null_mut());
+                BNGetSymbolsOfType(self.as_ref().handle, ty.into(), &mut count, std::ptr::null_mut());
 
             Array::new(handles, count, ())
         }
@@ -479,7 +483,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 range.start,
                 len,
                 &mut count,
-                ptr::null_mut(),
+                std::ptr::null_mut(),
             );
 
             Array::new(handles, count, ())
@@ -501,7 +505,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         let raw_type = if let Some(t) = ty.into() {
             t.handle
         } else {
-            ptr::null_mut()
+            std::ptr::null_mut()
         };
 
         unsafe {
@@ -657,8 +661,8 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
 
         let mut progress_raw = ProgressContext(progress);
-        let mut result_ids: *mut *mut c_char = ptr::null_mut();
-        let mut result_names: *mut BNQualifiedName = ptr::null_mut();
+        let mut result_ids: *mut *mut c_char = std::ptr::null_mut();
+        let mut result_names: *mut BNQualifiedName = std::ptr::null_mut();
         let result_count = unsafe {
             BNDefineAnalysisTypes(
                 self.as_ref().handle,
@@ -936,7 +940,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 plat.handle,
                 addr,
                 false,
-                ptr::null_mut(),
+                std::ptr::null_mut(),
             );
 
             if handle.is_null() {
@@ -957,7 +961,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let func_type = match func_type {
                 Some(func_type) => func_type.handle,
-                None => ptr::null_mut(),
+                None => std::ptr::null_mut(),
             };
 
             let handle = BNAddFunctionForAnalysis(
@@ -1466,15 +1470,15 @@ pub trait BinaryViewExt: BinaryViewBase {
         let result = unsafe {
             BNGetComponentByGuid(
                 self.as_ref().handle,
-                name.as_ref().as_ptr() as *const core::ffi::c_char,
+                name.as_ref().as_ptr() as *const c_char,
             )
         };
-        core::ptr::NonNull::new(result).map(|h| unsafe { Component::from_raw(h) })
+        NonNull::new(result).map(|h| unsafe { Component::from_raw(h) })
     }
 
     fn root_component(&self) -> Option<Component> {
         let result = unsafe { BNGetRootComponent(self.as_ref().handle) };
-        core::ptr::NonNull::new(result).map(|h| unsafe { Component::from_raw(h) })
+        NonNull::new(result).map(|h| unsafe { Component::from_raw(h) })
     }
 
     fn component_builder(&self) -> ComponentBuilder {
@@ -1486,10 +1490,10 @@ pub trait BinaryViewExt: BinaryViewBase {
         let result = unsafe {
             BNGetComponentByPath(
                 self.as_ref().handle,
-                path.as_ref().as_ptr() as *const core::ffi::c_char,
+                path.as_ref().as_ptr() as *const c_char,
             )
         };
-        core::ptr::NonNull::new(result).map(|h| unsafe { Component::from_raw(h) })
+        NonNull::new(result).map(|h| unsafe { Component::from_raw(h) })
     }
 
     fn remove_component(&self, component: &Component) -> bool {
@@ -1526,10 +1530,10 @@ pub trait BinaryViewExt: BinaryViewBase {
         let result = unsafe {
             BNGetBinaryViewTypeLibrary(
                 self.as_ref().handle,
-                name.as_ref().as_ptr() as *const core::ffi::c_char,
+                name.as_ref().as_ptr() as *const c_char,
             )
         };
-        core::ptr::NonNull::new(result).map(|h| unsafe { TypeLibrary::from_raw(h) })
+        NonNull::new(result).map(|h| unsafe { TypeLibrary::from_raw(h) })
     }
 
     /// Should be called by custom py:py:class:`BinaryView` implementations
@@ -1576,7 +1580,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         let mut lib_ref = lib
             .as_mut()
             .map(|l| unsafe { l.as_raw() } as *mut _)
-            .unwrap_or(ptr::null_mut());
+            .unwrap_or(std::ptr::null_mut());
         let result = unsafe {
             BNBinaryViewImportTypeLibraryType(
                 self.as_ref().handle,
@@ -1604,7 +1608,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         let mut lib_ref = lib
             .as_mut()
             .map(|l| unsafe { l.as_raw() } as *mut _)
-            .unwrap_or(ptr::null_mut());
+            .unwrap_or(std::ptr::null_mut());
         let result = unsafe {
             BNBinaryViewImportTypeLibraryObject(
                 self.as_ref().handle,
@@ -1672,7 +1676,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         addr: u64,
         platform: &Platform,
     ) -> Option<(TypeLibrary, QualifiedName)> {
-        let mut result_lib = ptr::null_mut();
+        let mut result_lib = std::ptr::null_mut();
         let mut result_name = Default::default();
         let success = unsafe {
             BNBinaryViewLookupImportedObjectLibrary(
@@ -1686,7 +1690,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         if !success {
             return None;
         }
-        let lib = unsafe { TypeLibrary::from_raw(ptr::NonNull::new(result_lib)?) };
+        let lib = unsafe { TypeLibrary::from_raw(NonNull::new(result_lib)?) };
         let name = QualifiedName(result_name);
         Some((lib, name))
     }
@@ -1698,7 +1702,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         &self,
         name: &QualifiedNameAndType,
     ) -> Option<(TypeLibrary, QualifiedName)> {
-        let mut result_lib = ptr::null_mut();
+        let mut result_lib = std::ptr::null_mut();
         let mut result_name = Default::default();
         let success = unsafe {
             BNBinaryViewLookupImportedTypeLibrary(
@@ -1711,7 +1715,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         if !success {
             return None;
         }
-        let lib = unsafe { TypeLibrary::from_raw(ptr::NonNull::new(result_lib)?) };
+        let lib = unsafe { TypeLibrary::from_raw(NonNull::new(result_lib)?) };
         let name = QualifiedName(result_name);
         Some((lib, name))
     }

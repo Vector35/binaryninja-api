@@ -168,6 +168,7 @@ impl core::fmt::Debug for MediumLevelILInstruction {
 
 impl MediumLevelILInstruction {
     pub(crate) fn new(function: Ref<MediumLevelILFunction>, index: usize) -> Self {
+        // TODO: If op.sourceOperation == BN_INVALID_OPERAND && op.operation == MLIL_NOP return None
         let op = unsafe { BNGetMediumLevelILByIndex(function.handle, index) };
         use BNMediumLevelILOperation::*;
         use MediumLevelILInstructionKind as Op;

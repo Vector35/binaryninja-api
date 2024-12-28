@@ -26,28 +26,10 @@ enum EdgeDirection {
 }
 
 pub struct Edge<'a, C: 'a + BlockContext> {
-    branch: BranchType,
-    back_edge: bool,
-    source: Guard<'a, BasicBlock<C>>,
+    pub branch: BranchType,
+    pub back_edge: bool,
+    pub source: Guard<'a, BasicBlock<C>>,
     target: Guard<'a, BasicBlock<C>>,
-}
-
-impl<'a, C: 'a + BlockContext> Edge<'a, C> {
-    pub fn branch_type(&self) -> super::BranchType {
-        self.branch
-    }
-
-    pub fn back_edge(&self) -> bool {
-        self.back_edge
-    }
-
-    pub fn source(&self) -> &BasicBlock<C> {
-        &self.source
-    }
-
-    pub fn target(&self) -> &BasicBlock<C> {
-        &self.target
-    }
 }
 
 impl<'a, C: 'a + fmt::Debug + BlockContext> fmt::Debug for Edge<'a, C> {
@@ -77,7 +59,6 @@ unsafe impl<'a, C: 'a + BlockContext> CoreArrayProviderInner for Edge<'a, C> {
     }
     
     unsafe fn wrap_raw<'b>(raw: &'b Self::Raw, context: &'b Self::Context) -> Self::Wrapped<'b> {
-        // TODO: Why not just take a ref to this? Why do we store a guard in Edge?
         let edge_target = Guard::new(
             BasicBlock::from_raw(raw.target, context.orig_block.context.clone()),
             raw,
@@ -117,9 +98,6 @@ pub struct BasicBlock<C: BlockContext> {
     pub(crate) handle: *mut BNBasicBlock,
     context: C,
 }
-
-unsafe impl<C: BlockContext> Send for BasicBlock<C> {}
-unsafe impl<C: BlockContext> Sync for BasicBlock<C> {}
 
 impl<C: BlockContext> BasicBlock<C> {
     pub(crate) unsafe fn from_raw(handle: *mut BNBasicBlock, context: C) -> Self {
@@ -315,3 +293,6 @@ unsafe impl<C: BlockContext> CoreArrayProviderInner for BasicBlock<C> {
         Guard::new(BasicBlock::from_raw(*raw, context.clone()), context)
     }
 }
+
+unsafe impl<C: BlockContext> Send for BasicBlock<C> {}
+unsafe impl<C: BlockContext> Sync for BasicBlock<C> {}

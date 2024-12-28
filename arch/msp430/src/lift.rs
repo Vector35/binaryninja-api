@@ -146,17 +146,21 @@ macro_rules! conditional_jump {
 
         $il.if_expr(
             $cond,
-            true_label.unwrap_or_else(|| &new_true),
-            false_label.unwrap_or_else(|| &new_false),
+            &mut true_label.unwrap_or(new_true),
+            &mut false_label.unwrap_or(new_false),
         )
         .append();
         
-        if true_label.is_none() {
+        if let Some(true_label) = true_label {
+            $il.update_label_for_address(true_addr, true_label);
+        } else {
             $il.mark_label(&mut new_true);
             $il.jump($il.const_ptr(true_addr)).append();
         }
-
-        if false_label.is_none() {
+        
+        if let Some(false_label) = false_label {
+            $il.update_label_for_address(false_addr, false_label);
+        } else {
             $il.mark_label(&mut new_false);
         }
     };
@@ -277,8 +281,9 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &Lifter<Msp430
             let fixed_addr = offset_to_absolute(addr, inst.offset());
             let label = il.label_for_address(fixed_addr);
             match label {
-                Some(label) => {
-                    il.goto(label).append();
+                Some(mut label) => {
+                    il.goto(&mut label).append();
+                    il.update_label_for_address(fixed_addr, label);
                 }
                 None => {
                     il.jump(il.const_ptr(fixed_addr)).append();
@@ -411,8 +416,9 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &Lifter<Msp430
         }
         Instruction::Br(inst) => {
             let dest = if let Some(Operand::Immediate(dest)) = inst.destination() {
-                if let Some(label) = il.label_for_address(*dest as u64) {
-                    il.goto(label).append();
+                if let Some(mut label) = il.label_for_address(*dest as u64) {
+                    il.goto(&mut label).append();
+                    il.update_label_for_address(*dest as u64, label);
                     return;
                 } else {
                     il.const_ptr(*dest as u64)

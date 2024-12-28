@@ -27,7 +27,7 @@ where
     F: FunctionForm,
     O: OperationArguments,
 {
-    pub(crate) function: &'func Function<A, M, F>,
+    pub(crate) function: &'func LowLevelILFunction<A, M, F>,
     pub(crate) op: BNLowLevelILInstruction,
     _args: PhantomData<O>,
 }
@@ -39,7 +39,7 @@ where
     F: FunctionForm,
     O: OperationArguments,
 {
-    pub(crate) fn new(function: &'func Function<A, M, F>, op: BNLowLevelILInstruction) -> Self {
+    pub(crate) fn new(function: &'func LowLevelILFunction<A, M, F>, op: BNLowLevelILInstruction) -> Self {
         Self {
             function,
             op,
@@ -375,7 +375,7 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    function: &'func Function<A, M, F>,
+    function: &'func LowLevelILFunction<A, M, F>,
     cursor: BNLowLevelILInstruction,
     cursor_operand: usize,
 }

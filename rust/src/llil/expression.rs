@@ -44,7 +44,7 @@ where
     F: FunctionForm,
     R: ExpressionResultType,
 {
-    pub(crate) function: &'func Function<A, M, F>,
+    pub(crate) function: &'func LowLevelILFunction<A, M, F>,
     pub(crate) expr_idx: usize,
 
     // tag the 'return' type of this expression
@@ -58,7 +58,7 @@ where
     F: FunctionForm,
     R: ExpressionResultType,
 {
-    pub(crate) fn new(function: &'func Function<A, M, F>, expr_idx: usize) -> Self {
+    pub(crate) fn new(function: &'func LowLevelILFunction<A, M, F>, expr_idx: usize) -> Self {
         Self {
             function,
             expr_idx,
@@ -84,7 +84,7 @@ where
 }
 
 fn common_info<'func, A, M, F>(
-    function: &'func Function<A, M, F>,
+    function: &'func LowLevelILFunction<A, M, F>,
     op: BNLowLevelILInstruction,
 ) -> ExprInfo<'func, A, M, F>
 where

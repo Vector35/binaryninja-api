@@ -40,14 +40,14 @@ pub use self::lifting::{
     ExpressionBuilder, FlagWriteOp, Label, Liftable, LiftableWithSize, RegisterOrConstant,
 };
 
-pub use self::block::Block as LowLevelBlock;
-pub use self::block::BlockIter as LowLevelBlockIter;
+pub use self::block::LowLevelILBlock as LowLevelBlock;
+pub use self::block::LowLevelILBlockIter as LowLevelBlockIter;
 
-pub type Lifter<Arch> = Function<Arch, Mutable, NonSSA<LiftedNonSSA>>;
-pub type LiftedFunction<Arch> = Function<Arch, Finalized, NonSSA<LiftedNonSSA>>;
+pub type Lifter<Arch> = LowLevelILFunction<Arch, Mutable, NonSSA<LiftedNonSSA>>;
+pub type LiftedFunction<Arch> = LowLevelILFunction<Arch, Finalized, NonSSA<LiftedNonSSA>>;
 pub type LiftedExpr<'a, Arch> = Expression<'a, Arch, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>;
-pub type RegularFunction<Arch> = Function<Arch, Finalized, NonSSA<RegularNonSSA>>;
-pub type SSAFunction<Arch> = Function<Arch, Finalized, SSA>;
+pub type RegularFunction<Arch> = LowLevelILFunction<Arch, Finalized, NonSSA<RegularNonSSA>>;
+pub type SSAFunction<Arch> = LowLevelILFunction<Arch, Finalized, SSA>;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Register<R: ArchReg> {

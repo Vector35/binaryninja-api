@@ -28,12 +28,12 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub(crate) function: &'func Function<A, M, F>,
+    pub(crate) function: &'func LowLevelILFunction<A, M, F>,
     pub(crate) instr_idx: usize,
 }
 
 fn common_info<'func, A, M, F>(
-    function: &'func Function<A, M, F>,
+    function: &'func LowLevelILFunction<A, M, F>,
     op: BNLowLevelILInstruction,
 ) -> Option<InstrInfo<'func, A, M, F>>
 where

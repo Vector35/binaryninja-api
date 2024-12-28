@@ -43,7 +43,7 @@ pub fn user_signature_dir() -> PathBuf {
 
 pub fn build_function<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
     func: &BNFunction,
-    llil: &llil::Function<A, M, NonSSA<V>>,
+    llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
 ) -> Function {
     let bn_fn_ty = func.function_type();
     Function {
@@ -75,7 +75,7 @@ pub fn sorted_basic_blocks(func: &BNFunction) -> Vec<BNRef<BNBasicBlock<NativeBl
 
 pub fn function_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
     func: &BNFunction,
-    llil: &llil::Function<A, M, NonSSA<V>>,
+    llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
 ) -> FunctionGUID {
     let basic_blocks = sorted_basic_blocks(func);
     let basic_block_guids = basic_blocks
@@ -87,7 +87,7 @@ pub fn function_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
 
 pub fn basic_block_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
     basic_block: &BNBasicBlock<NativeBlock>,
-    llil: &llil::Function<A, M, NonSSA<V>>,
+    llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
 ) -> BasicBlockGUID {
     let func = basic_block.function();
     let view = func.view();

@@ -45,7 +45,7 @@ impl From<&BNDataVariable> for DataVariable {
         Self {
             address: value.address,
             ty: Conf::new(
-                unsafe { Type::ref_from_raw(value.type_).to_owned() },
+                unsafe { Type::from_raw(value.type_).to_owned() },
                 value.typeConfidence,
             ),
             auto_discovered: value.autoDiscovered,
@@ -56,7 +56,7 @@ impl From<&BNDataVariable> for DataVariable {
 impl CoreArrayProvider for DataVariable {
     type Raw = BNDataVariable;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, Self>;
+    type Wrapped<'a> = Self;
 }
 
 unsafe impl CoreArrayProviderInner for DataVariable {
@@ -65,7 +65,7 @@ unsafe impl CoreArrayProviderInner for DataVariable {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self::from(raw), raw)
+        raw.into()
     }
 }
 
@@ -194,7 +194,7 @@ impl From<NamedVariableWithType> for BNVariableNameAndType {
 impl CoreArrayProvider for NamedVariableWithType {
     type Raw = BNVariableNameAndType;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, Self>;
+    type Wrapped<'a> = NamedVariableWithType;
 }
 
 unsafe impl CoreArrayProviderInner for NamedVariableWithType {
@@ -203,7 +203,7 @@ unsafe impl CoreArrayProviderInner for NamedVariableWithType {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        unsafe { Guard::new(Self::from(raw), raw) }
+        Self::from(raw)
     }
 }
 

@@ -47,12 +47,12 @@ impl AnalysisContext {
     /// LowLevelILFunction used to represent Low Level IL
     pub unsafe fn lifted_il_function<F: FunctionForm>(
         &self,
-    ) -> Option<Ref<llil::Function<CoreArchitecture, Mutable, F>>> {
+    ) -> Option<Ref<llil::LowLevelILFunction<CoreArchitecture, Mutable, F>>> {
         let func = self.function();
         let result = unsafe { BNGetFunctionLiftedIL(func.handle) };
         let arch = self.function().arch();
         unsafe {
-            Some(llil::Function::ref_from_raw(
+            Some(llil::LowLevelILFunction::ref_from_raw(
                 arch,
                 NonNull::new(result)?.as_ptr(),
             ))
@@ -61,7 +61,7 @@ impl AnalysisContext {
 
     pub fn set_lifted_il_function<F: FunctionForm>(
         &self,
-        value: &llil::Function<CoreArchitecture, Mutable, F>,
+        value: &llil::LowLevelILFunction<CoreArchitecture, Mutable, F>,
     ) {
         unsafe { BNSetLiftedILFunction(self.handle.as_ptr(), value.handle) }
     }
@@ -69,11 +69,11 @@ impl AnalysisContext {
     /// LowLevelILFunction used to represent Low Level IL
     pub unsafe fn llil_function<F: FunctionForm>(
         &self,
-    ) -> Option<Ref<llil::Function<CoreArchitecture, Mutable, F>>> {
+    ) -> Option<Ref<llil::LowLevelILFunction<CoreArchitecture, Mutable, F>>> {
         let result = unsafe { BNAnalysisContextGetLowLevelILFunction(self.handle.as_ptr()) };
         let arch = self.function().arch();
         unsafe {
-            Some(llil::Function::ref_from_raw(
+            Some(llil::LowLevelILFunction::ref_from_raw(
                 arch,
                 NonNull::new(result)?.as_ptr(),
             ))
@@ -82,7 +82,7 @@ impl AnalysisContext {
 
     pub fn set_llil_function<F: FunctionForm>(
         &self,
-        value: &llil::Function<CoreArchitecture, Mutable, F>,
+        value: &llil::LowLevelILFunction<CoreArchitecture, Mutable, F>,
     ) {
         unsafe { BNSetLowLevelILFunction(self.handle.as_ptr(), value.handle) }
     }

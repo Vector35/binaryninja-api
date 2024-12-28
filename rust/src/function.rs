@@ -660,7 +660,7 @@ impl Function {
         let adjust_ptr = adjust_type
             .as_mut()
             .map(|x| x as *mut _)
-            .unwrap_or(core::ptr::null_mut());
+            .unwrap_or(std::ptr::null_mut());
         unsafe { BNSetUserCallTypeAdjustment(self.handle, arch.handle, addr, adjust_ptr) }
     }
 
@@ -910,7 +910,7 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let func_type = func_type.map(|f| f.handle).unwrap_or(core::ptr::null_mut());
+        let func_type = func_type.map(|f| f.handle).unwrap_or(std::ptr::null_mut());
         let value =
             unsafe { BNGetParameterValueAtInstruction(self.handle, arch.handle, addr, func_type, i) };
         value.into()
@@ -1336,7 +1336,7 @@ impl Function {
         let tags = unsafe {
             match (tag_type, auto) {
                 // received a tag_type, BinaryView found none
-                (Some(None), _) => return Array::new(core::ptr::null_mut(), 0, ()),
+                (Some(None), _) => return Array::new(std::ptr::null_mut(), 0, ()),
 
                 // with tag_type
                 (Some(Some(tag_type)), None) => {
@@ -1597,7 +1597,7 @@ impl Function {
         let enum_display_typeid = enum_display_typeid.map(BnStrCompatible::into_bytes_with_nul);
         let enum_display_typeid_ptr = enum_display_typeid
             .map(|x| x.as_ref().as_ptr() as *const c_char)
-            .unwrap_or(core::ptr::null());
+            .unwrap_or(std::ptr::null());
         unsafe {
             BNSetIntegerConstantDisplayType(
                 self.handle,
@@ -1863,7 +1863,7 @@ impl Function {
         &self,
         settings: Option<&DisassemblySettings>,
     ) -> Array<DisassemblyTextLine> {
-        let settings = settings.map(|s| s.handle).unwrap_or(core::ptr::null_mut());
+        let settings = settings.map(|s| s.handle).unwrap_or(std::ptr::null_mut());
         let mut count = 0;
         let lines = unsafe { BNGetFunctionTypeTokens(self.handle, settings, &mut count) };
         assert!(!lines.is_null());
@@ -2236,7 +2236,7 @@ impl Function {
         view_type: FunctionViewType,
         settings: Option<DisassemblySettings>,
     ) -> Ref<FlowGraph> {
-        let settings_raw = settings.map(|s| s.handle).unwrap_or(core::ptr::null_mut());
+        let settings_raw = settings.map(|s| s.handle).unwrap_or(std::ptr::null_mut());
         let result = unsafe { BNCreateFunctionGraph(self.handle, view_type.as_raw().0, settings_raw) };
         unsafe { Ref::new(FlowGraph::from_raw(result)) }
     }
@@ -2293,7 +2293,7 @@ unsafe impl CoreArrayProviderInner for Function {
     }
     
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Function { handle: *raw }, context)
+        Guard::new(Self::from_raw(*raw), context)
     }
 }
 

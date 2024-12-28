@@ -24,7 +24,7 @@ pub trait Liftable<'func, A: 'func + Architecture> {
     type Result: ExpressionResultType;
 
     fn lift(
-        il: &'func Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        il: &'func LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>,
         expr: Self,
     ) -> Expression<'func, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result>;
 }
@@ -33,7 +33,7 @@ pub trait LiftableWithSize<'func, A: 'func + Architecture>:
     Liftable<'func, A, Result = ValueExpr>
 {
     fn lift_with_size(
-        il: &'func Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        il: &'func LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>,
         expr: Self,
         size: usize,
     ) -> Expression<'func, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>;
@@ -410,7 +410,7 @@ macro_rules! prim_int_lifter {
         impl<'a, A: 'a + Architecture> Liftable<'a, A> for $x {
             type Result = ValueExpr;
 
-            fn lift(il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>, val: Self)
+            fn lift(il: &'a LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>, val: Self)
                 -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result>
             {
                 il.const_int(std::mem::size_of::<Self>(), val as i64 as u64)
@@ -418,7 +418,7 @@ macro_rules! prim_int_lifter {
         }
 
         impl<'a, A: 'a + Architecture> LiftableWithSize<'a, A> for $x {
-            fn lift_with_size(il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>, val: Self, size: usize)
+            fn lift_with_size(il: &'a LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>, val: Self, size: usize)
                 -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
             {
                 let raw = val as i64;
@@ -459,7 +459,7 @@ where
     type Result = ValueExpr;
 
     fn lift(
-        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        il: &'a LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>,
         reg: Self,
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
         match reg {
@@ -474,7 +474,7 @@ where
     R: LiftableWithSize<'a, A> + Into<Register<R>>,
 {
     fn lift_with_size(
-        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        il: &'a LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>,
         reg: Self,
         size: usize,
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
@@ -492,7 +492,7 @@ where
     type Result = ValueExpr;
 
     fn lift(
-        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        il: &'a LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>,
         reg: Self,
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
         match reg {
@@ -507,7 +507,7 @@ where
     R: LiftableWithSize<'a, A> + Into<Register<R>>,
 {
     fn lift_with_size(
-        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        il: &'a LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>,
         reg: Self,
         size: usize,
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
@@ -527,7 +527,7 @@ where
     type Result = R;
 
     fn lift(
-        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        il: &'a LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>,
         expr: Self,
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
         debug_assert!(expr.function.handle == il.handle);
@@ -539,7 +539,7 @@ impl<'a, A: 'a + Architecture> LiftableWithSize<'a, A>
     for Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
 {
     fn lift_with_size(
-        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        il: &'a LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>,
         expr: Self,
         _size: usize,
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
@@ -582,14 +582,15 @@ where
 
 use binaryninjacore_sys::BNLowLevelILOperation;
 use crate::function::Location;
-use crate::llil::{Expression, ExpressionResultType, Function, LiftedExpr, LiftedNonSSA, Lifter, Mutable, NonSSA, Register, ValueExpr, VoidExpr};
+use crate::llil;
+use crate::llil::{Expression, ExpressionResultType, LowLevelILFunction, LiftedExpr, LiftedNonSSA, Lifter, Mutable, NonSSA, Register, ValueExpr, VoidExpr};
 
 pub struct ExpressionBuilder<'func, A, R>
 where
     A: 'func + Architecture,
     R: ExpressionResultType,
 {
-    function: &'func Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+    function: &'func LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>,
     op: BNLowLevelILOperation,
     size: usize,
     flags: u32,
@@ -673,7 +674,7 @@ where
     type Result = R;
 
     fn lift(
-        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        il: &'a LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>,
         expr: Self,
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
         debug_assert!(expr.function.handle == il.handle);
@@ -687,7 +688,7 @@ where
     A: 'a + Architecture,
 {
     fn lift_with_size(
-        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        il: &'a LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>,
         expr: Self,
         _size: usize,
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
@@ -882,7 +883,7 @@ macro_rules! binary_op_carry_lifter {
     };
 }
 
-impl<A> Function<A, Mutable, NonSSA<LiftedNonSSA>>
+impl<A> LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>
 where
     A: Architecture,
 {
@@ -981,8 +982,8 @@ where
     pub fn if_expr<'a: 'b, 'b, C>(
         &'a self,
         cond: C,
-        true_label: &'b Label,
-        false_label: &'b Label,
+        true_label: &'b mut Label,
+        false_label: &'b mut Label,
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, VoidExpr>
     where
         C: Liftable<'b, A, Result = ValueExpr>,
@@ -991,8 +992,8 @@ where
 
         let cond = C::lift(self, cond);
 
-        let mut raw_true_label = BNLowLevelILLabel::from(true_label);
-        let mut raw_false_label = BNLowLevelILLabel::from(false_label);
+        let mut raw_true_label = BNLowLevelILLabel::from(*true_label);
+        let mut raw_false_label = BNLowLevelILLabel::from(*false_label);
         let expr_idx = unsafe {
             BNLowLevelILIf(
                 self.handle,
@@ -1001,6 +1002,10 @@ where
                 &mut raw_false_label,
             )
         };
+        
+        // Update the labels after they have been resolved.
+        *true_label = Label::from(raw_true_label);
+        *false_label = Label::from(raw_false_label);
 
         Expression::new(self, expr_idx)
     }
@@ -1008,12 +1013,15 @@ where
     // TODO: Wtf are these lifetimes??
     pub fn goto<'a: 'b, 'b>(
         &'a self,
-        label: &'b Label,
+        label: &'b mut Label,
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, VoidExpr> {
         use binaryninjacore_sys::BNLowLevelILGoto;
 
-        let mut raw_label = BNLowLevelILLabel::from(label);
+        let mut raw_label = BNLowLevelILLabel::from(*label);
         let expr_idx = unsafe { BNLowLevelILGoto(self.handle, &mut raw_label) };
+
+        // Update the labels after they have been resolved.
+        *label = Label::from(raw_label);
 
         Expression::new(self, expr_idx)
     }
@@ -1446,18 +1454,29 @@ where
         }
     }
 
-    pub fn label_for_address<L: Into<Location>>(&self, loc: L) -> Option<&Label> {
+    pub fn label_for_address<L: Into<Location>>(&self, loc: L) -> Option<Label> {
         use binaryninjacore_sys::BNGetLowLevelILLabelForAddress;
 
         let loc: Location = loc.into();
         let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
 
-        let res = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
-
-        if res.is_null() {
-            None
-        } else {
-            Some(unsafe { &*(res as *mut Label) })
+        let raw_label = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
+        match raw_label.is_null() {
+            false => Some(unsafe { Label::from(*raw_label) }),
+            true => None
+        }
+    }
+    
+    /// Call this after updating the label through an il operation or via [`Self::mark_label`].
+    /// 
+    /// If you retrieved a label via [`Self::label_for_address`] than you very likely want to use this.
+    pub fn update_label_for_address<L: Into<Location>>(&self, loc: L, label: Label) {
+        use binaryninjacore_sys::BNGetLowLevelILLabelForAddress;
+        let loc: Location = loc.into();
+        let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
+        let raw_label = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
+        if !raw_label.is_null() {
+            unsafe { *raw_label = label.into() };   
         }
     }
 
@@ -1481,13 +1500,10 @@ pub struct Label {
 impl Label {
     pub fn new() -> Self {
         use binaryninjacore_sys::BNLowLevelILInitLabel;
-
-        unsafe {
-            // This is one instance where it'd be easy to use mem::MaybeUninit, but *shrug* this is easier
-            let mut raw_label = BNLowLevelILLabel::default();
-            BNLowLevelILInitLabel(&mut raw_label);
-            raw_label.into()
-        }
+        
+        let mut raw_label = BNLowLevelILLabel::default();
+        unsafe { BNLowLevelILInitLabel(&mut raw_label) };
+        raw_label.into()
     }
 }
 

@@ -82,7 +82,7 @@ impl ToOwned for Tag {
 impl CoreArrayProvider for Tag {
     type Raw = *mut BNTag;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, Self>;
+    type Wrapped<'a> = Guard<'a, Tag>;
 }
 
 unsafe impl CoreArrayProviderInner for Tag {

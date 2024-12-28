@@ -66,7 +66,7 @@ pub fn try_cached_function_match(function: &BNFunction) -> Option<Function> {
 
 pub fn cached_function<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
     function: &BNFunction,
-    llil: &llil::Function<A, M, NonSSA<V>>,
+    llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
 ) -> Function {
     let view = function.view();
     let view_id = ViewID::from(view.as_ref());
@@ -120,7 +120,7 @@ where
 
 pub fn cached_function_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
     function: &BNFunction,
-    llil: &llil::Function<A, M, NonSSA<V>>,
+    llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
 ) -> FunctionGUID {
     let view = function.view();
     let view_id = ViewID::from(view);
@@ -201,7 +201,7 @@ impl FunctionCache {
     pub fn function<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
         &self,
         function: &BNFunction,
-        llil: &llil::Function<A, M, NonSSA<V>>,
+        llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
     ) -> Function {
         let function_id = FunctionID::from(function);
         match self.cache.get(&function_id) {
@@ -329,7 +329,7 @@ impl GUIDCache {
     pub fn function_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
         &self,
         function: &BNFunction,
-        llil: &llil::Function<A, M, NonSSA<V>>,
+        llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
     ) -> FunctionGUID {
         let function_id = FunctionID::from(function);
         match self.cache.get(&function_id) {

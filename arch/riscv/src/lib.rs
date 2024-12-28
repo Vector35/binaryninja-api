@@ -1196,7 +1196,11 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let target = addr.wrapping_add(j.imm() as i64 as u64);
 
                 match (j.rd().id(), il.label_for_address(target)) {
-                    (0, Some(l)) => il.goto(l),
+                    (0, Some(mut l)) => {
+                        let jump_expr = il.goto(&mut l);
+                        il.update_label_for_address(target, l);
+                        jump_expr
+                    },
                     (0, None) => il.jump(il.const_ptr(target)),
                     (_, _) => il.call(il.const_ptr(target)),
                 }
@@ -1260,17 +1264,20 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let tt = addr.wrapping_add(b.imm() as i64 as u64);
 
                 {
-                    let f = il.label_for_address(ft).unwrap_or_else(|| {
+                    let mut f = il.label_for_address(ft).unwrap_or_else(|| {
                         new_false = Some(Label::new());
-                        new_false.as_ref().unwrap()
+                        new_false.unwrap()
                     });
 
-                    let t = il.label_for_address(tt).unwrap_or_else(|| {
+                    let mut t = il.label_for_address(tt).unwrap_or_else(|| {
                         new_true = Some(Label::new());
-                        new_true.as_ref().unwrap()
+                        new_true.unwrap()
                     });
 
-                    il.if_expr(cond_expr, t, f).append();
+                    il.if_expr(cond_expr, &mut t, &mut f).append();
+
+                    il.update_label_for_address(ft, f);
+                    il.update_label_for_address(tt, t);
                 }
 
                 if let Some(t) = new_true.as_mut() {
@@ -1430,12 +1437,14 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     let cond_expr = il.cmp_e(max_width, dest_reg, 0u64);
 
                     let ft = addr.wrapping_add(inst_len);
-                    let f = il.label_for_address(ft).unwrap_or_else(|| {
+                    let mut f = il.label_for_address(ft).unwrap_or_else(|| {
                         new_false = Some(Label::new());
-                        new_false.as_ref().unwrap()
+                        new_false.unwrap()
                     });
 
-                    il.if_expr(cond_expr, &t, f).append();
+                    il.if_expr(cond_expr, &mut t, &mut f).append();
+
+                    il.update_label_for_address(ft, f);
                 }
 
                 il.mark_label(&mut t);

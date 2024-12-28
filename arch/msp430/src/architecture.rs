@@ -4,7 +4,7 @@ use crate::register::Register;
 
 use binaryninja::{
     architecture::{
-        Architecture, BranchInfo, CoreArchitecture, CustomArchitectureHandle, FlagCondition,
+        Architecture, CoreArchitecture, CustomArchitectureHandle, FlagCondition,
         InstructionInfo, UnusedIntrinsic, UnusedRegisterStack, UnusedRegisterStackInfo,
     },
     disassembly::{InstructionTextToken, InstructionTextTokenContents},

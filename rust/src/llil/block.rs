@@ -19,17 +19,17 @@ use crate::basicblock::{BasicBlock, BlockContext};
 
 use super::*;
 
-pub struct BlockIter<'func, A, M, F>
+pub struct LowLevelILBlockIter<'func, A, M, F>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    function: &'func Function<A, M, F>,
+    function: &'func LowLevelILFunction<A, M, F>,
     range: Range<u64>,
 }
 
-impl<'func, A, M, F> Iterator for BlockIter<'func, A, M, F>
+impl<'func, A, M, F> Iterator for LowLevelILBlockIter<'func, A, M, F>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
@@ -45,34 +45,24 @@ where
     }
 }
 
-pub struct Block<'func, A, M, F>
+#[derive(Copy)]
+pub struct LowLevelILBlock<'func, A, M, F>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub(crate) function: &'func Function<A, M, F>,
+    pub(crate) function: &'func LowLevelILFunction<A, M, F>,
 }
 
-impl<'func, A, M, F> fmt::Debug for Block<'func, A, M, F>
+impl<'func, A, M, F> BlockContext for LowLevelILBlock<'func, A, M, F>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "llil_bb {:?}", self.function)
-    }
-}
-
-impl<'func, A, M, F> BlockContext for Block<'func, A, M, F>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    type Iter = BlockIter<'func, A, M, F>;
     type Instruction = Instruction<'func, A, M, F>;
+    type Iter = LowLevelILBlockIter<'func, A, M, F>;
 
     fn start(&self, block: &BasicBlock<Self>) -> Instruction<'func, A, M, F> {
         Instruction {
@@ -81,22 +71,34 @@ where
         }
     }
 
-    fn iter(&self, block: &BasicBlock<Self>) -> BlockIter<'func, A, M, F> {
-        BlockIter {
+    fn iter(&self, block: &BasicBlock<Self>) -> LowLevelILBlockIter<'func, A, M, F> {
+        LowLevelILBlockIter {
             function: self.function,
             range: block.raw_start()..block.raw_end(),
         }
     }
 }
 
-impl<'func, A, M, F> Clone for Block<'func, A, M, F>
+impl<'func, A, M, F> fmt::Debug for LowLevelILBlock<'func, A, M, F>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // TODO: Make this better
+        write!(f, "llil_bb {:?}", self.function)
+    }
+}
+
+impl<'func, A, M, F> Clone for LowLevelILBlock<'func, A, M, F>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
     fn clone(&self) -> Self {
-        Block {
+        LowLevelILBlock {
             function: self.function,
         }
     }

@@ -1290,7 +1290,7 @@ impl Architecture for CoreArchitecture {
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
         let mut info = BNInstructionInfo::default();
-        let success = unsafe {
+        if unsafe {
             BNGetInstructionInfo(
                 self.handle,
                 data.as_ptr(),
@@ -1298,9 +1298,7 @@ impl Architecture for CoreArchitecture {
                 data.len(),
                 &mut info,
             )
-        };
-
-        if success {
+        } {
             Some(info.into())
         } else {
             None
@@ -1325,12 +1323,12 @@ impl Architecture for CoreArchitecture {
                 &mut result,
                 &mut count,
             ) {
-                let vec = std::slice::from_raw_parts(result, count)
+                let instr_text_tokens = std::slice::from_raw_parts(result, count)
                     .iter()
                     .map(|x| InstructionTextToken::from_raw(x).to_owned())
                     .collect();
                 BNFreeInstructionText(result, count);
-                Some((consumed, vec))
+                Some((consumed, instr_text_tokens))
             } else {
                 None
             }
@@ -2913,7 +2911,9 @@ where
         getAddressSize: Some(cb_address_size::<A>),
         getDefaultIntegerSize: Some(cb_default_integer_size::<A>),
         getInstructionAlignment: Some(cb_instruction_alignment::<A>),
+        // TODO: Make getOpcodeDisplayLength optional.
         getMaxInstructionLength: Some(cb_max_instr_len::<A>),
+        // TODO: Make getOpcodeDisplayLength optional.
         getOpcodeDisplayLength: Some(cb_opcode_display_len::<A>),
         getAssociatedArchitectureByAddress: Some(cb_associated_arch_by_addr::<A>),
         getInstructionInfo: Some(cb_instruction_info::<A>),

@@ -59,6 +59,7 @@ unsafe impl CoreArrayProviderInner for CodeReference {
     }
     
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        // TODO: Cant remove this guard until we get rid of that manual drop, INSANE!
         Guard::new(CodeReference::new(raw), &())
     }
 }

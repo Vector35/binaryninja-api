@@ -1363,13 +1363,10 @@ impl StructureBuilder {
         debug_assert!(!handle.is_null());
         Self { handle }
     }
-
-    // Chainable terminal
+    
     pub fn finalize(&self) -> Ref<Structure> {
         unsafe { Structure::ref_from_raw(BNFinalizeStructureBuilder(self.handle)) }
     }
-
-    // Chainable builders/setters
 
     pub fn set_width(&self, width: u64) -> &Self {
         unsafe {
@@ -1410,21 +1407,14 @@ impl StructureBuilder {
         self
     }
 
-    pub fn set_base_structures(&self, bases: Vec<BaseStructure>) -> &Self {
-        let mut bases_api = vec![];
-        for base in &bases {
-            bases_api.push(BNBaseStructure {
-                type_: base.ty.handle,
-                offset: base.offset,
-                width: base.width,
-            });
-        }
+    pub fn set_base_structures(&self, bases: &[BaseStructure]) -> &Self {
+        let raw_base_structs: Vec<BNBaseStructure> = bases.iter().map(Into::into).collect();
 
         unsafe {
             BNSetBaseStructuresForStructureBuilder(
                 self.handle,
-                bases_api.as_mut_ptr(),
-                bases_api.len(),
+                raw_base_structs.as_ptr() as *mut _,
+                raw_base_structs.len(),
             )
         };
 
@@ -1453,9 +1443,8 @@ impl StructureBuilder {
     }
 
     pub fn insert_member(&self, member: &StructureMember, overwrite_existing: bool) -> &Self {
-        let ty = member.ty.clone();
         self.insert(
-            ty.as_ref(),
+            &member.ty,
             member.name.clone(),
             member.offset,
             overwrite_existing,
@@ -1499,9 +1488,7 @@ impl StructureBuilder {
         }
         self
     }
-
-    // Getters
-
+    
     pub fn width(&self) -> u64 {
         unsafe { BNGetStructureBuilderWidth(self.handle) }
     }
@@ -1555,9 +1542,7 @@ impl StructureBuilder {
             .iter()
             .position(|member| member.offset == offset)
     }
-
-    // Setters
-
+    
     pub fn clear_members(&self) {
         let len = self.members().len();
         for idx in (0..len).rev() {
@@ -1799,7 +1784,7 @@ impl From<StructureMember> for BNStructureMember {
 impl CoreArrayProvider for StructureMember {
     type Raw = BNStructureMember;
     type Context = ();
-    type Wrapped<'a> = Guard<'a, Self>;
+    type Wrapped<'a> = StructureMember;
 }
 
 unsafe impl CoreArrayProviderInner for StructureMember {
@@ -1808,7 +1793,7 @@ unsafe impl CoreArrayProviderInner for StructureMember {
     }
     
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self::from(raw), raw)
+        Self::from(raw)
     }
 }
 
@@ -1853,6 +1838,29 @@ impl From<BNBaseStructure> for BaseStructure {
     fn from(value: BNBaseStructure) -> Self {
         Self {
             ty: unsafe { NamedTypeReference::ref_from_raw(value.type_) },
+            offset: value.offset,
+            width: value.width,
+        }
+    }
+}
+
+impl From<BaseStructure> for BNBaseStructure {
+    fn from(value: BaseStructure) -> Self {
+        Self {
+            type_: value.ty.handle,
+            offset: value.offset,
+            width: value.width,
+        }
+    }
+}
+
+impl From<&BaseStructure> for BNBaseStructure {
+    fn from(value: &BaseStructure) -> Self {
+        Self {
+            // TODO: In the core there doesn't appear to be a ref increment.
+            // TODO: Do we want to increment the ref here for the &BaseStructure impl?
+            // TODO: See BNSetBaseStructuresForStructureBuilder for an example.
+            type_: value.ty.handle,
             offset: value.offset,
             width: value.width,
         }

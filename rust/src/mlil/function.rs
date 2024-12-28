@@ -1,6 +1,6 @@
-use core::hash::{Hash, Hasher};
+use std::hash::{Hash, Hasher};
 use std::ffi::c_char;
-
+use std::fmt::{Debug, Formatter};
 use binaryninjacore_sys::*;
 
 use crate::architecture::CoreArchitecture;
@@ -20,22 +20,6 @@ pub use binaryninjacore_sys::BNFunctionGraphType as FunctionGraphType;
 
 pub struct MediumLevelILFunction {
     pub(crate) handle: *mut BNMediumLevelILFunction,
-}
-
-unsafe impl Send for MediumLevelILFunction {}
-unsafe impl Sync for MediumLevelILFunction {}
-
-impl Eq for MediumLevelILFunction {}
-impl PartialEq for MediumLevelILFunction {
-    fn eq(&self, rhs: &Self) -> bool {
-        self.get_function().eq(&rhs.get_function())
-    }
-}
-
-impl Hash for MediumLevelILFunction {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.get_function().hash(state)
-    }
 }
 
 impl MediumLevelILFunction {
@@ -67,16 +51,22 @@ impl MediumLevelILFunction {
         MediumLevelILInstruction::new(self.to_owned(), expr_idx)
     }
 
+    // TODO: Possibly remove this function.
     pub fn lifted_instruction_from_idx(&self, expr_idx: usize) -> MediumLevelILLiftedInstruction {
         self.instruction_from_idx(expr_idx).lift()
     }
 
+    // TODO: This naming is not clear, document the difference between:
+    // TODO: `instruction_from_instruction_idx` and `instruction_from_idx`.
     pub fn instruction_from_instruction_idx(&self, instr_idx: usize) -> MediumLevelILInstruction {
         self.instruction_from_idx(unsafe {
             BNGetMediumLevelILIndexForInstruction(self.handle, instr_idx)
         })
     }
 
+    // TODO: This naming is not clear, document the difference between:
+    // TODO: `lifted_instruction_from_instruction_idx` and `lifted_instruction_from_idx`.
+    // TODO: Possibly remove this function.
     pub fn lifted_instruction_from_instruction_idx(
         &self,
         instr_idx: usize,
@@ -111,18 +101,13 @@ impl MediumLevelILFunction {
         unsafe { Array::new(blocks, count, context) }
     }
 
-    pub fn get_var_definitions<'a>(&'a self, var: &Variable) -> MediumLevelILInstructionList<'a> {
+    pub fn get_var_definitions(&self, var: &Variable) -> Array<MediumLevelILInstruction> {
         let mut count = 0;
         let raw_var = BNVariable::from(var);
-        let raw_instrs =
+        let raw_instr_idxs =
             unsafe { BNGetMediumLevelILVariableDefinitions(self.handle, &raw_var, &mut count) };
-        assert!(!raw_instrs.is_null());
-        let instrs = unsafe { core::slice::from_raw_parts(raw_instrs, count) };
-        MediumLevelILInstructionList {
-            mlil: self,
-            ptr: raw_instrs,
-            instr_idxs: instrs.iter(),
-        }
+        assert!(!raw_instr_idxs.is_null());
+        unsafe { Array::new(raw_instr_idxs, count, self.to_owned()) }
     }
 
     pub fn create_user_stack_var<'a, S: BnStrCompatible, C: Into<Conf<&'a Type>>>(
@@ -211,6 +196,7 @@ impl MediumLevelILFunction {
     ) -> Result<(), ()> {
         let Some(_def_site) = self
             .get_var_definitions(var)
+            .iter()
             .find(|def| def.address == addr)
         else {
             // Error "No definition for Variable found at given address"
@@ -235,6 +221,7 @@ impl MediumLevelILFunction {
     pub fn clear_user_var_value(&self, var: &Variable, addr: u64) -> Result<(), ()> {
         let Some(_var_def) = self
             .get_var_definitions(var)
+            .iter()
             .find(|site| site.address == addr)
         else {
             //error "Could not get definition for Variable"
@@ -400,17 +387,14 @@ impl MediumLevelILFunction {
     pub fn basic_block_containing(
         &self,
         instruction: &MediumLevelILInstruction,
-    ) -> Option<BasicBlock<MediumLevelILBlock>> {
+    ) -> Option<Ref<BasicBlock<MediumLevelILBlock>>> {
         let index = instruction.index;
-        let block = unsafe { BNGetMediumLevelILBasicBlockForInstruction(self.handle, index) };
-        (!block.is_null()).then(|| unsafe {
-            BasicBlock::from_raw(
-                block,
-                MediumLevelILBlock {
-                    function: self.to_owned(),
-                },
-            )
-        })
+        let context = MediumLevelILBlock { function: self.to_owned(), };
+        let basic_block_ptr = unsafe { BNGetMediumLevelILBasicBlockForInstruction(self.handle, index) };
+        match basic_block_ptr.is_null() {
+            false => Some(unsafe { BasicBlock::ref_from_raw(basic_block_ptr, context) }),
+            true => None,
+        }
     }
     
     /// Ends the function and computes the list of basic blocks.
@@ -551,15 +535,14 @@ impl MediumLevelILFunction {
     }
 
     pub fn create_graph(&self, settings: Option<DisassemblySettings>) -> FlowGraph {
-        let settings = settings.map(|x| x.handle).unwrap_or(core::ptr::null_mut());
+        let settings = settings.map(|x| x.handle).unwrap_or(std::ptr::null_mut());
         let graph = unsafe { BNCreateMediumLevelILFunctionGraph(self.handle, settings) };
         unsafe { FlowGraph::from_raw(graph) }
     }
 
     /// This gets just the MLIL variables - you may be interested in the union
-    /// of [MediumLevelILFunction::aliased_variables] and
-    /// [crate::function::Function::parameter_variables] for all the
-    /// variables used in the function
+    /// of [`MediumLevelILFunction::aliased_variables`] and [`Function::parameter_variables`] for 
+    /// all the variables used in the function
     pub fn variables(&self) -> Array<Variable> {
         let mut count = 0;
         let uses = unsafe { BNGetMediumLevelILVariables(self.handle, &mut count) };
@@ -567,8 +550,8 @@ impl MediumLevelILFunction {
     }
 
     /// This returns a list of Variables that are taken reference to and used
-    /// elsewhere. You may also wish to consider [MediumLevelILFunction::variables]
-    /// and [crate::function::Function::parameter_variables]
+    /// elsewhere. You may also wish to consider [`MediumLevelILFunction::variables`]
+    /// and [`Function::parameter_variables`]
     pub fn aliased_variables(&self) -> Array<Variable> {
         let mut count = 0;
         let uses = unsafe { BNGetMediumLevelILAliasedVariables(self.handle, &mut count) };
@@ -604,45 +587,27 @@ unsafe impl RefCountable for MediumLevelILFunction {
     }
 }
 
-impl core::fmt::Debug for MediumLevelILFunction {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+impl Debug for MediumLevelILFunction {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "<mlil func handle {:p}>", self.handle)
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct MediumLevelILInstructionList<'a> {
-    mlil: &'a MediumLevelILFunction,
-    ptr: *mut usize,
-    instr_idxs: core::slice::Iter<'a, usize>,
-}
+unsafe impl Send for MediumLevelILFunction {}
+unsafe impl Sync for MediumLevelILFunction {}
 
-impl Drop for MediumLevelILInstructionList<'_> {
-    fn drop(&mut self) {
-        unsafe { BNFreeILInstructionList(self.ptr) };
+impl Eq for MediumLevelILFunction {}
+impl PartialEq for MediumLevelILFunction {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.get_function().eq(&rhs.get_function())
     }
 }
 
-impl Iterator for MediumLevelILInstructionList<'_> {
-    type Item = MediumLevelILInstruction;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.instr_idxs
-            .next()
-            .map(|i| self.mlil.instruction_from_instruction_idx(*i))
+impl Hash for MediumLevelILFunction {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.get_function().hash(state)
     }
 }
-
-impl DoubleEndedIterator for MediumLevelILInstructionList<'_> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.instr_idxs
-            .next_back()
-            .map(|i| self.mlil.instruction_from_instruction_idx(*i))
-    }
-}
-
-impl ExactSizeIterator for MediumLevelILInstructionList<'_> {}
-impl core::iter::FusedIterator for MediumLevelILInstructionList<'_> {}
 
 pub struct ILReferenceSource {
     pub function: Ref<Function>,
@@ -687,7 +652,7 @@ unsafe impl CoreArrayProviderInner for ILReferenceSource {
         BNFreeILReferences(raw, count)
     }
     
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         raw.into()
     }
 }

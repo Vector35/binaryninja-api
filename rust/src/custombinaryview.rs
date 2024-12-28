@@ -271,6 +271,11 @@ pub struct BinaryViewType {
 }
 
 impl BinaryViewType {
+    pub(crate) unsafe fn from_raw(handle: *mut BNBinaryViewType) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle }
+    }
+    
     pub fn list_all() -> Array<BinaryViewType> {
         unsafe {
             let mut count: usize = 0;
@@ -292,7 +297,7 @@ impl BinaryViewType {
         let bytes = name.into_bytes_with_nul();
         let handle = unsafe { BNGetBinaryViewTypeByName(bytes.as_ref().as_ptr() as *const _) };
         match handle.is_null() {
-            false => Ok(BinaryViewType { handle }),
+            false => Ok(unsafe { BinaryViewType::from_raw(handle) }),
             true => Err(()),
         }
     }
@@ -333,7 +338,7 @@ unsafe impl CoreArrayProviderInner for BinaryViewType {
         BNFreeBinaryViewTypeList(raw);
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(BinaryViewType { handle: *raw }, &())
+        Guard::new(BinaryViewType::from_raw(*raw), &())
     }
 }
 

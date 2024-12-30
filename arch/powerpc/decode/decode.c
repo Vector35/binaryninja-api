@@ -11,7 +11,6 @@
 // see stanford bit twiddling hacks
 static int32_t sign_extend(uint32_t x, unsigned numBits)
 {
-	int32_t r;
 	int32_t const m = 1U << (numBits - 1);
 
 	x = x & ((1U << numBits) - 1);
@@ -198,12 +197,6 @@ static void PushCRFS(Instruction* instruction, uint32_t word32)
 	PushRegister(instruction, PPC_OP_REG_CRFS, Crf(crfs));
 }
 
-static void PushCRFSImply0(Instruction* instruction, uint32_t word32)
-{
-	uint32_t crfs = (word32 >> 18) & 0x7;
-	PushRegister(instruction, PPC_OP_REG_CRFS_IMPLY0, Crf(crfs));
-}
-
 static void PushCRBitA(Instruction* instruction, uint32_t word32)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_CRBIT_A;
@@ -246,7 +239,6 @@ static uint32_t GetBO(uint32_t word32)
 static void FillBranchLikelyHint(Instruction* instruction, uint32_t word32)
 {
 	uint32_t bo = GetBO(word32);
-	uint32_t bi = GetBI(word32);
 
 	switch (bo >> 2)
 	{
@@ -1455,7 +1447,6 @@ static InstructionId DecodeSpe0x04(uint32_t word32, uint32_t decodeFlags)
 {
 	uint32_t a = GetA(word32);
 	uint32_t b = GetB(word32);
-	uint32_t d = GetD(word32);
 	uint32_t subop = word32 & 0x7ff;
 
 	switch (subop)
@@ -4346,7 +4337,6 @@ static InstructionId Decode0x3B(uint32_t word32, uint32_t flags)
 
 static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 {
-	uint32_t bit21 = (word32 >> 10) & 0x1;
 	uint32_t subop = (word32 >> 4) & 0x3;
 	uint32_t vsxA = GetVsxA(word32);
 	uint32_t vsxB = GetVsxB(word32);
@@ -5728,8 +5718,7 @@ static InstructionId Decode0x3F(uint32_t word32, uint32_t flags)
 						return PPC_ID_VSX_XSSQRTQPx;
 
 					default:
-						PPC_ID_INVALID;
-
+						return PPC_ID_INVALID;
 				}
 			}
 			else
@@ -5928,10 +5917,10 @@ static InstructionId Decode(uint32_t word32, uint32_t decodeFlags)
 			{
 				if ((word32 & 0x00200000) != 0)
 				{
-					if (decodeFlags & DECODE_FLAGS_PPC64 == 0)
+					if ((decodeFlags & DECODE_FLAGS_PPC64) != 0)
+						return PPC_ID_CMPLDI;
+					else
 						return PPC_ID_INVALID;
-
-					return PPC_ID_CMPLDI;
 				}
 				else
 				{
@@ -5946,10 +5935,11 @@ static InstructionId Decode(uint32_t word32, uint32_t decodeFlags)
 			{
 				if ((word32 & 0x00200000) != 0)
 				{
-					if (decodeFlags & DECODE_FLAGS_PPC64 == 0)
+					if ((decodeFlags & DECODE_FLAGS_PPC64) != 0)
+						return PPC_ID_CMPDI;
+					else
 						return PPC_ID_INVALID;
 
-					return PPC_ID_CMPDI;
 				}
 				else
 				{
@@ -9290,8 +9280,6 @@ void FillBclrxOperands(OperandsList* bclrx, const Instruction* instruction)
 
 const char* GetMnemonic(const Instruction* instruction)
 {
-	unsigned int index;
-
 	switch (instruction->id)
 	{
 		case PPC_ID_ADDx: return OeRcMnemonic(instruction, SubMnemADDx);
@@ -11057,7 +11045,8 @@ const char* OperandClassName(uint32_t cls)
 		case PPC_OP_REG_VSX_RS: return "VSX_RS";
 		case PPC_OP_REG_VSX_RS_DWORD0: return "VSX_RS0";
 
-		return "???";
+		default:
+			return "???";
 	}
 }
 

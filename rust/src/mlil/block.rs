@@ -1,7 +1,4 @@
 use std::ops::Range;
-
-use binaryninjacore_sys::BNGetMediumLevelILIndexForInstruction;
-
 use crate::basicblock::{BasicBlock, BlockContext};
 use crate::rc::Ref;
 

@@ -233,9 +233,6 @@ pub struct Function {
     pub(crate) handle: *mut BNFunction,
 }
 
-unsafe impl Send for Function {}
-unsafe impl Sync for Function {}
-
 impl Function {
     pub(crate) unsafe fn from_raw(handle: *mut BNFunction) -> Self {
         debug_assert!(!handle.is_null());
@@ -1982,7 +1979,7 @@ impl Function {
 
     /// Splits a varible at the definition site. The given `var` must be the
     /// variable unique to the definition and should be obtained by using
-    /// [mlil::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
+    /// [crate::mlil::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
     ///
     /// This function is not meant to split variables that have been previously merged. Use
     /// [Function::unmerge_variables] to split previously merged variables.
@@ -2005,7 +2002,7 @@ impl Function {
 
     /// Undoes varible splitting performed with [Function::split_variable]. The given `var`
     /// must be the variable unique to the definition and should be obtained by using
-    /// [mlil::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
+    /// [crate::mlil::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
     ///
     /// * `var` - variable to unsplit
     pub fn unsplit_variable(&self, var: &Variable) {
@@ -2260,6 +2257,9 @@ impl Debug for Function {
         )
     }
 }
+
+unsafe impl Send for Function {}
+unsafe impl Sync for Function {}
 
 impl ToOwned for Function {
     type Owned = Ref<Self>;

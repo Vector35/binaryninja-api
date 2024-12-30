@@ -1257,37 +1257,35 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     _ => unreachable!(),
                 };
 
-                let mut new_false: Option<Label> = None;
-                let mut new_true: Option<Label> = None;
+                let mut new_false = false;
+                let mut new_true = false;
 
                 let ft = addr.wrapping_add(inst_len);
                 let tt = addr.wrapping_add(b.imm() as i64 as u64);
 
-                {
-                    let mut f = il.label_for_address(ft).unwrap_or_else(|| {
-                        new_false = Some(Label::new());
-                        new_false.unwrap()
-                    });
+                let mut f = il.label_for_address(ft).unwrap_or_else(|| {
+                    new_false = true;
+                    Label::new()
+                });
 
-                    let mut t = il.label_for_address(tt).unwrap_or_else(|| {
-                        new_true = Some(Label::new());
-                        new_true.unwrap()
-                    });
+                let mut t = il.label_for_address(tt).unwrap_or_else(|| {
+                    new_true = true;
+                    Label::new()
+                });
 
-                    il.if_expr(cond_expr, &mut t, &mut f).append();
-
-                    il.update_label_for_address(ft, f);
+                il.if_expr(cond_expr, &mut t, &mut f).append();
+                
+                if new_true {
+                    il.mark_label(&mut t);
+                    il.jump(il.const_ptr(tt)).append();
+                } else {
                     il.update_label_for_address(tt, t);
                 }
 
-                if let Some(t) = new_true.as_mut() {
-                    il.mark_label(t);
-
-                    il.jump(il.const_ptr(tt)).append();
-                }
-
-                if let Some(f) = new_false.as_mut() {
-                    il.mark_label(f);
+                if new_false {
+                    il.mark_label(&mut f);
+                } else {
+                    il.update_label_for_address(ft, f);
                 }
             }
 
@@ -1430,31 +1428,28 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 // nature of the store -- dataflow will give up
                 il.set_reg(max_width, dest_reg, il.unimplemented()).append();
 
-                let mut new_false: Option<Label> = None;
+                let mut new_false = false;
                 let mut t = Label::new();
 
-                {
-                    let cond_expr = il.cmp_e(max_width, dest_reg, 0u64);
+                let cond_expr = il.cmp_e(max_width, dest_reg, 0u64);
 
-                    let ft = addr.wrapping_add(inst_len);
-                    let mut f = il.label_for_address(ft).unwrap_or_else(|| {
-                        new_false = Some(Label::new());
-                        new_false.unwrap()
-                    });
+                let ft = addr.wrapping_add(inst_len);
+                let mut f = il.label_for_address(ft).unwrap_or_else(|| {
+                    new_false = true;
+                    Label::new()
+                });
 
-                    il.if_expr(cond_expr, &mut t, &mut f).append();
-
-                    il.update_label_for_address(ft, f);
-                }
+                il.if_expr(cond_expr, &mut t, &mut f).append();
 
                 il.mark_label(&mut t);
-
                 il.store(size, Register::from(a.rs1()), Register::from(a.rs2()))
                     .with_source_operand(2)
                     .append();
 
-                if let Some(f) = new_false.as_mut() {
-                    il.mark_label(f);
+                if new_false {
+                    il.mark_label(&mut f);
+                } else {
+                    il.update_label_for_address(ft, f);
                 }
             }
             Op::AmoSwap(a)

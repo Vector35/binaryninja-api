@@ -101,7 +101,7 @@ impl FunctionInfoBuilder {
 // TODO : Don't make this pub...fix the value thing
 pub(crate) struct DebugType {
     name: String,
-    t: Ref<Type>,
+    ty: Ref<Type>,
     commit: bool,
 }
 
@@ -111,7 +111,7 @@ impl DebugType {
     }
 
     pub fn get_type(&self) -> Ref<Type> {
-        self.t.clone()
+        self.ty.clone()
     }
 }
 
@@ -330,13 +330,13 @@ impl DebugInfoBuilder {
     pub(crate) fn add_type(&mut self, type_uid: TypeUID, name: &String, t: Ref<Type>, commit: bool) {
         if let Some(DebugType {
             name: existing_name,
-            t: existing_type,
+            ty: existing_type,
             commit: _,
         }) = self.types.insert(
             type_uid,
             DebugType {
                 name: name.clone(),
-                t: t.clone(),
+                ty: t.clone(),
                 commit,
             },
         ) {
@@ -496,7 +496,7 @@ impl DebugInfoBuilder {
                 };
 
                 let mut skip_adding_type = false;
-                if stored_debug_type.t != debug_type.t {
+                if stored_debug_type.ty != debug_type.ty {
                     // We already stored a type with this name and it's a different type, deconflict the name and try again
                     let mut i = 1;
                     loop {
@@ -507,7 +507,7 @@ impl DebugInfoBuilder {
                                 break;
                             }
                             if let Some(stored_debug_type) = self.types.get(stored_uid) {
-                                if stored_debug_type.t == debug_type.t {
+                                if stored_debug_type.ty == debug_type.ty {
                                     // We already have a type with this name but it's the same type so we're ok
                                     skip_adding_type = true;
                                     break;
@@ -529,9 +529,9 @@ impl DebugInfoBuilder {
                 }
             };
 
-            type_uids_by_name.insert(debug_type_name.clone(), *debug_type_uid);
-            debug_info.add_type(debug_type_name, debug_type.t.as_ref(), &[]);
             // TODO : Components
+            debug_info.add_type(&debug_type_name, &debug_type.ty, &[]);
+            type_uids_by_name.insert(debug_type_name, *debug_type_uid);
         }
     }
 
@@ -540,7 +540,7 @@ impl DebugInfoBuilder {
         for (&address, (name, type_uid)) in &self.data_variables {
             assert!(debug_info.add_data_variable(
                 address,
-                &self.get_type(*type_uid).unwrap().t,
+                &self.get_type(*type_uid).unwrap().ty,
                 name.clone(),
                 &[] // TODO : Components
             ));

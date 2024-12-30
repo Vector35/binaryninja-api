@@ -1797,10 +1797,6 @@ impl BinaryViewBase for BinaryView {
         unsafe { BNRemoveViewData(self.handle, offset, len as u64) }
     }
 
-    fn modification_status(&self, offset: u64) -> ModificationStatus {
-        unsafe { BNGetModification(self.handle, offset) }
-    }
-
     fn offset_valid(&self, offset: u64) -> bool {
         unsafe { BNIsValidOffset(self.handle, offset) }
     }
@@ -1825,16 +1821,8 @@ impl BinaryViewBase for BinaryView {
         unsafe { BNGetNextValidOffset(self.handle, offset) }
     }
 
-    fn default_endianness(&self) -> Endianness {
-        unsafe { BNGetDefaultEndianness(self.handle) }
-    }
-
-    fn relocatable(&self) -> bool {
-        unsafe { BNIsRelocatable(self.handle) }
-    }
-
-    fn address_size(&self) -> usize {
-        unsafe { BNGetViewAddressSize(self.handle) }
+    fn modification_status(&self, offset: u64) -> ModificationStatus {
+        unsafe { BNGetModification(self.handle, offset) }
     }
 
     fn start(&self) -> u64 {
@@ -1845,12 +1833,24 @@ impl BinaryViewBase for BinaryView {
         unsafe { BNGetViewLength(self.handle) as usize }
     }
 
+    fn executable(&self) -> bool {
+        unsafe { BNIsExecutableView(self.handle) }
+    }
+
+    fn relocatable(&self) -> bool {
+        unsafe { BNIsRelocatable(self.handle) }
+    }
+
     fn entry_point(&self) -> u64 {
         unsafe { BNGetEntryPoint(self.handle) }
     }
 
-    fn executable(&self) -> bool {
-        unsafe { BNIsExecutableView(self.handle) }
+    fn default_endianness(&self) -> Endianness {
+        unsafe { BNGetDefaultEndianness(self.handle) }
+    }
+
+    fn address_size(&self) -> usize {
+        unsafe { BNGetViewAddressSize(self.handle) }
     }
 }
 

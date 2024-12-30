@@ -1,11 +1,18 @@
+use crate::confidence::Conf;
 use crate::function::{Function, Location};
-use crate::mlil::MediumLevelILFunction;
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
+use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::string::{raw_to_string, BnString};
 use crate::types::Type;
-use binaryninjacore_sys::{BNDataVariable, BNDataVariableAndName, BNFreeDataVariables, BNFreeILInstructionList, BNFreeIndirectBranchList, BNFreeMergedVariableList, BNFreeStackVariableReferenceList, BNFreeUserVariableValues, BNFreeVariableList, BNFreeVariableNameAndTypeList, BNFromVariableIdentifier, BNGetMediumLevelILVariableSSAVersions, BNIndirectBranchInfo, BNLookupTableEntry, BNMergedVariable, BNPossibleValueSet, BNRegisterValue, BNRegisterValueType, BNStackVariableReference, BNToVariableIdentifier, BNUserVariableValue, BNValueRange, BNVariable, BNVariableNameAndType, BNVariableSourceType};
+use binaryninjacore_sys::{
+    BNDataVariable, BNDataVariableAndName, BNFreeDataVariables, BNFreeILInstructionList,
+    BNFreeIndirectBranchList, BNFreeMergedVariableList, BNFreeStackVariableReferenceList,
+    BNFreeUserVariableValues, BNFreeVariableList, BNFreeVariableNameAndTypeList,
+    BNFromVariableIdentifier, BNIndirectBranchInfo, BNLookupTableEntry, BNMergedVariable,
+    BNPossibleValueSet, BNRegisterValue, BNRegisterValueType, BNStackVariableReference,
+    BNToVariableIdentifier, BNUserVariableValue, BNValueRange, BNVariable, BNVariableNameAndType,
+    BNVariableSourceType,
+};
 use std::collections::HashSet;
-use crate::confidence::Conf;
 
 pub type VariableSourceType = BNVariableSourceType;
 pub type RegisterValueType = BNRegisterValueType;
@@ -295,7 +302,6 @@ impl From<&BNStackVariableReference> for StackVariableReference {
     }
 }
 
-
 impl From<StackVariableReference> for BNStackVariableReference {
     fn from(value: StackVariableReference) -> Self {
         let bn_name = BnString::new(value.name);
@@ -465,7 +471,7 @@ unsafe impl CoreArrayProviderInner for MergedVariable {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeMergedVariableList(raw, count)
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Self::from(*raw)
     }

@@ -138,30 +138,32 @@ macro_rules! conditional_jump {
     ($addr:ident, $inst:ident, $cond:ident, $il:ident) => {
         let true_addr = offset_to_absolute($addr, $inst.offset());
         let false_addr = $addr + $inst.size() as u64;
-        let mut new_true = Label::new();
-        let mut new_false = Label::new();
-
-        let true_label = $il.label_for_address(true_addr);
-        let false_label = $il.label_for_address(false_addr);
-
-        $il.if_expr(
-            $cond,
-            &mut true_label.unwrap_or(new_true),
-            &mut false_label.unwrap_or(new_false),
-        )
-        .append();
+        let mut new_true = true;
+        let mut new_false = false;
         
-        if let Some(true_label) = true_label {
-            $il.update_label_for_address(true_addr, true_label);
-        } else {
-            $il.mark_label(&mut new_true);
+        let mut true_label = $il.label_for_address(true_addr).unwrap_or_else(|| {
+            new_true = true;
+            Label::new()
+        });
+        
+        let mut false_label = $il.label_for_address(false_addr).unwrap_or_else(|| {
+            new_false = true;
+            Label::new()
+        });
+
+        $il.if_expr($cond, &mut true_label, &mut false_label).append();
+        
+        if new_true {
+            $il.mark_label(&mut true_label);
             $il.jump($il.const_ptr(true_addr)).append();
+        } else {
+            $il.update_label_for_address(true_addr, true_label);
         }
         
-        if let Some(false_label) = false_label {
-            $il.update_label_for_address(false_addr, false_label);
+        if new_false {
+            $il.mark_label(&mut false_label);
         } else {
-            $il.mark_label(&mut new_false);
+            $il.update_label_for_address(false_addr, false_label);
         }
     };
 }

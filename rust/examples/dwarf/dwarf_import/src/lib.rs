@@ -612,7 +612,7 @@ impl CustomDebugInfoParser for DWARFParser {
                 (Some(debug_view), x)
             }
             else if let Ok(build_id) = get_build_id(bv) {
-                helpers::load_debug_info_for_build_id(&build_id, bv)
+                load_debug_info_for_build_id(&build_id, bv)
             }
             else {
                 (None, false)

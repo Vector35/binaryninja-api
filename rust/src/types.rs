@@ -709,10 +709,12 @@ impl Type {
 
     pub fn named_type_from_type<S: BnStrCompatible>(name: S, t: &Type) -> Ref<Self> {
         let mut name = QualifiedName::from(name);
+        // TODO: No id is present for this call?
+        let id = BnString::new("");
 
         unsafe {
             Self::ref_from_raw(BNCreateNamedTypeReferenceFromTypeAndId(
-                BnString::new("").as_ptr() as *mut _,
+                id.as_ptr(),
                 &mut name.0,
                 t.handle,
             ))
@@ -1619,11 +1621,6 @@ pub struct Structure {
 }
 
 impl Structure {
-    unsafe fn from_raw(handle: *mut BNStructure) -> Self {
-        debug_assert!(!handle.is_null());
-        Self { handle }
-    }
-
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNStructure) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Ref::new(Self { handle })
@@ -1873,11 +1870,6 @@ pub struct NamedTypeReference {
 }
 
 impl NamedTypeReference {
-    pub(crate) unsafe fn from_raw(handle: *mut BNNamedTypeReference) -> Self {
-        debug_assert!(!handle.is_null());
-        Self { handle }
-    }
-
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNNamedTypeReference) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Ref::new(Self { handle })

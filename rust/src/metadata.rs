@@ -350,7 +350,8 @@ impl CoreArrayProvider for Metadata {
 }
 
 unsafe impl CoreArrayProviderInner for Metadata {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        // TODO: `count` is not passed into the core here...
         BNFreeMetadataArray(raw);
     }
     

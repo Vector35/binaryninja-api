@@ -68,8 +68,8 @@
 //! `DebugInfo` object just returned. This is automatic when opening a binary view with multiple valid debug info parsers. If you
 //! wish to set the debug info for a binary view without applying it as well, you can call `binaryninja::binaryview::BinaryView::set_debug_info`.
 
-use std::ffi::c_void;
 use binaryninjacore_sys::*;
+use std::ffi::c_void;
 
 use crate::{
     binaryview::BinaryView,
@@ -732,19 +732,16 @@ impl DebugInfo {
         new_type: &Type,
         components: &[&str],
     ) -> bool {
-        let mut components_array: Vec<*const ::std::os::raw::c_char> =
-            Vec::with_capacity(components.len());
-        for component in components {
-            components_array.push(component.as_ptr() as _);
-        }
-
+        // SAFETY: Lifetime of `components` will live long enough, so passing as_ptr is safe.
+        let raw_components: Vec<_> = components.iter().map(|&c| c.as_ptr()).collect();
+        
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddDebugType(
                 self.handle,
                 name.as_ref().as_ptr() as *mut _,
                 new_type.handle,
-                components_array.as_ptr() as _,
+                raw_components.as_ptr() as *mut _,
                 components.len(),
             )
         }

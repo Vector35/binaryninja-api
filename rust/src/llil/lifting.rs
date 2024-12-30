@@ -19,6 +19,10 @@ use crate::architecture::Register as ArchReg;
 use crate::architecture::{
     Flag, FlagClass, FlagCondition, FlagGroup, FlagRole, FlagWrite, Intrinsic,
 };
+use binaryninjacore_sys::{BNAddLowLevelILLabelForAddress, BNLowLevelILOperation};
+use crate::function::Location;
+use crate::llil::{Expression, ExpressionResultType, LowLevelILFunction, LiftedExpr, LiftedNonSSA, Lifter, Mutable, NonSSA, Register, ValueExpr, VoidExpr};
+use binaryninjacore_sys::{BNLowLevelILLabel, BNRegisterOrConstant};
 
 pub trait Liftable<'func, A: 'func + Architecture> {
     type Result: ExpressionResultType;
@@ -38,8 +42,6 @@ pub trait LiftableWithSize<'func, A: 'func + Architecture>:
         size: usize,
     ) -> Expression<'func, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>;
 }
-
-use binaryninjacore_sys::{BNLowLevelILLabel, BNRegisterOrConstant};
 
 #[derive(Copy, Clone)]
 pub enum RegisterOrConstant<R: ArchReg> {
@@ -580,11 +582,6 @@ where
     }
 }
 
-use binaryninjacore_sys::BNLowLevelILOperation;
-use crate::function::Location;
-use crate::llil;
-use crate::llil::{Expression, ExpressionResultType, LowLevelILFunction, LiftedExpr, LiftedNonSSA, Lifter, Mutable, NonSSA, Register, ValueExpr, VoidExpr};
-
 pub struct ExpressionBuilder<'func, A, R>
 where
     A: 'func + Architecture,
@@ -977,7 +974,7 @@ where
     unsized_unary_op_lifter!(call, LLIL_CALL, VoidExpr);
     unsized_unary_op_lifter!(ret, LLIL_RET, VoidExpr);
     unsized_unary_op_lifter!(jump, LLIL_JUMP, VoidExpr);
-    // JumpTo TODO
+    // TODO: LLIL_JUMP_TO
 
     pub fn if_expr<'a: 'b, 'b, C>(
         &'a self,
@@ -1456,10 +1453,9 @@ where
 
     pub fn label_for_address<L: Into<Location>>(&self, loc: L) -> Option<Label> {
         use binaryninjacore_sys::BNGetLowLevelILLabelForAddress;
-
+        
         let loc: Location = loc.into();
         let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
-
         let raw_label = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
         match raw_label.is_null() {
             false => Some(unsafe { Label::from(*raw_label) }),
@@ -1472,12 +1468,17 @@ where
     /// If you retrieved a label via [`Self::label_for_address`] than you very likely want to use this.
     pub fn update_label_for_address<L: Into<Location>>(&self, loc: L, label: Label) {
         use binaryninjacore_sys::BNGetLowLevelILLabelForAddress;
+        
         let loc: Location = loc.into();
         let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
+        // Add the label into the label map
+        unsafe { BNAddLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
+        // Retrieve a pointer to the label in the map
         let raw_label = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
-        if !raw_label.is_null() {
-            unsafe { *raw_label = label.into() };   
-        }
+        // We should always have a valid label here
+        assert!(!raw_label.is_null(), "Failed to add label for address!");
+        // Update the label in the map with `label`
+        unsafe { *raw_label = label.into() };
     }
 
     pub fn mark_label(&self, label: &mut Label) {

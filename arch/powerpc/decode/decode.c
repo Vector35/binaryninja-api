@@ -9,6 +9,15 @@
 //    Implementations of the PowerPC^TM Architecture" by Freescale/NXP
 //
 
+size_t GetInstructionLength(const uint8_t* data, size_t data_length, uint32_t decodeFlags)
+{
+	(void)data;
+	(void)data_length;
+	(void)decodeFlags;
+
+	return 4;
+}
+
 static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 {
 	uint32_t subop = word32 & 0x3f;
@@ -5429,7 +5438,7 @@ static InstructionId Decode0x3F(uint32_t word32, uint32_t flags)
 	return true;
 }
 
-static InstructionId Decode(uint32_t word32, uint32_t decodeFlags)
+static InstructionId Decode32(uint32_t word32, uint32_t decodeFlags)
 {
 	uint32_t a = GetA(word32);
 
@@ -5754,14 +5763,14 @@ static InstructionId Decode(uint32_t word32, uint32_t decodeFlags)
 	}
 }
 
-bool Decompose(Instruction* instruction, uint32_t word32, uint64_t address, uint32_t flags)
+bool Decompose32(Instruction* instruction, uint32_t word32, uint64_t address, uint32_t flags)
 {
 	memset(instruction, 0, sizeof *instruction);
 
-	instruction->id = Decode(word32, flags);
+	instruction->id = Decode32(word32, flags);
 	if (instruction->id == PPC_ID_INVALID)
 		return false;
 
-	FillOperands(instruction, word32, address);
+	FillOperands32(instruction, word32, address);
 	return true;
 }

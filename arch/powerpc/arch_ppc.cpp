@@ -340,12 +340,22 @@ class PowerpcArchitecture: public Architecture
 
 	bool FillInstruction(Instruction* instruction, const uint8_t* data, size_t length, uint64_t address)
 	{
-		uint32_t word32 = *(const uint32_t *) data;
+		switch (length)
+		{
+			case 4:
+			{
+				uint32_t word32 = *(const uint32_t *) data;
 
-		if (endian == BigEndian)
-			word32 = bswap32(word32);
+				if (endian == BigEndian)
+					word32 = bswap32(word32);
 
-		return Decompose(instruction, word32, address, decodeFlags);
+				return Decompose32(instruction, word32, address, decodeFlags);
+			}
+
+			default:
+				MYLOG("FillInstruction: unrecognized length %d", length);
+				return false;
+		}
 	}
 
 	/* think "GetInstructionBranchBehavior()"
@@ -361,17 +371,17 @@ class PowerpcArchitecture: public Architecture
 	virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr,
 		size_t maxLen, InstructionInfo& result) override
 	{
-		Instruction instruction;
-
-		if (maxLen < 4)
+		size_t instructionLength = GetInstructionLength(data, maxLen, decodeFlags);
+		if (instructionLength == 0)
 		{
-			MYLOG("ERROR: need at least 4 bytes\n");
+			MYLOG("ERROR: not enough bytes for instruction\n");
 			return false;
 		}
 
-		result.length = 4;
+		result.length = instructionLength;
 
-		if (!FillInstruction(&instruction, data, maxLen, addr))
+		Instruction instruction;
+		if (!FillInstruction(&instruction, data, instructionLength, addr))
 		{
 			MYLOG("ERROR: FillInstruction()\n");
 			return false;
@@ -540,15 +550,15 @@ class PowerpcArchitecture: public Architecture
 		const char* mnemonic = NULL;
 
 		//MYLOG("%s()\n", __func__);
-
-		if (len < 4)
+		size_t instructionLength = GetInstructionLength(data, len, decodeFlags);
+		if (instructionLength == 0)
 		{
-			MYLOG("ERROR: need at least 4 bytes\n");
+			MYLOG("ERROR: not enough bytes for instruction\n");
 			return false;
 		}
 
-		len = 4;
-		if (!FillInstruction(&instruction, data, len, addr))
+		len = instructionLength;
+		if (!FillInstruction(&instruction, data, instructionLength, addr))
 		{
 			MYLOG("ERROR: FillInstruction()\n");
 			return false;
@@ -740,27 +750,24 @@ class PowerpcArchitecture: public Architecture
 
 	virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override
 	{
-		Instruction instruction;
-		bool rc = false;
-
-		if (len < 4)
+		size_t instructionLength = GetInstructionLength(data, len, decodeFlags);
+		if (instructionLength == 0)
 		{
-			MYLOG("ERROR: need at least 4 bytes\n");
-			goto cleanup;
+			MYLOG("ERROR: not enough bytes for instruction\n");
+			return false;
 		}
 
-		if (!FillInstruction(&instruction, data, len, addr))
+		len = instructionLength;
+
+		Instruction instruction;
+		if (!FillInstruction(&instruction, data, instructionLength, addr))
 		{
 			MYLOG("ERROR: FillInstruction()\n");
 			il.AddInstruction(il.Undefined());
-			goto cleanup;
+			return false;
 		}
 
-		rc = GetLowLevelILForPPCInstruction(this, il, &instruction, addr);
-		len = 4;
-
-		cleanup:
-		return rc;
+		return GetLowLevelILForPPCInstruction(this, il, &instruction, addr);
 	}
 
 	virtual size_t GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,

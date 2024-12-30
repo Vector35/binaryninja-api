@@ -5,6 +5,16 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+// Procedure for adding a new instruction:
+// 	* Add its enum to the InstructionId in this file (decode.h)
+// 	* Add logic to convert instruction bits to the new instruction in decode.c
+// 	* Add its mnemonic in `GetMnemonic` in `mnemonic.c`
+// 	* Add its operands in `FillOperands` in `operands.c`
+//
+// This only handles instruction decoding (going from bits --> a powerpc
+// instruction), and not anything like lifting or the behavior of the
+// instruction itself.
+
 #define DECODE_FLAGS_PPC64      0x01
 #define DECODE_FLAGS_ALTIVEC    0x02
 #define DECODE_FLAGS_VSX        0x04

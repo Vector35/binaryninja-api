@@ -24,4 +24,4 @@ uint32_t GetSH(uint32_t word32);
 uint32_t GetSH64(uint32_t word32);
 uint32_t GetMX64(uint32_t word32);
 
-void FillOperands(Instruction* instruction, uint32_t word32, uint64_t address);
+void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address);

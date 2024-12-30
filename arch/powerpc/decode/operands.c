@@ -310,7 +310,7 @@ static void PushAltivecVS(Instruction* instruction, uint32_t word32)
 	PushRegister(instruction, PPC_OP_REG_AV_VS, AltivecVr(vs));
 }
 
-void FillOperands(Instruction* instruction, uint32_t word32, uint64_t address)
+void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 {
 	switch (instruction->id)
 	{

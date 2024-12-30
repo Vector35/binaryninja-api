@@ -1647,7 +1647,10 @@ extern "C" {
 	typedef struct Instruction Instruction;
 #endif
 
-	bool Decompose(Instruction* instruction, uint32_t word32, uint64_t address, uint32_t flags);
+	// returns 0 if data_length is too small to tell
+	size_t GetInstructionLength(const uint8_t* data, size_t data_length, uint32_t flags);
+
+	bool Decompose32(Instruction* instruction, uint32_t word32, uint64_t address, uint32_t flags);
 	void FillBcxOperands(OperandsList* bcx, const Instruction* instruction);
 	void FillBcctrxOperands(OperandsList* bcctrx, const Instruction* instruction);
 	void FillBclrxOperands(OperandsList* bclrx, const Instruction* instruction);

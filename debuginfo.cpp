@@ -291,7 +291,9 @@ bool DebugInfo::AddType(const string& name, Ref<Type> type, const vector<string>
 	const char** const componentArray = new const char*[components.size()];
 	for (size_t i = 0; i < components.size(); ++i)
 		componentArray[i] = components[i].c_str();
-	return BNAddDebugType(m_object, name.c_str(), type->GetObject(), componentArray, components.size());
+	bool result = BNAddDebugType(m_object, name.c_str(), type->GetObject(), componentArray, components.size());
+	delete[] componentArray;
+	return result;
 }
 
 

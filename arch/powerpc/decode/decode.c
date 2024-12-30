@@ -48,6 +48,11 @@ static Register VsxVr(uint32_t value)
 	return PPC_REG_VSX_VR0 + value;
 }
 
+static Register VsxVrHi(uint32_t value)
+{
+	return PPC_REG_VSX_VR0 + value + 32;
+}
+
 static void PushUIMMValue(Instruction* instruction, uint32_t uimm)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_UIMM;
@@ -132,6 +137,11 @@ static void PushRAor0(Instruction* instruction, uint32_t word32)
 static void PushRB(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_RB, Gpr(GetB(word32)));
+}
+
+static void PushRC(Instruction* instruction, uint32_t word32)
+{
+	PushRegister(instruction, PPC_OP_REG_RC, Gpr(GetC(word32)));
 }
 
 static void PushRD(Instruction* instruction, uint32_t word32)
@@ -281,6 +291,11 @@ static void PushVsxA(Instruction* instruction, uint32_t word32, VsxWidth width)
 		VsxVr(GetVsxA(word32)));
 }
 
+static void PushVsxHiA(Instruction* instruction, uint32_t word32)
+{
+	PushRegister(instruction, PPC_OP_REG_VSX_RA, VsxVrHi(GetA(word32)));
+}
+
 static uint32_t GetVsxB(uint32_t word32)
 {
 	uint32_t bx = (word32 >> 1) & 0x1;
@@ -294,6 +309,11 @@ static void PushVsxB(Instruction* instruction, uint32_t word32, VsxWidth width)
 	PushRegister(instruction,
 		width == VSX_WIDTH_FULL ? PPC_OP_REG_VSX_RB : PPC_OP_REG_VSX_RB_DWORD0,
 		VsxVr(GetVsxB(word32)));
+}
+
+static void PushVsxHiB(Instruction* instruction, uint32_t word32)
+{
+	PushRegister(instruction, PPC_OP_REG_VSX_RB, VsxVrHi(GetB(word32)));
 }
 
 static uint32_t GetVsxC(uint32_t word32)
@@ -324,6 +344,11 @@ static void PushVsxD(Instruction* instruction, uint32_t word32, VsxWidth width)
 	PushRegister(instruction,
 		width == VSX_WIDTH_FULL ? PPC_OP_REG_VSX_RD : PPC_OP_REG_VSX_RD_DWORD0,
 		VsxVr(GetVsxD(word32)));
+}
+
+static void PushVsxHiD(Instruction* instruction, uint32_t word32)
+{
+	PushRegister(instruction, PPC_OP_REG_VSX_RD, VsxVrHi(GetD(word32)));
 }
 
 static void PushVsxS(Instruction* instruction, uint32_t word32, VsxWidth width)
@@ -454,11 +479,38 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 
 			return PPC_ID_AV_VSLDOI;
 
+		case 0x2d:
+			return PPC_ID_AV_VPERMXOR;
+
 		case 0x2e:
 			return PPC_ID_AV_VMADDFP;
 
 		case 0x2f:
 			return PPC_ID_AV_VNMSUBFP;
+
+		case 0x30:
+			return PPC_ID_AV_MADDHD;
+
+		case 0x31:
+			return PPC_ID_AV_MADDHDU;
+
+		case 0x33:
+			return PPC_ID_AV_MADDLD;
+
+		case 0x3b:
+			return PPC_ID_AV_VPERMR;
+
+		case 0x3c:
+			return PPC_ID_AV_VADDEUQM;
+
+		case 0x3d:
+			return PPC_ID_AV_VADDECUQ;
+
+		case 0x3e:
+			return PPC_ID_AV_VSUBEUQM;
+
+		case 0x3f:
+			return PPC_ID_AV_VSUBECUQ;
 
 		default:
 			;
@@ -470,6 +522,12 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x000:
 			return PPC_ID_AV_VADDUBM;
 
+		case 0x001:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VMUL10CUQ;
+
 		case 0x002:
 			return PPC_ID_AV_VMAXUB;
 
@@ -480,6 +538,10 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x006:
 		case 0x406:
 			return PPC_ID_AV_VCMPEQUBx;
+
+		case 0x007:
+		case 0x407:
+			return PPC_ID_AV_VCMPNEBx;
 
 		case 0x008:
 			return PPC_ID_AV_VMULOUB;
@@ -496,6 +558,9 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x040:
 			return PPC_ID_AV_VADDUHM;
 
+		case 0x041:
+			return PPC_ID_AV_VMUL10ECUQ;
+
 		case 0x042:
 			return PPC_ID_AV_VMAXUH;
 
@@ -506,6 +571,10 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x046:
 		case 0x446:
 			return PPC_ID_AV_VCMPEQUHx;
+
+		case 0x047:
+		case 0x447:
+			return PPC_ID_AV_VCMPNEHx;
 
 		case 0x048:
 			return PPC_ID_AV_VMULOUH;
@@ -528,10 +597,16 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x084:
 			return PPC_ID_AV_VRLW;
 
+		case 0x085:
+			return PPC_ID_AV_VRLWMI;
 
 		case 0x086:
 		case 0x486:
 			return PPC_ID_AV_VCMPEQUWx;
+
+		case 0x087:
+		case 0x487:
+			return PPC_ID_AV_VCMPNEWx;
 
 		case 0x88:
 			return PPC_ID_AV_VMULOUW;
@@ -554,6 +629,8 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x0c4:
 			return PPC_ID_AV_VRLD;
 
+		case 0x0c5:
+			return PPC_ID_AV_VRLDMI;
 
 		case 0x0c6:
 		case 0x4c6:
@@ -566,11 +643,18 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x0ce:
 			return PPC_ID_AV_VPKUWUS;
 
+		case 0x100:
+			return PPC_ID_AV_VADDUQM;
+
 		case 0x102:
 			return PPC_ID_AV_VMAXSB;
 
 		case 0x104:
 			return PPC_ID_AV_VSLB;
+
+		case 0x107:
+		case 0x507:
+			return PPC_ID_AV_VCMPNEZBx;
 
 		case 0x108:
 			return PPC_ID_AV_VMULOSB;
@@ -587,11 +671,18 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x10e:
 			return PPC_ID_AV_VPKSHUS;
 
+		case 0x140:
+			return PPC_ID_AV_VADDCUQ;
+
 		case 0x142:
 			return PPC_ID_AV_VMAXSH;
 
 		case 0x144:
 			return PPC_ID_AV_VSLH;
+
+		case 0x147:
+		case 0x547:
+			return PPC_ID_AV_VCMPNEZHx;
 
 		case 0x148:
 			return PPC_ID_AV_VMULOSH;
@@ -617,6 +708,13 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x184:
 			return PPC_ID_AV_VSLW;
 
+		case 0x185:
+			return PPC_ID_AV_VRLWNM;
+
+		case 0x187:
+		case 0x587:
+			return PPC_ID_AV_VCMPNEZWx;
+
 		case 0x188:
 			return PPC_ID_AV_VMULOSW;
 
@@ -638,6 +736,9 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x1c4:
 			return PPC_ID_AV_VSL;
 
+		case 0x1c5:
+			return PPC_ID_AV_VRLDNM;
+
 		case 0x1c6:
 		case 0x5c6:
 			return PPC_ID_AV_VCMPGEFPx;
@@ -653,6 +754,12 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 
 		case 0x200:
 			return PPC_ID_AV_VADDUBS;
+
+		case 0x201:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VMUL10UQ;
 
 		case 0x202:
 			return PPC_ID_AV_VMINUB;
@@ -677,6 +784,12 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x20c:
 			return PPC_ID_AV_VSPLTB;
 
+		case 0x20d:
+			if ((word32 & 0x00100000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VEXTRACTUB;
+
 		case 0x20e:
 			if (a != 0)
 				return PPC_ID_INVALID;
@@ -685,6 +798,9 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 
 		case 0x240:
 			return PPC_ID_AV_VADDUHS;
+
+		case 0x241:
+			return PPC_ID_AV_VMUL10EUQ;
 
 		case 0x242:
 			return PPC_ID_AV_VMINUH;
@@ -707,6 +823,12 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 
 		case 0x24c:
 			return PPC_ID_AV_VSPLTH;
+
+		case 0x24d:
+			if ((word32 & 0x00100000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VEXTRACTUH;
 
 		case 0x24e:
 			if (a != 0)
@@ -739,6 +861,12 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x28c:
 			return PPC_ID_AV_VSPLTW;
 
+		case 0x28d:
+			if ((word32 & 0x00100000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VEXTRACTUW;
+
 		case 0x28e:
 			if (a != 0)
 				return PPC_ID_INVALID;
@@ -764,6 +892,12 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_AV_VRFIM;
+
+		case 0x2cd:
+			if ((word32 & 0x00100000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VEXTRACTD;
 
 		case 0x2ce:
 			if (a != 0)
@@ -796,11 +930,20 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 
 			return PPC_ID_AV_VSPLTISB;
 
+		case 0x30d:
+			if ((word32 & 0x00100000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VINSERTB;
+
 		case 0x30e:
 			return PPC_ID_AV_VPKPX;
 
 		case 0x340:
 			return PPC_ID_AV_VADDSHS;
+
+		case 0x341:
+			return PPC_ID_AV_BCDCPSGN;
 
 		case 0x342:
 			return PPC_ID_AV_VMINSH;
@@ -823,6 +966,12 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_AV_VSPLTISH;
+
+		case 0x34d:
+			if ((word32 & 0x00100000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VINSERTH;
 
 		case 0x34e:
 			if (a != 0)
@@ -855,6 +1004,12 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 
 			return PPC_ID_AV_VSPLTISW;
 
+		case 0x38d:
+			if ((word32 & 0x00100000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VINSERTW;
+
 		case 0x3c2:
 			return PPC_ID_AV_VMINSD;
 
@@ -872,6 +1027,12 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x3ca:
 			return PPC_ID_AV_VCTSXS;
 
+		case 0x3cd:
+			if ((word32 & 0x00100000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VINSERTD;
+
 		case 0x3ce:
 			if (a != 0)
 				return PPC_ID_INVALID;
@@ -881,11 +1042,21 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x400:
 			return PPC_ID_AV_VSUBUBM;
 
+		case 0x401:
+		case 0x601:
+			return PPC_ID_AV_BCDADD;
+
 		case 0x402:
 			return PPC_ID_AV_VAVGUB;
 
+		case 0x403:
+			return PPC_ID_AV_VABSDUB;
+
 		case 0x404:
 			return PPC_ID_AV_VAND;
+
+		case 0x408:
+			return PPC_ID_AV_VPMSUMB;
 
 		case 0x40a:
 			return PPC_ID_AV_VMAXFP;
@@ -896,11 +1067,21 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x440:
 			return PPC_ID_AV_VSUBUHM;
 
+		case 0x441:
+		case 0x641:
+			return PPC_ID_AV_BCDSUB;
+
 		case 0x442:
 			return PPC_ID_AV_VAVGUH;
 
+		case 0x443:
+			return PPC_ID_AV_VABSDUH;
+
 		case 0x444:
 			return PPC_ID_AV_VANDC;
+
+		case 0x448:
+			return PPC_ID_AV_VPMSUMH;
 
 		case 0x44a:
 			return PPC_ID_AV_VMINFP;
@@ -908,26 +1089,79 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x44c:
 			return PPC_ID_AV_VSRO;
 
+		case 0x44e:
+			return PPC_ID_AV_VPKUDUM;
+
 		case 0x480:
 			return PPC_ID_AV_VSUBUWM;
+
+		case 0x481:
+			return PPC_ID_AV_BCDUS;
 
 		case 0x482:
 			return PPC_ID_AV_VAVGUW;
 
+		case 0x483:
+			return PPC_ID_AV_VABSDUW;
+
 		case 0x484:
-			return PPC_ID_AV_VOR;
+			if (a == b)
+				return PPC_ID_AV_VMR;
+			else
+				return PPC_ID_AV_VOR;
+
+		case 0x488:
+			return PPC_ID_AV_VPMSUMW;
 
 		case 0x4c0:
 			return PPC_ID_AV_VSUBUDM;
 
+		case 0x4c1:
+		case 0x6c1:
+			return PPC_ID_AV_BCDS;
+
 		case 0x4c4:
 			return PPC_ID_AV_VXOR;
+
+		case 0x4c8:
+			return PPC_ID_AV_VPMSUMD;
+
+		case 0x4ce:
+			return PPC_ID_AV_VPKUDUS;
+
+		case 0x500:
+			return PPC_ID_AV_VSUBUQM;
+
+		case 0x501:
+		case 0x701:
+			return PPC_ID_AV_BCDTRUNC;
 
 		case 0x502:
 			return PPC_ID_AV_VAVGSB;
 
 		case 0x504:
-			return PPC_ID_AV_VNOR;
+			if (a == b)
+				return PPC_ID_AV_VNOT;
+			else 
+				return PPC_ID_AV_VNOR;
+
+		case 0x508:
+			return PPC_ID_AV_VCIPHER;
+
+		case 0x509:
+			return PPC_ID_AV_VCIPHERLAST;
+
+		case 0x50c:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VGBBD;
+
+		case 0x540:
+			return PPC_ID_AV_VSUBCUQ;
+
+		case 0x541:
+			return PPC_ID_AV_BCDUTRUNC;
 
 		case 0x542:
 			return PPC_ID_AV_VAVGSH;
@@ -935,8 +1169,55 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x544:
 			return PPC_ID_AV_VORC;
 
+		case 0x548:
+			return PPC_ID_AV_VNCIPHER;
+
+		case 0x549:
+			return PPC_ID_AV_VNCIPHERLAST;
+
+		case 0x54c:
+			return PPC_ID_AV_VBPERMQ;
+
+		case 0x54e:
+			return PPC_ID_AV_VPKSDUS;
+
 		case 0x580:
 			return PPC_ID_AV_VSUBCUW;
+
+		case 0x581:
+		case 0x781:
+			switch (a)
+			{
+			case 0x00:
+				if (subop == 0x581)
+					return PPC_ID_AV_BCDCTSQ;
+				else
+					return PPC_ID_INVALID;
+
+			case 0x02:
+				return PPC_ID_AV_BCDCFSQ;
+
+			case 0x04:
+				return PPC_ID_AV_BCDCTZ;
+
+			case 0x05:
+				if (subop == 0x581)
+					return PPC_ID_AV_BCDCTN;
+				else
+					return PPC_ID_INVALID;
+
+			case 0x06:
+				return PPC_ID_AV_BCDCFZ;
+
+			case 0x07:
+				return PPC_ID_AV_BCDCFN;
+
+			case 0x1f:
+				return PPC_ID_AV_BCDSETSGN;
+
+			default:
+				return PPC_ID_INVALID;
+			}
 
 		case 0x582:
 			return PPC_ID_AV_VAVGSW;
@@ -944,17 +1225,91 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x584:
 			return PPC_ID_AV_VNAND;
 
+		case 0x5c1:
+		case 0x7c1:
+			return PPC_ID_AV_BCDSR;
+
 		case 0x5c4:
 			return PPC_ID_AV_VSLD;
 
+		case 0x5c8:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VSBOX;
+
+		case 0x5cc:
+			return PPC_ID_AV_VBPERMD;
+
+		case 0x5ce:
+			return PPC_ID_AV_VPKSDSS;
+
 		case 0x600:
 			return PPC_ID_AV_VSUBUBS;
+
+		case 0x602:
+			switch (a)
+			{
+			case 0x00:
+				return PPC_ID_AV_VCLZLSBB;
+
+			case 0x01:
+				return PPC_ID_AV_VCTZLSBB;
+
+			case 0x06:
+				return PPC_ID_AV_VNEGW;
+
+			case 0x07:
+				return PPC_ID_AV_VNEGD;
+
+			case 0x08:
+				return PPC_ID_AV_VPRTYBW;
+
+			case 0x09:
+				return PPC_ID_AV_VPRTYBD;
+
+			case 0x0a:
+				return PPC_ID_AV_VPRTYBQ;
+
+			case 0x10:
+				return PPC_ID_AV_VEXTSB2W;
+
+			case 0x11:
+				return PPC_ID_AV_VEXTSH2W;
+
+			case 0x18:
+				return PPC_ID_AV_VEXTSB2D;
+
+			case 0x19:
+				return PPC_ID_AV_VEXTSH2D;
+
+			case 0x1a:
+				return PPC_ID_AV_VEXTSW2D;
+
+			case 0x1c:
+				return PPC_ID_AV_VCTZB;
+
+			case 0x1d:
+				return PPC_ID_AV_VCTZH;
+
+			case 0x1e:
+				return PPC_ID_AV_VCTZW;
+
+			case 0x1f:
+				return PPC_ID_AV_VCTZD;
+
+			default:
+				return PPC_ID_INVALID;
+			}
 
 		case 0x604:
 			if ((a != 0) || (b != 0))
 				return PPC_ID_INVALID;
 
 			return PPC_ID_AV_MFVSCR;
+
+		case 0x60d:
+			return PPC_ID_AV_VEXTUBLX;
 
 		case 0x608:
 			return PPC_ID_AV_VSUM4UBS;
@@ -971,8 +1326,20 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x648:
 			return PPC_ID_AV_VSUM4SHS;
 
+		case 0x64d:
+			return PPC_ID_AV_VEXTUHLX;
+
+		case 0x64e:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VUPKHSW;
+
 		case 0x680:
 			return PPC_ID_AV_VSUBUWS;
+
+		case 0x682:
+			return PPC_ID_AV_VSHASIGMAW;
 
 		case 0x684:
 			return PPC_ID_AV_VEQV;
@@ -980,8 +1347,23 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 		case 0x688:
 			return PPC_ID_AV_VSUM2SWS;
 
+		case 0x68c:
+			return PPC_ID_AV_VMRGOW;
+
+		case 0x68d:
+			return PPC_ID_AV_VEXTUWLX;
+
+		case 0x6c2:
+			return PPC_ID_AV_VSHASIGMAD;
+
 		case 0x6c4:
 			return PPC_ID_AV_VSRD;
+
+		case 0x6ce:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_AV_VUPKLSW;
 
 		case 0x700:
 			return PPC_ID_AV_VSUBSBS;
@@ -998,8 +1380,14 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 
 			return PPC_ID_AV_VPOPCNTB;
 
+		case 0x704:
+			return PPC_ID_AV_VSRV;
+
 		case 0x708:
 			return PPC_ID_AV_VSUM4SBS;
+
+		case 0x70d:
+			return PPC_ID_AV_VEXTUBRX;
 
 		case 0x740:
 			return PPC_ID_AV_VSUBSHS;
@@ -1015,6 +1403,12 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_AV_VPOPCNTH;
+
+		case 0x744:
+			return PPC_ID_AV_VSLV;
+
+		case 0x74d:
+			return PPC_ID_AV_VEXTUHRX;
 
 		case 0x780:
 			return PPC_ID_AV_VSUBSWS;
@@ -1033,6 +1427,12 @@ static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
 
 		case 0x788:
 			return PPC_ID_AV_VSUMSWS;
+
+		case 0x78c:
+			return PPC_ID_AV_VMRGEW;
+
+		case 0x78d:
+			return PPC_ID_AV_VEXTUWRX;
 
 		case 0x7c2:
 			if (a != 0)
@@ -2082,7 +2482,20 @@ static InstructionId Decode0x13(uint32_t word32, uint32_t decodeFlags)
 	uint32_t b = GetB(word32);
 	uint32_t d = GetD(word32);
 
-	uint32_t subop = word32 & 0x7ff;
+	uint32_t subop = (word32 >> 1) & 0x1f;
+	switch (subop)
+	{
+		case 0x2:
+			if ((word32 & 0x001fffff) == 4)
+				return PPC_ID_LNIA;
+
+			return PPC_ID_ADDPCIS;
+
+		default:
+			;
+	}
+
+	subop = word32 & 0x7ff;
 	switch (subop)
 	{
 		case 0x000:
@@ -2331,6 +2744,10 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x017:
 			return PPC_ID_MULHWUx;
 
+		case 0x018:
+		case 0x019:
+			return PPC_ID_VSX_LXSIWZX;
+
 		case 0x026:
 			if ((word32 & 0x00100000) != 0)
 			{
@@ -2350,12 +2767,13 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 			return PPC_ID_MFCR;
 
 		case 0x028:
+		case 0x029:
 			return PPC_ID_LWARX;
 
 		case 0x02a:
 			return PPC_ID_LDX;
 
-		case 0x2c:
+		case 0x02c:
 			if ((word32 & 0x02000000) != 0)
 				return PPC_ID_INVALID;
 
@@ -2382,6 +2800,9 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x038:
 		case 0x039:
 			return PPC_ID_ANDx;
+
+		case 0x03e:
+			return PPC_ID_LWEPX;
 
 		case 0x040:
 			if ((word32 & 0x00400000) == 0)
@@ -2421,6 +2842,24 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x451:
 			return PPC_ID_SUBFx;
 
+		case 0x066:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_MFFPRD;
+
+		case 0x067:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			// either MFVSRD or MFVRD; we use MFVRD for backwards
+			// compatibility with capstone
+			return PPC_ID_VSX_MFVSRD;
+
+		case 0x068:
+		case 0x069:
+			return PPC_ID_LBARX;
+
 		case 0x06a:
 			return PPC_ID_LDUX;
 
@@ -2444,7 +2883,13 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x079:
 			return PPC_ID_ANDCx;
 
-		case 0x07c:
+		case 0x07e:
+			if (d != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_DCBSTEP;
+
+		case 0x03c:
 		{
 			if ((word32 & 0x039ff800) != 0)
 				return false;
@@ -2495,6 +2940,10 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x097:
 			return PPC_ID_MULHWx;
 
+		case 0x098:
+		case 0x099:
+			return PPC_ID_VSX_LXSIWAX;
+
 		case 0x0a6:
 			if ((a != 0) || (b != 0))
 				return PPC_ID_INVALID;
@@ -2502,16 +2951,33 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 			return PPC_ID_MFMSR;
 
 		case 0x0a8:
+		case 0x0a9:
 			return PPC_ID_LDARX;
 
 		case 0x0ac:
-			if (d != 0)
+		{
+			if ((word32 & 0x03800000) != 0)
 				return PPC_ID_INVALID;
 
-			return PPC_ID_DCBF;
+			uint32_t l = (word32 >> 21) & 0x3;
+			switch (l)
+			{
+				case 1:
+					return PPC_ID_DCBFL;
+
+				case 3:
+					return PPC_ID_DCBFLP;
+
+				default:
+					return PPC_ID_DCBF;
+			}
+		}
 
 		case 0x0ae:
 			return PPC_ID_LBZX;
+
+		case 0x0be:
+			return PPC_ID_LBEPX;
 
 		case 0x0ce:
 			if ((decodeFlags & DECODE_FLAGS_ALTIVEC) != 0)
@@ -2528,12 +2994,41 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 
 			return PPC_ID_NEGx;
 
+		case 0xe6:
+		case 0xe7:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_MFVSRWZ;
+
+		case 0x0e8:
+		case 0x0e9:
+			return PPC_ID_LHARX;
+
 		case 0x0ee:
 			return PPC_ID_LBZUX;
+
+		case 0x0f4:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_POPCNTB;
 
 		case 0x0f8:
 		case 0x0f9:
 			return PPC_ID_NORx;
+
+		case 0x0fe:
+			if ((word32 & 0x03800000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_DCBFEP;
+
+		case 0x100:
+			if ((word32 & 0x0003f800) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SETB;
 
 		case 0x106:
 			if ((a != 0) || (b != 0))
@@ -2558,6 +3053,10 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x514:
 		case 0x515:
 			return PPC_ID_ADDEx;
+
+		case 0x118:
+		case 0x119:
+			return PPC_ID_VSX_STXSIWX;
 
 		case 0x120:
 			if ((word32 & 0x00100000) != 0)
@@ -2595,6 +3094,12 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x12e:
 			return PPC_ID_STWX;
 
+		case 0x13a:
+			return PPC_ID_STDEPX;
+
+		case 0x13e:
+			return PPC_ID_STWEPX;
+
 		case 0x146:
 			if ((word32 & 0x03ff7800) != 0)
 				return PPC_ID_INVALID;
@@ -2613,11 +3118,30 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 
 			return PPC_ID_MTMSRD;
 
+		case 0x166:
+		case 0x167:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_MTVSRD;
+
 		case 0x16a:
 			return PPC_ID_STDUX;
 
 		case 0x16e:
 			return PPC_ID_STWUX;
+
+		case 0x180:
+			if ((word32 & 0x00400000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_CMPRB;
+
+		case 0x18d:
+			if ((word32 & 0x02000000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_ICBLQ;
 
 		case 0x18e:
 			if ((decodeFlags & DECODE_FLAGS_ALTIVEC) != 0)
@@ -2649,11 +3173,33 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 
 			return PPC_ID_MTSR;
 
+		case 0x1a6:
+		case 0x1a7:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_MTVSRWA;
+
 		case 0x1ad:
 			return PPC_ID_STDCX;
 
 		case 0x1ae:
 			return PPC_ID_STBX;
+
+		case 0x1be:
+			return PPC_ID_STBEPX;
+
+		case 0x1c0:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_CMPEQB;
+
+		case 0x1cc:
+			if ((word32 & 0x02000000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_ICBLC;
 
 		case 0x1ce:
 			if ((decodeFlags & DECODE_FLAGS_ALTIVEC) != 0)
@@ -2700,20 +3246,50 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 
 			return PPC_ID_MTSRIN;
 
-		case 0x1ec:
-			if (d != 0)
+		case 0x1e6:
+		case 0x1e7:
+			if (b != 0)
 				return PPC_ID_INVALID;
 
-			return PPC_ID_DCBTST;
+			return PPC_ID_VSX_MTVSRWZ;
+
+		case 0x1ec:
+		{
+			uint32_t th = (word32 >> 21) & 0x1f;
+			if (th == 0x10)
+				return PPC_ID_DCBTSTT;
+			else
+				return PPC_ID_DCBTST;
+		}
 
 		case 0x1ee:
 			return PPC_ID_STBUX;
+
+		case 0x1f8:
+			return PPC_ID_BPERMD;
+
+		case 0x1fe:
+			return PPC_ID_DCBTSTEP;
+
+		case 0x212:
+			return PPC_ID_MODUD;
 
 		case 0x214:
 		case 0x215:
 		case 0x614:
 		case 0x615:
 			return PPC_ID_ADDx;
+
+		case 0x216:
+			return PPC_ID_MODUW;
+
+		case 0x218:
+		case 0x219:
+			return PPC_ID_VSX_LXVX;
+
+		case 0x21a:
+		case 0x21b:
+			return PPC_ID_VSX_LXVL;
 
 		case 0x224:
 			if ((d != 0) || (a != 0))
@@ -2722,10 +3298,13 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 			return PPC_ID_TLBIEL;
 
 		case 0x22c:
-			if (d != 0)
-				return PPC_ID_INVALID;
-
-			return PPC_ID_DCBT;
+		{
+			uint32_t th = (word32 >> 21) & 0x1f;
+			if (th == 0x10)
+				return PPC_ID_DCBTT;
+			else
+				return PPC_ID_DCBT;
+		}
 
 		case 0x22e:
 			return PPC_ID_LHZX;
@@ -2734,11 +3313,28 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x239:
 			return PPC_ID_EQVx;
 
+		case 0x23e:
+			return PPC_ID_LHEPX;
+
+		case 0x25a:
+		case 0x25b:
+			return PPC_ID_VSX_LXVLL;
+
+		case 0x25c:
+			return PPC_ID_MFBHRBE;
+
 		case 0x264:
 			if (a != 0)
 				return PPC_ID_INVALID;
 			
 			return PPC_ID_TLBIE;
+
+		case 0x266:
+		case 0x267:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_MFVSRLD;
 
 		case 0x26c:
 			return PPC_ID_ECIWX;
@@ -2749,6 +3345,9 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x278:
 		case 0x279:
 			return PPC_ID_XORx;
+
+		case 0x27e:
+			return PPC_ID_DCBTEP;
 
 		case 0x286:
 		{
@@ -2775,6 +3374,15 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_VSX_LXVDSX;
+
+		case 0x29c:
+			return PPC_ID_MFPMR;
+
+		case 0x2a4:
+			if (a != 0 || b != 0 || d != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SLBSYNC;
 
 		case 0x2a6:
 		{
@@ -2822,6 +3430,10 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 
 			return PPC_ID_INVALID;
 
+		case 0x2d8:
+		case 0x2d9:
+			return PPC_ID_VSX_LXVWSX;
+
 		case 0x2e4:
 			if ((word32 & 0x03fff800) != 0)
 				return PPC_ID_INVALID;
@@ -2868,11 +3480,38 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 			// TODO: [Category: Embedded.Phased-In]
 			return PPC_ID_POPCNTW;
 
+		case 0x312:
+		case 0x313:
+		case 0x712:
+		case 0x713:
+			return PPC_ID_DIVDEUx;
+
+		case 0x316:
+		case 0x317:
+		case 0x716:
+		case 0x717:
+			return PPC_ID_DIVWEUx;
+
+		case 0x318:
+		case 0x319:
+			return PPC_ID_VSX_STXVX;
+
+		case 0x31a:
+		case 0x31b:
+			return PPC_ID_VSX_STXVL;
+
 		case 0x324:
 			if (a != 0)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_SLBMTE;
+
+		case 0x326:
+		case 0x327:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_MTVSRWS;
 
 		case 0x32e:
 			return PPC_ID_STHX;
@@ -2881,11 +3520,40 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x339:
 			return PPC_ID_ORCx;
 
+		case 0x33e:
+			return PPC_ID_STHEPX;
+
+		case 0x352:
+		case 0x353:
+		case 0x752:
+		case 0x753:
+			return PPC_ID_DIVDEx;
+
+		case 0x356:
+		case 0x357:
+		case 0x756:
+		case 0x757:
+			return PPC_ID_DIVWEx;
+
+		case 0x35a:
+		case 0x35b:
+			return PPC_ID_VSX_STXVLL;
+
+		case 0x35c:
+			if ((a != 0) || (b != 0) || (d != 0))
+				return PPC_ID_INVALID;
+
+			return PPC_ID_CLRBHRB;
+
 		case 0x364:
 			if ((d != 0) || (a != 0))
 				return PPC_ID_INVALID;
 			
 			return PPC_ID_SLBIE;
+
+		case 0x366:
+		case 0x367:
+			return PPC_ID_VSX_MTVSRDD;
 
 		case 0x36c:
 			return PPC_ID_ECOWX;
@@ -2949,6 +3617,15 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x797:
 			return PPC_ID_DIVWUx;
 
+		case 0x39c:
+			return PPC_ID_MTPMR;
+
+		case 0x3a4:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SLBIEG;
+
 		case 0x3a6:
 		{
 			uint32_t spr = GetSpecialRegisterCommon(word32);
@@ -2980,6 +3657,12 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x3b8:
 		case 0x3b9:
 			return PPC_ID_NANDx;
+
+		case 0x3cc:
+			if ((word32 & 0x02000000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_ICBTLS;
 
 		case 0x3ce:
 			if ((decodeFlags & DECODE_FLAGS_ALTIVEC) != 0)
@@ -3022,6 +3705,10 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 
 			break;
 
+		case 0x418:
+		case 0x419:
+			return PPC_ID_VSX_LXSSPX;
+
 		case 0x428:
 			if ((decodeFlags & DECODE_FLAGS_PPC64) == 0)
 				return PPC_ID_INVALID;
@@ -3041,6 +3728,13 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x431:
 			return PPC_ID_SRWx;
 
+		case 0x434:
+		case 0x435:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_CNTTZWx;
+
 		case 0x436:
 		case 0x437:
 			return PPC_ID_SRDx;
@@ -3053,6 +3747,22 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 
 		case 0x46e:
 			return PPC_ID_LFSUX;
+
+		case 0x474:
+		case 0x475:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_CNTTZDx;
+
+		case 0x480:
+			if ((word32 & 0x007ff800) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_MCRXRX;
+
+		case 0x48c:
+			return PPC_ID_LWAT;
 
 		case 0x498:
 		case 0x499:
@@ -3090,6 +3800,12 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x4ae:
 			return PPC_ID_LFDX;
 
+		case 0x4be:
+			return PPC_ID_LFDEPX;
+
+		case 0x4cc:
+			return PPC_ID_LDAT;
+
 		case 0x4ee:
 			return PPC_ID_LFDUX;
 
@@ -3098,6 +3814,16 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_TLBIA;
+
+		case 0x518:
+		case 0x519:
+			return PPC_ID_VSX_STXSSPX;
+
+		case 0x51d:
+			if ((word32 & 0x03eff800) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_TBEGIN;
 
 		case 0x526:
 			if (a != 0)
@@ -3120,8 +3846,20 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x52e:
 			return PPC_ID_STFSX;
 
+		case 0x55d:
+			if ((word32 & 0x01fff800) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_TEND;
+
+		case 0x56d:
+			return PPC_ID_STBCX;
+
 		case 0x56e:
 			return PPC_ID_STFSUX;
+
+		case 0x58c:
+			return PPC_ID_STWAT;
 
 		case 0x598:
 		case 0x599:
@@ -3130,11 +3868,38 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 
 			return PPC_ID_VSX_STXSDX;
 
+		case 0x59c:
+			if ((word32 & 0x007ff800) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_TCHECK;
+
 		case 0x5aa:
 			return PPC_ID_STSWI;
 
+		case 0x5ad:
+			return PPC_ID_STHCX;
+
 		case 0x5ae:
 			return PPC_ID_STFDX;
+
+		case 0x5be:
+			return PPC_ID_STFDEPX;
+
+		case 0x5cc:
+			return PPC_ID_STDAT;
+
+		case 0x5dd:
+			if ((word32 & 0x03dff800) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_TSR;
+
+		case 0x5e6:
+			if ((word32 & 0x001cf800) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_DARN;
 
 		case 0x5ec:
 			if (d != 0)
@@ -3145,12 +3910,31 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x5ee:
 			return PPC_ID_STFDUX;
 
+		case 0x60c:
+			if (d != 1)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_COPY;
+
+		case 0x612:
+			return PPC_ID_MODSD;
+
+		case 0x616:
+			return PPC_ID_MODSW;
+
 		case 0x618:
 		case 0x619:
 			if ((decodeFlags & DECODE_FLAGS_VSX) == 0)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_VSX_LXVW4X;
+
+		case 0x61a:
+		case 0x61b:
+			return PPC_ID_VSX_LXSIBZX;
+
+		case 0x61d:
+			return PPC_ID_TABORTWC;
 
 		case 0x624:
 			if ((word32 & 0x03e00000) != 0)
@@ -3174,6 +3958,17 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_SRADx;
+
+		case 0x658:
+		case 0x659:
+			return PPC_ID_VSX_LXVH8X;
+
+		case 0x65a:
+		case 0x65b:
+			return PPC_ID_VSX_LXSIHZX;
+
+		case 0x65d:
+			return PPC_ID_TABORTDC;
 
 		case 0x66a:
 			return PPC_ID_LHZCIX;
@@ -3211,12 +4006,27 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 
 			return PPC_ID_SRADIx;
 
+		case 0x68c:
+			if (a != 0 || b != 0 || d != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_CP_ABORT;
+
 		case 0x698:
 		case 0x699:
 			if ((decodeFlags & DECODE_FLAGS_VSX) == 0)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_VSX_LXVD2X;
+
+		case 0x69d:
+			return PPC_ID_TABORTWCI;
+
+		case 0x6a6:
+			if ((word32 & 0x001e0000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_SLBMFEV;
 
 		case 0x6aa:
 			return PPC_ID_LBZCIX;
@@ -3233,12 +4043,36 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x6ae:
 			return PPC_ID_LFIWAX;
 
+		case 0x6d8:
+		case 0x6d9:
+			return PPC_ID_VSX_LXVB16X;
+
+		case 0x6dd:
+			return PPC_ID_TABORTDCI;
+
 		case 0x6ea:
 			return PPC_ID_LDCIX;
+
+		case 0x6ec:
+			if ((a != 0) || (b != 0) || (d != 0))
+				return PPC_ID_INVALID;
+
+			return PPC_ID_MSGSYNC;
 
 		case 0x6ee:
 			return PPC_ID_LFIWZX;
 
+		case 0x6f4:
+		case 0x6f5:
+		case 0x6f6:
+		case 0x6f7:
+			return PPC_ID_EXTSWSLIx;
+
+		case 0x70d:
+			if (d != 1)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PASTE;
 
 		case 0x718:
 		case 0x719:
@@ -3246,6 +4080,16 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_VSX_STXVW4X;
+
+		case 0x71a:
+		case 0x71b:
+			return PPC_ID_VSX_STXSIBX;
+
+		case 0x71d:
+			if (d != 0 || b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_TABORT;
 
 		case 0x724:
 			if ((word32 & 0x03e00000) != 0)
@@ -3271,6 +4115,20 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_EXTSHx;
+
+		case 0x758:
+		case 0x759:
+			return PPC_ID_VSX_STXVH8X;
+
+		case 0x75a:
+		case 0x75b:
+			return PPC_ID_VSX_STXSIHX;
+
+		case 0x75d:
+			if ((d != 0) || (b != 0))
+				return PPC_ID_INVALID;
+
+			return PPC_ID_TRECLAIM;
 
 		case 0x764:
 			if ((word32 & 0x800) != 0)
@@ -3333,6 +4191,22 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 
 			return PPC_ID_EXTSWx;
 
+		case 0x7be:
+			if (d != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_ICBIEP;
+
+		case 0x7d8:
+		case 0x7d9:
+			return PPC_ID_VSX_STXVB16X;
+
+		case 0x7dd:
+			if ((a != 0) || (b != 0) || (d != 0))
+				return PPC_ID_INVALID;
+
+			return PPC_ID_TRECHKPT;
+
 		case 0x7e4:
 			if (d != 0 || a != 0)
 				return PPC_ID_INVALID;
@@ -3354,6 +4228,12 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 			else
 				return PPC_ID_INVALID;
 		}
+
+		case 0x7fe:
+			if (d != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_DCBZEP;
 
 		default:
 			return PPC_ID_INVALID;
@@ -3477,9 +4357,43 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 		default:  break;
 	}
 
+	subop = (word32 >> 1) & 0x3ff;
+	switch (subop)
+	{
+		case 0x168:
+			if ((word32 & 0x00180000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XXSPLTIB;
+
+		case 0x396:
+			return PPC_ID_VSX_XSIEXPDP;
+
+		default:
+			;
+	}
+
 	subop = (word32 >> 2) & 0x1ff;
 	switch (subop)
 	{
+		case 0x00a:
+			if ((word32 & 0x001f0000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XSRSQRTESP;
+
+		case 0x00b:
+			if ((word32 & 0x001f0000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XSSQRTSP;
+
+		case 0x01a:
+			if ((word32 & 0x001f0000) != 0x0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XSRESP;
+
 		case 0x048:
 			if ((word32 & 0x001f0000) != 0x0)
 				return PPC_ID_INVALID;
@@ -3594,6 +4508,12 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 
 			return PPC_ID_VSX_XXSPLTW;
 
+		case 0x0a5:
+			if ((word32 & 0x00100000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XXEXTRACTUW;
+
 		case 0x0a8:
 			if ((word32 & 0x001f0000) != 0x0)
 				return PPC_ID_INVALID;
@@ -3606,7 +4526,7 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 
 			return PPC_ID_VSX_XVRSPIP;
 
-		case 0xaa:
+		case 0x0aa:
 			if ((word32 & 0x007f0001) != 0)
 				return PPC_ID_INVALID;
 
@@ -3617,6 +4537,12 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_VSX_XVRSPIC;
+
+		case 0x0b5:
+			if ((word32 & 0x00100000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XXINSERTW;
 
 		case 0x0b8:
 			if ((word32 & 0x001f0000) != 0x0)
@@ -3714,6 +4640,36 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 
 			return PPC_ID_VSX_XSCVDPSP;
 
+		case 0x10b:
+			if ((word32 & 0x001f0000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XSCVDPSPN;
+
+		case 0x119:
+			if ((word32 & 0x001f0000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XSRSP;
+
+		case 0x128:
+			if ((word32 & 0x001f0000) != 0x0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XSCVUXDSP;
+
+		case 0x12a:
+			if ((word32 & 0x1) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XSTSTDCSP;
+
+		case 0x138:
+			if ((word32 & 0x001f0000) != 0x0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XSCVSXDSP;
+
 		case 0x148:
 			if ((word32 & 0x001f0000) != 0x0)
 				return PPC_ID_INVALID;
@@ -3725,6 +4681,12 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_VSX_XSCVSPDP;
+
+		case 0x14b:
+			if ((word32 & 0x001f0000) != 0x0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XSCVSPDPN;
 
 		case 0x158:
 			if ((word32 & 0x001f0000) != 0x0)
@@ -3738,6 +4700,34 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 
 			return PPC_ID_VSX_XSABSDP;
 
+		case 0x15b:
+		{
+			uint32_t subsubop = (word32 >> 16) & 0x1f;
+			switch (subsubop)
+			{
+				case 0x00:
+					if ((word32 & 0x1) != 0)
+						return PPC_ID_INVALID;
+
+					return PPC_ID_VSX_XSXEXPDP;
+
+				case 0x01:
+					if ((word32 & 0x1) != 0)
+						return PPC_ID_INVALID;
+
+					return PPC_ID_VSX_XSXSIGDP;
+
+				case 0x10:
+					return PPC_ID_VSX_XSCVHPDP;
+
+				case 0x11:
+					return PPC_ID_VSX_XSCVDPHP;
+
+				default:
+					return PPC_ID_INVALID;
+			}
+		}
+
 		case 0x168:
 			if ((word32 & 0x001f0000) != 0x0)
 				return PPC_ID_INVALID;
@@ -3749,6 +4739,12 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_VSX_XSNABSDP;
+
+		case 0x16a:
+			if ((word32 & 0x1) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XSTSTDCDP;
 
 		case 0x178:
 			if ((word32 & 0x001f0000) != 0x0)
@@ -3834,6 +4830,47 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 
 			return PPC_ID_VSX_XVABSDP;
 
+		case 0x1db:
+		{
+			uint32_t subsubop = (word32 >> 16) & 0x1f;
+			switch (subsubop)
+			{
+				case 0x00:
+					return PPC_ID_VSX_XVXEXPDP;
+
+				case 0x01:
+					return PPC_ID_VSX_XVXSIGDP;
+
+				case 0x07:
+					return PPC_ID_VSX_XXBRH;
+
+				case 0x08:
+					return PPC_ID_VSX_XVXEXPSP;
+
+				case 0x09:
+					return PPC_ID_VSX_XVXSIGSP;
+
+				case 0x0f:
+					return PPC_ID_VSX_XXBRW;
+
+				case 0x17:
+					return PPC_ID_VSX_XXBRD;
+
+				case 0x18:
+					return PPC_ID_VSX_XVCVHPSP;
+
+				case 0x19:
+					return PPC_ID_VSX_XVCVSPHP;
+
+				case 0x1f:
+					return PPC_ID_VSX_XXBRQ;
+
+				default:
+					return PPC_ID_INVALID;
+
+			}
+		}
+
 		case 0x1e8:
 			if ((word32 & 0x001f0000) != 0)
 				return PPC_ID_INVALID;
@@ -3866,14 +4903,25 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 	switch (subop)
 	{
 		case 0x00:
-			// TODO: XSADDSP?
-			return PPC_ID_INVALID;
+			return PPC_ID_VSX_XSADDSP;
+
+		case 0x01:
+			return PPC_ID_VSX_XSMADDASP;
 
 		case 0x02:
 		case 0x22:
 		case 0x42:
 		case 0x62:
 			return PPC_ID_VSX_XXSLDWI;
+
+		case 0x03:
+			return PPC_ID_VSX_XSCMPEQDP;
+
+		case 0x08:
+			return PPC_ID_VSX_XSSUBSP;
+
+		case 0x09:
+			return PPC_ID_VSX_XSMADDMSP;
 
 		case 0x0a:
 		case 0x2a:
@@ -3903,8 +4951,29 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 			}
 		}
 
+		case 0x0b:
+			return PPC_ID_VSX_XSCMPGTDP;
+
+		case 0x10:
+			return PPC_ID_VSX_XSMULSP;
+
+		case 0x11:
+			return PPC_ID_VSX_XSMSUBASP;
+
 		case 0x12:
 			return PPC_ID_VSX_XXMRGHW;
+
+		case 0x13:
+			return PPC_ID_VSX_XSCMPGEDP;
+
+		case 0x18:
+			return PPC_ID_VSX_XSDIVSP;
+
+		case 0x19:
+			return PPC_ID_VSX_XSMSUBMSP;
+
+		case 0x1a:
+			return PPC_ID_VSX_XXPERM;
 
 		case 0x20:
 			return PPC_ID_VSX_XSADDDP;
@@ -3947,6 +5016,12 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 
 		case 0x3a:
 			return PPC_ID_VSX_XXPERMR;
+
+		case 0x3b:
+			if ((word32 & 0x00600001) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XSCMPEXPDP;
 
 		case 0x3d:
 			if ((word32 & 0x00600001) != 0)
@@ -4038,22 +5113,38 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 
 			return PPC_ID_VSX_XVTDIVDP;
 
+		case 0x80:
+			return PPC_ID_VSX_XSMAXCDP;
+
 		case 0x81:
-			// TODO: XSNMADDASP not handled by capstone?
-			return PPC_ID_INVALID;
+			return PPC_ID_VSX_XSNMADDASP;
 
 		case 0x82:
 			return PPC_ID_VSX_XXLAND;
 
+		case 0x88:
+			return PPC_ID_VSX_XSMINCDP;
+
 		case 0x89:
-			// TODO: XSNMADDMSP not handled by capstone?
-			return PPC_ID_INVALID;
+			return PPC_ID_VSX_XSNMADDMSP;
 
 		case 0x8a:
 			return PPC_ID_VSX_XXLANDC;
 
+		case 0x90:
+			return PPC_ID_VSX_XSMAXJDP;
+
+		case 0x91:
+			return PPC_ID_VSX_XSNMSUBASP;
+
 		case 0x92:
 			return PPC_ID_VSX_XXLOR;
+
+		case 0x98:
+			return PPC_ID_VSX_XSMINJDP;
+
+		case 0x99:
+			return PPC_ID_VSX_XSNMSUBMSP;
 
 		case 0x9a:
 			return PPC_ID_VSX_XXLXOR;
@@ -4112,6 +5203,13 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 		case 0xd1:
 			return PPC_ID_VSX_XVNMSUBASP;
 
+		case 0xd5:
+		case 0xdd:
+			return PPC_ID_VSX_XVTSTDCSP;
+
+		case 0xd8:
+			return PPC_ID_VSX_XVIEXPSP;
+
 		case 0xd9:
 			return PPC_ID_VSX_XVNMSUBMSP;
 
@@ -4136,8 +5234,39 @@ static InstructionId DecodeVsx0x3C(uint32_t word32, uint32_t flags)
 		case 0xf1:
 			return PPC_ID_VSX_XVNMSUBADP;
 
+		case 0xf5:
+		case 0xfd:
+			return PPC_ID_VSX_XVTSTDCDP;
+
+		case 0xf8:
+			return PPC_ID_VSX_XVIEXPDP;
+
 		case 0xf9:
 			return PPC_ID_VSX_XVNMSUBMDP;
+
+		default:
+			return PPC_ID_INVALID;
+	}
+}
+
+static InstructionId DecodeVsx0x3D(uint32_t word32, uint32_t flags)
+{
+	uint32_t subop = word32 & 0x7;
+	switch (subop)
+	{
+		case 1:
+			return PPC_ID_VSX_LXV;
+
+		case 2:
+		case 6:
+			return PPC_ID_VSX_STXSD;
+
+		case 3:
+		case 7:
+			return PPC_ID_VSX_STXSSP;
+
+		case 5:
+			return PPC_ID_VSX_STXV;
 
 		default:
 			return PPC_ID_INVALID;
@@ -4191,6 +5320,26 @@ static InstructionId Decode0x3F(uint32_t word32, uint32_t flags)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_FCMPU;
+
+		case 0x008:
+		case 0x009:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+				return PPC_ID_VSX_XSADDQPx;
+			else
+				return PPC_ID_INVALID;
+
+		case 0x00a:
+		case 0x00b:
+		case 0x20a:
+		case 0x20b:
+		case 0x40a:
+		case 0x40b:
+		case 0x60a:
+		case 0x60b:
+			if ((word32 & 0x001e0000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_VSX_XSRQPIx;
 
 		case 0x010:
 		case 0x011:
@@ -4256,6 +5405,29 @@ static InstructionId Decode0x3F(uint32_t word32, uint32_t flags)
 
 			return PPC_ID_FCMPO;
 
+		case 0x048:
+		case 0x049:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+				return PPC_ID_VSX_XSMULQPx;
+			else
+				return PPC_ID_INVALID;
+
+		case 0x04a:
+		case 0x24a:
+		case 0x44a:
+		case 0x64a:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+			{
+				if ((word32 & 0x001e0000) != 0)
+					return PPC_ID_INVALID;
+
+				return PPC_ID_VSX_XSRQPXP;
+			}
+			else
+			{
+				return PPC_ID_INVALID;
+			}
+
 		case 0x04c:
 		case 0x04d:
 			if ((a != 0) || (b != 0))
@@ -4290,6 +5462,31 @@ static InstructionId Decode0x3F(uint32_t word32, uint32_t flags)
 
 			return PPC_ID_FMRx;
 
+		case 0x0c8:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+				return PPC_ID_VSX_XSCPSGNQP;
+			else
+				return PPC_ID_INVALID;
+
+		case 0x100:
+			if ((word32 & 0x00600000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_FTDIV;
+
+		case 0x108:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+			{
+				if ((word32 & 0x00600000) != 0)
+					return PPC_ID_INVALID;
+
+				return PPC_ID_VSX_XSCMPOQP;
+			}
+			else
+			{
+				return PPC_ID_INVALID;
+			}
+
 		case 0x10c:
 		case 0x10d:
 			if ((word32 & 0x007e0800) != 0)
@@ -4304,12 +5501,38 @@ static InstructionId Decode0x3F(uint32_t word32, uint32_t flags)
 
 			return PPC_ID_FNABSx;
 
+		case 0x11c:
+		case 0x11d:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_FCTIWUx;
+
 		case 0x11e:
 		case 0x11f:
 			if (a != 0)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_FCTIWUZx;
+
+		case 0x140:
+			if ((word32 & 0x007f0000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_FTSQRT;
+
+		case 0x148:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+			{
+				if ((word32 & 0x00600000) != 0)
+					return PPC_ID_INVALID;
+
+				return PPC_ID_VSX_XSCMPEXPQP;
+			}
+			else
+			{
+				return PPC_ID_INVALID;
+			}
 
 		case 0x210:
 		case 0x211:
@@ -4318,12 +5541,26 @@ static InstructionId Decode0x3F(uint32_t word32, uint32_t flags)
 
 			return PPC_ID_FABSx;
 
+		case 0x308:
+		case 0x309:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+				return PPC_ID_VSX_XSMADDQPx;
+			else
+				return PPC_ID_INVALID;
+
 		case 0x310:
 		case 0x311:
 			if (a != 0)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_FRINx;
+
+		case 0x348:
+		case 0x349:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+				return PPC_ID_VSX_XSMSUBQPx;
+			else
+				return PPC_ID_INVALID;
 
 		case 0x350:
 		case 0x351:
@@ -4332,12 +5569,26 @@ static InstructionId Decode0x3F(uint32_t word32, uint32_t flags)
 
 			return PPC_ID_FRIZx;
 
+		case 0x388:
+		case 0x389:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+				return PPC_ID_VSX_XSNMADDQPx;
+			else
+				return PPC_ID_INVALID;
+
 		case 0x390:
 		case 0x391:
 			if (a != 0)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_FRIPx;
+
+		case 0x3c8:
+		case 0x3c9:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+				return PPC_ID_VSX_XSNMSUBQPx;
+			else
+				return PPC_ID_INVALID;
 
 		case 0x3d0:
 		case 0x3d1:
@@ -4346,16 +5597,145 @@ static InstructionId Decode0x3F(uint32_t word32, uint32_t flags)
 
 			return PPC_ID_FRIMx;
 
-		case 0x48e:
-		case 0x48f:
-			if ((a != 0) || (b != 0))
+		case 0x408:
+		case 0x409:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+				return PPC_ID_VSX_XSSUBQPx;
+			else
 				return PPC_ID_INVALID;
 
-			return PPC_ID_MFFSx;
+		case 0x448:
+		case 0x449:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+				return PPC_ID_VSX_XSDIVQPx;
+			else
+				return PPC_ID_INVALID;
+
+		case 0x48e:
+		case 0x48f:
+		{
+			uint32_t subsubop = (word32 >> 16) & 0x1f;
+			switch (subsubop)
+			{
+				case 0x00:
+					if ((word32 & 0x0000f800) != 0)
+						return PPC_ID_INVALID;
+
+					return PPC_ID_MFFSx;
+
+				case 0x01:
+					if ((word32 & 0x0000f801) != 0)
+						return PPC_ID_INVALID;
+
+					return PPC_ID_MFFSCE;
+
+				case 0x14:
+					if ((word32 & 0x1) != 0)
+						return PPC_ID_INVALID;
+
+					return PPC_ID_MFFSCDRN;
+
+				case 0x15:
+					if ((word32 & 0x0000c001) != 0)
+						return PPC_ID_INVALID;
+
+					return PPC_ID_MFFSCDRNI;
+
+				case 0x16:
+					if ((word32 & 0x1) != 0)
+						return PPC_ID_INVALID;
+
+					return PPC_ID_MFFSCRN;
+
+				case 0x17:
+					if ((word32 & 0x0000e001) != 0)
+						return PPC_ID_INVALID;
+
+					return PPC_ID_MFFSCRNI;
+
+				case 0x18:
+					if ((word32 & 0x0000f801) != 0)
+						return PPC_ID_INVALID;
+
+					return PPC_ID_MFFSL;
+
+				default:
+					return PPC_ID_INVALID;
+			}
+		}
+
+		case 0x508:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+			{
+				if ((word32 & 0x00600000) != 0)
+					return PPC_ID_INVALID;
+
+				return PPC_ID_VSX_XSCMPUQP;
+			}
+			else
+			{
+				return PPC_ID_INVALID;
+			}
+
+		case 0x588:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+				return PPC_ID_VSX_XSTSTDCQP;
+			else
+				return PPC_ID_INVALID;
 
 		case 0x58e:
 		case 0x58f:
 			return PPC_ID_MTFSFx;
+
+		case 0x648:
+		case 0x649:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+			{
+				uint32_t subsubop = (word32 >> 16) & 0x1f;
+				switch (subsubop)
+				{
+					case 0x00:
+						if ((word32 & 0x1) != 0)
+							return PPC_ID_INVALID;
+
+						return PPC_ID_VSX_XSABSQP;
+
+					case 0x02:
+						if ((word32 & 0x1) != 0)
+							return PPC_ID_INVALID;
+
+						return PPC_ID_VSX_XSXEXPQP;
+
+					case 0x08:
+						if ((word32 & 0x1) != 0)
+							return PPC_ID_INVALID;
+
+						return PPC_ID_VSX_XSNABSQP;
+
+					case 0x10:
+						if ((word32 & 0x1) != 0)
+							return PPC_ID_INVALID;
+
+						return PPC_ID_VSX_XSNEGQP;
+
+					case 0x12:
+						if ((word32 & 0x1) != 0)
+							return PPC_ID_INVALID;
+
+						return PPC_ID_VSX_XSXSIGQP;
+
+					case 0x1b:
+						return PPC_ID_VSX_XSSQRTQPx;
+
+					default:
+						PPC_ID_INVALID;
+
+				}
+			}
+			else
+			{
+				return PPC_ID_INVALID;
+			}
 
 		case 0x65c:
 		case 0x65d:
@@ -4371,12 +5751,86 @@ static InstructionId Decode0x3F(uint32_t word32, uint32_t flags)
 
 			return PPC_ID_FCTIDZx;
 
+		case 0x688:
+		case 0x689:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+			{
+				uint32_t subsubop = (word32 >> 16) & 0x1f;
+				switch (subsubop)
+				{
+					case 0x01:
+						if ((word32 & 0x1) != 0)
+							return PPC_ID_INVALID;
+
+						return PPC_ID_VSX_XSCVQPUWZ;
+
+					case 0x02:
+						if ((word32 & 0x1) != 0)
+							return PPC_ID_INVALID;
+
+						return PPC_ID_VSX_XSCVUDQP;
+
+					case 0x09:
+						if ((word32 & 0x1) != 0)
+							return PPC_ID_INVALID;
+
+						return PPC_ID_VSX_XSCVQPSWZ;
+
+					case 0x0a:
+						if ((word32 & 0x1) != 0)
+							return PPC_ID_INVALID;
+
+						return PPC_ID_VSX_XSCVSDQP;
+
+					case 0x11:
+						if ((word32 & 0x1) != 0)
+							return PPC_ID_INVALID;
+
+						return PPC_ID_VSX_XSCVQPUDZ;
+
+					case 0x14:
+						return PPC_ID_VSX_XSCVQPDPx;
+
+					case 0x16:
+						if ((word32 & 0x1) != 0)
+							return PPC_ID_INVALID;
+
+						return PPC_ID_VSX_XSCVDPQP;
+
+					case 0x19:
+						if ((word32 & 0x1) != 0)
+							return PPC_ID_INVALID;
+
+						return PPC_ID_VSX_XSCVQPSDZ;
+
+					default:
+						return PPC_ID_INVALID;
+				}
+			}
+			else
+			{
+				return PPC_ID_INVALID;
+			}
+
 		case 0x69c:
 		case 0x69d:
 			if (a != 0)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_FCFIDx;
+
+		case 0x6c8:
+			if ((flags & DECODE_FLAGS_VSX) != 0)
+				return PPC_ID_VSX_XSIEXPQP;
+			else
+				return PPC_ID_INVALID;
+
+		case 0x75c:
+		case 0x75d:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_FCTIDUx;
 
 		case 0x75e:
 		case 0x75f:
@@ -4693,10 +6147,16 @@ static InstructionId Decode(uint32_t word32, uint32_t decodeFlags)
 			return Decode0x3B(word32, decodeFlags);
 
 		case 0x3c:
-			if ((decodeFlags & DECODE_FLAGS_VSX) == 0)
+			if ((decodeFlags & DECODE_FLAGS_VSX) != 0)
+				return DecodeVsx0x3C(word32, decodeFlags);
+			else
 				return PPC_ID_INVALID;
 
-			return DecodeVsx0x3C(word32, decodeFlags);
+		case 0x3d:
+			if ((decodeFlags & DECODE_FLAGS_VSX) != 0)
+				return DecodeVsx0x3D(word32, decodeFlags);
+			else
+				return PPC_ID_INVALID;
 
 		case 0x3e:
 			if ((decodeFlags & DECODE_FLAGS_PPC64) == 0)
@@ -4723,10 +6183,12 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 	{
 		// instructions with no operands
 		case PPC_ID_ATTN:
+		case PPC_ID_CP_ABORT:
 		case PPC_ID_DCCCI:
 		case PPC_ID_ICCCI:
 		case PPC_ID_ISYNC:
 		case PPC_ID_LWSYNC:
+		case PPC_ID_MSGSYNC:
 		case PPC_ID_NOP:
 		case PPC_ID_PTESYNC:
 		case PPC_ID_RFCI:
@@ -4734,10 +6196,13 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_RFI:
 		case PPC_ID_RFID:
 		case PPC_ID_RFMCI:
+		case PPC_ID_SYNC:
 		case PPC_ID_TLBIA:
 		case PPC_ID_TLBSYNC:
 		case PPC_ID_TRAP:
+		case PPC_ID_TRECHKPT:
 		case PPC_ID_SLBIA:
+		case PPC_ID_SLBSYNC:
 		case PPC_ID_XNOP:
 		case PPC_ID_WAITIMPL:
 		case PPC_ID_WAITRSV:
@@ -4745,6 +6210,7 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			break;
 
 		// <op> rD
+		case PPC_ID_LNIA:
 		case PPC_ID_MFBR0:
 		case PPC_ID_MFBR1:
 		case PPC_ID_MFBR2:
@@ -4780,6 +6246,12 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			PushRS(instruction, word32);
 			break;
 
+		// <op> rA
+		case PPC_ID_TABORT:
+		case PPC_ID_TRECLAIM:
+			PushRA(instruction, word32);
+			break;
+
 		// <op> rB
 		case PPC_ID_TLBIEL:
 		case PPC_ID_TLBLI:
@@ -4808,9 +6280,17 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_ADDCx:
 		case PPC_ID_ADDEx:
 		case PPC_ID_DIVDx:
+		case PPC_ID_DIVDEx:
+		case PPC_ID_DIVDEUx:
 		case PPC_ID_DIVDUx:
 		case PPC_ID_DIVWx:
+		case PPC_ID_DIVWEx:
+		case PPC_ID_DIVWEUx:
 		case PPC_ID_DIVWUx:
+		case PPC_ID_MODSD:
+		case PPC_ID_MODSW:
+		case PPC_ID_MODUD:
+		case PPC_ID_MODUW:
 		case PPC_ID_MULHDx:
 		case PPC_ID_MULHDUx:
 		case PPC_ID_MULHWx:
@@ -4836,6 +6316,9 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		// <op>[.] rA, rS (logical)
 		case PPC_ID_CNTLZWx:
 		case PPC_ID_CNTLZDx:
+		case PPC_ID_CNTTZWx:
+		case PPC_ID_CNTTZDx:
+		case PPC_ID_POPCNTB:
 		case PPC_ID_POPCNTD:
 		case PPC_ID_POPCNTW:
 		case PPC_ID_EXTSHx:
@@ -4844,12 +6327,15 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			PushRA(instruction, word32);
 			PushRS(instruction, word32);
 
+			// not all of these have RC bits, but it gets filtered
+			// at subop decode step
 			instruction->flags.rc = word32 & 0x1;
 			break;
 
 		// <op>[.] rA, rS, rB
 		case PPC_ID_ANDx:
 		case PPC_ID_ANDCx:
+		case PPC_ID_BPERMD:
 		case PPC_ID_CMPB:
 		case PPC_ID_ECIWX:
 		case PPC_ID_ECOWX:
@@ -4963,6 +6449,7 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 
 		// <op> crfD, rA, rB
 		case PPC_ID_CMPD:
+		case PPC_ID_CMPEQB:
 		case PPC_ID_CMPW:
 		case PPC_ID_CMPLD:
 		case PPC_ID_CMPLW:
@@ -4996,6 +6483,8 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		}
 
 		// <op> rA, rB
+		case PPC_ID_COPY:
+		case PPC_ID_PASTE:
 		case PPC_ID_TDEQ:
 		case PPC_ID_TDGT:
 		case PPC_ID_TDLGT:
@@ -5018,6 +6507,8 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		// <trap> TO, rA, rB
 		case PPC_ID_TD:
 		case PPC_ID_TW:
+		case PPC_ID_TABORTDC:
+		case PPC_ID_TABORTWC:
 		{
 			uint32_t to = (word32 >> 21) & 0x1f;
 
@@ -5056,6 +6547,19 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		{
 			uint32_t to = (word32 >> 21) & 0x1f;
 			int32_t simm = (int32_t)((int16_t)(word32 & 0xffff));
+
+			PushUIMMValue(instruction, to);
+			PushRA(instruction, word32);
+			PushSIMMValue(instruction, simm);
+			break;
+		}
+
+		// <tabort> TO, rA, SIMM
+		case PPC_ID_TABORTDCI:
+		case PPC_ID_TABORTWCI:
+		{
+			uint32_t to = (word32 >> 21) & 0x1f;
+			int32_t simm = sign_extend((word32 >> 11) & 0x1f, 5);
 
 			PushUIMMValue(instruction, to);
 			PushRA(instruction, word32);
@@ -5117,10 +6621,10 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		}
 
 		// <op> rD, rA, rB (indexed load)
+		case PPC_ID_LBEPX:
 		case PPC_ID_LBZCIX:
 		case PPC_ID_LBZUX:
 		case PPC_ID_LBZX:
-		case PPC_ID_LDARX:
 		case PPC_ID_LDBRX:
 		case PPC_ID_LDCIX:
 		case PPC_ID_LDUX:
@@ -5128,14 +6632,15 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_LHAUX:
 		case PPC_ID_LHAX:
 		case PPC_ID_LHBRX:
+		case PPC_ID_LHEPX:
 		case PPC_ID_LHZCIX:
 		case PPC_ID_LHZX:
 		case PPC_ID_LHZUX:
 		case PPC_ID_LSWX:
 		case PPC_ID_LWAX:
 		case PPC_ID_LWAUX:
-		case PPC_ID_LWARX:
 		case PPC_ID_LWBRX:
+		case PPC_ID_LWEPX:
 		case PPC_ID_LWZCIX:
 		case PPC_ID_LWZUX:
 		case PPC_ID_LWZX:
@@ -5143,6 +6648,46 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			break;
+
+		// <op> rD, rA, rB, [EH if nonzero] (indexed load)
+		case PPC_ID_LBARX:
+		case PPC_ID_LDARX:
+		case PPC_ID_LHARX:
+		case PPC_ID_LWARX:
+		{
+			PushRD(instruction, word32);
+			PushRAor0(instruction, word32);
+			PushRB(instruction, word32);
+			uint32_t eh = word32 & 0x1;
+			// NOTE: this breaks with convention by only
+			// conditionally including EH
+			if (eh)
+				PushUIMMValue(instruction, word32 & 0x1);
+			break;
+		}
+
+		// <op> rD, rA, FC
+		case PPC_ID_LDAT:
+		case PPC_ID_LWAT:
+		{
+			uint32_t fc = (word32 >> 11) & 0x1f;
+			PushRD(instruction, word32);
+			PushRA(instruction, word32);
+			PushUIMMValue(instruction, fc);
+			break;
+		}
+		
+		// <op> rS, rA, FC
+		case PPC_ID_STDAT:
+		case PPC_ID_STWAT:
+		{
+			uint32_t fc = (word32 >> 11) & 0x1f;
+			PushRS(instruction, word32);
+			PushRA(instruction, word32);
+			PushUIMMValue(instruction, fc);
+			break;
+		}
+		
 
 		// <op> rS, d(RA)
 		case PPC_ID_STB:
@@ -5168,24 +6713,30 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		}
 
 		// <op> rS, rA, rB (indexed store)
-		case PPC_ID_STDBRX:
-		case PPC_ID_STDCIX:
-		case PPC_ID_STDUX:
-		case PPC_ID_STDX:
+		case PPC_ID_STBCX:
 		case PPC_ID_STBCIX:
+		case PPC_ID_STBEPX:
 		case PPC_ID_STBUX:
 		case PPC_ID_STBX:
+		case PPC_ID_STDBRX:
+		case PPC_ID_STDCIX:
+		case PPC_ID_STDEPX:
+		case PPC_ID_STDUX:
+		case PPC_ID_STDX:
 		case PPC_ID_STHBRX:
 		case PPC_ID_STHCIX:
+		case PPC_ID_STHCX:
+		case PPC_ID_STHEPX:
 		case PPC_ID_STHUX:
 		case PPC_ID_STHX:
 		case PPC_ID_STSWX:
 		case PPC_ID_STWBRX:
 		case PPC_ID_STWCIX:
+		case PPC_ID_STWEPX:
 		case PPC_ID_STWUX:
 		case PPC_ID_STWX:
 			PushRS(instruction, word32);
-			PushRA(instruction, word32);
+			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			break;
 
@@ -5193,7 +6744,7 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_STDCX:
 		case PPC_ID_STWCX:
 			PushRS(instruction, word32);
-			PushRA(instruction, word32);
+			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			instruction->flags.rc = 1;
 			break;
@@ -5208,6 +6759,7 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			break;
 
 		// <op> frD, rA, rB
+		case PPC_ID_LFDEPX:
 		case PPC_ID_LFDUX:
 		case PPC_ID_LFDX:
 		case PPC_ID_LFIWAX:
@@ -5215,7 +6767,7 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_LFSUX:
 		case PPC_ID_LFSX:
 			PushFRD(instruction, word32);
-			PushRA(instruction, word32);
+			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			break;
 
@@ -5229,13 +6781,14 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			break;
 
 		// <op> frS, rA, rB
+		case PPC_ID_STFDEPX:
 		case PPC_ID_STFDUX:
 		case PPC_ID_STFDX:
 		case PPC_ID_STFIWX:
 		case PPC_ID_STFSUX:
 		case PPC_ID_STFSX:
 			PushFRS(instruction, word32);
-			PushRA(instruction, word32);
+			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			break;
 
@@ -5267,9 +6820,16 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			PushCRBitB(instruction, word32);
 			break;
 
+		// <op> crbD
 		case PPC_ID_CRCLR:
 		case PPC_ID_CRSET:
 			PushCRBitD(instruction, word32);
+			break;
+
+		// <op> crfS
+		case PPC_ID_MCRXRX:
+		case PPC_ID_TCHECK:
+			PushCRFD(instruction, word32);
 			break;
 
 		// conditional branches to registers
@@ -5331,13 +6891,15 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		// <op>[.] frD, frB
 		case PPC_ID_FABSx:
 		case PPC_ID_FCFIDx:
-		case PPC_ID_FCFIDUx:
-		case PPC_ID_FCTIDUZx:
 		case PPC_ID_FCFIDSx:
+		case PPC_ID_FCFIDUx:
 		case PPC_ID_FCFIDUSx:
 		case PPC_ID_FCTIDx:
+		case PPC_ID_FCTIDUx:
+		case PPC_ID_FCTIDUZx:
 		case PPC_ID_FCTIDZx:
 		case PPC_ID_FCTIWx:
+		case PPC_ID_FCTIWUx:
 		case PPC_ID_FCTIWUZx:
 		case PPC_ID_FCTIWZx:
 		case PPC_ID_FMRx:
@@ -5370,6 +6932,7 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 
 		// <op> rD, UIMM (special register)
 		case PPC_ID_MFDCR:
+		case PPC_ID_MFPMR:
 		case PPC_ID_MFSPR:
 		case PPC_ID_MFTB:
 		{
@@ -5382,6 +6945,7 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 
 		// <op> UIMM, rS (special register)
 		case PPC_ID_MTDCR:
+		case PPC_ID_MTPMR:
 		case PPC_ID_MTSPR:
 		{
 			uint32_t special = GetSpecialRegisterCommon(word32);
@@ -5394,15 +6958,18 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		// <op> rA, rB (cache-related)
 		case PPC_ID_DCBA:
 		case PPC_ID_DCBST:
-		case PPC_ID_DCBF:
+		case PPC_ID_DCBSTEP:
+		case PPC_ID_DCBFL:
+		case PPC_ID_DCBFLP:
 		case PPC_ID_DCBI:
-		case PPC_ID_DCBT:
-		case PPC_ID_DCBTST:
+		case PPC_ID_DCBTSTT:
+		case PPC_ID_DCBTT:
 		case PPC_ID_DCBZ:
+		case PPC_ID_DCBZEP:
 		case PPC_ID_DCBZL:
 		case PPC_ID_ICBI:
-			// TODO: this should be PushRAor0
-			PushRA(instruction, word32);
+		case PPC_ID_ICBIEP:
+			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			break;
 
@@ -5413,6 +6980,49 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			uint32_t ct = (word32 >> 21) & 0xf;
 
 			PushUIMMValue(instruction, ct);
+			break;
+		}
+
+		// <op> CT, rA, rB (cache-related)
+		case PPC_ID_ICBLC:
+		case PPC_ID_ICBLQ:
+		case PPC_ID_ICBTLS:
+			uint32_t ct = (word32 >> 21) & 0xf;
+
+			PushUIMMValue(instruction, ct);
+			PushRAor0(instruction, word32);
+			PushRB(instruction, word32);
+			break;
+
+		// <op> TH, rA, rB (cache-related)
+		case PPC_ID_DCBTEP:
+		case PPC_ID_DCBTSTEP:
+		{
+			uint32_t th = (word32 >> 21) & 0x1f;
+			PushUIMMValue(instruction, th);
+			PushRAor0(instruction, word32);
+			PushRB(instruction, word32);
+			break;
+		}
+
+		// <op> rA, rB, TH
+		case PPC_ID_DCBT:
+		{
+			PushRAor0(instruction, word32);
+			PushRB(instruction, word32);
+			uint32_t th = (word32 >> 21) & 0x1f;
+			if (th != 0)
+				PushUIMMValue(instruction, th);
+			break;
+		}
+
+		case PPC_ID_DCBTST:
+		{
+			PushRAor0(instruction, word32);
+			PushRB(instruction, word32);
+			uint32_t th = (word32 >> 21) & 0x1f;
+			if (th != 0)
+				PushUIMMValue(instruction, th);
 			break;
 		}
 
@@ -5462,6 +7072,17 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			PushSIMMValue(instruction, (int32_t)((int16_t)(word32 & 0xffff)));
 			break;
 
+		case PPC_ID_ADDPCIS:
+		{
+			PushRD(instruction, word32);
+			uint64_t d1 = (word32 >> 16) & 0x1f;
+			uint64_t d0 = (word32 >> 6) & 0x3ff;
+			uint64_t d2 = word32 & 0x1;
+			uint64_t d = (d0 << 6) | (d1 << 1) | d2;
+			PushUIMMValue(instruction, d);
+			break;
+		}
+
 		case PPC_ID_ANDI:
 			// different from other logical immediates because of rc bit
 			PushRA(instruction, word32);
@@ -5493,6 +7114,69 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			break;
 		}
 
+		case PPC_ID_CMPRB:
+		{
+			PushCRFD(instruction, word32);
+
+			uint32_t l = (word32 >> 21) & 0x1;
+			PushUIMMValue(instruction, l);
+
+			PushRA(instruction, word32);
+			PushRB(instruction, word32);
+			break;
+		}
+
+		case PPC_ID_DARN:
+		{
+			uint32_t l = (word32 >> 16) & 0x3;
+			PushRD(instruction, word32);
+			PushUIMMValue(instruction, l);
+			break;
+		}
+
+		case PPC_ID_DCBF:
+		case PPC_ID_DCBFEP:
+		{
+			uint32_t l = (word32 >> 21) & 0x3;
+			PushRAor0(instruction, word32);
+			PushRB(instruction, word32);
+			if (l != 0)
+				PushUIMMValue(instruction, l);
+
+			break;
+		}
+
+		case PPC_ID_EXTSWSLIx:
+		{
+			PushRA(instruction, word32);
+			PushRS(instruction, word32);
+			uint32_t sh5 = (word32 >> 1) & 0x1;
+			uint32_t sh0_4 = (word32 >> 11) & 0x1f;
+			PushUIMMValue(instruction, (sh5 << 5) | sh0_4);
+
+			instruction->flags.rc = word32 & 0x1;
+			break;
+		}
+
+		case PPC_ID_FTDIV:
+			PushCRFD(instruction, word32);
+			PushFRA(instruction, word32);
+			PushFRB(instruction, word32);
+			break;
+
+		case PPC_ID_FTSQRT:
+			PushCRFD(instruction, word32);
+			PushFRB(instruction, word32);
+			break;
+
+		case PPC_ID_MFBHRBE:
+		{
+			uint32_t bhrbe = (word32 >> 11) & 0x3ff;
+			PushRD(instruction, word32);
+			PushUIMMValue(instruction, bhrbe);
+			break;
+		}
+
 		case PPC_ID_MFOCRF:
 		{
 			uint32_t fxm = (word32 >> 12) & 0xff;
@@ -5508,7 +7192,7 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			uint32_t ct = (word32 >> 21) & 0xf;
 
 			PushUIMMValue(instruction, ct);
-			PushRA(instruction, word32);
+			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 
 			break;
@@ -5519,7 +7203,7 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			uint32_t bc = (word32 >> 6) & 0x1f;
 
 			PushRD(instruction, word32);
-			PushRA(instruction, word32);
+			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			PushUIMMValue(instruction, bc);
 			break;
@@ -5555,9 +7239,33 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		}
 
 		case PPC_ID_MFFSx:
+		case PPC_ID_MFFSCE:
+		case PPC_ID_MFFSL:
 			PushFRD(instruction, word32);
 			instruction->flags.rc = word32 & 0x1;
 			break;
+
+		case PPC_ID_MFFSCDRN:
+		case PPC_ID_MFFSCRN:
+			PushFRD(instruction, word32);
+			PushFRB(instruction, word32);
+			break;
+
+		case PPC_ID_MFFSCDRNI:
+		{
+			uint32_t drm = (word32 >> 11) & 0x7;
+			PushFRD(instruction, word32);
+			PushUIMMValue(instruction, drm);
+			break;
+		}
+
+		case PPC_ID_MFFSCRNI:
+		{
+			uint32_t rm = (word32 >> 11) & 0x3;
+			PushFRD(instruction, word32);
+			PushUIMMValue(instruction, rm);
+			break;
+		}
 
 		case PPC_ID_MFSR:
 		{
@@ -5677,12 +7385,19 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			break;
 		}
 
+		case PPC_ID_SETB:
+			PushRD(instruction, word32);
+			PushCRFS(instruction, word32);
+			break;
+
 		case PPC_ID_SLBMFEE:
+		case PPC_ID_SLBMFEV:
 			PushRD(instruction, word32);
 			PushRB(instruction, word32);
 			break;
 
 		case PPC_ID_SLBMTE:
+		case PPC_ID_SLBIEG:
 			PushRS(instruction, word32);
 			PushRB(instruction, word32);
 			break;
@@ -5713,11 +7428,19 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			break;
 		}
 
-		case PPC_ID_SYNC:
+		case PPC_ID_TBEGIN:
 		{
-			uint32_t l = (word32 >> 21) & 0x3;
+			uint32_t r = (word32 >> 21) & 0x1;
 
-			PushUIMMValue(instruction, l);
+			PushUIMMValue(instruction, r);
+			break;
+		}
+
+		case PPC_ID_TEND:
+		{
+			uint32_t a = (word32 >> 25) & 0x1;
+
+			PushUIMMValue(instruction, a);
 			break;
 		}
 
@@ -5730,6 +7453,14 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			PushRA(instruction, word32);
 			PushRB(instruction, word32);
 			break;
+
+		case PPC_ID_TSR:
+		{
+			uint32_t l = (word32 >> 21) & 0x1;
+
+			PushUIMMValue(instruction, l);
+			break;
+		}
 
 		case PPC_ID_WAIT:
 		{
@@ -5752,9 +7483,13 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		// ALTIVEC INSTRUCTIONS
 
 		// <op> vD, vA, vB, vC
+		case PPC_ID_AV_VADDECUQ:
+		case PPC_ID_AV_VADDEUQM:
 		case PPC_ID_AV_VMHADDSHS:
 		case PPC_ID_AV_VMHRADDSHS:
 		case PPC_ID_AV_VMLADDUHM:
+		case PPC_ID_AV_VSUBECUQ:
+		case PPC_ID_AV_VSUBEUQM:
 		case PPC_ID_AV_VMSUMMBM:
 		case PPC_ID_AV_VMSUMUBM:
 		case PPC_ID_AV_VMSUMSHM:
@@ -5762,6 +7497,8 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_AV_VMSUMUHM:
 		case PPC_ID_AV_VMSUMUHS:
 		case PPC_ID_AV_VPERM:
+		case PPC_ID_AV_VPERMR:
+		case PPC_ID_AV_VPERMXOR:
 		case PPC_ID_AV_VSEL:
 			PushAltivecVD(instruction, word32);
 			PushAltivecVA(instruction, word32);
@@ -5779,6 +7516,14 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			break;
 
 		// <op> vD, vA, vB
+		case PPC_ID_AV_VABSDUB:
+		case PPC_ID_AV_VABSDUH:
+		case PPC_ID_AV_VABSDUW:
+		case PPC_ID_AV_VADDUQM:
+		case PPC_ID_AV_VADDCUQ:
+		case PPC_ID_AV_BCDUS:
+		case PPC_ID_AV_BCDUTRUNC:
+		case PPC_ID_AV_BCDCPSGN:
 		case PPC_ID_AV_VADDCUW:
 		case PPC_ID_AV_VADDFP:
 		case PPC_ID_AV_VADDSBS:
@@ -5799,6 +7544,10 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_AV_VAVGUB:
 		case PPC_ID_AV_VAVGUH:
 		case PPC_ID_AV_VAVGUW:
+		case PPC_ID_AV_VBPERMD:
+		case PPC_ID_AV_VBPERMQ:
+		case PPC_ID_AV_VCIPHER:
+		case PPC_ID_AV_VCIPHERLAST:
 		case PPC_ID_AV_VEQV:
 		case PPC_ID_AV_VMAXFP:
 		case PPC_ID_AV_VMAXSB:
@@ -5818,12 +7567,16 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_AV_VMINSD:
 		case PPC_ID_AV_VMINSH:
 		case PPC_ID_AV_VMINSW:
+		case PPC_ID_AV_VMRGEW:
 		case PPC_ID_AV_VMRGHB:
 		case PPC_ID_AV_VMRGHH:
 		case PPC_ID_AV_VMRGHW:
 		case PPC_ID_AV_VMRGLB:
 		case PPC_ID_AV_VMRGLH:
 		case PPC_ID_AV_VMRGLW:
+		case PPC_ID_AV_VMRGOW:
+		case PPC_ID_AV_VMUL10EUQ:
+		case PPC_ID_AV_VMUL10ECUQ:
 		case PPC_ID_AV_VMULESB:
 		case PPC_ID_AV_VMULESH:
 		case PPC_ID_AV_VMULESW:
@@ -5838,27 +7591,42 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_AV_VMULOUW:
 		case PPC_ID_AV_VMULUWM:
 		case PPC_ID_AV_VNAND:
+		case PPC_ID_AV_VNCIPHER:
+		case PPC_ID_AV_VNCIPHERLAST:
 		case PPC_ID_AV_VNOR:
 		case PPC_ID_AV_VOR:
 		case PPC_ID_AV_VORC:
 		case PPC_ID_AV_VPKPX:
-		case PPC_ID_AV_VPKSHUS:
+		case PPC_ID_AV_VPKSDSS:
+		case PPC_ID_AV_VPKSDUS:
 		case PPC_ID_AV_VPKSHSS:
+		case PPC_ID_AV_VPKSHUS:
 		case PPC_ID_AV_VPKSWSS:
 		case PPC_ID_AV_VPKSWUS:
+		case PPC_ID_AV_VPKUDUM:
+		case PPC_ID_AV_VPKUDUS:
 		case PPC_ID_AV_VPKUHUM:
 		case PPC_ID_AV_VPKUHUS:
 		case PPC_ID_AV_VPKUWUM:
 		case PPC_ID_AV_VPKUWUS:
+		case PPC_ID_AV_VPMSUMB:
+		case PPC_ID_AV_VPMSUMD:
+		case PPC_ID_AV_VPMSUMH:
+		case PPC_ID_AV_VPMSUMW:
 		case PPC_ID_AV_VRLB:
 		case PPC_ID_AV_VRLD:
+		case PPC_ID_AV_VRLDMI:
+		case PPC_ID_AV_VRLDNM:
 		case PPC_ID_AV_VRLH:
 		case PPC_ID_AV_VRLW:
+		case PPC_ID_AV_VRLWMI:
+		case PPC_ID_AV_VRLWNM:
 		case PPC_ID_AV_VSL:
 		case PPC_ID_AV_VSLB:
 		case PPC_ID_AV_VSLD:
 		case PPC_ID_AV_VSLH:
 		case PPC_ID_AV_VSLO:
+		case PPC_ID_AV_VSLV:
 		case PPC_ID_AV_VSLW:
 		case PPC_ID_AV_VSR:
 		case PPC_ID_AV_VSRAB:
@@ -5869,7 +7637,9 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_AV_VSRD:
 		case PPC_ID_AV_VSRH:
 		case PPC_ID_AV_VSRO:
+		case PPC_ID_AV_VSRV:
 		case PPC_ID_AV_VSRW:
+		case PPC_ID_AV_VSUBCUQ:
 		case PPC_ID_AV_VSUBCUW:
 		case PPC_ID_AV_VSUBFP:
 		case PPC_ID_AV_VSUBSBS:
@@ -5877,6 +7647,7 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_AV_VSUBSWS:
 		case PPC_ID_AV_VSUBUBS:
 		case PPC_ID_AV_VSUBUHS:
+		case PPC_ID_AV_VSUBUQM:
 		case PPC_ID_AV_VSUBUWS:
 		case PPC_ID_AV_VSUBUBM:
 		case PPC_ID_AV_VSUBUDM:
@@ -5910,6 +7681,12 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_AV_VCMPGTUDx:
 		case PPC_ID_AV_VCMPGTUHx:
 		case PPC_ID_AV_VCMPGTUWx:
+		case PPC_ID_AV_VCMPNEBx:
+		case PPC_ID_AV_VCMPNEHx:
+		case PPC_ID_AV_VCMPNEWx:
+		case PPC_ID_AV_VCMPNEZBx:
+		case PPC_ID_AV_VCMPNEZHx:
+		case PPC_ID_AV_VCMPNEZWx:
 			PushAltivecVD(instruction, word32);
 			PushAltivecVA(instruction, word32);
 			PushAltivecVB(instruction, word32);
@@ -5917,17 +7694,44 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			instruction->flags.rc = (word32 >> 10) & 0x1;
 			break;
 
+		// <op> vD, vA
+		case PPC_ID_AV_VMUL10CUQ:
+		case PPC_ID_AV_VMUL10UQ:
+		case PPC_ID_AV_VSBOX:
+			PushAltivecVD(instruction, word32);
+			PushAltivecVA(instruction, word32);
+			break;
+
 		// <op> vD, vB
+		case PPC_ID_AV_BCDCTN:
+		case PPC_ID_AV_BCDCTSQ:
 		case PPC_ID_AV_VCLZB:
 		case PPC_ID_AV_VCLZD:
 		case PPC_ID_AV_VCLZH:
 		case PPC_ID_AV_VCLZW:
+		case PPC_ID_AV_VCTZB:
+		case PPC_ID_AV_VCTZD:
+		case PPC_ID_AV_VCTZH:
+		case PPC_ID_AV_VCTZW:
 		case PPC_ID_AV_VEXPTEFP:
+		case PPC_ID_AV_VEXTSB2D:
+		case PPC_ID_AV_VEXTSB2W:
+		case PPC_ID_AV_VEXTSH2D:
+		case PPC_ID_AV_VEXTSH2W:
+		case PPC_ID_AV_VEXTSW2D:
+		case PPC_ID_AV_VGBBD:
 		case PPC_ID_AV_VLOGEFP:
+		case PPC_ID_AV_VMR:
+		case PPC_ID_AV_VNEGD:
+		case PPC_ID_AV_VNEGW:
+		case PPC_ID_AV_VNOT:
 		case PPC_ID_AV_VPOPCNTB:
 		case PPC_ID_AV_VPOPCNTD:
 		case PPC_ID_AV_VPOPCNTH:
 		case PPC_ID_AV_VPOPCNTW:
+		case PPC_ID_AV_VPRTYBD:
+		case PPC_ID_AV_VPRTYBQ:
+		case PPC_ID_AV_VPRTYBW:
 		case PPC_ID_AV_VREFP:
 		case PPC_ID_AV_VRFIM:
 		case PPC_ID_AV_VRFIN:
@@ -5937,9 +7741,11 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_AV_VUPKHPX:
 		case PPC_ID_AV_VUPKHSB:
 		case PPC_ID_AV_VUPKHSH:
+		case PPC_ID_AV_VUPKHSW:
 		case PPC_ID_AV_VUPKLPX:
 		case PPC_ID_AV_VUPKLSB:
 		case PPC_ID_AV_VUPKLSH:
+		case PPC_ID_AV_VUPKLSW:
 			PushAltivecVD(instruction, word32);
 			PushAltivecVB(instruction, word32);
 			break;
@@ -5978,7 +7784,7 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_AV_LVX:
 		case PPC_ID_AV_LVXL:
 			PushAltivecVD(instruction, word32);
-			PushRA(instruction, word32);
+			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			break;
 
@@ -5989,7 +7795,7 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_AV_STVX:
 		case PPC_ID_AV_STVXL:
 			PushAltivecVS(instruction, word32);
-			PushRA(instruction, word32);
+			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			break;
 
@@ -6031,6 +7837,89 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			PushUIMMValue(instruction, (word32 >> 6) & 0xf);
 			break;
 
+		// rD, rA, rB, rC (normal registers)
+		case PPC_ID_AV_MADDHD:
+		case PPC_ID_AV_MADDHDU:
+		case PPC_ID_AV_MADDLD:
+			PushRD(instruction, word32);
+			PushRA(instruction, word32);
+			PushRB(instruction, word32);
+			PushRC(instruction, word32);
+			break;
+
+		// vrD, vrA, vrB, ps
+		case PPC_ID_AV_BCDADD:
+		case PPC_ID_AV_BCDSUB:
+		case PPC_ID_AV_BCDS:
+		case PPC_ID_AV_BCDSR:
+		case PPC_ID_AV_BCDTRUNC:
+		{
+			PushAltivecVD(instruction, word32);
+			PushAltivecVA(instruction, word32);
+			PushAltivecVB(instruction, word32);
+			uint32_t ps = (word32 & 0x200) != 0;
+			PushUIMMValue(instruction, ps);
+			break;
+		}
+
+
+		// vrD, vrB, ps
+		case PPC_ID_AV_BCDCFN:
+		case PPC_ID_AV_BCDCFZ:
+		case PPC_ID_AV_BCDCTZ:
+		case PPC_ID_AV_BCDCFSQ:
+		case PPC_ID_AV_BCDSETSGN:
+			// PS isn't in all of these instructions, but it gets
+			// filtered out in subop decode
+			PushAltivecVD(instruction, word32);
+			PushAltivecVB(instruction, word32);
+			uint32_t ps = (word32 & 0x200) != 0;
+			PushUIMMValue(instruction, ps);
+			break;
+
+
+		// vrD, vrB, UIM
+		case PPC_ID_AV_VEXTRACTD:
+		case PPC_ID_AV_VEXTRACTUB:
+		case PPC_ID_AV_VEXTRACTUH:
+		case PPC_ID_AV_VEXTRACTUW:
+		case PPC_ID_AV_VINSERTB:
+		case PPC_ID_AV_VINSERTD:
+		case PPC_ID_AV_VINSERTH:
+		case PPC_ID_AV_VINSERTW:
+			PushAltivecVD(instruction, word32);
+			PushAltivecVB(instruction, word32);
+			PushUIMMValue(instruction, (word32 >> 16) & 0xf);
+			break;
+			
+		// <op> rD, rA, vB
+		case PPC_ID_AV_VEXTUBLX:
+		case PPC_ID_AV_VEXTUHLX:
+		case PPC_ID_AV_VEXTUWLX:
+		case PPC_ID_AV_VEXTUBRX:
+		case PPC_ID_AV_VEXTUHRX:
+		case PPC_ID_AV_VEXTUWRX:
+			PushRD(instruction, word32);
+			PushRA(instruction, word32);
+			PushAltivecVB(instruction, word32);
+			break;
+
+		// <op> vD, vA, ST, SIX
+		case PPC_ID_AV_VSHASIGMAD:
+		case PPC_ID_AV_VSHASIGMAW:
+			PushAltivecVD(instruction, word32);
+			PushAltivecVA(instruction, word32);
+			PushUIMMValue(instruction, (word32 >> 15) & 0x1);
+			PushUIMMValue(instruction, (word32 >> 11) & 0xf);
+			break;
+
+		// <op> rD, vB
+		case PPC_ID_AV_VCLZLSBB:
+		case PPC_ID_AV_VCTZLSBB:
+			PushRD(instruction, word32);
+			PushAltivecVB(instruction, word32);
+			break;
+
 		// VSX INSTRUCTIONS
 
 		// <op> vrD, vrA, vrB <full width>
@@ -6040,6 +7929,8 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_VSX_XVCPSGNSP:
 		case PPC_ID_VSX_XVDIVDP:
 		case PPC_ID_VSX_XVDIVSP:
+		case PPC_ID_VSX_XVIEXPDP:
+		case PPC_ID_VSX_XVIEXPSP:
 		case PPC_ID_VSX_XVMADDADP:
 		case PPC_ID_VSX_XVMADDASP:
 		case PPC_ID_VSX_XVMADDMDP:
@@ -6076,6 +7967,7 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_VSX_XXMRGHW:
 		case PPC_ID_VSX_XXMRGLD:
 		case PPC_ID_VSX_XXMRGLW:
+		case PPC_ID_VSX_XXPERM:
 		case PPC_ID_VSX_XXPERMR:
 			PushVsxD(instruction, word32, VSX_WIDTH_FULL);
 			PushVsxA(instruction, word32, VSX_WIDTH_FULL);
@@ -6096,21 +7988,40 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			break;
 
 		// <op> vrD, vrA, vrB <dword0>
+		case PPC_ID_VSX_XSADDSP:
 		case PPC_ID_VSX_XSADDDP:
+		case PPC_ID_VSX_XSCMPEQDP:
+		case PPC_ID_VSX_XSCMPGEDP:
+		case PPC_ID_VSX_XSCMPGTDP:
 		case PPC_ID_VSX_XSCPSGNDP:
 		case PPC_ID_VSX_XSDIVDP:
+		case PPC_ID_VSX_XSDIVSP:
 		case PPC_ID_VSX_XSMADDADP:
 		case PPC_ID_VSX_XSMADDMDP:
+		case PPC_ID_VSX_XSMADDASP:
+		case PPC_ID_VSX_XSMADDMSP:
+		case PPC_ID_VSX_XSMAXCDP:
 		case PPC_ID_VSX_XSMAXDP:
+		case PPC_ID_VSX_XSMAXJDP:
+		case PPC_ID_VSX_XSMINCDP:
 		case PPC_ID_VSX_XSMINDP:
+		case PPC_ID_VSX_XSMINJDP:
 		case PPC_ID_VSX_XSMSUBADP:
+		case PPC_ID_VSX_XSMSUBASP:
 		case PPC_ID_VSX_XSMSUBMDP:
+		case PPC_ID_VSX_XSMSUBMSP:
 		case PPC_ID_VSX_XSMULDP:
+		case PPC_ID_VSX_XSMULSP:
 		case PPC_ID_VSX_XSNMADDADP:
+		case PPC_ID_VSX_XSNMADDASP:
 		case PPC_ID_VSX_XSNMADDMDP:
+		case PPC_ID_VSX_XSNMADDMSP:
 		case PPC_ID_VSX_XSNMSUBADP:
+		case PPC_ID_VSX_XSNMSUBASP:
 		case PPC_ID_VSX_XSNMSUBMDP:
+		case PPC_ID_VSX_XSNMSUBMSP:
 		case PPC_ID_VSX_XSSUBDP:
+		case PPC_ID_VSX_XSSUBSP:
 			PushVsxD(instruction, word32, VSX_WIDTH_DWORD0);
 			PushVsxA(instruction, word32, VSX_WIDTH_DWORD0);
 			PushVsxB(instruction, word32, VSX_WIDTH_DWORD0);
@@ -6159,20 +8070,34 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_VSX_XVSQRTDP:
 		case PPC_ID_VSX_XVMOVDP:
 		case PPC_ID_VSX_XVMOVSP:
+		case PPC_ID_VSX_XVXEXPDP:
+		case PPC_ID_VSX_XVXEXPSP:
+		case PPC_ID_VSX_XVXSIGDP:
+		case PPC_ID_VSX_XVXSIGSP:
+		case PPC_ID_VSX_XXBRD:
+		case PPC_ID_VSX_XXBRH:
+		case PPC_ID_VSX_XXBRQ:
+		case PPC_ID_VSX_XXBRW:
 			PushVsxD(instruction, word32, VSX_WIDTH_FULL);
 			PushVsxB(instruction, word32, VSX_WIDTH_FULL);
 			break;
 
-
+		// <op> vrD, vrB
 		case PPC_ID_VSX_XSABSDP:
+		case PPC_ID_VSX_XSCVDPHP:
 		case PPC_ID_VSX_XSCVDPSXDS:
 		case PPC_ID_VSX_XSCVDPSP:
+		case PPC_ID_VSX_XSCVDPSPN:
 		case PPC_ID_VSX_XSCVDPSXWS:
 		case PPC_ID_VSX_XSCVDPUXDS:
 		case PPC_ID_VSX_XSCVDPUXWS:
 		case PPC_ID_VSX_XSCVSPDP:
+		case PPC_ID_VSX_XSCVHPDP:
+		case PPC_ID_VSX_XSCVSPDPN:
 		case PPC_ID_VSX_XSCVSXDDP:
+		case PPC_ID_VSX_XSCVSXDSP:
 		case PPC_ID_VSX_XSCVUXDDP:
+		case PPC_ID_VSX_XSCVUXDSP:
 		case PPC_ID_VSX_XSNABSDP:
 		case PPC_ID_VSX_XSNEGDP:
 		case PPC_ID_VSX_XSRDPI:
@@ -6181,13 +8106,17 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		case PPC_ID_VSX_XSRDPIP:
 		case PPC_ID_VSX_XSRDPIZ:
 		case PPC_ID_VSX_XSREDP:
+		case PPC_ID_VSX_XSRESP:
+		case PPC_ID_VSX_XSRSP:
+		case PPC_ID_VSX_XSRSQRTESP:
 		case PPC_ID_VSX_XSRSQRTEDP:
 		case PPC_ID_VSX_XSSQRTDP:
+		case PPC_ID_VSX_XSSQRTSP:
+		case PPC_ID_VSX_XVCVHPSP:
+		case PPC_ID_VSX_XVCVSPHP:
 			PushVsxD(instruction, word32, VSX_WIDTH_DWORD0);
 			PushVsxB(instruction, word32, VSX_WIDTH_DWORD0);
 			break;
-
-		// <op>
 
 		// <op> vrD, vrA, vrB, <UIMM>
 		case PPC_ID_VSX_XXPERMDI:
@@ -6202,36 +8131,64 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			break;
 		}
 
+		// <op> vrD, rA, rB
+		case PPC_ID_VSX_MTVSRDD:
+			PushVsxD(instruction, word32, VSX_WIDTH_FULL);
+			PushRAor0(instruction, word32);
+			PushRB(instruction, word32);
+			break;
+
 		// <op> vrD, rA, rB (load indexed)
+		case PPC_ID_VSX_LXVB16X:
 		case PPC_ID_VSX_LXVD2X:
 		case PPC_ID_VSX_LXVDSX:
+		case PPC_ID_VSX_LXVH8X:
+		case PPC_ID_VSX_LXVL:
+		case PPC_ID_VSX_LXVLL:
 		case PPC_ID_VSX_LXVW4X:
+		case PPC_ID_VSX_LXVWSX:
+		case PPC_ID_VSX_LXVX:
 			PushVsxD(instruction, word32, VSX_WIDTH_FULL);
-			PushRA(instruction, word32);
+			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			break;
 
 		case PPC_ID_VSX_LXSDX:
+		case PPC_ID_VSX_LXSIBZX:
+		case PPC_ID_VSX_LXSIHZX:
+		case PPC_ID_VSX_LXSIWAX:
+		case PPC_ID_VSX_LXSIWZX:
+		case PPC_ID_VSX_LXSSPX:
 			PushVsxD(instruction, word32, VSX_WIDTH_DWORD0);
-			PushRA(instruction, word32);
+			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			break;
 
 		// <op> vrS, rA, rB (store indexed)
+		case PPC_ID_VSX_STXVB16X:
 		case PPC_ID_VSX_STXVD2X:
+		case PPC_ID_VSX_STXVH8X:
+		case PPC_ID_VSX_STXVL:
+		case PPC_ID_VSX_STXVLL:
 		case PPC_ID_VSX_STXVW4X:
+		case PPC_ID_VSX_STXVX:
 			PushVsxS(instruction, word32, VSX_WIDTH_FULL);
-			PushRA(instruction, word32);
+			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			break;
 
 		case PPC_ID_VSX_STXSDX:
+		case PPC_ID_VSX_STXSIBX:
+		case PPC_ID_VSX_STXSIHX:
+		case PPC_ID_VSX_STXSIWX:
+		case PPC_ID_VSX_STXSSPX:
 			PushVsxS(instruction, word32, VSX_WIDTH_DWORD0);
-			PushRA(instruction, word32);
+			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			break;
 
 		// <op> crfD, vrA, vrB <dword0>
+		case PPC_ID_VSX_XSCMPEXPDP:
 		case PPC_ID_VSX_XSCMPODP:
 		case PPC_ID_VSX_XSCMPUDP:
 		case PPC_ID_VSX_XSTDIVDP:
@@ -6260,6 +8217,198 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			PushVsxB(instruction, word32, VSX_WIDTH_DWORD0);
 			break;
 
+		// <op> vrD, rA
+		case PPC_ID_VSX_MTVSRWS:
+			PushVsxD(instruction, word32, VSX_WIDTH_FULL);
+			PushRA(instruction, word32);
+			break;
+
+		case PPC_ID_VSX_MTVSRD:
+		case PPC_ID_VSX_MTVSRWA:
+		case PPC_ID_VSX_MTVSRWZ:
+			PushVsxD(instruction, word32, VSX_WIDTH_DWORD0);
+			PushRA(instruction, word32);
+			break;
+
+		// <op> rA, vrS
+		case PPC_ID_VSX_MFVSRLD:
+			PushRA(instruction, word32);
+			PushVsxS(instruction, word32, VSX_WIDTH_FULL);
+			break;
+
+		case PPC_ID_VSX_MFFPRD:
+		case PPC_ID_VSX_MFVSRWZ:
+		case PPC_ID_VSX_MFVSRD:
+			PushRA(instruction, word32);
+			PushVsxS(instruction, word32, VSX_WIDTH_DWORD0);
+			break;
+
+		// <op> vrD, vrB, UIM
+		case PPC_ID_VSX_XXINSERTW:
+			PushVsxD(instruction, word32, VSX_WIDTH_FULL);
+			PushVsxB(instruction, word32, VSX_WIDTH_FULL);
+			PushUIMMValue(instruction, (word32 >> 16) & 0xf);
+			break;
+
+		case PPC_ID_VSX_XXEXTRACTUW:
+			PushVsxD(instruction, word32, VSX_WIDTH_DWORD0);
+			PushVsxB(instruction, word32, VSX_WIDTH_DWORD0);
+			PushUIMMValue(instruction, (word32 >> 16) & 0xf);
+			break;
+
+		case PPC_ID_VSX_LXV:
+		{
+			uint32_t dx = (word32 >> 3) & 0x1;
+			uint32_t d = GetD(word32);
+			uint32_t vsxd = (dx << 5) | d;
+
+			PushRegister(instruction, PPC_OP_REG_VSX_RD, VsxVr(vsxd));
+
+			uint32_t dq = (int32_t)((int16_t)(word32 & 0xfff0));
+			PushMem(instruction, PPC_OP_MEM_RA, Gpr(GetA(word32)), dq);
+
+			break;
+		}
+
+		case PPC_ID_VSX_STXV:
+		{
+			uint32_t sx = (word32 >> 3) & 0x1;
+			uint32_t s = GetS(word32);
+			uint32_t vsxs = (sx << 5) | s;
+
+			PushRegister(instruction, PPC_OP_REG_VSX_RS, VsxVr(vsxs));
+
+			int32_t dq = (int32_t)((int16_t)(word32 & 0xfff0));
+			PushMem(instruction, PPC_OP_MEM_RA, Gpr(GetA(word32)), dq);
+
+			break;
+		}
+
+		case PPC_ID_VSX_STXSD:
+		case PPC_ID_VSX_STXSSP:
+		{
+			uint32_t xs = GetS(word32) + 32;
+			PushRegister(instruction, PPC_OP_REG_VSX_RS, VsxVr(xs));
+
+			int32_t ds = (int32_t)((int16_t)(word32 & 0xfffc));
+			PushMem(instruction, PPC_OP_MEM_RA, Gpr(GetA(word32)), ds);
+			break;
+		}
+
+		// <op>[o] vrdHi, vraHi, vrbHi
+		case PPC_ID_VSX_XSADDQPx:
+		case PPC_ID_VSX_XSCPSGNQP:
+		case PPC_ID_VSX_XSDIVQPx:
+		case PPC_ID_VSX_XSIEXPQP:
+		case PPC_ID_VSX_XSMADDQPx:
+		case PPC_ID_VSX_XSMSUBQPx:
+		case PPC_ID_VSX_XSMULQPx:
+		case PPC_ID_VSX_XSNMADDQPx:
+		case PPC_ID_VSX_XSNMSUBQPx:
+		case PPC_ID_VSX_XSSUBQPx:
+		{
+			PushVsxHiD(instruction, word32);
+			PushVsxHiA(instruction, word32);
+			PushVsxHiB(instruction, word32);
+
+			instruction->flags.round2odd = word32 & 0x1;
+			break;
+		}
+
+		case PPC_ID_VSX_XSABSQP:
+		case PPC_ID_VSX_XSCVQPUWZ:
+		case PPC_ID_VSX_XSCVUDQP:
+		case PPC_ID_VSX_XSNABSQP:
+		case PPC_ID_VSX_XSCVDPQP:
+		case PPC_ID_VSX_XSCVQPDPx:
+		case PPC_ID_VSX_XSCVQPSDZ:
+		case PPC_ID_VSX_XSCVQPSWZ:
+		case PPC_ID_VSX_XSCVQPUDZ:
+		case PPC_ID_VSX_XSCVSDQP:
+		case PPC_ID_VSX_XSNEGQP:
+		case PPC_ID_VSX_XSSQRTQPx:
+		case PPC_ID_VSX_XSXEXPQP:
+		case PPC_ID_VSX_XSXSIGQP:
+		{
+			PushVsxHiD(instruction, word32);
+			PushVsxHiB(instruction, word32);
+
+			instruction->flags.round2odd = word32 & 0x1;
+			break;
+		}
+
+		case PPC_ID_VSX_XSCMPEXPQP:
+		case PPC_ID_VSX_XSCMPOQP:
+		case PPC_ID_VSX_XSCMPUQP:
+			PushCRFD(instruction, word32);
+			PushVsxHiA(instruction, word32);
+			PushVsxHiB(instruction, word32);
+
+			break;
+
+		case PPC_ID_VSX_XSTSTDCQP:
+		{
+			uint32_t dcmx = (word32 >> 16) & 0x7f;
+			PushCRFD(instruction, word32);
+			PushVsxHiB(instruction, word32);
+			PushUIMMValue(instruction, dcmx);
+			break;
+		}
+
+		// one-off VSX instructions
+		case PPC_ID_VSX_XSIEXPDP:
+		{
+			PushVsxD(instruction, word32, VSX_WIDTH_FULL);
+			PushRA(instruction, word32);
+			PushRB(instruction, word32);
+			break;
+		}
+
+		case PPC_ID_VSX_XSRQPIx:
+		case PPC_ID_VSX_XSRQPXP:
+		{
+			uint32_t r = (word32 >> 16) & 0x1;
+			PushUIMMValue(instruction, r);
+			PushVsxHiD(instruction, word32);
+			PushVsxHiB(instruction, word32);
+
+			uint32_t rmc = (word32 >> 9) & 0x3;
+			PushUIMMValue(instruction, rmc);
+
+			instruction->flags.inexact = word32 & 0x1;
+			break;
+		}
+
+		case PPC_ID_VSX_XSTSTDCDP:
+		case PPC_ID_VSX_XSTSTDCSP:
+		{
+			uint32_t dcmx = (word32 >> 16) & 0x7f;
+			PushCRFD(instruction, word32);
+			PushVsxB(instruction, word32, VSX_WIDTH_DWORD0);
+			PushUIMMValue(instruction, dcmx);
+			break;
+		}
+
+		case PPC_ID_VSX_XSXEXPDP:
+		case PPC_ID_VSX_XSXSIGDP:
+			PushRD(instruction, word32);
+			PushVsxB(instruction, word32, VSX_WIDTH_DWORD0);
+			break;
+
+		case PPC_ID_VSX_XVTSTDCDP:
+		case PPC_ID_VSX_XVTSTDCSP:
+		{
+			PushVsxD(instruction, word32, VSX_WIDTH_FULL);
+			PushVsxB(instruction, word32, VSX_WIDTH_FULL);
+			uint32_t dm = (word32 >> 2) & 0x1;
+			uint32_t dc = (word32 >> 6) & 0x1;
+			uint32_t dx = (word32 >> 16) & 0x1f;
+			uint32_t dcmx = (dc << 6) | (dm << 5) | dx;
+			PushUIMMValue(instruction, dcmx);
+			break;
+		}
+
+
 		case PPC_ID_VSX_XXSPLTD:
 		{
 			uint32_t uimm = (word32 >> 8) & 0x3;
@@ -6272,6 +8421,14 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 			else
 				PushUIMMValue(instruction, 0);
 
+			break;
+		}
+
+		case PPC_ID_VSX_XXSPLTIB:
+		{
+			uint32_t uimm8 = (word32 >> 11) & 0xff;
+			PushVsxD(instruction, word32, VSX_WIDTH_FULL);
+			PushUIMMValue(instruction, uimm8);
 			break;
 		}
 
@@ -6706,6 +8863,20 @@ static void FillOperands(Instruction* instruction, uint32_t word32, uint64_t add
 		base "la+"                      \
 	};
 
+#define DEFINE_SUBMNEM_ROUND2ODD(_identifier, base)    \
+	const char* _identifier[2] =            \
+	{                                       \
+		base,                           \
+		base "o",                       \
+	};
+
+#define DEFINE_SUBMNEM_INEXACT(_identifier, base)    \
+	const char* _identifier[2] =            \
+	{                                       \
+		base,                           \
+		base "x",                       \
+	};
+
 DEFINE_SUBMNEM_OE_RC(SubMnemADDx, "add")
 DEFINE_SUBMNEM_OE_RC(SubMnemADDCx, "addc")
 DEFINE_SUBMNEM_OE_RC(SubMnemADDEx, "adde")
@@ -6766,14 +8937,21 @@ DEFINE_SUBMNEM_RC(SubMnemCLRLWIx, "clrlwi")
 DEFINE_SUBMNEM_RC(SubMnemCLRRWIx, "clrrwi")
 DEFINE_SUBMNEM_RC(SubMnemCNTLZDx, "cntlzd")
 DEFINE_SUBMNEM_RC(SubMnemCNTLZWx, "cntlzw")
+DEFINE_SUBMNEM_RC(SubMnemCNTTZDx, "cnttzd")
+DEFINE_SUBMNEM_RC(SubMnemCNTTZWx, "cnttzw")
 DEFINE_SUBMNEM_OE_RC(SubMnemDIVDx, "divd")
+DEFINE_SUBMNEM_OE_RC(SubMnemDIVDEx, "divde")
+DEFINE_SUBMNEM_OE_RC(SubMnemDIVDEUx, "divdeu")
 DEFINE_SUBMNEM_OE_RC(SubMnemDIVDUx, "divdu")
 DEFINE_SUBMNEM_OE_RC(SubMnemDIVWx, "divw")
+DEFINE_SUBMNEM_OE_RC(SubMnemDIVWEx, "divwe")
+DEFINE_SUBMNEM_OE_RC(SubMnemDIVWEUx, "divweu")
 DEFINE_SUBMNEM_OE_RC(SubMnemDIVWUx, "divwu")
 DEFINE_SUBMNEM_RC(SubMnemEQVx, "eqv")
 DEFINE_SUBMNEM_RC(SubMnemEXTSBx, "extsb")
 DEFINE_SUBMNEM_RC(SubMnemEXTSHx, "extsh")
 DEFINE_SUBMNEM_RC(SubMnemEXTSWx, "extsw")
+DEFINE_SUBMNEM_RC(SubMnemEXTSWSLIx, "extswsli")
 DEFINE_SUBMNEM_RC(SubMnemFABSx, "fabs")
 DEFINE_SUBMNEM_RC(SubMnemFADDx, "fadd")
 DEFINE_SUBMNEM_RC(SubMnemFADDSx, "fadds")
@@ -6783,9 +8961,11 @@ DEFINE_SUBMNEM_RC(SubMnemFCFIDUx, "fcfidu")
 DEFINE_SUBMNEM_RC(SubMnemFCFIDUSx, "fcfidus")
 DEFINE_SUBMNEM_RC(SubMnemFCPSGNx, "fcpsgn")
 DEFINE_SUBMNEM_RC(SubMnemFCTIDx, "fctid")
+DEFINE_SUBMNEM_RC(SubMnemFCTIDUx, "fctidu")
 DEFINE_SUBMNEM_RC(SubMnemFCTIDUZx, "fctiduz")
 DEFINE_SUBMNEM_RC(SubMnemFCTIDZx, "fctidz")
 DEFINE_SUBMNEM_RC(SubMnemFCTIWx, "fctiw")
+DEFINE_SUBMNEM_RC(SubMnemFCTIWUx, "fctiwu")
 DEFINE_SUBMNEM_RC(SubMnemFCTIWUZx, "fctiwuz")
 DEFINE_SUBMNEM_RC(SubMnemFCTIWZx, "fctiwz")
 DEFINE_SUBMNEM_RC(SubMnemFDIVx, "fdiv")
@@ -6883,6 +9063,12 @@ DEFINE_SUBMNEM_RC(SubMnemVCMPGTUBx, "vcmpgtub");
 DEFINE_SUBMNEM_RC(SubMnemVCMPGTUDx, "vcmpgtud");
 DEFINE_SUBMNEM_RC(SubMnemVCMPGTUHx, "vcmpgtuh");
 DEFINE_SUBMNEM_RC(SubMnemVCMPGTUWx, "vcmpgtuw");
+DEFINE_SUBMNEM_RC(SubMnemVCMPNEBx, "vcmpneb");
+DEFINE_SUBMNEM_RC(SubMnemVCMPNEHx, "vcmpneh");
+DEFINE_SUBMNEM_RC(SubMnemVCMPNEWx, "vcmpnew");
+DEFINE_SUBMNEM_RC(SubMnemVCMPNEZBx, "vcmpnezb");
+DEFINE_SUBMNEM_RC(SubMnemVCMPNEZHx, "vcmpnezh");
+DEFINE_SUBMNEM_RC(SubMnemVCMPNEZWx, "vcmpnezw");
 
 // VSX MNEMONICS
 DEFINE_SUBMNEM_RC(SubMnemXVCMPEQDPx, "xvcmpeqdp");
@@ -6891,6 +9077,17 @@ DEFINE_SUBMNEM_RC(SubMnemXVCMPGEDPx, "xvcmpgedp");
 DEFINE_SUBMNEM_RC(SubMnemXVCMPGESPx, "xvcmpgesp");
 DEFINE_SUBMNEM_RC(SubMnemXVCMPGTDPx, "xvcmpgtdp");
 DEFINE_SUBMNEM_RC(SubMnemXVCMPGTSPx, "xvcmpgtsp");
+DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSADDQPx, "xsaddqp");
+DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSCVQPDPx, "xscvqpdp");
+DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSDIVQPx, "xsdivqp");
+DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSMADDQPx, "xsmaddqp");
+DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSMULQPx, "xsmulqp");
+DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSMSUBQPx, "xsmsubqp");
+DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSNMADDQPx, "xsnmaddqp");
+DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSNMSUBQPx, "xsnmsubqp");
+DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSSQRTQPx, "xssqrtqp");
+DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSSUBQPx, "xssubqp");
+DEFINE_SUBMNEM_INEXACT(SubMnemXSRQPIx, "xsrqpi");
 
 static const char* RcMnemonic(const Instruction* instruction, const char* names[2])
 {
@@ -6920,6 +9117,16 @@ static const char* AaLkMnemonic(const Instruction* instruction, const char* name
 static const char* AaLkHintMnemonic(const Instruction* instruction, const char* names[16])
 {
 	return names[4*instruction->flags.branchLikelyHint + 2*instruction->flags.aa + instruction->flags.lk];
+}
+
+static const char* Round2OddMnemonic(const Instruction* instruction, const char* names[2])
+{
+	return names[instruction->flags.round2odd];
+}
+
+static const char* InexactMnemonic(const Instruction* instruction, const char* names[2])
+{
+	return names[instruction->flags.inexact];
 }
 
 void FillBcxOperands(OperandsList* bcx, const Instruction* instruction)
@@ -7042,6 +9249,8 @@ void FillBclrxOperands(OperandsList* bclrx, const Instruction* instruction)
 		case 8:
 		case 10:
 			CopyOperand(&bclrx->operands[0], &instruction->operands[1]);
+			bclrx->operands[0].cls = PPC_OP_CRBIT;
+			bclrx->operands[0].crbit = (uint32_t)instruction->operands[1].uimm;
 			bclrx->numOperands = 1;
 			break;
 
@@ -7092,6 +9301,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_ADDICx: return RcMnemonic(instruction, SubMnemADDICx);
 		case PPC_ID_ADDIS: return "addis";
 		case PPC_ID_ADDMEx: return OeRcMnemonic(instruction, SubMnemADDMEx);
+		case PPC_ID_ADDPCIS: return "addpcis";
 		case PPC_ID_ADDZEx: return OeRcMnemonic(instruction, SubMnemADDZEx);
 		case PPC_ID_ANDx: return RcMnemonic(instruction, SubMnemANDx);
 		case PPC_ID_ANDCx: return RcMnemonic(instruction, SubMnemANDCx);
@@ -7328,12 +9538,16 @@ const char* GetMnemonic(const Instruction* instruction)
 			}
 		}
 
+		case PPC_ID_BPERMD: return "bpermd";
+		case PPC_ID_CLRBHRB: return "clrbhrb";
 		case PPC_ID_CLRLDIx: return RcMnemonic(instruction, SubMnemCLRLDIx);
 		case PPC_ID_CLRLWIx: return RcMnemonic(instruction, SubMnemCLRLWIx);
 		case PPC_ID_CLRRWIx: return RcMnemonic(instruction, SubMnemCLRRWIx);
 		case PPC_ID_CMPB: return "cmpb";
 		case PPC_ID_CMPD: return "cmpd";
 		case PPC_ID_CMPDI: return "cmpdi";
+		case PPC_ID_CMPEQB: return "cmpeqb";
+		case PPC_ID_CMPRB: return "cmprb";
 		case PPC_ID_CMPW: return "cmpw";
 		case PPC_ID_CMPWI: return "cmpwi";
 		case PPC_ID_CMPLD: return "cmpld";
@@ -7342,6 +9556,10 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_CMPLWI: return "cmplwi";
 		case PPC_ID_CNTLZDx: return RcMnemonic(instruction, SubMnemCNTLZDx);
 		case PPC_ID_CNTLZWx: return RcMnemonic(instruction, SubMnemCNTLZWx);
+		case PPC_ID_CNTTZDx: return RcMnemonic(instruction, SubMnemCNTTZDx);
+		case PPC_ID_CNTTZWx: return RcMnemonic(instruction, SubMnemCNTTZWx);
+		case PPC_ID_COPY: return "copy";
+		case PPC_ID_CP_ABORT: return "cp_abort";
 		case PPC_ID_CRAND: return "crand";
 		case PPC_ID_CRANDC: return "crandc";
 		case PPC_ID_CRCLR: return "crclr";
@@ -7354,19 +9572,33 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_CRORC: return "crorc";
 		case PPC_ID_CRSET: return "crset";
 		case PPC_ID_CRXOR: return "crxor";
+		case PPC_ID_DARN: return "darn";
 		case PPC_ID_DCBA: return "dcba";
 		case PPC_ID_DCBF: return "dcbf";
+		case PPC_ID_DCBFEP: return "dcbfep";
+		case PPC_ID_DCBFL: return "dcbfl";
+		case PPC_ID_DCBFLP: return "dcbflp";
 		case PPC_ID_DCBI: return "dcbi";
 		case PPC_ID_DCBST: return "dcbst";
+		case PPC_ID_DCBSTEP: return "dcbstep";
 		case PPC_ID_DCBT: return "dcbt";
+		case PPC_ID_DCBTT: return "dcbtt";
+		case PPC_ID_DCBTEP: return "dcbtep";
 		case PPC_ID_DCBTST: return "dcbtst";
+		case PPC_ID_DCBTSTEP: return "dcbtstep";
+		case PPC_ID_DCBTSTT: return "dcbtstt";
 		case PPC_ID_DCBZ: return "dcbz";
+		case PPC_ID_DCBZEP: return "dcbzep";
 		case PPC_ID_DCBZL: return "dcbzl";
 		case PPC_ID_DCCCI: return "dccci";
 		case PPC_ID_DCI: return "dci";
 		case PPC_ID_DIVDx: return OeRcMnemonic(instruction, SubMnemDIVDx);
+		case PPC_ID_DIVDEx: return OeRcMnemonic(instruction, SubMnemDIVDEx);
+		case PPC_ID_DIVDEUx: return OeRcMnemonic(instruction, SubMnemDIVDEUx);
 		case PPC_ID_DIVDUx: return OeRcMnemonic(instruction, SubMnemDIVDUx);
 		case PPC_ID_DIVWx: return OeRcMnemonic(instruction, SubMnemDIVWx);
+		case PPC_ID_DIVWEx: return OeRcMnemonic(instruction, SubMnemDIVWEx);
+		case PPC_ID_DIVWEUx: return OeRcMnemonic(instruction, SubMnemDIVWEUx);
 		case PPC_ID_DIVWUx: return OeRcMnemonic(instruction, SubMnemDIVWUx);
 		case PPC_ID_ECIWX: return "eciwx";
 		case PPC_ID_ECOWX: return "ecowx";
@@ -7375,6 +9607,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_EXTSBx: return RcMnemonic(instruction, SubMnemEXTSBx);
 		case PPC_ID_EXTSHx: return RcMnemonic(instruction, SubMnemEXTSHx);
 		case PPC_ID_EXTSWx: return RcMnemonic(instruction, SubMnemEXTSWx);
+		case PPC_ID_EXTSWSLIx: return RcMnemonic(instruction, SubMnemEXTSWSLIx);
 		case PPC_ID_FABSx: return RcMnemonic(instruction, SubMnemFABSx);
 		case PPC_ID_FADDx: return RcMnemonic(instruction, SubMnemFADDx);
 		case PPC_ID_FADDSx: return RcMnemonic(instruction, SubMnemFADDSx);
@@ -7386,9 +9619,11 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_FCMPU: return "fcmpu";
 		case PPC_ID_FCPSGNx: return RcMnemonic(instruction, SubMnemFCPSGNx);
 		case PPC_ID_FCTIDx: return RcMnemonic(instruction, SubMnemFCTIDx);
+		case PPC_ID_FCTIDUx: return RcMnemonic(instruction, SubMnemFCTIDUx);
 		case PPC_ID_FCTIDUZx: return RcMnemonic(instruction, SubMnemFCTIDUZx);
 		case PPC_ID_FCTIDZx: return RcMnemonic(instruction, SubMnemFCTIDZx);
 		case PPC_ID_FCTIWx: return RcMnemonic(instruction, SubMnemFCTIWx);
+		case PPC_ID_FCTIWUx: return RcMnemonic(instruction, SubMnemFCTIWUx);
 		case PPC_ID_FCTIWUZx: return RcMnemonic(instruction, SubMnemFCTIWUZx);
 		case PPC_ID_FCTIWZx: return RcMnemonic(instruction, SubMnemFCTIWZx);
 		case PPC_ID_FDIVx: return RcMnemonic(instruction, SubMnemFDIVx);
@@ -7420,18 +9655,27 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_FSQRTSx:  return RcMnemonic(instruction, SubMnemFSQRTSx);
 		case PPC_ID_FSUBx:  return RcMnemonic(instruction, SubMnemFSUBx);
 		case PPC_ID_FSUBSx:  return RcMnemonic(instruction, SubMnemFSUBSx);
+		case PPC_ID_FTDIV: return "ftdiv";
+		case PPC_ID_FTSQRT: return "ftsqrt";
 		case PPC_ID_ICBI: return "icbi";
+		case PPC_ID_ICBIEP: return "icbiep";
+		case PPC_ID_ICBLC: return "icblc";
+		case PPC_ID_ICBLQ: return "icblq.";
 		case PPC_ID_ICBT: return "icbt";
+		case PPC_ID_ICBTLS: return "icbtls";
 		case PPC_ID_ICCCI: return "iccci";
 		case PPC_ID_ICI: return "ici";
 		case PPC_ID_ISEL: return "isel";
 		case PPC_ID_ISYNC: return "isync";
+		case PPC_ID_LBARX: return "lbarx";
+		case PPC_ID_LBEPX: return "lbepx";
 		case PPC_ID_LBZ: return "lbz";
 		case PPC_ID_LBZCIX: return "lbzcix";
 		case PPC_ID_LBZU: return "lbzu";
 		case PPC_ID_LBZUX: return "lbzux";
 		case PPC_ID_LBZX: return "lbzx";
 		case PPC_ID_LDARX: return "ldarx";
+		case PPC_ID_LDAT: return "ldat";
 		case PPC_ID_LDBRX: return "ldbrx";
 		case PPC_ID_LDCIX: return "ldcix";
 		case PPC_ID_LD: return "ld";
@@ -7439,6 +9683,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_LDUX: return "ldux";
 		case PPC_ID_LDX: return "ldx";
 		case PPC_ID_LFD: return "lfd";
+		case PPC_ID_LFDEPX: return "lfdepx";
 		case PPC_ID_LFDU: return "lfdu";
 		case PPC_ID_LFDUX: return "lfdux";
 		case PPC_ID_LFDX: return "lfdx";
@@ -7449,10 +9694,12 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_LFSUX: return "lfsux";
 		case PPC_ID_LFSX: return "lfsx";
 		case PPC_ID_LHA: return "lha";
+		case PPC_ID_LHARX: return "lharx";
 		case PPC_ID_LHAU: return "lhau";
 		case PPC_ID_LHAUX: return "lhaux";
 		case PPC_ID_LHAX: return "lhax";
 		case PPC_ID_LHBRX: return "lhbrx";
+		case PPC_ID_LHEPX: return "lhepx";
 		case PPC_ID_LHZ: return "lhz";
 		case PPC_ID_LHZCIX: return "lhzcix";
 		case PPC_ID_LHZU: return "lhzu";
@@ -7461,13 +9708,16 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_LI: return "li";
 		case PPC_ID_LIS: return "lis";
 		case PPC_ID_LMW: return "lmw";
+		case PPC_ID_LNIA: return "lnia";
 		case PPC_ID_LSWI: return "lswi";
 		case PPC_ID_LSWX: return "lswx";
 		case PPC_ID_LWA: return "lwa";
+		case PPC_ID_LWAT: return "lwat";
 		case PPC_ID_LWAX: return "lwax";
 		case PPC_ID_LWARX: return "lwarx";
 		case PPC_ID_LWAUX: return "lwaux";
 		case PPC_ID_LWBRX: return "lwbrx";
+		case PPC_ID_LWEPX: return "lwepx";
 		case PPC_ID_LWSYNC: return "lwsync";
 		case PPC_ID_LWZ: return "lwz";
 		case PPC_ID_LWZCIX: return "lwzcix";
@@ -7478,6 +9728,8 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_MCRF: return "mcrf";
 		case PPC_ID_MCRFS: return "mcrfs";
 		case PPC_ID_MCRXR: return "mcrxr";
+		case PPC_ID_MCRXRX: return "mcrxrx";
+		case PPC_ID_MFBHRBE: return "mfbhrbe";
 		case PPC_ID_MFBR0: return "mfbr0";
 		case PPC_ID_MFBR1: return "mfbr1";
 		case PPC_ID_MFBR2: return "mfbr2";
@@ -7492,9 +9744,16 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_MFDCRUX: return "mfdcrux";
 		case PPC_ID_MFDCRX: return "mfdcrx";
 		case PPC_ID_MFFSx: return RcMnemonic(instruction, SubMnemMFFSx);
+		case PPC_ID_MFFSCDRN: return "mffscdrn";
+		case PPC_ID_MFFSCDRNI: return "mffscdrni";
+		case PPC_ID_MFFSCE: return "mffsce";
+		case PPC_ID_MFFSCRN: return "mffscrn";
+		case PPC_ID_MFFSCRNI: return "mffscrni";
+		case PPC_ID_MFFSL: return "mffsl";
 		case PPC_ID_MFLR: return "mflr";
 		case PPC_ID_MFMSR: return "mfmsr";
 		case PPC_ID_MFOCRF: return "mfocrf";
+		case PPC_ID_MFPMR: return "mfpmr";
 		case PPC_ID_MFSPR: return "mfspr";
 		case PPC_ID_MFSR: return "mfsr";
 		case PPC_ID_MFSRIN: return "mfsrin";
@@ -7502,6 +9761,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_MFTBU: return "mftbu";
 		case PPC_ID_MFXER: return "mfxer";
 		case PPC_ID_MRx: return RcMnemonic(instruction, SubMnemMRx);
+		case PPC_ID_MSGSYNC: return "msgsync";
 		case PPC_ID_MTAMR: return "mtamr";
 		case PPC_ID_MTBR0: return "mtbr0";
 		case PPC_ID_MTBR1: return "mtbr1";
@@ -7520,10 +9780,15 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_MTFSB1x: return RcMnemonic(instruction, SubMnemMTFSB1x);
 		case PPC_ID_MTFSFx: return RcMnemonic(instruction, SubMnemMTFSFx);
 		case PPC_ID_MTFSFIx: return RcMnemonic(instruction, SubMnemMTFSFIx);
+		case PPC_ID_MODSD: return "modsd";
+		case PPC_ID_MODSW: return "modsw";
+		case PPC_ID_MODUD: return "modud";
+		case PPC_ID_MODUW: return "moduw";
 		case PPC_ID_MTLR: return "mtlr";
 		case PPC_ID_MTMSR: return "mtmsr";
 		case PPC_ID_MTMSRD: return "mtmsrd";
 		case PPC_ID_MTOCRF: return "mtocrf";
+		case PPC_ID_MTPMR: return "mtpmr";
 		case PPC_ID_MTSPR: return "mtspr";
 		case PPC_ID_MTSR: return "mtsr";
 		case PPC_ID_MTSRIN: return "mtsrin";
@@ -7543,6 +9808,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_ORCx: return RcMnemonic(instruction, SubMnemORCx);
 		case PPC_ID_ORI: return "ori";
 		case PPC_ID_ORIS: return "oris";
+		case PPC_ID_PASTE: return "paste.";
 		case PPC_ID_POPCNTB: return "popcntb";
 		case PPC_ID_POPCNTD: return "popcntd";
 		case PPC_ID_POPCNTW: return "popcntw";
@@ -7566,10 +9832,14 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_ROTLWx: return RcMnemonic(instruction, SubMnemROTLWx);
 		case PPC_ID_ROTLWIx: return RcMnemonic(instruction, SubMnemROTLWIx);
 		case PPC_ID_SC: return "sc";
+		case PPC_ID_SETB: return "setb";
 		case PPC_ID_SLBIA: return "slbia";
 		case PPC_ID_SLBIE: return "slbie";
+		case PPC_ID_SLBIEG: return "slbieg";
 		case PPC_ID_SLBMFEE: return "slbmfee";
+		case PPC_ID_SLBMFEV: return "slbmfev";
 		case PPC_ID_SLBMTE: return "slbmte";
+		case PPC_ID_SLBSYNC: return "slbsync";
 		case PPC_ID_SLDx: return RcMnemonic(instruction, SubMnemSLDx);
 		case PPC_ID_SLDIx: return RcMnemonic(instruction, SubMnemSLDIx);
 		case PPC_ID_SLWx: return RcMnemonic(instruction, SubMnemSLWx);
@@ -7583,18 +9853,23 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_SRWx: return RcMnemonic(instruction, SubMnemSRWx);
 		case PPC_ID_SRWIx: return RcMnemonic(instruction, SubMnemSRWIx);
 		case PPC_ID_STB: return "stb";
+		case PPC_ID_STBCIX: return "stbcix";
+		case PPC_ID_STBCX: return "stbcx.";
+		case PPC_ID_STBEPX: return "stbepx";
 		case PPC_ID_STBU: return "stbu";
 		case PPC_ID_STBUX: return "stbux";
 		case PPC_ID_STBX: return "stbx";
-		case PPC_ID_STBCIX: return "stbcix";
 		case PPC_ID_STD: return "std";
+		case PPC_ID_STDAT: return "stdat";
 		case PPC_ID_STDBRX: return "stdbrx";
 		case PPC_ID_STDCIX: return "stdcix";
 		case PPC_ID_STDCX: return "stdcx.";
+		case PPC_ID_STDEPX: return "stdepx";
 		case PPC_ID_STDU: return "stdu";
 		case PPC_ID_STDUX: return "stdux";
 		case PPC_ID_STDX: return "stdx";
 		case PPC_ID_STFD: return "stfd";
+		case PPC_ID_STFDEPX: return "stfdepx";
 		case PPC_ID_STFDU: return "stfdu";
 		case PPC_ID_STFDUX: return "stfdux";
 		case PPC_ID_STFDX: return "stfdx";
@@ -7606,6 +9881,8 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_STH: return "sth";
 		case PPC_ID_STHBRX: return "sthbrx";
 		case PPC_ID_STHCIX: return "sthcix";
+		case PPC_ID_STHCX: return "sthcx.";
+		case PPC_ID_STHEPX: return "sthepx";
 		case PPC_ID_STHU: return "sthu";
 		case PPC_ID_STHUX: return "sthux";
 		case PPC_ID_STHX: return "sthx";
@@ -7613,9 +9890,11 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_STSWI: return "stswi";
 		case PPC_ID_STSWX: return "stswx";
 		case PPC_ID_STW: return "stw";
+		case PPC_ID_STWAT: return "stwat";
 		case PPC_ID_STWBRX: return "stwbrx";
 		case PPC_ID_STWCIX: return "stwcix";
 		case PPC_ID_STWCX: return "stwcx.";
+		case PPC_ID_STWEPX: return "stwepx";
 		case PPC_ID_STWU: return "stwu";
 		case PPC_ID_STWUX: return "stwux";
 		case PPC_ID_STWX: return "stwx";
@@ -7626,6 +9905,13 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_SUBFMEx: return OeRcMnemonic(instruction, SubMnemSUBFMEx);
 		case PPC_ID_SUBFZEx: return OeRcMnemonic(instruction, SubMnemSUBFZEx);
 		case PPC_ID_SYNC: return "sync";
+		case PPC_ID_TABORT: return "tabort.";
+		case PPC_ID_TABORTDC: return "tabortdc.";
+		case PPC_ID_TABORTDCI: return "tabortdci.";
+		case PPC_ID_TABORTWC: return "tabortwc.";
+		case PPC_ID_TABORTWCI: return "tabortwci.";
+		case PPC_ID_TBEGIN: return "tbegin.";
+		case PPC_ID_TCHECK: return "tcheck";
 		case PPC_ID_TD: return "td";
 		case PPC_ID_TDEQ: return "tdeq";
 		case PPC_ID_TDEQI: return "tdeqi";
@@ -7642,6 +9928,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_TDNEI: return "tdnei";
 		case PPC_ID_TDU: return "tdu";
 		case PPC_ID_TDUI: return "tdui";
+		case PPC_ID_TEND: return "tend.";
 		case PPC_ID_TLBIA: return "tlbia";
 		case PPC_ID_TLBIE: return "tlbie";
 		case PPC_ID_TLBIEL: return "tlbiel";
@@ -7656,6 +9943,9 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_TLBWEHI: return "tlbwehi";
 		case PPC_ID_TLBWELO: return "tlbwelo";
 		case PPC_ID_TRAP: return "trap";
+		case PPC_ID_TRECHKPT: return "trechkpt.";
+		case PPC_ID_TRECLAIM: return "treclaim.";
+		case PPC_ID_TSR: return "tsr.";
 		case PPC_ID_TW: return "tw";
 		case PPC_ID_TWEQ: return "tweq";
 		case PPC_ID_TWEQI: return "tweqi";
@@ -7685,6 +9975,26 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_XORI: return "xori";
 		case PPC_ID_XORIS: return "xoris";
 
+		case PPC_ID_AV_VABSDUB: return "vabsdub";
+		case PPC_ID_AV_VABSDUH: return "vabsduh";
+		case PPC_ID_AV_VABSDUW: return "vabsduw";
+		case PPC_ID_AV_VADDUQM: return "vadduqm";
+		case PPC_ID_AV_VADDCUQ: return "vaddcuq";
+		case PPC_ID_AV_BCDADD: return "bcdadd.";
+		case PPC_ID_AV_BCDCFN: return "bcdcfn.";
+		case PPC_ID_AV_BCDCFSQ: return "bcdcfsq.";
+		case PPC_ID_AV_BCDCFZ: return "bcdcfz.";
+		case PPC_ID_AV_BCDCPSGN: return "bcdcpsgn.";
+		case PPC_ID_AV_BCDCTN: return "bcdctn.";
+		case PPC_ID_AV_BCDCTSQ: return "bcdctsq.";
+		case PPC_ID_AV_BCDCTZ: return "bcdctz.";
+		case PPC_ID_AV_BCDS: return "bcds.";
+		case PPC_ID_AV_BCDSETSGN: return "bcdsetsgn.";
+		case PPC_ID_AV_BCDSR: return "bcdsr.";
+		case PPC_ID_AV_BCDSUB: return "bcdsub.";
+		case PPC_ID_AV_BCDTRUNC: return "bcdtrunc.";
+		case PPC_ID_AV_BCDUS: return "bcdus.";
+		case PPC_ID_AV_BCDUTRUNC: return "bcdutrunc.";
 		case PPC_ID_AV_DSS: return "dss";
 		case PPC_ID_AV_DSSALL: return "dssall";
 		case PPC_ID_AV_DST: return "dst";
@@ -7698,6 +10008,9 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_AV_LVSR: return "lvsr";
 		case PPC_ID_AV_LVX: return "lvx";
 		case PPC_ID_AV_LVXL: return "lvxl";
+		case PPC_ID_AV_MADDHD: return "maddhd";
+		case PPC_ID_AV_MADDHDU: return "maddhdu";
+		case PPC_ID_AV_MADDLD: return "maddld";
 		case PPC_ID_AV_MFVSCR: return "mfvscr";
 		case PPC_ID_AV_MTVSCR: return "mtvscr";
 		case PPC_ID_AV_STVEBX: return "stvebx";
@@ -7706,6 +10019,8 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_AV_STVX: return "stvx";
 		case PPC_ID_AV_STVXL: return "stvxl";
 		case PPC_ID_AV_VADDCUW: return "vaddcuw";
+		case PPC_ID_AV_VADDECUQ: return "vaddecuq";
+		case PPC_ID_AV_VADDEUQM: return "vaddeuqm";
 		case PPC_ID_AV_VADDFP: return "vaddfp";
 		case PPC_ID_AV_VADDSBS: return "vaddsbs";
 		case PPC_ID_AV_VADDSHS: return "vaddshs";
@@ -7725,11 +10040,16 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_AV_VAVGUB: return "vavgub";
 		case PPC_ID_AV_VAVGUH: return "vavguh";
 		case PPC_ID_AV_VAVGUW: return "vavguw";
+		case PPC_ID_AV_VBPERMD: return "vbpermd";
+		case PPC_ID_AV_VBPERMQ: return "vbpermq";
 		case PPC_ID_AV_VCFSX: return "vcfsx";
 		case PPC_ID_AV_VCFUX: return "vcfux";
+		case PPC_ID_AV_VCIPHER: return "vcipher";
+		case PPC_ID_AV_VCIPHERLAST: return "vcipherlast";
 		case PPC_ID_AV_VCLZB: return "vclzb";
 		case PPC_ID_AV_VCLZD: return "vclzd";
 		case PPC_ID_AV_VCLZH: return "vclzh";
+		case PPC_ID_AV_VCLZLSBB: return "vclzlsbb";
 		case PPC_ID_AV_VCLZW: return "vclzw";
 		case PPC_ID_AV_VCMPBFPx: return RcMnemonic(instruction, SubMnemVCMPBFPx);
 		case PPC_ID_AV_VCMPEQFPx: return RcMnemonic(instruction, SubMnemVCMPEQFPx);
@@ -7747,10 +10067,41 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_AV_VCMPGTUDx: return RcMnemonic(instruction, SubMnemVCMPGTUDx);
 		case PPC_ID_AV_VCMPGTUHx: return RcMnemonic(instruction, SubMnemVCMPGTUHx);
 		case PPC_ID_AV_VCMPGTUWx: return RcMnemonic(instruction, SubMnemVCMPGTUWx);
+		case PPC_ID_AV_VCMPNEBx: return RcMnemonic(instruction, SubMnemVCMPNEBx);
+		case PPC_ID_AV_VCMPNEHx: return RcMnemonic(instruction, SubMnemVCMPNEHx);
+		case PPC_ID_AV_VCMPNEWx: return RcMnemonic(instruction, SubMnemVCMPNEWx);
+		case PPC_ID_AV_VCMPNEZBx: return RcMnemonic(instruction, SubMnemVCMPNEZBx);
+		case PPC_ID_AV_VCMPNEZHx: return RcMnemonic(instruction, SubMnemVCMPNEZHx);
+		case PPC_ID_AV_VCMPNEZWx: return RcMnemonic(instruction, SubMnemVCMPNEZWx);
 		case PPC_ID_AV_VCTSXS: return "vctsxs";
 		case PPC_ID_AV_VCTUXS: return "vctuxs";
+		case PPC_ID_AV_VCTZB: return "vctzb";
+		case PPC_ID_AV_VCTZD: return "vctzd";
+		case PPC_ID_AV_VCTZH: return "vctzh";
+		case PPC_ID_AV_VCTZLSBB: return "vctzlsbb";
+		case PPC_ID_AV_VCTZW: return "vctzw";
 		case PPC_ID_AV_VEQV: return "veqv";
 		case PPC_ID_AV_VEXPTEFP: return "vexptefp";
+		case PPC_ID_AV_VEXTRACTD: return "vextractd";
+		case PPC_ID_AV_VEXTRACTUB: return "vextractub";
+		case PPC_ID_AV_VEXTRACTUH: return "vextractuh";
+		case PPC_ID_AV_VEXTRACTUW: return "vextractuw";
+		case PPC_ID_AV_VEXTSB2D: return "vextsb2d";
+		case PPC_ID_AV_VEXTSB2W: return "vextsb2w";
+		case PPC_ID_AV_VEXTSH2D: return "vextsh2d";
+		case PPC_ID_AV_VEXTSH2W: return "vextsh2w";
+		case PPC_ID_AV_VEXTSW2D: return "vextsw2d";
+		case PPC_ID_AV_VEXTUBLX: return "vextublx";
+		case PPC_ID_AV_VEXTUHLX: return "vextuhlx";
+		case PPC_ID_AV_VEXTUWLX: return "vextuwlx";
+		case PPC_ID_AV_VEXTUBRX: return "vextubrx";
+		case PPC_ID_AV_VEXTUHRX: return "vextuhrx";
+		case PPC_ID_AV_VEXTUWRX: return "vextuwrx";
+		case PPC_ID_AV_VGBBD: return "vgbbd";
+		case PPC_ID_AV_VINSERTB: return "vinsertb";
+		case PPC_ID_AV_VINSERTD: return "vinsertd";
+		case PPC_ID_AV_VINSERTH: return "vinserth";
+		case PPC_ID_AV_VINSERTW: return "vinsertw";
 		case PPC_ID_AV_VLOGEFP: return "vlogefp";
 		case PPC_ID_AV_VMADDFP: return "vmaddfp";
 		case PPC_ID_AV_VMAXFP: return "vmaxfp";
@@ -7774,18 +10125,25 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_AV_VMINUH: return "vminuh";
 		case PPC_ID_AV_VMINUW: return "vminuw";
 		case PPC_ID_AV_VMLADDUHM: return "vmladduhm";
+		case PPC_ID_AV_VMR: return "vmr";
+		case PPC_ID_AV_VMRGEW: return "vmrgew";
 		case PPC_ID_AV_VMRGHB: return "vmrghb";
 		case PPC_ID_AV_VMRGHH: return "vmrghh";
 		case PPC_ID_AV_VMRGHW: return "vmrghw";
 		case PPC_ID_AV_VMRGLB: return "vmrglb";
 		case PPC_ID_AV_VMRGLH: return "vmrglh";
 		case PPC_ID_AV_VMRGLW: return "vmrglw";
+		case PPC_ID_AV_VMRGOW: return "vmrgow";
 		case PPC_ID_AV_VMSUMMBM: return "vmsummbm";
 		case PPC_ID_AV_VMSUMSHM: return "vmsumshm";
 		case PPC_ID_AV_VMSUMSHS: return "vmsumshs";
 		case PPC_ID_AV_VMSUMUBM: return "vmsumubm";
 		case PPC_ID_AV_VMSUMUHM: return "vmsumuhm";
 		case PPC_ID_AV_VMSUMUHS: return "vmsumuhs";
+		case PPC_ID_AV_VMUL10CUQ: return "vmul10cuq";
+		case PPC_ID_AV_VMUL10EUQ: return "vmul10euq";
+		case PPC_ID_AV_VMUL10ECUQ: return "vmul10ecuq";
+		case PPC_ID_AV_VMUL10UQ: return "vmul10uq";
 		case PPC_ID_AV_VMULESB: return "vmulesb";
 		case PPC_ID_AV_VMULESH: return "vmulesh";
 		case PPC_ID_AV_VMULESW: return "vmulesw";
@@ -7800,24 +10158,42 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_AV_VMULOUW: return "vmulouw";
 		case PPC_ID_AV_VMULUWM: return "vmuluwm";
 		case PPC_ID_AV_VNAND: return "vnand";
+		case PPC_ID_AV_VNCIPHER: return "vncipher";
+		case PPC_ID_AV_VNCIPHERLAST: return "vncipherlast";
 		case PPC_ID_AV_VNMSUBFP: return "vnmsubfp";
+		case PPC_ID_AV_VNEGD: return "vnegd";
+		case PPC_ID_AV_VNEGW: return "vnegw";
 		case PPC_ID_AV_VNOR: return "vnor";
+		case PPC_ID_AV_VNOT: return "vnot";
 		case PPC_ID_AV_VOR: return "vor";
 		case PPC_ID_AV_VORC: return "vorc";
 		case PPC_ID_AV_VPERM: return "vperm";
+		case PPC_ID_AV_VPERMR: return "vpermr";
+		case PPC_ID_AV_VPERMXOR: return "vpermxor";
 		case PPC_ID_AV_VPKPX: return "vpkpx";
+		case PPC_ID_AV_VPKSDSS: return "vpksdss";
+		case PPC_ID_AV_VPKSDUS: return "vpksdus";
 		case PPC_ID_AV_VPKSHSS: return "vpkshss";
 		case PPC_ID_AV_VPKSHUS: return "vpkshus";
 		case PPC_ID_AV_VPKSWSS: return "vpkswss";
 		case PPC_ID_AV_VPKSWUS: return "vpkswus";
+		case PPC_ID_AV_VPKUDUM: return "vpkudum";
+		case PPC_ID_AV_VPKUDUS: return "vpkudus";
 		case PPC_ID_AV_VPKUHUM: return "vpkuhum";
 		case PPC_ID_AV_VPKUHUS: return "vpkuhus";
 		case PPC_ID_AV_VPKUWUM: return "vpkuwum";
 		case PPC_ID_AV_VPKUWUS: return "vpkuwus";
+		case PPC_ID_AV_VPMSUMB: return "vpmsumb";
+		case PPC_ID_AV_VPMSUMD: return "vpmsumd";
+		case PPC_ID_AV_VPMSUMH: return "vpmsumh";
+		case PPC_ID_AV_VPMSUMW: return "vpmsumw";
 		case PPC_ID_AV_VPOPCNTB: return "vpopcntb";
 		case PPC_ID_AV_VPOPCNTD: return "vpopcntd";
 		case PPC_ID_AV_VPOPCNTH: return "vpopcnth";
 		case PPC_ID_AV_VPOPCNTW: return "vpopcntw";
+		case PPC_ID_AV_VPRTYBD: return "vprtybd";
+		case PPC_ID_AV_VPRTYBQ: return "vprtybq";
+		case PPC_ID_AV_VPRTYBW: return "vprtybw";
 		case PPC_ID_AV_VREFP: return "vrefp";
 		case PPC_ID_AV_VRFIM: return "vrfim";
 		case PPC_ID_AV_VRFIN: return "vrfin";
@@ -7825,16 +10201,24 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_AV_VRFIZ: return "vrfiz";
 		case PPC_ID_AV_VRLB: return "vrlb";
 		case PPC_ID_AV_VRLD: return "vrld";
+		case PPC_ID_AV_VRLDNM: return "vrldnm";
+		case PPC_ID_AV_VRLDMI: return "vrldmi";
 		case PPC_ID_AV_VRLH: return "vrlh";
 		case PPC_ID_AV_VRLW: return "vrlw";
+		case PPC_ID_AV_VRLWMI: return "vrlwmi";
+		case PPC_ID_AV_VRLWNM: return "vrlwnm";
 		case PPC_ID_AV_VRSQRTEFP: return "vrsqrtefp";
+		case PPC_ID_AV_VSBOX: return "vsbox";
 		case PPC_ID_AV_VSEL: return "vsel";
+		case PPC_ID_AV_VSHASIGMAD: return "vshasigmad";
+		case PPC_ID_AV_VSHASIGMAW: return "vshasigmaw";
 		case PPC_ID_AV_VSL: return "vsl";
 		case PPC_ID_AV_VSLB: return "vslb";
 		case PPC_ID_AV_VSLD: return "vsld";
 		case PPC_ID_AV_VSLDOI: return "vsldoi";
 		case PPC_ID_AV_VSLH: return "vslh";
 		case PPC_ID_AV_VSLO: return "vslo";
+		case PPC_ID_AV_VSLV: return "vslv";
 		case PPC_ID_AV_VSLW: return "vslw";
 		case PPC_ID_AV_VSPLTB: return "vspltb";
 		case PPC_ID_AV_VSPLTH: return "vsplth";
@@ -7851,8 +10235,12 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_AV_VSRD: return "vsrd";
 		case PPC_ID_AV_VSRH: return "vsrh";
 		case PPC_ID_AV_VSRO: return "vsro";
+		case PPC_ID_AV_VSRV: return "vsrv";
 		case PPC_ID_AV_VSRW: return "vsrw";
+		case PPC_ID_AV_VSUBCUQ: return "vsubcuq";
 		case PPC_ID_AV_VSUBCUW: return "vsubcuw";
+		case PPC_ID_AV_VSUBECUQ: return "vsubecuq";
+		case PPC_ID_AV_VSUBEUQM: return "vsubeuqm";
 		case PPC_ID_AV_VSUBFP: return "vsubfp";
 		case PPC_ID_AV_VSUBSBS: return "vsubsbs";
 		case PPC_ID_AV_VSUBSHS: return "vsubshs";
@@ -7862,6 +10250,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_AV_VSUBUDM: return "vsubudm";
 		case PPC_ID_AV_VSUBUHM: return "vsubuhm";
 		case PPC_ID_AV_VSUBUHS: return "vsubuhs";
+		case PPC_ID_AV_VSUBUQM: return "vsubuqm";
 		case PPC_ID_AV_VSUBUWM: return "vsubuwm";
 		case PPC_ID_AV_VSUBUWS: return "vsubuws";
 		case PPC_ID_AV_VSUMSWS: return "vsumsws";
@@ -7872,64 +10261,129 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_AV_VUPKHPX: return "vupkhpx";
 		case PPC_ID_AV_VUPKHSB: return "vupkhsb";
 		case PPC_ID_AV_VUPKHSH: return "vupkhsh";
+		case PPC_ID_AV_VUPKHSW: return "vupkhsw";
 		case PPC_ID_AV_VUPKLPX: return "vupklpx";
 		case PPC_ID_AV_VUPKLSB: return "vupklsb";
 		case PPC_ID_AV_VUPKLSH: return "vupklsh";
+		case PPC_ID_AV_VUPKLSW: return "vupklsw";
 		case PPC_ID_AV_VXOR: return "vxor";
 
 		case PPC_ID_VSX_LXSDX: return "lxsdx";
+		case PPC_ID_VSX_LXSIBZX: return "lxsibzx";
+		case PPC_ID_VSX_LXSIHZX: return "lxsihzx";
 		case PPC_ID_VSX_LXSIWAX: return "lxsiwax";
 		case PPC_ID_VSX_LXSIWZX: return "lxsiwzx";
 		case PPC_ID_VSX_LXSSPX: return "lxsspx";
+		case PPC_ID_VSX_LXV: return "lxv";
+		case PPC_ID_VSX_LXVB16X: return "lxvb16x";
 		case PPC_ID_VSX_LXVD2X: return "lxvd2x";
 		case PPC_ID_VSX_LXVDSX: return "lxvdsx";
+		case PPC_ID_VSX_LXVH8X: return "lxvh8x";
+		case PPC_ID_VSX_LXVL: return "lxvl";
+		case PPC_ID_VSX_LXVLL: return "lxvll";
 		case PPC_ID_VSX_LXVW4X: return "lxvw4x";
+		case PPC_ID_VSX_LXVWSX: return "lxvwsx";
+		case PPC_ID_VSX_LXVX: return "lxvx";
+		case PPC_ID_VSX_MFFPRD: return "mffprd";
+		case PPC_ID_VSX_MFVSRD: return "mfvsrd";
+		case PPC_ID_VSX_MFVSRLD: return "mfvsrld";
+		case PPC_ID_VSX_MFVSRWZ: return "mfvsrwz";
+		case PPC_ID_VSX_MTVSRD: return "mtvsrd";
+		case PPC_ID_VSX_MTVSRDD: return "mtvsrdd";
+		case PPC_ID_VSX_MTVSRWA: return "mtvsrwa";
+		case PPC_ID_VSX_MTVSRWS: return "mtvsrws";
+		case PPC_ID_VSX_MTVSRWZ: return "mtvsrwz";
+		case PPC_ID_VSX_STXSD: return "stxsd";
 		case PPC_ID_VSX_STXSDX: return "stxsdx";
+		case PPC_ID_VSX_STXSIBX: return "stxsibx";
+		case PPC_ID_VSX_STXSIHX: return "stxsihx";
 		case PPC_ID_VSX_STXSIWX: return "stxsiwx";
+		case PPC_ID_VSX_STXSSP: return "stxssp";
 		case PPC_ID_VSX_STXSSPX: return "stxsspx";
+		case PPC_ID_VSX_STXVB16X: return "stxvb16x";
 		case PPC_ID_VSX_STXVD2X: return "stxvd2x";
+		case PPC_ID_VSX_STXVH8X: return "stxvh8x";
+		case PPC_ID_VSX_STXV: return "stxv";
+		case PPC_ID_VSX_STXVL: return "stxvl";
+		case PPC_ID_VSX_STXVLL: return "stxvll";
 		case PPC_ID_VSX_STXVW4X: return "stxvw4x";
+		case PPC_ID_VSX_STXVX: return "stxvx";
 		case PPC_ID_VSX_XSABSDP: return "xsabsdp";
+		case PPC_ID_VSX_XSABSQP: return "xsabsqp";
 		case PPC_ID_VSX_XSADDDP: return "xsadddp";
 		case PPC_ID_VSX_XSADDSP: return "xsaddsp";
+		case PPC_ID_VSX_XSADDQPx: return Round2OddMnemonic(instruction, SubMnemXSADDQPx);
+		case PPC_ID_VSX_XSCMPEQDP: return "xscmpeqdp";
+		case PPC_ID_VSX_XSCMPEXPDP: return "xscmpexpdp";
+		case PPC_ID_VSX_XSCMPEXPQP: return "xscmpexpqp";
+		case PPC_ID_VSX_XSCMPGEDP: return "xscmpgedp";
+		case PPC_ID_VSX_XSCMPGTDP: return "xscmpgtdp";
 		case PPC_ID_VSX_XSCMPODP: return "xscmpodp";
+		case PPC_ID_VSX_XSCMPOQP: return "xscmpoqp";
 		case PPC_ID_VSX_XSCMPUDP: return "xscmpudp";
+		case PPC_ID_VSX_XSCMPUQP: return "xscmpuqp";
 		case PPC_ID_VSX_XSCPSGNDP: return "xscpsgndp";
+		case PPC_ID_VSX_XSCPSGNQP: return "xscpsgnqp";
+		case PPC_ID_VSX_XSCVDPHP: return "xscvdphp";
+		case PPC_ID_VSX_XSCVDPQP: return "xscvdpqp";
 		case PPC_ID_VSX_XSCVDPSP: return "xscvdpsp";
+		case PPC_ID_VSX_XSCVDPSPN: return "xscvdpspn";
 		case PPC_ID_VSX_XSCVDPSXDS: return "xscvdpsxds";
 		case PPC_ID_VSX_XSCVDPSXWS: return "xscvdpsxws";
 		case PPC_ID_VSX_XSCVDPUXDS: return "xscvdpuxds";
 		case PPC_ID_VSX_XSCVDPUXWS: return "xscvdpuxws";
+		case PPC_ID_VSX_XSCVHPDP: return "xscvhpdp";
+		case PPC_ID_VSX_XSCVQPDPx: return Round2OddMnemonic(instruction, SubMnemXSCVQPDPx);
+		case PPC_ID_VSX_XSCVQPSDZ: return "xscvqpsdz";
+		case PPC_ID_VSX_XSCVQPSWZ: return "xscvqpswz";
+		case PPC_ID_VSX_XSCVQPUDZ: return "xscvqpudz";
+		case PPC_ID_VSX_XSCVQPUWZ: return "xscvqpuwz";
+		case PPC_ID_VSX_XSCVSDQP: return "xscvsdqp";
 		case PPC_ID_VSX_XSCVSPDP: return "xscvspdp";
 		case PPC_ID_VSX_XSCVSPDPN: return "xscvspdpn";
 		case PPC_ID_VSX_XSCVSXDDP: return "xscvsxddp";
 		case PPC_ID_VSX_XSCVSXDSP: return "xscvsxdsp";
+		case PPC_ID_VSX_XSCVUDQP: return "xscvudqp";
 		case PPC_ID_VSX_XSCVUXDDP: return "xscvuxddp";
 		case PPC_ID_VSX_XSCVUXDSP: return "xscvuxdsp";
 		case PPC_ID_VSX_XSDIVDP: return "xsdivdp";
 		case PPC_ID_VSX_XSDIVSP: return "xsdivsp";
+		case PPC_ID_VSX_XSDIVQPx: return Round2OddMnemonic(instruction, SubMnemXSDIVQPx);
+		case PPC_ID_VSX_XSIEXPDP: return "xsiexpdp";
+		case PPC_ID_VSX_XSIEXPQP: return "xsiexpqp";
 		case PPC_ID_VSX_XSMADDADP: return "xsmaddadp";
 		case PPC_ID_VSX_XSMADDASP: return "xsmaddasp";
 		case PPC_ID_VSX_XSMADDMDP: return "xsmaddmdp";
 		case PPC_ID_VSX_XSMADDMSP: return "xsmaddmsp";
+		case PPC_ID_VSX_XSMADDQPx: return Round2OddMnemonic(instruction, SubMnemXSMADDQPx);
+		case PPC_ID_VSX_XSMAXCDP: return "xsmaxcdp";
 		case PPC_ID_VSX_XSMAXDP: return "xsmaxdp";
+		case PPC_ID_VSX_XSMAXJDP: return "xsmaxjdp";
 		case PPC_ID_VSX_XSMINDP: return "xsmindp";
+		case PPC_ID_VSX_XSMINCDP: return "xsmincdp";
+		case PPC_ID_VSX_XSMINJDP: return "xsminjdp";
 		case PPC_ID_VSX_XSMSUBADP: return "xsmsubadp";
 		case PPC_ID_VSX_XSMSUBASP: return "xsmsubasp";
 		case PPC_ID_VSX_XSMSUBMDP: return "xsmsubmdp";
 		case PPC_ID_VSX_XSMSUBMSP: return "xsmsubmsp";
+		case PPC_ID_VSX_XSMSUBQPx: return Round2OddMnemonic(instruction, SubMnemXSMSUBQPx);
 		case PPC_ID_VSX_XSMULDP: return "xsmuldp";
 		case PPC_ID_VSX_XSMULSP: return "xsmulsp";
+		case PPC_ID_VSX_XSMULQPx: return Round2OddMnemonic(instruction, SubMnemXSMULQPx);
 		case PPC_ID_VSX_XSNABSDP: return "xsnabsdp";
+		case PPC_ID_VSX_XSNABSQP: return "xsnabsqp";
 		case PPC_ID_VSX_XSNEGDP: return "xsnegdp";
+		case PPC_ID_VSX_XSNEGQP: return "xsnegqp";
 		case PPC_ID_VSX_XSNMADDADP: return "xsnmaddadp";
 		case PPC_ID_VSX_XSNMADDASP: return "xsnmaddasp";
+		case PPC_ID_VSX_XSNMADDQPx: return Round2OddMnemonic(instruction, SubMnemXSNMADDQPx);
 		case PPC_ID_VSX_XSNMADDMDP: return "xsnmaddmdp";
 		case PPC_ID_VSX_XSNMADDMSP: return "xsnmaddmsp";
 		case PPC_ID_VSX_XSNMSUBADP: return "xsnmsubadp";
 		case PPC_ID_VSX_XSNMSUBASP: return "xsnmsubasp";
 		case PPC_ID_VSX_XSNMSUBMDP: return "xsnmsubmdp";
 		case PPC_ID_VSX_XSNMSUBMSP: return "xsnmsubmsp";
+		case PPC_ID_VSX_XSNMSUBQPx: return Round2OddMnemonic(instruction, SubMnemXSNMSUBQPx);
 		case PPC_ID_VSX_XSRDPI: return "xsrdpi";
 		case PPC_ID_VSX_XSRDPIC: return "xsrdpic";
 		case PPC_ID_VSX_XSRDPIM: return "xsrdpim";
@@ -7937,15 +10391,27 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_VSX_XSRDPIZ: return "xsrdpiz";
 		case PPC_ID_VSX_XSREDP: return "xsredp";
 		case PPC_ID_VSX_XSRESP: return "xsresp";
+		case PPC_ID_VSX_XSRSP: return "xsrsp";
 		case PPC_ID_VSX_XSRSQRTEDP: return "xsrsqrtedp";
 		case PPC_ID_VSX_XSRSQRTESP: return "xsrsqrtesp";
 		case PPC_ID_VSX_XSSQRTDP: return "xssqrtdp";
+		case PPC_ID_VSX_XSSQRTQPx: return Round2OddMnemonic(instruction, SubMnemXSSQRTQPx);
 		case PPC_ID_VSX_XSSQRTSP: return "xssqrtsp";
 		case PPC_ID_VSX_XSSUBDP: return "xssubdp";
 		case PPC_ID_VSX_XSSUBSP: return "xssubsp";
+		case PPC_ID_VSX_XSSUBQPx: return Round2OddMnemonic(instruction, SubMnemXSSUBQPx);
+		case PPC_ID_VSX_XSRQPIx: return InexactMnemonic(instruction, SubMnemXSRQPIx);
+		case PPC_ID_VSX_XSRQPXP: return "xsrqpxp";
 		case PPC_ID_VSX_XSTDIVDP: return "xstdivdp";
 		case PPC_ID_VSX_XSTDIVSP: return "xstdivsp";
+		case PPC_ID_VSX_XSTSTDCDP: return "xststdcdp";
+		case PPC_ID_VSX_XSTSTDCQP: return "xststdcqp";
+		case PPC_ID_VSX_XSTSTDCSP: return "xststdcsp";
 		case PPC_ID_VSX_XSTSQRTDP: return "xstsqrtdp";
+		case PPC_ID_VSX_XSXEXPDP: return "xsxexpdp";
+		case PPC_ID_VSX_XSXEXPQP: return "xsxexpqp";
+		case PPC_ID_VSX_XSXSIGDP: return "xsxsigdp";
+		case PPC_ID_VSX_XSXSIGQP: return "xsxsigqp";
 		case PPC_ID_VSX_XVABSSP: return "xvabssp";
 		case PPC_ID_VSX_XVABSDP: return "xvabsdp";
 		case PPC_ID_VSX_XVADDSP: return "xvaddsp";
@@ -7963,7 +10429,9 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_VSX_XVCVDPSXWS: return "xvcvdpsxws";
 		case PPC_ID_VSX_XVCVDPUXDS: return "xvcvdpuxds";
 		case PPC_ID_VSX_XVCVDPUXWS: return "xvcvdpuxws";
+		case PPC_ID_VSX_XVCVHPSP: return "xvcvhpsp";
 		case PPC_ID_VSX_XVCVSPDP: return "xvcvspdp";
+		case PPC_ID_VSX_XVCVSPHP: return "xvcvsphp";
 		case PPC_ID_VSX_XVCVSPSXDS: return "xvcvspsxds";
 		case PPC_ID_VSX_XVCVSPSXWS: return "xvcvspsxws";
 		case PPC_ID_VSX_XVCVSPUXDS: return "xvcvspuxds";
@@ -7978,6 +10446,8 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_VSX_XVCVUXWSP: return "xvcvuxwsp";
 		case PPC_ID_VSX_XVDIVDP: return "xvdivdp";
 		case PPC_ID_VSX_XVDIVSP: return "xvdivsp";
+		case PPC_ID_VSX_XVIEXPDP: return "xviexpdp";
+		case PPC_ID_VSX_XVIEXPSP: return "xviexpsp";
 		case PPC_ID_VSX_XVMADDADP: return "xvmaddadp";
 		case PPC_ID_VSX_XVMADDASP: return "xvmaddasp";
 		case PPC_ID_VSX_XVMADDMDP: return "xvmaddmdp";
@@ -8028,6 +10498,18 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_VSX_XVTDIVSP: return "xvtdivsp";
 		case PPC_ID_VSX_XVTSQRTDP: return "xvtsqrtdp";
 		case PPC_ID_VSX_XVTSQRTSP: return "xvtsqrtsp";
+		case PPC_ID_VSX_XVTSTDCDP: return "xvtstdcdp";
+		case PPC_ID_VSX_XVTSTDCSP: return "xvtstdcsp";
+		case PPC_ID_VSX_XVXEXPDP: return "xvxexpdp";
+		case PPC_ID_VSX_XVXEXPSP: return "xvxexpsp";
+		case PPC_ID_VSX_XVXSIGDP: return "xvxsigdp";
+		case PPC_ID_VSX_XVXSIGSP: return "xvxsigsp";
+		case PPC_ID_VSX_XXBRD: return "xxbrd";
+		case PPC_ID_VSX_XXBRH: return "xxbrh";
+		case PPC_ID_VSX_XXBRQ: return "xxbrq";
+		case PPC_ID_VSX_XXBRW: return "xxbrw";
+		case PPC_ID_VSX_XXEXTRACTUW: return "xxextractuw";
+		case PPC_ID_VSX_XXINSERTW: return "xxinsertw";
 		case PPC_ID_VSX_XXLAND: return "xxland";
 		case PPC_ID_VSX_XXLANDC: return "xxlandc";
 		case PPC_ID_VSX_XXLEQV: return "xxleqv";
@@ -8040,11 +10522,13 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_VSX_XXMRGLW: return "xxmrglw";
 		case PPC_ID_VSX_XXLOR: return "xxlor";
 		case PPC_ID_VSX_XXLXOR: return "xxlxor";
+		case PPC_ID_VSX_XXPERM: return "xxperm";
 		case PPC_ID_VSX_XXPERMDI: return "xxpermdi";
 		case PPC_ID_VSX_XXPERMR: return "xxpermr";
 		case PPC_ID_VSX_XXSEL: return "xxsel";
 		case PPC_ID_VSX_XXSLDWI: return "xxsldwi";
 		case PPC_ID_VSX_XXSPLTD: return "xxspltd";
+		case PPC_ID_VSX_XXSPLTIB: return "xxspltib";
 		case PPC_ID_VSX_XXSPLTW: return "xxspltw";
 		case PPC_ID_VSX_XXSWAPD: return "xxswapd";
 
@@ -8534,6 +11018,7 @@ const char* OperandClassName(uint32_t cls)
 
 		case PPC_OP_REG_RA: return "RA";
 		case PPC_OP_REG_RB: return "RB";
+		case PPC_OP_REG_RC: return "RC";
 		case PPC_OP_REG_RD: return "RD";
 		case PPC_OP_REG_RS: return "RS";
 
@@ -8546,6 +11031,7 @@ const char* OperandClassName(uint32_t cls)
 		case PPC_OP_REG_CRFD: return "CRFD";
 		case PPC_OP_REG_CRFD_IMPLY0: return "CRFD";
 		case PPC_OP_REG_CRFS: return "CRFS";
+		case PPC_OP_CRBIT: return "CRBIT";
 		case PPC_OP_CRBIT_A: return "CRBIT_A";
 		case PPC_OP_CRBIT_B: return "CRBIT_B";
 		case PPC_OP_CRBIT_D: return "CRBIT_C";

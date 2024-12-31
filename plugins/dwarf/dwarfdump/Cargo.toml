@@ -1,6 +1,7 @@
 [package]
-name = "dwarf_import"
+name = "dwarfdump"
 version = "0.1.0"
+authors = ["Kyle Martin <kyle@vector35.com>"]
 edition = "2021"
 
 [lib]
@@ -8,10 +9,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 dwarfreader = { path = "../shared/" }
-binaryninja = { path = "../../../" }
+binaryninja = { path = "../../../rust" }
 gimli = "0.31"
-log = "0.4.20"
-iset = "0.2.2"
-cpp_demangle = "0.4.3"
-regex = "1"
-indexmap = "2.5.0"

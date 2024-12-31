@@ -18,20 +18,11 @@ binaryninjacore-sys = { path = "binaryninjacore-sys" }
 members = [
     "examples/basic_script",
     "examples/decompile",
-    "examples/dwarf/dwarf_export",
-    "examples/dwarf/dwarf_import",
-    "examples/dwarf/dwarfdump",
-    "examples/dwarf/shared",
-    "examples/idb_import",
     "examples/flowgraph",
-    # TODO: Disabled until they can update time dependency.
-    # "examples/minidump",
     "examples/mlil_visitor",
     "examples/mlil_lifter",
     "examples/hlil_visitor",
     "examples/hlil_lifter",
-    "examples/pdb-ng",
-    "examples/pdb-ng/demo",
     "examples/template",
     "examples/test_demangler",
 	"examples/workflow"

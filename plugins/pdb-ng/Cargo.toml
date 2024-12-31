@@ -8,7 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 anyhow = "^1.0"
-binaryninja = {path = "../../"}
+binaryninja = { path = "../../rust" }
 itertools = "^0.11"
 log = "^0.4"
 pdb = { git = "https://github.com/Vector35/pdb-rs", rev = "6016177" }
@@ -16,3 +16,7 @@ regex = "1"
 
 [features]
 demo = []
+
+[profile.release]
+lto = true
+debug = "full"

@@ -6,6 +6,18 @@
 
 > :warning: This project requires Rust version `1.83.0`
 
+## Documentation
+
+Documentation can be found at https://dev-rust.binary.ninja/
+
+### Offline Documentation
+
+Offline documentation can be generated like any other rust crate, using `cargo doc`.
+
+```shell
+git clone https://github.com/Vector35/binaryninja-api
+cd rust && cargo doc --open
+```
 
 ## Contributing
 
@@ -17,12 +29,11 @@
 - Clang
 - Rust
 
-
 ## How to use
 
-See [`examples/template`](examples/template) for more details.
-
 ### To write a plugin:
+
+Plugins are loaded at runtime and as such will have their own initialization routine.
 
 `Cargo.toml`:
 ```toml
@@ -33,8 +44,17 @@ crate-type = ["cdylib"]
 binaryninja = {git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev"}
 ```
 
-See the `./examples/`.  Plugin registration commands are in `binaryninja::command::*`
-
+`lib.rs`:
+```rust
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn CorePluginInit() -> bool {
+    // Initialize logging
+    // Register custom architectures, workflows, demanglers, 
+    // function recognizers, platforms and views!
+    true
+}
+```
 
 ### To write a standalone executable:
 
@@ -71,12 +91,9 @@ fn main() {
 ```
 
 - All standalone binaries should call both `binaryninja::headless::init()` and `binaryninja::headless::shutdown()`.
+  - Prefer using `binaryninja::headless::Session`, it will call shutdown for you.
 - All standalone binaries need to provide a `build.rs`.
-- See [`examples/template`](examples/template) for details.
-
-## Docs
-
-Docs can be found at https://dev-rust.binary.ninja/
+  - Or otherwise provide binaryninjacore to the rpath.
 
 ---
 

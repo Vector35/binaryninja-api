@@ -781,14 +781,14 @@ pub fn add_optional_plugin_dependency<S: string::BnStrCompatible>(name: S) {
 }
 
 // Provide ABI version automatically so that the core can verify binary compatibility
-#[cfg(not(feature = "noexports"))]
+#[cfg(not(feature = "no_exports"))]
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginABIVersion() -> u32 {
     plugin_abi_version()
 }
 
-#[cfg(not(feature = "noexports"))]
+#[cfg(not(feature = "no_exports"))]
 #[no_mangle]
 pub extern "C" fn UIPluginABIVersion() -> u32 {
     plugin_ui_abi_version()

@@ -23,6 +23,7 @@ use crate::rc::*;
 
 use std::convert::From;
 use std::ffi::CStr;
+use std::fmt::Display;
 
 pub type InstructionTextTokenType = BNInstructionTextTokenType;
 pub type InstructionTextTokenContext = BNInstructionTextTokenContext;
@@ -256,6 +257,12 @@ impl Clone for InstructionTextToken {
             namesCount: 0,
             exprIndex: self.0.exprIndex,
         })
+    }
+}
+
+impl Display for InstructionTextToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.text().to_string())
     }
 }
 

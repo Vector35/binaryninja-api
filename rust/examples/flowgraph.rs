@@ -1,6 +1,5 @@
 use binaryninja::{
     binaryview::{BinaryView, BinaryViewExt},
-    command::register,
     disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenContents},
     flowgraph::{BranchType, EdgePenStyle, EdgeStyle, FlowGraph, FlowGraphNode, ThemeColor},
 };
@@ -39,12 +38,18 @@ fn test_graph(view: &BinaryView) {
     view.show_graph_report("Rust Graph Title", &graph);
 }
 
-#[no_mangle]
-pub extern "C" fn UIPluginInit() -> bool {
-    register(
-        "Rust Graph Test Title",
-        "Rust Graph Test Description",
-        test_graph,
-    );
-    true
+fn main() {
+    println!("Starting session...");
+    // This loads all the core architecture, platform, etc plugins
+    let headless_session = binaryninja::headless::Session::new();
+
+    println!("Loading binary...");
+    let bv = headless_session
+        .load("/bin/cat")
+        .expect("Couldn't open `/bin/cat`");
+
+    // TODO: Register BNInteractionHandlerCallbacks with showGraphReport pointing at our function
+    // TODO: Idea: register showGraphReport that dumps a dotgraph to stdin
+
+    test_graph(&bv);
 }

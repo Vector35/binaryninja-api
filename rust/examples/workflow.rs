@@ -1,9 +1,6 @@
-use binaryninja::llil::{
-    ExprInfo, LiftedNonSSA, NonSSA, VisitorAction,
-};
+use binaryninja::binaryview::{BinaryViewBase, BinaryViewExt};
+use binaryninja::llil::{ExprInfo, LiftedNonSSA, NonSSA, VisitorAction};
 use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
-use log::LevelFilter;
-use binaryninja::logger::Logger;
 
 const RUST_ACTIVITY_NAME: &'static str = "analysis.plugins.rustexample";
 const RUST_ACTIVITY_CONFIG: &'static str = r#"{
@@ -53,18 +50,43 @@ fn example_activity(analysis_context: &AnalysisContext) {
     }
 }
 
-#[no_mangle]
-#[allow(non_snake_case)]
-pub extern "C" fn CorePluginInit() -> bool {
-    Logger::new("Workflow Example").with_level(LevelFilter::Info).init();
+pub fn main() {
+    println!("Starting session...");
+    // This loads all the core architecture, platform, etc plugins
+    let headless_session = binaryninja::headless::Session::new();
 
-    log::info!("Initialized the plugin");
-
+    println!("Registering workflow...");
     let meta_workflow = Workflow::new_from_copy("core.function.metaAnalysis");
     let activity = Activity::new_with_action(RUST_ACTIVITY_CONFIG, example_activity);
     meta_workflow.register_activity(&activity).unwrap();
     meta_workflow.insert("core.function.runFunctionRecognizers", [RUST_ACTIVITY_NAME]);
     // Re-register the meta workflow with our changes.
     meta_workflow.register().unwrap();
-    true
+
+    println!("Loading binary...");
+    let bv = headless_session
+        .load("/bin/cat")
+        .expect("Couldn't open `/bin/cat`");
+
+    // traverse all llil expressions and look for the constant 0x1337
+    for func in &bv.functions() {
+        if let Ok(llil) = func.low_level_il() {
+            for block in &llil.basic_blocks() {
+                for instr in block.iter() {
+                    instr.visit_tree(&mut |_expr, expr_info| {
+                        if let ExprInfo::Const(value) = expr_info {
+                            if value.value() == 0x1337 {
+                                println!(
+                                    "Found constant 0x1337 at instruction 0x{:x} in function {}",
+                                    instr.address(),
+                                    func.start()
+                                );
+                            }
+                        }
+                        VisitorAction::Descend
+                    });
+                }
+            }
+        }
+    }
 }

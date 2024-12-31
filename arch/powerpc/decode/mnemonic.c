@@ -708,6 +708,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_FSUBSx:  return RcMnemonic(instruction, SubMnemFSUBSx);
 		case PPC_ID_FTDIV: return "ftdiv";
 		case PPC_ID_FTSQRT: return "ftsqrt";
+		case PPC_ID_HRFID: return "hrfid";
 		case PPC_ID_ICBI: return "icbi";
 		case PPC_ID_ICBIEP: return "icbiep";
 		case PPC_ID_ICBLC: return "icblc";
@@ -852,6 +853,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_MULLDx: return OeRcMnemonic(instruction, SubMnemMULLDx);
 		case PPC_ID_MULLWx: return OeRcMnemonic(instruction, SubMnemMULLWx);
 		case PPC_ID_NANDx: return RcMnemonic(instruction, SubMnemNANDx);
+		case PPC_ID_NAP: return "nap";
 		case PPC_ID_NEGx: return OeRcMnemonic(instruction, SubMnemNEGx);
 		case PPC_ID_NOP: return "nop";
 		case PPC_ID_NORx: return RcMnemonic(instruction, SubMnemNORx);
@@ -866,6 +868,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_PTESYNC: return "ptesync";
 		case PPC_ID_RFCI: return "rfci";
 		case PPC_ID_RFDI: return "rfdi";
+		case PPC_ID_RFEBB: return "rfebb";
 		case PPC_ID_RFI: return "rfi";
 		case PPC_ID_RFID: return "rfid";
 		case PPC_ID_RFMCI: return "rfmci";
@@ -938,6 +941,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_STHUX: return "sthux";
 		case PPC_ID_STHX: return "sthx";
 		case PPC_ID_STMW: return "stmw";
+		case PPC_ID_STOP: return "stop";
 		case PPC_ID_STSWI: return "stswi";
 		case PPC_ID_STSWX: return "stswx";
 		case PPC_ID_STW: return "stw";
@@ -1319,11 +1323,13 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_AV_VUPKLSW: return "vupklsw";
 		case PPC_ID_AV_VXOR: return "vxor";
 
+		case PPC_ID_VSX_LXSD: return "lxsd";
 		case PPC_ID_VSX_LXSDX: return "lxsdx";
 		case PPC_ID_VSX_LXSIBZX: return "lxsibzx";
 		case PPC_ID_VSX_LXSIHZX: return "lxsihzx";
 		case PPC_ID_VSX_LXSIWAX: return "lxsiwax";
 		case PPC_ID_VSX_LXSIWZX: return "lxsiwzx";
+		case PPC_ID_VSX_LXSSP: return "lxssp";
 		case PPC_ID_VSX_LXSSPX: return "lxsspx";
 		case PPC_ID_VSX_LXV: return "lxv";
 		case PPC_ID_VSX_LXVB16X: return "lxvb16x";

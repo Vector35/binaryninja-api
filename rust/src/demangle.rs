@@ -35,11 +35,7 @@ pub fn demangle_generic<S: BnStrCompatible>(
     let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
     let mut out_type: *mut BNType = std::ptr::null_mut();
-    let mut out_name = BNQualifiedName {
-        name: std::ptr::null_mut(),
-        join: std::ptr::null_mut(),
-        nameCount: 0,
-    };
+    let mut out_name = BNQualifiedName::default();
     let view_ptr = match view {
         Some(v) => v.handle,
         None => std::ptr::null_mut(),
@@ -90,7 +86,7 @@ pub fn demangle_llvm<S: BnStrCompatible>(
 ) -> Result<Vec<String>> {
     let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
-    let mut out_name: *mut *mut std::os::raw::c_char = unsafe { std::mem::zeroed() };
+    let mut out_name: *mut *mut std::os::raw::c_char = std::ptr::null_mut();
     let mut out_size: usize = 0;
     let res = unsafe {
         BNDemangleLLVM(
@@ -122,6 +118,7 @@ pub fn demangle_llvm<S: BnStrCompatible>(
         .map(str::to_string)
         .collect();
 
+    // TODO: This wont get freed on early returns.
     unsafe { BNFreeDemangledName(&mut out_name, out_size) };
 
     Ok(names)

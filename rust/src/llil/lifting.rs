@@ -292,7 +292,7 @@ impl<R: ArchReg> FlagWriteOp<R> {
         }
     }
 
-    pub(crate) fn api_operands(&self) -> (usize, [BNRegisterOrConstant; 5]) {
+    pub(crate) fn raw_operands(&self) -> (usize, [BNRegisterOrConstant; 5]) {
         use self::FlagWriteOp::*;
 
         let mut operands: [BNRegisterOrConstant; 5] = [BNRegisterOrConstant::default(); 5];
@@ -369,7 +369,7 @@ where
     A: 'func + Architecture,
 {
     let (size, operation) = op.size_and_op();
-    let (count, operands) = op.api_operands();
+    let (count, operands) = op.raw_operands();
 
     let expr_idx = unsafe {
         use binaryninjacore_sys::BNGetDefaultArchitectureFlagWriteLowLevelIL;

@@ -337,6 +337,7 @@ unsafe impl CoreArrayProviderInner for BinaryViewType {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeBinaryViewTypeList(raw);
     }
+    
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(BinaryViewType::from_raw(*raw), &())
     }

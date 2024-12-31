@@ -316,7 +316,7 @@ impl MediumLevelILFunction {
     /// # Example
     /// ```no_run
     /// # use binaryninja::mlil::MediumLevelILFunction;
-    /// # use binaryninja::types::Variable;
+    /// # use binaryninja::variable::Variable;
     /// # let mlil_fun: MediumLevelILFunction = todo!();
     /// # let mlil_var: Variable = todo!();
     /// let instr_idx = mlil_fun.var_refs(&mlil_var).get(0).expr_idx;

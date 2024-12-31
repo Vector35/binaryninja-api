@@ -1,4 +1,4 @@
-use binaryninja::binaryview::{BinaryViewBase, BinaryViewExt};
+use binaryninja::binaryview::BinaryViewExt;
 use binaryninja::llil::{ExprInfo, LiftedNonSSA, NonSSA, VisitorAction};
 use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
 

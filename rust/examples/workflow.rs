@@ -15,7 +15,7 @@ const RUST_ACTIVITY_CONFIG: &'static str = r#"{
 
 fn example_activity(analysis_context: &AnalysisContext) {
     let func = analysis_context.function();
-    log::info!(
+    println!(
         "Activity `{}` called in function {} with workflow {:?}!",
         RUST_ACTIVITY_NAME,
         func.start(),
@@ -30,7 +30,7 @@ fn example_activity(analysis_context: &AnalysisContext) {
                         match info {
                             ExprInfo::Const(_op) => {
                                 // Replace all consts with 0x1337.
-                                log::info!(
+                                println!(
                                     "Replacing llil expression @ 0x{:x} : {}",
                                     instr,
                                     expr.index()

@@ -280,6 +280,11 @@ static void PushVsxS(Instruction* instruction, uint32_t word32, VsxWidth width)
 		VsxVr((sx << 5) | s));
 }
 
+static void PushVsxHiS(Instruction* instruction, uint32_t word32)
+{
+	PushRegister(instruction, PPC_OP_REG_VSX_RS, VsxVrHi(GetS(word32)));
+}
+
 static void PushAltivecVA(Instruction* instruction, uint32_t word32)
 {
 	uint32_t va = (word32 >> 16) & 0x1f;
@@ -318,10 +323,12 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 		case PPC_ID_ATTN:
 		case PPC_ID_CP_ABORT:
 		case PPC_ID_DCCCI:
+		case PPC_ID_HRFID:
 		case PPC_ID_ICCCI:
 		case PPC_ID_ISYNC:
 		case PPC_ID_LWSYNC:
 		case PPC_ID_MSGSYNC:
+		case PPC_ID_NAP:
 		case PPC_ID_NOP:
 		case PPC_ID_PTESYNC:
 		case PPC_ID_RFCI:
@@ -329,6 +336,7 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 		case PPC_ID_RFI:
 		case PPC_ID_RFID:
 		case PPC_ID_RFMCI:
+		case PPC_ID_STOP:
 		case PPC_ID_SYNC:
 		case PPC_ID_TLBIA:
 		case PPC_ID_TLBSYNC:
@@ -1488,6 +1496,10 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 			PushRB(instruction, word32);
 			break;
 
+		case PPC_ID_RFEBB:
+			PushUIMMValue(instruction, (word32 >> 11) & 0x1);
+			break;
+
 		case PPC_ID_RLWIMIx:
 		case PPC_ID_RLWINMx:
 			PushRA(instruction, word32);
@@ -2389,6 +2401,16 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 			PushUIMMValue(instruction, (word32 >> 16) & 0xf);
 			break;
 
+		case PPC_ID_VSX_LXSD:
+		case PPC_ID_VSX_LXSSP:
+		{
+			PushVsxHiD(instruction, word32);
+
+			int32_t ds = (int32_t)((int16_t)(word32 & 0xfffc));
+			PushMem(instruction, PPC_OP_MEM_RA, Gpr(GetA(word32)), ds);
+			break;
+		}
+
 		case PPC_ID_VSX_LXV:
 		{
 			uint32_t dx = (word32 >> 3) & 0x1;
@@ -2420,8 +2442,7 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 		case PPC_ID_VSX_STXSD:
 		case PPC_ID_VSX_STXSSP:
 		{
-			uint32_t xs = GetS(word32) + 32;
-			PushRegister(instruction, PPC_OP_REG_VSX_RS, VsxVr(xs));
+			PushVsxHiS(instruction, word32);
 
 			int32_t ds = (int32_t)((int16_t)(word32 & 0xfffc));
 			PushMem(instruction, PPC_OP_MEM_RA, Gpr(GetA(word32)), ds);

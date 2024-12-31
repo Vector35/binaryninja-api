@@ -2139,8 +2139,14 @@ static InstructionId Decode0x13(uint32_t word32, uint32_t decodeFlags)
 		case 0x102:
 			return PPC_ID_CRANDC;
 
+		case 0x124:
+			if ((word32 & 0x03fff000) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_RFEBB;
+
 		case 0x12c:
-			if ((word32 & 0x3fff800) != 0)
+			if ((word32 & 0x03fff800) != 0)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_ISYNC;
@@ -2157,14 +2163,32 @@ static InstructionId Decode0x13(uint32_t word32, uint32_t decodeFlags)
 		case 0x202:
 			return PPC_ID_CRAND;
 
+		case 0x224:
+			if ((word32 & 0x03fff801) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_HRFID;
+
 		case 0x242:
 			if (d == a && d == b)
 				return PPC_ID_CRSET;
 			else
 				return PPC_ID_CREQV;
 
+		case 0x2e4:
+			if ((word32 & 0x03fff801) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_STOP;
+
 		case 0x342:
 			return PPC_ID_CRORC;
+
+		case 0x364:
+			if ((word32 & 0x03fff801) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_NAP;
 
 		case 0x382:
 			if (a == b)
@@ -3407,7 +3431,7 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 			return PPC_ID_VSX_STXSSPX;
 
 		case 0x51d:
-			if ((word32 & 0x03eff800) != 0)
+			if ((word32 & 0x01dff800) != 0)
 				return PPC_ID_INVALID;
 
 			return PPC_ID_TBEGIN;
@@ -3827,6 +3851,22 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 	}
 
 	return true;
+}
+
+static InstructionId DecodeVsx0x39(uint32_t word32, uint32_t flags)
+{
+	uint32_t subop = word32 & 0x3;
+	switch (subop)
+	{
+		case 2:
+			return PPC_ID_VSX_LXSD;
+
+		case 3:
+			return PPC_ID_VSX_LXSSP;
+
+		default:
+			return PPC_ID_INVALID;
+	}
 }
 
 static InstructionId Decode0x3B(uint32_t word32, uint32_t flags)
@@ -5716,6 +5756,12 @@ static InstructionId Decode32(uint32_t word32, uint32_t decodeFlags)
 
 		case 0x37:
 			return PPC_ID_STFDU;
+
+		case 0x39:
+			if ((decodeFlags & DECODE_FLAGS_VSX) != 0)
+				return DecodeVsx0x39(word32, decodeFlags);
+			else
+				return PPC_ID_INVALID;
 
 		case 0x3a:
 			if ((decodeFlags & DECODE_FLAGS_PPC64) == 0)

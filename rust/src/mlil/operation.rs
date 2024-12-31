@@ -1,7 +1,7 @@
-use std::collections::BTreeMap;
+use super::MediumLevelILLiftedInstruction;
 use crate::architecture::CoreIntrinsic;
 use crate::variable::{ConstantData, SSAVariable, Variable};
-use super::MediumLevelILLiftedInstruction;
+use std::collections::BTreeMap;
 
 // IF
 #[derive(Copy, Clone)]

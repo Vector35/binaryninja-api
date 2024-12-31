@@ -354,7 +354,7 @@ unsafe impl CoreArrayProviderInner for Metadata {
         // TODO: `count` is not passed into the core here...
         BNFreeMetadataArray(raw);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Self::from_raw(*raw), context)
     }

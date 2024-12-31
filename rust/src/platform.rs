@@ -71,7 +71,7 @@ impl Platform {
         debug_assert!(!handle.is_null());
         Self { handle }
     }
-    
+
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNPlatform) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Ref::new(Self { handle })
@@ -386,7 +386,7 @@ unsafe impl CoreArrayProviderInner for Platform {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreePlatformList(raw, count);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         debug_assert!(!raw.is_null());
         Guard::new(Self::from_raw(*raw), context)

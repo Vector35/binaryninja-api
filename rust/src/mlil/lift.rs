@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 
+use super::operation::*;
+use super::MediumLevelILFunction;
 use crate::architecture::CoreIntrinsic;
 use crate::rc::Ref;
 use crate::variable::{ConstantData, SSAVariable, Variable};
-use super::operation::*;
-use super::MediumLevelILFunction;
 
 #[derive(Clone)]
 pub enum MediumLevelILLiftedOperand {

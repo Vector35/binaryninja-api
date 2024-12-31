@@ -15,17 +15,15 @@
 //! Contains and provides information about different systems' calling conventions to analysis.
 
 use std::borrow::Borrow;
+use std::ffi::c_void;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
-use std::ffi::c_void;
 
 use binaryninjacore_sys::*;
 
 use crate::architecture::{Architecture, ArchitectureExt, CoreArchitecture, Register};
-use crate::rc::{
-    CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable,
-};
+use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::*;
 use crate::types::FunctionParameter;
 use crate::variable::Variable;
@@ -85,7 +83,7 @@ where
             if regs.is_null() {
                 return;
             }
-            
+
             let _regs = Box::from_raw(std::ptr::slice_from_raw_parts_mut(regs, count));
         })
     }
@@ -677,7 +675,7 @@ unsafe impl<A: Architecture> CoreArrayProviderInner for CallingConvention<A> {
     unsafe fn free(raw: *mut *mut BNCallingConvention, count: usize, _content: &Self::Context) {
         BNFreeCallingConventionList(raw, count);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(
             CallingConvention {

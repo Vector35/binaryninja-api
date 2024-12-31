@@ -64,10 +64,10 @@ impl BnString {
     }
 
     /// Consumes the `BnString`, returning a raw pointer to the string.
-    /// 
+    ///
     /// After calling this function, the caller is responsible for the
     /// memory previously managed by the `BnString`.
-    /// 
+    ///
     /// This is typically used to pass a string back through the core where the core is expected to free.
     pub(crate) fn into_raw(self) -> *mut c_char {
         let res = self.raw;
@@ -169,7 +169,7 @@ unsafe impl CoreArrayProviderInner for BnString {
         use binaryninjacore_sys::BNFreeStringList;
         BNFreeStringList(raw, count);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         CStr::from_ptr(*raw).to_str().unwrap()
     }
@@ -177,7 +177,7 @@ unsafe impl CoreArrayProviderInner for BnString {
 
 pub unsafe trait BnStrCompatible {
     type Result: AsRef<[u8]>;
-    
+
     fn into_bytes_with_nul(self) -> Self::Result;
 }
 
@@ -248,13 +248,13 @@ unsafe impl BnStrCompatible for &QualifiedName {
 
 pub trait IntoJson {
     type Output: BnStrCompatible;
-    
+
     fn get_json_string(self) -> Result<Self::Output, ()>;
 }
 
 impl<S: BnStrCompatible> IntoJson for S {
     type Output = S;
-    
+
     fn get_json_string(self) -> Result<Self::Output, ()> {
         Ok(self)
     }

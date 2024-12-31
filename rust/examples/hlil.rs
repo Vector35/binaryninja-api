@@ -43,8 +43,8 @@ fn main() {
 }
 
 mod visitor {
-    use binaryninja::hlil::{HighLevelILFunction, HighLevelILLiftedInstruction};
     use binaryninja::hlil::HighLevelILLiftedOperand::*;
+    use binaryninja::hlil::{HighLevelILFunction, HighLevelILLiftedInstruction};
     use binaryninja::variable::Variable;
 
     fn print_indent(indent: usize) {
@@ -65,7 +65,7 @@ mod visitor {
         println!();
 
         indent += 1;
-        
+
         for (_name, operand) in instr.operands() {
             match operand {
                 Int(int) => {

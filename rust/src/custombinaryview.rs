@@ -96,7 +96,7 @@ where
                     // in the refcount going to 0 in the process of returning it
                     // to the core -- we're transferring ownership of the Ref here
                     Ref::into_raw(bv.handle).handle
-                },
+                }
                 Err(_) => {
                     error!("CustomBinaryViewType::create_custom_view returned Err");
                     ptr::null_mut()
@@ -104,7 +104,7 @@ where
             }
         })
     }
-    
+
     extern "C" fn cb_parse<T>(ctxt: *mut c_void, data: *mut BNBinaryView) -> *mut BNBinaryView
     where
         T: CustomBinaryViewType,
@@ -117,14 +117,14 @@ where
                 view_type,
                 actual_parent: &data,
             };
-            
+
             match view_type.parse_custom_view(&data, builder) {
                 Ok(bv) => {
                     // force a leak of the Ref; failure to do this would result
                     // in the refcount going to 0 in the process of returning it
                     // to the core -- we're transferring ownership of the Ref here
                     Ref::into_raw(bv.handle).handle
-                },
+                }
                 Err(_) => {
                     error!("CustomBinaryViewType::parse returned Err");
                     ptr::null_mut()
@@ -204,7 +204,7 @@ pub trait BinaryViewTypeBase: AsRef<BinaryViewType> {
             unsafe { Some(Settings::from_raw(settings_handle)) }
         }
     }
-    
+
     fn load_settings_for_data(&self, _data: &BinaryView) -> Option<Ref<Settings>> {
         None
     }
@@ -221,7 +221,12 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
 
     fn register_arch<A: Architecture>(&self, id: u32, endianness: Endianness, arch: &A) {
         unsafe {
-            BNRegisterArchitectureForViewType(self.as_ref().handle, id, endianness, arch.as_ref().handle);
+            BNRegisterArchitectureForViewType(
+                self.as_ref().handle,
+                id,
+                endianness,
+                arch.as_ref().handle,
+            );
         }
     }
 
@@ -266,7 +271,7 @@ impl<T: BinaryViewTypeBase> BinaryViewTypeExt for T {}
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct BinaryViewType {
-    pub handle: *mut BNBinaryViewType
+    pub handle: *mut BNBinaryViewType,
 }
 
 impl BinaryViewType {
@@ -274,7 +279,7 @@ impl BinaryViewType {
         debug_assert!(!handle.is_null());
         Self { handle }
     }
-    
+
     pub fn list_all() -> Array<BinaryViewType> {
         unsafe {
             let mut count: usize = 0;
@@ -316,7 +321,8 @@ impl BinaryViewTypeBase for BinaryViewType {
     }
 
     fn load_settings_for_data(&self, data: &BinaryView) -> Option<Ref<Settings>> {
-        let settings_handle = unsafe { BNGetBinaryViewLoadSettingsForData(self.handle, data.handle) };
+        let settings_handle =
+            unsafe { BNGetBinaryViewLoadSettingsForData(self.handle, data.handle) };
 
         if settings_handle.is_null() {
             None
@@ -336,7 +342,7 @@ unsafe impl CoreArrayProviderInner for BinaryViewType {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeBinaryViewTypeList(raw);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(BinaryViewType::from_raw(*raw), &())
     }

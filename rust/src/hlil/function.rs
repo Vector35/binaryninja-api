@@ -2,12 +2,12 @@ use std::hash::{Hash, Hasher};
 
 use binaryninjacore_sys::*;
 
+use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelILLiftedInstruction};
 use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
 use crate::function::Function;
 use crate::rc::{Array, Ref, RefCountable};
 use crate::variable::{SSAVariable, Variable};
-use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelILLiftedInstruction};
 
 pub struct HighLevelILFunction {
     pub(crate) full_ast: bool,
@@ -242,7 +242,8 @@ impl HighLevelILFunction {
     pub fn ssa_variables(&self, variable: &Variable) -> Array<SSAVariable> {
         let mut count = 0;
         let raw_variable = BNVariable::from(variable);
-        let variables = unsafe { BNGetHighLevelILVariableSSAVersions(self.handle, &raw_variable, &mut count) };
+        let variables =
+            unsafe { BNGetHighLevelILVariableSSAVersions(self.handle, &raw_variable, &mut count) };
         unsafe { Array::new(variables, count, *variable) }
     }
 }

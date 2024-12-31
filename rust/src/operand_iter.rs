@@ -82,7 +82,7 @@ impl<F: ILFunction + RefCountable> OperandIter<F> {
 
 impl<F: ILFunction + RefCountable> Iterator for OperandIter<F> {
     type Item = u64;
-    
+
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(item) = self.current_iter.next() {
             self.remaining -= 1;
@@ -210,12 +210,10 @@ impl<F: ILFunction + RefCountable> Iterator for OperandSSAVarIter<F> {
     type Item = SSAVariable;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0
-            .next()
-            .map(|(id, version)| {
-                let var = Variable::from_identifier(id);
-                SSAVariable::new(var, version as _)
-            })
+        self.0.next().map(|(id, version)| {
+            let var = Variable::from_identifier(id);
+            SSAVariable::new(var, version as _)
+        })
     }
 }
 

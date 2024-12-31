@@ -39,7 +39,10 @@ where
     F: FunctionForm,
     O: OperationArguments,
 {
-    pub(crate) fn new(function: &'func LowLevelILFunction<A, M, F>, op: BNLowLevelILInstruction) -> Self {
+    pub(crate) fn new(
+        function: &'func LowLevelILFunction<A, M, F>,
+        op: BNLowLevelILInstruction,
+    ) -> Self {
         Self {
             function,
             op,
@@ -294,10 +297,10 @@ where
 pub struct RegSplit;
 
 impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, RegSplit>
-    where
-        A: 'func + Architecture,
-        M: FunctionMutability,
-        V: NonSSAVariant,
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    V: NonSSAVariant,
 {
     pub fn size(&self) -> usize {
         self.op.size

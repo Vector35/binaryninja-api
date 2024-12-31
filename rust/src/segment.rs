@@ -211,7 +211,7 @@ unsafe impl CoreArrayProviderInner for Segment {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeSegmentList(raw, count);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Segment::from_raw(*raw), context)
     }

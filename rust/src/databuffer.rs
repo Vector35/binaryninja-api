@@ -27,7 +27,7 @@ impl DataBuffer {
     pub(crate) fn from_raw(raw: *mut BNDataBuffer) -> Self {
         DataBuffer(raw)
     }
-    
+
     pub(crate) fn as_raw(&self) -> *mut BNDataBuffer {
         self.0
     }
@@ -111,7 +111,13 @@ impl DataBuffer {
     }
 
     pub fn to_escaped_string(&self, null_terminates: bool, escape_printable: bool) -> BnString {
-        unsafe { BnString::from_raw(BNDataBufferToEscapedString(self.0, null_terminates, escape_printable)) }
+        unsafe {
+            BnString::from_raw(BNDataBufferToEscapedString(
+                self.0,
+                null_terminates,
+                escape_printable,
+            ))
+        }
     }
 
     pub fn from_escaped_string(value: &BnString) -> Self {

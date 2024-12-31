@@ -4,7 +4,6 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::rc::Array;
 use crate::string::{BnStrCompatible, BnString};
 
-
 #[derive(Debug)]
 pub struct EnterpriseCheckoutError(pub String);
 
@@ -50,10 +49,14 @@ pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutErro
             }
         }
     }
-    
-    if !is_server_license_still_activated() || (!is_server_floating_license() && crate::license_expiration_time() < SystemTime::now()) {
+
+    if !is_server_license_still_activated()
+        || (!is_server_floating_license() && crate::license_expiration_time() < SystemTime::now())
+    {
         if !update_server_license(duration) {
-            return Err(EnterpriseCheckoutError("Failed to refresh expired license".to_string()));
+            return Err(EnterpriseCheckoutError(
+                "Failed to refresh expired license".to_string(),
+            ));
         }
     }
 
@@ -77,7 +80,9 @@ pub fn server_url() -> BnString {
 pub fn set_server_url<S: BnStrCompatible>(url: S) -> Result<(), ()> {
     let url = url.into_bytes_with_nul();
     let result = unsafe {
-        binaryninjacore_sys::BNSetEnterpriseServerUrl(url.as_ref().as_ptr() as *const std::os::raw::c_char)
+        binaryninjacore_sys::BNSetEnterpriseServerUrl(
+            url.as_ref().as_ptr() as *const std::os::raw::c_char
+        )
     };
     if result {
         Ok(())

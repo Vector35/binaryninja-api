@@ -4,13 +4,13 @@ use std::ptr::NonNull;
 
 use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
+use crate::binaryview::BinaryView;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
 use crate::llil::{self, FunctionForm, Mutable};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 use crate::{hlil, mlil};
-use crate::binaryview::BinaryView;
 
 #[repr(transparent)]
 /// The AnalysisContext struct is used to represent the current state of
@@ -341,7 +341,12 @@ impl Workflow {
     /// * `configuration` - a JSON representation of the workflow configuration
     pub fn register_with_config<S: BnStrCompatible>(&self, config: S) -> Result<(), ()> {
         let config = config.into_bytes_with_nul();
-        if unsafe { BNRegisterWorkflow(self.handle.as_ptr(), config.as_ref().as_ptr() as *const c_char) } {
+        if unsafe {
+            BNRegisterWorkflow(
+                self.handle.as_ptr(),
+                config.as_ref().as_ptr() as *const c_char,
+            )
+        } {
             Ok(())
         } else {
             Err(())
@@ -396,8 +401,9 @@ impl Workflow {
     ///
     /// `activity` - if specified, return the configuration for the `activity`
     pub fn configuration<A: IntoActivityName>(&self, activity: A) -> BnString {
-        let result =
-            unsafe { BNWorkflowGetConfiguration(self.handle.as_ptr(), activity.activity_name().as_ptr()) };
+        let result = unsafe {
+            BNWorkflowGetConfiguration(self.handle.as_ptr(), activity.activity_name().as_ptr())
+        };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
@@ -415,7 +421,10 @@ impl Workflow {
     pub fn activity<A: BnStrCompatible>(&self, name: A) -> Option<Activity> {
         let name = name.into_bytes_with_nul();
         let result = unsafe {
-            BNWorkflowGetActivity(self.handle.as_ptr(), name.as_ref().as_ptr() as *const c_char)
+            BNWorkflowGetActivity(
+                self.handle.as_ptr(),
+                name.as_ref().as_ptr() as *const c_char,
+            )
         };
         NonNull::new(result).map(|a| unsafe { Activity::from_raw(a) })
     }
@@ -427,7 +436,11 @@ impl Workflow {
     pub fn activity_roots<A: IntoActivityName>(&self, activity: A) -> Array<BnString> {
         let mut count = 0;
         let result = unsafe {
-            BNWorkflowGetActivityRoots(self.handle.as_ptr(), activity.activity_name().as_ptr(), &mut count)
+            BNWorkflowGetActivityRoots(
+                self.handle.as_ptr(),
+                activity.activity_name().as_ptr(),
+                &mut count,
+            )
         };
         assert!(!result.is_null());
         unsafe { Array::new(result as *mut *mut c_char, count, ()) }
@@ -554,17 +567,29 @@ impl Workflow {
 
     /// Not yet implemented.
     pub fn show_metrics(&self) {
-        unsafe { BNWorkflowShowReport(self.handle.as_ptr(), b"metrics\x00".as_ptr() as *const c_char) }
+        unsafe {
+            BNWorkflowShowReport(
+                self.handle.as_ptr(),
+                b"metrics\x00".as_ptr() as *const c_char,
+            )
+        }
     }
 
     /// Show the Workflow topology in the UI.
     pub fn show_topology(&self) {
-        unsafe { BNWorkflowShowReport(self.handle.as_ptr(), b"topology\x00".as_ptr() as *const c_char) }
+        unsafe {
+            BNWorkflowShowReport(
+                self.handle.as_ptr(),
+                b"topology\x00".as_ptr() as *const c_char,
+            )
+        }
     }
 
     /// Not yet implemented.
     pub fn show_trace(&self) {
-        unsafe { BNWorkflowShowReport(self.handle.as_ptr(), b"trace\x00".as_ptr() as *const c_char) }
+        unsafe {
+            BNWorkflowShowReport(self.handle.as_ptr(), b"trace\x00".as_ptr() as *const c_char)
+        }
     }
 }
 

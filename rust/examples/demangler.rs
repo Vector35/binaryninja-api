@@ -38,9 +38,21 @@ fn main() {
     for d in Demangler::list().iter() {
         println!("{}", d.name());
 
-        println!("  \"__ZN1AC2Ei\" is mangled? {}", d.is_mangled_string("__ZN1AC2Ei"));
-        println!("  \"__ZN1AC2Ei\" : {:?}", d.demangle(&placeholder_arch, "__ZN1AC2Ei", None));
-        println!("  \"test_name\" : {:?}", d.demangle(&placeholder_arch, "test_name", None));
-        println!("  \"test_name2\" : {:?}", d.demangle(&placeholder_arch, "test_name2", None));
+        println!(
+            "  \"__ZN1AC2Ei\" is mangled? {}",
+            d.is_mangled_string("__ZN1AC2Ei")
+        );
+        println!(
+            "  \"__ZN1AC2Ei\" : {:?}",
+            d.demangle(&placeholder_arch, "__ZN1AC2Ei", None)
+        );
+        println!(
+            "  \"test_name\" : {:?}",
+            d.demangle(&placeholder_arch, "test_name", None)
+        );
+        println!(
+            "  \"test_name2\" : {:?}",
+            d.demangle(&placeholder_arch, "test_name2", None)
+        );
     }
 }

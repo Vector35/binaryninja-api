@@ -433,7 +433,7 @@ unsafe impl CoreArrayProviderInner for LinearDisassemblyLine {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeLinearDisassemblyLines(raw, count);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         // TODO: Cant remove this guard until we remove those manual drops... INSANE!
         Guard::new(Self::from_raw(raw), context)

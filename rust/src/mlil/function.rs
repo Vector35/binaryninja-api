@@ -1,8 +1,9 @@
-use std::hash::{Hash, Hasher};
+use binaryninjacore_sys::*;
 use std::ffi::c_char;
 use std::fmt::{Debug, Formatter};
-use binaryninjacore_sys::*;
+use std::hash::{Hash, Hasher};
 
+use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
 use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
 use crate::confidence::Conf;
@@ -13,7 +14,6 @@ use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCounta
 use crate::string::BnStrCompatible;
 use crate::types::Type;
 use crate::variable::{PossibleValueSet, RegisterValue, SSAVariable, UserVariableValue, Variable};
-use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
 
 // TODO: Does this belong here?
 pub use binaryninjacore_sys::BNFunctionGraphType as FunctionGraphType;
@@ -27,7 +27,7 @@ impl MediumLevelILFunction {
         debug_assert!(!handle.is_null());
         Self { handle }
     }
-    
+
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNMediumLevelILFunction) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Ref::new(Self::from_raw(handle))
@@ -37,8 +37,9 @@ impl MediumLevelILFunction {
         let loc: Location = loc.into();
         let arch_handle = loc.arch.unwrap();
 
-        let expr_idx =
-            unsafe { BNMediumLevelILGetInstructionStart(self.handle, arch_handle.handle, loc.addr) };
+        let expr_idx = unsafe {
+            BNMediumLevelILGetInstructionStart(self.handle, arch_handle.handle, loc.addr)
+        };
 
         if expr_idx >= self.instruction_count() {
             None
@@ -336,7 +337,7 @@ impl MediumLevelILFunction {
     }
 
     /// Retrieves variable references from a specified location or range within a medium-level IL function.
-    /// 
+    ///
     /// Passing in a `length` will query a range for variable references, instead of just the address
     /// specified in `location`.
     pub fn var_refs_from(
@@ -345,7 +346,10 @@ impl MediumLevelILFunction {
         length: Option<u64>,
     ) -> Array<VariableReferenceSource> {
         let location = location.into();
-        let raw_arch = location.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut());
+        let raw_arch = location
+            .arch
+            .map(|a| a.handle)
+            .unwrap_or(std::ptr::null_mut());
         let function = self.get_function();
         let mut count = 0;
 
@@ -361,7 +365,12 @@ impl MediumLevelILFunction {
             }
         } else {
             unsafe {
-                BNGetMediumLevelILVariableReferencesFrom(function.handle, raw_arch, location.addr, &mut count)
+                BNGetMediumLevelILVariableReferencesFrom(
+                    function.handle,
+                    raw_arch,
+                    location.addr,
+                    &mut count,
+                )
             }
         };
         assert!(!refs.is_null());
@@ -379,7 +388,10 @@ impl MediumLevelILFunction {
     /// Set the current IL Address
     pub fn set_current_address(&self, location: impl Into<Location>) {
         let location = location.into();
-        let arch = location.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut());
+        let arch = location
+            .arch
+            .map(|a| a.handle)
+            .unwrap_or(std::ptr::null_mut());
         unsafe { BNMediumLevelILSetCurrentAddress(self.handle, arch, location.addr) }
     }
 
@@ -389,23 +401,26 @@ impl MediumLevelILFunction {
         instruction: &MediumLevelILInstruction,
     ) -> Option<Ref<BasicBlock<MediumLevelILBlock>>> {
         let index = instruction.index;
-        let context = MediumLevelILBlock { function: self.to_owned(), };
-        let basic_block_ptr = unsafe { BNGetMediumLevelILBasicBlockForInstruction(self.handle, index) };
+        let context = MediumLevelILBlock {
+            function: self.to_owned(),
+        };
+        let basic_block_ptr =
+            unsafe { BNGetMediumLevelILBasicBlockForInstruction(self.handle, index) };
         match basic_block_ptr.is_null() {
             false => Some(unsafe { BasicBlock::ref_from_raw(basic_block_ptr, context) }),
             true => None,
         }
     }
-    
+
     /// Ends the function and computes the list of basic blocks.
-    /// 
+    ///
     /// NOTE: This should be called after updating MLIL.
     pub fn finalize(&self) {
         unsafe { BNFinalizeMediumLevelILFunction(self.handle) }
     }
 
     /// Generate SSA form given the current MLIL.
-    /// 
+    ///
     /// NOTE: This should be called after updating MLIL.
     ///
     /// * `analyze_conditionals` - whether to analyze conditionals
@@ -419,7 +434,8 @@ impl MediumLevelILFunction {
         non_aliased_vars: impl IntoIterator<Item = Variable>,
         aliased_vars: impl IntoIterator<Item = Variable>,
     ) {
-        let raw_non_aliased_vars: Vec<BNVariable> = non_aliased_vars.into_iter().map(Into::into).collect();
+        let raw_non_aliased_vars: Vec<BNVariable> =
+            non_aliased_vars.into_iter().map(Into::into).collect();
         let raw_aliased_vars: Vec<BNVariable> = aliased_vars.into_iter().map(Into::into).collect();
         unsafe {
             BNGenerateMediumLevelILSSAForm(
@@ -438,7 +454,10 @@ impl MediumLevelILFunction {
     ///
     /// Since SSA variables can only be defined once, this will return the single instruction where that occurs.
     /// For SSA variable version 0s, which don't have definitions, this will return `None` instead.
-    pub fn ssa_variable_definition(&self, ssa_variable: &SSAVariable) -> Option<MediumLevelILInstruction> {
+    pub fn ssa_variable_definition(
+        &self,
+        ssa_variable: &SSAVariable,
+    ) -> Option<MediumLevelILInstruction> {
         let raw_var = BNVariable::from(ssa_variable.variable);
         let result = unsafe {
             BNGetMediumLevelILSSAVarDefinition(self.handle, &raw_var, ssa_variable.version)
@@ -458,12 +477,7 @@ impl MediumLevelILFunction {
         let mut count = 0;
         let raw_var = BNVariable::from(ssa_variable.variable);
         let uses = unsafe {
-            BNGetMediumLevelILSSAVarUses(
-                self.handle,
-                &raw_var,
-                ssa_variable.version,
-                &mut count,
-            )
+            BNGetMediumLevelILSSAVarUses(self.handle, &raw_var, ssa_variable.version, &mut count)
         };
         assert!(!uses.is_null());
         unsafe { Array::new(uses, count, self.to_owned()) }
@@ -479,25 +493,21 @@ impl MediumLevelILFunction {
     /// Determines if `variable` is live at any point in the function
     pub fn is_ssa_variable_live(&self, ssa_variable: &SSAVariable) -> bool {
         let raw_var = BNVariable::from(ssa_variable.variable);
-        unsafe {
-            BNIsMediumLevelILSSAVarLive(self.handle, &raw_var, ssa_variable.version)
-        }
+        unsafe { BNIsMediumLevelILSSAVarLive(self.handle, &raw_var, ssa_variable.version) }
     }
 
     pub fn variable_definitions(&self, variable: &Variable) -> Array<MediumLevelILInstruction> {
         let mut count = 0;
         let raw_var = BNVariable::from(variable);
-        let defs = unsafe {
-            BNGetMediumLevelILVariableDefinitions(self.handle, &raw_var, &mut count)
-        };
+        let defs =
+            unsafe { BNGetMediumLevelILVariableDefinitions(self.handle, &raw_var, &mut count) };
         unsafe { Array::new(defs, count, self.to_owned()) }
     }
 
     pub fn variable_uses(&self, variable: &Variable) -> Array<MediumLevelILInstruction> {
         let mut count = 0;
         let raw_var = BNVariable::from(variable);
-        let uses =
-            unsafe { BNGetMediumLevelILVariableUses(self.handle, &raw_var, &mut count) };
+        let uses = unsafe { BNGetMediumLevelILVariableUses(self.handle, &raw_var, &mut count) };
         unsafe { Array::new(uses, count, self.to_owned()) }
     }
 
@@ -528,10 +538,7 @@ impl MediumLevelILFunction {
 
     pub fn ssa_variable_value(&self, ssa_variable: &SSAVariable) -> RegisterValue {
         let raw_var = BNVariable::from(ssa_variable.variable);
-        unsafe {
-            BNGetMediumLevelILSSAVarValue(self.handle, &raw_var, ssa_variable.version)
-        }
-        .into()
+        unsafe { BNGetMediumLevelILSSAVarValue(self.handle, &raw_var, ssa_variable.version) }.into()
     }
 
     pub fn create_graph(&self, settings: Option<DisassemblySettings>) -> FlowGraph {
@@ -541,7 +548,7 @@ impl MediumLevelILFunction {
     }
 
     /// This gets just the MLIL variables - you may be interested in the union
-    /// of [`MediumLevelILFunction::aliased_variables`] and [`Function::parameter_variables`] for 
+    /// of [`MediumLevelILFunction::aliased_variables`] and [`Function::parameter_variables`] for
     /// all the variables used in the function
     pub fn variables(&self) -> Array<Variable> {
         let mut count = 0;
@@ -562,7 +569,9 @@ impl MediumLevelILFunction {
     pub fn ssa_variables(&self, variable: &Variable) -> Array<SSAVariable> {
         let mut count = 0;
         let raw_variable = BNVariable::from(variable);
-        let versions = unsafe { BNGetMediumLevelILVariableSSAVersions(self.handle, &raw_variable, &mut count) };
+        let versions = unsafe {
+            BNGetMediumLevelILVariableSSAVersions(self.handle, &raw_variable, &mut count)
+        };
         unsafe { Array::new(versions, count, *variable) }
     }
 }
@@ -651,7 +660,7 @@ unsafe impl CoreArrayProviderInner for ILReferenceSource {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeILReferences(raw, count)
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         raw.into()
     }
@@ -692,7 +701,7 @@ unsafe impl CoreArrayProviderInner for VariableReferenceSource {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeVariableReferenceSourceList(raw, count)
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         raw.into()
     }

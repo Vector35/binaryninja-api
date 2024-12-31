@@ -18,14 +18,6 @@
 // RegisterInfo purge
 use binaryninjacore_sys::*;
 
-use std::{
-    borrow::{Borrow, Cow},
-    collections::HashMap,
-    ffi::{c_char, c_void, c_int, CStr, CString},
-    hash::Hash,
-    mem::MaybeUninit,
-};
-use std::ops::Deref;
 use crate::{
     callingconvention::CallingConvention,
     databuffer::DataBuffer,
@@ -41,14 +33,22 @@ use crate::{
     types::{NameAndType, Type},
     Endianness,
 };
+use std::ops::Deref;
+use std::{
+    borrow::{Borrow, Cow},
+    collections::HashMap,
+    ffi::{c_char, c_int, c_void, CStr, CString},
+    hash::Hash,
+    mem::MaybeUninit,
+};
 
 use crate::functionrecognizer::FunctionRecognizer;
 use crate::relocation::{CustomRelocationHandlerHandle, RelocationHandler};
 
+use crate::confidence::Conf;
 pub use binaryninjacore_sys::BNFlagRole as FlagRole;
 pub use binaryninjacore_sys::BNImplicitRegisterExtend as ImplicitRegisterExtend;
 pub use binaryninjacore_sys::BNLowLevelILFlagCondition as FlagCondition;
-use crate::confidence::Conf;
 
 #[derive(Default, Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum BranchKind {
@@ -75,14 +75,11 @@ pub struct BranchInfo {
 impl BranchInfo {
     /// Branches to an instruction with the current architecture.
     pub fn new(kind: BranchKind) -> Self {
-        Self {
-            arch: None,
-            kind,
-        }
+        Self { arch: None, kind }
     }
 
     /// Branches to an instruction with an explicit architecture.
-    /// 
+    ///
     /// Use this if your architecture can transition to another architecture with a branch.
     pub fn new_with_arch(kind: BranchKind, arch: CoreArchitecture) -> Self {
         Self {
@@ -90,7 +87,7 @@ impl BranchInfo {
             kind,
         }
     }
-    
+
     pub fn target(&self) -> Option<u64> {
         match self.kind {
             BranchKind::Unconditional(target) => Some(target),
@@ -137,7 +134,7 @@ pub struct InstructionInfo {
     // TODO: This field name is really long...
     pub arch_transition_by_target_addr: bool,
     pub delay_slots: u8,
-    pub branches: [Option<BranchInfo>; NUM_BRANCH_INFO]
+    pub branches: [Option<BranchInfo>; NUM_BRANCH_INFO],
 }
 
 impl InstructionInfo {
@@ -150,7 +147,7 @@ impl InstructionInfo {
             branches: Default::default(),
         }
     }
-    
+
     pub fn add_branch(&mut self, branch_info: impl Into<BranchInfo>) {
         // Will go through each slot and attempt to add the branch info.
         // TODO: Return a result with BranchInfoSlotsFilled error.
@@ -221,9 +218,18 @@ impl From<InstructionInfo> for BNInstructionInfo {
                 branch_info_2.target().unwrap_or_default(),
             ],
             branchArch: [
-                branch_info_0.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut()),
-                branch_info_1.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut()),
-                branch_info_2.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut()),
+                branch_info_0
+                    .arch
+                    .map(|a| a.handle)
+                    .unwrap_or(std::ptr::null_mut()),
+                branch_info_1
+                    .arch
+                    .map(|a| a.handle)
+                    .unwrap_or(std::ptr::null_mut()),
+                branch_info_2
+                    .arch
+                    .map(|a| a.handle)
+                    .unwrap_or(std::ptr::null_mut()),
             ],
         }
     }
@@ -716,11 +722,7 @@ pub struct CoreRegisterInfo {
 
 impl CoreRegisterInfo {
     pub fn new(arch: *mut BNArchitecture, id: u32, info: BNRegisterInfo) -> Self {
-        Self {
-            arch,
-            id,
-            info,
-        }
+        Self { arch, id, info }
     }
 }
 
@@ -800,7 +802,7 @@ unsafe impl CoreArrayProviderInner for CoreRegister {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeRegisterList(raw)
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Self::new(context.handle, *raw)
     }
@@ -849,7 +851,7 @@ impl RegisterStackInfo for CoreRegisterStackInfo {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CoreRegisterStack {
     arch: *mut BNArchitecture,
-    id: u32
+    id: u32,
 }
 
 impl CoreRegisterStack {
@@ -893,7 +895,7 @@ impl RegisterStack for CoreRegisterStack {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CoreFlag {
     arch: *mut BNArchitecture,
-    id: u32
+    id: u32,
 }
 
 impl CoreFlag {
@@ -938,7 +940,7 @@ impl Flag for CoreFlag {
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CoreFlagWrite {
     arch: *mut BNArchitecture,
-    id: u32
+    id: u32,
 }
 
 impl CoreFlagWrite {
@@ -982,9 +984,8 @@ impl FlagWrite for CoreFlagWrite {
 
     fn flags_written(&self) -> Vec<CoreFlag> {
         let mut count: usize = 0;
-        let regs: *mut u32 = unsafe {
-            BNGetArchitectureFlagsWrittenByFlagWriteType(self.arch, self.id, &mut count)
-        };
+        let regs: *mut u32 =
+            unsafe { BNGetArchitectureFlagsWrittenByFlagWriteType(self.arch, self.id, &mut count) };
 
         let ret = unsafe {
             std::slice::from_raw_parts(regs, count)
@@ -1004,7 +1005,7 @@ impl FlagWrite for CoreFlagWrite {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CoreFlagClass {
     arch: *mut BNArchitecture,
-    id: u32
+    id: u32,
 }
 
 impl CoreFlagClass {
@@ -1038,7 +1039,7 @@ impl FlagClass for CoreFlagClass {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct CoreFlagGroup {
     arch: *mut BNArchitecture,
-    id: u32
+    id: u32,
 }
 
 impl CoreFlagGroup {
@@ -1095,11 +1096,8 @@ impl FlagGroup for CoreFlagGroup {
         let mut count: usize = 0;
 
         unsafe {
-            let flag_conds = BNGetArchitectureFlagConditionsForSemanticFlagGroup(
-                self.arch,
-                self.id,
-                &mut count,
-            );
+            let flag_conds =
+                BNGetArchitectureFlagConditionsForSemanticFlagGroup(self.arch, self.id, &mut count);
 
             let ret = std::slice::from_raw_parts_mut(flag_conds, count)
                 .iter()
@@ -1207,7 +1205,7 @@ impl Drop for CoreArchitectureList {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct CoreArchitecture {
-    pub(crate) handle: *mut BNArchitecture   
+    pub(crate) handle: *mut BNArchitecture,
 }
 
 impl CoreArchitecture {
@@ -1225,7 +1223,8 @@ impl CoreArchitecture {
     }
 
     pub fn by_name(name: &str) -> Option<Self> {
-        let handle = unsafe { BNGetArchitectureByName(name.into_bytes_with_nul().as_ptr() as *mut _) };
+        let handle =
+            unsafe { BNGetArchitectureByName(name.into_bytes_with_nul().as_ptr() as *mut _) };
         match handle.is_null() {
             false => Some(CoreArchitecture { handle }),
             true => None,
@@ -1290,15 +1289,8 @@ impl Architecture for CoreArchitecture {
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
         let mut info = BNInstructionInfo::default();
-        if unsafe {
-            BNGetInstructionInfo(
-                self.handle,
-                data.as_ptr(),
-                addr,
-                data.len(),
-                &mut info,
-            )
-        } {
+        if unsafe { BNGetInstructionInfo(self.handle, data.as_ptr(), addr, data.len(), &mut info) }
+        {
             Some(info.into())
         } else {
             None
@@ -1343,7 +1335,13 @@ impl Architecture for CoreArchitecture {
     ) -> Option<(usize, bool)> {
         let mut size = data.len();
         let success = unsafe {
-            BNGetInstructionLowLevelIL(self.handle, data.as_ptr(), addr, &mut size as *mut _, il.handle)
+            BNGetInstructionLowLevelIL(
+                self.handle,
+                data.as_ptr(),
+                addr,
+                &mut size as *mut _,
+                il.handle,
+            )
         };
 
         if !success {
@@ -1674,7 +1672,12 @@ impl Architecture for CoreArchitecture {
 
     fn is_skip_and_return_zero_patch_available(&self, data: &[u8], addr: u64) -> bool {
         unsafe {
-            BNIsArchitectureSkipAndReturnZeroPatchAvailable(self.handle, data.as_ptr(), addr, data.len())
+            BNIsArchitectureSkipAndReturnZeroPatchAvailable(
+                self.handle,
+                data.as_ptr(),
+                addr,
+                data.len(),
+            )
         }
     }
 
@@ -1703,7 +1706,13 @@ impl Architecture for CoreArchitecture {
 
     fn skip_and_return_value(&self, data: &mut [u8], addr: u64, value: u64) -> bool {
         unsafe {
-            BNArchitectureSkipAndReturnValue(self.handle, data.as_mut_ptr(), addr, data.len(), value)
+            BNArchitectureSkipAndReturnValue(
+                self.handle,
+                data.as_mut_ptr(),
+                addr,
+                data.len(),
+                value,
+            )
         }
     }
 
@@ -1759,7 +1768,8 @@ pub trait ArchitectureExt: Architecture {
     fn calling_conventions(&self) -> Array<CallingConvention<Self>> {
         unsafe {
             let mut count = 0;
-            let calling_convs = BNGetArchitectureCallingConventions(self.as_ref().handle, &mut count);
+            let calling_convs =
+                BNGetArchitectureCallingConventions(self.as_ref().handle, &mut count);
             Array::new(calling_convs, count, self.handle())
         }
     }
@@ -1811,7 +1821,8 @@ pub trait ArchitectureExt: Architecture {
         };
 
         unsafe {
-            let handle = BNArchitectureGetRelocationHandler(self.as_ref().handle, view_name.as_ptr());
+            let handle =
+                BNArchitectureGetRelocationHandler(self.as_ref().handle, view_name.as_ptr());
 
             if handle.is_null() {
                 return None;
@@ -2190,7 +2201,8 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut flag_classes: Box<[_]> = custom_arch.flag_classes().iter().map(|f| f.id()).collect();
+        let mut flag_classes: Box<[_]> =
+            custom_arch.flag_classes().iter().map(|f| f.id()).collect();
 
         // SAFETY: `count` is an out parameter
         unsafe { *count = flag_classes.len() };
@@ -2640,19 +2652,20 @@ where
 
         let Some(intrinsic) = custom_arch.intrinsic_from_id(intrinsic) else {
             // SAFETY: Passed in to be written
-            unsafe { *count = 0; }
+            unsafe {
+                *count = 0;
+            }
             return std::ptr::null_mut();
         };
 
         let inputs = intrinsic.inputs();
-        let mut raw_inputs: Box<[_]> = inputs
-            .into_iter()
-            .map(Into::into)
-            .collect();
-        
+        let mut raw_inputs: Box<[_]> = inputs.into_iter().map(Into::into).collect();
+
         // SAFETY: Passed in to be written
-        unsafe { *count = raw_inputs.len(); }
-        
+        unsafe {
+            *count = raw_inputs.len();
+        }
+
         if raw_inputs.is_empty() {
             std::ptr::null_mut()
         } else {
@@ -2663,8 +2676,11 @@ where
         }
     }
 
-    extern "C" fn cb_free_name_and_types<A>(_ctxt: *mut c_void, nt: *mut BNNameAndType, count: usize)
-    where
+    extern "C" fn cb_free_name_and_types<A>(
+        _ctxt: *mut c_void,
+        nt: *mut BNNameAndType,
+        count: usize,
+    ) where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         if nt.is_null() {
@@ -2689,18 +2705,20 @@ where
 
         let Some(intrinsic) = custom_arch.intrinsic_from_id(intrinsic) else {
             // SAFETY: Passed in to be written
-            unsafe { *count = 0; }
+            unsafe {
+                *count = 0;
+            }
             return std::ptr::null_mut();
         };
 
         let outputs = intrinsic.outputs();
-        let mut raw_outputs: Box<[BNTypeWithConfidence]> = outputs
-            .into_iter()
-            .map(|o| o.as_ref().into())
-            .collect();
+        let mut raw_outputs: Box<[BNTypeWithConfidence]> =
+            outputs.into_iter().map(|o| o.as_ref().into()).collect();
 
         // SAFETY: Passed in to be written
-        unsafe { *count = raw_outputs.len(); }
+        unsafe {
+            *count = raw_outputs.len();
+        }
 
         if raw_outputs.is_empty() {
             std::ptr::null_mut()
@@ -2721,7 +2739,8 @@ where
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
         if !tl.is_null() {
-            let _type_list = unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(tl, count)) };
+            let _type_list =
+                unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(tl, count)) };
         }
     }
 

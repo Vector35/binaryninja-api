@@ -4,10 +4,10 @@ use crate::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
 use crate::function::Function;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::string::{BnStrCompatible, BnString};
-use crate::types::{ComponentReferencedType};
+use crate::types::ComponentReferencedType;
 
-use binaryninjacore_sys::*;
 use crate::variable::DataVariable;
+use binaryninjacore_sys::*;
 
 pub struct ComponentBuilder {
     bv: *mut BNBinaryView,

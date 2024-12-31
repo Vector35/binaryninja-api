@@ -1,7 +1,7 @@
-use std::time::SystemTime;
 use binaryninja::metadata::Metadata;
 use binaryninja::project::Project;
 use binaryninja::rc::Ref;
+use std::time::SystemTime;
 
 fn unique_project(name: &str) -> String {
     format!("{}/{}", std::env::temp_dir().to_str().unwrap(), name)
@@ -179,7 +179,7 @@ fn modify_project() {
             SystemTime::UNIX_EPOCH,
         )
     }
-        .unwrap();
+    .unwrap();
     let file_3_data = b"data\x023";
     let file_3_desc = "!";
     let _file_3 = project
@@ -206,7 +206,7 @@ fn modify_project() {
             |_, _| true,
         )
     }
-        .unwrap();
+    .unwrap();
     let file_5_desc = "desc";
     let _file_5 = project
         .create_file_from_path(&input_file_1, None, "file_5", file_5_desc)
@@ -224,7 +224,7 @@ fn modify_project() {
             file_6_time,
         )
     }
-        .unwrap();
+    .unwrap();
     let file_7 = project
         .create_file_from_path_with_progress(
             &input_file_2,
@@ -245,7 +245,7 @@ fn modify_project() {
             |_, _| true,
         )
     }
-        .unwrap();
+    .unwrap();
 
     assert_eq!(project.files().unwrap().len(), 10);
     let file_a = project.file_by_id(file_8.id()).unwrap();

@@ -2,12 +2,12 @@ use core::ffi;
 
 use binaryninjacore_sys::*;
 
+use super::HighLevelILLiftedInstruction;
 use crate::architecture::CoreIntrinsic;
 use crate::function::Function;
 use crate::rc::Ref;
 use crate::string::{BnStrCompatible, BnString};
 use crate::variable::{ConstantData, SSAVariable, Variable};
-use super::HighLevelILLiftedInstruction;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GotoLabel {

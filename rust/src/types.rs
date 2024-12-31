@@ -27,20 +27,20 @@ use crate::{
     string::{BnStrCompatible, BnString},
 };
 
-use lazy_static::lazy_static;
-use std::{
-    borrow::Cow,
-    collections::HashSet,
-    ffi::{CStr, c_char},
-    fmt::{Debug, Display, Formatter},
-    hash::{Hash, Hasher},
-    iter::{IntoIterator},
-    sync::Mutex,
-};
-use std::num::NonZeroUsize;
 use crate::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use crate::string::raw_to_string;
 use crate::variable::{Variable, VariableSourceType};
+use lazy_static::lazy_static;
+use std::num::NonZeroUsize;
+use std::{
+    borrow::Cow,
+    collections::HashSet,
+    ffi::{c_char, CStr},
+    fmt::{Debug, Display, Formatter},
+    hash::{Hash, Hasher},
+    iter::IntoIterator,
+    sync::Mutex,
+};
 
 pub type ReferenceType = BNReferenceType;
 pub type TypeClass = BNTypeClass;
@@ -124,7 +124,7 @@ impl TypeBuilder {
     pub fn is_floating_point(&self) -> bool {
         unsafe { BNIsTypeBuilderFloatingPoint(self.handle) }
     }
-    
+
     pub fn child_type(&self) -> Option<Conf<Ref<Type>>> {
         let raw_target = unsafe { BNGetTypeBuilderChildType(self.handle) };
         match raw_target.type_.is_null() {
@@ -167,7 +167,7 @@ impl TypeBuilder {
                     BNFreeTypeParameterList(raw_parameters_ptr, count);
                     Some(parameters)
                 }
-                true => None
+                true => None,
             }
         }
     }
@@ -459,7 +459,7 @@ impl Type {
     pub fn to_builder(&self) -> TypeBuilder {
         TypeBuilder::new(self)
     }
-    
+
     pub fn type_class(&self) -> TypeClass {
         unsafe { BNGetTypeClass(self.handle) }
     }
@@ -532,7 +532,7 @@ impl Type {
                     //BNFreeTypeParameterList(raw_parameters_ptr, count);
                     Some(parameters)
                 }
-                true => None
+                true => None,
             }
         }
     }
@@ -669,7 +669,7 @@ impl Type {
     }
 
     /// ## NOTE
-    /// 
+    ///
     /// The C/C++ APIs require an associated architecture, but in the core we only query the default_int_size if the given width is 0.
     ///
     /// For simplicity's sake, that convention isn't followed, and you can query [`Architecture::default_integer_size`] if you need to.
@@ -739,7 +739,11 @@ impl Type {
             };
 
         let mut stack_adjust = Conf::new(0, MIN_CONFIDENCE).into();
-        let mut raw_parameters = parameters.iter().cloned().map(Into::into).collect::<Vec<_>>();
+        let mut raw_parameters = parameters
+            .iter()
+            .cloned()
+            .map(Into::into)
+            .collect::<Vec<_>>();
         let reg_stack_adjust_regs = std::ptr::null_mut();
         let reg_stack_adjust_values = std::ptr::null_mut();
 
@@ -785,11 +789,16 @@ impl Type {
         let mut variable_arguments = Conf::new(variable_arguments, MAX_CONFIDENCE).into();
         let mut can_return = Conf::new(true, MIN_CONFIDENCE).into();
         let mut pure = Conf::new(false, MIN_CONFIDENCE).into();
-        
-        let mut raw_calling_convention: BNCallingConventionWithConfidence = calling_convention.into().into();
-        
+
+        let mut raw_calling_convention: BNCallingConventionWithConfidence =
+            calling_convention.into().into();
+
         let mut stack_adjust = stack_adjust.into();
-        let mut raw_parameters = parameters.iter().cloned().map(Into::into).collect::<Vec<_>>();
+        let mut raw_parameters = parameters
+            .iter()
+            .cloned()
+            .map(Into::into)
+            .collect::<Vec<_>>();
 
         // TODO: Update type signature and include these (will be a breaking change)
         let reg_stack_adjust_regs = std::ptr::null_mut();
@@ -1071,7 +1080,7 @@ impl From<BNFunctionParameter> for FunctionParameter {
         } else {
             unsafe { BnString::from_raw(value.name) }.to_string()
         };
-        
+
         Self {
             ty: Conf::new(
                 unsafe { Type::ref_from_raw(value.type_) },
@@ -1133,14 +1142,17 @@ impl From<FunctionParameter> for BNFunctionParameter {
 impl CoreArrayProvider for (&str, Variable, &Type) {
     type Raw = BNVariableNameAndType;
     type Context = ();
-    type Wrapped<'a> = (&'a str, Variable, &'a Type) where Self: 'a;
+    type Wrapped<'a>
+        = (&'a str, Variable, &'a Type)
+    where
+        Self: 'a;
 }
 
 unsafe impl CoreArrayProviderInner for (&str, Variable, &Type) {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeVariableNameAndTypeList(raw, count)
     }
-    
+
     unsafe fn wrap_raw<'a>(
         raw: &'a Self::Raw,
         _context: &'a Self::Context,
@@ -1248,7 +1260,8 @@ impl EnumerationBuilder {
         unsafe {
             let mut count = 0;
             let members_raw_ptr = BNGetEnumerationBuilderMembers(self.handle, &mut count);
-            let members_raw: &[BNEnumerationMember] = std::slice::from_raw_parts(members_raw_ptr, count);
+            let members_raw: &[BNEnumerationMember] =
+                std::slice::from_raw_parts(members_raw_ptr, count);
             let members = members_raw.iter().copied().map(Into::into).collect();
             BNFreeEnumerationMemberList(members_raw_ptr, count);
             members
@@ -1297,7 +1310,8 @@ impl Enumeration {
         unsafe {
             let mut count = 0;
             let members_raw_ptr = BNGetEnumerationMembers(self.handle, &mut count);
-            let members_raw: &[BNEnumerationMember] = std::slice::from_raw_parts(members_raw_ptr, count);
+            let members_raw: &[BNEnumerationMember] =
+                std::slice::from_raw_parts(members_raw_ptr, count);
             let members = members_raw.iter().copied().map(Into::into).collect();
             BNFreeEnumerationMemberList(members_raw_ptr, count);
             members
@@ -1365,7 +1379,7 @@ impl StructureBuilder {
         debug_assert!(!handle.is_null());
         Self { handle }
     }
-    
+
     pub fn finalize(&self) -> Ref<Structure> {
         unsafe { Structure::ref_from_raw(BNFinalizeStructureBuilder(self.handle)) }
     }
@@ -1490,7 +1504,7 @@ impl StructureBuilder {
         }
         self
     }
-    
+
     pub fn width(&self) -> u64 {
         unsafe { BNGetStructureBuilderWidth(self.handle) }
     }
@@ -1517,14 +1531,15 @@ impl StructureBuilder {
 
     pub fn base_structures(&self) -> Option<Vec<BaseStructure>> {
         let mut count = 0usize;
-        let bases_raw_ptr = unsafe { BNGetBaseStructuresForStructureBuilder(self.handle, &mut count) };
+        let bases_raw_ptr =
+            unsafe { BNGetBaseStructuresForStructureBuilder(self.handle, &mut count) };
         match bases_raw_ptr.is_null() {
             false => {
                 let bases_raw = unsafe { std::slice::from_raw_parts(bases_raw_ptr, count) };
                 let bases = bases_raw.iter().copied().map(Into::into).collect();
                 unsafe { BNFreeBaseStructureList(bases_raw_ptr, count) };
                 Some(bases)
-            },
+            }
             true => None,
         }
     }
@@ -1544,7 +1559,7 @@ impl StructureBuilder {
             .iter()
             .position(|member| member.offset == offset)
     }
-    
+
     pub fn clear_members(&self) {
         let len = self.members().len();
         for idx in (0..len).rev() {
@@ -1651,7 +1666,7 @@ impl Structure {
                     let members = members_raw.iter().map(Into::into).collect();
                     BNFreeStructureMemberList(members_raw_ptr, count);
                     Some(members)
-                },
+                }
                 true => None,
             }
         }
@@ -1667,7 +1682,7 @@ impl Structure {
                 let bases = bases_raw.iter().copied().map(Into::into).collect();
                 unsafe { BNFreeBaseStructureList(bases_raw_ptr, count) };
                 Some(bases)
-            },
+            }
             true => None,
         }
     }
@@ -1788,7 +1803,7 @@ unsafe impl CoreArrayProviderInner for StructureMember {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeStructureMemberList(raw, count)
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Self::from(raw)
     }
@@ -1882,7 +1897,11 @@ impl NamedTypeReference {
     /// the core will do the id stuff for you.
     pub fn new(type_class: NamedTypeReferenceClass, mut name: QualifiedName) -> Ref<Self> {
         unsafe {
-            Self::ref_from_raw(BNCreateNamedType(type_class, std::ptr::null() as *const _, &mut name.0))
+            Self::ref_from_raw(BNCreateNamedType(
+                type_class,
+                std::ptr::null() as *const _,
+                &mut name.0,
+            ))
         }
     }
 
@@ -1899,7 +1918,11 @@ impl NamedTypeReference {
         let type_id = type_id.into_bytes_with_nul();
 
         unsafe {
-            Self::ref_from_raw(BNCreateNamedType(type_class, type_id.as_ref().as_ptr() as _, &mut name.0))
+            Self::ref_from_raw(BNCreateNamedType(
+                type_class,
+                type_id.as_ref().as_ptr() as _,
+                &mut name.0,
+            ))
         }
     }
 
@@ -2093,7 +2116,7 @@ unsafe impl CoreArrayProviderInner for QualifiedName {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTypeNameList(raw, count);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         std::mem::transmute(raw)
     }
@@ -2170,7 +2193,7 @@ unsafe impl CoreArrayProviderInner for QualifiedNameTypeAndId {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTypeIdList(raw, count);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         // TODO: Oh my god what is wrong with all of you people
         std::mem::transmute(raw)
@@ -2189,13 +2212,16 @@ pub struct NameAndType {
 
 impl NameAndType {
     pub fn new(name: impl Into<String>, ty: Conf<Ref<Type>>) -> Self {
-        Self { name: name.into(), ty}
+        Self {
+            name: name.into(),
+            ty,
+        }
     }
 }
 
 impl From<BNNameAndType> for NameAndType {
     fn from(value: BNNameAndType) -> Self {
-        Self  {
+        Self {
             name: unsafe { BnString::from_raw(value.name) }.to_string(),
             ty: Conf::new(
                 unsafe { Type::ref_from_raw(value.type_) },
@@ -2207,7 +2233,7 @@ impl From<BNNameAndType> for NameAndType {
 
 impl From<&BNNameAndType> for NameAndType {
     fn from(value: &BNNameAndType) -> Self {
-        Self  {
+        Self {
             // TODO: I dislike using this function here.
             name: raw_to_string(value.name as *mut _).unwrap(),
             ty: Conf::new(
@@ -2239,7 +2265,7 @@ unsafe impl CoreArrayProviderInner for NameAndType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeNameAndTypeList(raw, count);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         raw.into()
     }

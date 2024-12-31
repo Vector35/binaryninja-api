@@ -228,7 +228,7 @@ unsafe impl CoreArrayProviderInner for TagReference {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTagReferences(raw, count)
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         raw.into()
     }

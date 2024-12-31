@@ -19,9 +19,12 @@ use crate::architecture::Register as ArchReg;
 use crate::architecture::{
     Flag, FlagClass, FlagCondition, FlagGroup, FlagRole, FlagWrite, Intrinsic,
 };
-use binaryninjacore_sys::{BNAddLowLevelILLabelForAddress, BNLowLevelILOperation};
 use crate::function::Location;
-use crate::llil::{Expression, ExpressionResultType, LowLevelILFunction, LiftedExpr, LiftedNonSSA, Lifter, Mutable, NonSSA, Register, ValueExpr, VoidExpr};
+use crate::llil::{
+    Expression, ExpressionResultType, LiftedExpr, LiftedNonSSA, Lifter, LowLevelILFunction,
+    Mutable, NonSSA, Register, ValueExpr, VoidExpr,
+};
+use binaryninjacore_sys::{BNAddLowLevelILLabelForAddress, BNLowLevelILOperation};
 use binaryninjacore_sys::{BNLowLevelILLabel, BNRegisterOrConstant};
 
 pub trait Liftable<'func, A: 'func + Architecture> {
@@ -400,8 +403,12 @@ where
     let class_id = class.map(|c| c.id()).unwrap_or(0);
 
     unsafe {
-        let expr_idx =
-            BNGetDefaultArchitectureFlagConditionLowLevelIL(arch.as_ref().handle, cond, class_id, il.handle);
+        let expr_idx = BNGetDefaultArchitectureFlagConditionLowLevelIL(
+            arch.as_ref().handle,
+            cond,
+            class_id,
+            il.handle,
+        );
 
         Expression::new(il, expr_idx)
     }
@@ -606,9 +613,7 @@ where
     pub fn from_expr(expr: Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R>) -> Self {
         use binaryninjacore_sys::BNGetLowLevelILByIndex;
 
-        let instr = unsafe {
-            BNGetLowLevelILByIndex(expr.function.handle, expr.expr_idx)
-        };
+        let instr = unsafe { BNGetLowLevelILByIndex(expr.function.handle, expr.expr_idx) };
 
         ExpressionBuilder {
             function: expr.function,
@@ -619,7 +624,7 @@ where
             op2: instr.operands[1],
             op3: instr.operands[2],
             op4: instr.operands[3],
-            _ty: PhantomData
+            _ty: PhantomData,
         }
     }
 
@@ -999,7 +1004,7 @@ where
                 &mut raw_false_label,
             )
         };
-        
+
         // Update the labels after they have been resolved.
         *true_label = Label::from(raw_true_label);
         *false_label = Label::from(raw_false_label);
@@ -1453,28 +1458,30 @@ where
 
     pub fn label_for_address<L: Into<Location>>(&self, loc: L) -> Option<Label> {
         use binaryninjacore_sys::BNGetLowLevelILLabelForAddress;
-        
+
         let loc: Location = loc.into();
         let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
-        let raw_label = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
+        let raw_label =
+            unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
         match raw_label.is_null() {
             false => Some(unsafe { Label::from(*raw_label) }),
-            true => None
+            true => None,
         }
     }
-    
+
     /// Call this after updating the label through an il operation or via [`Self::mark_label`].
-    /// 
+    ///
     /// If you retrieved a label via [`Self::label_for_address`] than you very likely want to use this.
     pub fn update_label_for_address<L: Into<Location>>(&self, loc: L, label: Label) {
         use binaryninjacore_sys::BNGetLowLevelILLabelForAddress;
-        
+
         let loc: Location = loc.into();
         let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
         // Add the label into the label map
         unsafe { BNAddLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
         // Retrieve a pointer to the label in the map
-        let raw_label = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
+        let raw_label =
+            unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
         // We should always have a valid label here
         assert!(!raw_label.is_null(), "Failed to add label for address!");
         // Update the label in the map with `label`
@@ -1501,7 +1508,7 @@ pub struct Label {
 impl Label {
     pub fn new() -> Self {
         use binaryninjacore_sys::BNLowLevelILInitLabel;
-        
+
         let mut raw_label = BNLowLevelILLabel::default();
         unsafe { BNLowLevelILInitLabel(&mut raw_label) };
         raw_label.into()

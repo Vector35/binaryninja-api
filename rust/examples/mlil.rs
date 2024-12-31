@@ -16,11 +16,11 @@ fn main() {
 
     for func in &bv.functions() {
         println!("{}:", func.symbol().full_name());
-        
+
         let Ok(il) = func.medium_level_il() else {
             continue;
         };
-        
+
         // Get the SSA form for this function
         let il = il.ssa_form();
 
@@ -44,8 +44,8 @@ fn main() {
 
 mod visitor {
     use binaryninja::architecture::Intrinsic;
-    use binaryninja::mlil::{MediumLevelILFunction, MediumLevelILLiftedInstruction};
     use binaryninja::mlil::MediumLevelILLiftedOperand::*;
+    use binaryninja::mlil::{MediumLevelILFunction, MediumLevelILLiftedInstruction};
     use binaryninja::variable::Variable;
 
     fn print_indent(indent: usize) {
@@ -63,11 +63,11 @@ mod visitor {
     pub(crate) fn print_il_expr(instr: &MediumLevelILLiftedInstruction, mut indent: usize) {
         print_indent(indent);
         print_operation(instr);
-        
+
         println!();
-        
+
         indent += 1;
-        
+
         for (_name, operand) in instr.operands() {
             match operand {
                 Int(int) => {

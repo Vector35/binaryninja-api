@@ -12,9 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ffi::c_void;
-use binaryninjacore_sys::{BNBeginUndoActions, BNCloseFile, BNCommitUndoActions, BNCreateDatabase, BNCreateFileMetadata, BNFileMetadata, BNFileMetadataGetSessionId, BNFreeFileMetadata, BNGetCurrentOffset, BNGetCurrentView, BNGetFileMetadataDatabase, BNGetFileViewOfType, BNGetFilename, BNGetProjectFile, BNIsAnalysisChanged, BNIsBackedByDatabase, BNIsFileModified, BNMarkFileModified, BNMarkFileSaved, BNNavigate, BNNewFileReference, BNOpenDatabaseForConfiguration, BNOpenExistingDatabase, BNRedo, BNRevertUndoActions, BNSaveAutoSnapshot, BNSetFilename, BNUndo};
+use binaryninjacore_sys::{
+    BNBeginUndoActions, BNCloseFile, BNCommitUndoActions, BNCreateDatabase, BNCreateFileMetadata,
+    BNFileMetadata, BNFileMetadataGetSessionId, BNFreeFileMetadata, BNGetCurrentOffset,
+    BNGetCurrentView, BNGetFileMetadataDatabase, BNGetFileViewOfType, BNGetFilename,
+    BNGetProjectFile, BNIsAnalysisChanged, BNIsBackedByDatabase, BNIsFileModified,
+    BNMarkFileModified, BNMarkFileSaved, BNNavigate, BNNewFileReference,
+    BNOpenDatabaseForConfiguration, BNOpenExistingDatabase, BNRedo, BNRevertUndoActions,
+    BNSaveAutoSnapshot, BNSetFilename, BNUndo,
+};
 use binaryninjacore_sys::{BNCreateDatabaseWithProgress, BNOpenExistingDatabaseWithProgress};
+use std::ffi::c_void;
 
 use crate::binaryview::BinaryView;
 use crate::database::Database;
@@ -57,11 +65,9 @@ impl FileMetadata {
             BNCloseFile(self.handle);
         }
     }
-    
+
     pub fn session_id(&self) -> usize {
-        unsafe {
-            BNFileMetadataGetSessionId(self.handle)
-        }
+        unsafe { BNFileMetadataGetSessionId(self.handle) }
     }
 
     pub fn filename(&self) -> BnString {
@@ -199,12 +205,12 @@ impl FileMetadata {
     ) -> bool {
         let filename = filename.into_bytes_with_nul();
         let filename_ptr = filename.as_ref().as_ptr() as *mut _;
-        
+
         // Databases are created with the root view (Raw).
         let Some(raw_view) = self.get_view_of_type("Raw") else {
             return false;
         };
-        
+
         match progress_func {
             None => unsafe { BNCreateDatabase(raw_view.handle, filename_ptr, ptr::null_mut()) },
             Some(func) => unsafe {
@@ -224,13 +230,8 @@ impl FileMetadata {
         let Some(raw_view) = self.get_view_of_type("Raw") else {
             return false;
         };
-        
-        unsafe {
-            BNSaveAutoSnapshot(
-                raw_view.handle,
-                ptr::null_mut() as *mut _,
-            )
-        }
+
+        unsafe { BNSaveAutoSnapshot(raw_view.handle, ptr::null_mut() as *mut _) }
     }
 
     pub fn open_database_for_configuration<S: BnStrCompatible>(

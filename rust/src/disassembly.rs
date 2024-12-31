@@ -287,7 +287,7 @@ unsafe impl CoreArrayProviderInner for InstructionTextToken {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeInstructionText(raw, count)
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         // TODO: This MUST be removed.
         std::mem::transmute(raw)
@@ -303,7 +303,7 @@ unsafe impl CoreArrayProviderInner for Array<InstructionTextToken> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeInstructionTextLines(raw, count)
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         // TODO: This is insane.
         std::mem::ManuallyDrop::new(Self::new(raw.tokens, raw.count, ()))
@@ -396,7 +396,9 @@ impl From<&Vec<&str>> for DisassemblyTextLine {
     fn from(string_tokens: &Vec<&str>) -> Self {
         let mut tokens: Box<[BNInstructionTextToken]> = string_tokens
             .iter()
-            .map(|&token| InstructionTextToken::new(token, InstructionTextTokenContents::Text).into_raw())
+            .map(|&token| {
+                InstructionTextToken::new(token, InstructionTextTokenContents::Text).into_raw()
+            })
             .collect();
 
         // let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() };  // Can't use for now...still a rust nighly feature
@@ -480,7 +482,7 @@ unsafe impl CoreArrayProviderInner for DisassemblyTextLine {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeDisassemblyTextLines(raw, count)
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         // TODO: This MUST be removed.
         std::mem::transmute(raw)

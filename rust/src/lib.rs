@@ -131,15 +131,16 @@ pub mod binaryview;
 pub mod binarywriter;
 pub mod callingconvention;
 pub mod command;
+pub mod component;
+pub mod confidence;
 pub mod custombinaryview;
 pub mod database;
 pub mod databuffer;
 pub mod debuginfo;
 pub mod demangle;
 pub mod disassembly;
-pub mod enterprise;
-pub mod component;
 pub mod downloadprovider;
+pub mod enterprise;
 pub mod externallibrary;
 pub mod fileaccessor;
 pub mod filemetadata;
@@ -166,25 +167,24 @@ pub mod string;
 pub mod symbol;
 pub mod tags;
 pub mod templatesimplifier;
-pub mod typelibrary;
 pub mod typearchive;
+pub mod typelibrary;
 pub mod types;
 pub mod update;
-pub mod workflow;
 pub mod variable;
-pub mod confidence;
+pub mod workflow;
 
-use std::collections::HashMap;
-use std::ffi::{c_char, c_void, CStr};
-use std::path::PathBuf;
+use crate::filemetadata::FileMetadata;
+use crate::function::Function;
 use binaryninjacore_sys::*;
 use binaryview::BinaryView;
 use metadata::Metadata;
 use metadata::MetadataType;
+use std::collections::HashMap;
+use std::ffi::{c_char, c_void, CStr};
+use std::path::PathBuf;
 use string::BnStrCompatible;
 use string::IntoJson;
-use crate::filemetadata::FileMetadata;
-use crate::function::Function;
 // Commented out to suppress unused warnings
 // const BN_MAX_INSTRUCTION_LENGTH: u64 = 256;
 // const BN_DEFAULT_INSTRUCTION_LENGTH: u64 = 16;
@@ -203,9 +203,9 @@ use crate::function::Function;
 // const BN_HEURISTIC_CONFIDENCE: u8 = 192;
 
 pub use binaryninjacore_sys::BNBranchType as BranchType;
+pub use binaryninjacore_sys::BNDataFlowQueryOption as DataFlowQueryOption;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
 pub use binaryninjacore_sys::BNILBranchDependence as ILBranchDependence;
-pub use binaryninjacore_sys::BNDataFlowQueryOption as DataFlowQueryOption;
 
 pub const BN_FULL_CONFIDENCE: u8 = u8::MAX;
 pub const BN_INVALID_EXPR: usize = usize::MAX;
@@ -222,26 +222,17 @@ unsafe extern "C" fn cb_progress_func<F: FnMut(usize, usize) -> bool>(
     closure(progress, total)
 }
 
-
-unsafe extern "C" fn cb_progress_nop(
-    _ctxt: *mut c_void,
-    _arg1: usize,
-    _arg2: usize
-) -> bool {
+unsafe extern "C" fn cb_progress_nop(_ctxt: *mut c_void, _arg1: usize, _arg2: usize) -> bool {
     true
 }
 
-
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
-pub fn load<S>(
-    filename: S,
-) -> Option<rc::Ref<BinaryView>>
+pub fn load<S>(filename: S) -> Option<rc::Ref<BinaryView>>
 where
     S: BnStrCompatible,
 {
     let filename = filename.into_bytes_with_nul();
     let options = "\x00";
-
 
     let handle = unsafe {
         BNLoadFilename(
@@ -260,10 +251,7 @@ where
     }
 }
 
-pub fn load_with_progress<S, F>(
-    filename: S,
-    mut progress: F,
-) -> Option<rc::Ref<BinaryView>>
+pub fn load_with_progress<S, F>(filename: S, mut progress: F) -> Option<rc::Ref<BinaryView>>
 where
     S: BnStrCompatible,
     F: FnMut(usize, usize) -> bool,
@@ -378,7 +366,7 @@ where
 
     let progress_ctx = match progress {
         Some(mut x) => &mut x as *mut F as *mut c_void,
-        None => std::ptr::null_mut()
+        None => std::ptr::null_mut(),
     };
 
     let handle = unsafe {
@@ -463,7 +451,7 @@ where
 
     let progress_ctx = match progress {
         Some(mut x) => &mut x as *mut F as *mut c_void,
-        None => std::ptr::null_mut()
+        None => std::ptr::null_mut(),
     };
 
     let handle = unsafe {
@@ -505,9 +493,7 @@ pub fn bundled_plugin_directory() -> Result<PathBuf, ()> {
 
 pub fn set_bundled_plugin_directory<S: string::BnStrCompatible>(new_dir: S) {
     unsafe {
-        BNSetBundledPluginDirectory(
-            new_dir.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-        )
+        BNSetBundledPluginDirectory(new_dir.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
     };
 }
 
@@ -560,7 +546,7 @@ pub fn path_relative_to_bundled_plugin_directory<S: string::BnStrCompatible>(
 ) -> Result<PathBuf, ()> {
     let s: *mut c_char = unsafe {
         BNGetPathRelativeToBundledPluginDirectory(
-            path.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+            path.into_bytes_with_nul().as_ref().as_ptr() as *const c_char
         )
     };
     if s.is_null() {
@@ -576,7 +562,7 @@ pub fn path_relative_to_user_plugin_directory<S: string::BnStrCompatible>(
 ) -> Result<PathBuf, ()> {
     let s: *mut c_char = unsafe {
         BNGetPathRelativeToUserPluginDirectory(
-            path.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+            path.into_bytes_with_nul().as_ref().as_ptr() as *const c_char
         )
     };
     if s.is_null() {
@@ -590,7 +576,7 @@ pub fn path_relative_to_user_plugin_directory<S: string::BnStrCompatible>(
 pub fn path_relative_to_user_directory<S: string::BnStrCompatible>(path: S) -> Result<PathBuf, ()> {
     let s: *mut c_char = unsafe {
         BNGetPathRelativeToUserDirectory(
-            path.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+            path.into_bytes_with_nul().as_ref().as_ptr() as *const c_char
         )
     };
     if s.is_null() {
@@ -622,8 +608,7 @@ pub trait ObjectDestructor: 'static + Sync + Sized {
     fn destruct_file_metadata(&self, _metadata: &FileMetadata) {}
     fn destruct_function(&self, _func: &Function) {}
 
-    unsafe extern "C" fn cb_destruct_binary_view(ctxt: *mut c_void, view: *mut BNBinaryView)
-    {
+    unsafe extern "C" fn cb_destruct_binary_view(ctxt: *mut c_void, view: *mut BNBinaryView) {
         ffi_wrap!("ObjectDestructor::destruct_view", {
             let view_type = &*(ctxt as *mut Self);
             let view = BinaryView { handle: view };
@@ -631,8 +616,7 @@ pub trait ObjectDestructor: 'static + Sync + Sized {
         })
     }
 
-    unsafe extern "C" fn cb_destruct_file_metadata(ctxt: *mut c_void, file: *mut BNFileMetadata)
-    {
+    unsafe extern "C" fn cb_destruct_file_metadata(ctxt: *mut c_void, file: *mut BNFileMetadata) {
         ffi_wrap!("ObjectDestructor::destruct_file_metadata", {
             let view_type = &*(ctxt as *mut Self);
             let file = FileMetadata::from_raw(file);
@@ -640,15 +624,14 @@ pub trait ObjectDestructor: 'static + Sync + Sized {
         })
     }
 
-    unsafe extern "C" fn cb_destruct_function(ctxt: *mut c_void, func: *mut BNFunction)
-    {
+    unsafe extern "C" fn cb_destruct_function(ctxt: *mut c_void, func: *mut BNFunction) {
         ffi_wrap!("ObjectDestructor::destruct_function", {
             let view_type = &*(ctxt as *mut Self);
             let func = Function { handle: func };
             view_type.destruct_function(&func);
         })
     }
-    
+
     unsafe fn as_callbacks(&'static mut self) -> BNObjectDestructionCallbacks {
         BNObjectDestructionCallbacks {
             context: std::mem::transmute(&self),
@@ -657,11 +640,11 @@ pub trait ObjectDestructor: 'static + Sync + Sized {
             destructFunction: Some(Self::cb_destruct_function),
         }
     }
-    
+
     fn register(&'static mut self) {
         unsafe { BNRegisterObjectDestructionCallbacks(&mut self.as_callbacks()) };
     }
-    
+
     fn unregister(&'static mut self) {
         unsafe { BNUnregisterObjectDestructionCallbacks(&mut self.as_callbacks()) };
     }
@@ -724,9 +707,7 @@ pub fn product_type() -> string::BnString {
 }
 
 pub fn license_expiration_time() -> std::time::SystemTime {
-    let m = std::time::Duration::from_secs(unsafe {
-        BNGetLicenseExpirationTime()
-    });
+    let m = std::time::Duration::from_secs(unsafe { BNGetLicenseExpirationTime() });
     std::time::UNIX_EPOCH + m
 }
 
@@ -766,17 +747,13 @@ pub fn plugin_ui_abi_minimum_version() -> u32 {
 
 pub fn add_required_plugin_dependency<S: string::BnStrCompatible>(name: S) {
     unsafe {
-        BNAddRequiredPluginDependency(
-            name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-        )
+        BNAddRequiredPluginDependency(name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
     };
 }
 
 pub fn add_optional_plugin_dependency<S: string::BnStrCompatible>(name: S) {
     unsafe {
-        BNAddOptionalPluginDependency(
-            name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-        )
+        BNAddOptionalPluginDependency(name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
     };
 }
 

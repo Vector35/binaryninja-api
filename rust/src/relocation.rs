@@ -1,7 +1,7 @@
 use crate::rc::Guard;
 use crate::string::BnStrCompatible;
 use crate::{
-    architecture::{CoreArchitecture},
+    architecture::CoreArchitecture,
     binaryview::BinaryView,
     llil,
     rc::{CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable},
@@ -228,7 +228,7 @@ unsafe impl CoreArrayProviderInner for Relocation {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeRelocationList(raw, count);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Relocation(*raw), &())
     }
@@ -501,7 +501,9 @@ where
 
     let name = name.into_bytes_with_nul();
 
-    let raw = Box::leak(Box::new(MaybeUninit::<RelocationHandlerBuilder<_>>::zeroed()));
+    let raw = Box::leak(Box::new(
+        MaybeUninit::<RelocationHandlerBuilder<_>>::zeroed(),
+    ));
     let mut custom_handler = BNCustomRelocationHandler {
         context: raw.as_mut_ptr() as *mut _,
         freeObject: Some(cb_free::<R>),

@@ -18,8 +18,8 @@ use binaryninjacore_sys::BNLowLevelILFunction;
 use binaryninjacore_sys::BNNewLowLevelILFunctionReference;
 
 use std::borrow::Borrow;
-use std::marker::PhantomData;
 use std::hash::{Hash, Hasher};
+use std::marker::PhantomData;
 
 use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
@@ -80,7 +80,7 @@ where
             _form: PhantomData,
         }
     }
-    
+
     pub(crate) unsafe fn ref_from_raw(
         borrower: A::Handle,
         handle: *mut BNLowLevelILFunction,
@@ -168,10 +168,7 @@ impl LowLevelILFunction<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
     // TODO: Document what happens when you pass None for `source_func`.
     // TODO: Doing so would construct a LowLevelILFunction with no basic blocks
     // TODO: Document why you would want to do that.
-    pub fn new(
-        arch: CoreArchitecture,
-        source_func: Option<Function>,
-    ) -> Ref<Self> {
+    pub fn new(arch: CoreArchitecture, source_func: Option<Function>) -> Ref<Self> {
         use binaryninjacore_sys::BNCreateLowLevelILFunction;
 
         let handle = unsafe {
@@ -180,7 +177,7 @@ impl LowLevelILFunction<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
                 None => BNCreateLowLevelILFunction(arch.handle, std::ptr::null_mut()),
             }
         };
-        
+
         // BNCreateLowLevelILFunction should always return a valid object.
         assert!(!handle.is_null());
 
@@ -234,12 +231,20 @@ where
     }
 }
 
-unsafe impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Send for LowLevelILFunction<A, M, F> {}
-unsafe impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Sync for LowLevelILFunction<A, M, F> {}
+unsafe impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Send
+    for LowLevelILFunction<A, M, F>
+{
+}
+unsafe impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Sync
+    for LowLevelILFunction<A, M, F>
+{
+}
 
 impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Eq for LowLevelILFunction<A, M, F> {}
 
-impl<A: Architecture, M: FunctionMutability, F: FunctionForm> PartialEq for LowLevelILFunction<A, M, F> {
+impl<A: Architecture, M: FunctionMutability, F: FunctionForm> PartialEq
+    for LowLevelILFunction<A, M, F>
+{
     fn eq(&self, rhs: &Self) -> bool {
         self.get_function().eq(&rhs.get_function())
     }

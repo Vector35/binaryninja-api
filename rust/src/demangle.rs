@@ -19,7 +19,7 @@ use std::ffi::{c_char, c_void, CStr};
 
 use crate::architecture::CoreArchitecture;
 use crate::binaryview::BinaryView;
-use crate::string::{BnStrCompatible, BnString, raw_to_string};
+use crate::string::{raw_to_string, BnStrCompatible, BnString};
 use crate::types::{QualifiedName, Type};
 
 use crate::rc::*;
@@ -76,14 +76,11 @@ pub fn demangle_generic<S: BnStrCompatible>(
             .strings()
             .iter()
             .map(|str| str.to_string())
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>(),
     ))
 }
 
-pub fn demangle_llvm<S: BnStrCompatible>(
-    mangled_name: S,
-    simplify: bool,
-) -> Result<Vec<String>> {
+pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Result<Vec<String>> {
     let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
     let mut out_name: *mut *mut std::os::raw::c_char = std::ptr::null_mut();
@@ -269,19 +266,27 @@ impl Demangler {
 
         let view_ptr = match view {
             Some(v) => v.handle,
-            None => std::ptr::null_mut()
+            None => std::ptr::null_mut(),
         };
 
-        if !unsafe { BNDemanglerDemangle(self.handle, arch.handle, name_bytes.as_ref().as_ptr() as *const _, &mut out_type, &mut out_var_name, view_ptr) } {
+        if !unsafe {
+            BNDemanglerDemangle(
+                self.handle,
+                arch.handle,
+                name_bytes.as_ref().as_ptr() as *const _,
+                &mut out_type,
+                &mut out_var_name,
+                view_ptr,
+            )
+        } {
             return Err(());
         }
 
-        let var_type =
-            if out_type.is_null() {
-                None
-            } else {
-                Some(unsafe { Type::ref_from_raw(out_type) })
-            };
+        let var_type = if out_type.is_null() {
+            None
+        } else {
+            Some(unsafe { Type::ref_from_raw(out_type) })
+        };
         let var_name = QualifiedName(out_var_name);
 
         Ok((var_type, var_name))
@@ -318,28 +323,33 @@ impl Demangler {
         {
             ffi_wrap!("CustomDemangler::cb_is_mangled_string", unsafe {
                 let cmd = &*(ctxt as *const C);
-                let name =
-                    if let Some(n) = raw_to_string(name) {
-                        n
-                    } else {
-                        return false;
-                    };
+                let name = if let Some(n) = raw_to_string(name) {
+                    n
+                } else {
+                    return false;
+                };
                 cmd.is_mangled_string(&name)
             })
         }
-        extern "C" fn cb_demangle<C>(ctxt: *mut c_void, arch: *mut BNArchitecture, name: *const c_char, out_type: *mut *mut BNType, out_var_name: *mut BNQualifiedName, view: *mut BNBinaryView) -> bool
+        extern "C" fn cb_demangle<C>(
+            ctxt: *mut c_void,
+            arch: *mut BNArchitecture,
+            name: *const c_char,
+            out_type: *mut *mut BNType,
+            out_var_name: *mut BNQualifiedName,
+            view: *mut BNBinaryView,
+        ) -> bool
         where
             C: CustomDemangler,
         {
             ffi_wrap!("CustomDemangler::cb_demangle", unsafe {
                 let cmd = &*(ctxt as *const C);
                 let arch = CoreArchitecture::from_raw(arch);
-                let name =
-                    if let Some(n) = raw_to_string(name) {
-                        n
-                    } else {
-                        return false;
-                    };
+                let name = if let Some(n) = raw_to_string(name) {
+                    n
+                } else {
+                    return false;
+                };
                 let view = if view.is_null() {
                     None
                 } else {
@@ -350,17 +360,16 @@ impl Demangler {
                     Ok((type_, name)) => {
                         *out_type = match type_ {
                             Some(t) => RefCountable::inc_ref(t.as_ref()).handle,
-                            None => std::ptr::null_mut()
+                            None => std::ptr::null_mut(),
                         };
                         // TODO: Need to have a better way for api-owned QNames
                         (*out_var_name).nameCount = name.0.nameCount;
                         (*out_var_name).join = BNAllocString(name.0.join);
-                        (*out_var_name).name = BNAllocStringList(name.0.name as *mut *const _, name.0.nameCount);
+                        (*out_var_name).name =
+                            BNAllocStringList(name.0.name as *mut *const _, name.0.nameCount);
                         true
-                    },
-                    Err(_) => {
-                        false
                     }
+                    Err(_) => false,
                 }
             })
         }
@@ -394,7 +403,9 @@ impl Demangler {
     }
 
     pub fn promote(demangler: &Demangler) {
-        unsafe { BNPromoteDemangler(demangler.handle); }
+        unsafe {
+            BNPromoteDemangler(demangler.handle);
+        }
     }
 }
 

@@ -1,6 +1,6 @@
-use std::ops::Range;
 use crate::basicblock::{BasicBlock, BlockContext};
 use crate::rc::Ref;
+use std::ops::Range;
 
 use super::{MediumLevelILFunction, MediumLevelILInstruction};
 
@@ -13,7 +13,8 @@ impl BlockContext for MediumLevelILBlock {
     type Iter = MediumLevelILBlockIter;
 
     fn start(&self, block: &BasicBlock<Self>) -> MediumLevelILInstruction {
-        self.function.instruction_from_instruction_idx(block.raw_start() as usize)
+        self.function
+            .instruction_from_instruction_idx(block.raw_start() as usize)
     }
 
     fn iter(&self, block: &BasicBlock<Self>) -> MediumLevelILBlockIter {

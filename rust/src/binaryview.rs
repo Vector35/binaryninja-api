@@ -14,10 +14,10 @@
 
 //! A view on binary data and queryable interface of a binary file.
 //!
-//! One key job of BinaryView is file format parsing which allows Binary Ninja to read, write, 
-//! insert, remove portions of the file given a virtual address. 
-//! 
-//! For the purposes of this documentation we define a virtual address as the memory address that 
+//! One key job of BinaryView is file format parsing which allows Binary Ninja to read, write,
+//! insert, remove portions of the file given a virtual address.
+//!
+//! For the purposes of this documentation we define a virtual address as the memory address that
 //! the various pieces of the physical file will be loaded at.
 //! TODO : Mirror the Python docs for this
 
@@ -26,11 +26,6 @@ use binaryninjacore_sys::*;
 pub use binaryninjacore_sys::BNAnalysisState as AnalysisState;
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
-use std::collections::HashMap;
-use std::ffi::{c_char, c_void};
-use std::ops::Range;
-use std::{ops, result, slice};
-use std::ptr::NonNull;
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::basicblock::BasicBlock;
 use crate::component::{Component, ComponentBuilder, IntoComponentGuid};
@@ -51,10 +46,13 @@ use crate::settings::Settings;
 use crate::symbol::{Symbol, SymbolType};
 use crate::tags::{Tag, TagType};
 use crate::typelibrary::TypeLibrary;
-use crate::types::{
-    NamedTypeReference, QualifiedName, QualifiedNameAndType, Type,
-};
+use crate::types::{NamedTypeReference, QualifiedName, QualifiedNameAndType, Type};
 use crate::Endianness;
+use std::collections::HashMap;
+use std::ffi::{c_char, c_void};
+use std::ops::Range;
+use std::ptr::NonNull;
+use std::{ops, result, slice};
 
 use crate::rc::*;
 use crate::references::{CodeReference, DataReference};
@@ -262,15 +260,11 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn original_image_base(&self) -> u64 {
-        unsafe {
-            BNGetOriginalImageBase(self.as_ref().handle)
-        }
+        unsafe { BNGetOriginalImageBase(self.as_ref().handle) }
     }
 
     fn set_original_image_base(&self, image_base: u64) {
-        unsafe {
-            BNSetOriginalImageBase(self.as_ref().handle, image_base)
-        }
+        unsafe { BNSetOriginalImageBase(self.as_ref().handle, image_base) }
     }
 
     fn end(&self) -> u64 {
@@ -398,7 +392,8 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     fn symbol_by_address(&self, addr: u64) -> Option<Ref<Symbol>> {
         unsafe {
-            let raw_sym_ptr = BNGetSymbolByAddress(self.as_ref().handle, addr, std::ptr::null_mut());
+            let raw_sym_ptr =
+                BNGetSymbolByAddress(self.as_ref().handle, addr, std::ptr::null_mut());
             match raw_sym_ptr.is_null() {
                 false => Some(Symbol::ref_from_raw(raw_sym_ptr)),
                 true => None,
@@ -466,8 +461,12 @@ pub trait BinaryViewExt: BinaryViewBase {
     fn symbols_of_type(&self, ty: SymbolType) -> Array<Symbol> {
         unsafe {
             let mut count = 0;
-            let handles =
-                BNGetSymbolsOfType(self.as_ref().handle, ty.into(), &mut count, std::ptr::null_mut());
+            let handles = BNGetSymbolsOfType(
+                self.as_ref().handle,
+                ty.into(),
+                &mut count,
+                std::ptr::null_mut(),
+            );
 
             Array::new(handles, count, ())
         }
@@ -833,53 +832,46 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     /// Adds a segment to the view.
-    /// 
-    /// NOTE: Consider using [BinaryViewExt::begin_bulk_add_segments] and [BinaryViewExt::end_bulk_add_segments] 
+    ///
+    /// NOTE: Consider using [BinaryViewExt::begin_bulk_add_segments] and [BinaryViewExt::end_bulk_add_segments]
     /// if you plan on adding a number of segments all at once, to avoid unnecessary MemoryMap updates.
     fn add_segment(&self, segment: SegmentBuilder) {
         segment.create(self.as_ref());
     }
-    
+
     // TODO: Replace with BulkModify guard.
     /// Start adding segments in bulk. Useful for adding large numbers of segments.
-    /// 
-    /// After calling this any call to [BinaryViewExt::add_segment] will be uncommited until a call to 
-    /// [BinaryViewExt::end_bulk_add_segments] 
-    /// 
+    ///
+    /// After calling this any call to [BinaryViewExt::add_segment] will be uncommited until a call to
+    /// [BinaryViewExt::end_bulk_add_segments]
+    ///
     /// If you wish to discard the uncommited segments you can call [BinaryViewExt::cancel_bulk_add_segments].
-    /// 
-    /// NOTE: This **must** be paired with a later call to [BinaryViewExt::end_bulk_add_segments] or 
+    ///
+    /// NOTE: This **must** be paired with a later call to [BinaryViewExt::end_bulk_add_segments] or
     /// [BinaryViewExt::cancel_bulk_add_segments], otherwise segments added after this call will stay uncommited.
     fn begin_bulk_add_segments(&self) {
-        unsafe {
-            BNBeginBulkAddSegments(self.as_ref().handle)
-        }
+        unsafe { BNBeginBulkAddSegments(self.as_ref().handle) }
     }
 
     // TODO: Replace with BulkModify guard.
     /// Commit all auto and user segments that have been added since the call to [Self::begin_bulk_add_segments].
-    /// 
+    ///
     /// NOTE: This **must** be paired with a prior call to [Self::begin_bulk_add_segments], otherwise this
     /// does nothing and segments are added individually.
     fn end_bulk_add_segments(&self) {
-        unsafe {
-            BNEndBulkAddSegments(self.as_ref().handle)
-        }
+        unsafe { BNEndBulkAddSegments(self.as_ref().handle) }
     }
 
     // TODO: Replace with BulkModify guard.
     /// Flushes the auto and user segments that have yet to be committed.
-    /// 
+    ///
     /// This is to be used in conjunction with [Self::begin_bulk_add_segments]
     /// and [Self::end_bulk_add_segments], where the latter will commit the segments
     /// which have been added since [Self::begin_bulk_add_segments], this function
     /// will discard them so that they do not get added to the view.
     fn cancel_bulk_add_segments(&self) {
-        unsafe {
-            BNCancelBulkAddSegments(self.as_ref().handle)
-        }
+        unsafe { BNCancelBulkAddSegments(self.as_ref().handle) }
     }
-
 
     fn add_section<S: BnStrCompatible>(&self, section: SectionBuilder<S>) {
         section.create(self.as_ref());
@@ -1061,7 +1053,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             }
         }
     }
-    
+
     fn function_start_before(&self, addr: u64) -> u64 {
         unsafe { BNGetPreviousFunctionStartBeforeAddress(self.as_ref().handle, addr) }
     }
@@ -1345,7 +1337,9 @@ pub trait BinaryViewExt: BinaryViewBase {
             // TODO: For now just construct it manually.
             let mut src = BNReferenceSource {
                 func: func.map(|f| f.handle).unwrap_or(std::ptr::null_mut()),
-                arch: func.map(|f| f.arch().handle).unwrap_or(std::ptr::null_mut()),
+                arch: func
+                    .map(|f| f.arch().handle)
+                    .unwrap_or(std::ptr::null_mut()),
                 addr,
             };
             let addresses = BNGetCodeReferencesFrom(self.as_ref().handle, &mut src, &mut count);
@@ -1505,10 +1499,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNRemoveComponentByGuid(self.as_ref().handle, path.as_ptr()) }
     }
 
-    fn data_variable_parent_components(
-        &self,
-        data_variable: &DataVariable,
-    ) -> Array<Component> {
+    fn data_variable_parent_components(&self, data_variable: &DataVariable) -> Array<Component> {
         let mut count = 0;
         let result = unsafe {
             BNGetDataVariableParentComponents(
@@ -1733,7 +1724,7 @@ impl BinaryView {
         debug_assert!(!handle.is_null());
         Self { handle }
     }
-    
+
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNBinaryView) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Ref::new(Self { handle })

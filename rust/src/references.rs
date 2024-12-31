@@ -57,7 +57,7 @@ unsafe impl CoreArrayProviderInner for CodeReference {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeCodeReferences(raw, count)
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         // TODO: Cant remove this guard until we get rid of that manual drop, INSANE!
         Guard::new(CodeReference::new(raw), &())
@@ -83,7 +83,7 @@ unsafe impl CoreArrayProviderInner for DataReference {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeDataReferences(raw)
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         DataReference { address: *raw }
     }

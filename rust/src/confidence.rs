@@ -1,11 +1,14 @@
-use std::fmt;
-use std::fmt::{Debug, Display, Formatter};
-use std::hash::{Hash, Hasher};
-use binaryninjacore_sys::{BNBoolWithConfidence, BNCallingConventionWithConfidence, BNGetCallingConventionArchitecture, BNOffsetWithConfidence, BNTypeWithConfidence};
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::callingconvention::CallingConvention;
 use crate::rc::{Ref, RefCountable};
 use crate::types::Type;
+use binaryninjacore_sys::{
+    BNBoolWithConfidence, BNCallingConventionWithConfidence, BNGetCallingConventionArchitecture,
+    BNOffsetWithConfidence, BNTypeWithConfidence,
+};
+use std::fmt;
+use std::fmt::{Debug, Display, Formatter};
+use std::hash::{Hash, Hasher};
 
 /// The minimum allowed confidence of any given [`Type`].
 pub const MIN_CONFIDENCE: u8 = u8::MIN;

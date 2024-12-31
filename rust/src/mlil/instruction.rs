@@ -1,16 +1,16 @@
 use binaryninjacore_sys::*;
 
+use super::lift::*;
+use super::operation::*;
+use super::MediumLevelILFunction;
 use crate::architecture::CoreIntrinsic;
 use crate::confidence::Conf;
-use crate::{DataFlowQueryOption, ILBranchDependence};
 use crate::disassembly::InstructionTextToken;
 use crate::operand_iter::OperandIter;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::types::Type;
-use crate::variable::{PossibleValueSet, RegisterValue, Variable, ConstantData, SSAVariable};
-use super::lift::*;
-use super::operation::*;
-use super::MediumLevelILFunction;
+use crate::variable::{ConstantData, PossibleValueSet, RegisterValue, SSAVariable, Variable};
+use crate::{DataFlowQueryOption, ILBranchDependence};
 
 #[derive(Clone)]
 pub struct MediumLevelILInstruction {
@@ -909,7 +909,10 @@ impl MediumLevelILInstruction {
                 output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
                     .vars()
                     .collect(),
-                intrinsic: CoreIntrinsic::new(self.function.get_function().arch().handle, op.intrinsic),
+                intrinsic: CoreIntrinsic::new(
+                    self.function.get_function().arch().handle,
+                    op.intrinsic,
+                ),
                 params: OperandIter::new(&*self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())
@@ -928,7 +931,10 @@ impl MediumLevelILInstruction {
                 output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
                     .ssa_vars()
                     .collect(),
-                intrinsic: CoreIntrinsic::new(self.function.get_function().arch().handle, op.intrinsic),
+                intrinsic: CoreIntrinsic::new(
+                    self.function.get_function().arch().handle,
+                    op.intrinsic,
+                ),
                 params: OperandIter::new(&*self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())
@@ -1070,7 +1076,7 @@ impl MediumLevelILInstruction {
                 self.function.handle,
                 self.index,
                 options.as_ptr() as *mut _,
-                options.len()
+                options.len(),
             )
         };
         let result = PossibleValueSet::from(value);
@@ -1078,10 +1084,7 @@ impl MediumLevelILInstruction {
         result
     }
 
-    pub fn possible_ssa_variable_values(
-        &self,
-        ssa_var: SSAVariable,
-    ) -> PossibleValueSet {
+    pub fn possible_ssa_variable_values(&self, ssa_var: SSAVariable) -> PossibleValueSet {
         self.possible_ssa_variable_values_with_opts(ssa_var, &[])
     }
 
@@ -1105,7 +1108,7 @@ impl MediumLevelILInstruction {
         unsafe { BNFreePossibleValueSet(&mut value) }
         result
     }
-    
+
     /// return the variable version used at this instruction
     pub fn ssa_variable_version(&self, var: Variable) -> SSAVariable {
         let raw_var = BNVariable::from(var);
@@ -1223,10 +1226,7 @@ impl MediumLevelILInstruction {
         .into()
     }
 
-    pub fn possible_register_values(
-        &self,
-        reg_id: u32,
-    ) -> PossibleValueSet {
+    pub fn possible_register_values(&self, reg_id: u32) -> PossibleValueSet {
         self.possible_register_values_with_opts(reg_id, &[])
     }
 
@@ -1249,10 +1249,7 @@ impl MediumLevelILInstruction {
         result
     }
 
-    pub fn possible_register_values_after(
-        &self,
-        reg_id: u32,
-    ) -> PossibleValueSet {
+    pub fn possible_register_values_after(&self, reg_id: u32) -> PossibleValueSet {
         self.possible_register_values_after_with_opts(reg_id, &[])
     }
 
@@ -1289,10 +1286,7 @@ impl MediumLevelILInstruction {
         .into()
     }
 
-    pub fn possible_flag_values(
-        &self,
-        flag_id: u32,
-    ) -> PossibleValueSet {
+    pub fn possible_flag_values(&self, flag_id: u32) -> PossibleValueSet {
         self.possible_flag_values_with_opts(flag_id, &[])
     }
 

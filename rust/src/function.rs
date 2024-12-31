@@ -21,35 +21,35 @@ use crate::{
     callingconvention::CallingConvention,
     component::Component,
     disassembly::{DisassemblySettings, DisassemblyTextLine},
-    flowgraph::FlowGraph, llil,
+    flowgraph::FlowGraph,
+    llil,
     mlil::FunctionGraphType,
     platform::Platform,
     references::CodeReference,
     string::*,
     symbol::Symbol,
     tags::{Tag, TagReference, TagType},
-    types::{
-        IntegerDisplayType,
-        QualifiedName,
-        Type,
-    },
+    types::{IntegerDisplayType, QualifiedName, Type},
 };
 use crate::{databuffer::DataBuffer, disassembly::InstructionTextToken, rc::*};
 pub use binaryninjacore_sys::BNAnalysisSkipReason as AnalysisSkipReason;
+pub use binaryninjacore_sys::BNBuiltinType as BuiltinType;
 pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisSkipOverride;
 pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
-pub use binaryninjacore_sys::BNBuiltinType as BuiltinType;
 pub use binaryninjacore_sys::BNHighlightStandardColor as HighlightStandardColor;
 
-use std::{ffi::c_char, hash::Hash, ops::Range};
-use std::fmt::{Debug, Formatter};
-use std::ptr::NonNull;
-use std::time::Duration;
 use crate::confidence::Conf;
 use crate::hlil::HighLevelILFunction;
 use crate::mlil::MediumLevelILFunction;
-use crate::variable::{IndirectBranchInfo, MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType, StackVariableReference, Variable};
+use crate::variable::{
+    IndirectBranchInfo, MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType,
+    StackVariableReference, Variable,
+};
 use crate::workflow::Workflow;
+use std::fmt::{Debug, Formatter};
+use std::ptr::NonNull;
+use std::time::Duration;
+use std::{ffi::c_char, hash::Hash, ops::Range};
 
 /// Used to describe a location within a [`Function`].
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -179,14 +179,26 @@ impl FunctionViewType {
             FunctionViewType::Normal => BNFunctionGraphType::NormalFunctionGraph,
             FunctionViewType::LowLevelIL => BNFunctionGraphType::LowLevelILFunctionGraph,
             FunctionViewType::LiftedIL => BNFunctionGraphType::LiftedILFunctionGraph,
-            FunctionViewType::LowLevelILSSAForm => BNFunctionGraphType::LowLevelILSSAFormFunctionGraph,
+            FunctionViewType::LowLevelILSSAForm => {
+                BNFunctionGraphType::LowLevelILSSAFormFunctionGraph
+            }
             FunctionViewType::MediumLevelIL => BNFunctionGraphType::MediumLevelILFunctionGraph,
-            FunctionViewType::MediumLevelILSSAForm => BNFunctionGraphType::MediumLevelILSSAFormFunctionGraph,
-            FunctionViewType::MappedMediumLevelIL => BNFunctionGraphType::MappedMediumLevelILFunctionGraph,
-            FunctionViewType::MappedMediumLevelILSSAForm => BNFunctionGraphType::MappedMediumLevelILSSAFormFunctionGraph,
+            FunctionViewType::MediumLevelILSSAForm => {
+                BNFunctionGraphType::MediumLevelILSSAFormFunctionGraph
+            }
+            FunctionViewType::MappedMediumLevelIL => {
+                BNFunctionGraphType::MappedMediumLevelILFunctionGraph
+            }
+            FunctionViewType::MappedMediumLevelILSSAForm => {
+                BNFunctionGraphType::MappedMediumLevelILSSAFormFunctionGraph
+            }
             FunctionViewType::HighLevelIL => BNFunctionGraphType::HighLevelILFunctionGraph,
-            FunctionViewType::HighLevelILSSAForm => BNFunctionGraphType::HighLevelILSSAFormFunctionGraph,
-            FunctionViewType::HighLevelLanguageRepresentation(_) => BNFunctionGraphType::HighLevelLanguageRepresentationFunctionGraph,
+            FunctionViewType::HighLevelILSSAForm => {
+                BNFunctionGraphType::HighLevelILSSAFormFunctionGraph
+            }
+            FunctionViewType::HighLevelLanguageRepresentation(_) => {
+                BNFunctionGraphType::HighLevelLanguageRepresentationFunctionGraph
+            }
         };
         RawFunctionViewType(BNFunctionViewType {
             type_: view_type,
@@ -204,13 +216,23 @@ impl Into<FunctionViewType> for FunctionGraphType {
         match self {
             BNFunctionGraphType::LowLevelILFunctionGraph => FunctionViewType::LowLevelIL,
             BNFunctionGraphType::LiftedILFunctionGraph => FunctionViewType::LiftedIL,
-            BNFunctionGraphType::LowLevelILSSAFormFunctionGraph => FunctionViewType::LowLevelILSSAForm,
+            BNFunctionGraphType::LowLevelILSSAFormFunctionGraph => {
+                FunctionViewType::LowLevelILSSAForm
+            }
             BNFunctionGraphType::MediumLevelILFunctionGraph => FunctionViewType::MediumLevelIL,
-            BNFunctionGraphType::MediumLevelILSSAFormFunctionGraph => FunctionViewType::MediumLevelILSSAForm,
-            BNFunctionGraphType::MappedMediumLevelILFunctionGraph => FunctionViewType::MappedMediumLevelIL,
-            BNFunctionGraphType::MappedMediumLevelILSSAFormFunctionGraph => FunctionViewType::MappedMediumLevelILSSAForm,
+            BNFunctionGraphType::MediumLevelILSSAFormFunctionGraph => {
+                FunctionViewType::MediumLevelILSSAForm
+            }
+            BNFunctionGraphType::MappedMediumLevelILFunctionGraph => {
+                FunctionViewType::MappedMediumLevelIL
+            }
+            BNFunctionGraphType::MappedMediumLevelILSSAFormFunctionGraph => {
+                FunctionViewType::MappedMediumLevelILSSAForm
+            }
             BNFunctionGraphType::HighLevelILFunctionGraph => FunctionViewType::HighLevelIL,
-            BNFunctionGraphType::HighLevelILSSAFormFunctionGraph => FunctionViewType::HighLevelILSSAForm,
+            BNFunctionGraphType::HighLevelILSSAFormFunctionGraph => {
+                FunctionViewType::HighLevelILSSAForm
+            }
             BNFunctionGraphType::HighLevelLanguageRepresentationFunctionGraph => {
                 // Historically this was the only language representation.
                 FunctionViewType::HighLevelLanguageRepresentation("Pseudo C".into())
@@ -223,7 +245,9 @@ impl Into<FunctionViewType> for FunctionGraphType {
 impl Drop for RawFunctionViewType {
     fn drop(&mut self) {
         if !self.0.name.is_null() {
-            unsafe { let _ = std::ffi::CString::from_raw(self.0.name as *mut _); }
+            unsafe {
+                let _ = std::ffi::CString::from_raw(self.0.name as *mut _);
+            }
         }
     }
 }
@@ -385,7 +409,8 @@ impl Function {
     ) -> Array<Array<InstructionTextToken>> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
-        let lines = unsafe { BNGetFunctionBlockAnnotations(self.handle, arch.handle, addr, &mut count) };
+        let lines =
+            unsafe { BNGetFunctionBlockAnnotations(self.handle, arch.handle, addr, &mut count) };
         assert!(!lines.is_null());
         unsafe { Array::new(lines, count, ()) }
     }
@@ -425,9 +450,7 @@ impl Function {
         }
     }
 
-    pub fn mapped_medium_level_il_if_available(
-        &self,
-    ) -> Option<Ref<MediumLevelILFunction>> {
+    pub fn mapped_medium_level_il_if_available(&self) -> Option<Ref<MediumLevelILFunction>> {
         let mlil_ptr = unsafe { BNGetFunctionMappedMediumLevelILIfAvailable(self.handle) };
         match mlil_ptr.is_null() {
             false => Some(unsafe { MediumLevelILFunction::ref_from_raw(mlil_ptr) }),
@@ -501,12 +524,7 @@ impl Function {
     {
         let return_type: Conf<&Type> = return_type.into();
         let mut raw_return_type = BNTypeWithConfidence::from(return_type);
-        unsafe {
-            BNSetAutoFunctionReturnType(
-                self.handle,
-                &mut raw_return_type,
-            )
-        }
+        unsafe { BNSetAutoFunctionReturnType(self.handle, &mut raw_return_type) }
     }
 
     pub fn set_user_return_type<'a, C>(&self, return_type: C)
@@ -515,12 +533,7 @@ impl Function {
     {
         let return_type: Conf<&Type> = return_type.into();
         let mut raw_return_type = BNTypeWithConfidence::from(return_type);
-        unsafe {
-            BNSetUserFunctionReturnType(
-                self.handle,
-                &mut raw_return_type,
-            )
-        }
+        unsafe { BNSetUserFunctionReturnType(self.handle, &mut raw_return_type) }
     }
 
     pub fn function_type(&self) -> Ref<Type> {
@@ -706,7 +719,8 @@ impl Function {
         I: IntoIterator<Item = RegisterStackAdjustment>,
     {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let adjustments: Vec<BNRegisterStackAdjustment> = adjust.into_iter().map(Into::into).collect();
+        let adjustments: Vec<BNRegisterStackAdjustment> =
+            adjust.into_iter().map(Into::into).collect();
         unsafe {
             BNSetUserCallRegisterStackAdjustment(
                 self.handle,
@@ -727,7 +741,8 @@ impl Function {
         I: IntoIterator<Item = RegisterStackAdjustment>,
     {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let adjustments: Vec<BNRegisterStackAdjustment> = adjust.into_iter().map(Into::into).collect();
+        let adjustments: Vec<BNRegisterStackAdjustment> =
+            adjust.into_iter().map(Into::into).collect();
         unsafe {
             BNSetAutoCallRegisterStackAdjustment(
                 self.handle,
@@ -908,8 +923,9 @@ impl Function {
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
         let func_type = func_type.map(|f| f.handle).unwrap_or(std::ptr::null_mut());
-        let value =
-            unsafe { BNGetParameterValueAtInstruction(self.handle, arch.handle, addr, func_type, i) };
+        let value = unsafe {
+            BNGetParameterValueAtInstruction(self.handle, arch.handle, addr, func_type, i)
+        };
         value.into()
     }
 
@@ -986,12 +1002,7 @@ impl Function {
         C: Into<Conf<bool>>,
     {
         let value: Conf<bool> = value.into();
-        unsafe {
-            BNSetAutoFunctionInlinedDuringAnalysis(
-                self.handle,
-                value.into(),
-            )
-        }
+        unsafe { BNSetAutoFunctionInlinedDuringAnalysis(self.handle, value.into()) }
     }
 
     pub fn set_user_inline_during_analysis<C>(&self, value: C)
@@ -999,12 +1010,7 @@ impl Function {
         C: Into<Conf<bool>>,
     {
         let value: Conf<bool> = value.into();
-        unsafe {
-            BNSetUserFunctionInlinedDuringAnalysis(
-                self.handle,
-                value.into(),
-            )
-        }
+        unsafe { BNSetUserFunctionInlinedDuringAnalysis(self.handle, value.into()) }
     }
 
     pub fn analysis_performance_info(&self) -> Array<PerformanceInfo> {
@@ -1059,9 +1065,13 @@ impl Function {
         unsafe {
             match (user, addr) {
                 (false, None) => BNAddAutoFunctionTag(self.handle, tag.handle),
-                (false, Some(addr)) => BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle),
+                (false, Some(addr)) => {
+                    BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
+                }
                 (true, None) => BNAddUserFunctionTag(self.handle, tag.handle),
-                (true, Some(addr)) => BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle),
+                (true, Some(addr)) => {
+                    BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
+                }
             }
         }
     }
@@ -1086,7 +1096,9 @@ impl Function {
                     BNRemoveAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
                 }
                 (true, None) => BNRemoveUserFunctionTag(self.handle, tag.handle),
-                (true, Some(addr)) => BNRemoveUserAddressTag(self.handle, arch.handle, addr, tag.handle),
+                (true, Some(addr)) => {
+                    BNRemoveUserAddressTag(self.handle, arch.handle, addr, tag.handle)
+                }
             }
         }
     }
@@ -1277,7 +1289,14 @@ impl Function {
         let arch = arch.unwrap_or_else(|| self.arch());
         let name_ptr = &name.0 as *const _ as *mut _;
         unsafe {
-            BNRemoveUserTypeFieldReference(self.handle, arch.handle, from_addr, name_ptr, offset, size)
+            BNRemoveUserTypeFieldReference(
+                self.handle,
+                arch.handle,
+                from_addr,
+                name_ptr,
+                offset,
+                size,
+            )
         }
     }
 
@@ -1290,7 +1309,9 @@ impl Function {
         let size = size.unwrap_or(0);
         // TODO: Adjust `BuiltinType`?
         let mut builtin_type = BuiltinType::BuiltinNone;
-        let buffer = DataBuffer::from_raw(unsafe { BNGetConstantData(self.handle, state.into(), value, size, &mut builtin_type) });
+        let buffer = DataBuffer::from_raw(unsafe {
+            BNGetConstantData(self.handle, state.into(), value, size, &mut builtin_type)
+        });
         (buffer, builtin_type)
     }
 
@@ -1301,8 +1322,9 @@ impl Function {
     ) -> Array<ConstantReference> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
-        let refs =
-            unsafe { BNGetConstantsReferencedByInstruction(self.handle, arch.handle, addr, &mut count) };
+        let refs = unsafe {
+            BNGetConstantsReferencedByInstruction(self.handle, arch.handle, addr, &mut count)
+        };
         assert!(!refs.is_null());
         unsafe { Array::new(refs, count, ()) }
     }
@@ -1315,7 +1337,12 @@ impl Function {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
         let refs = unsafe {
-            BNGetConstantsReferencedByInstructionIfAvailable(self.handle, arch.handle, addr, &mut count)
+            BNGetConstantsReferencedByInstructionIfAvailable(
+                self.handle,
+                arch.handle,
+                addr,
+                &mut count,
+            )
         };
         assert!(!refs.is_null());
         unsafe { Array::new(refs, count, ()) }
@@ -1377,8 +1404,12 @@ impl Function {
 
         let tags = match auto {
             None => unsafe { BNGetAddressTags(self.handle, arch.handle, addr, &mut count) },
-            Some(true) => unsafe { BNGetAutoAddressTags(self.handle, arch.handle, addr, &mut count) },
-            Some(false) => unsafe { BNGetUserAddressTags(self.handle, arch.handle, addr, &mut count) },
+            Some(true) => unsafe {
+                BNGetAutoAddressTags(self.handle, arch.handle, addr, &mut count)
+            },
+            Some(false) => unsafe {
+                BNGetUserAddressTags(self.handle, arch.handle, addr, &mut count)
+            },
         };
         assert!(!tags.is_null());
         unsafe { Array::new(tags, count, ()) }
@@ -1399,13 +1430,31 @@ impl Function {
 
         let tags = match auto {
             None => unsafe {
-                BNGetAddressTagsInRange(self.handle, arch.handle, range.start, range.end, &mut count)
+                BNGetAddressTagsInRange(
+                    self.handle,
+                    arch.handle,
+                    range.start,
+                    range.end,
+                    &mut count,
+                )
             },
             Some(true) => unsafe {
-                BNGetAutoAddressTagsInRange(self.handle, arch.handle, range.start, range.end, &mut count)
+                BNGetAutoAddressTagsInRange(
+                    self.handle,
+                    arch.handle,
+                    range.start,
+                    range.end,
+                    &mut count,
+                )
             },
             Some(false) => unsafe {
-                BNGetUserAddressTagsInRange(self.handle, arch.handle, range.start, range.end, &mut count)
+                BNGetUserAddressTagsInRange(
+                    self.handle,
+                    arch.handle,
+                    range.start,
+                    range.end,
+                    &mut count,
+                )
             },
         };
         assert!(!tags.is_null());
@@ -1482,7 +1531,8 @@ impl Function {
     ) -> Array<IndirectBranchInfo> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
-        let branches = unsafe { BNGetIndirectBranchesAt(self.handle, arch.handle, addr, &mut count) };
+        let branches =
+            unsafe { BNGetIndirectBranchesAt(self.handle, arch.handle, addr, &mut count) };
         assert!(!branches.is_null());
         unsafe { Array::new(branches, count, ()) }
     }
@@ -1525,7 +1575,7 @@ impl Function {
     /// ```no_run
     /// # use binaryninja::function::{HighlightColor, HighlightStandardColor};
     /// # let function: binaryninja::function::Function = todo!();
-    /// let color = HighlightColor::StandardHighlightColor { 
+    /// let color = HighlightColor::StandardHighlightColor {
     ///     color: HighlightStandardColor::RedHighlightColor,
     ///     alpha: u8::MAX
     /// };
@@ -1570,7 +1620,9 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> IntegerDisplayType {
         let arch = arch.unwrap_or_else(|| self.arch());
-        unsafe { BNGetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand) }
+        unsafe {
+            BNGetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand)
+        }
     }
 
     /// Change the text display type for an integer token in the disassembly or IL views
@@ -1674,7 +1726,8 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let register = unsafe { BNGetRegisterValueAtInstruction(self.handle, arch.handle, addr, reg) };
+        let register =
+            unsafe { BNGetRegisterValueAtInstruction(self.handle, arch.handle, addr, reg) };
         register.into()
     }
 
@@ -1728,8 +1781,9 @@ impl Function {
     ) -> Array<CoreRegister> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut count = 0;
-        let regs =
-            unsafe { BNGetRegistersWrittenByInstruction(self.handle, arch.handle, addr, &mut count) };
+        let regs = unsafe {
+            BNGetRegistersWrittenByInstruction(self.handle, arch.handle, addr, &mut count)
+        };
         assert!(!regs.is_null());
         unsafe { Array::new(regs, count, arch) }
     }
@@ -1776,8 +1830,9 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let value =
-            unsafe { BNGetStackContentsAtInstruction(self.handle, arch.handle, addr, offset, size) };
+        let value = unsafe {
+            BNGetStackContentsAtInstruction(self.handle, arch.handle, addr, offset, size)
+        };
         value.into()
     }
 
@@ -1789,8 +1844,9 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let value =
-            unsafe { BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, offset, size) };
+        let value = unsafe {
+            BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, offset, size)
+        };
         value.into()
     }
 
@@ -1803,7 +1859,13 @@ impl Function {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut found_value = BNVariableNameAndType::default();
         let found = unsafe {
-            BNGetStackVariableAtFrameOffset(self.handle, arch.handle, addr, offset, &mut found_value)
+            BNGetStackVariableAtFrameOffset(
+                self.handle,
+                arch.handle,
+                addr,
+                offset,
+                &mut found_value,
+            )
         };
         if !found {
             return None;
@@ -2234,15 +2296,17 @@ impl Function {
         settings: Option<DisassemblySettings>,
     ) -> Ref<FlowGraph> {
         let settings_raw = settings.map(|s| s.handle).unwrap_or(std::ptr::null_mut());
-        let result = unsafe { BNCreateFunctionGraph(self.handle, view_type.as_raw().0, settings_raw) };
+        let result =
+            unsafe { BNCreateFunctionGraph(self.handle, view_type.as_raw().0, settings_raw) };
         unsafe { Ref::new(FlowGraph::from_raw(result)) }
     }
 
     pub fn parent_components(&self) -> Array<Component> {
         let mut count = 0;
-        let result = unsafe{ BNGetFunctionParentComponents(self.view().handle, self.handle, &mut count) };
+        let result =
+            unsafe { BNGetFunctionParentComponents(self.view().handle, self.handle, &mut count) };
         assert!(!result.is_null());
-        unsafe{ Array::new(result, count, ()) }
+        unsafe { Array::new(result, count, ()) }
     }
 }
 
@@ -2291,7 +2355,7 @@ unsafe impl CoreArrayProviderInner for Function {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeFunctionList(raw, count);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Self::from_raw(*raw), context)
     }
@@ -2320,14 +2384,14 @@ impl PartialEq for Function {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct AddressRange {
     pub start: u64,
-    pub end: u64
+    pub end: u64,
 }
 
 impl From<BNAddressRange> for AddressRange {
     fn from(raw: BNAddressRange) -> Self {
         Self {
             start: raw.start,
-            end: raw.end
+            end: raw.end,
         }
     }
 }
@@ -2336,7 +2400,7 @@ impl From<AddressRange> for BNAddressRange {
     fn from(raw: AddressRange) -> Self {
         Self {
             start: raw.start,
-            end: raw.end
+            end: raw.end,
         }
     }
 }
@@ -2351,7 +2415,7 @@ unsafe impl CoreArrayProviderInner for AddressRange {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeAddressRanges(raw);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Self::from(*raw)
     }
@@ -2392,7 +2456,7 @@ unsafe impl CoreArrayProviderInner for PerformanceInfo {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeAnalysisPerformanceInfo(raw, count);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         // TODO: Swap this to the ref version.
         Self::from(*raw)
@@ -2464,7 +2528,7 @@ unsafe impl CoreArrayProviderInner for ConstantReference {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeConstantReferenceList(raw)
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Self::from(*raw)
     }
@@ -2543,28 +2607,22 @@ pub enum HighlightColor {
 impl From<BNHighlightColor> for HighlightColor {
     fn from(value: BNHighlightColor) -> Self {
         match value.style {
-            BNHighlightColorStyle::StandardHighlightColor => {
-                Self::StandardHighlightColor {
-                    color: value.color,
-                    alpha: value.alpha,
-                }
-            }
-            BNHighlightColorStyle::MixedHighlightColor => {
-                Self::MixedHighlightColor {
-                    color: value.color,
-                    mix_color: value.mixColor,
-                    mix: value.mix,
-                    alpha: value.alpha,
-                }
-            }
-            BNHighlightColorStyle::CustomHighlightColor => {
-                Self::CustomHighlightColor {
-                    r: value.r,
-                    g: value.g,
-                    b: value.b,
-                    alpha: value.alpha,
-                }
-            }
+            BNHighlightColorStyle::StandardHighlightColor => Self::StandardHighlightColor {
+                color: value.color,
+                alpha: value.alpha,
+            },
+            BNHighlightColorStyle::MixedHighlightColor => Self::MixedHighlightColor {
+                color: value.color,
+                mix_color: value.mixColor,
+                mix: value.mix,
+                alpha: value.alpha,
+            },
+            BNHighlightColorStyle::CustomHighlightColor => Self::CustomHighlightColor {
+                r: value.r,
+                g: value.g,
+                b: value.b,
+                alpha: value.alpha,
+            },
         }
     }
 }
@@ -2572,34 +2630,33 @@ impl From<BNHighlightColor> for HighlightColor {
 impl From<HighlightColor> for BNHighlightColor {
     fn from(value: HighlightColor) -> Self {
         match value {
-            HighlightColor::StandardHighlightColor { color, alpha } => {
-                BNHighlightColor {
-                    style: BNHighlightColorStyle::StandardHighlightColor,
-                    color,
-                    alpha,
-                    ..Default::default()
-                }
-            }
-            HighlightColor::MixedHighlightColor { color, mix_color, mix, alpha } => {
-                BNHighlightColor {
-                    style: BNHighlightColorStyle::MixedHighlightColor,
-                    color,
-                    mixColor: mix_color,
-                    mix,
-                    alpha,
-                    ..Default::default()
-                }
-            }
-            HighlightColor::CustomHighlightColor { r, g, b, alpha } => {
-                BNHighlightColor {
-                    style: BNHighlightColorStyle::CustomHighlightColor,
-                    r,
-                    g,
-                    b,
-                    alpha,
-                    ..Default::default()
-                }
-            }
+            HighlightColor::StandardHighlightColor { color, alpha } => BNHighlightColor {
+                style: BNHighlightColorStyle::StandardHighlightColor,
+                color,
+                alpha,
+                ..Default::default()
+            },
+            HighlightColor::MixedHighlightColor {
+                color,
+                mix_color,
+                mix,
+                alpha,
+            } => BNHighlightColor {
+                style: BNHighlightColorStyle::MixedHighlightColor,
+                color,
+                mixColor: mix_color,
+                mix,
+                alpha,
+                ..Default::default()
+            },
+            HighlightColor::CustomHighlightColor { r, g, b, alpha } => BNHighlightColor {
+                style: BNHighlightColorStyle::CustomHighlightColor,
+                r,
+                g,
+                b,
+                alpha,
+                ..Default::default()
+            },
         }
     }
 }
@@ -2621,7 +2678,7 @@ unsafe impl CoreArrayProviderInner for Comment {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeAddressList(raw);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, function: &'a Self::Context) -> Self::Wrapped<'a> {
         Comment {
             addr: *raw,

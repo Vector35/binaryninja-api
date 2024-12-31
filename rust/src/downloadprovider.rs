@@ -1,4 +1,4 @@
-use crate::rc::{Array, CoreArrayProvider, Guard, CoreArrayProviderInner, Ref, RefCountable};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::settings::Settings;
 use crate::string::{BnStrCompatible, BnString};
 use binaryninjacore_sys::*;
@@ -68,7 +68,7 @@ unsafe impl CoreArrayProviderInner for DownloadProvider {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeDownloadProviderList(raw);
     }
-    
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(DownloadProvider::from_raw(*raw), &())
     }

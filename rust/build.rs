@@ -9,7 +9,7 @@ fn main() {
         "target/doc/under_construction.png",
     );
     let _ = std::fs::copy("../docs/img/logo.png", "target/doc/logo.png");
-    
+
     let link_path =
         std::env::var_os("DEP_BINARYNINJACORE_PATH").expect("DEP_BINARYNINJACORE_PATH specified");
 

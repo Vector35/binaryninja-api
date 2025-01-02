@@ -43,7 +43,7 @@ use riscv_dis::{
     FloatReg, FloatRegType, Instr, IntRegType, Op, RegFile, Register as RiscVRegister,
     RiscVDisassembler, RoundMode,
 };
-use binaryninja::architecture::BranchKind;
+use binaryninja::architecture::{BranchKind, IntrinsicId, RegisterId};
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 
 enum RegType {
@@ -84,7 +84,7 @@ enum Intrinsic {
 
 #[derive(Copy, Clone)]
 struct Register<D: 'static + RiscVDisassembler> {
-    id: u32,
+    id: RegisterId,
     _dis: PhantomData<D>,
 }
 
@@ -95,7 +95,7 @@ struct RiscVIntrinsic<D: 'static + RiscVDisassembler> {
 }
 
 impl<D: 'static + RiscVDisassembler> Register<D> {
-    fn new(id: u32) -> Self {
+    fn new(id: RegisterId) -> Self {
         Self {
             id,
             _dis: PhantomData,
@@ -105,10 +105,10 @@ impl<D: 'static + RiscVDisassembler> Register<D> {
     fn reg_type(&self) -> RegType {
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
 
-        if self.id < int_reg_count {
-            RegType::Integer(self.id)
+        if self.id.0 < int_reg_count {
+            RegType::Integer(self.id.0)
         } else {
-            RegType::Float(self.id - int_reg_count)
+            RegType::Float(self.id.0 - int_reg_count)
         }
     }
 }
@@ -116,7 +116,7 @@ impl<D: 'static + RiscVDisassembler> Register<D> {
 impl<D: 'static + RiscVDisassembler> From<riscv_dis::IntReg<D>> for Register<D> {
     fn from(reg: riscv_dis::IntReg<D>) -> Self {
         Self {
-            id: reg.id(),
+            id: RegisterId(reg.id()),
             _dis: PhantomData,
         }
     }
@@ -127,7 +127,7 @@ impl<D: 'static + RiscVDisassembler> From<FloatReg<D>> for Register<D> {
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
 
         Self {
-            id: reg.id() + int_reg_count,
+            id: RegisterId(reg.id() + int_reg_count),
             _dis: PhantomData,
         }
     }
@@ -194,7 +194,7 @@ impl<D: 'static + RiscVDisassembler> architecture::Register for Register<D> {
         *self
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> RegisterId {
         self.id
     }
 }
@@ -271,7 +271,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> fmt::Debug for Register<D> {
 }
 
 impl<D: RiscVDisassembler> RiscVIntrinsic<D> {
-    fn id_from_parts(id: u32, sz1: Option<u8>, sz2: Option<u8>, rm: Option<RoundMode>) -> u32 {
+    fn id_from_parts(id: u32, sz1: Option<u8>, sz2: Option<u8>, rm: Option<RoundMode>) -> IntrinsicId {
         let sz1 = sz1.unwrap_or(0);
         let sz2 = sz2.unwrap_or(0);
         let rm = match rm {
@@ -287,10 +287,11 @@ impl<D: RiscVDisassembler> RiscVIntrinsic<D> {
         id |= sz1 as u32;
         id |= (sz2 as u32) << 8;
         id |= (rm as u32) << 16;
-        id
+        IntrinsicId(id)
     }
 
-    fn parts_from_id(id: u32) -> Option<(u32, u8, u8, RoundMode)> {
+    fn parts_from_id(id: IntrinsicId) -> Option<(u32, u8, u8, RoundMode)> {
+        let id = id.0;
         let sz1 = (id & 0xff) as u8;
         let sz2 = ((id >> 8) & 0xff) as u8;
         let rm = match (id >> 16) & 0xf {
@@ -305,7 +306,7 @@ impl<D: RiscVDisassembler> RiscVIntrinsic<D> {
         Some(((id >> 20) & 0xfff, sz1, sz2, rm))
     }
 
-    fn from_id(id: u32) -> Option<RiscVIntrinsic<D>> {
+    fn from_id(id: IntrinsicId) -> Option<RiscVIntrinsic<D>> {
         match Self::parts_from_id(id) {
             Some((0, _, _, _)) => Some(Intrinsic::Uret.into()),
             Some((1, _, _, _)) => Some(Intrinsic::Sret.into()),
@@ -470,7 +471,7 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
         }
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> IntrinsicId {
         match self.id {
             Intrinsic::Uret => Self::id_from_parts(0, None, None, None),
             Intrinsic::Sret => Self::id_from_parts(1, None, None, None),
@@ -1055,7 +1056,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         macro_rules! set_reg_or_append_fallback {
             ($op:ident, $t:expr, $f:expr) => {{
                 let rd = Register::from($op.rd());
-                match rd.id {
+                match rd.id.0 {
                     0 => $f.append(),
                     _ => il.set_reg(rd.size(), rd, $t).append(),
                 }
@@ -1843,7 +1844,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         let mut res = Vec::with_capacity(reg_count as usize);
 
         for i in 0..reg_count {
-            res.push(Register::new(i));
+            res.push(Register::new(RegisterId(i)));
         }
 
         res
@@ -1857,28 +1858,28 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         let mut regs = Vec::with_capacity(2);
 
         for i in &[3, 4] {
-            regs.push(Register::new(*i));
+            regs.push(Register::new(RegisterId(*i)));
         }
 
         regs
     }
 
     fn stack_pointer_reg(&self) -> Option<Self::Register> {
-        Some(Register::new(2))
+        Some(Register::new(RegisterId(2)))
     }
 
     fn link_reg(&self) -> Option<Self::Register> {
-        Some(Register::new(1))
+        Some(Register::new(RegisterId(1)))
     }
 
-    fn register_from_id(&self, id: u32) -> Option<Self::Register> {
+    fn register_from_id(&self, id: RegisterId) -> Option<Self::Register> {
         let mut reg_count = <D::RegFile as RegFile>::int_reg_count();
 
         if <D::RegFile as RegFile>::Float::present() {
             reg_count += 32;
         }
 
-        if id > reg_count {
+        if id.0 > reg_count {
             None
         } else {
             Some(Register::new(id))
@@ -1958,7 +1959,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         res.iter().map(|i| (*i).into()).collect()
     }
 
-    fn intrinsic_from_id(&self, id: u32) -> Option<Self::Intrinsic> {
+    fn intrinsic_from_id(&self, id: IntrinsicId) -> Option<Self::Intrinsic> {
         RiscVIntrinsic::from_id(id)
     }
 
@@ -2657,7 +2658,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConventionBase for Ris
             1u32, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 28, 29, 30, 31,
         ] {
             if i < &int_reg_count {
-                regs.push(Register::new(*i));
+                regs.push(Register::new(RegisterId(*i)));
             }
         }
 
@@ -2665,7 +2666,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConventionBase for Ris
             for i in &[
                 0u32, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 28, 29, 30, 31,
             ] {
-                regs.push(Register::new(*i + int_reg_count));
+                regs.push(Register::new(RegisterId(*i + int_reg_count)));
             }
         }
 
@@ -2678,13 +2679,13 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConventionBase for Ris
 
         for i in &[8u32, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] {
             if i < &int_reg_count {
-                regs.push(Register::new(*i));
+                regs.push(Register::new(RegisterId(*i)));
             }
         }
 
         if <D::RegFile as RegFile>::Float::present() {
             for i in &[8u32, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] {
-                regs.push(Register::new(*i + int_reg_count));
+                regs.push(Register::new(RegisterId(*i + int_reg_count)));
             }
         }
 
@@ -2697,7 +2698,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConventionBase for Ris
 
         for i in &[10, 11, 12, 13, 14, 15, 16, 17] {
             if i < &int_reg_count {
-                regs.push(Register::new(*i));
+                regs.push(Register::new(RegisterId(*i)));
             }
         }
 
@@ -2710,7 +2711,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConventionBase for Ris
         if <D::RegFile as RegFile>::Float::present() {
             let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
             for i in &[10, 11, 12, 13, 14, 15, 16, 17] {
-                regs.push(Register::new(*i + int_reg_count));
+                regs.push(Register::new(RegisterId(*i + int_reg_count)));
             }
         }
 
@@ -2734,17 +2735,17 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConventionBase for Ris
 
     // a0 == x10
     fn return_int_reg(&self) -> Option<Register<D>> {
-        Some(Register::new(10))
+        Some(Register::new(RegisterId(10)))
     }
     // a1 == x11
     fn return_hi_int_reg(&self) -> Option<Register<D>> {
-        Some(Register::new(11))
+        Some(Register::new(RegisterId(11)))
     }
 
     fn return_float_reg(&self) -> Option<Register<D>> {
         if <D::RegFile as RegFile>::Float::present() {
             let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
-            Some(Register::new(10 + int_reg_count))
+            Some(Register::new(RegisterId(10 + int_reg_count)))
         } else {
             None
         }
@@ -2752,7 +2753,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConventionBase for Ris
 
     // gp == x3
     fn global_pointer_reg(&self) -> Option<Register<D>> {
-        Some(Register::new(3))
+        Some(Register::new(RegisterId(3)))
     }
 
     fn implicitly_defined_registers(&self) -> Vec<Register<D>> {

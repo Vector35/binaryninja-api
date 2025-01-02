@@ -32,11 +32,10 @@ fn example_activity(analysis_context: &AnalysisContext) {
                                 // Replace all consts with 0x1337.
                                 println!(
                                     "Replacing llil expression @ 0x{:x} : {}",
-                                    instr,
-                                    expr.index()
+                                    instr, expr.index
                                 );
                                 unsafe {
-                                    llil.replace_expression(expr.index(), llil.const_int(4, 0x1337))
+                                    llil.replace_expression(expr.index, llil.const_int(4, 0x1337))
                                 };
                             }
                             _ => {}

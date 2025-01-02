@@ -35,7 +35,7 @@ use pdb::{
     UserDefinedTypeSymbol, UsingNamespaceSymbol,
 };
 
-use binaryninja::architecture::{Architecture, ArchitectureExt, Register};
+use binaryninja::architecture::{Architecture, ArchitectureExt, Register, RegisterId};
 use binaryninja::binaryview::BinaryViewBase;
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use binaryninja::demangle::demangle_ms;
@@ -739,7 +739,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 location: Variable {
                     ty: VariableSourceType::RegisterVariableSourceType,
                     index: 0,
-                    storage: reg,
+                    storage: reg.0 as i64,
                 },
                 base_relative: false,
                 stack_relative: false,
@@ -1590,7 +1590,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 location: Variable {
                     ty: VariableSourceType::RegisterVariableSourceType,
                     index: 0,
-                    storage: reg,
+                    storage: reg.0 as i64,
                 },
                 base_relative: false,
                 stack_relative: false,
@@ -2042,19 +2042,19 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     }
 
     /// Convert a pdb::Register (u32) to a binja register index for the current arch
-    fn convert_register(&self, reg: pdb::Register) -> Option<i64> {
+    fn convert_register(&self, reg: pdb::Register) -> Option<RegisterId> {
         match self.lookup_register(reg) {
             Some(X86(xreg)) => {
                 self.log(|| format!("Register {:?} ==> {:?}", reg, xreg));
                 self.arch
                     .register_by_name(xreg.to_string().to_lowercase())
-                    .map(|reg| reg.id() as i64)
+                    .map(|reg| reg.id())
             }
             Some(AMD64(areg)) => {
                 self.log(|| format!("Register {:?} ==> {:?}", reg, areg));
                 self.arch
                     .register_by_name(areg.to_string().to_lowercase())
-                    .map(|reg| reg.id() as i64)
+                    .map(|reg| reg.id())
             }
             // TODO: Other arches
             _ => None,

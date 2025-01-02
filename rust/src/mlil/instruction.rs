@@ -3,7 +3,7 @@ use binaryninjacore_sys::*;
 use super::lift::*;
 use super::operation::*;
 use super::MediumLevelILFunction;
-use crate::architecture::CoreIntrinsic;
+use crate::architecture::{CoreIntrinsic, IntrinsicId};
 use crate::confidence::Conf;
 use crate::disassembly::InstructionTextToken;
 use crate::operand_iter::OperandIter;
@@ -910,9 +910,10 @@ impl MediumLevelILInstruction {
                     .vars()
                     .collect(),
                 intrinsic: CoreIntrinsic::new(
-                    self.function.get_function().arch().handle,
-                    op.intrinsic,
-                ),
+                    self.function.get_function().arch(),
+                    IntrinsicId(op.intrinsic),
+                )
+                .expect("Valid intrinsic"),
                 params: OperandIter::new(&*self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())
@@ -932,9 +933,10 @@ impl MediumLevelILInstruction {
                     .ssa_vars()
                     .collect(),
                 intrinsic: CoreIntrinsic::new(
-                    self.function.get_function().arch().handle,
-                    op.intrinsic,
-                ),
+                    self.function.get_function().arch(),
+                    IntrinsicId(op.intrinsic),
+                )
+                .expect("Valid intrinsic"),
                 params: OperandIter::new(&*self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())

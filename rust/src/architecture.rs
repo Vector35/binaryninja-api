@@ -17,6 +17,7 @@
 // container abstraction to avoid Vec<> (want CoreArchFlagList, CoreArchRegList)
 // RegisterInfo purge
 use binaryninjacore_sys::*;
+use std::fmt::Formatter;
 
 use crate::{
     callingconvention::CallingConvention,
@@ -38,6 +39,7 @@ use std::{
     borrow::{Borrow, Cow},
     collections::HashMap,
     ffi::{c_char, c_int, c_void, CStr, CString},
+    fmt::Display,
     hash::Hash,
     mem::MaybeUninit,
 };
@@ -49,6 +51,40 @@ use crate::confidence::Conf;
 pub use binaryninjacore_sys::BNFlagRole as FlagRole;
 pub use binaryninjacore_sys::BNImplicitRegisterExtend as ImplicitRegisterExtend;
 pub use binaryninjacore_sys::BNLowLevelILFlagCondition as FlagCondition;
+
+macro_rules! newtype {
+    ($name:ident, $inner_type:ty) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+        pub struct $name(pub $inner_type);
+
+        impl From<$inner_type> for $name {
+            fn from(value: $inner_type) -> Self {
+                Self(value)
+            }
+        }
+
+        impl From<$name> for $inner_type {
+            fn from(value: $name) -> Self {
+                value.0
+            }
+        }
+
+        impl Display for $name {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
+    };
+}
+
+newtype!(RegisterId, u32);
+newtype!(RegisterStackId, u32);
+newtype!(FlagId, u32);
+// TODO: Make this NonZero<u32>?
+newtype!(FlagWriteId, u32);
+newtype!(FlagClassId, u32);
+newtype!(FlagGroupId, u32);
+newtype!(IntrinsicId, u32);
 
 #[derive(Default, Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum BranchKind {
@@ -253,7 +289,7 @@ pub trait Register: Sized + Clone + Copy + Hash + Eq {
     /// Unique identifier for this `Register`.
     ///
     /// *MUST* be in the range [0, 0x7fff_ffff]
-    fn id(&self) -> u32;
+    fn id(&self) -> RegisterId;
 }
 
 pub trait RegisterStackInfo: Sized {
@@ -261,8 +297,8 @@ pub trait RegisterStackInfo: Sized {
     type RegType: Register<InfoType = Self::RegInfoType>;
     type RegInfoType: RegisterInfo<RegType = Self::RegType>;
 
-    fn storage_regs(&self) -> (Self::RegType, u32);
-    fn top_relative_regs(&self) -> Option<(Self::RegType, u32)>;
+    fn storage_regs(&self) -> (Self::RegType, usize);
+    fn top_relative_regs(&self) -> Option<(Self::RegType, usize)>;
     fn stack_top_reg(&self) -> Self::RegType;
 }
 
@@ -281,7 +317,7 @@ pub trait RegisterStack: Sized + Clone + Copy {
     /// Unique identifier for this `RegisterStack`.
     ///
     /// *MUST* be in the range [0, 0x7fff_ffff]
-    fn id(&self) -> u32;
+    fn id(&self) -> RegisterStackId;
 }
 
 pub trait Flag: Sized + Clone + Copy + Hash + Eq {
@@ -293,7 +329,7 @@ pub trait Flag: Sized + Clone + Copy + Hash + Eq {
     /// Unique identifier for this `Flag`.
     ///
     /// *MUST* be in the range [0, 0x7fff_ffff]
-    fn id(&self) -> u32;
+    fn id(&self) -> FlagId;
 }
 
 pub trait FlagWrite: Sized + Clone + Copy {
@@ -307,7 +343,7 @@ pub trait FlagWrite: Sized + Clone + Copy {
     ///
     /// *MUST NOT* be 0.
     /// *MUST* be in the range [1, 0x7fff_ffff]
-    fn id(&self) -> u32;
+    fn id(&self) -> FlagWriteId;
 
     fn flags_written(&self) -> Vec<Self::FlagType>;
 }
@@ -319,7 +355,7 @@ pub trait FlagClass: Sized + Clone + Copy + Hash + Eq {
     ///
     /// *MUST NOT* be 0.
     /// *MUST* be in the range [1, 0x7fff_ffff]
-    fn id(&self) -> u32;
+    fn id(&self) -> FlagClassId;
 }
 
 pub trait FlagGroup: Sized + Clone + Copy {
@@ -331,7 +367,7 @@ pub trait FlagGroup: Sized + Clone + Copy {
     /// Unique identifier for this `FlagGroup`.
     ///
     /// *MUST* be in the range [0, 0x7fff_ffff]
-    fn id(&self) -> u32;
+    fn id(&self) -> FlagGroupId;
 
     /// Returns the list of flags that need to be resolved in order
     /// to take the clean flag resolution path -- at time of writing,
@@ -364,7 +400,12 @@ pub trait Intrinsic: Sized + Clone + Copy {
     fn name(&self) -> Cow<str>;
 
     /// Unique identifier for this `Intrinsic`.
-    fn id(&self) -> u32;
+    fn id(&self) -> IntrinsicId;
+
+    /// The intrinsic class for this `Intrinsic`.
+    fn class(&self) -> BNIntrinsicClass {
+        BNIntrinsicClass::GeneralIntrinsicClass
+    }
 
     // TODO: Maybe just return `(String, Conf<Ref<Type>>)`?
     /// List of the input names and types for this intrinsic.
@@ -520,32 +561,32 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         None
     }
 
-    fn register_from_id(&self, id: u32) -> Option<Self::Register>;
+    fn register_from_id(&self, id: RegisterId) -> Option<Self::Register>;
 
-    fn register_stack_from_id(&self, _id: u32) -> Option<Self::RegisterStack> {
+    fn register_stack_from_id(&self, _id: RegisterStackId) -> Option<Self::RegisterStack> {
         None
     }
 
-    fn flag_from_id(&self, _id: u32) -> Option<Self::Flag> {
+    fn flag_from_id(&self, _id: FlagId) -> Option<Self::Flag> {
         None
     }
-    fn flag_write_from_id(&self, _id: u32) -> Option<Self::FlagWrite> {
+    fn flag_write_from_id(&self, _id: FlagWriteId) -> Option<Self::FlagWrite> {
         None
     }
-    fn flag_class_from_id(&self, _id: u32) -> Option<Self::FlagClass> {
+    fn flag_class_from_id(&self, _id: FlagClassId) -> Option<Self::FlagClass> {
         None
     }
-    fn flag_group_from_id(&self, _id: u32) -> Option<Self::FlagGroup> {
+    fn flag_group_from_id(&self, _id: FlagGroupId) -> Option<Self::FlagGroup> {
         None
     }
 
     fn intrinsics(&self) -> Vec<Self::Intrinsic> {
         Vec::new()
     }
-    fn intrinsic_class(&self, _id: u32) -> binaryninjacore_sys::BNIntrinsicClass {
-        binaryninjacore_sys::BNIntrinsicClass::GeneralIntrinsicClass
+    fn intrinsic_class(&self, _id: IntrinsicId) -> BNIntrinsicClass {
+        BNIntrinsicClass::GeneralIntrinsicClass
     }
-    fn intrinsic_from_id(&self, _id: u32) -> Option<Self::Intrinsic> {
+    fn intrinsic_from_id(&self, _id: IntrinsicId) -> Option<Self::Intrinsic> {
         None
     }
 
@@ -607,10 +648,10 @@ impl<R: Register> RegisterStackInfo for UnusedRegisterStackInfo<R> {
     type RegType = R;
     type RegInfoType = R::InfoType;
 
-    fn storage_regs(&self) -> (Self::RegType, u32) {
+    fn storage_regs(&self) -> (Self::RegType, usize) {
         unreachable!()
     }
-    fn top_relative_regs(&self) -> Option<(Self::RegType, u32)> {
+    fn top_relative_regs(&self) -> Option<(Self::RegType, usize)> {
         unreachable!()
     }
     fn stack_top_reg(&self) -> Self::RegType {
@@ -626,7 +667,7 @@ impl<R: Register> RegisterStack for UnusedRegisterStack<R> {
     fn name(&self) -> Cow<str> {
         unreachable!()
     }
-    fn id(&self) -> u32 {
+    fn id(&self) -> RegisterStackId {
         unreachable!()
     }
     fn info(&self) -> Self::InfoType {
@@ -646,7 +687,7 @@ impl Flag for UnusedFlag {
     fn role(&self, _class: Option<Self::FlagClass>) -> FlagRole {
         unreachable!()
     }
-    fn id(&self) -> u32 {
+    fn id(&self) -> FlagId {
         unreachable!()
     }
 }
@@ -660,7 +701,7 @@ impl FlagWrite for UnusedFlag {
     fn class(&self) -> Option<Self> {
         unreachable!()
     }
-    fn id(&self) -> u32 {
+    fn id(&self) -> FlagWriteId {
         unreachable!()
     }
     fn flags_written(&self) -> Vec<Self::FlagType> {
@@ -672,7 +713,7 @@ impl FlagClass for UnusedFlag {
     fn name(&self) -> Cow<str> {
         unreachable!()
     }
-    fn id(&self) -> u32 {
+    fn id(&self) -> FlagClassId {
         unreachable!()
     }
 }
@@ -683,7 +724,7 @@ impl FlagGroup for UnusedFlag {
     fn name(&self) -> Cow<str> {
         unreachable!()
     }
-    fn id(&self) -> u32 {
+    fn id(&self) -> FlagGroupId {
         unreachable!()
     }
     fn flags_required(&self) -> Vec<Self::FlagType> {
@@ -702,7 +743,7 @@ impl Intrinsic for UnusedIntrinsic {
     fn name(&self) -> Cow<str> {
         unreachable!()
     }
-    fn id(&self) -> u32 {
+    fn id(&self) -> IntrinsicId {
         unreachable!()
     }
     fn inputs(&self) -> Vec<NameAndType> {
@@ -715,13 +756,13 @@ impl Intrinsic for UnusedIntrinsic {
 
 #[derive(Debug, Copy, Clone)]
 pub struct CoreRegisterInfo {
-    arch: *mut BNArchitecture,
-    id: u32,
+    arch: CoreArchitecture,
+    id: RegisterId,
     info: BNRegisterInfo,
 }
 
 impl CoreRegisterInfo {
-    pub fn new(arch: *mut BNArchitecture, id: u32, info: BNRegisterInfo) -> Self {
+    pub fn new(arch: CoreArchitecture, id: RegisterId, info: BNRegisterInfo) -> Self {
         Self { arch, id, info }
     }
 }
@@ -730,8 +771,11 @@ impl RegisterInfo for CoreRegisterInfo {
     type RegType = CoreRegister;
 
     fn parent(&self) -> Option<CoreRegister> {
-        if self.id != self.info.fullWidthRegister {
-            Some(CoreRegister::new(self.arch, self.info.fullWidthRegister))
+        if self.id != RegisterId::from(self.info.fullWidthRegister) {
+            Some(CoreRegister::new(
+                self.arch,
+                RegisterId::from(self.info.fullWidthRegister),
+            )?)
         } else {
             None
         }
@@ -752,13 +796,26 @@ impl RegisterInfo for CoreRegisterInfo {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CoreRegister {
-    arch: *mut BNArchitecture,
-    id: u32,
+    arch: CoreArchitecture,
+    id: RegisterId,
 }
 
 impl CoreRegister {
-    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
-        Self { arch, id }
+    pub fn new(arch: CoreArchitecture, id: RegisterId) -> Option<Self> {
+        let register = Self { arch, id };
+        register.is_valid().then_some(register)
+    }
+
+    fn is_valid(&self) -> bool {
+        // We check the name to see if the register is actually valid.
+        let name = unsafe { BNGetArchitectureRegisterName(self.arch.handle, self.id.into()) };
+        match name.is_null() {
+            true => false,
+            false => {
+                unsafe { BNFreeString(name) };
+                true
+            }
+        }
     }
 }
 
@@ -767,7 +824,7 @@ impl Register for CoreRegister {
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureRegisterName(self.arch, self.id);
+            let name = BNGetArchitectureRegisterName(self.arch.handle, self.id.into());
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -783,11 +840,11 @@ impl Register for CoreRegister {
 
     fn info(&self) -> CoreRegisterInfo {
         CoreRegisterInfo::new(self.arch, self.id, unsafe {
-            BNGetArchitectureRegisterInfo(self.arch, self.id)
+            BNGetArchitectureRegisterInfo(self.arch.handle, self.id.into())
         })
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> RegisterId {
         self.id
     }
 }
@@ -804,18 +861,19 @@ unsafe impl CoreArrayProviderInner for CoreRegister {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::new(context.handle, *raw)
+        Self::new(*context, RegisterId::from(*raw)).expect("Register list contains valid registers")
     }
 }
 
 #[derive(Debug, Copy, Clone)]
 pub struct CoreRegisterStackInfo {
-    arch: *mut BNArchitecture,
+    arch: CoreArchitecture,
+    // TODO: Wrap BNRegisterStackInfo
     info: BNRegisterStackInfo,
 }
 
 impl CoreRegisterStackInfo {
-    pub fn new(arch: *mut BNArchitecture, info: BNRegisterStackInfo) -> Self {
+    pub fn new(arch: CoreArchitecture, info: BNRegisterStackInfo) -> Self {
         Self { arch, info }
     }
 }
@@ -825,38 +883,54 @@ impl RegisterStackInfo for CoreRegisterStackInfo {
     type RegType = CoreRegister;
     type RegInfoType = CoreRegisterInfo;
 
-    fn storage_regs(&self) -> (Self::RegType, u32) {
+    fn storage_regs(&self) -> (Self::RegType, usize) {
         (
-            CoreRegister::new(self.arch, self.info.firstStorageReg),
-            self.info.storageCount,
+            CoreRegister::new(self.arch, RegisterId::from(self.info.firstStorageReg))
+                .expect("Storage register is valid"),
+            self.info.storageCount as usize,
         )
     }
 
-    fn top_relative_regs(&self) -> Option<(Self::RegType, u32)> {
+    fn top_relative_regs(&self) -> Option<(Self::RegType, usize)> {
         if self.info.topRelativeCount == 0 {
             None
         } else {
             Some((
-                CoreRegister::new(self.arch, self.info.firstTopRelativeReg),
-                self.info.topRelativeCount,
+                CoreRegister::new(self.arch, RegisterId::from(self.info.firstTopRelativeReg))
+                    .expect("Top relative register is valid"),
+                self.info.topRelativeCount as usize,
             ))
         }
     }
 
     fn stack_top_reg(&self) -> Self::RegType {
-        CoreRegister::new(self.arch, self.info.stackTopReg)
+        CoreRegister::new(self.arch, RegisterId::from(self.info.stackTopReg))
+            .expect("Stack top register is valid")
     }
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CoreRegisterStack {
-    arch: *mut BNArchitecture,
-    id: u32,
+    arch: CoreArchitecture,
+    id: RegisterStackId,
 }
 
 impl CoreRegisterStack {
-    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
-        Self { arch, id }
+    pub fn new(arch: CoreArchitecture, id: RegisterStackId) -> Option<Self> {
+        let register_stack = Self { arch, id };
+        register_stack.is_valid().then_some(register_stack)
+    }
+
+    fn is_valid(&self) -> bool {
+        // We check the name to see if the stack register is actually valid.
+        let name = unsafe { BNGetArchitectureRegisterStackName(self.arch.handle, self.id.into()) };
+        match name.is_null() {
+            true => false,
+            false => {
+                unsafe { BNFreeString(name) };
+                true
+            }
+        }
     }
 }
 
@@ -867,7 +941,7 @@ impl RegisterStack for CoreRegisterStack {
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureRegisterStackName(self.arch, self.id);
+            let name = BNGetArchitectureRegisterStackName(self.arch.handle, self.id.into());
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -883,24 +957,37 @@ impl RegisterStack for CoreRegisterStack {
 
     fn info(&self) -> CoreRegisterStackInfo {
         CoreRegisterStackInfo::new(self.arch, unsafe {
-            BNGetArchitectureRegisterStackInfo(self.arch, self.id)
+            BNGetArchitectureRegisterStackInfo(self.arch.handle, self.id.into())
         })
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> RegisterStackId {
         self.id
     }
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CoreFlag {
-    arch: *mut BNArchitecture,
-    id: u32,
+    arch: CoreArchitecture,
+    id: FlagId,
 }
 
 impl CoreFlag {
-    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
-        Self { arch, id }
+    pub fn new(arch: CoreArchitecture, id: FlagId) -> Option<Self> {
+        let flag = Self { arch, id };
+        flag.is_valid().then_some(flag)
+    }
+
+    fn is_valid(&self) -> bool {
+        // We check the name to see if the flag is actually valid.
+        let name = unsafe { BNGetArchitectureFlagName(self.arch.handle, self.id.into()) };
+        match name.is_null() {
+            true => false,
+            false => {
+                unsafe { BNFreeString(name) };
+                true
+            }
+        }
     }
 }
 
@@ -909,7 +996,7 @@ impl Flag for CoreFlag {
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureFlagName(self.arch, self.id);
+            let name = BNGetArchitectureFlagName(self.arch.handle, self.id.into());
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -924,28 +1011,42 @@ impl Flag for CoreFlag {
     }
 
     fn role(&self, class: Option<CoreFlagClass>) -> FlagRole {
-        let class_id = match class {
-            Some(class) => class.id,
-            _ => 0,
-        };
-
-        unsafe { BNGetArchitectureFlagRole(self.arch, self.id, class_id) }
+        unsafe {
+            BNGetArchitectureFlagRole(
+                self.arch.handle,
+                self.id.into(),
+                class.map(|c| c.id.0).unwrap_or(0),
+            )
+        }
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> FlagId {
         self.id
     }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CoreFlagWrite {
-    arch: *mut BNArchitecture,
-    id: u32,
+    arch: CoreArchitecture,
+    id: FlagWriteId,
 }
 
 impl CoreFlagWrite {
-    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
-        Self { arch, id }
+    pub fn new(arch: CoreArchitecture, id: FlagWriteId) -> Option<Self> {
+        let flag_write = Self { arch, id };
+        flag_write.is_valid().then_some(flag_write)
+    }
+
+    fn is_valid(&self) -> bool {
+        // We check the name to see if the flag write is actually valid.
+        let name = unsafe { BNGetArchitectureFlagWriteTypeName(self.arch.handle, self.id.into()) };
+        match name.is_null() {
+            true => false,
+            false => {
+                unsafe { BNFreeString(name) };
+                true
+            }
+        }
     }
 }
 
@@ -955,7 +1056,7 @@ impl FlagWrite for CoreFlagWrite {
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureFlagWriteTypeName(self.arch, self.id);
+            let name = BNGetArchitectureFlagWriteTypeName(self.arch.handle, self.id.into());
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -970,27 +1071,35 @@ impl FlagWrite for CoreFlagWrite {
     }
 
     fn class(&self) -> Option<CoreFlagClass> {
-        let class = unsafe { BNGetArchitectureSemanticClassForFlagWriteType(self.arch, self.id) };
+        let class = unsafe {
+            BNGetArchitectureSemanticClassForFlagWriteType(self.arch.handle, self.id.into())
+        };
 
         match class {
             0 => None,
-            class_id => Some(CoreFlagClass::new(self.arch, class_id)),
+            class_id => Some(CoreFlagClass::new(self.arch, class_id.into())?),
         }
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> FlagWriteId {
         self.id
     }
 
     fn flags_written(&self) -> Vec<CoreFlag> {
         let mut count: usize = 0;
-        let regs: *mut u32 =
-            unsafe { BNGetArchitectureFlagsWrittenByFlagWriteType(self.arch, self.id, &mut count) };
+        let regs: *mut u32 = unsafe {
+            BNGetArchitectureFlagsWrittenByFlagWriteType(
+                self.arch.handle,
+                self.id.into(),
+                &mut count,
+            )
+        };
 
         let ret = unsafe {
             std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|&reg| CoreFlag::new(self.arch, reg))
+                .map(|id| FlagId::from(*id))
+                .filter_map(|reg| CoreFlag::new(self.arch, reg))
                 .collect()
         };
 
@@ -1004,20 +1113,34 @@ impl FlagWrite for CoreFlagWrite {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CoreFlagClass {
-    arch: *mut BNArchitecture,
-    id: u32,
+    arch: CoreArchitecture,
+    id: FlagClassId,
 }
 
 impl CoreFlagClass {
-    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
-        Self { arch, id }
+    pub fn new(arch: CoreArchitecture, id: FlagClassId) -> Option<Self> {
+        let flag = Self { arch, id };
+        flag.is_valid().then_some(flag)
+    }
+
+    fn is_valid(&self) -> bool {
+        // We check the name to see if the flag is actually valid.
+        let name =
+            unsafe { BNGetArchitectureSemanticFlagClassName(self.arch.handle, self.id.into()) };
+        match name.is_null() {
+            true => false,
+            false => {
+                unsafe { BNFreeString(name) };
+                true
+            }
+        }
     }
 }
 
 impl FlagClass for CoreFlagClass {
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureSemanticFlagClassName(self.arch, self.id);
+            let name = BNGetArchitectureSemanticFlagClassName(self.arch.handle, self.id.into());
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -1031,20 +1154,34 @@ impl FlagClass for CoreFlagClass {
         }
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> FlagClassId {
         self.id
     }
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct CoreFlagGroup {
-    arch: *mut BNArchitecture,
-    id: u32,
+    arch: CoreArchitecture,
+    id: FlagGroupId,
 }
 
 impl CoreFlagGroup {
-    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
-        Self { arch, id }
+    pub fn new(arch: CoreArchitecture, id: FlagGroupId) -> Option<Self> {
+        let flag_group = Self { arch, id };
+        flag_group.is_valid().then_some(flag_group)
+    }
+
+    fn is_valid(&self) -> bool {
+        // We check the name to see if the flag group is actually valid.
+        let name =
+            unsafe { BNGetArchitectureSemanticFlagGroupName(self.arch.handle, self.id.into()) };
+        match name.is_null() {
+            true => false,
+            false => {
+                unsafe { BNFreeString(name) };
+                true
+            }
+        }
     }
 }
 
@@ -1054,7 +1191,7 @@ impl FlagGroup for CoreFlagGroup {
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureSemanticFlagGroupName(self.arch, self.id);
+            let name = BNGetArchitectureSemanticFlagGroupName(self.arch.handle, self.id.into());
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -1068,20 +1205,25 @@ impl FlagGroup for CoreFlagGroup {
         }
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> FlagGroupId {
         self.id
     }
 
     fn flags_required(&self) -> Vec<CoreFlag> {
         let mut count: usize = 0;
         let regs: *mut u32 = unsafe {
-            BNGetArchitectureFlagsRequiredForSemanticFlagGroup(self.arch, self.id, &mut count)
+            BNGetArchitectureFlagsRequiredForSemanticFlagGroup(
+                self.arch.handle,
+                self.id.into(),
+                &mut count,
+            )
         };
 
         let ret = unsafe {
             std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|&reg| CoreFlag::new(self.arch, reg))
+                .map(|id| FlagId::from(*id))
+                .filter_map(|reg| CoreFlag::new(self.arch, reg))
                 .collect()
         };
 
@@ -1096,16 +1238,19 @@ impl FlagGroup for CoreFlagGroup {
         let mut count: usize = 0;
 
         unsafe {
-            let flag_conds =
-                BNGetArchitectureFlagConditionsForSemanticFlagGroup(self.arch, self.id, &mut count);
+            let flag_conds = BNGetArchitectureFlagConditionsForSemanticFlagGroup(
+                self.arch.handle,
+                self.id.into(),
+                &mut count,
+            );
 
             let ret = std::slice::from_raw_parts_mut(flag_conds, count)
                 .iter()
-                .map(|class_cond| {
-                    (
-                        CoreFlagClass::new(self.arch, class_cond.semanticClass),
+                .filter_map(|class_cond| {
+                    Some((
+                        CoreFlagClass::new(self.arch, class_cond.semanticClass.into())?,
                         class_cond.condition,
-                    )
+                    ))
                 })
                 .collect();
 
@@ -1118,20 +1263,33 @@ impl FlagGroup for CoreFlagGroup {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct CoreIntrinsic {
-    pub arch: *mut BNArchitecture,
-    pub id: u32,
+    pub arch: CoreArchitecture,
+    pub id: IntrinsicId,
 }
 
 impl CoreIntrinsic {
-    pub fn new(arch: *mut BNArchitecture, id: u32) -> Self {
-        Self { arch, id }
+    pub fn new(arch: CoreArchitecture, id: IntrinsicId) -> Option<Self> {
+        let intrinsic = Self { arch, id };
+        intrinsic.is_valid().then_some(intrinsic)
+    }
+
+    fn is_valid(&self) -> bool {
+        // We check the name to see if the intrinsic is actually valid.
+        let name = unsafe { BNGetArchitectureIntrinsicName(self.arch.handle, self.id.into()) };
+        match name.is_null() {
+            true => false,
+            false => {
+                unsafe { BNFreeString(name) };
+                true
+            }
+        }
     }
 }
 
 impl Intrinsic for CoreIntrinsic {
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureIntrinsicName(self.arch, self.id);
+            let name = BNGetArchitectureIntrinsicName(self.arch.handle, self.id.into());
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -1146,14 +1304,19 @@ impl Intrinsic for CoreIntrinsic {
         }
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> IntrinsicId {
         self.id
+    }
+
+    fn class(&self) -> BNIntrinsicClass {
+        unsafe { BNGetArchitectureIntrinsicClass(self.arch.handle, self.id.into()) }
     }
 
     fn inputs(&self) -> Vec<NameAndType> {
         let mut count: usize = 0;
         unsafe {
-            let inputs = BNGetArchitectureIntrinsicInputs(self.arch, self.id, &mut count);
+            let inputs =
+                BNGetArchitectureIntrinsicInputs(self.arch.handle, self.id.into(), &mut count);
 
             let ret = std::slice::from_raw_parts_mut(inputs, count)
                 .iter()
@@ -1170,7 +1333,8 @@ impl Intrinsic for CoreIntrinsic {
     fn outputs(&self) -> Vec<Conf<Ref<Type>>> {
         let mut count: usize = 0;
         unsafe {
-            let inputs = BNGetArchitectureIntrinsicOutputs(self.arch, self.id, &mut count);
+            let inputs =
+                BNGetArchitectureIntrinsicOutputs(self.arch.handle, self.id.into(), &mut count);
 
             let ret = std::slice::from_raw_parts_mut(inputs, count)
                 .iter()
@@ -1361,6 +1525,34 @@ impl Architecture for CoreArchitecture {
         None
     }
 
+    fn flags_required_for_flag_condition(
+        &self,
+        condition: FlagCondition,
+        class: Option<Self::FlagClass>,
+    ) -> Vec<Self::Flag> {
+        let class_id_raw = class.map(|c| c.id().0).unwrap_or(0);
+
+        unsafe {
+            let mut count: usize = 0;
+            let flags = BNGetArchitectureFlagsRequiredForFlagCondition(
+                self.handle,
+                condition,
+                class_id_raw,
+                &mut count,
+            );
+
+            let ret = std::slice::from_raw_parts(flags, count)
+                .iter()
+                .map(|&id| FlagId::from(id))
+                .filter_map(|flag| CoreFlag::new(*self, flag))
+                .collect();
+
+            BNFreeRegisterList(flags);
+
+            ret
+        }
+    }
+
     fn flag_cond_llil<'a>(
         &self,
         _cond: FlagCondition,
@@ -1381,14 +1573,15 @@ impl Architecture for CoreArchitecture {
     fn registers_all(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureRegisters(self.handle, &mut count);
+            let registers_raw = BNGetAllArchitectureRegisters(self.handle, &mut count);
 
-            let ret = std::slice::from_raw_parts(regs, count)
+            let ret = std::slice::from_raw_parts(registers_raw, count)
                 .iter()
-                .map(|&reg| CoreRegister::new(self.handle, reg))
+                .map(|&id| RegisterId::from(id))
+                .filter_map(|reg| CoreRegister::new(*self, reg))
                 .collect();
 
-            BNFreeRegisterList(regs);
+            BNFreeRegisterList(registers_raw);
 
             ret
         }
@@ -1397,14 +1590,15 @@ impl Architecture for CoreArchitecture {
     fn registers_full_width(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetFullWidthArchitectureRegisters(self.handle, &mut count);
+            let registers_raw = BNGetFullWidthArchitectureRegisters(self.handle, &mut count);
 
-            let ret = std::slice::from_raw_parts(regs, count)
+            let ret = std::slice::from_raw_parts(registers_raw, count)
                 .iter()
-                .map(|&reg| CoreRegister::new(self.handle, reg))
+                .map(|&id| RegisterId::from(id))
+                .filter_map(|reg| CoreRegister::new(*self, reg))
                 .collect();
 
-            BNFreeRegisterList(regs);
+            BNFreeRegisterList(registers_raw);
 
             ret
         }
@@ -1413,14 +1607,15 @@ impl Architecture for CoreArchitecture {
     fn registers_global(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetArchitectureGlobalRegisters(self.handle, &mut count);
+            let registers_raw = BNGetArchitectureGlobalRegisters(self.handle, &mut count);
 
-            let ret = std::slice::from_raw_parts(regs, count)
+            let ret = std::slice::from_raw_parts(registers_raw, count)
                 .iter()
-                .map(|&reg| CoreRegister::new(self.handle, reg))
+                .map(|&id| RegisterId::from(id))
+                .filter_map(|reg| CoreRegister::new(*self, reg))
                 .collect();
 
-            BNFreeRegisterList(regs);
+            BNFreeRegisterList(registers_raw);
 
             ret
         }
@@ -1429,14 +1624,15 @@ impl Architecture for CoreArchitecture {
     fn registers_system(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetArchitectureSystemRegisters(self.handle, &mut count);
+            let registers_raw = BNGetArchitectureSystemRegisters(self.handle, &mut count);
 
-            let ret = std::slice::from_raw_parts(regs, count)
+            let ret = std::slice::from_raw_parts(registers_raw, count)
                 .iter()
-                .map(|&reg| CoreRegister::new(self.handle, reg))
+                .map(|&id| RegisterId::from(id))
+                .filter_map(|reg| CoreRegister::new(*self, reg))
                 .collect();
 
-            BNFreeRegisterList(regs);
+            BNFreeRegisterList(registers_raw);
 
             ret
         }
@@ -1445,14 +1641,15 @@ impl Architecture for CoreArchitecture {
     fn register_stacks(&self) -> Vec<CoreRegisterStack> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureRegisterStacks(self.handle, &mut count);
+            let reg_stacks_raw = BNGetAllArchitectureRegisterStacks(self.handle, &mut count);
 
-            let ret = std::slice::from_raw_parts(regs, count)
+            let ret = std::slice::from_raw_parts(reg_stacks_raw, count)
                 .iter()
-                .map(|&reg| CoreRegisterStack::new(self.handle, reg))
+                .map(|&id| RegisterStackId::from(id))
+                .filter_map(|reg_stack| CoreRegisterStack::new(*self, reg_stack))
                 .collect();
 
-            BNFreeRegisterList(regs);
+            BNFreeRegisterList(reg_stacks_raw);
 
             ret
         }
@@ -1461,14 +1658,15 @@ impl Architecture for CoreArchitecture {
     fn flags(&self) -> Vec<CoreFlag> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureFlags(self.handle, &mut count);
+            let flags_raw = BNGetAllArchitectureFlags(self.handle, &mut count);
 
-            let ret = std::slice::from_raw_parts(regs, count)
+            let ret = std::slice::from_raw_parts(flags_raw, count)
                 .iter()
-                .map(|&reg| CoreFlag::new(self.handle, reg))
+                .map(|&id| FlagId::from(id))
+                .filter_map(|flag| CoreFlag::new(*self, flag))
                 .collect();
 
-            BNFreeRegisterList(regs);
+            BNFreeRegisterList(flags_raw);
 
             ret
         }
@@ -1477,14 +1675,15 @@ impl Architecture for CoreArchitecture {
     fn flag_write_types(&self) -> Vec<CoreFlagWrite> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureFlagWriteTypes(self.handle, &mut count);
+            let flag_writes_raw = BNGetAllArchitectureFlagWriteTypes(self.handle, &mut count);
 
-            let ret = std::slice::from_raw_parts(regs, count)
+            let ret = std::slice::from_raw_parts(flag_writes_raw, count)
                 .iter()
-                .map(|&reg| CoreFlagWrite::new(self.handle, reg))
+                .map(|&id| FlagWriteId::from(id))
+                .filter_map(|flag_write| CoreFlagWrite::new(*self, flag_write))
                 .collect();
 
-            BNFreeRegisterList(regs);
+            BNFreeRegisterList(flag_writes_raw);
 
             ret
         }
@@ -1493,14 +1692,15 @@ impl Architecture for CoreArchitecture {
     fn flag_classes(&self) -> Vec<CoreFlagClass> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureSemanticFlagClasses(self.handle, &mut count);
+            let flag_classes_raw = BNGetAllArchitectureSemanticFlagClasses(self.handle, &mut count);
 
-            let ret = std::slice::from_raw_parts(regs, count)
+            let ret = std::slice::from_raw_parts(flag_classes_raw, count)
                 .iter()
-                .map(|&reg| CoreFlagClass::new(self.handle, reg))
+                .map(|&id| FlagClassId::from(id))
+                .filter_map(|flag_class| CoreFlagClass::new(*self, flag_class))
                 .collect();
 
-            BNFreeRegisterList(regs);
+            BNFreeRegisterList(flag_classes_raw);
 
             ret
         }
@@ -1509,41 +1709,15 @@ impl Architecture for CoreArchitecture {
     fn flag_groups(&self) -> Vec<CoreFlagGroup> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureSemanticFlagGroups(self.handle, &mut count);
+            let flag_groups_raw = BNGetAllArchitectureSemanticFlagGroups(self.handle, &mut count);
 
-            let ret = std::slice::from_raw_parts(regs, count)
+            let ret = std::slice::from_raw_parts(flag_groups_raw, count)
                 .iter()
-                .map(|&reg| CoreFlagGroup::new(self.handle, reg))
+                .map(|&id| FlagGroupId::from(id))
+                .filter_map(|flag_group| CoreFlagGroup::new(*self, flag_group))
                 .collect();
 
-            BNFreeRegisterList(regs);
-
-            ret
-        }
-    }
-
-    fn flags_required_for_flag_condition(
-        &self,
-        condition: FlagCondition,
-        class: Option<Self::FlagClass>,
-    ) -> Vec<Self::Flag> {
-        let class_id = class.map(|c| c.id()).unwrap_or(0);
-
-        unsafe {
-            let mut count: usize = 0;
-            let flags = BNGetArchitectureFlagsRequiredForFlagCondition(
-                self.handle,
-                condition,
-                class_id,
-                &mut count,
-            );
-
-            let ret = std::slice::from_raw_parts(flags, count)
-                .iter()
-                .map(|&flag| CoreFlag::new(self.handle, flag))
-                .collect();
-
-            BNFreeRegisterList(flags);
+            BNFreeRegisterList(flag_groups_raw);
 
             ret
         }
@@ -1552,70 +1726,60 @@ impl Architecture for CoreArchitecture {
     fn stack_pointer_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetArchitectureStackPointerRegister(self.handle) } {
             0xffff_ffff => None,
-            reg => Some(CoreRegister::new(self.handle, reg)),
+            reg => Some(CoreRegister::new(*self, reg.into())?),
         }
     }
 
     fn link_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetArchitectureLinkRegister(self.handle) } {
             0xffff_ffff => None,
-            reg => Some(CoreRegister::new(self.handle, reg)),
+            reg => Some(CoreRegister::new(*self, reg.into())?),
         }
     }
 
-    fn register_from_id(&self, id: u32) -> Option<CoreRegister> {
-        // TODO validate in debug builds
-        Some(CoreRegister::new(self.handle, id))
+    fn register_from_id(&self, id: RegisterId) -> Option<CoreRegister> {
+        CoreRegister::new(*self, id)
     }
 
-    fn register_stack_from_id(&self, id: u32) -> Option<CoreRegisterStack> {
-        // TODO validate in debug builds
-        Some(CoreRegisterStack::new(self.handle, id))
+    fn register_stack_from_id(&self, id: RegisterStackId) -> Option<CoreRegisterStack> {
+        CoreRegisterStack::new(*self, id)
     }
 
-    fn flag_from_id(&self, id: u32) -> Option<CoreFlag> {
-        // TODO validate in debug builds
-        Some(CoreFlag::new(self.handle, id))
+    fn flag_from_id(&self, id: FlagId) -> Option<CoreFlag> {
+        CoreFlag::new(*self, id)
     }
 
-    fn flag_write_from_id(&self, id: u32) -> Option<CoreFlagWrite> {
-        // TODO validate in debug builds
-        Some(CoreFlagWrite::new(self.handle, id))
+    fn flag_write_from_id(&self, id: FlagWriteId) -> Option<CoreFlagWrite> {
+        CoreFlagWrite::new(*self, id)
     }
 
-    fn flag_class_from_id(&self, id: u32) -> Option<CoreFlagClass> {
-        // TODO validate in debug builds
-        Some(CoreFlagClass::new(self.handle, id))
+    fn flag_class_from_id(&self, id: FlagClassId) -> Option<CoreFlagClass> {
+        CoreFlagClass::new(*self, id)
     }
 
-    fn flag_group_from_id(&self, id: u32) -> Option<CoreFlagGroup> {
-        // TODO validate in debug builds
-        Some(CoreFlagGroup::new(self.handle, id))
+    fn flag_group_from_id(&self, id: FlagGroupId) -> Option<CoreFlagGroup> {
+        CoreFlagGroup::new(*self, id)
     }
 
     fn intrinsics(&self) -> Vec<CoreIntrinsic> {
         unsafe {
             let mut count: usize = 0;
-            let intrinsics = BNGetAllArchitectureIntrinsics(self.handle, &mut count);
+            let intrinsics_raw = BNGetAllArchitectureIntrinsics(self.handle, &mut count);
 
-            let ret = std::slice::from_raw_parts_mut(intrinsics, count)
+            let intrinsics = std::slice::from_raw_parts_mut(intrinsics_raw, count)
                 .iter()
-                .map(|&reg| CoreIntrinsic::new(self.handle, reg))
+                .map(|&id| IntrinsicId::from(id))
+                .filter_map(|intrinsic| CoreIntrinsic::new(*self, intrinsic))
                 .collect();
 
-            BNFreeRegisterList(intrinsics);
+            BNFreeRegisterList(intrinsics_raw);
 
-            ret
+            intrinsics
         }
     }
 
-    fn intrinsic_class(&self, id: u32) -> BNIntrinsicClass {
-        unsafe { BNGetArchitectureIntrinsicClass(self.handle, id) }
-    }
-
-    fn intrinsic_from_id(&self, id: u32) -> Option<CoreIntrinsic> {
-        // TODO validate in debug builds
-        Some(CoreIntrinsic::new(self.handle, id))
+    fn intrinsic_from_id(&self, id: IntrinsicId) -> Option<CoreIntrinsic> {
+        CoreIntrinsic::new(*self, id)
     }
 
     fn can_assemble(&self) -> bool {
@@ -1761,7 +1925,7 @@ pub trait ArchitectureExt: Architecture {
             BNGetArchitectureRegisterByName(self.as_ref().handle, name.as_ref().as_ptr() as *mut _)
         } {
             0xffff_ffff => None,
-            reg => self.register_from_id(reg),
+            reg => self.register_from_id(reg.into()),
         }
     }
 
@@ -2042,7 +2206,7 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        match custom_arch.register_from_id(reg) {
+        match custom_arch.register_from_id(reg.into()) {
             Some(reg) => BnString::new(reg.name().as_ref()).into_raw(),
             None => BnString::new("invalid_reg").into_raw(),
         }
@@ -2054,7 +2218,7 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        match custom_arch.flag_from_id(flag) {
+        match custom_arch.flag_from_id(flag.into()) {
             Some(flag) => BnString::new(flag.name().as_ref()).into_raw(),
             None => BnString::new("invalid_flag").into_raw(),
         }
@@ -2066,7 +2230,7 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        match custom_arch.flag_write_from_id(flag_write) {
+        match custom_arch.flag_write_from_id(flag_write.into()) {
             Some(flag_write) => BnString::new(flag_write.name().as_ref()).into_raw(),
             None => BnString::new("invalid_flag_write").into_raw(),
         }
@@ -2078,7 +2242,7 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        match custom_arch.flag_class_from_id(class) {
+        match custom_arch.flag_class_from_id(class.into()) {
             Some(class) => BnString::new(class.name().as_ref()).into_raw(),
             None => BnString::new("invalid_flag_class").into_raw(),
         }
@@ -2090,7 +2254,7 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        match custom_arch.flag_group_from_id(group) {
+        match custom_arch.flag_group_from_id(group.into()) {
             Some(group) => BnString::new(group.name().as_ref()).into_raw(),
             None => BnString::new("invalid_flag_group").into_raw(),
         }
@@ -2104,7 +2268,7 @@ where
         let mut regs: Box<[_]> = custom_arch
             .registers_full_width()
             .iter()
-            .map(|r| r.id())
+            .map(|r| r.id().0)
             .collect();
 
         // SAFETY: `count` is an out parameter
@@ -2119,7 +2283,11 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut regs: Box<[_]> = custom_arch.registers_all().iter().map(|r| r.id()).collect();
+        let mut regs: Box<[_]> = custom_arch
+            .registers_all()
+            .iter()
+            .map(|r| r.id().0)
+            .collect();
 
         // SAFETY: `count` is an out parameter
         unsafe { *count = regs.len() };
@@ -2136,7 +2304,7 @@ where
         let mut regs: Box<[_]> = custom_arch
             .registers_global()
             .iter()
-            .map(|r| r.id())
+            .map(|r| r.id().0)
             .collect();
 
         // SAFETY: `count` is an out parameter
@@ -2154,7 +2322,7 @@ where
         let mut regs: Box<[_]> = custom_arch
             .registers_system()
             .iter()
-            .map(|r| r.id())
+            .map(|r| r.id().0)
             .collect();
 
         // SAFETY: `count` is an out parameter
@@ -2169,7 +2337,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut flags: Box<[_]> = custom_arch.flags().iter().map(|f| f.id()).collect();
+        let mut flags: Box<[_]> = custom_arch.flags().iter().map(|f| f.id().0).collect();
 
         // SAFETY: `count` is an out parameter
         unsafe { *count = flags.len() };
@@ -2186,7 +2354,7 @@ where
         let mut flag_writes: Box<[_]> = custom_arch
             .flag_write_types()
             .iter()
-            .map(|f| f.id())
+            .map(|f| f.id().0)
             .collect();
 
         // SAFETY: `count` is an out parameter
@@ -2201,8 +2369,11 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut flag_classes: Box<[_]> =
-            custom_arch.flag_classes().iter().map(|f| f.id()).collect();
+        let mut flag_classes: Box<[_]> = custom_arch
+            .flag_classes()
+            .iter()
+            .map(|f| f.id().0)
+            .collect();
 
         // SAFETY: `count` is an out parameter
         unsafe { *count = flag_classes.len() };
@@ -2216,7 +2387,8 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut flag_groups: Box<[_]> = custom_arch.flag_groups().iter().map(|f| f.id()).collect();
+        let mut flag_groups: Box<[_]> =
+            custom_arch.flag_groups().iter().map(|f| f.id().0).collect();
 
         // SAFETY: `count` is an out parameter
         unsafe { *count = flag_groups.len() };
@@ -2232,8 +2404,8 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         if let (Some(flag), class) = (
-            custom_arch.flag_from_id(flag),
-            custom_arch.flag_class_from_id(class),
+            custom_arch.flag_from_id(FlagId(flag)),
+            custom_arch.flag_class_from_id(FlagClassId(class)),
         ) {
             flag.role(class)
         } else {
@@ -2251,11 +2423,11 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let class = custom_arch.flag_class_from_id(class);
+        let class = custom_arch.flag_class_from_id(FlagClassId(class));
         let mut flags: Box<[_]> = custom_arch
             .flags_required_for_flag_condition(cond, class)
             .iter()
-            .map(|f| f.id())
+            .map(|f| f.id().0)
             .collect();
 
         // SAFETY: `count` is an out parameter
@@ -2275,8 +2447,8 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        if let Some(group) = custom_arch.flag_group_from_id(group) {
-            let mut flags: Box<[_]> = group.flags_required().iter().map(|f| f.id()).collect();
+        if let Some(group) = custom_arch.flag_group_from_id(FlagGroupId(group)) {
+            let mut flags: Box<[_]> = group.flags_required().iter().map(|f| f.id().0).collect();
 
             // SAFETY: `count` is an out parameter
             unsafe { *count = flags.len() };
@@ -2301,12 +2473,12 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        if let Some(group) = custom_arch.flag_group_from_id(group) {
+        if let Some(group) = custom_arch.flag_group_from_id(FlagGroupId(group)) {
             let flag_conditions = group.flag_conditions();
             let mut flags: Box<[_]> = flag_conditions
                 .iter()
                 .map(|(&class, &condition)| BNFlagConditionForSemanticClass {
-                    semanticClass: class.id(),
+                    semanticClass: class.id().0,
                     condition,
                 })
                 .collect();
@@ -2351,9 +2523,12 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        if let Some(write_type) = custom_arch.flag_write_from_id(write_type) {
-            let mut flags_written: Box<[_]> =
-                write_type.flags_written().iter().map(|f| f.id()).collect();
+        if let Some(write_type) = custom_arch.flag_write_from_id(FlagWriteId(write_type)) {
+            let mut flags_written: Box<[_]> = write_type
+                .flags_written()
+                .iter()
+                .map(|f| f.id().0)
+                .collect();
 
             // SAFETY: `count` is an out parameter
             unsafe { *count = flags_written.len() };
@@ -2377,9 +2552,9 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch
-            .flag_write_from_id(write_type)
+            .flag_write_from_id(FlagWriteId(write_type))
             .map(|w| w.class())
-            .and_then(|c| c.map(|c| c.id()))
+            .and_then(|c| c.map(|c| c.id().0))
             .unwrap_or(0)
     }
 
@@ -2401,8 +2576,8 @@ where
             handle: ctxt as *mut A,
         };
 
-        let flag_write = custom_arch.flag_write_from_id(flag_write);
-        let flag = custom_arch.flag_from_id(flag);
+        let flag_write = custom_arch.flag_write_from_id(FlagWriteId(flag_write));
+        let flag = custom_arch.flag_from_id(FlagId(flag));
         let operands = unsafe { std::slice::from_raw_parts(operands_raw, operand_count) };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
@@ -2410,7 +2585,7 @@ where
             if let Some(op) = FlagWriteOp::from_op(custom_arch, size, op, operands) {
                 if let Some(expr) = custom_arch.flag_write_llil(flag, flag_write, op, &mut lifter) {
                     // TODO verify that returned expr is a bool value
-                    return expr.expr_idx;
+                    return expr.index.0;
                 }
             } else {
                 warn!(
@@ -2436,7 +2611,7 @@ where
         } else {
             // TODO this should be impossible; requires bad flag/flag_write ids passed in;
             // explode more violently
-            lifter.unimplemented().expr_idx
+            lifter.unimplemented().index.0
         }
     }
 
@@ -2454,15 +2629,15 @@ where
             handle: ctxt as *mut A,
         };
 
-        let class = custom_arch.flag_class_from_id(class);
+        let class = custom_arch.flag_class_from_id(FlagClassId(class));
 
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
         if let Some(expr) = custom_arch.flag_cond_llil(cond, class, &mut lifter) {
             // TODO verify that returned expr is a bool value
-            return expr.expr_idx;
+            return expr.index.0;
         }
 
-        lifter.unimplemented().expr_idx
+        lifter.unimplemented().index.0
     }
 
     extern "C" fn cb_flag_group_llil<A>(
@@ -2480,14 +2655,14 @@ where
 
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
-        if let Some(group) = custom_arch.flag_group_from_id(group) {
+        if let Some(group) = custom_arch.flag_group_from_id(FlagGroupId(group)) {
             if let Some(expr) = custom_arch.flag_group_llil(group, &mut lifter) {
                 // TODO verify that returned expr is a bool value
-                return expr.expr_idx;
+                return expr.index.0;
             }
         }
 
-        lifter.unimplemented().expr_idx
+        lifter.unimplemented().index.0
     }
 
     extern "C" fn cb_free_register_list(_ctxt: *mut c_void, regs: *mut u32, count: usize) {
@@ -2508,12 +2683,12 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let result = unsafe { &mut *result };
 
-        if let Some(reg) = custom_arch.register_from_id(reg) {
+        if let Some(reg) = custom_arch.register_from_id(RegisterId(reg)) {
             let info = reg.info();
 
             result.fullWidthRegister = match info.parent() {
-                Some(p) => p.id(),
-                None => reg.id(),
+                Some(p) => p.id().0,
+                None => reg.id().0,
             };
 
             result.offset = info.offset();
@@ -2529,7 +2704,7 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         if let Some(reg) = custom_arch.stack_pointer_reg() {
-            reg.id()
+            reg.id().0
         } else {
             0xffff_ffff
         }
@@ -2542,7 +2717,7 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         if let Some(reg) = custom_arch.link_reg() {
-            reg.id()
+            reg.id().0
         } else {
             0xffff_ffff
         }
@@ -2554,7 +2729,7 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        match custom_arch.register_stack_from_id(stack) {
+        match custom_arch.register_stack_from_id(RegisterStackId(stack)) {
             Some(stack) => BnString::new(stack.name().as_ref()).into_raw(),
             None => BnString::new("invalid_reg_stack").into_raw(),
         }
@@ -2568,7 +2743,7 @@ where
         let mut regs: Box<[_]> = custom_arch
             .register_stacks()
             .iter()
-            .map(|r| r.id())
+            .map(|r| r.id().0)
             .collect();
 
         // SAFETY: Passed in to be written
@@ -2588,22 +2763,22 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let result = unsafe { &mut *result };
 
-        if let Some(stack) = custom_arch.register_stack_from_id(stack) {
+        if let Some(stack) = custom_arch.register_stack_from_id(RegisterStackId(stack)) {
             let info = stack.info();
 
             let (reg, count) = info.storage_regs();
-            result.firstStorageReg = reg.id();
-            result.storageCount = count;
+            result.firstStorageReg = reg.id().0;
+            result.storageCount = count as u32;
 
             if let Some((reg, count)) = info.top_relative_regs() {
-                result.firstTopRelativeReg = reg.id();
-                result.topRelativeCount = count;
+                result.firstTopRelativeReg = reg.id().0;
+                result.topRelativeCount = count as u32;
             } else {
                 result.firstTopRelativeReg = 0xffff_ffff;
                 result.topRelativeCount = 0;
             }
 
-            result.stackTopReg = info.stack_top_reg().id();
+            result.stackTopReg = info.stack_top_reg().id().0;
         }
     }
 
@@ -2612,7 +2787,11 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        custom_arch.intrinsic_class(intrinsic)
+        match custom_arch.intrinsic_from_id(IntrinsicId(intrinsic)) {
+            Some(intrinsic) => intrinsic.class(),
+            // TODO: Make this unreachable?
+            None => BNIntrinsicClass::GeneralIntrinsicClass,
+        }
     }
 
     extern "C" fn cb_intrinsic_name<A>(ctxt: *mut c_void, intrinsic: u32) -> *mut c_char
@@ -2620,8 +2799,8 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        match custom_arch.intrinsic_from_id(intrinsic) {
-            Some(intrinsic) => BnString::new(intrinsic.name().as_ref()).into_raw(),
+        match custom_arch.intrinsic_from_id(IntrinsicId(intrinsic)) {
+            Some(intrinsic) => BnString::new(intrinsic.name()).into_raw(),
             None => BnString::new("invalid_intrinsic").into_raw(),
         }
     }
@@ -2631,7 +2810,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let mut intrinsics: Box<[_]> = custom_arch.intrinsics().iter().map(|i| i.id()).collect();
+        let mut intrinsics: Box<[_]> = custom_arch.intrinsics().iter().map(|i| i.id().0).collect();
 
         // SAFETY: Passed in to be written
         unsafe { *count = intrinsics.len() };
@@ -2650,7 +2829,7 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        let Some(intrinsic) = custom_arch.intrinsic_from_id(intrinsic) else {
+        let Some(intrinsic) = custom_arch.intrinsic_from_id(IntrinsicId(intrinsic)) else {
             // SAFETY: Passed in to be written
             unsafe {
                 *count = 0;
@@ -2703,7 +2882,7 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        let Some(intrinsic) = custom_arch.intrinsic_from_id(intrinsic) else {
+        let Some(intrinsic) = custom_arch.intrinsic_from_id(IntrinsicId(intrinsic)) else {
             // SAFETY: Passed in to be written
             unsafe {
                 *count = 0;

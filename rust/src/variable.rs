@@ -514,7 +514,7 @@ impl RegisterValue {
 impl From<BNRegisterValue> for RegisterValue {
     fn from(value: BNRegisterValue) -> Self {
         Self {
-            state: value.state.into(),
+            state: value.state,
             value: value.value,
             offset: value.offset,
             size: value.size,
@@ -525,7 +525,7 @@ impl From<BNRegisterValue> for RegisterValue {
 impl From<RegisterValue> for BNRegisterValue {
     fn from(value: RegisterValue) -> Self {
         Self {
-            state: value.state.into(),
+            state: value.state,
             value: value.value,
             offset: value.offset,
             size: value.size,
@@ -772,7 +772,7 @@ impl From<BNPossibleValueSet> for PossibleValueSet {
 impl From<PossibleValueSet> for BNPossibleValueSet {
     fn from(value: PossibleValueSet) -> Self {
         let mut raw = BNPossibleValueSet::default();
-        raw.state = value.value_type().into();
+        raw.state = value.value_type();
         match value {
             PossibleValueSet::UndeterminedValue => {}
             PossibleValueSet::EntryValue { reg } => {

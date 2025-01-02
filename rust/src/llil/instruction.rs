@@ -15,12 +15,22 @@
 use binaryninjacore_sys::BNGetLowLevelILByIndex;
 use binaryninjacore_sys::BNGetLowLevelILIndexForInstruction;
 use binaryninjacore_sys::BNLowLevelILInstruction;
+use std::fmt::{Display, Formatter};
 
 use super::operation;
 use super::operation::Operation;
 use super::*;
 
 use crate::architecture::Architecture;
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct InstructionIndex(pub usize);
+
+impl Display for InstructionIndex {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
+    }
+}
 
 pub struct Instruction<'func, A, M, F>
 where
@@ -29,7 +39,20 @@ where
     F: FunctionForm,
 {
     pub(crate) function: &'func LowLevelILFunction<A, M, F>,
-    pub(crate) instr_idx: usize,
+    pub index: InstructionIndex,
+}
+
+impl<'func, A, M, F> Instruction<'func, A, M, F>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    // TODO: Should we check the instruction count here with BNGetLowLevelILInstructionCount?
+    // TODO: If we _can_ then this should become an Option<Self> methinks
+    pub fn new(function: &'func LowLevelILFunction<A, M, F>, index: InstructionIndex) -> Self {
+        Self { function, index }
+    }
 }
 
 fn common_info<'func, A, M, F>(
@@ -97,7 +120,7 @@ where
 {
     pub fn address(&self) -> u64 {
         let expr_idx =
-            unsafe { BNGetLowLevelILIndexForInstruction(self.function.handle, self.instr_idx) };
+            unsafe { BNGetLowLevelILIndexForInstruction(self.function.handle, self.index.0) };
         let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, expr_idx) };
         op.address
     }
@@ -106,7 +129,7 @@ where
         use binaryninjacore_sys::BNLowLevelILOperation::*;
 
         let expr_idx =
-            unsafe { BNGetLowLevelILIndexForInstruction(self.function.handle, self.instr_idx) };
+            unsafe { BNGetLowLevelILIndexForInstruction(self.function.handle, self.index.0) };
         let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, expr_idx) };
 
         match op.operation {
@@ -126,7 +149,7 @@ where
                     // Hopefully this is a bare value. If it isn't (expression
                     // from wrong function form or similar) it won't really cause
                     // any problems as it'll come back as undefined when queried.
-                    let expr = Expression::new(self.function, expr_idx);
+                    let expr = Expression::new(self.function, ExpressionIndex(expr_idx));
 
                     let info = unsafe { expr.info_from_op(op) };
 

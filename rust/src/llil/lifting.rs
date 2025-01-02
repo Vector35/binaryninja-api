@@ -14,15 +14,15 @@
 
 use std::marker::PhantomData;
 
-use crate::architecture::Architecture;
 use crate::architecture::Register as ArchReg;
+use crate::architecture::{Architecture, FlagWriteId, RegisterId};
 use crate::architecture::{
     Flag, FlagClass, FlagCondition, FlagGroup, FlagRole, FlagWrite, Intrinsic,
 };
 use crate::function::Location;
 use crate::llil::{
-    Expression, ExpressionResultType, LiftedExpr, LiftedNonSSA, Lifter, LowLevelILFunction,
-    Mutable, NonSSA, Register, ValueExpr, VoidExpr,
+    Expression, ExpressionIndex, ExpressionResultType, LiftedExpr, LiftedNonSSA, Lifter,
+    LowLevelILFunction, Mutable, NonSSA, Register, ValueExpr, VoidExpr,
 };
 use binaryninjacore_sys::{BNAddLowLevelILLabelForAddress, BNLowLevelILOperation};
 use binaryninjacore_sys::{BNLowLevelILLabel, BNRegisterOrConstant};
@@ -57,7 +57,7 @@ impl<R: ArchReg> From<RegisterOrConstant<R>> for BNRegisterOrConstant {
         match value {
             RegisterOrConstant::Register(_, r) => Self {
                 constant: false,
-                reg: r.id(),
+                reg: r.id().0,
                 value: 0,
             },
             RegisterOrConstant::Constant(_, value) => Self {
@@ -170,7 +170,7 @@ impl<R: ArchReg> FlagWriteOp<R> {
                 RegisterOrConstant::Constant(size, operand.value)
             } else {
                 let il_reg = if 0x8000_0000 & operand.reg == 0 {
-                    Register::ArchReg(arch.register_from_id(operand.reg).unwrap())
+                    Register::ArchReg(arch.register_from_id(RegisterId(operand.reg)).unwrap())
                 } else {
                     Register::Temp(operand.reg)
                 };
@@ -387,7 +387,7 @@ where
         )
     };
 
-    Expression::new(il, expr_idx)
+    Expression::new(il, ExpressionIndex(expr_idx))
 }
 
 pub fn get_default_flag_cond_llil<'func, A>(
@@ -400,7 +400,7 @@ where
     A: 'func + Architecture,
 {
     use binaryninjacore_sys::BNGetDefaultArchitectureFlagConditionLowLevelIL;
-    let class_id = class.map(|c| c.id()).unwrap_or(0);
+    let class_id = class.map(|c| c.id().0).unwrap_or(0);
 
     unsafe {
         let expr_idx = BNGetDefaultArchitectureFlagConditionLowLevelIL(
@@ -410,7 +410,7 @@ where
             il.handle,
         );
 
-        Expression::new(il, expr_idx)
+        Expression::new(il, ExpressionIndex(expr_idx))
     }
 }
 
@@ -578,7 +578,7 @@ where
     pub fn with_source_operand(self, op: u32) -> Self {
         use binaryninjacore_sys::BNLowLevelILSetExprSourceOperand;
 
-        unsafe { BNLowLevelILSetExprSourceOperand(self.function.handle, self.expr_idx, op) }
+        unsafe { BNLowLevelILSetExprSourceOperand(self.function.handle, self.index.0, op) }
 
         self
     }
@@ -597,7 +597,7 @@ where
     function: &'func LowLevelILFunction<A, Mutable, NonSSA<LiftedNonSSA>>,
     op: BNLowLevelILOperation,
     size: usize,
-    flags: u32,
+    flag_write: FlagWriteId,
     op1: u64,
     op2: u64,
     op3: u64,
@@ -613,13 +613,13 @@ where
     pub fn from_expr(expr: Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R>) -> Self {
         use binaryninjacore_sys::BNGetLowLevelILByIndex;
 
-        let instr = unsafe { BNGetLowLevelILByIndex(expr.function.handle, expr.expr_idx) };
+        let instr = unsafe { BNGetLowLevelILByIndex(expr.function.handle, expr.index.0) };
 
         ExpressionBuilder {
             function: expr.function,
             op: instr.operation,
             size: instr.size,
-            flags: instr.flags,
+            flag_write: FlagWriteId(instr.flags),
             op1: instr.operands[0],
             op2: instr.operands[1],
             op3: instr.operands[2],
@@ -630,7 +630,7 @@ where
 
     pub fn with_flag_write(mut self, flag_write: A::FlagWrite) -> Self {
         // TODO verify valid id
-        self.flags = flag_write.id();
+        self.flag_write = flag_write.id();
         self
     }
 
@@ -642,7 +642,7 @@ where
                 self.function.handle,
                 self.op,
                 self.size,
-                self.flags,
+                self.flag_write.0,
                 self.op1,
                 self.op2,
                 self.op3,
@@ -650,7 +650,7 @@ where
             )
         };
 
-        Expression::new(self.function, expr_idx)
+        Expression::new(self.function, ExpressionIndex(expr_idx))
     }
 
     pub fn with_source_operand(
@@ -720,7 +720,7 @@ macro_rules! no_arg_lifter {
 
             let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, $op, 0, 0, 0, 0, 0, 0) };
 
-            Expression::new(self, expr_idx)
+            Expression::new(self, ExpressionIndex(expr_idx))
         }
     };
 }
@@ -734,7 +734,7 @@ macro_rules! sized_no_arg_lifter {
                 function: self,
                 op: $op,
                 size,
-                flags: 0,
+                flag_write: FlagWriteId(0),
                 op1: 0,
                 op2: 0,
                 op3: 0,
@@ -760,10 +760,10 @@ macro_rules! unsized_unary_op_lifter {
             let expr = E::lift(self, expr);
 
             let expr_idx = unsafe {
-                BNLowLevelILAddExpr(self.handle, $op, 0, 0, expr.expr_idx as u64, 0, 0, 0)
+                BNLowLevelILAddExpr(self.handle, $op, 0, 0, expr.index.0 as u64, 0, 0, 0)
             };
 
-            Expression::new(self, expr_idx)
+            Expression::new(self, ExpressionIndex(expr_idx))
         }
     };
 }
@@ -782,8 +782,8 @@ macro_rules! sized_unary_op_lifter {
                 function: self,
                 op: $op,
                 size,
-                flags: 0,
-                op1: expr.expr_idx as u64,
+                flag_write: FlagWriteId(0),
+                op1: expr.index.0 as u64,
                 op2: 0,
                 op3: 0,
                 op4: 0,
@@ -807,8 +807,8 @@ macro_rules! size_changing_unary_op_lifter {
                 function: self,
                 op: $op,
                 size,
-                flags: 0,
-                op1: expr.expr_idx as u64,
+                flag_write: FlagWriteId(0),
+                op1: expr.index.0 as u64,
                 op2: 0,
                 op3: 0,
                 op4: 0,
@@ -839,9 +839,9 @@ macro_rules! binary_op_lifter {
                 function: self,
                 op: $op,
                 size,
-                flags: 0,
-                op1: left.expr_idx as u64,
-                op2: right.expr_idx as u64,
+                flag_write: FlagWriteId(0),
+                op1: left.index.0 as u64,
+                op2: right.index.0 as u64,
                 op3: 0,
                 op4: 0,
                 _ty: PhantomData,
@@ -874,10 +874,10 @@ macro_rules! binary_op_carry_lifter {
                 function: self,
                 op: $op,
                 size,
-                flags: 0,
-                op1: left.expr_idx as u64,
-                op2: right.expr_idx as u64,
-                op3: carry.expr_idx as u64,
+                flag_write: FlagWriteId(0),
+                op1: left.index.0 as u64,
+                op2: right.index.0 as u64,
+                op3: carry.index.0 as u64,
                 op4: 0,
                 _ty: PhantomData,
             }
@@ -904,19 +904,20 @@ where
 
         unsafe {
             use binaryninjacore_sys::BNLowLevelILAddInstruction;
-            BNLowLevelILAddInstruction(self.handle, expr.expr_idx);
+            BNLowLevelILAddInstruction(self.handle, expr.index.0);
         }
     }
 
     pub unsafe fn replace_expression<'a, E: Liftable<'a, A>>(
         &'a self,
-        replaced_expr_index: usize,
+        replaced_expr_index: ExpressionIndex,
         replacement: E,
     ) {
         use binaryninjacore_sys::BNGetLowLevelILExprCount;
         use binaryninjacore_sys::BNReplaceLowLevelILExpr;
 
-        if replaced_expr_index >= BNGetLowLevelILExprCount(self.handle) {
+        // Return false instead?
+        if replaced_expr_index.0 >= BNGetLowLevelILExprCount(self.handle) {
             panic!(
                 "bad expr idx used: {} exceeds function bounds",
                 replaced_expr_index
@@ -924,7 +925,7 @@ where
         }
 
         let expr = self.expression(replacement);
-        BNReplaceLowLevelILExpr(self.handle, replaced_expr_index, expr.expr_idx);
+        BNReplaceLowLevelILExpr(self.handle, replaced_expr_index.0, expr.index.0);
     }
 
     pub fn const_int(
@@ -938,7 +939,7 @@ where
         let expr_idx =
             unsafe { BNLowLevelILAddExpr(self.handle, LLIL_CONST, size, 0, val, 0, 0, 0) };
 
-        Expression::new(self, expr_idx)
+        Expression::new(self, ExpressionIndex(expr_idx))
     }
 
     pub fn const_ptr_sized(
@@ -952,7 +953,7 @@ where
         let expr_idx =
             unsafe { BNLowLevelILAddExpr(self.handle, LLIL_CONST_PTR, size, 0, val, 0, 0, 0) };
 
-        Expression::new(self, expr_idx)
+        Expression::new(self, ExpressionIndex(expr_idx))
     }
 
     pub fn const_ptr(&self, val: u64) -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
@@ -965,7 +966,7 @@ where
 
         let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, LLIL_TRAP, 0, 0, val, 0, 0, 0) };
 
-        Expression::new(self, expr_idx)
+        Expression::new(self, ExpressionIndex(expr_idx))
     }
 
     no_arg_lifter!(unimplemented, LLIL_UNIMPL, ValueExpr);
@@ -999,7 +1000,7 @@ where
         let expr_idx = unsafe {
             BNLowLevelILIf(
                 self.handle,
-                cond.expr_idx as u64,
+                cond.index.0 as u64,
                 &mut raw_true_label,
                 &mut raw_false_label,
             )
@@ -1009,7 +1010,7 @@ where
         *true_label = Label::from(raw_true_label);
         *false_label = Label::from(raw_false_label);
 
-        Expression::new(self, expr_idx)
+        Expression::new(self, ExpressionIndex(expr_idx))
     }
 
     // TODO: Wtf are these lifetimes??
@@ -1025,7 +1026,7 @@ where
         // Update the labels after they have been resolved.
         *label = Label::from(raw_label);
 
-        Expression::new(self, expr_idx)
+        Expression::new(self, ExpressionIndex(expr_idx))
     }
 
     pub fn reg<R: Into<Register<A::Register>>>(
@@ -1037,15 +1038,12 @@ where
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_REG;
 
         // TODO verify valid id
-        let reg = match reg.into() {
-            Register::ArchReg(r) => r.id(),
-            Register::Temp(r) => 0x8000_0000 | r,
-        };
+        let reg = reg.into().id();
 
         let expr_idx =
-            unsafe { BNLowLevelILAddExpr(self.handle, LLIL_REG, size, 0, reg as u64, 0, 0, 0) };
+            unsafe { BNLowLevelILAddExpr(self.handle, LLIL_REG, size, 0, reg.0 as u64, 0, 0, 0) };
 
-        Expression::new(self, expr_idx)
+        Expression::new(self, ExpressionIndex(expr_idx))
     }
 
     pub fn reg_split<H: Into<Register<A::Register>>, L: Into<Register<A::Register>>>(
@@ -1058,16 +1056,8 @@ where
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_REG_SPLIT;
 
         // TODO verify valid id
-        let hi_reg = match hi_reg.into() {
-            Register::ArchReg(r) => r.id(),
-            Register::Temp(r) => 0x8000_0000 | r,
-        };
-
-        // TODO verify valid id
-        let lo_reg = match lo_reg.into() {
-            Register::ArchReg(r) => r.id(),
-            Register::Temp(r) => 0x8000_0000 | r,
-        };
+        let hi_reg = hi_reg.into().id();
+        let lo_reg = lo_reg.into().id();
 
         let expr_idx = unsafe {
             BNLowLevelILAddExpr(
@@ -1075,14 +1065,14 @@ where
                 LLIL_REG_SPLIT,
                 size,
                 0,
-                hi_reg as u64,
-                lo_reg as u64,
+                hi_reg.0 as u64,
+                lo_reg.0 as u64,
                 0,
                 0,
             )
         };
 
-        Expression::new(self, expr_idx)
+        Expression::new(self, ExpressionIndex(expr_idx))
     }
 
     pub fn set_reg<'a, R, E>(
@@ -1098,10 +1088,7 @@ where
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_SET_REG;
 
         // TODO verify valid id
-        let dest_reg = match dest_reg.into() {
-            Register::ArchReg(r) => r.id(),
-            Register::Temp(r) => 0x8000_0000 | r,
-        };
+        let dest_reg = dest_reg.into().id();
 
         let expr = E::lift_with_size(self, expr, size);
 
@@ -1109,9 +1096,10 @@ where
             function: self,
             op: LLIL_SET_REG,
             size,
-            flags: 0,
-            op1: dest_reg as u64,
-            op2: expr.expr_idx as u64,
+            // TODO: Make these optional?
+            flag_write: FlagWriteId(0),
+            op1: dest_reg.0 as u64,
+            op2: expr.index.0 as u64,
             op3: 0,
             op4: 0,
             _ty: PhantomData,
@@ -1133,16 +1121,8 @@ where
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_SET_REG_SPLIT;
 
         // TODO verify valid id
-        let hi_reg = match hi_reg.into() {
-            Register::ArchReg(r) => r.id(),
-            Register::Temp(r) => 0x8000_0000 | r,
-        };
-
-        // TODO verify valid id
-        let lo_reg = match lo_reg.into() {
-            Register::ArchReg(r) => r.id(),
-            Register::Temp(r) => 0x8000_0000 | r,
-        };
+        let hi_reg = hi_reg.into().id();
+        let lo_reg = lo_reg.into().id();
 
         let expr = E::lift_with_size(self, expr, size);
 
@@ -1150,10 +1130,11 @@ where
             function: self,
             op: LLIL_SET_REG_SPLIT,
             size,
-            flags: 0,
-            op1: hi_reg as u64,
-            op2: lo_reg as u64,
-            op3: expr.expr_idx as u64,
+            // TODO: Make these optional?
+            flag_write: FlagWriteId(0),
+            op1: hi_reg.0 as u64,
+            op2: lo_reg.0 as u64,
+            op3: expr.index.0 as u64,
             op4: 0,
             _ty: PhantomData,
         }
@@ -1164,10 +1145,11 @@ where
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLAG;
 
         // TODO verify valid id
-        let expr_idx =
-            unsafe { BNLowLevelILAddExpr(self.handle, LLIL_FLAG, 0, 0, flag.id() as u64, 0, 0, 0) };
+        let expr_idx = unsafe {
+            BNLowLevelILAddExpr(self.handle, LLIL_FLAG, 0, 0, flag.id().0 as u64, 0, 0, 0)
+        };
 
-        Expression::new(self, expr_idx)
+        Expression::new(self, ExpressionIndex(expr_idx))
     }
 
     pub fn flag_cond(
@@ -1181,7 +1163,7 @@ where
         let expr_idx =
             unsafe { BNLowLevelILAddExpr(self.handle, LLIL_FLAG_COND, 0, 0, cond as u64, 0, 0, 0) };
 
-        Expression::new(self, expr_idx)
+        Expression::new(self, ExpressionIndex(expr_idx))
     }
 
     pub fn flag_group(
@@ -1198,14 +1180,14 @@ where
                 LLIL_FLAG_GROUP,
                 0,
                 0,
-                group.id() as u64,
+                group.id().0 as u64,
                 0,
                 0,
                 0,
             )
         };
 
-        Expression::new(self, expr_idx)
+        Expression::new(self, ExpressionIndex(expr_idx))
     }
 
     pub fn set_flag<'a, E>(
@@ -1226,9 +1208,9 @@ where
             function: self,
             op: LLIL_SET_FLAG,
             size: 0,
-            flags: 0,
-            op1: dest_flag.id() as u64,
-            op2: expr.expr_idx as u64,
+            flag_write: FlagWriteId(0),
+            op1: dest_flag.id().0 as u64,
+            op2: expr.index.0 as u64,
             op3: 0,
             op4: 0,
             _ty: PhantomData,
@@ -1252,8 +1234,8 @@ where
             function: self,
             op: LLIL_LOAD,
             size,
-            flags: 0,
-            op1: expr.expr_idx as u64,
+            flag_write: FlagWriteId(0),
+            op1: expr.index.0 as u64,
             op2: 0,
             op3: 0,
             op4: 0,
@@ -1280,9 +1262,9 @@ where
             function: self,
             op: LLIL_STORE,
             size,
-            flags: 0,
-            op1: dest_mem.expr_idx as u64,
-            op2: value.expr_idx as u64,
+            flag_write: FlagWriteId(0),
+            op1: dest_mem.index.0 as u64,
+            op2: value.index.0 as u64,
             op3: 0,
             op4: 0,
             _ty: PhantomData,
@@ -1307,14 +1289,7 @@ where
 
         let mut outputs: Vec<u64> = outputs
             .into_iter()
-            .map(|output| {
-                // TODO verify valid id
-                let output = match output.into() {
-                    Register::ArchReg(r) => r.id(),
-                    Register::Temp(r) => 0x8000_0000 | r,
-                };
-                output as u64
-            })
+            .map(|output| output.into().id().0 as u64)
             .collect();
         let output_expr_idx =
             unsafe { BNLowLevelILAddOperandList(self.handle, outputs.as_mut_ptr(), outputs.len()) };
@@ -1325,7 +1300,7 @@ where
             .into_iter()
             .map(|input| {
                 let input = P::lift(self, input);
-                input.expr_idx as u64
+                input.index.0 as u64
             })
             .collect();
         let input_list_expr_idx =
@@ -1347,10 +1322,10 @@ where
             function: self,
             op: LLIL_INTRINSIC,
             size: 0,
-            flags: 0,
+            flag_write: FlagWriteId(0),
             op1: outputs.len() as u64,
             op2: output_expr_idx as u64,
-            op3: intrinsic.id() as u64,
+            op3: intrinsic.id().0 as u64,
             op4: input_expr_idx as u64,
             _ty: PhantomData,
         }
@@ -1500,8 +1475,10 @@ where
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Label {
     pub resolved: bool,
-    // TODO: Rename this to something more sensible?
-    pub expr_ref: usize,
+    // TODO: This expr_ref is not actually a valid one sometimes...
+    // TODO: We should make these non public and only accessible if resolved is true.
+    pub expr_ref: ExpressionIndex,
+    // TODO: If this is 7 this label is not valid.
     pub operand: usize,
 }
 
@@ -1519,7 +1496,7 @@ impl From<BNLowLevelILLabel> for Label {
     fn from(value: BNLowLevelILLabel) -> Self {
         Self {
             resolved: value.resolved,
-            expr_ref: value.ref_,
+            expr_ref: ExpressionIndex(value.ref_),
             operand: value.operand,
         }
     }
@@ -1529,7 +1506,7 @@ impl From<Label> for BNLowLevelILLabel {
     fn from(value: Label) -> Self {
         Self {
             resolved: value.resolved,
-            ref_: value.expr_ref,
+            ref_: value.expr_ref.0,
             operand: value.operand,
         }
     }

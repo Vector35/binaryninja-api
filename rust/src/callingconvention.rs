@@ -22,7 +22,7 @@ use std::marker::PhantomData;
 
 use binaryninjacore_sys::*;
 
-use crate::architecture::{Architecture, ArchitectureExt, CoreArchitecture, Register};
+use crate::architecture::{Architecture, ArchitectureExt, CoreArchitecture, Register, RegisterId};
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::*;
 use crate::types::FunctionParameter;
@@ -98,7 +98,7 @@ where
                 .cc
                 .caller_saved_registers()
                 .iter()
-                .map(|r| r.id())
+                .map(|r| r.id().0)
                 .collect();
 
             // SAFETY: `count` is an out parameter
@@ -119,7 +119,7 @@ where
                 .cc
                 .callee_saved_registers()
                 .iter()
-                .map(|r| r.id())
+                .map(|r| r.id().0)
                 .collect();
 
             // SAFETY: `count` is an out parameter
@@ -136,7 +136,12 @@ where
     {
         ffi_wrap!("CallingConvention::int_arg_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let mut regs: Vec<_> = ctxt.cc.int_arg_registers().iter().map(|r| r.id()).collect();
+            let mut regs: Vec<_> = ctxt
+                .cc
+                .int_arg_registers()
+                .iter()
+                .map(|r| r.id().0)
+                .collect();
 
             // SAFETY: `count` is an out parameter
             *count = regs.len();
@@ -156,7 +161,7 @@ where
                 .cc
                 .float_arg_registers()
                 .iter()
-                .map(|r| r.id())
+                .map(|r| r.id().0)
                 .collect();
 
             // SAFETY: `count` is an out parameter
@@ -222,7 +227,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
 
             match ctxt.cc.return_int_reg() {
-                Some(r) => r.id(),
+                Some(r) => r.id().0,
                 _ => 0xffff_ffff,
             }
         })
@@ -236,7 +241,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
 
             match ctxt.cc.return_hi_int_reg() {
-                Some(r) => r.id(),
+                Some(r) => r.id().0,
                 _ => 0xffff_ffff,
             }
         })
@@ -250,7 +255,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
 
             match ctxt.cc.return_float_reg() {
-                Some(r) => r.id(),
+                Some(r) => r.id().0,
                 _ => 0xffff_ffff,
             }
         })
@@ -264,7 +269,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
 
             match ctxt.cc.global_pointer_reg() {
-                Some(r) => r.id(),
+                Some(r) => r.id().0,
                 _ => 0xffff_ffff,
             }
         })
@@ -283,7 +288,7 @@ where
                 .cc
                 .implicitly_defined_registers()
                 .iter()
-                .map(|r| r.id())
+                .map(|r| r.id().0)
                 .collect();
 
             // SAFETY: `count` is an out parameter
@@ -461,7 +466,7 @@ impl<A: Architecture> CallingConvention<A> {
         let mut count: usize = 0;
         let raw_params: Vec<BNFunctionParameter> = params.iter().cloned().map(Into::into).collect();
         let raw_vars_ptr: *mut BNVariable = if let Some(permitted_args) = permitted_registers {
-            let permitted_regs = permitted_args.iter().map(|r| r.id()).collect::<Vec<_>>();
+            let permitted_regs = permitted_args.iter().map(|r| r.id().0).collect::<Vec<_>>();
 
             unsafe {
                 BNGetVariablesForParameters(
@@ -518,10 +523,8 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
 
             let res = std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|&r| {
-                    arch.register_from_id(r)
-                        .expect("bad reg id from CallingConvention")
-                })
+                .map(|&id| RegisterId(id))
+                .filter_map(|r| arch.register_from_id(r))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -538,10 +541,8 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
 
             let res = std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|&r| {
-                    arch.register_from_id(r)
-                        .expect("bad reg id from CallingConvention")
-                })
+                .map(|&id| RegisterId(id))
+                .filter_map(|r| arch.register_from_id(r))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -558,10 +559,8 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
 
             let res = std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|&r| {
-                    arch.register_from_id(r)
-                        .expect("bad reg id from CallingConvention")
-                })
+                .map(|&id| RegisterId(id))
+                .filter_map(|r| arch.register_from_id(r))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -578,10 +577,8 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
 
             let res = std::slice::from_raw_parts(regs, count)
                 .iter()
-                .map(|&r| {
-                    arch.register_from_id(r)
-                        .expect("bad reg id from CallingConvention")
-                })
+                .map(|&id| RegisterId(id))
+                .filter_map(|r| arch.register_from_id(r))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -608,28 +605,28 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
 
     fn return_int_reg(&self) -> Option<A::Register> {
         match unsafe { BNGetIntegerReturnValueRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(id),
+            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
             _ => None,
         }
     }
 
     fn return_hi_int_reg(&self) -> Option<A::Register> {
         match unsafe { BNGetHighIntegerReturnValueRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(id),
+            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
             _ => None,
         }
     }
 
     fn return_float_reg(&self) -> Option<A::Register> {
         match unsafe { BNGetFloatReturnValueRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(id),
+            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
             _ => None,
         }
     }
 
     fn global_pointer_reg(&self) -> Option<A::Register> {
         match unsafe { BNGetGlobalPointerRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(id),
+            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
             _ => None,
         }
     }

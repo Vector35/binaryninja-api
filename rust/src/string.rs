@@ -205,7 +205,7 @@ unsafe impl BnStrCompatible for CString {
     }
 }
 
-unsafe impl<'a> BnStrCompatible for &'a str {
+unsafe impl BnStrCompatible for &str {
     type Result = Vec<u8>;
 
     fn into_bytes_with_nul(self) -> Self::Result {
@@ -222,7 +222,7 @@ unsafe impl BnStrCompatible for String {
     }
 }
 
-unsafe impl<'a> BnStrCompatible for &'a String {
+unsafe impl BnStrCompatible for &String {
     type Result = Vec<u8>;
 
     fn into_bytes_with_nul(self) -> Self::Result {
@@ -231,6 +231,14 @@ unsafe impl<'a> BnStrCompatible for &'a String {
 }
 
 unsafe impl<'a> BnStrCompatible for &'a Cow<'a, str> {
+    type Result = Vec<u8>;
+
+    fn into_bytes_with_nul(self) -> Self::Result {
+        self.to_string().into_bytes_with_nul()
+    }
+}
+
+unsafe impl BnStrCompatible for Cow<'_, str> {
     type Result = Vec<u8>;
 
     fn into_bytes_with_nul(self) -> Self::Result {

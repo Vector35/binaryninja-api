@@ -57,7 +57,3 @@ add_custom_command(
 	WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 	DEPENDS ${RUST_API_SOURCES}
 )
-
-if(BN_API_BUILD_EXAMPLES)
-		add_subdirectory(examples/basic_script)
-endif()

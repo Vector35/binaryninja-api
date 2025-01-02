@@ -14,11 +14,11 @@
 
 use binaryninjacore_sys::{BNGetLowLevelILByIndex, BNLowLevelILInstruction};
 
+use super::*;
+use crate::architecture::{FlagGroupId, FlagWriteId, IntrinsicId};
 use std::collections::BTreeMap;
 use std::marker::PhantomData;
 use std::mem;
-
-use super::*;
 
 pub struct Operation<'func, A, M, F, O>
 where
@@ -64,7 +64,7 @@ where
     pub fn flag_write(&self) -> Option<A::FlagWrite> {
         match self.op.flags {
             0 => None,
-            id => self.function.arch().flag_write_from_id(id),
+            id => self.function.arch().flag_write_from_id(FlagWriteId(id)),
         }
     }
 }
@@ -101,7 +101,7 @@ where
     // TODO: Support register and expression lists
     pub fn intrinsic(&self) -> Option<A::Intrinsic> {
         let raw_id = self.op.operands[2] as u32;
-        self.function.arch().intrinsic_from_id(raw_id)
+        self.function.arch().intrinsic_from_id(IntrinsicId(raw_id))
     }
 }
 
@@ -126,7 +126,7 @@ where
         } else {
             self.function
                 .arch()
-                .register_from_id(raw_id)
+                .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
                     error!(
@@ -140,7 +140,7 @@ where
     }
 
     pub fn source_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression::new(self.function, self.op.operands[1] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
     }
 }
 
@@ -165,7 +165,7 @@ where
         } else {
             self.function
                 .arch()
-                .register_from_id(raw_id)
+                .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
                     error!(
@@ -186,7 +186,7 @@ where
         } else {
             self.function
                 .arch()
-                .register_from_id(raw_id)
+                .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
                     error!(
@@ -200,7 +200,7 @@ where
     }
 
     pub fn source_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression::new(self.function, self.op.operands[2] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[2] as usize))
     }
 }
 
@@ -214,7 +214,7 @@ where
     V: NonSSAVariant,
 {
     pub fn source_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression::new(self.function, self.op.operands[1] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
     }
 }
 
@@ -232,7 +232,7 @@ where
     }
 
     pub fn source_mem_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression::new(self.function, self.op.operands[0] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 }
 
@@ -250,11 +250,11 @@ where
     }
 
     pub fn dest_mem_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression::new(self.function, self.op.operands[0] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 
     pub fn source_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression::new(self.function, self.op.operands[1] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
     }
 }
 
@@ -279,7 +279,7 @@ where
         } else {
             self.function
                 .arch()
-                .register_from_id(raw_id)
+                .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
                     error!(
@@ -314,7 +314,7 @@ where
         } else {
             self.function
                 .arch()
-                .register_from_id(raw_id)
+                .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
                     error!(
@@ -335,7 +335,7 @@ where
         } else {
             self.function
                 .arch()
-                .register_from_id(raw_id)
+                .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
                     error!(
@@ -365,7 +365,7 @@ where
     F: FunctionForm,
 {
     pub fn target(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[0] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 }
 
@@ -409,7 +409,7 @@ where
     F: FunctionForm,
 {
     pub fn target(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[0] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 
     pub fn target_list(&self) -> BTreeMap<u64, usize> {
@@ -443,7 +443,7 @@ where
     V: NonSSAVariant,
 {
     pub fn target(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression::new(self.function, self.op.operands[0] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 
     pub fn stack_adjust(&self) -> Option<u64> {
@@ -467,7 +467,7 @@ where
     F: FunctionForm,
 {
     pub fn target(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[0] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 }
 
@@ -481,29 +481,21 @@ where
     F: FunctionForm,
 {
     pub fn condition(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[0] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 
     pub fn true_target(&self) -> Instruction<'func, A, M, F> {
-        Instruction {
-            function: self.function,
-            instr_idx: self.op.operands[1] as usize,
-        }
-    }
-
-    pub fn true_target_idx(&self) -> usize {
-        self.op.operands[1] as usize
+        Instruction::new(
+            self.function,
+            InstructionIndex(self.op.operands[1] as usize),
+        )
     }
 
     pub fn false_target(&self) -> Instruction<'func, A, M, F> {
-        Instruction {
-            function: self.function,
-            instr_idx: self.op.operands[2] as usize,
-        }
-    }
-
-    pub fn false_target_idx(&self) -> usize {
-        self.op.operands[2] as usize
+        Instruction::new(
+            self.function,
+            InstructionIndex(self.op.operands[2] as usize),
+        )
     }
 }
 
@@ -517,14 +509,10 @@ where
     F: FunctionForm,
 {
     pub fn target(&self) -> Instruction<'func, A, M, F> {
-        Instruction {
-            function: self.function,
-            instr_idx: self.op.operands[0] as usize,
-        }
-    }
-
-    pub fn target_idx(&self) -> usize {
-        self.op.operands[0] as usize
+        Instruction::new(
+            self.function,
+            InstructionIndex(self.op.operands[0] as usize),
+        )
     }
 }
 
@@ -541,7 +529,10 @@ where
 {
     pub fn flag_group(&self) -> A::FlagGroup {
         let id = self.op.operands[0] as u32;
-        self.function.arch().flag_group_from_id(id).unwrap()
+        self.function
+            .arch()
+            .flag_group_from_id(FlagGroupId(id))
+            .unwrap()
     }
 }
 
@@ -670,11 +661,11 @@ where
     }
 
     pub fn left(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[0] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 
     pub fn right(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[1] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
     }
 }
 
@@ -692,15 +683,15 @@ where
     }
 
     pub fn left(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[0] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 
     pub fn right(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[1] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
     }
 
     pub fn carry(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[2] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[2] as usize))
     }
 }
 
@@ -718,15 +709,15 @@ where
     }
 
     pub fn high(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[0] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 
     pub fn low(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[1] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
     }
 
     pub fn right(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[2] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[2] as usize))
     }
 }
 
@@ -745,7 +736,7 @@ where
     }
 
     pub fn operand(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[0] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 }
 
@@ -763,11 +754,11 @@ where
     }
 
     pub fn left(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[0] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 
     pub fn right(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[1] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
     }
 }
 
@@ -785,7 +776,7 @@ where
     }
 
     pub fn mem_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, self.op.operands[0] as usize)
+        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 }
 

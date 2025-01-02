@@ -2,7 +2,7 @@ use binaryninjacore_sys::*;
 
 use super::operation::*;
 use super::{HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLiftedInstructionKind};
-use crate::architecture::CoreIntrinsic;
+use crate::architecture::{CoreIntrinsic, IntrinsicId};
 use crate::confidence::Conf;
 use crate::disassembly::DisassemblyTextLine;
 use crate::operand_iter::OperandIter;
@@ -816,16 +816,18 @@ impl HighLevelILInstruction {
             }),
             Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
                 intrinsic: CoreIntrinsic::new(
-                    self.function.get_function().arch().handle,
-                    op.intrinsic,
-                ),
+                    self.function.get_function().arch(),
+                    IntrinsicId(op.intrinsic),
+                )
+                .expect("Invalid intrinsic"),
                 params: self.lift_instruction_list(op.first_param, op.num_params),
             }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
                 intrinsic: CoreIntrinsic::new(
-                    self.function.get_function().arch().handle,
-                    op.intrinsic,
-                ),
+                    self.function.get_function().arch(),
+                    IntrinsicId(op.intrinsic),
+                )
+                .expect("Invalid intrinsic"),
                 params: self.lift_instruction_list(op.first_param, op.num_params),
                 dest_memory: op.dest_memory,
                 src_memory: op.src_memory,

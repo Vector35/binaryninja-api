@@ -333,7 +333,7 @@ impl From<&BNDebugFunctionInfo> for DebugFunctionInfo {
                 .filter_map(|c| raw_to_string(c))
                 .collect(),
             local_variables: raw_local_variables
-                .into_iter()
+                .iter()
                 .copied()
                 .map(Into::into)
                 .collect(),

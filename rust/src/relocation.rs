@@ -281,7 +281,7 @@ pub trait RelocationHandlerExt: RelocationHandler {
             BNRelocationHandlerDefaultApplyRelocation(
                 self.as_ref().0,
                 bv.handle,
-                arch.as_ref().handle,
+                arch.handle,
                 reloc.0,
                 dest.as_mut_ptr(),
                 dest.len(),
@@ -324,7 +324,7 @@ impl RelocationHandler for CoreRelocationHandler {
             BNRelocationHandlerGetRelocationInfo(
                 self.0,
                 bv.handle,
-                arch.as_ref().handle,
+                arch.handle,
                 raw_info.as_mut_ptr(),
                 raw_info.len(),
             )
@@ -346,7 +346,7 @@ impl RelocationHandler for CoreRelocationHandler {
             BNRelocationHandlerApplyRelocation(
                 self.0,
                 bv.handle,
-                arch.as_ref().handle,
+                arch.handle,
                 reloc.0,
                 dest.as_mut_ptr(),
                 dest.len(),
@@ -524,7 +524,7 @@ where
         });
 
         BNArchitectureRegisterRelocationHandler(
-            arch.as_ref().handle,
+            arch.handle,
             name.as_ref().as_ptr() as *const _,
             handle.handle().as_ref().0,
         );

@@ -16,6 +16,7 @@ use binaryninjacore_sys::BNGetLowLevelILByIndex;
 use binaryninjacore_sys::BNLowLevelILInstruction;
 
 use std::fmt;
+use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
 use super::operation;
@@ -37,6 +38,15 @@ pub trait ExpressionResultType: 'static {}
 impl ExpressionResultType for ValueExpr {}
 impl ExpressionResultType for VoidExpr {}
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ExpressionIndex(pub usize);
+
+impl Display for ExpressionIndex {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
+    }
+}
+
 pub struct Expression<'func, A, M, F, R>
 where
     A: 'func + Architecture,
@@ -45,7 +55,7 @@ where
     R: ExpressionResultType,
 {
     pub(crate) function: &'func LowLevelILFunction<A, M, F>,
-    pub(crate) expr_idx: usize,
+    pub index: ExpressionIndex,
 
     // tag the 'return' type of this expression
     pub(crate) _ty: PhantomData<R>,
@@ -58,16 +68,15 @@ where
     F: FunctionForm,
     R: ExpressionResultType,
 {
-    pub(crate) fn new(function: &'func LowLevelILFunction<A, M, F>, expr_idx: usize) -> Self {
+    pub(crate) fn new(
+        function: &'func LowLevelILFunction<A, M, F>,
+        index: ExpressionIndex,
+    ) -> Self {
         Self {
             function,
-            expr_idx,
+            index,
             _ty: PhantomData,
         }
-    }
-
-    pub fn index(&self) -> usize {
-        self.expr_idx
     }
 }
 
@@ -79,7 +88,7 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let op_info = self.info();
-        write!(f, "<expr {}: {:?}>", self.expr_idx, op_info)
+        write!(f, "<expr {}: {:?}>", self.index, op_info)
     }
 }
 
@@ -288,7 +297,7 @@ where
 
     pub fn info(&self) -> ExprInfo<'func, A, M, NonSSA<V>> {
         unsafe {
-            let op = BNGetLowLevelILByIndex(self.function.handle, self.expr_idx);
+            let op = BNGetLowLevelILByIndex(self.function.handle, self.index.0);
             self.info_from_op(op)
         }
     }
@@ -341,7 +350,7 @@ where
 
     pub fn info(&self) -> ExprInfo<'func, A, M, SSA> {
         unsafe {
-            let op = BNGetLowLevelILByIndex(self.function.handle, self.expr_idx);
+            let op = BNGetLowLevelILByIndex(self.function.handle, self.index.0);
             self.info_from_op(op)
         }
     }

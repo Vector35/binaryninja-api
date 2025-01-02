@@ -130,10 +130,12 @@ impl<C: BlockContext> BasicBlock<C> {
         self.context.iter(self)
     }
 
+    // TODO: This needs to be generic over the IL index / mapped address.
     pub fn raw_start(&self) -> u64 {
         unsafe { BNGetBasicBlockStart(self.handle) }
     }
 
+    // TODO: This needs to be generic over the IL index / mapped address.
     pub fn raw_end(&self) -> u64 {
         unsafe { BNGetBasicBlockEnd(self.handle) }
     }

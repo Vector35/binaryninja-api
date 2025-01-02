@@ -154,7 +154,7 @@ impl<'a, T> Guard<'a, T> {
 }
 
 #[allow(private_bounds)]
-impl<'a, T> Guard<'a, T>
+impl<T> Guard<'_, T>
 where
     T: RefCountable,
 {
@@ -164,13 +164,13 @@ where
     }
 }
 
-impl<'a, T> AsRef<T> for Guard<'a, T> {
+impl<T> AsRef<T> for Guard<'_, T> {
     fn as_ref(&self) -> &T {
         &self.contents
     }
 }
 
-impl<'a, T> Deref for Guard<'a, T> {
+impl<T> Deref for Guard<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &T {
@@ -178,13 +178,13 @@ impl<'a, T> Deref for Guard<'a, T> {
     }
 }
 
-impl<'a, T> DerefMut for Guard<'a, T> {
+impl<T> DerefMut for Guard<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
         &mut self.contents
     }
 }
 
-impl<'a, T> Borrow<T> for Guard<'a, T> {
+impl<T> Borrow<T> for Guard<'_, T> {
     fn borrow(&self) -> &T {
         &self.contents
     }

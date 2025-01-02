@@ -1,5 +1,5 @@
 use binaryninja::architecture;
-use binaryninja::architecture::ImplicitRegisterExtend;
+use binaryninja::architecture::{ImplicitRegisterExtend, RegisterId};
 
 use std::borrow::Cow;
 
@@ -23,15 +23,15 @@ pub enum Register {
     R15,
 }
 
-impl TryFrom<u32> for Register {
+impl TryFrom<RegisterId> for Register {
     type Error = ();
 
-    fn try_from(id: u32) -> Result<Self, Self::Error> {
+    fn try_from(id: RegisterId) -> Result<Self, Self::Error> {
         // TODO: we should return separate errors if the id is between 0x7fff_ffff and 0xffff_ffff
         // vs outside of that range. Temporary registers have have the high bit set which we
         // shouldn't get, unless there is a bug in core. An id that isn't within that range but we
         // don't handle is a bug in the architecture.
-        match id {
+        match id.0 {
             0 => Ok(Self::Pc),
             1 => Ok(Self::Sp),
             2 => Ok(Self::Sr),
@@ -50,6 +50,15 @@ impl TryFrom<u32> for Register {
             15 => Ok(Self::R15),
             _ => Err(()),
         }
+    }
+}
+
+// TODO: Get rid of this and lift all u32 vals to a proper register id.
+impl TryFrom<u32> for Register {
+    type Error = ();
+
+    fn try_from(id: u32) -> Result<Self, Self::Error> {
+        Register::try_from(RegisterId(id))
     }
 }
 
@@ -81,7 +90,7 @@ impl architecture::Register for Register {
         *self
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> RegisterId {
         match self {
             Self::Pc => 0,
             Self::Sp => 1,
@@ -99,7 +108,7 @@ impl architecture::Register for Register {
             Self::R13 => 13,
             Self::R14 => 14,
             Self::R15 => 15,
-        }
+        }.into()
     }
 }
 

@@ -20,8 +20,8 @@ use std::fmt;
 // requirements on load/store memory address sizes?
 // can reg/set_reg be used with sizes that differ from what is in BNRegisterInfo?
 
-use crate::architecture::Architecture;
 use crate::architecture::Register as ArchReg;
+use crate::architecture::{Architecture, RegisterId};
 use crate::function::Location;
 
 mod block;
@@ -52,14 +52,16 @@ pub type SSAFunction<Arch> = LowLevelILFunction<Arch, Finalized, SSA>;
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Register<R: ArchReg> {
     ArchReg(R),
+    // TODO: Might want to be changed to TempRegisterId.
+    // TODO: If we do that then we would need to get rid of `Register::id()`
     Temp(u32),
 }
 
 impl<R: ArchReg> Register<R> {
-    fn id(&self) -> u32 {
+    fn id(&self) -> RegisterId {
         match *self {
             Register::ArchReg(ref r) => r.id(),
-            Register::Temp(id) => 0x8000_0000 | id,
+            Register::Temp(id) => RegisterId(0x8000_0000 | id),
         }
     }
 }

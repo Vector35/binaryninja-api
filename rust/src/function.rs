@@ -38,6 +38,7 @@ pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisS
 pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
 pub use binaryninjacore_sys::BNHighlightStandardColor as HighlightStandardColor;
 
+use crate::architecture::RegisterId;
 use crate::confidence::Conf;
 use crate::hlil::HighLevelILFunction;
 use crate::mlil::MediumLevelILFunction;
@@ -59,7 +60,7 @@ pub struct Location {
 }
 
 impl Location {
-    pub fn from_raw(addr: u64, arch: *mut BNArchitecture) -> Self {
+    pub(crate) fn from_raw(addr: u64, arch: *mut BNArchitecture) -> Self {
         Self {
             addr,
             arch: Some(unsafe { CoreArchitecture::from_raw(arch) }),
@@ -211,9 +212,9 @@ impl FunctionViewType {
     }
 }
 
-impl Into<FunctionViewType> for FunctionGraphType {
-    fn into(self) -> FunctionViewType {
-        match self {
+impl From<FunctionGraphType> for FunctionViewType {
+    fn from(view_type: FunctionGraphType) -> Self {
+        match view_type {
             BNFunctionGraphType::LowLevelILFunctionGraph => FunctionViewType::LowLevelIL,
             BNFunctionGraphType::LiftedILFunctionGraph => FunctionViewType::LiftedIL,
             BNFunctionGraphType::LowLevelILSSAFormFunctionGraph => {
@@ -237,7 +238,9 @@ impl Into<FunctionViewType> for FunctionGraphType {
                 // Historically this was the only language representation.
                 FunctionViewType::HighLevelLanguageRepresentation("Pseudo C".into())
             }
-            _ => FunctionViewType::Normal,
+            BNFunctionGraphType::InvalidILViewType | BNFunctionGraphType::NormalFunctionGraph => {
+                FunctionViewType::Normal
+            }
         }
     }
 }
@@ -1310,7 +1313,7 @@ impl Function {
         // TODO: Adjust `BuiltinType`?
         let mut builtin_type = BuiltinType::BuiltinNone;
         let buffer = DataBuffer::from_raw(unsafe {
-            BNGetConstantData(self.handle, state.into(), value, size, &mut builtin_type)
+            BNGetConstantData(self.handle, state, value, size, &mut builtin_type)
         });
         (buffer, builtin_type)
     }
@@ -1722,12 +1725,12 @@ impl Function {
     pub fn register_value_at(
         &self,
         addr: u64,
-        reg: u32,
+        reg: RegisterId,
         arch: Option<CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
         let register =
-            unsafe { BNGetRegisterValueAtInstruction(self.handle, arch.handle, addr, reg) };
+            unsafe { BNGetRegisterValueAtInstruction(self.handle, arch.handle, addr, reg.0) };
         register.into()
     }
 
@@ -1747,12 +1750,12 @@ impl Function {
     pub fn register_value_after(
         &self,
         addr: u64,
-        reg: u32,
+        reg: RegisterId,
         arch: Option<CoreArchitecture>,
     ) -> RegisterValue {
         let arch = arch.unwrap_or_else(|| self.arch());
         let register =
-            unsafe { BNGetRegisterValueAfterInstruction(self.handle, arch.handle, addr, reg) };
+            unsafe { BNGetRegisterValueAfterInstruction(self.handle, arch.handle, addr, reg.0) };
         register.into()
     }
 
@@ -1800,7 +1803,7 @@ impl Function {
     where
         I: IntoIterator<Item = CoreRegister>,
     {
-        let mut regs: Box<[u32]> = registers.into_iter().map(|reg| reg.id()).collect();
+        let mut regs: Box<[u32]> = registers.into_iter().map(|reg| reg.id().0).collect();
         let mut regs = BNRegisterSetWithConfidence {
             regs: regs.as_mut_ptr(),
             count: regs.len(),
@@ -1813,7 +1816,7 @@ impl Function {
     where
         I: IntoIterator<Item = CoreRegister>,
     {
-        let mut regs: Box<[u32]> = registers.into_iter().map(|reg| reg.id()).collect();
+        let mut regs: Box<[u32]> = registers.into_iter().map(|reg| reg.id().0).collect();
         let mut regs = BNRegisterSetWithConfidence {
             regs: regs.as_mut_ptr(),
             count: regs.len(),
@@ -2262,7 +2265,7 @@ impl Function {
     where
         I: IntoIterator<Item = CoreRegister>,
     {
-        let mut regs: Box<[u32]> = values.into_iter().map(|reg| reg.id()).collect();
+        let mut regs: Box<[u32]> = values.into_iter().map(|reg| reg.id().0).collect();
         let mut regs = BNRegisterSetWithConfidence {
             regs: regs.as_mut_ptr(),
             count: regs.len(),
@@ -2275,7 +2278,7 @@ impl Function {
     where
         I: IntoIterator<Item = CoreRegister>,
     {
-        let mut regs: Box<[u32]> = values.into_iter().map(|reg| reg.id()).collect();
+        let mut regs: Box<[u32]> = values.into_iter().map(|reg| reg.id().0).collect();
         let mut regs = BNRegisterSetWithConfidence {
             regs: regs.as_mut_ptr(),
             count: regs.len(),

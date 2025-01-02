@@ -18,7 +18,7 @@ use msp430_asm::{
 };
 
 use log::error;
-use binaryninja::architecture::BranchKind;
+use binaryninja::architecture::{BranchKind, FlagClassId, FlagGroupId, FlagId, FlagWriteId, RegisterId};
 
 const MIN_MNEMONIC: usize = 9;
 
@@ -344,14 +344,14 @@ impl Architecture for Msp430 {
         None
     }
 
-    fn register_from_id(&self, id: u32) -> Option<Self::Register> {
+    fn register_from_id(&self, id: RegisterId) -> Option<Self::Register> {
         match id.try_into() {
             Ok(register) => Some(register),
             Err(_) => None,
         }
     }
 
-    fn flag_from_id(&self, id: u32) -> Option<Self::Flag> {
+    fn flag_from_id(&self, id: FlagId) -> Option<Self::Flag> {
         match id.try_into() {
             Ok(flag) => Some(flag),
             Err(_) => {
@@ -361,7 +361,7 @@ impl Architecture for Msp430 {
         }
     }
 
-    fn flag_write_from_id(&self, id: u32) -> Option<Self::FlagWrite> {
+    fn flag_write_from_id(&self, id: FlagWriteId) -> Option<Self::FlagWrite> {
         match id.try_into() {
             Ok(flag_write) => Some(flag_write),
             Err(_) => {
@@ -371,11 +371,11 @@ impl Architecture for Msp430 {
         }
     }
 
-    fn flag_class_from_id(&self, _: u32) -> Option<Self::FlagClass> {
+    fn flag_class_from_id(&self, _: FlagClassId) -> Option<Self::FlagClass> {
         None
     }
 
-    fn flag_group_from_id(&self, _: u32) -> Option<Self::FlagGroup> {
+    fn flag_group_from_id(&self, _: FlagGroupId) -> Option<Self::FlagGroup> {
         None
     }
 

@@ -106,26 +106,17 @@ where
             if instr_idx >= BNGetLowLevelILInstructionCount(self.handle) {
                 None
             } else {
-                Some(Instruction {
-                    function: self,
-                    instr_idx,
-                })
+                Some(Instruction::new(self, InstructionIndex(instr_idx)))
             }
         }
     }
 
-    pub fn instruction_from_idx(&self, instr_idx: usize) -> Instruction<A, M, F> {
-        unsafe {
-            use binaryninjacore_sys::BNGetLowLevelILInstructionCount;
-            if instr_idx >= BNGetLowLevelILInstructionCount(self.handle) {
-                panic!("instruction index {} out of bounds", instr_idx);
-            }
-
-            Instruction {
-                function: self,
-                instr_idx,
-            }
+    // TODO: This should be a Option<Instruction> instead
+    pub fn instruction_from_idx(&self, index: InstructionIndex) -> Instruction<A, M, F> {
+        if index.0 >= self.instruction_count() {
+            panic!("instruction index {} out of bounds", index);
         }
+        Instruction::new(self, index)
     }
 
     pub fn instruction_count(&self) -> usize {

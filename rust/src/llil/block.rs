@@ -26,7 +26,8 @@ where
     F: FunctionForm,
 {
     function: &'func LowLevelILFunction<A, M, F>,
-    range: Range<u64>,
+    // TODO: Once step_trait is stable we can do Range<InstructionIndex>
+    range: Range<usize>,
 }
 
 impl<'func, A, M, F> Iterator for LowLevelILBlockIter<'func, A, M, F>
@@ -38,10 +39,9 @@ where
     type Item = Instruction<'func, A, M, F>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.range.next().map(|i| Instruction {
-            function: self.function,
-            instr_idx: i as usize,
-        })
+        self.range
+            .next()
+            .map(|i| Instruction::new(self.function, InstructionIndex(i)))
     }
 }
 
@@ -65,16 +65,15 @@ where
     type Iter = LowLevelILBlockIter<'func, A, M, F>;
 
     fn start(&self, block: &BasicBlock<Self>) -> Instruction<'func, A, M, F> {
-        Instruction {
-            function: self.function,
-            instr_idx: block.raw_start() as usize,
-        }
+        // TODO: block.raw_start should really return InstructionIndex...
+        Instruction::new(self.function, InstructionIndex(block.raw_start() as usize))
     }
 
     fn iter(&self, block: &BasicBlock<Self>) -> LowLevelILBlockIter<'func, A, M, F> {
+        // TODO: block.raw_start should really return InstructionIndex...
         LowLevelILBlockIter {
             function: self.function,
-            range: block.raw_start()..block.raw_end(),
+            range: (block.raw_start() as usize)..(block.raw_end() as usize),
         }
     }
 }

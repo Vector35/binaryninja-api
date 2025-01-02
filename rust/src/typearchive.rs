@@ -221,7 +221,7 @@ impl TypeArchive {
         let id = self
             .get_type_id(old_name, self.current_snapshot_id())
             .unwrap();
-        return self.rename_type_by_id(id, new_name.name());
+        self.rename_type_by_id(id, new_name.name())
     }
 
     /// Change the name of an existing type in the type archive.

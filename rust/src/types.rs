@@ -22,7 +22,6 @@ use crate::{
     architecture::{Architecture, CoreArchitecture},
     binaryview::{BinaryView, BinaryViewExt},
     callingconvention::CallingConvention,
-    filemetadata::FileMetadata,
     rc::*,
     string::{BnStrCompatible, BnString},
 };
@@ -30,7 +29,6 @@ use crate::{
 use crate::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use crate::string::raw_to_string;
 use crate::variable::{Variable, VariableSourceType};
-use lazy_static::lazy_static;
 use std::num::NonZeroUsize;
 use std::{
     borrow::Cow,
@@ -39,9 +37,9 @@ use std::{
     fmt::{Debug, Display, Formatter},
     hash::{Hash, Hasher},
     iter::IntoIterator,
-    sync::Mutex,
 };
 
+pub type StructureType = BNStructureVariant;
 pub type ReferenceType = BNReferenceType;
 pub type TypeClass = BNTypeClass;
 pub type NamedTypeReferenceClass = BNNamedTypeReferenceClass;
@@ -908,6 +906,12 @@ impl Type {
 
 impl Display for Type {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self, f)
+    }
+}
+
+impl Debug for Type {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", unsafe {
             BnString::from_raw(BNGetTypeString(
                 self.handle,
@@ -915,80 +919,6 @@ impl Display for Type {
                 BNTokenEscapingType::NoTokenEscapingType,
             ))
         })
-    }
-}
-
-lazy_static! {
-    static ref TYPE_DEBUG_BV: Mutex<Option<Ref<BinaryView>>> =
-        Mutex::new(BinaryView::from_data(&FileMetadata::new(), &[]).ok());
-}
-
-impl Debug for Type {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if let Ok(lock) = TYPE_DEBUG_BV.lock() {
-            if let Some(bv) = &*lock {
-                let container = unsafe { BNGetAnalysisTypeContainer(bv.handle) };
-
-                let printer = if f.alternate() {
-                    unsafe { BNGetTypePrinterByName(c"_DebugTypePrinter".as_ptr()) }
-                } else {
-                    unsafe { BNGetTypePrinterByName(c"CoreTypePrinter".as_ptr()) }
-                };
-                if printer.is_null() {
-                    return Err(std::fmt::Error);
-                }
-
-                let mut name = QualifiedName::from("");
-
-                let mut lines: *mut BNTypeDefinitionLine = std::ptr::null_mut();
-                let mut count: usize = 0;
-
-                unsafe {
-                    BNGetTypePrinterTypeLines(
-                        printer,
-                        self.handle,
-                        container,
-                        &mut name.0,
-                        64,
-                        false,
-                        BNTokenEscapingType::NoTokenEscapingType,
-                        &mut lines,
-                        &mut count,
-                    )
-                };
-                unsafe {
-                    BNFreeTypeContainer(container);
-                }
-
-                if lines.is_null() {
-                    return Err(std::fmt::Error);
-                }
-
-                let line_slice: &[BNTypeDefinitionLine] =
-                    unsafe { std::slice::from_raw_parts(lines, count) };
-
-                for (i, line) in line_slice.iter().enumerate() {
-                    if i > 0 {
-                        writeln!(f)?;
-                    }
-
-                    let tokens: &[BNInstructionTextToken] =
-                        unsafe { std::slice::from_raw_parts(line.tokens, line.count) };
-
-                    for token in tokens {
-                        let text: *const c_char = token.text;
-                        let str = unsafe { CStr::from_ptr(text) };
-                        write!(f, "{}", str.to_string_lossy())?;
-                    }
-                }
-
-                unsafe {
-                    BNFreeTypeDefinitionLineList(lines, count);
-                }
-                return Ok(());
-            }
-        }
-        Err(std::fmt::Error)
     }
 }
 
@@ -1336,8 +1266,6 @@ impl ToOwned for Enumeration {
         unsafe { RefCountable::inc_ref(self) }
     }
 }
-
-pub type StructureType = BNStructureVariant;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct StructureBuilder {
@@ -1692,13 +1620,12 @@ impl Structure {
 
 impl Debug for Structure {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Structure {{")?;
-        if let Some(members) = self.members() {
-            for member in members {
-                write!(f, " {:?}", member)?;
-            }
-        }
-        write!(f, "}}")
+        f.debug_struct("Structure")
+            .field("width", &self.width())
+            .field("structure_type", &self.structure_type())
+            .field("base_structures", &self.base_structures())
+            .field("members", &self.members())
+            .finish()
     }
 }
 
@@ -2135,6 +2062,15 @@ impl QualifiedNameAndType {
     }
 }
 
+impl Debug for QualifiedNameAndType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("QualifiedNameAndType")
+            .field("name", self.name())
+            .field("type", self.type_object().as_ref())
+            .finish()
+    }
+}
+
 impl Drop for QualifiedNameAndType {
     fn drop(&mut self) {
         unsafe {
@@ -2172,6 +2108,16 @@ impl QualifiedNameTypeAndId {
 
     pub fn ty(&self) -> Guard<Type> {
         unsafe { Guard::new(Type::from_raw(self.0.type_), self) }
+    }
+}
+
+impl Debug for QualifiedNameTypeAndId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("QualifiedNameTypeAndId")
+            .field("name", self.name())
+            .field("id", &self.id())
+            .field("type", self.ty().as_ref())
+            .finish()
     }
 }
 

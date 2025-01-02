@@ -16,7 +16,6 @@ name = "binaryninja"
 version = "0.1.0"
 dependencies = [
  "binaryninjacore-sys",
- "lazy_static",
  "log",
 ]
 
@@ -106,12 +105,6 @@ checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
 dependencies = [
  "either",
 ]
-
-[[package]]
-name = "lazy_static"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "libc"

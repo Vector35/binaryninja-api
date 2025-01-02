@@ -9,8 +9,11 @@ rust-version = "1.83.0"
 # This is used when statically linking to prevent exporting CorePluginABIVersion and UiPluginABIVersion.
 no_exports = []
 
+
 [dependencies]
-lazy_static = "1.4.0"
 log = { version = "0.4", features = ["std"] }
 rayon = { version = "1.8", optional = true }
 binaryninjacore-sys = { path = "binaryninjacore-sys" }
+
+[dev-dependencies]
+rstest = "0.23.0"

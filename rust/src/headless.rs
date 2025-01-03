@@ -80,7 +80,7 @@ use binaryninjacore_sys::{BNInitPlugins, BNInitRepoPlugins, BNSetBundledPluginDi
 ///
 /// ⚠️ Important! Must be called at the beginning of scripts.  Plugins do not need to call this. ⚠️
 ///
-/// You can instead call this through [`Session`] or [`script_helper`]
+/// You can instead call this through [`Session`].
 pub fn init() {
     match crate::product().as_str() {
         "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => {
@@ -116,22 +116,6 @@ pub fn shutdown() {
 
 pub fn is_shutdown_requested() -> bool {
     unsafe { binaryninjacore_sys::BNIsShutdownRequested() }
-}
-
-/// Prelued-postlued helper function (calls [`init`] and [`shutdown`] for you)
-/// ```no_run
-/// # use binaryninja::binaryview::BinaryViewExt;
-/// binaryninja::headless::script_helper(|| {
-///     let cat = binaryninja::load("/bin/cat").expect("Couldn't open `/bin/cat`");
-///     for function in cat.functions().iter() {
-///         println!("  `{}`", function.symbol().full_name());
-///     }
-/// });
-/// ```
-pub fn script_helper(func: fn()) {
-    init();
-    func();
-    shutdown();
 }
 
 /// Wrapper for [`init`] and [`shutdown`]. Instantiating this at the top of your script will initialize everything correctly and then clean itself up at exit as well.

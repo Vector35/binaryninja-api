@@ -72,7 +72,7 @@
 //! The most up-to-date version of the suggested [`build.rs` is here].
 //!
 //! ### `main.rs`
-//! Standalone binaries need to initialize Binary Ninja before they can work. You can do this through [`headless::Session`], [`headless::script_helper`], or [`headless::init()`] at start and [`headless::shutdown()`] at shutdown.
+//! Standalone binaries need to initialize Binary Ninja before they can work. You can do this through [`headless::Session`], or [`headless::init()`] at start and [`headless::shutdown()`] at shutdown.
 //! ```no_run
 //! // This loads all the core architecture, platform, etc plugins
 //! // Standalone executables need to call this, but plugins do not

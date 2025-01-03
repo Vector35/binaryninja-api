@@ -1445,7 +1445,7 @@ namespace BinaryNinja
 			QualifiedName filesetEntryCommandQualName;
 		} m_typeNames;
 
-		ObjCProcessor* m_objcProcessor = nullptr;
+		MachoObjCProcessor* m_objcProcessor = nullptr;
 
 		uint64_t m_universalImageOffset;
 		bool m_parseOnly, m_backedByDatabase;

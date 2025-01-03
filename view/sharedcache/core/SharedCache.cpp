@@ -1673,9 +1673,9 @@ static void ProcessObjCSectionsForImageWithName(std::string baseName, std::share
 	try
 	{
 		if (processObjCMetadata)
-			objc->ProcessObjCData(vm, baseName);
+			objc->ProcessObjCData(baseName);
 		if (processCFStrings)
-			objc->ProcessCFStrings(vm, baseName);
+			objc->ProcessCFStrings(baseName);
 	}
 	catch (const std::exception& ex)
 	{

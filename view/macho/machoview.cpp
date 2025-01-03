@@ -1840,13 +1840,13 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		parseObjCStructs = settings->Get<bool>("loader.macho.processObjectiveC", this);
 	if (settings && settings->Contains("loader.macho.processCFStrings"))
 		parseCFStrings = settings->Get<bool>("loader.macho.processCFStrings", this);
-	if (!ObjCProcessor::ViewHasObjCMetadata(this))
+	if (!MachoObjCProcessor::ViewHasObjCMetadata(this))
 		parseObjCStructs = false;
 	if (!GetSectionByName("__cfstring"))
 		parseCFStrings = false;
 	if (parseObjCStructs || parseCFStrings)
 	{
-		m_objcProcessor = new ObjCProcessor(this, m_backedByDatabase);
+		m_objcProcessor = new MachoObjCProcessor(this, m_backedByDatabase);
 	}
 	if (parseObjCStructs)
 	{
@@ -2332,7 +2332,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	if (parseCFStrings)
 	{
 		try {
-			m_objcProcessor->ProcessCFStrings();
+			m_objcProcessor->ProcessCFStrings(std::nullopt);
 		}
 		catch (std::exception& ex)
 		{
@@ -2344,7 +2344,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	if (parseObjCStructs)
 	{
 		try {
-			m_objcProcessor->ProcessObjCData();
+			m_objcProcessor->ProcessObjCData(std::nullopt);
 		}
 		catch (std::exception& ex)
 		{
@@ -3873,7 +3873,7 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 			settings->UpdateProperty(override, "readOnly", false);
 	}
 
-	if (ObjCProcessor::ViewHasObjCMetadata(viewRef))
+	if (MachoObjCProcessor::ViewHasObjCMetadata(viewRef))
 	{
 		settings->RegisterSetting("loader.macho.processObjectiveC",
 			R"({

@@ -15,7 +15,7 @@
 //! Interfaces for demangling and simplifying mangled names in binaries.
 
 use binaryninjacore_sys::*;
-use std::ffi::{c_char, c_void, CStr};
+use std::ffi::{c_char, c_void};
 
 use crate::architecture::CoreArchitecture;
 use crate::binaryview::BinaryView;
@@ -31,56 +31,34 @@ pub fn demangle_generic<S: BnStrCompatible>(
     mangled_name: S,
     view: Option<&BinaryView>,
     simplify: bool,
-) -> Result<(Option<Ref<Type>>, Vec<String>)> {
+) -> Option<(QualifiedName, Option<Ref<Type>>)> {
     let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
     let mut out_type: *mut BNType = std::ptr::null_mut();
     let mut out_name = BNQualifiedName::default();
-    let view_ptr = match view {
-        Some(v) => v.handle,
-        None => std::ptr::null_mut(),
-    };
     let res = unsafe {
         BNDemangleGeneric(
             arch.handle,
             mangled_name_ptr.as_ptr() as *const c_char,
             &mut out_type,
             &mut out_name,
-            view_ptr,
+            view.map(|v| v.handle).unwrap_or(std::ptr::null_mut()),
             simplify,
         )
     };
 
-    if !res {
-        let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
-            Ok(cstr) => cstr,
-            Err(_) => {
-                log::error!("demangle_generic: failed to parse mangled name");
-                return Err(());
-            }
+    if res {
+        let out_type = match out_type.is_null() {
+            true => None,
+            false => Some(unsafe { Type::ref_from_raw(out_type) }),
         };
-        return Ok((None, vec![cstr.to_string_lossy().into_owned()]));
+        Some((out_name.into(), out_type))
+    } else {
+        None
     }
-
-    let out_type = match out_type.is_null() {
-        true => {
-            log::debug!("demangle_generic: out_type is NULL");
-            None
-        }
-        false => Some(unsafe { Type::ref_from_raw(out_type) }),
-    };
-
-    Ok((
-        out_type,
-        QualifiedName(out_name)
-            .strings()
-            .iter()
-            .map(|str| str.to_string())
-            .collect::<Vec<_>>(),
-    ))
 }
 
-pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Result<Vec<String>> {
+pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Option<Vec<String>> {
     let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
     let mut out_name: *mut *mut std::os::raw::c_char = std::ptr::null_mut();
@@ -94,38 +72,26 @@ pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Res
         )
     };
 
-    if !res || out_size == 0 {
-        let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
-            Ok(cstr) => cstr,
-            Err(_) => {
-                log::error!("demangle_llvm: failed to parse mangled name");
-                return Err(());
-            }
-        };
-        return Ok(vec![cstr.to_string_lossy().into_owned()]);
+    match res {
+        true => {
+            assert!(!out_name.is_null());
+            let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
+                .iter()
+                .map(str::to_string)
+                .collect();
+            unsafe { BNFreeDemangledName(&mut out_name, out_size) };
+
+            Some(names)
+        }
+        false => None,
     }
-
-    if out_name.is_null() {
-        log::error!("demangle_llvm: out_name is NULL");
-        return Err(());
-    }
-
-    let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
-        .iter()
-        .map(str::to_string)
-        .collect();
-
-    // TODO: This wont get freed on early returns.
-    unsafe { BNFreeDemangledName(&mut out_name, out_size) };
-
-    Ok(names)
 }
 
 pub fn demangle_gnu3<S: BnStrCompatible>(
     arch: &CoreArchitecture,
     mangled_name: S,
     simplify: bool,
-) -> Result<(Option<Ref<Type>>, Vec<String>)> {
+) -> Option<(Vec<String>, Option<Ref<Type>>)> {
     let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
     let mut out_type: *mut BNType = std::ptr::null_mut();
@@ -142,45 +108,31 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
         )
     };
 
-    if !res || out_size == 0 {
-        let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
-            Ok(cstr) => cstr,
-            Err(_) => {
-                log::error!("demangle_gnu3: failed to parse mangled name");
-                return Err(());
-            }
-        };
-        return Ok((None, vec![cstr.to_string_lossy().into_owned()]));
-    }
-
-    let out_type = match out_type.is_null() {
+    match res {
         true => {
-            log::debug!("demangle_gnu3: out_type is NULL");
-            None
+            assert!(!out_name.is_null());
+            let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
+                .iter()
+                .map(str::to_string)
+                .collect();
+            unsafe { BNFreeDemangledName(&mut out_name, out_size) };
+
+            let out_type = match out_type.is_null() {
+                true => None,
+                false => Some(unsafe { Type::ref_from_raw(out_type) }),
+            };
+
+            Some((names, out_type))
         }
-        false => Some(unsafe { Type::ref_from_raw(out_type) }),
-    };
-
-    if out_name.is_null() {
-        log::error!("demangle_gnu3: out_name is NULL");
-        return Err(());
+        false => None,
     }
-
-    let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
-        .iter()
-        .map(str::to_string)
-        .collect();
-
-    unsafe { BNFreeDemangledName(&mut out_name, out_size) };
-
-    Ok((out_type, names))
 }
 
 pub fn demangle_ms<S: BnStrCompatible>(
     arch: &CoreArchitecture,
     mangled_name: S,
     simplify: bool,
-) -> Result<(Option<Ref<Type>>, Vec<String>)> {
+) -> Option<(Vec<String>, Option<Ref<Type>>)> {
     let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
 
@@ -198,38 +150,24 @@ pub fn demangle_ms<S: BnStrCompatible>(
         )
     };
 
-    if !res || out_size == 0 {
-        let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
-            Ok(cstr) => cstr,
-            Err(_) => {
-                log::error!("demangle_ms: failed to parse mangled name");
-                return Err(());
-            }
-        };
-        return Ok((None, vec![cstr.to_string_lossy().into_owned()]));
-    }
-
-    let out_type = match out_type.is_null() {
+    match res {
         true => {
-            log::debug!("demangle_ms: out_type is NULL");
-            None
+            assert!(!out_name.is_null());
+            let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
+                .iter()
+                .map(str::to_string)
+                .collect();
+            unsafe { BNFreeDemangledName(&mut out_name, out_size) };
+
+            let out_type = match out_type.is_null() {
+                true => None,
+                false => Some(unsafe { Type::ref_from_raw(out_type) }),
+            };
+
+            Some((names, out_type))
         }
-        false => Some(unsafe { Type::ref_from_raw(out_type) }),
-    };
-
-    if out_name.is_null() {
-        log::error!("demangle_ms: out_name is NULL");
-        return Err(());
+        false => None,
     }
-
-    let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
-        .iter()
-        .map(|name| name.to_string())
-        .collect();
-
-    unsafe { BNFreeDemangledName(&mut out_name, out_size) };
-
-    Ok((out_type, names))
 }
 
 #[derive(PartialEq, Eq, Hash)]
@@ -240,8 +178,13 @@ pub struct Demangler {
 impl Demangler {
     pub(crate) unsafe fn from_raw(handle: *mut BNDemangler) -> Self {
         debug_assert!(!handle.is_null());
-
         Self { handle }
+    }
+
+    pub fn list() -> Array<Self> {
+        let mut count: usize = 0;
+        let demanglers = unsafe { BNGetDemanglerList(&mut count) };
+        unsafe { Array::<Demangler>::new(demanglers, count, ()) }
     }
 
     pub fn is_mangled_string<S: BnStrCompatible>(&self, name: S) -> bool {
@@ -254,22 +197,18 @@ impl Demangler {
         arch: &CoreArchitecture,
         name: S,
         view: Option<&BinaryView>,
-    ) -> Result<(Option<Ref<Type>>, QualifiedName)> {
+    ) -> Option<(QualifiedName, Option<Ref<Type>>)> {
         let name_bytes = name.into_bytes_with_nul();
 
         let mut out_type = std::ptr::null_mut();
-        let mut out_var_name = BNQualifiedName {
-            name: std::ptr::null_mut(),
-            join: std::ptr::null_mut(),
-            nameCount: 0,
-        };
+        let mut out_var_name = BNQualifiedName::default();
 
         let view_ptr = match view {
             Some(v) => v.handle,
             None => std::ptr::null_mut(),
         };
 
-        if !unsafe {
+        let res = unsafe {
             BNDemanglerDemangle(
                 self.handle,
                 arch.handle,
@@ -278,18 +217,19 @@ impl Demangler {
                 &mut out_var_name,
                 view_ptr,
             )
-        } {
-            return Err(());
-        }
-
-        let var_type = if out_type.is_null() {
-            None
-        } else {
-            Some(unsafe { Type::ref_from_raw(out_type) })
         };
-        let var_name = QualifiedName(out_var_name);
 
-        Ok((var_type, var_name))
+        match res {
+            true => {
+                let var_type = match out_type.is_null() {
+                    true => None,
+                    false => Some(unsafe { Type::ref_from_raw(out_type) }),
+                };
+
+                Some((out_var_name.into(), var_type))
+            }
+            false => None,
+        }
     }
 
     pub fn name(&self) -> BnString {
@@ -306,13 +246,7 @@ impl Demangler {
         }
     }
 
-    pub fn list() -> Array<Self> {
-        let mut count: usize = 0;
-        let demanglers = unsafe { BNGetDemanglerList(&mut count) };
-        unsafe { Array::<Demangler>::new(demanglers, count, ()) }
-    }
-
-    pub fn register<S, C>(name: S, callbacks: C) -> Self
+    pub fn register<S, C>(name: S, demangler: C) -> Self
     where
         S: BnStrCompatible,
         C: CustomDemangler,
@@ -357,35 +291,33 @@ impl Demangler {
                 };
 
                 match cmd.demangle(&arch, &name, view) {
-                    Ok((type_, name)) => {
-                        *out_type = match type_ {
+                    Some((name, ty)) => {
+                        *out_type = match ty {
                             Some(t) => RefCountable::inc_ref(t.as_ref()).handle,
                             None => std::ptr::null_mut(),
                         };
-                        // TODO: Need to have a better way for api-owned QNames
-                        (*out_var_name).nameCount = name.0.nameCount;
-                        (*out_var_name).join = BNAllocString(name.0.join);
-                        (*out_var_name).name =
-                            BNAllocStringList(name.0.name as *mut *const _, name.0.nameCount);
+                        *out_var_name = name.into();
                         true
                     }
-                    Err(_) => false,
+                    None => false,
                 }
             })
         }
+
         extern "C" fn cb_free_var_name<C>(_ctxt: *mut c_void, name: *mut BNQualifiedName)
         where
             C: CustomDemangler,
         {
             ffi_wrap!("CustomDemangler::cb_free_var_name", unsafe {
-                BNFreeString((*name).join);
-                BNFreeStringList((*name).name, (*name).nameCount);
+                // TODO: What is the point of this free callback?
+                // TODO: The core can just call BNFreeQualifiedName.
+                BNFreeQualifiedName(name);
             })
         }
 
         let name = name.into_bytes_with_nul();
         let name_ptr = name.as_ref().as_ptr() as *mut _;
-        let ctxt = Box::into_raw(Box::new(callbacks));
+        let ctxt = Box::into_raw(Box::new(demangler));
 
         let callbacks = BNDemanglerCallbacks {
             context: ctxt as *mut c_void,
@@ -437,5 +369,5 @@ pub trait CustomDemangler: 'static + Sync {
         arch: &CoreArchitecture,
         name: &str,
         view: Option<Ref<BinaryView>>,
-    ) -> Result<(Option<Ref<Type>>, QualifiedName)>;
+    ) -> Option<(QualifiedName, Option<Ref<Type>>)>;
 }

@@ -18,7 +18,7 @@ macro_rules! ffi_wrap {
         use std::process;
 
         panic::catch_unwind(|| $b).unwrap_or_else(|_| {
-            error!("ffi callback caught panic: {}", $n);
+            log::error!("ffi callback caught panic: {}", $n);
             process::abort()
         })
     }};

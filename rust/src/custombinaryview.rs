@@ -98,7 +98,7 @@ where
                     Ref::into_raw(bv.handle).handle
                 }
                 Err(_) => {
-                    error!("CustomBinaryViewType::create_custom_view returned Err");
+                    log::error!("CustomBinaryViewType::create_custom_view returned Err");
                     ptr::null_mut()
                 }
             }
@@ -126,7 +126,7 @@ where
                     Ref::into_raw(bv.handle).handle
                 }
                 Err(_) => {
-                    error!("CustomBinaryViewType::parse returned Err");
+                    log::error!("CustomBinaryViewType::parse returned Err");
                     ptr::null_mut()
                 }
             }
@@ -242,7 +242,7 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
         let handle = unsafe { BNCreateBinaryViewOfType(self.as_ref().handle, data.handle) };
 
         if handle.is_null() {
-            error!(
+            log::error!(
                 "failed to create BinaryView of BinaryViewType '{}'",
                 self.name()
             );
@@ -256,7 +256,7 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
         let handle = unsafe { BNParseBinaryViewOfType(self.as_ref().handle, data.handle) };
 
         if handle.is_null() {
-            error!(
+            log::error!(
                 "failed to parse BinaryView of BinaryViewType '{}'",
                 self.name()
             );
@@ -450,7 +450,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
             // even if we deal with it gracefully in cb_free_object,
             // BNCreateBinaryViewOfType is still going to crash, so we're just
             // going to try and stop this from happening in the first place.
-            error!(
+            log::error!(
                 "attempt to create duplicate view of type '{}' (existing: {:?})",
                 view_name.as_str(),
                 bv.handle
@@ -511,12 +511,12 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
                             true
                         }
                         Err(_) => {
-                            error!("CustomBinaryView::init failed; custom view returned Err");
+                            log::error!("CustomBinaryView::init failed; custom view returned Err");
                             false
                         }
                     },
                     Err(_) => {
-                        error!("CustomBinaryView::new failed; custom view returned Err");
+                        log::error!("CustomBinaryView::new failed; custom view returned Err");
                         false
                     }
                 }
@@ -546,7 +546,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
                     //
                     // if we're here, it's too late to do anything about it, though we can at least not
                     // run the destructor on the custom view since that memory is unitialized.
-                    error!(
+                    log::error!(
                       "BinaryViewBase::freeObject called on partially initialized object! crash imminent!"
                     );
                 } else if matches!(
@@ -565,7 +565,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
                     //
                     // we can't do anything to prevent this, but we can at least have the crash
                     // not be our fault.
-                    error!("BinaryViewBase::freeObject called on leaked/never initialized custom view!");
+                    log::error!("BinaryViewBase::freeObject called on leaked/never initialized custom view!");
                 }
             })
         }

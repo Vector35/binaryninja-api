@@ -273,9 +273,8 @@ impl TypeLibrary {
     /// `export_object_to_library <binaryview.BinaryView.export_object_to_library>`, which will automatically pull in
     /// all referenced types and record additional dependencies as needed.
     pub fn add_named_object(&self, name: &QualifiedName, type_: &Type) {
-        unsafe {
-            BNAddTypeLibraryNamedObject(self.as_raw(), &name.0 as *const _ as *mut _, type_.handle)
-        }
+        let mut raw_name = BNQualifiedName::from(name);
+        unsafe { BNAddTypeLibraryNamedObject(self.as_raw(), &mut raw_name, type_.handle) }
     }
 
     /// Directly inserts a named object into the type library's object store.
@@ -285,10 +284,9 @@ impl TypeLibrary {
     /// To add types and objects from an existing BinaryView, it is recommended to use
     /// `export_type_to_library <binaryview.BinaryView.export_type_to_library>`, which will automatically pull in
     /// all referenced types and record additional dependencies as needed.
-    pub fn add_named_type(&self, name: &QualifiedNameAndType, type_: &Type) {
-        unsafe {
-            BNAddTypeLibraryNamedType(self.as_raw(), &name.0 as *const _ as *mut _, type_.handle)
-        }
+    pub fn add_named_type(&self, name: &QualifiedName, type_: &Type) {
+        let mut raw_name = BNQualifiedName::from(name);
+        unsafe { BNAddTypeLibraryNamedType(self.as_raw(), &mut raw_name, type_.handle) }
     }
 
     /// Manually flag NamedTypeReferences to the given QualifiedName as originating from another source
@@ -301,10 +299,11 @@ impl TypeLibrary {
     /// </div>
     pub fn add_type_source<S: BnStrCompatible>(&self, name: &QualifiedName, source: S) {
         let source = source.into_bytes_with_nul();
+        let mut raw_name = BNQualifiedName::from(name);
         unsafe {
             BNAddTypeLibraryNamedTypeSource(
                 self.as_raw(),
-                &name.0 as *const _ as *mut _,
+                &mut raw_name,
                 source.as_ref().as_ptr() as *const ffi::c_char,
             )
         }
@@ -314,8 +313,8 @@ impl TypeLibrary {
     /// attempting to extract types from a library into a BinaryView, consider using
     /// `import_library_object <binaryview.BinaryView.import_library_object>` instead.
     pub fn get_named_object(&self, name: &QualifiedName) -> Option<Ref<Type>> {
-        let t =
-            unsafe { BNGetTypeLibraryNamedObject(self.as_raw(), &name.0 as *const _ as *mut _) };
+        let mut raw_name = BNQualifiedName::from(name);
+        let t = unsafe { BNGetTypeLibraryNamedObject(self.as_raw(), &mut raw_name) };
         (!t.is_null()).then(|| unsafe { Type::ref_from_raw(t) })
     }
 
@@ -323,7 +322,8 @@ impl TypeLibrary {
     /// attempting to extract types from a library into a BinaryView, consider using
     /// `import_library_type <binaryview.BinaryView.import_library_type>` instead.
     pub fn get_named_type(&self, name: &QualifiedName) -> Option<Ref<Type>> {
-        let t = unsafe { BNGetTypeLibraryNamedType(self.as_raw(), &name.0 as *const _ as *mut _) };
+        let mut raw_name = BNQualifiedName::from(name);
+        let t = unsafe { BNGetTypeLibraryNamedType(self.as_raw(), &mut raw_name) };
         (!t.is_null()).then(|| unsafe { Type::ref_from_raw(t) })
     }
 

@@ -14,15 +14,15 @@
 
 //! String wrappers for core-owned strings and strings being passed to the core
 
+use crate::rc::*;
+use crate::types::QualifiedName;
 use std::borrow::Cow;
 use std::ffi::{c_char, CStr, CString};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::mem;
 use std::ops::Deref;
-
-use crate::rc::*;
-use crate::types::QualifiedName;
+use std::path::{Path, PathBuf};
 
 // TODO: Remove or refactor this.
 pub(crate) fn raw_to_string(ptr: *const c_char) -> Option<String> {
@@ -31,6 +31,17 @@ pub(crate) fn raw_to_string(ptr: *const c_char) -> Option<String> {
     } else {
         Some(unsafe { CStr::from_ptr(ptr).to_string_lossy().into_owned() })
     }
+}
+
+// TODO: Make this pass in an iterator over something more generic...
+pub(crate) fn strings_to_string_list(strings: &[String]) -> *mut *mut c_char {
+    use binaryninjacore_sys::BNAllocStringList;
+    let bn_str_list = strings
+        .iter()
+        .map(|s| BnString::new(s.as_str()))
+        .collect::<Vec<_>>();
+    let mut raw_str_list = bn_str_list.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
+    unsafe { BNAllocStringList(raw_str_list.as_mut_ptr(), raw_str_list.len()) }
 }
 
 /// Is the equivalent of `core::ffi::CString` but using the alloc and free from `binaryninjacore-sys`.
@@ -250,7 +261,23 @@ unsafe impl BnStrCompatible for &QualifiedName {
     type Result = Vec<u8>;
 
     fn into_bytes_with_nul(self) -> Self::Result {
-        self.string().into_bytes_with_nul()
+        self.to_string().into_bytes_with_nul()
+    }
+}
+
+unsafe impl BnStrCompatible for PathBuf {
+    type Result = Vec<u8>;
+
+    fn into_bytes_with_nul(self) -> Self::Result {
+        self.as_path().into_bytes_with_nul()
+    }
+}
+
+unsafe impl BnStrCompatible for &Path {
+    type Result = Vec<u8>;
+
+    fn into_bytes_with_nul(self) -> Self::Result {
+        self.to_string_lossy().into_bytes_with_nul()
     }
 }
 

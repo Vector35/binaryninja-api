@@ -440,7 +440,7 @@ macro_rules! prim_int_lifter {
                     };
 
                     if !is_safe {
-                        error!("il @ {:x} attempted to lift constant 0x{:x} as {} byte expr (won't fit!)",
+                        log::error!("il @ {:x} attempted to lift constant 0x{:x} as {} byte expr (won't fit!)",
                                il.current_address(), val, size);
                     }
                 }
@@ -556,7 +556,7 @@ impl<'a, A: 'a + Architecture> LiftableWithSize<'a, A>
         {
             if let Some(expr_size) = expr.info().size() {
                 if expr_size != _size {
-                    warn!(
+                    log::warn!(
                         "il @ {:x} attempted to lift {} byte expression as {} bytes",
                         il.current_address(),
                         expr_size,
@@ -699,7 +699,7 @@ where
             use binaryninjacore_sys::BNLowLevelILOperation::{LLIL_UNIMPL, LLIL_UNIMPL_MEM};
 
             if expr.size != _size && ![LLIL_UNIMPL, LLIL_UNIMPL_MEM].contains(&expr.op) {
-                warn!(
+                log::warn!(
                     "il @ {:x} attempted to lift {} byte expression builder as {} bytes",
                     il.current_address(),
                     expr.size,

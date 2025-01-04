@@ -194,9 +194,10 @@ where
         _ => {
             #[cfg(debug_assertions)]
             {
-                error!(
+                log::error!(
                     "Got unexpected operation {:?} in value expr at 0x{:x}",
-                    op.operation, op.address
+                    op.operation,
+                    op.address
                 );
             }
 

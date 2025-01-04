@@ -2588,7 +2588,7 @@ where
                     return expr.index.0;
                 }
             } else {
-                warn!(
+                log::warn!(
                     "unable to unpack flag write op: {:?} with {} operands",
                     op,
                     operands.len()

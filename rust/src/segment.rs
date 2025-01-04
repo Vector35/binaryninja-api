@@ -111,8 +111,14 @@ pub struct Segment {
 }
 
 impl Segment {
-    pub(crate) unsafe fn from_raw(raw: *mut BNSegment) -> Self {
-        Self { handle: raw }
+    pub(crate) unsafe fn from_raw(handle: *mut BNSegment) -> Self {
+        assert!(!handle.is_null());
+        Self { handle }
+    }
+
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNSegment) -> Ref<Self> {
+        assert!(!handle.is_null());
+        Ref::new(Self { handle })
     }
 
     /// You need to create a segment builder, customize that segment, then add it to a binary view:

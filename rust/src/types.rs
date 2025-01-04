@@ -27,13 +27,12 @@ use crate::{
 };
 
 use crate::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
-use crate::string::raw_to_string;
+use crate::string::{raw_to_string, strings_to_string_list};
 use crate::variable::{Variable, VariableSourceType};
 use std::num::NonZeroUsize;
 use std::{
-    borrow::Cow,
     collections::HashSet,
-    ffi::{c_char, CStr},
+    ffi::CStr,
     fmt::{Debug, Display, Formatter},
     hash::{Hash, Hasher},
     iter::IntoIterator,
@@ -329,13 +328,15 @@ impl TypeBuilder {
         }
     }
 
-    pub fn named_type_from_type<S: BnStrCompatible>(name: S, t: &Type) -> Self {
-        let mut name = QualifiedName::from(name);
+    pub fn named_type_from_type<T: AsRef<QualifiedName>>(name: T, t: &Type) -> Self {
+        let mut raw_name = BNQualifiedName::from(name.as_ref());
+        // TODO: This cant be right...
+        let id = BnString::new("");
 
         unsafe {
             Self::from_raw(BNCreateNamedTypeReferenceBuilderFromTypeAndId(
-                BnString::new("").as_ptr() as *mut _,
-                &mut name.0,
+                id.as_ptr() as *mut _,
+                &mut raw_name,
                 t.handle,
             ))
         }
@@ -705,15 +706,15 @@ impl Type {
         }
     }
 
-    pub fn named_type_from_type<S: BnStrCompatible>(name: S, t: &Type) -> Ref<Self> {
-        let mut name = QualifiedName::from(name);
+    pub fn named_type_from_type<T: AsRef<QualifiedName>>(name: T, t: &Type) -> Ref<Self> {
+        let mut raw_name = BNQualifiedName::from(name.as_ref());
         // TODO: No id is present for this call?
         let id = BnString::new("");
 
         unsafe {
             Self::ref_from_raw(BNCreateNamedTypeReferenceFromTypeAndId(
                 id.as_ptr(),
-                &mut name.0,
+                &mut raw_name,
                 t.handle,
             ))
         }
@@ -898,9 +899,9 @@ impl Type {
         }
     }
 
-    pub fn generate_auto_demangled_type_id<S: BnStrCompatible>(name: S) -> BnString {
-        let mut name = QualifiedName::from(name);
-        unsafe { BnString::from_raw(BNGenerateAutoDemangledTypeId(&mut name.0)) }
+    pub fn generate_auto_demangled_type_id<T: AsRef<QualifiedName>>(name: T) -> BnString {
+        let mut raw_name = BNQualifiedName::from(name.as_ref());
+        unsafe { BnString::from_raw(BNGenerateAutoDemangledTypeId(&mut raw_name)) }
     }
 }
 
@@ -1581,8 +1582,7 @@ impl Structure {
         unsafe { BNGetStructureType(self.handle) }
     }
 
-    // TODO: Omit `Option` and pass empty vec? Actually the core will only nullptr on failed allocation, use debug_assert.
-    pub fn members(&self) -> Option<Vec<StructureMember>> {
+    pub fn members(&self) -> Vec<StructureMember> {
         unsafe {
             let mut count = 0;
             let members_raw_ptr: *mut BNStructureMember =
@@ -1593,15 +1593,15 @@ impl Structure {
                     let members_raw = std::slice::from_raw_parts(members_raw_ptr, count);
                     let members = members_raw.iter().map(Into::into).collect();
                     BNFreeStructureMemberList(members_raw_ptr, count);
-                    Some(members)
+                    members
                 }
-                true => None,
+                true => vec![],
             }
         }
     }
 
     // TODO: Omit `Option` and pass empty vec?
-    pub fn base_structures(&self) -> Option<Vec<BaseStructure>> {
+    pub fn base_structures(&self) -> Vec<BaseStructure> {
         let mut count = 0;
         let bases_raw_ptr = unsafe { BNGetBaseStructuresForStructure(self.handle, &mut count) };
         match bases_raw_ptr.is_null() {
@@ -1609,9 +1609,9 @@ impl Structure {
                 let bases_raw = unsafe { std::slice::from_raw_parts(bases_raw_ptr, count) };
                 let bases = bases_raw.iter().copied().map(Into::into).collect();
                 unsafe { BNFreeBaseStructureList(bases_raw_ptr, count) };
-                Some(bases)
+                bases
             }
-            true => None,
+            true => vec![],
         }
     }
 
@@ -1822,12 +1822,13 @@ impl NamedTypeReference {
     /// You should not assign type ids yourself, that is the responsibility of the BinaryView
     /// implementation after your types have been added. Just make sure the names match up and
     /// the core will do the id stuff for you.
-    pub fn new(type_class: NamedTypeReferenceClass, mut name: QualifiedName) -> Ref<Self> {
+    pub fn new(type_class: NamedTypeReferenceClass, name: QualifiedName) -> Ref<Self> {
+        let mut raw_name = BNQualifiedName::from(name);
         unsafe {
             Self::ref_from_raw(BNCreateNamedType(
                 type_class,
                 std::ptr::null() as *const _,
-                &mut name.0,
+                &mut raw_name,
             ))
         }
     }
@@ -1840,22 +1841,23 @@ impl NamedTypeReference {
     pub fn new_with_id<S: BnStrCompatible>(
         type_class: NamedTypeReferenceClass,
         type_id: S,
-        mut name: QualifiedName,
+        name: QualifiedName,
     ) -> Ref<Self> {
         let type_id = type_id.into_bytes_with_nul();
+        let mut raw_name = BNQualifiedName::from(name);
 
         unsafe {
             Self::ref_from_raw(BNCreateNamedType(
                 type_class,
                 type_id.as_ref().as_ptr() as _,
-                &mut name.0,
+                &mut raw_name,
             ))
         }
     }
 
     pub fn name(&self) -> QualifiedName {
-        let named_ref: BNQualifiedName = unsafe { BNGetTypeReferenceName(self.handle) };
-        QualifiedName(named_ref)
+        let raw_name = unsafe { BNGetTypeReferenceName(self.handle) };
+        QualifiedName::from(raw_name)
     }
 
     pub fn id(&self) -> BnString {
@@ -1867,28 +1869,26 @@ impl NamedTypeReference {
     }
 
     fn target_helper(&self, bv: &BinaryView, visited: &mut HashSet<BnString>) -> Option<Ref<Type>> {
-        // TODO : This is a clippy bug (#10088, I think); remove after we upgrade past 2022-12-12
-        #[allow(clippy::manual_filter)]
-        if let Some(t) = bv.get_type_by_id(self.id()) {
-            if t.type_class() != TypeClass::NamedTypeReferenceClass {
-                Some(t)
-            } else {
-                let t = t.get_named_type_reference().unwrap();
-                if visited.contains(&t.id()) {
-                    error!("Can't get target for recursively defined type!");
-                    None
-                } else {
-                    visited.insert(t.id());
-                    t.target_helper(bv, visited)
+        let ty = bv.get_type_by_id(self.id())?;
+        match ty.type_class() {
+            TypeClass::NamedTypeReferenceClass => {
+                // Recurse into the NTR type until we get the target type.
+                let ntr = ty.get_named_type_reference().unwrap();
+                match visited.insert(ntr.id()) {
+                    true => ntr.target_helper(bv, visited),
+                    false => {
+                        log::error!("Can't get target for recursively defined type!");
+                        None
+                    }
                 }
             }
-        } else {
-            None
+            // Found target type
+            _ => Some(ty),
         }
     }
 
+    /// Type referenced by this [`NamedTypeReference`].
     pub fn target(&self, bv: &BinaryView) -> Option<Ref<Type>> {
-        //! Returns the type referenced by this named type reference
         self.target_helper(bv, &mut HashSet::new())
     }
 }
@@ -1917,126 +1917,123 @@ impl Debug for NamedTypeReference {
     }
 }
 
-#[repr(transparent)]
-pub struct QualifiedName(pub(crate) BNQualifiedName);
+// TODO: Document usage, specifically how to make a qualified name and why it exists.
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct QualifiedName {
+    pub items: Vec<String>,
+    // TODO: Make this Option<String> where default is "::".
+    pub seperator: String,
+}
 
 impl QualifiedName {
-    // TODO : I think this is bad
-    pub fn string(&self) -> String {
-        unsafe {
-            std::slice::from_raw_parts(self.0.name, self.0.nameCount)
-                .iter()
-                .map(|c| CStr::from_ptr(*c).to_string_lossy())
-                .collect::<Vec<_>>()
-                .join("::")
-        }
-    }
-
-    pub fn join(&self) -> Cow<str> {
-        let join: *mut c_char = self.0.join;
-        unsafe { CStr::from_ptr(join) }.to_string_lossy()
-    }
-
-    pub fn strings(&self) -> Vec<Cow<str>> {
-        let names: *mut *mut c_char = self.0.name;
-        unsafe {
-            std::slice::from_raw_parts(names, self.0.nameCount)
-                .iter()
-                .map(|name| CStr::from_ptr(*name).to_string_lossy())
-                .collect::<Vec<_>>()
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.nameCount
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.nameCount == 0
+    pub fn new(items: Vec<String>, seperator: String) -> Self {
+        Self { items, seperator }
     }
 }
 
-impl<S: BnStrCompatible> From<S> for QualifiedName {
-    fn from(name: S) -> Self {
-        let join = BnString::new("::");
-        let name = name.into_bytes_with_nul();
-        let mut list = vec![name.as_ref().as_ptr() as *const _];
-
-        QualifiedName(BNQualifiedName {
-            name: unsafe { BNAllocStringList(list.as_mut_ptr(), 1) },
-            join: join.into_raw(),
-            nameCount: 1,
-        })
-    }
-}
-
-impl<S: BnStrCompatible> From<Vec<S>> for QualifiedName {
-    fn from(names: Vec<S>) -> Self {
-        let join = BnString::new("::");
-        let names = names
-            .into_iter()
-            .map(|n| n.into_bytes_with_nul())
-            .collect::<Vec<_>>();
-        let mut list = names
+impl From<BNQualifiedName> for QualifiedName {
+    fn from(value: BNQualifiedName) -> Self {
+        // TODO: This could be improved...
+        let raw_names = unsafe { std::slice::from_raw_parts(value.name, value.nameCount) };
+        let items = raw_names
             .iter()
-            .map(|n| n.as_ref().as_ptr() as *const _)
-            .collect::<Vec<_>>();
-
-        QualifiedName(BNQualifiedName {
-            name: unsafe { BNAllocStringList(list.as_mut_ptr(), list.len()) },
-            join: join.into_raw(),
-            nameCount: list.len(),
-        })
+            .filter_map(|&raw_name| raw_to_string(raw_name as *const _))
+            .collect();
+        let seperator = raw_to_string(value.join).unwrap();
+        unsafe { BNFreeStringList(value.name, value.nameCount) };
+        unsafe { BNFreeString(value.join) };
+        Self { items, seperator }
     }
 }
 
-impl Clone for QualifiedName {
-    fn clone(&self) -> Self {
-        let strings = self.strings();
-        let name = Self::from(strings.iter().collect::<Vec<&Cow<str>>>());
-        name
+impl From<&BNQualifiedName> for QualifiedName {
+    fn from(value: &BNQualifiedName) -> Self {
+        // TODO: This could be improved...
+        // Taking this as a ref, we should not free the underlying data...
+        let raw_names = unsafe { std::slice::from_raw_parts(value.name, value.nameCount) };
+        let items = raw_names
+            .iter()
+            .filter_map(|&raw_name| raw_to_string(raw_name as *const _))
+            .collect();
+        let seperator = raw_to_string(value.join).unwrap();
+        Self { items, seperator }
     }
 }
 
-impl Hash for QualifiedName {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.join().hash(state);
-        self.strings().hash(state);
+impl From<QualifiedName> for BNQualifiedName {
+    fn from(value: QualifiedName) -> Self {
+        let bn_join = BnString::new(value.seperator);
+        Self {
+            // TODO: Check this to make sure this isnt leaking...
+            name: strings_to_string_list(&value.items),
+            join: bn_join.into_raw(),
+            nameCount: value.items.len(),
+        }
     }
 }
 
-impl Debug for QualifiedName {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.string())
+impl From<&QualifiedName> for BNQualifiedName {
+    fn from(value: &QualifiedName) -> Self {
+        let bn_join = BnString::new(&value.seperator);
+        Self {
+            // TODO: Check this to make sure this isnt leaking...
+            name: strings_to_string_list(&value.items),
+            join: bn_join.into_raw(),
+            nameCount: value.items.len(),
+        }
+    }
+}
+
+impl From<&str> for QualifiedName {
+    fn from(value: &str) -> Self {
+        Self {
+            items: vec![value.to_string()],
+            // TODO: See comment in struct def.
+            seperator: String::from("::"),
+        }
+    }
+}
+
+impl From<String> for QualifiedName {
+    fn from(value: String) -> Self {
+        Self {
+            items: vec![value],
+            // TODO: See comment in struct def.
+            seperator: String::from("::"),
+        }
+    }
+}
+
+impl From<Vec<String>> for QualifiedName {
+    fn from(value: Vec<String>) -> Self {
+        Self {
+            items: value,
+            // TODO: See comment in struct def.
+            seperator: String::from("::"),
+        }
+    }
+}
+
+impl From<Vec<&str>> for QualifiedName {
+    fn from(value: Vec<&str>) -> Self {
+        value
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .into()
     }
 }
 
 impl Display for QualifiedName {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.string())
-    }
-}
-
-impl PartialEq for QualifiedName {
-    fn eq(&self, other: &Self) -> bool {
-        self.strings() == other.strings()
-    }
-}
-
-impl Eq for QualifiedName {}
-
-impl Drop for QualifiedName {
-    fn drop(&mut self) {
-        unsafe {
-            BNFreeQualifiedName(&mut self.0);
-        }
+        write!(f, "{}", self.items.join(&self.seperator))
     }
 }
 
 impl CoreArrayProvider for QualifiedName {
     type Raw = BNQualifiedName;
     type Context = ();
-    type Wrapped<'a> = &'a QualifiedName;
+    type Wrapped<'a> = Self;
 }
 
 unsafe impl CoreArrayProviderInner for QualifiedName {
@@ -2045,36 +2042,79 @@ unsafe impl CoreArrayProviderInner for QualifiedName {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        std::mem::transmute(raw)
+        Self::from(raw)
     }
 }
 
-#[repr(transparent)]
-pub struct QualifiedNameAndType(pub(crate) BNQualifiedNameAndType);
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct QualifiedNameAndType {
+    pub name: QualifiedName,
+    pub ty: Ref<Type>,
+}
 
 impl QualifiedNameAndType {
-    pub fn name(&self) -> &QualifiedName {
-        unsafe { std::mem::transmute(&self.0.name) }
-    }
-
-    pub fn type_object(&self) -> Guard<Type> {
-        unsafe { Guard::new(Type::from_raw(self.0.type_), self) }
+    pub fn new(name: QualifiedName, ty: Ref<Type>) -> Self {
+        Self { name, ty }
     }
 }
 
-impl Debug for QualifiedNameAndType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("QualifiedNameAndType")
-            .field("name", self.name())
-            .field("type", self.type_object().as_ref())
-            .finish()
+impl From<BNQualifiedNameAndType> for QualifiedNameAndType {
+    fn from(value: BNQualifiedNameAndType) -> Self {
+        Self {
+            name: QualifiedName::from(value.name),
+            ty: unsafe { Type::ref_from_raw(value.type_) },
+        }
     }
 }
 
-impl Drop for QualifiedNameAndType {
-    fn drop(&mut self) {
-        unsafe {
-            BNFreeQualifiedNameAndType(&mut self.0);
+impl From<&BNQualifiedNameAndType> for QualifiedNameAndType {
+    fn from(value: &BNQualifiedNameAndType) -> Self {
+        Self {
+            name: QualifiedName::from(&value.name),
+            ty: unsafe { Type::from_raw(value.type_).to_owned() },
+        }
+    }
+}
+
+impl From<QualifiedNameAndType> for BNQualifiedNameAndType {
+    fn from(value: QualifiedNameAndType) -> Self {
+        Self {
+            name: value.name.into(),
+            type_: value.ty.handle,
+        }
+    }
+}
+
+impl From<&QualifiedNameAndType> for BNQualifiedNameAndType {
+    fn from(value: &QualifiedNameAndType) -> Self {
+        Self {
+            name: BNQualifiedName::from(&value.name),
+            type_: value.ty.handle,
+        }
+    }
+}
+
+impl<T> From<(T, Ref<Type>)> for QualifiedNameAndType
+where
+    T: Into<QualifiedName>,
+{
+    fn from(value: (T, Ref<Type>)) -> Self {
+        Self {
+            name: value.0.into(),
+            ty: value.1,
+        }
+    }
+}
+
+impl<T> From<(T, &Type)> for QualifiedNameAndType
+where
+    T: Into<QualifiedName>,
+{
+    fn from(value: (T, &Type)) -> Self {
+        let ty = value.1.to_owned();
+        Self {
+            name: value.0.into(),
+            ty,
         }
     }
 }
@@ -2082,49 +2122,53 @@ impl Drop for QualifiedNameAndType {
 impl CoreArrayProvider for QualifiedNameAndType {
     type Raw = BNQualifiedNameAndType;
     type Context = ();
-    type Wrapped<'a> = &'a QualifiedNameAndType;
+    type Wrapped<'a> = Self;
 }
 
 unsafe impl CoreArrayProviderInner for QualifiedNameAndType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTypeAndNameList(raw, count);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        std::mem::transmute(raw)
+        Self::from(raw)
     }
 }
 
-#[repr(transparent)]
-pub struct QualifiedNameTypeAndId(pub(crate) BNQualifiedNameTypeAndId);
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct QualifiedNameTypeAndId {
+    pub name: QualifiedName,
+    pub ty: Ref<Type>,
+    pub id: String,
+}
 
-impl QualifiedNameTypeAndId {
-    pub fn name(&self) -> &QualifiedName {
-        unsafe { std::mem::transmute(&self.0.name) }
-    }
-
-    pub fn id(&self) -> &str {
-        unsafe { CStr::from_ptr(self.0.id).to_str().unwrap() }
-    }
-
-    pub fn ty(&self) -> Guard<Type> {
-        unsafe { Guard::new(Type::from_raw(self.0.type_), self) }
+impl From<BNQualifiedNameTypeAndId> for QualifiedNameTypeAndId {
+    fn from(value: BNQualifiedNameTypeAndId) -> Self {
+        Self {
+            name: QualifiedName::from(value.name),
+            ty: unsafe { Type::ref_from_raw(value.type_) },
+            id: unsafe { BnString::from_raw(value.id) }.to_string(),
+        }
     }
 }
 
-impl Debug for QualifiedNameTypeAndId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("QualifiedNameTypeAndId")
-            .field("name", self.name())
-            .field("id", &self.id())
-            .field("type", self.ty().as_ref())
-            .finish()
+impl From<&BNQualifiedNameTypeAndId> for QualifiedNameTypeAndId {
+    fn from(value: &BNQualifiedNameTypeAndId) -> Self {
+        Self {
+            name: QualifiedName::from(&value.name),
+            ty: unsafe { Type::from_raw(value.type_).to_owned() },
+            id: raw_to_string(value.id as *mut _).unwrap(),
+        }
     }
 }
 
-impl Drop for QualifiedNameTypeAndId {
-    fn drop(&mut self) {
-        unsafe {
-            BNFreeQualifiedNameTypeAndId(&mut self.0);
+impl From<QualifiedNameTypeAndId> for BNQualifiedNameTypeAndId {
+    fn from(value: QualifiedNameTypeAndId) -> Self {
+        let bn_id = BnString::new(value.id);
+        Self {
+            name: value.name.into(),
+            id: bn_id.into_raw(),
+            type_: value.ty.handle,
         }
     }
 }
@@ -2132,7 +2176,7 @@ impl Drop for QualifiedNameTypeAndId {
 impl CoreArrayProvider for QualifiedNameTypeAndId {
     type Raw = BNQualifiedNameTypeAndId;
     type Context = ();
-    type Wrapped<'a> = &'a QualifiedNameTypeAndId;
+    type Wrapped<'a> = QualifiedNameTypeAndId;
 }
 
 unsafe impl CoreArrayProviderInner for QualifiedNameTypeAndId {
@@ -2141,8 +2185,7 @@ unsafe impl CoreArrayProviderInner for QualifiedNameTypeAndId {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        // TODO: Oh my god what is wrong with all of you people
-        std::mem::transmute(raw)
+        Self::from(raw)
     }
 }
 

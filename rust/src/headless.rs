@@ -13,75 +13,68 @@
 // limitations under the License.
 
 use crate::{
-    binaryview, rc,
-    string::{BnStrCompatible, IntoJson},
+    binaryview, bundled_plugin_directory, is_main_thread, rc, set_bundled_plugin_directory,
+    string::IntoJson,
 };
 
-use std::env;
-use std::path::PathBuf;
+use crate::mainthread::{MainThreadAction, MainThreadHandler};
+use crate::rc::Ref;
+use binaryninjacore_sys::{BNInitPlugins, BNInitRepoPlugins};
+use std::sync::mpsc::Sender;
 use std::time::Duration;
 
-#[cfg(not(target_os = "windows"))]
-fn binja_path() -> PathBuf {
-    use std::ffi::{CStr, OsStr};
-    use std::mem;
-    use std::os::raw;
-    use std::os::unix::ffi::OsStrExt;
+#[derive(Debug)]
+pub struct HeadlessMainThreadSender {
+    sender: Sender<Ref<MainThreadAction>>,
+}
 
-    #[repr(C)]
-    struct DlInfo {
-        dli_fname: *const raw::c_char,
-        dli_fbase: *mut raw::c_void,
-        dli_sname: *const raw::c_char,
-        dli_saddr: *mut raw::c_void,
-    }
-
-    if let Ok(p) = env::var("BINJA_DIR") {
-        return PathBuf::from(p);
-    }
-
-    extern "C" {
-        fn dladdr(addr: *mut raw::c_void, info: *mut DlInfo) -> raw::c_int;
-    }
-
-    unsafe {
-        let mut info: DlInfo = mem::zeroed();
-
-        if dladdr(BNSetBundledPluginDirectory as *mut _, &mut info) == 0 {
-            panic!("Failed to find libbinaryninjacore path!");
-        }
-
-        if info.dli_fname.is_null() {
-            panic!("Failed to find libbinaryninjacore path!");
-        }
-
-        let path = CStr::from_ptr(info.dli_fname);
-        let path = OsStr::from_bytes(path.to_bytes());
-        let mut path = PathBuf::from(path);
-        while path.is_symlink() {
-            path = path
-                .read_link()
-                .expect("Failed to find libbinaryninjacore path!");
-        }
-
-        path.pop();
-        path
+impl HeadlessMainThreadSender {
+    pub fn new(sender: Sender<Ref<MainThreadAction>>) -> Self {
+        Self { sender }
     }
 }
 
-#[cfg(target_os = "windows")]
-fn binja_path() -> PathBuf {
-    PathBuf::from(env::var("PROGRAMFILES").unwrap()).join("Vector35\\BinaryNinja\\")
+impl MainThreadHandler for HeadlessMainThreadSender {
+    fn add_action(&self, action: Ref<MainThreadAction>) {
+        self.sender
+            .send(action)
+            .expect("Failed to send action to main thread");
+    }
 }
-
-use binaryninjacore_sys::{BNInitPlugins, BNInitRepoPlugins, BNSetBundledPluginDirectory};
 
 /// Loads plugins, core architecture, platform, etc.
 ///
 /// ⚠️ Important! Must be called at the beginning of scripts.  Plugins do not need to call this. ⚠️
 ///
 /// You can instead call this through [`Session`].
+///
+/// If you are using a custom [`MainThreadHandler`] than use [`init_without_main_thread`] instead.
 pub fn init() {
+    // If we are the main thread that means there is no main thread.
+    if is_main_thread() {
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let main_thread = HeadlessMainThreadSender::new(sender);
+
+        // This thread will act as our main thread.
+        std::thread::Builder::new()
+            .name("HeadlessMainThread".to_string())
+            .spawn(move || {
+                // We must register the main thread within said thread.
+                main_thread.register();
+                while let Ok(action) = receiver.recv() {
+                    action.execute();
+                }
+            })
+            .expect("Failed to spawn main thread");
+    }
+
+    init_without_main_thread();
+}
+
+/// This initializes the core without registering a main thread handler.
+///
+/// Call this if you have previously registered a [`MainThreadHandler`].
+pub fn init_without_main_thread() {
     match crate::product().as_str() {
         "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => {
             crate::enterprise::checkout_license(Duration::from_secs(900))
@@ -90,11 +83,11 @@ pub fn init() {
         _ => {}
     }
 
-    unsafe {
-        let path = binja_path().join("plugins").into_os_string();
-        let path = path.into_string().unwrap();
+    let bundled_plugin_dir =
+        bundled_plugin_directory().expect("Failed to get bundled plugin directory");
+    set_bundled_plugin_directory(bundled_plugin_dir);
 
-        BNSetBundledPluginDirectory(path.as_str().into_bytes_with_nul().as_ptr() as *mut _);
+    unsafe {
         BNInitPlugins(true);
         BNInitRepoPlugins();
     }

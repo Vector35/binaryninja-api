@@ -1193,17 +1193,17 @@ impl Function {
     /// ```no_run
     /// # use binaryninja::function::Function;
     /// # let fun: Function = todo!();
-    /// fun.add_user_type_ref(0x1337, &"A".into(), None);
+    /// fun.add_user_type_ref(0x1337, "A", None);
     /// ```
-    pub fn add_user_type_ref(
+    pub fn add_user_type_ref<T: Into<QualifiedName>>(
         &self,
         from_addr: u64,
-        name: &QualifiedName,
+        name: T,
         arch: Option<CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = &name.0 as *const BNQualifiedName as *mut _;
-        unsafe { BNAddUserTypeReference(self.handle, arch.handle, from_addr, name_ptr) }
+        let mut raw_name = BNQualifiedName::from(name.into());
+        unsafe { BNAddUserTypeReference(self.handle, arch.handle, from_addr, &mut raw_name) }
     }
 
     /// Removes a user-defined type cross-reference.
@@ -1218,17 +1218,17 @@ impl Function {
     /// ```no_run
     /// # use binaryninja::function::Function;
     /// # let fun: Function = todo!();
-    /// fun.remove_user_type_ref(0x1337, &"A".into(), None);
+    /// fun.remove_user_type_ref(0x1337, "A", None);
     /// ```
-    pub fn remove_user_type_ref(
+    pub fn remove_user_type_ref<T: Into<QualifiedName>>(
         &self,
         from_addr: u64,
-        name: &QualifiedName,
+        name: T,
         arch: Option<CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = &name.0 as *const BNQualifiedName as *mut _;
-        unsafe { BNRemoveUserTypeReference(self.handle, arch.handle, from_addr, name_ptr) }
+        let mut raw_name = BNQualifiedName::from(name.into());
+        unsafe { BNRemoveUserTypeReference(self.handle, arch.handle, from_addr, &mut raw_name) }
     }
 
     /// Places a user-defined type field cross-reference from the
@@ -1246,21 +1246,28 @@ impl Function {
     /// ```no_run
     /// # use binaryninja::function::Function;
     /// # let fun: Function = todo!();
-    /// fun.add_user_type_field_ref(0x1337, &"A".into(), 0x8, None, None);
+    /// fun.add_user_type_field_ref(0x1337, "A", 0x8, None, None);
     /// ```
-    pub fn add_user_type_field_ref(
+    pub fn add_user_type_field_ref<T: Into<QualifiedName>>(
         &self,
         from_addr: u64,
-        name: &QualifiedName,
+        name: T,
         offset: u64,
         arch: Option<CoreArchitecture>,
         size: Option<usize>,
     ) {
         let size = size.unwrap_or(0);
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = &name.0 as *const _ as *mut _;
+        let mut raw_name = BNQualifiedName::from(name.into());
         unsafe {
-            BNAddUserTypeFieldReference(self.handle, arch.handle, from_addr, name_ptr, offset, size)
+            BNAddUserTypeFieldReference(
+                self.handle,
+                arch.handle,
+                from_addr,
+                &mut raw_name,
+                offset,
+                size,
+            )
         }
     }
 
@@ -1278,25 +1285,25 @@ impl Function {
     /// ```no_run
     /// # use binaryninja::function::Function;
     /// # let fun: Function = todo!();
-    /// fun.remove_user_type_field_ref(0x1337, &"A".into(), 0x8, None, None);
+    /// fun.remove_user_type_field_ref(0x1337, "A", 0x8, None, None);
     /// ```
-    pub fn remove_user_type_field_ref(
+    pub fn remove_user_type_field_ref<T: Into<QualifiedName>>(
         &self,
         from_addr: u64,
-        name: &QualifiedName,
+        name: T,
         offset: u64,
         arch: Option<CoreArchitecture>,
         size: Option<usize>,
     ) {
         let size = size.unwrap_or(0);
         let arch = arch.unwrap_or_else(|| self.arch());
-        let name_ptr = &name.0 as *const _ as *mut _;
+        let mut raw_name = BNQualifiedName::from(name.into());
         unsafe {
             BNRemoveUserTypeFieldReference(
                 self.handle,
                 arch.handle,
                 from_addr,
-                name_ptr,
+                &mut raw_name,
                 offset,
                 size,
             )

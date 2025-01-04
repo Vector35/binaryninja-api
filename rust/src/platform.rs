@@ -168,10 +168,15 @@ impl Platform {
         unsafe { CoreArchitecture::from_raw(BNGetPlatformArchitecture(self.handle)) }
     }
 
-    pub fn get_type_libraries_by_name(&self, name: &QualifiedName) -> Array<TypeLibrary> {
+    pub fn get_type_libraries_by_name<T: BnStrCompatible>(&self, name: T) -> Array<TypeLibrary> {
         let mut count = 0;
+        let name = name.into_bytes_with_nul();
         let result = unsafe {
-            BNGetPlatformTypeLibrariesByName(self.handle, &name.0 as *const _ as *mut _, &mut count)
+            BNGetPlatformTypeLibrariesByName(
+                self.handle,
+                name.as_ref().as_ptr() as *mut _,
+                &mut count,
+            )
         };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
@@ -271,9 +276,9 @@ pub trait TypeParser {
 
 #[derive(Clone, Default)]
 pub struct TypeParserResult {
-    pub types: HashMap<String, Ref<Type>>,
-    pub variables: HashMap<String, Ref<Type>>,
-    pub functions: HashMap<String, Ref<Type>>,
+    pub types: HashMap<QualifiedName, Ref<Type>>,
+    pub variables: HashMap<QualifiedName, Ref<Type>>,
+    pub functions: HashMap<QualifiedName, Ref<Type>>,
 }
 
 impl TypeParser for Platform {
@@ -284,17 +289,8 @@ impl TypeParser for Platform {
         include_directories: &[P],
         auto_type_source: S,
     ) -> Result<TypeParserResult, String> {
-        let mut result = BNTypeParserResult {
-            functionCount: 0,
-            typeCount: 0,
-            variableCount: 0,
-            functions: ptr::null_mut(),
-            types: ptr::null_mut(),
-            variables: ptr::null_mut(),
-        };
-
+        let mut result = BNTypeParserResult::default();
         let mut type_parser_result = TypeParserResult::default();
-
         let mut error_string: *mut raw::c_char = ptr::null_mut();
 
         let src = source.into_bytes_with_nul();
@@ -331,24 +327,24 @@ impl TypeParser for Platform {
             }
 
             for i in slice::from_raw_parts(result.types, result.typeCount) {
-                let name = QualifiedName(i.name);
+                let name = QualifiedName::from(i.name);
                 type_parser_result
                     .types
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
+                    .insert(name, Type::ref_from_raw(i.type_));
             }
 
             for i in slice::from_raw_parts(result.functions, result.functionCount) {
-                let name = QualifiedName(i.name);
+                let name = QualifiedName::from(i.name);
                 type_parser_result
                     .functions
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
+                    .insert(name, Type::ref_from_raw(i.type_));
             }
 
             for i in slice::from_raw_parts(result.variables, result.variableCount) {
-                let name = QualifiedName(i.name);
+                let name = QualifiedName::from(i.name);
                 type_parser_result
                     .variables
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
+                    .insert(name, Type::ref_from_raw(i.type_));
             }
         }
 

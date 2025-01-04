@@ -1,16 +1,25 @@
+use binaryninja::headless::Session;
 use binaryninja::metadata::Metadata;
 use binaryninja::project::Project;
 use binaryninja::rc::Ref;
+use rstest::*;
 use std::time::SystemTime;
+
+// TODO: We should use tempdir to manage the project directory.
+
+#[fixture]
+#[once]
+fn session() -> Session {
+    Session::new()
+}
 
 fn unique_project(name: &str) -> String {
     format!("{}/{}", std::env::temp_dir().to_str().unwrap(), name)
 }
 
-#[test]
-fn create_delete_empty() {
+#[rstest]
+fn create_delete_empty(_session: &Session) {
     use std::fs::canonicalize;
-    binaryninja::headless::init();
 
     let project_name = "create_delete_empty_project";
     let project_path = unique_project(project_name);
@@ -35,14 +44,10 @@ fn create_delete_empty() {
 
     // delete the project
     std::fs::remove_dir_all(project_path).unwrap();
-
-    binaryninja::headless::shutdown();
 }
 
-#[test]
-fn create_close_open_close() {
-    binaryninja::headless::init();
-
+#[rstest]
+fn create_close_open_close(_session: &Session) {
     let project_name = "create_close_open_close";
     let project_path = unique_project(project_name);
     // create the project
@@ -67,14 +72,10 @@ fn create_close_open_close() {
 
     // delete the project
     std::fs::remove_dir_all(project_path).unwrap();
-
-    binaryninja::headless::shutdown();
 }
 
-#[test]
-fn modify_project() {
-    binaryninja::headless::init();
-
+#[rstest]
+fn modify_project(_session: &Session) {
     let project_name = "modify_project";
     let project_path = unique_project(project_name);
     // create the project
@@ -102,7 +103,7 @@ fn modify_project() {
     // create file that will be imported to the project
     let tmp_folder_1_name = format!(
         "tmp_folder_{}",
-        std::time::SystemTime::now()
+        SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_millis()
@@ -296,17 +297,26 @@ fn modify_project() {
     }
 
     // check files
-    #[rustfmt::skip]
-        let files = [
-            ("file_1", &file_1_data[..], None, None),
-            ("file_2", &file_2_data[..], Some(file_2_id), None),
-            ("file_3", &file_3_data[..], None, None),
-            ("file_4", &file_4_data[..], Some(file_4_id), Some(file_4_time)),
-            ("file_5", &input_file_1_data[..], None, None),
-            ("file_6", &input_file_2_data[..], Some(file_6_id), Some(file_6_time)),
-            ("input_1", &input_file_1_data[..], None, None),
-            ("input_2", &input_file_2_data[..], None, None),
-        ];
+    let files = [
+        ("file_1", &file_1_data[..], None, None),
+        ("file_2", &file_2_data[..], Some(file_2_id), None),
+        ("file_3", &file_3_data[..], None, None),
+        (
+            "file_4",
+            &file_4_data[..],
+            Some(file_4_id),
+            Some(file_4_time),
+        ),
+        ("file_5", &input_file_1_data[..], None, None),
+        (
+            "file_6",
+            &input_file_2_data[..],
+            Some(file_6_id),
+            Some(file_6_time),
+        ),
+        ("input_1", &input_file_1_data[..], None, None),
+        ("input_2", &input_file_2_data[..], None, None),
+    ];
     for file in project.files().unwrap().iter() {
         let found = files.iter().find(|f| file.name().as_str() == f.0).unwrap();
         if let Some(id) = found.2 {
@@ -337,6 +347,4 @@ fn modify_project() {
     std::fs::remove_dir_all(project_path).unwrap();
     std::fs::remove_dir_all(tmp_folder_1).unwrap();
     std::fs::remove_dir_all(tmp_folder_2).unwrap();
-
-    binaryninja::headless::shutdown();
 }

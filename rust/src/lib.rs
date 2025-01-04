@@ -31,6 +31,7 @@
 //!
 //! ---
 //!  # Warning
+//!
 //! <img align="right" src="../under_construction.png" width="175" height="175">
 //!
 //! > ⚠️ **These bindings are in a very early beta, only have partial support for the core APIs and are still actively under development. Compatibility _will_ break and conventions _will_ change! They are being used for core Binary Ninja features however, so we expect much of what is already there to be reliable enough to build on, just don't be surprised if your plugins/scripts need to hit a moving target.**
@@ -72,7 +73,9 @@
 //! The most up-to-date version of the suggested [`build.rs` is here].
 //!
 //! ### `main.rs`
+//!
 //! Standalone binaries need to initialize Binary Ninja before they can work. You can do this through [`headless::Session`], or [`headless::init()`] at start and [`headless::shutdown()`] at shutdown.
+//!
 //! ```no_run
 //! // This loads all the core architecture, platform, etc plugins
 //! // Standalone executables need to call this, but plugins do not
@@ -85,6 +88,7 @@
 //! ```
 //!
 //! ### `Cargo.toml`
+//!
 //! ```toml
 //! [dependencies]
 //! binaryninja = { git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev"}
@@ -102,8 +106,6 @@
 //! [examples]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples
 //!
 
-#[macro_use]
-extern crate log;
 #[doc(hidden)]
 pub extern crate binaryninjacore_sys;
 #[cfg(feature = "rayon")]
@@ -153,6 +155,7 @@ pub mod interaction;
 pub mod linearview;
 pub mod llil;
 pub mod logger;
+pub mod mainthread;
 pub mod metadata;
 pub mod mlil;
 pub mod platform;
@@ -180,27 +183,13 @@ use binaryninjacore_sys::*;
 use binaryview::BinaryView;
 use metadata::Metadata;
 use metadata::MetadataType;
+use rc::Ref;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void, CStr};
 use std::path::PathBuf;
 use string::BnStrCompatible;
+use string::BnString;
 use string::IntoJson;
-// Commented out to suppress unused warnings
-// const BN_MAX_INSTRUCTION_LENGTH: u64 = 256;
-// const BN_DEFAULT_INSTRUCTION_LENGTH: u64 = 16;
-// const BN_DEFAULT_OPCODE_DISPLAY: u64 = 8;
-// const BN_MAX_INSTRUCTION_BRANCHES: u64 = 3;
-// const BN_MAX_STORED_DATA_LENGTH: u64 = 0x3fffffff;
-// const BN_NULL_ID: i64 = -1;
-// const BN_INVALID_REGISTER: usize = 0xffffffff;
-// const BN_AUTOCOERCE_EXTERN_PTR: u64 = 0xfffffffd;
-// const BN_NOCOERCE_EXTERN_PTR: u64 = 0xfffffffe;
-// const BN_INVALID_OPERAND: u64 = 0xffffffff;
-// const BN_MAX_STRING_LENGTH: u64 = 128;
-// const BN_MAX_VARIABLE_OFFSET: u64 = 0x7fffffffff;
-// const BN_MAX_VARIABLE_INDEX: u64 = 0xfffff;
-// const BN_MINIMUM_CONFIDENCE: u8 = 1;
-// const BN_HEURISTIC_CONFIDENCE: u8 = 192;
 
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 pub use binaryninjacore_sys::BNDataFlowQueryOption as DataFlowQueryOption;
@@ -227,7 +216,7 @@ unsafe extern "C" fn cb_progress_nop(_ctxt: *mut c_void, _arg1: usize, _arg2: us
 }
 
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
-pub fn load<S>(filename: S) -> Option<rc::Ref<BinaryView>>
+pub fn load<S>(filename: S) -> Option<Ref<BinaryView>>
 where
     S: BnStrCompatible,
 {
@@ -251,7 +240,7 @@ where
     }
 }
 
-pub fn load_with_progress<S, F>(filename: S, mut progress: F) -> Option<rc::Ref<BinaryView>>
+pub fn load_with_progress<S, F>(filename: S, mut progress: F) -> Option<Ref<BinaryView>>
 where
     S: BnStrCompatible,
     F: FnMut(usize, usize) -> bool,
@@ -299,7 +288,7 @@ pub fn load_with_options<S, O>(
     filename: S,
     update_analysis_and_wait: bool,
     options: Option<O>,
-) -> Option<rc::Ref<BinaryView>>
+) -> Option<Ref<BinaryView>>
 where
     S: BnStrCompatible,
     O: IntoJson,
@@ -342,7 +331,7 @@ pub fn load_with_options_and_progress<S, O, F>(
     update_analysis_and_wait: bool,
     options: Option<O>,
     progress: Option<F>,
-) -> Option<rc::Ref<BinaryView>>
+) -> Option<Ref<BinaryView>>
 where
     S: BnStrCompatible,
     O: IntoJson,
@@ -390,7 +379,7 @@ pub fn load_view<O>(
     bv: &BinaryView,
     update_analysis_and_wait: bool,
     options: Option<O>,
-) -> Option<rc::Ref<binaryview::BinaryView>>
+) -> Option<Ref<BinaryView>>
 where
     O: IntoJson,
 {
@@ -430,7 +419,7 @@ pub fn load_view_with_progress<O, F>(
     update_analysis_and_wait: bool,
     options: Option<O>,
     progress: Option<F>,
-) -> Option<rc::Ref<binaryview::BinaryView>>
+) -> Option<Ref<BinaryView>>
 where
     O: IntoJson,
     F: FnMut(usize, usize) -> bool,
@@ -476,9 +465,7 @@ pub fn install_directory() -> Result<PathBuf, ()> {
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn bundled_plugin_directory() -> Result<PathBuf, ()> {
@@ -486,12 +473,10 @@ pub fn bundled_plugin_directory() -> Result<PathBuf, ()> {
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
-pub fn set_bundled_plugin_directory<S: string::BnStrCompatible>(new_dir: S) {
+pub fn set_bundled_plugin_directory<S: BnStrCompatible>(new_dir: S) {
     unsafe {
         BNSetBundledPluginDirectory(new_dir.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
     };
@@ -502,9 +487,7 @@ pub fn user_directory() -> Result<PathBuf, ()> {
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn user_plugin_directory() -> Result<PathBuf, ()> {
@@ -512,9 +495,7 @@ pub fn user_plugin_directory() -> Result<PathBuf, ()> {
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn repositories_directory() -> Result<PathBuf, ()> {
@@ -522,9 +503,7 @@ pub fn repositories_directory() -> Result<PathBuf, ()> {
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn settings_file_name() -> Result<PathBuf, ()> {
@@ -532,11 +511,12 @@ pub fn settings_file_name() -> Result<PathBuf, ()> {
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
+/// Write the installation directory of the currently running core instance to disk.
+///
+/// This is used to select the most recent installation for running scripts.
 pub fn save_last_run() {
     unsafe { BNSaveLastRun() };
 }
@@ -552,9 +532,7 @@ pub fn path_relative_to_bundled_plugin_directory<S: string::BnStrCompatible>(
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn path_relative_to_user_plugin_directory<S: string::BnStrCompatible>(
@@ -568,9 +546,7 @@ pub fn path_relative_to_user_plugin_directory<S: string::BnStrCompatible>(
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
 pub fn path_relative_to_user_directory<S: string::BnStrCompatible>(path: S) -> Result<PathBuf, ()> {
@@ -582,9 +558,14 @@ pub fn path_relative_to_user_directory<S: string::BnStrCompatible>(path: S) -> R
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(
-        unsafe { string::BnString::from_raw(s) }.to_string(),
-    ))
+    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
+}
+
+/// Returns if the running thread is the "main thread"
+///
+/// If there is no registered main thread than this will return the current thread.
+pub fn is_main_thread() -> bool {
+    unsafe { binaryninjacore_sys::BNIsMainThread() }
 }
 
 pub fn memory_info() -> HashMap<String, u64> {
@@ -650,8 +631,8 @@ pub trait ObjectDestructor: 'static + Sync + Sized {
     }
 }
 
-pub fn version() -> string::BnString {
-    unsafe { string::BnString::from_raw(BNGetVersionString()) }
+pub fn version() -> BnString {
+    unsafe { BnString::from_raw(BNGetVersionString()) }
 }
 
 pub fn build_id() -> u32 {
@@ -663,7 +644,7 @@ pub struct VersionInfo {
     pub major: u32,
     pub minor: u32,
     pub build: u32,
-    pub channel: string::BnString,
+    pub channel: String,
 }
 
 pub fn version_info() -> VersionInfo {
@@ -672,20 +653,20 @@ pub fn version_info() -> VersionInfo {
         major: info_raw.major,
         minor: info_raw.minor,
         build: info_raw.build,
-        channel: unsafe { string::BnString::from_raw(info_raw.channel) },
+        channel: unsafe { BnString::from_raw(info_raw.channel).to_string() },
     }
 }
 
-pub fn serial_number() -> string::BnString {
-    unsafe { string::BnString::from_raw(BNGetSerialNumber()) }
+pub fn serial_number() -> BnString {
+    unsafe { BnString::from_raw(BNGetSerialNumber()) }
 }
 
 pub fn is_license_validated() -> bool {
     unsafe { BNIsLicenseValidated() }
 }
 
-pub fn licensed_user_email() -> string::BnString {
-    unsafe { string::BnString::from_raw(BNGetLicensedUserEmail()) }
+pub fn licensed_user_email() -> BnString {
+    unsafe { BnString::from_raw(BNGetLicensedUserEmail()) }
 }
 
 pub fn license_count() -> i32 {
@@ -698,12 +679,12 @@ pub fn set_license<S: string::BnStrCompatible>(license: S) {
     unsafe { BNSetLicense(license_slice.as_ptr() as *const c_char) }
 }
 
-pub fn product() -> string::BnString {
-    unsafe { string::BnString::from_raw(BNGetProduct()) }
+pub fn product() -> BnString {
+    unsafe { BnString::from_raw(BNGetProduct()) }
 }
 
-pub fn product_type() -> string::BnString {
-    unsafe { string::BnString::from_raw(BNGetProductType()) }
+pub fn product_type() -> BnString {
+    unsafe { BnString::from_raw(BNGetProductType()) }
 }
 
 pub fn license_expiration_time() -> std::time::SystemTime {

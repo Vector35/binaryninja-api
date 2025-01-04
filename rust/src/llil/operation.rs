@@ -129,7 +129,7 @@ where
                 .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
-                    error!(
+                    log::error!(
                         "got garbage register from LLIL_SET_REG @ 0x{:x}",
                         self.op.address
                     );
@@ -168,7 +168,7 @@ where
                 .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
-                    error!(
+                    log::error!(
                         "got garbage register from LLIL_SET_REG_SPLIT @ 0x{:x}",
                         self.op.address
                     );
@@ -189,7 +189,7 @@ where
                 .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
-                    error!(
+                    log::error!(
                         "got garbage register from LLIL_SET_REG_SPLIT @ 0x{:x}",
                         self.op.address
                     );
@@ -282,7 +282,7 @@ where
                 .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
-                    error!(
+                    log::error!(
                         "got garbage register from LLIL_REG @ 0x{:x}",
                         self.op.address
                     );
@@ -317,7 +317,7 @@ where
                 .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
-                    error!(
+                    log::error!(
                         "got garbage register from LLIL_REG @ 0x{:x}",
                         self.op.address
                     );
@@ -338,7 +338,7 @@ where
                 .register_from_id(RegisterId(raw_id))
                 .map(Register::ArchReg)
                 .unwrap_or_else(|| {
-                    error!(
+                    log::error!(
                         "got garbage register from LLIL_REG @ 0x{:x}",
                         self.op.address
                     );
@@ -583,9 +583,11 @@ where
             };
 
             if !is_safe {
-                error!(
+                log::error!(
                     "il expr @ {:x} contains constant 0x{:x} as {} byte value (doesn't fit!)",
-                    self.op.address, self.op.operands[0], self.op.size
+                    self.op.address,
+                    self.op.operands[0],
+                    self.op.size
                 );
             }
         }
@@ -625,9 +627,11 @@ where
             };
 
             if !is_safe {
-                error!(
+                log::error!(
                     "il expr @ {:x} contains extern 0x{:x} as {} byte value (doesn't fit!)",
-                    self.op.address, self.op.operands[0], self.op.size
+                    self.op.address,
+                    self.op.operands[0],
+                    self.op.size
                 );
             }
         }

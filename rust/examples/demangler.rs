@@ -16,11 +16,11 @@ impl CustomDemangler for TestDemangler {
         _arch: &CoreArchitecture,
         name: &str,
         _view: Option<Ref<BinaryView>>,
-    ) -> Result<(Option<Ref<Type>>, QualifiedName), ()> {
+    ) -> Option<(QualifiedName, Option<Ref<Type>>)> {
         match name {
-            "test_name" => Ok((Some(Type::bool()), QualifiedName::from(vec!["test_name"]))),
-            "test_name2" => Ok((None, QualifiedName::from(vec!["test_name2", "aaa"]))),
-            _ => Err(()),
+            "test_name" => Some((QualifiedName::from(vec!["test_name"]), Some(Type::bool()))),
+            "test_name2" => Some((QualifiedName::from(vec!["test_name2", "aaa"]), None)),
+            _ => None,
         }
     }
 }

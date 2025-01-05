@@ -408,7 +408,7 @@ pub(crate) fn get_build_id(view: &BinaryView) -> Result<String, String> {
 }
 
 
-pub(crate) fn download_debug_info(build_id: &String, view: &BinaryView) -> Result<Ref<BinaryView>, String> {
+pub(crate) fn download_debug_info(build_id: &str, view: &BinaryView) -> Result<Ref<BinaryView>, String> {
     let settings = Settings::new("");
 
     let debug_server_urls = settings.get_string_list("network.debuginfodServers", Some(view), None);
@@ -479,7 +479,7 @@ pub(crate) fn download_debug_info(build_id: &String, view: &BinaryView) -> Resul
 }
 
 
-pub(crate) fn find_local_debug_file_for_build_id(build_id: &String, view: &BinaryView) -> Option<String> {
+pub(crate) fn find_local_debug_file_for_build_id(build_id: &str, view: &BinaryView) -> Option<String> {
     let settings = Settings::new("");
     let debug_dirs_enabled = settings.get_bool("analysis.debugInfo.enableDebugDirectories", Some(view), None);
 
@@ -522,7 +522,7 @@ pub(crate) fn find_local_debug_file_for_build_id(build_id: &String, view: &Binar
 }
 
 
-pub(crate) fn load_debug_info_for_build_id(build_id: &String, view: &BinaryView) -> (Option<Ref<BinaryView>>, bool) {
+pub(crate) fn load_debug_info_for_build_id(build_id: &str, view: &BinaryView) -> (Option<Ref<BinaryView>>, bool) {
     if let Some(debug_file_path) = find_local_debug_file_for_build_id(build_id, view) {
         return
         (

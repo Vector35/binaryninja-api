@@ -162,7 +162,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             }
             TranslateTypeResult::PartiallyTranslated(og_ty, error) => {
                 TranslateTypeResult::PartiallyTranslated(
-                    Type::named_type_from_type(&String::from_utf8_lossy(&ty.name), og_ty),
+                    Type::named_type_from_type(String::from_utf8_lossy(&ty.name), og_ty),
                     error
                         .as_ref()
                         .map(|x| BnTypeError::Typedef(Box::new(x.clone())))
@@ -170,7 +170,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 )
             }
             TranslateTypeResult::Translated(og_ty) => TranslateTypeResult::Translated(
-                Type::named_type_from_type(&String::from_utf8_lossy(&ty.name), og_ty),
+                Type::named_type_from_type(String::from_utf8_lossy(&ty.name), og_ty),
             ),
         }
     }

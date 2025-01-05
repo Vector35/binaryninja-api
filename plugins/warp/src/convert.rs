@@ -102,17 +102,15 @@ pub fn to_bn_symbol_at_address(view: &BinaryView, symbol: &Symbol, addr: u64) ->
     let mut symbol_builder = BNSymbol::builder(symbol_type, &symbol.name, addr);
     // Demangle symbol name (short is with simplifications).
     if let Some(arch) = view.default_arch() {
-        if let Ok((_, full_name_list)) =
+        if let Some((full_name, _)) =
             binaryninja::demangle::demangle_generic(&arch, raw_name, Some(view), false)
         {
-            let full_name = full_name_list.join("::");
-            symbol_builder = symbol_builder.full_name(&full_name);
+            symbol_builder = symbol_builder.full_name(full_name);
         }
-        if let Ok((_, short_name_list)) =
+        if let Some((short_name, _)) =
             binaryninja::demangle::demangle_generic(&arch, raw_name, Some(view), false)
         {
-            let short_name = short_name_list.join("::");
-            symbol_builder = symbol_builder.short_name(&short_name);
+            symbol_builder = symbol_builder.short_name(short_name);
         }
     }
     symbol_builder.create()
@@ -160,7 +158,6 @@ pub fn from_bn_type_internal(
 
             let mut members = raw_struct
                 .members()
-                .unwrap()
                 .into_iter()
                 .map(|raw_member| {
                     let bit_offset = bytes_to_bits(raw_member.offset);
@@ -185,26 +182,24 @@ pub fn from_bn_type_internal(
                 .collect::<Vec<_>>();
 
             // Add base structures as flattened members
-            if let Some(base_structs) = raw_struct.base_structures() {
-                let base_to_member_iter = base_structs.iter().map(|base_struct| {
-                    let bit_offset = bytes_to_bits(base_struct.offset);
-                    let mut modifiers = StructureMemberModifiers::empty();
-                    modifiers.set(StructureMemberModifiers::Flattened, true);
-                    let base_struct_ty = from_bn_type_internal(
-                        view,
-                        visited_refs,
-                        &BNType::named_type(&base_struct.ty),
-                        255,
-                    );
-                    StructureMember {
-                        name: base_struct_ty.name.to_owned(),
-                        offset: bit_offset,
-                        ty: base_struct_ty,
-                        modifiers,
-                    }
-                });
-                members.extend(base_to_member_iter);
-            }
+            let base_to_member_iter = raw_struct.base_structures().into_iter().map(|base_struct| {
+                let bit_offset = bytes_to_bits(base_struct.offset);
+                let mut modifiers = StructureMemberModifiers::empty();
+                modifiers.set(StructureMemberModifiers::Flattened, true);
+                let base_struct_ty = from_bn_type_internal(
+                    view,
+                    visited_refs,
+                    &BNType::named_type(&base_struct.ty),
+                    255,
+                );
+                StructureMember {
+                    name: base_struct_ty.name.to_owned(),
+                    offset: bit_offset,
+                    ty: base_struct_ty,
+                    modifiers,
+                }
+            });
+            members.extend(base_to_member_iter);
 
             // TODO: Check if union
             let struct_class = StructureClass::new(members);
@@ -603,8 +598,8 @@ mod tests {
                     let converted_types: Vec<_> = bv
                         .types()
                         .iter()
-                        .map(|t| {
-                            let ty = from_bn_type(&bv, &t.type_object(), u8::MAX);
+                        .map(|qualified_name_and_type| {
+                            let ty = from_bn_type(&bv, &qualified_name_and_type.ty, u8::MAX);
                             (TypeGUID::from(&ty), ty)
                         })
                         .collect();
@@ -628,7 +623,7 @@ mod tests {
                         .types()
                         .iter()
                         .map(|t| {
-                            let ty = from_bn_type(&inital_bv, &t.type_object(), u8::MAX);
+                            let ty = from_bn_type(&inital_bv, &t.ty, u8::MAX);
                             (TypeGUID::from(&ty), ty)
                         })
                         .collect();
@@ -649,7 +644,7 @@ mod tests {
                             .types()
                             .iter()
                             .map(|t| {
-                                let ty = from_bn_type(&second_bv, &t.type_object(), u8::MAX);
+                                let ty = from_bn_type(&second_bv, &t.ty, u8::MAX);
                                 (TypeGUID::from(&ty), ty)
                             })
                             .collect();

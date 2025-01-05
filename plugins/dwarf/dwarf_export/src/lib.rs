@@ -131,7 +131,7 @@ fn export_type(
                 AttributeValue::Data2(t.width() as u16),
             );
 
-            for struct_member in t.get_structure().unwrap().members().unwrap() {
+            for struct_member in t.get_structure().unwrap().members() {
                 let struct_member_die_uid =
                     dwarf.unit.add(structure_die_uid, constants::DW_TAG_member);
                 dwarf.unit.get_mut(struct_member_die_uid).set(
@@ -378,8 +378,8 @@ fn export_types(
 ) {
     for t in &bv.types() {
         export_type(
-            t.name().to_string(),
-            &t.type_object(),
+            t.name.to_string(),
+            &t.ty,
             bv,
             defined_types,
             dwarf,

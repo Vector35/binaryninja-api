@@ -29,10 +29,7 @@ use binaryninja::debuginfo::{DebugFunctionInfo, DebugInfo};
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::settings::Settings;
-use binaryninja::types::{
-    EnumerationBuilder, NamedTypeReference,
-    NamedTypeReferenceClass, StructureBuilder, StructureType, Type, TypeClass,
-};
+use binaryninja::types::{EnumerationBuilder, NamedTypeReference, NamedTypeReferenceClass, QualifiedName, StructureBuilder, StructureType, Type, TypeClass};
 use binaryninja::variable::NamedDataVariableWithType;
 use crate::symbol_parser::{ParsedDataSymbol, ParsedProcedure, ParsedSymbol};
 use crate::type_parser::ParsedType;
@@ -67,13 +64,13 @@ pub struct PDBParserInstance<'a, S: Source<'a> + 'a> {
     /// TypeIndex -> ParsedType enum used during parsing
     pub(crate) indexed_types: BTreeMap<TypeIndex, ParsedType>,
     /// QName -> Binja Type for finished types
-    pub(crate) named_types: BTreeMap<String, Ref<Type>>,
+    pub(crate) named_types: BTreeMap<QualifiedName, Ref<Type>>,
     /// Raw (mangled) name -> TypeIndex for resolving forward references
     pub(crate) full_type_indices: BTreeMap<String, TypeIndex>,
     /// Stack of types we're currently parsing
     pub(crate) type_stack: Vec<TypeIndex>,
     /// Stack of parent types we're parsing nested types inside of
-    pub(crate) namespace_stack: Vec<String>,
+    pub(crate) namespace_stack: QualifiedName,
     /// Type Index -> Does it return on the stack
     pub(crate) type_default_returnable: BTreeMap<TypeIndex, bool>,
 
@@ -287,9 +284,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     fn collect_name(
         &self,
         name: &NamedTypeReference,
-        unknown_names: &mut HashMap<String, NamedTypeReferenceClass>,
+        unknown_names: &mut HashMap<QualifiedName, NamedTypeReferenceClass>,
     ) {
-        let used_name = name.name().to_string();
+        let used_name = name.name();
         if let Some(&found) =
             unknown_names.get(&used_name)
         {
@@ -312,20 +309,16 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     fn collect_names(
         &self,
         ty: &Type,
-        unknown_names: &mut HashMap<String, NamedTypeReferenceClass>,
+        unknown_names: &mut HashMap<QualifiedName, NamedTypeReferenceClass>,
     ) {
         match ty.type_class() {
             TypeClass::StructureTypeClass => {
                 if let Some(structure) = ty.get_structure() {
-                    if let Some(members) = structure.members() {
-                        for member in members {
-                            self.collect_names(member.ty.contents.as_ref(), unknown_names);
-                        }
+                    for member in structure.members() {
+                        self.collect_names(member.ty.contents.as_ref(), unknown_names);
                     }
-                    if let Some(bases) = structure.base_structures() {
-                        for base in bases {
-                            self.collect_name(base.ty.as_ref(), unknown_names);
-                        }
+                    for base in structure.base_structures() {
+                        self.collect_name(base.ty.as_ref(), unknown_names);
                     }
                 }
             }
@@ -368,7 +361,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             .bv
             .types()
             .iter()
-            .map(|qnat| qnat.name().string())
+            .map(|qnat| qnat.name)
             .collect::<HashSet<_>>();
 
         for ty in &self.named_types {
@@ -409,7 +402,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             match class {
                 NamedTypeReferenceClass::UnknownNamedTypeClass
                 | NamedTypeReferenceClass::TypedefNamedTypeClass => {
-                    self.debug_info.add_type(name, Type::void().as_ref(), &[]); // TODO : Components
+                    self.debug_info.add_type(&name, Type::void().as_ref(), &[]); // TODO : Components
                 }
                 NamedTypeReferenceClass::ClassNamedTypeClass
                 | NamedTypeReferenceClass::StructNamedTypeClass
@@ -431,7 +424,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     structure.set_alignment(1);
 
                     self.debug_info.add_type(
-                        name,
+                        &name,
                         Type::structure(structure.finalize().as_ref()).as_ref(),
                         &[], // TODO : Components
                     );
@@ -439,7 +432,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 NamedTypeReferenceClass::EnumNamedTypeClass => {
                     let enumeration = EnumerationBuilder::new();
                     self.debug_info.add_type(
-                        name,
+                        &name,
                         Type::enumeration(
                             enumeration.finalize().as_ref(),
                             self.arch.default_integer_size().try_into()?,

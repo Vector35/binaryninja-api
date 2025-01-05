@@ -80,7 +80,7 @@ impl BnString {
     /// memory previously managed by the `BnString`.
     ///
     /// This is typically used to pass a string back through the core where the core is expected to free.
-    pub(crate) fn into_raw(self) -> *mut c_char {
+    pub fn into_raw(self) -> *mut c_char {
         let res = self.raw;
         // we're surrendering ownership over the *mut c_char to
         // the core, so ensure we don't free it

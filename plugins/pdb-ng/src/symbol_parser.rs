@@ -260,7 +260,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                             )
                         });
                         if old_exists {
-                            self.log(|| format!("Clobbering old definition"));
+                            self.log(|| "Clobbering old definition");
                         }
                         best_symbols.insert(raw_name.clone(), sym);
                     }
@@ -318,7 +318,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                             )
                         });
                         if old_exists {
-                            self.log(|| format!("Clobbering old definition"));
+                            self.log(|| "Clobbering old definition");
                         }
                         best_functions.insert(raw_name.clone(), sym);
                     }
@@ -444,10 +444,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             match p {
                 Ok(SymbolData::ScopeEnd) | Ok(SymbolData::InlineSiteEnd) if popped => {}
                 Ok(SymbolData::ScopeEnd) | Ok(SymbolData::InlineSiteEnd) if !popped => {
-                    self.log(|| format!("Did not pop at a scope end??? WTF??"));
+                    self.log(|| "Did not pop at a scope end??? WTF??");
                 }
                 _ if popped => {
-                    self.log(|| format!("Popped but not at a scope end??? WTF??"));
+                    self.log(|| "Popped but not at a scope end??? WTF??");
                 }
                 _ => {}
             }
@@ -714,7 +714,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     }
 
     fn handle_scope_end_symbol(&mut self, _index: SymbolIndex) -> Result<Option<ParsedSymbol>> {
-        self.log(|| format!("Got ScopeEnd symbol"));
+        self.log(|| "Got ScopeEnd symbol");
         Ok(None)
     }
 
@@ -794,7 +794,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let rva = data.offset.to_rva(&self.address_map).unwrap_or_default();
         let raw_name = data.name.to_string().to_string();
         let (t, name) = self.demangle_to_type(&raw_name, rva)?;
-        let name = name.map(|n| n.string());
+        let name = name.map(|n| n.to_string());
 
         // Sometimes the demangler REALLY knows what type this is supposed to be, and the
         // data symbol is actually wrong. So in those cases, let the demangler take precedence
@@ -848,7 +848,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let rva = data.offset.to_rva(&self.address_map).unwrap_or_default();
         let raw_name = data.name.to_string().to_string();
         let (t, name) = self.demangle_to_type(&raw_name, rva)?;
-        let name = name.map(|n| n.string());
+        let name = name.map(|n| n.to_string());
 
         let name = SymbolNames {
             raw_name,
@@ -1112,7 +1112,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         // Generally proc symbols have real types, but use the demangler just in case the microsoft
         // public pdbs have the function type as `void`
         let (t, name) = self.demangle_to_type(&raw_name, rva)?;
-        let mut name = name.map(|n| n.string());
+        let mut name = name.map(|n| n.to_string());
 
         // Some proc symbols don't have a mangled name, so try and look up their name
         if name.is_none() || name.as_ref().expect("just failed none") == &raw_name {
@@ -1384,12 +1384,12 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         &mut self,
         _index: SymbolIndex,
     ) -> Result<Option<ParsedSymbol>> {
-        self.log(|| format!("Got InlineSiteEnd symbol"));
+        self.log(|| "Got InlineSiteEnd symbol");
         Ok(None)
     }
 
     fn handle_procedure_end_symbol(&mut self, _index: SymbolIndex) -> Result<Option<ParsedSymbol>> {
-        self.log(|| format!("Got ProcedureEnd symbol"));
+        self.log(|| "Got ProcedureEnd symbol");
         Ok(None)
     }
 
@@ -1476,7 +1476,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let address = self.bv.start() + rva.0 as u64;
 
         let (t, name) = self.demangle_to_type(&raw_name, rva)?;
-        let name = name.map(|n| n.string());
+        let name = name.map(|n| n.to_string());
         let mut fn_type = t;
 
         // These have the same name as their target, so look that up
@@ -1786,9 +1786,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         rva: Rva,
     ) -> Result<(Option<Conf<Ref<Type>>>, Option<QualifiedName>)> {
         let (mut t, mut name) = match demangle_ms(&self.arch, raw_name, true) {
-            Ok((Some(t), name)) => (Some(Conf::new(t, DEMANGLE_CONFIDENCE)), name),
-            Ok((_, name)) => (None, name),
-            _ => (None, vec![raw_name.clone()]),
+            Some((name, Some(t))) => (Some(Conf::new(t, DEMANGLE_CONFIDENCE)), name),
+            Some((name, _)) => (None, name),
+            _ => (None, QualifiedName::new(vec![raw_name.clone()])),
         };
 
         if let Some(ty) = t.as_ref() {
@@ -1864,7 +1864,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             for (search_name, search_types) in name_to_type.iter() {
                 if last_name.contains(search_name) {
                     for search_type in search_types {
-                        if let Some(ty) = self.named_types.get(search_type) {
+                        let qualified_search_type = QualifiedName::from(search_type);
+                        if let Some(ty) = self.named_types.get(&qualified_search_type) {
                             // Fallback in case we don't find a specific one
                             t = Some(Conf::new(
                                 Type::named_type_from_type(search_type, ty.as_ref()),
@@ -1880,8 +1881,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                     self.make_lengthy_type(ty, self.bv.start() + rva.0 as u64)?
                                 {
                                     // See if we have a type with this length
-                                    let lengthy_name =
-                                        format!("${}$_extraBytes_{}", search_type, length);
+                                    let lengthy_name: QualifiedName =
+                                        format!("${}$_extraBytes_{}", search_type, length).into();
 
                                     if let Some(ty) = self.named_types.get(&lengthy_name) {
                                         // Wow!
@@ -1901,9 +1902,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
 
         // VTables have types on their data symbols,
-        if let Some((class_name, last)) = name.join("::").rsplit_once("::") {
+        if let Some((last, class_name)) = name.split_last() {
             if last.contains("`vftable'") {
-                let mut vt_name = class_name.to_string() + "::" + "VTable";
+                let mut vt_name = class_name.with_item("VTable");
                 if last.contains("{for") {
                     // DerivedClass::`vftable'{for `BaseClass'}
                     let mut base_name = last.to_owned();
@@ -1911,7 +1912,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     base_name.drain((base_name.len() - "'}".len())..(base_name.len()));
                     // Multiply inherited classes have multiple vtable types
                     // TODO: Do that
-                    vt_name = base_name + "::" + "VTable";
+                    vt_name = QualifiedName::new(vec![base_name, "VTable".to_string()]);
                 }
 
                 vt_name = vt_name
@@ -1921,7 +1922,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
                 if let Some(ty) = self.named_types.get(&vt_name) {
                     t = Some(Conf::new(
-                        Type::named_type_from_type(&vt_name, ty.as_ref()),
+                        Type::named_type_from_type(vt_name, ty.as_ref()),
                         DEMANGLE_CONFIDENCE,
                     ));
                 } else {
@@ -1933,13 +1934,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
                     if let Some(ty) = self.named_types.get(&vt_name) {
                         t = Some(Conf::new(
-                            Type::named_type_from_type(&vt_name, ty.as_ref()),
+                            Type::named_type_from_type(vt_name, ty.as_ref()),
                             DEMANGLE_CONFIDENCE,
                         ));
                     } else {
                         t = Some(Conf::new(
                             Type::named_type_from_type(
-                                &vt_name,
+                                vt_name,
                                 Type::structure(StructureBuilder::new().finalize().as_ref())
                                     .as_ref(),
                             ),
@@ -1982,9 +1983,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let structure = base_type
             .get_structure()
             .ok_or(anyhow!("Expected structure"))?;
-        let mut members = structure
-            .members()
-            .ok_or(anyhow!("Expected structure to have members"))?;
+        let mut members = structure.members();
         let last_member = members
             .last_mut()
             .ok_or(anyhow!("Not enough members"))?;

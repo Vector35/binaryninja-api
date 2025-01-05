@@ -29,7 +29,9 @@ use crate::{
 use crate::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use crate::string::{raw_to_string, strings_to_string_list};
 use crate::variable::{Variable, VariableSourceType};
+use std::borrow::Cow;
 use std::num::NonZeroUsize;
+use std::ops::{Index, IndexMut};
 use std::{
     collections::HashSet,
     ffi::CStr,
@@ -328,8 +330,8 @@ impl TypeBuilder {
         }
     }
 
-    pub fn named_type_from_type<T: AsRef<QualifiedName>>(name: T, t: &Type) -> Self {
-        let mut raw_name = BNQualifiedName::from(name.as_ref());
+    pub fn named_type_from_type<T: Into<QualifiedName>>(name: T, t: &Type) -> Self {
+        let mut raw_name = BNQualifiedName::from(name.into());
         // TODO: This cant be right...
         let id = BnString::new("");
 
@@ -706,8 +708,8 @@ impl Type {
         }
     }
 
-    pub fn named_type_from_type<T: AsRef<QualifiedName>>(name: T, t: &Type) -> Ref<Self> {
-        let mut raw_name = BNQualifiedName::from(name.as_ref());
+    pub fn named_type_from_type<T: Into<QualifiedName>>(name: T, t: &Type) -> Ref<Self> {
+        let mut raw_name = BNQualifiedName::from(name.into());
         // TODO: No id is present for this call?
         let id = BnString::new("");
 
@@ -899,8 +901,8 @@ impl Type {
         }
     }
 
-    pub fn generate_auto_demangled_type_id<T: AsRef<QualifiedName>>(name: T) -> BnString {
-        let mut raw_name = BNQualifiedName::from(name.as_ref());
+    pub fn generate_auto_demangled_type_id<T: Into<QualifiedName>>(name: T) -> BnString {
+        let mut raw_name = BNQualifiedName::from(name.into());
         unsafe { BnString::from_raw(BNGenerateAutoDemangledTypeId(&mut raw_name)) }
     }
 }
@@ -1587,7 +1589,7 @@ impl Structure {
             let mut count = 0;
             let members_raw_ptr: *mut BNStructureMember =
                 BNGetStructureMembers(self.handle, &mut count);
-            // TODO: Debug assert members_raw_ptr.
+            debug_assert!(!members_raw_ptr.is_null());
             match members_raw_ptr.is_null() {
                 false => {
                     let members_raw = std::slice::from_raw_parts(members_raw_ptr, count);
@@ -1600,10 +1602,10 @@ impl Structure {
         }
     }
 
-    // TODO: Omit `Option` and pass empty vec?
     pub fn base_structures(&self) -> Vec<BaseStructure> {
         let mut count = 0;
         let bases_raw_ptr = unsafe { BNGetBaseStructuresForStructure(self.handle, &mut count) };
+        debug_assert!(!bases_raw_ptr.is_null());
         match bases_raw_ptr.is_null() {
             false => {
                 let bases_raw = unsafe { std::slice::from_raw_parts(bases_raw_ptr, count) };
@@ -1650,6 +1652,7 @@ impl ToOwned for Structure {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct StructureMember {
     pub ty: Conf<Ref<Type>>,
+    // TODO: Shouldnt this be a QualifiedName? The ffi says no...
     pub name: String,
     pub offset: u64,
     pub access: MemberAccess,
@@ -1918,7 +1921,7 @@ impl Debug for NamedTypeReference {
 }
 
 // TODO: Document usage, specifically how to make a qualified name and why it exists.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq, Ord, PartialOrd)]
 pub struct QualifiedName {
     pub items: Vec<String>,
     // TODO: Make this Option<String> where default is "::".
@@ -1926,8 +1929,86 @@ pub struct QualifiedName {
 }
 
 impl QualifiedName {
-    pub fn new(items: Vec<String>, seperator: String) -> Self {
+    pub fn new(items: Vec<String>) -> Self {
+        Self::new_with_seperator(items, "::".to_string())
+    }
+
+    pub fn new_with_seperator(items: Vec<String>, seperator: String) -> Self {
         Self { items, seperator }
+    }
+
+    pub fn with_item(&self, item: impl Into<String>) -> Self {
+        let mut items = self.items.clone();
+        items.push(item.into());
+        Self::new_with_seperator(items, self.seperator.clone())
+    }
+
+    pub fn push(&mut self, item: String) {
+        self.items.push(item);
+    }
+
+    pub fn pop(&mut self) -> Option<String> {
+        self.items.pop()
+    }
+
+    pub fn insert(&mut self, index: usize, item: String) {
+        if index <= self.items.len() {
+            self.items.insert(index, item);
+        }
+    }
+
+    pub fn split_last(&self) -> Option<(String, QualifiedName)> {
+        self.items.split_last().map(|(a, b)| {
+            (
+                a.to_owned(),
+                QualifiedName::new_with_seperator(b.to_vec(), self.seperator.clone()),
+            )
+        })
+    }
+
+    /// Replaces all occurrences of a substring with another string in all items of the `QualifiedName`
+    /// and returns an owned version of the modified `QualifiedName`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use binaryninja::types::QualifiedName;
+    ///
+    /// let qualified_name = QualifiedName::new(vec!["my::namespace".to_string(), "mytype".to_string()]);
+    /// let replaced = qualified_name.replace("my", "your");
+    /// assert_eq!(replaced.items, vec!["your::namespace".to_string(), "yourtype".to_string()]);
+    /// ```
+    pub fn replace(&self, from: &str, to: &str) -> Self {
+        Self {
+            items: self
+                .items
+                .iter()
+                .map(|item| item.replace(from, to))
+                .collect(),
+            seperator: self.seperator.clone(),
+        }
+    }
+
+    /// Returns the last item, or `None` if it is empty.
+    pub fn last(&self) -> Option<&String> {
+        self.items.last()
+    }
+
+    /// Returns a mutable reference to the last item, or `None` if it is empty.
+    pub fn last_mut(&mut self) -> Option<&mut String> {
+        self.items.last_mut()
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    /// A [`QualifiedName`] is empty if it has no items.
+    ///
+    /// If you want to know if the unqualified name is empty (i.e. no characters)
+    /// you must first convert the qualified name to unqualified via [`QualifiedName::to_string`].
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
     }
 }
 
@@ -1984,16 +2065,6 @@ impl From<&QualifiedName> for BNQualifiedName {
     }
 }
 
-impl From<&str> for QualifiedName {
-    fn from(value: &str) -> Self {
-        Self {
-            items: vec![value.to_string()],
-            // TODO: See comment in struct def.
-            seperator: String::from("::"),
-        }
-    }
-}
-
 impl From<String> for QualifiedName {
     fn from(value: String) -> Self {
         Self {
@@ -2004,13 +2075,27 @@ impl From<String> for QualifiedName {
     }
 }
 
+impl From<&str> for QualifiedName {
+    fn from(value: &str) -> Self {
+        Self::from(value.to_string())
+    }
+}
+
+impl From<&String> for QualifiedName {
+    fn from(value: &String) -> Self {
+        Self::from(value.to_owned())
+    }
+}
+
+impl From<Cow<'_, str>> for QualifiedName {
+    fn from(value: Cow<'_, str>) -> Self {
+        Self::from(value.to_string())
+    }
+}
+
 impl From<Vec<String>> for QualifiedName {
     fn from(value: Vec<String>) -> Self {
-        Self {
-            items: value,
-            // TODO: See comment in struct def.
-            seperator: String::from("::"),
-        }
+        Self::new(value)
     }
 }
 
@@ -2021,6 +2106,26 @@ impl From<Vec<&str>> for QualifiedName {
             .map(ToString::to_string)
             .collect::<Vec<_>>()
             .into()
+    }
+}
+
+impl From<QualifiedName> for String {
+    fn from(value: QualifiedName) -> Self {
+        value.to_string()
+    }
+}
+
+impl Index<usize> for QualifiedName {
+    type Output = String;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.items[index]
+    }
+}
+
+impl IndexMut<usize> for QualifiedName {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.items[index]
     }
 }
 

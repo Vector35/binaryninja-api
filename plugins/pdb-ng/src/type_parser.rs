@@ -136,7 +136,7 @@ pub struct ParsedMemberFunction {
 #[derive(Debug, Clone)]
 pub struct VirtualBaseClass {
     /// Base class name
-    pub base_name: String,
+    pub base_name: QualifiedName,
     /// Base class type
     pub base_type: Ref<Type>,
     /// Offset in this class where the base's fields are located
@@ -153,7 +153,7 @@ pub enum ParsedType {
     /// No info other than type data
     Bare(Ref<Type>),
     /// Named fully parsed class/enum/union/etc type
-    Named(String, Ref<Type>),
+    Named(QualifiedName, Ref<Type>),
     /// Function procedure
     Procedure(ParsedProcedureType),
     /// Bitfield entries
@@ -163,7 +163,7 @@ pub enum ParsedType {
     /// One member in a structure/union
     Member(ParsedMember),
     /// Base class name and offset details
-    BaseClass(String, StructureMember),
+    BaseClass(QualifiedName, StructureMember),
     /// One member in an enumeration
     Enumerate(EnumerationMember),
     /// List of arguments to a function
@@ -260,7 +260,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     ) -> Result<()> {
         // Hack: This is needed for primitive types but it's not defined in the pdb itself
         self.named_types
-            .insert("HRESULT".to_string(), Type::int(4, true));
+            .insert("HRESULT".into(), Type::int(4, true));
 
         let type_information = self.pdb.type_information()?;
         let mut finder = type_information.finder();
@@ -352,8 +352,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     let name = ty
                         .get_named_type_reference()
                         .ok_or(anyhow!("expected ntr"))?
-                        .name()
-                        .to_string();
+                        .name();
                     if Self::is_name_anonymous(&name) {
                         continue;
                     }
@@ -361,7 +360,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         continue;
                     }
                     // If the bv has this type, DebugInfo will just update us to reference it
-                    if let Some(_) = self.bv.get_type_by_name(&name) {
+                    if let Some(_) = self.bv.get_type_by_name(name.to_owned()) {
                         continue;
                     }
 
@@ -406,8 +405,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         // Cleanup a couple builtin names
         for &name in BUILTIN_NAMES {
-            if self.named_types.contains_key(name) {
-                self.named_types.remove(name);
+            let builtin_qualified_name = QualifiedName::from(name);
+            if self.named_types.contains_key(&builtin_qualified_name) {
+                self.named_types.remove(&builtin_qualified_name);
                 self.log(|| format!("Remove builtin type {}", name));
             }
         }
@@ -423,10 +423,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         let mut remove_names = vec![];
         for (name, _) in &self.named_types {
-            if uint_regex.is_match(name) {
+            let name_str = name.to_string();
+            if uint_regex.is_match(&name_str) {
                 remove_names.push(name.clone());
             }
-            if float_regex.is_match(name) {
+            if float_regex.is_match(&name_str) {
                 remove_names.push(name.clone());
             }
         }
@@ -446,7 +447,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     ) -> Result<Option<Ref<Type>>> {
         match self.indexed_types.get(index) {
             Some(ParsedType::Bare(ty)) => Ok(Some(ty.clone())),
-            Some(ParsedType::Named(name, ty)) => Ok(Some(Type::named_type_from_type(name, &ty))),
+            Some(ParsedType::Named(name, ty)) => Ok(Some(Type::named_type_from_type(name.clone(), &ty))),
             Some(ParsedType::Procedure(ParsedProcedureType {
                 method_type,
                 raw_method_type,
@@ -749,8 +750,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     ) -> Result<Option<Box<ParsedType>>> {
         self.log(|| format!("Got Class type: {:x?}", data));
 
-        let raw_class_name = &data.name.to_string();
-        let class_name = raw_class_name.to_string();
+        let raw_class_name = data.name.to_string();
+        let class_name = QualifiedName::from(raw_class_name);
 
         self.log(|| format!("Named: {}", class_name));
 
@@ -758,7 +759,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             // Try and find it first
             if let Some(existing) = self.named_types.get(&class_name) {
                 return Ok(Some(Box::new(ParsedType::Bare(
-                    Type::named_type_from_type(&class_name, existing),
+                    Type::named_type_from_type(class_name, existing),
                 ))));
             }
 
@@ -949,6 +950,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             &format!(
                 "`{}`",
                 self.namespace_stack
+                    .items
                     .last()
                     .ok_or_else(|| anyhow!("Expected class in ns stack"))?
             ),
@@ -982,7 +984,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         _ => NamedTypeReferenceClass::StructNamedTypeClass,
                     };
                     bases.push(BaseStructure::new(
-                        NamedTypeReference::new(ntr_class, name.into()),
+                        NamedTypeReference::new(ntr_class, name.clone()),
                         base.offset,
                         base.ty.contents.width(),
                     ));
@@ -1014,13 +1016,14 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         _ => NamedTypeReferenceClass::StructNamedTypeClass,
                     };
                     bases.push(BaseStructure::new(
-                        NamedTypeReference::new(ntr_class, base_name.into()),
+                        NamedTypeReference::new(ntr_class, base_name.clone()),
                         *base_offset,
                         base_type.width(),
                     ));
                     warn!(
                         "Class `{}` uses virtual inheritance. Type information may be inaccurate.",
                         self.namespace_stack
+                            .items
                             .last()
                             .ok_or_else(|| anyhow!("Expected class in ns stack"))?
                     );
@@ -1033,6 +1036,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             warn!(
                 "Class `{}` has multiple base classes. Type information may be inaccurate.",
                 self.namespace_stack
+                    .items
                     .last()
                     .ok_or_else(|| anyhow!("Expected class in ns stack"))?
             );
@@ -1051,13 +1055,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             for base_class in &base_classes {
                 match base_class {
                     ParsedType::BaseClass(base_name, _base_type) => {
-                        let mut vt_base_name = base_name
-                            .split("::")
-                            .into_iter()
-                            .map(|s| s.to_string())
-                            .collect::<Vec<_>>();
-                        vt_base_name.push("VTable".to_string());
-                        let vt_base_name = vt_base_name.join("::");
+                        let mut vt_base_name = base_name.clone();
+                        vt_base_name.items.push("VTable".to_string());
 
                         match self.named_types.get(&vt_base_name) {
                             Some(vt_base_type)
@@ -1129,18 +1128,18 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
             let vt_type = Type::structure(vt.finalize().as_ref());
             // Need to insert a new named type for the vtable
-            let mut vt_name = self
-                .namespace_stack
-                .last()
-                .ok_or_else(|| anyhow!("Expected class in ns stack"))?
-                .clone();
-            vt_name += "::VTable";
+            if self.namespace_stack.is_empty() {
+                return Err(anyhow!("Expected class in ns stack"));
+            }
+            
+            let mut vt_name = self.namespace_stack.clone();
+            vt_name.items.push("VTable".to_string());
             self.named_types.insert(vt_name.clone(), vt_type.clone());
 
             let vt_pointer = Type::pointer(
                 &self.arch,
                 &Conf::new(
-                    Type::named_type_from_type(&QualifiedName::from(vt_name), vt_type.as_ref()),
+                    Type::named_type_from_type(vt_name, vt_type.as_ref()),
                     MAX_CONFIDENCE,
                 ),
             );
@@ -1369,10 +1368,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     ) -> Result<Option<Box<ParsedType>>> {
         self.log(|| format!("Got Nested type: {:x?}", data));
         let mut class_name_ns = self.namespace_stack.clone();
-        class_name_ns.push(data.name.to_string().to_string());
+        class_name_ns.push(data.name.to_string().into());
         let ty = self.type_index_to_bare(data.nested_type, finder, false)?;
         Ok(Some(Box::new(ParsedType::Named(
-            class_name_ns.join("::"),
+            class_name_ns,
             ty,
         ))))
     }
@@ -1393,8 +1392,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 let name = t
                     .get_named_type_reference()
                     .ok_or(anyhow!("Expected NTR to have NTR"))?
-                    .name()
-                    .to_string();
+                    .name();
                 (name, t.clone())
             }
             e => return Err(anyhow!("Unexpected base class type: {:x?}", e)),
@@ -1402,7 +1400,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         // Try to resolve the full base type
         let resolved_type = match self.try_type_index_to_bare(data.base_class, finder, true)? {
-            Some(ty) => Type::named_type_from_type(&member_name, ty.as_ref()),
+            Some(ty) => Type::named_type_from_type(member_name.clone(), ty.as_ref()),
             None => t.clone(),
         };
 
@@ -1418,7 +1416,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             member_name.clone(),
             StructureMember::new(
                 Conf::new(resolved_type, MAX_CONFIDENCE),
-                member_name,
+                member_name.to_string(),
                 base_offset as u64,
                 access,
                 scope,
@@ -1439,8 +1437,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 let name = t
                     .get_named_type_reference()
                     .ok_or(anyhow!("Expected NTR to have NTR"))?
-                    .name()
-                    .to_string();
+                    .name();
                 (name, t.clone())
             }
             e => return Err(anyhow!("Unexpected base class type: {:x?}", e)),
@@ -1627,15 +1624,15 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     ) -> Result<Option<Box<ParsedType>>> {
         self.log(|| format!("Got Enumeration type: {:x?}", data));
 
-        let raw_enum_name = &data.name.to_string();
-        let enum_name = raw_enum_name.to_string();
+        let raw_enum_name = data.name.to_string();
+        let enum_name = QualifiedName::from(raw_enum_name);
         self.log(|| format!("Named: {}", enum_name));
 
         if data.properties.forward_reference() {
             // Try and find it first
             if let Some(existing) = self.named_types.get(&enum_name) {
                 return Ok(Some(Box::new(ParsedType::Bare(
-                    Type::named_type_from_type(&enum_name, existing),
+                    Type::named_type_from_type(enum_name, existing),
                 ))));
             }
 
@@ -1755,15 +1752,15 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     ) -> Result<Option<Box<ParsedType>>> {
         self.log(|| format!("Got Union type: {:x?}", data));
 
-        let raw_union_name = &data.name.to_string();
-        let union_name = raw_union_name.to_string();
+        let raw_union_name = data.name.to_string();
+        let union_name = QualifiedName::from(raw_union_name);
         self.log(|| format!("Named: {}", union_name));
 
         if data.properties.forward_reference() {
             // Try and find it first
             if let Some(existing) = self.named_types.get(&union_name) {
                 return Ok(Some(Box::new(ParsedType::Bare(
-                    Type::named_type_from_type(&union_name, existing),
+                    Type::named_type_from_type(union_name, existing),
                 ))));
             }
 
@@ -1996,7 +1993,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let (mut type_, inner) = match self.handle_type_index(index, finder)? {
             Some(ParsedType::Bare(ty)) => (ty.clone(), None),
             Some(ParsedType::Named(name, ty)) => {
-                (Type::named_type_from_type(name, &ty), Some(ty.clone()))
+                (Type::named_type_from_type(name.to_owned(), &ty), Some(ty.clone()))
             }
             Some(ParsedType::Procedure(ParsedProcedureType { method_type, .. })) => {
                 (method_type.clone(), Some(method_type.clone()))
@@ -2016,10 +2013,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 let name = type_
                     .get_named_type_reference()
                     .ok_or(anyhow!("expected ntr"))?
-                    .name()
-                    .to_string();
+                    .name();
                 if let Some(full_ntr) = self.named_types.get(&name) {
-                    type_ = Type::named_type_from_type(&name, full_ntr.as_ref());
+                    type_ = Type::named_type_from_type(name, full_ntr.as_ref());
                 }
             }
         }
@@ -2060,8 +2056,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             let name = type_
                 .get_named_type_reference()
                 .ok_or(anyhow!("expected ntr"))?
-                .name()
-                .to_string();
+                .name();
             if Self::is_name_anonymous(&name) {
                 if let Some(inner) = inner.as_ref() {
                     type_ = inner.clone();
@@ -2095,9 +2090,12 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     }
 
     /// Is this name one of the stupid microsoft unnamed type names
-    fn is_name_anonymous(name: &String) -> bool {
-        let name_string = name.split("::").last().unwrap_or("").to_string();
-        return name_string == "<anonymous-tag>" || name_string.starts_with("<unnamed-");
+    fn is_name_anonymous(name: &QualifiedName) -> bool {
+        match name.items.last() {
+            Some(item) if item == "<anonymous-tag>" => true,
+            Some(item) if item.starts_with("<unnamed-") => true,
+            _ => false,
+        }
     }
 
     /// Find a calling convention in the platform

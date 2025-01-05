@@ -119,12 +119,12 @@ pub struct SymbolBuilder {
 }
 
 impl SymbolBuilder {
-    pub fn new(ty: SymbolType, raw_name: &str, addr: u64) -> Self {
+    pub fn new<T: Into<String>>(ty: SymbolType, raw_name: T, addr: u64) -> Self {
         Self {
             ty,
             binding: Binding::None,
             addr,
-            raw_name: raw_name.to_owned(),
+            raw_name: raw_name.into(),
             short_name: None,
             full_name: None,
             ordinal: 0,
@@ -136,13 +136,13 @@ impl SymbolBuilder {
         self
     }
 
-    pub fn short_name(mut self, short_name: &str) -> Self {
-        self.short_name = Some(short_name.to_owned());
+    pub fn short_name<T: Into<String>>(mut self, short_name: T) -> Self {
+        self.short_name = Some(short_name.into());
         self
     }
 
-    pub fn full_name(mut self, full_name: &str) -> Self {
-        self.full_name = Some(full_name.to_owned());
+    pub fn full_name<T: Into<String>>(mut self, full_name: T) -> Self {
+        self.full_name = Some(full_name.into());
         self
     }
 

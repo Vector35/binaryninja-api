@@ -142,7 +142,7 @@ pub(crate) fn handle_enum<R: ReaderType>(
 pub(crate) fn handle_typedef(
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
-    typedef_name: &String,
+    typedef_name: &str,
 ) -> (Option<Ref<Type>>, bool) {
     // All base types have:
     //   DW_AT_name
@@ -152,7 +152,7 @@ pub(crate) fn handle_typedef(
     // This will fail in the case where we have a typedef to a type that doesn't exist (failed to parse, incomplete, etc)
     if let Some(entry_type_offset) = entry_type {
         if let Some(t) = debug_info_builder.get_type(entry_type_offset) {
-            return (Some(t.get_type()), typedef_name != t.get_name());
+            return (Some(t.get_type()), typedef_name != t.name);
         }
     }
 
@@ -304,13 +304,14 @@ pub(crate) fn handle_function<R: ReaderType>(
 
     // Alias function type in the case that it contains itself
     if let Some(name) = debug_info_builder_context.get_name(dwarf, unit, entry) {
+        let ntr = Type::named_type_from_type(
+            &name,
+            &Type::function(return_type.as_ref(), &[], false),
+        );
         debug_info_builder.add_type(
             get_uid(dwarf, unit, entry),
-            &name,
-            Type::named_type_from_type(
-                &name,
-                &Type::function::<&binaryninja::types::Type>(return_type.as_ref(), &[], false),
-            ),
+            name,
+            ntr,
             false,
         );
     }

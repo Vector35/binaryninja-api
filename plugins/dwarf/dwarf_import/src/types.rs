@@ -141,13 +141,14 @@ fn do_structure_parse<R: ReaderType>(
     // This reference type will be used by any children to grab while we're still building this type
     //  it will also be how any other types refer to this struct
     if let Some(full_name) = &full_name {
+        let ntr = Type::named_type_from_type(
+            full_name,
+            &Type::structure(&structure_builder.finalize()),
+        );
         debug_info_builder.add_type(
             get_uid(dwarf, unit, entry),
-            &full_name,
-            Type::named_type_from_type(
-                full_name.clone(),
-                &Type::structure(&structure_builder.finalize()),
-            ),
+            full_name.to_owned(),
+            ntr,
             false,
         );
     } else {
@@ -155,10 +156,14 @@ fn do_structure_parse<R: ReaderType>(
         // These get overwritten in the last step with the actual type, however, so this
         // is either perfectly fine or breaking a bunch of NTRs
         let full_name = format!("anonymous_structure_{:x}", get_uid(dwarf, unit, entry));
+        let ntr = Type::named_type_from_type(
+            &full_name,
+            &Type::structure(&structure_builder.finalize()),
+        );
         debug_info_builder.add_type(
             get_uid(dwarf, unit, entry),
-            &full_name,
-            Type::named_type_from_type(&full_name, &Type::structure(&structure_builder.finalize())),
+            full_name,
+            ntr,
             false,
         );
     }
@@ -224,14 +229,14 @@ fn do_structure_parse<R: ReaderType>(
     if let Some(full_name) = full_name {
         debug_info_builder.add_type(
             get_uid(dwarf, unit, entry) + 1, // TODO : This is super broke (uid + 1 is not guaranteed to be unique)
-            &full_name,
+            full_name,
             finalized_structure,
             true,
         );
     } else {
         debug_info_builder.add_type(
             get_uid(dwarf, unit, entry),
-            &format!("{}", finalized_structure),
+            finalized_structure.to_string(),
             finalized_structure,
             false, // Don't commit anonymous unions (because I think it'll break things)
         );
@@ -451,10 +456,10 @@ pub(crate) fn get_type<R: ReaderType>(
         }
         .unwrap_or_else(|| {
             commit = false;
-            format!("{}", type_def)
+            type_def.to_string()
         });
 
-        debug_info_builder.add_type(entry_uid, &name, type_def, commit);
+        debug_info_builder.add_type(entry_uid, name, type_def, commit);
         Some(entry_uid)
     } else {
         None

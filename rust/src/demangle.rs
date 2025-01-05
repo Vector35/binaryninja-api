@@ -58,7 +58,7 @@ pub fn demangle_generic<S: BnStrCompatible>(
     }
 }
 
-pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Option<Vec<String>> {
+pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Option<QualifiedName> {
     let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
     let mut out_name: *mut *mut std::os::raw::c_char = std::ptr::null_mut();
@@ -75,13 +75,13 @@ pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Opt
     match res {
         true => {
             assert!(!out_name.is_null());
-            let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
+            let names: Vec<_> = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
                 .iter()
                 .map(str::to_string)
                 .collect();
             unsafe { BNFreeDemangledName(&mut out_name, out_size) };
 
-            Some(names)
+            Some(names.into())
         }
         false => None,
     }
@@ -91,7 +91,7 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
     arch: &CoreArchitecture,
     mangled_name: S,
     simplify: bool,
-) -> Option<(Vec<String>, Option<Ref<Type>>)> {
+) -> Option<(QualifiedName, Option<Ref<Type>>)> {
     let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
     let mut out_type: *mut BNType = std::ptr::null_mut();
@@ -111,7 +111,7 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
     match res {
         true => {
             assert!(!out_name.is_null());
-            let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
+            let names: Vec<_> = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
                 .iter()
                 .map(str::to_string)
                 .collect();
@@ -122,7 +122,7 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
                 false => Some(unsafe { Type::ref_from_raw(out_type) }),
             };
 
-            Some((names, out_type))
+            Some((names.into(), out_type))
         }
         false => None,
     }
@@ -132,7 +132,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
     arch: &CoreArchitecture,
     mangled_name: S,
     simplify: bool,
-) -> Option<(Vec<String>, Option<Ref<Type>>)> {
+) -> Option<(QualifiedName, Option<Ref<Type>>)> {
     let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
 
@@ -153,7 +153,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
     match res {
         true => {
             assert!(!out_name.is_null());
-            let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
+            let names: Vec<_> = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
                 .iter()
                 .map(str::to_string)
                 .collect();
@@ -164,7 +164,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
                 false => Some(unsafe { Type::ref_from_raw(out_type) }),
             };
 
-            Some((names, out_type))
+            Some((names.into(), out_type))
         }
         false => None,
     }

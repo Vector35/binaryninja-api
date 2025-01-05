@@ -126,7 +126,7 @@ impl AnalysisContext {
     where
         I: IntoIterator<Item = BasicBlock<NativeBlock>>,
     {
-        let blocks: Vec<_> = blocks.into_iter().map(|block| block).collect();
+        let blocks: Vec<_> = blocks.into_iter().collect();
         let mut blocks_raw: Vec<*mut BNBasicBlock> =
             blocks.iter().map(|block| block.handle).collect();
         unsafe { BNSetBasicBlockList(self.handle.as_ptr(), blocks_raw.as_mut_ptr(), blocks.len()) }

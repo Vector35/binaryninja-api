@@ -203,24 +203,12 @@ pub(crate) unsafe trait CoreArrayProviderInner: CoreArrayProvider {
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a>;
 }
 
+// TODO: I would really like if we impld Debug for this, but lifetimes are hard!
 #[allow(private_bounds)]
 pub struct Array<P: CoreArrayProviderInner> {
     contents: *mut P::Raw,
     count: usize,
     context: P::Context,
-}
-
-unsafe impl<P> Sync for Array<P>
-where
-    P: CoreArrayProviderInner,
-    P::Context: Sync,
-{
-}
-unsafe impl<P> Send for Array<P>
-where
-    P: CoreArrayProviderInner,
-    P::Context: Send,
-{
 }
 
 #[allow(private_bounds)]
@@ -242,10 +230,13 @@ impl<P: CoreArrayProviderInner> Array<P> {
     pub fn is_empty(&self) -> bool {
         self.count == 0
     }
-}
 
-#[allow(private_bounds)]
-impl<P: CoreArrayProviderInner> Array<P> {
+    pub fn to_vec(&self) -> Vec<P::Wrapped<'_>> {
+        let mut res = Vec::with_capacity(self.count);
+        res.extend(self.iter());
+        res
+    }
+
     #[inline]
     pub fn get(&self, index: usize) -> P::Wrapped<'_> {
         unsafe {
@@ -260,6 +251,19 @@ impl<P: CoreArrayProviderInner> Array<P> {
             context: &self.context,
         }
     }
+}
+
+unsafe impl<P> Sync for Array<P>
+where
+    P: CoreArrayProviderInner,
+    P::Context: Sync,
+{
+}
+unsafe impl<P> Send for Array<P>
+where
+    P: CoreArrayProviderInner,
+    P::Context: Send,
+{
 }
 
 impl<'a, P: CoreArrayProviderInner> IntoIterator for &'a Array<P> {

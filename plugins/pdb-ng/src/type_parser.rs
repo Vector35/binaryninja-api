@@ -769,7 +769,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 ClassKind::Interface => NamedTypeReferenceClass::StructNamedTypeClass,
             };
             return Ok(Some(Box::new(ParsedType::Bare(Type::named_type(
-                &*NamedTypeReference::new(ntr_class, QualifiedName::from(class_name)),
+                &*NamedTypeReference::new(ntr_class, class_name),
             )))));
         }
 
@@ -1083,7 +1083,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                         NamedTypeReferenceClass::StructNamedTypeClass
                                     };
                                 vt_bases.push(BaseStructure::new(
-                                    NamedTypeReference::new(ntr_class, vt_base_name.into()),
+                                    NamedTypeReference::new(ntr_class, vt_base_name),
                                     0,
                                     vt_base_type.width(),
                                 ));
@@ -1638,7 +1638,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
             let ntr_class = NamedTypeReferenceClass::EnumNamedTypeClass;
             return Ok(Some(Box::new(ParsedType::Bare(Type::named_type(
-                &*NamedTypeReference::new(ntr_class, QualifiedName::from(enum_name)),
+                &*NamedTypeReference::new(ntr_class, enum_name),
             )))));
         }
 
@@ -1766,7 +1766,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
             let ntr_class = NamedTypeReferenceClass::UnionNamedTypeClass;
             return Ok(Some(Box::new(ParsedType::Bare(Type::named_type(
-                &*NamedTypeReference::new(ntr_class, QualifiedName::from(union_name)),
+                &*NamedTypeReference::new(ntr_class, union_name),
             )))));
         }
 

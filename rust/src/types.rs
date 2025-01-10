@@ -960,6 +960,23 @@ impl ToOwned for Type {
     }
 }
 
+impl CoreArrayProvider for Type {
+    type Raw = *mut BNType;
+    type Context = ();
+    type Wrapped<'a> = &'a Self;
+}
+
+unsafe impl CoreArrayProviderInner for Type {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeTypeList(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        // TODO: This is assuming &'a Type is &*mut BNType
+        std::mem::transmute(raw)
+    }
+}
+
 // TODO: Remove this struct, or make it not a ZST with a terrible array provider.
 /// ZST used only for `Array<ComponentReferencedType>`.
 pub struct ComponentReferencedType;
@@ -1726,7 +1743,7 @@ impl From<StructureMember> for BNStructureMember {
 impl CoreArrayProvider for StructureMember {
     type Raw = BNStructureMember;
     type Context = ();
-    type Wrapped<'a> = StructureMember;
+    type Wrapped<'a> = Self;
 }
 
 unsafe impl CoreArrayProviderInner for StructureMember {
@@ -1815,6 +1832,11 @@ pub struct NamedTypeReference {
 }
 
 impl NamedTypeReference {
+    pub(crate) unsafe fn from_raw(handle: *mut BNNamedTypeReference) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle }
+    }
+
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNNamedTypeReference) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Ref::new(Self { handle })
@@ -1825,12 +1847,12 @@ impl NamedTypeReference {
     /// You should not assign type ids yourself, that is the responsibility of the BinaryView
     /// implementation after your types have been added. Just make sure the names match up and
     /// the core will do the id stuff for you.
-    pub fn new(type_class: NamedTypeReferenceClass, name: QualifiedName) -> Ref<Self> {
-        let mut raw_name = BNQualifiedName::from(name);
+    pub fn new<T: Into<QualifiedName>>(type_class: NamedTypeReferenceClass, name: T) -> Ref<Self> {
+        let mut raw_name = BNQualifiedName::from(name.into());
         unsafe {
             Self::ref_from_raw(BNCreateNamedType(
                 type_class,
-                std::ptr::null() as *const _,
+                std::ptr::null(),
                 &mut raw_name,
             ))
         }
@@ -1841,13 +1863,13 @@ impl NamedTypeReference {
     /// You should not assign type ids yourself: if you use this to reference a type you are going
     /// to create but have not yet created, you may run into problems when giving your types to
     /// a BinaryView.
-    pub fn new_with_id<S: BnStrCompatible>(
+    pub fn new_with_id<T: Into<QualifiedName>, S: BnStrCompatible>(
         type_class: NamedTypeReferenceClass,
         type_id: S,
-        name: QualifiedName,
+        name: T,
     ) -> Ref<Self> {
         let type_id = type_id.into_bytes_with_nul();
-        let mut raw_name = BNQualifiedName::from(name);
+        let mut raw_name = BNQualifiedName::from(name.into());
 
         unsafe {
             Self::ref_from_raw(BNCreateNamedType(
@@ -1923,9 +1945,9 @@ impl Debug for NamedTypeReference {
 // TODO: Document usage, specifically how to make a qualified name and why it exists.
 #[derive(Default, Debug, Clone, Hash, PartialEq, Eq, Ord, PartialOrd)]
 pub struct QualifiedName {
-    pub items: Vec<String>,
     // TODO: Make this Option<String> where default is "::".
     pub seperator: String,
+    pub items: Vec<String>,
 }
 
 impl QualifiedName {

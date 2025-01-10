@@ -277,7 +277,7 @@ unsafe impl BnStrCompatible for &Path {
     type Result = Vec<u8>;
 
     fn into_bytes_with_nul(self) -> Self::Result {
-        self.to_string_lossy().into_bytes_with_nul()
+        self.as_os_str().as_encoded_bytes().to_vec()
     }
 }
 

@@ -434,11 +434,11 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                                 Some(guid) => BNNamedTypeReference::new_with_id(
                                     NamedTypeReferenceClass::UnknownNamedTypeClass,
                                     guid.to_string(),
-                                    base_struct_ntr_name.into(),
+                                    base_struct_ntr_name,
                                 ),
                                 None => BNNamedTypeReference::new(
                                     NamedTypeReferenceClass::UnknownNamedTypeClass,
-                                    base_struct_ntr_name.into(),
+                                    base_struct_ntr_name,
                                 ),
                             };
                             base_structs.push(BNBaseStructure::new(
@@ -548,19 +548,19 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                     NamedTypeReference::new_with_id(
                         NamedTypeReferenceClass::UnknownNamedTypeClass,
                         guid_str,
-                        ntr_name.into(),
+                        ntr_name,
                     )
                 }
                 None => match c.name.as_ref() {
                     Some(ntr_name) => NamedTypeReference::new(
                         NamedTypeReferenceClass::UnknownNamedTypeClass,
-                        ntr_name.into(),
+                        ntr_name,
                     ),
                     None => {
                         log::error!("Referrer with no reference! {:?}", c);
                         NamedTypeReference::new(
                             NamedTypeReferenceClass::UnknownNamedTypeClass,
-                            "AHHHHHH".into(),
+                            "AHHHHHH",
                         )
                     }
                 },

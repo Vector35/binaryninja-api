@@ -14,19 +14,20 @@
 
 //! Contains all information related to the execution environment of the binary, mainly the calling conventions used
 
+use binaryninjacore_sys::*;
+use std::ptr::NonNull;
 use std::{borrow::Borrow, ffi, ptr};
 
-use binaryninjacore_sys::*;
-
+use crate::typecontainer::TypeContainer;
+use crate::typeparser::{TypeParserError, TypeParserErrorSeverity, TypeParserResult};
 use crate::{
     architecture::{Architecture, CoreArchitecture},
     callingconvention::CallingConvention,
     rc::*,
     string::*,
     typelibrary::TypeLibrary,
-    types::{QualifiedName, QualifiedNameAndType, Type},
+    types::QualifiedNameAndType,
 };
-use crate::typeparser::{TypeParserError, TypeParserErrorSeverity, TypeParserResult};
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Platform {
@@ -169,6 +170,14 @@ impl Platform {
         unsafe { CoreArchitecture::from_raw(BNGetPlatformArchitecture(self.handle)) }
     }
 
+    pub fn type_container(&self) -> TypeContainer {
+        let type_container_ptr = NonNull::new(unsafe { BNGetPlatformTypeContainer(self.handle) });
+        // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`
+        // TODO: We are cloning here for platforms but we dont need to do this for [BinaryViewExt::type_container]
+        // TODO: Why does this require that we, construct a TypeContainer, duplicate the type container, then drop the original.
+        unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()).clone() }
+    }
+
     pub fn get_type_libraries_by_name<T: BnStrCompatible>(&self, name: T) -> Array<TypeLibrary> {
         let mut count = 0;
         let name = name.into_bytes_with_nul();
@@ -262,6 +271,7 @@ impl Platform {
         }
     }
 
+    // TODO: Documentation, specifically how this differs from the TypeParser impl
     pub fn preprocess_source(
         &self,
         source: &str,
@@ -283,7 +293,7 @@ impl Platform {
                 include_dirs.len(),
             )
         };
-        
+
         if success {
             assert!(!result.is_null());
             Ok(unsafe { BnString::from_raw(result) })
@@ -291,13 +301,15 @@ impl Platform {
             assert!(!error_string.is_null());
             Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
-                unsafe { BnString::from_raw(error_string) },
-                file_name,
+                unsafe { BnString::from_raw(error_string) }.to_string(),
+                file_name.to_string(),
                 0,
                 0,
             ))
         }
     }
+
+    // TODO: Documentation, specifically how this differs from the TypeParser impl
     pub fn parse_types_from_source(
         &self,
         src: &str,
@@ -309,14 +321,14 @@ impl Platform {
         let file_name_cstr = BnString::new(filename);
         let auto_type_source = BnString::new(auto_type_source);
 
-        let mut result = BNTypeParserResult::default();
+        let mut raw_result = BNTypeParserResult::default();
         let mut error_string = ptr::null_mut();
         let success = unsafe {
             BNParseTypesFromSource(
                 self.handle,
                 source_cstr.as_ptr(),
                 file_name_cstr.as_ptr(),
-                &mut result,
+                &mut raw_result,
                 &mut error_string,
                 include_dirs.as_ptr() as *mut *const ffi::c_char,
                 include_dirs.len(),
@@ -325,19 +337,20 @@ impl Platform {
         };
 
         if success {
-            Ok(unsafe { TypeParserResult::from_raw(result) })
+            Ok(raw_result.into())
         } else {
             assert!(!error_string.is_null());
             Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
-                unsafe { BnString::from_raw(error_string) },
-                filename,
+                unsafe { BnString::from_raw(error_string) }.to_string(),
+                filename.to_string(),
                 0,
                 0,
             ))
         }
     }
 
+    // TODO: Documentation, specifically how this differs from the TypeParser impl
     pub fn parse_types_from_source_file(
         &self,
         filename: &str,
@@ -362,13 +375,13 @@ impl Platform {
         };
 
         if success {
-            Ok(unsafe { TypeParserResult::from_raw(result) })
+            Ok(result.into())
         } else {
             assert!(!error_string.is_null());
             Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
-                unsafe { BnString::from_raw(error_string) },
-                filename,
+                unsafe { BnString::from_raw(error_string) }.to_string(),
+                filename.to_string(),
                 0,
                 0,
             ))

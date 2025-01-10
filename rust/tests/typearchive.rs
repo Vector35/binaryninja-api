@@ -19,7 +19,7 @@ fn empty_view() -> Ref<BinaryView> {
 }
 
 #[rstest]
-fn test_main_thread_different(_session: &Session) {
+fn test_create_archive(_session: &Session) {
     let placeholder_platform = Platform::by_name("x86_64").expect("Failed to get platform");
 
     let temp_dir = tempfile::tempdir().unwrap();

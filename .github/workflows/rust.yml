@@ -17,10 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Ensure rustfmt is installed and setup problem matcher
+      # Ensure rustfmt is installed
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: rustfmt
       - name: Rustfmt Check
-        working-directory: ./rust
         uses: actions-rust-lang/rustfmt@v1
+        with:
+          manifest-path: ./rust

@@ -20,13 +20,13 @@ fn test_demangler_simple(_session: &Session) {
     // Example LLVM-style mangled name
     let llvm_mangled = "_Z3fooi"; // "foo(int)" in LLVM mangling
     let llvm_demangled = demangle_llvm(llvm_mangled, true).unwrap();
-    assert_eq!(llvm_demangled, vec!["foo(int)"]);
+    assert_eq!(llvm_demangled, "foo(int)".into());
 
     // Example GNU-style mangled name
     let gnu_mangled = "_Z3bari"; // "bar(int)" in GNU mangling
     let (gnu_demangled_name, gnu_demangled_type) =
         demangle_gnu3(&placeholder_arch, gnu_mangled, true).unwrap();
-    assert_eq!(gnu_demangled_name, vec!["bar"]);
+    assert_eq!(gnu_demangled_name, "bar".into());
     // TODO: We check the type display because other means include things such as confidence which is hard to get 1:1
     assert_eq!(
         gnu_demangled_type.unwrap().to_string(),
@@ -37,7 +37,7 @@ fn test_demangler_simple(_session: &Session) {
     let msvc_mangled = "?baz@@YAHH@Z"; // "int __cdecl baz(int)" in MSVC mangling
     let (msvc_demangled_name, msvc_demangled_type) =
         demangle_ms(&placeholder_arch, msvc_mangled, true).unwrap();
-    assert_eq!(msvc_demangled_name, vec!["baz"]);
+    assert_eq!(msvc_demangled_name, "baz".into());
     // TODO: We check the type display because other means include things such as confidence which is hard to get 1:1
     assert_eq!(
         msvc_demangled_type.unwrap().to_string(),

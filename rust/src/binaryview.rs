@@ -59,6 +59,7 @@ use std::{ops, result, slice};
 use crate::rc::*;
 use crate::references::{CodeReference, DataReference};
 use crate::string::*;
+use crate::typecontainer::TypeContainer;
 use crate::variable::DataVariable;
 // TODO : general reorg of modules related to bv
 
@@ -1472,6 +1473,34 @@ pub trait BinaryViewExt: BinaryViewBase {
             )
         };
         unsafe { Array::new(result, count, ()) }
+    }
+
+    /// Type container for all types (user and auto) in the Binary View.
+    ///
+    /// NOTE: Modifying an auto type will promote it to a user type.
+    fn type_container(&self) -> TypeContainer {
+        let type_container_ptr =
+            NonNull::new(unsafe { BNGetAnalysisTypeContainer(self.as_ref().handle) });
+        // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`
+        unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
+    }
+
+    /// Type container for user types in the Binary View.
+    fn user_type_container(&self) -> TypeContainer {
+        let type_container_ptr =
+            NonNull::new(unsafe { BNGetAnalysisUserTypeContainer(self.as_ref().handle) });
+        // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`
+        unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
+    }
+
+    /// Type container for auto types in the Binary View.
+    ///
+    /// NOTE: Unlike [`Self::type_container`] modification of auto types will **NOT** promote it to a user type.
+    fn auto_type_container(&self) -> TypeContainer {
+        let type_container_ptr =
+            NonNull::new(unsafe { BNGetAnalysisAutoTypeContainer(self.as_ref().handle) });
+        // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`
+        unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
     }
 
     /// Make the contents of a type library available for type/import resolution

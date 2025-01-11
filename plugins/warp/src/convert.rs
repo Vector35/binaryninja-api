@@ -6,7 +6,7 @@ use binaryninja::binaryview::{BinaryView, BinaryViewExt};
 use binaryninja::callingconvention::CallingConvention as BNCallingConvention;
 use binaryninja::rc::Ref as BNRef;
 use binaryninja::symbol::{Symbol as BNSymbol, SymbolType as BNSymbolType};
-use binaryninja::confidence::Conf as BNConf;
+use binaryninja::confidence::{Conf as BNConf, MAX_CONFIDENCE};
 use binaryninja::types::{
     BaseStructure as BNBaseStructure, EnumerationBuilder as BNEnumerationBuilder,
     FunctionParameter as BNFunctionParameter, MemberAccess as BNMemberAccess, MemberAccess,
@@ -190,7 +190,7 @@ pub fn from_bn_type_internal(
                     view,
                     visited_refs,
                     &BNType::named_type(&base_struct.ty),
-                    255,
+                    MAX_CONFIDENCE,
                 );
                 StructureMember {
                     name: base_struct_ty.name.to_owned(),

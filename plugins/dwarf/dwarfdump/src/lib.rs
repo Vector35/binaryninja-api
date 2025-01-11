@@ -15,7 +15,7 @@
 use binaryninja::{
     binaryview::{BinaryView, BinaryViewExt},
     command::{register, Command},
-    disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenContents},
+    disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenKind},
     flowgraph::{BranchType, EdgeStyle, FlowGraph, FlowGraphNode, FlowGraphOption},
 };
 use dwarfreader::is_valid;
@@ -32,6 +32,7 @@ use gimli::{
     Unit,
     UnitSectionOffset,
 };
+use binaryninja::disassembly::StringType;
 
 static PADDING: [&str; 23] = [
     "",
@@ -74,17 +75,19 @@ fn get_info_string<R: Reader>(
     }
     .into_u64();
     let label_string = format!("#0x{:08x}", label_value);
-    disassembly_lines.push(DisassemblyTextLine::from(vec![
+    disassembly_lines.push(DisassemblyTextLine::new(vec![
         InstructionTextToken::new(
             &label_string,
-            InstructionTextTokenContents::GotoLabel(label_value),
+            InstructionTextTokenKind::GotoLabel {
+                target: label_value,
+            },
         ),
-        InstructionTextToken::new(":", InstructionTextTokenContents::Text),
+        InstructionTextToken::new(":", InstructionTextTokenKind::Text),
     ]));
 
-    disassembly_lines.push(DisassemblyTextLine::from(vec![InstructionTextToken::new(
+    disassembly_lines.push(DisassemblyTextLine::new(vec![InstructionTextToken::new(
         die_node.tag().static_string().unwrap(),
-        InstructionTextTokenContents::TypeName, // TODO : KeywordToken?
+        InstructionTextTokenKind::TypeName, // TODO : KeywordToken?
     )]));
 
     let mut attrs = die_node.attrs();
@@ -92,7 +95,7 @@ fn get_info_string<R: Reader>(
         let mut attr_line: Vec<InstructionTextToken> = Vec::with_capacity(5);
         attr_line.push(InstructionTextToken::new(
             "  ",
-            InstructionTextTokenContents::Indentation,
+            InstructionTextTokenKind::Indentation,
         ));
 
         let len;
@@ -100,14 +103,22 @@ fn get_info_string<R: Reader>(
             len = n.len();
             attr_line.push(InstructionTextToken::new(
                 n,
-                InstructionTextTokenContents::FieldName,
+                // TODO: Using field name for this is weird.
+                InstructionTextTokenKind::FieldName {
+                    offset: 0,
+                    type_names: vec![],
+                },
             ));
         } else {
             // This is rather unlikely, I think
             len = 1;
             attr_line.push(InstructionTextToken::new(
                 "?",
-                InstructionTextTokenContents::FieldName,
+                // TODO: Using field name for this is weird.
+                InstructionTextTokenKind::FieldName {
+                    offset: 0,
+                    type_names: vec![],
+                },
             ));
         }
 
@@ -115,40 +126,41 @@ fn get_info_string<R: Reader>(
         if len < 18 {
             attr_line.push(InstructionTextToken::new(
                 PADDING[18 - len],
-                InstructionTextTokenContents::Text,
+                InstructionTextTokenKind::Text,
             ));
         }
         attr_line.push(InstructionTextToken::new(
             " = ",
-            InstructionTextTokenContents::Text,
+            InstructionTextTokenKind::Text,
         ));
 
         if let Ok(Some(addr)) = dwarf.attr_address(unit, attr.value()) {
             let addr_string = format!("0x{:08x}", addr);
             attr_line.push(InstructionTextToken::new(
                 &addr_string,
-                InstructionTextTokenContents::Integer(addr),
+                InstructionTextTokenKind::Integer {
+                    value: addr,
+                    size: None,
+                },
             ));
         } else if let Ok(attr_reader) = dwarf.attr_string(unit, attr.value()) {
             if let Ok(attr_string) = attr_reader.to_string() {
                 attr_line.push(InstructionTextToken::new(
                     attr_string.as_ref(),
-                    InstructionTextTokenContents::String({
-                        let (_, id, offset) =
-                            dwarf.lookup_offset_id(attr_reader.offset_id()).unwrap();
-                        offset.into_u64() + view.section_by_name(id.name()).unwrap().start()
-                    }),
+                    InstructionTextTokenKind::String {
+                        ty: StringType::Utf8String,
+                    },
                 ));
             } else {
                 attr_line.push(InstructionTextToken::new(
                     "??",
-                    InstructionTextTokenContents::Text,
+                    InstructionTextTokenKind::Text,
                 ));
             }
         } else if let Encoding(type_class) = attr.value() {
             attr_line.push(InstructionTextToken::new(
                 type_class.static_string().unwrap(),
-                InstructionTextTokenContents::TypeName,
+                InstructionTextTokenKind::TypeName,
             ));
         } else if let UnitRef(offset) = attr.value() {
             let addr = match offset.to_unit_section_offset(unit) {
@@ -159,17 +171,25 @@ fn get_info_string<R: Reader>(
             let addr_string = format!("#0x{:08x}", addr);
             attr_line.push(InstructionTextToken::new(
                 &addr_string,
-                InstructionTextTokenContents::GotoLabel(addr),
+                InstructionTextTokenKind::GotoLabel {
+                    target: addr,
+                },
             ));
         } else if let Flag(true) = attr.value() {
             attr_line.push(InstructionTextToken::new(
                 "true",
-                InstructionTextTokenContents::Integer(1),
+                InstructionTextTokenKind::Integer {
+                    value: 1,
+                    size: None,
+                },
             ));
         } else if let Flag(false) = attr.value() {
             attr_line.push(InstructionTextToken::new(
                 "false",
-                InstructionTextTokenContents::Integer(1),
+                InstructionTextTokenKind::Integer {
+                    value: 0,
+                    size: None,
+                },
             ));
 
         // Fall-back cases
@@ -177,34 +197,46 @@ fn get_info_string<R: Reader>(
             let value_string = format!("{}", value);
             attr_line.push(InstructionTextToken::new(
                 &value_string,
-                InstructionTextTokenContents::Integer(value.into()),
+                InstructionTextTokenKind::Integer {
+                    value: value as u64,
+                    size: None,
+                },
             ));
         } else if let Some(value) = attr.u16_value() {
             let value_string = format!("{}", value);
             attr_line.push(InstructionTextToken::new(
                 &value_string,
-                InstructionTextTokenContents::Integer(value.into()),
+                InstructionTextTokenKind::Integer {
+                    value: value as u64,
+                    size: None,
+                },
             ));
         } else if let Some(value) = attr.udata_value() {
             let value_string = format!("{}", value);
             attr_line.push(InstructionTextToken::new(
                 &value_string,
-                InstructionTextTokenContents::Integer(value),
+                InstructionTextTokenKind::Integer {
+                    value: value,
+                    size: None,
+                },
             ));
         } else if let Some(value) = attr.sdata_value() {
             let value_string = format!("{}", value);
             attr_line.push(InstructionTextToken::new(
                 &value_string,
-                InstructionTextTokenContents::Integer(value as u64),
+                InstructionTextTokenKind::Integer {
+                    value: value as u64,
+                    size: None,
+                },
             ));
         } else {
             let attr_string = format!("{:?}", attr.value());
             attr_line.push(InstructionTextToken::new(
                 &attr_string,
-                InstructionTextTokenContents::Text,
+                InstructionTextTokenKind::Text,
             ));
         }
-        disassembly_lines.push(DisassemblyTextLine::from(attr_line));
+        disassembly_lines.push(DisassemblyTextLine::new(attr_line));
     }
 
     disassembly_lines
@@ -227,7 +259,7 @@ fn process_tree<R: Reader>(
     let new_node = FlowGraphNode::new(graph);
 
     let attr_string = get_info_string(view, dwarf, unit, die_node.entry());
-    new_node.set_disassembly_lines(&attr_string);
+    new_node.set_lines(attr_string);
 
     graph.append(&new_node);
     graph_parent.add_outgoing_edge(
@@ -255,7 +287,7 @@ fn dump_dwarf(bv: &BinaryView) {
     graph.set_option(FlowGraphOption::FlowGraphUsesInstructionHighlights, true);
 
     let graph_root = FlowGraphNode::new(&graph);
-    graph_root.set_lines(vec!["Graph Root"]);
+    graph_root.set_lines(["Graph Root".into()]);
     graph.append(&graph_root);
 
     let endian = dwarfreader::get_endian(bv);

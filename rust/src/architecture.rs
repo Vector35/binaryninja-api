@@ -1481,7 +1481,7 @@ impl Architecture for CoreArchitecture {
             ) {
                 let instr_text_tokens = std::slice::from_raw_parts(result, count)
                     .iter()
-                    .map(|x| InstructionTextToken::from_raw(x).to_owned())
+                    .map(Into::into)
                     .collect();
                 BNFreeInstructionText(result, count);
                 Some((consumed, instr_text_tokens))
@@ -2156,21 +2156,23 @@ where
             return false;
         };
 
-        let res_tokens: Box<[_]> = res_tokens.into_boxed_slice();
+        let res_tokens: Box<[BNInstructionTextToken]> =
+            res_tokens.into_iter().map(Into::into).collect();
         unsafe {
+            // NOTE: Freed with `cb_free_instruction_text`
             let res_tokens = Box::leak(res_tokens);
-            let r_ptr = res_tokens.as_mut_ptr();
-            let r_count = res_tokens.len();
-
-            *result = &mut (*r_ptr).0;
-            *count = r_count;
+            *result = res_tokens.as_mut_ptr();
+            *count = res_tokens.len();
             *len = res_size;
         }
         true
     }
 
     extern "C" fn cb_free_instruction_text(tokens: *mut BNInstructionTextToken, count: usize) {
-        let _tokens = unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(tokens, count)) };
+        unsafe {
+            let raw_tokens = std::slice::from_raw_parts_mut(tokens, count);
+            let _ = Box::from_raw(raw_tokens);
+        }
     }
 
     extern "C" fn cb_instruction_llil<A>(

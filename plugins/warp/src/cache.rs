@@ -17,6 +17,7 @@ use std::sync::OnceLock;
 use warp::r#type::ComputedType;
 use warp::signature::function::constraints::FunctionConstraint;
 use warp::signature::function::{Function, FunctionGUID};
+use binaryninja::confidence::MAX_CONFIDENCE;
 
 pub static MATCHED_FUNCTION_CACHE: OnceLock<DashMap<ViewID, MatchedFunctionCache>> =
     OnceLock::new();
@@ -369,7 +370,7 @@ impl TypeRefCache {
             None => match type_ref.target(view) {
                 Some(raw_ty) => {
                     let computed_ty =
-                        ComputedType::new(from_bn_type_internal(view, visited_refs, &raw_ty, 255));
+                        ComputedType::new(from_bn_type_internal(view, visited_refs, &raw_ty, MAX_CONFIDENCE));
                     self.cache
                         .entry(ntr_id)
                         .insert(Some(computed_ty))

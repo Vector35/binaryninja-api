@@ -518,32 +518,35 @@ pub struct TypeDefinitionLine {
     pub field_index: usize,
 }
 
-impl From<BNTypeDefinitionLine> for TypeDefinitionLine {
-    fn from(value: BNTypeDefinitionLine) -> Self {
-        Self {
-            line_type: value.lineType,
-            // TODO: Tokens are busted.
-            tokens: vec![],
-            ty: unsafe { Type::ref_from_raw(value.type_) },
-            parent_type: match value.parentType.is_null() {
-                false => Some(unsafe { Type::ref_from_raw(value.parentType) }),
-                true => None,
-            },
-            root_type: match value.rootType.is_null() {
-                false => Some(unsafe { Type::ref_from_raw(value.rootType) }),
-                true => None,
-            },
-            root_type_name: match value.rootTypeName.is_null() {
-                false => Some(unsafe { BnString::from_raw(value.rootTypeName).to_string() }),
-                true => None,
-            },
-            base_type: match value.baseType.is_null() {
-                false => Some(unsafe { NamedTypeReference::ref_from_raw(value.baseType) }),
-                true => None,
-            },
-            base_offset: value.baseOffset,
-            offset: value.offset,
-            field_index: value.fieldIndex,
+impl TypeDefinitionLine {
+    pub(crate) unsafe fn free_raw(raw: BNTypeDefinitionLine) {
+        if !raw.tokens.is_null() {
+            let tokens = std::ptr::slice_from_raw_parts_mut(raw.tokens, raw.count);
+            // SAFETY: raw.tokens must have been allocated by rust.
+            let boxed_tokens = Box::from_raw(tokens);
+            for token in boxed_tokens {
+                InstructionTextToken::free_raw(token);
+            }
+        }
+        if !raw.type_.is_null() {
+            // SAFETY: raw.type_ must have been ref incremented in conjunction with this free
+            BNFreeType(raw.type_);
+        }
+        if !raw.parentType.is_null() {
+            // SAFETY: raw.parentType must have been ref incremented in conjunction with this free
+            BNFreeType(raw.parentType);
+        }
+        if !raw.rootType.is_null() {
+            // SAFETY: raw.rootType must have been ref incremented in conjunction with this free
+            BNFreeType(raw.rootType);
+        }
+        if !raw.rootTypeName.is_null() {
+            // SAFETY: raw.rootTypeName must have been ref incremented in conjunction with this free
+            BNFreeString(raw.rootTypeName);
+        }
+        if !raw.baseType.is_null() {
+            // SAFETY: raw.baseType must have been ref incremented in conjunction with this free
+            BNFreeNamedTypeReference(raw.baseType);
         }
     }
 }
@@ -552,8 +555,10 @@ impl From<&BNTypeDefinitionLine> for TypeDefinitionLine {
     fn from(value: &BNTypeDefinitionLine) -> Self {
         Self {
             line_type: value.lineType,
-            // TODO: Tokens are busted.
-            tokens: vec![],
+            tokens: {
+                let raw_tokens = unsafe { std::slice::from_raw_parts(value.tokens, value.count) };
+                raw_tokens.iter().map(Into::into).collect()
+            },
             ty: unsafe { Type::from_raw(value.type_).to_owned() },
             parent_type: match value.parentType.is_null() {
                 false => Some(unsafe { Type::from_raw(value.parentType).to_owned() }),
@@ -580,26 +585,35 @@ impl From<&BNTypeDefinitionLine> for TypeDefinitionLine {
 
 impl From<TypeDefinitionLine> for BNTypeDefinitionLine {
     fn from(value: TypeDefinitionLine) -> Self {
+        // NOTE: This is leaking [BNInstructionTextToken::text], [BNInstructionTextToken::typeNames].
+        let tokens: Box<[BNInstructionTextToken]> =
+            value.tokens.into_iter().map(Into::into).collect();
         Self {
             lineType: value.line_type,
-            tokens: todo!("this is busted!"),
-            count: todo!("see above"),
-            type_: value.ty.handle,
+            count: tokens.len(),
+            // NOTE: This is leaking tokens. Must free with `cb_free_lines`.
+            tokens: Box::leak(tokens).as_mut_ptr(),
+            // NOTE: This is leaking a ref to ty. Must free with `cb_free_lines`.
+            type_:  unsafe { BNNewTypeReference(value.ty.handle) },
+            // NOTE: This is leaking a ref to parent_type. Must free with `cb_free_lines`.
             parentType: value
                 .parent_type
-                .map(|t| t.handle)
+                .map(|t| unsafe { BNNewTypeReference(t.handle) })
                 .unwrap_or(std::ptr::null_mut()),
+            // NOTE: This is leaking a ref to root_type. Must free with `cb_free_lines`.
             rootType: value
                 .root_type
-                .map(|t| t.handle)
+                .map(|t| unsafe { BNNewTypeReference(t.handle) })
                 .unwrap_or(std::ptr::null_mut()),
+            // NOTE: This is leaking root_type_name. Must free with `cb_free_lines`.
             rootTypeName: value
                 .root_type_name
                 .map(|s| BnString::new(s).into_raw())
                 .unwrap_or(std::ptr::null_mut()),
+            // NOTE: This is leaking a ref to base_type. Must free with `cb_free_lines`.
             baseType: value
                 .base_type
-                .map(|t| t.handle)
+                .map(|t| unsafe { BNNewNamedTypeReference(t.handle) })
                 .unwrap_or(std::ptr::null_mut()),
             baseOffset: value.base_offset,
             offset: value.offset,
@@ -647,14 +661,11 @@ unsafe extern "C" fn cb_get_type_tokens<T: TypePrinter>(
         escaping,
     );
     if let Some(inner_result) = inner_result {
-        // SAFETY dropped by the cb_free_tokens
-        let inner_result = Box::leak(inner_result.into_boxed_slice());
-        *result_count = inner_result.len();
-        // TODO: At some point this will not be the case!
-        // SAFETY InstructionTextToken and BNInstructionTextToken are transparent
-        let inner_result_ptr =
-            inner_result.as_ptr() as *mut InstructionTextToken as *mut BNInstructionTextToken;
-        *result = inner_result_ptr;
+        let raw_text_tokens: Box<[BNInstructionTextToken]> =
+            inner_result.into_iter().map(Into::into).collect();
+        *result_count = raw_text_tokens.len();
+        // NOTE: Dropped by the cb_free_tokens
+        *result = Box::leak(raw_text_tokens).as_mut_ptr();
         true
     } else {
         *result = std::ptr::null_mut();
@@ -688,13 +699,11 @@ unsafe extern "C" fn cb_get_type_tokens_before_name<T: TypePrinter>(
         escaping,
     );
     if let Some(inner_result) = inner_result {
-        // SAFETY dropped by the cb_free_tokens
-        let inner_result = Box::leak(inner_result.into_boxed_slice());
-        *result_count = inner_result.len();
-        // SAFETY InstructionTextToken and BNInstructionTextToken are transparent
-        let inner_result_ptr =
-            inner_result.as_ptr() as *mut InstructionTextToken as *mut BNInstructionTextToken;
-        *result = inner_result_ptr;
+        let raw_text_tokens: Box<[BNInstructionTextToken]> =
+            inner_result.into_iter().map(Into::into).collect();
+        *result_count = raw_text_tokens.len();
+        // NOTE: Dropped by the cb_free_tokens
+        *result = Box::leak(raw_text_tokens).as_mut_ptr();
         true
     } else {
         *result = std::ptr::null_mut();
@@ -728,14 +737,11 @@ unsafe extern "C" fn cb_get_type_tokens_after_name<T: TypePrinter>(
         escaping,
     );
     if let Some(inner_result) = inner_result {
-        // NOTE: Dropped by `cb_free_tokens`
-        let inner_result = Box::leak(inner_result.into_boxed_slice());
-        *result_count = inner_result.len();
-        // TODO: At some point this will not be the case!
-        // SAFETY InstructionTextToken and BNInstructionTextToken are transparent
-        let inner_result_ptr =
-            inner_result.as_ptr() as *mut InstructionTextToken as *mut BNInstructionTextToken;
-        *result = inner_result_ptr;
+        let raw_text_tokens: Box<[BNInstructionTextToken]> =
+            inner_result.into_iter().map(Into::into).collect();
+        *result_count = raw_text_tokens.len();
+        // NOTE: Dropped by the cb_free_tokens
+        *result = Box::leak(raw_text_tokens).as_mut_ptr();
         true
     } else {
         *result = std::ptr::null_mut();
@@ -852,8 +858,8 @@ unsafe extern "C" fn cb_get_type_lines<T: TypePrinter>(
         escaping,
     );
     if let Some(inner_result) = inner_result {
-        *result_count = inner_result.len();
         let boxed_raw_lines: Box<[_]> = inner_result.into_iter().map(Into::into).collect();
+        *result_count = boxed_raw_lines.len();
         // NOTE: Dropped by `cb_free_lines`
         *result = Box::leak(boxed_raw_lines).as_mut_ptr();
         true
@@ -907,8 +913,12 @@ unsafe extern "C" fn cb_free_tokens(
     tokens: *mut BNInstructionTextToken,
     count: usize,
 ) {
-    let errors = std::ptr::slice_from_raw_parts_mut(tokens, count);
-    let _ = Box::from_raw(errors);
+    let tokens = std::ptr::slice_from_raw_parts_mut(tokens, count);
+    // SAFETY: tokens must have been allocated by rust.
+    let boxed_tokens = Box::from_raw(tokens);
+    for token in boxed_tokens {
+        InstructionTextToken::free_raw(token);
+    }
 }
 
 unsafe extern "C" fn cb_free_lines(
@@ -916,6 +926,9 @@ unsafe extern "C" fn cb_free_lines(
     lines: *mut BNTypeDefinitionLine,
     count: usize,
 ) {
-    let errors = std::ptr::slice_from_raw_parts_mut(lines, count);
-    let _ = Box::from_raw(errors);
+    let lines = std::ptr::slice_from_raw_parts_mut(lines, count);
+    let boxes_lines = Box::from_raw(lines);
+    for line in boxes_lines {
+        TypeDefinitionLine::free_raw(line);
+    }
 }

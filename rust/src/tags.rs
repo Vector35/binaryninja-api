@@ -15,6 +15,7 @@
 //! Interfaces for creating and modifying tags in a BinaryView.
 
 use binaryninjacore_sys::*;
+use std::fmt::{Debug, Formatter};
 
 use crate::architecture::CoreArchitecture;
 use crate::binaryview::BinaryView;
@@ -23,20 +24,27 @@ use crate::function::Function;
 use crate::rc::*;
 use crate::string::*;
 
+pub type TagTypeType = BNTagTypeType;
+pub type TagReferenceType = BNTagReferenceType;
+
 pub struct Tag {
     pub(crate) handle: *mut BNTag,
 }
 
 impl Tag {
-    pub(crate) unsafe fn from_raw(handle: *mut BNTag) -> Ref<Self> {
+    pub(crate) unsafe fn from_raw(handle: *mut BNTag) -> Self {
         debug_assert!(!handle.is_null());
+        Self { handle }
+    }
 
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNTag) -> Ref<Self> {
+        debug_assert!(!handle.is_null());
         Ref::new(Self { handle })
     }
 
     pub fn new<S: BnStrCompatible>(t: &TagType, data: S) -> Ref<Self> {
         let data = data.into_bytes_with_nul();
-        unsafe { Self::from_raw(BNCreateTag(t.handle, data.as_ref().as_ptr() as *mut _)) }
+        unsafe { Self::ref_from_raw(BNCreateTag(t.handle, data.as_ref().as_ptr() as *mut _)) }
     }
 
     pub fn id(&self) -> BnString {
@@ -47,8 +55,8 @@ impl Tag {
         unsafe { BnString::from_raw(BNTagGetData(self.handle)) }
     }
 
-    pub fn t(&self) -> Ref<TagType> {
-        unsafe { TagType::from_raw(BNTagGetType(self.handle)) }
+    pub fn ty(&self) -> Ref<TagType> {
+        unsafe { TagType::ref_from_raw(BNTagGetType(self.handle)) }
     }
 
     pub fn set_data<S: BnStrCompatible>(&self, data: S) {
@@ -58,6 +66,24 @@ impl Tag {
         }
     }
 }
+
+impl Debug for Tag {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Tag")
+            .field("id", &self.id())
+            .field("data", &self.data())
+            .field("type", &self.ty())
+            .finish()
+    }
+}
+
+impl PartialEq for Tag {
+    fn eq(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+}
+
+impl Eq for Tag {}
 
 unsafe impl RefCountable for Tag {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
@@ -89,6 +115,7 @@ unsafe impl CoreArrayProviderInner for Tag {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTagList(raw, count)
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Self { handle: *raw }, &context)
     }
@@ -97,16 +124,13 @@ unsafe impl CoreArrayProviderInner for Tag {
 unsafe impl Send for Tag {}
 unsafe impl Sync for Tag {}
 
-pub type TagTypeType = BNTagTypeType;
-
 pub struct TagType {
     pub(crate) handle: *mut BNTagType,
 }
 
 impl TagType {
-    pub(crate) unsafe fn from_raw(handle: *mut BNTagType) -> Ref<Self> {
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNTagType) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-
         Ref::new(Self { handle })
     }
 
@@ -115,7 +139,7 @@ impl TagType {
         name: N,
         icon: I,
     ) -> Ref<Self> {
-        let tag_type = unsafe { Self::from_raw(BNCreateTagType(view.handle)) };
+        let tag_type = unsafe { Self::ref_from_raw(BNCreateTagType(view.handle)) };
         tag_type.set_name(name);
         tag_type.set_icon(icon);
         tag_type
@@ -155,7 +179,7 @@ impl TagType {
         unsafe { BNTagTypeSetVisible(self.handle, visible) }
     }
 
-    pub fn t(&self) -> TagTypeType {
+    pub fn ty(&self) -> TagTypeType {
         unsafe { BNTagTypeGetType(self.handle) }
     }
 
@@ -168,6 +192,18 @@ impl TagType {
 
     pub fn view(&self) -> Ref<BinaryView> {
         unsafe { BinaryView::ref_from_raw(BNTagTypeGetView(self.handle)) }
+    }
+}
+
+impl Debug for TagType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TagType")
+            .field("id", &self.id())
+            .field("name", &self.name())
+            .field("icon", &self.icon())
+            .field("visible", &self.visible())
+            .field("type", &self.ty())
+            .finish()
     }
 }
 
@@ -194,15 +230,14 @@ impl ToOwned for TagType {
 unsafe impl Send for TagType {}
 unsafe impl Sync for TagType {}
 
-pub type TagReferenceType = BNTagReferenceType;
-
+#[derive(Debug, Clone, PartialEq)]
 pub struct TagReference {
-    pub reference_type: TagReferenceType,
-    pub auto_defined: bool,
-    pub tag: Ref<Tag>,
     pub arch: CoreArchitecture,
     pub func: Ref<Function>,
     pub addr: u64,
+    pub auto_defined: bool,
+    pub reference_type: TagReferenceType,
+    pub tag: Ref<Tag>,
 }
 
 impl From<&BNTagReference> for TagReference {
@@ -210,7 +245,7 @@ impl From<&BNTagReference> for TagReference {
         Self {
             reference_type: value.refType,
             auto_defined: value.autoDefined,
-            tag: unsafe { Tag::from_raw(value.tag).to_owned() },
+            tag: unsafe { Tag::ref_from_raw(value.tag).to_owned() },
             arch: unsafe { CoreArchitecture::from_raw(value.arch) },
             func: unsafe { Function::from_raw(value.func).to_owned() },
             addr: value.addr,

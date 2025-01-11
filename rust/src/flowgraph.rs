@@ -68,19 +68,17 @@ impl<'a> FlowGraphNode<'a> {
         unsafe { FlowGraphNode::from_raw(BNCreateFlowGraphNode(graph.handle)) }
     }
 
-    pub fn set_disassembly_lines(&self, lines: &'a [DisassemblyTextLine]) {
+    pub fn set_lines(&self, lines: impl IntoIterator<Item = DisassemblyTextLine>) {
+        // NOTE: This will create allocations and increment tag refs, we must call DisassemblyTextLine::free_raw
+        // TODO: This set of api's is really garbage, we should really do something about this.
+        let mut raw_lines: Vec<BNDisassemblyTextLine> =
+            lines.into_iter().map(|l| l.into_raw()).collect();
         unsafe {
-            BNSetFlowGraphNodeLines(self.handle, lines.as_ptr() as *mut _, lines.len());
-            // BNFreeDisassemblyTextLines(lines.as_ptr() as *mut _, lines.len());  // Shouldn't need...would be a double free?
+            BNSetFlowGraphNodeLines(self.handle, raw_lines.as_mut_ptr(), raw_lines.len());
+            for raw_line in raw_lines {
+                DisassemblyTextLine::free_raw(raw_line);
+            }
         }
-    }
-
-    pub fn set_lines(&self, lines: Vec<&str>) {
-        let lines = lines
-            .iter()
-            .map(|&line| DisassemblyTextLine::from(&vec![line]))
-            .collect::<Vec<_>>();
-        self.set_disassembly_lines(&lines);
     }
 
     pub fn add_outgoing_edge(

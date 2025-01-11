@@ -2671,6 +2671,15 @@ impl From<HighlightColor> for BNHighlightColor {
     }
 }
 
+impl Default for HighlightColor {
+    fn default() -> Self {
+        Self::StandardHighlightColor {
+            color: HighlightStandardColor::NoHighlightColor,
+            alpha: 0,
+        }
+    }
+}
+
 // NOTE only exists as Array<Comments>, cant be owned
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Comment {

@@ -1160,7 +1160,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             if handle.is_null() {
                 return None;
             }
-            Some(TagType::from_raw(handle))
+            Some(TagType::ref_from_raw(handle))
         }
     }
 
@@ -1174,7 +1174,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             if handle.is_null() {
                 return None;
             }
-            Some(Tag::from_raw(handle))
+            Some(Tag::ref_from_raw(handle))
         }
     }
 

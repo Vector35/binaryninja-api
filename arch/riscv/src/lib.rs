@@ -16,7 +16,7 @@ use binaryninja::{
     binaryview::{BinaryView, BinaryViewExt},
     callingconvention::{register_calling_convention, CallingConventionBase, ConventionBuilder},
     custombinaryview::{BinaryViewType, BinaryViewTypeExt},
-    disassembly::{InstructionTextToken, InstructionTextTokenContents},
+    disassembly::{InstructionTextToken, InstructionTextTokenKind},
     function::Function,
     functionrecognizer::FunctionRecognizer,
     llil,
@@ -739,7 +739,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         addr: u64,
     ) -> Option<(usize, Vec<InstructionTextToken>)> {
         use riscv_dis::Operand;
-        use InstructionTextTokenContents::*;
+        use InstructionTextTokenKind::*;
 
         let inst = match D::decode(addr, data) {
             Ok(i) => i,
@@ -977,12 +977,12 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 Operand::R(r) => {
                     let reg = self::Register::from(r);
 
-                    res.push(InstructionTextToken::new(&reg.name(), Register));
+                    res.push(InstructionTextToken::new(reg.name(), Register));
                 }
                 Operand::F(r) => {
                     let reg = self::Register::from(r);
 
-                    res.push(InstructionTextToken::new(&reg.name(), Register));
+                    res.push(InstructionTextToken::new(reg.name(), Register));
                 }
                 Operand::I(i) => {
                     match op {
@@ -998,7 +998,10 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
 
                             res.push(InstructionTextToken::new(
                                 &format!("0x{:x}", target),
-                                CodeRelativeAddress(target),
+                                CodeRelativeAddress {
+                                    value: target,
+                                    size: Some(self.address_size()),
+                                },
                             ));
                         }
                         _ => {
@@ -1007,7 +1010,10 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                                     -0x8_0000..=-1 => format!("-0x{:x}", -i),
                                     _ => format!("0x{:x}", i),
                                 },
-                                Integer(i as u64),
+                                Integer {
+                                    value: i as u64,
+                                    size: None,
+                                },
                             ));
                         }
                     }
@@ -1022,12 +1028,15 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                         } else {
                             format!("0x{:x}", i)
                         },
-                        Integer(i as u64),
+                        Integer {
+                            value: i as u64,
+                            size: None,
+                        },
                     ));
 
-                    res.push(InstructionTextToken::new("(", Brace));
-                    res.push(InstructionTextToken::new(&reg.name(), Register));
-                    res.push(InstructionTextToken::new(")", Brace));
+                    res.push(InstructionTextToken::new("(", Brace { hash: None }));
+                    res.push(InstructionTextToken::new(reg.name(), Register));
+                    res.push(InstructionTextToken::new(")", Brace { hash: None }));
                     res.push(InstructionTextToken::new("", EndMemoryOperand));
                 }
                 Operand::RM(r) => {

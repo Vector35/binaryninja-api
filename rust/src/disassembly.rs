@@ -285,7 +285,7 @@ impl From<InstructionTextToken> for BNInstructionTextToken {
         let kind_value = value.kind.try_value().unwrap_or(0);
         let operand = value.kind.try_operand().unwrap_or(0);
         let size = value.kind.try_size().unwrap_or(0);
-        let type_names = value.kind.try_type_names().unwrap_or(vec![]);
+        let type_names = value.kind.try_type_names().unwrap_or_default();
         Self {
             type_: value.kind.into(),
             // Expected to be freed with `InstructionTextToken::free_raw`.

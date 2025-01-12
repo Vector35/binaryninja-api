@@ -376,9 +376,9 @@ impl From<BNTypeParserResult> for TypeParserResult {
         let raw_functions =
             unsafe { std::slice::from_raw_parts(value.functions, value.functionCount) };
         let result = TypeParserResult {
-            types: raw_types.iter().map(|t| ParsedType::from(t)).collect(),
-            variables: raw_variables.iter().map(|t| ParsedType::from(t)).collect(),
-            functions: raw_functions.iter().map(|t| ParsedType::from(t)).collect(),
+            types: raw_types.iter().map(ParsedType::from).collect(),
+            variables: raw_variables.iter().map(ParsedType::from).collect(),
+            functions: raw_functions.iter().map(ParsedType::from).collect(),
         };
         // SAFETY: `value` must be a properly initialized BNTypeParserResult.
         unsafe { BNFreeTypeParserResult(&mut value) };

@@ -63,9 +63,9 @@ pub struct LowLevelILFunction<A: Architecture, M: FunctionMutability, F: Functio
     _form: PhantomData<F>,
 }
 
-impl<'func, A, M, F> LowLevelILFunction<A, M, F>
+impl<A, M, F> LowLevelILFunction<A, M, F>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -137,9 +137,9 @@ where
 // LLIL basic blocks are not available until the function object
 // is finalized, so ensure we can't try requesting basic blocks
 // during lifting
-impl<'func, A, F> LowLevelILFunction<A, Finalized, F>
+impl<A, F> LowLevelILFunction<A, Finalized, F>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     F: FunctionForm,
 {
     pub fn basic_blocks(&self) -> Array<BasicBlock<LowLevelBlock<A, Finalized, F>>> {
@@ -176,9 +176,9 @@ impl LowLevelILFunction<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
     }
 }
 
-impl<'func, A, M, F> ToOwned for LowLevelILFunction<A, M, F>
+impl<A, M, F> ToOwned for LowLevelILFunction<A, M, F>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -189,9 +189,9 @@ where
     }
 }
 
-unsafe impl<'func, A, M, F> RefCountable for LowLevelILFunction<A, M, F>
+unsafe impl<A, M, F> RefCountable for LowLevelILFunction<A, M, F>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -210,9 +210,9 @@ where
     }
 }
 
-impl<'func, A, M, F> fmt::Debug for LowLevelILFunction<A, M, F>
+impl<A, M, F> fmt::Debug for LowLevelILFunction<A, M, F>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {

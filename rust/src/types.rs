@@ -1109,7 +1109,7 @@ unsafe impl CoreArrayProviderInner for (&str, Variable, &Type) {
     ) -> (&'a str, Variable, &'a Type) {
         let name = CStr::from_ptr(raw.name).to_str().unwrap();
         let var = Variable::from(raw.var);
-        let var_type = std::mem::transmute(&raw.type_);
+        let var_type = &*(raw.type_ as *mut Type);
         (name, var, var_type)
     }
 }

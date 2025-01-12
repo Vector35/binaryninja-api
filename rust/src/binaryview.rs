@@ -669,7 +669,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         let name_array = unsafe { Array::<QualifiedName>::new(result_names, result_count, ()) };
         id_array
             .into_iter()
-            .zip(name_array.into_iter())
+            .zip(&name_array)
             .map(|(id, name)| (id.to_owned(), name))
             .collect()
     }

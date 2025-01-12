@@ -172,7 +172,7 @@ impl DataBuffer {
 
 impl Default for DataBuffer {
     fn default() -> Self {
-        Self(unsafe { BNCreateDataBuffer([].as_ptr() as *const c_void, 0) })
+        Self(unsafe { BNCreateDataBuffer([].as_ptr(), 0) })
     }
 }
 

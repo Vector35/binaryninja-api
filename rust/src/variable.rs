@@ -771,8 +771,10 @@ impl From<BNPossibleValueSet> for PossibleValueSet {
 // TODO: Anything requiring core allocation is missing!
 impl From<PossibleValueSet> for BNPossibleValueSet {
     fn from(value: PossibleValueSet) -> Self {
-        let mut raw = BNPossibleValueSet::default();
-        raw.state = value.value_type();
+        let mut raw = BNPossibleValueSet {
+            state: value.value_type(),
+            ..Default::default()
+        };
         match value {
             PossibleValueSet::UndeterminedValue => {}
             PossibleValueSet::EntryValue { reg } => {

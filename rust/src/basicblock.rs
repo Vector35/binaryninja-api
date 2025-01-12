@@ -240,7 +240,7 @@ impl<C: BlockContext> BasicBlock<C> {
     // TODO iterated dominance frontier
 }
 
-impl<'a, C: BlockContext> IntoIterator for &'a BasicBlock<C> {
+impl<C: BlockContext> IntoIterator for &BasicBlock<C> {
     type Item = C::Instruction;
     type IntoIter = C::Iter;
 

@@ -20,10 +20,8 @@ pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutErro
         return Ok(());
     }
 
-    if !is_server_initialized() {
-        if !initialize_server() && is_server_floating_license() {
-            return Err(EnterpriseCheckoutError(server_last_error().to_string()));
-        }
+    if !is_server_initialized() && !initialize_server() && is_server_floating_license() {
+        return Err(EnterpriseCheckoutError(server_last_error().to_string()));
     }
 
     if is_server_floating_license() {
@@ -31,33 +29,30 @@ pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutErro
             return Err(EnterpriseCheckoutError(server_last_error().to_string()));
         }
 
-        if !is_server_authenticated() {
-            if !authenticate_server_with_method("Keychain", false) {
-                let Some(username) = std::env::var("BN_ENTERPRISE_USERNAME").ok() else {
-                    return Err(EnterpriseCheckoutError("BN_ENTERPRISE_USERNAME not set when attempting to authenticate with credentials".to_string()));
-                };
-                let Some(password) = std::env::var("BN_ENTERPRISE_PASSWORD").ok() else {
-                    return Err(EnterpriseCheckoutError("BN_ENTERPRISE_PASSWORD not set when attempting to authenticate with credentials".to_string()));
-                };
-                if !authenticate_server_with_credentials(username, password, true) {
-                    let failed_message = "Could not checkout a license: Not authenticated. Try one of the following: \n \
-                         - Log in and check out a license for an extended time\n \
-                         - Set BN_ENTERPRISE_USERNAME and BN_ENTERPRISE_PASSWORD environment variables\n \
-                         - Use binaryninja::enterprise::{authenticate_server_with_method OR authenticate_server_with_credentials} in your code";
-                    return Err(EnterpriseCheckoutError(failed_message.to_string()));
-                }
+        if !is_server_authenticated() && !authenticate_server_with_method("Keychain", false) {
+            let Some(username) = std::env::var("BN_ENTERPRISE_USERNAME").ok() else {
+                return Err(EnterpriseCheckoutError("BN_ENTERPRISE_USERNAME not set when attempting to authenticate with credentials".to_string()));
+            };
+            let Some(password) = std::env::var("BN_ENTERPRISE_PASSWORD").ok() else {
+                return Err(EnterpriseCheckoutError("BN_ENTERPRISE_PASSWORD not set when attempting to authenticate with credentials".to_string()));
+            };
+            if !authenticate_server_with_credentials(username, password, true) {
+                let failed_message = "Could not checkout a license: Not authenticated. Try one of the following: \n \
+                     - Log in and check out a license for an extended time\n \
+                     - Set BN_ENTERPRISE_USERNAME and BN_ENTERPRISE_PASSWORD environment variables\n \
+                     - Use binaryninja::enterprise::{authenticate_server_with_method OR authenticate_server_with_credentials} in your code";
+                return Err(EnterpriseCheckoutError(failed_message.to_string()));
             }
         }
     }
 
-    if !is_server_license_still_activated()
-        || (!is_server_floating_license() && crate::license_expiration_time() < SystemTime::now())
+    if (!is_server_license_still_activated()
+        || (!is_server_floating_license() && crate::license_expiration_time() < SystemTime::now()))
+        && !update_server_license(duration)
     {
-        if !update_server_license(duration) {
-            return Err(EnterpriseCheckoutError(
-                "Failed to refresh expired license".to_string(),
-            ));
-        }
+        return Err(EnterpriseCheckoutError(
+            "Failed to refresh expired license".to_string(),
+        ));
     }
 
     Ok(())

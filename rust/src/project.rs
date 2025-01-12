@@ -1107,7 +1107,7 @@ unsafe extern "C" fn cb_progress_func<F: FnMut(usize, usize) -> bool>(
     if ctxt.is_null() {
         return true;
     }
-    let closure: &mut F = mem::transmute(ctxt);
+    let closure = &mut *(ctxt as *mut F);
     closure(progress, total)
 }
 

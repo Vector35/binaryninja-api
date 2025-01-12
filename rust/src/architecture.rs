@@ -200,14 +200,20 @@ impl From<BNInstructionInfo> for InstructionInfo {
     fn from(value: BNInstructionInfo) -> Self {
         // TODO: This is quite ugly, but we destructure the branch info so this will have to do.
         let mut branch_info = [None; NUM_BRANCH_INFO];
-        for i in 0..value.branchCount.min(NUM_BRANCH_INFO) {
-            let branch_target = value.branchTarget[i];
-            branch_info[i] = Some(BranchInfo {
-                kind: match value.branchType[i] {
-                    BNBranchType::UnconditionalBranch => BranchKind::Unconditional(branch_target),
-                    BNBranchType::FalseBranch => BranchKind::False(branch_target),
-                    BNBranchType::TrueBranch => BranchKind::True(branch_target),
-                    BNBranchType::CallDestination => BranchKind::Call(branch_target),
+        for (i, slot) in branch_info
+            .iter_mut()
+            .enumerate()
+            .take(value.branchCount.min(NUM_BRANCH_INFO))
+        {
+            let target = value.branchTarget[i];
+            let kind = value.branchType[i];
+            let arch = value.branchArch[i];
+            *slot = Some(BranchInfo {
+                kind: match kind {
+                    BNBranchType::UnconditionalBranch => BranchKind::Unconditional(target),
+                    BNBranchType::FalseBranch => BranchKind::False(target),
+                    BNBranchType::TrueBranch => BranchKind::True(target),
+                    BNBranchType::CallDestination => BranchKind::Call(target),
                     BNBranchType::FunctionReturn => BranchKind::FunctionReturn,
                     BNBranchType::SystemCall => BranchKind::SystemCall,
                     BNBranchType::IndirectBranch => BranchKind::Indirect,
@@ -215,10 +221,10 @@ impl From<BNInstructionInfo> for InstructionInfo {
                     BNBranchType::UnresolvedBranch => BranchKind::Unresolved,
                     BNBranchType::UserDefinedBranch => BranchKind::UserDefined,
                 },
-                arch: if value.branchArch[i].is_null() {
+                arch: if arch.is_null() {
                     None
                 } else {
-                    Some(unsafe { CoreArchitecture::from_raw(value.branchArch[i]) })
+                    Some(unsafe { CoreArchitecture::from_raw(arch) })
                 },
             });
         }

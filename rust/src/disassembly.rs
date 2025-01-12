@@ -254,7 +254,7 @@ impl InstructionTextToken {
             kind,
         }
     }
-    
+
     pub(crate) unsafe fn free_raw(raw: BNInstructionTextToken) {
         if !raw.text.is_null() {
             BNFreeString(raw.text);

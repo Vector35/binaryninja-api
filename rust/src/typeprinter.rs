@@ -594,7 +594,7 @@ impl From<TypeDefinitionLine> for BNTypeDefinitionLine {
             // NOTE: This is leaking tokens. Must free with `cb_free_lines`.
             tokens: Box::leak(tokens).as_mut_ptr(),
             // NOTE: This is leaking a ref to ty. Must free with `cb_free_lines`.
-            type_:  unsafe { BNNewTypeReference(value.ty.handle) },
+            type_: unsafe { BNNewTypeReference(value.ty.handle) },
             // NOTE: This is leaking a ref to parent_type. Must free with `cb_free_lines`.
             parentType: value
                 .parent_type

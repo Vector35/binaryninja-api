@@ -2159,6 +2159,42 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 
 			break;
 
+		case MIPS_MTSAB:
+		{
+			auto gprValue = il.Register(4, op1.reg);
+			auto gprLS4 = il.And(4, gprValue, il.Const(4, 0xF));
+
+			// Extract least-significant 4 bits of immediate value
+			auto immLS4 = il.And(4, il.Const(4, op2.immediate), il.Const(4, 0xF));
+
+			// Perform XOR operation between GPR[rs][3:0] and immediate[3:0]
+			auto xorResult = il.Xor(4, gprLS4, immLS4);
+
+			// Multiply result by 8 (equivalent to left shift by 3)
+			auto shiftAmount = il.ShiftLeft(4, xorResult, il.Const(4, 3));
+
+			// Write the result to the SA register
+			il.AddInstruction(il.SetRegister(4, R5900_SA, shiftAmount));
+
+			break;
+		}
+		case MIPS_MTSAH:
+		{
+			auto rsVal = il.And(4, il.Register(4, op1.reg), il.Const(4, 0b111));
+			auto immVal = il.Const(4, op2.immediate & 0b111);
+
+			// Perform XOR
+			auto xorVal = il.Xor(4, rsVal, immVal);
+
+			// Multiply by 16
+			auto shiftAmount = il.Mult(4, xorVal, il.Const(4, 16));
+
+			// Set the SA register
+			il.AddInstruction(il.SetRegister(4, R5900_SA, shiftAmount));
+
+			break;
+		}
+
 		case MIPS_ADDR:
 		case MIPS_LDXC1:
 		case MIPS_LLO:

@@ -67,7 +67,7 @@ static Operation cavium_mips_base_table[8][8] = {
 };
 
 //Fields are: [Version][opcode_high][opcode_low]
-static Operation mips_base_table[6][8][8] = {
+static Operation mips_base_table[7][8][8] = {
 	{	//MIPS version 1
 		{MIPS_INVALID, MIPS_INVALID, MIPS_J,    MIPS_JAL,     MIPS_BEQ,     MIPS_BNE,     MIPS_BLEZ,    MIPS_BGTZ},
 		{MIPS_ADDI,    MIPS_ADDIU,   MIPS_SLTI, MIPS_SLTIU,   MIPS_ANDI,    MIPS_ORI,     MIPS_XORI,    MIPS_LUI},
@@ -122,11 +122,20 @@ static Operation mips_base_table[6][8][8] = {
 		{MIPS_SB,      MIPS_SH,      MIPS_SWL,  MIPS_SW,      MIPS_SDL,     MIPS_SDR,  MIPS_SWR,     MIPS_CACHE},
 		{MIPS_LL,      MIPS_LWC1,    MIPS_LWC2, MIPS_PREF,    MIPS_LLD,     MIPS_LDC1, MIPS_LDC2,    MIPS_LD},
 		{MIPS_SC,      MIPS_SWC1,    MIPS_SWC2, MIPS_INVALID, MIPS_SCD,     MIPS_SDC1, MIPS_SDC2,    MIPS_SD}
+	},{ // MIPS r5900
+		{MIPS_INVALID, MIPS_INVALID, MIPS_J,       MIPS_JAL,      MIPS_BEQ,      MIPS_BNE,     MIPS_BLEZ,   MIPS_BGTZ},
+		{MIPS_ADDI,    MIPS_ADDIU,   MIPS_SLTI,    MIPS_SLTIU,    MIPS_ANDI,     MIPS_ORI,     MIPS_XORI,   MIPS_LUI},
+		{MIPS_COP0,    MIPS_COP1,    MIPS_COP2,    MIPS_INVALID,  MIPS_BEQL,     MIPS_BNEL,    MIPS_BLEZL,  MIPS_BGTZL},
+		{MIPS_DADDI,   MIPS_DADDIU,  MIPS_LDL,	   MIPS_LDR,  	  MIPS_INVALID,  MIPS_INVALID, MIPS_LQ,     MIPS_SQ},
+		{MIPS_LB,      MIPS_LH,      MIPS_LWL,     MIPS_LW,       MIPS_LBU,      MIPS_LHU,     MIPS_LWR,    MIPS_LWU},
+		{MIPS_SB,      MIPS_SH,      MIPS_SWL,     MIPS_SW,       MIPS_SDL,      MIPS_SDR,     MIPS_SWR,    MIPS_CACHE},
+		{MIPS_INVALID, MIPS_LWC1,    MIPS_INVALID, MIPS_PREF,     MIPS_INVALID,  MIPS_INVALID, MIPS_LDC2,   MIPS_LD},
+		{MIPS_INVALID, MIPS_SWC1,    MIPS_INVALID, MIPS_INVALID,  MIPS_INVALID,  MIPS_INVALID, MIPS_SDC2,   MIPS_SD}
 	}
 };
 
 //Fields are: [Version][function_high][function_low]
-static Operation mips_special_table[6][8][8] = {
+static Operation mips_special_table[7][8][8] = {
 	{	//MIPS version 1
 		{MIPS_SLL,     MIPS_INVALID, MIPS_SRL,     MIPS_SRA,     MIPS_SLLV,    MIPS_INVALID, MIPS_SRLV,    MIPS_SRAV},
 		{MIPS_JR,      MIPS_JALR,    MIPS_INVALID, MIPS_INVALID, MIPS_SYSCALL, MIPS_BREAK,   MIPS_INVALID, MIPS_INVALID},
@@ -181,10 +190,19 @@ static Operation mips_special_table[6][8][8] = {
 		{MIPS_INVALID, MIPS_INVALID, MIPS_SLT,  MIPS_SLTU, MIPS_DADD,    MIPS_DADDU,   MIPS_DSUB,    MIPS_DSUBU},
 		{MIPS_TGE,     MIPS_TGEU,    MIPS_TLT,  MIPS_TLTU, MIPS_TEQ,     MIPS_INVALID, MIPS_TNE,     MIPS_INVALID},
 		{MIPS_DSLL,    MIPS_INVALID, MIPS_DSRL, MIPS_DSRA, MIPS_DSLL32,  MIPS_INVALID, MIPS_DSRL32,  MIPS_DSRA32}
+	},{	//MIPS r5900
+		{MIPS_SLL,     MIPS_MOVCI,   MIPS_SRL,  MIPS_SRA,  MIPS_SLLV,    MIPS_INVALID, MIPS_SRLV,    MIPS_SRAV},
+		{MIPS_JR,      MIPS_JALR,    MIPS_MOVZ, MIPS_MOVN, MIPS_SYSCALL, MIPS_BREAK,   MIPS_INVALID, MIPS_SYNC},
+		{MIPS_MFHI,    MIPS_MTHI,    MIPS_MFLO, MIPS_MTLO, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_MULT,    MIPS_MULTU,   MIPS_DIV,  MIPS_DIVU, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_ADD,     MIPS_ADDU,    MIPS_SUB,  MIPS_SUBU, MIPS_AND,     MIPS_OR,      MIPS_XOR,     MIPS_NOR},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_SLT,  MIPS_SLTU, MIPS_DADD,    MIPS_DADDU,   MIPS_DSUB,    MIPS_DSUBU},
+		{MIPS_TGE,     MIPS_TGEU,    MIPS_TLT,  MIPS_TLTU, MIPS_TEQ,     MIPS_INVALID, MIPS_TNE,     MIPS_INVALID},
+		{MIPS_DSLL,    MIPS_INVALID, MIPS_DSRL, MIPS_DSRA, MIPS_DSLL32,  MIPS_INVALID, MIPS_DSRL32,  MIPS_DSRA32}
 	}
 };
 
-static Operation mips_regimm_table[6][4][8] = {
+static Operation mips_regimm_table[7][4][8] = {
 	{	//MIPS version 1
 		{MIPS_BLTZ,    MIPS_BGEZ,    MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
 		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
@@ -215,6 +233,11 @@ static Operation mips_regimm_table[6][4][8] = {
 		{MIPS_TGEI,    MIPS_TGEIU,   MIPS_TLTI,    MIPS_TLTIU,   MIPS_TEQI,    MIPS_INVALID, MIPS_TNEI,    MIPS_INVALID},
 		{MIPS_BLTZAL,  MIPS_BGEZAL,  MIPS_BLTZALL, MIPS_BGEZALL, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
 		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_SYNCI}
+	},{	//MIPS r5900
+		{MIPS_BLTZ,    MIPS_BGEZ,    MIPS_BLTZL,   MIPS_BGEZL,   MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_TGEI,    MIPS_TGEIU,   MIPS_TLTI,    MIPS_TLTIU,   MIPS_TEQI,    MIPS_INVALID, MIPS_TNEI,    MIPS_INVALID},
+		{MIPS_BLTZAL,  MIPS_BGEZAL,  MIPS_BLTZALL, MIPS_BGEZALL, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_MTSAB,   MIPS_MTSAH,   MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID}
 	}
 };
 
@@ -325,6 +348,100 @@ static Operation mips_v5_cop1x_table[8][8] = {
 	{MIPS_NMSUB_S, MIPS_NMSUB_D, MIPS_INVALID,  MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_NMSUB_PS, MIPS_INVALID},
 };
 
+static Operation mips_mmi_r5900_table[8][8] = { // 0x1c
+		{MIPS_MADD, MIPS_MADDU, MIPS_INVALID, MIPS_INVALID, MIPS_PLZCW},
+		{MIPS_MMI0 /* MMI0 */, MIPS_MMI2 /* MMI2 */, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_MFHI1, MIPS_MTHI1, MIPS_MFLO1, MIPS_MTLO1, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_MULT1, MIPS_MULTU1, MIPS_DIV1, MIPS_DIVU1, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_MADD1,     MIPS_MADDU1,     MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_MMI1 /* MMI1 */, MIPS_MMI3  /* MMI3 */, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_PMFHL, MIPS_PMTHL, MIPS_INVALID, MIPS_INVALID, MIPS_PSLLH, MIPS_INVALID, MIPS_PSRLH, MIPS_PSRAH},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_PSLLW, MIPS_INVALID, MIPS_PSRLW, MIPS_PSRAW}
+};
+
+static Operation mips_r5900_mmi0_table[8][4] = {
+		{MIPS_PADDW, MIPS_PSUBW, MIPS_PCGTW, MIPS_PMAXW},
+		{MIPS_PADDH, MIPS_PSUBH, MIPS_PCGTH, MIPS_PMAXH},
+		{MIPS_PADDB, MIPS_PSUBB, MIPS_PCGTB, MIPS_INVALID},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_PADDSW, MIPS_PSUBSW, MIPS_PEXTLW, MIPS_PPACW},
+		{MIPS_PADDSH, MIPS_PSUBSH, MIPS_PEXTLH, MIPS_PPACH},
+		{MIPS_PADDSB, MIPS_PSUBSB, MIPS_PEXTLB, MIPS_PPACB},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_PEXT5, MIPS_PPAC5},
+};
+
+static Operation mips_r5900_mmi1_table[8][4] = {
+		{MIPS_INVALID, MIPS_PABSW, MIPS_PCEQW, MIPS_PMINW},
+		{MIPS_PADSBH, MIPS_PABSH, MIPS_PCEQH, MIPS_PMINH},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_PCEQB, MIPS_INVALID},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_PADDUW, MIPS_PSUBUW, MIPS_PEXTUW, MIPS_INVALID},
+		{MIPS_PADDUH, MIPS_PSUBUH, MIPS_PEXTUH, MIPS_INVALID},
+		{MIPS_PADDUB, MIPS_PSUBUB, MIPS_PEXTUB, MIPS_QFSRV},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+};
+
+static Operation mips_r5900_mmi2_table[8][4] = {
+		{MIPS_PMADDW, MIPS_INVALID, MIPS_PSLLVW, MIPS_PSRLVW}, // 000
+		{MIPS_PMSUBW, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID}, // 001
+		{MIPS_PMFHI, MIPS_PMFLO, MIPS_PINTH, MIPS_INVALID}, // 010
+		{MIPS_PMULTW, MIPS_PDIVW, MIPS_PCPYLD, MIPS_INVALID}, // 011
+		{MIPS_PMADDH, MIPS_PHMADH, MIPS_PAND, MIPS_PXOR}, // 100
+		{MIPS_PMSUBH, MIPS_PHMSBH, MIPS_INVALID, MIPS_INVALID}, // 101
+		{MIPS_INVALID, MIPS_INVALID, MIPS_PEXEH, MIPS_PREVH}, // 110
+		{MIPS_PMULTH, MIPS_PDIVBW, MIPS_PEXEW, MIPS_PROT3W}, // 111
+};
+static Operation mips_r5900_mmi3_table[8][4] = {
+		{MIPS_PMADDUW, MIPS_INVALID, MIPS_INVALID, MIPS_PSRAVW}, // 000
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID}, // 001
+		{MIPS_PMTHI, MIPS_PMTLO, MIPS_PINTEH, MIPS_INVALID}, // 010
+		{MIPS_PMULTUW, MIPS_PDIVUW, MIPS_PCPYUD, MIPS_INVALID}, // 011
+		{MIPS_INVALID, MIPS_INVALID, MIPS_POR, MIPS_PNOR}, // 100
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID}, // 101
+		{MIPS_INVALID, MIPS_INVALID, MIPS_PEXCH, MIPS_PCPYH}, // 110
+		{MIPS_INVALID, MIPS_INVALID, MIPS_PEXCW, MIPS_INVALID}, // 111
+};
+
+static Operation mips_r5900_cop2_special1_table[8][8] = {
+		{MIPS_VADDx, MIPS_VADDy, MIPS_VADDz, MIPS_VADDw, MIPS_VSUBx, MIPS_VSUBy, MIPS_VSUBz, MIPS_VSUBw},
+		{MIPS_VMADDx, MIPS_VMADDy, MIPS_VMADDz, MIPS_VMADDw, MIPS_VMSUBx, MIPS_VMSUBy, MIPS_VMSUBz, MIPS_VMSUBw},
+		{MIPS_VMAXx, MIPS_VMAXy, MIPS_VMAXz, MIPS_VMAXw, MIPS_VMINIx, MIPS_VMINIy, MIPS_VMINIz, MIPS_VMINIw},
+		{MIPS_VMULx, MIPS_VMULy, MIPS_VMULz, MIPS_VMULw, MIPS_VMULq, MIPS_VMAXi, MIPS_VMULi, MIPS_VMINIi},
+		{MIPS_VADDq, MIPS_VMADDq, MIPS_VADDi, MIPS_VMADDi, MIPS_VSUBq, MIPS_VMSUBq, MIPS_VSUBi, MIPS_VMSUBi},
+		{MIPS_VADD, MIPS_VMADD, MIPS_VMUL, MIPS_VMAX, MIPS_VSUB, MIPS_VMSUB, MIPS_VOPMSUB, MIPS_VMINI},
+		{MIPS_VIADD, MIPS_VISUB, MIPS_VIADDI, MIPS_INVALID, MIPS_VIAND, MIPS_VIOR, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_VCALLMS, MIPS_VCALLMSR, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+};
+
+static Operation mips_r5900_cop2_special2_table[16][8] = {
+		{MIPS_VADDAx, MIPS_VADDAy, MIPS_VADDAz, MIPS_VADDAw, MIPS_VSUBAx, MIPS_VSUBAy, MIPS_VSUBAz, MIPS_VSUBAw},
+		{MIPS_VMADDAx, MIPS_VMADDAy, MIPS_VMADDAz, MIPS_VMADDAw, MIPS_VMSUBAx, MIPS_VMSUBAy, MIPS_VMSUBAz, MIPS_VMSUBAw},
+		{MIPS_VITOF0, MIPS_VITOF4, MIPS_VITOF12, MIPS_VITOF15, MIPS_VFTOI0, MIPS_VFTOI4, MIPS_VFTOI12, MIPS_VFTOI15},
+		{MIPS_VMULAx, MIPS_VMULAy, MIPS_VMULAz, MIPS_VMULAw, MIPS_VMULAq, MIPS_VABS, MIPS_VMULAi, MIPS_VCLIPw},
+		{MIPS_VADDAq, MIPS_VMADDAq, MIPS_VADDAi, MIPS_VMADDAi, MIPS_VSUBAq, MIPS_VMSUBAq, MIPS_VSUBAi, MIPS_VMSUBAi},
+		{MIPS_VADDA, MIPS_VMADDA, MIPS_VMULA, MIPS_INVALID, MIPS_VSUBA, MIPS_VMSUBA, MIPS_VOPMULA, MIPS_VNOP},
+		{MIPS_VMOVE, MIPS_VMR32, MIPS_INVALID, MIPS_INVALID, MIPS_VLQI, MIPS_VSQI, MIPS_VLQD, MIPS_VSQD},
+		{MIPS_VDIV, MIPS_VSQRT, MIPS_VRSQRT, MIPS_VWAITQ, MIPS_VMTIR, MIPS_VMFIR, MIPS_VILWR, MIPS_VISWR},
+		{MIPS_VRNEXT, MIPS_VRGET, MIPS_VRINIT, MIPS_VRXOR, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+};
+
+static Operation mips_r5900_cop1_S_table[8][8] = {
+		{MIPS_ADD_S,   MIPS_SUB_S,   MIPS_MUL_S,   MIPS_DIV_S,   MIPS_SQRT_S,  MIPS_ABS_S,   MIPS_MOV_S,   MIPS_NEG_S},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_RSQRT_S, MIPS_INVALID},
+		{MIPS_ADDA_S,  MIPS_SUBA_S,  MIPS_MULA_S,  MIPS_INVALID, MIPS_MADD_S,  MIPS_MSUB_S,  MIPS_MADDA_S, MIPS_MSUBA_S},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_CVT_W_S, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_MAX_S,   MIPS_MIN_S,   MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_C_F_S,   MIPS_INVALID, MIPS_C_EQ_S,  MIPS_INVALID, MIPS_C_LT_S,  MIPS_INVALID, MIPS_C_LE_S,  MIPS_INVALID},
+		{MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+};
 
 static const char* const OperationStrings[] = {
 		"INVALID",
@@ -805,7 +922,244 @@ static const char* const OperationStrings[] = {
 		"vmulu",
 		"zcb",
 		"zcbt",
-
+		// r5900 instructions
+		"lq",
+		"sq",
+		"dslrv",
+		"mfsa",
+		"mtsa",
+		"mtsab",
+		"mtsah",
+		"plzcw",
+		"mfhi1",
+		"mthi1",
+		"mflo1",
+		"mlto1",
+		"mult1",
+		"multu1",
+		"div1",
+		"divu1",
+		"madd1",
+		"maddu1",
+		"pmfhl",
+		"pmthl",
+		"psllh",
+		"psrlh",
+		"psrah",
+		"psllw",
+		"psrlw",
+		"psraw",
+		"paddw",
+		"psubw",
+		"pcgtw",
+		"pmaxw",
+		"paddh",
+		"psubh",
+		"pcgth",
+		"pmaxh",
+		"paddb",
+		"psubb",
+		"pcgtb",
+		"paddsw",
+		"psubsw",
+		"pextlw",
+		"ppacw",
+		"paddsh",
+		"psubsh",
+		"pextlh",
+		"ppach",
+		"paddsb",
+		"psubsb",
+		"pextlb",
+		"ppacb",
+		"pext5",
+		"ppac5",
+		"pabsw",
+		"pceqw",
+		"pminw",
+		"padsbh",
+		"pabsh",
+		"pceqh",
+		"pminh",
+		"pceqb",
+		"padduw",
+		"psubuw",
+		"pextuw",
+		"padduh",
+		"psubuh",
+		"pextuh",
+		"paddub",
+		"psubub",
+		"pextub",
+		"qfsrv",
+		"pmaddw",
+		"psllvw",
+		"psrlvw",
+		"pmsubw",
+		"pmfhi",
+		"pmflo",
+		"pinth",
+		"pmultw",
+		"pdivw",
+		"pcpyld",
+		"pmaddh",
+		"phmadh",
+		"pand",
+		"pxor",
+		"pmsubh",
+		"phmsbh",
+		"pexeh",
+		"prevh",
+		"pmulth",
+		"pdivbw",
+		"pexew",
+		"prot3w",
+		"pmadduw",
+		"psravw",
+		"pmthi",
+		"pmtlo",
+		"pinteh",
+		"pmultuw",
+		"pdivuw",
+		"pcpyud",
+		"por",
+		"pnor",
+		"pexch",
+		"pcpyh",
+		"pexcw",
+		"bc0f",
+		"bc0t",
+		"bc0fl",
+		"bc0tl",
+		"adda.s",
+		"suba.s",
+		"mula.s",
+		"madda.s",
+		"msuba.s",
+		"max.s",
+		"min.s",
+		"qmfc2",
+		"qmtc2",
+		"vaddx",
+		"vaddy",
+		"vaddz",
+		"vaddw",
+		"vsubx",
+		"vsuby",
+		"vsubz",
+		"vsubw",
+		"vmaddx",
+		"vmaddy",
+		"vmaddz",
+		"vmaddw",
+		"vmsubx",
+		"vmsuby",
+		"vmsubz",
+		"vmsubw",
+		"vmaxx",
+		"vmaxy",
+		"vmaxz",
+		"vmaxw",
+		"vminix",
+		"vminiy",
+		"vminiz",
+		"vminiw",
+		"vmulx",
+		"vmuly",
+		"vmulz",
+		"vmulw",
+		"vmulq",
+		"vmaxi",
+		"vmuli",
+		"vminii",
+		"vaddq",
+		"vmaddq",
+		"vaddi",
+		"vmaddi",
+		"vsubq",
+		"vmsubq",
+		"vsubi",
+		"vmsubi",
+		"vadd",
+		"vmadd",
+		"vmul",
+		"vmax",
+		"vsub",
+		"vmsub",
+		"vopmsub",
+		"vmini",
+		"viadd",
+		"visub",
+		"viaddi",
+		"viand",
+		"vior",
+		"vcallms",
+		"vcallmsr",
+		"vaddax",
+		"vadday",
+		"vaddaz",
+		"vaddaw",
+		"vsubax",
+		"vsubay",
+		"vsubaz",
+		"vsubaw",
+		"vmaddax",
+		"vmadday",
+		"vmaddaz",
+		"vmaddaw",
+		"vmsubax",
+		"vmsubay",
+		"vmsubaz",
+		"vmsubaw",
+		"vitof0",
+		"vitof4",
+		"vitof12",
+		"vitof15",
+		"vftoi0",
+		"vftoi4",
+		"vftoi12",
+		"vftoi15",
+		"vmulax",
+		"vmulay",
+		"vmulaz",
+		"vmulaw",
+		"vmulaq",
+		"vabs",
+		"vmulai",
+		"vclipw",
+		"vaddaq",
+		"vmaddaq",
+		"vaddai",
+		"vmaddai",
+		"vsubaq",
+		"vmsubaq",
+		"vsubai",
+		"vmsubai",
+		"vadda",
+		"vmadda",
+		"vmula",
+		"vsuba",
+		"vmsuba",
+		"vopmula",
+		"vnop",
+		"vmove",
+		"vmr32",
+		"vlqi",
+		"vsqi",
+		"vlqd",
+		"vsqd",
+		"vdiv",
+		"vsqrt",
+		"vrsqrt",
+		"vwaitq",
+		"vmtir",
+		"vmfir",
+		"vilwr",
+		"viswr",
+		"vrnext",
+		"vrget",
+		"vrinit",
+		"vrxor",
 };
 
 static const char * const RegisterStrings[] = {
@@ -1154,6 +1508,8 @@ static const char * const RegisterStrings[] = {
 
 	"CVMX_HSH_STARTSHA512",
 	"CVMX_GFM_XORMUL1",
+
+	"sa"
 };
 
 static const char * const FlagStrings[] = {
@@ -1293,6 +1649,8 @@ uint32_t mips_decompose_instruction(
 				}
 
 			}
+			else if (version == MIPS_R5900)
+				instruction->operation = mips_mmi_r5900_table[ins.decode.func_hi][ins.decode.func_lo];
 			break;
 		case 0x1f:
 			if (version == MIPS_32)
@@ -1308,7 +1666,7 @@ uint32_t mips_decompose_instruction(
 	}
 
 	//Now deal with aliases and stage 2 decoding
-	if (version == MIPS_32 || version == MIPS_64)
+	if (version == MIPS_32 || version == MIPS_64 || version == MIPS_R5900)
 	{
 		switch (instruction->operation)
 		{
@@ -1368,6 +1726,17 @@ uint32_t mips_decompose_instruction(
 			case MIPS_DSRLV:
 				if (ins.bits.bit6 == 1)
 					instruction->operation = MIPS_DROTRV;
+			case MIPS_MMI0:
+				instruction->operation = mips_r5900_mmi0_table[ins.r.sa >> 2][ins.r.sa & 3];
+				break;
+			case MIPS_MMI1:
+				instruction->operation = mips_r5900_mmi1_table[ins.r.sa >> 2][ins.r.sa & 3];
+				break;
+			case MIPS_MMI2:
+				instruction->operation = mips_r5900_mmi2_table[ins.r.sa >> 2][ins.r.sa & 3];
+				break;
+			case MIPS_MMI3:
+				instruction->operation = mips_r5900_mmi3_table[ins.r.sa >> 2][ins.r.sa & 3];
 				break;
 			case MIPS_COP0:
 				switch (ins.r.rs)
@@ -1390,6 +1759,18 @@ uint32_t mips_decompose_instruction(
 						instruction->operation = MIPS_DMTC0;
 						break;
 					case 6:  instruction->operation = MIPS_CTC0;    break;
+				    case 8:
+				    {
+				        if (version != MIPS_R5900)
+				            return 1;
+				        switch (ins.decode.rt_lo)
+				        {
+				            case 0: instruction->operation = MIPS_BC0F; break;
+				            case 1: instruction->operation = MIPS_BC0T; break;
+				            case 2: instruction->operation = MIPS_BC0FL; break;
+				            case 3: instruction->operation = MIPS_BC0TL; break;
+				        }
+				    }
 					case 10: instruction->operation = MIPS_RDPGPR; break;
 					case 11:
 						if (ins.bits.bit5 == 1)
@@ -1412,6 +1793,18 @@ uint32_t mips_decompose_instruction(
 						case 24: instruction->operation = MIPS_ERET;    break;
 						case 31: instruction->operation = MIPS_DERET;   break;
 						case 32: instruction->operation = MIPS_WAIT;    break;
+						case 56:
+							if (version == MIPS_R5900)
+							{
+								instruction->operation = MIPS_EI;
+								break;
+							}
+						case 57:
+							if (version == MIPS_R5900)
+							{
+								instruction->operation = MIPS_DI;
+								break;
+							}
 					}
 				}
 				break;
@@ -1452,7 +1845,10 @@ uint32_t mips_decompose_instruction(
 						break;
 					case 10: instruction->operation = MIPS_BC1ANY4; break;
 					case 16: //S
-						instruction->operation = mips_v5_cop1_S_table[ins.decode.func_hi][ins.decode.func_lo];
+				        if (version == MIPS_R5900)
+				            instruction->operation = mips_r5900_cop1_S_table[ins.decode.func_hi][ins.decode.func_lo];
+				        else
+						    instruction->operation = mips_v5_cop1_S_table[ins.decode.func_hi][ins.decode.func_lo];
 						if (instruction->operation == MIPS_MOVCF)
 						{
 							if (ins.bits.bit16 == 1)
@@ -1499,26 +1895,35 @@ uint32_t mips_decompose_instruction(
 			{
 				if (ins.r.rs < 8)
 				{
-					static const Operation opmap[8] =
-					{
-						MIPS_MFC2,    // 00000
-						MIPS_DMFC2,   // 00001
-						MIPS_CFC2,    // 00010
-						MIPS_MFHC2,   // 00011
-						MIPS_MTC2,    // 00100
-						MIPS_DMTC2,   // 00101
-						MIPS_CTC2,    // 00110
-						MIPS_MTHC2    // 00111
-					};
-					instruction->operation = opmap[ins.r.rs];
+					static const Operation opmap[2][8] =
+					{{
+				             MIPS_MFC2,    // 00000
+				             MIPS_DMFC2,   // 00001
+				             MIPS_CFC2,    // 00010
+				             MIPS_MFHC2,   // 00011
+				             MIPS_MTC2,    // 00100
+				             MIPS_DMTC2,   // 00101
+				             MIPS_CTC2,    // 00110
+				             MIPS_MTHC2    // 00111
+				     },{
+				             MIPS_INVALID, // 00000
+				             MIPS_QMFC2,   // 00001
+				             MIPS_CFC2,    // 00010
+				             MIPS_INVALID, // 00011
+				             MIPS_INVALID, // 00100
+				             MIPS_QMTC2,   // 00101
+				             MIPS_CTC2,    // 00110
+				             MIPS_INVALID  // 00111
+				     }};
+					instruction->operation = opmap[version == MIPS_R5900][ins.r.rs];
 				}
 				else if (ins.r.rs == 8)
 				{
 					static const Operation opmap[4] =
 					{
 						MIPS_BC2F,    // 01000:00
-						MIPS_BC2FL,   // 01000:10
 						MIPS_BC2T,    // 01000:01
+				        MIPS_BC2FL,   // 01000:10
 						MIPS_BC2TL   // 01000:11
 					};
 					instruction->operation = opmap[ins.r.rt & 3];
@@ -1537,6 +1942,16 @@ uint32_t mips_decompose_instruction(
 						MIPS_SDC2     // 01111
 					};
 					instruction->operation = opmap[ins.r.rs & 7];
+				}
+				else if (ins.r.rs < 32 && version == MIPS_R5900)
+				{
+				    if (ins.r.function > 59)
+				    {
+				        uint32_t opcode = (ins.r.function & 3) | (ins.r.sa << 2);
+				        instruction->operation = mips_r5900_cop2_special2_table[opcode >> 3][opcode & 7];
+				    }
+				    else
+				        instruction->operation = mips_r5900_cop2_special1_table[ins.decode.func_hi][ins.decode.func_lo];
 				}
 				else
 				{
@@ -1658,7 +2073,7 @@ uint32_t mips_decompose_instruction(
 		}
 	}
 
-	//Now that we have the proper instructions aliased figure out what our operands are
+	// Stage 3: Now that we have the proper instructions aliased figure out what our operands are
 	switch(instruction->operation)
 	{
 		//Zero operand instructions
@@ -1691,6 +2106,12 @@ uint32_t mips_decompose_instruction(
 				INS_1(IMM, ins.r.sa);
 			break;
 		//1 operand instructions
+		case MIPS_BC0F:
+		case MIPS_BC0FL:
+		case MIPS_BC0T:
+		case MIPS_BC0TL:
+			INS_1(IMM, (ins.i.immediate << 2))
+			break;
 		case MIPS_COP2:
 			INS_1(IMM, (ins.value & 0x1ffffff))
 			break;
@@ -1707,11 +2128,18 @@ uint32_t mips_decompose_instruction(
 			break;
 		case MIPS_DI:
 		case MIPS_EI:
-			if (ins.r.rt != 0)
+			if (ins.r.rt != 0 && version != MIPS_R5900)
 				INS_1(REG, ins.r.rt)
 			break;
 		case MIPS_MFHI:
 		case MIPS_MFLO:
+		case MIPS_MFHI1:
+		case MIPS_MFLO1:
+			INS_1(REG, ins.r.rd)
+			if (ins.r.sa + ins.r.rt + ins.r.rs != 0)
+				return 1;
+			break;
+		case MIPS_MFSA:
 			INS_1(REG, ins.r.rd)
 			if (ins.r.sa + ins.r.rt + ins.r.rs != 0)
 				return 1;
@@ -1730,8 +2158,23 @@ uint32_t mips_decompose_instruction(
 			break;
 		case MIPS_MTHI:
 		case MIPS_MTLO:
-			INS_1(REG,ins.r.rs)
+		case MIPS_MTHI1:
+		case MIPS_MTLO1:
+		case MIPS_MTSA:
+			INS_1(REG, ins.r.rs)
 			if (ins.r.rd + ins.r.rt + ins.r.sa != 0)
+				return 1;
+			break;
+		case MIPS_PMFHI:
+		case MIPS_PMFLO:
+			INS_1(REG, ins.r.rd)
+			if (ins.r.rs + ins.r.rt != 0)
+				return 1;
+			break;
+		case MIPS_PMTHI:
+		case MIPS_PMTLO:
+			INS_1(REG, ins.r.rs)
+			if (ins.r.rd + ins.r.rt != 0)
 				return 1;
 			break;
 		case MIPS_BAL:
@@ -1764,6 +2207,10 @@ uint32_t mips_decompose_instruction(
 			{
 				INS_2(FLAG, (FPCCREG_FCC0 + ((ins.value >> 18) & 7)), LABEL, (4 + address + (ins.i.immediate<<2)) & registerMask);
 			}
+			break;
+		case MIPS_MTSAB:
+		case MIPS_MTSAH:
+			INS_2(REG, ins.i.rs, IMM, ins.i.immediate)
 			break;
 		case MIPS_CLO:
 		case MIPS_CLZ:
@@ -1877,13 +2324,28 @@ uint32_t mips_decompose_instruction(
 		case MIPS_DIVU:
 		case MIPS_DMULT:
 		case MIPS_DMULTU:
-		case MIPS_MULT:
 		case MIPS_MULTU:
-		case MIPS_MADD:
-		case MIPS_MADDU:
 		case MIPS_MSUB:
 		case MIPS_MSUBU:
 			if (ins.r.rd != 0 || ins.r.sa != 0)
+				return 1;
+			INS_2(REG, ins.r.rs, REG, ins.r.rt)
+			break;
+		case MIPS_MULT:
+		case MIPS_MADD:
+		case MIPS_MADDU:
+			if (ins.r.sa != 0
+				|| (version != MIPS_R5900 && ins.r.rd != 0))
+				return 1;
+			if (ins.r.rd != 0)
+				INS_3(REG, ins.r.rd, REG, ins.r.rs, REG, ins.r.rt)
+			else
+				INS_2(REG, ins.r.rs, REG, ins.r.rt)
+			break;
+		case MIPS_PDIVBW:
+		case MIPS_PDIVUW:
+		case MIPS_PDIVW:
+			if (ins.r.rd != 0)
 				return 1;
 			INS_2(REG, ins.r.rs, REG, ins.r.rt)
 			break;
@@ -1911,8 +2373,27 @@ uint32_t mips_decompose_instruction(
 		case MIPS_BITSWAP:
 		case MIPS_DSBH:
 		case MIPS_DSHD:
+		case MIPS_PABSH:
+		case MIPS_PABSW:
 			INS_2(REG, ins.r.rd, REG, ins.r.rt)
 			break;
+		case MIPS_PCPYH:
+		case MIPS_PEXCH:
+		case MIPS_PEXCW:
+		case MIPS_PEXEH:
+		case MIPS_PEXEW:
+		case MIPS_PEXT5:
+		case MIPS_PPAC5:
+		case MIPS_PREVH:
+		case MIPS_PROT3W:
+			if (ins.r.rs != 0)
+				return 1;
+			INS_2(REG, ins.r.rd, REG, ins.r.rt)
+			break;
+		case MIPS_PLZCW:
+			if (ins.r.rt != 0)
+				return 1;
+			INS_2(REG, ins.r.rd, REG, ins.r.rs)
 		case MIPS_CFC0:
 		case MIPS_CTC0:
 		case MIPS_CFC1:
@@ -2015,7 +2496,14 @@ uint32_t mips_decompose_instruction(
 				return 1;
 			INS_2(REG, ins.f.fd + FPREG_F0, REG, ins.f.fs + FPREG_F0)
 			break;
-
+		case MIPS_ADDA_S:
+		case MIPS_SUBA_S:
+		case MIPS_MULA_S:
+			INS_2(REG, FPREG_F0 + ins.f.fs, REG, FPREG_F0 + ins.f.ft)
+			break;
+		case MIPS_SQRT_PS:
+			INS_2(REG, FPREG_F0 + ins.f.fd, REG, FPREG_F0 + ins.f.ft)
+			break;
 		case MIPS_LBUX:
 		case MIPS_LHX:
 		case MIPS_LWX:
@@ -2051,6 +2539,8 @@ uint32_t mips_decompose_instruction(
 		case MIPS_SW:
 		case MIPS_SWL:
 		case MIPS_SWR:
+		case MIPS_LQ:
+		case MIPS_SQ:
 			instruction->operands[0].operandClass = REG;
 			instruction->operands[1].operandClass = MEM_IMM;
 			instruction->operands[0].reg = ins.i.rt;
@@ -2099,11 +2589,86 @@ uint32_t mips_decompose_instruction(
 		case MIPS_LWC3:
 			instruction->operands[0].operandClass = IMM;
 			instruction->operands[1].operandClass = MEM_IMM;
-			instruction->operands[0].reg = ins.i.rt;
-			instruction->operands[1].reg = ins.i.rs;
+			instruction->operands[0].reg = version != MIPS_R5900 ? ins.i.rt : (FPREG_F0 + ins.f.ft);
+			instruction->operands[1].reg = version != MIPS_R5900 ? ins.i.rs : (FPREG_F0 + ins.f.fr);
 			instruction->operands[1].immediate = ins.i.immediate;
 			break;
 		//3 operand instructions
+		case MIPS_MULT1:
+		case MIPS_MULTU1:
+		case MIPS_DIV1:
+		case MIPS_DIVU1:
+		case MIPS_MADDU1:
+		{
+			if (ins.r.sa != 0)
+				return 1;
+			INS_3(REG, ins.r.rd, REG, ins.r.rs, REG, ins.r.rt)
+			break;
+		}
+		case MIPS_PADDB:
+		case MIPS_PADDH:
+		case MIPS_PADDW:
+		case MIPS_PADDSB:
+		case MIPS_PADDSH:
+		case MIPS_PADDSW:
+		case MIPS_PADDUB:
+		case MIPS_PADDUH:
+		case MIPS_PADDUW:
+		case MIPS_PADSBH:
+		case MIPS_PAND:
+		case MIPS_PCEQB:
+		case MIPS_PCEQH:
+		case MIPS_PCEQW:
+		case MIPS_PCGTB:
+		case MIPS_PCGTH:
+		case MIPS_PCGTW:
+		case MIPS_PCPYLD:
+		case MIPS_PCPYUD:
+		case MIPS_PEXTLB:
+		case MIPS_PEXTLH:
+		case MIPS_PEXTLW:
+		case MIPS_PEXTUB:
+		case MIPS_PEXTUH:
+		case MIPS_PEXTUW:
+		case MIPS_PHMADH:
+		case MIPS_PHMSBH:
+		case MIPS_PINTEH:
+		case MIPS_PINTH:
+		case MIPS_PMADDH:
+		case MIPS_PMADDUW:
+		case MIPS_PMADDW:
+		case MIPS_PMAXH:
+		case MIPS_PMAXW:
+		case MIPS_PMINH:
+		case MIPS_PMINW:
+		case MIPS_PMSUBH:
+		case MIPS_PMSUBW:
+		case MIPS_PMULTH:
+		case MIPS_PMULTUW:
+		case MIPS_PMULTW:
+		case MIPS_PNOR:
+		case MIPS_POR:
+		case MIPS_PPACB:
+		case MIPS_PPACH:
+		case MIPS_PPACW:
+		case MIPS_PSUBB:
+		case MIPS_PSUBH:
+		case MIPS_PSUBSB:
+		case MIPS_PSUBSH:
+		case MIPS_PSUBSW:
+		case MIPS_PSUBUB:
+		case MIPS_PSUBUH:
+		case MIPS_PSUBUW:
+		case MIPS_PSUBW:
+		case MIPS_PXOR:
+		case MIPS_QFSRV:
+			INS_3(REG, ins.r.rd, REG, ins.r.rs, REG, ins.r.rt)
+			break;
+		case MIPS_PSLLVW:
+		case MIPS_PSRAVW:
+		case MIPS_PSRLVW:
+			INS_3(REG, ins.r.rd, REG, ins.r.rt, REG, ins.r.rs)
+			break;
 		case MIPS_DIV_S:
 		case MIPS_DIV_D:
 		case MIPS_MUL_S:
@@ -2128,6 +2693,7 @@ uint32_t mips_decompose_instruction(
 		case MIPS_MADDF_S:
 		case MIPS_MSUBF_D:
 		case MIPS_MSUBF_S:
+		case MIPS_RSQRT:
 			INS_3(REG, ins.f.fd + FPREG_F0, REG, ins.f.fs + FPREG_F0, REG, ins.f.ft + FPREG_F0)
 			break;
 		case MIPS_MOVF:
@@ -2197,6 +2763,12 @@ uint32_t mips_decompose_instruction(
 		case MIPS_ROTR:
 		case MIPS_DROTR:
 		case MIPS_DROTR32:
+		case MIPS_PSLLH:
+		case MIPS_PSLLW:
+		case MIPS_PSRAH:
+		case MIPS_PSRAW:
+		case MIPS_PSRLH:
+		case MIPS_PSRLW:
 			INS_3(REG, ins.r.rd, REG, ins.r.rt, IMM, ins.r.sa)
 			if (ins.r.rs != 1)
 				return 1;
@@ -2236,9 +2808,14 @@ uint32_t mips_decompose_instruction(
 			break;
 		case MIPS_DMFC0:
 		case MIPS_DMTC0:
+			INS_3(REG, ins.r.rt, IMM, ins.r.rd, IMM, (ins.r.function & 7))
+			break;
 		case MIPS_MFC0:
 		case MIPS_MTC0:
-			INS_3(REG, ins.r.rt, IMM, ins.r.rd, IMM, (ins.r.function & 7))
+			if (version == MIPS_R5900)
+				INS_2(REG, ins.r.rt, REG, CPREG_0 + ins.r.rd)
+			else
+				INS_3(REG, ins.r.rt, IMM, ins.r.rd, IMM, (ins.r.function & 7))
 			break;
 		case MIPS_MADD_S:
 		case MIPS_MADD_D:

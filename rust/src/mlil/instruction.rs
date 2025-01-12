@@ -750,10 +750,7 @@ impl MediumLevelILInstruction {
                 constant_data: ConstantData::new(
                     self.function.get_function(),
                     RegisterValue {
-                        // TODO: Replace with a From<u32> for RegisterValueType.
-                        // TODO: We might also want to change the type of `op.constant_data_kind`
-                        // TODO: To RegisterValueType and do the conversion when creating instruction.
-                        state: unsafe { std::mem::transmute(op.constant_data_kind) },
+                        state: op.constant_data_kind.into(),
                         value: op.constant_data_value,
                         offset: 0,
                         size: op.size,

@@ -1320,7 +1320,7 @@ impl Function {
         // TODO: Adjust `BuiltinType`?
         let mut builtin_type = BuiltinType::BuiltinNone;
         let buffer = DataBuffer::from_raw(unsafe {
-            BNGetConstantData(self.handle, state, value, size, &mut builtin_type)
+            BNGetConstantData(self.handle, state.into(), value, size, &mut builtin_type)
         });
         (buffer, builtin_type)
     }

@@ -15,7 +15,6 @@ use binaryninjacore_sys::{
 use std::collections::HashSet;
 
 pub type VariableSourceType = BNVariableSourceType;
-pub type RegisterValueType = BNRegisterValueType;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct DataVariable {
@@ -514,7 +513,7 @@ impl RegisterValue {
 impl From<BNRegisterValue> for RegisterValue {
     fn from(value: BNRegisterValue) -> Self {
         Self {
-            state: value.state,
+            state: value.state.into(),
             value: value.value,
             offset: value.offset,
             size: value.size,
@@ -525,10 +524,104 @@ impl From<BNRegisterValue> for RegisterValue {
 impl From<RegisterValue> for BNRegisterValue {
     fn from(value: RegisterValue) -> Self {
         Self {
-            state: value.state,
+            state: value.state.into(),
             value: value.value,
             offset: value.offset,
             size: value.size,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+pub enum RegisterValueType {
+    UndeterminedValue = 0,
+    EntryValue = 1,
+    ConstantValue = 2,
+    ConstantPointerValue = 3,
+    ExternalPointerValue = 4,
+    StackFrameOffset = 5,
+    ReturnAddressValue = 6,
+    ImportedAddressValue = 7,
+    SignedRangeValue = 8,
+    UnsignedRangeValue = 9,
+    LookupTableValue = 10,
+    InSetOfValues = 11,
+    NotInSetOfValues = 12,
+    ConstantDataValue = 32768,
+    ConstantDataZeroExtendValue = 32769,
+    ConstantDataSignExtendValue = 32770,
+    ConstantDataAggregateValue = 32771,
+}
+
+impl From<u32> for RegisterValueType {
+    fn from(value: u32) -> Self {
+        match value {
+            0 => Self::UndeterminedValue,
+            1 => Self::EntryValue,
+            2 => Self::ConstantValue,
+            3 => Self::ConstantPointerValue,
+            4 => Self::ExternalPointerValue,
+            5 => Self::StackFrameOffset,
+            6 => Self::ReturnAddressValue,
+            7 => Self::ImportedAddressValue,
+            8 => Self::SignedRangeValue,
+            9 => Self::UnsignedRangeValue,
+            10 => Self::LookupTableValue,
+            11 => Self::InSetOfValues,
+            12 => Self::NotInSetOfValues,
+            32768 => Self::ConstantDataValue,
+            32769 => Self::ConstantDataZeroExtendValue,
+            32770 => Self::ConstantDataSignExtendValue,
+            32771 => Self::ConstantDataAggregateValue,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl From<BNRegisterValueType> for RegisterValueType {
+    fn from(value: BNRegisterValueType) -> Self {
+        match value {
+            BNRegisterValueType::UndeterminedValue => Self::UndeterminedValue,
+            BNRegisterValueType::EntryValue => Self::EntryValue,
+            BNRegisterValueType::ConstantValue => Self::ConstantValue,
+            BNRegisterValueType::ConstantPointerValue => Self::ConstantPointerValue,
+            BNRegisterValueType::ExternalPointerValue => Self::ExternalPointerValue,
+            BNRegisterValueType::StackFrameOffset => Self::StackFrameOffset,
+            BNRegisterValueType::ReturnAddressValue => Self::ReturnAddressValue,
+            BNRegisterValueType::ImportedAddressValue => Self::ImportedAddressValue,
+            BNRegisterValueType::SignedRangeValue => Self::SignedRangeValue,
+            BNRegisterValueType::UnsignedRangeValue => Self::UnsignedRangeValue,
+            BNRegisterValueType::LookupTableValue => Self::LookupTableValue,
+            BNRegisterValueType::InSetOfValues => Self::InSetOfValues,
+            BNRegisterValueType::NotInSetOfValues => Self::NotInSetOfValues,
+            BNRegisterValueType::ConstantDataValue => Self::ConstantDataValue,
+            BNRegisterValueType::ConstantDataZeroExtendValue => Self::ConstantDataZeroExtendValue,
+            BNRegisterValueType::ConstantDataSignExtendValue => Self::ConstantDataSignExtendValue,
+            BNRegisterValueType::ConstantDataAggregateValue => Self::ConstantDataAggregateValue,
+        }
+    }
+}
+
+impl From<RegisterValueType> for BNRegisterValueType {
+    fn from(value: RegisterValueType) -> Self {
+        match value {
+            RegisterValueType::UndeterminedValue => Self::UndeterminedValue,
+            RegisterValueType::EntryValue => Self::EntryValue,
+            RegisterValueType::ConstantValue => Self::ConstantValue,
+            RegisterValueType::ConstantPointerValue => Self::ConstantPointerValue,
+            RegisterValueType::ExternalPointerValue => Self::ExternalPointerValue,
+            RegisterValueType::StackFrameOffset => Self::StackFrameOffset,
+            RegisterValueType::ReturnAddressValue => Self::ReturnAddressValue,
+            RegisterValueType::ImportedAddressValue => Self::ImportedAddressValue,
+            RegisterValueType::SignedRangeValue => Self::SignedRangeValue,
+            RegisterValueType::UnsignedRangeValue => Self::UnsignedRangeValue,
+            RegisterValueType::LookupTableValue => Self::LookupTableValue,
+            RegisterValueType::InSetOfValues => Self::InSetOfValues,
+            RegisterValueType::NotInSetOfValues => Self::NotInSetOfValues,
+            RegisterValueType::ConstantDataValue => Self::ConstantDataValue,
+            RegisterValueType::ConstantDataZeroExtendValue => Self::ConstantDataZeroExtendValue,
+            RegisterValueType::ConstantDataSignExtendValue => Self::ConstantDataSignExtendValue,
+            RegisterValueType::ConstantDataAggregateValue => Self::ConstantDataAggregateValue,
         }
     }
 }
@@ -703,64 +796,64 @@ impl PossibleValueSet {
 impl From<BNPossibleValueSet> for PossibleValueSet {
     fn from(value: BNPossibleValueSet) -> Self {
         match value.state {
-            RegisterValueType::UndeterminedValue => Self::UndeterminedValue,
-            RegisterValueType::EntryValue => Self::EntryValue { reg: value.value },
-            RegisterValueType::ConstantValue => Self::ConstantValue { value: value.value },
-            RegisterValueType::ConstantPointerValue => {
+            BNRegisterValueType::UndeterminedValue => Self::UndeterminedValue,
+            BNRegisterValueType::EntryValue => Self::EntryValue { reg: value.value },
+            BNRegisterValueType::ConstantValue => Self::ConstantValue { value: value.value },
+            BNRegisterValueType::ConstantPointerValue => {
                 Self::ConstantPointerValue { value: value.value }
             }
-            RegisterValueType::ExternalPointerValue => Self::ExternalPointerValue {
+            BNRegisterValueType::ExternalPointerValue => Self::ExternalPointerValue {
                 value: value.value,
                 offset: value.offset,
             },
-            RegisterValueType::StackFrameOffset => Self::StackFrameOffset { value: value.value },
-            RegisterValueType::ReturnAddressValue => Self::ReturnAddressValue,
-            RegisterValueType::ImportedAddressValue => Self::ImportedAddressValue,
-            RegisterValueType::SignedRangeValue => {
+            BNRegisterValueType::StackFrameOffset => Self::StackFrameOffset { value: value.value },
+            BNRegisterValueType::ReturnAddressValue => Self::ReturnAddressValue,
+            BNRegisterValueType::ImportedAddressValue => Self::ImportedAddressValue,
+            BNRegisterValueType::SignedRangeValue => {
                 let raw_ranges = unsafe { std::slice::from_raw_parts(value.ranges, value.count) };
                 Self::SignedRangeValue {
                     value: value.value,
                     ranges: raw_ranges.iter().map(|&r| r.into()).collect(),
                 }
             }
-            RegisterValueType::UnsignedRangeValue => {
+            BNRegisterValueType::UnsignedRangeValue => {
                 let raw_ranges = unsafe { std::slice::from_raw_parts(value.ranges, value.count) };
                 Self::UnsignedRangeValue {
                     value: value.value,
                     ranges: raw_ranges.iter().map(|&r| r.into()).collect(),
                 }
             }
-            RegisterValueType::LookupTableValue => {
+            BNRegisterValueType::LookupTableValue => {
                 let raw_entries = unsafe { std::slice::from_raw_parts(value.table, value.count) };
                 Self::LookupTableValue {
                     table: raw_entries.iter().map(|&r| r.into()).collect(),
                 }
             }
-            RegisterValueType::InSetOfValues => {
+            BNRegisterValueType::InSetOfValues => {
                 let raw_values = unsafe { std::slice::from_raw_parts(value.valueSet, value.count) };
                 Self::InSetOfValues {
                     values: raw_values.iter().copied().collect(),
                 }
             }
-            RegisterValueType::NotInSetOfValues => {
+            BNRegisterValueType::NotInSetOfValues => {
                 let raw_values = unsafe { std::slice::from_raw_parts(value.valueSet, value.count) };
                 Self::NotInSetOfValues {
                     values: raw_values.iter().copied().collect(),
                 }
             }
-            RegisterValueType::ConstantDataValue => Self::ConstantDataValue {
+            BNRegisterValueType::ConstantDataValue => Self::ConstantDataValue {
                 value: value.value,
                 size: value.size,
             },
-            RegisterValueType::ConstantDataZeroExtendValue => Self::ConstantDataZeroExtendValue {
+            BNRegisterValueType::ConstantDataZeroExtendValue => Self::ConstantDataZeroExtendValue {
                 value: value.value,
                 size: value.size,
             },
-            RegisterValueType::ConstantDataSignExtendValue => Self::ConstantDataSignExtendValue {
+            BNRegisterValueType::ConstantDataSignExtendValue => Self::ConstantDataSignExtendValue {
                 value: value.value,
                 size: value.size,
             },
-            RegisterValueType::ConstantDataAggregateValue => Self::ConstantDataAggregateValue {
+            BNRegisterValueType::ConstantDataAggregateValue => Self::ConstantDataAggregateValue {
                 value: value.value,
                 size: value.size,
             },
@@ -772,7 +865,7 @@ impl From<BNPossibleValueSet> for PossibleValueSet {
 impl From<PossibleValueSet> for BNPossibleValueSet {
     fn from(value: PossibleValueSet) -> Self {
         let mut raw = BNPossibleValueSet {
-            state: value.value_type(),
+            state: value.value_type().into(),
             ..Default::default()
         };
         match value {

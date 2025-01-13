@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use binaryninja::confidence::ConfMergable;
+use binaryninja::confidence::ConfMergeable;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::sync::OnceLock;

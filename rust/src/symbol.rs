@@ -270,7 +270,7 @@ impl Symbol {
         unsafe { BNIsSymbolAutoDefined(self.handle) }
     }
 
-    /// Wether this symbol has external linkage
+    /// Whether this symbol has external linkage
     pub fn external(&self) -> bool {
         self.binding() == Binding::Weak || self.binding() == Binding::Global
     }

@@ -218,7 +218,7 @@ impl FormInputBuilder {
     }
 
     /// Form Field: Vertical spacing
-    pub fn seperator_field(mut self) -> Self {
+    pub fn separator_field(mut self) -> Self {
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::SeparatorFormField;
         result.hasDefault = false;

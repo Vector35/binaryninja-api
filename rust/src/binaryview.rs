@@ -844,13 +844,13 @@ pub trait BinaryViewExt: BinaryViewBase {
     // TODO: Replace with BulkModify guard.
     /// Start adding segments in bulk. Useful for adding large numbers of segments.
     ///
-    /// After calling this any call to [BinaryViewExt::add_segment] will be uncommited until a call to
+    /// After calling this any call to [BinaryViewExt::add_segment] will be uncommitted until a call to
     /// [BinaryViewExt::end_bulk_add_segments]
     ///
-    /// If you wish to discard the uncommited segments you can call [BinaryViewExt::cancel_bulk_add_segments].
+    /// If you wish to discard the uncommitted segments you can call [BinaryViewExt::cancel_bulk_add_segments].
     ///
     /// NOTE: This **must** be paired with a later call to [BinaryViewExt::end_bulk_add_segments] or
-    /// [BinaryViewExt::cancel_bulk_add_segments], otherwise segments added after this call will stay uncommited.
+    /// [BinaryViewExt::cancel_bulk_add_segments], otherwise segments added after this call will stay uncommitted.
     fn begin_bulk_add_segments(&self) {
         unsafe { BNBeginBulkAddSegments(self.as_ref().handle) }
     }

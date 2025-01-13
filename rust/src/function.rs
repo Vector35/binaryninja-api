@@ -2014,7 +2014,7 @@ impl Function {
         unsafe { Array::new(vars, count, ()) }
     }
 
-    /// Merge one or more varibles in `sources` into the `target` variable. All
+    /// Merge one or more variables in `sources` into the `target` variable. All
     /// variable accesses to the variables in `sources` will be rewritten to use `target`.
     ///
     /// * `target` - target variable
@@ -2058,7 +2058,7 @@ impl Function {
         }
     }
 
-    /// Splits a varible at the definition site. The given `var` must be the
+    /// Splits a variable at the definition site. The given `var` must be the
     /// variable unique to the definition and should be obtained by using
     /// [crate::mlil::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
     ///
@@ -2081,7 +2081,7 @@ impl Function {
         unsafe { BNSplitVariable(self.handle, &raw_var) }
     }
 
-    /// Undoes varible splitting performed with [Function::split_variable]. The given `var`
+    /// Undoes variable splitting performed with [Function::split_variable]. The given `var`
     /// must be the variable unique to the definition and should be obtained by using
     /// [crate::mlil::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
     ///

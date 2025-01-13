@@ -24,7 +24,7 @@ pub struct Conf<T> {
     pub confidence: u8,
 }
 
-pub trait ConfMergable<T, O> {
+pub trait ConfMergeable<T, O> {
     type Result;
     /// Merge two confidence types' values depending on whichever has higher confidence
     /// In the event of a tie, the LHS (caller's) value is used.
@@ -57,7 +57,7 @@ impl<T> Conf<T> {
 /// Returns best value or LHS on tie
 ///
 /// `Conf<T>` + `Conf<T>` → `Conf<T>`
-impl<T> ConfMergable<T, Conf<T>> for Conf<T> {
+impl<T> ConfMergeable<T, Conf<T>> for Conf<T> {
     type Result = Conf<T>;
     fn merge(self, other: Conf<T>) -> Conf<T> {
         if other.confidence > self.confidence {
@@ -71,7 +71,7 @@ impl<T> ConfMergable<T, Conf<T>> for Conf<T> {
 /// Returns LHS if RHS is None
 ///
 /// `Conf<T>` + `Option<Conf<T>>` → `Conf<T>`
-impl<T> ConfMergable<T, Option<Conf<T>>> for Conf<T> {
+impl<T> ConfMergeable<T, Option<Conf<T>>> for Conf<T> {
     type Result = Conf<T>;
     fn merge(self, other: Option<Conf<T>>) -> Conf<T> {
         match other {
@@ -84,7 +84,7 @@ impl<T> ConfMergable<T, Option<Conf<T>>> for Conf<T> {
 /// Returns RHS if LHS is None
 ///
 /// `Option<Conf<T>>` + `Conf<T>` → `Conf<T>`
-impl<T> ConfMergable<T, Conf<T>> for Option<Conf<T>> {
+impl<T> ConfMergeable<T, Conf<T>> for Option<Conf<T>> {
     type Result = Conf<T>;
     fn merge(self, other: Conf<T>) -> Conf<T> {
         match self {
@@ -97,7 +97,7 @@ impl<T> ConfMergable<T, Conf<T>> for Option<Conf<T>> {
 /// Returns best non-None value or None
 ///
 /// `Option<Conf<T>>` + `Option<Conf<T>>` → `Option<Conf<T>>`
-impl<T> ConfMergable<T, Option<Conf<T>>> for Option<Conf<T>> {
+impl<T> ConfMergeable<T, Option<Conf<T>>> for Option<Conf<T>> {
     type Result = Option<Conf<T>>;
     fn merge(self, other: Option<Conf<T>>) -> Option<Conf<T>> {
         match (self, other) {

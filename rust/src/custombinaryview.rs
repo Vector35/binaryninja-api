@@ -430,7 +430,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
     ///
     /// The `BinaryView` argument passed to the constructor function is the object that is expected
     /// to be returned by the `AsRef<BinaryView>` implementation required by the `BinaryViewBase` trait.
-    ///  TODO FIXME welp this is broke going to need 2 init callbacks
+    ///  TODO FIXME whelp this is broke going to need 2 init callbacks
     pub fn create<V>(self, parent: &BinaryView, view_args: V::Args) -> Result<CustomView<'a>>
     where
         V: CustomBinaryView,
@@ -545,7 +545,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
                     // prohibited, so an API contract was violated in order to get here.
                     //
                     // if we're here, it's too late to do anything about it, though we can at least not
-                    // run the destructor on the custom view since that memory is unitialized.
+                    // run the destructor on the custom view since that memory is uninitialized.
                     log::error!(
                       "BinaryViewBase::freeObject called on partially initialized object! crash imminent!"
                     );

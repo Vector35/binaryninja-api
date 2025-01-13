@@ -1944,7 +1944,7 @@ impl Debug for NamedTypeReference {
 #[derive(Default, Debug, Clone, Hash, PartialEq, Eq, Ord, PartialOrd)]
 pub struct QualifiedName {
     // TODO: Make this Option<String> where default is "::".
-    pub seperator: String,
+    pub separator: String,
     pub items: Vec<String>,
 }
 
@@ -1956,8 +1956,8 @@ impl QualifiedName {
             .iter()
             .filter_map(|&raw_name| raw_to_string(raw_name as *const _))
             .collect();
-        let seperator = raw_to_string(value.join).unwrap();
-        Self { items, seperator }
+        let separator = raw_to_string(value.join).unwrap();
+        Self { items, separator }
     }
 
     pub(crate) fn from_owned_raw(value: BNQualifiedName) -> Self {
@@ -1967,7 +1967,7 @@ impl QualifiedName {
     }
 
     pub fn into_raw(value: Self) -> BNQualifiedName {
-        let bn_join = BnString::new(&value.seperator);
+        let bn_join = BnString::new(&value.separator);
         BNQualifiedName {
             // NOTE: Leaking string list must be freed by core or us!
             name: strings_to_string_list(&value.items),
@@ -1983,17 +1983,17 @@ impl QualifiedName {
     }
 
     pub fn new(items: Vec<String>) -> Self {
-        Self::new_with_seperator(items, "::".to_string())
+        Self::new_with_separator(items, "::".to_string())
     }
 
-    pub fn new_with_seperator(items: Vec<String>, seperator: String) -> Self {
-        Self { items, seperator }
+    pub fn new_with_separator(items: Vec<String>, separator: String) -> Self {
+        Self { items, separator }
     }
 
     pub fn with_item(&self, item: impl Into<String>) -> Self {
         let mut items = self.items.clone();
         items.push(item.into());
-        Self::new_with_seperator(items, self.seperator.clone())
+        Self::new_with_separator(items, self.separator.clone())
     }
 
     pub fn push(&mut self, item: String) {
@@ -2014,7 +2014,7 @@ impl QualifiedName {
         self.items.split_last().map(|(a, b)| {
             (
                 a.to_owned(),
-                QualifiedName::new_with_seperator(b.to_vec(), self.seperator.clone()),
+                QualifiedName::new_with_separator(b.to_vec(), self.separator.clone()),
             )
         })
     }
@@ -2042,7 +2042,7 @@ impl QualifiedName {
                 .iter()
                 .map(|item| item.replace(from, to))
                 .collect(),
-            seperator: self.seperator.clone(),
+            separator: self.separator.clone(),
         }
     }
 
@@ -2074,7 +2074,7 @@ impl From<String> for QualifiedName {
         Self {
             items: vec![value],
             // TODO: See comment in struct def.
-            seperator: String::from("::"),
+            separator: String::from("::"),
         }
     }
 }
@@ -2135,7 +2135,7 @@ impl IndexMut<usize> for QualifiedName {
 
 impl Display for QualifiedName {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.items.join(&self.seperator))
+        write!(f, "{}", self.items.join(&self.separator))
     }
 }
 

@@ -426,7 +426,7 @@ pub trait TypePrinter {
     ) -> Option<Vec<InstructionTextToken>>;
 
     /// In a single-line text representation of a type, generate the tokens
-    /// that should be printed after the type's name. Returns a ist of text
+    /// that should be printed after the type's name. Returns a list of text
     /// tokens representing the type
     ///
     /// * `type_` - Type to print

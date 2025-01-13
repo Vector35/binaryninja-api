@@ -41,3 +41,14 @@ jobs:
         uses: actions-rust-lang/rustfmt@v1
         with:
           manifest-path: ./rust/Cargo.toml
+
+  # Check spelling with typos
+  spelling:
+    name: typos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Typo Check
+        uses: crate-ci/typos@v1.29.4
+        with:
+          files: ./rust

@@ -745,7 +745,7 @@ impl Project {
     ///     }
     /// }
     /// ```
-    // NOTE mut is used here, so only one lock can be aquired at once
+    // NOTE mut is used here, so only one lock can be acquired at once
     pub fn bulk_operation(&mut self) -> Result<ProjectBulkOperationLock, ()> {
         Ok(ProjectBulkOperationLock::lock(self))
     }

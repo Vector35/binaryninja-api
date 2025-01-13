@@ -20,6 +20,7 @@ pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutErro
         return Ok(());
     }
 
+    #[allow(clippy::collapsible_if)]
     if !is_server_initialized() {
         if !initialize_server() && is_server_floating_license() {
             return Err(EnterpriseCheckoutError(server_last_error().to_string()));
@@ -31,6 +32,7 @@ pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutErro
             return Err(EnterpriseCheckoutError(server_last_error().to_string()));
         }
 
+        #[allow(clippy::collapsible_if)]
         if !is_server_authenticated() {
             if !authenticate_server_with_method("Keychain", false) {
                 let Some(username) = std::env::var("BN_ENTERPRISE_USERNAME").ok() else {
@@ -50,6 +52,7 @@ pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutErro
         }
     }
 
+    #[allow(clippy::collapsible_if)]
     if !is_server_license_still_activated()
         || (!is_server_floating_license() && crate::license_expiration_time() < SystemTime::now())
     {

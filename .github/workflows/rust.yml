@@ -10,8 +10,23 @@ on:
       - 'rust/**'
 
 jobs:
-  # TODO: Cargo clippy (just warnings don't fail)
   # TODO: Cargo test (we would need to pull in binary ninja)
+  # Check lints with clippy
+  clippy:
+    name: cargo clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Ensure clippy is installed
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: clippy
+      - name: Clippy Check
+      - uses: clechasseur/rs-clippy-check@v4
+        with:
+          working-directory: ./rust
+          args: --all-features
+
   # Check formatting with rustfmt
   formatting:
     name: cargo fmt

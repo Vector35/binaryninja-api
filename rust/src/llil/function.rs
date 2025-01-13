@@ -18,6 +18,7 @@ use binaryninjacore_sys::BNLowLevelILFunction;
 use binaryninjacore_sys::BNNewLowLevelILFunctionReference;
 
 use std::borrow::Borrow;
+use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
@@ -63,9 +64,9 @@ pub struct LowLevelILFunction<A: Architecture, M: FunctionMutability, F: Functio
     _form: PhantomData<F>,
 }
 
-impl<'func, A, M, F> LowLevelILFunction<A, M, F>
+impl<A, M, F> LowLevelILFunction<A, M, F>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -137,9 +138,9 @@ where
 // LLIL basic blocks are not available until the function object
 // is finalized, so ensure we can't try requesting basic blocks
 // during lifting
-impl<'func, A, F> LowLevelILFunction<A, Finalized, F>
+impl<A, F> LowLevelILFunction<A, Finalized, F>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     F: FunctionForm,
 {
     pub fn basic_blocks(&self) -> Array<BasicBlock<LowLevelBlock<A, Finalized, F>>> {
@@ -176,9 +177,9 @@ impl LowLevelILFunction<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
     }
 }
 
-impl<'func, A, M, F> ToOwned for LowLevelILFunction<A, M, F>
+impl<A, M, F> ToOwned for LowLevelILFunction<A, M, F>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -189,9 +190,9 @@ where
     }
 }
 
-unsafe impl<'func, A, M, F> RefCountable for LowLevelILFunction<A, M, F>
+unsafe impl<A, M, F> RefCountable for LowLevelILFunction<A, M, F>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -210,15 +211,17 @@ where
     }
 }
 
-impl<'func, A, M, F> fmt::Debug for LowLevelILFunction<A, M, F>
+impl<A, M, F> Debug for LowLevelILFunction<A, M, F>
 where
-    A: 'func + Architecture,
+    A: Architecture + Debug,
     M: FunctionMutability,
     F: FunctionForm,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // TODO: Make this better
-        write!(f, "<llil func handle {:p}>", self.handle)
+        f.debug_struct("LowLevelILFunction")
+            .field("arch", &self.arch())
+            .field("instruction_count", &self.instruction_count())
+            .finish()
     }
 }
 

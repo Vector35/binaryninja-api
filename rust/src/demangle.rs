@@ -301,10 +301,7 @@ impl Demangler {
             })
         }
 
-        extern "C" fn cb_free_var_name<C>(_ctxt: *mut c_void, name: *mut BNQualifiedName)
-        where
-            C: CustomDemangler,
-        {
+        extern "C" fn cb_free_var_name(_ctxt: *mut c_void, name: *mut BNQualifiedName) {
             ffi_wrap!("CustomDemangler::cb_free_var_name", unsafe {
                 // TODO: What is the point of this free callback?
                 QualifiedName::free_raw(*name)
@@ -319,7 +316,7 @@ impl Demangler {
             context: ctxt as *mut c_void,
             isMangledString: Some(cb_is_mangled_string::<C>),
             demangle: Some(cb_demangle::<C>),
-            freeVarName: Some(cb_free_var_name::<C>),
+            freeVarName: Some(cb_free_var_name),
         };
 
         unsafe {

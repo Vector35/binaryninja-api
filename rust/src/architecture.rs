@@ -200,6 +200,7 @@ impl From<BNInstructionInfo> for InstructionInfo {
     fn from(value: BNInstructionInfo) -> Self {
         // TODO: This is quite ugly, but we destructure the branch info so this will have to do.
         let mut branch_info = [None; NUM_BRANCH_INFO];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..value.branchCount.min(NUM_BRANCH_INFO) {
             let branch_target = value.branchTarget[i];
             branch_info[i] = Some(BranchInfo {

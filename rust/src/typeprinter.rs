@@ -365,12 +365,8 @@ impl CoreTypePrinter {
 impl Default for CoreTypePrinter {
     fn default() -> Self {
         // TODO: Remove this entirely, there is no "default", its view specific lets not make this some defined behavior.
-        let default_settings = crate::settings::Settings::default();
-        let name = default_settings.get_string(
-            std::ffi::CStr::from_bytes_with_nul(b"analysis.types.printerName\x00").unwrap(),
-            None,
-            None,
-        );
+        let default_settings = crate::settings::Settings::new("default");
+        let name = default_settings.get_string("analysis.types.printerName", None, None);
         Self::printer_by_name(name).unwrap()
     }
 }
@@ -931,7 +927,7 @@ unsafe extern "C" fn cb_print_all_types<T: TypePrinter>(
     let ctxt: &mut T = &mut *(ctxt as *mut T);
     let raw_names = std::slice::from_raw_parts(names, type_count);
     // NOTE: The caller is responsible for freeing raw_names.
-    let names: Vec<_> = raw_names.into_iter().map(QualifiedName::from_raw).collect();
+    let names: Vec<_> = raw_names.iter().map(QualifiedName::from_raw).collect();
     let raw_types = std::slice::from_raw_parts(types, type_count);
     // NOTE: The caller is responsible for freeing raw_types.
     let types: Vec<_> = raw_types.iter().map(|&t| Type::ref_from_raw(t)).collect();

@@ -739,8 +739,10 @@ impl PossibleValueSet {
     }
 
     pub(crate) fn into_raw(value: Self) -> BNPossibleValueSet {
-        let mut raw = BNPossibleValueSet::default();
-        raw.state = value.value_type();
+        let mut raw = BNPossibleValueSet {
+            state: value.value_type(),
+            ..Default::default()
+        };
         match value {
             PossibleValueSet::UndeterminedValue => {}
             PossibleValueSet::EntryValue { reg } => {

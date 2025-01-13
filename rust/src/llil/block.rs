@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::fmt::Debug;
 use std::ops::Range;
 
 use crate::architecture::Architecture;
@@ -78,15 +79,16 @@ where
     }
 }
 
-impl<'func, A, M, F> fmt::Debug for LowLevelILBlock<'func, A, M, F>
+impl<'func, A, M, F> Debug for LowLevelILBlock<'func, A, M, F>
 where
-    A: 'func + Architecture,
+    A: 'func + Architecture + Debug,
     M: FunctionMutability,
     F: FunctionForm,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // TODO: Make this better
-        write!(f, "llil_bb {:?}", self.function)
+        f.debug_struct("LowLevelILBlock")
+            .field("function", &self.function)
+            .finish()
     }
 }
 

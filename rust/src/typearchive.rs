@@ -376,7 +376,7 @@ impl TypeArchive {
     }
 
     /// Get a list of all types' names and ids in the archive at a current snapshot
-
+    ///
     /// * `snapshot` - Snapshot id to search for types
     pub fn get_type_names_and_ids<S: BnStrCompatible>(
         &self,

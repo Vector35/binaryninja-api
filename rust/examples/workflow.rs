@@ -2,8 +2,8 @@ use binaryninja::binaryview::BinaryViewExt;
 use binaryninja::llil::{ExprInfo, LiftedNonSSA, NonSSA, VisitorAction};
 use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
 
-const RUST_ACTIVITY_NAME: &'static str = "analysis.plugins.rustexample";
-const RUST_ACTIVITY_CONFIG: &'static str = r#"{
+const RUST_ACTIVITY_NAME: &str = "analysis.plugins.rustexample";
+const RUST_ACTIVITY_CONFIG: &str = r#"{
     "name": "analysis.plugins.rustexample",
     "title" : "Rust Example",
     "description": "This analysis step logs out some information about the function...",
@@ -27,18 +27,15 @@ fn example_activity(analysis_context: &AnalysisContext) {
             for instr in basic_block.iter() {
                 if let Some(llil_instr) = llil.instruction_at(instr) {
                     llil_instr.visit_tree(&mut |expr, info| {
-                        match info {
-                            ExprInfo::Const(_op) => {
-                                // Replace all consts with 0x1337.
-                                println!(
-                                    "Replacing llil expression @ 0x{:x} : {}",
-                                    instr, expr.index
-                                );
-                                unsafe {
-                                    llil.replace_expression(expr.index, llil.const_int(4, 0x1337))
-                                };
-                            }
-                            _ => {}
+                        if let ExprInfo::Const(_op) = info {
+                            // Replace all consts with 0x1337.
+                            println!(
+                                "Replacing llil expression @ 0x{:x} : {}",
+                                instr, expr.index
+                            );
+                            unsafe {
+                                llil.replace_expression(expr.index, llil.const_int(4, 0x1337))
+                            };
                         }
                         VisitorAction::Descend
                     });

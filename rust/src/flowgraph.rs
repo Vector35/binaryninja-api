@@ -92,7 +92,7 @@ impl<'a> FlowGraphNode<'a> {
     }
 }
 
-unsafe impl<'a> RefCountable for FlowGraphNode<'a> {
+unsafe impl RefCountable for FlowGraphNode<'_> {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
         Ref::new(Self {
             handle: BNNewFlowGraphNodeReference(handle.handle),
@@ -105,7 +105,7 @@ unsafe impl<'a> RefCountable for FlowGraphNode<'a> {
     }
 }
 
-impl<'a> ToOwned for FlowGraphNode<'a> {
+impl ToOwned for FlowGraphNode<'_> {
     type Owned = Ref<Self>;
 
     fn to_owned(&self) -> Self::Owned {

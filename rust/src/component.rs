@@ -146,13 +146,10 @@ impl Component {
     }
 
     /// Original name set for this component
-
     /// :note: The `.display_name` property should be used for `bv.get_component_by_path()` lookups.
-
     /// This can differ from the .display_name property if one of its sibling components has the same .original_name; In that
     /// case, .name will be an automatically generated unique name (e.g. "MyComponentName (1)") while .original_name will
     /// remain what was originally set (e.g. "MyComponentName")
-
     /// If this component has a duplicate name and is moved to a component where none of its siblings share its name,
     /// .name will return the original "MyComponentName"
     pub fn name(&self) -> BnString {

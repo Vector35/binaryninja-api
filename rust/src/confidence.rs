@@ -189,7 +189,7 @@ impl<T> From<T> for Conf<T> {
     }
 }
 
-impl<'a> Conf<&'a Type> {
+impl Conf<&'_ Type> {
     pub(crate) fn into_raw(value: Self) -> BNTypeWithConfidence {
         BNTypeWithConfidence {
             type_: value.contents.handle,

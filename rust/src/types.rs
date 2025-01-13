@@ -339,7 +339,7 @@ impl TypeBuilder {
 
     pub fn named_type_from_type<T: Into<QualifiedName>>(name: T, t: &Type) -> Self {
         let mut raw_name = QualifiedName::into_raw(name.into());
-        let id = CStr::from_bytes_with_nul(b"\0").unwrap();
+        let id = c"";
 
         let result = unsafe {
             Self::from_raw(BNCreateNamedTypeReferenceBuilderFromTypeAndId(
@@ -726,7 +726,7 @@ impl Type {
     pub fn named_type_from_type<T: Into<QualifiedName>>(name: T, t: &Type) -> Ref<Self> {
         let mut raw_name = QualifiedName::into_raw(name.into());
         // TODO: No id is present for this call?
-        let id = CStr::from_bytes_with_nul(b"\0").unwrap();
+        let id = c"";
 
         let result = unsafe {
             Self::ref_from_raw(BNCreateNamedTypeReferenceFromTypeAndId(
@@ -1124,6 +1124,7 @@ impl FunctionParameter {
     }
 }
 
+// TODO: We need to delete this...
 // Name, Variable and Type
 impl CoreArrayProvider for (&str, Variable, &Type) {
     type Raw = BNVariableNameAndType;
@@ -1134,6 +1135,7 @@ impl CoreArrayProvider for (&str, Variable, &Type) {
         Self: 'a;
 }
 
+// TODO: This needs to go!
 unsafe impl CoreArrayProviderInner for (&str, Variable, &Type) {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeVariableNameAndTypeList(raw, count)
@@ -1145,7 +1147,7 @@ unsafe impl CoreArrayProviderInner for (&str, Variable, &Type) {
     ) -> (&'a str, Variable, &'a Type) {
         let name = CStr::from_ptr(raw.name).to_str().unwrap();
         let var = Variable::from(raw.var);
-        let var_type = std::mem::transmute(&raw.type_);
+        let var_type = &*(raw.type_ as *mut Type);
         (name, var, var_type)
     }
 }

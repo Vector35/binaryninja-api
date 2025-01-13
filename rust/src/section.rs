@@ -273,7 +273,7 @@ impl<S: BnStrCompatible> SectionBuilder<S> {
         let len = self.range.end.wrapping_sub(start);
 
         unsafe {
-            let nul_str = std::ffi::CStr::from_bytes_with_nul_unchecked(b"\x00").as_ptr();
+            let nul_str = c"".as_ptr();
             let name_ptr = name.as_ref().as_ptr() as *mut _;
             let ty_ptr = ty.map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
             let linked_section_ptr =

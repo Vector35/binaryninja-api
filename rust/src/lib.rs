@@ -16,6 +16,7 @@
 #![allow(clippy::missing_safety_doc)]
 #![allow(clippy::result_unit_err)]
 #![allow(clippy::type_complexity)]
+#![allow(clippy::too_many_arguments)]
 #![doc(html_root_url = "https://dev-rust.binary.ninja/")]
 #![doc(html_favicon_url = "/favicon.ico")]
 #![doc(html_logo_url = "/logo.png")]
@@ -211,7 +212,7 @@ unsafe extern "C" fn cb_progress_func<F: FnMut(usize, usize) -> bool>(
     if ctxt.is_null() {
         return true;
     }
-    let closure: &mut F = std::mem::transmute(ctxt);
+    let closure = &mut *(ctxt as *mut F);
     closure(progress, total)
 }
 

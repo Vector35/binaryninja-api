@@ -753,7 +753,7 @@ impl MediumLevelILInstruction {
                         // TODO: Replace with a From<u32> for RegisterValueType.
                         // TODO: We might also want to change the type of `op.constant_data_kind`
                         // TODO: To RegisterValueType and do the conversion when creating instruction.
-                        state: unsafe { std::mem::transmute(op.constant_data_kind) },
+                        state: unsafe { std::mem::transmute::<u32, BNRegisterValueType>(op.constant_data_kind) },
                         value: op.constant_data_value,
                         offset: 0,
                         size: op.size,

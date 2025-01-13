@@ -22,7 +22,7 @@ fn set_len_write() {
     // and is not using the original pointer
     contents.as_mut_slice().fill(0x55);
     drop(contents);
-    assert_eq!(data.get_data(), &DUMMY_DATA_0[..]);
+    assert_eq!(data.get_data(), DUMMY_DATA_0);
 
     // make sure the new len truncate the original data
     unsafe { data.set_len(13) };

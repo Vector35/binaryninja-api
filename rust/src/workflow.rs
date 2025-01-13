@@ -192,7 +192,7 @@ impl Activity {
             ctxt: *mut c_void,
             analysis: *mut BNAnalysisContext,
         ) {
-            let ctxt: &mut F = core::mem::transmute(ctxt);
+            let ctxt = &mut *(ctxt as *mut F);
             if let Some(analysis) = NonNull::new(analysis) {
                 ctxt(&AnalysisContext::from_raw(analysis))
             }
@@ -567,29 +567,17 @@ impl Workflow {
 
     /// Not yet implemented.
     pub fn show_metrics(&self) {
-        unsafe {
-            BNWorkflowShowReport(
-                self.handle.as_ptr(),
-                b"metrics\x00".as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNWorkflowShowReport(self.handle.as_ptr(), c"metrics".as_ptr()) }
     }
 
     /// Show the Workflow topology in the UI.
     pub fn show_topology(&self) {
-        unsafe {
-            BNWorkflowShowReport(
-                self.handle.as_ptr(),
-                b"topology\x00".as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNWorkflowShowReport(self.handle.as_ptr(), c"topology".as_ptr()) }
     }
 
     /// Not yet implemented.
     pub fn show_trace(&self) {
-        unsafe {
-            BNWorkflowShowReport(self.handle.as_ptr(), b"trace\x00".as_ptr() as *const c_char)
-        }
+        unsafe { BNWorkflowShowReport(self.handle.as_ptr(), c"trace".as_ptr()) }
     }
 }
 

@@ -22,7 +22,7 @@ jobs:
         with:
           components: clippy
       - name: Clippy Check
-      - uses: clechasseur/rs-clippy-check@v4
+        uses: clechasseur/rs-clippy-check@v4
         with:
           working-directory: ./rust
           args: --all-features

@@ -84,6 +84,7 @@ rust/target/
 rust/binaryninjacore-sys/target/
 rust/examples/*/target/
 rust/examples/dwarf/*/target/
+Cargo.lock
 
 # Debugger docs
 docs/img/debugger

@@ -74,16 +74,16 @@ where
     type Iter = BlockIter<'func, A, M, F>;
     type Instruction = Instruction<'func, A, M, F>;
 
-    fn start(&self, block: &BasicBlock<Self>) -> Instruction<'func, A, M, F> {
+    fn start(block: &BasicBlock<Self>) -> Instruction<'func, A, M, F> {
         Instruction {
-            function: self.function,
+            function: block.context.function,
             instr_idx: block.raw_start() as usize,
         }
     }
 
-    fn iter(&self, block: &BasicBlock<Self>) -> BlockIter<'func, A, M, F> {
+    fn iter(block: &BasicBlock<Self>) -> BlockIter<'func, A, M, F> {
         BlockIter {
-            function: self.function,
+            function: block.context.function,
             range: block.raw_start()..block.raw_end(),
         }
     }

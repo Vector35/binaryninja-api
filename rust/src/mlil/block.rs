@@ -39,16 +39,19 @@ impl BlockContext for MediumLevelILBlock {
     type Iter = MediumLevelILBlockIter;
     type Instruction = MediumLevelILInstruction;
 
-    fn start(&self, block: &BasicBlock<Self>) -> MediumLevelILInstruction {
+    fn start(block: &BasicBlock<Self>) -> MediumLevelILInstruction {
         let expr_idx = unsafe {
-            BNGetMediumLevelILIndexForInstruction(self.function.handle, block.raw_start() as usize)
+            BNGetMediumLevelILIndexForInstruction(
+                block.context.function.handle,
+                block.raw_start() as usize,
+            )
         };
-        MediumLevelILInstruction::new(self.function.to_owned(), expr_idx)
+        MediumLevelILInstruction::new(block.context.function.to_owned(), expr_idx)
     }
 
-    fn iter(&self, block: &BasicBlock<Self>) -> MediumLevelILBlockIter {
+    fn iter(block: &BasicBlock<Self>) -> MediumLevelILBlockIter {
         MediumLevelILBlockIter {
-            function: self.function.to_owned(),
+            function: block.context.function.to_owned(),
             range: block.raw_start()..block.raw_end(),
         }
     }

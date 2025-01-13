@@ -351,7 +351,7 @@ impl TypeContainer {
 
     /// Parse an entire block of source into types, variables, and functions, with
     /// knowledge of the types in the Type Container.
-    /// 
+    ///
     /// * `source` - Source code to parse
     /// * `file_name` - Name of the file containing the source (optional: exists on disk)
     /// * `options` - String arguments to pass as options, e.g. command line arguments

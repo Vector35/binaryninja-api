@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::callingconvention::CallingConvention;
 use crate::rc::{Ref, RefCountable};
@@ -187,34 +189,86 @@ impl<T> From<T> for Conf<T> {
     }
 }
 
-impl From<BNTypeWithConfidence> for Conf<Ref<Type>> {
-    fn from(type_with_confidence: BNTypeWithConfidence) -> Self {
+impl<'a> Conf<&'a Type> {
+    pub(crate) fn into_raw(value: Self) -> BNTypeWithConfidence {
+        BNTypeWithConfidence {
+            type_: value.contents.handle,
+            confidence: value.confidence,
+        }
+    }
+}
+
+impl Conf<Ref<Type>> {
+    pub(crate) fn from_raw(value: &BNTypeWithConfidence) -> Self {
         Self::new(
-            unsafe { Type::ref_from_raw(type_with_confidence.type_) },
-            type_with_confidence.confidence,
+            unsafe { Type::from_raw(value.type_) }.to_owned(),
+            value.confidence,
         )
+    }
+
+    pub(crate) fn from_owned_raw(value: BNTypeWithConfidence) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNTypeWithConfidence {
+        BNTypeWithConfidence {
+            type_: unsafe { Ref::into_raw(value.contents) }.handle,
+            confidence: value.confidence,
+        }
+    }
+
+    pub(crate) fn free_raw(value: BNTypeWithConfidence) {
+        let _ = unsafe { Type::ref_from_raw(value.type_) };
+    }
+}
+
+impl Conf<Ref<CallingConvention<CoreArchitecture>>> {
+    pub(crate) fn from_raw(value: &BNCallingConventionWithConfidence) -> Self {
+        let arch = unsafe {
+            CoreArchitecture::from_raw(BNGetCallingConventionArchitecture(value.convention))
+        };
+        Self::new(
+            unsafe { CallingConvention::from_raw(value.convention, arch).to_owned() },
+            value.confidence,
+        )
+    }
+
+    pub(crate) fn from_owned_raw(value: BNCallingConventionWithConfidence) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+}
+
+impl<A: Architecture> Conf<Ref<CallingConvention<A>>> {
+    pub(crate) fn into_raw(value: Self) -> BNCallingConventionWithConfidence {
+        BNCallingConventionWithConfidence {
+            convention: unsafe { Ref::into_raw(value.contents) }.handle,
+            confidence: value.confidence,
+        }
+    }
+
+    pub(crate) fn into_owned_raw(value: &Self) -> BNCallingConventionWithConfidence {
+        BNCallingConventionWithConfidence {
+            convention: value.contents.handle,
+            confidence: value.confidence,
+        }
+    }
+
+    pub(crate) fn free_raw(value: BNCallingConventionWithConfidence) {
+        let arch = unsafe {
+            CoreArchitecture::from_raw(BNGetCallingConventionArchitecture(value.convention))
+        };
+        let _ =
+            unsafe { CallingConvention::<CoreArchitecture>::ref_from_raw(value.convention, arch) };
     }
 }
 
 impl From<BNBoolWithConfidence> for Conf<bool> {
     fn from(bool_with_confidence: BNBoolWithConfidence) -> Self {
         Self::new(bool_with_confidence.value, bool_with_confidence.confidence)
-    }
-}
-
-impl From<BNCallingConventionWithConfidence> for Conf<Ref<CallingConvention<CoreArchitecture>>> {
-    fn from(cc_with_confidence: BNCallingConventionWithConfidence) -> Self {
-        Self::new(
-            unsafe {
-                CallingConvention::ref_from_raw(
-                    cc_with_confidence.convention,
-                    CoreArchitecture::from_raw(BNGetCallingConventionArchitecture(
-                        cc_with_confidence.convention,
-                    )),
-                )
-            },
-            cc_with_confidence.confidence,
-        )
     }
 }
 
@@ -227,37 +281,10 @@ impl From<BNOffsetWithConfidence> for Conf<i64> {
     }
 }
 
-impl From<Conf<Ref<Type>>> for BNTypeWithConfidence {
-    fn from(conf: Conf<Ref<Type>>) -> Self {
-        Self {
-            type_: conf.contents.handle,
-            confidence: conf.confidence,
-        }
-    }
-}
-
-impl From<Conf<&Type>> for BNTypeWithConfidence {
-    fn from(conf: Conf<&Type>) -> Self {
-        Self {
-            type_: conf.contents.handle,
-            confidence: conf.confidence,
-        }
-    }
-}
-
 impl From<Conf<bool>> for BNBoolWithConfidence {
     fn from(conf: Conf<bool>) -> Self {
         Self {
             value: conf.contents,
-            confidence: conf.confidence,
-        }
-    }
-}
-
-impl<A: Architecture> From<Conf<&CallingConvention<A>>> for BNCallingConventionWithConfidence {
-    fn from(conf: Conf<&CallingConvention<A>>) -> Self {
-        Self {
-            convention: conf.contents.handle,
             confidence: conf.confidence,
         }
     }

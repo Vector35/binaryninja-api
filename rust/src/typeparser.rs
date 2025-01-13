@@ -1,3 +1,4 @@
+#![allow(unused)]
 use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void};
 use std::fmt::Debug;
@@ -159,7 +160,10 @@ impl TypeParser for CoreTypeParser {
             )
         };
         if success {
-            Ok(raw_result.into())
+            let result = TypeParserResult::from_raw(&raw_result);
+            // NOTE: This is safe because the core allocated the TypeParserResult
+            TypeParserResult::free_raw(raw_result);
+            Ok(result)
         } else {
             let errors: Array<TypeParserError> = unsafe { Array::new(errors, error_count, ()) };
             Err(errors.to_vec())
@@ -188,7 +192,7 @@ impl TypeParser for CoreTypeParser {
             )
         };
         if result {
-            Ok(QualifiedNameAndType::from(output))
+            Ok(QualifiedNameAndType::from_owned_raw(output))
         } else {
             let errors: Array<TypeParserError> = unsafe { Array::new(errors, error_count, ()) };
             Err(errors.to_vec())
@@ -292,6 +296,37 @@ pub struct TypeParserError {
 }
 
 impl TypeParserError {
+    pub(crate) fn from_raw(value: &BNTypeParserError) -> Self {
+        Self {
+            severity: value.severity,
+            message: raw_to_string(value.message).unwrap(),
+            file_name: raw_to_string(value.fileName).unwrap(),
+            line: value.line,
+            column: value.column,
+        }
+    }
+
+    pub(crate) fn from_owned_raw(value: BNTypeParserError) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNTypeParserError {
+        BNTypeParserError {
+            severity: value.severity,
+            message: BnString::into_raw(BnString::new(value.message)),
+            fileName: BnString::into_raw(BnString::new(value.file_name)),
+            line: value.line,
+            column: value.column,
+        }
+    }
+
+    pub(crate) fn free_raw(value: BNTypeParserError) {
+        let _ = unsafe { BnString::from_raw(value.message) };
+        let _ = unsafe { BnString::from_raw(value.fileName) };
+    }
+
     pub fn new(
         severity: TypeParserErrorSeverity,
         message: String,
@@ -309,42 +344,6 @@ impl TypeParserError {
     }
 }
 
-impl From<BNTypeParserError> for TypeParserError {
-    fn from(value: BNTypeParserError) -> Self {
-        Self {
-            severity: value.severity,
-            message: unsafe { BnString::from_raw(value.message).to_string() },
-            file_name: unsafe { BnString::from_raw(value.fileName).to_string() },
-            line: value.line,
-            column: value.column,
-        }
-    }
-}
-
-impl From<&BNTypeParserError> for TypeParserError {
-    fn from(value: &BNTypeParserError) -> Self {
-        Self {
-            severity: value.severity,
-            message: raw_to_string(value.message).unwrap(),
-            file_name: raw_to_string(value.fileName).unwrap(),
-            line: value.line,
-            column: value.column,
-        }
-    }
-}
-
-impl From<TypeParserError> for BNTypeParserError {
-    fn from(value: TypeParserError) -> Self {
-        Self {
-            severity: value.severity,
-            message: BnString::new(value.message).into_raw(),
-            fileName: BnString::new(value.file_name).into_raw(),
-            line: value.line,
-            column: value.column,
-        }
-    }
-}
-
 impl CoreArrayProvider for TypeParserError {
     type Raw = BNTypeParserError;
     type Context = ();
@@ -357,7 +356,7 @@ unsafe impl CoreArrayProviderInner for TypeParserError {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::from(raw)
+        Self::from_raw(raw)
     }
 }
 
@@ -368,21 +367,85 @@ pub struct TypeParserResult {
     pub functions: Vec<ParsedType>,
 }
 
-impl From<BNTypeParserResult> for TypeParserResult {
-    fn from(mut value: BNTypeParserResult) -> Self {
+impl TypeParserResult {
+    pub(crate) fn from_raw(value: &BNTypeParserResult) -> Self {
         let raw_types = unsafe { std::slice::from_raw_parts(value.types, value.typeCount) };
+        let types = raw_types.iter().map(ParsedType::from_raw).collect();
         let raw_variables =
             unsafe { std::slice::from_raw_parts(value.variables, value.variableCount) };
+        let variables = raw_variables.iter().map(ParsedType::from_raw).collect();
         let raw_functions =
             unsafe { std::slice::from_raw_parts(value.functions, value.functionCount) };
-        let result = TypeParserResult {
-            types: raw_types.iter().map(|t| ParsedType::from(t)).collect(),
-            variables: raw_variables.iter().map(|t| ParsedType::from(t)).collect(),
-            functions: raw_functions.iter().map(|t| ParsedType::from(t)).collect(),
-        };
+        let functions = raw_functions.iter().map(ParsedType::from_raw).collect();
+        TypeParserResult {
+            types,
+            variables,
+            functions,
+        }
+    }
+
+    /// Return a rust allocated type parser result, free using [`Self::free_owned_raw`].
+    ///
+    /// Under no circumstance should you call [`Self::free_raw`] on the returned result.
+    pub(crate) fn into_raw(value: Self) -> BNTypeParserResult {
+        let boxed_raw_types: Box<[BNParsedType]> = value
+            .types
+            .into_iter()
+            // NOTE: Freed with [`Self::free_owned_raw`].
+            .map(ParsedType::into_raw)
+            .collect();
+        let boxed_raw_variables: Box<[BNParsedType]> = value
+            .variables
+            .into_iter()
+            // NOTE: Freed with [`Self::free_owned_raw`].
+            .map(ParsedType::into_raw)
+            .collect();
+        let boxed_raw_functions: Box<[BNParsedType]> = value
+            .functions
+            .into_iter()
+            // NOTE: Freed with [`Self::free_owned_raw`].
+            .map(ParsedType::into_raw)
+            .collect();
+        BNTypeParserResult {
+            typeCount: boxed_raw_types.len(),
+            // NOTE: Freed with [`Self::free_owned_raw`].
+            types: Box::leak(boxed_raw_types).as_mut_ptr(),
+            variableCount: boxed_raw_variables.len(),
+            // NOTE: Freed with [`Self::free_owned_raw`].
+            variables: Box::leak(boxed_raw_variables).as_mut_ptr(),
+            functionCount: boxed_raw_functions.len(),
+            // NOTE: Freed with [`Self::free_owned_raw`].
+            functions: Box::leak(boxed_raw_functions).as_mut_ptr(),
+        }
+    }
+
+    pub(crate) fn free_raw(mut value: BNTypeParserResult) {
         // SAFETY: `value` must be a properly initialized BNTypeParserResult.
+        // SAFETY: `value` must be core allocated.
         unsafe { BNFreeTypeParserResult(&mut value) };
-        result
+    }
+
+    pub(crate) fn free_owned_raw(value: BNTypeParserResult) {
+        let raw_types = std::ptr::slice_from_raw_parts_mut(value.types, value.typeCount);
+        // Free the rust allocated types list
+        let boxed_types = unsafe { Box::from_raw(raw_types) };
+        for parsed_type in boxed_types {
+            ParsedType::free_raw(parsed_type);
+        }
+        let raw_variables =
+            std::ptr::slice_from_raw_parts_mut(value.variables, value.variableCount);
+        // Free the rust allocated variables list
+        let boxed_variables = unsafe { Box::from_raw(raw_variables) };
+        for parsed_type in boxed_variables {
+            ParsedType::free_raw(parsed_type);
+        }
+        let raw_functions =
+            std::ptr::slice_from_raw_parts_mut(value.functions, value.functionCount);
+        // Free the rust allocated functions list
+        let boxed_functions = unsafe { Box::from_raw(raw_functions) };
+        for parsed_type in boxed_functions {
+            ParsedType::free_raw(parsed_type);
+        }
     }
 }
 
@@ -394,38 +457,35 @@ pub struct ParsedType {
 }
 
 impl ParsedType {
-    pub fn new(name: QualifiedName, ty: Ref<Type>, user: bool) -> Self {
-        Self { name, ty, user }
-    }
-}
-
-impl From<BNParsedType> for ParsedType {
-    fn from(value: BNParsedType) -> Self {
+    pub(crate) fn from_raw(value: &BNParsedType) -> Self {
         Self {
-            name: value.name.into(),
-            ty: unsafe { Type::ref_from_raw(value.type_) },
-            user: value.isUser,
-        }
-    }
-}
-
-impl From<&BNParsedType> for ParsedType {
-    fn from(value: &BNParsedType) -> Self {
-        Self {
-            name: QualifiedName::from(&value.name),
+            name: QualifiedName::from_raw(&value.name),
             ty: unsafe { Type::from_raw(value.type_).to_owned() },
             user: value.isUser,
         }
     }
-}
 
-impl From<ParsedType> for BNParsedType {
-    fn from(value: ParsedType) -> Self {
-        Self {
-            name: value.name.into(),
-            type_: value.ty.handle,
+    pub(crate) fn from_owned_raw(value: BNParsedType) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNParsedType {
+        BNParsedType {
+            name: QualifiedName::into_raw(value.name),
+            type_: unsafe { Ref::into_raw(value.ty) }.handle,
             isUser: value.user,
         }
+    }
+
+    pub(crate) fn free_raw(value: BNParsedType) {
+        QualifiedName::free_raw(value.name);
+        let _ = unsafe { Type::ref_from_raw(value.type_) };
+    }
+
+    pub fn new(name: QualifiedName, ty: Ref<Type>, user: bool) -> Self {
+        Self { name, ty, user }
     }
 }
 
@@ -442,7 +502,7 @@ unsafe impl CoreArrayProviderInner for ParsedType {
     }
 
     unsafe fn wrap_raw<'b>(raw: &'b Self::Raw, _context: &'b Self::Context) -> Self::Wrapped<'b> {
-        ParsedType::from(raw)
+        ParsedType::from_raw(raw)
     }
 }
 
@@ -456,7 +516,7 @@ unsafe extern "C" fn cb_get_option_text<T: TypeParser>(
     if let Some(inner_result) = ctxt.get_option_text(option, &raw_to_string(value).unwrap()) {
         let bn_inner_result = BnString::new(inner_result);
         // NOTE: Dropped by `cb_free_string`
-        *result = bn_inner_result.into_raw();
+        *result = BnString::into_raw(bn_inner_result);
         true
     } else {
         *result = std::ptr::null_mut();
@@ -503,15 +563,19 @@ unsafe extern "C" fn cb_preprocess_source<T: TypeParser>(
         Ok(inner_result) => {
             let bn_inner_result = BnString::new(inner_result);
             // NOTE: Dropped by `cb_free_string`
-            *result = bn_inner_result.into_raw();
+            *result = BnString::into_raw(bn_inner_result);
             *errors = std::ptr::null_mut();
             *error_count = 0;
             true
         }
         Err(inner_errors) => {
-            *error_count = inner_errors.len();
-            let inner_errors: Box<[_]> = inner_errors.into_iter().map(Into::into).collect();
             *result = std::ptr::null_mut();
+            *error_count = inner_errors.len();
+            // NOTE: Leaking errors here, dropped by `cb_free_error_list`.
+            let inner_errors: Box<[_]> = inner_errors
+                .into_iter()
+                .map(TypeParserError::into_raw)
+                .collect();
             // NOTE: Dropped by `cb_free_error_list`
             *errors = Box::leak(inner_errors).as_mut_ptr();
             false
@@ -558,43 +622,17 @@ unsafe extern "C" fn cb_parse_types_from_source<T: TypeParser>(
         &raw_to_string(auto_type_source).unwrap(),
     ) {
         Ok(type_parser_result) => {
-            let boxed_raw_types: Box<[BNParsedType]> = type_parser_result
-                .types
-                .into_iter()
-                .map(Into::into)
-                .collect();
-            let boxed_raw_variables: Box<[BNParsedType]> = type_parser_result
-                .variables
-                .into_iter()
-                .map(Into::into)
-                .collect();
-            let boxed_raw_functions: Box<[BNParsedType]> = type_parser_result
-                .functions
-                .into_iter()
-                .map(Into::into)
-                .collect();
-            let type_count = boxed_raw_types.len();
-            let variable_count = boxed_raw_variables.len();
-            let function_count = boxed_raw_functions.len();
-            let raw_result = BNTypeParserResult {
-                // NOTE: Freed with `cb_free_result`.
-                types: Box::leak(boxed_raw_types).as_mut_ptr(),
-                // NOTE: Freed with `cb_free_result`.
-                variables: Box::leak(boxed_raw_variables).as_mut_ptr(),
-                // NOTE: Freed with `cb_free_result`.
-                functions: Box::leak(boxed_raw_functions).as_mut_ptr(),
-                typeCount: type_count,
-                variableCount: variable_count,
-                functionCount: function_count,
-            };
-            *result = raw_result;
+            *result = TypeParserResult::into_raw(type_parser_result);
             *errors = std::ptr::null_mut();
             *error_count = 0;
             true
         }
         Err(inner_errors) => {
             *error_count = inner_errors.len();
-            let inner_errors: Box<[_]> = inner_errors.into_iter().map(Into::into).collect();
+            let inner_errors: Box<[_]> = inner_errors
+                .into_iter()
+                .map(TypeParserError::into_raw)
+                .collect();
             *result = Default::default();
             // NOTE: Dropped by cb_free_error_list
             *errors = Box::leak(inner_errors).as_mut_ptr();
@@ -618,14 +656,17 @@ unsafe extern "C" fn cb_parse_type_string<T: TypeParser>(
     let existing_types = TypeContainer::from_raw(existing_types_ptr);
     match ctxt.parse_type_string(&raw_to_string(source).unwrap(), &platform, &existing_types) {
         Ok(inner_result) => {
-            *result = inner_result.into();
+            *result = QualifiedNameAndType::into_raw(inner_result);
             *errors = std::ptr::null_mut();
             *error_count = 0;
             true
         }
         Err(inner_errors) => {
             *error_count = inner_errors.len();
-            let inner_errors: Box<[_]> = inner_errors.into_iter().map(Into::into).collect();
+            let inner_errors: Box<[_]> = inner_errors
+                .into_iter()
+                .map(TypeParserError::into_raw)
+                .collect();
             *result = Default::default();
             // NOTE: Dropped by cb_free_error_list
             *errors = Box::leak(inner_errors).as_mut_ptr();
@@ -640,7 +681,7 @@ unsafe extern "C" fn cb_free_string(_ctxt: *mut c_void, string: *mut c_char) {
 }
 
 unsafe extern "C" fn cb_free_result(_ctxt: *mut c_void, result: *mut BNTypeParserResult) {
-    let _ = Box::from_raw(result);
+    TypeParserResult::free_owned_raw(*result);
 }
 
 unsafe extern "C" fn cb_free_error_list(
@@ -649,5 +690,8 @@ unsafe extern "C" fn cb_free_error_list(
     error_count: usize,
 ) {
     let errors = std::ptr::slice_from_raw_parts_mut(errors, error_count);
-    let _ = Box::from_raw(errors);
+    let boxed_errors = Box::from_raw(errors);
+    for error in boxed_errors {
+        TypeParserError::free_raw(error);
+    }
 }

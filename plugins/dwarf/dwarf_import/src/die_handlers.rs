@@ -306,7 +306,7 @@ pub(crate) fn handle_function<R: ReaderType>(
     if let Some(name) = debug_info_builder_context.get_name(dwarf, unit, entry) {
         let ntr = Type::named_type_from_type(
             &name,
-            &Type::function(return_type.as_ref(), &[], false),
+            &Type::function(return_type.as_ref(), vec![], false),
         );
         debug_info_builder.add_type(
             get_uid(dwarf, unit, entry),
@@ -350,7 +350,7 @@ pub(crate) fn handle_function<R: ReaderType>(
 
     Some(Type::function(
         return_type.as_ref(),
-        &parameters,
+        parameters,
         variable_arguments,
     ))
 }

@@ -70,9 +70,10 @@ impl<'a> FlowGraphNode<'a> {
 
     pub fn set_lines(&self, lines: impl IntoIterator<Item = DisassemblyTextLine>) {
         // NOTE: This will create allocations and increment tag refs, we must call DisassemblyTextLine::free_raw
-        // TODO: This set of api's is really garbage, we should really do something about this.
-        let mut raw_lines: Vec<BNDisassemblyTextLine> =
-            lines.into_iter().map(|l| l.into_raw()).collect();
+        let mut raw_lines: Vec<BNDisassemblyTextLine> = lines
+            .into_iter()
+            .map(DisassemblyTextLine::into_raw)
+            .collect();
         unsafe {
             BNSetFlowGraphNodeLines(self.handle, raw_lines.as_mut_ptr(), raw_lines.len());
             for raw_line in raw_lines {

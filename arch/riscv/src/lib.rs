@@ -264,7 +264,7 @@ impl<D: 'static + RiscVDisassembler> PartialEq for Register<D> {
 
 impl<D: 'static + RiscVDisassembler> Eq for Register<D> {}
 
-impl<D: 'static + RiscVDisassembler + Send + Sync> fmt::Debug for Register<D> {
+impl<D: 'static + RiscVDisassembler> fmt::Debug for Register<D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(self.name().as_ref())
     }

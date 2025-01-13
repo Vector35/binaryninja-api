@@ -30,9 +30,8 @@ fn empty_view() -> Ref<BinaryView> {
 fn test_types(_session: &Session, platform: &Platform) {
     let type_container = platform.type_container();
     let types = type_container.types().unwrap();
-    let types_len = types.len();
     // windows-x86_64 has a few thousand, not zero.
-    assert_ne!(types_len, 0);
+    assert_eq!(types.len(), platform.types().len());
 }
 
 #[rstest]
@@ -80,6 +79,7 @@ fn test_immutable_container(_session: &Session, platform: &Platform) {
         !plat_type_container.is_mutable(),
         "Platform should NOT be mutable!"
     );
+    assert_ne!(platform.types().len(), 0);
     let type_ids = plat_type_container.type_ids().unwrap();
     let first_type_id = type_ids.iter().next().unwrap();
     // Platform type containers are immutable so these should be false!
@@ -111,6 +111,12 @@ fn test_parse_type(_session: &Session, platform: &Platform) {
 
 #[rstest]
 fn test_container_lifetime(_session: &Session, platform: &Platform, empty_view: &BinaryView) {
+    let plat_type_container_dropped = platform.type_container();
+    let view_type_container_dropped = empty_view.type_container();
+    let _plat_types_dropped = plat_type_container_dropped.types();
+    let _view_types_dropped = view_type_container_dropped.types();
+    drop(plat_type_container_dropped);
+    drop(view_type_container_dropped);
     let plat_type_container_0 = platform.type_container();
     let view_type_container_0 = empty_view.type_container();
     let test_type = Type::int(4, true);

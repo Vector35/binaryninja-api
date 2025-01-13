@@ -132,11 +132,11 @@ fn do_structure_parse<R: ReaderType>(
 
     // Create structure with proper size
     let size = get_size_as_u64(entry).unwrap_or(0);
-    let structure_builder: StructureBuilder = StructureBuilder::new();
+    let mut structure_builder = StructureBuilder::new();
     structure_builder
-        .set_packed(true)
-        .set_width(size)
-        .set_structure_type(structure_type);
+        .packed(true)
+        .width(size)
+        .structure_type(structure_type);
 
     // This reference type will be used by any children to grab while we're still building this type
     //  it will also be how any other types refer to this struct

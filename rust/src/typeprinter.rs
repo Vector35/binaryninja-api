@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::binaryview::BinaryView;
 use crate::disassembly::InstructionTextToken;
 use crate::platform::Platform;
@@ -81,7 +83,7 @@ impl CoreTypePrinter {
     ) -> Option<Array<InstructionTextToken>> {
         let mut result_count = 0;
         let mut result = std::ptr::null_mut();
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         let success = unsafe {
             BNGetTypePrinterTypeTokens(
                 self.handle.as_ptr(),
@@ -94,6 +96,7 @@ impl CoreTypePrinter {
                 &mut result_count,
             )
         };
+        QualifiedName::free_raw(raw_name);
         success.then(|| {
             assert!(!result.is_null());
             unsafe { Array::new(result, result_count, ()) }
@@ -164,7 +167,7 @@ impl CoreTypePrinter {
         escaping: TokenEscapingType,
     ) -> Option<BnString> {
         let mut result = std::ptr::null_mut();
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         let success = unsafe {
             BNGetTypePrinterTypeString(
                 self.handle.as_ptr(),
@@ -175,6 +178,7 @@ impl CoreTypePrinter {
                 &mut result,
             )
         };
+        QualifiedName::free_raw(raw_name);
         success.then(|| unsafe {
             assert!(!result.is_null());
             BnString::from_raw(result)
@@ -236,7 +240,7 @@ impl CoreTypePrinter {
     ) -> Option<Array<TypeDefinitionLine>> {
         let mut result_count = 0;
         let mut result = std::ptr::null_mut();
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         let success = unsafe {
             BNGetTypePrinterTypeLines(
                 self.handle.as_ptr(),
@@ -250,6 +254,7 @@ impl CoreTypePrinter {
                 &mut result_count,
             )
         };
+        QualifiedName::free_raw(raw_name);
         success.then(|| {
             assert!(!result.is_null());
             unsafe { Array::<TypeDefinitionLine>::new(result, result_count, ()) }
@@ -277,7 +282,11 @@ impl CoreTypePrinter {
         let (mut raw_names, mut raw_types): (Vec<BNQualifiedName>, Vec<_>) = types
             .map(|t| {
                 let t = t.into();
-                (BNQualifiedName::from(t.name), t.ty.handle)
+                // Leak both to the core and then free afterwards.
+                (
+                    QualifiedName::into_raw(t.name),
+                    unsafe { Ref::into_raw(t.ty) }.handle,
+                )
             })
             .unzip();
         let success = unsafe {
@@ -292,6 +301,12 @@ impl CoreTypePrinter {
                 &mut result,
             )
         };
+        for raw_name in raw_names {
+            QualifiedName::free_raw(raw_name);
+        }
+        for raw_type in raw_types {
+            let _ = unsafe { Type::ref_from_raw(raw_type) };
+        }
         success.then(|| unsafe {
             assert!(!result.is_null());
             BnString::from_raw(result)
@@ -306,15 +321,20 @@ impl CoreTypePrinter {
         escaping: TokenEscapingType,
     ) -> Option<BnString>
     where
-        T: Iterator<Item = I>,
+        T: IntoIterator<Item = I>,
         I: Into<QualifiedNameAndType>,
     {
         let mut result = std::ptr::null_mut();
         // TODO: I dislike how this iter unzip looks like... but its how to avoid allocating again...
         let (mut raw_names, mut raw_types): (Vec<BNQualifiedName>, Vec<_>) = types
+            .into_iter()
             .map(|t| {
                 let t = t.into();
-                (BNQualifiedName::from(t.name), t.ty.handle)
+                // Leak both to the core and then free afterwards.
+                (
+                    QualifiedName::into_raw(t.name),
+                    unsafe { Ref::into_raw(t.ty) }.handle,
+                )
             })
             .unzip();
         let success = unsafe {
@@ -329,6 +349,12 @@ impl CoreTypePrinter {
                 &mut result,
             )
         };
+        for raw_name in raw_names {
+            QualifiedName::free_raw(raw_name);
+        }
+        for raw_type in raw_types {
+            let _ = unsafe { Type::ref_from_raw(raw_type) };
+        }
         success.then(|| unsafe {
             assert!(!result.is_null());
             BnString::from_raw(result)
@@ -519,45 +545,15 @@ pub struct TypeDefinitionLine {
 }
 
 impl TypeDefinitionLine {
-    pub(crate) unsafe fn free_raw(raw: BNTypeDefinitionLine) {
-        if !raw.tokens.is_null() {
-            let tokens = std::ptr::slice_from_raw_parts_mut(raw.tokens, raw.count);
-            // SAFETY: raw.tokens must have been allocated by rust.
-            let boxed_tokens = Box::from_raw(tokens);
-            for token in boxed_tokens {
-                InstructionTextToken::free_raw(token);
-            }
-        }
-        if !raw.type_.is_null() {
-            // SAFETY: raw.type_ must have been ref incremented in conjunction with this free
-            BNFreeType(raw.type_);
-        }
-        if !raw.parentType.is_null() {
-            // SAFETY: raw.parentType must have been ref incremented in conjunction with this free
-            BNFreeType(raw.parentType);
-        }
-        if !raw.rootType.is_null() {
-            // SAFETY: raw.rootType must have been ref incremented in conjunction with this free
-            BNFreeType(raw.rootType);
-        }
-        if !raw.rootTypeName.is_null() {
-            // SAFETY: raw.rootTypeName must have been ref incremented in conjunction with this free
-            BNFreeString(raw.rootTypeName);
-        }
-        if !raw.baseType.is_null() {
-            // SAFETY: raw.baseType must have been ref incremented in conjunction with this free
-            BNFreeNamedTypeReference(raw.baseType);
-        }
-    }
-}
-
-impl From<&BNTypeDefinitionLine> for TypeDefinitionLine {
-    fn from(value: &BNTypeDefinitionLine) -> Self {
+    pub(crate) fn from_raw(value: &BNTypeDefinitionLine) -> Self {
         Self {
             line_type: value.lineType,
             tokens: {
                 let raw_tokens = unsafe { std::slice::from_raw_parts(value.tokens, value.count) };
-                raw_tokens.iter().map(Into::into).collect()
+                raw_tokens
+                    .iter()
+                    .map(InstructionTextToken::from_raw)
+                    .collect()
             },
             ty: unsafe { Type::from_raw(value.type_).to_owned() },
             parent_type: match value.parentType.is_null() {
@@ -581,43 +577,83 @@ impl From<&BNTypeDefinitionLine> for TypeDefinitionLine {
             field_index: value.fieldIndex,
         }
     }
-}
 
-impl From<TypeDefinitionLine> for BNTypeDefinitionLine {
-    fn from(value: TypeDefinitionLine) -> Self {
+    /// The raw value must have been allocated by rust. See [`Self::free_owned_raw`] for details.
+    pub(crate) fn from_owned_raw(value: BNTypeDefinitionLine) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_owned_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNTypeDefinitionLine {
         // NOTE: This is leaking [BNInstructionTextToken::text], [BNInstructionTextToken::typeNames].
-        let tokens: Box<[BNInstructionTextToken]> =
-            value.tokens.into_iter().map(Into::into).collect();
-        Self {
+        let tokens: Box<[BNInstructionTextToken]> = value
+            .tokens
+            .into_iter()
+            .map(InstructionTextToken::into_raw)
+            .collect();
+        BNTypeDefinitionLine {
             lineType: value.line_type,
             count: tokens.len(),
             // NOTE: This is leaking tokens. Must free with `cb_free_lines`.
             tokens: Box::leak(tokens).as_mut_ptr(),
             // NOTE: This is leaking a ref to ty. Must free with `cb_free_lines`.
-            type_: unsafe { BNNewTypeReference(value.ty.handle) },
+            type_: unsafe { Ref::into_raw(value.ty) }.handle,
             // NOTE: This is leaking a ref to parent_type. Must free with `cb_free_lines`.
             parentType: value
                 .parent_type
-                .map(|t| unsafe { BNNewTypeReference(t.handle) })
+                .map(|t| unsafe { Ref::into_raw(t) }.handle)
                 .unwrap_or(std::ptr::null_mut()),
             // NOTE: This is leaking a ref to root_type. Must free with `cb_free_lines`.
             rootType: value
                 .root_type
-                .map(|t| unsafe { BNNewTypeReference(t.handle) })
+                .map(|t| unsafe { Ref::into_raw(t) }.handle)
                 .unwrap_or(std::ptr::null_mut()),
             // NOTE: This is leaking root_type_name. Must free with `cb_free_lines`.
             rootTypeName: value
                 .root_type_name
-                .map(|s| BnString::new(s).into_raw())
+                .map(|s| BnString::into_raw(BnString::new(s)))
                 .unwrap_or(std::ptr::null_mut()),
             // NOTE: This is leaking a ref to base_type. Must free with `cb_free_lines`.
             baseType: value
                 .base_type
-                .map(|t| unsafe { BNNewNamedTypeReference(t.handle) })
+                .map(|t| unsafe { Ref::into_raw(t) }.handle)
                 .unwrap_or(std::ptr::null_mut()),
             baseOffset: value.base_offset,
             offset: value.offset,
             fieldIndex: value.field_index,
+        }
+    }
+
+    /// This is unique from the typical `from_raw` as the allocation of InstructionTextToken requires it be from rust, hence the "owned" free.
+    pub(crate) fn free_owned_raw(raw: BNTypeDefinitionLine) {
+        if !raw.tokens.is_null() {
+            let tokens = std::ptr::slice_from_raw_parts_mut(raw.tokens, raw.count);
+            // SAFETY: raw.tokens must have been allocated by rust.
+            let boxed_tokens = unsafe { Box::from_raw(tokens) };
+            for token in boxed_tokens {
+                InstructionTextToken::free_raw(token);
+            }
+        }
+        if !raw.type_.is_null() {
+            // SAFETY: raw.type_ must have been ref incremented in conjunction with this free
+            let _ = unsafe { Type::ref_from_raw(raw.type_) };
+        }
+        if !raw.parentType.is_null() {
+            // SAFETY: raw.parentType must have been ref incremented in conjunction with this free
+            let _ = unsafe { Type::ref_from_raw(raw.parentType) };
+        }
+        if !raw.rootType.is_null() {
+            // SAFETY: raw.rootType must have been ref incremented in conjunction with this free
+            let _ = unsafe { Type::ref_from_raw(raw.rootType) };
+        }
+        if !raw.rootTypeName.is_null() {
+            // SAFETY: raw.rootTypeName must have been ref incremented in conjunction with this free
+            let _ = unsafe { BnString::from_raw(raw.rootTypeName) };
+        }
+        if !raw.baseType.is_null() {
+            // SAFETY: raw.baseType must have been ref incremented in conjunction with this free
+            let _ = unsafe { NamedTypeReference::ref_from_raw(raw.baseType) };
         }
     }
 }
@@ -634,7 +670,7 @@ unsafe impl CoreArrayProviderInner for TypeDefinitionLine {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::from(raw)
+        Self::from_raw(raw)
     }
 }
 
@@ -649,7 +685,8 @@ unsafe extern "C" fn cb_get_type_tokens<T: TypePrinter>(
     result_count: *mut usize,
 ) -> bool {
     let ctxt: &mut T = &mut *(ctxt as *mut T);
-    let qualified_name = QualifiedName::from(*name);
+    // NOTE: The caller is responsible for freeing name.
+    let qualified_name = QualifiedName::from_raw(&*name);
     let inner_result = ctxt.get_type_tokens(
         unsafe { Type::ref_from_raw(type_) },
         match platform.is_null() {
@@ -661,8 +698,10 @@ unsafe extern "C" fn cb_get_type_tokens<T: TypePrinter>(
         escaping,
     );
     if let Some(inner_result) = inner_result {
-        let raw_text_tokens: Box<[BNInstructionTextToken]> =
-            inner_result.into_iter().map(Into::into).collect();
+        let raw_text_tokens: Box<[BNInstructionTextToken]> = inner_result
+            .into_iter()
+            .map(InstructionTextToken::into_raw)
+            .collect();
         *result_count = raw_text_tokens.len();
         // NOTE: Dropped by the cb_free_tokens
         *result = Box::leak(raw_text_tokens).as_mut_ptr();
@@ -699,8 +738,10 @@ unsafe extern "C" fn cb_get_type_tokens_before_name<T: TypePrinter>(
         escaping,
     );
     if let Some(inner_result) = inner_result {
-        let raw_text_tokens: Box<[BNInstructionTextToken]> =
-            inner_result.into_iter().map(Into::into).collect();
+        let raw_text_tokens: Box<[BNInstructionTextToken]> = inner_result
+            .into_iter()
+            .map(InstructionTextToken::into_raw)
+            .collect();
         *result_count = raw_text_tokens.len();
         // NOTE: Dropped by the cb_free_tokens
         *result = Box::leak(raw_text_tokens).as_mut_ptr();
@@ -737,8 +778,10 @@ unsafe extern "C" fn cb_get_type_tokens_after_name<T: TypePrinter>(
         escaping,
     );
     if let Some(inner_result) = inner_result {
-        let raw_text_tokens: Box<[BNInstructionTextToken]> =
-            inner_result.into_iter().map(Into::into).collect();
+        let raw_text_tokens: Box<[BNInstructionTextToken]> = inner_result
+            .into_iter()
+            .map(InstructionTextToken::into_raw)
+            .collect();
         *result_count = raw_text_tokens.len();
         // NOTE: Dropped by the cb_free_tokens
         *result = Box::leak(raw_text_tokens).as_mut_ptr();
@@ -759,7 +802,8 @@ unsafe extern "C" fn cb_get_type_string<T: TypePrinter>(
     result: *mut *mut ::std::os::raw::c_char,
 ) -> bool {
     let ctxt: &mut T = &mut *(ctxt as *mut T);
-    let qualified_name = QualifiedName::from(*name);
+    // NOTE: The caller is responsible for freeing name.
+    let qualified_name = QualifiedName::from_raw(&*name);
     let inner_result = ctxt.get_type_string(
         Type::ref_from_raw(type_),
         match platform.is_null() {
@@ -770,9 +814,9 @@ unsafe extern "C" fn cb_get_type_string<T: TypePrinter>(
         escaping,
     );
     if let Some(inner_result) = inner_result {
-        // NOTE: Dropped by `cb_free_string`
         let raw_string = BnString::new(inner_result);
-        *result = raw_string.into_raw();
+        // NOTE: Dropped by `cb_free_string`
+        *result = BnString::into_raw(raw_string);
         true
     } else {
         *result = std::ptr::null_mut();
@@ -799,7 +843,7 @@ unsafe extern "C" fn cb_get_type_string_before_name<T: TypePrinter>(
     if let Some(inner_result) = inner_result {
         // NOTE: Dropped by `cb_free_string`
         let raw_string = BnString::new(inner_result);
-        *result = raw_string.into_raw();
+        *result = BnString::into_raw(raw_string);
         true
     } else {
         *result = std::ptr::null_mut();
@@ -824,9 +868,9 @@ unsafe extern "C" fn cb_get_type_string_after_name<T: TypePrinter>(
         escaping,
     );
     if let Some(inner_result) = inner_result {
-        // NOTE: Dropped by `cb_free_string`
         let raw_string = BnString::new(inner_result);
-        *result = raw_string.into_raw();
+        // NOTE: Dropped by `cb_free_string`
+        *result = BnString::into_raw(raw_string);
         true
     } else {
         *result = std::ptr::null_mut();
@@ -846,7 +890,8 @@ unsafe extern "C" fn cb_get_type_lines<T: TypePrinter>(
     result_count: *mut usize,
 ) -> bool {
     let ctxt: &mut T = &mut *(ctxt as *mut T);
-    let qualified_name = QualifiedName::from(*name);
+    // NOTE: The caller is responsible for freeing name.
+    let qualified_name = QualifiedName::from_raw(&*name);
     let types_ptr = NonNull::new(types).unwrap();
     let types = TypeContainer::from_raw(types_ptr);
     let inner_result = ctxt.get_type_lines(
@@ -858,7 +903,10 @@ unsafe extern "C" fn cb_get_type_lines<T: TypePrinter>(
         escaping,
     );
     if let Some(inner_result) = inner_result {
-        let boxed_raw_lines: Box<[_]> = inner_result.into_iter().map(Into::into).collect();
+        let boxed_raw_lines: Box<[_]> = inner_result
+            .into_iter()
+            .map(TypeDefinitionLine::into_raw)
+            .collect();
         *result_count = boxed_raw_lines.len();
         // NOTE: Dropped by `cb_free_lines`
         *result = Box::leak(boxed_raw_lines).as_mut_ptr();
@@ -882,8 +930,10 @@ unsafe extern "C" fn cb_print_all_types<T: TypePrinter>(
 ) -> bool {
     let ctxt: &mut T = &mut *(ctxt as *mut T);
     let raw_names = std::slice::from_raw_parts(names, type_count);
-    let names: Vec<_> = raw_names.iter().map(Into::into).collect();
+    // NOTE: The caller is responsible for freeing raw_names.
+    let names: Vec<_> = raw_names.into_iter().map(QualifiedName::from_raw).collect();
     let raw_types = std::slice::from_raw_parts(types, type_count);
+    // NOTE: The caller is responsible for freeing raw_types.
     let types: Vec<_> = raw_types.iter().map(|&t| Type::ref_from_raw(t)).collect();
     let inner_result = ctxt.print_all_types(
         names,
@@ -893,9 +943,9 @@ unsafe extern "C" fn cb_print_all_types<T: TypePrinter>(
         escaping,
     );
     if let Some(inner_result) = inner_result {
-        // NOTE: Dropped by `cb_free_string`
         let raw_string = BnString::new(inner_result);
-        *result = raw_string.into_raw();
+        // NOTE: Dropped by `cb_free_string`
+        *result = BnString::into_raw(raw_string);
         true
     } else {
         *result = std::ptr::null_mut();
@@ -927,8 +977,9 @@ unsafe extern "C" fn cb_free_lines(
     count: usize,
 ) {
     let lines = std::ptr::slice_from_raw_parts_mut(lines, count);
+    // SAFETY: lines must have been allocated by rust.
     let boxes_lines = Box::from_raw(lines);
     for line in boxes_lines {
-        TypeDefinitionLine::free_raw(line);
+        TypeDefinitionLine::free_owned_raw(line);
     }
 }

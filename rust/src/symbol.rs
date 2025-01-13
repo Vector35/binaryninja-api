@@ -233,7 +233,10 @@ impl Symbol {
     /// ```no_run
     /// # use binaryninja::symbol::Symbol;
     /// # use binaryninja::symbol::SymbolType;
-    /// Symbol::builder(SymbolType::Data, "hello", 0x1337).short_name("hello").full_name("hello").create();
+    /// Symbol::builder(SymbolType::Data, "hello", 0x1337)
+    ///     .short_name("hello")
+    ///     .full_name("hello")
+    ///     .create();
     /// ```
     pub fn builder(ty: SymbolType, raw_name: &str, addr: u64) -> SymbolBuilder {
         SymbolBuilder::new(ty, raw_name, addr)

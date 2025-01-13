@@ -1,6 +1,5 @@
 use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void, CStr};
-use std::mem::ManuallyDrop;
 use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 
@@ -17,39 +16,6 @@ use crate::types::{QualifiedName, QualifiedNameAndType, QualifiedNameTypeAndId, 
 #[repr(transparent)]
 pub struct TypeArchive {
     handle: NonNull<BNTypeArchive>,
-}
-
-impl Drop for TypeArchive {
-    fn drop(&mut self) {
-        unsafe { BNFreeTypeArchiveReference(self.as_raw()) }
-    }
-}
-
-impl Clone for TypeArchive {
-    fn clone(&self) -> Self {
-        unsafe { Self::from_raw(NonNull::new(BNNewTypeArchiveReference(self.as_raw())).unwrap()) }
-    }
-}
-
-impl PartialEq for TypeArchive {
-    fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id()
-    }
-}
-impl Eq for TypeArchive {}
-
-impl core::hash::Hash for TypeArchive {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        (self.handle.as_ptr() as usize).hash(state);
-    }
-}
-
-impl core::fmt::Debug for TypeArchive {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("TypeArchive")
-            .field("path", &self.path())
-            .finish()
-    }
 }
 
 impl TypeArchive {
@@ -193,48 +159,53 @@ impl TypeArchive {
         (!result.is_null()).then(|| unsafe { Array::new(result, count, ()) })
     }
 
-    /// Add named types to the type archive. Type must have all dependant named types added
+    /// Add a named type to the type archive. Type must have all dependant named types added
     /// prior to being added, or this function will fail.
     /// If the type already exists, it will be overwritten.
     ///
-    /// * `name` - Name of new type
-    /// * `type` - Definition of new type
-    pub fn add_type(&self, name: &QualifiedNameAndType) {
-        self.add_types(core::slice::from_ref(name))
+    /// * `named_type` - Named type to add
+    pub fn add_type(&self, named_type: QualifiedNameAndType) -> bool {
+        self.add_types(vec![named_type])
     }
 
     /// Add named types to the type archive. Types must have all dependant named
     /// types prior to being added, or included in the list, or this function will fail.
     /// Types already existing with any added names will be overwritten.
     ///
-    /// * `new_types` - Names and definitions of new types
-    pub fn add_types(&self, new_types: &[QualifiedNameAndType]) {
-        // SAFETY BNQualifiedNameAndType and QualifiedNameAndType are transparent
-        let new_types_raw: &[BNQualifiedNameAndType] = unsafe { std::mem::transmute(new_types) };
+    /// * `named_types` - Names and definitions of new types
+    pub fn add_types(&self, named_types: Vec<QualifiedNameAndType>) -> bool {
+        let new_types_raw: Vec<_> = named_types
+            .into_iter()
+            .map(QualifiedNameAndType::into_raw)
+            .collect();
         let result = unsafe {
-            BNAddTypeArchiveTypes(self.as_raw(), new_types_raw.as_ptr(), new_types.len())
+            BNAddTypeArchiveTypes(self.as_raw(), new_types_raw.as_ptr(), new_types_raw.len())
         };
-        assert!(result);
+        for new_type in new_types_raw {
+            QualifiedNameAndType::free_raw(new_type);
+        }
+        result
     }
 
-    /// Change the name of an existing type in the type archive.
+    /// Change the name of an existing type in the type archive. Returns false if failed.
     ///
     /// * `old_name` - Old type name in archive
     /// * `new_name` - New type name
-    pub fn rename_type(&self, old_name: &QualifiedName, new_name: &QualifiedNameAndType) {
-        let id = self
-            .get_type_id(old_name, self.current_snapshot_id())
-            .unwrap();
-        self.rename_type_by_id(id, &new_name.name)
+    pub fn rename_type(&self, old_name: QualifiedName, new_name: QualifiedName) -> bool {
+        if let Some(id) = self.get_type_id(old_name, self.current_snapshot_id()) {
+            self.rename_type_by_id(id, new_name)
+        } else {
+            false
+        }
     }
 
-    /// Change the name of an existing type in the type archive.
+    /// Change the name of an existing type in the type archive. Returns false if failed.
     ///
     /// * `id` - Old id of type in archive
     /// * `new_name` - New type name
-    pub fn rename_type_by_id<S: BnStrCompatible>(&self, id: S, new_name: &QualifiedName) {
+    pub fn rename_type_by_id<S: BnStrCompatible>(&self, id: S, new_name: QualifiedName) -> bool {
         let id = id.into_bytes_with_nul();
-        let raw_name = BNQualifiedName::from(new_name);
+        let raw_name = QualifiedName::into_raw(new_name);
         let result = unsafe {
             BNRenameTypeArchiveType(
                 self.as_raw(),
@@ -242,25 +213,26 @@ impl TypeArchive {
                 &raw_name,
             )
         };
-        assert!(result);
+        QualifiedName::free_raw(raw_name);
+        result
     }
 
     /// Delete an existing type in the type archive.
-    pub fn delete_type(&self, name: &QualifiedName) {
-        let id = self.get_type_id(name, self.current_snapshot_id());
-        let Some(id) = id else {
-            panic!("Unknown type {}", name)
-        };
-        self.delete_type_by_id(id);
+    pub fn delete_type(&self, name: QualifiedName) -> bool {
+        if let Some(type_id) = self.get_type_id(name, self.current_snapshot_id()) {
+            self.delete_type_by_id(type_id)
+        } else {
+            false
+        }
     }
 
     /// Delete an existing type in the type archive.
-    pub fn delete_type_by_id<S: BnStrCompatible>(&self, id: S) {
+    pub fn delete_type_by_id<S: BnStrCompatible>(&self, id: S) -> bool {
         let id = id.into_bytes_with_nul();
         let result = unsafe {
             BNDeleteTypeArchiveType(self.as_raw(), id.as_ref().as_ptr() as *const c_char)
         };
-        assert!(result);
+        result
     }
 
     /// Retrieve a stored type in the archive
@@ -269,11 +241,11 @@ impl TypeArchive {
     /// * `snapshot` - Snapshot id to search for types
     pub fn get_type_by_name<S: BnStrCompatible>(
         &self,
-        name: &QualifiedName,
+        name: QualifiedName,
         snapshot: S,
     ) -> Option<Ref<Type>> {
         let snapshot = snapshot.into_bytes_with_nul();
-        let raw_name = BNQualifiedName::from(name);
+        let raw_name = QualifiedName::into_raw(name);
         let result = unsafe {
             BNGetTypeArchiveTypeByName(
                 self.as_raw(),
@@ -281,6 +253,7 @@ impl TypeArchive {
                 snapshot.as_ref().as_ptr() as *const c_char,
             )
         };
+        QualifiedName::free_raw(raw_name);
         (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
     }
 
@@ -323,7 +296,7 @@ impl TypeArchive {
                 snapshot.as_ref().as_ptr() as *const c_char,
             )
         };
-        QualifiedName::from(result)
+        QualifiedName::from_owned_raw(result)
     }
 
     /// Retrieve a type's id by its name
@@ -332,11 +305,11 @@ impl TypeArchive {
     /// * `snapshot` - Snapshot id to search for types
     pub fn get_type_id<S: BnStrCompatible>(
         &self,
-        name: &QualifiedName,
+        name: QualifiedName,
         snapshot: S,
     ) -> Option<BnString> {
         let snapshot = snapshot.into_bytes_with_nul();
-        let raw_name = BNQualifiedName::from(name);
+        let raw_name = QualifiedName::into_raw(name);
         let result = unsafe {
             BNGetTypeArchiveTypeId(
                 self.as_raw(),
@@ -344,6 +317,7 @@ impl TypeArchive {
                 snapshot.as_ref().as_ptr() as *const c_char,
             )
         };
+        QualifiedName::free_raw(raw_name);
         (!result.is_null()).then(|| unsafe { BnString::from_raw(result) })
     }
 
@@ -755,6 +729,42 @@ impl TypeArchive {
     }
 }
 
+impl Drop for TypeArchive {
+    fn drop(&mut self) {
+        unsafe { BNFreeTypeArchiveReference(self.as_raw()) }
+    }
+}
+
+impl Clone for TypeArchive {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(NonNull::new(BNNewTypeArchiveReference(self.as_raw())).unwrap()) }
+    }
+}
+
+impl PartialEq for TypeArchive {
+    fn eq(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+}
+impl Eq for TypeArchive {}
+
+impl core::hash::Hash for TypeArchive {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        (self.handle.as_ptr() as usize).hash(state);
+    }
+}
+
+impl core::fmt::Debug for TypeArchive {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TypeArchive")
+            .field("id", &self.id())
+            .field("path", &self.path())
+            .field("current_snapshot_id", &self.current_snapshot_id())
+            .field("platform", &self.platform())
+            .finish()
+    }
+}
+
 impl CoreArrayProvider for TypeArchive {
     type Raw = *mut BNTypeArchive;
     type Context = ();
@@ -929,8 +939,10 @@ unsafe extern "C" fn cb_type_renamed<T: TypeArchiveNotificationCallback>(
     new_name: *const BNQualifiedName,
 ) {
     let ctxt: &mut T = &mut *(ctxt as *mut T);
-    let old_name = ManuallyDrop::new(QualifiedName::from(*old_name));
-    let new_name = ManuallyDrop::new(QualifiedName::from(*new_name));
+    // `old_name` is freed by the caller
+    let old_name = QualifiedName::from_raw(&*old_name);
+    // `new_name` is freed by the caller
+    let new_name = QualifiedName::from_raw(&*new_name);
     ctxt.type_renamed(
         unsafe { TypeArchive::ref_from_raw(&archive) },
         unsafe { CStr::from_ptr(id).to_string_lossy().as_ref() },

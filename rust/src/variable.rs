@@ -1,16 +1,18 @@
+#![allow(unused)]
+
 use crate::confidence::Conf;
 use crate::function::{Function, Location};
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::string::{raw_to_string, BnString};
 use crate::types::Type;
 use binaryninjacore_sys::{
-    BNDataVariable, BNDataVariableAndName, BNFreeDataVariables, BNFreeILInstructionList,
-    BNFreeIndirectBranchList, BNFreeMergedVariableList, BNFreeStackVariableReferenceList,
-    BNFreeUserVariableValues, BNFreeVariableList, BNFreeVariableNameAndTypeList,
-    BNFromVariableIdentifier, BNIndirectBranchInfo, BNLookupTableEntry, BNMergedVariable,
-    BNPossibleValueSet, BNRegisterValue, BNRegisterValueType, BNStackVariableReference,
-    BNToVariableIdentifier, BNUserVariableValue, BNValueRange, BNVariable, BNVariableNameAndType,
-    BNVariableSourceType,
+    BNDataVariable, BNDataVariableAndName, BNFreeDataVariableAndName, BNFreeDataVariables,
+    BNFreeILInstructionList, BNFreeIndirectBranchList, BNFreeMergedVariableList,
+    BNFreePossibleValueSet, BNFreeStackVariableReferenceList, BNFreeUserVariableValues,
+    BNFreeVariableList, BNFreeVariableNameAndTypeList, BNFromVariableIdentifier,
+    BNIndirectBranchInfo, BNLookupTableEntry, BNMergedVariable, BNPossibleValueSet,
+    BNRegisterValue, BNRegisterValueType, BNStackVariableReference, BNToVariableIdentifier,
+    BNUserVariableValue, BNValueRange, BNVariable, BNVariableNameAndType, BNVariableSourceType,
 };
 use std::collections::HashSet;
 
@@ -25,30 +27,7 @@ pub struct DataVariable {
 }
 
 impl DataVariable {
-    pub fn new(address: u64, ty: Conf<Ref<Type>>, auto_discovered: bool) -> Self {
-        Self {
-            address,
-            ty,
-            auto_discovered,
-        }
-    }
-}
-
-impl From<BNDataVariable> for DataVariable {
-    fn from(value: BNDataVariable) -> Self {
-        Self {
-            address: value.address,
-            ty: Conf::new(
-                unsafe { Type::ref_from_raw(value.type_) },
-                value.typeConfidence,
-            ),
-            auto_discovered: value.autoDiscovered,
-        }
-    }
-}
-
-impl From<&BNDataVariable> for DataVariable {
-    fn from(value: &BNDataVariable) -> Self {
+    pub(crate) fn from_raw(value: &BNDataVariable) -> Self {
         Self {
             address: value.address,
             ty: Conf::new(
@@ -56,6 +35,42 @@ impl From<&BNDataVariable> for DataVariable {
                 value.typeConfidence,
             ),
             auto_discovered: value.autoDiscovered,
+        }
+    }
+
+    pub(crate) fn from_owned_raw(value: BNDataVariable) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNDataVariable {
+        BNDataVariable {
+            address: value.address,
+            type_: unsafe { Ref::into_raw(value.ty.contents) }.handle,
+            autoDiscovered: value.auto_discovered,
+            typeConfidence: value.ty.confidence,
+        }
+    }
+
+    pub(crate) fn into_owned_raw(value: &Self) -> BNDataVariable {
+        BNDataVariable {
+            address: value.address,
+            type_: value.ty.contents.handle,
+            autoDiscovered: value.auto_discovered,
+            typeConfidence: value.ty.confidence,
+        }
+    }
+
+    pub(crate) fn free_raw(value: BNDataVariable) {
+        let _ = unsafe { Type::ref_from_raw(value.type_) };
+    }
+
+    pub fn new(address: u64, ty: Conf<Ref<Type>>, auto_discovered: bool) -> Self {
+        Self {
+            address,
+            ty,
+            auto_discovered,
         }
     }
 }
@@ -72,7 +87,7 @@ unsafe impl CoreArrayProviderInner for DataVariable {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        raw.into()
+        DataVariable::from_raw(raw)
     }
 }
 
@@ -85,32 +100,7 @@ pub struct NamedDataVariableWithType {
 }
 
 impl NamedDataVariableWithType {
-    pub fn new(address: u64, ty: Conf<Ref<Type>>, name: String, auto_discovered: bool) -> Self {
-        Self {
-            address,
-            ty,
-            name,
-            auto_discovered,
-        }
-    }
-}
-
-impl From<BNDataVariableAndName> for NamedDataVariableWithType {
-    fn from(value: BNDataVariableAndName) -> Self {
-        Self {
-            address: value.address,
-            ty: Conf::new(
-                unsafe { Type::ref_from_raw(value.type_) },
-                value.typeConfidence,
-            ),
-            name: unsafe { BnString::from_raw(value.name) }.to_string(),
-            auto_discovered: value.autoDiscovered,
-        }
-    }
-}
-
-impl From<&BNDataVariableAndName> for NamedDataVariableWithType {
-    fn from(value: &BNDataVariableAndName) -> Self {
+    pub(crate) fn from_raw(value: &BNDataVariableAndName) -> Self {
         Self {
             address: value.address,
             ty: Conf::new(
@@ -122,17 +112,45 @@ impl From<&BNDataVariableAndName> for NamedDataVariableWithType {
             auto_discovered: value.autoDiscovered,
         }
     }
-}
 
-impl From<NamedDataVariableWithType> for BNDataVariableAndName {
-    fn from(value: NamedDataVariableWithType) -> Self {
+    pub(crate) fn from_owned_raw(value: BNDataVariableAndName) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) unsafe fn from_ref_raw(value: *mut BNDataVariableAndName) -> Self {
+        let owned = Self::from_raw(&*value);
+        Self::free_ref_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNDataVariableAndName {
         let bn_name = BnString::new(value.name);
-        Self {
+        BNDataVariableAndName {
             address: value.address,
-            type_: value.ty.contents.handle,
-            name: bn_name.into_raw(),
+            type_: unsafe { Ref::into_raw(value.ty.contents) }.handle,
+            name: BnString::into_raw(bn_name),
             autoDiscovered: value.auto_discovered,
             typeConfidence: value.ty.confidence,
+        }
+    }
+
+    pub(crate) fn free_ref_raw(value: *mut BNDataVariableAndName) {
+        unsafe { BNFreeDataVariableAndName(value) }
+    }
+
+    pub(crate) fn free_raw(value: BNDataVariableAndName) {
+        let _ = unsafe { Type::ref_from_raw(value.type_) };
+        let _ = unsafe { BnString::from_raw(value.name) };
+    }
+
+    pub fn new(address: u64, ty: Conf<Ref<Type>>, name: String, auto_discovered: bool) -> Self {
+        Self {
+            address,
+            ty,
+            name,
+            auto_discovered,
         }
     }
 }
@@ -146,36 +164,11 @@ pub struct NamedVariableWithType {
 }
 
 impl NamedVariableWithType {
-    pub fn new(variable: Variable, ty: Conf<Ref<Type>>, name: String, auto_defined: bool) -> Self {
-        Self {
-            variable,
-            ty,
-            name,
-            auto_defined,
-        }
-    }
-}
-
-impl From<BNVariableNameAndType> for NamedVariableWithType {
-    fn from(value: BNVariableNameAndType) -> Self {
+    pub(crate) fn from_raw(value: &BNVariableNameAndType) -> Self {
         Self {
             variable: value.var.into(),
             ty: Conf::new(
-                unsafe { Type::ref_from_raw(value.type_) },
-                value.typeConfidence,
-            ),
-            name: unsafe { BnString::from_raw(value.name) }.to_string(),
-            auto_defined: value.autoDefined,
-        }
-    }
-}
-
-impl From<&BNVariableNameAndType> for NamedVariableWithType {
-    fn from(value: &BNVariableNameAndType) -> Self {
-        Self {
-            variable: value.var.into(),
-            ty: Conf::new(
-                unsafe { Type::from_raw(value.type_).to_owned() },
+                unsafe { Type::from_raw(value.type_) }.to_owned(),
                 value.typeConfidence,
             ),
             // TODO: I dislike using this function here.
@@ -183,17 +176,35 @@ impl From<&BNVariableNameAndType> for NamedVariableWithType {
             auto_defined: value.autoDefined,
         }
     }
-}
 
-impl From<NamedVariableWithType> for BNVariableNameAndType {
-    fn from(value: NamedVariableWithType) -> Self {
+    pub(crate) fn from_owned_raw(value: BNVariableNameAndType) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNVariableNameAndType {
         let bn_name = BnString::new(value.name);
-        Self {
+        BNVariableNameAndType {
             var: value.variable.into(),
-            type_: value.ty.contents.handle,
-            name: bn_name.into_raw(),
+            type_: unsafe { Ref::into_raw(value.ty.contents) }.handle,
+            name: BnString::into_raw(bn_name),
             autoDefined: value.auto_defined,
             typeConfidence: value.ty.confidence,
+        }
+    }
+
+    pub(crate) fn free_raw(value: BNVariableNameAndType) {
+        let _ = unsafe { Type::ref_from_raw(value.type_) };
+        let _ = unsafe { BnString::from_raw(value.name) };
+    }
+
+    pub fn new(variable: Variable, ty: Conf<Ref<Type>>, name: String, auto_defined: bool) -> Self {
+        Self {
+            variable,
+            ty,
+            name,
+            auto_defined,
         }
     }
 }
@@ -210,7 +221,7 @@ unsafe impl CoreArrayProviderInner for NamedVariableWithType {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::from(raw)
+        Self::from_raw(raw)
     }
 }
 
@@ -221,22 +232,20 @@ pub struct UserVariableValue {
     pub value: PossibleValueSet,
 }
 
-impl From<BNUserVariableValue> for UserVariableValue {
-    fn from(value: BNUserVariableValue) -> Self {
+impl UserVariableValue {
+    pub(crate) fn from_raw(value: &BNUserVariableValue) -> Self {
         Self {
             variable: value.var.into(),
             def_site: value.defSite.into(),
-            value: value.value.into(),
+            value: PossibleValueSet::from_raw(&value.value),
         }
     }
-}
 
-impl From<UserVariableValue> for BNUserVariableValue {
-    fn from(value: UserVariableValue) -> Self {
-        Self {
+    pub(crate) fn into_raw(value: Self) -> BNUserVariableValue {
+        BNUserVariableValue {
             var: value.variable.into(),
             defSite: value.def_site.into(),
-            value: value.value.into(),
+            value: PossibleValueSet::into_raw(value.value),
         }
     }
 }
@@ -253,7 +262,7 @@ unsafe impl CoreArrayProviderInner for UserVariableValue {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        UserVariableValue::from(*raw)
+        UserVariableValue::from_raw(raw)
     }
 }
 
@@ -267,53 +276,45 @@ pub struct StackVariableReference {
     pub size: usize,
 }
 
-impl From<BNStackVariableReference> for StackVariableReference {
-    fn from(value: BNStackVariableReference) -> Self {
+impl StackVariableReference {
+    pub(crate) fn from_raw(value: &BNStackVariableReference) -> Self {
         Self {
             source_operand: value.sourceOperand,
             variable_type: Conf::new(
-                unsafe { Type::ref_from_raw(value.type_) },
-                value.typeConfidence,
-            ),
-            name: unsafe { BnString::from_raw(value.name) }.to_string(),
-            // TODO: It might be beneficial to newtype the identifier as VariableIdentifier.
-            variable: Variable::from_identifier(value.varIdentifier),
-            offset: value.referencedOffset,
-            size: value.size,
-        }
-    }
-}
-
-impl From<&BNStackVariableReference> for StackVariableReference {
-    fn from(value: &BNStackVariableReference) -> Self {
-        Self {
-            source_operand: value.sourceOperand,
-            variable_type: Conf::new(
-                unsafe { Type::from_raw(value.type_).to_owned() },
+                unsafe { Type::from_raw(value.type_) }.to_owned(),
                 value.typeConfidence,
             ),
             // TODO: I dislike using this function here.
-            name: raw_to_string(value.name as *mut _).unwrap(),
+            name: raw_to_string(value.name).unwrap(),
             // TODO: It might be beneficial to newtype the identifier as VariableIdentifier.
             variable: Variable::from_identifier(value.varIdentifier),
             offset: value.referencedOffset,
             size: value.size,
         }
     }
-}
 
-impl From<StackVariableReference> for BNStackVariableReference {
-    fn from(value: StackVariableReference) -> Self {
+    pub(crate) fn from_owned_raw(value: BNStackVariableReference) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNStackVariableReference {
         let bn_name = BnString::new(value.name);
-        Self {
+        BNStackVariableReference {
             sourceOperand: value.source_operand,
             typeConfidence: value.variable_type.confidence,
-            type_: value.variable_type.contents.handle,
-            name: bn_name.into_raw(),
+            type_: unsafe { Ref::into_raw(value.variable_type.contents) }.handle,
+            name: BnString::into_raw(bn_name),
             varIdentifier: value.variable.to_identifier(),
             referencedOffset: value.offset,
             size: value.size,
         }
+    }
+
+    pub(crate) fn free_raw(value: BNStackVariableReference) {
+        let _ = unsafe { Type::ref_from_raw(value.type_) };
+        let _ = unsafe { BnString::from_raw(value.name) };
     }
 }
 
@@ -329,7 +330,7 @@ unsafe impl CoreArrayProviderInner for StackVariableReference {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        raw.into()
+        StackVariableReference::from_raw(raw)
     }
 }
 
@@ -435,7 +436,7 @@ unsafe impl CoreArrayProviderInner for Variable {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Variable::from(*raw)
+        Variable::from(raw)
     }
 }
 
@@ -445,20 +446,16 @@ pub struct MergedVariable {
     pub sources: Vec<Variable>,
 }
 
-impl From<BNMergedVariable> for MergedVariable {
-    fn from(value: BNMergedVariable) -> Self {
-        let sources = unsafe {
-            std::slice::from_raw_parts(value.sources, value.sourceCount)
-                .iter()
-                .copied()
-                .map(Into::into)
-                .collect()
-        };
+impl MergedVariable {
+    pub(crate) fn from_raw(value: &BNMergedVariable) -> Self {
+        let raw_sources = unsafe { std::slice::from_raw_parts(value.sources, value.sourceCount) };
         Self {
             target: value.target.into(),
-            sources,
+            sources: raw_sources.iter().map(Into::into).collect(),
         }
     }
+
+    // TODO: If we want from_owned_raw/free_raw/into_raw we need a way to allocate sources.
 }
 
 impl CoreArrayProvider for MergedVariable {
@@ -473,7 +470,7 @@ unsafe impl CoreArrayProviderInner for MergedVariable {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::from(*raw)
+        Self::from_raw(raw)
     }
 }
 
@@ -590,12 +587,12 @@ pub struct LookupTableEntry {
     to: i64,
 }
 
-impl From<BNLookupTableEntry> for LookupTableEntry {
-    fn from(value: BNLookupTableEntry) -> Self {
+impl LookupTableEntry {
+    pub(crate) fn from_raw(value: &BNLookupTableEntry) -> Self {
         let from_values = unsafe { std::slice::from_raw_parts(value.fromValues, value.fromCount) };
         Self {
             // TODO: Better way to construct HashSet<i64>?
-            from: from_values.iter().copied().collect(),
+            from: HashSet::from_iter(from_values.iter().copied()),
             to: value.toValue,
         }
     }
@@ -667,41 +664,7 @@ pub enum PossibleValueSet {
 }
 
 impl PossibleValueSet {
-    pub fn value_type(&self) -> RegisterValueType {
-        match self {
-            PossibleValueSet::UndeterminedValue => RegisterValueType::UndeterminedValue,
-            PossibleValueSet::EntryValue { .. } => RegisterValueType::EntryValue,
-            PossibleValueSet::ConstantValue { .. } => RegisterValueType::ConstantValue,
-            PossibleValueSet::ConstantPointerValue { .. } => {
-                RegisterValueType::ConstantPointerValue
-            }
-            PossibleValueSet::ExternalPointerValue { .. } => {
-                RegisterValueType::ExternalPointerValue
-            }
-            PossibleValueSet::StackFrameOffset { .. } => RegisterValueType::StackFrameOffset,
-            PossibleValueSet::ReturnAddressValue => RegisterValueType::ReturnAddressValue,
-            PossibleValueSet::ImportedAddressValue => RegisterValueType::ImportedAddressValue,
-            PossibleValueSet::SignedRangeValue { .. } => RegisterValueType::SignedRangeValue,
-            PossibleValueSet::UnsignedRangeValue { .. } => RegisterValueType::UnsignedRangeValue,
-            PossibleValueSet::LookupTableValue { .. } => RegisterValueType::LookupTableValue,
-            PossibleValueSet::InSetOfValues { .. } => RegisterValueType::InSetOfValues,
-            PossibleValueSet::NotInSetOfValues { .. } => RegisterValueType::NotInSetOfValues,
-            PossibleValueSet::ConstantDataValue { .. } => RegisterValueType::ConstantDataValue,
-            PossibleValueSet::ConstantDataZeroExtendValue { .. } => {
-                RegisterValueType::ConstantDataZeroExtendValue
-            }
-            PossibleValueSet::ConstantDataSignExtendValue { .. } => {
-                RegisterValueType::ConstantDataSignExtendValue
-            }
-            PossibleValueSet::ConstantDataAggregateValue { .. } => {
-                RegisterValueType::ConstantDataAggregateValue
-            }
-        }
-    }
-}
-
-impl From<BNPossibleValueSet> for PossibleValueSet {
-    fn from(value: BNPossibleValueSet) -> Self {
+    pub(crate) fn from_raw(value: &BNPossibleValueSet) -> Self {
         match value.state {
             RegisterValueType::UndeterminedValue => Self::UndeterminedValue,
             RegisterValueType::EntryValue => Self::EntryValue { reg: value.value },
@@ -733,7 +696,7 @@ impl From<BNPossibleValueSet> for PossibleValueSet {
             RegisterValueType::LookupTableValue => {
                 let raw_entries = unsafe { std::slice::from_raw_parts(value.table, value.count) };
                 Self::LookupTableValue {
-                    table: raw_entries.iter().map(|&r| r.into()).collect(),
+                    table: raw_entries.iter().map(LookupTableEntry::from_raw).collect(),
                 }
             }
             RegisterValueType::InSetOfValues => {
@@ -766,11 +729,16 @@ impl From<BNPossibleValueSet> for PossibleValueSet {
             },
         }
     }
-}
 
-// TODO: Anything requiring core allocation is missing!
-impl From<PossibleValueSet> for BNPossibleValueSet {
-    fn from(value: PossibleValueSet) -> Self {
+    /// Take ownership over an "owned" core allocated value. Do not call this for a rust allocated value.
+    pub(crate) fn from_owned_raw(mut value: BNPossibleValueSet) -> Self {
+        let owned = Self::from_raw(&value);
+        // TODO: This entire function is a little wonky.
+        Self::free_raw(&mut value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNPossibleValueSet {
         let mut raw = BNPossibleValueSet::default();
         raw.state = value.value_type();
         match value {
@@ -793,29 +761,29 @@ impl From<PossibleValueSet> for BNPossibleValueSet {
             }
             PossibleValueSet::ReturnAddressValue => {}
             PossibleValueSet::ImportedAddressValue => {}
-            PossibleValueSet::SignedRangeValue { value, .. } => {
+            PossibleValueSet::SignedRangeValue { value, ranges } => {
                 raw.value = value;
                 // TODO: raw.ranges
                 // TODO: requires core allocation and freeing.
                 // TODO: See `BNFreePossibleValueSet` for why this sucks.
             }
-            PossibleValueSet::UnsignedRangeValue { value, .. } => {
+            PossibleValueSet::UnsignedRangeValue { value, ranges } => {
                 raw.value = value;
                 // TODO: raw.ranges
                 // TODO: requires core allocation and freeing.
                 // TODO: See `BNFreePossibleValueSet` for why this sucks.
             }
-            PossibleValueSet::LookupTableValue { .. } => {
+            PossibleValueSet::LookupTableValue { table } => {
                 // TODO: raw.table
                 // TODO: requires core allocation and freeing.
                 // TODO: See `BNFreePossibleValueSet` for why this sucks.
             }
-            PossibleValueSet::InSetOfValues { .. } => {
+            PossibleValueSet::InSetOfValues { values } => {
                 // TODO: raw.valueSet
                 // TODO: requires core allocation and freeing.
                 // TODO: See `BNFreePossibleValueSet` for why this sucks.
             }
-            PossibleValueSet::NotInSetOfValues { .. } => {
+            PossibleValueSet::NotInSetOfValues { values } => {
                 // TODO: raw.valueSet
                 // TODO: requires core allocation and freeing.
                 // TODO: See `BNFreePossibleValueSet` for why this sucks.
@@ -838,6 +806,48 @@ impl From<PossibleValueSet> for BNPossibleValueSet {
             }
         };
         raw
+    }
+
+    /// Free a CORE ALLOCATED possible value set. Do not use this with [Self::into_raw] values.
+    pub(crate) fn free_raw(value: &mut BNPossibleValueSet) {
+        unsafe { BNFreePossibleValueSet(value) }
+    }
+
+    /// Free a RUST ALLOCATED possible value set. Do not use this with CORE ALLOCATED values.
+    pub(crate) fn free_owned_raw(value: BNPossibleValueSet) {
+        // TODO: Once we fill out allocation of the possible value set then we should fill this out as well.
+    }
+
+    pub fn value_type(&self) -> RegisterValueType {
+        match self {
+            PossibleValueSet::UndeterminedValue => RegisterValueType::UndeterminedValue,
+            PossibleValueSet::EntryValue { .. } => RegisterValueType::EntryValue,
+            PossibleValueSet::ConstantValue { .. } => RegisterValueType::ConstantValue,
+            PossibleValueSet::ConstantPointerValue { .. } => {
+                RegisterValueType::ConstantPointerValue
+            }
+            PossibleValueSet::ExternalPointerValue { .. } => {
+                RegisterValueType::ExternalPointerValue
+            }
+            PossibleValueSet::StackFrameOffset { .. } => RegisterValueType::StackFrameOffset,
+            PossibleValueSet::ReturnAddressValue => RegisterValueType::ReturnAddressValue,
+            PossibleValueSet::ImportedAddressValue => RegisterValueType::ImportedAddressValue,
+            PossibleValueSet::SignedRangeValue { .. } => RegisterValueType::SignedRangeValue,
+            PossibleValueSet::UnsignedRangeValue { .. } => RegisterValueType::UnsignedRangeValue,
+            PossibleValueSet::LookupTableValue { .. } => RegisterValueType::LookupTableValue,
+            PossibleValueSet::InSetOfValues { .. } => RegisterValueType::InSetOfValues,
+            PossibleValueSet::NotInSetOfValues { .. } => RegisterValueType::NotInSetOfValues,
+            PossibleValueSet::ConstantDataValue { .. } => RegisterValueType::ConstantDataValue,
+            PossibleValueSet::ConstantDataZeroExtendValue { .. } => {
+                RegisterValueType::ConstantDataZeroExtendValue
+            }
+            PossibleValueSet::ConstantDataSignExtendValue { .. } => {
+                RegisterValueType::ConstantDataSignExtendValue
+            }
+            PossibleValueSet::ConstantDataAggregateValue { .. } => {
+                RegisterValueType::ConstantDataAggregateValue
+            }
+        }
     }
 }
 

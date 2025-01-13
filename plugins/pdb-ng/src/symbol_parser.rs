@@ -1078,7 +1078,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     .ok_or(anyhow!("no ret"))?,
                 fancy_params.as_slice(),
                 fancy_type.contents.has_variable_arguments().contents,
-                &cc,
+                cc,
                 fancy_type.contents.stack_adjustment(),
             ),
             MAX_CONFIDENCE,
@@ -1801,11 +1801,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 if let [p] = parameters.as_slice() {
                     if p.ty.contents.type_class() == TypeClass::VoidTypeClass {
                         t = Some(Conf::new(
-                            Type::function::<_>(
+                            Type::function(
                                 &ty.contents
                                     .return_value()
                                     .ok_or(anyhow!("no return value"))?,
-                                &[],
+                                vec![],
                                 ty.contents.has_variable_arguments().contents,
                             ),
                             ty.confidence,
@@ -2022,7 +2022,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
 
         // Make a new copy of the type with the correct element count
-        last_member.ty.contents = Type::array(member_element.as_ref(), element_count);
+        last_member.ty.contents = Type::array(&member_element, element_count);
 
         Ok(Some((
             Type::structure(StructureBuilder::from(members).finalize().as_ref()),

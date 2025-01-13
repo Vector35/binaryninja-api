@@ -251,7 +251,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             bn_args.push(FunctionParameter::new(arg, name, loc));
         }
 
-        let ty = Type::function(&return_ty, &bn_args, false);
+        let ty = Type::function(&return_ty, bn_args, false);
         if is_partial {
             let error = (errors.ret.is_some() || !errors.args.is_empty())
                 .then(|| BnTypeError::Function(errors));
@@ -284,7 +284,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         &self,
         offset: usize,
         members_slice: &[TILStructMember],
-        struct_builder: &StructureBuilder,
+        struct_builder: &mut StructureBuilder,
     ) {
         if members_slice.is_empty() {
             unreachable!()
@@ -301,7 +301,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         let mut current_field_bits: u32 = first_field.width.into();
         let mut start_idx = 0;
 
-        let create_field = |start_idx, i, bytes| {
+        let mut create_field = |start_idx, i, bytes| {
             let name = if start_idx == i - 1 {
                 let member: &TILStructMember = &members_slice[i - 1];
                 member
@@ -354,8 +354,8 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             return TranslateTypeResult::Translated(Type::void());
         }
         let mut is_partial = false;
-        let structure = StructureBuilder::new();
-        structure.set_alignment(effective_alignment.into());
+        let mut structure = StructureBuilder::new();
+        structure.alignment(effective_alignment.into());
 
         let mut errors = vec![];
         let mut first_bitfield_seq = None;
@@ -372,7 +372,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 (_, Some(start_idx)) => {
                     first_bitfield_seq = None;
                     let members_bitrange = &members[start_idx..i];
-                    self.condensate_bitfields_from_struct(start_idx, members_bitrange, &structure);
+                    self.condensate_bitfields_from_struct(start_idx, members_bitrange, &mut structure);
                 }
 
                 (_, None) => {}
@@ -402,7 +402,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         }
         if let Some(start_idx) = first_bitfield_seq {
             let members_bitrange = &members[start_idx..];
-            self.condensate_bitfields_from_struct(start_idx, members_bitrange, &structure);
+            self.condensate_bitfields_from_struct(start_idx, members_bitrange, &mut structure);
         }
         let bn_ty = Type::structure(&structure.finalize());
         if is_partial {
@@ -420,8 +420,8 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         _effective_alignment: u16,
     ) -> TranslateTypeResult {
         let mut is_partial = false;
-        let structure = StructureBuilder::new();
-        structure.set_structure_type(StructureType::UnionStructureType);
+        let mut structure = StructureBuilder::new();
+        structure.structure_type(StructureType::UnionStructureType);
         let mut errors = vec![];
         for (i, (member_name, member_type)) in members.iter().enumerate() {
             // bitfields can be translated into complete fields

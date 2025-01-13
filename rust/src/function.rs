@@ -518,15 +518,15 @@ impl Function {
     }
 
     pub fn return_type(&self) -> Conf<Ref<Type>> {
-        unsafe { BNGetFunctionReturnType(self.handle) }.into()
+        let raw_return_type = unsafe { BNGetFunctionReturnType(self.handle) };
+        Conf::<Ref<Type>>::from_owned_raw(raw_return_type)
     }
 
     pub fn set_auto_return_type<'a, C>(&self, return_type: C)
     where
         C: Into<Conf<&'a Type>>,
     {
-        let return_type: Conf<&Type> = return_type.into();
-        let mut raw_return_type = BNTypeWithConfidence::from(return_type);
+        let mut raw_return_type = Conf::<&Type>::into_raw(return_type.into());
         unsafe { BNSetAutoFunctionReturnType(self.handle, &mut raw_return_type) }
     }
 
@@ -534,8 +534,7 @@ impl Function {
     where
         C: Into<Conf<&'a Type>>,
     {
-        let return_type: Conf<&Type> = return_type.into();
-        let mut raw_return_type = BNTypeWithConfidence::from(return_type);
+        let mut raw_return_type = Conf::<&Type>::into_raw(return_type.into());
         unsafe { BNSetUserFunctionReturnType(self.handle, &mut raw_return_type) }
     }
 
@@ -644,7 +643,7 @@ impl Function {
         let arch = arch.unwrap_or_else(|| self.arch());
         let result = unsafe { BNGetCallTypeAdjustment(self.handle, arch.handle, addr) };
         match result.type_.is_null() {
-            false => Some(result.into()),
+            false => Some(Conf::<Ref<Type>>::from_owned_raw(result)),
             true => None,
         }
     }
@@ -1046,7 +1045,13 @@ impl Function {
     /// # let fun: Function = todo!();
     /// # let bv: BinaryView = todo!();
     /// let important = bv.create_tag_type("Important", "⚠️");
-    /// fun.add_tag(&important, "I think this is the main function", None, false, None);
+    /// fun.add_tag(
+    ///     &important,
+    ///     "I think this is the main function",
+    ///     None,
+    ///     false,
+    ///     None,
+    /// );
     /// let crash = bv.create_tag_type("Crashes", "🎯");
     /// fun.add_tag(&crash, "Nullpointer dereference", Some(0x1337), false, None);
     /// ```
@@ -1202,8 +1207,9 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let mut raw_name = BNQualifiedName::from(name.into());
-        unsafe { BNAddUserTypeReference(self.handle, arch.handle, from_addr, &mut raw_name) }
+        let mut raw_name = QualifiedName::into_raw(name.into());
+        unsafe { BNAddUserTypeReference(self.handle, arch.handle, from_addr, &mut raw_name) };
+        QualifiedName::free_raw(raw_name);
     }
 
     /// Removes a user-defined type cross-reference.
@@ -1227,8 +1233,9 @@ impl Function {
         arch: Option<CoreArchitecture>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let mut raw_name = BNQualifiedName::from(name.into());
-        unsafe { BNRemoveUserTypeReference(self.handle, arch.handle, from_addr, &mut raw_name) }
+        let mut raw_name = QualifiedName::into_raw(name.into());
+        unsafe { BNRemoveUserTypeReference(self.handle, arch.handle, from_addr, &mut raw_name) };
+        QualifiedName::free_raw(raw_name);
     }
 
     /// Places a user-defined type field cross-reference from the
@@ -1258,7 +1265,7 @@ impl Function {
     ) {
         let size = size.unwrap_or(0);
         let arch = arch.unwrap_or_else(|| self.arch());
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
             BNAddUserTypeFieldReference(
                 self.handle,
@@ -1268,7 +1275,8 @@ impl Function {
                 offset,
                 size,
             )
-        }
+        };
+        QualifiedName::free_raw(raw_name);
     }
 
     /// Removes a user-defined type field cross-reference.
@@ -1297,7 +1305,7 @@ impl Function {
     ) {
         let size = size.unwrap_or(0);
         let arch = arch.unwrap_or_else(|| self.arch());
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
             BNRemoveUserTypeFieldReference(
                 self.handle,
@@ -1308,6 +1316,7 @@ impl Function {
                 size,
             )
         }
+        QualifiedName::free_raw(raw_name);
     }
 
     pub fn constant_data(
@@ -1587,7 +1596,7 @@ impl Function {
     /// # let function: binaryninja::function::Function = todo!();
     /// let color = HighlightColor::StandardHighlightColor {
     ///     color: HighlightStandardColor::RedHighlightColor,
-    ///     alpha: u8::MAX
+    ///     alpha: u8::MAX,
     /// };
     /// function.set_user_instr_highlight(0x1337, color, None);
     /// ```

@@ -40,7 +40,13 @@
 //!         true
 //!     }
 //!
-//!     fn parse_info(&self, _debug_info: &mut DebugInfo, _view: &BinaryView, _debug_file: &BinaryView, _progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>) -> bool {
+//!     fn parse_info(
+//!         &self,
+//!         _debug_info: &mut DebugInfo,
+//!         _view: &BinaryView,
+//!         _debug_file: &BinaryView,
+//!         _progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
+//!     ) -> bool {
 //!         println!("Parsing info");
 //!         true
 //!     }
@@ -306,37 +312,37 @@ pub struct DebugFunctionInfo {
     local_variables: Vec<NamedVariableWithType>,
 }
 
-impl From<&BNDebugFunctionInfo> for DebugFunctionInfo {
-    fn from(raw: &BNDebugFunctionInfo) -> Self {
-        let raw_components = unsafe { std::slice::from_raw_parts(raw.components, raw.componentN) };
+impl DebugFunctionInfo {
+    pub(crate) fn from_raw(value: &BNDebugFunctionInfo) -> Self {
+        let raw_components =
+            unsafe { std::slice::from_raw_parts(value.components, value.componentN) };
+        let components = raw_components
+            .iter()
+            .filter_map(|&c| raw_to_string(c))
+            .collect();
         let raw_local_variables =
-            unsafe { std::slice::from_raw_parts(raw.localVariables, raw.localVariableN) };
-
+            unsafe { std::slice::from_raw_parts(value.localVariables, value.localVariableN) };
+        let local_variables = raw_local_variables
+            .iter()
+            .map(NamedVariableWithType::from_raw)
+            .collect();
         Self {
-            short_name: raw_to_string(raw.shortName),
-            full_name: raw_to_string(raw.fullName),
-            raw_name: raw_to_string(raw.rawName),
-            type_: if raw.type_.is_null() {
+            short_name: raw_to_string(value.shortName),
+            full_name: raw_to_string(value.fullName),
+            raw_name: raw_to_string(value.rawName),
+            type_: if value.type_.is_null() {
                 None
             } else {
-                Some(unsafe { Type::ref_from_raw(raw.type_) })
+                Some(unsafe { Type::from_raw(value.type_) }.to_owned())
             },
-            address: raw.address,
-            platform: if raw.platform.is_null() {
+            address: value.address,
+            platform: if value.platform.is_null() {
                 None
             } else {
-                Some(unsafe { Platform::ref_from_raw(raw.platform) })
+                Some(unsafe { Platform::from_raw(value.platform) }.to_owned())
             },
-            components: raw_components
-                .iter()
-                .copied()
-                .filter_map(|c| raw_to_string(c))
-                .collect(),
-            local_variables: raw_local_variables
-                .iter()
-                .copied()
-                .map(Into::into)
-                .collect(),
+            components,
+            local_variables,
         }
     }
 }
@@ -408,8 +414,7 @@ impl DebugInfo {
         let result: Vec<_> = unsafe {
             std::slice::from_raw_parts_mut(debug_types_ptr, count)
                 .iter()
-                .copied()
-                .map(Into::into)
+                .map(NameAndType::from_raw)
                 .collect()
         };
 
@@ -424,8 +429,7 @@ impl DebugInfo {
         let result: Vec<_> = unsafe {
             std::slice::from_raw_parts_mut(debug_types_ptr, count)
                 .iter()
-                .copied()
-                .map(Into::into)
+                .map(NameAndType::from_raw)
                 .collect()
         };
 
@@ -449,7 +453,7 @@ impl DebugInfo {
         let result: Vec<DebugFunctionInfo> = unsafe {
             std::slice::from_raw_parts_mut(functions_ptr, count)
                 .iter()
-                .map(DebugFunctionInfo::from)
+                .map(DebugFunctionInfo::from_raw)
                 .collect()
         };
 
@@ -465,7 +469,7 @@ impl DebugInfo {
         let result: Vec<DebugFunctionInfo> = unsafe {
             std::slice::from_raw_parts_mut(functions_ptr, count)
                 .iter()
-                .map(DebugFunctionInfo::from)
+                .map(DebugFunctionInfo::from_raw)
                 .collect()
         };
 
@@ -492,8 +496,7 @@ impl DebugInfo {
         let result: Vec<NamedDataVariableWithType> = unsafe {
             std::slice::from_raw_parts_mut(data_variables_ptr, count)
                 .iter()
-                .copied()
-                .map(Into::into)
+                .map(NamedDataVariableWithType::from_raw)
                 .collect()
         };
 
@@ -509,8 +512,7 @@ impl DebugInfo {
         let result: Vec<NamedDataVariableWithType> = unsafe {
             std::slice::from_raw_parts_mut(data_variables_ptr, count)
                 .iter()
-                .copied()
-                .map(Into::into)
+                .map(NamedDataVariableWithType::from_raw)
                 .collect()
         };
 
@@ -552,9 +554,7 @@ impl DebugInfo {
         };
 
         if !raw_named_var.is_null() {
-            let result = unsafe { raw_named_var.read() };
-            unsafe { BNFreeDataVariableAndName(raw_named_var) };
-            Some(NamedDataVariableWithType::from(result))
+            Some(unsafe { NamedDataVariableWithType::from_ref_raw(raw_named_var) })
         } else {
             None
         }
@@ -575,9 +575,7 @@ impl DebugInfo {
         };
 
         if !raw_named_var.is_null() {
-            let result = unsafe { raw_named_var.read() };
-            unsafe { BNFreeDataVariableAndName(raw_named_var) };
-            Some(NamedDataVariableWithType::from(result))
+            Some(unsafe { NamedDataVariableWithType::from_ref_raw(raw_named_var) })
         } else {
             None
         }
@@ -596,8 +594,7 @@ impl DebugInfo {
 
         let names_and_types = raw_names_and_types
             .iter()
-            .copied()
-            .map(Into::into)
+            .map(NameAndType::from_raw)
             .collect();
 
         unsafe { BNFreeNameAndTypeList(raw_names_and_types_ptr, count) };
@@ -626,7 +623,7 @@ impl DebugInfo {
                 (
                     raw_to_string((*variable_and_name).name).unwrap(),
                     (*variable_and_name).address,
-                    Type::ref_from_raw(BNNewTypeReference((*variable_and_name).type_)),
+                    Type::from_raw((*variable_and_name).type_).to_owned(),
                 )
             })
             .collect();
@@ -651,7 +648,7 @@ impl DebugInfo {
                 (
                     raw_to_string((*variable_and_name).parser).unwrap(),
                     raw_to_string((*variable_and_name).name).unwrap(),
-                    Type::ref_from_raw(BNNewTypeReference((*variable_and_name).type_)),
+                    Type::from_raw((*variable_and_name).type_).to_owned(),
                 )
             })
             .collect();
@@ -870,7 +867,10 @@ impl DebugInfo {
     }
 
     pub fn add_data_variable_info(&self, var: NamedDataVariableWithType) -> bool {
-        unsafe { BNAddDebugDataVariableInfo(self.handle, &var.into()) }
+        let raw_data_var = NamedDataVariableWithType::into_raw(var);
+        let success = unsafe { BNAddDebugDataVariableInfo(self.handle, &raw_data_var) };
+        NamedDataVariableWithType::free_raw(raw_data_var);
+        success
     }
 }
 

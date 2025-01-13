@@ -27,7 +27,6 @@
 //!     true
 //! }
 //! ```
-//!
 
 pub use binaryninjacore_sys::BNLogLevel as Level;
 use binaryninjacore_sys::{

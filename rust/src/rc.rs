@@ -57,9 +57,7 @@ impl<T: RefCountable> Ref<T> {
 
     pub(crate) unsafe fn into_raw(obj: Self) -> T {
         let res = ptr::read(&obj.contents);
-
         mem::forget(obj);
-
         res
     }
 }
@@ -150,6 +148,15 @@ impl<'a, T> Guard<'a, T> {
             contents,
             _guard: PhantomData,
         }
+    }
+}
+
+impl<T> Debug for Guard<'_, T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.contents.fmt(f)
     }
 }
 

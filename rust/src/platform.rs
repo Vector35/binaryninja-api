@@ -14,10 +14,6 @@
 
 //! Contains all information related to the execution environment of the binary, mainly the calling conventions used
 
-use binaryninjacore_sys::*;
-use std::ptr::NonNull;
-use std::{borrow::Borrow, ffi, ptr};
-
 use crate::typecontainer::TypeContainer;
 use crate::typeparser::{TypeParserError, TypeParserErrorSeverity, TypeParserResult};
 use crate::{
@@ -28,6 +24,10 @@ use crate::{
     typelibrary::TypeLibrary,
     types::QualifiedNameAndType,
 };
+use binaryninjacore_sys::*;
+use std::fmt::Debug;
+use std::ptr::NonNull;
+use std::{borrow::Borrow, ffi, ptr};
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Platform {
@@ -152,9 +152,7 @@ impl Platform {
         let name = name.into_bytes_with_nul();
         unsafe {
             let handle = BNCreatePlatform(arch.as_ref().handle, name.as_ref().as_ptr() as *mut _);
-
             assert!(!handle.is_null());
-
             Ref::new(Self { handle })
         }
     }
@@ -239,7 +237,6 @@ impl Platform {
         unsafe {
             let mut count = 0;
             let handles = BNGetPlatformCallingConventions(self.handle, &mut count);
-
             Array::new(handles, count, self.arch())
         }
     }
@@ -248,7 +245,6 @@ impl Platform {
         unsafe {
             let mut count = 0;
             let handles = BNGetPlatformTypes(self.handle, &mut count);
-
             Array::new(handles, count, ())
         }
     }
@@ -257,7 +253,6 @@ impl Platform {
         unsafe {
             let mut count = 0;
             let handles = BNGetPlatformVariables(self.handle, &mut count);
-
             Array::new(handles, count, ())
         }
     }
@@ -266,7 +261,6 @@ impl Platform {
         unsafe {
             let mut count = 0;
             let handles = BNGetPlatformFunctions(self.handle, &mut count);
-
             Array::new(handles, count, ())
         }
     }
@@ -337,7 +331,10 @@ impl Platform {
         };
 
         if success {
-            Ok(raw_result.into())
+            let result = TypeParserResult::from_raw(&raw_result);
+            // NOTE: This is safe because the core allocated the TypeParserResult
+            TypeParserResult::free_raw(raw_result);
+            Ok(result)
         } else {
             assert!(!error_string.is_null());
             Err(TypeParserError::new(
@@ -360,13 +357,13 @@ impl Platform {
         let file_name_cstr = BnString::new(filename);
         let auto_type_source = BnString::new(auto_type_source);
 
-        let mut result = BNTypeParserResult::default();
+        let mut raw_result = BNTypeParserResult::default();
         let mut error_string = ptr::null_mut();
         let success = unsafe {
             BNParseTypesFromSourceFile(
                 self.handle,
                 file_name_cstr.as_ptr(),
-                &mut result,
+                &mut raw_result,
                 &mut error_string,
                 include_dirs.as_ptr() as *mut *const ffi::c_char,
                 include_dirs.len(),
@@ -375,7 +372,10 @@ impl Platform {
         };
 
         if success {
-            Ok(result.into())
+            let result = TypeParserResult::from_raw(&raw_result);
+            // NOTE: This is safe because the core allocated the TypeParserResult
+            TypeParserResult::free_raw(raw_result);
+            Ok(result)
         } else {
             assert!(!error_string.is_null());
             Err(TypeParserError::new(
@@ -386,6 +386,15 @@ impl Platform {
                 0,
             ))
         }
+    }
+}
+
+impl Debug for Platform {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Platform")
+            .field("name", &self.name())
+            .field("arch", &self.arch())
+            .finish()
     }
 }
 

@@ -123,7 +123,9 @@ impl Session {
     /// ```no_run
     /// let headless_session = binaryninja::headless::Session::new();
     ///
-    /// let bv = headless_session.load("/bin/cat").expect("Couldn't open `/bin/cat`");
+    /// let bv = headless_session
+    ///     .load("/bin/cat")
+    ///     .expect("Couldn't open `/bin/cat`");
     /// ```
     pub fn load(&self, filename: &str) -> Option<rc::Ref<binaryview::BinaryView>> {
         crate::load(filename)
@@ -133,12 +135,12 @@ impl Session {
     /// use binaryninja::{metadata::Metadata, rc::Ref};
     /// use std::collections::HashMap;
     ///
-    /// let settings: Ref<Metadata> = HashMap::from([
-    ///     ("analysis.linearSweep.autorun", false.into()),
-    /// ]).into();
+    /// let settings: Ref<Metadata> =
+    ///     HashMap::from([("analysis.linearSweep.autorun", false.into())]).into();
     /// let headless_session = binaryninja::headless::Session::new();
     ///
-    /// let bv = headless_session.load_with_options("/bin/cat", true, Some(settings))
+    /// let bv = headless_session
+    ///     .load_with_options("/bin/cat", true, Some(settings))
     ///     .expect("Couldn't open `/bin/cat`");
     /// ```
     pub fn load_with_options<O: IntoJson>(

@@ -117,14 +117,13 @@ impl MediumLevelILFunction {
         var_type: C,
         name: S,
     ) {
-        let var_type = var_type.into();
-        let mut raw_var_type: BNTypeWithConfidence = var_type.into();
+        let mut owned_raw_var_ty = Conf::<&Type>::into_raw(var_type.into());
         let name = name.into_bytes_with_nul();
         unsafe {
             BNCreateUserStackVariable(
                 self.get_function().handle,
                 offset,
-                &mut raw_var_type,
+                &mut owned_raw_var_ty,
                 name.as_ref().as_ptr() as *const c_char,
             )
         }
@@ -141,15 +140,14 @@ impl MediumLevelILFunction {
         name: S,
         ignore_disjoint_uses: bool,
     ) {
-        let var_type = var_type.into();
         let raw_var = BNVariable::from(var);
-        let raw_var_type: BNTypeWithConfidence = var_type.into();
+        let mut owned_raw_var_ty = Conf::<&Type>::into_raw(var_type.into());
         let name = name.into_bytes_with_nul();
         unsafe {
             BNCreateUserVariable(
                 self.get_function().handle,
                 &raw_var,
-                &raw_var_type as *const _ as *mut _,
+                &mut owned_raw_var_ty,
                 name.as_ref().as_ptr() as *const _,
                 ignore_disjoint_uses,
             )
@@ -186,8 +184,10 @@ impl MediumLevelILFunction {
     /// # let mlil_fun: MediumLevelILFunction = todo!();
     /// let user_var_val = mlil_fun.user_var_values().iter().next().unwrap();
     /// let def_address = user_var_val.def_site.addr;
-    /// let var_value = PossibleValueSet::ConstantValue{value: 5};
-    /// mlil_fun.set_user_var_value(&user_var_val.variable, def_address, var_value).unwrap();
+    /// let var_value = PossibleValueSet::ConstantValue { value: 5 };
+    /// mlil_fun
+    ///     .set_user_var_value(&user_var_val.variable, def_address, var_value)
+    ///     .unwrap();
     /// ```
     pub fn set_user_var_value(
         &self,
@@ -209,9 +209,9 @@ impl MediumLevelILFunction {
             address: addr,
         };
         let raw_var = BNVariable::from(var);
-        let raw_value = BNPossibleValueSet::from(value);
-
+        let raw_value = PossibleValueSet::into_raw(value);
         unsafe { BNSetUserVariableValue(function.handle, &raw_var, &def_site, &raw_value) }
+        PossibleValueSet::free_owned_raw(raw_value);
         Ok(())
     }
 
@@ -264,15 +264,14 @@ impl MediumLevelILFunction {
         var_type: T,
         name: S,
     ) {
-        let var_type: Conf<&Type> = var_type.into();
-        let mut var_type = var_type.into();
+        let mut owned_raw_var_ty = Conf::<&Type>::into_raw(var_type.into());
         let name = name.into_bytes_with_nul();
         let name_c_str = name.as_ref();
         unsafe {
             BNCreateAutoStackVariable(
                 self.get_function().handle,
                 offset,
-                &mut var_type,
+                &mut owned_raw_var_ty,
                 name_c_str.as_ptr() as *const c_char,
             )
         }
@@ -290,15 +289,14 @@ impl MediumLevelILFunction {
         ignore_disjoint_uses: bool,
     ) {
         let raw_var = BNVariable::from(var);
-        let var_type: Conf<&Type> = var_type.into();
-        let mut var_type = var_type.into();
+        let mut owned_raw_var_ty = Conf::<&Type>::into_raw(var_type.into());
         let name = name.into_bytes_with_nul();
         let name_c_str = name.as_ref();
         unsafe {
             BNCreateAutoVariable(
                 self.get_function().handle,
                 &raw_var,
-                &mut var_type,
+                &mut owned_raw_var_ty,
                 name_c_str.as_ptr() as *const c_char,
                 ignore_disjoint_uses,
             )

@@ -52,7 +52,7 @@ pub fn demangle_generic<S: BnStrCompatible>(
             true => None,
             false => Some(unsafe { Type::ref_from_raw(out_type) }),
         };
-        Some((out_name.into(), out_type))
+        Some((QualifiedName::from_owned_raw(out_name), out_type))
     } else {
         None
     }
@@ -226,7 +226,7 @@ impl Demangler {
                     false => Some(unsafe { Type::ref_from_raw(out_type) }),
                 };
 
-                Some((out_var_name.into(), var_type))
+                Some((QualifiedName::from_owned_raw(out_var_name), var_type))
             }
             false => None,
         }
@@ -257,9 +257,7 @@ impl Demangler {
         {
             ffi_wrap!("CustomDemangler::cb_is_mangled_string", unsafe {
                 let cmd = &*(ctxt as *const C);
-                let name = if let Some(n) = raw_to_string(name) {
-                    n
-                } else {
+                let Some(name) = raw_to_string(name) else {
                     return false;
                 };
                 cmd.is_mangled_string(&name)
@@ -279,24 +277,23 @@ impl Demangler {
             ffi_wrap!("CustomDemangler::cb_demangle", unsafe {
                 let cmd = &*(ctxt as *const C);
                 let arch = CoreArchitecture::from_raw(arch);
-                let name = if let Some(n) = raw_to_string(name) {
-                    n
-                } else {
+                let Some(name) = raw_to_string(name) else {
                     return false;
                 };
-                let view = if view.is_null() {
-                    None
-                } else {
-                    Some(BinaryView::ref_from_raw(BNNewViewReference(view)))
+                let view = match view.is_null() {
+                    false => Some(BinaryView::from_raw(view).to_owned()),
+                    true => None,
                 };
 
                 match cmd.demangle(&arch, &name, view) {
                     Some((name, ty)) => {
+                        // NOTE: Leaked to the caller, who must pick the ref up.
                         *out_type = match ty {
-                            Some(t) => RefCountable::inc_ref(t.as_ref()).handle,
+                            Some(t) => Ref::into_raw(t).handle,
                             None => std::ptr::null_mut(),
                         };
-                        *out_var_name = name.into();
+                        // NOTE: Leaked to be freed with `cb_free_var_name`.
+                        *out_var_name = QualifiedName::into_raw(name);
                         true
                     }
                     None => false,
@@ -310,8 +307,7 @@ impl Demangler {
         {
             ffi_wrap!("CustomDemangler::cb_free_var_name", unsafe {
                 // TODO: What is the point of this free callback?
-                // TODO: The core can just call BNFreeQualifiedName.
-                BNFreeQualifiedName(name);
+                QualifiedName::free_raw(*name)
             })
         }
 

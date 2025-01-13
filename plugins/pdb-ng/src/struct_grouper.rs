@@ -362,7 +362,7 @@ pub fn group_structure(
             warn!("{} Could not resolve structure groups: {}", name, e);
             for member in members {
                 structure.insert(
-                    &member.ty.clone(),
+                    &member.ty,
                     member.name.clone(),
                     member.offset,
                     false,
@@ -391,7 +391,7 @@ fn apply_groups(
 
                 if offset > member.offset {
                     structure.insert(
-                        &member.ty.clone(),
+                        &member.ty,
                         member.name.clone(),
                         0,
                         false,
@@ -400,7 +400,7 @@ fn apply_groups(
                     );
                 } else {
                     structure.insert(
-                        &member.ty.clone(),
+                        &member.ty,
                         member.name.clone(),
                         member.offset - offset,
                         false,
@@ -423,7 +423,7 @@ fn apply_groups(
             }
             ResolvedGroup::Union(inner_offset, children) => {
                 let mut inner = StructureBuilder::new();
-                inner.set_structure_type(StructureType::UnionStructureType);
+                inner.structure_type(StructureType::UnionStructureType);
                 apply_groups(members, &mut inner, children, inner_offset);
                 structure.insert(
                     &Conf::new(Type::structure(inner.finalize().as_ref()), MAX_CONFIDENCE),

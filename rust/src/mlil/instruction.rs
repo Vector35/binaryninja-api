@@ -1073,7 +1073,7 @@ impl MediumLevelILInstruction {
 
     /// Possible values of expression using path-sensitive static data flow analysis
     pub fn possible_values_with_opts(&self, options: &[DataFlowQueryOption]) -> PossibleValueSet {
-        let mut value = unsafe {
+        let value = unsafe {
             BNGetMediumLevelILPossibleExprValues(
                 self.function.handle,
                 self.index,
@@ -1081,9 +1081,7 @@ impl MediumLevelILInstruction {
                 options.len(),
             )
         };
-        let result = PossibleValueSet::from(value);
-        unsafe { BNFreePossibleValueSet(&mut value) }
-        result
+        PossibleValueSet::from_owned_raw(value)
     }
 
     pub fn possible_ssa_variable_values(&self, ssa_var: SSAVariable) -> PossibleValueSet {
@@ -1096,7 +1094,7 @@ impl MediumLevelILInstruction {
         options: &[DataFlowQueryOption],
     ) -> PossibleValueSet {
         let raw_var = BNVariable::from(ssa_var.variable);
-        let mut value = unsafe {
+        let value = unsafe {
             BNGetMediumLevelILPossibleSSAVarValues(
                 self.function.handle,
                 &raw_var,
@@ -1106,9 +1104,7 @@ impl MediumLevelILInstruction {
                 options.len(),
             )
         };
-        let result = PossibleValueSet::from(value);
-        unsafe { BNFreePossibleValueSet(&mut value) }
-        result
+        PossibleValueSet::from_owned_raw(value)
     }
 
     /// return the variable version used at this instruction
@@ -1237,7 +1233,7 @@ impl MediumLevelILInstruction {
         reg_id: u32,
         options: &[DataFlowQueryOption],
     ) -> PossibleValueSet {
-        let mut value = unsafe {
+        let value = unsafe {
             BNGetMediumLevelILPossibleRegisterValuesAtInstruction(
                 self.function.handle,
                 reg_id,
@@ -1246,9 +1242,7 @@ impl MediumLevelILInstruction {
                 options.len(),
             )
         };
-        let result = PossibleValueSet::from(value);
-        unsafe { BNFreePossibleValueSet(&mut value) }
-        result
+        PossibleValueSet::from_owned_raw(value)
     }
 
     pub fn possible_register_values_after(&self, reg_id: u32) -> PossibleValueSet {
@@ -1260,7 +1254,7 @@ impl MediumLevelILInstruction {
         reg_id: u32,
         options: &[DataFlowQueryOption],
     ) -> PossibleValueSet {
-        let mut value = unsafe {
+        let value = unsafe {
             BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(
                 self.function.handle,
                 reg_id,
@@ -1269,9 +1263,7 @@ impl MediumLevelILInstruction {
                 options.len(),
             )
         };
-        let result = PossibleValueSet::from(value);
-        unsafe { BNFreePossibleValueSet(&mut value) }
-        result
+        PossibleValueSet::from_owned_raw(value)
     }
 
     pub fn flag_value(&self, flag_id: u32) -> RegisterValue {
@@ -1297,7 +1289,7 @@ impl MediumLevelILInstruction {
         flag_id: u32,
         options: &[DataFlowQueryOption],
     ) -> PossibleValueSet {
-        let mut value = unsafe {
+        let value = unsafe {
             BNGetMediumLevelILPossibleFlagValuesAtInstruction(
                 self.function.handle,
                 flag_id,
@@ -1306,9 +1298,7 @@ impl MediumLevelILInstruction {
                 options.len(),
             )
         };
-        let result = PossibleValueSet::from(value);
-        unsafe { BNFreePossibleValueSet(&mut value) }
-        result
+        PossibleValueSet::from_owned_raw(value)
     }
 
     pub fn possible_flag_values_after_with_opts(
@@ -1316,7 +1306,7 @@ impl MediumLevelILInstruction {
         flag_id: u32,
         options: &[DataFlowQueryOption],
     ) -> PossibleValueSet {
-        let mut value = unsafe {
+        let value = unsafe {
             BNGetMediumLevelILPossibleFlagValuesAfterInstruction(
                 self.function.handle,
                 flag_id,
@@ -1325,9 +1315,7 @@ impl MediumLevelILInstruction {
                 options.len(),
             )
         };
-        let result = PossibleValueSet::from(value);
-        unsafe { BNFreePossibleValueSet(&mut value) }
-        result
+        PossibleValueSet::from_owned_raw(value)
     }
 
     pub fn stack_contents(&self, offset: i64, size: usize) -> RegisterValue {
@@ -1360,7 +1348,7 @@ impl MediumLevelILInstruction {
         size: usize,
         options: &[DataFlowQueryOption],
     ) -> PossibleValueSet {
-        let mut value = unsafe {
+        let value = unsafe {
             BNGetMediumLevelILPossibleStackContentsAtInstruction(
                 self.function.handle,
                 offset,
@@ -1370,9 +1358,7 @@ impl MediumLevelILInstruction {
                 options.len(),
             )
         };
-        let result = PossibleValueSet::from(value);
-        unsafe { BNFreePossibleValueSet(&mut value) }
-        result
+        PossibleValueSet::from_owned_raw(value)
     }
 
     pub fn possible_stack_contents_after_with_opts(
@@ -1381,7 +1367,7 @@ impl MediumLevelILInstruction {
         size: usize,
         options: &[DataFlowQueryOption],
     ) -> PossibleValueSet {
-        let mut value = unsafe {
+        let value = unsafe {
             BNGetMediumLevelILPossibleStackContentsAfterInstruction(
                 self.function.handle,
                 offset,
@@ -1391,9 +1377,7 @@ impl MediumLevelILInstruction {
                 options.len(),
             )
         };
-        let result = PossibleValueSet::from(value);
-        unsafe { BNFreePossibleValueSet(&mut value) }
-        result
+        PossibleValueSet::from_owned_raw(value)
     }
 
     /// Gets the unique variable for a definition instruction. This unique variable can be passed

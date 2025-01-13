@@ -16,6 +16,7 @@ use crate::types::{QualifiedName, QualifiedNameAndType, Type};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void};
+use std::fmt::{Debug, Formatter};
 use std::ptr::NonNull;
 
 pub type TypeContainerType = BNTypeContainerType;
@@ -88,7 +89,10 @@ impl TypeContainer {
             .into_iter()
             .map(|t| {
                 let t = t.into();
-                (BNQualifiedName::from(t.name), t.ty.handle)
+                (
+                    QualifiedName::into_raw(t.name),
+                    unsafe { Ref::into_raw(t.ty) }.handle,
+                )
             })
             .unzip();
 
@@ -121,7 +125,10 @@ impl TypeContainer {
             .into_iter()
             .map(|t| {
                 let t = t.into();
-                (BNQualifiedName::from(t.name), t.ty.handle)
+                (
+                    QualifiedName::into_raw(t.name),
+                    unsafe { Ref::into_raw(t.ty) }.handle,
+                )
             })
             .unzip();
 
@@ -153,14 +160,16 @@ impl TypeContainer {
         type_id: S,
     ) -> bool {
         let type_id = type_id.into_bytes_with_nul();
-        let raw_name = BNQualifiedName::from(name.into());
-        unsafe {
+        let raw_name = QualifiedName::into_raw(name.into());
+        let success = unsafe {
             BNTypeContainerRenameType(
                 self.handle.as_ptr(),
                 type_id.as_ref().as_ptr() as *const c_char,
                 &raw_name,
             )
-        }
+        };
+        QualifiedName::free_raw(raw_name);
+        success
     }
 
     /// Delete a type in the Type Container. Behavior of references to this type is
@@ -182,9 +191,10 @@ impl TypeContainer {
     /// If no type with that name exists, returns None.
     pub fn type_id<T: Into<QualifiedName>>(&self, name: T) -> Option<BnString> {
         let mut result = std::ptr::null_mut();
-        let raw_name = BNQualifiedName::from(name.into());
+        let raw_name = QualifiedName::into_raw(name.into());
         let success =
             unsafe { BNTypeContainerGetTypeId(self.handle.as_ptr(), &raw_name, &mut result) };
+        QualifiedName::free_raw(raw_name);
         success.then(|| unsafe { BnString::from_raw(result) })
     }
 
@@ -201,7 +211,7 @@ impl TypeContainer {
                 &mut result,
             )
         };
-        success.then(|| QualifiedName::from(result))
+        success.then(|| QualifiedName::from_owned_raw(result))
     }
 
     /// Get the definition of the type in the Type Container with the given id.
@@ -225,14 +235,14 @@ impl TypeContainer {
     /// If no type with that name exists, returns None.
     pub fn type_by_name<T: Into<QualifiedName>>(&self, name: T) -> Option<Ref<Type>> {
         let mut result = std::ptr::null_mut();
-        let raw_name = BNQualifiedName::from(name.into());
+        let raw_name = QualifiedName::into_raw(name.into());
         let success =
             unsafe { BNTypeContainerGetTypeByName(self.handle.as_ptr(), &raw_name, &mut result) };
+        QualifiedName::free_raw(raw_name);
         success.then(|| unsafe { Type::ref_from_raw(result) })
     }
 
     /// Get a mapping of all types in a Type Container.
-    // TODO: This needs to be redone... somehow all of these need to be merged into one array...
     pub fn types(&self) -> Option<HashMap<String, (QualifiedName, Ref<Type>)>> {
         let mut type_ids = std::ptr::null_mut();
         let mut type_names = std::ptr::null_mut();
@@ -255,7 +265,7 @@ impl TypeContainer {
             for (idx, raw_id) in raw_ids.iter().enumerate() {
                 let id = raw_to_string(*raw_id).expect("Valid string");
                 // Take the qualified name as a ref as the name should not be freed.
-                let name = QualifiedName::from(&raw_names[idx]);
+                let name = QualifiedName::from_raw(&raw_names[idx]);
                 // Take the type as an owned ref, as the returned type was not already incremented.
                 let ty = Type::from_raw(raw_types[idx]).to_owned();
                 map.insert(id, (name, ty));
@@ -332,7 +342,7 @@ impl TypeContainer {
             )
         };
         if success {
-            Ok(QualifiedNameAndType::from(result))
+            Ok(QualifiedNameAndType::from_owned_raw(result))
         } else {
             assert!(!errors.is_null());
             Err(unsafe { Array::new(errors, error_count, ()) })
@@ -405,11 +415,25 @@ impl TypeContainer {
             )
         };
         if success {
-            Ok(raw_result.into())
+            let result = TypeParserResult::from_raw(&raw_result);
+            // NOTE: This is safe because the core allocated the TypeParserResult
+            TypeParserResult::free_raw(raw_result);
+            Ok(result)
         } else {
             assert!(!errors.is_null());
             Err(unsafe { Array::new(errors, error_count, ()) })
         }
+    }
+}
+
+impl Debug for TypeContainer {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TypeContainer")
+            .field("id", &self.id())
+            .field("name", &self.name())
+            .field("container_type", &self.container_type())
+            .field("is_mutable", &self.is_mutable())
+            .finish()
     }
 }
 

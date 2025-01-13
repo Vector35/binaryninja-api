@@ -22,7 +22,7 @@ use std::marker::PhantomData;
 
 use binaryninjacore_sys::*;
 
-use crate::architecture::{Architecture, ArchitectureExt, CoreArchitecture, Register, RegisterId};
+use crate::architecture::{Architecture, ArchitectureExt, Register, RegisterId};
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::*;
 use crate::types::FunctionParameter;
@@ -443,6 +443,14 @@ pub struct CallingConvention<A: Architecture> {
 }
 
 impl<A: Architecture> CallingConvention<A> {
+    pub(crate) unsafe fn from_raw(handle: *mut BNCallingConvention, arch: A::Handle) -> Self {
+        CallingConvention {
+            handle,
+            arch_handle: arch,
+            _arch: PhantomData,
+        }
+    }
+
     pub(crate) unsafe fn ref_from_raw(
         handle: *mut BNCallingConvention,
         arch: A::Handle,
@@ -464,7 +472,11 @@ impl<A: Architecture> CallingConvention<A> {
         permitted_registers: Option<&[A::Register]>,
     ) -> Vec<Variable> {
         let mut count: usize = 0;
-        let raw_params: Vec<BNFunctionParameter> = params.iter().cloned().map(Into::into).collect();
+        let raw_params: Vec<BNFunctionParameter> = params
+            .iter()
+            .cloned()
+            .map(FunctionParameter::into_raw)
+            .collect();
         let raw_vars_ptr: *mut BNVariable = if let Some(permitted_args) = permitted_registers {
             let permitted_regs = permitted_args.iter().map(|r| r.id().0).collect::<Vec<_>>();
 
@@ -489,6 +501,10 @@ impl<A: Architecture> CallingConvention<A> {
             }
         };
 
+        for raw_param in raw_params {
+            FunctionParameter::free_raw(raw_param);
+        }
+
         let raw_vars = unsafe { std::slice::from_raw_parts(raw_vars_ptr, count) };
         let vars: Vec<_> = raw_vars.iter().copied().map(Into::into).collect();
         unsafe { BNFreeVariableList(raw_vars_ptr) };
@@ -503,6 +519,43 @@ impl<A: Architecture> Eq for CallingConvention<A> {}
 impl<A: Architecture> PartialEq for CallingConvention<A> {
     fn eq(&self, rhs: &Self) -> bool {
         self.handle == rhs.handle
+    }
+}
+
+impl<A: Architecture> Debug for CallingConvention<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CallingConvention")
+            .field("name", &self.name())
+            .field("caller_saved_registers", &self.caller_saved_registers())
+            .field("callee_saved_registers", &self.callee_saved_registers())
+            .field("int_arg_registers", &self.int_arg_registers())
+            .field("float_arg_registers", &self.float_arg_registers())
+            .field(
+                "arg_registers_shared_index",
+                &self.arg_registers_shared_index(),
+            )
+            .field(
+                "reserved_stack_space_for_arg_registers",
+                &self.reserved_stack_space_for_arg_registers(),
+            )
+            .field("stack_adjusted_on_return", &self.stack_adjusted_on_return())
+            .field(
+                "is_eligible_for_heuristics",
+                &self.is_eligible_for_heuristics(),
+            )
+            .field("return_int_reg", &self.return_int_reg())
+            .field("return_hi_int_reg", &self.return_hi_int_reg())
+            .field("return_float_reg", &self.return_float_reg())
+            .field("global_pointer_reg", &self.global_pointer_reg())
+            .field(
+                "implicitly_defined_registers",
+                &self.implicitly_defined_registers(),
+            )
+            .field(
+                "are_argument_registers_used_for_var_args",
+                &self.are_argument_registers_used_for_var_args(),
+            )
+            .finish()
     }
 }
 
@@ -682,12 +735,6 @@ unsafe impl<A: Architecture> CoreArrayProviderInner for CallingConvention<A> {
             },
             context,
         )
-    }
-}
-
-impl Debug for CallingConvention<CoreArchitecture> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "<cc: {} arch: {}>", self.name(), self.arch_handle.name())
     }
 }
 

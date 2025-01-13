@@ -47,6 +47,8 @@ struct Args {
     /// The external debug information file to use
     #[arg(short, long)]
     debug_info: Option<PathBuf>,
+    
+    // TODO: Add a file filter and default to filter out files starting with "."
 }
 
 fn default_settings(bn_settings: &Settings) -> Value {
@@ -75,6 +77,10 @@ fn main() {
     let args = Args::parse();
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
+    // TODO: After analysis finishes for a file we should save off the bndb to another directory called the bndb cache
+    // TODO: This cache should be used before opening a file for first analysis.
+    
+    // TODO: We should resolve the path to something sensible in cases where user is passing CWD.
     // If no output file was given, just prepend binary with extension sbin
     let output_file = args
         .output

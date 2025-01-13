@@ -739,12 +739,8 @@ impl Project {
     ///         let file = file.unwrap();
     ///         let file_type = file.file_type().unwrap();
     ///         if file_type.is_file() && !file_type.is_symlink() {
-    ///             bulk.create_file_from_path(
-    ///                 "/bin/",
-    ///                 None,
-    ///                 &file.file_name().to_string_lossy(),
-    ///                 "",
-    ///             ).unwrap();
+    ///             bulk.create_file_from_path("/bin/", None, &file.file_name().to_string_lossy(), "")
+    ///                 .unwrap();
     ///         }
     ///     }
     /// }

@@ -401,7 +401,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
             BNType::array(&member_type, c.length.unwrap_or(0))
         }
         TypeClass::Structure(c) => {
-            let builder = BNStructureBuilder::new();
+            let mut builder = BNStructureBuilder::new();
             // TODO: Structure type class?
             // TODO: Alignment
             // TODO: Other modifiers?
@@ -457,7 +457,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                     }
                 } else {
                     builder.insert_member(
-                        &BNStructureMember::new(
+                        BNStructureMember::new(
                             member_type,
                             member_name,
                             member_offset,
@@ -468,7 +468,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                     );
                 }
             }
-            builder.set_base_structures(&base_structs);
+            builder.base_structures(&base_structs);
             BNType::structure(&builder.finalize())
         }
         TypeClass::Enumeration(c) => {
@@ -486,8 +486,8 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
             BNType::enumeration(&builder.finalize(), width.try_into().unwrap(), signed)
         }
         TypeClass::Union(c) => {
-            let builder = BNStructureBuilder::new();
-            builder.set_structure_type(BNStructureType::UnionStructureType);
+            let mut builder = BNStructureBuilder::new();
+            builder.structure_type(BNStructureType::UnionStructureType);
             for member in &c.members {
                 let member_type = BNConf::new(to_bn_type(arch, &member.ty), u8::MAX);
                 let member_name = member.name.to_owned();
@@ -502,7 +502,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                     member_access,
                     member_scope,
                 );
-                builder.insert_member(&structure_member, false);
+                builder.insert_member(structure_member, false);
             }
             BNType::structure(&builder.finalize())
         }
@@ -533,11 +533,11 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                         &return_type,
                         &params,
                         variable_args,
-                        &BNConf::new(calling_convention, u8::MAX),
+                        BNConf::new(calling_convention, u8::MAX),
                         BNConf::new(0, 0),
                     )
                 }
-                None => BNType::function(&return_type, &params, variable_args),
+                None => BNType::function(&return_type, params, variable_args),
             }
         }
         TypeClass::Referrer(c) => {

@@ -563,7 +563,7 @@ impl DebugInfoBuilder {
             })
             .collect();
 
-        Type::function(&return_type, &parameters, function.variable_arguments)
+        Type::function(&return_type, parameters, function.variable_arguments)
     }
 
     fn commit_functions(&self, debug_info: &mut DebugInfo) {

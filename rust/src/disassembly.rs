@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#![allow(unused)]
 
 use binaryninjacore_sys::*;
 
@@ -40,78 +41,17 @@ pub struct DisassemblyTextLine {
 }
 
 impl DisassemblyTextLine {
-    pub fn new(tokens: Vec<InstructionTextToken>) -> Self {
-        Self {
-            tokens,
-            ..Default::default()
-        }
-    }
-
-    // TODO: I dislike this API immensely, remove as soon as possible.
-    /// Convert into a raw [BNDisassemblyTextLine], use with caution.
-    ///
-    /// NOTE: The allocations here for tokens and tags MUST be freed by rust using [Self::free_raw].
-    pub(crate) fn into_raw(self) -> BNDisassemblyTextLine {
-        // NOTE: The instruction text and type names fields are being leaked here. To be freed with [Self::free_raw].
-        let tokens: Box<[BNInstructionTextToken]> =
-            self.tokens.into_iter().map(Into::into).collect();
-        let tags: Box<[*mut BNTag]> = self
-            .tags
-            .into_iter()
-            .map(|t| {
-                // SAFETY: The tags ref will be temporarily incremented here, until [Self::free_raw] is called.
-                // SAFETY: This is so that tags lifetime is long enough, as we might be the last holders of the ref.
-                unsafe { BNNewTagReference(t.handle) };
-                t.handle
-            })
-            .collect();
-        let tokens_len = tokens.len();
-        let tags_len = tags.len();
-        BNDisassemblyTextLine {
-            addr: self.address,
-            instrIndex: self.instruction_index,
-            // NOTE: Leaking tokens here to be freed with [Self::free_raw].
-            tokens: Box::leak(tokens).as_mut_ptr(),
-            count: tokens_len,
-            highlight: self.highlight.into(),
-            // NOTE: Leaking tags here to be freed with [Self::free_raw].
-            tags: Box::leak(tags).as_mut_ptr(),
-            tagCount: tags_len,
-            typeInfo: self.type_info.into(),
-        }
-    }
-
-    // TODO: I dislike this API immensely, remove as soon as possible.
-    /// Frees raw object created with [Self::into_raw], use with caution.
-    ///
-    /// NOTE: The allocations freed MUST have been created in rust using [Self::into_raw].
-    pub(crate) unsafe fn free_raw(raw: BNDisassemblyTextLine) {
-        // Free the token list
-        let raw_tokens = std::slice::from_raw_parts_mut(raw.tokens, raw.count);
-        let boxed_tokens = Box::from_raw(raw_tokens);
-        for token in boxed_tokens {
-            // SAFETY: As we have leaked the token contents we need to now free them (text and typeNames).
-            InstructionTextToken::free_raw(token);
-        }
-        // Free the tag list
-        let raw_tags = std::slice::from_raw_parts_mut(raw.tags, raw.tagCount);
-        let boxed_tags = Box::from_raw(raw_tags);
-        for tag in boxed_tags {
-            // SAFETY: As we have incremented the tags ref in [Self::into_raw] we must now decrement.
-            unsafe { BNFreeTag(tag) };
-        }
-    }
-}
-
-impl From<&BNDisassemblyTextLine> for DisassemblyTextLine {
-    fn from(value: &BNDisassemblyTextLine) -> Self {
+    pub(crate) fn from_raw(value: &BNDisassemblyTextLine) -> Self {
         let raw_tokens = unsafe { std::slice::from_raw_parts(value.tokens, value.count) };
-        let raw_tags = unsafe { std::slice::from_raw_parts(value.tags, value.tagCount) };
-        let tokens: Vec<_> = raw_tokens.iter().map(Into::into).collect();
+        let tokens: Vec<_> = raw_tokens
+            .iter()
+            .map(InstructionTextToken::from_raw)
+            .collect();
         // SAFETY: Increment the tag ref as we are going from ref to owned.
+        let raw_tags = unsafe { std::slice::from_raw_parts(value.tags, value.tagCount) };
         let tags: Vec<_> = raw_tags
             .iter()
-            .map(|&t| unsafe { Tag::from_raw(t).to_owned() })
+            .map(|&t| unsafe { Tag::from_raw(t) }.to_owned())
             .collect();
         Self {
             address: value.addr,
@@ -119,7 +59,69 @@ impl From<&BNDisassemblyTextLine> for DisassemblyTextLine {
             tokens,
             highlight: value.highlight.into(),
             tags,
-            type_info: value.typeInfo.into(),
+            type_info: DisassemblyTextLineTypeInfo::from_raw(&value.typeInfo),
+        }
+    }
+
+    /// Convert into a raw [BNDisassemblyTextLine], use with caution.
+    ///
+    /// NOTE: The allocations here for tokens and tags MUST be freed by rust using [Self::free_raw].
+    pub(crate) fn into_raw(value: Self) -> BNDisassemblyTextLine {
+        // NOTE: The instruction text and type names fields are being leaked here. To be freed with [Self::free_raw].
+        let tokens: Box<[BNInstructionTextToken]> = value
+            .tokens
+            .into_iter()
+            .map(InstructionTextToken::into_raw)
+            .collect();
+        let tags: Box<[*mut BNTag]> = value
+            .tags
+            .into_iter()
+            .map(|t| {
+                // SAFETY: The tags ref will be temporarily incremented here, until [Self::free_raw] is called.
+                // SAFETY: This is so that tags lifetime is long enough, as we might be the last holders of the ref.
+                unsafe { Ref::into_raw(t) }.handle
+            })
+            .collect();
+        BNDisassemblyTextLine {
+            addr: value.address,
+            instrIndex: value.instruction_index,
+            count: tokens.len(),
+            // NOTE: Leaking tokens here to be freed with [Self::free_raw].
+            tokens: Box::leak(tokens).as_mut_ptr(),
+            highlight: value.highlight.into(),
+            tagCount: tags.len(),
+            // NOTE: Leaking tags here to be freed with [Self::free_raw].
+            tags: Box::leak(tags).as_mut_ptr(),
+            typeInfo: DisassemblyTextLineTypeInfo::into_raw(value.type_info),
+        }
+    }
+
+    /// Frees raw object created with [Self::into_raw], use with caution.
+    ///
+    /// NOTE: The allocations freed MUST have been created in rust using [Self::into_raw].
+    pub(crate) fn free_raw(value: BNDisassemblyTextLine) {
+        // Free the token list
+        let raw_tokens = unsafe { std::slice::from_raw_parts_mut(value.tokens, value.count) };
+        let boxed_tokens = unsafe { Box::from_raw(raw_tokens) };
+        for token in boxed_tokens {
+            // SAFETY: As we have leaked the token contents we need to now free them (text and typeNames).
+            InstructionTextToken::free_raw(token);
+        }
+        // Free the tag list
+        let raw_tags = unsafe { std::slice::from_raw_parts_mut(value.tags, value.tagCount) };
+        let boxed_tags = unsafe { Box::from_raw(raw_tags) };
+        for tag in boxed_tags {
+            // SAFETY: As we have incremented the tags ref in [Self::into_raw] we must now decrement.
+            let _ = unsafe { Tag::ref_from_raw(tag) };
+        }
+        // Free the type info
+        DisassemblyTextLineTypeInfo::free_raw(value.typeInfo);
+    }
+
+    pub fn new(tokens: Vec<InstructionTextToken>) -> Self {
+        Self {
+            tokens,
+            ..Default::default()
         }
     }
 }
@@ -163,7 +165,7 @@ unsafe impl CoreArrayProviderInner for DisassemblyTextLine {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::from(raw)
+        Self::from_raw(raw)
     }
 }
 
@@ -175,22 +177,8 @@ pub struct DisassemblyTextLineTypeInfo {
     pub offset: u64,
 }
 
-impl From<BNDisassemblyTextLineTypeInfo> for DisassemblyTextLineTypeInfo {
-    fn from(value: BNDisassemblyTextLineTypeInfo) -> Self {
-        Self {
-            has_type_info: value.hasTypeInfo,
-            parent_type: match value.parentType.is_null() {
-                false => Some(unsafe { Type::ref_from_raw(value.parentType) }),
-                true => None,
-            },
-            field_index: value.fieldIndex,
-            offset: value.offset,
-        }
-    }
-}
-
-impl From<&BNDisassemblyTextLineTypeInfo> for DisassemblyTextLineTypeInfo {
-    fn from(value: &BNDisassemblyTextLineTypeInfo) -> Self {
+impl DisassemblyTextLineTypeInfo {
+    pub(crate) fn from_raw(value: &BNDisassemblyTextLineTypeInfo) -> Self {
         Self {
             has_type_info: value.hasTypeInfo,
             parent_type: match value.parentType.is_null() {
@@ -201,18 +189,47 @@ impl From<&BNDisassemblyTextLineTypeInfo> for DisassemblyTextLineTypeInfo {
             offset: value.offset,
         }
     }
-}
 
-impl From<DisassemblyTextLineTypeInfo> for BNDisassemblyTextLineTypeInfo {
-    fn from(value: DisassemblyTextLineTypeInfo) -> Self {
+    pub(crate) fn from_owned_raw(value: BNDisassemblyTextLineTypeInfo) -> Self {
         Self {
+            has_type_info: value.hasTypeInfo,
+            parent_type: match value.parentType.is_null() {
+                false => Some(unsafe { Type::ref_from_raw(value.parentType) }),
+                true => None,
+            },
+            field_index: value.fieldIndex,
+            offset: value.offset,
+        }
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNDisassemblyTextLineTypeInfo {
+        BNDisassemblyTextLineTypeInfo {
             hasTypeInfo: value.has_type_info,
             parentType: value
                 .parent_type
+                .map(|t| unsafe { Ref::into_raw(t) }.handle)
+                .unwrap_or(std::ptr::null_mut()),
+            fieldIndex: value.field_index,
+            offset: value.offset,
+        }
+    }
+
+    pub(crate) fn into_owned_raw(value: &Self) -> BNDisassemblyTextLineTypeInfo {
+        BNDisassemblyTextLineTypeInfo {
+            hasTypeInfo: value.has_type_info,
+            parentType: value
+                .parent_type
+                .as_ref()
                 .map(|t| t.handle)
                 .unwrap_or(std::ptr::null_mut()),
             fieldIndex: value.field_index,
             offset: value.offset,
+        }
+    }
+
+    pub(crate) fn free_raw(value: BNDisassemblyTextLineTypeInfo) {
+        if !value.parentType.is_null() {
+            let _ = unsafe { Type::ref_from_raw(value.parentType) };
         }
     }
 }
@@ -229,6 +246,52 @@ pub struct InstructionTextToken {
 }
 
 impl InstructionTextToken {
+    pub(crate) fn from_raw(value: &BNInstructionTextToken) -> Self {
+        Self {
+            address: value.address,
+            text: raw_to_string(value.text).unwrap(),
+            confidence: value.confidence,
+            context: value.context.into(),
+            expr_index: value.exprIndex,
+            kind: InstructionTextTokenKind::from_raw(value),
+        }
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNInstructionTextToken {
+        let bn_text = BnString::new(value.text);
+        // These can be gathered from value.kind
+        let kind_value = value.kind.try_value().unwrap_or(0);
+        let operand = value.kind.try_operand().unwrap_or(0);
+        let size = value.kind.try_size().unwrap_or(0);
+        let type_names = value.kind.try_type_names().unwrap_or(vec![]);
+        BNInstructionTextToken {
+            type_: value.kind.into(),
+            // NOTE: Expected to be freed with `InstructionTextToken::free_raw`.
+            text: BnString::into_raw(bn_text),
+            value: kind_value,
+            // TODO: Where is this even used?
+            width: 0,
+            size,
+            operand,
+            context: value.context.into(),
+            confidence: value.confidence,
+            address: value.address,
+            // NOTE: Expected to be freed with `InstructionTextToken::free_raw`.
+            typeNames: strings_to_string_list(&type_names),
+            namesCount: type_names.len(),
+            exprIndex: value.expr_index,
+        }
+    }
+
+    pub(crate) fn free_raw(value: BNInstructionTextToken) {
+        if !value.text.is_null() {
+            unsafe { BNFreeString(value.text) };
+        }
+        if !value.typeNames.is_null() {
+            unsafe { BNFreeStringList(value.typeNames, value.namesCount) };
+        }
+    }
+
     pub fn new(text: impl Into<String>, kind: InstructionTextTokenKind) -> Self {
         Self {
             address: 0,
@@ -254,56 +317,6 @@ impl InstructionTextToken {
             kind,
         }
     }
-
-    pub(crate) unsafe fn free_raw(raw: BNInstructionTextToken) {
-        if !raw.text.is_null() {
-            BNFreeString(raw.text);
-        }
-        if !raw.typeNames.is_null() {
-            BNFreeStringList(raw.typeNames, raw.namesCount);
-        }
-    }
-}
-
-impl From<&BNInstructionTextToken> for InstructionTextToken {
-    fn from(value: &BNInstructionTextToken) -> Self {
-        Self {
-            address: value.address,
-            text: raw_to_string(value.text).unwrap(),
-            confidence: value.confidence,
-            context: value.context.into(),
-            expr_index: value.exprIndex,
-            kind: InstructionTextTokenKind::from(value),
-        }
-    }
-}
-
-impl From<InstructionTextToken> for BNInstructionTextToken {
-    fn from(value: InstructionTextToken) -> Self {
-        let bn_text = BnString::new(value.text);
-        // These can be gathered from value.kind
-        let kind_value = value.kind.try_value().unwrap_or(0);
-        let operand = value.kind.try_operand().unwrap_or(0);
-        let size = value.kind.try_size().unwrap_or(0);
-        let type_names = value.kind.try_type_names().unwrap_or(vec![]);
-        Self {
-            type_: value.kind.into(),
-            // Expected to be freed with `InstructionTextToken::free_raw`.
-            text: bn_text.into_raw(),
-            value: kind_value,
-            // TODO: Where is this even used?
-            width: 0,
-            size,
-            operand,
-            context: value.context.into(),
-            confidence: value.confidence,
-            address: value.address,
-            // Expected to be freed with `InstructionTextToken::free_raw`.
-            typeNames: strings_to_string_list(&type_names),
-            namesCount: type_names.len(),
-            exprIndex: value.expr_index,
-        }
-    }
 }
 
 impl Display for InstructionTextToken {
@@ -325,7 +338,7 @@ unsafe impl CoreArrayProviderInner for InstructionTextToken {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::from(raw)
+        Self::from_raw(raw)
     }
 }
 
@@ -508,80 +521,7 @@ pub enum InstructionTextTokenKind {
 }
 
 impl InstructionTextTokenKind {
-    /// Mapping to the [`BNInstructionTextTokenType::value`] field.
-    fn try_value(&self) -> Option<u64> {
-        // TODO: Double check to make sure these are correct.
-        match self {
-            InstructionTextTokenKind::Integer { value, .. } => Some(*value),
-            InstructionTextTokenKind::PossibleAddress { value, .. } => Some(*value),
-            InstructionTextTokenKind::PossibleValue { value, .. } => Some(*value),
-            InstructionTextTokenKind::FloatingPoint { value, .. } => Some(*value as u64),
-            InstructionTextTokenKind::CodeRelativeAddress { value, .. } => Some(*value),
-            InstructionTextTokenKind::ArgumentName { value, .. } => Some(*value),
-            InstructionTextTokenKind::HexDumpByteValue { value, .. } => Some(*value as u64),
-            InstructionTextTokenKind::HexDumpText { width, .. } => Some(*width),
-            InstructionTextTokenKind::String { ty, .. } => Some(*ty as u64),
-            InstructionTextTokenKind::FieldName { offset, .. } => Some(*offset),
-            InstructionTextTokenKind::StructOffset { offset, .. } => Some(*offset),
-            InstructionTextTokenKind::StructureHexDumpText { width, .. } => Some(*width),
-            InstructionTextTokenKind::GotoLabel { target, .. } => Some(*target),
-            InstructionTextTokenKind::Comment { target, .. } => Some(*target),
-            InstructionTextTokenKind::ArrayIndex { index, .. } => Some(*index),
-            InstructionTextTokenKind::EnumerationMember { value, .. } => Some(*value),
-            InstructionTextTokenKind::LocalVariable { variable_id, .. } => Some(*variable_id),
-            InstructionTextTokenKind::Import { target, .. } => Some(*target),
-            InstructionTextTokenKind::AddressDisplay { address, .. } => Some(*address),
-            InstructionTextTokenKind::IndirectImport { target, .. } => Some(*target),
-            InstructionTextTokenKind::Brace { hash, .. } => *hash,
-            InstructionTextTokenKind::CodeSymbol { value, .. } => Some(*value),
-            InstructionTextTokenKind::DataSymbol { value, .. } => Some(*value),
-            InstructionTextTokenKind::ExternalSymbol { value, .. } => Some(*value),
-            InstructionTextTokenKind::StackVariable { variable_id, .. } => Some(*variable_id),
-            InstructionTextTokenKind::CollapseStateIndicator { hash, .. } => *hash,
-            _ => None,
-        }
-    }
-
-    /// Mapping to the [`BNInstructionTextTokenType::size`] field.
-    fn try_size(&self) -> Option<usize> {
-        match self {
-            InstructionTextTokenKind::Integer { size, .. } => *size,
-            InstructionTextTokenKind::FloatingPoint { size, .. } => *size,
-            InstructionTextTokenKind::PossibleAddress { size, .. } => *size,
-            InstructionTextTokenKind::CodeRelativeAddress { size, .. } => *size,
-            InstructionTextTokenKind::CodeSymbol { size, .. } => Some(*size),
-            InstructionTextTokenKind::DataSymbol { size, .. } => Some(*size),
-            InstructionTextTokenKind::IndirectImport { size, .. } => Some(*size),
-            _ => None,
-        }
-    }
-
-    /// Mapping to the [`BNInstructionTextTokenType::operand`] field.
-    fn try_operand(&self) -> Option<usize> {
-        match self {
-            InstructionTextTokenKind::LocalVariable { ssa_version, .. } => Some(*ssa_version),
-            InstructionTextTokenKind::IndirectImport { source_operand, .. } => {
-                Some(*source_operand)
-            }
-            _ => None,
-        }
-    }
-
-    /// Mapping to the [`BNInstructionTextTokenType::typeNames`] field.
-    fn try_type_names(&self) -> Option<Vec<String>> {
-        match self {
-            InstructionTextTokenKind::FieldName { type_names, .. } => Some(type_names.clone()),
-            InstructionTextTokenKind::StructOffset { type_names, .. } => Some(type_names.clone()),
-            InstructionTextTokenKind::EnumerationMember { type_id, .. } => {
-                Some(vec![type_id.clone()?])
-            }
-            _ => None,
-        }
-    }
-}
-
-impl From<&BNInstructionTextToken> for InstructionTextTokenKind {
-    fn from(value: &BNInstructionTextToken) -> Self {
+    pub(crate) fn from_raw(value: &BNInstructionTextToken) -> Self {
         match value.type_ {
             BNInstructionTextTokenType::TextToken => Self::Text,
             BNInstructionTextTokenType::InstructionToken => Self::Instruction,
@@ -739,6 +679,77 @@ impl From<&BNInstructionTextToken> for InstructionTextTokenKind {
                     },
                 }
             }
+        }
+    }
+
+    /// Mapping to the [`BNInstructionTextTokenType::value`] field.
+    fn try_value(&self) -> Option<u64> {
+        // TODO: Double check to make sure these are correct.
+        match self {
+            InstructionTextTokenKind::Integer { value, .. } => Some(*value),
+            InstructionTextTokenKind::PossibleAddress { value, .. } => Some(*value),
+            InstructionTextTokenKind::PossibleValue { value, .. } => Some(*value),
+            InstructionTextTokenKind::FloatingPoint { value, .. } => Some(*value as u64),
+            InstructionTextTokenKind::CodeRelativeAddress { value, .. } => Some(*value),
+            InstructionTextTokenKind::ArgumentName { value, .. } => Some(*value),
+            InstructionTextTokenKind::HexDumpByteValue { value, .. } => Some(*value as u64),
+            InstructionTextTokenKind::HexDumpText { width, .. } => Some(*width),
+            InstructionTextTokenKind::String { ty, .. } => Some(*ty as u64),
+            InstructionTextTokenKind::FieldName { offset, .. } => Some(*offset),
+            InstructionTextTokenKind::StructOffset { offset, .. } => Some(*offset),
+            InstructionTextTokenKind::StructureHexDumpText { width, .. } => Some(*width),
+            InstructionTextTokenKind::GotoLabel { target, .. } => Some(*target),
+            InstructionTextTokenKind::Comment { target, .. } => Some(*target),
+            InstructionTextTokenKind::ArrayIndex { index, .. } => Some(*index),
+            InstructionTextTokenKind::EnumerationMember { value, .. } => Some(*value),
+            InstructionTextTokenKind::LocalVariable { variable_id, .. } => Some(*variable_id),
+            InstructionTextTokenKind::Import { target, .. } => Some(*target),
+            InstructionTextTokenKind::AddressDisplay { address, .. } => Some(*address),
+            InstructionTextTokenKind::IndirectImport { target, .. } => Some(*target),
+            InstructionTextTokenKind::Brace { hash, .. } => *hash,
+            InstructionTextTokenKind::CodeSymbol { value, .. } => Some(*value),
+            InstructionTextTokenKind::DataSymbol { value, .. } => Some(*value),
+            InstructionTextTokenKind::ExternalSymbol { value, .. } => Some(*value),
+            InstructionTextTokenKind::StackVariable { variable_id, .. } => Some(*variable_id),
+            InstructionTextTokenKind::CollapseStateIndicator { hash, .. } => *hash,
+            _ => None,
+        }
+    }
+
+    /// Mapping to the [`BNInstructionTextTokenType::size`] field.
+    fn try_size(&self) -> Option<usize> {
+        match self {
+            InstructionTextTokenKind::Integer { size, .. } => *size,
+            InstructionTextTokenKind::FloatingPoint { size, .. } => *size,
+            InstructionTextTokenKind::PossibleAddress { size, .. } => *size,
+            InstructionTextTokenKind::CodeRelativeAddress { size, .. } => *size,
+            InstructionTextTokenKind::CodeSymbol { size, .. } => Some(*size),
+            InstructionTextTokenKind::DataSymbol { size, .. } => Some(*size),
+            InstructionTextTokenKind::IndirectImport { size, .. } => Some(*size),
+            _ => None,
+        }
+    }
+
+    /// Mapping to the [`BNInstructionTextTokenType::operand`] field.
+    fn try_operand(&self) -> Option<usize> {
+        match self {
+            InstructionTextTokenKind::LocalVariable { ssa_version, .. } => Some(*ssa_version),
+            InstructionTextTokenKind::IndirectImport { source_operand, .. } => {
+                Some(*source_operand)
+            }
+            _ => None,
+        }
+    }
+
+    /// Mapping to the [`BNInstructionTextTokenType::typeNames`] field.
+    fn try_type_names(&self) -> Option<Vec<String>> {
+        match self {
+            InstructionTextTokenKind::FieldName { type_names, .. } => Some(type_names.clone()),
+            InstructionTextTokenKind::StructOffset { type_names, .. } => Some(type_names.clone()),
+            InstructionTextTokenKind::EnumerationMember { type_id, .. } => {
+                Some(vec![type_id.clone()?])
+            }
+            _ => None,
         }
     }
 }

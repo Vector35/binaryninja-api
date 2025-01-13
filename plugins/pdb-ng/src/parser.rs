@@ -407,21 +407,21 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 NamedTypeReferenceClass::ClassNamedTypeClass
                 | NamedTypeReferenceClass::StructNamedTypeClass
                 | NamedTypeReferenceClass::UnionNamedTypeClass => {
-                    let structure = StructureBuilder::new();
+                    let mut structure = StructureBuilder::new();
                     match class {
                         NamedTypeReferenceClass::ClassNamedTypeClass => {
-                            structure.set_structure_type(StructureType::ClassStructureType);
+                            structure.structure_type(StructureType::ClassStructureType);
                         }
                         NamedTypeReferenceClass::StructNamedTypeClass => {
-                            structure.set_structure_type(StructureType::StructStructureType);
+                            structure.structure_type(StructureType::StructStructureType);
                         }
                         NamedTypeReferenceClass::UnionNamedTypeClass => {
-                            structure.set_structure_type(StructureType::UnionStructureType);
+                            structure.structure_type(StructureType::UnionStructureType);
                         }
                         _ => {}
                     }
-                    structure.set_width(1);
-                    structure.set_alignment(1);
+                    structure.width(1);
+                    structure.alignment(1);
 
                     self.debug_info.add_type(
                         &name,

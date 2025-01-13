@@ -373,7 +373,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     let bare_type = match type_class {
                         NamedTypeReferenceClass::ClassNamedTypeClass => Type::structure(
                             StructureBuilder::new()
-                                .set_structure_type(StructureType::ClassStructureType)
+                                .structure_type(StructureType::ClassStructureType)
                                 .finalize()
                                 .as_ref(),
                         ),
@@ -385,7 +385,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         }
                         NamedTypeReferenceClass::UnionNamedTypeClass => Type::structure(
                             StructureBuilder::new()
-                                .set_structure_type(StructureType::UnionStructureType)
+                                .structure_type(StructureType::UnionStructureType)
                                 .finalize()
                                 .as_ref(),
                         ),
@@ -713,31 +713,31 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         match data.indirection {
             Some(Indirection::Near16) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
                 &self.arch,
-                base.as_ref(),
+                &base,
             ))))),
             Some(Indirection::Far16) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
                 &self.arch,
-                base.as_ref(),
+                &base,
             ))))),
             Some(Indirection::Huge16) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
                 &self.arch,
-                base.as_ref(),
+                &base,
             ))))),
             Some(Indirection::Near32) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
                 &self.arch,
-                base.as_ref(),
+                &base,
             ))))),
             Some(Indirection::Far32) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
                 &self.arch,
-                base.as_ref(),
+                &base,
             ))))),
             Some(Indirection::Near64) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
                 &self.arch,
-                base.as_ref(),
+                &base,
             ))))),
             Some(Indirection::Near128) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
                 &self.arch,
-                base.as_ref(),
+                &base,
             ))))),
             None => Ok(Some(Box::new(ParsedType::Bare(base)))),
         }
@@ -780,9 +780,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         };
 
         let mut structure = StructureBuilder::new();
-        structure.set_structure_type(struct_kind);
-        structure.set_width(data.size);
-        structure.set_packed(data.properties.packed());
+        structure.structure_type(struct_kind);
+        structure.width(data.size);
+        structure.packed(data.properties.packed());
 
         if let Some(fields) = data.fields {
             self.namespace_stack.push(class_name.to_string());
@@ -876,7 +876,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             match (m.bitfield_position, m.bitfield_size) {
                 (Some(pos), Some(_size)) => {
                     if last_bitfield_offset != m.offset || last_bitfield_pos >= pos {
-                        if let Some(builder) = bitfield_builder.take() {
+                        if let Some(mut builder) = bitfield_builder.take() {
                             combined_bitfield_members.push(ParsedMember {
                                 ty: Conf::new(
                                     Type::structure(builder.finalize().as_ref()),
@@ -890,9 +890,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                 bitfield_position: None,
                             });
                         }
-                        let new_builder = StructureBuilder::new();
-                        new_builder.set_structure_type(StructureType::UnionStructureType);
-                        new_builder.set_width(m.ty.contents.width());
+                        let mut new_builder = StructureBuilder::new();
+                        new_builder.structure_type(StructureType::UnionStructureType);
+                        new_builder.width(m.ty.contents.width());
                         bitfield_builder = Some(new_builder);
 
                         if last_bitfield_offset != m.offset {
@@ -910,7 +910,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         .insert(&m.ty, m.name, 0, false, m.access, m.scope);
                 }
                 (None, None) => {
-                    if let Some(builder) = bitfield_builder.take() {
+                    if let Some(mut builder) = bitfield_builder.take() {
                         combined_bitfield_members.push(ParsedMember {
                             ty: Conf::new(
                                 Type::structure(builder.finalize().as_ref()),
@@ -931,7 +931,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 e => return Err(anyhow!("Unexpected bitfield parameters {:?}", e)),
             }
         }
-        if let Some(builder) = bitfield_builder.take() {
+        if let Some(mut builder) = bitfield_builder.take() {
             combined_bitfield_members.push(ParsedMember {
                 ty: Conf::new(
                     Type::structure(builder.finalize().as_ref()),
@@ -1041,14 +1041,14 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     .ok_or_else(|| anyhow!("Expected class in ns stack"))?
             );
         }
-        structure.set_base_structures(&bases);
+        structure.base_structures(&bases);
 
         if self
             .settings
             .get_bool("pdb.features.generateVTables", Some(self.bv), None)
             && !virt_methods.is_empty()
         {
-            let vt = StructureBuilder::new();
+            let mut vt = StructureBuilder::new();
 
             let mut vt_bases = vec![];
 
@@ -1106,8 +1106,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 min_width = min_width.max(base.width);
             }
 
-            vt.set_base_structures(&vt_bases);
-            vt.set_propagates_data_var_refs(true);
+            vt.base_structures(&vt_bases);
+            vt.propagates_data_var_refs(true);
 
             for (offset, (name, method)) in virt_methods {
                 vt.insert(
@@ -1124,7 +1124,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 min_width = min_width.max((offset + self.arch.address_size()) as u64);
             }
 
-            vt.set_width(min_width);
+            vt.width(min_width);
 
             let vt_type = Type::structure(vt.finalize().as_ref());
             // Need to insert a new named type for the vtable
@@ -1289,7 +1289,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             &Conf::new(return_type, MAX_CONFIDENCE),
             arguments.as_slice(),
             is_varargs,
-            &convention,
+            convention.clone(),
             Conf::new(0, 0),
         );
 
@@ -1297,7 +1297,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             &Conf::new(fancy_return_type, MAX_CONFIDENCE),
             fancy_arguments.as_slice(),
             is_varargs,
-            &convention,
+            convention,
             Conf::new(0, 0),
         );
 
@@ -1536,7 +1536,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         if return_stacky {
             // Stack return via a pointer in the first parameter
             fancy_return_type =
-                Conf::new(Type::pointer(&self.arch, &return_type), MAX_CONFIDENCE);
+                Conf::new(Type::pointer(&self.arch, &return_type.clone()), MAX_CONFIDENCE);
             fancy_arguments.insert(
                 0,
                 FunctionParameter::new(fancy_return_type.clone(), "__return".to_string(), None),
@@ -1553,7 +1553,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             &return_type,
             arguments.as_slice(),
             is_varargs,
-            &convention,
+            convention.clone(),
             Conf::new(0, 0),
         );
 
@@ -1561,7 +1561,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             &fancy_return_type,
             fancy_arguments.as_slice(),
             is_varargs,
-            &convention,
+            convention,
             Conf::new(0, 0),
         );
 
@@ -1592,7 +1592,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         if let Some(base) = base {
             Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
                 &self.arch,
-                base.as_ref(),
+                &base,
             )))))
         } else {
             Ok(None)
@@ -1736,7 +1736,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     counts[j] /= new_type.width();
                 }
 
-                new_type = Type::array(new_type.as_ref(), counts[i] as u64);
+                new_type = Type::array(&new_type, counts[i] as u64);
             }
 
             Ok(Some(Box::new(ParsedType::Bare(new_type))))
@@ -1771,8 +1771,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
 
         let mut structure = StructureBuilder::new();
-        structure.set_structure_type(StructureType::UnionStructureType);
-        structure.set_width(data.size);
+        structure.structure_type(StructureType::UnionStructureType);
+        structure.width(data.size);
 
         self.namespace_stack.push(union_name.to_string());
         let success = self.parse_union_fields(&mut structure, data.fields, finder);
@@ -1827,7 +1827,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     group[0].scope,
                 );
             } else {
-                let inner_struct = StructureBuilder::new();
+                let mut inner_struct = StructureBuilder::new();
                 for member in group {
                     inner_struct.insert(
                         &member.ty,
@@ -1928,7 +1928,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     } else {
                         args.push(FunctionParameter::new(
                             Conf::new(
-                                Type::pointer(self.arch.as_ref(), ty.as_ref()),
+                                Type::pointer(self.arch.as_ref(), &ty),
                                 MAX_CONFIDENCE,
                             ),
                             "".to_string(),

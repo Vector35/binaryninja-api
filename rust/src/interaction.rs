@@ -482,10 +482,10 @@ impl FormInputBuilder {
     /// };
     ///
     /// let FormResponses::String(last_name) = &responses[0] else {
-    ///    unreachable!()
+    ///     unreachable!()
     /// };
     /// let FormResponses::String(first_name) = &responses[1] else {
-    ///    unreachable!()
+    ///     unreachable!()
     /// };
     ///
     /// println!("{} {} likes {}", &first_name, &last_name, food);

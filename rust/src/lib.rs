@@ -82,7 +82,9 @@
 //! let headless_session = binaryninja::headless::Session::new();
 //!
 //! println!("Loading binary...");
-//! let bv = headless_session.load("/bin/cat").expect("Couldn't open `/bin/cat`");
+//! let bv = headless_session
+//!     .load("/bin/cat")
+//!     .expect("Couldn't open `/bin/cat`");
 //!
 //! // Your code here...
 //! ```
@@ -104,7 +106,6 @@
 //! [the only official method of providing linker arguments to a crate is through that crate's `build.rs`]: https://github.com/rust-lang/cargo/issues/9554
 //! [`build.rs` is here]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/examples/template/build.rs
 //! [examples]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples
-//!
 
 #[doc(hidden)]
 pub extern crate binaryninjacore_sys;

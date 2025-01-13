@@ -393,7 +393,7 @@ impl LinearDisassemblyLine {
         let linetype = raw.type_;
         // TODO: We must remove this behavior.
         let function = mem::ManuallyDrop::new(Function::ref_from_raw(raw.function));
-        let contents = mem::ManuallyDrop::new(DisassemblyTextLine::from(&raw.contents));
+        let contents = mem::ManuallyDrop::new(DisassemblyTextLine::from_raw(&raw.contents));
         Self {
             t: linetype,
             function,

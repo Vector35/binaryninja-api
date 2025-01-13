@@ -557,7 +557,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         let mut dv = BNDataVariable::default();
         unsafe {
             if BNGetDataVariableAtAddress(self.as_ref().handle, addr, &mut dv) {
-                Some(DataVariable::from(dv))
+                Some(DataVariable::from_owned_raw(dv))
             } else {
                 None
             }
@@ -565,15 +565,17 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn define_auto_data_var<'a, T: Into<Conf<&'a Type>>>(&self, addr: u64, ty: T) {
+        let mut owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
         unsafe {
-            BNDefineDataVariable(self.as_ref().handle, addr, &mut ty.into().into());
+            BNDefineDataVariable(self.as_ref().handle, addr, &mut owned_raw_ty);
         }
     }
 
     /// You likely would also like to call [`Self::define_user_symbol`] to bind this data variable with a name
     fn define_user_data_var<'a, T: Into<Conf<&'a Type>>>(&self, addr: u64, ty: T) {
+        let mut owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
         unsafe {
-            BNDefineUserDataVariable(self.as_ref().handle, addr, &mut ty.into().into());
+            BNDefineUserDataVariable(self.as_ref().handle, addr, &mut owned_raw_ty);
         }
     }
 
@@ -595,14 +597,15 @@ pub trait BinaryViewExt: BinaryViewBase {
         source: S,
         type_obj: &Type,
     ) -> QualifiedName {
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         let source_str = source.into_bytes_with_nul();
         let name_handle = unsafe {
             let id_str =
                 BNGenerateAutoTypeId(source_str.as_ref().as_ptr() as *const _, &mut raw_name);
             BNDefineAnalysisType(self.as_ref().handle, id_str, &mut raw_name, type_obj.handle)
         };
-        QualifiedName::from(name_handle)
+        QualifiedName::free_raw(raw_name);
+        QualifiedName::from_owned_raw(name_handle)
     }
 
     fn define_auto_type_with_id<T: Into<QualifiedName>, S: BnStrCompatible>(
@@ -611,7 +614,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         id: S,
         type_obj: &Type,
     ) -> QualifiedName {
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         let id_str = id.into_bytes_with_nul();
         let result_raw_name = unsafe {
             BNDefineAnalysisType(
@@ -621,12 +624,14 @@ pub trait BinaryViewExt: BinaryViewBase {
                 type_obj.handle,
             )
         };
-        QualifiedName::from(result_raw_name)
+        QualifiedName::free_raw(raw_name);
+        QualifiedName::from_owned_raw(result_raw_name)
     }
 
     fn define_user_type<T: Into<QualifiedName>>(&self, name: T, type_obj: &Type) {
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe { BNDefineUserAnalysisType(self.as_ref().handle, &mut raw_name, type_obj.handle) }
+        QualifiedName::free_raw(raw_name);
     }
 
     fn define_auto_types<T, I>(&self, names_sources_and_types: T) -> HashMap<String, QualifiedName>
@@ -648,7 +653,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     {
         let mut types: Vec<BNQualifiedNameTypeAndId> = names_sources_and_types
             .map(Into::into)
-            .map(Into::into)
+            .map(QualifiedNameTypeAndId::into_raw)
             .collect();
         let mut progress_raw = ProgressContext(progress);
         let mut result_ids: *mut *mut c_char = std::ptr::null_mut();
@@ -664,6 +669,10 @@ pub trait BinaryViewExt: BinaryViewBase {
                 &mut result_names as *mut _,
             )
         };
+
+        for ty in types {
+            QualifiedNameTypeAndId::free_raw(ty);
+        }
 
         let id_array = unsafe { Array::<BnString>::new(result_ids, result_count, ()) };
         let name_array = unsafe { Array::<QualifiedName>::new(result_names, result_count, ()) };
@@ -690,8 +699,10 @@ pub trait BinaryViewExt: BinaryViewBase {
         T: Iterator<Item = I>,
         I: Into<QualifiedNameAndType>,
     {
-        let mut types: Vec<BNQualifiedNameAndType> =
-            names_and_types.map(Into::into).map(Into::into).collect();
+        let mut types: Vec<BNQualifiedNameAndType> = names_and_types
+            .map(Into::into)
+            .map(QualifiedNameAndType::into_raw)
+            .collect();
         let mut progress_raw = ProgressContext(progress);
         unsafe {
             BNDefineUserAnalysisTypes(
@@ -702,6 +713,9 @@ pub trait BinaryViewExt: BinaryViewBase {
                 &mut progress_raw as *mut _ as *mut c_void,
             )
         };
+        for ty in types {
+            QualifiedNameAndType::free_raw(ty);
+        }
     }
 
     fn undefine_auto_type<S: BnStrCompatible>(&self, id: S) {
@@ -712,8 +726,9 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn undefine_user_type<T: Into<QualifiedName>>(&self, name: T) {
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe { BNUndefineUserAnalysisType(self.as_ref().handle, &mut raw_name) }
+        QualifiedName::free_raw(raw_name);
     }
 
     fn types(&self) -> Array<QualifiedNameAndType> {
@@ -733,9 +748,10 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn get_type_by_name<T: Into<QualifiedName>>(&self, name: T) -> Option<Ref<Type>> {
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
             let type_handle = BNGetAnalysisTypeByName(self.as_ref().handle, &mut raw_name);
+            QualifiedName::free_raw(raw_name);
             if type_handle.is_null() {
                 return None;
             }
@@ -770,7 +786,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             let id_str = id.into_bytes_with_nul();
             let name_handle =
                 BNGetAnalysisTypeNameById(self.as_ref().handle, id_str.as_ref().as_ptr() as *mut _);
-            let name = QualifiedName::from(name_handle);
+            let name = QualifiedName::from_owned_raw(name_handle);
             // The core will return an empty qualified name if no type name was found.
             match name.items.is_empty() {
                 true => None,
@@ -780,9 +796,10 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn get_type_id<T: Into<QualifiedName>>(&self, name: T) -> Option<BnString> {
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
             let id_cstr = BNGetAnalysisTypeId(self.as_ref().handle, &mut raw_name);
+            QualifiedName::free_raw(raw_name);
             let id = BnString::from_raw(id_cstr);
             match id.is_empty() {
                 true => None,
@@ -792,8 +809,10 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn is_type_auto_defined<T: Into<QualifiedName>>(&self, name: T) -> bool {
-        let mut raw_name = BNQualifiedName::from(name.into());
-        unsafe { BNIsAnalysisTypeAutoDefined(self.as_ref().handle, &mut raw_name) }
+        let mut raw_name = QualifiedName::into_raw(name.into());
+        let result = unsafe { BNIsAnalysisTypeAutoDefined(self.as_ref().handle, &mut raw_name) };
+        QualifiedName::free_raw(raw_name);
+        result
     }
 
     fn segments(&self) -> Array<Segment> {
@@ -1376,22 +1395,24 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     /// Retrieves a list of [CodeReference]s for locations in code that use a given named type.
     fn get_code_refs_for_type<T: Into<QualifiedName>>(&self, name: T) -> Array<CodeReference> {
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
             let mut count = 0;
             let handle =
                 BNGetCodeReferencesForType(self.as_ref().handle, &mut raw_name, &mut count);
+            QualifiedName::free_raw(raw_name);
             Array::new(handle, count, ())
         }
     }
 
     /// Retrieves a list of [DataReference]s instances of a given named type in data.
     fn get_data_refs_for_type<T: Into<QualifiedName>>(&self, name: T) -> Array<DataReference> {
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
             let mut count = 0;
             let handle =
                 BNGetDataReferencesForType(self.as_ref().handle, &mut raw_name, &mut count);
+            QualifiedName::free_raw(raw_name);
             Array::new(handle, count, ())
         }
     }
@@ -1534,7 +1555,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         addr: u64,
         platform: &Platform,
     ) {
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
             BNBinaryViewRecordImportedObjectLibrary(
                 self.as_ref().handle,
@@ -1544,6 +1565,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 &mut raw_name,
             )
         }
+        QualifiedName::free_raw(raw_name);
     }
 
     /// Recursively imports a type from the specified type library, or, if
@@ -1565,10 +1587,11 @@ pub trait BinaryViewExt: BinaryViewBase {
             .as_mut()
             .map(|l| unsafe { l.as_raw() } as *mut _)
             .unwrap_or(std::ptr::null_mut());
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         let result = unsafe {
             BNBinaryViewImportTypeLibraryType(self.as_ref().handle, &mut lib_ref, &mut raw_name)
         };
+        QualifiedName::free_raw(raw_name);
         (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
     }
 
@@ -1590,10 +1613,11 @@ pub trait BinaryViewExt: BinaryViewBase {
             .as_mut()
             .map(|l| unsafe { l.as_raw() } as *mut _)
             .unwrap_or(std::ptr::null_mut());
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         let result = unsafe {
             BNBinaryViewImportTypeLibraryObject(self.as_ref().handle, &mut lib_ref, &mut raw_name)
         };
+        QualifiedName::free_raw(raw_name);
         (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
     }
 
@@ -1624,7 +1648,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         name: T,
         type_obj: &Type,
     ) {
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
             BNBinaryViewExportTypeToTypeLibrary(
                 self.as_ref().handle,
@@ -1633,6 +1657,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 type_obj.handle,
             )
         }
+        QualifiedName::free_raw(raw_name);
     }
 
     /// Recursively exports `type_obj` into `lib` as a type with name `name`
@@ -1645,7 +1670,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         name: T,
         type_obj: &Type,
     ) {
-        let mut raw_name = BNQualifiedName::from(name.into());
+        let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
             BNBinaryViewExportObjectToTypeLibrary(
                 self.as_ref().handle,
@@ -1654,6 +1679,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 type_obj.handle,
             )
         }
+        QualifiedName::free_raw(raw_name);
     }
 
     /// Gives you details of which type library and name was used to determine
@@ -1681,7 +1707,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             return None;
         }
         let lib = unsafe { TypeLibrary::from_raw(NonNull::new(result_lib)?) };
-        let name = QualifiedName::from(result_name);
+        let name = QualifiedName::from_owned_raw(result_name);
         Some((lib, name))
     }
 
@@ -1692,7 +1718,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         &self,
         name: T,
     ) -> Option<(TypeLibrary, QualifiedName)> {
-        let raw_name = BNQualifiedName::from(name.into());
+        let raw_name = QualifiedName::into_raw(name.into());
         let mut result_lib = std::ptr::null_mut();
         let mut result_name = BNQualifiedName::default();
         let success = unsafe {
@@ -1703,11 +1729,12 @@ pub trait BinaryViewExt: BinaryViewBase {
                 &mut result_name,
             )
         };
+        QualifiedName::free_raw(raw_name);
         if !success {
             return None;
         }
         let lib = unsafe { TypeLibrary::from_raw(NonNull::new(result_lib)?) };
-        let name = QualifiedName::from(result_name);
+        let name = QualifiedName::from_owned_raw(result_name);
         Some((lib, name))
     }
     //
@@ -1914,7 +1941,9 @@ pub type BinaryViewEventType = BNBinaryViewEventType;
 /// # Example
 ///
 /// ```no_run
-/// use binaryninja::binaryview::{BinaryView, BinaryViewEventHandler, BinaryViewEventType, register_binary_view_event};
+/// use binaryninja::binaryview::{
+///     register_binary_view_event, BinaryView, BinaryViewEventHandler, BinaryViewEventType,
+/// };
 ///
 /// struct EventHandlerContext {
 ///     // Context holding state available to event handler
@@ -1928,7 +1957,7 @@ pub type BinaryViewEventType = BNBinaryViewEventType;
 ///
 /// #[no_mangle]
 /// pub extern "C" fn CorePluginInit() {
-///     let context = EventHandlerContext { };
+///     let context = EventHandlerContext {};
 ///
 ///     register_binary_view_event(
 ///         BinaryViewEventType::BinaryViewInitialAnalysisCompletionEvent,

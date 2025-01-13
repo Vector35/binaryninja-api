@@ -17,7 +17,7 @@
 // container abstraction to avoid Vec<> (want CoreArchFlagList, CoreArchRegList)
 // RegisterInfo purge
 use binaryninjacore_sys::*;
-use std::fmt::Formatter;
+use std::fmt::{Debug, Formatter};
 
 use crate::{
     callingconvention::CallingConvention,
@@ -280,7 +280,7 @@ pub trait RegisterInfo: Sized {
     fn implicit_extend(&self) -> ImplicitRegisterExtend;
 }
 
-pub trait Register: Sized + Clone + Copy + Hash + Eq {
+pub trait Register: Debug + Sized + Clone + Copy + Hash + Eq {
     type InfoType: RegisterInfo<RegType = Self>;
 
     fn name(&self) -> Cow<str>;
@@ -849,6 +849,14 @@ impl Register for CoreRegister {
     }
 }
 
+impl Debug for CoreRegister {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CoreRegister")
+            .field("id", &self.id)
+            .finish()
+    }
+}
+
 impl CoreArrayProvider for CoreRegister {
     type Raw = u32;
     type Context = CoreArchitecture;
@@ -1320,8 +1328,7 @@ impl Intrinsic for CoreIntrinsic {
 
             let ret = std::slice::from_raw_parts_mut(inputs, count)
                 .iter()
-                .copied()
-                .map(Into::into)
+                .map(NameAndType::from_raw)
                 .collect();
 
             BNFreeNameAndTypeList(inputs, count);
@@ -1338,7 +1345,7 @@ impl Intrinsic for CoreIntrinsic {
 
             let ret = std::slice::from_raw_parts_mut(inputs, count)
                 .iter()
-                .map(|input| (*input).into())
+                .map(Conf::<Ref<Type>>::from_raw)
                 .collect();
 
             BNFreeOutputTypeList(inputs, count);
@@ -1481,7 +1488,7 @@ impl Architecture for CoreArchitecture {
             ) {
                 let instr_text_tokens = std::slice::from_raw_parts(result, count)
                     .iter()
-                    .map(Into::into)
+                    .map(InstructionTextToken::from_raw)
                     .collect();
                 BNFreeInstructionText(result, count);
                 Some((consumed, instr_text_tokens))
@@ -2156,8 +2163,10 @@ where
             return false;
         };
 
-        let res_tokens: Box<[BNInstructionTextToken]> =
-            res_tokens.into_iter().map(Into::into).collect();
+        let res_tokens: Box<[BNInstructionTextToken]> = res_tokens
+            .into_iter()
+            .map(InstructionTextToken::into_raw)
+            .collect();
         unsafe {
             // NOTE: Freed with `cb_free_instruction_text`
             let res_tokens = Box::leak(res_tokens);
@@ -2171,7 +2180,10 @@ where
     extern "C" fn cb_free_instruction_text(tokens: *mut BNInstructionTextToken, count: usize) {
         unsafe {
             let raw_tokens = std::slice::from_raw_parts_mut(tokens, count);
-            let _ = Box::from_raw(raw_tokens);
+            let boxed_tokens = Box::from_raw(raw_tokens);
+            for token in boxed_tokens {
+                InstructionTextToken::free_raw(token);
+            }
         }
     }
 
@@ -2209,8 +2221,8 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         match custom_arch.register_from_id(reg.into()) {
-            Some(reg) => BnString::new(reg.name().as_ref()).into_raw(),
-            None => BnString::new("invalid_reg").into_raw(),
+            Some(reg) => BnString::into_raw(BnString::new(reg.name().as_ref())),
+            None => BnString::into_raw(BnString::new("invalid_reg")),
         }
     }
 
@@ -2221,8 +2233,8 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         match custom_arch.flag_from_id(flag.into()) {
-            Some(flag) => BnString::new(flag.name().as_ref()).into_raw(),
-            None => BnString::new("invalid_flag").into_raw(),
+            Some(flag) => BnString::into_raw(BnString::new(flag.name().as_ref())),
+            None => BnString::into_raw(BnString::new("invalid_flag")),
         }
     }
 
@@ -2233,8 +2245,8 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         match custom_arch.flag_write_from_id(flag_write.into()) {
-            Some(flag_write) => BnString::new(flag_write.name().as_ref()).into_raw(),
-            None => BnString::new("invalid_flag_write").into_raw(),
+            Some(flag_write) => BnString::into_raw(BnString::new(flag_write.name().as_ref())),
+            None => BnString::into_raw(BnString::new("invalid_flag_write")),
         }
     }
 
@@ -2245,8 +2257,8 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         match custom_arch.flag_class_from_id(class.into()) {
-            Some(class) => BnString::new(class.name().as_ref()).into_raw(),
-            None => BnString::new("invalid_flag_class").into_raw(),
+            Some(class) => BnString::into_raw(BnString::new(class.name().as_ref())),
+            None => BnString::into_raw(BnString::new("invalid_flag_class")),
         }
     }
 
@@ -2257,8 +2269,8 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         match custom_arch.flag_group_from_id(group.into()) {
-            Some(group) => BnString::new(group.name().as_ref()).into_raw(),
-            None => BnString::new("invalid_flag_group").into_raw(),
+            Some(group) => BnString::into_raw(BnString::new(group.name().as_ref())),
+            None => BnString::into_raw(BnString::new("invalid_flag_group")),
         }
     }
 
@@ -2732,8 +2744,8 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
         match custom_arch.register_stack_from_id(RegisterStackId(stack)) {
-            Some(stack) => BnString::new(stack.name().as_ref()).into_raw(),
-            None => BnString::new("invalid_reg_stack").into_raw(),
+            Some(stack) => BnString::into_raw(BnString::new(stack.name().as_ref())),
+            None => BnString::into_raw(BnString::new("invalid_reg_stack")),
         }
     }
 
@@ -2802,8 +2814,8 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         match custom_arch.intrinsic_from_id(IntrinsicId(intrinsic)) {
-            Some(intrinsic) => BnString::new(intrinsic.name()).into_raw(),
-            None => BnString::new("invalid_intrinsic").into_raw(),
+            Some(intrinsic) => BnString::into_raw(BnString::new(intrinsic.name())),
+            None => BnString::into_raw(BnString::new("invalid_intrinsic")),
         }
     }
 
@@ -2840,7 +2852,8 @@ where
         };
 
         let inputs = intrinsic.inputs();
-        let mut raw_inputs: Box<[_]> = inputs.into_iter().map(Into::into).collect();
+        // NOTE: The into_raw will leak and be freed later by `cb_free_name_and_types`.
+        let raw_inputs: Box<[_]> = inputs.into_iter().map(NameAndType::into_raw).collect();
 
         // SAFETY: Passed in to be written
         unsafe {
@@ -2850,10 +2863,8 @@ where
         if raw_inputs.is_empty() {
             std::ptr::null_mut()
         } else {
-            let raw_ptr = raw_inputs.as_mut_ptr();
             // Core is responsible for calling back to `cb_free_name_and_types`.
-            std::mem::forget(raw_inputs);
-            raw_ptr
+            Box::leak(raw_inputs).as_mut_ptr()
         }
     }
 
@@ -2871,7 +2882,10 @@ where
         // Reconstruct the box and drop.
         let nt_ptr = std::ptr::slice_from_raw_parts_mut(nt, count);
         // SAFETY: nt_ptr is a pointer to a Box.
-        let _ = unsafe { Box::from_raw(nt_ptr) };
+        let boxed_name_and_types = unsafe { Box::from_raw(nt_ptr) };
+        for nt in boxed_name_and_types {
+            NameAndType::free_raw(nt);
+        }
     }
 
     extern "C" fn cb_intrinsic_outputs<A>(
@@ -2893,8 +2907,11 @@ where
         };
 
         let outputs = intrinsic.outputs();
-        let mut raw_outputs: Box<[BNTypeWithConfidence]> =
-            outputs.into_iter().map(|o| o.as_ref().into()).collect();
+        let raw_outputs: Box<[BNTypeWithConfidence]> = outputs
+            .into_iter()
+            // Leaked to be freed later by `cb_free_type_list`.
+            .map(Conf::<Ref<Type>>::into_raw)
+            .collect();
 
         // SAFETY: Passed in to be written
         unsafe {
@@ -2904,10 +2921,8 @@ where
         if raw_outputs.is_empty() {
             std::ptr::null_mut()
         } else {
-            let raw_ptr = raw_outputs.as_mut_ptr();
-            // Core is responsible for calling back to `cb_free_name_and_types`.
-            std::mem::forget(raw_outputs);
-            raw_ptr
+            // Core is responsible for calling back to `cb_free_type_list`.
+            Box::leak(raw_outputs).as_mut_ptr()
         }
     }
 
@@ -2919,9 +2934,9 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
-        if !tl.is_null() {
-            let _type_list =
-                unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(tl, count)) };
+        let boxed_types = unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(tl, count)) };
+        for ty in boxed_types {
+            Conf::<Ref<Type>>::free_raw(ty);
         }
     }
 
@@ -2951,13 +2966,13 @@ where
             Ok(result) => {
                 buffer.set_data(&result);
                 unsafe {
-                    *errors = BnString::new("").into_raw();
+                    *errors = BnString::into_raw(BnString::new(""));
                 }
                 true
             }
             Err(result) => {
                 unsafe {
-                    *errors = BnString::new(result).into_raw();
+                    *errors = BnString::into_raw(BnString::new(result));
                 }
                 false
             }

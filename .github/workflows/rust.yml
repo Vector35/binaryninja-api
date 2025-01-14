@@ -23,6 +23,7 @@ jobs:
         run: sudo apt-get install libwayland-dev
         # Pull in Binary Ninja
       - name: Setup Binary Ninja
+        id: setup-binja
         uses: Vector35/setup-binary-ninja@v1-beta
         with:
           license: '${{ secrets.BN_SERIAL }}'
@@ -31,6 +32,8 @@ jobs:
       - name: Test
         # For now, we run the tests single threaded, there are some data races in core around platform types
         run: cargo test --all-features -- --test-threads=1
+        env:
+          BINARYNINJADIR: ${{ steps.setup-binja.outputs.install-path }}
 
   # Check lints with clippy
   clippy:

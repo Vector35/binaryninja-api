@@ -46,7 +46,8 @@ fn example_activity(analysis_context: &AnalysisContext) {
 pub fn main() {
     println!("Starting session...");
     // This loads all the core architecture, platform, etc plugins
-    let headless_session = binaryninja::headless::Session::new();
+    let headless_session =
+        binaryninja::headless::Session::new().expect("Failed to initialize session");
 
     println!("Registering workflow...");
     let meta_workflow = Workflow::new_from_copy("core.function.metaAnalysis");

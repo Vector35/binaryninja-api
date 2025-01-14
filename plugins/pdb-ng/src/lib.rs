@@ -91,20 +91,13 @@ fn active_local_cache(view: Option<&BinaryView>) -> Result<String> {
         .get_string("pdb.files.localStoreAbsolute", view, None)
         .to_string();
     if local_store_path.is_empty() {
-        local_store_path = match user_directory() {
-            Ok(mut dir) => {
-                dir.push(
-                    Settings::new("")
-                        .get_string("pdb.files.localStoreRelative", view, None)
-                        .to_string(),
-                );
-                match dir.to_str() {
-                    Some(s) => s.to_string(),
-                    _ => "".to_string(),
-                }
-            }
-            _ => "".to_string(),
-        };
+        let relative_local_store = Settings::new("")
+            .get_string("pdb.files.localStoreRelative", view, None)
+            .to_string();
+        local_store_path = user_directory()
+            .join(relative_local_store)
+            .to_string_lossy()
+            .to_string();
     }
     if !local_store_path.is_empty() {
         Ok(local_store_path)

@@ -582,7 +582,7 @@ mod tests {
     static INIT: OnceLock<Session> = OnceLock::new();
 
     fn get_session<'a>() -> &'a Session {
-        INIT.get_or_init(|| Session::new())
+        INIT.get_or_init(|| Session::new().expect("Failed to initialize session"))
     }
 
     #[test]

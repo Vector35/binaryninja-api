@@ -4,7 +4,8 @@ use binaryninja::binaryview::{BinaryViewBase, BinaryViewExt};
 fn main() {
     println!("Starting session...");
     // This loads all the core architecture, platform, etc plugins
-    let headless_session = binaryninja::headless::Session::new();
+    let headless_session =
+        binaryninja::headless::Session::new().expect("Failed to initialize session");
 
     println!("Loading binary...");
     let bv = headless_session

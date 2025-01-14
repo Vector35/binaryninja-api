@@ -28,7 +28,7 @@ mod plugin;
 
 pub fn core_signature_dir() -> PathBuf {
     // Get core signatures for the given platform
-    let install_dir = binaryninja::install_directory().unwrap();
+    let install_dir = binaryninja::install_directory();
     // macOS core dir is separate from the install dir.
     #[cfg(target_os = "macos")]
     let core_dir = install_dir.parent().unwrap().join("Resources");
@@ -38,7 +38,7 @@ pub fn core_signature_dir() -> PathBuf {
 }
 
 pub fn user_signature_dir() -> PathBuf {
-    binaryninja::user_directory().unwrap().join("signatures/")
+    binaryninja::user_directory().join("signatures/")
 }
 
 pub fn build_function<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
@@ -185,7 +185,7 @@ mod tests {
 
     fn get_session<'a>() -> &'a Session {
         // TODO: This is not shared between other test modules, should still be fine (mutex in core now).
-        INIT.get_or_init(|| Session::new())
+        INIT.get_or_init(|| Session::new().expect("Failed to initialize session"))
     }
 
     #[test]

@@ -80,7 +80,7 @@
 //! ```no_run
 //! // This loads all the core architecture, platform, etc plugins
 //! // Standalone executables need to call this, but plugins do not
-//! let headless_session = binaryninja::headless::Session::new();
+//! let headless_session = binaryninja::headless::Session::new().unwrap();
 //!
 //! println!("Loading binary...");
 //! let bv = headless_session
@@ -465,12 +465,11 @@ where
     }
 }
 
-pub fn install_directory() -> Result<PathBuf, ()> {
-    let s: *mut c_char = unsafe { BNGetInstallDirectory() };
-    if s.is_null() {
-        return Err(());
-    }
-    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
+pub fn install_directory() -> PathBuf {
+    let install_dir_ptr: *mut c_char = unsafe { BNGetInstallDirectory() };
+    assert!(!install_dir_ptr.is_null());
+    let bn_install_dir = unsafe { BnString::from_raw(install_dir_ptr) };
+    PathBuf::from(bn_install_dir.to_string())
 }
 
 pub fn bundled_plugin_directory() -> Result<PathBuf, ()> {
@@ -487,12 +486,11 @@ pub fn set_bundled_plugin_directory<S: BnStrCompatible>(new_dir: S) {
     };
 }
 
-pub fn user_directory() -> Result<PathBuf, ()> {
-    let s: *mut c_char = unsafe { BNGetUserDirectory() };
-    if s.is_null() {
-        return Err(());
-    }
-    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
+pub fn user_directory() -> PathBuf {
+    let user_dir_ptr: *mut c_char = unsafe { BNGetUserDirectory() };
+    assert!(!user_dir_ptr.is_null());
+    let bn_user_dir = unsafe { BnString::from_raw(user_dir_ptr) };
+    PathBuf::from(bn_user_dir.to_string())
 }
 
 pub fn user_plugin_directory() -> Result<PathBuf, ()> {
@@ -511,12 +509,11 @@ pub fn repositories_directory() -> Result<PathBuf, ()> {
     Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
-pub fn settings_file_name() -> Result<PathBuf, ()> {
-    let s: *mut c_char = unsafe { BNGetSettingsFileName() };
-    if s.is_null() {
-        return Err(());
-    }
-    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
+pub fn settings_file_name() -> PathBuf {
+    let settings_file_name_ptr: *mut c_char = unsafe { BNGetSettingsFileName() };
+    assert!(!settings_file_name_ptr.is_null());
+    let bn_settings_file_name = unsafe { BnString::from_raw(settings_file_name_ptr) };
+    PathBuf::from(bn_settings_file_name.to_string())
 }
 
 /// Write the installation directory of the currently running core instance to disk.
@@ -568,9 +565,9 @@ pub fn path_relative_to_user_directory<S: string::BnStrCompatible>(path: S) -> R
 
 /// Returns if the running thread is the "main thread"
 ///
-/// If there is no registered main thread than this will return the current thread.
+/// If there is no registered main thread than this will always return true.
 pub fn is_main_thread() -> bool {
-    unsafe { binaryninjacore_sys::BNIsMainThread() }
+    unsafe { BNIsMainThread() }
 }
 
 pub fn memory_info() -> HashMap<String, u64> {
@@ -652,14 +649,20 @@ pub struct VersionInfo {
     pub channel: String,
 }
 
+impl VersionInfo {
+    pub(crate) fn from_owned_raw(value: BNVersionInfo) -> Self {
+        Self {
+            major: value.major,
+            minor: value.minor,
+            build: value.build,
+            channel: unsafe { BnString::from_raw(value.channel) }.to_string(),
+        }
+    }
+}
+
 pub fn version_info() -> VersionInfo {
     let info_raw = unsafe { BNGetVersionInfo() };
-    VersionInfo {
-        major: info_raw.major,
-        minor: info_raw.minor,
-        build: info_raw.build,
-        channel: unsafe { BnString::from_raw(info_raw.channel).to_string() },
-    }
+    VersionInfo::from_owned_raw(info_raw)
 }
 
 pub fn serial_number() -> BnString {
@@ -674,10 +677,19 @@ pub fn licensed_user_email() -> BnString {
     unsafe { BnString::from_raw(BNGetLicensedUserEmail()) }
 }
 
+pub fn license_path() -> PathBuf {
+    user_directory().join("license.dat")
+}
+
 pub fn license_count() -> i32 {
     unsafe { BNGetLicenseCount() }
 }
 
+/// Set the license that will be used once the core initializes.
+///
+/// If not set the normal license retrieval will occur:
+/// 1. Check the BN_LICENSE environment variable
+/// 2. Check the Binary Ninja user directory for license.dat
 pub fn set_license<S: string::BnStrCompatible>(license: S) {
     let license = license.into_bytes_with_nul();
     let license_slice = license.as_ref();

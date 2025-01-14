@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use warp_ninja::convert::from_bn_type;
 
 pub fn type_conversion_benchmark(c: &mut Criterion) {
-    let session = Session::new();
+    let session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     for entry in std::fs::read_dir(out_dir).expect("Failed to read OUT_DIR") {
         let entry = entry.expect("Failed to read directory entry");

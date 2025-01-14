@@ -10,7 +10,7 @@ use std::time::SystemTime;
 #[fixture]
 #[once]
 fn session() -> Session {
-    Session::new()
+    Session::new().expect("Failed to initialize session")
 }
 
 fn unique_project(name: &str) -> String {

@@ -92,7 +92,8 @@ fn main() {
     }
 
     log::debug!("Starting Binary Ninja session...");
-    let _headless_session = binaryninja::headless::Session::new();
+    let _headless_session =
+        binaryninja::headless::Session::new().expect("Failed to initialize session");
 
     // Adjust the amount of worker threads so that we can actually free BinaryViews.
     let bn_settings = Settings::new("");
@@ -258,7 +259,8 @@ mod tests {
         env_logger::init();
         // TODO: Store oracles here to get more out of this test.
         let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
-        let _headless_session = binaryninja::headless::Session::new();
+        let _headless_session =
+            binaryninja::headless::Session::new().expect("Failed to initialize session");
         let bn_settings = Settings::new("");
         let settings = default_settings(&bn_settings);
         for entry in std::fs::read_dir(out_dir).expect("Failed to read OUT_DIR") {

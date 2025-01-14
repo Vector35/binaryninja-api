@@ -6,7 +6,7 @@ use rstest::*;
 #[fixture]
 #[once]
 fn session() -> Session {
-    Session::new()
+    Session::new().expect("Failed to initialize session")
 }
 
 #[rstest]

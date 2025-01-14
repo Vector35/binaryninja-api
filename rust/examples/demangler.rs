@@ -28,7 +28,8 @@ impl CustomDemangler for TestDemangler {
 fn main() {
     println!("Starting session...");
     // This loads all the core architecture, platform, etc plugins
-    let _headless_session = binaryninja::headless::Session::new();
+    let _headless_session =
+        binaryninja::headless::Session::new().expect("Failed to initialize session");
 
     println!("Registering demangler...");
     Demangler::register("Test", TestDemangler);

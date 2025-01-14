@@ -191,7 +191,7 @@ use metadata::MetadataType;
 use rc::Ref;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void, CStr};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use string::BnStrCompatible;
 use string::BnString;
 use string::IntoJson;
@@ -221,23 +221,18 @@ unsafe extern "C" fn cb_progress_nop(_ctxt: *mut c_void, _arg1: usize, _arg2: us
 }
 
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
-pub fn load<S>(filename: S) -> Option<Ref<BinaryView>>
-where
-    S: BnStrCompatible,
-{
-    let filename = filename.into_bytes_with_nul();
-    let options = "\x00";
-
+pub fn load(file_path: impl AsRef<Path>) -> Option<Ref<BinaryView>> {
+    let file_path = file_path.as_ref().into_bytes_with_nul();
+    let options = c"";
     let handle = unsafe {
         BNLoadFilename(
-            filename.as_ref().as_ptr() as *mut _,
+            file_path.as_ptr() as *mut _,
             true,
             options.as_ptr() as *mut c_char,
             Some(cb_progress_nop),
             std::ptr::null_mut(),
         )
     };
-
     if handle.is_null() {
         None
     } else {
@@ -245,26 +240,25 @@ where
     }
 }
 
-pub fn load_with_progress<S, F>(filename: S, mut progress: F) -> Option<Ref<BinaryView>>
+pub fn load_with_progress<F>(
+    file_path: impl AsRef<Path>,
+    mut progress: F,
+) -> Option<Ref<BinaryView>>
 where
-    S: BnStrCompatible,
     F: FnMut(usize, usize) -> bool,
 {
-    let filename = filename.into_bytes_with_nul();
-    let options = "\x00";
-
+    let file_path = file_path.as_ref().into_bytes_with_nul();
+    let options = c"";
     let progress_ctx = &mut progress as *mut F as *mut c_void;
-
     let handle = unsafe {
         BNLoadFilename(
-            filename.as_ref().as_ptr() as *mut _,
+            file_path.as_ptr() as *mut _,
             true,
             options.as_ptr() as *mut c_char,
             Some(cb_progress_func::<F>),
             progress_ctx,
         )
     };
-
     if handle.is_null() {
         None
     } else {
@@ -289,17 +283,15 @@ where
 /// let bv = binaryninja::load_with_options("/bin/cat", true, Some(json!("analysis.linearSweep.autorun": false).to_string()))
 ///     .expect("Couldn't open `/bin/cat`");
 /// ```
-pub fn load_with_options<S, O>(
-    filename: S,
+pub fn load_with_options<O>(
+    file_path: impl AsRef<Path>,
     update_analysis_and_wait: bool,
     options: Option<O>,
 ) -> Option<Ref<BinaryView>>
 where
-    S: BnStrCompatible,
     O: IntoJson,
 {
-    let filename = filename.into_bytes_with_nul();
-
+    let file_path = file_path.as_ref().into_bytes_with_nul();
     let options_or_default = if let Some(opt) = options {
         opt.get_json_string()
             .ok()?
@@ -316,7 +308,7 @@ where
 
     let handle = unsafe {
         BNLoadFilename(
-            filename.as_ref().as_ptr() as *mut _,
+            file_path.as_ptr() as *mut _,
             update_analysis_and_wait,
             options_or_default.as_ptr() as *mut c_char,
             Some(cb_progress_nop),
@@ -332,7 +324,7 @@ where
 }
 
 pub fn load_with_options_and_progress<S, O, F>(
-    filename: S,
+    file_path: impl AsRef<Path>,
     update_analysis_and_wait: bool,
     options: Option<O>,
     progress: Option<F>,
@@ -342,8 +334,7 @@ where
     O: IntoJson,
     F: FnMut(usize, usize) -> bool,
 {
-    let filename = filename.into_bytes_with_nul();
-
+    let file_path = file_path.as_ref().into_bytes_with_nul();
     let options_or_default = if let Some(opt) = options {
         opt.get_json_string()
             .ok()?
@@ -365,7 +356,7 @@ where
 
     let handle = unsafe {
         BNLoadFilename(
-            filename.as_ref().as_ptr() as *mut _,
+            file_path.as_ptr() as *mut _,
             update_analysis_and_wait,
             options_or_default.as_ptr() as *mut c_char,
             Some(cb_progress_func::<F>),
@@ -480,10 +471,9 @@ pub fn bundled_plugin_directory() -> Result<PathBuf, ()> {
     Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
-pub fn set_bundled_plugin_directory<S: BnStrCompatible>(new_dir: S) {
-    unsafe {
-        BNSetBundledPluginDirectory(new_dir.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
-    };
+pub fn set_bundled_plugin_directory(new_dir: impl AsRef<Path>) {
+    let new_dir = new_dir.as_ref().into_bytes_with_nul();
+    unsafe { BNSetBundledPluginDirectory(new_dir.as_ptr() as *const c_char) };
 }
 
 pub fn user_directory() -> PathBuf {
@@ -523,40 +513,30 @@ pub fn save_last_run() {
     unsafe { BNSaveLastRun() };
 }
 
-pub fn path_relative_to_bundled_plugin_directory<S: string::BnStrCompatible>(
-    path: S,
-) -> Result<PathBuf, ()> {
-    let s: *mut c_char = unsafe {
-        BNGetPathRelativeToBundledPluginDirectory(
-            path.into_bytes_with_nul().as_ref().as_ptr() as *const c_char
-        )
-    };
+pub fn path_relative_to_bundled_plugin_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
+    let path_raw = path.as_ref().into_bytes_with_nul();
+    let s: *mut c_char =
+        unsafe { BNGetPathRelativeToBundledPluginDirectory(path_raw.as_ptr() as *const c_char) };
     if s.is_null() {
         return Err(());
     }
     Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
-pub fn path_relative_to_user_plugin_directory<S: string::BnStrCompatible>(
-    path: S,
-) -> Result<PathBuf, ()> {
-    let s: *mut c_char = unsafe {
-        BNGetPathRelativeToUserPluginDirectory(
-            path.into_bytes_with_nul().as_ref().as_ptr() as *const c_char
-        )
-    };
+pub fn path_relative_to_user_plugin_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
+    let path_raw = path.as_ref().into_bytes_with_nul();
+    let s: *mut c_char =
+        unsafe { BNGetPathRelativeToUserPluginDirectory(path_raw.as_ptr() as *const c_char) };
     if s.is_null() {
         return Err(());
     }
     Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
 }
 
-pub fn path_relative_to_user_directory<S: string::BnStrCompatible>(path: S) -> Result<PathBuf, ()> {
-    let s: *mut c_char = unsafe {
-        BNGetPathRelativeToUserDirectory(
-            path.into_bytes_with_nul().as_ref().as_ptr() as *const c_char
-        )
-    };
+pub fn path_relative_to_user_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
+    let path_raw = path.as_ref().into_bytes_with_nul();
+    let s: *mut c_char =
+        unsafe { BNGetPathRelativeToUserDirectory(path_raw.as_ptr() as *const c_char) };
     if s.is_null() {
         return Err(());
     }
@@ -685,13 +665,13 @@ pub fn license_count() -> i32 {
     unsafe { BNGetLicenseCount() }
 }
 
-/// Set the license that will be used once the core initializes.
+/// Set the license that will be used once the core initializes. You can reset the license by passing `None`.
 ///
 /// If not set the normal license retrieval will occur:
 /// 1. Check the BN_LICENSE environment variable
 /// 2. Check the Binary Ninja user directory for license.dat
-pub fn set_license<S: string::BnStrCompatible>(license: S) {
-    let license = license.into_bytes_with_nul();
+pub fn set_license<S: BnStrCompatible + Default>(license: Option<S>) {
+    let license = license.unwrap_or_default().into_bytes_with_nul();
     let license_slice = license.as_ref();
     unsafe { BNSetLicense(license_slice.as_ptr() as *const c_char) }
 }
@@ -713,7 +693,7 @@ pub fn is_ui_enabled() -> bool {
     unsafe { BNIsUIEnabled() }
 }
 
-pub fn is_database<S: string::BnStrCompatible>(filename: S) -> bool {
+pub fn is_database<S: BnStrCompatible>(filename: S) -> bool {
     let filename = filename.into_bytes_with_nul();
     let filename_slice = filename.as_ref();
     unsafe { BNIsDatabase(filename_slice.as_ptr() as *const c_char) }
@@ -743,13 +723,13 @@ pub fn plugin_ui_abi_minimum_version() -> u32 {
     BN_MINIMUM_UI_ABI_VERSION
 }
 
-pub fn add_required_plugin_dependency<S: string::BnStrCompatible>(name: S) {
+pub fn add_required_plugin_dependency<S: BnStrCompatible>(name: S) {
     unsafe {
         BNAddRequiredPluginDependency(name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
     };
 }
 
-pub fn add_optional_plugin_dependency<S: string::BnStrCompatible>(name: S) {
+pub fn add_optional_plugin_dependency<S: BnStrCompatible>(name: S) {
     unsafe {
         BNAddOptionalPluginDependency(name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
     };

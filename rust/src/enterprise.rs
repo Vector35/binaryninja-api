@@ -18,6 +18,7 @@ pub enum EnterpriseCheckoutError {
     RefreshExpiredLicenseFailed,
 }
 
+/// Initialize the enterprise server connection to check out a floating license.
 pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutError> {
     if crate::is_ui_enabled() {
         // We only need to check out a license if running headlessly.
@@ -70,6 +71,16 @@ pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutErro
 
 pub fn release_license() {
     if !crate::is_ui_enabled() {
+        // This might look dumb, why would we want to connect to the server, would that not just mean
+        // we don't need to release the license? Well no, you could have run a script, acquired a license for 10 hours
+        // then you WOULD want to call release license, and your expectation is that acquired license
+        // will now be released. To release that you must have an active connection which is what this does.
+        if !is_server_initialized() {
+            initialize_server();
+        }
+        if !is_server_connected() {
+            connect_server();
+        }
         // We should only release the license if we are running headlessly.
         release_server_license();
     }

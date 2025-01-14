@@ -109,7 +109,7 @@ impl Section {
     }
 
     pub fn is_empty(&self) -> bool {
-        unsafe { BNSectionGetLength(self.handle) as usize == 0 }
+        self.len() == 0
     }
 
     pub fn address_range(&self) -> Range<u64> {
@@ -147,13 +147,16 @@ impl Section {
 
 impl fmt::Debug for Section {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "<section '{}' @ {:x}-{:x}>",
-            self.name(),
-            self.start(),
-            self.end()
-        )
+        f.debug_struct("Section")
+            .field("name", &self.name())
+            .field("address_range", &self.address_range())
+            .field("section_type", &self.section_type())
+            .field("semantics", &self.semantics())
+            .field("linked_section", &self.linked_section())
+            .field("align", &self.align())
+            .field("entry_size", &self.entry_size())
+            .field("auto_defined", &self.auto_defined())
+            .finish()
     }
 }
 

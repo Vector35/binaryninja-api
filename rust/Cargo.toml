@@ -9,13 +9,12 @@ rust-version = "1.83.0"
 # This is used when statically linking to prevent exporting CorePluginABIVersion and UiPluginABIVersion.
 no_exports = []
 
-
 [dependencies]
 log = { version = "0.4", features = ["std"] }
-rayon = { version = "1.8", optional = true }
+rayon = { version = "1.10", optional = true }
 binaryninjacore-sys = { path = "binaryninjacore-sys" }
 thiserror = "2.0"
 
 [dev-dependencies]
-rstest = "0.24.0"
-tempfile = "3"
+rstest = "0.24"
+tempfile = "3.15"

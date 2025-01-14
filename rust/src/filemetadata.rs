@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::binaryview::BinaryView;
+use crate::database::Database;
+use crate::project::ProjectFile;
 use binaryninjacore_sys::{
     BNBeginUndoActions, BNCloseFile, BNCommitUndoActions, BNCreateDatabase, BNCreateFileMetadata,
     BNFileMetadata, BNFileMetadataGetSessionId, BNFreeFileMetadata, BNGetCurrentOffset,
@@ -23,10 +26,7 @@ use binaryninjacore_sys::{
 };
 use binaryninjacore_sys::{BNCreateDatabaseWithProgress, BNOpenExistingDatabaseWithProgress};
 use std::ffi::c_void;
-
-use crate::binaryview::BinaryView;
-use crate::database::Database;
-use crate::project::ProjectFile;
+use std::fmt::Debug;
 
 use crate::rc::*;
 use crate::string::*;
@@ -37,9 +37,6 @@ use std::ptr::{self, NonNull};
 pub struct FileMetadata {
     pub(crate) handle: *mut BNFileMetadata,
 }
-
-unsafe impl Send for FileMetadata {}
-unsafe impl Sync for FileMetadata {}
 
 impl FileMetadata {
     pub(crate) fn from_raw(handle: *mut BNFileMetadata) -> Self {
@@ -284,6 +281,22 @@ impl FileMetadata {
         NonNull::new(result).map(|handle| unsafe { Database::from_raw(handle) })
     }
 }
+
+impl Debug for FileMetadata {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FileMetadata")
+            .field("filename", &self.filename())
+            .field("session_id", &self.session_id())
+            .field("modified", &self.modified())
+            .field("is_analysis_changed", &self.is_analysis_changed())
+            .field("current_view", &self.current_view())
+            .field("current_view", &self.current_offset())
+            .finish()
+    }
+}
+
+unsafe impl Send for FileMetadata {}
+unsafe impl Sync for FileMetadata {}
 
 impl ToOwned for FileMetadata {
     type Owned = Ref<Self>;

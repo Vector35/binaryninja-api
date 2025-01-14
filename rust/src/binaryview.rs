@@ -39,28 +39,28 @@ use crate::function::{Function, NativeBlock};
 use crate::linearview::{LinearDisassemblyLine, LinearViewCursor};
 use crate::metadata::Metadata;
 use crate::platform::Platform;
+use crate::rc::*;
+use crate::references::{CodeReference, DataReference};
 use crate::relocation::Relocation;
 use crate::section::{Section, SectionBuilder};
 use crate::segment::{Segment, SegmentBuilder};
 use crate::settings::Settings;
+use crate::string::*;
 use crate::symbol::{Symbol, SymbolType};
 use crate::tags::{Tag, TagType};
+use crate::typecontainer::TypeContainer;
 use crate::typelibrary::TypeLibrary;
 use crate::types::{
     NamedTypeReference, QualifiedName, QualifiedNameAndType, QualifiedNameTypeAndId, Type,
 };
+use crate::variable::DataVariable;
 use crate::Endianness;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void};
 use std::ops::Range;
+use std::path::Path;
 use std::ptr::NonNull;
 use std::{ops, result, slice};
-
-use crate::rc::*;
-use crate::references::{CodeReference, DataReference};
-use crate::string::*;
-use crate::typecontainer::TypeContainer;
-use crate::variable::DataVariable;
 // TODO : general reorg of modules related to bv
 
 pub type Result<R> = result::Result<R, ()>;
@@ -190,7 +190,6 @@ pub trait BinaryViewExt: BinaryViewBase {
     fn file(&self) -> Ref<FileMetadata> {
         unsafe {
             let raw = BNGetFileForView(self.as_ref().handle);
-
             Ref::new(FileMetadata::from_raw(raw))
         }
     }
@@ -1774,15 +1773,10 @@ impl BinaryView {
         Ref::new(Self { handle })
     }
 
-    pub fn from_filename<S: BnStrCompatible>(
-        meta: &mut FileMetadata,
-        filename: S,
-    ) -> Result<Ref<Self>> {
-        let file = filename.into_bytes_with_nul();
-
-        let handle = unsafe {
-            BNCreateBinaryDataViewFromFilename(meta.handle, file.as_ref().as_ptr() as *mut _)
-        };
+    pub fn from_path(meta: &mut FileMetadata, file_path: impl AsRef<Path>) -> Result<Ref<Self>> {
+        let file = file_path.as_ref().into_bytes_with_nul();
+        let handle =
+            unsafe { BNCreateBinaryDataViewFromFilename(meta.handle, file.as_ptr() as *mut _) };
 
         if handle.is_null() {
             return Err(());
@@ -1920,13 +1914,25 @@ unsafe impl Sync for BinaryView {}
 
 impl std::fmt::Debug for BinaryView {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "BinaryView (type: `{}`): '{}', len {:#x}",
-            self.view_type(),
-            self.file().filename(),
-            self.len()
-        )
+        f.debug_struct("BinaryView")
+            .field("type_name", &self.type_name())
+            .field("file", &self.file())
+            .field("original_image_base", &self.original_image_base())
+            .field("start", &self.start())
+            .field("end", &self.end())
+            .field("len", &self.len())
+            .field("default_platform", &self.default_platform())
+            .field("default_arch", &self.default_arch())
+            .field("default_endianness", &self.default_endianness())
+            .field("entry_point", &self.entry_point())
+            .field(
+                "entry_point_functions",
+                &self.entry_point_functions().to_vec(),
+            )
+            .field("address_size", &self.address_size())
+            .field("sections", &self.sections().to_vec())
+            .field("segments", &self.segments().to_vec())
+            .finish()
     }
 }
 

@@ -10,8 +10,11 @@ use crate::variable::DataVariable;
 use binaryninjacore_sys::*;
 
 pub struct ComponentBuilder {
+    // TODO: This should be a ref
     bv: *mut BNBinaryView,
+    // TODO: Make owned string
     parent: Option<BnString>,
+    // TODO: Make owned string
     name: Option<BnString>,
 }
 
@@ -75,6 +78,7 @@ impl Component {
         Self { handle }
     }
 
+    // TODO: Ref<>
     pub(crate) unsafe fn ref_from_raw(handle: &*mut BNComponent) -> &Self {
         assert!(!handle.is_null());
         mem::transmute(handle)

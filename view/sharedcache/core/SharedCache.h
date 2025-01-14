@@ -511,7 +511,6 @@ namespace SharedCacheCore {
 
 	struct MappingInfo
 	{
-		std::shared_ptr<MMappedFileAccessor> file;
 		dyld_cache_mapping_info mappingInfo;
 		uint32_t slideInfoVersion;
 		dyld_cache_slide_info_v2 slideInfoV2;

@@ -1157,7 +1157,6 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 		MappingInfo map;
 
 		file->Read(&map.mappingInfo, baseHeader.mappingOffset + sizeof(dyld_cache_mapping_info), sizeof(dyld_cache_mapping_info));
-		map.file = file;
 		map.slideInfoVersion = slideInfoVersion;
 		if (map.slideInfoVersion == 2)
 			file->Read(&map.slideInfoV2, slideInfoOff, sizeof(dyld_cache_slide_info_v2));
@@ -1183,7 +1182,6 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 			if (mappingAndSlideInfo.slideInfoFileOffset)
 			{
 				MappingInfo map;
-				map.file = file;
 				if (mappingAndSlideInfo.size == 0)
 					continue;
 				map.slideInfoVersion = file->ReadUInt32(mappingAndSlideInfo.slideInfoFileOffset);
@@ -1251,7 +1249,7 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 			{
 				try
 				{
-					uint16_t start = mapping.file->ReadUShort(cursor);
+					uint16_t start = file->ReadUShort(cursor);
 					cursor += sizeof(uint16_t);
 					if (start == DYLD_CACHE_SLIDE_PAGE_ATTR_NO_REBASE)
 						continue;
@@ -1301,7 +1299,7 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 							uint64_t extraCursor = extrasOffset + (j * sizeof(uint16_t));
 							try
 							{
-								auto extra = mapping.file->ReadUShort(extraCursor);
+								auto extra = file->ReadUShort(extraCursor);
 								uint16_t aStart = extra;
 								uint64_t page = mapping.mappingInfo.fileOffset + (pageSize * i);
 								uint16_t pageStartOffset = (aStart & 0x3FFF)*4;
@@ -1340,7 +1338,7 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 			{
 				try
 				{
-					uint16_t delta = mapping.file->ReadUShort(cursor);
+					uint16_t delta = file->ReadUShort(cursor);
 					cursor += sizeof(uint16_t);
 					if (delta == DYLD_CACHE_SLIDE_V3_PAGE_ATTR_NO_REBASE)
 						continue;
@@ -1352,8 +1350,7 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 						loc += delta * sizeof(dyld_cache_slide_pointer3);
 						try
 						{
-							dyld_cache_slide_pointer3 slideInfo;
-							file->Read(&slideInfo, loc, sizeof(slideInfo));
+							dyld_cache_slide_pointer3 slideInfo = { file->ReadULong(loc) };
 							delta = slideInfo.plain.offsetToNextPointer;
 
 							if (slideInfo.auth.authenticated)
@@ -1395,7 +1392,7 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 			{
 				try
 				{
-					uint16_t delta = mapping.file->ReadUShort(cursor);
+					uint16_t delta = file->ReadUShort(cursor);
 					cursor += sizeof(uint16_t);
 					if (delta == DYLD_CACHE_SLIDE_V5_PAGE_ATTR_NO_REBASE)
 						continue;
@@ -1407,8 +1404,7 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 						loc += delta * sizeof(dyld_cache_slide_pointer5);
 						try
 						{
-							dyld_cache_slide_pointer5 slideInfo;
-							file->Read(&slideInfo, loc, sizeof(slideInfo));
+							dyld_cache_slide_pointer5 slideInfo = { file->ReadULong(loc) };
 							delta = slideInfo.regular.next;
 							if (slideInfo.auth.auth)
 							{

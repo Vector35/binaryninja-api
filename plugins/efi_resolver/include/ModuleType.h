@@ -13,10 +13,10 @@ enum EFIModuleType
 
 static inline EFIModuleType identifyModuleType(BinaryView* bv)
 {
-	std::string viewType = bv->GetCurrentView();
-	if (viewType == "Linear:PE")
+	FileMetadata* file = bv->GetFile();
+	if (file->GetViewOfType("PE"))
 		return DXE;
-	else if (viewType == "Linear:TE")
+	else if (file->GetViewOfType("TE"))
 		return PEI;
 	else
 		return UNKNOWN;

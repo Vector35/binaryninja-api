@@ -10,7 +10,25 @@ on:
       - 'rust/**'
 
 jobs:
-  # TODO: Cargo test (we would need to pull in binary ninja)
+  # Check that code compiles and tests pass
+  test:
+    # The testing environment is used to access the BN_SERIAL secret.
+    environment: testing
+    name: cargo test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # Pull in Binary Ninja
+      - name: Setup Binary Ninja
+        uses: Vector35/setup-binary-ninja@v1-beta
+        with:
+          license: '${{ secrets.BN_SERIAL }}'
+          python-support: 'false'
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Test
+        # For now, we run the tests single threaded, there are some data races in core around platform types
+        run: cargo test --all-features -- --test-threads=1
+
   # Check lints with clippy
   clippy:
     name: cargo clippy
@@ -24,6 +42,7 @@ jobs:
       - name: Clippy Check
         uses: clechasseur/rs-clippy-check@v4
         with:
+          # We do not run clippy on plugins.
           working-directory: ./rust
           args: --all-features
 
@@ -39,8 +58,6 @@ jobs:
           components: rustfmt
       - name: Rustfmt Check
         uses: actions-rust-lang/rustfmt@v1
-        with:
-          manifest-path: ./rust/Cargo.toml
 
   # Check spelling with typos
   spelling:

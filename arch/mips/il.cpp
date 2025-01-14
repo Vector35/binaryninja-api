@@ -2194,6 +2194,48 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 
 			break;
 		}
+		case MIPS_PADDUW:
+		{
+			for (int i = 0; i < 4; i++)
+			{
+				size_t offset = i * 32;
+				auto rs_segment = il.And(16,
+					il.LogicalShiftRight(
+							16,
+							il.Register(16, op2.reg),
+							il.Const(4, offset)
+						),
+					il.Const(128, 0xFFFFFFFF)
+				);
+				auto rt_segment = il.And(16,
+					il.LogicalShiftRight(
+							16,
+							il.Register(16, op3.reg),
+							il.Const(4, offset)
+						),
+					il.Const(128, 0xFFFFFFFF)
+				);
+
+				auto sum = il.Add(8, rs_segment, rt_segment);
+
+				// This is a 4 byte add, but if the sum is greater than 0xFFFFFFFF, the result is 0xFFFFFFFF
+				// So we do an 8 bit add and and the result
+
+				auto saturated_sum = il.And(4, sum, il.Const(4, 0xFFFFFFFF));
+
+				auto shifted_sum = il.ShiftLeft(16, saturated_sum, il.Const(4, offset));
+				if (i == 0)
+				{
+					il.AddInstruction(il.SetRegister(16, op1.reg, shifted_sum));
+				}
+				else
+				{
+					il.AddInstruction(il.SetRegister(16, op1.reg, il.Or(16, il.Register(16, op1.reg), shifted_sum)));
+				}
+			}
+
+			break;
+		}
 
 		case MIPS_ADDR:
 		case MIPS_LDXC1:

@@ -143,7 +143,7 @@ pub enum LicenseLocation {
 /// This is useful if you want to know whether the core will use your license. If this returns `None`
 /// you should look setting the `BN_LICENSE` environment variable, or calling [`set_license`].
 pub fn license_location() -> Option<LicenseLocation> {
-    match std::env::var("BN_LICENSE_FILE") {
+    match std::env::var("BN_LICENSE") {
         Ok(_) => Some(LicenseLocation::EnvironmentVariable),
         Err(_) => {
             // Check the license_path to see if a file is there.

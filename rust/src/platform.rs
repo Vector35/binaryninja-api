@@ -264,7 +264,7 @@ impl Platform {
             Array::new(handles, count, ())
         }
     }
-    
+
     // TODO: system_calls
     // TODO: add a helper function to define a system call (platform function with a specific type)
 

@@ -117,7 +117,7 @@ impl TypeContainer {
             QualifiedName::free_raw(name);
         }
         for ty in raw_types {
-            let _ = unsafe { Type::ref_from_raw(ty) } ;
+            let _ = unsafe { Type::ref_from_raw(ty) };
         }
         success
     }
@@ -161,7 +161,7 @@ impl TypeContainer {
             QualifiedName::free_raw(name);
         }
         for ty in raw_types {
-            let _ = unsafe { Type::ref_from_raw(ty) } ;
+            let _ = unsafe { Type::ref_from_raw(ty) };
         }
         success
     }

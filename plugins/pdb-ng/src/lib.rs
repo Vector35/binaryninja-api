@@ -32,7 +32,7 @@ use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet};
 use binaryninja::logger::Logger;
 use binaryninja::settings::Settings;
 use binaryninja::string::BnString;
-use binaryninja::{add_optional_plugin_dependency, interaction, user_directory};
+use binaryninja::{interaction, user_directory};
 use parser::PDBParserInstance;
 
 /// PDB Parser!!
@@ -675,6 +675,7 @@ impl CustomDebugInfoParser for PDBParser {
 #[cfg(not(feature = "demo"))]
 #[no_mangle]
 pub extern "C" fn CorePluginDependencies() {
+    use binaryninja::add_optional_plugin_dependency;
     add_optional_plugin_dependency("view_pe");
 }
 

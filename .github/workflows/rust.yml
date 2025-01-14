@@ -34,6 +34,7 @@ jobs:
         run: cargo test --all-features -- --test-threads=1
         env:
           BINARYNINJADIR: ${{ steps.setup-binja.outputs.install-path }}
+          BN_LICENSE: ${{ secrets.BN_LICENSE }}
 
   # Check lints with clippy
   clippy:

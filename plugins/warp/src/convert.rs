@@ -4,9 +4,9 @@ use binaryninja::architecture::Architecture as BNArchitecture;
 use binaryninja::architecture::ArchitectureExt;
 use binaryninja::binaryview::{BinaryView, BinaryViewExt};
 use binaryninja::callingconvention::CallingConvention as BNCallingConvention;
+use binaryninja::confidence::{Conf as BNConf, MAX_CONFIDENCE};
 use binaryninja::rc::Ref as BNRef;
 use binaryninja::symbol::{Symbol as BNSymbol, SymbolType as BNSymbolType};
-use binaryninja::confidence::{Conf as BNConf, MAX_CONFIDENCE};
 use binaryninja::types::{
     BaseStructure as BNBaseStructure, EnumerationBuilder as BNEnumerationBuilder,
     FunctionParameter as BNFunctionParameter, MemberAccess as BNMemberAccess, MemberAccess,
@@ -629,7 +629,7 @@ mod tests {
                         .collect();
                     assert_eq!(types_len, converted_types.len());
                     // Hold on to a reference to the core to prevent view getting dropped in worker thread.
-                    let core_ref = inital_bv
+                    let _core_ref = inital_bv
                         .functions()
                         .iter()
                         .next()
@@ -650,7 +650,7 @@ mod tests {
                             .collect();
                         assert_eq!(types_len, converted_types.len());
                         // Hold on to a reference to the core to prevent view getting dropped in worker thread.
-                        let core_ref = second_bv
+                        let _core_ref = second_bv
                             .functions()
                             .iter()
                             .next()

@@ -1,8 +1,8 @@
 use binaryninja::binaryview::BinaryView;
 use binaryninja::command::{register, Command};
 use binaryninja::custombinaryview::register_view_type;
-use log::{debug, LevelFilter};
 use binaryninja::logger::Logger;
+use log::{debug, LevelFilter};
 
 mod command;
 mod view;
@@ -22,7 +22,9 @@ impl Command for PrintMemoryInformationCommand {
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginInit() -> bool {
-    Logger::new("Minidump").with_level(LevelFilter::Trace).init();
+    Logger::new("Minidump")
+        .with_level(LevelFilter::Trace)
+        .init();
 
     debug!("Registering minidump binary view type");
     register_view_type("Minidump", "Minidump", view::MinidumpBinaryViewType::new);

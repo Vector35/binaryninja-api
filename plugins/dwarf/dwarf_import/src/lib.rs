@@ -37,15 +37,17 @@ use dwarfreader::{
 };
 
 use functions::parse_lexical_block;
-use gimli::{constants, CfaRule, DebuggingInformationEntry, Dwarf, DwarfFileType, Reader, Section, SectionId, Unit, UnwindContext, UnwindSection};
+use gimli::{
+    constants, CfaRule, DebuggingInformationEntry, Dwarf, DwarfFileType, Reader, Section,
+    SectionId, Unit, UnwindContext, UnwindSection,
+};
 
+use binaryninja::logger::Logger;
 use helpers::{get_build_id, load_debug_info_for_build_id};
 use log::{debug, error, warn};
-use binaryninja::logger::Logger;
 
 trait ReaderType: Reader<Offset = usize> {}
 impl<T: Reader<Offset = usize>> ReaderType for T {}
-
 
 pub(crate) fn split_progress<'b, F: Fn(usize, usize) -> Result<(), ()> + 'b>(
     original_fn: F,
@@ -82,16 +84,13 @@ pub(crate) fn split_progress<'b, F: Fn(usize, usize) -> Result<(), ()> + 'b>(
     })
 }
 
-
 fn calculate_total_unit_bytes<R: ReaderType>(
     dwarf: &Dwarf<R>,
     debug_info_builder_context: &mut DebugInfoBuilderContext<R>,
-)
-{
+) {
     let mut iter = dwarf.units();
     let mut total_size: usize = 0;
-    while let Ok(Some(header)) = iter.next()
-    {
+    while let Ok(Some(header)) = iter.next() {
         total_size += header.length_including_self();
     }
     debug_info_builder_context.total_unit_size_bytes = total_size;
@@ -102,7 +101,6 @@ fn recover_names<R: ReaderType>(
     debug_info_builder_context: &mut DebugInfoBuilderContext<R>,
     progress: &dyn Fn(usize, usize) -> Result<(), ()>,
 ) -> bool {
-
     let mut res = true;
     if let Some(sup_dwarf) = dwarf.sup() {
         res = recover_names_internal(sup_dwarf, debug_info_builder_context, progress);
@@ -137,7 +135,12 @@ fn recover_names_internal<R: ReaderType>(
         while let Ok(Some((delta_depth, entry))) = entries.next_dfs() {
             debug_info_builder_context.total_die_count += 1;
 
-            if (*progress)(current_byte_offset, debug_info_builder_context.total_unit_size_bytes).is_err() {
+            if (*progress)(
+                current_byte_offset,
+                debug_info_builder_context.total_unit_size_bytes,
+            )
+            .is_err()
+            {
                 return false; // Parsing canceled
             };
             current_byte_offset = unit_offset + entry.offset().0;
@@ -296,51 +299,67 @@ fn parse_unit<R: ReaderType>(
             if let Some((_fn_idx, depth)) = functions_by_depth.last() {
                 if current_depth <= *depth {
                     functions_by_depth.pop();
+                } else {
+                    break;
                 }
-                else {
-                    break
-                }
-            }
-            else {
+            } else {
                 break;
             }
 
             if let Some((_lexical_block, depth)) = lexical_blocks_by_depth.last() {
                 if current_depth <= *depth {
                     lexical_blocks_by_depth.pop();
+                } else {
+                    break;
                 }
-                else {
-                    break
-                }
-            }
-            else {
+            } else {
                 break;
             }
         }
 
         match entry.tag() {
             constants::DW_TAG_subprogram => {
-                let fn_idx = parse_function_entry(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
+                let fn_idx = parse_function_entry(
+                    dwarf,
+                    unit,
+                    entry,
+                    debug_info_builder_context,
+                    debug_info_builder,
+                );
                 functions_by_depth.push((fn_idx, current_depth));
-            },
+            }
             constants::DW_TAG_lexical_block => {
                 if let Some(block_ranges) = parse_lexical_block(dwarf, unit, entry) {
                     lexical_blocks_by_depth.push((block_ranges, current_depth));
                 }
-            },
+            }
             constants::DW_TAG_variable => {
                 let current_fn_idx = functions_by_depth.last().and_then(|x| x.0);
                 let current_lexical_block = lexical_blocks_by_depth.last().and_then(|x| Some(&x.0));
-                parse_variable(dwarf, unit, entry, debug_info_builder_context, debug_info_builder, current_fn_idx, current_lexical_block)
-            },
-            constants::DW_TAG_class_type |
-            constants::DW_TAG_enumeration_type |
-            constants::DW_TAG_structure_type |
-            constants::DW_TAG_union_type |
-            constants::DW_TAG_typedef => {
+                parse_variable(
+                    dwarf,
+                    unit,
+                    entry,
+                    debug_info_builder_context,
+                    debug_info_builder,
+                    current_fn_idx,
+                    current_lexical_block,
+                )
+            }
+            constants::DW_TAG_class_type
+            | constants::DW_TAG_enumeration_type
+            | constants::DW_TAG_structure_type
+            | constants::DW_TAG_union_type
+            | constants::DW_TAG_typedef => {
                 // Ensure types are loaded even if they're unused
-                types::get_type(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
-            },
+                types::get_type(
+                    dwarf,
+                    unit,
+                    entry,
+                    debug_info_builder_context,
+                    debug_info_builder,
+                );
+            }
             _ => (),
         }
     }
@@ -350,24 +369,41 @@ fn parse_unwind_section<R: Reader, U: UnwindSection<R>>(
     view: &BinaryView,
     unwind_section: U,
 ) -> gimli::Result<iset::IntervalMap<u64, i64>>
-where <U as UnwindSection<R>>::Offset: std::hash::Hash {
+where
+    <U as UnwindSection<R>>::Offset: std::hash::Hash,
+{
     let mut bases = gimli::BaseAddresses::default();
 
-    if let Some(section) = view.section_by_name(".eh_frame_hdr").or(view.section_by_name("__eh_frame_hdr")) {
+    if let Some(section) = view
+        .section_by_name(".eh_frame_hdr")
+        .or(view.section_by_name("__eh_frame_hdr"))
+    {
         bases = bases.set_eh_frame_hdr(section.start());
     }
 
-    if let Some(section) = view.section_by_name(".eh_frame").or(view.section_by_name("__eh_frame")) {
+    if let Some(section) = view
+        .section_by_name(".eh_frame")
+        .or(view.section_by_name("__eh_frame"))
+    {
         bases = bases.set_eh_frame(section.start());
-    } else if let Some(section) = view.section_by_name(".debug_frame").or(view.section_by_name("__debug_frame")) {
+    } else if let Some(section) = view
+        .section_by_name(".debug_frame")
+        .or(view.section_by_name("__debug_frame"))
+    {
         bases = bases.set_eh_frame(section.start());
     }
 
-    if let Some(section) = view.section_by_name(".text").or(view.section_by_name("__text")) {
+    if let Some(section) = view
+        .section_by_name(".text")
+        .or(view.section_by_name("__text"))
+    {
         bases = bases.set_text(section.start());
     }
 
-    if let Some(section) = view.section_by_name(".got").or(view.section_by_name("__got")) {
+    if let Some(section) = view
+        .section_by_name(".got")
+        .or(view.section_by_name("__got"))
+    {
         bases = bases.set_got(section.start());
     }
 
@@ -401,30 +437,38 @@ where <U as UnwindSection<R>>::Offset: std::hash::Hash {
                 }
 
                 if fde.initial_address().overflowing_add(fde.len()).1 {
-                    warn!("FDE at offset {:?} exceeds bounds of memory space! {:#x} + length {:#x}", fde.offset(), fde.initial_address(), fde.len());
+                    warn!(
+                        "FDE at offset {:?} exceeds bounds of memory space! {:#x} + length {:#x}",
+                        fde.offset(),
+                        fde.initial_address(),
+                        fde.len()
+                    );
                 } else {
                     // Walk the FDE table rows and store their CFA
                     let mut fde_table = fde.rows(&unwind_section, &bases, &mut unwind_context)?;
 
                     while let Some(row) = fde_table.next_row()? {
                         match row.cfa() {
-                            CfaRule::RegisterAndOffset {register: _, offset} => {
+                            CfaRule::RegisterAndOffset {
+                                register: _,
+                                offset,
+                            } => {
                                 // TODO: we should store offsets by register
                                 if row.start_address() < row.end_address() {
-                                    cfa_offsets.insert(
-                                        row.start_address()..row.end_address(),
-                                        *offset,
+                                    cfa_offsets
+                                        .insert(row.start_address()..row.end_address(), *offset);
+                                } else {
+                                    debug!(
+                                        "Invalid FDE table row addresses: {:#x}..{:#x}",
+                                        row.start_address(),
+                                        row.end_address()
                                     );
                                 }
-                                else {
-                                    debug!("Invalid FDE table row addresses: {:#x}..{:#x}", row.start_address(), row.end_address());
-                                }
-                            },
+                            }
                             CfaRule::Expression(_) => {
                                 debug!("Unhandled CFA expression when determining offset");
                             }
                         };
-
                     }
                 }
             }
@@ -447,11 +491,8 @@ fn get_supplementary_build_id(bv: &BinaryView) -> Option<String> {
             .read_vec(start, len)
             .splitn(2, |x| *x == 0)
             .last()
-            .map(|a| {
-                a.iter().map(|b| format!("{:02x}", b)).collect()
-            })
-    }
-    else {
+            .map(|a| a.iter().map(|b| format!("{:02x}", b)).collect())
+    } else {
         None
     }
 }
@@ -482,7 +523,7 @@ fn parse_dwarf(
     let mut section_reader =
         |section_id: SectionId| -> _ { create_section_reader(section_id, view, endian, dwo_file) };
 
-    let mut dwarf = match  Dwarf::load(&mut section_reader) {
+    let mut dwarf = match Dwarf::load(&mut section_reader) {
         Ok(x) => x,
         Err(e) => {
             error!("Failed to load DWARF info: {}", e);
@@ -492,16 +533,16 @@ fn parse_dwarf(
 
     if dwo_file {
         dwarf.file_type = DwarfFileType::Dwo;
-    }
-    else {
+    } else {
         dwarf.file_type = DwarfFileType::Main;
     }
 
     if let Some(sup_bv) = supplementary_bv {
         let sup_endian = get_endian(sup_bv);
         let sup_dwo_file = is_dwo_dwarf(sup_bv) || is_raw_dwo_dwarf(sup_bv);
-        let sup_section_reader =
-            |section_id: SectionId| -> _ { create_section_reader(section_id, sup_bv, sup_endian, sup_dwo_file) };
+        let sup_section_reader = |section_id: SectionId| -> _ {
+            create_section_reader(section_id, sup_bv, sup_endian, sup_dwo_file)
+        };
         if let Err(e) = dwarf.load_sup(sup_section_reader) {
             error!("Failed to load supplementary file: {}", e);
         }
@@ -510,26 +551,27 @@ fn parse_dwarf(
     let range_data_offsets;
     if view.section_by_name(".eh_frame").is_some() || view.section_by_name("__eh_frame").is_some() {
         let eh_frame_endian = get_endian(view);
-        let mut eh_frame_section_reader =
-            |section_id: SectionId| -> _ { create_section_reader(section_id, view, eh_frame_endian, dwo_file) };
-        let mut eh_frame = gimli::EhFrame::load(&mut eh_frame_section_reader).unwrap();
+        let eh_frame_section_reader = |section_id: SectionId| -> _ {
+            create_section_reader(section_id, view, eh_frame_endian, dwo_file)
+        };
+        let mut eh_frame = gimli::EhFrame::load(eh_frame_section_reader).unwrap();
         eh_frame.set_address_size(view.address_size() as u8);
         range_data_offsets = parse_unwind_section(view, eh_frame)
             .map_err(|e| error!("Error parsing .eh_frame: {}", e))?;
-    }
-    else if view.section_by_name(".debug_frame").is_some() || view.section_by_name("__debug_frame").is_some() {
+    } else if view.section_by_name(".debug_frame").is_some()
+        || view.section_by_name("__debug_frame").is_some()
+    {
         let debug_frame_endian = get_endian(view);
-        let mut debug_frame_section_reader =
-            |section_id: SectionId| -> _ { create_section_reader(section_id, view, debug_frame_endian, dwo_file) };
-        let mut debug_frame = gimli::DebugFrame::load(&mut debug_frame_section_reader).unwrap();
+        let debug_frame_section_reader = |section_id: SectionId| -> _ {
+            create_section_reader(section_id, view, debug_frame_endian, dwo_file)
+        };
+        let mut debug_frame = gimli::DebugFrame::load(debug_frame_section_reader).unwrap();
         debug_frame.set_address_size(view.address_size() as u8);
         range_data_offsets = parse_unwind_section(view, debug_frame)
             .map_err(|e| error!("Error parsing .debug_frame: {}", e))?;
-    }
-    else {
+    } else {
         range_data_offsets = Default::default();
     }
-
 
     // Create debug info builder and recover name mapping first
     //  Since DWARF is stored as a tree with arbitrary implicit edges among leaves,
@@ -557,7 +599,7 @@ fn parse_dwarf(
         for unit in debug_info_builder_context.sup_units() {
             parse_unit(
                 dwarf.sup().unwrap(),
-                &unit,
+                unit,
                 &debug_info_builder_context,
                 &mut debug_info_builder,
                 &parse_progress,
@@ -568,7 +610,7 @@ fn parse_dwarf(
         for unit in debug_info_builder_context.units() {
             parse_unit(
                 &dwarf,
-                &unit,
+                unit,
                 &debug_info_builder_context,
                 &mut debug_info_builder,
                 &parse_progress,
@@ -610,36 +652,28 @@ impl CustomDebugInfoParser for DWARFParser {
         let (external_file, close_external) = if !dwarfreader::is_valid(bv) {
             if let (Some(debug_view), x) = helpers::load_sibling_debug_file(bv) {
                 (Some(debug_view), x)
-            }
-            else if let Ok(build_id) = get_build_id(bv) {
+            } else if let Ok(build_id) = get_build_id(bv) {
                 load_debug_info_for_build_id(&build_id, bv)
-            }
-            else {
+            } else {
                 (None, false)
             }
-        }
-        else {
+        } else {
             (None, false)
         };
 
-        let sup_bv = get_supplementary_build_id(
-            external_file
-                .as_deref()
-                .unwrap_or(debug_file)
-            )
+        let sup_bv = get_supplementary_build_id(external_file.as_deref().unwrap_or(debug_file))
             .and_then(|build_id| {
                 load_debug_info_for_build_id(&build_id, bv)
-                .0
-                .map(|x| x.raw_view().unwrap())
+                    .0
+                    .map(|x| x.raw_view().unwrap())
             });
 
         let result = match parse_dwarf(
             bv,
             external_file.as_deref().unwrap_or(debug_file),
             sup_bv.as_deref(),
-            progress
-        )
-        {
+            progress,
+        ) {
             Ok(mut builder) => {
                 builder.post_process(bv, debug_info).commit_info(debug_info);
                 true

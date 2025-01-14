@@ -40,7 +40,8 @@ impl architecture::Flag for Flag {
             Self::Z => 1,
             Self::N => 2,
             Self::V => 8,
-        }.into()
+        }
+        .into()
     }
 }
 
@@ -125,7 +126,8 @@ impl architecture::FlagWrite for FlagWrite {
             Self::Nz => 2,
             Self::Nvz => 3,
             Self::Cnz => 4,
-        }.into()
+        }
+        .into()
     }
 
     fn flags_written(&self) -> Vec<Self::FlagType> {

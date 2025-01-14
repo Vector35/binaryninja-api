@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use anyhow::{anyhow, Result};
+use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
+use binaryninja::types::{MemberAccess, MemberScope, StructureBuilder, StructureType, Type};
+use log::{debug, warn};
 use std::cmp::Ordering;
 use std::env;
 use std::fmt::{Debug, Display, Formatter};
-use anyhow::{anyhow, Result};
-use log::{debug, warn};
-use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
-use binaryninja::types::{
-    MemberAccess, MemberScope, StructureBuilder, StructureType, Type,
-};
 
 use crate::type_parser::ParsedMember;
 
@@ -63,7 +61,7 @@ impl PartialOrd<Self> for WorkingStruct {
 
 impl Debug for WorkingStruct {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if self.children.len() == 0 {
+        if self.children.is_empty() {
             write!(f, "{:X} -> {:X}", self.start(), self.end())?;
             if let Some(index) = self.index {
                 write!(f, " (#{:X})", index)?;
@@ -128,11 +126,11 @@ impl WorkingStruct {
     pub fn insert(&mut self, other: WorkingStruct, recursion: usize) -> Result<()> {
         log(|| {
             format!("{}self: {:#?}", "    ".repeat(recursion), self)
-                .replace("\n", &*("\n".to_owned() + &"    ".repeat(recursion)))
+                .replace("\n", &("\n".to_owned() + &"    ".repeat(recursion)))
         });
         log(|| {
             format!("{}other: {:#?}", "    ".repeat(recursion), other)
-                .replace("\n", &*("\n".to_owned() + &"    ".repeat(recursion)))
+                .replace("\n", &("\n".to_owned() + &"    ".repeat(recursion)))
         });
 
         self.extend_to(other.end());
@@ -142,7 +140,7 @@ impl WorkingStruct {
         // b. `other` starts before the end of the last group => collect all the children inserted after it starts and put them into a struct
         // start a new struct with `other`
 
-        if self.children.len() == 0 {
+        if self.children.is_empty() {
             self.children.push(other);
             return Ok(());
         }
@@ -362,7 +360,7 @@ pub fn group_structure(
             warn!("{} Could not resolve structure groups: {}", name, e);
             for member in members {
                 structure.insert(
-                    &member.ty,
+                    &member.ty.clone(),
                     member.name.clone(),
                     member.offset,
                     false,
@@ -391,7 +389,7 @@ fn apply_groups(
 
                 if offset > member.offset {
                     structure.insert(
-                        &member.ty,
+                        &member.ty.clone(),
                         member.name.clone(),
                         0,
                         false,
@@ -400,7 +398,7 @@ fn apply_groups(
                     );
                 } else {
                     structure.insert(
-                        &member.ty,
+                        &member.ty.clone(),
                         member.name.clone(),
                         member.offset - offset,
                         false,

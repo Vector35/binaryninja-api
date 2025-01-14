@@ -1,8 +1,13 @@
+use crate::cache::{
+    cached_adjacency_constraints, cached_call_site_constraints, cached_function_guid,
+};
+use crate::convert::{from_bn_symbol, from_bn_type};
 use binaryninja::architecture::{
     Architecture, ImplicitRegisterExtend, Register as BNRegister, RegisterInfo,
 };
 use binaryninja::basicblock::BasicBlock as BNBasicBlock;
 use binaryninja::binaryview::BinaryViewExt;
+use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::{Function as BNFunction, NativeBlock};
 use binaryninja::llil;
 use binaryninja::llil::{
@@ -14,11 +19,6 @@ use std::path::PathBuf;
 use warp::signature::basic_block::BasicBlockGUID;
 use warp::signature::function::constraints::FunctionConstraints;
 use warp::signature::function::{Function, FunctionGUID};
-use binaryninja::confidence::MAX_CONFIDENCE;
-use crate::cache::{
-    cached_adjacency_constraints, cached_call_site_constraints, cached_function_guid,
-};
-use crate::convert::{from_bn_symbol, from_bn_type};
 
 pub mod cache;
 pub mod convert;

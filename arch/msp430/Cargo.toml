@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 binaryninja = { path = "../../rust" }
+binaryninjacore-sys = { path = "../../rust/binaryninjacore-sys"  }
 log = "0.4"
 msp430-asm = "^0.2"
 

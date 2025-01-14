@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
-use crate::{helpers::*, ReaderType};
 use crate::types::get_type;
+use crate::{helpers::*, ReaderType};
 
 use binaryninja::{
     rc::*,
@@ -125,10 +125,9 @@ pub(crate) fn handle_enum<R: ReaderType>(
         }
     }
 
-    let width = match get_size_as_usize(entry).unwrap_or(8)
-    {
+    let width = match get_size_as_usize(entry).unwrap_or(8) {
         0 => debug_info_builder_context.default_address_size(),
-        x => x
+        x => x,
     };
 
     Some(Type::enumeration(
@@ -179,7 +178,10 @@ pub(crate) fn handle_pointer<R: ReaderType>(
 
     if let Some(pointer_size) = get_size_as_usize(entry) {
         if let Some(entry_type_offset) = entry_type {
-            let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().get_type();
+            let parent_type = debug_info_builder
+                .get_type(entry_type_offset)
+                .unwrap()
+                .get_type();
             Some(Type::pointer_of_width(
                 parent_type.as_ref(),
                 pointer_size,
@@ -197,7 +199,10 @@ pub(crate) fn handle_pointer<R: ReaderType>(
             ))
         }
     } else if let Some(entry_type_offset) = entry_type {
-        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().get_type();
+        let parent_type = debug_info_builder
+            .get_type(entry_type_offset)
+            .unwrap()
+            .get_type();
         Some(Type::pointer_of_width(
             parent_type.as_ref(),
             debug_info_builder_context.default_address_size(),
@@ -235,7 +240,10 @@ pub(crate) fn handle_array<R: ReaderType>(
     //   For multidimensional arrays, DW_TAG_subrange_type or DW_TAG_enumeration_type
 
     if let Some(entry_type_offset) = entry_type {
-        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().get_type();
+        let parent_type = debug_info_builder
+            .get_type(entry_type_offset)
+            .unwrap()
+            .get_type();
 
         let mut tree = unit.entries_tree(Some(entry.offset())).unwrap();
         let mut children = tree.root().unwrap().children();
@@ -293,27 +301,18 @@ pub(crate) fn handle_function<R: ReaderType>(
     // or is otherwise DW_TAG_unspecified_parameters
 
     let return_type = match entry_type {
-        Some(entry_type_offset) => {
-            debug_info_builder
-                .get_type(entry_type_offset)
-                .expect("Subroutine return type was not processed")
-                .get_type()
-        }
+        Some(entry_type_offset) => debug_info_builder
+            .get_type(entry_type_offset)
+            .expect("Subroutine return type was not processed")
+            .get_type(),
         None => Type::void(),
     };
 
     // Alias function type in the case that it contains itself
     if let Some(name) = debug_info_builder_context.get_name(dwarf, unit, entry) {
-        let ntr = Type::named_type_from_type(
-            &name,
-            &Type::function(return_type.as_ref(), vec![], false),
-        );
-        debug_info_builder.add_type(
-            get_uid(dwarf, unit, entry),
-            name,
-            ntr,
-            false,
-        );
+        let ntr =
+            Type::named_type_from_type(&name, &Type::function(return_type.as_ref(), vec![], false));
+        debug_info_builder.add_type(get_uid(dwarf, unit, entry), name, ntr, false);
     }
 
     let mut parameters: Vec<FunctionParameter> = vec![];
@@ -344,7 +343,10 @@ pub(crate) fn handle_function<R: ReaderType>(
         }
     }
 
-    if debug_info_builder_context.get_name(dwarf, unit, entry).is_some() {
+    if debug_info_builder_context
+        .get_name(dwarf, unit, entry)
+        .is_some()
+    {
         debug_info_builder.remove_type(get_uid(dwarf, unit, entry));
     }
 
@@ -368,7 +370,10 @@ pub(crate) fn handle_const(
     //   ?DW_AT_type
 
     if let Some(entry_type_offset) = entry_type {
-        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().get_type();
+        let parent_type = debug_info_builder
+            .get_type(entry_type_offset)
+            .unwrap()
+            .get_type();
         Some((*parent_type).to_builder().set_const(true).finalize())
     } else {
         Some(TypeBuilder::void().set_const(true).finalize())
@@ -388,7 +393,10 @@ pub(crate) fn handle_volatile(
     //   ?DW_AT_type
 
     if let Some(entry_type_offset) = entry_type {
-        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().get_type();
+        let parent_type = debug_info_builder
+            .get_type(entry_type_offset)
+            .unwrap()
+            .get_type();
         Some((*parent_type).to_builder().set_volatile(true).finalize())
     } else {
         Some(TypeBuilder::void().set_volatile(true).finalize())

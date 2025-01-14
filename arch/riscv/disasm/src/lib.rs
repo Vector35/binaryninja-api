@@ -4,8 +4,6 @@
 // finish transition to from_instr32 from 'new'
 // make the various component structs smaller (8 bit IntReg/FloatReg etc.)
 
-extern crate byteorder;
-
 use std::borrow::Cow;
 use std::fmt;
 use std::marker::PhantomData;
@@ -345,21 +343,21 @@ pub enum Operand<D: RiscVDisassembler> {
 
 impl<D: RiscVDisassembler> fmt::Display for Operand<D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &Operand::R(ref r) => write!(f, "x{}", r.id()),
-            &Operand::F(ref r) => write!(f, "f{}", r.id()),
-            &Operand::I(i) => match i {
+        match *self {
+            Operand::R(r) => write!(f, "x{}", r.id()),
+            Operand::F(r) => write!(f, "f{}", r.id()),
+            Operand::I(i) => match i {
                 -0x80000..=-1 => write!(f, "-{:x}", -i),
                 _ => write!(f, "{:x}", i),
             },
-            &Operand::M(i, ref r) => {
+            Operand::M(i, r) => {
                 if i < 0 {
                     write!(f, "-{:x}(x{})", -i, r.id())
                 } else {
                     write!(f, "{:x}(x{})", i, r.id())
                 }
             }
-            &Operand::RM(ref r) => write!(f, "{}", r.name()),
+            Operand::RM(r) => write!(f, "{}", r.name()),
         }
     }
 }
@@ -1777,7 +1775,7 @@ pub enum Instr<D: RiscVDisassembler> {
 
 impl<D: RiscVDisassembler> Instr<D> {
     pub fn mnem(&self) -> Mnem<D> {
-        Mnem(&self)
+        Mnem(self)
     }
 
     pub fn operands(&self) -> Vec<Operand<D>> {
@@ -2300,7 +2298,7 @@ impl<'a, D: RiscVDisassembler + 'a> Mnem<'a, D> {
     }
 }
 
-impl<'a, D: RiscVDisassembler> fmt::Display for Mnem<'a, D> {
+impl<D: RiscVDisassembler> fmt::Display for Mnem<'_, D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match (self.mnem(), self.suffix()) {
             (m, None) => f.pad(m),
@@ -3141,9 +3139,7 @@ pub trait RiscVDisassembler: Sized + Copy + Clone {
                                     f if (f & 0xfe0) == 0x120 => {
                                         Op::SfenceVma(RTypeIntInst::new(inst)?)
                                     }
-                                    0x104 => {
-                                        Op::SfenceVm(RTypeIntInst::new(inst)?)
-                                    }
+                                    0x104 => Op::SfenceVm(RTypeIntInst::new(inst)?),
 
                                     0x000 => Op::Ecall,
                                     0x001 => Op::Ebreak,
@@ -3171,7 +3167,7 @@ pub trait RiscVDisassembler: Sized + Copy + Clone {
 
                 Ok(Instr::Rv32(decoded))
             }
-            _ => return Err(TooShort),
+            _ => Err(TooShort),
         }
     }
 }

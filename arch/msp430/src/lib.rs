@@ -2,8 +2,14 @@ extern crate binaryninja;
 extern crate log;
 extern crate msp430_asm;
 
+use binaryninja::{
+    add_optional_plugin_dependency,
+    architecture::ArchitectureExt,
+    callingconvention,
+    custombinaryview::{BinaryViewType, BinaryViewTypeExt},
+    Endianness,
+};
 use log::LevelFilter;
-use binaryninja::{add_optional_plugin_dependency, architecture::ArchitectureExt, callingconvention, custombinaryview::{BinaryViewType, BinaryViewTypeExt}, Endianness};
 
 mod architecture;
 mod flag;
@@ -17,10 +23,10 @@ use binaryninja::logger::Logger;
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginInit() -> bool {
     Logger::new("MSP430").with_level(LevelFilter::Info).init();
-    let arch = binaryninja::architecture::register_architecture(
-        "msp430",
-        |custom_handle, handle| Msp430::new(handle, custom_handle),
-    );
+    let arch =
+        binaryninja::architecture::register_architecture("msp430", |custom_handle, handle| {
+            Msp430::new(handle, custom_handle)
+        });
 
     // we may need to introduce additional calling conventions here to
     // support additional ABIs. MSPGCC's calling convention (what

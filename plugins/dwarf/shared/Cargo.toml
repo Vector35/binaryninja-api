@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 binaryninja = { path = "../../../rust" }
+binaryninjacore-sys = { path = "../../../rust/binaryninjacore-sys"  }
 gimli = "0.31"
 zstd = "0.13.2"
 thiserror = "1.0"

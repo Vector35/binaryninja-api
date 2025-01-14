@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{helpers::{get_uid, resolve_specification, DieReference}, ReaderType};
+use crate::{
+    helpers::{get_uid, resolve_specification, DieReference},
+    ReaderType,
+};
 
 use binaryninja::{
     binaryview::{BinaryView, BinaryViewBase, BinaryViewExt},
@@ -21,21 +24,17 @@ use binaryninja::{
     rc::*,
     symbol::SymbolType,
     templatesimplifier::simplify_str_to_fqn,
-    variable::NamedVariableWithType,
     types::{FunctionParameter, Type},
+    variable::NamedVariableWithType,
 };
 
 use gimli::{DebuggingInformationEntry, Dwarf, Unit};
 
-use indexmap::{map::Values, IndexMap};
-use log::{debug, error, warn};
-use std::{
-    cmp::Ordering,
-    collections::HashMap,
-    hash::Hash,
-};
 use binaryninja::confidence::Conf;
 use binaryninja::variable::{Variable, VariableSourceType};
+use indexmap::{map::Values, IndexMap};
+use log::{debug, error, warn};
+use std::{cmp::Ordering, collections::HashMap, hash::Hash};
 
 pub(crate) type TypeUID = usize;
 
@@ -81,7 +80,7 @@ impl FunctionInfoBuilder {
             self.address = address;
         }
 
-        for (i, new_parameter) in parameters.into_iter().enumerate() {
+        for (i, new_parameter) in parameters.iter().enumerate() {
             match self.parameters.get(i) {
                 Some(None) => self.parameters[i] = new_parameter.clone(),
                 Some(Some(_)) => (),
@@ -122,7 +121,6 @@ pub(crate) struct DebugInfoBuilderContext<R: ReaderType> {
 
 impl<R: ReaderType> DebugInfoBuilderContext<R> {
     pub(crate) fn new(view: &BinaryView, dwarf: &Dwarf<R>) -> Option<Self> {
-
         let mut units = vec![];
         let mut iter = dwarf.units();
         while let Ok(Some(header)) = iter.next() {
@@ -203,7 +201,7 @@ pub(crate) struct DebugInfoBuilder {
     full_function_name_indices: HashMap<String, usize>,
     types: IndexMap<TypeUID, DebugType>,
     data_variables: HashMap<u64, (Option<String>, TypeUID)>,
-    range_data_offsets: iset::IntervalMap<u64, i64>
+    range_data_offsets: iset::IntervalMap<u64, i64>,
 }
 
 impl DebugInfoBuilder {
@@ -238,10 +236,10 @@ impl DebugInfoBuilder {
         // TODO : Consider further falling back on address/architecture
 
         /*
-            If it has a raw_name and we know it, update it and return
-            Else if it has a full_name and we know it, update it and return
-            Else Add a new entry if we don't know the full_name or raw_name
-         */
+           If it has a raw_name and we know it, update it and return
+           Else if it has a full_name and we know it, update it and return
+           Else Add a new entry if we don't know the full_name or raw_name
+        */
 
         if let Some(ident) = &raw_name {
             // check if we already know about this raw name's index
@@ -252,19 +250,20 @@ impl DebugInfoBuilder {
                 let function = self.functions.get_mut(*idx).unwrap();
 
                 if function.full_name.is_some() && function.full_name != full_name {
-                    self.full_function_name_indices.remove(function.full_name.as_ref().unwrap());
+                    self.full_function_name_indices
+                        .remove(function.full_name.as_ref().unwrap());
                 }
 
                 function.update(full_name, raw_name, return_type, address, parameters);
 
-                if function.full_name.is_some()  {
-                    self.full_function_name_indices.insert(function.full_name.clone().unwrap(), *idx);
+                if function.full_name.is_some() {
+                    self.full_function_name_indices
+                        .insert(function.full_name.clone().unwrap(), *idx);
                 }
 
                 return Some(*idx);
             }
-        }
-        else if let Some(ident) = &full_name {
+        } else if let Some(ident) = &full_name {
             // check if we already know about this full name's index
             // if we do, and the raw name will change, remove the known raw index if it exists
             // update the function
@@ -273,19 +272,20 @@ impl DebugInfoBuilder {
                 let function = self.functions.get_mut(*idx).unwrap();
 
                 if function.raw_name.is_some() && function.raw_name != raw_name {
-                    self.raw_function_name_indices.remove(function.raw_name.as_ref().unwrap());
+                    self.raw_function_name_indices
+                        .remove(function.raw_name.as_ref().unwrap());
                 }
 
                 function.update(full_name, raw_name, return_type, address, parameters);
 
-                if function.raw_name.is_some()  {
-                    self.raw_function_name_indices.insert(function.raw_name.clone().unwrap(), *idx);
+                if function.raw_name.is_some() {
+                    self.raw_function_name_indices
+                        .insert(function.raw_name.clone().unwrap(), *idx);
                 }
 
                 return Some(*idx);
             }
-        }
-        else {
+        } else {
             debug!("Function entry in DWARF without full or raw name.");
             return None;
         }
@@ -303,15 +303,17 @@ impl DebugInfoBuilder {
         };
 
         if let Some(n) = &function.full_name {
-            self.full_function_name_indices.insert(n.clone(), self.functions.len());
+            self.full_function_name_indices
+                .insert(n.clone(), self.functions.len());
         }
 
         if let Some(n) = &function.raw_name {
-            self.raw_function_name_indices.insert(n.clone(), self.functions.len());
+            self.raw_function_name_indices
+                .insert(n.clone(), self.functions.len());
         }
 
         self.functions.push(function);
-        Some(self.functions.len()-1)
+        Some(self.functions.len() - 1)
     }
 
     pub(crate) fn functions(&self) -> &[FunctionInfoBuilder] {
@@ -359,7 +361,6 @@ impl DebugInfoBuilder {
         self.types.contains_key(&type_uid)
     }
 
-
     pub(crate) fn add_stack_variable(
         &mut self,
         fn_idx: Option<usize>,
@@ -373,11 +374,10 @@ impl DebugInfoBuilder {
                 if x.len() == 1 && x.chars().next() == Some('\x00') {
                     // Anonymous variable, generate name
                     format!("debug_var_{}", offset)
-                }
-                else {
+                } else {
                     x
                 }
-            },
+            }
             None => {
                 // Anonymous variable, generate name
                 format!("debug_var_{}", offset)
@@ -386,14 +386,16 @@ impl DebugInfoBuilder {
 
         let Some(function_index) = fn_idx else {
             // If we somehow lost track of what subprogram we're in or we're not actually in a subprogram
-            error!("Trying to add a local variable outside of a subprogram. Please report this issue.");
+            error!(
+                "Trying to add a local variable outside of a subprogram. Please report this issue."
+            );
             return;
         };
 
         // Either get the known type or use a 0 confidence void type so we at least get the name applied
         let ty = match type_uid {
             Some(uid) => Conf::new(self.get_type(uid).unwrap().ty.clone(), 128),
-            None => Conf::new(Type::void(), 0)
+            None => Conf::new(Type::void(), 0),
         };
         let function = &mut self.functions[function_index];
 
@@ -405,20 +407,22 @@ impl DebugInfoBuilder {
             return;
         };
 
-        let adjusted_offset;
-
-        let Some(adjustment_at_variable_lifetime_start) = lexical_block.and_then(|block_ranges| {
-            block_ranges
-            .unsorted_iter()
-            .find_map(|x| self.range_data_offsets.values_overlap(x.start).next())
-        }).or_else(|| {
-            // Try using the offset at the adjustment 4 bytes after the function start, in case the function starts with a stack adjustment
-            // TODO: This is a decent heuristic but not perfect, since further adjustments could still be made
-            self.range_data_offsets.values_overlap(func_addr+4).next()
-        }).or_else(|| {
-            // If all else fails, use the function start address
-            self.range_data_offsets.values_overlap(func_addr).next()
-        }) else {
+        let Some(adjustment_at_variable_lifetime_start) = lexical_block
+            .and_then(|block_ranges| {
+                block_ranges
+                    .unsorted_iter()
+                    .find_map(|x| self.range_data_offsets.values_overlap(x.start).next())
+            })
+            .or_else(|| {
+                // Try using the offset at the adjustment 4 bytes after the function start, in case the function starts with a stack adjustment
+                // TODO: This is a decent heuristic but not perfect, since further adjustments could still be made
+                self.range_data_offsets.values_overlap(func_addr + 4).next()
+            })
+            .or_else(|| {
+                // If all else fails, use the function start address
+                self.range_data_offsets.values_overlap(func_addr).next()
+            })
+        else {
             // Unknown why, but this is happening with MachO + external dSYM
             debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CIE offset.", name, offset, func_addr);
             return;
@@ -426,20 +430,21 @@ impl DebugInfoBuilder {
 
         // TODO: handle non-sp frame bases
         // TODO: if not in a lexical block these can be wrong, see https://github.com/Vector35/binaryninja-api/issues/5882#issuecomment-2406065057
-        if function.use_cfa {
+        let adjusted_offset = if function.use_cfa {
             // Apply CFA offset to variable storage offset if DW_AT_frame_base is frame base is CFA
-            adjusted_offset = offset + adjustment_at_variable_lifetime_start;
-        }
-        else {
+            offset + adjustment_at_variable_lifetime_start
+        } else {
             // If it's using SP, we know the SP offset is <SP offset> + (<entry SP CFA offset> - <SP CFA offset>)
-            let Some(adjustment_at_entry) = self.range_data_offsets.values_overlap(func_addr).next() else {
+            let Some(adjustment_at_entry) =
+                self.range_data_offsets.values_overlap(func_addr).next()
+            else {
                 // Unknown why, but this is happening with MachO + external dSYM
                 debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CIE offset for function start.", name, offset, func_addr);
                 return;
             };
 
-            adjusted_offset = offset + (adjustment_at_entry - adjustment_at_variable_lifetime_start);
-        }
+            offset + (adjustment_at_entry - adjustment_at_variable_lifetime_start)
+        };
 
         if adjusted_offset > 0 {
             // If we somehow end up with a positive sp offset
@@ -447,9 +452,14 @@ impl DebugInfoBuilder {
             return;
         }
 
-        let var = Variable::new(VariableSourceType::StackVariableSourceType, 0, adjusted_offset);
-        function.stack_variables.push(NamedVariableWithType::new(var, ty, name, false));
-
+        let var = Variable::new(
+            VariableSourceType::StackVariableSourceType,
+            0,
+            adjusted_offset,
+        );
+        function
+            .stack_variables
+            .push(NamedVariableWithType::new(var, ty, name, false));
     }
 
     pub(crate) fn add_data_variable(
@@ -512,8 +522,7 @@ impl DebugInfoBuilder {
 
                             debug_type_name = format!("{}_{}", debug_type.name, i);
                             i += 1;
-                        }
-                        else {
+                        } else {
                             // We found a unique name
                             break;
                         }
@@ -545,7 +554,9 @@ impl DebugInfoBuilder {
 
     fn get_function_type(&self, function: &FunctionInfoBuilder) -> Ref<Type> {
         let return_type = match function.return_type {
-            Some(return_type_id) => Conf::new(self.get_type(return_type_id).unwrap().ty.clone(), 128),
+            Some(return_type_id) => {
+                Conf::new(self.get_type(return_type_id).unwrap().ty.clone(), 128)
+            }
             _ => Conf::new(Type::void(), 0),
         };
 
@@ -577,7 +588,7 @@ impl DebugInfoBuilder {
                 Some(self.get_function_type(function)),
                 function.address,
                 function.platform.clone(),
-                vec![], // TODO : Components
+                vec![],                           // TODO : Components
                 function.stack_variables.clone(), // TODO: local non-stack variables
             ));
         }
@@ -607,7 +618,9 @@ impl DebugInfoBuilder {
 
                         // If our name has fewer namespaces than the existing name, assume we lost the namespace info
                         if simplify_str_to_fqn(func_full_name, true).items.len()
-                            < simplify_str_to_fqn(symbol_full_name.clone(), true).items.len()
+                            < simplify_str_to_fqn(symbol_full_name.clone(), true)
+                                .items
+                                .len()
                         {
                             func.full_name = Some(symbol_full_name.to_string());
                         }
@@ -618,13 +631,15 @@ impl DebugInfoBuilder {
             if let Some(address) = func.address.as_mut() {
                 let (diff, overflowed) = bv.start().overflowing_sub(bv.original_image_base());
                 if !overflowed {
-                    *address = (*address).overflowing_add(diff).0;  // rebase the address
+                    *address = (*address).overflowing_add(diff).0; // rebase the address
                     let existing_functions = bv.functions_at(*address);
                     match existing_functions.len().cmp(&1) {
                         Ordering::Greater => {
                             warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");
                         }
-                        Ordering::Equal => func.platform = Some(existing_functions.get(0).platform()),
+                        Ordering::Equal => {
+                            func.platform = Some(existing_functions.get(0).platform())
+                        }
                         Ordering::Less => {}
                     }
                 }

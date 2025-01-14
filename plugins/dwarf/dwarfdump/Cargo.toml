@@ -10,4 +10,5 @@ crate-type = ["cdylib"]
 [dependencies]
 dwarfreader = { path = "../shared/" }
 binaryninja = { path = "../../../rust" }
+binaryninjacore-sys = { path = "../../../rust/binaryninjacore-sys"  }
 gimli = "0.31"

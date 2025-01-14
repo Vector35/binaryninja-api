@@ -10,19 +10,19 @@ use gimli::{
 use object::{write, Architecture, BinaryFormat, SectionKind};
 use std::fs;
 
+use binaryninja::logger::Logger;
 use binaryninja::{
     binaryview::{BinaryView, BinaryViewBase, BinaryViewExt},
     command::{register, Command},
+    confidence::Conf,
     interaction,
     interaction::{FormResponses, FormResponses::Index},
     rc::Ref,
     string::BnString,
     symbol::SymbolType,
-    confidence::Conf,
     types::{MemberAccess, StructureType, Type, TypeClass},
 };
 use log::{error, info, LevelFilter};
-use binaryninja::logger::Logger;
 
 fn export_type(
     name: String,
@@ -377,13 +377,7 @@ fn export_types(
     defined_types: &mut Vec<(Ref<Type>, UnitEntryId)>,
 ) {
     for t in &bv.types() {
-        export_type(
-            t.name.to_string(),
-            &t.ty,
-            bv,
-            defined_types,
-            dwarf,
-        );
+        export_type(t.name.to_string(), &t.ty, bv, defined_types, dwarf);
     }
 }
 
@@ -783,7 +777,9 @@ impl Command for MyCommand {
 
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
-    Logger::new("DWARF Export").with_level(LevelFilter::Debug).init();
+    Logger::new("DWARF Export")
+        .with_level(LevelFilter::Debug)
+        .init();
 
     register(
         "Export as DWARF",

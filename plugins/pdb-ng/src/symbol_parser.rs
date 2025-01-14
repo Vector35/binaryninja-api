@@ -35,17 +35,14 @@ use pdb::{
     UserDefinedTypeSymbol, UsingNamespaceSymbol,
 };
 
+use crate::PDBParserInstance;
 use binaryninja::architecture::{Architecture, ArchitectureExt, Register, RegisterId};
 use binaryninja::binaryview::BinaryViewBase;
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use binaryninja::demangle::demangle_ms;
 use binaryninja::rc::Ref;
-use binaryninja::types::{
-    FunctionParameter, QualifiedName,
-    StructureBuilder, Type, TypeClass,
-};
+use binaryninja::types::{FunctionParameter, QualifiedName, StructureBuilder, Type, TypeClass};
 use binaryninja::variable::{Variable, VariableSourceType};
-use crate::PDBParserInstance;
 
 const DEMANGLE_CONFIDENCE: u8 = 32;
 
@@ -500,7 +497,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
         assert!(self.symbol_stack.is_empty());
         // Add thunks at the end as per above
-        top_level_syms.extend(thunk_syms.into_iter());
+        top_level_syms.extend(thunk_syms);
 
         // Restart and do the processing for real this time
         if let Some(first) = first {
@@ -592,7 +589,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
 
         children.push(sym);
-        return children;
+        children
     }
 
     /// Direct children of symbol index (only during this module parse)
@@ -607,7 +604,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     /// Direct parent of symbol index (only during this module parse)
     #[allow(dead_code)]
     fn symbol_parent(&self, sym: SymbolIndex) -> Option<SymbolIndex> {
-        self.symbol_parents.get(&sym).map(|idx| *idx)
+        self.symbol_parents.get(&sym).copied()
     }
 
     /// Find symbol by index (only during this module parse)
@@ -653,62 +650,58 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     ) -> Result<Option<ParsedSymbol>> {
         match data {
             SymbolData::ScopeEnd => self.handle_scope_end_symbol(index),
-            SymbolData::ObjName(data) => self.handle_obj_name_symbol(index, &data),
-            SymbolData::RegisterVariable(data) => {
-                self.handle_register_variable_symbol(index, &data)
-            }
-            SymbolData::Constant(data) => self.handle_constant_symbol(index, &data),
-            SymbolData::UserDefinedType(data) => self.handle_user_defined_type_symbol(index, &data),
+            SymbolData::ObjName(data) => self.handle_obj_name_symbol(index, data),
+            SymbolData::RegisterVariable(data) => self.handle_register_variable_symbol(index, data),
+            SymbolData::Constant(data) => self.handle_constant_symbol(index, data),
+            SymbolData::UserDefinedType(data) => self.handle_user_defined_type_symbol(index, data),
             SymbolData::MultiRegisterVariable(data) => {
-                self.handle_multi_register_variable_symbol(index, &data)
+                self.handle_multi_register_variable_symbol(index, data)
             }
-            SymbolData::Data(data) => self.handle_data_symbol(index, &data),
-            SymbolData::Public(data) => self.handle_public_symbol(index, &data),
-            SymbolData::Procedure(data) => self.handle_procedure_symbol(index, &data),
-            SymbolData::ThreadStorage(data) => self.handle_thread_storage_symbol(index, &data),
-            SymbolData::CompileFlags(data) => self.handle_compile_flags_symbol(index, &data),
-            SymbolData::UsingNamespace(data) => self.handle_using_namespace_symbol(index, &data),
+            SymbolData::Data(data) => self.handle_data_symbol(index, data),
+            SymbolData::Public(data) => self.handle_public_symbol(index, data),
+            SymbolData::Procedure(data) => self.handle_procedure_symbol(index, data),
+            SymbolData::ThreadStorage(data) => self.handle_thread_storage_symbol(index, data),
+            SymbolData::CompileFlags(data) => self.handle_compile_flags_symbol(index, data),
+            SymbolData::UsingNamespace(data) => self.handle_using_namespace_symbol(index, data),
             SymbolData::ProcedureReference(data) => {
                 self.handle_procedure_reference_symbol(index, &data)
             }
-            SymbolData::DataReference(data) => self.handle_data_reference_symbol(index, &data),
+            SymbolData::DataReference(data) => self.handle_data_reference_symbol(index, data),
             SymbolData::AnnotationReference(data) => {
-                self.handle_annotation_reference_symbol(index, &data)
+                self.handle_annotation_reference_symbol(index, data)
             }
-            SymbolData::Trampoline(data) => self.handle_trampoline_symbol(index, &data),
-            SymbolData::Export(data) => self.handle_export_symbol(index, &data),
-            SymbolData::Local(data) => self.handle_local_symbol(index, &data),
-            SymbolData::BuildInfo(data) => self.handle_build_info_symbol(index, &data),
-            SymbolData::InlineSite(data) => self.handle_inline_site_symbol(index, &data),
+            SymbolData::Trampoline(data) => self.handle_trampoline_symbol(index, data),
+            SymbolData::Export(data) => self.handle_export_symbol(index, data),
+            SymbolData::Local(data) => self.handle_local_symbol(index, data),
+            SymbolData::BuildInfo(data) => self.handle_build_info_symbol(index, data),
+            SymbolData::InlineSite(data) => self.handle_inline_site_symbol(index, data),
             SymbolData::InlineSiteEnd => self.handle_inline_site_end_symbol(index),
             SymbolData::ProcedureEnd => self.handle_procedure_end_symbol(index),
-            SymbolData::Label(data) => self.handle_label_symbol(index, &data),
-            SymbolData::Block(data) => self.handle_block_symbol(index, &data),
-            SymbolData::RegisterRelative(data) => {
-                self.handle_register_relative_symbol(index, &data)
-            }
-            SymbolData::Thunk(data) => self.handle_thunk_symbol(index, &data),
-            SymbolData::SeparatedCode(data) => self.handle_separated_code_symbol(index, &data),
+            SymbolData::Label(data) => self.handle_label_symbol(index, data),
+            SymbolData::Block(data) => self.handle_block_symbol(index, data),
+            SymbolData::RegisterRelative(data) => self.handle_register_relative_symbol(index, data),
+            SymbolData::Thunk(data) => self.handle_thunk_symbol(index, data),
+            SymbolData::SeparatedCode(data) => self.handle_separated_code_symbol(index, data),
             SymbolData::DefRange(data) => self.handle_def_range(index, &data),
-            SymbolData::DefRangeSubField(data) => self.handle_def_range_sub_field(index, &data),
-            SymbolData::DefRangeRegister(data) => self.handle_def_range_register(index, &data),
+            SymbolData::DefRangeSubField(data) => self.handle_def_range_sub_field(index, data),
+            SymbolData::DefRangeRegister(data) => self.handle_def_range_register(index, data),
             SymbolData::DefRangeFramePointerRelative(data) => {
-                self.handle_def_range_frame_pointer_relative_symbol(index, &data)
+                self.handle_def_range_frame_pointer_relative_symbol(index, data)
             }
             SymbolData::DefRangeFramePointerRelativeFullScope(data) => {
-                self.handle_def_range_frame_pointer_relative_full_scope_symbol(index, &data)
+                self.handle_def_range_frame_pointer_relative_full_scope_symbol(index, data)
             }
             SymbolData::DefRangeSubFieldRegister(data) => {
-                self.handle_def_range_sub_field_register_symbol(index, &data)
+                self.handle_def_range_sub_field_register_symbol(index, data)
             }
             SymbolData::DefRangeRegisterRelative(data) => {
-                self.handle_def_range_register_relative_symbol(index, &data)
+                self.handle_def_range_register_relative_symbol(index, data)
             }
             SymbolData::BasePointerRelative(data) => {
-                self.handle_base_pointer_relative_symbol(index, &data)
+                self.handle_base_pointer_relative_symbol(index, data)
             }
-            SymbolData::FrameProcedure(data) => self.handle_frame_procedure_symbol(index, &data),
-            SymbolData::CallSiteInfo(data) => self.handle_call_site_info(index, &data),
+            SymbolData::FrameProcedure(data) => self.handle_frame_procedure_symbol(index, data),
+            SymbolData::CallSiteInfo(data) => self.handle_call_site_info(index, data),
             e => Err(anyhow!("Unhandled symbol type {:?}", e)),
         }
     }
@@ -952,10 +945,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             _ => return Ok((fancier_type, vec![])),
         };
 
-        let raw_params = raw_type
-            .contents
-            .parameters()
-            .ok_or(anyhow!("no params"))?;
+        let raw_params = raw_type.contents.parameters().ok_or(anyhow!("no params"))?;
         let mut fancy_params = fancy_type
             .contents
             .parameters()
@@ -970,7 +960,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     MIN_CONFIDENCE,
                 )),
                 p.name.clone(),
-                p.storage.get(0).map(|loc| loc.location.clone()),
+                p.storage.first().map(|loc| loc.location),
             );
             // Ignore thisptr because it's not technically part of the raw type signature
             if p.name != "this" {
@@ -985,7 +975,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     MIN_CONFIDENCE,
                 )),
                 p.name.clone(),
-                p.storage.get(0).map(|loc| loc.location.clone()),
+                p.storage.first().map(|loc| loc.location),
             );
             // Ignore thisptr because it's not technically part of the raw type signature
             if p.name != "this" {
@@ -998,10 +988,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         self.log(|| format!("Parsed params: {:#x?}", parsed_params));
 
         // We expect one parameter for each unnamed parameter in the marked up type
-        let expected_param_count = fancy_params
-            .iter()
-            .filter(|p| p.name.as_str().is_empty())
-            .count();
+        let expected_param_count = fancy_params.iter().filter(|p| p.name.is_empty()).count();
         // Sanity
         if expected_param_count != raw_params.len() {
             return Err(anyhow!(
@@ -1018,7 +1005,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             if expected_param_count > (parsed_params.len() + parsed_locals.len()) {
                 return Ok((fancier_type, vec![]));
             }
-            parsed_params.extend(parsed_locals.into_iter());
+            parsed_params.extend(parsed_locals);
         }
         let expected_parsed_params = parsed_params
             .drain(0..expected_param_count)
@@ -1029,7 +1016,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         let mut i = 0;
         for p in fancy_params.iter_mut() {
-            if p.name.as_str().is_empty() {
+            if p.name.is_empty() {
                 if p.ty.contents != expected_parsed_params[i].ty.contents {
                     self.log(|| {
                         format!(
@@ -1344,11 +1331,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     ) -> Result<Option<ParsedSymbol>> {
         self.log(|| format!("Got Local symbol: {:?}", data));
         // Look for definition ranges for this symbol
-        let mut locations = vec![];
+        let mut locations: Vec<ParsedLocation> = vec![];
         for child in self.symbol_children(index) {
             match self.lookup_symbol(&child) {
                 Some(ParsedSymbol::Location(loc)) => {
-                    locations.push(loc.clone());
+                    locations.push(*loc);
                 }
                 _ => {}
             }
@@ -1545,7 +1532,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         Ok(Some(ParsedSymbol::Procedure(ParsedProcedure {
             is_public: false,
-            address: address,
+            address,
             name,
             type_: fn_type,
             locals,
@@ -1794,10 +1781,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         if let Some(ty) = t.as_ref() {
             if ty.contents.type_class() == TypeClass::FunctionTypeClass {
                 // demangler makes (void) into (void arg1) which is wrong
-                let parameters = ty
-                    .contents
-                    .parameters()
-                    .ok_or(anyhow!("no parameters"))?;
+                let parameters = ty.contents.parameters().ok_or(anyhow!("no parameters"))?;
                 if let [p] = parameters.as_slice() {
                     if p.ty.contents.type_class() == TypeClass::VoidTypeClass {
                         t = Some(Conf::new(
@@ -1959,14 +1943,14 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         let name = if name.len() == 1 && &name[0] == raw_name && raw_name.starts_with('?') {
             None
-        } else if name.len() == 1 && name[0] == "" {
+        } else if name.len() == 1 && name[0].is_empty() {
             None
         } else if name.len() > 0 && name[0].starts_with("\x7f") {
             // Not sure why these exist but they do Weird Stuff
             name[0].drain(0..1);
-            Some(QualifiedName::from(name))
+            Some(name)
         } else {
-            Some(QualifiedName::from(name))
+            Some(name)
         };
 
         Ok((t, name))
@@ -1984,9 +1968,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             .get_structure()
             .ok_or(anyhow!("Expected structure"))?;
         let mut members = structure.members();
-        let last_member = members
-            .last_mut()
-            .ok_or(anyhow!("Not enough members"))?;
+        let last_member = members.last_mut().ok_or(anyhow!("Not enough members"))?;
 
         if last_member.ty.contents.type_class() != TypeClass::ArrayTypeClass {
             return Ok(None);
@@ -2006,8 +1988,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         // Read member_width bytes from bv starting at that member, until we read all zeroes
         let member_address = base_address + last_member.offset;
 
-        let mut bytes = Vec::<u8>::new();
-        bytes.resize(member_width as usize, 0);
+        let mut bytes = vec![0; member_width as usize];
 
         let mut element_count = 0;
         while self.bv.read(

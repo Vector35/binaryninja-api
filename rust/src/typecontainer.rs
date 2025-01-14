@@ -89,6 +89,7 @@ impl TypeContainer {
             .into_iter()
             .map(|t| {
                 let t = t.into();
+                // Leaked to be freed after the call to core.
                 (
                     QualifiedName::into_raw(t.name),
                     unsafe { Ref::into_raw(t.ty) }.handle,
@@ -99,7 +100,7 @@ impl TypeContainer {
         let mut result_names = std::ptr::null_mut();
         let mut result_ids = std::ptr::null_mut();
         let mut result_count = 0;
-        unsafe {
+        let success = unsafe {
             BNTypeContainerAddTypes(
                 self.handle.as_ptr(),
                 raw_names.as_ptr(),
@@ -111,7 +112,14 @@ impl TypeContainer {
                 &mut result_ids,
                 &mut result_count,
             )
+        };
+        for name in raw_names {
+            QualifiedName::free_raw(name);
         }
+        for ty in raw_types {
+            let _ = unsafe { Type::ref_from_raw(ty) } ;
+        }
+        success
     }
 
     pub fn add_types_with_progress<I, T, F>(&self, types: I, mut progress: F) -> bool
@@ -125,6 +133,7 @@ impl TypeContainer {
             .into_iter()
             .map(|t| {
                 let t = t.into();
+                // Leaked to be freed after the call to core.
                 (
                     QualifiedName::into_raw(t.name),
                     unsafe { Ref::into_raw(t.ty) }.handle,
@@ -135,7 +144,7 @@ impl TypeContainer {
         let mut result_names = std::ptr::null_mut();
         let mut result_ids = std::ptr::null_mut();
         let mut result_count = 0;
-        unsafe {
+        let success = unsafe {
             BNTypeContainerAddTypes(
                 self.handle.as_ptr(),
                 raw_names.as_ptr(),
@@ -147,7 +156,14 @@ impl TypeContainer {
                 &mut result_ids,
                 &mut result_count,
             )
+        };
+        for name in raw_names {
+            QualifiedName::free_raw(name);
         }
+        for ty in raw_types {
+            let _ = unsafe { Type::ref_from_raw(ty) } ;
+        }
+        success
     }
 
     /// Rename a type in the Type Container. All references to this type will be updated

@@ -29,10 +29,10 @@ use binaryninja::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser};
 use binaryninja::downloadprovider::{DownloadInstanceInputOutputCallbacks, DownloadProvider};
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet};
+use binaryninja::logger::Logger;
 use binaryninja::settings::Settings;
 use binaryninja::string::BnString;
 use binaryninja::{add_optional_plugin_dependency, interaction, user_directory};
-use binaryninja::logger::Logger;
 use parser::PDBParserInstance;
 
 /// PDB Parser!!
@@ -124,10 +124,7 @@ fn active_local_cache(view: Option<&BinaryView>) -> Result<String> {
     }
 }
 
-fn parse_sym_srv(
-    symbol_path: &String,
-    default_store: &String,
-) -> Result<Box<dyn Iterator<Item = String>>> {
+fn parse_sym_srv(symbol_path: &str, default_store: String) -> Result<impl Iterator<Item = String>> {
     // https://docs.microsoft.com/en-us/windows/win32/debug/using-symsrv
     // Why
 
@@ -144,7 +141,7 @@ fn parse_sym_srv(
     // ... symbol servers are made up of symbol store elements separated by asterisks. There can
     // be up to 10 symbol stores after the "srv*" prefix.
 
-    let mut sym_srv_results = vec![];
+    let mut sym_srv_results: Vec<String> = vec![];
 
     // 'path elements separated by semicolons'
     for path_element in symbol_path.split(';') {
@@ -167,10 +164,10 @@ fn parse_sym_srv(
         }
     }
 
-    Ok(Box::new(sym_srv_results.into_iter()))
+    Ok(sym_srv_results.into_iter())
 }
 
-fn read_from_sym_store(bv: &BinaryView, path: &String) -> Result<(bool, Vec<u8>)> {
+fn read_from_sym_store(bv: &BinaryView, path: &str) -> Result<(bool, Vec<u8>)> {
     if !path.contains("://") {
         // Local file
         info!("Read local file: {}", path);
@@ -185,7 +182,7 @@ fn read_from_sym_store(bv: &BinaryView, path: &String) -> Result<(bool, Vec<u8>)
     // Download from remote
     let (tx, rx) = mpsc::channel();
     let write = move |data: &[u8]| -> usize {
-        if let Ok(_) = tx.send(Vec::from(data)) {
+        if tx.send(Vec::from(data)).is_ok() {
             data.len()
         } else {
             0
@@ -202,7 +199,7 @@ fn read_from_sym_store(bv: &BinaryView, path: &String) -> Result<(bool, Vec<u8>)
     let result = inst
         .perform_custom_request(
             "GET",
-            path.clone(),
+            path,
             HashMap::<BnString, BnString>::new(),
             DownloadInstanceInputOutputCallbacks {
                 read: None,
@@ -240,7 +237,11 @@ fn read_from_sym_store(bv: &BinaryView, path: &String) -> Result<(bool, Vec<u8>)
     Ok((true, data))
 }
 
-fn search_sym_store(bv: &BinaryView, store_path: &String, pdb_info: &PDBInfo) -> Result<Option<Vec<u8>>> {
+fn search_sym_store(
+    bv: &BinaryView,
+    store_path: String,
+    pdb_info: &PDBInfo,
+) -> Result<Option<Vec<u8>>> {
     // https://www.technlg.net/windows/symbol-server-path-windbg-debugging/
     // For symbol servers, to identify the files path easily, Windbg uses the format
     // binaryname.pdb/GUID
@@ -249,8 +250,7 @@ fn search_sym_store(bv: &BinaryView, store_path: &String, pdb_info: &PDBInfo) ->
     // https://docs.microsoft.com/en-us/windows/win32/debug/using-symstore
     // In this example, the lookup path for the acpi.dbg symbol file might look something
     // like this: \\mybuilds\symsrv\acpi.dbg\37cdb03962040.
-    let base_path =
-        store_path.clone() + "/" + &pdb_info.file_name + "/" + &pdb_info.guid_age_string;
+    let base_path = store_path + "/" + &pdb_info.file_name + "/" + &pdb_info.guid_age_string;
 
     // Three files may exist inside the lookup directory:
     // 1. If the file was stored, then acpi.dbg will exist there.
@@ -271,14 +271,14 @@ fn search_sym_store(bv: &BinaryView, store_path: &String, pdb_info: &PDBInfo) ->
     if let Ok((_remote, conts)) = read_from_sym_store(bv, &file_ptr) {
         let path = String::from_utf8(conts)?;
         // PATH:https://full/path
-        if path.starts_with("PATH:") {
-            if let Ok((_remote, conts)) = read_from_sym_store(bv, &path[5..].to_string()) {
+        if let Some(stripped) = path.strip_prefix("PATH:") {
+            if let Ok((_remote, conts)) = read_from_sym_store(bv, stripped) {
                 return Ok(Some(conts));
             }
         }
     }
 
-    return Ok(None);
+    Ok(None)
 }
 
 fn parse_pdb_info(view: &BinaryView) -> Option<PDBInfo> {
@@ -360,7 +360,7 @@ impl PDBParser {
         conts: &Vec<u8>,
         debug_info: &mut DebugInfo,
         view: &BinaryView,
-        progress: &Box<dyn Fn(usize, usize) -> Result<(), ()>>,
+        progress: &dyn Fn(usize, usize) -> Result<(), ()>,
         check_guid: bool,
         did_download: bool,
     ) -> Result<()> {
@@ -374,11 +374,8 @@ impl PDBParser {
                 if check_guid {
                     return Err(anyhow!("PDB GUID does not match"));
                 } else {
-                    let ask = settings.get_string(
-                        "pdb.features.loadMismatchedPDB",
-                        Some(view),
-                        None,
-                    );
+                    let ask =
+                        settings.get_string("pdb.features.loadMismatchedPDB", Some(view), None);
 
                     match ask.as_str() {
                         "true" => {},
@@ -438,7 +435,7 @@ impl PDBParser {
                         };
                         if has_dir {
                             cab_path.push(&info.file_name);
-                            match fs::write(&cab_path, &conts) {
+                            match fs::write(&cab_path, conts) {
                                 Ok(_) => {
                                     info!("Downloaded to: {}", cab_path.to_string_lossy());
                                 }
@@ -473,7 +470,7 @@ impl PDBParser {
                             };
                             if has_dir {
                                 cab_path.push(&info.file_name);
-                                match fs::write(&cab_path, &conts) {
+                                match fs::write(&cab_path, conts) {
                                     Ok(_) => {
                                         info!("Downloaded to: {}", cab_path.to_string_lossy());
                                     }
@@ -489,11 +486,7 @@ impl PDBParser {
             if check_guid {
                 return Err(anyhow!("File not compiled with PDB information"));
             } else {
-                let ask = settings.get_string(
-                    "pdb.features.loadMismatchedPDB",
-                    Some(view),
-                    None,
-                );
+                let ask = settings.get_string("pdb.features.loadMismatchedPDB", Some(view), None);
 
                 match ask.as_str() {
                     "true" => {},
@@ -578,13 +571,13 @@ impl CustomDebugInfoParser for PDBParser {
             // First, check _NT_SYMBOL_PATH
             if let Ok(sym_path) = env::var("_NT_SYMBOL_PATH") {
                 let stores = if let Ok(default_cache) = active_local_cache(Some(view)) {
-                    parse_sym_srv(&sym_path, &default_cache)
+                    parse_sym_srv(&sym_path, default_cache)
                 } else {
                     Err(anyhow!("No local cache found"))
                 };
                 if let Ok(stores) = stores {
                     for store in stores {
-                        match search_sym_store(view, &store, &info) {
+                        match search_sym_store(view, store.clone(), &info) {
                             Ok(Some(conts)) => {
                                 match self
                                     .load_from_file(&conts, debug_info, view, &progress, true, true)
@@ -622,10 +615,9 @@ impl CustomDebugInfoParser for PDBParser {
             potential_path.push(&info.file_name);
             if potential_path.exists() {
                 match fs::read(
-                    &potential_path
+                    potential_path
                         .to_str()
-                        .expect("Potential path is a real string")
-                        .to_string(),
+                        .expect("Potential path is a real string"),
                 ) {
                     Ok(conts) => match self
                         .load_from_file(&conts, debug_info, view, &progress, true, false)
@@ -641,7 +633,7 @@ impl CustomDebugInfoParser for PDBParser {
 
             // Check the local symbol store
             if let Ok(local_store_path) = active_local_cache(Some(view)) {
-                match search_sym_store(view, &local_store_path, &info) {
+                match search_sym_store(view, local_store_path.clone(), &info) {
                     Ok(Some(conts)) => {
                         match self.load_from_file(&conts, debug_info, view, &progress, true, false)
                         {
@@ -663,7 +655,7 @@ impl CustomDebugInfoParser for PDBParser {
                 Settings::new("").get_string_list("pdb.files.symbolServerList", Some(view), None);
 
             for server in server_list.iter() {
-                match search_sym_store(view, &server.to_string(), &info) {
+                match search_sym_store(view, server.to_string(), &info) {
                     Ok(Some(conts)) => {
                         match self.load_from_file(&conts, debug_info, view, &progress, true, true) {
                             Ok(_) => return true,
@@ -880,7 +872,7 @@ fn test_sym_srv() {
     assert_eq!(
         parse_sym_srv(
             &r"srv*\\mybuilds\mysymbols".to_string(),
-            &r"DEFAULT_STORE".to_string()
+            r"DEFAULT_STORE".to_string()
         )
         .expect("parse success")
         .collect::<Vec<_>>(),
@@ -889,7 +881,7 @@ fn test_sym_srv() {
     assert_eq!(
         parse_sym_srv(
             &r"srv*c:\localsymbols*\\mybuilds\mysymbols".to_string(),
-            &r"DEFAULT_STORE".to_string()
+            r"DEFAULT_STORE".to_string()
         )
         .expect("parse success")
         .collect::<Vec<_>>(),
@@ -901,7 +893,7 @@ fn test_sym_srv() {
     assert_eq!(
         parse_sym_srv(
             &r"srv**\\mybuilds\mysymbols".to_string(),
-            &r"DEFAULT_STORE".to_string()
+            r"DEFAULT_STORE".to_string()
         )
         .expect("parse success")
         .collect::<Vec<_>>(),
@@ -913,7 +905,7 @@ fn test_sym_srv() {
     assert_eq!(
         parse_sym_srv(
             &r"srv*c:\localsymbols*\\NearbyServer\store*https://DistantServer".to_string(),
-            &r"DEFAULT_STORE".to_string()
+            r"DEFAULT_STORE".to_string()
         )
         .expect("parse success")
         .collect::<Vec<_>>(),
@@ -926,7 +918,7 @@ fn test_sym_srv() {
     assert_eq!(
         parse_sym_srv(
             &r"srv*c:\DownstreamStore*https://msdl.microsoft.com/download/symbols".to_string(),
-            &r"DEFAULT_STORE".to_string()
+            r"DEFAULT_STORE".to_string()
         )
         .expect("parse success")
         .collect::<Vec<_>>(),

@@ -4,6 +4,7 @@ use anyhow::{anyhow, Result};
 use binaryninja::architecture::CoreArchitecture;
 use binaryninja::binaryninjacore_sys::{BNMemberAccess, BNMemberScope};
 use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::confidence::Conf;
 use binaryninja::rc::Ref;
 use binaryninja::types::{
     EnumerationBuilder, FunctionParameter, StructureBuilder, StructureType, Type,
@@ -13,7 +14,6 @@ use idb_rs::til::{
     r#struct::Struct as TILStruct, r#struct::StructMember as TILStructMember, section::TILSection,
     union::Union as TILUnion, TILTypeInfo, Type as TILType, Typedef as TILTypedef,
 };
-use binaryninja::confidence::Conf;
 
 #[derive(Debug, Clone)]
 pub enum BnTypeError {
@@ -254,7 +254,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         let ty = Type::function(&return_ty, bn_args, false);
         if is_partial {
             let error = (errors.ret.is_some() || !errors.args.is_empty())
-                .then(|| BnTypeError::Function(errors));
+                .then_some(BnTypeError::Function(errors));
             TranslateTypeResult::PartiallyTranslated(ty, error)
         } else {
             assert!(errors.ret.is_none() && errors.args.is_empty());
@@ -372,7 +372,11 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 (_, Some(start_idx)) => {
                     first_bitfield_seq = None;
                     let members_bitrange = &members[start_idx..i];
-                    self.condensate_bitfields_from_struct(start_idx, members_bitrange, &mut structure);
+                    self.condensate_bitfields_from_struct(
+                        start_idx,
+                        members_bitrange,
+                        &mut structure,
+                    );
                 }
 
                 (_, None) => {}

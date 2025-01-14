@@ -4,8 +4,8 @@ use crate::register::Register;
 
 use binaryninja::{
     architecture::{
-        Architecture, CoreArchitecture, CustomArchitectureHandle, FlagCondition,
-        InstructionInfo, UnusedIntrinsic, UnusedRegisterStack, UnusedRegisterStackInfo,
+        Architecture, CoreArchitecture, CustomArchitectureHandle, FlagCondition, InstructionInfo,
+        UnusedIntrinsic, UnusedRegisterStack, UnusedRegisterStackInfo,
     },
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
     llil::{LiftedExpr, Lifter},
@@ -17,8 +17,10 @@ use msp430_asm::{
     single_operand::SingleOperand, two_operand::TwoOperand,
 };
 
+use binaryninja::architecture::{
+    BranchKind, FlagClassId, FlagGroupId, FlagId, FlagWriteId, RegisterId,
+};
 use log::error;
-use binaryninja::architecture::{BranchKind, FlagClassId, FlagGroupId, FlagId, FlagWriteId, RegisterId};
 
 const MIN_MNEMONIC: usize = 9;
 
@@ -83,81 +85,51 @@ impl Architecture for Msp430 {
 
                 match inst {
                     Instruction::Jnz(inst) => {
-                        info.add_branch(
-                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
-                        );
-                        info.add_branch(
-                            BranchKind::False(addr + inst.size() as u64),
-                        );
+                        info.add_branch(BranchKind::True(offset_to_absolute(addr, inst.offset())));
+                        info.add_branch(BranchKind::False(addr + inst.size() as u64));
                     }
                     Instruction::Jz(inst) => {
-                        info.add_branch(
-                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
-                        );
-                        info.add_branch(
-                            BranchKind::False(addr + inst.size() as u64),
-                        );
+                        info.add_branch(BranchKind::True(offset_to_absolute(addr, inst.offset())));
+                        info.add_branch(BranchKind::False(addr + inst.size() as u64));
                     }
                     Instruction::Jlo(inst) => {
-                        info.add_branch(
-                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
-                        );
-                        info.add_branch(
-                            BranchKind::False(addr + inst.size() as u64),
-                        );
+                        info.add_branch(BranchKind::True(offset_to_absolute(addr, inst.offset())));
+                        info.add_branch(BranchKind::False(addr + inst.size() as u64));
                     }
                     Instruction::Jc(inst) => {
-                        info.add_branch(
-                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
-                        );
-                        info.add_branch(
-                            BranchKind::False(addr + inst.size() as u64),
-                        );
+                        info.add_branch(BranchKind::True(offset_to_absolute(addr, inst.offset())));
+                        info.add_branch(BranchKind::False(addr + inst.size() as u64));
                     }
                     Instruction::Jn(inst) => {
-                        info.add_branch(
-                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
-                        );
-                        info.add_branch(
-                            BranchKind::False(addr + inst.size() as u64),
-                        );
+                        info.add_branch(BranchKind::True(offset_to_absolute(addr, inst.offset())));
+                        info.add_branch(BranchKind::False(addr + inst.size() as u64));
                     }
                     Instruction::Jge(inst) => {
-                        info.add_branch(
-                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
-                        );
-                        info.add_branch(
-                            BranchKind::False(addr + inst.size() as u64),
-                        );
+                        info.add_branch(BranchKind::True(offset_to_absolute(addr, inst.offset())));
+                        info.add_branch(BranchKind::False(addr + inst.size() as u64));
                     }
                     Instruction::Jl(inst) => {
-                        info.add_branch(
-                            BranchKind::True(offset_to_absolute(addr, inst.offset())),
-                        );
-                        info.add_branch(
-                            BranchKind::False(addr + inst.size() as u64),
-                        );
+                        info.add_branch(BranchKind::True(offset_to_absolute(addr, inst.offset())));
+                        info.add_branch(BranchKind::False(addr + inst.size() as u64));
                     }
                     Instruction::Jmp(inst) => {
-                        info.add_branch(
-                            BranchKind::Unconditional(offset_to_absolute(addr, inst.offset())),
-                        );
+                        info.add_branch(BranchKind::Unconditional(offset_to_absolute(
+                            addr,
+                            inst.offset(),
+                        )));
                     }
                     Instruction::Br(inst) => match inst.destination() {
-                        Some(Operand::RegisterDirect(_)) => {
-                            info.add_branch(BranchKind::Indirect)
+                        Some(Operand::RegisterDirect(_)) => info.add_branch(BranchKind::Indirect),
+                        Some(Operand::Indexed(_)) => info.add_branch(BranchKind::Indirect),
+                        Some(Operand::Absolute(value)) => {
+                            info.add_branch(BranchKind::Unconditional(*value as u64))
                         }
-                        Some(Operand::Indexed(_)) => {
-                            info.add_branch(BranchKind::Indirect)
-                        }
-                        Some(Operand::Absolute(value)) => info.add_branch(
-                            BranchKind::Unconditional(*value as u64),
-                        ),
                         Some(Operand::Symbolic(offset)) => info.add_branch(
                             BranchKind::Unconditional((addr as i64 + *offset as i64) as u64),
                         ),
-                        Some(Operand::Immediate(addr)) => info
-                            .add_branch(BranchKind::Unconditional(*addr as u64)),
+                        Some(Operand::Immediate(addr)) => {
+                            info.add_branch(BranchKind::Unconditional(*addr as u64))
+                        }
                         Some(Operand::Constant(_)) => {
                             info.add_branch(BranchKind::Unconditional(addr))
                         }
@@ -168,24 +140,16 @@ impl Architecture for Msp430 {
                         None => {}
                     },
                     Instruction::Call(inst) => match inst.source() {
-                        Operand::RegisterDirect(_) => {
-                            info.add_branch(BranchKind::Indirect)
-                        }
-                        Operand::Indexed(_) => {
-                            info.add_branch(BranchKind::Indirect)
-                        }
+                        Operand::RegisterDirect(_) => info.add_branch(BranchKind::Indirect),
+                        Operand::Indexed(_) => info.add_branch(BranchKind::Indirect),
                         Operand::Absolute(value) => {
                             info.add_branch(BranchKind::Call(*value as u64))
                         }
-                        Operand::Symbolic(offset) => info.add_branch(
-                            BranchKind::Call((addr as i64 + *offset as i64) as u64),
-                        ),
-                        Operand::Immediate(addr) => {
-                            info.add_branch(BranchKind::Call(*addr as u64))
+                        Operand::Symbolic(offset) => {
+                            info.add_branch(BranchKind::Call((addr as i64 + *offset as i64) as u64))
                         }
-                        Operand::Constant(_) => {
-                            info.add_branch(BranchKind::Call(addr))
-                        }
+                        Operand::Immediate(addr) => info.add_branch(BranchKind::Call(*addr as u64)),
+                        Operand::Constant(_) => info.add_branch(BranchKind::Call(addr)),
                         Operand::RegisterIndirect(_)
                         | Operand::RegisterIndirectAutoIncrement(_) => {
                             info.add_branch(BranchKind::Indirect)
@@ -468,7 +432,7 @@ fn generate_single_operand_tokens(
     if inst.mnemonic().len() < MIN_MNEMONIC {
         let padding = " ".repeat(MIN_MNEMONIC - inst.mnemonic().len());
         res.push(InstructionTextToken::new(
-            &padding,
+            padding,
             InstructionTextTokenKind::Text,
         ))
     }
@@ -489,13 +453,13 @@ fn generate_jxx_tokens(inst: &impl Jxx, addr: u64) -> Vec<InstructionTextToken> 
     if inst.mnemonic().len() < MIN_MNEMONIC {
         let padding = " ".repeat(MIN_MNEMONIC - inst.mnemonic().len());
         res.push(InstructionTextToken::new(
-            &padding,
+            padding,
             InstructionTextTokenKind::Text,
         ))
     }
 
     res.push(InstructionTextToken::new(
-        &format!("0x{fixed_addr:4x}"),
+        format!("0x{fixed_addr:4x}"),
         InstructionTextTokenKind::CodeRelativeAddress {
             value: fixed_addr,
             size: None,
@@ -514,7 +478,7 @@ fn generate_two_operand_tokens(inst: &impl TwoOperand, addr: u64) -> Vec<Instruc
     if inst.mnemonic().len() < MIN_MNEMONIC {
         let padding = " ".repeat(MIN_MNEMONIC - inst.mnemonic().len());
         res.push(InstructionTextToken::new(
-            &padding,
+            padding,
             InstructionTextTokenKind::Text,
         ))
     }
@@ -578,7 +542,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                 InstructionTextTokenKind::Register,
             )],
             _ => vec![InstructionTextToken::new(
-                &format!("r{r}"),
+                format!("r{r}"),
                 InstructionTextTokenKind::Register,
             )],
         },
@@ -674,10 +638,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                         },
                     ),
                     InstructionTextToken::new("(", InstructionTextTokenKind::Text),
-                    InstructionTextToken::new(
-                        &format!("r{r}"),
-                        InstructionTextTokenKind::Register,
-                    ),
+                    InstructionTextToken::new(format!("r{r}"), InstructionTextTokenKind::Register),
                     InstructionTextToken::new(")", InstructionTextTokenKind::Text),
                 ]
             }
@@ -691,7 +652,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
 
             vec![
                 InstructionTextToken::new("@", InstructionTextTokenKind::Text),
-                InstructionTextToken::new(&r_text, InstructionTextTokenKind::Register),
+                InstructionTextToken::new(r_text, InstructionTextTokenKind::Register),
             ]
         }
         Operand::RegisterIndirectAutoIncrement(r) => {
@@ -703,24 +664,21 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
 
             vec![
                 InstructionTextToken::new("@", InstructionTextTokenKind::Text),
-                InstructionTextToken::new(&r_text, InstructionTextTokenKind::Register),
+                InstructionTextToken::new(r_text, InstructionTextTokenKind::Register),
                 InstructionTextToken::new("+", InstructionTextTokenKind::Text),
             ]
         }
         Operand::Symbolic(i) => {
             let value = (addr as i64 + *i as i64) as u64;
             vec![InstructionTextToken::new(
-                &format!("{value:#x}"),
-                InstructionTextTokenKind::CodeRelativeAddress {
-                    value,
-                    size: None,
-                },
+                format!("{value:#x}"),
+                InstructionTextTokenKind::CodeRelativeAddress { value, size: None },
             )]
         }
         Operand::Immediate(i) => {
             if call {
                 vec![InstructionTextToken::new(
-                    &format!("{i:#x}"),
+                    format!("{i:#x}"),
                     InstructionTextTokenKind::CodeRelativeAddress {
                         value: *i as u64,
                         size: None,
@@ -728,7 +686,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                 )]
             } else {
                 vec![InstructionTextToken::new(
-                    &format!("{i:#x}"),
+                    format!("{i:#x}"),
                     InstructionTextTokenKind::PossibleAddress {
                         value: *i as u64,
                         size: None,
@@ -739,7 +697,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
         Operand::Absolute(a) => {
             if call {
                 vec![InstructionTextToken::new(
-                    &format!("{a:#x}"),
+                    format!("{a:#x}"),
                     InstructionTextTokenKind::CodeRelativeAddress {
                         value: *a as u64,
                         size: None,
@@ -747,7 +705,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                 )]
             } else {
                 vec![InstructionTextToken::new(
-                    &format!("{a:#x}"),
+                    format!("{a:#x}"),
                     InstructionTextTokenKind::PossibleAddress {
                         value: *a as u64,
                         size: None,
@@ -765,7 +723,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
             vec![
                 InstructionTextToken::new("#", InstructionTextTokenKind::Text),
                 InstructionTextToken::new(
-                    &num_text,
+                    num_text,
                     InstructionTextTokenKind::Integer {
                         value: *i as u64,
                         size: None,

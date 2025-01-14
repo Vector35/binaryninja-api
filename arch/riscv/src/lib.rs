@@ -1,3 +1,4 @@
+#![allow(clippy::unusual_byte_groupings)]
 // Option -> Result
 // rework operands/instruction text
 // helper func for reading/writing to registers
@@ -38,13 +39,13 @@ use std::fmt;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
+use binaryninja::architecture::{BranchKind, IntrinsicId, RegisterId};
+use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use binaryninja::logger::Logger;
 use riscv_dis::{
     FloatReg, FloatRegType, Instr, IntRegType, Op, RegFile, Register as RiscVRegister,
     RiscVDisassembler, RoundMode,
 };
-use binaryninja::architecture::{BranchKind, IntrinsicId, RegisterId};
-use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 
 enum RegType {
     Integer(u32),
@@ -133,9 +134,9 @@ impl<D: 'static + RiscVDisassembler> From<FloatReg<D>> for Register<D> {
     }
 }
 
-impl<D: 'static + RiscVDisassembler> Into<llil::Register<Register<D>>> for Register<D> {
-    fn into(self) -> llil::Register<Register<D>> {
-        llil::Register::ArchReg(self)
+impl<D: 'static + RiscVDisassembler> From<Register<D>> for llil::Register<Register<D>> {
+    fn from(reg: Register<D>) -> Self {
+        llil::Register::ArchReg(reg)
     }
 }
 
@@ -271,7 +272,12 @@ impl<D: 'static + RiscVDisassembler> fmt::Debug for Register<D> {
 }
 
 impl<D: RiscVDisassembler> RiscVIntrinsic<D> {
-    fn id_from_parts(id: u32, sz1: Option<u8>, sz2: Option<u8>, rm: Option<RoundMode>) -> IntrinsicId {
+    fn id_from_parts(
+        id: u32,
+        sz1: Option<u8>,
+        sz2: Option<u8>,
+        rm: Option<RoundMode>,
+    ) -> IntrinsicId {
         let sz1 = sz1.unwrap_or(0);
         let sz2 = sz2.unwrap_or(0);
         let rm = match rm {
@@ -520,7 +526,7 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             Intrinsic::Csrrd => {
                 vec![NameAndType::new(
                     "csr",
-                    Conf::new(Type::int(4, false), MAX_CONFIDENCE)
+                    Conf::new(Type::int(4, false), MAX_CONFIDENCE),
                 )]
             }
             Intrinsic::Csrrw | Intrinsic::Csrwr | Intrinsic::Csrrs | Intrinsic::Csrrc => {
@@ -528,7 +534,10 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
                     NameAndType::new("csr", Conf::new(Type::int(4, false), MAX_CONFIDENCE)),
                     NameAndType::new(
                         "value",
-                        Conf::new(Type::int(<D::RegFile as RegFile>::Int::width(), false), MIN_CONFIDENCE)
+                        Conf::new(
+                            Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                            MIN_CONFIDENCE,
+                        ),
                     ),
                 ]
             }
@@ -553,23 +562,26 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::FcvtFToU(size, _, _) => {
                 vec![NameAndType::new(
                     "",
-                    Conf::new(Type::float(size as usize), MAX_CONFIDENCE)
+                    Conf::new(Type::float(size as usize), MAX_CONFIDENCE),
                 )]
             }
             Intrinsic::FcvtIToF(size, _, _) => {
                 vec![NameAndType::new(
                     "",
-                    Conf::new(Type::int(size as usize, true), MAX_CONFIDENCE)
+                    Conf::new(Type::int(size as usize, true), MAX_CONFIDENCE),
                 )]
             }
             Intrinsic::FcvtUToF(size, _, _) => {
                 vec![NameAndType::new(
                     "",
-                    Conf::new(Type::int(size as usize, false), MAX_CONFIDENCE)
+                    Conf::new(Type::int(size as usize, false), MAX_CONFIDENCE),
                 )]
             }
             Intrinsic::Fence => {
-                vec![NameAndType::new("", Conf::new(Type::int(4, false), MIN_CONFIDENCE))]
+                vec![NameAndType::new(
+                    "",
+                    Conf::new(Type::int(4, false), MIN_CONFIDENCE),
+                )]
             }
         }
     }
@@ -713,9 +725,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             | Op::BltU(ref b)
             | Op::BgeU(ref b) => {
                 res.add_branch(BranchKind::False(addr.wrapping_add(inst_len as u64)));
-                res.add_branch(
-                    BranchKind::True(addr.wrapping_add(b.imm() as i64 as u64)),
-                );
+                res.add_branch(BranchKind::True(addr.wrapping_add(b.imm() as i64 as u64)));
             }
             Op::Ecall => {
                 res.add_branch(BranchKind::SystemCall);
@@ -997,7 +1007,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                             let target = addr.wrapping_add(i as i64 as u64);
 
                             res.push(InstructionTextToken::new(
-                                &format!("0x{:x}", target),
+                                format!("0x{:x}", target),
                                 CodeRelativeAddress {
                                     value: target,
                                     size: Some(self.address_size()),
@@ -1210,7 +1220,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                         let jump_expr = il.goto(&mut l);
                         il.update_label_for_address(target, l);
                         jump_expr
-                    },
+                    }
                     (0, None) => il.jump(il.const_ptr(target)),
                     (_, _) => il.call(il.const_ptr(target)),
                 }
@@ -1284,7 +1294,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 });
 
                 il.if_expr(cond_expr, &mut t, &mut f).append();
-                
+
                 if new_true {
                     il.mark_label(&mut t);
                     il.jump(il.const_ptr(tt)).append();

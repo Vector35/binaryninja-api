@@ -21,6 +21,8 @@ use anyhow::{anyhow, Result};
 use log::{debug, info};
 use pdb::*;
 
+use crate::symbol_parser::{ParsedDataSymbol, ParsedProcedure, ParsedSymbol};
+use crate::type_parser::ParsedType;
 use binaryninja::architecture::{Architecture, CoreArchitecture};
 use binaryninja::binaryview::{BinaryView, BinaryViewExt};
 use binaryninja::callingconvention::CallingConvention;
@@ -29,10 +31,11 @@ use binaryninja::debuginfo::{DebugFunctionInfo, DebugInfo};
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::settings::Settings;
-use binaryninja::types::{EnumerationBuilder, NamedTypeReference, NamedTypeReferenceClass, QualifiedName, StructureBuilder, StructureType, Type, TypeClass};
+use binaryninja::types::{
+    EnumerationBuilder, NamedTypeReference, NamedTypeReferenceClass, QualifiedName,
+    StructureBuilder, StructureType, Type, TypeClass,
+};
 use binaryninja::variable::NamedDataVariableWithType;
-use crate::symbol_parser::{ParsedDataSymbol, ParsedProcedure, ParsedSymbol};
-use crate::type_parser::ParsedType;
 
 /// Megastruct for all the parsing
 /// Certain fields are only used by specific files, as marked below.
@@ -208,8 +211,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         type_,
                         ..
                     }) => {
-                        let real_type =
-                            type_.as_ref().unwrap_or(&min_confidence_type);
+                        let real_type = type_.as_ref().unwrap_or(&min_confidence_type);
 
                         if real_type.contents.type_class() == TypeClass::VoidTypeClass {
                             if !allow_void {
@@ -287,9 +289,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         unknown_names: &mut HashMap<QualifiedName, NamedTypeReferenceClass>,
     ) {
         let used_name = name.name();
-        if let Some(&found) =
-            unknown_names.get(&used_name)
-        {
+        if let Some(&found) = unknown_names.get(&used_name) {
             if found != name.class() {
                 // Interesting case, not sure we care
                 self.log(|| {
@@ -369,7 +369,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
 
         let count = symbols.len();
-        for (i, sym) in symbols.into_iter().enumerate() {
+        for (i, sym) in symbols.iter().enumerate() {
             match sym {
                 ParsedSymbol::Data(ParsedDataSymbol {
                     type_: Some(type_), ..
@@ -390,7 +390,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 }
                 _ => {}
             }
-            (&progress)(i, count)?;
+            progress(i, count)?;
         }
 
         for (name, class) in unknown_names.into_iter() {
@@ -402,7 +402,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             match class {
                 NamedTypeReferenceClass::UnknownNamedTypeClass
                 | NamedTypeReferenceClass::TypedefNamedTypeClass => {
-                    self.debug_info.add_type(&name, Type::void().as_ref(), &[]); // TODO : Components
+                    self.debug_info.add_type(&name, Type::void().as_ref(), &[]);
+                    // TODO : Components
                 }
                 NamedTypeReferenceClass::ClassNamedTypeClass
                 | NamedTypeReferenceClass::StructNamedTypeClass
@@ -451,16 +452,14 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     /// Lazy logging function that prints like 20MB of messages
     pub(crate) fn log<F: FnOnce() -> D, D: Display>(&self, msg: F) {
         static MEM: OnceLock<bool> = OnceLock::new();
-        let debug_pdb = MEM.get_or_init(|| {
-            env::var("BN_DEBUG_PDB").is_ok()
-        });
+        let debug_pdb = MEM.get_or_init(|| env::var("BN_DEBUG_PDB").is_ok());
         if *debug_pdb {
             let space = "\t".repeat(self.type_stack.len()) + &"\t".repeat(self.symbol_stack.len());
             let msg = format!("{}", msg());
             debug!(
                 "{}{}",
                 space,
-                msg.replace("\n", &*("\n".to_string() + &space))
+                msg.replace("\n", &("\n".to_string() + &space))
             );
         }
     }

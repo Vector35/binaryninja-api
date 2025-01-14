@@ -15,16 +15,19 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+use crate::struct_grouper::group_structure;
+use crate::PDBParserInstance;
 use anyhow::{anyhow, Result};
 use binaryninja::architecture::{Architecture, CoreArchitecture};
 use binaryninja::binaryview::BinaryViewExt;
 use binaryninja::callingconvention::CallingConvention;
+use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::types::{
-    BaseStructure, EnumerationBuilder, EnumerationMember, FunctionParameter,
-    MemberAccess, MemberScope, NamedTypeReference, NamedTypeReferenceClass, QualifiedName,
-    StructureBuilder, StructureMember, StructureType, Type, TypeBuilder, TypeClass,
+    BaseStructure, EnumerationBuilder, EnumerationMember, FunctionParameter, MemberAccess,
+    MemberScope, NamedTypeReference, NamedTypeReferenceClass, QualifiedName, StructureBuilder,
+    StructureMember, StructureType, Type, TypeBuilder, TypeClass,
 };
 use log::warn;
 use pdb::Error::UnimplementedTypeKind;
@@ -37,11 +40,8 @@ use pdb::{
     VirtualFunctionTablePointerType, VirtualFunctionTableType, VirtualTableShapeType,
 };
 use regex::Regex;
-use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
-use crate::struct_grouper::group_structure;
-use crate::PDBParserInstance;
 
-static BUILTIN_NAMES: &[&'static str] = &[
+static BUILTIN_NAMES: &[&str] = &[
     "size_t",
     "ssize_t",
     "ptrdiff_t",
@@ -311,7 +311,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             }
         }
 
-        self.log(|| format!("Now parsing named types"));
+        self.log(|| "Now parsing named types");
 
         // Parse the types we care about, so that recursion gives us parent relationships for free
         let mut types = type_information.iter();
@@ -331,7 +331,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             assert!(self.type_stack.is_empty());
         }
 
-        self.log(|| format!("Now parsing unused floating types"));
+        self.log(|| "Now parsing unused floating types");
 
         // Parse the rest because symbols often use them
         let mut postpass_types = type_information.iter();
@@ -342,10 +342,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             self.handle_type_index(ty.index(), &mut finder)?;
         }
 
-        self.log(|| format!("Now adding all unreferenced named types"));
+        self.log(|| "Now adding all unreferenced named types");
         // Any referenced named types that are only forward-declared will cause missing type references,
         // so create empty types for those here.
-        for (_, parsed) in &self.indexed_types {
+        for parsed in self.indexed_types.values() {
             match parsed {
                 ParsedType::Bare(ty) if ty.type_class() == TypeClass::NamedTypeReferenceClass => {
                     // See if we have this type
@@ -360,7 +360,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         continue;
                     }
                     // If the bv has this type, DebugInfo will just update us to reference it
-                    if let Some(_) = self.bv.get_type_by_name(name.to_owned()) {
+                    if self.bv.get_type_by_name(name.to_owned()).is_some() {
                         continue;
                     }
 
@@ -413,16 +413,12 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
 
         static MEM: OnceLock<Regex> = OnceLock::new();
-        let uint_regex = MEM.get_or_init(|| {
-            Regex::new(r"u?int\d+_t").unwrap()
-        });
+        let uint_regex = MEM.get_or_init(|| Regex::new(r"u?int\d+_t").unwrap());
 
-        let float_regex = MEM.get_or_init(|| {
-            Regex::new(r"float\d+").unwrap()
-        });
+        let float_regex = MEM.get_or_init(|| Regex::new(r"float\d+").unwrap());
 
         let mut remove_names = vec![];
-        for (name, _) in &self.named_types {
+        for name in self.named_types.keys() {
             let name_str = name.to_string();
             if uint_regex.is_match(&name_str) {
                 remove_names.push(name.clone());
@@ -447,7 +443,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     ) -> Result<Option<Ref<Type>>> {
         match self.indexed_types.get(index) {
             Some(ParsedType::Bare(ty)) => Ok(Some(ty.clone())),
-            Some(ParsedType::Named(name, ty)) => Ok(Some(Type::named_type_from_type(name.clone(), &ty))),
+            Some(ParsedType::Named(name, ty)) => {
+                Ok(Some(Type::named_type_from_type(name.clone(), ty)))
+            }
             Some(ParsedType::Procedure(ParsedProcedureType {
                 method_type,
                 raw_method_type,
@@ -590,40 +588,40 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         finder: &mut ItemFinder<TypeIndex>,
     ) -> Result<Option<Box<ParsedType>>> {
         match data {
-            TypeData::Primitive(data) => Ok(self.handle_primitive_type(&data, finder)?),
-            TypeData::Class(data) => Ok(self.handle_class_type(&data, finder)?),
-            TypeData::Member(data) => Ok(self.handle_member_type(&data, finder)?),
-            TypeData::MemberFunction(data) => Ok(self.handle_member_function_type(&data, finder)?),
+            TypeData::Primitive(data) => Ok(self.handle_primitive_type(data, finder)?),
+            TypeData::Class(data) => Ok(self.handle_class_type(data, finder)?),
+            TypeData::Member(data) => Ok(self.handle_member_type(data, finder)?),
+            TypeData::MemberFunction(data) => Ok(self.handle_member_function_type(data, finder)?),
             TypeData::OverloadedMethod(data) => {
-                Ok(self.handle_overloaded_method_type(&data, finder)?)
+                Ok(self.handle_overloaded_method_type(data, finder)?)
             }
-            TypeData::Method(data) => Ok(self.handle_method_type(&data, finder)?),
-            TypeData::StaticMember(data) => Ok(self.handle_static_member_type(&data, finder)?),
-            TypeData::Nested(data) => Ok(self.handle_nested_type(&data, finder)?),
-            TypeData::BaseClass(data) => Ok(self.handle_base_class_type(&data, finder)?),
+            TypeData::Method(data) => Ok(self.handle_method_type(data, finder)?),
+            TypeData::StaticMember(data) => Ok(self.handle_static_member_type(data, finder)?),
+            TypeData::Nested(data) => Ok(self.handle_nested_type(data, finder)?),
+            TypeData::BaseClass(data) => Ok(self.handle_base_class_type(data, finder)?),
             TypeData::VirtualBaseClass(data) => {
-                Ok(self.handle_virtual_base_class_type(&data, finder)?)
+                Ok(self.handle_virtual_base_class_type(data, finder)?)
             }
             TypeData::VirtualFunctionTable(data) => {
-                Ok(self.handle_virtual_function_table_type(&data, finder)?)
+                Ok(self.handle_virtual_function_table_type(data, finder)?)
             }
             TypeData::VirtualTableShape(data) => {
-                Ok(self.handle_virtual_table_shape_type(&data, finder)?)
+                Ok(self.handle_virtual_table_shape_type(data, finder)?)
             }
             TypeData::VirtualFunctionTablePointer(data) => {
-                Ok(self.handle_virtual_function_table_pointer_type(&data, finder)?)
+                Ok(self.handle_virtual_function_table_pointer_type(data, finder)?)
             }
-            TypeData::Procedure(data) => Ok(self.handle_procedure_type(&data, finder)?),
-            TypeData::Pointer(data) => Ok(self.handle_pointer_type(&data, finder)?),
-            TypeData::Modifier(data) => Ok(self.handle_modifier_type(&data, finder)?),
-            TypeData::Enumeration(data) => Ok(self.handle_enumeration_type(&data, finder)?),
-            TypeData::Enumerate(data) => Ok(self.handle_enumerate_type(&data, finder)?),
-            TypeData::Array(data) => Ok(self.handle_array_type(&data, finder)?),
-            TypeData::Union(data) => Ok(self.handle_union_type(&data, finder)?),
-            TypeData::Bitfield(data) => Ok(self.handle_bitfield_type(&data, finder)?),
-            TypeData::FieldList(data) => Ok(self.handle_field_list_type(&data, finder)?),
-            TypeData::ArgumentList(data) => Ok(self.handle_argument_list_type(&data, finder)?),
-            TypeData::MethodList(data) => Ok(self.handle_method_list_type(&data, finder)?),
+            TypeData::Procedure(data) => Ok(self.handle_procedure_type(data, finder)?),
+            TypeData::Pointer(data) => Ok(self.handle_pointer_type(data, finder)?),
+            TypeData::Modifier(data) => Ok(self.handle_modifier_type(data, finder)?),
+            TypeData::Enumeration(data) => Ok(self.handle_enumeration_type(data, finder)?),
+            TypeData::Enumerate(data) => Ok(self.handle_enumerate_type(data, finder)?),
+            TypeData::Array(data) => Ok(self.handle_array_type(data, finder)?),
+            TypeData::Union(data) => Ok(self.handle_union_type(data, finder)?),
+            TypeData::Bitfield(data) => Ok(self.handle_bitfield_type(data, finder)?),
+            TypeData::FieldList(data) => Ok(self.handle_field_list_type(data, finder)?),
+            TypeData::ArgumentList(data) => Ok(self.handle_argument_list_type(data, finder)?),
+            TypeData::MethodList(data) => Ok(self.handle_method_list_type(data, finder)?),
             _ => Err(anyhow!("Unknown typedata")),
         }
     }
@@ -712,32 +710,25 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         // TODO: Pointer suffix is not exposed
         match data.indirection {
             Some(Indirection::Near16) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
-                &base,
+                &self.arch, &base,
             ))))),
             Some(Indirection::Far16) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
-                &base,
+                &self.arch, &base,
             ))))),
             Some(Indirection::Huge16) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
-                &base,
+                &self.arch, &base,
             ))))),
             Some(Indirection::Near32) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
-                &base,
+                &self.arch, &base,
             ))))),
             Some(Indirection::Far32) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
-                &base,
+                &self.arch, &base,
             ))))),
             Some(Indirection::Near64) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
-                &base,
+                &self.arch, &base,
             ))))),
             Some(Indirection::Near128) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
-                &base,
+                &self.arch, &base,
             ))))),
             None => Ok(Some(Box::new(ParsedType::Bare(base)))),
         }
@@ -769,7 +760,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 ClassKind::Interface => NamedTypeReferenceClass::StructNamedTypeClass,
             };
             return Ok(Some(Box::new(ParsedType::Bare(Type::named_type(
-                &*NamedTypeReference::new(ntr_class, class_name),
+                &NamedTypeReference::new(ntr_class, class_name),
             )))));
         }
 
@@ -933,10 +924,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
         if let Some(mut builder) = bitfield_builder.take() {
             combined_bitfield_members.push(ParsedMember {
-                ty: Conf::new(
-                    Type::structure(builder.finalize().as_ref()),
-                    MAX_CONFIDENCE,
-                ),
+                ty: Conf::new(Type::structure(builder.finalize().as_ref()), MAX_CONFIDENCE),
                 name: bitfield_name(last_bitfield_offset, last_bitfield_idx),
                 offset: last_bitfield_offset,
                 access: MemberAccess::PublicAccess,
@@ -1131,7 +1119,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             if self.namespace_stack.is_empty() {
                 return Err(anyhow!("Expected class in ns stack"));
             }
-            
+
             let mut vt_name = self.namespace_stack.clone();
             vt_name.items.push("VTable".to_string());
             self.named_types.insert(vt_name.clone(), vt_type.clone());
@@ -1254,10 +1242,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         {
             // Return UDT??
             // This probably means the return value got pushed to the stack
-            fancy_return_type = Type::pointer(
-                &self.arch,
-                &Conf::new(return_type.clone(), MAX_CONFIDENCE),
-            );
+            fancy_return_type =
+                Type::pointer(&self.arch, &Conf::new(return_type.clone(), MAX_CONFIDENCE));
             fancy_arguments.insert(
                 0,
                 FunctionParameter::new(
@@ -1370,10 +1356,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let mut class_name_ns = self.namespace_stack.clone();
         class_name_ns.push(data.name.to_string().into());
         let ty = self.type_index_to_bare(data.nested_type, finder, false)?;
-        Ok(Some(Box::new(ParsedType::Named(
-            class_name_ns,
-            ty,
-        ))))
+        Ok(Some(Box::new(ParsedType::Named(class_name_ns, ty))))
     }
 
     fn handle_base_class_type(
@@ -1535,8 +1518,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
         if return_stacky {
             // Stack return via a pointer in the first parameter
-            fancy_return_type =
-                Conf::new(Type::pointer(&self.arch, &return_type.clone()), MAX_CONFIDENCE);
+            fancy_return_type = Conf::new(
+                Type::pointer(&self.arch, &return_type.clone()),
+                MAX_CONFIDENCE,
+            );
             fancy_arguments.insert(
                 0,
                 FunctionParameter::new(fancy_return_type.clone(), "__return".to_string(), None),
@@ -1591,8 +1576,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         if let Some(base) = base {
             Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
-                &base,
+                &self.arch, &base,
             )))))
         } else {
             Ok(None)
@@ -1638,7 +1622,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
             let ntr_class = NamedTypeReferenceClass::EnumNamedTypeClass;
             return Ok(Some(Box::new(ParsedType::Bare(Type::named_type(
-                &*NamedTypeReference::new(ntr_class, enum_name),
+                &NamedTypeReference::new(ntr_class, enum_name),
             )))));
         }
 
@@ -1736,7 +1720,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     counts[j] /= new_type.width();
                 }
 
-                new_type = Type::array(&new_type, counts[i] as u64);
+                new_type = Type::array(&new_type, counts[i]);
             }
 
             Ok(Some(Box::new(ParsedType::Bare(new_type))))
@@ -1766,7 +1750,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
             let ntr_class = NamedTypeReferenceClass::UnionNamedTypeClass;
             return Ok(Some(Box::new(ParsedType::Bare(Type::named_type(
-                &*NamedTypeReference::new(ntr_class, union_name),
+                &NamedTypeReference::new(ntr_class, union_name),
             )))));
         }
 
@@ -1927,10 +1911,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         ));
                     } else {
                         args.push(FunctionParameter::new(
-                            Conf::new(
-                                Type::pointer(self.arch.as_ref(), &ty),
-                                MAX_CONFIDENCE,
-                            ),
+                            Conf::new(Type::pointer(self.arch.as_ref(), &ty), MAX_CONFIDENCE),
                             "".to_string(),
                             None,
                         ));
@@ -1992,9 +1973,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     ) -> Result<Option<Ref<Type>>> {
         let (mut type_, inner) = match self.handle_type_index(index, finder)? {
             Some(ParsedType::Bare(ty)) => (ty.clone(), None),
-            Some(ParsedType::Named(name, ty)) => {
-                (Type::named_type_from_type(name.to_owned(), &ty), Some(ty.clone()))
-            }
+            Some(ParsedType::Named(name, ty)) => (
+                Type::named_type_from_type(name.to_owned(), ty),
+                Some(ty.clone()),
+            ),
             Some(ParsedType::Procedure(ParsedProcedureType { method_type, .. })) => {
                 (method_type.clone(), Some(method_type.clone()))
             }
@@ -2247,10 +2229,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     }
 
     fn size_can_fit_in_register(size: u64) -> bool {
-        match size {
-            0 | 1 | 2 | 4 | 8 => true,
-            _ => false,
-        }
+        matches!(size, 0 | 1 | 2 | 4 | 8)
     }
 
     // Memoized... because this has gotta be real slow
@@ -2278,7 +2257,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         Ok(fields
                             .fields
                             .into_iter()
-                            .chain(get_fields(cont, finder)?.into_iter())
+                            .chain(get_fields(cont, finder)?)
                             .collect::<Vec<_>>())
                     } else {
                         Ok(fields.fields)
@@ -2337,11 +2316,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 }
 
                 // - no base classes
-                if let Some(_) = c.derived_from {
+                if c.derived_from.is_some() {
                     return false;
                 }
                 // - no virtual functions
-                if let Some(_) = c.vtable_shape {
+                if c.vtable_shape.is_some() {
                     return false;
                 }
 
@@ -2393,7 +2372,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         _ => {}
                     }
                 }
-                return true;
+                true
             }
             TypeData::Union(u) => {
                 if u.properties.forward_reference() {
@@ -2468,7 +2447,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         _ => {}
                     }
                 }
-                return true;
+                true
             }
             _ => false,
         }

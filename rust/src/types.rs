@@ -1847,13 +1847,15 @@ impl NamedTypeReference {
     /// the core will do the id stuff for you.
     pub fn new<T: Into<QualifiedName>>(type_class: NamedTypeReferenceClass, name: T) -> Ref<Self> {
         let mut raw_name = QualifiedName::into_raw(name.into());
-        unsafe {
+        let result = unsafe {
             Self::ref_from_raw(BNCreateNamedType(
                 type_class,
                 std::ptr::null(),
                 &mut raw_name,
             ))
-        }
+        };
+        QualifiedName::free_raw(raw_name);
+        result
     }
 
     /// Create an NTR to a type with an existing type id, which generally means it came directly
@@ -1868,14 +1870,15 @@ impl NamedTypeReference {
     ) -> Ref<Self> {
         let type_id = type_id.into_bytes_with_nul();
         let mut raw_name = QualifiedName::into_raw(name.into());
-
-        unsafe {
+        let result = unsafe {
             Self::ref_from_raw(BNCreateNamedType(
                 type_class,
                 type_id.as_ref().as_ptr() as _,
                 &mut raw_name,
             ))
-        }
+        };
+        QualifiedName::free_raw(raw_name);
+        result
     }
 
     pub fn name(&self) -> QualifiedName {

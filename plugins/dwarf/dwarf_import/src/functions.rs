@@ -15,8 +15,8 @@
 use std::sync::OnceLock;
 
 use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
-use crate::{helpers::*, ReaderType};
 use crate::types::get_type;
+use crate::{helpers::*, ReaderType};
 
 use binaryninja::templatesimplifier::simplify_str_to_str;
 use cpp_demangle::DemangleOptions;
@@ -82,9 +82,21 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
 ) -> Option<usize> {
     // Collect function properties (if they exist in this DIE)
     let raw_name = get_raw_name(dwarf, unit, entry);
-    let return_type = get_type(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
+    let return_type = get_type(
+        dwarf,
+        unit,
+        entry,
+        debug_info_builder_context,
+        debug_info_builder,
+    );
     let address = get_start_address(dwarf, unit, entry);
-    let (parameters, variable_arguments) = get_parameters(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
+    let (parameters, variable_arguments) = get_parameters(
+        dwarf,
+        unit,
+        entry,
+        debug_info_builder_context,
+        debug_info_builder,
+    );
 
     // If we have a raw name, it might be mangled, see if we can demangle it into full_name
     //  raw_name should contain a superset of the info we have in full_name
@@ -100,9 +112,7 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
             });
 
             static ABI_REGEX_MEM: OnceLock<Regex> = OnceLock::new();
-            let abi_regex = ABI_REGEX_MEM.get_or_init(|| {
-                Regex::new(r"\[abi:v\d+\]").unwrap()
-            });
+            let abi_regex = ABI_REGEX_MEM.get_or_init(|| Regex::new(r"\[abi:v\d+\]").unwrap());
             if let Ok(sym) = cpp_demangle::Symbol::new(possibly_mangled_name) {
                 if let Ok(demangled) = sym.demangle(demangle_options) {
                     let cleaned = abi_regex.replace_all(&demangled, "");
@@ -127,20 +137,28 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
     }
 
     let use_cfa;
-    if let Ok(Some(AttributeValue::Exprloc(mut expression))) = entry.attr_value(constants::DW_AT_frame_base) {
+    if let Ok(Some(AttributeValue::Exprloc(mut expression))) =
+        entry.attr_value(constants::DW_AT_frame_base)
+    {
         use_cfa = match Operation::parse(&mut expression.0, unit.encoding()) {
             Ok(Operation::Register { register: _ }) => false, // TODO: handle register-relative encodings later
             Ok(Operation::CallFrameCFA) => true,
-            _ => false
+            _ => false,
         };
-    }
-    else {
+    } else {
         use_cfa = false;
     }
 
-    debug_info_builder.insert_function(full_name, raw_name, return_type, address, &parameters, variable_arguments, use_cfa)
+    debug_info_builder.insert_function(
+        full_name,
+        raw_name,
+        return_type,
+        address,
+        &parameters,
+        variable_arguments,
+        use_cfa,
+    )
 }
-
 
 pub(crate) fn parse_lexical_block<R: ReaderType>(
     dwarf: &Dwarf<R>,
@@ -151,24 +169,24 @@ pub(crate) fn parse_lexical_block<R: ReaderType>(
     // Must have either DW_AT_ranges or DW_AT_low_pc and DW_AT_high_pc
     let mut result = iset::IntervalSet::new();
     if let Ok(Some(attr_value)) = entry.attr_value(constants::DW_AT_ranges) {
-        if let Ok(Some(ranges_offset)) = dwarf.attr_ranges_offset(unit, attr_value)
-        {
-            if let Ok(mut ranges) = dwarf.ranges(unit, ranges_offset)
-            {
+        if let Ok(Some(ranges_offset)) = dwarf.attr_ranges_offset(unit, attr_value) {
+            if let Ok(mut ranges) = dwarf.ranges(unit, ranges_offset) {
                 while let Ok(Some(range)) = ranges.next() {
                     // Ranges where start == end may be ignored (DWARFv5 spec, 2.17.3 line 17)
                     if range.begin == range.end {
-                        continue
+                        continue;
                     }
                     result.insert(range.begin..range.end);
                 }
             }
         }
-    }
-    else if let Ok(Some(low_pc_value)) = entry.attr_value(constants::DW_AT_low_pc) {
+    } else if let Ok(Some(low_pc_value)) = entry.attr_value(constants::DW_AT_low_pc) {
         let Ok(Some(low_pc)) = dwarf.attr_address(unit, low_pc_value.clone()) else {
             let unit_base: usize = unit.header.offset().as_debug_info_offset().unwrap().0;
-            error!("Failed to read lexical block low_pc for entry {:#x}, please report this bug.", unit_base + entry.offset().0);
+            error!(
+                "Failed to read lexical block low_pc for entry {:#x}, please report this bug.",
+                unit_base + entry.offset().0
+            );
             return None;
         };
 
@@ -184,18 +202,22 @@ pub(crate) fn parse_lexical_block<R: ReaderType>(
             .or_else(|| dwarf.attr_address(unit, high_pc_value).unwrap_or(None))
         else {
             let unit_base: usize = unit.header.offset().as_debug_info_offset().unwrap().0;
-            error!("Failed to read lexical block high_pc for entry {:#x}, please report this bug.", unit_base + entry.offset().0);
+            error!(
+                "Failed to read lexical block high_pc for entry {:#x}, please report this bug.",
+                unit_base + entry.offset().0
+            );
             return None;
         };
 
         if low_pc < high_pc {
             result.insert(low_pc..high_pc);
+        } else {
+            error!(
+                "Invalid lexical block range: {:#x} -> {:#x}",
+                low_pc, high_pc
+            );
         }
-        else {
-            error!("Invalid lexical block range: {:#x} -> {:#x}", low_pc, high_pc);
-        }
-    }
-    else {
+    } else {
         // If neither case is hit the lexical block doesn't define any ranges and we should ignore it
         return None;
     }

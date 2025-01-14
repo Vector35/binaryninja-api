@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{die_handlers::*, ReaderType};
 use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
 use crate::helpers::*;
+use crate::{die_handlers::*, ReaderType};
 
 use binaryninja::{
     rc::*,
@@ -37,20 +37,32 @@ pub(crate) fn parse_variable<R: ReaderType>(
     lexical_block: Option<&iset::IntervalSet<u64>>,
 ) {
     let full_name = debug_info_builder_context.get_name(dwarf, unit, entry);
-    let type_uid = get_type(dwarf, unit, entry, debug_info_builder_context, debug_info_builder);
+    let type_uid = get_type(
+        dwarf,
+        unit,
+        entry,
+        debug_info_builder_context,
+        debug_info_builder,
+    );
 
     let Ok(Some(attr)) = entry.attr(constants::DW_AT_location) else {
-        return
+        return;
     };
 
     let AttributeValue::Exprloc(mut expression) = attr.value() else {
-        return
+        return;
     };
 
     match Operation::parse(&mut expression.0, unit.encoding()) {
         Ok(Operation::FrameOffset { offset }) => {
-            debug_info_builder.add_stack_variable(function_index, offset, full_name, type_uid, lexical_block);
-        },
+            debug_info_builder.add_stack_variable(
+                function_index,
+                offset,
+                full_name,
+                type_uid,
+                lexical_block,
+            );
+        }
         //Ok(Operation::RegisterOffset { register: _, offset: _, base_type: _ }) => {
         //    //TODO: look up register by index (binja register indexes don't match processor indexes?)
         //    //TODO: calculate absolute stack offset
@@ -60,22 +72,23 @@ pub(crate) fn parse_variable<R: ReaderType>(
             if let Some(uid) = type_uid {
                 debug_info_builder.add_data_variable(address, full_name, uid)
             }
-        },
+        }
         Ok(Operation::AddressIndex { index }) => {
             if let Some(uid) = type_uid {
                 if let Ok(address) = dwarf.address(unit, index) {
                     debug_info_builder.add_data_variable(address, full_name, uid)
-                }
-                else
-                {
+                } else {
                     warn!("Invalid index into IAT: {}", index.0);
                 }
             }
-        },
+        }
         Ok(op) => {
             debug!("Unhandled operation type for variable: {:?}", op);
-        },
-        Err(e) => error!("Error parsing operation type for variable {:?}: {}", full_name, e)
+        }
+        Err(e) => error!(
+            "Error parsing operation type for variable {:?}: {}",
+            full_name, e
+        ),
     }
 }
 
@@ -141,10 +154,8 @@ fn do_structure_parse<R: ReaderType>(
     // This reference type will be used by any children to grab while we're still building this type
     //  it will also be how any other types refer to this struct
     if let Some(full_name) = &full_name {
-        let ntr = Type::named_type_from_type(
-            full_name,
-            &Type::structure(&structure_builder.finalize()),
-        );
+        let ntr =
+            Type::named_type_from_type(full_name, &Type::structure(&structure_builder.finalize()));
         debug_info_builder.add_type(
             get_uid(dwarf, unit, entry),
             full_name.to_owned(),
@@ -156,16 +167,9 @@ fn do_structure_parse<R: ReaderType>(
         // These get overwritten in the last step with the actual type, however, so this
         // is either perfectly fine or breaking a bunch of NTRs
         let full_name = format!("anonymous_structure_{:x}", get_uid(dwarf, unit, entry));
-        let ntr = Type::named_type_from_type(
-            &full_name,
-            &Type::structure(&structure_builder.finalize()),
-        );
-        debug_info_builder.add_type(
-            get_uid(dwarf, unit, entry),
-            full_name,
-            ntr,
-            false,
-        );
+        let ntr =
+            Type::named_type_from_type(&full_name, &Type::structure(&structure_builder.finalize()));
+        debug_info_builder.add_type(get_uid(dwarf, unit, entry), full_name, ntr, false);
     }
 
     // Get all the children and populate
@@ -272,15 +276,13 @@ pub(crate) fn get_type<R: ReaderType>(
     ) {
         // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
         match die_reference {
-            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
-                get_type(
-                    dwarf,
-                    entry_unit,
-                    &entry_unit.entry(entry_offset).unwrap(),
-                    debug_info_builder_context,
-                    debug_info_builder,
-                )
-            }
+            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => get_type(
+                dwarf,
+                entry_unit,
+                &entry_unit.entry(entry_offset).unwrap(),
+                debug_info_builder_context,
+                debug_info_builder,
+            ),
             DieReference::Err => {
                 warn!("Failed to fetch DIE when getting type through DW_AT_type. Debug information may be incomplete.");
                 None
@@ -295,15 +297,13 @@ pub(crate) fn get_type<R: ReaderType>(
     ) {
         // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
         match die_reference {
-            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
-                get_type(
-                    dwarf,
-                    entry_unit,
-                    &entry_unit.entry(entry_offset).unwrap(),
-                    debug_info_builder_context,
-                    debug_info_builder,
-                )
-            }
+            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => get_type(
+                dwarf,
+                entry_unit,
+                &entry_unit.entry(entry_offset).unwrap(),
+                debug_info_builder_context,
+                debug_info_builder,
+            ),
             DieReference::Err => {
                 warn!("Failed to fetch DIE when getting type through DW_AT_abstract_origin. Debug information may be incomplete.");
                 None
@@ -326,7 +326,9 @@ pub(crate) fn get_type<R: ReaderType>(
             }
             DieReference::UnitAndOffset(_) => None,
             DieReference::Err => {
-                warn!("Failed to fetch DIE when getting type. Debug information may be incomplete.");
+                warn!(
+                    "Failed to fetch DIE when getting type. Debug information may be incomplete."
+                );
                 None
             }
         }
@@ -378,9 +380,10 @@ pub(crate) fn get_type<R: ReaderType>(
         }
 
         // Enum
-        constants::DW_TAG_enumeration_type => {
-            (handle_enum(dwarf, unit, entry, debug_info_builder_context), true)
-        }
+        constants::DW_TAG_enumeration_type => (
+            handle_enum(dwarf, unit, entry, debug_info_builder_context),
+            true,
+        ),
 
         // Basic types
         constants::DW_TAG_typedef => {

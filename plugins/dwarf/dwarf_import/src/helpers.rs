@@ -14,18 +14,18 @@
 
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
-use std::{
-    collections::HashMap,
-    ops::Deref,
-    sync::mpsc,
-    str::FromStr
-};
+use std::{collections::HashMap, ops::Deref, str::FromStr, sync::mpsc};
 
 use crate::{DebugInfoBuilderContext, ReaderType};
 use binaryninja::binaryview::BinaryViewBase;
 use binaryninja::filemetadata::FileMetadata;
 use binaryninja::Endianness;
-use binaryninja::{binaryview::{BinaryView, BinaryViewExt}, downloadprovider::{DownloadInstanceInputOutputCallbacks, DownloadProvider}, rc::Ref, settings::Settings};
+use binaryninja::{
+    binaryview::{BinaryView, BinaryViewExt},
+    downloadprovider::{DownloadInstanceInputOutputCallbacks, DownloadProvider},
+    rc::Ref,
+    settings::Settings,
+};
 use gimli::Dwarf;
 use gimli::{
     constants, Attribute, AttributeValue,
@@ -70,40 +70,55 @@ pub(crate) fn get_attr_die<'a, R: ReaderType>(
             if dwarf.sup().is_some() {
                 for source_unit in debug_info_builder_context.units() {
                     if let Some(new_offset) = offset.to_unit_offset(&source_unit.header) {
-                        return Some(DieReference::UnitAndOffset((dwarf, source_unit, new_offset)));
+                        return Some(DieReference::UnitAndOffset((
+                            dwarf,
+                            source_unit,
+                            new_offset,
+                        )));
                     }
                 }
-            }
-            else {
+            } else {
                 // This could either have no supplementary file because it is one or because it just doesn't have one
                 // operate on supplementary file if dwarf is a supplementary file, else self
 
                 // It's possible this is a reference in the supplementary file to itself
                 for source_unit in debug_info_builder_context.sup_units() {
                     if let Some(new_offset) = offset.to_unit_offset(&source_unit.header) {
-                        return Some(DieReference::UnitAndOffset((dwarf, source_unit, new_offset)));
+                        return Some(DieReference::UnitAndOffset((
+                            dwarf,
+                            source_unit,
+                            new_offset,
+                        )));
                     }
                 }
 
                 // ... or it just doesn't have a supplementary file
                 for source_unit in debug_info_builder_context.units() {
                     if let Some(new_offset) = offset.to_unit_offset(&source_unit.header) {
-                        return Some(DieReference::UnitAndOffset((dwarf, source_unit, new_offset)));
+                        return Some(DieReference::UnitAndOffset((
+                            dwarf,
+                            source_unit,
+                            new_offset,
+                        )));
                     }
                 }
             }
 
             None
-        },
+        }
         Ok(Some(DebugInfoRefSup(offset))) => {
             for source_unit in debug_info_builder_context.sup_units() {
                 if let Some(new_offset) = offset.to_unit_offset(&source_unit.header) {
-                    return Some(DieReference::UnitAndOffset((dwarf.sup().unwrap(), source_unit, new_offset)));
+                    return Some(DieReference::UnitAndOffset((
+                        dwarf.sup().unwrap(),
+                        source_unit,
+                        new_offset,
+                    )));
                 }
             }
             warn!("Failed to fetch DIE. Supplementary debug information may be incomplete.");
             None
-        },
+        }
         _ => None,
     }
 }
@@ -141,7 +156,9 @@ pub(crate) fn resolve_specification<'a, R: ReaderType>(
     ) {
         match die_reference {
             DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
-                if entry_offset == entry.offset() && unit.header.offset() == entry_unit.header.offset() {
+                if entry_offset == entry.offset()
+                    && unit.header.offset() == entry_unit.header.offset()
+                {
                     warn!("DWARF information is invalid (infinite abstract origin reference cycle). Debug information may be incomplete.");
                     DieReference::Err
                 } else if let Ok(new_entry) = entry_unit.entry(entry_offset) {
@@ -172,15 +189,12 @@ pub(crate) fn get_name<R: ReaderType>(
                 .unwrap()
                 .attr_value(constants::DW_AT_name)
             {
-                if let Ok(attr_string) = dwarf.attr_string(entry_unit, attr_val.clone())
-                {
+                if let Ok(attr_string) = dwarf.attr_string(entry_unit, attr_val.clone()) {
                     if let Ok(attr_string) = attr_string.to_string() {
                         return Some(attr_string.to_string());
                     }
-                }
-                else if let Some(dwarf) = &dwarf.sup {
-                    if let Ok(attr_string) = dwarf.attr_string(entry_unit, attr_val)
-                    {
+                } else if let Some(dwarf) = &dwarf.sup {
+                    if let Ok(attr_string) = dwarf.attr_string(entry_unit, attr_val) {
                         if let Ok(attr_string) = attr_string.to_string() {
                             return Some(attr_string.to_string());
                         }
@@ -208,15 +222,12 @@ pub(crate) fn get_raw_name<R: ReaderType>(
     entry: &DebuggingInformationEntry<R>,
 ) -> Option<String> {
     if let Ok(Some(attr_val)) = entry.attr_value(constants::DW_AT_linkage_name) {
-        if let Ok(attr_string) = dwarf.attr_string(unit, attr_val.clone())
-        {
+        if let Ok(attr_string) = dwarf.attr_string(unit, attr_val.clone()) {
             if let Ok(attr_string) = attr_string.to_string() {
                 return Some(attr_string.to_string());
             }
-        }
-        else if let Some(dwarf) = dwarf.sup() {
-            if let Ok(attr_string) = dwarf.attr_string(unit, attr_val)
-            {
+        } else if let Some(dwarf) = dwarf.sup() {
+            if let Ok(attr_string) = dwarf.attr_string(unit, attr_val) {
                 if let Ok(attr_string) = attr_string.to_string() {
                     return Some(attr_string.to_string());
                 }
@@ -240,9 +251,7 @@ pub(crate) fn get_size_as_usize<R: ReaderType>(
 }
 
 // Get the size of an object as a u64
-pub(crate) fn get_size_as_u64<R: ReaderType>(
-    entry: &DebuggingInformationEntry<R>,
-) -> Option<u64> {
+pub(crate) fn get_size_as_u64<R: ReaderType>(entry: &DebuggingInformationEntry<R>) -> Option<u64> {
     if let Ok(Some(attr)) = entry.attr(constants::DW_AT_byte_size) {
         get_attr_as_u64(&attr)
     } else if let Ok(Some(attr)) = entry.attr(constants::DW_AT_bit_size) {
@@ -253,9 +262,7 @@ pub(crate) fn get_size_as_u64<R: ReaderType>(
 }
 
 // Get the size of a subrange as a u64
-pub(crate) fn get_subrange_size<R: ReaderType>(
-    entry: &DebuggingInformationEntry<R>,
-) -> u64 {
+pub(crate) fn get_subrange_size<R: ReaderType>(entry: &DebuggingInformationEntry<R>) -> u64 {
     if let Ok(Some(attr)) = entry.attr(constants::DW_AT_upper_bound) {
         get_attr_as_u64(&attr).map_or(0, |v| v + 1)
     } else if let Ok(Some(attr)) = entry.attr(constants::DW_AT_count) {
@@ -274,22 +281,18 @@ pub(crate) fn get_start_address<R: ReaderType>(
     entry: &DebuggingInformationEntry<R>,
 ) -> Option<u64> {
     if let Ok(Some(attr_val)) = entry.attr_value(constants::DW_AT_low_pc) {
-        match dwarf.attr_address(unit, attr_val)
-        {
+        match dwarf.attr_address(unit, attr_val) {
             Ok(Some(val)) => Some(val),
             _ => None,
         }
     } else if let Ok(Some(attr_val)) = entry.attr_value(constants::DW_AT_entry_pc) {
-        match dwarf.attr_address(unit, attr_val)
-        {
+        match dwarf.attr_address(unit, attr_val) {
             Ok(Some(val)) => Some(val),
             _ => None,
         }
     } else if let Ok(Some(attr_value)) = entry.attr_value(constants::DW_AT_ranges) {
-        if let Ok(Some(ranges_offset)) = dwarf.attr_ranges_offset(unit, attr_value)
-        {
-            if let Ok(mut ranges) = dwarf.ranges(unit, ranges_offset)
-            {
+        if let Ok(Some(ranges_offset)) = dwarf.attr_ranges_offset(unit, attr_value) {
+            if let Ok(mut ranges) = dwarf.ranges(unit, ranges_offset) {
                 if let Ok(Some(range)) = ranges.next() {
                     return Some(range.begin);
                 }
@@ -313,7 +316,7 @@ pub(crate) fn get_attr_as_u64<R: ReaderType>(attr: &Attribute<R>) -> Option<u64>
             2 => data.read_u16().map(u64::from).ok(),
             4 => data.read_u32().map(u64::from).ok(),
             8 => data.read_u64().ok(),
-            _ => None
+            _ => None,
         }
     } else {
         None
@@ -335,23 +338,19 @@ pub(crate) fn get_attr_as_usize<R: ReaderType>(attr: Attribute<R>) -> Option<usi
 
 // Get an attribute value as a usize if it can be coerced
 // Parses DW_OP_address, DW_OP_const
-pub(crate) fn get_expr_value<R: ReaderType>(
-    unit: &Unit<R>,
-    attr: Attribute<R>,
-) -> Option<u64> {
+pub(crate) fn get_expr_value<R: ReaderType>(unit: &Unit<R>, attr: Attribute<R>) -> Option<u64> {
     if let AttributeValue::Exprloc(mut expression) = attr.value() {
         match Operation::parse(&mut expression.0, unit.encoding()) {
             Ok(Operation::PlusConstant { value }) => Some(value),
             Ok(Operation::UnsignedConstant { value }) => Some(value),
             Ok(Operation::Address { address: 0 }) => None,
             Ok(Operation::Address { address }) => Some(address),
-            _ => None
+            _ => None,
         }
     } else {
         None
     }
 }
-
 
 pub(crate) fn get_build_id(view: &BinaryView) -> Result<String, String> {
     let mut build_id: Option<String> = None;
@@ -363,7 +362,8 @@ pub(crate) fn get_build_id(view: &BinaryView) -> Result<String, String> {
             // Type - 4 bytes
             // Name - n bytes
             // Desc - n bytes
-            let build_id_bytes = raw_view.read_vec(build_id_section.start(), build_id_section.len());
+            let build_id_bytes =
+                raw_view.read_vec(build_id_section.start(), build_id_section.len());
             if build_id_bytes.len() < 12 {
                 return Err("Build id section must be at least 12 bytes".to_string());
             }
@@ -376,7 +376,7 @@ pub(crate) fn get_build_id(view: &BinaryView) -> Result<String, String> {
                     name_len = u32::from_le_bytes(build_id_bytes[0..4].try_into().unwrap());
                     desc_len = u32::from_le_bytes(build_id_bytes[4..8].try_into().unwrap());
                     note_type = u32::from_le_bytes(build_id_bytes[8..12].try_into().unwrap());
-                },
+                }
                 Endianness::BigEndian => {
                     name_len = u32::from_be_bytes(build_id_bytes[0..4].try_into().unwrap());
                     desc_len = u32::from_be_bytes(build_id_bytes[4..8].try_into().unwrap());
@@ -391,24 +391,29 @@ pub(crate) fn get_build_id(view: &BinaryView) -> Result<String, String> {
             let expected_len = (12 + name_len + desc_len) as usize;
 
             if build_id_bytes.len() < expected_len {
-                return Err(format!("Build id section not expected length: expected {}, got {}", expected_len, build_id_bytes.len()));
+                return Err(format!(
+                    "Build id section not expected length: expected {}, got {}",
+                    expected_len,
+                    build_id_bytes.len()
+                ));
             }
 
-            let desc: &[u8] = &build_id_bytes[(12+name_len as usize)..expected_len];
+            let desc: &[u8] = &build_id_bytes[(12 + name_len as usize)..expected_len];
             build_id = Some(desc.iter().map(|b| format!("{:02x}", b)).collect());
         }
     }
 
     if let Some(x) = build_id {
         Ok(x)
-    }
-    else {
+    } else {
         Err("Failed to get build id".to_string())
     }
 }
 
-
-pub(crate) fn download_debug_info(build_id: &str, view: &BinaryView) -> Result<Ref<BinaryView>, String> {
+pub(crate) fn download_debug_info(
+    build_id: &str,
+    view: &BinaryView,
+) -> Result<Ref<BinaryView>, String> {
     let settings = Settings::new("");
 
     let debug_server_urls = settings.get_string_list("network.debuginfodServers", Some(view), None);
@@ -419,7 +424,7 @@ pub(crate) fn download_debug_info(build_id: &str, view: &BinaryView) -> Result<R
         // Download from remote
         let (tx, rx) = mpsc::channel();
         let write = move |data: &[u8]| -> usize {
-            if let Ok(_) = tx.send(Vec::from(data)) {
+            if tx.send(Vec::from(data)).is_ok() {
                 data.len()
             } else {
                 0
@@ -475,30 +480,34 @@ pub(crate) fn download_debug_info(build_id: &str, view: &BinaryView) -> Result<R
         return binaryninja::load_view(bv.deref(), false, Some(options))
             .ok_or("Unable to load binary view from downloaded data".to_string());
     }
-    return Err("Could not find a server with debug info for this file".to_string());
+    Err("Could not find a server with debug info for this file".to_string())
 }
 
-
-pub(crate) fn find_local_debug_file_for_build_id(build_id: &str, view: &BinaryView) -> Option<String> {
+pub(crate) fn find_local_debug_file_for_build_id(
+    build_id: &str,
+    view: &BinaryView,
+) -> Option<String> {
     let settings = Settings::new("");
-    let debug_dirs_enabled = settings.get_bool("analysis.debugInfo.enableDebugDirectories", Some(view), None);
+    let debug_dirs_enabled = settings.get_bool(
+        "analysis.debugInfo.enableDebugDirectories",
+        Some(view),
+        None,
+    );
 
     if !debug_dirs_enabled {
         return None;
     }
 
-    let debug_info_paths = settings.get_string_list("analysis.debugInfo.debugDirectories", Some(view), None);
+    let debug_info_paths =
+        settings.get_string_list("analysis.debugInfo.debugDirectories", Some(view), None);
 
     if debug_info_paths.is_empty() {
-        return None
+        return None;
     }
 
     for debug_info_path in debug_info_paths.into_iter() {
         let path = PathBuf::from(debug_info_path);
-        let elf_path = path
-            .join(&build_id[..2])
-            .join(&build_id[2..])
-            .join("elf");
+        let elf_path = path.join(&build_id[..2]).join(&build_id[2..]).join("elf");
 
         let debug_ext_path = path
             .join(&build_id[..2])
@@ -506,47 +515,40 @@ pub(crate) fn find_local_debug_file_for_build_id(build_id: &str, view: &BinaryVi
 
         let final_path = if debug_ext_path.exists() {
             debug_ext_path
-        }
-        else if elf_path.exists() {
+        } else if elf_path.exists() {
             elf_path
-        }
-        else {
+        } else {
             // No paths exist in this dir, try the next one
             continue;
         };
-        return final_path
-            .to_str()
-            .and_then(|x| Some(x.to_string()));
+        return final_path.to_str().and_then(|x| Some(x.to_string()));
     }
     None
 }
 
-
-pub(crate) fn load_debug_info_for_build_id(build_id: &str, view: &BinaryView) -> (Option<Ref<BinaryView>>, bool) {
+pub(crate) fn load_debug_info_for_build_id(
+    build_id: &str,
+    view: &BinaryView,
+) -> (Option<Ref<BinaryView>>, bool) {
     if let Some(debug_file_path) = find_local_debug_file_for_build_id(build_id, view) {
-        return
-        (
+        return (
             binaryninja::load_with_options(
                 debug_file_path,
                 false,
-                Some("{\"analysis.debugInfo.internal\": false}")
+                Some("{\"analysis.debugInfo.internal\": false}"),
             ),
-            false
+            false,
         );
-    }
-    else if Settings::new("").get_bool("network.enableDebuginfod", Some(view), None) {
-        return (
-            download_debug_info(build_id, view).ok(),
-            true
-        );
+    } else if Settings::new("").get_bool("network.enableDebuginfod", Some(view), None) {
+        return (download_debug_info(build_id, view).ok(), true);
     }
     (None, false)
 }
 
-
 pub(crate) fn find_sibling_debug_file(view: &BinaryView) -> Option<String> {
     let settings = Settings::new("");
-    let load_sibling_debug = settings.get_bool("analysis.debugInfo.loadSiblingDebugFiles", Some(view), None);
+    let load_sibling_debug =
+        settings.get_bool("analysis.debugInfo.loadSiblingDebugFiles", Some(view), None);
 
     if !load_sibling_debug {
         return None;
@@ -565,9 +567,7 @@ pub(crate) fn find_sibling_debug_file(view: &BinaryView) -> Option<String> {
             .file_name()
             .unwrap_or(OsStr::new(""));
 
-        let dsym_file = dsym_folder
-            .join("Contents/Resources/DWARF/")
-            .join(filename); // TODO: should this just pull any file out? Can there be multiple files?
+        let dsym_file = dsym_folder.join("Contents/Resources/DWARF/").join(filename); // TODO: should this just pull any file out? Can there be multiple files?
         if dsym_file.exists() {
             return Some(dsym_file.to_string_lossy().to_string());
         }
@@ -576,23 +576,21 @@ pub(crate) fn find_sibling_debug_file(view: &BinaryView) -> Option<String> {
     None
 }
 
-
 pub(crate) fn load_sibling_debug_file(view: &BinaryView) -> (Option<Ref<BinaryView>>, bool) {
     let Some(debug_file) = find_sibling_debug_file(view) else {
         return (None, false);
     };
 
     let load_settings = match view.default_platform() {
-        Some(plat) => format!("{{\"analysis.debugInfo.internal\": false, \"loader.platform\": \"{}\"}}", plat.name()),
-        None => "{\"analysis.debugInfo.internal\": false}".to_string()
+        Some(plat) => format!(
+            "{{\"analysis.debugInfo.internal\": false, \"loader.platform\": \"{}\"}}",
+            plat.name()
+        ),
+        None => "{\"analysis.debugInfo.internal\": false}".to_string(),
     };
 
     (
-        binaryninja::load_with_options(
-            debug_file,
-            false,
-            Some(load_settings)
-        ),
-        false
+        binaryninja::load_with_options(debug_file, false, Some(load_settings)),
+        false,
     )
 }

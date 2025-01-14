@@ -79,7 +79,7 @@ fn test_immutable_container(_session: &Session, platform: &Platform) {
         !plat_type_container.is_mutable(),
         "Platform should NOT be mutable!"
     );
-    assert_ne!(platform.types().len(), 0);
+    assert_ne!(platform.types().len(), 0, "Something deleted all the platform types!");
     let type_ids = plat_type_container.type_ids().unwrap();
     let first_type_id = type_ids.iter().next().unwrap();
     // Platform type containers are immutable so these should be false!

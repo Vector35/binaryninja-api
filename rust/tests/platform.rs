@@ -28,7 +28,5 @@ fn test_platform_types(_session: &Session) {
 #[rstest]
 fn test_platform_calling_conventions(_session: &Session) {
     let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
-    for cc in platform.calling_conventions().iter() {
-        println!("{:#?}", cc);
-    }
+    assert_eq!(platform.calling_conventions().len(), 1);
 }

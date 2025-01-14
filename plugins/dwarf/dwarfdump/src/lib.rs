@@ -20,6 +20,7 @@ use binaryninja::{
 };
 use dwarfreader::is_valid;
 
+use binaryninja::disassembly::StringType;
 use gimli::{
     AttributeValue::{Encoding, Flag, UnitRef},
     // BigEndian,
@@ -32,7 +33,6 @@ use gimli::{
     Unit,
     UnitSectionOffset,
 };
-use binaryninja::disassembly::StringType;
 
 static PADDING: [&str; 23] = [
     "",
@@ -62,7 +62,7 @@ static PADDING: [&str; 23] = [
 
 // TODO : This is very much not comprehensive: see https://github.com/gimli-rs/gimli/blob/master/examples/dwarfdump.rs
 fn get_info_string<R: Reader>(
-    view: &BinaryView,
+    _view: &BinaryView,
     dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     die_node: &DebuggingInformationEntry<R>,
@@ -171,9 +171,7 @@ fn get_info_string<R: Reader>(
             let addr_string = format!("#0x{:08x}", addr);
             attr_line.push(InstructionTextToken::new(
                 &addr_string,
-                InstructionTextTokenKind::GotoLabel {
-                    target: addr,
-                },
+                InstructionTextTokenKind::GotoLabel { target: addr },
             ));
         } else if let Flag(true) = attr.value() {
             attr_line.push(InstructionTextToken::new(
@@ -215,10 +213,7 @@ fn get_info_string<R: Reader>(
             let value_string = format!("{}", value);
             attr_line.push(InstructionTextToken::new(
                 &value_string,
-                InstructionTextTokenKind::Integer {
-                    value: value,
-                    size: None,
-                },
+                InstructionTextTokenKind::Integer { value, size: None },
             ));
         } else if let Some(value) = attr.sdata_value() {
             let value_string = format!("{}", value);

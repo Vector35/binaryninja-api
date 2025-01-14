@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 binaryninja = { path = "../../rust" }
+binaryninjacore-sys = { path = "../../rust/binaryninjacore-sys"  }
 riscv-dis = { path = "disasm" }
 log = "0.4"
 rayon = { version = "1.0", optional = true }

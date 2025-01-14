@@ -8,6 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 binaryninja = { path = "../../../rust" }
+binaryninjacore-sys = { path = "../../../rust/binaryninjacore-sys"  }
 gimli = "^0.31"
 log = "^0.4"
 object = { version = "0.32.1", features = ["write"] }

@@ -108,7 +108,8 @@ impl architecture::Register for Register {
             Self::R13 => 13,
             Self::R14 => 14,
             Self::R15 => 15,
-        }.into()
+        }
+        .into()
     }
 }
 

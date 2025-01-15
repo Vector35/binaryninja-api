@@ -98,6 +98,11 @@ impl InitializationOptions {
     }
 
     /// A license to override with, you can use this to make sure you initialize with a specific license.
+    /// 
+    /// This takes the form of a JSON array. The string should be formed like:
+    /// ```json
+    /// [{ /* json object with license data */ }]
+    /// ```
     pub fn with_license(mut self, license: impl Into<String>) -> Self {
         self.license = Some(license.into());
         self

@@ -215,6 +215,28 @@ impl Settings {
         }
     }
 
+    pub fn get_property_string_list<S: BnStrCompatible>(
+        &self,
+        key: S,
+        property: S,
+    ) -> Array<BnString> {
+        let key = key.into_bytes_with_nul();
+        let property = property.into_bytes_with_nul();
+        let mut size: usize = 0;
+        unsafe {
+            Array::new(
+                BNSettingsQueryPropertyStringList(
+                    self.handle,
+                    key.as_ref().as_ptr() as *mut _,
+                    property.as_ref().as_ptr() as *mut _,
+                    &mut size,
+                ) as *mut *mut c_char,
+                size,
+                (),
+            )
+        }
+    }
+
     pub fn get_json<S: BnStrCompatible>(
         &self,
         key: S,

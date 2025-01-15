@@ -50,7 +50,8 @@ pub fn main() {
         binaryninja::headless::Session::new().expect("Failed to initialize session");
 
     println!("Registering workflow...");
-    let meta_workflow = Workflow::new_from_copy("core.function.metaAnalysis");
+    let old_meta_workflow = Workflow::instance("core.function.metaAnalysis");
+    let meta_workflow = old_meta_workflow.clone("core.function.metaAnalysis");
     let activity = Activity::new_with_action(RUST_ACTIVITY_CONFIG, example_activity);
     meta_workflow.register_activity(&activity).unwrap();
     meta_workflow.insert("core.function.runFunctionRecognizers", [RUST_ACTIVITY_NAME]);

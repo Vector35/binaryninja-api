@@ -34,7 +34,6 @@ fn main() {
         println!("{}:", func.symbol().full_name());
     }
 }
-
 ```
 
 ## Getting Started
@@ -61,7 +60,7 @@ binaryninjacore-sys = { git = "https://github.com/Vector35/binaryninja-api.git",
 ```
 
 `build.rs`:
-```rust
+```doctestinjectablerust
 fn main() {
     let link_path =
         std::env::var_os("DEP_BINARYNINJACORE_PATH").expect("DEP_BINARYNINJACORE_PATH not specified");

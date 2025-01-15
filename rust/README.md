@@ -42,10 +42,11 @@ fn main() {
 ### Requirements
 
 - Having BinaryNinja installed (and your license registered)
+  - For headless operation you must have a headless supporting license.
 - Clang
 - Rust
 
-### To link to Binary Ninja
+### Link to Binary Ninja
 
 Writing a standalone executable _or_ a plugin requires that you link to `binaryninjacore` directly. The process of locating that however
 is done for you within the `binaryninjacore-sys` crate. Because linker arguments are _not_ transitive for executables you
@@ -78,7 +79,7 @@ fn main() {
 }
 ```
 
-### To write a plugin:
+### Write a Plugin
 
 Plugins are loaded at runtime and as such will have their own initialization routine.
 
@@ -100,7 +101,7 @@ pub extern "C" fn CorePluginInit() -> bool {
 }
 ```
 
-### To write a standalone executable:
+### Write a Standalone Executable
 
 If you have a headless supporting license you are able to use Binary Ninja as a regular dynamically loaded library.
 

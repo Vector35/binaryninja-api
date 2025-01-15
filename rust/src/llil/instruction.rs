@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use binaryninjacore_sys::BNGetLowLevelILByIndex;
-use binaryninjacore_sys::BNGetLowLevelILIndexForInstruction;
-use binaryninjacore_sys::BNLowLevelILInstruction;
-use std::fmt::{Display, Formatter};
-
 use super::operation;
 use super::operation::Operation;
 use super::*;
-
 use crate::architecture::Architecture;
+use binaryninjacore_sys::BNGetLowLevelILByIndex;
+use binaryninjacore_sys::BNGetLowLevelILIndexForInstruction;
+use binaryninjacore_sys::BNLowLevelILInstruction;
+use std::fmt::{Debug, Display, Formatter};
+
+use super::VisitorAction;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct InstructionIndex(pub usize);
@@ -36,6 +36,22 @@ impl Display for InstructionIndex {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("{}", self.0))
     }
+}
+
+pub trait InstructionHandler<'func, A, M, F>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn info(&self) -> InstrInfo<'func, A, M, F>;
+
+    /// Visit the sub expressions of this instruction.
+    ///
+    /// NOTE: This does not visit the root expression, i.e. the instruction.
+    fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
+    where
+        T: FnMut(&Expression<'func, A, M, F, ValueExpr>) -> VisitorAction;
 }
 
 pub struct Instruction<'func, A, M, F>
@@ -59,144 +75,106 @@ where
     pub fn new(function: &'func LowLevelILFunction<A, M, F>, index: InstructionIndex) -> Self {
         Self { function, index }
     }
-}
 
-fn common_info<'func, A, M, F>(
-    function: &'func LowLevelILFunction<A, M, F>,
-    op: BNLowLevelILInstruction,
-) -> Option<InstrInfo<'func, A, M, F>>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    use binaryninjacore_sys::BNLowLevelILOperation::*;
-
-    match op.operation {
-        LLIL_NOP => InstrInfo::Nop(Operation::new(function, op)).into(),
-        LLIL_JUMP => InstrInfo::Jump(Operation::new(function, op)).into(),
-        LLIL_JUMP_TO => InstrInfo::JumpTo(Operation::new(function, op)).into(),
-        LLIL_RET => InstrInfo::Ret(Operation::new(function, op)).into(),
-        LLIL_NORET => InstrInfo::NoRet(Operation::new(function, op)).into(),
-        LLIL_IF => InstrInfo::If(Operation::new(function, op)).into(),
-        LLIL_GOTO => InstrInfo::Goto(Operation::new(function, op)).into(),
-        LLIL_BP => InstrInfo::Bp(Operation::new(function, op)).into(),
-        LLIL_TRAP => InstrInfo::Trap(Operation::new(function, op)).into(),
-        LLIL_UNDEF => InstrInfo::Undef(Operation::new(function, op)).into(),
-        _ => None,
-    }
-}
-
-use super::VisitorAction;
-
-macro_rules! visit {
-    ($f:expr, $($e:expr),*) => {
-        if let VisitorAction::Halt = $f($($e,)*) {
-            return VisitorAction::Halt;
-        }
-    }
-}
-
-fn common_visit<'func, A, M, F, CB>(info: &InstrInfo<'func, A, M, F>, f: &mut CB) -> VisitorAction
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    F: FunctionForm,
-    CB: FnMut(&Expression<'func, A, M, F, ValueExpr>) -> VisitorAction,
-{
-    use self::InstrInfo::*;
-
-    match *info {
-        Jump(ref op) => visit!(f, &op.target()),
-        JumpTo(ref op) => visit!(f, &op.target()),
-        Ret(ref op) => visit!(f, &op.target()),
-        If(ref op) => visit!(f, &op.condition()),
-        Value(ref e, _) => visit!(f, e),
-        _ => {}
-    };
-
-    VisitorAction::Sibling
-}
-
-impl<'func, A, M, V> Instruction<'func, A, M, NonSSA<V>>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    V: NonSSAVariant,
-{
     pub fn address(&self) -> u64 {
         let expr_idx =
             unsafe { BNGetLowLevelILIndexForInstruction(self.function.handle, self.index.0) };
         let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, expr_idx) };
         op.address
     }
+}
 
-    pub fn info(&self) -> InstrInfo<'func, A, M, NonSSA<V>> {
+impl<'func, A, M, F> Debug for Instruction<'func, A, M, F>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Instruction")
+            .field("index", &self.index)
+            .field("address", &self.address())
+            .finish()
+    }
+}
+
+impl<'func, A, M> InstructionHandler<'func, A, M, SSA> for Instruction<'func, A, M, SSA>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+{
+    fn info(&self) -> InstrInfo<'func, A, M, SSA> {
+        #[allow(unused_imports)]
         use binaryninjacore_sys::BNLowLevelILOperation::*;
-
-        let expr_idx =
-            unsafe { BNGetLowLevelILIndexForInstruction(self.function.handle, self.index.0) };
-        let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, expr_idx) };
-
+        let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
+        #[allow(clippy::match_single_binding)]
         match op.operation {
-            LLIL_SET_REG => InstrInfo::SetReg(Operation::new(self.function, op)),
-            LLIL_SET_REG_SPLIT => InstrInfo::SetRegSplit(Operation::new(self.function, op)),
-            LLIL_SET_FLAG => InstrInfo::SetFlag(Operation::new(self.function, op)),
-            LLIL_STORE => InstrInfo::Store(Operation::new(self.function, op)),
-            LLIL_PUSH => InstrInfo::Push(Operation::new(self.function, op)),
-            LLIL_CALL | LLIL_CALL_STACK_ADJUST => {
-                InstrInfo::Call(Operation::new(self.function, op))
-            }
-            LLIL_TAILCALL => InstrInfo::TailCall(Operation::new(self.function, op)),
-            LLIL_SYSCALL => InstrInfo::Syscall(Operation::new(self.function, op)),
-            LLIL_INTRINSIC => InstrInfo::Intrinsic(Operation::new(self.function, op)),
-            _ => {
-                common_info(self.function, op).unwrap_or_else(|| {
-                    // Hopefully this is a bare value. If it isn't (expression
-                    // from wrong function form or similar) it won't really cause
-                    // any problems as it'll come back as undefined when queried.
-                    let expr = Expression::new(self.function, ExpressionIndex(expr_idx));
-
-                    let info = unsafe { expr.info_from_op(op) };
-
-                    InstrInfo::Value(expr, info)
-                })
-            }
+            // Any invalid ops for Non-Lifted IL will be checked here.
+            // SAFETY: We have checked for illegal operations.
+            _ => unsafe { InstrInfo::from_raw(self.function, self.index, op) },
         }
     }
 
-    pub fn visit_tree<F>(&self, f: &mut F) -> VisitorAction
+    fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
     where
-        F: FnMut(
-            &Expression<'func, A, M, NonSSA<V>, ValueExpr>,
-            &ExprInfo<'func, A, M, NonSSA<V>>,
-        ) -> VisitorAction,
+        T: FnMut(&Expression<'func, A, M, SSA, ValueExpr>) -> VisitorAction,
     {
-        use self::InstrInfo::*;
-        let info = self.info();
+        // Recursively visit sub expressions.
+        self.info().visit_sub_expressions(|e| e.visit_tree(f))
+    }
+}
 
-        let fb = &mut |e: &Expression<'func, A, M, NonSSA<V>, ValueExpr>| e.visit_tree(f);
-
-        match info {
-            SetReg(ref op) => visit!(fb, &op.source_expr()),
-            SetRegSplit(ref op) => visit!(fb, &op.source_expr()),
-            SetFlag(ref op) => visit!(fb, &op.source_expr()),
-            Store(ref op) => {
-                visit!(fb, &op.dest_mem_expr());
-                visit!(fb, &op.source_expr());
-            }
-            Push(ref op) => visit!(fb, &op.operand()),
-            Call(ref op) | TailCall(ref op) => visit!(fb, &op.target()),
-            Intrinsic(ref _op) => {
-                // TODO: Use this when we support expression lists
-                // for expr in op.source_exprs() {
-                //     visit!(fb, expr);
-                // }
-            }
-            _ => visit!(common_visit, &info, fb),
+impl<'func, A, M> InstructionHandler<'func, A, M, NonSSA<LiftedNonSSA>>
+    for Instruction<'func, A, M, NonSSA<LiftedNonSSA>>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+{
+    fn info(&self) -> InstrInfo<'func, A, M, NonSSA<LiftedNonSSA>> {
+        #[allow(unused_imports)]
+        use binaryninjacore_sys::BNLowLevelILOperation::*;
+        let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
+        #[allow(clippy::match_single_binding)]
+        match op.operation {
+            // Any invalid ops for Non-Lifted IL will be checked here.
+            // SAFETY: We have checked for illegal operations.
+            _ => unsafe { InstrInfo::from_raw(self.function, self.index, op) },
         }
+    }
 
-        VisitorAction::Sibling
+    fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
+    where
+        T: FnMut(&Expression<'func, A, M, NonSSA<LiftedNonSSA>, ValueExpr>) -> VisitorAction,
+    {
+        // Recursively visit sub expressions.
+        self.info().visit_sub_expressions(|e| e.visit_tree(f))
+    }
+}
+
+impl<'func, A, M> InstructionHandler<'func, A, M, NonSSA<RegularNonSSA>>
+    for Instruction<'func, A, M, NonSSA<RegularNonSSA>>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+{
+    fn info(&self) -> InstrInfo<'func, A, M, NonSSA<RegularNonSSA>> {
+        #[allow(unused_imports)]
+        use binaryninjacore_sys::BNLowLevelILOperation::*;
+        let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
+        #[allow(clippy::match_single_binding)]
+        match op.operation {
+            // Any invalid ops for Non-Lifted IL will be checked here.
+            // SAFETY: We have checked for illegal operations.
+            _ => unsafe { InstrInfo::from_raw(self.function, self.index, op) },
+        }
+    }
+
+    fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
+    where
+        T: FnMut(&Expression<'func, A, M, NonSSA<RegularNonSSA>, ValueExpr>) -> VisitorAction,
+    {
+        // Recursively visit sub expressions.
+        self.info().visit_sub_expressions(|e| e.visit_tree(f))
     }
 }
 
@@ -211,7 +189,8 @@ where
     SetRegSplit(Operation<'func, A, M, F, operation::SetRegSplit>),
     SetFlag(Operation<'func, A, M, F, operation::SetFlag>),
     Store(Operation<'func, A, M, F, operation::Store>),
-    Push(Operation<'func, A, M, F, operation::UnaryOp>), // TODO needs a real op
+    // TODO needs a real op
+    Push(Operation<'func, A, M, F, operation::UnaryOp>),
 
     Jump(Operation<'func, A, M, F, operation::Jump>),
     JumpTo(Operation<'func, A, M, F, operation::JumpTo>),
@@ -231,8 +210,95 @@ where
     Trap(Operation<'func, A, M, F, operation::Trap>),
     Undef(Operation<'func, A, M, F, operation::NoArgs>),
 
-    Value(
-        Expression<'func, A, M, F, ValueExpr>,
-        ExprInfo<'func, A, M, F>,
-    ),
+    /// The instruction is an expression.
+    Value(Expression<'func, A, M, F, ValueExpr>),
+}
+
+impl<'func, A, M, F> InstrInfo<'func, A, M, F>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub(crate) unsafe fn from_raw(
+        function: &'func LowLevelILFunction<A, M, F>,
+        index: InstructionIndex,
+        op: BNLowLevelILInstruction,
+    ) -> Self {
+        use binaryninjacore_sys::BNLowLevelILOperation::*;
+
+        match op.operation {
+            LLIL_NOP => InstrInfo::Nop(Operation::new(function, op)),
+            LLIL_SET_REG | LLIL_SET_REG_SSA => InstrInfo::SetReg(Operation::new(function, op)),
+            LLIL_SET_REG_SPLIT | LLIL_SET_REG_SPLIT_SSA => {
+                InstrInfo::SetRegSplit(Operation::new(function, op))
+            }
+            LLIL_SET_FLAG | LLIL_SET_FLAG_SSA => InstrInfo::SetFlag(Operation::new(function, op)),
+            LLIL_STORE | LLIL_STORE_SSA => InstrInfo::Store(Operation::new(function, op)),
+            LLIL_PUSH => InstrInfo::Push(Operation::new(function, op)),
+
+            LLIL_JUMP => InstrInfo::Jump(Operation::new(function, op)),
+            LLIL_JUMP_TO => InstrInfo::JumpTo(Operation::new(function, op)),
+
+            LLIL_CALL | LLIL_CALL_STACK_ADJUST | LLIL_CALL_SSA => {
+                InstrInfo::Call(Operation::new(function, op))
+            }
+            LLIL_TAILCALL | LLIL_TAILCALL_SSA => InstrInfo::TailCall(Operation::new(function, op)),
+
+            LLIL_RET => InstrInfo::Ret(Operation::new(function, op)),
+            LLIL_NORET => InstrInfo::NoRet(Operation::new(function, op)),
+
+            LLIL_IF => InstrInfo::If(Operation::new(function, op)),
+            LLIL_GOTO => InstrInfo::Goto(Operation::new(function, op)),
+
+            LLIL_SYSCALL | LLIL_SYSCALL_SSA => InstrInfo::Syscall(Operation::new(function, op)),
+            LLIL_INTRINSIC | LLIL_INTRINSIC_SSA => {
+                InstrInfo::Intrinsic(Operation::new(function, op))
+            }
+            LLIL_BP => InstrInfo::Bp(Operation::new(function, op)),
+            LLIL_TRAP => InstrInfo::Trap(Operation::new(function, op)),
+            LLIL_UNDEF => InstrInfo::Undef(Operation::new(function, op)),
+            // Could not identify an instruction, therefor must be a value expression.
+            // The conversion from instruction index to expression index is safe here.
+            _ => InstrInfo::Value(Expression::new(function, ExpressionIndex(index.0))),
+        }
+    }
+
+    fn visit_sub_expressions<T>(&self, mut visitor: T) -> VisitorAction
+    where
+        T: FnMut(&Expression<'func, A, M, F, ValueExpr>) -> VisitorAction,
+    {
+        use InstrInfo::*;
+
+        macro_rules! visit {
+            ($expr:expr) => {
+                if let VisitorAction::Halt = visitor($expr) {
+                    return VisitorAction::Halt;
+                }
+            };
+        }
+
+        match self {
+            SetReg(ref op) => visit!(&op.source_expr()),
+            SetRegSplit(ref op) => visit!(&op.source_expr()),
+            SetFlag(ref op) => visit!(&op.source_expr()),
+            Store(ref op) => {
+                visit!(&op.dest_mem_expr());
+                visit!(&op.source_expr());
+            }
+            Push(ref op) => visit!(&op.operand()),
+            Jump(ref op) => visit!(&op.target()),
+            JumpTo(ref op) => visit!(&op.target()),
+            Call(ref op) | TailCall(ref op) => visit!(&op.target()),
+            Ret(ref op) => visit!(&op.target()),
+            If(ref op) => visit!(&op.condition()),
+            Intrinsic(ref _op) => {
+                // TODO: Visit when we support expression lists
+            }
+            Value(e) => visit!(e),
+            _ => {}
+        }
+
+        VisitorAction::Sibling
+    }
 }

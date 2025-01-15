@@ -41,6 +41,7 @@ use std::marker::PhantomData;
 
 use binaryninja::architecture::{BranchKind, IntrinsicId, RegisterId};
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
+use binaryninja::llil::{ExpressionHandler, InstructionHandler};
 use binaryninja::logger::Logger;
 use riscv_dis::{
     FloatReg, FloatRegType, Instr, IntRegType, Op, RegFile, Register as RiscVRegister,
@@ -89,7 +90,7 @@ struct Register<D: 'static + RiscVDisassembler> {
     _dis: PhantomData<D>,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 struct RiscVIntrinsic<D: 'static + RiscVDisassembler> {
     id: Intrinsic,
     _dis: PhantomData<D>,
@@ -2472,7 +2473,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
                 // Actual target symbol is on the associated R_RISCV_PCREL_HI20 relocation, which
                 // is pointed to by `reloc.target()`.
                 let target = match bv
-                    .get_relocations_at(reloc.target())
+                    .relocations_at(reloc.target())
                     .iter()
                     .find(|r| r.info().native_type == Self::R_RISCV_PCREL_HI20)
                 {

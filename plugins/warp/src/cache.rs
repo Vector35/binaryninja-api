@@ -4,7 +4,7 @@ use binaryninja::architecture::Architecture;
 use binaryninja::binaryview::{BinaryView, BinaryViewExt};
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::Function as BNFunction;
-use binaryninja::llil::{FunctionMutability, NonSSA, NonSSAVariant};
+use binaryninja::llil::{FunctionMutability, NonSSA, RegularNonSSA};
 use binaryninja::rc::Guard;
 use binaryninja::rc::Ref as BNRef;
 use binaryninja::symbol::Symbol as BNSymbol;
@@ -65,9 +65,9 @@ pub fn try_cached_function_match(function: &BNFunction) -> Option<Function> {
         .to_owned()
 }
 
-pub fn cached_function<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
+pub fn cached_function<A: Architecture, M: FunctionMutability>(
     function: &BNFunction,
-    llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
+    llil: &llil::LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
 ) -> Function {
     let view = function.view();
     let view_id = ViewID::from(view.as_ref());
@@ -119,9 +119,9 @@ where
     }
 }
 
-pub fn cached_function_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
+pub fn cached_function_guid<A: Architecture, M: FunctionMutability>(
     function: &BNFunction,
-    llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
+    llil: &llil::LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
 ) -> FunctionGUID {
     let view = function.view();
     let view_id = ViewID::from(view);
@@ -199,10 +199,10 @@ pub struct FunctionCache {
 }
 
 impl FunctionCache {
-    pub fn function<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
+    pub fn function<A: Architecture, M: FunctionMutability>(
         &self,
         function: &BNFunction,
-        llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
+        llil: &llil::LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
     ) -> Function {
         let function_id = FunctionID::from(function);
         match self.cache.get(&function_id) {
@@ -229,7 +229,7 @@ impl GUIDCache {
         let func_platform = function.platform();
         let mut constraints = HashSet::new();
         for call_site in &function.call_sites() {
-            for cs_ref_addr in view.get_code_refs_from(call_site.address, Some(function)) {
+            for cs_ref_addr in view.code_refs_from_addr(call_site.address, Some(function)) {
                 match view.function_at(&func_platform, cs_ref_addr) {
                     Some(cs_ref_func) => {
                         // Call site is a function, constrain on it.
@@ -327,10 +327,10 @@ impl GUIDCache {
         }
     }
 
-    pub fn function_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
+    pub fn function_guid<A: Architecture, M: FunctionMutability>(
         &self,
         function: &BNFunction,
-        llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
+        llil: &llil::LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
     ) -> FunctionGUID {
         let function_id = FunctionID::from(function);
         match self.cache.get(&function_id) {
@@ -479,6 +479,6 @@ impl ObjectDestructor for CacheDestructor {
         if let Some(cache) = TYPE_REF_CACHE.get() {
             cache.remove(&view_id);
         }
-        log::debug!("Removed WARP caches for {:?}", view);
+        log::debug!("Removed WARP caches for {:?}", view.file().filename());
     }
 }

@@ -16,7 +16,3 @@ iset = "0.2.2"
 cpp_demangle = "0.4.3"
 regex = "1"
 indexmap = "2.5.0"
-
-[profile.release]
-lto = true
-debug = "full"

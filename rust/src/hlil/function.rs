@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 
 use binaryninjacore_sys::*;
@@ -12,22 +13,6 @@ use crate::variable::{SSAVariable, Variable};
 pub struct HighLevelILFunction {
     pub(crate) full_ast: bool,
     pub(crate) handle: *mut BNHighLevelILFunction,
-}
-
-unsafe impl Send for HighLevelILFunction {}
-unsafe impl Sync for HighLevelILFunction {}
-
-impl Eq for HighLevelILFunction {}
-impl PartialEq for HighLevelILFunction {
-    fn eq(&self, rhs: &Self) -> bool {
-        self.get_function().eq(&rhs.get_function())
-    }
-}
-
-impl Hash for HighLevelILFunction {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.get_function().hash(state)
-    }
 }
 
 impl HighLevelILFunction {
@@ -87,7 +72,7 @@ impl HighLevelILFunction {
         }
     }
 
-    pub fn get_function(&self) -> Ref<Function> {
+    pub fn function(&self) -> Ref<Function> {
         unsafe {
             let func = BNGetHighLevelILOwnerFunction(self.handle);
             Function::ref_from_raw(func)
@@ -125,7 +110,7 @@ impl HighLevelILFunction {
     }
 
     pub fn set_current_address(&self, address: u64, arch: Option<CoreArchitecture>) {
-        let arch = arch.unwrap_or_else(|| self.get_function().arch());
+        let arch = arch.unwrap_or_else(|| self.function().arch());
         unsafe { BNHighLevelILSetCurrentAddress(self.handle, arch.handle, address) }
     }
 
@@ -248,6 +233,31 @@ impl HighLevelILFunction {
     }
 }
 
+impl Debug for HighLevelILFunction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HighLevelILFunction")
+            .field("arch", &self.function().arch())
+            .field("instruction_count", &self.instruction_count())
+            .finish()
+    }
+}
+
+unsafe impl Send for HighLevelILFunction {}
+unsafe impl Sync for HighLevelILFunction {}
+
+impl Eq for HighLevelILFunction {}
+impl PartialEq for HighLevelILFunction {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.function().eq(&rhs.function())
+    }
+}
+
+impl Hash for HighLevelILFunction {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.function().hash(state)
+    }
+}
+
 impl ToOwned for HighLevelILFunction {
     type Owned = Ref<Self>;
 
@@ -266,11 +276,5 @@ unsafe impl RefCountable for HighLevelILFunction {
 
     unsafe fn dec_ref(handle: &Self) {
         BNFreeHighLevelILFunction(handle.handle);
-    }
-}
-
-impl core::fmt::Debug for HighLevelILFunction {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "<hlil func handle {:p}>", self.handle)
     }
 }

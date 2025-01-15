@@ -7,9 +7,9 @@ use ihex::*;
 use srec::*;
 use titxt::*;
 
-use std::ops::Range;
-use log::LevelFilter;
 use binaryninja::logger::Logger;
+use log::LevelFilter;
+use std::ops::Range;
 
 #[no_mangle]
 #[allow(non_snake_case)]

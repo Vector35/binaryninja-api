@@ -11,8 +11,8 @@ use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::{Function as BNFunction, NativeBlock};
 use binaryninja::llil;
 use binaryninja::llil::{
-    ExprInfo, FunctionMutability, InstrInfo, Instruction, NonSSA, NonSSAVariant, Register,
-    VisitorAction,
+    ExprInfo, ExpressionHandler, FunctionMutability, InstrInfo, Instruction, InstructionHandler,
+    NonSSA, Register, RegularNonSSA, VisitorAction,
 };
 use binaryninja::rc::Ref as BNRef;
 use std::path::PathBuf;
@@ -41,9 +41,9 @@ pub fn user_signature_dir() -> PathBuf {
     binaryninja::user_directory().join("signatures/")
 }
 
-pub fn build_function<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
+pub fn build_function<A: Architecture, M: FunctionMutability>(
     func: &BNFunction,
-    llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
+    llil: &llil::LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
 ) -> Function {
     let bn_fn_ty = func.function_type();
     Function {
@@ -73,9 +73,9 @@ pub fn sorted_basic_blocks(func: &BNFunction) -> Vec<BNRef<BNBasicBlock<NativeBl
     basic_blocks
 }
 
-pub fn function_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
+pub fn function_guid<A: Architecture, M: FunctionMutability>(
     func: &BNFunction,
-    llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
+    llil: &llil::LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
 ) -> FunctionGUID {
     let basic_blocks = sorted_basic_blocks(func);
     let basic_block_guids = basic_blocks
@@ -85,9 +85,9 @@ pub fn function_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
     FunctionGUID::from_basic_blocks(&basic_block_guids)
 }
 
-pub fn basic_block_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
+pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
     basic_block: &BNBasicBlock<NativeBlock>,
-    llil: &llil::LowLevelILFunction<A, M, NonSSA<V>>,
+    llil: &llil::LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
 ) -> BasicBlockGUID {
     let func = basic_block.function();
     let view = func.view();
@@ -95,7 +95,7 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant
     let max_instr_len = arch.max_instr_len();
 
     // NOPs and useless moves are blacklisted to allow for hot-patchable functions.
-    let is_blacklisted_instr = |instr: &Instruction<A, M, NonSSA<V>>| {
+    let is_blacklisted_instr = |instr: &Instruction<A, M, NonSSA<RegularNonSSA>>| {
         match instr.info() {
             InstrInfo::Nop(_) => true,
             InstrInfo::SetReg(op) => {
@@ -121,8 +121,8 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant
         }
     };
 
-    let is_variant_instr = |instr: &Instruction<A, M, NonSSA<V>>| {
-        let is_variant_expr = |expr: &ExprInfo<A, M, NonSSA<V>>| {
+    let is_variant_instr = |instr: &Instruction<A, M, NonSSA<RegularNonSSA>>| {
+        let is_variant_expr = |expr: &ExprInfo<A, M, NonSSA<RegularNonSSA>>| {
             match expr {
                 ExprInfo::ConstPtr(op) if !view.sections_at(op.value()).is_empty() => {
                     // Constant Pointer must be in a section for it to be relocatable.
@@ -140,8 +140,8 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant
         };
 
         // Visit instruction expressions looking for variant expression, [VisitorAction::Halt] means variant.
-        instr.visit_tree(&mut |_expr, expr_info| {
-            if is_variant_expr(expr_info) {
+        instr.visit_tree(&mut |expr| {
+            if is_variant_expr(&expr.info()) {
                 // Found a variant expression
                 VisitorAction::Halt
             } else {

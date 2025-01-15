@@ -1895,7 +1895,7 @@ impl NamedTypeReference {
     }
 
     fn target_helper(&self, bv: &BinaryView, visited: &mut HashSet<BnString>) -> Option<Ref<Type>> {
-        let ty = bv.get_type_by_id(self.id())?;
+        let ty = bv.type_by_id(self.id())?;
         match ty.type_class() {
             TypeClass::NamedTypeReferenceClass => {
                 // Recurse into the NTR type until we get the target type.

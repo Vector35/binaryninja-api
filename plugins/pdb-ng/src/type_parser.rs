@@ -360,7 +360,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         continue;
                     }
                     // If the bv has this type, DebugInfo will just update us to reference it
-                    if self.bv.get_type_by_name(name.to_owned()).is_some() {
+                    if self.bv.type_by_name(name.to_owned()).is_some() {
                         continue;
                     }
 

@@ -119,7 +119,7 @@ impl Matcher {
             ty: &Type,
         ) {
             let ty_id_str = TypeGUID::from(ty).to_string();
-            if view.get_type_by_id(&ty_id_str).is_some() {
+            if view.type_by_id(&ty_id_str).is_some() {
                 // Type already added.
                 return;
             }
@@ -159,7 +159,7 @@ impl Matcher {
                     if let Some(ref_guid) = c.guid {
                         // NOTE: We do not need to check for cyclic reference here because
                         // NOTE: GUID references are unable to be referenced by themselves.
-                        if view.get_type_by_id(ref_guid.to_string()).is_none() {
+                        if view.type_by_id(ref_guid.to_string()).is_none() {
                             // Add the referrer to the view if it is in the Matcher types
                             if let Some(ref_ty) = matcher.types.get(&ref_guid) {
                                 inner_add_type_to_view(matcher, view, arch, visited_refs, &ref_ty);
@@ -172,7 +172,7 @@ impl Matcher {
                         // Only try and resolve by name if not already visiting.
                         if !resolved
                             && visited_refs.insert(ref_name.to_string())
-                            && view.get_type_by_name(ref_name).is_none()
+                            && view.type_by_name(ref_name).is_none()
                         {
                             // Add the ref to the view if it is in the Matcher types
                             if let Some(ref_ty) = matcher.named_types.get(ref_name) {

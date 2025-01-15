@@ -365,7 +365,7 @@ unsafe impl CoreArrayProviderInner for SSAVariable {
 /// Variables exist within functions at Medium Level IL or higher.
 ///
 /// As such, they are to be used within the context of a [`Function`].
-/// See [`Function::get_variable_name`] as an example of how to interact with variables.
+/// See [`Function::variable_name`] as an example of how to interact with variables.
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct Variable {
     pub ty: VariableSourceType,

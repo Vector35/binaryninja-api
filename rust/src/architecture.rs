@@ -321,7 +321,7 @@ pub trait RegisterStack: Sized + Clone + Copy {
     fn id(&self) -> RegisterStackId;
 }
 
-pub trait Flag: Sized + Clone + Copy + Hash + Eq {
+pub trait Flag: Debug + Sized + Clone + Copy + Hash + Eq {
     type FlagClass: FlagClass;
 
     fn name(&self) -> Cow<str>;
@@ -359,7 +359,7 @@ pub trait FlagClass: Sized + Clone + Copy + Hash + Eq {
     fn id(&self) -> FlagClassId;
 }
 
-pub trait FlagGroup: Sized + Clone + Copy {
+pub trait FlagGroup: Debug + Sized + Clone + Copy {
     type FlagType: Flag;
     type FlagClass: FlagClass;
 
@@ -397,7 +397,7 @@ pub trait FlagGroup: Sized + Clone + Copy {
     fn flag_conditions(&self) -> HashMap<Self::FlagClass, FlagCondition>;
 }
 
-pub trait Intrinsic: Sized + Clone + Copy {
+pub trait Intrinsic: Debug + Sized + Clone + Copy {
     fn name(&self) -> Cow<str>;
 
     /// Unique identifier for this `Intrinsic`.
@@ -677,7 +677,7 @@ impl<R: Register> RegisterStack for UnusedRegisterStack<R> {
 }
 
 /// Type for architrectures that do not use flags. Will panic if accessed as a flag.
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct UnusedFlag;
 
 impl Flag for UnusedFlag {

@@ -59,7 +59,7 @@ impl BackgroundTask {
         unsafe { BNIsBackgroundTaskFinished(self.handle) }
     }
 
-    pub fn get_progress_text(&self) -> BnString {
+    pub fn progress_text(&self) -> BnString {
         unsafe { BnString::from_raw(BNGetBackgroundTaskProgressText(self.handle)) }
     }
 
@@ -83,7 +83,6 @@ impl BackgroundTask {
         unsafe {
             let mut count = 0;
             let handles = BNGetRunningBackgroundTasks(&mut count);
-
             Array::new(handles, count, ())
         }
     }

@@ -85,7 +85,7 @@ impl MediumLevelILFunction {
         MediumLevelILFunction { handle: ssa }
     }
 
-    pub fn get_function(&self) -> Ref<Function> {
+    pub fn function(&self) -> Ref<Function> {
         unsafe {
             let func = BNGetMediumLevelILOwnerFunction(self.handle);
             Function::ref_from_raw(func)
@@ -102,7 +102,7 @@ impl MediumLevelILFunction {
         unsafe { Array::new(blocks, count, context) }
     }
 
-    pub fn get_var_definitions(&self, var: &Variable) -> Array<MediumLevelILInstruction> {
+    pub fn var_definitions(&self, var: &Variable) -> Array<MediumLevelILInstruction> {
         let mut count = 0;
         let raw_var = BNVariable::from(var);
         let raw_instr_idxs =
@@ -121,7 +121,7 @@ impl MediumLevelILFunction {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNCreateUserStackVariable(
-                self.get_function().handle,
+                self.function().handle,
                 offset,
                 &mut owned_raw_var_ty,
                 name.as_ref().as_ptr() as *const c_char,
@@ -130,7 +130,7 @@ impl MediumLevelILFunction {
     }
 
     pub fn delete_user_stack_var(self, offset: i64) {
-        unsafe { BNDeleteUserStackVariable(self.get_function().handle, offset) }
+        unsafe { BNDeleteUserStackVariable(self.function().handle, offset) }
     }
 
     pub fn create_user_var<'a, S: BnStrCompatible, C: Into<Conf<&'a Type>>>(
@@ -145,7 +145,7 @@ impl MediumLevelILFunction {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNCreateUserVariable(
-                self.get_function().handle,
+                self.function().handle,
                 &raw_var,
                 &mut owned_raw_var_ty,
                 name.as_ref().as_ptr() as *const _,
@@ -156,12 +156,12 @@ impl MediumLevelILFunction {
 
     pub fn delete_user_var(&self, var: &Variable) {
         let raw_var = BNVariable::from(var);
-        unsafe { BNDeleteUserVariable(self.get_function().handle, &raw_var) }
+        unsafe { BNDeleteUserVariable(self.function().handle, &raw_var) }
     }
 
     pub fn is_var_user_defined(&self, var: &Variable) -> bool {
         let raw_var = BNVariable::from(var);
-        unsafe { BNIsVariableUserDefined(self.get_function().handle, &raw_var) }
+        unsafe { BNIsVariableUserDefined(self.function().handle, &raw_var) }
     }
 
     /// Allows the user to specify a PossibleValueSet value for an MLIL
@@ -196,14 +196,14 @@ impl MediumLevelILFunction {
         value: PossibleValueSet,
     ) -> Result<(), ()> {
         let Some(_def_site) = self
-            .get_var_definitions(var)
+            .var_definitions(var)
             .iter()
             .find(|def| def.address == addr)
         else {
             // Error "No definition for Variable found at given address"
             return Err(());
         };
-        let function = self.get_function();
+        let function = self.function();
         let def_site = BNArchitectureAndAddress {
             arch: function.arch().handle,
             address: addr,
@@ -221,7 +221,7 @@ impl MediumLevelILFunction {
     /// * `def_addr` - Address of the definition site of the variable
     pub fn clear_user_var_value(&self, var: &Variable, addr: u64) -> Result<(), ()> {
         let Some(_var_def) = self
-            .get_var_definitions(var)
+            .var_definitions(var)
             .iter()
             .find(|site| site.address == addr)
         else {
@@ -229,7 +229,7 @@ impl MediumLevelILFunction {
             return Err(());
         };
 
-        let function = self.get_function();
+        let function = self.function();
         let raw_var = BNVariable::from(var);
         let def_site = BNArchitectureAndAddress {
             arch: function.arch().handle,
@@ -244,7 +244,7 @@ impl MediumLevelILFunction {
     /// Returns a Map of user current defined user variable values and their definition sites.
     pub fn user_var_values(&self) -> Array<UserVariableValue> {
         let mut count = 0;
-        let function = self.get_function();
+        let function = self.function();
         let var_values = unsafe { BNGetAllUserVariableValues(function.handle, &mut count) };
         assert!(!var_values.is_null());
         unsafe { Array::new(var_values, count, ()) }
@@ -269,7 +269,7 @@ impl MediumLevelILFunction {
         let name_c_str = name.as_ref();
         unsafe {
             BNCreateAutoStackVariable(
-                self.get_function().handle,
+                self.function().handle,
                 offset,
                 &mut owned_raw_var_ty,
                 name_c_str.as_ptr() as *const c_char,
@@ -278,7 +278,7 @@ impl MediumLevelILFunction {
     }
 
     pub fn delete_auto_stack_var(&self, offset: i64) {
-        unsafe { BNDeleteAutoStackVariable(self.get_function().handle, offset) }
+        unsafe { BNDeleteAutoStackVariable(self.function().handle, offset) }
     }
 
     pub fn create_auto_var<'a, S: BnStrCompatible, C: Into<Conf<&'a Type>>>(
@@ -294,7 +294,7 @@ impl MediumLevelILFunction {
         let name_c_str = name.as_ref();
         unsafe {
             BNCreateAutoVariable(
-                self.get_function().handle,
+                self.function().handle,
                 &raw_var,
                 &mut owned_raw_var_ty,
                 name_c_str.as_ptr() as *const c_char,
@@ -324,11 +324,7 @@ impl MediumLevelILFunction {
         let mut count = 0;
         let mut raw_var = BNVariable::from(var);
         let refs = unsafe {
-            BNGetMediumLevelILVariableReferences(
-                self.get_function().handle,
-                &mut raw_var,
-                &mut count,
-            )
+            BNGetMediumLevelILVariableReferences(self.function().handle, &mut raw_var, &mut count)
         };
         assert!(!refs.is_null());
         unsafe { Array::new(refs, count, ()) }
@@ -348,7 +344,7 @@ impl MediumLevelILFunction {
             .arch
             .map(|a| a.handle)
             .unwrap_or(std::ptr::null_mut());
-        let function = self.get_function();
+        let function = self.function();
         let mut count = 0;
 
         let refs = if let Some(length) = length {
@@ -596,7 +592,10 @@ unsafe impl RefCountable for MediumLevelILFunction {
 
 impl Debug for MediumLevelILFunction {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "<mlil func handle {:p}>", self.handle)
+        f.debug_struct("MediumLevelILFunction")
+            .field("arch", &self.function().arch())
+            .field("instruction_count", &self.instruction_count())
+            .finish()
     }
 }
 
@@ -606,13 +605,13 @@ unsafe impl Sync for MediumLevelILFunction {}
 impl Eq for MediumLevelILFunction {}
 impl PartialEq for MediumLevelILFunction {
     fn eq(&self, rhs: &Self) -> bool {
-        self.get_function().eq(&rhs.get_function())
+        self.function().eq(&rhs.function())
     }
 }
 
 impl Hash for MediumLevelILFunction {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.get_function().hash(state)
+        self.function().hash(state)
     }
 }
 

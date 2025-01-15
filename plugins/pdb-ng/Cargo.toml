@@ -17,7 +17,3 @@ regex = "1"
 
 [features]
 demo = []
-
-[profile.release]
-lto = true
-debug = "full"

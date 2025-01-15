@@ -23,9 +23,6 @@
 
 use binaryninjacore_sys::*;
 
-pub use binaryninjacore_sys::BNAnalysisState as AnalysisState;
-pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
-
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::basicblock::BasicBlock;
 use crate::component::{Component, ComponentBuilder, IntoComponentGuid};
@@ -60,10 +57,13 @@ use std::ffi::{c_char, c_void};
 use std::ops::Range;
 use std::path::Path;
 use std::ptr::NonNull;
-use std::{ops, result, slice};
+use std::{result, slice};
 // TODO : general reorg of modules related to bv
 
 pub type Result<R> = result::Result<R, ()>;
+pub type BinaryViewEventType = BNBinaryViewEventType;
+pub type AnalysisState = BNAnalysisState;
+pub type ModificationStatus = BNModificationStatus;
 
 #[allow(clippy::len_without_is_empty)]
 pub trait BinaryViewBase: AsRef<BinaryView> {
@@ -208,7 +208,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn raw_view(&self) -> Option<Ref<BinaryView>> {
-        self.file().get_view_of_type("Raw")
+        self.file().view_of_type("Raw")
     }
 
     fn view_type(&self) -> BnString {
@@ -444,7 +444,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn symbols_in_range(&self, range: ops::Range<u64>) -> Array<Symbol> {
+    fn symbols_in_range(&self, range: Range<u64>) -> Array<Symbol> {
         unsafe {
             let mut count = 0;
             let len = range.end.wrapping_sub(range.start);
@@ -474,7 +474,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn symbols_of_type_in_range(&self, ty: SymbolType, range: ops::Range<u64>) -> Array<Symbol> {
+    fn symbols_of_type_in_range(&self, ty: SymbolType, range: Range<u64>) -> Array<Symbol> {
         unsafe {
             let mut count = 0;
             let len = range.end.wrapping_sub(range.start);
@@ -547,7 +547,6 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let mut count = 0;
             let vars = BNGetDataVariables(self.as_ref().handle, &mut count);
-
             Array::new(vars, count, ())
         }
     }
@@ -746,7 +745,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_type_by_name<T: Into<QualifiedName>>(&self, name: T) -> Option<Ref<Type>> {
+    fn type_by_name<T: Into<QualifiedName>>(&self, name: T) -> Option<Ref<Type>> {
         let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
             let type_handle = BNGetAnalysisTypeByName(self.as_ref().handle, &mut raw_name);
@@ -758,7 +757,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_type_by_ref(&self, ref_: &NamedTypeReference) -> Option<Ref<Type>> {
+    fn type_by_ref(&self, ref_: &NamedTypeReference) -> Option<Ref<Type>> {
         unsafe {
             let type_handle = BNGetAnalysisTypeByRef(self.as_ref().handle, ref_.handle);
             if type_handle.is_null() {
@@ -768,7 +767,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_type_by_id<S: BnStrCompatible>(&self, id: S) -> Option<Ref<Type>> {
+    fn type_by_id<S: BnStrCompatible>(&self, id: S) -> Option<Ref<Type>> {
         unsafe {
             let id_str = id.into_bytes_with_nul();
             let type_handle =
@@ -780,7 +779,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_type_name_by_id<S: BnStrCompatible>(&self, id: S) -> Option<QualifiedName> {
+    fn type_name_by_id<S: BnStrCompatible>(&self, id: S) -> Option<QualifiedName> {
         unsafe {
             let id_str = id.into_bytes_with_nul();
             let name_handle =
@@ -794,7 +793,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_type_id<T: Into<QualifiedName>>(&self, name: T) -> Option<BnString> {
+    fn type_id_by_name<T: Into<QualifiedName>>(&self, name: T) -> Option<BnString> {
         let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
             let id_cstr = BNGetAnalysisTypeId(self.as_ref().handle, &mut raw_name);
@@ -1170,9 +1169,8 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     /// Get a tag type by its name.
-    fn get_tag_type<S: BnStrCompatible>(&self, name: S) -> Option<Ref<TagType>> {
+    fn tag_type_by_name<S: BnStrCompatible>(&self, name: S) -> Option<Ref<TagType>> {
         let name = name.into_bytes_with_nul();
-
         unsafe {
             let handle = BNGetTagType(self.as_ref().handle, name.as_ref().as_ptr() as *mut _);
             if handle.is_null() {
@@ -1185,7 +1183,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// Get a tag by its id.
     ///
     /// Note this does not tell you anything about where it is used.
-    fn get_tag<S: BnStrCompatible>(&self, id: S) -> Option<Ref<Tag>> {
+    fn tag_by_id<S: BnStrCompatible>(&self, id: S) -> Option<Ref<Tag>> {
         let id = id.into_bytes_with_nul();
         unsafe {
             let handle = BNGetTag(self.as_ref().handle, id.as_ref().as_ptr() as *mut _);
@@ -1317,7 +1315,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     /// Retrieves a list of [CodeReference]s pointing to a given address.
-    fn get_code_refs(&self, addr: u64) -> Array<CodeReference> {
+    fn code_refs_to_addr(&self, addr: u64) -> Array<CodeReference> {
         unsafe {
             let mut count = 0;
             let handle = BNGetCodeReferences(self.as_ref().handle, addr, &mut count);
@@ -1325,29 +1323,8 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    /// Retrieves a list of addresses pointed to by a given address.
-    fn get_code_refs_from(&self, addr: u64, func: Option<&Function>) -> Vec<u64> {
-        unsafe {
-            let mut count = 0;
-            // TODO: We could have done a [CodeReference] however it seems to be poorly written.
-            // TODO: It uses manually drop on a ref that only gets dropped in the array, insane behavior.
-            // TODO: For now just construct it manually.
-            let mut src = BNReferenceSource {
-                func: func.map(|f| f.handle).unwrap_or(std::ptr::null_mut()),
-                arch: func
-                    .map(|f| f.arch().handle)
-                    .unwrap_or(std::ptr::null_mut()),
-                addr,
-            };
-            let addresses = BNGetCodeReferencesFrom(self.as_ref().handle, &mut src, &mut count);
-            let res = std::slice::from_raw_parts(addresses, count).to_vec();
-            BNFreeAddressList(addresses);
-            res
-        }
-    }
-
     /// Retrieves a list of [CodeReference]s pointing into a given [Range].
-    fn get_code_refs_in_range(&self, range: Range<u64>) -> Array<CodeReference> {
+    fn code_refs_into_range(&self, range: Range<u64>) -> Array<CodeReference> {
         unsafe {
             let mut count = 0;
             let handle = BNGetCodeReferencesInRange(
@@ -1360,8 +1337,23 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    /// Retrieves a list of addresses pointed to by a given address.
+    fn code_refs_from_addr(&self, addr: u64, func: Option<&Function>) -> Vec<u64> {
+        unsafe {
+            let mut count = 0;
+            let code_ref =
+                CodeReference::new(addr, func.map(|f| f.to_owned()), func.map(|f| f.arch()));
+            let mut raw_code_ref = CodeReference::into_owned_raw(&code_ref);
+            let addresses =
+                BNGetCodeReferencesFrom(self.as_ref().handle, &mut raw_code_ref, &mut count);
+            let res = std::slice::from_raw_parts(addresses, count).to_vec();
+            BNFreeAddressList(addresses);
+            res
+        }
+    }
+
     /// Retrieves a list of [DataReference]s pointing to a given address.
-    fn get_data_refs(&self, addr: u64) -> Array<DataReference> {
+    fn data_refs_to_addr(&self, addr: u64) -> Array<DataReference> {
         unsafe {
             let mut count = 0;
             let handle = BNGetDataReferences(self.as_ref().handle, addr, &mut count);
@@ -1369,17 +1361,8 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    /// Retrieves a list of [DataReference]s originating from a given address.
-    fn get_data_refs_from(&self, addr: u64) -> Array<DataReference> {
-        unsafe {
-            let mut count = 0;
-            let handle = BNGetDataReferencesFrom(self.as_ref().handle, addr, &mut count);
-            Array::new(handle, count, ())
-        }
-    }
-
     /// Retrieves a list of [DataReference]s pointing into a given [Range].
-    fn get_data_refs_in_range(&self, range: Range<u64>) -> Array<DataReference> {
+    fn data_refs_into_range(&self, range: Range<u64>) -> Array<DataReference> {
         unsafe {
             let mut count = 0;
             let handle = BNGetDataReferencesInRange(
@@ -1392,8 +1375,17 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    /// Retrieves a list of [DataReference]s originating from a given address.
+    fn data_refs_from_addr(&self, addr: u64) -> Array<DataReference> {
+        unsafe {
+            let mut count = 0;
+            let handle = BNGetDataReferencesFrom(self.as_ref().handle, addr, &mut count);
+            Array::new(handle, count, ())
+        }
+    }
+
     /// Retrieves a list of [CodeReference]s for locations in code that use a given named type.
-    fn get_code_refs_for_type<T: Into<QualifiedName>>(&self, name: T) -> Array<CodeReference> {
+    fn code_refs_using_type_name<T: Into<QualifiedName>>(&self, name: T) -> Array<CodeReference> {
         let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
             let mut count = 0;
@@ -1404,8 +1396,8 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    /// Retrieves a list of [DataReference]s instances of a given named type in data.
-    fn get_data_refs_for_type<T: Into<QualifiedName>>(&self, name: T) -> Array<DataReference> {
+    /// Retrieves a list of [DataReference]s for locations in data that use a given named type.
+    fn data_refs_using_type_name<T: Into<QualifiedName>>(&self, name: T) -> Array<DataReference> {
         let mut raw_name = QualifiedName::into_raw(name.into());
         unsafe {
             let mut count = 0;
@@ -1416,7 +1408,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_relocations_at(&self, addr: u64) -> Array<Relocation> {
+    fn relocations_at(&self, addr: u64) -> Array<Relocation> {
         unsafe {
             let mut count = 0;
             let handle = BNGetRelocationsAt(self.as_ref().handle, addr, &mut count);
@@ -1424,7 +1416,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_relocation_ranges(&self) -> Vec<Range<u64>> {
+    fn relocation_ranges(&self) -> Vec<Range<u64>> {
         let ranges = unsafe {
             let mut count = 0;
             let reloc_ranges_ptr = BNGetRelocationRanges(self.as_ref().handle, &mut count);
@@ -1939,8 +1931,6 @@ impl std::fmt::Debug for BinaryView {
 pub trait BinaryViewEventHandler: 'static + Sync {
     fn on_event(&self, binary_view: &BinaryView);
 }
-
-pub type BinaryViewEventType = BNBinaryViewEventType;
 
 /// Registers an event listener for binary view events.
 ///

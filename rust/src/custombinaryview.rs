@@ -440,7 +440,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
 
         let view_name = view_type.name();
 
-        if let Some(bv) = file.get_view_of_type(view_name.as_str()) {
+        if let Some(bv) = file.view_of_type(view_name.as_str()) {
             // while it seems to work most of the time, you can get really unlucky
             // if the a free of the existing view of the same type kicks off while
             // BNCreateBinaryViewOfType is still running. the freeObject callback

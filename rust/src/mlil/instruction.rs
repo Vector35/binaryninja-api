@@ -748,7 +748,7 @@ impl MediumLevelILInstruction {
 
             ConstData(op) => Lifted::ConstData(LiftedConstData {
                 constant_data: ConstantData::new(
-                    self.function.get_function(),
+                    self.function.function(),
                     RegisterValue {
                         // TODO: Replace with a From<u32> for RegisterValueType.
                         // TODO: We might also want to change the type of `op.constant_data_kind`
@@ -912,7 +912,7 @@ impl MediumLevelILInstruction {
                     .vars()
                     .collect(),
                 intrinsic: CoreIntrinsic::new(
-                    self.function.get_function().arch(),
+                    self.function.function().arch(),
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Valid intrinsic"),
@@ -935,7 +935,7 @@ impl MediumLevelILInstruction {
                     .ssa_vars()
                     .collect(),
                 intrinsic: CoreIntrinsic::new(
-                    self.function.get_function().arch(),
+                    self.function.function().arch(),
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Valid intrinsic"),
@@ -1053,7 +1053,7 @@ impl MediumLevelILInstruction {
         assert!(unsafe {
             BNGetMediumLevelILExprText(
                 self.function.handle,
-                self.function.get_function().arch().handle,
+                self.function.function().arch().handle,
                 self.index,
                 &mut tokens,
                 &mut count,

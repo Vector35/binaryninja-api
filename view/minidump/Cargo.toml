@@ -11,7 +11,3 @@ binaryninja = { path = "../../rust" }
 binaryninjacore-sys = { path="../../rust/binaryninjacore-sys" }
 log = "0.4.20"
 minidump = "0.23.0"
-
-[profile.release]
-lto = true
-debug = "full"

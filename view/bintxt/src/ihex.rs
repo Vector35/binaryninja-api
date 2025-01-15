@@ -1,15 +1,15 @@
-use binaryninja::binaryview::*;
-use binaryninja::custombinaryview::*;
-use binaryninja::rc::Ref;
-use binaryninja::segment::SegmentBuilder;
-use ihex::Record;
-use binaryninja::platform::Platform;
-use binaryninja::settings::Settings;
 use crate::segment_after_address;
 use crate::segment_from_address;
 use crate::sort_and_merge_segments;
 use crate::MergedSegment;
 use crate::UnmergedSegment;
+use binaryninja::binaryview::*;
+use binaryninja::custombinaryview::*;
+use binaryninja::platform::Platform;
+use binaryninja::rc::Ref;
+use binaryninja::segment::SegmentBuilder;
+use binaryninja::settings::Settings;
+use ihex::Record;
 
 fn parse_ihex(string: &str) -> Result<(Vec<u8>, IHexViewData)> {
     let mut reader = ihex::Reader::new(&string);
@@ -216,7 +216,7 @@ unsafe impl CustomBinaryView for IHexView {
                     .contains_code(true),
             );
         }
-        
+
         // TODO: Because we detached from the raw view this setting will never be set.
         let _ = self.core.load_settings(self.type_name()).map(|s| {
             let platform_name = s.get_string("loader.platform", Some(&self.core), None);
@@ -224,7 +224,7 @@ unsafe impl CustomBinaryView for IHexView {
                 self.set_default_platform(&platform);
             }
         });
-        
+
         Ok(())
     }
 }

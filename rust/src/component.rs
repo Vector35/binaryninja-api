@@ -205,7 +205,7 @@ impl Component {
     /// Get data variables referenced by this component
     ///
     /// * `recursive` - Get all DataVariables referenced by this component and subcomponents.
-    pub fn get_referenced_data_variables(&self, recursive: bool) -> Array<DataVariable> {
+    pub fn referenced_data_variables(&self, recursive: bool) -> Array<DataVariable> {
         let mut count = 0;
         let result = if recursive {
             unsafe { BNComponentGetReferencedDataVariablesRecursive(self.as_raw(), &mut count) }
@@ -218,7 +218,7 @@ impl Component {
     /// Get Types referenced by this component
     ///
     /// * `recursive` - Get all Types referenced by this component and subcomponents.
-    pub fn get_referenced_types(&self, recursive: bool) -> Array<ComponentReferencedType> {
+    pub fn referenced_types(&self, recursive: bool) -> Array<ComponentReferencedType> {
         let mut count = 0;
         let result = if recursive {
             unsafe { BNComponentGetReferencedTypesRecursive(self.as_raw(), &mut count) }

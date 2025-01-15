@@ -20,10 +20,7 @@ use crate::architecture::{
     Flag, FlagClass, FlagCondition, FlagGroup, FlagRole, FlagWrite, Intrinsic,
 };
 use crate::function::Location;
-use crate::llil::{
-    Expression, ExpressionIndex, ExpressionResultType, LiftedExpr, LiftedNonSSA, Lifter,
-    LowLevelILFunction, Mutable, NonSSA, Register, ValueExpr, VoidExpr,
-};
+use crate::llil::{Expression, ExpressionIndex, ExpressionResultType, LiftedExpr, LiftedNonSSA, Lifter, LowLevelILFunction, Mutable, NonSSA, Register, ValueExpr, VoidExpr};
 use binaryninjacore_sys::{BNAddLowLevelILLabelForAddress, BNLowLevelILOperation};
 use binaryninjacore_sys::{BNLowLevelILLabel, BNRegisterOrConstant};
 
@@ -554,6 +551,7 @@ impl<'a, A: 'a + Architecture> LiftableWithSize<'a, A>
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
         #[cfg(debug_assertions)]
         {
+            use crate::llil::ExpressionHandler;
             if let Some(expr_size) = expr.info().size() {
                 if expr_size != _size {
                     log::warn!(

@@ -418,7 +418,7 @@ impl Function {
         unsafe { Array::new(lines, count, ()) }
     }
 
-    pub fn get_variable_name(&self, var: &Variable) -> BnString {
+    pub fn variable_name(&self, var: &Variable) -> BnString {
         unsafe {
             let raw_var = BNVariable::from(var);
             let raw_name = BNGetVariableName(self.handle, &raw_var);
@@ -1374,7 +1374,7 @@ impl Function {
     pub fn function_tags(&self, auto: Option<bool>, tag_type: Option<&str>) -> Array<Tag> {
         let mut count = 0;
 
-        let tag_type = tag_type.map(|tag_type| self.view().get_tag_type(tag_type));
+        let tag_type = tag_type.map(|tag_type| self.view().tag_type_by_name(tag_type));
 
         let tags = unsafe {
             match (tag_type, auto) {
@@ -2156,7 +2156,7 @@ impl Function {
     /// Returns a list of ReferenceSource objects corresponding to the addresses
     /// in functions which reference this function
     pub fn caller_sites(&self) -> Array<CodeReference> {
-        self.view().get_code_refs(self.start())
+        self.view().code_refs_to_addr(self.start())
     }
 
     /// Calling convention used by the function

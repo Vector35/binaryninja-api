@@ -15,22 +15,20 @@
 use binaryninjacore_sys::BNGetLowLevelILByIndex;
 use binaryninjacore_sys::BNLowLevelILInstruction;
 
+use super::operation;
+use super::operation::Operation;
+use super::VisitorAction;
+use super::*;
+use crate::architecture::Architecture;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
-use super::operation;
-use super::operation::Operation;
-use super::*;
-
-use crate::architecture::Architecture;
-use crate::architecture::RegisterInfo;
-
-// used as a marker for Expressions that can produce a value
+/// Used as a marker for an [`Expression`] that **can** produce a value.
 #[derive(Copy, Clone, Debug)]
 pub struct ValueExpr;
 
-// used as a marker for Expressions that can not produce a value
+/// Used as a marker for an [`Expression`] that can **not** produce a value.
 #[derive(Copy, Clone, Debug)]
 pub struct VoidExpr;
 
@@ -45,6 +43,19 @@ impl Display for ExpressionIndex {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("{}", self.0))
     }
+}
+
+pub trait ExpressionHandler<'func, A, M, F>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn info(&self) -> ExprInfo<'func, A, M, F>;
+
+    fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
+    where
+        T: FnMut(&Expression<'func, A, M, F, ValueExpr>) -> VisitorAction;
 }
 
 pub struct Expression<'func, A, M, F, R>
@@ -72,6 +83,7 @@ where
         function: &'func LowLevelILFunction<A, M, F>,
         index: ExpressionIndex,
     ) -> Self {
+        // TODO: Validate expression here?
         Self {
             function,
             index,
@@ -80,305 +92,115 @@ where
     }
 }
 
-impl<'func, A, M, V> fmt::Debug for Expression<'func, A, M, NonSSA<V>, ValueExpr>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    V: NonSSAVariant,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let op_info = self.info();
-        write!(f, "<expr {}: {:?}>", self.index, op_info)
-    }
-}
-
-fn common_info<'func, A, M, F>(
-    function: &'func LowLevelILFunction<A, M, F>,
-    op: BNLowLevelILInstruction,
-) -> ExprInfo<'func, A, M, F>
+impl<'func, A, M, F, R> fmt::Debug for Expression<'func, A, M, F, R>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
     F: FunctionForm,
+    R: ExpressionResultType,
 {
-    use binaryninjacore_sys::BNLowLevelILOperation::*;
-
-    match op.operation {
-        LLIL_CONST => ExprInfo::Const(Operation::new(function, op)),
-        LLIL_CONST_PTR => ExprInfo::ConstPtr(Operation::new(function, op)),
-
-        LLIL_EXTERN_PTR => ExprInfo::ExternPtr(Operation::new(function, op)),
-
-        LLIL_ADD => ExprInfo::Add(Operation::new(function, op)),
-        LLIL_ADC => ExprInfo::Adc(Operation::new(function, op)),
-        LLIL_SUB => ExprInfo::Sub(Operation::new(function, op)),
-        LLIL_SBB => ExprInfo::Sbb(Operation::new(function, op)),
-        LLIL_AND => ExprInfo::And(Operation::new(function, op)),
-        LLIL_OR => ExprInfo::Or(Operation::new(function, op)),
-        LLIL_XOR => ExprInfo::Xor(Operation::new(function, op)),
-        LLIL_LSL => ExprInfo::Lsl(Operation::new(function, op)),
-        LLIL_LSR => ExprInfo::Lsr(Operation::new(function, op)),
-        LLIL_ASR => ExprInfo::Asr(Operation::new(function, op)),
-        LLIL_ROL => ExprInfo::Rol(Operation::new(function, op)),
-        LLIL_RLC => ExprInfo::Rlc(Operation::new(function, op)),
-        LLIL_ROR => ExprInfo::Ror(Operation::new(function, op)),
-        LLIL_RRC => ExprInfo::Rrc(Operation::new(function, op)),
-        LLIL_MUL => ExprInfo::Mul(Operation::new(function, op)),
-
-        LLIL_MULU_DP => ExprInfo::MuluDp(Operation::new(function, op)),
-        LLIL_MULS_DP => ExprInfo::MulsDp(Operation::new(function, op)),
-
-        LLIL_DIVU => ExprInfo::Divu(Operation::new(function, op)),
-        LLIL_DIVS => ExprInfo::Divs(Operation::new(function, op)),
-
-        LLIL_DIVU_DP => ExprInfo::DivuDp(Operation::new(function, op)),
-        LLIL_DIVS_DP => ExprInfo::DivsDp(Operation::new(function, op)),
-
-        LLIL_MODU => ExprInfo::Modu(Operation::new(function, op)),
-        LLIL_MODS => ExprInfo::Mods(Operation::new(function, op)),
-
-        LLIL_MODU_DP => ExprInfo::ModuDp(Operation::new(function, op)),
-        LLIL_MODS_DP => ExprInfo::ModsDp(Operation::new(function, op)),
-
-        LLIL_NEG => ExprInfo::Neg(Operation::new(function, op)),
-        LLIL_NOT => ExprInfo::Not(Operation::new(function, op)),
-
-        LLIL_SX => ExprInfo::Sx(Operation::new(function, op)),
-        LLIL_ZX => ExprInfo::Zx(Operation::new(function, op)),
-        LLIL_LOW_PART => ExprInfo::LowPart(Operation::new(function, op)),
-
-        LLIL_REG_SPLIT => ExprInfo::RegSplit(Operation::new(function, op)),
-
-        LLIL_CMP_E => ExprInfo::CmpE(Operation::new(function, op)),
-        LLIL_CMP_NE => ExprInfo::CmpNe(Operation::new(function, op)),
-        LLIL_CMP_SLT => ExprInfo::CmpSlt(Operation::new(function, op)),
-        LLIL_CMP_ULT => ExprInfo::CmpUlt(Operation::new(function, op)),
-        LLIL_CMP_SLE => ExprInfo::CmpSle(Operation::new(function, op)),
-        LLIL_CMP_ULE => ExprInfo::CmpUle(Operation::new(function, op)),
-        LLIL_CMP_SGE => ExprInfo::CmpSge(Operation::new(function, op)),
-        LLIL_CMP_UGE => ExprInfo::CmpUge(Operation::new(function, op)),
-        LLIL_CMP_SGT => ExprInfo::CmpSgt(Operation::new(function, op)),
-        LLIL_CMP_UGT => ExprInfo::CmpUgt(Operation::new(function, op)),
-
-        LLIL_BOOL_TO_INT => ExprInfo::BoolToInt(Operation::new(function, op)),
-
-        LLIL_FADD => ExprInfo::Fadd(Operation::new(function, op)),
-        LLIL_FSUB => ExprInfo::Fsub(Operation::new(function, op)),
-        LLIL_FMUL => ExprInfo::Fmul(Operation::new(function, op)),
-        LLIL_FDIV => ExprInfo::Fdiv(Operation::new(function, op)),
-
-        LLIL_FSQRT => ExprInfo::Fsqrt(Operation::new(function, op)),
-        LLIL_FNEG => ExprInfo::Fneg(Operation::new(function, op)),
-        LLIL_FABS => ExprInfo::Fabs(Operation::new(function, op)),
-        LLIL_FLOAT_TO_INT => ExprInfo::FloatToInt(Operation::new(function, op)),
-        LLIL_INT_TO_FLOAT => ExprInfo::IntToFloat(Operation::new(function, op)),
-        LLIL_FLOAT_CONV => ExprInfo::FloatConv(Operation::new(function, op)),
-        LLIL_ROUND_TO_INT => ExprInfo::RoundToInt(Operation::new(function, op)),
-        LLIL_FLOOR => ExprInfo::Floor(Operation::new(function, op)),
-        LLIL_CEIL => ExprInfo::Ceil(Operation::new(function, op)),
-        LLIL_FTRUNC => ExprInfo::Ftrunc(Operation::new(function, op)),
-
-        LLIL_FCMP_E => ExprInfo::FcmpE(Operation::new(function, op)),
-        LLIL_FCMP_NE => ExprInfo::FcmpNE(Operation::new(function, op)),
-        LLIL_FCMP_LT => ExprInfo::FcmpLT(Operation::new(function, op)),
-        LLIL_FCMP_LE => ExprInfo::FcmpLE(Operation::new(function, op)),
-        LLIL_FCMP_GT => ExprInfo::FcmpGT(Operation::new(function, op)),
-        LLIL_FCMP_GE => ExprInfo::FcmpGE(Operation::new(function, op)),
-        LLIL_FCMP_O => ExprInfo::FcmpO(Operation::new(function, op)),
-        LLIL_FCMP_UO => ExprInfo::FcmpUO(Operation::new(function, op)),
-
-        LLIL_UNIMPL => ExprInfo::Unimpl(Operation::new(function, op)),
-        LLIL_UNIMPL_MEM => ExprInfo::UnimplMem(Operation::new(function, op)),
-
-        // TODO TEST_BIT ADD_OVERFLOW LLIL_REG_STACK_PUSH LLIL_REG_STACK_POP
-        _ => {
-            #[cfg(debug_assertions)]
-            {
-                log::error!(
-                    "Got unexpected operation {:?} in value expr at 0x{:x}",
-                    op.operation,
-                    op.address
-                );
-            }
-
-            ExprInfo::Undef(Operation::new(function, op))
-        }
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.debug_struct("Expression")
+            .field("index", &self.index)
+            .finish()
     }
 }
 
-use super::VisitorAction;
-
-macro_rules! visit {
-    ($f:expr, $($e:expr),*) => {
-        if let VisitorAction::Halt = $f($($e,)*) {
-            return VisitorAction::Halt;
-        }
-    }
-}
-
-fn common_visit<'func, A, M, F, CB>(info: &ExprInfo<'func, A, M, F>, f: &mut CB) -> VisitorAction
+impl<'func, A, M> ExpressionHandler<'func, A, M, SSA> for Expression<'func, A, M, SSA, ValueExpr>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
-    F: FunctionForm,
-    CB: FnMut(&Expression<'func, A, M, F, ValueExpr>) -> VisitorAction,
 {
-    use self::ExprInfo::*;
-
-    match *info {
-        CmpE(ref op) | CmpNe(ref op) | CmpSlt(ref op) | CmpUlt(ref op) | CmpSle(ref op)
-        | CmpUle(ref op) | CmpSge(ref op) | CmpUge(ref op) | CmpSgt(ref op) | CmpUgt(ref op)
-        | FcmpE(ref op) | FcmpNE(ref op) | FcmpLT(ref op) | FcmpLE(ref op) | FcmpGE(ref op)
-        | FcmpGT(ref op) | FcmpO(ref op) | FcmpUO(ref op) => {
-            visit!(f, &op.left());
-            visit!(f, &op.right());
-        }
-
-        Adc(ref op) | Sbb(ref op) | Rlc(ref op) | Rrc(ref op) => {
-            visit!(f, &op.left());
-            visit!(f, &op.right());
-            visit!(f, &op.carry());
-        }
-
-        Add(ref op) | Sub(ref op) | And(ref op) | Or(ref op) | Xor(ref op) | Lsl(ref op)
-        | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op) | Mul(ref op) | MulsDp(ref op)
-        | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op) | Mods(ref op)
-        | Fadd(ref op) | Fsub(ref op) | Fmul(ref op) | Fdiv(ref op) => {
-            visit!(f, &op.left());
-            visit!(f, &op.right());
-        }
-
-        DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op) => {
-            visit!(f, &op.high());
-            visit!(f, &op.low());
-            visit!(f, &op.right());
-        }
-
-        Neg(ref op) | Not(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
-        | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op) | FloatToInt(ref op)
-        | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op) | Floor(ref op)
-        | Ceil(ref op) | Ftrunc(ref op) => {
-            visit!(f, &op.operand());
-        }
-
-        UnimplMem(ref op) => {
-            visit!(f, &op.mem_expr());
-        }
-
-        _ => {}
-    };
-
-    VisitorAction::Sibling
-}
-
-impl<'func, A, M, V> Expression<'func, A, M, NonSSA<V>, ValueExpr>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    V: NonSSAVariant,
-{
-    pub(crate) unsafe fn info_from_op(
-        &self,
-        op: BNLowLevelILInstruction,
-    ) -> ExprInfo<'func, A, M, NonSSA<V>> {
+    fn info(&self) -> ExprInfo<'func, A, M, SSA> {
+        #[allow(unused_imports)]
         use binaryninjacore_sys::BNLowLevelILOperation::*;
-
+        let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
+        #[allow(clippy::match_single_binding)]
         match op.operation {
-            LLIL_LOAD => ExprInfo::Load(Operation::new(self.function, op)),
-            LLIL_POP => ExprInfo::Pop(Operation::new(self.function, op)),
-            LLIL_REG => ExprInfo::Reg(Operation::new(self.function, op)),
-            LLIL_REG_SPLIT => ExprInfo::RegSplit(Operation::new(self.function, op)),
-            LLIL_FLAG => ExprInfo::Flag(Operation::new(self.function, op)),
-            LLIL_FLAG_BIT => ExprInfo::FlagBit(Operation::new(self.function, op)),
-            LLIL_FLAG_COND => ExprInfo::FlagCond(Operation::new(self.function, op)), // TODO lifted only
-            LLIL_FLAG_GROUP => ExprInfo::FlagGroup(Operation::new(self.function, op)), // TODO lifted only
-            _ => common_info(self.function, op),
+            // Any invalid ops for SSA will be checked here.
+            // SAFETY: We have checked for illegal operations.
+            _ => unsafe { ExprInfo::from_raw(self.function, op) },
         }
     }
 
-    pub fn info(&self) -> ExprInfo<'func, A, M, NonSSA<V>> {
-        unsafe {
-            let op = BNGetLowLevelILByIndex(self.function.handle, self.index.0);
-            self.info_from_op(op)
-        }
-    }
-
-    pub fn visit_tree<F>(&self, f: &mut F) -> VisitorAction
+    fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
     where
-        F: FnMut(&Self, &ExprInfo<'func, A, M, NonSSA<V>>) -> VisitorAction,
+        T: FnMut(&Expression<'func, A, M, SSA, ValueExpr>) -> VisitorAction,
     {
-        use self::ExprInfo::*;
-
+        // First visit the current expression.
         let info = self.info();
-
-        match f(self, &info) {
+        match f(self) {
             VisitorAction::Descend => {}
             action => return action,
-        };
-
-        match info {
-            Load(ref op) => visit!(Self::visit_tree, &op.source_mem_expr(), f),
-            _ => {
-                let mut fb = |e: &Self| e.visit_tree(f);
-                visit!(common_visit, &info, &mut fb);
-            }
-        };
-
-        VisitorAction::Sibling
+        }
+        // Recursively visit sub expressions.
+        info.visit_sub_expressions(|e| e.visit_tree(f))
     }
 }
 
-impl<'func, A, M> Expression<'func, A, M, SSA, ValueExpr>
+impl<'func, A, M> ExpressionHandler<'func, A, M, NonSSA<LiftedNonSSA>>
+    for Expression<'func, A, M, NonSSA<LiftedNonSSA>, ValueExpr>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
 {
-    pub(crate) unsafe fn info_from_op(
-        &self,
-        op: BNLowLevelILInstruction,
-    ) -> ExprInfo<'func, A, M, SSA> {
+    fn info(&self) -> ExprInfo<'func, A, M, NonSSA<LiftedNonSSA>> {
+        #[allow(unused_imports)]
         use binaryninjacore_sys::BNLowLevelILOperation::*;
-
+        let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
+        #[allow(clippy::match_single_binding)]
         match op.operation {
-            LLIL_LOAD_SSA => ExprInfo::Load(Operation::new(self.function, op)),
-            LLIL_REG_SSA | LLIL_REG_SSA_PARTIAL => ExprInfo::Reg(Operation::new(self.function, op)),
-            LLIL_REG_SPLIT_SSA => ExprInfo::RegSplit(Operation::new(self.function, op)),
-            LLIL_FLAG_SSA => ExprInfo::Flag(Operation::new(self.function, op)),
-            LLIL_FLAG_BIT_SSA => ExprInfo::FlagBit(Operation::new(self.function, op)),
-            _ => common_info(self.function, op),
+            // Any invalid ops for Lifted IL will be checked here.
+            // SAFETY: We have checked for illegal operations.
+            _ => unsafe { ExprInfo::from_raw(self.function, op) },
         }
     }
 
-    pub fn info(&self) -> ExprInfo<'func, A, M, SSA> {
-        unsafe {
-            let op = BNGetLowLevelILByIndex(self.function.handle, self.index.0);
-            self.info_from_op(op)
-        }
-    }
-
-    pub fn visit_tree<F>(&self, f: &mut F) -> VisitorAction
+    fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
     where
-        F: FnMut(&Self, &ExprInfo<'func, A, M, SSA>) -> VisitorAction,
+        T: FnMut(&Expression<'func, A, M, NonSSA<LiftedNonSSA>, ValueExpr>) -> VisitorAction,
     {
-        use self::ExprInfo::*;
-
+        // First visit the current expression.
         let info = self.info();
-
-        match f(self, &info) {
+        match f(self) {
             VisitorAction::Descend => {}
             action => return action,
-        };
+        }
+        // Recursively visit sub expressions.
+        info.visit_sub_expressions(|e| e.visit_tree(f))
+    }
+}
 
-        match info {
-            // TODO ssa
-            Load(ref _op) => {} //visit!(Self::visit_tree, &op.source_mem_expr(), f),
-            _ => {
-                let mut fb = |e: &Self| e.visit_tree(f);
-                visit!(common_visit, &info, &mut fb);
-            }
-        };
+impl<'func, A, M> ExpressionHandler<'func, A, M, NonSSA<RegularNonSSA>>
+    for Expression<'func, A, M, NonSSA<RegularNonSSA>, ValueExpr>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+{
+    fn info(&self) -> ExprInfo<'func, A, M, NonSSA<RegularNonSSA>> {
+        use binaryninjacore_sys::BNLowLevelILOperation::*;
+        let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
+        match op.operation {
+            // Any invalid ops for Non-Lifted IL will be checked here.
+            LLIL_FLAG_COND => unreachable!("LLIL_FLAG_COND is only valid in Lifted IL"),
+            LLIL_FLAG_GROUP => unreachable!("LLIL_FLAG_GROUP is only valid in Lifted IL"),
+            // SAFETY: We have checked for illegal operations.
+            _ => unsafe { ExprInfo::from_raw(self.function, op) },
+        }
+    }
 
-        VisitorAction::Sibling
+    fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
+    where
+        T: FnMut(&Expression<'func, A, M, NonSSA<RegularNonSSA>, ValueExpr>) -> VisitorAction,
+    {
+        // First visit the current expression.
+        let info = self.info();
+        match f(self) {
+            VisitorAction::Descend => {}
+            action => return action,
+        }
+        // Recursively visit sub expressions.
+        info.visit_sub_expressions(|e| e.visit_tree(f))
     }
 }
 
@@ -390,6 +212,7 @@ where
     // TODO possible values
 }
 
+#[derive(Debug)]
 pub enum ExprInfo<'func, A, M, F>
 where
     A: 'func + Architecture,
@@ -443,8 +266,10 @@ where
     Zx(Operation<'func, A, M, F, operation::UnaryOp>),
     LowPart(Operation<'func, A, M, F, operation::UnaryOp>),
 
-    FlagCond(Operation<'func, A, M, F, operation::FlagCond>),
-    FlagGroup(Operation<'func, A, M, F, operation::FlagGroup>),
+    // Valid only in Lifted IL
+    FlagCond(Operation<'func, A, M, NonSSA<LiftedNonSSA>, operation::FlagCond>),
+    // Valid only in Lifted IL
+    FlagGroup(Operation<'func, A, M, NonSSA<LiftedNonSSA>, operation::FlagGroup>),
 
     CmpE(Operation<'func, A, M, F, operation::Condition>),
     CmpNe(Operation<'func, A, M, F, operation::Condition>),
@@ -497,6 +322,119 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
+    // TODO: Document what "unchecked" means and how to consume this safely.
+    pub(crate) unsafe fn from_raw(
+        function: &'func LowLevelILFunction<A, M, F>,
+        op: BNLowLevelILInstruction,
+    ) -> Self {
+        use binaryninjacore_sys::BNLowLevelILOperation::*;
+
+        match op.operation {
+            LLIL_LOAD | LLIL_LOAD_SSA => ExprInfo::Load(Operation::new(function, op)),
+            LLIL_POP => ExprInfo::Pop(Operation::new(function, op)),
+            LLIL_REG | LLIL_REG_SSA | LLIL_REG_SSA_PARTIAL => {
+                ExprInfo::Reg(Operation::new(function, op))
+            }
+            LLIL_REG_SPLIT | LLIL_REG_SPLIT_SSA => ExprInfo::RegSplit(Operation::new(function, op)),
+            LLIL_CONST => ExprInfo::Const(Operation::new(function, op)),
+            LLIL_CONST_PTR => ExprInfo::ConstPtr(Operation::new(function, op)),
+            LLIL_FLAG | LLIL_FLAG_SSA => ExprInfo::Flag(Operation::new(function, op)),
+            LLIL_FLAG_BIT | LLIL_FLAG_BIT_SSA => ExprInfo::FlagBit(Operation::new(function, op)),
+            LLIL_EXTERN_PTR => ExprInfo::ExternPtr(Operation::new(function, op)),
+
+            LLIL_ADD => ExprInfo::Add(Operation::new(function, op)),
+            LLIL_ADC => ExprInfo::Adc(Operation::new(function, op)),
+            LLIL_SUB => ExprInfo::Sub(Operation::new(function, op)),
+            LLIL_SBB => ExprInfo::Sbb(Operation::new(function, op)),
+            LLIL_AND => ExprInfo::And(Operation::new(function, op)),
+            LLIL_OR => ExprInfo::Or(Operation::new(function, op)),
+            LLIL_XOR => ExprInfo::Xor(Operation::new(function, op)),
+            LLIL_LSL => ExprInfo::Lsl(Operation::new(function, op)),
+            LLIL_LSR => ExprInfo::Lsr(Operation::new(function, op)),
+            LLIL_ASR => ExprInfo::Asr(Operation::new(function, op)),
+            LLIL_ROL => ExprInfo::Rol(Operation::new(function, op)),
+            LLIL_RLC => ExprInfo::Rlc(Operation::new(function, op)),
+            LLIL_ROR => ExprInfo::Ror(Operation::new(function, op)),
+            LLIL_RRC => ExprInfo::Rrc(Operation::new(function, op)),
+            LLIL_MUL => ExprInfo::Mul(Operation::new(function, op)),
+
+            LLIL_MULU_DP => ExprInfo::MuluDp(Operation::new(function, op)),
+            LLIL_MULS_DP => ExprInfo::MulsDp(Operation::new(function, op)),
+
+            LLIL_DIVU => ExprInfo::Divu(Operation::new(function, op)),
+            LLIL_DIVS => ExprInfo::Divs(Operation::new(function, op)),
+
+            LLIL_DIVU_DP => ExprInfo::DivuDp(Operation::new(function, op)),
+            LLIL_DIVS_DP => ExprInfo::DivsDp(Operation::new(function, op)),
+
+            LLIL_MODU => ExprInfo::Modu(Operation::new(function, op)),
+            LLIL_MODS => ExprInfo::Mods(Operation::new(function, op)),
+
+            LLIL_MODU_DP => ExprInfo::ModuDp(Operation::new(function, op)),
+            LLIL_MODS_DP => ExprInfo::ModsDp(Operation::new(function, op)),
+
+            LLIL_NEG => ExprInfo::Neg(Operation::new(function, op)),
+            LLIL_NOT => ExprInfo::Not(Operation::new(function, op)),
+
+            LLIL_SX => ExprInfo::Sx(Operation::new(function, op)),
+            LLIL_ZX => ExprInfo::Zx(Operation::new(function, op)),
+            LLIL_LOW_PART => ExprInfo::LowPart(Operation::new(function, op)),
+
+            LLIL_CMP_E => ExprInfo::CmpE(Operation::new(function, op)),
+            LLIL_CMP_NE => ExprInfo::CmpNe(Operation::new(function, op)),
+            LLIL_CMP_SLT => ExprInfo::CmpSlt(Operation::new(function, op)),
+            LLIL_CMP_ULT => ExprInfo::CmpUlt(Operation::new(function, op)),
+            LLIL_CMP_SLE => ExprInfo::CmpSle(Operation::new(function, op)),
+            LLIL_CMP_ULE => ExprInfo::CmpUle(Operation::new(function, op)),
+            LLIL_CMP_SGE => ExprInfo::CmpSge(Operation::new(function, op)),
+            LLIL_CMP_UGE => ExprInfo::CmpUge(Operation::new(function, op)),
+            LLIL_CMP_SGT => ExprInfo::CmpSgt(Operation::new(function, op)),
+            LLIL_CMP_UGT => ExprInfo::CmpUgt(Operation::new(function, op)),
+
+            LLIL_BOOL_TO_INT => ExprInfo::BoolToInt(Operation::new(function, op)),
+
+            LLIL_FADD => ExprInfo::Fadd(Operation::new(function, op)),
+            LLIL_FSUB => ExprInfo::Fsub(Operation::new(function, op)),
+            LLIL_FMUL => ExprInfo::Fmul(Operation::new(function, op)),
+            LLIL_FDIV => ExprInfo::Fdiv(Operation::new(function, op)),
+
+            LLIL_FSQRT => ExprInfo::Fsqrt(Operation::new(function, op)),
+            LLIL_FNEG => ExprInfo::Fneg(Operation::new(function, op)),
+            LLIL_FABS => ExprInfo::Fabs(Operation::new(function, op)),
+            LLIL_FLOAT_TO_INT => ExprInfo::FloatToInt(Operation::new(function, op)),
+            LLIL_INT_TO_FLOAT => ExprInfo::IntToFloat(Operation::new(function, op)),
+            LLIL_FLOAT_CONV => ExprInfo::FloatConv(Operation::new(function, op)),
+            LLIL_ROUND_TO_INT => ExprInfo::RoundToInt(Operation::new(function, op)),
+            LLIL_FLOOR => ExprInfo::Floor(Operation::new(function, op)),
+            LLIL_CEIL => ExprInfo::Ceil(Operation::new(function, op)),
+            LLIL_FTRUNC => ExprInfo::Ftrunc(Operation::new(function, op)),
+
+            LLIL_FCMP_E => ExprInfo::FcmpE(Operation::new(function, op)),
+            LLIL_FCMP_NE => ExprInfo::FcmpNE(Operation::new(function, op)),
+            LLIL_FCMP_LT => ExprInfo::FcmpLT(Operation::new(function, op)),
+            LLIL_FCMP_LE => ExprInfo::FcmpLE(Operation::new(function, op)),
+            LLIL_FCMP_GT => ExprInfo::FcmpGT(Operation::new(function, op)),
+            LLIL_FCMP_GE => ExprInfo::FcmpGE(Operation::new(function, op)),
+            LLIL_FCMP_O => ExprInfo::FcmpO(Operation::new(function, op)),
+            LLIL_FCMP_UO => ExprInfo::FcmpUO(Operation::new(function, op)),
+
+            LLIL_UNIMPL => ExprInfo::Unimpl(Operation::new(function, op)),
+            LLIL_UNIMPL_MEM => ExprInfo::UnimplMem(Operation::new(function, op)),
+
+            // TODO TEST_BIT ADD_OVERFLOW LLIL_REG_STACK_PUSH LLIL_REG_STACK_POP
+            _ => {
+                #[cfg(debug_assertions)]
+                log::error!(
+                    "Got unexpected operation {:?} in value expr at 0x{:x}",
+                    op.operation,
+                    op.address
+                );
+
+                ExprInfo::Undef(Operation::new(function, op))
+            }
+        }
+    }
+
     /// Returns the size of the result of this expression
     ///
     /// If the expression is malformed or is `Unimpl` there
@@ -589,6 +527,60 @@ where
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => Some(op),
             _ => None,
         }
+    }
+
+    pub fn visit_sub_expressions<T>(&self, mut visitor: T) -> VisitorAction
+    where
+        T: FnMut(Expression<'func, A, M, F, ValueExpr>) -> VisitorAction,
+    {
+        use ExprInfo::*;
+
+        macro_rules! visit {
+            ($expr:expr) => {
+                if let VisitorAction::Halt = visitor($expr) {
+                    return VisitorAction::Halt;
+                }
+            };
+        }
+
+        match self {
+            CmpE(ref op) | CmpNe(ref op) | CmpSlt(ref op) | CmpUlt(ref op) | CmpSle(ref op)
+            | CmpUle(ref op) | CmpSge(ref op) | CmpUge(ref op) | CmpSgt(ref op)
+            | CmpUgt(ref op) | FcmpE(ref op) | FcmpNE(ref op) | FcmpLT(ref op) | FcmpLE(ref op)
+            | FcmpGE(ref op) | FcmpGT(ref op) | FcmpO(ref op) | FcmpUO(ref op) => {
+                visit!(op.left());
+                visit!(op.right());
+            }
+            Adc(ref op) | Sbb(ref op) | Rlc(ref op) | Rrc(ref op) => {
+                visit!(op.left());
+                visit!(op.right());
+                visit!(op.carry());
+            }
+            Add(ref op) | Sub(ref op) | And(ref op) | Or(ref op) | Xor(ref op) | Lsl(ref op)
+            | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op) | Mul(ref op)
+            | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op)
+            | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op) | Fdiv(ref op) => {
+                visit!(op.left());
+                visit!(op.right());
+            }
+            DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op) => {
+                visit!(op.high());
+                visit!(op.low());
+                visit!(op.right());
+            }
+            Neg(ref op) | Not(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
+            | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
+            | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
+            | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => {
+                visit!(op.operand());
+            }
+            UnimplMem(ref op) => {
+                visit!(op.mem_expr());
+            }
+            _ => {}
+        }
+
+        VisitorAction::Sibling
     }
 
     pub(crate) fn raw_struct(&self) -> &BNLowLevelILInstruction {
@@ -697,164 +689,6 @@ where
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => op.flag_write(),
 
             UnimplMem(ref op) => op.flag_write(),
-            //TestBit(Operation<'func, A, M, F, operation::TestBit>), // TODO
-        }
-    }
-}
-
-impl<'func, A, M, V> fmt::Debug for ExprInfo<'func, A, M, NonSSA<V>>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    V: NonSSAVariant,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::ExprInfo::*;
-
-        match *self {
-            Undef(..) => f.write_str("undefined"),
-
-            Unimpl(..) => f.write_str("unimplemented"),
-
-            FlagCond(..) => f.write_str("some_flag_cond"),
-            FlagGroup(..) => f.write_str("some_flag_group"),
-
-            CmpE(ref op) | CmpNe(ref op) | CmpSlt(ref op) | CmpUlt(ref op) | CmpSle(ref op)
-            | CmpUle(ref op) | CmpSge(ref op) | CmpUge(ref op) | CmpSgt(ref op)
-            | CmpUgt(ref op) | FcmpE(ref op) | FcmpNE(ref op) | FcmpLT(ref op) | FcmpLE(ref op)
-            | FcmpGE(ref op) | FcmpGT(ref op) | FcmpO(ref op) | FcmpUO(ref op) => {
-                let left = op.left();
-                let right = op.right();
-
-                write!(
-                    f,
-                    "{:?}({}, {:?}, {:?})",
-                    op.op.operation,
-                    op.size(),
-                    left,
-                    right
-                )
-            }
-
-            Load(ref op) => {
-                let source = op.source_mem_expr();
-                let size = op.size();
-
-                write!(f, "[{:?}].{}", source, size)
-            }
-
-            Pop(ref op) => write!(f, "pop.{}", op.size()),
-
-            Reg(ref op) => {
-                let reg = op.source_reg();
-                let size = op.size();
-
-                let size = match reg {
-                    Register::Temp(_) => Some(size),
-                    Register::ArchReg(ref r) if r.info().size() != size => Some(size),
-                    _ => None,
-                };
-
-                match size {
-                    Some(s) => write!(f, "{:?}.{}", reg, s),
-                    _ => write!(f, "{:?}", reg),
-                }
-            }
-
-            RegSplit(ref op) => {
-                let low_reg = op.low_reg();
-                let high_reg = op.high_reg();
-                let size = op.size();
-
-                let low_size = match low_reg {
-                    Register::Temp(_) => Some(size),
-                    Register::ArchReg(ref r) if r.info().size() != size => Some(size),
-                    _ => None,
-                };
-
-                let high_size = match high_reg {
-                    Register::Temp(_) => Some(size),
-                    Register::ArchReg(ref r) if r.info().size() != size => Some(size),
-                    _ => None,
-                };
-
-                match (low_size, high_size) {
-                    (Some(ls), Some(hs)) => write!(f, "{:?}.{}:{:?}.{}", high_reg, hs, low_reg, ls),
-                    (Some(ls), None) => write!(f, "{:?}:{:?}.{}", high_reg, low_reg, ls),
-                    (None, Some(hs)) => write!(f, "{:?}.{}:{:?}", high_reg, hs, low_reg),
-                    _ => write!(f, "{:?}:{:?}", high_reg, low_reg),
-                }
-            }
-
-            Flag(ref _op) => write!(f, "flag"), // TODO
-
-            FlagBit(ref _op) => write!(f, "flag_bit"), // TODO
-
-            Const(ref op) | ConstPtr(ref op) => write!(f, "0x{:x}", op.value()),
-
-            ExternPtr(ref op) => write!(f, "0x{:x}", op.value()),
-
-            Adc(ref op) | Sbb(ref op) | Rlc(ref op) | Rrc(ref op) => {
-                let left = op.left();
-                let right = op.right();
-                let carry = op.carry();
-
-                write!(
-                    f,
-                    "{:?}({}, {:?}, {:?}, carry: {:?})",
-                    op.op.operation,
-                    op.size(),
-                    left,
-                    right,
-                    carry
-                )
-            }
-
-            Add(ref op) | Sub(ref op) | And(ref op) | Or(ref op) | Xor(ref op) | Lsl(ref op)
-            | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op) | Mul(ref op)
-            | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op)
-            | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op) | Fdiv(ref op) => {
-                let left = op.left();
-                let right = op.right();
-
-                write!(
-                    f,
-                    "{:?}({}, {:?}, {:?})",
-                    op.op.operation,
-                    op.size(),
-                    left,
-                    right
-                )
-            }
-
-            DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op) => {
-                let high = op.high();
-                let low = op.low();
-                let right = op.right();
-
-                write!(
-                    f,
-                    "{:?}({}, {:?}:{:?},{:?})",
-                    op.op.operation,
-                    op.size(),
-                    high,
-                    low,
-                    right
-                )
-            }
-
-            Neg(ref op) | Not(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
-            | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
-            | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
-            | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => write!(
-                f,
-                "{:?}({}, {:?})",
-                op.op.operation,
-                op.size(),
-                op.operand()
-            ),
-
-            UnimplMem(ref op) => write!(f, "unimplemented_mem({:?})", op.mem_expr()),
             //TestBit(Operation<'func, A, M, F, operation::TestBit>), // TODO
         }
     }

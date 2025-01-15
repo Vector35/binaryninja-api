@@ -58,7 +58,7 @@ mod visitor {
     }
 
     fn print_variable(func: &MediumLevelILFunction, var: &Variable) {
-        print!("{}", func.get_function().get_variable_name(var));
+        print!("{}", func.function().variable_name(var));
     }
 
     pub(crate) fn print_il_expr(instr: &MediumLevelILLiftedInstruction, mut indent: usize) {

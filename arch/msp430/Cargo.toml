@@ -12,8 +12,3 @@ msp430-asm = "^0.2"
 
 [lib]
 crate-type = ["cdylib"]
-
-[profile.release]
-panic = "abort"
-lto = true
-debug = 1

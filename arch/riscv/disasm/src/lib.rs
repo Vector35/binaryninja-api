@@ -6,6 +6,7 @@
 
 use std::borrow::Cow;
 use std::fmt;
+use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::mem;
 
@@ -290,7 +291,7 @@ impl FloatRegType for () {}
 impl FloatRegType for f32 {}
 impl FloatRegType for f64 {}
 
-pub trait RegFile: Sized + Copy + Clone {
+pub trait RegFile: Debug + Sized + Copy + Clone {
     type Int: IntRegType;
     type Float: FloatRegType;
 
@@ -2330,7 +2331,7 @@ impl StandardExtension for ExtensionSupported {
     }
 }
 
-pub trait RiscVDisassembler: Sized + Copy + Clone {
+pub trait RiscVDisassembler: Debug + Sized + Copy + Clone {
     type RegFile: RegFile;
     type MulDivExtension: StandardExtension;
     type AtomicExtension: StandardExtension;

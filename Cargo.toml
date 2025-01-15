@@ -9,12 +9,17 @@ members = [
     "rust/binaryninjacore-sys",
     "arch/riscv",
     "arch/msp430",
+    "view/bintxt",
+    "view/minidump",
     "plugins/dwarf/dwarf_import",
     "plugins/dwarf/dwarf_export",
     "plugins/dwarf/dwarfdump",
     "plugins/dwarf/shared",
     "plugins/idb_import",
-    "plugins/minidump",
     "plugins/pdb-ng",
     "plugins/warp"
 ]
+
+[profile.release]
+lto = true
+debug = "full"

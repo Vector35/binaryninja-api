@@ -749,7 +749,7 @@ impl HighLevelILInstruction {
             Import(op) => Lifted::Import(op),
             ConstData(op) => Lifted::ConstData(LiftedConstData {
                 constant_data: ConstantData::new(
-                    self.function.get_function(),
+                    self.function.function(),
                     RegisterValue {
                         // TODO: Replace with a From<u32> for RegisterValueType.
                         // TODO: We might also want to change the type of `op.constant_data_kind`
@@ -818,7 +818,7 @@ impl HighLevelILInstruction {
             }),
             Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
                 intrinsic: CoreIntrinsic::new(
-                    self.function.get_function().arch(),
+                    self.function.function().arch(),
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Invalid intrinsic"),
@@ -826,7 +826,7 @@ impl HighLevelILInstruction {
             }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
                 intrinsic: CoreIntrinsic::new(
-                    self.function.get_function().arch(),
+                    self.function.function().arch(),
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Invalid intrinsic"),
@@ -967,7 +967,7 @@ impl HighLevelILInstruction {
     fn lift_label(&self, op: Label) -> LiftedLabel {
         LiftedLabel {
             target: GotoLabel {
-                function: self.function.get_function(),
+                function: self.function.function(),
                 target: op.target,
             },
         }

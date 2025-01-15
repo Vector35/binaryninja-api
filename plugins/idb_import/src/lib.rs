@@ -20,7 +20,7 @@ use binaryninja::logger::Logger;
 struct IDBDebugInfoParser;
 impl CustomDebugInfoParser for IDBDebugInfoParser {
     fn is_valid(&self, view: &BinaryView) -> bool {
-        if let Some(project_file) = view.file().get_project_file() {
+        if let Some(project_file) = view.file().project_file() {
             project_file.name().as_str().ends_with(".i64")
                 || project_file.name().as_str().ends_with(".idb")
         } else {
@@ -49,7 +49,7 @@ impl CustomDebugInfoParser for IDBDebugInfoParser {
 struct TILDebugInfoParser;
 impl CustomDebugInfoParser for TILDebugInfoParser {
     fn is_valid(&self, view: &BinaryView) -> bool {
-        if let Some(project_file) = view.file().get_project_file() {
+        if let Some(project_file) = view.file().project_file() {
             project_file.name().as_str().ends_with(".til")
         } else {
             view.file().filename().as_str().ends_with(".til")

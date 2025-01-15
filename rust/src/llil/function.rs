@@ -127,7 +127,7 @@ where
         }
     }
 
-    pub fn get_function(&self) -> Ref<Function> {
+    pub fn function(&self) -> Ref<Function> {
         unsafe {
             let func = BNGetLowLevelILOwnerFunction(self.handle);
             Function::ref_from_raw(func)
@@ -240,12 +240,12 @@ impl<A: Architecture, M: FunctionMutability, F: FunctionForm> PartialEq
     for LowLevelILFunction<A, M, F>
 {
     fn eq(&self, rhs: &Self) -> bool {
-        self.get_function().eq(&rhs.get_function())
+        self.function().eq(&rhs.function())
     }
 }
 
 impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Hash for LowLevelILFunction<A, M, F> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.get_function().hash(state)
+        self.function().hash(state)
     }
 }

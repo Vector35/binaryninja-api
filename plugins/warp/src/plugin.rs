@@ -30,7 +30,7 @@ const TAG_ICON: &str = "🌏";
 const TAG_NAME: &str = "WARP";
 
 fn get_warp_tag_type(view: &BinaryView) -> Ref<TagType> {
-    view.get_tag_type(TAG_NAME)
+    view.tag_type_by_name(TAG_NAME)
         .unwrap_or_else(|| view.create_tag_type(TAG_NAME, TAG_ICON))
 }
 

@@ -17,8 +17,3 @@ liftcheck = ["rayon", "binaryninja/rayon"]
 
 [lib]
 crate-type = ["cdylib"]
-
-[profile.release]
-panic = "abort"
-lto = true
-debug = 1

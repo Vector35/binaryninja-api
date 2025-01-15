@@ -176,7 +176,7 @@ impl FileMetadata {
         }
     }
 
-    pub fn get_view_of_type<S: BnStrCompatible>(&self, view: S) -> Option<Ref<BinaryView>> {
+    pub fn view_of_type<S: BnStrCompatible>(&self, view: S) -> Option<Ref<BinaryView>> {
         let view = view.into_bytes_with_nul();
 
         unsafe {
@@ -188,7 +188,7 @@ impl FileMetadata {
         }
     }
 
-    pub fn get_project_file(&self) -> Option<ProjectFile> {
+    pub fn project_file(&self) -> Option<ProjectFile> {
         unsafe {
             let res = NonNull::new(BNGetProjectFile(self.handle))?;
             Some(ProjectFile::from_raw(res))
@@ -204,7 +204,7 @@ impl FileMetadata {
         let filename_ptr = filename.as_ref().as_ptr() as *mut _;
 
         // Databases are created with the root view (Raw).
-        let Some(raw_view) = self.get_view_of_type("Raw") else {
+        let Some(raw_view) = self.view_of_type("Raw") else {
             return false;
         };
 
@@ -224,7 +224,7 @@ impl FileMetadata {
 
     pub fn save_auto_snapshot(&self) -> bool {
         // Snapshots are saved with the root view (Raw).
-        let Some(raw_view) = self.get_view_of_type("Raw") else {
+        let Some(raw_view) = self.view_of_type("Raw") else {
             return false;
         };
 

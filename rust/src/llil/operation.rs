@@ -15,14 +15,15 @@
 use binaryninjacore_sys::{BNGetLowLevelILByIndex, BNLowLevelILInstruction};
 
 use super::*;
-use crate::architecture::{FlagGroupId, FlagWriteId, IntrinsicId};
+use crate::architecture::{FlagGroupId, FlagId, FlagWriteId, IntrinsicId};
 use std::collections::BTreeMap;
+use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::mem;
 
 pub struct Operation<'func, A, M, F, O>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
     O: OperationArguments,
@@ -34,7 +35,7 @@ where
 
 impl<'func, A, M, F, O> Operation<'func, A, M, F, O>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
     O: OperationArguments,
@@ -55,9 +56,9 @@ where
     }
 }
 
-impl<'func, A, M, O> Operation<'func, A, M, NonSSA<LiftedNonSSA>, O>
+impl<A, M, O> Operation<'_, A, M, NonSSA<LiftedNonSSA>, O>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     O: OperationArguments,
 {
@@ -72,12 +73,23 @@ where
 // LLIL_NOP, LLIL_NORET, LLIL_BP, LLIL_UNDEF, LLIL_UNIMPL
 pub struct NoArgs;
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, NoArgs>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NoArgs").finish()
+    }
+}
+
 // LLIL_POP
 pub struct Pop;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, Pop>
+impl<A, M, F> Operation<'_, A, M, F, Pop>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -86,17 +98,42 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, Pop>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Pop")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .finish()
+    }
+}
+
 // LLIL_SYSCALL, LLIL_SYSCALL_SSA
 pub struct Syscall;
+
+impl<A, M, F> Debug for Operation<'_, A, M, F, Syscall>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Syscall").finish()
+    }
+}
 
 // LLIL_INTRINSIC, LLIL_INTRINSIC_SSA
 pub struct Intrinsic;
 
-impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, Intrinsic>
+impl<A, M, F> Operation<'_, A, M, F, Intrinsic>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
-    V: NonSSAVariant,
+    F: FunctionForm,
 {
     // TODO: Support register and expression lists
     pub fn intrinsic(&self) -> Option<A::Intrinsic> {
@@ -105,14 +142,28 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, Intrinsic>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Intrinsic")
+            .field("address", &self.address())
+            .field("size", &self.intrinsic())
+            .finish()
+    }
+}
+
 // LLIL_SET_REG, LLIL_SET_REG_SSA, LLIL_SET_REG_PARTIAL_SSA
 pub struct SetReg;
 
-impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, SetReg>
+impl<'func, A, M, F> Operation<'func, A, M, F, SetReg>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
-    V: NonSSAVariant,
+    F: FunctionForm,
 {
     pub fn size(&self) -> usize {
         self.op.size
@@ -139,19 +190,35 @@ where
         }
     }
 
-    pub fn source_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
+    pub fn source_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
         Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
+    }
+}
+
+impl<A, M, F> Debug for Operation<'_, A, M, F, SetReg>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SetReg")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("dest_reg", &self.dest_reg())
+            .field("source_expr", &self.source_expr())
+            .finish()
     }
 }
 
 // LLIL_SET_REG_SPLIT, LLIL_SET_REG_SPLIT_SSA
 pub struct SetRegSplit;
 
-impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, SetRegSplit>
+impl<'func, A, M, F> Operation<'func, A, M, F, SetRegSplit>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
-    V: NonSSAVariant,
+    F: FunctionForm,
 {
     pub fn size(&self) -> usize {
         self.op.size
@@ -199,73 +266,145 @@ where
         }
     }
 
-    pub fn source_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
+    pub fn source_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
         Expression::new(self.function, ExpressionIndex(self.op.operands[2] as usize))
+    }
+}
+
+impl<A, M, F> Debug for Operation<'_, A, M, F, SetRegSplit>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SetRegSplit")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("dest_reg_high", &self.dest_reg_high())
+            .field("dest_reg_low", &self.dest_reg_low())
+            .field("source_expr", &self.source_expr())
+            .finish()
     }
 }
 
 // LLIL_SET_FLAG, LLIL_SET_FLAG_SSA
 pub struct SetFlag;
 
-impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, SetFlag>
+impl<'func, A, M, F> Operation<'func, A, M, F, SetFlag>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
-    V: NonSSAVariant,
+    F: FunctionForm,
 {
-    pub fn source_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
+    pub fn dest_flag(&self) -> A::Flag {
+        // TODO: Error handling?
+        // TODO: Test this.
+        self.function
+            .arch()
+            .flag_from_id(FlagId(self.op.operands[0] as u32))
+            .unwrap()
+    }
+
+    pub fn source_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
         Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
+    }
+}
+
+impl<A, M, F> Debug for Operation<'_, A, M, F, SetFlag>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SetFlag")
+            .field("address", &self.address())
+            .field("dest_flag", &self.dest_flag())
+            .field("source_expr", &self.source_expr())
+            .finish()
     }
 }
 
 // LLIL_LOAD, LLIL_LOAD_SSA
 pub struct Load;
 
-impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, Load>
+impl<'func, A, M, F> Operation<'func, A, M, F, Load>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
-    V: NonSSAVariant,
+    F: FunctionForm,
 {
     pub fn size(&self) -> usize {
         self.op.size
     }
 
-    pub fn source_mem_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
+    pub fn source_mem_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
         Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    }
+}
+
+impl<A, M, F> Debug for Operation<'_, A, M, F, Load>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Load")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("source_mem_expr", &self.source_mem_expr())
+            .finish()
     }
 }
 
 // LLIL_STORE, LLIL_STORE_SSA
 pub struct Store;
 
-impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, Store>
+impl<'func, A, M, F> Operation<'func, A, M, F, Store>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
-    V: NonSSAVariant,
+    F: FunctionForm,
 {
     pub fn size(&self) -> usize {
         self.op.size
     }
 
-    pub fn dest_mem_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
+    pub fn dest_mem_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
         Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 
-    pub fn source_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
+    pub fn source_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
         Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
+    }
+}
+
+impl<A, M, F> Debug for Operation<'_, A, M, F, Store>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Store")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("dest_mem_expr", &self.dest_mem_expr())
+            .field("source_expr", &self.source_expr())
+            .finish()
     }
 }
 
 // LLIL_REG, LLIL_REG_SSA, LLIL_REG_SSA_PARTIAL
 pub struct Reg;
 
-impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, Reg>
+impl<A, M, F> Operation<'_, A, M, F, Reg>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
-    V: NonSSAVariant,
+    F: FunctionForm,
 {
     pub fn size(&self) -> usize {
         self.op.size
@@ -293,14 +432,29 @@ where
     }
 }
 
-// LLIL_REG_SPLIT
+impl<A, M, F> Debug for Operation<'_, A, M, F, Reg>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Reg")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("source_reg", &self.source_reg())
+            .finish()
+    }
+}
+
+// LLIL_REG_SPLIT, LLIL_REG_SPLIT_SSA
 pub struct RegSplit;
 
-impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, RegSplit>
+impl<A, M, F> Operation<'_, A, M, F, RegSplit>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
-    V: NonSSAVariant,
+    F: FunctionForm,
 {
     pub fn size(&self) -> usize {
         self.op.size
@@ -349,18 +503,56 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, RegSplit>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RegSplit")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("low_reg", &self.low_reg())
+            .field("high_reg", &self.high_reg())
+            .finish()
+    }
+}
+
 // LLIL_FLAG, LLIL_FLAG_SSA
 pub struct Flag;
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, Flag>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Flag").finish()
+    }
+}
+
 // LLIL_FLAG_BIT, LLIL_FLAG_BIT_SSA
 pub struct FlagBit;
+
+impl<A, M, F> Debug for Operation<'_, A, M, F, FlagBit>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FlagBit").finish()
+    }
+}
 
 // LLIL_JUMP
 pub struct Jump;
 
 impl<'func, A, M, F> Operation<'func, A, M, F, Jump>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -369,12 +561,25 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, Jump>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Jump")
+            .field("target", &self.target())
+            .finish()
+    }
+}
+
 // LLIL_JUMP_TO
 pub struct JumpTo;
 
 struct TargetListIter<'func, A, M, F>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -383,9 +588,9 @@ where
     cursor_operand: usize,
 }
 
-impl<'func, A, M, F> TargetListIter<'func, A, M, F>
+impl<A, M, F> TargetListIter<'_, A, M, F>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -404,7 +609,7 @@ where
 
 impl<'func, A, M, F> Operation<'func, A, M, F, JumpTo>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -433,16 +638,30 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, JumpTo>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("JumpTo")
+            .field("target", &self.target())
+            .field("target_list", &self.target_list())
+            .finish()
+    }
+}
+
 // LLIL_CALL, LLIL_CALL_SSA
 pub struct Call;
 
-impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, Call>
+impl<'func, A, M, F> Operation<'func, A, M, F, Call>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
-    V: NonSSAVariant,
+    F: FunctionForm,
 {
-    pub fn target(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
+    pub fn target(&self) -> Expression<'func, A, M, F, ValueExpr> {
         Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 
@@ -457,12 +676,26 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, Call>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Call")
+            .field("target", &self.target())
+            .field("stack_adjust", &self.stack_adjust())
+            .finish()
+    }
+}
+
 // LLIL_RET
 pub struct Ret;
 
 impl<'func, A, M, F> Operation<'func, A, M, F, Ret>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -471,12 +704,25 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, Ret>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Ret")
+            .field("target", &self.target())
+            .finish()
+    }
+}
+
 // LLIL_IF
 pub struct If;
 
 impl<'func, A, M, F> Operation<'func, A, M, F, If>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -499,12 +745,27 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, If>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("If")
+            .field("condition", &self.condition())
+            .field("true_target", &self.true_target())
+            .field("false_target", &self.false_target())
+            .finish()
+    }
+}
+
 // LLIL_GOTO
 pub struct Goto;
 
 impl<'func, A, M, F> Operation<'func, A, M, F, Goto>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -516,15 +777,41 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, Goto>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Goto")
+            .field("target", &self.target())
+            .finish()
+    }
+}
+
 // LLIL_FLAG_COND
+// Valid only in Lifted IL
 pub struct FlagCond;
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, FlagCond>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FlagCond").finish()
+    }
+}
+
 // LLIL_FLAG_GROUP
+// Valid only in Lifted IL
 pub struct FlagGroup;
 
-impl<'func, A, M> Operation<'func, A, M, NonSSA<LiftedNonSSA>, FlagGroup>
+impl<A, M> Operation<'_, A, M, NonSSA<LiftedNonSSA>, FlagGroup>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
 {
     pub fn flag_group(&self) -> A::FlagGroup {
@@ -536,12 +823,34 @@ where
     }
 }
 
+impl<A, M> Debug for Operation<'_, A, M, NonSSA<LiftedNonSSA>, FlagGroup>
+where
+    A: Architecture,
+    M: FunctionMutability,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FlagGroup")
+            .field("flag_group", &self.flag_group())
+            .finish()
+    }
+}
+
+impl<A, M> Debug for Operation<'_, A, M, SSA, FlagGroup>
+where
+    A: Architecture,
+    M: FunctionMutability,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FlagGroup").finish()
+    }
+}
+
 // LLIL_TRAP
 pub struct Trap;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, Trap>
+impl<A, M, F> Operation<'_, A, M, F, Trap>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -550,21 +859,67 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, Trap>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Trap")
+            .field("vector", &self.vector())
+            .finish()
+    }
+}
+
 // LLIL_REG_PHI
 pub struct RegPhi;
+
+impl<A, M, F> Debug for Operation<'_, A, M, F, RegPhi>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RegPhi").finish()
+    }
+}
 
 // LLIL_FLAG_PHI
 pub struct FlagPhi;
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, FlagPhi>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FlagPhi").finish()
+    }
+}
+
 // LLIL_MEM_PHI
 pub struct MemPhi;
+
+impl<A, M, F> Debug for Operation<'_, A, M, F, MemPhi>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MemPhi").finish()
+    }
+}
 
 // LLIL_CONST, LLIL_CONST_PTR
 pub struct Const;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, Const>
+impl<A, M, F> Operation<'_, A, M, F, Const>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -603,12 +958,26 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, Const>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Const")
+            .field("size", &self.size())
+            .field("value", &self.value())
+            .finish()
+    }
+}
+
 // LLIL_EXTERN_PTR
 pub struct Extern;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, Extern>
+impl<A, M, F> Operation<'_, A, M, F, Extern>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -647,6 +1016,20 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, Extern>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Extern")
+            .field("size", &self.size())
+            .field("value", &self.value())
+            .finish()
+    }
+}
+
 // LLIL_ADD, LLIL_SUB, LLIL_AND, LLIL_OR
 // LLIL_XOR, LLIL_LSL, LLIL_LSR, LLIL_ASR
 // LLIL_ROL, LLIL_ROR, LLIL_MUL, LLIL_MULU_DP,
@@ -656,7 +1039,7 @@ pub struct BinaryOp;
 
 impl<'func, A, M, F> Operation<'func, A, M, F, BinaryOp>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -673,12 +1056,27 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, BinaryOp>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("BinaryOp")
+            .field("size", &self.size())
+            .field("left", &self.left())
+            .field("right", &self.right())
+            .finish()
+    }
+}
+
 // LLIL_ADC, LLIL_SBB, LLIL_RLC, LLIL_RRC
 pub struct BinaryOpCarry;
 
 impl<'func, A, M, F> Operation<'func, A, M, F, BinaryOpCarry>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -699,12 +1097,28 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, BinaryOpCarry>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("BinaryOpCarry")
+            .field("size", &self.size())
+            .field("left", &self.left())
+            .field("right", &self.right())
+            .field("carry", &self.carry())
+            .finish()
+    }
+}
+
 // LLIL_DIVS_DP, LLIL_DIVU_DP, LLIL_MODU_DP, LLIL_MODS_DP
 pub struct DoublePrecDivOp;
 
 impl<'func, A, M, F> Operation<'func, A, M, F, DoublePrecDivOp>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -720,8 +1134,26 @@ where
         Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
     }
 
+    // TODO: I don't think this actually exists?
     pub fn right(&self) -> Expression<'func, A, M, F, ValueExpr> {
         Expression::new(self.function, ExpressionIndex(self.op.operands[2] as usize))
+    }
+}
+
+impl<A, M, F> Debug for Operation<'_, A, M, F, DoublePrecDivOp>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DoublePrecDivOp")
+            .field("size", &self.size())
+            .field("high", &self.high())
+            .field("low", &self.low())
+            // TODO: I don't think this actually is used...
+            .field("right", &self.right())
+            .finish()
     }
 }
 
@@ -731,7 +1163,7 @@ pub struct UnaryOp;
 
 impl<'func, A, M, F> Operation<'func, A, M, F, UnaryOp>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -744,12 +1176,26 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, UnaryOp>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("UnaryOp")
+            .field("size", &self.size())
+            .field("operand", &self.operand())
+            .finish()
+    }
+}
+
 // LLIL_CMP_X
 pub struct Condition;
 
 impl<'func, A, M, F> Operation<'func, A, M, F, Condition>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -766,12 +1212,27 @@ where
     }
 }
 
+impl<A, M, F> Debug for Operation<'_, A, M, F, Condition>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Condition")
+            .field("size", &self.size())
+            .field("left", &self.left())
+            .field("right", &self.right())
+            .finish()
+    }
+}
+
 // LLIL_UNIMPL_MEM
 pub struct UnimplMem;
 
 impl<'func, A, M, F> Operation<'func, A, M, F, UnimplMem>
 where
-    A: 'func + Architecture,
+    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -781,6 +1242,20 @@ where
 
     pub fn mem_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
         Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    }
+}
+
+impl<A, M, F> Debug for Operation<'_, A, M, F, UnimplMem>
+where
+    A: Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("UnimplMem")
+            .field("size", &self.size())
+            .field("mem_expr", &self.mem_expr())
+            .finish()
     }
 }
 

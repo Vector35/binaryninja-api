@@ -17,6 +17,7 @@
 #![allow(clippy::result_unit_err)]
 #![allow(clippy::type_complexity)]
 #![allow(clippy::too_many_arguments)]
+#![allow(clippy::needless_doctest_main)]
 #![doc(html_root_url = "https://dev-rust.binary.ninja/")]
 #![doc(html_favicon_url = "/favicon.ico")]
 #![doc(html_logo_url = "/logo.png")]

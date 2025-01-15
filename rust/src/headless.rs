@@ -98,7 +98,7 @@ impl InitializationOptions {
     }
 
     /// A license to override with, you can use this to make sure you initialize with a specific license.
-    /// 
+    ///
     /// This takes the form of a JSON array. The string should be formed like:
     /// ```json
     /// [{ /* json object with license data */ }]

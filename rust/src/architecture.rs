@@ -54,7 +54,7 @@ pub use binaryninjacore_sys::BNLowLevelILFlagCondition as FlagCondition;
 
 macro_rules! newtype {
     ($name:ident, $inner_type:ty) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
         pub struct $name(pub $inner_type);
 
         impl From<$inner_type> for $name {

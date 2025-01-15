@@ -412,7 +412,7 @@ where
         Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
     }
 
-    pub fn target_list(&self) -> BTreeMap<u64, usize> {
+    pub fn target_list(&self) -> BTreeMap<u64, InstructionIndex> {
         let mut result = BTreeMap::new();
         let count = self.op.operands[1] as usize / 2;
         let mut list = TargetListIter {
@@ -425,7 +425,7 @@ where
 
         for _ in 0..count {
             let value = list.next();
-            let target = list.next() as usize;
+            let target = InstructionIndex(list.next() as usize);
             result.insert(value, target);
         }
 

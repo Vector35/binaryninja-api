@@ -26,6 +26,12 @@ use crate::architecture::Architecture;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct InstructionIndex(pub usize);
 
+impl InstructionIndex {
+    pub fn next(&self) -> Self {
+        Self(self.0 + 1)
+    }
+}
+
 impl Display for InstructionIndex {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("{}", self.0))

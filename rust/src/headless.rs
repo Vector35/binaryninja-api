@@ -246,7 +246,7 @@ impl Session {
     /// Before calling new you must make sure that the license is retrievable, otherwise the core won't be able to initialize.
     ///
     /// If you cannot otherwise provide a license via `BN_LICENSE_FILE` environment variable or the Binary Ninja user directory
-    /// you can call [`Session::new_with_license`] instead of this function.
+    /// you can call [`Session::new_with_opts`] instead of this function.
     pub fn new() -> Result<Self, InitializationError> {
         if license_location().is_some() {
             // We were able to locate a license, continue with initialization.

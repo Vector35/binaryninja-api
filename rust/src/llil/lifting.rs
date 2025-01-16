@@ -20,7 +20,10 @@ use crate::architecture::{
     Flag, FlagClass, FlagCondition, FlagGroup, FlagRole, FlagWrite, Intrinsic,
 };
 use crate::function::Location;
-use crate::llil::{Expression, ExpressionIndex, ExpressionResultType, LiftedExpr, LiftedNonSSA, Lifter, LowLevelILFunction, Mutable, NonSSA, Register, ValueExpr, VoidExpr};
+use crate::llil::{
+    Expression, ExpressionIndex, ExpressionResultType, LiftedExpr, LiftedNonSSA, Lifter,
+    LowLevelILFunction, Mutable, NonSSA, Register, ValueExpr, VoidExpr,
+};
 use binaryninjacore_sys::{BNAddLowLevelILLabelForAddress, BNLowLevelILOperation};
 use binaryninjacore_sys::{BNLowLevelILLabel, BNRegisterOrConstant};
 

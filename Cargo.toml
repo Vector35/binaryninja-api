@@ -19,6 +19,7 @@ members = [
     "plugins/pdb-ng",
     "plugins/warp"
 ]
+default-members = ["rust", "rust/binaryninjacore-sys"]
 
 [profile.release]
 lto = true

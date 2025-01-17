@@ -3,10 +3,7 @@ use crate::flag::{Flag, FlagWrite};
 use crate::register::Register;
 use crate::Msp430;
 
-use binaryninja::{
-    architecture::FlagCondition,
-    llil::{Label, LiftedNonSSA, Lifter, Mutable, NonSSA},
-};
+use binaryninja::{architecture::FlagCondition, lowlevelil::lifting::Label};
 
 use msp430_asm::emulate::Emulated;
 use msp430_asm::instruction::Instruction;
@@ -15,6 +12,8 @@ use msp430_asm::operand::{Operand, OperandWidth};
 use msp430_asm::single_operand::SingleOperand;
 use msp430_asm::two_operand::TwoOperand;
 
+use binaryninja::lowlevelil::expression::ValueExpr;
+use binaryninja::lowlevelil::{MutableLiftedILExpr, MutableLiftedILFunction};
 use log::info;
 
 macro_rules! auto_increment {
@@ -169,7 +168,11 @@ macro_rules! conditional_jump {
     };
 }
 
-pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &Lifter<Msp430>) {
+pub(crate) fn lift_instruction(
+    inst: &Instruction,
+    addr: u64,
+    il: &MutableLiftedILFunction<Msp430>,
+) {
     match inst {
         Instruction::Rrc(inst) => {
             let size = match inst.operand_width() {
@@ -631,14 +634,8 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &Lifter<Msp430
 fn lift_source_operand<'a>(
     operand: &Operand,
     size: usize,
-    il: &'a Lifter<Msp430>,
-) -> binaryninja::llil::Expression<
-    'a,
-    Msp430,
-    Mutable,
-    NonSSA<LiftedNonSSA>,
-    binaryninja::llil::ValueExpr,
-> {
+    il: &'a MutableLiftedILFunction<Msp430>,
+) -> MutableLiftedILExpr<'a, Msp430, ValueExpr> {
     match operand {
         Operand::RegisterDirect(r) => il.reg(size, Register::try_from(*r as u32).unwrap()),
         Operand::Indexed((r, offset)) => il

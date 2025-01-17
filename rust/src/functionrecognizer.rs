@@ -1,6 +1,7 @@
-use crate::llil::LowLevelILFunction;
+use crate::lowlevelil::function::LowLevelILFunction;
+use crate::lowlevelil::RegularLowLevelILFunction;
 use crate::mlil::MediumLevelILFunction;
-use crate::{architecture::CoreArchitecture, binaryview::BinaryView, function::Function, llil};
+use crate::{architecture::CoreArchitecture, binaryview::BinaryView, function::Function};
 use binaryninjacore_sys::*;
 use std::os::raw::c_void;
 
@@ -9,7 +10,7 @@ pub trait FunctionRecognizer {
         &self,
         _bv: &BinaryView,
         _func: &Function,
-        _llil: &llil::RegularFunction<CoreArchitecture>,
+        _llil: &RegularLowLevelILFunction<CoreArchitecture>,
     ) -> bool {
         false
     }

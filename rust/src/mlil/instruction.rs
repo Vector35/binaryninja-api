@@ -1,9 +1,12 @@
 use binaryninjacore_sys::*;
+use std::fmt;
+use std::fmt::{Display, Formatter};
 
 use super::lift::*;
 use super::operation::*;
-use super::MediumLevelILFunction;
+use super::{MediumLevelILBlock, MediumLevelILFunction};
 use crate::architecture::{CoreIntrinsic, IntrinsicId};
+use crate::basicblock::BasicBlock;
 use crate::confidence::Conf;
 use crate::disassembly::InstructionTextToken;
 use crate::operand_iter::OperandIter;
@@ -12,13 +15,48 @@ use crate::types::Type;
 use crate::variable::{ConstantData, PossibleValueSet, RegisterValue, SSAVariable, Variable};
 use crate::{DataFlowQueryOption, ILBranchDependence};
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct MediumLevelInstructionIndex(pub usize);
+
+impl MediumLevelInstructionIndex {
+    pub fn next(&self) -> Self {
+        Self(self.0 + 1)
+    }
+}
+
+impl From<usize> for MediumLevelInstructionIndex {
+    fn from(index: usize) -> Self {
+        Self(index)
+    }
+}
+
+impl From<u64> for MediumLevelInstructionIndex {
+    fn from(index: u64) -> Self {
+        Self(index as usize)
+    }
+}
+
+impl Display for MediumLevelInstructionIndex {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
+    }
+}
+
 #[derive(Clone)]
 pub struct MediumLevelILInstruction {
     pub function: Ref<MediumLevelILFunction>,
     pub address: u64,
-    pub index: usize,
+    pub index: MediumLevelInstructionIndex,
     pub size: usize,
     pub kind: MediumLevelILInstructionKind,
+}
+
+impl MediumLevelILInstruction {
+    /// Returns the [`BasicBlock`] containing the given [`MediumLevelILInstruction`].
+    pub fn basic_block(&self) -> Option<Ref<BasicBlock<MediumLevelILBlock>>> {
+        // TODO: We might be able to .expect this if we guarantee that self.index is valid.
+        self.function.basic_block_containing_index(self.index)
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -167,9 +205,12 @@ impl core::fmt::Debug for MediumLevelILInstruction {
 }
 
 impl MediumLevelILInstruction {
-    pub(crate) fn new(function: Ref<MediumLevelILFunction>, index: usize) -> Self {
+    pub(crate) fn new(
+        function: Ref<MediumLevelILFunction>,
+        index: MediumLevelInstructionIndex,
+    ) -> Self {
         // TODO: If op.sourceOperation == BN_INVALID_OPERAND && op.operation == MLIL_NOP return None
-        let op = unsafe { BNGetMediumLevelILByIndex(function.handle, index) };
+        let op = unsafe { BNGetMediumLevelILByIndex(function.handle, index.0) };
         use BNMediumLevelILOperation::*;
         use MediumLevelILInstructionKind as Op;
         let kind = match op.operation {
@@ -1054,7 +1095,7 @@ impl MediumLevelILInstruction {
             BNGetMediumLevelILExprText(
                 self.function.handle,
                 self.function.function().arch().handle,
-                self.index,
+                self.index.0,
                 &mut tokens,
                 &mut count,
                 core::ptr::null_mut(),
@@ -1065,7 +1106,7 @@ impl MediumLevelILInstruction {
 
     /// Value of expression if constant or a known value
     pub fn value(&self) -> RegisterValue {
-        unsafe { BNGetMediumLevelILExprValue(self.function.handle, self.index) }.into()
+        unsafe { BNGetMediumLevelILExprValue(self.function.handle, self.index.0) }.into()
     }
 
     /// Possible values of expression using path-sensitive static data flow analysis
@@ -1078,7 +1119,7 @@ impl MediumLevelILInstruction {
         let value = unsafe {
             BNGetMediumLevelILPossibleExprValues(
                 self.function.handle,
-                self.index,
+                self.index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1101,7 +1142,7 @@ impl MediumLevelILInstruction {
                 self.function.handle,
                 &raw_var,
                 ssa_var.version,
-                self.index,
+                self.index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1116,7 +1157,7 @@ impl MediumLevelILInstruction {
             BNGetMediumLevelILSSAVarVersionAtILInstruction(
                 self.function.handle,
                 &raw_var,
-                self.index,
+                self.index.0,
             )
         };
         SSAVariable::new(var, version)
@@ -1126,7 +1167,7 @@ impl MediumLevelILInstruction {
     pub fn branch_dependencies(&self) -> Array<BranchDependence> {
         let mut count = 0;
         let deps = unsafe {
-            BNGetAllMediumLevelILBranchDependence(self.function.handle, self.index, &mut count)
+            BNGetAllMediumLevelILBranchDependence(self.function.handle, self.index.0, &mut count)
         };
         assert!(!deps.is_null());
         unsafe { Array::new(deps, count, self.function.clone()) }
@@ -1134,7 +1175,11 @@ impl MediumLevelILInstruction {
 
     pub fn branch_dependence_at(&self, instruction: MediumLevelILInstruction) -> BranchDependence {
         let deps = unsafe {
-            BNGetMediumLevelILBranchDependence(self.function.handle, self.index, instruction.index)
+            BNGetMediumLevelILBranchDependence(
+                self.function.handle,
+                self.index.0,
+                instruction.index.0,
+            )
         };
         BranchDependence {
             instruction,
@@ -1145,13 +1190,13 @@ impl MediumLevelILInstruction {
     /// Version of active memory contents in SSA form for this instruction
     pub fn ssa_memory_version(&self) -> usize {
         unsafe {
-            BNGetMediumLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.index)
+            BNGetMediumLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.index.0)
         }
     }
 
     /// Type of expression
     pub fn expr_type(&self) -> Option<Conf<Ref<Type>>> {
-        let result = unsafe { BNGetMediumLevelILExprType(self.function.handle, self.index) };
+        let result = unsafe { BNGetMediumLevelILExprType(self.function.handle, self.index.0) };
         (!result.type_.is_null()).then(|| {
             Conf::new(
                 unsafe { Type::ref_from_raw(result.type_) },
@@ -1172,7 +1217,7 @@ impl MediumLevelILInstruction {
             type_: type_.contents.handle,
             confidence: type_.confidence,
         };
-        unsafe { BNSetMediumLevelILExprType(self.function.handle, self.index, &mut type_raw) }
+        unsafe { BNSetMediumLevelILExprType(self.function.handle, self.index.0, &mut type_raw) }
     }
 
     pub fn variable_for_register(&self, reg_id: u32) -> Variable {
@@ -1180,7 +1225,7 @@ impl MediumLevelILInstruction {
             BNGetMediumLevelILVariableForRegisterAtInstruction(
                 self.function.handle,
                 reg_id,
-                self.index,
+                self.index.0,
             )
         };
         Variable::from(result)
@@ -1191,7 +1236,7 @@ impl MediumLevelILInstruction {
             BNGetMediumLevelILVariableForFlagAtInstruction(
                 self.function.handle,
                 flag_id,
-                self.index,
+                self.index.0,
             )
         };
         Variable::from(result)
@@ -1202,7 +1247,7 @@ impl MediumLevelILInstruction {
             BNGetMediumLevelILVariableForStackLocationAtInstruction(
                 self.function.handle,
                 offset,
-                self.index,
+                self.index.0,
             )
         };
         Variable::from(result)
@@ -1210,7 +1255,7 @@ impl MediumLevelILInstruction {
 
     pub fn register_value(&self, reg_id: u32) -> RegisterValue {
         unsafe {
-            BNGetMediumLevelILRegisterValueAtInstruction(self.function.handle, reg_id, self.index)
+            BNGetMediumLevelILRegisterValueAtInstruction(self.function.handle, reg_id, self.index.0)
         }
         .into()
     }
@@ -1220,7 +1265,7 @@ impl MediumLevelILInstruction {
             BNGetMediumLevelILRegisterValueAfterInstruction(
                 self.function.handle,
                 reg_id,
-                self.index,
+                self.index.0,
             )
         }
         .into()
@@ -1239,7 +1284,7 @@ impl MediumLevelILInstruction {
             BNGetMediumLevelILPossibleRegisterValuesAtInstruction(
                 self.function.handle,
                 reg_id,
-                self.index,
+                self.index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1260,7 +1305,7 @@ impl MediumLevelILInstruction {
             BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(
                 self.function.handle,
                 reg_id,
-                self.index,
+                self.index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1270,14 +1315,14 @@ impl MediumLevelILInstruction {
 
     pub fn flag_value(&self, flag_id: u32) -> RegisterValue {
         unsafe {
-            BNGetMediumLevelILFlagValueAtInstruction(self.function.handle, flag_id, self.index)
+            BNGetMediumLevelILFlagValueAtInstruction(self.function.handle, flag_id, self.index.0)
         }
         .into()
     }
 
     pub fn flag_value_after(&self, flag_id: u32) -> RegisterValue {
         unsafe {
-            BNGetMediumLevelILFlagValueAfterInstruction(self.function.handle, flag_id, self.index)
+            BNGetMediumLevelILFlagValueAfterInstruction(self.function.handle, flag_id, self.index.0)
         }
         .into()
     }
@@ -1295,7 +1340,7 @@ impl MediumLevelILInstruction {
             BNGetMediumLevelILPossibleFlagValuesAtInstruction(
                 self.function.handle,
                 flag_id,
-                self.index,
+                self.index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1312,7 +1357,7 @@ impl MediumLevelILInstruction {
             BNGetMediumLevelILPossibleFlagValuesAfterInstruction(
                 self.function.handle,
                 flag_id,
-                self.index,
+                self.index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1326,7 +1371,7 @@ impl MediumLevelILInstruction {
                 self.function.handle,
                 offset,
                 size,
-                self.index,
+                self.index.0,
             )
         }
         .into()
@@ -1338,7 +1383,7 @@ impl MediumLevelILInstruction {
                 self.function.handle,
                 offset,
                 size,
-                self.index,
+                self.index.0,
             )
         }
         .into()
@@ -1355,7 +1400,7 @@ impl MediumLevelILInstruction {
                 self.function.handle,
                 offset,
                 size,
-                self.index,
+                self.index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1374,7 +1419,7 @@ impl MediumLevelILInstruction {
                 self.function.handle,
                 offset,
                 size,
-                self.index,
+                self.index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1393,7 +1438,7 @@ impl MediumLevelILInstruction {
             BNGetDefaultIndexForMediumLevelILVariableDefinition(
                 self.function.handle,
                 &raw_var,
-                self.index,
+                self.index.0,
             )
         };
         Variable::new(var.ty, index, var.storage)
@@ -1406,7 +1451,15 @@ impl MediumLevelILInstruction {
     }
 
     fn lift_operand(&self, expr_idx: usize) -> Box<MediumLevelILLiftedInstruction> {
-        Box::new(self.function.lifted_instruction_from_idx(expr_idx))
+        // TODO: UGH, if your gonna call it expr_idx, call the instruction and expression!!!!!
+        // TODO: We dont even need to say instruction in the type!
+        // TODO: IF you want to have an instruction type, there needs to be a seperate expression type
+        // TODO: See the lowlevelil module.
+        let expr_idx_is_really_instr_idx = MediumLevelInstructionIndex(expr_idx);
+        let operand_instr = self
+            .function
+            .instruction_from_mapped_index(expr_idx_is_really_instr_idx);
+        Box::new(operand_instr.unwrap().lift())
     }
 
     fn lift_binary_op(&self, op: BinaryOp) -> LiftedBinaryOp {
@@ -1490,7 +1543,11 @@ unsafe impl CoreArrayProviderInner for MediumLevelILInstruction {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        context.instruction_from_idx(*raw)
+        // TODO: This needs to be tested!!!!
+        // TODO: What if this does not need to be mapped!!!!
+        context
+            .instruction_from_index(MediumLevelInstructionIndex(*raw))
+            .unwrap()
     }
 }
 
@@ -1567,7 +1624,10 @@ unsafe impl CoreArrayProviderInner for BranchDependence {
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Self {
-            instruction: MediumLevelILInstruction::new(context.clone(), raw.branch),
+            instruction: MediumLevelILInstruction::new(
+                context.clone(),
+                MediumLevelInstructionIndex(raw.branch),
+            ),
             dependence: raw.dependence,
         }
     }

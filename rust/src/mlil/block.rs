@@ -2,7 +2,7 @@ use crate::basicblock::{BasicBlock, BlockContext};
 use crate::rc::Ref;
 use std::ops::Range;
 
-use super::{MediumLevelILFunction, MediumLevelILInstruction};
+use super::{MediumLevelILFunction, MediumLevelILInstruction, MediumLevelInstructionIndex};
 
 pub struct MediumLevelILBlock {
     pub(crate) function: Ref<MediumLevelILFunction>,
@@ -10,17 +10,21 @@ pub struct MediumLevelILBlock {
 
 impl BlockContext for MediumLevelILBlock {
     type Instruction = MediumLevelILInstruction;
+    type InstructionIndex = MediumLevelInstructionIndex;
     type Iter = MediumLevelILBlockIter;
 
     fn start(&self, block: &BasicBlock<Self>) -> MediumLevelILInstruction {
+        // TODO: instruction_from_index says that it is not mapped and will do the call
+        // TODO: What if this IS already MAPPED!?!?!?
         self.function
-            .instruction_from_instruction_idx(block.raw_start() as usize)
+            .instruction_from_index(block.start_index())
+            .unwrap()
     }
 
     fn iter(&self, block: &BasicBlock<Self>) -> MediumLevelILBlockIter {
         MediumLevelILBlockIter {
             function: self.function.to_owned(),
-            range: block.raw_start()..block.raw_end(),
+            range: block.start_index().0..block.end_index().0,
         }
     }
 }
@@ -42,7 +46,7 @@ impl Clone for MediumLevelILBlock {
 
 pub struct MediumLevelILBlockIter {
     function: Ref<MediumLevelILFunction>,
-    range: Range<u64>,
+    range: Range<usize>,
 }
 
 impl Iterator for MediumLevelILBlockIter {
@@ -51,6 +55,8 @@ impl Iterator for MediumLevelILBlockIter {
     fn next(&mut self) -> Option<Self::Item> {
         self.range
             .next()
-            .map(|i| self.function.instruction_from_instruction_idx(i as usize))
+            .map(|i| MediumLevelInstructionIndex(i))
+            // TODO: What if this is already mapped!?!?!? we will map twice!?!?!?
+            .and_then(|i| self.function.instruction_from_index(i))
     }
 }

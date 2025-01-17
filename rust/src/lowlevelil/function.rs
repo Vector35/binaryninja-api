@@ -25,6 +25,7 @@ use std::marker::PhantomData;
 use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
 use crate::function::Function;
+use crate::lowlevelil::block::LowLevelILBlock;
 use crate::rc::*;
 
 use super::*;
@@ -57,7 +58,7 @@ impl FunctionForm for SSA {}
 impl<V: NonSSAVariant> FunctionForm for NonSSA<V> {}
 
 pub struct LowLevelILFunction<A: Architecture, M: FunctionMutability, F: FunctionForm> {
-    pub(crate) borrower: A::Handle,
+    pub(crate) arch_handle: A::Handle,
     pub(crate) handle: *mut BNLowLevelILFunction,
     _arch: PhantomData<*mut A>,
     _mutability: PhantomData<M>,
@@ -70,11 +71,14 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub(crate) unsafe fn from_raw(borrower: A::Handle, handle: *mut BNLowLevelILFunction) -> Self {
+    pub(crate) unsafe fn from_raw(
+        arch_handle: A::Handle,
+        handle: *mut BNLowLevelILFunction,
+    ) -> Self {
         debug_assert!(!handle.is_null());
 
         Self {
-            borrower,
+            arch_handle,
             handle,
             _arch: PhantomData,
             _mutability: PhantomData,
@@ -83,47 +87,66 @@ where
     }
 
     pub(crate) unsafe fn ref_from_raw(
-        borrower: A::Handle,
+        arch_handle: A::Handle,
         handle: *mut BNLowLevelILFunction,
     ) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-        Ref::new(Self::from_raw(borrower, handle))
+        Ref::new(Self::from_raw(arch_handle, handle))
     }
 
     pub(crate) fn arch(&self) -> &A {
-        self.borrower.borrow()
+        self.arch_handle.borrow()
     }
 
-    pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<Instruction<A, M, F>> {
-        use binaryninjacore_sys::BNGetLowLevelILInstructionCount;
-        use binaryninjacore_sys::BNLowLevelILGetInstructionStart;
+    pub fn instruction_at<L: Into<Location>>(
+        &self,
+        loc: L,
+    ) -> Option<LowLevelILInstruction<A, M, F>> {
+        Some(LowLevelILInstruction::new(
+            self,
+            self.instruction_index_at(loc)?,
+        ))
+    }
 
+    pub fn instruction_index_at<L: Into<Location>>(
+        &self,
+        loc: L,
+    ) -> Option<LowLevelInstructionIndex> {
+        use binaryninjacore_sys::BNLowLevelILGetInstructionStart;
         let loc: Location = loc.into();
         let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
-
-        unsafe {
-            let instr_idx = BNLowLevelILGetInstructionStart(self.handle, arch.handle, loc.addr);
-
-            if instr_idx >= BNGetLowLevelILInstructionCount(self.handle) {
-                None
-            } else {
-                Some(Instruction::new(self, InstructionIndex(instr_idx)))
-            }
+        let instr_idx =
+            unsafe { BNLowLevelILGetInstructionStart(self.handle, arch.handle, loc.addr) };
+        // `instr_idx` will equal self.instruction_count() if the instruction is not valid.
+        if instr_idx >= self.instruction_count() {
+            None
+        } else {
+            Some(LowLevelInstructionIndex(instr_idx))
         }
     }
 
-    // TODO: This should be a Option<Instruction> instead
-    pub fn instruction_from_idx(&self, index: InstructionIndex) -> Instruction<A, M, F> {
+    pub fn instruction_from_index(
+        &self,
+        index: LowLevelInstructionIndex,
+    ) -> Option<LowLevelILInstruction<A, M, F>> {
         if index.0 >= self.instruction_count() {
-            panic!("instruction index {} out of bounds", index);
+            None
+        } else {
+            Some(LowLevelILInstruction::new(self, index))
         }
-        Instruction::new(self, index)
     }
 
     pub fn instruction_count(&self) -> usize {
         unsafe {
             use binaryninjacore_sys::BNGetLowLevelILInstructionCount;
             BNGetLowLevelILInstructionCount(self.handle)
+        }
+    }
+
+    pub fn expression_count(&self) -> usize {
+        unsafe {
+            use binaryninjacore_sys::BNGetLowLevelILExprCount;
+            BNGetLowLevelILExprCount(self.handle)
         }
     }
 
@@ -143,13 +166,13 @@ where
     A: Architecture,
     F: FunctionForm,
 {
-    pub fn basic_blocks(&self) -> Array<BasicBlock<LowLevelBlock<A, Finalized, F>>> {
+    pub fn basic_blocks(&self) -> Array<BasicBlock<LowLevelILBlock<A, Finalized, F>>> {
         use binaryninjacore_sys::BNGetLowLevelILBasicBlockList;
 
         unsafe {
             let mut count = 0;
             let blocks = BNGetLowLevelILBasicBlockList(self.handle, &mut count);
-            let context = LowLevelBlock { function: self };
+            let context = LowLevelILBlock { function: self };
             Array::new(blocks, count, context)
         }
     }
@@ -198,7 +221,7 @@ where
 {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
         Ref::new(Self {
-            borrower: handle.borrower.clone(),
+            arch_handle: handle.arch_handle.clone(),
             handle: BNNewLowLevelILFunctionReference(handle.handle),
             _arch: PhantomData,
             _mutability: PhantomData,
@@ -221,6 +244,7 @@ where
         f.debug_struct("LowLevelILFunction")
             .field("arch", &self.arch())
             .field("instruction_count", &self.instruction_count())
+            .field("expression_count", &self.expression_count())
             .finish()
     }
 }

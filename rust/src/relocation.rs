@@ -1,9 +1,9 @@
+use crate::lowlevelil::RegularLowLevelILFunction;
 use crate::rc::Guard;
 use crate::string::BnStrCompatible;
 use crate::{
     architecture::CoreArchitecture,
     binaryview::BinaryView,
-    llil,
     rc::{CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable},
     symbol::Symbol,
 };
@@ -168,6 +168,7 @@ impl RelocationInfo {
             target: self.target,
             dataRelocation: self.data_relocation,
             relocationDataCache: self.relocation_data_cache,
+            // TODO: How to handle this?
             prev: core::ptr::null_mut(),
             next: core::ptr::null_mut(),
         }
@@ -180,6 +181,9 @@ impl Default for RelocationInfo {
     }
 }
 
+// TODO: There is NO freeing of the relocation
+// TODO: A quick look it seem that the relocation ptr is always not owned so this is _fine_
+// TODO: REALLY need to come back to this at some point.
 pub struct Relocation(*mut BNRelocation);
 
 impl Relocation {
@@ -260,7 +264,8 @@ pub trait RelocationHandler: 'static + Sized + AsRef<CoreRelocationHandler> {
         &self,
         _data: &[u8],
         _addr: u64,
-        _il: &llil::RegularFunction<CoreArchitecture>,
+        // TODO: Are we sure this is not a liftedilfunction?
+        _il: &RegularLowLevelILFunction<CoreArchitecture>,
         _reloc: &Relocation,
     ) -> RelocationOperand {
         RelocationOperand::AutocoerceExternPtr
@@ -358,7 +363,7 @@ impl RelocationHandler for CoreRelocationHandler {
         &self,
         data: &[u8],
         addr: u64,
-        il: &llil::RegularFunction<CoreArchitecture>,
+        il: &RegularLowLevelILFunction<CoreArchitecture>,
         reloc: &Relocation,
     ) -> RelocationOperand {
         unsafe {
@@ -491,8 +496,7 @@ where
             return RelocationOperand::Invalid.into();
         }
         let arch = unsafe { CoreArchitecture::from_raw(arch) };
-
-        let il = unsafe { llil::RegularFunction::from_raw(arch, il) };
+        let il = unsafe { RegularLowLevelILFunction::from_raw(arch, il) };
 
         custom_handler
             .get_operand_for_external_relocation(data, addr, &il, &reloc)

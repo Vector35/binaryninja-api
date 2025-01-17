@@ -20,11 +20,6 @@ use binaryninja::{
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
     function::Function,
     functionrecognizer::FunctionRecognizer,
-    llil,
-    llil::{
-        ExprInfo, InstrInfo, Label, Liftable, LiftableWithSize, LiftedNonSSA, Lifter, Mutable,
-        NonSSA,
-    },
     rc::Ref,
     relocation::{
         CoreRelocationHandler, CustomRelocationHandlerHandle, RelocationHandler, RelocationInfo,
@@ -41,8 +36,14 @@ use std::marker::PhantomData;
 
 use binaryninja::architecture::{BranchKind, IntrinsicId, RegisterId};
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
-use binaryninja::llil::{ExpressionHandler, InstructionHandler};
 use binaryninja::logger::Logger;
+use binaryninja::lowlevelil::expression::{LowLevelILExpressionKind, ValueExpr};
+use binaryninja::lowlevelil::instruction::LowLevelILInstructionKind;
+use binaryninja::lowlevelil::lifting::{Label, LiftableLowLevelIL, LiftableLowLevelILWithSize};
+use binaryninja::lowlevelil::{
+    expression::ExpressionHandler, instruction::InstructionHandler, LowLevelILRegister,
+    MutableLiftedILExpr, MutableLiftedILFunction, RegularLowLevelILFunction,
+};
 use riscv_dis::{
     FloatReg, FloatRegType, Instr, IntRegType, Op, RegFile, Register as RiscVRegister,
     RiscVDisassembler, RoundMode,
@@ -135,9 +136,9 @@ impl<D: 'static + RiscVDisassembler> From<FloatReg<D>> for Register<D> {
     }
 }
 
-impl<D: 'static + RiscVDisassembler> From<Register<D>> for llil::Register<Register<D>> {
+impl<D: 'static + RiscVDisassembler> From<Register<D>> for LowLevelILRegister<Register<D>> {
     fn from(reg: Register<D>) -> Self {
-        llil::Register::ArchReg(reg)
+        LowLevelILRegister::ArchReg(reg)
     }
 }
 
@@ -201,13 +202,15 @@ impl<D: 'static + RiscVDisassembler> architecture::Register for Register<D> {
     }
 }
 
-impl<'a, D: 'static + RiscVDisassembler + Send + Sync> Liftable<'a, RiscVArch<D>> for Register<D> {
-    type Result = llil::ValueExpr;
+impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableLowLevelIL<'a, RiscVArch<D>>
+    for Register<D>
+{
+    type Result = ValueExpr;
 
     fn lift(
-        il: &'a llil::Lifter<RiscVArch<D>>,
+        il: &'a MutableLiftedILFunction<RiscVArch<D>>,
         reg: Self,
-    ) -> llil::Expression<'a, RiscVArch<D>, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
+    ) -> MutableLiftedILExpr<'a, RiscVArch<D>, Self::Result> {
         match reg.reg_type() {
             RegType::Integer(0) => il.const_int(reg.size(), 0),
             RegType::Integer(_) => il.reg(reg.size(), reg),
@@ -216,14 +219,14 @@ impl<'a, D: 'static + RiscVDisassembler + Send + Sync> Liftable<'a, RiscVArch<D>
     }
 }
 
-impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableWithSize<'a, RiscVArch<D>>
+impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableLowLevelILWithSize<'a, RiscVArch<D>>
     for Register<D>
 {
     fn lift_with_size(
-        il: &'a llil::Lifter<RiscVArch<D>>,
+        il: &'a MutableLiftedILFunction<RiscVArch<D>>,
         reg: Self,
         size: usize,
-    ) -> llil::Expression<'a, RiscVArch<D>, Mutable, NonSSA<LiftedNonSSA>, llil::ValueExpr> {
+    ) -> MutableLiftedILExpr<'a, RiscVArch<D>, ValueExpr> {
         #[cfg(debug_assertions)]
         {
             if reg.size() < size {
@@ -1063,7 +1066,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         &self,
         data: &[u8],
         addr: u64,
-        il: &mut llil::Lifter<Self>,
+        il: &mut MutableLiftedILFunction<Self>,
     ) -> Option<(usize, bool)> {
         let max_width = self.default_integer_size();
 
@@ -1240,7 +1243,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     (0, _, _) => il.jump(target).append(), // indirect jump
                     (rd_id, rs1_id, _) if rd_id == rs1_id => {
                         // store the target in a temporary register so we don't clobber it when rd == rs1
-                        let tmp_reg: llil::Register<Register<D>> = llil::Register::Temp(0);
+                        let tmp_reg: LowLevelILRegister<Register<D>> = LowLevelILRegister::Temp(0);
                         il.set_reg(max_width, tmp_reg, target).append();
                         // indirect jump with storage of next address to non-`ra` register
                         il.set_reg(
@@ -1314,41 +1317,41 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             Op::Ebreak => il.bp().append(),
             Op::Uret => {
                 il.intrinsic(
-                    Lifter::<Self>::NO_OUTPUTS,
+                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
                     Intrinsic::Uret,
-                    Lifter::<Self>::NO_INPUTS,
+                    MutableLiftedILFunction::<Self>::NO_INPUTS,
                 )
                 .append();
                 il.no_ret().append();
             }
             Op::Sret => {
                 il.intrinsic(
-                    Lifter::<Self>::NO_OUTPUTS,
+                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
                     Intrinsic::Sret,
-                    Lifter::<Self>::NO_INPUTS,
+                    MutableLiftedILFunction::<Self>::NO_INPUTS,
                 )
                 .append();
                 il.no_ret().append();
             }
             Op::Mret => {
                 il.intrinsic(
-                    Lifter::<Self>::NO_OUTPUTS,
+                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
                     Intrinsic::Mret,
-                    Lifter::<Self>::NO_INPUTS,
+                    MutableLiftedILFunction::<Self>::NO_INPUTS,
                 )
                 .append();
                 il.no_ret().append();
             }
             Op::Wfi => il
                 .intrinsic(
-                    Lifter::<Self>::NO_OUTPUTS,
+                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
                     Intrinsic::Wfi,
-                    Lifter::<Self>::NO_INPUTS,
+                    MutableLiftedILFunction::<Self>::NO_INPUTS,
                 )
                 .append(),
             Op::Fence(i) => il
                 .intrinsic(
-                    Lifter::<Self>::NO_OUTPUTS,
+                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
                     Intrinsic::Fence,
                     [il.const_int(4, i.imm() as u32 as u64)],
                 )
@@ -1356,19 +1359,23 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
 
             Op::Csrrw(i) => {
                 let rd = Register::from(i.rd());
-                let rs1 = Liftable::lift(il, Register::from(i.rs1()));
+                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
                 let csr = il.const_int(4, i.csr() as u64);
 
                 if i.rd().id() == 0 {
-                    il.intrinsic(Lifter::<Self>::NO_OUTPUTS, Intrinsic::Csrwr, [csr, rs1])
-                        .append();
+                    il.intrinsic(
+                        MutableLiftedILFunction::<Self>::NO_OUTPUTS,
+                        Intrinsic::Csrwr,
+                        [csr, rs1],
+                    )
+                    .append();
                 } else {
                     il.intrinsic([rd], Intrinsic::Csrrw, [rs1]).append();
                 }
             }
             Op::Csrrs(i) => {
                 let rd = Register::from(i.rd());
-                let rs1 = Liftable::lift(il, Register::from(i.rs1()));
+                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
                 let csr = il.const_int(4, i.csr() as u64);
 
                 if i.rs1().id() == 0 {
@@ -1379,7 +1386,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             }
             Op::Csrrc(i) => {
                 let rd = Register::from(i.rd());
-                let rs1 = Liftable::lift(il, Register::from(i.rs1()));
+                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
                 let csr = il.const_int(4, i.csr() as u64);
 
                 if i.rs1().id() == 0 {
@@ -1394,8 +1401,12 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let imm = il.const_int(max_width, i.imm() as u64);
 
                 if i.rd().id() == 0 {
-                    il.intrinsic(Lifter::<Self>::NO_OUTPUTS, Intrinsic::Csrwr, [csr, imm])
-                        .append();
+                    il.intrinsic(
+                        MutableLiftedILFunction::<Self>::NO_OUTPUTS,
+                        Intrinsic::Csrwr,
+                        [csr, imm],
+                    )
+                    .append();
                 } else {
                     il.intrinsic([rd], Intrinsic::Csrrw, [csr, imm]).append();
                 }
@@ -1438,7 +1449,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let rd = a.rd();
 
                 let dest_reg = match rd.id() {
-                    0 => llil::Register::Temp(0),
+                    0 => LowLevelILRegister::Temp(0),
                     _ => Register::from(rd).into(),
                 };
 
@@ -1488,14 +1499,14 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let rs2 = a.rs2();
 
                 let dest_reg = match rd.id() {
-                    0 => llil::Register::Temp(0),
+                    0 => LowLevelILRegister::Temp(0),
                     _ => Register::from(rd).into(),
                 };
 
                 let mut next_temp_reg = 1;
                 let mut alloc_reg = |rs: riscv_dis::IntReg<D>| match (rs.id(), rd.id()) {
                     (id, r) if id != 0 && id == r => {
-                        let reg = llil::Register::Temp(next_temp_reg);
+                        let reg = LowLevelILRegister::Temp(next_temp_reg);
                         next_temp_reg += 1;
 
                         il.set_reg(max_width, reg, Register::from(rs)).append();
@@ -1516,8 +1527,8 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
 
                 il.set_reg(max_width, dest_reg, load_expr).append();
 
-                let val_expr = LiftableWithSize::lift_with_size(il, reg_with_val, size);
-                let dest_reg_val = LiftableWithSize::lift_with_size(il, dest_reg, size);
+                let val_expr = LiftableLowLevelILWithSize::lift_with_size(il, reg_with_val, size);
+                let dest_reg_val = LiftableLowLevelILWithSize::lift_with_size(il, dest_reg, size);
 
                 let val_to_store = match op {
                     Op::AmoSwap(..) => val_expr,
@@ -1575,7 +1586,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     };
                     il.set_reg(width, rd, result).append();
                 } else {
-                    let product = llil::Register::Temp(0);
+                    let product = LowLevelILRegister::Temp(0);
                     il.intrinsic(
                         [product],
                         Intrinsic::Fmul(f.width(), f.rm()),
@@ -1730,7 +1741,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             }
             Op::Fle(f) | Op::Flt(f) | Op::Feq(f) => {
                 let rd = match f.rd().id() {
-                    0 => llil::Register::Temp(0),
+                    0 => LowLevelILRegister::Temp(0),
                     _ => Register::from(f.rd()).into(),
                 };
                 let left = Register::from(f.rs1());
@@ -1764,7 +1775,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             }
             Op::FcvtToInt(f) => {
                 let rd = match f.rd().id() {
-                    0 => llil::Register::Temp(0),
+                    0 => LowLevelILRegister::Temp(0),
                     _ => Register::from(f.rd()).into(),
                 };
                 let rs1 = Register::from(f.rs1());
@@ -1799,7 +1810,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let rs1 = Register::from(f.rs1());
                 let rd_width = f.rd_width() as usize;
                 let rs1_width = f.rs1_width() as usize;
-                let rs1 = LiftableWithSize::lift_with_size(il, rs1, rs1_width);
+                let rs1 = LiftableLowLevelILWithSize::lift_with_size(il, rs1, rs1_width);
                 if f.zx() {
                     il.intrinsic(
                         [rd],
@@ -1821,7 +1832,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             }
             Op::FmvToInt(f) => {
                 let rd = match f.rd().id() {
-                    0 => llil::Register::Temp(0),
+                    0 => LowLevelILRegister::Temp(0),
                     _ => Register::from(f.rd()).into(),
                 };
                 let rs1 = Register::from(f.rs1());
@@ -1837,7 +1848,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let rd = Register::from(f.rd());
                 let rs1 = Register::from(f.rs1());
                 let width = f.width() as usize;
-                let rs1 = LiftableWithSize::lift_with_size(il, rs1, width);
+                let rs1 = LiftableLowLevelILWithSize::lift_with_size(il, rs1, width);
                 il.set_reg(width, rd, rs1).append();
             }
             Op::Fclass(f) => {
@@ -2791,7 +2802,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         &self,
         bv: &BinaryView,
         func: &Function,
-        llil: &llil::RegularFunction<CoreArchitecture>,
+        llil: &RegularLowLevelILFunction<CoreArchitecture>,
     ) -> bool {
         // Look for the following code pattern:
         // t3 = plt
@@ -2807,11 +2818,13 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         let mut next_llil_instr = llil.basic_blocks().iter().next().unwrap().iter();
 
         // Match instruction that fetches PC-relative PLT address range
-        let auipc = next_llil_instr.next().unwrap().info();
+        let auipc = next_llil_instr.next().unwrap().kind();
         let (auipc_dest, plt_base) = match auipc {
-            InstrInfo::SetReg(r) => {
-                let value = match r.source_expr().info() {
-                    ExprInfo::Const(v) | ExprInfo::ConstPtr(v) => v.value(),
+            LowLevelILInstructionKind::SetReg(r) => {
+                let value = match r.source_expr().kind() {
+                    LowLevelILExpressionKind::Const(v) | LowLevelILExpressionKind::ConstPtr(v) => {
+                        v.value()
+                    }
                     _ => return false,
                 };
                 (r.dest_reg(), value)
@@ -2820,34 +2833,46 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         };
 
         // Match load instruction that loads the imported address
-        let load = next_llil_instr.next().unwrap().info();
+        let load = next_llil_instr.next().unwrap().kind();
         let (mut entry, mut target_reg) = match load {
-            InstrInfo::SetReg(r) => match r.source_expr().info() {
-                ExprInfo::Load(l) => {
+            LowLevelILInstructionKind::SetReg(r) => match r.source_expr().kind() {
+                LowLevelILExpressionKind::Load(l) => {
                     let target_reg = r.dest_reg();
-                    let entry = match l.source_mem_expr().info() {
-                        ExprInfo::Reg(lr) if lr.source_reg() == auipc_dest => plt_base,
-                        ExprInfo::Add(a) => match (a.left().info(), a.right().info()) {
-                            (ExprInfo::Reg(a), ExprInfo::Const(b) | ExprInfo::ConstPtr(b))
-                                if a.source_reg() == auipc_dest =>
-                            {
-                                plt_base.wrapping_add(b.value())
+                    let entry = match l.source_mem_expr().kind() {
+                        LowLevelILExpressionKind::Reg(lr) if lr.source_reg() == auipc_dest => {
+                            plt_base
+                        }
+                        LowLevelILExpressionKind::Add(a) => {
+                            match (a.left().kind(), a.right().kind()) {
+                                (
+                                    LowLevelILExpressionKind::Reg(a),
+                                    LowLevelILExpressionKind::Const(b)
+                                    | LowLevelILExpressionKind::ConstPtr(b),
+                                ) if a.source_reg() == auipc_dest => {
+                                    plt_base.wrapping_add(b.value())
+                                }
+                                (
+                                    LowLevelILExpressionKind::Const(b)
+                                    | LowLevelILExpressionKind::ConstPtr(b),
+                                    LowLevelILExpressionKind::Reg(a),
+                                ) if a.source_reg() == auipc_dest => {
+                                    plt_base.wrapping_add(b.value())
+                                }
+                                _ => return false,
                             }
-                            (ExprInfo::Const(b) | ExprInfo::ConstPtr(b), ExprInfo::Reg(a))
-                                if a.source_reg() == auipc_dest =>
-                            {
-                                plt_base.wrapping_add(b.value())
+                        }
+                        LowLevelILExpressionKind::Sub(a) => {
+                            match (a.left().kind(), a.right().kind()) {
+                                (
+                                    LowLevelILExpressionKind::Reg(a),
+                                    LowLevelILExpressionKind::Const(b)
+                                    | LowLevelILExpressionKind::ConstPtr(b),
+                                ) if a.source_reg() == auipc_dest => {
+                                    plt_base.wrapping_sub(b.value())
+                                }
+                                _ => return false,
                             }
-                            _ => return false,
-                        },
-                        ExprInfo::Sub(a) => match (a.left().info(), a.right().info()) {
-                            (ExprInfo::Reg(a), ExprInfo::Const(b) | ExprInfo::ConstPtr(b))
-                                if a.source_reg() == auipc_dest =>
-                            {
-                                plt_base.wrapping_sub(b.value())
-                            }
-                            _ => return false,
-                        },
+                        }
                         _ => return false,
                     };
                     (entry, target_reg)
@@ -2870,14 +2895,14 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         }
 
         // (OPTIONAL) Check if we are storing in temp0, adjust target reg if so
-        let mut temp_reg_inst = next_llil_instr.next().unwrap().info();
+        let mut temp_reg_inst = next_llil_instr.next().unwrap().kind();
         match &temp_reg_inst {
-            InstrInfo::SetReg(r) if llil.instruction_count() >= 5 => {
-                match r.source_expr().info() {
-                    ExprInfo::Reg(op) if target_reg == op.source_reg() => {
+            LowLevelILInstructionKind::SetReg(r) if llil.instruction_count() >= 5 => {
+                match r.source_expr().kind() {
+                    LowLevelILExpressionKind::Reg(op) if target_reg == op.source_reg() => {
                         // Update the target_reg to the temp reg.
                         target_reg = r.dest_reg();
-                        temp_reg_inst = next_llil_instr.next().unwrap().info()
+                        temp_reg_inst = next_llil_instr.next().unwrap().kind()
                     }
                     _ => {}
                 }
@@ -2888,9 +2913,11 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         // Match instruction that stores the next instruction address into a register
         let next_pc_inst = temp_reg_inst;
         let (next_pc_dest, next_pc, cur_pc) = match next_pc_inst {
-            InstrInfo::SetReg(r) => {
-                let value = match r.source_expr().info() {
-                    ExprInfo::Const(v) | ExprInfo::ConstPtr(v) => v.value(),
+            LowLevelILInstructionKind::SetReg(r) => {
+                let value = match r.source_expr().kind() {
+                    LowLevelILExpressionKind::Const(v) | LowLevelILExpressionKind::ConstPtr(v) => {
+                        v.value()
+                    }
                     _ => return false,
                 };
                 (r.dest_reg(), value, r.address())
@@ -2902,17 +2929,17 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         }
 
         // Match tail call at the end and make sure it is going to the import
-        let jump = next_llil_instr.next().unwrap().info();
+        let jump = next_llil_instr.next().unwrap().kind();
         match jump {
-            InstrInfo::TailCall(j) => {
-                match j.target().info() {
-                    ExprInfo::Reg(r) if r.source_reg() == target_reg => (),
+            LowLevelILInstructionKind::TailCall(j) => {
+                match j.target().kind() {
+                    LowLevelILExpressionKind::Reg(r) if r.source_reg() == target_reg => (),
                     _ => return false,
                 };
             }
-            InstrInfo::Jump(j) => {
-                match j.target().info() {
-                    ExprInfo::Reg(r) if r.source_reg() == target_reg => (),
+            LowLevelILInstructionKind::Jump(j) => {
+                match j.target().kind() {
+                    LowLevelILExpressionKind::Reg(r) if r.source_reg() == target_reg => (),
                     _ => return false,
                 };
             }

@@ -22,7 +22,6 @@ use crate::{
     component::Component,
     disassembly::{DisassemblySettings, DisassemblyTextLine},
     flowgraph::FlowGraph,
-    llil,
     mlil::FunctionGraphType,
     platform::Platform,
     references::CodeReference,
@@ -41,6 +40,7 @@ pub use binaryninjacore_sys::BNHighlightStandardColor as HighlightStandardColor;
 use crate::architecture::RegisterId;
 use crate::confidence::Conf;
 use crate::hlil::HighLevelILFunction;
+use crate::lowlevelil::{LiftedILFunction, RegularLowLevelILFunction};
 use crate::mlil::MediumLevelILFunction;
 use crate::variable::{
     IndirectBranchInfo, MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType,
@@ -141,18 +141,19 @@ impl NativeBlock {
 
 impl BlockContext for NativeBlock {
     type Instruction = u64;
+    type InstructionIndex = u64;
     type Iter = NativeBlockIter;
 
     fn start(&self, block: &BasicBlock<Self>) -> u64 {
-        block.raw_start()
+        block.start_index()
     }
 
     fn iter(&self, block: &BasicBlock<Self>) -> NativeBlockIter {
         NativeBlockIter {
             arch: block.arch(),
             bv: block.function().view(),
-            cur: block.raw_start(),
-            end: block.raw_end(),
+            cur: block.start_index(),
+            end: block.end_index(),
         }
     }
 }
@@ -479,11 +480,14 @@ impl Function {
         }
     }
 
-    pub fn low_level_il(&self) -> Result<Ref<llil::RegularFunction<CoreArchitecture>>, ()> {
+    pub fn low_level_il(&self) -> Result<Ref<RegularLowLevelILFunction<CoreArchitecture>>, ()> {
         unsafe {
             let llil_ptr = BNGetFunctionLowLevelIL(self.handle);
             match llil_ptr.is_null() {
-                false => Ok(llil::RegularFunction::ref_from_raw(self.arch(), llil_ptr)),
+                false => Ok(RegularLowLevelILFunction::ref_from_raw(
+                    self.arch(),
+                    llil_ptr,
+                )),
                 true => Err(()),
             }
         }
@@ -491,28 +495,30 @@ impl Function {
 
     pub fn low_level_il_if_available(
         &self,
-    ) -> Option<Ref<llil::RegularFunction<CoreArchitecture>>> {
+    ) -> Option<Ref<RegularLowLevelILFunction<CoreArchitecture>>> {
         let llil_ptr = unsafe { BNGetFunctionLowLevelILIfAvailable(self.handle) };
         match llil_ptr.is_null() {
-            false => Some(unsafe { llil::RegularFunction::ref_from_raw(self.arch(), llil_ptr) }),
+            false => {
+                Some(unsafe { RegularLowLevelILFunction::ref_from_raw(self.arch(), llil_ptr) })
+            }
             true => None,
         }
     }
 
-    pub fn lifted_il(&self) -> Result<Ref<llil::LiftedFunction<CoreArchitecture>>, ()> {
+    pub fn lifted_il(&self) -> Result<Ref<LiftedILFunction<CoreArchitecture>>, ()> {
         unsafe {
             let llil_ptr = BNGetFunctionLiftedIL(self.handle);
             match llil_ptr.is_null() {
-                false => Ok(llil::LiftedFunction::ref_from_raw(self.arch(), llil_ptr)),
+                false => Ok(LiftedILFunction::ref_from_raw(self.arch(), llil_ptr)),
                 true => Err(()),
             }
         }
     }
 
-    pub fn lifted_il_if_available(&self) -> Option<Ref<llil::LiftedFunction<CoreArchitecture>>> {
+    pub fn lifted_il_if_available(&self) -> Option<Ref<LiftedILFunction<CoreArchitecture>>> {
         let llil_ptr = unsafe { BNGetFunctionLiftedILIfAvailable(self.handle) };
         match llil_ptr.is_null() {
-            false => Some(unsafe { llil::LiftedFunction::ref_from_raw(self.arch(), llil_ptr) }),
+            false => Some(unsafe { LiftedILFunction::ref_from_raw(self.arch(), llil_ptr) }),
             true => None,
         }
     }

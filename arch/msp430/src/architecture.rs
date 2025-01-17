@@ -8,7 +8,6 @@ use binaryninja::{
         UnusedIntrinsic, UnusedRegisterStack, UnusedRegisterStackInfo,
     },
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
-    llil::{LiftedExpr, Lifter},
     Endianness,
 };
 
@@ -20,6 +19,8 @@ use msp430_asm::{
 use binaryninja::architecture::{
     BranchKind, FlagClassId, FlagGroupId, FlagId, FlagWriteId, RegisterId,
 };
+use binaryninja::lowlevelil::expression::ValueExpr;
+use binaryninja::lowlevelil::{MutableLiftedILExpr, MutableLiftedILFunction};
 use log::error;
 
 const MIN_MNEMONIC: usize = 9;
@@ -192,7 +193,7 @@ impl Architecture for Msp430 {
         &self,
         data: &[u8],
         addr: u64,
-        il: &mut Lifter<Self>,
+        il: &mut MutableLiftedILFunction<Self>,
     ) -> Option<(usize, bool)> {
         match msp430_asm::decode(data) {
             Ok(inst) => {
@@ -224,8 +225,8 @@ impl Architecture for Msp430 {
     fn flag_group_llil<'a>(
         &self,
         _group: Self::FlagGroup,
-        _il: &'a mut Lifter<Self>,
-    ) -> Option<LiftedExpr<'a, Self>> {
+        _il: &'a mut MutableLiftedILFunction<Self>,
+    ) -> Option<MutableLiftedILExpr<'a, Self, ValueExpr>> {
         None
     }
 

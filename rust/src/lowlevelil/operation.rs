@@ -169,29 +169,32 @@ where
         self.op.size
     }
 
-    pub fn dest_reg(&self) -> Register<A::Register> {
+    pub fn dest_reg(&self) -> LowLevelILRegister<A::Register> {
         let raw_id = self.op.operands[0] as u32;
 
         if raw_id >= 0x8000_0000 {
-            Register::Temp(raw_id & 0x7fff_ffff)
+            LowLevelILRegister::Temp(raw_id & 0x7fff_ffff)
         } else {
             self.function
                 .arch()
                 .register_from_id(RegisterId(raw_id))
-                .map(Register::ArchReg)
+                .map(LowLevelILRegister::ArchReg)
                 .unwrap_or_else(|| {
                     log::error!(
                         "got garbage register from LLIL_SET_REG @ 0x{:x}",
                         self.op.address
                     );
 
-                    Register::Temp(0)
+                    LowLevelILRegister::Temp(0)
                 })
         }
     }
 
-    pub fn source_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[1] as usize),
+        )
     }
 }
 
@@ -224,50 +227,53 @@ where
         self.op.size
     }
 
-    pub fn dest_reg_high(&self) -> Register<A::Register> {
+    pub fn dest_reg_high(&self) -> LowLevelILRegister<A::Register> {
         let raw_id = self.op.operands[0] as u32;
 
         if raw_id >= 0x8000_0000 {
-            Register::Temp(raw_id & 0x7fff_ffff)
+            LowLevelILRegister::Temp(raw_id & 0x7fff_ffff)
         } else {
             self.function
                 .arch()
                 .register_from_id(RegisterId(raw_id))
-                .map(Register::ArchReg)
+                .map(LowLevelILRegister::ArchReg)
                 .unwrap_or_else(|| {
                     log::error!(
                         "got garbage register from LLIL_SET_REG_SPLIT @ 0x{:x}",
                         self.op.address
                     );
 
-                    Register::Temp(0)
+                    LowLevelILRegister::Temp(0)
                 })
         }
     }
 
-    pub fn dest_reg_low(&self) -> Register<A::Register> {
+    pub fn dest_reg_low(&self) -> LowLevelILRegister<A::Register> {
         let raw_id = self.op.operands[1] as u32;
 
         if raw_id >= 0x8000_0000 {
-            Register::Temp(raw_id & 0x7fff_ffff)
+            LowLevelILRegister::Temp(raw_id & 0x7fff_ffff)
         } else {
             self.function
                 .arch()
                 .register_from_id(RegisterId(raw_id))
-                .map(Register::ArchReg)
+                .map(LowLevelILRegister::ArchReg)
                 .unwrap_or_else(|| {
                     log::error!(
                         "got garbage register from LLIL_SET_REG_SPLIT @ 0x{:x}",
                         self.op.address
                     );
 
-                    Register::Temp(0)
+                    LowLevelILRegister::Temp(0)
                 })
         }
     }
 
-    pub fn source_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[2] as usize))
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[2] as usize),
+        )
     }
 }
 
@@ -306,8 +312,11 @@ where
             .unwrap()
     }
 
-    pub fn source_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[1] as usize),
+        )
     }
 }
 
@@ -339,8 +348,11 @@ where
         self.op.size
     }
 
-    pub fn source_mem_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    pub fn source_mem_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[0] as usize),
+        )
     }
 }
 
@@ -372,12 +384,18 @@ where
         self.op.size
     }
 
-    pub fn dest_mem_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    pub fn dest_mem_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[0] as usize),
+        )
     }
 
-    pub fn source_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[1] as usize),
+        )
     }
 }
 
@@ -410,23 +428,23 @@ where
         self.op.size
     }
 
-    pub fn source_reg(&self) -> Register<A::Register> {
+    pub fn source_reg(&self) -> LowLevelILRegister<A::Register> {
         let raw_id = self.op.operands[0] as u32;
 
         if raw_id >= 0x8000_0000 {
-            Register::Temp(raw_id & 0x7fff_ffff)
+            LowLevelILRegister::Temp(raw_id & 0x7fff_ffff)
         } else {
             self.function
                 .arch()
                 .register_from_id(RegisterId(raw_id))
-                .map(Register::ArchReg)
+                .map(LowLevelILRegister::ArchReg)
                 .unwrap_or_else(|| {
                     log::error!(
                         "got garbage register from LLIL_REG @ 0x{:x}",
                         self.op.address
                     );
 
-                    Register::Temp(0)
+                    LowLevelILRegister::Temp(0)
                 })
         }
     }
@@ -460,44 +478,44 @@ where
         self.op.size
     }
 
-    pub fn low_reg(&self) -> Register<A::Register> {
+    pub fn low_reg(&self) -> LowLevelILRegister<A::Register> {
         let raw_id = self.op.operands[0] as u32;
 
         if raw_id >= 0x8000_0000 {
-            Register::Temp(raw_id & 0x7fff_ffff)
+            LowLevelILRegister::Temp(raw_id & 0x7fff_ffff)
         } else {
             self.function
                 .arch()
                 .register_from_id(RegisterId(raw_id))
-                .map(Register::ArchReg)
+                .map(LowLevelILRegister::ArchReg)
                 .unwrap_or_else(|| {
                     log::error!(
                         "got garbage register from LLIL_REG @ 0x{:x}",
                         self.op.address
                     );
 
-                    Register::Temp(0)
+                    LowLevelILRegister::Temp(0)
                 })
         }
     }
 
-    pub fn high_reg(&self) -> Register<A::Register> {
+    pub fn high_reg(&self) -> LowLevelILRegister<A::Register> {
         let raw_id = self.op.operands[1] as u32;
 
         if raw_id >= 0x8000_0000 {
-            Register::Temp(raw_id & 0x7fff_ffff)
+            LowLevelILRegister::Temp(raw_id & 0x7fff_ffff)
         } else {
             self.function
                 .arch()
                 .register_from_id(RegisterId(raw_id))
-                .map(Register::ArchReg)
+                .map(LowLevelILRegister::ArchReg)
                 .unwrap_or_else(|| {
                     log::error!(
                         "got garbage register from LLIL_REG @ 0x{:x}",
                         self.op.address
                     );
 
-                    Register::Temp(0)
+                    LowLevelILRegister::Temp(0)
                 })
         }
     }
@@ -556,8 +574,11 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn target(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    pub fn target(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[0] as usize),
+        )
     }
 }
 
@@ -613,11 +634,14 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn target(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    pub fn target(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[0] as usize),
+        )
     }
 
-    pub fn target_list(&self) -> BTreeMap<u64, InstructionIndex> {
+    pub fn target_list(&self) -> BTreeMap<u64, LowLevelInstructionIndex> {
         let mut result = BTreeMap::new();
         let count = self.op.operands[1] as usize / 2;
         let mut list = TargetListIter {
@@ -630,7 +654,7 @@ where
 
         for _ in 0..count {
             let value = list.next();
-            let target = InstructionIndex(list.next() as usize);
+            let target = LowLevelInstructionIndex(list.next() as usize);
             result.insert(value, target);
         }
 
@@ -661,8 +685,11 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn target(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    pub fn target(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[0] as usize),
+        )
     }
 
     pub fn stack_adjust(&self) -> Option<u64> {
@@ -699,8 +726,11 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn target(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    pub fn target(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[0] as usize),
+        )
     }
 }
 
@@ -726,21 +756,24 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn condition(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
-    }
-
-    pub fn true_target(&self) -> Instruction<'func, A, M, F> {
-        Instruction::new(
+    pub fn condition(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
             self.function,
-            InstructionIndex(self.op.operands[1] as usize),
+            LowLevelILExpressionIndex(self.op.operands[0] as usize),
         )
     }
 
-    pub fn false_target(&self) -> Instruction<'func, A, M, F> {
-        Instruction::new(
+    pub fn true_target(&self) -> LowLevelILInstruction<'func, A, M, F> {
+        LowLevelILInstruction::new(
             self.function,
-            InstructionIndex(self.op.operands[2] as usize),
+            LowLevelInstructionIndex(self.op.operands[1] as usize),
+        )
+    }
+
+    pub fn false_target(&self) -> LowLevelILInstruction<'func, A, M, F> {
+        LowLevelILInstruction::new(
+            self.function,
+            LowLevelInstructionIndex(self.op.operands[2] as usize),
         )
     }
 }
@@ -769,10 +802,10 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn target(&self) -> Instruction<'func, A, M, F> {
-        Instruction::new(
+    pub fn target(&self) -> LowLevelILInstruction<'func, A, M, F> {
+        LowLevelILInstruction::new(
             self.function,
-            InstructionIndex(self.op.operands[0] as usize),
+            LowLevelInstructionIndex(self.op.operands[0] as usize),
         )
     }
 }
@@ -1047,12 +1080,18 @@ where
         self.op.size
     }
 
-    pub fn left(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    pub fn left(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[0] as usize),
+        )
     }
 
-    pub fn right(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
+    pub fn right(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[1] as usize),
+        )
     }
 }
 
@@ -1084,16 +1123,25 @@ where
         self.op.size
     }
 
-    pub fn left(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    pub fn left(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[0] as usize),
+        )
     }
 
-    pub fn right(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
+    pub fn right(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[1] as usize),
+        )
     }
 
-    pub fn carry(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[2] as usize))
+    pub fn carry(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[2] as usize),
+        )
     }
 }
 
@@ -1126,17 +1174,26 @@ where
         self.op.size
     }
 
-    pub fn high(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    pub fn high(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[0] as usize),
+        )
     }
 
-    pub fn low(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
+    pub fn low(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[1] as usize),
+        )
     }
 
     // TODO: I don't think this actually exists?
-    pub fn right(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[2] as usize))
+    pub fn right(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[2] as usize),
+        )
     }
 }
 
@@ -1171,8 +1228,11 @@ where
         self.op.size
     }
 
-    pub fn operand(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    pub fn operand(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[0] as usize),
+        )
     }
 }
 
@@ -1203,12 +1263,18 @@ where
         self.op.size
     }
 
-    pub fn left(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    pub fn left(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[0] as usize),
+        )
     }
 
-    pub fn right(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[1] as usize))
+    pub fn right(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[1] as usize),
+        )
     }
 }
 
@@ -1240,8 +1306,11 @@ where
         self.op.size
     }
 
-    pub fn mem_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression::new(self.function, ExpressionIndex(self.op.operands[0] as usize))
+    pub fn mem_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelILExpressionIndex(self.op.operands[0] as usize),
+        )
     }
 }
 

@@ -1,5 +1,5 @@
 use super::operation::*;
-use super::HighLevelILFunction;
+use super::{HighLevelILFunction, HighLevelInstructionIndex};
 
 use crate::architecture::CoreIntrinsic;
 use crate::rc::Ref;
@@ -21,11 +21,15 @@ pub enum HighLevelILLiftedOperand {
     VarSsaList(Vec<SSAVariable>),
 }
 
+// TODO: UGH, if your gonna call it expr_idx, call the instruction and expression!!!!!
+// TODO: We dont even need to say instruction in the type!
+// TODO: IF you want to have an instruction type, there needs to be a seperate expression type
+// TODO: See the lowlevelil module.
 #[derive(Clone, Debug, PartialEq)]
 pub struct HighLevelILLiftedInstruction {
     pub function: Ref<HighLevelILFunction>,
     pub address: u64,
-    pub index: usize,
+    pub index: HighLevelInstructionIndex,
     pub size: usize,
     pub kind: HighLevelILLiftedInstructionKind,
 }

@@ -7,10 +7,12 @@ use crate::basicblock::BasicBlock;
 use crate::binaryview::BinaryView;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
-use crate::llil::{self, FunctionForm, Mutable};
+use crate::hlil::HighLevelILFunction;
+use crate::lowlevelil::function::{LowLevelILFunction, Mutable, NonSSA, NonSSAVariant};
+use crate::lowlevelil::MutableLiftedILFunction;
+use crate::mlil::MediumLevelILFunction;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
-use crate::{hlil, mlil};
 
 #[repr(transparent)]
 /// The AnalysisContext struct is used to represent the current state of
@@ -37,75 +39,76 @@ impl AnalysisContext {
         unsafe { BinaryView::ref_from_raw(result) }
     }
 
-    /// Function for the current AnalysisContext
+    /// [`Function`] for the current AnalysisContext
     pub fn function(&self) -> Ref<Function> {
         let result = unsafe { BNAnalysisContextGetFunction(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { Function::ref_from_raw(result) }
     }
 
-    /// LowLevelILFunction used to represent Low Level IL
-    pub unsafe fn lifted_il_function<F: FunctionForm>(
+    /// [`LowLevelILFunction`] used to represent Low Level IL
+    pub unsafe fn lifted_il_function(
         &self,
-    ) -> Option<Ref<llil::LowLevelILFunction<CoreArchitecture, Mutable, F>>> {
+    ) -> Option<Ref<MutableLiftedILFunction<CoreArchitecture>>> {
         let func = self.function();
         let result = unsafe { BNGetFunctionLiftedIL(func.handle) };
         let arch = self.function().arch();
         unsafe {
-            Some(llil::LowLevelILFunction::ref_from_raw(
+            Some(LowLevelILFunction::ref_from_raw(
                 arch,
                 NonNull::new(result)?.as_ptr(),
             ))
         }
     }
 
-    pub fn set_lifted_il_function<F: FunctionForm>(
-        &self,
-        value: &llil::LowLevelILFunction<CoreArchitecture, Mutable, F>,
-    ) {
+    pub fn set_lifted_il_function(&self, value: &MutableLiftedILFunction<CoreArchitecture>) {
         unsafe { BNSetLiftedILFunction(self.handle.as_ptr(), value.handle) }
     }
 
-    /// LowLevelILFunction used to represent Low Level IL
-    pub unsafe fn llil_function<F: FunctionForm>(
+    // TODO: This returns LiftedNonSSA because the lifting code was written before we could patch the IL
+    // TODO: At some point we need to take the lifting code and make it available to regular IL.
+    /// [`LowLevelILFunction`] used to represent Low Level IL
+    pub unsafe fn llil_function<V: NonSSAVariant>(
         &self,
-    ) -> Option<Ref<llil::LowLevelILFunction<CoreArchitecture, Mutable, F>>> {
+    ) -> Option<Ref<LowLevelILFunction<CoreArchitecture, Mutable, NonSSA<V>>>> {
         let result = unsafe { BNAnalysisContextGetLowLevelILFunction(self.handle.as_ptr()) };
         let arch = self.function().arch();
         unsafe {
-            Some(llil::LowLevelILFunction::ref_from_raw(
+            Some(LowLevelILFunction::ref_from_raw(
                 arch,
                 NonNull::new(result)?.as_ptr(),
             ))
         }
     }
 
-    pub fn set_llil_function<F: FunctionForm>(
+    // TODO: This returns LiftedNonSSA because the lifting code was written before we could patch the IL
+    // TODO: At some point we need to take the lifting code and make it available to regular IL.
+    pub fn set_llil_function<V: NonSSAVariant>(
         &self,
-        value: &llil::LowLevelILFunction<CoreArchitecture, Mutable, F>,
+        value: &LowLevelILFunction<CoreArchitecture, Mutable, NonSSA<V>>,
     ) {
         unsafe { BNSetLowLevelILFunction(self.handle.as_ptr(), value.handle) }
     }
 
-    /// MediumLevelILFunction used to represent Medium Level IL
-    pub fn mlil_function(&self) -> Option<Ref<mlil::MediumLevelILFunction>> {
+    /// [`MediumLevelILFunction`] used to represent Medium Level IL
+    pub fn mlil_function(&self) -> Option<Ref<MediumLevelILFunction>> {
         let result = unsafe { BNAnalysisContextGetMediumLevelILFunction(self.handle.as_ptr()) };
         unsafe {
-            Some(mlil::MediumLevelILFunction::ref_from_raw(
+            Some(MediumLevelILFunction::ref_from_raw(
                 NonNull::new(result)?.as_ptr(),
             ))
         }
     }
 
-    pub fn set_mlil_function(&self, value: &mlil::MediumLevelILFunction) {
+    pub fn set_mlil_function(&self, value: &MediumLevelILFunction) {
         unsafe { BNSetMediumLevelILFunction(self.handle.as_ptr(), value.handle) }
     }
 
-    /// HighLevelILFunction used to represent High Level IL
-    pub fn hlil_function(&self, full_ast: bool) -> Option<Ref<hlil::HighLevelILFunction>> {
+    /// [`HighLevelILFunction`] used to represent High Level IL
+    pub fn hlil_function(&self, full_ast: bool) -> Option<Ref<HighLevelILFunction>> {
         let result = unsafe { BNAnalysisContextGetHighLevelILFunction(self.handle.as_ptr()) };
         unsafe {
-            Some(hlil::HighLevelILFunction::ref_from_raw(
+            Some(HighLevelILFunction::ref_from_raw(
                 NonNull::new(result)?.as_ptr(),
                 full_ast,
             ))

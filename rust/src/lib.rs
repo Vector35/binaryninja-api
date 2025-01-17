@@ -71,8 +71,8 @@ pub mod headless;
 pub mod hlil;
 pub mod interaction;
 pub mod linearview;
-pub mod llil;
 pub mod logger;
+pub mod lowlevelil;
 pub mod mainthread;
 pub mod metadata;
 pub mod mlil;
@@ -119,22 +119,6 @@ pub use binaryninjacore_sys::BNILBranchDependence as ILBranchDependence;
 
 pub const BN_FULL_CONFIDENCE: u8 = u8::MAX;
 pub const BN_INVALID_EXPR: usize = usize::MAX;
-
-unsafe extern "C" fn cb_progress_func<F: FnMut(usize, usize) -> bool>(
-    ctxt: *mut c_void,
-    progress: usize,
-    total: usize,
-) -> bool {
-    if ctxt.is_null() {
-        return true;
-    }
-    let closure = &mut *(ctxt as *mut F);
-    closure(progress, total)
-}
-
-unsafe extern "C" fn cb_progress_nop(_ctxt: *mut c_void, _arg1: usize, _arg2: usize) -> bool {
-    true
-}
 
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
 pub fn load(file_path: impl AsRef<Path>) -> Option<Ref<BinaryView>> {
@@ -649,6 +633,22 @@ pub fn add_optional_plugin_dependency<S: BnStrCompatible>(name: S) {
     unsafe {
         BNAddOptionalPluginDependency(name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
     };
+}
+
+unsafe extern "C" fn cb_progress_func<F: FnMut(usize, usize) -> bool>(
+    ctxt: *mut c_void,
+    progress: usize,
+    total: usize,
+) -> bool {
+    if ctxt.is_null() {
+        return true;
+    }
+    let closure = &mut *(ctxt as *mut F);
+    closure(progress, total)
+}
+
+unsafe extern "C" fn cb_progress_nop(_ctxt: *mut c_void, _arg1: usize, _arg2: usize) -> bool {
+    true
 }
 
 // Provide ABI version automatically so that the core can verify binary compatibility

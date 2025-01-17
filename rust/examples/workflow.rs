@@ -1,7 +1,7 @@
 use binaryninja::binaryview::BinaryViewExt;
-use binaryninja::llil::{
-    ExprInfo, ExpressionHandler, InstructionHandler, LiftedNonSSA, NonSSA, VisitorAction,
-};
+use binaryninja::lowlevelil::expression::{ExpressionHandler, LowLevelILExpressionKind};
+use binaryninja::lowlevelil::instruction::InstructionHandler;
+use binaryninja::lowlevelil::VisitorAction;
 use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
 
 const RUST_ACTIVITY_NAME: &str = "analysis.plugins.rustexample";
@@ -24,12 +24,12 @@ fn example_activity(analysis_context: &AnalysisContext) {
         func.workflow().map(|wf| wf.name())
     );
     // If we have llil available, replace that as well.
-    if let Some(llil) = unsafe { analysis_context.llil_function::<NonSSA<LiftedNonSSA>>() } {
+    if let Some(llil) = unsafe { analysis_context.llil_function() } {
         for basic_block in &func.basic_blocks() {
             for instr in basic_block.iter() {
                 if let Some(llil_instr) = llil.instruction_at(instr) {
                     llil_instr.visit_tree(&mut |expr| {
-                        if let ExprInfo::Const(_op) = expr.info() {
+                        if let LowLevelILExpressionKind::Const(_op) = expr.kind() {
                             // Replace all consts with 0x1337.
                             println!("Replacing llil expression @ 0x{:x} : {}", instr, expr.index);
                             unsafe {
@@ -71,7 +71,7 @@ pub fn main() {
             for block in &llil.basic_blocks() {
                 for instr in block.iter() {
                     instr.visit_tree(&mut |expr| {
-                        if let ExprInfo::Const(value) = expr.info() {
+                        if let LowLevelILExpressionKind::Const(value) = expr.kind() {
                             if value.value() == 0x1337 {
                                 println!(
                                     "Found constant 0x1337 at instruction 0x{:x} in function {}",

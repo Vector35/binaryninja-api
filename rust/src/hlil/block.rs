@@ -1,15 +1,13 @@
 use std::ops::Range;
 
-use binaryninjacore_sys::BNGetHighLevelILIndexForInstruction;
-
 use crate::basicblock::{BasicBlock, BlockContext};
 use crate::rc::Ref;
 
-use super::{HighLevelILFunction, HighLevelILInstruction};
+use super::{HighLevelILFunction, HighLevelILInstruction, HighLevelInstructionIndex};
 
 pub struct HighLevelILBlockIter {
     function: Ref<HighLevelILFunction>,
-    range: Range<u64>,
+    range: Range<usize>,
 }
 
 impl Iterator for HighLevelILBlockIter {
@@ -18,10 +16,9 @@ impl Iterator for HighLevelILBlockIter {
     fn next(&mut self) -> Option<Self::Item> {
         self.range
             .next()
-            .map(|i| unsafe {
-                BNGetHighLevelILIndexForInstruction(self.function.handle, i as usize)
-            })
-            .map(|i| HighLevelILInstruction::new(self.function.to_owned(), i))
+            .map(|i| HighLevelInstructionIndex(i))
+            // TODO: Is this already MAPPED>!>?!? If so we map twice that is BAD!!!!
+            .and_then(|i| self.function.instruction_from_index(i))
     }
 }
 
@@ -31,25 +28,27 @@ pub struct HighLevelILBlock {
 
 impl core::fmt::Debug for HighLevelILBlock {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        // TODO: Actual basic block please
         write!(f, "mlil_bb {:?}", self.function)
     }
 }
 
 impl BlockContext for HighLevelILBlock {
-    type Iter = HighLevelILBlockIter;
     type Instruction = HighLevelILInstruction;
+    type InstructionIndex = HighLevelInstructionIndex;
+    type Iter = HighLevelILBlockIter;
 
     fn start(&self, block: &BasicBlock<Self>) -> HighLevelILInstruction {
-        let expr_idx = unsafe {
-            BNGetHighLevelILIndexForInstruction(self.function.handle, block.raw_start() as usize)
-        };
-        HighLevelILInstruction::new(self.function.to_owned(), expr_idx)
+        // TODO: Is this start index already mappedd?????
+        self.function
+            .instruction_from_index(block.start_index())
+            .unwrap()
     }
 
     fn iter(&self, block: &BasicBlock<Self>) -> HighLevelILBlockIter {
         HighLevelILBlockIter {
             function: self.function.to_owned(),
-            range: block.raw_start()..block.raw_end(),
+            range: block.start_index().0..block.end_index().0,
         }
     }
 }

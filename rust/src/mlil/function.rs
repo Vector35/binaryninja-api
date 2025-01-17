@@ -3,7 +3,7 @@ use std::ffi::c_char;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 
-use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
+use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelInstructionIndex};
 use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
 use crate::confidence::Conf;
@@ -34,49 +34,58 @@ impl MediumLevelILFunction {
     }
 
     pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<MediumLevelILInstruction> {
+        Some(MediumLevelILInstruction::new(
+            self.to_owned(),
+            self.instruction_index_at(loc)?,
+        ))
+    }
+
+    pub fn instruction_index_at<L: Into<Location>>(
+        &self,
+        loc: L,
+    ) -> Option<MediumLevelInstructionIndex> {
         let loc: Location = loc.into();
-        let arch_handle = loc.arch.unwrap();
-
-        let expr_idx = unsafe {
-            BNMediumLevelILGetInstructionStart(self.handle, arch_handle.handle, loc.addr)
-        };
-
-        if expr_idx >= self.instruction_count() {
+        let arch = loc
+            .arch
+            .map(|a| a.handle)
+            .unwrap_or_else(std::ptr::null_mut);
+        let instr_idx = unsafe { BNMediumLevelILGetInstructionStart(self.handle, arch, loc.addr) };
+        // `instr_idx` will equal self.instruction_count() if the instruction is not valid.
+        if instr_idx >= self.instruction_count() {
             None
         } else {
-            Some(MediumLevelILInstruction::new(self.to_owned(), expr_idx))
+            Some(MediumLevelInstructionIndex(instr_idx))
         }
     }
 
-    pub fn instruction_from_idx(&self, expr_idx: usize) -> MediumLevelILInstruction {
-        MediumLevelILInstruction::new(self.to_owned(), expr_idx)
-    }
-
-    // TODO: Possibly remove this function.
-    pub fn lifted_instruction_from_idx(&self, expr_idx: usize) -> MediumLevelILLiftedInstruction {
-        self.instruction_from_idx(expr_idx).lift()
-    }
-
-    // TODO: This naming is not clear, document the difference between:
-    // TODO: `instruction_from_instruction_idx` and `instruction_from_idx`.
-    pub fn instruction_from_instruction_idx(&self, instr_idx: usize) -> MediumLevelILInstruction {
-        self.instruction_from_idx(unsafe {
-            BNGetMediumLevelILIndexForInstruction(self.handle, instr_idx)
-        })
-    }
-
-    // TODO: This naming is not clear, document the difference between:
-    // TODO: `lifted_instruction_from_instruction_idx` and `lifted_instruction_from_idx`.
-    // TODO: Possibly remove this function.
-    pub fn lifted_instruction_from_instruction_idx(
+    // TODO: When to use this?
+    pub fn instruction_from_index(
         &self,
-        instr_idx: usize,
-    ) -> MediumLevelILLiftedInstruction {
-        self.instruction_from_instruction_idx(instr_idx).lift()
+        index: MediumLevelInstructionIndex,
+    ) -> Option<MediumLevelILInstruction> {
+        let mapped_index = unsafe { BNGetMediumLevelILIndexForInstruction(self.handle, index.0) };
+        self.instruction_from_mapped_index(MediumLevelInstructionIndex(mapped_index))
+    }
+
+    // TODO: What is a mapped index?
+    // TODO: When to use this?
+    pub fn instruction_from_mapped_index(
+        &self,
+        mapped_index: MediumLevelInstructionIndex,
+    ) -> Option<MediumLevelILInstruction> {
+        if mapped_index.0 >= self.instruction_count() {
+            None
+        } else {
+            Some(MediumLevelILInstruction::new(self.to_owned(), mapped_index))
+        }
     }
 
     pub fn instruction_count(&self) -> usize {
         unsafe { BNGetMediumLevelILInstructionCount(self.handle) }
+    }
+
+    pub fn expression_count(&self) -> usize {
+        unsafe { BNGetMediumLevelILExprCount(self.handle) }
     }
 
     pub fn ssa_form(&self) -> MediumLevelILFunction {
@@ -98,7 +107,6 @@ impl MediumLevelILFunction {
         let context = MediumLevelILBlock {
             function: self.to_owned(),
         };
-
         unsafe { Array::new(blocks, count, context) }
     }
 
@@ -389,17 +397,19 @@ impl MediumLevelILFunction {
         unsafe { BNMediumLevelILSetCurrentAddress(self.handle, arch, location.addr) }
     }
 
-    /// Returns the BasicBlock at the given MLIL `instruction`.
-    pub fn basic_block_containing(
+    /// Returns the [`BasicBlock`] at the given instruction `index`.
+    ///
+    /// You can also retrieve this using [`MediumLevelILInstruction::basic_block`].
+    pub fn basic_block_containing_index(
         &self,
-        instruction: &MediumLevelILInstruction,
+        index: MediumLevelInstructionIndex,
     ) -> Option<Ref<BasicBlock<MediumLevelILBlock>>> {
-        let index = instruction.index;
         let context = MediumLevelILBlock {
             function: self.to_owned(),
         };
+        // TODO: If we can guarantee self.index is valid we can omit the wrapped Option.
         let basic_block_ptr =
-            unsafe { BNGetMediumLevelILBasicBlockForInstruction(self.handle, index) };
+            unsafe { BNGetMediumLevelILBasicBlockForInstruction(self.handle, index.0) };
         match basic_block_ptr.is_null() {
             false => Some(unsafe { BasicBlock::ref_from_raw(basic_block_ptr, context) }),
             true => None,
@@ -456,14 +466,14 @@ impl MediumLevelILFunction {
         let result = unsafe {
             BNGetMediumLevelILSSAVarDefinition(self.handle, &raw_var, ssa_variable.version)
         };
-        (result < self.instruction_count())
-            .then(|| MediumLevelILInstruction::new(self.to_owned(), result))
+        // TODO: Is this mapped?
+        self.instruction_from_mapped_index(MediumLevelInstructionIndex(result))
     }
 
     pub fn ssa_memory_definition(&self, version: usize) -> Option<MediumLevelILInstruction> {
         let result = unsafe { BNGetMediumLevelILSSAMemoryDefinition(self.handle, version) };
-        (result < self.instruction_count())
-            .then(|| MediumLevelILInstruction::new(self.to_owned(), result))
+        // TODO: Is this mapped?
+        self.instruction_from_mapped_index(MediumLevelInstructionIndex(result))
     }
 
     /// Gets all the instructions that use the given SSA variable.

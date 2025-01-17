@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
-
 use crate::architecture::CoreArchitecture;
 use crate::function::Function;
 use crate::rc::*;
 use crate::BranchType;
 use binaryninjacore_sys::*;
+use std::fmt;
+use std::fmt::Debug;
 
 enum EdgeDirection {
     Incoming,
@@ -90,6 +90,7 @@ unsafe impl<'a, C: 'a + BlockContext> CoreArrayProviderInner for Edge<'a, C> {
 
 pub trait BlockContext: Clone + Sync + Send + Sized {
     type Instruction;
+    type InstructionIndex: Debug + From<u64>;
     type Iter: Iterator<Item = Self::Instruction>;
 
     fn start(&self, block: &BasicBlock<Self>) -> Self::Instruction;
@@ -130,14 +131,12 @@ impl<C: BlockContext> BasicBlock<C> {
         self.context.iter(self)
     }
 
-    // TODO: This needs to be generic over the IL index / mapped address.
-    pub fn raw_start(&self) -> u64 {
-        unsafe { BNGetBasicBlockStart(self.handle) }
+    pub fn start_index(&self) -> C::InstructionIndex {
+        C::InstructionIndex::from(unsafe { BNGetBasicBlockStart(self.handle) })
     }
 
-    // TODO: This needs to be generic over the IL index / mapped address.
-    pub fn raw_end(&self) -> u64 {
-        unsafe { BNGetBasicBlockEnd(self.handle) }
+    pub fn end_index(&self) -> C::InstructionIndex {
+        C::InstructionIndex::from(unsafe { BNGetBasicBlockEnd(self.handle) })
     }
 
     pub fn raw_length(&self) -> u64 {
@@ -148,7 +147,6 @@ impl<C: BlockContext> BasicBlock<C> {
         unsafe {
             let mut count = 0;
             let edges = BNGetBasicBlockIncomingEdges(self.handle, &mut count);
-
             Array::new(
                 edges,
                 count,
@@ -164,7 +162,6 @@ impl<C: BlockContext> BasicBlock<C> {
         unsafe {
             let mut count = 0;
             let edges = BNGetBasicBlockOutgoingEdges(self.handle, &mut count);
-
             Array::new(
                 edges,
                 count,
@@ -176,7 +173,7 @@ impl<C: BlockContext> BasicBlock<C> {
         }
     }
 
-    // is this valid for il blocks?
+    // is this valid for il blocks? (it looks like up to MLIL it is)
     pub fn has_undetermined_outgoing_edges(&self) -> bool {
         unsafe { BNBasicBlockHasUndeterminedOutgoingEdges(self.handle) }
     }
@@ -185,18 +182,18 @@ impl<C: BlockContext> BasicBlock<C> {
         unsafe { BNBasicBlockCanExit(self.handle) }
     }
 
+    // TODO: Should we new type this? I just cant tell where the consumers of this are.
     pub fn index(&self) -> usize {
         unsafe { BNGetBasicBlockIndex(self.handle) }
     }
 
     pub fn immediate_dominator(&self) -> Option<Ref<Self>> {
         unsafe {
+            // TODO: We don't allow the user to calculate post dominators
             let block = BNGetBasicBlockImmediateDominator(self.handle, false);
-
             if block.is_null() {
                 return None;
             }
-
             Some(Ref::new(BasicBlock::from_raw(block, self.context.clone())))
         }
     }
@@ -204,8 +201,8 @@ impl<C: BlockContext> BasicBlock<C> {
     pub fn dominators(&self) -> Array<BasicBlock<C>> {
         unsafe {
             let mut count = 0;
+            // TODO: We don't allow the user to calculate post dominators
             let blocks = BNGetBasicBlockDominators(self.handle, &mut count, false);
-
             Array::new(blocks, count, self.context.clone())
         }
     }
@@ -213,8 +210,8 @@ impl<C: BlockContext> BasicBlock<C> {
     pub fn strict_dominators(&self) -> Array<BasicBlock<C>> {
         unsafe {
             let mut count = 0;
+            // TODO: We don't allow the user to calculate post dominators
             let blocks = BNGetBasicBlockStrictDominators(self.handle, &mut count, false);
-
             Array::new(blocks, count, self.context.clone())
         }
     }
@@ -222,8 +219,8 @@ impl<C: BlockContext> BasicBlock<C> {
     pub fn dominator_tree_children(&self) -> Array<BasicBlock<C>> {
         unsafe {
             let mut count = 0;
+            // TODO: We don't allow the user to calculate post dominators
             let blocks = BNGetBasicBlockDominatorTreeChildren(self.handle, &mut count, false);
-
             Array::new(blocks, count, self.context.clone())
         }
     }
@@ -231,8 +228,8 @@ impl<C: BlockContext> BasicBlock<C> {
     pub fn dominance_frontier(&self) -> Array<BasicBlock<C>> {
         unsafe {
             let mut count = 0;
+            // TODO: We don't allow the user to calculate post dominators
             let blocks = BNGetBasicBlockDominanceFrontier(self.handle, &mut count, false);
-
             Array::new(blocks, count, self.context.clone())
         }
     }
@@ -249,16 +246,23 @@ impl<C: BlockContext> IntoIterator for &BasicBlock<C> {
     }
 }
 
+impl<C: BlockContext> IntoIterator for BasicBlock<C> {
+    type Item = C::Instruction;
+    type IntoIter = C::Iter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 impl<C: fmt::Debug + BlockContext> fmt::Debug for BasicBlock<C> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "<bb handle {:p} context {:?} contents: {} -> {}>",
-            self.handle,
-            &self.context,
-            self.raw_start(),
-            self.raw_end()
-        )
+        f.debug_struct("BasicBlock")
+            .field("context", &self.context)
+            .field("start_index", &self.start_index())
+            .field("end_index", &self.end_index())
+            .field("raw_length", &self.raw_length())
+            .finish()
     }
 }
 

@@ -1062,7 +1062,6 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let mut count = 0;
             let blocks = BNGetBasicBlocksForAddress(self.as_ref().handle, addr, &mut count);
-
             Array::new(blocks, count, NativeBlock::new())
         }
     }
@@ -1071,7 +1070,6 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let mut count = 0;
             let blocks = BNGetBasicBlocksStartingAtAddress(self.as_ref().handle, addr, &mut count);
-
             Array::new(blocks, count, NativeBlock::new())
         }
     }

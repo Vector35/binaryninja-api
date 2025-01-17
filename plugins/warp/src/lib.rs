@@ -9,11 +9,14 @@ use binaryninja::basicblock::BasicBlock as BNBasicBlock;
 use binaryninja::binaryview::BinaryViewExt;
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::{Function as BNFunction, NativeBlock};
-use binaryninja::llil;
-use binaryninja::llil::{
-    ExprInfo, ExpressionHandler, FunctionMutability, InstrInfo, Instruction, InstructionHandler,
-    NonSSA, Register, RegularNonSSA, VisitorAction,
+use binaryninja::lowlevelil::expression::{ExpressionHandler, LowLevelILExpressionKind};
+use binaryninja::lowlevelil::function::{
+    FunctionMutability, LowLevelILFunction, NonSSA, RegularNonSSA,
 };
+use binaryninja::lowlevelil::instruction::{
+    InstructionHandler, LowLevelILInstruction, LowLevelILInstructionKind,
+};
+use binaryninja::lowlevelil::{LowLevelILRegister, VisitorAction};
 use binaryninja::rc::Ref as BNRef;
 use std::path::PathBuf;
 use warp::signature::basic_block::BasicBlockGUID;
@@ -43,7 +46,7 @@ pub fn user_signature_dir() -> PathBuf {
 
 pub fn build_function<A: Architecture, M: FunctionMutability>(
     func: &BNFunction,
-    llil: &llil::LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
+    llil: &LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
 ) -> Function {
     let bn_fn_ty = func.function_type();
     Function {
@@ -69,13 +72,13 @@ pub fn sorted_basic_blocks(func: &BNFunction) -> Vec<BNRef<BNBasicBlock<NativeBl
         .iter()
         .map(|bb| bb.clone())
         .collect::<Vec<_>>();
-    basic_blocks.sort_by_key(|f| f.raw_start());
+    basic_blocks.sort_by_key(|f| f.start_index());
     basic_blocks
 }
 
 pub fn function_guid<A: Architecture, M: FunctionMutability>(
     func: &BNFunction,
-    llil: &llil::LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
+    llil: &LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
 ) -> FunctionGUID {
     let basic_blocks = sorted_basic_blocks(func);
     let basic_block_guids = basic_blocks
@@ -87,7 +90,7 @@ pub fn function_guid<A: Architecture, M: FunctionMutability>(
 
 pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
     basic_block: &BNBasicBlock<NativeBlock>,
-    llil: &llil::LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
+    llil: &LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
 ) -> BasicBlockGUID {
     let func = basic_block.function();
     let view = func.view();
@@ -95,14 +98,16 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
     let max_instr_len = arch.max_instr_len();
 
     // NOPs and useless moves are blacklisted to allow for hot-patchable functions.
-    let is_blacklisted_instr = |instr: &Instruction<A, M, NonSSA<RegularNonSSA>>| {
-        match instr.info() {
-            InstrInfo::Nop(_) => true,
-            InstrInfo::SetReg(op) => {
-                match op.source_expr().info() {
-                    ExprInfo::Reg(source_op) if op.dest_reg() == source_op.source_reg() => {
+    let is_blacklisted_instr = |instr: &LowLevelILInstruction<A, M, NonSSA<RegularNonSSA>>| {
+        match instr.kind() {
+            LowLevelILInstructionKind::Nop(_) => true,
+            LowLevelILInstructionKind::SetReg(op) => {
+                match op.source_expr().kind() {
+                    LowLevelILExpressionKind::Reg(source_op)
+                        if op.dest_reg() == source_op.source_reg() =>
+                    {
                         match op.dest_reg() {
-                            Register::ArchReg(r) => {
+                            LowLevelILRegister::ArchReg(r) => {
                                 // If this register has no implicit extend then we can safely assume it's a NOP.
                                 // Ex. on x86_64 we don't want to remove `mov edi, edi` as it will zero the upper 32 bits.
                                 // Ex. on x86 we do want to remove `mov edi, edi` as it will not have a side effect like above.
@@ -111,7 +116,7 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
                                     ImplicitRegisterExtend::NoExtend
                                 )
                             }
-                            Register::Temp(_) => false,
+                            LowLevelILRegister::Temp(_) => false,
                         }
                     }
                     _ => false,
@@ -121,16 +126,18 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
         }
     };
 
-    let is_variant_instr = |instr: &Instruction<A, M, NonSSA<RegularNonSSA>>| {
-        let is_variant_expr = |expr: &ExprInfo<A, M, NonSSA<RegularNonSSA>>| {
+    let is_variant_instr = |instr: &LowLevelILInstruction<A, M, NonSSA<RegularNonSSA>>| {
+        let is_variant_expr = |expr: &LowLevelILExpressionKind<A, M, NonSSA<RegularNonSSA>>| {
             match expr {
-                ExprInfo::ConstPtr(op) if !view.sections_at(op.value()).is_empty() => {
+                LowLevelILExpressionKind::ConstPtr(op)
+                    if !view.sections_at(op.value()).is_empty() =>
+                {
                     // Constant Pointer must be in a section for it to be relocatable.
                     // NOTE: We cannot utilize segments here as there will be a zero based segment.
                     true
                 }
-                ExprInfo::ExternPtr(_) => true,
-                ExprInfo::Const(op) if !view.sections_at(op.value()).is_empty() => {
+                LowLevelILExpressionKind::ExternPtr(_) => true,
+                LowLevelILExpressionKind::Const(op) if !view.sections_at(op.value()).is_empty() => {
                     // Constant value must be in a section for it to be relocatable.
                     // NOTE: We cannot utilize segments here as there will be a zero based segment.
                     true
@@ -141,7 +148,7 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
 
         // Visit instruction expressions looking for variant expression, [VisitorAction::Halt] means variant.
         instr.visit_tree(&mut |expr| {
-            if is_variant_expr(&expr.info()) {
+            if is_variant_expr(&expr.kind()) {
                 // Found a variant expression
                 VisitorAction::Halt
             } else {
@@ -150,7 +157,7 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
         }) == VisitorAction::Halt
     };
 
-    let basic_block_range = basic_block.raw_start()..basic_block.raw_end();
+    let basic_block_range = basic_block.start_index()..basic_block.end_index();
     let mut basic_block_bytes = Vec::with_capacity(basic_block_range.count());
     for instr_addr in basic_block.into_iter() {
         let mut instr_bytes = view.read_vec(instr_addr, max_instr_len);

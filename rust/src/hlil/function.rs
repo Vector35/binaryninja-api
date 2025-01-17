@@ -3,10 +3,9 @@ use std::hash::{Hash, Hasher};
 
 use binaryninjacore_sys::*;
 
-use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelILLiftedInstruction};
-use crate::architecture::CoreArchitecture;
+use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelInstructionIndex};
 use crate::basicblock::BasicBlock;
-use crate::function::Function;
+use crate::function::{Function, Location};
 use crate::rc::{Array, Ref, RefCountable};
 use crate::variable::{SSAVariable, Variable};
 
@@ -24,43 +23,45 @@ impl HighLevelILFunction {
         Self { handle, full_ast }.to_owned()
     }
 
-    pub fn instruction_from_idx(&self, expr_idx: usize) -> HighLevelILInstruction {
-        HighLevelILInstruction::new(self.to_owned(), expr_idx)
-    }
-
-    pub fn lifted_instruction_from_idx(&self, expr_idx: usize) -> HighLevelILLiftedInstruction {
-        self.instruction_from_idx(expr_idx).lift()
-    }
-
-    pub fn instruction_from_instruction_idx(&self, instr_idx: usize) -> HighLevelILInstruction {
-        HighLevelILInstruction::new(self.as_non_ast(), unsafe {
-            BNGetHighLevelILIndexForInstruction(self.handle, instr_idx)
-        })
-    }
-
-    pub fn lifted_instruction_from_instruction_idx(
+    pub fn instruction_from_index(
         &self,
-        instr_idx: usize,
-    ) -> HighLevelILLiftedInstruction {
-        self.instruction_from_instruction_idx(instr_idx).lift()
+        index: HighLevelInstructionIndex,
+    ) -> Option<HighLevelILInstruction> {
+        let mapped_index = unsafe { BNGetHighLevelILIndexForInstruction(self.handle, index.0) };
+        self.instruction_from_mapped_index(HighLevelInstructionIndex(mapped_index))
+    }
+
+    // TODO: instruction_from_index should be it right? we always want to get the mapped index right?
+    // TODO: This needs testing...
+    pub fn instruction_from_mapped_index(
+        &self,
+        mapped_index: HighLevelInstructionIndex,
+    ) -> Option<HighLevelILInstruction> {
+        if mapped_index.0 >= self.instruction_count() {
+            None
+        } else {
+            Some(HighLevelILInstruction::new(self.to_owned(), mapped_index))
+        }
+    }
+
+    pub fn root_instruction_index(&self) -> HighLevelInstructionIndex {
+        HighLevelInstructionIndex(unsafe { BNGetHighLevelILRootExpr(self.handle) })
     }
 
     pub fn root(&self) -> HighLevelILInstruction {
-        HighLevelILInstruction::new(self.as_ast(), unsafe {
-            BNGetHighLevelILRootExpr(self.handle)
-        })
+        HighLevelILInstruction::new(self.as_ast(), self.root_instruction_index())
     }
 
     pub fn set_root(&self, new_root: &HighLevelILInstruction) {
-        unsafe { BNSetHighLevelILRootExpr(self.handle, new_root.index) }
-    }
-
-    pub fn lifted_root(&self) -> HighLevelILLiftedInstruction {
-        self.root().lift()
+        unsafe { BNSetHighLevelILRootExpr(self.handle, new_root.index.0) }
     }
 
     pub fn instruction_count(&self) -> usize {
         unsafe { BNGetHighLevelILInstructionCount(self.handle) }
+    }
+
+    pub fn expression_count(&self) -> usize {
+        unsafe { BNGetHighLevelILExprCount(self.handle) }
     }
 
     pub fn ssa_form(&self) -> HighLevelILFunction {
@@ -85,7 +86,6 @@ impl HighLevelILFunction {
         let context = HighLevelILBlock {
             function: self.to_owned(),
         };
-
         unsafe { Array::new(blocks, count, context) }
     }
 
@@ -105,13 +105,20 @@ impl HighLevelILFunction {
         .to_owned()
     }
 
-    pub fn current_address(&self) -> u64 {
-        unsafe { BNHighLevelILGetCurrentAddress(self.handle) }
+    // TODO: Rename to `current_location`?
+    pub fn current_address(&self) -> Location {
+        let addr = unsafe { BNHighLevelILGetCurrentAddress(self.handle) };
+        Location::from(addr)
     }
 
-    pub fn set_current_address(&self, address: u64, arch: Option<CoreArchitecture>) {
-        let arch = arch.unwrap_or_else(|| self.function().arch());
-        unsafe { BNHighLevelILSetCurrentAddress(self.handle, arch.handle, address) }
+    // TODO: Rename to `set_current_location`?
+    pub fn set_current_address(&self, location: impl Into<Location>) {
+        let location = location.into();
+        let arch = location
+            .arch
+            .map(|a| a.handle)
+            .unwrap_or_else(std::ptr::null_mut);
+        unsafe { BNHighLevelILSetCurrentAddress(self.handle, arch, location.addr) }
     }
 
     /// Gets the instruction that contains the given SSA variable's definition.
@@ -126,14 +133,14 @@ impl HighLevelILFunction {
                 variable.version,
             )
         };
-        (index < self.instruction_count())
-            .then(|| HighLevelILInstruction::new(self.to_owned(), index))
+        // TODO: Is this mapped index?
+        self.instruction_from_mapped_index(HighLevelInstructionIndex(index))
     }
 
     pub fn ssa_memory_definition(&self, version: usize) -> Option<HighLevelILInstruction> {
         let index = unsafe { BNGetHighLevelILSSAMemoryDefinition(self.handle, version) };
-        (index < self.instruction_count())
-            .then(|| HighLevelILInstruction::new(self.to_owned(), index))
+        // TODO: Is this mapped index?
+        self.instruction_from_mapped_index(HighLevelInstructionIndex(index))
     }
 
     /// Gets all the instructions that use the given SSA variable.
@@ -176,7 +183,7 @@ impl HighLevelILFunction {
                 self.handle,
                 &variable.variable.into(),
                 variable.version,
-                instr.index,
+                instr.index.0,
             )
         }
     }
@@ -200,7 +207,7 @@ impl HighLevelILFunction {
 
     /// Determines if `variable` is live at a given point in the function
     pub fn is_variable_live_at(&self, variable: Variable, instr: &HighLevelILInstruction) -> bool {
-        unsafe { BNIsHighLevelILVarLiveAt(self.handle, &variable.into(), instr.index) }
+        unsafe { BNIsHighLevelILVarLiveAt(self.handle, &variable.into(), instr.index.0) }
     }
 
     /// This gets just the HLIL variables - you may be interested in the union
@@ -238,6 +245,9 @@ impl Debug for HighLevelILFunction {
         f.debug_struct("HighLevelILFunction")
             .field("arch", &self.function().arch())
             .field("instruction_count", &self.instruction_count())
+            .field("expression_count", &self.expression_count())
+            .field("root", &self.root())
+            .field("root", &self.root())
             .finish()
     }
 }

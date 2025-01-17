@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use super::operation::*;
-use super::MediumLevelILFunction;
+use super::{MediumLevelILFunction, MediumLevelInstructionIndex};
 use crate::architecture::CoreIntrinsic;
 use crate::rc::Ref;
 use crate::variable::{ConstantData, SSAVariable, Variable};
@@ -26,7 +26,7 @@ pub enum MediumLevelILLiftedOperand {
 pub struct MediumLevelILLiftedInstruction {
     pub function: Ref<MediumLevelILFunction>,
     pub address: u64,
-    pub index: usize,
+    pub index: MediumLevelInstructionIndex,
     pub size: usize,
     pub kind: MediumLevelILLiftedInstructionKind,
 }

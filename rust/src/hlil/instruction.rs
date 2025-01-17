@@ -1,4 +1,6 @@
 use binaryninjacore_sys::*;
+use std::fmt;
+use std::fmt::{Debug, Display, Formatter};
 
 use super::operation::*;
 use super::{HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLiftedInstructionKind};
@@ -10,11 +12,38 @@ use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::types::Type;
 use crate::variable::{ConstantData, RegisterValue, SSAVariable, Variable};
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct HighLevelInstructionIndex(pub usize);
+
+impl HighLevelInstructionIndex {
+    pub fn next(&self) -> Self {
+        Self(self.0 + 1)
+    }
+}
+
+impl From<usize> for HighLevelInstructionIndex {
+    fn from(index: usize) -> Self {
+        Self(index)
+    }
+}
+
+impl From<u64> for HighLevelInstructionIndex {
+    fn from(index: u64) -> Self {
+        Self(index as usize)
+    }
+}
+
+impl Display for HighLevelInstructionIndex {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
+    }
+}
+
 #[derive(Clone)]
 pub struct HighLevelILInstruction {
     pub function: Ref<HighLevelILFunction>,
     pub address: u64,
-    pub index: usize,
+    pub index: HighLevelInstructionIndex,
     pub size: usize,
     pub kind: HighLevelILInstructionKind,
 }
@@ -145,8 +174,11 @@ pub enum HighLevelILInstructionKind {
     DoWhileSsa(WhileSsa),
 }
 impl HighLevelILInstruction {
-    pub(crate) fn new(function: Ref<HighLevelILFunction>, index: usize) -> Self {
-        let op = unsafe { BNGetHighLevelILByIndex(function.handle, index, function.full_ast) };
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        index: HighLevelInstructionIndex,
+    ) -> Self {
+        let op = unsafe { BNGetHighLevelILByIndex(function.handle, index.0, function.full_ast) };
         use BNHighLevelILOperation::*;
         use HighLevelILInstructionKind as Op;
         let kind = match op.operation {
@@ -903,7 +935,7 @@ impl HighLevelILInstruction {
         let lines = unsafe {
             BNGetHighLevelILExprText(
                 self.function.handle,
-                self.index,
+                self.index.0,
                 self.function.full_ast,
                 &mut count,
                 core::ptr::null_mut(),
@@ -914,7 +946,7 @@ impl HighLevelILInstruction {
 
     /// Type of expression
     pub fn expr_type(&self) -> Option<Conf<Ref<Type>>> {
-        let result = unsafe { BNGetHighLevelILExprType(self.function.handle, self.index) };
+        let result = unsafe { BNGetHighLevelILExprType(self.function.handle, self.index.0) };
         (!result.type_.is_null()).then(|| {
             Conf::new(
                 unsafe { Type::ref_from_raw(result.type_) },
@@ -925,7 +957,9 @@ impl HighLevelILInstruction {
 
     /// Version of active memory contents in SSA form for this instruction
     pub fn ssa_memory_version(&self) -> usize {
-        unsafe { BNGetHighLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.index) }
+        unsafe {
+            BNGetHighLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.index.0)
+        }
     }
 
     pub fn ssa_variable_version(&self, variable: Variable) -> SSAVariable {
@@ -933,14 +967,22 @@ impl HighLevelILInstruction {
             BNGetHighLevelILSSAVarVersionAtILInstruction(
                 self.function.handle,
                 &variable.into(),
-                self.index,
+                self.index.0,
             )
         };
         SSAVariable::new(variable, version)
     }
 
     fn lift_operand(&self, expr_idx: usize) -> Box<HighLevelILLiftedInstruction> {
-        Box::new(self.function.lifted_instruction_from_idx(expr_idx))
+        // TODO: UGH, if your gonna call it expr_idx, call the instruction and expression!!!!!
+        // TODO: We dont even need to say instruction in the type!
+        // TODO: IF you want to have an instruction type, there needs to be a seperate expression type
+        // TODO: See the lowlevelil module.
+        let expr_idx_is_really_instr_idx = HighLevelInstructionIndex(expr_idx);
+        let operand_instr = self
+            .function
+            .instruction_from_mapped_index(expr_idx_is_really_instr_idx);
+        Box::new(operand_instr.unwrap().lift())
     }
 
     fn lift_binary_op(&self, op: BinaryOp) -> LiftedBinaryOp {
@@ -1030,12 +1072,13 @@ unsafe impl CoreArrayProviderInner for HighLevelILInstruction {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::new(context.clone(), *raw)
+        Self::new(context.clone(), HighLevelInstructionIndex(*raw))
     }
 }
 
-impl core::fmt::Debug for HighLevelILInstruction {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+impl Debug for HighLevelILInstruction {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        // TODO: Actual debug impl please!
         write!(
             f,
             "<{} at 0x{:08}>",

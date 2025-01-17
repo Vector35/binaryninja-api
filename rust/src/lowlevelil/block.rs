@@ -37,12 +37,13 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    type Item = Instruction<'func, A, M, F>;
+    type Item = LowLevelILInstruction<'func, A, M, F>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.range
             .next()
-            .map(|i| Instruction::new(self.function, InstructionIndex(i)))
+            .map(|idx| LowLevelInstructionIndex(idx))
+            .and_then(|idx| self.function.instruction_from_index(idx))
     }
 }
 
@@ -62,19 +63,20 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    type Instruction = Instruction<'func, A, M, F>;
+    type Instruction = LowLevelILInstruction<'func, A, M, F>;
+    type InstructionIndex = LowLevelInstructionIndex;
     type Iter = LowLevelILBlockIter<'func, A, M, F>;
 
-    fn start(&self, block: &BasicBlock<Self>) -> Instruction<'func, A, M, F> {
-        // TODO: block.raw_start should really return InstructionIndex...
-        Instruction::new(self.function, InstructionIndex(block.raw_start() as usize))
+    fn start(&self, block: &BasicBlock<Self>) -> LowLevelILInstruction<'func, A, M, F> {
+        self.function
+            .instruction_from_index(block.start_index())
+            .unwrap()
     }
 
     fn iter(&self, block: &BasicBlock<Self>) -> LowLevelILBlockIter<'func, A, M, F> {
-        // TODO: block.raw_start should really return InstructionIndex...
         LowLevelILBlockIter {
             function: self.function,
-            range: (block.raw_start() as usize)..(block.raw_end() as usize),
+            range: (block.start_index().0)..(block.end_index().0),
         }
     }
 }

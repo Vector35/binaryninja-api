@@ -3,27 +3,33 @@ use binaryninjacore_sys::BNGetMediumLevelILByIndex;
 use binaryninjacore_sys::BNHighLevelILOperation;
 use binaryninjacore_sys::BNMediumLevelILOperation;
 
-use crate::hlil::{HighLevelILFunction, HighLevelILInstruction};
-use crate::mlil::{MediumLevelILFunction, MediumLevelILInstruction};
+use crate::hlil::{HighLevelILFunction, HighLevelILInstruction, HighLevelInstructionIndex};
+use crate::mlil::{MediumLevelILFunction, MediumLevelILInstruction, MediumLevelInstructionIndex};
 use crate::rc::{Ref, RefCountable};
 use crate::variable::{SSAVariable, Variable};
 
+// TODO: This code needs to go away IMO, we have the facilities to do this for each IL already!
+
 pub trait ILFunction {
     type Instruction;
+    type InstructionIndex: From<u64>;
 
-    fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction;
-    fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5];
+    fn il_instruction_from_index(&self, instr_index: Self::InstructionIndex) -> Self::Instruction;
+    fn operands_from_index(&self, instr_index: Self::InstructionIndex) -> [u64; 5];
 }
 
 impl ILFunction for MediumLevelILFunction {
     type Instruction = MediumLevelILInstruction;
+    type InstructionIndex = MediumLevelInstructionIndex;
 
-    fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction {
-        self.instruction_from_idx(expr_idx)
+    fn il_instruction_from_index(&self, instr_index: Self::InstructionIndex) -> Self::Instruction {
+        self.instruction_from_index(instr_index)
+            .expect("Invalid instruction index")
     }
 
-    fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5] {
-        let node = unsafe { BNGetMediumLevelILByIndex(self.handle, expr_idx) };
+    fn operands_from_index(&self, instr_index: Self::InstructionIndex) -> [u64; 5] {
+        // TODO: WTF?!?!?!
+        let node = unsafe { BNGetMediumLevelILByIndex(self.handle, instr_index.0) };
         assert_eq!(node.operation, BNMediumLevelILOperation::MLIL_UNDEF);
         node.operands
     }
@@ -31,13 +37,15 @@ impl ILFunction for MediumLevelILFunction {
 
 impl ILFunction for HighLevelILFunction {
     type Instruction = HighLevelILInstruction;
+    type InstructionIndex = HighLevelInstructionIndex;
 
-    fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction {
-        self.instruction_from_idx(expr_idx)
+    fn il_instruction_from_index(&self, instr_index: Self::InstructionIndex) -> Self::Instruction {
+        self.instruction_from_index(instr_index)
+            .expect("Invalid instruction index")
     }
 
-    fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5] {
-        let node = unsafe { BNGetHighLevelILByIndex(self.handle, expr_idx, self.full_ast) };
+    fn operands_from_index(&self, instr_index: Self::InstructionIndex) -> [u64; 5] {
+        let node = unsafe { BNGetHighLevelILByIndex(self.handle, instr_index.0, self.full_ast) };
         assert_eq!(node.operation, BNHighLevelILOperation::HLIL_UNDEF);
         node.operands
     }
@@ -90,7 +98,8 @@ impl<F: ILFunction + RefCountable> Iterator for OperandIter<F> {
         } else {
             // Will short-circuit and return `None` once iter is exhausted
             let iter_idx = self.next_iter_idx?;
-            let operands = self.function.operands_from_idx(iter_idx);
+            let iter_idx = F::InstructionIndex::from(iter_idx as u64);
+            let operands = self.function.operands_from_index(iter_idx);
 
             let next = if self.remaining > 4 {
                 self.next_iter_idx = Some(operands[4] as usize);
@@ -179,7 +188,8 @@ impl<F: ILFunction + RefCountable> Iterator for OperandExprIter<F> {
     fn next(&mut self) -> Option<Self::Item> {
         self.0
             .next()
-            .map(|idx| self.0.function.il_instruction_from_idx(idx as usize))
+            .map(|i| F::InstructionIndex::from(i))
+            .map(|idx| self.0.function.il_instruction_from_index(idx))
     }
 }
 

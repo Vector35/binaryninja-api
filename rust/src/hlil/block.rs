@@ -16,7 +16,7 @@ impl Iterator for HighLevelILBlockIter {
     fn next(&mut self) -> Option<Self::Item> {
         self.range
             .next()
-            .map(|i| HighLevelInstructionIndex(i))
+            .map(HighLevelInstructionIndex)
             // TODO: Is this already MAPPED>!>?!? If so we map twice that is BAD!!!!
             .and_then(|i| self.function.instruction_from_index(i))
     }

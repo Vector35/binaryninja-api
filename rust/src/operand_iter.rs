@@ -188,7 +188,7 @@ impl<F: ILFunction + RefCountable> Iterator for OperandExprIter<F> {
     fn next(&mut self) -> Option<Self::Item> {
         self.0
             .next()
-            .map(|i| F::InstructionIndex::from(i))
+            .map(F::InstructionIndex::from)
             .map(|idx| self.0.function.il_instruction_from_index(idx))
     }
 }

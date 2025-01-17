@@ -55,7 +55,7 @@ impl Iterator for MediumLevelILBlockIter {
     fn next(&mut self) -> Option<Self::Item> {
         self.range
             .next()
-            .map(|i| MediumLevelInstructionIndex(i))
+            .map(MediumLevelInstructionIndex)
             // TODO: What if this is already mapped!?!?!? we will map twice!?!?!?
             .and_then(|i| self.function.instruction_from_index(i))
     }

@@ -42,7 +42,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         self.range
             .next()
-            .map(|idx| LowLevelInstructionIndex(idx))
+            .map(LowLevelInstructionIndex)
             .and_then(|idx| self.function.instruction_from_index(idx))
     }
 }

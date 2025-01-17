@@ -23,7 +23,7 @@ pub enum HighLevelILLiftedOperand {
 
 // TODO: UGH, if your gonna call it expr_idx, call the instruction and expression!!!!!
 // TODO: We dont even need to say instruction in the type!
-// TODO: IF you want to have an instruction type, there needs to be a seperate expression type
+// TODO: IF you want to have an instruction type, there needs to be a separate expression type
 // TODO: See the lowlevelil module.
 #[derive(Clone, Debug, PartialEq)]
 pub struct HighLevelILLiftedInstruction {

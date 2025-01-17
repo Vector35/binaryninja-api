@@ -976,7 +976,7 @@ impl HighLevelILInstruction {
     fn lift_operand(&self, expr_idx: usize) -> Box<HighLevelILLiftedInstruction> {
         // TODO: UGH, if your gonna call it expr_idx, call the instruction and expression!!!!!
         // TODO: We dont even need to say instruction in the type!
-        // TODO: IF you want to have an instruction type, there needs to be a seperate expression type
+        // TODO: IF you want to have an instruction type, there needs to be a separate expression type
         // TODO: See the lowlevelil module.
         let expr_idx_is_really_instr_idx = HighLevelInstructionIndex(expr_idx);
         let operand_instr = self

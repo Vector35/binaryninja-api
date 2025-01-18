@@ -24,7 +24,7 @@ fn create_delete_empty(_session: &Session) {
     let project_name = "create_delete_empty_project";
     let project_path = unique_project(project_name);
     // create the project
-    let project = Project::create(&project_path, project_name);
+    let project = Project::create(&project_path, project_name).expect("Failed to create project");
     project.open().unwrap();
     assert!(project.is_open());
 
@@ -51,7 +51,7 @@ fn create_close_open_close(_session: &Session) {
     let project_name = "create_close_open_close";
     let project_path = unique_project(project_name);
     // create the project
-    let project = Project::create(&project_path, project_name);
+    let project = Project::create(&project_path, project_name).expect("Failed to create project");
     project.open().unwrap();
 
     // get the project id
@@ -61,7 +61,7 @@ fn create_close_open_close(_session: &Session) {
     project.close().unwrap();
     drop(project);
 
-    let project = Project::open_project(&project_path);
+    let project = Project::open_project(&project_path).expect("Failed to open project");
     // assert same id
     let new_id = project.id();
     assert_eq!(id, new_id);
@@ -76,10 +76,10 @@ fn create_close_open_close(_session: &Session) {
 
 #[rstest]
 fn modify_project(_session: &Session) {
-    let project_name = "modify_project";
+    let project_name = "modify_project_project";
     let project_path = unique_project(project_name);
     // create the project
-    let project = Project::create(&project_path, project_name);
+    let project = Project::create(&project_path, project_name).expect("Failed to create project");
     project.open().unwrap();
 
     // get project id
@@ -248,12 +248,12 @@ fn modify_project(_session: &Session) {
     }
     .unwrap();
 
-    assert_eq!(project.files().unwrap().len(), 10);
+    assert_eq!(project.files().len(), 10);
     let file_a = project.file_by_id(file_8.id()).unwrap();
     let file_b = project.file_by_path(file_7.path_on_disk()).unwrap();
     project.delete_file(&file_a);
     project.delete_file(&file_b);
-    assert_eq!(project.files().unwrap().len(), 8);
+    assert_eq!(project.files().len(), 8);
     drop(file_8);
     drop(file_7);
 
@@ -268,7 +268,7 @@ fn modify_project(_session: &Session) {
     drop(folder_3);
 
     // reopen the project and verify the information store on it
-    let project = Project::open_project(&project_path);
+    let project = Project::open_project(&project_path).expect("Failed to open project");
 
     // assert same id
     assert_eq!(id, project.id());
@@ -317,7 +317,7 @@ fn modify_project(_session: &Session) {
         ("input_1", &input_file_1_data[..], None, None),
         ("input_2", &input_file_2_data[..], None, None),
     ];
-    for file in project.files().unwrap().iter() {
+    for file in project.files().iter() {
         let found = files.iter().find(|f| file.name().as_str() == f.0).unwrap();
         if let Some(id) = found.2 {
             assert_eq!(file.id().as_str(), id);

@@ -14,7 +14,7 @@ use binaryninjacore_sys::{
     BNSnapshot, BNSnapshotHasAncestor, BNSnapshotHasContents, BNSnapshotHasUndo,
     BNSnapshotStoreData,
 };
-use std::ffi::c_char;
+use std::ffi::{c_char, c_void};
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 use std::ptr::NonNull;
@@ -136,14 +136,17 @@ impl Snapshot {
     ) -> Array<UndoEntry> {
         assert!(self.has_undo());
         let mut count = 0;
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let result = unsafe {
             BNGetSnapshotUndoEntriesWithProgress(
                 self.handle.as_ptr(),
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 Some(ProgressExecutor::cb_execute),
                 &mut count,
             )
         };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
     }
@@ -158,13 +161,16 @@ impl Snapshot {
         &self,
         progress: impl Into<ProgressExecutor>,
     ) -> Ref<KeyValueStore> {
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let result = unsafe {
             BNReadSnapshotDataWithProgress(
                 self.handle.as_ptr(),
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 Some(ProgressExecutor::cb_execute),
             )
         };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
         unsafe { KeyValueStore::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
@@ -190,14 +196,18 @@ impl Snapshot {
         data: &KeyValueStore,
         progress: impl Into<ProgressExecutor>,
     ) -> bool {
-        unsafe {
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+        let success = unsafe {
             BNSnapshotStoreData(
                 self.handle.as_ptr(),
                 data.handle.as_ptr(),
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 Some(ProgressExecutor::cb_execute),
             )
-        }
+        };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+        success
     }
 
     /// Determine if this snapshot has another as an ancestor

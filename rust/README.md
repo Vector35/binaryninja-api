@@ -18,7 +18,7 @@ To specify a specific commit see the cargo documentation [here](https://doc.rust
 
 ```rust
 use binaryninja::headless::Session;
-use binaryninja::binaryview::{BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::{BinaryViewBase, BinaryViewExt};
 
 fn main() {
     let headless_session = Session::new().expect("Failed to initialize session");

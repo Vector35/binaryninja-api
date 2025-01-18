@@ -4,7 +4,7 @@ pub mod undo;
 
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
-use std::ffi::c_char;
+use std::ffi::{c_char, c_void};
 use std::fmt::Debug;
 use std::ptr::NonNull;
 
@@ -94,6 +94,8 @@ impl Database {
     {
         let name_raw = name.into_bytes_with_nul();
         let name_ptr = name_raw.as_ref().as_ptr() as *const c_char;
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let new_id = unsafe {
             BNWriteDatabaseSnapshotData(
                 self.handle.as_ptr(),
@@ -104,10 +106,11 @@ impl Database {
                 name_ptr,
                 data.handle.as_ptr(),
                 auto_save,
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 Some(ProgressExecutor::cb_execute),
             )
         };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
         SnapshotId(new_id)
     }
 

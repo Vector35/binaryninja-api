@@ -11,17 +11,12 @@ impl ProgressExecutor {
         }
     }
 
-    /// Leak the executor and return an opaque pointer.
-    pub fn into_raw_context(self) -> *mut c_void {
-        Box::into_raw(Box::new(self)) as *mut c_void
-    }
-
     pub unsafe extern "C" fn cb_execute(ctx: *mut c_void, progress: usize, total: usize) -> bool {
         if ctx.is_null() {
             return true;
         }
-        let f: Box<Self> = Box::from_raw(ctx as *mut Self);
-        f.execute(progress, total)
+        let executor: *mut Self = ctx as *mut Self;
+        (*executor).execute(progress, total)
     }
 
     pub fn execute(&self, progress: usize, total: usize) -> bool {

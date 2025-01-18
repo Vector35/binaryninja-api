@@ -90,9 +90,9 @@ impl ProjectFile {
     }
 
     /// Get the folder that contains this file
-    pub fn folder(&self) -> Option<ProjectFolder> {
+    pub fn folder(&self) -> Option<Ref<ProjectFolder>> {
         let result = unsafe { BNProjectFileGetFolder(self.handle.as_ptr()) };
-        NonNull::new(result).map(|handle| unsafe { ProjectFolder::from_raw(handle) })
+        NonNull::new(result).map(|handle| unsafe { ProjectFolder::ref_from_raw(handle) })
     }
 
     /// Set the folder that contains this file

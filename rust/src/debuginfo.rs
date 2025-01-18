@@ -177,6 +177,8 @@ impl DebugInfoParser {
         existing_debug_info: Option<&DebugInfo>,
         progress: impl Into<ProgressExecutor>,
     ) -> Option<Ref<DebugInfo>> {
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let info: *mut BNDebugInfo = match existing_debug_info {
             Some(debug_info) => unsafe {
                 BNParseDebugInfo(
@@ -185,7 +187,7 @@ impl DebugInfoParser {
                     debug_file.handle,
                     debug_info.handle,
                     Some(ProgressExecutor::cb_execute),
-                    progress.into().into_raw_context(),
+                    leaked_boxed_progress as *mut c_void,
                 )
             },
             None => unsafe {
@@ -195,10 +197,11 @@ impl DebugInfoParser {
                     debug_file.handle,
                     std::ptr::null_mut(),
                     Some(ProgressExecutor::cb_execute),
-                    progress.into().into_raw_context(),
+                    leaked_boxed_progress as *mut c_void,
                 )
             },
         };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
         if info.is_null() {
             return None;
         }

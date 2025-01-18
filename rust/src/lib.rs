@@ -73,11 +73,11 @@ pub mod interaction;
 pub mod linear_view;
 pub mod logger;
 pub mod low_level_il;
-pub mod mainthread;
+pub mod main_thread;
 pub mod medium_level_il;
 pub mod metadata;
 pub mod platform;
-mod progress;
+pub mod progress;
 pub mod project;
 pub mod rc;
 pub mod references;
@@ -134,15 +134,18 @@ pub fn load_with_progress(
 ) -> Option<Ref<BinaryView>> {
     let file_path = file_path.as_ref().into_bytes_with_nul();
     let options = c"";
+    let boxed_progress = Box::new(progress.into());
+    let leaked_boxed_progress = Box::into_raw(boxed_progress);
     let handle = unsafe {
         BNLoadFilename(
             file_path.as_ptr() as *mut _,
             true,
             options.as_ptr() as *mut c_char,
             Some(ProgressExecutor::cb_execute),
-            progress.into().into_raw_context(),
+            leaked_boxed_progress as *mut c_void,
         )
     };
+    let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
     if handle.is_null() {
         None
     } else {
@@ -206,16 +209,18 @@ where
             .as_ref()
             .to_vec()
     };
-
+    let boxed_progress = Box::new(progress.into());
+    let leaked_boxed_progress = Box::into_raw(boxed_progress);
     let handle = unsafe {
         BNLoadFilename(
             file_path.as_ptr() as *mut _,
             update_analysis_and_wait,
             options_or_default.as_ptr() as *mut c_char,
             Some(ProgressExecutor::cb_execute),
-            progress.into().into_raw_context(),
+            leaked_boxed_progress as *mut c_void,
         )
     };
+    let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
 
     if handle.is_null() {
         None
@@ -262,16 +267,18 @@ where
             .as_ref()
             .to_vec()
     };
-
+    let boxed_progress = Box::new(progress.into());
+    let leaked_boxed_progress = Box::into_raw(boxed_progress);
     let handle = unsafe {
         BNLoadBinaryView(
             bv.handle as *mut _,
             update_analysis_and_wait,
             options_or_default.as_ptr() as *mut c_char,
             Some(ProgressExecutor::cb_execute),
-            progress.into().into_raw_context(),
+            leaked_boxed_progress as *mut c_void,
         )
     };
+    let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
 
     if handle.is_null() {
         None

@@ -24,6 +24,7 @@ use binaryninjacore_sys::{
     BNSaveAutoSnapshot, BNSetFilename, BNUndo,
 };
 use binaryninjacore_sys::{BNCreateDatabaseWithProgress, BNOpenExistingDatabaseWithProgress};
+use std::ffi::c_void;
 use std::fmt::Debug;
 
 use crate::rc::*;
@@ -226,15 +227,19 @@ impl FileMetadata {
             return false;
         };
 
-        unsafe {
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+        let success = unsafe {
             BNCreateDatabaseWithProgress(
                 raw_view.handle,
                 filename_ptr,
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 Some(ProgressExecutor::cb_execute),
                 ptr::null_mut(),
             )
-        }
+        };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+        success
     }
 
     pub fn save_auto_snapshot(&self) -> bool {
@@ -283,15 +288,17 @@ impl FileMetadata {
     ) -> Result<Ref<BinaryView>, ()> {
         let filename = filename.into_bytes_with_nul();
         let filename_ptr = filename.as_ref().as_ptr() as *mut _;
-
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let view = unsafe {
             BNOpenExistingDatabaseWithProgress(
                 self.handle,
                 filename_ptr,
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 Some(ProgressExecutor::cb_execute),
             )
         };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
 
         if view.is_null() {
             Err(())

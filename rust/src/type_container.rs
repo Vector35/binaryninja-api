@@ -16,7 +16,7 @@ use crate::type_parser::{TypeParserError, TypeParserResult};
 use crate::types::{QualifiedName, QualifiedNameAndType, Type};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
-use std::ffi::c_char;
+use std::ffi::{c_char, c_void};
 use std::fmt::{Debug, Formatter};
 use std::ptr::NonNull;
 
@@ -113,6 +113,8 @@ impl TypeContainer {
         let mut result_names = std::ptr::null_mut();
         let mut result_ids = std::ptr::null_mut();
         let mut result_count = 0;
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let success = unsafe {
             BNTypeContainerAddTypes(
                 self.handle.as_ptr(),
@@ -120,12 +122,13 @@ impl TypeContainer {
                 raw_types.as_mut_ptr(),
                 raw_types.len(),
                 Some(ProgressExecutor::cb_execute),
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 &mut result_names,
                 &mut result_ids,
                 &mut result_count,
             )
         };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
         for name in raw_names {
             QualifiedName::free_raw(name);
         }

@@ -21,7 +21,7 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 use crate::enterprise::release_license;
-use crate::mainthread::{MainThreadAction, MainThreadHandler};
+use crate::main_thread::{MainThreadAction, MainThreadHandler};
 use crate::rc::Ref;
 use binaryninjacore_sys::{BNInitPlugins, BNInitRepoPlugins};
 use std::sync::mpsc::Sender;

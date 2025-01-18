@@ -836,7 +836,8 @@ impl TypeArchive {
         let mut conflicts_errors_count = 0;
 
         let mut result = std::ptr::null_mut();
-
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let success = unsafe {
             BNTypeArchiveMergeSnapshots(
                 self.handle.as_ptr(),
@@ -850,9 +851,10 @@ impl TypeArchive {
                 &mut conflicts_errors_count,
                 &mut result,
                 Some(ProgressExecutor::cb_execute),
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
             )
         };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
         if success {
             assert!(!result.is_null());
             Ok(unsafe { BnString::from_raw(result) })

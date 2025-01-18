@@ -18,7 +18,7 @@ fn test_not_main_thread(_session: &Session) {
 #[rstest]
 fn test_main_thread_different(_session: &Session) {
     let calling_thread = std::thread::current();
-    binaryninja::mainthread::execute_on_main_thread_and_wait(move || {
+    binaryninja::main_thread::execute_on_main_thread_and_wait(move || {
         let main_thread = std::thread::current();
         assert_ne!(
             calling_thread.id(),

@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use std::ffi::c_char;
+use std::ffi::{c_char, c_void};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::progress::ProgressExecutor;
@@ -146,14 +146,17 @@ impl UpdateChannel {
         progress: impl Into<ProgressExecutor>,
     ) -> Result<UpdateResult, BnString> {
         let mut errors = std::ptr::null_mut();
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let result = unsafe {
             BNUpdateToLatestVersion(
                 self.name.as_ptr() as *const c_char,
                 &mut errors,
                 Some(ProgressExecutor::cb_execute),
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
             )
         };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
         if !errors.is_null() {
             Err(unsafe { BnString::from_raw(errors) })
         } else {
@@ -171,15 +174,18 @@ impl UpdateChannel {
         progress: impl Into<ProgressExecutor>,
     ) -> Result<UpdateResult, BnString> {
         let mut errors = std::ptr::null_mut();
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let result = unsafe {
             BNUpdateToVersion(
                 self.name.as_ptr() as *const c_char,
                 version.version.as_ptr() as *const c_char,
                 &mut errors,
                 Some(ProgressExecutor::cb_execute),
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
             )
         };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
         if !errors.is_null() {
             Err(unsafe { BnString::from_raw(errors) })
         } else {

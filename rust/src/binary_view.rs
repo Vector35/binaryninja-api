@@ -56,7 +56,7 @@ use crate::types::{
 use crate::variable::DataVariable;
 use crate::Endianness;
 use std::collections::HashMap;
-use std::ffi::c_char;
+use std::ffi::{c_char, c_void};
 use std::ops::Range;
 use std::path::Path;
 use std::ptr::NonNull;
@@ -645,17 +645,20 @@ pub trait BinaryViewExt: BinaryViewBase {
             .collect();
         let mut result_ids: *mut *mut c_char = std::ptr::null_mut();
         let mut result_names: *mut BNQualifiedName = std::ptr::null_mut();
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let result_count = unsafe {
             BNDefineAnalysisTypes(
                 self.as_ref().handle,
                 types.as_mut_ptr(),
                 types.len(),
                 Some(ProgressExecutor::cb_execute),
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 &mut result_ids as *mut _,
                 &mut result_names as *mut _,
             )
         };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
 
         for ty in types {
             QualifiedNameTypeAndId::free_raw(ty);
@@ -690,15 +693,18 @@ pub trait BinaryViewExt: BinaryViewBase {
             .map(Into::into)
             .map(QualifiedNameAndType::into_raw)
             .collect();
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         unsafe {
             BNDefineUserAnalysisTypes(
                 self.as_ref().handle,
                 types.as_mut_ptr(),
                 types.len(),
                 Some(ProgressExecutor::cb_execute),
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
             )
         };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
         for ty in types {
             QualifiedNameAndType::free_raw(ty);
         }

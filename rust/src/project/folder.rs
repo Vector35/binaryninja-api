@@ -8,7 +8,7 @@ use binaryninjacore_sys::{
     BNProjectFolderGetName, BNProjectFolderGetParent, BNProjectFolderGetProject,
     BNProjectFolderSetDescription, BNProjectFolderSetName, BNProjectFolderSetParent,
 };
-use std::ffi::c_char;
+use std::ffi::{c_char, c_void};
 use std::fmt::Debug;
 use std::ptr::{null_mut, NonNull};
 
@@ -27,9 +27,9 @@ impl ProjectFolder {
     }
 
     /// Get the project that owns this folder
-    pub fn project(&self) -> Project {
+    pub fn project(&self) -> Ref<Project> {
         unsafe {
-            Project::from_raw(
+            Project::ref_from_raw(
                 NonNull::new(BNProjectFolderGetProject(self.handle.as_ptr())).unwrap(),
             )
         }
@@ -102,14 +102,18 @@ impl ProjectFolder {
         S: BnStrCompatible,
     {
         let dest_raw = dest.into_bytes_with_nul();
-        unsafe {
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+        let success = unsafe {
             BNProjectFolderExport(
                 self.handle.as_ptr(),
                 dest_raw.as_ref().as_ptr() as *const c_char,
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 Some(ProgressExecutor::cb_execute),
             )
-        }
+        };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+        success
     }
 }
 

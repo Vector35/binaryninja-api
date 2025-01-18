@@ -1,7 +1,7 @@
 pub mod file;
 pub mod folder;
 
-use std::ffi::c_char;
+use std::ffi::{c_char, c_void};
 use std::fmt::Debug;
 use std::ptr::{null_mut, NonNull};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -39,7 +39,7 @@ impl Project {
     ///
     /// * `path` - Path to the project directory (.bnpr)
     /// * `name` - Name of the new project
-    pub fn create<P: BnStrCompatible, S: BnStrCompatible>(path: P, name: S) -> Ref<Self> {
+    pub fn create<P: BnStrCompatible, S: BnStrCompatible>(path: P, name: S) -> Option<Ref<Self>> {
         let path_raw = path.into_bytes_with_nul();
         let name_raw = name.into_bytes_with_nul();
         let handle = unsafe {
@@ -48,16 +48,16 @@ impl Project {
                 name_raw.as_ref().as_ptr() as *const c_char,
             )
         };
-        unsafe { Self::ref_from_raw(NonNull::new(handle).unwrap()) }
+        NonNull::new(handle).map(|h| unsafe { Self::ref_from_raw(h) })
     }
 
     /// Open an existing project
     ///
     /// * `path` - Path to the project directory (.bnpr) or project metadata file (.bnpm)
-    pub fn open_project<P: BnStrCompatible>(path: P) -> Ref<Self> {
+    pub fn open_project<P: BnStrCompatible>(path: P) -> Option<Ref<Self>> {
         let path_raw = path.into_bytes_with_nul();
         let handle = unsafe { BNOpenProject(path_raw.as_ref().as_ptr() as *const c_char) };
-        unsafe { Self::ref_from_raw(NonNull::new(handle).unwrap()) }
+        NonNull::new(handle).map(|h| unsafe { Self::ref_from_raw(h) })
     }
 
     /// Check if the project is currently open
@@ -207,16 +207,18 @@ impl Project {
         let path_raw = path.into_bytes_with_nul();
         let description_raw = description.into_bytes_with_nul();
         let parent_ptr = parent.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
-
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         unsafe {
             let result = BNProjectCreateFolderFromPath(
                 self.handle.as_ptr(),
                 path_raw.as_ref().as_ptr() as *const c_char,
                 parent_ptr,
                 description_raw.as_ref().as_ptr() as *const c_char,
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 Some(ProgressExecutor::cb_execute),
             );
+            let _ = Box::from_raw(leaked_boxed_progress);
             Ok(ProjectFolder::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
     }
@@ -320,14 +322,17 @@ impl Project {
         folder: &ProjectFolder,
         progress: impl Into<ProgressExecutor>,
     ) -> Result<(), ()> {
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let result = unsafe {
             BNProjectDeleteFolder(
                 self.handle.as_ptr(),
                 folder.handle.as_ptr(),
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 Some(ProgressExecutor::cb_execute),
             )
         };
+        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
         if result {
             Ok(())
         } else {
@@ -390,6 +395,8 @@ impl Project {
         let name_raw = name.into_bytes_with_nul();
         let description_raw = description.into_bytes_with_nul();
         let folder_ptr = folder.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         unsafe {
             let result = BNProjectCreateFileFromPath(
                 self.handle.as_ptr(),
@@ -397,9 +404,10 @@ impl Project {
                 folder_ptr,
                 name_raw.as_ref().as_ptr() as *const c_char,
                 description_raw.as_ref().as_ptr() as *const c_char,
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 Some(ProgressExecutor::cb_execute),
             );
+            let _ = Box::from_raw(leaked_boxed_progress);
             Ok(ProjectFile::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
     }
@@ -469,6 +477,8 @@ impl Project {
         let description_raw = description.into_bytes_with_nul();
         let id_raw = id.into_bytes_with_nul();
         let folder_ptr = folder.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         unsafe {
             let result = BNProjectCreateFileFromPathUnsafe(
                 self.handle.as_ptr(),
@@ -478,9 +488,10 @@ impl Project {
                 description_raw.as_ref().as_ptr() as *const c_char,
                 id_raw.as_ref().as_ptr() as *const c_char,
                 systime_to_bntime(creation_time).unwrap(),
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 Some(ProgressExecutor::cb_execute),
             );
+            let _ = Box::from_raw(leaked_boxed_progress);
             Ok(ProjectFile::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
     }
@@ -533,6 +544,8 @@ impl Project {
         let name_raw = name.into_bytes_with_nul();
         let description_raw = description.into_bytes_with_nul();
         let folder_ptr = folder.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         unsafe {
             let result = BNProjectCreateFile(
                 self.handle.as_ptr(),
@@ -541,9 +554,10 @@ impl Project {
                 folder_ptr,
                 name_raw.as_ref().as_ptr() as *const c_char,
                 description_raw.as_ref().as_ptr() as *const c_char,
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 Some(ProgressExecutor::cb_execute),
             );
+            let _ = Box::from_raw(leaked_boxed_progress);
             Ok(ProjectFile::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
     }
@@ -610,6 +624,8 @@ impl Project {
         let description_raw = description.into_bytes_with_nul();
         let id_raw = id.into_bytes_with_nul();
         let folder_ptr = folder.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
+        let boxed_progress = Box::new(progress.into());
+        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         unsafe {
             let result = BNProjectCreateFileUnsafe(
                 self.handle.as_ptr(),
@@ -620,19 +636,20 @@ impl Project {
                 description_raw.as_ref().as_ptr() as *const c_char,
                 id_raw.as_ref().as_ptr() as *const c_char,
                 systime_to_bntime(creation_time).unwrap(),
-                progress.into().into_raw_context(),
+                leaked_boxed_progress as *mut c_void,
                 Some(ProgressExecutor::cb_execute),
             );
+            let _ = Box::from_raw(leaked_boxed_progress);
             Ok(ProjectFile::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
     }
 
     /// Get a list of files in the project
-    pub fn files(&self) -> Result<Array<ProjectFile>, ()> {
+    pub fn files(&self) -> Array<ProjectFile> {
         let mut count = 0;
         let result = unsafe { BNProjectGetFiles(self.handle.as_ptr(), &mut count) };
         assert!(!result.is_null());
-        Ok(unsafe { Array::new(result, count, ()) })
+        unsafe { Array::new(result, count, ()) }
     }
 
     /// Retrieve a file in the project by unique `id`

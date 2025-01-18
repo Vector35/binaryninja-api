@@ -187,7 +187,7 @@ impl MediumLevelILFunction {
     ///
     /// # Example
     /// ```no_run
-    /// # use binaryninja::mlil::MediumLevelILFunction;
+    /// # use binaryninja::medium_level_il::MediumLevelILFunction;
     /// # use binaryninja::variable::PossibleValueSet;
     /// # let mlil_fun: MediumLevelILFunction = todo!();
     /// let user_var_val = mlil_fun.user_var_values().iter().next().unwrap();
@@ -322,7 +322,7 @@ impl MediumLevelILFunction {
     ///
     /// # Example
     /// ```no_run
-    /// # use binaryninja::mlil::MediumLevelILFunction;
+    /// # use binaryninja::medium_level_il::MediumLevelILFunction;
     /// # use binaryninja::variable::Variable;
     /// # let mlil_fun: MediumLevelILFunction = todo!();
     /// # let mlil_var: Variable = todo!();

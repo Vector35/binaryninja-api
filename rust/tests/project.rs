@@ -197,7 +197,7 @@ fn modify_project(_session: &Session) {
     let file_4_desc = "";
     let file_4_id = "123123123";
     let _file_4 = unsafe {
-        project.create_file_with_progress_unsafe(
+        project.create_file_unsafe_with_progress(
             file_4_data,
             Some(&folder_3),
             "file_4",
@@ -236,7 +236,7 @@ fn modify_project(_session: &Session) {
         )
         .unwrap();
     let file_8 = unsafe {
-        project.create_file_from_path_with_progress_unsafe(
+        project.create_file_from_path_unsafe_with_progress(
             &input_file_1,
             None,
             "file_7",

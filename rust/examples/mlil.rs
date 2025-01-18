@@ -45,8 +45,8 @@ fn main() {
 
 mod visitor {
     use binaryninja::architecture::Intrinsic;
-    use binaryninja::mlil::MediumLevelILLiftedOperand::*;
-    use binaryninja::mlil::{MediumLevelILFunction, MediumLevelILLiftedInstruction};
+    use binaryninja::medium_level_il::MediumLevelILLiftedOperand::*;
+    use binaryninja::medium_level_il::{MediumLevelILFunction, MediumLevelILLiftedInstruction};
     use binaryninja::variable::Variable;
 
     fn print_indent(indent: usize) {

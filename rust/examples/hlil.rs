@@ -44,8 +44,8 @@ fn main() {
 }
 
 mod visitor {
-    use binaryninja::hlil::HighLevelILLiftedOperand::*;
-    use binaryninja::hlil::{HighLevelILFunction, HighLevelILLiftedInstruction};
+    use binaryninja::high_level_il::HighLevelILLiftedOperand::*;
+    use binaryninja::high_level_il::{HighLevelILFunction, HighLevelILLiftedInstruction};
     use binaryninja::variable::Variable;
 
     fn print_indent(indent: usize) {

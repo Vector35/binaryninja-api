@@ -1,12 +1,11 @@
 use binaryninja::architecture::Register;
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use binaryninja::low_level_il::expression::LowLevelExpressionIndex;
 use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstructionKind, LowLevelInstructionIndex,
 };
 use binaryninja::low_level_il::LowLevelILRegister;
-use binaryninja::rc::Ref;
 use rstest::*;
 use std::path::PathBuf;
 
@@ -16,15 +15,11 @@ fn session() -> Session {
     Session::new().expect("Failed to initialize session")
 }
 
-#[fixture]
-#[once]
-fn view() -> Ref<BinaryView> {
-    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
-    binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view")
-}
-
 #[rstest]
-fn test_llil_info(_session: &Session, view: &BinaryView) {
+fn test_llil_info(_session: &Session) {
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+
     let entry_function = view.entry_point_function().unwrap();
     let llil_function = entry_function.low_level_il().unwrap();
     let llil_basic_blocks = llil_function.basic_blocks();

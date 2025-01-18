@@ -2,8 +2,8 @@ use std::collections::HashSet;
 
 use binaryninja::architecture::Architecture as BNArchitecture;
 use binaryninja::architecture::ArchitectureExt;
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
-use binaryninja::callingconvention::CallingConvention as BNCallingConvention;
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::calling_convention::CallingConvention as BNCallingConvention;
 use binaryninja::confidence::{Conf as BNConf, MAX_CONFIDENCE};
 use binaryninja::rc::Ref as BNRef;
 use binaryninja::symbol::{Symbol as BNSymbol, SymbolType as BNSymbolType};
@@ -573,7 +573,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use binaryninja::binaryview::BinaryViewExt;
+    use binaryninja::binary_view::BinaryViewExt;
     use binaryninja::headless::Session;
     use std::path::PathBuf;
     use std::sync::OnceLock;

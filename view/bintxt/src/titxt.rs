@@ -1,5 +1,5 @@
-use binaryninja::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
-use binaryninja::custombinaryview::{
+use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
+use binaryninja::custom_binary_view::{
     BinaryViewType, BinaryViewTypeBase, CustomBinaryView, CustomBinaryViewType, CustomView,
     CustomViewBuilder,
 };

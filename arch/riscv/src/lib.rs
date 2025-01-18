@@ -14,12 +14,12 @@ use binaryninja::{
         LlvmServicesRelocMode, Register as Reg, RegisterInfo, UnusedFlag, UnusedRegisterStack,
         UnusedRegisterStackInfo,
     },
-    binaryview::{BinaryView, BinaryViewExt},
-    callingconvention::{register_calling_convention, CallingConventionBase, ConventionBuilder},
-    custombinaryview::{BinaryViewType, BinaryViewTypeExt},
+    binary_view::{BinaryView, BinaryViewExt},
+    calling_convention::{register_calling_convention, CallingConventionBase, ConventionBuilder},
+    custom_binary_view::{BinaryViewType, BinaryViewTypeExt},
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
     function::Function,
-    functionrecognizer::FunctionRecognizer,
+    function_recognizer::FunctionRecognizer,
     rc::Ref,
     relocation::{
         CoreRelocationHandler, CustomRelocationHandlerHandle, RelocationHandler, RelocationInfo,
@@ -37,10 +37,10 @@ use std::marker::PhantomData;
 use binaryninja::architecture::{BranchKind, IntrinsicId, RegisterId};
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use binaryninja::logger::Logger;
-use binaryninja::lowlevelil::expression::{LowLevelILExpressionKind, ValueExpr};
-use binaryninja::lowlevelil::instruction::LowLevelILInstructionKind;
-use binaryninja::lowlevelil::lifting::{Label, LiftableLowLevelIL, LiftableLowLevelILWithSize};
-use binaryninja::lowlevelil::{
+use binaryninja::low_level_il::expression::{LowLevelILExpressionKind, ValueExpr};
+use binaryninja::low_level_il::instruction::LowLevelILInstructionKind;
+use binaryninja::low_level_il::lifting::{Label, LiftableLowLevelIL, LiftableLowLevelILWithSize};
+use binaryninja::low_level_il::{
     expression::ExpressionHandler, instruction::InstructionHandler, LowLevelILRegister,
     MutableLiftedILExpr, MutableLiftedILFunction, RegularLowLevelILFunction,
 };

@@ -3,14 +3,14 @@ use std::ffi::{c_char, c_void};
 use std::ptr::NonNull;
 
 use crate::architecture::CoreArchitecture;
-use crate::basicblock::BasicBlock;
-use crate::binaryview::BinaryView;
+use crate::basic_block::BasicBlock;
+use crate::binary_view::BinaryView;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
-use crate::hlil::HighLevelILFunction;
-use crate::lowlevelil::function::{LowLevelILFunction, Mutable, NonSSA, NonSSAVariant};
-use crate::lowlevelil::MutableLiftedILFunction;
-use crate::mlil::MediumLevelILFunction;
+use crate::high_level_il::HighLevelILFunction;
+use crate::low_level_il::function::{LowLevelILFunction, Mutable, NonSSA, NonSSAVariant};
+use crate::low_level_il::MutableLiftedILFunction;
+use crate::medium_level_il::MediumLevelILFunction;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 

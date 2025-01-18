@@ -1,7 +1,7 @@
-use binaryninja::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::disassembly::{DisassemblyOption, DisassemblySettings};
 use binaryninja::function::Function;
-use binaryninja::linearview::{LinearViewCursor, LinearViewObject};
+use binaryninja::linear_view::{LinearViewCursor, LinearViewObject};
 
 fn decompile_to_c(view: &BinaryView, func: &Function) {
     let settings = DisassemblySettings::new();

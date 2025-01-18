@@ -7,7 +7,7 @@ use ar::Archive;
 use clap::{arg, Parser};
 use rayon::prelude::*;
 
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::function::Function as BNFunction;
 use binaryninja::rc::Guard as BNGuard;
 use binaryninja::settings::Settings;
@@ -99,12 +99,7 @@ fn main() {
     let bn_settings = Settings::new("");
     let worker_count = rayon::current_num_threads() * 4;
     log::debug!("Adjusting Binary Ninja worker count to {}...", worker_count);
-    bn_settings.set_integer(
-        "analysis.limits.workerThreadCount",
-        worker_count as u64,
-        None,
-        None,
-    );
+    binaryninja::worker_thread::set_worker_thread_count(worker_count);
 
     // Make sure caches are flushed when the views get destructed.
     register_cache_destructor();

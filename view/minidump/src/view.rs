@@ -10,15 +10,15 @@ use minidump::{
     MinidumpStream, MinidumpSystemInfo, Module,
 };
 
-use binaryninja::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
-use binaryninja::custombinaryview::{
+use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
+use binaryninja::custom_binary_view::{
     BinaryViewType, BinaryViewTypeBase, CustomBinaryView, CustomBinaryViewType, CustomView,
     CustomViewBuilder,
 };
 use binaryninja::platform::Platform;
 use binaryninja::Endianness;
 
-type BinaryViewResult<R> = binaryninja::binaryview::Result<R>;
+type BinaryViewResult<R> = binaryninja::binary_view::Result<R>;
 
 /// The _Minidump_ binary view type, which the Rust plugin registers with the Binary Ninja core
 /// (via `binaryninja::custombinaryview::register_view_type`) as a possible binary view

@@ -18,12 +18,12 @@ use crate::{
 };
 
 use binaryninja::{
-    binaryview::{BinaryView, BinaryViewBase, BinaryViewExt},
+    binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
     debuginfo::{DebugFunctionInfo, DebugInfo},
     platform::Platform,
     rc::*,
     symbol::SymbolType,
-    templatesimplifier::simplify_str_to_fqn,
+    template_simplifier::simplify_str_to_fqn,
     types::{FunctionParameter, Type},
     variable::NamedVariableWithType,
 };

@@ -5,18 +5,18 @@ use crate::convert::{from_bn_symbol, from_bn_type};
 use binaryninja::architecture::{
     Architecture, ImplicitRegisterExtend, Register as BNRegister, RegisterInfo,
 };
-use binaryninja::basicblock::BasicBlock as BNBasicBlock;
-use binaryninja::binaryview::BinaryViewExt;
+use binaryninja::basic_block::BasicBlock as BNBasicBlock;
+use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::{Function as BNFunction, NativeBlock};
-use binaryninja::lowlevelil::expression::{ExpressionHandler, LowLevelILExpressionKind};
-use binaryninja::lowlevelil::function::{
+use binaryninja::low_level_il::expression::{ExpressionHandler, LowLevelILExpressionKind};
+use binaryninja::low_level_il::function::{
     FunctionMutability, LowLevelILFunction, NonSSA, RegularNonSSA,
 };
-use binaryninja::lowlevelil::instruction::{
+use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstruction, LowLevelILInstructionKind,
 };
-use binaryninja::lowlevelil::{LowLevelILRegister, VisitorAction};
+use binaryninja::low_level_il::{LowLevelILRegister, VisitorAction};
 use binaryninja::rc::Ref as BNRef;
 use std::path::PathBuf;
 use warp::signature::basic_block::BasicBlockGUID;
@@ -183,7 +183,7 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
 #[cfg(test)]
 mod tests {
     use crate::cache::cached_function_guid;
-    use binaryninja::binaryview::BinaryViewExt;
+    use binaryninja::binary_view::BinaryViewExt;
     use binaryninja::headless::Session;
     use std::path::PathBuf;
     use std::sync::OnceLock;

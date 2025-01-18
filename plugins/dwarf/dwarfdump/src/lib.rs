@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use binaryninja::{
-    binaryview::{BinaryView, BinaryViewExt},
+    binary_view::{BinaryView, BinaryViewExt},
     command::{register, Command},
     disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenKind},
     flowgraph::{BranchType, EdgeStyle, FlowGraph, FlowGraphNode, FlowGraphOption},

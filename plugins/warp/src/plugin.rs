@@ -6,7 +6,7 @@ use crate::matcher::{
     invalidate_function_matcher_cache, Matcher, MatcherSettings, PlatformID, PLAT_MATCHER_CACHE,
 };
 use crate::{build_function, cache};
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::{Command, FunctionCommand};
 use binaryninja::function::{Function, FunctionUpdateType};
 use binaryninja::logger::Logger;

@@ -1,5 +1,5 @@
 use binaryninja::architecture::CoreArchitecture;
-use binaryninja::binaryview::BinaryView;
+use binaryninja::binary_view::BinaryView;
 use binaryninja::demangle::{
     demangle_generic, demangle_gnu3, demangle_llvm, demangle_ms, CustomDemangler, Demangler,
 };

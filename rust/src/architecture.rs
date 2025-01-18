@@ -20,10 +20,10 @@ use binaryninjacore_sys::*;
 use std::fmt::{Debug, Formatter};
 
 use crate::{
-    callingconvention::CallingConvention,
-    databuffer::DataBuffer,
+    calling_convention::CallingConvention,
+    data_buffer::DataBuffer,
     disassembly::InstructionTextToken,
-    lowlevelil::{MutableLiftedILExpr, MutableLiftedILFunction},
+    low_level_il::{MutableLiftedILExpr, MutableLiftedILFunction},
     platform::Platform,
     rc::*,
     relocation::CoreRelocationHandler,
@@ -42,12 +42,12 @@ use std::{
     mem::MaybeUninit,
 };
 
-use crate::functionrecognizer::FunctionRecognizer;
+use crate::function_recognizer::FunctionRecognizer;
 use crate::relocation::{CustomRelocationHandlerHandle, RelocationHandler};
 
 use crate::confidence::Conf;
-use crate::lowlevelil::expression::ValueExpr;
-use crate::lowlevelil::lifting::{
+use crate::low_level_il::expression::ValueExpr;
+use crate::low_level_il::lifting::{
     get_default_flag_cond_llil, get_default_flag_write_llil, LowLevelILFlagWriteOp,
 };
 pub use binaryninjacore_sys::BNFlagRole as FlagRole;
@@ -2023,7 +2023,7 @@ pub trait ArchitectureExt: Architecture {
     where
         R: 'static + FunctionRecognizer + Send + Sync + Sized,
     {
-        crate::functionrecognizer::register_arch_function_recognizer(self.as_ref(), recognizer);
+        crate::function_recognizer::register_arch_function_recognizer(self.as_ref(), recognizer);
     }
 }
 

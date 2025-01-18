@@ -1,5 +1,5 @@
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
-use binaryninja::filemetadata::FileMetadata;
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::file_metadata::FileMetadata;
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;

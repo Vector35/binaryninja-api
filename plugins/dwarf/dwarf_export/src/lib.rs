@@ -12,7 +12,7 @@ use std::fs;
 
 use binaryninja::logger::Logger;
 use binaryninja::{
-    binaryview::{BinaryView, BinaryViewBase, BinaryViewExt},
+    binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
     command::{register, Command},
     confidence::Conf,
     interaction,

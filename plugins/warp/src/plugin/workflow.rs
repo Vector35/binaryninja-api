@@ -1,9 +1,9 @@
 use crate::cache::cached_function_guid;
 use crate::matcher::cached_function_matcher;
-use binaryninja::backgroundtask::BackgroundTask;
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::background_task::BackgroundTask;
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
-use binaryninja::lowlevelil::function::RegularNonSSA;
+use binaryninja::low_level_il::function::RegularNonSSA;
 use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
 use std::time::Instant;
 
@@ -37,7 +37,7 @@ impl Command for RunMatcher {
         // TODO: Check to see if the GUID cache is empty and ask the user if they want to regenerate the guids.
         std::thread::spawn(move || {
             let undo_id = view.file().begin_undo_actions(true);
-            let background_task = BackgroundTask::new("Matching on functions...", false).unwrap();
+            let background_task = BackgroundTask::new("Matching on functions...", false);
             let start = Instant::now();
             view.functions()
                 .iter()
@@ -59,7 +59,7 @@ pub fn insert_workflow() {
     let matcher_activity = |ctx: &AnalysisContext| {
         let view = ctx.view();
         let undo_id = view.file().begin_undo_actions(true);
-        let background_task = BackgroundTask::new("Matching on functions...", false).unwrap();
+        let background_task = BackgroundTask::new("Matching on functions...", false);
         let start = Instant::now();
         view.functions()
             .iter()

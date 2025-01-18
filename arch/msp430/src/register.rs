@@ -1,7 +1,7 @@
 use binaryninja::architecture;
 use binaryninja::architecture::{ImplicitRegisterExtend, RegisterId};
 
-use binaryninja::lowlevelil::LowLevelILRegister;
+use binaryninja::low_level_il::LowLevelILRegister;
 use std::borrow::Cow;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

@@ -1,4 +1,4 @@
-use binaryninja::databuffer::DataBuffer;
+use binaryninja::data_buffer::DataBuffer;
 
 const DUMMY_DATA_0: &[u8] = b"0123456789\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x09\xFF";
 const DUMMY_DATA_1: &[u8] = b"qwertyuiopasdfghjkl\xE7zxcvbnm\x00\x01\x00";

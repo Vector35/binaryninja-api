@@ -12,7 +12,7 @@ pub struct MainThreadActionExecutor {
 
 impl MainThreadActionExecutor {
     unsafe extern "C" fn cb_execute(ctx: *mut c_void) {
-        let f: Box<MainThreadActionExecutor> = Box::from_raw(ctx as *mut MainThreadActionExecutor);
+        let f: Box<Self> = Box::from_raw(ctx as *mut Self);
         f.execute();
     }
 

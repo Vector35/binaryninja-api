@@ -1,5 +1,5 @@
 use crate::convert::to_bn_type;
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
 use std::time::Instant;
 
@@ -31,11 +31,10 @@ impl Command for LoadTypes {
 
         let view = view.to_owned();
         std::thread::spawn(move || {
-            let background_task = binaryninja::backgroundtask::BackgroundTask::new(
+            let background_task = binaryninja::background_task::BackgroundTask::new(
                 format!("Applying {} types...", data.types.len()),
                 true,
-            )
-            .unwrap();
+            );
 
             let start = Instant::now();
             for comp_ty in data.types {

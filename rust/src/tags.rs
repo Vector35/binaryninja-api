@@ -18,7 +18,7 @@ use binaryninjacore_sys::*;
 use std::fmt::{Debug, Formatter};
 
 use crate::architecture::CoreArchitecture;
-use crate::binaryview::BinaryView;
+use crate::binary_view::BinaryView;
 
 use crate::function::Function;
 use crate::rc::*;

@@ -18,7 +18,7 @@ pub use binaryninjacore_sys::BNSettingsScope as SettingsScope;
 use binaryninjacore_sys::*;
 use std::os::raw::c_char;
 
-use crate::binaryview::BinaryView;
+use crate::binary_view::BinaryView;
 use crate::rc::*;
 use crate::string::{BnStrCompatible, BnString};
 

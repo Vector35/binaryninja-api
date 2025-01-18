@@ -1,7 +1,7 @@
 use crate::cache::{cached_function, cached_type_references};
 use crate::matcher::invalidate_function_matcher_cache;
 use crate::user_signature_dir;
-use binaryninja::binaryview::BinaryView;
+use binaryninja::binary_view::BinaryView;
 use binaryninja::command::FunctionCommand;
 use binaryninja::function::Function;
 use std::thread;

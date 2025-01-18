@@ -9,6 +9,9 @@ fn session() -> Session {
     Session::new().expect("Failed to initialize session")
 }
 
+// TODO: Test running a workflow activity
+// TODO: Test activity insertion and removal
+
 #[rstest]
 fn test_workflow_clone(_session: &Session) {
     let original_workflow = Workflow::new("core.function.baseAnalysis");

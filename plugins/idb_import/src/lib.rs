@@ -3,7 +3,7 @@ use types::*;
 mod addr_info;
 use addr_info::*;
 
-use binaryninja::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::debuginfo::{
     CustomDebugInfoParser, DebugFunctionInfo, DebugInfo, DebugInfoParser,
 };

@@ -18,7 +18,7 @@ use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void};
 
 use crate::architecture::CoreArchitecture;
-use crate::binaryview::BinaryView;
+use crate::binary_view::BinaryView;
 use crate::string::{raw_to_string, BnStrCompatible, BnString};
 use crate::types::{QualifiedName, Type};
 

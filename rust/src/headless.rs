@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::{
-    binaryview, bundled_plugin_directory, enterprise, is_license_validated, is_main_thread,
+    binary_view, bundled_plugin_directory, enterprise, is_license_validated, is_main_thread,
     license_path, set_bundled_plugin_directory, set_license, string::IntoJson,
 };
 use std::io;
@@ -279,7 +279,7 @@ impl Session {
     ///     .load("/bin/cat")
     ///     .expect("Couldn't open `/bin/cat`");
     /// ```
-    pub fn load(&self, file_path: impl AsRef<Path>) -> Option<Ref<binaryview::BinaryView>> {
+    pub fn load(&self, file_path: impl AsRef<Path>) -> Option<Ref<binary_view::BinaryView>> {
         crate::load(file_path)
     }
 
@@ -300,7 +300,7 @@ impl Session {
         file_path: impl AsRef<Path>,
         update_analysis_and_wait: bool,
         options: Option<O>,
-    ) -> Option<Ref<binaryview::BinaryView>> {
+    ) -> Option<Ref<binary_view::BinaryView>> {
         crate::load_with_options(file_path, update_analysis_and_wait, options)
     }
 }

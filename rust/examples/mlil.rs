@@ -1,4 +1,4 @@
-use binaryninja::binaryview::{BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::{BinaryViewBase, BinaryViewExt};
 
 fn main() {
     println!("Starting session...");

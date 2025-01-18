@@ -1,9 +1,9 @@
-use crate::lowlevelil::RegularLowLevelILFunction;
+use crate::low_level_il::RegularLowLevelILFunction;
 use crate::rc::Guard;
 use crate::string::BnStrCompatible;
 use crate::{
     architecture::CoreArchitecture,
-    binaryview::BinaryView,
+    binary_view::BinaryView,
     rc::{CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable},
     symbol::Symbol,
 };

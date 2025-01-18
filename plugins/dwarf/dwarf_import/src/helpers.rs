@@ -17,12 +17,12 @@ use std::path::{Path, PathBuf};
 use std::{collections::HashMap, ops::Deref, str::FromStr, sync::mpsc};
 
 use crate::{DebugInfoBuilderContext, ReaderType};
-use binaryninja::binaryview::BinaryViewBase;
-use binaryninja::filemetadata::FileMetadata;
+use binaryninja::binary_view::BinaryViewBase;
+use binaryninja::file_metadata::FileMetadata;
 use binaryninja::Endianness;
 use binaryninja::{
-    binaryview::{BinaryView, BinaryViewExt},
-    downloadprovider::{DownloadInstanceInputOutputCallbacks, DownloadProvider},
+    binary_view::{BinaryView, BinaryViewExt},
+    download_provider::{DownloadInstanceInputOutputCallbacks, DownloadProvider},
     rc::Ref,
     settings::Settings,
 };

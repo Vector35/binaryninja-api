@@ -19,7 +19,7 @@ use std::fmt::{Debug, Formatter};
 
 use std::ops::Range;
 
-use crate::binaryview::BinaryView;
+use crate::binary_view::BinaryView;
 use crate::rc::*;
 
 fn set_bit(val: u32, bit_mask: u32, new_val: bool) -> u32 {
@@ -126,7 +126,7 @@ impl Segment {
     ///
     /// ```no_run
     /// # use binaryninja::segment::Segment;
-    /// # use binaryninja::binaryview::BinaryViewExt;
+    /// # use binaryninja::binary_view::BinaryViewExt;
     /// let bv = binaryninja::load("example").unwrap();
     /// bv.add_segment(Segment::builder(0..0x1000).writable(true).readable(true))
     /// ```

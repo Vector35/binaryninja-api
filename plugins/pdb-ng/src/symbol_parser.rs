@@ -37,7 +37,7 @@ use pdb::{
 
 use crate::PDBParserInstance;
 use binaryninja::architecture::{Architecture, ArchitectureExt, Register, RegisterId};
-use binaryninja::binaryview::BinaryViewBase;
+use binaryninja::binary_view::BinaryViewBase;
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use binaryninja::demangle::demangle_ms;
 use binaryninja::rc::Ref;

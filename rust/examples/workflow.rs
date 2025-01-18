@@ -1,7 +1,7 @@
-use binaryninja::binaryview::BinaryViewExt;
-use binaryninja::lowlevelil::expression::{ExpressionHandler, LowLevelILExpressionKind};
-use binaryninja::lowlevelil::instruction::InstructionHandler;
-use binaryninja::lowlevelil::VisitorAction;
+use binaryninja::binary_view::BinaryViewExt;
+use binaryninja::low_level_il::expression::{ExpressionHandler, LowLevelILExpressionKind};
+use binaryninja::low_level_il::instruction::InstructionHandler;
+use binaryninja::low_level_il::VisitorAction;
 use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
 
 const RUST_ACTIVITY_NAME: &str = "analysis.plugins.rustexample";

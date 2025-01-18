@@ -16,13 +16,13 @@ use binaryninjacore_sys::*;
 
 use crate::{
     architecture::{Architecture, CoreArchitecture, CoreRegister, Register},
-    basicblock::{BasicBlock, BlockContext},
-    binaryview::{BinaryView, BinaryViewExt},
-    callingconvention::CallingConvention,
+    basic_block::{BasicBlock, BlockContext},
+    binary_view::{BinaryView, BinaryViewExt},
+    calling_convention::CallingConvention,
     component::Component,
     disassembly::{DisassemblySettings, DisassemblyTextLine},
     flowgraph::FlowGraph,
-    mlil::FunctionGraphType,
+    medium_level_il::FunctionGraphType,
     platform::Platform,
     references::CodeReference,
     string::*,
@@ -30,7 +30,7 @@ use crate::{
     tags::{Tag, TagReference, TagType},
     types::{IntegerDisplayType, QualifiedName, Type},
 };
-use crate::{databuffer::DataBuffer, disassembly::InstructionTextToken, rc::*};
+use crate::{data_buffer::DataBuffer, disassembly::InstructionTextToken, rc::*};
 pub use binaryninjacore_sys::BNAnalysisSkipReason as AnalysisSkipReason;
 pub use binaryninjacore_sys::BNBuiltinType as BuiltinType;
 pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisSkipOverride;
@@ -39,9 +39,9 @@ pub use binaryninjacore_sys::BNHighlightStandardColor as HighlightStandardColor;
 
 use crate::architecture::RegisterId;
 use crate::confidence::Conf;
-use crate::hlil::HighLevelILFunction;
-use crate::lowlevelil::{LiftedILFunction, RegularLowLevelILFunction};
-use crate::mlil::MediumLevelILFunction;
+use crate::high_level_il::HighLevelILFunction;
+use crate::low_level_il::{LiftedILFunction, RegularLowLevelILFunction};
+use crate::medium_level_il::MediumLevelILFunction;
 use crate::variable::{
     IndirectBranchInfo, MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType,
     StackVariableReference, Variable,
@@ -1046,7 +1046,7 @@ impl Function {
     /// # Example
     ///
     /// ```no_run
-    /// # use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+    /// # use binaryninja::binary_view::{BinaryView, BinaryViewExt};
     /// # use binaryninja::function::Function;
     /// # let fun: Function = todo!();
     /// # let bv: BinaryView = todo!();

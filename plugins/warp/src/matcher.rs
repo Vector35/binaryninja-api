@@ -1,5 +1,5 @@
 use binaryninja::architecture::Architecture as BNArchitecture;
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::function::Function as BNFunction;
 use binaryninja::platform::Platform;
 use binaryninja::rc::Guard;

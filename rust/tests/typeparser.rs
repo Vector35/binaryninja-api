@@ -1,6 +1,6 @@
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
-use binaryninja::typeparser::{CoreTypeParser, TypeParser, TypeParserError};
+use binaryninja::type_parser::{CoreTypeParser, TypeParser, TypeParserError};
 use binaryninja::types::Type;
 use binaryninjacore_sys::BNTypeParserErrorSeverity::ErrorSeverity;
 use rstest::*;

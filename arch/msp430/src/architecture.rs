@@ -19,8 +19,8 @@ use msp430_asm::{
 use binaryninja::architecture::{
     BranchKind, FlagClassId, FlagGroupId, FlagId, FlagWriteId, RegisterId,
 };
-use binaryninja::lowlevelil::expression::ValueExpr;
-use binaryninja::lowlevelil::{MutableLiftedILExpr, MutableLiftedILFunction};
+use binaryninja::low_level_il::expression::ValueExpr;
+use binaryninja::low_level_il::{MutableLiftedILExpr, MutableLiftedILFunction};
 use log::error;
 
 const MIN_MNEMONIC: usize = 9;

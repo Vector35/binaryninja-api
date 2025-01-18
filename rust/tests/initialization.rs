@@ -1,6 +1,6 @@
-use binaryninja::binaryview::BinaryView;
+use binaryninja::binary_view::BinaryView;
 use binaryninja::enterprise::release_license;
-use binaryninja::filemetadata::FileMetadata;
+use binaryninja::file_metadata::FileMetadata;
 use binaryninja::headless::{
     init, init_with_opts, shutdown, InitializationError, InitializationOptions,
 };

@@ -1,5 +1,5 @@
 use binaryninja::{
-    binaryview::{BinaryView, BinaryViewExt},
+    binary_view::{BinaryView, BinaryViewExt},
     disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenKind},
     flowgraph::{BranchType, EdgePenStyle, EdgeStyle, FlowGraph, FlowGraphNode, ThemeColor},
 };

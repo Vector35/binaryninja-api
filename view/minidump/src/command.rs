@@ -3,7 +3,7 @@ use std::str;
 use log::{debug, error, info};
 use minidump::{Minidump, MinidumpMemoryInfoList};
 
-use binaryninja::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 
 pub fn print_memory_information(bv: &BinaryView) {
     debug!("Printing memory information");

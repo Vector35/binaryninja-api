@@ -40,7 +40,7 @@ use binaryninjacore_sys::{
 use std::ops::Range;
 use std::os::raw::c_void;
 
-use crate::binaryview::BinaryView;
+use crate::binary_view::BinaryView;
 use crate::function::Function;
 use crate::string::BnStrCompatible;
 
@@ -68,7 +68,7 @@ where
 /// # Example
 /// ```no_run
 /// # use binaryninja::command::Command;
-/// # use binaryninja::binaryview::BinaryView;
+/// # use binaryninja::binary_view::BinaryView;
 /// struct MyCommand;
 ///
 /// impl Command for MyCommand {
@@ -169,7 +169,7 @@ where
 /// # Example
 /// ```no_run
 /// # use binaryninja::command::AddressCommand;
-/// # use binaryninja::binaryview::BinaryView;
+/// # use binaryninja::binary_view::BinaryView;
 /// struct MyCommand;
 ///
 /// impl AddressCommand for MyCommand {
@@ -271,7 +271,7 @@ where
 /// ```no_run
 /// # use std::ops::Range;
 /// # use binaryninja::command::RangeCommand;
-/// # use binaryninja::binaryview::BinaryView;
+/// # use binaryninja::binary_view::BinaryView;
 /// struct MyCommand;
 ///
 /// impl RangeCommand for MyCommand {
@@ -377,7 +377,7 @@ where
 /// # Example
 /// ```no_run
 /// # use binaryninja::command::FunctionCommand;
-/// # use binaryninja::binaryview::BinaryView;
+/// # use binaryninja::binary_view::BinaryView;
 /// # use binaryninja::function::Function;
 /// # use binaryninja::command::register_for_function;
 /// struct MyCommand;

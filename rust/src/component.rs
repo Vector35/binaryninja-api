@@ -1,6 +1,6 @@
 use core::{ffi, mem, ptr};
 
-use crate::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
+use crate::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 use crate::function::Function;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::string::{BnStrCompatible, BnString};

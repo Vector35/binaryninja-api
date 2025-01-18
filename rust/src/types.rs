@@ -21,8 +21,8 @@ use binaryninjacore_sys::*;
 
 use crate::{
     architecture::{Architecture, CoreArchitecture},
-    binaryview::{BinaryView, BinaryViewExt},
-    callingconvention::CallingConvention,
+    binary_view::{BinaryView, BinaryViewExt},
+    calling_convention::CallingConvention,
     rc::*,
     string::{BnStrCompatible, BnString},
 };
@@ -447,7 +447,7 @@ pub struct Type {
 }
 
 /// ```no_run
-/// # use crate::binaryninja::binaryview::BinaryViewExt;
+/// # use crate::binaryninja::binary_view::BinaryViewExt;
 /// # use binaryninja::types::Type;
 /// let bv = binaryninja::load("example.bin").unwrap();
 /// let my_custom_type_1 = Type::named_int(5, false, "my_w");
@@ -1353,7 +1353,7 @@ pub struct StructureBuilder {
 
 /// ```no_run
 /// // Includes
-/// # use binaryninja::binaryview::BinaryViewExt;
+/// # use binaryninja::binary_view::BinaryViewExt;
 /// use binaryninja::types::{MemberAccess, MemberScope, Structure, StructureBuilder, Type};
 ///
 /// // Types to use in the members

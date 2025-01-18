@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use anyhow::{anyhow, Result};
 use binaryninja::architecture::CoreArchitecture;
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::binaryninjacore_sys::{BNMemberAccess, BNMemberScope};
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
 use binaryninja::confidence::Conf;
 use binaryninja::rc::Ref;
 use binaryninja::types::{

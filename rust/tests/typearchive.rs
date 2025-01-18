@@ -1,9 +1,9 @@
-use binaryninja::binaryview::BinaryView;
-use binaryninja::filemetadata::FileMetadata;
+use binaryninja::binary_view::BinaryView;
+use binaryninja::file_metadata::FileMetadata;
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
-use binaryninja::typearchive::TypeArchive;
+use binaryninja::type_archive::TypeArchive;
 use rstest::*;
 
 #[fixture]

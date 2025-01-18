@@ -1,13 +1,13 @@
 use crate::convert::{from_bn_symbol, from_bn_type_internal};
 use crate::{build_function, function_guid};
 use binaryninja::architecture::Architecture;
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::Function as BNFunction;
-use binaryninja::lowlevelil::function::{
+use binaryninja::low_level_il::function::{
     FunctionMutability, LowLevelILFunction, NonSSA, RegularNonSSA,
 };
-use binaryninja::lowlevelil::RegularLowLevelILFunction;
+use binaryninja::low_level_il::RegularLowLevelILFunction;
 use binaryninja::rc::Guard;
 use binaryninja::rc::Ref as BNRef;
 use binaryninja::symbol::Symbol as BNSymbol;

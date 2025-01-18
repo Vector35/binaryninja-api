@@ -1,5 +1,5 @@
 use binaryninja::architecture::CoreArchitecture;
-use binaryninja::binaryview::BinaryView;
+use binaryninja::binary_view::BinaryView;
 use binaryninja::demangle::{CustomDemangler, Demangler};
 use binaryninja::rc::Ref;
 use binaryninja::types::{QualifiedName, Type};

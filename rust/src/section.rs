@@ -19,7 +19,7 @@ use std::ops::Range;
 
 use binaryninjacore_sys::*;
 
-use crate::binaryview::BinaryView;
+use crate::binary_view::BinaryView;
 use crate::rc::*;
 use crate::string::*;
 
@@ -80,7 +80,7 @@ impl Section {
     ///
     /// ```no_run
     /// # use binaryninja::section::Section;
-    /// # use binaryninja::binaryview::BinaryViewExt;
+    /// # use binaryninja::binary_view::BinaryViewExt;
     /// let bv = binaryninja::load("example").unwrap();
     /// bv.add_section(Section::builder("example", 0..1024).align(4).entry_size(4))
     /// ```

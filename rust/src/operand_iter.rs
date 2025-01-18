@@ -3,8 +3,12 @@ use binaryninjacore_sys::BNGetMediumLevelILByIndex;
 use binaryninjacore_sys::BNHighLevelILOperation;
 use binaryninjacore_sys::BNMediumLevelILOperation;
 
-use crate::hlil::{HighLevelILFunction, HighLevelILInstruction, HighLevelInstructionIndex};
-use crate::mlil::{MediumLevelILFunction, MediumLevelILInstruction, MediumLevelInstructionIndex};
+use crate::high_level_il::{
+    HighLevelILFunction, HighLevelILInstruction, HighLevelInstructionIndex,
+};
+use crate::medium_level_il::{
+    MediumLevelILFunction, MediumLevelILInstruction, MediumLevelInstructionIndex,
+};
 use crate::rc::{Ref, RefCountable};
 use crate::variable::{SSAVariable, Variable};
 

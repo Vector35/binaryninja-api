@@ -29,7 +29,7 @@
 //! Here's a minimal, complete example boilerplate-plugin:
 //! ```no_run
 //! use binaryninja::{
-//!     binaryview::BinaryView,
+//!     binary_view::BinaryView,
 //!     debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser},
 //! };
 //!
@@ -62,11 +62,11 @@
 //! `DebugInfo` will then be automatically applied to binary views that contain debug information (via the setting `analysis.debugInfo.internal`), binary views that provide valid external debug info files (`analysis.debugInfo.external`), or manually fetched/applied as below:
 //! ```no_run
 //! # use binaryninja::debuginfo::DebugInfoParser;
-//! # use binaryninja::binaryview::BinaryViewExt;
+//! # use binaryninja::binary_view::BinaryViewExt;
 //! let bv = binaryninja::load("example").unwrap();
 //! let valid_parsers = DebugInfoParser::parsers_for_view(&bv);
 //! let parser = valid_parsers.get(0);
-//! let debug_info = parser.parse_debug_info(&bv, &bv, None, None).unwrap();
+//! let debug_info = parser.parse_debug_info(&bv, &bv, None).unwrap();
 //! bv.apply_debug_info(&debug_info);
 //! ```
 //!
@@ -77,20 +77,28 @@
 use binaryninjacore_sys::*;
 use std::ffi::c_void;
 
+use crate::progress::ProgressExecutor;
+use crate::variable::{NamedDataVariableWithType, NamedVariableWithType};
 use crate::{
-    binaryview::BinaryView,
+    binary_view::BinaryView,
     platform::Platform,
     rc::*,
     string::{raw_to_string, BnStrCompatible, BnString},
     types::{NameAndType, Type},
 };
 
-use crate::variable::{NamedDataVariableWithType, NamedVariableWithType};
+/// Implement this trait to implement a debug info parser.  See `DebugInfoParser` for more details.
+pub trait CustomDebugInfoParser: 'static + Sync {
+    fn is_valid(&self, view: &BinaryView) -> bool;
 
-struct ProgressContext(Option<Box<dyn Fn(usize, usize) -> Result<(), ()>>>);
-
-//////////////////////
-//  DebugInfoParser
+    fn parse_info(
+        &self,
+        debug_info: &mut DebugInfo,
+        view: &BinaryView,
+        debug_file: &BinaryView,
+        progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
+    ) -> bool;
+}
 
 /// Represents the registered parsers and providers of debug information to Binary Ninja.
 /// See `binaryninja::debuginfo` for more information
@@ -142,25 +150,33 @@ impl DebugInfoParser {
         unsafe { BNIsDebugInfoParserValidForView(self.handle, view.handle) }
     }
 
-    extern "C" fn cb_progress(ctxt: *mut c_void, cur: usize, max: usize) -> bool {
-        ffi_wrap!("DebugInfoParser::cb_progress", unsafe {
-            let progress = ctxt as *mut ProgressContext;
-            match &(*progress).0 {
-                Some(func) => (func)(cur, max).is_ok(),
-                None => true,
-            }
-        })
-    }
-
-    /// Returns a `DebugInfo` object populated with debug info by this debug-info parser. Only provide a `DebugInfo` object if you wish to append to the existing debug info
+    /// Returns [`DebugInfo`] populated with debug info by this debug-info parser.
+    ///
+    /// Only provide a `DebugInfo` object if you wish to append to the existing debug info
     pub fn parse_debug_info(
         &self,
         view: &BinaryView,
         debug_file: &BinaryView,
         existing_debug_info: Option<&DebugInfo>,
-        progress: Option<Box<dyn Fn(usize, usize) -> Result<(), ()>>>,
     ) -> Option<Ref<DebugInfo>> {
-        let mut progress_raw = ProgressContext(progress);
+        self.parse_debug_info_with_progress(
+            view,
+            debug_file,
+            existing_debug_info,
+            ProgressExecutor::default(),
+        )
+    }
+
+    /// Returns [`DebugInfo`] populated with debug info by this debug-info parser.
+    ///
+    /// Only provide a `DebugInfo` object if you wish to append to the existing debug info
+    pub fn parse_debug_info_with_progress(
+        &self,
+        view: &BinaryView,
+        debug_file: &BinaryView,
+        existing_debug_info: Option<&DebugInfo>,
+        progress: impl Into<ProgressExecutor>,
+    ) -> Option<Ref<DebugInfo>> {
         let info: *mut BNDebugInfo = match existing_debug_info {
             Some(debug_info) => unsafe {
                 BNParseDebugInfo(
@@ -168,8 +184,8 @@ impl DebugInfoParser {
                     view.handle,
                     debug_file.handle,
                     debug_info.handle,
-                    Some(Self::cb_progress),
-                    &mut progress_raw as *mut _ as *mut c_void,
+                    Some(ProgressExecutor::cb_execute),
+                    progress.into().into_raw_context(),
                 )
             },
             None => unsafe {
@@ -178,8 +194,8 @@ impl DebugInfoParser {
                     view.handle,
                     debug_file.handle,
                     std::ptr::null_mut(),
-                    Some(Self::cb_progress),
-                    &mut progress_raw as *mut _ as *mut c_void,
+                    Some(ProgressExecutor::cb_execute),
+                    progress.into().into_raw_context(),
                 )
             },
         };
@@ -892,19 +908,4 @@ impl ToOwned for DebugInfo {
     fn to_owned(&self) -> Self::Owned {
         unsafe { RefCountable::inc_ref(self) }
     }
-}
-
-////////////////////////////
-//  CustomDebugInfoParser
-
-/// Implement this trait to implement a debug info parser.  See `DebugInfoParser` for more details.
-pub trait CustomDebugInfoParser: 'static + Sync {
-    fn is_valid(&self, view: &BinaryView) -> bool;
-    fn parse_info(
-        &self,
-        debug_info: &mut DebugInfo,
-        view: &BinaryView,
-        debug_file: &BinaryView,
-        progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
-    ) -> bool;
 }

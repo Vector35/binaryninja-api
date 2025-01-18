@@ -1,11 +1,11 @@
 use binaryninja::architecture::Register;
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::headless::Session;
-use binaryninja::lowlevelil::expression::LowLevelILExpressionIndex;
-use binaryninja::lowlevelil::instruction::{
+use binaryninja::low_level_il::expression::LowLevelExpressionIndex;
+use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstructionKind, LowLevelInstructionIndex,
 };
-use binaryninja::lowlevelil::LowLevelILRegister;
+use binaryninja::low_level_il::LowLevelILRegister;
 use binaryninja::rc::Ref;
 use rstest::*;
 use std::path::PathBuf;
@@ -44,7 +44,7 @@ fn test_llil_info(_session: &Session, view: &BinaryView) {
                 LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "edi"),
                 _ => panic!("Expected Register::ArchReg"),
             }
-            assert_eq!(op.source_expr().index, LowLevelILExpressionIndex(0));
+            assert_eq!(op.source_expr().index, LowLevelExpressionIndex(0));
         }
         _ => panic!("Expected SetReg"),
     }
@@ -56,7 +56,7 @@ fn test_llil_info(_session: &Session, view: &BinaryView) {
     match instr_1.kind() {
         LowLevelILInstructionKind::Push(op) => {
             assert_eq!(op.size(), 4);
-            assert_eq!(op.operand().index, LowLevelILExpressionIndex(2));
+            assert_eq!(op.operand().index, LowLevelExpressionIndex(2));
         }
         _ => panic!("Expected Push"),
     }
@@ -72,7 +72,7 @@ fn test_llil_info(_session: &Session, view: &BinaryView) {
                 LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "ebp"),
                 _ => panic!("Expected Register::ArchReg"),
             }
-            assert_eq!(op.source_expr().index, LowLevelILExpressionIndex(4));
+            assert_eq!(op.source_expr().index, LowLevelExpressionIndex(4));
         }
         _ => panic!("Expected SetReg"),
     }
@@ -88,7 +88,7 @@ fn test_llil_info(_session: &Session, view: &BinaryView) {
                 LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "eax"),
                 _ => panic!("Expected Register::ArchReg"),
             }
-            assert_eq!(op.source_expr().index, LowLevelILExpressionIndex(9));
+            assert_eq!(op.source_expr().index, LowLevelExpressionIndex(9));
         }
         _ => panic!("Expected SetReg"),
     }
@@ -100,7 +100,7 @@ fn test_llil_info(_session: &Session, view: &BinaryView) {
     match instr_4.kind() {
         LowLevelILInstructionKind::Push(op) => {
             assert_eq!(op.size(), 4);
-            assert_eq!(op.operand().index, LowLevelILExpressionIndex(11));
+            assert_eq!(op.operand().index, LowLevelExpressionIndex(11));
         }
         _ => panic!("Expected Push"),
     }
@@ -111,7 +111,7 @@ fn test_llil_info(_session: &Session, view: &BinaryView) {
     println!("{:?}", instr_5.kind());
     match instr_5.kind() {
         LowLevelILInstructionKind::Call(op) => {
-            assert_eq!(op.target().index, LowLevelILExpressionIndex(13));
+            assert_eq!(op.target().index, LowLevelExpressionIndex(13));
         }
         _ => panic!("Expected Call"),
     }
@@ -127,7 +127,7 @@ fn test_llil_info(_session: &Session, view: &BinaryView) {
                 LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "esp"),
                 _ => panic!("Expected Register::ArchReg"),
             }
-            assert_eq!(op.source_expr().index, LowLevelILExpressionIndex(17));
+            assert_eq!(op.source_expr().index, LowLevelExpressionIndex(17));
         }
         _ => panic!("Expected SetReg"),
     }
@@ -143,7 +143,7 @@ fn test_llil_info(_session: &Session, view: &BinaryView) {
                 LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "ebp"),
                 _ => panic!("Expected Register::ArchReg"),
             }
-            assert_eq!(op.source_expr().index, LowLevelILExpressionIndex(19));
+            assert_eq!(op.source_expr().index, LowLevelExpressionIndex(19));
         }
         _ => panic!("Expected SetReg"),
     }
@@ -154,7 +154,7 @@ fn test_llil_info(_session: &Session, view: &BinaryView) {
     println!("{:?}", instr_8.kind());
     match instr_8.kind() {
         LowLevelILInstructionKind::Ret(op) => {
-            assert_eq!(op.target().index, LowLevelILExpressionIndex(21));
+            assert_eq!(op.target().index, LowLevelExpressionIndex(21));
         }
         _ => panic!("Expected Ret"),
     }

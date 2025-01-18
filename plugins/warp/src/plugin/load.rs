@@ -1,5 +1,5 @@
 use crate::matcher::{Matcher, PlatformID, PLAT_MATCHER_CACHE};
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
 pub struct LoadSignatureFile;
 

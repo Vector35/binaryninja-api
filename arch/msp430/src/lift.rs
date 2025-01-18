@@ -3,7 +3,7 @@ use crate::flag::{Flag, FlagWrite};
 use crate::register::Register;
 use crate::Msp430;
 
-use binaryninja::{architecture::FlagCondition, lowlevelil::lifting::Label};
+use binaryninja::{architecture::FlagCondition, low_level_il::lifting::Label};
 
 use msp430_asm::emulate::Emulated;
 use msp430_asm::instruction::Instruction;
@@ -12,8 +12,8 @@ use msp430_asm::operand::{Operand, OperandWidth};
 use msp430_asm::single_operand::SingleOperand;
 use msp430_asm::two_operand::TwoOperand;
 
-use binaryninja::lowlevelil::expression::ValueExpr;
-use binaryninja::lowlevelil::{MutableLiftedILExpr, MutableLiftedILFunction};
+use binaryninja::low_level_il::expression::ValueExpr;
+use binaryninja::low_level_il::{MutableLiftedILExpr, MutableLiftedILFunction};
 use log::info;
 
 macro_rules! auto_increment {

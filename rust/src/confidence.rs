@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use crate::architecture::{Architecture, CoreArchitecture};
-use crate::callingconvention::CallingConvention;
+use crate::calling_convention::CallingConvention;
 use crate::rc::{Ref, RefCountable};
 use crate::types::Type;
 use binaryninjacore_sys::{

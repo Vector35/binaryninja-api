@@ -44,39 +44,40 @@ mod ffi;
 mod operand_iter;
 
 pub mod architecture;
-pub mod backgroundtask;
-pub mod basicblock;
-pub mod binaryreader;
-pub mod binaryview;
-pub mod binarywriter;
-pub mod callingconvention;
+pub mod background_task;
+pub mod basic_block;
+pub mod binary_reader;
+pub mod binary_view;
+pub mod binary_writer;
+pub mod calling_convention;
 pub mod command;
 pub mod component;
 pub mod confidence;
-pub mod custombinaryview;
+pub mod custom_binary_view;
+pub mod data_buffer;
 pub mod database;
-pub mod databuffer;
 pub mod debuginfo;
 pub mod demangle;
 pub mod disassembly;
-pub mod downloadprovider;
+pub mod download_provider;
 pub mod enterprise;
-pub mod externallibrary;
-pub mod fileaccessor;
-pub mod filemetadata;
+pub mod external_library;
+pub mod file_accessor;
+pub mod file_metadata;
 pub mod flowgraph;
 pub mod function;
-pub mod functionrecognizer;
+pub mod function_recognizer;
 pub mod headless;
-pub mod hlil;
+pub mod high_level_il;
 pub mod interaction;
-pub mod linearview;
+pub mod linear_view;
 pub mod logger;
-pub mod lowlevelil;
+pub mod low_level_il;
 pub mod mainthread;
+pub mod medium_level_il;
 pub mod metadata;
-pub mod mlil;
 pub mod platform;
+mod progress;
 pub mod project;
 pub mod rc;
 pub mod references;
@@ -87,21 +88,22 @@ pub mod settings;
 pub mod string;
 pub mod symbol;
 pub mod tags;
-pub mod templatesimplifier;
-pub mod typearchive;
-pub mod typecontainer;
-pub mod typelibrary;
-pub mod typeparser;
-pub mod typeprinter;
+pub mod template_simplifier;
+pub mod type_archive;
+pub mod type_container;
+pub mod type_library;
+pub mod type_parser;
+pub mod type_printer;
 pub mod types;
 pub mod update;
 pub mod variable;
+pub mod worker_thread;
 pub mod workflow;
 
-use crate::filemetadata::FileMetadata;
+use crate::file_metadata::FileMetadata;
 use crate::function::Function;
+use binary_view::BinaryView;
 use binaryninjacore_sys::*;
-use binaryview::BinaryView;
 use metadata::Metadata;
 use metadata::MetadataType;
 use rc::Ref;
@@ -112,6 +114,7 @@ use string::BnStrCompatible;
 use string::BnString;
 use string::IntoJson;
 
+use crate::progress::ProgressExecutor;
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 pub use binaryninjacore_sys::BNDataFlowQueryOption as DataFlowQueryOption;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
@@ -122,41 +125,22 @@ pub const BN_INVALID_EXPR: usize = usize::MAX;
 
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
 pub fn load(file_path: impl AsRef<Path>) -> Option<Ref<BinaryView>> {
-    let file_path = file_path.as_ref().into_bytes_with_nul();
-    let options = c"";
-    let handle = unsafe {
-        BNLoadFilename(
-            file_path.as_ptr() as *mut _,
-            true,
-            options.as_ptr() as *mut c_char,
-            Some(cb_progress_nop),
-            std::ptr::null_mut(),
-        )
-    };
-    if handle.is_null() {
-        None
-    } else {
-        Some(unsafe { BinaryView::ref_from_raw(handle) })
-    }
+    load_with_progress(file_path, ProgressExecutor::default())
 }
 
-pub fn load_with_progress<F>(
+pub fn load_with_progress(
     file_path: impl AsRef<Path>,
-    mut progress: F,
-) -> Option<Ref<BinaryView>>
-where
-    F: FnMut(usize, usize) -> bool,
-{
+    progress: impl Into<ProgressExecutor>,
+) -> Option<Ref<BinaryView>> {
     let file_path = file_path.as_ref().into_bytes_with_nul();
     let options = c"";
-    let progress_ctx = &mut progress as *mut F as *mut c_void;
     let handle = unsafe {
         BNLoadFilename(
             file_path.as_ptr() as *mut _,
             true,
             options.as_ptr() as *mut c_char,
-            Some(cb_progress_func::<F>),
-            progress_ctx,
+            Some(ProgressExecutor::cb_execute),
+            progress.into().into_raw_context(),
         )
     };
     if handle.is_null() {
@@ -191,48 +175,22 @@ pub fn load_with_options<O>(
 where
     O: IntoJson,
 {
-    let file_path = file_path.as_ref().into_bytes_with_nul();
-    let options_or_default = if let Some(opt) = options {
-        opt.get_json_string()
-            .ok()?
-            .into_bytes_with_nul()
-            .as_ref()
-            .to_vec()
-    } else {
-        Metadata::new_of_type(MetadataType::KeyValueDataType)
-            .get_json_string()
-            .ok()?
-            .as_ref()
-            .to_vec()
-    };
-
-    let handle = unsafe {
-        BNLoadFilename(
-            file_path.as_ptr() as *mut _,
-            update_analysis_and_wait,
-            options_or_default.as_ptr() as *mut c_char,
-            Some(cb_progress_nop),
-            std::ptr::null_mut(),
-        )
-    };
-
-    if handle.is_null() {
-        None
-    } else {
-        Some(unsafe { BinaryView::ref_from_raw(handle) })
-    }
+    load_with_options_and_progress(
+        file_path,
+        update_analysis_and_wait,
+        options,
+        ProgressExecutor::default(),
+    )
 }
 
-pub fn load_with_options_and_progress<S, O, F>(
+pub fn load_with_options_and_progress<O>(
     file_path: impl AsRef<Path>,
     update_analysis_and_wait: bool,
     options: Option<O>,
-    progress: Option<F>,
+    progress: impl Into<ProgressExecutor>,
 ) -> Option<Ref<BinaryView>>
 where
-    S: BnStrCompatible,
     O: IntoJson,
-    F: FnMut(usize, usize) -> bool,
 {
     let file_path = file_path.as_ref().into_bytes_with_nul();
     let options_or_default = if let Some(opt) = options {
@@ -249,18 +207,13 @@ where
             .to_vec()
     };
 
-    let progress_ctx = match progress {
-        Some(mut x) => &mut x as *mut F as *mut c_void,
-        None => std::ptr::null_mut(),
-    };
-
     let handle = unsafe {
         BNLoadFilename(
             file_path.as_ptr() as *mut _,
             update_analysis_and_wait,
             options_or_default.as_ptr() as *mut c_char,
-            Some(cb_progress_func::<F>),
-            progress_ctx,
+            Some(ProgressExecutor::cb_execute),
+            progress.into().into_raw_context(),
         )
     };
 
@@ -279,46 +232,22 @@ pub fn load_view<O>(
 where
     O: IntoJson,
 {
-    let options_or_default = if let Some(opt) = options {
-        opt.get_json_string()
-            .ok()?
-            .into_bytes_with_nul()
-            .as_ref()
-            .to_vec()
-    } else {
-        Metadata::new_of_type(MetadataType::KeyValueDataType)
-            .get_json_string()
-            .ok()?
-            .as_ref()
-            .to_vec()
-    };
-
-    let handle = unsafe {
-        BNLoadBinaryView(
-            bv.handle as *mut _,
-            update_analysis_and_wait,
-            options_or_default.as_ptr() as *mut c_char,
-            Some(cb_progress_nop),
-            std::ptr::null_mut(),
-        )
-    };
-
-    if handle.is_null() {
-        None
-    } else {
-        Some(unsafe { BinaryView::ref_from_raw(handle) })
-    }
+    load_view_with_progress(
+        bv,
+        update_analysis_and_wait,
+        options,
+        ProgressExecutor::default(),
+    )
 }
 
-pub fn load_view_with_progress<O, F>(
+pub fn load_view_with_progress<O>(
     bv: &BinaryView,
     update_analysis_and_wait: bool,
     options: Option<O>,
-    progress: Option<F>,
+    progress: impl Into<ProgressExecutor>,
 ) -> Option<Ref<BinaryView>>
 where
     O: IntoJson,
-    F: FnMut(usize, usize) -> bool,
 {
     let options_or_default = if let Some(opt) = options {
         opt.get_json_string()
@@ -334,18 +263,13 @@ where
             .to_vec()
     };
 
-    let progress_ctx = match progress {
-        Some(mut x) => &mut x as *mut F as *mut c_void,
-        None => std::ptr::null_mut(),
-    };
-
     let handle = unsafe {
         BNLoadBinaryView(
             bv.handle as *mut _,
             update_analysis_and_wait,
             options_or_default.as_ptr() as *mut c_char,
-            Some(cb_progress_func::<F>),
-            progress_ctx,
+            Some(ProgressExecutor::cb_execute),
+            progress.into().into_raw_context(),
         )
     };
 
@@ -633,22 +557,6 @@ pub fn add_optional_plugin_dependency<S: BnStrCompatible>(name: S) {
     unsafe {
         BNAddOptionalPluginDependency(name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
     };
-}
-
-unsafe extern "C" fn cb_progress_func<F: FnMut(usize, usize) -> bool>(
-    ctxt: *mut c_void,
-    progress: usize,
-    total: usize,
-) -> bool {
-    if ctxt.is_null() {
-        return true;
-    }
-    let closure = &mut *(ctxt as *mut F);
-    closure(progress, total)
-}
-
-unsafe extern "C" fn cb_progress_nop(_ctxt: *mut c_void, _arg1: usize, _arg2: usize) -> bool {
-    true
 }
 
 // Provide ABI version automatically so that the core can verify binary compatibility

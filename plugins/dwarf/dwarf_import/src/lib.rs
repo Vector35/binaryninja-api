@@ -25,12 +25,12 @@ use crate::functions::parse_function_entry;
 use crate::helpers::{get_attr_die, get_name, get_uid, DieReference};
 use crate::types::parse_variable;
 
-use binaryninja::binaryview::BinaryViewBase;
+use binaryninja::binary_view::BinaryViewBase;
 use binaryninja::{
-    binaryview::{BinaryView, BinaryViewExt},
+    binary_view::{BinaryView, BinaryViewExt},
     debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser},
     settings::Settings,
-    templatesimplifier::simplify_str_to_str,
+    template_simplifier::simplify_str_to_str,
 };
 use dwarfreader::{
     create_section_reader, get_endian, is_dwo_dwarf, is_non_dwo_dwarf, is_raw_dwo_dwarf,

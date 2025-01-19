@@ -3,7 +3,7 @@ use crate::flag::{Flag, FlagWrite};
 use crate::register::Register;
 use crate::Msp430;
 
-use binaryninja::{architecture::FlagCondition, low_level_il::lifting::Label};
+use binaryninja::{architecture::FlagCondition, low_level_il::lifting::LowLevelILLabel};
 
 use msp430_asm::emulate::Emulated;
 use msp430_asm::instruction::Instruction;
@@ -142,12 +142,12 @@ macro_rules! conditional_jump {
 
         let mut true_label = $il.label_for_address(true_addr).unwrap_or_else(|| {
             new_true = true;
-            Label::new()
+            LowLevelILLabel::new()
         });
 
         let mut false_label = $il.label_for_address(false_addr).unwrap_or_else(|| {
             new_false = true;
-            Label::new()
+            LowLevelILLabel::new()
         });
 
         $il.if_expr($cond, &mut true_label, &mut false_label)
@@ -156,14 +156,10 @@ macro_rules! conditional_jump {
         if new_true {
             $il.mark_label(&mut true_label);
             $il.jump($il.const_ptr(true_addr)).append();
-        } else {
-            $il.update_label_for_address(true_addr, true_label);
         }
 
         if new_false {
             $il.mark_label(&mut false_label);
-        } else {
-            $il.update_label_for_address(false_addr, false_label);
         }
     };
 }
@@ -289,7 +285,6 @@ pub(crate) fn lift_instruction(
             match label {
                 Some(mut label) => {
                     il.goto(&mut label).append();
-                    il.update_label_for_address(fixed_addr, label);
                 }
                 None => {
                     il.jump(il.const_ptr(fixed_addr)).append();
@@ -424,7 +419,6 @@ pub(crate) fn lift_instruction(
             let dest = if let Some(Operand::Immediate(dest)) = inst.destination() {
                 if let Some(mut label) = il.label_for_address(*dest as u64) {
                     il.goto(&mut label).append();
-                    il.update_label_for_address(*dest as u64, label);
                     return;
                 } else {
                     il.const_ptr(*dest as u64)

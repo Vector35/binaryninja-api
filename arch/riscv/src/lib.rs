@@ -39,7 +39,9 @@ use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use binaryninja::logger::Logger;
 use binaryninja::low_level_il::expression::{LowLevelILExpressionKind, ValueExpr};
 use binaryninja::low_level_il::instruction::LowLevelILInstructionKind;
-use binaryninja::low_level_il::lifting::{Label, LiftableLowLevelIL, LiftableLowLevelILWithSize};
+use binaryninja::low_level_il::lifting::{
+    LiftableLowLevelIL, LiftableLowLevelILWithSize, LowLevelILLabel,
+};
 use binaryninja::low_level_il::{
     expression::ExpressionHandler, instruction::InstructionHandler, LowLevelILRegister,
     MutableLiftedILExpr, MutableLiftedILFunction, RegularLowLevelILFunction,
@@ -1220,11 +1222,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let target = addr.wrapping_add(j.imm() as i64 as u64);
 
                 match (j.rd().id(), il.label_for_address(target)) {
-                    (0, Some(mut l)) => {
-                        let jump_expr = il.goto(&mut l);
-                        il.update_label_for_address(target, l);
-                        jump_expr
-                    }
+                    (0, Some(mut l)) => il.goto(&mut l),
                     (0, None) => il.jump(il.const_ptr(target)),
                     (_, _) => il.call(il.const_ptr(target)),
                 }
@@ -1289,12 +1287,12 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
 
                 let mut f = il.label_for_address(ft).unwrap_or_else(|| {
                     new_false = true;
-                    Label::new()
+                    LowLevelILLabel::new()
                 });
 
                 let mut t = il.label_for_address(tt).unwrap_or_else(|| {
                     new_true = true;
-                    Label::new()
+                    LowLevelILLabel::new()
                 });
 
                 il.if_expr(cond_expr, &mut t, &mut f).append();
@@ -1302,14 +1300,10 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 if new_true {
                     il.mark_label(&mut t);
                     il.jump(il.const_ptr(tt)).append();
-                } else {
-                    il.update_label_for_address(tt, t);
                 }
 
                 if new_false {
                     il.mark_label(&mut f);
-                } else {
-                    il.update_label_for_address(ft, f);
                 }
             }
 
@@ -1461,14 +1455,14 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 il.set_reg(max_width, dest_reg, il.unimplemented()).append();
 
                 let mut new_false = false;
-                let mut t = Label::new();
+                let mut t = LowLevelILLabel::new();
 
                 let cond_expr = il.cmp_e(max_width, dest_reg, 0u64);
 
                 let ft = addr.wrapping_add(inst_len);
                 let mut f = il.label_for_address(ft).unwrap_or_else(|| {
                     new_false = true;
-                    Label::new()
+                    LowLevelILLabel::new()
                 });
 
                 il.if_expr(cond_expr, &mut t, &mut f).append();
@@ -1480,8 +1474,6 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
 
                 if new_false {
                     il.mark_label(&mut f);
-                } else {
-                    il.update_label_for_address(ft, f);
                 }
             }
             Op::AmoSwap(a)

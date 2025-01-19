@@ -1097,8 +1097,8 @@ where
     pub fn if_expr<'a: 'b, 'b, C>(
         &'a self,
         cond: C,
-        true_label: &'b mut Label,
-        false_label: &'b mut Label,
+        true_label: &'b mut LowLevelILLabel,
+        false_label: &'b mut LowLevelILLabel,
     ) -> LowLevelILExpression<'a, A, Mutable, NonSSA<LiftedNonSSA>, VoidExpr>
     where
         C: LiftableLowLevelIL<'b, A, Result = ValueExpr>,
@@ -1119,8 +1119,10 @@ where
         };
 
         // Update the labels after they have been resolved.
-        *true_label = Label::from(raw_true_label);
-        *false_label = Label::from(raw_false_label);
+        *true_label = LowLevelILLabel::from(raw_true_label);
+        *false_label = LowLevelILLabel::from(raw_false_label);
+        self.update_label_map_for_label(true_label);
+        self.update_label_map_for_label(false_label);
 
         LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
     }
@@ -1128,7 +1130,7 @@ where
     // TODO: Wtf are these lifetimes??
     pub fn goto<'a: 'b, 'b>(
         &'a self,
-        label: &'b mut Label,
+        label: &'b mut LowLevelILLabel,
     ) -> LowLevelILExpression<'a, A, Mutable, NonSSA<LiftedNonSSA>, VoidExpr> {
         use binaryninjacore_sys::BNLowLevelILGoto;
 
@@ -1136,7 +1138,8 @@ where
         let expr_idx = unsafe { BNLowLevelILGoto(self.handle, &mut raw_label) };
 
         // Update the labels after they have been resolved.
-        *label = Label::from(raw_label);
+        *label = LowLevelILLabel::from(raw_label);
+        self.update_label_map_for_label(label);
 
         LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
     }
@@ -1549,7 +1552,7 @@ where
         }
     }
 
-    pub fn label_for_address<L: Into<Location>>(&self, loc: L) -> Option<Label> {
+    pub fn label_for_address<L: Into<Location>>(&self, loc: L) -> Option<LowLevelILLabel> {
         use binaryninjacore_sys::BNGetLowLevelILLabelForAddress;
 
         let loc: Location = loc.into();
@@ -1557,43 +1560,50 @@ where
         let raw_label =
             unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
         match raw_label.is_null() {
-            false => Some(unsafe { Label::from(*raw_label) }),
+            false => {
+                let mut label = unsafe { LowLevelILLabel::from(*raw_label) };
+                // Set the location so that calls to [Self::update_label_map_for_label] will update the label map.
+                label.location = Some(loc);
+                Some(label)
+            }
             true => None,
         }
     }
 
-    // TODO: Make this private and then force the updates in the expressions.
     /// Call this after updating the label through an il operation or via [`Self::mark_label`].
-    ///
-    /// If you retrieved a label via [`Self::label_for_address`] than you very likely want to use this.
-    pub fn update_label_for_address<L: Into<Location>>(&self, loc: L, label: Label) {
+    fn update_label_map_for_label(&self, label: &LowLevelILLabel) {
         use binaryninjacore_sys::BNGetLowLevelILLabelForAddress;
 
-        let loc: Location = loc.into();
-        let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
-        // Add the label into the label map
-        unsafe { BNAddLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
-        // Retrieve a pointer to the label in the map
-        let raw_label =
-            unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
-        // We should always have a valid label here
-        assert!(!raw_label.is_null(), "Failed to add label for address!");
-        // Update the label in the map with `label`
-        unsafe { *raw_label = label.into() };
+        // Only need to update the label if there is an associated address.
+        if let Some(loc) = label.location {
+            let loc: Location = loc.into();
+            let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
+            // Add the label into the label map
+            unsafe { BNAddLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
+            // Retrieve a pointer to the label in the map
+            let raw_label =
+                unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };
+            // We should always have a valid label here
+            assert!(!raw_label.is_null(), "Failed to add label for address!");
+            // Update the label in the map with `label`
+            unsafe { *raw_label = label.into() };
+        }
     }
 
-    pub fn mark_label(&self, label: &mut Label) {
+    pub fn mark_label(&self, label: &mut LowLevelILLabel) {
         use binaryninjacore_sys::BNLowLevelILMarkLabel;
 
         let mut raw_label = BNLowLevelILLabel::from(*label);
         unsafe { BNLowLevelILMarkLabel(self.handle, &mut raw_label) };
-        *label = Label::from(raw_label);
+        *label = LowLevelILLabel::from(raw_label);
+        self.update_label_map_for_label(label);
     }
 }
 
-// TODO: Rename to LowLevelILLabel
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Label {
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct LowLevelILLabel {
+    /// Used to update the label map if the label is associated with a location.
+    pub location: Option<Location>,
     pub resolved: bool,
     // TODO: This expr_ref is not actually a valid one sometimes...
     // TODO: We should make these non public and only accessible if resolved is true.
@@ -1602,7 +1612,7 @@ pub struct Label {
     pub operand: usize,
 }
 
-impl Label {
+impl LowLevelILLabel {
     pub fn new() -> Self {
         use binaryninjacore_sys::BNLowLevelILInitLabel;
 
@@ -1612,9 +1622,10 @@ impl Label {
     }
 }
 
-impl From<BNLowLevelILLabel> for Label {
+impl From<BNLowLevelILLabel> for LowLevelILLabel {
     fn from(value: BNLowLevelILLabel) -> Self {
         Self {
+            location: None,
             resolved: value.resolved,
             expr_ref: LowLevelExpressionIndex(value.ref_),
             operand: value.operand,
@@ -1622,8 +1633,8 @@ impl From<BNLowLevelILLabel> for Label {
     }
 }
 
-impl From<Label> for BNLowLevelILLabel {
-    fn from(value: Label) -> Self {
+impl From<LowLevelILLabel> for BNLowLevelILLabel {
+    fn from(value: LowLevelILLabel) -> Self {
         Self {
             resolved: value.resolved,
             ref_: value.expr_ref.0,
@@ -1632,13 +1643,13 @@ impl From<Label> for BNLowLevelILLabel {
     }
 }
 
-impl From<&Label> for BNLowLevelILLabel {
-    fn from(value: &Label) -> Self {
+impl From<&LowLevelILLabel> for BNLowLevelILLabel {
+    fn from(value: &LowLevelILLabel) -> Self {
         Self::from(*value)
     }
 }
 
-impl Default for Label {
+impl Default for LowLevelILLabel {
     fn default() -> Self {
         Self::new()
     }

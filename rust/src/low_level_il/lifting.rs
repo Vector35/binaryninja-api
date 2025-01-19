@@ -1576,7 +1576,6 @@ where
 
         // Only need to update the label if there is an associated address.
         if let Some(loc) = label.location {
-            let loc: Location = loc.into();
             let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
             // Add the label into the label map
             unsafe { BNAddLowLevelILLabelForAddress(self.handle, arch.handle, loc.addr) };

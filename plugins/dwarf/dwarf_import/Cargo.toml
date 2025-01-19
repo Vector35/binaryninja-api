@@ -8,10 +8,10 @@ crate-type = ["cdylib"]
 
 [dependencies]
 dwarfreader = { path = "../shared/" }
-binaryninja = { path = "../../../rust" }
-binaryninjacore-sys = { path = "../../../rust/binaryninjacore-sys"  }
+binaryninja.workspace = true
+binaryninjacore-sys.workspace = true
 gimli = "0.31"
-log = "0.4.20"
+log = "0.4"
 iset = "0.2.2"
 cpp_demangle = "0.4.3"
 regex = "1"

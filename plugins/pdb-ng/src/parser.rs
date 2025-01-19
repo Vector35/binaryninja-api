@@ -30,7 +30,7 @@ use binaryninja::confidence::{Conf, MIN_CONFIDENCE};
 use binaryninja::debuginfo::{DebugFunctionInfo, DebugInfo};
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
-use binaryninja::settings::Settings;
+use binaryninja::settings::{QueryOptions, Settings};
 use binaryninja::types::{
     EnumerationBuilder, NamedTypeReference, NamedTypeReferenceClass, QualifiedName,
     StructureBuilder, StructureType, Type, TypeClass,
@@ -61,6 +61,8 @@ pub struct PDBParserInstance<'a, S: Source<'a> + 'a> {
     pub(crate) address_map: AddressMap<'a>,
     /// Binja Settings instance (for optimization)
     pub(crate) settings: Ref<Settings>,
+    /// Binja Settings query instance (for optimization)
+    pub(crate) settings_query_opts: QueryOptions<'a>,
 
     /// type_parser.rs
 
@@ -139,7 +141,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             platform,
             pdb,
             address_map,
-            settings: Settings::new(""),
+            settings: Settings::new(),
+            settings_query_opts: QueryOptions::new_with_view(bv),
             indexed_types: Default::default(),
             named_types: Default::default(),
             full_type_indices: Default::default(),
@@ -175,15 +178,15 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         if self
             .settings
-            .get_bool("pdb.features.parseSymbols", Some(self.bv), None)
+            .get_bool_with_opts("pdb.features.parseSymbols", &mut self.settings_query_opts)
         {
             let (symbols, functions) =
                 self.parse_symbols(Self::split_progress(&progress, 1, &[1.0, 3.0, 0.5, 0.5]))?;
 
-            if self
-                .settings
-                .get_bool("pdb.features.createMissingNamedTypes", Some(self.bv), None)
-            {
+            if self.settings.get_bool_with_opts(
+                "pdb.features.createMissingNamedTypes",
+                &mut self.settings_query_opts,
+            ) {
                 self.resolve_missing_ntrs(
                     &symbols,
                     Self::split_progress(&progress, 2, &[1.0, 3.0, 0.5, 0.5]),
@@ -198,9 +201,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             info!("PDB found {} data variables", symbols.len());
             info!("PDB found {} functions", functions.len());
 
-            let allow_void =
-                self.settings
-                    .get_bool("pdb.features.allowVoidGlobals", Some(self.bv), None);
+            let allow_void = self.settings.get_bool_with_opts(
+                "pdb.features.allowVoidGlobals",
+                &mut self.settings_query_opts,
+            );
 
             let min_confidence_type = Conf::new(Type::void(), MIN_CONFIDENCE);
             for sym in symbols {

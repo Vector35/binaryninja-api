@@ -5,6 +5,7 @@ Official Rust bindings for [Binary Ninja].
 - [Getting Started](#getting-started)
 - [Examples](https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples)
 - [Documentation](https://dev-rust.binary.ninja/)
+- [Offline Documentation](#offline-documentation)
 
 ## WARNING
 
@@ -123,7 +124,8 @@ Offline documentation can be generated like any other rust crate, using `cargo d
 
 ```shell
 git clone https://github.com/Vector35/binaryninja-api
-cd rust && cargo doc --open
+cd binaryninja-api
+cargo doc --no-deps --open -p binaryninja
 ```
 
 ## Contributing

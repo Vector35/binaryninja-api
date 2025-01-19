@@ -204,9 +204,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             }
         }
 
-        let use_public =
-            self.settings
-                .get_bool("pdb.features.loadGlobalSymbols", Some(self.bv), None);
+        let use_public = self.settings.get_bool_with_opts(
+            "pdb.features.loadGlobalSymbols",
+            &mut self.settings_query_opts,
+        );
 
         let mut best_symbols = HashMap::<String, &ParsedSymbol>::new();
         for sym in &self.parsed_symbols {
@@ -795,10 +796,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let data_type = t.merge(self.lookup_type_conf(&data.type_index, false)?);
 
         // Ignore symbols with no name and no type
-        if !self
-            .settings
-            .get_bool("pdb.features.allowUnnamedVoidSymbols", Some(self.bv), None)
-            && name.is_none()
+        if !self.settings.get_bool_with_opts(
+            "pdb.features.allowUnnamedVoidSymbols",
+            &mut self.settings_query_opts,
+        ) && name.is_none()
         {
             if let Some(ty) = &data_type {
                 if ty.contents.type_class() == TypeClass::VoidTypeClass {
@@ -1856,10 +1857,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                 DEMANGLE_CONFIDENCE,
                             ));
 
-                            if self.settings.get_bool(
+                            if self.settings.get_bool_with_opts(
                                 "pdb.features.expandRTTIStructures",
-                                Some(self.bv),
-                                None,
+                                &mut self.settings_query_opts.clone(),
                             ) {
                                 if let Some((lengthy_type, length)) =
                                     self.make_lengthy_type(ty, self.bv.start() + rva.0 as u64)?

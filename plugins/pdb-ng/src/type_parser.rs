@@ -1031,10 +1031,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
         structure.base_structures(&bases);
 
-        if self
-            .settings
-            .get_bool("pdb.features.generateVTables", Some(self.bv), None)
-            && !virt_methods.is_empty()
+        if self.settings.get_bool_with_opts(
+            "pdb.features.generateVTables",
+            &mut self.settings_query_opts,
+        ) && !virt_methods.is_empty()
         {
             let mut vt = StructureBuilder::new();
 

@@ -20,8 +20,8 @@ use binaryninja::{
     Endianness,
 };
 
+use binaryninja::settings::QueryOptions;
 use std::rc::Rc;
-
 //////////////////////
 // Dwarf Validation
 
@@ -63,8 +63,9 @@ pub fn is_raw_dwo_dwarf(view: &BinaryView) -> bool {
 }
 
 pub fn can_use_debuginfod(view: &BinaryView) -> bool {
+    let mut query_options = QueryOptions::new_with_view(view);
     has_build_id_section(view)
-        && Settings::new("").get_bool("network.enableDebuginfod", Some(view), None)
+        && Settings::new().get_bool_with_opts("network.enableDebuginfod", &mut query_options)
 }
 
 pub fn has_build_id_section(view: &BinaryView) -> bool {

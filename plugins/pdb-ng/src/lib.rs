@@ -30,7 +30,7 @@ use binaryninja::debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser};
 use binaryninja::download_provider::{DownloadInstanceInputOutputCallbacks, DownloadProvider};
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet};
 use binaryninja::logger::Logger;
-use binaryninja::settings::Settings;
+use binaryninja::settings::{QueryOptions, Settings};
 use binaryninja::string::BnString;
 use binaryninja::{interaction, user_directory};
 use parser::PDBParserInstance;
@@ -87,12 +87,14 @@ fn default_local_cache() -> Result<String> {
 
 fn active_local_cache(view: Option<&BinaryView>) -> Result<String> {
     // Check the local symbol store
-    let mut local_store_path = Settings::new("")
-        .get_string("pdb.files.localStoreAbsolute", view, None)
+    let mut settings_query_options = view.map(QueryOptions::new_with_view).unwrap_or_default();
+    let settings = Settings::new();
+    let mut local_store_path = settings
+        .get_string_with_opts("pdb.files.localStoreAbsolute", &mut settings_query_options)
         .to_string();
     if local_store_path.is_empty() {
-        let relative_local_store = Settings::new("")
-            .get_string("pdb.files.localStoreRelative", view, None)
+        let relative_local_store = settings
+            .get_string_with_opts("pdb.files.localStoreRelative", &mut settings_query_options)
             .to_string();
         local_store_path = user_directory()
             .join(relative_local_store)
@@ -168,7 +170,8 @@ fn read_from_sym_store(bv: &BinaryView, path: &str) -> Result<(bool, Vec<u8>)> {
         return Ok((false, conts));
     }
 
-    if !Settings::new("").get_bool("network.pdbAutoDownload", Some(bv), None) {
+    let mut query_options = QueryOptions::new_with_view(bv);
+    if !Settings::new().get_bool_with_opts("network.pdbAutoDownload", &mut query_options) {
         return Err(anyhow!("Auto download disabled"));
     }
 
@@ -359,7 +362,8 @@ impl PDBParser {
     ) -> Result<()> {
         let mut pdb = PDB::open(Cursor::new(&conts))?;
 
-        let settings = Settings::new("");
+        let settings = Settings::new();
+        let mut settings_query_opts = QueryOptions::new_with_view(view);
 
         if let Some(info) = parse_pdb_info(view) {
             let pdb_info = &pdb.pdb_information()?;
@@ -367,8 +371,10 @@ impl PDBParser {
                 if check_guid {
                     return Err(anyhow!("PDB GUID does not match"));
                 } else {
-                    let ask =
-                        settings.get_string("pdb.features.loadMismatchedPDB", Some(view), None);
+                    let ask = settings.get_string_with_opts(
+                        "pdb.features.loadMismatchedPDB",
+                        &mut settings_query_opts,
+                    );
 
                     match ask.as_str() {
                         "true" => {},
@@ -400,7 +406,7 @@ impl PDBParser {
                 }
             }
 
-            if did_download && settings.get_bool("pdb.files.localStoreCache", None, None) {
+            if did_download && settings.get_bool("pdb.files.localStoreCache") {
                 match active_local_cache(Some(view)) {
                     Ok(cache) => {
                         let mut cab_path = PathBuf::from(&cache);
@@ -479,7 +485,10 @@ impl PDBParser {
             if check_guid {
                 return Err(anyhow!("File not compiled with PDB information"));
             } else {
-                let ask = settings.get_string("pdb.features.loadMismatchedPDB", Some(view), None);
+                let ask = settings.get_string_with_opts(
+                    "pdb.features.loadMismatchedPDB",
+                    &mut settings_query_opts,
+                );
 
                 match ask.as_str() {
                     "true" => {},
@@ -644,8 +653,9 @@ impl CustomDebugInfoParser for PDBParser {
             }
 
             // Next, try downloading from all symbol servers in the server list
-            let server_list =
-                Settings::new("").get_string_list("pdb.files.symbolServerList", Some(view), None);
+            let mut query_options = QueryOptions::new_with_view(view);
+            let server_list = Settings::new()
+                .get_string_list_with_opts("pdb.files.symbolServerList", &mut query_options);
 
             for server in server_list.iter() {
                 match search_sym_store(view, server.to_string(), &info) {
@@ -688,7 +698,7 @@ fn init_plugin() -> bool {
     Logger::new("PDB").init();
     DebugInfoParser::register("PDB", PDBParser {});
 
-    let settings = Settings::new("");
+    let settings = Settings::new();
     settings.register_group("pdb", "PDB Loader");
     settings.register_setting_json(
         "pdb.files.localStoreAbsolute",

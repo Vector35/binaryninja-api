@@ -398,7 +398,7 @@ impl MatcherSettings {
     /// NOTE: If you are using this as a library then just modify the MatcherSettings directly
     /// in the matcher instance, that way you don't need to round-trip through Binary Ninja.
     pub fn register() {
-        let bn_settings = binaryninja::settings::Settings::new("");
+        let bn_settings = binaryninja::settings::Settings::new();
 
         let trivial_function_len_props = json!({
             "title" : "Trivial Function Length",
@@ -463,25 +463,24 @@ impl MatcherSettings {
 
     pub fn global() -> Self {
         let mut settings = MatcherSettings::default();
-        let bn_settings = binaryninja::settings::Settings::new("");
+        let bn_settings = binaryninja::settings::Settings::new();
         if bn_settings.contains(Self::TRIVIAL_FUNCTION_LEN_SETTING) {
             settings.trivial_function_len =
-                bn_settings.get_integer(Self::TRIVIAL_FUNCTION_LEN_SETTING, None, None);
+                bn_settings.get_integer(Self::TRIVIAL_FUNCTION_LEN_SETTING);
         }
         if bn_settings.contains(Self::MINIMUM_FUNCTION_LEN_SETTING) {
             settings.minimum_function_len =
-                bn_settings.get_integer(Self::MINIMUM_FUNCTION_LEN_SETTING, None, None);
+                bn_settings.get_integer(Self::MINIMUM_FUNCTION_LEN_SETTING);
         }
         if bn_settings.contains(Self::MAXIMUM_FUNCTION_LEN_SETTING) {
-            match bn_settings.get_integer(Self::MAXIMUM_FUNCTION_LEN_SETTING, None, None) {
+            match bn_settings.get_integer(Self::MAXIMUM_FUNCTION_LEN_SETTING) {
                 0 => settings.maximum_function_len = None,
                 len => settings.maximum_function_len = Some(len),
             }
         }
         if bn_settings.contains(Self::MINIMUM_MATCHED_CONSTRAINTS_SETTING) {
             settings.minimum_matched_constraints =
-                bn_settings.get_integer(Self::MINIMUM_MATCHED_CONSTRAINTS_SETTING, None, None)
-                    as usize;
+                bn_settings.get_integer(Self::MINIMUM_MATCHED_CONSTRAINTS_SETTING) as usize;
         }
         settings
     }

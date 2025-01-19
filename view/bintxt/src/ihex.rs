@@ -8,7 +8,7 @@ use binaryninja::custom_binary_view::*;
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::segment::SegmentBuilder;
-use binaryninja::settings::Settings;
+use binaryninja::settings::{QueryOptions, Settings};
 use ihex::Record;
 
 fn parse_ihex(string: &str) -> Result<(Vec<u8>, IHexViewData)> {
@@ -218,8 +218,9 @@ unsafe impl CustomBinaryView for IHexView {
         }
 
         // TODO: Because we detached from the raw view this setting will never be set.
+        let mut settings_query_opts = QueryOptions::new_with_view(&self.core);
         let _ = self.core.load_settings(self.type_name()).map(|s| {
-            let platform_name = s.get_string("loader.platform", Some(&self.core), None);
+            let platform_name = s.get_string_with_opts("loader.platform", &mut settings_query_opts);
             if let Some(platform) = Platform::by_name(platform_name) {
                 self.set_default_platform(&platform);
             }

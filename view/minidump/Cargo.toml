@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-binaryninja = { path = "../../rust" }
-binaryninjacore-sys = { path="../../rust/binaryninjacore-sys" }
-log = "0.4.20"
+binaryninja.workspace = true
+binaryninjacore-sys.workspace = true
+log = "0.4"
 minidump = "0.23.0"

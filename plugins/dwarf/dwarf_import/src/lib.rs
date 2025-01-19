@@ -693,7 +693,7 @@ impl CustomDebugInfoParser for DWARFParser {
 pub extern "C" fn CorePluginInit() -> bool {
     Logger::new("DWARF").init();
 
-    let settings = Settings::new("");
+    let settings = Settings::new();
 
     settings.register_setting_json(
         "network.enableDebuginfod",

@@ -33,6 +33,7 @@ use gimli::{
     DebuggingInformationEntry, Operation, Unit, UnitOffset, UnitSectionOffset,
 };
 
+use binaryninja::settings::QueryOptions;
 use log::warn;
 
 pub(crate) fn get_uid<R: ReaderType>(
@@ -414,9 +415,10 @@ pub(crate) fn download_debug_info(
     build_id: &str,
     view: &BinaryView,
 ) -> Result<Ref<BinaryView>, String> {
-    let settings = Settings::new("");
-
-    let debug_server_urls = settings.get_string_list("network.debuginfodServers", Some(view), None);
+    let mut settings_query_opts = QueryOptions::new_with_view(view);
+    let settings = Settings::new();
+    let debug_server_urls =
+        settings.get_string_list_with_opts("network.debuginfodServers", &mut settings_query_opts);
 
     for debug_server_url in debug_server_urls.iter() {
         let artifact_url = format!("{}/buildid/{}/debuginfo", debug_server_url, build_id);
@@ -487,19 +489,21 @@ pub(crate) fn find_local_debug_file_for_build_id(
     build_id: &str,
     view: &BinaryView,
 ) -> Option<String> {
-    let settings = Settings::new("");
-    let debug_dirs_enabled = settings.get_bool(
+    let mut settings_query_opts = QueryOptions::new_with_view(view);
+    let settings = Settings::new();
+    let debug_dirs_enabled = settings.get_bool_with_opts(
         "analysis.debugInfo.enableDebugDirectories",
-        Some(view),
-        None,
+        &mut settings_query_opts,
     );
 
     if !debug_dirs_enabled {
         return None;
     }
 
-    let debug_info_paths =
-        settings.get_string_list("analysis.debugInfo.debugDirectories", Some(view), None);
+    let debug_info_paths = settings.get_string_list_with_opts(
+        "analysis.debugInfo.debugDirectories",
+        &mut settings_query_opts,
+    );
 
     if debug_info_paths.is_empty() {
         return None;
@@ -530,6 +534,8 @@ pub(crate) fn load_debug_info_for_build_id(
     build_id: &str,
     view: &BinaryView,
 ) -> (Option<Ref<BinaryView>>, bool) {
+    let mut settings_query_opts = QueryOptions::new_with_view(view);
+    let settings = Settings::new();
     if let Some(debug_file_path) = find_local_debug_file_for_build_id(build_id, view) {
         return (
             binaryninja::load_with_options(
@@ -539,16 +545,19 @@ pub(crate) fn load_debug_info_for_build_id(
             ),
             false,
         );
-    } else if Settings::new("").get_bool("network.enableDebuginfod", Some(view), None) {
+    } else if settings.get_bool_with_opts("network.enableDebuginfod", &mut settings_query_opts) {
         return (download_debug_info(build_id, view).ok(), true);
     }
     (None, false)
 }
 
 pub(crate) fn find_sibling_debug_file(view: &BinaryView) -> Option<String> {
-    let settings = Settings::new("");
-    let load_sibling_debug =
-        settings.get_bool("analysis.debugInfo.loadSiblingDebugFiles", Some(view), None);
+    let mut settings_query_opts = QueryOptions::new_with_view(view);
+    let settings = Settings::new();
+    let load_sibling_debug = settings.get_bool_with_opts(
+        "analysis.debugInfo.loadSiblingDebugFiles",
+        &mut settings_query_opts,
+    );
 
     if !load_sibling_debug {
         return None;

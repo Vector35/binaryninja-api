@@ -5,10 +5,10 @@ authors = ["Rubens Brandao <git@rubens.io>"]
 edition = "2021"
 
 [dependencies]
-binaryninja = { path = "../../rust" }
-binaryninjacore-sys = { path = "../../rust/binaryninjacore-sys" }
+binaryninja.workspace = true
+binaryninjacore-sys.workspace = true
 ihex = "3.0.0"
-log = "*"
+log = "0.4"
 srec = "0.2.0"
 
 [lib]

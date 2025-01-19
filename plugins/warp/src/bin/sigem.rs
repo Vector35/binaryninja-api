@@ -96,7 +96,6 @@ fn main() {
         binaryninja::headless::Session::new().expect("Failed to initialize session");
 
     // Adjust the amount of worker threads so that we can actually free BinaryViews.
-    let bn_settings = Settings::new("");
     let worker_count = rayon::current_num_threads() * 4;
     log::debug!("Adjusting Binary Ninja worker count to {}...", worker_count);
     binaryninja::worker_thread::set_worker_thread_count(worker_count);
@@ -104,6 +103,7 @@ fn main() {
     // Make sure caches are flushed when the views get destructed.
     register_cache_destructor();
 
+    let bn_settings = Settings::new();
     let settings = default_settings(&bn_settings);
 
     log::info!("Creating functions for {:?}...", args.path);
@@ -223,7 +223,6 @@ fn data_from_directory(settings: &Value, dir: PathBuf) -> Option<Data> {
     }
 }
 
-// TODO: Pass settings.
 fn data_from_file(settings: &Value, path: &Path) -> Option<Data> {
     match path.extension() {
         Some(ext) if ext == "a" || ext == "lib" || ext == "rlib" => {
@@ -256,7 +255,7 @@ mod tests {
         let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
         let _headless_session =
             binaryninja::headless::Session::new().expect("Failed to initialize session");
-        let bn_settings = Settings::new("");
+        let bn_settings = Settings::new();
         let settings = default_settings(&bn_settings);
         for entry in std::fs::read_dir(out_dir).expect("Failed to read OUT_DIR") {
             let entry = entry.expect("Failed to read directory entry");

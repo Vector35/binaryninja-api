@@ -2908,7 +2908,6 @@ dependencies = [
  "arboard",
  "binaryninja",
  "binaryninjacore-sys",
- "cc",
  "clap",
  "criterion",
  "dashmap",

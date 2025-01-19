@@ -677,7 +677,6 @@ impl Project {
         unsafe { BNProjectDeleteFile(self.handle.as_ptr(), file.handle.as_ptr()) }
     }
 
-    // TODO: Is this even usable? You cant touch the project when taking &mut self...
     /// A context manager to speed up bulk project operations.
     /// Project modifications are synced to disk in chunks,
     /// and the project on disk vs in memory may not agree on state

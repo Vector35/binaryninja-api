@@ -173,11 +173,49 @@ pub enum FunctionViewType {
     HighLevelLanguageRepresentation(String),
 }
 
-pub(crate) struct RawFunctionViewType(pub BNFunctionViewType);
-
+#[allow(unused)]
 impl FunctionViewType {
-    pub(crate) fn as_raw(&self) -> RawFunctionViewType {
-        let view_type = match self {
+    pub(crate) fn from_raw(value: &BNFunctionViewType) -> Option<Self> {
+        match value.type_ {
+            BNFunctionGraphType::InvalidILViewType => None,
+            BNFunctionGraphType::NormalFunctionGraph => Some(FunctionViewType::Normal),
+            BNFunctionGraphType::LowLevelILFunctionGraph => Some(FunctionViewType::LowLevelIL),
+            BNFunctionGraphType::LiftedILFunctionGraph => Some(FunctionViewType::LiftedIL),
+            BNFunctionGraphType::LowLevelILSSAFormFunctionGraph => {
+                Some(FunctionViewType::LowLevelILSSAForm)
+            }
+            BNFunctionGraphType::MediumLevelILFunctionGraph => {
+                Some(FunctionViewType::MediumLevelIL)
+            }
+            BNFunctionGraphType::MediumLevelILSSAFormFunctionGraph => {
+                Some(FunctionViewType::MediumLevelILSSAForm)
+            }
+            BNFunctionGraphType::MappedMediumLevelILFunctionGraph => {
+                Some(FunctionViewType::MappedMediumLevelIL)
+            }
+            BNFunctionGraphType::MappedMediumLevelILSSAFormFunctionGraph => {
+                Some(FunctionViewType::MappedMediumLevelILSSAForm)
+            }
+            BNFunctionGraphType::HighLevelILFunctionGraph => Some(FunctionViewType::HighLevelIL),
+            BNFunctionGraphType::HighLevelILSSAFormFunctionGraph => {
+                Some(FunctionViewType::HighLevelILSSAForm)
+            }
+            BNFunctionGraphType::HighLevelLanguageRepresentationFunctionGraph => {
+                Some(FunctionViewType::HighLevelLanguageRepresentation(
+                    raw_to_string(value.name).unwrap(),
+                ))
+            }
+        }
+    }
+
+    pub(crate) fn from_owned_raw(value: BNFunctionViewType) -> Option<Self> {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNFunctionViewType {
+        let view_type = match value {
             FunctionViewType::Normal => BNFunctionGraphType::NormalFunctionGraph,
             FunctionViewType::LowLevelIL => BNFunctionGraphType::LowLevelILFunctionGraph,
             FunctionViewType::LiftedIL => BNFunctionGraphType::LiftedILFunctionGraph,
@@ -202,14 +240,20 @@ impl FunctionViewType {
                 BNFunctionGraphType::HighLevelLanguageRepresentationFunctionGraph
             }
         };
-        RawFunctionViewType(BNFunctionViewType {
+        let view_name = match value {
+            FunctionViewType::HighLevelLanguageRepresentation(name) => Some(BnString::new(name)),
+            _ => None,
+        };
+        BNFunctionViewType {
             type_: view_type,
-            name: if let FunctionViewType::HighLevelLanguageRepresentation(ref name) = self {
-                std::ffi::CString::new(name.to_string()).unwrap().into_raw()
-            } else {
-                std::ptr::null()
-            },
-        })
+            name: view_name
+                .map(|n| BnString::into_raw(n) as *mut _)
+                .unwrap_or(std::ptr::null_mut()),
+        }
+    }
+
+    pub(crate) fn free_raw(value: BNFunctionViewType) {
+        let _ = unsafe { BnString::from_raw(value.name as *mut _) };
     }
 }
 
@@ -241,16 +285,6 @@ impl From<FunctionGraphType> for FunctionViewType {
             }
             BNFunctionGraphType::InvalidILViewType | BNFunctionGraphType::NormalFunctionGraph => {
                 FunctionViewType::Normal
-            }
-        }
-    }
-}
-
-impl Drop for RawFunctionViewType {
-    fn drop(&mut self) {
-        if !self.0.name.is_null() {
-            unsafe {
-                let _ = std::ffi::CString::from_raw(self.0.name as *mut _);
             }
         }
     }
@@ -2144,7 +2178,7 @@ impl Function {
     /// 'user' functions may or may not have been created by a user through the or API. For instance the entry point
     /// into a function is always created a 'user' function. 'user' functions should be considered the root of auto
     /// analysis.
-    pub fn auto(&self) -> bool {
+    pub fn is_auto(&self) -> bool {
         unsafe { BNWasFunctionAutomaticallyDiscovered(self.handle) }
     }
 
@@ -2318,11 +2352,12 @@ impl Function {
     pub fn create_graph(
         &self,
         view_type: FunctionViewType,
-        settings: Option<DisassemblySettings>,
+        settings: Option<&DisassemblySettings>,
     ) -> Ref<FlowGraph> {
         let settings_raw = settings.map(|s| s.handle).unwrap_or(std::ptr::null_mut());
-        let result =
-            unsafe { BNCreateFunctionGraph(self.handle, view_type.as_raw().0, settings_raw) };
+        let raw_view_type = FunctionViewType::into_raw(view_type);
+        let result = unsafe { BNCreateFunctionGraph(self.handle, raw_view_type, settings_raw) };
+        FunctionViewType::free_raw(raw_view_type);
         unsafe { Ref::new(FlowGraph::from_raw(result)) }
     }
 
@@ -2337,13 +2372,16 @@ impl Function {
 
 impl Debug for Function {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "<func '{}' ({}) {:x}>",
-            self.symbol().full_name(),
-            self.platform().name(),
-            self.start()
-        )
+        // TODO: I am sure there is more we should add to this.
+        f.debug_struct("Function")
+            .field("start", &self.start())
+            .field("arch", &self.arch())
+            .field("platform", &self.platform())
+            .field("symbol", &self.symbol())
+            .field("is_auto", &self.is_auto())
+            .field("tags", &self.tags().to_vec())
+            .field("comments", &self.comments().to_vec())
+            .finish()
     }
 }
 

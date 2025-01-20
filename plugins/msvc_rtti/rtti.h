@@ -101,6 +101,8 @@ namespace BinaryNinja {
 
 		std::map<uint64_t, ClassInfo> m_classInfo;
 
+		std::set<uint64_t> m_visitedClassHierarchyDescAddrs;
+
 		void DeserializedMetadata(const Ref<Metadata> &metadata);
 
 		std::optional<std::string> DemangleName(const std::string &mangledName);

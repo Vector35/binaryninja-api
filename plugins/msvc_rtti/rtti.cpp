@@ -60,7 +60,7 @@ CompleteObjectLocator::CompleteObjectLocator(BinaryView *view, uint64_t address)
     offset = reader.Read32();
     cdOffset = reader.Read32();
     pTypeDescriptor = static_cast<int32_t>(reader.Read32());
-    pClassHeirarchyDescriptor = static_cast<int32_t>(reader.Read32());
+    pClassHierarchyDescriptor = static_cast<int32_t>(reader.Read32());
     if (signature == COL_SIG_REV1)
     {
         pSelf = static_cast<int32_t>(reader.Read32());
@@ -93,7 +93,7 @@ std::optional<CompleteObjectLocator> ReadCompleteObjectorLocator(BinaryView *vie
         if (outsideSection(coLocator.pTypeDescriptor + startAddr))
             return std::nullopt;
 
-        if (outsideSection(coLocator.pClassHeirarchyDescriptor + startAddr))
+        if (outsideSection(coLocator.pClassHierarchyDescriptor + startAddr))
             return std::nullopt;
     }
     else
@@ -102,7 +102,7 @@ std::optional<CompleteObjectLocator> ReadCompleteObjectorLocator(BinaryView *vie
         if (outsideSection(coLocator.pTypeDescriptor))
             return std::nullopt;
 
-        if (outsideSection(coLocator.pClassHeirarchyDescriptor))
+        if (outsideSection(coLocator.pClassHierarchyDescriptor))
             return std::nullopt;
     }
 
@@ -479,7 +479,7 @@ std::optional<ClassInfo> MicrosoftRTTIProcessor::ProcessRTTI(uint64_t coLocatorA
     m_view->DefineDataVariable(typeDescAddr,
                                Confidence(TypeDescriptorType(m_view, typeDesc.name.length()), RTTI_CONFIDENCE));
 
-    auto classHierarchyDescAddr = resolveAddr(coLocator->pClassHeirarchyDescriptor);
+    auto classHierarchyDescAddr = resolveAddr(coLocator->pClassHierarchyDescriptor);
     auto classHierarchyDesc = ClassHierarchyDescriptor(m_view, classHierarchyDescAddr);
     auto classHierarchyDescName = fmt::format("{}::`RTTI Class Hierarchy Descriptor'", classInfo.className);
     m_view->DefineAutoSymbol(new Symbol{DataSymbol, classHierarchyDescName, classHierarchyDescAddr});

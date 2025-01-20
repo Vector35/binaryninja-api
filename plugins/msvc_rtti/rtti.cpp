@@ -6,6 +6,7 @@ constexpr int COL_SIG_REV0 = 0;
 constexpr int COL_SIG_REV1 = 1;
 constexpr int RTTI_CONFIDENCE = 100;
 
+constexpr int BCD_HASPCHD = 0x40;
 
 ClassHierarchyDescriptor::ClassHierarchyDescriptor(BinaryView *view, uint64_t address)
 {
@@ -503,8 +504,10 @@ std::optional<ClassInfo> MicrosoftRTTIProcessor::ProcessRTTI(uint64_t coLocatorA
             m_view->DefineDataVariable(baseClassTypeDescAddr,
                                     Confidence(TypeDescriptorType(m_view, baseClassTypeDesc.name.length()), RTTI_CONFIDENCE));
 
-            auto classHierarchyDescAddr = resolveAddr(baseClassDesc.pClassHierarchyDescriptor);
-            baseClasses[classHierarchyDescAddr] = baseClassInfo;
+            if (baseClassDesc.attributes & BCD_HASPCHD) {
+                auto classHierarchyDescAddr = resolveAddr(baseClassDesc.pClassHierarchyDescriptor);
+                baseClasses[classHierarchyDescAddr] = baseClassInfo;
+            }
         }
 
         return baseClasses;

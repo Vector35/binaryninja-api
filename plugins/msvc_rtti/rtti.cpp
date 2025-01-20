@@ -141,6 +141,7 @@ Ref<Type> BaseClassDescriptorType(BinaryView *view, BNPointerBaseType ptrBaseTy)
 
     if (typeCache == nullptr)
     {
+        Ref<Architecture> arch = view->GetDefaultArchitecture();
         Ref<Type> uintType = Type::IntegerType(4, false);
 
         StructureBuilder baseClassDescriptorBuilder;
@@ -151,7 +152,17 @@ Ref<Type> BaseClassDescriptorType(BinaryView *view, BNPointerBaseType ptrBaseTy)
         baseClassDescriptorBuilder.AddMember(pTypeDescType, "pTypeDescriptor");
         baseClassDescriptorBuilder.AddMember(uintType, "numContainedBases");
         baseClassDescriptorBuilder.AddMember(GetPMDType(view), "where");
-        baseClassDescriptorBuilder.AddMember(uintType, "attributes");
+        Ref<Enumeration> attrEnum = EnumerationBuilder()
+                .AddMemberWithValue("BCD_NOT_VISIBLE",         0x01)
+                .AddMemberWithValue("BCD_AMBIGUOUS",           0x02)
+                .AddMemberWithValue("BCD_PRIVORPROTBASE",      0x04)
+                .AddMemberWithValue("BCD_PRIVORPROTINCOMPOBJ", 0x08)
+                .AddMemberWithValue("BCD_VBOFCONTOBJ",         0x10)
+                .AddMemberWithValue("BCD_NONPOLYMORPHIC",      0x20)
+                .AddMemberWithValue("BCD_HASPCHD",             0x40)
+                .Finalize();
+        Ref<Type> attrType = Type::EnumerationType(arch, attrEnum, 4);
+        baseClassDescriptorBuilder.AddMember(attrType, "attributes");
         Ref<Type> pClassDescType = TypeBuilder::PointerType(4, ClassHierarchyDescriptorType(view, ptrBaseTy))
                 .SetPointerBase(ptrBaseTy, 0)
                 .Finalize();
@@ -185,11 +196,18 @@ Ref<Type> ClassHierarchyDescriptorType(BinaryView *view, BNPointerBaseType ptrBa
 
     if (typeCache == nullptr)
     {
+        Ref<Architecture> arch = view->GetDefaultArchitecture();
         Ref<Type> uintType = Type::IntegerType(4, false);
 
         StructureBuilder classHierarchyDescriptorBuilder;
         classHierarchyDescriptorBuilder.AddMember(uintType, "signature");
-        classHierarchyDescriptorBuilder.AddMember(uintType, "attributes");
+        Ref<Enumeration> attrEnum = EnumerationBuilder()
+                .AddMemberWithValue("CHD_MULTINH",   0x01)
+                .AddMemberWithValue("CHD_VIRTINH",   0x02)
+                .AddMemberWithValue("CHD_AMBIGUOUS", 0x04)
+                .Finalize();
+        Ref<Type> attrType = Type::EnumerationType(arch, attrEnum, 4);
+        classHierarchyDescriptorBuilder.AddMember(attrType, "attributes");
         classHierarchyDescriptorBuilder.AddMember(uintType, "numBaseClasses");
         Ref<Type> pBaseClassArrayType = TypeBuilder::PointerType(4, Type::VoidType())
                 .SetPointerBase(ptrBaseTy, 0)

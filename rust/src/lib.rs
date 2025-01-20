@@ -19,8 +19,8 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::needless_doctest_main)]
 #![doc(html_root_url = "https://dev-rust.binary.ninja/")]
-#![doc(html_favicon_url = "/favicon.ico")]
-#![doc(html_logo_url = "/logo.png")]
+#![doc(html_favicon_url = "https://binary.ninja/icons/favicon-32x32.png")]
+#![doc(html_logo_url = "https://binary.ninja/icons/android-chrome-512x512.png")]
 #![doc(issue_tracker_base_url = "https://github.com/Vector35/binaryninja-api/issues/")]
 #![doc = include_str!("../README.md")]
 

@@ -1119,11 +1119,19 @@ where
         };
 
         // Update the labels after they have been resolved.
-        *true_label = LowLevelILLabel::from(raw_true_label);
-        *false_label = LowLevelILLabel::from(raw_false_label);
-        self.update_label_map_for_label(true_label);
-        self.update_label_map_for_label(false_label);
-
+        let mut new_true_label = LowLevelILLabel::from(raw_true_label);
+        let mut new_false_label = LowLevelILLabel::from(raw_false_label);
+        if let Some(location) = true_label.location {
+            new_true_label.location = Some(location);
+            self.update_label_map_for_label(&new_true_label);
+        }
+        if let Some(location) = false_label.location {
+            new_false_label.location = Some(location);
+            self.update_label_map_for_label(&new_false_label);
+        }
+        *true_label = new_true_label;
+        *false_label = new_false_label;
+        
         LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
@@ -1138,8 +1146,12 @@ where
         let expr_idx = unsafe { BNLowLevelILGoto(self.handle, &mut raw_label) };
 
         // Update the labels after they have been resolved.
-        *label = LowLevelILLabel::from(raw_label);
-        self.update_label_map_for_label(label);
+        let mut new_label = LowLevelILLabel::from(raw_label);
+        if let Some(location) = label.location {
+            new_label.location = Some(location);
+            self.update_label_map_for_label(&new_label);
+        }
+        *label = new_label;
 
         LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
     }
@@ -1594,8 +1606,12 @@ where
 
         let mut raw_label = BNLowLevelILLabel::from(*label);
         unsafe { BNLowLevelILMarkLabel(self.handle, &mut raw_label) };
-        *label = LowLevelILLabel::from(raw_label);
-        self.update_label_map_for_label(label);
+        let mut new_label = LowLevelILLabel::from(raw_label);
+        if let Some(location) = label.location {
+            new_label.location = Some(location);
+            self.update_label_map_for_label(&new_label);
+        }
+        *label = new_label;
     }
 }
 

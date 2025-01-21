@@ -616,7 +616,7 @@ impl MediumLevelILInstruction {
         Self {
             function,
             address: op.address,
-            expr_index: expr_index,
+            expr_index,
             size: op.size,
             kind,
         }

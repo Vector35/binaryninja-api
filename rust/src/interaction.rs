@@ -21,7 +21,7 @@ use std::path::PathBuf;
 
 use crate::binary_view::BinaryView;
 use crate::rc::Ref;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 pub fn get_text_line_input(prompt: &str, title: &str) -> Option<String> {
     let mut value: *mut c_char = std::ptr::null_mut();
@@ -29,8 +29,8 @@ pub fn get_text_line_input(prompt: &str, title: &str) -> Option<String> {
     let result = unsafe {
         BNGetTextLineInput(
             &mut value,
-            prompt.into_bytes_with_nul().as_ptr() as *mut _,
-            title.into_bytes_with_nul().as_ptr() as *mut _,
+            prompt.as_cstr().as_ptr(),
+            title.as_cstr().as_ptr(),
         )
     };
     if !result {
@@ -46,8 +46,8 @@ pub fn get_integer_input(prompt: &str, title: &str) -> Option<i64> {
     let result = unsafe {
         BNGetIntegerInput(
             &mut value,
-            prompt.into_bytes_with_nul().as_ptr() as *mut _,
-            title.into_bytes_with_nul().as_ptr() as *mut _,
+            prompt.as_cstr().as_ptr(),
+            title.as_cstr().as_ptr(),
         )
     };
 
@@ -64,8 +64,8 @@ pub fn get_address_input(prompt: &str, title: &str) -> Option<u64> {
     let result = unsafe {
         BNGetAddressInput(
             &mut value,
-            prompt.into_bytes_with_nul().as_ptr() as *mut _,
-            title.into_bytes_with_nul().as_ptr() as *mut _,
+            prompt.as_cstr().as_ptr(),
+            title.as_cstr().as_ptr(),
             std::ptr::null_mut(),
             0,
         )
@@ -84,8 +84,8 @@ pub fn get_open_filename_input(prompt: &str, extension: &str) -> Option<PathBuf>
     let result = unsafe {
         BNGetOpenFileNameInput(
             &mut value,
-            prompt.into_bytes_with_nul().as_ptr() as *mut _,
-            extension.into_bytes_with_nul().as_ptr() as *mut _,
+            prompt.as_cstr().as_ptr(),
+            extension.as_cstr().as_ptr(),
         )
     };
     if !result {
@@ -106,9 +106,9 @@ pub fn get_save_filename_input(
     let result = unsafe {
         BNGetSaveFileNameInput(
             &mut value,
-            prompt.into_bytes_with_nul().as_ptr() as *mut _,
-            extension.into_bytes_with_nul().as_ptr() as *mut _,
-            default_name.into_bytes_with_nul().as_ptr() as *mut _,
+            prompt.as_cstr().as_ptr(),
+            extension.as_cstr().as_ptr(),
+            default_name.as_cstr().as_ptr(),
         )
     };
     if !result {
@@ -125,8 +125,8 @@ pub fn get_directory_name_input(prompt: &str, default_name: &str) -> Option<Path
     let result = unsafe {
         BNGetDirectoryNameInput(
             &mut value,
-            prompt.into_bytes_with_nul().as_ptr() as *mut _,
-            default_name.into_bytes_with_nul().as_ptr() as *mut _,
+            prompt.as_cstr().as_ptr(),
+            default_name.as_cstr().as_ptr(),
         )
     };
     if !result {
@@ -148,8 +148,8 @@ pub fn show_message_box(
 ) -> MessageBoxButtonResult {
     unsafe {
         BNShowMessageBox(
-            title.into_bytes_with_nul().as_ptr() as *mut _,
-            text.into_bytes_with_nul().as_ptr() as *mut _,
+            title.as_cstr().as_ptr(),
+            text.as_cstr().as_ptr(),
             buttons,
             icon,
         )
@@ -210,7 +210,7 @@ impl FormInputBuilder {
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::LabelFormField;
         result.hasDefault = false;
-        result.prompt = text.as_ref().as_ptr() as *const c_char;
+        result.prompt = text.as_ptr();
         self.fields.push(result);
 
         self.data.push(FormData::Label { _text: text });
@@ -233,10 +233,10 @@ impl FormInputBuilder {
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::TextLineFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
+        result.prompt = prompt.as_ptr();
         result.hasDefault = default.is_some();
         if let Some(ref default) = default {
-            result.stringDefault = default.as_ref().as_ptr() as *const c_char;
+            result.stringDefault = default.as_ptr();
         }
         self.fields.push(result);
 
@@ -254,10 +254,10 @@ impl FormInputBuilder {
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::MultilineTextFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
+        result.prompt = prompt.as_ptr();
         result.hasDefault = default.is_some();
         if let Some(ref default) = default {
-            result.stringDefault = default.as_ref().as_ptr() as *const c_char;
+            result.stringDefault = default.as_ptr();
         }
         self.fields.push(result);
 
@@ -274,7 +274,7 @@ impl FormInputBuilder {
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::IntegerFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
+        result.prompt = prompt.as_ptr();
         result.hasDefault = default.is_some();
         if let Some(default) = default {
             result.intDefault = default;
@@ -297,7 +297,7 @@ impl FormInputBuilder {
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::AddressFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
+        result.prompt = prompt.as_ptr();
         if let Some(view) = view {
             // the view is being moved into result, there is no need to clone
             // and drop is intentionally being avoided with `Ref::into_raw`
@@ -317,15 +317,12 @@ impl FormInputBuilder {
     /// Form Field: Prompt for a choice from provided options
     pub fn choice_field(mut self, prompt: &str, choices: &[&str], default: Option<usize>) -> Self {
         let prompt = BnString::new(prompt);
-        let choices: Vec<BnString> = choices.iter().map(|&s| BnString::new(s)).collect();
+        let choices: Vec<BnString> = choices.iter().map(BnString::new).collect();
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::ChoiceFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
-        let mut raw_choices: Vec<*const c_char> = choices
-            .iter()
-            .map(|c| c.as_ref().as_ptr() as *const c_char)
-            .collect();
+        result.prompt = prompt.as_ptr();
+        let mut raw_choices: Vec<_> = choices.iter().map(|c| c.as_ptr()).collect();
         result.choices = raw_choices.as_mut_ptr();
         result.count = choices.len();
         result.hasDefault = default.is_some();
@@ -350,20 +347,16 @@ impl FormInputBuilder {
         default: Option<&str>,
     ) -> Self {
         let prompt = BnString::new(prompt);
-        let ext = if let Some(ext) = ext {
-            BnString::new(ext)
-        } else {
-            BnString::new("")
-        };
+        let ext = BnString::new(ext.unwrap_or_default());
         let default = default.map(BnString::new);
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::OpenFileNameFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
-        result.ext = ext.as_ref().as_ptr() as *const c_char;
+        result.prompt = prompt.as_ptr();
+        result.ext = ext.as_ptr();
         result.hasDefault = default.is_some();
         if let Some(ref default) = default {
-            result.stringDefault = default.as_ref().as_ptr() as *const c_char;
+            result.stringDefault = default.as_ptr();
         }
         self.fields.push(result);
 
@@ -384,26 +377,18 @@ impl FormInputBuilder {
         default: Option<&str>,
     ) -> Self {
         let prompt = BnString::new(prompt);
-        let ext = if let Some(ext) = ext {
-            BnString::new(ext)
-        } else {
-            BnString::new("")
-        };
-        let default_name = if let Some(default_name) = default_name {
-            BnString::new(default_name)
-        } else {
-            BnString::new("")
-        };
+        let ext = BnString::new(ext.unwrap_or_default());
+        let default_name = BnString::new(default_name.unwrap_or_default());
         let default = default.map(BnString::new);
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::SaveFileNameFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
-        result.ext = ext.as_ref().as_ptr() as *const c_char;
-        result.defaultName = default_name.as_ref().as_ptr() as *const c_char;
+        result.prompt = prompt.as_ptr();
+        result.ext = ext.as_ptr();
+        result.defaultName = default_name.as_ptr();
         result.hasDefault = default.is_some();
         if let Some(ref default) = default {
-            result.stringDefault = default.as_ref().as_ptr() as *const c_char;
+            result.stringDefault = default.as_ptr();
         }
         self.fields.push(result);
 
@@ -424,20 +409,16 @@ impl FormInputBuilder {
         default: Option<&str>,
     ) -> Self {
         let prompt = BnString::new(prompt);
-        let default_name = if let Some(default_name) = default_name {
-            BnString::new(default_name)
-        } else {
-            BnString::new("")
-        };
+        let default_name = BnString::new(default_name.unwrap_or_default());
         let default = default.map(BnString::new);
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::DirectoryNameFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
-        result.defaultName = default_name.as_ref().as_ptr() as *const c_char;
+        result.prompt = prompt.as_ptr();
+        result.defaultName = default_name.as_ptr();
         result.hasDefault = default.is_some();
         if let Some(ref default) = default {
-            result.stringDefault = default.as_ref().as_ptr() as *const c_char;
+            result.stringDefault = default.as_ptr();
         }
         self.fields.push(result);
 
@@ -495,7 +476,7 @@ impl FormInputBuilder {
             BNGetFormInput(
                 self.fields.as_mut_ptr(),
                 self.fields.len(),
-                title.into_bytes_with_nul().as_ptr() as *const _,
+                title.as_cstr().as_ptr(),
             )
         } {
             let result = self
@@ -577,7 +558,7 @@ pub fn run_progress_dialog<F: Fn(Box<dyn Fn(usize, usize) -> Result<(), ()>>)>(
 
     if unsafe {
         BNRunProgressDialog(
-            title.into_bytes_with_nul().as_ptr() as *mut _,
+            title.as_cstr().as_ptr(),
             can_cancel,
             Some(cb_task::<F>),
             &mut ctxt as *mut _ as *mut c_void,

@@ -1,5 +1,5 @@
 use crate::rc::Array;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -107,13 +107,8 @@ pub fn server_url() -> BnString {
     unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerUrl()) }
 }
 
-pub fn set_server_url<S: BnStrCompatible>(url: S) -> Result<(), ()> {
-    let url = url.into_bytes_with_nul();
-    let result = unsafe {
-        binaryninjacore_sys::BNSetEnterpriseServerUrl(
-            url.as_ref().as_ptr() as *const std::os::raw::c_char
-        )
-    };
+pub fn set_server_url<S: AsCStr>(url: S) -> Result<(), ()> {
+    let result = unsafe { binaryninjacore_sys::BNSetEnterpriseServerUrl(url.as_cstr().as_ptr()) };
     if result {
         Ok(())
     } else {
@@ -166,25 +161,22 @@ pub fn is_server_license_still_activated() -> bool {
 
 pub fn authenticate_server_with_credentials<U, P>(username: U, password: P, remember: bool) -> bool
 where
-    U: BnStrCompatible,
-    P: BnStrCompatible,
+    U: AsCStr,
+    P: AsCStr,
 {
-    let username = username.into_bytes_with_nul();
-    let password = password.into_bytes_with_nul();
     unsafe {
         binaryninjacore_sys::BNAuthenticateEnterpriseServerWithCredentials(
-            username.as_ref().as_ptr() as *const std::os::raw::c_char,
-            password.as_ref().as_ptr() as *const std::os::raw::c_char,
+            username.as_cstr().as_ptr(),
+            password.as_cstr().as_ptr(),
             remember,
         )
     }
 }
 
-pub fn authenticate_server_with_method<S: BnStrCompatible>(method: S, remember: bool) -> bool {
-    let method = method.into_bytes_with_nul();
+pub fn authenticate_server_with_method<S: AsCStr>(method: S, remember: bool) -> bool {
     unsafe {
         binaryninjacore_sys::BNAuthenticateEnterpriseServerWithMethod(
-            method.as_ref().as_ptr() as *const std::os::raw::c_char,
+            method.as_cstr().as_ptr(),
             remember,
         )
     }

@@ -1,6 +1,6 @@
 use crate::data_buffer::DataBuffer;
 use crate::rc::{Array, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use binaryninjacore_sys::{
     BNBeginKeyValueStoreNamespace, BNEndKeyValueStoreNamespace, BNFreeKeyValueStore,
     BNGetKeyValueStoreBuffer, BNGetKeyValueStoreDataSize, BNGetKeyValueStoreKeys,
@@ -9,7 +9,6 @@ use binaryninjacore_sys::{
     BNNewKeyValueStoreReference, BNSetKeyValueStoreBuffer,
 };
 use std::collections::HashMap;
-use std::ffi::c_char;
 use std::fmt::Debug;
 use std::ptr::NonNull;
 
@@ -42,18 +41,17 @@ impl KeyValueStore {
     }
 
     /// Get the value for a single key
-    pub fn value<S: BnStrCompatible>(&self, key: S) -> Option<DataBuffer> {
-        let key_raw = key.into_bytes_with_nul();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
-        let result = unsafe { BNGetKeyValueStoreBuffer(self.handle.as_ptr(), key_ptr) };
+    pub fn value<S: AsCStr>(&self, key: S) -> Option<DataBuffer> {
+        let result =
+            unsafe { BNGetKeyValueStoreBuffer(self.handle.as_ptr(), key.as_cstr().as_ptr()) };
         NonNull::new(result).map(|_| DataBuffer::from_raw(result))
     }
 
     /// Set the value for a single key
-    pub fn set_value<S: BnStrCompatible>(&self, key: S, value: &DataBuffer) -> bool {
-        let key_raw = key.into_bytes_with_nul();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
-        unsafe { BNSetKeyValueStoreBuffer(self.handle.as_ptr(), key_ptr, value.as_raw()) }
+    pub fn set_value<S: AsCStr>(&self, key: S, value: &DataBuffer) -> bool {
+        unsafe {
+            BNSetKeyValueStoreBuffer(self.handle.as_ptr(), key.as_cstr().as_ptr(), value.as_raw())
+        }
     }
 
     /// Get the stored representation of the kvs
@@ -64,10 +62,8 @@ impl KeyValueStore {
     }
 
     /// Begin storing new keys into a namespace
-    pub fn begin_namespace<S: BnStrCompatible>(&self, name: S) {
-        let name_raw = name.into_bytes_with_nul();
-        let name_ptr = name_raw.as_ref().as_ptr() as *const c_char;
-        unsafe { BNBeginKeyValueStoreNamespace(self.handle.as_ptr(), name_ptr) }
+    pub fn begin_namespace<S: AsCStr>(&self, name: S) {
+        unsafe { BNBeginKeyValueStoreNamespace(self.handle.as_ptr(), name.as_cstr().as_ptr()) }
     }
 
     /// End storing new keys into a namespace

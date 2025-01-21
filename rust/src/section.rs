@@ -14,7 +14,6 @@
 
 //! Sections are [crate::segment::Segment]s that are loaded into memory at run time
 
-use std::ffi::c_char;
 use std::fmt;
 use std::ops::Range;
 
@@ -270,44 +269,29 @@ impl SectionBuilder {
     }
 
     pub(crate) fn create(self, view: &BinaryView) {
-        let name = self.name.into_bytes_with_nul();
-        let ty = self.ty.into_bytes_with_nul();
-        let linked_section = self.linked_section.into_bytes_with_nul();
-        let info_section = self.info_section.into_bytes_with_nul();
-
         let start = self.range.start;
         let len = self.range.end.wrapping_sub(start);
 
+        let add_section = if self.is_auto {
+            BNAddAutoSection
+        } else {
+            BNAddUserSection
+        };
+
         unsafe {
-            if self.is_auto {
-                BNAddAutoSection(
-                    view.handle,
-                    name.as_ptr() as *const c_char,
-                    start,
-                    len,
-                    self.semantics.into(),
-                    ty.as_ptr() as *const c_char,
-                    self.align,
-                    self.entry_size,
-                    linked_section.as_ptr() as *const c_char,
-                    info_section.as_ptr() as *const c_char,
-                    self.info_data,
-                );
-            } else {
-                BNAddUserSection(
-                    view.handle,
-                    name.as_ptr() as *const c_char,
-                    start,
-                    len,
-                    self.semantics.into(),
-                    ty.as_ptr() as *const c_char,
-                    self.align,
-                    self.entry_size,
-                    linked_section.as_ptr() as *const c_char,
-                    info_section.as_ptr() as *const c_char,
-                    self.info_data,
-                );
-            }
+            add_section(
+                view.handle,
+                self.name.as_cstr().as_ptr(),
+                start,
+                len,
+                self.semantics.into(),
+                self.ty.as_cstr().as_ptr(),
+                self.align,
+                self.entry_size,
+                self.linked_section.as_cstr().as_ptr(),
+                self.info_section.as_cstr().as_ptr(),
+                self.info_data,
+            )
         }
     }
 }

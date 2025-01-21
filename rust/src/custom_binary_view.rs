@@ -41,7 +41,7 @@ use crate::Endianness;
 /// implementation of the `CustomBinaryViewType` must return.
 pub fn register_view_type<S, T, F>(name: S, long_name: S, constructor: F) -> &'static T
 where
-    S: BnStrCompatible,
+    S: AsCStr,
     T: CustomBinaryViewType,
     F: FnOnce(BinaryViewType) -> T,
 {
@@ -148,12 +148,6 @@ where
         })
     }
 
-    let name = name.into_bytes_with_nul();
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-
-    let long_name = long_name.into_bytes_with_nul();
-    let long_name_ptr = long_name.as_ref().as_ptr() as *mut _;
-
     let ctxt = Box::leak(Box::new(MaybeUninit::zeroed()));
 
     let mut bn_obj = BNCustomBinaryViewType {
@@ -167,7 +161,11 @@ where
     };
 
     unsafe {
-        let handle = BNRegisterBinaryViewType(name_ptr, long_name_ptr, &mut bn_obj as *mut _);
+        let handle = BNRegisterBinaryViewType(
+            name.as_cstr().as_ptr(),
+            long_name.as_cstr().as_ptr(),
+            &mut bn_obj as *mut _,
+        );
         if handle.is_null() {
             // avoid leaking the space allocated for the type, but also
             // avoid running its Drop impl (if any -- not that there should
@@ -359,9 +357,8 @@ impl BinaryViewType {
     }
 
     /// Looks up a BinaryViewType by its short name
-    pub fn by_name<N: BnStrCompatible>(name: N) -> Result<Self> {
-        let bytes = name.into_bytes_with_nul();
-        let handle = unsafe { BNGetBinaryViewTypeByName(bytes.as_ref().as_ptr() as *const _) };
+    pub fn by_name<N: AsCStr>(name: N) -> Result<Self> {
+        let handle = unsafe { BNGetBinaryViewTypeByName(name.as_cstr().as_ptr()) };
         match handle.is_null() {
             false => Ok(unsafe { BinaryViewType::from_raw(handle) }),
             true => Err(()),

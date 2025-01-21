@@ -58,7 +58,7 @@ pub trait CallingConvention: Sync {
 pub fn register_calling_convention<A, N, C>(arch: &A, name: N, cc: C) -> Ref<CoreCallingConvention>
 where
     A: Architecture,
-    N: BnStrCompatible,
+    N: AsCStr,
     C: 'static + CallingConvention,
 {
     struct CustomCallingConventionContext<C>
@@ -377,7 +377,6 @@ where
         )
     }
 
-    let name = name.into_bytes_with_nul();
     let raw = Box::into_raw(Box::new(CustomCallingConventionContext {
         raw_handle: std::ptr::null_mut(),
         cc,
@@ -413,8 +412,8 @@ where
     };
 
     unsafe {
-        let cc_name = name.as_ref().as_ptr() as *mut _;
-        let result = BNCreateCallingConvention(arch.as_ref().handle, cc_name, &mut cc);
+        let result =
+            BNCreateCallingConvention(arch.as_ref().handle, name.as_cstr().as_ptr(), &mut cc);
 
         assert!(!result.is_null());
 

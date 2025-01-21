@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use std::ptr::NonNull;
 
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 pub trait SecretsProvider {
     fn has_data(&mut self, key: &str) -> bool;
@@ -27,7 +27,6 @@ impl CoreSecretsProvider {
     /// Register a new provider
     pub fn new<C: SecretsProvider>(name: &str, callback: C) -> Self {
         // SAFETY: once create SecretsProvider is never dropped
-        let name = name.into_bytes_with_nul();
         let callback = Box::leak(Box::new(callback));
         let mut callbacks = BNSecretsProviderCallbacks {
             context: callback as *mut C as *mut c_void,
@@ -36,8 +35,7 @@ impl CoreSecretsProvider {
             storeData: Some(cb_store_data::<C>),
             deleteData: Some(cb_delete_data::<C>),
         };
-        let result =
-            unsafe { BNRegisterSecretsProvider(name.as_ptr() as *const c_char, &mut callbacks) };
+        let result = unsafe { BNRegisterSecretsProvider(name.as_cstr().as_ptr(), &mut callbacks) };
         unsafe { Self::from_raw(NonNull::new(result).unwrap()) }
     }
 
@@ -50,9 +48,8 @@ impl CoreSecretsProvider {
     }
 
     /// Retrieve a provider by name
-    pub fn by_name<S: BnStrCompatible>(name: S) -> Option<CoreSecretsProvider> {
-        let name = name.into_bytes_with_nul();
-        let result = unsafe { BNGetSecretsProviderByName(name.as_ref().as_ptr() as *const c_char) };
+    pub fn by_name<S: AsCStr>(name: S) -> Option<CoreSecretsProvider> {
+        let result = unsafe { BNGetSecretsProviderByName(name.as_cstr().as_ptr()) };
         NonNull::new(result).map(|h| unsafe { Self::from_raw(h) })
     }
 
@@ -63,44 +60,31 @@ impl CoreSecretsProvider {
     }
 
     /// Check if data for a specific key exists, but do not retrieve it
-    pub fn has_data<S: BnStrCompatible>(&self, key: S) -> bool {
-        let key = key.into_bytes_with_nul();
-        unsafe {
-            BNSecretsProviderHasData(self.handle.as_ptr(), key.as_ref().as_ptr() as *const c_char)
-        }
+    pub fn has_data<S: AsCStr>(&self, key: S) -> bool {
+        unsafe { BNSecretsProviderHasData(self.handle.as_ptr(), key.as_cstr().as_ptr()) }
     }
 
     /// Retrieve data for the given key, if it exists
-    pub fn get_data<S: BnStrCompatible>(&self, key: S) -> BnString {
-        let key = key.into_bytes_with_nul();
-        let result = unsafe {
-            BNGetSecretsProviderData(self.handle.as_ptr(), key.as_ref().as_ptr() as *const c_char)
-        };
+    pub fn get_data<S: AsCStr>(&self, key: S) -> BnString {
+        let result =
+            unsafe { BNGetSecretsProviderData(self.handle.as_ptr(), key.as_cstr().as_ptr()) };
         unsafe { BnString::from_raw(result) }
     }
 
     /// Store data with the given key
-    pub fn store_data<K: BnStrCompatible, V: BnStrCompatible>(&self, key: K, value: V) -> bool {
-        let key = key.into_bytes_with_nul();
-        let value = value.into_bytes_with_nul();
+    pub fn store_data<K: AsCStr, V: AsCStr>(&self, key: K, value: V) -> bool {
         unsafe {
             BNStoreSecretsProviderData(
                 self.handle.as_ptr(),
-                key.as_ref().as_ptr() as *const c_char,
-                value.as_ref().as_ptr() as *const c_char,
+                key.as_cstr().as_ptr(),
+                value.as_cstr().as_ptr(),
             )
         }
     }
 
     /// Delete stored data with the given key
-    pub fn delete_data<S: BnStrCompatible>(&self, key: S) -> bool {
-        let key = key.into_bytes_with_nul();
-        unsafe {
-            BNDeleteSecretsProviderData(
-                self.handle.as_ptr(),
-                key.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn delete_data<S: AsCStr>(&self, key: S) -> bool {
+        unsafe { BNDeleteSecretsProviderData(self.handle.as_ptr(), key.as_cstr().as_ptr()) }
     }
 }
 

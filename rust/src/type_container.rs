@@ -11,12 +11,12 @@
 use crate::platform::Platform;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, Ref};
-use crate::string::{raw_to_string, BnStrCompatible, BnString};
+use crate::string::{raw_to_string, AsCStr, BnString};
 use crate::type_parser::{TypeParserError, TypeParserResult};
 use crate::types::{QualifiedName, QualifiedNameAndType, Type};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::fmt::{Debug, Formatter};
 use std::ptr::NonNull;
 
@@ -137,19 +137,10 @@ impl TypeContainer {
     /// (by id) to use the new name.
     ///
     /// Returns true if the type was renamed.
-    pub fn rename_type<T: Into<QualifiedName>, S: BnStrCompatible>(
-        &self,
-        name: T,
-        type_id: S,
-    ) -> bool {
-        let type_id = type_id.into_bytes_with_nul();
+    pub fn rename_type<T: Into<QualifiedName>, S: AsCStr>(&self, name: T, type_id: S) -> bool {
         let raw_name = QualifiedName::into_raw(name.into());
         let success = unsafe {
-            BNTypeContainerRenameType(
-                self.handle.as_ptr(),
-                type_id.as_ref().as_ptr() as *const c_char,
-                &raw_name,
-            )
+            BNTypeContainerRenameType(self.handle.as_ptr(), type_id.as_cstr().as_ptr(), &raw_name)
         };
         QualifiedName::free_raw(raw_name);
         success
@@ -159,14 +150,8 @@ impl TypeContainer {
     /// not specified and you may end up with broken references if any still exist.
     ///
     /// Returns true if the type was deleted.
-    pub fn delete_type<S: BnStrCompatible>(&self, type_id: S) -> bool {
-        let type_id = type_id.into_bytes_with_nul();
-        unsafe {
-            BNTypeContainerDeleteType(
-                self.handle.as_ptr(),
-                type_id.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn delete_type<S: AsCStr>(&self, type_id: S) -> bool {
+        unsafe { BNTypeContainerDeleteType(self.handle.as_ptr(), type_id.as_cstr().as_ptr()) }
     }
 
     /// Get the unique id of the type in the Type Container with the given name.
@@ -184,13 +169,12 @@ impl TypeContainer {
     /// Get the unique name of the type in the Type Container with the given id.
     ///
     /// If no type with that id exists, returns None.
-    pub fn type_name<S: BnStrCompatible>(&self, type_id: S) -> Option<QualifiedName> {
-        let type_id = type_id.into_bytes_with_nul();
+    pub fn type_name<S: AsCStr>(&self, type_id: S) -> Option<QualifiedName> {
         let mut result = BNQualifiedName::default();
         let success = unsafe {
             BNTypeContainerGetTypeName(
                 self.handle.as_ptr(),
-                type_id.as_ref().as_ptr() as *const c_char,
+                type_id.as_cstr().as_ptr(),
                 &mut result,
             )
         };
@@ -200,13 +184,12 @@ impl TypeContainer {
     /// Get the definition of the type in the Type Container with the given id.
     ///
     /// If no type with that id exists, returns None.
-    pub fn type_by_id<S: BnStrCompatible>(&self, type_id: S) -> Option<Ref<Type>> {
-        let type_id = type_id.into_bytes_with_nul();
+    pub fn type_by_id<S: AsCStr>(&self, type_id: S) -> Option<Ref<Type>> {
         let mut result = std::ptr::null_mut();
         let success = unsafe {
             BNTypeContainerGetTypeById(
                 self.handle.as_ptr(),
-                type_id.as_ref().as_ptr() as *const c_char,
+                type_id.as_cstr().as_ptr(),
                 &mut result,
             )
         };
@@ -305,19 +288,18 @@ impl TypeContainer {
     ///
     /// * `source` - Source code to parse
     /// * `import_dependencies` - If Type Library / Type Archive types should be imported during parsing
-    pub fn parse_type_string<S: BnStrCompatible>(
+    pub fn parse_type_string<S: AsCStr>(
         &self,
         source: S,
         import_dependencies: bool,
     ) -> Result<QualifiedNameAndType, Array<TypeParserError>> {
-        let source = source.into_bytes_with_nul();
         let mut result = BNQualifiedNameAndType::default();
         let mut errors = std::ptr::null_mut();
         let mut error_count = 0;
         let success = unsafe {
             BNTypeContainerParseTypeString(
                 self.handle.as_ptr(),
-                source.as_ref().as_ptr() as *const c_char,
+                source.as_cstr().as_ptr(),
                 import_dependencies,
                 &mut result,
                 &mut errors,
@@ -351,46 +333,41 @@ impl TypeContainer {
         import_dependencies: bool,
     ) -> Result<TypeParserResult, Array<TypeParserError>>
     where
-        S: BnStrCompatible,
-        F: BnStrCompatible,
+        S: AsCStr,
+        F: AsCStr,
         O: IntoIterator,
-        O::Item: BnStrCompatible,
+        O::Item: AsCStr,
         D: IntoIterator,
-        D::Item: BnStrCompatible,
-        A: BnStrCompatible,
+        D::Item: AsCStr,
+        A: AsCStr,
     {
-        let source = source.into_bytes_with_nul();
-        let filename = filename.into_bytes_with_nul();
-        let options: Vec<_> = options
-            .into_iter()
-            .map(|o| o.into_bytes_with_nul())
-            .collect();
-        let options_raw: Vec<*const c_char> = options
+        let options = options.into_iter().collect::<Vec<_>>();
+        let options = options.iter().map(|o| o.as_cstr()).collect::<Vec<_>>();
+        let options_raw = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
+
+        let include_directories = include_directories.into_iter().collect::<Vec<_>>();
+        let include_directories = include_directories
             .iter()
-            .map(|o| o.as_ref().as_ptr() as *const c_char)
-            .collect();
-        let include_directories: Vec<_> = include_directories
-            .into_iter()
-            .map(|d| d.into_bytes_with_nul())
-            .collect();
-        let include_directories_raw: Vec<*const c_char> = include_directories
+            .map(|d| d.as_cstr())
+            .collect::<Vec<_>>();
+        let include_directories_raw = include_directories
             .iter()
-            .map(|d| d.as_ref().as_ptr() as *const c_char)
-            .collect();
-        let auto_type_source = auto_type_source.into_bytes_with_nul();
+            .map(|d| d.as_ptr())
+            .collect::<Vec<_>>();
+
         let mut raw_result = BNTypeParserResult::default();
         let mut errors = std::ptr::null_mut();
         let mut error_count = 0;
         let success = unsafe {
             BNTypeContainerParseTypesFromSource(
                 self.handle.as_ptr(),
-                source.as_ref().as_ptr() as *const c_char,
-                filename.as_ref().as_ptr() as *const c_char,
+                source.as_cstr().as_ptr(),
+                filename.as_cstr().as_ptr(),
                 options_raw.as_ptr(),
                 options_raw.len(),
                 include_directories_raw.as_ptr(),
                 include_directories_raw.len(),
-                auto_type_source.as_ref().as_ptr() as *const c_char,
+                auto_type_source.as_cstr().as_ptr(),
                 import_dependencies,
                 &mut raw_result,
                 &mut errors,

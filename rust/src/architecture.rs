@@ -27,7 +27,7 @@ use crate::{
     platform::Platform,
     rc::*,
     relocation::CoreRelocationHandler,
-    string::BnStrCompatible,
+    string::AsCStr,
     string::*,
     types::{NameAndType, Type},
     Endianness,
@@ -1397,8 +1397,7 @@ impl CoreArchitecture {
     }
 
     pub fn by_name(name: &str) -> Option<Self> {
-        let handle =
-            unsafe { BNGetArchitectureByName(name.into_bytes_with_nul().as_ptr() as *mut _) };
+        let handle = unsafe { BNGetArchitectureByName(name.as_cstr().as_ptr()) };
         match handle.is_null() {
             false => Some(CoreArchitecture { handle }),
             true => None,
@@ -1945,11 +1944,9 @@ macro_rules! cc_func {
 
 /// Contains helper methods for all types implementing 'Architecture'
 pub trait ArchitectureExt: Architecture {
-    fn register_by_name<S: BnStrCompatible>(&self, name: S) -> Option<Self::Register> {
-        let name = name.into_bytes_with_nul();
-
+    fn register_by_name<S: AsCStr>(&self, name: S) -> Option<Self::Register> {
         match unsafe {
-            BNGetArchitectureRegisterByName(self.as_ref().handle, name.as_ref().as_ptr() as *mut _)
+            BNGetArchitectureRegisterByName(self.as_ref().handle, name.as_cstr().as_ptr())
         } {
             0xffff_ffff => None,
             reg => self.register_from_id(reg.into()),
@@ -2025,7 +2022,7 @@ pub trait ArchitectureExt: Architecture {
 
     fn register_relocation_handler<S, R, F>(&self, name: S, func: F)
     where
-        S: BnStrCompatible,
+        S: AsCStr,
         R: 'static
             + RelocationHandler<Handle = CustomRelocationHandlerHandle<R>>
             + Send
@@ -2048,7 +2045,7 @@ impl<T: Architecture> ArchitectureExt for T {}
 
 pub fn register_architecture<S, A, F>(name: S, func: F) -> &'static A
 where
-    S: BnStrCompatible,
+    S: AsCStr,
     A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
     F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
 {
@@ -3134,8 +3131,6 @@ where
         custom_arch.skip_and_return_value(data, addr, val)
     }
 
-    let name = name.into_bytes_with_nul();
-
     let uninit_arch = ArchitectureBuilder {
         arch: MaybeUninit::zeroed(),
         func: Some(func),
@@ -3225,8 +3220,7 @@ where
     };
 
     unsafe {
-        let res =
-            BNRegisterArchitecture(name.as_ref().as_ptr() as *mut _, &mut custom_arch as *mut _);
+        let res = BNRegisterArchitecture(name.as_cstr().as_ptr(), &mut custom_arch as *mut _);
 
         assert!(!res.is_null());
 

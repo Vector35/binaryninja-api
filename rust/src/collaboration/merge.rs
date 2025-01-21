@@ -1,11 +1,10 @@
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 use std::ptr::NonNull;
 
 use crate::database::{snapshot::Snapshot, Database};
 use crate::file_metadata::FileMetadata;
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 pub type MergeConflictDataType = BNMergeConflictDataType;
 
@@ -49,13 +48,9 @@ impl MergeConflict {
         NonNull::new(result).map(|handle| unsafe { Snapshot::from_raw(handle) })
     }
 
-    pub fn path_item_string<S: BnStrCompatible>(&self, path: S) -> Result<BnString, ()> {
-        let path = path.into_bytes_with_nul();
+    pub fn path_item_string<S: AsCStr>(&self, path: S) -> Result<BnString, ()> {
         let result = unsafe {
-            BNAnalysisMergeConflictGetPathItemString(
-                self.handle.as_ptr(),
-                path.as_ref().as_ptr() as *const c_char,
-            )
+            BNAnalysisMergeConflictGetPathItemString(self.handle.as_ptr(), path.as_cstr().as_ptr())
         };
         (!result.is_null())
             .then(|| unsafe { BnString::from_raw(result) })
@@ -123,25 +118,17 @@ impl MergeConflict {
     }
 
     /// Call this when you've resolved the conflict to save the result
-    pub fn success<S: BnStrCompatible>(&self, value: S) -> Result<(), ()> {
-        let value = value.into_bytes_with_nul();
+    pub fn success<S: AsCStr>(&self, value: S) -> Result<(), ()> {
         let success = unsafe {
-            BNAnalysisMergeConflictSuccess(
-                self.handle.as_ptr(),
-                value.as_ref().as_ptr() as *const c_char,
-            )
+            BNAnalysisMergeConflictSuccess(self.handle.as_ptr(), value.as_cstr().as_ptr())
         };
         success.then_some(()).ok_or(())
     }
 
     // TODO: Make a safe version of this that checks the path and if it holds a number
-    pub unsafe fn get_path_item_number<S: BnStrCompatible>(&self, path_key: S) -> Option<u64> {
-        let path_key = path_key.into_bytes_with_nul();
+    pub unsafe fn get_path_item_number<S: AsCStr>(&self, path_key: S) -> Option<u64> {
         let value = unsafe {
-            BNAnalysisMergeConflictGetPathItem(
-                self.handle.as_ptr(),
-                path_key.as_ref().as_ptr() as *const c_char,
-            )
+            BNAnalysisMergeConflictGetPathItem(self.handle.as_ptr(), path_key.as_cstr().as_ptr())
         };
         match value.is_null() {
             // SAFETY: The path must be a number.
@@ -150,12 +137,11 @@ impl MergeConflict {
         }
     }
 
-    pub unsafe fn get_path_item_string<S: BnStrCompatible>(&self, path_key: S) -> Option<BnString> {
-        let path_key = path_key.into_bytes_with_nul();
+    pub unsafe fn get_path_item_string<S: AsCStr>(&self, path_key: S) -> Option<BnString> {
         let value = unsafe {
             BNAnalysisMergeConflictGetPathItemString(
                 self.handle.as_ptr(),
-                path_key.as_ref().as_ptr() as *const c_char,
+                path_key.as_cstr().as_ptr(),
             )
         };
         match value.is_null() {

@@ -6,7 +6,7 @@ use std::ptr::NonNull;
 
 use crate::platform::Platform;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
-use crate::string::{raw_to_string, BnStrCompatible, BnString};
+use crate::string::{raw_to_string, AsCStr, BnString};
 use crate::type_container::TypeContainer;
 use crate::types::{QualifiedName, QualifiedNameAndType, Type};
 
@@ -14,7 +14,7 @@ pub type TypeParserErrorSeverity = BNTypeParserErrorSeverity;
 pub type TypeParserOption = BNTypeParserOption;
 
 /// Register a custom parser with the API
-pub fn register_type_parser<S: BnStrCompatible, T: TypeParser>(
+pub fn register_type_parser<S: AsCStr, T: TypeParser>(
     name: S,
     parser: T,
 ) -> (&'static mut T, CoreTypeParser) {
@@ -29,12 +29,7 @@ pub fn register_type_parser<S: BnStrCompatible, T: TypeParser>(
         freeResult: Some(cb_free_result),
         freeErrorList: Some(cb_free_error_list),
     };
-    let result = unsafe {
-        BNRegisterTypeParser(
-            name.into_bytes_with_nul().as_ref().as_ptr() as *const _,
-            &mut callback,
-        )
-    };
+    let result = unsafe { BNRegisterTypeParser(name.as_cstr().as_ptr(), &mut callback) };
     let core = unsafe { CoreTypeParser::from_raw(NonNull::new(result).unwrap()) };
     (parser, core)
 }
@@ -55,9 +50,8 @@ impl CoreTypeParser {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn parser_by_name<S: BnStrCompatible>(name: S) -> Option<CoreTypeParser> {
-        let name_raw = name.into_bytes_with_nul();
-        let result = unsafe { BNGetTypeParserByName(name_raw.as_ref().as_ptr() as *const c_char) };
+    pub fn parser_by_name<S: AsCStr>(name: S) -> Option<CoreTypeParser> {
+        let result = unsafe { BNGetTypeParserByName(name.as_cstr().as_ptr()) };
         NonNull::new(result).map(|x| unsafe { Self::from_raw(x) })
     }
 
@@ -71,18 +65,17 @@ impl CoreTypeParser {
 impl TypeParser for CoreTypeParser {
     fn get_option_text(&self, option: TypeParserOption, value: &str) -> Option<String> {
         let mut output = std::ptr::null_mut();
-        let value_cstr = BnString::new(value);
         let result = unsafe {
             BNGetTypeParserOptionText(
                 self.handle.as_ptr(),
                 option,
-                value_cstr.as_ptr(),
+                value.as_cstr().as_ptr(),
                 &mut output,
             )
         };
         result.then(|| {
             assert!(!output.is_null());
-            value_cstr.to_string()
+            value.to_string()
         })
     }
 
@@ -95,16 +88,14 @@ impl TypeParser for CoreTypeParser {
         options: &[String],
         include_dirs: &[String],
     ) -> Result<String, Vec<TypeParserError>> {
-        let source_cstr = BnString::new(source);
-        let file_name_cstr = BnString::new(file_name);
         let mut result = std::ptr::null_mut();
         let mut errors = std::ptr::null_mut();
         let mut error_count = 0;
         let success = unsafe {
             BNTypeParserPreprocessSource(
                 self.handle.as_ptr(),
-                source_cstr.as_ptr(),
-                file_name_cstr.as_ptr(),
+                source.as_cstr().as_ptr(),
+                file_name.as_cstr().as_ptr(),
                 platform.handle,
                 existing_types.handle.as_ptr(),
                 options.as_ptr() as *const *const c_char,
@@ -136,24 +127,21 @@ impl TypeParser for CoreTypeParser {
         include_dirs: &[String],
         auto_type_source: &str,
     ) -> Result<TypeParserResult, Vec<TypeParserError>> {
-        let source_cstr = BnString::new(source);
-        let file_name_cstr = BnString::new(file_name);
-        let auto_type_source = BnString::new(auto_type_source);
         let mut raw_result = BNTypeParserResult::default();
         let mut errors = std::ptr::null_mut();
         let mut error_count = 0;
         let success = unsafe {
             BNTypeParserParseTypesFromSource(
                 self.handle.as_ptr(),
-                source_cstr.as_ptr(),
-                file_name_cstr.as_ptr(),
+                source.as_cstr().as_ptr(),
+                file_name.as_cstr().as_ptr(),
                 platform.handle,
                 existing_types.handle.as_ptr(),
                 options.as_ptr() as *const *const c_char,
                 options.len(),
                 include_dirs.as_ptr() as *const *const c_char,
                 include_dirs.len(),
-                auto_type_source.as_ptr(),
+                auto_type_source.as_cstr().as_ptr(),
                 &mut raw_result,
                 &mut errors,
                 &mut error_count,
@@ -176,14 +164,13 @@ impl TypeParser for CoreTypeParser {
         platform: &Platform,
         existing_types: &TypeContainer,
     ) -> Result<QualifiedNameAndType, Vec<TypeParserError>> {
-        let source_cstr = BnString::new(source);
         let mut output = BNQualifiedNameAndType::default();
         let mut errors = std::ptr::null_mut();
         let mut error_count = 0;
         let result = unsafe {
             BNTypeParserParseTypeString(
                 self.handle.as_ptr(),
-                source_cstr.as_ptr(),
+                source.as_cstr().as_ptr(),
                 platform.handle,
                 existing_types.handle.as_ptr(),
                 &mut output,

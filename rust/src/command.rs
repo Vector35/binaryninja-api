@@ -42,7 +42,7 @@ use std::os::raw::c_void;
 
 use crate::binary_view::BinaryView;
 use crate::function::Function;
-use crate::string::BnStrCompatible;
+use crate::string::AsCStr;
 
 /// The trait required for generic commands.  See [register_command] for example usage.
 pub trait Command: 'static + Sync {
@@ -95,7 +95,7 @@ where
 /// ```
 pub fn register_command<S, C>(name: S, desc: S, command: C)
 where
-    S: BnStrCompatible,
+    S: AsCStr,
     C: Command,
 {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView)
@@ -126,18 +126,12 @@ where
         })
     }
 
-    let name = name.into_bytes_with_nul();
-    let desc = desc.into_bytes_with_nul();
-
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-    let desc_ptr = desc.as_ref().as_ptr() as *mut _;
-
     let ctxt = Box::into_raw(Box::new(command));
 
     unsafe {
         BNRegisterPluginCommand(
-            name_ptr,
-            desc_ptr,
+            name.as_cstr().as_ptr(),
+            desc.as_cstr().as_ptr(),
             Some(cb_action::<C>),
             Some(cb_valid::<C>),
             ctxt as *mut _,
@@ -196,7 +190,7 @@ where
 /// ```
 pub fn register_command_for_address<S, C>(name: S, desc: S, command: C)
 where
-    S: BnStrCompatible,
+    S: AsCStr,
     C: AddressCommand,
 {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView, addr: u64)
@@ -227,18 +221,12 @@ where
         })
     }
 
-    let name = name.into_bytes_with_nul();
-    let desc = desc.into_bytes_with_nul();
-
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-    let desc_ptr = desc.as_ref().as_ptr() as *mut _;
-
     let ctxt = Box::into_raw(Box::new(command));
 
     unsafe {
         BNRegisterPluginCommandForAddress(
-            name_ptr,
-            desc_ptr,
+            name.as_cstr().as_ptr(),
+            desc.as_cstr().as_ptr(),
             Some(cb_action::<C>),
             Some(cb_valid::<C>),
             ctxt as *mut _,
@@ -298,7 +286,7 @@ where
 /// ```
 pub fn register_command_for_range<S, C>(name: S, desc: S, command: C)
 where
-    S: BnStrCompatible,
+    S: AsCStr,
     C: RangeCommand,
 {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView, addr: u64, len: u64)
@@ -334,18 +322,12 @@ where
         })
     }
 
-    let name = name.into_bytes_with_nul();
-    let desc = desc.into_bytes_with_nul();
-
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-    let desc_ptr = desc.as_ref().as_ptr() as *mut _;
-
     let ctxt = Box::into_raw(Box::new(command));
 
     unsafe {
         BNRegisterPluginCommandForRange(
-            name_ptr,
-            desc_ptr,
+            name.as_cstr().as_ptr(),
+            desc.as_cstr().as_ptr(),
             Some(cb_action::<C>),
             Some(cb_valid::<C>),
             ctxt as *mut _,
@@ -405,7 +387,7 @@ where
 /// ```
 pub fn register_command_for_function<S, C>(name: S, desc: S, command: C)
 where
-    S: BnStrCompatible,
+    S: AsCStr,
     C: FunctionCommand,
 {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView, func: *mut BNFunction)
@@ -446,18 +428,12 @@ where
         })
     }
 
-    let name = name.into_bytes_with_nul();
-    let desc = desc.into_bytes_with_nul();
-
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-    let desc_ptr = desc.as_ref().as_ptr() as *mut _;
-
     let ctxt = Box::into_raw(Box::new(command));
 
     unsafe {
         BNRegisterPluginCommandForFunction(
-            name_ptr,
-            desc_ptr,
+            name.as_cstr().as_ptr(),
+            desc.as_cstr().as_ptr(),
             Some(cb_action::<C>),
             Some(cb_valid::<C>),
             ctxt as *mut _,

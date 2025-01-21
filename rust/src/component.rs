@@ -1,9 +1,8 @@
 use crate::binary_view::{BinaryView, BinaryViewExt};
 use crate::function::Function;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use crate::types::ComponentReferencedType;
-use std::ffi::c_char;
 use std::fmt::Debug;
 use std::ptr::NonNull;
 
@@ -38,29 +37,19 @@ impl ComponentBuilder {
     pub fn finalize(self) -> Ref<Component> {
         let result = match (&self.parent, &self.name) {
             (None, None) => unsafe { BNCreateComponent(self.view.handle) },
-            (None, Some(name)) => {
-                let name_raw = name.into_bytes_with_nul();
-                unsafe {
-                    BNCreateComponentWithName(self.view.handle, name_raw.as_ptr() as *mut c_char)
-                }
-            }
-            (Some(guid), None) => {
-                let guid_raw = guid.into_bytes_with_nul();
-                unsafe {
-                    BNCreateComponentWithParent(self.view.handle, guid_raw.as_ptr() as *mut c_char)
-                }
-            }
-            (Some(guid), Some(name)) => {
-                let guid_raw = guid.into_bytes_with_nul();
-                let name_raw = name.into_bytes_with_nul();
-                unsafe {
-                    BNCreateComponentWithParentAndName(
-                        self.view.handle,
-                        guid_raw.as_ptr() as *mut c_char,
-                        name_raw.as_ptr() as *mut c_char,
-                    )
-                }
-            }
+            (None, Some(name)) => unsafe {
+                BNCreateComponentWithName(self.view.handle, name.as_cstr().as_ptr())
+            },
+            (Some(guid), None) => unsafe {
+                BNCreateComponentWithParent(self.view.handle, guid.as_cstr().as_ptr())
+            },
+            (Some(guid), Some(name)) => unsafe {
+                BNCreateComponentWithParentAndName(
+                    self.view.handle,
+                    guid.as_cstr().as_ptr(),
+                    name.as_cstr().as_ptr(),
+                )
+            },
         };
         unsafe { Component::ref_from_raw(NonNull::new(result).unwrap()) }
     }
@@ -164,14 +153,8 @@ impl Component {
         unsafe { BnString::from_raw(result) }
     }
 
-    pub fn set_name<S: BnStrCompatible>(&self, name: S) {
-        let name = name.into_bytes_with_nul();
-        unsafe {
-            BNComponentSetName(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn set_name<S: AsCStr>(&self, name: S) {
+        unsafe { BNComponentSetName(self.handle.as_ptr(), name.as_cstr().as_ptr()) }
     }
 
     /// The component that contains this component, if it exists.
@@ -321,7 +304,7 @@ impl IntoComponentGuid for &Component {
     }
 }
 
-impl<S: BnStrCompatible> IntoComponentGuid for S {
+impl<S: AsCStr> IntoComponentGuid for S {
     fn component_guid(self) -> BnString {
         BnString::new(self)
     }

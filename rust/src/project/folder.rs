@@ -1,14 +1,14 @@
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::Project;
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use binaryninjacore_sys::{
     BNFreeProjectFolder, BNFreeProjectFolderList, BNNewProjectFolderReference, BNProjectFolder,
     BNProjectFolderExport, BNProjectFolderGetDescription, BNProjectFolderGetId,
     BNProjectFolderGetName, BNProjectFolderGetParent, BNProjectFolderGetProject,
     BNProjectFolderSetDescription, BNProjectFolderSetName, BNProjectFolderSetParent,
 };
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::fmt::Debug;
 use std::ptr::{null_mut, NonNull};
 
@@ -46,14 +46,8 @@ impl ProjectFolder {
     }
 
     /// Set the name of this folder
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) -> bool {
-        let value_raw = value.into_bytes_with_nul();
-        unsafe {
-            BNProjectFolderSetName(
-                self.handle.as_ptr(),
-                value_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn set_name<S: AsCStr>(&self, value: S) -> bool {
+        unsafe { BNProjectFolderSetName(self.handle.as_ptr(), value.as_cstr().as_ptr()) }
     }
 
     /// Get the description of this folder
@@ -62,14 +56,8 @@ impl ProjectFolder {
     }
 
     /// Set the description of this folder
-    pub fn set_description<S: BnStrCompatible>(&self, value: S) -> bool {
-        let value_raw = value.into_bytes_with_nul();
-        unsafe {
-            BNProjectFolderSetDescription(
-                self.handle.as_ptr(),
-                value_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn set_description<S: AsCStr>(&self, value: S) -> bool {
+        unsafe { BNProjectFolderSetDescription(self.handle.as_ptr(), value.as_cstr().as_ptr()) }
     }
 
     /// Get the folder that contains this folder
@@ -88,7 +76,7 @@ impl ProjectFolder {
     /// Recursively export this folder to disk, returns `true' if the export succeeded
     ///
     /// * `dest` - Destination path for the exported contents
-    pub fn export<S: BnStrCompatible>(&self, dest: S) -> bool {
+    pub fn export<S: AsCStr>(&self, dest: S) -> bool {
         self.export_with_progress(dest, NoProgressCallback)
     }
 
@@ -99,15 +87,13 @@ impl ProjectFolder {
     /// * `progress` - [`ProgressCallback`] that will be called as contents are exporting
     pub fn export_with_progress<S, P>(&self, dest: S, mut progress: P) -> bool
     where
-        S: BnStrCompatible,
+        S: AsCStr,
         P: ProgressCallback,
     {
-        let dest_raw = dest.into_bytes_with_nul();
-
         let success = unsafe {
             BNProjectFolderExport(
                 self.handle.as_ptr(),
-                dest_raw.as_ref().as_ptr() as *const c_char,
+                dest.as_cstr().as_ptr(),
                 &mut progress as *mut P as *mut c_void,
                 Some(P::cb_progress_callback),
             )

@@ -1,8 +1,7 @@
 use super::Remote;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ptr::NonNull;
@@ -50,14 +49,8 @@ impl RemoteGroup {
 
     /// Set group name
     /// You will need to push the group to update the Remote.
-    pub fn set_name<U: BnStrCompatible>(&self, name: U) {
-        let name = name.into_bytes_with_nul();
-        unsafe {
-            BNCollaborationGroupSetName(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn set_name<U: AsCStr>(&self, name: U) {
+        unsafe { BNCollaborationGroupSetName(self.handle.as_ptr(), name.as_cstr().as_ptr()) }
     }
 
     /// Get list of users in the group
@@ -90,16 +83,11 @@ impl RemoteGroup {
     pub fn set_users<I>(&self, usernames: I) -> Result<(), ()>
     where
         I: IntoIterator,
-        I::Item: BnStrCompatible,
+        I::Item: AsCStr,
     {
-        let usernames: Vec<_> = usernames
-            .into_iter()
-            .map(|u| u.into_bytes_with_nul())
-            .collect();
-        let mut usernames_raw: Vec<_> = usernames
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let usernames = usernames.into_iter().collect::<Vec<_>>();
+        let usernames = usernames.iter().map(|u| u.as_cstr()).collect::<Vec<_>>();
+        let mut usernames_raw = usernames.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
         // TODO: This should only fail if collaboration is not supported.
         // TODO: Because you should not have a RemoteGroup at that point we can ignore?
         // TODO: Do you need any permissions to do this?
@@ -114,13 +102,9 @@ impl RemoteGroup {
     }
 
     /// Test if a group has a user with the given username
-    pub fn contains_user<U: BnStrCompatible>(&self, username: U) -> bool {
-        let username = username.into_bytes_with_nul();
+    pub fn contains_user<U: AsCStr>(&self, username: U) -> bool {
         unsafe {
-            BNCollaborationGroupContainsUser(
-                self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-            )
+            BNCollaborationGroupContainsUser(self.handle.as_ptr(), username.as_cstr().as_ptr())
         }
     }
 }

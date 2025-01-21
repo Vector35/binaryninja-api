@@ -121,7 +121,7 @@ impl DataBuffer {
     }
 
     pub fn from_escaped_string(value: &BnString) -> Self {
-        Self(unsafe { BNDecodeEscapedString(value.as_ptr()) })
+        Self(unsafe { BNDecodeEscapedString(value.as_c_str().as_ptr()) })
     }
 
     pub fn to_base64(&self) -> BnString {
@@ -129,7 +129,7 @@ impl DataBuffer {
     }
 
     pub fn from_base64(value: &BnString) -> Self {
-        Self(unsafe { BNDecodeBase64(value.as_ptr()) })
+        Self(unsafe { BNDecodeBase64(value.as_c_str().as_ptr()) })
     }
 
     pub fn zlib_compress(&self) -> Self {

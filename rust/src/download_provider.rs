@@ -1,6 +1,6 @@
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::settings::Settings;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::ffi::{c_void, CStr};
@@ -13,12 +13,8 @@ pub struct DownloadProvider {
 }
 
 impl DownloadProvider {
-    pub fn get<S: BnStrCompatible>(name: S) -> Option<DownloadProvider> {
-        let result = unsafe {
-            BNGetDownloadProviderByName(
-                name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char
-            )
-        };
+    pub fn get<S: AsCStr>(name: S) -> Option<DownloadProvider> {
+        let result = unsafe { BNGetDownloadProviderByName(name.as_cstr().as_ptr()) };
         if result.is_null() {
             return None;
         }
@@ -130,7 +126,7 @@ impl DownloadInstance {
         }
     }
 
-    pub fn perform_request<S: BnStrCompatible>(
+    pub fn perform_request<S: AsCStr>(
         &mut self,
         url: S,
         callbacks: DownloadInstanceOutputCallbacks,
@@ -146,7 +142,7 @@ impl DownloadInstance {
         let result = unsafe {
             BNPerformDownloadRequest(
                 self.handle,
-                url.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                url.as_cstr().as_ptr(),
                 &mut cbs as *mut BNDownloadInstanceOutputCallbacks,
             )
         };
@@ -196,10 +192,10 @@ impl DownloadInstance {
     }
 
     pub fn perform_custom_request<
-        M: BnStrCompatible,
-        U: BnStrCompatible,
-        HK: BnStrCompatible,
-        HV: BnStrCompatible,
+        M: AsCStr,
+        U: AsCStr,
+        HK: AsCStr,
+        HV: AsCStr,
         I: IntoIterator<Item = (HK, HV)>,
     >(
         &mut self,
@@ -208,20 +204,13 @@ impl DownloadInstance {
         headers: I,
         callbacks: DownloadInstanceInputOutputCallbacks,
     ) -> Result<DownloadResponse, BnString> {
-        let mut header_keys = vec![];
-        let mut header_values = vec![];
-        for (key, value) in headers {
-            header_keys.push(key.into_bytes_with_nul());
-            header_values.push(value.into_bytes_with_nul());
-        }
+        let (keys, values): (Vec<_>, Vec<_>) = headers.into_iter().unzip();
 
-        let mut header_key_ptrs = vec![];
-        let mut header_value_ptrs = vec![];
+        let header_keys = keys.iter().map(|k| k.as_cstr()).collect::<Vec<_>>();
+        let header_values = values.iter().map(|v| v.as_cstr()).collect::<Vec<_>>();
 
-        for (key, value) in header_keys.iter().zip(header_values.iter()) {
-            header_key_ptrs.push(key.as_ref().as_ptr() as *const c_char);
-            header_value_ptrs.push(value.as_ref().as_ptr() as *const c_char);
-        }
+        let header_key_ptrs = header_keys.iter().map(|k| k.as_ptr()).collect::<Vec<_>>();
+        let header_value_ptrs = header_values.iter().map(|v| v.as_ptr()).collect::<Vec<_>>();
 
         let callbacks = Box::into_raw(Box::new(callbacks));
         let mut cbs = BNDownloadInstanceInputOutputCallbacks {
@@ -238,8 +227,8 @@ impl DownloadInstance {
         let result = unsafe {
             BNPerformCustomRequest(
                 self.handle,
-                method.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-                url.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                method.as_cstr().as_ptr(),
+                url.as_cstr().as_ptr(),
                 header_key_ptrs.len() as u64,
                 header_key_ptrs.as_ptr(),
                 header_value_ptrs.as_ptr(),

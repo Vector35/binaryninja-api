@@ -1,13 +1,13 @@
 use binaryninjacore_sys::*;
 
-use core::{ffi, mem, ptr};
+use core::{mem, ptr};
 
 use crate::{
     architecture::CoreArchitecture,
     metadata::Metadata,
     platform::Platform,
     rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref},
-    string::{BnStrCompatible, BnString},
+    string::{AsCStr, BnString},
     types::{QualifiedName, QualifiedNameAndType, Type},
 };
 
@@ -42,10 +42,8 @@ impl TypeLibrary {
     }
 
     /// Creates an empty type library object with a random GUID and the provided name.
-    pub fn new<S: BnStrCompatible>(arch: CoreArchitecture, name: S) -> TypeLibrary {
-        let name = name.into_bytes_with_nul();
-        let new_lib =
-            unsafe { BNNewTypeLibrary(arch.handle, name.as_ref().as_ptr() as *const ffi::c_char) };
+    pub fn new<S: AsCStr>(arch: CoreArchitecture, name: S) -> TypeLibrary {
+        let new_lib = unsafe { BNNewTypeLibrary(arch.handle, name.as_cstr().as_ptr()) };
         unsafe { TypeLibrary::from_raw(ptr::NonNull::new(new_lib).unwrap()) }
     }
 
@@ -57,49 +55,31 @@ impl TypeLibrary {
     }
 
     /// Decompresses a type library file to a file on disk.
-    pub fn decompress_to_file<P: BnStrCompatible, O: BnStrCompatible>(path: P, output: O) -> bool {
-        let path = path.into_bytes_with_nul();
-        let output = output.into_bytes_with_nul();
-        unsafe {
-            BNTypeLibraryDecompressToFile(
-                path.as_ref().as_ptr() as *const ffi::c_char,
-                output.as_ref().as_ptr() as *const ffi::c_char,
-            )
-        }
+    pub fn decompress_to_file<P: AsCStr, O: AsCStr>(path: P, output: O) -> bool {
+        unsafe { BNTypeLibraryDecompressToFile(path.as_cstr().as_ptr(), output.as_cstr().as_ptr()) }
     }
 
     /// Loads a finalized type library instance from file
-    pub fn load_from_file<S: BnStrCompatible>(path: S) -> Option<TypeLibrary> {
-        let path = path.into_bytes_with_nul();
-        let handle =
-            unsafe { BNLoadTypeLibraryFromFile(path.as_ref().as_ptr() as *const ffi::c_char) };
+    pub fn load_from_file<S: AsCStr>(path: S) -> Option<TypeLibrary> {
+        let handle = unsafe { BNLoadTypeLibraryFromFile(path.as_cstr().as_ptr()) };
         ptr::NonNull::new(handle).map(|h| unsafe { TypeLibrary::from_raw(h) })
     }
 
     /// Saves a finalized type library instance to file
-    pub fn write_to_file<S: BnStrCompatible>(&self, path: S) -> bool {
-        let path = path.into_bytes_with_nul();
-        unsafe {
-            BNWriteTypeLibraryToFile(self.as_raw(), path.as_ref().as_ptr() as *const ffi::c_char)
-        }
+    pub fn write_to_file<S: AsCStr>(&self, path: S) -> bool {
+        unsafe { BNWriteTypeLibraryToFile(self.as_raw(), path.as_cstr().as_ptr()) }
     }
 
     /// Looks up the first type library found with a matching name. Keep in mind that names are not
     /// necessarily unique.
-    pub fn from_name<S: BnStrCompatible>(arch: CoreArchitecture, name: S) -> Option<TypeLibrary> {
-        let name = name.into_bytes_with_nul();
-        let handle = unsafe {
-            BNLookupTypeLibraryByName(arch.handle, name.as_ref().as_ptr() as *const ffi::c_char)
-        };
+    pub fn from_name<S: AsCStr>(arch: CoreArchitecture, name: S) -> Option<TypeLibrary> {
+        let handle = unsafe { BNLookupTypeLibraryByName(arch.handle, name.as_cstr().as_ptr()) };
         ptr::NonNull::new(handle).map(|h| unsafe { TypeLibrary::from_raw(h) })
     }
 
     /// Attempts to grab a type library associated with the provided Architecture and GUID pair
-    pub fn from_guid<S: BnStrCompatible>(arch: CoreArchitecture, guid: S) -> Option<TypeLibrary> {
-        let guid = guid.into_bytes_with_nul();
-        let handle = unsafe {
-            BNLookupTypeLibraryByGuid(arch.handle, guid.as_ref().as_ptr() as *const ffi::c_char)
-        };
+    pub fn from_guid<S: AsCStr>(arch: CoreArchitecture, guid: S) -> Option<TypeLibrary> {
+        let handle = unsafe { BNLookupTypeLibraryByGuid(arch.handle, guid.as_cstr().as_ptr()) };
         ptr::NonNull::new(handle).map(|h| unsafe { TypeLibrary::from_raw(h) })
     }
 
@@ -117,11 +97,8 @@ impl TypeLibrary {
     }
 
     /// Sets the name of a type library instance that has not been finalized
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) {
-        let value = value.into_bytes_with_nul();
-        unsafe {
-            BNSetTypeLibraryName(self.as_raw(), value.as_ref().as_ptr() as *const ffi::c_char)
-        }
+    pub fn set_name<S: AsCStr>(&self, value: S) {
+        unsafe { BNSetTypeLibraryName(self.as_raw(), value.as_cstr().as_ptr()) }
     }
 
     /// The `dependency_name` of a library is the name used to record dependencies across
@@ -135,14 +112,8 @@ impl TypeLibrary {
     }
 
     /// Sets the dependency name of a type library instance that has not been finalized
-    pub fn set_dependency_name<S: BnStrCompatible>(&self, value: S) {
-        let value = value.into_bytes_with_nul();
-        unsafe {
-            BNSetTypeLibraryDependencyName(
-                self.as_raw(),
-                value.as_ref().as_ptr() as *const ffi::c_char,
-            )
-        }
+    pub fn set_dependency_name<S: AsCStr>(&self, value: S) {
+        unsafe { BNSetTypeLibraryDependencyName(self.as_raw(), value.as_cstr().as_ptr()) }
     }
 
     /// Returns the GUID associated with the type library
@@ -152,11 +123,8 @@ impl TypeLibrary {
     }
 
     /// Sets the GUID of a type library instance that has not been finalized
-    pub fn set_guid<S: BnStrCompatible>(&self, value: S) {
-        let value = value.into_bytes_with_nul();
-        unsafe {
-            BNSetTypeLibraryGuid(self.as_raw(), value.as_ref().as_ptr() as *const ffi::c_char)
-        }
+    pub fn set_guid<S: AsCStr>(&self, value: S) {
+        unsafe { BNSetTypeLibraryGuid(self.as_raw(), value.as_cstr().as_ptr()) }
     }
 
     /// A list of extra names that will be considered a match by [Platform::get_type_libraries_by_name]
@@ -168,14 +136,8 @@ impl TypeLibrary {
     }
 
     /// Adds an extra name to this type library used during library lookups and dependency resolution
-    pub fn add_alternate_name<S: BnStrCompatible>(&self, value: S) {
-        let value = value.into_bytes_with_nul();
-        unsafe {
-            BNAddTypeLibraryAlternateName(
-                self.as_raw(),
-                value.as_ref().as_ptr() as *const ffi::c_char,
-            )
-        }
+    pub fn add_alternate_name<S: AsCStr>(&self, value: S) {
+        unsafe { BNAddTypeLibraryAlternateName(self.as_raw(), value.as_cstr().as_ptr()) }
     }
 
     /// Returns a list of all platform names that this type library will register with during platform
@@ -212,11 +174,8 @@ impl TypeLibrary {
     }
 
     /// Retrieves a metadata associated with the given key stored in the type library
-    pub fn query_metadata<S: BnStrCompatible>(&self, key: S) -> Option<Metadata> {
-        let key = key.into_bytes_with_nul();
-        let result = unsafe {
-            BNTypeLibraryQueryMetadata(self.as_raw(), key.as_ref().as_ptr() as *const ffi::c_char)
-        };
+    pub fn query_metadata<S: AsCStr>(&self, key: S) -> Option<Metadata> {
+        let result = unsafe { BNTypeLibraryQueryMetadata(self.as_raw(), key.as_cstr().as_ptr()) };
         (!result.is_null()).then(|| unsafe { Metadata::from_raw(result) })
     }
 
@@ -231,23 +190,13 @@ impl TypeLibrary {
     ///
     /// * `key` - key value to associate the Metadata object with
     /// * `md` - object to store.
-    pub fn store_metadata<S: BnStrCompatible>(&self, key: S, md: &Metadata) {
-        let key = key.into_bytes_with_nul();
-        unsafe {
-            BNTypeLibraryStoreMetadata(
-                self.as_raw(),
-                key.as_ref().as_ptr() as *const ffi::c_char,
-                md.handle,
-            )
-        }
+    pub fn store_metadata<S: AsCStr>(&self, key: S, md: &Metadata) {
+        unsafe { BNTypeLibraryStoreMetadata(self.as_raw(), key.as_cstr().as_ptr(), md.handle) }
     }
 
     /// Removes the metadata associated with key from the current type library.
-    pub fn remove_metadata<S: BnStrCompatible>(&self, key: S) {
-        let key = key.into_bytes_with_nul();
-        unsafe {
-            BNTypeLibraryRemoveMetadata(self.as_raw(), key.as_ref().as_ptr() as *const ffi::c_char)
-        }
+    pub fn remove_metadata<S: AsCStr>(&self, key: S) {
+        unsafe { BNTypeLibraryRemoveMetadata(self.as_raw(), key.as_cstr().as_ptr()) }
     }
 
     /// Retrieves the metadata associated with the current type library.
@@ -299,15 +248,10 @@ impl TypeLibrary {
     /// Use this api with extreme caution.
     ///
     /// </div>
-    pub fn add_type_source<S: BnStrCompatible>(&self, name: QualifiedName, source: S) {
-        let source = source.into_bytes_with_nul();
+    pub fn add_type_source<S: AsCStr>(&self, name: QualifiedName, source: S) {
         let mut raw_name = QualifiedName::into_raw(name);
         unsafe {
-            BNAddTypeLibraryNamedTypeSource(
-                self.as_raw(),
-                &mut raw_name,
-                source.as_ref().as_ptr() as *const ffi::c_char,
-            )
+            BNAddTypeLibraryNamedTypeSource(self.as_raw(), &mut raw_name, source.as_cstr().as_ptr())
         }
         QualifiedName::free_raw(raw_name);
     }

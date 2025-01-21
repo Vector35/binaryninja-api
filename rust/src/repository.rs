@@ -9,7 +9,7 @@ use binaryninjacore_sys::*;
 
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::repository::plugin::RepositoryPlugin;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 pub use manager::RepositoryManager;
 
@@ -52,14 +52,9 @@ impl Repository {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn plugin_by_path<S: BnStrCompatible>(&self, path: S) -> Option<Ref<RepositoryPlugin>> {
-        let path = path.into_bytes_with_nul();
-        let result = unsafe {
-            BNRepositoryGetPluginByPath(
-                self.handle.as_ptr(),
-                path.as_ref().as_ptr() as *const c_char,
-            )
-        };
+    pub fn plugin_by_path<S: AsCStr>(&self, path: S) -> Option<Ref<RepositoryPlugin>> {
+        let result =
+            unsafe { BNRepositoryGetPluginByPath(self.handle.as_ptr(), path.as_cstr().as_ptr()) };
         NonNull::new(result).map(|h| unsafe { RepositoryPlugin::ref_from_raw(h) })
     }
 

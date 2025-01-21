@@ -19,27 +19,25 @@ use std::ffi::{c_char, c_void};
 
 use crate::architecture::CoreArchitecture;
 use crate::binary_view::BinaryView;
-use crate::string::{raw_to_string, BnStrCompatible, BnString};
+use crate::string::{raw_to_string, AsCStr, BnString};
 use crate::types::{QualifiedName, Type};
 
 use crate::rc::*;
 
 pub type Result<R> = std::result::Result<R, ()>;
 
-pub fn demangle_generic<S: BnStrCompatible>(
+pub fn demangle_generic<S: AsCStr>(
     arch: &CoreArchitecture,
     mangled_name: S,
     view: Option<&BinaryView>,
     simplify: bool,
 ) -> Option<(QualifiedName, Option<Ref<Type>>)> {
-    let mangled_name_bwn = mangled_name.into_bytes_with_nul();
-    let mangled_name_ptr = mangled_name_bwn.as_ref();
     let mut out_type: *mut BNType = std::ptr::null_mut();
     let mut out_name = BNQualifiedName::default();
     let res = unsafe {
         BNDemangleGeneric(
             arch.handle,
-            mangled_name_ptr.as_ptr() as *const c_char,
+            mangled_name.as_cstr().as_ptr(),
             &mut out_type,
             &mut out_name,
             view.map(|v| v.handle).unwrap_or(std::ptr::null_mut()),
@@ -58,14 +56,12 @@ pub fn demangle_generic<S: BnStrCompatible>(
     }
 }
 
-pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Option<QualifiedName> {
-    let mangled_name_bwn = mangled_name.into_bytes_with_nul();
-    let mangled_name_ptr = mangled_name_bwn.as_ref();
+pub fn demangle_llvm<S: AsCStr>(mangled_name: S, simplify: bool) -> Option<QualifiedName> {
     let mut out_name: *mut *mut std::os::raw::c_char = std::ptr::null_mut();
     let mut out_size: usize = 0;
     let res = unsafe {
         BNDemangleLLVM(
-            mangled_name_ptr.as_ptr() as *const c_char,
+            mangled_name.as_cstr().as_ptr(),
             &mut out_name,
             &mut out_size,
             simplify,
@@ -87,20 +83,18 @@ pub fn demangle_llvm<S: BnStrCompatible>(mangled_name: S, simplify: bool) -> Opt
     }
 }
 
-pub fn demangle_gnu3<S: BnStrCompatible>(
+pub fn demangle_gnu3<S: AsCStr>(
     arch: &CoreArchitecture,
     mangled_name: S,
     simplify: bool,
 ) -> Option<(QualifiedName, Option<Ref<Type>>)> {
-    let mangled_name_bwn = mangled_name.into_bytes_with_nul();
-    let mangled_name_ptr = mangled_name_bwn.as_ref();
     let mut out_type: *mut BNType = std::ptr::null_mut();
     let mut out_name: *mut *mut std::os::raw::c_char = std::ptr::null_mut();
     let mut out_size: usize = 0;
     let res = unsafe {
         BNDemangleGNU3(
             arch.handle,
-            mangled_name_ptr.as_ptr() as *const c_char,
+            mangled_name.as_cstr().as_ptr(),
             &mut out_type,
             &mut out_name,
             &mut out_size,
@@ -128,21 +122,18 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
     }
 }
 
-pub fn demangle_ms<S: BnStrCompatible>(
+pub fn demangle_ms<S: AsCStr>(
     arch: &CoreArchitecture,
     mangled_name: S,
     simplify: bool,
 ) -> Option<(QualifiedName, Option<Ref<Type>>)> {
-    let mangled_name_bwn = mangled_name.into_bytes_with_nul();
-    let mangled_name_ptr = mangled_name_bwn.as_ref();
-
     let mut out_type: *mut BNType = std::ptr::null_mut();
     let mut out_name: *mut *mut std::os::raw::c_char = std::ptr::null_mut();
     let mut out_size: usize = 0;
     let res = unsafe {
         BNDemangleMS(
             arch.handle,
-            mangled_name_ptr.as_ptr() as *const c_char,
+            mangled_name.as_cstr().as_ptr(),
             &mut out_type,
             &mut out_name,
             &mut out_size,
@@ -187,19 +178,16 @@ impl Demangler {
         unsafe { Array::<Demangler>::new(demanglers, count, ()) }
     }
 
-    pub fn is_mangled_string<S: BnStrCompatible>(&self, name: S) -> bool {
-        let bytes = name.into_bytes_with_nul();
-        unsafe { BNIsDemanglerMangledName(self.handle, bytes.as_ref().as_ptr() as *const _) }
+    pub fn is_mangled_string<S: AsCStr>(&self, name: S) -> bool {
+        unsafe { BNIsDemanglerMangledName(self.handle, name.as_cstr().as_ptr()) }
     }
 
-    pub fn demangle<S: BnStrCompatible>(
+    pub fn demangle<S: AsCStr>(
         &self,
         arch: &CoreArchitecture,
         name: S,
         view: Option<&BinaryView>,
     ) -> Option<(QualifiedName, Option<Ref<Type>>)> {
-        let name_bytes = name.into_bytes_with_nul();
-
         let mut out_type = std::ptr::null_mut();
         let mut out_var_name = BNQualifiedName::default();
 
@@ -212,7 +200,7 @@ impl Demangler {
             BNDemanglerDemangle(
                 self.handle,
                 arch.handle,
-                name_bytes.as_ref().as_ptr() as *const _,
+                name.as_cstr().as_ptr(),
                 &mut out_type,
                 &mut out_var_name,
                 view_ptr,
@@ -236,9 +224,8 @@ impl Demangler {
         unsafe { BnString::from_raw(BNGetDemanglerName(self.handle)) }
     }
 
-    pub fn from_name<S: BnStrCompatible>(name: S) -> Option<Self> {
-        let name_bytes = name.into_bytes_with_nul();
-        let demangler = unsafe { BNGetDemanglerByName(name_bytes.as_ref().as_ptr() as *const _) };
+    pub fn from_name<S: AsCStr>(name: S) -> Option<Self> {
+        let demangler = unsafe { BNGetDemanglerByName(name.as_cstr().as_ptr()) };
         if demangler.is_null() {
             None
         } else {
@@ -248,7 +235,7 @@ impl Demangler {
 
     pub fn register<S, C>(name: S, demangler: C) -> Self
     where
-        S: BnStrCompatible,
+        S: AsCStr,
         C: CustomDemangler,
     {
         extern "C" fn cb_is_mangled_string<C>(ctxt: *mut c_void, name: *const c_char) -> bool
@@ -308,8 +295,6 @@ impl Demangler {
             })
         }
 
-        let name = name.into_bytes_with_nul();
-        let name_ptr = name.as_ref().as_ptr() as *mut _;
         let ctxt = Box::into_raw(Box::new(demangler));
 
         let callbacks = BNDemanglerCallbacks {
@@ -321,7 +306,7 @@ impl Demangler {
 
         unsafe {
             Demangler::from_raw(BNRegisterDemangler(
-                name_ptr,
+                name.as_cstr().as_ptr(),
                 Box::leak(Box::new(callbacks)),
             ))
         }

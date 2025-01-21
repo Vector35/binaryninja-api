@@ -3,9 +3,8 @@ use crate::data_buffer::DataBuffer;
 use crate::file_accessor::FileAccessor;
 use crate::rc::Ref;
 use crate::segment::SegmentFlags;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct MemoryMap {
@@ -43,16 +42,15 @@ impl MemoryMap {
 
     pub fn add_binary_memory_region(
         &mut self,
-        name: impl BnStrCompatible,
+        name: impl AsCStr,
         start: u64,
         view: &BinaryView,
         segment_flags: Option<SegmentFlags>,
     ) -> bool {
-        let name_raw = name.into_bytes_with_nul();
         unsafe {
             BNAddBinaryMemoryRegion(
                 self.view.handle,
-                name_raw.as_ref().as_ptr() as *const c_char,
+                name.as_cstr().as_ptr(),
                 start,
                 view.handle,
                 segment_flags.unwrap_or_default().into_raw(),
@@ -62,16 +60,15 @@ impl MemoryMap {
 
     pub fn add_data_memory_region(
         &mut self,
-        name: impl BnStrCompatible,
+        name: impl AsCStr,
         start: u64,
         data: &DataBuffer,
         segment_flags: Option<SegmentFlags>,
     ) -> bool {
-        let name_raw = name.into_bytes_with_nul();
         unsafe {
             BNAddDataMemoryRegion(
                 self.view.handle,
-                name_raw.as_ref().as_ptr() as *const c_char,
+                name.as_cstr().as_ptr(),
                 start,
                 data.as_raw(),
                 segment_flags.unwrap_or_default().into_raw(),
@@ -81,16 +78,15 @@ impl MemoryMap {
 
     pub fn add_remote_memory_region(
         &mut self,
-        name: impl BnStrCompatible,
+        name: impl AsCStr,
         start: u64,
         accessor: &mut FileAccessor,
         segment_flags: Option<SegmentFlags>,
     ) -> bool {
-        let name_raw = name.into_bytes_with_nul();
         unsafe {
             BNAddRemoteMemoryRegion(
                 self.view.handle,
-                name_raw.as_ref().as_ptr() as *const c_char,
+                name.as_cstr().as_ptr(),
                 start,
                 &mut accessor.api_object,
                 segment_flags.unwrap_or_default().into_raw(),
@@ -98,14 +94,8 @@ impl MemoryMap {
         }
     }
 
-    pub fn remove_memory_region(&mut self, name: impl BnStrCompatible) -> bool {
-        let name_raw = name.into_bytes_with_nul();
-        unsafe {
-            BNRemoveMemoryRegion(
-                self.view.handle,
-                name_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn remove_memory_region(&mut self, name: impl AsCStr) -> bool {
+        unsafe { BNRemoveMemoryRegion(self.view.handle, name.as_cstr().as_ptr()) }
     }
 
     pub fn active_memory_region_at(&self, addr: u64) -> BnString {
@@ -115,98 +105,41 @@ impl MemoryMap {
         }
     }
 
-    pub fn memory_region_flags(&self, name: impl BnStrCompatible) -> SegmentFlags {
-        let name_raw = name.into_bytes_with_nul();
-        let flags_raw = unsafe {
-            BNGetMemoryRegionFlags(
-                self.view.handle,
-                name_raw.as_ref().as_ptr() as *const c_char,
-            )
-        };
+    pub fn memory_region_flags(&self, name: impl AsCStr) -> SegmentFlags {
+        let flags_raw =
+            unsafe { BNGetMemoryRegionFlags(self.view.handle, name.as_cstr().as_ptr()) };
         SegmentFlags::from_raw(flags_raw)
     }
 
-    pub fn set_memory_region_flags(
-        &mut self,
-        name: impl BnStrCompatible,
-        flags: SegmentFlags,
-    ) -> bool {
-        let name_raw = name.into_bytes_with_nul();
+    pub fn set_memory_region_flags(&mut self, name: impl AsCStr, flags: SegmentFlags) -> bool {
         unsafe {
-            BNSetMemoryRegionFlags(
-                self.view.handle,
-                name_raw.as_ref().as_ptr() as *const c_char,
-                flags.into_raw(),
-            )
+            BNSetMemoryRegionFlags(self.view.handle, name.as_cstr().as_ptr(), flags.into_raw())
         }
     }
 
-    pub fn is_memory_region_enabled(&self, name: impl BnStrCompatible) -> bool {
-        let name_raw = name.into_bytes_with_nul();
-        unsafe {
-            BNIsMemoryRegionEnabled(
-                self.view.handle,
-                name_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn is_memory_region_enabled(&self, name: impl AsCStr) -> bool {
+        unsafe { BNIsMemoryRegionEnabled(self.view.handle, name.as_cstr().as_ptr()) }
     }
 
-    pub fn set_memory_region_enabled(&mut self, name: impl BnStrCompatible, enabled: bool) -> bool {
-        let name_raw = name.into_bytes_with_nul();
-        unsafe {
-            BNSetMemoryRegionEnabled(
-                self.view.handle,
-                name_raw.as_ref().as_ptr() as *const c_char,
-                enabled,
-            )
-        }
+    pub fn set_memory_region_enabled(&mut self, name: impl AsCStr, enabled: bool) -> bool {
+        unsafe { BNSetMemoryRegionEnabled(self.view.handle, name.as_cstr().as_ptr(), enabled) }
     }
 
     // TODO: Should we just call this is_memory_region_relocatable?
-    pub fn is_memory_region_rebaseable(&self, name: impl BnStrCompatible) -> bool {
-        let name_raw = name.into_bytes_with_nul();
-        unsafe {
-            BNIsMemoryRegionRebaseable(
-                self.view.handle,
-                name_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn is_memory_region_rebaseable(&self, name: impl AsCStr) -> bool {
+        unsafe { BNIsMemoryRegionRebaseable(self.view.handle, name.as_cstr().as_ptr()) }
     }
 
-    pub fn set_memory_region_rebaseable(
-        &mut self,
-        name: impl BnStrCompatible,
-        enabled: bool,
-    ) -> bool {
-        let name_raw = name.into_bytes_with_nul();
-        unsafe {
-            BNSetMemoryRegionRebaseable(
-                self.view.handle,
-                name_raw.as_ref().as_ptr() as *const c_char,
-                enabled,
-            )
-        }
+    pub fn set_memory_region_rebaseable(&mut self, name: impl AsCStr, enabled: bool) -> bool {
+        unsafe { BNSetMemoryRegionRebaseable(self.view.handle, name.as_cstr().as_ptr(), enabled) }
     }
 
-    pub fn memory_region_fill(&self, name: impl BnStrCompatible) -> u8 {
-        let name_raw = name.into_bytes_with_nul();
-        unsafe {
-            BNGetMemoryRegionFill(
-                self.view.handle,
-                name_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn memory_region_fill(&self, name: impl AsCStr) -> u8 {
+        unsafe { BNGetMemoryRegionFill(self.view.handle, name.as_cstr().as_ptr()) }
     }
 
-    pub fn set_memory_region_fill(&mut self, name: impl BnStrCompatible, fill: u8) -> bool {
-        let name_raw = name.into_bytes_with_nul();
-        unsafe {
-            BNSetMemoryRegionFill(
-                self.view.handle,
-                name_raw.as_ref().as_ptr() as *const c_char,
-                fill,
-            )
-        }
+    pub fn set_memory_region_fill(&mut self, name: impl AsCStr, fill: u8) -> bool {
+        unsafe { BNSetMemoryRegionFill(self.view.handle, name.as_cstr().as_ptr(), fill) }
     }
 
     pub fn reset(&mut self) {

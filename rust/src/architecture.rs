@@ -20,7 +20,7 @@ use binaryninjacore_sys::*;
 use std::fmt::{Debug, Formatter};
 
 use crate::{
-    calling_convention::CallingConvention,
+    calling_convention::CoreCallingConvention,
     data_buffer::DataBuffer,
     disassembly::InstructionTextToken,
     low_level_il::{MutableLiftedILExpr, MutableLiftedILFunction},
@@ -1897,7 +1897,7 @@ impl Architecture for CoreArchitecture {
 
 macro_rules! cc_func {
     ($get_name:ident, $get_api:ident, $set_name:ident, $set_api:ident) => {
-        fn $get_name(&self) -> Option<Ref<CallingConvention<Self>>> {
+        fn $get_name(&self) -> Option<Ref<CoreCallingConvention>> {
             let arch = self.as_ref();
 
             unsafe {
@@ -1906,12 +1906,15 @@ macro_rules! cc_func {
                 if cc.is_null() {
                     None
                 } else {
-                    Some(CallingConvention::ref_from_raw(cc, self.handle()))
+                    Some(CoreCallingConvention::ref_from_raw(
+                        cc,
+                        self.as_ref().handle(),
+                    ))
                 }
             }
         }
 
-        fn $set_name(&self, cc: &CallingConvention<Self>) {
+        fn $set_name(&self, cc: &CoreCallingConvention) {
             let arch = self.as_ref();
 
             assert!(
@@ -1939,12 +1942,12 @@ pub trait ArchitectureExt: Architecture {
         }
     }
 
-    fn calling_conventions(&self) -> Array<CallingConvention<Self>> {
+    fn calling_conventions(&self) -> Array<CoreCallingConvention> {
         unsafe {
             let mut count = 0;
             let calling_convs =
                 BNGetArchitectureCallingConventions(self.as_ref().handle, &mut count);
-            Array::new(calling_convs, count, self.handle())
+            Array::new(calling_convs, count, self.as_ref().handle())
         }
     }
 

@@ -1,6 +1,6 @@
 mod block;
 mod function;
-mod instruction;
+pub mod instruction;
 mod lift;
 pub mod operation;
 

@@ -1,11 +1,7 @@
-use binaryninjacore_sys::*;
-use std::fmt;
-use std::fmt::{Display, Formatter};
-
 use super::lift::*;
 use super::operation::*;
 use super::{MediumLevelILBlock, MediumLevelILFunction};
-use crate::architecture::{CoreIntrinsic, IntrinsicId};
+use crate::architecture::{CoreIntrinsic, FlagId, IntrinsicId, RegisterId};
 use crate::basic_block::BasicBlock;
 use crate::confidence::Conf;
 use crate::disassembly::InstructionTextToken;
@@ -14,6 +10,9 @@ use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::types::Type;
 use crate::variable::{ConstantData, PossibleValueSet, RegisterValue, SSAVariable, Variable};
 use crate::{DataFlowQueryOption, ILBranchDependence};
+use binaryninjacore_sys::*;
+use std::fmt;
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MediumLevelInstructionIndex(pub usize);
@@ -46,162 +45,10 @@ impl Display for MediumLevelInstructionIndex {
 pub struct MediumLevelILInstruction {
     pub function: Ref<MediumLevelILFunction>,
     pub address: u64,
-    pub index: MediumLevelInstructionIndex,
+    // TODO; Because this structure is incorrectly named instruction, we want to make it clear that we actually have the expression index.
+    pub expr_index: MediumLevelInstructionIndex,
     pub size: usize,
     pub kind: MediumLevelILInstructionKind,
-}
-
-impl MediumLevelILInstruction {
-    /// Returns the [`BasicBlock`] containing the given [`MediumLevelILInstruction`].
-    pub fn basic_block(&self) -> Option<Ref<BasicBlock<MediumLevelILBlock>>> {
-        // TODO: We might be able to .expect this if we guarantee that self.index is valid.
-        self.function.basic_block_containing_index(self.index)
-    }
-}
-
-#[derive(Copy, Clone)]
-pub enum MediumLevelILInstructionKind {
-    Nop,
-    Noret,
-    Bp,
-    Undef,
-    Unimpl,
-    If(MediumLevelILOperationIf),
-    FloatConst(FloatConst),
-    Const(Constant),
-    ConstPtr(Constant),
-    Import(Constant),
-    ExternPtr(ExternPtr),
-    ConstData(ConstData),
-    Jump(Jump),
-    RetHint(Jump),
-    StoreSsa(StoreSsa),
-    StoreStructSsa(StoreStructSsa),
-    StoreStruct(StoreStruct),
-    Store(Store),
-    JumpTo(JumpTo),
-    Goto(Goto),
-    FreeVarSlot(FreeVarSlot),
-    SetVarField(SetVarField),
-    SetVar(SetVar),
-    FreeVarSlotSsa(FreeVarSlotSsa),
-    SetVarSsaField(SetVarSsaField),
-    SetVarAliasedField(SetVarSsaField),
-    SetVarAliased(SetVarAliased),
-    SetVarSsa(SetVarSsa),
-    VarPhi(VarPhi),
-    MemPhi(MemPhi),
-    VarSplit(VarSplit),
-    SetVarSplit(SetVarSplit),
-    VarSplitSsa(VarSplitSsa),
-    SetVarSplitSsa(SetVarSplitSsa),
-    Add(BinaryOp),
-    Sub(BinaryOp),
-    And(BinaryOp),
-    Or(BinaryOp),
-    Xor(BinaryOp),
-    Lsl(BinaryOp),
-    Lsr(BinaryOp),
-    Asr(BinaryOp),
-    Rol(BinaryOp),
-    Ror(BinaryOp),
-    Mul(BinaryOp),
-    MuluDp(BinaryOp),
-    MulsDp(BinaryOp),
-    Divu(BinaryOp),
-    DivuDp(BinaryOp),
-    Divs(BinaryOp),
-    DivsDp(BinaryOp),
-    Modu(BinaryOp),
-    ModuDp(BinaryOp),
-    Mods(BinaryOp),
-    ModsDp(BinaryOp),
-    CmpE(BinaryOp),
-    CmpNe(BinaryOp),
-    CmpSlt(BinaryOp),
-    CmpUlt(BinaryOp),
-    CmpSle(BinaryOp),
-    CmpUle(BinaryOp),
-    CmpSge(BinaryOp),
-    CmpUge(BinaryOp),
-    CmpSgt(BinaryOp),
-    CmpUgt(BinaryOp),
-    TestBit(BinaryOp),
-    AddOverflow(BinaryOp),
-    FcmpE(BinaryOp),
-    FcmpNe(BinaryOp),
-    FcmpLt(BinaryOp),
-    FcmpLe(BinaryOp),
-    FcmpGe(BinaryOp),
-    FcmpGt(BinaryOp),
-    FcmpO(BinaryOp),
-    FcmpUo(BinaryOp),
-    Fadd(BinaryOp),
-    Fsub(BinaryOp),
-    Fmul(BinaryOp),
-    Fdiv(BinaryOp),
-    Adc(BinaryOpCarry),
-    Sbb(BinaryOpCarry),
-    Rlc(BinaryOpCarry),
-    Rrc(BinaryOpCarry),
-    Call(Call),
-    Tailcall(Call),
-    Syscall(Syscall),
-    Intrinsic(Intrinsic),
-    IntrinsicSsa(IntrinsicSsa),
-    CallSsa(CallSsa),
-    TailcallSsa(CallSsa),
-    CallUntypedSsa(CallUntypedSsa),
-    TailcallUntypedSsa(CallUntypedSsa),
-    SyscallSsa(SyscallSsa),
-    SyscallUntypedSsa(SyscallUntypedSsa),
-    CallUntyped(CallUntyped),
-    TailcallUntyped(CallUntyped),
-    SyscallUntyped(SyscallUntyped),
-    SeparateParamList(SeparateParamList),
-    SharedParamSlot(SharedParamSlot),
-    Neg(UnaryOp),
-    Not(UnaryOp),
-    Sx(UnaryOp),
-    Zx(UnaryOp),
-    LowPart(UnaryOp),
-    BoolToInt(UnaryOp),
-    UnimplMem(UnaryOp),
-    Fsqrt(UnaryOp),
-    Fneg(UnaryOp),
-    Fabs(UnaryOp),
-    FloatToInt(UnaryOp),
-    IntToFloat(UnaryOp),
-    FloatConv(UnaryOp),
-    RoundToInt(UnaryOp),
-    Floor(UnaryOp),
-    Ceil(UnaryOp),
-    Ftrunc(UnaryOp),
-    Load(UnaryOp),
-    LoadStruct(LoadStruct),
-    LoadStructSsa(LoadStructSsa),
-    LoadSsa(LoadSsa),
-    Ret(Ret),
-    Var(Var),
-    AddressOf(Var),
-    VarField(Field),
-    AddressOfField(Field),
-    VarSsa(VarSsa),
-    VarAliased(VarSsa),
-    VarSsaField(VarSsaField),
-    VarAliasedField(VarSsaField),
-    Trap(Trap),
-}
-
-impl core::fmt::Debug for MediumLevelILInstruction {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(
-            f,
-            "<{} at 0x{:08}>",
-            core::any::type_name::<Self>(),
-            self.address,
-        )
-    }
 }
 
 impl MediumLevelILInstruction {
@@ -210,7 +57,17 @@ impl MediumLevelILInstruction {
         index: MediumLevelInstructionIndex,
     ) -> Self {
         // TODO: If op.sourceOperation == BN_INVALID_OPERAND && op.operation == MLIL_NOP return None
-        let op = unsafe { BNGetMediumLevelILByIndex(function.handle, index.0) };
+        let expr_index = unsafe { BNGetMediumLevelILIndexForInstruction(function.handle, index.0) };
+        Self::new_expr(function, MediumLevelInstructionIndex(expr_index))
+    }
+
+    // TODO: I need MediumLevelILExpression YESTERDAY!!!!
+    pub(crate) fn new_expr(
+        function: Ref<MediumLevelILFunction>,
+        expr_index: MediumLevelInstructionIndex,
+    ) -> Self {
+        // TODO: If op.sourceOperation == BN_INVALID_OPERAND && op.operation == MLIL_NOP return None
+        let op = unsafe { BNGetMediumLevelILByIndex(function.handle, expr_index.0) };
         use BNMediumLevelILOperation::*;
         use MediumLevelILInstructionKind as Op;
         let kind = match op.operation {
@@ -221,8 +78,8 @@ impl MediumLevelILInstruction {
             MLIL_UNIMPL => Op::Unimpl,
             MLIL_IF => Op::If(MediumLevelILOperationIf {
                 condition: op.operands[0] as usize,
-                dest_true: op.operands[1],
-                dest_false: op.operands[2],
+                dest_true: MediumLevelInstructionIndex(op.operands[1] as usize),
+                dest_false: MediumLevelInstructionIndex(op.operands[2] as usize),
             }),
             MLIL_FLOAT_CONST => Op::FloatConst(FloatConst {
                 constant: get_float(op.operands[0], op.size),
@@ -279,7 +136,7 @@ impl MediumLevelILInstruction {
                 first_operand: op.operands[2] as usize,
             }),
             MLIL_GOTO => Op::Goto(Goto {
-                dest: op.operands[0],
+                dest: MediumLevelInstructionIndex(op.operands[0] as usize),
             }),
             MLIL_FREE_VAR_SLOT => Op::FreeVarSlot(FreeVarSlot {
                 dest: get_var(op.operands[0]),
@@ -759,7 +616,7 @@ impl MediumLevelILInstruction {
         Self {
             function,
             address: op.address,
-            index,
+            expr_index: expr_index,
             size: op.size,
             kind,
         }
@@ -835,6 +692,9 @@ impl MediumLevelILInstruction {
                 dest: self.lift_operand(op.dest),
                 targets: OperandIter::new(&*self.function, op.first_operand, op.num_operands)
                     .pairs()
+                    .map(|(addr, instr_idx)| {
+                        (addr, MediumLevelInstructionIndex(instr_idx as usize))
+                    })
                     .collect(),
             }),
             Goto(op) => Lifted::Goto(op),
@@ -1082,7 +942,7 @@ impl MediumLevelILInstruction {
         MediumLevelILLiftedInstruction {
             function: self.function.clone(),
             address: self.address,
-            index: self.index,
+            index: self.expr_index,
             size: self.size,
             kind,
         }
@@ -1095,7 +955,7 @@ impl MediumLevelILInstruction {
             BNGetMediumLevelILExprText(
                 self.function.handle,
                 self.function.function().arch().handle,
-                self.index.0,
+                self.expr_index.0,
                 &mut tokens,
                 &mut count,
                 core::ptr::null_mut(),
@@ -1106,7 +966,13 @@ impl MediumLevelILInstruction {
 
     /// Value of expression if constant or a known value
     pub fn value(&self) -> RegisterValue {
-        unsafe { BNGetMediumLevelILExprValue(self.function.handle, self.index.0) }.into()
+        unsafe { BNGetMediumLevelILExprValue(self.function.handle, self.expr_index.0) }.into()
+    }
+
+    /// Returns the [`BasicBlock`] containing the given [`MediumLevelILInstruction`].
+    pub fn basic_block(&self) -> Option<Ref<BasicBlock<MediumLevelILBlock>>> {
+        // TODO: We might be able to .expect this if we guarantee that self.index is valid.
+        self.function.basic_block_containing_index(self.expr_index)
     }
 
     /// Possible values of expression using path-sensitive static data flow analysis
@@ -1119,7 +985,7 @@ impl MediumLevelILInstruction {
         let value = unsafe {
             BNGetMediumLevelILPossibleExprValues(
                 self.function.handle,
-                self.index.0,
+                self.expr_index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1127,13 +993,13 @@ impl MediumLevelILInstruction {
         PossibleValueSet::from_owned_raw(value)
     }
 
-    pub fn possible_ssa_variable_values(&self, ssa_var: SSAVariable) -> PossibleValueSet {
+    pub fn possible_ssa_variable_values(&self, ssa_var: &SSAVariable) -> PossibleValueSet {
         self.possible_ssa_variable_values_with_opts(ssa_var, &[])
     }
 
     pub fn possible_ssa_variable_values_with_opts(
         &self,
-        ssa_var: SSAVariable,
+        ssa_var: &SSAVariable,
         options: &[DataFlowQueryOption],
     ) -> PossibleValueSet {
         let raw_var = BNVariable::from(ssa_var.variable);
@@ -1142,7 +1008,7 @@ impl MediumLevelILInstruction {
                 self.function.handle,
                 &raw_var,
                 ssa_var.version,
-                self.index.0,
+                self.expr_index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1150,14 +1016,14 @@ impl MediumLevelILInstruction {
         PossibleValueSet::from_owned_raw(value)
     }
 
-    /// return the variable version used at this instruction
+    /// Return the ssa version of a [`Variable`] at the given instruction.
     pub fn ssa_variable_version(&self, var: Variable) -> SSAVariable {
         let raw_var = BNVariable::from(var);
         let version = unsafe {
             BNGetMediumLevelILSSAVarVersionAtILInstruction(
                 self.function.handle,
                 &raw_var,
-                self.index.0,
+                self.expr_index.0,
             )
         };
         SSAVariable::new(var, version)
@@ -1167,7 +1033,11 @@ impl MediumLevelILInstruction {
     pub fn branch_dependencies(&self) -> Array<BranchDependence> {
         let mut count = 0;
         let deps = unsafe {
-            BNGetAllMediumLevelILBranchDependence(self.function.handle, self.index.0, &mut count)
+            BNGetAllMediumLevelILBranchDependence(
+                self.function.handle,
+                self.expr_index.0,
+                &mut count,
+            )
         };
         assert!(!deps.is_null());
         unsafe { Array::new(deps, count, self.function.clone()) }
@@ -1177,8 +1047,8 @@ impl MediumLevelILInstruction {
         let deps = unsafe {
             BNGetMediumLevelILBranchDependence(
                 self.function.handle,
-                self.index.0,
-                instruction.index.0,
+                self.expr_index.0,
+                instruction.expr_index.0,
             )
         };
         BranchDependence {
@@ -1190,19 +1060,17 @@ impl MediumLevelILInstruction {
     /// Version of active memory contents in SSA form for this instruction
     pub fn ssa_memory_version(&self) -> usize {
         unsafe {
-            BNGetMediumLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.index.0)
+            BNGetMediumLevelILSSAMemoryVersionAtILInstruction(
+                self.function.handle,
+                self.expr_index.0,
+            )
         }
     }
 
     /// Type of expression
     pub fn expr_type(&self) -> Option<Conf<Ref<Type>>> {
-        let result = unsafe { BNGetMediumLevelILExprType(self.function.handle, self.index.0) };
-        (!result.type_.is_null()).then(|| {
-            Conf::new(
-                unsafe { Type::ref_from_raw(result.type_) },
-                result.confidence,
-            )
-        })
+        let result = unsafe { BNGetMediumLevelILExprType(self.function.handle, self.expr_index.0) };
+        (!result.type_.is_null()).then(|| Conf::<Ref<Type>>::from_owned_raw(result))
     }
 
     /// Set type of expression
@@ -1211,32 +1079,28 @@ impl MediumLevelILInstruction {
     /// and get lost after a database save and reload. To make persistent changes to the analysis, one should use other
     /// APIs to, for example, change the type of variables. The analysis will then propagate the type of the variable
     /// and update the type of related expressions.
-    pub fn set_expr_type<'a, T: Into<Conf<&'a Type>>>(&self, value: T) {
-        let type_: Conf<&'a Type> = value.into();
-        let mut type_raw: BNTypeWithConfidence = BNTypeWithConfidence {
-            type_: type_.contents.handle,
-            confidence: type_.confidence,
-        };
-        unsafe { BNSetMediumLevelILExprType(self.function.handle, self.index.0, &mut type_raw) }
+    pub fn set_expr_type<'a, T: Into<Conf<&'a Type>>>(&self, ty: T) {
+        let mut ty: BNTypeWithConfidence = Conf::<&Type>::into_raw(ty.into());
+        unsafe { BNSetMediumLevelILExprType(self.function.handle, self.expr_index.0, &mut ty) }
     }
 
-    pub fn variable_for_register(&self, reg_id: u32) -> Variable {
+    pub fn variable_for_register(&self, reg_id: RegisterId) -> Variable {
         let result = unsafe {
             BNGetMediumLevelILVariableForRegisterAtInstruction(
                 self.function.handle,
-                reg_id,
-                self.index.0,
+                reg_id.0,
+                self.expr_index.0,
             )
         };
         Variable::from(result)
     }
 
-    pub fn variable_for_flag(&self, flag_id: u32) -> Variable {
+    pub fn variable_for_flag(&self, flag_id: FlagId) -> Variable {
         let result = unsafe {
             BNGetMediumLevelILVariableForFlagAtInstruction(
                 self.function.handle,
-                flag_id,
-                self.index.0,
+                flag_id.0,
+                self.expr_index.0,
             )
         };
         Variable::from(result)
@@ -1247,44 +1111,48 @@ impl MediumLevelILInstruction {
             BNGetMediumLevelILVariableForStackLocationAtInstruction(
                 self.function.handle,
                 offset,
-                self.index.0,
+                self.expr_index.0,
             )
         };
         Variable::from(result)
     }
 
-    pub fn register_value(&self, reg_id: u32) -> RegisterValue {
+    pub fn register_value(&self, reg_id: RegisterId) -> RegisterValue {
         unsafe {
-            BNGetMediumLevelILRegisterValueAtInstruction(self.function.handle, reg_id, self.index.0)
-        }
-        .into()
-    }
-
-    pub fn register_value_after(&self, reg_id: u32) -> RegisterValue {
-        unsafe {
-            BNGetMediumLevelILRegisterValueAfterInstruction(
+            BNGetMediumLevelILRegisterValueAtInstruction(
                 self.function.handle,
-                reg_id,
-                self.index.0,
+                reg_id.0,
+                self.expr_index.0,
             )
         }
         .into()
     }
 
-    pub fn possible_register_values(&self, reg_id: u32) -> PossibleValueSet {
+    pub fn register_value_after(&self, reg_id: RegisterId) -> RegisterValue {
+        unsafe {
+            BNGetMediumLevelILRegisterValueAfterInstruction(
+                self.function.handle,
+                reg_id.0,
+                self.expr_index.0,
+            )
+        }
+        .into()
+    }
+
+    pub fn possible_register_values(&self, reg_id: RegisterId) -> PossibleValueSet {
         self.possible_register_values_with_opts(reg_id, &[])
     }
 
     pub fn possible_register_values_with_opts(
         &self,
-        reg_id: u32,
+        reg_id: RegisterId,
         options: &[DataFlowQueryOption],
     ) -> PossibleValueSet {
         let value = unsafe {
             BNGetMediumLevelILPossibleRegisterValuesAtInstruction(
                 self.function.handle,
-                reg_id,
-                self.index.0,
+                reg_id.0,
+                self.expr_index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1292,20 +1160,20 @@ impl MediumLevelILInstruction {
         PossibleValueSet::from_owned_raw(value)
     }
 
-    pub fn possible_register_values_after(&self, reg_id: u32) -> PossibleValueSet {
+    pub fn possible_register_values_after(&self, reg_id: RegisterId) -> PossibleValueSet {
         self.possible_register_values_after_with_opts(reg_id, &[])
     }
 
     pub fn possible_register_values_after_with_opts(
         &self,
-        reg_id: u32,
+        reg_id: RegisterId,
         options: &[DataFlowQueryOption],
     ) -> PossibleValueSet {
         let value = unsafe {
             BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(
                 self.function.handle,
-                reg_id,
-                self.index.0,
+                reg_id.0,
+                self.expr_index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1313,34 +1181,42 @@ impl MediumLevelILInstruction {
         PossibleValueSet::from_owned_raw(value)
     }
 
-    pub fn flag_value(&self, flag_id: u32) -> RegisterValue {
+    pub fn flag_value(&self, flag_id: FlagId) -> RegisterValue {
         unsafe {
-            BNGetMediumLevelILFlagValueAtInstruction(self.function.handle, flag_id, self.index.0)
+            BNGetMediumLevelILFlagValueAtInstruction(
+                self.function.handle,
+                flag_id.0,
+                self.expr_index.0,
+            )
         }
         .into()
     }
 
-    pub fn flag_value_after(&self, flag_id: u32) -> RegisterValue {
+    pub fn flag_value_after(&self, flag_id: FlagId) -> RegisterValue {
         unsafe {
-            BNGetMediumLevelILFlagValueAfterInstruction(self.function.handle, flag_id, self.index.0)
+            BNGetMediumLevelILFlagValueAfterInstruction(
+                self.function.handle,
+                flag_id.0,
+                self.expr_index.0,
+            )
         }
         .into()
     }
 
-    pub fn possible_flag_values(&self, flag_id: u32) -> PossibleValueSet {
+    pub fn possible_flag_values(&self, flag_id: FlagId) -> PossibleValueSet {
         self.possible_flag_values_with_opts(flag_id, &[])
     }
 
     pub fn possible_flag_values_with_opts(
         &self,
-        flag_id: u32,
+        flag_id: FlagId,
         options: &[DataFlowQueryOption],
     ) -> PossibleValueSet {
         let value = unsafe {
             BNGetMediumLevelILPossibleFlagValuesAtInstruction(
                 self.function.handle,
-                flag_id,
-                self.index.0,
+                flag_id.0,
+                self.expr_index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1350,14 +1226,14 @@ impl MediumLevelILInstruction {
 
     pub fn possible_flag_values_after_with_opts(
         &self,
-        flag_id: u32,
+        flag_id: FlagId,
         options: &[DataFlowQueryOption],
     ) -> PossibleValueSet {
         let value = unsafe {
             BNGetMediumLevelILPossibleFlagValuesAfterInstruction(
                 self.function.handle,
-                flag_id,
-                self.index.0,
+                flag_id.0,
+                self.expr_index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1371,7 +1247,7 @@ impl MediumLevelILInstruction {
                 self.function.handle,
                 offset,
                 size,
-                self.index.0,
+                self.expr_index.0,
             )
         }
         .into()
@@ -1383,7 +1259,7 @@ impl MediumLevelILInstruction {
                 self.function.handle,
                 offset,
                 size,
-                self.index.0,
+                self.expr_index.0,
             )
         }
         .into()
@@ -1400,7 +1276,7 @@ impl MediumLevelILInstruction {
                 self.function.handle,
                 offset,
                 size,
-                self.index.0,
+                self.expr_index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1419,7 +1295,7 @@ impl MediumLevelILInstruction {
                 self.function.handle,
                 offset,
                 size,
-                self.index.0,
+                self.expr_index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -1432,13 +1308,13 @@ impl MediumLevelILInstruction {
     /// assigned variable to query.
     ///
     /// * `var` - variable to query
-    pub fn split_var_for_definition(&self, var: Variable) -> Variable {
+    pub fn split_var_for_definition(&self, var: &Variable) -> Variable {
         let raw_var = BNVariable::from(var);
         let index = unsafe {
             BNGetDefaultIndexForMediumLevelILVariableDefinition(
                 self.function.handle,
                 &raw_var,
-                self.index.0,
+                self.expr_index.0,
             )
         };
         Variable::new(var.ty, index, var.storage)
@@ -1447,7 +1323,7 @@ impl MediumLevelILInstruction {
     /// alias for [MediumLevelILInstruction::split_var_for_definition]
     #[inline]
     pub fn get_split_var_for_definition(&self, var: &Variable) -> Variable {
-        self.split_var_for_definition(*var)
+        self.split_var_for_definition(var)
     }
 
     fn lift_operand(&self, expr_idx: usize) -> Box<MediumLevelILLiftedInstruction> {
@@ -1456,10 +1332,12 @@ impl MediumLevelILInstruction {
         // TODO: IF you want to have an instruction type, there needs to be a separate expression type
         // TODO: See the lowlevelil module.
         let expr_idx_is_really_instr_idx = MediumLevelInstructionIndex(expr_idx);
+        // TODO: See the comment in the unchecked function, ugh, i hate this..
         let operand_instr = self
             .function
-            .instruction_from_mapped_index(expr_idx_is_really_instr_idx);
-        Box::new(operand_instr.unwrap().lift())
+            .instruction_from_expr_index(expr_idx_is_really_instr_idx)
+            .unwrap();
+        Box::new(operand_instr.lift())
     }
 
     fn lift_binary_op(&self, op: BinaryOp) -> LiftedBinaryOp {
@@ -1531,6 +1409,17 @@ impl MediumLevelILInstruction {
     }
 }
 
+impl Debug for MediumLevelILInstruction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MediumLevelILInstruction")
+            .field("address", &self.address)
+            .field("index", &self.expr_index)
+            .field("size", &self.size)
+            .field("kind", &self.kind)
+            .finish()
+    }
+}
+
 impl CoreArrayProvider for MediumLevelILInstruction {
     type Raw = usize;
     type Context = Ref<MediumLevelILFunction>;
@@ -1549,6 +1438,140 @@ unsafe impl CoreArrayProviderInner for MediumLevelILInstruction {
             .instruction_from_index(MediumLevelInstructionIndex(*raw))
             .unwrap()
     }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum MediumLevelILInstructionKind {
+    Nop,
+    Noret,
+    Bp,
+    Undef,
+    Unimpl,
+    If(MediumLevelILOperationIf),
+    FloatConst(FloatConst),
+    Const(Constant),
+    ConstPtr(Constant),
+    Import(Constant),
+    ExternPtr(ExternPtr),
+    ConstData(ConstData),
+    Jump(Jump),
+    RetHint(Jump),
+    StoreSsa(StoreSsa),
+    StoreStructSsa(StoreStructSsa),
+    StoreStruct(StoreStruct),
+    Store(Store),
+    JumpTo(JumpTo),
+    Goto(Goto),
+    FreeVarSlot(FreeVarSlot),
+    SetVarField(SetVarField),
+    SetVar(SetVar),
+    FreeVarSlotSsa(FreeVarSlotSsa),
+    SetVarSsaField(SetVarSsaField),
+    SetVarAliasedField(SetVarSsaField),
+    SetVarAliased(SetVarAliased),
+    SetVarSsa(SetVarSsa),
+    VarPhi(VarPhi),
+    MemPhi(MemPhi),
+    VarSplit(VarSplit),
+    SetVarSplit(SetVarSplit),
+    VarSplitSsa(VarSplitSsa),
+    SetVarSplitSsa(SetVarSplitSsa),
+    Add(BinaryOp),
+    Sub(BinaryOp),
+    And(BinaryOp),
+    Or(BinaryOp),
+    Xor(BinaryOp),
+    Lsl(BinaryOp),
+    Lsr(BinaryOp),
+    Asr(BinaryOp),
+    Rol(BinaryOp),
+    Ror(BinaryOp),
+    Mul(BinaryOp),
+    MuluDp(BinaryOp),
+    MulsDp(BinaryOp),
+    Divu(BinaryOp),
+    DivuDp(BinaryOp),
+    Divs(BinaryOp),
+    DivsDp(BinaryOp),
+    Modu(BinaryOp),
+    ModuDp(BinaryOp),
+    Mods(BinaryOp),
+    ModsDp(BinaryOp),
+    CmpE(BinaryOp),
+    CmpNe(BinaryOp),
+    CmpSlt(BinaryOp),
+    CmpUlt(BinaryOp),
+    CmpSle(BinaryOp),
+    CmpUle(BinaryOp),
+    CmpSge(BinaryOp),
+    CmpUge(BinaryOp),
+    CmpSgt(BinaryOp),
+    CmpUgt(BinaryOp),
+    TestBit(BinaryOp),
+    AddOverflow(BinaryOp),
+    FcmpE(BinaryOp),
+    FcmpNe(BinaryOp),
+    FcmpLt(BinaryOp),
+    FcmpLe(BinaryOp),
+    FcmpGe(BinaryOp),
+    FcmpGt(BinaryOp),
+    FcmpO(BinaryOp),
+    FcmpUo(BinaryOp),
+    Fadd(BinaryOp),
+    Fsub(BinaryOp),
+    Fmul(BinaryOp),
+    Fdiv(BinaryOp),
+    Adc(BinaryOpCarry),
+    Sbb(BinaryOpCarry),
+    Rlc(BinaryOpCarry),
+    Rrc(BinaryOpCarry),
+    Call(Call),
+    Tailcall(Call),
+    Syscall(Syscall),
+    Intrinsic(Intrinsic),
+    IntrinsicSsa(IntrinsicSsa),
+    CallSsa(CallSsa),
+    TailcallSsa(CallSsa),
+    CallUntypedSsa(CallUntypedSsa),
+    TailcallUntypedSsa(CallUntypedSsa),
+    SyscallSsa(SyscallSsa),
+    SyscallUntypedSsa(SyscallUntypedSsa),
+    CallUntyped(CallUntyped),
+    TailcallUntyped(CallUntyped),
+    SyscallUntyped(SyscallUntyped),
+    SeparateParamList(SeparateParamList),
+    SharedParamSlot(SharedParamSlot),
+    Neg(UnaryOp),
+    Not(UnaryOp),
+    Sx(UnaryOp),
+    Zx(UnaryOp),
+    LowPart(UnaryOp),
+    BoolToInt(UnaryOp),
+    UnimplMem(UnaryOp),
+    Fsqrt(UnaryOp),
+    Fneg(UnaryOp),
+    Fabs(UnaryOp),
+    FloatToInt(UnaryOp),
+    IntToFloat(UnaryOp),
+    FloatConv(UnaryOp),
+    RoundToInt(UnaryOp),
+    Floor(UnaryOp),
+    Ceil(UnaryOp),
+    Ftrunc(UnaryOp),
+    Load(UnaryOp),
+    LoadStruct(LoadStruct),
+    LoadStructSsa(LoadStructSsa),
+    LoadSsa(LoadSsa),
+    Ret(Ret),
+    Var(Var),
+    AddressOf(Var),
+    VarField(Field),
+    AddressOfField(Field),
+    VarSsa(VarSsa),
+    VarAliased(VarSsa),
+    VarSsaField(VarSsaField),
+    VarAliasedField(VarSsaField),
+    Trap(Trap),
 }
 
 fn get_float(value: u64, size: usize) -> f64 {

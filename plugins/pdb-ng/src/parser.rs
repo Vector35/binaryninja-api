@@ -25,7 +25,7 @@ use crate::symbol_parser::{ParsedDataSymbol, ParsedProcedure, ParsedSymbol};
 use crate::type_parser::ParsedType;
 use binaryninja::architecture::{Architecture, CoreArchitecture};
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
-use binaryninja::calling_convention::CallingConvention;
+use binaryninja::calling_convention::CoreCallingConvention;
 use binaryninja::confidence::{Conf, MIN_CONFIDENCE};
 use binaryninja::debuginfo::{DebugFunctionInfo, DebugInfo};
 use binaryninja::platform::Platform;
@@ -48,11 +48,11 @@ pub struct PDBParserInstance<'a, S: Source<'a> + 'a> {
     /// Default arch of self.bv
     pub(crate) arch: CoreArchitecture,
     /// Default calling convention for self.arch
-    pub(crate) default_cc: Ref<CallingConvention<CoreArchitecture>>,
+    pub(crate) default_cc: Ref<CoreCallingConvention>,
     /// Thiscall calling convention for self.bv, or default_cc if we can't find one
-    pub(crate) thiscall_cc: Ref<CallingConvention<CoreArchitecture>>,
+    pub(crate) thiscall_cc: Ref<CoreCallingConvention>,
     /// Cdecl calling convention for self.bv, or default_cc if we can't find one
-    pub(crate) cdecl_cc: Ref<CallingConvention<CoreArchitecture>>,
+    pub(crate) cdecl_cc: Ref<CoreCallingConvention>,
     /// Default platform of self.bv
     pub(crate) platform: Ref<Platform>,
     /// pdb-rs structure for making lifetime hell a real place

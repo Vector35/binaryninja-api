@@ -15,7 +15,7 @@ use binaryninja::{
         UnusedRegisterStackInfo,
     },
     binary_view::{BinaryView, BinaryViewExt},
-    calling_convention::{register_calling_convention, CallingConventionBase, ConventionBuilder},
+    calling_convention::{register_calling_convention, CallingConvention, ConventionBuilder},
     custom_binary_view::{BinaryViewType, BinaryViewTypeExt},
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
     function::Function,
@@ -2670,7 +2670,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RiscVCC<D> {
     }
 }
 
-impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConventionBase for RiscVCC<D> {
+impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConvention for RiscVCC<D> {
     type Arch = RiscVArch<D>;
 
     fn caller_saved_registers(&self) -> Vec<Register<D>> {

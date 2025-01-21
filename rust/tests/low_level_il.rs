@@ -1,7 +1,9 @@
 use binaryninja::architecture::Register;
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
-use binaryninja::low_level_il::expression::LowLevelExpressionIndex;
+use binaryninja::low_level_il::expression::{
+    ExpressionHandler, LowLevelExpressionIndex, LowLevelILExpressionKind,
+};
 use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstructionKind, LowLevelInstructionIndex,
 };
@@ -31,6 +33,7 @@ fn test_llil_info(_session: &Session) {
     let instr_0 = llil_instr_iter.next().unwrap();
     assert_eq!(instr_0.index, LowLevelInstructionIndex(0));
     assert_eq!(instr_0.address(), 0x00025f10);
+    println!("{:?}", instr_0);
     println!("{:?}", instr_0.kind());
     match instr_0.kind() {
         LowLevelILInstructionKind::SetReg(op) => {
@@ -52,6 +55,17 @@ fn test_llil_info(_session: &Session) {
         LowLevelILInstructionKind::Push(op) => {
             assert_eq!(op.size(), 4);
             assert_eq!(op.operand().index, LowLevelExpressionIndex(2));
+            println!("{:?}", op.operand().kind());
+            match op.operand().kind() {
+                LowLevelILExpressionKind::Reg(op) => {
+                    assert_eq!(op.size(), 4);
+                    match op.source_reg() {
+                        LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "ebp"),
+                        _ => panic!("Expected Register::ArchReg"),
+                    }
+                }
+                _ => panic!("Expected Reg"),
+            }
         }
         _ => panic!("Expected Push"),
     }

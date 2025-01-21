@@ -1,20 +1,20 @@
-use super::MediumLevelILLiftedInstruction;
+use super::{MediumLevelILLiftedInstruction, MediumLevelInstructionIndex};
 use crate::architecture::CoreIntrinsic;
 use crate::variable::{ConstantData, SSAVariable, Variable};
 use std::collections::BTreeMap;
 
 // IF
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct MediumLevelILOperationIf {
     pub condition: usize,
-    pub dest_true: u64,
-    pub dest_false: u64,
+    pub dest_true: MediumLevelInstructionIndex,
+    pub dest_false: MediumLevelInstructionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIf {
     pub condition: Box<MediumLevelILLiftedInstruction>,
-    pub dest_true: u64,
-    pub dest_false: u64,
+    pub dest_true: MediumLevelInstructionIndex,
+    pub dest_false: MediumLevelInstructionIndex,
 }
 
 // FLOAT_CONST
@@ -37,7 +37,7 @@ pub struct ExternPtr {
 }
 
 // CONST_DATA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct ConstData {
     pub constant_data_kind: u32,
     pub constant_data_value: i64,
@@ -49,7 +49,7 @@ pub struct LiftedConstData {
 }
 
 // JUMP, RET_HINT
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Jump {
     pub dest: usize,
 }
@@ -59,7 +59,7 @@ pub struct LiftedJump {
 }
 
 // STORE_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct StoreSsa {
     pub dest: usize,
     pub dest_memory: u64,
@@ -75,7 +75,7 @@ pub struct LiftedStoreSsa {
 }
 
 // STORE_STRUCT_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct StoreStructSsa {
     pub dest: usize,
     pub offset: u64,
@@ -93,7 +93,7 @@ pub struct LiftedStoreStructSsa {
 }
 
 // STORE_STRUCT
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct StoreStruct {
     pub dest: usize,
     pub offset: u64,
@@ -107,7 +107,7 @@ pub struct LiftedStoreStruct {
 }
 
 // STORE
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Store {
     pub dest: usize,
     pub src: usize,
@@ -119,7 +119,7 @@ pub struct LiftedStore {
 }
 
 // JUMP_TO
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct JumpTo {
     pub dest: usize,
     pub first_operand: usize,
@@ -128,13 +128,13 @@ pub struct JumpTo {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedJumpTo {
     pub dest: Box<MediumLevelILLiftedInstruction>,
-    pub targets: BTreeMap<u64, u64>,
+    pub targets: BTreeMap<u64, MediumLevelInstructionIndex>,
 }
 
 // GOTO
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Goto {
-    pub dest: u64,
+    pub dest: MediumLevelInstructionIndex,
 }
 
 // FREE_VAR_SLOT
@@ -144,7 +144,7 @@ pub struct FreeVarSlot {
 }
 
 // SET_VAR_FIELD
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SetVarField {
     pub dest: Variable,
     pub offset: u64,
@@ -158,9 +158,10 @@ pub struct LiftedSetVarField {
 }
 
 // SET_VAR
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SetVar {
     pub dest: Variable,
+    // TODO: Expression?
     pub src: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
@@ -177,7 +178,7 @@ pub struct FreeVarSlotSsa {
 }
 
 // SET_VAR_SSA_FIELD, SET_VAR_ALIASED_FIELD
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SetVarSsaField {
     pub dest: SSAVariable,
     pub prev: SSAVariable,
@@ -193,7 +194,7 @@ pub struct LiftedSetVarSsaField {
 }
 
 // SET_VAR_ALIASED
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SetVarAliased {
     pub dest: SSAVariable,
     pub prev: SSAVariable,
@@ -207,7 +208,7 @@ pub struct LiftedSetVarAliased {
 }
 
 // SET_VAR_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SetVarSsa {
     pub dest: SSAVariable,
     pub src: usize,
@@ -219,7 +220,7 @@ pub struct LiftedSetVarSsa {
 }
 
 // VAR_PHI
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct VarPhi {
     pub dest: SSAVariable,
     pub first_operand: usize,
@@ -232,7 +233,7 @@ pub struct LiftedVarPhi {
 }
 
 // MEM_PHI
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct MemPhi {
     pub dest_memory: u64,
     pub first_operand: usize,
@@ -252,7 +253,7 @@ pub struct VarSplit {
 }
 
 // SET_VAR_SPLIT
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SetVarSplit {
     pub high: Variable,
     pub low: Variable,
@@ -273,7 +274,7 @@ pub struct VarSplitSsa {
 }
 
 // SET_VAR_SPLIT_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SetVarSplitSsa {
     pub high: SSAVariable,
     pub low: SSAVariable,
@@ -287,7 +288,7 @@ pub struct LiftedSetVarSplitSsa {
 }
 
 // ADD, SUB, AND, OR, XOR, LSL, LSR, ASR, ROL, ROR, MUL, MULU_DP, MULS_DP, DIVU, DIVU_DP, DIVS, DIVS_DP, MODU, MODU_DP, MODS, MODS_DP, CMP_E, CMP_NE, CMP_SLT, CMP_ULT, CMP_SLE, CMP_ULE, CMP_SGE, CMP_UGE, CMP_SGT, CMP_UGT, TEST_BIT, ADD_OVERFLOW, FCMP_E, FCMP_NE, FCMP_LT, FCMP_LE, FCMP_GE, FCMP_GT, FCMP_O, FCMP_UO, FADD, FSUB, FMUL, FDIV
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct BinaryOp {
     pub left: usize,
     pub right: usize,
@@ -299,7 +300,7 @@ pub struct LiftedBinaryOp {
 }
 
 // ADC, SBB, RLC, RRC
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct BinaryOpCarry {
     pub left: usize,
     pub right: usize,
@@ -313,7 +314,7 @@ pub struct LiftedBinaryOpCarry {
 }
 
 // CALL, TAILCALL
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Call {
     pub first_output: usize,
     pub num_outputs: usize,
@@ -329,7 +330,7 @@ pub struct LiftedCall {
 }
 
 // SYSCALL
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Syscall {
     pub first_output: usize,
     pub num_outputs: usize,
@@ -343,7 +344,7 @@ pub struct LiftedSyscallCall {
 }
 
 // INTRINSIC
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Intrinsic {
     pub first_output: usize,
     pub num_outputs: usize,
@@ -359,7 +360,7 @@ pub struct LiftedIntrinsic {
 }
 
 // INTRINSIC_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct IntrinsicSsa {
     pub first_output: usize,
     pub num_outputs: usize,
@@ -375,7 +376,7 @@ pub struct LiftedIntrinsicSsa {
 }
 
 // CALL_SSA, TAILCALL_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct CallSsa {
     pub output: usize,
     pub dest: usize,
@@ -392,7 +393,7 @@ pub struct LiftedCallSsa {
 }
 
 // CALL_UNTYPED_SSA, TAILCALL_UNTYPED_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct CallUntypedSsa {
     pub output: usize,
     pub dest: usize,
@@ -408,7 +409,7 @@ pub struct LiftedCallUntypedSsa {
 }
 
 // SYSCALL_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SyscallSsa {
     pub output: usize,
     pub first_param: usize,
@@ -423,7 +424,7 @@ pub struct LiftedSyscallSsa {
 }
 
 // SYSCALL_UNTYPED_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SyscallUntypedSsa {
     pub output: usize,
     pub params: usize,
@@ -437,7 +438,7 @@ pub struct LiftedSyscallUntypedSsa {
 }
 
 // CALL_UNTYPED, TAILCALL_UNTYPED
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct CallUntyped {
     pub output: usize,
     pub dest: usize,
@@ -453,7 +454,7 @@ pub struct LiftedCallUntyped {
 }
 
 // SYSCALL_UNTYPED
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SyscallUntyped {
     pub output: usize,
     pub params: usize,
@@ -467,7 +468,7 @@ pub struct LiftedSyscallUntyped {
 }
 
 // NEG, NOT, SX, ZX, LOW_PART, BOOL_TO_INT, UNIMPL_MEM, FSQRT, FNEG, FABS, FLOAT_TO_INT, INT_TO_FLOAT, FLOAT_CONV, ROUND_TO_INT, FLOOR, CEIL, FTRUNC, LOAD
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct UnaryOp {
     pub src: usize,
 }
@@ -477,7 +478,7 @@ pub struct LiftedUnaryOp {
 }
 
 // LOAD_STRUCT
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct LoadStruct {
     pub src: usize,
     pub offset: u64,
@@ -489,7 +490,7 @@ pub struct LiftedLoadStruct {
 }
 
 // LOAD_STRUCT_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct LoadStructSsa {
     pub src: usize,
     pub offset: u64,
@@ -503,7 +504,7 @@ pub struct LiftedLoadStructSsa {
 }
 
 // LOAD_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct LoadSsa {
     pub src: usize,
     pub src_memory: u64,
@@ -515,7 +516,7 @@ pub struct LiftedLoadSsa {
 }
 
 // RET
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Ret {
     pub first_operand: usize,
     pub num_operands: usize,
@@ -526,7 +527,7 @@ pub struct LiftedRet {
 }
 
 // SEPARATE_PARAM_LIST
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SeparateParamList {
     pub first_param: usize,
     pub num_params: usize,
@@ -537,7 +538,7 @@ pub struct LiftedSeparateParamList {
 }
 
 // SHARED_PARAM_SLOT
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SharedParamSlot {
     pub first_param: usize,
     pub num_params: usize,

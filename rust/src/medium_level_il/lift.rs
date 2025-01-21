@@ -15,11 +15,12 @@ pub enum MediumLevelILLiftedOperand {
     Float(f64),
     Int(u64),
     IntList(Vec<u64>),
-    TargetMap(BTreeMap<u64, u64>),
+    TargetMap(BTreeMap<u64, MediumLevelInstructionIndex>),
     Var(Variable),
     VarList(Vec<Variable>),
     VarSsa(SSAVariable),
     VarSsaList(Vec<SSAVariable>),
+    InstructionIndex(MediumLevelInstructionIndex),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -309,8 +310,8 @@ impl MediumLevelILLiftedInstruction {
             Nop | Noret | Bp | Undef | Unimpl => vec![],
             If(op) => vec![
                 ("condition", Operand::Expr(*op.condition.clone())),
-                ("dest_true", Operand::Int(op.dest_true)),
-                ("dest_false", Operand::Int(op.dest_false)),
+                ("dest_true", Operand::InstructionIndex(op.dest_true)),
+                ("dest_false", Operand::InstructionIndex(op.dest_false)),
             ],
             FloatConst(op) => vec![("constant", Operand::Float(op.constant))],
             Const(op) | ConstPtr(op) | Import(op) => vec![("constant", Operand::Int(op.constant))],
@@ -349,7 +350,7 @@ impl MediumLevelILLiftedInstruction {
                 ("dest", Operand::Expr(*op.dest.clone())),
                 ("targets", Operand::TargetMap(op.targets.clone())),
             ],
-            Goto(op) => vec![("dest", Operand::Int(op.dest))],
+            Goto(op) => vec![("dest", Operand::InstructionIndex(op.dest))],
             FreeVarSlot(op) => vec![("dest", Operand::Var(op.dest))],
             SetVarField(op) => vec![
                 ("dest", Operand::Var(op.dest)),

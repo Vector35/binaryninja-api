@@ -18,9 +18,9 @@ use std::sync::OnceLock;
 use crate::struct_grouper::group_structure;
 use crate::PDBParserInstance;
 use anyhow::{anyhow, Result};
-use binaryninja::architecture::{Architecture, CoreArchitecture};
+use binaryninja::architecture::Architecture;
 use binaryninja::binary_view::BinaryViewExt;
-use binaryninja::calling_convention::CallingConvention;
+use binaryninja::calling_convention::CoreCallingConvention;
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
@@ -2084,7 +2084,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     pub(crate) fn find_calling_convention(
         platform: &Platform,
         name: &str,
-    ) -> Option<Ref<CallingConvention<CoreArchitecture>>> {
+    ) -> Option<Ref<CoreCallingConvention>> {
         platform
             .calling_conventions()
             .iter()
@@ -2093,10 +2093,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     }
 
     /// Convert pdb calling convention enum to binja
-    fn cv_call_t_to_calling_convention(
-        &self,
-        cv: u8,
-    ) -> Option<Ref<CallingConvention<CoreArchitecture>>> {
+    fn cv_call_t_to_calling_convention(&self, cv: u8) -> Option<Ref<CoreCallingConvention>> {
         match CV_call_t::try_from(cv) {
             Ok(CV_call_t::NEAR_FAST) | Ok(CV_call_t::FAR_FAST) => {
                 self.platform.get_fastcall_calling_convention()

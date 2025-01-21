@@ -43,142 +43,27 @@ impl Display for HighLevelInstructionIndex {
 pub struct HighLevelILInstruction {
     pub function: Ref<HighLevelILFunction>,
     pub address: u64,
-    pub index: HighLevelInstructionIndex,
+    pub expr_index: HighLevelInstructionIndex,
     pub size: usize,
     pub kind: HighLevelILInstructionKind,
 }
 
-#[derive(Copy, Clone)]
-pub enum HighLevelILInstructionKind {
-    Nop,
-    Break,
-    Continue,
-    Noret,
-    Unreachable,
-    Bp,
-    Undef,
-    Unimpl,
-    Adc(BinaryOpCarry),
-    Sbb(BinaryOpCarry),
-    Rlc(BinaryOpCarry),
-    Rrc(BinaryOpCarry),
-    Add(BinaryOp),
-    Sub(BinaryOp),
-    And(BinaryOp),
-    Or(BinaryOp),
-    Xor(BinaryOp),
-    Lsl(BinaryOp),
-    Lsr(BinaryOp),
-    Asr(BinaryOp),
-    Rol(BinaryOp),
-    Ror(BinaryOp),
-    Mul(BinaryOp),
-    MuluDp(BinaryOp),
-    MulsDp(BinaryOp),
-    Divu(BinaryOp),
-    DivuDp(BinaryOp),
-    Divs(BinaryOp),
-    DivsDp(BinaryOp),
-    Modu(BinaryOp),
-    ModuDp(BinaryOp),
-    Mods(BinaryOp),
-    ModsDp(BinaryOp),
-    CmpE(BinaryOp),
-    CmpNe(BinaryOp),
-    CmpSlt(BinaryOp),
-    CmpUlt(BinaryOp),
-    CmpSle(BinaryOp),
-    CmpUle(BinaryOp),
-    CmpSge(BinaryOp),
-    CmpUge(BinaryOp),
-    CmpSgt(BinaryOp),
-    CmpUgt(BinaryOp),
-    TestBit(BinaryOp),
-    AddOverflow(BinaryOp),
-    Fadd(BinaryOp),
-    Fsub(BinaryOp),
-    Fmul(BinaryOp),
-    Fdiv(BinaryOp),
-    FcmpE(BinaryOp),
-    FcmpNe(BinaryOp),
-    FcmpLt(BinaryOp),
-    FcmpLe(BinaryOp),
-    FcmpGe(BinaryOp),
-    FcmpGt(BinaryOp),
-    FcmpO(BinaryOp),
-    FcmpUo(BinaryOp),
-    ArrayIndex(ArrayIndex),
-    ArrayIndexSsa(ArrayIndexSsa),
-    Assign(Assign),
-    AssignMemSsa(AssignMemSsa),
-    AssignUnpack(AssignUnpack),
-    AssignUnpackMemSsa(AssignUnpackMemSsa),
-    Block(Block),
-    Call(Call),
-    Tailcall(Call),
-    CallSsa(CallSsa),
-    Case(Case),
-    Const(Const),
-    ConstPtr(Const),
-    Import(Const),
-    ConstData(ConstData),
-    Deref(UnaryOp),
-    AddressOf(UnaryOp),
-    Neg(UnaryOp),
-    Not(UnaryOp),
-    Sx(UnaryOp),
-    Zx(UnaryOp),
-    LowPart(UnaryOp),
-    BoolToInt(UnaryOp),
-    UnimplMem(UnaryOp),
-    Fsqrt(UnaryOp),
-    Fneg(UnaryOp),
-    Fabs(UnaryOp),
-    FloatToInt(UnaryOp),
-    IntToFloat(UnaryOp),
-    FloatConv(UnaryOp),
-    RoundToInt(UnaryOp),
-    Floor(UnaryOp),
-    Ceil(UnaryOp),
-    Ftrunc(UnaryOp),
-    DerefFieldSsa(DerefFieldSsa),
-    DerefSsa(DerefSsa),
-    ExternPtr(ExternPtr),
-    FloatConst(FloatConst),
-    For(ForLoop),
-    ForSsa(ForLoopSsa),
-    Goto(Label),
-    Label(Label),
-    If(If),
-    Intrinsic(Intrinsic),
-    IntrinsicSsa(IntrinsicSsa),
-    Jump(Jump),
-    MemPhi(MemPhi),
-    Ret(Ret),
-    Split(Split),
-    StructField(StructField),
-    DerefField(StructField),
-    Switch(Switch),
-    Syscall(Syscall),
-    SyscallSsa(SyscallSsa),
-    Trap(Trap),
-    VarDeclare(Var),
-    Var(Var),
-    VarInit(VarInit),
-    VarInitSsa(VarInitSsa),
-    VarPhi(VarPhi),
-    VarSsa(VarSsa),
-    While(While),
-    DoWhile(While),
-    WhileSsa(WhileSsa),
-    DoWhileSsa(WhileSsa),
-}
 impl HighLevelILInstruction {
     pub(crate) fn new(
         function: Ref<HighLevelILFunction>,
         index: HighLevelInstructionIndex,
     ) -> Self {
-        let op = unsafe { BNGetHighLevelILByIndex(function.handle, index.0, function.full_ast) };
+        let expr_index = unsafe { BNGetHighLevelILIndexForInstruction(function.handle, index.0) };
+        Self::new_expr(function, HighLevelInstructionIndex(expr_index))
+    }
+
+    // TODO: I need HighLevelILExpression YESTERDAY!!!!
+    pub(crate) fn new_expr(
+        function: Ref<HighLevelILFunction>,
+        expr_index: HighLevelInstructionIndex,
+    ) -> Self {
+        let op =
+            unsafe { BNGetHighLevelILByIndex(function.handle, expr_index.0, function.full_ast) };
         use BNHighLevelILOperation::*;
         use HighLevelILInstructionKind as Op;
         let kind = match op.operation {
@@ -660,7 +545,7 @@ impl HighLevelILInstruction {
         Self {
             function,
             address: op.address,
-            index,
+            expr_index,
             size: op.size,
             kind,
         }
@@ -923,7 +808,7 @@ impl HighLevelILInstruction {
         HighLevelILLiftedInstruction {
             function: self.function.clone(),
             address: self.address,
-            index: self.index,
+            expr_index: self.expr_index,
             size: self.size,
             kind,
         }
@@ -935,7 +820,7 @@ impl HighLevelILInstruction {
         let lines = unsafe {
             BNGetHighLevelILExprText(
                 self.function.handle,
-                self.index.0,
+                self.expr_index.0,
                 self.function.full_ast,
                 &mut count,
                 core::ptr::null_mut(),
@@ -946,7 +831,7 @@ impl HighLevelILInstruction {
 
     /// Type of expression
     pub fn expr_type(&self) -> Option<Conf<Ref<Type>>> {
-        let result = unsafe { BNGetHighLevelILExprType(self.function.handle, self.index.0) };
+        let result = unsafe { BNGetHighLevelILExprType(self.function.handle, self.expr_index.0) };
         (!result.type_.is_null()).then(|| {
             Conf::new(
                 unsafe { Type::ref_from_raw(result.type_) },
@@ -958,7 +843,7 @@ impl HighLevelILInstruction {
     /// Version of active memory contents in SSA form for this instruction
     pub fn ssa_memory_version(&self) -> usize {
         unsafe {
-            BNGetHighLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.index.0)
+            BNGetHighLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.expr_index.0)
         }
     }
 
@@ -967,7 +852,7 @@ impl HighLevelILInstruction {
             BNGetHighLevelILSSAVarVersionAtILInstruction(
                 self.function.handle,
                 &variable.into(),
-                self.index.0,
+                self.expr_index.0,
             )
         };
         SSAVariable::new(variable, version)
@@ -979,10 +864,13 @@ impl HighLevelILInstruction {
         // TODO: IF you want to have an instruction type, there needs to be a separate expression type
         // TODO: See the lowlevelil module.
         let expr_idx_is_really_instr_idx = HighLevelInstructionIndex(expr_idx);
+        // TODO: Ugh, this is so dumb..... i want HighLevelILLiftedExpression yesterday!!!
         let operand_instr = self
             .function
-            .instruction_from_mapped_index(expr_idx_is_really_instr_idx);
-        Box::new(operand_instr.unwrap().lift())
+            .instruction_from_expr_index(expr_idx_is_really_instr_idx)
+            .unwrap();
+        // TODO: Why box it here??!?!?! insane.
+        Box::new(operand_instr.lift())
     }
 
     fn lift_binary_op(&self, op: BinaryOp) -> LiftedBinaryOp {
@@ -1086,6 +974,132 @@ impl Debug for HighLevelILInstruction {
             self.address,
         )
     }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum HighLevelILInstructionKind {
+    Nop,
+    Break,
+    Continue,
+    Noret,
+    Unreachable,
+    Bp,
+    Undef,
+    Unimpl,
+    Adc(BinaryOpCarry),
+    Sbb(BinaryOpCarry),
+    Rlc(BinaryOpCarry),
+    Rrc(BinaryOpCarry),
+    Add(BinaryOp),
+    Sub(BinaryOp),
+    And(BinaryOp),
+    Or(BinaryOp),
+    Xor(BinaryOp),
+    Lsl(BinaryOp),
+    Lsr(BinaryOp),
+    Asr(BinaryOp),
+    Rol(BinaryOp),
+    Ror(BinaryOp),
+    Mul(BinaryOp),
+    MuluDp(BinaryOp),
+    MulsDp(BinaryOp),
+    Divu(BinaryOp),
+    DivuDp(BinaryOp),
+    Divs(BinaryOp),
+    DivsDp(BinaryOp),
+    Modu(BinaryOp),
+    ModuDp(BinaryOp),
+    Mods(BinaryOp),
+    ModsDp(BinaryOp),
+    CmpE(BinaryOp),
+    CmpNe(BinaryOp),
+    CmpSlt(BinaryOp),
+    CmpUlt(BinaryOp),
+    CmpSle(BinaryOp),
+    CmpUle(BinaryOp),
+    CmpSge(BinaryOp),
+    CmpUge(BinaryOp),
+    CmpSgt(BinaryOp),
+    CmpUgt(BinaryOp),
+    TestBit(BinaryOp),
+    AddOverflow(BinaryOp),
+    Fadd(BinaryOp),
+    Fsub(BinaryOp),
+    Fmul(BinaryOp),
+    Fdiv(BinaryOp),
+    FcmpE(BinaryOp),
+    FcmpNe(BinaryOp),
+    FcmpLt(BinaryOp),
+    FcmpLe(BinaryOp),
+    FcmpGe(BinaryOp),
+    FcmpGt(BinaryOp),
+    FcmpO(BinaryOp),
+    FcmpUo(BinaryOp),
+    ArrayIndex(ArrayIndex),
+    ArrayIndexSsa(ArrayIndexSsa),
+    Assign(Assign),
+    AssignMemSsa(AssignMemSsa),
+    AssignUnpack(AssignUnpack),
+    AssignUnpackMemSsa(AssignUnpackMemSsa),
+    Block(Block),
+    Call(Call),
+    Tailcall(Call),
+    CallSsa(CallSsa),
+    Case(Case),
+    Const(Const),
+    ConstPtr(Const),
+    Import(Const),
+    ConstData(ConstData),
+    Deref(UnaryOp),
+    AddressOf(UnaryOp),
+    Neg(UnaryOp),
+    Not(UnaryOp),
+    Sx(UnaryOp),
+    Zx(UnaryOp),
+    LowPart(UnaryOp),
+    BoolToInt(UnaryOp),
+    UnimplMem(UnaryOp),
+    Fsqrt(UnaryOp),
+    Fneg(UnaryOp),
+    Fabs(UnaryOp),
+    FloatToInt(UnaryOp),
+    IntToFloat(UnaryOp),
+    FloatConv(UnaryOp),
+    RoundToInt(UnaryOp),
+    Floor(UnaryOp),
+    Ceil(UnaryOp),
+    Ftrunc(UnaryOp),
+    DerefFieldSsa(DerefFieldSsa),
+    DerefSsa(DerefSsa),
+    ExternPtr(ExternPtr),
+    FloatConst(FloatConst),
+    For(ForLoop),
+    ForSsa(ForLoopSsa),
+    Goto(Label),
+    Label(Label),
+    If(If),
+    Intrinsic(Intrinsic),
+    IntrinsicSsa(IntrinsicSsa),
+    Jump(Jump),
+    MemPhi(MemPhi),
+    Ret(Ret),
+    Split(Split),
+    StructField(StructField),
+    DerefField(StructField),
+    Switch(Switch),
+    Syscall(Syscall),
+    SyscallSsa(SyscallSsa),
+    Trap(Trap),
+    VarDeclare(Var),
+    Var(Var),
+    VarInit(VarInit),
+    VarInitSsa(VarInitSsa),
+    VarPhi(VarPhi),
+    VarSsa(VarSsa),
+    While(While),
+    DoWhile(While),
+    WhileSsa(WhileSsa),
+    DoWhileSsa(WhileSsa),
 }
 
 fn get_float(value: u64, size: usize) -> f64 {

@@ -20,33 +20,6 @@ use crate::basic_block::{BasicBlock, BlockContext};
 
 use super::*;
 
-pub struct LowLevelILBlockIter<'func, A, M, F>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    function: &'func LowLevelILFunction<A, M, F>,
-    // TODO: Once step_trait is stable we can do Range<InstructionIndex>
-    range: Range<usize>,
-}
-
-impl<'func, A, M, F> Iterator for LowLevelILBlockIter<'func, A, M, F>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    type Item = LowLevelILInstruction<'func, A, M, F>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.range
-            .next()
-            .map(LowLevelInstructionIndex)
-            .and_then(|idx| self.function.instruction_from_index(idx))
-    }
-}
-
 #[derive(Copy)]
 pub struct LowLevelILBlock<'func, A, M, F>
 where
@@ -104,5 +77,32 @@ where
         LowLevelILBlock {
             function: self.function,
         }
+    }
+}
+
+pub struct LowLevelILBlockIter<'func, A, M, F>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    function: &'func LowLevelILFunction<A, M, F>,
+    // TODO: Once step_trait is stable we can do Range<InstructionIndex>
+    range: Range<usize>,
+}
+
+impl<'func, A, M, F> Iterator for LowLevelILBlockIter<'func, A, M, F>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    type Item = LowLevelILInstruction<'func, A, M, F>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.range
+            .next()
+            .map(LowLevelInstructionIndex)
+            .and_then(|idx| self.function.instruction_from_index(idx))
     }
 }

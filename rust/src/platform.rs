@@ -18,7 +18,7 @@ use crate::type_container::TypeContainer;
 use crate::type_parser::{TypeParserError, TypeParserErrorSeverity, TypeParserResult};
 use crate::{
     architecture::{Architecture, CoreArchitecture},
-    calling_convention::CallingConvention,
+    calling_convention::CoreCallingConvention,
     rc::*,
     string::*,
     type_library::TypeLibrary,
@@ -39,7 +39,7 @@ unsafe impl Sync for Platform {}
 
 macro_rules! cc_func {
     ($get_name:ident, $get_api:ident, $set_name:ident, $set_api:ident) => {
-        pub fn $get_name(&self) -> Option<Ref<CallingConvention<CoreArchitecture>>> {
+        pub fn $get_name(&self) -> Option<Ref<CoreCallingConvention>> {
             let arch = self.arch();
 
             unsafe {
@@ -48,12 +48,15 @@ macro_rules! cc_func {
                 if cc.is_null() {
                     None
                 } else {
-                    Some(CallingConvention::ref_from_raw(cc, arch))
+                    Some(CoreCallingConvention::ref_from_raw(
+                        cc,
+                        arch.as_ref().handle(),
+                    ))
                 }
             }
         }
 
-        pub fn $set_name<A: Architecture>(&self, cc: &CallingConvention<A>) {
+        pub fn $set_name(&self, cc: &CoreCallingConvention) {
             let arch = self.arch();
 
             assert!(
@@ -233,7 +236,7 @@ impl Platform {
         BNSetPlatformSystemCallConvention
     );
 
-    pub fn calling_conventions(&self) -> Array<CallingConvention<CoreArchitecture>> {
+    pub fn calling_conventions(&self) -> Array<CoreCallingConvention> {
         unsafe {
             let mut count = 0;
             let handles = BNGetPlatformCallingConventions(self.handle, &mut count);

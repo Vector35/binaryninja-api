@@ -29,7 +29,8 @@ pub enum HighLevelILLiftedOperand {
 pub struct HighLevelILLiftedInstruction {
     pub function: Ref<HighLevelILFunction>,
     pub address: u64,
-    pub index: HighLevelInstructionIndex,
+    // TODO: Please i need expression
+    pub expr_index: HighLevelInstructionIndex,
     pub size: usize,
     pub kind: HighLevelILLiftedInstructionKind,
 }

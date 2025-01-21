@@ -369,6 +369,7 @@ unsafe impl CoreArrayProviderInner for SSAVariable {
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct Variable {
     pub ty: VariableSourceType,
+    // TODO: VariableIndex type?
     pub index: u32,
     // TODO: Type this to `VariableStorage`
     pub storage: i64,

@@ -27,33 +27,38 @@ impl HighLevelILFunction {
         &self,
         index: HighLevelInstructionIndex,
     ) -> Option<HighLevelILInstruction> {
-        let mapped_index = unsafe { BNGetHighLevelILIndexForInstruction(self.handle, index.0) };
-        self.instruction_from_mapped_index(HighLevelInstructionIndex(mapped_index))
-    }
-
-    // TODO: instruction_from_index should be it right? we always want to get the mapped index right?
-    // TODO: This needs testing...
-    pub fn instruction_from_mapped_index(
-        &self,
-        mapped_index: HighLevelInstructionIndex,
-    ) -> Option<HighLevelILInstruction> {
-        if mapped_index.0 >= self.instruction_count() {
+        if index.0 >= self.instruction_count() {
             None
         } else {
-            Some(HighLevelILInstruction::new(self.to_owned(), mapped_index))
+            Some(HighLevelILInstruction::new(self.to_owned(), index))
         }
     }
 
+    pub fn instruction_from_expr_index(
+        &self,
+        expr_index: HighLevelInstructionIndex,
+    ) -> Option<HighLevelILInstruction> {
+        if expr_index.0 >= self.expression_count() {
+            None
+        } else {
+            Some(HighLevelILInstruction::new_expr(
+                self.to_owned(),
+                expr_index,
+            ))
+        }
+    }
+
+    // TODO: This returns an expression index!
     pub fn root_instruction_index(&self) -> HighLevelInstructionIndex {
         HighLevelInstructionIndex(unsafe { BNGetHighLevelILRootExpr(self.handle) })
     }
 
     pub fn root(&self) -> HighLevelILInstruction {
-        HighLevelILInstruction::new(self.as_ast(), self.root_instruction_index())
+        HighLevelILInstruction::new_expr(self.as_ast(), self.root_instruction_index())
     }
 
     pub fn set_root(&self, new_root: &HighLevelILInstruction) {
-        unsafe { BNSetHighLevelILRootExpr(self.handle, new_root.index.0) }
+        unsafe { BNSetHighLevelILRootExpr(self.handle, new_root.expr_index.0) }
     }
 
     pub fn instruction_count(&self) -> usize {
@@ -133,14 +138,12 @@ impl HighLevelILFunction {
                 variable.version,
             )
         };
-        // TODO: Is this mapped index?
-        self.instruction_from_mapped_index(HighLevelInstructionIndex(index))
+        self.instruction_from_index(HighLevelInstructionIndex(index))
     }
 
     pub fn ssa_memory_definition(&self, version: usize) -> Option<HighLevelILInstruction> {
         let index = unsafe { BNGetHighLevelILSSAMemoryDefinition(self.handle, version) };
-        // TODO: Is this mapped index?
-        self.instruction_from_mapped_index(HighLevelInstructionIndex(index))
+        self.instruction_from_index(HighLevelInstructionIndex(index))
     }
 
     /// Gets all the instructions that use the given SSA variable.
@@ -183,7 +186,7 @@ impl HighLevelILFunction {
                 self.handle,
                 &variable.variable.into(),
                 variable.version,
-                instr.index.0,
+                instr.expr_index.0,
             )
         }
     }
@@ -207,7 +210,7 @@ impl HighLevelILFunction {
 
     /// Determines if `variable` is live at a given point in the function
     pub fn is_variable_live_at(&self, variable: Variable, instr: &HighLevelILInstruction) -> bool {
-        unsafe { BNIsHighLevelILVarLiveAt(self.handle, &variable.into(), instr.index.0) }
+        unsafe { BNIsHighLevelILVarLiveAt(self.handle, &variable.into(), instr.expr_index.0) }
     }
 
     /// This gets just the HLIL variables - you may be interested in the union

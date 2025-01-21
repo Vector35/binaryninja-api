@@ -1131,7 +1131,7 @@ where
         }
         *true_label = new_true_label;
         *false_label = new_false_label;
-        
+
         LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 

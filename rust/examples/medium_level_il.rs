@@ -77,7 +77,7 @@ mod visitor {
                 }
                 Float(float) => {
                     print_indent(indent);
-                    println!("int {:e}", float);
+                    println!("float {:e}", float);
                 }
                 Expr(expr) => print_il_expr(&expr, indent),
                 Var(var) => {
@@ -135,6 +135,10 @@ mod visitor {
                 }
                 ConstantData(_) => println!("contantdata"),
                 Intrinsic(intrinsic) => println!("intrinsic {}", intrinsic.name()),
+                InstructionIndex(idx) => {
+                    print_indent(indent);
+                    println!("index {}", idx);
+                }
             }
         }
     }

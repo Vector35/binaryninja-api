@@ -18,6 +18,7 @@ pub trait ILFunction {
     type Instruction;
     type InstructionIndex: From<u64>;
 
+    // TODO Actually this is il expression from index!
     fn il_instruction_from_index(&self, instr_index: Self::InstructionIndex) -> Self::Instruction;
     fn operands_from_index(&self, instr_index: Self::InstructionIndex) -> [u64; 5];
 }
@@ -27,8 +28,7 @@ impl ILFunction for MediumLevelILFunction {
     type InstructionIndex = MediumLevelInstructionIndex;
 
     fn il_instruction_from_index(&self, instr_index: Self::InstructionIndex) -> Self::Instruction {
-        self.instruction_from_index(instr_index)
-            .expect("Invalid instruction index")
+        self.instruction_from_expr_index(instr_index).unwrap()
     }
 
     fn operands_from_index(&self, instr_index: Self::InstructionIndex) -> [u64; 5] {
@@ -44,8 +44,7 @@ impl ILFunction for HighLevelILFunction {
     type InstructionIndex = HighLevelInstructionIndex;
 
     fn il_instruction_from_index(&self, instr_index: Self::InstructionIndex) -> Self::Instruction {
-        self.instruction_from_index(instr_index)
-            .expect("Invalid instruction index")
+        self.instruction_from_expr_index(instr_index).unwrap()
     }
 
     fn operands_from_index(&self, instr_index: Self::InstructionIndex) -> [u64; 5] {

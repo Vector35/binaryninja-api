@@ -58,25 +58,28 @@ impl MediumLevelILFunction {
         }
     }
 
-    // TODO: When to use this?
     pub fn instruction_from_index(
         &self,
         index: MediumLevelInstructionIndex,
     ) -> Option<MediumLevelILInstruction> {
-        let mapped_index = unsafe { BNGetMediumLevelILIndexForInstruction(self.handle, index.0) };
-        self.instruction_from_mapped_index(MediumLevelInstructionIndex(mapped_index))
-    }
-
-    // TODO: What is a mapped index?
-    // TODO: When to use this?
-    pub fn instruction_from_mapped_index(
-        &self,
-        mapped_index: MediumLevelInstructionIndex,
-    ) -> Option<MediumLevelILInstruction> {
-        if mapped_index.0 >= self.instruction_count() {
+        if index.0 >= self.instruction_count() {
             None
         } else {
-            Some(MediumLevelILInstruction::new(self.to_owned(), mapped_index))
+            Some(MediumLevelILInstruction::new(self.to_owned(), index))
+        }
+    }
+
+    pub fn instruction_from_expr_index(
+        &self,
+        expr_index: MediumLevelInstructionIndex,
+    ) -> Option<MediumLevelILInstruction> {
+        if expr_index.0 >= self.expression_count() {
+            None
+        } else {
+            Some(MediumLevelILInstruction::new_expr(
+                self.to_owned(),
+                expr_index,
+            ))
         }
     }
 
@@ -466,14 +469,14 @@ impl MediumLevelILFunction {
         let result = unsafe {
             BNGetMediumLevelILSSAVarDefinition(self.handle, &raw_var, ssa_variable.version)
         };
-        // TODO: Is this mapped?
-        self.instruction_from_mapped_index(MediumLevelInstructionIndex(result))
+        // TODO: Does this return the expression or instruction index? Also we dont diff and this prob doesnt work.
+        self.instruction_from_index(MediumLevelInstructionIndex(result))
     }
 
     pub fn ssa_memory_definition(&self, version: usize) -> Option<MediumLevelILInstruction> {
         let result = unsafe { BNGetMediumLevelILSSAMemoryDefinition(self.handle, version) };
-        // TODO: Is this mapped?
-        self.instruction_from_mapped_index(MediumLevelInstructionIndex(result))
+        // TODO: Does this return the expression or instruction index? Also we dont diff and this prob doesnt work.
+        self.instruction_from_index(MediumLevelInstructionIndex(result))
     }
 
     /// Gets all the instructions that use the given SSA variable.

@@ -18,7 +18,7 @@ use crate::{
     architecture::{Architecture, CoreArchitecture, CoreRegister, Register},
     basic_block::{BasicBlock, BlockContext},
     binary_view::{BinaryView, BinaryViewExt},
-    calling_convention::CallingConvention,
+    calling_convention::CoreCallingConvention,
     component::Component,
     disassembly::{DisassemblySettings, DisassemblyTextLine},
     flowgraph::FlowGraph,
@@ -2200,11 +2200,11 @@ impl Function {
     }
 
     /// Calling convention used by the function
-    pub fn calling_convention(&self) -> Option<Conf<Ref<CallingConvention<CoreArchitecture>>>> {
+    pub fn calling_convention(&self) -> Option<Conf<Ref<CoreCallingConvention>>> {
         let result = unsafe { BNGetFunctionCallingConvention(self.handle) };
         (!result.convention.is_null()).then(|| {
             Conf::new(
-                unsafe { CallingConvention::ref_from_raw(result.convention, self.arch()) },
+                unsafe { CoreCallingConvention::ref_from_raw(result.convention, self.arch()) },
                 result.confidence,
             )
         })
@@ -2213,7 +2213,7 @@ impl Function {
     /// Set the User calling convention used by the function
     pub fn set_user_calling_convention<'a, I>(&self, value: Option<I>)
     where
-        I: Into<Conf<&'a CallingConvention<CoreArchitecture>>>,
+        I: Into<Conf<&'a CoreCallingConvention>>,
     {
         let mut conv_conf = BNCallingConventionWithConfidence::default();
         if let Some(value) = value {
@@ -2227,7 +2227,7 @@ impl Function {
     /// Set the calling convention used by the function
     pub fn set_auto_calling_convention<'a, I>(&self, value: Option<I>)
     where
-        I: Into<Conf<&'a CallingConvention<CoreArchitecture>>>,
+        I: Into<Conf<&'a CoreCallingConvention>>,
     {
         let mut conv_conf = BNCallingConventionWithConfidence::default();
         if let Some(value) = value {

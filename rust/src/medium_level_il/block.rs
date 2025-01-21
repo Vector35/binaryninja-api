@@ -31,8 +31,9 @@ impl BlockContext for MediumLevelILBlock {
 
 impl std::fmt::Debug for MediumLevelILBlock {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        // TODO: Make this better
-        write!(f, "mlil_bb {:?}", self.function)
+        f.debug_struct("MediumLevelILBlock")
+            .field("function", &self.function)
+            .finish()
     }
 }
 
@@ -56,7 +57,6 @@ impl Iterator for MediumLevelILBlockIter {
         self.range
             .next()
             .map(MediumLevelInstructionIndex)
-            // TODO: What if this is already mapped!?!?!? we will map twice!?!?!?
             .and_then(|i| self.function.instruction_from_index(i))
     }
 }

@@ -98,12 +98,13 @@ where
     }
 
     // TODO: Document the difference between the self.index and the expr_idx.
-    pub fn expr_idx(&self) -> usize {
-        unsafe { BNGetLowLevelILIndexForInstruction(self.function.handle, self.index.0) }
+    pub fn expr_idx(&self) -> LowLevelExpressionIndex {
+        let idx = unsafe { BNGetLowLevelILIndexForInstruction(self.function.handle, self.index.0) };
+        LowLevelExpressionIndex(idx)
     }
 
     pub fn into_raw(&self) -> BNLowLevelILInstruction {
-        unsafe { BNGetLowLevelILByIndex(self.function.handle, self.expr_idx()) }
+        unsafe { BNGetLowLevelILByIndex(self.function.handle, self.expr_idx().0) }
     }
 }
 
@@ -116,6 +117,7 @@ where
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Instruction")
             .field("index", &self.index)
+            .field("expr_idx", &self.expr_idx())
             .field("address", &self.address())
             .finish()
     }
@@ -134,7 +136,9 @@ where
         match raw_op.operation {
             // Any invalid ops for Non-Lifted IL will be checked here.
             // SAFETY: We have checked for illegal operations.
-            _ => unsafe { LowLevelILInstructionKind::from_raw(self.function, self.index, raw_op) },
+            _ => unsafe {
+                LowLevelILInstructionKind::from_raw(self.function, self.expr_idx(), raw_op)
+            },
         }
     }
 
@@ -161,7 +165,9 @@ where
         match raw_op.operation {
             // Any invalid ops for Non-Lifted IL will be checked here.
             // SAFETY: We have checked for illegal operations.
-            _ => unsafe { LowLevelILInstructionKind::from_raw(self.function, self.index, raw_op) },
+            _ => unsafe {
+                LowLevelILInstructionKind::from_raw(self.function, self.expr_idx(), raw_op)
+            },
         }
     }
 
@@ -190,7 +196,9 @@ where
         match raw_op.operation {
             // Any invalid ops for Non-Lifted IL will be checked here.
             // SAFETY: We have checked for illegal operations.
-            _ => unsafe { LowLevelILInstructionKind::from_raw(self.function, self.index, raw_op) },
+            _ => unsafe {
+                LowLevelILInstructionKind::from_raw(self.function, self.expr_idx(), raw_op)
+            },
         }
     }
 
@@ -250,7 +258,7 @@ where
 {
     pub(crate) unsafe fn from_raw(
         function: &'func LowLevelILFunction<A, M, F>,
-        index: LowLevelInstructionIndex,
+        expr_index: LowLevelExpressionIndex,
         op: BNLowLevelILInstruction,
     ) -> Self {
         use binaryninjacore_sys::BNLowLevelILOperation::*;
@@ -296,12 +304,7 @@ where
             LLIL_BP => LowLevelILInstructionKind::Bp(Operation::new(function, op)),
             LLIL_TRAP => LowLevelILInstructionKind::Trap(Operation::new(function, op)),
             LLIL_UNDEF => LowLevelILInstructionKind::Undef(Operation::new(function, op)),
-            // Could not identify an instruction, therefor must be a value expression.
-            // The conversion from instruction index to expression index is safe here.
-            _ => LowLevelILInstructionKind::Value(LowLevelILExpression::new(
-                function,
-                LowLevelExpressionIndex(index.0),
-            )),
+            _ => LowLevelILInstructionKind::Value(LowLevelILExpression::new(function, expr_index)),
         }
     }
 

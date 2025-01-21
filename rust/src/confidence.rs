@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use crate::architecture::{Architecture, CoreArchitecture};
-use crate::calling_convention::CallingConvention;
+use crate::calling_convention::CoreCallingConvention;
 use crate::rc::{Ref, RefCountable};
 use crate::types::Type;
 use binaryninjacore_sys::{
@@ -224,13 +224,13 @@ impl Conf<Ref<Type>> {
     }
 }
 
-impl Conf<Ref<CallingConvention<CoreArchitecture>>> {
+impl Conf<Ref<CoreCallingConvention>> {
     pub(crate) fn from_raw(value: &BNCallingConventionWithConfidence) -> Self {
         let arch = unsafe {
             CoreArchitecture::from_raw(BNGetCallingConventionArchitecture(value.convention))
         };
         Self::new(
-            unsafe { CallingConvention::from_raw(value.convention, arch).to_owned() },
+            unsafe { CoreCallingConvention::from_raw(value.convention, arch).to_owned() },
             value.confidence,
         )
     }
@@ -242,7 +242,7 @@ impl Conf<Ref<CallingConvention<CoreArchitecture>>> {
     }
 }
 
-impl<A: Architecture> Conf<Ref<CallingConvention<A>>> {
+impl Conf<Ref<CoreCallingConvention>> {
     pub(crate) fn into_raw(value: Self) -> BNCallingConventionWithConfidence {
         BNCallingConventionWithConfidence {
             convention: unsafe { Ref::into_raw(value.contents) }.handle,
@@ -261,8 +261,7 @@ impl<A: Architecture> Conf<Ref<CallingConvention<A>>> {
         let arch = unsafe {
             CoreArchitecture::from_raw(BNGetCallingConventionArchitecture(value.convention))
         };
-        let _ =
-            unsafe { CallingConvention::<CoreArchitecture>::ref_from_raw(value.convention, arch) };
+        let _ = unsafe { CoreCallingConvention::ref_from_raw(value.convention, arch) };
     }
 }
 

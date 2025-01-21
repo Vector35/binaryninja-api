@@ -33,7 +33,7 @@ impl GotoLabel {
 }
 
 // ADC, SBB, RLC, RRC
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct BinaryOpCarry {
     pub left: usize,
     pub right: usize,
@@ -47,7 +47,7 @@ pub struct LiftedBinaryOpCarry {
 }
 
 // ADD, SUB, AND, OR, XOR, LSL, LSR, ASR, ROL, ROR, MUL, MULU_DP, MULS_DP, DIVU, DIVU_DP, DIVS, DIVS_DP, MODU, MODU_DP, MODS, MODS_DP, CMP_E, CMP_NE, CMP_SLT, CMP_ULT, CMP_SLE, CMP_ULE, CMP_SGE, CMP_UGE, CMP_SGT, CMP_UGT, TEST_BIT, ADD_OVERFLOW, FADD, FSUB, FMUL, FDIV, FCMP_E, FCMP_NE, FCMP_LT, FCMP_LE, FCMP_GE, FCMP_GT, FCMP_O, FCMP_UO
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct BinaryOp {
     pub left: usize,
     pub right: usize,
@@ -59,7 +59,7 @@ pub struct LiftedBinaryOp {
 }
 
 // ARRAY_INDEX
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct ArrayIndex {
     pub src: usize,
     pub index: usize,
@@ -71,7 +71,7 @@ pub struct LiftedArrayIndex {
 }
 
 // ARRAY_INDEX_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct ArrayIndexSsa {
     pub src: usize,
     pub src_memory: u64,
@@ -85,7 +85,7 @@ pub struct LiftedArrayIndexSsa {
 }
 
 // ASSIGN
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Assign {
     pub dest: usize,
     pub src: usize,
@@ -97,7 +97,7 @@ pub struct LiftedAssign {
 }
 
 // ASSIGN_MEM_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct AssignMemSsa {
     pub dest: usize,
     pub dest_memory: u64,
@@ -113,7 +113,7 @@ pub struct LiftedAssignMemSsa {
 }
 
 // ASSIGN_UNPACK
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct AssignUnpack {
     pub first_dest: usize,
     pub num_dests: usize,
@@ -126,7 +126,7 @@ pub struct LiftedAssignUnpack {
 }
 
 // ASSIGN_UNPACK_MEM_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct AssignUnpackMemSsa {
     pub first_dest: usize,
     pub num_dests: usize,
@@ -143,7 +143,7 @@ pub struct LiftedAssignUnpackMemSsa {
 }
 
 // BLOCK
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Block {
     pub first_param: usize,
     pub num_params: usize,
@@ -154,7 +154,7 @@ pub struct LiftedBlock {
 }
 
 // CALL, TAILCALL
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Call {
     pub dest: usize,
     pub first_param: usize,
@@ -167,7 +167,7 @@ pub struct LiftedCall {
 }
 
 // CALL_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct CallSsa {
     pub dest: usize,
     pub first_param: usize,
@@ -184,7 +184,7 @@ pub struct LiftedCallSsa {
 }
 
 // CASE
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Case {
     pub first_value: usize,
     pub num_values: usize,
@@ -203,7 +203,7 @@ pub struct Const {
 }
 
 // CONST_DATA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct ConstData {
     pub constant_data_kind: u32,
     pub constant_data_value: i64,
@@ -216,7 +216,7 @@ pub struct LiftedConstData {
 }
 
 // DEREF, ADDRESS_OF, NEG, NOT, SX, ZX, LOW_PART, BOOL_TO_INT, UNIMPL_MEM, FSQRT, FNEG, FABS, FLOAT_TO_INT, INT_TO_FLOAT, FLOAT_CONV, ROUND_TO_INT, FLOOR, CEIL, FTRUNC
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct UnaryOp {
     pub src: usize,
 }
@@ -226,7 +226,7 @@ pub struct LiftedUnaryOp {
 }
 
 // DEREF_FIELD_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct DerefFieldSsa {
     pub src: usize,
     pub src_memory: u64,
@@ -243,7 +243,7 @@ pub struct LiftedDerefFieldSsa {
 }
 
 // DEREF_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct DerefSsa {
     pub src: usize,
     pub src_memory: u64,
@@ -269,7 +269,7 @@ pub struct FloatConst {
 }
 
 // FOR
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct ForLoop {
     pub init: usize,
     pub condition: usize,
@@ -286,7 +286,7 @@ pub struct LiftedForLoop {
 }
 
 // FOR_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct ForLoopSsa {
     pub init: usize,
     pub condition_phi: usize,
@@ -304,7 +304,7 @@ pub struct LiftedForLoopSsa {
 }
 
 // GOTO, LABEL
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Label {
     pub target: u64,
 }
@@ -324,7 +324,7 @@ impl LiftedLabel {
 }
 
 // IF
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct If {
     pub condition: usize,
     pub cond_true: usize,
@@ -338,7 +338,7 @@ pub struct LiftedIf {
 }
 
 // INTRINSIC
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Intrinsic {
     pub intrinsic: u32,
     pub first_param: usize,
@@ -351,7 +351,7 @@ pub struct LiftedIntrinsic {
 }
 
 // INTRINSIC_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct IntrinsicSsa {
     pub intrinsic: u32,
     pub first_param: usize,
@@ -368,7 +368,7 @@ pub struct LiftedIntrinsicSsa {
 }
 
 // JUMP
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Jump {
     pub dest: usize,
 }
@@ -378,7 +378,7 @@ pub struct LiftedJump {
 }
 
 // MEM_PHI
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct MemPhi {
     pub dest: u64,
     pub first_src: usize,
@@ -391,7 +391,7 @@ pub struct LiftedMemPhi {
 }
 
 // RET
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Ret {
     pub first_src: usize,
     pub num_srcs: usize,
@@ -402,7 +402,7 @@ pub struct LiftedRet {
 }
 
 // SPLIT
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Split {
     pub high: usize,
     pub low: usize,
@@ -414,7 +414,7 @@ pub struct LiftedSplit {
 }
 
 // STRUCT_FIELD, DEREF_FIELD
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct StructField {
     pub src: usize,
     pub offset: u64,
@@ -428,7 +428,7 @@ pub struct LiftedStructField {
 }
 
 // SWITCH
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Switch {
     pub condition: usize,
     pub default: usize,
@@ -443,7 +443,7 @@ pub struct LiftedSwitch {
 }
 
 // SYSCALL
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Syscall {
     pub first_param: usize,
     pub num_params: usize,
@@ -454,7 +454,7 @@ pub struct LiftedSyscall {
 }
 
 // SYSCALL_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SyscallSsa {
     pub first_param: usize,
     pub num_params: usize,
@@ -481,7 +481,7 @@ pub struct Var {
 }
 
 // VAR_INIT
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct VarInit {
     pub dest: Variable,
     pub src: usize,
@@ -493,7 +493,7 @@ pub struct LiftedVarInit {
 }
 
 // VAR_INIT_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct VarInitSsa {
     pub dest: SSAVariable,
     pub src: usize,
@@ -505,7 +505,7 @@ pub struct LiftedVarInitSsa {
 }
 
 // VAR_PHI
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct VarPhi {
     pub dest: SSAVariable,
     pub first_src: usize,
@@ -524,7 +524,7 @@ pub struct VarSsa {
 }
 
 // WHILE, DO_WHILE
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct While {
     pub condition: usize,
     pub body: usize,
@@ -536,7 +536,7 @@ pub struct LiftedWhile {
 }
 
 // WHILE_SSA, DO_WHILE_SSA
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct WhileSsa {
     pub condition_phi: usize,
     pub condition: usize,

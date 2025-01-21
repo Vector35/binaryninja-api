@@ -22,8 +22,10 @@ use std::marker::PhantomData;
 
 use binaryninjacore_sys::*;
 
-use crate::architecture::{Architecture, ArchitectureExt, Register, RegisterId};
-use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
+use crate::architecture::{
+    Architecture, ArchitectureExt, CoreArchitecture, CoreRegister, Register, RegisterId,
+};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::*;
 use crate::types::FunctionParameter;
 use crate::variable::Variable;
@@ -32,7 +34,7 @@ use crate::variable::Variable;
 // CallingConvention impl
 // dataflow callbacks
 
-pub trait CallingConventionBase: Sync {
+pub trait CallingConvention: Sync {
     type Arch: Architecture;
 
     fn caller_saved_registers(&self) -> Vec<<Self::Arch as Architecture>::Register>;
@@ -55,23 +57,24 @@ pub trait CallingConventionBase: Sync {
     fn are_argument_registers_used_for_var_args(&self) -> bool;
 }
 
-pub fn register_calling_convention<A, N, C>(arch: &A, name: N, cc: C) -> Ref<CallingConvention<A>>
+pub fn register_calling_convention<A, N, C>(arch: &A, name: N, cc: C) -> Ref<CoreCallingConvention>
 where
     A: Architecture,
     N: BnStrCompatible,
-    C: 'static + CallingConventionBase<Arch = A>,
+    C: 'static + CallingConvention<Arch = A>,
 {
     struct CustomCallingConventionContext<C>
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         raw_handle: *mut BNCallingConvention,
         cc: C,
     }
 
+    // TODO: It would be nice if these callbacks were moved out to the bottom of this file (maybe in another mod)
     extern "C" fn cb_free<C>(ctxt: *mut c_void)
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::free", unsafe {
             let _ctxt = Box::from_raw(ctxt as *mut CustomCallingConventionContext<C>);
@@ -84,13 +87,14 @@ where
                 return;
             }
 
-            let _regs = Box::from_raw(std::ptr::slice_from_raw_parts_mut(regs, count));
+            let regs_ptr = std::ptr::slice_from_raw_parts_mut(regs, count);
+            let _regs = Box::from_raw(regs_ptr);
         })
     }
 
     extern "C" fn cb_caller_saved<C>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::caller_saved_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -111,7 +115,7 @@ where
 
     extern "C" fn cb_callee_saved<C>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::callee_saved_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -132,7 +136,7 @@ where
 
     extern "C" fn cb_int_args<C>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::int_arg_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -153,7 +157,7 @@ where
 
     extern "C" fn cb_float_args<C>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::float_arg_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -174,7 +178,7 @@ where
 
     extern "C" fn cb_arg_shared_index<C>(ctxt: *mut c_void) -> bool
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::arg_registers_shared_index", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -185,7 +189,7 @@ where
 
     extern "C" fn cb_stack_reserved_arg_regs<C>(ctxt: *mut c_void) -> bool
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!(
             "CallingConvention::reserved_stack_space_for_arg_registers",
@@ -199,7 +203,7 @@ where
 
     extern "C" fn cb_stack_adjusted_on_return<C>(ctxt: *mut c_void) -> bool
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::stack_adjusted_on_return", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -210,7 +214,7 @@ where
 
     extern "C" fn cb_is_eligible_for_heuristics<C>(ctxt: *mut c_void) -> bool
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::is_eligible_for_heuristics", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -221,7 +225,7 @@ where
 
     extern "C" fn cb_return_int_reg<C>(ctxt: *mut c_void) -> u32
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::return_int_reg", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -235,7 +239,7 @@ where
 
     extern "C" fn cb_return_hi_int_reg<C>(ctxt: *mut c_void) -> u32
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::return_hi_int_reg", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -249,7 +253,7 @@ where
 
     extern "C" fn cb_return_float_reg<C>(ctxt: *mut c_void) -> u32
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::return_float_reg", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -263,7 +267,7 @@ where
 
     extern "C" fn cb_global_pointer_reg<C>(ctxt: *mut c_void) -> u32
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::global_pointer_reg", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -280,7 +284,7 @@ where
         count: *mut usize,
     ) -> *mut u32
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::implicitly_defined_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -299,15 +303,16 @@ where
         })
     }
 
-    #[allow(clippy::extra_unused_type_parameters)] // TODO : This is bad; need to finish this stub
+    #[allow(clippy::extra_unused_type_parameters)]
     extern "C" fn cb_incoming_reg_value<C>(
         _ctxt: *mut c_void,
         _reg: u32,
         _func: *mut BNFunction,
         val: *mut BNRegisterValue,
     ) where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
+        // TODO: This is bad; need to finish this stub
         ffi_wrap!("CallingConvention::incoming_reg_value", unsafe {
             //let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             let val = &mut *val;
@@ -317,15 +322,16 @@ where
         })
     }
 
-    #[allow(clippy::extra_unused_type_parameters)] // TODO : This is bad; need to finish this stub
+    #[allow(clippy::extra_unused_type_parameters)]
     extern "C" fn cb_incoming_flag_value<C>(
         _ctxt: *mut c_void,
         _flag: u32,
         _func: *mut BNFunction,
         val: *mut BNRegisterValue,
     ) where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
+        // TODO: This is bad; need to finish this stub
         ffi_wrap!("CallingConvention::incoming_flag_value", unsafe {
             //let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             let val = &mut *val;
@@ -341,7 +347,7 @@ where
         _func: *mut BNFunction,
         param: *mut BNVariable,
     ) where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::incoming_var_for_param", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -358,7 +364,7 @@ where
         _func: *mut BNFunction,
         param: *mut BNVariable,
     ) where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!("CallingConvention::incoming_param_for_var", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
@@ -371,7 +377,7 @@ where
 
     extern "C" fn cb_are_argument_registers_used_for_var_args<C>(ctxt: *mut c_void) -> bool
     where
-        C: CallingConventionBase,
+        C: CallingConvention,
     {
         ffi_wrap!(
             "CallingConvention::are_argument_registers_used_for_var_args",
@@ -428,37 +434,36 @@ where
 
         BNRegisterCallingConvention(arch.as_ref().handle, result);
 
-        Ref::new(CallingConvention {
+        Ref::new(CoreCallingConvention {
             handle: result,
-            arch_handle: arch.handle(),
-            _arch: PhantomData,
+            arch_handle: arch.as_ref().handle(),
         })
     }
 }
 
-pub struct CallingConvention<A: Architecture> {
+pub struct CoreCallingConvention {
     pub(crate) handle: *mut BNCallingConvention,
-    pub(crate) arch_handle: A::Handle,
-    _arch: PhantomData<*mut A>,
+    pub(crate) arch_handle: CoreArchitecture,
 }
 
-impl<A: Architecture> CallingConvention<A> {
-    pub(crate) unsafe fn from_raw(handle: *mut BNCallingConvention, arch: A::Handle) -> Self {
-        CallingConvention {
+impl CoreCallingConvention {
+    pub(crate) unsafe fn from_raw(
+        handle: *mut BNCallingConvention,
+        arch: CoreArchitecture,
+    ) -> Self {
+        CoreCallingConvention {
             handle,
             arch_handle: arch,
-            _arch: PhantomData,
         }
     }
 
     pub(crate) unsafe fn ref_from_raw(
         handle: *mut BNCallingConvention,
-        arch: A::Handle,
+        arch: CoreArchitecture,
     ) -> Ref<Self> {
-        Ref::new(CallingConvention {
+        Ref::new(CoreCallingConvention {
             handle,
             arch_handle: arch,
-            _arch: PhantomData,
         })
     }
 
@@ -469,7 +474,7 @@ impl<A: Architecture> CallingConvention<A> {
     pub fn variables_for_parameters(
         &self,
         params: &[FunctionParameter],
-        permitted_registers: Option<&[A::Register]>,
+        permitted_registers: Option<&[CoreRegister]>,
     ) -> Vec<Variable> {
         let mut count: usize = 0;
         let raw_params: Vec<BNFunctionParameter> = params
@@ -505,26 +510,23 @@ impl<A: Architecture> CallingConvention<A> {
             FunctionParameter::free_raw(raw_param);
         }
 
-        let raw_vars = unsafe { std::slice::from_raw_parts(raw_vars_ptr, count) };
-        let vars: Vec<_> = raw_vars.iter().copied().map(Into::into).collect();
-        unsafe { BNFreeVariableList(raw_vars_ptr) };
-        vars
+        unsafe { Array::<Variable>::new(raw_vars_ptr, count, ()) }.to_vec()
     }
 }
 
-unsafe impl<A: Architecture> Send for CallingConvention<A> {}
-unsafe impl<A: Architecture> Sync for CallingConvention<A> {}
+unsafe impl Send for CoreCallingConvention {}
+unsafe impl Sync for CoreCallingConvention {}
 
-impl<A: Architecture> Eq for CallingConvention<A> {}
-impl<A: Architecture> PartialEq for CallingConvention<A> {
+impl Eq for CoreCallingConvention {}
+impl PartialEq for CoreCallingConvention {
     fn eq(&self, rhs: &Self) -> bool {
         self.handle == rhs.handle
     }
 }
 
-impl<A: Architecture> Debug for CallingConvention<A> {
+impl Debug for CoreCallingConvention {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CallingConvention")
+        f.debug_struct("CoreCallingConvention")
             .field("name", &self.name())
             .field("caller_saved_registers", &self.caller_saved_registers())
             .field("callee_saved_registers", &self.callee_saved_registers())
@@ -559,84 +561,44 @@ impl<A: Architecture> Debug for CallingConvention<A> {
     }
 }
 
-impl<A: Architecture> Hash for CallingConvention<A> {
+impl Hash for CoreCallingConvention {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.handle.hash(state);
     }
 }
 
-impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
-    type Arch = A;
+impl CallingConvention for CoreCallingConvention {
+    type Arch = CoreArchitecture;
 
-    fn caller_saved_registers(&self) -> Vec<A::Register> {
+    fn caller_saved_registers(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count = 0;
             let regs = BNGetCallerSavedRegisters(self.handle, &mut count);
-            let arch = self.arch_handle.borrow();
-
-            let res = std::slice::from_raw_parts(regs, count)
-                .iter()
-                .map(|&id| RegisterId(id))
-                .filter_map(|r| arch.register_from_id(r))
-                .collect();
-
-            BNFreeRegisterList(regs);
-
-            res
+            Array::<CoreRegister>::new(regs, count, self.arch_handle).to_vec()
         }
     }
 
-    fn callee_saved_registers(&self) -> Vec<A::Register> {
+    fn callee_saved_registers(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count = 0;
             let regs = BNGetCalleeSavedRegisters(self.handle, &mut count);
-            let arch = self.arch_handle.borrow();
-
-            let res = std::slice::from_raw_parts(regs, count)
-                .iter()
-                .map(|&id| RegisterId(id))
-                .filter_map(|r| arch.register_from_id(r))
-                .collect();
-
-            BNFreeRegisterList(regs);
-
-            res
+            Array::<CoreRegister>::new(regs, count, self.arch_handle).to_vec()
         }
     }
 
-    fn int_arg_registers(&self) -> Vec<A::Register> {
+    fn int_arg_registers(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count = 0;
             let regs = BNGetIntegerArgumentRegisters(self.handle, &mut count);
-            let arch = self.arch_handle.borrow();
-
-            let res = std::slice::from_raw_parts(regs, count)
-                .iter()
-                .map(|&id| RegisterId(id))
-                .filter_map(|r| arch.register_from_id(r))
-                .collect();
-
-            BNFreeRegisterList(regs);
-
-            res
+            Array::<CoreRegister>::new(regs, count, self.arch_handle).to_vec()
         }
     }
 
-    fn float_arg_registers(&self) -> Vec<A::Register> {
+    fn float_arg_registers(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count = 0;
             let regs = BNGetFloatArgumentRegisters(self.handle, &mut count);
-            let arch = self.arch_handle.borrow();
-
-            let res = std::slice::from_raw_parts(regs, count)
-                .iter()
-                .map(|&id| RegisterId(id))
-                .filter_map(|r| arch.register_from_id(r))
-                .collect();
-
-            BNFreeRegisterList(regs);
-
-            res
+            Array::<CoreRegister>::new(regs, count, self.arch_handle).to_vec()
         }
     }
 
@@ -653,39 +615,43 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
     }
 
     fn is_eligible_for_heuristics(&self) -> bool {
-        false
+        unsafe { BNIsEligibleForHeuristics(self.handle) }
     }
 
-    fn return_int_reg(&self) -> Option<A::Register> {
+    fn return_int_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetIntegerReturnValueRegister(self.handle) } {
             id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
             _ => None,
         }
     }
 
-    fn return_hi_int_reg(&self) -> Option<A::Register> {
+    fn return_hi_int_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetHighIntegerReturnValueRegister(self.handle) } {
             id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
             _ => None,
         }
     }
 
-    fn return_float_reg(&self) -> Option<A::Register> {
+    fn return_float_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetFloatReturnValueRegister(self.handle) } {
             id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
             _ => None,
         }
     }
 
-    fn global_pointer_reg(&self) -> Option<A::Register> {
+    fn global_pointer_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetGlobalPointerRegister(self.handle) } {
             id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
             _ => None,
         }
     }
 
-    fn implicitly_defined_registers(&self) -> Vec<A::Register> {
-        Vec::new()
+    fn implicitly_defined_registers(&self) -> Vec<CoreRegister> {
+        unsafe {
+            let mut count = 0;
+            let regs = BNGetImplicitlyDefinedRegisters(self.handle, &mut count);
+            Array::<CoreRegister>::new(regs, count, self.arch_handle).to_vec()
+        }
     }
 
     fn are_argument_registers_used_for_var_args(&self) -> bool {
@@ -693,7 +659,7 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
     }
 }
 
-impl<A: Architecture> ToOwned for CallingConvention<A> {
+impl ToOwned for CoreCallingConvention {
     type Owned = Ref<Self>;
 
     fn to_owned(&self) -> Self::Owned {
@@ -701,12 +667,11 @@ impl<A: Architecture> ToOwned for CallingConvention<A> {
     }
 }
 
-unsafe impl<A: Architecture> RefCountable for CallingConvention<A> {
+unsafe impl RefCountable for CoreCallingConvention {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
         Ref::new(Self {
             handle: BNNewCallingConventionReference(handle.handle),
-            arch_handle: handle.arch_handle.clone(),
-            _arch: PhantomData,
+            arch_handle: handle.arch_handle,
         })
     }
 
@@ -715,23 +680,22 @@ unsafe impl<A: Architecture> RefCountable for CallingConvention<A> {
     }
 }
 
-impl<A: Architecture> CoreArrayProvider for CallingConvention<A> {
+impl CoreArrayProvider for CoreCallingConvention {
     type Raw = *mut BNCallingConvention;
-    type Context = A::Handle;
-    type Wrapped<'a> = Guard<'a, CallingConvention<A>>;
+    type Context = CoreArchitecture;
+    type Wrapped<'a> = Guard<'a, CoreCallingConvention>;
 }
 
-unsafe impl<A: Architecture> CoreArrayProviderInner for CallingConvention<A> {
+unsafe impl CoreArrayProviderInner for CoreCallingConvention {
     unsafe fn free(raw: *mut *mut BNCallingConvention, count: usize, _content: &Self::Context) {
         BNFreeCallingConventionList(raw, count);
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(
-            CallingConvention {
+            CoreCallingConvention {
                 handle: *raw,
-                arch_handle: context.clone(),
-                _arch: Default::default(),
+                arch_handle: *context,
             },
             context,
         )
@@ -762,9 +726,6 @@ pub struct ConventionBuilder<A: Architecture> {
     arch_handle: A::Handle,
     _arch: PhantomData<*const A>,
 }
-
-unsafe impl<A: Architecture> Send for ConventionBuilder<A> {}
-unsafe impl<A: Architecture> Sync for ConventionBuilder<A> {}
 
 macro_rules! bool_arg {
     ($name:ident) => {
@@ -853,14 +814,13 @@ impl<A: Architecture> ConventionBuilder<A> {
 
     bool_arg!(are_argument_registers_used_for_var_args);
 
-    pub fn register(self, name: &str) -> Ref<CallingConvention<A>> {
+    pub fn register(self, name: &str) -> Ref<CoreCallingConvention> {
         let arch = self.arch_handle.clone();
-
         register_calling_convention(arch.borrow(), name, self)
     }
 }
 
-impl<A: Architecture> CallingConventionBase for ConventionBuilder<A> {
+impl<A: Architecture> CallingConvention for ConventionBuilder<A> {
     type Arch = A;
 
     fn caller_saved_registers(&self) -> Vec<A::Register> {
@@ -919,3 +879,6 @@ impl<A: Architecture> CallingConventionBase for ConventionBuilder<A> {
         self.are_argument_registers_used_for_var_args
     }
 }
+
+unsafe impl<A: Architecture> Send for ConventionBuilder<A> {}
+unsafe impl<A: Architecture> Sync for ConventionBuilder<A> {}

@@ -609,7 +609,7 @@ impl MediumLevelILInstruction {
             | MLIL_CALL_OUTPUT_SSA
             | MLIL_MEMORY_INTRINSIC_OUTPUT_SSA
             | MLIL_MEMORY_INTRINSIC_SSA => {
-                unreachable!()
+                unimplemented!()
             }
         };
 

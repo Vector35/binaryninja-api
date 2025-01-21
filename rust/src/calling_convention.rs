@@ -35,25 +35,23 @@ use crate::variable::Variable;
 // dataflow callbacks
 
 pub trait CallingConvention: Sync {
-    type Arch: Architecture;
-
-    fn caller_saved_registers(&self) -> Vec<<Self::Arch as Architecture>::Register>;
-    fn callee_saved_registers(&self) -> Vec<<Self::Arch as Architecture>::Register>;
-    fn int_arg_registers(&self) -> Vec<<Self::Arch as Architecture>::Register>;
-    fn float_arg_registers(&self) -> Vec<<Self::Arch as Architecture>::Register>;
+    fn caller_saved_registers(&self) -> Vec<RegisterId>;
+    fn callee_saved_registers(&self) -> Vec<RegisterId>;
+    fn int_arg_registers(&self) -> Vec<RegisterId>;
+    fn float_arg_registers(&self) -> Vec<RegisterId>;
 
     fn arg_registers_shared_index(&self) -> bool;
     fn reserved_stack_space_for_arg_registers(&self) -> bool;
     fn stack_adjusted_on_return(&self) -> bool;
     fn is_eligible_for_heuristics(&self) -> bool;
 
-    fn return_int_reg(&self) -> Option<<Self::Arch as Architecture>::Register>;
-    fn return_hi_int_reg(&self) -> Option<<Self::Arch as Architecture>::Register>;
-    fn return_float_reg(&self) -> Option<<Self::Arch as Architecture>::Register>;
+    fn return_int_reg(&self) -> Option<RegisterId>;
+    fn return_hi_int_reg(&self) -> Option<RegisterId>;
+    fn return_float_reg(&self) -> Option<RegisterId>;
 
-    fn global_pointer_reg(&self) -> Option<<Self::Arch as Architecture>::Register>;
+    fn global_pointer_reg(&self) -> Option<RegisterId>;
 
-    fn implicitly_defined_registers(&self) -> Vec<<Self::Arch as Architecture>::Register>;
+    fn implicitly_defined_registers(&self) -> Vec<RegisterId>;
     fn are_argument_registers_used_for_var_args(&self) -> bool;
 }
 
@@ -61,7 +59,7 @@ pub fn register_calling_convention<A, N, C>(arch: &A, name: N, cc: C) -> Ref<Cor
 where
     A: Architecture,
     N: BnStrCompatible,
-    C: 'static + CallingConvention<Arch = A>,
+    C: 'static + CallingConvention,
 {
     struct CustomCallingConventionContext<C>
     where
@@ -102,7 +100,7 @@ where
                 .cc
                 .caller_saved_registers()
                 .iter()
-                .map(|r| r.id().0)
+                .map(|r| r.0)
                 .collect();
 
             // SAFETY: `count` is an out parameter
@@ -123,7 +121,7 @@ where
                 .cc
                 .callee_saved_registers()
                 .iter()
-                .map(|r| r.id().0)
+                .map(|r| r.0)
                 .collect();
 
             // SAFETY: `count` is an out parameter
@@ -140,12 +138,7 @@ where
     {
         ffi_wrap!("CallingConvention::int_arg_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let mut regs: Vec<_> = ctxt
-                .cc
-                .int_arg_registers()
-                .iter()
-                .map(|r| r.id().0)
-                .collect();
+            let mut regs: Vec<_> = ctxt.cc.int_arg_registers().iter().map(|r| r.0).collect();
 
             // SAFETY: `count` is an out parameter
             *count = regs.len();
@@ -161,12 +154,7 @@ where
     {
         ffi_wrap!("CallingConvention::float_arg_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            let mut regs: Vec<_> = ctxt
-                .cc
-                .float_arg_registers()
-                .iter()
-                .map(|r| r.id().0)
-                .collect();
+            let mut regs: Vec<_> = ctxt.cc.float_arg_registers().iter().map(|r| r.0).collect();
 
             // SAFETY: `count` is an out parameter
             *count = regs.len();
@@ -231,7 +219,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
 
             match ctxt.cc.return_int_reg() {
-                Some(r) => r.id().0,
+                Some(r) => r.0,
                 _ => 0xffff_ffff,
             }
         })
@@ -245,7 +233,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
 
             match ctxt.cc.return_hi_int_reg() {
-                Some(r) => r.id().0,
+                Some(r) => r.0,
                 _ => 0xffff_ffff,
             }
         })
@@ -259,7 +247,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
 
             match ctxt.cc.return_float_reg() {
-                Some(r) => r.id().0,
+                Some(r) => r.0,
                 _ => 0xffff_ffff,
             }
         })
@@ -273,7 +261,7 @@ where
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
 
             match ctxt.cc.global_pointer_reg() {
-                Some(r) => r.id().0,
+                Some(r) => r.0,
                 _ => 0xffff_ffff,
             }
         })
@@ -292,7 +280,7 @@ where
                 .cc
                 .implicitly_defined_registers()
                 .iter()
-                .map(|r| r.id().0)
+                .map(|r| r.0)
                 .collect();
 
             // SAFETY: `count` is an out parameter
@@ -568,37 +556,60 @@ impl Hash for CoreCallingConvention {
 }
 
 impl CallingConvention for CoreCallingConvention {
-    type Arch = CoreArchitecture;
-
-    fn caller_saved_registers(&self) -> Vec<CoreRegister> {
+    fn caller_saved_registers(&self) -> Vec<RegisterId> {
         unsafe {
             let mut count = 0;
-            let regs = BNGetCallerSavedRegisters(self.handle, &mut count);
-            Array::<CoreRegister>::new(regs, count, self.arch_handle).to_vec()
+            let regs_ptr = BNGetCallerSavedRegisters(self.handle, &mut count);
+            let regs: Vec<RegisterId> = std::slice::from_raw_parts(regs_ptr, count)
+                .iter()
+                .copied()
+                .map(RegisterId::from)
+                .collect();
+            BNFreeRegisterList(regs_ptr);
+            regs
         }
     }
 
-    fn callee_saved_registers(&self) -> Vec<CoreRegister> {
+    fn callee_saved_registers(&self) -> Vec<RegisterId> {
         unsafe {
             let mut count = 0;
-            let regs = BNGetCalleeSavedRegisters(self.handle, &mut count);
-            Array::<CoreRegister>::new(regs, count, self.arch_handle).to_vec()
+            let regs_ptr = BNGetCalleeSavedRegisters(self.handle, &mut count);
+            BNFreeRegisterList(regs_ptr);
+            let regs: Vec<RegisterId> = std::slice::from_raw_parts(regs_ptr, count)
+                .iter()
+                .copied()
+                .map(RegisterId::from)
+                .collect();
+            BNFreeRegisterList(regs_ptr);
+            regs
         }
     }
 
-    fn int_arg_registers(&self) -> Vec<CoreRegister> {
+    fn int_arg_registers(&self) -> Vec<RegisterId> {
         unsafe {
             let mut count = 0;
-            let regs = BNGetIntegerArgumentRegisters(self.handle, &mut count);
-            Array::<CoreRegister>::new(regs, count, self.arch_handle).to_vec()
+            let regs_ptr = BNGetIntegerArgumentRegisters(self.handle, &mut count);
+            let regs: Vec<RegisterId> = std::slice::from_raw_parts(regs_ptr, count)
+                .iter()
+                .copied()
+                .map(RegisterId::from)
+                .collect();
+            BNFreeRegisterList(regs_ptr);
+            regs
         }
     }
 
-    fn float_arg_registers(&self) -> Vec<CoreRegister> {
+    fn float_arg_registers(&self) -> Vec<RegisterId> {
         unsafe {
             let mut count = 0;
-            let regs = BNGetFloatArgumentRegisters(self.handle, &mut count);
-            Array::<CoreRegister>::new(regs, count, self.arch_handle).to_vec()
+            let regs_ptr = BNGetFloatArgumentRegisters(self.handle, &mut count);
+            let regs: Vec<RegisterId> = std::slice::from_raw_parts(regs_ptr, count)
+                .iter()
+                .copied()
+                .map(RegisterId::from)
+                .collect();
+            BNFreeRegisterList(regs_ptr);
+            regs
         }
     }
 
@@ -618,39 +629,61 @@ impl CallingConvention for CoreCallingConvention {
         unsafe { BNIsEligibleForHeuristics(self.handle) }
     }
 
-    fn return_int_reg(&self) -> Option<CoreRegister> {
+    fn return_int_reg(&self) -> Option<RegisterId> {
         match unsafe { BNGetIntegerReturnValueRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
+            id if id < 0x8000_0000 => self
+                .arch_handle
+                .borrow()
+                .register_from_id(RegisterId(id))
+                .map(|r| r.id()),
             _ => None,
         }
     }
 
-    fn return_hi_int_reg(&self) -> Option<CoreRegister> {
+    fn return_hi_int_reg(&self) -> Option<RegisterId> {
         match unsafe { BNGetHighIntegerReturnValueRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
+            id if id < 0x8000_0000 => self
+                .arch_handle
+                .borrow()
+                .register_from_id(RegisterId(id))
+                .map(|r| r.id()),
             _ => None,
         }
     }
 
-    fn return_float_reg(&self) -> Option<CoreRegister> {
+    fn return_float_reg(&self) -> Option<RegisterId> {
         match unsafe { BNGetFloatReturnValueRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
+            id if id < 0x8000_0000 => self
+                .arch_handle
+                .borrow()
+                .register_from_id(RegisterId(id))
+                .map(|r| r.id()),
             _ => None,
         }
     }
 
-    fn global_pointer_reg(&self) -> Option<CoreRegister> {
+    fn global_pointer_reg(&self) -> Option<RegisterId> {
         match unsafe { BNGetGlobalPointerRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(RegisterId(id)),
+            id if id < 0x8000_0000 => self
+                .arch_handle
+                .borrow()
+                .register_from_id(RegisterId(id))
+                .map(|r| r.id()),
             _ => None,
         }
     }
 
-    fn implicitly_defined_registers(&self) -> Vec<CoreRegister> {
+    fn implicitly_defined_registers(&self) -> Vec<RegisterId> {
         unsafe {
             let mut count = 0;
-            let regs = BNGetImplicitlyDefinedRegisters(self.handle, &mut count);
-            Array::<CoreRegister>::new(regs, count, self.arch_handle).to_vec()
+            let regs_ptr = BNGetImplicitlyDefinedRegisters(self.handle, &mut count);
+            let regs: Vec<RegisterId> = std::slice::from_raw_parts(regs_ptr, count)
+                .iter()
+                .copied()
+                .map(RegisterId::from)
+                .collect();
+            BNFreeRegisterList(regs_ptr);
+            regs
         }
     }
 
@@ -703,23 +736,23 @@ unsafe impl CoreArrayProviderInner for CoreCallingConvention {
 }
 
 pub struct ConventionBuilder<A: Architecture> {
-    caller_saved_registers: Vec<A::Register>,
-    callee_saved_registers: Vec<A::Register>,
-    int_arg_registers: Vec<A::Register>,
-    float_arg_registers: Vec<A::Register>,
+    caller_saved_registers: Vec<RegisterId>,
+    callee_saved_registers: Vec<RegisterId>,
+    int_arg_registers: Vec<RegisterId>,
+    float_arg_registers: Vec<RegisterId>,
 
     arg_registers_shared_index: bool,
     reserved_stack_space_for_arg_registers: bool,
     stack_adjusted_on_return: bool,
     is_eligible_for_heuristics: bool,
 
-    return_int_reg: Option<A::Register>,
-    return_hi_int_reg: Option<A::Register>,
-    return_float_reg: Option<A::Register>,
+    return_int_reg: Option<RegisterId>,
+    return_hi_int_reg: Option<RegisterId>,
+    return_float_reg: Option<RegisterId>,
 
-    global_pointer_reg: Option<A::Register>,
+    global_pointer_reg: Option<RegisterId>,
 
-    implicitly_defined_registers: Vec<A::Register>,
+    implicitly_defined_registers: Vec<RegisterId>,
 
     are_argument_registers_used_for_var_args: bool,
 
@@ -742,7 +775,10 @@ macro_rules! reg_list {
             {
                 // FIXME NLL
                 let arch = self.arch_handle.borrow();
-                let arch_regs = regs.iter().filter_map(|&r| arch.register_by_name(r));
+                let arch_regs = regs
+                    .iter()
+                    .filter_map(|&r| arch.register_by_name(r))
+                    .map(|r| r.id());
 
                 self.$name = arch_regs.collect();
             }
@@ -758,7 +794,7 @@ macro_rules! reg {
             {
                 // FIXME NLL
                 let arch = self.arch_handle.borrow();
-                self.$name = arch.register_by_name(reg);
+                self.$name = arch.register_by_name(reg).map(|r| r.id());
             }
 
             self
@@ -821,21 +857,19 @@ impl<A: Architecture> ConventionBuilder<A> {
 }
 
 impl<A: Architecture> CallingConvention for ConventionBuilder<A> {
-    type Arch = A;
-
-    fn caller_saved_registers(&self) -> Vec<A::Register> {
+    fn caller_saved_registers(&self) -> Vec<RegisterId> {
         self.caller_saved_registers.clone()
     }
 
-    fn callee_saved_registers(&self) -> Vec<A::Register> {
+    fn callee_saved_registers(&self) -> Vec<RegisterId> {
         self.callee_saved_registers.clone()
     }
 
-    fn int_arg_registers(&self) -> Vec<A::Register> {
+    fn int_arg_registers(&self) -> Vec<RegisterId> {
         self.int_arg_registers.clone()
     }
 
-    fn float_arg_registers(&self) -> Vec<A::Register> {
+    fn float_arg_registers(&self) -> Vec<RegisterId> {
         self.float_arg_registers.clone()
     }
 
@@ -855,23 +889,23 @@ impl<A: Architecture> CallingConvention for ConventionBuilder<A> {
         self.is_eligible_for_heuristics
     }
 
-    fn return_int_reg(&self) -> Option<A::Register> {
+    fn return_int_reg(&self) -> Option<RegisterId> {
         self.return_int_reg
     }
 
-    fn return_hi_int_reg(&self) -> Option<A::Register> {
+    fn return_hi_int_reg(&self) -> Option<RegisterId> {
         self.return_hi_int_reg
     }
 
-    fn return_float_reg(&self) -> Option<A::Register> {
+    fn return_float_reg(&self) -> Option<RegisterId> {
         self.return_float_reg
     }
 
-    fn global_pointer_reg(&self) -> Option<A::Register> {
+    fn global_pointer_reg(&self) -> Option<RegisterId> {
         self.global_pointer_reg
     }
 
-    fn implicitly_defined_registers(&self) -> Vec<A::Register> {
+    fn implicitly_defined_registers(&self) -> Vec<RegisterId> {
         self.implicitly_defined_registers.clone()
     }
 

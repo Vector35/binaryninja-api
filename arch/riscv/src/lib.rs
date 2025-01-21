@@ -2671,9 +2671,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RiscVCC<D> {
 }
 
 impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConvention for RiscVCC<D> {
-    type Arch = RiscVArch<D>;
-
-    fn caller_saved_registers(&self) -> Vec<Register<D>> {
+    fn caller_saved_registers(&self) -> Vec<RegisterId> {
         let mut regs = Vec::with_capacity(36);
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
 
@@ -2681,7 +2679,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConvention for RiscVCC
             1u32, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 28, 29, 30, 31,
         ] {
             if i < &int_reg_count {
-                regs.push(Register::new(RegisterId(*i)));
+                regs.push(RegisterId(*i));
             }
         }
 
@@ -2689,52 +2687,52 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConvention for RiscVCC
             for i in &[
                 0u32, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 28, 29, 30, 31,
             ] {
-                regs.push(Register::new(RegisterId(*i + int_reg_count)));
+                regs.push(RegisterId(*i + int_reg_count));
             }
         }
 
         regs
     }
 
-    fn callee_saved_registers(&self) -> Vec<Register<D>> {
+    fn callee_saved_registers(&self) -> Vec<RegisterId> {
         let mut regs = Vec::with_capacity(24);
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
 
         for i in &[8u32, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] {
             if i < &int_reg_count {
-                regs.push(Register::new(RegisterId(*i)));
+                regs.push(RegisterId(*i));
             }
         }
 
         if <D::RegFile as RegFile>::Float::present() {
             for i in &[8u32, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] {
-                regs.push(Register::new(RegisterId(*i + int_reg_count)));
+                regs.push(RegisterId(*i + int_reg_count));
             }
         }
 
         regs
     }
 
-    fn int_arg_registers(&self) -> Vec<Register<D>> {
+    fn int_arg_registers(&self) -> Vec<RegisterId> {
         let mut regs = Vec::with_capacity(8);
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
 
         for i in &[10, 11, 12, 13, 14, 15, 16, 17] {
             if i < &int_reg_count {
-                regs.push(Register::new(RegisterId(*i)));
+                regs.push(RegisterId(*i));
             }
         }
 
         regs
     }
 
-    fn float_arg_registers(&self) -> Vec<Register<D>> {
+    fn float_arg_registers(&self) -> Vec<RegisterId> {
         let mut regs = Vec::with_capacity(8);
 
         if <D::RegFile as RegFile>::Float::present() {
             let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
             for i in &[10, 11, 12, 13, 14, 15, 16, 17] {
-                regs.push(Register::new(RegisterId(*i + int_reg_count)));
+                regs.push(RegisterId(*i + int_reg_count));
             }
         }
 
@@ -2757,29 +2755,29 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConvention for RiscVCC
     }
 
     // a0 == x10
-    fn return_int_reg(&self) -> Option<Register<D>> {
-        Some(Register::new(RegisterId(10)))
+    fn return_int_reg(&self) -> Option<RegisterId> {
+        Some(RegisterId(10))
     }
     // a1 == x11
-    fn return_hi_int_reg(&self) -> Option<Register<D>> {
-        Some(Register::new(RegisterId(11)))
+    fn return_hi_int_reg(&self) -> Option<RegisterId> {
+        Some(RegisterId(11))
     }
 
-    fn return_float_reg(&self) -> Option<Register<D>> {
+    fn return_float_reg(&self) -> Option<RegisterId> {
         if <D::RegFile as RegFile>::Float::present() {
             let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
-            Some(Register::new(RegisterId(10 + int_reg_count)))
+            Some(RegisterId(10 + int_reg_count))
         } else {
             None
         }
     }
 
     // gp == x3
-    fn global_pointer_reg(&self) -> Option<Register<D>> {
-        Some(Register::new(RegisterId(3)))
+    fn global_pointer_reg(&self) -> Option<RegisterId> {
+        Some(RegisterId(3))
     }
 
-    fn implicitly_defined_registers(&self) -> Vec<Register<D>> {
+    fn implicitly_defined_registers(&self) -> Vec<RegisterId> {
         Vec::new()
     }
     fn are_argument_registers_used_for_var_args(&self) -> bool {
@@ -2995,9 +2993,17 @@ pub extern "C" fn CorePluginInit() -> bool {
     arch32.register_function_recognizer(RiscVELFPLTRecognizer);
     arch64.register_function_recognizer(RiscVELFPLTRecognizer);
 
-    let cc32 = register_calling_convention(arch32, "default", RiscVCC::new());
+    let cc32 = register_calling_convention(
+        arch32,
+        "default",
+        RiscVCC::<RiscVIMACDisassembler<Rv32GRegs>>::new(),
+    );
     arch32.set_default_calling_convention(&cc32);
-    let cc64 = register_calling_convention(arch64, "default", RiscVCC::new());
+    let cc64 = register_calling_convention(
+        arch64,
+        "default",
+        RiscVCC::<RiscVIMACDisassembler<Rv64GRegs>>::new(),
+    );
     arch64.set_default_calling_convention(&cc64);
 
     if let Ok(bvt) = BinaryViewType::by_name("ELF") {

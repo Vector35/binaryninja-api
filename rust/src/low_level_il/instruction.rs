@@ -20,7 +20,6 @@ use binaryninjacore_sys::BNGetLowLevelILByIndex;
 use binaryninjacore_sys::BNGetLowLevelILIndexForInstruction;
 use binaryninjacore_sys::BNLowLevelILInstruction;
 use std::fmt::{Debug, Display, Formatter};
-
 use super::VisitorAction;
 
 #[repr(transparent)]
@@ -340,7 +339,8 @@ where
                 // TODO: Visit when we support expression lists
             }
             Value(e) => visit!(e),
-            _ => {}
+            // Do not have any sub expressions.
+            Nop(_) | NoRet(_) | Goto(_) | Syscall(_) | Bp(_) | Trap(_) | Undef(_) => {}
         }
 
         VisitorAction::Sibling

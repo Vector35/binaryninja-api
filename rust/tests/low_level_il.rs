@@ -7,7 +7,7 @@ use binaryninja::low_level_il::expression::{
 use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstructionKind, LowLevelInstructionIndex,
 };
-use binaryninja::low_level_il::LowLevelILRegister;
+use binaryninja::low_level_il::{LowLevelILRegister, VisitorAction};
 use rstest::*;
 use std::path::PathBuf;
 
@@ -166,5 +166,57 @@ fn test_llil_info(_session: &Session) {
             assert_eq!(op.target().index, LowLevelExpressionIndex(21));
         }
         _ => panic!("Expected Ret"),
+    }
+}
+
+#[rstest]
+fn test_llil_visitor(_session: &Session) {
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+    let platform = view.default_platform().unwrap();
+
+    // Sample function: __crt_strtox::c_string_character_source<char>::validate
+    let sample_function = view.function_at(&platform, 0x2bd80).unwrap();
+    let llil_function = sample_function.low_level_il().unwrap();
+    let llil_basic_blocks = llil_function.basic_blocks();
+    let llil_basic_block_iter = llil_basic_blocks.iter();
+
+    let mut basic_blocks_visited = 0;
+    let mut instructions_visited: Vec<LowLevelInstructionIndex> = vec![];
+    let mut expressions_visited: Vec<LowLevelExpressionIndex> = vec![];
+    for basic_block in llil_basic_block_iter {
+        basic_blocks_visited += 1;
+        for instr in basic_block.iter() {
+            instructions_visited.push(instr.index);
+            expressions_visited.push(instr.expr_idx());
+            instr.visit_tree(&mut |expr| {
+                expressions_visited.push(expr.index);
+                VisitorAction::Descend
+            });
+        }
+    }
+
+    assert_eq!(basic_blocks_visited, 10);
+    // This is a flag instruction removed in LLIL.
+    instructions_visited.push(LowLevelInstructionIndex(38));
+    for instr_idx in 0..41 {
+        if instructions_visited.iter().find(|x| x.0 == instr_idx).is_none() {
+            panic!("Instruction with index {:?} not visited", instr_idx);
+        };
+    }
+    // These are NOP's
+    expressions_visited.push(LowLevelExpressionIndex(24));
+    expressions_visited.push(LowLevelExpressionIndex(54));
+    expressions_visited.push(LowLevelExpressionIndex(62));
+    expressions_visited.push(LowLevelExpressionIndex(87));
+    // These are some flag things
+    expressions_visited.push(LowLevelExpressionIndex(114));
+    expressions_visited.push(LowLevelExpressionIndex(115));
+    expressions_visited.push(LowLevelExpressionIndex(116));
+    expressions_visited.push(LowLevelExpressionIndex(121));
+    for expr_idx in 0..127 {
+        if expressions_visited.iter().find(|x| x.0 == expr_idx).is_none() {
+            panic!("Expression with index {:?} not visited", expr_idx);
+        };
     }
 }

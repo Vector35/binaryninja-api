@@ -130,14 +130,14 @@ where
     where
         T: FnMut(&LowLevelILExpression<'func, A, M, SSA, ValueExpr>) -> VisitorAction,
     {
-        // First visit the current expression.
-        let info = self.kind();
+        // Visit the current expression.
         match f(self) {
-            VisitorAction::Descend => {}
-            action => return action,
+            VisitorAction::Descend => {
+                // Recursively visit sub expressions.
+                self.kind().visit_sub_expressions(|e| e.visit_tree(f))
+            }
+            action => action,
         }
-        // Recursively visit sub expressions.
-        info.visit_sub_expressions(|e| e.visit_tree(f))
     }
 }
 
@@ -165,14 +165,14 @@ where
             &LowLevelILExpression<'func, A, M, NonSSA<LiftedNonSSA>, ValueExpr>,
         ) -> VisitorAction,
     {
-        // First visit the current expression.
-        let info = self.kind();
+        // Visit the current expression.
         match f(self) {
-            VisitorAction::Descend => {}
-            action => return action,
+            VisitorAction::Descend => {
+                // Recursively visit sub expressions.
+                self.kind().visit_sub_expressions(|e| e.visit_tree(f))
+            }
+            action => action,
         }
-        // Recursively visit sub expressions.
-        info.visit_sub_expressions(|e| e.visit_tree(f))
     }
 }
 
@@ -200,14 +200,14 @@ where
             &LowLevelILExpression<'func, A, M, NonSSA<RegularNonSSA>, ValueExpr>,
         ) -> VisitorAction,
     {
-        // First visit the current expression.
-        let info = self.kind();
+        // Visit the current expression.
         match f(self) {
-            VisitorAction::Descend => {}
-            action => return action,
+            VisitorAction::Descend => {
+                // Recursively visit sub expressions.
+                self.kind().visit_sub_expressions(|e| e.visit_tree(f))
+            }
+            action => action,
         }
-        // Recursively visit sub expressions.
-        info.visit_sub_expressions(|e| e.visit_tree(f))
     }
 }
 
@@ -592,7 +592,11 @@ where
             UnimplMem(ref op) => {
                 visit!(op.mem_expr());
             }
-            _ => {}
+            Load(ref op) => {
+                visit!(op.source_mem_expr());
+            }
+            // Do not have any sub expressions.
+            Pop(_) | Reg(_) | RegSplit(_) | Const(_) | ConstPtr(_) | Flag(_) | FlagBit(_) | ExternPtr(_) | FlagCond(_) | FlagGroup(_) | Unimpl(_) | Undef(_) => {}
         }
 
         VisitorAction::Sibling

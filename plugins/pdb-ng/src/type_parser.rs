@@ -2075,7 +2075,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     fn is_name_anonymous(name: &QualifiedName) -> bool {
         match name.items.last() {
             Some(item) if item == "<anonymous-tag>" => true,
-            Some(item) if item.starts_with("<unnamed-") => true,
+            Some(item) if item.contains("<unnamed-") => true,
             _ => false,
         }
     }
@@ -2210,6 +2210,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         // No? We're just going to do something close and leave it to the users to figure out the rest
         // There's no way I'm digging through all nonsense
 
+        // Glenn: "Never mind this got deleted... MS has done it again"
         // After a quick GitHub discussion (https://github.com/MicrosoftDocs/cpp-docs/issues/4152)
         // I've determined this is unknowable.
         // Microsoft does it again!!!!

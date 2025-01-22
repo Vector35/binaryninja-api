@@ -128,6 +128,7 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
 
     let is_variant_instr = |instr: &LowLevelILInstruction<A, M, NonSSA<RegularNonSSA>>| {
         let is_variant_expr = |expr: &LowLevelILExpressionKind<A, M, NonSSA<RegularNonSSA>>| {
+            // TODO: Checking the section here is slow, we should gather all section ranges outside of this.
             match expr {
                 LowLevelILExpressionKind::ConstPtr(op)
                     if !view.sections_at(op.value()).is_empty() =>

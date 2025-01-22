@@ -28,6 +28,7 @@ jobs:
         with:
           license: '${{ secrets.BN_SERIAL }}'
           python-support: 'false'
+          dev-branch: 'true'
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Test
         # For now, we run the tests single threaded, there are some data races in core around platform types

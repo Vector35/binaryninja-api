@@ -1395,6 +1395,10 @@ public:
 			return "__wfi";
 		case ARM_M_INTRIN_SET_BASEPRI:
 			return "__set_BASEPRI";
+		case ARMV7_INTRIN_RBIT:
+			return "__rbit";
+		case ARMV7_INTRIN_CLZ:
+			return "__clz";
 		default:
 			return "";
 		}

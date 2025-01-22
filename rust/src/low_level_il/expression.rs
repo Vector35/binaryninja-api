@@ -596,7 +596,8 @@ where
                 visit!(op.source_mem_expr());
             }
             // Do not have any sub expressions.
-            Pop(_) | Reg(_) | RegSplit(_) | Const(_) | ConstPtr(_) | Flag(_) | FlagBit(_) | ExternPtr(_) | FlagCond(_) | FlagGroup(_) | Unimpl(_) | Undef(_) => {}
+            Pop(_) | Reg(_) | RegSplit(_) | Const(_) | ConstPtr(_) | Flag(_) | FlagBit(_)
+            | ExternPtr(_) | FlagCond(_) | FlagGroup(_) | Unimpl(_) | Undef(_) => {}
         }
 
         VisitorAction::Sibling

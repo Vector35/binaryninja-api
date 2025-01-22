@@ -200,7 +200,11 @@ fn test_llil_visitor(_session: &Session) {
     // This is a flag instruction removed in LLIL.
     instructions_visited.push(LowLevelInstructionIndex(38));
     for instr_idx in 0..41 {
-        if instructions_visited.iter().find(|x| x.0 == instr_idx).is_none() {
+        if instructions_visited
+            .iter()
+            .find(|x| x.0 == instr_idx)
+            .is_none()
+        {
             panic!("Instruction with index {:?} not visited", instr_idx);
         };
     }
@@ -215,7 +219,11 @@ fn test_llil_visitor(_session: &Session) {
     expressions_visited.push(LowLevelExpressionIndex(116));
     expressions_visited.push(LowLevelExpressionIndex(121));
     for expr_idx in 0..127 {
-        if expressions_visited.iter().find(|x| x.0 == expr_idx).is_none() {
+        if expressions_visited
+            .iter()
+            .find(|x| x.0 == expr_idx)
+            .is_none()
+        {
             panic!("Expression with index {:?} not visited", expr_idx);
         };
     }

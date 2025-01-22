@@ -14,13 +14,13 @@
 
 use super::operation;
 use super::operation::Operation;
+use super::VisitorAction;
 use super::*;
 use crate::architecture::Architecture;
 use binaryninjacore_sys::BNGetLowLevelILByIndex;
 use binaryninjacore_sys::BNGetLowLevelILIndexForInstruction;
 use binaryninjacore_sys::BNLowLevelILInstruction;
 use std::fmt::{Debug, Display, Formatter};
-use super::VisitorAction;
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

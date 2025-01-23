@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO : These clippy-allow are bad and needs to be removed
+// TODO: These clippy-allow are bad and needs to be removed
 #![allow(clippy::missing_safety_doc)]
 #![allow(clippy::result_unit_err)]
 #![allow(clippy::type_complexity)]
@@ -23,21 +23,6 @@
 #![doc(html_logo_url = "https://binary.ninja/icons/android-chrome-512x512.png")]
 #![doc(issue_tracker_base_url = "https://github.com/Vector35/binaryninja-api/issues/")]
 #![doc = include_str!("../README.md")]
-
-#[doc(hidden)]
-pub extern crate binaryninjacore_sys;
-#[cfg(feature = "rayon")]
-extern crate rayon;
-
-// TODO
-// move some options to results
-// replace `fn handle` with `AsRef` bounds
-// possible values
-// arch rework
-// cc possible values
-// bv reorg
-// core fileaccessor (for bv saving)
-// platform cc
 
 #[macro_use]
 mod ffi;

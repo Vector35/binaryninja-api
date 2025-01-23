@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use anyhow::{anyhow, Result};
 use binaryninja::architecture::CoreArchitecture;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
-use binaryninja::binaryninjacore_sys::{BNMemberAccess, BNMemberScope};
 use binaryninja::confidence::Conf;
 use binaryninja::rc::Ref;
 use binaryninja::types::{
-    EnumerationBuilder, FunctionParameter, StructureBuilder, StructureType, Type,
+    EnumerationBuilder, FunctionParameter, MemberAccess, MemberScope, StructureBuilder,
+    StructureType, Type,
 };
 use idb_rs::til::{
     array::Array as TILArray, function::Function as TILFunction, r#enum::Enum as TILEnum,
@@ -313,12 +313,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 format!("bitfield_{}_{}", offset + start_idx, offset + (i - 1))
             };
             let field = field_from_bytes(bytes);
-            struct_builder.append(
-                &field,
-                name,
-                BNMemberAccess::NoAccess,
-                BNMemberScope::NoScope,
-            );
+            struct_builder.append(&field, name, MemberAccess::NoAccess, MemberScope::NoScope);
         };
 
         for (i, member) in members {
@@ -402,7 +397,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 .as_ref()
                 .map(|name| String::from_utf8_lossy(name).to_string())
                 .unwrap_or_else(|| format!("member_{i}"));
-            structure.append(&mem, name, BNMemberAccess::NoAccess, BNMemberScope::NoScope);
+            structure.append(&mem, name, MemberAccess::NoAccess, MemberScope::NoScope);
         }
         if let Some(start_idx) = first_bitfield_seq {
             let members_bitrange = &members[start_idx..];
@@ -452,7 +447,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 .as_ref()
                 .map(|name| String::from_utf8_lossy(name).to_string())
                 .unwrap_or_else(|| format!("member_{i}"));
-            structure.append(&mem, name, BNMemberAccess::NoAccess, BNMemberScope::NoScope);
+            structure.append(&mem, name, MemberAccess::NoAccess, MemberScope::NoScope);
         }
         let str_ref = structure.finalize();
 

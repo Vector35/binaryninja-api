@@ -1,7 +1,7 @@
 use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::disassembly::{DisassemblyOption, DisassemblySettings};
 use binaryninja::function::Function;
-use binaryninja::linear_view::{LinearViewCursor, LinearViewObject};
+use binaryninja::linear_view::LinearViewObject;
 
 fn decompile_to_c(view: &BinaryView, func: &Function) {
     let settings = DisassemblySettings::new();
@@ -13,7 +13,7 @@ fn decompile_to_c(view: &BinaryView, func: &Function) {
 
     let linear_view = LinearViewObject::language_representation(view, &settings, "Pseudo C");
 
-    let mut cursor = LinearViewCursor::new(&linear_view);
+    let mut cursor = linear_view.create_cursor();
     cursor.seek_to_address(func.highest_address());
 
     let last = view.get_next_linear_disassembly_lines(&mut cursor.duplicate());

@@ -129,7 +129,7 @@ pub trait BinaryViewBase: AsRef<BinaryView> {
         0
     }
 
-    fn len(&self) -> usize {
+    fn len(&self) -> u64 {
         0
     }
 
@@ -1937,8 +1937,8 @@ impl BinaryViewBase for BinaryView {
         unsafe { BNGetStartOffset(self.handle) }
     }
 
-    fn len(&self) -> usize {
-        unsafe { BNGetViewLength(self.handle) as usize }
+    fn len(&self) -> u64 {
+        unsafe { BNGetViewLength(self.handle) }
     }
 
     fn executable(&self) -> bool {

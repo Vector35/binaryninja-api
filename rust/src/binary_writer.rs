@@ -16,30 +16,51 @@
 
 use binaryninjacore_sys::*;
 
-use crate::binary_view::BinaryView;
+use crate::binary_view::{BinaryView, BinaryViewBase};
 use crate::Endianness;
 
-use std::io::{Seek, SeekFrom, Write};
+use crate::rc::Ref;
+use std::io::{ErrorKind, Seek, SeekFrom, Write};
 
 pub struct BinaryWriter {
+    view: Ref<BinaryView>,
     handle: *mut BNBinaryWriter,
 }
 
 impl BinaryWriter {
-    pub fn new(view: &BinaryView, endian: Endianness) -> Self {
+    pub fn new(view: &BinaryView) -> Self {
         let handle = unsafe { BNCreateBinaryWriter(view.handle) };
-        unsafe {
-            BNSetBinaryWriterEndianness(handle, endian);
+        Self {
+            view: view.to_owned(),
+            handle,
         }
-        Self { handle }
     }
 
-    pub fn endian(&self) -> Endianness {
+    pub fn new_with_opts(view: &BinaryView, options: &BinaryWriterOptions) -> Self {
+        let mut writer = Self::new(view);
+        if let Some(endianness) = options.endianness {
+            writer.set_endianness(endianness);
+        }
+        if let Some(address) = options.address {
+            writer.seek_to_offset(address);
+        }
+        writer
+    }
+
+    pub fn endianness(&self) -> Endianness {
         unsafe { BNGetBinaryWriterEndianness(self.handle) }
     }
 
-    pub fn set_endian(&self, endian: Endianness) {
-        unsafe { BNSetBinaryWriterEndianness(self.handle, endian) }
+    pub fn set_endianness(&mut self, endianness: Endianness) {
+        unsafe { BNSetBinaryWriterEndianness(self.handle, endianness) }
+    }
+
+    pub fn seek_to_offset(&mut self, offset: u64) {
+        unsafe { BNSeekBinaryWriter(self.handle, offset) }
+    }
+
+    pub fn seek_to_relative_offset(&mut self, offset: i64) {
+        unsafe { BNSeekBinaryWriterRelative(self.handle, offset) }
     }
 
     pub fn offset(&self) -> u64 {
@@ -49,22 +70,22 @@ impl BinaryWriter {
 
 impl Seek for BinaryWriter {
     /// Seek to the specified position.
-    ///
-    /// # Errors
-    /// Seeking relative to [SeekFrom::End] is unsupported and will return an error.
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        unsafe {
-            match pos {
-                SeekFrom::Current(offset) => BNSeekBinaryWriterRelative(self.handle, offset),
-                SeekFrom::Start(offset) => BNSeekBinaryWriter(self.handle, offset),
-                _ => {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::Unsupported,
-                        "Cannot seek end of BinaryWriter",
-                    ))
-                }
-            };
-        }
+        match pos {
+            SeekFrom::Current(offset) => self.seek_to_relative_offset(offset),
+            SeekFrom::Start(offset) => self.seek_to_offset(offset),
+            SeekFrom::End(end_offset) => {
+                let offset =
+                    self.view
+                        .len()
+                        .checked_add_signed(end_offset)
+                        .ok_or(std::io::Error::new(
+                            ErrorKind::Other,
+                            "Seeking from end overflowed",
+                        ))?;
+                self.seek_to_offset(offset);
+            }
+        };
 
         Ok(self.offset())
     }
@@ -97,3 +118,25 @@ impl Drop for BinaryWriter {
 
 unsafe impl Sync for BinaryWriter {}
 unsafe impl Send for BinaryWriter {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct BinaryWriterOptions {
+    endianness: Option<Endianness>,
+    address: Option<u64>,
+}
+
+impl BinaryWriterOptions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_endianness(mut self, endian: Endianness) -> Self {
+        self.endianness = Some(endian);
+        self
+    }
+
+    pub fn with_address(mut self, address: u64) -> Self {
+        self.address = Some(address);
+        self
+    }
+}

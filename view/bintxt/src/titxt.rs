@@ -172,7 +172,7 @@ impl CustomBinaryViewType for TiTxtViewConstructor {
         parent: &BinaryView,
         builder: CustomViewBuilder<'builder, Self>,
     ) -> Result<CustomView<'builder>, ()> {
-        let bytes = parent.len();
+        let bytes = parent.len() as usize;
         let mut buf = vec![0; bytes];
         let bytes_read = parent.read(&mut buf, 0);
         if bytes_read != bytes {

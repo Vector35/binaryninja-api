@@ -552,7 +552,7 @@ impl CustomDebugInfoParser for PDBParser {
     ) -> bool {
         if is_pdb(debug_file) {
             match self.load_from_file(
-                &debug_file.read_vec(0, debug_file.len()),
+                &debug_file.read_vec(0, debug_file.len() as usize),
                 debug_info,
                 view,
                 &progress,

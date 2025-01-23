@@ -1,3 +1,5 @@
+//! **WARNING** This API is incomplete and subject to change in the near future!
+
 mod block;
 mod function;
 pub mod instruction;

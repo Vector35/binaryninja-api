@@ -117,7 +117,7 @@ impl MinidumpBinaryView {
 
     fn init(&self) -> BinaryViewResult<()> {
         let parent_view = self.parent_view().ok_or(())?;
-        let read_buffer = parent_view.read_buffer(0, parent_view.len())?;
+        let read_buffer = parent_view.read_buffer(0, parent_view.len() as usize)?;
 
         if let Ok(minidump_obj) = Minidump::read(read_buffer.get_data()) {
             // Architecture, platform information

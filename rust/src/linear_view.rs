@@ -25,81 +25,65 @@ use std::ops::Deref;
 
 use std::mem;
 
+pub type LinearDisassemblyLineType = BNLinearDisassemblyLineType;
+
+// TODO: Rename to LinearView?
 pub struct LinearViewObject {
     pub(crate) handle: *mut BNLinearViewObject,
 }
 
 impl LinearViewObject {
-    pub(crate) unsafe fn from_raw(handle: *mut BNLinearViewObject) -> Ref<Self> {
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNLinearViewObject) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-
         Ref::new(Self { handle })
     }
 
     pub fn data_only(view: &BinaryView, settings: &DisassemblySettings) -> Ref<Self> {
         unsafe {
-            let handle =
-                binaryninjacore_sys::BNCreateLinearViewDataOnly(view.handle, settings.handle);
-
-            Self::from_raw(handle)
+            let handle = BNCreateLinearViewDataOnly(view.handle, settings.handle);
+            Self::ref_from_raw(handle)
         }
     }
 
     pub fn disassembly(view: &BinaryView, settings: &DisassemblySettings) -> Ref<Self> {
         unsafe {
-            let handle =
-                binaryninjacore_sys::BNCreateLinearViewDisassembly(view.handle, settings.handle);
-
-            Self::from_raw(handle)
+            let handle = BNCreateLinearViewDisassembly(view.handle, settings.handle);
+            Self::ref_from_raw(handle)
         }
     }
 
     pub fn lifted_il(view: &BinaryView, settings: &DisassemblySettings) -> Ref<Self> {
         unsafe {
-            let handle =
-                binaryninjacore_sys::BNCreateLinearViewLiftedIL(view.handle, settings.handle);
-
-            Self::from_raw(handle)
+            let handle = BNCreateLinearViewLiftedIL(view.handle, settings.handle);
+            Self::ref_from_raw(handle)
         }
     }
 
     pub fn mlil(view: &BinaryView, settings: &DisassemblySettings) -> Ref<Self> {
         unsafe {
-            let handle =
-                binaryninjacore_sys::BNCreateLinearViewMediumLevelIL(view.handle, settings.handle);
-
-            Self::from_raw(handle)
+            let handle = BNCreateLinearViewMediumLevelIL(view.handle, settings.handle);
+            Self::ref_from_raw(handle)
         }
     }
 
     pub fn mlil_ssa(view: &BinaryView, settings: &DisassemblySettings) -> Ref<Self> {
         unsafe {
-            let handle = binaryninjacore_sys::BNCreateLinearViewMediumLevelILSSAForm(
-                view.handle,
-                settings.handle,
-            );
-
-            Self::from_raw(handle)
+            let handle = BNCreateLinearViewMediumLevelILSSAForm(view.handle, settings.handle);
+            Self::ref_from_raw(handle)
         }
     }
 
     pub fn hlil(view: &BinaryView, settings: &DisassemblySettings) -> Ref<Self> {
         unsafe {
-            let handle =
-                binaryninjacore_sys::BNCreateLinearViewHighLevelIL(view.handle, settings.handle);
-
-            Self::from_raw(handle)
+            let handle = BNCreateLinearViewHighLevelIL(view.handle, settings.handle);
+            Self::ref_from_raw(handle)
         }
     }
 
     pub fn hlil_ssa(view: &BinaryView, settings: &DisassemblySettings) -> Ref<Self> {
         unsafe {
-            let handle = binaryninjacore_sys::BNCreateLinearViewHighLevelILSSAForm(
-                view.handle,
-                settings.handle,
-            );
-
-            Self::from_raw(handle)
+            let handle = BNCreateLinearViewHighLevelILSSAForm(view.handle, settings.handle);
+            Self::ref_from_raw(handle)
         }
     }
 
@@ -110,13 +94,13 @@ impl LinearViewObject {
     ) -> Ref<Self> {
         unsafe {
             let language = std::ffi::CString::new(language).unwrap();
-            let handle = binaryninjacore_sys::BNCreateLinearViewLanguageRepresentation(
+            let handle = BNCreateLinearViewLanguageRepresentation(
                 view.handle,
                 settings.handle,
                 language.as_ptr(),
             );
 
-            Self::from_raw(handle)
+            Self::ref_from_raw(handle)
         }
     }
 
@@ -125,12 +109,9 @@ impl LinearViewObject {
         settings: &DisassemblySettings,
     ) -> Ref<Self> {
         unsafe {
-            let handle = binaryninjacore_sys::BNCreateLinearViewSingleFunctionDisassembly(
-                function.handle,
-                settings.handle,
-            );
-
-            Self::from_raw(handle)
+            let handle =
+                BNCreateLinearViewSingleFunctionDisassembly(function.handle, settings.handle);
+            Self::ref_from_raw(handle)
         }
     }
 
@@ -139,23 +120,16 @@ impl LinearViewObject {
         settings: &DisassemblySettings,
     ) -> Ref<Self> {
         unsafe {
-            let handle = binaryninjacore_sys::BNCreateLinearViewSingleFunctionLiftedIL(
-                function.handle,
-                settings.handle,
-            );
-
-            Self::from_raw(handle)
+            let handle = BNCreateLinearViewSingleFunctionLiftedIL(function.handle, settings.handle);
+            Self::ref_from_raw(handle)
         }
     }
 
     pub fn single_function_mlil(function: &Function, settings: &DisassemblySettings) -> Ref<Self> {
         unsafe {
-            let handle = binaryninjacore_sys::BNCreateLinearViewSingleFunctionMediumLevelIL(
-                function.handle,
-                settings.handle,
-            );
-
-            Self::from_raw(handle)
+            let handle =
+                BNCreateLinearViewSingleFunctionMediumLevelIL(function.handle, settings.handle);
+            Self::ref_from_raw(handle)
         }
     }
 
@@ -164,23 +138,19 @@ impl LinearViewObject {
         settings: &DisassemblySettings,
     ) -> Ref<Self> {
         unsafe {
-            let handle = binaryninjacore_sys::BNCreateLinearViewSingleFunctionMediumLevelILSSAForm(
+            let handle = BNCreateLinearViewSingleFunctionMediumLevelILSSAForm(
                 function.handle,
                 settings.handle,
             );
-
-            Self::from_raw(handle)
+            Self::ref_from_raw(handle)
         }
     }
 
     pub fn single_function_hlil(function: &Function, settings: &DisassemblySettings) -> Ref<Self> {
         unsafe {
-            let handle = binaryninjacore_sys::BNCreateLinearViewSingleFunctionHighLevelIL(
-                function.handle,
-                settings.handle,
-            );
-
-            Self::from_raw(handle)
+            let handle =
+                BNCreateLinearViewSingleFunctionHighLevelIL(function.handle, settings.handle);
+            Self::ref_from_raw(handle)
         }
     }
 
@@ -189,12 +159,11 @@ impl LinearViewObject {
         settings: &DisassemblySettings,
     ) -> Ref<Self> {
         unsafe {
-            let handle = binaryninjacore_sys::BNCreateLinearViewSingleFunctionHighLevelILSSAForm(
+            let handle = BNCreateLinearViewSingleFunctionHighLevelILSSAForm(
                 function.handle,
                 settings.handle,
             );
-
-            Self::from_raw(handle)
+            Self::ref_from_raw(handle)
         }
     }
 
@@ -205,14 +174,19 @@ impl LinearViewObject {
     ) -> Ref<Self> {
         unsafe {
             let language = std::ffi::CString::new(language).unwrap();
-            let handle =
-                binaryninjacore_sys::BNCreateLinearViewSingleFunctionLanguageRepresentation(
-                    function.handle,
-                    settings.handle,
-                    language.as_ptr(),
-                );
+            let handle = BNCreateLinearViewSingleFunctionLanguageRepresentation(
+                function.handle,
+                settings.handle,
+                language.as_ptr(),
+            );
+            Self::ref_from_raw(handle)
+        }
+    }
 
-            Self::from_raw(handle)
+    pub fn create_cursor(&self) -> Ref<LinearViewCursor> {
+        unsafe {
+            let handle = BNCreateLinearViewCursor(self.handle);
+            LinearViewCursor::ref_from_raw(handle)
         }
     }
 }
@@ -242,36 +216,27 @@ unsafe impl Sync for LinearViewObject {}
 
 #[derive(Eq)]
 pub struct LinearViewCursor {
-    pub(crate) handle: *mut binaryninjacore_sys::BNLinearViewCursor,
+    pub(crate) handle: *mut BNLinearViewCursor,
 }
 
 impl LinearViewCursor {
-    pub(crate) unsafe fn from_raw(handle: *mut BNLinearViewCursor) -> Ref<Self> {
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNLinearViewCursor) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-
         Ref::new(Self { handle })
     }
 
-    pub fn new(root: &LinearViewObject) -> Ref<Self> {
-        unsafe {
-            let handle = BNCreateLinearViewCursor(root.handle);
-            Self::from_raw(handle)
-        }
-    }
-
-    /// Gets the current [LinearViewObject] associated with this cursor.
+    /// Gets the current [`LinearViewObject`] associated with this cursor.
     pub fn current_object(&self) -> Ref<LinearViewObject> {
         unsafe {
             let handle = BNGetLinearViewCursorCurrentObject(self.handle);
-            LinearViewObject::from_raw(handle)
+            LinearViewObject::ref_from_raw(handle)
         }
     }
 
-    // FIXME: can we implement clone without shadowing ToOwned?
     pub fn duplicate(&self) -> Ref<Self> {
         unsafe {
             let handle = BNDuplicateLinearViewCursor(self.handle);
-            Self::from_raw(handle)
+            Self::ref_from_raw(handle)
         }
     }
 
@@ -375,8 +340,6 @@ impl ToOwned for LinearViewCursor {
 
 unsafe impl Send for LinearViewCursor {}
 unsafe impl Sync for LinearViewCursor {}
-
-pub type LinearDisassemblyLineType = BNLinearDisassemblyLineType;
 
 pub struct LinearDisassemblyLine {
     t: LinearDisassemblyLineType,

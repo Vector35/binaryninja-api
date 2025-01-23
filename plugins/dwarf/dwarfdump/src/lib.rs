@@ -260,7 +260,7 @@ fn process_tree<R: Reader>(
     graph_parent.add_outgoing_edge(
         BranchType::UnconditionalBranch,
         &new_node,
-        &EdgeStyle::default(),
+        EdgeStyle::default(),
     );
 
     let mut children = die_node.children();

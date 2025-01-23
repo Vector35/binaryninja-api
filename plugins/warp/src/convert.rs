@@ -606,7 +606,7 @@ mod tests {
             }
         }
     }
-    
+
     #[ignore]
     #[test]
     fn check_for_leaks() {

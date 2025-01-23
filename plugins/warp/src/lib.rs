@@ -204,19 +204,16 @@ mod tests {
             let entry = entry.expect("Failed to read directory entry");
             let path = entry.path();
             if path.is_file() {
-                if let Some(path_str) = path.to_str() {
-                    if path_str.ends_with("library.o") {
-                        if let Some(inital_bv) = session.load(path_str) {
-                            let mut functions = inital_bv
-                                .functions()
-                                .iter()
-                                .map(|f| cached_function_guid(&f, &f.low_level_il().unwrap()))
-                                .collect::<Vec<_>>();
-                            functions.sort_by_key(|guid| guid.guid);
-                            insta::assert_debug_snapshot!(functions);
-                        }
-                    }
-                }
+                let view = session.load(&path).expect("Failed to load view");
+                let mut functions = view
+                    .functions()
+                    .iter()
+                    .map(|f| cached_function_guid(&f, &f.low_level_il().unwrap()))
+                    .collect::<Vec<_>>();
+                functions.sort_by_key(|guid| guid.guid);
+                let snapshot_name =
+                    format!("snapshot_{}", path.file_stem().unwrap().to_string_lossy());
+                insta::assert_debug_snapshot!(snapshot_name, functions);
             }
         }
     }

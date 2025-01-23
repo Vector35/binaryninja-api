@@ -28,11 +28,11 @@ fn test_graph(view: &BinaryView) {
     graph.append(&node_b);
 
     let edge = EdgeStyle::new(EdgePenStyle::DashDotDotLine, 2, ThemeColor::AddressColor);
-    node_a.add_outgoing_edge(BranchType::UserDefinedBranch, &node_b, &edge);
+    node_a.add_outgoing_edge(BranchType::UserDefinedBranch, &node_b, edge);
     node_b.add_outgoing_edge(
         BranchType::UnconditionalBranch,
         &node_a,
-        &EdgeStyle::default(),
+        EdgeStyle::default(),
     );
 
     view.show_graph_report("Rust Graph Title", &graph);

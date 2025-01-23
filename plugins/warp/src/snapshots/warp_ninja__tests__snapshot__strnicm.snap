@@ -1,0 +1,9 @@
+---
+source: plugins/warp/src/lib.rs
+expression: functions
+---
+[
+    FunctionGUID {
+        guid: 7c350a2d-2282-5625-943e-009f317b8d2c,
+    },
+]

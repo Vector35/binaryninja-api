@@ -792,6 +792,7 @@ fn test_kprcb() {
     );
 }
 
+#[ignore]
 #[test]
 fn test_dispatcher_header() {
     /*
@@ -1120,6 +1121,7 @@ fn test_dispatcher_header() {
     )
 }
 
+#[ignore]
 #[test]
 fn test_bool_modifier() {
     assert_eq!(

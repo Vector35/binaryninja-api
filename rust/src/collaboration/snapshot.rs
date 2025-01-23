@@ -1,152 +1,123 @@
-use core::{ffi, mem, ptr};
-
+use std::ffi::{c_char, c_void};
+use std::ptr::NonNull;
 use std::time::SystemTime;
 
+use super::{sync, Remote, RemoteFile, RemoteProject};
+use crate::binary_view::{BinaryView, BinaryViewExt};
+use crate::database::snapshot::Snapshot;
 use binaryninjacore_sys::*;
 
-use super::{databasesync, Remote, RemoteFile, RemoteProject};
-
-use crate::binaryview::{BinaryView, BinaryViewExt};
-use crate::database::Snapshot;
 use crate::ffi::{ProgressCallback, ProgressCallbackNop};
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 
-/// Class representing a remote Snapshot
+// TODO: RemoteSnapshotId ?
+
 #[repr(transparent)]
-pub struct CollabSnapshot {
-    handle: ptr::NonNull<BNCollaborationSnapshot>,
+pub struct RemoteSnapshot {
+    pub(crate) handle: NonNull<BNCollaborationSnapshot>,
 }
 
-impl Drop for CollabSnapshot {
-    fn drop(&mut self) {
-        unsafe { BNFreeCollaborationSnapshot(self.as_raw()) }
-    }
-}
-
-impl PartialEq for CollabSnapshot {
-    fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id()
-    }
-}
-impl Eq for CollabSnapshot {}
-
-impl Clone for CollabSnapshot {
-    fn clone(&self) -> Self {
-        unsafe {
-            Self::from_raw(
-                ptr::NonNull::new(BNNewCollaborationSnapshotReference(self.as_raw())).unwrap(),
-            )
-        }
-    }
-}
-
-impl CollabSnapshot {
-    pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNCollaborationSnapshot>) -> Self {
+impl RemoteSnapshot {
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNCollaborationSnapshot>) -> Self {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNCollaborationSnapshot) -> &Self {
-        assert!(!handle.is_null());
-        mem::transmute(handle)
-    }
-
-    #[allow(clippy::mut_from_ref)]
-    pub(crate) unsafe fn as_raw(&self) -> &mut BNCollaborationSnapshot {
-        &mut *self.handle.as_ptr()
+    pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNCollaborationSnapshot>) -> Ref<Self> {
+        Ref::new(Self { handle })
     }
 
     /// Get the remote snapshot associated with a local snapshot (if it exists)
-    pub fn get_for_local_snapshot(snapshot: &Snapshot) -> Result<Option<CollabSnapshot>, ()> {
-        databasesync::get_remote_snapshot_from_local(snapshot)
+    pub fn get_for_local_snapshot(snapshot: &Snapshot) -> Result<Option<Ref<RemoteSnapshot>>, ()> {
+        sync::get_remote_snapshot_from_local(snapshot)
     }
 
     /// Owning File
-    pub fn file(&self) -> Result<RemoteFile, ()> {
-        let result = unsafe { BNCollaborationSnapshotGetFile(self.as_raw()) };
-        let raw = ptr::NonNull::new(result).ok_or(())?;
-        Ok(unsafe { RemoteFile::from_raw(raw) })
+    pub fn file(&self) -> Result<Ref<RemoteFile>, ()> {
+        let result = unsafe { BNCollaborationSnapshotGetFile(self.handle.as_ptr()) };
+        let raw = NonNull::new(result).ok_or(())?;
+        Ok(unsafe { RemoteFile::ref_from_raw(raw) })
     }
 
     /// Owning Project
-    pub fn project(&self) -> Result<RemoteProject, ()> {
-        let result = unsafe { BNCollaborationSnapshotGetProject(self.as_raw()) };
-        let raw = ptr::NonNull::new(result).ok_or(())?;
-        Ok(unsafe { RemoteProject::from_raw(raw) })
+    pub fn project(&self) -> Result<Ref<RemoteProject>, ()> {
+        let result = unsafe { BNCollaborationSnapshotGetProject(self.handle.as_ptr()) };
+        let raw = NonNull::new(result).ok_or(())?;
+        Ok(unsafe { RemoteProject::ref_from_raw(raw) })
     }
 
     /// Owning Remote
-    pub fn remote(&self) -> Result<Remote, ()> {
-        let result = unsafe { BNCollaborationSnapshotGetRemote(self.as_raw()) };
-        let raw = ptr::NonNull::new(result).ok_or(())?;
-        Ok(unsafe { Remote::from_raw(raw) })
+    pub fn remote(&self) -> Result<Ref<Remote>, ()> {
+        let result = unsafe { BNCollaborationSnapshotGetRemote(self.handle.as_ptr()) };
+        let raw = NonNull::new(result).ok_or(())?;
+        Ok(unsafe { Remote::ref_from_raw(raw) })
     }
 
     /// Web api endpoint url
     pub fn url(&self) -> BnString {
-        let value = unsafe { BNCollaborationSnapshotGetUrl(self.as_raw()) };
+        let value = unsafe { BNCollaborationSnapshotGetUrl(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
 
     /// Unique id
     pub fn id(&self) -> BnString {
-        let value = unsafe { BNCollaborationSnapshotGetId(self.as_raw()) };
+        let value = unsafe { BNCollaborationSnapshotGetId(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
 
     /// Name of snapshot
     pub fn name(&self) -> BnString {
-        let value = unsafe { BNCollaborationSnapshotGetName(self.as_raw()) };
+        let value = unsafe { BNCollaborationSnapshotGetName(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
 
     /// Get the title of a snapshot: the first line of its name
     pub fn title(&self) -> BnString {
-        let value = unsafe { BNCollaborationSnapshotGetTitle(self.as_raw()) };
+        let value = unsafe { BNCollaborationSnapshotGetTitle(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
 
     /// Get the description of a snapshot: the lines of its name after the first line
     pub fn description(&self) -> BnString {
-        let value = unsafe { BNCollaborationSnapshotGetDescription(self.as_raw()) };
+        let value = unsafe { BNCollaborationSnapshotGetDescription(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
 
     /// Get the user id of the author of a snapshot
     pub fn author(&self) -> BnString {
-        let value = unsafe { BNCollaborationSnapshotGetAuthor(self.as_raw()) };
+        let value = unsafe { BNCollaborationSnapshotGetAuthor(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
 
     /// Get the username of the author of a snapshot, if possible (vs author which is user id)
     pub fn author_username(&self) -> BnString {
-        let value = unsafe { BNCollaborationSnapshotGetAuthorUsername(self.as_raw()) };
+        let value = unsafe { BNCollaborationSnapshotGetAuthorUsername(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
 
     /// Created date of Snapshot
     pub fn created(&self) -> SystemTime {
-        let timestamp = unsafe { BNCollaborationSnapshotGetCreated(self.as_raw()) };
+        let timestamp = unsafe { BNCollaborationSnapshotGetCreated(self.handle.as_ptr()) };
         crate::ffi::time_from_bn(timestamp.try_into().unwrap())
     }
 
     /// Date of last modification to the snapshot
     pub fn last_modified(&self) -> SystemTime {
-        let timestamp = unsafe { BNCollaborationSnapshotGetLastModified(self.as_raw()) };
+        let timestamp = unsafe { BNCollaborationSnapshotGetLastModified(self.handle.as_ptr()) };
         crate::ffi::time_from_bn(timestamp.try_into().unwrap())
     }
 
     /// Hash of snapshot data (analysis and markup, etc)
     /// No specific hash algorithm is guaranteed
     pub fn hash(&self) -> BnString {
-        let value = unsafe { BNCollaborationSnapshotGetHash(self.as_raw()) };
+        let value = unsafe { BNCollaborationSnapshotGetHash(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
@@ -154,25 +125,25 @@ impl CollabSnapshot {
     /// Hash of file contents in snapshot
     /// No specific hash algorithm is guaranteed
     pub fn snapshot_file_hash(&self) -> BnString {
-        let value = unsafe { BNCollaborationSnapshotGetSnapshotFileHash(self.as_raw()) };
+        let value = unsafe { BNCollaborationSnapshotGetSnapshotFileHash(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
 
     /// If the snapshot has pulled undo entries yet
     pub fn has_pulled_undo_entires(&self) -> bool {
-        unsafe { BNCollaborationSnapshotHasPulledUndoEntries(self.as_raw()) }
+        unsafe { BNCollaborationSnapshotHasPulledUndoEntries(self.handle.as_ptr()) }
     }
 
     /// If the snapshot has been finalized on the server and is no longer editable
     pub fn is_finalized(&self) -> bool {
-        unsafe { BNCollaborationSnapshotIsFinalized(self.as_raw()) }
+        unsafe { BNCollaborationSnapshotIsFinalized(self.handle.as_ptr()) }
     }
 
     /// List of ids of all remote parent Snapshots
     pub fn parent_ids(&self) -> Result<Array<BnString>, ()> {
         let mut count = 0;
-        let raw = unsafe { BNCollaborationSnapshotGetParentIds(self.as_raw(), &mut count) };
+        let raw = unsafe { BNCollaborationSnapshotGetParentIds(self.handle.as_ptr(), &mut count) };
         (!raw.is_null())
             .then(|| unsafe { Array::new(raw, count, ()) })
             .ok_or(())
@@ -181,25 +152,25 @@ impl CollabSnapshot {
     /// List of ids of all remote child Snapshots
     pub fn child_ids(&self) -> Result<Array<BnString>, ()> {
         let mut count = 0;
-        let raw = unsafe { BNCollaborationSnapshotGetChildIds(self.as_raw(), &mut count) };
+        let raw = unsafe { BNCollaborationSnapshotGetChildIds(self.handle.as_ptr(), &mut count) };
         (!raw.is_null())
             .then(|| unsafe { Array::new(raw, count, ()) })
             .ok_or(())
     }
 
     /// List of all parent Snapshot objects
-    pub fn parents(&self) -> Result<Array<CollabSnapshot>, ()> {
+    pub fn parents(&self) -> Result<Array<RemoteSnapshot>, ()> {
         let mut count = 0;
-        let raw = unsafe { BNCollaborationSnapshotGetParents(self.as_raw(), &mut count) };
+        let raw = unsafe { BNCollaborationSnapshotGetParents(self.handle.as_ptr(), &mut count) };
         (!raw.is_null())
             .then(|| unsafe { Array::new(raw, count, ()) })
             .ok_or(())
     }
 
     /// List of all child Snapshot objects
-    pub fn children(&self) -> Result<Array<CollabSnapshot>, ()> {
+    pub fn children(&self) -> Result<Array<RemoteSnapshot>, ()> {
         let mut count = 0;
-        let raw = unsafe { BNCollaborationSnapshotGetChildren(self.as_raw(), &mut count) };
+        let raw = unsafe { BNCollaborationSnapshotGetChildren(self.handle.as_ptr(), &mut count) };
         (!raw.is_null())
             .then(|| unsafe { Array::new(raw, count, ()) })
             .ok_or(())
@@ -208,12 +179,13 @@ impl CollabSnapshot {
     /// Get the list of undo entries stored in this snapshot.
     ///
     /// NOTE: If undo entries have not been pulled, they will be pulled upon calling this.
-    pub fn undo_entries(&self) -> Result<Array<UndoEntry>, ()> {
+    pub fn undo_entries(&self) -> Result<Array<RemoteUndoEntry>, ()> {
         if !self.has_pulled_undo_entires() {
             self.pull_undo_entries(ProgressCallbackNop)?;
         }
         let mut count = 0;
-        let raw = unsafe { BNCollaborationSnapshotGetUndoEntries(self.as_raw(), &mut count) };
+        let raw =
+            unsafe { BNCollaborationSnapshotGetUndoEntries(self.handle.as_ptr(), &mut count) };
         (!raw.is_null())
             .then(|| unsafe { Array::new(raw, count, ()) })
             .ok_or(())
@@ -222,21 +194,21 @@ impl CollabSnapshot {
     /// Get a specific Undo Entry in the Snapshot by its id
     ///
     /// NOTE: If undo entries have not been pulled, they will be pulled upon calling this.
-    pub fn get_undo_entry_by_id(&self, id: u64) -> Result<Option<UndoEntry>, ()> {
+    pub fn get_undo_entry_by_id(&self, id: u64) -> Result<Option<Ref<RemoteUndoEntry>>, ()> {
         if !self.has_pulled_undo_entires() {
             self.pull_undo_entries(ProgressCallbackNop)?;
         }
-        let raw = unsafe { BNCollaborationSnapshotGetUndoEntryById(self.as_raw(), id) };
-        Ok(ptr::NonNull::new(raw).map(|handle| unsafe { UndoEntry::from_raw(handle) }))
+        let raw = unsafe { BNCollaborationSnapshotGetUndoEntryById(self.handle.as_ptr(), id) };
+        Ok(NonNull::new(raw).map(|handle| unsafe { RemoteUndoEntry::ref_from_raw(handle) }))
     }
 
     /// Pull the list of Undo Entries from the Remote.
     pub fn pull_undo_entries<P: ProgressCallback>(&self, mut progress: P) -> Result<(), ()> {
         let success = unsafe {
             BNCollaborationSnapshotPullUndoEntries(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 Some(P::cb_progress_callback),
-                &mut progress as *mut P as *mut ffi::c_void,
+                &mut progress as *mut P as *mut c_void,
             )
         };
         success.then_some(()).ok_or(())
@@ -247,24 +219,24 @@ impl CollabSnapshot {
         &self,
         parent: Option<u64>,
         data: S,
-    ) -> Result<UndoEntry, ()> {
+    ) -> Result<Ref<RemoteUndoEntry>, ()> {
         let data = data.into_bytes_with_nul();
         let value = unsafe {
             BNCollaborationSnapshotCreateUndoEntry(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 parent.is_some(),
                 parent.unwrap_or(0),
-                data.as_ref().as_ptr() as *const ffi::c_char,
+                data.as_ref().as_ptr() as *const c_char,
             )
         };
-        let handle = ptr::NonNull::new(value).ok_or(())?;
-        Ok(unsafe { UndoEntry::from_raw(handle) })
+        let handle = NonNull::new(value).ok_or(())?;
+        Ok(unsafe { RemoteUndoEntry::ref_from_raw(handle) })
     }
 
     /// Mark a snapshot as Finalized, committing it to the Remote, preventing future updates,
     /// and allowing snapshots to be children of it.
     pub fn finalize(&self) -> Result<(), ()> {
-        let success = unsafe { BNCollaborationSnapshotFinalize(self.as_raw()) };
+        let success = unsafe { BNCollaborationSnapshotFinalize(self.handle.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -278,7 +250,7 @@ impl CollabSnapshot {
     //    let mut count = 0;
     //    let success = unsafe {
     //        BNCollaborationSnapshotDownloadSnapshotFile(
-    //            self.as_raw(),
+    //            self.handle.as_ptr(),
     //            Some(P::cb_progress_callback),
     //            &mut progress as *mut P as *mut ffi::c_void,
     //            &mut data,
@@ -297,7 +269,7 @@ impl CollabSnapshot {
     //    let mut count = 0;
     //    let success = unsafe {
     //        BNCollaborationSnapshotDownload(
-    //            self.as_raw(),
+    //            self.handle.as_ptr(),
     //            Some(P::cb_progress_callback),
     //            &mut progress as *mut P as *mut ffi::c_void,
     //            &mut data,
@@ -316,7 +288,7 @@ impl CollabSnapshot {
     //    let mut count = 0;
     //    let success = unsafe {
     //        BNCollaborationSnapshotDownloadAnalysisCache(
-    //            self.as_raw(),
+    //            self.handle.as_ptr(),
     //            Some(P::cb_progress_callback),
     //            &mut progress as *mut P as *mut ffi::c_void,
     //            &mut data,
@@ -327,128 +299,129 @@ impl CollabSnapshot {
     //}
 
     /// Get the local snapshot associated with a remote snapshot (if it exists)
-    pub fn get_local_snapshot(&self, bv: &BinaryView) -> Result<Option<Snapshot>, ()> {
+    pub fn get_local_snapshot(&self, bv: &BinaryView) -> Result<Option<Ref<Snapshot>>, ()> {
         let Some(db) = bv.file().database() else {
             return Ok(None);
         };
-        databasesync::get_local_snapshot_for_remote(self, &db)
+        sync::get_local_snapshot_for_remote(self, &db)
     }
 
     pub fn analysis_cache_build_id(&self) -> u64 {
-        unsafe { BNCollaborationSnapshotGetAnalysisCacheBuildId(self.as_raw()) }
+        unsafe { BNCollaborationSnapshotGetAnalysisCacheBuildId(self.handle.as_ptr()) }
     }
 }
 
-impl CoreArrayProvider for CollabSnapshot {
-    type Raw = *mut BNCollaborationSnapshot;
-    type Context = ();
-    type Wrapped<'a> = &'a CollabSnapshot;
-}
-
-unsafe impl CoreArrayProviderInner for CollabSnapshot {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeCollaborationSnapshotList(raw, count)
-    }
-
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
-    }
-}
-
-#[repr(transparent)]
-pub struct UndoEntry {
-    handle: ptr::NonNull<BNCollaborationUndoEntry>,
-}
-
-impl Drop for UndoEntry {
-    fn drop(&mut self) {
-        unsafe { BNFreeCollaborationUndoEntry(self.as_raw()) }
-    }
-}
-
-impl PartialEq for UndoEntry {
+impl PartialEq for RemoteSnapshot {
     fn eq(&self, other: &Self) -> bool {
         self.id() == other.id()
     }
 }
-impl Eq for UndoEntry {}
+impl Eq for RemoteSnapshot {}
 
-impl Clone for UndoEntry {
-    fn clone(&self) -> Self {
-        unsafe {
-            Self::from_raw(
-                ptr::NonNull::new(BNNewCollaborationUndoEntryReference(self.as_raw())).unwrap(),
-            )
-        }
+impl ToOwned for RemoteSnapshot {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
     }
 }
 
-impl UndoEntry {
-    pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNCollaborationUndoEntry>) -> Self {
+unsafe impl RefCountable for RemoteSnapshot {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: NonNull::new(BNNewCollaborationSnapshotReference(handle.handle.as_ptr()))
+                .unwrap(),
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeCollaborationSnapshot(handle.handle.as_ptr());
+    }
+}
+
+impl CoreArrayProvider for RemoteSnapshot {
+    type Raw = *mut BNCollaborationSnapshot;
+    type Context = ();
+    type Wrapped<'a> = Guard<'a, RemoteSnapshot>;
+}
+
+unsafe impl CoreArrayProviderInner for RemoteSnapshot {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeCollaborationSnapshotList(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let raw_ptr = NonNull::new(*raw).unwrap();
+        Guard::new(Self::from_raw(raw_ptr), context)
+    }
+}
+
+#[repr(transparent)]
+pub struct RemoteUndoEntry {
+    handle: NonNull<BNCollaborationUndoEntry>,
+}
+
+impl RemoteUndoEntry {
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNCollaborationUndoEntry>) -> Self {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNCollaborationUndoEntry) -> &Self {
-        assert!(!handle.is_null());
-        mem::transmute(handle)
-    }
-
-    #[allow(clippy::mut_from_ref)]
-    pub(crate) unsafe fn as_raw(&self) -> &mut BNCollaborationUndoEntry {
-        &mut *self.handle.as_ptr()
+    pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNCollaborationUndoEntry>) -> Ref<Self> {
+        Ref::new(Self { handle })
     }
 
     /// Owning Snapshot
-    pub fn snapshot(&self) -> Result<CollabSnapshot, ()> {
-        let value = unsafe { BNCollaborationUndoEntryGetSnapshot(self.as_raw()) };
-        let handle = ptr::NonNull::new(value).ok_or(())?;
-        Ok(unsafe { CollabSnapshot::from_raw(handle) })
+    pub fn snapshot(&self) -> Result<Ref<RemoteSnapshot>, ()> {
+        let value = unsafe { BNCollaborationUndoEntryGetSnapshot(self.handle.as_ptr()) };
+        let handle = NonNull::new(value).ok_or(())?;
+        Ok(unsafe { RemoteSnapshot::ref_from_raw(handle) })
     }
 
     /// Owning File
-    pub fn file(&self) -> Result<RemoteFile, ()> {
-        let value = unsafe { BNCollaborationUndoEntryGetFile(self.as_raw()) };
-        let handle = ptr::NonNull::new(value).ok_or(())?;
-        Ok(unsafe { RemoteFile::from_raw(handle) })
+    pub fn file(&self) -> Result<Ref<RemoteFile>, ()> {
+        let value = unsafe { BNCollaborationUndoEntryGetFile(self.handle.as_ptr()) };
+        let handle = NonNull::new(value).ok_or(())?;
+        Ok(unsafe { RemoteFile::ref_from_raw(handle) })
     }
 
     /// Owning Project
-    pub fn project(&self) -> Result<RemoteProject, ()> {
-        let value = unsafe { BNCollaborationUndoEntryGetProject(self.as_raw()) };
-        let handle = ptr::NonNull::new(value).ok_or(())?;
-        Ok(unsafe { RemoteProject::from_raw(handle) })
+    pub fn project(&self) -> Result<Ref<RemoteProject>, ()> {
+        let value = unsafe { BNCollaborationUndoEntryGetProject(self.handle.as_ptr()) };
+        let handle = NonNull::new(value).ok_or(())?;
+        Ok(unsafe { RemoteProject::ref_from_raw(handle) })
     }
 
     /// Owning Remote
-    pub fn remote(&self) -> Result<Remote, ()> {
-        let value = unsafe { BNCollaborationUndoEntryGetRemote(self.as_raw()) };
-        let handle = ptr::NonNull::new(value).ok_or(())?;
-        Ok(unsafe { Remote::from_raw(handle) })
+    pub fn remote(&self) -> Result<Ref<Remote>, ()> {
+        let value = unsafe { BNCollaborationUndoEntryGetRemote(self.handle.as_ptr()) };
+        let handle = NonNull::new(value).ok_or(())?;
+        Ok(unsafe { Remote::ref_from_raw(handle) })
     }
 
     /// Web api endpoint url
     pub fn url(&self) -> BnString {
-        let value = unsafe { BNCollaborationUndoEntryGetUrl(self.as_raw()) };
+        let value = unsafe { BNCollaborationUndoEntryGetUrl(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
 
     /// Unique id
     pub fn id(&self) -> u64 {
-        unsafe { BNCollaborationUndoEntryGetId(self.as_raw()) }
+        unsafe { BNCollaborationUndoEntryGetId(self.handle.as_ptr()) }
     }
 
     /// Id of parent undo entry
     pub fn parent_id(&self) -> Option<u64> {
         let mut value = 0;
-        let success = unsafe { BNCollaborationUndoEntryGetParentId(self.as_raw(), &mut value) };
+        let success =
+            unsafe { BNCollaborationUndoEntryGetParentId(self.handle.as_ptr(), &mut value) };
         success.then_some(value)
     }
 
     /// Undo entry contents data
     pub fn data(&self) -> Result<BnString, ()> {
-        let mut value = ptr::null_mut();
-        let success = unsafe { BNCollaborationUndoEntryGetData(self.as_raw(), &mut value) };
+        let mut value = std::ptr::null_mut();
+        let success = unsafe { BNCollaborationUndoEntryGetData(self.handle.as_ptr(), &mut value) };
         if !success {
             return Err(());
         }
@@ -457,24 +430,53 @@ impl UndoEntry {
     }
 
     /// Parent Undo Entry object
-    pub fn parent(&self) -> Option<UndoEntry> {
-        let value = unsafe { BNCollaborationUndoEntryGetParent(self.as_raw()) };
-        ptr::NonNull::new(value).map(|handle| unsafe { UndoEntry::from_raw(handle) })
+    pub fn parent(&self) -> Option<Ref<RemoteUndoEntry>> {
+        let value = unsafe { BNCollaborationUndoEntryGetParent(self.handle.as_ptr()) };
+        NonNull::new(value).map(|handle| unsafe { RemoteUndoEntry::ref_from_raw(handle) })
     }
 }
 
-impl CoreArrayProvider for UndoEntry {
-    type Raw = *mut BNCollaborationUndoEntry;
-    type Context = ();
-    type Wrapped<'a> = &'a Self;
+impl PartialEq for RemoteUndoEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+}
+impl Eq for RemoteUndoEntry {}
+
+impl ToOwned for RemoteUndoEntry {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
 }
 
-unsafe impl CoreArrayProviderInner for UndoEntry {
+unsafe impl RefCountable for RemoteUndoEntry {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: NonNull::new(BNNewCollaborationUndoEntryReference(handle.handle.as_ptr()))
+                .unwrap(),
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeCollaborationUndoEntry(handle.handle.as_ptr());
+    }
+}
+
+impl CoreArrayProvider for RemoteUndoEntry {
+    type Raw = *mut BNCollaborationUndoEntry;
+    type Context = ();
+    type Wrapped<'a> = Guard<'a, Self>;
+}
+
+unsafe impl CoreArrayProviderInner for RemoteUndoEntry {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeCollaborationUndoEntryList(raw, count)
     }
 
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let raw_ptr = NonNull::new(*raw).unwrap();
+        Guard::new(Self::from_raw(raw_ptr), context)
     }
 }

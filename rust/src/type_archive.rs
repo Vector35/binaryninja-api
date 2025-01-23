@@ -51,7 +51,7 @@ unsafe impl CoreArrayProviderInner for TypeArchiveSnapshotId {
 /// sessions and are backed by a database file on disk. Their types can be modified, and
 /// a history of previous versions of types is stored in snapshots in the archive.
 pub struct TypeArchive {
-    handle: NonNull<BNTypeArchive>,
+    pub(crate) handle: NonNull<BNTypeArchive>,
 }
 
 impl TypeArchive {
@@ -1122,84 +1122,100 @@ unsafe extern "C" fn cb_type_deleted<T: TypeArchiveNotificationCallback>(
 
 #[repr(transparent)]
 pub struct TypeArchiveMergeConflict {
-    handle: ptr::NonNull<BNTypeArchiveMergeConflict>,
-}
-
-impl Drop for TypeArchiveMergeConflict {
-    fn drop(&mut self) {
-        unsafe { BNFreeTypeArchiveMergeConflict(self.as_raw()) }
-    }
-}
-
-impl Clone for TypeArchiveMergeConflict {
-    fn clone(&self) -> Self {
-        unsafe {
-            Self::from_raw(
-                ptr::NonNull::new(BNNewTypeArchiveMergeConflictReference(self.as_raw())).unwrap(),
-            )
-        }
-    }
+    handle: NonNull<BNTypeArchiveMergeConflict>,
 }
 
 impl TypeArchiveMergeConflict {
-    pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNTypeArchiveMergeConflict>) -> Self {
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNTypeArchiveMergeConflict>) -> Self {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNTypeArchiveMergeConflict) -> &Self {
-        assert!(!handle.is_null());
-        mem::transmute(handle)
+    pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNTypeArchiveMergeConflict>) -> Ref<Self> {
+        Ref::new(Self { handle })
     }
 
-    #[allow(clippy::mut_from_ref)]
-    pub(crate) unsafe fn as_raw(&self) -> &mut BNTypeArchiveMergeConflict {
-        &mut *self.handle.as_ptr()
-    }
-
-    pub fn get_type_archive(&self) -> Option<TypeArchive> {
-        let value = unsafe { BNTypeArchiveMergeConflictGetTypeArchive(self.as_raw()) };
-        ptr::NonNull::new(value).map(|handle| unsafe { TypeArchive::from_raw(handle) })
+    pub fn get_type_archive(&self) -> Option<Ref<TypeArchive>> {
+        let value = unsafe { BNTypeArchiveMergeConflictGetTypeArchive(self.handle.as_ptr()) };
+        NonNull::new(value).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
     }
 
     pub fn type_id(&self) -> BnString {
-        let value = unsafe { BNTypeArchiveMergeConflictGetTypeId(self.as_raw()) };
+        let value = unsafe { BNTypeArchiveMergeConflictGetTypeId(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
 
-    pub fn base_snapshot_id(&self) -> BnString {
-        let value = unsafe { BNTypeArchiveMergeConflictGetBaseSnapshotId(self.as_raw()) };
+    pub fn base_snapshot_id(&self) -> TypeArchiveSnapshotId {
+        let value = unsafe { BNTypeArchiveMergeConflictGetBaseSnapshotId(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        let id = unsafe { BnString::from_raw(value) }.to_string();
+        TypeArchiveSnapshotId(id)
     }
 
-    pub fn first_snapshot_id(&self) -> BnString {
-        let value = unsafe { BNTypeArchiveMergeConflictGetFirstSnapshotId(self.as_raw()) };
+    pub fn first_snapshot_id(&self) -> TypeArchiveSnapshotId {
+        let value = unsafe { BNTypeArchiveMergeConflictGetFirstSnapshotId(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        let id = unsafe { BnString::from_raw(value) }.to_string();
+        TypeArchiveSnapshotId(id)
     }
 
-    pub fn second_snapshot_id(&self) -> BnString {
-        let value = unsafe { BNTypeArchiveMergeConflictGetSecondSnapshotId(self.as_raw()) };
+    pub fn second_snapshot_id(&self) -> TypeArchiveSnapshotId {
+        let value = unsafe { BNTypeArchiveMergeConflictGetSecondSnapshotId(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        let id = unsafe { BnString::from_raw(value) }.to_string();
+        TypeArchiveSnapshotId(id)
     }
 
+    // TODO: This needs documentation!
     pub fn success<S: BnStrCompatible>(&self, value: S) -> bool {
         let value = value.into_bytes_with_nul();
         unsafe {
             BNTypeArchiveMergeConflictSuccess(
-                self.as_raw(),
-                value.as_ref().as_ptr() as *const ffi::c_char,
+                self.handle.as_ptr(),
+                value.as_ref().as_ptr() as *const c_char,
             )
         }
+    }
+}
+
+impl Debug for TypeArchiveMergeConflict {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TypeArchiveMergeConflict")
+            .field("type_id", &self.type_id())
+            .field("base_snapshot_id", &self.base_snapshot_id())
+            .field("first_snapshot_id", &self.first_snapshot_id())
+            .field("second_snapshot_id", &self.second_snapshot_id())
+            .finish()
+    }
+}
+
+impl ToOwned for TypeArchiveMergeConflict {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for TypeArchiveMergeConflict {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: NonNull::new(BNNewTypeArchiveMergeConflictReference(
+                handle.handle.as_ptr(),
+            ))
+            .unwrap(),
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeTypeArchiveMergeConflict(handle.handle.as_ptr());
     }
 }
 
 impl CoreArrayProvider for TypeArchiveMergeConflict {
     type Raw = *mut BNTypeArchiveMergeConflict;
     type Context = ();
-    type Wrapped<'a> = &'a Self;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl CoreArrayProviderInner for TypeArchiveMergeConflict {
@@ -1207,7 +1223,8 @@ unsafe impl CoreArrayProviderInner for TypeArchiveMergeConflict {
         BNFreeTypeArchiveMergeConflictList(raw, count)
     }
 
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let raw_ptr = NonNull::new(*raw).unwrap();
+        Guard::new(Self::from_raw(raw_ptr), context)
     }
 }

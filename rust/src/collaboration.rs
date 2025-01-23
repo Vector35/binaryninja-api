@@ -1,5 +1,4 @@
 mod changeset;
-mod databasesync;
 mod file;
 mod folder;
 mod group;
@@ -8,10 +7,10 @@ mod permission;
 mod project;
 mod remote;
 mod snapshot;
+mod sync;
 mod user;
 
 pub use changeset::*;
-pub use databasesync::*;
 pub use file::*;
 pub use folder::*;
 pub use group::*;
@@ -20,27 +19,28 @@ pub use permission::*;
 pub use project::*;
 pub use remote::*;
 pub use snapshot::*;
+pub use sync::*;
 pub use user::*;
 
 use core::{ffi, ptr};
 
 use binaryninjacore_sys::*;
 
-use crate::rc::Array;
+use crate::rc::{Array, Ref};
 use crate::string::{BnStrCompatible, BnString};
 
 // TODO it's unclear where should preventivelly call things like `open`, `pull_files`, `pull_folders`, etc
 // and where should let the user do it.
 
 /// Get the single actively connected Remote (for ux simplification), if any
-pub fn active_remote() -> Option<Remote> {
+pub fn active_remote() -> Option<Ref<Remote>> {
     let value = unsafe { BNCollaborationGetActiveRemote() };
-    ptr::NonNull::new(value).map(|h| unsafe { Remote::from_raw(h) })
+    ptr::NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
 
 /// Set the single actively connected Remote
 pub fn set_active_remote(remote: Option<&Remote>) {
-    let remote_ptr = remote.map_or(ptr::null_mut(), |r| unsafe { r.as_raw() } as *mut _);
+    let remote_ptr = remote.map_or(ptr::null_mut(), |r| r.handle.as_ptr());
     unsafe { BNCollaborationSetActiveRemote(remote_ptr) }
 }
 
@@ -117,32 +117,32 @@ pub fn known_remotes() -> Array<Remote> {
 }
 
 /// Get Remote by unique `id`
-pub fn get_remote_by_id<S: BnStrCompatible>(id: S) -> Option<Remote> {
+pub fn get_remote_by_id<S: BnStrCompatible>(id: S) -> Option<Ref<Remote>> {
     let id = id.into_bytes_with_nul();
     let value = unsafe { BNCollaborationGetRemoteById(id.as_ref().as_ptr() as *const ffi::c_char) };
-    ptr::NonNull::new(value).map(|h| unsafe { Remote::from_raw(h) })
+    ptr::NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
 
 /// Get Remote by `address`
-pub fn get_remote_by_address<S: BnStrCompatible>(address: S) -> Option<Remote> {
+pub fn get_remote_by_address<S: BnStrCompatible>(address: S) -> Option<Ref<Remote>> {
     let address = address.into_bytes_with_nul();
     let value = unsafe {
         BNCollaborationGetRemoteByAddress(address.as_ref().as_ptr() as *const ffi::c_char)
     };
-    ptr::NonNull::new(value).map(|h| unsafe { Remote::from_raw(h) })
+    ptr::NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
 
 /// Get Remote by `name`
-pub fn get_remote_by_name<S: BnStrCompatible>(name: S) -> Option<Remote> {
+pub fn get_remote_by_name<S: BnStrCompatible>(name: S) -> Option<Ref<Remote>> {
     let name = name.into_bytes_with_nul();
     let value =
         unsafe { BNCollaborationGetRemoteByName(name.as_ref().as_ptr() as *const ffi::c_char) };
-    ptr::NonNull::new(value).map(|h| unsafe { Remote::from_raw(h) })
+    ptr::NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
 
 /// Remove a Remote from the list of known remotes (saved to Settings)
 pub fn remove_known_remote(remote: &Remote) {
-    unsafe { BNCollaborationRemoveRemote(remote.as_raw()) }
+    unsafe { BNCollaborationRemoveRemote(remote.handle.as_ptr()) }
 }
 
 /// Save the list of known Remotes to local Settings

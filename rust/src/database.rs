@@ -18,7 +18,7 @@ use crate::rc::{Array, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 
 pub struct Database {
-    handle: NonNull<BNDatabase>,
+    pub(crate) handle: NonNull<BNDatabase>,
 }
 
 impl Database {

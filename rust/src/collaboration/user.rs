@@ -1,80 +1,49 @@
-use core::{ffi, mem, ptr};
-
-use binaryninjacore_sys::*;
-
 use super::Remote;
+use binaryninjacore_sys::*;
+use core::{ffi, mem, ptr};
+use std::ptr::NonNull;
 
-use crate::rc::{CoreArrayProvider, CoreArrayProviderInner};
+use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 
-/// Class representing a remote User
 #[repr(transparent)]
-pub struct User {
-    handle: ptr::NonNull<BNCollaborationUser>,
+pub struct RemoteUser {
+    pub(crate) handle: NonNull<BNCollaborationUser>,
 }
 
-impl Drop for User {
-    fn drop(&mut self) {
-        unsafe { BNFreeCollaborationUser(self.as_raw()) }
-    }
-}
-
-impl PartialEq for User {
-    fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id()
-    }
-}
-impl Eq for User {}
-
-impl Clone for User {
-    fn clone(&self) -> Self {
-        unsafe {
-            Self::from_raw(
-                ptr::NonNull::new(BNNewCollaborationUserReference(self.as_raw())).unwrap(),
-            )
-        }
-    }
-}
-
-impl User {
-    pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNCollaborationUser>) -> Self {
+impl RemoteUser {
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNCollaborationUser>) -> Self {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNCollaborationUser) -> &Self {
-        assert!(!handle.is_null());
-        mem::transmute(handle)
-    }
-
-    #[allow(clippy::mut_from_ref)]
-    pub(crate) unsafe fn as_raw(&self) -> &mut BNCollaborationUser {
-        &mut *self.handle.as_ptr()
+    pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNCollaborationUser>) -> Ref<Self> {
+        Ref::new(Self { handle })
     }
 
     /// Owning Remote
-    pub fn remote(&self) -> Result<Remote, ()> {
-        let value = unsafe { BNCollaborationUserGetRemote(self.as_raw()) };
-        let handle = ptr::NonNull::new(value).ok_or(())?;
-        Ok(unsafe { Remote::from_raw(handle) })
+    pub fn remote(&self) -> Result<Ref<Remote>, ()> {
+        let value = unsafe { BNCollaborationUserGetRemote(self.handle.as_ptr()) };
+        let handle = NonNull::new(value).ok_or(())?;
+        Ok(unsafe { Remote::ref_from_raw(handle) })
     }
 
     /// Web api endpoint url
     pub fn url(&self) -> BnString {
-        let value = unsafe { BNCollaborationUserGetUrl(self.as_raw()) };
+        let value = unsafe { BNCollaborationUserGetUrl(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
 
     /// Unique id
     pub fn id(&self) -> BnString {
-        let value = unsafe { BNCollaborationUserGetId(self.as_raw()) };
+        let value = unsafe { BNCollaborationUserGetId(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
 
     /// User's login username
     pub fn username(&self) -> BnString {
-        let value = unsafe { BNCollaborationUserGetUsername(self.as_raw()) };
+        let value = unsafe { BNCollaborationUserGetUsername(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
@@ -84,7 +53,7 @@ impl User {
         let username = username.into_bytes_with_nul();
         let result = unsafe {
             BNCollaborationUserSetUsername(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 username.as_ref().as_ptr() as *const ffi::c_char,
             )
         };
@@ -97,7 +66,7 @@ impl User {
 
     /// User's email address
     pub fn email(&self) -> BnString {
-        let value = unsafe { BNCollaborationUserGetEmail(self.as_raw()) };
+        let value = unsafe { BNCollaborationUserGetEmail(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
@@ -107,7 +76,7 @@ impl User {
         let username = email.into_bytes_with_nul();
         let result = unsafe {
             BNCollaborationUserSetEmail(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 username.as_ref().as_ptr() as *const ffi::c_char,
             )
         };
@@ -120,19 +89,19 @@ impl User {
 
     /// String representing the last date the user logged in
     pub fn last_login(&self) -> BnString {
-        let value = unsafe { BNCollaborationUserGetLastLogin(self.as_raw()) };
+        let value = unsafe { BNCollaborationUserGetLastLogin(self.handle.as_ptr()) };
         assert!(!value.is_null());
         unsafe { BnString::from_raw(value) }
     }
 
     /// If the user account is active and can log in
     pub fn is_active(&self) -> bool {
-        unsafe { BNCollaborationUserIsActive(self.as_raw()) }
+        unsafe { BNCollaborationUserIsActive(self.handle.as_ptr()) }
     }
 
     /// Enable/disable a user account. You will need to push the user to update the Remote
     pub fn set_is_active(&self, value: bool) -> Result<(), ()> {
-        if unsafe { BNCollaborationUserSetIsActive(self.as_raw(), value) } {
+        if unsafe { BNCollaborationUserSetIsActive(self.handle.as_ptr(), value) } {
             Ok(())
         } else {
             Err(())
@@ -140,18 +109,46 @@ impl User {
     }
 }
 
-impl CoreArrayProvider for User {
-    type Raw = *mut BNCollaborationUser;
-    type Context = ();
-    type Wrapped<'a> = &'a User;
+impl PartialEq for RemoteUser {
+    fn eq(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+}
+impl Eq for RemoteUser {}
+
+impl ToOwned for RemoteUser {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
 }
 
-unsafe impl CoreArrayProviderInner for User {
+unsafe impl RefCountable for RemoteUser {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: NonNull::new(BNNewCollaborationUserReference(handle.handle.as_ptr())).unwrap(),
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeCollaborationUser(handle.handle.as_ptr());
+    }
+}
+
+impl CoreArrayProvider for RemoteUser {
+    type Raw = *mut BNCollaborationUser;
+    type Context = ();
+    type Wrapped<'a> = Guard<'a, RemoteUser>;
+}
+
+unsafe impl CoreArrayProviderInner for RemoteUser {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeCollaborationUserList(raw, count)
     }
 
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let raw_ptr = NonNull::new(*raw).unwrap();
+        Guard::new(Self::from_raw(raw_ptr), context)
     }
 }

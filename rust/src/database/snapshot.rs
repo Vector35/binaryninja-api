@@ -6,31 +6,21 @@ use crate::progress::ProgressExecutor;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 use binaryninjacore_sys::{
-    BNFreeSnapshot, BNFreeSnapshotList, BNGetSnapshotChildren, BNGetSnapshotDatabase,
-    BNGetSnapshotFileContents, BNGetSnapshotFileContentsHash, BNGetSnapshotFirstParent,
-    BNGetSnapshotId, BNGetSnapshotName, BNGetSnapshotParents, BNGetSnapshotUndoData,
-    BNGetSnapshotUndoEntries, BNGetSnapshotUndoEntriesWithProgress, BNIsSnapshotAutoSave,
-    BNNewSnapshotReference, BNReadSnapshotData, BNReadSnapshotDataWithProgress, BNSetSnapshotName,
-    BNSnapshot, BNSnapshotHasAncestor, BNSnapshotHasContents, BNSnapshotHasUndo,
-    BNSnapshotStoreData,
+    BNCollaborationFreeSnapshotIdList, BNFreeSnapshot, BNFreeSnapshotList, BNGetSnapshotChildren,
+    BNGetSnapshotDatabase, BNGetSnapshotFileContents, BNGetSnapshotFileContentsHash,
+    BNGetSnapshotFirstParent, BNGetSnapshotId, BNGetSnapshotName, BNGetSnapshotParents,
+    BNGetSnapshotUndoData, BNGetSnapshotUndoEntries, BNGetSnapshotUndoEntriesWithProgress,
+    BNIsSnapshotAutoSave, BNNewSnapshotReference, BNReadSnapshotData,
+    BNReadSnapshotDataWithProgress, BNSetSnapshotName, BNSnapshot, BNSnapshotHasAncestor,
+    BNSnapshotHasContents, BNSnapshotHasUndo, BNSnapshotStoreData,
 };
 use std::ffi::{c_char, c_void};
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 use std::ptr::NonNull;
 
-#[repr(transparent)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SnapshotId(pub i64);
-
-impl Display for SnapshotId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.write_fmt(format_args!("{}", self.0))
-    }
-}
-
 pub struct Snapshot {
-    handle: NonNull<BNSnapshot>,
+    pub(crate) handle: NonNull<BNSnapshot>,
 }
 
 impl Snapshot {
@@ -264,5 +254,31 @@ unsafe impl CoreArrayProviderInner for Snapshot {
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         let raw_ptr = NonNull::new(*raw).unwrap();
         Guard::new(Self::from_raw(raw_ptr), context)
+    }
+}
+
+#[repr(transparent)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SnapshotId(pub i64);
+
+impl Display for SnapshotId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
+    }
+}
+
+impl CoreArrayProvider for SnapshotId {
+    type Raw = i64;
+    type Context = ();
+    type Wrapped<'a> = SnapshotId;
+}
+
+unsafe impl CoreArrayProviderInner for SnapshotId {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNCollaborationFreeSnapshotIdList(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        SnapshotId(*raw)
     }
 }

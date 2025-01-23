@@ -35,6 +35,7 @@ pub mod binary_reader;
 pub mod binary_view;
 pub mod binary_writer;
 pub mod calling_convention;
+pub mod collaboration;
 pub mod command;
 pub mod component;
 pub mod confidence;

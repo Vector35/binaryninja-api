@@ -137,7 +137,10 @@ impl<P: ProgressCallback> SplitProgress<P> {
 }
 
 impl<P: ProgressCallback> SplitProgressBuilder for SplitProgress<P> {
-    type Progress<'a> = SplitProgressInstance<'a, P> where Self: 'a;
+    type Progress<'a>
+        = SplitProgressInstance<'a, P>
+    where
+        Self: 'a;
     fn next_subpart<'a>(&'a mut self) -> Option<Self::Progress<'a>> {
         self.next_subpart()
     }

@@ -1,80 +1,52 @@
 use core::{ffi, mem, ptr};
-
+use std::ptr::NonNull;
 use std::time::SystemTime;
 
 use binaryninjacore_sys::*;
 
 use super::{
-    databasesync, CollabSnapshot, DatabaseConflictHandler, DatabaseConflictHandlerFail,
-    NameChangeset, NameChangesetNop, Remote, RemoteFolder, RemoteProject,
+    sync, DatabaseConflictHandler, DatabaseConflictHandlerFail, NameChangeset, NameChangesetNop,
+    Remote, RemoteFolder, RemoteProject, RemoteSnapshot,
 };
 
-use crate::binaryview::{BinaryView, BinaryViewExt};
+use crate::binary_view::{BinaryView, BinaryViewExt};
 use crate::database::Database;
 use crate::ffi::{ProgressCallback, ProgressCallbackNop, SplitProgressBuilder};
-use crate::filemetadata::FileMetadata;
-use crate::project::ProjectFile;
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
+use crate::file_metadata::FileMetadata;
+use crate::project::file::ProjectFile;
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 
 pub type RemoteFileType = BNRemoteFileType;
 
-/// Class representing a remote project file. It controls the various
-/// snapshots and raw file contents associated with the analysis.
+/// A remote project file. It controls the various snapshots and raw file contents associated with the analysis.
 #[repr(transparent)]
 pub struct RemoteFile {
-    handle: ptr::NonNull<BNRemoteFile>,
-}
-
-impl Drop for RemoteFile {
-    fn drop(&mut self) {
-        unsafe { BNFreeRemoteFile(self.as_raw()) }
-    }
-}
-
-impl PartialEq for RemoteFile {
-    fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id()
-    }
-}
-impl Eq for RemoteFile {}
-
-impl Clone for RemoteFile {
-    fn clone(&self) -> Self {
-        unsafe {
-            Self::from_raw(ptr::NonNull::new(BNNewRemoteFileReference(self.as_raw())).unwrap())
-        }
-    }
+    pub(crate) handle: NonNull<BNRemoteFile>,
 }
 
 impl RemoteFile {
-    pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNRemoteFile>) -> Self {
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNRemoteFile>) -> Self {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNRemoteFile) -> &Self {
-        assert!(!handle.is_null());
-        mem::transmute(handle)
-    }
-
-    #[allow(clippy::mut_from_ref)]
-    pub(crate) unsafe fn as_raw(&self) -> &mut BNRemoteFile {
-        &mut *self.handle.as_ptr()
+    pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNRemoteFile>) -> Ref<Self> {
+        Ref::new(Self { handle })
     }
 
     /// Look up the remote File for a local database, or None if there is no matching
     /// remote File found.
     /// See [RemoteFile::get_for_binary_view] to load from a [BinaryView].
-    pub fn get_for_local_database(database: &Database) -> Result<Option<RemoteFile>, ()> {
-        if !databasesync::pull_files(database)? {
+    pub fn get_for_local_database(database: &Database) -> Result<Option<Ref<RemoteFile>>, ()> {
+        if !sync::pull_files(database)? {
             return Ok(None);
         }
-        databasesync::get_remote_file_for_local_database(database)
+        sync::get_remote_file_for_local_database(database)
     }
 
-    /// Look up the remote File for a local BinaryView, or None if there is no matching
+    /// Look up the [`RemoteFile`] for a local [`BinaryView`], or None if there is no matching
     /// remote File found.
-    pub fn get_for_binary_view(bv: &BinaryView) -> Result<Option<RemoteFile>, ()> {
+    pub fn get_for_binary_view(bv: &BinaryView) -> Result<Option<Ref<RemoteFile>>, ()> {
         let file = bv.file();
         let Some(database) = file.database() else {
             return Ok(None);
@@ -83,41 +55,40 @@ impl RemoteFile {
     }
 
     pub fn core_file(&self) -> Result<ProjectFile, ()> {
-        let result = unsafe { BNRemoteFileGetCoreFile(self.as_raw()) };
-        ptr::NonNull::new(result)
+        let result = unsafe { BNRemoteFileGetCoreFile(self.handle.as_ptr()) };
+        NonNull::new(result)
             .map(|handle| unsafe { ProjectFile::from_raw(handle) })
             .ok_or(())
     }
 
-    pub fn project(&self) -> Result<RemoteProject, ()> {
-        let result = unsafe { BNRemoteFileGetProject(self.as_raw()) };
-        ptr::NonNull::new(result)
-            .map(|handle| unsafe { RemoteProject::from_raw(handle) })
+    pub fn project(&self) -> Result<Ref<RemoteProject>, ()> {
+        let result = unsafe { BNRemoteFileGetProject(self.handle.as_ptr()) };
+        NonNull::new(result)
+            .map(|handle| unsafe { RemoteProject::ref_from_raw(handle) })
             .ok_or(())
     }
 
-    pub fn remote(&self) -> Result<Remote, ()> {
-        let result = unsafe { BNRemoteFileGetRemote(self.as_raw()) };
-        ptr::NonNull::new(result)
-            .map(|handle| unsafe { Remote::from_raw(handle) })
+    pub fn remote(&self) -> Result<Ref<Remote>, ()> {
+        let result = unsafe { BNRemoteFileGetRemote(self.handle.as_ptr()) };
+        NonNull::new(result)
+            .map(|handle| unsafe { Remote::ref_from_raw(handle) })
             .ok_or(())
     }
 
     /// Parent folder, if one exists. None if this is in the root of the project.
-    pub fn folder(&self) -> Result<Option<RemoteFolder>, ()> {
+    pub fn folder(&self) -> Result<Option<Ref<RemoteFolder>>, ()> {
         let project = self.project()?;
         if !project.has_pulled_folders() {
             project.pull_folders(ProgressCallbackNop)?;
         }
-        let result = unsafe { BNRemoteFileGetFolder(self.as_raw()) };
-        Ok(ptr::NonNull::new(result).map(|handle| unsafe { RemoteFolder::from_raw(handle) }))
+        let result = unsafe { BNRemoteFileGetFolder(self.handle.as_ptr()) };
+        Ok(NonNull::new(result).map(|handle| unsafe { RemoteFolder::ref_from_raw(handle) }))
     }
 
     /// Set the parent folder of a file.
     pub fn set_folder(&self, folder: Option<&RemoteFolder>) -> Result<(), ()> {
-        let folder_raw = folder.map_or(ptr::null_mut(), |folder| unsafe { folder.as_raw() }
-            as *mut _);
-        let success = unsafe { BNRemoteFileSetFolder(self.as_raw(), folder_raw) };
+        let folder_raw = folder.map_or(ptr::null_mut(), |f| f.handle.as_ptr());
+        let success = unsafe { BNRemoteFileSetFolder(self.handle.as_ptr(), folder_raw) };
         success.then_some(()).ok_or(())
     }
 
@@ -125,7 +96,7 @@ impl RemoteFile {
         let folder_raw = folder.into_bytes_with_nul();
         let success = unsafe {
             BNRemoteFileSetMetadata(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 folder_raw.as_ref().as_ptr() as *const ffi::c_char,
             )
         };
@@ -134,27 +105,27 @@ impl RemoteFile {
 
     /// Web API endpoint URL
     pub fn url(&self) -> BnString {
-        let result = unsafe { BNRemoteFileGetUrl(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     /// Chat log API endpoint URL
     pub fn chat_log_url(&self) -> BnString {
-        let result = unsafe { BNRemoteFileGetChatLogUrl(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetChatLogUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     pub fn user_positions_url(&self) -> BnString {
-        let result = unsafe { BNRemoteFileGetUserPositionsUrl(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetUserPositionsUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     /// Unique ID
     pub fn id(&self) -> BnString {
-        let result = unsafe { BNRemoteFileGetId(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetId(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
@@ -162,56 +133,56 @@ impl RemoteFile {
     /// All files share the same properties, but files with different types may make different
     /// uses of those properties, or not use some of them at all.
     pub fn file_type(&self) -> RemoteFileType {
-        unsafe { BNRemoteFileGetType(self.as_raw()) }
+        unsafe { BNRemoteFileGetType(self.handle.as_ptr()) }
     }
 
     /// Created date of the file
     pub fn created(&self) -> SystemTime {
-        let result = unsafe { BNRemoteFileGetCreated(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetCreated(self.handle.as_ptr()) };
         crate::ffi::time_from_bn(result.try_into().unwrap())
     }
 
     pub fn created_by(&self) -> BnString {
-        let result = unsafe { BNRemoteFileGetCreatedBy(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetCreatedBy(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     /// Last modified of the file
     pub fn last_modified(&self) -> SystemTime {
-        let result = unsafe { BNRemoteFileGetLastModified(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetLastModified(self.handle.as_ptr()) };
         crate::ffi::time_from_bn(result.try_into().unwrap())
     }
 
     /// Date of last snapshot in the file
     pub fn last_snapshot(&self) -> SystemTime {
-        let result = unsafe { BNRemoteFileGetLastSnapshot(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetLastSnapshot(self.handle.as_ptr()) };
         crate::ffi::time_from_bn(result.try_into().unwrap())
     }
 
     /// Username of user who pushed the last snapshot in the file
     pub fn last_snapshot_by(&self) -> BnString {
-        let result = unsafe { BNRemoteFileGetLastSnapshotBy(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetLastSnapshotBy(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     pub fn last_snapshot_name(&self) -> BnString {
-        let result = unsafe { BNRemoteFileGetLastSnapshotName(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetLastSnapshotName(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     /// Hash of file contents (no algorithm guaranteed)
     pub fn hash(&self) -> BnString {
-        let result = unsafe { BNRemoteFileGetHash(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetHash(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     /// Displayed name of file
     pub fn name(&self) -> BnString {
-        let result = unsafe { BNRemoteFileGetName(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
@@ -220,14 +191,17 @@ impl RemoteFile {
     pub fn set_name<S: BnStrCompatible>(&self, name: S) -> Result<(), ()> {
         let name = name.into_bytes_with_nul();
         let success = unsafe {
-            BNRemoteFileSetName(self.as_raw(), name.as_ref().as_ptr() as *const ffi::c_char)
+            BNRemoteFileSetName(
+                self.handle.as_ptr(),
+                name.as_ref().as_ptr() as *const ffi::c_char,
+            )
         };
         success.then_some(()).ok_or(())
     }
 
     /// Desciprtion of the file
     pub fn description(&self) -> BnString {
-        let result = unsafe { BNRemoteFileGetDescription(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetDescription(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
@@ -237,7 +211,7 @@ impl RemoteFile {
         let description = description.into_bytes_with_nul();
         let success = unsafe {
             BNRemoteFileSetDescription(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 description.as_ref().as_ptr() as *const ffi::c_char,
             )
         };
@@ -245,39 +219,39 @@ impl RemoteFile {
     }
 
     pub fn metadata(&self) -> BnString {
-        let result = unsafe { BNRemoteFileGetMetadata(self.as_raw()) };
+        let result = unsafe { BNRemoteFileGetMetadata(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     /// Size of raw content of file, in bytes
     pub fn size(&self) -> u64 {
-        unsafe { BNRemoteFileGetSize(self.as_raw()) }
+        unsafe { BNRemoteFileGetSize(self.handle.as_ptr()) }
     }
 
     /// Get the default filepath for a remote File. This is based off the Setting for
     /// collaboration.directory, the file's id, the file's project's id, and the file's
     /// remote's id.
     pub fn default_path(&self) -> BnString {
-        let result = unsafe { BNCollaborationDefaultFilePath(self.as_raw()) };
+        let result = unsafe { BNCollaborationDefaultFilePath(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     /// If the file has pulled the snapshots yet
     pub fn has_pulled_snapshots(&self) -> bool {
-        unsafe { BNRemoteFileHasPulledSnapshots(self.as_raw()) }
+        unsafe { BNRemoteFileHasPulledSnapshots(self.handle.as_ptr()) }
     }
 
     /// Get the list of snapshots in this file.
     ///
     /// NOTE: If snapshots have not been pulled, they will be pulled upon calling this.
-    pub fn snapshots(&self) -> Result<Array<CollabSnapshot>, ()> {
+    pub fn snapshots(&self) -> Result<Array<RemoteSnapshot>, ()> {
         if !self.has_pulled_snapshots() {
             self.pull_snapshots(ProgressCallbackNop)?;
         }
         let mut count = 0;
-        let result = unsafe { BNRemoteFileGetSnapshots(self.as_raw(), &mut count) };
+        let result = unsafe { BNRemoteFileGetSnapshots(self.handle.as_ptr(), &mut count) };
         (!result.is_null())
             .then(|| unsafe { Array::new(result, count, ()) })
             .ok_or(())
@@ -286,22 +260,28 @@ impl RemoteFile {
     /// Get a specific Snapshot in the File by its id
     ///
     /// NOTE: If snapshots have not been pulled, they will be pulled upon calling this.
-    pub fn snapshot_by_id<S: BnStrCompatible>(&self, id: S) -> Result<Option<CollabSnapshot>, ()> {
+    pub fn snapshot_by_id<S: BnStrCompatible>(
+        &self,
+        id: S,
+    ) -> Result<Option<Ref<RemoteSnapshot>>, ()> {
         if !self.has_pulled_snapshots() {
             self.pull_snapshots(ProgressCallbackNop)?;
         }
         let id = id.into_bytes_with_nul();
         let result = unsafe {
-            BNRemoteFileGetSnapshotById(self.as_raw(), id.as_ref().as_ptr() as *const ffi::c_char)
+            BNRemoteFileGetSnapshotById(
+                self.handle.as_ptr(),
+                id.as_ref().as_ptr() as *const ffi::c_char,
+            )
         };
-        Ok(ptr::NonNull::new(result).map(|handle| unsafe { CollabSnapshot::from_raw(handle) }))
+        Ok(NonNull::new(result).map(|handle| unsafe { RemoteSnapshot::ref_from_raw(handle) }))
     }
 
     /// Pull the list of Snapshots from the Remote.
     pub fn pull_snapshots<P: ProgressCallback>(&self, mut progress: P) -> Result<(), ()> {
         let success = unsafe {
             BNRemoteFilePullSnapshots(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 Some(P::cb_progress_callback),
                 &mut progress as *mut P as *mut ffi::c_void,
             )
@@ -325,7 +305,7 @@ impl RemoteFile {
         file: &mut [u8],
         parent_ids: I,
         mut progress: P,
-    ) -> Result<CollabSnapshot, ()>
+    ) -> Result<Ref<RemoteSnapshot>, ()>
     where
         S: BnStrCompatible,
         P: ProgressCallback,
@@ -343,7 +323,7 @@ impl RemoteFile {
             .collect();
         let result = unsafe {
             BNRemoteFileCreateSnapshot(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 name.as_ref().as_ptr() as *const ffi::c_char,
                 contents.as_mut_ptr(),
                 contents.len(),
@@ -357,13 +337,14 @@ impl RemoteFile {
                 &mut progress as *mut P as *mut ffi::c_void,
             )
         };
-        let handle = ptr::NonNull::new(result).ok_or(())?;
-        Ok(unsafe { CollabSnapshot::from_raw(handle) })
+        let handle = NonNull::new(result).ok_or(())?;
+        Ok(unsafe { RemoteSnapshot::ref_from_raw(handle) })
     }
 
     // Delete a snapshot from the remote
-    pub fn delete_snapshot(&self, snapshot: &CollabSnapshot) -> Result<(), ()> {
-        let success = unsafe { BNRemoteFileDeleteSnapshot(self.as_raw(), snapshot.as_raw()) };
+    pub fn delete_snapshot(&self, snapshot: &RemoteSnapshot) -> Result<(), ()> {
+        let success =
+            unsafe { BNRemoteFileDeleteSnapshot(self.handle.as_ptr(), snapshot.handle.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -380,7 +361,7 @@ impl RemoteFile {
     //    let mut data_len = 0;
     //    let result = unsafe {
     //        BNRemoteFileDownload(
-    //            self.as_raw(),
+    //            self.handle.as_ptr(),
     //            Some(F::cb_progress_callback),
     //            &mut progress_function as *mut _ as *mut ffi::c_void,
     //            &mut data,
@@ -391,13 +372,13 @@ impl RemoteFile {
     //}
 
     pub fn request_user_positions(&self) -> BnString {
-        let result = unsafe { BNRemoteFileRequestUserPositions(self.as_raw()) };
+        let result = unsafe { BNRemoteFileRequestUserPositions(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     pub fn request_chat_log(&self) -> BnString {
-        let result = unsafe { BNRemoteFileRequestChatLog(self.as_raw()) };
+        let result = unsafe { BNRemoteFileRequestChatLog(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
@@ -415,7 +396,7 @@ impl RemoteFile {
         let db_path = db_path.into_bytes_with_nul();
         let result = unsafe {
             BNCollaborationDownloadFile(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 db_path.as_ref().as_ptr() as *const ffi::c_char,
                 Some(F::cb_progress_callback),
                 &mut progress_function as *mut _ as *mut ffi::c_void,
@@ -438,7 +419,7 @@ impl RemoteFile {
         let db_path = db_path.into_bytes_with_nul();
         let success = unsafe {
             BNCollaborationDownloadDatabaseForFile(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 db_path.as_ref().as_ptr() as *const ffi::c_char,
                 force,
                 Some(F::cb_progress_callback),
@@ -459,7 +440,7 @@ impl RemoteFile {
             .map(|x| BnString::new(x))
             .unwrap_or_else(|| self.default_path());
         let mut progress = progress.split(&[50, 50]);
-        let file = databasesync::download_file(self, path, progress.next_subpart().unwrap())?;
+        let file = sync::download_file(self, path, progress.next_subpart().unwrap())?;
         let database = file.database().ok_or(())?;
         self.sync(
             &database,
@@ -483,7 +464,7 @@ impl RemoteFile {
         progress: P,
         name_changeset: N,
     ) -> Result<(), ()> {
-        databasesync::sync_database(database, self, conflict_handler, progress, name_changeset)
+        sync::sync_database(database, self, conflict_handler, progress, name_changeset)
     }
 
     /// Pull updated snapshots from the remote. Merge local changes with remote changes and
@@ -505,7 +486,7 @@ impl RemoteFile {
         P: ProgressCallback,
         N: NameChangeset,
     {
-        databasesync::pull_database(database, self, conflict_handler, progress, name_changeset)
+        sync::pull_database(database, self, conflict_handler, progress, name_changeset)
     }
 
     /// Push locally added snapshots to the remote
@@ -516,14 +497,41 @@ impl RemoteFile {
     where
         P: ProgressCallback,
     {
-        databasesync::push_database(database, self, progress)
+        sync::push_database(database, self, progress)
+    }
+}
+
+impl PartialEq for RemoteFile {
+    fn eq(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+}
+impl Eq for RemoteFile {}
+
+impl ToOwned for RemoteFile {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for RemoteFile {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: NonNull::new(BNNewRemoteFileReference(handle.handle.as_ptr())).unwrap(),
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeRemoteFile(handle.handle.as_ptr());
     }
 }
 
 impl CoreArrayProvider for RemoteFile {
     type Raw = *mut BNRemoteFile;
     type Context = ();
-    type Wrapped<'a> = &'a Self;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl CoreArrayProviderInner for RemoteFile {
@@ -531,7 +539,8 @@ unsafe impl CoreArrayProviderInner for RemoteFile {
         BNFreeRemoteFileList(raw, count)
     }
 
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let raw_ptr = NonNull::new(*raw).unwrap();
+        Guard::new(Self::from_raw(raw_ptr), context)
     }
 }

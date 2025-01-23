@@ -1,64 +1,33 @@
-use core::{ffi, mem, ptr};
-
 use binaryninjacore_sys::*;
+use core::{ffi, mem, ptr};
+use std::ptr::NonNull;
 
-use super::{databasesync, Group, Id, RemoteProject, User};
+use super::{sync, GroupId, RemoteGroup, RemoteProject, RemoteUser};
 
-use crate::binaryview::BinaryView;
+use crate::binary_view::BinaryView;
 use crate::database::Database;
+use crate::enterprise;
 use crate::ffi::{ProgressCallback, ProgressCallbackNop};
 use crate::project::Project;
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 
 #[repr(transparent)]
 pub struct Remote {
-    handle: ptr::NonNull<BNRemote>,
-}
-
-impl Drop for Remote {
-    fn drop(&mut self) {
-        unsafe { BNFreeRemote(self.as_raw()) }
-    }
-}
-
-impl PartialEq for Remote {
-    fn eq(&self, other: &Self) -> bool {
-        // don't pull metadata if we hand't yet
-        if !self.has_loaded_metadata() || other.has_loaded_metadata() {
-            self.address() == other.address()
-        } else if let Some((slf, oth)) = self.unique_id().ok().zip(other.unique_id().ok()) {
-            slf == oth
-        } else {
-            // falback to comparing address
-            self.address() == other.address()
-        }
-    }
-}
-impl Eq for Remote {}
-
-impl Clone for Remote {
-    fn clone(&self) -> Self {
-        unsafe { Self::from_raw(ptr::NonNull::new(BNNewRemoteReference(self.as_raw())).unwrap()) }
-    }
+    pub(crate) handle: NonNull<BNRemote>,
 }
 
 impl Remote {
-    pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNRemote>) -> Self {
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNRemote>) -> Self {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNRemote) -> &Self {
-        assert!(!handle.is_null());
-        mem::transmute(handle)
+    pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNRemote>) -> Ref<Self> {
+        Ref::new(Self { handle })
     }
 
-    #[allow(clippy::mut_from_ref)]
-    pub(crate) unsafe fn as_raw(&self) -> &mut BNRemote {
-        &mut *self.handle.as_ptr()
-    }
-
-    pub fn new<N: BnStrCompatible, A: BnStrCompatible>(name: N, address: A) -> Self {
+    /// Create a Remote and add it to the list of known remotes (saved to Settings)
+    pub fn new<N: BnStrCompatible, A: BnStrCompatible>(name: N, address: A) -> Ref<Self> {
         let name = name.into_bytes_with_nul();
         let address = address.into_bytes_with_nul();
         let result = unsafe {
@@ -67,22 +36,22 @@ impl Remote {
                 address.as_ref().as_ptr() as *const ffi::c_char,
             )
         };
-        unsafe { Self::from_raw(ptr::NonNull::new(result).unwrap()) }
+        unsafe { Self::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
     /// Get the Remote for a Database
-    pub fn get_for_local_database(database: &Database) -> Result<Option<Remote>, ()> {
-        databasesync::get_remote_for_local_database(database)
+    pub fn get_for_local_database(database: &Database) -> Result<Option<Ref<Remote>>, ()> {
+        sync::get_remote_for_local_database(database)
     }
 
     /// Get the Remote for a Binary View
-    pub fn get_for_binary_view(bv: &BinaryView) -> Result<Option<Remote>, ()> {
-        databasesync::get_remote_for_binary_view(bv)
+    pub fn get_for_binary_view(bv: &BinaryView) -> Result<Option<Ref<Remote>>, ()> {
+        sync::get_remote_for_binary_view(bv)
     }
 
     /// Checks if the remote has pulled metadata like its id, etc.
     pub fn has_loaded_metadata(&self) -> bool {
-        unsafe { BNRemoteHasLoadedMetadata(self.as_raw()) }
+        unsafe { BNRemoteHasLoadedMetadata(self.handle.as_ptr()) }
     }
 
     /// Gets the unique id. If metadata has not been pulled, it will be pulled upon calling this.
@@ -90,40 +59,40 @@ impl Remote {
         if !self.has_loaded_metadata() {
             self.load_metadata()?;
         }
-        let result = unsafe { BNRemoteGetUniqueId(self.as_raw()) };
+        let result = unsafe { BNRemoteGetUniqueId(self.handle.as_ptr()) };
         assert!(!result.is_null());
         Ok(unsafe { BnString::from_raw(result) })
     }
 
     /// Gets the name of the remote.
     pub fn name(&self) -> BnString {
-        let result = unsafe { BNRemoteGetName(self.as_raw()) };
+        let result = unsafe { BNRemoteGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     /// Gets the address of the remote.
     pub fn address(&self) -> BnString {
-        let result = unsafe { BNRemoteGetAddress(self.as_raw()) };
+        let result = unsafe { BNRemoteGetAddress(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     /// Checks if the remote is connected.
     pub fn is_connected(&self) -> bool {
-        unsafe { BNRemoteIsConnected(self.as_raw()) }
+        unsafe { BNRemoteIsConnected(self.handle.as_ptr()) }
     }
 
     /// Gets the username used to connect to the remote.
     pub fn username(&self) -> BnString {
-        let result = unsafe { BNRemoteGetUsername(self.as_raw()) };
+        let result = unsafe { BNRemoteGetUsername(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     /// Gets the token used to connect to the remote.
     pub fn token(&self) -> BnString {
-        let result = unsafe { BNRemoteGetToken(self.as_raw()) };
+        let result = unsafe { BNRemoteGetToken(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
@@ -133,7 +102,7 @@ impl Remote {
         if !self.has_loaded_metadata() {
             self.load_metadata()?;
         }
-        Ok(unsafe { BNRemoteGetServerVersion(self.as_raw()) })
+        Ok(unsafe { BNRemoteGetServerVersion(self.handle.as_ptr()) })
     }
 
     /// Gets the server build id. If metadata has not been pulled, it will be pulled upon calling this.
@@ -141,7 +110,11 @@ impl Remote {
         if !self.has_loaded_metadata() {
             self.load_metadata()?;
         }
-        unsafe { Ok(BnString::from_raw(BNRemoteGetServerBuildId(self.as_raw()))) }
+        unsafe {
+            Ok(BnString::from_raw(BNRemoteGetServerBuildId(
+                self.handle.as_ptr(),
+            )))
+        }
     }
 
     /// Gets the list of supported authentication backends on the server.
@@ -156,7 +129,7 @@ impl Remote {
         let mut count = 0;
         let success = unsafe {
             BNRemoteGetAuthBackends(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 &mut backend_ids,
                 &mut backend_names,
                 &mut count,
@@ -177,7 +150,7 @@ impl Remote {
         if !self.has_pulled_users() {
             self.pull_users(ProgressCallbackNop)?;
         }
-        Ok(unsafe { BNRemoteIsAdmin(self.as_raw()) })
+        Ok(unsafe { BNRemoteIsAdmin(self.handle.as_ptr()) })
     }
 
     /// Checks if the remote is the same as the Enterprise License server.
@@ -185,12 +158,12 @@ impl Remote {
         if !self.has_loaded_metadata() {
             self.load_metadata()?;
         }
-        Ok(unsafe { BNRemoteIsEnterprise(self.as_raw()) })
+        Ok(unsafe { BNRemoteIsEnterprise(self.handle.as_ptr()) })
     }
 
     /// Loads metadata from the remote, including unique id and versions.
     pub fn load_metadata(&self) -> Result<(), ()> {
-        let success = unsafe { BNRemoteLoadMetadata(self.as_raw()) };
+        let success = unsafe { BNRemoteLoadMetadata(self.handle.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -204,7 +177,7 @@ impl Remote {
         let password = password.into_bytes_with_nul();
         let token = unsafe {
             BNRemoteRequestAuthenticationToken(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 username.as_ref().as_ptr() as *const ffi::c_char,
                 password.as_ref().as_ptr() as *const ffi::c_char,
             )
@@ -229,15 +202,13 @@ impl Remote {
             self.load_metadata()?;
         }
 
-        let success = if let Some((username, token)) = username_and_token {
-            return self.connect_with_username_and_token(username, token);
-        // TODO: implement enterprise
-        //} else if self.is_enterprise()? && enterprise::is_authenticated() {
-        //    // try with the enterprise
-        //    let username = enterprise::username();
-        //    let token = enterprise::token();
-
-        //    unsafe { BNRemoteConnect(self.as_raw(), username.as_ptr(), token.as_ptr()) }
+        if let Some((username, token)) = username_and_token {
+            self.connect_with_username_and_token(username, token)
+        } else if self.is_enterprise()? && enterprise::is_server_authenticated() {
+            // Try connecting with enterprise.
+            let username = enterprise::server_username();
+            let token = enterprise::server_token();
+            self.connect_with_username_and_token(username, token)
         } else {
             // TODO: implement SecretsProvider
             //let secrets_prov_name = crate::settings::Settings::new(c"default").get_string(
@@ -254,7 +225,7 @@ impl Remote {
                 //let crefs = json_decode::decode(creds_json.as_str());
                 //let username = creds.get("username");
                 //let token = creds.get("token");
-                //unsafe { BNRemoteConnect(self.as_raw(), username.as_ptr(), token.as_ptr()) }
+                //unsafe { BNRemoteConnect(self.handle.as_ptr(), username.as_ptr(), token.as_ptr()) }
                 unreachable!();
             } else {
                 // try loggin in with creds in the env
@@ -265,16 +236,18 @@ impl Remote {
                 });
 
                 if let Some(Some(token)) = token {
-                    let username_ptr = username.as_ref().unwrap().as_ptr() as *const ffi::c_char;
-
-                    unsafe { BNRemoteConnect(self.as_raw(), username_ptr, token.as_ptr()) }
+                    if let Some(username) = username {
+                        self.connect_with_username_and_token(username, token)   
+                    } else {
+                        // No username provided
+                        Err(())   
+                    }
                 } else {
-                    // unable to find valid creds
+                    // unable to find valid creds (no token)
                     return Err(());
                 }
             }
-        };
-        success.then_some(()).ok_or(())
+        }
     }
 
     pub fn connect_with_username_and_token<U: BnStrCompatible, T: BnStrCompatible>(
@@ -287,29 +260,29 @@ impl Remote {
         let username_ptr = username.as_ref().as_ptr() as *const ffi::c_char;
         let token_ptr = token.as_ref().as_ptr() as *const ffi::c_char;
 
-        let success = unsafe { BNRemoteConnect(self.as_raw(), username_ptr, token_ptr) };
+        let success = unsafe { BNRemoteConnect(self.handle.as_ptr(), username_ptr, token_ptr) };
         success.then_some(()).ok_or(())
     }
 
     /// Disconnects from the remote.
     pub fn disconnect(&self) -> Result<(), ()> {
-        let success = unsafe { BNRemoteDisconnect(self.as_raw()) };
+        let success = unsafe { BNRemoteDisconnect(self.handle.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
     /// Checks if the project has pulled the projects yet.
     pub fn has_pulled_projects(&self) -> bool {
-        unsafe { BNRemoteHasPulledProjects(self.as_raw()) }
+        unsafe { BNRemoteHasPulledProjects(self.handle.as_ptr()) }
     }
 
     /// Checks if the project has pulled the groups yet.
     pub fn has_pulled_groups(&self) -> bool {
-        unsafe { BNRemoteHasPulledGroups(self.as_raw()) }
+        unsafe { BNRemoteHasPulledGroups(self.handle.as_ptr()) }
     }
 
     /// Checks if the project has pulled the users yet.
     pub fn has_pulled_users(&self) -> bool {
-        unsafe { BNRemoteHasPulledUsers(self.as_raw()) }
+        unsafe { BNRemoteHasPulledUsers(self.handle.as_ptr()) }
     }
 
     /// Gets the list of projects in this project.
@@ -321,7 +294,7 @@ impl Remote {
         }
 
         let mut count = 0;
-        let value = unsafe { BNRemoteGetProjects(self.as_raw(), &mut count) };
+        let value = unsafe { BNRemoteGetProjects(self.handle.as_ptr(), &mut count) };
         if value.is_null() {
             return Err(());
         }
@@ -334,16 +307,19 @@ impl Remote {
     pub fn get_project_by_id<S: BnStrCompatible>(
         &self,
         id: S,
-    ) -> Result<Option<RemoteProject>, ()> {
+    ) -> Result<Option<Ref<RemoteProject>>, ()> {
         if !self.has_pulled_projects() {
             self.pull_projects(ProgressCallbackNop)?;
         }
 
         let id = id.into_bytes_with_nul();
         let value = unsafe {
-            BNRemoteGetProjectById(self.as_raw(), id.as_ref().as_ptr() as *const ffi::c_char)
+            BNRemoteGetProjectById(
+                self.handle.as_ptr(),
+                id.as_ref().as_ptr() as *const ffi::c_char,
+            )
         };
-        Ok(ptr::NonNull::new(value).map(|handle| unsafe { RemoteProject::from_raw(handle) }))
+        Ok(NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) }))
     }
 
     /// Gets a specific project in the Remote by its name.
@@ -352,16 +328,19 @@ impl Remote {
     pub fn get_project_by_name<S: BnStrCompatible>(
         &self,
         name: S,
-    ) -> Result<Option<RemoteProject>, ()> {
+    ) -> Result<Option<Ref<RemoteProject>>, ()> {
         if !self.has_pulled_projects() {
             self.pull_projects(ProgressCallbackNop)?;
         }
 
         let name = name.into_bytes_with_nul();
         let value = unsafe {
-            BNRemoteGetProjectByName(self.as_raw(), name.as_ref().as_ptr() as *const ffi::c_char)
+            BNRemoteGetProjectByName(
+                self.handle.as_ptr(),
+                name.as_ref().as_ptr() as *const ffi::c_char,
+            )
         };
-        Ok(ptr::NonNull::new(value).map(|handle| unsafe { RemoteProject::from_raw(handle) }))
+        Ok(NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) }))
     }
 
     /// Pulls the list of projects from the Remote.
@@ -372,7 +351,7 @@ impl Remote {
     pub fn pull_projects<F: ProgressCallback>(&self, mut progress: F) -> Result<(), ()> {
         let success = unsafe {
             BNRemotePullProjects(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 Some(F::cb_progress_callback),
                 &mut progress as *mut F as *mut ffi::c_void,
             )
@@ -390,18 +369,18 @@ impl Remote {
         &self,
         name: N,
         description: D,
-    ) -> Result<RemoteProject, ()> {
+    ) -> Result<Ref<RemoteProject>, ()> {
         let name = name.into_bytes_with_nul();
         let description = description.into_bytes_with_nul();
         let value = unsafe {
             BNRemoteCreateProject(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 name.as_ref().as_ptr() as *const ffi::c_char,
                 description.as_ref().as_ptr() as *const ffi::c_char,
             )
         };
-        ptr::NonNull::new(value)
-            .map(|handle| unsafe { RemoteProject::from_raw(handle) })
+        NonNull::new(value)
+            .map(|handle| unsafe { RemoteProject::ref_from_raw(handle) })
             .ok_or(())
     }
 
@@ -410,16 +389,16 @@ impl Remote {
         &self,
         project: &Project,
         mut progress: P,
-    ) -> Option<RemoteProject> {
+    ) -> Option<Ref<RemoteProject>> {
         let value = unsafe {
             BNRemoteImportLocalProject(
-                self.as_raw(),
-                project.as_raw(),
+                self.handle.as_ptr(),
+                project.handle.as_ptr(),
                 Some(P::cb_progress_callback),
                 &mut progress as *mut P as *mut ffi::c_void,
             )
         };
-        ptr::NonNull::new(value).map(|handle| unsafe { RemoteProject::from_raw(handle) })
+        NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) })
     }
 
     /// Pushes an updated Project object to the Remote.
@@ -449,8 +428,8 @@ impl Remote {
 
         let success = unsafe {
             BNRemotePushProject(
-                self.as_raw(),
-                project.as_raw(),
+                self.handle.as_ptr(),
+                project.handle.as_ptr(),
                 keys_raw.as_mut_ptr(),
                 values_raw.as_mut_ptr(),
                 keys_raw.len(),
@@ -461,7 +440,8 @@ impl Remote {
 
     /// Deletes a project from the remote.
     pub fn delete_project(&self, project: &RemoteProject) -> Result<(), ()> {
-        let success = unsafe { BNRemoteDeleteProject(self.as_raw(), project.as_raw()) };
+        let success =
+            unsafe { BNRemoteDeleteProject(self.handle.as_ptr(), project.handle.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -469,13 +449,13 @@ impl Remote {
     ///
     /// If groups have not been pulled, they will be pulled upon calling this.
     /// This function is only available to accounts with admin status on the Remote.
-    pub fn groups(&self) -> Result<Array<Group>, ()> {
+    pub fn groups(&self) -> Result<Array<RemoteGroup>, ()> {
         if !self.has_pulled_groups() {
             self.pull_groups(ProgressCallbackNop)?;
         }
 
         let mut count = 0;
-        let value = unsafe { BNRemoteGetGroups(self.as_raw(), &mut count) };
+        let value = unsafe { BNRemoteGetGroups(self.handle.as_ptr(), &mut count) };
         if value.is_null() {
             return Err(());
         }
@@ -486,30 +466,36 @@ impl Remote {
     ///
     /// If groups have not been pulled, they will be pulled upon calling this.
     /// This function is only available to accounts with admin status on the Remote.
-    pub fn get_group_by_id(&self, id: u64) -> Result<Option<Group>, ()> {
+    pub fn get_group_by_id(&self, id: u64) -> Result<Option<Ref<RemoteGroup>>, ()> {
         if !self.has_pulled_groups() {
             self.pull_groups(ProgressCallbackNop)?;
         }
 
-        let value = unsafe { BNRemoteGetGroupById(self.as_raw(), id) };
-        Ok(ptr::NonNull::new(value).map(|handle| unsafe { Group::from_raw(handle) }))
+        let value = unsafe { BNRemoteGetGroupById(self.handle.as_ptr(), id) };
+        Ok(NonNull::new(value).map(|handle| unsafe { RemoteGroup::ref_from_raw(handle) }))
     }
 
     /// Gets a specific group in the Remote by its name.
     ///
     /// If groups have not been pulled, they will be pulled upon calling this.
     /// This function is only available to accounts with admin status on the Remote.
-    pub fn get_group_by_name<S: BnStrCompatible>(&self, name: S) -> Result<Option<Group>, ()> {
+    pub fn get_group_by_name<S: BnStrCompatible>(
+        &self,
+        name: S,
+    ) -> Result<Option<Ref<RemoteGroup>>, ()> {
         if !self.has_pulled_groups() {
             self.pull_groups(ProgressCallbackNop)?;
         }
 
         let name = name.into_bytes_with_nul();
         let value = unsafe {
-            BNRemoteGetGroupByName(self.as_raw(), name.as_ref().as_ptr() as *const ffi::c_char)
+            BNRemoteGetGroupByName(
+                self.handle.as_ptr(),
+                name.as_ref().as_ptr() as *const ffi::c_char,
+            )
         };
 
-        Ok(ptr::NonNull::new(value).map(|handle| unsafe { Group::from_raw(handle) }))
+        Ok(NonNull::new(value).map(|handle| unsafe { RemoteGroup::ref_from_raw(handle) }))
     }
 
     /// Searches for groups in the Remote with a given prefix.
@@ -520,7 +506,7 @@ impl Remote {
     pub fn search_groups<S: BnStrCompatible>(
         &self,
         prefix: S,
-    ) -> Result<(Array<Id>, Array<BnString>), ()> {
+    ) -> Result<(Array<GroupId>, Array<BnString>), ()> {
         let prefix = prefix.into_bytes_with_nul();
         let mut count = 0;
         let mut group_ids = ptr::null_mut();
@@ -528,7 +514,7 @@ impl Remote {
 
         let success = unsafe {
             BNRemoteSearchGroups(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 prefix.as_ref().as_ptr() as *const ffi::c_char,
                 &mut group_ids,
                 &mut group_names,
@@ -555,7 +541,7 @@ impl Remote {
     pub fn pull_groups<F: ProgressCallback>(&self, mut progress: F) -> Result<(), ()> {
         let success = unsafe {
             BNRemotePullGroups(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 Some(F::cb_progress_callback),
                 &mut progress as *mut F as *mut ffi::c_void,
             )
@@ -570,7 +556,7 @@ impl Remote {
     ///
     /// * `name` - Group name
     /// * `usernames` - List of usernames of users in the group
-    pub fn create_group<N, I>(&self, name: N, usernames: I) -> Result<Group, ()>
+    pub fn create_group<N, I>(&self, name: N, usernames: I) -> Result<Ref<RemoteGroup>, ()>
     where
         N: BnStrCompatible,
         I: IntoIterator,
@@ -588,14 +574,14 @@ impl Remote {
 
         let value = unsafe {
             BNRemoteCreateGroup(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 name.as_ref().as_ptr() as *const ffi::c_char,
                 username_ptrs.as_mut_ptr(),
                 username_ptrs.len(),
             )
         };
-        ptr::NonNull::new(value)
-            .map(|handle| unsafe { Group::from_raw(handle) })
+        NonNull::new(value)
+            .map(|handle| unsafe { RemoteGroup::ref_from_raw(handle) })
             .ok_or(())
     }
 
@@ -606,7 +592,7 @@ impl Remote {
     ///
     /// * `group` - Group object which has been updated
     /// * `extra_fields` - Extra HTTP fields to send with the update
-    pub fn push_group<I, K, V>(&self, group: &Group, extra_fields: I) -> Result<(), ()>
+    pub fn push_group<I, K, V>(&self, group: &RemoteGroup, extra_fields: I) -> Result<(), ()>
     where
         I: IntoIterator<Item = (K, V)>,
         K: BnStrCompatible,
@@ -627,8 +613,8 @@ impl Remote {
 
         let success = unsafe {
             BNRemotePushGroup(
-                self.as_raw(),
-                group.as_raw(),
+                self.handle.as_ptr(),
+                group.handle.as_ptr(),
                 keys_raw.as_mut_ptr(),
                 values_raw.as_mut_ptr(),
                 keys.len(),
@@ -644,8 +630,8 @@ impl Remote {
     /// # Arguments
     ///
     /// * `group` - Reference to the group to delete.
-    pub fn delete_group(&self, group: &Group) -> Result<(), ()> {
-        let success = unsafe { BNRemoteDeleteGroup(self.as_raw(), group.as_raw()) };
+    pub fn delete_group(&self, group: &RemoteGroup) -> Result<(), ()> {
+        let success = unsafe { BNRemoteDeleteGroup(self.handle.as_ptr(), group.handle.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -654,7 +640,7 @@ impl Remote {
     /// NOTE: If users have not been pulled, they will be pulled upon calling this.
     ///
     /// NOTE: This function is only available to accounts with admin status on the Remote
-    pub fn users(&self) -> Result<Array<User>, ()> {
+    pub fn users(&self) -> Result<Array<RemoteUser>, ()> {
         if !self.has_pulled_users() {
             self.pull_users(ProgressCallbackNop)?;
         }
@@ -675,15 +661,18 @@ impl Remote {
     /// # Arguments
     ///
     /// * `id` - The identifier of the user to retrieve.
-    pub fn get_user_by_id<S: BnStrCompatible>(&self, id: S) -> Result<Option<User>, ()> {
+    pub fn get_user_by_id<S: BnStrCompatible>(&self, id: S) -> Result<Option<Ref<RemoteUser>>, ()> {
         if !self.has_pulled_users() {
             self.pull_users(ProgressCallbackNop)?;
         }
         let id = id.into_bytes_with_nul();
         let value = unsafe {
-            BNRemoteGetUserById(self.as_raw(), id.as_ref().as_ptr() as *const ffi::c_char)
+            BNRemoteGetUserById(
+                self.handle.as_ptr(),
+                id.as_ref().as_ptr() as *const ffi::c_char,
+            )
         };
-        Ok(ptr::NonNull::new(value).map(|handle| unsafe { User::from_raw(handle) }))
+        Ok(NonNull::new(value).map(|handle| unsafe { RemoteUser::ref_from_raw(handle) }))
     }
 
     /// Retrieves a specific user in the project by their username.
@@ -698,18 +687,18 @@ impl Remote {
     pub fn get_user_by_username<S: BnStrCompatible>(
         &self,
         username: S,
-    ) -> Result<Option<User>, ()> {
+    ) -> Result<Option<Ref<RemoteUser>>, ()> {
         if !self.has_pulled_users() {
             self.pull_users(ProgressCallbackNop)?;
         }
         let username = username.into_bytes_with_nul();
         let value = unsafe {
             BNRemoteGetUserByUsername(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 username.as_ref().as_ptr() as *const ffi::c_char,
             )
         };
-        Ok(ptr::NonNull::new(value).map(|handle| unsafe { User::from_raw(handle) }))
+        Ok(NonNull::new(value).map(|handle| unsafe { RemoteUser::ref_from_raw(handle) }))
     }
 
     /// Retrieves the user object for the currently connected user.
@@ -717,12 +706,12 @@ impl Remote {
     /// NOTE: If users have not been pulled, they will be pulled upon calling this.
     ///
     /// NOTE: This function is only available to accounts with admin status on the Remote
-    pub fn current_user(&self) -> Result<Option<User>, ()> {
+    pub fn current_user(&self) -> Result<Option<Ref<RemoteUser>>, ()> {
         if !self.has_pulled_users() {
             self.pull_users(ProgressCallbackNop)?;
         }
         let value = unsafe { BNRemoteGetCurrentUser(self.handle.as_ptr()) };
-        Ok(ptr::NonNull::new(value).map(|handle| unsafe { User::from_raw(handle) }))
+        Ok(NonNull::new(value).map(|handle| unsafe { RemoteUser::ref_from_raw(handle) }))
     }
 
     /// Searches for users in the project with a given prefix.
@@ -740,7 +729,7 @@ impl Remote {
         let mut usernames = ptr::null_mut();
         let success = unsafe {
             BNRemoteSearchUsers(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 prefix.as_ref().as_ptr() as *const ffi::c_char,
                 &mut user_ids,
                 &mut usernames,
@@ -772,7 +761,7 @@ impl Remote {
     pub fn pull_users<P: ProgressCallback>(&self, mut progress: P) -> Result<(), ()> {
         let success = unsafe {
             BNRemotePullUsers(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 Some(P::cb_progress_callback),
                 &mut progress as *mut P as *mut ffi::c_void,
             )
@@ -795,14 +784,14 @@ impl Remote {
         password: P,
         group_ids: &[u64],
         user_permission_ids: &[u64],
-    ) -> Result<User, ()> {
+    ) -> Result<Ref<RemoteUser>, ()> {
         let username = username.into_bytes_with_nul();
         let email = email.into_bytes_with_nul();
         let password = password.into_bytes_with_nul();
 
         let value = unsafe {
             BNRemoteCreateUser(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 username.as_ref().as_ptr() as *const ffi::c_char,
                 email.as_ref().as_ptr() as *const ffi::c_char,
                 is_active,
@@ -813,8 +802,8 @@ impl Remote {
                 user_permission_ids.len(),
             )
         };
-        ptr::NonNull::new(value)
-            .map(|handle| unsafe { User::from_raw(handle) })
+        NonNull::new(value)
+            .map(|handle| unsafe { RemoteUser::ref_from_raw(handle) })
             .ok_or(())
     }
 
@@ -826,7 +815,7 @@ impl Remote {
     ///
     /// * `user` - Reference to the `RemoteUser` object to push.
     /// * `extra_fields` - Optional extra fields to send with the update.
-    pub fn push_user<I, K, V>(&self, user: &User, extra_fields: I) -> Result<(), ()>
+    pub fn push_user<I, K, V>(&self, user: &RemoteUser, extra_fields: I) -> Result<(), ()>
     where
         I: Iterator<Item = (K, V)>,
         K: BnStrCompatible,
@@ -846,8 +835,8 @@ impl Remote {
             .collect();
         let success = unsafe {
             BNRemotePushUser(
-                self.as_raw(),
-                user.as_raw(),
+                self.handle.as_ptr(),
+                user.handle.as_ptr(),
                 keys_raw.as_mut_ptr(),
                 values_raw.as_mut_ptr(),
                 keys_raw.len(),
@@ -859,14 +848,49 @@ impl Remote {
     // TODO identify the request and ret type of this function, it seems to use a C++ implementation of
     // HTTP requests, composed mostly of `std:vector`.
     //pub fn request(&self) {
-    //    unsafe { BNRemoteRequest(self.as_raw(), todo!(), todo!()) }
+    //    unsafe { BNRemoteRequest(self.handle.as_ptr(), todo!(), todo!()) }
     //}
+}
+
+impl PartialEq for Remote {
+    fn eq(&self, other: &Self) -> bool {
+        // don't pull metadata if we hand't yet
+        if !self.has_loaded_metadata() || other.has_loaded_metadata() {
+            self.address() == other.address()
+        } else if let Some((slf, oth)) = self.unique_id().ok().zip(other.unique_id().ok()) {
+            slf == oth
+        } else {
+            // falback to comparing address
+            self.address() == other.address()
+        }
+    }
+}
+impl Eq for Remote {}
+
+impl ToOwned for Remote {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for Remote {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: NonNull::new(BNNewRemoteReference(handle.handle.as_ptr())).unwrap(),
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeRemote(handle.handle.as_ptr());
+    }
 }
 
 impl CoreArrayProvider for Remote {
     type Raw = *mut BNRemote;
     type Context = ();
-    type Wrapped<'a> = &'a Self;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl CoreArrayProviderInner for Remote {
@@ -874,7 +898,8 @@ unsafe impl CoreArrayProviderInner for Remote {
         BNFreeRemoteList(raw, count)
     }
 
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let raw_ptr = NonNull::new(*raw).unwrap();
+        Guard::new(Self::from_raw(raw_ptr), context)
     }
 }

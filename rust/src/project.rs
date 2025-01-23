@@ -16,7 +16,7 @@ use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, Re
 use crate::string::{BnStrCompatible, BnString};
 
 pub struct Project {
-    handle: NonNull<BNProject>,
+    pub(crate) handle: NonNull<BNProject>,
 }
 
 impl Project {

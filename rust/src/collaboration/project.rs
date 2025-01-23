@@ -1,67 +1,39 @@
 use core::{ffi, mem, ptr};
-
+use std::ptr::NonNull;
 use std::time::SystemTime;
 
 use binaryninjacore_sys::*;
 
 use super::{
-    databasesync, CollaborationPermissionLevel, NameChangeset, Permission, Remote, RemoteFile,
+    sync, CollaborationPermissionLevel, NameChangeset, Permission, Remote, RemoteFile,
     RemoteFileType, RemoteFolder,
 };
 
-use crate::binaryview::{BinaryView, BinaryViewExt};
+use crate::binary_view::{BinaryView, BinaryViewExt};
 use crate::database::Database;
 use crate::ffi::{ProgressCallback, ProgressCallbackNop};
-use crate::filemetadata::FileMetadata;
+use crate::file_metadata::FileMetadata;
 use crate::project::Project;
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 
-/// Struct representing a remote project
 #[repr(transparent)]
 pub struct RemoteProject {
-    handle: ptr::NonNull<BNRemoteProject>,
-}
-
-impl Drop for RemoteProject {
-    fn drop(&mut self) {
-        unsafe { BNFreeRemoteProject(self.as_raw()) }
-    }
-}
-
-impl PartialEq for RemoteProject {
-    fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id()
-    }
-}
-impl Eq for RemoteProject {}
-
-impl Clone for RemoteProject {
-    fn clone(&self) -> Self {
-        unsafe {
-            Self::from_raw(ptr::NonNull::new(BNNewRemoteProjectReference(self.as_raw())).unwrap())
-        }
-    }
+    pub(crate) handle: NonNull<BNRemoteProject>,
 }
 
 impl RemoteProject {
-    pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNRemoteProject>) -> Self {
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNRemoteProject>) -> Self {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNRemoteProject) -> &Self {
-        assert!(!handle.is_null());
-        mem::transmute(handle)
-    }
-
-    #[allow(clippy::mut_from_ref)]
-    pub(crate) unsafe fn as_raw(&self) -> &mut BNRemoteProject {
-        &mut *self.handle.as_ptr()
+    pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNRemoteProject>) -> Ref<Self> {
+        Ref::new(Self { handle })
     }
 
     /// Determine if the project is open (it needs to be opened before you can access its files)
     pub fn is_open(&self) -> bool {
-        unsafe { BNRemoteProjectIsOpen(self.as_raw()) }
+        unsafe { BNRemoteProjectIsOpen(self.handle.as_ptr()) }
     }
 
     /// Open the project, allowing various file and folder based apis to work, as well as
@@ -72,7 +44,7 @@ impl RemoteProject {
         }
         let success = unsafe {
             BNRemoteProjectOpen(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 Some(F::cb_progress_callback),
                 &mut progress as *mut F as *mut ffi::c_void,
             )
@@ -82,19 +54,19 @@ impl RemoteProject {
 
     /// Close the project and stop all background operations (e.g. file uploads)
     pub fn close(&self) {
-        unsafe { BNRemoteProjectClose(self.as_raw()) }
+        unsafe { BNRemoteProjectClose(self.handle.as_ptr()) }
     }
 
     /// Get the Remote Project for a Database
-    pub fn get_for_local_database(database: &Database) -> Result<Option<Self>, ()> {
-        if databasesync::pull_projects(database)? {
+    pub fn get_for_local_database(database: &Database) -> Result<Option<Ref<Self>>, ()> {
+        if sync::pull_projects(database)? {
             return Ok(None);
         }
-        databasesync::get_remote_project_for_local_database(database)
+        sync::get_remote_project_for_local_database(database)
     }
 
     /// Get the Remote Project for a BinaryView
-    pub fn get_for_binaryview(bv: &BinaryView) -> Result<Option<Self>, ()> {
+    pub fn get_for_binaryview(bv: &BinaryView) -> Result<Option<Ref<Self>>, ()> {
         let file = bv.file();
         let Some(database) = file.database() else {
             return Ok(None);
@@ -102,55 +74,55 @@ impl RemoteProject {
         Self::get_for_local_database(&database)
     }
 
-    /// Get the core [Project] for the remote project.
+    /// Get the core [`Project`] for the remote project.
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
-    pub fn core_project(&self) -> Result<Project, ()> {
+    pub fn core_project(&self) -> Result<Ref<Project>, ()> {
         self.open(ProgressCallbackNop)?;
 
-        let value = unsafe { BNRemoteProjectGetCoreProject(self.as_raw()) };
-        ptr::NonNull::new(value)
-            .map(|handle| unsafe { Project::from_raw(handle) })
+        let value = unsafe { BNRemoteProjectGetCoreProject(self.handle.as_ptr()) };
+        NonNull::new(value)
+            .map(|handle| unsafe { Project::ref_from_raw(handle) })
             .ok_or(())
     }
 
     /// Get the owning remote
-    pub fn remote(&self) -> Result<Remote, ()> {
-        let value = unsafe { BNRemoteProjectGetRemote(self.as_raw()) };
-        ptr::NonNull::new(value)
-            .map(|handle| unsafe { Remote::from_raw(handle) })
+    pub fn remote(&self) -> Result<Ref<Remote>, ()> {
+        let value = unsafe { BNRemoteProjectGetRemote(self.handle.as_ptr()) };
+        NonNull::new(value)
+            .map(|handle| unsafe { Remote::ref_from_raw(handle) })
             .ok_or(())
     }
 
     /// Get the URL of the project
     pub fn url(&self) -> BnString {
-        let result = unsafe { BNRemoteProjectGetUrl(self.as_raw()) };
+        let result = unsafe { BNRemoteProjectGetUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     /// Get the unique ID of the project
     pub fn id(&self) -> BnString {
-        let result = unsafe { BNRemoteProjectGetId(self.as_raw()) };
+        let result = unsafe { BNRemoteProjectGetId(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
 
     /// Created date of the project
     pub fn created(&self) -> SystemTime {
-        let result = unsafe { BNRemoteProjectGetCreated(self.as_raw()) };
+        let result = unsafe { BNRemoteProjectGetCreated(self.handle.as_ptr()) };
         crate::ffi::time_from_bn(result.try_into().unwrap())
     }
 
     /// Last modification of the project
     pub fn last_modified(&self) -> SystemTime {
-        let result = unsafe { BNRemoteProjectGetLastModified(self.as_raw()) };
+        let result = unsafe { BNRemoteProjectGetLastModified(self.handle.as_ptr()) };
         crate::ffi::time_from_bn(result.try_into().unwrap())
     }
 
     /// Displayed name of file
     pub fn name(&self) -> BnString {
-        let result = unsafe { BNRemoteProjectGetName(self.as_raw()) };
+        let result = unsafe { BNRemoteProjectGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
@@ -159,14 +131,17 @@ impl RemoteProject {
     pub fn set_name<S: BnStrCompatible>(&self, name: S) -> Result<(), ()> {
         let name = name.into_bytes_with_nul();
         let success = unsafe {
-            BNRemoteProjectSetName(self.as_raw(), name.as_ref().as_ptr() as *const ffi::c_char)
+            BNRemoteProjectSetName(
+                self.handle.as_ptr(),
+                name.as_ref().as_ptr() as *const ffi::c_char,
+            )
         };
         success.then_some(()).ok_or(())
     }
 
     /// Desciprtion of the file
     pub fn description(&self) -> BnString {
-        let result = unsafe { BNRemoteProjectGetDescription(self.as_raw()) };
+        let result = unsafe { BNRemoteProjectGetDescription(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
@@ -176,7 +151,7 @@ impl RemoteProject {
         let description = description.into_bytes_with_nul();
         let success = unsafe {
             BNRemoteProjectSetDescription(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 description.as_ref().as_ptr() as *const ffi::c_char,
             )
         };
@@ -185,44 +160,44 @@ impl RemoteProject {
 
     /// Get the number of files in a project (without needing to pull them first)
     pub fn received_file_count(&self) -> u64 {
-        unsafe { BNRemoteProjectGetReceivedFileCount(self.as_raw()) }
+        unsafe { BNRemoteProjectGetReceivedFileCount(self.handle.as_ptr()) }
     }
 
     /// Get the number of folders in a project (without needing to pull them first)
     pub fn received_folder_count(&self) -> u64 {
-        unsafe { BNRemoteProjectGetReceivedFolderCount(self.as_raw()) }
+        unsafe { BNRemoteProjectGetReceivedFolderCount(self.handle.as_ptr()) }
     }
 
     /// Get the default directory path for a remote Project. This is based off the Setting for
     /// collaboration.directory, the project's id, and the project's remote's id.
     pub fn default_path(&self) -> Result<BnString, ()> {
-        databasesync::default_project_path(self)
+        sync::default_project_path(self)
     }
 
     /// If the project has pulled the folders yet
     pub fn has_pulled_files(&self) -> bool {
-        unsafe { BNRemoteProjectHasPulledFiles(self.as_raw()) }
+        unsafe { BNRemoteProjectHasPulledFiles(self.handle.as_ptr()) }
     }
 
     /// If the project has pulled the folders yet
     pub fn has_pulled_folders(&self) -> bool {
-        unsafe { BNRemoteProjectHasPulledFolders(self.as_raw()) }
+        unsafe { BNRemoteProjectHasPulledFolders(self.handle.as_ptr()) }
     }
 
     /// If the project has pulled the group permissions yet
     pub fn has_pulled_group_permissions(&self) -> bool {
-        unsafe { BNRemoteProjectHasPulledGroupPermissions(self.as_raw()) }
+        unsafe { BNRemoteProjectHasPulledGroupPermissions(self.handle.as_ptr()) }
     }
 
     /// If the project has pulled the user permissions yet
     pub fn has_pulled_user_permissions(&self) -> bool {
-        unsafe { BNRemoteProjectHasPulledUserPermissions(self.as_raw()) }
+        unsafe { BNRemoteProjectHasPulledUserPermissions(self.handle.as_ptr()) }
     }
 
     /// If the currently logged in user is an administrator of the project (and can edit
     /// permissions and such for the project).
     pub fn is_admin(&self) -> bool {
-        unsafe { BNRemoteProjectIsAdmin(self.as_raw()) }
+        unsafe { BNRemoteProjectIsAdmin(self.handle.as_ptr()) }
     }
 
     /// Get the list of files in this project.
@@ -236,7 +211,7 @@ impl RemoteProject {
         }
 
         let mut count = 0;
-        let result = unsafe { BNRemoteProjectGetFiles(self.as_raw(), &mut count) };
+        let result = unsafe { BNRemoteProjectGetFiles(self.handle.as_ptr(), &mut count) };
         (!result.is_null())
             .then(|| unsafe { Array::new(result, count, ()) })
             .ok_or(())
@@ -246,30 +221,39 @@ impl RemoteProject {
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     /// NOTE: If files have not been pulled, they will be pulled upon calling this.
-    pub fn get_file_by_id<S: BnStrCompatible>(&self, id: S) -> Result<Option<RemoteFile>, ()> {
+    pub fn get_file_by_id<S: BnStrCompatible>(&self, id: S) -> Result<Option<Ref<RemoteFile>>, ()> {
         if !self.has_pulled_files() {
             self.pull_files(ProgressCallbackNop)?;
         }
         let id = id.into_bytes_with_nul();
         let result = unsafe {
-            BNRemoteProjectGetFileById(self.as_raw(), id.as_ref().as_ptr() as *const ffi::c_char)
+            BNRemoteProjectGetFileById(
+                self.handle.as_ptr(),
+                id.as_ref().as_ptr() as *const ffi::c_char,
+            )
         };
-        Ok(ptr::NonNull::new(result).map(|handle| unsafe { RemoteFile::from_raw(handle) }))
+        Ok(NonNull::new(result).map(|handle| unsafe { RemoteFile::ref_from_raw(handle) }))
     }
 
     /// Get a specific File in the Project by its name
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     /// NOTE: If files have not been pulled, they will be pulled upon calling this.
-    pub fn get_file_by_name<S: BnStrCompatible>(&self, name: S) -> Result<Option<RemoteFile>, ()> {
+    pub fn get_file_by_name<S: BnStrCompatible>(
+        &self,
+        name: S,
+    ) -> Result<Option<Ref<RemoteFile>>, ()> {
         if !self.has_pulled_files() {
             self.pull_files(ProgressCallbackNop)?;
         }
         let id = name.into_bytes_with_nul();
         let result = unsafe {
-            BNRemoteProjectGetFileByName(self.as_raw(), id.as_ref().as_ptr() as *const ffi::c_char)
+            BNRemoteProjectGetFileByName(
+                self.handle.as_ptr(),
+                id.as_ref().as_ptr() as *const ffi::c_char,
+            )
         };
-        Ok(ptr::NonNull::new(result).map(|handle| unsafe { RemoteFile::from_raw(handle) }))
+        Ok(NonNull::new(result).map(|handle| unsafe { RemoteFile::ref_from_raw(handle) }))
     }
 
     /// Pull the list of files from the Remote.
@@ -282,7 +266,7 @@ impl RemoteProject {
         }
         let success = unsafe {
             BNRemoteProjectPullFiles(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 Some(P::cb_progress_callback),
                 &mut progress as *mut P as *mut ffi::c_void,
             )
@@ -310,7 +294,7 @@ impl RemoteProject {
         parent_folder: Option<&RemoteFolder>,
         file_type: RemoteFileType,
         mut progress: P,
-    ) -> Result<RemoteFile, ()>
+    ) -> Result<Ref<RemoteFile>, ()>
     where
         F: BnStrCompatible,
         N: BnStrCompatible,
@@ -322,11 +306,10 @@ impl RemoteProject {
         let filename = filename.into_bytes_with_nul();
         let name = name.into_bytes_with_nul();
         let description = description.into_bytes_with_nul();
-        let folder_handle =
-            parent_folder.map_or(ptr::null_mut(), |f| unsafe { f.as_raw() } as *mut _);
+        let folder_handle = parent_folder.map_or(ptr::null_mut(), |f| f.handle.as_ptr());
         let file_ptr = unsafe {
             BNRemoteProjectCreateFile(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 filename.as_ref().as_ptr() as *const ffi::c_char,
                 contents.as_ptr() as *mut _,
                 contents.len(),
@@ -339,8 +322,8 @@ impl RemoteProject {
             )
         };
 
-        ptr::NonNull::new(file_ptr)
-            .map(|handle| unsafe { RemoteFile::from_raw(handle) })
+        NonNull::new(file_ptr)
+            .map(|handle| unsafe { RemoteFile::ref_from_raw(handle) })
             .ok_or(())
     }
 
@@ -369,8 +352,8 @@ impl RemoteProject {
             .collect::<Vec<_>>();
         let success = unsafe {
             BNRemoteProjectPushFile(
-                self.as_raw(),
-                file.as_raw(),
+                self.handle.as_ptr(),
+                file.handle.as_ptr(),
                 keys_raw.as_mut_ptr(),
                 values_raw.as_mut_ptr(),
                 keys_raw.len(),
@@ -382,7 +365,8 @@ impl RemoteProject {
     pub fn delete_file(&self, file: &RemoteFile) -> Result<(), ()> {
         self.open(ProgressCallbackNop)?;
 
-        let success = unsafe { BNRemoteProjectDeleteFile(self.as_raw(), file.as_raw()) };
+        let success =
+            unsafe { BNRemoteProjectDeleteFile(self.handle.as_ptr(), file.handle.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -395,7 +379,7 @@ impl RemoteProject {
             self.pull_folders(ProgressCallbackNop)?;
         }
         let mut count = 0;
-        let result = unsafe { BNRemoteProjectGetFolders(self.as_raw(), &mut count) };
+        let result = unsafe { BNRemoteProjectGetFolders(self.handle.as_ptr(), &mut count) };
         if result.is_null() {
             return Err(());
         }
@@ -406,15 +390,21 @@ impl RemoteProject {
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     /// NOTE: If folders have not been pulled, they will be pulled upon calling this.
-    pub fn get_folder_by_id<S: BnStrCompatible>(&self, id: S) -> Result<Option<RemoteFolder>, ()> {
+    pub fn get_folder_by_id<S: BnStrCompatible>(
+        &self,
+        id: S,
+    ) -> Result<Option<Ref<RemoteFolder>>, ()> {
         if !self.has_pulled_folders() {
             self.pull_folders(ProgressCallbackNop)?;
         }
         let id = id.into_bytes_with_nul();
         let result = unsafe {
-            BNRemoteProjectGetFolderById(self.as_raw(), id.as_ref().as_ptr() as *const ffi::c_char)
+            BNRemoteProjectGetFolderById(
+                self.handle.as_ptr(),
+                id.as_ref().as_ptr() as *const ffi::c_char,
+            )
         };
-        Ok(ptr::NonNull::new(result).map(|handle| unsafe { RemoteFolder::from_raw(handle) }))
+        Ok(NonNull::new(result).map(|handle| unsafe { RemoteFolder::ref_from_raw(handle) }))
     }
 
     /// Pull the list of folders from the Remote.
@@ -425,7 +415,7 @@ impl RemoteProject {
 
         let success = unsafe {
             BNRemoteProjectPullFolders(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 Some(P::cb_progress_callback),
                 &mut progress as *mut P as *mut ffi::c_void,
             )
@@ -447,7 +437,7 @@ impl RemoteProject {
         description: D,
         parent_folder: Option<&RemoteFolder>,
         mut progress: P,
-    ) -> Result<RemoteFolder, ()>
+    ) -> Result<Ref<RemoteFolder>, ()>
     where
         N: BnStrCompatible,
         D: BnStrCompatible,
@@ -457,11 +447,10 @@ impl RemoteProject {
 
         let name = name.into_bytes_with_nul();
         let description = description.into_bytes_with_nul();
-        let folder_handle =
-            parent_folder.map_or(ptr::null_mut(), |f| unsafe { f.as_raw() } as *mut _);
+        let folder_handle = parent_folder.map_or(ptr::null_mut(), |f| f.handle.as_ptr());
         let file_ptr = unsafe {
             BNRemoteProjectCreateFolder(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 name.as_ref().as_ptr() as *const ffi::c_char,
                 description.as_ref().as_ptr() as *const ffi::c_char,
                 folder_handle,
@@ -470,8 +459,8 @@ impl RemoteProject {
             )
         };
 
-        ptr::NonNull::new(file_ptr)
-            .map(|handle| unsafe { RemoteFolder::from_raw(handle) })
+        NonNull::new(file_ptr)
+            .map(|handle| unsafe { RemoteFolder::ref_from_raw(handle) })
             .ok_or(())
     }
 
@@ -503,8 +492,8 @@ impl RemoteProject {
             .collect::<Vec<_>>();
         let success = unsafe {
             BNRemoteProjectPushFolder(
-                self.as_raw(),
-                folder.as_raw(),
+                self.handle.as_ptr(),
+                folder.handle.as_ptr(),
                 keys_raw.as_mut_ptr(),
                 values_raw.as_mut_ptr(),
                 keys_raw.len(),
@@ -516,10 +505,11 @@ impl RemoteProject {
     /// Delete a folder from the remote
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
-    pub fn delete_folder(&self, file: &RemoteFolder) -> Result<(), ()> {
+    pub fn delete_folder(&self, folder: &RemoteFolder) -> Result<(), ()> {
         self.open(ProgressCallbackNop)?;
 
-        let success = unsafe { BNRemoteProjectDeleteFolder(self.as_raw(), file.as_raw()) };
+        let success =
+            unsafe { BNRemoteProjectDeleteFolder(self.handle.as_ptr(), folder.handle.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -557,7 +547,7 @@ impl RemoteProject {
     pub fn get_permission_by_id<S: BnStrCompatible>(
         &self,
         id: S,
-    ) -> Result<Option<Permission>, ()> {
+    ) -> Result<Option<Ref<Permission>>, ()> {
         if !self.has_pulled_user_permissions() {
             self.pull_user_permissions(ProgressCallbackNop)?;
         }
@@ -568,16 +558,16 @@ impl RemoteProject {
 
         let id = id.into_bytes_with_nul();
         let value = unsafe {
-            BNRemoteProjectGetPermissionById(self.as_raw(), id.as_ref().as_ptr() as *const _)
+            BNRemoteProjectGetPermissionById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const _)
         };
-        Ok(ptr::NonNull::new(value).map(|v| unsafe { Permission::from_raw(v) }))
+        Ok(NonNull::new(value).map(|v| unsafe { Permission::ref_from_raw(v) }))
     }
 
     /// Pull the list of group permissions from the Remote.
     pub fn pull_group_permissions<F: ProgressCallback>(&self, mut progress: F) -> Result<(), ()> {
         let success = unsafe {
             BNRemoteProjectPullGroupPermissions(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 Some(F::cb_progress_callback),
                 &mut progress as *mut F as *mut ffi::c_void,
             )
@@ -589,7 +579,7 @@ impl RemoteProject {
     pub fn pull_user_permissions<F: ProgressCallback>(&self, mut progress: F) -> Result<(), ()> {
         let success = unsafe {
             BNRemoteProjectPullUserPermissions(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 Some(F::cb_progress_callback),
                 &mut progress as *mut F as *mut ffi::c_void,
             )
@@ -609,10 +599,10 @@ impl RemoteProject {
         group_id: i64,
         level: CollaborationPermissionLevel,
         mut progress: F,
-    ) -> Result<Permission, ()> {
+    ) -> Result<Ref<Permission>, ()> {
         let value = unsafe {
             BNRemoteProjectCreateGroupPermission(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 group_id,
                 level,
                 Some(F::cb_progress_callback),
@@ -620,8 +610,8 @@ impl RemoteProject {
             )
         };
 
-        ptr::NonNull::new(value)
-            .map(|v| unsafe { Permission::from_raw(v) })
+        NonNull::new(value)
+            .map(|v| unsafe { Permission::ref_from_raw(v) })
             .ok_or(())
     }
 
@@ -636,11 +626,11 @@ impl RemoteProject {
         user_id: S,
         level: CollaborationPermissionLevel,
         mut progress: F,
-    ) -> Result<Permission, ()> {
+    ) -> Result<Ref<Permission>, ()> {
         let user_id = user_id.into_bytes_with_nul();
         let value = unsafe {
             BNRemoteProjectCreateUserPermission(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 user_id.as_ref().as_ptr() as *const ffi::c_char,
                 level,
                 Some(F::cb_progress_callback),
@@ -648,8 +638,8 @@ impl RemoteProject {
             )
         };
 
-        ptr::NonNull::new(value)
-            .map(|v| unsafe { Permission::from_raw(v) })
+        NonNull::new(value)
+            .map(|v| unsafe { Permission::ref_from_raw(v) })
             .ok_or(())
     }
 
@@ -684,8 +674,8 @@ impl RemoteProject {
 
         let success = unsafe {
             BNRemoteProjectPushPermission(
-                self.as_raw(),
-                permission.as_raw(),
+                self.handle.as_ptr(),
+                permission.handle.as_ptr(),
                 keys_raw.as_mut_ptr(),
                 values_raw.as_mut_ptr(),
                 keys_raw.len(),
@@ -696,8 +686,9 @@ impl RemoteProject {
 
     /// Delete a permission from the remote.
     pub fn delete_permission(&self, permission: &Permission) -> Result<(), ()> {
-        let success =
-            unsafe { BNRemoteProjectDeletePermission(self.as_raw(), permission.as_raw()) };
+        let success = unsafe {
+            BNRemoteProjectDeletePermission(self.handle.as_ptr(), permission.handle.as_ptr())
+        };
         success.then_some(()).ok_or(())
     }
 
@@ -710,7 +701,7 @@ impl RemoteProject {
         let username = username.into_bytes_with_nul();
         unsafe {
             BNRemoteProjectCanUserView(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 username.as_ref().as_ptr() as *const ffi::c_char,
             )
         }
@@ -725,7 +716,7 @@ impl RemoteProject {
         let username = username.into_bytes_with_nul();
         unsafe {
             BNRemoteProjectCanUserEdit(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 username.as_ref().as_ptr() as *const ffi::c_char,
             )
         }
@@ -740,7 +731,7 @@ impl RemoteProject {
         let username = username.into_bytes_with_nul();
         unsafe {
             BNRemoteProjectCanUserAdmin(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 username.as_ref().as_ptr() as *const ffi::c_char,
             )
         }
@@ -750,7 +741,7 @@ impl RemoteProject {
     /// the Setting for collaboration.directory, the project's id, and the
     /// project's remote's id.
     pub fn default_project_path(&self) -> BnString {
-        let result = unsafe { BNCollaborationDefaultProjectPath(self.as_raw()) };
+        let result = unsafe { BNCollaborationDefaultProjectPath(self.handle.as_ptr()) };
         unsafe { BnString::from_raw(result) }
     }
 
@@ -766,13 +757,13 @@ impl RemoteProject {
         parent_folder: Option<&RemoteFolder>,
         progress_function: P,
         name_changeset: C,
-    ) -> Result<RemoteFile, ()>
+    ) -> Result<Ref<RemoteFile>, ()>
     where
         S: BnStrCompatible,
         P: ProgressCallback,
         C: NameChangeset,
     {
-        databasesync::upload_database(
+        sync::upload_database(
             metadata,
             self,
             parent_folder,
@@ -805,10 +796,37 @@ impl RemoteProject {
     //}
 }
 
+impl PartialEq for RemoteProject {
+    fn eq(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+}
+impl Eq for RemoteProject {}
+
+impl ToOwned for RemoteProject {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for RemoteProject {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: NonNull::new(BNNewRemoteProjectReference(handle.handle.as_ptr())).unwrap(),
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeRemoteProject(handle.handle.as_ptr());
+    }
+}
+
 impl CoreArrayProvider for RemoteProject {
     type Raw = *mut BNRemoteProject;
     type Context = ();
-    type Wrapped<'a> = &'a Self;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl CoreArrayProviderInner for RemoteProject {
@@ -816,7 +834,8 @@ unsafe impl CoreArrayProviderInner for RemoteProject {
         BNFreeRemoteProjectList(raw, count)
     }
 
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let raw_ptr = NonNull::new(*raw).unwrap();
+        Guard::new(Self::from_raw(raw_ptr), context)
     }
 }

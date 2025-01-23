@@ -1,24 +1,24 @@
-use core::{ffi, mem, ptr};
-
 use binaryninjacore_sys::*;
+use core::{ffi, mem, ptr};
+use std::ptr::NonNull;
 
 use super::{
-    Changeset, CollabSnapshot, MergeConflict, Remote, RemoteFile, RemoteFolder, RemoteProject,
+    Changeset, MergeConflict, Remote, RemoteFile, RemoteFolder, RemoteProject, RemoteSnapshot,
 };
 
-use crate::binaryview::{BinaryView, BinaryViewExt};
-use crate::database::{Database, Snapshot};
+use crate::binary_view::{BinaryView, BinaryViewExt};
+use crate::database::{snapshot::Snapshot, Database};
 use crate::ffi::{ProgressCallback, ProgressCallbackNop};
-use crate::filemetadata::FileMetadata;
-use crate::project::ProjectFile;
+use crate::file_metadata::FileMetadata;
+use crate::project::file::ProjectFile;
 use crate::rc::Ref;
 use crate::string::{BnStrCompatible, BnString};
-use crate::typearchive::{TypeArchive, TypeArchiveMergeConflict};
+use crate::type_archive::{TypeArchive, TypeArchiveMergeConflict};
 
 /// Get the default directory path for a remote Project. This is based off the Setting for
 /// collaboration.directory, the project's id, and the project's remote's id.
 pub fn default_project_path(project: &RemoteProject) -> Result<BnString, ()> {
-    let result = unsafe { BNCollaborationDefaultProjectPath(project.as_raw()) };
+    let result = unsafe { BNCollaborationDefaultProjectPath(project.handle.as_ptr()) };
     let success = !result.is_null();
     success
         .then(|| unsafe { BnString::from_raw(result) })
@@ -29,7 +29,7 @@ pub fn default_project_path(project: &RemoteProject) -> Result<BnString, ()> {
 // collaboration.directory, the file's id, the file's project's id, and the file's
 // remote's id.
 pub fn default_file_path(file: &RemoteFile) -> Result<BnString, ()> {
-    let result = unsafe { BNCollaborationDefaultFilePath(file.as_raw()) };
+    let result = unsafe { BNCollaborationDefaultFilePath(file.handle.as_ptr()) };
     let success = !result.is_null();
     success
         .then(|| unsafe { BnString::from_raw(result) })
@@ -50,7 +50,7 @@ pub fn download_file<S: BnStrCompatible, F: ProgressCallback>(
     let db_path = db_path.into_bytes_with_nul();
     let result = unsafe {
         BNCollaborationDownloadFile(
-            file.as_raw(),
+            file.handle.as_ptr(),
             db_path.as_ref().as_ptr() as *const ffi::c_char,
             Some(F::cb_progress_callback),
             &mut progress as *mut F as *mut ffi::c_void,
@@ -75,12 +75,12 @@ pub fn upload_database<P: ProgressCallback, N: NameChangeset>(
     parent_folder: Option<&RemoteFolder>,
     mut progress: P,
     mut name_changeset: N,
-) -> Result<RemoteFile, ()> {
-    let folder_raw = parent_folder.map_or(ptr::null_mut(), |h| unsafe { h.as_raw() } as *mut _);
+) -> Result<Ref<RemoteFile>, ()> {
+    let folder_raw = parent_folder.map_or(ptr::null_mut(), |h| h.handle.as_ptr());
     let result = unsafe {
         BNCollaborationUploadDatabase(
             metadata.handle,
-            project.as_raw(),
+            project.handle.as_ptr(),
             folder_raw,
             Some(P::cb_progress_callback),
             &mut progress as *mut P as *mut ffi::c_void,
@@ -89,27 +89,27 @@ pub fn upload_database<P: ProgressCallback, N: NameChangeset>(
         )
     };
     ptr::NonNull::new(result)
-        .map(|raw| unsafe { RemoteFile::from_raw(raw) })
+        .map(|raw| unsafe { RemoteFile::ref_from_raw(raw) })
         .ok_or(())
 }
 
 /// Test if a database is valid for use in collaboration
 pub fn is_collaboration_database(database: &Database) -> bool {
-    unsafe { BNCollaborationIsCollaborationDatabase(database.as_raw()) }
+    unsafe { BNCollaborationIsCollaborationDatabase(database.handle.as_ptr()) }
 }
 
 /// Get the Remote for a Database
-pub fn get_remote_for_local_database(database: &Database) -> Result<Option<Remote>, ()> {
+pub fn get_remote_for_local_database(database: &Database) -> Result<Option<Ref<Remote>>, ()> {
     let mut value = ptr::null_mut();
     let success =
-        unsafe { BNCollaborationGetRemoteForLocalDatabase(database.as_raw(), &mut value) };
+        unsafe { BNCollaborationGetRemoteForLocalDatabase(database.handle.as_ptr(), &mut value) };
     success
-        .then(|| ptr::NonNull::new(value).map(|handle| unsafe { Remote::from_raw(handle) }))
+        .then(|| ptr::NonNull::new(value).map(|handle| unsafe { Remote::ref_from_raw(handle) }))
         .ok_or(())
 }
 
 /// Get the Remote for a BinaryView
-pub fn get_remote_for_binary_view(bv: &BinaryView) -> Result<Option<Remote>, ()> {
+pub fn get_remote_for_binary_view(bv: &BinaryView) -> Result<Option<Ref<Remote>>, ()> {
     let Some(db) = bv.file().database() else {
         return Ok(None);
     };
@@ -120,56 +120,72 @@ pub fn get_remote_for_binary_view(bv: &BinaryView) -> Result<Option<Remote>, ()>
 /// connected remotes, or None if not found or if projects are not pulled
 pub fn get_remote_project_for_local_database(
     database: &Database,
-) -> Result<Option<RemoteProject>, ()> {
+) -> Result<Option<Ref<RemoteProject>>, ()> {
     let mut value = ptr::null_mut();
-    let success =
-        unsafe { BNCollaborationGetRemoteProjectForLocalDatabase(database.as_raw(), &mut value) };
+    let success = unsafe {
+        BNCollaborationGetRemoteProjectForLocalDatabase(database.handle.as_ptr(), &mut value)
+    };
     success
-        .then(|| ptr::NonNull::new(value).map(|handle| unsafe { RemoteProject::from_raw(handle) }))
+        .then(|| {
+            ptr::NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) })
+        })
         .ok_or(())
 }
 
 /// Get the Remote File for a Database
-pub fn get_remote_file_for_local_database(database: &Database) -> Result<Option<RemoteFile>, ()> {
+pub fn get_remote_file_for_local_database(
+    database: &Database,
+) -> Result<Option<Ref<RemoteFile>>, ()> {
     let mut value = ptr::null_mut();
-    let success =
-        unsafe { BNCollaborationGetRemoteFileForLocalDatabase(database.as_raw(), &mut value) };
+    let success = unsafe {
+        BNCollaborationGetRemoteFileForLocalDatabase(database.handle.as_ptr(), &mut value)
+    };
     success
-        .then(|| ptr::NonNull::new(value).map(|handle| unsafe { RemoteFile::from_raw(handle) }))
+        .then(|| ptr::NonNull::new(value).map(|handle| unsafe { RemoteFile::ref_from_raw(handle) }))
         .ok_or(())
 }
 
 /// Add a snapshot to the id map in a database
 pub fn assign_snapshot_map(
     local_snapshot: &Snapshot,
-    remote_snapshot: &CollabSnapshot,
+    remote_snapshot: &RemoteSnapshot,
 ) -> Result<(), ()> {
     let success = unsafe {
-        BNCollaborationAssignSnapshotMap(local_snapshot.as_raw(), remote_snapshot.as_raw())
+        BNCollaborationAssignSnapshotMap(
+            local_snapshot.handle.as_ptr(),
+            remote_snapshot.handle.as_ptr(),
+        )
     };
     success.then_some(()).ok_or(())
 }
 
 /// Get the remote snapshot associated with a local snapshot (if it exists)
-pub fn get_remote_snapshot_from_local(snap: &Snapshot) -> Result<Option<CollabSnapshot>, ()> {
+pub fn get_remote_snapshot_from_local(snap: &Snapshot) -> Result<Option<Ref<RemoteSnapshot>>, ()> {
     let mut value = ptr::null_mut();
-    let success = unsafe { BNCollaborationGetRemoteSnapshotFromLocal(snap.as_raw(), &mut value) };
+    let success =
+        unsafe { BNCollaborationGetRemoteSnapshotFromLocal(snap.handle.as_ptr(), &mut value) };
     success
-        .then(|| ptr::NonNull::new(value).map(|handle| unsafe { CollabSnapshot::from_raw(handle) }))
+        .then(|| {
+            ptr::NonNull::new(value).map(|handle| unsafe { RemoteSnapshot::ref_from_raw(handle) })
+        })
         .ok_or(())
 }
 
 /// Get the local snapshot associated with a remote snapshot (if it exists)
 pub fn get_local_snapshot_for_remote(
-    snapshot: &CollabSnapshot,
+    snapshot: &RemoteSnapshot,
     database: &Database,
-) -> Result<Option<Snapshot>, ()> {
+) -> Result<Option<Ref<Snapshot>>, ()> {
     let mut value = ptr::null_mut();
     let success = unsafe {
-        BNCollaborationGetLocalSnapshotFromRemote(snapshot.as_raw(), database.as_raw(), &mut value)
+        BNCollaborationGetLocalSnapshotFromRemote(
+            snapshot.handle.as_ptr(),
+            database.handle.as_ptr(),
+            &mut value,
+        )
     };
     success
-        .then(|| ptr::NonNull::new(value).map(|handle| unsafe { Snapshot::from_raw(handle) }))
+        .then(|| ptr::NonNull::new(value).map(|handle| unsafe { Snapshot::ref_from_raw(handle) }))
         .ok_or(())
 }
 
@@ -189,8 +205,8 @@ pub fn sync_database<C: DatabaseConflictHandler, P: ProgressCallback, N: NameCha
 ) -> Result<(), ()> {
     let success = unsafe {
         BNCollaborationSyncDatabase(
-            database.as_raw(),
-            file.as_raw(),
+            database.handle.as_ptr(),
+            file.handle.as_ptr(),
             Some(C::cb_handle_conflict),
             &mut conflict_handler as *mut C as *mut ffi::c_void,
             Some(P::cb_progress_callback),
@@ -220,8 +236,8 @@ pub fn pull_database<C: DatabaseConflictHandler, P: ProgressCallback, N: NameCha
     let mut count = 0;
     let success = unsafe {
         BNCollaborationPullDatabase(
-            database.as_raw(),
-            file.as_raw(),
+            database.handle.as_ptr(),
+            file.handle.as_ptr(),
             &mut count,
             Some(C::cb_handle_conflict),
             &mut conflict_handler as *mut C as *mut ffi::c_void,
@@ -246,7 +262,7 @@ pub fn merge_database<C: DatabaseConflictHandler, P: ProgressCallback>(
 ) -> Result<(), ()> {
     let success = unsafe {
         BNCollaborationMergeDatabase(
-            database.as_raw(),
+            database.handle.as_ptr(),
             Some(C::cb_handle_conflict),
             &mut conflict_handler as *mut C as *mut ffi::c_void,
             Some(P::cb_progress_callback),
@@ -269,8 +285,8 @@ pub fn push_database<P: ProgressCallback>(
     let mut count = 0;
     let success = unsafe {
         BNCollaborationPushDatabase(
-            database.as_raw(),
-            file.as_raw(),
+            database.handle.as_ptr(),
+            file.handle.as_ptr(),
             &mut count,
             Some(P::cb_progress_callback),
             &mut progress as *mut P as *mut ffi::c_void,
@@ -281,7 +297,7 @@ pub fn push_database<P: ProgressCallback>(
 
 /// Print debug information about a database to stdout
 pub fn dump_database(database: &Database) -> Result<(), ()> {
-    let success = unsafe { BNCollaborationDumpDatabase(database.as_raw()) };
+    let success = unsafe { BNCollaborationDumpDatabase(database.handle.as_ptr()) };
     success.then_some(()).ok_or(())
 }
 
@@ -290,7 +306,9 @@ pub fn dump_database(database: &Database) -> Result<(), ()> {
 /// * `database` - Parent database
 /// * `snapshot` - Snapshot to ignore
 pub fn ignore_snapshot(database: &Database, snapshot: &Snapshot) -> Result<(), ()> {
-    let success = unsafe { BNCollaborationIgnoreSnapshot(database.as_raw(), snapshot.as_raw()) };
+    let success = unsafe {
+        BNCollaborationIgnoreSnapshot(database.handle.as_ptr(), snapshot.handle.as_ptr())
+    };
     success.then_some(()).ok_or(())
 }
 
@@ -299,7 +317,7 @@ pub fn ignore_snapshot(database: &Database, snapshot: &Snapshot) -> Result<(), (
 /// * `database` - Parent database
 /// * `snapshot` - Snapshot to test
 pub fn is_snapshot_ignored(database: &Database, snapshot: &Snapshot) -> bool {
-    unsafe { BNCollaborationIsSnapshotIgnored(database.as_raw(), snapshot.as_raw()) }
+    unsafe { BNCollaborationIsSnapshotIgnored(database.handle.as_ptr(), snapshot.handle.as_ptr()) }
 }
 
 /// Get the remote author of a local snapshot
@@ -312,7 +330,11 @@ pub fn get_snapshot_author(
 ) -> Result<Option<BnString>, ()> {
     let mut value = ptr::null_mut();
     let success = unsafe {
-        BNCollaborationGetSnapshotAuthor(database.as_raw(), snapshot.as_raw(), &mut value)
+        BNCollaborationGetSnapshotAuthor(
+            database.handle.as_ptr(),
+            snapshot.handle.as_ptr(),
+            &mut value,
+        )
     };
     success
         .then(|| (!value.is_null()).then(|| unsafe { BnString::from_raw(value) }))
@@ -332,8 +354,8 @@ pub fn set_snapshot_author<S: BnStrCompatible>(
     let author = author.into_bytes_with_nul();
     let success = unsafe {
         BNCollaborationSetSnapshotAuthor(
-            database.as_raw(),
-            snapshot.as_raw(),
+            database.handle.as_ptr(),
+            snapshot.handle.as_ptr(),
             author.as_ref().as_ptr() as *const ffi::c_char,
         )
     };
@@ -377,8 +399,8 @@ pub fn sync_type_archive<C: TypeArchiveConflictHandler, P: ProgressCallback>(
 ) -> Result<(), ()> {
     let success = unsafe {
         BNCollaborationSyncTypeArchive(
-            type_archive.as_raw(),
-            file.as_raw(),
+            type_archive.handle.as_ptr(),
+            file.handle.as_ptr(),
             Some(C::cb_handle_conflict),
             &mut conflict_handler as *mut C as *mut ffi::c_void,
             Some(P::cb_progress_callback),
@@ -401,8 +423,8 @@ pub fn push_type_archive<P: ProgressCallback>(
     let mut count = 0;
     let success = unsafe {
         BNCollaborationPushTypeArchive(
-            type_archive.as_raw(),
-            file.as_raw(),
+            type_archive.handle.as_ptr(),
+            file.handle.as_ptr(),
             &mut count,
             Some(P::cb_progress_callback),
             &mut progress as *mut P as *mut ffi::c_void,
@@ -428,8 +450,8 @@ pub fn pull_type_archive<C: TypeArchiveConflictHandler, P: ProgressCallback>(
     let mut count = 0;
     let success = unsafe {
         BNCollaborationPullTypeArchive(
-            type_archive.as_raw(),
-            file.as_raw(),
+            type_archive.handle.as_ptr(),
+            file.handle.as_ptr(),
             &mut count,
             Some(C::cb_handle_conflict),
             &mut conflict_handler as *mut C as *mut ffi::c_void,
@@ -442,51 +464,56 @@ pub fn pull_type_archive<C: TypeArchiveConflictHandler, P: ProgressCallback>(
 
 /// Test if a type archive is valid for use in collaboration
 pub fn is_collaboration_type_archive(type_archive: &TypeArchive) -> bool {
-    unsafe { BNCollaborationIsCollaborationTypeArchive(type_archive.as_raw()) }
+    unsafe { BNCollaborationIsCollaborationTypeArchive(type_archive.handle.as_ptr()) }
 }
 
 /// Get the Remote for a Type Archive
-pub fn get_remote_for_local_type_archive(type_archive: &TypeArchive) -> Option<Remote> {
-    let value = unsafe { BNCollaborationGetRemoteForLocalTypeArchive(type_archive.as_raw()) };
-    ptr::NonNull::new(value).map(|handle| unsafe { Remote::from_raw(handle) })
+pub fn get_remote_for_local_type_archive(type_archive: &TypeArchive) -> Option<Ref<Remote>> {
+    let value =
+        unsafe { BNCollaborationGetRemoteForLocalTypeArchive(type_archive.handle.as_ptr()) };
+    ptr::NonNull::new(value).map(|handle| unsafe { Remote::ref_from_raw(handle) })
 }
 
 /// Get the Remote Project for a Type Archive
-pub fn get_remote_project_for_local_type_archive(database: &TypeArchive) -> Option<RemoteProject> {
-    let value = unsafe { BNCollaborationGetRemoteProjectForLocalTypeArchive(database.as_raw()) };
-    ptr::NonNull::new(value).map(|handle| unsafe { RemoteProject::from_raw(handle) })
+pub fn get_remote_project_for_local_type_archive(
+    database: &TypeArchive,
+) -> Option<Ref<RemoteProject>> {
+    let value =
+        unsafe { BNCollaborationGetRemoteProjectForLocalTypeArchive(database.handle.as_ptr()) };
+    ptr::NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) })
 }
 
 /// Get the Remote File for a Type Archive
-pub fn get_remote_file_for_local_type_archive(database: &TypeArchive) -> Option<RemoteFile> {
-    let value = unsafe { BNCollaborationGetRemoteFileForLocalTypeArchive(database.as_raw()) };
-    ptr::NonNull::new(value).map(|handle| unsafe { RemoteFile::from_raw(handle) })
+pub fn get_remote_file_for_local_type_archive(database: &TypeArchive) -> Option<Ref<RemoteFile>> {
+    let value =
+        unsafe { BNCollaborationGetRemoteFileForLocalTypeArchive(database.handle.as_ptr()) };
+    ptr::NonNull::new(value).map(|handle| unsafe { RemoteFile::ref_from_raw(handle) })
 }
 
 /// Get the remote snapshot associated with a local snapshot (if it exists) in a Type Archive
 pub fn get_remote_snapshot_from_local_type_archive<S: BnStrCompatible>(
     type_archive: &TypeArchive,
     snapshot_id: S,
-) -> Option<CollabSnapshot> {
+) -> Option<Ref<RemoteSnapshot>> {
     let snapshot_id = snapshot_id.into_bytes_with_nul();
     let value = unsafe {
         BNCollaborationGetRemoteSnapshotFromLocalTypeArchive(
-            type_archive.as_raw(),
+            type_archive.handle.as_ptr(),
             snapshot_id.as_ref().as_ptr() as *const ffi::c_char,
         )
     };
-    ptr::NonNull::new(value).map(|handle| unsafe { CollabSnapshot::from_raw(handle) })
+    ptr::NonNull::new(value).map(|handle| unsafe { RemoteSnapshot::ref_from_raw(handle) })
 }
 
 /// Get the local snapshot associated with a remote snapshot (if it exists) in a Type Archive
 pub fn get_local_snapshot_from_remote_type_archive(
-    snapshot: &CollabSnapshot,
+    snapshot: &RemoteSnapshot,
     type_archive: &TypeArchive,
 ) -> Option<BnString> {
     let value = unsafe {
         BNCollaborationGetLocalSnapshotFromRemoteTypeArchive(
-            snapshot.as_raw(),
-            type_archive.as_raw(),
+            snapshot.handle.as_ptr(),
+            type_archive.handle.as_ptr(),
         )
     };
     (!value.is_null()).then(|| unsafe { BnString::from_raw(value) })
@@ -500,7 +527,7 @@ pub fn is_type_archive_snapshot_ignored<S: BnStrCompatible>(
     let snapshot_id = snapshot_id.into_bytes_with_nul();
     unsafe {
         BNCollaborationIsTypeArchiveSnapshotIgnored(
-            type_archive.as_raw(),
+            type_archive.handle.as_ptr(),
             snapshot_id.as_ref().as_ptr() as *const ffi::c_char,
         )
     }
@@ -517,7 +544,7 @@ pub fn download_type_archive<S: BnStrCompatible, F: ProgressCallback>(
     let db_path = location.into_bytes_with_nul();
     let success = unsafe {
         BNCollaborationDownloadTypeArchive(
-            file.as_raw(),
+            file.handle.as_ptr(),
             db_path.as_ref().as_ptr() as *const ffi::c_char,
             Some(F::cb_progress_callback),
             &mut progress as *mut F as *mut ffi::c_void,
@@ -533,26 +560,28 @@ pub fn download_type_archive<S: BnStrCompatible, F: ProgressCallback>(
 pub fn upload_type_archive<P: ProgressCallback>(
     archive: &TypeArchive,
     project: &RemoteProject,
+    // TODO: Is this required?
     folder: &RemoteFolder,
     mut progress: P,
+    // TODO: I dislike the word "core" just say local?
     core_file: &ProjectFile,
-) -> Result<RemoteFile, ()> {
+) -> Result<Ref<RemoteFile>, ()> {
     let mut value = ptr::null_mut();
     let success = unsafe {
         BNCollaborationUploadTypeArchive(
-            archive.as_raw(),
-            project.as_raw(),
-            folder.as_raw(),
+            archive.handle.as_ptr(),
+            project.handle.as_ptr(),
+            folder.handle.as_ptr(),
             Some(P::cb_progress_callback),
             &mut progress as *const P as *mut ffi::c_void,
-            core_file.as_raw(),
+            core_file.handle.as_ptr(),
             &mut value,
         )
     };
     success
         .then(|| {
             ptr::NonNull::new(value)
-                .map(|handle| unsafe { RemoteFile::from_raw(handle) })
+                .map(|handle| unsafe { RemoteFile::ref_from_raw(handle) })
                 .unwrap()
         })
         .ok_or(())
@@ -567,8 +596,8 @@ pub fn merge_snapshots<C: DatabaseConflictHandler, P: ProgressCallback>(
 ) -> Result<Snapshot, ()> {
     let value = unsafe {
         BNCollaborationMergeSnapshots(
-            first.as_raw(),
-            second.as_raw(),
+            first.handle.as_ptr(),
+            second.handle.as_ptr(),
             Some(C::cb_handle_conflict),
             &mut conflict_handler as *mut C as *mut ffi::c_void,
             Some(P::cb_progress_callback),
@@ -587,7 +616,10 @@ pub trait NameChangeset: Sized {
         changeset: *mut BNCollaborationChangeset,
     ) -> bool {
         let ctxt: &mut Self = &mut *(ctxt as *mut Self);
-        ctxt.name_changeset(Changeset::ref_from_raw(&changeset))
+        let raw_changeset_ptr = NonNull::new(changeset).unwrap();
+        // TODO: Do we take ownership with a ref here or not?
+        let changeset = Changeset::from_raw(raw_changeset_ptr);
+        ctxt.name_changeset(&changeset)
     }
 }
 
@@ -622,6 +654,7 @@ pub trait DatabaseConflictHandler: Sized {
     ///
     /// Return true if all conflicts were successfully merged
     fn handle_conflict(&mut self, keys: &str, conflicts: &MergeConflict) -> bool;
+
     unsafe extern "C" fn cb_handle_conflict(
         ctxt: *mut ffi::c_void,
         keys: *mut *const ffi::c_char,
@@ -633,9 +666,12 @@ pub trait DatabaseConflictHandler: Sized {
         let conflicts = core::slice::from_raw_parts(conflicts, conflict_count);
         keys.iter().zip(conflicts.iter()).all(|(key, conflict)| {
             // NOTE this is a reference, not owned, so ManuallyDrop is required, or just implement `ref_from_raw`
+            // TODO: Replace with raw_to_string
             let key = mem::ManuallyDrop::new(BnString::from_raw(*key as *mut _));
-            let conflict = MergeConflict::ref_from_raw(conflict);
-            ctxt.handle_conflict(key.as_str(), conflict)
+            // TODO I guess dont drop here?
+            let raw_ptr = NonNull::new(*conflict).unwrap();
+            let conflict = MergeConflict::from_raw(raw_ptr);
+            ctxt.handle_conflict(key.as_str(), &conflict)
         })
     }
 }
@@ -674,10 +710,14 @@ pub trait TypeArchiveConflictHandler: Sized {
         conflicts: *mut *mut BNTypeArchiveMergeConflict,
         conflict_count: usize,
     ) -> bool {
-        let slf: &mut Self = &mut *(ctxt as *mut Self);
-        core::slice::from_raw_parts(conflicts, conflict_count)
+        let ctx: &mut Self = &mut *(ctxt as *mut Self);
+        // TODO: Verify that we dont own the merge conflict, or this list passed to us.
+        let conflicts_raw = core::slice::from_raw_parts(conflicts, conflict_count);
+        conflicts_raw
             .iter()
-            .all(|conflict| slf.handle_conflict(TypeArchiveMergeConflict::ref_from_raw(conflict)))
+            .map(|t| NonNull::new_unchecked(*t))
+            .map(|t| TypeArchiveMergeConflict::from_raw(t))
+            .all(|conflict| ctx.handle_conflict(&conflict))
     }
 }
 

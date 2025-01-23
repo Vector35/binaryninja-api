@@ -1,85 +1,65 @@
-use core::{ffi, mem, ptr};
-
 use binaryninjacore_sys::*;
+use core::{ffi, mem, ptr};
+use std::ptr::NonNull;
 
-use super::{RemoteFile, User};
+use super::{RemoteFile, RemoteUser};
 
+use crate::database::snapshot::SnapshotId;
 use crate::database::Database;
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 
-/// Class representing a collection of snapshots in a local database
+/// A collection of snapshots in a local database
 #[repr(transparent)]
 pub struct Changeset {
-    handle: ptr::NonNull<BNCollaborationChangeset>,
-}
-
-impl Drop for Changeset {
-    fn drop(&mut self) {
-        unsafe { BNFreeCollaborationChangeset(self.as_raw()) }
-    }
-}
-
-impl Clone for Changeset {
-    fn clone(&self) -> Self {
-        unsafe {
-            Self::from_raw(
-                ptr::NonNull::new(BNNewCollaborationChangesetReference(self.as_raw())).unwrap(),
-            )
-        }
-    }
+    handle: NonNull<BNCollaborationChangeset>,
 }
 
 impl Changeset {
-    pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNCollaborationChangeset>) -> Self {
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNCollaborationChangeset>) -> Self {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNCollaborationChangeset) -> &Self {
-        assert!(!handle.is_null());
-        mem::transmute(handle)
-    }
-
-    #[allow(clippy::mut_from_ref)]
-    pub(crate) unsafe fn as_raw(&self) -> &mut BNCollaborationChangeset {
-        &mut *self.handle.as_ptr()
+    pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNCollaborationChangeset>) -> Ref<Self> {
+        Ref::new(Self { handle })
     }
 
     /// Owning database for snapshots
     pub fn database(&self) -> Result<Database, ()> {
-        let result = unsafe { BNCollaborationChangesetGetDatabase(self.as_raw()) };
-        let raw = ptr::NonNull::new(result).ok_or(())?;
+        let result = unsafe { BNCollaborationChangesetGetDatabase(self.handle.as_ptr()) };
+        let raw = NonNull::new(result).ok_or(())?;
         Ok(unsafe { Database::from_raw(raw) })
     }
 
     /// Relevant remote File object
-    pub fn file(&self) -> Result<RemoteFile, ()> {
-        let result = unsafe { BNCollaborationChangesetGetFile(self.as_raw()) };
-        ptr::NonNull::new(result)
-            .map(|raw| unsafe { RemoteFile::from_raw(raw) })
+    pub fn file(&self) -> Result<Ref<RemoteFile>, ()> {
+        let result = unsafe { BNCollaborationChangesetGetFile(self.handle.as_ptr()) };
+        NonNull::new(result)
+            .map(|raw| unsafe { RemoteFile::ref_from_raw(raw) })
             .ok_or(())
     }
 
     /// List of snapshot ids in the database
     pub fn snapshot_ids(&self) -> Result<Array<SnapshotId>, ()> {
         let mut count = 0;
-        let result = unsafe { BNCollaborationChangesetGetSnapshotIds(self.as_raw(), &mut count) };
+        let result =
+            unsafe { BNCollaborationChangesetGetSnapshotIds(self.handle.as_ptr(), &mut count) };
         (!result.is_null())
             .then(|| unsafe { Array::new(result, count, ()) })
             .ok_or(())
     }
 
     /// Relevant remote author User
-    pub fn author(&self) -> Result<User, ()> {
-        let result = unsafe { BNCollaborationChangesetGetAuthor(self.as_raw()) };
-        ptr::NonNull::new(result)
-            .map(|raw| unsafe { User::from_raw(raw) })
+    pub fn author(&self) -> Result<Ref<RemoteUser>, ()> {
+        let result = unsafe { BNCollaborationChangesetGetAuthor(self.handle.as_ptr()) };
+        NonNull::new(result)
+            .map(|raw| unsafe { RemoteUser::ref_from_raw(raw) })
             .ok_or(())
     }
 
     /// Changeset name
     pub fn name(&self) -> BnString {
-        let result = unsafe { BNCollaborationChangesetGetName(self.as_raw()) };
+        let result = unsafe { BNCollaborationChangesetGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::from_raw(result) }
     }
@@ -89,17 +69,38 @@ impl Changeset {
         let value = value.into_bytes_with_nul();
         unsafe {
             BNCollaborationChangesetSetName(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 value.as_ref().as_ptr() as *const ffi::c_char,
             )
         }
     }
 }
 
+impl ToOwned for Changeset {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for Changeset {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: NonNull::new(BNNewCollaborationChangesetReference(handle.handle.as_ptr()))
+                .unwrap(),
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeCollaborationChangeset(handle.handle.as_ptr());
+    }
+}
+
 impl CoreArrayProvider for Changeset {
     type Raw = *mut BNCollaborationChangeset;
     type Context = ();
-    type Wrapped<'a> = &'a Self;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl CoreArrayProviderInner for Changeset {
@@ -107,24 +108,8 @@ unsafe impl CoreArrayProviderInner for Changeset {
         BNFreeCollaborationChangesetList(raw, count)
     }
 
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
-    }
-}
-
-pub struct SnapshotId;
-impl CoreArrayProvider for SnapshotId {
-    type Raw = i64;
-    type Context = ();
-    type Wrapped<'a> = i64;
-}
-
-unsafe impl CoreArrayProviderInner for SnapshotId {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNCollaborationFreeSnapshotIdList(raw, count)
-    }
-
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        *raw
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let raw_ptr = NonNull::new(*raw).unwrap();
+        Guard::new(Self::from_raw(raw_ptr), context)
     }
 }

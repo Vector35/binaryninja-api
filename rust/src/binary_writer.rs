@@ -15,6 +15,7 @@
 //! A convenience class for writing binary data
 
 use binaryninjacore_sys::*;
+use std::fmt::Debug;
 
 use crate::binary_view::{BinaryView, BinaryViewBase};
 use crate::Endianness;
@@ -65,6 +66,15 @@ impl BinaryWriter {
 
     pub fn offset(&self) -> u64 {
         unsafe { BNGetWriterPosition(self.handle) }
+    }
+}
+
+impl Debug for BinaryWriter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BinaryWriter")
+            .field("offset", &self.offset())
+            .field("endianness", &self.endianness())
+            .finish()
     }
 }
 

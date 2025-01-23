@@ -15,6 +15,7 @@
 //! A convenience class for reading binary data
 
 use binaryninjacore_sys::*;
+use std::fmt::Debug;
 
 use crate::binary_view::{BinaryView, BinaryViewBase};
 use crate::Endianness;
@@ -84,6 +85,16 @@ impl BinaryReader {
     /// Are we at the end of the file?
     pub fn is_eof(&self) -> bool {
         unsafe { BNIsEndOfFile(self.handle) }
+    }
+}
+
+impl Debug for BinaryReader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BinaryReader")
+            .field("offset", &self.offset())
+            .field("virtual_base", &self.virtual_base())
+            .field("endianness", &self.endianness())
+            .finish()
     }
 }
 

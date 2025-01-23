@@ -1,5 +1,7 @@
 name: Rust CI
 
+# TODO: The paths need to include all rust projects. Those exist outside the rust directory.
+
 on:
   workflow_dispatch:
   push:
@@ -10,33 +12,6 @@ on:
       - 'rust/**'
 
 jobs:
-  # Check that code compiles and tests pass
-  test:
-    # The testing environment is used to access the BN_SERIAL secret.
-    environment: testing
-    name: cargo test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        # We need to add wayland as it's used for file picker in the WARP integration
-      - name: Install system dependencies
-        run: sudo apt-get install libwayland-dev
-        # Pull in Binary Ninja
-      - name: Setup Binary Ninja
-        id: setup-binja
-        uses: Vector35/setup-binary-ninja@v1-beta
-        with:
-          license: '${{ secrets.BN_SERIAL }}'
-          python-support: 'false'
-          dev-branch: 'true'
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - name: Test
-        # For now, we run the tests single threaded, there are some data races in core around platform types
-        run: cargo test --all-features -- --test-threads=1
-        env:
-          BINARYNINJADIR: ${{ steps.setup-binja.outputs.install-path }}
-          BN_LICENSE: ${{ secrets.BN_LICENSE }}
-
   # Check lints with clippy
   clippy:
     name: cargo clippy

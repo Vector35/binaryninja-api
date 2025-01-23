@@ -37,6 +37,8 @@ fn main() {
 }
 ```
 
+More examples can be found in [here](https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples).
+
 ## Getting Started
 
 ### Requirements
@@ -101,6 +103,8 @@ pub extern "C" fn CorePluginInit() -> bool {
 }
 ```
 
+Examples for writing a plugin can be found [here](https://github.com/Vector35/binaryninja-api/tree/dev/plugins).
+
 ### Write a Standalone Executable
 
 If you have a headless supporting license you are able to use Binary Ninja as a regular dynamically loaded library.
@@ -139,9 +143,12 @@ If you're thinking of contributing to the Rust API, we encourage you to join the
 This project makes use of:
   - [log] ([log license] - MIT)
   - [rayon] ([rayon license] - MIT)
+  - [thiserror] ([thiserror license] - MIT)
 
 [log]: https://github.com/rust-lang/log
 [log license]: https://github.com/rust-lang/log/blob/master/LICENSE-MIT
 [rayon]: https://github.com/rayon-rs/rayon
 [rayon license]: https://github.com/rayon-rs/rayon/blob/master/LICENSE-MIT
+[thiserror]: https://github.com/dtolnay/thiserror
+[thiserror license]: https://github.com/dtolnay/thiserror/blob/master/LICENSE-MIT
 [Binary Ninja]: https://binary.ninja

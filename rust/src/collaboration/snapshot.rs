@@ -4,12 +4,12 @@ use std::time::SystemTime;
 
 use super::{sync, Remote, RemoteFile, RemoteProject};
 use crate::binary_view::{BinaryView, BinaryViewExt};
+use crate::collaboration::undo::{RemoteUndoEntry, RemoteUndoEntryId};
 use crate::database::snapshot::Snapshot;
-use binaryninjacore_sys::*;
-
-use crate::ffi::{ProgressCallback, ProgressCallbackNop};
+use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
+use binaryninjacore_sys::*;
 
 // TODO: RemoteSnapshotId ?
 
@@ -181,7 +181,7 @@ impl RemoteSnapshot {
     /// NOTE: If undo entries have not been pulled, they will be pulled upon calling this.
     pub fn undo_entries(&self) -> Result<Array<RemoteUndoEntry>, ()> {
         if !self.has_pulled_undo_entires() {
-            self.pull_undo_entries(ProgressCallbackNop)?;
+            self.pull_undo_entries()?;
         }
         let mut count = 0;
         let raw =
@@ -194,16 +194,27 @@ impl RemoteSnapshot {
     /// Get a specific Undo Entry in the Snapshot by its id
     ///
     /// NOTE: If undo entries have not been pulled, they will be pulled upon calling this.
-    pub fn get_undo_entry_by_id(&self, id: u64) -> Result<Option<Ref<RemoteUndoEntry>>, ()> {
+    pub fn get_undo_entry_by_id(
+        &self,
+        id: RemoteUndoEntryId,
+    ) -> Result<Option<Ref<RemoteUndoEntry>>, ()> {
         if !self.has_pulled_undo_entires() {
-            self.pull_undo_entries(ProgressCallbackNop)?;
+            self.pull_undo_entries()?;
         }
-        let raw = unsafe { BNCollaborationSnapshotGetUndoEntryById(self.handle.as_ptr(), id) };
+        let raw = unsafe { BNCollaborationSnapshotGetUndoEntryById(self.handle.as_ptr(), id.0) };
         Ok(NonNull::new(raw).map(|handle| unsafe { RemoteUndoEntry::ref_from_raw(handle) }))
     }
 
     /// Pull the list of Undo Entries from the Remote.
-    pub fn pull_undo_entries<P: ProgressCallback>(&self, mut progress: P) -> Result<(), ()> {
+    pub fn pull_undo_entries(&self) -> Result<(), ()> {
+        self.pull_undo_entries_with_progress(NoProgressCallback)
+    }
+
+    /// Pull the list of Undo Entries from the Remote.
+    pub fn pull_undo_entries_with_progress<P: ProgressCallback>(
+        &self,
+        mut progress: P,
+    ) -> Result<(), ()> {
         let success = unsafe {
             BNCollaborationSnapshotPullUndoEntries(
                 self.handle.as_ptr(),
@@ -348,131 +359,6 @@ impl CoreArrayProvider for RemoteSnapshot {
 unsafe impl CoreArrayProviderInner for RemoteSnapshot {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeCollaborationSnapshotList(raw, count)
-    }
-
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
-    }
-}
-
-#[repr(transparent)]
-pub struct RemoteUndoEntry {
-    handle: NonNull<BNCollaborationUndoEntry>,
-}
-
-impl RemoteUndoEntry {
-    pub(crate) unsafe fn from_raw(handle: NonNull<BNCollaborationUndoEntry>) -> Self {
-        Self { handle }
-    }
-
-    pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNCollaborationUndoEntry>) -> Ref<Self> {
-        Ref::new(Self { handle })
-    }
-
-    /// Owning Snapshot
-    pub fn snapshot(&self) -> Result<Ref<RemoteSnapshot>, ()> {
-        let value = unsafe { BNCollaborationUndoEntryGetSnapshot(self.handle.as_ptr()) };
-        let handle = NonNull::new(value).ok_or(())?;
-        Ok(unsafe { RemoteSnapshot::ref_from_raw(handle) })
-    }
-
-    /// Owning File
-    pub fn file(&self) -> Result<Ref<RemoteFile>, ()> {
-        let value = unsafe { BNCollaborationUndoEntryGetFile(self.handle.as_ptr()) };
-        let handle = NonNull::new(value).ok_or(())?;
-        Ok(unsafe { RemoteFile::ref_from_raw(handle) })
-    }
-
-    /// Owning Project
-    pub fn project(&self) -> Result<Ref<RemoteProject>, ()> {
-        let value = unsafe { BNCollaborationUndoEntryGetProject(self.handle.as_ptr()) };
-        let handle = NonNull::new(value).ok_or(())?;
-        Ok(unsafe { RemoteProject::ref_from_raw(handle) })
-    }
-
-    /// Owning Remote
-    pub fn remote(&self) -> Result<Ref<Remote>, ()> {
-        let value = unsafe { BNCollaborationUndoEntryGetRemote(self.handle.as_ptr()) };
-        let handle = NonNull::new(value).ok_or(())?;
-        Ok(unsafe { Remote::ref_from_raw(handle) })
-    }
-
-    /// Web api endpoint url
-    pub fn url(&self) -> BnString {
-        let value = unsafe { BNCollaborationUndoEntryGetUrl(self.handle.as_ptr()) };
-        assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
-    }
-
-    /// Unique id
-    pub fn id(&self) -> u64 {
-        unsafe { BNCollaborationUndoEntryGetId(self.handle.as_ptr()) }
-    }
-
-    /// Id of parent undo entry
-    pub fn parent_id(&self) -> Option<u64> {
-        let mut value = 0;
-        let success =
-            unsafe { BNCollaborationUndoEntryGetParentId(self.handle.as_ptr(), &mut value) };
-        success.then_some(value)
-    }
-
-    /// Undo entry contents data
-    pub fn data(&self) -> Result<BnString, ()> {
-        let mut value = std::ptr::null_mut();
-        let success = unsafe { BNCollaborationUndoEntryGetData(self.handle.as_ptr(), &mut value) };
-        if !success {
-            return Err(());
-        }
-        assert!(!value.is_null());
-        Ok(unsafe { BnString::from_raw(value) })
-    }
-
-    /// Parent Undo Entry object
-    pub fn parent(&self) -> Option<Ref<RemoteUndoEntry>> {
-        let value = unsafe { BNCollaborationUndoEntryGetParent(self.handle.as_ptr()) };
-        NonNull::new(value).map(|handle| unsafe { RemoteUndoEntry::ref_from_raw(handle) })
-    }
-}
-
-impl PartialEq for RemoteUndoEntry {
-    fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id()
-    }
-}
-impl Eq for RemoteUndoEntry {}
-
-impl ToOwned for RemoteUndoEntry {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
-    }
-}
-
-unsafe impl RefCountable for RemoteUndoEntry {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewCollaborationUndoEntryReference(handle.handle.as_ptr()))
-                .unwrap(),
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeCollaborationUndoEntry(handle.handle.as_ptr());
-    }
-}
-
-impl CoreArrayProvider for RemoteUndoEntry {
-    type Raw = *mut BNCollaborationUndoEntry;
-    type Context = ();
-    type Wrapped<'a> = Guard<'a, Self>;
-}
-
-unsafe impl CoreArrayProviderInner for RemoteUndoEntry {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeCollaborationUndoEntryList(raw, count)
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {

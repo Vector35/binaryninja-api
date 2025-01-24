@@ -9,7 +9,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use binaryninjacore_sys::*;
 
 use crate::metadata::Metadata;
-use crate::progress::ProgressExecutor;
+use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
 use crate::project::folder::ProjectFolder;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
@@ -179,12 +179,7 @@ impl Project {
         P: BnStrCompatible,
         D: BnStrCompatible,
     {
-        self.create_folder_from_path_with_progress(
-            path,
-            parent,
-            description,
-            ProgressExecutor::default(),
-        )
+        self.create_folder_from_path_with_progress(path, parent, description, NoProgressCallback)
     }
 
     /// Recursively create files and folders in the project from a path on disk
@@ -193,32 +188,31 @@ impl Project {
     /// * `parent` - Parent folder in the project that will contain the new contents
     /// * `description` - Description for created root folder
     /// * `progress` - [`ProgressExecutor`] that will be called as the [`ProjectFolder`] is being created
-    pub fn create_folder_from_path_with_progress<P, D>(
+    pub fn create_folder_from_path_with_progress<P, D, PC>(
         &self,
         path: P,
         parent: Option<&ProjectFolder>,
         description: D,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: PC,
     ) -> Result<Ref<ProjectFolder>, ()>
     where
         P: BnStrCompatible,
         D: BnStrCompatible,
+        PC: ProgressCallback,
     {
         let path_raw = path.into_bytes_with_nul();
         let description_raw = description.into_bytes_with_nul();
         let parent_ptr = parent.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+
         unsafe {
             let result = BNProjectCreateFolderFromPath(
                 self.handle.as_ptr(),
                 path_raw.as_ref().as_ptr() as *const c_char,
                 parent_ptr,
                 description_raw.as_ref().as_ptr() as *const c_char,
-                leaked_boxed_progress as *mut c_void,
-                Some(ProgressExecutor::cb_execute),
+                &mut progress as *mut PC as *mut c_void,
+                Some(PC::cb_progress_callback),
             );
-            let _ = Box::from_raw(leaked_boxed_progress);
             Ok(ProjectFolder::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
     }
@@ -310,29 +304,27 @@ impl Project {
     ///
     /// * `folder` - [`ProjectFolder`] to delete recursively
     pub fn delete_folder(&self, folder: &ProjectFolder) -> Result<(), ()> {
-        self.delete_folder_with_progress(folder, ProgressExecutor::default())
+        self.delete_folder_with_progress(folder, NoProgressCallback)
     }
 
     /// Recursively delete a [`ProjectFolder`] from the [`Project`].
     ///
     /// * `folder` - [`ProjectFolder`] to delete recursively
     /// * `progress` - [`ProgressExecutor`] that will be called as objects get deleted
-    pub fn delete_folder_with_progress(
+    pub fn delete_folder_with_progress<P: ProgressCallback>(
         &self,
         folder: &ProjectFolder,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: P,
     ) -> Result<(), ()> {
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let result = unsafe {
             BNProjectDeleteFolder(
                 self.handle.as_ptr(),
                 folder.handle.as_ptr(),
-                leaked_boxed_progress as *mut c_void,
-                Some(ProgressExecutor::cb_execute),
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
             )
         };
-        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+
         if result {
             Ok(())
         } else {
@@ -367,7 +359,7 @@ impl Project {
             folder,
             name,
             description,
-            ProgressExecutor::default(),
+            NoProgressCallback,
         )
     }
 
@@ -378,25 +370,25 @@ impl Project {
     /// * `name` - Name to assign to the created file
     /// * `description` - Description to assign to the created file
     /// * `progress` - [`ProgressExecutor`] that will be called as the [`ProjectFile`] is being added
-    pub fn create_file_from_path_with_progress<P, N, D>(
+    pub fn create_file_from_path_with_progress<P, N, D, PC>(
         &self,
         path: P,
         folder: Option<&ProjectFolder>,
         name: N,
         description: D,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: PC,
     ) -> Result<Ref<ProjectFile>, ()>
     where
         P: BnStrCompatible,
         N: BnStrCompatible,
         D: BnStrCompatible,
+        PC: ProgressCallback,
     {
         let path_raw = path.into_bytes_with_nul();
         let name_raw = name.into_bytes_with_nul();
         let description_raw = description.into_bytes_with_nul();
         let folder_ptr = folder.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+
         unsafe {
             let result = BNProjectCreateFileFromPath(
                 self.handle.as_ptr(),
@@ -404,10 +396,9 @@ impl Project {
                 folder_ptr,
                 name_raw.as_ref().as_ptr() as *const c_char,
                 description_raw.as_ref().as_ptr() as *const c_char,
-                leaked_boxed_progress as *mut c_void,
-                Some(ProgressExecutor::cb_execute),
+                &mut progress as *mut PC as *mut c_void,
+                Some(PC::cb_progress_callback),
             );
-            let _ = Box::from_raw(leaked_boxed_progress);
             Ok(ProjectFile::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
     }
@@ -442,7 +433,7 @@ impl Project {
             description,
             id,
             creation_time,
-            ProgressExecutor::default(),
+            NoProgressCallback,
         )
     }
 
@@ -456,7 +447,7 @@ impl Project {
     /// * `creation_time` - Creation time of the file
     /// * `progress` - [`ProgressExecutor`] that will be called as the [`ProjectFile`] is being created
     #[allow(clippy::too_many_arguments)]
-    pub unsafe fn create_file_from_path_unsafe_with_progress<P, N, D, I>(
+    pub unsafe fn create_file_from_path_unsafe_with_progress<P, N, D, I, PC>(
         &self,
         path: P,
         folder: Option<&ProjectFolder>,
@@ -464,21 +455,21 @@ impl Project {
         description: D,
         id: I,
         creation_time: SystemTime,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: PC,
     ) -> Result<Ref<ProjectFile>, ()>
     where
         P: BnStrCompatible,
         N: BnStrCompatible,
         D: BnStrCompatible,
         I: BnStrCompatible,
+        PC: ProgressCallback,
     {
         let path_raw = path.into_bytes_with_nul();
         let name_raw = name.into_bytes_with_nul();
         let description_raw = description.into_bytes_with_nul();
         let id_raw = id.into_bytes_with_nul();
         let folder_ptr = folder.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+
         unsafe {
             let result = BNProjectCreateFileFromPathUnsafe(
                 self.handle.as_ptr(),
@@ -488,10 +479,9 @@ impl Project {
                 description_raw.as_ref().as_ptr() as *const c_char,
                 id_raw.as_ref().as_ptr() as *const c_char,
                 systime_to_bntime(creation_time).unwrap(),
-                leaked_boxed_progress as *mut c_void,
-                Some(ProgressExecutor::cb_execute),
+                &mut progress as *mut PC as *mut c_void,
+                Some(PC::cb_progress_callback),
             );
-            let _ = Box::from_raw(leaked_boxed_progress);
             Ok(ProjectFile::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
     }
@@ -513,13 +503,7 @@ impl Project {
         N: BnStrCompatible,
         D: BnStrCompatible,
     {
-        self.create_file_with_progress(
-            contents,
-            folder,
-            name,
-            description,
-            ProgressExecutor::default(),
-        )
+        self.create_file_with_progress(contents, folder, name, description, NoProgressCallback)
     }
 
     /// Create a file in the project
@@ -529,23 +513,23 @@ impl Project {
     /// * `name` - Name to assign to the created file
     /// * `description` - Description to assign to the created file
     /// * `progress` - [`ProgressExecutor`] that will be called as the [`ProjectFile`] is being created
-    pub fn create_file_with_progress<N, D>(
+    pub fn create_file_with_progress<N, D, P>(
         &self,
         contents: &[u8],
         folder: Option<&ProjectFolder>,
         name: N,
         description: D,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: P,
     ) -> Result<Ref<ProjectFile>, ()>
     where
         N: BnStrCompatible,
         D: BnStrCompatible,
+        P: ProgressCallback,
     {
         let name_raw = name.into_bytes_with_nul();
         let description_raw = description.into_bytes_with_nul();
         let folder_ptr = folder.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+
         unsafe {
             let result = BNProjectCreateFile(
                 self.handle.as_ptr(),
@@ -554,10 +538,9 @@ impl Project {
                 folder_ptr,
                 name_raw.as_ref().as_ptr() as *const c_char,
                 description_raw.as_ref().as_ptr() as *const c_char,
-                leaked_boxed_progress as *mut c_void,
-                Some(ProgressExecutor::cb_execute),
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
             );
-            let _ = Box::from_raw(leaked_boxed_progress);
             Ok(ProjectFile::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
     }
@@ -591,7 +574,7 @@ impl Project {
             description,
             id,
             creation_time,
-            ProgressExecutor::default(),
+            NoProgressCallback,
         )
     }
 
@@ -605,7 +588,7 @@ impl Project {
     /// * `creation_time` - Creation time of the file
     /// * `progress` - [`ProgressExecutor`] that will be called as the [`ProjectFile`] is being created
     #[allow(clippy::too_many_arguments)]
-    pub unsafe fn create_file_unsafe_with_progress<N, D, I>(
+    pub unsafe fn create_file_unsafe_with_progress<N, D, I, P>(
         &self,
         contents: &[u8],
         folder: Option<&ProjectFolder>,
@@ -613,19 +596,19 @@ impl Project {
         description: D,
         id: I,
         creation_time: SystemTime,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: P,
     ) -> Result<Ref<ProjectFile>, ()>
     where
         N: BnStrCompatible,
         D: BnStrCompatible,
         I: BnStrCompatible,
+        P: ProgressCallback,
     {
         let name_raw = name.into_bytes_with_nul();
         let description_raw = description.into_bytes_with_nul();
         let id_raw = id.into_bytes_with_nul();
         let folder_ptr = folder.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+
         unsafe {
             let result = BNProjectCreateFileUnsafe(
                 self.handle.as_ptr(),
@@ -636,10 +619,9 @@ impl Project {
                 description_raw.as_ref().as_ptr() as *const c_char,
                 id_raw.as_ref().as_ptr() as *const c_char,
                 systime_to_bntime(creation_time).unwrap(),
-                leaked_boxed_progress as *mut c_void,
-                Some(ProgressExecutor::cb_execute),
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
             );
-            let _ = Box::from_raw(leaked_boxed_progress);
             Ok(ProjectFile::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
     }

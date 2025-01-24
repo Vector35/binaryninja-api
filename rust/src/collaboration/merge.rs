@@ -1,5 +1,5 @@
 use binaryninjacore_sys::*;
-use core::{ffi, mem, ptr};
+use std::ffi::c_char;
 use std::ptr::NonNull;
 
 use crate::database::{snapshot::Snapshot, Database};
@@ -20,6 +20,7 @@ impl MergeConflict {
         Self { handle }
     }
 
+    #[allow(unused)]
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNAnalysisMergeConflict>) -> Ref<Self> {
         Ref::new(Self { handle })
     }
@@ -53,7 +54,7 @@ impl MergeConflict {
         let result = unsafe {
             BNAnalysisMergeConflictGetPathItemString(
                 self.handle.as_ptr(),
-                path.as_ref().as_ptr() as *const ffi::c_char,
+                path.as_ref().as_ptr() as *const c_char,
             )
         };
         (!result.is_null())
@@ -127,36 +128,40 @@ impl MergeConflict {
         let success = unsafe {
             BNAnalysisMergeConflictSuccess(
                 self.handle.as_ptr(),
-                value.as_ref().as_ptr() as *const ffi::c_char,
+                value.as_ref().as_ptr() as *const c_char,
             )
         };
         success.then_some(()).ok_or(())
     }
 
-    fn get_path_item_inner<S: BnStrCompatible>(&self, path_key: S) -> *mut ffi::c_void {
+    // TODO: Make a safe version of this that checks the path and if it holds a number
+    pub unsafe fn get_path_item_number<S: BnStrCompatible>(&self, path_key: S) -> Option<u64> {
         let path_key = path_key.into_bytes_with_nul();
-        unsafe {
+        let value = unsafe {
             BNAnalysisMergeConflictGetPathItem(
                 self.handle.as_ptr(),
-                path_key.as_ref().as_ptr() as *const ffi::c_char,
+                path_key.as_ref().as_ptr() as *const c_char,
             )
+        };
+        match value.is_null() {
+            // SAFETY: The path must be a number.
+            false => Some(value as u64),
+            true => None,
         }
     }
 
-    // TODO - How to downcast into usize/u64? How to free the original pointer? It's unclear how to handle
-    // this correctly
-    //pub fn get_path_item_number<S: BnStrCompatible>(&self, path_key: S) -> Result<usize, ()> {
-    //    Ok(self.get_path_item_inner(path_key) as usize)
-    //}
-
-    pub unsafe fn get_path_item_string<S: BnStrCompatible>(
-        &self,
-        path_key: S,
-    ) -> Result<BnString, ()> {
-        let value = self.get_path_item_inner(path_key);
-        (!value.is_null())
-            .then(|| unsafe { BnString::from_raw(value as *mut ffi::c_char) })
-            .ok_or(())
+    pub unsafe fn get_path_item_string<S: BnStrCompatible>(&self, path_key: S) -> Option<BnString> {
+        let path_key = path_key.into_bytes_with_nul();
+        let value = unsafe {
+            BNAnalysisMergeConflictGetPathItemString(
+                self.handle.as_ptr(),
+                path_key.as_ref().as_ptr() as *const c_char,
+            )
+        };
+        match value.is_null() {
+            false => Some(unsafe { BnString::from_raw(value) }),
+            true => None,
+        }
     }
 }
 

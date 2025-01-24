@@ -2,7 +2,7 @@ use crate::data_buffer::DataBuffer;
 use crate::database::kvs::KeyValueStore;
 use crate::database::undo::UndoEntry;
 use crate::database::Database;
-use crate::progress::ProgressExecutor;
+use crate::progress::ProgressCallback;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 use binaryninjacore_sys::{
@@ -120,23 +120,22 @@ impl Snapshot {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn undo_entries_with_progress(
+    pub fn undo_entries_with_progress<P: ProgressCallback>(
         &self,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: P,
     ) -> Array<UndoEntry> {
         assert!(self.has_undo());
         let mut count = 0;
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+
         let result = unsafe {
             BNGetSnapshotUndoEntriesWithProgress(
                 self.handle.as_ptr(),
-                leaked_boxed_progress as *mut c_void,
-                Some(ProgressExecutor::cb_execute),
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
                 &mut count,
             )
         };
-        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
     }
@@ -147,20 +146,18 @@ impl Snapshot {
         unsafe { KeyValueStore::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
-    pub fn read_data_with_progress(
+    pub fn read_data_with_progress<P: ProgressCallback>(
         &self,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: P,
     ) -> Ref<KeyValueStore> {
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let result = unsafe {
             BNReadSnapshotDataWithProgress(
                 self.handle.as_ptr(),
-                leaked_boxed_progress as *mut c_void,
-                Some(ProgressExecutor::cb_execute),
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
             )
         };
-        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+
         unsafe { KeyValueStore::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
@@ -181,23 +178,19 @@ impl Snapshot {
         }
     }
 
-    pub fn store_data_with_progress(
+    pub fn store_data_with_progress<P: ProgressCallback>(
         &self,
         data: &KeyValueStore,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: P,
     ) -> bool {
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
-        let success = unsafe {
+        unsafe {
             BNSnapshotStoreData(
                 self.handle.as_ptr(),
                 data.handle.as_ptr(),
-                leaked_boxed_progress as *mut c_void,
-                Some(ProgressExecutor::cb_execute),
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
             )
-        };
-        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
-        success
+        }
     }
 
     /// Determine if this snapshot has another as an ancestor

@@ -86,10 +86,12 @@ pub fn release_license() {
     }
 }
 
+// TODO: If "" string return None
 pub fn server_username() -> BnString {
     unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerUsername()) }
 }
 
+// TODO: If "" string return None
 pub fn server_url() -> BnString {
     unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerUrl()) }
 }

@@ -13,7 +13,7 @@ use std::fs;
 use binaryninja::logger::Logger;
 use binaryninja::{
     binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
-    command::{register, Command},
+    command::{register_command, Command},
     confidence::Conf,
     interaction,
     interaction::{FormResponses, FormResponses::Index},
@@ -781,7 +781,7 @@ pub extern "C" fn CorePluginInit() -> bool {
         .with_level(LevelFilter::Debug)
         .init();
 
-    register(
+    register_command(
         "Export as DWARF",
         "Export current analysis state and annotations as DWARF for import into other tools",
         MyCommand {},

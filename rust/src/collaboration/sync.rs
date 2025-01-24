@@ -1,20 +1,21 @@
-use binaryninjacore_sys::*;
-use core::{ffi, mem, ptr};
-use std::ptr::NonNull;
-
 use super::{
     Changeset, MergeConflict, Remote, RemoteFile, RemoteFolder, RemoteProject, RemoteSnapshot,
 };
+use binaryninjacore_sys::*;
+use std::ffi::{c_char, c_void};
+use std::mem::ManuallyDrop;
+use std::ptr::NonNull;
 
 use crate::binary_view::{BinaryView, BinaryViewExt};
 use crate::database::{snapshot::Snapshot, Database};
-use crate::ffi::{ProgressCallback, ProgressCallbackNop};
 use crate::file_metadata::FileMetadata;
+use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
 use crate::rc::Ref;
 use crate::string::{BnStrCompatible, BnString};
 use crate::type_archive::{TypeArchive, TypeArchiveMergeConflict};
 
+// TODO: PathBuf
 /// Get the default directory path for a remote Project. This is based off the Setting for
 /// collaboration.directory, the project's id, and the project's remote's id.
 pub fn default_project_path(project: &RemoteProject) -> Result<BnString, ()> {
@@ -25,6 +26,7 @@ pub fn default_project_path(project: &RemoteProject) -> Result<BnString, ()> {
         .ok_or(())
 }
 
+// TODO: PathBuf
 // Get the default filepath for a remote File. This is based off the Setting for
 // collaboration.directory, the file's id, the file's project's id, and the file's
 // remote's id.
@@ -36,13 +38,27 @@ pub fn default_file_path(file: &RemoteFile) -> Result<BnString, ()> {
         .ok_or(())
 }
 
+// TODO: AsRef<Path>
+/// Download a file from its remote, saving all snapshots to a database in the
+/// specified location. Returns a FileContext for opening the file later.
+///
+/// * `file` - Remote File to download and open
+/// * `db_path` - File path for saved database
+pub fn download_file<S: BnStrCompatible>(
+    file: &RemoteFile,
+    db_path: S,
+) -> Result<Ref<FileMetadata>, ()> {
+    download_file_with_progress(file, db_path, NoProgressCallback)
+}
+
+// TODO: AsRef<Path>
 /// Download a file from its remote, saving all snapshots to a database in the
 /// specified location. Returns a FileContext for opening the file later.
 ///
 /// * `file` - Remote File to download and open
 /// * `db_path` - File path for saved database
 /// * `progress` - Function to call for progress updates
-pub fn download_file<S: BnStrCompatible, F: ProgressCallback>(
+pub fn download_file_with_progress<S: BnStrCompatible, F: ProgressCallback>(
     file: &RemoteFile,
     db_path: S,
     mut progress: F,
@@ -51,9 +67,9 @@ pub fn download_file<S: BnStrCompatible, F: ProgressCallback>(
     let result = unsafe {
         BNCollaborationDownloadFile(
             file.handle.as_ptr(),
-            db_path.as_ref().as_ptr() as *const ffi::c_char,
+            db_path.as_ref().as_ptr() as *const c_char,
             Some(F::cb_progress_callback),
-            &mut progress as *mut F as *mut ffi::c_void,
+            &mut progress as *mut F as *mut c_void,
         )
     };
     let success = !result.is_null();
@@ -64,31 +80,52 @@ pub fn download_file<S: BnStrCompatible, F: ProgressCallback>(
 
 /// Upload a file, with database, to the remote under the given project
 ///
+/// * `project` - Remote project under which to place the new file
+/// * `parent_folder` - Optional parent folder in which to place this file
+/// * `metadata` - Local file with database
+/// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
+pub fn upload_database<N: NameChangeset>(
+    project: &RemoteProject,
+    parent_folder: Option<&RemoteFolder>,
+    metadata: &FileMetadata,
+    name_changeset: N,
+) -> Result<Ref<RemoteFile>, ()> {
+    upload_database_with_progress(
+        project,
+        parent_folder,
+        metadata,
+        name_changeset,
+        NoProgressCallback,
+    )
+}
+
+/// Upload a file, with database, to the remote under the given project
+///
 /// * `metadata` - Local file with database
 /// * `project` - Remote project under which to place the new file
 /// * `parent_folder` - Optional parent folder in which to place this file
-/// * `progress` - Function to call for progress updates
 /// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
-pub fn upload_database<P: ProgressCallback, N: NameChangeset>(
-    metadata: &FileMetadata,
+/// * `progress` - Function to call for progress updates
+pub fn upload_database_with_progress<P: ProgressCallback, N: NameChangeset>(
     project: &RemoteProject,
     parent_folder: Option<&RemoteFolder>,
-    mut progress: P,
+    metadata: &FileMetadata,
     mut name_changeset: N,
+    mut progress: P,
 ) -> Result<Ref<RemoteFile>, ()> {
-    let folder_raw = parent_folder.map_or(ptr::null_mut(), |h| h.handle.as_ptr());
+    let folder_raw = parent_folder.map_or(std::ptr::null_mut(), |h| h.handle.as_ptr());
     let result = unsafe {
         BNCollaborationUploadDatabase(
             metadata.handle,
             project.handle.as_ptr(),
             folder_raw,
             Some(P::cb_progress_callback),
-            &mut progress as *mut P as *mut ffi::c_void,
+            &mut progress as *mut P as *mut c_void,
             Some(N::cb_name_changeset),
-            &mut name_changeset as *mut N as *mut ffi::c_void,
+            &mut name_changeset as *mut N as *mut c_void,
         )
     };
-    ptr::NonNull::new(result)
+    NonNull::new(result)
         .map(|raw| unsafe { RemoteFile::ref_from_raw(raw) })
         .ok_or(())
 }
@@ -100,11 +137,11 @@ pub fn is_collaboration_database(database: &Database) -> bool {
 
 /// Get the Remote for a Database
 pub fn get_remote_for_local_database(database: &Database) -> Result<Option<Ref<Remote>>, ()> {
-    let mut value = ptr::null_mut();
+    let mut value = std::ptr::null_mut();
     let success =
         unsafe { BNCollaborationGetRemoteForLocalDatabase(database.handle.as_ptr(), &mut value) };
     success
-        .then(|| ptr::NonNull::new(value).map(|handle| unsafe { Remote::ref_from_raw(handle) }))
+        .then(|| NonNull::new(value).map(|handle| unsafe { Remote::ref_from_raw(handle) }))
         .ok_or(())
 }
 
@@ -121,14 +158,12 @@ pub fn get_remote_for_binary_view(bv: &BinaryView) -> Result<Option<Ref<Remote>>
 pub fn get_remote_project_for_local_database(
     database: &Database,
 ) -> Result<Option<Ref<RemoteProject>>, ()> {
-    let mut value = ptr::null_mut();
+    let mut value = std::ptr::null_mut();
     let success = unsafe {
         BNCollaborationGetRemoteProjectForLocalDatabase(database.handle.as_ptr(), &mut value)
     };
     success
-        .then(|| {
-            ptr::NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) })
-        })
+        .then(|| NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) }))
         .ok_or(())
 }
 
@@ -136,12 +171,12 @@ pub fn get_remote_project_for_local_database(
 pub fn get_remote_file_for_local_database(
     database: &Database,
 ) -> Result<Option<Ref<RemoteFile>>, ()> {
-    let mut value = ptr::null_mut();
+    let mut value = std::ptr::null_mut();
     let success = unsafe {
         BNCollaborationGetRemoteFileForLocalDatabase(database.handle.as_ptr(), &mut value)
     };
     success
-        .then(|| ptr::NonNull::new(value).map(|handle| unsafe { RemoteFile::ref_from_raw(handle) }))
+        .then(|| NonNull::new(value).map(|handle| unsafe { RemoteFile::ref_from_raw(handle) }))
         .ok_or(())
 }
 
@@ -161,13 +196,11 @@ pub fn assign_snapshot_map(
 
 /// Get the remote snapshot associated with a local snapshot (if it exists)
 pub fn get_remote_snapshot_from_local(snap: &Snapshot) -> Result<Option<Ref<RemoteSnapshot>>, ()> {
-    let mut value = ptr::null_mut();
+    let mut value = std::ptr::null_mut();
     let success =
         unsafe { BNCollaborationGetRemoteSnapshotFromLocal(snap.handle.as_ptr(), &mut value) };
     success
-        .then(|| {
-            ptr::NonNull::new(value).map(|handle| unsafe { RemoteSnapshot::ref_from_raw(handle) })
-        })
+        .then(|| NonNull::new(value).map(|handle| unsafe { RemoteSnapshot::ref_from_raw(handle) }))
         .ok_or(())
 }
 
@@ -176,7 +209,7 @@ pub fn get_local_snapshot_for_remote(
     snapshot: &RemoteSnapshot,
     database: &Database,
 ) -> Result<Option<Ref<Snapshot>>, ()> {
-    let mut value = ptr::null_mut();
+    let mut value = std::ptr::null_mut();
     let success = unsafe {
         BNCollaborationGetLocalSnapshotFromRemote(
             snapshot.handle.as_ptr(),
@@ -185,8 +218,38 @@ pub fn get_local_snapshot_for_remote(
         )
     };
     success
-        .then(|| ptr::NonNull::new(value).map(|handle| unsafe { Snapshot::ref_from_raw(handle) }))
+        .then(|| NonNull::new(value).map(|handle| unsafe { Snapshot::ref_from_raw(handle) }))
         .ok_or(())
+}
+
+pub fn download_database<S>(file: &RemoteFile, location: S, force: bool) -> Result<(), ()>
+where
+    S: BnStrCompatible,
+{
+    download_database_with_progress(file, location, force, NoProgressCallback)
+}
+
+pub fn download_database_with_progress<S, F>(
+    file: &RemoteFile,
+    location: S,
+    force: bool,
+    mut progress: F,
+) -> Result<(), ()>
+where
+    S: BnStrCompatible,
+    F: ProgressCallback,
+{
+    let db_path = location.into_bytes_with_nul();
+    let success = unsafe {
+        BNCollaborationDownloadDatabaseForFile(
+            file.handle.as_ptr(),
+            db_path.as_ref().as_ptr() as *const c_char,
+            force,
+            Some(F::cb_progress_callback),
+            &mut progress as *mut _ as *mut c_void,
+        )
+    };
+    success.then_some(()).ok_or(())
 }
 
 /// Completely sync a database, pushing/pulling/merging/applying changes
@@ -194,25 +257,50 @@ pub fn get_local_snapshot_for_remote(
 /// * `database` - Database to sync
 /// * `file` - File to sync with
 /// * `conflict_handler` - Function to call to resolve snapshot conflicts
-/// * `progress` - Function to call for progress updates
 /// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
-pub fn sync_database<C: DatabaseConflictHandler, P: ProgressCallback, N: NameChangeset>(
+pub fn sync_database<C: DatabaseConflictHandler, N: NameChangeset>(
+    database: &Database,
+    file: &RemoteFile,
+    conflict_handler: C,
+    name_changeset: N,
+) -> Result<(), ()> {
+    sync_database_with_progress(
+        database,
+        file,
+        conflict_handler,
+        name_changeset,
+        NoProgressCallback,
+    )
+}
+
+/// Completely sync a database, pushing/pulling/merging/applying changes
+///
+/// * `database` - Database to sync
+/// * `file` - File to sync with
+/// * `conflict_handler` - Function to call to resolve snapshot conflicts
+/// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
+/// * `progress` - Function to call for progress updates
+pub fn sync_database_with_progress<
+    C: DatabaseConflictHandler,
+    P: ProgressCallback,
+    N: NameChangeset,
+>(
     database: &Database,
     file: &RemoteFile,
     mut conflict_handler: C,
-    mut progress: P,
     mut name_changeset: N,
+    mut progress: P,
 ) -> Result<(), ()> {
     let success = unsafe {
         BNCollaborationSyncDatabase(
             database.handle.as_ptr(),
             file.handle.as_ptr(),
             Some(C::cb_handle_conflict),
-            &mut conflict_handler as *mut C as *mut ffi::c_void,
+            &mut conflict_handler as *mut C as *mut c_void,
             Some(P::cb_progress_callback),
-            &mut progress as *mut P as *mut ffi::c_void,
+            &mut progress as *mut P as *mut c_void,
             Some(N::cb_name_changeset),
-            &mut name_changeset as *mut N as *mut ffi::c_void,
+            &mut name_changeset as *mut N as *mut c_void,
         )
     };
     success.then_some(()).ok_or(())
@@ -224,14 +312,40 @@ pub fn sync_database<C: DatabaseConflictHandler, P: ProgressCallback, N: NameCha
 /// * `database` - Database to pull
 /// * `file` - Remote File to pull to
 /// * `conflict_handler` - Function to call to resolve snapshot conflicts
-/// * `progress` - Function to call for progress updates
 /// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
-pub fn pull_database<C: DatabaseConflictHandler, P: ProgressCallback, N: NameChangeset>(
+pub fn pull_database<C: DatabaseConflictHandler, N: NameChangeset>(
+    database: &Database,
+    file: &RemoteFile,
+    conflict_handler: C,
+    name_changeset: N,
+) -> Result<usize, ()> {
+    pull_database_with_progress(
+        database,
+        file,
+        conflict_handler,
+        name_changeset,
+        NoProgressCallback,
+    )
+}
+
+/// Pull updated snapshots from the remote. Merge local changes with remote changes and
+/// potentially create a new snapshot for unsaved changes, named via name_changeset.
+///
+/// * `database` - Database to pull
+/// * `file` - Remote File to pull to
+/// * `conflict_handler` - Function to call to resolve snapshot conflicts
+/// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
+/// * `progress` - Function to call for progress updates
+pub fn pull_database_with_progress<
+    C: DatabaseConflictHandler,
+    P: ProgressCallback,
+    N: NameChangeset,
+>(
     database: &Database,
     file: &RemoteFile,
     mut conflict_handler: C,
-    mut progress: P,
     mut name_changeset: N,
+    mut progress: P,
 ) -> Result<usize, ()> {
     let mut count = 0;
     let success = unsafe {
@@ -240,11 +354,11 @@ pub fn pull_database<C: DatabaseConflictHandler, P: ProgressCallback, N: NameCha
             file.handle.as_ptr(),
             &mut count,
             Some(C::cb_handle_conflict),
-            &mut conflict_handler as *mut C as *mut ffi::c_void,
+            &mut conflict_handler as *mut C as *mut c_void,
             Some(P::cb_progress_callback),
-            &mut progress as *mut P as *mut ffi::c_void,
+            &mut progress as *mut P as *mut c_void,
             Some(N::cb_name_changeset),
-            &mut name_changeset as *mut N as *mut ffi::c_void,
+            &mut name_changeset as *mut N as *mut c_void,
         )
     };
     success.then_some(count).ok_or(())
@@ -254,8 +368,19 @@ pub fn pull_database<C: DatabaseConflictHandler, P: ProgressCallback, N: NameCha
 ///
 /// * `database` - Database to merge
 /// * `conflict_handler` - Function to call for progress updates
+pub fn merge_database<C: DatabaseConflictHandler>(
+    database: &Database,
+    conflict_handler: C,
+) -> Result<(), ()> {
+    merge_database_with_progress(database, conflict_handler, NoProgressCallback)
+}
+
+/// Merge all leaf snapshots in a database down to a single leaf snapshot.
+///
+/// * `database` - Database to merge
+/// * `conflict_handler` - Function to call for progress updates
 /// * `progress` - Function to call to resolve snapshot conflicts
-pub fn merge_database<C: DatabaseConflictHandler, P: ProgressCallback>(
+pub fn merge_database_with_progress<C: DatabaseConflictHandler, P: ProgressCallback>(
     database: &Database,
     mut conflict_handler: C,
     mut progress: P,
@@ -264,9 +389,9 @@ pub fn merge_database<C: DatabaseConflictHandler, P: ProgressCallback>(
         BNCollaborationMergeDatabase(
             database.handle.as_ptr(),
             Some(C::cb_handle_conflict),
-            &mut conflict_handler as *mut C as *mut ffi::c_void,
+            &mut conflict_handler as *mut C as *mut c_void,
             Some(P::cb_progress_callback),
-            &mut progress as *mut P as *mut ffi::c_void,
+            &mut progress as *mut P as *mut c_void,
         )
     };
     success.then_some(()).ok_or(())
@@ -276,8 +401,16 @@ pub fn merge_database<C: DatabaseConflictHandler, P: ProgressCallback>(
 ///
 /// * `database` - Database to push
 /// * `file` - Remote File to push to
+pub fn push_database(database: &Database, file: &RemoteFile) -> Result<usize, ()> {
+    push_database_with_progress(database, file, NoProgressCallback)
+}
+
+/// Push locally added snapshots to the remote
+///
+/// * `database` - Database to push
+/// * `file` - Remote File to push to
 /// * `progress` - Function to call for progress updates
-pub fn push_database<P: ProgressCallback>(
+pub fn push_database_with_progress<P: ProgressCallback>(
     database: &Database,
     file: &RemoteFile,
     mut progress: P,
@@ -289,7 +422,7 @@ pub fn push_database<P: ProgressCallback>(
             file.handle.as_ptr(),
             &mut count,
             Some(P::cb_progress_callback),
-            &mut progress as *mut P as *mut ffi::c_void,
+            &mut progress as *mut P as *mut c_void,
         )
     };
     success.then_some(count).ok_or(())
@@ -328,7 +461,7 @@ pub fn get_snapshot_author(
     database: &Database,
     snapshot: &Snapshot,
 ) -> Result<Option<BnString>, ()> {
-    let mut value = ptr::null_mut();
+    let mut value = std::ptr::null_mut();
     let success = unsafe {
         BNCollaborationGetSnapshotAuthor(
             database.handle.as_ptr(),
@@ -356,22 +489,22 @@ pub fn set_snapshot_author<S: BnStrCompatible>(
         BNCollaborationSetSnapshotAuthor(
             database.handle.as_ptr(),
             snapshot.handle.as_ptr(),
-            author.as_ref().as_ptr() as *const ffi::c_char,
+            author.as_ref().as_ptr() as *const c_char,
         )
     };
     success.then_some(()).ok_or(())
 }
 
+// TODO: this needs to be removed imo
 pub(crate) fn pull_projects(database: &Database) -> Result<bool, ()> {
     let Some(remote) = get_remote_for_local_database(database)? else {
         return Ok(false);
     };
-    if !remote.has_pulled_projects() {
-        remote.pull_projects(ProgressCallbackNop)?;
-    }
+    remote.pull_projects()?;
     Ok(true)
 }
 
+// TODO: This needs to be removed imo
 pub(crate) fn pull_files(database: &Database) -> Result<bool, ()> {
     if !pull_projects(database)? {
         return Ok(false);
@@ -379,9 +512,7 @@ pub(crate) fn pull_files(database: &Database) -> Result<bool, ()> {
     let Some(project) = get_remote_project_for_local_database(database)? else {
         return Ok(false);
     };
-    if !project.has_pulled_files() {
-        project.pull_files(ProgressCallbackNop)?;
-    }
+    project.pull_files()?;
     Ok(true)
 }
 
@@ -390,8 +521,21 @@ pub(crate) fn pull_files(database: &Database) -> Result<bool, ()> {
 /// * `type_archive` - TypeArchive to sync
 /// * `file` - File to sync with
 /// * `conflict_handler` - Function to call to resolve snapshot conflicts
+pub fn sync_type_archive<C: TypeArchiveConflictHandler>(
+    type_archive: &TypeArchive,
+    file: &RemoteFile,
+    conflict_handler: C,
+) -> Result<(), ()> {
+    sync_type_archive_with_progress(type_archive, file, conflict_handler, NoProgressCallback)
+}
+
+/// Completely sync a type archive, pushing/pulling/merging/applying changes
+///
+/// * `type_archive` - TypeArchive to sync
+/// * `file` - File to sync with
+/// * `conflict_handler` - Function to call to resolve snapshot conflicts
 /// * `progress` - Function to call for progress updates
-pub fn sync_type_archive<C: TypeArchiveConflictHandler, P: ProgressCallback>(
+pub fn sync_type_archive_with_progress<C: TypeArchiveConflictHandler, P: ProgressCallback>(
     type_archive: &TypeArchive,
     file: &RemoteFile,
     mut conflict_handler: C,
@@ -402,9 +546,9 @@ pub fn sync_type_archive<C: TypeArchiveConflictHandler, P: ProgressCallback>(
             type_archive.handle.as_ptr(),
             file.handle.as_ptr(),
             Some(C::cb_handle_conflict),
-            &mut conflict_handler as *mut C as *mut ffi::c_void,
+            &mut conflict_handler as *mut C as *mut c_void,
             Some(P::cb_progress_callback),
-            &mut progress as *mut P as *mut ffi::c_void,
+            &mut progress as *mut P as *mut c_void,
         )
     };
     success.then_some(()).ok_or(())
@@ -414,8 +558,16 @@ pub fn sync_type_archive<C: TypeArchiveConflictHandler, P: ProgressCallback>(
 ///
 /// * `type_archive` - TypeArchive to push
 /// * `file` - Remote File to push to
+pub fn push_type_archive(type_archive: &TypeArchive, file: &RemoteFile) -> Result<usize, ()> {
+    push_type_archive_with_progress(type_archive, file, NoProgressCallback)
+}
+
+/// Push locally added snapshots to the remote
+///
+/// * `type_archive` - TypeArchive to push
+/// * `file` - Remote File to push to
 /// * `progress` - Function to call for progress updates
-pub fn push_type_archive<P: ProgressCallback>(
+pub fn push_type_archive_with_progress<P: ProgressCallback>(
     type_archive: &TypeArchive,
     file: &RemoteFile,
     mut progress: P,
@@ -427,21 +579,32 @@ pub fn push_type_archive<P: ProgressCallback>(
             file.handle.as_ptr(),
             &mut count,
             Some(P::cb_progress_callback),
-            &mut progress as *mut P as *mut ffi::c_void,
+            &mut progress as *mut P as *mut c_void,
         )
     };
     success.then_some(count).ok_or(())
 }
 
-/// Pull updated snapshots from the remote. Merge local changes with remote changes and
-/// potentially create a new snapshot for unsaved changes, named via name_changeset.
+/// Pull updated type archives from the remote.
+///
+/// * `type_archive` - TypeArchive to pull
+/// * `file` - Remote File to pull to
+/// * `conflict_handler` - Function to call to resolve snapshot conflicts
+pub fn pull_type_archive<C: TypeArchiveConflictHandler>(
+    type_archive: &TypeArchive,
+    file: &RemoteFile,
+    conflict_handler: C,
+) -> Result<usize, ()> {
+    pull_type_archive_with_progress(type_archive, file, conflict_handler, NoProgressCallback)
+}
+
+/// Pull updated type archives from the remote.
 ///
 /// * `type_archive` - TypeArchive to pull
 /// * `file` - Remote File to pull to
 /// * `conflict_handler` - Function to call to resolve snapshot conflicts
 /// * `progress` - Function to call for progress updates
-/// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
-pub fn pull_type_archive<C: TypeArchiveConflictHandler, P: ProgressCallback>(
+pub fn pull_type_archive_with_progress<C: TypeArchiveConflictHandler, P: ProgressCallback>(
     type_archive: &TypeArchive,
     file: &RemoteFile,
     mut conflict_handler: C,
@@ -454,9 +617,9 @@ pub fn pull_type_archive<C: TypeArchiveConflictHandler, P: ProgressCallback>(
             file.handle.as_ptr(),
             &mut count,
             Some(C::cb_handle_conflict),
-            &mut conflict_handler as *mut C as *mut ffi::c_void,
+            &mut conflict_handler as *mut C as *mut c_void,
             Some(P::cb_progress_callback),
-            &mut progress as *mut P as *mut ffi::c_void,
+            &mut progress as *mut P as *mut c_void,
         )
     };
     success.then_some(count).ok_or(())
@@ -471,7 +634,7 @@ pub fn is_collaboration_type_archive(type_archive: &TypeArchive) -> bool {
 pub fn get_remote_for_local_type_archive(type_archive: &TypeArchive) -> Option<Ref<Remote>> {
     let value =
         unsafe { BNCollaborationGetRemoteForLocalTypeArchive(type_archive.handle.as_ptr()) };
-    ptr::NonNull::new(value).map(|handle| unsafe { Remote::ref_from_raw(handle) })
+    NonNull::new(value).map(|handle| unsafe { Remote::ref_from_raw(handle) })
 }
 
 /// Get the Remote Project for a Type Archive
@@ -480,14 +643,14 @@ pub fn get_remote_project_for_local_type_archive(
 ) -> Option<Ref<RemoteProject>> {
     let value =
         unsafe { BNCollaborationGetRemoteProjectForLocalTypeArchive(database.handle.as_ptr()) };
-    ptr::NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) })
+    NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) })
 }
 
 /// Get the Remote File for a Type Archive
 pub fn get_remote_file_for_local_type_archive(database: &TypeArchive) -> Option<Ref<RemoteFile>> {
     let value =
         unsafe { BNCollaborationGetRemoteFileForLocalTypeArchive(database.handle.as_ptr()) };
-    ptr::NonNull::new(value).map(|handle| unsafe { RemoteFile::ref_from_raw(handle) })
+    NonNull::new(value).map(|handle| unsafe { RemoteFile::ref_from_raw(handle) })
 }
 
 /// Get the remote snapshot associated with a local snapshot (if it exists) in a Type Archive
@@ -499,10 +662,10 @@ pub fn get_remote_snapshot_from_local_type_archive<S: BnStrCompatible>(
     let value = unsafe {
         BNCollaborationGetRemoteSnapshotFromLocalTypeArchive(
             type_archive.handle.as_ptr(),
-            snapshot_id.as_ref().as_ptr() as *const ffi::c_char,
+            snapshot_id.as_ref().as_ptr() as *const c_char,
         )
     };
-    ptr::NonNull::new(value).map(|handle| unsafe { RemoteSnapshot::ref_from_raw(handle) })
+    NonNull::new(value).map(|handle| unsafe { RemoteSnapshot::ref_from_raw(handle) })
 }
 
 /// Get the local snapshot associated with a remote snapshot (if it exists) in a Type Archive
@@ -528,59 +691,79 @@ pub fn is_type_archive_snapshot_ignored<S: BnStrCompatible>(
     unsafe {
         BNCollaborationIsTypeArchiveSnapshotIgnored(
             type_archive.handle.as_ptr(),
-            snapshot_id.as_ref().as_ptr() as *const ffi::c_char,
+            snapshot_id.as_ref().as_ptr() as *const c_char,
         )
     }
 }
 
 /// Download a type archive from its remote, saving all snapshots to an archive in the
-/// specified `location`. Returns a [TypeArchive] for using later.
-pub fn download_type_archive<S: BnStrCompatible, F: ProgressCallback>(
+/// specified `location`. Returns a [`TypeArchive`] for using later.
+pub fn download_type_archive<S: BnStrCompatible>(
+    file: &RemoteFile,
+    location: S,
+) -> Result<Option<TypeArchive>, ()> {
+    download_type_archive_with_progress(file, location, NoProgressCallback)
+}
+
+/// Download a type archive from its remote, saving all snapshots to an archive in the
+/// specified `location`. Returns a [`TypeArchive`] for using later.
+pub fn download_type_archive_with_progress<S: BnStrCompatible, F: ProgressCallback>(
     file: &RemoteFile,
     location: S,
     mut progress: F,
 ) -> Result<Option<TypeArchive>, ()> {
-    let mut value = ptr::null_mut();
+    let mut value = std::ptr::null_mut();
     let db_path = location.into_bytes_with_nul();
     let success = unsafe {
         BNCollaborationDownloadTypeArchive(
             file.handle.as_ptr(),
-            db_path.as_ref().as_ptr() as *const ffi::c_char,
+            db_path.as_ref().as_ptr() as *const c_char,
             Some(F::cb_progress_callback),
-            &mut progress as *mut F as *mut ffi::c_void,
+            &mut progress as *mut F as *mut c_void,
             &mut value,
         )
     };
     success
-        .then(|| ptr::NonNull::new(value).map(|handle| unsafe { TypeArchive::from_raw(handle) }))
+        .then(|| NonNull::new(value).map(|handle| unsafe { TypeArchive::from_raw(handle) }))
         .ok_or(())
 }
 
 /// Upload a type archive
-pub fn upload_type_archive<P: ProgressCallback>(
+pub fn upload_type_archive(
     archive: &TypeArchive,
     project: &RemoteProject,
     // TODO: Is this required?
     folder: &RemoteFolder,
-    mut progress: P,
-    // TODO: I dislike the word "core" just say local?
     core_file: &ProjectFile,
 ) -> Result<Ref<RemoteFile>, ()> {
-    let mut value = ptr::null_mut();
+    upload_type_archive_with_progress(archive, project, folder, core_file, NoProgressCallback)
+}
+
+/// Upload a type archive
+pub fn upload_type_archive_with_progress<P: ProgressCallback>(
+    archive: &TypeArchive,
+    project: &RemoteProject,
+    // TODO: Is this required?
+    folder: &RemoteFolder,
+    // TODO: I dislike the word "core" just say local?
+    core_file: &ProjectFile,
+    mut progress: P,
+) -> Result<Ref<RemoteFile>, ()> {
+    let mut value = std::ptr::null_mut();
     let success = unsafe {
         BNCollaborationUploadTypeArchive(
             archive.handle.as_ptr(),
             project.handle.as_ptr(),
             folder.handle.as_ptr(),
             Some(P::cb_progress_callback),
-            &mut progress as *const P as *mut ffi::c_void,
+            &mut progress as *const P as *mut c_void,
             core_file.handle.as_ptr(),
             &mut value,
         )
     };
     success
         .then(|| {
-            ptr::NonNull::new(value)
+            NonNull::new(value)
                 .map(|handle| unsafe { RemoteFile::ref_from_raw(handle) })
                 .unwrap()
         })
@@ -588,7 +771,16 @@ pub fn upload_type_archive<P: ProgressCallback>(
 }
 
 /// Merge a pair of snapshots and create a new snapshot with the result.
-pub fn merge_snapshots<C: DatabaseConflictHandler, P: ProgressCallback>(
+pub fn merge_snapshots<C: DatabaseConflictHandler>(
+    first: &Snapshot,
+    second: &Snapshot,
+    conflict_handler: C,
+) -> Result<Snapshot, ()> {
+    merge_snapshots_with_progress(first, second, conflict_handler, NoProgressCallback)
+}
+
+/// Merge a pair of snapshots and create a new snapshot with the result.
+pub fn merge_snapshots_with_progress<C: DatabaseConflictHandler, P: ProgressCallback>(
     first: &Snapshot,
     second: &Snapshot,
     mut conflict_handler: C,
@@ -599,18 +791,19 @@ pub fn merge_snapshots<C: DatabaseConflictHandler, P: ProgressCallback>(
             first.handle.as_ptr(),
             second.handle.as_ptr(),
             Some(C::cb_handle_conflict),
-            &mut conflict_handler as *mut C as *mut ffi::c_void,
+            &mut conflict_handler as *mut C as *mut c_void,
             Some(P::cb_progress_callback),
-            &mut progress as *mut P as *mut ffi::c_void,
+            &mut progress as *mut P as *mut c_void,
         )
     };
-    ptr::NonNull::new(value)
+    NonNull::new(value)
         .map(|handle| unsafe { Snapshot::from_raw(handle) })
         .ok_or(())
 }
 
 pub trait NameChangeset: Sized {
     fn name_changeset(&mut self, changeset: &Changeset) -> bool;
+
     unsafe extern "C" fn cb_name_changeset(
         ctxt: *mut ::std::os::raw::c_void,
         changeset: *mut BNCollaborationChangeset,
@@ -632,8 +825,9 @@ where
     }
 }
 
-pub struct NameChangesetNop;
-impl NameChangeset for NameChangesetNop {
+pub struct NoNameChangeset;
+
+impl NameChangeset for NoNameChangeset {
     fn name_changeset(&mut self, _changeset: &Changeset) -> bool {
         unreachable!()
     }
@@ -656,8 +850,8 @@ pub trait DatabaseConflictHandler: Sized {
     fn handle_conflict(&mut self, keys: &str, conflicts: &MergeConflict) -> bool;
 
     unsafe extern "C" fn cb_handle_conflict(
-        ctxt: *mut ffi::c_void,
-        keys: *mut *const ffi::c_char,
+        ctxt: *mut c_void,
+        keys: *mut *const c_char,
         conflicts: *mut *mut BNAnalysisMergeConflict,
         conflict_count: usize,
     ) -> bool {
@@ -667,7 +861,7 @@ pub trait DatabaseConflictHandler: Sized {
         keys.iter().zip(conflicts.iter()).all(|(key, conflict)| {
             // NOTE this is a reference, not owned, so ManuallyDrop is required, or just implement `ref_from_raw`
             // TODO: Replace with raw_to_string
-            let key = mem::ManuallyDrop::new(BnString::from_raw(*key as *mut _));
+            let key = ManuallyDrop::new(BnString::from_raw(*key as *mut _));
             // TODO I guess dont drop here?
             let raw_ptr = NonNull::new(*conflict).unwrap();
             let conflict = MergeConflict::from_raw(raw_ptr);
@@ -692,14 +886,13 @@ impl DatabaseConflictHandler for DatabaseConflictHandlerFail {
     }
 
     unsafe extern "C" fn cb_handle_conflict(
-        _ctxt: *mut ffi::c_void,
-        _keys: *mut *const ffi::c_char,
+        _ctxt: *mut c_void,
+        _keys: *mut *const c_char,
         _conflicts: *mut *mut BNAnalysisMergeConflict,
-        _conflict_count: usize,
+        conflict_count: usize,
     ) -> bool {
-        // TODO only fail if _conflict_count is greater then 0?
-        //_conflict_count > 0
-        false
+        // Fail if we have any conflicts.
+        conflict_count > 0
     }
 }
 
@@ -737,7 +930,7 @@ impl TypeArchiveConflictHandler for TypeArchiveConflictHandlerFail {
     }
 
     unsafe extern "C" fn cb_handle_conflict(
-        _ctxt: *mut ffi::c_void,
+        _ctxt: *mut c_void,
         _conflicts: *mut *mut BNTypeArchiveMergeConflict,
         _conflict_count: usize,
     ) -> bool {

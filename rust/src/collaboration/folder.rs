@@ -1,10 +1,8 @@
 use super::{Remote, RemoteProject};
-use crate::database::snapshot::Snapshot;
 use binaryninjacore_sys::*;
-use core::{ffi, mem, ptr};
+use std::ffi::c_char;
 use std::ptr::NonNull;
 
-use crate::ffi::ProgressCallbackNop;
 use crate::project::folder::ProjectFolder;
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
@@ -23,14 +21,17 @@ impl RemoteFolder {
         Ref::new(Self { handle })
     }
 
+    // TODO: Rename to local folder?
+    // TODO: Bump this to an option
     /// Get the core folder associated with this remote folder.
-    pub fn core_folder(&self) -> Result<ProjectFolder, ()> {
+    pub fn core_folder(&self) -> Result<Ref<ProjectFolder>, ()> {
         let result = unsafe { BNRemoteFolderGetCoreFolder(self.handle.as_ptr()) };
         NonNull::new(result)
-            .map(|handle| unsafe { ProjectFolder::from_raw(handle) })
+            .map(|handle| unsafe { ProjectFolder::ref_from_raw(handle) })
             .ok_or(())
     }
 
+    // TODO: Bump this to an option
     /// Get the owning project of this folder.
     pub fn project(&self) -> Result<Ref<RemoteProject>, ()> {
         let result = unsafe { BNRemoteFolderGetProject(self.handle.as_ptr()) };
@@ -39,6 +40,7 @@ impl RemoteFolder {
             .ok_or(())
     }
 
+    // TODO: Bump this to an option
     /// Get the owning remote of this folder.
     pub fn remote(&self) -> Result<Ref<Remote>, ()> {
         let result = unsafe { BNRemoteFolderGetRemote(self.handle.as_ptr()) };
@@ -47,13 +49,16 @@ impl RemoteFolder {
             .ok_or(())
     }
 
+    // TODO: Should this pull folders?
+    // TODO: If it does we keep the result?
     /// Get the parent folder, if available.
     pub fn parent(&self) -> Result<Option<Ref<RemoteFolder>>, ()> {
         let project = self.project()?;
+        // TODO: This sync should be removed?
         if !project.has_pulled_folders() {
-            project.pull_folders(ProgressCallbackNop)?;
+            project.pull_folders()?;
         }
-        let mut parent_handle = ptr::null_mut();
+        let mut parent_handle = std::ptr::null_mut();
         let success = unsafe { BNRemoteFolderGetParent(self.handle.as_ptr(), &mut parent_handle) };
         success
             .then(|| {
@@ -65,7 +70,7 @@ impl RemoteFolder {
 
     /// Set the parent folder. You will need to push the folder to update the remote version.
     pub fn set_parent(&self, parent: Option<&RemoteFolder>) -> Result<(), ()> {
-        let parent_handle = parent.map_or(ptr::null_mut(), |p| p.handle.as_ptr());
+        let parent_handle = parent.map_or(std::ptr::null_mut(), |p| p.handle.as_ptr());
         let success = unsafe { BNRemoteFolderSetParent(self.handle.as_ptr(), parent_handle) };
         success.then_some(()).ok_or(())
     }
@@ -86,7 +91,7 @@ impl RemoteFolder {
 
     /// Unique id of parent folder, if there is a parent. None, otherwise
     pub fn parent_id(&self) -> Option<BnString> {
-        let mut parent_id = ptr::null_mut();
+        let mut parent_id = std::ptr::null_mut();
         let have = unsafe { BNRemoteFolderGetParentId(self.handle.as_ptr(), &mut parent_id) };
         have.then(|| unsafe { BnString::from_raw(parent_id) })
     }
@@ -104,7 +109,7 @@ impl RemoteFolder {
         let success = unsafe {
             BNRemoteFolderSetName(
                 self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_ref().as_ptr() as *const c_char,
             )
         };
         success.then_some(()).ok_or(())
@@ -123,7 +128,7 @@ impl RemoteFolder {
         let success = unsafe {
             BNRemoteFolderSetDescription(
                 self.handle.as_ptr(),
-                description.as_ref().as_ptr() as *const ffi::c_char,
+                description.as_ref().as_ptr() as *const c_char,
             )
         };
         success.then_some(()).ok_or(())

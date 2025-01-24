@@ -1,3 +1,4 @@
+use crate::progress::{NoProgressCallback, ProgressCallback};
 use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void, CStr};
 use std::fmt::{Debug, Display, Formatter};
@@ -8,7 +9,6 @@ use std::ptr::NonNull;
 use crate::data_buffer::DataBuffer;
 use crate::metadata::Metadata;
 use crate::platform::Platform;
-use crate::progress::ProgressExecutor;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{raw_to_string, BnStrCompatible, BnString};
 use crate::type_container::TypeContainer;
@@ -791,7 +791,7 @@ impl TypeArchive {
             first_snapshot,
             second_snapshot,
             merge_conflicts,
-            ProgressExecutor::default(),
+            NoProgressCallback,
         )
     }
 
@@ -805,13 +805,13 @@ impl TypeArchive {
     ///
     /// Returns Snapshot id, if merge was successful, otherwise the List of
     /// conflicting type ids
-    pub fn merge_snapshots_with_progress<B, F, S, M, MI, MK>(
+    pub fn merge_snapshots_with_progress<B, F, S, M, MI, MK, P>(
         &self,
         base_snapshot: B,
         first_snapshot: F,
         second_snapshot: S,
         merge_conflicts: M,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: P,
     ) -> Result<BnString, Array<BnString>>
     where
         B: BnStrCompatible,
@@ -820,6 +820,7 @@ impl TypeArchive {
         M: IntoIterator<Item = (MI, MK)>,
         MI: BnStrCompatible,
         MK: BnStrCompatible,
+        P: ProgressCallback,
     {
         let base_snapshot = base_snapshot.into_bytes_with_nul();
         let first_snapshot = first_snapshot.into_bytes_with_nul();
@@ -836,8 +837,7 @@ impl TypeArchive {
         let mut conflicts_errors_count = 0;
 
         let mut result = std::ptr::null_mut();
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+
         let success = unsafe {
             BNTypeArchiveMergeSnapshots(
                 self.handle.as_ptr(),
@@ -850,11 +850,11 @@ impl TypeArchive {
                 &mut conflicts_errors,
                 &mut conflicts_errors_count,
                 &mut result,
-                Some(ProgressExecutor::cb_execute),
-                leaked_boxed_progress as *mut c_void,
+                Some(P::cb_progress_callback),
+                &mut progress as *mut P as *mut c_void,
             )
         };
-        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+
         if success {
             assert!(!result.is_null());
             Ok(unsafe { BnString::from_raw(result) })
@@ -1130,6 +1130,7 @@ impl TypeArchiveMergeConflict {
         Self { handle }
     }
 
+    #[allow(unused)]
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNTypeArchiveMergeConflict>) -> Ref<Self> {
         Ref::new(Self { handle })
     }

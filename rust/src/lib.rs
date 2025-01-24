@@ -100,7 +100,7 @@ use string::BnStrCompatible;
 use string::BnString;
 use string::IntoJson;
 
-use crate::progress::ProgressExecutor;
+use crate::progress::{NoProgressCallback, ProgressCallback};
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 pub use binaryninjacore_sys::BNDataFlowQueryOption as DataFlowQueryOption;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
@@ -111,27 +111,25 @@ pub const BN_INVALID_EXPR: usize = usize::MAX;
 
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
 pub fn load(file_path: impl AsRef<Path>) -> Option<Ref<BinaryView>> {
-    load_with_progress(file_path, ProgressExecutor::default())
+    load_with_progress(file_path, NoProgressCallback)
 }
 
-pub fn load_with_progress(
+pub fn load_with_progress<P: ProgressCallback>(
     file_path: impl AsRef<Path>,
-    progress: impl Into<ProgressExecutor>,
+    mut progress: P,
 ) -> Option<Ref<BinaryView>> {
     let file_path = file_path.as_ref().into_bytes_with_nul();
     let options = c"";
-    let boxed_progress = Box::new(progress.into());
-    let leaked_boxed_progress = Box::into_raw(boxed_progress);
     let handle = unsafe {
         BNLoadFilename(
             file_path.as_ptr() as *mut _,
             true,
             options.as_ptr() as *mut c_char,
-            Some(ProgressExecutor::cb_execute),
-            leaked_boxed_progress as *mut c_void,
+            Some(P::cb_progress_callback),
+            &mut progress as *mut P as *mut c_void,
         )
     };
-    let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+
     if handle.is_null() {
         None
     } else {
@@ -168,18 +166,19 @@ where
         file_path,
         update_analysis_and_wait,
         options,
-        ProgressExecutor::default(),
+        NoProgressCallback,
     )
 }
 
-pub fn load_with_options_and_progress<O>(
+pub fn load_with_options_and_progress<O, P>(
     file_path: impl AsRef<Path>,
     update_analysis_and_wait: bool,
     options: Option<O>,
-    progress: impl Into<ProgressExecutor>,
+    mut progress: P,
 ) -> Option<Ref<BinaryView>>
 where
     O: IntoJson,
+    P: ProgressCallback,
 {
     let file_path = file_path.as_ref().into_bytes_with_nul();
     let options_or_default = if let Some(opt) = options {
@@ -195,18 +194,15 @@ where
             .as_ref()
             .to_vec()
     };
-    let boxed_progress = Box::new(progress.into());
-    let leaked_boxed_progress = Box::into_raw(boxed_progress);
     let handle = unsafe {
         BNLoadFilename(
             file_path.as_ptr() as *mut _,
             update_analysis_and_wait,
             options_or_default.as_ptr() as *mut c_char,
-            Some(ProgressExecutor::cb_execute),
-            leaked_boxed_progress as *mut c_void,
+            Some(P::cb_progress_callback),
+            &mut progress as *mut P as *mut c_void,
         )
     };
-    let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
 
     if handle.is_null() {
         None
@@ -223,22 +219,18 @@ pub fn load_view<O>(
 where
     O: IntoJson,
 {
-    load_view_with_progress(
-        bv,
-        update_analysis_and_wait,
-        options,
-        ProgressExecutor::default(),
-    )
+    load_view_with_progress(bv, update_analysis_and_wait, options, NoProgressCallback)
 }
 
-pub fn load_view_with_progress<O>(
+pub fn load_view_with_progress<O, P>(
     bv: &BinaryView,
     update_analysis_and_wait: bool,
     options: Option<O>,
-    progress: impl Into<ProgressExecutor>,
+    mut progress: P,
 ) -> Option<Ref<BinaryView>>
 where
     O: IntoJson,
+    P: ProgressCallback,
 {
     let options_or_default = if let Some(opt) = options {
         opt.get_json_string()
@@ -253,18 +245,15 @@ where
             .as_ref()
             .to_vec()
     };
-    let boxed_progress = Box::new(progress.into());
-    let leaked_boxed_progress = Box::into_raw(boxed_progress);
     let handle = unsafe {
         BNLoadBinaryView(
             bv.handle as *mut _,
             update_analysis_and_wait,
             options_or_default.as_ptr() as *mut c_char,
-            Some(ProgressExecutor::cb_execute),
-            leaked_boxed_progress as *mut c_void,
+            Some(P::cb_progress_callback),
+            &mut progress as *mut P as *mut c_void,
         )
     };
-    let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
 
     if handle.is_null() {
         None

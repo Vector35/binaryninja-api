@@ -1,6 +1,5 @@
-use super::{Remote, RemoteProject};
+use super::{GroupId, Remote, RemoteProject};
 use binaryninjacore_sys::*;
-use std::num::NonZeroU64;
 use std::ptr::NonNull;
 
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
@@ -63,9 +62,13 @@ impl Permission {
     }
 
     /// Id of affected group
-    pub fn group_id(&self) -> Option<NonZeroU64> {
+    pub fn group_id(&self) -> Option<GroupId> {
         let value = unsafe { BNCollaborationPermissionGetGroupId(self.handle.as_ptr()) };
-        NonZeroU64::new(value)
+        if value != 0 {
+            Some(GroupId(value))
+        } else {
+            None
+        }
     }
 
     /// Name of affected group

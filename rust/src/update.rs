@@ -2,7 +2,7 @@
 use std::ffi::{c_char, c_void};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::progress::ProgressExecutor;
+use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
 use crate::string::{raw_to_string, BnString};
 use binaryninjacore_sys::*;
@@ -138,25 +138,24 @@ impl UpdateChannel {
     }
 
     pub fn update_to_latest(&self) -> Result<UpdateResult, BnString> {
-        self.update_to_latest_with_progress(ProgressExecutor::default())
+        self.update_to_latest_with_progress(NoProgressCallback)
     }
 
-    pub fn update_to_latest_with_progress(
+    pub fn update_to_latest_with_progress<P: ProgressCallback>(
         &self,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: P,
     ) -> Result<UpdateResult, BnString> {
         let mut errors = std::ptr::null_mut();
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+
         let result = unsafe {
             BNUpdateToLatestVersion(
                 self.name.as_ptr() as *const c_char,
                 &mut errors,
-                Some(ProgressExecutor::cb_execute),
-                leaked_boxed_progress as *mut c_void,
+                Some(P::cb_progress_callback),
+                &mut progress as *mut P as *mut c_void,
             )
         };
-        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+
         if !errors.is_null() {
             Err(unsafe { BnString::from_raw(errors) })
         } else {
@@ -165,27 +164,26 @@ impl UpdateChannel {
     }
 
     pub fn update(&self, version: &UpdateVersion) -> Result<UpdateResult, BnString> {
-        self.update_with_progress(version, ProgressExecutor::default())
+        self.update_with_progress(version, NoProgressCallback)
     }
 
-    pub fn update_with_progress(
+    pub fn update_with_progress<P: ProgressCallback>(
         &self,
         version: &UpdateVersion,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: P,
     ) -> Result<UpdateResult, BnString> {
         let mut errors = std::ptr::null_mut();
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+
         let result = unsafe {
             BNUpdateToVersion(
                 self.name.as_ptr() as *const c_char,
                 version.version.as_ptr() as *const c_char,
                 &mut errors,
-                Some(ProgressExecutor::cb_execute),
-                leaked_boxed_progress as *mut c_void,
+                Some(P::cb_progress_callback),
+                &mut progress as *mut P as *mut c_void,
             )
         };
-        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+
         if !errors.is_null() {
             Err(unsafe { BnString::from_raw(errors) })
         } else {

@@ -37,7 +37,7 @@ use crate::function::{Function, NativeBlock};
 use crate::linear_view::{LinearDisassemblyLine, LinearViewCursor};
 use crate::metadata::Metadata;
 use crate::platform::Platform;
-use crate::progress::ProgressExecutor;
+use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
 use crate::rc::*;
 use crate::references::{CodeReference, DataReference};
@@ -145,11 +145,10 @@ pub trait BinaryViewBase: AsRef<BinaryView> {
     fn default_endianness(&self) -> Endianness;
     fn address_size(&self) -> usize;
 
-    // TODO saving fileaccessor
     fn save(&self) -> bool {
         self.as_ref()
             .parent_view()
-            .map(|bv| bv.save())
+            .map(|view| view.save())
             .unwrap_or(false)
     }
 }
@@ -627,17 +626,18 @@ pub trait BinaryViewExt: BinaryViewBase {
         T: Iterator<Item = I>,
         I: Into<QualifiedNameTypeAndId>,
     {
-        self.define_auto_types_with_progress(names_sources_and_types, ProgressExecutor::default())
+        self.define_auto_types_with_progress(names_sources_and_types, NoProgressCallback)
     }
 
-    fn define_auto_types_with_progress<T, I>(
+    fn define_auto_types_with_progress<T, I, P>(
         &self,
         names_sources_and_types: T,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: P,
     ) -> HashMap<String, QualifiedName>
     where
         T: Iterator<Item = I>,
         I: Into<QualifiedNameTypeAndId>,
+        P: ProgressCallback,
     {
         let mut types: Vec<BNQualifiedNameTypeAndId> = names_sources_and_types
             .map(Into::into)
@@ -645,20 +645,18 @@ pub trait BinaryViewExt: BinaryViewBase {
             .collect();
         let mut result_ids: *mut *mut c_char = std::ptr::null_mut();
         let mut result_names: *mut BNQualifiedName = std::ptr::null_mut();
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+
         let result_count = unsafe {
             BNDefineAnalysisTypes(
                 self.as_ref().handle,
                 types.as_mut_ptr(),
                 types.len(),
-                Some(ProgressExecutor::cb_execute),
-                leaked_boxed_progress as *mut c_void,
+                Some(P::cb_progress_callback),
+                &mut progress as *mut P as *mut c_void,
                 &mut result_ids as *mut _,
                 &mut result_names as *mut _,
             )
         };
-        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
 
         for ty in types {
             QualifiedNameTypeAndId::free_raw(ty);
@@ -678,33 +676,30 @@ pub trait BinaryViewExt: BinaryViewBase {
         T: Iterator<Item = I>,
         I: Into<QualifiedNameAndType>,
     {
-        self.define_user_types_with_progress(names_and_types, ProgressExecutor::default());
+        self.define_user_types_with_progress(names_and_types, NoProgressCallback);
     }
 
-    fn define_user_types_with_progress<T, I>(
-        &self,
-        names_and_types: T,
-        progress: impl Into<ProgressExecutor>,
-    ) where
+    fn define_user_types_with_progress<T, I, P>(&self, names_and_types: T, mut progress: P)
+    where
         T: Iterator<Item = I>,
         I: Into<QualifiedNameAndType>,
+        P: ProgressCallback,
     {
         let mut types: Vec<BNQualifiedNameAndType> = names_and_types
             .map(Into::into)
             .map(QualifiedNameAndType::into_raw)
             .collect();
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+
         unsafe {
             BNDefineUserAnalysisTypes(
                 self.as_ref().handle,
                 types.as_mut_ptr(),
                 types.len(),
-                Some(ProgressExecutor::cb_execute),
-                leaked_boxed_progress as *mut c_void,
+                Some(P::cb_progress_callback),
+                &mut progress as *mut P as *mut c_void,
             )
         };
-        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+
         for ty in types {
             QualifiedNameAndType::free_raw(ty);
         }
@@ -1865,8 +1860,7 @@ impl BinaryView {
     }
 
     pub fn from_accessor(meta: &FileMetadata, file: &mut FileAccessor) -> Result<Ref<Self>> {
-        let handle =
-            unsafe { BNCreateBinaryDataViewFromFile(meta.handle, &mut file.api_object as *mut _) };
+        let handle = unsafe { BNCreateBinaryDataViewFromFile(meta.handle, &mut file.api_object) };
 
         if handle.is_null() {
             return Err(());
@@ -1885,6 +1879,17 @@ impl BinaryView {
         }
 
         unsafe { Ok(Ref::new(Self { handle })) }
+    }
+
+    /// Save the original binary file to the provided `file_path` along with any modifications.
+    pub fn save_to_path(&self, file_path: impl AsRef<Path>) -> bool {
+        let file = file_path.as_ref().into_bytes_with_nul();
+        unsafe { BNSaveToFilename(self.handle, file.as_ptr() as *mut _) }
+    }
+
+    /// Save the original binary file to the provided [`FileAccessor`] along with any modifications.
+    pub fn save_to_accessor(&self, file: &mut FileAccessor) -> bool {
+        unsafe { BNSaveToFile(self.handle, &mut file.api_object) }
     }
 }
 

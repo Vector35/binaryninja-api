@@ -1,6 +1,6 @@
 use super::Remote;
 use binaryninjacore_sys::*;
-use core::{ffi, mem, ptr};
+use std::ffi::c_char;
 use std::ptr::NonNull;
 
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
@@ -54,7 +54,7 @@ impl RemoteUser {
         let result = unsafe {
             BNCollaborationUserSetUsername(
                 self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const ffi::c_char,
+                username.as_ref().as_ptr() as *const c_char,
             )
         };
         if result {
@@ -77,7 +77,7 @@ impl RemoteUser {
         let result = unsafe {
             BNCollaborationUserSetEmail(
                 self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const ffi::c_char,
+                username.as_ref().as_ptr() as *const c_char,
             )
         };
         if result {

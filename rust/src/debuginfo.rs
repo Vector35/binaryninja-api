@@ -77,7 +77,7 @@
 use binaryninjacore_sys::*;
 use std::ffi::c_void;
 
-use crate::progress::ProgressExecutor;
+use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::variable::{NamedDataVariableWithType, NamedVariableWithType};
 use crate::{
     binary_view::BinaryView,
@@ -163,22 +163,20 @@ impl DebugInfoParser {
             view,
             debug_file,
             existing_debug_info,
-            ProgressExecutor::default(),
+            NoProgressCallback,
         )
     }
 
     /// Returns [`DebugInfo`] populated with debug info by this debug-info parser.
     ///
     /// Only provide a `DebugInfo` object if you wish to append to the existing debug info
-    pub fn parse_debug_info_with_progress(
+    pub fn parse_debug_info_with_progress<P: ProgressCallback>(
         &self,
         view: &BinaryView,
         debug_file: &BinaryView,
         existing_debug_info: Option<&DebugInfo>,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: P,
     ) -> Option<Ref<DebugInfo>> {
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
         let info: *mut BNDebugInfo = match existing_debug_info {
             Some(debug_info) => unsafe {
                 BNParseDebugInfo(
@@ -186,8 +184,8 @@ impl DebugInfoParser {
                     view.handle,
                     debug_file.handle,
                     debug_info.handle,
-                    Some(ProgressExecutor::cb_execute),
-                    leaked_boxed_progress as *mut c_void,
+                    Some(P::cb_progress_callback),
+                    &mut progress as *mut P as *mut c_void,
                 )
             },
             None => unsafe {
@@ -196,12 +194,12 @@ impl DebugInfoParser {
                     view.handle,
                     debug_file.handle,
                     std::ptr::null_mut(),
-                    Some(ProgressExecutor::cb_execute),
-                    leaked_boxed_progress as *mut c_void,
+                    Some(P::cb_progress_callback),
+                    &mut progress as *mut P as *mut c_void,
                 )
             },
         };
-        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+
         if info.is_null() {
             return None;
         }

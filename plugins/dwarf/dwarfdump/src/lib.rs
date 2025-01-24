@@ -14,7 +14,7 @@
 
 use binaryninja::{
     binary_view::{BinaryView, BinaryViewExt},
-    command::{register, Command},
+    command::{register_command, Command},
     disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenKind},
     flowgraph::{BranchType, EdgeStyle, FlowGraph, FlowGraphNode, FlowGraphOption},
 };
@@ -325,7 +325,7 @@ impl Command for DWARFDump {
 
 #[no_mangle]
 pub extern "C" fn UIPluginInit() -> bool {
-    register(
+    register_command(
         "DWARF Dump",
         "Show embedded DWARF info as a tree structure for you to navigate",
         DWARFDump {},

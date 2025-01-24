@@ -13,7 +13,7 @@ use crate::data_buffer::DataBuffer;
 use crate::database::kvs::KeyValueStore;
 use crate::database::snapshot::{Snapshot, SnapshotId};
 use crate::file_metadata::FileMetadata;
-use crate::progress::ProgressExecutor;
+use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 
@@ -76,26 +76,26 @@ impl Database {
             name,
             data,
             auto_save,
-            ProgressExecutor::default(),
+            NoProgressCallback,
         )
     }
 
-    pub fn write_snapshot_data_with_progress<N>(
+    pub fn write_snapshot_data_with_progress<N, P>(
         &self,
         parents: &[SnapshotId],
         file: &BinaryView,
         name: N,
         data: &KeyValueStore,
         auto_save: bool,
-        progress: impl Into<ProgressExecutor>,
+        mut progress: P,
     ) -> SnapshotId
     where
         N: BnStrCompatible,
+        P: ProgressCallback,
     {
         let name_raw = name.into_bytes_with_nul();
         let name_ptr = name_raw.as_ref().as_ptr() as *const c_char;
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+
         let new_id = unsafe {
             BNWriteDatabaseSnapshotData(
                 self.handle.as_ptr(),
@@ -106,11 +106,11 @@ impl Database {
                 name_ptr,
                 data.handle.as_ptr(),
                 auto_save,
-                leaked_boxed_progress as *mut c_void,
-                Some(ProgressExecutor::cb_execute),
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
             )
         };
-        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+
         SnapshotId(new_id)
     }
 
@@ -221,6 +221,7 @@ impl Debug for Database {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Database")
             .field("current_snapshot", &self.current_snapshot())
+            .field("snapshot_count", &self.snapshots().len())
             .field("globals", &self.globals())
             .field("analysis_cache", &self.analysis_cache())
             .finish()

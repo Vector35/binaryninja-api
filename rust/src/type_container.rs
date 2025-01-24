@@ -9,7 +9,7 @@
 // * [DebugInfo::get_type_container]
 
 use crate::platform::Platform;
-use crate::progress::ProgressExecutor;
+use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, Ref};
 use crate::string::{raw_to_string, BnStrCompatible, BnString};
 use crate::type_parser::{TypeParserError, TypeParserResult};
@@ -85,17 +85,14 @@ impl TypeContainer {
         I: IntoIterator<Item = T>,
         T: Into<QualifiedNameAndType>,
     {
-        self.add_types_with_progress(types, ProgressExecutor::default())
+        self.add_types_with_progress(types, NoProgressCallback)
     }
 
-    pub fn add_types_with_progress<I, T>(
-        &self,
-        types: I,
-        progress: impl Into<ProgressExecutor>,
-    ) -> bool
+    pub fn add_types_with_progress<I, T, P>(&self, types: I, mut progress: P) -> bool
     where
         I: IntoIterator<Item = T>,
         T: Into<QualifiedNameAndType>,
+        P: ProgressCallback,
     {
         // TODO: I dislike how this iter unzip looks like... but its how to avoid allocating again...
         let (raw_names, mut raw_types): (Vec<BNQualifiedName>, Vec<_>) = types
@@ -113,22 +110,21 @@ impl TypeContainer {
         let mut result_names = std::ptr::null_mut();
         let mut result_ids = std::ptr::null_mut();
         let mut result_count = 0;
-        let boxed_progress = Box::new(progress.into());
-        let leaked_boxed_progress = Box::into_raw(boxed_progress);
+
         let success = unsafe {
             BNTypeContainerAddTypes(
                 self.handle.as_ptr(),
                 raw_names.as_ptr(),
                 raw_types.as_mut_ptr(),
                 raw_types.len(),
-                Some(ProgressExecutor::cb_execute),
-                leaked_boxed_progress as *mut c_void,
+                Some(P::cb_progress_callback),
+                &mut progress as *mut P as *mut c_void,
                 &mut result_names,
                 &mut result_ids,
                 &mut result_count,
             )
         };
-        let _ = unsafe { Box::from_raw(leaked_boxed_progress) };
+
         for name in raw_names {
             QualifiedName::free_raw(name);
         }

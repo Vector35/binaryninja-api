@@ -1,5 +1,5 @@
 use binaryninjacore_sys::*;
-use core::{ffi, mem, ptr};
+use std::ffi::{c_char, c_void};
 use std::ptr::NonNull;
 
 use super::{sync, GroupId, RemoteGroup, RemoteProject, RemoteUser};
@@ -7,7 +7,7 @@ use super::{sync, GroupId, RemoteGroup, RemoteProject, RemoteUser};
 use crate::binary_view::BinaryView;
 use crate::database::Database;
 use crate::enterprise;
-use crate::ffi::{ProgressCallback, ProgressCallbackNop};
+use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::Project;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
@@ -32,8 +32,8 @@ impl Remote {
         let address = address.into_bytes_with_nul();
         let result = unsafe {
             BNCollaborationCreateRemote(
-                name.as_ref().as_ptr() as *const ffi::c_char,
-                address.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_ref().as_ptr() as *const c_char,
+                address.as_ref().as_ptr() as *const c_char,
             )
         };
         unsafe { Self::ref_from_raw(NonNull::new(result).unwrap()) }
@@ -124,8 +124,8 @@ impl Remote {
             self.load_metadata()?;
         }
 
-        let mut backend_ids = ptr::null_mut();
-        let mut backend_names = ptr::null_mut();
+        let mut backend_ids = std::ptr::null_mut();
+        let mut backend_names = std::ptr::null_mut();
         let mut count = 0;
         let success = unsafe {
             BNRemoteGetAuthBackends(
@@ -148,7 +148,7 @@ impl Remote {
     /// Checks if the current user is an administrator.
     pub fn is_admin(&self) -> Result<bool, ()> {
         if !self.has_pulled_users() {
-            self.pull_users(ProgressCallbackNop)?;
+            self.pull_users()?;
         }
         Ok(unsafe { BNRemoteIsAdmin(self.handle.as_ptr()) })
     }
@@ -178,8 +178,8 @@ impl Remote {
         let token = unsafe {
             BNRemoteRequestAuthenticationToken(
                 self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const ffi::c_char,
-                password.as_ref().as_ptr() as *const ffi::c_char,
+                username.as_ref().as_ptr() as *const c_char,
+                password.as_ref().as_ptr() as *const c_char,
             )
         };
         if token.is_null() {
@@ -189,77 +189,46 @@ impl Remote {
         }
     }
 
-    // TODO: implement enterprise and SecretsProvider
     /// Connects to the Remote, loading metadata and optionally acquiring a token.
     ///
-    /// NOTE: If no username or token are provided, they will be looked up from the keychain, \
-    /// 	likely saved there by Enterprise authentication.
-    pub fn connect<U: BnStrCompatible, T: BnStrCompatible>(
-        &self,
-        username_and_token: Option<(U, T)>,
-    ) -> Result<(), ()> {
-        if !self.has_loaded_metadata() {
-            self.load_metadata()?;
-        }
-
-        if let Some((username, token)) = username_and_token {
-            self.connect_with_username_and_token(username, token)
-        } else if self.is_enterprise()? && enterprise::is_server_authenticated() {
-            // Try connecting with enterprise.
-            let username = enterprise::server_username();
-            let token = enterprise::server_token();
-            self.connect_with_username_and_token(username, token)
+    /// Use [Remote::connect_with_opts] if you cannot otherwise automatically connect using enterprise.
+    pub fn connect(&self) -> Result<(), ()> {
+        // TODO: implement SecretsProvider
+        if self.is_enterprise()? && enterprise::is_server_authenticated() {
+            self.connect_with_opts(ConnectionOptions::from_enterprise()?)
         } else {
-            // TODO: implement SecretsProvider
-            //let secrets_prov_name = crate::settings::Settings::new(c"default").get_string(
-            //    c"enterprise.secretsProvider",
-            //    None,
-            //    None,
-            //);
-            //let secrets_prov = secrets::SecretsProvider::by_name(secrets_prov_name);
-            //let secrets_proc_creds = secrets_prov.get_data(self.address());
-            let secrets_proc_creds: Option<BnString> = None;
-            if let Some(_creds_json) = secrets_proc_creds {
-                // TODO: implement/use a json_decode
-                // try loggin from the secrets provider
-                //let crefs = json_decode::decode(creds_json.as_str());
-                //let username = creds.get("username");
-                //let token = creds.get("token");
-                //unsafe { BNRemoteConnect(self.handle.as_ptr(), username.as_ptr(), token.as_ptr()) }
-                unreachable!();
-            } else {
-                // try loggin in with creds in the env
-                let username = std::env::var("BN_ENTERPRISE_USERNAME").ok();
-                let password = std::env::var("BN_ENTERPRISE_PASSWORD").ok();
-                let token = username.as_ref().zip(password).map(|(username, password)| {
-                    self.request_authentication_token(username, password)
-                });
-
-                if let Some(Some(token)) = token {
-                    if let Some(username) = username {
-                        self.connect_with_username_and_token(username, token)   
-                    } else {
-                        // No username provided
-                        Err(())   
-                    }
-                } else {
-                    // unable to find valid creds (no token)
-                    return Err(());
-                }
-            }
+            // TODO: Make this error instead.
+            let username =
+                std::env::var("BN_ENTERPRISE_USERNAME").expect("No username for connection!");
+            let password =
+                std::env::var("BN_ENTERPRISE_PASSWORD").expect("No password for connection!");
+            let connection_opts = ConnectionOptions::new_with_password(username, password);
+            self.connect_with_opts(connection_opts)
         }
     }
 
-    pub fn connect_with_username_and_token<U: BnStrCompatible, T: BnStrCompatible>(
-        &self,
-        username: U,
-        token: T,
-    ) -> Result<(), ()> {
-        let username = username.into_bytes_with_nul();
+    // TODO: This needs docs and proper error.
+    pub fn connect_with_opts(&self, options: ConnectionOptions) -> Result<(), ()> {
+        // TODO: Should we make used load metadata first?
+        if !self.has_loaded_metadata() {
+            self.load_metadata()?;
+        }
+        let token = match options.token {
+            Some(token) => token,
+            None => {
+                // TODO: If password not defined than error saying no token or password
+                let password = options
+                    .password
+                    .expect("No password or token for connection!");
+                let token = self.request_authentication_token(&options.username, password);
+                // TODO: Error if None.
+                token.unwrap().to_string()
+            }
+        };
+        let username = options.username.into_bytes_with_nul();
+        let username_ptr = username.as_ptr() as *const c_char;
         let token = token.into_bytes_with_nul();
-        let username_ptr = username.as_ref().as_ptr() as *const ffi::c_char;
-        let token_ptr = token.as_ref().as_ptr() as *const ffi::c_char;
-
+        let token_ptr = token.as_ptr() as *const c_char;
         let success = unsafe { BNRemoteConnect(self.handle.as_ptr(), username_ptr, token_ptr) };
         success.then_some(()).ok_or(())
     }
@@ -290,7 +259,7 @@ impl Remote {
     /// NOTE: If projects have not been pulled, they will be pulled upon calling this.
     pub fn projects(&self) -> Result<Array<RemoteProject>, ()> {
         if !self.has_pulled_projects() {
-            self.pull_projects(ProgressCallbackNop)?;
+            self.pull_projects()?;
         }
 
         let mut count = 0;
@@ -309,15 +278,12 @@ impl Remote {
         id: S,
     ) -> Result<Option<Ref<RemoteProject>>, ()> {
         if !self.has_pulled_projects() {
-            self.pull_projects(ProgressCallbackNop)?;
+            self.pull_projects()?;
         }
 
         let id = id.into_bytes_with_nul();
         let value = unsafe {
-            BNRemoteGetProjectById(
-                self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const ffi::c_char,
-            )
+            BNRemoteGetProjectById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
         };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) }))
     }
@@ -330,17 +296,22 @@ impl Remote {
         name: S,
     ) -> Result<Option<Ref<RemoteProject>>, ()> {
         if !self.has_pulled_projects() {
-            self.pull_projects(ProgressCallbackNop)?;
+            self.pull_projects()?;
         }
 
         let name = name.into_bytes_with_nul();
         let value = unsafe {
             BNRemoteGetProjectByName(
                 self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_ref().as_ptr() as *const c_char,
             )
         };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) }))
+    }
+
+    /// Pulls the list of projects from the Remote.
+    pub fn pull_projects(&self) -> Result<(), ()> {
+        self.pull_projects_with_progress(NoProgressCallback)
     }
 
     /// Pulls the list of projects from the Remote.
@@ -348,12 +319,15 @@ impl Remote {
     /// # Arguments
     ///
     /// * `progress` - Function to call for progress updates
-    pub fn pull_projects<F: ProgressCallback>(&self, mut progress: F) -> Result<(), ()> {
+    pub fn pull_projects_with_progress<F: ProgressCallback>(
+        &self,
+        mut progress: F,
+    ) -> Result<(), ()> {
         let success = unsafe {
             BNRemotePullProjects(
                 self.handle.as_ptr(),
                 Some(F::cb_progress_callback),
-                &mut progress as *mut F as *mut ffi::c_void,
+                &mut progress as *mut F as *mut c_void,
             )
         };
         success.then_some(()).ok_or(())
@@ -370,13 +344,19 @@ impl Remote {
         name: N,
         description: D,
     ) -> Result<Ref<RemoteProject>, ()> {
+        // TODO: Do we want this?
+        // TODO: If you have not yet pulled projects you will have never filled the map you will be placing your
+        // TODO: New project in.
+        if !self.has_pulled_projects() {
+            self.pull_projects()?;
+        }
         let name = name.into_bytes_with_nul();
         let description = description.into_bytes_with_nul();
         let value = unsafe {
             BNRemoteCreateProject(
                 self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const ffi::c_char,
-                description.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_ref().as_ptr() as *const c_char,
+                description.as_ref().as_ptr() as *const c_char,
             )
         };
         NonNull::new(value)
@@ -385,7 +365,12 @@ impl Remote {
     }
 
     /// Create a new project on the remote from a local project.
-    pub fn import_local_project<P: ProgressCallback>(
+    pub fn import_local_project(&self, project: &Project) -> Option<Ref<RemoteProject>> {
+        self.import_local_project_with_progress(project, NoProgressCallback)
+    }
+
+    /// Create a new project on the remote from a local project.
+    pub fn import_local_project_with_progress<P: ProgressCallback>(
         &self,
         project: &Project,
         mut progress: P,
@@ -395,7 +380,7 @@ impl Remote {
                 self.handle.as_ptr(),
                 project.handle.as_ptr(),
                 Some(P::cb_progress_callback),
-                &mut progress as *mut P as *mut ffi::c_void,
+                &mut progress as *mut P as *mut c_void,
             )
         };
         NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) })
@@ -419,11 +404,11 @@ impl Remote {
             .unzip();
         let mut keys_raw = keys
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect::<Vec<_>>();
         let mut values_raw = values
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect::<Vec<_>>();
 
         let success = unsafe {
@@ -451,7 +436,7 @@ impl Remote {
     /// This function is only available to accounts with admin status on the Remote.
     pub fn groups(&self) -> Result<Array<RemoteGroup>, ()> {
         if !self.has_pulled_groups() {
-            self.pull_groups(ProgressCallbackNop)?;
+            self.pull_groups()?;
         }
 
         let mut count = 0;
@@ -466,12 +451,12 @@ impl Remote {
     ///
     /// If groups have not been pulled, they will be pulled upon calling this.
     /// This function is only available to accounts with admin status on the Remote.
-    pub fn get_group_by_id(&self, id: u64) -> Result<Option<Ref<RemoteGroup>>, ()> {
+    pub fn get_group_by_id(&self, id: GroupId) -> Result<Option<Ref<RemoteGroup>>, ()> {
         if !self.has_pulled_groups() {
-            self.pull_groups(ProgressCallbackNop)?;
+            self.pull_groups()?;
         }
 
-        let value = unsafe { BNRemoteGetGroupById(self.handle.as_ptr(), id) };
+        let value = unsafe { BNRemoteGetGroupById(self.handle.as_ptr(), id.0) };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteGroup::ref_from_raw(handle) }))
     }
 
@@ -484,14 +469,14 @@ impl Remote {
         name: S,
     ) -> Result<Option<Ref<RemoteGroup>>, ()> {
         if !self.has_pulled_groups() {
-            self.pull_groups(ProgressCallbackNop)?;
+            self.pull_groups()?;
         }
 
         let name = name.into_bytes_with_nul();
         let value = unsafe {
             BNRemoteGetGroupByName(
                 self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_ref().as_ptr() as *const c_char,
             )
         };
 
@@ -509,13 +494,13 @@ impl Remote {
     ) -> Result<(Array<GroupId>, Array<BnString>), ()> {
         let prefix = prefix.into_bytes_with_nul();
         let mut count = 0;
-        let mut group_ids = ptr::null_mut();
-        let mut group_names = ptr::null_mut();
+        let mut group_ids = std::ptr::null_mut();
+        let mut group_names = std::ptr::null_mut();
 
         let success = unsafe {
             BNRemoteSearchGroups(
                 self.handle.as_ptr(),
-                prefix.as_ref().as_ptr() as *const ffi::c_char,
+                prefix.as_ref().as_ptr() as *const c_char,
                 &mut group_ids,
                 &mut group_names,
                 &mut count,
@@ -534,16 +519,25 @@ impl Remote {
 
     /// Pulls the list of groups from the Remote.
     /// This function is only available to accounts with admin status on the Remote.
+    pub fn pull_groups(&self) -> Result<(), ()> {
+        self.pull_groups_with_progress(NoProgressCallback)
+    }
+
+    /// Pulls the list of groups from the Remote.
+    /// This function is only available to accounts with admin status on the Remote.
     ///
     /// # Arguments
     ///
     /// * `progress` - Function to call for progress updates
-    pub fn pull_groups<F: ProgressCallback>(&self, mut progress: F) -> Result<(), ()> {
+    pub fn pull_groups_with_progress<F: ProgressCallback>(
+        &self,
+        mut progress: F,
+    ) -> Result<(), ()> {
         let success = unsafe {
             BNRemotePullGroups(
                 self.handle.as_ptr(),
                 Some(F::cb_progress_callback),
-                &mut progress as *mut F as *mut ffi::c_void,
+                &mut progress as *mut F as *mut c_void,
             )
         };
         success.then_some(()).ok_or(())
@@ -569,13 +563,13 @@ impl Remote {
             .collect();
         let mut username_ptrs: Vec<_> = usernames
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect();
 
         let value = unsafe {
             BNRemoteCreateGroup(
                 self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_ref().as_ptr() as *const c_char,
                 username_ptrs.as_mut_ptr(),
                 username_ptrs.len(),
             )
@@ -604,11 +598,11 @@ impl Remote {
             .unzip();
         let mut keys_raw: Vec<_> = keys
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect();
         let mut values_raw: Vec<_> = values
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect();
 
         let success = unsafe {
@@ -624,7 +618,7 @@ impl Remote {
     }
 
     /// Deletes the specified group from the remote.
-
+    ///
     /// NOTE: This function is only available to accounts with admin status on the Remote
     ///
     /// # Arguments
@@ -642,7 +636,7 @@ impl Remote {
     /// NOTE: This function is only available to accounts with admin status on the Remote
     pub fn users(&self) -> Result<Array<RemoteUser>, ()> {
         if !self.has_pulled_users() {
-            self.pull_users(ProgressCallbackNop)?;
+            self.pull_users()?;
         }
         let mut count = 0;
         let value = unsafe { BNRemoteGetUsers(self.handle.as_ptr(), &mut count) };
@@ -663,14 +657,11 @@ impl Remote {
     /// * `id` - The identifier of the user to retrieve.
     pub fn get_user_by_id<S: BnStrCompatible>(&self, id: S) -> Result<Option<Ref<RemoteUser>>, ()> {
         if !self.has_pulled_users() {
-            self.pull_users(ProgressCallbackNop)?;
+            self.pull_users()?;
         }
         let id = id.into_bytes_with_nul();
         let value = unsafe {
-            BNRemoteGetUserById(
-                self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const ffi::c_char,
-            )
+            BNRemoteGetUserById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
         };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteUser::ref_from_raw(handle) }))
     }
@@ -689,13 +680,13 @@ impl Remote {
         username: S,
     ) -> Result<Option<Ref<RemoteUser>>, ()> {
         if !self.has_pulled_users() {
-            self.pull_users(ProgressCallbackNop)?;
+            self.pull_users()?;
         }
         let username = username.into_bytes_with_nul();
         let value = unsafe {
             BNRemoteGetUserByUsername(
                 self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const ffi::c_char,
+                username.as_ref().as_ptr() as *const c_char,
             )
         };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteUser::ref_from_raw(handle) }))
@@ -708,7 +699,7 @@ impl Remote {
     /// NOTE: This function is only available to accounts with admin status on the Remote
     pub fn current_user(&self) -> Result<Option<Ref<RemoteUser>>, ()> {
         if !self.has_pulled_users() {
-            self.pull_users(ProgressCallbackNop)?;
+            self.pull_users()?;
         }
         let value = unsafe { BNRemoteGetCurrentUser(self.handle.as_ptr()) };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteUser::ref_from_raw(handle) }))
@@ -725,12 +716,12 @@ impl Remote {
     ) -> Result<(Array<BnString>, Array<BnString>), ()> {
         let prefix = prefix.into_bytes_with_nul();
         let mut count = 0;
-        let mut user_ids = ptr::null_mut();
-        let mut usernames = ptr::null_mut();
+        let mut user_ids = std::ptr::null_mut();
+        let mut usernames = std::ptr::null_mut();
         let success = unsafe {
             BNRemoteSearchUsers(
                 self.handle.as_ptr(),
-                prefix.as_ref().as_ptr() as *const ffi::c_char,
+                prefix.as_ref().as_ptr() as *const c_char,
                 &mut user_ids,
                 &mut usernames,
                 &mut count,
@@ -754,16 +745,24 @@ impl Remote {
     ///
     /// NOTE: This function is only available to accounts with admin status on the Remote.
     /// Non-admin accounts attempting to call this function will pull an empty list of users.
+    pub fn pull_users(&self) -> Result<(), ()> {
+        self.pull_users_with_progress(NoProgressCallback)
+    }
+
+    /// Pulls the list of users from the remote.
+    ///
+    /// NOTE: This function is only available to accounts with admin status on the Remote.
+    /// Non-admin accounts attempting to call this function will pull an empty list of users.
     ///
     /// # Arguments
     ///
     /// * `progress` - Closure called to report progress. Takes current and total progress counts.
-    pub fn pull_users<P: ProgressCallback>(&self, mut progress: P) -> Result<(), ()> {
+    pub fn pull_users_with_progress<P: ProgressCallback>(&self, mut progress: P) -> Result<(), ()> {
         let success = unsafe {
             BNRemotePullUsers(
                 self.handle.as_ptr(),
                 Some(P::cb_progress_callback),
-                &mut progress as *mut P as *mut ffi::c_void,
+                &mut progress as *mut P as *mut c_void,
             )
         };
         success.then_some(()).ok_or(())
@@ -792,10 +791,10 @@ impl Remote {
         let value = unsafe {
             BNRemoteCreateUser(
                 self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const ffi::c_char,
-                email.as_ref().as_ptr() as *const ffi::c_char,
+                username.as_ref().as_ptr() as *const c_char,
+                email.as_ref().as_ptr() as *const c_char,
                 is_active,
-                password.as_ref().as_ptr() as *const ffi::c_char,
+                password.as_ref().as_ptr() as *const c_char,
                 group_ids.as_ptr(),
                 group_ids.len(),
                 user_permission_ids.as_ptr(),
@@ -827,11 +826,11 @@ impl Remote {
             .unzip();
         let mut keys_raw: Vec<_> = keys
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect();
         let mut values_raw: Vec<_> = values
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect();
         let success = unsafe {
             BNRemotePushUser(
@@ -902,4 +901,59 @@ unsafe impl CoreArrayProviderInner for Remote {
         let raw_ptr = NonNull::new(*raw).unwrap();
         Guard::new(Self::from_raw(raw_ptr), context)
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ConnectionOptions {
+    pub username: String,
+    /// Provide this if you want to authenticate with a password.
+    pub password: Option<String>,
+    /// Provide this if you want to authenticate with a token.
+    ///
+    /// If you do not have a token you can use [ConnectionOptions::self].
+    pub token: Option<String>,
+}
+
+impl ConnectionOptions {
+    pub fn new_with_token(username: String, token: String) -> Self {
+        Self {
+            username,
+            token: Some(token),
+            password: None,
+        }
+    }
+
+    pub fn new_with_password(username: String, password: String) -> Self {
+        Self {
+            username,
+            token: None,
+            password: Some(password),
+        }
+    }
+
+    pub fn with_token(self, token: String) -> Self {
+        Self {
+            token: Some(token),
+            ..self
+        }
+    }
+
+    pub fn with_password(self, token: String) -> Self {
+        Self {
+            token: Some(token),
+            ..self
+        }
+    }
+
+    pub fn from_enterprise() -> Result<Self, ()> {
+        // TODO: Check if enterprise is initialized and error if not.
+        let username = enterprise::server_username();
+        let token = enterprise::server_token();
+        Ok(Self::new_with_token(
+            username.to_string(),
+            token.to_string(),
+        ))
+    }
+
+    // TODO: from_secrets_provider
 }

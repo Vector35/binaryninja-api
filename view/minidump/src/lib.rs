@@ -1,5 +1,5 @@
 use binaryninja::binary_view::BinaryView;
-use binaryninja::command::{register, Command};
+use binaryninja::command::{register_command, Command};
 use binaryninja::custom_binary_view::register_view_type;
 use binaryninja::logger::Logger;
 use log::{debug, LevelFilter};
@@ -30,7 +30,7 @@ pub extern "C" fn CorePluginInit() -> bool {
     register_view_type("Minidump", "Minidump", view::MinidumpBinaryViewType::new);
 
     debug!("Registering minidump plugin commands");
-    register(
+    register_command(
         "Minidump\\[DEBUG] Print Minidump Memory Information",
         "Print a human-readable description of the contents of the MinidumpMemoryInfoList stream in the loaded minidump",
         PrintMemoryInformationCommand {},

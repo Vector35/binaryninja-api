@@ -1,5 +1,5 @@
 use binaryninjacore_sys::*;
-use core::{ffi, mem, ptr};
+use std::ffi::c_char;
 use std::ptr::NonNull;
 
 use super::{RemoteFile, RemoteUser};
@@ -20,6 +20,7 @@ impl Changeset {
         Self { handle }
     }
 
+    #[allow(unused)]
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNCollaborationChangeset>) -> Ref<Self> {
         Ref::new(Self { handle })
     }
@@ -70,7 +71,7 @@ impl Changeset {
         unsafe {
             BNCollaborationChangesetSetName(
                 self.handle.as_ptr(),
-                value.as_ref().as_ptr() as *const ffi::c_char,
+                value.as_ref().as_ptr() as *const c_char,
             )
         }
     }

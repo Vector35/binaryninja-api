@@ -1,9 +1,8 @@
 use super::Remote;
-use crate::database::snapshot::SnapshotId;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 use binaryninjacore_sys::*;
-use core::{ffi, mem, ptr};
+use std::ffi::c_char;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ptr::NonNull;
@@ -38,8 +37,8 @@ impl RemoteGroup {
     }
 
     /// Unique id
-    pub fn id(&self) -> u64 {
-        unsafe { BNCollaborationGroupGetId(self.handle.as_ptr()) }
+    pub fn id(&self) -> GroupId {
+        GroupId(unsafe { BNCollaborationGroupGetId(self.handle.as_ptr()) })
     }
 
     /// Group name
@@ -56,16 +55,18 @@ impl RemoteGroup {
         unsafe {
             BNCollaborationGroupSetName(
                 self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_ref().as_ptr() as *const c_char,
             )
         }
     }
 
     /// Get list of users in the group
     pub fn users(&self) -> Result<(Array<BnString>, Array<BnString>), ()> {
-        let mut usernames = ptr::null_mut();
-        let mut user_ids = ptr::null_mut();
+        let mut usernames = std::ptr::null_mut();
+        let mut user_ids = std::ptr::null_mut();
         let mut count = 0;
+        // TODO: This should only fail if collaboration is not supported.
+        // TODO: Because you should not have a RemoteGroup at that point we can ignore?
         let success = unsafe {
             BNCollaborationGroupGetUsers(
                 self.handle.as_ptr(),
@@ -83,6 +84,7 @@ impl RemoteGroup {
             .ok_or(())
     }
 
+    // TODO: Are any permissions required to the set the remote group users?
     /// Set the list of users in a group by their usernames.
     /// You will need to push the group to update the Remote.
     pub fn set_users<I>(&self, usernames: I) -> Result<(), ()>
@@ -96,8 +98,11 @@ impl RemoteGroup {
             .collect();
         let mut usernames_raw: Vec<_> = usernames
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect();
+        // TODO: This should only fail if collaboration is not supported.
+        // TODO: Because you should not have a RemoteGroup at that point we can ignore?
+        // TODO: Do you need any permissions to do this?
         let success = unsafe {
             BNCollaborationGroupSetUsernames(
                 self.handle.as_ptr(),
@@ -114,7 +119,7 @@ impl RemoteGroup {
         unsafe {
             BNCollaborationGroupContainsUser(
                 self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const ffi::c_char,
+                username.as_ref().as_ptr() as *const c_char,
             )
         }
     }

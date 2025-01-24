@@ -1,4 +1,4 @@
-use core::{ffi, mem, ptr};
+use std::ffi::{c_char, c_void};
 use std::ptr::NonNull;
 use std::time::SystemTime;
 
@@ -11,8 +11,8 @@ use super::{
 
 use crate::binary_view::{BinaryView, BinaryViewExt};
 use crate::database::Database;
-use crate::ffi::{ProgressCallback, ProgressCallbackNop};
 use crate::file_metadata::FileMetadata;
+use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::Project;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
@@ -38,7 +38,13 @@ impl RemoteProject {
 
     /// Open the project, allowing various file and folder based apis to work, as well as
     /// connecting a core Project
-    pub fn open<F: ProgressCallback>(&self, mut progress: F) -> Result<(), ()> {
+    pub fn open(&self) -> Result<(), ()> {
+        self.open_with_progress(NoProgressCallback)
+    }
+
+    /// Open the project, allowing various file and folder based apis to work, as well as
+    /// connecting a core Project
+    pub fn open_with_progress<F: ProgressCallback>(&self, mut progress: F) -> Result<(), ()> {
         if self.is_open() {
             return Ok(());
         }
@@ -46,7 +52,7 @@ impl RemoteProject {
             BNRemoteProjectOpen(
                 self.handle.as_ptr(),
                 Some(F::cb_progress_callback),
-                &mut progress as *mut F as *mut ffi::c_void,
+                &mut progress as *mut F as *mut c_void,
             )
         };
         success.then_some(()).ok_or(())
@@ -59,6 +65,7 @@ impl RemoteProject {
 
     /// Get the Remote Project for a Database
     pub fn get_for_local_database(database: &Database) -> Result<Option<Ref<Self>>, ()> {
+        // TODO: This sync should be removed?
         if sync::pull_projects(database)? {
             return Ok(None);
         }
@@ -78,7 +85,8 @@ impl RemoteProject {
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     pub fn core_project(&self) -> Result<Ref<Project>, ()> {
-        self.open(ProgressCallbackNop)?;
+        // TODO: This sync should be removed?
+        self.open()?;
 
         let value = unsafe { BNRemoteProjectGetCoreProject(self.handle.as_ptr()) };
         NonNull::new(value)
@@ -133,7 +141,7 @@ impl RemoteProject {
         let success = unsafe {
             BNRemoteProjectSetName(
                 self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_ref().as_ptr() as *const c_char,
             )
         };
         success.then_some(()).ok_or(())
@@ -152,7 +160,7 @@ impl RemoteProject {
         let success = unsafe {
             BNRemoteProjectSetDescription(
                 self.handle.as_ptr(),
-                description.as_ref().as_ptr() as *const ffi::c_char,
+                description.as_ref().as_ptr() as *const c_char,
             )
         };
         success.then_some(()).ok_or(())
@@ -206,8 +214,9 @@ impl RemoteProject {
     /// NOTE: If folders have not been pulled, they will be pulled upon calling this.
     /// NOTE: If files have not been pulled, they will be pulled upon calling this.
     pub fn files(&self) -> Result<Array<RemoteFile>, ()> {
+        // TODO: This sync should be removed?
         if !self.has_pulled_files() {
-            self.pull_files(ProgressCallbackNop)?;
+            self.pull_files()?;
         }
 
         let mut count = 0;
@@ -222,15 +231,13 @@ impl RemoteProject {
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     /// NOTE: If files have not been pulled, they will be pulled upon calling this.
     pub fn get_file_by_id<S: BnStrCompatible>(&self, id: S) -> Result<Option<Ref<RemoteFile>>, ()> {
+        // TODO: This sync should be removed?
         if !self.has_pulled_files() {
-            self.pull_files(ProgressCallbackNop)?;
+            self.pull_files()?;
         }
         let id = id.into_bytes_with_nul();
         let result = unsafe {
-            BNRemoteProjectGetFileById(
-                self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const ffi::c_char,
-            )
+            BNRemoteProjectGetFileById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
         };
         Ok(NonNull::new(result).map(|handle| unsafe { RemoteFile::ref_from_raw(handle) }))
     }
@@ -243,14 +250,15 @@ impl RemoteProject {
         &self,
         name: S,
     ) -> Result<Option<Ref<RemoteFile>>, ()> {
+        // TODO: This sync should be removed?
         if !self.has_pulled_files() {
-            self.pull_files(ProgressCallbackNop)?;
+            self.pull_files()?;
         }
         let id = name.into_bytes_with_nul();
         let result = unsafe {
             BNRemoteProjectGetFileByName(
                 self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const ffi::c_char,
+                id.as_ref().as_ptr() as *const c_char,
             )
         };
         Ok(NonNull::new(result).map(|handle| unsafe { RemoteFile::ref_from_raw(handle) }))
@@ -260,15 +268,24 @@ impl RemoteProject {
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     /// NOTE: If folders have not been pulled, they will be pulled upon calling this.
-    pub fn pull_files<P: ProgressCallback>(&self, mut progress: P) -> Result<(), ()> {
+    pub fn pull_files(&self) -> Result<(), ()> {
+        self.pull_files_with_progress(NoProgressCallback)
+    }
+
+    /// Pull the list of files from the Remote.
+    ///
+    /// NOTE: If the project has not been opened, it will be opened upon calling this.
+    /// NOTE: If folders have not been pulled, they will be pulled upon calling this.
+    pub fn pull_files_with_progress<P: ProgressCallback>(&self, mut progress: P) -> Result<(), ()> {
+        // TODO: This sync should be removed?
         if !self.has_pulled_folders() {
-            self.pull_folders(ProgressCallbackNop)?;
+            self.pull_folders()?;
         }
         let success = unsafe {
             BNRemoteProjectPullFiles(
                 self.handle.as_ptr(),
                 Some(P::cb_progress_callback),
-                &mut progress as *mut P as *mut ffi::c_void,
+                &mut progress as *mut P as *mut c_void,
             )
         };
         success.then_some(()).ok_or(())
@@ -284,8 +301,43 @@ impl RemoteProject {
     /// * `description` - File description
     /// * `parent_folder` - Folder that will contain the file
     /// * `file_type` - Type of File to create
+    pub fn create_file<F, N, D>(
+        &self,
+        filename: F,
+        contents: &[u8],
+        name: N,
+        description: D,
+        parent_folder: Option<&RemoteFolder>,
+        file_type: RemoteFileType,
+    ) -> Result<Ref<RemoteFile>, ()>
+    where
+        F: BnStrCompatible,
+        N: BnStrCompatible,
+        D: BnStrCompatible,
+    {
+        self.create_file_with_progress(
+            filename,
+            contents,
+            name,
+            description,
+            parent_folder,
+            file_type,
+            NoProgressCallback,
+        )
+    }
+
+    /// Create a new file on the remote and return a reference to the created file
+    ///
+    /// NOTE: If the project has not been opened, it will be opened upon calling this.
+    ///
+    /// * `filename` - File name
+    /// * `contents` - File contents
+    /// * `name` - Displayed file name
+    /// * `description` - File description
+    /// * `parent_folder` - Folder that will contain the file
+    /// * `file_type` - Type of File to create
     /// * `progress` - Function to call on upload progress updates
-    pub fn create_file<F, N, D, P>(
+    pub fn create_file_with_progress<F, N, D, P>(
         &self,
         filename: F,
         contents: &[u8],
@@ -301,24 +353,25 @@ impl RemoteProject {
         D: BnStrCompatible,
         P: ProgressCallback,
     {
-        self.open(ProgressCallbackNop)?;
+        // TODO: This sync should be removed?
+        self.open()?;
 
         let filename = filename.into_bytes_with_nul();
         let name = name.into_bytes_with_nul();
         let description = description.into_bytes_with_nul();
-        let folder_handle = parent_folder.map_or(ptr::null_mut(), |f| f.handle.as_ptr());
+        let folder_handle = parent_folder.map_or(std::ptr::null_mut(), |f| f.handle.as_ptr());
         let file_ptr = unsafe {
             BNRemoteProjectCreateFile(
                 self.handle.as_ptr(),
-                filename.as_ref().as_ptr() as *const ffi::c_char,
+                filename.as_ref().as_ptr() as *const c_char,
                 contents.as_ptr() as *mut _,
                 contents.len(),
-                name.as_ref().as_ptr() as *const ffi::c_char,
-                description.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_ref().as_ptr() as *const c_char,
+                description.as_ref().as_ptr() as *const c_char,
                 folder_handle,
                 file_type,
                 Some(P::cb_progress_callback),
-                &mut progress as *mut P as *mut ffi::c_void,
+                &mut progress as *mut P as *mut c_void,
             )
         };
 
@@ -336,7 +389,8 @@ impl RemoteProject {
         K: BnStrCompatible,
         V: BnStrCompatible,
     {
-        self.open(ProgressCallbackNop)?;
+        // TODO: This sync should be removed?
+        self.open()?;
 
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
@@ -344,11 +398,11 @@ impl RemoteProject {
             .unzip();
         let mut keys_raw = keys
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect::<Vec<_>>();
         let mut values_raw = values
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect::<Vec<_>>();
         let success = unsafe {
             BNRemoteProjectPushFile(
@@ -363,7 +417,8 @@ impl RemoteProject {
     }
 
     pub fn delete_file(&self, file: &RemoteFile) -> Result<(), ()> {
-        self.open(ProgressCallbackNop)?;
+        // TODO: This sync should be removed?
+        self.open()?;
 
         let success =
             unsafe { BNRemoteProjectDeleteFile(self.handle.as_ptr(), file.handle.as_ptr()) };
@@ -375,8 +430,9 @@ impl RemoteProject {
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     /// NOTE: If folders have not been pulled, they will be pulled upon calling this.
     pub fn folders(&self) -> Result<Array<RemoteFolder>, ()> {
+        // TODO: This sync should be removed?
         if !self.has_pulled_folders() {
-            self.pull_folders(ProgressCallbackNop)?;
+            self.pull_folders()?;
         }
         let mut count = 0;
         let result = unsafe { BNRemoteProjectGetFolders(self.handle.as_ptr(), &mut count) };
@@ -394,14 +450,15 @@ impl RemoteProject {
         &self,
         id: S,
     ) -> Result<Option<Ref<RemoteFolder>>, ()> {
+        // TODO: This sync should be removed?
         if !self.has_pulled_folders() {
-            self.pull_folders(ProgressCallbackNop)?;
+            self.pull_folders()?;
         }
         let id = id.into_bytes_with_nul();
         let result = unsafe {
             BNRemoteProjectGetFolderById(
                 self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const ffi::c_char,
+                id.as_ref().as_ptr() as *const c_char,
             )
         };
         Ok(NonNull::new(result).map(|handle| unsafe { RemoteFolder::ref_from_raw(handle) }))
@@ -410,14 +467,25 @@ impl RemoteProject {
     /// Pull the list of folders from the Remote.
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
-    pub fn pull_folders<P: ProgressCallback>(&self, mut progress: P) -> Result<(), ()> {
-        self.open(ProgressCallbackNop)?;
+    pub fn pull_folders(&self) -> Result<(), ()> {
+        self.pull_folders_with_progress(NoProgressCallback)
+    }
+
+    /// Pull the list of folders from the Remote.
+    ///
+    /// NOTE: If the project has not been opened, it will be opened upon calling this.
+    pub fn pull_folders_with_progress<P: ProgressCallback>(
+        &self,
+        mut progress: P,
+    ) -> Result<(), ()> {
+        // TODO: This sync should be removed?
+        self.open()?;
 
         let success = unsafe {
             BNRemoteProjectPullFolders(
                 self.handle.as_ptr(),
                 Some(P::cb_progress_callback),
-                &mut progress as *mut P as *mut ffi::c_void,
+                &mut progress as *mut P as *mut c_void,
             )
         };
         success.then_some(()).ok_or(())
@@ -430,8 +498,28 @@ impl RemoteProject {
     /// * `name` - Displayed folder name
     /// * `description` - Folder description
     /// * `parent` - Parent folder (optional)
+    pub fn create_folder<N, D>(
+        &self,
+        name: N,
+        description: D,
+        parent_folder: Option<&RemoteFolder>,
+    ) -> Result<Ref<RemoteFolder>, ()>
+    where
+        N: BnStrCompatible,
+        D: BnStrCompatible,
+    {
+        self.create_folder_with_progress(name, description, parent_folder, NoProgressCallback)
+    }
+
+    /// Create a new folder on the remote (and pull it)
+    ///
+    /// NOTE: If the project has not been opened, it will be opened upon calling this.
+    ///
+    /// * `name` - Displayed folder name
+    /// * `description` - Folder description
+    /// * `parent` - Parent folder (optional)
     /// * `progress` - Function to call on upload progress updates
-    pub fn create_folders<N, D, P>(
+    pub fn create_folder_with_progress<N, D, P>(
         &self,
         name: N,
         description: D,
@@ -443,19 +531,20 @@ impl RemoteProject {
         D: BnStrCompatible,
         P: ProgressCallback,
     {
-        self.open(ProgressCallbackNop)?;
+        // TODO: This sync should be removed?
+        self.open()?;
 
         let name = name.into_bytes_with_nul();
         let description = description.into_bytes_with_nul();
-        let folder_handle = parent_folder.map_or(ptr::null_mut(), |f| f.handle.as_ptr());
+        let folder_handle = parent_folder.map_or(std::ptr::null_mut(), |f| f.handle.as_ptr());
         let file_ptr = unsafe {
             BNRemoteProjectCreateFolder(
                 self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const ffi::c_char,
-                description.as_ref().as_ptr() as *const ffi::c_char,
+                name.as_ref().as_ptr() as *const c_char,
+                description.as_ref().as_ptr() as *const c_char,
                 folder_handle,
                 Some(P::cb_progress_callback),
-                &mut progress as *mut P as *mut ffi::c_void,
+                &mut progress as *mut P as *mut c_void,
             )
         };
 
@@ -476,7 +565,8 @@ impl RemoteProject {
         K: BnStrCompatible,
         V: BnStrCompatible,
     {
-        self.open(ProgressCallbackNop)?;
+        // TODO: This sync should be removed?
+        self.open()?;
 
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
@@ -484,11 +574,11 @@ impl RemoteProject {
             .unzip();
         let mut keys_raw = keys
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect::<Vec<_>>();
         let mut values_raw = values
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect::<Vec<_>>();
         let success = unsafe {
             BNRemoteProjectPushFolder(
@@ -506,7 +596,8 @@ impl RemoteProject {
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     pub fn delete_folder(&self, folder: &RemoteFolder) -> Result<(), ()> {
-        self.open(ProgressCallbackNop)?;
+        // TODO: This sync should be removed?
+        self.open()?;
 
         let success =
             unsafe { BNRemoteProjectDeleteFolder(self.handle.as_ptr(), folder.handle.as_ptr()) };
@@ -517,8 +608,9 @@ impl RemoteProject {
     ///
     /// NOTE: If group permissions have not been pulled, they will be pulled upon calling this.
     pub fn group_permissions(&self) -> Result<Array<Permission>, ()> {
+        // TODO: This sync should be removed?
         if !self.has_pulled_group_permissions() {
-            self.pull_group_permissions(ProgressCallbackNop)?;
+            self.pull_group_permissions()?;
         }
 
         let mut count: usize = 0;
@@ -531,8 +623,9 @@ impl RemoteProject {
     ///
     /// NOTE: If user permissions have not been pulled, they will be pulled upon calling this.
     pub fn user_permissions(&self) -> Result<Array<Permission>, ()> {
+        // TODO: This sync should be removed?
         if !self.has_pulled_user_permissions() {
-            self.pull_user_permissions(ProgressCallbackNop)?;
+            self.pull_user_permissions()?;
         }
 
         let mut count: usize = 0;
@@ -548,12 +641,13 @@ impl RemoteProject {
         &self,
         id: S,
     ) -> Result<Option<Ref<Permission>>, ()> {
+        // TODO: This sync should be removed?
         if !self.has_pulled_user_permissions() {
-            self.pull_user_permissions(ProgressCallbackNop)?;
+            self.pull_user_permissions()?;
         }
-
+        // TODO: This sync should be removed?
         if !self.has_pulled_group_permissions() {
-            self.pull_group_permissions(ProgressCallbackNop)?;
+            self.pull_group_permissions()?;
         }
 
         let id = id.into_bytes_with_nul();
@@ -564,24 +658,40 @@ impl RemoteProject {
     }
 
     /// Pull the list of group permissions from the Remote.
-    pub fn pull_group_permissions<F: ProgressCallback>(&self, mut progress: F) -> Result<(), ()> {
+    pub fn pull_group_permissions(&self) -> Result<(), ()> {
+        self.pull_group_permissions_with_progress(NoProgressCallback)
+    }
+
+    /// Pull the list of group permissions from the Remote.
+    pub fn pull_group_permissions_with_progress<F: ProgressCallback>(
+        &self,
+        mut progress: F,
+    ) -> Result<(), ()> {
         let success = unsafe {
             BNRemoteProjectPullGroupPermissions(
                 self.handle.as_ptr(),
                 Some(F::cb_progress_callback),
-                &mut progress as *mut F as *mut ffi::c_void,
+                &mut progress as *mut F as *mut c_void,
             )
         };
         success.then_some(()).ok_or(())
     }
 
     /// Pull the list of user permissions from the Remote.
-    pub fn pull_user_permissions<F: ProgressCallback>(&self, mut progress: F) -> Result<(), ()> {
+    pub fn pull_user_permissions(&self) -> Result<(), ()> {
+        self.pull_user_permissions_with_progress(NoProgressCallback)
+    }
+
+    /// Pull the list of user permissions from the Remote.
+    pub fn pull_user_permissions_with_progress<F: ProgressCallback>(
+        &self,
+        mut progress: F,
+    ) -> Result<(), ()> {
         let success = unsafe {
             BNRemoteProjectPullUserPermissions(
                 self.handle.as_ptr(),
                 Some(F::cb_progress_callback),
-                &mut progress as *mut F as *mut ffi::c_void,
+                &mut progress as *mut F as *mut c_void,
             )
         };
         success.then_some(()).ok_or(())
@@ -593,8 +703,22 @@ impl RemoteProject {
     ///
     /// * `group_id` - Group id
     /// * `level` - Permission level
+    pub fn create_group_permission(
+        &self,
+        group_id: i64,
+        level: CollaborationPermissionLevel,
+    ) -> Result<Ref<Permission>, ()> {
+        self.create_group_permission_with_progress(group_id, level, NoProgressCallback)
+    }
+
+    /// Create a new group permission on the remote (and pull it).
+    ///
+    /// # Arguments
+    ///
+    /// * `group_id` - Group id
+    /// * `level` - Permission level
     /// * `progress` - Function to call for upload progress updates
-    pub fn create_group_permission<F: ProgressCallback>(
+    pub fn create_group_permission_with_progress<F: ProgressCallback>(
         &self,
         group_id: i64,
         level: CollaborationPermissionLevel,
@@ -606,7 +730,7 @@ impl RemoteProject {
                 group_id,
                 level,
                 Some(F::cb_progress_callback),
-                &mut progress as *mut F as *mut ffi::c_void,
+                &mut progress as *mut F as *mut c_void,
             )
         };
 
@@ -621,7 +745,22 @@ impl RemoteProject {
     ///
     /// * `user_id` - User id
     /// * `level` - Permission level
-    pub fn create_user_permission<S: BnStrCompatible, F: ProgressCallback>(
+    pub fn create_user_permission<S: BnStrCompatible>(
+        &self,
+        user_id: S,
+        level: CollaborationPermissionLevel,
+    ) -> Result<Ref<Permission>, ()> {
+        self.create_user_permission_with_progress(user_id, level, NoProgressCallback)
+    }
+
+    /// Create a new user permission on the remote (and pull it).
+    ///
+    /// # Arguments
+    ///
+    /// * `user_id` - User id
+    /// * `level` - Permission level
+    /// * `progress` - The progress callback to call
+    pub fn create_user_permission_with_progress<S: BnStrCompatible, F: ProgressCallback>(
         &self,
         user_id: S,
         level: CollaborationPermissionLevel,
@@ -631,10 +770,10 @@ impl RemoteProject {
         let value = unsafe {
             BNRemoteProjectCreateUserPermission(
                 self.handle.as_ptr(),
-                user_id.as_ref().as_ptr() as *const ffi::c_char,
+                user_id.as_ref().as_ptr() as *const c_char,
                 level,
                 Some(F::cb_progress_callback),
-                &mut progress as *mut F as *mut ffi::c_void,
+                &mut progress as *mut F as *mut c_void,
             )
         };
 
@@ -665,11 +804,11 @@ impl RemoteProject {
             .unzip();
         let mut keys_raw = keys
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect::<Vec<_>>();
         let mut values_raw = values
             .iter()
-            .map(|s| s.as_ref().as_ptr() as *const ffi::c_char)
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect::<Vec<_>>();
 
         let success = unsafe {
@@ -702,7 +841,7 @@ impl RemoteProject {
         unsafe {
             BNRemoteProjectCanUserView(
                 self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const ffi::c_char,
+                username.as_ref().as_ptr() as *const c_char,
             )
         }
     }
@@ -717,7 +856,7 @@ impl RemoteProject {
         unsafe {
             BNRemoteProjectCanUserEdit(
                 self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const ffi::c_char,
+                username.as_ref().as_ptr() as *const c_char,
             )
         }
     }
@@ -732,7 +871,7 @@ impl RemoteProject {
         unsafe {
             BNRemoteProjectCanUserAdmin(
                 self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const ffi::c_char,
+                username.as_ref().as_ptr() as *const c_char,
             )
         }
     }
@@ -748,27 +887,48 @@ impl RemoteProject {
     /// Upload a file, with database, to the remote under the given project
     ///
     /// * `metadata` - Local file with database
-    /// * `progress` -: Function to call for progress updates
-    /// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
     /// * `parent_folder` - Optional parent folder in which to place this file
-    pub fn upload_database<S, P, C>(
+    /// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
+    pub fn upload_database<C>(
         &self,
         metadata: &FileMetadata,
         parent_folder: Option<&RemoteFolder>,
-        progress_function: P,
         name_changeset: C,
     ) -> Result<Ref<RemoteFile>, ()>
     where
-        S: BnStrCompatible,
-        P: ProgressCallback,
         C: NameChangeset,
     {
-        sync::upload_database(
-            metadata,
+        // TODO: Do we want this?
+        // TODO: If you have not yet pulled files you will have never filled the map you will be placing your
+        // TODO: New file in.
+        if !self.has_pulled_files() {
+            self.pull_files()?;
+        }
+        sync::upload_database(self, parent_folder, metadata, name_changeset)
+    }
+
+    /// Upload a file, with database, to the remote under the given project
+    ///
+    /// * `metadata` - Local file with database
+    /// * `parent_folder` - Optional parent folder in which to place this file
+    /// * `progress` -: Function to call for progress updates
+    /// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
+    pub fn upload_database_with_progress<C>(
+        &self,
+        metadata: &FileMetadata,
+        parent_folder: Option<&RemoteFolder>,
+        name_changeset: C,
+        progress_function: impl ProgressCallback,
+    ) -> Result<Ref<RemoteFile>, ()>
+    where
+        C: NameChangeset,
+    {
+        sync::upload_database_with_progress(
             self,
             parent_folder,
-            progress_function,
+            metadata,
             name_changeset,
+            progress_function,
         )
     }
 
@@ -788,7 +948,7 @@ impl RemoteProject {
     //    progress: P,
     //    open_view_options: u32,
     //) -> Result<(), ()> {
-    //    if !self.open(ProgressCallbackNop)? {
+    //    if !self.open(NoProgressCallback)? {
     //        return Err(());
     //    }
     //    let target = target.into_bytes_with_nul();

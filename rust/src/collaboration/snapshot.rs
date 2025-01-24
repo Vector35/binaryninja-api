@@ -131,7 +131,7 @@ impl RemoteSnapshot {
     }
 
     /// If the snapshot has pulled undo entries yet
-    pub fn has_pulled_undo_entires(&self) -> bool {
+    pub fn has_pulled_undo_entries(&self) -> bool {
         unsafe { BNCollaborationSnapshotHasPulledUndoEntries(self.handle.as_ptr()) }
     }
 
@@ -180,7 +180,7 @@ impl RemoteSnapshot {
     ///
     /// NOTE: If undo entries have not been pulled, they will be pulled upon calling this.
     pub fn undo_entries(&self) -> Result<Array<RemoteUndoEntry>, ()> {
-        if !self.has_pulled_undo_entires() {
+        if !self.has_pulled_undo_entries() {
             self.pull_undo_entries()?;
         }
         let mut count = 0;
@@ -198,7 +198,7 @@ impl RemoteSnapshot {
         &self,
         id: RemoteUndoEntryId,
     ) -> Result<Option<Ref<RemoteUndoEntry>>, ()> {
-        if !self.has_pulled_undo_entires() {
+        if !self.has_pulled_undo_entries() {
             self.pull_undo_entries()?;
         }
         let raw = unsafe { BNCollaborationSnapshotGetUndoEntryById(self.handle.as_ptr(), id.0) };

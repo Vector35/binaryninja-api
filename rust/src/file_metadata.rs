@@ -209,7 +209,6 @@ impl FileMetadata {
         }
     }
 
-    // TOOD:
     pub fn create_database(&self, file_path: impl AsRef<Path>) -> bool {
         // Databases are created with the root view (Raw).
         let Some(raw_view) = self.view_of_type("Raw") else {

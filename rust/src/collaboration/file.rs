@@ -390,7 +390,7 @@ impl RemoteFile {
     // TODO - This passes and returns a c++ `std::vector<T>`. A BnData can be implement in rust, but the
     // coreAPI need to include a `FreeData` function, similar to `BNFreeString` does.
     // The C++ API just assumes that both use the same allocator, and the python API seems to just leak this
-    // memory, never droping it.
+    // memory, never dropping it.
     //pub fn download_file<S, F>(&self, mut progress_function: F) -> BnData
     //where
     //    S: BnStrCompatible,

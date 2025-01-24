@@ -2015,6 +2015,7 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_LDXRH:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_LDXRH, { ILREG_O(operand2) }));
+		break;
 	// We don't have a way to specify intrinsic register size, so we explicitly embed the size in the intrinsic name.
 	case ARM64_LDAXR:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_LDAXR, { ILREG_O(operand2) }));

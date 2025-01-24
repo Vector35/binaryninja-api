@@ -505,6 +505,8 @@ extern "C"
 		LLIL_SET_FLAG,            // Not valid in SSA form (see LLIL_SET_FLAG_SSA)
 		LLIL_SET_REG_STACK_REL,   // Not valid in SSA form (see LLIL_SET_REG_STACK_REL_SSA)
 		LLIL_REG_STACK_PUSH,      // Not valid in SSA form (expanded)
+		LLIL_ASSERT,
+		LLIL_FORCE_VER,
 		LLIL_LOAD,                // Not valid in SSA form (see LLIL_LOAD_SSA)
 		LLIL_STORE,               // Not valid in SSA form (see LLIL_STORE_SSA)
 		LLIL_PUSH,                // Not valid in SSA form (expanded)
@@ -624,6 +626,8 @@ extern "C"
 		LLIL_REG_STACK_FREE_REL_SSA,
 		LLIL_REG_STACK_FREE_ABS_SSA,
 		LLIL_SET_FLAG_SSA,
+		LLIL_ASSERT_SSA,
+		LLIL_FORCE_VER_SSA,
 		LLIL_FLAG_SSA,
 		LLIL_FLAG_BIT_SSA,
 		LLIL_CALL_SSA,
@@ -1195,6 +1199,8 @@ extern "C"
 		MLIL_SET_VAR,        // Not valid in SSA form (see MLIL_SET_VAR_SSA)
 		MLIL_SET_VAR_FIELD,  // Not valid in SSA form (see MLIL_SET_VAR_FIELD)
 		MLIL_SET_VAR_SPLIT,  // Not valid in SSA form (see MLIL_SET_VAR_SPLIT_SSA)
+		MLIL_ASSERT,
+		MLIL_FORCE_VER,
 		MLIL_LOAD,           // Not valid in SSA form (see MLIL_LOAD_SSA)
 		MLIL_LOAD_STRUCT,    // Not valid in SSA form (see MLIL_LOAD_STRUCT_SSA)
 		MLIL_STORE,          // Not valid in SSA form (see MLIL_STORE_SSA)
@@ -1315,6 +1321,8 @@ extern "C"
 		MLIL_VAR_ALIASED,
 		MLIL_VAR_ALIASED_FIELD,
 		MLIL_VAR_SPLIT_SSA,
+		MLIL_ASSERT_SSA,
+		MLIL_FORCE_VER_SSA,
 		MLIL_CALL_SSA,
 		MLIL_CALL_UNTYPED_SSA,
 		MLIL_SYSCALL_SSA,
@@ -1391,6 +1399,8 @@ extern "C"
 		HLIL_VAR_INIT,
 		HLIL_ASSIGN,
 		HLIL_ASSIGN_UNPACK,
+		HLIL_FORCE_VER,
+		HLIL_ASSERT,
 		HLIL_VAR,
 		HLIL_STRUCT_FIELD,
 		HLIL_ARRAY_INDEX,
@@ -1492,6 +1502,8 @@ extern "C"
 		HLIL_VAR_INIT_SSA,
 		HLIL_ASSIGN_MEM_SSA,
 		HLIL_ASSIGN_UNPACK_MEM_SSA,
+		HLIL_FORCE_VER_SSA,
+		HLIL_ASSERT_SSA,
 		HLIL_VAR_SSA,
 		HLIL_ARRAY_INDEX_SSA,
 		HLIL_DEREF_SSA,
@@ -5344,6 +5356,9 @@ extern "C"
 	BINARYNINJACOREAPI bool BNParsePossibleValueSet(BNBinaryView* view, const char* valueText,
 	    BNRegisterValueType state, BNPossibleValueSet* result, uint64_t here, char** errors);
 
+	BINARYNINJACOREAPI void BNCreateForcedVariableVersion(BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite);
+	BINARYNINJACOREAPI void BNClearForcedVariableVersion(BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite);
+
 	BINARYNINJACOREAPI void BNRequestFunctionDebugReport(BNFunction* func, const char* name);
 
 	BINARYNINJACOREAPI BNILReferenceSource* BNGetMediumLevelILVariableReferences(
@@ -5676,6 +5691,9 @@ extern "C"
 	    BNLowLevelILFunction* func, size_t expr, size_t operand, size_t* count);
 	BINARYNINJACOREAPI void BNLowLevelILFreeOperandList(uint64_t* operands);
 
+	BINARYNINJACOREAPI size_t BNCacheLowLevelILPossibleValueSet(BNLowLevelILFunction* func, BNPossibleValueSet* pvs);
+	BINARYNINJACOREAPI BNPossibleValueSet BNGetCachedLowLevelILPossibleValueSet(BNLowLevelILFunction* func, size_t idx);
+
 	BINARYNINJACOREAPI BNLowLevelILInstruction BNGetLowLevelILByIndex(BNLowLevelILFunction* func, size_t i);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILIndexForInstruction(BNLowLevelILFunction* func, size_t i);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILInstructionForExpr(BNLowLevelILFunction* func, size_t expr);
@@ -5829,6 +5847,9 @@ extern "C"
 	    BNMediumLevelILFunction* func, size_t expr, size_t operand, size_t* count);
 	BINARYNINJACOREAPI void BNMediumLevelILFreeOperandList(uint64_t* operands);
 
+	BINARYNINJACOREAPI size_t BNCacheMediumLevelILPossibleValueSet(BNMediumLevelILFunction* func, BNPossibleValueSet* pvs);
+	BINARYNINJACOREAPI BNPossibleValueSet BNGetCachedMediumLevelILPossibleValueSet(BNMediumLevelILFunction* func, size_t idx);
+
 	BINARYNINJACOREAPI BNMediumLevelILInstruction BNGetMediumLevelILByIndex(BNMediumLevelILFunction* func, size_t i);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILIndexForInstruction(BNMediumLevelILFunction* func, size_t i);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILInstructionForExpr(BNMediumLevelILFunction* func, size_t expr);
@@ -5976,6 +5997,9 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t* BNHighLevelILGetOperandList(
 	    BNHighLevelILFunction* func, size_t expr, size_t operand, size_t* count);
 	BINARYNINJACOREAPI void BNHighLevelILFreeOperandList(uint64_t* operands);
+
+	BINARYNINJACOREAPI size_t BNCacheHighLevelILPossibleValueSet(BNHighLevelILFunction* func, BNPossibleValueSet* pvs);
+	BINARYNINJACOREAPI BNPossibleValueSet BNGetCachedHighLevelILPossibleValueSet(BNHighLevelILFunction* func, size_t idx);
 
 	BINARYNINJACOREAPI BNHighLevelILInstruction BNGetHighLevelILByIndex(
 	    BNHighLevelILFunction* func, size_t i, bool asFullAst);

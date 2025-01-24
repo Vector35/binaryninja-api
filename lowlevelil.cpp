@@ -296,6 +296,20 @@ std::vector<SSAFlag> LowLevelILFunction::GetSSAFlags()
 }
 
 
+size_t LowLevelILFunction::CachePossibleValueSet(const PossibleValueSet& pvs)
+{
+	BNPossibleValueSet ugh = pvs.ToAPIObject();
+	return BNCacheLowLevelILPossibleValueSet(m_object, &ugh);
+}
+
+
+PossibleValueSet LowLevelILFunction::GetCachedPossibleValueSet(size_t idx)
+{
+	BNPossibleValueSet api = BNGetCachedLowLevelILPossibleValueSet(m_object, idx);
+	return PossibleValueSet::FromAPIObject(api);
+}
+
+
 ExprId LowLevelILFunction::AddExpr(
     BNLowLevelILOperation operation, size_t size, uint32_t flags, ExprId a, ExprId b, ExprId c, ExprId d)
 {

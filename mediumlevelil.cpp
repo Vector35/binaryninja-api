@@ -97,6 +97,20 @@ BNMediumLevelILLabel* MediumLevelILFunction::GetLabelForSourceInstruction(size_t
 }
 
 
+size_t MediumLevelILFunction::CachePossibleValueSet(const PossibleValueSet& pvs)
+{
+	BNPossibleValueSet ugh = pvs.ToAPIObject();
+	return BNCacheMediumLevelILPossibleValueSet(m_object, &ugh);
+}
+
+
+PossibleValueSet MediumLevelILFunction::GetCachedPossibleValueSet(size_t idx)
+{
+	BNPossibleValueSet api = BNGetCachedMediumLevelILPossibleValueSet(m_object, idx);
+	return PossibleValueSet::FromAPIObject(api);
+}
+
+
 ExprId MediumLevelILFunction::AddExpr(
     BNMediumLevelILOperation operation, size_t size, ExprId a, ExprId b, ExprId c, ExprId d, ExprId e)
 {

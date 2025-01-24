@@ -88,7 +88,8 @@ namespace BinaryNinja
 		IndexMapMediumLevelOperand,
 		VariableListMediumLevelOperand,
 		SSAVariableListMediumLevelOperand,
-		ExprListMediumLevelOperand
+		ExprListMediumLevelOperand,
+		ConstraintMediumLevelOperand
 	};
 
 	/*!
@@ -134,7 +135,8 @@ namespace BinaryNinja
 		UntypedParameterExprsMediumLevelOperandUsage,
 		UntypedParameterSSAExprsMediumLevelOperandUsage,
 		ParameterSSAMemoryVersionMediumLevelOperandUsage,
-		SourceSSAVariablesMediumLevelOperandUsages
+		SourceSSAVariablesMediumLevelOperandUsages,
+		ConstraintMediumLevelOperandUsage
 	};
 }  // namespace BinaryNinjaCore
 
@@ -457,6 +459,7 @@ namespace BinaryNinja
 		MediumLevelILVariableList GetRawOperandAsVariableList(size_t operand) const;
 		MediumLevelILSSAVariableList GetRawOperandAsSSAVariableList(size_t operand) const;
 		MediumLevelILInstructionList GetRawOperandAsExprList(size_t operand) const;
+		PossibleValueSet GetRawOperandAsPossibleValueSet(size_t operand) const;
 
 		void UpdateRawOperand(size_t operandIndex, ExprId value);
 		void UpdateRawOperandAsSSAVariableList(size_t operandIndex, const _STD_VECTOR<SSAVariable>& vars);
@@ -737,6 +740,11 @@ namespace BinaryNinja
 		{
 			return As<N>().GetSourceSSAVariables();
 		}
+		template <BNMediumLevelILOperation N>
+		PossibleValueSet GetConstraint() const
+		{
+			return As<N>().GetConstraint();
+		}
 
 		template <BNMediumLevelILOperation N>
 		void SetDestSSAVersion(size_t version)
@@ -1014,6 +1022,35 @@ namespace BinaryNinja
 		void SetDestMemoryVersion(size_t version) { UpdateRawOperand(1, version); }
 		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(2, version); }
 	};
+
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_FORCE_VER> : public MediumLevelILInstructionBase
+	{
+		Variable GetDestVariable() const { return GetRawOperandAsVariable(0); }
+		Variable GetSourceVariable() const { return GetRawOperandAsVariable(1); }
+	};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_FORCE_VER_SSA> : public MediumLevelILInstructionBase
+	{
+		SSAVariable GetDestSSAVariable() const { return GetRawOperandAsSSAVariable(0); }
+		void SetDestSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		SSAVariable GetSourceSSAVariable() const { return GetRawOperandAsSSAVariable(2); }
+		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(3, version); }
+	};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_ASSERT> : public MediumLevelILInstructionBase
+	{
+		Variable GetSourceVariable() const { return GetRawOperandAsVariable(0); }
+		PossibleValueSet GetConstraint() const { return GetRawOperandAsPossibleValueSet(1); }
+	};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_ASSERT_SSA> : public MediumLevelILInstructionBase
+	{
+		SSAVariable GetSourceSSAVariable() const { return GetRawOperandAsSSAVariable(0); }
+		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		PossibleValueSet GetConstraint() const { return GetRawOperandAsPossibleValueSet(2); }
+	};
+
 
 	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_LOAD> : public MediumLevelILOneOperandInstruction

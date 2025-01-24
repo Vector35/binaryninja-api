@@ -349,6 +349,7 @@ namespace BinaryNinja
 		HighLevelILInstructionList GetRawOperandAsExprList(size_t operand) const;
 		HighLevelILSSAVariableList GetRawOperandAsSSAVariableList(size_t operand) const;
 		HighLevelILIndexList GetRawOperandAsIndexList(size_t operand) const;
+		PossibleValueSet GetRawOperandAsPossibleValueSet(size_t operand) const;
 
 		void UpdateRawOperand(size_t operandIndex, ExprId value);
 		void UpdateRawOperandAsInteger(size_t operandIndex, uint64_t value);
@@ -651,6 +652,11 @@ namespace BinaryNinja
 		size_t GetDestMemoryVersion() const
 		{
 			return As<N>().GetDestMemoryVersion();
+		}
+		template <BNHighLevelILOperation N>
+		PossibleValueSet GetConstraint() const
+		{
+			return As<N>().GetConstraint();
 		}
 
 		template <BNHighLevelILOperation N>
@@ -1028,6 +1034,34 @@ namespace BinaryNinja
 		HighLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(3); }
 		size_t GetSourceMemoryVersion() const { return GetRawOperandAsIndex(4); }
 		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(4, version); }
+	};
+
+	template <>
+	struct HighLevelILInstructionAccessor<HLIL_FORCE_VER> : public HighLevelILInstructionBase
+	{
+		Variable GetDestVariable() const { return GetRawOperandAsVariable(0); }
+		Variable GetVariable() const { return GetRawOperandAsVariable(1); }
+	};
+	template <>
+	struct HighLevelILInstructionAccessor<HLIL_FORCE_VER_SSA> : public HighLevelILInstructionBase
+	{
+		SSAVariable GetDestSSAVariable() const { return GetRawOperandAsSSAVariable(0); }
+		void SetDestSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		SSAVariable GetSSAVariable() const { return GetRawOperandAsSSAVariable(2); }
+		void SetSSAVersion(size_t version) { UpdateRawOperand(3, version); }
+	};
+	template <>
+	struct HighLevelILInstructionAccessor<HLIL_ASSERT> : public HighLevelILInstructionBase
+	{
+		Variable GetVariable() const { return GetRawOperandAsVariable(0); }
+		PossibleValueSet GetConstraint() const { return GetRawOperandAsPossibleValueSet(1); }
+	};
+	template <>
+	struct HighLevelILInstructionAccessor<HLIL_ASSERT_SSA> : public HighLevelILInstructionBase
+	{
+		SSAVariable GetSSAVariable() const { return GetRawOperandAsSSAVariable(0); }
+		void SetSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		PossibleValueSet GetConstraint() const { return GetRawOperandAsPossibleValueSet(2); }
 	};
 
 	template <>

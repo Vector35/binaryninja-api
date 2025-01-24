@@ -380,7 +380,7 @@ class PossibleValueSet:
 			return self.ranges == other.ranges
 		elif self.type in [RegisterValueType.InSetOfValues, RegisterValueType.NotInSetOfValues]:
 			return self.values == other.values
-		elif self.type == RegisterValueType.UndeterminedValue and hasattr(other, 'type'):
+		elif self.type == RegisterValueType.UndeterminedValue and hasattr(other, '_type'):
 			return self.type == other.type
 		else:
 			return self == other

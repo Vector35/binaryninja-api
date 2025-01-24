@@ -10553,7 +10553,7 @@ namespace BinaryNinja {
 		size_t count;
 
 		static PossibleValueSet FromAPIObject(BNPossibleValueSet& value);
-		BNPossibleValueSet ToAPIObject();
+		BNPossibleValueSet ToAPIObject() const;
 		static void FreeAPIObject(BNPossibleValueSet* value);
 	};
 
@@ -11680,6 +11680,9 @@ namespace BinaryNinja {
 		std::vector<SSARegisterStack> GetSSARegisterStacks();
 		std::vector<SSAFlag> GetSSAFlags();
 
+		size_t CachePossibleValueSet(const PossibleValueSet& pvs);
+		PossibleValueSet GetCachedPossibleValueSet(size_t idx);
+
 		ExprId AddExpr(BNLowLevelILOperation operation, size_t size, uint32_t flags, ExprId a = 0, ExprId b = 0,
 		    ExprId c = 0, ExprId d = 0);
 		ExprId AddExprWithLocation(BNLowLevelILOperation operation, uint64_t addr, uint32_t sourceOperand, size_t size,
@@ -11767,6 +11770,12 @@ namespace BinaryNinja {
 		*/
 		ExprId SetFlag(uint32_t flag, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetFlagSSA(const SSAFlag& flag, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
+
+		ExprId ForceVer(size_t size, uint32_t reg, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ForceVerSSA(size_t size, SSARegister dst, SSARegister src, const ILSourceLocation& loc = ILSourceLocation());
+
+		ExprId Assert(size_t size, uint32_t reg, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssertSSA(size_t size, SSARegister reg, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
 
 		/*! Reads \c size bytes from the expression \c addr
 
@@ -13064,6 +13073,9 @@ namespace BinaryNinja {
 		*/
 		BNMediumLevelILLabel* GetLabelForSourceInstruction(size_t i);
 
+		size_t CachePossibleValueSet(const PossibleValueSet& pvs);
+		PossibleValueSet GetCachedPossibleValueSet(size_t idx);
+
 		ExprId AddExpr(BNMediumLevelILOperation operation, size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0,
 		    ExprId d = 0, ExprId e = 0);
 		ExprId AddExprWithLocation(BNMediumLevelILOperation operation, uint64_t addr, uint32_t sourceOperand,
@@ -13087,6 +13099,13 @@ namespace BinaryNinja {
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetVarAliasedField(size_t size, const Variable& dest, size_t newMemVersion, size_t prevMemVersion,
 		    uint64_t offset, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		ExprId ForceVer(size_t size, const Variable& dest, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ForceVerSSA(size_t size, const SSAVariable& dest, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
+
+		ExprId Assert(size_t size, const Variable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssertSSA(size_t size, const SSAVariable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
+
 		ExprId Load(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId LoadStruct(size_t size, ExprId src, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId LoadSSA(size_t size, ExprId src, size_t memVersion, const ILSourceLocation& loc = ILSourceLocation());
@@ -13429,6 +13448,9 @@ namespace BinaryNinja {
 		void SetRootExpr(ExprId expr);
 		void SetRootExpr(const HighLevelILInstruction& expr);
 
+		size_t CachePossibleValueSet(const PossibleValueSet& pvs);
+		PossibleValueSet GetCachedPossibleValueSet(size_t idx);
+
 		ExprId AddExpr(BNHighLevelILOperation operation, size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0,
 		    ExprId d = 0, ExprId e = 0);
 		ExprId AddExprWithLocation(BNHighLevelILOperation operation, uint64_t addr, uint32_t sourceOperand, size_t size,
@@ -13473,6 +13495,13 @@ namespace BinaryNinja {
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AssignUnpackMemSSA(const std::vector<ExprId>& output, size_t destMemVersion, ExprId src,
 		    size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
+
+		ExprId ForceVer(size_t size, const Variable& dest, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ForceVerSSA(size_t size, const SSAVariable& dest, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
+
+		ExprId Assert(size_t size, const Variable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssertSSA(size_t size, const SSAVariable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
+
 		ExprId Var(size_t size, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarSSA(size_t size, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarPhi(const SSAVariable& dest, const std::vector<SSAVariable>& sources,

@@ -156,6 +156,7 @@ impl HighLevelILInstruction {
             HLIL_UNREACHABLE => Op::Unreachable,
             HLIL_BP => Op::Bp,
             HLIL_UNDEF => Op::Undef,
+            HLIL_FORCE_VER | HLIL_FORCE_VER_SSA | HLIL_ASSERT | HLIL_ASSERT_SSA => Op::Undef,
             HLIL_UNIMPL => Op::Unimpl,
             HLIL_ADC => Op::Adc(BinaryOpCarry {
                 left: op.operands[0] as usize,

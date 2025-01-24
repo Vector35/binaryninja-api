@@ -533,7 +533,7 @@ PossibleValueSet PossibleValueSet::FromAPIObject(BNPossibleValueSet& value)
 }
 
 
-BNPossibleValueSet PossibleValueSet::ToAPIObject()
+BNPossibleValueSet PossibleValueSet::ToAPIObject() const
 {
 	BNPossibleValueSet result;
 	result.state = state;

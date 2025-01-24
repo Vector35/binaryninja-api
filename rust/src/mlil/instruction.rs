@@ -177,6 +177,7 @@ impl MediumLevelILInstruction {
             MLIL_NORET => Op::Noret,
             MLIL_BP => Op::Bp,
             MLIL_UNDEF => Op::Undef,
+            MLIL_ASSERT | MLIL_ASSERT_SSA | MLIL_FORCE_VER | MLIL_FORCE_VER_SSA => Op::Undef,
             MLIL_UNIMPL => Op::Unimpl,
             MLIL_IF => Op::If(MediumLevelILOperationIf {
                 condition: op.operands[0] as usize,

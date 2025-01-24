@@ -85,6 +85,20 @@ void HighLevelILFunction::SetRootExpr(const HighLevelILInstruction& expr)
 }
 
 
+size_t HighLevelILFunction::CachePossibleValueSet(const PossibleValueSet& pvs)
+{
+	BNPossibleValueSet ugh = pvs.ToAPIObject();
+	return BNCacheHighLevelILPossibleValueSet(m_object, &ugh);
+}
+
+
+PossibleValueSet HighLevelILFunction::GetCachedPossibleValueSet(size_t idx)
+{
+	BNPossibleValueSet api = BNGetCachedHighLevelILPossibleValueSet(m_object, idx);
+	return PossibleValueSet::FromAPIObject(api);
+}
+
+
 ExprId HighLevelILFunction::AddExpr(
     BNHighLevelILOperation operation, size_t size, ExprId a, ExprId b, ExprId c, ExprId d, ExprId e)
 {

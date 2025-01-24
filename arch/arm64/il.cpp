@@ -2016,6 +2016,9 @@ bool GetLowLevelILForInstruction(
 	case ARM64_LDXRH:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_LDXRH, { ILREG_O(operand2) }));
 	// We don't have a way to specify intrinsic register size, so we explicitly embed the size in the intrinsic name.
+	case ARM64_LDXP:
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)), RegisterOrFlag::Register(REG_O(operand2)) }, ARM64_INTRIN_LDXP, { ILREG_O(operand3) }));
+		break;
 	case ARM64_LDAXR:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_LDAXR, { ILREG_O(operand2) }));
 		break;
@@ -2033,6 +2036,9 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_STXRH:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_STXRH, { ILREG_O(operand2), ILREG_O(operand3) }));
+		break;
+	case ARM64_STXP:
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_STXP, { ILREG_O(operand2), ILREG_O(operand3), ILREG_O(operand4) }));
 		break;
 	case ARM64_STLXR:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_STLXR, { ILREG_O(operand2), ILREG_O(operand3) }));

@@ -138,6 +138,18 @@ cargo doc --no-deps --open -p binaryninja
 
 If you're thinking of contributing to the Rust API, we encourage you to join the #rust-api channel in our [Slack](https://slack.binary.ninja), especially for large-effort PRs.
 
+### Testing
+
+When contributing new APIs or refactoring existing APIs it is vital that you test your code! If you do not have a 
+headless supported license you should still be able to write them and open your PR. Once open a 
+maintainer will approve tests to run and from there you can refine the test so that it passes in CI.
+
+### Documentation
+
+When refactoring or making new changes make sure that the documentation for the respective APIs is up-to-date and not missing.
+Much of the APIs documentation exists only in the python bindings, so use that as a guide. If there is an API that confuses you
+it will likely confuse someone else, and you should make an issue or ask for guidance in the Slack channel above.
+
 ---
 
 #### Attribution

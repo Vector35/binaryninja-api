@@ -25,7 +25,7 @@ use binaryninjacore_sys::*;
 
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::basic_block::BasicBlock;
-use crate::component::{Component, ComponentBuilder, IntoComponentGuid};
+use crate::component::{Component, IntoComponentGuid};
 use crate::confidence::Conf;
 use crate::data_buffer::DataBuffer;
 use crate::debuginfo::DebugInfo;
@@ -1422,7 +1422,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             .collect()
     }
 
-    fn component_by_guid<S: BnStrCompatible>(&self, guid: S) -> Option<Component> {
+    fn component_by_guid<S: BnStrCompatible>(&self, guid: S) -> Option<Ref<Component>> {
         let name = guid.into_bytes_with_nul();
         let result = unsafe {
             BNGetComponentByGuid(
@@ -1430,19 +1430,15 @@ pub trait BinaryViewExt: BinaryViewBase {
                 name.as_ref().as_ptr() as *const c_char,
             )
         };
-        NonNull::new(result).map(|h| unsafe { Component::from_raw(h) })
+        NonNull::new(result).map(|h| unsafe { Component::ref_from_raw(h) })
     }
 
-    fn root_component(&self) -> Option<Component> {
+    fn root_component(&self) -> Option<Ref<Component>> {
         let result = unsafe { BNGetRootComponent(self.as_ref().handle) };
-        NonNull::new(result).map(|h| unsafe { Component::from_raw(h) })
+        NonNull::new(result).map(|h| unsafe { Component::ref_from_raw(h) })
     }
 
-    fn component_builder(&self) -> ComponentBuilder {
-        ComponentBuilder::new_from_raw(self.as_ref().handle)
-    }
-
-    fn component_by_path<P: BnStrCompatible>(&self, path: P) -> Option<Component> {
+    fn component_by_path<P: BnStrCompatible>(&self, path: P) -> Option<Ref<Component>> {
         let path = path.into_bytes_with_nul();
         let result = unsafe {
             BNGetComponentByPath(
@@ -1450,11 +1446,11 @@ pub trait BinaryViewExt: BinaryViewBase {
                 path.as_ref().as_ptr() as *const c_char,
             )
         };
-        NonNull::new(result).map(|h| unsafe { Component::from_raw(h) })
+        NonNull::new(result).map(|h| unsafe { Component::ref_from_raw(h) })
     }
 
     fn remove_component(&self, component: &Component) -> bool {
-        unsafe { BNRemoveComponent(self.as_ref().handle, component.as_raw()) }
+        unsafe { BNRemoveComponent(self.as_ref().handle, component.handle.as_ptr()) }
     }
 
     fn remove_component_by_guid<P: IntoComponentGuid>(&self, guid: P) -> bool {

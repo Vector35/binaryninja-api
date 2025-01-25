@@ -13,6 +13,8 @@ These bindings are still actively under development. Compatibility _will_ break 
 It is encouraged that you reference a specific commit to avoid having your plugin/application break when the API changes.
 To specify a specific commit see the cargo documentation [here](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#choice-of-commit).
 
+If you are worried about breaking changes avoid modules with warnings about instability!
+
 **MSRV**: The Rust version specified in the `Cargo.toml`.
 
 ## Example

@@ -1,3 +1,5 @@
+//! The collaboration API is **unstable** and as such will undergo breaking changes in the near future!
+
 mod changeset;
 mod file;
 mod folder;

@@ -187,7 +187,7 @@ impl Project {
     /// * `path` - Path to folder on disk
     /// * `parent` - Parent folder in the project that will contain the new contents
     /// * `description` - Description for created root folder
-    /// * `progress` - [`ProgressExecutor`] that will be called as the [`ProjectFolder`] is being created
+    /// * `progress` - [`ProgressCallback`] that will be called as the [`ProjectFolder`] is being created
     pub fn create_folder_from_path_with_progress<P, D, PC>(
         &self,
         path: P,
@@ -310,7 +310,7 @@ impl Project {
     /// Recursively delete a [`ProjectFolder`] from the [`Project`].
     ///
     /// * `folder` - [`ProjectFolder`] to delete recursively
-    /// * `progress` - [`ProgressExecutor`] that will be called as objects get deleted
+    /// * `progress` - [`ProgressCallback`] that will be called as objects get deleted
     pub fn delete_folder_with_progress<P: ProgressCallback>(
         &self,
         folder: &ProjectFolder,
@@ -369,7 +369,7 @@ impl Project {
     /// * `folder` - Folder to place the created file in
     /// * `name` - Name to assign to the created file
     /// * `description` - Description to assign to the created file
-    /// * `progress` - [`ProgressExecutor`] that will be called as the [`ProjectFile`] is being added
+    /// * `progress` - [`ProgressCallback`] that will be called as the [`ProjectFile`] is being added
     pub fn create_file_from_path_with_progress<P, N, D, PC>(
         &self,
         path: P,
@@ -445,7 +445,7 @@ impl Project {
     /// * `description` - Description to assign to the created file
     /// * `id` - id unique ID
     /// * `creation_time` - Creation time of the file
-    /// * `progress` - [`ProgressExecutor`] that will be called as the [`ProjectFile`] is being created
+    /// * `progress` - [`ProgressCallback`] that will be called as the [`ProjectFile`] is being created
     #[allow(clippy::too_many_arguments)]
     pub unsafe fn create_file_from_path_unsafe_with_progress<P, N, D, I, PC>(
         &self,
@@ -512,7 +512,7 @@ impl Project {
     /// * `folder` - Folder to place the created file in
     /// * `name` - Name to assign to the created file
     /// * `description` - Description to assign to the created file
-    /// * `progress` - [`ProgressExecutor`] that will be called as the [`ProjectFile`] is being created
+    /// * `progress` - [`ProgressCallback`] that will be called as the [`ProjectFile`] is being created
     pub fn create_file_with_progress<N, D, P>(
         &self,
         contents: &[u8],
@@ -586,7 +586,7 @@ impl Project {
     /// * `description` - Description to assign to the created file
     /// * `id` - id unique ID
     /// * `creation_time` - Creation time of the file
-    /// * `progress` - [`ProgressExecutor`] that will be called as the [`ProjectFile`] is being created
+    /// * `progress` - [`ProgressCallback`] that will be called as the [`ProjectFile`] is being created
     #[allow(clippy::too_many_arguments)]
     pub unsafe fn create_file_unsafe_with_progress<N, D, I, P>(
         &self,

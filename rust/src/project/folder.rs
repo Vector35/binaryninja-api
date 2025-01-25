@@ -96,7 +96,7 @@ impl ProjectFolder {
     /// Recursively export this folder to disk, returns `true' if the export succeeded
     ///
     /// * `dest` - Destination path for the exported contents
-    /// * `progress` - [`ProgressExecutor`] that will be called as contents are exporting
+    /// * `progress` - [`ProgressCallback`] that will be called as contents are exporting
     pub fn export_with_progress<S, P>(&self, dest: S, mut progress: P) -> bool
     where
         S: BnStrCompatible,

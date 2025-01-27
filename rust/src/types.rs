@@ -1217,7 +1217,7 @@ impl EnumerationBuilder {
         unsafe { Enumeration::ref_from_raw(BNFinalizeEnumerationBuilder(self.handle)) }
     }
 
-    pub fn append<S: BnStrCompatible>(&mut self, name: S) -> &Self {
+    pub fn append<S: BnStrCompatible>(&mut self, name: S) -> &mut Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddEnumerationBuilderMember(self.handle, name.as_ref().as_ptr() as _);
@@ -1225,7 +1225,7 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn insert<S: BnStrCompatible>(&mut self, name: S, value: u64) -> &Self {
+    pub fn insert<S: BnStrCompatible>(&mut self, name: S, value: u64) -> &mut Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddEnumerationBuilderMemberWithValue(self.handle, name.as_ref().as_ptr() as _, value);
@@ -1233,7 +1233,7 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn replace<S: BnStrCompatible>(&mut self, id: usize, name: S, value: u64) -> &Self {
+    pub fn replace<S: BnStrCompatible>(&mut self, id: usize, name: S, value: u64) -> &mut Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNReplaceEnumerationBuilderMember(self.handle, id, name.as_ref().as_ptr() as _, value);
@@ -1241,7 +1241,7 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn remove(&mut self, id: usize) -> &Self {
+    pub fn remove(&mut self, id: usize) -> &mut Self {
         unsafe {
             BNRemoveEnumerationBuilderMember(self.handle, id);
         }

@@ -10,7 +10,7 @@ use binaryninja::debuginfo::{
 
 use idb_rs::id0::{ID0Section, IDBParam1, IDBParam2};
 use idb_rs::til::section::TILSection;
-use idb_rs::til::Type as TILType;
+use idb_rs::til::TypeVariant as TILTypeVariant;
 
 use log::{error, trace, warn, LevelFilter};
 
@@ -148,9 +148,9 @@ fn parse_til_info(
         bv: debug_file,
         offset: 0,
     };
-    let file = std::io::BufReader::new(file);
+    let mut file = std::io::BufReader::new(file);
     trace!("Parsing the TIL section");
-    let til = TILSection::parse(file)?;
+    let til = TILSection::read(&mut file, idb_rs::IDBSectionCompression::None)?;
     import_til_section(debug_info, debug_file, &til, progress)
 }
 
@@ -168,26 +168,26 @@ pub fn import_til_section(
             TranslateTypeResult::NotYet => {
                 panic!(
                     "type could not be processed `{}`: {:#?}",
-                    &String::from_utf8_lossy(&ty.name),
+                    ty.name.as_utf8_lossy(),
                     &ty.og_ty
                 );
             }
             TranslateTypeResult::Error(error) => {
                 error!(
                     "Unable to parse type `{}`: {error}",
-                    &String::from_utf8_lossy(&ty.name)
+                    ty.name.as_utf8_lossy(),
                 );
             }
             TranslateTypeResult::PartiallyTranslated(_, error) => {
                 if let Some(error) = error {
                     error!(
                         "Unable to parse type `{}` correctly: {error}",
-                        &String::from_utf8_lossy(&ty.name)
+                        ty.name.as_utf8_lossy(),
                     );
                 } else {
                     warn!(
                         "Type `{}` maybe not be fully translated",
-                        &String::from_utf8_lossy(&ty.name)
+                        ty.name.as_utf8_lossy(),
                     );
                 }
             }
@@ -200,11 +200,8 @@ pub fn import_til_section(
         if let TranslateTypeResult::Translated(bn_ty)
         | TranslateTypeResult::PartiallyTranslated(bn_ty, _) = &ty.ty
         {
-            if !debug_info.add_type(String::from_utf8_lossy(&ty.name), bn_ty, &[/* TODO */]) {
-                error!(
-                    "Unable to add type `{}`",
-                    &String::from_utf8_lossy(&ty.name)
-                )
+            if !debug_info.add_type(ty.name.as_utf8_lossy(), bn_ty, &[/* TODO */]) {
+                error!("Unable to add type `{}`", ty.name.as_utf8_lossy())
             }
         }
     }
@@ -214,11 +211,8 @@ pub fn import_til_section(
         if let TranslateTypeResult::Translated(bn_ty)
         | TranslateTypeResult::PartiallyTranslated(bn_ty, _) = &ty.ty
         {
-            if !debug_info.add_type(String::from_utf8_lossy(&ty.name), bn_ty, &[/* TODO */]) {
-                error!(
-                    "Unable to fix type `{}`",
-                    &String::from_utf8_lossy(&ty.name)
-                )
+            if !debug_info.add_type(ty.name.as_utf8_lossy(), bn_ty, &[/* TODO */]) {
+                error!("Unable to fix type `{}`", ty.name.as_utf8_lossy())
             }
         }
     }
@@ -273,7 +267,7 @@ fn parse_id0_section_info(
             });
 
         match (label, &ty, bnty) {
-            (_, Some(TILType::Function(_)), bnty) => {
+            (_, Some(ty), bnty) if matches!(&ty.type_variant, TILTypeVariant::Function(_)) => {
                 if bnty.is_none() {
                     error!("Unable to convert the function type at {addr:#x}",)
                 }

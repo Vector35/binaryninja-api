@@ -277,7 +277,9 @@ unsafe impl BnStrCompatible for &Path {
     type Result = Vec<u8>;
 
     fn into_bytes_with_nul(self) -> Self::Result {
-        self.as_os_str().as_encoded_bytes().to_vec()
+        let ret = CString::new(self.as_os_str().as_encoded_bytes())
+            .expect("can't pass paths with internal nul bytes to core!");
+        ret.into_bytes_with_nul()
     }
 }
 

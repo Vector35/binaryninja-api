@@ -219,8 +219,8 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         };
         let mut partial_error_args = vec![];
         let mut bn_args = Vec::with_capacity(fun.args.len());
-        for (i, (arg_name, arg_type, _arg_loc)) in fun.args.iter().enumerate() {
-            let arg = match self.translate_type(arg_type) {
+        for (i, fun_arg) in fun.args.iter().enumerate() {
+            let arg = match self.translate_type(&fun_arg.ty) {
                 TranslateTypeResult::Translated(trans) => trans,
                 TranslateTypeResult::PartiallyTranslated(trans, error) => {
                     is_partial = true;
@@ -242,7 +242,8 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             };
             // TODO create location from `arg_loc`?
             let loc = None;
-            let name = arg_name
+            let name = fun_arg
+                .name
                 .as_ref()
                 .map(|name| name.as_utf8_lossy().to_string())
                 .unwrap_or_else(|| format!("arg_{i}"));
@@ -443,11 +444,11 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         let mut structure = StructureBuilder::new();
         structure.structure_type(StructureType::UnionStructureType);
         let mut errors = vec![];
-        for (i, (member_name, member_type)) in ty_union.members.iter().enumerate() {
+        for (i, member) in ty_union.members.iter().enumerate() {
             // bitfields can be translated into complete fields
-            let mem = match &member_type.type_variant {
+            let mem = match &member.ty.type_variant {
                 TILTypeVariant::Bitfield(field) => field_from_bytes(field.nbytes.get().into()),
-                _ => match self.translate_type(member_type) {
+                _ => match self.translate_type(&member.ty) {
                     TranslateTypeResult::Translated(ty) => ty,
                     TranslateTypeResult::Error(error) => {
                         errors.push((i, error));
@@ -464,7 +465,8 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 },
             };
 
-            let name = member_name
+            let name = member
+                .name
                 .as_ref()
                 .map(|name| name.as_utf8_lossy().to_string())
                 .unwrap_or_else(|| format!("member_{i}"));
@@ -484,12 +486,13 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
 
     fn translate_enum(&self, ty_enum: &TILEnum) -> Ref<Type> {
         let mut eb = EnumerationBuilder::new();
-        for (i, (name, member_value)) in ty_enum.members.iter().enumerate() {
-            let name = name
+        for (i, member) in ty_enum.members.iter().enumerate() {
+            let name = member
+                .name
                 .as_ref()
                 .map(|name| name.as_utf8_lossy().to_string())
                 .unwrap_or_else(|| format!("member_{i}"));
-            eb.insert(name, *member_value);
+            eb.insert(name, member.value);
         }
         Type::enumeration(
             &eb.finalize(),

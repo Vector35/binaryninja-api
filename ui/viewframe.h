@@ -186,11 +186,17 @@ class BINARYNINJAUIAPI View
 	virtual void cut();
 	virtual void copy(TransformRef xform = nullptr);
 	virtual void copyAddress();
+#ifdef ULTIMATE_EDITION
+	virtual void copyLocationAsURL();
+#endif
 	virtual void paste(TransformRef xform = nullptr);
 	virtual bool canCut();
 	virtual bool canCopy();
 	virtual bool canCopyWithTransform();
 	virtual bool canCopyAddress();
+#ifdef ULTIMATE_EDITION
+	virtual bool canCopyLocationAsURL();
+#endif
 	virtual bool canPaste();
 	virtual bool canPasteWithTransform();
 

@@ -12173,7 +12173,7 @@ namespace BinaryNinja {
 			\param b RHS expression
 			\param flags Flags to set
 			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>sbc.<size>{<flags>}(a, b)</tt>
+			\return The expression <tt>mul.<size>{<flags>}(a, b)</tt>
 		*/
 		ExprId Mult(
 		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());

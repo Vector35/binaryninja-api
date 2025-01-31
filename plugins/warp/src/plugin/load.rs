@@ -1,53 +1,161 @@
-use crate::matcher::{Matcher, PlatformID, PLAT_MATCHER_CACHE};
+use crate::cache::container::add_cached_container;
+use crate::container::disk::{DiskContainer, DiskContainerSource};
+use crate::container::{ContainerError, SourcePath};
+use crate::convert::platform_to_target;
+use crate::plugin::workflow::run_matcher;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
+use binaryninja::interaction::{
+    show_message_box, Form, FormInputField, MessageBoxButtonResult, MessageBoxButtonSet,
+    MessageBoxIcon,
+};
+use binaryninja::rc::Ref;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::thread;
+use warp::WarpFile;
+
+pub struct LoadFileField;
+
+impl LoadFileField {
+    pub fn field() -> FormInputField {
+        FormInputField::OpenFileName {
+            prompt: "File Path".to_string(),
+            // TODO: This is called extension but is really a filter.
+            extension: Some("*.warp".to_string()),
+            default: None,
+            value: None,
+        }
+    }
+
+    pub fn from_form(form: &Form) -> Option<PathBuf> {
+        let field = form.get_field_with_name("File Path")?;
+        let field_value = field.try_value_string()?;
+        Some(PathBuf::from(field_value))
+    }
+}
+
+pub struct RunMatcherField;
+
+impl RunMatcherField {
+    pub fn field() -> FormInputField {
+        FormInputField::Choice {
+            prompt: "Rerun Initial Matcher".to_string(),
+            choices: vec!["No".to_string(), "Yes".to_string()],
+            default: Some(1),
+            value: 0,
+        }
+    }
+
+    pub fn from_form(form: &Form) -> Option<bool> {
+        let field = form.get_field_with_name("Rerun Initial Matcher")?;
+        let field_value = field.try_value_index()?;
+        match field_value {
+            1 => Some(true),
+            _ => Some(false),
+        }
+    }
+}
+
 pub struct LoadSignatureFile;
+
+impl LoadSignatureFile {
+    pub fn read_file(
+        view: &BinaryView,
+        path: SourcePath,
+    ) -> Result<WarpFile<'static>, ContainerError> {
+        let contents = std::fs::read(&path).map_err(|e| ContainerError::FailedIO(e.kind()))?;
+        let mut file = WarpFile::from_owned_bytes(contents).ok_or(
+            ContainerError::CorruptedData("file data failed to validate"),
+        )?;
+
+        let view_target = view
+            .default_platform()
+            .map(|p| platform_to_target(&p))
+            .unwrap_or_default();
+        let file_has_target = file
+            .chunks
+            .iter()
+            .find(|c| c.header.target == view_target)
+            .is_some();
+
+        if !file_has_target {
+            // File does not contain a view target, alert user if they would like to override the file chunks to the view target.
+            let text = format!(
+                "Attempting to load WARP file with no target `{:?}`, continue loading anyways?",
+                &view_target
+            );
+            let res = show_message_box(
+                "Override file target?",
+                &text,
+                MessageBoxButtonSet::YesNoButtonSet,
+                MessageBoxIcon::WarningIcon,
+            );
+            if res != MessageBoxButtonResult::YesButton {
+                return Err(ContainerError::CorruptedData(
+                    "User does not want to load file",
+                ));
+            }
+
+            // Take all the chunks and convert them to the target, so we load them.
+            // If we do not do this, the user will be surprised when they get no new matches.
+            for chunk in &mut file.chunks {
+                chunk.header.target = view_target.clone();
+            }
+        }
+
+        Ok(file)
+    }
+
+    pub fn execute(view: Ref<BinaryView>) {
+        let mut form = Form::new("Load Signature File");
+        form.add_field(LoadFileField::field());
+        // let fd_field = FileDataKindField::default();
+        // form.add_field(fd_field.to_field());
+        form.add_field(RunMatcherField::field());
+        if !form.prompt() {
+            return;
+        }
+
+        let Some(file_path) = LoadFileField::from_form(&form) else {
+            return;
+        };
+        // TODO: Decide what to pull using the file data kind.
+        // let _file_data_kind = FileDataKindField::from_form(&form).unwrap_or_default();
+        let rerun_matcher = RunMatcherField::from_form(&form).unwrap_or(false);
+
+        let source_file_path = SourcePath::new(file_path.clone());
+
+        let file = match LoadSignatureFile::read_file(&view, source_file_path.clone()) {
+            Ok(file) => file,
+            Err(e) => {
+                log::error!("Failed to read signature file: {}", e);
+                return;
+            }
+        };
+
+        let container_source = DiskContainerSource::new(source_file_path.clone(), file);
+        log::info!("Loading container source: '{}'", container_source.path);
+        let mut map = HashMap::new();
+        map.insert(source_file_path.to_source_id(), container_source);
+        let container = DiskContainer::new("Loaded signatures".to_string(), map);
+        // TODO: See notes in the matcher about doing this, we really need to load it into an existing container.
+        add_cached_container(container);
+
+        if rerun_matcher {
+            thread::spawn(move || {
+                run_matcher(&view);
+            });
+        }
+    }
+}
 
 impl Command for LoadSignatureFile {
     fn action(&self, view: &BinaryView) {
-        let Some(platform) = view.default_platform() else {
-            log::error!("Default platform must be set to load signature!");
-            return;
-        };
-
-        // NOTE: Because we only can consume signatures from a specific directory, we don't need to use the interaction API.
-        // If we did need to load signature files from a project than this would need to change.
-        let Some(file) = rfd::FileDialog::new()
-            .add_filter("Signature Files", &["sbin"])
-            .set_file_name(format!("{}.sbin", view.file().filename()))
-            .pick_file()
-        else {
-            return;
-        };
-
-        let Ok(data) = std::fs::read(&file) else {
-            log::error!("Could not read signature file: {:?}", file);
-            return;
-        };
-
-        let Some(data) = warp::signature::Data::from_bytes(&data) else {
-            log::error!("Could not get data from signature file: {:?}", file);
-            return;
-        };
-
-        let new_matcher = Matcher::from_data(data);
-        log::info!(
-            "Loading signature file with {} functions and {} types...",
-            new_matcher.functions.len(),
-            new_matcher.types.len()
-        );
-        let platform_id = PlatformID::from(platform.as_ref());
-        let matcher_cache = PLAT_MATCHER_CACHE.get_or_init(Default::default);
-        match matcher_cache.get_mut(&platform_id) {
-            Some(mut matcher) => matcher.extend_with_matcher(new_matcher),
-            None => {
-                // We still must uphold `from_platform` in case we are running this before the matcher workflow
-                // is kicked off. Other-wise we only will have the `new_matcher` data.
-                let mut matcher = Matcher::from_platform(platform);
-                matcher.extend_with_matcher(new_matcher);
-                matcher_cache.insert(platform_id, matcher);
-            }
-        }
+        let view = view.to_owned();
+        thread::spawn(move || {
+            LoadSignatureFile::execute(view);
+        });
     }
 
     fn valid(&self, _view: &BinaryView) -> bool {

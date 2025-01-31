@@ -1,22 +1,50 @@
-use crate::cache::cached_function_guid;
-use crate::matcher::cached_function_matcher;
+use crate::cache::container::for_cached_containers;
+use crate::cache::{
+    cached_function_guid, insert_cached_function_match, try_cached_function_guid,
+    try_cached_function_match,
+};
+use crate::convert::{
+    comment_to_bn_comment, platform_to_target, to_bn_symbol_at_address, to_bn_type,
+};
+use crate::matcher::{Matcher, MatcherSettings};
+use crate::{get_warp_tag_type, relocatable_regions};
 use binaryninja::background_task::BackgroundTask;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
+use binaryninja::settings::{QueryOptions, Settings};
 use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
+use itertools::Itertools;
+use std::collections::HashMap;
 use std::time::Instant;
+use warp::signature::function::{Function, FunctionGUID};
+use warp::target::Target;
 
+pub const APPLY_ACTIVITY_NAME: &str = "analysis.warp.apply";
+const APPLY_ACTIVITY_CONFIG: &str = r#"{
+    "name": "analysis.warp.apply",
+    "title" : "WARP Apply Matched",
+    "description": "This analysis step applies WARP info to matched functions...",
+    "eligibility": {
+        "auto": {},
+        "runOnce": false
+    }
+}"#;
+
+// TODO: Describe that this is the "initial matcher"
+// TODO: There is going to an "interactive matcher" that runs as you navigate.
 pub const MATCHER_ACTIVITY_NAME: &str = "analysis.warp.matcher";
 const MATCHER_ACTIVITY_CONFIG: &str = r#"{
     "name": "analysis.warp.matcher",
     "title" : "WARP Matcher",
-    "description": "This analysis step applies WARP info to matched functions...",
+    "description": "This analysis step attempts to find matching WARP functions after initial analysis is complete...",
     "eligibility": {
         "auto": {},
         "runOnce": true
     }
 }"#;
 
+// TODO: This should run every time a function is changed no?
+// TODO: Ah whatever this is fine for now...
 pub const GUID_ACTIVITY_NAME: &str = "analysis.warp.guid";
 const GUID_ACTIVITY_CONFIG: &str = r#"{
     "name": "analysis.warp.guid",
@@ -24,7 +52,7 @@ const GUID_ACTIVITY_CONFIG: &str = r#"{
     "description": "This analysis step generates the GUID for all analyzed functions...",
     "eligibility": {
         "auto": {},
-        "runOnce": true
+        "runOnce": false
     }
 }"#;
 
@@ -33,19 +61,8 @@ pub struct RunMatcher;
 impl Command for RunMatcher {
     fn action(&self, view: &BinaryView) {
         let view = view.to_owned();
-        // TODO: Check to see if the GUID cache is empty and ask the user if they want to regenerate the guids.
         std::thread::spawn(move || {
-            let undo_id = view.file().begin_undo_actions(true);
-            let background_task = BackgroundTask::new("Matching on functions...", false);
-            let start = Instant::now();
-            view.functions()
-                .iter()
-                .for_each(|function| cached_function_matcher(&function));
-            log::info!("Function matching took {:?}", start.elapsed());
-            background_task.finish();
-            view.file().commit_undo_actions(&undo_id);
-            // Now we want to trigger re-analysis.
-            view.update_analysis();
+            run_matcher(&view);
         });
     }
 
@@ -54,37 +71,150 @@ impl Command for RunMatcher {
     }
 }
 
+pub fn run_matcher(view: &BinaryView) {
+    // Alert the user if we have no actual regions (one comes from the synthetic section).
+    let regions = relocatable_regions(view);
+    if regions.len() <= 1 {
+        log::warn!(
+            "No relocatable regions found, for best results please define sections for the binary!"
+        );
+    }
+
+    // Then we want to actually find matching functions.
+    let background_task = BackgroundTask::new("Matching on WARP functions...", true);
+    let start = Instant::now();
+
+    // Build matcher
+    let view_settings = Settings::new();
+    let mut query_opts = QueryOptions::new_with_view(view);
+    let matcher_settings = MatcherSettings::from_settings(&view_settings, &mut query_opts);
+    let matcher = Matcher::new(matcher_settings);
+
+    // TODO: Par iter this? Using dashmap
+    let functions_by_target_and_guid: HashMap<(FunctionGUID, Target), Vec<_>> = view
+        .functions()
+        .iter()
+        .filter_map(|f| {
+            let guid = try_cached_function_guid(&f)?;
+            let target = platform_to_target(&f.platform());
+            Some(((guid, target), f.to_owned()))
+        })
+        .into_group_map();
+
+    // TODO: Par iter this? Using dashmap
+    let guids_by_target: HashMap<Target, Vec<FunctionGUID>> = functions_by_target_and_guid
+        .keys()
+        .map(|(guid, target)| (target.clone(), *guid))
+        .into_group_map();
+
+    // TODO: Target gets cloned a lot.
+    // TODO: Containers might both match on the same function. What should we do?
+    for_cached_containers(|container| {
+        if background_task.is_cancelled() {
+            return;
+        }
+
+        for (target, guids) in &guids_by_target {
+            let function_guid_with_sources = container
+                .sources_with_function_guids(target, guids)
+                .unwrap_or_default();
+
+            for (guid, sources) in &function_guid_with_sources {
+                let matched_functions: Vec<Function> = sources
+                    .iter()
+                    .flat_map(|source| {
+                        container
+                            .functions_with_guid(target, source, guid)
+                            .unwrap_or_default()
+                    })
+                    .collect();
+
+                let functions = functions_by_target_and_guid
+                    .get(&(*guid, target.clone()))
+                    .expect("Function guid not found");
+
+                for function in functions {
+                    // Match on all the possible functions
+                    if let Some(matched_function) =
+                        matcher.match_function_from_constraints(function, &matched_functions)
+                    {
+                        // We were able to find a match, add it to the match cache and then mark the function
+                        // as requiring updates; this is so that we know about it in the applier activity.
+                        insert_cached_function_match(function, Some(matched_function.clone()));
+                    }
+                }
+            }
+        }
+    });
+
+    if background_task.is_cancelled() {
+        log::info!("Matcher was cancelled by user, you may run it again by running the 'Run Matcher' command.");
+    }
+
+    log::info!("Function matching took {:?}", start.elapsed());
+    background_task.finish();
+
+    // Now we want to trigger re-analysis.
+    view.update_analysis();
+}
+
 pub fn insert_workflow() {
+    // "Hey look, it's a plier" ~ Josh 2025
+    let apply_activity = |ctx: &AnalysisContext| {
+        let view = ctx.view();
+        let function = ctx.function();
+        if let Some(matched_function) = try_cached_function_match(&function) {
+            // view.undefine_auto_symbol(&function.symbol());
+            view.define_auto_symbol(&to_bn_symbol_at_address(
+                &view,
+                &matched_function.symbol,
+                function.symbol().address(),
+            ));
+            if let Some(func_ty) = &matched_function.ty {
+                function.set_auto_type(&to_bn_type(&function.arch(), func_ty));
+            }
+            // TODO: How to clear the comments? They are just persisted.
+            // TODO: Also they generate an undo action, i hate implicit undo actions so much.
+            for comment in matched_function.comments {
+                let bn_comment = comment_to_bn_comment(&function, comment);
+                function.set_comment_at(bn_comment.addr, &bn_comment.comment);
+            }
+            function.add_tag(
+                &get_warp_tag_type(&view),
+                &matched_function.guid.to_string(),
+                None,
+                false,
+                None,
+            );
+        }
+    };
+
     let matcher_activity = |ctx: &AnalysisContext| {
         let view = ctx.view();
-        let undo_id = view.file().begin_undo_actions(true);
-        let background_task = BackgroundTask::new("Matching on functions...", false);
-        let start = Instant::now();
-        view.functions()
-            .iter()
-            .for_each(|function| cached_function_matcher(&function));
-        log::info!("Function matching took {:?}", start.elapsed());
-        background_task.finish();
-        view.file().commit_undo_actions(&undo_id);
-        // Now we want to trigger re-analysis.
-        view.update_analysis();
+        run_matcher(&view);
     };
 
     let guid_activity = |ctx: &AnalysisContext| {
         let function = ctx.function();
-        // TODO: Returning RegularNonSSA means we cant modify the il (the lifting code was written just for lifted il, that needs to be fixed)
-        if let Some(llil) = unsafe { ctx.llil_function() } {
-            cached_function_guid(&function, &llil);
+        if let Some(lifted_il) = unsafe { ctx.lifted_il_function() } {
+            cached_function_guid(&function, &lifted_il);
         }
     };
 
     let old_function_meta_workflow = Workflow::instance("core.function.metaAnalysis");
     let function_meta_workflow = old_function_meta_workflow.clone_to("core.function.metaAnalysis");
     let guid_activity = Activity::new_with_action(GUID_ACTIVITY_CONFIG, guid_activity);
+    let apply_activity = Activity::new_with_action(APPLY_ACTIVITY_CONFIG, apply_activity);
     function_meta_workflow
         .register_activity(&guid_activity)
         .unwrap();
+    // Because we are going to impact analysis with application we must make sure the function update is triggered to continue to update analysis.
+    // TODO: need to ask why i cant do core.function.update like in the rtti plugin.
+    function_meta_workflow
+        .register_activity_with_subactivities::<Vec<String>>(&apply_activity, vec![])
+        .unwrap();
     function_meta_workflow.insert("core.function.runFunctionRecognizers", [GUID_ACTIVITY_NAME]);
+    function_meta_workflow.insert("core.function.generateMediumLevelIL", [APPLY_ACTIVITY_NAME]);
     function_meta_workflow.register().unwrap();
 
     let old_module_meta_workflow = Workflow::instance("core.module.metaAnalysis");

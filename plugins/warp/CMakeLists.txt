@@ -21,6 +21,13 @@ file(GLOB_RECURSE PLUGIN_SOURCES CONFIGURE_DEPENDS
         ${PROJECT_SOURCE_DIR}/Cargo.toml
         ${PROJECT_SOURCE_DIR}/src/*.rs)
 
+# Add API library.
+add_subdirectory(api)
+# Add UI plugin.
+if(NOT HEADLESS)
+    add_subdirectory(ui)
+endif()
+
 if(CMAKE_BUILD_TYPE MATCHES Debug)
     set(TARGET_DIR ${PROJECT_BINARY_DIR}/target/debug)
     set(CARGO_OPTS --target-dir=${PROJECT_BINARY_DIR}/target)
@@ -38,8 +45,14 @@ endif()
 set(CARGO_FEATURES "--no-default-features")
 set(OUTPUT_FILE_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}${PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
 set(OUTPUT_PDB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}${PROJECT_NAME}.pdb)
+set(OUTPUT_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}${PROJECT_NAME}.dll.lib)
 set(OUTPUT_FILE_PATH ${BN_CORE_PLUGIN_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
 set(OUTPUT_PDB_PATH ${BN_CORE_PLUGIN_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${PROJECT_NAME}.pdb)
+set(OUTPUT_LIB_PATH ${BN_CORE_PLUGIN_DIR}/${PROJECT_NAME}.lib)
+
+# warp_ninja_interface is the target hack im going with for now to get warp_api to build on windows
+add_library(${PROJECT_NAME}_interface INTERFACE)
+add_dependencies(${PROJECT_NAME}_interface ${PROJECT_NAME})
 
 add_custom_target(${PROJECT_NAME} ALL DEPENDS ${OUTPUT_FILE_PATH})
 add_dependencies(${PROJECT_NAME} binaryninjaapi)
@@ -109,11 +122,12 @@ if(APPLE)
     endif()
 elseif(WIN32)
     add_custom_command(
-            OUTPUT ${OUTPUT_FILE_PATH}
+            OUTPUT ${OUTPUT_FILE_PATH} ${OUTPUT_PDB_PATH} ${OUTPUT_LIB_PATH}
             COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} clean ${CARGO_OPTS} --package binaryninjacore-sys
             COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} build ${CARGO_OPTS} ${CARGO_FEATURES}
             COMMAND ${CMAKE_COMMAND} -E copy ${TARGET_DIR}/${OUTPUT_FILE_NAME} ${OUTPUT_FILE_PATH}
             COMMAND ${CMAKE_COMMAND} -E copy ${TARGET_DIR}/${OUTPUT_PDB_NAME} ${OUTPUT_PDB_PATH}
+            COMMAND ${CMAKE_COMMAND} -E copy ${TARGET_DIR}/${OUTPUT_LIB_NAME} ${OUTPUT_LIB_PATH}
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
             DEPENDS ${PLUGIN_SOURCES} ${API_SOURCES}
     )

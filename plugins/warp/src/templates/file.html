@@ -1,0 +1,37 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+</head>
+<body>
+<h1>{{ title }}</h1>
+
+{% for chunk in chunks %}
+<section>
+    <h2>{{ chunk.title }}</h2>
+    <p>Target: {{ chunk.target }}</p>
+    <p>Total items: {{ chunk.total_item_count }}</p>
+
+    <table>
+        <thead>
+        <tr>
+            <th>GUID</th>
+            <th>Name</th>
+            <th>Note</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in chunk.item_view %}
+        <tr>
+            <td>{{ item.guid }}</td>
+            <td>{{ item.name or 'N/A' }}</td>
+            <td>{{ item.note or 'N/A' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endfor %}
+</body>
+</html>

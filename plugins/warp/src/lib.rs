@@ -1,7 +1,5 @@
-use crate::cache::{
-    cached_adjacency_constraints, cached_call_site_constraints, cached_function_guid,
-};
-use crate::convert::{from_bn_symbol, from_bn_type};
+use crate::cache::{cached_constraints, cached_function_guid};
+use crate::convert::{bn_comment_to_comment, from_bn_symbol, from_bn_type};
 use binaryninja::architecture::{
     Architecture, ImplicitRegisterExtend, Register as BNRegister, RegisterInfo,
 };
@@ -9,24 +7,54 @@ use binaryninja::basic_block::BasicBlock as BNBasicBlock;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::{Function as BNFunction, NativeBlock};
-use binaryninja::low_level_il::expression::{ExpressionHandler, LowLevelILExpressionKind};
+use binaryninja::low_level_il::expression::{
+    ExpressionHandler, LowLevelILExpression, LowLevelILExpressionKind, ValueExpr,
+};
 use binaryninja::low_level_il::function::{FunctionMutability, LowLevelILFunction, NonSSA};
 use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstruction, LowLevelILInstructionKind,
 };
 use binaryninja::low_level_il::{LowLevelILRegisterKind, VisitorAction};
-use binaryninja::rc::Ref as BNRef;
+use binaryninja::rc::{Ref as BNRef, Ref};
 use std::ops::Range;
 use std::path::PathBuf;
 use warp::signature::basic_block::BasicBlockGUID;
-use warp::signature::function::constraints::FunctionConstraints;
 use warp::signature::function::{Function, FunctionGUID};
 
+use binaryninja::tags::TagType;
+use binaryninja::variable::RegisterValueType;
+/// Re-export the warp crate that is used, this is useful for consumers of this crate.
+pub use warp;
+
 pub mod cache;
+pub mod container;
 pub mod convert;
-mod matcher;
+pub mod matcher;
+pub mod processor;
+pub mod report;
+
 /// Only used when compiled for cdylib target.
 mod plugin;
+
+// TODO: Make this 4kb
+/// If the address is within this range before or after a relocatable region, we will assume the address to be relocatable.
+const ADDRESS_RELOCATION_THRESHOLD: u64 = 0x10000;
+
+const TAG_ICON: &str = "🌐";
+const TAG_NAME: &str = "WARP";
+
+fn get_warp_tag_type(view: &BinaryView) -> Ref<TagType> {
+    view.tag_type_by_name(TAG_NAME)
+        .unwrap_or_else(|| view.create_tag_type(TAG_NAME, TAG_ICON))
+}
+
+const INCLUDE_TAG_ICON: &str = "🚀";
+const INCLUDE_TAG_NAME: &str = "WARP: Selected Function";
+
+fn get_warp_include_tag_type(view: &BinaryView) -> Ref<TagType> {
+    view.tag_type_by_name(INCLUDE_TAG_NAME)
+        .unwrap_or_else(|| view.create_tag_type(INCLUDE_TAG_NAME, INCLUDE_TAG_ICON))
+}
 
 pub fn core_signature_dir() -> PathBuf {
     // Get core signatures for the given platform
@@ -45,22 +73,34 @@ pub fn user_signature_dir() -> PathBuf {
 
 pub fn build_function<M: FunctionMutability>(
     func: &BNFunction,
-    llil: &LowLevelILFunction<M, NonSSA>,
+    lifted_il: &LowLevelILFunction<M, NonSSA>,
 ) -> Function {
-    let bn_fn_ty = func.function_type();
+    let comments = func
+        .comments()
+        .iter()
+        .map(|c| bn_comment_to_comment(func, c))
+        .collect();
     Function {
-        guid: cached_function_guid(func, llil),
+        guid: cached_function_guid(func, lifted_il),
         symbol: from_bn_symbol(&func.symbol()),
-        ty: from_bn_type(&func.view(), &bn_fn_ty, MAX_CONFIDENCE),
-        constraints: FunctionConstraints {
-            // NOTE: Adding adjacent only works if analysis is complete.
-            // NOTE: We do not filter out adjacent functions here.
-            adjacent: cached_adjacency_constraints(func, |_| true),
-            call_sites: cached_call_site_constraints(func),
-            // TODO: Add caller sites (when adjacent and call sites are minimal)
-            // NOTE: Adding caller sites only works if analysis is complete.
-            caller_sites: Default::default(),
+        // Currently we only store the type if its a user type.
+        // TODO: In the future we might want to make this configurable.
+        ty: match func.has_user_type() {
+            true => Some(from_bn_type(
+                &func.view(),
+                &func.function_type(),
+                MAX_CONFIDENCE,
+            )),
+            false => None,
         },
+        // NOTE: Adding adjacent only works if analysis is complete.
+        // NOTE: We do not filter out adjacent functions here.
+        constraints: cached_constraints(func, |_| true),
+        comments,
+        // TODO: Gather relevant variables (only user?).
+        // TODO: Will need MLIL SSA for this to locate def sites.
+        // TODO: Add this info in a second pass?
+        variables: vec![],
     }
 }
 
@@ -71,20 +111,21 @@ pub fn sorted_basic_blocks(func: &BNFunction) -> Vec<BNRef<BNBasicBlock<NativeBl
         .iter()
         .map(|bb| bb.clone())
         .collect::<Vec<_>>();
+    // NOTE: start_index is actually the address with [`NativeBlock`].
     basic_blocks.sort_by_key(|f| f.start_index());
     basic_blocks
 }
 
 pub fn function_guid<M: FunctionMutability>(
     func: &BNFunction,
-    llil: &LowLevelILFunction<M, NonSSA>,
+    lifted_il: &LowLevelILFunction<M, NonSSA>,
 ) -> FunctionGUID {
     // TODO: We might want to make this configurable, or otherwise _not_ retrieve from the view here.
     let relocatable_regions = relocatable_regions(&func.view());
     let basic_blocks = sorted_basic_blocks(func);
     let basic_block_guids = basic_blocks
         .iter()
-        .map(|bb| basic_block_guid(&relocatable_regions, bb, llil))
+        .map(|bb| basic_block_guid(&relocatable_regions, bb, lifted_il))
         .collect::<Vec<_>>();
     FunctionGUID::from_basic_blocks(&basic_block_guids)
 }
@@ -92,30 +133,60 @@ pub fn function_guid<M: FunctionMutability>(
 pub fn basic_block_guid<M: FunctionMutability>(
     relocatable_regions: &[Range<u64>],
     basic_block: &BNBasicBlock<NativeBlock>,
-    llil: &LowLevelILFunction<M, NonSSA>,
+    lifted_il: &LowLevelILFunction<M, NonSSA>,
 ) -> BasicBlockGUID {
     let func = basic_block.function();
+    // TODO: We really should never consult another IL, no guarantee that it exists.
+    let low_level_il = func.low_level_il();
     let view = func.view();
     let arch = func.arch();
     let max_instr_len = arch.max_instr_len();
 
+    // NOTE: Whenever you make a change here, prefer being "additive", that is, make a smaller change that
+    // only increases the masked contents, instead of making a larger change that could *remove* masked
+    // contents. The reason is that we assume any change that is purely additive to increase the ability
+    // to match previously "unmatchable" functions, whereas the latter would take away. This is not always
+    // the case, but it is generally a good rule to follow.
     let basic_block_range = basic_block.start_index()..basic_block.end_index();
     let mut basic_block_bytes = Vec::with_capacity(basic_block_range.count());
     for instr_addr in basic_block.into_iter() {
         let mut instr_bytes = view.read_vec(instr_addr, max_instr_len);
         if let Some(instr_info) = arch.instruction_info(&instr_bytes, instr_addr) {
             instr_bytes.truncate(instr_info.length);
-            if let Some(instr_llil) = llil.instruction_at(instr_addr) {
-                // If instruction is blacklisted don't include the bytes.
-                if !is_blacklisted_instruction(&instr_llil) {
-                    if is_variant_instruction(relocatable_regions, &instr_llil) {
-                        // Found a variant instruction, mask off entire instruction.
-                        instr_bytes.fill(0);
-                    }
-                    // Add the instructions bytes to the basic blocks bytes
-                    basic_block_bytes.extend(instr_bytes);
+
+            // Find variant and blacklisted instructions using lifted il.
+            if let Some(lifted_il_instr) = lifted_il.instruction_at(instr_addr) {
+                // If instruction is blacklisted, don't include the bytes.
+                if is_blacklisted_instruction(&lifted_il_instr) {
+                    continue;
+                }
+
+                if is_variant_instruction(relocatable_regions, &lifted_il_instr) {
+                    // Found a variant instruction, mask off the entire instruction.
+                    instr_bytes.fill(0);
                 }
             }
+
+            // TODO: We cannot access the values of expression in lifted IL, we have to go and consult low level IL.
+            // TODO: But because of some extremely annoying simplifications that are happening at LLIL, namely
+            // TODO: Folding of expressions into other instructions, we cannot use only LLIL. Therefor
+            // TODO: We only put the checks that require the expr value here.
+            // TODO: This still has the issue of, some (if (rax + 44) => 28) expression being masked,
+            // TODO: But the only way to remove that is to not consult LLIL at all and have the values
+            // TODO: Available at lifted IL, I have not found a good way to do this without making
+            // TODO: A "mapped llil" or having some simple data flow, the simple data flow is the most attractive
+            // TODO: "solution", but it would require
+            if let Ok(llil) = &low_level_il {
+                if let Some(low_level_instr) = llil.instruction_at(instr_addr) {
+                    if is_computed_variant_instruction(relocatable_regions, &low_level_instr) {
+                        // Found a computed variant instruction, mask off the entire instruction.
+                        instr_bytes.fill(0);
+                    }
+                }
+            }
+
+            // Add the instruction bytes to the basic blocks bytes
+            basic_block_bytes.extend(instr_bytes);
         }
     }
 
@@ -127,8 +198,8 @@ pub fn basic_block_guid<M: FunctionMutability>(
 /// Blacklisted instructions will make an otherwise identical function GUID fail to match.
 ///
 /// Example: NOPs and useless moves are blacklisted to allow for hot-patchable functions.
-pub fn is_blacklisted_instruction<A: Architecture, M: FunctionMutability>(
-    instr: &LowLevelILInstruction<A, M, NonSSA<RegularNonSSA>>,
+pub fn is_blacklisted_instruction<M: FunctionMutability>(
+    instr: &LowLevelILInstruction<M, NonSSA>,
 ) -> bool {
     match instr.kind() {
         LowLevelILInstructionKind::Nop(_) => true,
@@ -138,13 +209,13 @@ pub fn is_blacklisted_instruction<A: Architecture, M: FunctionMutability>(
                     if op.dest_reg() == source_op.source_reg() =>
                 {
                     match op.dest_reg() {
-                        LowLevelILRegister::ArchReg(r) => {
-                            // If this register has no implicit extend then we can safely assume it's a NOP.
+                        LowLevelILRegisterKind::Arch(r) => {
+                            // If this register has no implicit extend, we can safely assume it's a NOP.
                             // Ex. on x86_64 we don't want to remove `mov edi, edi` as it will zero the upper 32 bits.
                             // Ex. on x86 we do want to remove `mov edi, edi` as it will not have a side effect like above.
                             matches!(r.info().implicit_extend(), ImplicitRegisterExtend::NoExtend)
                         }
-                        LowLevelILRegister::Temp(_) => false,
+                        LowLevelILRegisterKind::Temp(_) => false,
                     }
                 }
                 _ => false,
@@ -154,24 +225,22 @@ pub fn is_blacklisted_instruction<A: Architecture, M: FunctionMutability>(
     }
 }
 
-pub fn is_variant_instruction<A: Architecture, M: FunctionMutability>(
+pub fn is_variant_instruction<M: FunctionMutability>(
     relocatable_regions: &[Range<u64>],
-    instr: &LowLevelILInstruction<A, M, NonSSA<RegularNonSSA>>,
+    instr: &LowLevelILInstruction<M, NonSSA>,
 ) -> bool {
-    let is_variant_expr = |expr: &LowLevelILExpressionKind<A, M, NonSSA<RegularNonSSA>>| {
-        match expr {
+    let is_variant_expr = |expr: &LowLevelILExpression<M, NonSSA, ValueExpr>| {
+        match expr.kind() {
             LowLevelILExpressionKind::ConstPtr(op)
                 if is_address_relocatable(relocatable_regions, op.value()) =>
             {
                 // Constant Pointer must be in a section for it to be relocatable.
-                // NOTE: We cannot utilize segments here as there will be a zero based segment.
                 true
             }
             LowLevelILExpressionKind::Const(op)
                 if is_address_relocatable(relocatable_regions, op.value()) =>
             {
                 // Constant value must be in a section for it to be relocatable.
-                // NOTE: We cannot utilize segments here as there will be a zero based segment.
                 true
             }
             LowLevelILExpressionKind::ExternPtr(_) => true,
@@ -181,7 +250,7 @@ pub fn is_variant_instruction<A: Architecture, M: FunctionMutability>(
 
     // Visit instruction expressions looking for variant expression, [VisitorAction::Halt] means variant.
     instr.visit_tree(&mut |expr| {
-        if is_variant_expr(&expr.kind()) {
+        if is_variant_expr(expr) {
             // Found a variant expression.
             VisitorAction::Halt
         } else {
@@ -191,18 +260,87 @@ pub fn is_variant_instruction<A: Architecture, M: FunctionMutability>(
     }) == VisitorAction::Halt
 }
 
-/// If the address is inside any of the given ranges we will assume the address to be relocatable.
+/// NOTE: This will only work at LLIL, **NOT** lifted IL. You must do this in a second pass.
+///
+/// This was previously done inside `is_variant_instruction` but had to be moved to access expr value.
+pub fn is_computed_variant_instruction<M: FunctionMutability>(
+    relocatable_regions: &[Range<u64>],
+    instr: &LowLevelILInstruction<M, NonSSA>,
+) -> bool {
+    let is_expr_constant = |expr: &LowLevelILExpression<M, NonSSA, ValueExpr>| match expr.kind() {
+        LowLevelILExpressionKind::Const(_) => true,
+        _ => false,
+    };
+
+    let is_variant_observed_expr = |expr: &LowLevelILExpression<M, NonSSA, ValueExpr>| {
+        match expr.kind() {
+            // TODO: Skip problematic expressions like IF?
+            LowLevelILExpressionKind::Add(op) | LowLevelILExpressionKind::Sub(op) => {
+                // For now, we limit to only expressions that contain some constant; this keeps add expressions
+                // with two registers with known values from being marked variant.
+                let constant_expressed =
+                    is_expr_constant(&op.left()) || is_expr_constant(&op.right());
+                // NOTE: Lifted IL does not have the value ever, we must consult Low Level IL.
+                // If the expression value is known, we check to see if it's a relocatable address.
+                let expr_value = expr.value();
+                match expr_value.state {
+                    RegisterValueType::EntryValue
+                    | RegisterValueType::ConstantValue
+                    | RegisterValueType::ConstantPointerValue
+                    | RegisterValueType::ExternalPointerValue
+                    | RegisterValueType::StackFrameOffset
+                    | RegisterValueType::ReturnAddressValue
+                    | RegisterValueType::ImportedAddressValue
+                        if constant_expressed
+                            && is_address_relocatable(
+                                relocatable_regions,
+                                expr_value.value as u64,
+                            ) =>
+                    {
+                        // Concrete arithmetic operation with a relocatable result.
+                        true
+                    }
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
+    };
+
+    // Visit instruction expressions looking for an observed variant expression, [VisitorAction::Halt] means variant.
+    instr.visit_tree(&mut |expr| {
+        if is_variant_observed_expr(expr) {
+            // Found a variant expression.
+            VisitorAction::Halt
+        } else {
+            // Keep looking for an observed variant expression.
+            VisitorAction::Descend
+        }
+    }) == VisitorAction::Halt
+}
+
+/// If the address is inside any of the given ranges, we will assume the address to be relocatable.
 pub fn is_address_relocatable(relocatable_regions: &[Range<u64>], address: u64) -> bool {
     relocatable_regions
         .iter()
-        .any(|range| range.contains(&address))
+        .any(|range| {
+            // Check if the address is within the range itself
+            (range.contains(&address))
+                // Check if the address is within the threshold **AFTER** the range
+                // NOTE: The address must at least be larger than the threshold itself, for lower image-based binaries.
+                || (address > range.end && address > ADDRESS_RELOCATION_THRESHOLD && address <= range.end + ADDRESS_RELOCATION_THRESHOLD)
+                // Check if the address is within the threshold **BEFORE** the range
+                // NOTE: The address must at least be larger than the threshold itself, for lower image-based binaries.
+                || (address < range.start && address > ADDRESS_RELOCATION_THRESHOLD && address >= range.start.saturating_sub(ADDRESS_RELOCATION_THRESHOLD))
+        })
 }
 
 // TODO: This might need to be configurable, in that case we better remove this function.
 /// Get the relocatable regions of the view.
 ///
-/// Currently, this is all the sections, however this might be refined later.
+/// Currently, this is all the sections, however, this might be refined later.
 pub fn relocatable_regions(view: &BinaryView) -> Vec<Range<u64>> {
+    // NOTE: We cannot use segments here as there will be a zero-based segment.
     view.sections()
         .iter()
         .map(|s| Range {
@@ -210,42 +348,4 @@ pub fn relocatable_regions(view: &BinaryView) -> Vec<Range<u64>> {
             end: s.end(),
         })
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::cache::cached_function_guid;
-    use binaryninja::binary_view::BinaryViewExt;
-    use binaryninja::headless::Session;
-    use std::path::PathBuf;
-    use std::sync::OnceLock;
-
-    static INIT: OnceLock<Session> = OnceLock::new();
-
-    fn get_session<'a>() -> &'a Session {
-        // TODO: This is not shared between other test modules, should still be fine (mutex in core now).
-        INIT.get_or_init(|| Session::new().expect("Failed to initialize session"))
-    }
-
-    #[test]
-    fn insta_signatures() {
-        let session = get_session();
-        let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
-        for entry in std::fs::read_dir(out_dir).expect("Failed to read OUT_DIR") {
-            let entry = entry.expect("Failed to read directory entry");
-            let path = entry.path();
-            if path.is_file() {
-                let view = session.load(&path).expect("Failed to load view");
-                let mut functions = view
-                    .functions()
-                    .iter()
-                    .map(|f| cached_function_guid(&f, &f.low_level_il().unwrap()))
-                    .collect::<Vec<_>>();
-                functions.sort_by_key(|guid| guid.guid);
-                let snapshot_name =
-                    format!("snapshot_{}", path.file_stem().unwrap().to_string_lossy());
-                insta::assert_debug_snapshot!(snapshot_name, functions);
-            }
-        }
-    }
 }

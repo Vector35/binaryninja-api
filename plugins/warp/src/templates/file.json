@@ -1,0 +1,21 @@
+{
+  "title": "{{ title }}",
+  "chunks": [
+    {% for chunk in chunks %}
+    {
+      "title": "{{ chunk.title }}",
+      "target": "{{ chunk.target }}",
+      "total_item_count": {{ chunk.total_item_count }},
+    "item_view": [
+      {% for item in chunk.item_view %}
+      {
+        "guid": "{{ item.guid }}",
+        "name": "{{ item.name or 'N/A' }}",
+        "note": "{{ item.note or 'N/A' }}"
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}

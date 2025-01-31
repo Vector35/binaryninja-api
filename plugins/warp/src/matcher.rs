@@ -1,241 +1,33 @@
+use crate::cache::cached_constraints;
+use crate::container::{Container, SourceId};
+use crate::convert::to_bn_type;
 use binaryninja::architecture::Architecture as BNArchitecture;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::function::Function as BNFunction;
-use binaryninja::platform::Platform;
-use binaryninja::rc::Guard;
-use binaryninja::rc::Ref as BNRef;
-use dashmap::DashMap;
+use binaryninja::settings::{QueryOptions, Settings as BNSettings};
 use serde_json::json;
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
-use std::hash::{DefaultHasher, Hash, Hasher};
-use std::path::PathBuf;
-use std::sync::OnceLock;
-use walkdir::{DirEntry, WalkDir};
+use std::collections::HashSet;
+use std::hash::Hash;
 use warp::r#type::class::TypeClass;
-use warp::r#type::guid::TypeGUID;
 use warp::r#type::Type;
-use warp::signature::function::{Function, FunctionGUID};
-use warp::signature::Data;
+use warp::signature::function::Function;
 
-use crate::cache::{
-    cached_adjacency_constraints, cached_call_site_constraints, cached_function_match,
-    try_cached_function_guid,
-};
-use crate::convert::to_bn_type;
-use crate::plugin::on_matched_function;
-use crate::{core_signature_dir, user_signature_dir};
-
-pub static PLAT_MATCHER_CACHE: OnceLock<DashMap<PlatformID, Matcher>> = OnceLock::new();
-
-pub fn cached_function_matcher(function: &BNFunction) {
-    let platform = function.platform();
-    let platform_id = PlatformID::from(platform.as_ref());
-    let matcher_cache = PLAT_MATCHER_CACHE.get_or_init(Default::default);
-    match matcher_cache.get(&platform_id) {
-        Some(matcher) => matcher.match_function(function),
-        None => {
-            let matcher = Matcher::from_platform(platform);
-            matcher.match_function(function);
-            matcher_cache.insert(platform_id, matcher);
-        }
-    }
-}
-
-// TODO: Maybe just clear individual platforms? This works well enough either way.
-pub fn invalidate_function_matcher_cache() {
-    let matcher_cache = PLAT_MATCHER_CACHE.get_or_init(Default::default);
-    matcher_cache.clear();
-}
-
-#[derive(Debug, Default, Clone)]
+/// A matcher represents a specific configuration for identify functions using WARP. A matcher
+/// does not store/own any WARP information directly, instead the matcher is given a [`Container`]
+/// that holds all of that information.
+///
+/// The separation of the WARP information from the [`Matcher`] allows a greater degree of control and
+/// provides a clean interface for further logic to be built on top of. A matcher instance, unlike
+/// a typical [`Container`] implementation, is cheap to create.
+#[derive(Debug, Clone, Copy)]
 pub struct Matcher {
-    // TODO: Storing the settings here means that they are effectively global.
-    // TODO: If we want scoped or view settings they must be moved out.
     pub settings: MatcherSettings,
-    pub functions: DashMap<FunctionGUID, Vec<Function>>,
-    pub types: DashMap<TypeGUID, Type>,
-    pub named_types: DashMap<String, Type>,
 }
 
 impl Matcher {
-    /// Create a matcher from the platforms signature subdirectory.
-    pub fn from_platform(platform: BNRef<Platform>) -> Self {
-        let platform_name = platform.name().to_string();
-
-        // Get core and user signatures.
-        // TODO: Separate each file into own bucket for filtering?
-        let plat_core_sig_dir = core_signature_dir().join(&platform_name);
-        let mut data = get_data_from_dir(&plat_core_sig_dir);
-        let plat_user_sig_dir = user_signature_dir().join(&platform_name);
-        let user_data = get_data_from_dir(&plat_user_sig_dir);
-
-        data.extend(user_data);
-        let merged_data = Data::merge(data.values().cloned().collect::<Vec<_>>());
-        log::debug!("Loaded signatures: {:?}", data.keys());
-        Matcher::from_data(merged_data)
-    }
-
-    pub fn from_data(data: Data) -> Self {
-        let functions = data.functions.into_iter().fold(
-            DashMap::new(),
-            |map: DashMap<FunctionGUID, Vec<_>>, func| {
-                map.entry(func.guid).or_default().push(func);
-                map
-            },
-        );
-        let types = data
-            .types
-            .iter()
-            .map(|ty| (ty.guid, ty.ty.clone()))
-            .collect();
-        let named_types = data
-            .types
-            .into_iter()
-            .filter_map(|ty| ty.ty.name.to_owned().map(|name| (name, ty.ty)))
-            .collect();
-
-        Self {
-            // NOTE: Settings will be retrieved from global state every time this is called.
-            settings: MatcherSettings::global(),
-            functions,
-            types,
-            named_types,
-        }
-    }
-
-    pub fn extend_with_matcher(&mut self, matcher: Matcher) {
-        self.functions.extend(matcher.functions);
-        self.types.extend(matcher.types);
-        self.named_types.extend(matcher.named_types);
-    }
-
-    pub fn add_type_to_view<A: BNArchitecture>(&self, view: &BinaryView, arch: &A, ty: &Type) {
-        fn inner_add_type_to_view<A: BNArchitecture>(
-            matcher: &Matcher,
-            view: &BinaryView,
-            arch: &A,
-            visited_refs: &mut HashSet<String>,
-            ty: &Type,
-        ) {
-            let ty_id_str = TypeGUID::from(ty).to_string();
-            if view.type_by_id(&ty_id_str).is_some() {
-                // Type already added.
-                return;
-            }
-            // Type not already added to the view.
-            // Verify all nested types are added before adding type.
-            match ty.class.as_ref() {
-                TypeClass::Pointer(c) => {
-                    inner_add_type_to_view(matcher, view, arch, visited_refs, &c.child_type)
-                }
-                TypeClass::Array(c) => {
-                    inner_add_type_to_view(matcher, view, arch, visited_refs, &c.member_type)
-                }
-                TypeClass::Structure(c) => {
-                    for member in &c.members {
-                        inner_add_type_to_view(matcher, view, arch, visited_refs, &member.ty)
-                    }
-                }
-                TypeClass::Enumeration(c) => {
-                    inner_add_type_to_view(matcher, view, arch, visited_refs, &c.member_type)
-                }
-                TypeClass::Union(c) => {
-                    for member in &c.members {
-                        inner_add_type_to_view(matcher, view, arch, visited_refs, &member.ty)
-                    }
-                }
-                TypeClass::Function(c) => {
-                    for out_member in &c.out_members {
-                        inner_add_type_to_view(matcher, view, arch, visited_refs, &out_member.ty)
-                    }
-                    for in_member in &c.in_members {
-                        inner_add_type_to_view(matcher, view, arch, visited_refs, &in_member.ty)
-                    }
-                }
-                TypeClass::Referrer(c) => {
-                    // Check to see if the referrer has been added to the view.
-                    let mut resolved = false;
-                    if let Some(ref_guid) = c.guid {
-                        // NOTE: We do not need to check for cyclic reference here because
-                        // NOTE: GUID references are unable to be referenced by themselves.
-                        if view.type_by_id(&ref_guid.to_string()).is_none() {
-                            // Add the referrer to the view if it is in the Matcher types
-                            if let Some(ref_ty) = matcher.types.get(&ref_guid) {
-                                inner_add_type_to_view(matcher, view, arch, visited_refs, &ref_ty);
-                                resolved = true;
-                            }
-                        }
-                    }
-
-                    if let Some(ref_name) = &c.name {
-                        // Only try and resolve by name if not already visiting.
-                        if !resolved
-                            && visited_refs.insert(ref_name.to_string())
-                            && view.type_by_name(ref_name).is_none()
-                        {
-                            // Add the ref to the view if it is in the Matcher types
-                            if let Some(ref_ty) = matcher.named_types.get(ref_name) {
-                                inner_add_type_to_view(matcher, view, arch, visited_refs, &ref_ty);
-                            }
-                            // No longer visiting type.
-                            visited_refs.remove(ref_name);
-                        }
-                    }
-
-                    // All nested types _should_ be added now, we can add this type.
-                    // TODO: Do we want to make unnamed types visible? I think we should, but some people might be opposed.
-                    let ty_name = ty.name.to_owned().unwrap_or_else(|| ty_id_str.clone());
-                    view.define_auto_type_with_id(ty_name, &ty_id_str, &to_bn_type(arch, ty));
-                }
-                _ => {}
-            }
-        }
-        inner_add_type_to_view(self, view, arch, &mut HashSet::new(), ty)
-    }
-
-    pub fn match_function(&self, function: &BNFunction) {
-        // Call this the first time you matched on the function.
-        let resolve_new_types = |matched: &Function| {
-            // We also want to resolve the types here.
-            if let TypeClass::Function(c) = matched.ty.class.as_ref() {
-                // Recursively go through the function type and resolve referrers
-                let view = function.view();
-                let arch = function.arch();
-                for out_member in &c.out_members {
-                    self.add_type_to_view(&view, &arch, &out_member.ty);
-                }
-                for in_member in &c.in_members {
-                    self.add_type_to_view(&view, &arch, &in_member.ty);
-                }
-            }
-        };
-
-        if let Some(matched_function) = cached_function_match(function, || {
-            // We have yet to match on this function.
-            let function_len = function.highest_address() - function.lowest_address();
-            let is_function_trivial = { function_len < self.settings.trivial_function_len };
-            let is_function_allowed = {
-                function_len > self.settings.minimum_function_len
-                    && function_len < self.settings.maximum_function_len.unwrap_or(u64::MAX)
-            };
-            let warp_func_guid = try_cached_function_guid(function)?;
-            match self.functions.get(&warp_func_guid) {
-                _ if !is_function_allowed => None,
-                Some(matched) if matched.len() == 1 && !is_function_trivial => {
-                    resolve_new_types(&matched[0]);
-                    Some(matched[0].to_owned())
-                }
-                Some(matched) => {
-                    let matched_on = self.match_function_from_constraints(function, &matched)?;
-                    resolve_new_types(matched_on);
-                    Some(matched_on.to_owned())
-                }
-                None => None,
-            }
-        }) {
-            on_matched_function(function, &matched_function);
-        }
+    pub fn new(settings: MatcherSettings) -> Self {
+        Matcher { settings }
     }
 
     pub fn match_function_from_constraints<'a>(
@@ -243,121 +35,248 @@ impl Matcher {
         function: &BNFunction,
         matched_functions: &'a [Function],
     ) -> Option<&'a Function> {
+        let function_len = function.highest_address() - function.lowest_address();
+        let is_function_trivial = { function_len < self.settings.trivial_function_len };
+        let is_function_allowed = {
+            function_len >= self.settings.minimum_function_len
+                && function_len < self.settings.maximum_function_len.unwrap_or(u64::MAX)
+        };
+
+        // Function isn't allowed, or no matches so stop early.
+        if !is_function_allowed || matched_functions.is_empty() {
+            return None;
+        }
+
+        // If we have a single possible match than that must be our function.
+        // We must also not be a trivial function, as those will likely be artifacts of an incomplete dataset
+        if matched_functions.len() == 1 && !is_function_trivial {
+            return matched_functions.first();
+        }
         // Filter out adjacent functions which are trivial, this helps avoid false positives.
         // NOTE: If the user sets `trivial_function_adjacent_allowed` to true we will always match.
         // TODO: Expand on this more later. We might want to match on adjacent functions smaller than this.
         let adjacent_function_filter = |adj_func: &BNFunction| {
             let adj_func_len = adj_func.highest_address() - adj_func.lowest_address();
-            adj_func_len > self.settings.trivial_function_len
+            adj_func_len >= self.settings.trivial_function_len
                 || self.settings.trivial_function_adjacent_allowed
         };
 
-        let call_sites = cached_call_site_constraints(function);
-        let adjacent = cached_adjacency_constraints(function, adjacent_function_filter);
-
+        // TODO: When the highest count has two matches we return None. Need to alert the user.
         // "common" being the intersection between the observed and matched.
-        fn find_highest_common_count<'a, F, T>(
-            observed_items: &HashSet<T>,
-            matched_functions: &'a [Function],
-            extract_items: F,
-        ) -> (usize, Option<&'a Function>)
-        where
-            F: Fn(&Function) -> HashSet<T>,
-            T: Hash + Eq,
-        {
-            let mut highest_count = 0;
-            let mut matched_func = None;
-            for matched in matched_functions {
-                let matched_items = extract_items(matched);
-                let common_count = observed_items.intersection(&matched_items).count();
-                match common_count.cmp(&highest_count) {
-                    Ordering::Equal => matched_func = None,
-                    Ordering::Greater => {
-                        highest_count = common_count;
-                        matched_func = Some(matched);
-                    }
-                    Ordering::Less => {}
+        let constraints = cached_constraints(function, adjacent_function_filter);
+        let mut highest_count = 0;
+        let mut matched_func = None;
+        for matched in matched_functions {
+            let common_count = constraints.intersection(&matched.constraints).count();
+            match common_count.cmp(&highest_count) {
+                Ordering::Equal => matched_func = None,
+                Ordering::Greater => {
+                    highest_count = common_count;
+                    matched_func = Some(matched);
                 }
+                Ordering::Less => {}
             }
-            (highest_count, matched_func)
         }
 
-        let call_site_guids: HashSet<_> = call_sites.iter().filter_map(|c| c.guid).collect();
-        let call_site_symbol_names: HashSet<_> = call_sites
-            .into_iter()
-            .filter_map(|c| c.symbol.map(|s| s.name))
-            .collect();
-        let adjacent_guids: HashSet<_> = adjacent.iter().filter_map(|c| c.guid).collect();
-        let adjacent_symbol_names: HashSet<_> = adjacent
-            .into_iter()
-            .filter_map(|c| c.symbol.map(|s| s.name))
-            .collect();
+        // If we have a match below the minimum threshold, ignore.
+        match highest_count.cmp(&self.settings.minimum_matched_constraints) {
+            Ordering::Equal => matched_func,
+            Ordering::Greater => matched_func,
+            Ordering::Less => None,
+        }
+    }
 
-        // Ordered from the lowest confidence to the highest confidence constraint.
-        let checked_constraints = [
-            find_highest_common_count(&adjacent_symbol_names, matched_functions, |matched| {
-                matched
-                    .constraints
-                    .adjacent
-                    .iter()
-                    .filter_map(|c| c.symbol.to_owned().map(|s| s.name))
-                    .collect()
-            }),
-            find_highest_common_count(&adjacent_guids, matched_functions, |matched| {
-                matched
-                    .constraints
-                    .adjacent
-                    .iter()
-                    .filter_map(|c| c.guid)
-                    .collect()
-            }),
-            find_highest_common_count(&call_site_symbol_names, matched_functions, |matched| {
-                matched
-                    .constraints
-                    .call_sites
-                    .iter()
-                    .filter_map(|c| c.symbol.to_owned().map(|s| s.name))
-                    .collect()
-            }),
-            find_highest_common_count(&call_site_guids, matched_functions, |matched| {
-                matched
-                    .constraints
-                    .call_sites
-                    .iter()
-                    .filter_map(|c| c.guid)
-                    .collect()
-            }),
-        ];
+    // TODO: I would really like for WARP types to be added in a seperate type container, so that we don't
+    // TODO: just add them as system or user types.
+    pub fn add_type_to_view<A: BNArchitecture>(
+        &self,
+        container: &dyn Container,
+        source: &SourceId,
+        view: &BinaryView,
+        arch: &A,
+        ty: &Type,
+    ) where
+        Self: Sized,
+    {
+        fn inner_add_type_to_view<A: BNArchitecture>(
+            container: &dyn Container,
+            source: &SourceId,
+            view: &BinaryView,
+            arch: &A,
+            visited_refs: &mut HashSet<String>,
+            ty: &Type,
+        ) {
+            // Type not already added to the view.
+            // Verify all nested types are added before adding type.
+            match &ty.class {
+                TypeClass::Pointer(c) => inner_add_type_to_view(
+                    container,
+                    source,
+                    view,
+                    arch,
+                    visited_refs,
+                    &c.child_type,
+                ),
+                TypeClass::Array(c) => inner_add_type_to_view(
+                    container,
+                    source,
+                    view,
+                    arch,
+                    visited_refs,
+                    &c.member_type,
+                ),
+                TypeClass::Structure(c) => {
+                    for member in &c.members {
+                        inner_add_type_to_view(
+                            container,
+                            source,
+                            view,
+                            arch,
+                            visited_refs,
+                            &member.ty,
+                        )
+                    }
+                }
+                TypeClass::Enumeration(c) => inner_add_type_to_view(
+                    container,
+                    source,
+                    view,
+                    arch,
+                    visited_refs,
+                    &c.member_type,
+                ),
+                TypeClass::Union(c) => {
+                    for member in &c.members {
+                        inner_add_type_to_view(
+                            container,
+                            source,
+                            view,
+                            arch,
+                            visited_refs,
+                            &member.ty,
+                        )
+                    }
+                }
+                TypeClass::Function(c) => {
+                    for out_member in &c.out_members {
+                        inner_add_type_to_view(
+                            container,
+                            source,
+                            view,
+                            arch,
+                            visited_refs,
+                            &out_member.ty,
+                        )
+                    }
+                    for in_member in &c.in_members {
+                        inner_add_type_to_view(
+                            container,
+                            source,
+                            view,
+                            arch,
+                            visited_refs,
+                            &in_member.ty,
+                        )
+                    }
+                }
+                TypeClass::Referrer(c) => {
+                    // Check to see if the referrer has been added to the view.
+                    let mut resolved_ty = None;
+                    if let Some(ref_guid) = c.guid {
+                        // NOTE: We do not need to check for cyclic reference here because
+                        // NOTE: GUID references are unable to be referenced by themselves.
+                        if view.type_by_id(&ref_guid.to_string()).is_none() {
+                            // Add the referrer to the view if it is in the Matcher types
+                            if let Ok(Some(ref_ty)) = container.type_with_guid(source, &ref_guid) {
+                                inner_add_type_to_view(
+                                    container,
+                                    source,
+                                    view,
+                                    arch,
+                                    visited_refs,
+                                    &ref_ty,
+                                );
+                                resolved_ty = Some(ref_ty);
+                            }
+                        }
+                    }
 
-        // If there is a tie, the last one wins, which should be call_site guid.
-        checked_constraints
-            .into_iter()
-            .max_by_key(|&(count, _)| count)
-            .filter(|&(count, _)| count >= self.settings.minimum_matched_constraints)
-            .and_then(|(_, func)| func)
+                    if let Some(ref_name) = &c.name {
+                        // Only try and resolve by name if not already visiting.
+                        if resolved_ty.is_none()
+                            && visited_refs.insert(ref_name.to_string())
+                            && view.type_by_name(ref_name).is_none()
+                        {
+                            // Add the ref to the view if it is in the Matcher types
+                            let type_guids = container
+                                .type_guids_with_name(source, ref_name)
+                                .unwrap_or_default();
+                            // TODO: What happens if we have more than one?
+                            if type_guids.len() == 1 {
+                                // TODO: What happens if we cant get the guid?
+                                if let Ok(Some(ref_ty)) =
+                                    container.type_with_guid(source, &type_guids[0])
+                                {
+                                    inner_add_type_to_view(
+                                        container,
+                                        source,
+                                        view,
+                                        arch,
+                                        visited_refs,
+                                        &ref_ty,
+                                    );
+                                    resolved_ty = Some(ref_ty);
+                                }
+                            }
+                            // No longer visiting type.
+                            visited_refs.remove(ref_name);
+                        }
+                    }
+
+                    // Adds the ref'd type to the view.
+                    match (c.guid, &c.name, resolved_ty) {
+                        (Some(guid), Some(name), Some(ref_ty)) => {
+                            view.define_auto_type_with_id(
+                                name,
+                                &guid.to_string(),
+                                &to_bn_type(arch, &ref_ty),
+                            );
+                        }
+                        (Some(_guid), Some(_name), None) => {
+                            // TODO: Got name and guid but no type? Do we add a bare NTR?
+                        }
+                        (Some(_guid), None, _) => {
+                            // TODO: How would we reference this type without a name???
+                        }
+                        (None, Some(_name), _) => {
+                            // TODO: Cyclic type reference if no guid, so... dont define?
+                        }
+                        (None, None, _) => {
+                            // TODO: What?!?!?
+                        }
+                    }
+                }
+                TypeClass::Void
+                | TypeClass::Boolean(_)
+                | TypeClass::Integer(_)
+                | TypeClass::Character(_)
+                | TypeClass::Float(_) => {}
+            }
+
+            // TODO: Some refs likely need to ommitted because they are just that, refs to another type.
+            // let guid = TypeGUID::from(ty);
+            // let name = ty.name.clone().unwrap_or(guid.to_string());
+            // view.define_auto_type_with_id(name, &guid.to_string(), &to_bn_type(arch, ty));
+        }
+        inner_add_type_to_view(container, source, view, arch, &mut HashSet::new(), ty)
     }
 }
 
-fn get_data_from_dir(dir: &PathBuf) -> HashMap<PathBuf, Data> {
-    let data_from_entry = |entry: DirEntry| {
-        let path = entry.path();
-        let contents = std::fs::read(path).ok()?;
-        Data::from_bytes(&contents)
-    };
-
-    WalkDir::new(dir)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-        .filter_map(|e| Some((e.clone().into_path(), data_from_entry(e)?)))
-        .collect()
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MatcherSettings {
     /// Any function under this length will be required to constrain.
     ///
-    /// This is set to [MatcherSettings::DEFAULT_TRIVIAL_FUNCTION_LEN] by default.
+    /// This is set to [MatcherSettings::TRIVIAL_FUNCTION_LEN_DEFAULT] by default.
     pub trivial_function_len: u64,
     /// Any function under this length will not match.
     ///
@@ -367,13 +286,15 @@ pub struct MatcherSettings {
     ///
     /// This is set to [MatcherSettings::MAXIMUM_FUNCTION_LEN_DEFAULT] by default.
     pub maximum_function_len: Option<u64>,
-    /// For a successful constrained function match the number of matches must be above this.
+    /// For a successful constrained function match, the number of matches must be above this.
     ///
-    /// This is set to [MatcherSettings::DEFAULT_TRIVIAL_FUNCTION_LEN] by default.
+    /// This is set to [MatcherSettings::MINIMUM_MATCHED_CONSTRAINTS_DEFAULT] by default.
     pub minimum_matched_constraints: usize,
-    /// For a successful constrained function match the number of matches must be above this.
+    /// When function constraints are checked, if this is enabled, functions can match based off trivial adjacent functions.
     ///
-    /// This is set to [MatcherSettings::DEFAULT_TRIVIAL_FUNCTION_LEN] by default.
+    /// Any function under `trivial_function_len` will be considered trivial.
+    ///
+    /// This is set to [MatcherSettings::TRIVIAL_FUNCTION_ADJACENT_ALLOWED_DEFAULT] by default.
     pub trivial_function_adjacent_allowed: bool,
 }
 
@@ -395,17 +316,15 @@ impl MatcherSettings {
     ///
     /// Call this once when you initialize so that the settings exist.
     ///
-    /// NOTE: If you are using this as a library then just modify the MatcherSettings directly
+    /// NOTE: If you are using this as a library, then modify the [`MatcherSettings`] directly
     /// in the matcher instance, that way you don't need to round-trip through Binary Ninja.
-    pub fn register() {
-        let bn_settings = binaryninja::settings::Settings::new();
-
+    pub fn register(bn_settings: &mut BNSettings) {
         let trivial_function_len_props = json!({
             "title" : "Trivial Function Length",
             "type" : "number",
             "default" : Self::TRIVIAL_FUNCTION_LEN_DEFAULT,
             "description" : "Functions below this length in bytes will be required to match on constraints.",
-            "ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+            "ignore" : []
         });
         bn_settings.register_setting_json(
             Self::TRIVIAL_FUNCTION_LEN_SETTING,
@@ -417,7 +336,7 @@ impl MatcherSettings {
             "type" : "number",
             "default" : Self::MINIMUM_FUNCTION_LEN_DEFAULT,
             "description" : "Functions below this length will not be matched.",
-            "ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+            "ignore" : []
         });
         bn_settings.register_setting_json(
             Self::MINIMUM_FUNCTION_LEN_SETTING,
@@ -429,7 +348,7 @@ impl MatcherSettings {
             "type" : "number",
             "default" : Self::MAXIMUM_FUNCTION_LEN_DEFAULT,
             "description" : "Functions above this length will not be matched. A value of 0 will disable this check.",
-            "ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+            "ignore" : []
         });
         bn_settings.register_setting_json(
             Self::MAXIMUM_FUNCTION_LEN_SETTING,
@@ -441,7 +360,7 @@ impl MatcherSettings {
             "type" : "number",
             "default" : Self::MINIMUM_MATCHED_CONSTRAINTS_DEFAULT,
             "description" : "When function constraints are checked the amount of constraints matched must be at-least this.",
-            "ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+            "ignore" : []
         });
         bn_settings.register_setting_json(
             Self::MINIMUM_MATCHED_CONSTRAINTS_SETTING,
@@ -453,7 +372,7 @@ impl MatcherSettings {
             "type" : "boolean",
             "default" : Self::TRIVIAL_FUNCTION_ADJACENT_ALLOWED_DEFAULT,
             "description" : "When function constraints are checked if this is enabled functions can match based off trivial adjacent functions.",
-            "ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+            "ignore" : []
         });
         bn_settings.register_setting_json(
             Self::TRIVIAL_FUNCTION_ADJACENT_ALLOWED_SETTING,
@@ -461,26 +380,32 @@ impl MatcherSettings {
         );
     }
 
-    pub fn global() -> Self {
+    /// Retrieve matcher settings from [`BNSettings`].
+    pub fn from_settings(bn_settings: &BNSettings, query_opts: &mut QueryOptions) -> Self {
         let mut settings = MatcherSettings::default();
-        let bn_settings = binaryninja::settings::Settings::new();
         if bn_settings.contains(Self::TRIVIAL_FUNCTION_LEN_SETTING) {
             settings.trivial_function_len =
-                bn_settings.get_integer(Self::TRIVIAL_FUNCTION_LEN_SETTING);
+                bn_settings.get_integer_with_opts(Self::TRIVIAL_FUNCTION_LEN_SETTING, query_opts);
         }
         if bn_settings.contains(Self::MINIMUM_FUNCTION_LEN_SETTING) {
             settings.minimum_function_len =
-                bn_settings.get_integer(Self::MINIMUM_FUNCTION_LEN_SETTING);
+                bn_settings.get_integer_with_opts(Self::MINIMUM_FUNCTION_LEN_SETTING, query_opts);
         }
         if bn_settings.contains(Self::MAXIMUM_FUNCTION_LEN_SETTING) {
-            match bn_settings.get_integer(Self::MAXIMUM_FUNCTION_LEN_SETTING) {
+            match bn_settings.get_integer_with_opts(Self::MAXIMUM_FUNCTION_LEN_SETTING, query_opts)
+            {
                 0 => settings.maximum_function_len = None,
                 len => settings.maximum_function_len = Some(len),
             }
         }
         if bn_settings.contains(Self::MINIMUM_MATCHED_CONSTRAINTS_SETTING) {
-            settings.minimum_matched_constraints =
-                bn_settings.get_integer(Self::MINIMUM_MATCHED_CONSTRAINTS_SETTING) as usize;
+            settings.minimum_matched_constraints = bn_settings
+                .get_integer_with_opts(Self::MINIMUM_MATCHED_CONSTRAINTS_SETTING, query_opts)
+                as usize;
+        }
+        if bn_settings.contains(Self::TRIVIAL_FUNCTION_ADJACENT_ALLOWED_SETTING) {
+            settings.trivial_function_adjacent_allowed = bn_settings
+                .get_bool_with_opts(Self::TRIVIAL_FUNCTION_ADJACENT_ALLOWED_SETTING, query_opts);
         }
         settings
     }
@@ -496,29 +421,5 @@ impl Default for MatcherSettings {
             trivial_function_adjacent_allowed:
                 MatcherSettings::TRIVIAL_FUNCTION_ADJACENT_ALLOWED_DEFAULT,
         }
-    }
-}
-
-/// A unique platform ID, used for caching.
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PlatformID(u64);
-
-impl From<&Platform> for PlatformID {
-    fn from(value: &Platform) -> Self {
-        let mut hasher = DefaultHasher::new();
-        hasher.write(value.name().as_bytes());
-        Self(hasher.finish())
-    }
-}
-
-impl From<BNRef<Platform>> for PlatformID {
-    fn from(value: BNRef<Platform>) -> Self {
-        Self::from(value.as_ref())
-    }
-}
-
-impl From<Guard<'_, Platform>> for PlatformID {
-    fn from(value: Guard<'_, Platform>) -> Self {
-        Self::from(value.as_ref())
     }
 }

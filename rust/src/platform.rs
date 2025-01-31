@@ -72,7 +72,7 @@ macro_rules! cc_func {
 }
 
 impl Platform {
-    pub(crate) unsafe fn from_raw(handle: *mut BNPlatform) -> Self {
+    pub unsafe fn from_raw(handle: *mut BNPlatform) -> Self {
         debug_assert!(!handle.is_null());
         Self { handle }
     }

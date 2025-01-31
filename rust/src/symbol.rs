@@ -217,7 +217,7 @@ impl SymbolBuilder {
 
 #[derive(Eq)]
 pub struct Symbol {
-    pub(crate) handle: *mut BNSymbol,
+    pub handle: *mut BNSymbol,
 }
 
 impl Symbol {

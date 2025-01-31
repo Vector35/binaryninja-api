@@ -137,7 +137,7 @@ pub struct NativeBlock {
 }
 
 impl NativeBlock {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         NativeBlock { _priv: () }
     }
 }
@@ -305,12 +305,12 @@ pub struct Function {
 }
 
 impl Function {
-    pub(crate) unsafe fn from_raw(handle: *mut BNFunction) -> Self {
+    pub unsafe fn from_raw(handle: *mut BNFunction) -> Self {
         debug_assert!(!handle.is_null());
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: *mut BNFunction) -> Ref<Self> {
+    pub unsafe fn ref_from_raw(handle: *mut BNFunction) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Ref::new(Self { handle })
     }

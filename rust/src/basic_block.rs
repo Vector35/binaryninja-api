@@ -112,7 +112,7 @@ pub struct BasicBlock<C: BlockContext> {
 }
 
 impl<C: BlockContext> BasicBlock<C> {
-    pub(crate) unsafe fn from_raw(handle: *mut BNBasicBlock, context: C) -> Self {
+    pub unsafe fn from_raw(handle: *mut BNBasicBlock, context: C) -> Self {
         Self { handle, context }
     }
 

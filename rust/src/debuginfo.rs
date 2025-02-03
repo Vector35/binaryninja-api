@@ -562,18 +562,18 @@ impl DebugInfo {
     ) -> Option<NamedDataVariableWithType> {
         let parser_name = parser_name.into_bytes_with_nul();
         let name = name.into_bytes_with_nul();
-        let raw_named_var = unsafe {
-            BNGetDebugDataVariableByName(
+        let mut dv = BNDataVariableAndName::default();
+        unsafe {
+            if BNGetDebugDataVariableByName(
                 self.handle,
                 parser_name.as_ref().as_ptr() as *mut _,
                 name.as_ref().as_ptr() as *mut _,
-            )
-        };
-
-        if !raw_named_var.is_null() {
-            Some(unsafe { NamedDataVariableWithType::from_ref_raw(raw_named_var) })
-        } else {
-            None
+                &mut dv,
+            ) {
+                Some(NamedDataVariableWithType::from_owned_raw(dv))
+            } else {
+                None
+            }
         }
     }
 
@@ -583,18 +583,18 @@ impl DebugInfo {
         address: u64,
     ) -> Option<NamedDataVariableWithType> {
         let parser_name = parser_name.into_bytes_with_nul();
-        let raw_named_var = unsafe {
-            BNGetDebugDataVariableByAddress(
+        let mut dv = BNDataVariableAndName::default();
+        unsafe {
+            if BNGetDebugDataVariableByAddress(
                 self.handle,
                 parser_name.as_ref().as_ptr() as *mut _,
                 address,
-            )
-        };
-
-        if !raw_named_var.is_null() {
-            Some(unsafe { NamedDataVariableWithType::from_ref_raw(raw_named_var) })
-        } else {
-            None
+                &mut dv,
+            ) {
+                Some(NamedDataVariableWithType::from_owned_raw(dv))
+            } else {
+                None
+            }
         }
     }
 

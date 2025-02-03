@@ -158,27 +158,25 @@ Ref<Type> DebugInfo::GetTypeByName(const string& parserName, const string& name)
 optional<tuple<uint64_t, Ref<Type>>> DebugInfo::GetDataVariableByName(
 	const string& parserName, const string& name) const
 {
-	BNDataVariableAndName* result = BNGetDebugDataVariableByName(m_object, parserName.c_str(), name.c_str());
-	if (result)
-	{
-		BNFreeString(result->name);
-		return {{result->address, Ref<Type>(new Type(result->type))}};
-	}
-	return {};
+	BNDataVariableAndName result;
+	if (!BNGetDebugDataVariableByName(m_object, parserName.c_str(), name.c_str(), &result))
+		return std::nullopt;
+	Ref<Type> type = new Type(BNNewTypeReference(result.type));
+	BNFreeDataVariableAndName(&result);
+	return {{result.address, type}};
 }
 
 
 optional<tuple<string, Ref<Type>>> DebugInfo::GetDataVariableByAddress(
 	const string& parserName, const uint64_t address) const
 {
-	BNDataVariableAndName* nameAndVar = BNGetDebugDataVariableByAddress(m_object, parserName.c_str(), address);
-	if (nameAndVar)
-	{
-		const tuple<string, Ref<Type>> result = {nameAndVar->name, Ref<Type>(new Type(nameAndVar->type))};
-		BNFreeString(nameAndVar->name);
-		return {result};
-	}
-	return {};
+	BNDataVariableAndName result;
+	if (!BNGetDebugDataVariableByAddress(m_object, parserName.c_str(), address, &result))
+		return std::nullopt;
+	string name = result.name;
+	Ref<Type> type = new Type(BNNewTypeReference(result.type));
+	BNFreeDataVariableAndName(&result);
+	return {{name, type}};
 }
 
 

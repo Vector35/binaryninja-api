@@ -119,12 +119,6 @@ impl NamedDataVariableWithType {
         owned
     }
 
-    pub(crate) unsafe fn from_ref_raw(value: *mut BNDataVariableAndName) -> Self {
-        let owned = Self::from_raw(&*value);
-        Self::free_ref_raw(value);
-        owned
-    }
-
     pub(crate) fn into_raw(value: Self) -> BNDataVariableAndName {
         let bn_name = BnString::new(value.name);
         BNDataVariableAndName {
@@ -134,10 +128,6 @@ impl NamedDataVariableWithType {
             autoDiscovered: value.auto_discovered,
             typeConfidence: value.ty.confidence,
         }
-    }
-
-    pub(crate) fn free_ref_raw(value: *mut BNDataVariableAndName) {
-        unsafe { BNFreeDataVariableAndName(value) }
     }
 
     pub(crate) fn free_raw(value: BNDataVariableAndName) {

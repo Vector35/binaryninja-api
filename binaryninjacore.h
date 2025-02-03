@@ -7540,10 +7540,10 @@ extern "C"
 		BNDebugInfo* const debugInfo, const BNDataVariableAndName* var);
 	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariables(
 		BNDebugInfo* const debugInfo, const char* const name, size_t* count);
-	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariableByName(
-		BNDebugInfo* const debugInfo, const char* const parserName, const char* const variableName);
-	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariableByAddress(
-		BNDebugInfo* const debugInfo, const char* const parserName, const uint64_t address);
+	BINARYNINJACOREAPI bool BNGetDebugDataVariableByName(
+		BNDebugInfo* const debugInfo, const char* const parserName, const char* const variableName, BNDataVariableAndName* var);
+	BINARYNINJACOREAPI bool BNGetDebugDataVariableByAddress(
+		BNDebugInfo* const debugInfo, const char* const parserName, const uint64_t address, BNDataVariableAndName* var);
 	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariablesByName(
 		BNDebugInfo* const debugInfo, const char* const variableName, size_t* count);
 	BINARYNINJACOREAPI BNDataVariableAndNameAndDebugParser* BNGetDebugDataVariablesByAddress(

@@ -6,13 +6,12 @@ use rstest::*;
 use std::path::PathBuf;
 
 #[fixture]
-#[once]
 fn session() -> Session {
     Session::new().expect("Failed to initialize session")
 }
 
 #[rstest]
-fn test_binary_loading(_session: &Session) {
+fn test_binary_loading(_session: Session) {
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     assert!(view.has_initial_analysis(), "No initial analysis");
@@ -22,7 +21,7 @@ fn test_binary_loading(_session: &Session) {
 }
 
 #[rstest]
-fn test_binary_saving(_session: &Session) {
+fn test_binary_saving(_session: Session) {
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     // Verify the contents before we modify.
@@ -45,7 +44,7 @@ fn test_binary_saving(_session: &Session) {
 }
 
 #[rstest]
-fn test_binary_saving_database(_session: &Session) {
+fn test_binary_saving_database(_session: Session) {
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     // Update a symbol to verify modification

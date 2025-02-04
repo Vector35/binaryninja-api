@@ -9,7 +9,6 @@ use serial_test::serial;
 use std::path::PathBuf;
 
 #[fixture]
-#[once]
 fn session() -> Session {
     Session::new().expect("Failed to initialize session")
 }
@@ -58,7 +57,7 @@ fn temp_project_scope<T: Fn(&RemoteProject)>(remote: &Remote, project_name: &str
 
 #[rstest]
 #[serial]
-fn test_connection(_session: &Session) {
+fn test_connection(_session: Session) {
     if !has_collaboration_support() {
         eprintln!("No collaboration support, skipping test...");
         return;
@@ -74,7 +73,7 @@ fn test_connection(_session: &Session) {
 
 #[rstest]
 #[serial]
-fn test_project_creation(_session: &Session) {
+fn test_project_creation(_session: Session) {
     if !has_collaboration_support() {
         eprintln!("No collaboration support, skipping test...");
         return;
@@ -155,7 +154,7 @@ fn test_project_creation(_session: &Session) {
 
 #[rstest]
 #[serial]
-fn test_project_sync(_session: &Session) {
+fn test_project_sync(_session: Session) {
     if !has_collaboration_support() {
         eprintln!("No collaboration support, skipping test...");
         return;

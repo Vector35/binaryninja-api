@@ -18,8 +18,6 @@ use crate::{
 };
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::SeqCst;
 use thiserror::Error;
 
 use crate::enterprise::release_license;
@@ -35,7 +33,7 @@ use std::time::Duration;
 static MAIN_THREAD_HANDLE: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 
 /// Used to prevent shutting down Binary Ninja if there are other [`Session`]'s.
-static SESSION_COUNT: AtomicUsize = AtomicUsize::new(0);
+static SESSION_COUNT: Mutex<usize> = Mutex::new(0);
 
 #[derive(Error, Debug)]
 pub enum InitializationError {
@@ -47,6 +45,8 @@ pub enum InitializationError {
     InvalidLicense,
     #[error("no license could located, please see `binaryninja::set_license` for details")]
     NoLicenseFound,
+    #[error("unable to apply options to an previously created `binaryninja::headless::Session`")]
+    SessionAlreadyInitialized,
 }
 
 /// Loads plugins, core architecture, platform, etc.
@@ -284,15 +284,40 @@ pub fn license_location() -> Option<LicenseLocation> {
 }
 
 /// Wrapper for [`init`] and [`shutdown`]. Instantiating this at the top of your script will initialize everything correctly and then clean itself up at exit as well.
-pub struct Session {}
+pub struct Session {
+    /// lock that don't allow the user to create a session directly
+    _lock: std::marker::PhantomData<()>,
+}
 
 impl Session {
     /// Get a registered [`Session`] for use.
     ///
     /// This is required so that we can keep track of the [`SESSION_COUNT`].
-    fn registered_session() -> Self {
-        let _previous_count = SESSION_COUNT.fetch_add(1, SeqCst);
-        Self {}
+    fn register_session(
+        options: Option<InitializationOptions>,
+    ) -> Result<Self, InitializationError> {
+        // if we were able to locate a license, continue with initialization.
+        if license_location().is_none() {
+            // otherwise you must call [Self::new_with_license].
+            return Err(InitializationError::NoLicenseFound);
+        }
+
+        // This is required so that we call init only once
+        let mut session_count = SESSION_COUNT.lock().unwrap();
+        match (*session_count, options) {
+            // no session, just create one
+            (0, options) => init_with_opts(options.unwrap_or_default())?,
+            // session already created, can't apply options
+            (1.., Some(_)) => return Err(InitializationError::SessionAlreadyInitialized),
+            // NOTE if the existing session was created with options,
+            // returning the current session may not be exactly what the
+            // user expects.
+            (1.., None) => {}
+        }
+        *session_count += 1;
+        Ok(Self {
+            _lock: std::marker::PhantomData,
+        })
     }
 
     /// Before calling new you must make sure that the license is retrievable, otherwise the core won't be able to initialize.
@@ -300,14 +325,7 @@ impl Session {
     /// If you cannot otherwise provide a license via `BN_LICENSE_FILE` environment variable or the Binary Ninja user directory
     /// you can call [`Session::new_with_opts`] instead of this function.
     pub fn new() -> Result<Self, InitializationError> {
-        if license_location().is_some() {
-            // We were able to locate a license, continue with initialization.
-            init()?;
-            Ok(Self::registered_session())
-        } else {
-            // There was no license that could be automatically retrieved, you must call [Self::new_with_license].
-            Err(InitializationError::NoLicenseFound)
-        }
+        Self::register_session(None)
     }
 
     /// Initialize with options, the same rules apply as [`Session::new`], see [`InitializationOptions::default`] for the regular options passed.
@@ -315,8 +333,7 @@ impl Session {
     /// This differs from [`Session::new`] in that it does not check to see if there is a license that the core
     /// can discover by itself, therefor it is expected that you know where your license is when calling this directly.
     pub fn new_with_opts(options: InitializationOptions) -> Result<Self, InitializationError> {
-        init_with_opts(options)?;
-        Ok(Self::registered_session())
+        Self::register_session(Some(options))
     }
 
     /// ```no_run
@@ -410,10 +427,13 @@ impl Session {
 
 impl Drop for Session {
     fn drop(&mut self) {
-        let previous_count = SESSION_COUNT.fetch_sub(1, SeqCst);
-        if previous_count == 1 {
+        let mut session_count = SESSION_COUNT.lock().unwrap();
+        match *session_count {
+            0 => unreachable!(),
             // We were the last session, therefor we can safely shut down.
-            shutdown();
+            1 => shutdown(),
+            2.. => {}
         }
+        *session_count -= 1;
     }
 }

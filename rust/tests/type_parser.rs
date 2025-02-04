@@ -28,13 +28,12 @@ typedef struct {
 "#;
 
 #[fixture]
-#[once]
 fn session() -> Session {
     Session::new().expect("Failed to initialize session")
 }
 
 #[rstest]
-fn test_string_to_type(_session: &Session) {
+fn test_string_to_type(_session: Session) {
     let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
     let plat_type_container = platform.type_container();
     let parser = CoreTypeParser::default();
@@ -46,7 +45,7 @@ fn test_string_to_type(_session: &Session) {
 }
 
 #[rstest]
-fn test_string_to_types(_session: &Session) {
+fn test_string_to_types(_session: Session) {
     let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
     let plat_type_container = platform.type_container();
     let parser = CoreTypeParser::default();
@@ -65,7 +64,7 @@ fn test_string_to_types(_session: &Session) {
 }
 
 #[rstest]
-fn test_parse_error(_session: &Session) {
+fn test_parse_error(_session: Session) {
     let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
     let plat_type_container = platform.type_container();
     let parser = CoreTypeParser::default();

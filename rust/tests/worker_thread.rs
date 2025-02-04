@@ -3,13 +3,12 @@ use rstest::*;
 use std::sync::{Arc, Barrier};
 
 #[fixture]
-#[once]
 fn session() -> Session {
     Session::new().expect("Failed to initialize session")
 }
 
 #[rstest]
-fn test_setting_worker_thread(_session: &Session) {
+fn test_setting_worker_thread(_session: Session) {
     let original_count = binaryninja::worker_thread::worker_thread_count();
     binaryninja::worker_thread::set_worker_thread_count(original_count - 1);
     assert_eq!(
@@ -24,7 +23,7 @@ fn test_setting_worker_thread(_session: &Session) {
 }
 
 #[rstest]
-fn test_worker_thread_different(_session: &Session) {
+fn test_worker_thread_different(_session: Session) {
     let calling_thread = std::thread::current();
 
     // We need both (2) threads to synchronize

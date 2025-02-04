@@ -7,7 +7,6 @@ use binaryninja::types::Type;
 use rstest::*;
 
 #[fixture]
-#[once]
 fn session() -> Session {
     Session::new().expect("Failed to initialize session")
 }
@@ -27,7 +26,7 @@ fn empty_view() -> Ref<BinaryView> {
 }
 
 #[rstest]
-fn test_types(_session: &Session, platform: &Platform) {
+fn test_types(_session: Session, platform: &Platform) {
     let type_container = platform.type_container();
     let types = type_container.types().unwrap();
     // windows-x86_64 has a few thousand, not zero.
@@ -35,7 +34,7 @@ fn test_types(_session: &Session, platform: &Platform) {
 }
 
 #[rstest]
-fn test_type_id(_session: &Session, platform: &Platform) {
+fn test_type_id(_session: Session, platform: &Platform) {
     let type_container = platform.type_container();
     let type_ids = type_container.type_ids().unwrap();
     let first_type_id = type_ids.iter().next().unwrap();
@@ -53,7 +52,7 @@ fn test_type_id(_session: &Session, platform: &Platform) {
 }
 
 #[rstest]
-fn test_add_delete_type(_session: &Session, empty_view: &BinaryView) {
+fn test_add_delete_type(_session: Session, empty_view: &BinaryView) {
     let view_type_container = empty_view.type_container();
     let test_type = Type::int(4, true);
     assert!(
@@ -72,7 +71,7 @@ fn test_add_delete_type(_session: &Session, empty_view: &BinaryView) {
 }
 
 #[rstest]
-fn test_immutable_container(_session: &Session, platform: &Platform) {
+fn test_immutable_container(_session: Session, platform: &Platform) {
     // Platform type containers are immutable, so we shouldn't be able to delete/add/rename types.
     let plat_type_container = platform.type_container();
     assert!(
@@ -102,7 +101,7 @@ fn test_immutable_container(_session: &Session, platform: &Platform) {
 }
 
 #[rstest]
-fn test_parse_type(_session: &Session, platform: &Platform) {
+fn test_parse_type(_session: Session, platform: &Platform) {
     let type_container = platform.type_container();
     // HANDLE will be pulled in from the platform, which is `windows-x86_64`.
     let parsed_type = type_container
@@ -114,7 +113,7 @@ fn test_parse_type(_session: &Session, platform: &Platform) {
 }
 
 #[rstest]
-fn test_container_lifetime(_session: &Session, platform: &Platform, empty_view: &BinaryView) {
+fn test_container_lifetime(_session: Session, platform: &Platform, empty_view: &BinaryView) {
     let plat_type_container_dropped = platform.type_container();
     let view_type_container_dropped = empty_view.type_container();
     let _plat_types_dropped = plat_type_container_dropped.types();

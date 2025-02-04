@@ -4,7 +4,6 @@ use binaryninja::workflow::Workflow;
 use rstest::*;
 
 #[fixture]
-#[once]
 fn session() -> Session {
     Session::new().expect("Failed to initialize session")
 }
@@ -13,7 +12,7 @@ fn session() -> Session {
 // TODO: Test activity insertion and removal
 
 #[rstest]
-fn test_workflow_clone(_session: &Session) {
+fn test_workflow_clone(_session: Session) {
     let original_workflow = Workflow::new("core.function.baseAnalysis");
     let mut cloned_workflow = original_workflow.clone("clone_workflow");
 
@@ -31,7 +30,7 @@ fn test_workflow_clone(_session: &Session) {
 }
 
 #[rstest]
-fn test_workflow_registration(_session: &Session) {
+fn test_workflow_registration(_session: Session) {
     // Validate NULL workflows cannot be registered
     let workflow = Workflow::new("null");
     assert_eq!(workflow.name().as_str(), "null");

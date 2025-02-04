@@ -8,13 +8,12 @@ use rstest::{fixture, rstest};
 use std::path::PathBuf;
 
 #[fixture]
-#[once]
 fn session() -> Session {
     Session::new().expect("Failed to initialize session")
 }
 
 #[rstest]
-fn test_render_layer_register(_session: &Session) {
+fn test_render_layer_register(_session: Session) {
     struct EmptyRenderLayer;
     impl RenderLayer for EmptyRenderLayer {}
     register_render_layer("Test Render Layer", EmptyRenderLayer, Default::default());
@@ -22,7 +21,7 @@ fn test_render_layer_register(_session: &Session) {
 }
 
 #[rstest]
-fn test_render_layer_linear_view(_session: &Session) {
+fn test_render_layer_linear_view(_session: Session) {
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
 

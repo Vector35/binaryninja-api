@@ -5,13 +5,12 @@ use binaryninja::types::{MemberAccess, MemberScope, StructureBuilder, StructureM
 use rstest::*;
 
 #[fixture]
-#[once]
 fn session() -> Session {
     Session::new().expect("Failed to initialize session")
 }
 
 #[rstest]
-fn test_type_to_string(_session: &Session) {
+fn test_type_to_string(_session: Session) {
     let test_type = Type::int(4, true);
     assert_eq!(test_type.to_string(), "int32_t".to_string());
 
@@ -25,7 +24,7 @@ fn test_type_to_string(_session: &Session) {
 }
 
 #[rstest]
-fn test_structure_builder(_session: &Session) {
+fn test_structure_builder(_session: Session) {
     let mut builder = StructureBuilder::new();
     builder.insert(
         &Type::int(4, true),

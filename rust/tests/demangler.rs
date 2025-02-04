@@ -9,13 +9,12 @@ use binaryninja::types::{QualifiedName, Type};
 use rstest::*;
 
 #[fixture]
-#[once]
 fn session() -> Session {
     Session::new().expect("Failed to initialize session")
 }
 
 #[rstest]
-fn test_demangler_simple(_session: &Session) {
+fn test_demangler_simple(_session: Session) {
     let placeholder_arch = CoreArchitecture::by_name("x86").expect("x86 exists");
     // Example LLVM-style mangled name
     let llvm_mangled = "_Z3fooi"; // "foo(int)" in LLVM mangling
@@ -46,7 +45,7 @@ fn test_demangler_simple(_session: &Session) {
 }
 
 #[rstest]
-fn test_custom_demangler(_session: &Session) {
+fn test_custom_demangler(_session: Session) {
     struct TestDemangler;
 
     impl CustomDemangler for TestDemangler {

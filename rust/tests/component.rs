@@ -5,13 +5,12 @@ use rstest::*;
 use std::path::PathBuf;
 
 #[fixture]
-#[once]
 fn session() -> Session {
     Session::new().expect("Failed to initialize session")
 }
 
 #[rstest]
-fn test_component_creation(_session: &Session) {
+fn test_component_creation(_session: Session) {
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     let component = ComponentBuilder::new(view.clone()).name("test").finalize();

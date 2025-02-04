@@ -8,7 +8,6 @@ use std::time::SystemTime;
 // TODO: We should use tempdir to manage the project directory.
 
 #[fixture]
-#[once]
 fn session() -> Session {
     Session::new().expect("Failed to initialize session")
 }
@@ -18,7 +17,7 @@ fn unique_project(name: &str) -> String {
 }
 
 #[rstest]
-fn create_delete_empty(_session: &Session) {
+fn create_delete_empty(_session: Session) {
     use std::fs::canonicalize;
 
     let project_name = "create_delete_empty_project";
@@ -47,7 +46,7 @@ fn create_delete_empty(_session: &Session) {
 }
 
 #[rstest]
-fn create_close_open_close(_session: &Session) {
+fn create_close_open_close(_session: Session) {
     let project_name = "create_close_open_close";
     let project_path = unique_project(project_name);
     // create the project
@@ -75,7 +74,7 @@ fn create_close_open_close(_session: &Session) {
 }
 
 #[rstest]
-fn modify_project(_session: &Session) {
+fn modify_project(_session: Session) {
     let project_name = "modify_project_project";
     let project_path = unique_project(project_name);
     // create the project

@@ -80,7 +80,7 @@ impl RepositoryManager {
     /// Before you can query plugin metadata from a repository, you need to call [RepositoryManager::check_for_updates].
     ///
     /// * `url` - URL to the plugins.json containing the records for this repository
-    /// * `repopath` - path to where the repository will be stored on disk locally
+    /// * `repository_path` - path to where the repository will be stored on disk locally
     ///
     /// Returns true if the repository was successfully added, false otherwise.
     pub fn add_repository<U: BnStrCompatible, P: BnStrCompatible>(
@@ -99,7 +99,7 @@ impl RepositoryManager {
         }
     }
 
-    pub fn repository_by_path<P: BnStrCompatible>(&self, path: P) -> Repository {
+    pub fn repository_by_path<P: BnStrCompatible>(&self, path: P) -> Option<Repository> {
         let path = path.into_bytes_with_nul();
         let result = unsafe {
             BNRepositoryGetRepositoryByPath(
@@ -107,7 +107,7 @@ impl RepositoryManager {
                 path.as_ref().as_ptr() as *const ffi::c_char,
             )
         };
-        unsafe { Repository::from_raw(ptr::NonNull::new(result).unwrap()) }
+        ptr::NonNull::new(result).map(|raw| unsafe { Repository::from_raw(raw) })
     }
 
     /// Gets the default Repository

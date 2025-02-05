@@ -3,7 +3,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use binaryninjacore_sys::*;
 
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 
 pub type PluginType = BNPluginType;
@@ -16,32 +16,34 @@ pub struct RepositoryManager {
     handle: ptr::NonNull<BNRepositoryManager>,
 }
 
-impl Drop for RepositoryManager {
-    fn drop(&mut self) {
-        unsafe { BNFreeRepositoryManager(self.as_raw()) }
+impl ToOwned for RepositoryManager {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { <Self as RefCountable>::inc_ref(self) }
     }
 }
 
-impl Clone for RepositoryManager {
-    fn clone(&self) -> Self {
-        unsafe {
-            Self::from_raw(
-                ptr::NonNull::new(BNNewRepositoryManagerReference(self.as_raw())).unwrap(),
-            )
-        }
+unsafe impl RefCountable for RepositoryManager {
+    unsafe fn inc_ref(handle: &Self) -> crate::rc::Ref<Self> {
+        Self::ref_from_raw(
+            ptr::NonNull::new(BNNewRepositoryManagerReference(handle.as_raw())).unwrap(),
+        )
     }
-}
 
-impl Default for RepositoryManager {
-    fn default() -> Self {
-        let result = unsafe { BNGetRepositoryManager() };
-        unsafe { Self::from_raw(ptr::NonNull::new(result).unwrap()) }
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeRepositoryManager(handle.as_raw())
     }
 }
 
 impl RepositoryManager {
-    pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNRepositoryManager>) -> Self {
-        Self { handle }
+    pub fn default() -> Ref<Self> {
+        let result = unsafe { BNGetRepositoryManager() };
+        unsafe { Self::ref_from_raw(ptr::NonNull::new(result).unwrap()) }
+    }
+
+    pub(crate) unsafe fn ref_from_raw(handle: ptr::NonNull<BNRepositoryManager>) -> Ref<Self> {
+        Ref::new(Self { handle })
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -49,12 +51,12 @@ impl RepositoryManager {
         &mut *self.handle.as_ptr()
     }
 
-    pub fn new<S: BnStrCompatible>(plugins_path: S) -> Self {
+    pub fn new<S: BnStrCompatible>(plugins_path: S) -> Ref<Self> {
         let plugins_path = plugins_path.into_bytes_with_nul();
         let result = unsafe {
             BNCreateRepositoryManager(plugins_path.as_ref().as_ptr() as *const ffi::c_char)
         };
-        unsafe { Self::from_raw(ptr::NonNull::new(result).unwrap()) }
+        unsafe { Self::ref_from_raw(ptr::NonNull::new(result).unwrap()) }
     }
 
     /// Check for updates for all managed Repository objects
@@ -109,12 +111,12 @@ impl RepositoryManager {
     }
 
     /// Gets the default Repository
-    pub fn default_repository(&self) -> Repository {
+    pub fn default_repository(&self) -> Ref<Repository> {
         let result = unsafe { BNRepositoryManagerGetDefaultRepository(self.as_raw()) };
         assert!(!result.is_null());
         // NOTE result is not onwed, we need to clone it
-        let default = unsafe { Repository::ref_from_raw(&result) };
-        default.clone()
+        let default = unsafe { Repository::from_raw(ptr::NonNull::new(result).unwrap()) };
+        default.to_owned()
     }
 }
 
@@ -123,17 +125,21 @@ pub struct Repository {
     handle: ptr::NonNull<BNRepository>,
 }
 
-impl Drop for Repository {
-    fn drop(&mut self) {
-        unsafe { BNFreeRepository(self.as_raw()) }
+impl ToOwned for Repository {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { <Self as RefCountable>::inc_ref(self) }
     }
 }
 
-impl Clone for Repository {
-    fn clone(&self) -> Self {
-        unsafe {
-            Self::from_raw(ptr::NonNull::new(BNNewRepositoryReference(self.as_raw())).unwrap())
-        }
+unsafe impl RefCountable for Repository {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Self::ref_from_raw(ptr::NonNull::new(BNNewRepositoryReference(handle.as_raw())).unwrap())
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeRepository(handle.as_raw())
     }
 }
 
@@ -142,9 +148,8 @@ impl Repository {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNRepository) -> &Self {
-        assert!(!handle.is_null());
-        mem::transmute(handle)
+    pub(crate) unsafe fn ref_from_raw(handle: ptr::NonNull<BNRepository>) -> Ref<Self> {
+        Ref::new(Self { handle })
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -193,7 +198,7 @@ impl Repository {
 impl CoreArrayProvider for Repository {
     type Raw = *mut BNRepository;
     type Context = ();
-    type Wrapped<'a> = &'a Self;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl CoreArrayProviderInner for Repository {
@@ -201,8 +206,8 @@ unsafe impl CoreArrayProviderInner for Repository {
         BNFreeRepositoryManagerRepositoriesList(raw)
     }
 
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Guard::new(Self::from_raw(ptr::NonNull::new(*raw).unwrap()), context)
     }
 }
 
@@ -211,15 +216,21 @@ pub struct RepoPlugin {
     handle: ptr::NonNull<BNRepoPlugin>,
 }
 
-impl Drop for RepoPlugin {
-    fn drop(&mut self) {
-        unsafe { BNFreePlugin(self.as_raw()) }
+impl ToOwned for RepoPlugin {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { <Self as RefCountable>::inc_ref(self) }
     }
 }
 
-impl Clone for RepoPlugin {
-    fn clone(&self) -> Self {
-        unsafe { Self::from_raw(ptr::NonNull::new(BNNewPluginReference(self.as_raw())).unwrap()) }
+unsafe impl RefCountable for RepoPlugin {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Self::ref_from_raw(ptr::NonNull::new(BNNewPluginReference(handle.as_raw())).unwrap())
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreePlugin(handle.as_raw())
     }
 }
 
@@ -228,9 +239,8 @@ impl RepoPlugin {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: &*mut BNRepoPlugin) -> &Self {
-        assert!(!handle.is_null());
-        mem::transmute(handle)
+    pub(crate) unsafe fn ref_from_raw(handle: ptr::NonNull<BNRepoPlugin>) -> Ref<Self> {
+        Ref::new(Self { handle })
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -469,7 +479,7 @@ impl RepoPlugin {
 impl CoreArrayProvider for RepoPlugin {
     type Raw = *mut BNRepoPlugin;
     type Context = ();
-    type Wrapped<'a> = &'a Self;
+    type Wrapped<'a> = Guard<'a, Self>;
 }
 
 unsafe impl CoreArrayProviderInner for RepoPlugin {
@@ -477,8 +487,8 @@ unsafe impl CoreArrayProviderInner for RepoPlugin {
         BNFreeRepositoryPluginList(raw)
     }
 
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::ref_from_raw(raw)
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Guard::new(Self::from_raw(ptr::NonNull::new(*raw).unwrap()), context)
     }
 }
 

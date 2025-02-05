@@ -2,14 +2,16 @@ use core::{ffi, mem, ptr};
 
 use binaryninjacore_sys::*;
 
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct WebsocketProvider {
     handle: ptr::NonNull<BNWebsocketProvider>,
 }
+unsafe impl Sync for WebsocketProvider {}
+unsafe impl Send for WebsocketProvider {}
 
 impl WebsocketProvider {
     pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNWebsocketProvider>) -> Self {
@@ -51,46 +53,29 @@ impl WebsocketProvider {
     ///
     /// * `host` - Full url with scheme, domain, optionally port, and path
     /// * `headers` - HTTP header keys and values
-    pub fn connect<U, I, K, V>(self, url: U, headers: I) -> Option<WebsocketClient>
+    /// * `read_handle` - Handles the received data from the Socket
+    pub fn connect<'a, U, I, K, V, F>(
+        &'a self,
+        url: U,
+        headers: I,
+        read_handle: &'a mut F,
+    ) -> Option<Ref<WebsocketClient<'a>>>
     where
         U: BnStrCompatible,
         I: IntoIterator<Item = (K, V)>,
         K: BnStrCompatible,
         V: BnStrCompatible,
+        F: FnMut(&[u8]) -> bool,
     {
-        let result = unsafe { BNCreateWebsocketProviderClient(self.as_raw()) };
-        let client = unsafe { WebsocketClient::from_raw(ptr::NonNull::new(result).unwrap()) };
-        let url = url.into_bytes_with_nul();
-        let (header_keys, header_values): (Vec<K::Result>, Vec<V::Result>) = headers
-            .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
-            .unzip();
-        let header_keys: Vec<*const ffi::c_char> = header_keys
-            .iter()
-            .map(|k| k.as_ref().as_ptr() as *const ffi::c_char)
-            .collect();
-        let header_values: Vec<*const ffi::c_char> = header_values
-            .iter()
-            .map(|v| v.as_ref().as_ptr() as *const ffi::c_char)
-            .collect();
-        let mut cb_callback = BNWebsocketClientOutputCallbacks {
-            context: ptr::null_mut(),
+        let cb_callback = BNWebsocketClientOutputCallbacks {
+            context: read_handle as *mut _ as *mut ffi::c_void,
             connectedCallback: Some(cb_connected_nop),
             disconnectedCallback: Some(cb_disconnected_nop),
             errorCallback: Some(cb_error_nop),
-            readCallback: Some(cb_read_nop),
+            readCallback: Some(cb_read_closure::<F>),
         };
-        let success = unsafe {
-            BNConnectWebsocketClient(
-                client.as_raw(),
-                url.as_ref().as_ptr() as *const ffi::c_char,
-                header_keys.len().try_into().unwrap(),
-                header_keys.as_ptr(),
-                header_values.as_ptr(),
-                &mut cb_callback,
-            )
-        };
-        success.then_some(client)
+        let client_ptr = unsafe { BNCreateWebsocketProviderClient(self.as_raw()) };
+        connect_client(client_ptr, url, headers, cb_callback)
     }
 
     /// Connect to a given url, asynchronously. The connection will be run in a
@@ -110,12 +95,12 @@ impl WebsocketProvider {
     /// * `host` - Full url with scheme, domain, optionally port, and path
     /// * `headers` - HTTP header keys and values
     /// * `callback` - Callbacks for various websocket events
-    pub fn connect_with_callback<U, I, K, V, W>(
-        self,
+    pub fn connect_with_callback<'a, U, I, K, V, W>(
+        &self,
         url: U,
         headers: I,
-        callback: W,
-    ) -> Option<WebsocketClientHandleWithCallback<W>>
+        callback: &'a mut W,
+    ) -> Option<Ref<WebsocketClient<'a>>>
     where
         U: BnStrCompatible,
         I: IntoIterator<Item = (K, V)>,
@@ -123,41 +108,15 @@ impl WebsocketProvider {
         V: BnStrCompatible,
         W: WebsocketClientCallback,
     {
-        let result = unsafe { BNCreateWebsocketProviderClient(self.as_raw()) };
-        let client = unsafe { WebsocketClient::from_raw(ptr::NonNull::new(result).unwrap()) };
-        // SAFETY: freed by WebsocketClientConnectedWithCallback::drop
-        let callback = Box::leak(Box::new(callback));
-        let url = url.into_bytes_with_nul();
-        let (header_keys, header_values): (Vec<K::Result>, Vec<V::Result>) = headers
-            .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
-            .unzip();
-        let header_keys: Vec<*const ffi::c_char> = header_keys
-            .iter()
-            .map(|k| k.as_ref().as_ptr() as *const ffi::c_char)
-            .collect();
-        let header_values: Vec<*const ffi::c_char> = header_values
-            .iter()
-            .map(|v| v.as_ref().as_ptr() as *const ffi::c_char)
-            .collect();
-        let mut cb_callback = BNWebsocketClientOutputCallbacks {
+        let cb_callback = BNWebsocketClientOutputCallbacks {
             context: callback as *mut W as *mut _,
             connectedCallback: Some(cb_connected::<W>),
             disconnectedCallback: Some(cb_disconnected::<W>),
             errorCallback: Some(cb_error::<W>),
             readCallback: Some(cb_read::<W>),
         };
-        let success = unsafe {
-            BNConnectWebsocketClient(
-                client.as_raw(),
-                url.as_ref().as_ptr() as *const ffi::c_char,
-                header_keys.len().try_into().unwrap(),
-                header_keys.as_ptr(),
-                header_values.as_ptr(),
-                &mut cb_callback,
-            )
-        };
-        success.then(|| WebsocketClientHandleWithCallback { client, callback })
+        let client_ptr = unsafe { BNCreateWebsocketProviderClient(self.as_raw()) };
+        connect_client(client_ptr, url, headers, cb_callback)
     }
 }
 
@@ -177,32 +136,41 @@ unsafe impl CoreArrayProviderInner for WebsocketProvider {
     }
 }
 
-/// Implements a websocket client. See [WebsocketProvider::connect] and [WebsocketProvider::connect_with_callback] for more details.
+/// Implements a websocket client.
 #[repr(transparent)]
-pub struct WebsocketClient {
+pub struct WebsocketClient<'a> {
     handle: ptr::NonNull<BNWebsocketClient>,
+    // lifetime of callbacks, AKA don't drop callbacks while the client still running
+    _callback: std::marker::PhantomData<&'a ()>,
 }
+unsafe impl Sync for WebsocketClient<'_> {}
+unsafe impl Send for WebsocketClient<'_> {}
 
-impl Clone for WebsocketClient {
-    fn clone(&self) -> Self {
-        let result = unsafe { BNNewWebsocketClientReference(self.as_raw()) };
-        unsafe { Self::from_raw(ptr::NonNull::new(result).unwrap()) }
+impl ToOwned for WebsocketClient<'_> {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { <Self as RefCountable>::inc_ref(self) }
     }
 }
 
-impl Drop for WebsocketClient {
-    fn drop(&mut self) {
-        unsafe { BNFreeWebsocketClient(self.as_raw()) }
+unsafe impl RefCountable for WebsocketClient<'_> {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        let result = BNNewWebsocketClientReference(handle.as_raw());
+        unsafe { Self::ref_from_raw(ptr::NonNull::new(result).unwrap()) }
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeWebsocketClient(handle.as_raw())
     }
 }
 
-impl WebsocketClient {
-    pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNWebsocketClient>) -> Self {
-        Self { handle }
-    }
-
-    pub(crate) unsafe fn into_raw(self) -> *mut BNWebsocketClient {
-        mem::ManuallyDrop::new(self).handle.as_ptr()
+impl WebsocketClient<'_> {
+    pub(crate) unsafe fn ref_from_raw(handle: ptr::NonNull<BNWebsocketClient>) -> Ref<Self> {
+        Ref::new(Self {
+            handle,
+            _callback: std::marker::PhantomData,
+        })
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -210,63 +178,10 @@ impl WebsocketClient {
         &mut *self.handle.as_ptr()
     }
 
-    pub fn new_custom<W>(provider: WebsocketProvider) -> WebsocketClient
-    where
-        W: WebsocketCustomClient,
-    {
-        // SAFETY: Websocket client is freed by cb_destroy_client
-        let custom_uinit = Box::leak(Box::new(mem::MaybeUninit::zeroed()));
-        let mut callbacks = BNWebsocketClientCallbacks {
-            context: custom_uinit as *mut _ as *mut ffi::c_void,
-            connect: Some(cb_connect::<W>),
-            destroyClient: Some(cb_destroy_client::<W>),
-            disconnect: Some(cb_disconnect::<W>),
-            write: Some(cb_write::<W>),
-        };
-        let result = unsafe { BNInitWebsocketClient(provider.as_raw(), &mut callbacks) };
-        let client = unsafe { WebsocketClient::from_raw(ptr::NonNull::new(result).unwrap()) };
-        custom_uinit.write(W::new(provider, &client));
-        client
-    }
-
-    /// Call the connect callback function, forward the callback returned value
-    pub fn notify_connect(&self) -> bool {
-        unsafe { BNNotifyWebsocketClientConnect(self.as_raw()) }
-    }
-
-    /// Notify the callback function of a disconnect, but don't disconnect,
-    /// use the [Self::disconnect] function for that
-    pub fn notify_disconnect(&self) {
-        unsafe { BNNotifyWebsocketClientDisconnect(self.as_raw()) }
-    }
-
-    /// Call the error callback function
-    pub fn notify_error<S: BnStrCompatible>(&self, error: S) {
-        let error = error.into_bytes_with_nul();
-        unsafe {
-            BNNotifyWebsocketClientError(
-                self.as_raw(),
-                error.as_ref().as_ptr() as *const ffi::c_char,
-            )
-        }
-    }
-
-    /// Call the read callback function, forward the callback returned value
-    pub fn notify_read<S: BnStrCompatible>(&self, data: &mut [u8]) -> bool {
-        unsafe {
-            BNNotifyWebsocketClientReadData(
-                self.as_raw(),
-                data.as_mut_ptr(),
-                data.len().try_into().unwrap(),
-            )
-        }
-    }
-
     /// Write some data to the websocket
-    pub fn write(&self, data: &[u8]) -> usize {
+    pub fn write(&self, data: &[u8]) -> bool {
         let len = u64::try_from(data.len()).unwrap();
-        let result = unsafe { BNWriteWebsocketClientData(self.as_raw(), data.as_ptr(), len) };
-        usize::try_from(result).unwrap()
+        unsafe { BNWriteWebsocketClientData(self.as_raw(), data.as_ptr(), len) != 0 }
     }
 
     /// Disconnect the websocket
@@ -275,35 +190,180 @@ impl WebsocketClient {
     }
 }
 
-pub struct WebsocketClientHandleWithCallback<W: WebsocketClientCallback> {
-    client: WebsocketClient,
-    callback: *mut W,
-}
+pub struct CoreWebSocketClient<'a>(WebsocketClient<'a>);
 
-impl<W: WebsocketClientCallback> Drop for WebsocketClientHandleWithCallback<W> {
-    fn drop(&mut self) {
-        let callback: Box<W> = unsafe { Box::from_raw(self.callback) };
-        drop(callback);
+impl CoreWebSocketClient<'_> {
+    /// Call the connect callback function, forward the callback returned value
+    pub fn notify_connect(&self) -> bool {
+        unsafe { BNNotifyWebsocketClientConnect(self.0.as_raw()) }
     }
-}
 
-impl<W: WebsocketClientCallback> AsRef<WebsocketClient> for WebsocketClientHandleWithCallback<W> {
-    fn as_ref(&self) -> &WebsocketClient {
-        &self.client
+    /// Notify the callback function of a disconnect, but don't disconnect,
+    /// use the [Self::disconnect] function for that
+    pub fn notify_disconnect(&self) {
+        unsafe { BNNotifyWebsocketClientDisconnect(self.0.as_raw()) }
     }
-}
 
-impl<W: WebsocketClientCallback> core::ops::Deref for WebsocketClientHandleWithCallback<W> {
-    type Target = WebsocketClient;
+    /// Call the error callback function
+    pub fn notify_error<S: BnStrCompatible>(&self, error: S) {
+        let error = error.into_bytes_with_nul();
+        unsafe {
+            BNNotifyWebsocketClientError(
+                self.0.as_raw(),
+                error.as_ref().as_ptr() as *const ffi::c_char,
+            )
+        }
+    }
 
-    fn deref(&self) -> &Self::Target {
-        &self.client
+    /// Call the read callback function, forward the callback returned value
+    pub fn notify_read(&self, data: &[u8]) -> bool {
+        unsafe {
+            BNNotifyWebsocketClientReadData(
+                self.0.as_raw(),
+                data.as_ptr() as *mut _,
+                data.len().try_into().unwrap(),
+            )
+        }
     }
 }
 
 pub trait WebsocketCustomProvider: Sync + Send {
+    type Client<'a>: WebsocketCustomClient;
+
     fn new(core: WebsocketProvider) -> Self;
-    fn create_client(&self) -> WebsocketClient;
+    fn get_core(&self) -> &WebsocketProvider;
+    fn init_client<'a>(&self, core: CoreWebSocketClient<'a>) -> Self::Client<'a>;
+
+    /// Connect to a given url, asynchronously. The connection will be run in a
+    /// separate thread managed by the websocket provider.
+    ///
+    /// * `host` - Full url with scheme, domain, optionally port, and path
+    /// * `headers` - HTTP header keys and values
+    /// * `read_handle` - Handles the received data from the Socket
+    fn connect<'a, U, I, K, V, F>(
+        &self,
+        url: U,
+        headers: I,
+        read_handle: &'a mut F,
+    ) -> Option<Ref<WebsocketClient<'a>>>
+    where
+        Self: Sized,
+        U: BnStrCompatible,
+        I: IntoIterator<Item = (K, V)>,
+        K: BnStrCompatible,
+        V: BnStrCompatible,
+        F: FnMut(&[u8]) -> bool,
+    {
+        let cb_callback = BNWebsocketClientOutputCallbacks {
+            context: read_handle as *mut _ as *mut ffi::c_void,
+            connectedCallback: Some(cb_connected_nop),
+            disconnectedCallback: Some(cb_disconnected_nop),
+            errorCallback: Some(cb_error_nop),
+            readCallback: Some(cb_read_closure::<F>),
+        };
+        let client_ptr = new_client(self);
+        connect_client(client_ptr, url, headers, cb_callback)
+    }
+
+    /// Connect to a given url, asynchronously. The connection will be run in a
+    /// separate thread managed by the websocket provider.
+    ///
+    /// Callbacks will be called **on the thread of the connection**, so be sure
+    /// to ExecuteOnMainThread any long-running or gui operations in the callbacks.
+    ///
+    /// If the connection succeeds, [WebsocketClientCallback::connected] will be called. On normal termination, [WebsocketClientCallback::disconnected] will be called.
+    ///
+    /// If the connection succeeds, but later fails, [WebsocketClientCallback::disconnected] will not be called, and [WebsocketClientCallback::error] will be called instead.
+    ///
+    /// If the connection fails, neither [WebsocketClientCallback::connected] nor [WebsocketClientCallback::disconnected] will be called, and [WebsocketClientCallback::error] will be called instead.
+    ///
+    /// If [WebsocketClientCallback::connected] or [WebsocketClientCallback::read] return false, the connection will be aborted.
+    ///
+    /// * `host` - Full url with scheme, domain, optionally port, and path
+    /// * `headers` - HTTP header keys and values
+    /// * `callback` - Callbacks for various websocket events
+    fn connect_with_callback<'a, U, I, K, V, W>(
+        &self,
+        url: U,
+        headers: I,
+        callback: &'a mut W,
+    ) -> Option<Ref<WebsocketClient<'a>>>
+    where
+        Self: Sized,
+        U: BnStrCompatible,
+        I: IntoIterator<Item = (K, V)>,
+        K: BnStrCompatible,
+        V: BnStrCompatible,
+        W: WebsocketClientCallback,
+    {
+        let cb_callback = BNWebsocketClientOutputCallbacks {
+            context: callback as *mut W as *mut _,
+            connectedCallback: Some(cb_connected::<W>),
+            disconnectedCallback: Some(cb_disconnected::<W>),
+            errorCallback: Some(cb_error::<W>),
+            readCallback: Some(cb_read::<W>),
+        };
+        let client_ptr = new_client(self);
+        connect_client(client_ptr, url, headers, cb_callback)
+    }
+}
+
+fn new_client<W: WebsocketCustomProvider>(provider: &W) -> *mut BNWebsocketClient {
+    // SAFETY: Websocket client is freed by cb_destroy_client
+    let custom_uinit = Box::leak(Box::new(mem::MaybeUninit::zeroed()));
+    let mut callbacks = BNWebsocketClientCallbacks {
+        context: custom_uinit as *mut _ as *mut ffi::c_void,
+        connect: Some(cb_connect::<W::Client<'static>>),
+        destroyClient: Some(cb_destroy_client::<W::Client<'static>>),
+        disconnect: Some(cb_disconnect::<W::Client<'static>>),
+        write: Some(cb_write::<W::Client<'static>>),
+    };
+    let handle = unsafe { BNInitWebsocketClient(provider.get_core().as_raw(), &mut callbacks) };
+    custom_uinit.write(provider.init_client(CoreWebSocketClient(WebsocketClient {
+        handle: ptr::NonNull::new(handle).unwrap(),
+        _callback: std::marker::PhantomData,
+    })));
+    handle
+}
+
+fn connect_client<'a, U, I, K, V>(
+    client_ptr: *mut BNWebsocketClient,
+    url: U,
+    headers: I,
+    mut cb_callback: BNWebsocketClientOutputCallbacks,
+) -> Option<Ref<WebsocketClient<'a>>>
+where
+    U: BnStrCompatible,
+    I: IntoIterator<Item = (K, V)>,
+    K: BnStrCompatible,
+    V: BnStrCompatible,
+{
+    let client = unsafe { WebsocketClient::ref_from_raw(ptr::NonNull::new(client_ptr).unwrap()) };
+    // SAFETY: freed by WebsocketClientConnectedWithCallback::drop
+    let url = url.into_bytes_with_nul();
+    let (header_keys, header_values): (Vec<K::Result>, Vec<V::Result>) = headers
+        .into_iter()
+        .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
+        .unzip();
+    let header_keys: Vec<*const ffi::c_char> = header_keys
+        .iter()
+        .map(|k| k.as_ref().as_ptr() as *const ffi::c_char)
+        .collect();
+    let header_values: Vec<*const ffi::c_char> = header_values
+        .iter()
+        .map(|v| v.as_ref().as_ptr() as *const ffi::c_char)
+        .collect();
+    let success = unsafe {
+        BNConnectWebsocketClient(
+            client.as_raw(),
+            url.as_ref().as_ptr() as *const ffi::c_char,
+            header_keys.len().try_into().unwrap(),
+            header_keys.as_ptr(),
+            header_values.as_ptr(),
+            &mut cb_callback,
+        )
+    };
+    success.then_some(client)
 }
 
 pub trait WebsocketClientCallback: Sync + Send {
@@ -314,7 +374,6 @@ pub trait WebsocketClientCallback: Sync + Send {
 }
 
 pub trait WebsocketCustomClient: Sync + Send {
-    fn new(provider: WebsocketProvider, client: &WebsocketClient) -> Self;
     fn connect(&self, host: &str, header_keys: &[BnString], header_values: &[BnString]) -> bool;
     fn write(&self, data: &[u8]) -> bool;
     fn disconnect(&self) -> bool;
@@ -346,8 +405,7 @@ unsafe extern "C" fn cb_create_client<W: WebsocketCustomProvider>(
     ctxt: *mut ::std::os::raw::c_void,
 ) -> *mut BNWebsocketClient {
     let ctxt: &mut W = &mut *(ctxt as *mut W);
-    let result = ctxt.create_client();
-    result.into_raw()
+    new_client(ctxt)
 }
 
 unsafe extern "C" fn cb_destroy_client<W: WebsocketCustomClient>(ctxt: *mut ffi::c_void) {
@@ -425,10 +483,14 @@ unsafe extern "C" fn cb_disconnected_nop(_ctxt: *mut ffi::c_void) {}
 
 unsafe extern "C" fn cb_error_nop(_msg: *const ffi::c_char, _ctxt: *mut ffi::c_void) {}
 
-unsafe extern "C" fn cb_read_nop(
-    _data: *mut u8,
-    _len: u64,
-    _ctxt: *mut ::std::os::raw::c_void,
+unsafe extern "C" fn cb_read_closure<F: FnMut(&[u8]) -> bool>(
+    data: *mut u8,
+    len: u64,
+    ctxt: *mut ::std::os::raw::c_void,
 ) -> bool {
-    true
+    let ctxt: &mut F = &mut *(ctxt as *mut F);
+    let len = usize::try_from(len).unwrap();
+    let data = core::slice::from_raw_parts_mut(data, len);
+    let ctxt: &mut F = &mut *(ctxt as *mut F);
+    ctxt(data)
 }

@@ -76,12 +76,12 @@ impl SecretsProvider {
     }
 
     /// Retrieve data for the given key, if it exists
-    pub fn get_data<S: BnStrCompatible>(&self, key: S) -> Option<BnString> {
+    pub fn get_data<S: BnStrCompatible>(&self, key: S) -> BnString {
         let key = key.into_bytes_with_nul();
         let result = unsafe {
             BNGetSecretsProviderData(self.as_raw(), key.as_ref().as_ptr() as *const ffi::c_char)
         };
-        (!result.is_null()).then(|| unsafe { BnString::from_raw(result) })
+        unsafe { BnString::from_raw(result) }
     }
 
     /// Store data with the given key

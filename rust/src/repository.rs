@@ -114,7 +114,7 @@ impl RepositoryManager {
     pub fn default_repository(&self) -> Ref<Repository> {
         let result = unsafe { BNRepositoryManagerGetDefaultRepository(self.as_raw()) };
         assert!(!result.is_null());
-        // NOTE result is not onwed, we need to clone it
+        // NOTE result is not owned, we need to clone it
         let default = unsafe { Repository::from_raw(ptr::NonNull::new(result).unwrap()) };
         default.to_owned()
     }
@@ -576,14 +576,14 @@ unsafe impl CoreArrayProviderInner for PluginPlatforms {
     }
 }
 
-pub struct PluginDirectorys;
-impl CoreArrayProvider for PluginDirectorys {
+pub struct PluginDirectories;
+impl CoreArrayProvider for PluginDirectories {
     type Raw = *mut ffi::c_char;
     type Context = ();
     type Wrapped<'a> = &'a ffi::CStr;
 }
 
-unsafe impl CoreArrayProviderInner for PluginDirectorys {
+unsafe impl CoreArrayProviderInner for PluginDirectories {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNRepositoryFreePluginDirectoryList(raw, count)
     }

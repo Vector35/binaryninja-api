@@ -57,10 +57,8 @@ int count_trailing_zeros(uint64_t value) {
 
 struct SharedCache::State
 {
-	std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>>
-		exportInfos;
-	std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>>
-		symbolInfos;
+	std::unordered_map<uint64_t, std::vector<SymbolInfo>> exportInfos;
+	std::unordered_map<uint64_t, std::vector<SymbolInfo>> symbolInfos;
 
 	std::unordered_map<std::string, uint64_t> imageStarts;
 	std::unordered_map<uint64_t, SharedCacheMachOHeader> headers;
@@ -2593,7 +2591,7 @@ void SharedCache::InitializeHeader(
 		nlist_64 sym;
 		memset(&sym, 0, sizeof(sym));
 		auto N_TYPE = 0xE;	// idk
-		std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>> symbolInfos;
+		std::vector<SymbolInfo> symbolInfos;
 		for (size_t i = 0; i < header.symtab.nsyms; i++)
 		{
 			reader->Read(&sym, header.symtab.symoff + i * sizeof(nlist_64), sizeof(nlist_64));
@@ -2640,25 +2638,24 @@ void SharedCache::InitializeHeader(
 			if ((sym.n_desc & N_ARM_THUMB_DEF) == N_ARM_THUMB_DEF)
 				sym.n_value++;
 
-			auto symbolObj = new Symbol(type, symbol, sym.n_value, GlobalBinding);
-			if (type == FunctionSymbol)
-			{
+			SymbolInfo symbolInfo{std::move(symbol), .offset = sym.n_value, .type = type};
+			if (type == FunctionSymbol) {
 				Ref<Platform> targetPlatform = view->GetDefaultPlatform();
 				view->AddFunctionForAnalysis(targetPlatform, sym.n_value);
 			}
-			if (typeLib)
-			{
-				auto _type = m_dscView->ImportTypeLibraryObject(typeLib, {symbolObj->GetFullName()});
-				if (_type)
-				{
-					view->DefineAutoSymbolAndVariableOrFunction(view->GetDefaultPlatform(), symbolObj, _type);
-				}
-				else
+
+			Ref<Symbol> symbolObj = symbolInfo.AsSymbol();
+			if (typeLib) {
+				if (auto type = m_dscView->ImportTypeLibraryObject(typeLib, {symbolInfo.name})) {
+					view->DefineAutoSymbolAndVariableOrFunction(view->GetDefaultPlatform(), symbolObj, type);
+				} else {
 					view->DefineAutoSymbol(symbolObj);
-			}
-			else
+				}
+			} else {
 				view->DefineAutoSymbol(symbolObj);
-			symbolInfos.push_back({sym.n_value, {type, symbol}});
+			}
+
+			symbolInfos.push_back(std::move(symbolInfo));
 		}
 		MutableState().symbolInfos[header.textBase] = symbolInfos;
 	}
@@ -2666,47 +2663,41 @@ void SharedCache::InitializeHeader(
 	if (header.exportTriePresent && header.linkeditPresent && vm->AddressIsMapped(header.linkeditSegment.vmaddr))
 	{
 		auto symbols = SharedCache::ParseExportTrie(vm->MappingAtAddress(header.linkeditSegment.vmaddr).first.fileAccessor->lock(), header);
-		std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>> exportMapping;
-		for (const auto& symbol : symbols)
-		{
-			exportMapping.push_back({symbol->GetAddress(), {symbol->GetType(), symbol->GetRawName()}});
-			if (typeLib)
-			{
-				auto type = m_dscView->ImportTypeLibraryObject(typeLib, {symbol->GetFullName()});
-
-				if (type)
-				{
-					view->DefineAutoSymbolAndVariableOrFunction(view->GetDefaultPlatform(), symbol, type);
-				}
-				else
-					view->DefineAutoSymbol(symbol);
-
-				if (view->GetAnalysisFunction(view->GetDefaultPlatform(), symbol->GetAddress()))
-				{
-					auto func = view->GetAnalysisFunction(view->GetDefaultPlatform(), symbol->GetAddress());
-					if (symbol->GetFullName() == "_objc_msgSend")
-					{
-						func->SetHasVariableArguments(false);
-					}
-					else if (symbol->GetFullName().find("_objc_retain_x") != std::string::npos || symbol->GetFullName().find("_objc_release_x") != std::string::npos)
-					{
-						auto x = symbol->GetFullName().rfind("x");
-						auto num = symbol->GetFullName().substr(x + 1);
-
-						std::vector<BinaryNinja::FunctionParameter> callTypeParams;
-						auto cc = m_dscView->GetDefaultArchitecture()->GetCallingConventionByName("apple-arm64-objc-fast-arc-" + num);
-
-						callTypeParams.push_back({"obj", m_dscView->GetTypeByName({ "id" }), true, BinaryNinja::Variable()});
-
-						auto funcType = BinaryNinja::Type::FunctionType(m_dscView->GetTypeByName({ "id" }), cc, callTypeParams);
-						func->SetUserType(funcType);
-					}
-				}
-			}
-			else
+		for (const auto& symbolInfo : symbols) {
+			Ref<Symbol> symbol = symbolInfo.AsSymbol();
+			if (!typeLib) {
 				view->DefineAutoSymbol(symbol);
+				continue;
+			}
+
+			if (auto type = m_dscView->ImportTypeLibraryObject(typeLib, {symbolInfo.name})) {
+				view->DefineAutoSymbolAndVariableOrFunction(view->GetDefaultPlatform(), symbol, type);
+			} else {
+				view->DefineAutoSymbol(symbol);
+			}
+
+			auto func = view->GetAnalysisFunction(view->GetDefaultPlatform(), symbol->GetAddress());
+			if (!func) {
+				continue;
+			}
+
+			if (symbolInfo.name == "_objc_msgSend") {
+				func->SetHasVariableArguments(false);
+			} else if (symbolInfo.name.find("_objc_retain_x") != std::string::npos
+				|| symbolInfo.name.find("_objc_release_x") != std::string::npos) {
+				auto x = symbolInfo.name.rfind("x");
+				auto num = symbolInfo.name.substr(x + 1);
+
+				std::vector<BinaryNinja::FunctionParameter> callTypeParams;
+				auto cc = m_dscView->GetDefaultArchitecture()->GetCallingConventionByName("apple-arm64-objc-fast-arc-" + num);
+
+				callTypeParams.push_back({"obj", m_dscView->GetTypeByName({ "id" }), true, BinaryNinja::Variable()});
+
+				auto funcType = BinaryNinja::Type::FunctionType(m_dscView->GetTypeByName({ "id" }), cc, callTypeParams);
+				func->SetUserType(funcType);
+			}
 		}
-		MutableState().exportInfos[header.textBase] = std::move(exportMapping);
+		MutableState().exportInfos[header.textBase] = std::move(symbols);
 	}
 	view->EndBulkModifySymbols();
 
@@ -2717,7 +2708,7 @@ void SharedCache::InitializeHeader(
 }
 
 
-void SharedCache::ReadExportNode(std::vector<Ref<Symbol>>& symbolList, const SharedCacheMachOHeader& header,
+void SharedCache::ReadExportNode(std::vector<SymbolInfo>& symbolList, const SharedCacheMachOHeader& header,
 	const uint8_t* begin, const uint8_t* end, const uint8_t* current, uint64_t textBase, const std::string& currentText)
 {
 	if (current >= end)
@@ -2755,13 +2746,7 @@ void SharedCache::ReadExportNode(std::vector<Ref<Symbol>>& symbolList, const Sha
 #if EXPORT_TRIE_DEBUG
 					// BNLogInfo("export: %s -> 0x%llx", n.text.c_str(), image.baseAddress + n.offset);
 #endif
-				// TODO: The usual `Symbol` constructors take a `NameSpace` and do unnecessary memory allocations
-				// to pass its fields down to the core API. Here we pass nullptr for the namespace which is treated
-				// the same, but avoids the memory allocations. Switch back to directly constructing a `Symbol`
-				// once it gains constructors without that overhead.
-				auto symbol = new Symbol(BNCreateSymbol(type, currentText.c_str(), currentText.c_str(),
-					currentText.c_str(), textBase + imageOffset, NoBinding, nullptr, 0));
-				symbolList.push_back(symbol);
+				symbolList.push_back({.name = currentText, .offset = textBase + imageOffset, .type = type});
 			}
 		}
 	}
@@ -2786,7 +2771,7 @@ void SharedCache::ReadExportNode(std::vector<Ref<Symbol>>& symbolList, const Sha
 }
 
 
-std::vector<Ref<Symbol>> SharedCache::ParseExportTrie(std::shared_ptr<MMappedFileAccessor> linkeditFile, const SharedCacheMachOHeader& header)
+std::vector<SharedCache::SymbolInfo> SharedCache::ParseExportTrie(std::shared_ptr<MMappedFileAccessor> linkeditFile, const SharedCacheMachOHeader& header)
 {
 	if (!header.exportTrie.datasize) {
 		return {};
@@ -2794,7 +2779,7 @@ std::vector<Ref<Symbol>> SharedCache::ParseExportTrie(std::shared_ptr<MMappedFil
 
 	try
 	{
-		std::vector<Ref<Symbol>> symbols;
+		std::vector<SymbolInfo> symbols;
 		auto [begin, end] = linkeditFile->ReadSpan(header.exportTrie.dataoff, header.exportTrie.datasize);
 		ReadExportNode(symbols, header, begin, end, begin, header.textBase, "");
 		return symbols;
@@ -2817,13 +2802,13 @@ std::vector<std::string> SharedCache::GetAvailableImages()
 }
 
 
-std::vector<std::pair<std::string, Ref<Symbol>>> SharedCache::LoadAllSymbolsAndWait()
+std::vector<std::pair<std::string, SharedCache::SymbolInfo>> SharedCache::LoadAllSymbolsAndWait()
 {
 	WillMutateState();
 
 	std::lock_guard initialLoadBlock(m_viewSpecificState->viewOperationsThatInfluenceMetadataMutex);
 
-	std::vector<std::pair<std::string, Ref<Symbol>>> symbols;
+	std::vector<std::pair<std::string, SymbolInfo>> symbols;
 	for (const auto& img : State().images)
 	{
 		auto header = HeaderForAddress(img.headerLocation);
@@ -2837,13 +2822,11 @@ std::vector<std::pair<std::string, Ref<Symbol>>> SharedCache::LoadAllSymbolsAndW
 			continue;
 		}
 		auto exportList = SharedCache::ParseExportTrie(mapping, *header);
-		std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>> exportMapping;
-		for (const auto& sym : exportList)
+		for (const auto& symbol : exportList)
 		{
-			exportMapping.push_back({sym->GetAddress(), {sym->GetType(), sym->GetRawName()}});
-			symbols.push_back({img.installName, sym});
+			symbols.push_back({img.installName, symbol});
 		}
-		MutableState().exportInfos[header->textBase] = std::move(exportMapping);
+		MutableState().exportInfos[header->textBase] = std::move(exportList);
 	}
 
 	SaveToDSCView();
@@ -2936,45 +2919,39 @@ void SharedCache::FindSymbolAtAddrAndApplyToAddr(
 			return;
 		}
 		auto exportList = SharedCache::ParseExportTrie(mapping, *header);
-		std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>> exportMapping;
 		auto typeLib = TypeLibraryForImage(header->installName);
 		id = m_dscView->BeginUndoActions();
 		m_dscView->BeginBulkModifySymbols();
-		for (const auto& sym : exportList)
-		{
-			exportMapping.push_back({sym->GetAddress(), {sym->GetType(), sym->GetRawName()}});
-			if (sym->GetAddress() == symbolLocation)
-			{
-				if (auto func = m_dscView->GetAnalysisFunction(m_dscView->GetDefaultPlatform(), targetLocation))
-				{
-					m_dscView->DefineUserSymbol(
-						new Symbol(FunctionSymbol, prefix + sym->GetFullName(), targetLocation));
+		auto symbolInfo = std::find_if(exportList.begin(), exportList.end(), [=](auto& symbol) {
+			return symbol.offset == symbolLocation;
+		});
+		if (symbolInfo != exportList.end()) {
+			SymbolInfo targetSymbolInfo{.name = prefix + symbolInfo->name, .type = symbolInfo->type, .offset = targetLocation};
+			if (auto func = m_dscView->GetAnalysisFunction(m_dscView->GetDefaultPlatform(), targetLocation)) {
+				targetSymbolInfo.type = FunctionSymbol;
+				m_dscView->DefineUserSymbol(targetSymbolInfo.AsSymbol());
 
-					if (typeLib)
-						if (auto type = m_dscView->ImportTypeLibraryObject(typeLib, {sym->GetFullName()}))
-							func->SetUserType(type);
+				if (typeLib) {
+					if (auto type = m_dscView->ImportTypeLibraryObject(typeLib, {symbolInfo->name})) {
+						func->SetUserType(type);
+					}
 				}
-				else
-				{
-					m_dscView->DefineUserSymbol(
-						new Symbol(sym->GetType(), prefix + sym->GetFullName(), targetLocation));
 
-					if (typeLib)
-						if (auto type = m_dscView->ImportTypeLibraryObject(typeLib, {sym->GetFullName()}))
-							m_dscView->DefineUserDataVariable(targetLocation, type);
+				if (triggerReanalysis) {
+					func->Reanalyze();
 				}
-				if (triggerReanalysis)
-				{
-					auto func = m_dscView->GetAnalysisFunction(m_dscView->GetDefaultPlatform(), targetLocation);
-					if (func)
-						func->Reanalyze();
+			} else {
+				m_dscView->DefineUserSymbol(targetSymbolInfo.AsSymbol());
+				if (typeLib) {
+					if (auto type = m_dscView->ImportTypeLibraryObject(typeLib, {symbolInfo->name})) {
+						m_dscView->DefineUserDataVariable(targetLocation, type);
+					}
 				}
-				break;
 			}
 		}
 		{
 			std::lock_guard lock(m_viewSpecificState->viewOperationsThatInfluenceMetadataMutex);
-			MutableState().exportInfos[header->textBase] = std::move(exportMapping);
+			MutableState().exportInfos[header->textBase] = std::move(exportList);
 		}
 		m_dscView->EndBulkModifySymbols();
 		m_dscView->ForgetUndoActions(id);
@@ -3126,8 +3103,8 @@ extern "C"
 			BNDSCSymbolRep* symbols = (BNDSCSymbolRep*)malloc(sizeof(BNDSCSymbolRep) * value.size());
 			for (size_t i = 0; i < value.size(); i++)
 			{
-				symbols[i].address = value[i].second->GetAddress();
-				symbols[i].name = BNAllocString(value[i].second->GetRawName().c_str());
+				symbols[i].address = value[i].second.offset;
+				symbols[i].name = BNAllocStringWithLength(value[i].second.name.c_str(), value[i].second.name.length());
 				symbols[i].image = BNAllocString(value[i].first.c_str());
 			}
 			return symbols;
@@ -3431,18 +3408,18 @@ void SharedCache::Store(SerializationContext& context) const
 
 	Serialize(context, "exportInfos");
 	context.writer.StartArray();
-	for (const auto& pair1 : State().exportInfos)
+	for (const auto& [imageStart, symbols] : State().exportInfos)
 	{
 		context.writer.StartObject();
-		Serialize(context, "key", pair1.first);
+		Serialize(context, "key", imageStart);
 		Serialize(context, "value");
 		context.writer.StartArray();
-		for (const auto& pair2 : pair1.second)
+		for (const auto& symbol : symbols)
 		{
 			context.writer.StartObject();
-			Serialize(context, "key", pair2.first);
-			Serialize(context, "val1", pair2.second.first);
-			Serialize(context, "val2", pair2.second.second);
+			Serialize(context, "key", symbol.offset);
+			Serialize(context, "val1", symbol.type);
+			Serialize(context, "val2", symbol.name);
 			context.writer.EndObject();
 		}
 		context.writer.EndArray();
@@ -3452,18 +3429,18 @@ void SharedCache::Store(SerializationContext& context) const
 
 	Serialize(context, "symbolInfos");
 	context.writer.StartArray();
-	for (const auto& pair1 : State().symbolInfos)
+	for (const auto& [imageStart, symbols] : State().symbolInfos)
 	{
 		context.writer.StartObject();
-		Serialize(context, "key", pair1.first);
+		Serialize(context, "key", imageStart);
 		Serialize(context, "value");
 		context.writer.StartArray();
-		for (const auto& pair2 : pair1.second)
+		for (const auto& symbol : symbols)
 		{
 			context.writer.StartObject();
-			Serialize(context, "key", pair2.first);
-			Serialize(context, "val1", pair2.second.first);
-			Serialize(context, "val2", pair2.second.second);
+			Serialize(context, "key", symbol.offset);
+			Serialize(context, "val1", symbol.type);
+			Serialize(context, "val2", symbol.name);
 			context.writer.EndObject();
 		}
 		context.writer.EndArray();
@@ -3511,27 +3488,27 @@ void SharedCache::Load(DeserializationContext& context)
 	Deserialize(context, "m_imageStarts", MutableState().imageStarts);
 	Deserialize(context, "m_baseFilePath", MutableState().baseFilePath);
 
-	for (const auto& obj1 : context.doc["exportInfos"].GetArray())
+	for (const auto& exportInfos : context.doc["exportInfos"].GetArray())
 	{
-		std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>> innerVec;
-		for (const auto& obj2 : obj1["value"].GetArray())
+		std::vector<SymbolInfo> symbolInfos;
+		for (const auto& si : exportInfos["value"].GetArray())
 		{
-			std::pair<BNSymbolType, std::string> innerPair = {
-				(BNSymbolType)obj2["val1"].GetUint64(), obj2["val2"].GetString()};
-			innerVec.push_back({obj2["key"].GetUint64(), innerPair});
+			symbolInfos.push_back({.name = si["val2"].GetString(),
+				.offset = si["key"].GetUint64(),
+				.type = (BNSymbolType)si["val1"].GetUint64()});
 		}
 
-		MutableState().exportInfos[obj1["key"].GetUint64()] = std::move(innerVec);
+		MutableState().exportInfos[exportInfos["key"].GetUint64()] = std::move(symbolInfos);
 	}
 
 	for (auto& symbolInfo : context.doc["symbolInfos"].GetArray())
 	{
-		std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>
-			symbolInfos;
+		std::vector<SymbolInfo> symbolInfos;
 		for (auto& si : symbolInfo["value"].GetArray())
 		{
-			symbolInfos.push_back({si["key"].GetUint64(),
-				{static_cast<BNSymbolType>(si["val1"].GetUint64()), si["val2"].GetString()}});
+			symbolInfos.push_back({.name = si["val2"].GetString(),
+				.offset = si["key"].GetUint64(),
+				.type = (BNSymbolType)si["val1"].GetUint64()});
 		}
 		MutableState().symbolInfos[symbolInfo["key"].GetUint64()] = std::move(symbolInfos);
 	}
@@ -3678,6 +3655,16 @@ size_t SharedCache::GetObjCRelativeMethodBaseAddress(const VMReader& reader) con
 		return GetBaseAddress() + header->relativeMethodSelectorBaseAddressOffset;
 	}
 	return 0;
+}
+
+Ref<Symbol> SharedCache::SymbolInfo::AsSymbol() const
+{
+	// TODO: The usual `Symbol` constructors take a `NameSpace` and do unnecessary memory allocations
+	// to pass its fields down to the core API. Here we pass nullptr for the namespace which is treated
+	// the same, but avoids the memory allocations. Switch back to directly constructing a `Symbol`
+	// once it gains constructors without that overhead.
+	return new Symbol(BNCreateSymbol(type, name.c_str(), name.c_str(),
+		name.c_str(), offset, NoBinding, nullptr, 0));
 }
 
 }  // namespace SharedCacheCore

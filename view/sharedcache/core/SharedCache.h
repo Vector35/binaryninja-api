@@ -560,6 +560,14 @@ namespace SharedCacheCore {
 			iOS16CacheFormat,
 		};
 
+		struct SymbolInfo {
+			std::string name;
+			uint64_t offset;
+			BNSymbolType type;
+
+			Ref<Symbol> AsSymbol() const;
+		};
+
 		void Store(SerializationContext& context) const;
 		void Load(DeserializationContext& context);
 
@@ -613,7 +621,7 @@ namespace SharedCacheCore {
 		std::vector<MemoryRegion> GetMappedRegions() const;
 		bool IsMemoryMapped(uint64_t address);
 
-		std::vector<std::pair<std::string, Ref<Symbol>>> LoadAllSymbolsAndWait();
+		std::vector<std::pair<std::string, SymbolInfo>> LoadAllSymbolsAndWait();
 
 		const std::unordered_map<std::string, uint64_t>& AllImageStarts() const;
 		const std::unordered_map<uint64_t, SharedCacheMachOHeader>& AllImageHeaders() const;
@@ -637,9 +645,9 @@ private:
 			std::shared_ptr<VM> vm, uint64_t address, std::string installName);
 		void InitializeHeader(
 			Ref<BinaryView> view, VM* vm, const SharedCacheMachOHeader& header, std::vector<MemoryRegion*> regionsToLoad);
-		void ReadExportNode(std::vector<Ref<Symbol>>& symbolList, const SharedCacheMachOHeader& header, const uint8_t* begin,
+		void ReadExportNode(std::vector<SymbolInfo>& symbolList, const SharedCacheMachOHeader& header, const uint8_t* begin,
 			const uint8_t *end, const uint8_t* current, uint64_t textBase, const std::string& currentText);
-		std::vector<Ref<Symbol>> ParseExportTrie(
+		std::vector<SymbolInfo> ParseExportTrie(
 			std::shared_ptr<MMappedFileAccessor> linkeditFile, const SharedCacheMachOHeader& header);
 
 		Ref<TypeLibrary> TypeLibraryForImage(const std::string& installName);

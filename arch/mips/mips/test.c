@@ -44,7 +44,8 @@ int disassemble(uint32_t insword, uint64_t address, MipsVersion version, char *r
 void usage(char** av)
 {
 	printf("usage:\n");
-	printf("\t%s [instruction_words]\n", av[0]);
+	printf("\t%s [-k] [-l] [-m] [-n] [-o] [instruction_words]+\n", av[0]);
+	printf("\t\tdisassemble MIPS64, MIPS1, MIPS2, MIPS3, MIPS4 respectively for k, l, m, n, o\n");
 	printf("\t%s test\n", av[0]);
 	printf("example:\n");
 	printf("\t%s 3c028081 68435a50 24445a50 6c830007\n", av[0]);

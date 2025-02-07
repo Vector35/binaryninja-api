@@ -5,10 +5,14 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-Activity::Activity(const string& configuration, const std::function<void(Ref<AnalysisContext> analysisContext)>& action) : m_action(action)
+Activity::Activity(const string& configuration, const std::function<void(Ref<AnalysisContext> analysisContext)>& action,
+	const std::function<bool(Ref<Activity>, Ref<AnalysisContext>)>& eligibility) : m_action(action), m_eligibility(eligibility)
 {
 	// LogError("API-Side Activity Constructed!");
-	m_object = BNCreateActivity(configuration.c_str(), this, Run);
+	if (eligibility)
+		m_object = BNCreateActivityWithEligibility(configuration.c_str(), this, RunAction, CheckEligibility);
+	else
+		m_object = BNCreateActivity(configuration.c_str(), this, RunAction);
 }
 
 
@@ -25,12 +29,21 @@ Activity::~Activity()
 }
 
 
-void Activity::Run(void* ctxt, BNAnalysisContext* analysisContext)
+void Activity::RunAction(void* ctxt, BNAnalysisContext* analysisContext)
 {
-	// LogError("API-Side Activity Run!");
-	Activity* activity = (Activity*)ctxt;
+	// LogError("API-Side Activity RunAction!");
+	auto boundActivity = static_cast<Activity*>(ctxt);
 	Ref<AnalysisContext> ac = new AnalysisContext(BNNewAnalysisContextReference(analysisContext));
-	activity->m_action(ac);
+	boundActivity->m_action(ac);
+}
+
+
+bool Activity::CheckEligibility(void* ctxt, BNActivity* activity, BNAnalysisContext* analysisContext)
+{
+	auto boundActivity = static_cast<Activity*>(ctxt);
+	Ref<Activity> act = new Activity(BNNewActivityReference(activity));
+	Ref<AnalysisContext> ac = new AnalysisContext(BNNewAnalysisContextReference(analysisContext));
+	return boundActivity->m_eligibility(act, ac);
 }
 
 

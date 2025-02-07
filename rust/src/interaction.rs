@@ -19,7 +19,7 @@ use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void, CStr};
 use std::path::PathBuf;
 
-use crate::binaryview::BinaryView;
+use crate::binary_view::BinaryView;
 use crate::rc::Ref;
 use crate::string::{BnStrCompatible, BnString};
 
@@ -96,7 +96,11 @@ pub fn get_open_filename_input(prompt: &str, extension: &str) -> Option<PathBuf>
     Some(PathBuf::from(string.as_str()))
 }
 
-pub fn get_save_filename_input(prompt: &str, extension: &str, default_name: &str) -> Option<PathBuf> {
+pub fn get_save_filename_input(
+    prompt: &str,
+    extension: &str,
+    default_name: &str,
+) -> Option<PathBuf> {
     let mut value: *mut c_char = std::ptr::null_mut();
 
     let result = unsafe {
@@ -214,7 +218,7 @@ impl FormInputBuilder {
     }
 
     /// Form Field: Vertical spacing
-    pub fn seperator_field(mut self) -> Self {
+    pub fn separator_field(mut self) -> Self {
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::SeparatorFormField;
         result.hasDefault = false;
@@ -478,10 +482,10 @@ impl FormInputBuilder {
     /// };
     ///
     /// let FormResponses::String(last_name) = &responses[0] else {
-    ///    unreachable!()
+    ///     unreachable!()
     /// };
     /// let FormResponses::String(first_name) = &responses[1] else {
-    ///    unreachable!()
+    ///     unreachable!()
     /// };
     ///
     /// println!("{} {} likes {}", &first_name, &last_name, food);

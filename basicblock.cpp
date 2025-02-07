@@ -36,6 +36,24 @@ DisassemblySettings::DisassemblySettings(BNDisassemblySettings* settings)
 }
 
 
+Ref<DisassemblySettings> DisassemblySettings::GetDefaultSettings()
+{
+	return new DisassemblySettings(BNDefaultDisassemblySettings());
+}
+
+
+Ref<DisassemblySettings> DisassemblySettings::GetDefaultGraphSettings()
+{
+	return new DisassemblySettings(BNDefaultGraphDisassemblySettings());
+}
+
+
+Ref<DisassemblySettings> DisassemblySettings::GetDefaultLinearSettings()
+{
+	return new DisassemblySettings(BNDefaultLinearDisassemblySettings());
+}
+
+
 DisassemblySettings* DisassemblySettings::Duplicate()
 {
 	return new DisassemblySettings(BNDuplicateDisassemblySettings(m_object));
@@ -141,6 +159,73 @@ DisassemblyTextLine::DisassemblyTextLine()
 	typeInfo.fieldIndex = -1;
 	typeInfo.parentType = nullptr;
 	typeInfo.offset = 0;
+}
+
+
+size_t DisassemblyTextLine::GetTotalWidth() const
+{
+	size_t result = 0;
+	for (auto& i : tokens)
+		result += i.width;
+	return result;
+}
+
+
+static void FindAddressAndIndentationTokens(
+	const vector<InstructionTextToken>& tokens, const std::function<void(const InstructionTextToken&)>& callback)
+{
+	size_t startToken = 0;
+	for (size_t i = 0; i < tokens.size(); i++)
+	{
+		if (tokens[i].type == AddressSeparatorToken)
+		{
+			startToken = i + 1;
+			break;
+		}
+	}
+
+	for (size_t i = 0; i < startToken; i++)
+		callback(tokens[i]);
+	for (size_t i = startToken; i < tokens.size(); i++)
+	{
+		if (tokens[i].type == AddressDisplayToken || tokens[i].type == AddressSeparatorToken
+			|| tokens[i].type == CollapseStateIndicatorToken)
+		{
+			callback(tokens[i]);
+			continue;
+		}
+
+		bool whitespace = true;
+		for (auto ch : tokens[i].text)
+		{
+			if (!isspace(ch))
+			{
+				whitespace = false;
+				break;
+			}
+		}
+
+		if (!whitespace)
+			break;
+
+		callback(tokens[i]);
+	}
+}
+
+
+size_t DisassemblyTextLine::GetAddressAndIndentationWidth() const
+{
+	size_t result = 0;
+	FindAddressAndIndentationTokens(tokens, [&](const InstructionTextToken& token) { result += token.width; });
+	return result;
+}
+
+
+vector<InstructionTextToken> DisassemblyTextLine::GetAddressAndIndentationTokens() const
+{
+	vector<InstructionTextToken> result;
+	FindAddressAndIndentationTokens(tokens, [&](const InstructionTextToken& token) { result.push_back(token); });
+	return result;
 }
 
 
@@ -504,6 +589,12 @@ bool BasicBlock::IsLowLevelILBlock() const
 bool BasicBlock::IsMediumLevelILBlock() const
 {
 	return BNIsMediumLevelILBasicBlock(m_object);
+}
+
+
+bool BasicBlock::IsHighLevelILBlock() const
+{
+	return BNIsHighLevelILBasicBlock(m_object);
 }
 
 

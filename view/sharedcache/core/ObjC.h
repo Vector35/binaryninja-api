@@ -58,6 +58,10 @@ namespace DSCObjC {
 	typedef struct {
 		uint64_t count;
 	} protocol_list_t;
+	struct relative_list_list_entry_t {
+	    uint64_t imageIndex: 16;
+	    int64_t listOffset: 48;
+	};
 	typedef struct {
 		view_ptr_t isa;
 		view_ptr_t mangledName;
@@ -158,13 +162,13 @@ namespace DSCObjC {
 
 	class DSCObjCProcessor {
 		struct Types {
-			QualifiedName relativePtr;
-			QualifiedName id;
-			QualifiedName sel;
-			QualifiedName BOOL;
-			QualifiedName nsInteger;
-			QualifiedName nsuInteger;
-			QualifiedName cgFloat;
+			// QualifiedName relativePtr;
+			// QualifiedName id;
+			// QualifiedName sel;
+			// QualifiedName BOOL;
+			// QualifiedName nsInteger;
+			// QualifiedName nsuInteger;
+			// QualifiedName cgFloat;
 			QualifiedName cfStringFlag;
 			QualifiedName cfString;
 			QualifiedName cfStringUTF16;
@@ -214,15 +218,16 @@ namespace DSCObjC {
 		std::vector<QualifiedNameOrType> ParseEncodedType(const std::string& type);
 		void DefineObjCSymbol(BNSymbolType symbolType, QualifiedName typeName, const std::string& name, uint64_t addr, bool deferred);
 		void DefineObjCSymbol(BNSymbolType symbolType, Ref<Type> type, const std::string& name, uint64_t addr, bool deferred);
-		void ReadIvarList(VMReader* reader, ClassBase& cls, std::string name, view_ptr_t start);
-		void ReadMethodList(VMReader* reader, ClassBase& cls, std::string name, view_ptr_t start);
+		void ReadIvarList(VMReader* reader, ClassBase& cls, std::string_view name, view_ptr_t start);
+		void ReadMethodList(VMReader* reader, ClassBase& cls, std::string_view name, view_ptr_t start);
+		void ReadListOfMethodLists(VMReader* reader, ClassBase& cls, std::string_view name, view_ptr_t start);
 		void LoadClasses(VMReader* reader, Ref<Section> listSection);
 		void LoadCategories(VMReader* reader, Ref<Section> listSection);
 		void LoadProtocols(VMReader* reader, Ref<Section> listSection);
 		void GenerateClassTypes();
 		bool ApplyMethodType(Class& cls, Method& method, bool isInstanceMethod);
 		void ApplyMethodTypes(Class& cls);
-		void PostProcessObjCSections(VMReader* reader);
+		void PostProcessObjCSections(VMReader* reader, std::string baseName);
 	public:
 		DSCObjCProcessor(BinaryView* data, SharedCacheCore::SharedCache* cache, bool isBackedByDatabase);
 		void ProcessObjCData(std::shared_ptr<VM> vm, std::string baseName);

@@ -288,7 +288,7 @@ vector<Ref<RepoPlugin>> Repository::GetPlugins() const
 
 Ref<RepoPlugin> Repository::GetPluginByPath(const string& pluginPath)
 {
-	return new RepoPlugin(BNNewPluginReference(BNRepositoryGetPluginByPath(m_object, pluginPath.c_str())));
+	return new RepoPlugin(BNRepositoryGetPluginByPath(m_object, pluginPath.c_str()));
 }
 
 string Repository::GetFullPath() const
@@ -335,10 +335,10 @@ bool RepositoryManager::AddRepository(const std::string& url,
 
 Ref<Repository> RepositoryManager::GetRepositoryByPath(const std::string& repoPath)
 {
-	return new Repository(BNNewRepositoryReference(BNRepositoryGetRepositoryByPath(m_object, repoPath.c_str())));
+	return new Repository(BNRepositoryGetRepositoryByPath(m_object, repoPath.c_str()));
 }
 
 Ref<Repository> RepositoryManager::GetDefaultRepository()
 {
-	return new Repository(BNNewRepositoryReference(BNRepositoryManagerGetDefaultRepository(m_object)));
+	return new Repository(BNRepositoryManagerGetDefaultRepository(m_object));
 }

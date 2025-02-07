@@ -108,14 +108,20 @@ class SharedCache:
 	def __init__(self, view):
 		self.handle = sccore.BNGetSharedCache(view.handle)
 
-	def load_image_with_install_name(self, installName):
-		return sccore.BNDSCViewLoadImageWithInstallName(self.handle, installName)
+	def load_image_with_install_name(self, installName, skipObjC = False):
+		return sccore.BNDSCViewLoadImageWithInstallName(self.handle, installName, skipObjC)
 
 	def load_section_at_address(self, addr):
 		return sccore.BNDSCViewLoadSectionAtAddress(self.handle, addr)
 
-	def load_image_containing_address(self, addr):
-		return sccore.BNDSCViewLoadImageContainingAddress(self.handle, addr)
+	def load_image_containing_address(self, addr, skipObjC = False):
+		return sccore.BNDSCViewLoadImageContainingAddress(self.handle, addr, skipObjC)
+
+	def process_objc_sections_for_image_with_install_name(self, installName):
+		return sccore.BNDSCViewProcessObjCSectionsForImageWithInstallName(self.handle, installName, False)
+
+	def process_all_objc_sections(self):
+		return sccore.BNDSCViewProcessAllObjCSections(self.handle)
 
 	@property
 	def caches(self):

@@ -1,0 +1,12 @@
+[package]
+name = "dwarfreader"
+version = "0.1.0"
+authors = ["Kyle Martin <kyle@vector35.com>"]
+edition = "2021"
+
+[dependencies]
+binaryninja.workspace = true
+binaryninjacore-sys.workspace = true
+gimli = "0.31"
+zstd = "0.13.2"
+thiserror = "2.0"

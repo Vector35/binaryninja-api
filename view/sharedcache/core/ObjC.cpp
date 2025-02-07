@@ -775,7 +775,7 @@ void DSCObjCProcessor::LoadProtocols(VMReader* reader, Ref<Section> listSection)
 	}
 }
 
-void DSCObjCProcessor::ReadMethodList(VMReader* reader, ClassBase& cls, std::string name, view_ptr_t start)
+void DSCObjCProcessor::ReadListOfMethodLists(VMReader* reader, ClassBase& cls, std::string_view name, view_ptr_t start)
 {
 	reader->Seek(start);
 	method_list_t head;
@@ -783,14 +783,49 @@ void DSCObjCProcessor::ReadMethodList(VMReader* reader, ClassBase& cls, std::str
 	head.count = reader->Read32();
 	if (head.count > 0x1000)
 	{
+		m_logger->LogError("List of method lists at 0x%llx has an invalid count of 0x%x", start, head.count);
+		return;
+	}
+
+	for (size_t i = 0; i < head.count; ++i) {
+		relative_list_list_entry_t list_entry;
+		reader->Read(&list_entry, sizeof(list_entry));
+
+		ReadMethodList(reader, cls, name, reader->GetOffset() - sizeof(list_entry) + list_entry.listOffset);
+		// Reset the cursor to immediately past the list entry.
+		reader->Seek(start + sizeof(method_list_t) + ((i + 1) * sizeof(relative_list_list_entry_t)));
+	}
+}
+
+void DSCObjCProcessor::ReadMethodList(VMReader* reader, ClassBase& cls, std::string_view name, view_ptr_t start)
+{
+	// Lower two bits indicate the type of method list.
+	switch (start & 0b11) {
+		case 0:
+			break;
+		case 1:
+			return ReadListOfMethodLists(reader, cls, name, start - 1);
+		default:
+			m_logger->LogDebug("ReadMethodList: Unknown method list type at 0x%llx: %d", start, start & 0x3);
+			return;
+	}
+
+	reader->Seek(start);
+	method_list_t head;
+	head.entsizeAndFlags = reader->Read32();
+	head.count = reader->Read32();
+
+	if (head.count > 0x1000)
+	{
 		m_logger->LogError("Method list at 0x%llx has an invalid count of 0x%x", start, head.count);
 		return;
 	}
+
 	uint64_t pointerSize = m_data->GetAddressSize();
 	bool relativeOffsets = (head.entsizeAndFlags & 0xFFFF0000) & 0x80000000;
 	bool directSelectors = (head.entsizeAndFlags & 0xFFFF0000) & 0x40000000;
 	auto methodSize = relativeOffsets ? 12 : pointerSize * 3;
-	DefineObjCSymbol(DataSymbol, m_typeNames.methodList, "method_list_" + name, start, true);
+	DefineObjCSymbol(DataSymbol, m_typeNames.methodList, "method_list_" + std::string(name), start, true);
 
 	for (unsigned i = 0; i < head.count; i++)
 	{
@@ -806,18 +841,14 @@ void DSCObjCProcessor::ReadMethodList(VMReader* reader, ClassBase& cls, std::str
 			// --
 			if (relativeOffsets)
 			{
-				if (m_customRelativeMethodSelectorBase.has_value())
-				{
-					meth.name = m_customRelativeMethodSelectorBase.value() + reader->ReadS32();
-					meth.types = reader->GetOffset() + reader->ReadS32();
-					meth.imp = reader->GetOffset() + reader->ReadS32();
+				auto selectorBaseOffset = reader->GetOffset();
+				if (directSelectors && m_customRelativeMethodSelectorBase.has_value()) {
+					selectorBaseOffset = m_customRelativeMethodSelectorBase.value();
 				}
-				else
-				{
-					meth.name = reader->GetOffset() + reader->ReadS32();
-					meth.types = reader->GetOffset() + reader->ReadS32();
-					meth.imp = reader->GetOffset() + reader->ReadS32();
-				}
+
+				meth.name = selectorBaseOffset + reader->Read32();
+				meth.types = reader->GetOffset() + reader->ReadS32();
+				meth.imp = reader->GetOffset() + reader->ReadS32();
 			}
 			else
 			{
@@ -881,14 +912,14 @@ void DSCObjCProcessor::ReadMethodList(VMReader* reader, ClassBase& cls, std::str
 	}
 }
 
-void DSCObjCProcessor::ReadIvarList(VMReader* reader, ClassBase& cls, std::string name, view_ptr_t start)
+void DSCObjCProcessor::ReadIvarList(VMReader* reader, ClassBase& cls, std::string_view name, view_ptr_t start)
 {
 	reader->Seek(start);
 	ivar_list_t head;
 	head.entsizeAndFlags = reader->Read32();
 	head.count = reader->Read32();
 	auto addressSize = m_data->GetAddressSize();
-	DefineObjCSymbol(DataSymbol, m_typeNames.ivarList, "ivar_list_" + name, start, true);
+	DefineObjCSymbol(DataSymbol, m_typeNames.ivarList, "ivar_list_" + std::string(name), start, true);
 	if (head.count > 0x1000)
 	{
 		m_logger->LogError("Ivar list at 0x%llx has an invalid count of 0x%llx", start, head.count);
@@ -1010,6 +1041,10 @@ void DSCObjCProcessor::GenerateClassTypes()
 
 bool DSCObjCProcessor::ApplyMethodType(Class& cls, Method& method, bool isInstanceMethod)
 {
+	if (!method.imp || !m_data->IsValidOffset(method.imp)) {
+		return false;
+	}
+
 	std::stringstream r(method.name);
 
 	std::string token;
@@ -1087,16 +1122,16 @@ void DSCObjCProcessor::ApplyMethodTypes(Class& cls)
 	}
 }
 
-void DSCObjCProcessor::PostProcessObjCSections(VMReader* reader)
+void DSCObjCProcessor::PostProcessObjCSections(VMReader* reader, std::string baseName)
 {
 	auto ptrSize = m_data->GetAddressSize();
-	if (auto imageInfo = m_data->GetSectionByName("__objc_imageinfo"))
+	if (auto imageInfo = m_data->GetSectionByName(baseName + "::__objc_imageinfo"))
 	{
 		auto start = imageInfo->GetStart();
 		auto type = Type::NamedType(m_data, m_typeNames.imageInfo);
 		m_data->DefineDataVariable(start, type);
 	}
-	if (auto selrefs = m_data->GetSectionByName("__objc_selrefs"))
+	if (auto selrefs = m_data->GetSectionByName(baseName + "::__objc_selrefs"))
 	{
 		auto start = selrefs->GetStart();
 		auto end = selrefs->GetEnd();
@@ -1119,7 +1154,7 @@ void DSCObjCProcessor::PostProcessObjCSections(VMReader* reader)
 			DefineObjCSymbol(DataSymbol, type, "selRef_" + sel, i, true);
 		}
 	}
-	if (auto superRefs = m_data->GetSectionByName("__objc_classrefs"))
+	if (auto superRefs = m_data->GetSectionByName(baseName + "::__objc_classrefs"))
 	{
 		auto start = superRefs->GetStart();
 		auto end = superRefs->GetEnd();
@@ -1137,7 +1172,7 @@ void DSCObjCProcessor::PostProcessObjCSections(VMReader* reader)
 			}
 		}
 	}
-	if (auto superRefs = m_data->GetSectionByName("__objc_superrefs"))
+	if (auto superRefs = m_data->GetSectionByName(baseName + "::__objc_superrefs"))
 	{
 		auto start = superRefs->GetStart();
 		auto end = superRefs->GetEnd();
@@ -1155,7 +1190,7 @@ void DSCObjCProcessor::PostProcessObjCSections(VMReader* reader)
 			}
 		}
 	}
-	if (auto protoRefs = m_data->GetSectionByName("__objc_protorefs"))
+	if (auto protoRefs = m_data->GetSectionByName(baseName + "::__objc_protorefs"))
 	{
 		auto start = protoRefs->GetStart();
 		auto end = protoRefs->GetEnd();
@@ -1173,7 +1208,7 @@ void DSCObjCProcessor::PostProcessObjCSections(VMReader* reader)
 			}
 		}
 	}
-	if (auto ivars = m_data->GetSectionByName("__objc_ivar"))
+	if (auto ivars = m_data->GetSectionByName(baseName + "::__objc_ivar"))
 	{
 		auto start = ivars->GetStart();
 		auto end = ivars->GetEnd();
@@ -1210,16 +1245,29 @@ void DSCObjCProcessor::ProcessObjCData(std::shared_ptr<VM> vm, std::string baseN
 	m_symbolQueue = new SymbolQueue();
 	auto addrSize = m_data->GetAddressSize();
 
-	m_typeNames.relativePtr = defineTypedef(m_data, {"rptr_t"}, Type::IntegerType(4, true));
-	auto rptr_t = Type::NamedType(m_data, m_typeNames.relativePtr);
+	// m_typeNames.relativePtr = );
+	auto rptr_t = Type::NamedType(m_data, defineTypedef(m_data, {"rptr_t"}, Type::IntegerType(4, true)));
+	//
+	// m_typeNames.id = defineTypedef(m_data, {"id"}, Type::PointerType(addrSize, Type::VoidType()));
+	// m_typeNames.sel = defineTypedef(m_data, {"SEL"}, Type::PointerType(addrSize, Type::IntegerType(1, false)));
+	//
+	// m_typeNames.BOOL = defineTypedef(m_data, {"BOOL"}, Type::IntegerType(1, false));
+	// m_typeNames.nsInteger = defineTypedef(m_data, {"NSInteger"}, Type::IntegerType(addrSize, true));
+	// m_typeNames.nsuInteger = defineTypedef(m_data, {"NSUInteger"}, Type::IntegerType(addrSize, false));
+	// m_typeNames.cgFloat = defineTypedef(m_data, {"CGFloat"}, Type::FloatType(addrSize));
 
-	m_typeNames.id = defineTypedef(m_data, {"id"}, Type::PointerType(addrSize, Type::VoidType()));
-	m_typeNames.sel = defineTypedef(m_data, {"SEL"}, Type::PointerType(addrSize, Type::IntegerType(1, false)));
+	Ref<Type> relativeSelectorPtr;
+	auto reader = VMReader(vm);
+	if (auto objCRelativeMethodsBaseAddr = m_cache->GetObjCRelativeMethodBaseAddress(reader)) {
+		m_logger->LogDebug("RelativeMethodSelector Base: 0x%llx", objCRelativeMethodsBaseAddr);
+		m_customRelativeMethodSelectorBase = objCRelativeMethodsBaseAddr;
 
-	m_typeNames.BOOL = defineTypedef(m_data, {"BOOL"}, Type::IntegerType(1, false));
-	m_typeNames.nsInteger = defineTypedef(m_data, {"NSInteger"}, Type::IntegerType(addrSize, true));
-	m_typeNames.nsuInteger = defineTypedef(m_data, {"NSUInteger"}, Type::IntegerType(addrSize, false));
-	m_typeNames.cgFloat = defineTypedef(m_data, {"CGFloat"}, Type::FloatType(addrSize));
+		auto type = TypeBuilder::PointerType(4, Type::PointerType(addrSize, Type::IntegerType(1, false)))
+			.SetPointerBase(RelativeToConstantPointerBaseType, objCRelativeMethodsBaseAddr)
+			.Finalize();
+		auto relativeSelectorPtrName = defineTypedef(m_data, {"relative_SEL"}, type);
+		relativeSelectorPtr = Type::NamedType(m_data, relativeSelectorPtrName);
+	}
 
 	// https://github.com/apple-oss-distributions/objc4/blob/196363c165b175ed925ef6b9b99f558717923c47/runtime/objc-abi.h
 	EnumerationBuilder imageInfoFlagBuilder;
@@ -1256,7 +1304,7 @@ void DSCObjCProcessor::ProcessObjCData(std::shared_ptr<VM> vm, std::string baseN
 	m_typeNames.imageInfo = imageInfoType.first;
 
 	StructureBuilder methodEntry;
-	methodEntry.AddMember(rptr_t, "name");
+	methodEntry.AddMember(relativeSelectorPtr ? relativeSelectorPtr : rptr_t, "name");
 	methodEntry.AddMember(rptr_t, "types");
 	methodEntry.AddMember(rptr_t, "imp");
 	auto type = finalizeStructureBuilder(m_data, methodEntry, "objc_method_entry_t");
@@ -1360,42 +1408,6 @@ void DSCObjCProcessor::ProcessObjCData(std::shared_ptr<VM> vm, std::string baseN
 	protocolBuilder.AddMember(Type::IntegerType(4, false), "flags");
 	m_typeNames.protocol = finalizeStructureBuilder(m_data, protocolBuilder, "objc_protocol_t").first;
 
-	auto reader = VMReader(vm);
-
-	if (auto addr = m_cache->GetImageStart("/usr/lib/libobjc.A.dylib"))
-	{
-		auto header = m_cache->HeaderForAddress(addr.value());
-		uint64_t scoffs_addr = 0;
-		size_t scoffs_size = 0;
-
-		for (const auto& section : header->sections)
-		{
-			char name[17];
-			memcpy(name, section.sectname, 16);
-			name[16] = 0;
-			if (std::string(name) == "__objc_scoffs")
-			{
-				scoffs_addr = section.addr;
-				scoffs_size = section.size;
-				break;
-			}
-		}
-
-		if (scoffs_size && scoffs_addr)
-		{
-			if (scoffs_size == 0x20)
-			{
-				m_customRelativeMethodSelectorBase = reader.ReadULong(scoffs_addr);
-			}
-			else
-			{
-				m_customRelativeMethodSelectorBase = reader.ReadULong(scoffs_addr + 8);
-			}
-			m_logger->LogDebug("RelativeMethodSelector Base: 0x%llx", m_customRelativeMethodSelectorBase.value());
-		}
-	}
-
-
 	m_data->BeginBulkModifySymbols();
 	if (auto classList = m_data->GetSectionByName(baseName + "::__objc_classlist"))
 		LoadClasses(&reader, classList);
@@ -1416,7 +1428,7 @@ void DSCObjCProcessor::ProcessObjCData(std::shared_ptr<VM> vm, std::string baseN
 	if (auto protoList = m_data->GetSectionByName(baseName + "::__objc_protolist"))
 		LoadProtocols(&reader, protoList);
 
-	PostProcessObjCSections(&reader);
+	PostProcessObjCSections(&reader, baseName);
 
 	auto id = m_data->BeginUndoActions();
 	m_symbolQueue->Process();

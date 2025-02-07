@@ -5526,6 +5526,15 @@ Ref<BinaryView> BinaryNinja::Load(Ref<ProjectFile> projectFile, bool updateAnaly
 }
 
 
+Ref<BinaryView> BinaryNinja::ParseTextFormat(const std::string& filename)
+{
+	BNBinaryView* handle = BNParseTextFormat(filename.c_str());
+	if (!handle)
+		return nullptr;
+	return new BinaryView(handle);
+}
+
+
 SymbolQueue::SymbolQueue()
 {
 	m_object = BNCreateSymbolQueue();

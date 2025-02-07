@@ -19,7 +19,7 @@ use std::ops::Range;
 
 use binaryninjacore_sys::*;
 
-use crate::binaryview::BinaryView;
+use crate::binary_view::BinaryView;
 use crate::rc::*;
 use crate::string::*;
 
@@ -66,15 +66,21 @@ pub struct Section {
 }
 
 impl Section {
-    pub(crate) unsafe fn from_raw(raw: *mut BNSection) -> Self {
-        Self { handle: raw }
+    unsafe fn from_raw(handle: *mut BNSection) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle }
+    }
+
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNSection) -> Ref<Self> {
+        debug_assert!(!handle.is_null());
+        Ref::new(Self { handle })
     }
 
     /// You need to create a section builder, customize that section, then add it to a binary view:
     ///
     /// ```no_run
     /// # use binaryninja::section::Section;
-    /// # use binaryninja::binaryview::BinaryViewExt;
+    /// # use binaryninja::binary_view::BinaryViewExt;
     /// let bv = binaryninja::load("example").unwrap();
     /// bv.add_section(Section::builder("example", 0..1024).align(4).entry_size(4))
     /// ```
@@ -103,7 +109,7 @@ impl Section {
     }
 
     pub fn is_empty(&self) -> bool {
-        unsafe { BNSectionGetLength(self.handle) as usize == 0 }
+        self.len() == 0
     }
 
     pub fn address_range(&self) -> Range<u64> {
@@ -141,13 +147,16 @@ impl Section {
 
 impl fmt::Debug for Section {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "<section '{}' @ {:x}-{:x}>",
-            self.name(),
-            self.start(),
-            self.end()
-        )
+        f.debug_struct("Section")
+            .field("name", &self.name())
+            .field("address_range", &self.address_range())
+            .field("section_type", &self.section_type())
+            .field("semantics", &self.semantics())
+            .field("linked_section", &self.linked_section())
+            .field("align", &self.align())
+            .field("entry_size", &self.entry_size())
+            .field("auto_defined", &self.auto_defined())
+            .finish()
     }
 }
 
@@ -181,6 +190,7 @@ unsafe impl CoreArrayProviderInner for Section {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeSectionList(raw, count);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Section::from_raw(*raw), context)
     }
@@ -266,7 +276,7 @@ impl<S: BnStrCompatible> SectionBuilder<S> {
         let len = self.range.end.wrapping_sub(start);
 
         unsafe {
-            let nul_str = std::ffi::CStr::from_bytes_with_nul_unchecked(b"\x00").as_ptr();
+            let nul_str = c"".as_ptr();
             let name_ptr = name.as_ref().as_ptr() as *mut _;
             let ty_ptr = ty.map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
             let linked_section_ptr =

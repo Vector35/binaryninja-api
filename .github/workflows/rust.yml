@@ -1,44 +1,56 @@
-name: Rust PR Checks
+name: Rust CI
 
 on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '**'
+    paths:
+      - '**.rs'
+      - '**.toml'
+      - 'rust/**'
   pull_request:
     paths:
       - 'rust/**'
 
 jobs:
-  build_and_lint:
-    name: cargo check & cargo clippy
+  # Check lints with clippy
+  clippy:
+    name: cargo clippy
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      # Ensure clippy is installed
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          submodules: true
-
-      - name: Install Clang
-        run: |
-          sudo apt update
-          sudo apt install clang -y
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.83.0
-          profile: minimal
-          override: true
           components: clippy
+      - name: Clippy Check
+        uses: clechasseur/rs-clippy-check@v4
+        with:
+          # We do not run clippy on plugins.
+          working-directory: ./rust
+          args: --all-features
 
-      - name: cargo check
-        working-directory: ./rust
-        run: cargo check --workspace --all-features
+  # Check formatting with rustfmt
+  formatting:
+    name: cargo fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Ensure rustfmt is installed
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
+      - name: Rustfmt Check
+        uses: actions-rust-lang/rustfmt@v1
 
-      - name: cargo doc test
-        working-directory: ./rust
-        run: cargo test --doc -- --show-output
-
-      - name: cargo clippy
-        working-directory: ./rust
-        run: cargo clippy -- -D warnings
-        continue-on-error: true
-        # If this step fails, it will warn (?)
+  # Check spelling with typos
+  spelling:
+    name: typos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Typo Check
+        uses: crate-ci/typos@v1.29.4
+        with:
+          files: ./rust

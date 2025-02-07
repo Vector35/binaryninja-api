@@ -283,13 +283,14 @@ extern "C"
 	BINARYNINJAPLUGIN bool CorePluginInit()
 #endif
 	{
-		auto viewType = BinaryViewType::GetByName("Mach-O");
+		Ref<BinaryViewType> viewType = BinaryViewType::GetByName("Mach-O");
 		Ref<Architecture> x86 = Architecture::GetByName("x86");
 		if (x86)
 		{
 			g_macX86 = new MacX86Platform(x86);
 			Platform::Register("mac", g_macX86);
-			viewType->RegisterPlatformRecognizer(7, LittleEndian, MacX86Platform::Recognize);
+			if (viewType)
+				viewType->RegisterPlatformRecognizer(7, LittleEndian, MacX86Platform::Recognize);
 		}
 
 		Ref<Architecture> x64 = Architecture::GetByName("x86_64");
@@ -297,7 +298,8 @@ extern "C"
 		{
 			g_macX64 = new MacX64Platform(x64);
 			Platform::Register("mac", g_macX64);
-			viewType->RegisterPlatformRecognizer(0x01000007, LittleEndian, MacX64Platform::Recognize);
+			if (viewType)
+				viewType->RegisterPlatformRecognizer(0x01000007, LittleEndian, MacX64Platform::Recognize);
 		}
 
 		Ref<Architecture> armv7 = Architecture::GetByName("armv7");
@@ -316,8 +318,11 @@ extern "C"
 			Platform::Register("ios", g_iosArmv7);
 			Platform::Register("mac", g_macThumb2);
 			Platform::Register("ios", g_iosThumb2);
-			viewType->RegisterPlatformRecognizer(0xc, LittleEndian, MacArmv7Platform::Recognize);
-			viewType->RegisterPlatformRecognizer(0xc, LittleEndian, IOSArmv7Platform::Recognize);
+			if (viewType)
+			{
+				viewType->RegisterPlatformRecognizer(0xc, LittleEndian, MacArmv7Platform::Recognize);
+				viewType->RegisterPlatformRecognizer(0xc, LittleEndian, IOSArmv7Platform::Recognize);
+			}
 		}
 
 		Ref<Architecture> arm64 = Architecture::GetByName("aarch64");
@@ -327,11 +332,14 @@ extern "C"
 			g_iosArm64 = new IOSArm64Platform(arm64);
 			Platform::Register("mac", g_macArm64);
 			Platform::Register("ios", g_iosArm64);
-			viewType->RegisterPlatformRecognizer(0, LittleEndian, MacArm64Platform::Recognize);
-			viewType->RegisterPlatformRecognizer(0x0100000c, LittleEndian, MacArm64Platform::Recognize);
-			viewType->RegisterPlatformRecognizer(0x0200000c, LittleEndian, MacArm64Platform::Recognize);
-			viewType->RegisterPlatformRecognizer(0, LittleEndian, IOSArm64Platform::Recognize);
-			viewType->RegisterPlatformRecognizer(0x0100000c, LittleEndian, IOSArm64Platform::Recognize);
+			if (viewType)
+			{
+				viewType->RegisterPlatformRecognizer(0, LittleEndian, MacArm64Platform::Recognize);
+				viewType->RegisterPlatformRecognizer(0x0100000c, LittleEndian, MacArm64Platform::Recognize);
+				viewType->RegisterPlatformRecognizer(0x0200000c, LittleEndian, MacArm64Platform::Recognize);
+				viewType->RegisterPlatformRecognizer(0, LittleEndian, IOSArm64Platform::Recognize);
+				viewType->RegisterPlatformRecognizer(0x0100000c, LittleEndian, IOSArm64Platform::Recognize);
+			}
 		}
 
 		return true;

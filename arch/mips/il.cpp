@@ -1513,22 +1513,28 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_SLLV:
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize, op1.reg, il.ShiftLeft(4, ReadILOperand(il, instr, 2, registerSize), il.And(4, ReadILOperand(il, instr, 3, registerSize), il.Const(4, 0x1f)))));
 			break;
-		case MIPS_DSLL:
 		case MIPS_DSLL32:
+			op3.immediate += 32;
+			// fall through
+		case MIPS_DSLL:
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ShiftLeft(8, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_DSLLV:
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ShiftLeft(8, ReadILOperand(il, instr, 2, registerSize), il.And(8, ReadILOperand(il, instr, 3, registerSize), il.Const(8, 0x3f)))));
 			break;
-		case MIPS_DSRL:
 		case MIPS_DSRL32:
+			op3.immediate += 32;
+			// fall through
+		case MIPS_DSRL:
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.LogicalShiftRight(8, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_DSRLV:
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.LogicalShiftRight(8, ReadILOperand(il, instr, 2, registerSize), il.And(8, ReadILOperand(il, instr, 3, registerSize), il.Const(8, 0x3f)))));
 			break;
-		case MIPS_DSRA:
 		case MIPS_DSRA32:
+			op3.immediate += 32;
+			// fall through
+		case MIPS_DSRA:
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.ArithShiftRight(8, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_DSRAV:
@@ -1597,6 +1603,13 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			));
 
 			SignExtendHiLo(il, registerSize);
+			break;
+		case MIPS_DROTR32:
+			op3.immediate += 32;
+			// fall through
+		case MIPS_DROTR:
+		case MIPS_DROTRV:
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, il.RotateRight(8, ReadILOperand(il, instr, 2, registerSize), ReadILOperand(il, instr, 3, registerSize))));
 			break;
 		case MIPS_ROTR:
 		case MIPS_ROTRV:
@@ -2184,12 +2197,29 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_PREFX:
 		case MIPS_WRPGPR:
 		case MIPS_RDPGPR:
+		case MIPS_SUXC1:
+		case MIPS_SWXC1:
+		// Floating point instructions
+		case MIPS_RSQRT_D:
+		case MIPS_RSQRT_S:
+		case MIPS_RSQRT:
+		case MIPS_RSQRT1:
+		case MIPS_RSQRT2:
 		case MIPS_RECIP1:
 		case MIPS_RECIP2:
 		case MIPS_RECIP:
-		case MIPS_SUXC1:
-		case MIPS_SWXC1:
-			il.AddInstruction(il.Unimplemented());
+		case MIPS_NMADD_D:
+		case MIPS_NMADD_PS:
+		case MIPS_NMADD_S:
+		case MIPS_NMSUB_D:
+		case MIPS_NMSUB_PS:
+		case MIPS_NMSUB_S:
+		case MIPS_MADD_D:
+		case MIPS_MADD_PS:
+		case MIPS_MADD_S:
+		case MIPS_MADDF_D:
+		case MIPS_MADDF_S:
+		il.AddInstruction(il.Unimplemented());
 			break;
 
 		// instructions that are just internal placeholders for other

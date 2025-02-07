@@ -1,4 +1,4 @@
-use binaryninja::binaryview::BinaryView;
+use binaryninja::binary_view::BinaryView;
 use binaryninja::command::FunctionCommand;
 use binaryninja::function::Function;
 

@@ -15,6 +15,7 @@
 //! Interfaces for the various kinds of symbols in a binary.
 
 use std::fmt;
+use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::ptr;
 
@@ -119,12 +120,12 @@ pub struct SymbolBuilder {
 }
 
 impl SymbolBuilder {
-    pub fn new(ty: SymbolType, raw_name: &str, addr: u64) -> Self {
+    pub fn new<T: Into<String>>(ty: SymbolType, raw_name: T, addr: u64) -> Self {
         Self {
             ty,
             binding: Binding::None,
             addr,
-            raw_name: raw_name.to_owned(),
+            raw_name: raw_name.into(),
             short_name: None,
             full_name: None,
             ordinal: 0,
@@ -136,13 +137,13 @@ impl SymbolBuilder {
         self
     }
 
-    pub fn short_name(mut self, short_name: &str) -> Self {
-        self.short_name = Some(short_name.to_owned());
+    pub fn short_name<T: Into<String>>(mut self, short_name: T) -> Self {
+        self.short_name = Some(short_name.into());
         self
     }
 
-    pub fn full_name(mut self, full_name: &str) -> Self {
-        self.full_name = Some(full_name.to_owned());
+    pub fn full_name<T: Into<String>>(mut self, full_name: T) -> Self {
+        self.full_name = Some(full_name.into());
         self
     }
 
@@ -233,7 +234,10 @@ impl Symbol {
     /// ```no_run
     /// # use binaryninja::symbol::Symbol;
     /// # use binaryninja::symbol::SymbolType;
-    /// Symbol::builder(SymbolType::Data, "hello", 0x1337).short_name("hello").full_name("hello").create();
+    /// Symbol::builder(SymbolType::Data, "hello", 0x1337)
+    ///     .short_name("hello")
+    ///     .full_name("hello")
+    ///     .create();
     /// ```
     pub fn builder(ty: SymbolType, raw_name: &str, addr: u64) -> SymbolBuilder {
         SymbolBuilder::new(ty, raw_name, addr)
@@ -267,7 +271,7 @@ impl Symbol {
         unsafe { BNIsSymbolAutoDefined(self.handle) }
     }
 
-    /// Wether this symbol has external linkage
+    /// Whether this symbol has external linkage
     pub fn external(&self) -> bool {
         self.binding() == Binding::Weak || self.binding() == Binding::Global
     }
@@ -283,16 +287,18 @@ impl Symbol {
 unsafe impl Send for Symbol {}
 unsafe impl Sync for Symbol {}
 
-impl fmt::Debug for Symbol {
+impl Debug for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "<sym {:?} '{}' @ {:x} (handle: {:?})>",
-            self.sym_type(),
-            self.full_name(),
-            self.address(),
-            self.handle
-        )
+        f.debug_struct("Symbol")
+            .field("type", &self.sym_type())
+            .field("binding", &self.binding())
+            .field("full_name", &self.full_name())
+            .field("short_name", &self.short_name())
+            .field("raw_name", &self.raw_name())
+            .field("address", &self.address())
+            .field("auto_defined", &self.auto_defined())
+            .field("external", &self.external())
+            .finish()
     }
 }
 
@@ -326,6 +332,7 @@ unsafe impl CoreArrayProviderInner for Symbol {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeSymbolList(raw, count);
     }
+
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Symbol::from_raw(*raw), context)
     }

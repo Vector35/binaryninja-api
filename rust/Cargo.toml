@@ -6,40 +6,19 @@ edition = "2021"
 rust-version = "1.83.0"
 
 [features]
-noexports = []
+# This is used when statically linking to prevent exporting CorePluginABIVersion and UiPluginABIVersion.
+no_exports = []
+# Add this if you want to support the demo version of the product.
+# This will disable certain functions that do not exist in the demo build.
+demo = ["no_exports"]
 
 [dependencies]
-lazy_static = "1.4.0"
 log = { version = "0.4", features = ["std"] }
-rayon = { version = "1.8", optional = true }
+rayon = { version = "1.10", optional = true }
 binaryninjacore-sys = { path = "binaryninjacore-sys" }
+thiserror = "2.0"
 
-[patch.crates-io]
-# Patched pdb crate to implement some extra structures
-pdb = { path = "./examples/pdb-ng/pdb-0.8.0-patched" }
-
-[workspace]
-members = [
-    "examples/basic_script",
-    "examples/decompile",
-    "examples/dwarf/dwarf_export",
-    "examples/dwarf/dwarf_import",
-    "examples/dwarf/dwarfdump",
-    "examples/dwarf/shared",
-    "examples/idb_import",
-    "examples/flowgraph",
-    # TODO: Disabled until they can update time dependency.
-    # "examples/minidump",
-    "examples/mlil_visitor",
-    "examples/mlil_lifter",
-    "examples/hlil_visitor",
-    "examples/hlil_lifter",
-    "examples/pdb-ng",
-    "examples/pdb-ng/demo",
-    "examples/template",
-    "examples/test_demangler",
-	"examples/workflow"
-]
-
-[profile.release]
-debug = 1
+[dev-dependencies]
+rstest = "0.24"
+tempfile = "3.15"
+serial_test = "3.2"

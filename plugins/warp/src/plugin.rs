@@ -6,7 +6,7 @@ use crate::matcher::{
     invalidate_function_matcher_cache, Matcher, MatcherSettings, PlatformID, PLAT_MATCHER_CACHE,
 };
 use crate::{build_function, cache};
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::{Command, FunctionCommand};
 use binaryninja::function::{Function, FunctionUpdateType};
 use binaryninja::logger::Logger;
@@ -30,7 +30,7 @@ const TAG_ICON: &str = "🌏";
 const TAG_NAME: &str = "WARP";
 
 fn get_warp_tag_type(view: &BinaryView) -> Ref<TagType> {
-    view.get_tag_type(TAG_NAME)
+    view.tag_type_by_name(TAG_NAME)
         .unwrap_or_else(|| view.create_tag_type(TAG_NAME, TAG_ICON))
 }
 
@@ -39,6 +39,10 @@ fn get_warp_tag_type(view: &BinaryView) -> Ref<TagType> {
 // TODO: Rename to markup_function or something.
 pub fn on_matched_function(function: &Function, matched: &WarpFunction) {
     let view = function.view();
+    // TODO: Using user symbols here is problematic
+    // TODO: For one they queue up a bunch of main thread actions
+    // TODO: Secondly by queueing up those main thread actions if you attempt to save the file
+    // TODO: Before the undo actions are done completing
     view.define_user_symbol(&to_bn_symbol_at_address(
         &view,
         &matched.symbol,
@@ -186,67 +190,67 @@ pub extern "C" fn CorePluginInit() -> bool {
 
     workflow::insert_workflow();
 
-    binaryninja::command::register(
+    binaryninja::command::register_command(
         "WARP\\Run Matcher",
         "Run the matcher manually",
         workflow::RunMatcher {},
     );
 
-    binaryninja::command::register(
+    binaryninja::command::register_command(
         "WARP\\Debug\\Cache",
         "Debug cache sizes... because...",
         DebugCache {},
     );
 
-    binaryninja::command::register(
+    binaryninja::command::register_command(
         "WARP\\Debug\\Invalidate Caches",
         "Invalidate all WARP caches",
         DebugInvalidateCache {},
     );
 
-    binaryninja::command::register_for_function(
+    binaryninja::command::register_command_for_function(
         "WARP\\Debug\\Function Signature",
         "Print the entire signature for the function",
         DebugFunction {},
     );
 
-    binaryninja::command::register_for_function(
+    binaryninja::command::register_command_for_function(
         "WARP\\Debug\\Function Matcher",
         "Print all possible matches for the function",
         DebugMatcher {},
     );
 
-    binaryninja::command::register(
+    binaryninja::command::register_command(
         "WARP\\Debug\\Apply Signature File Types",
         "Load all types from a signature file and ignore functions",
         types::LoadTypes {},
     );
 
-    binaryninja::command::register(
+    binaryninja::command::register_command(
         "WARP\\Load Signature File",
         "Load file into the matcher, this does NOT kick off matcher analysis",
         load::LoadSignatureFile {},
     );
 
-    binaryninja::command::register_for_function(
+    binaryninja::command::register_command_for_function(
         "WARP\\Copy Function GUID",
         "Copy the computed GUID for the function",
         copy::CopyFunctionGUID {},
     );
 
-    binaryninja::command::register(
+    binaryninja::command::register_command(
         "WARP\\Find Function From GUID",
         "Locate the function in the view using a GUID",
         find::FindFunctionFromGUID {},
     );
 
-    binaryninja::command::register(
+    binaryninja::command::register_command(
         "WARP\\Generate Signature File",
         "Generates a signature file containing all binary view functions",
         create::CreateSignatureFile {},
     );
 
-    binaryninja::command::register_for_function(
+    binaryninja::command::register_command_for_function(
         "WARP\\Add Function Signature to File",
         "Stores the signature for the function in the signature file",
         add::AddFunctionSignature {},

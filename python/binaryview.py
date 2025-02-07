@@ -1413,6 +1413,7 @@ class Segment:
 		return f"<segment: {self.start:#x}-{self.end:#x}, {r}{w}{x}>"
 
 	@classmethod
+	@deprecation.deprecated(deprecated_in="4.3.6653", details="Use `SegmentDescriptorList` instead.")
 	def serialize(cls, image_base: int, start: int, length: int, data_offset: int=0, data_length: int=0, flags: 'SegmentFlag'=SegmentFlag.SegmentReadable, auto_defined=True, segments: str="[]"):
 		"""
 		Serialize segment parameters into a JSON string. This is useful for generating a properly formatted segment description as options when using `load`.
@@ -1431,9 +1432,10 @@ class Segment:
 		:Example::
 			>>> base = 0x400000
 			>>> rom_base = 0xffff0000
-			>>> segments = Segment.serialize(image_base=base, start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
-			>>> segments = Segment.serialize(image_base=base, start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable, segments=segments)
-			>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': segments})
+			>>> segments = SegmentDescriptorList(base)
+			>>> segments.append(start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
+			>>> segments.append(start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable)
+			>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': json.dumps(segments)})
 		"""
 		segments_list = json.loads(segments)
 		segment_info = {
@@ -1507,6 +1509,39 @@ class Segment:
 		return core.BNSegmentIsAutoDefined(self.handle)
 
 
+class SegmentDescriptorList(list):
+	def __init__(self, image_base: int):
+		"""
+		Initialize the SegmentDescriptorList with a base image address.
+
+		:param int image_base: The base address of the image.
+		"""
+		super().__init__()
+		self.image_base = image_base
+
+	def append(self, start: int, length: int, data_offset: int = 0, data_length: int = 0,
+				flags: 'SegmentFlag' = SegmentFlag.SegmentReadable, auto_defined: bool = True):
+		"""
+		Append a segment descriptor to the list.
+
+		:param int start: The start address of the segment.
+		:param int length: The length of the segment.
+		:param int data_offset: The offset of the data within the segment.
+		:param int data_length: The length of the data within the segment.
+		:param SegmentFlag flags: The flags of the segment.
+		:param bool auto_defined: Whether the segment is auto-defined.
+		"""
+		segment_info = {
+			"start": start - self.image_base,
+			"length": length,
+			"data_offset": data_offset,
+			"data_length": data_length,
+			"flags": flags,
+			"auto_defined": auto_defined
+		}
+		super().append(segment_info)
+
+
 class Section:
 	"""
 	The ``Section`` object is returned during BinaryView creation and should not be directly instantiated.
@@ -1541,6 +1576,7 @@ class Section:
 		return i >= self.start and i < self.end
 
 	@classmethod
+	@deprecation.deprecated(deprecated_in="4.3.6653", details="Use `SectionDescriptorList` instead.")
 	def serialize(cls, image_base: int, name: str, start: int, length: int, semantics: SectionSemantics=SectionSemantics.DefaultSectionSemantics, type: str="", align: int=1, entry_size: int=0, link: str="", info_section: str="", info_data: int=0, auto_defined: bool=True, sections: str="[]"):
 		"""
 		Serialize section parameters into a JSON string. This is useful for generating a properly formatted section description as options when using `load`.
@@ -1625,6 +1661,50 @@ class Section:
 	@property
 	def end(self) -> int:
 		return self.start + self.length
+
+
+class SectionDescriptorList(list):
+	def __init__(self, image_base: int):
+		"""
+		Initialize the SectionDescriptorList with a base image address.
+
+		:param int image_base: The base address of the image.
+		"""
+		super().__init__()
+		self.image_base = image_base
+
+	def append(self, name: str, start: int, length: int, semantics: 'SectionSemantics' = SectionSemantics.DefaultSectionSemantics,
+				type: str = "", align: int = 1, entry_size: int = 0, link: str = "", info_section: str = "",
+				info_data: int = 0, auto_defined: bool = True):
+		"""
+		Append a section descriptor to the list.
+
+		:param str name: The name of the section.
+		:param int start: The start address of the section.
+		:param int length: The length of the section.
+		:param SectionSemantics semantics: The semantics of the section.
+		:param str type: The type of the section.
+		:param int align: The alignment of the section.
+		:param int entry_size: The size of each entry in the section.
+		:param str link: An optional link field.
+		:param str info_section: An optional info_section field.
+		:param int info_data: An optional info_data field.
+		:param bool auto_defined: Whether the section is auto-defined.
+		"""
+		section_info = {
+			"name": name,
+			"start": start - self.image_base,
+			"length": length,
+			"semantics": semantics,
+			"type": type,
+			"align": align,
+			"entry_size": entry_size,
+			"link": link,
+			"info_section": info_section,
+			"info_data": info_data,
+			"auto_defined": auto_defined
+		}
+		super().append(section_info)
 
 
 class TagType:
@@ -2166,9 +2246,10 @@ class MemoryMap:
 
 		>>> base = 0x10000
 		>>> rom_base = 0xc0000000
-		>>> segments = Segment.serialize(image_base=base, start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
-		>>> segments = Segment.serialize(image_base=base, start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable, segments=segments)
-		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': segments})
+		>>> segments = SegmentDescriptorList(base)
+		>>> segments.append(start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
+		>>> segments.append(start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable)
+		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': json.dumps(segments)})
 		>>> view.memory_map
 			<region: 0x10000 - 0x10004>
 				size: 0x4
@@ -7540,7 +7621,7 @@ class BinaryView:
 		view, while those two APIs do not.
 
 		:param str text: C source code string of type to create
-		:param import_dependencies: If Type Library / Type Archive types should be imported during parsing
+		:param import_dependencies: If Type Library types should be imported during parsing
 		:return: A tuple of a :py:class:`Type` and type name
 		:rtype: tuple(Type, QualifiedName)
 		:Example:
@@ -7577,7 +7658,7 @@ class BinaryView:
 		:param str text: C source code string of types, variables, and function types, to create
 		:param options: Optional list of string options to be passed into the type parser
 		:param include_dirs: Optional list of header search directories
-		:param import_dependencies: If Type Library / Type Archive types should be imported during parsing
+		:param import_dependencies: If Type Library types should be imported during parsing
 		:return: :py:class:`~binaryninja.typeparser.TypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: TypeParserResult
 		:Example:
@@ -8930,20 +9011,9 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	def _LinearDisassemblyLine_convertor(
 	    self, lines: core.BNLinearDisassemblyLineHandle
 	) -> 'lineardisassembly.LinearDisassemblyLine':
-		func = None
-		block = None
-		line = lines[0]
-		if line.function:
-			func = _function.Function(self, core.BNNewFunctionReference(line.function))
-		if line.block:
-			block_handle = core.BNNewBasicBlockReference(line.block)
-			assert block_handle is not None, "core.BNNewBasicBlockReference returned None"
-			block = basicblock.BasicBlock(block_handle, self)
-		color = highlight.HighlightColor._from_core_struct(line.contents.highlight)
-		addr = line.contents.addr
-		tokens = _function.InstructionTextToken._from_core_struct(line.contents.tokens, line.contents.count)
-		contents = _function.DisassemblyTextLine(tokens, addr, color=color)
-		return lineardisassembly.LinearDisassemblyLine(line.type, func, block, contents)
+		line = lineardisassembly.LinearDisassemblyLine._from_core_struct(lines[0])
+		core.BNFreeLinearDisassemblyLines(lines, 1)
+		return line
 
 	def find_all_text(
 	    self, start: int, end: int, text: str, settings: Optional[_function.DisassemblySettings] = None,

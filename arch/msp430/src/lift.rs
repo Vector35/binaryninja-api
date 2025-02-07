@@ -3,10 +3,7 @@ use crate::flag::{Flag, FlagWrite};
 use crate::register::Register;
 use crate::Msp430;
 
-use binaryninja::{
-    architecture::FlagCondition,
-    llil::{Label, LiftedNonSSA, Lifter, Mutable, NonSSA},
-};
+use binaryninja::{architecture::FlagCondition, low_level_il::lifting::LowLevelILLabel};
 
 use msp430_asm::emulate::Emulated;
 use msp430_asm::instruction::Instruction;
@@ -15,6 +12,8 @@ use msp430_asm::operand::{Operand, OperandWidth};
 use msp430_asm::single_operand::SingleOperand;
 use msp430_asm::two_operand::TwoOperand;
 
+use binaryninja::low_level_il::expression::ValueExpr;
+use binaryninja::low_level_il::{MutableLiftedILExpr, MutableLiftedILFunction};
 use log::info;
 
 macro_rules! auto_increment {
@@ -138,31 +137,38 @@ macro_rules! conditional_jump {
     ($addr:ident, $inst:ident, $cond:ident, $il:ident) => {
         let true_addr = offset_to_absolute($addr, $inst.offset());
         let false_addr = $addr + $inst.size() as u64;
-        let mut new_true = Label::new();
-        let mut new_false = Label::new();
+        let mut new_true = true;
+        let mut new_false = false;
 
-        let true_label = $il.label_for_address(true_addr);
-        let false_label = $il.label_for_address(false_addr);
+        let mut true_label = $il.label_for_address(true_addr).unwrap_or_else(|| {
+            new_true = true;
+            LowLevelILLabel::new()
+        });
 
-        $il.if_expr(
-            $cond,
-            true_label.unwrap_or_else(|| &new_true),
-            false_label.unwrap_or_else(|| &new_false),
-        )
-        .append();
-        
-        if true_label.is_none() {
-            $il.mark_label(&mut new_true);
+        let mut false_label = $il.label_for_address(false_addr).unwrap_or_else(|| {
+            new_false = true;
+            LowLevelILLabel::new()
+        });
+
+        $il.if_expr($cond, &mut true_label, &mut false_label)
+            .append();
+
+        if new_true {
+            $il.mark_label(&mut true_label);
             $il.jump($il.const_ptr(true_addr)).append();
         }
 
-        if false_label.is_none() {
-            $il.mark_label(&mut new_false);
+        if new_false {
+            $il.mark_label(&mut false_label);
         }
     };
 }
 
-pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &Lifter<Msp430>) {
+pub(crate) fn lift_instruction(
+    inst: &Instruction,
+    addr: u64,
+    il: &MutableLiftedILFunction<Msp430>,
+) {
     match inst {
         Instruction::Rrc(inst) => {
             let size = match inst.operand_width() {
@@ -277,8 +283,8 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &Lifter<Msp430
             let fixed_addr = offset_to_absolute(addr, inst.offset());
             let label = il.label_for_address(fixed_addr);
             match label {
-                Some(label) => {
-                    il.goto(label).append();
+                Some(mut label) => {
+                    il.goto(&mut label).append();
                 }
                 None => {
                     il.jump(il.const_ptr(fixed_addr)).append();
@@ -411,8 +417,8 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &Lifter<Msp430
         }
         Instruction::Br(inst) => {
             let dest = if let Some(Operand::Immediate(dest)) = inst.destination() {
-                if let Some(label) = il.label_for_address(*dest as u64) {
-                    il.goto(label).append();
+                if let Some(mut label) = il.label_for_address(*dest as u64) {
+                    il.goto(&mut label).append();
                     return;
                 } else {
                     il.const_ptr(*dest as u64)
@@ -622,14 +628,8 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &Lifter<Msp430
 fn lift_source_operand<'a>(
     operand: &Operand,
     size: usize,
-    il: &'a Lifter<Msp430>,
-) -> binaryninja::llil::Expression<
-    'a,
-    Msp430,
-    Mutable,
-    NonSSA<LiftedNonSSA>,
-    binaryninja::llil::ValueExpr,
-> {
+    il: &'a MutableLiftedILFunction<Msp430>,
+) -> MutableLiftedILExpr<'a, Msp430, ValueExpr> {
     match operand {
         Operand::RegisterDirect(r) => il.reg(size, Register::try_from(*r as u32).unwrap()),
         Operand::Indexed((r, offset)) => il

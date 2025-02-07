@@ -81,6 +81,9 @@ class BINARYNINJAUIAPI DisassemblyView : public FlowGraphWidget
 	void setDisplayedFileName();
 	void setAddressBaseOffset(bool toHere);
 
+	void toggleRenderLayer(const std::string& layer);
+	FlowGraphRef applyRenderLayers(FlowGraphRef graph);
+
 	virtual DisassemblySettingsRef getDisassemblySettings() override;
 	virtual void setDisassemblySettings(DisassemblySettingsRef settings) override;
 
@@ -89,6 +92,7 @@ class BINARYNINJAUIAPI DisassemblyView : public FlowGraphWidget
 	virtual void onHighlightChanged(const HighlightTokenState& highlight) override;
 
 	static void registerActions();
+	virtual void bindDynamicActions() override;
 
   private:
 	class DisassemblyViewOptionsWidget : public MenuHelper
@@ -138,6 +142,7 @@ class BINARYNINJAUIAPI DisassemblyView : public FlowGraphWidget
 	BNDisassemblyCallParameterHints m_callParamHints;
 	DisassemblyContainer* m_container;
 	SettingsRef m_settings;
+	std::set<std::string> m_layers;
 
   private Q_SLOTS:
 	void viewInHexEditor();

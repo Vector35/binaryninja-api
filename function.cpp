@@ -410,6 +410,7 @@ void Function::AddUserTypeReference(Architecture* fromArch, uint64_t fromAddr, c
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
 	BNAddUserTypeReference(m_object, fromArch->GetObject(), fromAddr, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
 }
 
 
@@ -417,6 +418,7 @@ void Function::RemoveUserTypeReference(Architecture* fromArch, uint64_t fromAddr
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
 	BNRemoveUserTypeReference(m_object, fromArch->GetObject(), fromAddr, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
 }
 
 
@@ -425,6 +427,7 @@ void Function::AddUserTypeFieldReference(
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
 	BNAddUserTypeFieldReference(m_object, fromArch->GetObject(), fromAddr, &nameObj, offset, size);
+	QualifiedName::FreeAPIObject(&nameObj);
 }
 
 
@@ -433,6 +436,7 @@ void Function::RemoveUserTypeFieldReference(
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
 	BNRemoveUserTypeFieldReference(m_object, fromArch->GetObject(), fromAddr, &nameObj, offset, size);
+	QualifiedName::FreeAPIObject(&nameObj);
 }
 
 
@@ -1342,6 +1346,23 @@ bool Function::GetStackVariableAtFrameOffset(
 {
 	BNVariableNameAndType var;
 	if (!BNGetStackVariableAtFrameOffset(m_object, arch->GetObject(), addr, offset, &var))
+		return false;
+
+	result.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var.type)), var.typeConfidence);
+	result.name = var.name;
+	result.var = var.var;
+	result.autoDefined = var.autoDefined;
+
+	BNFreeVariableNameAndType(&var);
+	return true;
+}
+
+
+bool Function::GetStackVariableAtFrameOffsetAfterInstruction(
+    Architecture* arch, uint64_t addr, int64_t offset, VariableNameAndType& result)
+{
+	BNVariableNameAndType var;
+	if (!BNGetStackVariableAtFrameOffsetAfterInstruction(m_object, arch->GetObject(), addr, offset, &var))
 		return false;
 
 	result.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var.type)), var.typeConfidence);

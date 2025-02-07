@@ -1,11 +1,14 @@
 #include "fileinfo.h"
 #include "fontsettings.h"
 #include "theme.h"
-#include "copyablelable.h"
+#include "copyablelabel.h"
 #include <QClipboard>
 #include <QApplication>
 #include <QToolTip>
 #include <QPainter>
+#include <QtConcurrent/QtConcurrent>
+#include <QFuture>
+#include <QFutureWatcher>
 
 void FileInfoWidget::addCopyableField(const QString& name, const QVariant& value)
 {
@@ -35,12 +38,31 @@ void FileInfoWidget::addHashField(
 	auto& [row, column] = this->m_fieldPosition;
 
 	const auto hashFieldColor = getThemeColor(AlphanumericHighlightColor);
-	const auto crypto = QCryptographicHash::hash(data, algorithm);
-	const auto hashLabel = new CopyableLabel(crypto.toHex(), hashFieldColor);
+	auto hashLabel = new CopyableLabel("Calculating...", hashFieldColor);
 	hashLabel->setFont(getMonospaceFont(this));
 
 	this->m_layout->addWidget(new QLabel(hashName), row, column);
 	this->m_layout->addWidget(hashLabel, row++, column + 1);
+
+	// Process the hash calculations in a separate thread and update the label when done
+	QPointer<QFutureWatcher<QByteArray>> watcher = new QFutureWatcher<QByteArray>(this);
+	connect(watcher, &QFutureWatcher<QByteArray>::finished, this, [watcher, hashLabel]() {
+		if (watcher)
+		{
+			hashLabel->setText(watcher->result().toHex());
+			watcher->deleteLater();
+		}
+	});
+	QFuture<QByteArray> future = QtConcurrent::run([data, algorithm]() {
+		return QCryptographicHash::hash(data, algorithm);
+	});
+	watcher->setFuture(future);
+	connect(this, &QObject::destroyed, this, [watcher]() {
+		if (watcher && watcher->isRunning()) {
+			watcher->cancel();
+			watcher->waitForFinished();
+		}
+	});
 }
 
 FileInfoWidget::FileInfoWidget(QWidget* parent, BinaryViewRef bv)

@@ -617,9 +617,21 @@ size_t MediumLevelILFunction::GetSSAVarVersionAtInstruction(const Variable& var,
 }
 
 
+size_t MediumLevelILFunction::GetSSAVarVersionAfterInstruction(const Variable& var, size_t instr) const
+{
+	return BNGetMediumLevelILSSAVarVersionAfterILInstruction(m_object, &var, instr);
+}
+
+
 size_t MediumLevelILFunction::GetSSAMemoryVersionAtInstruction(size_t instr) const
 {
 	return BNGetMediumLevelILSSAMemoryVersionAtILInstruction(m_object, instr);
+}
+
+
+size_t MediumLevelILFunction::GetSSAMemoryVersionAfterInstruction(size_t instr) const
+{
+	return BNGetMediumLevelILSSAMemoryVersionAfterILInstruction(m_object, instr);
 }
 
 
@@ -629,15 +641,33 @@ Variable MediumLevelILFunction::GetVariableForRegisterAtInstruction(uint32_t reg
 }
 
 
+Variable MediumLevelILFunction::GetVariableForRegisterAfterInstruction(uint32_t reg, size_t instr) const
+{
+	return BNGetMediumLevelILVariableForRegisterAfterInstruction(m_object, reg, instr);
+}
+
+
 Variable MediumLevelILFunction::GetVariableForFlagAtInstruction(uint32_t flag, size_t instr) const
 {
 	return BNGetMediumLevelILVariableForFlagAtInstruction(m_object, flag, instr);
 }
 
 
+Variable MediumLevelILFunction::GetVariableForFlagAfterInstruction(uint32_t flag, size_t instr) const
+{
+	return BNGetMediumLevelILVariableForFlagAfterInstruction(m_object, flag, instr);
+}
+
+
 Variable MediumLevelILFunction::GetVariableForStackLocationAtInstruction(int64_t offset, size_t instr) const
 {
 	return BNGetMediumLevelILVariableForStackLocationAtInstruction(m_object, offset, instr);
+}
+
+
+Variable MediumLevelILFunction::GetVariableForStackLocationAfterInstruction(int64_t offset, size_t instr) const
+{
+	return BNGetMediumLevelILVariableForStackLocationAfterInstruction(m_object, offset, instr);
 }
 
 

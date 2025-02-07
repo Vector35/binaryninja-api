@@ -1,0 +1,19 @@
+[package]
+name = "pdb-import-plugin"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = "^1.0"
+binaryninja.workspace = true
+binaryninjacore-sys.workspace = true
+itertools = "0.14"
+log = "0.4"
+pdb = { git = "https://github.com/Vector35/pdb-rs", rev = "6016177" }
+regex = "1"
+
+[features]
+demo = []

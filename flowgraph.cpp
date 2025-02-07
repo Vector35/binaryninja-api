@@ -256,6 +256,12 @@ Ref<FlowGraphNode> FlowGraph::GetNode(size_t i)
 }
 
 
+size_t FlowGraph::GetNodeCount() const
+{
+	return BNGetFlowGraphNodeCount(m_object);
+}
+
+
 bool FlowGraph::HasNodes() const
 {
 	return BNFlowGraphHasNodes(m_object);
@@ -266,6 +272,18 @@ size_t FlowGraph::AddNode(FlowGraphNode* node)
 {
 	m_cachedNodes[node->GetObject()] = node;
 	return BNAddFlowGraphNode(m_object, node->GetObject());
+}
+
+
+void FlowGraph::ReplaceNode(size_t i, FlowGraphNode* newNode)
+{
+	BNReplaceFlowGraphNode(m_object, i, newNode->GetObject());
+}
+
+
+void FlowGraph::ClearNodes()
+{
+	BNClearFlowGraphNodes(m_object);
 }
 
 
@@ -416,6 +434,32 @@ void FlowGraph::SetOption(BNFlowGraphOption option, bool value)
 bool FlowGraph::IsOptionSet(BNFlowGraphOption option)
 {
 	return BNIsFlowGraphOptionSet(m_object, option);
+}
+
+
+std::vector<RenderLayer*> FlowGraph::GetRenderLayers() const
+{
+	size_t count = 0;
+	BNRenderLayer** layers = BNGetFlowGraphRenderLayers(m_object, &count);
+	std::vector<RenderLayer*> result;
+	for (size_t i = 0; i < count; i ++)
+	{
+		result.push_back(new CoreRenderLayer(layers[i]));
+	}
+	BNFreeRenderLayerList(layers);
+	return result;
+}
+
+
+void FlowGraph::AddRenderLayer(RenderLayer* layer)
+{
+	BNAddFlowGraphRenderLayer(m_object, layer->GetObject());
+}
+
+
+void FlowGraph::RemoveRenderLayer(RenderLayer* layer)
+{
+	BNRemoveFlowGraphRenderLayer(m_object, layer->GetObject());
 }
 
 

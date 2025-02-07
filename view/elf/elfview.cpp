@@ -739,6 +739,9 @@ bool ElfView::Init()
 			m_logger->LogError("ELF architecture %d is not supported", m_commonHeader.arch);
 			break;
 		}
+
+		if (!m_parseOnly)
+			m_logger->LogWarn("Unable to determine architecture. Please open the file with options and select a valid architecture.");
 		return false;
 	}
 
@@ -2944,8 +2947,8 @@ Ref<Settings> ElfViewType::GetLoadSettingsForData(BinaryView* data)
 	Ref<BinaryView> viewRef = Parse(data);
 	if (!viewRef || !viewRef->Init())
 	{
-		m_logger->LogError("View type '%s' could not be created", GetName().c_str());
-		return nullptr;
+		m_logger->LogWarn("Failed to initialize view of type '%s'. Generating default load settings.", GetName().c_str());
+		viewRef = data;
 	}
 
 	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);

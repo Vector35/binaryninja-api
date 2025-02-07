@@ -27,14 +27,14 @@
 //!     true
 //! }
 //! ```
-//!
 
 pub use binaryninjacore_sys::BNLogLevel as Level;
 use binaryninjacore_sys::{
     BNFreeLogger, BNLogCreateLogger, BNLogListener, BNLogger, BNLoggerGetName,
-    BNLoggerGetSessionId, BNUpdateLogListeners,
+    BNLoggerGetSessionId, BNNewLoggerReference, BNUpdateLogListeners,
 };
 
+use crate::rc::{Ref, RefCountable};
 use crate::string::BnString;
 use log;
 use log::LevelFilter;
@@ -44,26 +44,41 @@ use std::ptr::NonNull;
 
 const LOGGER_DEFAULT_SESSION_ID: usize = 0;
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Logger {
     handle: NonNull<BNLogger>,
     level: LevelFilter,
 }
 
 impl Logger {
-    pub fn new(name: &str) -> Logger {
+    pub fn new(name: &str) -> Ref<Logger> {
         Self::new_with_session(name, LOGGER_DEFAULT_SESSION_ID)
     }
 
-    pub fn new_with_session(name: &str, session_id: usize) -> Logger {
+    pub fn new_with_session(name: &str, session_id: usize) -> Ref<Logger> {
         let name_raw = CString::new(name).unwrap();
         let handle = unsafe { BNLogCreateLogger(name_raw.as_ptr(), session_id) };
-        Logger {
-            handle: NonNull::new(handle).unwrap(),
-            level: LevelFilter::Debug,
+        unsafe {
+            Ref::new(Logger {
+                handle: NonNull::new(handle).unwrap(),
+                level: LevelFilter::Debug,
+            })
         }
     }
 
-    pub fn with_level(mut self, level: LevelFilter) -> Logger {
+    pub fn name(&self) -> BnString {
+        unsafe { BnString::from_raw(BNLoggerGetName(self.handle.as_ptr())) }
+    }
+
+    pub fn session_id(&self) -> usize {
+        unsafe { BNLoggerGetSessionId(self.handle.as_ptr()) }
+    }
+}
+
+// NOTE: Due to the ref counted core object, we must impl on the ref counted object.
+// NOTE: If we wanted to be less specific than we would need Ref to impl Copy
+impl Ref<Logger> {
+    pub fn with_level(mut self, level: LevelFilter) -> Ref<Logger> {
         self.level = level;
         self
     }
@@ -76,29 +91,36 @@ impl Logger {
         log::set_max_level(self.level);
         let _ = log::set_boxed_logger(Box::new(self));
     }
-
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNLoggerGetName(self.handle.as_ptr())) }
-    }
-
-    pub fn session_id(&self) -> usize {
-        unsafe { BNLoggerGetSessionId(self.handle.as_ptr()) }
-    }
 }
 
-impl Default for Logger {
+impl Default for Ref<Logger> {
     fn default() -> Self {
         Logger::new("Default")
     }
 }
 
-impl Drop for Logger {
-    fn drop(&mut self) {
-        unsafe { BNFreeLogger(self.handle.as_ptr()) };
+impl ToOwned for Logger {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
     }
 }
 
-impl log::Log for Logger {
+unsafe impl RefCountable for Logger {
+    unsafe fn inc_ref(logger: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: NonNull::new(BNNewLoggerReference(logger.handle.as_ptr())).unwrap(),
+            level: logger.level,
+        })
+    }
+
+    unsafe fn dec_ref(logger: &Self) {
+        BNFreeLogger(logger.handle.as_ptr());
+    }
+}
+
+impl log::Log for Ref<Logger> {
     fn enabled(&self, _metadata: &log::Metadata) -> bool {
         true
     }
@@ -122,7 +144,7 @@ impl log::Log for Logger {
                 BNLog(
                     self.session_id(),
                     level,
-                    logger_name.into_raw(),
+                    logger_name.as_ptr(),
                     0,
                     percent_s.as_ptr(),
                     msg.as_ptr(),

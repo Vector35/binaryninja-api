@@ -1,5 +1,5 @@
 use binaryninja::architecture;
-use binaryninja::architecture::FlagRole;
+use binaryninja::architecture::{FlagClassId, FlagGroupId, FlagId, FlagRole, FlagWriteId};
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -25,7 +25,7 @@ impl architecture::Flag for Flag {
         }
     }
 
-    fn role(&self, _class: Option<Self::FlagClass>) -> architecture::FlagRole {
+    fn role(&self, _class: Option<Self::FlagClass>) -> FlagRole {
         match self {
             Self::C => FlagRole::CarryFlagRole,
             Self::Z => FlagRole::ZeroFlagRole,
@@ -34,20 +34,21 @@ impl architecture::Flag for Flag {
         }
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> FlagId {
         match self {
             Self::C => 0,
             Self::Z => 1,
             Self::N => 2,
             Self::V => 8,
         }
+        .into()
     }
 }
 
-impl TryFrom<u32> for Flag {
+impl TryFrom<FlagId> for Flag {
     type Error = ();
-    fn try_from(flag: u32) -> Result<Self, Self::Error> {
-        match flag {
+    fn try_from(flag: FlagId) -> Result<Self, Self::Error> {
+        match flag.0 {
             0 => Ok(Self::C),
             1 => Ok(Self::Z),
             2 => Ok(Self::N),
@@ -65,7 +66,7 @@ impl architecture::FlagClass for FlagClass {
         unimplemented!()
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> FlagClassId {
         unimplemented!()
     }
 }
@@ -81,7 +82,7 @@ impl architecture::FlagGroup for FlagGroup {
         unimplemented!()
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> FlagGroupId {
         unimplemented!()
     }
 
@@ -119,13 +120,14 @@ impl architecture::FlagWrite for FlagWrite {
         None
     }
 
-    fn id(&self) -> u32 {
+    fn id(&self) -> FlagWriteId {
         match self {
             Self::All => 1,
             Self::Nz => 2,
             Self::Nvz => 3,
             Self::Cnz => 4,
         }
+        .into()
     }
 
     fn flags_written(&self) -> Vec<Self::FlagType> {
@@ -138,11 +140,11 @@ impl architecture::FlagWrite for FlagWrite {
     }
 }
 
-impl TryFrom<u32> for FlagWrite {
+impl TryFrom<FlagWriteId> for FlagWrite {
     type Error = ();
 
-    fn try_from(value: u32) -> Result<Self, Self::Error> {
-        match value {
+    fn try_from(value: FlagWriteId) -> Result<Self, Self::Error> {
+        match value.0 {
             1 => Ok(Self::All),
             2 => Ok(Self::Nz),
             3 => Ok(Self::Nvz),

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QtCore/QSettings>
-#include <QtWidgets/QListView>
+#include <QtWidgets/QTableView>
 #include <QtWidgets/QStyledItemDelegate>
 #include <QtWidgets/QAbstractScrollArea>
 #include <mutex>
@@ -53,6 +53,13 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	std::vector<StringUpdateEvent> getQueuedStringUpdates();
 
   public:
+	enum {
+		COL_ADDRESS = 0,
+		COL_TYPE,
+		COL_VALUE,
+		COLUMN_COUNT,
+	};
+
 	StringsListModel(QWidget* parent, BinaryViewRef data);
 	virtual ~StringsListModel();
 
@@ -62,6 +69,7 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	virtual int rowCount(const QModelIndex& parent) const override;
 	virtual int columnCount(const QModelIndex& parent) const override;
 	virtual QVariant data(const QModelIndex& i, int role) const override;
+	virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
 	BNStringReference getStringAt(const QModelIndex& i);
 	QModelIndex findString(const BNStringReference& ref);
@@ -69,6 +77,8 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	virtual void OnStringFound(BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
 	virtual void OnStringRemoved(BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
 	void updateStrings();
+
+	virtual void sort(int col, Qt::SortOrder order) override;
 
 	void setFilter(const std::string& filter);
 
@@ -110,7 +120,6 @@ class BINARYNINJAUIAPI StringItemDelegate : public QStyledItemDelegate
 	void updateFonts();
 
 	virtual QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& idx) const override;
-	virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& idx) const override;
 	QFont getFont() const { return m_font; }
 };
 
@@ -121,7 +130,7 @@ class StringsViewSidebarWidget;
 
     \ingroup stringsview
 */
-class BINARYNINJAUIAPI StringsView : public QListView, public View, public FilterTarget
+class BINARYNINJAUIAPI StringsView : public QTableView, public View, public FilterTarget
 {
 	Q_OBJECT
 

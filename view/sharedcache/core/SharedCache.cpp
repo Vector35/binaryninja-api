@@ -27,6 +27,8 @@
 #include "SharedCache.h"
 #include "ObjC.h"
 #include <filesystem>
+#include <mutex>
+#include <unordered_map>
 #include <utility>
 #include <fcntl.h>
 #include <memory>
@@ -73,41 +75,95 @@ struct SharedCache::State
 	std::vector<MemoryRegion> dyldDataRegions;
 	std::vector<MemoryRegion> nonImageRegions;
 
+	std::optional<std::pair<size_t, size_t>> objcOptimizationDataRange;
+
 	std::string baseFilePath;
 	SharedCacheFormat cacheFormat;
 	DSCViewState viewState = DSCViewStateUnloaded;
 };
 
-static std::recursive_mutex viewStateMutex;
-static std::unordered_map<uint64_t, std::shared_ptr<struct SharedCache::State>> viewStateCache;
+struct SharedCache::ViewSpecificState {
+	std::mutex typeLibraryMutex;
+	std::unordered_map<std::string, Ref<TypeLibrary>> typeLibraries;
 
-std::mutex progressMutex;
-std::unordered_map<uint64_t, BNDSCViewLoadProgress> progressMap;
-
-struct ViewSpecificMutexes {
 	std::mutex viewOperationsThatInfluenceMetadataMutex;
-	std::mutex typeLibraryLookupAndApplicationMutex;
+
+	std::atomic<BNDSCViewLoadProgress> progress;
+
+	std::mutex stateMutex;
+	std::shared_ptr<struct SharedCache::State> cachedState;
 };
 
-static std::unordered_map<uint64_t, ViewSpecificMutexes> viewSpecificMutexes;
 
+std::shared_ptr<SharedCache::ViewSpecificState> ViewSpecificStateForId(uint64_t viewIdentifier, bool insertIfNeeded = true) {
+	static std::mutex viewSpecificStateMutex;
+	static std::unordered_map<uint64_t, std::weak_ptr<SharedCache::ViewSpecificState>> viewSpecificState;
+
+	std::lock_guard lock(viewSpecificStateMutex);
+
+	if (auto it = viewSpecificState.find(viewIdentifier); it != viewSpecificState.end()) {
+		if (auto statePtr = it->second.lock()) {
+			return statePtr;
+		}
+	}
+
+	if (!insertIfNeeded) {
+		return nullptr;
+	}
+
+	auto statePtr = std::make_shared<SharedCache::ViewSpecificState>();
+	viewSpecificState[viewIdentifier] = statePtr;
+
+	// Prune entries for any views that are no longer in use.
+	for (auto it = viewSpecificState.begin(); it != viewSpecificState.end(); ) {
+		if (it->second.expired()) {
+			it = viewSpecificState.erase(it);
+		} else {
+			++it;
+		}
+	}
+
+	return statePtr;
+}
+
+std::shared_ptr<SharedCache::ViewSpecificState> ViewSpecificStateForView(Ref<BinaryNinja::BinaryView> view) {
+	return ViewSpecificStateForId(view->GetFile()->GetSessionId());
+}
 
 std::string base_name(std::string const& path)
 {
 	return path.substr(path.find_last_of("/\\") + 1);
 }
 
+BNSegmentFlag SegmentFlagsFromMachOProtections(int initProt, int maxProt) {
+
+	uint32_t flags = 0;
+	if (initProt & MACHO_VM_PROT_READ)
+		flags |= SegmentReadable;
+	if (initProt & MACHO_VM_PROT_WRITE)
+		flags |= SegmentWritable;
+	if (initProt & MACHO_VM_PROT_EXECUTE)
+		flags |= SegmentExecutable;
+	if (((initProt & MACHO_VM_PROT_WRITE) == 0) &&
+		((maxProt & MACHO_VM_PROT_WRITE) == 0))
+		flags |= SegmentDenyWrite;
+	if (((initProt & MACHO_VM_PROT_EXECUTE) == 0) &&
+		((maxProt & MACHO_VM_PROT_EXECUTE) == 0))
+		flags |= SegmentDenyExecute;
+	return (BNSegmentFlag)flags;
+}
+
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
-static int64_t readSLEB128(DataBuffer& buffer, size_t length, size_t& offset)
+static int64_t readSLEB128(const uint8_t*& current, const uint8_t* end)
 {
 	uint8_t cur;
 	int64_t value = 0;
 	size_t shift = 0;
-	while (offset < length)
+	while (current != end)
 	{
-		cur = buffer[offset++];
+		cur = *current++;
 		value |= (cur & 0x7f) << shift;
 		shift += 7;
 		if ((cur & 0x80) == 0)
@@ -119,16 +175,16 @@ static int64_t readSLEB128(DataBuffer& buffer, size_t length, size_t& offset)
 #pragma clang diagnostic pop
 
 
-static uint64_t readLEB128(DataBuffer& p, size_t end, size_t& offset)
+static uint64_t readLEB128(const uint8_t*& current, const uint8_t* end)
 {
 	uint64_t result = 0;
 	int bit = 0;
 	do
 	{
-		if (offset >= end)
+		if (current >= end)
 			return -1;
 
-		uint64_t slice = p[offset] & 0x7f;
+		uint64_t slice = *current & 0x7f;
 
 		if (bit > 63)
 			return -1;
@@ -137,14 +193,14 @@ static uint64_t readLEB128(DataBuffer& p, size_t end, size_t& offset)
 			result |= (slice << bit);
 			bit += 7;
 		}
-	} while (p[offset++] & 0x80);
+	} while (*current++ & 0x80);
 	return result;
 }
 
 
-uint64_t readValidULEB128(DataBuffer& buffer, size_t& cursor)
+uint64_t readValidULEB128(const uint8_t*& current, const uint8_t* end)
 {
-	uint64_t value = readLEB128(buffer, buffer.GetLength(), cursor);
+	uint64_t value = readLEB128(current, end);
 	if ((int64_t)value == -1)
 		throw ReadException();
 	return value;
@@ -220,9 +276,7 @@ void SharedCache::PerformInitialLoad()
 	auto path = m_dscView->GetFile()->GetOriginalFilename();
 	auto baseFile = MMappedFileAccessor::Open(m_dscView, m_dscView->GetFile()->GetSessionId(), path)->lock();
 
-    progressMutex.lock();
-	progressMap[m_dscView->GetFile()->GetSessionId()] = LoadProgressLoadingCaches;
-	progressMutex.unlock();
+	m_viewSpecificState->progress = LoadProgressLoadingCaches;
 
 	WillMutateState();
 
@@ -259,6 +313,12 @@ void SharedCache::PerformInitialLoad()
 			MutableState().cacheFormat = iOS16CacheFormat;
 	}
 
+	if (primaryCacheHeader.objcOptsOffset && primaryCacheHeader.objcOptsSize) {
+		uint64_t objcOptsOffset = primaryCacheHeader.objcOptsOffset;
+		uint64_t objcOptsSize = primaryCacheHeader.objcOptsSize;
+		MutableState().objcOptimizationDataRange = {objcOptsOffset, objcOptsSize};
+	}
+
 	switch (State().cacheFormat)
 	{
 	case RegularCacheFormat:
@@ -271,11 +331,7 @@ void SharedCache::PerformInitialLoad()
 		for (size_t i = 0; i < primaryCacheHeader.mappingCount; i++)
 		{
 			baseFile->Read(&mapping, primaryCacheHeader.mappingOffset + (i * sizeof(mapping)), sizeof(mapping));
-			std::pair<uint64_t, std::pair<uint64_t, uint64_t>> mapRawToAddrAndSize;
-			mapRawToAddrAndSize.first = mapping.fileOffset;
-			mapRawToAddrAndSize.second.first = mapping.address;
-			mapRawToAddrAndSize.second.second = mapping.size;
-			cache.mappings.push_back(mapRawToAddrAndSize);
+			cache.mappings.push_back(mapping);
 		}
 		MutableState().backingCaches.push_back(std::move(cache));
 
@@ -339,11 +395,7 @@ void SharedCache::PerformInitialLoad()
 		for (size_t i = 0; i < primaryCacheHeader.mappingCount; i++)
 		{
 			baseFile->Read(&mapping, primaryCacheHeader.mappingOffset + (i * sizeof(mapping)), sizeof(mapping));
-			std::pair<uint64_t, std::pair<uint64_t, uint64_t>> mapRawToAddrAndSize;
-			mapRawToAddrAndSize.first = mapping.fileOffset;
-			mapRawToAddrAndSize.second.first = mapping.address;
-			mapRawToAddrAndSize.second.second = mapping.size;
-			cache.mappings.push_back(std::move(mapRawToAddrAndSize));
+			cache.mappings.push_back(mapping);
 		}
 		MutableState().backingCaches.push_back(std::move(cache));
 
@@ -415,11 +467,7 @@ void SharedCache::PerformInitialLoad()
 			{
 				subCacheFile->Read(&subCacheMapping, subCacheHeader.mappingOffset + (j * sizeof(subCacheMapping)),
 					sizeof(subCacheMapping));
-				std::pair<uint64_t, std::pair<uint64_t, uint64_t>> mapRawToAddrAndSize;
-				mapRawToAddrAndSize.first = subCacheMapping.fileOffset;
-				mapRawToAddrAndSize.second.first = subCacheMapping.address;
-				mapRawToAddrAndSize.second.second = subCacheMapping.size;
-				subCache.mappings.push_back(std::move(mapRawToAddrAndSize));
+				subCache.mappings.push_back(subCacheMapping);
 			}
 
 			if (subCacheHeader.mappingCount == 1 && subCacheHeader.imagesCountOld == 0 && subCacheHeader.imagesCount == 0
@@ -451,11 +499,7 @@ void SharedCache::PerformInitialLoad()
 		for (size_t i = 0; i < primaryCacheHeader.mappingCount; i++)
 		{
 			baseFile->Read(&mapping, primaryCacheHeader.mappingOffset + (i * sizeof(mapping)), sizeof(mapping));
-			std::pair<uint64_t, std::pair<uint64_t, uint64_t>> mapRawToAddrAndSize;
-			mapRawToAddrAndSize.first = mapping.fileOffset;
-			mapRawToAddrAndSize.second.first = mapping.address;
-			mapRawToAddrAndSize.second.second = mapping.size;
-			cache.mappings.push_back(std::move(mapRawToAddrAndSize));
+			cache.mappings.push_back(mapping);
 		}
 		MutableState().backingCaches.push_back(std::move(cache));
 
@@ -511,11 +555,7 @@ void SharedCache::PerformInitialLoad()
 			{
 				subCacheFile->Read(&subCacheMapping, subCacheHeader.mappingOffset + (j * sizeof(subCacheMapping)),
 					sizeof(subCacheMapping));
-				std::pair<uint64_t, std::pair<uint64_t, uint64_t>> mapRawToAddrAndSize;
-				mapRawToAddrAndSize.first = subCacheMapping.fileOffset;
-				mapRawToAddrAndSize.second.first = subCacheMapping.address;
-				mapRawToAddrAndSize.second.second = subCacheMapping.size;
-				subCache.mappings.push_back(std::move(mapRawToAddrAndSize));
+				subCache.mappings.push_back(subCacheMapping);
 			}
 
 			MutableState().backingCaches.push_back(std::move(subCache));
@@ -536,35 +576,36 @@ void SharedCache::PerformInitialLoad()
 		}
 
 		// Load .symbols subcache
+		try {
+			auto subCachePath = path + ".symbols";
+			auto subCacheFile = MMappedFileAccessor::Open(m_dscView, m_dscView->GetFile()->GetSessionId(), subCachePath)->lock();
 
-		auto subCachePath = path + ".symbols";
-		auto subCacheFile = MMappedFileAccessor::Open(m_dscView, m_dscView->GetFile()->GetSessionId(), subCachePath)->lock();
+			dyld_cache_header subCacheHeader {};
+			uint64_t headerSize = subCacheFile->ReadUInt32(16);
+			if (headerSize > sizeof(dyld_cache_header))
+			{
+				m_logger->LogDebug("Header size is larger than expected (0x%llx), using default size (0x%llx)", headerSize,
+					sizeof(dyld_cache_header));
+				headerSize = sizeof(dyld_cache_header);
+			}
+			subCacheFile->Read(&subCacheHeader, 0, headerSize);
 
-		dyld_cache_header subCacheHeader {};
-		uint64_t headerSize = subCacheFile->ReadUInt32(16);
-		if (headerSize > sizeof(dyld_cache_header))
-		{
-			m_logger->LogDebug("Header size is larger than expected (0x%llx), using default size (0x%llx)", headerSize,
-				sizeof(dyld_cache_header));
-			headerSize = sizeof(dyld_cache_header);
+			dyld_cache_mapping_info subCacheMapping {};
+			BackingCache subCache;
+
+			for (size_t j = 0; j < subCacheHeader.mappingCount; j++)
+			{
+				subCacheFile->Read(&subCacheMapping, subCacheHeader.mappingOffset + (j * sizeof(subCacheMapping)),
+					sizeof(subCacheMapping));
+				subCache.mappings.push_back(subCacheMapping);
+			}
+
+			MutableState().backingCaches.push_back(std::move(subCache));
 		}
-		subCacheFile->Read(&subCacheHeader, 0, headerSize);
-
-		dyld_cache_mapping_info subCacheMapping {};
-		BackingCache subCache;
-
-		for (size_t j = 0; j < subCacheHeader.mappingCount; j++)
+		catch (...)
 		{
-			subCacheFile->Read(&subCacheMapping, subCacheHeader.mappingOffset + (j * sizeof(subCacheMapping)),
-				sizeof(subCacheMapping));
-			std::pair<uint64_t, std::pair<uint64_t, uint64_t>> mapRawToAddrAndSize;
-			mapRawToAddrAndSize.first = subCacheMapping.fileOffset;
-			mapRawToAddrAndSize.second.first = subCacheMapping.address;
-			mapRawToAddrAndSize.second.second = subCacheMapping.size;
-			subCache.mappings.push_back(std::move(mapRawToAddrAndSize));
+			m_logger->LogWarn("Failed to locate .symbols subcache. Non-exported symbol information may be missing.");
 		}
-
-		MutableState().backingCaches.push_back(std::move(subCache));
 		break;
 	}
 	case iOS16CacheFormat:
@@ -578,11 +619,7 @@ void SharedCache::PerformInitialLoad()
 		for (size_t i = 0; i < primaryCacheHeader.mappingCount; i++)
 		{
 			baseFile->Read(&mapping, primaryCacheHeader.mappingOffset + (i * sizeof(mapping)), sizeof(mapping));
-			std::pair<uint64_t, std::pair<uint64_t, uint64_t>> mapRawToAddrAndSize;
-			mapRawToAddrAndSize.first = mapping.fileOffset;
-			mapRawToAddrAndSize.second.first = mapping.address;
-			mapRawToAddrAndSize.second.second = mapping.size;
-			cache.mappings.push_back(std::move(mapRawToAddrAndSize));
+			cache.mappings.push_back(mapping);
 		}
 
 		MutableState().backingCaches.push_back(std::move(cache));
@@ -660,12 +697,7 @@ void SharedCache::PerformInitialLoad()
 			{
 				subCacheFile->Read(&subCacheMapping, subCacheHeader.mappingOffset + (j * sizeof(subCacheMapping)),
 					sizeof(subCacheMapping));
-
-				std::pair<uint64_t, std::pair<uint64_t, uint64_t>> mapRawToAddrAndSize;
-				mapRawToAddrAndSize.first = subCacheMapping.fileOffset;
-				mapRawToAddrAndSize.second.first = subCacheMapping.address;
-				mapRawToAddrAndSize.second.second = subCacheMapping.size;
-				subCache.mappings.push_back(std::move(mapRawToAddrAndSize));
+				subCache.mappings.push_back(subCacheMapping);
 
 				if (subCachePath.find(".dylddata") != std::string::npos)
 				{
@@ -722,11 +754,7 @@ void SharedCache::PerformInitialLoad()
 			{
 				subCacheFile->Read(&subCacheMapping, subCacheHeader.mappingOffset + (j * sizeof(subCacheMapping)),
 					sizeof(subCacheMapping));
-				std::pair<uint64_t, std::pair<uint64_t, uint64_t>> mapRawToAddrAndSize;
-				mapRawToAddrAndSize.first = subCacheMapping.fileOffset;
-				mapRawToAddrAndSize.second.first = subCacheMapping.address;
-				mapRawToAddrAndSize.second.second = subCacheMapping.size;
-				subCache.mappings.push_back(std::move(mapRawToAddrAndSize));
+				subCache.mappings.push_back(subCacheMapping);
 			}
 
 			MutableState().backingCaches.push_back(std::move(subCache));
@@ -737,9 +765,8 @@ void SharedCache::PerformInitialLoad()
 	}
 	}
 	baseFile.reset();
-	progressMutex.lock();
-	progressMap[m_dscView->GetFile()->GetSessionId()] = LoadProgressLoadingImages;
-	progressMutex.unlock();
+
+	m_viewSpecificState->progress = LoadProgressLoadingImages;
 
 	// We have set up enough metadata to map VM now.
 
@@ -758,7 +785,7 @@ void SharedCache::PerformInitialLoad()
 				if (imageHeader->linkeditPresent && vm->AddressIsMapped(imageHeader->linkeditSegment.vmaddr))
 				{
 					auto mapping = vm->MappingAtAddress(imageHeader->linkeditSegment.vmaddr);
-					imageHeader->exportTriePath = mapping.first.filePath;
+					imageHeader->exportTriePath = mapping.first.fileAccessor->filePath();
 				}
 				MutableState().headers[start.second] = imageHeader.value();
 				CacheImage image;
@@ -773,19 +800,7 @@ void SharedCache::PerformInitialLoad()
 					sectionRegion.prettyName = imageHeader.value().identifierPrefix + "::" + std::string(segName);
 					sectionRegion.start = segment.vmaddr;
 					sectionRegion.size = segment.vmsize;
-					uint32_t flags = 0;
-					if (segment.initprot & MACHO_VM_PROT_READ)
-						flags |= SegmentReadable;
-					if (segment.initprot & MACHO_VM_PROT_WRITE)
-						flags |= SegmentWritable;
-					if (segment.initprot & MACHO_VM_PROT_EXECUTE)
-						flags |= SegmentExecutable;
-					if (((segment.initprot & MACHO_VM_PROT_WRITE) == 0) &&
-						((segment.maxprot & MACHO_VM_PROT_WRITE) == 0))
-						flags |= SegmentDenyWrite;
-					if (((segment.initprot & MACHO_VM_PROT_EXECUTE) == 0) &&
-						((segment.maxprot & MACHO_VM_PROT_EXECUTE) == 0))
-						flags |= SegmentDenyExecute;
+					uint32_t flags = SegmentFlagsFromMachOProtections(segment.initprot, segment.maxprot);
 
 					// if we're positive we have an entry point for some reason, force the segment
 					// executable. this helps with kernel images.
@@ -817,11 +832,10 @@ void SharedCache::PerformInitialLoad()
 		for (const auto& mapping : cache.mappings)
 		{
 			MemoryRegion region;
-			region.start = mapping.second.first;
-			region.size = mapping.second.second;
+			region.start = mapping.address;
+			region.size = mapping.size;
 			region.prettyName = base_name(cache.path) + "::" + std::to_string(i);
-			// FIXME flags!!! BackingCache.mapping needs refactored to store this information!
-			region.flags = (BNSegmentFlag)(BNSegmentFlag::SegmentReadable | BNSegmentFlag::SegmentExecutable);
+			region.flags = SegmentFlagsFromMachOProtections(mapping.initProt, mapping.maxProt);
 			MutableState().nonImageRegions.push_back(std::move(region));
 			i++;
 		}
@@ -952,9 +966,7 @@ void SharedCache::PerformInitialLoad()
 
 	m_logger->LogDebug("Finished initial load of Shared Cache");
 
-	progressMutex.lock();
-	progressMap[m_dscView->GetFile()->GetSessionId()] = LoadProgressFinished;
-	progressMutex.unlock();
+	m_viewSpecificState->progress = LoadProgressFinished;
 }
 
 std::shared_ptr<VM> SharedCache::GetVMMap(bool mapPages)
@@ -967,7 +979,7 @@ std::shared_ptr<VM> SharedCache::GetVMMap(bool mapPages)
 		{
 			for (const auto& mapping : cache.mappings)
 			{
-				vm->MapPages(m_dscView, m_dscView->GetFile()->GetSessionId(), mapping.second.first, mapping.first, mapping.second.second, cache.path,
+				vm->MapPages(m_dscView, m_dscView->GetFile()->GetSessionId(), mapping.address, mapping.fileOffset, mapping.size, cache.path,
 					[this, vm=vm](std::shared_ptr<MMappedFileAccessor> mmap){
 						ParseAndApplySlideInfoForFile(mmap);
 					});
@@ -983,10 +995,10 @@ void SharedCache::DeserializeFromRawView()
 {
 	if (m_dscView->QueryMetadata(SharedCacheMetadataTag))
 	{
-		std::unique_lock<std::recursive_mutex> viewStateCacheLock(viewStateMutex);
-		if (auto it = viewStateCache.find(m_dscView->GetFile()->GetSessionId()); it != viewStateCache.end())
+		std::lock_guard lock(m_viewSpecificState->stateMutex);
+		if (m_viewSpecificState->cachedState)
 		{
-			m_state = it->second;
+			m_state = m_viewSpecificState->cachedState;
 			m_stateIsShared = true;
 			m_metadataValid = true;
 		}
@@ -1034,9 +1046,9 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 	{
 		for (const auto& mapping : backingCache.mappings)
 		{
-			if (mapping.second.first < base)
+			if (mapping.address < base)
 			{
-				base = mapping.second.first;
+				base = mapping.address;
 				break;
 			}
 		}
@@ -1245,7 +1257,7 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 					cursor += sizeof(uint16_t);
 					if (delta == DYLD_CACHE_SLIDE_V3_PAGE_ATTR_NO_REBASE)
 						continue;
-					
+
 					delta = delta/sizeof(uint64_t); // initial offset is byte based
 					uint64_t loc = mapping.mappingInfo.fileOffset + (pageSize * i);
 					do
@@ -1300,7 +1312,7 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 					cursor += sizeof(uint16_t);
 					if (delta == DYLD_CACHE_SLIDE_V5_PAGE_ATTR_NO_REBASE)
 						continue;
-					
+
 					delta = delta/sizeof(uint64_t); // initial offset is byte based
 					uint64_t loc = mapping.mappingInfo.fileOffset + (pageSize * i);
 					do
@@ -1367,7 +1379,7 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 }
 
 
-SharedCache::SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView) : m_dscView(dscView)
+SharedCache::SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView) : m_dscView(dscView), m_viewSpecificState(ViewSpecificStateForView(dscView))
 {
 	if (dscView->GetTypeName() != VIEW_NAME)
 	{
@@ -1381,50 +1393,46 @@ SharedCache::SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView) : m_
 	DeserializeFromRawView();
 	if (!m_metadataValid)
 		return;
-	if (State().viewState == DSCViewStateUnloaded)
-	{
-		std::unique_lock<std::mutex> lock(viewSpecificMutexes[m_dscView->GetFile()->GetSessionId()].viewOperationsThatInfluenceMetadataMutex);
-		try {
-			PerformInitialLoad();
-		}
-		catch (...)
-		{
-			m_logger->LogError("Failed to perform initial load of Shared Cache");
-		}
 
-		auto settings = m_dscView->GetLoadSettings(VIEW_NAME);
-		bool autoLoadLibsystem = true;
-		if (settings && settings->Contains("loader.dsc.autoLoadLibSystem"))
+	if (State().viewState != DSCViewStateUnloaded) {
+		m_viewSpecificState->progress = LoadProgressFinished;
+		return;
+	}
+
+	std::unique_lock lock(m_viewSpecificState->viewOperationsThatInfluenceMetadataMutex);
+	try {
+		PerformInitialLoad();
+	}
+	catch (...)
+	{
+		m_logger->LogError("Failed to perform initial load of Shared Cache");
+	}
+
+	auto settings = m_dscView->GetLoadSettings(VIEW_NAME);
+	bool autoLoadLibsystem = true;
+	if (settings && settings->Contains("loader.dsc.autoLoadLibSystem"))
+	{
+		autoLoadLibsystem = settings->Get<bool>("loader.dsc.autoLoadLibSystem", m_dscView);
+	}
+	if (autoLoadLibsystem)
+	{
+		for (const auto& [_, header] : State().headers)
 		{
-			autoLoadLibsystem = settings->Get<bool>("loader.dsc.autoLoadLibSystem", m_dscView);
-		}
-		if (autoLoadLibsystem)
-		{
-			for (const auto& [_, header] : State().headers)
+			if (header.installName.find("libsystem_c.dylib") != std::string::npos)
 			{
-				if (header.installName.find("libsystem_c.dylib") != std::string::npos)
-				{
-					lock.unlock();
-					m_logger->LogInfo("Loading core libsystem_c.dylib library");
-					LoadImageWithInstallName(header.installName);
-					lock.lock();
-					break;
-				}
+				lock.unlock();
+				m_logger->LogInfo("Loading core libsystem_c.dylib library");
+				LoadImageWithInstallName(header.installName, false);
+				break;
 			}
 		}
-		MutableState().viewState = DSCViewStateLoaded;
-		SaveToDSCView();
 	}
-	else
-	{
-		progressMutex.lock();
-		progressMap[m_dscView->GetFile()->GetSessionId()] = LoadProgressFinished;
-		progressMutex.unlock();
-	}
+
+	MutableState().viewState = DSCViewStateLoaded;
+	SaveToDSCView();
 }
 
 SharedCache::~SharedCache() {
-	std::unique_lock<std::mutex> lock(viewSpecificMutexes[m_dscView->GetFile()->GetSessionId()].viewOperationsThatInfluenceMetadataMutex);
 	sharedCacheReferences--;
 }
 
@@ -1519,7 +1527,7 @@ std::string SharedCache::ImageNameForAddress(uint64_t address)
 	return "";
 }
 
-bool SharedCache::LoadImageContainingAddress(uint64_t address)
+bool SharedCache::LoadImageContainingAddress(uint64_t address, bool skipObjC)
 {
 	for (const auto& [start, header] : State().headers)
 	{
@@ -1527,7 +1535,7 @@ bool SharedCache::LoadImageContainingAddress(uint64_t address)
 		{
 			if (segment.vmaddr <= address && segment.vmaddr + segment.vmsize > address)
 			{
-				return LoadImageWithInstallName(header.installName);
+				return LoadImageWithInstallName(header.installName, skipObjC);
 			}
 		}
 	}
@@ -1537,7 +1545,7 @@ bool SharedCache::LoadImageContainingAddress(uint64_t address)
 
 bool SharedCache::LoadSectionAtAddress(uint64_t address)
 {
-	std::unique_lock<std::mutex> lock(viewSpecificMutexes[m_dscView->GetFile()->GetSessionId()].viewOperationsThatInfluenceMetadataMutex);
+	std::unique_lock lock(m_viewSpecificState->viewOperationsThatInfluenceMetadataMutex);
 	DeserializeFromRawView();
 	WillMutateState();
 
@@ -1582,21 +1590,10 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
 				ParseAndApplySlideInfoForFile(targetFile);
 				auto reader = VMReader(vm);
 				auto buff = reader.ReadBuffer(stubIsland.start, stubIsland.size);
-				auto rawViewEnd = m_dscView->GetParentView()->GetEnd();
-
-				auto name = stubIsland.prettyName;
-				m_dscView->GetParentView()->GetParentView()->WriteBuffer(
-					m_dscView->GetParentView()->GetParentView()->GetEnd(), buff);
-				m_dscView->GetParentView()->AddAutoSegment(rawViewEnd, stubIsland.size, rawViewEnd, stubIsland.size,
-					SegmentReadable | SegmentExecutable);
-				m_dscView->AddUserSegment(stubIsland.start, stubIsland.size, rawViewEnd, stubIsland.size,
-					SegmentReadable | SegmentExecutable);
-				m_dscView->AddUserSection(name, stubIsland.start, stubIsland.size, ReadOnlyCodeSectionSemantics);
-				m_dscView->WriteBuffer(stubIsland.start, buff);
+				m_dscView->GetMemoryMap()->AddDataMemoryRegion(stubIsland.prettyName, stubIsland.start, buff, SegmentReadable | SegmentExecutable);
+				m_dscView->AddUserSection(stubIsland.prettyName, stubIsland.start, stubIsland.size, ReadOnlyCodeSectionSemantics);
 
 				stubIsland.loaded = true;
-
-				stubIsland.rawViewOffsetIfLoaded = rawViewEnd;
 
 				MutableState().regionsMappedIntoMemory.push_back(stubIsland);
 
@@ -1622,20 +1619,10 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
 				ParseAndApplySlideInfoForFile(targetFile);
 				auto reader = VMReader(vm);
 				auto buff = reader.ReadBuffer(dyldData.start, dyldData.size);
-				auto rawViewEnd = m_dscView->GetParentView()->GetEnd();
-
-				auto name = dyldData.prettyName;
-				m_dscView->GetParentView()->GetParentView()->WriteBuffer(
-					m_dscView->GetParentView()->GetParentView()->GetEnd(), buff);
-				m_dscView->GetParentView()->WriteBuffer(rawViewEnd, buff);
-				m_dscView->GetParentView()->AddAutoSegment(rawViewEnd, dyldData.size, rawViewEnd, dyldData.size,
-					SegmentReadable);
-				m_dscView->AddUserSegment(dyldData.start, dyldData.size, rawViewEnd, dyldData.size, SegmentReadable);
-				m_dscView->AddUserSection(name, dyldData.start, dyldData.size, ReadOnlyDataSectionSemantics);
-				m_dscView->WriteBuffer(dyldData.start, buff);
+				m_dscView->GetMemoryMap()->AddDataMemoryRegion(dyldData.prettyName, dyldData.start, buff, SegmentReadable);
+				m_dscView->AddUserSection(dyldData.prettyName, dyldData.start, dyldData.size, ReadOnlyDataSectionSemantics);
 
 				dyldData.loaded = true;
-				dyldData.rawViewOffsetIfLoaded = rawViewEnd;
 
 				MutableState().regionsMappedIntoMemory.push_back(dyldData);
 
@@ -1661,19 +1648,10 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
 				ParseAndApplySlideInfoForFile(targetFile);
 				auto reader = VMReader(vm);
 				auto buff = reader.ReadBuffer(region.start, region.size);
-				auto rawViewEnd = m_dscView->GetParentView()->GetEnd();
-
-				auto name = region.prettyName;
-				m_dscView->GetParentView()->GetParentView()->WriteBuffer(
-					m_dscView->GetParentView()->GetParentView()->GetEnd(), buff);
-				m_dscView->GetParentView()->WriteBuffer(rawViewEnd, buff);
-				m_dscView->GetParentView()->AddAutoSegment(rawViewEnd, region.size, rawViewEnd, region.size, region.flags);
-				m_dscView->AddUserSegment(region.start, region.size, rawViewEnd, region.size, region.flags);
-				m_dscView->AddUserSection(name, region.start, region.size, ReadOnlyCodeSectionSemantics);
-				m_dscView->WriteBuffer(region.start, buff);
+				m_dscView->GetMemoryMap()->AddDataMemoryRegion(region.prettyName, region.start, buff, region.flags);
+				m_dscView->AddUserSection(region.prettyName, region.start, region.size, region.flags & SegmentDenyExecute ? ReadOnlyDataSectionSemantics : ReadOnlyCodeSectionSemantics);
 
 				region.loaded = true;
-				region.rawViewOffsetIfLoaded = rawViewEnd;
 
 				MutableState().regionsMappedIntoMemory.push_back(region);
 
@@ -1691,7 +1669,6 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
 	}
 
 	auto id = m_dscView->BeginUndoActions();
-	auto rawViewEnd = m_dscView->GetParentView()->GetEnd();
 	auto reader = VMReader(vm);
 
 	m_logger->LogDebug("Partial loading image %s", targetHeader.installName.c_str());
@@ -1699,17 +1676,9 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
 	auto targetFile = vm->MappingAtAddress(targetSegment->start).first.fileAccessor->lock();
 	ParseAndApplySlideInfoForFile(targetFile);
 	auto buff = reader.ReadBuffer(targetSegment->start, targetSegment->size);
-	m_dscView->GetParentView()->GetParentView()->WriteBuffer(
-		m_dscView->GetParentView()->GetParentView()->GetEnd(), buff);
-	m_dscView->GetParentView()->WriteBuffer(rawViewEnd, buff);
-	m_dscView->GetParentView()->AddAutoSegment(
-		rawViewEnd, targetSegment->size, rawViewEnd, targetSegment->size, SegmentReadable);
-	m_dscView->AddUserSegment(
-		targetSegment->start, targetSegment->size, rawViewEnd, targetSegment->size, targetSegment->flags);
-	m_dscView->WriteBuffer(targetSegment->start, buff);
+	m_dscView->GetMemoryMap()->AddDataMemoryRegion(targetSegment->prettyName, targetSegment->start, buff, targetSegment->flags);
 
 	targetSegment->loaded = true;
-	targetSegment->rawViewOffsetIfLoaded = rawViewEnd;
 
 	MutableState().regionsMappedIntoMemory.push_back(*targetSegment);
 
@@ -1728,11 +1697,86 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
 	return true;
 }
 
-bool SharedCache::LoadImageWithInstallName(std::string installName)
+static void GetObjCSettings(Ref<BinaryView> view, bool* processObjCMetadata, bool* processCFStrings)
+{
+	auto settings = view->GetLoadSettings(VIEW_NAME);
+	*processCFStrings = true;
+	*processObjCMetadata = true;
+	if (settings && settings->Contains("loader.dsc.processCFStrings"))
+		*processCFStrings = settings->Get<bool>("loader.dsc.processCFStrings", view);
+	if (settings && settings->Contains("loader.dsc.processObjC"))
+		*processObjCMetadata = settings->Get<bool>("loader.dsc.processObjC", view);
+}
+
+static void ProcessObjCSectionsForImageWithName(std::string baseName, std::shared_ptr<VM> vm, std::shared_ptr<DSCObjC::DSCObjCProcessor> objc, bool processCFStrings, bool processObjCMetadata, Ref<Logger> logger)
+{
+	try
+	{
+		if (processObjCMetadata)
+			objc->ProcessObjCData(vm, baseName);
+		if (processCFStrings)
+			objc->ProcessCFStrings(vm, baseName);
+	}
+	catch (const std::exception& ex)
+	{
+		logger->LogWarn("Error processing ObjC data for image %s: %s", baseName.c_str(), ex.what());
+	}
+	catch (...)
+	{
+		logger->LogWarn("Error processing ObjC data for image %s", baseName.c_str());
+	}
+}
+
+void SharedCache::ProcessObjCSectionsForImageWithInstallName(std::string installName)
+{
+	bool processCFStrings;
+	bool processObjCMetadata;
+	GetObjCSettings(m_dscView, &processCFStrings, &processObjCMetadata);
+
+	if (!processObjCMetadata && !processCFStrings)
+		return;
+
+	auto objc = std::make_shared<DSCObjC::DSCObjCProcessor>(m_dscView, this, false);
+	auto vm = GetVMMap();
+
+	ProcessObjCSectionsForImageWithName(base_name(installName), vm, objc, processCFStrings, processObjCMetadata, m_logger);
+}
+
+void SharedCache::ProcessAllObjCSections()
+{
+	bool processCFStrings;
+	bool processObjCMetadata;
+	GetObjCSettings(m_dscView, &processCFStrings, &processObjCMetadata);
+
+	if (!processObjCMetadata && !processCFStrings)
+		return;
+
+	auto objc = std::make_shared<DSCObjC::DSCObjCProcessor>(m_dscView, this, false);
+	auto vm = GetVMMap();
+
+	std::set<uint64_t> processedImageHeaders;
+	for (auto region : GetMappedRegions())
+	{
+		if (!region.loaded)
+			continue;
+
+		// Don't repeat the same images multiple times
+		auto header = HeaderForAddress(region.start);
+		if (!header)
+			continue;
+		if (processedImageHeaders.find(header->textBase) != processedImageHeaders.end())
+			continue;
+		processedImageHeaders.insert(header->textBase);
+
+		ProcessObjCSectionsForImageWithName(header->identifierPrefix, vm, objc, processCFStrings, processObjCMetadata, m_logger);
+	}
+}
+
+bool SharedCache::LoadImageWithInstallName(std::string installName, bool skipObjC)
 {
 	auto settings = m_dscView->GetLoadSettings(VIEW_NAME);
 
-	std::unique_lock<std::mutex> lock(viewSpecificMutexes[m_dscView->GetFile()->GetSessionId()].viewOperationsThatInfluenceMetadataMutex);
+	std::unique_lock lock(m_viewSpecificState->viewOperationsThatInfluenceMetadataMutex);
 
 	DeserializeFromRawView();
 	WillMutateState();
@@ -1782,20 +1826,12 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
 		auto targetFile = vm->MappingAtAddress(region.start).first.fileAccessor->lock();
 		ParseAndApplySlideInfoForFile(targetFile);
 
-		auto rawViewEnd = m_dscView->GetParentView()->GetEnd();
-
 		auto buff = reader.ReadBuffer(region.start, region.size);
-		m_dscView->GetParentView()->GetParentView()->WriteBuffer(rawViewEnd, buff);
-		m_dscView->GetParentView()->WriteBuffer(rawViewEnd, buff);
 
 		region.loaded = true;
-		region.rawViewOffsetIfLoaded = rawViewEnd;
 
 		MutableState().regionsMappedIntoMemory.push_back(region);
-
-		m_dscView->GetParentView()->AddAutoSegment(rawViewEnd, region.size, rawViewEnd, region.size, region.flags);
-		m_dscView->AddUserSegment(region.start, region.size, rawViewEnd, region.size, region.flags);
-		m_dscView->WriteBuffer(region.start, buff);
+		m_dscView->GetMemoryMap()->AddDataMemoryRegion(region.prettyName, region.start, buff, region.flags);
 
 		regionsToLoad.push_back(&region);
 	}
@@ -1806,21 +1842,7 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
 		return false;
 	}
 
-	std::unique_lock<std::mutex> typelibLock(viewSpecificMutexes[m_dscView->GetFile()->GetSessionId()].typeLibraryLookupAndApplicationMutex);
-	auto typeLib = m_dscView->GetTypeLibrary(header.installName);
-
-	if (!typeLib)
-	{
-		auto typeLibs = m_dscView->GetDefaultPlatform()->GetTypeLibrariesByName(header.installName);
-		if (!typeLibs.empty())
-		{
-			typeLib = typeLibs[0];
-			m_dscView->AddTypeLibrary(typeLib);
-			m_logger->LogInfo("shared-cache: adding type library for '%s': %s (%s)",
-				targetImage->installName.c_str(), typeLib->GetName().c_str(), typeLib->GetGuid().c_str());
-		}
-	}
-	typelibLock.unlock();
+	auto typeLib = TypeLibraryForImage(header.installName);
 
 	SaveToDSCView();
 
@@ -1838,28 +1860,13 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
 
 	SharedCache::InitializeHeader(m_dscView, vm.get(), *h, regions);
 
-	try
+	if (!skipObjC)
 	{
-		auto objc = std::make_unique<DSCObjC::DSCObjCProcessor>(m_dscView, this, false);
+		bool processCFStrings;
+		bool processObjCMetadata;
+		GetObjCSettings(m_dscView, &processCFStrings, &processObjCMetadata);
 
-		bool processCFStrings = true;
-		bool processObjCMetadata = true;
-		if (settings && settings->Contains("loader.dsc.processCFStrings"))
-			processCFStrings = settings->Get<bool>("loader.dsc.processCFStrings", m_dscView);
-		if (settings && settings->Contains("loader.dsc.processObjC"))
-			processObjCMetadata = settings->Get<bool>("loader.dsc.processObjC", m_dscView);
-		if (processObjCMetadata)
-			objc->ProcessObjCData(vm, h->identifierPrefix);
-		if (processCFStrings)
-			objc->ProcessCFStrings(vm, h->identifierPrefix);
-	}
-	catch (const std::exception& ex)
-	{
-		m_logger->LogWarn("Error processing ObjC data: %s", ex.what());
-	}
-	catch (...)
-	{
-		m_logger->LogWarn("Error processing ObjC data");
+		ProcessObjCSectionsForImageWithName(h->identifierPrefix, vm, std::make_shared<DSCObjC::DSCObjCProcessor>(m_dscView, this, false), processCFStrings, processObjCMetadata, m_logger);
 	}
 
 	m_dscView->AddAnalysisOption("linearsweep");
@@ -2279,7 +2286,7 @@ std::optional<SharedCacheMachOHeader> SharedCache::LoadHeaderForAddress(std::sha
 }
 
 void SharedCache::InitializeHeader(
-	Ref<BinaryView> view, VM* vm, SharedCacheMachOHeader header, std::vector<MemoryRegion*> regionsToLoad)
+	Ref<BinaryView> view, VM* vm, const SharedCacheMachOHeader& header, std::vector<MemoryRegion*> regionsToLoad)
 {
 	WillMutateState();
 
@@ -2550,9 +2557,11 @@ void SharedCache::InitializeHeader(
 		uint64_t curfunc = header.textBase;
 		uint64_t curOffset;
 
-		while (i < header.functionStarts.funcsize)
+		auto current = static_cast<const uint8_t*>(funcStarts.GetData());
+		auto end = current + funcStarts.GetLength();
+		while (current != end)
 		{
-			curOffset = readLEB128(funcStarts, header.functionStarts.funcsize, i);
+			curOffset = readLEB128(current, end);
 			bool addFunction = false;
 			for (const auto& region : regionsToLoad)
 			{
@@ -2707,98 +2716,94 @@ void SharedCache::InitializeHeader(
 	}
 }
 
-struct ExportNode
+
+void SharedCache::ReadExportNode(std::vector<Ref<Symbol>>& symbolList, const SharedCacheMachOHeader& header,
+	const uint8_t* begin, const uint8_t* end, const uint8_t* current, uint64_t textBase, const std::string& currentText)
 {
-	std::string text;
-	uint64_t offset;
-	uint64_t flags;
-};
-
-
-void SharedCache::ReadExportNode(std::vector<Ref<Symbol>>& symbolList, SharedCacheMachOHeader& header, DataBuffer& buffer, uint64_t textBase,
-	const std::string& currentText, size_t cursor, uint32_t endGuard)
-{
-
-	if (cursor > endGuard)
+	if (current >= end)
 		throw ReadException();
 
-	uint64_t terminalSize = readValidULEB128(buffer, cursor);
-	uint64_t childOffset = cursor + terminalSize;
+	uint64_t terminalSize = readValidULEB128(current, end);
+	const uint8_t* child = current + terminalSize;
 	if (terminalSize != 0) {
 		uint64_t imageOffset = 0;
-		uint64_t flags = readValidULEB128(buffer, cursor);
+		uint64_t flags = readValidULEB128(current, end);
 		if (!(flags & EXPORT_SYMBOL_FLAGS_REEXPORT))
 		{
-			imageOffset = readValidULEB128(buffer, cursor);
-			auto symbolType = m_dscView->GetAnalysisFunctionsForAddress(textBase + imageOffset).size() ? FunctionSymbol : DataSymbol;
+			imageOffset = readValidULEB128(current, end);
+			if (!currentText.empty() && textBase + imageOffset)
 			{
-				if (!currentText.empty() && textBase + imageOffset)
+				uint32_t flags;
+				BNSymbolType type;
+				for (auto s : header.sections)
 				{
-					uint32_t flags;
-					BNSymbolType type;
-					for (auto s : header.sections)
+					if (s.addr < textBase + imageOffset)
 					{
-						if (s.addr < textBase + imageOffset)
+						if (s.addr + s.size > textBase + imageOffset)
 						{
-							if (s.addr + s.size > textBase + imageOffset)
-							{
-								flags = s.flags;
-							}
+							flags = s.flags;
+							break;
 						}
 					}
-					if ((flags & S_ATTR_PURE_INSTRUCTIONS) == S_ATTR_PURE_INSTRUCTIONS
-						|| (flags & S_ATTR_SOME_INSTRUCTIONS) == S_ATTR_SOME_INSTRUCTIONS)
-						type = FunctionSymbol;
-					else
-						type = DataSymbol;
+				}
+				if ((flags & S_ATTR_PURE_INSTRUCTIONS) == S_ATTR_PURE_INSTRUCTIONS
+					|| (flags & S_ATTR_SOME_INSTRUCTIONS) == S_ATTR_SOME_INSTRUCTIONS)
+					type = FunctionSymbol;
+				else
+					type = DataSymbol;
 
 #if EXPORT_TRIE_DEBUG
-						// BNLogInfo("export: %s -> 0x%llx", n.text.c_str(), image.baseAddress + n.offset);
+					// BNLogInfo("export: %s -> 0x%llx", n.text.c_str(), image.baseAddress + n.offset);
 #endif
-					auto sym = new Symbol(type, currentText, textBase + imageOffset);
-					symbolList.push_back(sym);
-				}
+				// TODO: The usual `Symbol` constructors take a `NameSpace` and do unnecessary memory allocations
+				// to pass its fields down to the core API. Here we pass nullptr for the namespace which is treated
+				// the same, but avoids the memory allocations. Switch back to directly constructing a `Symbol`
+				// once it gains constructors without that overhead.
+				auto symbol = new Symbol(BNCreateSymbol(type, currentText.c_str(), currentText.c_str(),
+					currentText.c_str(), textBase + imageOffset, NoBinding, nullptr, 0));
+				symbolList.push_back(symbol);
 			}
 		}
 	}
-	cursor = childOffset;
-	uint8_t childCount = buffer[cursor];
-	cursor++;
-	if (cursor > endGuard)
-		throw ReadException();
+	current = child;
+	uint8_t childCount = *current++;
+	std::string childText = currentText;
 	for (uint8_t i = 0; i < childCount; ++i)
 	{
-		std::string childText;
-		while (buffer[cursor] != 0 & cursor <= endGuard)
-			childText.push_back(buffer[cursor++]);
-		cursor++;
-		if (cursor > endGuard)
+		if (current >= end)
 			throw ReadException();
-		auto next = readValidULEB128(buffer, cursor);
+		auto it = std::find(current, end, 0);
+		childText.append(current, it);
+		current = it + 1;
+		if (current >= end)
+			throw ReadException();
+		auto next = readValidULEB128(current, end);
 		if (next == 0)
 			throw ReadException();
-		ReadExportNode(symbolList, header, buffer, textBase, currentText + childText, next, endGuard);
+		ReadExportNode(symbolList, header, begin, end, begin + next, textBase, childText);
+		childText.resize(currentText.size());
 	}
 }
 
 
-std::vector<Ref<Symbol>> SharedCache::ParseExportTrie(std::shared_ptr<MMappedFileAccessor> linkeditFile, SharedCacheMachOHeader header)
+std::vector<Ref<Symbol>> SharedCache::ParseExportTrie(std::shared_ptr<MMappedFileAccessor> linkeditFile, const SharedCacheMachOHeader& header)
 {
-	std::vector<Ref<Symbol>> symbols;
+	if (!header.exportTrie.datasize) {
+		return {};
+	}
+
 	try
 	{
-		auto reader = linkeditFile;
-
-		std::vector<ExportNode> nodes;
-
-		DataBuffer buffer = reader->ReadBuffer(header.exportTrie.dataoff, header.exportTrie.datasize);
-		ReadExportNode(symbols, header, buffer, header.textBase, "", 0, header.exportTrie.datasize);
+		std::vector<Ref<Symbol>> symbols;
+		auto [begin, end] = linkeditFile->ReadSpan(header.exportTrie.dataoff, header.exportTrie.datasize);
+		ReadExportNode(symbols, header, begin, end, begin, header.textBase, "");
+		return symbols;
 	}
 	catch (std::exception& e)
 	{
 		BNLogError("Failed to load Export Trie");
+		return {};
 	}
-	return symbols;
 }
 
 std::vector<std::string> SharedCache::GetAvailableImages()
@@ -2816,7 +2821,7 @@ std::vector<std::pair<std::string, Ref<Symbol>>> SharedCache::LoadAllSymbolsAndW
 {
 	WillMutateState();
 
-	std::unique_lock<std::mutex> initialLoadBlock(viewSpecificMutexes[m_dscView->GetFile()->GetSessionId()].viewOperationsThatInfluenceMetadataMutex);
+	std::lock_guard initialLoadBlock(m_viewSpecificState->viewOperationsThatInfluenceMetadataMutex);
 
 	std::vector<std::pair<std::string, Ref<Symbol>>> symbols;
 	for (const auto& img : State().images)
@@ -2870,6 +2875,24 @@ std::string SharedCache::SerializedImageHeaderForName(std::string name)
 	return "";
 }
 
+Ref<TypeLibrary> SharedCache::TypeLibraryForImage(const std::string& installName) {
+	std::lock_guard lock(m_viewSpecificState->typeLibraryMutex);
+	if (auto it = m_viewSpecificState->typeLibraries.find(installName); it != m_viewSpecificState->typeLibraries.end()) {
+		return it->second;
+	}
+
+	auto typeLib = m_dscView->GetTypeLibrary(installName);
+	if (!typeLib) {
+		auto typeLibs = m_dscView->GetDefaultPlatform()->GetTypeLibrariesByName(installName);
+		if (!typeLibs.empty()) {
+			typeLib = typeLibs[0];
+			m_dscView->AddTypeLibrary(typeLib);
+		}
+	}
+
+	m_viewSpecificState->typeLibraries[installName] = typeLib;
+	return typeLib;
+}
 
 void SharedCache::FindSymbolAtAddrAndApplyToAddr(
 	uint64_t symbolLocation, uint64_t targetLocation, bool triggerReanalysis)
@@ -2914,18 +2937,7 @@ void SharedCache::FindSymbolAtAddrAndApplyToAddr(
 		}
 		auto exportList = SharedCache::ParseExportTrie(mapping, *header);
 		std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>> exportMapping;
-		std::unique_lock<std::mutex> lock(viewSpecificMutexes[m_dscView->GetFile()->GetSessionId()].typeLibraryLookupAndApplicationMutex);
-		auto typeLib = m_dscView->GetTypeLibrary(header->installName);
-		if (!typeLib)
-		{
-			auto typeLibs = m_dscView->GetDefaultPlatform()->GetTypeLibrariesByName(header->installName);
-			if (!typeLibs.empty())
-			{
-				typeLib = typeLibs[0];
-				m_dscView->AddTypeLibrary(typeLib);
-			}
-		}
-		lock.unlock();
+		auto typeLib = TypeLibraryForImage(header->installName);
 		id = m_dscView->BeginUndoActions();
 		m_dscView->BeginBulkModifySymbols();
 		for (const auto& sym : exportList)
@@ -2961,7 +2973,7 @@ void SharedCache::FindSymbolAtAddrAndApplyToAddr(
 			}
 		}
 		{
-			std::unique_lock<std::mutex> _lock(viewSpecificMutexes[m_dscView->GetFile()->GetSessionId()].viewOperationsThatInfluenceMetadataMutex);
+			std::lock_guard lock(m_viewSpecificState->viewOperationsThatInfluenceMetadataMutex);
 			MutableState().exportInfos[header->textBase] = std::move(exportMapping);
 		}
 		m_dscView->EndBulkModifySymbols();
@@ -2976,7 +2988,7 @@ bool SharedCache::SaveToDSCView()
 	{
 		auto data = AsMetadata();
 		m_dscView->StoreMetadata(SharedCacheMetadataTag, data);
-		m_dscView->GetParentView()->GetParentView()->StoreMetadata(SharedCacheMetadataTag, data);
+		m_dscView->GetParentView()->StoreMetadata(SharedCacheMetadataTag, data);
 
 		// By moving our state the to cache we can avoid creating a copy in the case
 		// that no further mutations are made to `this`. If we're not done being mutated,
@@ -2985,8 +2997,8 @@ bool SharedCache::SaveToDSCView()
 		m_state = cachedState;
 		m_stateIsShared = true;
 
-		std::unique_lock<std::recursive_mutex> viewStateCacheLock(viewStateMutex);
-		viewStateCache[m_dscView->GetFile()->GetSessionId()] = std::move(cachedState);
+		std::lock_guard lock(m_viewSpecificState->stateMutex);
+		m_viewSpecificState->cachedState = std::move(cachedState);
 
 		m_metadataValid = true;
 
@@ -2996,8 +3008,13 @@ bool SharedCache::SaveToDSCView()
 }
 std::vector<MemoryRegion> SharedCache::GetMappedRegions() const
 {
-	std::unique_lock<std::mutex> lock(viewSpecificMutexes[m_dscView->GetFile()->GetSessionId()].viewOperationsThatInfluenceMetadataMutex);
+	std::lock_guard lock(m_viewSpecificState->viewOperationsThatInfluenceMetadataMutex);
 	return State().regionsMappedIntoMemory;
+}
+
+bool SharedCache::IsMemoryMapped(uint64_t address)
+{
+	return m_dscView->IsValidOffset(address);
 }
 
 extern "C"
@@ -3034,13 +3051,13 @@ extern "C"
 		cache->object->ReleaseAPIRef();
 	}
 
-	bool BNDSCViewLoadImageWithInstallName(BNSharedCache* cache, char* name)
+	bool BNDSCViewLoadImageWithInstallName(BNSharedCache* cache, char* name, bool skipObjC)
 	{
 		std::string imageName = std::string(name);
 		// FIXME !!!!!!!! BNFreeString(name);
 
 		if (cache->object)
-			return cache->object->LoadImageWithInstallName(imageName);
+			return cache->object->LoadImageWithInstallName(imageName, skipObjC);
 
 		return false;
 	}
@@ -3055,14 +3072,30 @@ extern "C"
 		return false;
 	}
 
-	bool BNDSCViewLoadImageContainingAddress(BNSharedCache* cache, uint64_t address)
+	bool BNDSCViewLoadImageContainingAddress(BNSharedCache* cache, uint64_t address, bool skipObjC)
 	{
 		if (cache->object)
 		{
-			return cache->object->LoadImageContainingAddress(address);
+			return cache->object->LoadImageContainingAddress(address, skipObjC);
 		}
 
 		return false;
+	}
+
+	void BNDSCViewProcessObjCSectionsForImageWithInstallName(BNSharedCache* cache, char* name, bool deallocName)
+	{
+		std::string imageName = std::string(name);
+		if (deallocName)
+			BNFreeString(name);
+
+		if (cache->object)
+			cache->object->ProcessObjCSectionsForImageWithInstallName(imageName);
+	}
+
+	void BNDSCViewProcessAllObjCSections(BNSharedCache* cache)
+	{
+		if (cache->object)
+			cache->object->ProcessAllObjCSections();
 	}
 
 	char** BNDSCViewGetInstallNames(BNSharedCache* cache, size_t* count)
@@ -3197,11 +3230,11 @@ extern "C"
 				mappings = (BNDSCBackingCacheMapping*)malloc(sizeof(BNDSCBackingCacheMapping) * viewCaches[i].mappings.size());
 
 				size_t j = 0;
-				for (const auto& [fileOffset, mapping] : viewCaches[i].mappings)
+				for (const auto& mapping : viewCaches[i].mappings)
 				{
-					mappings[j].vmAddress = mapping.first;
-					mappings[j].size = mapping.second;
-					mappings[j].fileOffset = fileOffset;
+					mappings[j].vmAddress = mapping.address;
+					mappings[j].size = mapping.size;
+					mappings[j].fileOffset = mapping.fileOffset;
 					j++;
 				}
 				caches[i].mappings = mappings;
@@ -3234,28 +3267,39 @@ extern "C"
 	{
 		if (cache->object)
 		{
-			auto vm = cache->object->GetVMMap(true);
-			auto viewImageHeaders = cache->object->AllImageHeaders();
-			*count = viewImageHeaders.size();
-			BNDSCImage* images = (BNDSCImage*)malloc(sizeof(BNDSCImage) * viewImageHeaders.size());
-			size_t i = 0;
-			for (const auto& [baseAddress, header] : viewImageHeaders)
-			{
-				images[i].name = BNAllocString(header.installName.c_str());
-				images[i].headerAddress = baseAddress;
-				images[i].mappingCount = header.sections.size();
-				images[i].mappings = (BNDSCImageMemoryMapping*)malloc(sizeof(BNDSCImageMemoryMapping) * header.sections.size());
-				for (size_t j = 0; j < header.sections.size(); j++)
+			try {
+				auto vm = cache->object->GetVMMap(true);
+				auto viewImageHeaders = cache->object->AllImageHeaders();
+				*count = viewImageHeaders.size();
+				BNDSCImage* images = (BNDSCImage*)malloc(sizeof(BNDSCImage) * viewImageHeaders.size());
+				size_t i = 0;
+				for (const auto& [baseAddress, header] : viewImageHeaders)
 				{
-					images[i].mappings[j].rawViewOffset = header.sections[j].offset;
-					images[i].mappings[j].vmAddress = header.sections[j].addr;
-					images[i].mappings[j].size = header.sections[j].size;
-					images[i].mappings[j].name = BNAllocString(header.sectionNames[j].c_str());
-					images[i].mappings[j].filePath = BNAllocString(vm->MappingAtAddress(header.sections[j].addr).first.filePath.c_str());
+					images[i].name = BNAllocString(header.installName.c_str());
+					images[i].headerAddress = baseAddress;
+					images[i].mappingCount = header.sections.size();
+					images[i].mappings = (BNDSCImageMemoryMapping*)malloc(sizeof(BNDSCImageMemoryMapping) * header.sections.size());
+					for (size_t j = 0; j < header.sections.size(); j++)
+					{
+						const auto sectionStart = header.sections[j].addr;
+						images[i].mappings[j].rawViewOffset = header.sections[j].offset;
+						images[i].mappings[j].vmAddress = sectionStart;
+						images[i].mappings[j].size = header.sections[j].size;
+						images[i].mappings[j].name = BNAllocString(header.sectionNames[j].c_str());
+						auto fileAccessor = vm->MappingAtAddress(sectionStart).first.fileAccessor;
+						images[i].mappings[j].filePath = BNAllocStringWithLength(fileAccessor->filePath().data(), fileAccessor->filePath().length());
+						images[i].mappings[j].loaded = cache->object->IsMemoryMapped(sectionStart);
+					}
+					i++;
 				}
-				i++;
+				return images;
 			}
-			return images;
+			catch (...)
+			{
+				LogError("SharedCache: Failed to load image listing. Likely caused by a ser/deserialization error or load failure");
+				*count = 0;
+				return nullptr;
+			}
 		}
 		*count = 0;
 		return nullptr;
@@ -3310,15 +3354,11 @@ extern "C"
 
 	BNDSCViewLoadProgress BNDSCViewGetLoadProgress(uint64_t sessionID)
 	{
-		progressMutex.lock();
-		if (progressMap.find(sessionID) == progressMap.end())
-		{
-			progressMutex.unlock();
-			return LoadProgressNotStarted;
+		if (auto viewSpecificState = ViewSpecificStateForId(sessionID, false)) {
+			return viewSpecificState->progress;
 		}
-		auto progress = progressMap[sessionID];
-		progressMutex.unlock();
-		return progress;
+
+		return LoadProgressNotStarted;
 	}
 
 	uint64_t BNDSCViewFastGetBackingCacheCount(BNBinaryView* data)
@@ -3329,22 +3369,46 @@ extern "C"
 }
 
 [[maybe_unused]] DSCViewType* g_dscViewType;
-[[maybe_unused]] DSCRawViewType* g_dscRawViewType;
 
 void InitDSCViewType()
 {
 	MMappedFileAccessor::InitialVMSetup();
 	std::atexit(VMShutdown);
 
-	static DSCRawViewType rawType;
-	BinaryViewType::Register(&rawType);
 	static DSCViewType type;
 	BinaryViewType::Register(&type);
 	g_dscViewType = &type;
-	g_dscRawViewType = &rawType;
 }
 
 namespace SharedCacheCore {
+
+void Serialize(SerializationContext& context, const dyld_cache_mapping_info& value)
+{
+       context.writer.StartArray();
+       Serialize(context, value.address);
+       Serialize(context, value.size);
+       Serialize(context, value.fileOffset);
+       Serialize(context, value.maxProt);
+       Serialize(context, value.initProt);
+       context.writer.EndArray();
+}
+
+void Deserialize(DeserializationContext& context, std::string_view name, std::vector<dyld_cache_mapping_info>& b)
+{
+
+       auto bArr = context.doc[name.data()].GetArray();
+       for (auto& s : bArr)
+       {
+               dyld_cache_mapping_info mapping;
+               auto s2 = s.GetArray();
+               mapping.address = s2[0].GetUint64();
+               mapping.size = s2[1].GetUint64();
+               mapping.fileOffset = s2[2].GetUint64();
+               mapping.maxProt = s2[3].GetUint();
+               mapping.initProt = s2[4].GetUint();
+               b.push_back(mapping);
+       }
+}
 
 void SharedCache::Store(SerializationContext& context) const
 {
@@ -3368,6 +3432,27 @@ void SharedCache::Store(SerializationContext& context) const
 	Serialize(context, "exportInfos");
 	context.writer.StartArray();
 	for (const auto& pair1 : State().exportInfos)
+	{
+		context.writer.StartObject();
+		Serialize(context, "key", pair1.first);
+		Serialize(context, "value");
+		context.writer.StartArray();
+		for (const auto& pair2 : pair1.second)
+		{
+			context.writer.StartObject();
+			Serialize(context, "key", pair2.first);
+			Serialize(context, "val1", pair2.second.first);
+			Serialize(context, "val2", pair2.second.second);
+			context.writer.EndObject();
+		}
+		context.writer.EndArray();
+		context.writer.EndObject();
+	}
+	context.writer.EndArray();
+
+	Serialize(context, "symbolInfos");
+	context.writer.StartArray();
+	for (const auto& pair1 : State().symbolInfos)
 	{
 		context.writer.StartObject();
 		Serialize(context, "key", pair1.first);
@@ -3441,13 +3526,14 @@ void SharedCache::Load(DeserializationContext& context)
 
 	for (auto& symbolInfo : context.doc["symbolInfos"].GetArray())
 	{
-		std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>> symbolInfoVec;
-		for (auto& symbolInfoPair : symbolInfo.GetArray())
+		std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>
+			symbolInfos;
+		for (auto& si : symbolInfo["value"].GetArray())
 		{
-			symbolInfoVec.push_back({symbolInfoPair[0].GetUint64(),
-				{(BNSymbolType)symbolInfoPair[1].GetUint(), symbolInfoPair[2].GetString()}});
+			symbolInfos.push_back({si["key"].GetUint64(),
+				{static_cast<BNSymbolType>(si["val1"].GetUint64()), si["val2"].GetString()}});
 		}
-		MutableState().symbolInfos[symbolInfo[0].GetUint64()] = std::move(symbolInfoVec);
+		MutableState().symbolInfos[symbolInfo["key"].GetUint64()] = std::move(symbolInfos);
 	}
 
 	for (auto& bcV : context.doc["backingCaches"].GetArray())
@@ -3493,6 +3579,19 @@ void SharedCache::Load(DeserializationContext& context)
 	}
 
 	m_metadataValid = true;
+}
+
+void BackingCache::Store(SerializationContext& context) const
+{
+	MSS(path);
+	MSS(isPrimary);
+	MSS(mappings);
+}
+void BackingCache::Load(DeserializationContext& context)
+{
+	MSL(path);
+	MSL(isPrimary);
+	MSL(mappings);
 }
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -3542,6 +3641,43 @@ const std::unordered_map<std::string, uint64_t>& SharedCache::AllImageStarts() c
 const std::unordered_map<uint64_t, SharedCacheMachOHeader>& SharedCache::AllImageHeaders() const
 {
 	return State().headers;
+}
+size_t SharedCache::GetBaseAddress() const {
+	if (State().backingCaches.empty()) {
+		return 0;
+	}
+
+	const BackingCache& primaryCache = State().backingCaches[0];
+	if (!primaryCache.isPrimary) {
+		abort();
+		return 0;
+	}
+
+	if (primaryCache.mappings.empty()) {
+		return 0;
+	}
+
+	return primaryCache.mappings[0].address;
+}
+
+// Intentionally takes a copy to avoid modifying the cursor position in the original reader.
+std::optional<ObjCOptimizationHeader> SharedCache::GetObjCOptimizationHeader(VMReader reader) const {
+	if (!State().objcOptimizationDataRange) {
+		return {};
+	}
+
+	ObjCOptimizationHeader header{};
+	// Ignoring `objcOptsSize` in favor of `sizeof(ObjCOptimizationHeader)` matches dyld's behavior.
+	reader.Read(&header, GetBaseAddress() + State().objcOptimizationDataRange->first, sizeof(ObjCOptimizationHeader));
+
+	return header;
+}
+
+size_t SharedCache::GetObjCRelativeMethodBaseAddress(const VMReader& reader) const {
+	if (auto header = GetObjCOptimizationHeader(reader); header.has_value()) {
+		return GetBaseAddress() + header->relativeMethodSelectorBaseAddressOffset;
+	}
+	return 0;
 }
 
 }  // namespace SharedCacheCore

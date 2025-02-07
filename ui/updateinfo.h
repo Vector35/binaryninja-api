@@ -25,8 +25,9 @@ public:
 		QString author;
 		QString commit;
 		QString body;
-		ChangelogEntryItem(const QString& author = "", const QString& commit = "", const QString& body = "")
-			: author(author), commit(commit), body(body) {};
+		bool isHidden = false;
+		ChangelogEntryItem(const QString& author = "", const QString& commit = "", const QString& body = "", const bool isHidden = false)
+			: author(author), commit(commit), body(body), isHidden(isHidden) {};
 		/// In-struct cache for wrapped text
 		mutable QString bodyWrapCache;
 	};
@@ -65,6 +66,7 @@ public:
 	void startFetch();
 	const std::vector<Channel>& getChannels();
 	const Channel* getActiveChannel();
+	std::vector<ChangelogEntry> getFilteredChangelog();
 signals:
 	void fetchCompleted(const FetchError& error);
 };

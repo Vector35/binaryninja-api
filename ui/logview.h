@@ -254,8 +254,11 @@ class BINARYNINJAUIAPI LogView : public SidebarWidget, public FilterTarget
 
 		static void setLogLevel(BNLogLevel level);
 		static void setLogSize(size_t maxSize);
+		static void setWordWrap(bool wrap);
 		static bool IsHexString(const QString& str, std::pair<int, int> offsetLen);
 		static bool StartsWith0x(const QString& str, std::pair<int, int> offsetLen);
+
+		void notifyWordWrapChanged();
 
 		void notifyFontChanged() override;
 		void notifyThemeChanged() override;

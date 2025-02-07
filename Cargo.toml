@@ -1,0 +1,39 @@
+# This is the workspace for all rust projects in binaryninja-api
+# This is not a part of the build process, rather a way to link all rust code together so that external
+# contributors have a map of all rust code. The main benefit to providing this workspace is tooling, as cloning
+# binaryninja-api will result in this root workspace being picked up and used for LSP and cargo commands automatically.
+[workspace]
+resolver = "2"
+members = [
+    "rust",
+    "arch/riscv",
+    "arch/msp430",
+    "view/bintxt",
+    "view/minidump",
+    "plugins/dwarf/dwarf_import",
+    "plugins/dwarf/dwarf_export",
+    "plugins/dwarf/dwarfdump",
+    "plugins/dwarf/shared",
+    "plugins/idb_import",
+    "plugins/pdb-ng",
+    "plugins/pdb-ng/demo",
+    "plugins/warp"
+]
+
+[workspace.dependencies]
+binaryninja = { path = "rust" }
+binaryninjacore-sys = { path = "rust/binaryninjacore-sys" }
+
+[profile.release]
+lto = "thin"
+debug = "full"
+
+# Disable LTO on demo builds, it will export `rust_eh_personality`
+[profile.release-demo]
+inherits = "release"
+lto = false
+
+# Disable LTO on demo builds, it will export `rust_eh_personality`
+[profile.dev-demo]
+inherits = "dev"
+lto = false

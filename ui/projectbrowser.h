@@ -139,12 +139,14 @@ class BINARYNINJAUIAPI SortFilterProjectItemModel: public QSortFilterProxyModel
 {
 	bool m_acceptAllFolders = false;
 
+	ProjectRef m_project;
+
 protected:
 	virtual bool lessThan(const QModelIndex& sourceLeft, const QModelIndex& sourceRight) const override;
 	virtual bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
 
 public:
-	SortFilterProjectItemModel(QObject* parent = nullptr): QSortFilterProxyModel(parent) {};
+	SortFilterProjectItemModel(ProjectRef project, QObject* parent = nullptr): QSortFilterProxyModel(parent), m_project(project) {};
 
 	void setAcceptAllFolders(bool accept) { m_acceptAllFolders = accept; }
 	bool acceptAllFolders() const { return m_acceptAllFolders; }

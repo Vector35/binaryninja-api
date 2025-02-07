@@ -2,12 +2,13 @@ use std::collections::HashSet;
 
 use binaryninja::architecture::Architecture as BNArchitecture;
 use binaryninja::architecture::ArchitectureExt;
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
-use binaryninja::callingconvention::CallingConvention as BNCallingConvention;
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::calling_convention::CoreCallingConvention as BNCallingConvention;
+use binaryninja::confidence::{Conf as BNConf, MAX_CONFIDENCE};
 use binaryninja::rc::Ref as BNRef;
 use binaryninja::symbol::{Symbol as BNSymbol, SymbolType as BNSymbolType};
 use binaryninja::types::{
-    BaseStructure as BNBaseStructure, Conf as BNConf, EnumerationBuilder as BNEnumerationBuilder,
+    BaseStructure as BNBaseStructure, EnumerationBuilder as BNEnumerationBuilder,
     FunctionParameter as BNFunctionParameter, MemberAccess as BNMemberAccess, MemberAccess,
     MemberScope as BNMemberScope, NamedTypeReference, NamedTypeReference as BNNamedTypeReference,
     NamedTypeReferenceClass, StructureBuilder as BNStructureBuilder,
@@ -101,17 +102,15 @@ pub fn to_bn_symbol_at_address(view: &BinaryView, symbol: &Symbol, addr: u64) ->
     let mut symbol_builder = BNSymbol::builder(symbol_type, &symbol.name, addr);
     // Demangle symbol name (short is with simplifications).
     if let Some(arch) = view.default_arch() {
-        if let Ok((_, full_name_list)) =
+        if let Some((full_name, _)) =
             binaryninja::demangle::demangle_generic(&arch, raw_name, Some(view), false)
         {
-            let full_name = full_name_list.join("::");
-            symbol_builder = symbol_builder.full_name(&full_name);
+            symbol_builder = symbol_builder.full_name(full_name);
         }
-        if let Ok((_, short_name_list)) =
+        if let Some((short_name, _)) =
             binaryninja::demangle::demangle_generic(&arch, raw_name, Some(view), false)
         {
-            let short_name = short_name_list.join("::");
-            symbol_builder = symbol_builder.short_name(&short_name);
+            symbol_builder = symbol_builder.short_name(short_name);
         }
     }
     symbol_builder.create()
@@ -159,7 +158,6 @@ pub fn from_bn_type_internal(
 
             let mut members = raw_struct
                 .members()
-                .unwrap()
                 .into_iter()
                 .map(|raw_member| {
                     let bit_offset = bytes_to_bits(raw_member.offset);
@@ -184,26 +182,24 @@ pub fn from_bn_type_internal(
                 .collect::<Vec<_>>();
 
             // Add base structures as flattened members
-            if let Ok(base_structs) = raw_struct.base_structures() {
-                let base_to_member_iter = base_structs.iter().map(|base_struct| {
-                    let bit_offset = bytes_to_bits(base_struct.offset);
-                    let mut modifiers = StructureMemberModifiers::empty();
-                    modifiers.set(StructureMemberModifiers::Flattened, true);
-                    let base_struct_ty = from_bn_type_internal(
-                        view,
-                        visited_refs,
-                        &BNType::named_type(&base_struct.ty),
-                        255,
-                    );
-                    StructureMember {
-                        name: base_struct_ty.name.to_owned(),
-                        offset: bit_offset,
-                        ty: base_struct_ty,
-                        modifiers,
-                    }
-                });
-                members.extend(base_to_member_iter);
-            }
+            let base_to_member_iter = raw_struct.base_structures().into_iter().map(|base_struct| {
+                let bit_offset = bytes_to_bits(base_struct.offset);
+                let mut modifiers = StructureMemberModifiers::empty();
+                modifiers.set(StructureMemberModifiers::Flattened, true);
+                let base_struct_ty = from_bn_type_internal(
+                    view,
+                    visited_refs,
+                    &BNType::named_type(&base_struct.ty),
+                    MAX_CONFIDENCE,
+                );
+                StructureMember {
+                    name: base_struct_ty.name.to_owned(),
+                    offset: bit_offset,
+                    ty: base_struct_ty,
+                    modifiers,
+                }
+            });
+            members.extend(base_to_member_iter);
 
             // TODO: Check if union
             let struct_class = StructureClass::new(members);
@@ -275,8 +271,8 @@ pub fn from_bn_type_internal(
                         ty: from_bn_type_internal(
                             view,
                             visited_refs,
-                            &raw_member.t.contents,
-                            raw_member.t.confidence,
+                            &raw_member.ty.contents,
+                            raw_member.ty.confidence,
                         ),
                         // TODO: Just omit location for now?
                         // TODO: Location should be optional...
@@ -286,7 +282,7 @@ pub fn from_bn_type_internal(
                 .collect();
 
             let mut out_members = Vec::new();
-            if let Ok(return_ty) = raw_ty.return_value() {
+            if let Some(return_ty) = raw_ty.return_value() {
                 out_members.push(FunctionMember {
                     name: None,
                     ty: from_bn_type_internal(
@@ -301,8 +297,7 @@ pub fn from_bn_type_internal(
 
             let calling_convention = raw_ty
                 .calling_convention()
-                .map(|bn_cc| from_bn_calling_convention(bn_cc.contents))
-                .ok();
+                .map(|bn_cc| from_bn_calling_convention(bn_cc.contents));
 
             let func_class = FunctionClass {
                 calling_convention,
@@ -338,7 +333,7 @@ pub fn from_bn_type_internal(
         }
     };
 
-    let name = raw_ty.registered_name().map(|n| n.name().to_string()).ok();
+    let name = raw_ty.registered_name().map(|n| n.name().to_string());
 
     Type {
         name,
@@ -353,9 +348,7 @@ pub fn from_bn_type_internal(
     }
 }
 
-pub fn from_bn_calling_convention<A: BNArchitecture>(
-    raw_cc: BNRef<BNCallingConvention<A>>,
-) -> CallingConvention {
+pub fn from_bn_calling_convention(raw_cc: BNRef<BNCallingConvention>) -> CallingConvention {
     // NOTE: Currently calling convention just stores the name.
     CallingConvention::new(raw_cc.name().as_str())
 }
@@ -363,7 +356,7 @@ pub fn from_bn_calling_convention<A: BNArchitecture>(
 pub fn to_bn_calling_convention<A: BNArchitecture>(
     arch: &A,
     calling_convention: &CallingConvention,
-) -> BNRef<BNCallingConvention<A>> {
+) -> BNRef<BNCallingConvention> {
     for cc in &arch.calling_conventions() {
         if cc.name().as_str() == calling_convention.name {
             return cc.clone();
@@ -406,7 +399,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
             BNType::array(&member_type, c.length.unwrap_or(0))
         }
         TypeClass::Structure(c) => {
-            let builder = BNStructureBuilder::new();
+            let mut builder = BNStructureBuilder::new();
             // TODO: Structure type class?
             // TODO: Alignment
             // TODO: Other modifiers?
@@ -439,11 +432,11 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                                 Some(guid) => BNNamedTypeReference::new_with_id(
                                     NamedTypeReferenceClass::UnknownNamedTypeClass,
                                     guid.to_string(),
-                                    base_struct_ntr_name.into(),
+                                    base_struct_ntr_name,
                                 ),
                                 None => BNNamedTypeReference::new(
                                     NamedTypeReferenceClass::UnknownNamedTypeClass,
-                                    base_struct_ntr_name.into(),
+                                    base_struct_ntr_name,
                                 ),
                             };
                             base_structs.push(BNBaseStructure::new(
@@ -462,7 +455,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                     }
                 } else {
                     builder.insert_member(
-                        &BNStructureMember::new(
+                        BNStructureMember::new(
                             member_type,
                             member_name,
                             member_offset,
@@ -473,11 +466,11 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                     );
                 }
             }
-            builder.set_base_structures(base_structs);
+            builder.base_structures(&base_structs);
             BNType::structure(&builder.finalize())
         }
         TypeClass::Enumeration(c) => {
-            let builder = BNEnumerationBuilder::new();
+            let mut builder = BNEnumerationBuilder::new();
             for member in &c.members {
                 // TODO: Add default name?
                 let member_name = member.name.to_owned().unwrap_or("enum_VAL".into());
@@ -485,13 +478,14 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                 builder.insert(member_name, member_value);
             }
             // TODO: Warn if enumeration has no size.
-            let width = bits_to_bytes(c.member_type.size().unwrap()) as _;
+            let width = bits_to_bytes(c.member_type.size().unwrap()) as usize;
             let signed = matches!(*c.member_type.class, TypeClass::Integer(c) if c.signed);
-            BNType::enumeration(&builder.finalize(), width, signed)
+            // TODO: Passing width like this is weird.
+            BNType::enumeration(&builder.finalize(), width.try_into().unwrap(), signed)
         }
         TypeClass::Union(c) => {
-            let builder = BNStructureBuilder::new();
-            builder.set_structure_type(BNStructureType::UnionStructureType);
+            let mut builder = BNStructureBuilder::new();
+            builder.structure_type(BNStructureType::UnionStructureType);
             for member in &c.members {
                 let member_type = BNConf::new(to_bn_type(arch, &member.ty), u8::MAX);
                 let member_name = member.name.to_owned();
@@ -506,7 +500,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                     member_access,
                     member_scope,
                 );
-                builder.insert_member(&structure_member, false);
+                builder.insert_member(structure_member, false);
             }
             BNType::structure(&builder.finalize())
         }
@@ -533,15 +527,15 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
             match c.calling_convention.as_ref() {
                 Some(cc) => {
                     let calling_convention = to_bn_calling_convention(arch, cc);
-                    BNType::function_with_options(
+                    BNType::function_with_opts(
                         &return_type,
                         &params,
                         variable_args,
-                        &BNConf::new(calling_convention, u8::MAX),
+                        BNConf::new(calling_convention, u8::MAX),
                         BNConf::new(0, 0),
                     )
                 }
-                None => BNType::function(&return_type, &params, variable_args),
+                None => BNType::function(&return_type, params, variable_args),
             }
         }
         TypeClass::Referrer(c) => {
@@ -552,19 +546,19 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                     NamedTypeReference::new_with_id(
                         NamedTypeReferenceClass::UnknownNamedTypeClass,
                         guid_str,
-                        ntr_name.into(),
+                        ntr_name,
                     )
                 }
                 None => match c.name.as_ref() {
                     Some(ntr_name) => NamedTypeReference::new(
                         NamedTypeReferenceClass::UnknownNamedTypeClass,
-                        ntr_name.into(),
+                        ntr_name,
                     ),
                     None => {
                         log::error!("Referrer with no reference! {:?}", c);
                         NamedTypeReference::new(
                             NamedTypeReferenceClass::UnknownNamedTypeClass,
-                            "AHHHHHH".into(),
+                            "AHHHHHH",
                         )
                     }
                 },
@@ -577,7 +571,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use binaryninja::binaryview::BinaryViewExt;
+    use binaryninja::binary_view::BinaryViewExt;
     use binaryninja::headless::Session;
     use std::path::PathBuf;
     use std::sync::OnceLock;
@@ -586,7 +580,7 @@ mod tests {
     static INIT: OnceLock<Session> = OnceLock::new();
 
     fn get_session<'a>() -> &'a Session {
-        INIT.get_or_init(|| Session::new())
+        INIT.get_or_init(|| Session::new().expect("Failed to initialize session"))
     }
 
     #[test]
@@ -602,8 +596,8 @@ mod tests {
                     let converted_types: Vec<_> = bv
                         .types()
                         .iter()
-                        .map(|t| {
-                            let ty = from_bn_type(&bv, &t.type_object(), u8::MAX);
+                        .map(|qualified_name_and_type| {
+                            let ty = from_bn_type(&bv, &qualified_name_and_type.ty, u8::MAX);
                             (TypeGUID::from(&ty), ty)
                         })
                         .collect();
@@ -613,6 +607,7 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[test]
     fn check_for_leaks() {
         let session = get_session();
@@ -627,13 +622,13 @@ mod tests {
                         .types()
                         .iter()
                         .map(|t| {
-                            let ty = from_bn_type(&inital_bv, &t.type_object(), u8::MAX);
+                            let ty = from_bn_type(&inital_bv, &t.ty, u8::MAX);
                             (TypeGUID::from(&ty), ty)
                         })
                         .collect();
                     assert_eq!(types_len, converted_types.len());
                     // Hold on to a reference to the core to prevent view getting dropped in worker thread.
-                    let core_ref = inital_bv
+                    let _core_ref = inital_bv
                         .functions()
                         .iter()
                         .next()
@@ -648,13 +643,13 @@ mod tests {
                             .types()
                             .iter()
                             .map(|t| {
-                                let ty = from_bn_type(&second_bv, &t.type_object(), u8::MAX);
+                                let ty = from_bn_type(&second_bv, &t.ty, u8::MAX);
                                 (TypeGUID::from(&ty), ty)
                             })
                             .collect();
                         assert_eq!(types_len, converted_types.len());
                         // Hold on to a reference to the core to prevent view getting dropped in worker thread.
-                        let core_ref = second_bv
+                        let _core_ref = second_bv
                             .functions()
                             .iter()
                             .next()

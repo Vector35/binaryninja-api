@@ -1,9 +1,9 @@
 use crate::cache::cached_function_guid;
 use crate::matcher::cached_function_matcher;
-use binaryninja::backgroundtask::BackgroundTask;
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::background_task::BackgroundTask;
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
-use binaryninja::llil;
+use binaryninja::low_level_il::function::RegularNonSSA;
 use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
 use std::time::Instant;
 
@@ -37,7 +37,7 @@ impl Command for RunMatcher {
         // TODO: Check to see if the GUID cache is empty and ask the user if they want to regenerate the guids.
         std::thread::spawn(move || {
             let undo_id = view.file().begin_undo_actions(true);
-            let background_task = BackgroundTask::new("Matching on functions...", false).unwrap();
+            let background_task = BackgroundTask::new("Matching on functions...", false);
             let start = Instant::now();
             view.functions()
                 .iter()
@@ -59,7 +59,7 @@ pub fn insert_workflow() {
     let matcher_activity = |ctx: &AnalysisContext| {
         let view = ctx.view();
         let undo_id = view.file().begin_undo_actions(true);
-        let background_task = BackgroundTask::new("Matching on functions...", false).unwrap();
+        let background_task = BackgroundTask::new("Matching on functions...", false);
         let start = Instant::now();
         view.functions()
             .iter()
@@ -73,12 +73,14 @@ pub fn insert_workflow() {
 
     let guid_activity = |ctx: &AnalysisContext| {
         let function = ctx.function();
-        if let Some(llil) = unsafe { ctx.llil_function::<llil::NonSSA<llil::RegularNonSSA>>() } {
+        // TODO: Returning RegularNonSSA means we cant modify the il (the lifting code was written just for lifted il, that needs to be fixed)
+        if let Some(llil) = unsafe { ctx.llil_function::<RegularNonSSA>() } {
             cached_function_guid(&function, &llil);
         }
     };
 
-    let function_meta_workflow = Workflow::new_from_copy("core.function.metaAnalysis");
+    let old_function_meta_workflow = Workflow::instance("core.function.metaAnalysis");
+    let function_meta_workflow = old_function_meta_workflow.clone("core.function.metaAnalysis");
     let guid_activity = Activity::new_with_action(GUID_ACTIVITY_CONFIG, guid_activity);
     function_meta_workflow
         .register_activity(&guid_activity)
@@ -86,7 +88,8 @@ pub fn insert_workflow() {
     function_meta_workflow.insert("core.function.runFunctionRecognizers", [GUID_ACTIVITY_NAME]);
     function_meta_workflow.register().unwrap();
 
-    let module_meta_workflow = Workflow::new_from_copy("core.module.metaAnalysis");
+    let old_module_meta_workflow = Workflow::instance("core.module.metaAnalysis");
+    let module_meta_workflow = old_module_meta_workflow.clone("core.module.metaAnalysis");
     let matcher_activity = Activity::new_with_action(MATCHER_ACTIVITY_CONFIG, matcher_activity);
     module_meta_workflow
         .register_activity(&matcher_activity)

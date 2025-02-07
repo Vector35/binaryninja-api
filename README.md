@@ -13,7 +13,7 @@ Online documentation is available for the following APIs:
 - [Python API, Stable Branch](https://api.binary.ninja/)
 - [Python API, Dev Branch](https://dev-api.binary.ninja/)
 - [Rust API, Stable Branch](https://rust.binary.ninja/)
-- [Rust API, Dev Branch](https://rust-dev.binary.ninja/)
+- [Rust API, Dev Branch](https://dev-rust.binary.ninja/)
 
 ## Usage and Build Instructions
 
@@ -37,7 +37,7 @@ cmake --build build -j8
 In addition to the default build setup, you may want to:
 
 - **Build examples.** To build the [API examples](#examples), pass `-DBN_API_BUILD_EXAMPLES=ON` to CMake when configuring the build. After the build succeeds, you can install the built plugins by running the `install` target. When using the "Unix Makefiles" build generator, this looks like: `make install`.
-- **Build UI plugins.** You will need Qt 6.7.2 (as of writing) installed to build UI plugins.
+- **Build UI plugins.** You will need Qt 6.8.2 installed to build UI plugins. We use a slightly modified [build configuration](https://github.com/Vector35/qt-build) internally that has some ABI-compatible fixes and changes to defaults, but a stock build can also work. Note that it is not recommended to use pre-built configurations from Homebrew. Either using the official installer or building from our repo is recommended.
 - **Build headlessly.** If you are using a headless Binary Ninja distribution or you do not wish to build UI plugins, pass `-DHEADLESS=ON` to CMake when configuring the build.
 
 ### Troubleshooting
@@ -115,9 +115,9 @@ This repository contains all of our Binary View Type plugins available here:
 
 ## DebugInfo
 
-* [DWARF Import](https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/dwarf/dwarf_import)
-* [PDB Import](https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/pdb-ng)
-* [IDB Import](https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/idb_import)
+* [DWARF Import](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/dwarf/dwarf_import)
+* [PDB Import](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/pdb-ng)
+* [IDB Import](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/idb_import)
 
 
 ## Related Repositories

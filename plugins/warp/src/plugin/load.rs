@@ -1,5 +1,5 @@
 use crate::matcher::{Matcher, PlatformID, PLAT_MATCHER_CACHE};
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
 pub struct LoadSignatureFile;
 
@@ -10,8 +10,12 @@ impl Command for LoadSignatureFile {
             return;
         };
 
-        let Some(file) =
-            binaryninja::interaction::get_open_filename_input("Load Signature File", "*.sbin")
+        // NOTE: Because we only can consume signatures from a specific directory, we don't need to use the interaction API.
+        // If we did need to load signature files from a project than this would need to change.
+        let Some(file) = rfd::FileDialog::new()
+            .add_filter("Signature Files", &["sbin"])
+            .set_file_name(format!("{}.sbin", view.file().filename()))
+            .pick_file()
         else {
             return;
         };

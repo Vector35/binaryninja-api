@@ -105,6 +105,7 @@ class BINARYNINJAUIAPI TypeDialog : public QDialog
 	void saveLocation();
 	void reject();
 	void accept();
+	void linkActivated(const QString& link);
 
   private Q_SLOTS:
 	void accepted();

@@ -50,7 +50,7 @@ class BINARYNINJAUIAPI AddressDialogWithPreview : public QDialog
 private Q_SLOTS:
 	void updateTimerEvent();
 	void accepted();
-	void updateRelativeState(int state);
+	void updateRelativeState(Qt::CheckState state);
 	void updatePreview();
 	void updatePreviewText();
 	void updatePreviewWithText(QString data);

@@ -88,9 +88,14 @@ static void ExtendTypeName(TypeBuilder& type, const string& extend)
 		qn.back() += extend;
 	else
 		qn.push_back(extend);
-	type.SetNamedTypeReference(
-		NamedTypeReference::GenerateAutoDemangledTypeReference(type.GetNamedTypeReference()->GetTypeReferenceClass(), qn)
-	);
+
+	// This type might not be an NTR (Vector35/binaryninja-api#6261)
+	if (type.GetClass() == NamedTypeReferenceClass)
+	{
+		type.SetNamedTypeReference(
+			NamedTypeReference::GenerateAutoDemangledTypeReference(type.GetNamedTypeReference()->GetTypeReferenceClass(), qn)
+		);
+	}
 }
 
 

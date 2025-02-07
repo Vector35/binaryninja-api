@@ -7,24 +7,24 @@ use ihex::*;
 use srec::*;
 use titxt::*;
 
-use std::ops::Range;
-use log::LevelFilter;
 use binaryninja::logger::Logger;
+use log::LevelFilter;
+use std::ops::Range;
 
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginInit() -> bool {
     Logger::new("BINTXT").with_level(LevelFilter::Info).init();
 
-    binaryninja::custombinaryview::register_view_type(c"ti-txt", c"TI-TXT", |core| {
+    binaryninja::custom_binary_view::register_view_type(c"ti-txt", c"TI-TXT", |core| {
         TiTxtViewConstructor { core }
     });
 
-    binaryninja::custombinaryview::register_view_type(c"srec", c"Motorola S-record", |core| {
+    binaryninja::custom_binary_view::register_view_type(c"srec", c"Motorola S-record", |core| {
         SRecViewConstructor { core }
     });
 
-    binaryninja::custombinaryview::register_view_type(c"ihex", c"Intel HEX", |core| {
+    binaryninja::custom_binary_view::register_view_type(c"ihex", c"Intel HEX", |core| {
         IHexViewConstructor { core }
     });
 

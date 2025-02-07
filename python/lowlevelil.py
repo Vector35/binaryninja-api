@@ -4375,7 +4375,7 @@ class LowLevelILFunction:
 		:param ExpressionIndex a: LHS expression
 		:param ExpressionIndex b: RHS expression
 		:param str flags: optional, flags to set
-		:return: The expression ``sbc.<size>{<flags>}(a, b)``
+		:return: The expression ``mul.<size>{<flags>}(a, b)``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MUL, a, b, size=size, flags=flags)

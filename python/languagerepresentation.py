@@ -30,6 +30,7 @@ from . import binaryview
 from . import function
 from . import highlevelil
 from . import highlight
+from . import lineformatter
 from . import variable
 from . import types
 from .log import log_error
@@ -327,7 +328,8 @@ class LanguageRepresentationFunction:
 	annotation_end_string = "}"
 
 	def __init__(
-			self, arch: Optional['architecture.Architecture'] = None, owner: Optional['function.Function'] = None,
+			self, func_type: Optional['LanguageRepresentationFunctionType'] = None,
+			arch: Optional['architecture.Architecture'] = None, owner: Optional['function.Function'] = None,
 			hlil: Optional['highlevelil.HighLevelILFunction'] = None, handle=None
 	):
 		if handle is None:
@@ -354,7 +356,9 @@ class LanguageRepresentationFunction:
 			self.comment_end_string = self.__class__.comment_end_string
 			self.annotation_start_string = self.__class__.annotation_start_string
 			self.annotation_end_string = self.__class__.annotation_end_string
-			_handle = core.BNCreateCustomLanguageRepresentationFunction(arch.handle, owner.handle, hlil.handle, self._cb)
+			_handle = core.BNCreateCustomLanguageRepresentationFunction(
+				func_type.handle, arch.handle, owner.handle, hlil.handle, self._cb
+			)
 			assert _handle is not None
 		else:
 			self.comment_start_string = core.BNGetLanguageRepresentationFunctionCommentStartString(handle)
@@ -621,6 +625,7 @@ class LanguageRepresentationFunctionType(metaclass=_LanguageRepresentationFuncti
 		self._cb.isValid = self._cb.isValid.__class__(self._is_valid)
 		self._cb.getTypePrinter = self._cb.getTypePrinter.__class__(self._type_printer)
 		self._cb.getTypeParser = self._cb.getTypeParser.__class__(self._type_parser)
+		self._cb.getLineFormatter = self._cb.getLineFormatter.__class__(self._line_formatter)
 		self._cb.getFunctionTypeTokens = self._cb.getFunctionTypeTokens.__class__(self._function_type_tokens)
 		self._cb.freeLines = self._cb.freeLines.__class__(self._free_lines)
 		self.handle = core.BNRegisterLanguageRepresentationFunctionType(self.__class__.language_name, self._cb)
@@ -665,6 +670,16 @@ class LanguageRepresentationFunctionType(metaclass=_LanguageRepresentationFuncti
 	def _type_parser(self, ctxt):
 		try:
 			result = self.type_parser
+			if result is None:
+				return None
+			return ctypes.cast(result.handle, ctypes.c_void_p).value
+		except:
+			log_error(traceback.format_exc())
+			return None
+
+	def _line_formatter(self, ctxt):
+		try:
+			result = self.line_formatter
 			if result is None:
 				return None
 			return ctypes.cast(result.handle, ctypes.c_void_p).value
@@ -751,6 +766,14 @@ class LanguageRepresentationFunctionType(metaclass=_LanguageRepresentationFuncti
         """
 		return None
 
+	@property
+	def line_formatter(self) -> Optional['lineformatter.LineFormatter']:
+		"""
+		Returns the line formatter for formatting lines in this language. If ``None`` is returned, the default
+		line formatter will be used.
+		"""
+		return None
+
 	def function_type_tokens(
 			self, func: 'function.Function', settings: Optional['function.DisassemblySettings']
 	) -> List['function.DisassemblyTextLine']:
@@ -805,6 +828,13 @@ class CoreLanguageRepresentationFunctionType(LanguageRepresentationFunctionType)
 		if result is None:
 			return None
 		return binaryninja.typeparser.TypeParser(handle=result)
+
+	@property
+	def line_formatter(self) -> Optional['lineformatter.LineFormatter']:
+		result = core.BNGetLanguageRepresentationFunctionTypeLineFormatter(self.handle)
+		if result is None:
+			return None
+		return binaryninja.lineformatter.LineFormatter(handle=result)
 
 	def function_type_tokens(
 			self, func: 'function.Function', settings: Optional['function.DisassemblySettings']

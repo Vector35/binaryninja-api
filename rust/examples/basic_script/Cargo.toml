@@ -1,7 +1,0 @@
-[package]
-name = "basic_script"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-binaryninja = {path="../../"}

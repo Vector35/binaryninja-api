@@ -113,6 +113,12 @@ By default, logging will follow whatever the setting is for [minimum log level](
 
 We can customize our analysis a lot more granularly than that though. In [`load`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.load), notice the named `options` parameter, and the example code. Any setting you can set in the Binary Ninja "Open with Options" UI you can set through that parameter.
 
+### On-Disk License
+
+If manually installing a named license on Commercial, Ultimate, or Headless, make sure that your license file is copied to the [appropriate location](https://docs.binary.ninja/guide/index.html#user-folder) (`~/.binaryninja/license.dat` on Linux), or see the next section for an alternative.
+
+If using a floating license, you can use the [example code](https://api.binary.ninja/binaryninja.enterprise-module.html#binaryninja.enterprise.LicenseCheckout) to check out a license on the fly.
+
 ### In-Memory License
 
 For many applications it might be helpful to avoid having a license file on disk. Whether because the environment will be used to analyze malware, or because a docker image might be saved somewhere that the license file needs to be kept secret. (Note: this does not obfuscate the serial number as it can be extracted from memory or even via the API -- an informed attacker can still leak it and network isolation is recommended for analzying malicious applications)

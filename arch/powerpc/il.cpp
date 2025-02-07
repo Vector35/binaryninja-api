@@ -489,7 +489,7 @@ static void loadstoreppcfs(LowLevelILFunction& il,
 	bool update=false
 	)
 {
-	ExprId tmp;
+	ExprId tmp = 0;
 	const int addrsz = 4;
 	// assume single
 	if (!load_store_sz)
@@ -539,8 +539,8 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 	uint32_t rawInsn = *(const uint32_t *) data;
 
 	// for ppc_ps
-	ppc_reg_bn gqr_l = (ppc_reg_bn)0;
-	int w_l = 0;
+	// ppc_reg_bn gqr_l = (ppc_reg_bn)0;
+	// int w_l = 0;
 
 	addressSize_l = arch->GetAddressSize();
 	if (!le)
@@ -615,7 +615,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		//MYLOG("oper3: %p\n", oper3);
 	}
 
-	ExprId ei0, ei1, ei2;
+	ExprId ei0 = 0, ei1 = 0, ei2 = 0;
 
 	switch(insn->id) {
 		/* add

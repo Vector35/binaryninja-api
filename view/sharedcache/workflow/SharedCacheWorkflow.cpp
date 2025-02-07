@@ -468,7 +468,7 @@ void fixObjCCallTypes(Ref<AnalysisContext> ctx)
 				const auto selectorRegister = params[0].GetParameterExprs<LLIL_SEPARATE_PARAM_LIST_SSA>()[1].GetSourceSSARegister<LLIL_REG_SSA>();
 				rawSelector = ssa->GetSSARegisterValue(selectorRegister).value;
 			}
-			if (rawSelector == 0)
+			if (!rawSelector || !bv->IsValidOffset(rawSelector))
 				return;
 
 			// -- Do callsite override

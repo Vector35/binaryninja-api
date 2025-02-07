@@ -12,14 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
 macro_rules! ffi_wrap {
     ($n:expr, $b:expr) => {{
         use std::panic;
         use std::process;
 
         panic::catch_unwind(|| $b).unwrap_or_else(|_| {
-            error!("ffi callback caught panic: {}", $n);
+            log::error!("ffi callback caught panic: {}", $n);
             process::abort()
         })
     }};
+}
+
+pub(crate) fn time_from_bn(timestamp: u64) -> SystemTime {
+    let m = Duration::from_secs(timestamp);
+    UNIX_EPOCH + m
 }

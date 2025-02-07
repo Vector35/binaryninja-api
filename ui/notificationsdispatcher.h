@@ -165,8 +165,8 @@ public:
 	void addSource(NotificationType source) { m_source = static_cast<NotificationType>(static_cast<uint64_t>(m_source) | static_cast<uint64_t>(source)); }
 	NotificationType getSource() const { return m_source; }
 	NotificationTypes getSources() const { return static_cast<NotificationTypes>(m_source); }
-	bool isObjectRemoval() const { return (m_source & (NotificationType::DataVariableRemoved | NotificationType::FunctionRemoved)); }
-	bool isRemoval() const { return (m_source & (NotificationType::DataVariableRemoved | NotificationType::FunctionRemoved | NotificationType::SymbolRemoved)); }
+	bool isObjectRemoval() const { return (m_source & (NotificationType::DataVariableRemoved | NotificationType::FunctionRemoved | NotificationType::StringRemoved)); }
+	bool isRemoval() const { return (m_source & (NotificationType::DataVariableRemoved | NotificationType::FunctionRemoved | NotificationType::SymbolRemoved | NotificationType::StringRemoved)); }
 };
 
 

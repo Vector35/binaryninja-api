@@ -699,6 +699,11 @@ class MediumLevelILInstruction(BaseILInstruction):
 		return core.BNGetMediumLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.instr_index)
 
 	@property
+	def ssa_memory_version_after(self) -> int:
+		"""Version of active memory contents in SSA form after this instruction"""
+		return core.BNGetMediumLevelILSSAMemoryVersionAfterILInstruction(self.function.handle, self.instr_index)
+
+	@property
 	def prefix_operands(self) -> List[MediumLevelILOperandType]:
 		"""All operands in the expression tree in prefix order"""
 		result: List[MediumLevelILOperandType] = [MediumLevelILOperationAndSize(self.operation, self.size)]
@@ -803,9 +808,18 @@ class MediumLevelILInstruction(BaseILInstruction):
 		var_data = var.to_BNVariable()
 		return core.BNGetMediumLevelILSSAVarVersionAtILInstruction(self.function.handle, var_data, self.instr_index)
 
+	def get_ssa_var_version_after(self, var: variable.Variable) -> int:
+		var_data = var.to_BNVariable()
+		return core.BNGetMediumLevelILSSAVarVersionAfterILInstruction(self.function.handle, var_data, self.instr_index)
+
 	def get_var_for_reg(self, reg: 'architecture.RegisterType') -> variable.Variable:
 		reg = self.function.arch.get_reg_index(reg)
 		result = core.BNGetMediumLevelILVariableForRegisterAtInstruction(self.function.handle, reg, self.instr_index)
+		return variable.Variable.from_BNVariable(self.function, result)
+
+	def get_var_for_reg_after(self, reg: 'architecture.RegisterType') -> variable.Variable:
+		reg = self.function.arch.get_reg_index(reg)
+		result = core.BNGetMediumLevelILVariableForRegisterAfterInstruction(self.function.handle, reg, self.instr_index)
 		return variable.Variable.from_BNVariable(self.function, result)
 
 	def get_var_for_flag(self, flag: 'architecture.FlagType') -> variable.Variable:
@@ -813,8 +827,19 @@ class MediumLevelILInstruction(BaseILInstruction):
 		result = core.BNGetMediumLevelILVariableForFlagAtInstruction(self.function.handle, flag, self.instr_index)
 		return variable.Variable.from_BNVariable(self.function, result)
 
+	def get_var_for_flag_after(self, flag: 'architecture.FlagType') -> variable.Variable:
+		flag = self.function.arch.get_flag_index(flag)
+		result = core.BNGetMediumLevelILVariableForFlagAfterInstruction(self.function.handle, flag, self.instr_index)
+		return variable.Variable.from_BNVariable(self.function, result)
+
 	def get_var_for_stack_location(self, offset: int) -> variable.Variable:
 		result = core.BNGetMediumLevelILVariableForStackLocationAtInstruction(
+		    self.function.handle, offset, self.instr_index
+		)
+		return variable.Variable.from_BNVariable(self.function, result)
+
+	def get_var_for_stack_location_after(self, offset: int) -> variable.Variable:
+		result = core.BNGetMediumLevelILVariableForStackLocationAfterInstruction(
 		    self.function.handle, offset, self.instr_index
 		)
 		return variable.Variable.from_BNVariable(self.function, result)

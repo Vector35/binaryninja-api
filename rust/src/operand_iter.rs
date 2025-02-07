@@ -3,27 +3,37 @@ use binaryninjacore_sys::BNGetMediumLevelILByIndex;
 use binaryninjacore_sys::BNHighLevelILOperation;
 use binaryninjacore_sys::BNMediumLevelILOperation;
 
-use crate::hlil::{HighLevelILFunction, HighLevelILInstruction};
-use crate::mlil::{MediumLevelILFunction, MediumLevelILInstruction};
+use crate::high_level_il::{
+    HighLevelILFunction, HighLevelILInstruction, HighLevelInstructionIndex,
+};
+use crate::medium_level_il::{
+    MediumLevelILFunction, MediumLevelILInstruction, MediumLevelInstructionIndex,
+};
 use crate::rc::{Ref, RefCountable};
-use crate::types::{SSAVariable, Variable};
+use crate::variable::{SSAVariable, Variable};
+
+// TODO: This code needs to go away IMO, we have the facilities to do this for each IL already!
 
 pub trait ILFunction {
     type Instruction;
+    type InstructionIndex: From<u64>;
 
-    fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction;
-    fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5];
+    // TODO Actually this is il expression from index!
+    fn il_instruction_from_index(&self, instr_index: Self::InstructionIndex) -> Self::Instruction;
+    fn operands_from_index(&self, instr_index: Self::InstructionIndex) -> [u64; 5];
 }
 
 impl ILFunction for MediumLevelILFunction {
     type Instruction = MediumLevelILInstruction;
+    type InstructionIndex = MediumLevelInstructionIndex;
 
-    fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction {
-        self.instruction_from_idx(expr_idx)
+    fn il_instruction_from_index(&self, instr_index: Self::InstructionIndex) -> Self::Instruction {
+        self.instruction_from_expr_index(instr_index).unwrap()
     }
 
-    fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5] {
-        let node = unsafe { BNGetMediumLevelILByIndex(self.handle, expr_idx) };
+    fn operands_from_index(&self, instr_index: Self::InstructionIndex) -> [u64; 5] {
+        // TODO: WTF?!?!?!
+        let node = unsafe { BNGetMediumLevelILByIndex(self.handle, instr_index.0) };
         assert_eq!(node.operation, BNMediumLevelILOperation::MLIL_UNDEF);
         node.operands
     }
@@ -31,13 +41,14 @@ impl ILFunction for MediumLevelILFunction {
 
 impl ILFunction for HighLevelILFunction {
     type Instruction = HighLevelILInstruction;
+    type InstructionIndex = HighLevelInstructionIndex;
 
-    fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction {
-        self.instruction_from_idx(expr_idx)
+    fn il_instruction_from_index(&self, instr_index: Self::InstructionIndex) -> Self::Instruction {
+        self.instruction_from_expr_index(instr_index).unwrap()
     }
 
-    fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5] {
-        let node = unsafe { BNGetHighLevelILByIndex(self.handle, expr_idx, self.full_ast) };
+    fn operands_from_index(&self, instr_index: Self::InstructionIndex) -> [u64; 5] {
+        let node = unsafe { BNGetHighLevelILByIndex(self.handle, instr_index.0, self.full_ast) };
         assert_eq!(node.operation, BNHighLevelILOperation::HLIL_UNDEF);
         node.operands
     }
@@ -82,6 +93,7 @@ impl<F: ILFunction + RefCountable> OperandIter<F> {
 
 impl<F: ILFunction + RefCountable> Iterator for OperandIter<F> {
     type Item = u64;
+
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(item) = self.current_iter.next() {
             self.remaining -= 1;
@@ -89,7 +101,8 @@ impl<F: ILFunction + RefCountable> Iterator for OperandIter<F> {
         } else {
             // Will short-circuit and return `None` once iter is exhausted
             let iter_idx = self.next_iter_idx?;
-            let operands = self.function.operands_from_idx(iter_idx);
+            let iter_idx = F::InstructionIndex::from(iter_idx as u64);
+            let operands = self.function.operands_from_index(iter_idx);
 
             let next = if self.remaining > 4 {
                 self.next_iter_idx = Some(operands[4] as usize);
@@ -104,6 +117,7 @@ impl<F: ILFunction + RefCountable> Iterator for OperandIter<F> {
         }
     }
 }
+
 impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandIter<F> {
     fn len(&self) -> usize {
         self.remaining + self.current_iter.len()
@@ -145,6 +159,7 @@ impl Iterator for OperandIterInner {
         }
     }
 }
+
 impl ExactSizeIterator for OperandIterInner {
     fn len(&self) -> usize {
         4 - self.idx
@@ -152,6 +167,7 @@ impl ExactSizeIterator for OperandIterInner {
 }
 
 pub struct OperandPairIter<F: ILFunction + RefCountable>(OperandIter<F>);
+
 impl<F: ILFunction + RefCountable> Iterator for OperandPairIter<F> {
     type Item = (u64, u64);
 
@@ -168,15 +184,18 @@ impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandPairIter<F> {
 }
 
 pub struct OperandExprIter<F: ILFunction + RefCountable>(OperandIter<F>);
+
 impl<F: ILFunction + RefCountable> Iterator for OperandExprIter<F> {
     type Item = F::Instruction;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0
             .next()
-            .map(|idx| self.0.function.il_instruction_from_idx(idx as usize))
+            .map(F::InstructionIndex::from)
+            .map(|idx| self.0.function.il_instruction_from_index(idx))
     }
 }
+
 impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandExprIter<F> {
     fn len(&self) -> usize {
         self.0.len()
@@ -184,11 +203,12 @@ impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandExprIter<F> {
 }
 
 pub struct OperandVarIter<F: ILFunction + RefCountable>(OperandIter<F>);
+
 impl<F: ILFunction + RefCountable> Iterator for OperandVarIter<F> {
     type Item = Variable;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(get_var)
+        self.0.next().map(Variable::from_identifier)
     }
 }
 impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandVarIter<F> {
@@ -198,25 +218,20 @@ impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandVarIter<F> {
 }
 
 pub struct OperandSSAVarIter<F: ILFunction + RefCountable>(OperandPairIter<F>);
+
 impl<F: ILFunction + RefCountable> Iterator for OperandSSAVarIter<F> {
     type Item = SSAVariable;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0
-            .next()
-            .map(|(id, version)| get_var_ssa(id, version as usize))
+        self.0.next().map(|(id, version)| {
+            let var = Variable::from_identifier(id);
+            SSAVariable::new(var, version as _)
+        })
     }
 }
+
 impl<F: ILFunction + RefCountable> ExactSizeIterator for OperandSSAVarIter<F> {
     fn len(&self) -> usize {
         self.0.len()
     }
-}
-
-pub fn get_var(id: u64) -> Variable {
-    unsafe { Variable::from_identifier(id) }
-}
-
-pub fn get_var_ssa(id: u64, version: usize) -> SSAVariable {
-    SSAVariable::new(get_var(id), version)
 }

@@ -7,9 +7,8 @@ edition = "2021"
 crate-type = ["lib", "cdylib"]
 
 [dependencies]
-binaryninja = { path = "../../rust", features = ["rayon"] }
-# Used to link with for tests.
-binaryninjacore-sys = { path = "../../rust/binaryninjacore-sys", optional = true }
+binaryninja = { workspace = true, features = ["rayon"] }
+binaryninjacore-sys.workspace = true
 warp = { git = "https://github.com/Vector35/warp/", rev = "0ee5a6f" }
 log = "0.4"
 arboard = "3.4"
@@ -17,31 +16,25 @@ rayon = "1.10"
 dashmap = "6.1"
 walkdir = "2.5"
 rfd = "0.15"
-# For sigem
-env_logger = "0.11.5"
-clap = { version = "4.5.16", features = ["derive"] }
-ar = { git = "https://github.com/mdsteele/rust-ar" }
-tempdir = "0.3.7"
 serde_json = "1.0"
 
-[features]
-test = ["dep:binaryninjacore-sys"]
-
-[build-dependencies]
-cc = "1.1.28"
+# For sigem
+env_logger = { version = "0.11", optional = true }
+clap = { version = "4.5", features = ["derive"], optional = true }
+ar = { git = "https://github.com/mdsteele/rust-ar", optional = true }
+tempdir = { version = "0.3.7", optional = true }
 
 [dev-dependencies]
 criterion = "0.5.1"
 insta = { version = "1.38.0", features = ["yaml"] }
 
-[profile.release]
-panic = "abort"
-lto = true
-debug = "full"
+[features]
+default = ["sigem"]
+sigem = ["env_logger", "clap", "ar", "tempdir"]
 
-[profile.dev.package]
-insta.opt-level = 3
-similar.opt-level = 3
+[[bin]]
+name = "sigem"
+required-features = ["sigem"]
 
 [[bench]]
 name = "guid"

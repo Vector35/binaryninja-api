@@ -38,6 +38,17 @@ from . import highlevelil
 
 
 class PluginCommandContext:
+	"""
+	The ``class PluginCommandContext`` is used to access loaded plugins and their exposed methods with the context of a specific Binary VIew.
+
+	:Example:
+		# To trigger a registered plugin with a BinaryView, for example:
+		>>> bv = load("/tmp/file1")
+		>>> ctx = PluginCommandContext(bv);
+		>>> binexport = PluginCommand.get_valid_list(ctx)["BinExport"]
+		>>> binexport.execute(ctx)
+	"""
+
 	def __init__(self, view):
 		self._view = view
 		self._address = 0
@@ -292,6 +303,8 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 	@staticmethod
 	def _low_level_il_instruction_is_valid(view, func, instr, is_valid):
 		try:
+			if instr == 0xffffffffffffffff:
+				return False
 			if is_valid is None:
 				return True
 			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(view))
@@ -322,6 +335,8 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 	@staticmethod
 	def _medium_level_il_instruction_is_valid(view, func, instr, is_valid):
 		try:
+			if instr == 0xffffffffffffffff:
+				return False
 			if is_valid is None:
 				return True
 			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(view))
@@ -352,6 +367,8 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 	@staticmethod
 	def _high_level_il_instruction_is_valid(view, func, instr, is_valid):
 		try:
+			if instr == 0xffffffffffffffff:
+				return False
 			if is_valid is None:
 				return True
 			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(view))
@@ -834,7 +851,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 
 	def execute(self, context):
 		r"""
-		``execute`` Execute a Plugin
+		``execute`` Execute a plugin. See the example in :class:`~PluginCommandContext`
 
 		:param str context: PluginCommandContext to pass the PluginCommand
 		:rtype: None

@@ -152,12 +152,17 @@ class Activity(object):
 	"""
 
 	_action_callbacks = {}
+	_eligibility_callbacks = {}
 
-	def __init__(self, configuration: str = "", handle: Optional[core.BNActivityHandle] = None, action: Optional[Callable[[Any], None]] = None):
+	def __init__(self, configuration: str = "", handle: Optional[core.BNActivityHandle] = None, action: Optional[Callable[[Any], None]] = None, eligibility: Optional[Callable[[Any], bool]] = None):
 		if handle is None:
-			#cls._notify(ac, callback)
 			action_callback = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNAnalysisContext))(lambda ctxt, ac: self._action(ac))
-			_handle = core.BNCreateActivity(configuration, None, action_callback)
+			if eligibility:
+				eligibility_callback = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNActivity), ctypes.POINTER(core.BNAnalysisContext))(lambda ctxt, act, ac: eligibility(act, ac))
+				_handle = core.BNCreateActivityWithEligibility(configuration, None, action_callback, eligibility_callback)
+				self.__class__._eligibility_callbacks[len(self.__class__._eligibility_callbacks)] = eligibility_callback
+			else:
+				_handle = core.BNCreateActivity(configuration, None, action_callback)
 			self.action = action
 			self.__class__._action_callbacks[len(self.__class__._action_callbacks)] = action_callback
 		else:

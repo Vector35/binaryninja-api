@@ -33,6 +33,7 @@ python/generator.log
 python/generator.tlog
 .cache/
 target/
+view/sharedcache/api/python/_sharedcachecore.py
 
 # Unit Tests
 suite/unit.py
@@ -84,6 +85,8 @@ rust/target/
 rust/binaryninjacore-sys/target/
 rust/examples/*/target/
 rust/examples/dwarf/*/target/
+# Allow the test binaries
+!/rust/fixtures/bin/**
 
 # Debugger docs
 docs/img/debugger

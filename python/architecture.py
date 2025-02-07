@@ -1033,7 +1033,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 
 	def _get_stack_pointer_register(self, ctxt):
 		if self.stack_pointer is None:
-			return None
+			return 0
 		try:
 			return self._all_regs[self.stack_pointer]
 		except KeyError:

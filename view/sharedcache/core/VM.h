@@ -104,12 +104,25 @@ class MMAP {
     void Unmap();
 };
 
+class LazyMappedFileAccessor : public SelfAllocatingWeakPtr<MMappedFileAccessor> {
+public:
+    LazyMappedFileAccessor(std::string filePath, std::function<std::shared_ptr<MMappedFileAccessor>()> allocator,
+            std::function<void(std::shared_ptr<MMappedFileAccessor>)> postAlloc)
+        : SelfAllocatingWeakPtr(std::move(allocator), std::move(postAlloc)), m_filePath(std::move(filePath)) {
+    }
+
+    std::string_view filePath() const { return m_filePath; }
+
+private:
+    std::string m_filePath;
+};
+
 static uint64_t maxFPLimit;
 static std::mutex fileAccessorDequeMutex;
 static std::unordered_map<uint64_t, std::deque<std::shared_ptr<MMappedFileAccessor>>> fileAccessorReferenceHolder;
 static std::set<uint64_t> blockedSessionIDs;
 static std::mutex fileAccessorsMutex;
-static std::unordered_map<std::string, std::shared_ptr<SelfAllocatingWeakPtr<MMappedFileAccessor>>> fileAccessors;
+static std::unordered_map<std::string, std::shared_ptr<LazyMappedFileAccessor>> fileAccessors;
 static counting_semaphore fileAccessorSemaphore(0);
 
 static std::atomic<uint64_t> mmapCount = 0;
@@ -123,7 +136,7 @@ public:
 	MMappedFileAccessor(const std::string &path);
 	~MMappedFileAccessor();
 
-	static std::shared_ptr<SelfAllocatingWeakPtr<MMappedFileAccessor>> Open(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView, const uint64_t sessionID, const std::string &path, std::function<void(std::shared_ptr<MMappedFileAccessor>)> postAllocationRoutine = nullptr);
+	static std::shared_ptr<LazyMappedFileAccessor> Open(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView, const uint64_t sessionID, const std::string &path, std::function<void(std::shared_ptr<MMappedFileAccessor>)> postAllocationRoutine = nullptr);
 
 	static void CloseAll(const uint64_t sessionID);
 
@@ -174,16 +187,23 @@ public:
 
     BinaryNinja::DataBuffer ReadBuffer(size_t addr, size_t length);
 
+    // Returns a range of pointers within the mapped memory region corresponding to
+    // {addr, length}.
+    // WARNING: The pointers returned by this method is only valid for the lifetime
+    // of this file accessor.
+    // TODO: This should use std::span<const uint8_t> once the minimum supported
+    // C++ version supports it.
+    std::pair<const uint8_t*, const uint8_t*> ReadSpan(size_t addr, size_t length);
+
     void Read(void *dest, size_t addr, size_t length);
 };
 
 
 struct PageMapping {
-    std::string filePath;
-	std::shared_ptr<SelfAllocatingWeakPtr<MMappedFileAccessor>> fileAccessor;
+    std::shared_ptr<LazyMappedFileAccessor> fileAccessor;
     size_t fileOffset;
-	PageMapping(std::string filePath, std::shared_ptr<SelfAllocatingWeakPtr<MMappedFileAccessor>> fileAccessor, size_t fileOffset)
-		: filePath(std::move(filePath)), fileAccessor(std::move(fileAccessor)), fileOffset(fileOffset) {}
+    PageMapping(std::shared_ptr<LazyMappedFileAccessor> fileAccessor, size_t fileOffset)
+        : fileAccessor(std::move(fileAccessor)), fileOffset(fileOffset) {}
 };
 
 
@@ -249,7 +269,7 @@ public:
 
     ~VM();
 
-    void MapPages(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView, uint64_t sessionID, size_t vm_address, size_t fileoff, size_t size, std::string filePath, std::function<void(std::shared_ptr<MMappedFileAccessor>)> postAllocationRoutine);
+    void MapPages(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView, uint64_t sessionID, size_t vm_address, size_t fileoff, size_t size, const std::string& filePath, std::function<void(std::shared_ptr<MMappedFileAccessor>)> postAllocationRoutine);
 
     bool AddressIsMapped(uint64_t address);
 

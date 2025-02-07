@@ -14,38 +14,41 @@
 
 //! An interface for reading, writing, and creating new settings
 
-pub use binaryninjacore_sys::BNSettingsScope as SettingsScope;
 use binaryninjacore_sys::*;
-use std::os::raw::c_char;
+use std::ffi::c_char;
+use std::fmt::Debug;
 
-use crate::binaryview::BinaryView;
+use crate::binary_view::BinaryView;
 use crate::rc::*;
 use crate::string::{BnStrCompatible, BnString};
 
-use std::ptr;
+use crate::function::Function;
+
+pub type SettingsScope = BNSettingsScope;
+
+pub const DEFAULT_INSTANCE_ID: &str = "default";
+pub const GLOBAL_INSTANCE_ID: &str = "";
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Settings {
     pub(crate) handle: *mut BNSettings,
 }
 
-unsafe impl Send for Settings {}
-unsafe impl Sync for Settings {}
-
 impl Settings {
     pub(crate) unsafe fn from_raw(handle: *mut BNSettings) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-
         Ref::new(Self { handle })
     }
 
-    pub fn new<S: BnStrCompatible>(instance_id: S) -> Ref<Self> {
+    pub fn new() -> Ref<Self> {
+        Self::new_with_id(GLOBAL_INSTANCE_ID)
+    }
+
+    pub fn new_with_id<S: BnStrCompatible>(instance_id: S) -> Ref<Self> {
         let instance_id = instance_id.into_bytes_with_nul();
         unsafe {
             let handle = BNCreateSettings(instance_id.as_ref().as_ptr() as *mut _);
-
             debug_assert!(!handle.is_null());
-
             Ref::new(Self { handle })
         }
     }
@@ -60,12 +63,20 @@ impl Settings {
     }
 
     pub fn deserialize_schema<S: BnStrCompatible>(&self, schema: S) -> bool {
+        self.deserialize_schema_with_scope(schema, SettingsScope::SettingsAutoScope)
+    }
+
+    pub fn deserialize_schema_with_scope<S: BnStrCompatible>(
+        &self,
+        schema: S,
+        scope: SettingsScope,
+    ) -> bool {
         let schema = schema.into_bytes_with_nul();
         unsafe {
             BNSettingsDeserializeSchema(
                 self.handle,
                 schema.as_ref().as_ptr() as *mut _,
-                BNSettingsScope::SettingsAutoScope,
+                scope,
                 true,
             )
         }
@@ -77,126 +88,148 @@ impl Settings {
         unsafe { BNSettingsContains(self.handle, key.as_ref().as_ptr() as *mut _) }
     }
 
+    pub fn keys(&self) -> Array<BnString> {
+        let mut count = 0;
+        let result = unsafe { BNSettingsKeysList(self.handle, &mut count) };
+        assert!(!result.is_null());
+        unsafe { Array::new(result as *mut *mut c_char, count, ()) }
+    }
+
     // TODO Update the settings API to take an optional BinaryView or Function. Separate functions or...?
 
-    pub fn get_bool<S: BnStrCompatible>(
+    pub fn get_bool<S: BnStrCompatible>(&self, key: S) -> bool {
+        self.get_bool_with_opts(key, &mut QueryOptions::default())
+    }
+
+    pub fn get_bool_with_opts<S: BnStrCompatible>(
         &self,
         key: S,
-        view: Option<&BinaryView>,
-        scope: Option<Box<SettingsScope>>,
+        options: &mut QueryOptions,
     ) -> bool {
         let key = key.into_bytes_with_nul();
-        let view_handle = match view {
+        let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
+            _ => std::ptr::null_mut(),
         };
-        let scope_ptr = match scope {
-            Some(mut scope) => scope.as_mut(),
-            _ => ptr::null_mut() as *mut _,
+        let func_ptr = match options.function.as_ref() {
+            Some(func) => func.handle,
+            _ => std::ptr::null_mut(),
         };
         unsafe {
             BNSettingsGetBool(
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
-                view_handle,
-                std::ptr::null_mut(),
-                scope_ptr,
+                view_ptr,
+                func_ptr,
+                &mut options.scope,
             )
         }
     }
 
-    pub fn get_double<S: BnStrCompatible>(
+    pub fn get_double<S: BnStrCompatible>(&self, key: S) -> f64 {
+        self.get_double_with_opts(key, &mut QueryOptions::default())
+    }
+
+    pub fn get_double_with_opts<S: BnStrCompatible>(
         &self,
         key: S,
-        view: Option<&BinaryView>,
-        scope: Option<Box<SettingsScope>>,
+        options: &mut QueryOptions,
     ) -> f64 {
         let key = key.into_bytes_with_nul();
-        let view_handle = match view {
+        let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
+            _ => std::ptr::null_mut(),
         };
-        let scope_ptr = match scope {
-            Some(mut scope) => scope.as_mut(),
-            _ => ptr::null_mut() as *mut _,
+        let func_ptr = match options.function.as_ref() {
+            Some(func) => func.handle,
+            _ => std::ptr::null_mut(),
         };
         unsafe {
             BNSettingsGetDouble(
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
-                view_handle,
-                std::ptr::null_mut(),
-                scope_ptr,
+                view_ptr,
+                func_ptr,
+                &mut options.scope,
             )
         }
     }
 
-    pub fn get_integer<S: BnStrCompatible>(
+    pub fn get_integer<S: BnStrCompatible>(&self, key: S) -> u64 {
+        self.get_integer_with_opts(key, &mut QueryOptions::default())
+    }
+
+    pub fn get_integer_with_opts<S: BnStrCompatible>(
         &self,
         key: S,
-        view: Option<&BinaryView>,
-        scope: Option<Box<SettingsScope>>,
+        options: &mut QueryOptions,
     ) -> u64 {
         let key = key.into_bytes_with_nul();
-        let view_handle = match view {
+        let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
+            _ => std::ptr::null_mut(),
         };
-        let scope_ptr = match scope {
-            Some(mut scope) => scope.as_mut(),
-            _ => ptr::null_mut() as *mut _,
+        let func_ptr = match options.function.as_ref() {
+            Some(func) => func.handle,
+            _ => std::ptr::null_mut(),
         };
         unsafe {
             BNSettingsGetUInt64(
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
-                view_handle,
-                std::ptr::null_mut(),
-                scope_ptr,
+                view_ptr,
+                func_ptr,
+                &mut options.scope,
             )
         }
     }
 
-    pub fn get_string<S: BnStrCompatible>(
+    pub fn get_string<S: BnStrCompatible>(&self, key: S) -> BnString {
+        self.get_string_with_opts(key, &mut QueryOptions::default())
+    }
+
+    pub fn get_string_with_opts<S: BnStrCompatible>(
         &self,
         key: S,
-        view: Option<&BinaryView>,
-        scope: Option<Box<SettingsScope>>,
+        options: &mut QueryOptions,
     ) -> BnString {
         let key = key.into_bytes_with_nul();
-        let view_handle = match view {
+        let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
+            _ => std::ptr::null_mut(),
         };
-        let scope_ptr = match scope {
-            Some(mut scope) => scope.as_mut(),
-            _ => ptr::null_mut() as *mut _,
+        let func_ptr = match options.function.as_ref() {
+            Some(func) => func.handle,
+            _ => std::ptr::null_mut(),
         };
         unsafe {
             BnString::from_raw(BNSettingsGetString(
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
-                view_handle,
-                std::ptr::null_mut(),
-                scope_ptr,
+                view_ptr,
+                func_ptr,
+                &mut options.scope,
             ))
         }
     }
 
-    pub fn get_string_list<S: BnStrCompatible>(
+    pub fn get_string_list<S: BnStrCompatible>(&self, key: S) -> Array<BnString> {
+        self.get_string_list_with_opts(key, &mut QueryOptions::default())
+    }
+
+    pub fn get_string_list_with_opts<S: BnStrCompatible>(
         &self,
         key: S,
-        view: Option<&BinaryView>,
-        scope: Option<Box<SettingsScope>>,
+        options: &mut QueryOptions,
     ) -> Array<BnString> {
         let key = key.into_bytes_with_nul();
-        let view_handle = match view {
+        let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
+            _ => std::ptr::null_mut(),
         };
-        let scope_ptr = match scope {
-            Some(mut scope) => scope.as_mut(),
-            _ => ptr::null_mut() as *mut _,
+        let func_ptr = match options.function.as_ref() {
+            Some(func) => func.handle,
+            _ => std::ptr::null_mut(),
         };
         let mut size: usize = 0;
         unsafe {
@@ -204,9 +237,9 @@ impl Settings {
                 BNSettingsGetStringList(
                     self.handle,
                     key.as_ref().as_ptr() as *mut _,
-                    view_handle,
-                    std::ptr::null_mut(),
-                    scope_ptr,
+                    view_ptr,
+                    func_ptr,
+                    &mut options.scope,
                     &mut size,
                 ) as *mut *mut c_char,
                 size,
@@ -215,139 +248,153 @@ impl Settings {
         }
     }
 
-    pub fn get_json<S: BnStrCompatible>(
+    pub fn get_json<S: BnStrCompatible>(&self, key: S) -> BnString {
+        self.get_json_with_opts(key, &mut QueryOptions::default())
+    }
+
+    pub fn get_json_with_opts<S: BnStrCompatible>(
         &self,
         key: S,
-        view: Option<&BinaryView>,
-        scope: Option<Box<SettingsScope>>,
+        options: &mut QueryOptions,
     ) -> BnString {
         let key = key.into_bytes_with_nul();
-        let view_handle = match view {
+        let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
+            _ => std::ptr::null_mut(),
         };
-        let scope_ptr = match scope {
-            Some(mut scope) => scope.as_mut(),
-            _ => ptr::null_mut() as *mut _,
+        let func_ptr = match options.function.as_ref() {
+            Some(func) => func.handle,
+            _ => std::ptr::null_mut(),
         };
         unsafe {
             BnString::from_raw(BNSettingsGetJson(
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
-                view_handle,
-                std::ptr::null_mut(),
-                scope_ptr,
+                view_ptr,
+                func_ptr,
+                &mut options.scope,
             ))
         }
     }
 
-    pub fn set_bool<S: BnStrCompatible>(
+    pub fn set_bool<S: BnStrCompatible>(&self, key: S, value: bool) {
+        self.set_bool_with_opts(key, value, &QueryOptions::default())
+    }
+
+    pub fn set_bool_with_opts<S: BnStrCompatible>(
         &self,
         key: S,
         value: bool,
-        view: Option<&BinaryView>,
-        scope: Option<SettingsScope>,
+        options: &QueryOptions,
     ) {
         let key = key.into_bytes_with_nul();
-        let view_handle = match view {
+        let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
+            _ => std::ptr::null_mut(),
         };
-        let scope = match scope {
-            Some(scope) => scope,
-            _ => SettingsScope::SettingsAutoScope,
+        let func_ptr = match options.function.as_ref() {
+            Some(func) => func.handle,
+            _ => std::ptr::null_mut(),
         };
         unsafe {
             BNSettingsSetBool(
                 self.handle,
-                view_handle,
-                std::ptr::null_mut(),
-                scope,
+                view_ptr,
+                func_ptr,
+                options.scope,
                 key.as_ref().as_ptr() as *mut _,
                 value,
             );
         }
     }
 
-    pub fn set_double<S: BnStrCompatible>(
+    pub fn set_double<S: BnStrCompatible>(&self, key: S, value: f64) {
+        self.set_double_with_opts(key, value, &QueryOptions::default())
+    }
+    pub fn set_double_with_opts<S: BnStrCompatible>(
         &self,
         key: S,
         value: f64,
-        view: Option<&BinaryView>,
-        scope: Option<SettingsScope>,
+        options: &QueryOptions,
     ) {
         let key = key.into_bytes_with_nul();
-        let view_handle = match view {
+        let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
+            _ => std::ptr::null_mut(),
         };
-        let scope = match scope {
-            Some(scope) => scope,
-            _ => SettingsScope::SettingsAutoScope,
+        let func_ptr = match options.function.as_ref() {
+            Some(func) => func.handle,
+            _ => std::ptr::null_mut(),
         };
         unsafe {
             BNSettingsSetDouble(
                 self.handle,
-                view_handle,
-                std::ptr::null_mut(),
-                scope,
+                view_ptr,
+                func_ptr,
+                options.scope,
                 key.as_ref().as_ptr() as *mut _,
                 value,
             );
         }
     }
 
-    pub fn set_integer<S: BnStrCompatible>(
+    pub fn set_integer<S: BnStrCompatible>(&self, key: S, value: u64) {
+        self.set_integer_with_opts(key, value, &QueryOptions::default())
+    }
+
+    pub fn set_integer_with_opts<S: BnStrCompatible>(
         &self,
         key: S,
         value: u64,
-        view: Option<&BinaryView>,
-        scope: Option<SettingsScope>,
+        options: &QueryOptions,
     ) {
         let key = key.into_bytes_with_nul();
-        let view_handle = match view {
+        let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
+            _ => std::ptr::null_mut(),
         };
-        let scope = match scope {
-            Some(scope) => scope,
-            _ => SettingsScope::SettingsAutoScope,
+        let func_ptr = match options.function.as_ref() {
+            Some(func) => func.handle,
+            _ => std::ptr::null_mut(),
         };
         unsafe {
             BNSettingsSetUInt64(
                 self.handle,
-                view_handle,
-                std::ptr::null_mut(),
-                scope,
+                view_ptr,
+                func_ptr,
+                options.scope,
                 key.as_ref().as_ptr() as *mut _,
                 value,
             );
         }
     }
 
-    pub fn set_string<S1: BnStrCompatible, S2: BnStrCompatible>(
+    pub fn set_string<S1: BnStrCompatible, S2: BnStrCompatible>(&self, key: S1, value: S2) {
+        self.set_string_with_opts(key, value, &QueryOptions::default())
+    }
+
+    pub fn set_string_with_opts<S1: BnStrCompatible, S2: BnStrCompatible>(
         &self,
         key: S1,
         value: S2,
-        view: Option<&BinaryView>,
-        scope: Option<SettingsScope>,
+        options: &QueryOptions,
     ) {
         let key = key.into_bytes_with_nul();
         let value = value.into_bytes_with_nul();
-        let view_handle = match view {
+        let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
-            _ => ptr::null_mut() as *mut _,
+            _ => std::ptr::null_mut(),
         };
-        let scope = match scope {
-            Some(scope) => scope,
-            _ => SettingsScope::SettingsAutoScope,
+        let func_ptr = match options.function.as_ref() {
+            Some(func) => func.handle,
+            _ => std::ptr::null_mut(),
         };
         unsafe {
             BNSettingsSetString(
                 self.handle,
-                view_handle,
-                std::ptr::null_mut(),
-                scope,
+                view_ptr,
+                func_ptr,
+                options.scope,
                 key.as_ref().as_ptr() as *mut _,
                 value.as_ref().as_ptr() as *mut _,
             );
@@ -358,65 +405,110 @@ impl Settings {
         &self,
         key: S1,
         value: I,
-        view: Option<&BinaryView>,
-        scope: Option<SettingsScope>,
+    ) -> bool {
+        self.set_string_list_with_opts(key, value, &QueryOptions::default())
+    }
+
+    pub fn set_string_list_with_opts<
+        S1: BnStrCompatible,
+        S2: BnStrCompatible,
+        I: Iterator<Item = S2>,
+    >(
+        &self,
+        key: S1,
+        value: I,
+        options: &QueryOptions,
     ) -> bool {
         let key = key.into_bytes_with_nul();
-        let mut list: Vec<_> = value
-            .map(|s| s.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
+        let raw_list: Vec<_> = value.map(|s| s.into_bytes_with_nul()).collect();
+        let mut raw_list_ptr: Vec<_> = raw_list
+            .iter()
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect();
 
-        let view_handle = match view {
+        let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
-            None => ptr::null_mut() as *mut _,
+            _ => std::ptr::null_mut(),
         };
-
-        let scope = match scope {
-            Some(scope) => scope,
-            None => SettingsScope::SettingsAutoScope,
+        let func_ptr = match options.function.as_ref() {
+            Some(func) => func.handle,
+            _ => std::ptr::null_mut(),
         };
-
         unsafe {
             BNSettingsSetStringList(
                 self.handle,
-                view_handle,
-                std::ptr::null_mut(),
-                scope,
+                view_ptr,
+                func_ptr,
+                options.scope,
                 key.as_ref().as_ptr() as *mut _,
-                list.as_mut_ptr(),
-                list.len(),
+                raw_list_ptr.as_mut_ptr(),
+                raw_list_ptr.len(),
             )
         }
     }
 
-    pub fn set_json<S1: BnStrCompatible, S2: BnStrCompatible>(
+    pub fn set_json<S1: BnStrCompatible, S2: BnStrCompatible>(&self, key: S1, value: S2) -> bool {
+        self.set_json_with_opts(key, value, &QueryOptions::default())
+    }
+
+    pub fn set_json_with_opts<S1: BnStrCompatible, S2: BnStrCompatible>(
         &self,
         key: S1,
         value: S2,
-        view: Option<&BinaryView>,
-        scope: Option<SettingsScope>,
+        options: &QueryOptions,
     ) -> bool {
         let key = key.into_bytes_with_nul();
         let value = value.into_bytes_with_nul();
-
-        let view_handle = match view {
+        let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
-            None => ptr::null_mut() as *mut _,
+            _ => std::ptr::null_mut(),
         };
-
-        let scope = match scope {
-            Some(scope) => scope,
-            None => SettingsScope::SettingsAutoScope,
+        let func_ptr = match options.function.as_ref() {
+            Some(func) => func.handle,
+            _ => std::ptr::null_mut(),
         };
-
         unsafe {
             BNSettingsSetJson(
                 self.handle,
-                view_handle,
-                std::ptr::null_mut(),
-                scope,
+                view_ptr,
+                func_ptr,
+                options.scope,
                 key.as_ref().as_ptr() as *mut _,
                 value.as_ref().as_ptr() as *mut _,
+            )
+        }
+    }
+
+    pub fn get_property_string<S: BnStrCompatible>(&self, key: S, property: S) -> BnString {
+        let key = key.into_bytes_with_nul();
+        let property = property.into_bytes_with_nul();
+        unsafe {
+            BnString::from_raw(BNSettingsQueryPropertyString(
+                self.handle,
+                key.as_ref().as_ptr() as *mut _,
+                property.as_ref().as_ptr() as *mut _,
+            ))
+        }
+    }
+
+    pub fn get_property_string_list<S: BnStrCompatible>(
+        &self,
+        key: S,
+        property: S,
+    ) -> Array<BnString> {
+        let key = key.into_bytes_with_nul();
+        let property = property.into_bytes_with_nul();
+        let mut size: usize = 0;
+        unsafe {
+            Array::new(
+                BNSettingsQueryPropertyStringList(
+                    self.handle,
+                    key.as_ref().as_ptr() as *mut _,
+                    property.as_ref().as_ptr() as *mut _,
+                    &mut size,
+                ) as *mut *mut c_char,
+                size,
+                (),
             )
         }
     }
@@ -482,8 +574,10 @@ impl Settings {
     ) {
         let key = key.into_bytes_with_nul();
         let property = property.into_bytes_with_nul();
-        let mut list: Vec<_> = value
-            .map(|s| s.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
+        let raw_list: Vec<_> = value.map(|s| s.into_bytes_with_nul()).collect();
+        let mut raw_list_ptr: Vec<_> = raw_list
+            .iter()
+            .map(|s| s.as_ref().as_ptr() as *const c_char)
             .collect();
 
         unsafe {
@@ -491,8 +585,8 @@ impl Settings {
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
                 property.as_ref().as_ptr() as *mut _,
-                list.as_mut_ptr(),
-                list.len(),
+                raw_list_ptr.as_mut_ptr(),
+                raw_list_ptr.len(),
             );
         }
     }
@@ -534,6 +628,15 @@ impl Settings {
     // TODO: register_setting but type-safely turn it into json
 }
 
+impl Default for Ref<Settings> {
+    fn default() -> Self {
+        Settings::new_with_id(DEFAULT_INSTANCE_ID)
+    }
+}
+
+unsafe impl Send for Settings {}
+unsafe impl Sync for Settings {}
+
 impl ToOwned for Settings {
     type Owned = Ref<Self>;
 
@@ -551,5 +654,59 @@ unsafe impl RefCountable for Settings {
 
     unsafe fn dec_ref(handle: &Self) {
         BNFreeSettings(handle.handle);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct QueryOptions<'a> {
+    pub scope: SettingsScope,
+    pub view: Option<&'a BinaryView>,
+    pub function: Option<Ref<Function>>,
+}
+
+impl<'a> QueryOptions<'a> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn new_with_view(view: &'a BinaryView) -> Self {
+        Self {
+            view: Some(view),
+            ..Default::default()
+        }
+    }
+
+    pub fn new_with_func(func: Ref<Function>) -> Self {
+        Self {
+            function: Some(func),
+            ..Default::default()
+        }
+    }
+
+    /// Set the query to target a specific view, this will be overridden if a function is targeted.
+    pub fn with_view(mut self, view: &'a BinaryView) -> Self {
+        self.view = Some(view);
+        self
+    }
+
+    pub fn with_scope(mut self, scope: SettingsScope) -> Self {
+        self.scope = scope;
+        self
+    }
+
+    /// Set the query to target a specific function, this will override the target view.
+    pub fn with_function(mut self, function: Ref<Function>) -> Self {
+        self.function = Some(function);
+        self
+    }
+}
+
+impl Default for QueryOptions<'_> {
+    fn default() -> Self {
+        Self {
+            view: None,
+            scope: SettingsScope::SettingsDefaultScope,
+            function: None,
+        }
     }
 }

@@ -203,55 +203,57 @@ void MMAP::Unmap()
 }
 
 
-std::shared_ptr<SelfAllocatingWeakPtr<MMappedFileAccessor>> MMappedFileAccessor::Open(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView, const uint64_t sessionID, const std::string &path, std::function<void(std::shared_ptr<MMappedFileAccessor>)> postAllocationRoutine)
+std::shared_ptr<LazyMappedFileAccessor> MMappedFileAccessor::Open(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView, const uint64_t sessionID, const std::string &path, std::function<void(std::shared_ptr<MMappedFileAccessor>)> postAllocationRoutine)
 {
 	std::scoped_lock<std::mutex> lock(fileAccessorsMutex);
-	if (fileAccessors.count(path) == 0)
-	{
-		auto fileAcccessor = std::shared_ptr<SelfAllocatingWeakPtr<MMappedFileAccessor>>(new SelfAllocatingWeakPtr<MMappedFileAccessor>(
-			// Allocator logic for the SelfAllocatingWeakPtr
-			[path=path, sessionID=sessionID, dscView](){
-				std::unique_lock<std::mutex> _lock(fileAccessorDequeMutex);
-
-				// Iterate through held references and start removing them until we can get a file pointer
-				// FIXME: This could clear all currently used file pointers and still not get one. FIX!
-				// 		We should probably use a condition variable here to wait for a file pointer to be released!!!
-				for (auto& [_, fileAccessorDeque] : fileAccessorReferenceHolder)
-				{
-					if (fileAccessorSemaphore.try_acquire())
-						break;
-					fileAccessorDeque.pop_front();
-				}
-
-				mmapCount++;
-				_lock.unlock();
-				auto accessor = std::shared_ptr<MMappedFileAccessor>(new MMappedFileAccessor(ResolveFilePath(dscView, path)), [](MMappedFileAccessor* accessor){
-					// worker thread or we can deadlock on exit here.
-					BinaryNinja::WorkerEnqueue([accessor](){
-						fileAccessorSemaphore.release();
-						mmapCount--;
-						if (fileAccessors.count(accessor->m_path))
-						{
-							std::scoped_lock<std::mutex> lock(fileAccessorsMutex);
-							fileAccessors.erase(accessor->m_path);
-						}
-						delete accessor;
-					}, "MMappedFileAccessor Destructor");
-				});
-				_lock.lock();
-				// If some background thread has managed to try and open a file when the BV was already closed,
-				// 		we can still give them the file they want so they dont crash, but as soon as they let go it's gone.
-				if (!blockedSessionIDs.count(sessionID))
-					fileAccessorReferenceHolder[sessionID].push_back(accessor);
-				return accessor;
-			},
-			[postAllocationRoutine=postAllocationRoutine](std::shared_ptr<MMappedFileAccessor> accessor){
-				if (postAllocationRoutine)
-					postAllocationRoutine(accessor);
-			}));
-		fileAccessors.insert_or_assign(path, fileAcccessor);
+	if (auto it = fileAccessors.find(path); it != fileAccessors.end()) {
+		return it->second;
 	}
-	return fileAccessors.at(path);
+
+	auto fileAcccessor = std::make_shared<LazyMappedFileAccessor>(
+		path,
+		// Allocator logic for the SelfAllocatingWeakPtr
+		[path=path, sessionID=sessionID, dscView](){
+			std::unique_lock<std::mutex> _lock(fileAccessorDequeMutex);
+
+			// Iterate through held references and start removing them until we can get a file pointer
+			// FIXME: This could clear all currently used file pointers and still not get one. FIX!
+			// 		We should probably use a condition variable here to wait for a file pointer to be released!!!
+			for (auto& [_, fileAccessorDeque] : fileAccessorReferenceHolder)
+			{
+				if (fileAccessorSemaphore.try_acquire())
+					break;
+				fileAccessorDeque.pop_front();
+			}
+
+			mmapCount++;
+			_lock.unlock();
+			auto accessor = std::shared_ptr<MMappedFileAccessor>(new MMappedFileAccessor(ResolveFilePath(dscView, path)), [](MMappedFileAccessor* accessor){
+				// worker thread or we can deadlock on exit here.
+				BinaryNinja::WorkerEnqueue([accessor](){
+					fileAccessorSemaphore.release();
+					mmapCount--;
+					if (fileAccessors.count(accessor->m_path))
+					{
+						std::scoped_lock<std::mutex> lock(fileAccessorsMutex);
+						fileAccessors.erase(accessor->m_path);
+					}
+					delete accessor;
+				}, "MMappedFileAccessor Destructor");
+			});
+			_lock.lock();
+			// If some background thread has managed to try and open a file when the BV was already closed,
+			// 		we can still give them the file they want so they dont crash, but as soon as they let go it's gone.
+			if (!blockedSessionIDs.count(sessionID))
+				fileAccessorReferenceHolder[sessionID].push_back(accessor);
+			return accessor;
+		},
+		[postAllocationRoutine=postAllocationRoutine](std::shared_ptr<MMappedFileAccessor> accessor){
+			if (postAllocationRoutine)
+				postAllocationRoutine(std::move(accessor));
+		});
+	fileAccessors.insert_or_assign(path, fileAcccessor);
+	return fileAcccessor;
 }
 
 
@@ -463,6 +465,17 @@ BinaryNinja::DataBuffer MMappedFileAccessor::ReadBuffer(size_t address, size_t l
 	return BinaryNinja::DataBuffer(data, length);
 }
 
+std::pair<const uint8_t*, const uint8_t*> MMappedFileAccessor::ReadSpan(size_t address, size_t length)
+{
+	if (address > m_mmap.len)
+		throw MappingReadException();
+	if (address + length > m_mmap.len)
+		throw MappingReadException();
+	const uint8_t* data = (&(((uint8_t*)m_mmap._mmap)[address]));
+	return {data, data + length};
+}
+
+
 void MMappedFileAccessor::Read(void* dest, size_t address, size_t length)
 {
 	if (address > m_mmap.len)
@@ -482,7 +495,7 @@ VM::~VM()
 }
 
 
-void VM::MapPages(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView, uint64_t sessionID, size_t vm_address, size_t fileoff, size_t size, std::string filePath, std::function<void(std::shared_ptr<MMappedFileAccessor>)> postAllocationRoutine)
+void VM::MapPages(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView, uint64_t sessionID, size_t vm_address, size_t fileoff, size_t size, const std::string& filePath, std::function<void(std::shared_ptr<MMappedFileAccessor>)> postAllocationRoutine)
 {
 	// The mappings provided for shared caches will always be page aligned.
 	// We can use this to our advantage and gain considerable performance via page tables.
@@ -495,7 +508,7 @@ void VM::MapPages(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView, uint64_t se
 	}
 
 	auto accessor = MMappedFileAccessor::Open(std::move(dscView), sessionID, filePath, postAllocationRoutine);
-	auto [it, inserted] = m_map.insert_or_assign({vm_address, vm_address + size}, PageMapping(std::move(filePath), std::move(accessor), fileoff));
+	auto [it, inserted] = m_map.insert_or_assign({vm_address, vm_address + size}, PageMapping(std::move(accessor), fileoff));
 	if (m_safe && !inserted)
 	{
 		BNLogWarn("Remapping page 0x%zx (f: 0x%zx)", vm_address, fileoff);

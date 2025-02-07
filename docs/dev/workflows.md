@@ -331,7 +331,7 @@ Activities can have different roles, defining their behavior and how they intera
 
 - `action`: The default role; performs a specific task.
 - `selector`: Contains child activities and uses an eligibility handler to determine which child activities to execute. This enables the ability to have a dynamic and reactive execution pipeline.
-- `subflow`: Creates a new task context and asynchronously processes its workflow sub-graph on a new thread within the workflow machine. The subflow executes asynchronously from the requestor, allowing the original thread to return immediately. Within this context, multiple task actions can be enqueued, enabling extensive parallel processing. After completing its workflow sub-graph, it enters a Stall state, waiting for all its asynchronous task actions to complete. Once all task actions are finished, it re-evaluates its dependencies and may re-execute the entire subflow. This facilitates complex iterative processes that continue until convergence is achieved.
+- `subflow`: Creates a new task context and asynchronously processes its workflow sub-graph on a new thread within the workflow machine. The subflow executes asynchronously from the requestor, allowing the original thread to return immediately. Within this context, multiple task actions can be enqueued, enabling extensive parallel processing. After completing its workflow sub-graph, it enters a Stall state, waiting for all its asynchronous task actions to complete. If the `continuation` property is set to true, the subflow re-evaluates its dependencies upon finishing all task actions and re-executes. This facilitates complex iterative processes that continue until convergence is achieved.
 - `task`: Asynchronously processes the workflow graph on a new thread within the workflow machine. `task` activities enable the pipeline to execute asynchronously from its requestor. `task` activities require a task context to be present; if no task context exists, they execute immediately in the current thread.
 
 !!! note
@@ -341,11 +341,12 @@ Activities can have different roles, defining their behavior and how they intera
 
 Eligibility determines whether an Activity should execute, based on certain conditions or predicates. Key eligibility properties:
 
+- `auto`: An object that automatically generates a boolean control setting and predicate. It includes one optional field:
+	- `default`: The default boolean value for the auto-generated setting. If not provided, the default is `true`.
 - `runOnce`: A boolean indicating whether the activity executes only once across all file/analysis sessions. Once the activity runs, its state is saved persistently, and it will not run again unless explicitly reset. This is useful for activities that only need to be performed once, such as initial setup tasks.
 - `runOncePerSession`: A boolean indicating whether the activity executes only once within the current session. Its state is not saved persistently, meaning it resets when a new session begins. This is useful for tasks that should run once per analysis session, such as initialization steps specific to a particular execution context.
+- `continuation`: A boolean indicating if a `subflow` is eligible for re-execution based on its eligibility logic. If not provided, the default is `false`.
 - `predicates`: An array of objects defining the condition that must be met for the activity to be eligible to run.
-	- `auto`: An object that automatically generates a boolean control setting and predicate. It includes one optional field:
-		- `default`: The default boolean value for the auto-generated setting. If not provided, the default is `true`.
 	- `type` (required): A string indicating the type of predicate. Valid values:
 		- `"setting"`: Evaluates the value of specific setting.
 		- `"viewType"`: Evaluates the type of BinaryView.

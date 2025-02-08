@@ -1181,6 +1181,9 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_MULT:
 			il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO, il.MultDoublePrecSigned(4, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize))));
 			SignExtendHiLo(il, registerSize);
+			if (rd != REG_ZERO)
+				// mflo
+				il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, rd, il.Register(registerSize, REG_LO)));
 			break;
 		case MIPS_MULTU:
 			il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO, il.MultDoublePrecUnsigned(4, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize))));

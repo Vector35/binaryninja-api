@@ -34,15 +34,16 @@
  avoid that.
  * */
 
+#ifndef SHAREDCACHE_CORE_METADATASERIALIZABLE_HPP
+#define SHAREDCACHE_CORE_METADATASERIALIZABLE_HPP
+
+#include <cassert>
 #include "binaryninjaapi.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
 #include "../api/sharedcachecore.h"
 #include "view/macho/machoview.h"
-
-#ifndef SHAREDCACHE_CORE_METADATASERIALIZABLE_HPP
-#define SHAREDCACHE_CORE_METADATASERIALIZABLE_HPP
 
 namespace SharedCacheCore {
 
@@ -51,7 +52,6 @@ namespace SharedCacheCore {
 #define MSS_SUBCLASS(name)		 		 Serialize(context, #name, name)
 #define MSL(name)						 name = context.load<decltype(name)>(#name)
 #define MSL_CAST(name, storedType, type) name = (type)context.load<storedType>(#name)
-#define MSL_SUBCLASS(name)				 Deserialize(context, #name, name)
 
 using namespace BinaryNinja;
 
@@ -83,44 +83,34 @@ struct DeserializationContext {
 	}
 };
 
-template <typename Derived>
-class MetadataSerializable
-{
+template <typename Derived, typename LoadResult = Derived>
+class MetadataSerializable {
 public:
-	std::string AsString() const
-	{
+	std::string AsString() const {
 		SerializationContext context;
 		Store(context);
 
 		return context.buffer.GetString();
 	}
 
-	void LoadFromString(const std::string& s)
-	{
+	static LoadResult LoadFromString(const std::string& s) {
 		DeserializationContext context;
-		context.doc.Parse(s.c_str());
-		AsDerived().Load(context);
+		rapidjson::ParseResult result = context.doc.Parse(s.c_str());
+		assert(result);
+		return Derived::Load(context);
 	}
 
-	void LoadFromValue(rapidjson::Value& s)
-	{
+	static LoadResult LoadFromValue(rapidjson::Value& s) {
 		DeserializationContext context;
 		context.doc.CopyFrom(s, context.doc.GetAllocator());
-		AsDerived().Load(context);
+		return Derived::Load(context);
 	}
 
-	Ref<Metadata> AsMetadata() {
+	Ref<Metadata> AsMetadata() const {
 		return new Metadata(AsString());
 	}
 
-	bool LoadFromMetadata(const Ref<Metadata>& meta)
-	{
-		if (!meta->IsString())
-			return false;
-		LoadFromString(meta->GetString());
-		return true;
-	}
-
+	template <typename... Args>
 	void Store(SerializationContext& context) const {
 		context.writer.StartObject();
 		AsDerived().Store(context);

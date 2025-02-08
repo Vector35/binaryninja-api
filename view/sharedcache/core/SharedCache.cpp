@@ -25,15 +25,16 @@
  * */
 
 #include "SharedCache.h"
+
+#include "DSCView.h"
 #include "ObjC.h"
 #include <filesystem>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 #include <fcntl.h>
 #include <memory>
-#include <chrono>
-#include <thread>
 
 
 using namespace BinaryNinja;
@@ -55,8 +56,9 @@ int count_trailing_zeros(uint64_t value) {
 }
 #endif
 
-struct SharedCache::State
-{
+namespace SharedCacheCore {
+
+struct SharedCacheState {
 	std::unordered_map<uint64_t, std::shared_ptr<std::unordered_map<uint64_t, Ref<Symbol>>>>
 		exportInfos;
 	std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>>
@@ -78,9 +80,11 @@ struct SharedCache::State
 	std::optional<std::pair<size_t, size_t>> objcOptimizationDataRange;
 
 	std::string baseFilePath;
-	SharedCacheFormat cacheFormat;
+	SharedCache::SharedCacheFormat cacheFormat;
 	DSCViewState viewState = DSCViewStateUnloaded;
 };
+
+}  // namespace SharedCacheCore
 
 struct SharedCache::ViewSpecificState {
 	std::mutex typeLibraryMutex;
@@ -91,7 +95,7 @@ struct SharedCache::ViewSpecificState {
 	std::atomic<BNDSCViewLoadProgress> progress;
 
 	std::mutex stateMutex;
-	std::shared_ptr<struct SharedCache::State> cachedState;
+	std::shared_ptr<SharedCacheState> cachedState;
 };
 
 
@@ -993,33 +997,34 @@ std::shared_ptr<VM> SharedCache::GetVMMap(bool mapPages)
 
 void SharedCache::DeserializeFromRawView()
 {
-	if (m_dscView->QueryMetadata(SharedCacheMetadataTag))
-	{
+	if (m_dscView->QueryMetadata(SharedCacheMetadataTag)) {
 		std::lock_guard lock(m_viewSpecificState->stateMutex);
-		if (m_viewSpecificState->cachedState)
-		{
+		if (m_viewSpecificState->cachedState) {
 			m_state = m_viewSpecificState->cachedState;
 			m_stateIsShared = true;
 			m_metadataValid = true;
+			return;
 		}
-		else
-		{
-			LoadFromString(m_dscView->GetStringMetadata(SharedCacheMetadataTag));
+
+		if (auto state = LoadFromString(m_dscView->GetStringMetadata(SharedCacheMetadataTag))) {
+			m_state = std::make_shared<SharedCacheState>(std::move(*state));
+			m_stateIsShared = false;
+			m_metadataValid = true;
+			return;
 		}
-		if (!m_metadataValid)
-		{
-			m_logger->LogError("Failed to deserialize Shared Cache metadata");
-			WillMutateState();
-			MutableState().viewState = DSCViewStateUnloaded;
-		}
-	}
-	else
-	{
-		m_metadataValid = true;
+
+		m_state = nullptr;
+		m_metadataValid = false;
+		m_logger->LogError("Failed to deserialize Shared Cache metadata");
 		WillMutateState();
 		MutableState().viewState = DSCViewStateUnloaded;
-		MutableState().images.clear();	// fixme ??
+		return;
 	}
+
+	m_metadataValid = true;
+	WillMutateState();
+	MutableState().viewState = DSCViewStateUnloaded;
+	MutableState().images.clear();	// fixme ??
 }
 
 
@@ -3026,7 +3031,7 @@ bool SharedCache::SaveToDSCView()
 		// By moving our state the to cache we can avoid creating a copy in the case
 		// that no further mutations are made to `this`. If we're not done being mutated,
 		// the data will be copied on the first mutation.
-		auto cachedState = std::make_shared<struct State>(std::move(*m_state));
+		auto cachedState = std::make_shared<SharedCacheState>(std::move(*m_state));
 		m_state = cachedState;
 		m_stateIsShared = true;
 
@@ -3513,54 +3518,44 @@ void SharedCache::Store(SerializationContext& context) const
 	Serialize(context, "nonImageRegions", State().nonImageRegions);
 }
 
-void SharedCache::Load(DeserializationContext& context)
-{
-	if (context.doc.HasMember("metadataVersion"))
-	{
-		if (context.doc["metadataVersion"].GetUint() != METADATA_VERSION)
-		{
-			m_logger->LogError("Shared Cache metadata version mismatch");
-			return;
-		}
-	}
-	else
-	{
-		m_logger->LogError("Shared Cache metadata version missing");
-		return;
+// static
+std::optional<SharedCacheState> SharedCache::Load(DeserializationContext& context) {
+	if (!context.doc.HasMember("metadataVersion")) {
+		LogError("Shared Cache metadata version missing");
+		return std::nullopt;
 	}
 
-	m_stateIsShared = false;
-	m_state = std::make_shared<struct SharedCache::State>();
-
-	MutableState().viewState = static_cast<DSCViewState>(context.load<uint8_t>("m_viewState"));
-	MutableState().cacheFormat = static_cast<SharedCacheFormat>(context.load<uint8_t>("m_cacheFormat"));
-
-	for (auto& startAndHeader : context.doc["headers"].GetArray())
-	{
-		SharedCacheMachOHeader header;
-		header.LoadFromValue(startAndHeader);
-		MutableState().headers[header.textBase] = std::move(header);
+	if (context.doc["metadataVersion"].GetUint() != METADATA_VERSION) {
+		LogError("Shared Cache metadata version mismatch");
+		return std::nullopt;
 	}
 
-	Deserialize(context, "m_imageStarts", MutableState().imageStarts);
-	Deserialize(context, "m_baseFilePath", MutableState().baseFilePath);
+	SharedCacheState state;
 
-	for (const auto& obj1 : context.doc["exportInfos"].GetArray())
-	{
-		std::unordered_map<uint64_t, Ref<Symbol>> innerVec;
-		for (const auto& obj2 : obj1["value"].GetArray())
-		{
+	state.viewState = static_cast<DSCViewState>(context.load<uint8_t>("m_viewState"));
+	state.cacheFormat = static_cast<SharedCacheFormat>(context.load<uint8_t>("m_cacheFormat"));
+
+	for (auto& startAndHeader : context.doc["headers"].GetArray()) {
+		SharedCacheMachOHeader header = SharedCacheMachOHeader::LoadFromValue(startAndHeader);
+		state.headers[header.textBase] = std::move(header);
+	}
+
+	Deserialize(context, "m_imageStarts", state.imageStarts);
+	Deserialize(context, "m_baseFilePath", state.baseFilePath);
+
+	for (const auto& obj1 : context.doc["exportInfos"].GetArray()) {
+		std::unordered_map<uint64_t, Ref<Symbol>> symbolMap;
+		for (const auto& obj2 : obj1["value"].GetArray()) {
 			std::string raw = obj2["val2"].GetString();
 			uint64_t addr = obj2["key"].GetUint64();
-			innerVec[addr] = new Symbol(BNCreateSymbol((BNSymbolType)obj2["val1"].GetUint64(), raw.c_str(),
+			symbolMap[addr] = new Symbol(BNCreateSymbol((BNSymbolType)obj2["val1"].GetUint64(), raw.c_str(),
 				raw.c_str(), raw.c_str(), addr, NoBinding, nullptr, 0));
 		}
 
-		MutableState().exportInfos[obj1["key"].GetUint64()] = std::make_shared<std::unordered_map<uint64_t, Ref<Symbol>>>(innerVec);
+		state.exportInfos[obj1["key"].GetUint64()] = std::make_shared<std::unordered_map<uint64_t, Ref<Symbol>>>(std::move(symbolMap));
 	}
 
-	for (auto& symbolInfo : context.doc["symbolInfos"].GetArray())
-	{
+	for (auto& symbolInfo : context.doc["symbolInfos"].GetArray()) {
 		std::vector<std::pair<uint64_t, std::pair<BNSymbolType, std::string>>>
 			symbolInfos;
 		auto symbolInfoArray = symbolInfo["value"].GetArray();
@@ -3570,65 +3565,49 @@ void SharedCache::Load(DeserializationContext& context)
 			symbolInfos.push_back({si["key"].GetUint64(),
 				{static_cast<BNSymbolType>(si["val1"].GetUint64()), si["val2"].GetString()}});
 		}
-		MutableState().symbolInfos[symbolInfo["key"].GetUint64()] = std::move(symbolInfos);
+		state.symbolInfos[symbolInfo["key"].GetUint64()] = std::move(symbolInfos);
 	}
 
-	for (auto& bcV : context.doc["backingCaches"].GetArray())
-	{
-		BackingCache bc;
-		bc.LoadFromValue(bcV);
-		MutableState().backingCaches.push_back(std::move(bc));
+	for (auto& bcV : context.doc["backingCaches"].GetArray()) {
+		state.backingCaches.push_back(BackingCache::LoadFromValue(bcV));
 	}
 
-	for (auto& imgV : context.doc["images"].GetArray())
-	{
-		CacheImage img;
-		img.LoadFromValue(imgV);
-		MutableState().images.push_back(std::move(img));
+	for (auto& imgV : context.doc["images"].GetArray()) {
+		state.images.push_back(CacheImage::LoadFromValue(imgV));
 	}
 
-	for (auto& rV : context.doc["regionsMappedIntoMemory"].GetArray())
-	{
-		MemoryRegion r;
-		r.LoadFromValue(rV);
-		MutableState().regionsMappedIntoMemory.push_back(std::move(r));
+	for (auto& rV : context.doc["regionsMappedIntoMemory"].GetArray()) {
+		state.regionsMappedIntoMemory.push_back(MemoryRegion::LoadFromValue(rV));
 	}
 
-	for (auto& siV : context.doc["stubIslands"].GetArray())
-	{
-		MemoryRegion si;
-		si.LoadFromValue(siV);
-		MutableState().stubIslandRegions.push_back(std::move(si));
+	for (auto& siV : context.doc["stubIslands"].GetArray()) {
+		state.stubIslandRegions.push_back(MemoryRegion::LoadFromValue(siV));
 	}
 
-	for (auto& siV : context.doc["dyldDataSections"].GetArray())
-	{
-		MemoryRegion si;
-		si.LoadFromValue(siV);
-		MutableState().dyldDataRegions.push_back(std::move(si));
+	for (auto& siV : context.doc["dyldDataSections"].GetArray()) {
+		state.dyldDataRegions.push_back(MemoryRegion::LoadFromValue(siV));
 	}
 
-	for (auto& siV : context.doc["nonImageRegions"].GetArray())
-	{
-		MemoryRegion si;
-		si.LoadFromValue(siV);
-		MutableState().nonImageRegions.push_back(std::move(si));
+	for (auto& siV : context.doc["nonImageRegions"].GetArray()) {
+		state.nonImageRegions.push_back(MemoryRegion::LoadFromValue(siV));
 	}
 
-	m_metadataValid = true;
+	return state;
 }
 
-void BackingCache::Store(SerializationContext& context) const
-{
+void BackingCache::Store(SerializationContext& context) const {
 	MSS(path);
 	MSS(isPrimary);
 	MSS(mappings);
 }
-void BackingCache::Load(DeserializationContext& context)
-{
-	MSL(path);
-	MSL(isPrimary);
-	MSL(mappings);
+
+// static
+BackingCache BackingCache::Load(DeserializationContext& context) {
+	return BackingCache {
+		.MSL(path),
+		.MSL(isPrimary),
+		.MSL(mappings),
+	};
 }
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -3650,11 +3629,11 @@ void SharedCache::WillMutateState()
 {
 	if (!m_state)
 	{
-		m_state = std::make_shared<struct State>();
+		m_state = std::make_shared<SharedCacheState>();
 	}
 	else if (m_stateIsShared)
 	{
-		m_state = std::make_shared<struct State>(*m_state);
+		m_state = std::make_shared<SharedCacheState>(*m_state);
 	}
 	m_stateIsShared = false;
 }

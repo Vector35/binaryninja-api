@@ -211,40 +211,42 @@ namespace SharedCacheAPI {
 			MSS(relocatable);
 		}
 
-		void Load(SharedCacheCore::DeserializationContext& context) {
-			MSL(textBase);
-			MSL(loadCommandOffset);
-			MSL_SUBCLASS(ident);
-			MSL(identifierPrefix);
-			MSL(installName);
-			MSL(entryPoints);
-			MSL(m_entryPoints);
-			MSL_SUBCLASS(symtab);
-			MSL_SUBCLASS(dysymtab);
-			MSL_SUBCLASS(dyldInfo);
-			// MSL_SUBCLASS(routines64); // FIXME CRASH but also do we even use this?
-			MSL_SUBCLASS(functionStarts);
-			MSL_SUBCLASS(moduleInitSections);
-			MSL_SUBCLASS(exportTrie);
-			MSL_SUBCLASS(chainedFixups);
-			MSL(relocationBase);
-			MSL_SUBCLASS(segments);
-			MSL_SUBCLASS(linkeditSegment);
-			MSL_SUBCLASS(sections);
-			MSL(sectionNames);
-			MSL_SUBCLASS(symbolStubSections);
-			MSL_SUBCLASS(symbolPointerSections);
-			MSL(dylibs);
-			MSL_SUBCLASS(buildVersion);
-			MSL_SUBCLASS(buildToolVersions);
-			MSL(exportTriePath);
-			MSL(dysymPresent);
-			MSL(dyldInfoPresent);
-			MSL(exportTriePresent);
-			MSL(chainedFixupsPresent);
-			// MSL(routinesPresent);
-			MSL(functionStartsPresent);
-			MSL(relocatable);
+		static SharedCacheMachOHeader Load(SharedCacheCore::DeserializationContext& context) {
+			return SharedCacheMachOHeader {
+				.MSL(textBase),
+				.MSL(loadCommandOffset),
+				.MSL(ident),
+				.MSL(identifierPrefix),
+				.MSL(installName),
+				.MSL(entryPoints),
+				.MSL(m_entryPoints),
+				.MSL(symtab),
+				.MSL(dysymtab),
+				.MSL(dyldInfo),
+				// .MSL(routines64), // FIXME CRASH but also do we even use this?
+				.MSL(functionStarts),
+				.MSL(moduleInitSections),
+				.MSL(exportTrie),
+				.MSL(chainedFixups),
+				.MSL(relocationBase),
+				.MSL(segments),
+				.MSL(linkeditSegment),
+				.MSL(sections),
+				.MSL(sectionNames),
+				.MSL(symbolStubSections),
+				.MSL(symbolPointerSections),
+				.MSL(dylibs),
+				.MSL(buildVersion),
+				.MSL(buildToolVersions),
+				.MSL(exportTriePath),
+				.MSL(dysymPresent),
+				.MSL(dyldInfoPresent),
+				.MSL(exportTriePresent),
+				.MSL(chainedFixupsPresent),
+				// .MSL(routinesPresent),
+				.MSL(functionStartsPresent),
+				.MSL(relocatable),
+			};
 		}
 	};
 

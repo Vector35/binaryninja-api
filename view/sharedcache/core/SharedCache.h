@@ -2,15 +2,16 @@
 // Created by kat on 5/19/23.
 //
 
+#ifndef SHAREDCACHE_SHAREDCACHE_H
+#define SHAREDCACHE_SHAREDCACHE_H
+
 #include <binaryninjaapi.h>
-#include "DSCView.h"
 #include "VM.h"
 #include "view/macho/machoview.h"
 #include "MetadataSerializable.hpp"
 #include "../api/sharedcachecore.h"
 
-#ifndef SHAREDCACHE_SHAREDCACHE_H
-#define SHAREDCACHE_SHAREDCACHE_H
+#include <optional>
 
 DECLARE_SHAREDCACHE_API_OBJECT(BNSharedCache, SharedCache);
 
@@ -25,8 +26,7 @@ namespace SharedCacheCore {
 
 	const std::string SharedCacheMetadataTag = "SHAREDCACHE-SharedCacheData";
 
-	struct MemoryRegion : public MetadataSerializable<MemoryRegion>
-	{
+	struct MemoryRegion : public MetadataSerializable<MemoryRegion> {
 		std::string prettyName;
 		uint64_t start;
 		uint64_t size;
@@ -35,8 +35,7 @@ namespace SharedCacheCore {
 		bool headerInitialized = false;
 		BNSegmentFlag flags;
 
-		void Store(SerializationContext& context) const
-		{
+		void Store(SerializationContext& context) const {
 			MSS(prettyName);
 			MSS(start);
 			MSS(size);
@@ -45,48 +44,46 @@ namespace SharedCacheCore {
 			MSS_CAST(flags, uint64_t);
 		}
 
-		void Load(DeserializationContext& context)
-		{
-			MSL(prettyName);
-			MSL(start);
-			MSL(size);
-			MSL(loaded);
-			MSL(rawViewOffsetIfLoaded);
-			MSL_CAST(flags, uint64_t, BNSegmentFlag);
+		static MemoryRegion Load(DeserializationContext& context) {
+			return MemoryRegion {
+				.MSL(prettyName),
+				.MSL(start),
+				.MSL(size),
+				.MSL(loaded),
+				.MSL(rawViewOffsetIfLoaded),
+				.MSL_CAST(flags, uint64_t, BNSegmentFlag),
+			};
 		}
 	};
 
-	struct CacheImage : public MetadataSerializable<CacheImage>
-	{
+	struct CacheImage : public MetadataSerializable<CacheImage> {
 		std::string installName;
 		uint64_t headerLocation;
 		std::vector<MemoryRegion> regions;
 
-		void Store(SerializationContext& context) const
-		{
+		void Store(SerializationContext& context) const {
 			MSS(installName);
 			MSS(headerLocation);
 			Serialize(context, "regions");
 			context.writer.StartArray();
-			for (auto& region : regions)
-			{
+			for (auto& region : regions) {
 				Serialize(context, region.AsString());
 			}
 			context.writer.EndArray();
 		}
 
-		void Load(DeserializationContext& context)
-		{
-			MSL(installName);
-			MSL(headerLocation);
-			auto bArr = context.doc["regions"].GetArray();
-			regions.clear();
-			for (auto& region : bArr)
-			{
-				MemoryRegion r;
-				r.LoadFromString(region.GetString());
-				regions.push_back(r);
+		static CacheImage Load(DeserializationContext& context) {
+			auto regionsArray = context.doc["regions"].GetArray();
+			std::vector<MemoryRegion> regions;
+			for (auto& region : regionsArray) {
+				regions.push_back(MemoryRegion::LoadFromString(region.GetString()));
 			}
+
+			return CacheImage {
+				.MSL(installName),
+				.MSL(headerLocation),
+				.regions = std::move(regions),
+			};
 		}
 	};
 
@@ -111,14 +108,13 @@ namespace SharedCacheCore {
 		uint32_t initProt;
 	};
 
-	struct BackingCache : public MetadataSerializable<BackingCache>
-	{
+	struct BackingCache : public MetadataSerializable<BackingCache> {
 		std::string path;
 		bool isPrimary = false;
 		std::vector<dyld_cache_mapping_info> mappings;
 
 		void Store(SerializationContext& context) const;
-		void Load(DeserializationContext& context);
+		static BackingCache Load(DeserializationContext& context);
 	};
 
 	struct LoadedMapping
@@ -436,8 +432,7 @@ namespace SharedCacheCore {
 		bool functionStartsPresent = false;
 		bool relocatable = false;
 
-		void Store(SerializationContext& context) const
-		{
+		void Store(SerializationContext& context) const {
 			MSS(textBase);
 			MSS(loadCommandOffset);
 			MSS_SUBCLASS(ident);
@@ -473,45 +468,46 @@ namespace SharedCacheCore {
 			MSS(functionStartsPresent);
 			MSS(relocatable);
 		}
-		void Load(DeserializationContext& context)
-		{
-			MSL(textBase);
-			MSL(loadCommandOffset);
-			MSL_SUBCLASS(ident);
-			MSL(identifierPrefix);
-			MSL(installName);
-			MSL(entryPoints);
-			MSL(m_entryPoints);
-			MSL_SUBCLASS(symtab);
-			MSL_SUBCLASS(dysymtab);
-			MSL_SUBCLASS(dyldInfo);
-			// MSL_SUBCLASS(routines64); // FIXME CRASH but also do we even use this?
-			MSL_SUBCLASS(functionStarts);
-			MSL_SUBCLASS(moduleInitSections);
-			MSL_SUBCLASS(exportTrie);
-			MSL_SUBCLASS(chainedFixups);
-			MSL(relocationBase);
-			MSL_SUBCLASS(segments);
-			MSL_SUBCLASS(linkeditSegment);
-			MSL_SUBCLASS(sections);
-			MSL(sectionNames);
-			MSL_SUBCLASS(symbolStubSections);
-			MSL_SUBCLASS(symbolPointerSections);
-			MSL(dylibs);
-			MSL_SUBCLASS(buildVersion);
-			MSL_SUBCLASS(buildToolVersions);
-			MSL(linkeditPresent);
-			MSL(exportTriePath);
-			MSL(dysymPresent);
-			MSL(dyldInfoPresent);
-			MSL(exportTriePresent);
-			MSL(chainedFixupsPresent);
-			// MSL(routinesPresent);
-			MSL(functionStartsPresent);
-			MSL(relocatable);
+
+		static SharedCacheMachOHeader Load(DeserializationContext& context) {
+			return SharedCacheMachOHeader {
+				.MSL(textBase),
+				.MSL(loadCommandOffset),
+				.MSL(ident),
+				.MSL(identifierPrefix),
+				.MSL(installName),
+				.MSL(entryPoints),
+				.MSL(m_entryPoints),
+				.MSL(symtab),
+				.MSL(dysymtab),
+				.MSL(dyldInfo),
+				// .MSL(routines64), // FIXME CRASH but also do we even use this?
+				.MSL(functionStarts),
+				.MSL(moduleInitSections),
+				.MSL(exportTrie),
+				.MSL(chainedFixups),
+				.MSL(relocationBase),
+				.MSL(segments),
+				.MSL(linkeditSegment),
+				.MSL(sections),
+				.MSL(sectionNames),
+				.MSL(symbolStubSections),
+				.MSL(symbolPointerSections),
+				.MSL(dylibs),
+				.MSL(buildVersion),
+				.MSL(buildToolVersions),
+				.MSL(linkeditPresent),
+				.MSL(exportTriePath),
+				.MSL(dysymPresent),
+				.MSL(dyldInfoPresent),
+				.MSL(exportTriePresent),
+				.MSL(chainedFixupsPresent),
+				// .MSL(routinesPresent),
+				.MSL(functionStartsPresent),
+				.MSL(relocatable),
+			};
 		}
 	};
-
 
 	struct MappingInfo
 	{
@@ -528,8 +524,9 @@ namespace SharedCacheCore {
 
 	static std::atomic<uint64_t> sharedCacheReferences = 0;
 
-	class SharedCache : public MetadataSerializable<SharedCache>
-	{
+	struct SharedCacheState;
+
+	class SharedCache : public MetadataSerializable<SharedCache, std::optional<SharedCacheState>> {
 		IMPLEMENT_SHAREDCACHE_API_OBJECT(BNSharedCache);
 
 		std::atomic<int> m_refs = 0;
@@ -561,9 +558,7 @@ namespace SharedCacheCore {
 		};
 
 		void Store(SerializationContext& context) const;
-		void Load(DeserializationContext& context);
-
-		struct State;
+		static std::optional<SharedCacheState> Load(DeserializationContext& context);
 
 		struct ViewSpecificState;
 
@@ -575,7 +570,7 @@ namespace SharedCacheCore {
 		// Updated as the view is loaded further, more images are added, etc
 		// NOTE: Access via `State()` or `MutableState()` below.
 		// `WillMutateState()` must be called before the first access to `MutableState()`.
-		std::shared_ptr<State> m_state;
+		std::shared_ptr<SharedCacheState> m_state;
 		bool m_stateIsShared = false;
 
 		// Serialized once by PerformInitialLoad and available after m_viewState == Loaded
@@ -651,8 +646,8 @@ private:
 		size_t GetBaseAddress() const;
 		std::optional<ObjCOptimizationHeader> GetObjCOptimizationHeader(VMReader reader) const;
 
-		const State& State() const { return *m_state; }
-		struct State& MutableState() { AssertMutable(); return *m_state; }
+		const SharedCacheState& State() const { return *m_state; }
+		struct SharedCacheState& MutableState() { AssertMutable(); return *m_state; }
 
 		void AssertMutable() const;
 

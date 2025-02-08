@@ -3331,12 +3331,12 @@ extern "C"
 		#define EI_CLASS_32 (1)
 		#define EI_CLASS_64 (2)
 		#define ARCH_ID_MIPS32 ((EI_CLASS_32<<16)|EM_MIPS) /* 0x10008 */
+		#define ARCH_ID_MIPS32 ((EI_CLASS_32<<16)|EM_MIPS3) /* 0x10008 */		
 		#define ARCH_ID_MIPS64 ((EI_CLASS_64<<16)|EM_MIPS) /* 0x20008 */
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS64, LittleEndian, mips64el);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS64, BigEndian, mips64eb);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, LittleEndian, mipsel);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, BigEndian, mipseb);
-		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, BigEndian, mips3);
 
 		Ref<BinaryViewType> elf = BinaryViewType::GetByName("ELF");
 		if (elf)

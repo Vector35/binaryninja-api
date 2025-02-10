@@ -3263,16 +3263,18 @@ extern "C"
 	{
 		InitMipsSettings();
 
-		Architecture* mipsel = new MipsArchitecture("mipsel32", LittleEndian, 32, MIPS_32);
 		Architecture* mipseb = new MipsArchitecture("mips32", BigEndian, 32, MIPS_32);
+		Architecture* mipsel = new MipsArchitecture("mipsel32", LittleEndian, 32, MIPS_32);
 		Architecture* mips3 = new MipsArchitecture("mips3", BigEndian, 32, MIPS_3);
+		Architecture* mips3el = new MipsArchitecture("mipsel3", LittleEndian, 32, MIPS_3);
 		Architecture* mips64el = new MipsArchitecture("mipsel64", LittleEndian, 64, MIPS_64);
 		Architecture* mips64eb = new MipsArchitecture("mips64", BigEndian, 64, MIPS_64);
 		Architecture* cnmips64eb = new MipsArchitecture("cavium-mips64", BigEndian, 64, MIPS_64, DECOMPOSE_FLAGS_CAVIUM);
 
-		Architecture::Register(mipsel);
 		Architecture::Register(mipseb);
+		Architecture::Register(mipsel);
 		Architecture::Register(mips3);
+		Architecture::Register(mips3el);
 		Architecture::Register(mips64el);
 		Architecture::Register(mips64eb);
 		Architecture::Register(cnmips64eb);
@@ -3284,12 +3286,14 @@ extern "C"
 		MipsN64CallingConvention* n64BE = new MipsN64CallingConvention(mips64eb);
 		MipsN64CallingConvention* n64BEc = new MipsN64CallingConvention(cnmips64eb);
 
-		mipsel->RegisterCallingConvention(o32LE);
-		mipsel->SetDefaultCallingConvention(o32LE);
 		mipseb->RegisterCallingConvention(o32BE);
 		mipseb->SetDefaultCallingConvention(o32BE);
+		mipsel->RegisterCallingConvention(o32LE);
+		mipsel->SetDefaultCallingConvention(o32LE);
 		mips3->RegisterCallingConvention(o32BE);
 		mips3->SetDefaultCallingConvention(o32BE);
+		mips3->RegisterCallingConvention(o32LE);
+		mips3->SetDefaultCallingConvention(o32LE);
 		mips64el->RegisterCallingConvention(n64LE);
 		mips64el->SetDefaultCallingConvention(n64LE);
 		mips64eb->RegisterCallingConvention(n64BE);
@@ -3299,25 +3303,29 @@ extern "C"
 
 		MipsLinuxSyscallCallingConvention* linuxSyscallLE = new MipsLinuxSyscallCallingConvention(mipsel);
 		MipsLinuxSyscallCallingConvention* linuxSyscallBE = new MipsLinuxSyscallCallingConvention(mipseb);
-		mipsel->RegisterCallingConvention(linuxSyscallLE);
 		mipseb->RegisterCallingConvention(linuxSyscallBE);
+		mipsel->RegisterCallingConvention(linuxSyscallLE);
 		mips3->RegisterCallingConvention(linuxSyscallBE);
+		mips3el->RegisterCallingConvention(linuxSyscallLE);
 
-		mipsel->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mipsel));
 		mipseb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mipseb));
+		mipsel->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mipsel));
 		mips3->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips3));
+		mips3el->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips3el));
 		mips64el->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips64el));
 		mips64eb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips64eb));
 		cnmips64eb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(cnmips64eb));
 
 		/* function recognizers */
-		mipsel->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
 		mipseb->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
+		mipsel->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
 		mips3->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
+		mips3el->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
 
-		mipsel->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mipseb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
+		mipsel->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mips3->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
+		mips3el->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mips64el->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mips64eb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		cnmips64eb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
@@ -3336,7 +3344,6 @@ extern "C"
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS64, BigEndian, mips64eb);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, LittleEndian, mipsel);
 		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, BigEndian, mipseb);
-		BinaryViewType::RegisterArchitecture("ELF", ARCH_ID_MIPS32, BigEndian, mips3);
 
 		Ref<BinaryViewType> elf = BinaryViewType::GetByName("ELF");
 		if (elf)

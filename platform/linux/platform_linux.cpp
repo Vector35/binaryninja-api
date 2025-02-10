@@ -352,27 +352,37 @@ extern "C"
 
 		Ref<Architecture> mipsel = Architecture::GetByName("mipsel32");
 		Ref<Architecture> mipseb = Architecture::GetByName("mips32");
+		Ref<Architecture> mips3el = Architecture::GetByName("mipsel3");
+		Ref<Architecture> mips3eb = Architecture::GetByName("mips3");
 		Ref<Architecture> mips64eb = Architecture::GetByName("mips64");
 		Ref<Architecture> cnmips64eb = Architecture::GetByName("cavium-mips64");
-		if (mipsel && mipseb && mips64eb && cnmips64eb)
+		if (mipsel && mipseb && mips64eb && cnmips64eb && mips3el && mips3eb)
 		{
-			Ref<Platform> platformLE, platformBE, platformBE64, platformBE64cn;
+			Ref<Platform> platformLE, platformBE, platformBE64, platformBE64cn, platform3LE, platform3BE;
 
 			platformLE = new LinuxMipsPlatform(mipsel, "linux-mipsel");
 			platformBE = new LinuxMipsPlatform(mipseb, "linux-mips");
+			platform3LE = new LinuxMipsPlatform(mips3el, "linux-mipsel3");
+			platform3BE = new LinuxMipsPlatform(mips3eb, "linux-mips3");
 			platformBE64 = new LinuxMips64Platform(mips64eb, "linux-mips64");
 			platformBE64cn = new LinuxMips64Platform(cnmips64eb, "linux-cnmips64");
 			Platform::Register("linux", platformLE);
 			Platform::Register("linux", platformBE);
+			Platform::Register("linux", platform3LE);
+			Platform::Register("linux", platform3BE);
 			Platform::Register("linux", platformBE64);
 			Platform::Register("linux", platformBE64cn);
 			// Linux binaries sometimes have an OS identifier of zero, even though 3 is the correct one
 			BinaryViewType::RegisterPlatform("ELF", 0, mipsel, platformLE);
 			BinaryViewType::RegisterPlatform("ELF", 0, mipseb, platformBE);
+			BinaryViewType::RegisterPlatform("ELF", 0, mips3el, platform3LE);
+			BinaryViewType::RegisterPlatform("ELF", 0, mips3eb, platform3BE);
 			BinaryViewType::RegisterPlatform("ELF", 0, mips64eb, platformBE64);
 			BinaryViewType::RegisterPlatform("ELF", 0, cnmips64eb, platformBE64cn);
 			BinaryViewType::RegisterPlatform("ELF", 3, mipsel, platformLE);
 			BinaryViewType::RegisterPlatform("ELF", 3, mipseb, platformBE);
+			BinaryViewType::RegisterPlatform("ELF", 3, mips3el, platform3LE);
+			BinaryViewType::RegisterPlatform("ELF", 3, mips3eb, platform3BE);
 			BinaryViewType::RegisterPlatform("ELF", 3, mips64eb, platformBE64);
 			BinaryViewType::RegisterPlatform("ELF", 3, cnmips64eb, platformBE64cn);
 		}

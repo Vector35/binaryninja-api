@@ -169,6 +169,7 @@ vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint
 		line.tags = Tag::ConvertAndFreeTagList(lines[i].tags, lines[i].tagCount);
 		result.push_back(line);
 	}
+	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
 
@@ -211,6 +212,7 @@ vector<DisassemblyTextLine> DataRenderer::RenderLinesForData(BinaryView* data, u
 		result.push_back(line);
 	}
 
+	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
 

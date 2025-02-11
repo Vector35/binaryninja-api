@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "ffi.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -110,19 +111,7 @@ const vector<DisassemblyTextLine>& FlowGraphNode::GetLines()
 	size_t count;
 	BNDisassemblyTextLine* lines = BNGetFlowGraphNodeLines(m_object, &count);
 
-	vector<DisassemblyTextLine> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = lines[i].addr;
-		line.instrIndex = lines[i].instrIndex;
-		line.highlight = lines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		line.tags = Tag::ConvertTagList(lines[i].tags, lines[i].tagCount);
-		result.push_back(line);
-	}
-
+	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	m_cachedLines = result;
 	return m_cachedLines;
@@ -131,25 +120,11 @@ const vector<DisassemblyTextLine>& FlowGraphNode::GetLines()
 
 void FlowGraphNode::SetLines(const vector<DisassemblyTextLine>& lines)
 {
-	BNDisassemblyTextLine* buf = new BNDisassemblyTextLine[lines.size()];
-	for (size_t i = 0; i < lines.size(); i++)
-	{
-		buf[i].addr = lines[i].addr;
-		buf[i].instrIndex = lines[i].instrIndex;
-		buf[i].highlight = lines[i].highlight;
-		buf[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(lines[i].tokens);
-		buf[i].count = lines[i].tokens.size();
-		buf[i].tags = Tag::CreateTagList(lines[i].tags, &(buf[i].tagCount));
-	}
+	size_t inCount = 0;
+	BNDisassemblyTextLine* inLines = AllocAPIObjectList<DisassemblyTextLine>(lines, &inCount);
+	BNSetFlowGraphNodeLines(m_object, inLines, inCount);
 
-	BNSetFlowGraphNodeLines(m_object, buf, lines.size());
-
-	for (size_t i = 0; i < lines.size(); i++)
-	{
-		InstructionTextToken::FreeInstructionTextTokenList(buf[i].tokens, buf[i].count);
-		Tag::FreeTagList(buf[i].tags, buf[i].tagCount);
-	}
-	delete[] buf;
+	FreeAPIObjectList<DisassemblyTextLine>(inLines, inCount);
 
 	m_cachedLines = lines;
 	m_cachedLinesValid = true;

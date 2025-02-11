@@ -30,16 +30,7 @@ BNLinearDisassemblyLine LinearDisassemblyLine::GetAPIObject() const
 	result.type = this->type;
 	result.function = this->function ? BNNewFunctionReference(this->function->GetObject()) : nullptr;
 	result.block = this->block ? BNNewBasicBlockReference(this->block->GetObject()) : nullptr;
-	result.contents.addr = this->contents.addr;
-	result.contents.instrIndex = this->contents.instrIndex;
-	result.contents.highlight = this->contents.highlight;
-	result.contents.count = this->contents.tokens.size();
-	result.contents.tokens = InstructionTextToken::CreateInstructionTextTokenList(this->contents.tokens);
-	result.contents.tags = Tag::CreateTagList(this->contents.tags, &result.contents.tagCount);
-	result.contents.typeInfo.hasTypeInfo = this->contents.typeInfo.hasTypeInfo;
-	result.contents.typeInfo.parentType = this->contents.typeInfo.parentType ? BNNewTypeReference(this->contents.typeInfo.parentType->GetObject()) : nullptr;
-	result.contents.typeInfo.fieldIndex = this->contents.typeInfo.fieldIndex;
-	result.contents.typeInfo.offset = this->contents.typeInfo.offset;
+	result.contents = this->contents.GetAPIObject();
 	return result;
 }
 
@@ -50,17 +41,7 @@ LinearDisassemblyLine LinearDisassemblyLine::FromAPIObject(const BNLinearDisasse
 	result.type = line->type;
 	result.function = line->function ? new Function(BNNewFunctionReference(line->function)) : nullptr;
 	result.block = line->block ? new BasicBlock(BNNewBasicBlockReference(line->block)) : nullptr;
-	result.contents.addr = line->contents.addr;
-	result.contents.instrIndex = line->contents.instrIndex;
-	result.contents.highlight = line->contents.highlight;
-	result.contents.tokens =
-	    InstructionTextToken::ConvertInstructionTextTokenList(line->contents.tokens, line->contents.count);
-	result.contents.tags = Tag::ConvertTagList(line->contents.tags, line->contents.tagCount);
-	result.contents.typeInfo.hasTypeInfo = line->contents.typeInfo.hasTypeInfo;
-	result.contents.typeInfo.fieldIndex = line->contents.typeInfo.fieldIndex;
-	result.contents.typeInfo.parentType =
-	    line->contents.typeInfo.parentType ? new Type(BNNewTypeReference(line->contents.typeInfo.parentType)) : nullptr;
-	result.contents.typeInfo.offset = line->contents.typeInfo.offset;
+	result.contents = DisassemblyTextLine::FromAPIObject(&line->contents);
 	return result;
 }
 
@@ -71,10 +52,7 @@ void LinearDisassemblyLine::FreeAPIObject(BNLinearDisassemblyLine* line)
 		BNFreeFunction(line->function);
 	if (line->block)
 		BNFreeBasicBlock(line->block);
-	InstructionTextToken::FreeInstructionTextTokenList(line->contents.tokens, line->contents.count);
-	Tag::FreeTagList(line->contents.tags, line->contents.tagCount);
-	if (line->contents.typeInfo.parentType)
-		BNFreeType(line->contents.typeInfo.parentType);
+	DisassemblyTextLine::FreeAPIObject(&line->contents);
 }
 
 

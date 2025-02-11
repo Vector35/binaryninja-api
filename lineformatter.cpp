@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "ffi.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -103,47 +104,16 @@ BNDisassemblyTextLine* LineFormatter::FormatLinesCallback(void* ctxt, BNDisassem
 {
 	LineFormatter* formatter = (LineFormatter*)ctxt;
 
-	vector<DisassemblyTextLine> input;
-	input.reserve(inCount);
-	for (size_t i = 0; i < inCount; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = inLines[i].addr;
-		line.instrIndex = inLines[i].instrIndex;
-		line.highlight = inLines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(inLines[i].tokens, inLines[i].count);
-		line.tags = Tag::ConvertTagList(inLines[i].tags, inLines[i].tagCount);
-		input.push_back(line);
-	}
-
+	vector<DisassemblyTextLine> input = ParseAPIObjectList<DisassemblyTextLine>(inLines, inCount);
 	vector<DisassemblyTextLine> outLines =
 		formatter->FormatLines(input, LineFormatterSettings::FromAPIObject(settings));
-
-	*outCount = outLines.size();
-	BNDisassemblyTextLine* buf = new BNDisassemblyTextLine[outLines.size()];
-	for (size_t i = 0; i < outLines.size(); i++)
-	{
-		const DisassemblyTextLine& line = outLines[i];
-		buf[i].addr = line.addr;
-		buf[i].instrIndex = line.instrIndex;
-		buf[i].highlight = line.highlight;
-		buf[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(line.tokens);
-		buf[i].count = line.tokens.size();
-		buf[i].tags = Tag::CreateTagList(line.tags, &(buf[i].tagCount));
-	}
-
-	return buf;
+	return AllocAPIObjectList<DisassemblyTextLine>(outLines, outCount);
 }
 
 
 void LineFormatter::FreeLinesCallback(void*, BNDisassemblyTextLine* lines, size_t count)
 {
-	for (size_t i = 0; i < count; i++)
-	{
-		InstructionTextToken::FreeInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		Tag::FreeTagList(lines[i].tags, lines[i].tagCount);
-	}
-	delete[] lines;
+	FreeAPIObjectList<DisassemblyTextLine>(lines, count);
 }
 
 
@@ -183,43 +153,14 @@ CoreLineFormatter::CoreLineFormatter(BNLineFormatter* formatter) : LineFormatter
 vector<DisassemblyTextLine> CoreLineFormatter::FormatLines(
 	const vector<DisassemblyTextLine>& lines, const LineFormatterSettings& settings)
 {
-	size_t inCount = lines.size();
-	BNDisassemblyTextLine* inLines = new BNDisassemblyTextLine[lines.size()];
-	for (size_t i = 0; i < lines.size(); i++)
-	{
-		const DisassemblyTextLine& line = lines[i];
-		inLines[i].addr = line.addr;
-		inLines[i].instrIndex = line.instrIndex;
-		inLines[i].highlight = line.highlight;
-		inLines[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(line.tokens);
-		inLines[i].count = line.tokens.size();
-		inLines[i].tags = Tag::CreateTagList(line.tags, &(inLines[i].tagCount));
-	}
-
+	size_t inCount = 0;
+	BNDisassemblyTextLine* inLines = AllocAPIObjectList<DisassemblyTextLine>(lines, &inCount);
 	size_t outCount = 0;
 	BNLineFormatterSettings apiSettings = settings.ToAPIObject();
 	BNDisassemblyTextLine* outLines = BNFormatLines(m_object, inLines, inCount, &apiSettings, &outCount);
 
-	for (size_t i = 0; i < inCount; i++)
-	{
-		InstructionTextToken::FreeInstructionTextTokenList(inLines[i].tokens, inLines[i].count);
-		Tag::FreeTagList(inLines[i].tags, inLines[i].tagCount);
-	}
-	delete[] inLines;
-
-	vector<DisassemblyTextLine> result;
-	result.reserve(outCount);
-	for (size_t i = 0; i < outCount; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = outLines[i].addr;
-		line.instrIndex = outLines[i].instrIndex;
-		line.highlight = outLines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(outLines[i].tokens, outLines[i].count);
-		line.tags = Tag::ConvertTagList(outLines[i].tags, outLines[i].tagCount);
-		result.push_back(line);
-	}
-
+	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(outLines, outCount);
+	FreeAPIObjectList<DisassemblyTextLine>(inLines, inCount);
 	BNFreeDisassemblyTextLines(outLines, outCount);
 	return result;
 }

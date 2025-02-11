@@ -24,6 +24,7 @@
 #include <inttypes.h>
 #include <vector>
 #include "binaryninjaapi.h"
+#include "ffi.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -2441,17 +2442,7 @@ bool DisassemblyTextRenderer::GetInstructionText(uint64_t addr, size_t& len, vec
 	if (!BNGetDisassemblyTextRendererInstructionText(m_object, addr, &len, &result, &count))
 		return false;
 
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = result[i].addr;
-		line.instrIndex = result[i].instrIndex;
-		line.highlight = result[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(result[i].tokens, result[i].count);
-		line.tags = Tag::ConvertTagList(result[i].tags, result[i].tagCount);
-		lines.push_back(line);
-	}
-
+	lines = ParseAPIObjectList<DisassemblyTextLine>(result, count);
 	BNFreeDisassemblyTextLines(result, count);
 	return true;
 }
@@ -2460,41 +2451,15 @@ bool DisassemblyTextRenderer::GetInstructionText(uint64_t addr, size_t& len, vec
 vector<DisassemblyTextLine> DisassemblyTextRenderer::PostProcessInstructionTextLines(
     uint64_t addr, size_t len, const vector<DisassemblyTextLine>& lines, const string& indentSpaces)
 {
-	BNDisassemblyTextLine* inLines = new BNDisassemblyTextLine[lines.size()];
-	for (size_t i = 0; i < lines.size(); i++)
-	{
-		inLines[i].addr = lines[i].addr;
-		inLines[i].instrIndex = lines[i].instrIndex;
-		inLines[i].highlight = lines[i].highlight;
-		inLines[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(lines[i].tokens);
-		inLines[i].count = lines[i].tokens.size();
-		inLines[i].tags = Tag::CreateTagList(lines[i].tags, &inLines[i].tagCount);
-	}
-
+	size_t inCount = 0;
+	BNDisassemblyTextLine* inLines = AllocAPIObjectList<DisassemblyTextLine>(lines, &inCount);
 	BNDisassemblyTextLine* result = nullptr;
 	size_t count = 0;
 	result = BNPostProcessDisassemblyTextRendererLines(
-	    m_object, addr, len, inLines, lines.size(), &count, indentSpaces.c_str());
+	    m_object, addr, len, inLines, inCount, &count, indentSpaces.c_str());
 
-	for (size_t i = 0; i < lines.size(); i++)
-	{
-		InstructionTextToken::FreeInstructionTextTokenList(inLines[i].tokens, inLines[i].count);
-		Tag::FreeTagList(inLines[i].tags, inLines[i].tagCount);
-	}
-	delete[] inLines;
-
-	vector<DisassemblyTextLine> outLines;
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = result[i].addr;
-		line.instrIndex = result[i].instrIndex;
-		line.highlight = result[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(result[i].tokens, result[i].count);
-		line.tags = Tag::ConvertTagList(result[i].tags, result[i].tagCount);
-		outLines.push_back(line);
-	}
-
+	vector<DisassemblyTextLine> outLines = ParseAPIObjectList<DisassemblyTextLine>(result, count);
+	FreeAPIObjectList<DisassemblyTextLine>(inLines, inCount);
 	BNFreeDisassemblyTextLines(result, count);
 	return outLines;
 }
@@ -2507,17 +2472,7 @@ bool DisassemblyTextRenderer::GetDisassemblyText(uint64_t addr, size_t& len, vec
 	if (!BNGetDisassemblyTextRendererLines(m_object, addr, &len, &result, &count))
 		return false;
 
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = result[i].addr;
-		line.instrIndex = result[i].instrIndex;
-		line.highlight = result[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(result[i].tokens, result[i].count);
-		line.tags = Tag::ConvertTagList(result[i].tags, result[i].tagCount);
-		lines.push_back(line);
-	}
-
+	lines = ParseAPIObjectList<DisassemblyTextLine>(result, count);
 	BNFreeDisassemblyTextLines(result, count);
 	return true;
 }
@@ -2614,31 +2569,14 @@ void DisassemblyTextRenderer::AddIntegerToken(
 void DisassemblyTextRenderer::WrapComment(DisassemblyTextLine& line, vector<DisassemblyTextLine>& lines,
     const string& comment, bool hasAutoAnnotations, const string& leadingSpaces, const string& indentSpaces)
 {
-	BNDisassemblyTextLine inLine;
-	inLine.addr = line.addr;
-	inLine.instrIndex = line.instrIndex;
-	inLine.highlight = line.highlight;
-	inLine.count = line.tokens.size();
-	inLine.tokens = InstructionTextToken::CreateInstructionTextTokenList(line.tokens);
-	inLine.tags = Tag::CreateTagList(line.tags, &inLine.tagCount);
-
+	BNDisassemblyTextLine inLine = line.GetAPIObject();
 	size_t count = 0;
 	BNDisassemblyTextLine* result = BNDisassemblyTextRendererWrapComment(
 	    m_object, &inLine, &count, comment.c_str(), hasAutoAnnotations, leadingSpaces.c_str(), indentSpaces.c_str());
 
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = result[i].addr;
-		line.instrIndex = result[i].instrIndex;
-		line.highlight = result[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(result[i].tokens, result[i].count);
-		line.tags = Tag::ConvertTagList(result[i].tags, result[i].tagCount);
-		lines.push_back(line);
-	}
-
+	lines = ParseAPIObjectList<DisassemblyTextLine>(result, count);
 	BNFreeDisassemblyTextLines(result, count);
-	BNFreeInstructionText(inLine.tokens, inLine.count);
+	DisassemblyTextLine::FreeAPIObject(&inLine);
 }
 
 

@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "ffi.h"
 #include "highlevelilinstruction.h"
 
 using namespace BinaryNinja;
@@ -485,19 +486,7 @@ vector<DisassemblyTextLine> HighLevelILFunction::GetExprText(ExprId expr, bool a
 	BNDisassemblyTextLine* lines =
 	    BNGetHighLevelILExprText(m_object, expr, asFullAst, &count, settings ? settings->GetObject() : nullptr);
 
-	vector<DisassemblyTextLine> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = lines[i].addr;
-		line.instrIndex = lines[i].instrIndex;
-		line.highlight = lines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		line.tags = Tag::ConvertTagList(lines[i].tags, lines[i].tagCount);
-		result.push_back(line);
-	}
-
+	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
@@ -871,19 +860,7 @@ vector<DisassemblyTextLine> HighLevelILTokenEmitter::GetLines() const
     size_t count = 0;
     BNDisassemblyTextLine* lines = BNHighLevelILTokenEmitterGetLines(m_object, &count);
 
-    vector<DisassemblyTextLine> result;
-	result.reserve(count);
-    for (size_t i = 0; i < count; i++)
-    {
-        DisassemblyTextLine line;
-        line.addr = lines[i].addr;
-        line.instrIndex = lines[i].instrIndex;
-        line.highlight = lines[i].highlight;
-        line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
-        line.tags = Tag::ConvertTagList(lines[i].tags, lines[i].tagCount);
-        result.push_back(line);
-    }
-
+	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
     BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }

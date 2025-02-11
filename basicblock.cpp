@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "ffi.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -143,6 +144,34 @@ void DisassemblySettings::SetCallParameterHints(BNDisassemblyCallParameterHints 
 }
 
 
+BNDisassemblyTextLineTypeInfo DisassemblyTextLineTypeInfo::GetAPIObject() const
+{
+	BNDisassemblyTextLineTypeInfo result;
+	result.hasTypeInfo = this->hasTypeInfo;
+	result.parentType = this->parentType ? BNNewTypeReference(this->parentType->GetObject()) : nullptr;
+	result.fieldIndex = this->fieldIndex;
+	result.offset = this->offset;
+	return result;
+}
+
+
+void DisassemblyTextLineTypeInfo::FreeAPIObject(BNDisassemblyTextLineTypeInfo *value)
+{
+	BNFreeType(value->parentType);
+}
+
+
+DisassemblyTextLineTypeInfo DisassemblyTextLineTypeInfo::FromAPIObject(const BNDisassemblyTextLineTypeInfo *value)
+{
+	DisassemblyTextLineTypeInfo result;
+	result.hasTypeInfo = value->hasTypeInfo;
+	result.fieldIndex = value->fieldIndex;
+	result.parentType = value->parentType ? new Type(BNNewTypeReference(value->parentType)) : nullptr;
+	result.offset = value->offset;
+	return result;
+}
+
+
 DisassemblyTextLine::DisassemblyTextLine()
 {
 	addr = 0;
@@ -159,6 +188,41 @@ DisassemblyTextLine::DisassemblyTextLine()
 	typeInfo.fieldIndex = -1;
 	typeInfo.parentType = nullptr;
 	typeInfo.offset = 0;
+}
+
+
+BNDisassemblyTextLine DisassemblyTextLine::GetAPIObject() const
+{
+	BNDisassemblyTextLine result;
+	result.addr = this->addr;
+	result.instrIndex = this->instrIndex;
+	result.highlight = this->highlight;
+	result.tokens = InstructionTextToken::CreateInstructionTextTokenList(this->tokens);
+	result.count = this->tokens.size();
+	result.tags = Tag::CreateTagList(this->tags, &(result.tagCount));
+	result.typeInfo = this->typeInfo.GetAPIObject();
+	return result;
+}
+
+
+void DisassemblyTextLine::FreeAPIObject(BNDisassemblyTextLine *value)
+{
+	InstructionTextToken::FreeInstructionTextTokenList(value->tokens, value->count);
+	Tag::FreeTagList(value->tags, value->tagCount);
+	DisassemblyTextLineTypeInfo::FreeAPIObject(&value->typeInfo);
+}
+
+
+DisassemblyTextLine DisassemblyTextLine::FromAPIObject(const BNDisassemblyTextLine *value)
+{
+	DisassemblyTextLine result;
+	result.addr = value->addr;
+	result.instrIndex = value->instrIndex;
+	result.highlight = value->highlight;
+	result.tokens = InstructionTextToken::ConvertInstructionTextTokenList(value->tokens, value->count);
+	result.tags = Tag::ConvertTagList(value->tags, value->tagCount);
+	result.typeInfo = DisassemblyTextLineTypeInfo::FromAPIObject(&value->typeInfo);
+	return result;
 }
 
 
@@ -435,19 +499,7 @@ vector<DisassemblyTextLine> BasicBlock::GetDisassemblyText(DisassemblySettings* 
 	size_t count;
 	BNDisassemblyTextLine* lines = BNGetBasicBlockDisassemblyText(m_object, settings->GetObject(), &count);
 
-	vector<DisassemblyTextLine> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = lines[i].addr;
-		line.instrIndex = lines[i].instrIndex;
-		line.highlight = lines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		line.tags = Tag::ConvertTagList(lines[i].tags, lines[i].tagCount);
-		result.push_back(line);
-	}
-
+	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);;
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }

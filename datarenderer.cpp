@@ -1,4 +1,5 @@
 #include "binaryninjaapi.h"
+#include "ffi.h"
 
 using namespace std;
 using namespace BinaryNinja;
@@ -82,22 +83,10 @@ BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinar
 	}
 	auto lines = renderer->GetLinesForData(viewObj, addr, typeObj, prefixes, width, context,
 		language ? language : string());
-	*count = lines.size();
-	BNDisassemblyTextLine* buf = new BNDisassemblyTextLine[lines.size()];
-	for (size_t i = 0; i < lines.size(); i++)
-	{
-		const DisassemblyTextLine& line = lines[i];
-		buf[i].addr = line.addr;
-		buf[i].instrIndex = line.instrIndex;
-		buf[i].highlight = line.highlight;
-		buf[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(line.tokens);
-		buf[i].count = line.tokens.size();
-		buf[i].tags = Tag::CreateTagList(line.tags, &(buf[i].tagCount));
-	}
-
+	BNDisassemblyTextLine* result = AllocAPIObjectList(lines, count);
 	for (size_t i = 0; i < ctxCount; i++)
 		context[i].first->Release();
-	return buf;
+	return result;
 }
 
 
@@ -110,12 +99,7 @@ void DataRenderer::FreeCallback(void* ctxt)
 
 void DataRenderer::FreeLinesCallback(void* ctxt, BNDisassemblyTextLine* lines, size_t count)
 {
-	for (size_t i = 0; i < count; i++)
-	{
-		InstructionTextToken::FreeInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		Tag::FreeTagList(lines[i].tags, lines[i].tagCount);
-	}
-	delete[] lines;
+	FreeAPIObjectList<DisassemblyTextLine>(lines, count);
 }
 
 
@@ -157,18 +141,7 @@ vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint
 	}
 	delete[] prefixes;
 
-	vector<DisassemblyTextLine> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = lines[i].addr;
-		line.instrIndex = lines[i].instrIndex;
-		line.highlight = lines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		line.tags = Tag::ConvertAndFreeTagList(lines[i].tags, lines[i].tagCount);
-		result.push_back(line);
-	}
+	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
@@ -199,19 +172,7 @@ vector<DisassemblyTextLine> DataRenderer::RenderLinesForData(BinaryView* data, u
 	}
 	delete[] prefixes;
 
-	vector<DisassemblyTextLine> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = lines[i].addr;
-		line.instrIndex = lines[i].instrIndex;
-		line.highlight = lines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		line.tags = Tag::ConvertAndFreeTagList(lines[i].tags, lines[i].tagCount);
-		result.push_back(line);
-	}
-
+	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }

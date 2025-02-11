@@ -4045,9 +4045,13 @@ namespace BinaryNinja {
 	struct DisassemblyTextLineTypeInfo
 	{
 		bool hasTypeInfo;
-		BinaryNinja::Ref<BinaryNinja::Type> parentType;
+		Ref<Type> parentType;
 		size_t fieldIndex;
 		uint64_t offset;
+
+		BNDisassemblyTextLineTypeInfo GetAPIObject() const;
+		static void FreeAPIObject(BNDisassemblyTextLineTypeInfo* value);
+		static DisassemblyTextLineTypeInfo FromAPIObject(const BNDisassemblyTextLineTypeInfo* value);
 
 		DisassemblyTextLineTypeInfo() : hasTypeInfo(false), parentType(nullptr), fieldIndex(-1), offset(0) {}
 	};
@@ -4062,6 +4066,10 @@ namespace BinaryNinja {
 		DisassemblyTextLineTypeInfo typeInfo;
 
 		DisassemblyTextLine();
+
+		BNDisassemblyTextLine GetAPIObject() const;
+		static void FreeAPIObject(BNDisassemblyTextLine* value);
+		static DisassemblyTextLine FromAPIObject(const BNDisassemblyTextLine* value);
 
 		size_t GetTotalWidth() const;
 		size_t GetAddressAndIndentationWidth() const;

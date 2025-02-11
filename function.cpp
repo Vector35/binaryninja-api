@@ -23,6 +23,8 @@
 #include "highlevelilinstruction.h"
 #include <cstring>
 
+#include "ffi.h"
+
 using namespace BinaryNinja;
 using namespace std;
 
@@ -2554,19 +2556,7 @@ vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* setting
 	BNDisassemblyTextLine* lines =
 	    BNGetFunctionTypeTokens(m_object, settings ? settings->GetObject() : nullptr, &count);
 
-	vector<DisassemblyTextLine> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = lines[i].addr;
-		line.instrIndex = lines[i].instrIndex;
-		line.highlight = lines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		line.tags = Tag::ConvertTagList(lines[i].tags, lines[i].tagCount);
-		result.push_back(line);
-	}
-
+	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }

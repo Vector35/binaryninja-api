@@ -2933,85 +2933,85 @@ Ref<TypeLibrary> SharedCache::TypeLibraryForImage(const std::string& installName
 void SharedCache::FindSymbolAtAddrAndApplyToAddr(
 	uint64_t symbolLocation, uint64_t targetLocation, bool triggerReanalysis)
 {
-	WillMutateState();
-
 	std::string prefix = "";
 	if (symbolLocation != targetLocation)
 		prefix = "j_";
-	if (auto preexistingSymbol = m_dscView->GetSymbolByAddress(targetLocation))
-	{
-		if (preexistingSymbol->GetFullName().find("j_") != std::string::npos)
+
+	if (auto targetSymbol = m_dscView->GetSymbolByAddress(targetLocation)) {
+		// A symbol already exists at the target location. If the source and target address are the same,
+		// there's nothing more to do. If they're different but the symbol has the `j_` prefix that is added
+		// to stubs, there's also nothing more to do.
+		if (symbolLocation == targetLocation || targetSymbol->GetFullName().find("j_") != std::string::npos) {
 			return;
-	}
-	auto id = m_dscView->BeginUndoActions();
-	if (auto loadedSymbol = m_dscView->GetSymbolByAddress(symbolLocation))
-	{
-		if (m_dscView->GetAnalysisFunction(m_dscView->GetDefaultPlatform(), targetLocation))
-			m_dscView->DefineUserSymbol(new Symbol(FunctionSymbol, prefix + loadedSymbol->GetFullName(), targetLocation));
-		else
-			m_dscView->DefineUserSymbol(new Symbol(loadedSymbol->GetType(), prefix + loadedSymbol->GetFullName(), targetLocation));
-	}
-	else if (auto sym = m_dscView->GetSymbolByAddress(symbolLocation))
-	{
-		if (m_dscView->GetAnalysisFunction(m_dscView->GetDefaultPlatform(), targetLocation))
-			m_dscView->DefineUserSymbol(new Symbol(FunctionSymbol, prefix + sym->GetFullName(), targetLocation));
-		else
-			m_dscView->DefineUserSymbol(new Symbol(sym->GetType(), prefix + sym->GetFullName(), targetLocation));
-	}
-	m_dscView->ForgetUndoActions(id);
-	auto header = HeaderForAddress(symbolLocation);
-	if (header)
-	{
-
-		auto exportList = GetExportListForHeader(*header, [&]() {
-			try {
-				return MMappedFileAccessor::Open(m_dscView, m_dscView->GetFile()->GetSessionId(), header->exportTriePath)->lock();
-			}
-			catch (...)
-			{
-				m_logger->LogWarn("Serious Error: Failed to open export trie %s for %s", header->exportTriePath.c_str(), header->installName.c_str());
-				return std::shared_ptr<MMappedFileAccessor>(nullptr);
-			}
-		});
-
-		if (exportList)
-		{
-			if (auto it = exportList->find(symbolLocation); it != exportList->end())
-			{
-				auto typeLib = TypeLibraryForImage(header->installName);
-				id = m_dscView->BeginUndoActions();
-				m_dscView->BeginBulkModifySymbols();
-
-				auto func = m_dscView->GetAnalysisFunction(m_dscView->GetDefaultPlatform(), targetLocation);
-				if (func)
-				{
-					m_dscView->DefineUserSymbol(
-						new Symbol(FunctionSymbol, prefix + it->second->GetFullName(), targetLocation));
-
-					if (typeLib)
-						if (auto type = m_dscView->ImportTypeLibraryObject(typeLib, {it->second->GetFullName()}))
-							func->SetUserType(type);
-				}
-				else
-				{
-					m_dscView->DefineUserSymbol(
-						new Symbol(it->second->GetType(), prefix + it->second->GetFullName(), targetLocation));
-
-					if (typeLib)
-						if (auto type = m_dscView->ImportTypeLibraryObject(typeLib, {it->second->GetFullName()}))
-							m_dscView->DefineUserDataVariable(targetLocation, type);
-				}
-				if (triggerReanalysis)
-				{
-					if (func)
-						func->Reanalyze();
-				}
-
-				m_dscView->EndBulkModifySymbols();
-				m_dscView->ForgetUndoActions(id);
-			}
 		}
 	}
+
+	if (symbolLocation != targetLocation) {
+		if (auto symbol = m_dscView->GetSymbolByAddress(symbolLocation)) {
+			// A symbol already exists at the source location. Add a stub symbol at `targetLocation` based on the existing symbol.
+			auto id = m_dscView->BeginUndoActions();
+			if (m_dscView->GetAnalysisFunction(m_dscView->GetDefaultPlatform(), targetLocation))
+				m_dscView->DefineUserSymbol(new Symbol(FunctionSymbol, prefix + symbol->GetFullName(), targetLocation));
+			else
+				m_dscView->DefineUserSymbol(new Symbol(symbol->GetType(), prefix + symbol->GetFullName(), targetLocation));
+			m_dscView->ForgetUndoActions(id);
+			return;
+		}
+	}
+
+	// No existing symbol was found at `symbolLocation` or `targetLocation`. Search the export list
+	// for the image containing `symbolLocation` to find a symbol corresponding to that address.
+
+	auto header = HeaderForAddress(symbolLocation);
+	if (!header) {
+		return;
+	}
+
+	WillMutateState();
+	auto exportList = GetExportListForHeader(*header, [&]() {
+		try {
+			return MMappedFileAccessor::Open(m_dscView, m_dscView->GetFile()->GetSessionId(), header->exportTriePath)->lock();
+		} catch (...) {
+			m_logger->LogWarn("Serious Error: Failed to open export trie %s for %s", header->exportTriePath.c_str(), header->installName.c_str());
+			return std::shared_ptr<MMappedFileAccessor>(nullptr);
+		}
+	});
+
+	if (!exportList) {
+		return;
+	}
+
+	auto it = exportList->find(symbolLocation);
+	if (it == exportList->end()) {
+		return;
+	}
+
+	const auto& symbol = it->second;
+	auto id = m_dscView->BeginUndoActions();
+	auto typeLib = TypeLibraryForImage(header->installName);
+	auto type = typeLib ? m_dscView->ImportTypeLibraryObject(typeLib, {symbol->GetFullName()}) : nullptr;
+
+	if (auto func = m_dscView->GetAnalysisFunction(m_dscView->GetDefaultPlatform(), targetLocation)) {
+		m_dscView->DefineUserSymbol(
+			new Symbol(FunctionSymbol, prefix + symbol->GetFullName(), targetLocation));
+
+		if (type) {
+			func->SetUserType(type);
+		}
+
+		if (triggerReanalysis) {
+			func->Reanalyze();
+		}
+	} else {
+		m_dscView->DefineUserSymbol(
+			new Symbol(symbol->GetType(), prefix + symbol->GetFullName(), targetLocation));
+
+		if (type) {
+			m_dscView->DefineUserDataVariable(targetLocation, type);
+		}
+	}
+
+	m_dscView->ForgetUndoActions(id);
 }
 
 

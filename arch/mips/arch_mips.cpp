@@ -188,7 +188,7 @@ protected:
 	virtual bool Disassemble(const uint8_t* data, uint64_t addr, size_t maxLen, Instruction& result)
 	{
 		memset(&result, 0, sizeof(result));
-		if (mips_decompose((uint32_t*)data, maxLen,  &result, m_bits == 64 ? MIPS_64 : MIPS_32, addr, m_endian, m_decomposeFlags) != 0)
+		if (mips_decompose((uint32_t*)data, maxLen,  &result, m_version, addr, m_endian, m_decomposeFlags) != 0)
 			return false;
 		return true;
 	}
@@ -3022,14 +3022,7 @@ public:
 				uint32_t inst2 = *(uint32_t*)(cur->relocationDataCache);
 				Instruction instruction;
 				memset(&instruction, 0, sizeof(instruction));
-
-				MipsVersion version;
-				if (arch->GetName().substr(0, 5) == "r5900")
-					version = MIPS_R5900;
-				else
-					version = arch->GetAddressSize() == 8 ? MIPS_64 : MIPS_32;
-
-				if (mips_decompose(&inst2, sizeof(uint32_t), &instruction, version, cur->address, arch->GetEndianness(), DECOMPOSE_FLAGS_PSEUDO_OP))
+				if (mips_decompose(&inst2, sizeof(uint32_t), &instruction, m_version, cur->address, arch->GetEndianness(), DECOMPOSE_FLAGS_PSEUDO_OP))
 					break;
 
 				int32_t immediate = swap(inst2) & 0xffff;

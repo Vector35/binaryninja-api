@@ -78,6 +78,8 @@ int main(int ac, char **av)
 			version = MIPS_3;
 		else if (!strcmp("-mips4", av[1]))
 			version = MIPS_4;
+		else if (!strcmp("-r5900", av[1]))
+			version = MIPS_R5900;
 		else if (!strcmp("-cavium", av[1]))
 		{
 			version = MIPS_64;

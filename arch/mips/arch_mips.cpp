@@ -534,7 +534,7 @@ public:
 				il.AddInstruction(il.If(GetConditionForInstruction(il, instr, GetAddressSize()), trueCode, falseCode));
 				il.MarkLabel(trueCode);
 				il.SetCurrentAddress(this, addr + instr.size);
-				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize(), m_decomposeFlags);
+				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize(), m_decomposeFlags, m_version);
 				for (size_t i = 0; i < instrInfo.branchCount; i++)
 				{
 					if (instrInfo.branchType[i] == TrueBranch)
@@ -560,7 +560,7 @@ public:
 				nop = il.Nop();
 				il.AddInstruction(nop);
 
-				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize(), m_decomposeFlags);
+				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize(), m_decomposeFlags, m_version);
 
 				LowLevelILInstruction delayed;
 				uint32_t clobbered = BN_INVALID_REGISTER;
@@ -587,7 +587,7 @@ public:
 				}
 				else
 				{
-					status = GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_decomposeFlags);
+					status = GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_decomposeFlags, m_version);
 				}
 
 				if (clobbered != BN_INVALID_REGISTER)
@@ -752,12 +752,12 @@ public:
 				else
 					base->operation = is32bit ? MIPS_LW : MIPS_LD;
 
-				return GetLowLevelILForInstruction(this, addrToUse, il, *base, GetAddressSize(), m_decomposeFlags);
+				return GetLowLevelILForInstruction(this, addrToUse, il, *base, GetAddressSize(), m_decomposeFlags, m_version);
 			}
 		}
 
 		len = instr.size;
-		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_decomposeFlags);
+		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_decomposeFlags, m_version);
 	}
 
 	virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override
@@ -1570,7 +1570,12 @@ public:
 			REG_DESAVE,
 		};
 
-		if ((m_decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+		if (m_version == MIPS_R5900) {
+			// TODO: R5900 has 128-bit wide GPRs, $lo and $hi are 128-bit, and $lo1 and $hi1 are the upper 64 bits of $lo and $hi
+			uint32_t r5900_registers[] = { REG_LO1, REG_HI1 };
+			registers.insert(registers.end(), std::begin(r5900_registers), std::end(r5900_registers));
+		}
+		else if ((m_decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
 		{
 			uint32_t cavium_registers[] =
 			{
@@ -1888,7 +1893,11 @@ public:
 			REG_DESAVE,
 		};
 
-		if ((m_decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
+		if (m_version == MIPS_R5900) {
+			uint32_t r5900_registers[] = { REG_LO1, REG_HI1 };
+			registers.insert(registers.end(), std::begin(r5900_registers), std::end(r5900_registers));
+		}
+		else if ((m_decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
 		{
 			uint32_t cavium_registers[] =
 			{
@@ -2098,6 +2107,18 @@ public:
 	virtual BNRegisterInfo GetRegisterInfo(uint32_t reg) override
 	{
 		BNRegisterInfo result = {reg, 0, m_bits / 8, NoExtend};
+		if (m_version == MIPS_R5900) {
+			switch (reg) {
+			case REG_LO:
+			case REG_HI:
+			case REG_LO1:
+			case REG_HI1:
+				result.size = 64 / 8;
+			default:
+				if (REG_ZERO <= reg && reg <= REG_RA)
+					result.size = 128 / 8;
+			}
+		}
 		return result;
 	}
 

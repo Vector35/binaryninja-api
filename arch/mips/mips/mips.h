@@ -1163,6 +1163,10 @@ namespace mips
 
 		R5900_SA,
 
+		// R5900 Special registers (upper 64 bits of $lo and $hi)
+		REG_LO1,
+		REG_HI1,
+
 		// Last valid register
 		END_REG
 	};
@@ -1335,6 +1339,7 @@ namespace mips
 		Operation operation;
 		InstructionOperand operands[MAX_OPERANDS];
 		uint32_t size;
+		uint32_t numOperands;
 	};
 
 #ifndef __cplusplus

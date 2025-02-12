@@ -22,6 +22,7 @@ using namespace mips;
 	do { \
 	instruction->operands[0].operandClass = A;\
 	instruction->operands[0].VAR(A) = a;\
+	instruction->numOperands = 1;\
 	} while (0);
 
 #define INS_2(A,a,B,b)\
@@ -30,6 +31,7 @@ using namespace mips;
 	instruction->operands[0].VAR(A) = a;\
 	instruction->operands[1].operandClass = B;\
 	instruction->operands[1].VAR(B) = b;\
+	instruction->numOperands = 2;\
 	} while (0);
 
 #define INS_3(A,a,B,b,C,c)\
@@ -40,6 +42,7 @@ using namespace mips;
 	instruction->operands[1].VAR(B) = b;\
 	instruction->operands[2].operandClass = C;\
 	instruction->operands[2].VAR(C) = c;\
+	instruction->numOperands = 3;\
 	} while (0);
 
 #define INS_4(A,a,B,b,C,c,D,d)\
@@ -52,6 +55,7 @@ using namespace mips;
 	instruction->operands[2].VAR(C) = c;\
 	instruction->operands[3].operandClass = D;\
 	instruction->operands[3].VAR(D) = d;\
+	instruction->numOperands = 4;\
 	} while (0);
 
 
@@ -126,7 +130,7 @@ static Operation mips_base_table[7][8][8] = {
 		{MIPS_INVALID, MIPS_INVALID, MIPS_J,       MIPS_JAL,      MIPS_BEQ,      MIPS_BNE,     MIPS_BLEZ,   MIPS_BGTZ},
 		{MIPS_ADDI,    MIPS_ADDIU,   MIPS_SLTI,    MIPS_SLTIU,    MIPS_ANDI,     MIPS_ORI,     MIPS_XORI,   MIPS_LUI},
 		{MIPS_COP0,    MIPS_COP1,    MIPS_COP2,    MIPS_INVALID,  MIPS_BEQL,     MIPS_BNEL,    MIPS_BLEZL,  MIPS_BGTZL},
-		{MIPS_DADDI,   MIPS_DADDIU,  MIPS_LDL,	   MIPS_LDR,  	  MIPS_INVALID,  MIPS_INVALID, MIPS_LQ,     MIPS_SQ},
+		{MIPS_DADDI,   MIPS_DADDIU,  MIPS_LDL,	  MIPS_LDR,  	 MIPS_INVALID,  MIPS_INVALID, MIPS_LQ,     MIPS_SQ},
 		{MIPS_LB,      MIPS_LH,      MIPS_LWL,     MIPS_LW,       MIPS_LBU,      MIPS_LHU,     MIPS_LWR,    MIPS_LWU},
 		{MIPS_SB,      MIPS_SH,      MIPS_SWL,     MIPS_SW,       MIPS_SDL,      MIPS_SDR,     MIPS_SWR,    MIPS_CACHE},
 		{MIPS_INVALID, MIPS_LWC1,    MIPS_INVALID, MIPS_PREF,     MIPS_INVALID,  MIPS_INVALID, MIPS_LDC2,   MIPS_LD},
@@ -1509,7 +1513,10 @@ static const char * const RegisterStrings[] = {
 	"CVMX_HSH_STARTSHA512",
 	"CVMX_GFM_XORMUL1",
 
-	"sa"
+	"sa",
+
+	"$lo1",
+	"$hi1",
 };
 
 static const char * const FlagStrings[] = {
@@ -1657,6 +1664,8 @@ uint32_t mips_decompose_instruction(
 				instruction->operation = mips32_special3_table[ins.decode.func_hi][ins.decode.func_lo];
 			else if (version == MIPS_64)
 				instruction->operation = mips64_special3_table[ins.decode.func_hi][ins.decode.func_lo];
+			else if (version == MIPS_R5900)
+				instruction->operation = mips_base_table[version-1][ins.decode.op_hi][ins.decode.op_lo];
 			break;
 		default:
 			if ((flags & DECOMPOSE_FLAGS_CAVIUM) == 0)
@@ -2546,6 +2555,8 @@ uint32_t mips_decompose_instruction(
 			instruction->operands[0].reg = ins.i.rt;
 			instruction->operands[1].reg = ins.i.rs;
 			instruction->operands[1].immediate = ins.i.immediate;
+	        if (instruction->operation == MIPS_SQ)
+				instruction->operands[1].immediate = MIPS_SQ;
 			break;
 		case MIPS_PREF:
 		case MIPS_PREFX:
@@ -2590,7 +2601,9 @@ uint32_t mips_decompose_instruction(
 			instruction->operands[0].operandClass = IMM;
 			instruction->operands[1].operandClass = MEM_IMM;
 			instruction->operands[0].reg = version != MIPS_R5900 ? ins.i.rt : (FPREG_F0 + ins.f.ft);
-			instruction->operands[1].reg = version != MIPS_R5900 ? ins.i.rs : (FPREG_F0 + ins.f.fr);
+			// This special case for the R5900 seems wrong: it's trying to use a FP register for the base register
+			// instruction->operands[1].reg = version != MIPS_R5900 ? ins.i.rs : (FPREG_F0 + ins.f.fr);
+			instruction->operands[1].reg = ins.i.rs;
 			instruction->operands[1].immediate = ins.i.immediate;
 			break;
 		//3 operand instructions

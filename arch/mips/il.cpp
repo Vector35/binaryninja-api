@@ -796,7 +796,7 @@ static void SignExtendHiLo(LowLevelILFunction& il, size_t registerSize)
 	}
 }
 
-bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize, uint32_t decomposeFlags)
+bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize, uint32_t decomposeFlags, MipsVersion version)
 {
 	LowLevelILLabel trueLabel, falseLabel, doneLabel, dirFlagSet, dirFlagClear, dirFlagDone;
 	InstructionOperand& op1 = instr.operands[0];
@@ -1179,15 +1179,61 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			SignExtendHiLo(il, registerSize);
 			break;
 		case MIPS_MULT:
-			il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO, il.MultDoublePrecSigned(4, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize))));
-			SignExtendHiLo(il, registerSize);
-			if (rd != REG_ZERO)
-				// mflo
-				il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, rd, il.Register(registerSize, REG_LO)));
+			if (version == MIPS_R5900 && instr.numOperands == 3) {
+				auto temp = LLIL_TEMP(0);
+				il.AddInstruction(il.SetRegister(8, temp,
+				il.MultDoublePrecSigned(4,
+						ReadILOperand(il, instr, 2, registerSize),
+						ReadILOperand(il, instr, 3, registerSize))));
+				il.AddInstruction(il.SetRegister(registerSize, REG_HI, il.SignExtend(8, il.ArithShiftRight(8, il.Register(8, temp), il.Const(8, 32)))));
+				il.AddInstruction(il.SetRegister(registerSize, REG_LO, il.SignExtend(8, il.LowPart(4, il.Register(8, temp)))));
+				// il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO,
+				// 	il.MultDoublePrecSigned(8,
+				// 		ReadILOperand(il, instr, 2, registerSize),
+				// 		ReadILOperand(il, instr, 3, registerSize))));
+				SignExtendHiLo(il, registerSize);
+				auto rd = op1.reg;
+				if (rd != REG_ZERO)
+					il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, rd, il.Register(registerSize, REG_LO)));
+			}
+			// if (version == MIPS_R5900 && instr.numOperands == 3) {
+			// 	il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO,
+			// 		il.MultDoublePrecSigned(8,
+			// 			ReadILOperand(il, instr, 2, registerSize),
+			// 			ReadILOperand(il, instr, 3, registerSize))));
+			// 	SignExtendHiLo(il, registerSize);
+			// 	auto rd = op1.reg;
+			// 	if (rd != REG_ZERO)
+			// 		il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, rd, il.Register(registerSize, REG_LO)));
+			// }
+			else
+			{
+				il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO,
+					il.MultDoublePrecSigned(4,
+						ReadILOperand(il, instr, 1, registerSize),
+						ReadILOperand(il, instr, 2, registerSize))));
+				SignExtendHiLo(il, registerSize);
+			}
 			break;
 		case MIPS_MULTU:
-			il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO, il.MultDoublePrecUnsigned(4, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize))));
-			SignExtendHiLo(il, registerSize);
+			if (version == MIPS_R5900 && instr.numOperands == 3) {
+				il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO,
+					il.MultDoublePrecUnsigned(4,
+						ReadILOperand(il, instr, 2, registerSize),
+						ReadILOperand(il, instr, 3, registerSize))));
+				SignExtendHiLo(il, registerSize);
+				auto rd = op1.reg;
+				if (rd != REG_ZERO)
+					il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, rd, il.Register(registerSize, REG_LO)));
+			}
+			else
+			{
+				il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO,
+					il.MultDoublePrecUnsigned(4,
+						ReadILOperand(il, instr, 1, registerSize),
+						ReadILOperand(il, instr, 2, registerSize))));
+				SignExtendHiLo(il, registerSize);
+			}
 			break;
 		case MIPS_DMULT:
 			il.AddInstruction(il.SetRegisterSplit(8, REG_HI, REG_LO, il.MultDoublePrecSigned(8, ReadILOperand(il, instr, 1, registerSize), ReadILOperand(il, instr, 2, registerSize))));

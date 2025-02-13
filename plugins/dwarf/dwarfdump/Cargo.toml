@@ -3,6 +3,7 @@ name = "dwarfdump"
 version = "0.1.0"
 authors = ["Kyle Martin <kyle@vector35.com>"]
 edition = "2021"
+license = "Apache-2.0"
 
 [lib]
 crate-type = ["cdylib"]

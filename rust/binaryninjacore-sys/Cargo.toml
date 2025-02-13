@@ -5,6 +5,7 @@ authors = ["Ryan Snyder <ryan@vector35.com>", "Kyle Martin <kyle@vector35.com>"]
 build = "build.rs"
 edition = "2021"
 links = "binaryninjacore"
+license = "Apache-2.0"
 
 [build-dependencies]
 bindgen = "0.71.1"

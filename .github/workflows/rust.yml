@@ -54,3 +54,21 @@ jobs:
         uses: crate-ci/typos@v1.29.4
         with:
           files: ./rust
+
+  # Check licensing and produce a list of licenses
+  licensing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cargo-about
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-about
+          version: "0.6.6"
+      - name: Run license check
+        run: cargo about generate about.hbs > license.html
+      - name: Archive license file
+        uses: actions/upload-artifact@v4
+        with:
+          name: license
+          path: license.html

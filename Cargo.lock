@@ -2626,6 +2626,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbfa15b3dddfee50a0fff136974b3e1bde555604ba463834a7eb7deb6417705d"
 
 [[package]]
+name = "sharedcacherust"
+version = "0.1.0"
+
+[[package]]
 name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

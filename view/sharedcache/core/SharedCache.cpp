@@ -1360,9 +1360,12 @@ void SharedCache::ParseAndApplySlideInfoForFile(std::shared_ptr<MMappedFileAcces
 	file->SetSlideInfoWasApplied(true);
 }
 
+#include "rust/ffi.h"
 
 SharedCache::SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView) : m_dscView(dscView), m_viewSpecificState(ViewSpecificStateForView(dscView))
 {
+	int result = add_numbers(6, 6);
+	LogInfo("SharedCacheRust: %d", result);
 	m_logger = LogRegistry::GetLogger("SharedCache", dscView->GetFile()->GetSessionId());
 	if (dscView->GetTypeName() != VIEW_NAME)
 	{

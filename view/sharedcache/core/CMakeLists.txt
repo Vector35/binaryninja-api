@@ -79,6 +79,9 @@ target_compile_definitions(sharedcachecore PRIVATE SHAREDCACHE_LIBRARY ${COMPILE
 
 target_include_directories(sharedcachecore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${INCLUDES})
 
+add_subdirectory(rust)
+target_link_libraries(sharedcachecore PRIVATE sharedcacherust)
+
 set_target_properties(sharedcachecore PROPERTIES
         CXX_STANDARD 17
         CXX_VISIBILITY_PRESET hidden

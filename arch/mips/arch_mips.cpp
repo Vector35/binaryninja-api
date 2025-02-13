@@ -2108,15 +2108,23 @@ public:
 	{
 		BNRegisterInfo result = {reg, 0, m_bits / 8, NoExtend};
 		if (m_version == MIPS_R5900) {
+			result.size = get_register_width(reg, m_version);
 			switch (reg) {
-			case REG_LO:
-			case REG_HI:
+			// case REG_LO:
+			// case REG_HI:
+			// 	result.size = 64 / 8;
+			// 	break;
 			case REG_LO1:
 			case REG_HI1:
-				result.size = 64 / 8;
+				// result.size = (128 / 2);
+				if (reg == REG_LO1)
+					result.fullWidthRegister = REG_LO;
+				else if (reg == REG_HI1)
+					result.fullWidthRegister = REG_HI;
+				break;
 			default:
-				if (REG_ZERO <= reg && reg <= REG_RA)
-					result.size = 128 / 8;
+				// if (REG_ZERO <= reg && reg < REG_GP)
+				// 	result.size = 128 / 8;
 			}
 		}
 		return result;

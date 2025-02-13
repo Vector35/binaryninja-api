@@ -1098,14 +1098,26 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_MFHI:
 			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.Register(registerSize, REG_HI)));
 			break;
+		case MIPS_MFHI1:
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.Register(registerSize, REG_HI1)));
+			break;
 		case MIPS_MFLO:
 			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.Register(registerSize, REG_LO)));
+			break;
+		case MIPS_MFLO1:
+			il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize, op1.reg, il.Register(registerSize, REG_LO1)));
 			break;
 		case MIPS_MTHI:
 			il.AddInstruction(il.SetRegister(registerSize, REG_HI, ReadILOperand(il, instr, 1, registerSize)));
 			break;
+		case MIPS_MTHI1:
+			il.AddInstruction(il.SetRegister(registerSize, REG_HI1, ReadILOperand(il, instr, 1, registerSize)));
+			break;
 		case MIPS_MTLO:
 			il.AddInstruction(il.SetRegister(registerSize, REG_LO, ReadILOperand(il, instr, 1, registerSize)));
+			break;
+		case MIPS_MTLO1:
+			il.AddInstruction(il.SetRegister(registerSize, REG_LO1, ReadILOperand(il, instr, 1, registerSize)));
 			break;
 		case MIPS_DMFC0:
 			il.AddInstruction(MoveFromCoprocessor(0, il, 8, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
@@ -1346,7 +1358,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_SC:
 		{
 			LowLevelILLabel trueCode, falseCode, doneCode;
-			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_LLBIT_CHECK, {}));
+			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_LLBIT_CHECK,{}));
 			il.AddInstruction(il.If(il.CompareEqual(0, il.Register(0, LLIL_TEMP(0)), il.Const(0, 1)),
 			                        trueCode, falseCode));
 			il.MarkLabel(trueCode);
@@ -1363,6 +1375,9 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		}
 		case MIPS_SD:
 			il.AddInstruction(il.Store(8, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize)));
+			break;
+		case MIPS_SQ:
+			il.AddInstruction(il.Store(16, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize)));
 			break;
 		case MIPS_SCD:
 		{
@@ -1470,6 +1485,9 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 		case MIPS_LD:
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize, op1.reg, ReadILOperand(il, instr, 2, registerSize)));
+			break;
+		case MIPS_LQ:
+			il.AddInstruction(SetRegisterOrNop(il, 16, registerSize, op1.reg, ReadILOperand(il, instr, 2, registerSize)));
 			break;
 		case MIPS_LWL:
 		{
@@ -2243,45 +2261,158 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 
 			break;
 		}
+		case MIPS_PADDUB:
+		{
+			if (op3.reg == REG_ZERO)
+				if (op2.reg == REG_ZERO)
+					il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Const(16, 0)));
+				else
+					il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op2.reg)));
+			else if (op2.reg == REG_ZERO)
+				    il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op3.reg)));
+            else
+            {
+	            for (int i = 0; i < 16; i++)
+	            {
+	            	size_t offset = i * 8;
+	            	auto rs_segment = il.And(16,
+						il.LogicalShiftRight(
+								16,
+								il.Register(16, op2.reg),
+								il.Const(4, offset)
+							),
+						il.Const(128, 0xFFFFFFFF)
+					);
+	            	auto rt_segment = il.And(16,
+						il.LogicalShiftRight(
+								16,
+								il.Register(16, op3.reg),
+								il.Const(4, offset)
+							),
+						il.Const(128, 0xFFFFFFFF)
+					);
+
+	            	auto sum = il.Add(1, rs_segment, rt_segment);
+
+	            	// This is a 1 byte add, but if the sum is greater than 0xFFFF, the result is 0xFFFF
+	            	// So we do an 8 bit add and and the result
+
+	            	auto saturated_sum = il.And(1, sum, il.Const(1, 0xFF));
+
+	            	auto shifted_sum = il.ShiftLeft(16, saturated_sum, il.Const(4, offset));
+	            	if (i == 0)
+	            	{
+	            		il.AddInstruction(il.SetRegister(16, op1.reg, shifted_sum));
+	            	}
+	            	else
+	            	{
+	            		il.AddInstruction(il.SetRegister(16, op1.reg, il.Or(16, il.Register(16, op1.reg), shifted_sum)));
+	            	}
+	            }
+            }
+
+			break;
+		}		case MIPS_PADDUH:
+		{
+			if (op3.reg == REG_ZERO)
+				if (op2.reg == REG_ZERO)
+					il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Const(16, 0)));
+				else
+					il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op2.reg)));
+			else if (op2.reg == REG_ZERO)
+				    il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op3.reg)));
+            else
+            {
+	            for (int i = 0; i < 8; i++)
+	            {
+	            	size_t offset = i * 16;
+	            	auto rs_segment = il.And(16,
+						il.LogicalShiftRight(
+								16,
+								il.Register(16, op2.reg),
+								il.Const(4, offset)
+							),
+						il.Const(128, 0xFFFFFFFF)
+					);
+	            	auto rt_segment = il.And(16,
+						il.LogicalShiftRight(
+								16,
+								il.Register(16, op3.reg),
+								il.Const(4, offset)
+							),
+						il.Const(128, 0xFFFFFFFF)
+					);
+
+	            	auto sum = il.Add(2, rs_segment, rt_segment);
+
+	            	// This is a 2 byte add, but if the sum is greater than 0xFFFF, the result is 0xFFFF
+	            	// So we do an 8 bit add and and the result
+
+	            	auto saturated_sum = il.And(2, sum, il.Const(2, 0xFFFF));
+
+	            	auto shifted_sum = il.ShiftLeft(16, saturated_sum, il.Const(4, offset));
+	            	if (i == 0)
+	            	{
+	            		il.AddInstruction(il.SetRegister(16, op1.reg, shifted_sum));
+	            	}
+	            	else
+	            	{
+	            		il.AddInstruction(il.SetRegister(16, op1.reg, il.Or(16, il.Register(16, op1.reg), shifted_sum)));
+	            	}
+	            }
+            }
+
+			break;
+		}
 		case MIPS_PADDUW:
 		{
-			for (int i = 0; i < 4; i++)
-			{
-				size_t offset = i * 32;
-				auto rs_segment = il.And(16,
-					il.LogicalShiftRight(
-							16,
-							il.Register(16, op2.reg),
-							il.Const(4, offset)
-						),
-					il.Const(128, 0xFFFFFFFF)
-				);
-				auto rt_segment = il.And(16,
-					il.LogicalShiftRight(
-							16,
-							il.Register(16, op3.reg),
-							il.Const(4, offset)
-						),
-					il.Const(128, 0xFFFFFFFF)
-				);
-
-				auto sum = il.Add(8, rs_segment, rt_segment);
-
-				// This is a 4 byte add, but if the sum is greater than 0xFFFFFFFF, the result is 0xFFFFFFFF
-				// So we do an 8 bit add and and the result
-
-				auto saturated_sum = il.And(4, sum, il.Const(4, 0xFFFFFFFF));
-
-				auto shifted_sum = il.ShiftLeft(16, saturated_sum, il.Const(4, offset));
-				if (i == 0)
-				{
-					il.AddInstruction(il.SetRegister(16, op1.reg, shifted_sum));
-				}
+			if (op3.reg == REG_ZERO)
+				if (op2.reg == REG_ZERO)
+					il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Const(16, 0)));
 				else
-				{
-					il.AddInstruction(il.SetRegister(16, op1.reg, il.Or(16, il.Register(16, op1.reg), shifted_sum)));
-				}
-			}
+					il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op2.reg)));
+			else if (op2.reg == REG_ZERO)
+				    il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op3.reg)));
+            else
+            {
+	            for (int i = 0; i < 4; i++)
+	            {
+	            	size_t offset = i * 32;
+	            	auto rs_segment = il.And(16,
+						il.LogicalShiftRight(
+								16,
+								il.Register(16, op2.reg),
+								il.Const(4, offset)
+							),
+						il.Const(128, 0xFFFFFFFF)
+					);
+	            	auto rt_segment = il.And(16,
+						il.LogicalShiftRight(
+								16,
+								il.Register(16, op3.reg),
+								il.Const(4, offset)
+							),
+						il.Const(128, 0xFFFFFFFF)
+					);
+
+	            	auto sum = il.Add(4, rs_segment, rt_segment);
+
+	            	// This is a 4 byte add, but if the sum is greater than 0xFFFFFFFF, the result is 0xFFFFFFFF
+	            	// So we do an 8 bit add and and the result
+
+	            	auto saturated_sum = il.And(4, sum, il.Const(4, 0xFFFFFFFF));
+
+	            	auto shifted_sum = il.ShiftLeft(16, saturated_sum, il.Const(4, offset));
+	            	if (i == 0)
+	            	{
+	            		il.AddInstruction(il.SetRegister(16, op1.reg, shifted_sum));
+	            	}
+	            	else
+	            	{
+	            		il.AddInstruction(il.SetRegister(16, op1.reg, il.Or(16, il.Register(16, op1.reg), shifted_sum)));
+	            	}
+	            }
+            }
 
 			break;
 		}
@@ -2346,6 +2477,133 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_MADD_S:
 		case MIPS_MADDF_D:
 		case MIPS_MADDF_S:
+		// R5900 instructions
+		// case MIPS_LQ:
+		// case MIPS_SQ:
+		case MIPS_DSLRV:
+		case MIPS_MFSA:
+		case MIPS_MTSA:
+		// case MIPS_MTSAB:
+		// case MIPS_MTSAH:
+		// case MIPS_MFHI1:
+		// case MIPS_MTHI1:
+		// case MIPS_MFLO1:
+		// case MIPS_MTLO1:
+		// case MIPS_MULT1:
+		// case MIPS_MULTU1:
+		// case MIPS_DIV1:
+		// case MIPS_DIVU1:
+		// case MIPS_MADD1:
+		// case MIPS_MADDU1:
+		// case MIPS_PLZCW:
+		// case MIPS_PMFHL:
+		// case MIPS_PMTHL:
+		// case MIPS_PSLLH:
+		// case MIPS_PSRLH:
+		// case MIPS_PSRAH:
+		// case MIPS_PSLLW:
+		// case MIPS_PSRLW:
+		// case MIPS_PSRAW:
+		// case MIPS_MFHI1:
+		// case MIPS_MTHI1:
+		// case MIPS_MFLO1:
+		// case MIPS_MTLO1:
+		case MIPS_MULT1:
+		case MIPS_MULTU1:
+		case MIPS_DIV1:
+		case MIPS_DIVU1:
+		case MIPS_MADD1:
+		case MIPS_MADDU1:
+		case MIPS_PMFHL:
+		case MIPS_PMTHL:
+		case MIPS_PSLLH:
+		case MIPS_PSRLH:
+		case MIPS_PSRAH:
+		case MIPS_PSLLW:
+		case MIPS_PSRLW:
+		case MIPS_PSRAW:
+		case MIPS_PADDW:
+		case MIPS_PSUBW:
+		case MIPS_PCGTW:
+		case MIPS_PMAXW:
+		case MIPS_PADDH:
+		case MIPS_PSUBH:
+		case MIPS_PCGTH:
+		case MIPS_PMAXH:
+		case MIPS_PADDB:
+		case MIPS_PSUBB:
+		case MIPS_PCGTB:
+		case MIPS_PADDSW:
+		case MIPS_PSUBSW:
+		case MIPS_PEXTLW:
+		case MIPS_PPACW:
+		case MIPS_PADDSH:
+		case MIPS_PSUBSH:
+		case MIPS_PEXTLH:
+		case MIPS_PPACH:
+		case MIPS_PADDSB:
+		case MIPS_PSUBSB:
+		case MIPS_PEXTLB:
+		case MIPS_PPACB:
+		case MIPS_PEXT5:
+		case MIPS_PPAC5:
+		case MIPS_PABSW:
+		case MIPS_PCEQW:
+		case MIPS_PMINW:
+		case MIPS_PADSBH:
+		case MIPS_PABSH:
+		case MIPS_PCEQH:
+		case MIPS_PMINH:
+		case MIPS_PCEQB:
+		// case MIPS_PADDUW:
+		case MIPS_PSUBUW:
+		case MIPS_PEXTUW:
+		// case MIPS_PADDUH:
+		case MIPS_PSUBUH:
+		case MIPS_PEXTUH:
+		// case MIPS_PADDUB:
+		case MIPS_PSUBUB:
+		case MIPS_PEXTUB:
+		case MIPS_QFSRV:
+		case MIPS_PMADDW:
+		case MIPS_PSLLVW:
+		case MIPS_PSRLVW:
+		case MIPS_PMSUBW:
+		case MIPS_PMFHI:
+		case MIPS_PMFLO:
+		case MIPS_PINTH:
+		case MIPS_PMULTW:
+		case MIPS_PDIVW:
+		case MIPS_PCPYLD:
+		case MIPS_PMADDH:
+		case MIPS_PHMADH:
+		case MIPS_PAND:
+		case MIPS_PXOR:
+		case MIPS_PMSUBH:
+		case MIPS_PHMSBH:
+		case MIPS_PEXEH:
+		case MIPS_PREVH:
+		case MIPS_PMULTH:
+		case MIPS_PDIVBW:
+		case MIPS_PEXEW:
+		case MIPS_PROT3W:
+		case MIPS_PMADDUW:
+		case MIPS_PSRAVW:
+		case MIPS_PMTHI:
+		case MIPS_PMTLO:
+		case MIPS_PINTEH:
+		case MIPS_PMULTUW:
+		case MIPS_PDIVUW:
+		case MIPS_PCPYUD:
+		case MIPS_POR:
+		case MIPS_PNOR:
+		case MIPS_PEXCH:
+		case MIPS_PCPYH:
+		case MIPS_PEXCW:
+		case MIPS_MMI0:
+		case MIPS_MMI1:
+		case MIPS_MMI2:
+		case MIPS_MMI3:
 		il.AddInstruction(il.Unimplemented());
 			break;
 

@@ -16,7 +16,8 @@ members = [
     "plugins/idb_import",
     "plugins/pdb-ng",
     "plugins/pdb-ng/demo",
-    "plugins/warp"
+    "plugins/warp", 
+    "plugins/svd"
 ]
 
 [workspace.dependencies]

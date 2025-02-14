@@ -1,0 +1,62 @@
+---
+source: plugins/svd/tests/mapper.rs
+assertion_line: 42
+expression: view
+---
+BinaryView {
+    type_name: "Raw",
+    file: FileMetadata {
+        filename: "",
+        session_id: 11580417998191310921,
+        modified: false,
+        is_analysis_changed: true,
+        current_view_type: "Hex:Raw",
+        current_offset: 0,
+        view_types: [
+            "Raw",
+        ],
+    },
+    original_image_base: 0,
+    start: 0,
+    end: 0,
+    len: 0,
+    default_platform: None,
+    default_arch: None,
+    default_endianness: LittleEndian,
+    entry_point: 0,
+    entry_point_functions: [],
+    address_size: 4,
+    sections: [
+        Section {
+            name: "TIMER0",
+            address_range: 1073807360..1073807616,
+            section_type: "peripheral",
+            semantics: ReadWriteData,
+            linked_section: "",
+            align: 1,
+            entry_size: 1,
+            auto_defined: false,
+        },
+        Section {
+            name: "TIMER1",
+            address_range: 1073807616..1073807872,
+            section_type: "peripheral",
+            semantics: ReadWriteData,
+            linked_section: "",
+            align: 1,
+            entry_size: 1,
+            auto_defined: false,
+        },
+        Section {
+            name: "TIMER2",
+            address_range: 1073807872..1073808128,
+            section_type: "peripheral",
+            semantics: ReadWriteData,
+            linked_section: "",
+            align: 1,
+            entry_size: 1,
+            auto_defined: false,
+        },
+    ],
+    segments: [],
+}

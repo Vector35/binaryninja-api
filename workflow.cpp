@@ -8,12 +8,21 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-AnalysisContext::AnalysisContext(BNAnalysisContext* analysisContext) :
-    m_reader(Json::CharReaderBuilder().newCharReader())
+// static
+Json::StreamWriterBuilder& AnalysisContext::JsonBuilder()
+{
+	static Json::StreamWriterBuilder* builder = [] {
+		auto builder = new Json::StreamWriterBuilder;
+		(*builder)["indentation"] = "";
+		return builder;
+	}();
+	return *builder;
+}
+
+AnalysisContext::AnalysisContext(BNAnalysisContext* analysisContext)
 {
 	// LogError("API-Side AnalysisContext Constructed!");
 	m_object = analysisContext;
-	m_builder["indentation"] = "";
 }
 
 

@@ -10017,8 +10017,7 @@ namespace BinaryNinja {
 	class AnalysisContext :
 	    public CoreRefCountObject<BNAnalysisContext, BNNewAnalysisContextReference, BNFreeAnalysisContext>
 	{
-		std::unique_ptr<Json::CharReader> m_reader;
-		Json::StreamWriterBuilder m_builder;
+		static Json::StreamWriterBuilder& JsonBuilder();
 
 	  public:
 		AnalysisContext(BNAnalysisContext* analysisContext);
@@ -10102,7 +10101,7 @@ namespace BinaryNinja {
 				               }},
 				    arg);
 
-			return Inform(Json::writeString(m_builder, request));
+			return Inform(Json::writeString(JsonBuilder(), request));
 		}
 #endif
 	};

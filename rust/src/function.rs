@@ -2768,6 +2768,7 @@ impl Default for HighlightColor {
     }
 }
 
+// TODO: Move this out of function, so we can use it in the binary view
 // NOTE only exists as Array<Comments>, cant be owned
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Comment {

@@ -1222,6 +1222,31 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNRemoveUserDataTag(self.as_ref().handle, addr, tag.handle) }
     }
 
+    fn comment_at(&self, addr: u64) -> Option<BnString> {
+        unsafe {
+            let comment_raw = BNGetGlobalCommentForAddress(self.as_ref().handle, addr);
+            match comment_raw.is_null() {
+                false => Some(BnString::from_raw(comment_raw)),
+                true => None,
+            }
+        }
+    }
+
+    /// Sets a comment for the [`BinaryView`] at the address specified.
+    ///
+    /// NOTE: This is different from setting a comment at the function-level. To set a comment in a
+    /// function use [`Function::set_comment_at`]
+    fn set_comment_at(&self, addr: u64, comment: impl BnStrCompatible) {
+        let comment_raw = comment.into_bytes_with_nul();
+        unsafe {
+            BNSetGlobalCommentForAddress(
+                self.as_ref().handle,
+                addr,
+                comment_raw.as_ref().as_ptr() as *const c_char,
+            )
+        }
+    }
+
     /// Retrieves a list of the next disassembly lines.
     ///
     /// Retrieves an [`Array`] over [`LinearDisassemblyLine`] objects for the

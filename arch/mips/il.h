@@ -91,4 +91,50 @@ bool GetLowLevelILForInstruction(
 		uint32_t decomposeFlags,
 		mips::MipsVersion version);
 
-BinaryNinja::ExprId GetConditionForInstruction(BinaryNinja::LowLevelILFunction& il, mips::Instruction& instr, size_t registerSize);
+BinaryNinja::ExprId GetConditionForInstruction(BinaryNinja::LowLevelILFunction& il, mips::Instruction& instr, std::function<size_t(mips::InstructionOperand&)> registerSize);
+#ifdef __cplusplus
+extern "C" {
+	namespace mips {
+#endif
+
+static inline const size_t get_register_width(size_t reg, MipsVersion version, size_t maxWidth=8) {
+	size_t width = 32;
+	switch (version)
+	{
+	case MIPS_1:
+	case MIPS_2:
+	case MIPS_3:
+	case MIPS_4:
+	case MIPS_32:
+		width = 32;
+		break;
+	case MIPS_64:
+		width = 64;
+		break;
+	case MIPS_R5900:
+		switch (reg)
+		{
+	case REG_LO:
+	case REG_HI:
+		width = 64;
+			break;
+	case REG_LO1:
+	case REG_HI1:
+		width = 128;
+			break;
+	default:
+		if (REG_ZERO <= reg && reg < REG_GP)
+			width = 128;  // 64;  // 128
+		else if (FPREG_F0 <= reg && reg <= FPREG_F31)
+			width = 64;
+		}
+	default:
+		break;
+	}
+	width /= 8;
+	return width <= maxWidth ? width : maxWidth;
+}
+#ifdef __cplusplus
+}
+}//end namespace
+#endif

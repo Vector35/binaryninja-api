@@ -1377,40 +1377,9 @@ namespace mips
 		const char* get_register(Reg reg);
 		const char* get_flag(enum Flag flag);
 		const char* get_hint(Hint hint);
+
 #ifdef __cplusplus
 	}
 }//end namespace
 #endif
 
-static inline const size_t get_register_width(Reg reg, MipsVersion version) {
-	size_t width = 32;
-	switch (version)
-	{
-	case MIPS_1:
-	case MIPS_2:
-	case MIPS_3:
-	case MIPS_4:
-	case MIPS_32:
-		width = 32;
-	break;
-	case MIPS_64:
-		width = 64;
-	break;
-	case MIPS_R5900:
-		switch (reg)
-		{
-			case REG_LO:
-			case REG_HI:
-				width = 64;
-			break;
-			case REG_LO1:
-			case REG_HI1:
-				width = 128;
-			break;
-			default:
-				if (REG_ZERO <= reg && reg < REG_GP)
-					width = 128;
-		}
-	}
-	return width / 8;
-}

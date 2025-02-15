@@ -530,8 +530,13 @@ public:
 			{
 				InstructionInfo instrInfo;
 				LowLevelILLabel trueCode, falseCode;
+				auto registerSize = [=](const InstructionOperand& op) -> size_t const
+				{
+					return get_register_width(Reg(op.reg), m_version);
+				};
+
 				SetInstructionInfoForInstruction(addr, instr, instrInfo);
-				il.AddInstruction(il.If(GetConditionForInstruction(il, instr, GetAddressSize()), trueCode, falseCode));
+				il.AddInstruction(il.If(GetConditionForInstruction(il, instr, registerSize), trueCode, falseCode));
 				il.MarkLabel(trueCode);
 				il.SetCurrentAddress(this, addr + instr.size);
 				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize(), m_decomposeFlags, m_version);
@@ -2108,7 +2113,7 @@ public:
 	{
 		BNRegisterInfo result = {reg, 0, m_bits / 8, NoExtend};
 		if (m_version == MIPS_R5900) {
-			result.size = get_register_width(reg, m_version);
+			result.size = get_register_width(reg, m_version, 16);
 			switch (reg) {
 			// case REG_LO:
 			// case REG_HI:
@@ -2123,6 +2128,7 @@ public:
 					result.fullWidthRegister = REG_HI;
 				break;
 			default:
+				break;
 				// if (REG_ZERO <= reg && reg < REG_GP)
 				// 	result.size = 128 / 8;
 			}

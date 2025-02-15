@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::ops::Range;
 
 use binaryninja::section::Section;
-use binaryninja::segment::Segment;
+use binaryninja::segment::{Segment, SegmentFlags};
 use log::{debug, error, info, warn};
 use minidump::format::MemoryProtection;
 use minidump::{
@@ -244,13 +244,16 @@ impl MinidumpBinaryView {
                          segment_memory_protection.executable,
                     );
 
+                    let segment_flags = SegmentFlags::new()
+                        .readable(segment_memory_protection.readable)
+                        .writable(segment_memory_protection.writable)
+                        .executable(segment_memory_protection.executable);
+
                     self.add_segment(
                         Segment::builder(segment.mapped_addr_range.clone())
                             .parent_backing(segment.rva_range.clone())
                             .is_auto(true)
-                            .readable(segment_memory_protection.readable)
-                            .writable(segment_memory_protection.writable)
-                            .executable(segment_memory_protection.executable),
+                            .flags(segment_flags),
                     );
                 } else {
                     error!(

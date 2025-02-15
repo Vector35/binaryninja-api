@@ -26,6 +26,7 @@ use binaryninjacore_sys::*;
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::base_detection::BaseAddressDetection;
 use crate::basic_block::BasicBlock;
+use crate::binary_view::memory_map::MemoryMap;
 use crate::component::{Component, IntoComponentGuid};
 use crate::confidence::Conf;
 use crate::data_buffer::DataBuffer;
@@ -63,6 +64,8 @@ use std::path::Path;
 use std::ptr::NonNull;
 use std::{result, slice};
 // TODO : general reorg of modules related to bv
+
+pub mod memory_map;
 
 pub type Result<R> = result::Result<R, ()>;
 pub type BinaryViewEventType = BNBinaryViewEventType;
@@ -870,7 +873,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNCancelBulkAddSegments(self.as_ref().handle) }
     }
 
-    fn add_section<S: BnStrCompatible>(&self, section: SectionBuilder<S>) {
+    fn add_section(&self, section: SectionBuilder) {
         section.create(self.as_ref());
     }
 
@@ -916,6 +919,10 @@ pub trait BinaryViewExt: BinaryViewBase {
             let sections = BNGetSectionsAt(self.as_ref().handle, addr, &mut count);
             Array::new(sections, count, ())
         }
+    }
+
+    fn memory_map(&self) -> MemoryMap {
+        MemoryMap::new(self.as_ref().to_owned())
     }
 
     fn add_auto_function(&self, plat: &Platform, addr: u64) -> Option<Ref<Function>> {

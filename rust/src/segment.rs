@@ -22,15 +22,12 @@ use std::ops::Range;
 use crate::binary_view::BinaryView;
 use crate::rc::*;
 
-fn set_bit(val: u32, bit_mask: u32, new_val: bool) -> u32 {
-    (val & !bit_mask) | if new_val { bit_mask } else { 0 }
-}
-
 #[must_use]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct SegmentBuilder {
     ea: Range<u64>,
     parent_backing: Option<Range<u64>>,
-    flags: u32,
+    flags: SegmentFlags,
     is_auto: bool,
 }
 
@@ -39,7 +36,7 @@ impl SegmentBuilder {
         SegmentBuilder {
             ea,
             parent_backing: None,
-            flags: 0,
+            flags: Default::default(),
             is_auto: false,
         }
     }
@@ -49,38 +46,8 @@ impl SegmentBuilder {
         self
     }
 
-    pub fn executable(mut self, executable: bool) -> Self {
-        self.flags = set_bit(self.flags, 0x01, executable);
-        self
-    }
-
-    pub fn writable(mut self, writable: bool) -> Self {
-        self.flags = set_bit(self.flags, 0x02, writable);
-        self
-    }
-
-    pub fn readable(mut self, readable: bool) -> Self {
-        self.flags = set_bit(self.flags, 0x04, readable);
-        self
-    }
-
-    pub fn contains_data(mut self, contains_data: bool) -> Self {
-        self.flags = set_bit(self.flags, 0x08, contains_data);
-        self
-    }
-
-    pub fn contains_code(mut self, contains_code: bool) -> Self {
-        self.flags = set_bit(self.flags, 0x10, contains_code);
-        self
-    }
-
-    pub fn deny_write(mut self, deny_write: bool) -> Self {
-        self.flags = set_bit(self.flags, 0x20, deny_write);
-        self
-    }
-
-    pub fn deny_execute(mut self, deny_execute: bool) -> Self {
-        self.flags = set_bit(self.flags, 0x40, deny_execute);
+    pub fn flags(mut self, flags: SegmentFlags) -> Self {
+        self.flags = flags;
         self
     }
 
@@ -98,9 +65,23 @@ impl SegmentBuilder {
 
         unsafe {
             if self.is_auto {
-                BNAddAutoSegment(view.handle, ea_start, ea_len, b_start, b_len, self.flags);
+                BNAddAutoSegment(
+                    view.handle,
+                    ea_start,
+                    ea_len,
+                    b_start,
+                    b_len,
+                    self.flags.into_raw(),
+                );
             } else {
-                BNAddUserSegment(view.handle, ea_start, ea_len, b_start, b_len, self.flags);
+                BNAddUserSegment(
+                    view.handle,
+                    ea_start,
+                    ea_len,
+                    b_start,
+                    b_len,
+                    self.flags.into_raw(),
+                );
             }
         }
     }
@@ -125,10 +106,11 @@ impl Segment {
     /// You need to create a segment builder, customize that segment, then add it to a binary view:
     ///
     /// ```no_run
-    /// # use binaryninja::segment::Segment;
+    /// # use binaryninja::segment::{Segment, SegmentFlags};
     /// # use binaryninja::binary_view::BinaryViewExt;
     /// let bv = binaryninja::load("example").unwrap();
-    /// bv.add_segment(Segment::builder(0..0x1000).writable(true).readable(true))
+    /// let segment_flags = SegmentFlags::new().writable(true).readable(true);
+    /// bv.add_segment(Segment::builder(0..0x1000).flags(segment_flags))
     /// ```
     pub fn builder(ea_range: Range<u64>) -> SegmentBuilder {
         SegmentBuilder::new(ea_range)
@@ -151,36 +133,37 @@ impl Segment {
         }
     }
 
-    fn flags(&self) -> u32 {
-        unsafe { BNSegmentGetFlags(self.handle) }
+    pub fn flags(&self) -> SegmentFlags {
+        let raw_flags = unsafe { BNSegmentGetFlags(self.handle) };
+        SegmentFlags::from_raw(raw_flags)
     }
 
     pub fn executable(&self) -> bool {
-        self.flags() & 0x01 != 0
+        self.flags().executable
     }
 
     pub fn writable(&self) -> bool {
-        self.flags() & 0x02 != 0
+        self.flags().writable
     }
 
     pub fn readable(&self) -> bool {
-        self.flags() & 0x04 != 0
+        self.flags().readable
     }
 
     pub fn contains_data(&self) -> bool {
-        self.flags() & 0x08 != 0
+        self.flags().contains_data
     }
 
     pub fn contains_code(&self) -> bool {
-        self.flags() & 0x10 != 0
+        self.flags().contains_code
     }
 
     pub fn deny_write(&self) -> bool {
-        self.flags() & 0x20 != 0
+        self.flags().deny_write
     }
 
     pub fn deny_execute(&self) -> bool {
-        self.flags() & 0x40 != 0
+        self.flags().deny_execute
     }
 
     pub fn auto_defined(&self) -> bool {
@@ -193,14 +176,8 @@ impl Debug for Segment {
         f.debug_struct("Segment")
             .field("address_range", &self.address_range())
             .field("parent_backing", &self.parent_backing())
-            .field("executable", &self.executable())
-            .field("writable", &self.writable())
-            .field("readable", &self.readable())
-            .field("contains_data", &self.contains_data())
-            .field("contains_code", &self.contains_code())
-            .field("deny_write", &self.deny_write())
-            .field("deny_execute", &self.deny_execute())
             .field("auto_defined", &self.auto_defined())
+            .field("flags", &self.flags())
             .finish()
     }
 }
@@ -238,5 +215,79 @@ unsafe impl CoreArrayProviderInner for Segment {
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(Segment::from_raw(*raw), context)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct SegmentFlags {
+    pub executable: bool,
+    pub writable: bool,
+    pub readable: bool,
+    pub contains_data: bool,
+    pub contains_code: bool,
+    pub deny_write: bool,
+    pub deny_execute: bool,
+}
+
+impl SegmentFlags {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn executable(mut self, executable: bool) -> Self {
+        self.executable = executable;
+        self
+    }
+
+    pub fn writable(mut self, writable: bool) -> Self {
+        self.writable = writable;
+        self
+    }
+
+    pub fn readable(mut self, readable: bool) -> Self {
+        self.readable = readable;
+        self
+    }
+
+    pub fn contains_data(mut self, contains_data: bool) -> Self {
+        self.contains_data = contains_data;
+        self
+    }
+
+    pub fn contains_code(mut self, contains_code: bool) -> Self {
+        self.contains_code = contains_code;
+        self
+    }
+
+    pub fn deny_write(mut self, deny_write: bool) -> Self {
+        self.deny_write = deny_write;
+        self
+    }
+
+    pub fn deny_execute(mut self, deny_execute: bool) -> Self {
+        self.deny_execute = deny_execute;
+        self
+    }
+
+    pub(crate) fn from_raw(flags: u32) -> Self {
+        Self {
+            executable: flags & 0x01 != 0,
+            writable: flags & 0x02 != 0,
+            readable: flags & 0x04 != 0,
+            contains_data: flags & 0x08 != 0,
+            contains_code: flags & 0x10 != 0,
+            deny_write: flags & 0x20 != 0,
+            deny_execute: flags & 0x40 != 0,
+        }
+    }
+
+    pub(crate) fn into_raw(&self) -> u32 {
+        (self.executable as u32)
+            | (self.writable as u32) << 1
+            | (self.readable as u32) << 2
+            | (self.contains_data as u32) << 3
+            | (self.contains_code as u32) << 4
+            | (self.deny_write as u32) << 5
+            | (self.deny_execute as u32) << 6
     }
 }

@@ -28,7 +28,7 @@ Ref<BinaryView> AnalysisContext::GetBinaryView()
 	BNBinaryView* view = BNAnalysisContextGetBinaryView(m_object);
 	if (!view)
 		return nullptr;
-	return new BinaryView(view);
+	return BinaryView::LookupOrCreate(view);
 }
 
 

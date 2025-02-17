@@ -55,7 +55,7 @@ bool RelocationHandler::GetRelocationInfoCallback(
     void* ctxt, BNBinaryView* view, BNArchitecture* arch, BNRelocationInfo* result, size_t resultCount)
 {
 	CallbackRef<RelocationHandler> handler(ctxt);
-	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
+	Ref<BinaryView> viewObj = BinaryView::LookupOrCreate(BNNewViewReference(view));
 	Ref<Architecture> archObj = new CoreArchitecture(arch);
 	if (!result)
 		return false;
@@ -72,7 +72,7 @@ bool RelocationHandler::ApplyRelocationCallback(
 {
 	CallbackRef<RelocationHandler> handler(ctxt);
 	Ref<Architecture> archObj = new CoreArchitecture(arch);
-	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
+	Ref<BinaryView> viewObj = BinaryView::LookupOrCreate(BNNewViewReference(view));
 	Ref<Relocation> relocObj = new Relocation(BNNewRelocationReference(reloc));
 	return handler->ApplyRelocation(viewObj, archObj, relocObj, dest, len);
 }

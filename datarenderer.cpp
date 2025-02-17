@@ -42,7 +42,7 @@ bool DataRenderer::IsValidForDataCallback(
     void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type, BNTypeContext* typeCtx, size_t ctxCount)
 {
 	CallbackRef<DataRenderer> renderer(ctxt);
-	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
+	Ref<BinaryView> viewObj = BinaryView::LookupOrCreate(BNNewViewReference(view));
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
 	vector<pair<Type*, size_t>> context;
 	context.reserve(ctxCount);
@@ -68,7 +68,7 @@ BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinar
     BNTypeContext* typeCtx, size_t ctxCount, const char* language)
 {
 	CallbackRef<DataRenderer> renderer(ctxt);
-	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
+	Ref<BinaryView> viewObj = BinaryView::LookupOrCreate(BNNewViewReference(view));
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
 	vector<InstructionTextToken> prefixes = InstructionTextToken::ConvertInstructionTextTokenList(prefix, prefixCount);
 

@@ -3157,7 +3157,7 @@ extern "C"
 		if (!data)
 			return nullptr;
 
-		Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+		Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 		if (auto cache = SharedCache::GetFromDSCView(view))
 		{
 			cache->AddAPIRef();
@@ -3508,7 +3508,7 @@ extern "C"
 
 	uint64_t BNDSCViewFastGetBackingCacheCount(BNBinaryView* data)
 	{
-		Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+		Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 		return SharedCache::FastGetBackingCacheCount(view);
 	}
 }

@@ -192,7 +192,7 @@ bool InteractionHandler::GetDirectoryNameInput(string& result, const string& pro
 static void ShowPlainTextReportCallback(void* ctxt, BNBinaryView* view, const char* title, const char* contents)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
-	handler->ShowPlainTextReport(view ? new BinaryView(BNNewViewReference(view)) : nullptr, title, contents);
+	handler->ShowPlainTextReport(view ? BinaryView::LookupOrCreate(BNNewViewReference(view)) : nullptr, title, contents);
 }
 
 
@@ -200,7 +200,7 @@ static void ShowMarkdownReportCallback(
     void* ctxt, BNBinaryView* view, const char* title, const char* contents, const char* plaintext)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
-	handler->ShowMarkdownReport(view ? new BinaryView(BNNewViewReference(view)) : nullptr, title, contents, plaintext);
+	handler->ShowMarkdownReport(view ? BinaryView::LookupOrCreate(BNNewViewReference(view)) : nullptr, title, contents, plaintext);
 }
 
 
@@ -208,14 +208,14 @@ static void ShowHTMLReportCallback(
     void* ctxt, BNBinaryView* view, const char* title, const char* contents, const char* plaintext)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
-	handler->ShowHTMLReport(view ? new BinaryView(BNNewViewReference(view)) : nullptr, title, contents, plaintext);
+	handler->ShowHTMLReport(view ? BinaryView::LookupOrCreate(BNNewViewReference(view)) : nullptr, title, contents, plaintext);
 }
 
 
 static void ShowGraphReportCallback(void* ctxt, BNBinaryView* view, const char* title, BNFlowGraph* graph)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
-	handler->ShowGraphReport(view ? new BinaryView(BNNewViewReference(view)) : nullptr, title,
+	handler->ShowGraphReport(view ? BinaryView::LookupOrCreate(BNNewViewReference(view)) : nullptr, title,
 	    new CoreFlowGraph(BNNewFlowGraphReference(graph)));
 }
 
@@ -250,7 +250,7 @@ static bool GetAddressInputCallback(
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
 	return handler->GetAddressInput(
-	    *result, prompt, title, view ? new BinaryView(BNNewViewReference(view)) : nullptr, currentAddr);
+	    *result, prompt, title, view ? BinaryView::LookupOrCreate(BNNewViewReference(view)) : nullptr, currentAddr);
 }
 
 
@@ -335,7 +335,7 @@ static bool GetFormInputCallback(void* ctxt, BNFormInputField* fieldBuf, size_t 
 			break;
 		case AddressFormField:
 			fields.push_back(FormInputField::Address(fieldBuf[i].prompt,
-			    fieldBuf[i].view ? new BinaryView(BNNewViewReference(fieldBuf[i].view)) : nullptr,
+			    fieldBuf[i].view ? BinaryView::LookupOrCreate(BNNewViewReference(fieldBuf[i].view)) : nullptr,
 			    fieldBuf[i].currentAddress));
 			break;
 		case ChoiceFormField:
@@ -765,7 +765,7 @@ Ref<BinaryView> ReportCollection::GetView(size_t i) const
 	BNBinaryView* view = BNGetReportView(m_object, i);
 	if (!view)
 		return nullptr;
-	return new BinaryView(view);
+	return BinaryView::LookupOrCreate(view);
 }
 
 

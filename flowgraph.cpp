@@ -162,7 +162,7 @@ Ref<BinaryView> FlowGraph::GetView() const
 	BNBinaryView* view = BNGetViewForFlowGraph(m_object);
 	if (!view)
 		return nullptr;
-	return new BinaryView(view);
+	return BinaryView::LookupOrCreate(view);
 }
 
 

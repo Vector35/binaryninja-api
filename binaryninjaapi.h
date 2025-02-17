@@ -4512,6 +4512,7 @@ namespace BinaryNinja {
 	class BinaryView : public CoreRefCountObject<BNBinaryView, BNNewViewReference, BNFreeBinaryView>
 	{
 		std::unique_ptr<MemoryMap> m_memoryMap;
+		static std::unordered_map<BNBinaryView*, BinaryView*> g_registeredInstances;
 
 	  protected:
 		Ref<FileMetadata> m_file;  //!< The underlying file
@@ -4522,6 +4523,8 @@ namespace BinaryNinja {
 		   \param parentView optional view that contains the raw data used by this view
 		*/
 		BinaryView(const std::string& typeName, FileMetadata* file, BinaryView* parentView = nullptr);
+
+		BinaryView(BNBinaryView* view);
 
 		/*! PerformRead provides a mapping between the flat file and virtual offsets in the file.
 
@@ -4761,7 +4764,8 @@ namespace BinaryNinja {
 		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
 
 	  public:
-		BinaryView(BNBinaryView* view);
+		static Ref<BinaryView> LookupOrCreate(BNBinaryView* handle);
+		~BinaryView();
 
 		virtual bool Init() { return true; }
 

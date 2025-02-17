@@ -27,6 +27,9 @@ using namespace BinaryNinja;
 using namespace std;
 
 
+std::unordered_map<BNBinaryView*, BinaryView*> BinaryView::g_registeredInstances = {};
+
+
 struct SymbolQueueResolveContext
 {
 	std::function<std::pair<Ref<Symbol>, Ref<Type>>()> resolve;
@@ -41,7 +44,7 @@ struct SymbolQueueAddContext
 uint64_t BinaryDataNotification::NotificationBarrierCallback(void* ctxt, BNBinaryView* object)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	return notify->OnNotificationBarrier(view);
 }
 
@@ -49,7 +52,7 @@ uint64_t BinaryDataNotification::NotificationBarrierCallback(void* ctxt, BNBinar
 void BinaryDataNotification::DataWrittenCallback(void* ctxt, BNBinaryView* object, uint64_t offset, size_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	notify->OnBinaryDataWritten(view, offset, len);
 }
 
@@ -57,7 +60,7 @@ void BinaryDataNotification::DataWrittenCallback(void* ctxt, BNBinaryView* objec
 void BinaryDataNotification::DataInsertedCallback(void* ctxt, BNBinaryView* object, uint64_t offset, size_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	notify->OnBinaryDataInserted(view, offset, len);
 }
 
@@ -65,7 +68,7 @@ void BinaryDataNotification::DataInsertedCallback(void* ctxt, BNBinaryView* obje
 void BinaryDataNotification::DataRemovedCallback(void* ctxt, BNBinaryView* object, uint64_t offset, uint64_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	notify->OnBinaryDataRemoved(view, offset, len);
 }
 
@@ -73,7 +76,7 @@ void BinaryDataNotification::DataRemovedCallback(void* ctxt, BNBinaryView* objec
 void BinaryDataNotification::FunctionAddedCallback(void* ctxt, BNBinaryView* object, BNFunction* func)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
 	notify->OnAnalysisFunctionAdded(view, funcObj);
 }
@@ -82,7 +85,7 @@ void BinaryDataNotification::FunctionAddedCallback(void* ctxt, BNBinaryView* obj
 void BinaryDataNotification::FunctionRemovedCallback(void* ctxt, BNBinaryView* object, BNFunction* func)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
 	notify->OnAnalysisFunctionRemoved(view, funcObj);
 }
@@ -91,7 +94,7 @@ void BinaryDataNotification::FunctionRemovedCallback(void* ctxt, BNBinaryView* o
 void BinaryDataNotification::FunctionUpdatedCallback(void* ctxt, BNBinaryView* object, BNFunction* func)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
 	notify->OnAnalysisFunctionUpdated(view, funcObj);
 }
@@ -100,7 +103,7 @@ void BinaryDataNotification::FunctionUpdatedCallback(void* ctxt, BNBinaryView* o
 void BinaryDataNotification::FunctionUpdateRequestedCallback(void* ctxt, BNBinaryView* object, BNFunction* func)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
 	notify->OnAnalysisFunctionUpdateRequested(view, funcObj);
 }
@@ -109,7 +112,7 @@ void BinaryDataNotification::FunctionUpdateRequestedCallback(void* ctxt, BNBinar
 void BinaryDataNotification::DataVariableAddedCallback(void* ctxt, BNBinaryView* object, BNDataVariable* var)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	DataVariable varObj(var->address,
 	    Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence), var->autoDiscovered);
 	notify->OnDataVariableAdded(view, varObj);
@@ -119,7 +122,7 @@ void BinaryDataNotification::DataVariableAddedCallback(void* ctxt, BNBinaryView*
 void BinaryDataNotification::DataVariableRemovedCallback(void* ctxt, BNBinaryView* object, BNDataVariable* var)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	DataVariable varObj(var->address,
 	    Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence), var->autoDiscovered);
 	notify->OnDataVariableRemoved(view, varObj);
@@ -129,7 +132,7 @@ void BinaryDataNotification::DataVariableRemovedCallback(void* ctxt, BNBinaryVie
 void BinaryDataNotification::DataVariableUpdatedCallback(void* ctxt, BNBinaryView* object, BNDataVariable* var)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	DataVariable varObj(var->address,
 	    Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence), var->autoDiscovered);
 	notify->OnDataVariableUpdated(view, varObj);
@@ -139,7 +142,7 @@ void BinaryDataNotification::DataVariableUpdatedCallback(void* ctxt, BNBinaryVie
 void BinaryDataNotification::DataMetadataUpdatedCallback(void* ctxt, BNBinaryView* object, uint64_t offset)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	notify->OnDataMetadataUpdated(view, offset);
 }
 
@@ -147,7 +150,7 @@ void BinaryDataNotification::DataMetadataUpdatedCallback(void* ctxt, BNBinaryVie
 void BinaryDataNotification::TagTypeUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagType* tagType)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	Ref<TagType> tagTypeRef = new TagType(BNNewTagTypeReference(tagType));
 	notify->OnTagTypeUpdated(view, tagTypeRef);
 }
@@ -156,7 +159,7 @@ void BinaryDataNotification::TagTypeUpdatedCallback(void* ctxt, BNBinaryView* ob
 void BinaryDataNotification::TagAddedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	notify->OnTagAdded(view, TagReference(*tagRef));
 }
 
@@ -164,7 +167,7 @@ void BinaryDataNotification::TagAddedCallback(void* ctxt, BNBinaryView* object, 
 void BinaryDataNotification::TagUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	notify->OnTagUpdated(view, TagReference(*tagRef));
 }
 
@@ -172,7 +175,7 @@ void BinaryDataNotification::TagUpdatedCallback(void* ctxt, BNBinaryView* object
 void BinaryDataNotification::TagRemovedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	notify->OnTagRemoved(view, TagReference(*tagRef));
 }
 
@@ -180,7 +183,7 @@ void BinaryDataNotification::TagRemovedCallback(void* ctxt, BNBinaryView* object
 void BinaryDataNotification::SymbolAddedCallback(void* ctxt, BNBinaryView* object, BNSymbol* symobj)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	Ref<Symbol> sym = new Symbol(BNNewSymbolReference(symobj));
 	notify->OnSymbolAdded(view, sym);
 }
@@ -189,7 +192,7 @@ void BinaryDataNotification::SymbolAddedCallback(void* ctxt, BNBinaryView* objec
 void BinaryDataNotification::SymbolUpdatedCallback(void* ctxt, BNBinaryView* object, BNSymbol* symobj)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	Ref<Symbol> sym = new Symbol(BNNewSymbolReference(symobj));
 	notify->OnSymbolUpdated(view, sym);
 }
@@ -198,7 +201,7 @@ void BinaryDataNotification::SymbolUpdatedCallback(void* ctxt, BNBinaryView* obj
 void BinaryDataNotification::SymbolRemovedCallback(void* ctxt, BNBinaryView* object, BNSymbol* symobj)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	Ref<Symbol> sym = new Symbol(BNNewSymbolReference(symobj));
 	notify->OnSymbolRemoved(view, sym);
 }
@@ -208,7 +211,7 @@ void BinaryDataNotification::StringFoundCallback(
     void* ctxt, BNBinaryView* object, BNStringType type, uint64_t offset, size_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	notify->OnStringFound(view, type, offset, len);
 }
 
@@ -217,7 +220,7 @@ void BinaryDataNotification::StringRemovedCallback(
     void* ctxt, BNBinaryView* object, BNStringType type, uint64_t offset, size_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(object));
 	notify->OnStringRemoved(view, type, offset, len);
 }
 
@@ -225,7 +228,7 @@ void BinaryDataNotification::StringRemovedCallback(
 void BinaryDataNotification::TypeDefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
 	notify->OnTypeDefined(view, QualifiedName::FromAPIObject(name), typeObj);
 }
@@ -234,7 +237,7 @@ void BinaryDataNotification::TypeDefinedCallback(void* ctxt, BNBinaryView* data,
 void BinaryDataNotification::TypeUndefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
 	notify->OnTypeUndefined(view, QualifiedName::FromAPIObject(name), typeObj);
 }
@@ -244,7 +247,7 @@ void BinaryDataNotification::TypeReferenceChangedCallback(
     void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
 	notify->OnTypeReferenceChanged(view, QualifiedName::FromAPIObject(name), typeObj);
 }
@@ -254,7 +257,7 @@ void BinaryDataNotification::TypeFieldReferenceChangedCallback(
     void* ctxt, BNBinaryView* data, BNQualifiedName* name, uint64_t offset)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	notify->OnTypeFieldReferenceChanged(view, QualifiedName::FromAPIObject(name), offset);
 }
 
@@ -262,7 +265,7 @@ void BinaryDataNotification::TypeFieldReferenceChangedCallback(
 void BinaryDataNotification::SegmentAddedCallback(void* ctxt, BNBinaryView* data, BNSegment* segment)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Segment> segmentObj = new Segment(BNNewSegmentReference(segment));
 
 	notify->OnSegmentAdded(view, segmentObj);
@@ -272,7 +275,7 @@ void BinaryDataNotification::SegmentAddedCallback(void* ctxt, BNBinaryView* data
 void BinaryDataNotification::SegmentUpdatedCallback(void* ctxt, BNBinaryView* data, BNSegment* segment)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Segment> segmentObj = new Segment(BNNewSegmentReference(segment));
 
 	notify->OnSegmentUpdated(view, segmentObj);
@@ -282,7 +285,7 @@ void BinaryDataNotification::SegmentUpdatedCallback(void* ctxt, BNBinaryView* da
 void BinaryDataNotification::SegmentRemovedCallback(void* ctxt, BNBinaryView* data, BNSegment* segment)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Segment> segmentObj = new Segment(BNNewSegmentReference(segment));
 
 	notify->OnSegmentRemoved(view, segmentObj);
@@ -292,7 +295,7 @@ void BinaryDataNotification::SegmentRemovedCallback(void* ctxt, BNBinaryView* da
 void BinaryDataNotification::SectionAddedCallback(void* ctxt, BNBinaryView* data, BNSection* section)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Section> sectionObj = new Section(BNNewSectionReference(section));
 
 	notify->OnSectionAdded(view, sectionObj);
@@ -302,7 +305,7 @@ void BinaryDataNotification::SectionAddedCallback(void* ctxt, BNBinaryView* data
 void BinaryDataNotification::SectionUpdatedCallback(void* ctxt, BNBinaryView* data, BNSection* section)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Section> sectionObj = new Section(BNNewSectionReference(section));
 
 	notify->OnSectionUpdated(view, sectionObj);
@@ -312,7 +315,7 @@ void BinaryDataNotification::SectionUpdatedCallback(void* ctxt, BNBinaryView* da
 void BinaryDataNotification::SectionRemovedCallback(void* ctxt, BNBinaryView* data, BNSection* section)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Section> sectionObj = new Section(BNNewSectionReference(section));
 
 	notify->OnSectionRemoved(view, sectionObj);
@@ -321,7 +324,7 @@ void BinaryDataNotification::SectionRemovedCallback(void* ctxt, BNBinaryView* da
 void BinaryDataNotification::ComponentNameUpdatedCallback(void* ctxt, BNBinaryView* data, char *previousName, BNComponent* bnComponent)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Component> component = new Component(BNNewComponentReference(bnComponent));
 	std::string prevName = previousName;
 	BNFreeString(previousName);
@@ -332,7 +335,7 @@ void BinaryDataNotification::ComponentNameUpdatedCallback(void* ctxt, BNBinaryVi
 void BinaryDataNotification::ComponentAddedCallback(void* ctxt, BNBinaryView* data, BNComponent* bnComponent)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Component> component = new Component(BNNewComponentReference(bnComponent));
 	notify->OnComponentAdded(view, component);
 }
@@ -342,7 +345,7 @@ void BinaryDataNotification::ComponentRemovedCallback(void* ctxt, BNBinaryView* 
 	BNComponent* bnComponent)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Component> formerParent = new Component(BNNewComponentReference(bnFormerParent));
 	Ref<Component> component = new Component(BNNewComponentReference(bnComponent));
 	notify->OnComponentRemoved(view, formerParent, component);
@@ -353,7 +356,7 @@ void BinaryDataNotification::ComponentMovedCallback(void* ctxt, BNBinaryView* da
 	BNComponent* bnNewParent, BNComponent* bnComponent)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Component> formerParent = new Component(BNNewComponentReference(bnFormerParent));
 	Ref<Component> newParent = new Component(BNNewComponentReference(bnNewParent));
 	Ref<Component> component = new Component(BNNewComponentReference(bnComponent));
@@ -365,7 +368,7 @@ void BinaryDataNotification::ComponentFunctionAddedCallback(void* ctxt, BNBinary
 	BNFunction* func)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Component> component = new Component(BNNewComponentReference(bnComponent));
 	Ref<Function> function = new Function(BNNewFunctionReference(func));
 	notify->OnComponentFunctionAdded(view, component, function);
@@ -376,7 +379,7 @@ void BinaryDataNotification::ComponentFunctionRemovedCallback(void* ctxt, BNBina
 	BNFunction* func)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Component> component = new Component(BNNewComponentReference(bnComponent));
 	Ref<Function> function = new Function(BNNewFunctionReference(func));
 	notify->OnComponentFunctionRemoved(view, component, function);
@@ -388,7 +391,7 @@ void BinaryDataNotification::ComponentDataVariableAddedCallback(void* ctxt, BNBi
 	BNDataVariable* var)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Component> component = new Component(BNNewComponentReference(bnComponent));
 	DataVariable varObj(var->address,
 		Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence), var->autoDiscovered);
@@ -400,7 +403,7 @@ void BinaryDataNotification::ComponentDataVariableRemovedCallback(void* ctxt, BN
 	BNComponent* bnComponent, BNDataVariable* var)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Component> component = new Component(BNNewComponentReference(bnComponent));
 	DataVariable varObj(var->address,
 		Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence), var->autoDiscovered);
@@ -411,7 +414,7 @@ void BinaryDataNotification::ComponentDataVariableRemovedCallback(void* ctxt, BN
 void BinaryDataNotification::ExternalLibraryAddedCallback(void* ctxt, BNBinaryView* data, BNExternalLibrary* library)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<ExternalLibrary> libraryObj = new ExternalLibrary(BNNewExternalLibraryReference(library));
 	notify->OnExternalLibraryAdded(view, libraryObj);
 }
@@ -420,7 +423,7 @@ void BinaryDataNotification::ExternalLibraryAddedCallback(void* ctxt, BNBinaryVi
 void BinaryDataNotification::ExternalLibraryUpdatedCallback(void* ctxt, BNBinaryView* data, BNExternalLibrary* library)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<ExternalLibrary> libraryObj = new ExternalLibrary(BNNewExternalLibraryReference(library));
 	notify->OnExternalLibraryUpdated(view, libraryObj);
 }
@@ -429,7 +432,7 @@ void BinaryDataNotification::ExternalLibraryUpdatedCallback(void* ctxt, BNBinary
 void BinaryDataNotification::ExternalLibraryRemovedCallback(void* ctxt, BNBinaryView* data, BNExternalLibrary* library)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<ExternalLibrary> libraryObj = new ExternalLibrary(BNNewExternalLibraryReference(library));
 	notify->OnExternalLibraryRemoved(view, libraryObj);
 }
@@ -438,7 +441,7 @@ void BinaryDataNotification::ExternalLibraryRemovedCallback(void* ctxt, BNBinary
 void BinaryDataNotification::ExternalLocationAddedCallback(void* ctxt, BNBinaryView* data, BNExternalLocation* location)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<ExternalLocation> locationObj = new ExternalLocation(BNNewExternalLocationReference(location));
 	notify->OnExternalLocationAdded(view, locationObj);
 }
@@ -447,7 +450,7 @@ void BinaryDataNotification::ExternalLocationAddedCallback(void* ctxt, BNBinaryV
 void BinaryDataNotification::ExternalLocationUpdatedCallback(void* ctxt, BNBinaryView* data, BNExternalLocation* location)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<ExternalLocation> locationObj = new ExternalLocation(BNNewExternalLocationReference(location));
 	notify->OnExternalLocationUpdated(view, locationObj);
 }
@@ -456,7 +459,7 @@ void BinaryDataNotification::ExternalLocationUpdatedCallback(void* ctxt, BNBinar
 void BinaryDataNotification::ExternalLocationRemovedCallback(void* ctxt, BNBinaryView* data, BNExternalLocation* location)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<ExternalLocation> locationObj = new ExternalLocation(BNNewExternalLocationReference(location));
 	notify->OnExternalLocationRemoved(view, locationObj);
 }
@@ -465,7 +468,7 @@ void BinaryDataNotification::ExternalLocationRemovedCallback(void* ctxt, BNBinar
 void BinaryDataNotification::TypeArchiveAttachedCallback(void* ctxt, BNBinaryView* data, const char* id, const char* path)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	notify->OnTypeArchiveAttached(view, id, path);
 }
 
@@ -473,7 +476,7 @@ void BinaryDataNotification::TypeArchiveAttachedCallback(void* ctxt, BNBinaryVie
 void BinaryDataNotification::TypeArchiveDetachedCallback(void* ctxt, BNBinaryView* data, const char* id, const char* path)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	notify->OnTypeArchiveDetached(view, id, path);
 }
 
@@ -481,7 +484,7 @@ void BinaryDataNotification::TypeArchiveDetachedCallback(void* ctxt, BNBinaryVie
 void BinaryDataNotification::TypeArchiveConnectedCallback(void* ctxt, BNBinaryView* data, BNTypeArchive* archive)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<TypeArchive> apiArchive = new TypeArchive(BNNewTypeArchiveReference(archive));
 	notify->OnTypeArchiveConnected(view, apiArchive);
 }
@@ -490,7 +493,7 @@ void BinaryDataNotification::TypeArchiveConnectedCallback(void* ctxt, BNBinaryVi
 void BinaryDataNotification::TypeArchiveDisconnectedCallback(void* ctxt, BNBinaryView* data, BNTypeArchive* archive)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<TypeArchive> apiArchive = new TypeArchive(BNNewTypeArchiveReference(archive));
 	notify->OnTypeArchiveDisconnected(view, apiArchive);
 }
@@ -499,7 +502,7 @@ void BinaryDataNotification::TypeArchiveDisconnectedCallback(void* ctxt, BNBinar
 void BinaryDataNotification::UndoEntryAddedCallback(void* ctxt, BNBinaryView* data, BNUndoEntry* entry)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<UndoEntry> apiEntry = new UndoEntry(BNNewUndoEntryReference(entry));
 	notify->OnUndoEntryAdded(view, apiEntry);
 }
@@ -508,7 +511,7 @@ void BinaryDataNotification::UndoEntryAddedCallback(void* ctxt, BNBinaryView* da
 void BinaryDataNotification::UndoEntryTakenCallback(void* ctxt, BNBinaryView* data, BNUndoEntry* entry)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<UndoEntry> apiEntry = new UndoEntry(BNNewUndoEntryReference(entry));
 	notify->OnUndoEntryTaken(view, apiEntry);
 }
@@ -517,7 +520,7 @@ void BinaryDataNotification::UndoEntryTakenCallback(void* ctxt, BNBinaryView* da
 void BinaryDataNotification::RedoEntryTakenCallback(void* ctxt, BNBinaryView* data, BNUndoEntry* entry)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<UndoEntry> apiEntry = new UndoEntry(BNNewUndoEntryReference(entry));
 	notify->OnRedoEntryTaken(view, apiEntry);
 }
@@ -526,8 +529,8 @@ void BinaryDataNotification::RedoEntryTakenCallback(void* ctxt, BNBinaryView* da
 void BinaryDataNotification::RebasedCallback(void *ctxt, BNBinaryView *oldView, BNBinaryView *newView)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view1 = new BinaryView(BNNewViewReference(oldView));
-	Ref<BinaryView> view2 = new BinaryView(BNNewViewReference(newView));
+	Ref<BinaryView> view1 = BinaryView::LookupOrCreate(BNNewViewReference(oldView));
+	Ref<BinaryView> view2 = BinaryView::LookupOrCreate(BNNewViewReference(newView));
 	notify->OnRebased(view1, view2);
 }
 
@@ -902,7 +905,7 @@ TagType::TagType(BinaryView* view, const std::string& name, const std::string& i
 
 BinaryView* TagType::GetView() const
 {
-	return new BinaryView(BNTagTypeGetView(m_object));
+	return BinaryView::LookupOrCreate(BNTagTypeGetView(m_object));
 }
 
 
@@ -1325,6 +1328,7 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file, BinaryVi
 	m_object = BNCreateCustomBinaryView(
 	    typeName.c_str(), m_file->GetObject(), parentView ? parentView->GetObject() : nullptr, &view);
 	m_memoryMap = std::make_unique<MemoryMap>(m_object);
+	g_registeredInstances.insert({m_object, this});
 }
 
 
@@ -1333,6 +1337,22 @@ BinaryView::BinaryView(BNBinaryView* view)
 	m_object = view;
 	m_file = new FileMetadata(BNGetFileForView(m_object));
 	m_memoryMap = std::make_unique<MemoryMap>(m_object);
+}
+
+
+BinaryView::~BinaryView()
+{
+	g_registeredInstances.erase(m_object);
+}
+
+
+Ref<BinaryView> BinaryView::LookupOrCreate(BNBinaryView* handle)
+{
+	if (auto found = g_registeredInstances.find(handle); found != g_registeredInstances.end())
+	{
+		return found->second;
+	}
+	return new BinaryView(handle);
 }
 
 
@@ -1592,7 +1612,7 @@ Ref<BinaryView> BinaryView::GetParentView() const
 	BNBinaryView* view = BNGetParentView(m_object);
 	if (!view)
 		return nullptr;
-	return new BinaryView(view);
+	return BinaryView::LookupOrCreate(view);
 }
 
 
@@ -5596,7 +5616,7 @@ Ref<BinaryView> BinaryNinja::Load(const std::string& filename, bool updateAnalys
 	BNBinaryView* handle = BNLoadFilename(filename.c_str(), updateAnalysis, options.c_str(), ProgressCallback, &cb);
 	if (!handle)
 		return nullptr;
-	return new BinaryView(handle);
+	return BinaryView::LookupOrCreate(handle);
 }
 
 
@@ -5615,7 +5635,7 @@ Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis, con
 	BNBinaryView* handle = BNLoadBinaryView(view->GetObject(), updateAnalysis, options.c_str(), ProgressCallback, &cb);
 	if (!handle)
 		return nullptr;
-	return new BinaryView(handle);
+	return BinaryView::LookupOrCreate(handle);
 }
 
 
@@ -5626,7 +5646,7 @@ Ref<BinaryView> BinaryNinja::Load(Ref<ProjectFile> projectFile, bool updateAnaly
 	BNBinaryView* handle = BNLoadProjectFile(projectFile->GetObject(), updateAnalysis, options.c_str(), ProgressCallback, &cb);
 	if (!handle)
 		return nullptr;
-	return new BinaryView(handle);
+	return BinaryView::LookupOrCreate(handle);
 }
 
 
@@ -5635,7 +5655,7 @@ Ref<BinaryView> BinaryNinja::ParseTextFormat(const std::string& filename)
 	BNBinaryView* handle = BNParseTextFormat(filename.c_str());
 	if (!handle)
 		return nullptr;
-	return new BinaryView(handle);
+	return BinaryView::LookupOrCreate(handle);
 }
 
 

@@ -150,7 +150,7 @@ namespace BinaryNinja {
 		Demangler* demangler = (Demangler*)ctxt;
 
 		Ref<Architecture> apiArch = new CoreArchitecture(arch);
-		Ref<BinaryView> apiView = view ? new BinaryView(BNNewViewReference(view)) : nullptr;
+		Ref<BinaryView> apiView = view ? BinaryView::LookupOrCreate(BNNewViewReference(view)) : nullptr;
 
 		Ref<Type> apiType;
 		QualifiedName apiVarName;

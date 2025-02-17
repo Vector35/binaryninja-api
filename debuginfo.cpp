@@ -447,7 +447,7 @@ bool DebugInfoParser::IsValidForView(const Ref<BinaryView> view) const
 bool CustomDebugInfoParser::IsValidCallback(void* ctxt, BNBinaryView* view)
 {
 	CustomDebugInfoParser* parser = (CustomDebugInfoParser*)ctxt;
-	return parser->IsValid(new BinaryView(view));
+	return parser->IsValid(BinaryView::LookupOrCreate(view));
 }
 
 
@@ -455,7 +455,7 @@ bool CustomDebugInfoParser::ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BN
 	BNBinaryView* debugFile, BNProgressFunction progress, void* progressCtxt)
 {
 	CustomDebugInfoParser* parser = (CustomDebugInfoParser*)ctxt;
-	return parser->ParseInfo(new DebugInfo(debugInfo), new BinaryView(view), new BinaryView(debugFile),
+	return parser->ParseInfo(new DebugInfo(debugInfo), BinaryView::LookupOrCreate(view), BinaryView::LookupOrCreate(debugFile),
 		[=](size_t cur, size_t max) { return progress(progressCtxt, cur, max); });
 }
 

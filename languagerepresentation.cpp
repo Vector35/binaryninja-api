@@ -311,7 +311,7 @@ BNLanguageRepresentationFunction* LanguageRepresentationFunctionType::CreateCall
 bool LanguageRepresentationFunctionType::IsValidCallback(void* ctxt, BNBinaryView* view)
 {
 	LanguageRepresentationFunctionType* type = (LanguageRepresentationFunctionType*)ctxt;
-	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
+	Ref<BinaryView> viewObj = BinaryView::LookupOrCreate(BNNewViewReference(view));
 	return type->IsValid(viewObj);
 }
 

@@ -126,7 +126,7 @@ bool TypePrinter::PrintAllTypesCallback(void* ctxt, BNQualifiedName* names, BNTy
 		apiTypes.push_back({QualifiedName::FromAPIObject(&names[i]), new Type(types[i])});
 	}
 
-	string resultStr = printer->PrintAllTypes(apiTypes, new BinaryView(data), paddingCols, escaping);
+	string resultStr = printer->PrintAllTypes(apiTypes, BinaryView::LookupOrCreate(data), paddingCols, escaping);
 	*result = BNAllocString(resultStr.c_str());
 	return true;
 }

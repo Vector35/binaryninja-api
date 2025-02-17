@@ -180,7 +180,7 @@ Ref<BinaryView> FileMetadata::OpenExistingDatabase(const string& path)
 	BNBinaryView* data = BNOpenExistingDatabase(m_object, path.c_str());
 	if (!data)
 		return nullptr;
-	return new BinaryView(data);
+	return BinaryView::LookupOrCreate(data);
 }
 
 
@@ -192,7 +192,7 @@ Ref<BinaryView> FileMetadata::OpenExistingDatabase(
 	BNBinaryView* data = BNOpenExistingDatabaseWithProgress(m_object, path.c_str(), &cb, ProgressCallback);
 	if (!data)
 		return nullptr;
-	return new BinaryView(data);
+	return BinaryView::LookupOrCreate(data);
 }
 
 
@@ -201,7 +201,7 @@ Ref<BinaryView> FileMetadata::OpenDatabaseForConfiguration(const string& path)
 	BNBinaryView* data = BNOpenDatabaseForConfiguration(m_object, path.c_str());
 	if (!data)
 		return nullptr;
-	return new BinaryView(data);
+	return BinaryView::LookupOrCreate(data);
 }
 
 
@@ -478,7 +478,7 @@ Ref<BinaryView> FileMetadata::GetViewOfType(const string& name)
 	BNBinaryView* view = BNGetFileViewOfType(m_object, name.c_str());
 	if (!view)
 		return nullptr;
-	return new BinaryView(view);
+	return BinaryView::LookupOrCreate(view);
 }
 
 std::vector<std::string> FileMetadata::GetExistingViews() const

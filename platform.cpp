@@ -83,7 +83,7 @@ void Platform::InitCallback(void* ctxt, BNPlatform* plat)
 void Platform::InitViewCallback(void* ctxt, BNBinaryView* view)
 {
 	CallbackRef<Platform> plat(ctxt);
-	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
+	Ref<BinaryView> viewObj = BinaryView::LookupOrCreate(BNNewViewReference(view));
 	plat->BinaryViewInit(viewObj);
 }
 

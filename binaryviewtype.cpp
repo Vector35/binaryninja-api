@@ -27,7 +27,7 @@ using namespace std;
 BNBinaryView* BinaryViewType::CreateCallback(void* ctxt, BNBinaryView* data)
 {
 	CallbackRef<BinaryViewType> type(ctxt);
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<BinaryView> result = type->Create(view);
 	if (!result)
 		return nullptr;
@@ -38,7 +38,7 @@ BNBinaryView* BinaryViewType::CreateCallback(void* ctxt, BNBinaryView* data)
 BNBinaryView* BinaryViewType::ParseCallback(void* ctxt, BNBinaryView* data)
 {
 	CallbackRef<BinaryViewType> type(ctxt);
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<BinaryView> result = type->Parse(view);
 	if (!result)
 		return nullptr;
@@ -49,7 +49,7 @@ BNBinaryView* BinaryViewType::ParseCallback(void* ctxt, BNBinaryView* data)
 bool BinaryViewType::IsValidCallback(void* ctxt, BNBinaryView* data)
 {
 	CallbackRef<BinaryViewType> type(ctxt);
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	return type->IsTypeValidForData(view);
 }
 
@@ -71,7 +71,7 @@ bool BinaryViewType::IsForceLoadableCallback(void* ctxt)
 BNSettings* BinaryViewType::GetSettingsCallback(void* ctxt, BNBinaryView* data)
 {
 	CallbackRef<BinaryViewType> type(ctxt);
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = BinaryView::LookupOrCreate(BNNewViewReference(data));
 	Ref<Settings> result = type->GetLoadSettingsForData(view);
 	if (!result)
 		return nullptr;
@@ -280,7 +280,7 @@ void BinaryViewType::RegisterBinaryViewInitialAnalysisCompletionEvent(const func
 void BinaryViewType::BinaryViewEventCallback(void* ctxt, BNBinaryView* view)
 {
 	BinaryViewEvent* event = (BinaryViewEvent*)ctxt;
-	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	Ref<BinaryView> viewObject = BinaryView::LookupOrCreate(BNNewViewReference(view));
 	event->action(viewObject);
 }
 
@@ -288,7 +288,7 @@ void BinaryViewType::BinaryViewEventCallback(void* ctxt, BNBinaryView* view)
 BNPlatform* BinaryViewType::PlatformRecognizerCallback(void* ctxt, BNBinaryView* view, BNMetadata* metadata)
 {
 	PlatformRecognizerFunction* callback = (PlatformRecognizerFunction*)ctxt;
-	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	Ref<BinaryView> viewObject = BinaryView::LookupOrCreate(BNNewViewReference(view));
 	Ref<Metadata> metadataObject = new Metadata(BNNewMetadataReference(metadata));
 	Ref<Platform> result = callback->action(viewObject, metadataObject);
 	if (!result)
@@ -336,7 +336,7 @@ Ref<BinaryView> CoreBinaryViewType::Create(BinaryView* data)
 	BNBinaryView* view = BNCreateBinaryViewOfType(m_object, data->GetObject());
 	if (!view)
 		return nullptr;
-	return new BinaryView(view);
+	return BinaryView::LookupOrCreate(view);
 }
 
 
@@ -345,7 +345,7 @@ Ref<BinaryView> CoreBinaryViewType::Parse(BinaryView* data)
 	BNBinaryView* view = BNParseBinaryViewOfType(m_object, data->GetObject());
 	if (!view)
 		return nullptr;
-	return new BinaryView(view);
+	return BinaryView::LookupOrCreate(view);
 }
 
 

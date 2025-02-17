@@ -106,7 +106,7 @@ void ScriptingInstance::CancelScriptInputCallback(void* ctxt)
 void ScriptingInstance::ReleaseBinaryViewCallback(void* ctxt, BNBinaryView* view)
 {
 	CallbackRef<ScriptingInstance> instance(ctxt);
-	Ref<BinaryView> object = view ? new BinaryView(BNNewViewReference(view)) : nullptr;
+	Ref<BinaryView> object = view ? BinaryView::LookupOrCreate(BNNewViewReference(view)) : nullptr;
 	instance->ReleaseBinaryView(object);
 }
 
@@ -114,7 +114,7 @@ void ScriptingInstance::ReleaseBinaryViewCallback(void* ctxt, BNBinaryView* view
 void ScriptingInstance::SetCurrentBinaryViewCallback(void* ctxt, BNBinaryView* view)
 {
 	CallbackRef<ScriptingInstance> instance(ctxt);
-	Ref<BinaryView> object = view ? new BinaryView(BNNewViewReference(view)) : nullptr;
+	Ref<BinaryView> object = view ? BinaryView::LookupOrCreate(BNNewViewReference(view)) : nullptr;
 	instance->SetCurrentBinaryView(object);
 }
 

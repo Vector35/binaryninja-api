@@ -238,7 +238,7 @@ Function::~Function()
 
 Ref<BinaryView> Function::GetView() const
 {
-	return new BinaryView(BNGetFunctionData(m_object));
+	return BinaryView::LookupOrCreate(BNGetFunctionData(m_object));
 }
 
 

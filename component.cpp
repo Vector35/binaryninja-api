@@ -37,7 +37,7 @@ std::string Component::GetName()
 
 Ref<BinaryView> Component::GetView()
 {
-	return new BinaryView(BNComponentGetView(m_object));
+	return BinaryView::LookupOrCreate(BNComponentGetView(m_object));
 }
 
 

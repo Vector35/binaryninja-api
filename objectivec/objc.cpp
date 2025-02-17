@@ -581,13 +581,26 @@ void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSect
 			categoryBaseClassName = it->second.name;
 			category.associatedName = it->second.associatedName;
 		}
-		else if (auto symbol = m_data->GetSymbolByAddress(catLocation + m_data->GetAddressSize()))
-		{
-			if (symbol->GetType() == ImportedDataSymbol || symbol->GetType() == ImportAddressSymbol)
+		else
+		{	
+			auto symbol = m_data->GetSymbolByAddress(cat.cls);
+			if (!symbol)
+				symbol = SymbolForUnmappedAddress(cat.cls);
+
+			if (symbol)
 			{
-				const auto& symbolName = symbol->GetFullName();
-				if (symbolName.size() > 14 && symbolName.rfind("_OBJC_CLASS_$_", 0) == 0)
-					categoryBaseClassName = symbolName.substr(14, symbolName.size() - 14);
+				if (symbol->GetType() == ImportedDataSymbol || symbol->GetType() == ImportAddressSymbol || symbol->GetType() == DataSymbol)
+				{
+					// Symbols named `_OBJC_CLASS_$_` are references to external classes.
+					// Symbols named `cls_` are classes defined in a loaded image other than
+					// the image currently being analyzed. Classes from the current image
+					// are found via `m_classes`.
+					const std::string_view symbolName = symbol->GetFullNameRef();
+					if (symbolName.size() > 14 && symbolName.rfind("_OBJC_CLASS_$_", 0) == 0)
+						categoryBaseClassName = symbolName.substr(14);
+					else if (symbolName.size() > 4 && symbolName.rfind("cls_", 0) == 0)
+						categoryBaseClassName = symbolName.substr(4);
+				}
 			}
 		}
 		if (categoryBaseClassName.empty())
@@ -1245,6 +1258,11 @@ ObjCProcessor::ObjCProcessor(BinaryView* data, const char* loggerName, bool isBa
 uint64_t ObjCProcessor::GetObjCRelativeMethodBaseAddress(ObjCReader* reader)
 {
 	return 0;
+}
+
+Ref<Symbol> ObjCProcessor::SymbolForUnmappedAddress(uint64_t address)
+{
+	return nullptr;
 }
 
 void ObjCProcessor::ProcessObjCData(std::optional<std::string> imageName)

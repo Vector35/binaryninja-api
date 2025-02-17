@@ -705,7 +705,7 @@ impl Default for QueryOptions<'_> {
     fn default() -> Self {
         Self {
             view: None,
-            scope: SettingsScope::SettingsDefaultScope,
+            scope: SettingsScope::SettingsAutoScope,
             function: None,
         }
     }

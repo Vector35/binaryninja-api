@@ -47,7 +47,7 @@ target_include_directories(arch_x86
 	PRIVATE ${PROJECT_BINARY_DIR}/obj/include-private)
 
 add_compile_definitions(XED_DECODER XED_AMD_ENABLED XED_VIA_ENABLED XED_AVX XED_SUPPORTS_AVX512
-	XED_MPX XED_CET XED_SUPPORTS_SHA XED_SUPPORTS_WBNOINVD)
+	XED_MPX XED_CET XED_SUPPORTS_SHA XED_SUPPORTS_WBNOINVD XED_APX)
 
 target_link_libraries(arch_x86 binaryninjaapi)
 

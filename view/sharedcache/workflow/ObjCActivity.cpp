@@ -57,11 +57,24 @@ void ObjCActivity::AdjustCallType(Ref<AnalysisContext> ctx)
 		if (insn.operation != LLIL_CALL_SSA)
 			return;
 
-		// Filter out calls that aren't to `objc_msgSend`.
+		enum class MessageSendType {
+			Normal,
+			Super,
+		};
+
+		MessageSendType messageSendType = MessageSendType::Normal;
+		// Filter out calls that aren't to `objc_msgSend`, `objc_msgSendSuper`, or `objc_msgSendSuper2`.
 		auto callExpr = insn.GetDestExpr<LLIL_CALL_SSA>();
 		if (auto symbol = bv->GetSymbolByAddress(callExpr.GetValue().value))
-			if (symbol->GetRawName() != "_objc_msgSend")
-				return;
+		{
+			std::string_view symbolName = symbol->GetRawNameRef();
+			if (symbolName == "_objc_msgSend")
+				messageSendType = MessageSendType::Normal;
+			else if (symbolName == "_objc_msgSendSuper2" || symbolName == "_objc_msgSendSuper")
+				messageSendType = MessageSendType::Super;
+			else
+			 	return;
+		}
 
 		const auto params = insn.GetParameterExprs<LLIL_CALL_SSA>();
 		// The second parameter passed to the objc_msgSend call is the address of
@@ -98,7 +111,15 @@ void ObjCActivity::AdjustCallType(Ref<AnalysisContext> ctx)
 		std::vector<FunctionParameter> callTypeParams;
 		auto cc = bv->GetDefaultPlatform()->GetDefaultCallingConvention();
 
-		callTypeParams.emplace_back("self", retType, true, Variable());
+		if (messageSendType == MessageSendType::Normal)
+			callTypeParams.emplace_back("self", retType, true, Variable());
+		else
+		{
+			auto superType = bv->GetTypeByName({ "objc_super" });
+			if (!superType)
+				superType = Type::PointerType(ssa->GetArchitecture(), Type::VoidType());
+			callTypeParams.emplace_back("super", Type::PointerType(ssa->GetArchitecture(), superType), true, Variable());
+		}
 
 		auto selType = bv->GetTypeByName({ "SEL" });
 		if (!selType)

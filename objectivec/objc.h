@@ -324,6 +324,7 @@ namespace BinaryNinja {
 		virtual uint64_t GetObjCRelativeMethodBaseAddress(ObjCReader* reader);
 		virtual void GetRelativeMethod(ObjCReader* reader, method_t& meth);
 		virtual std::shared_ptr<ObjCReader> GetReader() = 0;
+		virtual Ref<Symbol> SymbolForUnmappedAddress(uint64_t address);
 
 	public:
 		virtual ~ObjCProcessor() = default;

@@ -63,6 +63,8 @@ namespace DSCObjC {
 
 		void GetRelativeMethod(BinaryNinja::ObjCReader* reader, BinaryNinja::method_t& meth) override;
 
+		BinaryNinja::Ref<BinaryNinja::Symbol> SymbolForUnmappedAddress(uint64_t address) override;
+
 	public:
 		SharedCacheObjCProcessor(BinaryNinja::BinaryView* data, bool isBackedByDatabase);
 

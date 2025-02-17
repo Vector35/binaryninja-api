@@ -61,6 +61,199 @@ static void ConditionExecute(LowLevelILFunction& il, ExprId cond, ExprId trueCas
 	return;
 }
 
+static void SaturatingAddSub(LowLevelILFunction& il, Instruction& instr, bool saturate, bool signedFlag, size_t bytes, bool subtract=false)
+{
+	// Perform saturating addition by applying the optimizations from https://web.archive.org/web/20190213215419/https://locklessinc.com/articles/sat_arithmetic/
+	// TODO: optimize signed case by applying above link
+	InstructionOperand& op1 = instr.operands[0];  // rd
+	InstructionOperand& op2 = instr.operands[1];  // rs
+	InstructionOperand& op3 = instr.operands[2];  // rt
+
+	auto signExtend = signedFlag ? SignExtend : ZeroExtend;
+
+
+	// Simple case: if either rs or rt is $zero, then it's equivalent to a 128-bit move
+	if (op3.reg == REG_ZERO)
+	{
+		// (If both are, then it's a 128-bit clear)
+		if (op2.reg == REG_ZERO)
+			il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Const(16, 0), signExtend));
+		else
+			il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op2.reg), signExtend));
+		return;
+	}
+	else if (op2.reg == REG_ZERO)
+	{
+		if (!subtract)
+		{
+			il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op3.reg), signExtend));
+			return;
+		}
+		else
+		{
+			// This cannot be done by a single negation, so let the code below handle it
+		}
+	}
+	// else
+	{
+		// Mask of the appropriate size for the pieces of rs and rd
+		const uint64_t mask = 0xFFFFFFFFFFFFFFFF >> (64 - (8 * bytes));
+
+		// Perform the appropriate number of piecewise additions, saturating if needed, then combine into the rd register
+	    for (int i = 0; i < 16 / bytes; i++)
+	    {
+	    	// How much to shift the piece
+	        size_t shift = i * 8 * bytes;
+	        ExprId rs_shifted = il.Register(16, op2.reg);
+	        ExprId rt_shifted = il.Register(16, op3.reg);
+
+			// Only need to shift if it's not the lowest-order piece
+	    	if (i > 0)
+	        {
+	            rs_shifted = il.LogicalShiftRight( 16, rs_shifted, il.Const(1, shift));
+	            rt_shifted = il.LogicalShiftRight( 16, rt_shifted, il.Const(1, shift));
+	        }
+
+	    	// Mask the (shifted) piece to the appropriate size
+	        rs_shifted = il.And(bytes, rs_shifted, il.Const(128, mask));
+	        rt_shifted = il.And(bytes, rt_shifted, il.Const(128, mask));
+
+	        ExprId sum = 0;
+
+	        if (!saturate)
+	        {
+		        // Non-saturating add/sub is just add/sub ignoring overflows (sign is actually irrelevant)
+	        	if (!subtract)
+	        		sum = il.And(bytes, il.Add(bytes, rs_shifted, rt_shifted), il.Const(bytes, mask));
+	        	else
+	        		sum = il.And(bytes, il.Sub(bytes, rs_shifted, rt_shifted), il.Const(bytes, mask));
+	        }
+			else
+	        {
+	        	if (signedFlag)
+	        	{
+	        		rs_shifted = il.SignExtend(2 * bytes, rs_shifted);
+	        		rt_shifted = il.SignExtend(2 * bytes, rt_shifted);
+	        	}
+	        	else
+	        	{
+	        		rs_shifted = il.ZeroExtend(2 * bytes, rs_shifted);
+	        		rt_shifted = il.ZeroExtend(2 * bytes, rt_shifted);
+
+	            	// For the unsigned case, we need to use the shifted and masked rs sub-value more than once so save it in temp0
+		            il.AddInstruction(il.SetRegister(2 * bytes, LLIL_TEMP(0), rs_shifted));
+		            rs_shifted = il.Register(2 * bytes, LLIL_TEMP(0));
+	            }
+	        	// This is an n-byte add, but if the sum is greater than 0xFFFFFFFF >> (32 - 8*n), the result is 0xFFFFFFFF >> (4-n)
+				// (Saturation for the signed case is more complicated, but the initial addition is the same)
+	            // So we do a 2n-byte add and saturate the result if necessary
+				ExprId add_sub = 0;
+				if (!subtract)
+					add_sub = il.Add(2 * bytes,
+						rs_shifted,
+						rt_shifted);
+				else
+					add_sub = il.Sub(2 * bytes,
+						rs_shifted,
+						rt_shifted);
+	            il.AddInstruction(il.SetRegister(2 * bytes,
+		            LLIL_TEMP(1),
+						add_sub));
+
+	            if (!signedFlag)
+	            {
+	            	if (!subtract)
+	            	{
+	            		ExprId comparison = il.CompareUnsignedLessThan(bytes,
+						  il.Register(bytes, LLIL_TEMP(1)),
+						  il.Register(bytes, LLIL_TEMP(0)));
+	            		sum = il.Or(bytes,
+							il.Register(bytes, LLIL_TEMP(1)),
+							il.Neg(bytes,
+								il.BoolToInt(bytes,
+									comparison)));
+	            	}
+	            	else
+	            	{
+	            		ExprId comparison = il.CompareUnsignedLessEqual(bytes,
+						  il.Register(bytes, LLIL_TEMP(1)),
+						  il.Register(bytes, LLIL_TEMP(0)));
+	            		sum = il.And(bytes,
+							il.Register(bytes, LLIL_TEMP(1)),
+							il.Neg(bytes,
+								il.BoolToInt(bytes,
+									comparison)));
+	            	}
+	            }
+	            else
+	            {
+					// bv.write(here, b'\x28\x26\x41\x70')  # paddub
+					// bv.write(here, b'\x08\x22\x41\x70')  # paddb
+					// bv.write(here, b'\x08\x26\x41\x70')  # paddsb
+					//
+					// bv.write(here, b'\x28\x25\x41\x70')  # padduh
+					// bv.write(here, b'\x08\x21\x41\x70')  # paddh
+					// bv.write(here, b'\x08\x25\x41\x70')  # paddsh
+					//
+					// bv.write(here, b'\x28\x24\x41\x70')  # padduw
+					// bv.write(here, b'\x08\x20\x41\x70')  # paddw
+					// bv.write(here, b'\x08\x24\x41\x70')  # paddsw
+
+		            uint64_t clamp_overflow = 0x7FFFFFFF >> (32 - (8 * bytes));
+		            uint64_t clamp_under_lower_bound = 0x100000000 >> (32 - (8 * bytes));
+		            uint64_t clamp_under_upper_bound = 0x180000000 >> (32 - (8 * bytes));
+		            // uint64_t clamp4 = 0x80000000 >> (32 - (8 * bytes));  // clamp3 - clamp2
+		            uint64_t clamp_underflow = clamp_under_upper_bound - clamp_under_lower_bound;
+
+					// Note: the Operation definition shows the overflow check before the underflow check, but
+	            	// that would mean an underflow would be detected as an overflow, and the underflow clamp
+	            	// would never be applied. So we do the underflow check first, under the assumption the
+	            	// reference manual is incorrect but the implementation in hardware would be correct.
+
+		            auto comparison1 = il.And(1,
+	            			il.CompareSignedGreaterThan(2 * bytes,
+							   il.Register(2 * bytes, LLIL_TEMP(1)),
+							   il.Const(2 * bytes, clamp_under_lower_bound)),
+	            			il.CompareSignedLessThan(bytes,
+							   il.Register(2 * bytes, LLIL_TEMP(1)),
+							   il.Const(2 * bytes, clamp_under_upper_bound)));
+		            auto comparison2 = il.CompareSignedGreaterThan(bytes,
+					   il.Register(2 * bytes, LLIL_TEMP(1)),
+					   il.Const(2 * bytes, clamp_overflow));
+
+		            LowLevelILLabel trueCase1, trueCase2, falseCase1, falseCase2, done;
+		            il.AddInstruction(il.If(comparison1, trueCase1, falseCase1));
+
+	            	il.MarkLabel(trueCase1);
+		            il.AddInstruction(il.SetRegister(bytes, LLIL_TEMP(1), il.Const(bytes, clamp_underflow)));
+		            il.AddInstruction(il.Goto(done));
+
+	            	il.MarkLabel(falseCase1);
+		            il.AddInstruction(il.If(comparison2, trueCase2, done));
+
+	            	il.MarkLabel(trueCase2);
+		            il.AddInstruction(il.SetRegister(bytes, LLIL_TEMP(1), il.Const(bytes, clamp_overflow)));
+
+	            	il.MarkLabel(done);
+
+		            sum = il.Register(bytes, LLIL_TEMP(1));
+
+	            }
+	            // padd\w* \$\w*, \$[^z]+, \$[^z]+
+	        }
+
+	        auto shifted_sum = i == 0 ? sum : il.ShiftLeft(16, sum, il.Const(1, shift));
+	        if (i == 0)
+	        {
+	            il.AddInstruction(il.SetRegister(16, op1.reg, shifted_sum));
+	        }
+	        else
+	        {
+	            il.AddInstruction(il.SetRegister(16, op1.reg, il.Or(16, il.Register(16, op1.reg), shifted_sum)));
+	        }
+	    }
+	}
+}
 
 static size_t GetILOperandMemoryAddress(LowLevelILFunction& il, InstructionOperand& operand, size_t addrSize, int32_t delta=0)
 {
@@ -812,7 +1005,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 	LowLevelILLabel trueCode, falseCode, again;
 	// size_t registerSize = addrSize;
 	// std::function<size_t (*)(const InstructionOperand& op)>
-	auto signExtend = SignExtend;
+	bool signedFlag = false;
 	bool saturate = false;
 	auto registerSize = [=](const InstructionOperand& op) -> size_t const
 	{
@@ -2350,379 +2543,60 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 
 			break;
 		}
-		case MIPS_PADDUB:
-			signExtend = ZeroExtend;
 		case MIPS_PADDSB:
+			signedFlag = true;
+		case MIPS_PADDUB:
 			saturate = true;
 		case MIPS_PADDB:
 		{
-			if (op3.reg == REG_ZERO)
-			{
-				if (op2.reg == REG_ZERO)
-					il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Const(16, 0), signExtend));
-				else
-					il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op2.reg), signExtend));
-			}
-			else if (op2.reg == REG_ZERO)
-				il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op3.reg), signExtend));
-            else
-            {
-            	// il.AddInstruction(il.SetRegister(16, LLIL_TEMP(0), il.Register(16, op1.reg)));
-	            for (int i = 0; i < 16; i++)
-	            {
-	            	size_t offset = i * 8;
-	            	auto rs_segment = il.And(16,
-						il.LogicalShiftRight(
-								16,
-								il.Register(16, op2.reg),
-								il.Const(1, offset)
-							),
-						il.Const(128, 0xFF)
-					);
-	            	auto rt_segment = il.And(16,
-						il.LogicalShiftRight(
-								16,
-								il.Register(16, op3.reg),
-								il.Const(1, offset)
-							),
-						il.Const(128, 0xFF)
-					);
-
-	            	auto sum = 0;
-
-	            	// auto saturated_sum = sum;
-	            	if (saturate)
-	            	{
-	            		// This is a 1 byte add, but if the sum is greater than 0xFF, the result is 0xFF
-	            		// So we do an 2 byte add and bitwise-and the result
-	            		// saturated_sum = il.And(1, sum, il.Const(1, 0xFF));
-                        // saturated_sum = il.And(1, il.Register(1, LLIL_TEMP(0)), il.Const(1, 0xFF));
-	            		il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), rs_segment));
-	            		il.AddInstruction(SetRegisterOrNop(il, 2, 2,
-	            			LLIL_TEMP(1),
-	            			il.Add(2,
-	            				il.Register(1, LLIL_TEMP(0)),
-	            				rt_segment), signExtend));
-	            		ExprId comparison = 0;
-	            		if (signExtend == ZeroExtend)
-	            			comparison = il.CompareUnsignedLessThan(1,
-	            				il.Register(1, LLIL_TEMP(1)),
-	            				il.Register(1, LLIL_TEMP(0)));
-	            		else
-	            		{
-							// TODO!
-	            		}
-	            		sum = il.Or(1,
-	            			il.Register(1, LLIL_TEMP(0)),
-	            			il.Neg(1,
-	            				il.BoolToInt(1,
-	            					comparison)));
-	            		// padd\w* \$\w*, \$[^z]+, \$[^z]+
-	            	}
-	            	else
-	            		sum = il.And(1, il.Add(2, rs_segment, rt_segment), il.Const(1, 0xFF));
-
-	            	auto shifted_sum = il.ShiftLeft(16, sum, il.Const(1, offset));
-	            	if (i == 0)
-	            	{
-	            		il.AddInstruction(il.SetRegister(16, op1.reg, shifted_sum));
-	            	}
-	            	else
-	            	{
-	            		il.AddInstruction(il.SetRegister(16, op1.reg, il.Or(16, il.Register(16, op1.reg), shifted_sum)));
-	            	}
-	            }
-            }
-
+			SaturatingAddSub(il, instr, saturate, signedFlag, 1);
 			break;
 		}
-		// case MIPS_PADDUH:
-		// {
-		// 	if (op3.reg == REG_ZERO)
-		// 		if (op2.reg == REG_ZERO)
-		// 			il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Const(16, 0)));
-		// 		else
-		// 			il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op2.reg)));
-		// 	else if (op2.reg == REG_ZERO)
-		// 		    il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op3.reg)));
-  //           else
-  //           {
-	 //            for (int i = 0; i < 8; i++)
-	 //            {
-	 //            	size_t offset = i * 16;
-	 //            	auto rs_segment = il.And(16,
-		// 				il.LogicalShiftRight(
-		// 						16,
-		// 						il.Register(16, op2.reg),
-		// 						il.Const(4, offset)
-		// 					),
-		// 				il.Const(128, 0xFFFFFFFF)
-		// 			);
-	 //            	auto rt_segment = il.And(16,
-		// 				il.LogicalShiftRight(
-		// 						16,
-		// 						il.Register(16, op3.reg),
-		// 						il.Const(4, offset)
-		// 					),
-		// 				il.Const(128, 0xFFFFFFFF)
-		// 			);
-  //
-	 //            	auto sum = il.Add(2, rs_segment, rt_segment);
-  //
-	 //            	// This is a 2 byte add, but if the sum is greater than 0xFFFF, the result is 0xFFFF
-	 //            	// So we do an 8 bit add and and the result
-  //
-	 //            	auto saturated_sum = il.And(2, sum, il.Const(2, 0xFFFF));
-  //
-	 //            	auto shifted_sum = il.ShiftLeft(16, saturated_sum, il.Const(4, offset));
-	 //            	if (i == 0)
-	 //            	{
-	 //            		il.AddInstruction(il.SetRegister(16, op1.reg, shifted_sum));
-	 //            	}
-	 //            	else
-	 //            	{
-	 //            		il.AddInstruction(il.SetRegister(16, op1.reg, il.Or(16, il.Register(16, op1.reg), shifted_sum)));
-	 //            	}
-	 //            }
-  //           }
-  //
-		// 	break;
-		// }
-		case MIPS_PADDUH:
-			signExtend = ZeroExtend;
 		case MIPS_PADDSH:
+			signedFlag = true;
+		case MIPS_PADDUH:
 			saturate = true;
 		case MIPS_PADDH:
 		{
-			const uint64_t bytes = 2;
-			uint64_t mask = 0xFFFFFFFFFFFFFFFF >> (64 - (8 * bytes));
-			if (op3.reg == REG_ZERO)
-			{
-				if (op2.reg == REG_ZERO)
-					il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Const(16, 0), signExtend));
-				else
-					il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op2.reg), signExtend));
-			}
-			else if (op2.reg == REG_ZERO)
-				il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op3.reg), signExtend));
-            else
-            {
-            	// il.AddInstruction(il.SetRegister(16, LLIL_TEMP(0), il.Register(16, op1.reg)));
-	            for (int i = 0; i < 16 / bytes; i++)
-	            {
-	            	size_t offset = i * 8 * bytes;
-	            	auto rs_shift = il.Register(16, op2.reg);
-	            	auto rt_shift = il.Register(16, op3.reg);
-	            	if (i > 0)
-	            	{
-	            		rs_shift = il.LogicalShiftRight( 16, il.Register(16, op2.reg), il.Const(1, offset));
-	            		rt_shift = il.LogicalShiftRight( 16, il.Register(16, op3.reg), il.Const(1, offset));
-	            	}
-					auto rs_segment = il.And(16, rs_shift, il.Const(128, mask));
-					auto rt_segment = il.And(16, rt_shift, il.Const(128, mask));
-
-	            	auto sum = 0;
-
-	            	// auto saturated_sum = sum;
-	            	if (saturate)
-	            	{
-	            		// This is a 1 byte add, but if the sum is greater than 0xFF, the result is 0xFF
-	            		// So we do an 2 byte add and bitwise-and the result
-	            		// saturated_sum = il.And(1, sum, il.Const(1, 0xFF));
-                        // saturated_sum = il.And(1, il.Register(1, LLIL_TEMP(0)), il.Const(1, 0xFF));
-	            		il.AddInstruction(il.SetRegister(bytes, LLIL_TEMP(0), rs_segment));
-	            		il.AddInstruction(SetRegisterOrNop(il, 2 * bytes, 2 * bytes,
-	            			LLIL_TEMP(1),
-	            			il.Add(2 * bytes,
-	            				il.Register(bytes, LLIL_TEMP(0)),
-	            				rt_segment), signExtend));
-	            		ExprId comparison = 0;
-	            		if (signExtend == ZeroExtend)
-	            		{
-	            			comparison = il.CompareUnsignedLessThan(bytes,
-							   il.Register(bytes, LLIL_TEMP(1)),
-							   il.Register(bytes, LLIL_TEMP(0)));
-	            			sum = il.Or(bytes,
-								il.Register(bytes, LLIL_TEMP(0)),
-								il.Neg(bytes,
-									il.BoolToInt(bytes,
-										comparison)));
-	            		}
-	            		else
-	            		{
-							// TODO!
-	            		}
-	            		// padd\w* \$\w*, \$[^z]+, \$[^z]+
-	            	}
-	            	else
-	            		sum = il.And(bytes, il.Add(bytes, rs_segment, rt_segment), il.Const(1, mask));
-
-	            	auto shifted_sum = i == 0 ? sum : il.ShiftLeft(16, sum, il.Const(1, offset));
-	            	if (i == 0)
-	            	{
-	            		il.AddInstruction(il.SetRegister(16, op1.reg, shifted_sum));
-	            	}
-	            	else
-	            	{
-	            		il.AddInstruction(il.SetRegister(16, op1.reg, il.Or(16, il.Register(16, op1.reg), shifted_sum)));
-	            	}
-	            }
-            }
-
+			SaturatingAddSub(il, instr, saturate, signedFlag, 2);
 			break;
 		}
-		case MIPS_PADDUW:
-			signExtend = ZeroExtend;
 		case MIPS_PADDSW:
+			signedFlag = true;
+		case MIPS_PADDUW:
 			saturate = true;
 		case MIPS_PADDW:
 		{
-			size_t bytes = 4;
-			uint64_t mask = 0xFFFFFFFFFFFFFFFF >> (64 - (8 * bytes));
-			if (op3.reg == REG_ZERO)
-			{
-				if (op2.reg == REG_ZERO)
-					il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Const(16, 0), signExtend));
-				else
-					il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op2.reg), signExtend));
-			}
-			else if (op2.reg == REG_ZERO)
-				il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op3.reg), signExtend));
-            else
-            {
-            	// il.AddInstruction(il.SetRegister(16, LLIL_TEMP(0), il.Register(16, op1.reg)));
-	            for (int i = 0; i < 16 / bytes; i++)
-	            {
-	    //         	size_t offset = i * 8 * bytes;
-	    //         	auto rs_segment = il.And(16,
-					// 	il.LogicalShiftRight(
-					// 			16,
-					// 			il.Register(16, op2.reg),
-					// 			il.Const(1, offset)
-					// 		),
-					// 	il.Const(128, mask)
-					// );
-	    //         	auto rt_segment = il.And(16,
-					// 	il.LogicalShiftRight(
-					// 			16,
-					// 			il.Register(16, op3.reg),
-					// 			il.Const(1, offset)
-					// 		),
-					// 	il.Const(128, mask)
-					// );
-	            	size_t offset = i * 8 * bytes;
-	            	auto rs_shift = il.Register(16, op2.reg);
-	            	auto rt_shift = il.Register(16, op3.reg);
-	            	if (i > 0)
-	            	{
-	            		rs_shift = il.LogicalShiftRight( 16, il.Register(16, op2.reg), il.Const(1, offset));
-	            		rt_shift = il.LogicalShiftRight( 16, il.Register(16, op3.reg), il.Const(1, offset));
-	            	}
-	            	auto rs_segment = il.And(16, rs_shift, il.Const(128, mask));
-	            	auto rt_segment = il.And(16, rt_shift, il.Const(128, mask));
-
-	            	auto sum = 0;
-
-	            	// auto saturated_sum = sum;
-	            	if (saturate)
-	            	{
-	            		// This is a 1 byte add, but if the sum is greater than 0xFF, the result is 0xFF
-	            		// So we do an 2 byte add and bitwise-and the result
-	            		// saturated_sum = il.And(1, sum, il.Const(1, 0xFF));
-                        // saturated_sum = il.And(1, il.Register(1, LLIL_TEMP(0)), il.Const(1, 0xFF));
-	            		il.AddInstruction(il.SetRegister(bytes, LLIL_TEMP(0), rs_segment));
-	            		il.AddInstruction(SetRegisterOrNop(il, 2 * bytes, 2 * bytes,
-	            			LLIL_TEMP(1),
-	            			il.Add(2 * bytes,
-	            				il.Register(bytes, LLIL_TEMP(0)),
-	            				rt_segment), signExtend));
-	            		ExprId comparison = 0;
-	            		if (signExtend == ZeroExtend)
-	            		{
-	            			comparison = il.CompareUnsignedLessThan(bytes,
-							   il.Register(bytes, LLIL_TEMP(1)),
-							   il.Register(bytes, LLIL_TEMP(0)));
-	            			sum = il.Or(bytes,
-								il.Register(bytes, LLIL_TEMP(0)),
-								il.Neg(bytes,
-									il.BoolToInt(1,
-										comparison)));
-	            		}
-	            		else
-	            		{
-							// TODO!
-	            		}
-	            		// padd\w* \$\w*, \$[^z]+, \$[^z]+
-	            	}
-	            	else
-	            		sum = il.And(bytes, il.Add(bytes, rs_segment, rt_segment), il.Const(1, mask));
-
-	            	auto shifted_sum = i == 0 ? sum : il.ShiftLeft(16, sum, il.Const(1, offset));
-	            	if (i == 0)
-	            	{
-	            		il.AddInstruction(il.SetRegister(16, op1.reg, shifted_sum));
-	            	}
-	            	else
-	            	{
-	            		il.AddInstruction(il.SetRegister(16, op1.reg, il.Or(16, il.Register(16, op1.reg), shifted_sum)));
-	            	}
-	            }
-            }
-
+			SaturatingAddSub(il, instr, saturate, signedFlag, 4);
 			break;
 		}
-		// case MIPS_PADDUW:
-		// {
-		// 	if (op3.reg == REG_ZERO)
-		// 		if (op2.reg == REG_ZERO)
-		// 			il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Const(16, 0)));
-		// 		else
-		// 			il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op2.reg)));
-		// 	else if (op2.reg == REG_ZERO)
-		// 		    il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, op3.reg)));
-  //           else
-  //           {
-	 //            for (int i = 0; i < 4; i++)
-	 //            {
-	 //            	size_t offset = i * 32;
-	 //            	auto rs_segment = il.And(16,
-		// 				il.LogicalShiftRight(
-		// 						16,
-		// 						il.Register(16, op2.reg),
-		// 						il.Const(4, offset)
-		// 					),
-		// 				il.Const(128, 0xFFFFFFFF)
-		// 			);
-	 //            	auto rt_segment = il.And(16,
-		// 				il.LogicalShiftRight(
-		// 						16,
-		// 						il.Register(16, op3.reg),
-		// 						il.Const(4, offset)
-		// 					),
-		// 				il.Const(128, 0xFFFFFFFF)
-		// 			);
-  //
-	 //            	auto sum = il.Add(4, rs_segment, rt_segment);
-  //
-	 //            	// This is a 4 byte add, but if the sum is greater than 0xFFFFFFFF, the result is 0xFFFFFFFF
-	 //            	// So we do an 8 bit add and and the result
-  //
-	 //            	auto saturated_sum = il.And(4, sum, il.Const(4, 0xFFFFFFFF));
-  //
-	 //            	auto shifted_sum = il.ShiftLeft(16, saturated_sum, il.Const(4, offset));
-	 //            	if (i == 0)
-	 //            	{
-	 //            		il.AddInstruction(il.SetRegister(16, op1.reg, shifted_sum));
-	 //            	}
-	 //            	else
-	 //            	{
-	 //            		il.AddInstruction(il.SetRegister(16, op1.reg, il.Or(16, il.Register(16, op1.reg), shifted_sum)));
-	 //            	}
-	 //            }
-  //           }
-  //
-		// 	break;
-		// }
+		case MIPS_PSUBSB:
+			signedFlag = true;
+		case MIPS_PSUBUB:
+			saturate = true;
+		case MIPS_PSUBB:
+		{
+			SaturatingAddSub(il, instr, saturate, signedFlag, 1, true);
+			break;
+		}
+		case MIPS_PSUBSH:
+			signedFlag = true;
+		case MIPS_PSUBUH:
+			saturate = true;
+		case MIPS_PSUBH:
+		{
+			SaturatingAddSub(il, instr, saturate, signedFlag, 2, true);
+			break;
+		}
+		case MIPS_PSUBSW:
+			signedFlag = true;
+		case MIPS_PSUBUW:
+			saturate = true;
+		case MIPS_PSUBW:
+		{
+			SaturatingAddSub(il, instr, saturate, signedFlag, 4, true);
+			break;
+		}
 
 		case MIPS_ADDR:
 		case MIPS_LDXC1:
@@ -2830,26 +2704,26 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_PSRLW:
 		case MIPS_PSRAW:
 		// case MIPS_PADDW:
-		case MIPS_PSUBW:
+		// case MIPS_PSUBW:
 		case MIPS_PCGTW:
 		case MIPS_PMAXW:
 		// case MIPS_PADDH:
-		case MIPS_PSUBH:
+		// case MIPS_PSUBH:
 		case MIPS_PCGTH:
 		case MIPS_PMAXH:
 		// case MIPS_PADDB:
-		case MIPS_PSUBB:
+		// case MIPS_PSUBB:
 		case MIPS_PCGTB:
 		// case MIPS_PADDSW:
-		case MIPS_PSUBSW:
+		// case MIPS_PSUBSW:
 		case MIPS_PEXTLW:
 		case MIPS_PPACW:
 		// case MIPS_PADDSH:
-		case MIPS_PSUBSH:
+		// case MIPS_PSUBSH:
 		case MIPS_PEXTLH:
 		case MIPS_PPACH:
 		// case MIPS_PADDSB:
-		case MIPS_PSUBSB:
+		// case MIPS_PSUBSB:
 		case MIPS_PEXTLB:
 		case MIPS_PPACB:
 		case MIPS_PEXT5:
@@ -2863,13 +2737,13 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_PMINH:
 		case MIPS_PCEQB:
 		// case MIPS_PADDUW:
-		case MIPS_PSUBUW:
+		// case MIPS_PSUBUW:
 		case MIPS_PEXTUW:
 		// case MIPS_PADDUH:
-		case MIPS_PSUBUH:
+		// case MIPS_PSUBUH:
 		case MIPS_PEXTUH:
 		// case MIPS_PADDUB:
-		case MIPS_PSUBUB:
+		// case MIPS_PSUBUB:
 		case MIPS_PEXTUB:
 		case MIPS_QFSRV:
 		case MIPS_PMADDW:

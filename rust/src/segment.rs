@@ -281,6 +281,7 @@ impl SegmentFlags {
         }
     }
 
+    #[allow(clippy::wrong_self_convention)]
     pub(crate) fn into_raw(&self) -> u32 {
         (self.executable as u32)
             | (self.writable as u32) << 1

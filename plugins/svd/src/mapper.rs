@@ -8,9 +8,8 @@ use binaryninja::section::{SectionBuilder, Semantics};
 use binaryninja::segment::{SegmentBuilder, SegmentFlags};
 use binaryninja::symbol::{SymbolBuilder, SymbolType};
 use binaryninja::types::{
-    BaseStructure, EnumerationBuilder, MemberAccess, MemberScope,
-    NamedTypeReference, NamedTypeReferenceClass, StructureBuilder, StructureMember, Type,
-    TypeBuilder,
+    BaseStructure, EnumerationBuilder, MemberAccess, MemberScope, NamedTypeReference,
+    NamedTypeReferenceClass, StructureBuilder, StructureMember, Type, TypeBuilder,
 };
 use std::num::NonZeroUsize;
 use svd_parser::svd::{
@@ -70,8 +69,7 @@ impl DeviceMapper {
         }
 
         // TODO: Return error instead.
-        let expanded_device =
-            svd_parser::expand(&new_device).expect("Failed to expand device!");
+        let expanded_device = svd_parser::expand(&new_device).expect("Failed to expand device!");
         Self {
             settings,
             device: expanded_device,

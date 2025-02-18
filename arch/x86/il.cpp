@@ -451,7 +451,7 @@ static void Repeat(
 static void CMovFlagCond(const int64_t addr, const xed_decoded_inst_t* xedd, LowLevelILFunction& il, BNLowLevelILFlagCondition flag)
 {
 	bool isCondFault = false;
-	bool isNdd = false;
+	bool isNdd = xed_decoded_inst_get_attribute(xedd, XED_ATTRIBUTE_APX_NDD);
 
 	switch (xed_decoded_inst_get_iclass(xedd)) {
 		case XED_ICLASS_CFCMOVB:
@@ -471,29 +471,6 @@ static void CMovFlagCond(const int64_t addr, const xed_decoded_inst_t* xedd, Low
 		case XED_ICLASS_CFCMOVS:
 		case XED_ICLASS_CFCMOVZ:
 			isCondFault = true;
-		case XED_ICLASS_CMOVB:
-		case XED_ICLASS_CMOVBE:
-		case XED_ICLASS_CMOVL:
-		case XED_ICLASS_CMOVLE:
-		case XED_ICLASS_CMOVNB:
-		case XED_ICLASS_CMOVNBE:
-		case XED_ICLASS_CMOVNL:
-		case XED_ICLASS_CMOVNLE:
-		case XED_ICLASS_CMOVNO:
-		case XED_ICLASS_CMOVNP:
-		case XED_ICLASS_CMOVNS:
-		case XED_ICLASS_CMOVNZ:
-		case XED_ICLASS_CMOVO:
-		case XED_ICLASS_CMOVP:
-		case XED_ICLASS_CMOVS:
-		case XED_ICLASS_CMOVZ:
-		{
-			size_t noperands = xed_inst_noperands(xed_decoded_inst_inst(xedd));
-			if (noperands == 3) {
-				isNdd = true;
-				break;
-			}
-		}
 		default:
 			break;
 	}
@@ -558,7 +535,7 @@ static void CMovFlagCond(const int64_t addr, const xed_decoded_inst_t* xedd, Low
 static void CMovFlagGroup(const int64_t addr, const xed_decoded_inst_t* xedd, LowLevelILFunction& il, uint32_t flag)
 {
 	bool isCondFault = false;
-	bool isNdd = false;
+	bool isNdd = xed_decoded_inst_get_attribute(xedd, XED_ATTRIBUTE_APX_NDD);
 
 	switch (xed_decoded_inst_get_iclass(xedd)) {
 		case XED_ICLASS_CFCMOVB:
@@ -578,29 +555,6 @@ static void CMovFlagGroup(const int64_t addr, const xed_decoded_inst_t* xedd, Lo
 		case XED_ICLASS_CFCMOVS:
 		case XED_ICLASS_CFCMOVZ:
 			isCondFault = true;
-		case XED_ICLASS_CMOVB:
-		case XED_ICLASS_CMOVBE:
-		case XED_ICLASS_CMOVL:
-		case XED_ICLASS_CMOVLE:
-		case XED_ICLASS_CMOVNB:
-		case XED_ICLASS_CMOVNBE:
-		case XED_ICLASS_CMOVNL:
-		case XED_ICLASS_CMOVNLE:
-		case XED_ICLASS_CMOVNO:
-		case XED_ICLASS_CMOVNP:
-		case XED_ICLASS_CMOVNS:
-		case XED_ICLASS_CMOVNZ:
-		case XED_ICLASS_CMOVO:
-		case XED_ICLASS_CMOVP:
-		case XED_ICLASS_CMOVS:
-		case XED_ICLASS_CMOVZ:
-		{
-			size_t noperands = xed_inst_noperands(xed_decoded_inst_inst(xedd));
-			if (noperands == 3) {
-				isNdd = true;
-				break;
-			}
-		}
 		default:
 			break;
 	}
@@ -784,6 +738,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
     const uint64_t         			immediateOne = xed_decoded_inst_get_unsigned_immediate(xedd);
  	const int64_t     				branchDestination = xed_decoded_inst_get_branch_displacement(xedd) + addr + instLen;
 
+	const bool                      newDataDestination = xed_decoded_inst_get_attribute(xedd, XED_ATTRIBUTE_APX_NDD);
 	const bool                      noFlags = xed_decoded_inst_get_attribute(xedd, XED_ATTRIBUTE_APX_NF);
 	const bool                      zeroUpper = xed_decoded_inst_is_apx_zu(xedd);
 
@@ -897,9 +852,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	{
 	case XED_ICLASS_ADC_LOCK: // TODO: Add Lock construct
 	case XED_ICLASS_ADC:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -907,7 +860,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					il.Flag(IL_FLAG_C), IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -917,12 +870,9 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					il.Flag(IL_FLAG_C), IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 
 	case XED_ICLASS_ADCX:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -930,7 +880,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					il.Flag(IL_FLAG_C), IL_FLAG_C)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -940,12 +890,9 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					il.Flag(IL_FLAG_C), IL_FLAG_C)));
 		}
 		break;
-	}
 
 	case XED_ICLASS_ADOX:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -953,7 +900,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					il.Flag(IL_FLAG_O), IL_FLAG_O)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -963,13 +910,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					il.Flag(IL_FLAG_O), IL_FLAG_O)));
 		}
 		break;
-	}
 
 	case XED_ICLASS_ADD_LOCK: // TODO: Add Lock construct
 	case XED_ICLASS_ADD:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -977,7 +921,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					ReadILOperand(il, xedd, addr, 0, 0),
 					ReadILOperand(il, xedd, addr, 1, 1),
 				noFlags ? 0 : IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -987,13 +931,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 				noFlags ? 0 : IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 
 	case XED_ICLASS_AND_LOCK: // TODO: Add Lock construct
 	case XED_ICLASS_AND:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -1001,7 +942,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -1011,7 +952,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
+
 	case XED_ICLASS_PAND:
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
@@ -1879,9 +1820,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 
 	case XED_ICLASS_DEC_LOCK: // TODO: Handle lock prefix
 	case XED_ICLASS_DEC:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 1) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -1891,7 +1830,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					noFlags ? 0 : IL_FLAGWRITE_NOCARRY)
 				)
 			);
-		} else if (noperands == 2) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -1903,7 +1842,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 			);
 		}
 		break;
-	}
 
 	case XED_ICLASS_DIV:
 		il.AddInstruction(
@@ -2230,9 +2168,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 
   	case XED_IFORM_IMUL_GPRv_GPRv:
   	case XED_IFORM_IMUL_GPRv_MEMv:
-	{
-			uint32_t noperands = xed_inst_noperands(xi);
-			if (noperands == 2) {
+			if (!newDataDestination) {
 				// nothing special
 				il.AddInstruction(
 					WriteILOperand(il, xedd, addr, 0, 0,
@@ -2240,7 +2176,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 							ReadILOperand(il, xedd, addr, 0, 0),
 							ReadILOperand(il, xedd, addr, 1, 1),
 						IL_FLAGWRITE_CO)));
-			} else if (noperands == 3) {
+			} else {
 				// new data destination
 				il.AddInstruction(
 					WriteILOperand(il, xedd, addr, 0, 0,
@@ -2250,7 +2186,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						IL_FLAGWRITE_CO)));
 			}
 			break;
-	}
   	case XED_IFORM_IMUL_GPRv_GPRv_IMMb:
   	case XED_IFORM_IMUL_GPRv_GPRv_IMMz:
   	case XED_IFORM_IMUL_GPRv_MEMv_IMMb:
@@ -2279,9 +2214,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 
 	case XED_ICLASS_INC_LOCK: // TODO: Handle lock prefix
 	case XED_ICLASS_INC:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 1) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -2289,7 +2222,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						il.Const(opOneLen, 1),
 					noFlags ? 0 : IL_FLAGWRITE_NOCARRY)));
-		} else if (noperands == 2) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -2299,7 +2232,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					noFlags ? 0 : IL_FLAGWRITE_NOCARRY)));
 		}
 		break;
-	}
 
 	case XED_ICLASS_INT:
 		switch (immediateOne)
@@ -3113,16 +3045,14 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 
 	case XED_ICLASS_NEG_LOCK: // TODO: Handle lock prefix
 	case XED_ICLASS_NEG:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 1) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
 					il.Neg(opOneLen,
 						ReadILOperand(il, xedd, addr, 0, 0),
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
-		} else if (noperands == 2) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3131,7 +3061,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 
 	case XED_ICLASS_NOP:
 	case XED_ICLASS_NOP2:
@@ -3171,15 +3100,13 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 
 	case XED_ICLASS_NOT_LOCK: // TODO: Handle lock prefix
 	case XED_ICLASS_NOT:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 1) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
 					il.Not(opOneLen,
 						ReadILOperand(il, xedd, addr, 0, 0))));
-		} else if (noperands == 2) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3187,13 +3114,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 1, 1))));
 		}
 		break;
-	}
 
 	case XED_ICLASS_OR_LOCK: // TODO: Handle lock prefix
 	case XED_ICLASS_OR:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3201,7 +3125,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3211,7 +3135,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 	case XED_ICLASS_POR:
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
@@ -3406,9 +3329,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	}
 
 	case XED_ICLASS_RCL:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3416,7 +3337,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					il.Flag(IL_FLAG_C), IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3426,12 +3347,9 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					il.Flag(IL_FLAG_C), IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 
 	case XED_ICLASS_RCR:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3439,7 +3357,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					il.Flag(IL_FLAG_C), IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3449,7 +3367,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					il.Flag(IL_FLAG_C), IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 
 	case XED_ICLASS_RET_NEAR:
 		if ((opOne_name != XED_OPERAND_IMM0) || (immediateOne == 0))
@@ -3469,9 +3386,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 
 	case XED_ICLASS_ROL:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3479,7 +3394,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3489,12 +3404,9 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 
 	case XED_ICLASS_ROR:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3502,7 +3414,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3512,7 +3424,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 
 	// there is no ROLX instruciton
 	case XED_ICLASS_RORX:
@@ -3525,9 +3436,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 
 	case XED_ICLASS_SAR:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3535,7 +3444,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3545,7 +3454,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 
 	case XED_ICLASS_SARX:
 		il.AddInstruction(
@@ -3566,9 +3474,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 
 	case XED_ICLASS_SBB_LOCK: // TODO: Handle lock prefix
 	case XED_ICLASS_SBB:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3576,7 +3482,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					il.Flag(IL_FLAG_C), IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3586,7 +3492,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					il.Flag(IL_FLAG_C), IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 
 	case XED_ICLASS_REPE_SCASB:
 	case XED_ICLASS_REPE_SCASD:
@@ -3714,9 +3619,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 
 	case XED_ICLASS_SHL:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3724,7 +3627,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3734,14 +3637,11 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 
 	// This is imprecise since it does NOT move the last shifted bit into CF
 	// the same problem also happens on SHL, SAR
 	case XED_ICLASS_SHR:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3749,7 +3649,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -3759,7 +3659,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 
 	case XED_ICLASS_SHLX:
 		il.AddInstruction(
@@ -3783,13 +3682,12 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	{
 		size_t opSize = opOneLen;
 		size_t mask = opSize == 4 ? 31 : 63;
-		uint32_t noperands = xed_inst_noperands(xi);
 
 		// Shift left double: operand[0] = operand[0]:operand[1] << operand[3]
 		// this since we can't easily operation on a combined register we do it like this
 		// operand[0] = (operand[0] << operand[3]) | (operand[1] >> (63|32 - operand[3]))
 		// One final cevate operand[3] must be masked with 63|32
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
 				il.Or(opSize,
@@ -3806,7 +3704,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 								il.Const(1, mask),
 								ReadILOperand(il, xedd, addr, 2, 2)),
 							il.Const(1, opSize * 8))))));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
 				il.Or(opSize,
@@ -3830,13 +3728,12 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	{
 		size_t opSize = opOneLen;
 		size_t mask = opSize == 4 ? 31 : 63;
-		uint32_t noperands = xed_inst_noperands(xi);
 
 		// Shift right double: operand[0] = operand[0]:operand[1] >> operand[3]
 		// this since we can't easily operation on a combined register we do it like this
 		// operand[0] = (operand[0] >> operand[3]) | (operand[1] << (63|31 - operand[3]))
 		// One final cevate operand[3] must be masked with 63|31
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
 				il.Or(opSize,
@@ -3853,7 +3750,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 							il.And(opSize,
 								il.Const(1, mask),
 								ReadILOperand(il, xedd, addr, 2, 2)))))));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
 				il.Or(opSize,
@@ -3992,9 +3889,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 
 	case XED_ICLASS_SUB_LOCK: // TODO: Handle lock prefix
 	case XED_ICLASS_SUB:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -4002,7 +3897,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -4012,7 +3907,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 
 	case XED_ICLASS_TEST:
 	case XED_ICLASS_CTESTT:
@@ -4254,9 +4148,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 	case XED_ICLASS_XOR_LOCK: // TODO: Handle lock prefix
 	case XED_ICLASS_XOR:
-	{
-		uint32_t noperands = xed_inst_noperands(xi);
-		if (noperands == 2) {
+		if (!newDataDestination) {
 			// nothing special
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -4264,7 +4156,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 						ReadILOperand(il, xedd, addr, 0, 0),
 						ReadILOperand(il, xedd, addr, 1, 1),
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
-		} else if (noperands == 3) {
+		} else {
 			// new data destination
 			il.AddInstruction(
 				WriteILOperand(il, xedd, addr, 0, 0,
@@ -4274,7 +4166,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					noFlags ? 0 : IL_FLAGWRITE_ALL)));
 		}
 		break;
-	}
 	case XED_ICLASS_VPXOR:
 		if (xed_classify_avx512(xedd))
 		{

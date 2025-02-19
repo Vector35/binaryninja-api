@@ -2756,33 +2756,59 @@ void SharedCache::ReadExportNode(std::vector<Ref<Symbol>>& symbolList, const Sha
 		uint64_t flags = readValidULEB128(current, end);
 		if (!(flags & EXPORT_SYMBOL_FLAGS_REEXPORT))
 		{
-			uint64_t imageOffset = readValidULEB128(current, end);
-			if (!currentText.empty() && textBase + imageOffset)
+			uint64_t value = readValidULEB128(current, end);
+			if (!currentText.empty() && value)
 			{
-				uint32_t flags;
-				BNSymbolType type;
-				for (auto s : header.sections)
+				// Default values for the address and type. May be updated
+				// within the switch below depending on the symbol kind.
+				uint64_t symbolAddress = textBase + value;
+				BNSymbolType type = DataSymbol;
+
+				switch (flags & EXPORT_SYMBOL_FLAGS_KIND_MASK)
 				{
-					if (s.addr < textBase + imageOffset)
+					case EXPORT_SYMBOL_FLAGS_KIND_REGULAR:
+					case EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL:
 					{
-						if (s.addr + s.size > textBase + imageOffset)
+						std::optional<BNSymbolType> typeFromSectionAttributes;
+						for (const auto &s : header.sections)
 						{
-							flags = s.flags;
-							break;
+							if (symbolAddress >= s.addr && symbolAddress < s.addr + s.size)
+							{
+								if ((s.flags & S_ATTR_PURE_INSTRUCTIONS) || (s.flags & S_ATTR_SOME_INSTRUCTIONS))
+									typeFromSectionAttributes = FunctionSymbol;
+								else
+									typeFromSectionAttributes = DataSymbol;
+								break;
+							}
 						}
+	
+						if (typeFromSectionAttributes) {
+							type = *typeFromSectionAttributes;
+						} else {
+							m_logger->LogWarn("ReadExportNode: Could not find section containing %s (%p) within %s", currentText.c_str(), symbolAddress, header.installName.c_str());
+						}
+
+						break;
+					}
+					case EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE:
+					{
+						symbolAddress = value;
+						break;
+					}
+					default:
+					{
+						m_logger->LogWarn("ReadExportNode: Symbol %s has unknown kind 0x%x", currentText.c_str(), flags & EXPORT_SYMBOL_FLAGS_KIND_MASK);
+						symbolAddress = 0;
+						break;
 					}
 				}
-				if ((flags & S_ATTR_PURE_INSTRUCTIONS) == S_ATTR_PURE_INSTRUCTIONS
-					|| (flags & S_ATTR_SOME_INSTRUCTIONS) == S_ATTR_SOME_INSTRUCTIONS)
-					type = FunctionSymbol;
-				else
-					type = DataSymbol;
 
-#if EXPORT_TRIE_DEBUG
-					// BNLogInfo("export: %s -> 0x%llx", n.text.c_str(), image.baseAddress + n.offset);
-#endif
-				auto symbol = new Symbol(type, currentText, textBase + imageOffset, nullptr);
-				symbolList.emplace_back(symbol);
+				// symbolAddress is set to 0 if the symbol is of a kind we do not yet understand.
+				if (symbolAddress)
+				{
+					auto symbol = new Symbol(type, currentText, symbolAddress, nullptr);
+					symbolList.emplace_back(symbol);
+				}
 			}
 		}
 	}

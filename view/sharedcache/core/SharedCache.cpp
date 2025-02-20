@@ -2348,7 +2348,11 @@ void SharedCache::ProcessSymbols(std::shared_ptr<MMappedFileAccessor> file, cons
 		if ((nlist.n_desc & N_ARM_THUMB_DEF) == N_ARM_THUMB_DEF)
 			symbolAddress++;
 
-		Ref<Symbol> sym = new Symbol(symbolType.value(), symbolName, symbolAddress, nullptr, GlobalBinding);
+		QualifiedName demangledName = {};
+		std::string shortName = symbolName;
+		if (DemangleLLVM(symbolName, demangledName, true))
+			shortName = demangledName.GetString();
+		Ref<Symbol> sym = new Symbol(symbolType.value(), shortName, shortName, symbolName, symbolAddress, nullptr);
 		symbolList.emplace_back(sym);
 	}
 
@@ -3300,7 +3304,13 @@ void Deserialize(DeserializationContext& context, std::string_view name,
 			std::string symbolName = symbol_array[0].GetString();
 			uint64_t address = symbol_array[1].GetUint64();
 			BNSymbolType type = (BNSymbolType)symbol_array[2].GetUint();
-			symbols.insert({address, new Symbol(type, symbolName, address)});
+
+			QualifiedName demangledName = {};
+			std::string shortName = symbolName;
+			if (DemangleLLVM(symbolName, demangledName, true))
+				shortName = demangledName.GetString();
+			Ref<Symbol> sym = new Symbol(type, shortName, shortName, symbolName, address, nullptr);
+			symbols.insert({address, sym});
 		}
 		value[pair[0].GetUint64()] = std::make_shared<std::unordered_map<uint64_t, Ref<Symbol>>>(std::move(symbols));
 	}
@@ -3321,7 +3331,13 @@ void Deserialize(DeserializationContext& context, std::string_view name,
 			std::string symbolName = symbol_array[0].GetString();
 			uint64_t address = symbol_array[1].GetUint64();
 			BNSymbolType type = (BNSymbolType)symbol_array[2].GetUint();
-			symbols.push_back(new Symbol(type, symbolName, address));
+
+			QualifiedName demangledName = {};
+			std::string shortName = symbolName;
+			if (DemangleLLVM(symbolName, demangledName, true))
+				shortName = demangledName.GetString();
+			Ref<Symbol> sym = new Symbol(type, shortName, shortName, symbolName, address, nullptr);
+			symbols.emplace_back(sym);
 		}
 		value[pair[0].GetUint64()] = std::make_shared<std::vector<Ref<Symbol>>>(std::move(symbols));
 	}

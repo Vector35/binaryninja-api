@@ -48,7 +48,6 @@ void UINotifications::OnViewChange(UIContext* context, ViewFrame* frame, const Q
 			if (!ah->isBoundAction("Load Image by Name"))
 			{
 				ah->bindAction("Load Image by Name", UIAction([view = view](const UIActionContext& ctx) {
-					Ref<SharedCacheAPI::SharedCache> cache = new SharedCacheAPI::SharedCache(view);
 					DisplayDSCPicker(ctx.context, view);
 				}));
 				ah->bindAction("Load Section by Address", UIAction([view = view](const UIActionContext& ctx) {

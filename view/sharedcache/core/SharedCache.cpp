@@ -1449,7 +1449,7 @@ SharedCache::SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView) :
 		return;
 	}
 
-	sharedCacheReferences++;
+	++sharedCacheReferences;
 	INIT_SHAREDCACHE_API_OBJECT()
 	if (!DeserializeFromRawView(lock))
 	{
@@ -1494,7 +1494,7 @@ SharedCache::SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView) :
 }
 
 SharedCache::~SharedCache() {
-	sharedCacheReferences--;
+	--sharedCacheReferences;
 }
 
 SharedCache* SharedCache::GetFromDSCView(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView)
@@ -3636,19 +3636,12 @@ std::string SharedCacheMetadata::InstallNameForImageBaseAddress(uint64_t baseAdd
 
 }  // namespace SharedCacheCore
 
-namespace {
-
-[[maybe_unused]] DSCViewType* g_dscViewType;
-
-}
-
 void InitDSCViewType() {
 	MMappedFileAccessor::InitialVMSetup();
 	std::atexit(VMShutdown);
 
 	static DSCViewType type;
 	BinaryViewType::Register(&type);
-	g_dscViewType = &type;
 }
 
 extern "C"
@@ -3688,7 +3681,7 @@ extern "C"
 	bool BNDSCViewLoadImageWithInstallName(BNSharedCache* cache, char* name, bool skipObjC)
 	{
 		std::string imageName = std::string(name);
-		// FIXME !!!!!!!! BNFreeString(name);
+		BNFreeString(name);
 
 		if (cache->object)
 			return cache->object->LoadImageWithInstallName(imageName, skipObjC);

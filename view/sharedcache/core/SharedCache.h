@@ -41,6 +41,9 @@ namespace SharedCacheCore {
 		std::string prettyName;
 		uint64_t start;
 		uint64_t size;
+		// Start address of the image this region belongs to.
+		// 0 if the region does not belong to any image.
+		uint64_t imageStart = 0;
 		BNSegmentFlag flags;
 		Type type;
 
@@ -55,6 +58,7 @@ namespace SharedCacheCore {
 			MSS(prettyName);
 			MSS(start);
 			MSS(size);
+			MSS(imageStart);
 			MSS_CAST(flags, uint64_t);
 			MSS_CAST(type, uint8_t);
 		}
@@ -67,6 +71,9 @@ namespace SharedCacheCore {
 			region.MSL(size);
 			region.MSL_CAST(flags, uint64_t, BNSegmentFlag);
 			region.MSL_CAST(type, uint8_t, Type);
+			if (context.doc.HasMember("imageStart"))
+				region.MSL(imageStart);
+
 			return region;
 		}
 	};

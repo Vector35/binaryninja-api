@@ -13,7 +13,9 @@
 #include "mediumlevelilinstruction.h"
 #include "../api/sharedcacheapi.h"
 #include "thread"
+#include <shared_mutex>
 
+using namespace SharedCacheAPI;
 
 struct GlobalWorkflowState
 {
@@ -22,30 +24,34 @@ struct GlobalWorkflowState
 	bool autoLoadObjCStubRequirements = true;
 };
 
-static std::unordered_map<uint64_t, GlobalWorkflowState*> globalWorkflowState;
-std::mutex globalWorkflowStateMutex;
+static std::unordered_map<uint64_t, std::shared_ptr<GlobalWorkflowState>> globalWorkflowState;
+std::shared_mutex globalWorkflowStateMutex;
 
-GlobalWorkflowState* GetGlobalWorkflowState(Ref<BinaryView> view)
+std::shared_ptr<GlobalWorkflowState> GetGlobalWorkflowState(Ref<BinaryView> view)
 {
-	std::unique_lock<std::mutex> lock(globalWorkflowStateMutex);
-	if (globalWorkflowState.find(view->GetFile()->GetSessionId()) == globalWorkflowState.end())
+	std::shared_lock<std::shared_mutex> readLock(globalWorkflowStateMutex);
+	uint64_t viewId = view->GetFile()->GetSessionId();
+	auto foundState = globalWorkflowState.find(viewId);
+	if (foundState != globalWorkflowState.end())
+		return foundState->second;
+	readLock.unlock();
+
+	std::unique_lock<std::shared_mutex> writeLock(globalWorkflowStateMutex);
+	globalWorkflowState[viewId] = std::make_shared<GlobalWorkflowState>();
+	Ref<Settings> settings = view->GetLoadSettings(VIEW_NAME);
+	bool autoLoadStubsAndDyldData = true;
+	if (settings && settings->Contains("loader.dsc.autoLoadStubsAndDyldData"))
 	{
-		globalWorkflowState[view->GetFile()->GetSessionId()] = new GlobalWorkflowState();
-		Ref<Settings> settings = view->GetLoadSettings(VIEW_NAME);
-		bool autoLoadStubsAndDyldData = true;
-		if (settings && settings->Contains("loader.dsc.autoLoadStubsAndDyldData"))
-		{
-			autoLoadStubsAndDyldData = settings->Get<bool>("loader.dsc.autoLoadStubsAndDyldData", view);
-		}
-		globalWorkflowState[view->GetFile()->GetSessionId()]->autoLoadStubsAndDyldData = autoLoadStubsAndDyldData;
-		bool autoLoadObjC = true;
-		if (settings && settings->Contains("loader.dsc.autoLoadObjCStubRequirements"))
-		{
-			autoLoadObjC = settings->Get<bool>("loader.dsc.autoLoadObjCStubRequirements", view);
-		}
-		globalWorkflowState[view->GetFile()->GetSessionId()]->autoLoadObjCStubRequirements = autoLoadObjC;
+		autoLoadStubsAndDyldData = settings->Get<bool>("loader.dsc.autoLoadStubsAndDyldData", view);
 	}
-	return globalWorkflowState[view->GetFile()->GetSessionId()];
+	globalWorkflowState[viewId]->autoLoadStubsAndDyldData = autoLoadStubsAndDyldData;
+	bool autoLoadObjC = true;
+	if (settings && settings->Contains("loader.dsc.autoLoadObjCStubRequirements"))
+	{
+		autoLoadObjC = settings->Get<bool>("loader.dsc.autoLoadObjCStubRequirements", view);
+	}
+	globalWorkflowState[viewId]->autoLoadObjCStubRequirements = autoLoadObjC;
+	return globalWorkflowState[viewId];
 }
 
 
@@ -76,15 +82,44 @@ std::vector<std::string> generateArgumentNames(const std::vector<std::string>& c
 }
 
 
-void SharedCacheWorkflow::ProcessOffImageCall(Ref<AnalysisContext> ctx, Ref<Function> func, Ref<MediumLevelILFunction> mssa, const MediumLevelILInstruction dest, ExprId exprIndex,  bool applySymbolIfFoundToCurrentFunction)
+void ProcessStubImageCall(const std::shared_ptr<GlobalWorkflowState> &workflowState, Ref<SharedCache> cache, Ref<Function> func,
+						   const Ref<Section>& section, uint64_t target)
+{
+	if (!workflowState->imageLoadMutex.try_lock())
+		return;
+
+	auto view = func->GetView();
+	if (!view->IsValidOffset(target))
+	{
+		if (!cache->GetImageNameForAddress(target).empty())
+			cache->LoadImageContainingAddress(target);
+		else
+			cache->LoadSectionAtAddress(target);
+
+		// Check to see if there are any functions inside the newly added image.
+		bool newFunctions = false;
+		for (const auto &sectFunc : view->GetAnalysisFunctionList())
+		{
+			if (section->GetStart() <= sectFunc->GetStart() && sectFunc->GetStart() < section->GetEnd())
+				newFunctions = true;
+		}
+
+		// If there are any new functions we should re-analyze the current function.
+		if (newFunctions)
+			func->Reanalyze();
+	}
+
+	workflowState->imageLoadMutex.unlock();
+}
+
+
+void SharedCacheWorkflow::ProcessOffImageCall(Ref<AnalysisContext> ctx, Ref<SharedCache> cache, Ref<Function> func,
+                                              Ref<MediumLevelILFunction> mssa, const MediumLevelILInstruction dest,
+                                              bool applySymbolIfFoundToCurrentFunction)
 {
 	auto bv = func->GetView();
-	WorkerPriorityEnqueue([bv=bv, dest=dest, func=func, applySymbolIfFoundToCurrentFunction]()
-		{
+	WorkerPriorityEnqueue([bv=std::move(bv), cache=std::move(cache), dest=dest, func=func, applySymbolIfFoundToCurrentFunction](){
 			auto workflowState = GetGlobalWorkflowState(bv);
-			Ref<SharedCacheAPI::SharedCache> cache = new SharedCacheAPI::SharedCache(bv);
-			if (!cache)
-				return;
 			if (dest.operation != MLIL_CONST_PTR && dest.operation != MLIL_CONST)
 				return;
 			if (workflowState->autoLoadStubsAndDyldData &&
@@ -122,34 +157,22 @@ void SharedCacheWorkflow::FixupStubs(Ref<AnalysisContext> ctx)
 		auto workflowState = GetGlobalWorkflowState(bv);
 
 		auto funcStart = func->GetStart();
-		auto sectionExists = !bv->GetSectionsAt(funcStart).empty();
-		if (!sectionExists)
+		auto sections = bv->GetSectionsAt(funcStart);
+		if (sections.empty())
 			return;
-		auto section = bv->GetSectionsAt(funcStart)[0];
-
-		auto imageName = section->GetName();
-		// remove everything after ::
-		auto pos = imageName.find("::");
-		if (pos != std::string::npos)
-			imageName = imageName.substr(0, pos);
-
-		const auto llil = ctx->GetLowLevelILFunction();
-		if (!llil) {
-			return;
-		}
-		const auto ssa = llil->GetSSAForm();
-		if (!ssa) {
-			return;
-		}
+		// Just get the first section
+		const auto& section = sections.front();
 
 		const auto mlil = ctx->GetMediumLevelILFunction();
-		if (!mlil) {
+		if (!mlil)
 			return;
-		}
 		const auto mssa = mlil->GetSSAForm();
-		if (!mssa) {
+		if (!mssa)
 			return;
-		}
+
+		Ref<SharedCache> cache = new SharedCache(bv);
+		if (cache->m_object == nullptr)
+			return;
 
 		// Processor that automatically loads the libObjC image when it encounters a stub (so we can do inlining).
 		if (workflowState->autoLoadObjCStubRequirements && section->GetName().find("__objc_stubs") != std::string::npos)
@@ -170,99 +193,25 @@ void SharedCacheWorkflow::FixupStubs(Ref<AnalysisContext> ctx)
 				for (size_t i = block->GetStart(), end = block->GetEnd(); i < end; ++i)
 				{
 					auto instr = mssa->GetInstruction(i);
-					// current_il_function.ssa_form.get_ssa_var_value(current_il_instruction.dest.var)
 					if (instr.operation == MLIL_JUMP)
 					{
 						if (instr.GetDestExpr<MLIL_JUMP>().operation == MLIL_VAR_SSA)
 						{
 							auto dest = instr.GetDestExpr<MLIL_JUMP>();
-							// RegisterValue value = mssa->GetSSAVarValue(instr.GetDestExpr().GetSourceSSAVariable())
-							// ExprId def = mssa->GetSSAVarDefinition(instr.GetDestExpr().GetSourceSSAVariable());
-							// MLILInstruction defInstr = mssa->GetInstruction(mssa->GetSSAVarDefinition(instr.GetDestExpr().GetSourceSSAVariable()));
-							// targetOffset = mssa->GetInstruction(mssa->GetSSAVarDefinition(instr.GetDestExpr().GetSourceSSAVariable())).GetSourceExpr().GetSourceExpr().GetConstant();
 							auto value = mssa->GetSSAVarValue(dest.GetSourceSSAVariable());
 							if (value.state == UndeterminedValue)
 							{
-								bool otherFunctionAlreadyRunning;
-								{
-									otherFunctionAlreadyRunning = !workflowState->imageLoadMutex.try_lock();
-									if (!otherFunctionAlreadyRunning)
-										workflowState->imageLoadMutex.unlock();
-								}
-								if (otherFunctionAlreadyRunning)
-								{
-									return;
-								}
-
-								std::unique_lock<std::mutex> lock(workflowState->imageLoadMutex);
 								auto def = mssa->GetSSAVarDefinition(dest.GetSourceSSAVariable());
 								auto defInstr = mssa->GetInstruction(def);
 								auto targetOffset = defInstr.GetSourceExpr().GetSourceExpr().GetConstant();
-
-								if (bv->IsValidOffset(targetOffset))
-									return;
-
-								Ref<SharedCacheAPI::SharedCache> cache = new SharedCacheAPI::SharedCache(bv);
-
-								if (!cache)
-									return;
-								if (!cache->GetImageNameForAddress(targetOffset).empty())
-								{
-									cache->LoadImageContainingAddress(targetOffset);
-								}
-								else
-								{
-									cache->LoadSectionAtAddress(targetOffset);
-								}
-								for (const auto &sectFunc : bv->GetAnalysisFunctionList())
-								{
-									if (section->GetStart() <= sectFunc->GetStart() && sectFunc->GetStart() < section->GetEnd())
-									{
-										func->Reanalyze();
-									}
-								}
+								ProcessStubImageCall(workflowState, cache, func, section, targetOffset);
 							}
 						}
-
 						else if (instr.GetDestExpr<MLIL_JUMP>().operation == MLIL_CONST_PTR)
 						{
-							bool otherFunctionAlreadyRunning;
-							{
-								otherFunctionAlreadyRunning = !workflowState->imageLoadMutex.try_lock();
-								if (!otherFunctionAlreadyRunning)
-									workflowState->imageLoadMutex.unlock();
-							}
-							if (otherFunctionAlreadyRunning)
-							{
-								return;
-							}
-
-							std::unique_lock<std::mutex> lock(workflowState->imageLoadMutex);
 							auto dest = instr.GetDestExpr<MLIL_JUMP>();
 							auto targetOffset = dest.GetConstant();
-							if (bv->IsValidOffset(targetOffset))
-								return;
-
-							Ref<SharedCacheAPI::SharedCache> cache = new SharedCacheAPI::SharedCache(bv);
-
-							if (!cache)
-								return;
-
-							if (!cache->GetImageNameForAddress(targetOffset).empty())
-							{
-								cache->LoadImageContainingAddress(targetOffset);
-							}
-							else
-							{
-								cache->LoadSectionAtAddress(targetOffset);
-							}
-							for (const auto &sectFunc : bv->GetAnalysisFunctionList())
-							{
-								if (section->GetStart() <= sectFunc->GetStart() && sectFunc->GetStart() < section->GetEnd())
-								{
-									func->Reanalyze();
-								}
-							}
+							ProcessStubImageCall(workflowState, cache, func, section, targetOffset);
 						}
 					}
 				}
@@ -297,7 +246,7 @@ void SharedCacheWorkflow::FixupStubs(Ref<AnalysisContext> ctx)
 				{
 					if (!bv->IsValidOffset(dest.GetConstant()))
 					{
-						ProcessOffImageCall(ctx, func, mssa, dest, firstInstruction.GetSSAExprIndex(), true);
+						ProcessOffImageCall(ctx, cache, func, mssa, dest, true);
 					}
 				}
 
@@ -308,12 +257,11 @@ void SharedCacheWorkflow::FixupStubs(Ref<AnalysisContext> ctx)
 						dest = dest.GetSourceExpr();
 						if (!bv->IsValidOffset(dest.GetConstant()))
 						{
-							ProcessOffImageCall(ctx, func, mssa, dest, firstInstruction.GetSSAExprIndex());
+							ProcessOffImageCall(ctx, cache, func, mssa, dest);
 						}
 					}
 				}
 			}
-
 			else
 			{
 				for (const auto& block : mssa->GetBasicBlocks())
@@ -321,62 +269,20 @@ void SharedCacheWorkflow::FixupStubs(Ref<AnalysisContext> ctx)
 					for (size_t i = block->GetStart(), end = block->GetEnd(); i < end; ++i)
 					{
 						auto instr = mssa->GetInstruction(i);
-						// current_il_function.ssa_form.get_ssa_var_value(current_il_instruction.dest.var)
 						if (instr.operation == MLIL_JUMP)
 						{
 							if (instr.GetDestExpr<MLIL_JUMP>().operation == MLIL_VAR_SSA)
 							{
 								auto dest = instr.GetDestExpr<MLIL_JUMP>();
-								// RegisterValue value = mssa->GetSSAVarValue(instr.GetDestExpr().GetSourceSSAVariable()) ExprId def = mssa->GetSSAVarDefinition(instr.GetDestExpr().GetSourceSSAVariable());
-								// MLILInstruction defInstr = mssa->GetInstruction(mssa->GetSSAVarDefinition(instr.GetDestExpr().GetSourceSSAVariable()));
-								// targetOffset = mssa->GetInstruction(mssa->GetSSAVarDefinition(instr.GetDestExpr().GetSourceSSAVariable())).GetSourceExpr().GetSourceExpr().GetConstant();
 								auto value = mssa->GetSSAVarValue(dest.GetSourceSSAVariable());
 								if (value.state == UndeterminedValue)
 								{
-									bool otherFunctionAlreadyRunning;
-									{
-										otherFunctionAlreadyRunning =
-											!workflowState->imageLoadMutex.try_lock();
-										if (!otherFunctionAlreadyRunning)
-											workflowState->imageLoadMutex.unlock();
-									}
-									if (otherFunctionAlreadyRunning)
-									{
-										return;
-									}
-
-									std::unique_lock<std::mutex> lock(
-										workflowState->imageLoadMutex);
 									auto def = mssa->GetSSAVarDefinition(dest.GetSourceSSAVariable());
 									auto defInstr = mssa->GetInstruction(def);
 									auto targetOffset = defInstr.GetSourceExpr().GetSourceExpr().GetConstant();
-
-									if (bv->IsValidOffset(targetOffset))
-										return;
-
-									Ref<SharedCacheAPI::SharedCache> cache = new SharedCacheAPI::SharedCache(bv);
-
-									if (!cache)
-										return;
-
-									if (!cache->GetImageNameForAddress(targetOffset).empty())
-									{
-										cache->LoadImageContainingAddress(targetOffset);
-									}
-									else
-									{
-										cache->LoadSectionAtAddress(targetOffset);
-									}
-									for (const auto &sectFunc : bv->GetAnalysisFunctionList())
-									{
-										if (section->GetStart() <= sectFunc->GetStart() && sectFunc->GetStart() < section->GetEnd())
-										{
-											func->Reanalyze();
-										}
-									}
+									ProcessStubImageCall(workflowState, cache, func, section, targetOffset);
 								}
 							}
-
 						}
 					}
 				}
@@ -397,7 +303,7 @@ void SharedCacheWorkflow::FixupStubs(Ref<AnalysisContext> ctx)
 						auto dest = instr.GetDestExpr<MLIL_CALL_SSA>();
 						if (!bv->IsValidOffset(dest.GetConstant()))
 						{
-							ProcessOffImageCall(ctx, func, mssa, dest, instr.GetSSAExprIndex());
+							ProcessOffImageCall(ctx, cache, func, mssa, dest);
 						}
 					}
 				}

@@ -461,10 +461,11 @@ void SharedCache::SetMemoryRegionHeaderInitialized(std::lock_guard<std::mutex>&,
 
 void SharedCache::PerformInitialLoad(std::lock_guard<std::mutex>& lock)
 {
-	m_logger->LogInfo("Performing initial load of Shared Cache");
+	std::unique_lock viewOperationsLock(m_viewSpecificState->viewOperationsThatInfluenceMetadataMutex);
 	auto path = m_dscView->GetFile()->GetOriginalFilename();
 	auto baseFile = MapFileWithoutApplyingSlide(path);
 
+	m_logger->LogInfo("Loading caches...");
 	m_viewSpecificState->progress = LoadProgressLoadingCaches;
 
 	CacheInfo initialState;
@@ -962,6 +963,7 @@ void SharedCache::PerformInitialLoad(std::lock_guard<std::mutex>& lock)
 	}
 	baseFile.reset();
 
+	m_logger->LogInfo("Loading images...");
 	m_viewSpecificState->progress = LoadProgressLoadingImages;
 
 	// We have set up enough metadata to map VM now.
@@ -1061,8 +1063,7 @@ void SharedCache::PerformInitialLoad(std::lock_guard<std::mutex>& lock)
 	m_modifiedState->viewState = DSCViewStateLoaded;
 	SaveCacheInfoToDSCView(lock);
 
-	m_logger->LogDebug("Finished initial load of Shared Cache");
-
+	m_logger->LogInfo("Finished loading...");
 	m_viewSpecificState->progress = LoadProgressFinished;
 }
 
@@ -1092,49 +1093,38 @@ std::shared_ptr<VM> SharedCache::GetVMMap(const CacheInfo& cacheInfo)
 }
 
 
-void SharedCache::DeserializeFromRawView(std::lock_guard<std::mutex>& lock)
+bool SharedCache::DeserializeFromRawView(std::lock_guard<std::mutex>& lock)
 {
 	std::lock_guard cacheInfoLock(m_viewSpecificState->cacheInfoMutex);
+
+	m_cacheInfo = std::make_shared<CacheInfo>();
+	m_modifiedState = std::make_unique<ModifiedState>();
+	m_modifiedState->viewState = DSCViewStateUnloaded;
+
+	// First try and load from the view itself.
 	if (m_viewSpecificState->cacheInfo)
 	{
 		m_cacheInfo = m_viewSpecificState->cacheInfo;
-		m_modifiedState = std::make_unique<ModifiedState>();
-		m_metadataValid = true;
-		return;
+		m_modifiedState->viewState = DSCViewStateLoaded;
+		return true;
 	}
 
+	// Second try and load from the view metadata.
 	if (SharedCacheMetadata::ViewHasMetadata(m_dscView))
 	{
 		auto metadata = SharedCacheMetadata::LoadFromView(m_dscView);
 		if (!metadata)
-		{
-			m_metadataValid = false;
-			m_logger->LogError("Failed to deserialize Shared Cache metadata");
-			return;
-		}
+			return false;
 
 		m_viewSpecificState->viewState = metadata->state->viewState.value_or(DSCViewStateUnloaded);
-		m_viewSpecificState->state = std::move(*metadata->state);
+		m_viewSpecificState->state = static_cast<State>(std::move(*metadata->state));
 		m_viewSpecificState->cacheInfo = std::move(metadata->cacheInfo);
 
 		m_cacheInfo = m_viewSpecificState->cacheInfo;
-		m_modifiedState = std::make_unique<ModifiedState>();
-		m_metadataValid = true;
-		return;
+		m_modifiedState->viewState = DSCViewStateLoaded;
 	}
 
-	m_cacheInfo = nullptr;
-	m_modifiedState = std::make_unique<ModifiedState>();
-	m_modifiedState->viewState = DSCViewStateUnloaded;
-	m_metadataValid = true;
-}
-
-
-std::string to_hex_string(uint64_t value)
-{
-	std::stringstream ss;
-	ss << std::hex << value;
-	return ss.str();
+	return true;
 }
 
 
@@ -1461,9 +1451,13 @@ SharedCache::SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView) :
 
 	sharedCacheReferences++;
 	INIT_SHAREDCACHE_API_OBJECT()
-	DeserializeFromRawView(lock);
-	if (!m_metadataValid)
-		return;
+	if (!DeserializeFromRawView(lock))
+	{
+		// TODO: We need a way to prompt the user and ask if they want to continue (like BNDB version upgrades)
+		// TODO: To do that we really need to consolidate _where_ SharedCache is called.
+		// TODO: Specifically the **first** call to this must originate in DSCView, which is NOT the case currently.
+		m_logger->LogError("Metadata was invalid, recreating initial load of shared cache information...");
+	}
 
 	if (m_modifiedState->viewState.value_or(m_viewSpecificState->viewState) != DSCViewStateUnloaded)
 	{
@@ -1471,7 +1465,6 @@ SharedCache::SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView) :
 		return;
 	}
 
-	std::unique_lock viewOperationsLock(m_viewSpecificState->viewOperationsThatInfluenceMetadataMutex);
 	try {
 		PerformInitialLoad(lock);
 	}
@@ -1492,7 +1485,6 @@ SharedCache::SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView) :
 		{
 			if (header.installName.find("libsystem_c.dylib") != std::string::npos)
 			{
-				viewOperationsLock.unlock();
 				m_logger->LogInfo("Loading core libsystem_c.dylib library");
 				LoadImageWithInstallName(lock, header.installName, false);
 				break;
@@ -3071,10 +3063,14 @@ bool SharedCache::SaveCacheInfoToDSCView(std::lock_guard<std::mutex>&)
 
 	{
 		std::lock_guard lock(m_viewSpecificState->cacheInfoMutex);
-		if (m_cacheInfo && !m_viewSpecificState->cacheInfo)
-			m_viewSpecificState->cacheInfo = m_cacheInfo;
-		else if (m_cacheInfo != m_viewSpecificState->cacheInfo)
-			abort();
+		if (m_cacheInfo)
+		{
+			if (!m_viewSpecificState->cacheInfo)
+				m_viewSpecificState->cacheInfo = m_cacheInfo;
+
+			// At this point we expect cache info and view state cache to be the same.
+			assert(m_viewSpecificState->cacheInfo == m_cacheInfo);
+		}
 	}
 
 	m_metadataValid = true;
@@ -3364,10 +3360,7 @@ std::optional<SharedCache::CacheInfo> SharedCache::CacheInfo::Load(Deserializati
 	}
 
 	if (context.doc["metadataVersion"].GetUint() != METADATA_VERSION)
-	{
-		LogError("Shared Cache metadata version mismatch");
 		return std::nullopt;
-	}
 
 	CacheInfo cacheInfo;
 	cacheInfo.MSL(backingCaches);

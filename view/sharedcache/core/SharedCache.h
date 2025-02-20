@@ -585,7 +585,7 @@ namespace SharedCacheCore {
 
 	private:
 		void PerformInitialLoad(std::lock_guard<std::mutex>&);
-		void DeserializeFromRawView(std::lock_guard<std::mutex>&);
+		bool DeserializeFromRawView(std::lock_guard<std::mutex>&);
 
 	public:
 		std::shared_ptr<VM> GetVMMap();

@@ -668,6 +668,7 @@ private:
 	public:
 		static std::optional<SharedCacheMetadata> LoadFromView(BinaryView*);
 		static bool ViewHasMetadata(BinaryView*);
+		static std::optional<unsigned int> ViewMetadataVersion(BinaryView*);
 
 		const std::unordered_map<uint64_t, std::shared_ptr<std::unordered_map<uint64_t, Ref<Symbol>>>>& ExportInfos() const;
 		std::string InstallNameForImageBaseAddress(uint64_t baseAddress) const;

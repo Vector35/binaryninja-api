@@ -3594,6 +3594,21 @@ bool SharedCacheMetadata::ViewHasMetadata(BinaryView* view)
 	return view->QueryMetadata(Tag);
 }
 
+std::optional<unsigned int> SharedCacheMetadata::ViewMetadataVersion(BinaryView* view)
+{
+	// Whether the view has compatible metadata. I.e. if the version differs.
+	Ref<Metadata> viewMetadata = view->QueryMetadata(Tag);
+	if (!viewMetadata)
+		return std::nullopt;
+	DeserializationContext context;
+	rapidjson::ParseResult result = context.doc.Parse(viewMetadata->GetString().c_str());
+	if (!result)
+		return std::nullopt;
+	if (!context.doc.HasMember("metadataVersion"))
+		return std::nullopt;
+	return context.doc["metadataVersion"].GetUint();
+}
+
 // static
 std::optional<SharedCacheMetadata> SharedCacheMetadata::LoadFromView(BinaryView* view)
 {

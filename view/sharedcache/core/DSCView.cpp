@@ -195,6 +195,14 @@ bool DSCView::Init()
 	if (m_parseOnly)
 		return true;
 
+	// Check the metadata version if there is one, so we can alert the user to why they have no loaded images.
+	// TODO: Once the view is able to be exited early we should offer to close the view if the user does not want to upgrade.
+	auto metadataVersion = SharedCacheCore::SharedCacheMetadata::ViewMetadataVersion(GetParentView());
+	if (metadataVersion.has_value() && metadataVersion.value() != METADATA_VERSION)
+	{
+		ShowMessageBox("Invalid Shared Cache Metadata!", "The BNDB shared cache metadata was created with a different version of the Shared Cache view, to continue the metadata has to be recreated. You will need to add your images back again.");
+	}
+
 	// Add Mach-O file header type info
 	EnumerationBuilder cpuTypeBuilder;
 	cpuTypeBuilder.AddMemberWithValue("CPU_TYPE_ANY", MACHO_CPU_TYPE_ANY);

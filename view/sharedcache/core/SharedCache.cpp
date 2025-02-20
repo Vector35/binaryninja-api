@@ -1015,6 +1015,7 @@ void SharedCache::PerformInitialLoad(std::lock_guard<std::mutex>& lock)
 				sectionRegion.prettyName = imageHeader.value().identifierPrefix + "::" + std::string(segName);
 				sectionRegion.start = segment.vmaddr;
 				sectionRegion.size = segment.vmsize;
+				sectionRegion.imageStart = start.second;
 				uint32_t flags = SegmentFlagsFromMachOProtections(segment.initprot, segment.maxprot);
 
 				// if we're positive we have an entry point for some reason, force the segment
@@ -1529,18 +1530,16 @@ const SharedCacheMachOHeader* SharedCache::HeaderForAddress(uint64_t address)
 	if (auto it = m_cacheInfo->headers.find(address); it != m_cacheInfo->headers.end())
 		return &it->second;
 
-	// We _could_ mark each page with the image start? :grimacing emoji:
-	// But that'd require mapping pages :grimacing emoji: :grimacing emoji:
-	// There's not really any other hacks that could make this faster, that I can think of...
-	for (const auto& [start, header] : m_cacheInfo->headers)
-	{
-		for (const auto& segment : header.segments)
-		{
-			if (segment.vmaddr <= address && segment.vmaddr + segment.vmsize > address)
-				return &header;
-		}
-	}
-	return {};
+	auto it = m_cacheInfo->memoryRegions.find(address);
+	if (it == m_cacheInfo->memoryRegions.end())
+		return nullptr;
+
+	if (auto headerAddress = it->second.imageStart)
+		return HeaderForAddress(headerAddress);
+
+	// Found a region, but its `imageStart` was 0. This should mean it doesn't belong to an image.
+	assert(it->second.type != MemoryRegion::Type::Image);
+	return nullptr;
 }
 
 std::string SharedCache::NameForAddress(uint64_t address)
@@ -1561,16 +1560,9 @@ std::string SharedCache::ImageNameForAddress(uint64_t address)
 
 bool SharedCache::LoadImageContainingAddress(uint64_t address, bool skipObjC)
 {
-	for (const auto& [start, header] : m_cacheInfo->headers)
-	{
-		for (const auto& segment : header.segments)
-		{
-			if (segment.vmaddr <= address && segment.vmaddr + segment.vmsize > address)
-			{
-				std::lock_guard lock(m_mutex);
-				return LoadImageWithInstallName(lock, header.installName, skipObjC);
-			}
-		}
+	if (auto header = HeaderForAddress(address)) {
+		std::lock_guard lock(m_mutex);
+		return LoadImageWithInstallName(lock, header->installName, skipObjC);
 	}
 
 	return false;
@@ -3387,6 +3379,29 @@ std::optional<SharedCache::CacheInfo> SharedCache::CacheInfo::Load(Deserializati
 	cacheInfo.MSL(objcOptimizationDataRange);
 	cacheInfo.MSL(baseFilePath);
 	cacheInfo.MSL_CAST(cacheFormat, uint8_t, SharedCacheFormat);
+
+	// Older metadata may be missing the `imageStart` field on `MemoryRegion`.
+	bool regionsMissingImageStart =
+		std::any_of(cacheInfo.memoryRegions.begin(), cacheInfo.memoryRegions.end(), [](const auto& pair) {
+			const auto& region = pair.second;
+			return region.type == MemoryRegion::Type::Image && region.imageStart == 0;
+		});
+
+	if (regionsMissingImageStart)
+	{
+		for (const auto& [start, header] : cacheInfo.headers)
+		{
+			for (const auto& segment : header.segments)
+			{
+				const auto regionIt = cacheInfo.memoryRegions.find(segment.vmaddr);
+				assert(regionIt != cacheInfo.memoryRegions.end());
+				auto& region = regionIt->second;
+				assert(!region.imageStart || region.imageStart == start);
+				region.imageStart = start;
+			}
+		}
+	}
+
 	return cacheInfo;
 }
 void State::Store(SerializationContext& context, std::optional<DSCViewState> viewState) const

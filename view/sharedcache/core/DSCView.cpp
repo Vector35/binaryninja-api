@@ -614,7 +614,7 @@ bool DSCView::Init()
 	Ref<Type> filesetEntryCommandType = Type::StructureType(filesetEntryCommandStruct);
 	DefineType(filesetEntryCommandTypeId, filesetEntryCommandName, filesetEntryCommandType);
 
-	if (auto metadata = SharedCacheCore::SharedCacheMetadata::LoadFromView(GetParentView()))
+	if (auto metadata = SharedCacheCore::SharedCacheMetadata::LoadFromView(this))
 	{
 		BeginBulkModifySymbols();
 		for (const auto& [imageBaseAddr, exportMap] : metadata->ExportInfos())

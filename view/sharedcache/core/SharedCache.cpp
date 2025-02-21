@@ -3055,7 +3055,6 @@ bool SharedCache::SaveCacheInfoToDSCView(std::lock_guard<std::mutex>&)
 
 	auto data = m_cacheInfo->AsMetadata();
 	m_dscView->StoreMetadata(SharedCacheMetadata::Tag, data);
-	m_dscView->GetParentView()->StoreMetadata(SharedCacheMetadata::Tag, data);
 
 	{
 		std::lock_guard lock(m_viewSpecificState->cacheInfoMutex);
@@ -3092,7 +3091,6 @@ bool SharedCache::SaveModifiedStateToDSCView(std::lock_guard<std::mutex>&)
 			auto data = m_viewSpecificState->state.AsMetadata(m_viewSpecificState->viewState);
 
 			m_dscView->StoreMetadata(metadataKey, data);
-			m_dscView->GetParentView()->StoreMetadata(metadataKey, data);
 			modificationNumber = m_viewSpecificState->savedModifications++;
 		}
 
@@ -3100,11 +3098,9 @@ bool SharedCache::SaveModifiedStateToDSCView(std::lock_guard<std::mutex>&)
 		auto data = m_modifiedState->AsMetadata();
 
 		m_dscView->StoreMetadata(metadataKey, data);
-		m_dscView->GetParentView()->StoreMetadata(metadataKey, data);
 
 		Ref<Metadata> count = new Metadata(m_viewSpecificState->savedModifications);
 		m_dscView->StoreMetadata(SharedCacheMetadata::ModifiedStateCountTag, count);
-		m_dscView->GetParentView()->StoreMetadata(SharedCacheMetadata::ModifiedStateCountTag, count);
 
 		m_viewSpecificState->state.exportInfos.merge(m_modifiedState->exportInfos);
 		m_viewSpecificState->state.symbolInfos.merge(m_modifiedState->symbolInfos);

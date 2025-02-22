@@ -1282,6 +1282,7 @@ class StructureMember:
 	offset: int
 	access: MemberAccess = MemberAccess.NoAccess
 	scope: MemberScope = MemberScope.NoScope
+	description: Optional[str] = None
 
 	def __repr__(self):
 		if len(self.name) == 0:
@@ -1366,7 +1367,7 @@ class StructureBuilder(TypeBuilder):
 			elif isinstance(member, StructureMember):
 				core.BNAddStructureBuilderMemberAtOffset(
 				    structure_builder_handle, member.type._to_core_struct(), member.name, member.offset, False,
-				    member.access, member.scope
+				    member.access, member.scope, member.description
 				)
 			elif isinstance(member, (TypeBuilder, Type)):
 				core.BNAddStructureBuilderMember(
@@ -1414,7 +1415,7 @@ class StructureBuilder(TypeBuilder):
 				result.append(
 				    StructureMember(
 				        t, members[i].name, members[i].offset, MemberAccess(members[i].access),
-				        MemberScope(members[i].scope)
+				        MemberScope(members[i].scope), members[i].description
 				    )
 				)
 			return result
@@ -1510,7 +1511,7 @@ class StructureBuilder(TypeBuilder):
 			return StructureMember(
 			    Type.create(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
 			    member.contents.name, member.contents.offset, MemberAccess(member.contents.access),
-			    MemberScope(member.contents.scope)
+			    MemberScope(member.contents.scope), member.contents.description
 			)
 		finally:
 			core.BNFreeStructureMember(member)
@@ -2542,7 +2543,7 @@ class StructureType(Type):
 			return StructureMember(
 			    Type.create(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
 			    member.contents.name, member.contents.offset, MemberAccess(member.contents.access),
-			    MemberScope(member.contents.scope)
+			    MemberScope(member.contents.scope), member.contents.description
 			)
 		finally:
 			if member is not None:
@@ -2557,7 +2558,7 @@ class StructureType(Type):
 			return StructureMember(
 			    Type.create(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
 			    member.contents.name, member.contents.offset, MemberAccess(member.contents.access),
-			    MemberScope(member.contents.scope)
+			    MemberScope(member.contents.scope), member.contents.description
 			)
 		finally:
 			core.BNFreeStructureMember(member)
@@ -2575,7 +2576,7 @@ class StructureType(Type):
 				    StructureMember(
 				        Type.create(core.BNNewTypeReference(members[i].type), confidence=members[i].typeConfidence),
 				        members[i].name, members[i].offset, MemberAccess(members[i].access),
-				        MemberScope(members[i].scope)
+				        MemberScope(members[i].scope), members[i].description
 				    )
 				)
 		finally:
@@ -2658,7 +2659,7 @@ class StructureType(Type):
 				        StructureMember(
 							Type.create(core.BNNewTypeReference(members[i].member.type), confidence=members[i].member.typeConfidence),
 							members[i].member.name, members[i].member.offset, MemberAccess(members[i].member.access),
-							MemberScope(members[i].member.scope)
+							MemberScope(members[i].member.scope), members[i].member.description
 						),
 						members[i].memberIndex
 				    )
@@ -2690,7 +2691,7 @@ class StructureType(Type):
 				StructureMember(
 					Type.create(core.BNNewTypeReference(member[0].member.type), confidence=member[0].member.typeConfidence),
 					member[0].member.name, member[0].member.offset, MemberAccess(member[0].member.access),
-					MemberScope(member[0].member.scope)
+					MemberScope(member[0].member.scope), member[0].member.description,
 				),
 				member[0].memberIndex
 			)
@@ -2741,7 +2742,7 @@ class StructureType(Type):
 				resolved_struct = StructureType.from_core_struct(core.BNNewStructureReference(resolved_struct))
 			t = Type.create(core.BNNewTypeReference(member.type), confidence=member.typeConfidence)
 			struct_member = StructureMember(
-				t, member.name, member.offset, MemberAccess(member.access), MemberScope(member.scope)
+				t, member.name, member.offset, MemberAccess(member.access), MemberScope(member.scope), member.description
 			)
 			resolve_func(base_name, resolved_struct, member_index, struct_offset, adjusted_offset, struct_member)
 

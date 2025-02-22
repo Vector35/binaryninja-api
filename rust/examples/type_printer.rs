@@ -22,6 +22,7 @@ fn main() {
                     0,
                     MemberAccess::PublicAccess,
                     MemberScope::NoScope,
+                    "".to_string()
                 ),
                 false,
             )

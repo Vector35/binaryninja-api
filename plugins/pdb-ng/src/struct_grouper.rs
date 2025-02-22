@@ -366,6 +366,7 @@ pub fn group_structure(
                     false,
                     member.access,
                     member.scope,
+                    ""
                 );
             }
         }
@@ -395,6 +396,7 @@ fn apply_groups(
                         false,
                         member.access,
                         member.scope,
+                        ""
                     );
                 } else {
                     structure.insert(
@@ -404,6 +406,7 @@ fn apply_groups(
                         false,
                         member.access,
                         member.scope,
+                        ""
                     );
                 }
             }
@@ -417,6 +420,7 @@ fn apply_groups(
                     false,
                     MemberAccess::PublicAccess,
                     MemberScope::NoScope,
+                    ""
                 );
             }
             ResolvedGroup::Union(inner_offset, children) => {
@@ -430,6 +434,7 @@ fn apply_groups(
                     false,
                     MemberAccess::PublicAccess,
                     MemberScope::NoScope,
+                    ""
                 );
             }
         }

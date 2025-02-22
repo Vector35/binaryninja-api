@@ -461,6 +461,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                             member_offset,
                             member_access,
                             member_scope,
+                            "".to_string()
                         ),
                         false,
                     );
@@ -499,6 +500,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                     0, // Union members all exist at 0 right?
                     member_access,
                     member_scope,
+                    "".to_string()
                 );
                 builder.insert_member(structure_member, false);
             }

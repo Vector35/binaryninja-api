@@ -9523,6 +9523,7 @@ namespace BinaryNinja {
 		uint64_t offset;
 		BNMemberAccess access;
 		BNMemberScope scope;
+		std::string description;
 	};
 
 	/*!
@@ -9763,7 +9764,7 @@ namespace BinaryNinja {
 		    \return reference to the Structure Builder
 		*/
 		StructureBuilder& AddMember(const Confidence<Ref<Type>>& type, const std::string& name,
-		    BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope);
+		    BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope, const std::string& description = "");
 
 		/*! AddMemberAtOffset adds a member at a specific offset within the struct
 
@@ -9776,7 +9777,7 @@ namespace BinaryNinja {
 		    \return Reference to the StructureBuilder
 		*/
 		StructureBuilder& AddMemberAtOffset(const Confidence<Ref<Type>>& type, const std::string& name, uint64_t offset,
-		    bool overwriteExisting = true, BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope);
+		    bool overwriteExisting = true, BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope, const std::string& description = "");
 
 		/*! RemoveMember removes a member at a specified index
 

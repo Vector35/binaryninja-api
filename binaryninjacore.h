@@ -1788,6 +1788,7 @@ extern "C"
 		UndefinedXrefLineType,
 		CollapsedPaddingLineType,
 		EmptyLineType,
+		DescriptionLineType,
 	} BNTypeDefinitionLineType;
 
 	typedef struct BNTypeDefinitionLine
@@ -2341,6 +2342,7 @@ extern "C"
 		uint8_t typeConfidence;
 		BNMemberAccess access;
 		BNMemberScope scope;
+		char* description;
 	} BNStructureMember;
 
 	typedef struct BNInheritedStructureMember
@@ -6549,10 +6551,10 @@ extern "C"
 		BNStructureBuilder* s, BNBaseStructure* bases, size_t count);
 
 	BINARYNINJACOREAPI void BNAddStructureBuilderMember(BNStructureBuilder* s, const BNTypeWithConfidence* const type,
-	    const char* name, BNMemberAccess access, BNMemberScope scope);
+	    const char* name, BNMemberAccess access, BNMemberScope scope, const char* description);
 	BINARYNINJACOREAPI void BNAddStructureBuilderMemberAtOffset(BNStructureBuilder* s,
 	    const BNTypeWithConfidence* const type, const char* name, uint64_t offset, bool overwriteExisting,
-	    BNMemberAccess access, BNMemberScope scope);
+	    BNMemberAccess access, BNMemberScope scope, const char* description);
 	BINARYNINJACOREAPI void BNRemoveStructureBuilderMember(BNStructureBuilder* s, size_t idx);
 	BINARYNINJACOREAPI void BNReplaceStructureBuilderMember(BNStructureBuilder* s, size_t idx,
 	    const BNTypeWithConfidence* const type, const char* name, bool overwriteExisting);

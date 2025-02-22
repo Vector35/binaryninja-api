@@ -2398,6 +2398,7 @@ vector<StructureMember> Structure::GetMembers() const
 		member.offset = members[i].offset;
 		member.access = members[i].access;
 		member.scope = members[i].scope;
+		member.description = members[i].description;
 		result.push_back(member);
 	}
 
@@ -2423,6 +2424,7 @@ vector<InheritedStructureMember> Structure::GetMembersIncludingInherited(const T
 		member.member.offset = members[i].member.offset;
 		member.member.access = members[i].member.access;
 		member.member.scope = members[i].member.scope;
+		member.member.description = members[i].member.description;
 		member.memberIndex = members[i].memberIndex;
 		result.push_back(member);
 	}
@@ -2446,6 +2448,7 @@ bool Structure::GetMemberIncludingInheritedAtOffset(BinaryView* view, int64_t of
 	result.member.offset = member->member.offset;
 	result.member.access = member->member.access;
 	result.member.scope = member->member.scope;
+	result.member.description = member->member.description;
 	result.memberIndex = member->memberIndex;
 
 	BNFreeInheritedStructureMember(member);
@@ -2463,6 +2466,7 @@ bool Structure::GetMemberByName(const string& name, StructureMember& result) con
 		result.offset = member->offset;
 		result.access = member->access;
 		result.scope = member->scope;
+		result.description = member->description;
 		BNFreeStructureMember(member);
 		return true;
 	}
@@ -2487,6 +2491,7 @@ bool Structure::GetMemberAtOffset(int64_t offset, StructureMember& result, size_
 		result.offset = member->offset;
 		result.access = member->access;
 		result.scope = member->scope;
+		result.description = member->description;
 		BNFreeStructureMember(member);
 		return true;
 	}
@@ -2591,6 +2596,7 @@ static void ResolveMemberCallback(void* ctxt, BNNamedTypeReference* baseName, BN
 	apiMember.offset = member.offset;
 	apiMember.access = member.access;
 	apiMember.scope = member.scope;
+	apiMember.description = member.description;
 	(*resolveFunc->callback)(baseNameRef, resolvedStructRef, memberIndex, structOffset, adjustedOffset, apiMember);
 }
 
@@ -2731,6 +2737,7 @@ vector<StructureMember> StructureBuilder::GetMembers() const
 		member.offset = members[i].offset;
 		member.access = members[i].access;
 		member.scope = members[i].scope;
+		member.description = members[i].description;
 		result.push_back(member);
 	}
 
@@ -2749,6 +2756,7 @@ bool StructureBuilder::GetMemberByName(const string& name, StructureMember& resu
 		result.offset = member->offset;
 		result.access = member->access;
 		result.scope = member->scope;
+		result.description = member->description;
 		BNFreeStructureMember(member);
 		return true;
 	}
@@ -2773,6 +2781,7 @@ bool StructureBuilder::GetMemberAtOffset(int64_t offset, StructureMember& result
 		result.offset = member->offset;
 		result.access = member->access;
 		result.scope = member->scope;
+		result.description = member->description;
 		BNFreeStructureMember(member);
 		return true;
 	}
@@ -2865,23 +2874,23 @@ BNStructureVariant StructureBuilder::GetStructureType() const
 
 
 StructureBuilder& StructureBuilder::AddMember(
-    const Confidence<Ref<Type>>& type, const string& name, BNMemberAccess access, BNMemberScope scope)
+    const Confidence<Ref<Type>>& type, const string& name, BNMemberAccess access, BNMemberScope scope, const string& description)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
 	tc.confidence = type.GetConfidence();
-	BNAddStructureBuilderMember(m_object, &tc, name.c_str(), access, scope);
+	BNAddStructureBuilderMember(m_object, &tc, name.c_str(), access, scope, description.c_str());
 	return *this;
 }
 
 
 StructureBuilder& StructureBuilder::AddMemberAtOffset(const Confidence<Ref<Type>>& type, const string& name,
-    uint64_t offset, bool overwriteExisting, BNMemberAccess access, BNMemberScope scope)
+    uint64_t offset, bool overwriteExisting, BNMemberAccess access, BNMemberScope scope, const string& description)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
 	tc.confidence = type.GetConfidence();
-	BNAddStructureBuilderMemberAtOffset(m_object, &tc, name.c_str(), offset, overwriteExisting, access, scope);
+	BNAddStructureBuilderMemberAtOffset(m_object, &tc, name.c_str(), offset, overwriteExisting, access, scope, description.c_str());
 	return *this;
 }
 

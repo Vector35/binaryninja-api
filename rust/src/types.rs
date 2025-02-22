@@ -1370,6 +1370,7 @@ pub struct StructureBuilder {
 ///         false,
 ///         MemberAccess::PublicAccess,
 ///         MemberScope::NoScope,
+///         ""
 ///     )
 ///     .insert(
 ///         &field_2_ty,
@@ -1378,6 +1379,7 @@ pub struct StructureBuilder {
 ///         false,
 ///         MemberAccess::PublicAccess,
 ///         MemberScope::NoScope,
+///         ""
 ///     )
 ///     .insert(
 ///         &field_3_ty,
@@ -1386,12 +1388,14 @@ pub struct StructureBuilder {
 ///         false,
 ///         MemberAccess::PublicAccess,
 ///         MemberScope::NoScope,
+///         ""
 ///     )
 ///     .append(
 ///         &field_1_ty,
 ///         "field_4",
 ///         MemberAccess::PublicAccess,
 ///         MemberScope::NoScope,
+///         ""
 ///     );
 ///
 /// // Convert structure to type
@@ -1482,8 +1486,10 @@ impl StructureBuilder {
         name: S,
         access: MemberAccess,
         scope: MemberScope,
+        description: impl BnStrCompatible,
     ) -> &mut Self {
         let name = name.into_bytes_with_nul();
+        let description = description.into_bytes_with_nul();
         let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
         unsafe {
             BNAddStructureBuilderMember(
@@ -1492,6 +1498,7 @@ impl StructureBuilder {
                 name.as_ref().as_ptr() as _,
                 access,
                 scope,
+                description.as_ref().as_ptr() as _,
             );
         }
         self
@@ -1509,6 +1516,7 @@ impl StructureBuilder {
             overwrite_existing,
             member.access,
             member.scope,
+            member.description
         );
         self
     }
@@ -1521,8 +1529,10 @@ impl StructureBuilder {
         overwrite_existing: bool,
         access: MemberAccess,
         scope: MemberScope,
+        description: impl BnStrCompatible
     ) -> &mut Self {
         let name = name.into_bytes_with_nul();
+        let description = description.into_bytes_with_nul();
         let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
         unsafe {
             BNAddStructureBuilderMemberAtOffset(
@@ -1533,6 +1543,7 @@ impl StructureBuilder {
                 overwrite_existing,
                 access,
                 scope,
+                description.as_ref().as_ptr() as _
             );
         }
         self
@@ -1687,6 +1698,7 @@ pub struct StructureMember {
     pub offset: u64,
     pub access: MemberAccess,
     pub scope: MemberScope,
+    pub description: String,
 }
 
 impl StructureMember {
@@ -1701,6 +1713,7 @@ impl StructureMember {
             offset: value.offset,
             access: value.access,
             scope: value.scope,
+            description: raw_to_string(value.description as *mut _).unwrap()
         }
     }
 
@@ -1712,6 +1725,7 @@ impl StructureMember {
 
     pub(crate) fn into_raw(value: Self) -> BNStructureMember {
         let bn_name = BnString::new(value.name);
+        let bn_desc = BnString::new(value.description);
         BNStructureMember {
             type_: unsafe { Ref::into_raw(value.ty.contents) }.handle,
             name: BnString::into_raw(bn_name),
@@ -1719,12 +1733,14 @@ impl StructureMember {
             typeConfidence: value.ty.confidence,
             access: value.access,
             scope: value.scope,
+            description: BnString::into_raw(bn_desc),
         }
     }
 
     pub(crate) fn free_raw(value: BNStructureMember) {
         let _ = unsafe { Type::ref_from_raw(value.type_) };
         let _ = unsafe { BnString::from_raw(value.name) };
+        let _ = unsafe { BnString::from_raw(value.description) };
     }
 
     pub fn new(
@@ -1733,6 +1749,7 @@ impl StructureMember {
         offset: u64,
         access: MemberAccess,
         scope: MemberScope,
+        description: String,
     ) -> Self {
         Self {
             ty,
@@ -1740,6 +1757,7 @@ impl StructureMember {
             offset,
             access,
             scope,
+            description
         }
     }
 }

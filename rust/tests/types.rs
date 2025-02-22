@@ -43,6 +43,7 @@ fn test_structure_builder(_session: &Session) {
         false,
         MemberAccess::PrivateAccess,
         MemberScope::FriendScope,
+        ""
     );
     builder.insert(
         &Type::float(8),
@@ -51,6 +52,7 @@ fn test_structure_builder(_session: &Session) {
         false,
         MemberAccess::PublicAccess,
         MemberScope::NoScope,
+        ""
     );
 
     let structure = builder.finalize();
@@ -64,6 +66,7 @@ fn test_structure_builder(_session: &Session) {
             offset: 0,
             access: MemberAccess::PrivateAccess,
             scope: MemberScope::FriendScope,
+            description: "".to_string()
         }
     );
 }

@@ -898,7 +898,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     bitfield_builder
                         .as_mut()
                         .expect("Invariant")
-                        .insert(&m.ty, m.name, 0, false, m.access, m.scope);
+                        .insert(&m.ty, m.name, 0, false, m.access, m.scope, "");
                 }
                 (None, None) => {
                     if let Some(mut builder) = bitfield_builder.take() {
@@ -1108,6 +1108,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     true,
                     MemberAccess::PublicAccess,
                     MemberScope::NoScope,
+                    ""
                 );
                 min_width = min_width.max((offset + self.arch.address_size()) as u64);
             }
@@ -1139,6 +1140,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 true,
                 MemberAccess::PublicAccess,
                 MemberScope::NoScope,
+                ""
             );
         }
 
@@ -1403,6 +1405,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 base_offset as u64,
                 access,
                 scope,
+                "".to_string()
             ),
         ))))
     }
@@ -1809,6 +1812,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     false,
                     group[0].access,
                     group[0].scope,
+                    ""
                 );
             } else {
                 let mut inner_struct = StructureBuilder::new();
@@ -1820,6 +1824,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         false,
                         member.access,
                         member.scope,
+                        ""
                     );
                 }
                 structure.insert(
@@ -1832,6 +1837,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     false,
                     MemberAccess::PublicAccess,
                     MemberScope::NoScope,
+                    ""
                 );
             }
         }

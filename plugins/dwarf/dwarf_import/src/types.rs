@@ -214,6 +214,7 @@ fn do_structure_parse<R: ReaderType>(
                                 false,
                                 MemberAccess::NoAccess, // TODO : Resolve actual scopes, if possible
                                 MemberScope::NoScope,
+                                ""
                             );
                         } else {
                             structure_builder.append(
@@ -221,6 +222,7 @@ fn do_structure_parse<R: ReaderType>(
                                 child_name,
                                 MemberAccess::NoAccess,
                                 MemberScope::NoScope,
+                                ""
                             );
                         }
                     }

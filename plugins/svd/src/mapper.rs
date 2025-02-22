@@ -323,6 +323,7 @@ impl DeviceMapper {
             register.address_offset as u64,
             MemberAccess::PublicAccess,
             MemberScope::NoScope,
+            register.description.clone().unwrap_or_default()
         )
     }
 
@@ -444,6 +445,7 @@ impl DeviceMapper {
             byte_offset as u64,
             MemberAccess::PublicAccess,
             MemberScope::NoScope,
+            field.description.clone().unwrap_or_default()
         )
     }
 

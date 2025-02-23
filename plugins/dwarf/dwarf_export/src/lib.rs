@@ -111,7 +111,31 @@ fn export_type(
         TypeClass::StructureTypeClass => {
             let structure_die_uid = match t.get_structure().unwrap().structure_type() {
                 StructureType::ClassStructureType => {
-                    dwarf.unit.add(root, constants::DW_TAG_class_type)
+                    let class_uid = dwarf.unit.add(root, constants::DW_TAG_class_type);
+                    for base_struct in t.get_structure().unwrap().base_structures() {
+                        let inheritance_uid = dwarf.unit.add(class_uid, gimli::DW_TAG_inheritance);
+                        let base_struct_uid = export_type(
+                            base_struct.ty.name().to_string(),
+                            base_struct.ty.target(bv).unwrap().as_ref(),
+                            bv,
+                            defined_types,
+                            dwarf,
+                        )
+                        .unwrap();
+                        dwarf
+                            .unit
+                            .get_mut(inheritance_uid)
+                            .set(gimli::DW_AT_type, AttributeValue::UnitRef(base_struct_uid));
+                        dwarf.unit.get_mut(inheritance_uid).set(
+                            gimli::DW_AT_data_member_location,
+                            AttributeValue::Data8(base_struct.offset),
+                        );
+                        dwarf.unit.get_mut(inheritance_uid).set(
+                            gimli::DW_AT_accessibility,
+                            AttributeValue::Accessibility(gimli::DW_ACCESS_public),
+                        );
+                    }
+                    class_uid
                 }
                 StructureType::StructStructureType => {
                     dwarf.unit.add(root, constants::DW_TAG_structure_type)

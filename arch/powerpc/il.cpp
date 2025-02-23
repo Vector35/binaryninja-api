@@ -536,7 +536,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei0);
 			break;
 
-		case PPC_ID_ADDI: /* add immediate, eg: addi rD, rA, <imm> */
+		case PPC_ID_ADDIx: /* add immediate, eg: addi rD, rA, <imm> */
 		case PPC_ID_ADDIS: /* add immediate, shifted */
 			REQUIRE2OPS
 			if (instruction->id == PPC_ID_ADDIS)
@@ -583,8 +583,8 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei0);
 			break;
 
+		case PPC_ID_ANDIx:
 		case PPC_ID_ANDIS:
-		case PPC_ID_ANDI:
 			REQUIRE3OPS
 			if (instruction->id == PPC_ID_ANDIS)
 				ei0 = il.Const(addressSize_l, oper2->uimm << 16);
@@ -876,8 +876,15 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		*/
 		case PPC_ID_LBZ:
 		case PPC_ID_LBZU:
+		case PPC_ID_VLE_SE_LBZ:
+		{
+			// 16-bit VLE loads/stores treats r0 as a normal register
+			uint32_t options = OTI_GPR0_ZERO;
+			if (instruction->id == PPC_ID_VLE_SE_LBZ)
+				options = 0;
+
 			REQUIRE2OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l); // d(rA) or 0
+			ei0 = operToIL(il, oper1, options, PPC_IL_EXTRA_DEFAULT, addressSize_l); // d(rA) or 0
 			ei0 = il.Load(1, ei0);                    // [d(rA)]
 			ei0 = il.ZeroExtend(addressSize_l, ei0);
 			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0); // rD = [d(rA)]
@@ -890,6 +897,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			}
 
 			break;
+		}
 
 		/*
 			load half word [and zero/sign extend] [and update]
@@ -919,8 +927,15 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LHZU:
 		case PPC_ID_LHA:
 		case PPC_ID_LHAU:
+		case PPC_ID_VLE_SE_LHZ:
+		{
+			// 16-bit VLE loads/stores treats r0 as a normal register
+			uint32_t options = OTI_GPR0_ZERO;
+			if (instruction->id == PPC_ID_VLE_SE_LHZ)
+				options = 0;
+
 			REQUIRE2OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l); // d(rA) or 0
+			ei0 = operToIL(il, oper1, options, PPC_IL_EXTRA_DEFAULT, addressSize_l); // d(rA) or 0
 			ei0 = il.Load(2, ei0);                    // [d(rA)]
 			if(instruction->id == PPC_ID_LHZ || instruction->id == PPC_ID_LHZU)
 				ei0 = il.ZeroExtend(addressSize_l, ei0);
@@ -937,6 +952,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			}
 
 			break;
+		}
 
 		/*
 			load half word [and zero/sign extend] [and update]
@@ -968,8 +984,15 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		*/
 		case PPC_ID_LWZ:
 		case PPC_ID_LWZU:
+		case PPC_ID_VLE_SE_LWZ:
+		{
+			// 16-bit VLE loads/stores treats r0 as a normal register
+			uint32_t options = OTI_GPR0_ZERO;
+			if (instruction->id == PPC_ID_VLE_SE_LWZ)
+				options = 0;
+
 			REQUIRE2OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l); // d(rA) or 0
+			ei0 = operToIL(il, oper1, options, PPC_IL_EXTRA_DEFAULT, addressSize_l); // d(rA) or 0
 			ei0 = il.Load(4, ei0);                    // [d(rA)]
 			if(addressSize_l == 8)
 			{
@@ -985,6 +1008,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			}
 
 			break;
+		}
 
 		/*
 			load word [and zero] [and update]
@@ -1115,7 +1139,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei0);
 			break;
 
-		case PPC_ID_ORI:
+		case PPC_ID_ORIx:
 		case PPC_ID_ORIS:
 			REQUIRE3OPS
 			if (instruction->id == PPC_ID_ORIS)
@@ -1142,7 +1166,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei0);
 			break;
 
-		case PPC_ID_XORI:
+		case PPC_ID_XORIx:
 		case PPC_ID_XORIS:
 			REQUIRE3OPS
 			if (instruction->id == PPC_ID_XORIS)
@@ -1162,7 +1186,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 		case PPC_ID_SUBFx:
 		case PPC_ID_SUBFCx:
-		case PPC_ID_SUBFIC:
+		case PPC_ID_SUBFICx:
 			REQUIRE3OPS
 			ei0 = il.Sub(
 				addressSize_l,
@@ -1230,9 +1254,16 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		/* store half word [with update] */
 		case PPC_ID_STB:
 		case PPC_ID_STBU: /* store(size, addr, val) */
+		case PPC_ID_VLE_SE_STB:
+		{
+			// 16-bit VLE loads/stores treats r0 as a normal register
+			uint32_t options = OTI_GPR0_ZERO;
+			if (instruction->id == PPC_ID_VLE_SE_STB)
+				options = 0;
+
 			REQUIRE2OPS
 			ei0 = il.Store(1,
-				operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
+				operToIL(il, oper1, options, PPC_IL_EXTRA_DEFAULT, addressSize_l),
 				il.LowPart(1, operToIL_a(il, oper0, addressSize_l))
 			);
 			il.AddInstruction(ei0);
@@ -1244,6 +1275,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			}
 
 			break;
+		}
 
 		/* store half word indexed [with update] */
 		case PPC_ID_STBX:
@@ -1271,9 +1303,16 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		/* store half word [with update] */
 		case PPC_ID_STH:
 		case PPC_ID_STHU: /* store(size, addr, val) */
+		case PPC_ID_VLE_SE_STH:
+		{
+			// 16-bit VLE loads/stores treats r0 as a normal register
+			uint32_t options = OTI_GPR0_ZERO;
+			if (instruction->id == PPC_ID_VLE_SE_STH)
+				options = 0;
+
 			REQUIRE2OPS
 			ei0 = il.Store(2,
-				operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
+				operToIL(il, oper1, options, PPC_IL_EXTRA_DEFAULT, addressSize_l),
 				il.LowPart(2, operToIL_a(il, oper0, addressSize_l))
 			);
 			il.AddInstruction(ei0);
@@ -1285,6 +1324,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			}
 
 			break;
+		}
 
 		/* store half word indexed [with update] */
 		case PPC_ID_STHX:
@@ -1312,6 +1352,13 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		/* store word [with update] */
 		case PPC_ID_STW:
 		case PPC_ID_STWU: /* store(size, addr, val) */
+		case PPC_ID_VLE_SE_STW:
+		{
+			// 16-bit VLE loads/stores treats r0 as a normal register
+			uint32_t options = OTI_GPR0_ZERO;
+			if (instruction->id == PPC_ID_VLE_SE_STW)
+				options = 0;
+
 			REQUIRE2OPS
 			if (addressSize_l == 8)
 			{
@@ -1321,8 +1368,9 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			{
 				ei0 = operToIL(il, oper0);
 			}
+
 			ei0 = il.Store(4,
-				operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
+				operToIL(il, oper1, options, PPC_IL_EXTRA_DEFAULT, addressSize_l),
 				ei0
 			);
 			il.AddInstruction(ei0);
@@ -1334,6 +1382,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			}
 
 			break;
+		}
 
 		/* store word indexed [with update] */
 		case PPC_ID_STWX:

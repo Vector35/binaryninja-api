@@ -92,11 +92,13 @@
 DEFINE_SUBMNEM_OE_RC(SubMnemADDx, "add")
 DEFINE_SUBMNEM_OE_RC(SubMnemADDCx, "addc")
 DEFINE_SUBMNEM_OE_RC(SubMnemADDEx, "adde")
+DEFINE_SUBMNEM_OE_RC(SubMnemADDIx, "addi")
 DEFINE_SUBMNEM_RC(SubMnemADDICx, "addic")
 DEFINE_SUBMNEM_OE_RC(SubMnemADDMEx, "addme")
 DEFINE_SUBMNEM_OE_RC(SubMnemADDZEx, "addze")
 DEFINE_SUBMNEM_RC(SubMnemANDx, "and")
 DEFINE_SUBMNEM_RC(SubMnemANDCx, "andc")
+DEFINE_SUBMNEM_RC(SubMnemANDIx, "andi")
 DEFINE_SUBMNEM_AA_LK(SubMnemBx, "b")
 DEFINE_SUBMNEM_AA_LK(SubMnemBCx, "bc")
 DEFINE_SUBMNEM_LK(SubMnemBCTRx, "bctr")
@@ -225,6 +227,7 @@ DEFINE_SUBMNEM_RC(SubMnemNANDx, "nand")
 DEFINE_SUBMNEM_OE_RC(SubMnemNEGx, "neg")
 DEFINE_SUBMNEM_RC(SubMnemNORx, "nor")
 DEFINE_SUBMNEM_RC(SubMnemORx, "or")
+DEFINE_SUBMNEM_RC(SubMnemORIx, "ori")
 DEFINE_SUBMNEM_RC(SubMnemORCx, "orc")
 DEFINE_SUBMNEM_RC(SubMnemRLDICLx, "rldicl")
 DEFINE_SUBMNEM_RC(SubMnemRLDICRx, "rldicr")
@@ -254,9 +257,11 @@ DEFINE_SUBMNEM_RC(SubMnemSRWIx, "srwi")
 DEFINE_SUBMNEM_OE_RC(SubMnemSUBFx, "subf")
 DEFINE_SUBMNEM_OE_RC(SubMnemSUBFCx, "subfc")
 DEFINE_SUBMNEM_OE_RC(SubMnemSUBFEx, "subfe")
+DEFINE_SUBMNEM_OE_RC(SubMnemSUBFICx, "subfic")
 DEFINE_SUBMNEM_OE_RC(SubMnemSUBFMEx, "subfme")
 DEFINE_SUBMNEM_OE_RC(SubMnemSUBFZEx, "subfze")
 DEFINE_SUBMNEM_RC(SubMnemXORx, "xor")
+DEFINE_SUBMNEM_RC(SubMnemXORIx, "xori")
 
 // ALTIVEC MNEMONICS
 DEFINE_SUBMNEM_RC(SubMnemVCMPBFPx, "vcmpbfp");
@@ -300,6 +305,36 @@ DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSNMSUBQPx, "xsnmsubqp");
 DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSSQRTQPx, "xssqrtqp");
 DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSSUBQPx, "xssubqp");
 DEFINE_SUBMNEM_INEXACT(SubMnemXSRQPIx, "xsrqpi");
+
+// VLE MNEMONICS
+DEFINE_SUBMNEM_RC(SubMnemVle32ADDIx, "e_addi");
+DEFINE_SUBMNEM_RC(SubMnemVle32ADDICx, "e_addic");
+DEFINE_SUBMNEM_RC(SubMnemVle32ANDIx, "e_andi");
+DEFINE_SUBMNEM_LK(SubMnemVle32Bx, "e_b");
+DEFINE_SUBMNEM_LK(SubMnemVle32BCx, "e_bc");
+DEFINE_SUBMNEM_LK(SubMnemVle32BDZx, "e_bdz");
+DEFINE_SUBMNEM_LK(SubMnemVle32BDNZx, "e_bdnz");
+DEFINE_SUBMNEM_LK(SubMnemVle32BEQx, "e_beq");
+DEFINE_SUBMNEM_LK(SubMnemVle32BGEx, "e_bge");
+DEFINE_SUBMNEM_LK(SubMnemVle32BGTx, "e_bgt");
+DEFINE_SUBMNEM_LK(SubMnemVle32BNEx, "e_bne");
+DEFINE_SUBMNEM_LK(SubMnemVle32BNSx, "e_bns");
+DEFINE_SUBMNEM_LK(SubMnemVle32BLEx, "e_ble");
+DEFINE_SUBMNEM_LK(SubMnemVle32BLTx, "e_blt");
+DEFINE_SUBMNEM_LK(SubMnemVle32BSOx, "e_bso");
+DEFINE_SUBMNEM_RC(SubMnemVle32ORIx, "e_ori");
+DEFINE_SUBMNEM_RC(SubMnemVle32RLWx, "e_rlw");
+DEFINE_SUBMNEM_RC(SubMnemVle32RLWIx, "e_rlwi");
+DEFINE_SUBMNEM_RC(SubMnemVle32SLWIx, "e_slwi");
+DEFINE_SUBMNEM_RC(SubMnemVle32SRWIx, "e_srwi");
+DEFINE_SUBMNEM_RC(SubMnemVle32SUBFICx, "e_subfic");
+DEFINE_SUBMNEM_RC(SubMnemVle32XORIx, "e_xori");
+
+DEFINE_SUBMNEM_RC(SubMnemVle16ANDx, "se_and");
+DEFINE_SUBMNEM_LK(SubMnemVle16Bx, "se_b");
+DEFINE_SUBMNEM_LK(SubMnemVle16BCTRx, "se_bctr");
+DEFINE_SUBMNEM_LK(SubMnemVle16BLRx, "se_blr");
+DEFINE_SUBMNEM_RC(SubMnemVle16SUBIx, "se_subi");
 
 static const char* RcMnemonic(const Instruction* instruction, const char* names[2])
 {
@@ -348,7 +383,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_ADDx: return OeRcMnemonic(instruction, SubMnemADDx);
 		case PPC_ID_ADDCx: return OeRcMnemonic(instruction, SubMnemADDCx);
 		case PPC_ID_ADDEx: return OeRcMnemonic(instruction, SubMnemADDEx);
-		case PPC_ID_ADDI: return "addi";
+		case PPC_ID_ADDIx:  return OeRcMnemonic(instruction, SubMnemADDIx);
 		case PPC_ID_ADDICx: return RcMnemonic(instruction, SubMnemADDICx);
 		case PPC_ID_ADDIS: return "addis";
 		case PPC_ID_ADDMEx: return OeRcMnemonic(instruction, SubMnemADDMEx);
@@ -356,7 +391,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_ADDZEx: return OeRcMnemonic(instruction, SubMnemADDZEx);
 		case PPC_ID_ANDx: return RcMnemonic(instruction, SubMnemANDx);
 		case PPC_ID_ANDCx: return RcMnemonic(instruction, SubMnemANDCx);
-		case PPC_ID_ANDI: return "andi.";
+		case PPC_ID_ANDIx: return RcMnemonic(instruction, SubMnemANDIx);
 		case PPC_ID_ANDIS: return "andis.";
 		case PPC_ID_ATTN: return "attn";
 		case PPC_ID_Bx: return AaLkMnemonic(instruction, SubMnemBx);
@@ -859,7 +894,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_NORx: return RcMnemonic(instruction, SubMnemNORx);
 		case PPC_ID_ORx: return RcMnemonic(instruction, SubMnemORx);
 		case PPC_ID_ORCx: return RcMnemonic(instruction, SubMnemORCx);
-		case PPC_ID_ORI: return "ori";
+		case PPC_ID_ORIx: return RcMnemonic(instruction, SubMnemORIx);
 		case PPC_ID_ORIS: return "oris";
 		case PPC_ID_PASTE: return "paste.";
 		case PPC_ID_POPCNTB: return "popcntb";
@@ -956,7 +991,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_SUBFx: return OeRcMnemonic(instruction, SubMnemSUBFx);
 		case PPC_ID_SUBFCx: return OeRcMnemonic(instruction, SubMnemSUBFCx);
 		case PPC_ID_SUBFEx: return OeRcMnemonic(instruction, SubMnemSUBFEx);
-		case PPC_ID_SUBFIC: return "subfic";
+		case PPC_ID_SUBFICx: return OeRcMnemonic(instruction, SubMnemSUBFICx);
 		case PPC_ID_SUBFMEx: return OeRcMnemonic(instruction, SubMnemSUBFMEx);
 		case PPC_ID_SUBFZEx: return OeRcMnemonic(instruction, SubMnemSUBFZEx);
 		case PPC_ID_SYNC: return "sync";
@@ -1027,7 +1062,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_WRTEEI: return "wrteei";
 		case PPC_ID_XNOP: return "xnop";
 		case PPC_ID_XORx: return RcMnemonic(instruction, SubMnemXORx);
-		case PPC_ID_XORI: return "xori";
+		case PPC_ID_XORIx: return RcMnemonic(instruction, SubMnemXORIx);
 		case PPC_ID_XORIS: return "xoris";
 
 		case PPC_ID_AV_VABSDUB: return "vabsdub";
@@ -1851,6 +1886,210 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_SPE_EVSUBFW: return "evsubfw";
 		case PPC_ID_SPE_EVSUBIFW: return "evsubifw";
 		case PPC_ID_SPE_EVXOR: return "evxor";
+
+		case PPC_ID_VLE_E_ADDIx: return RcMnemonic(instruction, SubMnemVle32ADDIx);
+		case PPC_ID_VLE_E_ADDICx: return RcMnemonic(instruction, SubMnemVle32ADDICx);
+		case PPC_ID_VLE_E_ADD2I: return "e_add2i";
+		case PPC_ID_VLE_E_ADD2IS: return "e_add2is";
+		case PPC_ID_VLE_E_ADD16I: return "e_add16i";
+		case PPC_ID_VLE_E_ANDIx: return RcMnemonic(instruction, SubMnemVle32ANDIx);
+		case PPC_ID_VLE_E_AND2I: return "e_and2i";
+		case PPC_ID_VLE_E_AND2IS: return "e_and2is";
+		case PPC_ID_VLE_E_Bx: return LkMnemonic(instruction, SubMnemVle32Bx);
+		case PPC_ID_VLE_E_BCx:
+		{
+			uint32_t bo = instruction->operands[0].uimm;
+			uint32_t bi = instruction->operands[1].uimm;
+
+			switch (bo)
+			{
+				// Branch if false
+				case 0:
+					switch (bi & 0x3)
+					{
+						case 0: return LkMnemonic(instruction, SubMnemVle32BGEx);
+						case 1: return LkMnemonic(instruction, SubMnemVle32BLEx);
+						case 2: return LkMnemonic(instruction, SubMnemVle32BNEx);
+						case 3: return LkMnemonic(instruction, SubMnemVle32BNSx);
+
+						default:
+							return NULL;
+					}
+
+					break;
+
+				// Branch if true
+				case 1:
+					switch (bi & 0x3)
+					{
+						case 0: return LkMnemonic(instruction, SubMnemVle32BLTx);
+						case 1: return LkMnemonic(instruction, SubMnemVle32BGTx);
+						case 2: return LkMnemonic(instruction, SubMnemVle32BEQx);
+						case 3: return LkMnemonic(instruction, SubMnemVle32BSOx);
+
+						default:
+							return NULL;
+					}
+
+					break;
+
+				// Decrement CTR, branch if zero/nonzero
+				// BI doesn't matter
+				case 2: return LkMnemonic(instruction, SubMnemVle32BDNZx);
+				case 3: return LkMnemonic(instruction, SubMnemVle32BDZx);
+
+				// Should be unreachable; bo only 2 bits
+				default:
+					return NULL;
+			}
+		}
+		case PPC_ID_VLE_E_CMP16I: return "e_cmp16i";
+		case PPC_ID_VLE_E_CMPH16I: return "e_cmph16i";
+		case PPC_ID_VLE_E_CMPHL: return "e_cmphl";
+		case PPC_ID_VLE_E_CMPHL16I: return "e_cmphl16i";
+		case PPC_ID_VLE_E_CMPI: return "e_cmpi";
+		case PPC_ID_VLE_E_CMPL16I: return "e_cmpl16i";
+		case PPC_ID_VLE_E_CMPLI: return "e_cmpli";
+		case PPC_ID_VLE_E_CRAND: return "e_crand";
+		case PPC_ID_VLE_E_CRANDC: return "e_crandc";
+		case PPC_ID_VLE_E_CREQV: return "e_creqv";
+		case PPC_ID_VLE_E_CRNAND: return "e_crnand";
+		case PPC_ID_VLE_E_CRNOR: return "e_crnor";
+		case PPC_ID_VLE_E_CROR: return "e_cror";
+		case PPC_ID_VLE_E_CRORC: return "e_crorc";
+		case PPC_ID_VLE_E_CRXOR: return "e_crxor";
+		case PPC_ID_VLE_E_LBZ: return "e_lbz";
+		case PPC_ID_VLE_E_LBZU: return "e_lbzu";
+		case PPC_ID_VLE_E_LHA: return "e_lha";
+		case PPC_ID_VLE_E_LHAU: return "e_lhau";
+		case PPC_ID_VLE_E_LHZ: return "e_lhz";
+		case PPC_ID_VLE_E_LHZU: return "e_lhzu";
+		case PPC_ID_VLE_E_LI: return "e_li";
+		case PPC_ID_VLE_E_LIS: return "e_lis";
+		case PPC_ID_VLE_E_LMW: return "e_lmw";
+		case PPC_ID_VLE_E_LWZ: return "e_lwz";
+		case PPC_ID_VLE_E_LWZU: return "e_lwzu";
+		case PPC_ID_VLE_E_MCRF: return "e_mcrf";
+		case PPC_ID_VLE_E_MULL2I: return "e_mull2i";
+		case PPC_ID_VLE_E_MULLI: return "e_mulli";
+		case PPC_ID_VLE_E_OR2I: return "e_or2i";
+		case PPC_ID_VLE_E_OR2IS: return "e_or2is";
+		case PPC_ID_VLE_E_ORIx: return RcMnemonic(instruction, SubMnemVle32ORIx);
+		case PPC_ID_VLE_E_RLWx: return RcMnemonic(instruction, SubMnemVle32RLWx);
+		case PPC_ID_VLE_E_RLWIx: return RcMnemonic(instruction, SubMnemVle32RLWIx);
+		case PPC_ID_VLE_E_RLWIMI: return "e_rlwimi";
+		case PPC_ID_VLE_E_RLWINM: return "e_rlwinm";
+		case PPC_ID_VLE_E_SLWIx: return RcMnemonic(instruction, SubMnemVle32SLWIx);
+		case PPC_ID_VLE_E_SRWIx: return RcMnemonic(instruction, SubMnemVle32SRWIx);
+		case PPC_ID_VLE_E_STB: return "e_stb";
+		case PPC_ID_VLE_E_STBU: return "e_stbu";
+		case PPC_ID_VLE_E_STH: return "e_sth";
+		case PPC_ID_VLE_E_STHU: return "e_sthu";
+		case PPC_ID_VLE_E_STMW: return "e_stmw";
+		case PPC_ID_VLE_E_STW: return "e_stw";
+		case PPC_ID_VLE_E_STWU: return "e_stwu";
+		case PPC_ID_VLE_E_SUBFICx: return RcMnemonic(instruction, SubMnemVle32SUBFICx);
+		case PPC_ID_VLE_E_XORIx: return RcMnemonic(instruction, SubMnemVle32XORIx);
+
+		case PPC_ID_VLE_SE_ADD: return "se_add";
+		case PPC_ID_VLE_SE_ADDI: return "se_addi";
+		case PPC_ID_VLE_SE_ANDx: return RcMnemonic(instruction, SubMnemVle16ANDx);
+		case PPC_ID_VLE_SE_ANDC: return "se_andc";
+		case PPC_ID_VLE_SE_ANDI: return "se_andi";
+		case PPC_ID_VLE_SE_Bx: return LkMnemonic(instruction, SubMnemVle16Bx);
+		case PPC_ID_VLE_SE_BC:
+		{
+			uint32_t bo = instruction->operands[0].uimm;
+			uint32_t bi = instruction->operands[1].uimm;
+
+			switch (bo)
+			{
+				// Branch if false
+				case 0:
+					switch (bi & 0x3)
+					{
+						case 0: return "bgex";
+						case 1: return "blex";
+						case 2: return "bnex";
+						case 3: return "bnsx";
+
+						default:
+							return NULL;
+					}
+
+					break;
+
+				// Branch if true
+				case 1:
+					switch (bi & 0x3)
+					{
+						case 0: return "bltx";
+						case 1: return "bgtx";
+						case 2: return "beqx";
+						case 3: return "bsox";
+
+						default:
+							return NULL;
+					}
+
+					break;
+
+				// Should be unreachable; bo only 1 bit
+				default:
+					return NULL;
+			}
+		}
+		case PPC_ID_VLE_SE_BCLRI: return "se_bclri";
+		case PPC_ID_VLE_SE_BCTRx: return LkMnemonic(instruction, SubMnemVle16BCTRx);
+		case PPC_ID_VLE_SE_BGENI: return "se_bgeni";
+		case PPC_ID_VLE_SE_BLRx: return LkMnemonic(instruction, SubMnemVle16BLRx);
+		case PPC_ID_VLE_SE_BMASKI: return "se_bmaski";
+		case PPC_ID_VLE_SE_BSETI: return "se_bseti";
+		case PPC_ID_VLE_SE_BTSTI: return "se_btsti";
+		case PPC_ID_VLE_SE_CMP: return "se_cmp";
+		case PPC_ID_VLE_SE_CMPH: return "se_cmph";
+		case PPC_ID_VLE_SE_CMPHL: return "se_cmphl";
+		case PPC_ID_VLE_SE_CMPI: return "se_cmpi";
+		case PPC_ID_VLE_SE_CMPL: return "se_cmpl";
+		case PPC_ID_VLE_SE_CMPLI: return "se_cmpli";
+		case PPC_ID_VLE_SE_EXTSB: return "se_extsb";
+		case PPC_ID_VLE_SE_EXTSH: return "se_extsh";
+		case PPC_ID_VLE_SE_EXTZB: return "se_extzb";
+		case PPC_ID_VLE_SE_EXTZH: return "se_extzh";
+		case PPC_ID_VLE_SE_ILLEGAL: return "se_illegal";
+		case PPC_ID_VLE_SE_ISYNC: return "se_isync";
+		case PPC_ID_VLE_SE_LBZ: return "se_lbz";
+		case PPC_ID_VLE_SE_LHZ: return "se_lhz";
+		case PPC_ID_VLE_SE_LI: return "se_li";
+		case PPC_ID_VLE_SE_LWZ: return "se_lwz";
+		case PPC_ID_VLE_SE_MFAR: return "se_mfar";
+		case PPC_ID_VLE_SE_MFCTR: return "se_mfctr";
+		case PPC_ID_VLE_SE_MFLR: return "se_mflr";
+		case PPC_ID_VLE_SE_MR: return "se_mr";
+		case PPC_ID_VLE_SE_MTAR: return "se_mtar";
+		case PPC_ID_VLE_SE_MTCTR: return "se_mtctr";
+		case PPC_ID_VLE_SE_MTLR: return "se_mtlr";
+		case PPC_ID_VLE_SE_MULLW: return "se_mullw";
+		case PPC_ID_VLE_SE_NEG: return "se_neg";
+		case PPC_ID_VLE_SE_NOT: return "se_not";
+		case PPC_ID_VLE_SE_OR: return "se_or";
+		case PPC_ID_VLE_SE_RFCI: return "se_rfci";
+		case PPC_ID_VLE_SE_RFDI: return "se_rfdi";
+		case PPC_ID_VLE_SE_RFI: return "se_rfi";
+		case PPC_ID_VLE_SE_RFMCI: return "se_rfmci";
+		case PPC_ID_VLE_SE_SC: return "se_sc";
+		case PPC_ID_VLE_SE_SLW: return "se_slw";
+		case PPC_ID_VLE_SE_SLWI: return "se_slwi";
+		case PPC_ID_VLE_SE_SRAW: return "se_sraw";
+		case PPC_ID_VLE_SE_SRAWI: return "se_srawi";
+		case PPC_ID_VLE_SE_SRW: return "se_srw";
+		case PPC_ID_VLE_SE_SRWI: return "se_srwi";
+		case PPC_ID_VLE_SE_STB: return "se_stb";
+		case PPC_ID_VLE_SE_STH: return "se_sth";
+		case PPC_ID_VLE_SE_STW: return "se_stw";
+		case PPC_ID_VLE_SE_SUB: return "se_sub";
+		case PPC_ID_VLE_SE_SUBF: return "se_subf";
+		case PPC_ID_VLE_SE_SUBIx: return RcMnemonic(instruction, SubMnemVle16SUBIx);
 
 		default: return NULL;
 	}

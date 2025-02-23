@@ -11,11 +11,21 @@
 
 size_t GetInstructionLength(const uint8_t* data, size_t data_length, uint32_t decodeFlags)
 {
-	(void)data;
-	(void)data_length;
-	(void)decodeFlags;
+	size_t instruction_length = 0;
+	if ((decodeFlags & DECODE_FLAGS_VLE) != 0)
+	{
+		instruction_length = VleGetInstructionLength(data, data_length, decodeFlags);
+	}
+	else
+	{
+		// All other powerpc flavors have fixed 32-bit instructions
+		instruction_length = 4;
+	}
 
-	return 4;
+	if (data_length < instruction_length)
+		return 0;
+
+	return instruction_length;
 }
 
 static InstructionId DecodeAltivec0x04(uint32_t word32, uint32_t decodeFlags)
@@ -2063,6 +2073,16 @@ static InstructionId DecodeSpe0x04(uint32_t word32, uint32_t decodeFlags)
 	}
 }
 
+InstructionId Decode0x04(uint32_t word32, uint32_t decodeFlags)
+{
+	if ((decodeFlags & DECODE_FLAGS_ALTIVEC))
+		return DecodeAltivec0x04(word32, decodeFlags);
+	else if ((decodeFlags & DECODE_FLAGS_SPE))
+		return DecodeSpe0x04(word32, decodeFlags);
+	else
+		return PPC_ID_INVALID;
+}
+
 static InstructionId Decode0x13(uint32_t word32, uint32_t decodeFlags)
 {
 	uint32_t a = GetA(word32);
@@ -2260,7 +2280,7 @@ static InstructionId Decode0x1E(uint32_t word32, uint32_t decodeFlags)
 	}
 }
 
-static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
+InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 {
 	uint32_t a = GetA(word32);
 	uint32_t b = GetB(word32);
@@ -2627,6 +2647,7 @@ static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 
 		case 0x0f8:
 		case 0x0f9:
+			// TODO: PPC_ID_NOTx pseudo-instruction
 			return PPC_ID_NORx;
 
 		case 0x0fe:
@@ -5474,8 +5495,6 @@ static InstructionId Decode0x3F(uint32_t word32, uint32_t flags)
 		default:
 			return PPC_ID_INVALID;
 	}
-
-	return true;
 }
 
 static InstructionId Decode32(uint32_t word32, uint32_t decodeFlags)
@@ -5532,20 +5551,13 @@ static InstructionId Decode32(uint32_t word32, uint32_t decodeFlags)
 		}
 
 		case 0x04:
-		{
-			if ((decodeFlags & DECODE_FLAGS_ALTIVEC))
-				return DecodeAltivec0x04(word32, decodeFlags);
-			else if ((decodeFlags & DECODE_FLAGS_SPE))
-				return DecodeSpe0x04(word32, decodeFlags);
-			else
-				return PPC_ID_INVALID;
-		}
+			return Decode0x04(word32, decodeFlags);
 
 		case 0x07:
 			return PPC_ID_MULLI;
 
 		case 0x08:
-			return PPC_ID_SUBFIC;
+			return PPC_ID_SUBFICx;
 
 
 		case 0x0a:
@@ -5595,7 +5607,7 @@ static InstructionId Decode32(uint32_t word32, uint32_t decodeFlags)
 			if (a == 0)
 				return PPC_ID_LI;
 			else
-				return PPC_ID_ADDI;
+				return PPC_ID_ADDIx;
 
 		case 0x0f:
 			if (a == 0)
@@ -5656,7 +5668,7 @@ static InstructionId Decode32(uint32_t word32, uint32_t decodeFlags)
 			if (word32 == 0x60000000)
 				return PPC_ID_NOP;
 			else
-				return PPC_ID_ORI;
+				return PPC_ID_ORIx;
 
 		case 0x19:
 			return PPC_ID_ORIS;
@@ -5665,13 +5677,13 @@ static InstructionId Decode32(uint32_t word32, uint32_t decodeFlags)
 			if (word32 == 0x68000000)
 				return PPC_ID_XNOP;
 			else
-				return PPC_ID_XORI;
+				return PPC_ID_XORIx;
 
 		case 0x1b:
 			return PPC_ID_XORIS;
 
 		case 0x1c:
-			return PPC_ID_ANDI;
+			return PPC_ID_ANDIx;
 
 		case 0x1d:
 			return PPC_ID_ANDIS;
@@ -5809,9 +5821,21 @@ static InstructionId Decode32(uint32_t word32, uint32_t decodeFlags)
 	}
 }
 
+bool Decompose16(Instruction* instruction, uint16_t word16, uint64_t address, uint32_t flags)
+{
+	memset(instruction, 0, sizeof *instruction);
+	if ((flags & DECODE_FLAGS_VLE) != 0)
+		return Decompose16Vle(instruction, word16, address, flags);
+	else
+		return false;
+}
+
 bool Decompose32(Instruction* instruction, uint32_t word32, uint64_t address, uint32_t flags)
 {
 	memset(instruction, 0, sizeof *instruction);
+
+	if ((flags & DECODE_FLAGS_VLE) != 0)
+		return Decompose32Vle(instruction, word32, address, flags);
 
 	instruction->id = Decode32(word32, flags);
 	if (instruction->id == PPC_ID_INVALID)
@@ -5819,4 +5843,32 @@ bool Decompose32(Instruction* instruction, uint32_t word32, uint64_t address, ui
 
 	FillOperands32(instruction, word32, address);
 	return true;
+}
+
+size_t VleGetInstructionLength(const uint8_t* data, size_t data_length, uint32_t decodeFlags)
+{
+	if (data_length == 0)
+		return 0;
+
+	switch (data[0] & 0xfc)
+	{
+		case 0x10:
+		case 0x18:
+		case 0x1c:
+		case 0x30:
+		case 0x34:
+		case 0x38:
+		case 0x50:
+		case 0x54:
+		case 0x58:
+		case 0x5c:
+		case 0x70:
+		case 0x74:
+		case 0x78:
+		case 0x7c:
+			return 4;
+
+		default:
+			return 2;
+	}
 }

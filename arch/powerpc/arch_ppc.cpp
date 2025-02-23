@@ -301,9 +301,11 @@ class PowerpcArchitecture: public Architecture
 	/* initialization list */
 	PowerpcArchitecture(const char* name, BNEndianness endian_, size_t addressSize_=4, uint32_t decodeFlags_=DECODE_FLAGS_ALTIVEC | DECODE_FLAGS_VSX): Architecture(name)
 	{
+		Ref<Settings> settings = Settings::Instance();
+		uint32_t flag_vle = settings->Get<bool>("arch.ppc.disassembly.vlehack") ? DECODE_FLAGS_VLE : 0;
 		endian = endian_;
 		addressSize = addressSize_;
-		decodeFlags = decodeFlags_;
+		decodeFlags = decodeFlags_ | flag_vle;
 		if (addressSize == 8)
 			decodeFlags |= DECODE_FLAGS_PPC64;
 	}
@@ -330,7 +332,10 @@ class PowerpcArchitecture: public Architecture
 
 	virtual size_t GetInstructionAlignment() const override
 	{
-		return 4;
+		if ((decodeFlags & DECODE_FLAGS_VLE) != 0)
+			return 2;
+		else
+			return 4;
 	}
 
 	virtual size_t GetMaxInstructionLength() const override
@@ -338,10 +343,19 @@ class PowerpcArchitecture: public Architecture
 		return 4;
 	}
 
-	bool FillInstruction(Instruction* instruction, const uint8_t* data, size_t length, uint64_t address)
+	bool FillInstruction(Instruction* instruction, const uint8_t* data, size_t length, uint64_t address, uint32_t extraFlags = 0)
 	{
 		switch (length)
 		{
+			case 2:
+			{
+				uint16_t word16 = *(const uint16_t *) data;
+				if (endian == BigEndian)
+					word16 = bswap16(word16);
+
+				return Decompose16(instruction, word16, address, decodeFlags | extraFlags);
+			}
+
 			case 4:
 			{
 				uint32_t word32 = *(const uint32_t *) data;
@@ -349,7 +363,7 @@ class PowerpcArchitecture: public Architecture
 				if (endian == BigEndian)
 					word32 = bswap32(word32);
 
-				return Decompose32(instruction, word32, address, decodeFlags);
+				return Decompose32(instruction, word32, address, decodeFlags | extraFlags);
 			}
 
 			default:
@@ -390,6 +404,8 @@ class PowerpcArchitecture: public Architecture
 		switch (instruction.id)
 		{
 			case PPC_ID_Bx:
+			case PPC_ID_VLE_E_Bx:
+			case PPC_ID_VLE_SE_Bx:
 			{
 				uint64_t target = instruction.operands[0].label;
 
@@ -402,11 +418,13 @@ class PowerpcArchitecture: public Architecture
 			}
 
 			case PPC_ID_BCx:
+			case PPC_ID_VLE_E_BCx:
+			case PPC_ID_VLE_SE_BC:
 			{
 				uint32_t bo = instruction.operands[0].uimm;
 				uint64_t target = instruction.operands[2].label;
 
-				if (target != addr + 4)
+				if (target != addr + instructionLength)
 				{
 					if ((bo & 0x14) == 0x14)
 					{
@@ -414,7 +432,7 @@ class PowerpcArchitecture: public Architecture
 					}
 					else if (!instruction.flags.lk)
 					{
-						result.AddBranch(FalseBranch, addr + 4);
+						result.AddBranch(FalseBranch, addr + instructionLength);
 						result.AddBranch(TrueBranch, target);
 					}
 				}
@@ -423,6 +441,7 @@ class PowerpcArchitecture: public Architecture
 			}
 
 			case PPC_ID_BCLRx:
+			case PPC_ID_VLE_SE_BLRx:
 				if (!instruction.flags.lk)
 					result.AddBranch(FunctionReturn);
 				else
@@ -431,6 +450,7 @@ class PowerpcArchitecture: public Architecture
 				break;
 
 			case PPC_ID_BCCTRx:
+			case PPC_ID_VLE_SE_BCTRx:
 				result.AddBranch(UnresolvedBranch);
 				break;
 
@@ -602,6 +622,12 @@ class PowerpcArchitecture: public Architecture
 			case PPC_ID_BCLRx:
 				FillBclrxOperands(&operand_list, &instruction);
 				break;
+			case PPC_ID_VLE_SE_BC:
+				FillVle16BcOperands(&operand_list, &instruction);
+				break;
+			case PPC_ID_VLE_E_BCx:
+				FillVle32BcxOperands(&operand_list, &instruction);
+				break;
 			default:
 				// Already copied by default
 				;
@@ -760,7 +786,7 @@ class PowerpcArchitecture: public Architecture
 		len = instructionLength;
 
 		Instruction instruction;
-		if (!FillInstruction(&instruction, data, instructionLength, addr))
+		if (!FillInstruction(&instruction, data, instructionLength, addr, DECODE_FLAGS_VLE_TRANSLATE))
 		{
 			MYLOG("ERROR: FillInstruction()\n");
 			il.AddInstruction(il.Undefined());
@@ -2362,11 +2388,6 @@ public:
 	}
 };
 
-uint16_t bswap16(uint16_t x)
-{
-	return (x >> 8) | (x << 8);
-}
-
 class PpcElfRelocationHandler: public RelocationHandler
 {
 public:
@@ -2545,6 +2566,16 @@ extern "C"
 	{
 		MYLOG("ARCH POWERPC compiled at %s %s\n", __DATE__, __TIME__);
 
+		Ref<Settings> settings = Settings::Instance();
+		settings->RegisterSetting("arch.ppc.disassembly.vlehack",
+			R"({
+			"title" : "Hack to treat PPC ELFs as VLE",
+			"type" : "boolean",
+			"default" : false,
+			"description" : "Treat PPC ELFs as VLE, temporary bandaid for now",
+			"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+			})");
+
 		/* create, register arch in global list of available architectures */
 		Architecture* ppc = new PowerpcArchitecture("ppc", BigEndian);
 		Architecture::Register(ppc);
@@ -2580,6 +2611,7 @@ extern "C"
 		ppc_ps->SetDefaultCallingConvention(conv);
 		ppc64->RegisterCallingConvention(conv);
 		ppc64->SetDefaultCallingConvention(conv);
+
 		conv = new PpcLinuxSyscallCallingConvention(ppc);
 		ppc->RegisterCallingConvention(conv);
 		ppc_qpx->RegisterCallingConvention(conv);

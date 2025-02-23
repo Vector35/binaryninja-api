@@ -4,7 +4,7 @@
 #include "priv.h"
 
 // see stanford bit twiddling hacks
-static int32_t sign_extend(uint32_t x, unsigned numBits)
+int32_t sign_extend(uint32_t x, unsigned numBits)
 {
 	int32_t const m = 1U << (numBits - 1);
 
@@ -17,7 +17,7 @@ static void CopyOperand(Operand* dst, const Operand* src)
 	memcpy(dst, src, sizeof *dst);
 }
 
-static Register Gpr(uint32_t value)
+Register Gpr(uint32_t value)
 {
 	return PPC_REG_GPR0 + value;
 }
@@ -27,7 +27,7 @@ static Register Fr(uint32_t value)
 	return PPC_REG_FR0 + value;
 }
 
-static Register Crf(uint32_t value)
+Register Crf(uint32_t value)
 {
 	return PPC_REG_CRF0 + value;
 }
@@ -47,21 +47,21 @@ static Register VsxVrHi(uint32_t value)
 	return PPC_REG_VSX_VR0 + value + 32;
 }
 
-static void PushUIMMValue(Instruction* instruction, uint32_t uimm)
+void PushUIMMValue(Instruction* instruction, uint64_t uimm)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_UIMM;
 	instruction->operands[instruction->numOperands].uimm = uimm;
 	++instruction->numOperands;
 }
 
-static void PushSIMMValue(Instruction* instruction, int32_t simm)
+void PushSIMMValue(Instruction* instruction, int32_t simm)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_SIMM;
 	instruction->operands[instruction->numOperands].simm = simm;
 	++instruction->numOperands;
 }
 
-static void PushRegister(Instruction* instruction, OperandClass cls, Register reg)
+void PushRegister(Instruction* instruction, OperandClass cls, Register reg)
 {
 	instruction->operands[instruction->numOperands].cls = cls;
 	instruction->operands[instruction->numOperands].reg = reg;
@@ -75,7 +75,7 @@ static uint64_t ComputeBranchTarget(Instruction* instruction, uint64_t address, 
 	return instruction->flags.aa ? bd : address + bd;
 }
 
-static void PushLabel(Instruction* instruction, uint64_t address)
+void PushLabel(Instruction* instruction, uint64_t address)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_LABEL;
 	instruction->operands[instruction->numOperands].label = address;
@@ -88,7 +88,7 @@ static void PushBranchTarget(Instruction* instruction, uint64_t address, uint32_
 	PushLabel(instruction, ComputeBranchTarget(instruction, address, word32));
 }
 
-static void PushRA(Instruction* instruction, uint32_t word32)
+void PushRA(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_RA, Gpr(GetA(word32)));
 }
@@ -103,7 +103,7 @@ static void PushRAor0(Instruction* instruction, uint32_t word32)
 		PushRegister(instruction, PPC_OP_REG_RA, Gpr(ra));
 }
 
-static void PushRB(Instruction* instruction, uint32_t word32)
+void PushRB(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_RB, Gpr(GetB(word32)));
 }
@@ -113,12 +113,12 @@ static void PushRC(Instruction* instruction, uint32_t word32)
 	PushRegister(instruction, PPC_OP_REG_RC, Gpr(GetC(word32)));
 }
 
-static void PushRD(Instruction* instruction, uint32_t word32)
+void PushRD(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_RD, Gpr(GetD(word32)));
 }
 
-static void PushRS(Instruction* instruction, uint32_t word32)
+void PushRS(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_RS, Gpr(GetS(word32)));
 }
@@ -148,47 +148,47 @@ static void PushFRS(Instruction* instruction, uint32_t word32)
 	PushRegister(instruction, PPC_OP_REG_FRS, Fr(GetS(word32)));
 }
 
-static void PushCRFD(Instruction* instruction, uint32_t word32)
+void PushCRFD(Instruction* instruction, uint32_t word32)
 {
 	uint32_t crfd = (word32 >> 23) & 0x7;
 	PushRegister(instruction, PPC_OP_REG_CRFD, Crf(crfd));
 }
 
-static void PushCRFDImplyCR0(Instruction* instruction, uint32_t word32)
+void PushCRFDImplyCR0(Instruction* instruction, uint32_t word32)
 {
 	uint32_t crfd = (word32 >> 23) & 0x7;
 
 	PushRegister(instruction, PPC_OP_REG_CRFD_IMPLY0, Crf(crfd));
 }
 
-static void PushCRFS(Instruction* instruction, uint32_t word32)
+void PushCRFS(Instruction* instruction, uint32_t word32)
 {
 	uint32_t crfs = (word32 >> 18) & 0x7;
 	PushRegister(instruction, PPC_OP_REG_CRFS, Crf(crfs));
 }
 
-static void PushCRBitA(Instruction* instruction, uint32_t word32)
+void PushCRBitA(Instruction* instruction, uint32_t word32)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_CRBIT_A;
 	instruction->operands[instruction->numOperands].crbit = GetA(word32);
 	++instruction->numOperands;
 }
 
-static void PushCRBitB(Instruction* instruction, uint32_t word32)
+void PushCRBitB(Instruction* instruction, uint32_t word32)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_CRBIT_B;
 	instruction->operands[instruction->numOperands].crbit = GetB(word32);
 	++instruction->numOperands;
 }
 
-static void PushCRBitD(Instruction* instruction, uint32_t word32)
+void PushCRBitD(Instruction* instruction, uint32_t word32)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_CRBIT_D;
 	instruction->operands[instruction->numOperands].crbit = GetD(word32);
 	++instruction->numOperands;
 }
 
-static void PushMem(Instruction* instruction, OperandClass cls, Register reg, int32_t offset)
+void PushMem(Instruction* instruction, OperandClass cls, Register reg, int32_t offset)
 {
 	instruction->operands[instruction->numOperands].cls = cls;
 	instruction->operands[instruction->numOperands].mem.reg = reg;
@@ -222,7 +222,7 @@ static void FillBranchLikelyHint(Instruction* instruction, uint32_t word32)
 	}
 }
 
-static void PushMemRA(Instruction* instruction, uint32_t word32)
+void PushMemRA(Instruction* instruction, uint32_t word32)
 {
 	int32_t offset = (int32_t)((int16_t)(word32 & 0xffff));
 	PushMem(instruction, PPC_OP_MEM_RA, Gpr(GetA(word32)), offset);
@@ -709,20 +709,22 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 		}
 
 		// <op> rD, rA, SIMM
-		case PPC_ID_ADDI:
+		case PPC_ID_ADDIx:
 		case PPC_ID_MULLI:
-		case PPC_ID_SUBFIC:
+		case PPC_ID_SUBFICx:
 			PushRD(instruction, word32);
 			PushRA(instruction, word32);
 			PushSIMMValue(instruction, (int32_t)((int16_t)(word32 & 0xffff)));
 			break;
 
 		// <op> rA, rS, UIMM
-		case PPC_ID_ORI:
-		case PPC_ID_XORI:
+		case PPC_ID_ORIx:
+		case PPC_ID_XORIx:
 			PushRA(instruction, word32);
 			PushRS(instruction, word32);
 			PushUIMMValue(instruction, word32 & 0xffff);
+
+			instruction->flags.rc = false;
 			break;
 
 		// differentiated in case it makes sense to use the shifted value as an operand
@@ -1224,7 +1226,7 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 			break;
 		}
 
-		case PPC_ID_ANDI:
+		case PPC_ID_ANDIx:
 			// different from other logical immediates because of rc bit
 			PushRA(instruction, word32);
 			PushRS(instruction, word32);
@@ -1352,7 +1354,7 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 
 		case PPC_ID_LI:
 			PushRD(instruction, word32);
-			PushSIMMValue(instruction, (int32_t)((int16_t)(word32 & 0xffff)));
+			PushUIMMValue(instruction, (uint64_t)(int64_t)(int32_t)((int16_t)(word32 & 0xffff)));
 			break;
 
 		case PPC_ID_LIS:

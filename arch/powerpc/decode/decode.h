@@ -15,12 +15,20 @@
 // instruction), and not anything like lifting or the behavior of the
 // instruction itself.
 
-#define DECODE_FLAGS_PPC64      0x01
-#define DECODE_FLAGS_ALTIVEC    0x02
-#define DECODE_FLAGS_VSX        0x04
-#define DECODE_FLAGS_QPX	0x08
-#define DECODE_FLAGS_PS		0x10
-#define DECODE_FLAGS_SPE	0x20
+#define DECODE_FLAGS_PPC64              0x01
+#define DECODE_FLAGS_ALTIVEC            0x02
+#define DECODE_FLAGS_VSX                0x04
+#define DECODE_FLAGS_QPX                0x08
+#define DECODE_FLAGS_PS                 0x10
+#define DECODE_FLAGS_SPE                0x20
+#define DECODE_FLAGS_VLE                0x40
+// When set, disassembly translates to a "normal" PowerPC instruction, which
+// usually amounts to simply dropping the "e_"/"se_" prefix and adding an extra
+// register (changing rX, rY --> rD, rA, rB) , but sometimes totally change the
+// instruction (for example, replacing `se_bgeni` with `li`)
+//
+// Should always be set in `flags` for LLIL, to maximize code reuse
+#define DECODE_FLAGS_VLE_TRANSLATE      0x80
 
 #ifdef __cplusplus
 extern "C" {
@@ -332,7 +340,7 @@ extern "C" {
 		PPC_ID_ADDx,
 		PPC_ID_ADDCx,
 		PPC_ID_ADDEx,
-		PPC_ID_ADDI,
+		PPC_ID_ADDIx,
 		PPC_ID_ADDICx,
 		PPC_ID_ADDIS,
 		PPC_ID_ADDMEx,
@@ -340,7 +348,7 @@ extern "C" {
 		PPC_ID_ADDZEx,
 		PPC_ID_ANDx,
 		PPC_ID_ANDCx,
-		PPC_ID_ANDI,
+		PPC_ID_ANDIx,
 		PPC_ID_ANDIS,
 		PPC_ID_ATTN,
 		PPC_ID_Bx,
@@ -627,7 +635,7 @@ extern "C" {
 		PPC_ID_NORx,
 		PPC_ID_ORx,
 		PPC_ID_ORCx,
-		PPC_ID_ORI,
+		PPC_ID_ORIx,
 		PPC_ID_ORIS,
 		PPC_ID_PASTE,
 		PPC_ID_POPCNTB,
@@ -724,7 +732,7 @@ extern "C" {
 		PPC_ID_SUBFx,
 		PPC_ID_SUBFCx,
 		PPC_ID_SUBFEx,
-		PPC_ID_SUBFIC,
+		PPC_ID_SUBFICx,
 		PPC_ID_SUBFMEx,
 		PPC_ID_SUBFZEx,
 		PPC_ID_SYNC,
@@ -795,7 +803,7 @@ extern "C" {
 		PPC_ID_WRTEEI,
 		PPC_ID_XNOP,
 		PPC_ID_XORx,
-		PPC_ID_XORI,
+		PPC_ID_XORIx,
 		PPC_ID_XORIS,
 
 		// AltiVec instructions
@@ -1623,6 +1631,128 @@ extern "C" {
 		PPC_ID_SPE_EVSUBFW,
 		PPC_ID_SPE_EVSUBIFW,
 		PPC_ID_SPE_EVXOR,
+
+		// This should be all of the VLE instructions; if any get added
+		// here, make sure `vle32.c:IsVleInstructionId` remains valid
+		//
+		// 32-bit VLE instructions
+		PPC_ID_VLE_E_ADDIx,
+		PPC_ID_VLE_E_ADDICx,
+		PPC_ID_VLE_E_ADD2I,
+		PPC_ID_VLE_E_ADD2IS,
+		PPC_ID_VLE_E_ADD16I,
+		PPC_ID_VLE_E_ANDIx,
+		PPC_ID_VLE_E_AND2I,
+		PPC_ID_VLE_E_AND2IS,
+		PPC_ID_VLE_E_Bx,
+		PPC_ID_VLE_E_BCx,
+		PPC_ID_VLE_E_CMP16I,
+		PPC_ID_VLE_E_CMPH16I,
+		PPC_ID_VLE_E_CMPHL,
+		PPC_ID_VLE_E_CMPHL16I,
+		PPC_ID_VLE_E_CMPI,
+		PPC_ID_VLE_E_CMPL16I,
+		PPC_ID_VLE_E_CMPLI,
+		PPC_ID_VLE_E_CRAND,
+		PPC_ID_VLE_E_CRANDC,
+		PPC_ID_VLE_E_CREQV,
+		PPC_ID_VLE_E_CRNAND,
+		PPC_ID_VLE_E_CRNOR,
+		PPC_ID_VLE_E_CROR,
+		PPC_ID_VLE_E_CRORC,
+		PPC_ID_VLE_E_CRXOR,
+		PPC_ID_VLE_E_LBZ,
+		PPC_ID_VLE_E_LBZU,
+		PPC_ID_VLE_E_LHA,
+		PPC_ID_VLE_E_LHAU,
+		PPC_ID_VLE_E_LHZ,
+		PPC_ID_VLE_E_LHZU,
+		PPC_ID_VLE_E_LI,
+		PPC_ID_VLE_E_LIS,
+		PPC_ID_VLE_E_LMW,
+		PPC_ID_VLE_E_LWZ,
+		PPC_ID_VLE_E_LWZU,
+		PPC_ID_VLE_E_MCRF,
+		PPC_ID_VLE_E_MULL2I,
+		PPC_ID_VLE_E_MULLI,
+		PPC_ID_VLE_E_OR2I,
+		PPC_ID_VLE_E_OR2IS,
+		PPC_ID_VLE_E_ORIx,
+		PPC_ID_VLE_E_RLWx,
+		PPC_ID_VLE_E_RLWIx,
+		PPC_ID_VLE_E_RLWIMI,
+		PPC_ID_VLE_E_RLWINM,
+		PPC_ID_VLE_E_SLWIx,
+		PPC_ID_VLE_E_SRWIx,
+		PPC_ID_VLE_E_STB,
+		PPC_ID_VLE_E_STBU,
+		PPC_ID_VLE_E_STH,
+		PPC_ID_VLE_E_STHU,
+		PPC_ID_VLE_E_STMW,
+		PPC_ID_VLE_E_STW,
+		PPC_ID_VLE_E_STWU,
+		PPC_ID_VLE_E_SUBFICx,
+		PPC_ID_VLE_E_XORIx,
+
+		// 16-bit VLE instructions
+		PPC_ID_VLE_SE_ADD,
+		PPC_ID_VLE_SE_ADDI,
+		PPC_ID_VLE_SE_ANDx,
+		PPC_ID_VLE_SE_ANDC,
+		PPC_ID_VLE_SE_ANDI,
+		PPC_ID_VLE_SE_Bx,
+		PPC_ID_VLE_SE_BC,
+		PPC_ID_VLE_SE_BCLRI,
+		PPC_ID_VLE_SE_BCTRx,
+		PPC_ID_VLE_SE_BGENI,
+		PPC_ID_VLE_SE_BLRx,
+		PPC_ID_VLE_SE_BMASKI,
+		PPC_ID_VLE_SE_BSETI,
+		PPC_ID_VLE_SE_BTSTI,
+		PPC_ID_VLE_SE_CMP,
+		PPC_ID_VLE_SE_CMPH,
+		PPC_ID_VLE_SE_CMPHL,
+		PPC_ID_VLE_SE_CMPI,
+		PPC_ID_VLE_SE_CMPL,
+		PPC_ID_VLE_SE_CMPLI,
+		PPC_ID_VLE_SE_EXTSB,
+		PPC_ID_VLE_SE_EXTSH,
+		PPC_ID_VLE_SE_EXTZB,
+		PPC_ID_VLE_SE_EXTZH,
+		PPC_ID_VLE_SE_ILLEGAL,
+		PPC_ID_VLE_SE_ISYNC,
+		PPC_ID_VLE_SE_LBZ,
+		PPC_ID_VLE_SE_LHZ,
+		PPC_ID_VLE_SE_LI,
+		PPC_ID_VLE_SE_LWZ,
+		PPC_ID_VLE_SE_MFAR,
+		PPC_ID_VLE_SE_MFCTR,
+		PPC_ID_VLE_SE_MFLR,
+		PPC_ID_VLE_SE_MR,
+		PPC_ID_VLE_SE_MTAR,
+		PPC_ID_VLE_SE_MTCTR,
+		PPC_ID_VLE_SE_MTLR,
+		PPC_ID_VLE_SE_MULLW,
+		PPC_ID_VLE_SE_NEG,
+		PPC_ID_VLE_SE_NOT,
+		PPC_ID_VLE_SE_OR,
+		PPC_ID_VLE_SE_RFCI,
+		PPC_ID_VLE_SE_RFDI,
+		PPC_ID_VLE_SE_RFI,
+		PPC_ID_VLE_SE_RFMCI,
+		PPC_ID_VLE_SE_SC,
+		PPC_ID_VLE_SE_SLW,
+		PPC_ID_VLE_SE_SLWI,
+		PPC_ID_VLE_SE_SRAW,
+		PPC_ID_VLE_SE_SRAWI,
+		PPC_ID_VLE_SE_SRW,
+		PPC_ID_VLE_SE_SRWI,
+		PPC_ID_VLE_SE_STB,
+		PPC_ID_VLE_SE_STH,
+		PPC_ID_VLE_SE_STW,
+		PPC_ID_VLE_SE_SUB,
+		PPC_ID_VLE_SE_SUBF,
+		PPC_ID_VLE_SE_SUBIx,
 	};
 
 #ifndef __cplusplus
@@ -1656,14 +1786,21 @@ extern "C" {
 	// returns 0 if data_length is too small to tell
 	size_t GetInstructionLength(const uint8_t* data, size_t data_length, uint32_t flags);
 
+	bool Decompose16(Instruction* instruction, uint16_t word32, uint64_t address, uint32_t flags);
 	bool Decompose32(Instruction* instruction, uint32_t word32, uint64_t address, uint32_t flags);
 	void FillBcxOperands(OperandsList* bcx, const Instruction* instruction);
 	void FillBcctrxOperands(OperandsList* bcctrx, const Instruction* instruction);
 	void FillBclrxOperands(OperandsList* bclrx, const Instruction* instruction);
+	void FillVle16BcOperands(OperandsList *se_bc, const Instruction *instruction);
+	void FillVle32BcxOperands(OperandsList *e_bcx, const Instruction *instruction);
 	const char* GetMnemonic(const Instruction* instruction);
 	const char* PowerPCRegisterName(uint32_t regId);
 	const char* OperandClassName(uint32_t cls);
 	const char* GetCRBitName(uint32_t crbit);
+
+	size_t VleGetInstructionLength(const uint8_t* data, size_t data_length, uint32_t decodeFlags);
+	bool Decompose16Vle(Instruction* instruction, uint16_t word16, uint64_t address, uint32_t flags);
+	bool Decompose32Vle(Instruction* instruction, uint32_t word32, uint64_t address, uint32_t flags);
 
 #ifdef __cplusplus
 }

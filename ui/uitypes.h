@@ -77,6 +77,7 @@ typedef BinaryNinja::Ref<BinaryNinja::DownloadProvider> DownloadProviderRef;
 typedef BinaryNinja::Ref<BinaryNinja::Enumeration> EnumerationRef;
 typedef BinaryNinja::Ref<BinaryNinja::ExternalLibrary> ExternalLibraryRef;
 typedef BinaryNinja::Ref<BinaryNinja::ExternalLocation> ExternalLocationRef;
+typedef BinaryNinja::Ref<BinaryNinja::FieldResolutionInfo> FieldResolutionInfoRef;
 typedef BinaryNinja::Ref<BinaryNinja::FileMetadata> FileMetadataRef;
 typedef BinaryNinja::Ref<BinaryNinja::FlowGraph> FlowGraphRef;
 typedef BinaryNinja::Ref<BinaryNinja::FlowGraphLayoutRequest> FlowGraphLayoutRequestRef;

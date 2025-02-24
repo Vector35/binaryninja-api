@@ -8,6 +8,7 @@
 #include "menus.h"
 #include "uicontext.h"
 #include "commentdialog.h"
+#include "commands.h"
 #include "instructionedit.h"
 
 /*!
@@ -146,6 +147,8 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 
 	FlowGraphRef m_recenterWithGraph;
 	int m_recenterXofs, m_recenterYofs;
+
+	FieldResolutionState m_fieldResolution;
 
 	static int m_layoutCompleteEventType;
 	static int m_updateCompleteEventType;

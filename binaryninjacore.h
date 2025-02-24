@@ -230,6 +230,7 @@ extern "C"
 	typedef struct BNTypeBuilder BNTypeBuilder;
 	typedef struct BNTypeLibrary BNTypeLibrary;
 	typedef struct BNTypeLibraryMapping BNTypeLibraryMapping;
+	typedef struct BNFieldResolutionInfo BNFieldResolutionInfo;
 	typedef struct BNStructure BNStructure;
 	typedef struct BNStructureBuilder BNStructureBuilder;
 	typedef struct BNTagType BNTagType;
@@ -2625,6 +2626,13 @@ extern "C"
 		bool after;
 		BNPossibleValueSet value;
 	} BNUserVariableValue;
+
+	typedef struct BNVariableFieldResolutionInfo
+	{
+		BNArchitectureAndAddress location;
+		BNVariable var;
+		BNFieldResolutionInfo* info;
+	} BNVariableFieldResolutionInfo;
 
 	typedef enum BNFunctionUpdateType
 	{
@@ -5419,6 +5427,15 @@ extern "C"
 	BINARYNINJACOREAPI void BNCreateForcedVariableVersion(BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite);
 	BINARYNINJACOREAPI void BNClearForcedVariableVersion(BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite);
 
+	BINARYNINJACOREAPI void BNSetFieldResolutionForVariableAt(BNFunction* func, const BNVariable* var,
+			const BNArchitectureAndAddress* defSite, const BNFieldResolutionInfo* info);
+	BINARYNINJACOREAPI BNFieldResolutionInfo* BNGetFieldResolutionForVariableAt(BNFunction* func, const BNVariable* var,
+			const BNArchitectureAndAddress* defSite);
+	BINARYNINJACOREAPI BNVariableFieldResolutionInfo* BNGetAllVariableFieldResolutions(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI void BNFreeVariableFieldResolutions(BNVariableFieldResolutionInfo* result, size_t count);
+	BINARYNINJACOREAPI void BNClearFieldResolutionForVariableAt(BNFunction* func, const BNVariable* var,
+			const BNArchitectureAndAddress* defSite, const BNFieldResolutionInfo* info);
+
 	BINARYNINJACOREAPI void BNRequestFunctionDebugReport(BNFunction* func, const char* name);
 
 	BINARYNINJACOREAPI BNILReferenceSource* BNGetMediumLevelILVariableReferences(
@@ -6286,6 +6303,9 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetLanguageRepresentationFunctionAnnotationEndString(
 		BNLanguageRepresentationFunction* func);
 
+	BINARYNINJACOREAPI BNFieldResolutionInfo* BNNewFieldResolutionInfoReference(BNFieldResolutionInfo* info);
+	BINARYNINJACOREAPI void BNFreeFieldResolutionInfo(BNFieldResolutionInfo* info);
+
 	// Types
 	BINARYNINJACOREAPI bool BNTypesEqual(BNType* a, BNType* b);
 	BINARYNINJACOREAPI bool BNTypesNotEqual(BNType* a, BNType* b);
@@ -6406,9 +6426,12 @@ extern "C"
 	    BNType* type, BNNamedTypeReference* from, BNNamedTypeReference* to);
 
 	BINARYNINJACOREAPI bool BNAddTypeMemberTokens(BNType* type, BNBinaryView* data, BNInstructionTextToken** tokens,
-	    size_t* tokenCount, int64_t offset, char*** nameList, size_t* nameCount, size_t size, bool indirect);
+	    size_t* tokenCount, int64_t offset, char*** nameList, size_t* nameCount, size_t size, bool indirect, BNFieldResolutionInfo* info);
 	BINARYNINJACOREAPI BNTypeDefinitionLine* BNGetTypeLines(BNType* type, BNTypeContainer* types, const char* name, int paddingCols, bool collapsed, BNTokenEscapingType escaping, size_t* count);
 	BINARYNINJACOREAPI void BNFreeTypeDefinitionLineList(BNTypeDefinitionLine* list, size_t count);
+
+	BINARYNINJACOREAPI bool BNEnumerateTypesForAccess(BNType* type, BNBinaryView* data, uint64_t offset, size_t size, uint8_t baseConfidence,
+			void (*terminal)(void*, BNTypeWithConfidence*, BNFieldResolutionInfo*), void* ctxt);
 
 	BINARYNINJACOREAPI BNQualifiedName BNTypeBuilderGetTypeName(BNTypeBuilder* nt);
 	BINARYNINJACOREAPI void BNTypeBuilderSetTypeName(BNTypeBuilder* type, BNQualifiedName* name);

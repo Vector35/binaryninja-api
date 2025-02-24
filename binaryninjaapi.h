@@ -8754,6 +8754,12 @@ namespace BinaryNinja {
 		{}
 	};
 
+	class FieldResolutionInfo : public CoreRefCountObject<BNFieldResolutionInfo, BNNewFieldResolutionInfoReference, BNFreeFieldResolutionInfo>
+	{
+	  public:
+		FieldResolutionInfo(BNFieldResolutionInfo* info);
+	};
+
 	struct QualifiedNameAndType
 	{
 		QualifiedName name;
@@ -9303,7 +9309,9 @@ namespace BinaryNinja {
 		Ref<Type> WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTypeReference* to);
 
 		bool AddTypeMemberTokens(BinaryView* data, std::vector<InstructionTextToken>& tokens, int64_t offset,
-		    std::vector<std::string>& nameList, size_t size = 0, bool indirect = false);
+		    std::vector<std::string>& nameList, size_t size = 0, bool indirect = false, FieldResolutionInfo* info = nullptr);
+		bool EnumerateTypesForAccess(BinaryView* data, uint64_t offset, size_t size, uint8_t baseConfidence,
+			const std::function<void(const Confidence<Ref<Type>>& type, FieldResolutionInfo* path)>& terminal);
 		std::vector<TypeDefinitionLine> GetLines(const TypeContainer& types, const std::string& name,
 			int paddingCols = 64, bool collapsed = false, BNTokenEscapingType escaping = NoTokenEscapingType);
 
@@ -11204,6 +11212,11 @@ namespace BinaryNinja {
 
 		void CreateForcedVariableVersion(const Variable& var, const ArchAndAddr& location);
 		void ClearForcedVariableVersion(const Variable& var, const ArchAndAddr& location);
+
+		void SetFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location, FieldResolutionInfo* info);
+		void ClearFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location, FieldResolutionInfo* info);
+		Ref<FieldResolutionInfo> GetFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location);
+		std::map<Variable, std::map<ArchAndAddr, Ref<FieldResolutionInfo>>> GetAllFieldResolutions();
 
 		void RequestDebugReport(const std::string& name);
 

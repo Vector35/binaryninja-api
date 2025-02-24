@@ -47,6 +47,16 @@ bool BINARYNINJAUIAPI eligibleToForceVariableVersion(View* parent, HighlightToke
 bool BINARYNINJAUIAPI clearVariableVersion(View* parent, HighlightTokenState& highlight);
 bool BINARYNINJAUIAPI eligibleToClearVariableVersion(View* parent, HighlightTokenState& highlight);
 
+struct BINARYNINJAUIAPI FieldResolutionState
+{
+	std::vector<std::pair<std::string, FieldResolutionInfoRef>> goodFieldResolutions = {};
+	std::vector<std::pair<std::string, FieldResolutionInfoRef>> badFieldResolutions = {};
+
+	size_t registeredGoodFieldResolutions = 0;
+	size_t registeredBadFieldResolutions = 0;
+
+	void bindDynamicActions(View* view, HighlightTokenState& highlight);
+};
 
 bool BINARYNINJAUIAPI getEnumSelection(QWidget* parent, BinaryViewRef data, FunctionRef func, uint64_t constValue,
 	TypeRef& selectedEnum, bool checkValue, bool canTruncate);

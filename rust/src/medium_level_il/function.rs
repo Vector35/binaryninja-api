@@ -197,7 +197,7 @@ impl MediumLevelILFunction {
     /// let def_address = user_var_val.def_site.addr;
     /// let var_value = PossibleValueSet::ConstantValue { value: 5 };
     /// mlil_fun
-    ///     .set_user_var_value(&user_var_val.variable, def_address, var_value)
+    ///     .set_user_var_value(&user_var_val.variable, def_address, var_value, false)
     ///     .unwrap();
     /// ```
     pub fn set_user_var_value(

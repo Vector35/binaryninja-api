@@ -31,6 +31,7 @@ use std::sync::mpsc::Sender;
 use std::sync::Mutex;
 use std::thread::JoinHandle;
 use std::time::Duration;
+use crate::settings::Settings;
 
 static MAIN_THREAD_HANDLE: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 
@@ -49,13 +50,13 @@ pub enum InitializationError {
     NoLicenseFound,
 }
 
-/// Loads plugins, core architecture, platform, etc.
+/// Loads core plugins, core architecture, platform, etc.
 ///
 /// ⚠️ Important! Must be called at the beginning of scripts.  Plugins do not need to call this. ⚠️
 ///
 /// You can instead call this through [`Session`].
 ///
-/// If you need to customize initialization, use [`init_with_opts`] instead.
+/// If you need to customize initialization, use [`init_with_opts`] instead, for example to set [`InitializationOptions::with_user_plugins`].
 pub fn init() -> Result<(), InitializationError> {
     let options = InitializationOptions::default();
     init_with_opts(options)
@@ -172,6 +173,21 @@ impl Default for InitializationOptions {
     }
 }
 
+/// Adjust settings temporarily so that we can screw with the core settings and not impact user settings.
+fn init_adjusted_settings(options: &InitializationOptions, cb: impl FnOnce(&mut Settings)) {
+    let mut settings = Settings::new();
+    let is_python_enabled = settings.get_bool("corePlugins.python");
+    // Because we don't ship core python plugins, we don't need to load
+    // python if we are not loading user plugins.
+    settings.set_bool("corePlugins.python", options.user_plugins);
+    if options.repo_plugins {
+        settings.set_bool("corePlugins.python", options.repo_plugins);   
+    }
+    cb(&mut settings);
+    // Reset the settings to the previous value.
+    settings.set_bool("corePlugins.python", is_python_enabled);
+}
+
 /// This initializes the core with the given [`InitializationOptions`].
 pub fn init_with_opts(options: InitializationOptions) -> Result<(), InitializationError> {
     // If we are the main thread that means there is no main thread, we should register a main thread handler.
@@ -207,20 +223,22 @@ pub fn init_with_opts(options: InitializationOptions) -> Result<(), Initializati
         _ => {}
     }
 
-    if let Some(license) = options.license {
+    if let Some(license) = options.license.clone() {
         // We were given a license override, use it!
         set_license(Some(license));
     }
 
-    set_bundled_plugin_directory(options.bundled_plugin_directory);
+    set_bundled_plugin_directory(&options.bundled_plugin_directory);
 
-    unsafe {
-        BNInitPlugins(options.user_plugins);
-        if options.repo_plugins {
-            // We are allowed to initialize repo plugins, so do it!
-            BNInitRepoPlugins();
+    init_adjusted_settings(&options, |_| {
+        unsafe {
+            BNInitPlugins(options.user_plugins);
+            if options.repo_plugins {
+                // We are allowed to initialize repo plugins, so do it!
+                BNInitRepoPlugins();
+            }
         }
-    }
+    });
 
     if !is_license_validated() {
         // Unfortunately you must have a valid license to use Binary Ninja.
@@ -291,6 +309,9 @@ impl Session {
     ///
     /// If you cannot otherwise provide a license via `BN_LICENSE_FILE` environment variable or the Binary Ninja user directory
     /// you can call [`Session::new_with_opts`] instead of this function.
+    /// 
+    /// If you need to use a user plugin you should call [`Session::new_with_opts`] instead, as by default
+    /// [`Session::new`] will only initialize core plugins.
     pub fn new() -> Result<Self, InitializationError> {
         if license_location().is_some() {
             // We were able to locate a license, continue with initialization.

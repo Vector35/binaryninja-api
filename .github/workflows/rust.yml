@@ -23,13 +23,13 @@ jobs:
       # Ensure clippy is installed
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
+          target: 1.83.0
           components: clippy
       - name: Clippy Check
         uses: clechasseur/rs-clippy-check@v4
         with:
           # We do not run clippy on plugins.
-          working-directory: ./rust
-          args: --all-features
+          args: -p binaryninja --all-features
 
   # Check formatting with rustfmt
   formatting:
@@ -40,6 +40,7 @@ jobs:
       # Ensure rustfmt is installed
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
+          target: 1.83.0
           components: rustfmt
       - name: Rustfmt Check
         uses: actions-rust-lang/rustfmt@v1

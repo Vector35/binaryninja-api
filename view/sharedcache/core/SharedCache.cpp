@@ -1808,11 +1808,9 @@ bool SharedCache::LoadImageWithInstallName(std::lock_guard<std::mutex>& lock, st
 		regionsToLoad.push_back(&region);
 	}
 
+	// Regions for this image are already loaded, skip un-needed analysis!
 	if (regionsToLoad.empty())
-	{
-		m_logger->LogWarn("No regions to load for image %s", installName.c_str());
 		return false;
-	}
 
 	auto typeLib = TypeLibraryForImage(header.installName);
 

@@ -472,12 +472,14 @@ void SharedCache::PerformInitialLoad(std::lock_guard<std::mutex>& lock)
 	initialState.baseFilePath = path;
 	initialState.cacheFormat = RegularCacheFormat;
 
+	// TODO: If this fails we should prompt the user to select there file, this probably means that
+	// TODO: They are opening a database with no original file path.
 	DataBuffer sig = baseFile->ReadBuffer(0, 4);
 	if (sig.GetLength() != 4)
-		abort();
+		throw std::runtime_error("Not a valid dyld_shared_cache file");
 	const char* magic = (char*)sig.GetData();
 	if (strncmp(magic, "dyld", 4) != 0)
-		abort();
+		throw std::runtime_error("Not a valid dyld_shared_cache file");
 
 	dyld_cache_header primaryCacheHeader {};
 	size_t header_size = baseFile->ReadUInt32(16);
@@ -1469,9 +1471,9 @@ SharedCache::SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView) :
 	try {
 		PerformInitialLoad(lock);
 	}
-	catch (...)
+	catch (std::exception& e)
 	{
-		m_logger->LogError("Failed to perform initial load of Shared Cache");
+		m_logger->LogError("Failed to perform initial load of Shared Cache: %s", e.what());
 	}
 
 	auto settings = m_dscView->GetLoadSettings(VIEW_NAME);

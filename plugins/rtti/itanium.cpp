@@ -477,7 +477,9 @@ void ItaniumRTTIProcessor::ProcessRTTI()
 
 void ItaniumRTTIProcessor::ProcessVFT()
 {
-   std::map<uint64_t, uint64_t> vftMap = {};
+    // TODO: vftMap needs to be an array i guess?
+    // TODO: What ddoes msvc do?
+    std::map<uint64_t, std::set<uint64_t>> vftMap = {};
     std::map<uint64_t, std::optional<VirtualFunctionTableInfo>> vftFinishedMap = {};
     auto start_time = std::chrono::high_resolution_clock::now();
     for (auto &[coLocatorAddr, classInfo]: m_classInfo)
@@ -490,7 +492,9 @@ void ItaniumRTTIProcessor::ProcessVFT()
                 continue;
             // TODO: This is not pointing at where it should, remember that the vtable will be inside another structure.
             auto vftAddr = ref + m_view->GetAddressSize();
-            vftMap[coLocatorAddr] = vftAddr;
+            // Found a vtable reference to colocator
+            // TODO: Access check here.
+            vftMap[coLocatorAddr].insert(vftAddr);
         }
     }
 
@@ -541,16 +545,22 @@ void ItaniumRTTIProcessor::ProcessVFT()
         return vftInfo;
     };
 
-    for (const auto &[coLocatorAddr, vftAddr]: vftMap)
-    {
+    auto populateVftMap = [&](uint64_t coLocatorAddr, uint64_t vftAddr) {
         auto classInfo = m_classInfo.find(coLocatorAddr)->second;
         if (classInfo.baseClassName.has_value())
         {
             // Process base vtable and add it to the class info.
-            for (auto [baseCoLocAddr, baseClassInfo] : m_classInfo)
+            for (auto& [baseCoLocAddr, baseClassInfo] : m_classInfo)
             {
                 if (baseClassInfo.className == classInfo.baseClassName.value())
                 {
+                    // TODO: This is so fucked up
+                    // TODO: Itanium does not have this structure that msvc has
+                    // TODO: The multi inheritence is flatteed at the colocator level
+                    // TODO: To have this work we need to either 1: do a single pass on the
+                    // TODO: virtual table
+                    // TODO: Or 2: have some way of locating the correct vft from the colocator
+                    // TODO: Which WILL have multiple xrefs, how do we find the correct one?
                     uint64_t baseVftAddr = vftMap[baseCoLocAddr];
                     if (auto baseVftInfo = GetCachedVFTInfo(baseVftAddr, baseClassInfo))
                     {
@@ -565,6 +575,14 @@ void ItaniumRTTIProcessor::ProcessVFT()
             classInfo.vft = vftInfo.value();
 
         m_classInfo[coLocatorAddr] = classInfo;
+    };
+
+    for (const auto &[coLocatorAddr, vftAddrs]: vftMap)
+    {
+        for (const auto& vftAddr: vftAddrs)
+        {
+            populateVftMap(coLocatorAddr, vftAddr);
+        }
     }
 
     auto end_time = std::chrono::high_resolution_clock::now();

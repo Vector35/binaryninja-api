@@ -57,32 +57,23 @@ namespace BinaryNinja::RTTI::Microsoft {
 		CompleteObjectLocator(BinaryView *view, uint64_t address);
 	};
 
-	class MicrosoftRTTIProcessor
+	class MicrosoftRTTIProcessor : public RTTIProcessor
 	{
-		Ref<BinaryView> m_view;
-		Ref<Logger> m_logger;
 		bool allowMangledClassNames;
 		bool allowAnonymousClassNames;
 		bool checkWritableRData;
 		bool virtualFunctionTableSweep;
 
-		std::map<uint64_t, ClassInfo> m_classInfo;
-
 		std::set<uint64_t> m_visitedClassHierarchyDescAddrs;
 
-		void DeserializedMetadata(const Ref<Metadata> &metadata);
+		std::optional<ClassInfo> ProcessRTTI(uint64_t objectAddr) override;
 
-		std::optional<ClassInfo> ProcessRTTI(uint64_t coLocatorAddr);
-
-		std::optional<VirtualFunctionTableInfo> ProcessVFT(uint64_t vftAddr, const ClassInfo &classInfo);
-
+		std::optional<VirtualFunctionTableInfo> ProcessVFT(uint64_t vftAddr, ClassInfo &classInfo) override;
 	public:
-		MicrosoftRTTIProcessor(const Ref<BinaryView> &view, bool useMangled = true, bool checkRData = true, bool vftSweep = true, bool allowAnonymous = true);
+		explicit MicrosoftRTTIProcessor(const Ref<BinaryView> &view, bool useMangled = true, bool checkRData = true, bool vftSweep = true, bool allowAnonymous = true);
 
-		Ref<Metadata> SerializedMetadata();
+		void ProcessRTTI() override;
 
-		void ProcessRTTI();
-
-		void ProcessVFT();
+		void ProcessVFT() override;
 	};
 }

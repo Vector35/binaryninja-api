@@ -86,7 +86,7 @@ extern "C" {
 		// Run rtti before debug info is applied.
 		rttiMetaWorkflow->Insert("core.module.loadDebugInfo", "plugin.rtti.rttiAnalysis");
 		// Run vft after functions have analyzed (so that the virtual functions have analyzed)
-		rttiMetaWorkflow->Insert("core.module.notifyCompletion", "plugin.rtti.vftAnalysis");
+		rttiMetaWorkflow->Insert("core.module.deleteUnusedAutoFunctions", "plugin.rtti.vftAnalysis");
 		Workflow::RegisterWorkflow(rttiMetaWorkflow);
 
 		return true;

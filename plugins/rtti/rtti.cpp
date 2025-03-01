@@ -25,7 +25,7 @@ std::string RemoveItaniumPrefix(const std::string& name) {
         return name.substr(1);
     if (name.rfind('9', 0) == 0)
         return name.substr(1);
-    if (name.rfind("4", 0) == 0)
+    if (name.rfind('4', 0) == 0)
         return name.substr(2);
     return name;
 }

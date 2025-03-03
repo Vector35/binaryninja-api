@@ -743,7 +743,8 @@ public:
 				else
 				{
 					proceed = proceed && (left->operands[1].immediate == (right->operands[1].immediate + 7));
-					addrToUse = (uint32_t)addr + ((&instr == right) ? 0 : 8);
+					// addrToUse = (uint32_t)addr + ((&instr == right) ? 0 : 8);
+					addrToUse = (uint32_t)addr + ((&instr == right) ? 0 : 4);
 				}
 				base = right;
 			}
@@ -781,17 +782,38 @@ public:
 	virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, vector<InstructionTextToken>& result) override
 	{
 		Instruction instr;
-		char operand[64];
+		char operand[64] = {0};
+		char operation[64] = {0};
 		char padding[9];
 		const char* reg = NULL;
+		char dest[5] = {0};
+		int first_operand = 0;
 		if (!Disassemble(data, addr, len, instr))
 			return false;
 
 		len = instr.size;
 		memset(padding, 0x20, sizeof(padding));
-		const char* operation = get_operation(instr.operation);
-		if (operation == NULL)
+		const char* operation_name = get_operation(instr.operation);
+		if (operation_name == NULL)
 			return false;
+		strlcpy(operation, operation_name, sizeof(operation));
+
+		if (instr.operands[0].operandClass == V_DEST)
+		{
+			char* p = dest;
+			if (instr.operands[0].reg & 8)
+				*p++ = 'x';
+			if (instr.operands[0].reg & 4)
+				*p++ = 'y';
+			if (instr.operands[0].reg & 2)
+				*p++ = 'z';
+			if (instr.operands[0].reg & 1)
+				*p++ = 'w';
+			*p = '\0';
+			strcat(operation, ".");
+			strcat(operation, dest);
+			first_operand++;
+		}
 
 		size_t operationLen = strlen(operation);
 		if (operationLen < 8)
@@ -803,15 +825,17 @@ public:
 
 		result.emplace_back(InstructionToken, operation);
 		result.emplace_back(TextToken, padding);
-		for (size_t i = 0; i < MAX_OPERANDS; i++)
+		for (size_t i = first_operand; i < MAX_OPERANDS; i++)
 		{
 			if (instr.operands[i].operandClass == NONE)
 				return true;
 
+			operand[0] = '\0';
+
 			int32_t imm = instr.operands[i].immediate;
 			uint64_t label_imm = instr.operands[i].immediate;
 
-			if (i != 0)
+			if (i != first_operand)
 				result.emplace_back(OperandSeparatorToken, ", ");
 
 			switch (instr.operands[i].operandClass)
@@ -858,18 +882,15 @@ public:
 				break;
 			case MEM_IMM:
 				result.emplace_back(BeginMemoryOperandToken, "");
-				if (imm != 0)
-				{
-					if (imm < -9)
-						snprintf(operand, sizeof(operand), "-%#x", -imm);
-					else if (imm < 0)
-						snprintf(operand, sizeof(operand), "-%d", -imm);
-					else if (imm < 10)
-						snprintf(operand, sizeof(operand), "%d", imm);
-					else
-						snprintf(operand, sizeof(operand), "%#x", imm);
-					result.emplace_back(IntegerToken, operand, imm);
-				}
+				if (imm < -9)
+					snprintf(operand, sizeof(operand), "-%#x", -imm);
+				else if (imm < 0)
+					snprintf(operand, sizeof(operand), "-%d", -imm);
+				else if (imm < 10)
+					snprintf(operand, sizeof(operand), "%d", imm);
+				else
+					snprintf(operand, sizeof(operand), "%#x", imm);
+				result.emplace_back(IntegerToken, operand, imm);
 				if (instr.operands[i].reg == REG_ZERO)
 					break;
 				result.emplace_back(BraceToken, "(");
@@ -895,6 +916,102 @@ public:
 				result.emplace_back(BraceToken, ")");
 				result.emplace_back(EndMemoryOperandToken, "");
 				break;
+			case V_REG:
+				// #define V_FMT "$vf%02d"  // Use this if leading zeroes are preferred
+				#define V_FMT "$vf%d"
+				reg = NULL;
+				if (instr.operands[i].reg >= REG_VP)
+					reg = get_register((Reg)instr.operands[i].reg);
+				if (reg != NULL)
+				{
+					if (instr.operands[i].reg >= REG_VI0 && instr.operands[i].reg <= REG_VI15)
+					{
+						char reg_tmp[sizeof(operand)] = {0};
+						switch (instr.operation)
+						{
+						case MIPS_VLQI:
+						case MIPS_VSQI:
+							snprintf(reg_tmp, sizeof(reg_tmp), "(%s++)", reg);
+							reg = reg_tmp;
+							break;
+						case MIPS_VLQD:
+						case MIPS_VSQD:
+							snprintf(reg_tmp, sizeof(reg_tmp), "(--%s)", reg);
+							reg = reg_tmp;
+							break;
+						default:
+							break;
+						}
+					}
+					else if (instr.operands[i].reg >= REG_VF0 && instr.operands[i].reg <= REG_VF31)
+					{
+						if (instr.operands[i].immediate > 0 && instr.operands[i].immediate <= 4)
+							snprintf(operand, sizeof(operand), "%s.%c",
+								reg,
+								"xyzw"[instr.operands[i].immediate-1]);
+						else if (dest[0])
+							snprintf(operand, sizeof(operand), "%s.%s", reg, dest);
+					}
+					if (!operand[0])
+						snprintf(operand, sizeof(operand), "%s", reg);
+				}
+				// else if ((instr.operands[i].reg >= REG_VACC && instr.operands[i].reg <= REG_VI15) &&
+				// 	(reg = get_register((Reg)instr.operands[i].reg)) != NULL)
+				// {
+				// 	// if (instr.operands[i].reg == REG_VACC && dest[0])
+				// 	// 	snprintf(operand, sizeof(operand), "%s.%s", reg, dest);
+				// 	// else
+				// 		snprintf(operand, sizeof(operand), "%s", reg);
+				// }
+				else if (instr.operands[i].immediate > 0 && instr.operands[i].immediate <= 4)
+					snprintf(operand, sizeof(operand), V_FMT ".%c",
+						instr.operands[i].reg,
+						"xyzw"[instr.operands[i].immediate-1]);
+				else if (instr.operands[i].immediate == 'A')
+				{
+					if (dest[0])
+						snprintf(operand, sizeof(operand), "ACC.%s", dest);
+					else
+						snprintf(operand, sizeof(operand), "ACC");
+				}
+				else if (instr.operands[i].immediate > 'A' && instr.operands[i].immediate <= 'Z')
+					snprintf(operand, sizeof(operand), "%c",
+						(char) instr.operands[i].immediate);
+				else if (dest[0])
+					snprintf(operand, sizeof(operand), V_FMT ".%s",
+						instr.operands[i].reg, dest);
+				else
+					snprintf(operand, sizeof(operand), V_FMT, instr.operands[i].reg);
+				result.emplace_back(RegisterToken, operand);
+				break;
+			case V_DEST:
+			{
+				char* p = dest;
+				if (*p == '\0' && (instr.operands[i].reg & 0xF) != 0)
+				{
+					if (instr.operands[i].reg & 8)
+						*p++ = 'x';
+					if (instr.operands[i].reg & 4)
+						*p++ = 'y';
+					if (instr.operands[i].reg & 2)
+						*p++ = 'z';
+					if (instr.operands[i].reg & 1)
+						*p++ = 'w';
+					*p = '\0';
+				}
+				break;
+			}
+			case V_REG_FIELD:
+			{
+				snprintf(operand, sizeof(operand), V_FMT ".%c",
+					instr.operands[i].reg,
+					"xyzw"[instr.operands[i].immediate]);
+				// char *p = operand;
+				// *p++ = "xyzw"[instr.operands[i].reg];
+				// *p = '\0';
+				result.emplace_back(RegisterToken, operand);
+				break;
+			}
 			default:
 				LogError("operandClass %x\n", instr.operands[i].operandClass);
 				return false;
@@ -1016,6 +1133,9 @@ public:
 				return "_countOnes32";
 			case CNMIPS_INTRIN_DPOP:
 				return "_countOnes64";
+
+			case MIPS_INTRIN_R5900_VWAITQ:
+				return "__vwaitq";
 			default:
 				return "";
 		}
@@ -1023,7 +1143,7 @@ public:
 
 	virtual vector<uint32_t> GetAllIntrinsics() override
 	{
-		return vector<uint32_t>{
+		auto intrinsics = vector<uint32_t>{
 			MIPS_INTRIN_WSBH,
 			MIPS_INTRIN_DSBH,
 			MIPS_INTRIN_DSHD,
@@ -1075,6 +1195,14 @@ public:
 			CNMIPS_INTRIN_POP,
 			CNMIPS_INTRIN_DPOP,
 		};
+		if (m_version == MIPS_R5900)
+		{
+			auto r5900_intrinsics = {
+				MIPS_INTRIN_R5900_VWAITQ,
+			};
+			intrinsics.insert(intrinsics.end(), std::begin(r5900_intrinsics), std::end(r5900_intrinsics));
+		}
+		return intrinsics;
 	}
 
 	virtual vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic) override
@@ -1231,6 +1359,8 @@ public:
 				return {
 					NameAndType("index", Type::IntegerType(8, false)),
 				};
+
+			case MIPS_INTRIN_R5900_VWAITQ:
 			default:
 				return vector<NameAndType>();
 		}
@@ -1287,6 +1417,7 @@ public:
 				};
 			case MIPS_INTRIN_TLBSEARCH:
 				return { Type::IntegerType(8, false) };
+			case MIPS_INTRIN_R5900_VWAITQ:
 			default:
 				return vector<Confidence<Ref<Type>>>();
 		}
@@ -1577,7 +1708,27 @@ public:
 
 		if (m_version == MIPS_R5900) {
 			// TODO: R5900 has 128-bit wide GPRs, $lo and $hi are 128-bit, and $lo1 and $hi1 are the upper 64 bits of $lo and $hi
-			uint32_t r5900_registers[] = { REG_LO1, REG_HI1 };
+			uint32_t r5900_registers[] = {
+				R5900_SA,
+				REG_LO1, REG_HI1,
+
+				REG_VP,
+
+				REG_VI0, REG_VI1, REG_VI2, REG_VI3, REG_VI4, REG_VI5, REG_VI6, REG_VI7, REG_VI8, REG_VI9,
+				REG_VI10, REG_VI11, REG_VI12, REG_VI13, REG_VI14, REG_VI15,
+				REG_VCCR_STATUS, REG_VCCR_MAC, REG_VCCR_CLIPPING, REG_VCCR_19,
+				REG_VR,  // CCR[2,20]
+				REG_VI,  // CCR[2,21]
+				REG_VQ,  // CCR[2,22]
+				REG_VCCR_23, REG_VCCR_24, REG_VCCR_25, REG_VCCR_TPC, REG_VCCR_CMSAR0,
+				REG_VCCR_FBRST, REG_VCCR_VPU_STAT, REG_VCCR_30, REG_VCCR_CMSAR1,
+
+				REG_VACC,
+				REG_VF0, REG_VF1, REG_VF2, REG_VF3, REG_VF4, REG_VF5, REG_VF6, REG_VF7, REG_VF8, REG_VF9,
+				REG_VF10, REG_VF11, REG_VF12, REG_VF13, REG_VF14, REG_VF15, REG_VF16, REG_VF17, REG_VF18, REG_VF19,
+				REG_VF20, REG_VF21, REG_VF22, REG_VF23, REG_VF24, REG_VF25, REG_VF26, REG_VF27, REG_VF28, REG_VF29,
+				REG_VF30, REG_VF31,
+			};
 			registers.insert(registers.end(), std::begin(r5900_registers), std::end(r5900_registers));
 		}
 		else if ((m_decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
@@ -1899,8 +2050,36 @@ public:
 		};
 
 		if (m_version == MIPS_R5900) {
-			uint32_t r5900_registers[] = { REG_LO1, REG_HI1 };
+			// TODO: R5900 has 128-bit wide GPRs, $lo and $hi are 128-bit, and $lo1 and $hi1 are the upper 64 bits of $lo and $hi
+			uint32_t r5900_registers[] = {
+				R5900_SA,
+				REG_LO1, REG_HI1,
+				REG_VP,
+
+				REG_VI0, REG_VI1, REG_VI2, REG_VI3, REG_VI4, REG_VI5, REG_VI6, REG_VI7, REG_VI8, REG_VI9,
+				REG_VI10, REG_VI11, REG_VI12, REG_VI13, REG_VI14, REG_VI15,
+				REG_VCCR_STATUS, REG_VCCR_MAC, REG_VCCR_CLIPPING, REG_VCCR_19,
+				REG_VR,  // CCR[2,20]
+				REG_VI,  // CCR[2,21]
+				REG_VQ,  // CCR[2,22]
+				REG_VCCR_23, REG_VCCR_24, REG_VCCR_25, REG_VCCR_TPC, REG_VCCR_CMSAR0,
+				REG_VCCR_FBRST, REG_VCCR_VPU_STAT, REG_VCCR_30, REG_VCCR_CMSAR1,
+
+				REG_VACC,
+				REG_VF0, REG_VF1, REG_VF2, REG_VF3, REG_VF4, REG_VF5, REG_VF6, REG_VF7, REG_VF8, REG_VF9,
+				REG_VF10, REG_VF11, REG_VF12, REG_VF13, REG_VF14, REG_VF15, REG_VF16, REG_VF17, REG_VF18, REG_VF19,
+				REG_VF20, REG_VF21, REG_VF22, REG_VF23, REG_VF24, REG_VF25, REG_VF26, REG_VF27, REG_VF28, REG_VF29,
+				REG_VF30, REG_VF31,
+			};
 			registers.insert(registers.end(), std::begin(r5900_registers), std::end(r5900_registers));
+			constexpr auto _r5900_registers_vpu = []() {
+				vector<Reg> registers;
+				for (uint32_t i = REG_VACC_X; i < REG_VF31_XYZW; i++)
+					registers.push_back((Reg) i);
+				return registers;
+			};
+			auto r5900_registers_vpu = _r5900_registers_vpu();
+			registers.insert(registers.end(), r5900_registers_vpu.begin(), r5900_registers_vpu.end());
 		}
 		else if ((m_decomposeFlags & DECOMPOSE_FLAGS_CAVIUM) != 0)
 		{
@@ -2122,15 +2301,33 @@ public:
 			case REG_LO1:
 			case REG_HI1:
 				// result.size = (128 / 2);
+				result.offset = 8;
 				if (reg == REG_LO1)
 					result.fullWidthRegister = REG_LO;
 				else if (reg == REG_HI1)
 					result.fullWidthRegister = REG_HI;
 				break;
 			default:
-				break;
-				// if (REG_ZERO <= reg && reg < REG_GP)
-				// 	result.size = 128 / 8;
+				if (reg >= REG_VACC_X && reg <= REG_VF31_XYZW)
+				{
+					result.fullWidthRegister = REG_VACC + ((reg - REG_VACC_X) % 33);
+					if (reg >= REG_VACC_Y && reg <= REG_VF31_Y)
+						result.offset = 4;
+					else if (reg >= REG_VACC_Z && reg <= REG_VF31_Z)
+						result.offset = 8;
+					else if (reg >= REG_VACC_W && reg <= REG_VF31_W)
+						result.offset = 12;
+
+					else if (reg >= REG_VACC_YZ && reg <= REG_VF31_YZ)
+						result.offset = 4;
+					else if (reg >= REG_VACC_ZW && reg <= REG_VF31_ZW)
+						result.offset = 12;
+
+					else if (reg >= REG_VACC_YZW && reg <= REG_VF31_YZW)
+						result.offset = 4;
+
+					// XXX: offsets are just wrong for discontinuous registers: XZ, XW, YW, XYW, XZW
+				}
 			}
 		}
 		return result;

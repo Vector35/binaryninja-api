@@ -10,6 +10,7 @@ using namespace mips;
 #endif
 
 #define REG_ reg
+#define V_REG_ reg
 #define FLAG_ reg
 #define FPREG_ reg
 #define FPCCREG_ reg
@@ -1043,7 +1044,11 @@ static const char* const OperationStrings[] = {
 		"max.s",
 		"min.s",
 		"qmfc2",
+		"qmfc2.i",
+		"qmfc2.ni",
 		"qmtc2",
+		"qmtc2.i",
+		"qmtc2.ni",
 		"vaddx",
 		"vaddy",
 		"vaddz",
@@ -1164,6 +1169,13 @@ static const char* const OperationStrings[] = {
 		"vrget",
 		"vrinit",
 		"vrxor",
+
+		"mmi0",
+		"mmi1",
+		"mmi2",
+		"mmi3",
+		"lqc2",
+		"sqc2",
 };
 
 static const char * const RegisterStrings[] = {
@@ -1513,10 +1525,90 @@ static const char * const RegisterStrings[] = {
 	"CVMX_HSH_STARTSHA512",
 	"CVMX_GFM_XORMUL1",
 
-	"sa",
+	"$sa",
 
 	"$lo1",
 	"$hi1",
+
+	"$P",
+
+	"$vi0", "$vi1", "$vi2", "$vi3", "$vi4", "$vi5", "$vi6", "$vi7", "$vi8", "$vi9",
+	"$vi10", "$vi11", "$vi12", "$vi13", "$vi14", "$vi15",
+
+	"CCR_STATUS", "CCR_MAC", "CCR_CLIPPING", "CCR[2,19]",
+	"$R", "$I", "$Q",
+	"CCR[2,23]", "CCR[2,24]", "CCR[2,25]", "CCR_TPC", "CCR_CMSAR0",
+	"CCR_FBRST", "CCR_VPU_STAT", "CCR[2,30]", "CCR_CMSAR1",
+
+	"$acc",
+	"$vf0", "$vf1", "$vf2", "$vf3", "$vf4", "$vf5", "$vf6", "$vf7", "$vf8", "$vf9",
+	"$vf10", "$vf11", "$vf12", "$vf13", "$vf14", "$vf15", "$vf16", "$vf17", "$vf18", "$vf19",
+	"$vf20", "$vf21", "$vf22", "$vf23", "$vf24", "$vf25", "$vf26", "$vf27", "$vf28", "$vf29",
+	"$vf30", "$vf31",
+
+	"$acc.x", "$vf0.x", "$vf1.x", "$vf2.x", "$vf3.x", "$vf4.x", "$vf5.x", "$vf6.x",
+	"$vf7.x", "$vf8.x", "$vf9.x", "$vf10.x", "$vf11.x", "$vf12.x", "$vf13.x", "$vf14.x",
+	"$vf15.x", "$vf16.x", "$vf17.x", "$vf18.x", "$vf19.x", "$vf20.x", "$vf21.x", "$vf22.x",
+	"$vf23.x", "$vf24.x", "$vf25.x", "$vf26.x", "$vf27.x", "$vf28.x", "$vf29.x", "$vf30.x",
+	"$vf31.x", "$acc.y", "$vf0.y", "$vf1.y", "$vf2.y", "$vf3.y", "$vf4.y", "$vf5.y",
+	"$vf6.y", "$vf7.y", "$vf8.y", "$vf9.y", "$vf10.y", "$vf11.y", "$vf12.y", "$vf13.y",
+	"$vf14.y", "$vf15.y", "$vf16.y", "$vf17.y", "$vf18.y", "$vf19.y", "$vf20.y", "$vf21.y",
+	"$vf22.y", "$vf23.y", "$vf24.y", "$vf25.y", "$vf26.y", "$vf27.y", "$vf28.y", "$vf29.y",
+	"$vf30.y", "$vf31.y", "$acc.z", "$vf0.z", "$vf1.z", "$vf2.z", "$vf3.z", "$vf4.z",
+	"$vf5.z", "$vf6.z", "$vf7.z", "$vf8.z", "$vf9.z", "$vf10.z", "$vf11.z", "$vf12.z",
+	"$vf13.z", "$vf14.z", "$vf15.z", "$vf16.z", "$vf17.z", "$vf18.z", "$vf19.z", "$vf20.z",
+	"$vf21.z", "$vf22.z", "$vf23.z", "$vf24.z", "$vf25.z", "$vf26.z", "$vf27.z", "$vf28.z",
+	"$vf29.z", "$vf30.z", "$vf31.z", "$acc.w", "$vf0.w", "$vf1.w", "$vf2.w", "$vf3.w",
+	"$vf4.w", "$vf5.w", "$vf6.w", "$vf7.w", "$vf8.w", "$vf9.w", "$vf10.w", "$vf11.w",
+	"$vf12.w", "$vf13.w", "$vf14.w", "$vf15.w", "$vf16.w", "$vf17.w", "$vf18.w", "$vf19.w",
+	"$vf20.w", "$vf21.w", "$vf22.w", "$vf23.w", "$vf24.w", "$vf25.w", "$vf26.w", "$vf27.w",
+	"$vf28.w", "$vf29.w", "$vf30.w", "$vf31.w", "$acc.xy", "$vf0.xy", "$vf1.xy", "$vf2.xy",
+	"$vf3.xy", "$vf4.xy", "$vf5.xy", "$vf6.xy", "$vf7.xy", "$vf8.xy", "$vf9.xy", "$vf10.xy",
+	"$vf11.xy", "$vf12.xy", "$vf13.xy", "$vf14.xy", "$vf15.xy", "$vf16.xy", "$vf17.xy", "$vf18.xy",
+	"$vf19.xy", "$vf20.xy", "$vf21.xy", "$vf22.xy", "$vf23.xy", "$vf24.xy", "$vf25.xy", "$vf26.xy",
+	"$vf27.xy", "$vf28.xy", "$vf29.xy", "$vf30.xy", "$vf31.xy", "$acc.xz", "$vf0.xz", "$vf1.xz",
+	"$vf2.xz", "$vf3.xz", "$vf4.xz", "$vf5.xz", "$vf6.xz", "$vf7.xz", "$vf8.xz", "$vf9.xz",
+	"$vf10.xz", "$vf11.xz", "$vf12.xz", "$vf13.xz", "$vf14.xz", "$vf15.xz", "$vf16.xz", "$vf17.xz",
+	"$vf18.xz", "$vf19.xz", "$vf20.xz", "$vf21.xz", "$vf22.xz", "$vf23.xz", "$vf24.xz", "$vf25.xz",
+	"$vf26.xz", "$vf27.xz", "$vf28.xz", "$vf29.xz", "$vf30.xz", "$vf31.xz", "$acc.xw", "$vf0.xw",
+	"$vf1.xw", "$vf2.xw", "$vf3.xw", "$vf4.xw", "$vf5.xw", "$vf6.xw", "$vf7.xw", "$vf8.xw",
+	"$vf9.xw", "$vf10.xw", "$vf11.xw", "$vf12.xw", "$vf13.xw", "$vf14.xw", "$vf15.xw", "$vf16.xw",
+	"$vf17.xw", "$vf18.xw", "$vf19.xw", "$vf20.xw", "$vf21.xw", "$vf22.xw", "$vf23.xw", "$vf24.xw",
+	"$vf25.xw", "$vf26.xw", "$vf27.xw", "$vf28.xw", "$vf29.xw", "$vf30.xw", "$vf31.xw", "$acc.yz",
+	"$vf0.yz", "$vf1.yz", "$vf2.yz", "$vf3.yz", "$vf4.yz", "$vf5.yz", "$vf6.yz", "$vf7.yz",
+	"$vf8.yz", "$vf9.yz", "$vf10.yz", "$vf11.yz", "$vf12.yz", "$vf13.yz", "$vf14.yz", "$vf15.yz",
+	"$vf16.yz", "$vf17.yz", "$vf18.yz", "$vf19.yz", "$vf20.yz", "$vf21.yz", "$vf22.yz", "$vf23.yz",
+	"$vf24.yz", "$vf25.yz", "$vf26.yz", "$vf27.yz", "$vf28.yz", "$vf29.yz", "$vf30.yz", "$vf31.yz",
+	"$acc.yw", "$vf0.yw", "$vf1.yw", "$vf2.yw", "$vf3.yw", "$vf4.yw", "$vf5.yw", "$vf6.yw",
+	"$vf7.yw", "$vf8.yw", "$vf9.yw", "$vf10.yw", "$vf11.yw", "$vf12.yw", "$vf13.yw", "$vf14.yw",
+	"$vf15.yw", "$vf16.yw", "$vf17.yw", "$vf18.yw", "$vf19.yw", "$vf20.yw", "$vf21.yw", "$vf22.yw",
+	"$vf23.yw", "$vf24.yw", "$vf25.yw", "$vf26.yw", "$vf27.yw", "$vf28.yw", "$vf29.yw", "$vf30.yw",
+	"$vf31.yw", "$acc.zw", "$vf0.zw", "$vf1.zw", "$vf2.zw", "$vf3.zw", "$vf4.zw", "$vf5.zw",
+	"$vf6.zw", "$vf7.zw", "$vf8.zw", "$vf9.zw", "$vf10.zw", "$vf11.zw", "$vf12.zw", "$vf13.zw",
+	"$vf14.zw", "$vf15.zw", "$vf16.zw", "$vf17.zw", "$vf18.zw", "$vf19.zw", "$vf20.zw", "$vf21.zw",
+	"$vf22.zw", "$vf23.zw", "$vf24.zw", "$vf25.zw", "$vf26.zw", "$vf27.zw", "$vf28.zw", "$vf29.zw",
+	"$vf30.zw", "$vf31.zw", "$acc.xyz", "$vf0.xyz", "$vf1.xyz", "$vf2.xyz", "$vf3.xyz", "$vf4.xyz",
+	"$vf5.xyz", "$vf6.xyz", "$vf7.xyz", "$vf8.xyz", "$vf9.xyz", "$vf10.xyz", "$vf11.xyz", "$vf12.xyz",
+	"$vf13.xyz", "$vf14.xyz", "$vf15.xyz", "$vf16.xyz", "$vf17.xyz", "$vf18.xyz", "$vf19.xyz", "$vf20.xyz",
+	"$vf21.xyz", "$vf22.xyz", "$vf23.xyz", "$vf24.xyz", "$vf25.xyz", "$vf26.xyz", "$vf27.xyz", "$vf28.xyz",
+	"$vf29.xyz", "$vf30.xyz", "$vf31.xyz", "$acc.xyw", "$vf0.xyw", "$vf1.xyw", "$vf2.xyw", "$vf3.xyw",
+	"$vf4.xyw", "$vf5.xyw", "$vf6.xyw", "$vf7.xyw", "$vf8.xyw", "$vf9.xyw", "$vf10.xyw", "$vf11.xyw",
+	"$vf12.xyw", "$vf13.xyw", "$vf14.xyw", "$vf15.xyw", "$vf16.xyw", "$vf17.xyw", "$vf18.xyw", "$vf19.xyw",
+	"$vf20.xyw", "$vf21.xyw", "$vf22.xyw", "$vf23.xyw", "$vf24.xyw", "$vf25.xyw", "$vf26.xyw", "$vf27.xyw",
+	"$vf28.xyw", "$vf29.xyw", "$vf30.xyw", "$vf31.xyw", "$acc.xzw", "$vf0.xzw", "$vf1.xzw", "$vf2.xzw",
+	"$vf3.xzw", "$vf4.xzw", "$vf5.xzw", "$vf6.xzw", "$vf7.xzw", "$vf8.xzw", "$vf9.xzw", "$vf10.xzw",
+	"$vf11.xzw", "$vf12.xzw", "$vf13.xzw", "$vf14.xzw", "$vf15.xzw", "$vf16.xzw", "$vf17.xzw", "$vf18.xzw",
+	"$vf19.xzw", "$vf20.xzw", "$vf21.xzw", "$vf22.xzw", "$vf23.xzw", "$vf24.xzw", "$vf25.xzw", "$vf26.xzw",
+	"$vf27.xzw", "$vf28.xzw", "$vf29.xzw", "$vf30.xzw", "$vf31.xzw", "$acc.yzw", "$vf0.yzw", "$vf1.yzw",
+	"$vf2.yzw", "$vf3.yzw", "$vf4.yzw", "$vf5.yzw", "$vf6.yzw", "$vf7.yzw", "$vf8.yzw", "$vf9.yzw",
+	"$vf10.yzw", "$vf11.yzw", "$vf12.yzw", "$vf13.yzw", "$vf14.yzw", "$vf15.yzw", "$vf16.yzw", "$vf17.yzw",
+	"$vf18.yzw", "$vf19.yzw", "$vf20.yzw", "$vf21.yzw", "$vf22.yzw", "$vf23.yzw", "$vf24.yzw", "$vf25.yzw",
+	"$vf26.yzw", "$vf27.yzw", "$vf28.yzw", "$vf29.yzw", "$vf30.yzw", "$vf31.yzw", "$acc.xyzw", "$vf0.xyzw",
+	"$vf1.xyzw", "$vf2.xyzw", "$vf3.xyzw", "$vf4.xyzw", "$vf5.xyzw", "$vf6.xyzw", "$vf7.xyzw", "$vf8.xyzw",
+	"$vf9.xyzw", "$vf10.xyzw", "$vf11.xyzw", "$vf12.xyzw", "$vf13.xyzw", "$vf14.xyzw", "$vf15.xyzw", "$vf16.xyzw",
+	"$vf17.xyzw", "$vf18.xyzw", "$vf19.xyzw", "$vf20.xyzw", "$vf21.xyzw", "$vf22.xyzw", "$vf23.xyzw", "$vf24.xyzw",
+	"$vf25.xyzw", "$vf26.xyzw", "$vf27.xyzw", "$vf28.xyzw", "$vf29.xyzw", "$vf30.xyzw", "$vf31.xyzw"
+
 };
 
 static const char * const FlagStrings[] = {
@@ -1667,6 +1759,8 @@ uint32_t mips_decompose_instruction(
 			else if (version == MIPS_R5900)
 				instruction->operation = mips_base_table[version-1][ins.decode.op_hi][ins.decode.op_lo];
 			break;
+		// case 0x12:
+		// 	printf("Inst: %08" PRIx64 ":%08X\n", address, ins.value);
 		default:
 			if ((flags & DECOMPOSE_FLAGS_CAVIUM) == 0)
 				instruction->operation = mips_base_table[version-1][ins.decode.op_hi][ins.decode.op_lo];
@@ -2082,6 +2176,7 @@ uint32_t mips_decompose_instruction(
 		}
 	}
 
+	int i = 1; // operand index counter for V* instructions
 	// Stage 3: Now that we have the proper instructions aliased figure out what our operands are
 	switch(instruction->operation)
 	{
@@ -2419,13 +2514,18 @@ uint32_t mips_decompose_instruction(
 			if (ins.r.function + ins.r.sa != 0)
 				return 1;
 			break;
+		case MIPS_CTC2:
+		case MIPS_CFC2:
+			if (version == MIPS_R5900)
+			{
+				INS_2(REG, ins.r.rt, V_REG, ins.v.fs + REG_VI0);
+				break;
+			}
 		case MIPS_DMFC2:
 		case MIPS_MFC2:
 		case MIPS_DMTC2:
 		case MIPS_MTC2:
-		case MIPS_CFC2:
 		case MIPS_MFHC2:
-		case MIPS_CTC2:
 		case MIPS_MTHC2:
 			INS_2(REG, ins.i.rt, IMM, ins.i.immediate);
 			break;
@@ -2505,6 +2605,8 @@ uint32_t mips_decompose_instruction(
 				return 1;
 			INS_2(REG, ins.f.fd + FPREG_F0, REG, ins.f.fs + FPREG_F0)
 			break;
+		case MIPS_MADDA_S:
+		case MIPS_MSUBA_S:
 		case MIPS_ADDA_S:
 		case MIPS_SUBA_S:
 		case MIPS_MULA_S:
@@ -2555,8 +2657,9 @@ uint32_t mips_decompose_instruction(
 			instruction->operands[0].reg = ins.i.rt;
 			instruction->operands[1].reg = ins.i.rs;
 			instruction->operands[1].immediate = ins.i.immediate;
-	        if (instruction->operation == MIPS_SQ)
-				instruction->operands[1].immediate = MIPS_SQ;
+			// These next two lines are suspect, so commenting them out
+			// if (instruction->operation == MIPS_SQ)
+			// 	instruction->operands[1].immediate = MIPS_SQ;
 			break;
 		case MIPS_PREF:
 		case MIPS_PREFX:
@@ -2586,31 +2689,79 @@ uint32_t mips_decompose_instruction(
 			instruction->operands[1].immediate = ins.f.ft;
 			instruction->operands[1].reg = ins.f.fr;
 			break;
-		case MIPS_SWC1:
-		case MIPS_SWC2:
-		case MIPS_SWC3:
-		case MIPS_LDC1:
-		case MIPS_LDC2:
-		case MIPS_LDC3:
-		case MIPS_SDC1:
-		case MIPS_SDC2:
-		case MIPS_SDC3:
 		case MIPS_LWC1:
-		case MIPS_LWC2:
-		case MIPS_LWC3:
-			instruction->operands[0].operandClass = IMM;
-			instruction->operands[1].operandClass = MEM_IMM;
-			instruction->operands[0].reg = version != MIPS_R5900 ? ins.i.rt : (FPREG_F0 + ins.f.ft);
+		case MIPS_SWC1:
+		case MIPS_LDC1:
+		case MIPS_SDC1:
 			// This special case for the R5900 seems wrong: it's trying to use a FP register for the base register
 			// instruction->operands[1].reg = version != MIPS_R5900 ? ins.i.rs : (FPREG_F0 + ins.f.fr);
+			if (version == MIPS_R5900)
+			{
+				instruction->operands[0].reg = FPREG_F0 + ins.f.ft;
+				instruction->operands[0].operandClass = REG;
+				instruction->operands[1].operandClass = MEM_IMM;
+				instruction->operands[1].reg = ins.i.rs;
+				instruction->operands[1].immediate = ins.i.immediate;
+				break;
+			}
+		case MIPS_QMFC2:
+		case MIPS_QMTC2:
+			if (version == MIPS_R5900)
+			{
+				// TODO: non-interlock (NI)?
+				instruction->operands[0].operandClass = REG;
+				instruction->operands[0].reg = ins.i.rt;
+				instruction->operands[1].operandClass = V_REG;
+				instruction->operands[1].reg = ins.v.fs;
+				if (ins.v.bc & 1)
+					instruction->operation += 1;
+			}
+			break;
+		case MIPS_SDC2:
+		case MIPS_LDC2:
+			if (version == MIPS_R5900)
+			{
+				instruction->operands[0].operandClass = V_REG;
+				instruction->operands[0].reg = ins.f.ft + REG_VF0;
+				instruction->operands[1].operandClass = MEM_IMM;
+				instruction->operands[1].reg = ins.i.rs;
+				instruction->operands[1].immediate = ins.i.immediate;
+				switch (instruction->operation)
+				{
+				case MIPS_LDC2:
+					instruction->operation = MIPS_LQC2; break;
+				case MIPS_SDC2:
+					instruction->operation = MIPS_SQC2; break;
+				default:
+					instruction->operation = MIPS_INVALID;
+				}
+				break;
+			}
+		case MIPS_SWC2:
+		case MIPS_LWC2:
+		case MIPS_SWC3:
+		case MIPS_LDC3:
+		case MIPS_SDC3:
+		case MIPS_LWC3:
+			instruction->operands[0].reg = ins.i.rt;
+			instruction->operands[0].immediate = ins.i.rt;
+			instruction->operands[0].operandClass = IMM;
+			// instruction->operands[0].operandClass = REG;
+			instruction->operands[1].operandClass = MEM_IMM;
 			instruction->operands[1].reg = ins.i.rs;
 			instruction->operands[1].immediate = ins.i.immediate;
 			break;
+		case MIPS_DIV1:
+		case MIPS_DIVU1:
+		if (version == MIPS_R5900) {
+			if (ins.r.sa != 0)
+				return 1;
+			INS_2(REG, ins.r.rs, REG, ins.r.rt)
+			break;
+		}
 		//3 operand instructions
 		case MIPS_MULT1:
 		case MIPS_MULTU1:
-		case MIPS_DIV1:
-		case MIPS_DIVU1:
 		case MIPS_MADDU1:
 		{
 			if (ins.r.sa != 0)
@@ -2783,8 +2934,8 @@ uint32_t mips_decompose_instruction(
 		case MIPS_PSRLH:
 		case MIPS_PSRLW:
 			INS_3(REG, ins.r.rd, REG, ins.r.rt, IMM, ins.r.sa)
-			if (ins.r.rs != 1)
-				return 1;
+			// if (ins.r.rs != 1)
+			// 	return 1;
 			break;
 		case MIPS_DSLL:
 		case MIPS_DSRA:
@@ -2831,9 +2982,17 @@ uint32_t mips_decompose_instruction(
 				INS_3(REG, ins.r.rt, IMM, ins.r.rd, IMM, (ins.r.function & 7))
 			break;
 		case MIPS_MADD_S:
+		case MIPS_MSUB_S:
+			if (version == MIPS_R5900)
+			{
+				INS_3(REG, ins.f.fd + FPREG_F0,
+					  REG, ins.f.fs + FPREG_F0,
+					  REG, ins.f.ft + FPREG_F0);
+				break;
+			}
+
 		case MIPS_MADD_D:
 		case MIPS_MADD_PS:
-		case MIPS_MSUB_S:
 		case MIPS_MSUB_D:
 		case MIPS_MSUB_PS:
 		case MIPS_NMADD_S:
@@ -2943,6 +3102,484 @@ uint32_t mips_decompose_instruction(
 			instruction->operands[0].immediate = 0;
 			break;
 
+		// case MIPS_VADDx:
+		// case MIPS_VADDy:
+		// case MIPS_VADDz:
+		// case MIPS_VADDw:
+		// case MIPS_VSUBx:
+		// case MIPS_VSUBy:
+		// case MIPS_VSUBz:
+		// case MIPS_VSUBw:
+		// case MIPS_VMADDx:
+		// case MIPS_VMADDy:
+		// case MIPS_VMADDz:
+		// case MIPS_VMADDw:
+		// case MIPS_VMSUBx:
+		// case MIPS_VMSUBy:
+		// case MIPS_VMSUBz:
+		// case MIPS_VMSUBw:
+		// case MIPS_VMAXx:
+		// case MIPS_VMAXy:
+		// case MIPS_VMAXz:
+		// case MIPS_VMAXw:
+		// case MIPS_VMINIx:
+		// case MIPS_VMINIy:
+		// case MIPS_VMINIz:
+		// case MIPS_VMINIw:
+		// case MIPS_VMULx:
+		// case MIPS_VMULy:
+		// case MIPS_VMULz:
+		// case MIPS_VMULw:
+		// case MIPS_VMULq:
+		// case MIPS_VMAXi:
+		// case MIPS_VMULi:
+		// case MIPS_VMINIi:
+		// case MIPS_VADDq:
+		// case MIPS_VMADDq:
+		// case MIPS_VADDi:
+		// case MIPS_VMADDi:
+		// case MIPS_VSUBq:
+		// case MIPS_VMSUBq:
+		// case MIPS_VSUBi:
+		// case MIPS_VMSUBi:
+		// case MIPS_VADD:
+		// case MIPS_VMADD:
+		// case MIPS_VMUL:
+		// case MIPS_VMAX:
+		// case MIPS_VSUB:
+		// case MIPS_VMSUB:
+		// case MIPS_VOPMSUB:
+		// case MIPS_VMINI:
+		// case MIPS_VIADD:
+		// case MIPS_VISUB:
+		// case MIPS_VIADDI:
+		// case MIPS_VIAND:
+		// case MIPS_VIOR:
+		case MIPS_VCALLMS:
+		case MIPS_VCALLMSR:
+		// case MIPS_VADDAx:
+		// case MIPS_VADDAy:
+		// case MIPS_VADDAz:
+		// case MIPS_VADDAw:
+		// case MIPS_VSUBAx:
+		// case MIPS_VSUBAy:
+		// case MIPS_VSUBAz:
+		// case MIPS_VSUBAw:
+		// case MIPS_VMADDAx:
+		// case MIPS_VMADDAy:
+		// case MIPS_VMADDAz:
+		// case MIPS_VMADDAw:
+		// case MIPS_VMSUBAx:
+		// case MIPS_VMSUBAy:
+		// case MIPS_VMSUBAz:
+		// case MIPS_VMSUBAw:
+		// case MIPS_VITOF0:
+		// case MIPS_VITOF4:
+		// case MIPS_VITOF12:
+		// case MIPS_VITOF15:
+		// case MIPS_VFTOI0:
+		// case MIPS_VFTOI4:
+		// case MIPS_VFTOI12:
+		// case MIPS_VFTOI15:
+		// case MIPS_VMULAx:
+		// case MIPS_VMULAy:
+		// case MIPS_VMULAz:
+		// case MIPS_VMULAw:
+		// case MIPS_VMULAq:
+		// case MIPS_VABS:
+		// case MIPS_VMULAi:
+		// case MIPS_VCLIPw:
+		// case MIPS_VADDAq:
+		// case MIPS_VMADDAq:
+		// case MIPS_VADDAi:
+		// case MIPS_VMADDAi:
+		// case MIPS_VSUBAq:
+		// case MIPS_VMSUBAq:
+		// case MIPS_VSUBAi:
+		// case MIPS_VMSUBAi:
+		// case MIPS_VADDA:
+		// case MIPS_VMADDA:
+		// case MIPS_VMULA:
+		// case MIPS_VSUBA:
+		// case MIPS_VMSUBA:
+		// case MIPS_VOPMULA:
+		// case MIPS_VNOP:
+		// case MIPS_VMOVE:
+		// case MIPS_VMR32:
+		// case MIPS_VLQI:
+		// case MIPS_VSQI:
+		// case MIPS_VLQD:
+		// case MIPS_VSQD:
+		// case MIPS_VDIV:
+		// case MIPS_VSQRT:
+		// case MIPS_VRSQRT:
+		// case MIPS_VWAITQ:
+		// case MIPS_VMTIR:
+		// case MIPS_VMFIR:
+		case MIPS_VILWR:
+		case MIPS_VISWR:
+		// case MIPS_VRNEXT:
+		// case MIPS_VRGET:
+		// case MIPS_VRINIT:
+		// case MIPS_VRXOR:
+			break;
+
+	    // <OP>
+		case MIPS_VNOP:
+		case MIPS_VWAITQ:
+			break;
+
+	    // <OP>.dest ft.dest, (is++).dest
+		case MIPS_VLQI:
+			instruction->operands[i].reg = ins.v.ft + REG_VF0;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs + REG_VI0;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			instruction->operands[0].immediate = 1;
+			break;
+	    // <OP>.dest fs.dest, (it++).dest
+		case MIPS_VSQI:
+			instruction->operands[i].reg = ins.v.fs + REG_VF0;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.ft + REG_VI0;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			instruction->operands[0].immediate = 1;
+			break;
+	    // <OP>.dest ft.dest, (--is).dest
+		case MIPS_VLQD:
+			instruction->operands[i].reg = ins.v.ft + REG_VF0;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs + REG_VI0;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			instruction->operands[0].immediate = -1;
+			break;
+
+		// <OP>.dest fs.dest, (--it).dest
+		case MIPS_VSQD:
+			instruction->operands[i].reg = ins.v.fs + REG_VF0;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.ft + REG_VI0;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			instruction->operands[0].immediate = -1;
+			break;
+
+		// <OP> it, is, Imm5
+		case MIPS_VIADDI:
+			i = 0;
+			instruction->operands[i].reg = ins.v.ft + REG_VI0;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs + REG_VI0;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fd;
+			instruction->operands[i++].operandClass = IMM;
+			break;
+
+		// <OP> id, is, it
+		case MIPS_VIADD:
+		case MIPS_VISUB:
+		case MIPS_VIAND:
+		case MIPS_VIOR:
+			i = 0;
+			instruction->operands[i].reg = ins.v.fd + REG_VI0;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs + REG_VI0;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.ft + REG_VI0;
+			instruction->operands[i++].operandClass = V_REG;
+			break;
+
+		// <OP>.dest ft.dest is
+		case MIPS_VMFIR:
+			instruction->operands[i].reg = ins.v.ft;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs + REG_VI0;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			break;
+		// <OP>.dest it, fs.dest
+		case MIPS_VMTIR:
+			i = 0;
+			instruction->operands[i].reg = ins.v.ft + REG_VI0;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs;
+			instruction->operands[i].immediate = ins.v.bc + 1;
+			instruction->operands[i++].operandClass = V_REG;
+			break;
+
+		// <OP>bc.dest   fs.dest, ft.bc
+		case MIPS_VCLIPw:
+			instruction->operands[i].reg = ins.v.fs;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.ft;
+			instruction->operands[i].immediate = ins.v.bc + 1;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			break;
+
+		// <OP>bc.dest   fd.dest, fs.dest, ft.bc
+		case MIPS_VADDx:
+		case MIPS_VADDy:
+		case MIPS_VADDz:
+		case MIPS_VADDw:
+
+		case MIPS_VSUBx:
+		case MIPS_VSUBy:
+		case MIPS_VSUBz:
+		case MIPS_VSUBw:
+
+		case MIPS_VMULx:
+		case MIPS_VMULy:
+		case MIPS_VMULz:
+		case MIPS_VMULw:
+
+		case MIPS_VMAXx:
+		case MIPS_VMAXy:
+		case MIPS_VMAXz:
+		case MIPS_VMAXw:
+
+		case MIPS_VMADDx:
+		case MIPS_VMADDy:
+		case MIPS_VMADDz:
+		case MIPS_VMADDw:
+
+		case MIPS_VMSUBx:
+		case MIPS_VMSUBy:
+		case MIPS_VMSUBz:
+		case MIPS_VMSUBw:
+			// The broadcast field if present will override the dest field
+			instruction->operands[3].immediate = ins.v.bc + 1;
+			// Fall through
+
+		// VOPMSUB.xyz   ACC.xyz, fs.xyz, ft.xyz
+		case MIPS_VOPMSUB:
+			// Fall through
+
+		// <OP>.dest   fd.dest, fs.dest, ft.dest
+		case MIPS_VADD:
+		case MIPS_VSUB:
+		case MIPS_VMUL:
+		case MIPS_VMAX:
+		case MIPS_VMINI:
+		case MIPS_VMADD:
+		case MIPS_VMSUB:
+			instruction->operands[i].reg = ins.v.fd;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.ft;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			break;
+
+		// <OP>i.dest   fd.dest, fs.dest, I
+		case MIPS_VMINIx:
+		case MIPS_VMINIy:
+		case MIPS_VMINIz:
+		case MIPS_VMINIw:
+		case MIPS_VMAXi:
+		case MIPS_VMULi:
+		case MIPS_VMINIi:
+		case MIPS_VADDi:
+		case MIPS_VMADDi:
+		case MIPS_VSUBi:
+		case MIPS_VMSUBi:
+			instruction->operands[i].reg = ins.v.fd;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = REG_VI;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			break;
+
+		// <OP>i.dest   ACC.dest, fs.dest, I
+		case MIPS_VMULAi:
+		case MIPS_VADDAi:
+		case MIPS_VMADDAi:
+		case MIPS_VSUBAi:
+		case MIPS_VMSUBAi:
+			instruction->operands[i].reg = REG_VACC;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = REG_VI;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			break;
+
+		// <OP>Abc.dest   ACC.dest, fs.dest, ft.bc
+		case MIPS_VADDAx:
+		case MIPS_VADDAy:
+		case MIPS_VADDAz:
+		case MIPS_VADDAw:
+
+		case MIPS_VMULAx:
+		case MIPS_VMULAy:
+		case MIPS_VMULAz:
+		case MIPS_VMULAw:
+
+		case MIPS_VMADDAx:
+		case MIPS_VMADDAy:
+		case MIPS_VMADDAz:
+		case MIPS_VMADDAw:
+
+		case MIPS_VMSUBAx:
+		case MIPS_VMSUBAy:
+		case MIPS_VMSUBAz:
+		case MIPS_VMSUBAw:
+			instruction->operands[3].immediate = ins.v.bc + 1;
+			// Fall through
+
+		// VOPMULA.xyz   ACC.xyz, fs.xyz, ft.xyz
+		case MIPS_VOPMULA:
+			// Fall through
+
+		// <OP>.dest   ACC.dest, fs.dest, ft.dest
+		case MIPS_VADDA:
+		case MIPS_VMADDA:
+		case MIPS_VMULA:
+		case MIPS_VSUBA:
+		case MIPS_VMSUBA:
+			// instruction->operands[i].immediate = 'A';
+			instruction->operands[i].reg = REG_VACC;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.ft;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			break;
+
+		// <OP>.dest   ACC.dest, fs.dest, Q
+		case MIPS_VMULAq:
+		case MIPS_VADDAq:
+		case MIPS_VMADDAq:
+		case MIPS_VSUBAq:
+		case MIPS_VMSUBAq:
+			// instruction->operands[i].immediate = 'A';
+			instruction->operands[i].reg = REG_VACC;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs;
+			instruction->operands[i++].operandClass = V_REG;
+			// instruction->operands[i].immediate = 'Q';
+			instruction->operands[i].reg = REG_VQ;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			break;
+
+		// <OP>.dest   fd.dest, fs.dest, Q
+		case MIPS_VADDq:
+		case MIPS_VMADDq:
+		case MIPS_VSUBq:
+		case MIPS_VMSUBq:
+		case MIPS_VMULq:
+			instruction->operands[i].reg = ins.v.fd;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs;
+			instruction->operands[i++].operandClass = V_REG;
+			// instruction->operands[i].immediate = 'Q';
+			instruction->operands[i].reg = REG_VQ;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			break;
+		case MIPS_VDIV:
+			instruction->operands[i].reg = ins.v.fs;
+			instruction->operands[i].immediate = ins.v.dest & 3;
+			instruction->operands[i++].operandClass = V_REG_FIELD;
+			instruction->operands[i].reg = ins.v.ft;
+			instruction->operands[i].immediate = (ins.v.dest >> 2) & 3;
+			instruction->operands[i++].operandClass = V_REG_FIELD;
+			// instruction->operands[0].immediate = 'Q';
+			instruction->operands[0].reg = REG_VQ;
+			instruction->operands[0].operandClass = V_REG;
+			break;
+		case MIPS_VSQRT:
+			instruction->operands[i].reg = ins.v.ft;
+			instruction->operands[i].immediate = (ins.v.dest >> 2) & 3;
+			instruction->operands[i++].operandClass = V_REG_FIELD;
+			// instruction->operands[0].immediate = 'Q';
+			instruction->operands[0].reg = REG_VQ;
+			instruction->operands[0].operandClass = V_REG;
+			break;
+		case MIPS_VRSQRT:
+			instruction->operands[i].reg = ins.v.fs;
+			instruction->operands[i].immediate = ins.v.dest & 3;
+			instruction->operands[i++].operandClass = V_REG_FIELD;
+			instruction->operands[i].reg = ins.v.ft;
+			instruction->operands[i].immediate = (ins.v.dest >> 2) & 3;
+			instruction->operands[i++].operandClass = V_REG_FIELD;
+			// instruction->operands[0].immediate = 'Q';
+			instruction->operands[0].reg = REG_VQ;
+			instruction->operands[0].operandClass = V_REG;
+			break;
+		case MIPS_VRINIT:
+		case MIPS_VRXOR:
+			instruction->operands[i].reg = ins.v.fs;
+			instruction->operands[i].immediate = ins.v.dest & 3;
+			instruction->operands[i++].operandClass = V_REG_FIELD;
+			// instruction->operands[0].immediate = 'R';
+			instruction->operands[0].reg = REG_VR;
+			instruction->operands[0].operandClass = V_REG;
+			break;
+		case MIPS_VRGET:
+		case MIPS_VRNEXT:
+			instruction->operands[i].reg = ins.v.ft;
+			instruction->operands[i++].operandClass = V_REG;
+			// instruction->operands[i].immediate = 'R';
+			instruction->operands[0].reg = REG_VR;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			break;
+
+	 	// <OP>.dest    ft.dest, fs.dest
+		case MIPS_VFTOI0:
+		case MIPS_VFTOI4:
+		case MIPS_VFTOI12:
+		case MIPS_VFTOI15:
+		case MIPS_VITOF0:
+		case MIPS_VITOF4:
+		case MIPS_VITOF12:
+		case MIPS_VITOF15:
+		case MIPS_VMOVE:
+		case MIPS_VMR32:
+		case MIPS_VABS:
+			instruction->operands[i].reg = ins.v.ft;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			break;
 		default:
 			return 1;
 	}
@@ -2955,7 +3592,10 @@ uint32_t mips_disassemble(
 		uint32_t outBufferSize)
 {
 	char operands[MAX_OPERANDS][64] = {{0},{0},{0},{0}};
+	char operation[64] = {0};
 	char* operandPtr = NULL;
+	char dest[5] = {0};
+	strlcpy(operation, OperationStrings[instruction->operation], sizeof(operation));
 	for (uint32_t i = 0;
 			i < MAX_OPERANDS && instruction->operands[i].operandClass != NONE; i++)
 	{
@@ -3008,12 +3648,44 @@ uint32_t mips_disassemble(
 					RegisterStrings[instruction->operands[i].immediate],
 					RegisterStrings[instruction->operands[i].reg]);
 				break;
+			case V_REG:
+				strcpy(operandPtr, RegisterStrings[instruction->operands[i].reg + FPREG_F0]);
+				if (dest[0])
+				{
+					strcat(operandPtr, "_");
+					strcat(operandPtr, dest);
+				}
+				break;
+			case V_DEST:
+			{
+				char* p = dest;
+				if (instruction->operands[i].reg & 8)
+					*p++ = 'x';
+				if (instruction->operands[i].reg & 4)
+					*p++ = 'y';
+				if (instruction->operands[i].reg & 2)
+					*p++ = 'z';
+				if (instruction->operands[i].reg & 1)
+					*p++ = 'w';
+				*p = '\0';
+				strcat(operation, ".");
+				strcat(operation, dest);
+				break;
+			}
+			case V_REG_FIELD:
+			{
+				char *p = operandPtr;
+				*p++ = "xyzw"[instruction->operands[i].reg];
+				*p = '\0';
+				break;
+			}
 		}
 	}
 	if (instruction->operation != MIPS_INVALID && instruction->operation < MIPS_OPERATION_END)
 	{
 		snprintf(outBuffer, outBufferSize, "%s\t%s%s%s%s",
-				OperationStrings[instruction->operation],
+				// OperationStrings[instruction->operation],
+				operation,
 				operands[0],
 				operands[1],
 				operands[2],

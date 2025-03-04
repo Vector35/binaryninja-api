@@ -198,7 +198,7 @@ static Operation mips_special_table[7][8][8] = {
 	},{	//MIPS r5900
 		{MIPS_SLL,     MIPS_MOVCI,   MIPS_SRL,  MIPS_SRA,  MIPS_SLLV,    MIPS_INVALID, MIPS_SRLV,    MIPS_SRAV},
 		{MIPS_JR,      MIPS_JALR,    MIPS_MOVZ, MIPS_MOVN, MIPS_SYSCALL, MIPS_BREAK,   MIPS_INVALID, MIPS_SYNC},
-		{MIPS_MFHI,    MIPS_MTHI,    MIPS_MFLO, MIPS_MTLO, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
+		{MIPS_MFHI,    MIPS_MTHI,    MIPS_MFLO, MIPS_MTLO, MIPS_DSLLV,   MIPS_INVALID, MIPS_DSRLV,   MIPS_DSRAV},
 		{MIPS_MULT,    MIPS_MULTU,   MIPS_DIV,  MIPS_DIVU, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID, MIPS_INVALID},
 		{MIPS_ADD,     MIPS_ADDU,    MIPS_SUB,  MIPS_SUBU, MIPS_AND,     MIPS_OR,      MIPS_XOR,     MIPS_NOR},
 		{MIPS_INVALID, MIPS_INVALID, MIPS_SLT,  MIPS_SLTU, MIPS_DADD,    MIPS_DADDU,   MIPS_DSUB,    MIPS_DSUBU},
@@ -1619,7 +1619,9 @@ static const char * const FlagStrings[] = {
 	"$fcc4",
 	"$fcc5",
 	"$fcc6",
-	"$fcc7"
+	"$fcc7",
+	"$coc0",
+	"$coc2",
 };
 
 static const char * const HintStrings[] = {
@@ -1868,11 +1870,13 @@ uint32_t mips_decompose_instruction(
 				            return 1;
 				        switch (ins.decode.rt_lo)
 				        {
-				            case 0: instruction->operation = MIPS_BC0F; break;
-				            case 1: instruction->operation = MIPS_BC0T; break;
-				            case 2: instruction->operation = MIPS_BC0FL; break;
-				            case 3: instruction->operation = MIPS_BC0TL; break;
+			            case 0: instruction->operation = MIPS_BC0F; break;
+			            case 1: instruction->operation = MIPS_BC0T; break;
+			            case 2: instruction->operation = MIPS_BC0FL; break;
+			            case 3: instruction->operation = MIPS_BC0TL; break;
+				        default: return 1;
 				        }
+				    	break;
 				    }
 					case 10: instruction->operation = MIPS_RDPGPR; break;
 					case 11:
@@ -2214,7 +2218,8 @@ uint32_t mips_decompose_instruction(
 		case MIPS_BC0FL:
 		case MIPS_BC0T:
 		case MIPS_BC0TL:
-			INS_1(IMM, (ins.i.immediate << 2))
+			// INS_1(IMM, (ins.i.immediate << 2))
+			INS_1(LABEL, (4 + address + (ins.i.immediate<<2)) & registerMask)
 			break;
 		case MIPS_COP2:
 			INS_1(IMM, (ins.value & 0x1ffffff))
@@ -2312,6 +2317,19 @@ uint32_t mips_decompose_instruction(
 				INS_2(FLAG, (FPCCREG_FCC0 + ((ins.value >> 18) & 7)), LABEL, (4 + address + (ins.i.immediate<<2)) & registerMask);
 			}
 			break;
+		case MIPS_BC2F:
+		case MIPS_BC2FL:
+		case MIPS_BC2T:
+		case MIPS_BC2TL:
+			if (((ins.value >> 18) & 7) == 0)
+			{
+				INS_1(LABEL, (4 + address + (ins.i.immediate<<2)) & registerMask);
+			}
+			else
+			{
+				INS_2(FLAG, (CCREG_COC2 + ((ins.value >> 18) & 7)), LABEL, (4 + address + (ins.i.immediate<<2)) & registerMask);
+			}
+			break;
 		case MIPS_MTSAB:
 		case MIPS_MTSAH:
 			INS_2(REG, ins.i.rs, IMM, ins.i.immediate)
@@ -2327,13 +2345,18 @@ uint32_t mips_decompose_instruction(
 		case MIPS_RDHWR:
 			INS_2(REG, ins.r.rt, IMM, ins.r.rd);
 			break;
+		case MIPS_RSQRT_S:
+			if (version == MIPS_R5900)
+			{
+				INS_3(REG, ins.f.fd + FPREG_F0, REG, ins.f.fs + FPREG_F0, REG, ins.f.ft + FPREG_F0);
+				break;
+			}
 		case MIPS_TRUNC_W_S:
 		case MIPS_TRUNC_W_D:
 		case MIPS_TRUNC_L_S:
 		case MIPS_TRUNC_L_D:
 		case MIPS_SQRT_S:
 		case MIPS_SQRT_D:
-		case MIPS_RSQRT_S:
 		case MIPS_RSQRT_D:
 		case MIPS_ROUND_W_S:
 		case MIPS_ROUND_W_D:
@@ -2342,7 +2365,7 @@ uint32_t mips_decompose_instruction(
 		case MIPS_RECIP_S:
 		case MIPS_RECIP_D:
 			INS_2(REG, ins.f.fd + FPREG_F0, REG, ins.f.fs + FPREG_F0);
-			if (ins.f.ft != 0)
+			if (0 && ins.f.ft != 0)
 				return 1;
 			break;
 		case MIPS_BC1EQZ:
@@ -2862,7 +2885,7 @@ uint32_t mips_decompose_instruction(
 			break;
 		case MIPS_MOVF:
 		case MIPS_MOVT:
-			INS_3(REG, ins.r.rd, REG, ins.r.rs, FLAG, (ins.r.rt>>2) + FPCCREG_FCC0)
+			INS_3(REG, ins.r.rd, REG, ins.r.rs, FLAG, ((ins.r.rt>>2) & 7) + FPCCREG_FCC0)
 			if (ins.r.sa != 0 || ins.bits.bit17 != 0)
 				return 1;
 			break;
@@ -2872,7 +2895,7 @@ uint32_t mips_decompose_instruction(
 		case MIPS_MOVT_S:
 		case MIPS_MOVT_D:
 		case MIPS_MOVT_PS:
-			INS_3(REG, ins.f.fd + FPREG_F0, REG, ins.f.fs + FPREG_F0, FLAG, (ins.r.rt>>2) + FPCCREG_FCC0)
+			INS_3(REG, ins.f.fd + FPREG_F0, REG, ins.f.fs + FPREG_F0, FLAG, ((ins.r.rt>>2) & 7) + FPCCREG_FCC0)
 			if (ins.bits.bit17 != 0)
 				return 1;
 			break;
@@ -3102,6 +3125,11 @@ uint32_t mips_decompose_instruction(
 			instruction->operands[0].immediate = 0;
 			break;
 
+		case MIPS_MIN_S:
+		case MIPS_MAX_S:
+			INS_3(REG, FPREG_F0 + ins.f.fd, REG, FPREG_F0 + ins.f.fs, REG, FPREG_F0 + ins.f.ft);
+			break;
+
 		// case MIPS_VADDx:
 		// case MIPS_VADDy:
 		// case MIPS_VADDz:
@@ -3155,8 +3183,8 @@ uint32_t mips_decompose_instruction(
 		// case MIPS_VIADDI:
 		// case MIPS_VIAND:
 		// case MIPS_VIOR:
-		case MIPS_VCALLMS:
-		case MIPS_VCALLMSR:
+		// case MIPS_VCALLMS:
+		// case MIPS_VCALLMSR:
 		// case MIPS_VADDAx:
 		// case MIPS_VADDAy:
 		// case MIPS_VADDAz:
@@ -3224,6 +3252,16 @@ uint32_t mips_decompose_instruction(
 		// case MIPS_VRXOR:
 			break;
 
+		case MIPS_VCALLMS:
+			instruction->operands[0].immediate = ins.vi.imm15;
+            instruction->operands[0].operandClass = IMM;
+            break;
+
+		case MIPS_VCALLMSR:
+			instruction->operands[0].reg = REG_VCCR_CMSAR0;
+			instruction->operands[0].operandClass = REG;
+			break;
+
 	    // <OP>
 		case MIPS_VNOP:
 		case MIPS_VWAITQ:
@@ -3231,7 +3269,8 @@ uint32_t mips_decompose_instruction(
 
 	    // <OP>.dest ft.dest, (is++).dest
 		case MIPS_VLQI:
-			instruction->operands[i].reg = ins.v.ft + REG_VF0;
+			// instruction->operands[i].reg = ins.v.ft + REG_VF0;
+			instruction->operands[i].reg = ins.v.ft;
 			instruction->operands[i++].operandClass = V_REG;
 			instruction->operands[i].reg = ins.v.fs + REG_VI0;
 			instruction->operands[i++].operandClass = V_REG;
@@ -3242,7 +3281,8 @@ uint32_t mips_decompose_instruction(
 			break;
 	    // <OP>.dest fs.dest, (it++).dest
 		case MIPS_VSQI:
-			instruction->operands[i].reg = ins.v.fs + REG_VF0;
+			// instruction->operands[i].reg = ins.v.fs + REG_VF0;
+			instruction->operands[i].reg = ins.v.fs;
 			instruction->operands[i++].operandClass = V_REG;
 			instruction->operands[i].reg = ins.v.ft + REG_VI0;
 			instruction->operands[i++].operandClass = V_REG;
@@ -3253,7 +3293,8 @@ uint32_t mips_decompose_instruction(
 			break;
 	    // <OP>.dest ft.dest, (--is).dest
 		case MIPS_VLQD:
-			instruction->operands[i].reg = ins.v.ft + REG_VF0;
+			// instruction->operands[i].reg = ins.v.ft + REG_VF0;
+			instruction->operands[i].reg = ins.v.ft;
 			instruction->operands[i++].operandClass = V_REG;
 			instruction->operands[i].reg = ins.v.fs + REG_VI0;
 			instruction->operands[i++].operandClass = V_REG;
@@ -3265,7 +3306,8 @@ uint32_t mips_decompose_instruction(
 
 		// <OP>.dest fs.dest, (--it).dest
 		case MIPS_VSQD:
-			instruction->operands[i].reg = ins.v.fs + REG_VF0;
+			// instruction->operands[i].reg = ins.v.fs + REG_VF0;
+			instruction->operands[i].reg = ins.v.fs;
 			instruction->operands[i++].operandClass = V_REG;
 			instruction->operands[i].reg = ins.v.ft + REG_VI0;
 			instruction->operands[i++].operandClass = V_REG;
@@ -3454,7 +3496,16 @@ uint32_t mips_decompose_instruction(
 
 		// VOPMULA.xyz   ACC.xyz, fs.xyz, ft.xyz
 		case MIPS_VOPMULA:
-			// Fall through
+			instruction->operands[i].reg = REG_VACC;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.ft;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			break;
 
 		// <OP>.dest   ACC.dest, fs.dest, ft.dest
 		case MIPS_VADDA:

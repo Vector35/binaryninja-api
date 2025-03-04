@@ -1272,6 +1272,8 @@ namespace mips
 		FPCCREG_FCC5,
 		FPCCREG_FCC6,
 		FPCCREG_FCC7,
+		CCREG_COC0,
+		CCREG_COC2,
 		END_FLAG
 	};
 
@@ -1372,6 +1374,14 @@ namespace mips
 		uint32_t opcode:6;
 	};
 
+	struct vitype {
+	    uint32_t func:6;
+	    uint32_t imm15:15;
+		uint32_t dest:4;
+		uint32_t co:1;
+		uint32_t opcode:6;
+	};
+
 	struct ttype {
 		uint32_t function:6;
 		uint32_t code:10;
@@ -1393,6 +1403,7 @@ namespace mips
 		struct rtype r;
 		struct ftype f;
 		struct vtype v;
+		struct vitype vi;
 		struct ttype t;
 		struct stype s;
 		uint32_t value;

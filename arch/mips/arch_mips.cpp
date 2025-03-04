@@ -228,6 +228,10 @@ protected:
 			case MIPS_JAL:
 			case MIPS_JALR:
 			case MIPS_JALR_HB:
+			case MIPS_BC0F:
+			case MIPS_BC0FL:
+			case MIPS_BC0T:
+			case MIPS_BC0TL:
 			case MIPS_BC1F:
 			case MIPS_BC1FL:
 			case MIPS_BC1T:
@@ -380,6 +384,10 @@ protected:
 			else
 				result.AddBranch(UnresolvedBranch, 0, nullptr, hasBranchDelay);
 			break;
+		case MIPS_BC0F:
+		case MIPS_BC0FL:
+		case MIPS_BC0T:
+		case MIPS_BC0TL:
 		case MIPS_BC1F:
 		case MIPS_BC1FL:
 		case MIPS_BC1T:
@@ -1136,6 +1144,18 @@ public:
 
 			case MIPS_INTRIN_R5900_VWAITQ:
 				return "__vwaitq";
+			case MIPS_INTRIN_R5900_VU_MEM_LOAD:
+				return "__vu_mem_load";
+			case MIPS_INTRIN_R5900_VU_MEM_STORE:
+				return "__vu_mem_store";
+			case MIPS_INTRIN_R5900_VU0_CALLMS:
+				return "__vu0_callms";
+			case MIPS_INTRIN_R5900_VU0_CALLMSR:
+				return "__vu0_callmsr";
+
+			case MIPS_INTRIN_COP0_CONDITION:
+				return "__COP0Condition";
+
 			default:
 				return "";
 		}
@@ -1199,6 +1219,10 @@ public:
 		{
 			auto r5900_intrinsics = {
 				MIPS_INTRIN_R5900_VWAITQ,
+				MIPS_INTRIN_R5900_VU_MEM_LOAD,
+				MIPS_INTRIN_R5900_VU_MEM_STORE,
+				MIPS_INTRIN_R5900_VU0_CALLMS,
+				MIPS_INTRIN_R5900_VU0_CALLMSR,
 			};
 			intrinsics.insert(intrinsics.end(), std::begin(r5900_intrinsics), std::end(r5900_intrinsics));
 		}
@@ -1360,6 +1384,27 @@ public:
 					NameAndType("index", Type::IntegerType(8, false)),
 				};
 
+			case MIPS_INTRIN_R5900_VU_MEM_LOAD:
+				return {
+					NameAndType("offset", Type::IntegerType(4, false)),
+					NameAndType("field", Type::IntegerType(2, false)),
+				};
+			case MIPS_INTRIN_R5900_VU_MEM_STORE:
+				return {
+					NameAndType("offset", Type::IntegerType(4, false)),
+					NameAndType("field", Type::IntegerType(2, false)),
+					NameAndType("value", Type::FloatType(4)),
+				};
+			case MIPS_INTRIN_R5900_VU0_CALLMS:
+				return {
+					NameAndType("address", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_R5900_VU0_CALLMSR:
+				// return {
+				// 	NameAndType("reg", Type::IntegerType(4, false)),
+				// };
+
+			case MIPS_INTRIN_COP0_CONDITION:
 			case MIPS_INTRIN_R5900_VWAITQ:
 			default:
 				return vector<NameAndType>();
@@ -1417,6 +1462,15 @@ public:
 				};
 			case MIPS_INTRIN_TLBSEARCH:
 				return { Type::IntegerType(8, false) };
+
+			case MIPS_INTRIN_R5900_VU_MEM_LOAD:
+				// return { Type::ArrayType(Type::FloatType(4), 4) };
+				return { Type::FloatType(4) };
+			case MIPS_INTRIN_COP0_CONDITION:
+				return { Type::BoolType() };
+			case MIPS_INTRIN_R5900_VU_MEM_STORE:
+			case MIPS_INTRIN_R5900_VU0_CALLMS:
+			case MIPS_INTRIN_R5900_VU0_CALLMSR:
 			case MIPS_INTRIN_R5900_VWAITQ:
 			default:
 				return vector<Confidence<Ref<Type>>>();

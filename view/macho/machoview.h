@@ -1270,7 +1270,8 @@ namespace BinaryNinja
 		GenericArm64eFixupFormat,
 		Generic64FixupFormat,
 		Generic32FixupFormat,
-		Firmware32FixupFormat
+		Firmware32FixupFormat,
+		Kernel64Format
 	};
 
 	union Arm64e {

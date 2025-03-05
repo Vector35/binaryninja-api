@@ -64,11 +64,12 @@ namespace BinaryNinja::RTTI::Microsoft {
 		bool checkWritableRData;
 		bool virtualFunctionTableSweep;
 
-		std::set<uint64_t> m_visitedClassHierarchyDescAddrs;
+		// This will process a CHD and store all `BaseClassInfo` in `classInfo`.
+		std::vector<BaseClassInfo> ProcessClassHierarchyDescriptor(uint64_t address, CompleteObjectLocator &coLocator, const ClassInfo &classInfo);
 
 		std::optional<ClassInfo> ProcessRTTI(uint64_t objectAddr) override;
 
-		std::optional<VirtualFunctionTableInfo> ProcessVFT(uint64_t vftAddr, ClassInfo &classInfo) override;
+		std::optional<VirtualFunctionTableInfo> ProcessVFT(uint64_t vftAddr, ClassInfo &classInfo, std::optional<BaseClassInfo> baseClassInfo) override;
 	public:
 		explicit MicrosoftRTTIProcessor(const Ref<BinaryView> &view, bool useMangled = true, bool checkRData = true, bool vftSweep = true, bool allowAnonymous = true);
 

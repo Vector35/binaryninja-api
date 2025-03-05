@@ -14,19 +14,27 @@ std::optional<std::string> RTTI::DemangleNameMS(BinaryView* view, bool allowMang
 }
 
 
-std::string RemoveItaniumPrefix(const std::string& name) {
+std::string RemoveItaniumPrefix(std::string& name) {
     // Remove class prefixes.
     // 1 and 7 is class_type
     // 9 is si_class_type
     // 1..4 is vmi_class_type
     if (name.rfind('1', 0) == 0)
-        return name.substr(1);
+        name = name.substr(1);
     if (name.rfind('7', 0) == 0)
-        return name.substr(1);
+        name = name.substr(1);
     if (name.rfind('9', 0) == 0)
-        return name.substr(1);
+        name = name.substr(1);
+    if (name.rfind('8', 0) == 0)
+        name = name.substr(1);
     if (name.rfind('4', 0) == 0)
-        return name.substr(2);
+        name = name.substr(1);
+    if (name.rfind('6', 0) == 0)
+        name = name.substr(1);
+    if (name.rfind('2', 0) == 0)
+        name = name.substr(1);
+    if (name.rfind('2', 0) == 0)
+        name = name.substr(1);
     return name;
 }
 
@@ -56,54 +64,85 @@ std::optional<std::string> RTTI::DemangleNameLLVM(bool allowMangled, const std::
 }
 
 
-Ref<Metadata> ClassInfo::SerializedMetadata()
+Ref<Metadata> BaseClassInfo::SerializedMetadata() const
 {
-    std::map<std::string, Ref<Metadata> > classInfoMeta;
+    std::map<std::string, Ref<Metadata>> baseClassMeta;
+    baseClassMeta["className"] = new Metadata(className);
+    baseClassMeta["classOffset"] = new Metadata(offset);
+    // NOTE: We omit base vft functions as it can be resolved manually and just bloats the size.
+    if (vft.has_value())
+        baseClassMeta["vft"] = vft->SerializedMetadata(false);
+    return new Metadata(baseClassMeta);
+}
+
+BaseClassInfo BaseClassInfo::DeserializedMetadata(const Ref<Metadata> &metadata)
+{
+    std::map<std::string, Ref<Metadata>> baseClassMeta = metadata->GetKeyValueStore();
+    std::string className = baseClassMeta["className"]->GetString();
+    uint64_t offset = baseClassMeta["classOffset"]->GetUnsignedInteger();
+    BaseClassInfo baseClassInfo = {className, offset};
+    if (baseClassMeta.find("vft") != baseClassMeta.end())
+        baseClassInfo.vft = VirtualFunctionTableInfo::DeserializedMetadata(baseClassMeta["vft"]);
+    return baseClassInfo;
+}
+
+
+Ref<Metadata> ClassInfo::SerializedMetadata() const
+{
+    std::map<std::string, Ref<Metadata>> classInfoMeta;
     classInfoMeta["processor"] = new Metadata(static_cast<uint64_t>(processor));
     classInfoMeta["className"] = new Metadata(className);
-    if (baseClassName.has_value())
-        classInfoMeta["baseClassName"] = new Metadata(baseClassName.value());
-    if (classOffset.has_value())
-        classInfoMeta["classOffset"] = new Metadata(classOffset.value());
+    if (!baseClasses.empty())
+    {
+        std::vector<Ref<Metadata> > basesMeta;
+        basesMeta.reserve(baseClasses.size());
+        for (const auto& baseClass : baseClasses)
+            basesMeta.emplace_back(baseClass.SerializedMetadata());
+        classInfoMeta["bases"] = new Metadata(basesMeta);
+    }
     if (vft.has_value())
         classInfoMeta["vft"] = vft->SerializedMetadata();
-    // NOTE: We omit baseVft as it can be resolved manually and just bloats the size.
     return new Metadata(classInfoMeta);
 }
 
 
 ClassInfo ClassInfo::DeserializedMetadata(const Ref<Metadata> &metadata)
 {
-    std::map<std::string, Ref<Metadata> > classInfoMeta = metadata->GetKeyValueStore();
+    std::map<std::string, Ref<Metadata>> classInfoMeta = metadata->GetKeyValueStore();
     std::string className = classInfoMeta["className"]->GetString();
     RTTIProcessorType processor = static_cast<RTTIProcessorType>(classInfoMeta["processor"]->GetUnsignedInteger());
     ClassInfo info = {processor, className};
-    if (classInfoMeta.find("baseClassName") != classInfoMeta.end())
-        info.baseClassName = classInfoMeta["baseClassName"]->GetString();
-    if (classInfoMeta.find("classOffset") != classInfoMeta.end())
-        info.classOffset = classInfoMeta["classOffset"]->GetUnsignedInteger();
+    if (classInfoMeta.find("bases") != classInfoMeta.end())
+    {
+        for (auto &entry: classInfoMeta["bases"]->GetArray())
+            info.baseClasses.emplace_back(BaseClassInfo::DeserializedMetadata(entry));
+    }
     if (classInfoMeta.find("vft") != classInfoMeta.end())
         info.vft = VirtualFunctionTableInfo::DeserializedMetadata(classInfoMeta["vft"]);
     return info;
 }
 
 
-Ref<Metadata> VirtualFunctionTableInfo::SerializedMetadata()
+Ref<Metadata> VirtualFunctionTableInfo::SerializedMetadata(const bool serializeFunctions) const
 {
-    std::vector<Ref<Metadata> > funcsMeta;
-    funcsMeta.reserve(virtualFunctions.size());
-    for (auto &vFunc: virtualFunctions)
-        funcsMeta.emplace_back(vFunc.SerializedMetadata());
-    std::map<std::string, Ref<Metadata> > vftMeta;
+    std::map<std::string, Ref<Metadata>> vftMeta;
     vftMeta["address"] = new Metadata(address);
-    vftMeta["functions"] = new Metadata(funcsMeta);
+    // NOTE: We allow omitting baseVft functions as it can be resolved manually and just bloats the size.
+    if (serializeFunctions && !virtualFunctions.empty())
+    {
+        std::vector<Ref<Metadata> > funcsMeta;
+        funcsMeta.reserve(virtualFunctions.size());
+        for (auto &vFunc: virtualFunctions)
+            funcsMeta.emplace_back(vFunc.SerializedMetadata());
+        vftMeta["functions"] = new Metadata(funcsMeta);
+    }
     return new Metadata(vftMeta);
 }
 
 
 VirtualFunctionTableInfo VirtualFunctionTableInfo::DeserializedMetadata(const Ref<Metadata> &metadata)
 {
-    std::map<std::string, Ref<Metadata> > vftMeta = metadata->GetKeyValueStore();
+    std::map<std::string, Ref<Metadata>> vftMeta = metadata->GetKeyValueStore();
     VirtualFunctionTableInfo vftInfo = {vftMeta["address"]->GetUnsignedInteger()};
     if (vftMeta.find("functions") != vftMeta.end())
     {
@@ -114,9 +153,9 @@ VirtualFunctionTableInfo VirtualFunctionTableInfo::DeserializedMetadata(const Re
 }
 
 
-Ref<Metadata> VirtualFunctionInfo::SerializedMetadata()
+Ref<Metadata> VirtualFunctionInfo::SerializedMetadata() const
 {
-    std::map<std::string, Ref<Metadata> > vFuncMeta;
+    std::map<std::string, Ref<Metadata>> vFuncMeta;
     vFuncMeta["address"] = new Metadata(funcAddr);
     return new Metadata(vFuncMeta);
 }
@@ -124,7 +163,7 @@ Ref<Metadata> VirtualFunctionInfo::SerializedMetadata()
 
 VirtualFunctionInfo VirtualFunctionInfo::DeserializedMetadata(const Ref<Metadata> &metadata)
 {
-    std::map<std::string, Ref<Metadata> > vFuncMeta = metadata->GetKeyValueStore();
+    std::map<std::string, Ref<Metadata>> vFuncMeta = metadata->GetKeyValueStore();
     VirtualFunctionInfo vFuncInfo = {vFuncMeta["address"]->GetUnsignedInteger()};
     return vFuncInfo;
 }
@@ -132,7 +171,7 @@ VirtualFunctionInfo VirtualFunctionInfo::DeserializedMetadata(const Ref<Metadata
 
 Ref<Metadata> RTTIProcessor::SerializedMetadata()
 {
-    std::map<std::string, Ref<Metadata> > classesMeta;
+    std::map<std::string, Ref<Metadata>> classesMeta;
     for (auto &[objectAddr, classInfo]: m_classInfo)
     {
         auto addrStr = std::to_string(objectAddr);
@@ -147,7 +186,7 @@ Ref<Metadata> RTTIProcessor::SerializedMetadata()
             classesMeta[addrStr] = classInfo.SerializedMetadata();
     }
 
-    std::map<std::string, Ref<Metadata> > itaniumMeta;
+    std::map<std::string, Ref<Metadata>> itaniumMeta;
     itaniumMeta["classes"] = new Metadata(classesMeta);
     return new Metadata(itaniumMeta);
 }
@@ -155,7 +194,7 @@ Ref<Metadata> RTTIProcessor::SerializedMetadata()
 
 void RTTIProcessor::DeserializedMetadata(RTTIProcessorType type, const Ref<Metadata> &metadata)
 {
-    std::map<std::string, Ref<Metadata> > msvcMeta = metadata->GetKeyValueStore();
+    std::map<std::string, Ref<Metadata>> msvcMeta = metadata->GetKeyValueStore();
     if (msvcMeta.find("classes") != msvcMeta.end())
     {
         for (auto &[objectAddrStr, classInfoMeta]: msvcMeta["classes"]->GetKeyValueStore())

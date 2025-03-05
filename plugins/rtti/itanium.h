@@ -58,7 +58,7 @@ namespace BinaryNinja::RTTI::Itanium {
 	{
 		uint64_t base_type;
 		uint64_t offset_flags;
-		OffsetFlagsMasks offset_flags_masks;
+		uint64_t offset_flags_masks;
 
 		BaseClassTypeInfo(BinaryView *view, uint64_t address);
 	};
@@ -114,9 +114,11 @@ namespace BinaryNinja::RTTI::Itanium {
 		bool checkWritableRData;
 		bool virtualFunctionTableSweep;
 
+		std::optional<BaseClassInfo> ProcessVFTBaseClassInfo(uint64_t vftAddr, ClassInfo &classInfo);
+
 		std::optional<ClassInfo> ProcessRTTI(uint64_t objectAddr) override;
 
-		std::optional<VirtualFunctionTableInfo> ProcessVFT(uint64_t vftAddr, ClassInfo &classInfo) override;
+		std::optional<VirtualFunctionTableInfo> ProcessVFT(uint64_t vftAddr, ClassInfo &classInfo, std::optional<BaseClassInfo> baseClassInfo) override;
 	public:
 		explicit ItaniumRTTIProcessor(const Ref<BinaryView> &view, bool useMangled = true, bool checkRData = true, bool vttSweep = true);
 

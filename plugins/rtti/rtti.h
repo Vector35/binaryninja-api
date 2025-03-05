@@ -16,7 +16,7 @@ namespace BinaryNinja::RTTI {
 	{
 		uint64_t funcAddr;
 
-		Ref<Metadata> SerializedMetadata();
+		Ref<Metadata> SerializedMetadata() const;
 
 		static VirtualFunctionInfo DeserializedMetadata(const Ref<Metadata> &metadata);
 	};
@@ -26,7 +26,7 @@ namespace BinaryNinja::RTTI {
 		uint64_t address;
 		std::vector<VirtualFunctionInfo> virtualFunctions;
 
-		Ref<Metadata> SerializedMetadata();
+		Ref<Metadata> SerializedMetadata(bool serializeFunctions = true) const;
 
 		static VirtualFunctionTableInfo DeserializedMetadata(const Ref<Metadata> &metadata);
 	};
@@ -37,17 +37,27 @@ namespace BinaryNinja::RTTI {
 		Itanium = 1,
 	};
 
+	struct BaseClassInfo
+	{
+		std::string className;
+		uint64_t offset;
+		std::optional<VirtualFunctionTableInfo> vft;
+
+		Ref<Metadata> SerializedMetadata() const;
+
+		static BaseClassInfo DeserializedMetadata(const Ref<Metadata> &metadata);
+	};
+
 	// TODO: This needs to have some flags. Virtual, pure iirc.
 	struct ClassInfo
 	{
 		RTTIProcessorType processor;
 		std::string className;
-		std::optional<std::string> baseClassName;
-		std::optional<uint64_t> classOffset;
-		std::optional<VirtualFunctionTableInfo> vft;
-		std::optional<VirtualFunctionTableInfo> baseVft;
 
-		Ref<Metadata> SerializedMetadata();
+		std::optional<VirtualFunctionTableInfo> vft;
+		std::vector<BaseClassInfo> baseClasses;
+
+		Ref<Metadata> SerializedMetadata() const;
 
 		static ClassInfo DeserializedMetadata(const Ref<Metadata> &metadata);
 	};
@@ -63,7 +73,7 @@ namespace BinaryNinja::RTTI {
 
 		virtual std::optional<ClassInfo> ProcessRTTI(uint64_t objectAddr) = 0;
 
-		virtual std::optional<VirtualFunctionTableInfo> ProcessVFT(uint64_t vftAddr, ClassInfo &classInfo) = 0;
+		virtual std::optional<VirtualFunctionTableInfo> ProcessVFT(uint64_t vftAddr, ClassInfo &classInfo, std::optional<BaseClassInfo> baseClassInfo) = 0;
 	public:
 		virtual ~RTTIProcessor() = default;
 

@@ -3647,13 +3647,46 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, LLIL_TEMP(0))));
 			break;
 		}
-		/*
-			Opcode "pcgth" is unimplemented (LLIL)
-			Opcode "ppacb" is unimplemented (LLIL)
-			Opcode "psllh" is unimplemented (LLIL)
-			Opcode "psrah" is unimplemented (LLIL)
-			Opcode "psrlh" is unimplemented (LLIL)
-		 */
+
+		// case MIPS_PEXCH:
+		case MIPS_PEXCW:
+		{
+			il.AddInstruction(il.SetRegister(16, op1.reg,
+				il.Or(16,
+					il.Xor(16, il.Register(16, op2.reg),
+						il.And(16, il.Register(16, op2.reg),
+							il.ShiftLeft(16, il.Const(16, 0xFFFFFFFFFFFFFFFF), il.Const(16, 32)))),
+					il.Or(16,
+						il.ShiftLeft(16,
+							il.And(16, il.LogicalShiftRight(64, il.Register(16, op2.reg), il.Const(16, 64)),
+								il.Const(16, 0xFFFFFFFF)),
+							il.Const(16, 32)),
+						il.ShiftLeft(16,
+							il.And(16, il.LogicalShiftRight(64, il.Register(16, op2.reg), il.Const(16, 32)),
+								il.Const(16, 0xFFFFFFFF)),
+							il.Const(16, 64))
+						))));
+			break;
+		}
+		case MIPS_PEXEW:
+		{
+			il.AddInstruction(il.SetRegister(16, op1.reg,
+				il.Or(16,
+					il.Xor(16, il.Register(16, op2.reg),
+						il.And(16, il.Register(16, op2.reg),
+							il.ShiftLeft(16, il.Const(16, 0xFFFFFFFFFFFFFFFF), il.Const(16, 32)))),
+					il.Or(16,
+						il.ShiftLeft(16,
+							il.And(16, il.LogicalShiftRight(64, il.Register(16, op2.reg), il.Const(16, 64)),
+								il.Const(16, 0xFFFFFFFF)),
+							il.Const(16, 32)),
+						il.ShiftLeft(16,
+							il.And(16, il.LogicalShiftRight(64, il.Register(16, op2.reg), il.Const(16, 32)),
+								il.Const(16, 0xFFFFFFFF)),
+							il.Const(16, 64))
+						))));
+			break;
+		}
 
 
 		case MIPS_CTC1:
@@ -3835,7 +3868,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_PREVH:
 		case MIPS_PMULTH:
 		case MIPS_PDIVBW:
-		case MIPS_PEXEW:
+		// case MIPS_PEXEW:
 		case MIPS_PROT3W:
 		case MIPS_PMADDUW:
 		case MIPS_PSRAVW:
@@ -3847,9 +3880,9 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		// case MIPS_PCPYUD:
 		// case MIPS_POR:
 		// case MIPS_PNOR:
-		case MIPS_PEXCH:
+		// case MIPS_PEXCH:
 		// case MIPS_PCPYH:
-		case MIPS_PEXCW:
+		// case MIPS_PEXCW:
 		// case MIPS_BC0F:
 		// case MIPS_BC0T:
 		// case MIPS_BC0FL:
@@ -4208,6 +4241,32 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VACC_W - REG_VACC, il.FloatAdd(4, il.Register(4, op2.reg + REG_VACC_W - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_W), il.Register(4, op4.reg + REG_VF0_W)))));
 			break;
 		}
+		case MIPS_VMSUB:
+		{
+			unsigned char dest = op1.reg;
+			if (dest & (1 << 3))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_X, il.FloatSub(4, il.Register(4, op2.reg + REG_VACC_X - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_X), il.Register(4, op4.reg + REG_VF0_X)))));
+			if (dest & (1 << 2))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_Y, il.FloatSub(4, il.Register(4, op2.reg + REG_VACC_Y - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_Y), il.Register(4, op4.reg + REG_VF0_Y)))));
+			if (dest & (1 << 1))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_Z, il.FloatSub(4, il.Register(4, op2.reg + REG_VACC_Z - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_Z), il.Register(4, op4.reg + REG_VF0_Z)))));
+			if (dest & (1 << 0))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_W, il.FloatSub(4, il.Register(4, op2.reg + REG_VACC_W - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_W), il.Register(4, op4.reg + REG_VF0_W)))));
+			break;
+		}
+		case MIPS_VMSUBA:
+		{
+			unsigned char dest = op1.reg;
+			if (dest & (1 << 3))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VACC_X - REG_VACC, il.FloatSub(4, il.Register(4, op2.reg + REG_VACC_X - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_X), il.Register(4, op4.reg + REG_VF0_X)))));
+			if (dest & (1 << 2))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VACC_Y - REG_VACC, il.FloatSub(4, il.Register(4, op2.reg + REG_VACC_Y - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_Y), il.Register(4, op4.reg + REG_VF0_Y)))));
+			if (dest & (1 << 1))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VACC_Z - REG_VACC, il.FloatSub(4, il.Register(4, op2.reg + REG_VACC_Z - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_Z), il.Register(4, op4.reg + REG_VF0_Z)))));
+			if (dest & (1 << 0))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VACC_W - REG_VACC, il.FloatSub(4, il.Register(4, op2.reg + REG_VACC_W - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_W), il.Register(4, op4.reg + REG_VF0_W)))));
+			break;
+		}
 		case MIPS_VMADDAx:
 		case MIPS_VMADDAy:
 		case MIPS_VMADDAz:
@@ -4242,6 +4301,23 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_W, il.FloatAdd(4, il.Register(4, REG_VACC_W), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_W), il.Register(4, op4.reg + bc)))));
 			break;
 		}
+		case MIPS_VMSUBx:
+		case MIPS_VMSUBy:
+		case MIPS_VMSUBz:
+		case MIPS_VMSUBw:
+		{
+			unsigned char dest = op1.reg;
+			auto bc = REG_VF0_X + (op4.immediate - 1) * 33;
+			if (dest & (1 << 3))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_X, il.FloatSub(4, il.Register(4, REG_VACC_X), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_X), il.Register(4, op4.reg + bc)))));
+			if (dest & (1 << 2))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_Y, il.FloatSub(4, il.Register(4, REG_VACC_Y), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_Y), il.Register(4, op4.reg + bc)))));
+			if (dest & (1 << 1))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_Z, il.FloatSub(4, il.Register(4, REG_VACC_Z), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_Z), il.Register(4, op4.reg + bc)))));
+			if (dest & (1 << 0))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_W, il.FloatSub(4, il.Register(4, REG_VACC_W), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_W), il.Register(4, op4.reg + bc)))));
+			break;
+		}
 		case MIPS_VMADDq:
 		case MIPS_VMADDi:
 		{
@@ -4254,6 +4330,20 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_Z, il.FloatAdd(4, il.Register(4, op2.reg + REG_VACC_Z - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_Z), il.Register(4, op4.reg)))));
 			if (dest & (1 << 0))
 				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_W, il.FloatAdd(4, il.Register(4, op2.reg + REG_VACC_W - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_W), il.Register(4, op4.reg)))));
+			break;
+		}
+		case MIPS_VMSUBq:
+		case MIPS_VMSUBi:
+		{
+			unsigned char dest = op1.reg;
+			if (dest & (1 << 3))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_X, il.FloatSub(4, il.Register(4, op2.reg + REG_VACC_X - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_X), il.Register(4, op4.reg)))));
+			if (dest & (1 << 2))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_Y, il.FloatSub(4, il.Register(4, op2.reg + REG_VACC_Y - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_Y), il.Register(4, op4.reg)))));
+			if (dest & (1 << 1))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_Z, il.FloatSub(4, il.Register(4, op2.reg + REG_VACC_Z - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_Z), il.Register(4, op4.reg)))));
+			if (dest & (1 << 0))
+				il.AddInstruction(il.SetRegister(4, op2.reg + REG_VF0_W, il.FloatSub(4, il.Register(4, op2.reg + REG_VACC_W - REG_VACC), il.FloatMult(4, il.Register(4, op3.reg + REG_VF0_W), il.Register(4, op4.reg)))));
 			break;
 		}
 		case MIPS_VDIV:
@@ -4347,9 +4437,16 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 		}
 
+		case MIPS_VIADD:
+		case MIPS_VIADDI:
+		{
+			il.AddInstruction(il.SetRegister(2, op1.reg, il.Add(2, il.Register(2, op2.reg), ReadILOperand(il, instr, 3, 2, 1))));
+            break;
+		}
 
 		// case MIPS_VDIV:
-		case MIPS_VIADD:
+		// case MIPS_VIADD:
+		// case MIPS_VIADDI:
 		case MIPS_VIOR:
 		// case MIPS_VMADD:
 		// case MIPS_VMADDAx:

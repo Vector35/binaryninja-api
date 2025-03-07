@@ -5710,6 +5710,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNUndefineAutoSymbol(BNBinaryView* view, BNSymbol* sym);
 	BINARYNINJACOREAPI void BNDefineUserSymbol(BNBinaryView* view, BNSymbol* sym);
 	BINARYNINJACOREAPI void BNUndefineUserSymbol(BNBinaryView* view, BNSymbol* sym);
+	BINARYNINJACOREAPI void BNDefineAutoUserSymbol(BNBinaryView* view, BNSymbol* sym);
+	BINARYNINJACOREAPI void BNUndefineAutoUserSymbol(BNBinaryView* view, BNSymbol* sym);
 	BINARYNINJACOREAPI void BNDefineImportedFunction(
 	    BNBinaryView* view, BNSymbol* importAddressSym, BNFunction* func, BNType* type);
 	BINARYNINJACOREAPI BNSymbol* BNDefineAutoSymbolAndVariableOrFunction(

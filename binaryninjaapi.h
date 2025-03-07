@@ -5705,6 +5705,18 @@ namespace BinaryNinja {
 		*/
 		void UndefineUserSymbol(Ref<Symbol> sym);
 
+		/*! Define an auto user symbol, unlike DefineUserSymbol this does not add an undo entry
+
+			\param sym Symbol to define
+		*/
+		void DefineAutoUserSymbol(Ref<Symbol> sym);
+
+		/*! Undefine an auto user symbol, unlike UndefineUserSymbol this does not add an undo entry
+
+			\param sym Symbol to undefinee
+		*/
+		void UndefineAutoUserSymbol(Ref<Symbol> sym);
+
 		/*! Defines an imported Function \c func with a ImportedFunctionSymbol type
 
 			\param importAddressSym Symbol for the imported function

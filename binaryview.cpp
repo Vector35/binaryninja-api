@@ -3141,6 +3141,18 @@ void BinaryView::UndefineUserSymbol(Ref<Symbol> sym)
 }
 
 
+void BinaryView::DefineAutoUserSymbol(Ref<Symbol> sym)
+{
+	BNDefineAutoUserSymbol(m_object, sym->GetObject());
+}
+
+
+void BinaryView::UndefineAutoUserSymbol(Ref<Symbol> sym)
+{
+	BNUndefineAutoUserSymbol(m_object, sym->GetObject());
+}
+
+
 void BinaryView::DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func, Ref<Type> type)
 {
 	BNDefineImportedFunction(

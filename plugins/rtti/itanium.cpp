@@ -17,7 +17,15 @@ TypeInfo::TypeInfo(BinaryView *view, uint64_t address)
     base = reader.ReadPointer();
     auto typeNameAddr = reader.ReadPointer();
     reader.Seek(typeNameAddr);
-    type_name = reader.ReadCString(512);
+    // For the sake of my sanity we just do this...
+    try
+    {
+        type_name = reader.ReadCString(512);
+    }
+    catch (std::exception& e)
+    {
+        type_name = "";
+    }
 }
 
 

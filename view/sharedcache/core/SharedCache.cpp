@@ -1455,7 +1455,7 @@ SharedCache::SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView) :
 		// TODO: We need a way to prompt the user and ask if they want to continue (like BNDB version upgrades)
 		// TODO: To do that we really need to consolidate _where_ SharedCache is called.
 		// TODO: Specifically the **first** call to this must originate in DSCView, which is NOT the case currently.
-		m_logger->LogError("Metadata was invalid, recreating initial load of shared cache information...");
+		m_logger->LogWarn("Metadata was invalid, recreating initial load of shared cache information...");
 	}
 
 	if (m_modifiedState->viewState.value_or(m_viewSpecificState->viewState) != DSCViewStateUnloaded)

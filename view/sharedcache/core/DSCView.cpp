@@ -614,32 +614,6 @@ bool DSCView::Init()
 	Ref<Type> filesetEntryCommandType = Type::StructureType(filesetEntryCommandStruct);
 	DefineType(filesetEntryCommandTypeId, filesetEntryCommandName, filesetEntryCommandType);
 
-	if (auto metadata = SharedCacheCore::SharedCacheMetadata::LoadFromView(this))
-	{
-		BeginBulkModifySymbols();
-		for (const auto& [imageBaseAddr, exportMap] : metadata->ExportInfos())
-		{
-			auto typelib = GetTypeLibrary(metadata->InstallNameForImageBaseAddress(imageBaseAddr));
-
-			for (const auto& [address, symbol] : *exportMap)
-			{
-				if (!IsValidOffset(address))
-					continue;
-
-				if (typelib)
-				{
-					if (auto type = typelib->GetNamedObject(symbol->GetFullName()))
-					{
-						DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), symbol, type);
-						continue;
-					}
-				}
-				DefineAutoSymbol(symbol);
-			}
-		}
-		EndBulkModifySymbols();
-	}
-
 	// uint32_t at 0x10 is offset to mapping table.
 	// first mapping struct in that table is base of primary
 	// first uint64_t in that struct is the base address of the primary

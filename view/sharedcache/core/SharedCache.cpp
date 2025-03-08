@@ -2362,14 +2362,15 @@ void SharedCache::ApplySymbol(Ref<BinaryView> view, Ref<TypeLibrary> typeLib, Re
 	if (typeLib)
 	{
 		auto type = m_dscView->ImportTypeLibraryObject(typeLib, {symbol->GetFullName()});
+		// TODO: This is still auto
 		if (type)
 			view->DefineAutoSymbolAndVariableOrFunction(view->GetDefaultPlatform(), symbol, type);
 		else
-			view->DefineAutoSymbol(symbol);
+			view->DefineAutoUserSymbol(symbol);
 	}
 	else
 	{
-		view->DefineAutoSymbol(symbol);
+		view->DefineAutoUserSymbol(symbol);
 	}
 
 	if (!func)
@@ -3274,59 +3275,6 @@ void Serialize(SerializationContext& context, const std::shared_ptr<std::vector<
 	Serialize(context, *value);
 }
 
-void Deserialize(DeserializationContext& context, std::string_view name,
-	std::unordered_map<uint64_t, std::shared_ptr<std::unordered_map<uint64_t, Ref<Symbol>>>>& value)
-{
-	auto array = context.doc[name.data()].GetArray();
-	for (auto& pair : array)
-	{
-		auto symbols_array = pair[1].GetArray();
-		std::unordered_map<uint64_t, Ref<Symbol>> symbols;
-		for (auto& symbol_value : symbols_array)
-		{
-			auto symbol_array = symbol_value.GetArray();
-			std::string symbolName = symbol_array[0].GetString();
-			uint64_t address = symbol_array[1].GetUint64();
-			BNSymbolType type = (BNSymbolType)symbol_array[2].GetUint();
-
-			QualifiedName demangledName = {};
-			std::string shortName = symbolName;
-			if (DemangleLLVM(symbolName, demangledName, true))
-				shortName = demangledName.GetString();
-			Ref<Symbol> sym = new Symbol(type, shortName, shortName, symbolName, address, nullptr);
-			symbols.insert({address, sym});
-		}
-		value[pair[0].GetUint64()] = std::make_shared<std::unordered_map<uint64_t, Ref<Symbol>>>(std::move(symbols));
-	}
-}
-
-void Deserialize(DeserializationContext& context, std::string_view name,
-	std::unordered_map<uint64_t, std::shared_ptr<std::vector<Ref<Symbol>>>>& value)
-{
-	auto array = context.doc[name.data()].GetArray();
-	for (auto& pair : array)
-	{
-		auto symbols_array = pair[1].GetArray();
-		std::vector<Ref<Symbol>> symbols;
-		symbols.reserve(symbols_array.Size());
-		for (auto& symbol_value : symbols_array)
-		{
-			auto symbol_array = symbol_value.GetArray();
-			std::string symbolName = symbol_array[0].GetString();
-			uint64_t address = symbol_array[1].GetUint64();
-			BNSymbolType type = (BNSymbolType)symbol_array[2].GetUint();
-
-			QualifiedName demangledName = {};
-			std::string shortName = symbolName;
-			if (DemangleLLVM(symbolName, demangledName, true))
-				shortName = demangledName.GetString();
-			Ref<Symbol> sym = new Symbol(type, shortName, shortName, symbolName, address, nullptr);
-			symbols.emplace_back(sym);
-		}
-		value[pair[0].GetUint64()] = std::make_shared<std::vector<Ref<Symbol>>>(std::move(symbols));
-	}
-}
-
 void Deserialize(DeserializationContext& context, std::string_view name, std::optional<DSCViewState>& viewState)
 {
 	auto& value = context.doc[name.data()];
@@ -3399,8 +3347,6 @@ std::optional<SharedCache::CacheInfo> SharedCache::CacheInfo::Load(Deserializati
 void State::Store(SerializationContext& context, std::optional<DSCViewState> viewState) const
 {
 	MSS(memoryRegionStatus);
-	MSS(exportInfos);
-	MSS(symbolInfos);
 	MSS(viewState);
 }
 
@@ -3413,8 +3359,6 @@ SharedCache::ModifiedState SharedCache::ModifiedState::Load(DeserializationConte
 {
 	SharedCache::ModifiedState state;
 	state.MSL(memoryRegionStatus);
-	state.MSL(exportInfos);
-	state.MSL(symbolInfos);
 	state.MSL(viewState);
 	return state;
 }

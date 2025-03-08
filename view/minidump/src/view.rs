@@ -3,7 +3,6 @@ use std::ops::Range;
 
 use binaryninja::section::Section;
 use binaryninja::segment::{Segment, SegmentFlags};
-use log::{debug, error, info, warn};
 use minidump::format::MemoryProtection;
 use minidump::{
     Minidump, MinidumpMemory64List, MinidumpMemoryInfoList, MinidumpMemoryList, MinidumpModuleList,
@@ -44,19 +43,19 @@ impl AsRef<BinaryViewType> for MinidumpBinaryViewType {
 }
 
 impl BinaryViewTypeBase for MinidumpBinaryViewType {
+    fn is_valid_for(&self, data: &BinaryView) -> bool {
+        let mut magic_number = Vec::<u8>::new();
+        data.read_into_vec(&mut magic_number, 0, 4);
+
+        magic_number == b"MDMP"
+    }
+
     fn is_deprecated(&self) -> bool {
         false
     }
 
     fn is_force_loadable(&self) -> bool {
         false
-    }
-
-    fn is_valid_for(&self, data: &BinaryView) -> bool {
-        let mut magic_number = Vec::<u8>::new();
-        data.read_into_vec(&mut magic_number, 0, 4);
-
-        magic_number == b"MDMP"
     }
 }
 
@@ -66,39 +65,9 @@ impl CustomBinaryViewType for MinidumpBinaryViewType {
         data: &BinaryView,
         builder: CustomViewBuilder<'builder, Self>,
     ) -> BinaryViewResult<CustomView<'builder>> {
-        debug!("Creating MinidumpBinaryView from registered MinidumpBinaryViewType");
-
         let binary_view = builder.create::<MinidumpBinaryView>(data, ());
         binary_view
     }
-}
-
-#[derive(Debug)]
-struct SegmentData {
-    rva_range: Range<u64>,
-    mapped_addr_range: Range<u64>,
-}
-
-impl SegmentData {
-    fn from_addresses_and_size(rva: u64, mapped_addr: u64, size: u64) -> Self {
-        SegmentData {
-            rva_range: Range {
-                start: rva,
-                end: rva + size,
-            },
-            mapped_addr_range: Range {
-                start: mapped_addr,
-                end: mapped_addr + size,
-            },
-        }
-    }
-}
-
-#[derive(Debug)]
-struct SegmentMemoryProtection {
-    readable: bool,
-    writable: bool,
-    executable: bool,
 }
 
 /// An instance of the actual _Minidump_ custom binary view.
@@ -119,121 +88,124 @@ impl MinidumpBinaryView {
         let parent_view = self.parent_view().ok_or(())?;
         let read_buffer = parent_view.read_buffer(0, parent_view.len() as usize)?;
 
-        if let Ok(minidump_obj) = Minidump::read(read_buffer.get_data()) {
-            // Architecture, platform information
-            if let Ok(minidump_system_info) = minidump_obj.get_stream::<MinidumpSystemInfo>() {
-                if let Some(platform) = MinidumpBinaryView::translate_minidump_platform(
-                    minidump_system_info.cpu,
-                    minidump_obj.endian,
-                    minidump_system_info.os,
-                ) {
-                    self.set_default_platform(&platform);
-                } else {
-                    error!(
-                        "Could not parse valid system information from minidump: could not map system information in MinidumpSystemInfo stream (arch {:?}, endian {:?}, os {:?}) to a known architecture",
-                        minidump_system_info.cpu,
-                        minidump_obj.endian,
-                        minidump_system_info.os,
-                    );
-                    return Err(());
-                }
-            } else {
-                error!("Could not parse system information from minidump: could not find a valid MinidumpSystemInfo stream");
+        let Ok(minidump) = Minidump::read(read_buffer.get_data()) else {
+            log::error!("Could not parse data as minidump");
+            return Err(());
+        };
+
+        // Architecture, platform information
+        let Ok(minidump_system_info) = minidump.get_stream::<MinidumpSystemInfo>() else {
+            log::error!("Could not parse system information from minidump: could not find a valid MinidumpSystemInfo stream");
+            return Err(());
+        };
+
+        let Some(platform) = MinidumpBinaryView::translate_minidump_platform(
+            minidump_system_info.cpu,
+            minidump.endian,
+            minidump_system_info.os,
+        ) else {
+            log::error!(
+                "Unknown architecture (arch {:?}, endian {:?}, os {:?})",
+                minidump_system_info.cpu,
+                minidump.endian,
+                minidump_system_info.os,
+            );
+            return Err(());
+        };
+        self.set_default_platform(&platform);
+
+        // Memory segments
+        let mut segment_data = Vec::<SegmentData>::new();
+
+        // Memory segments in a full memory dump (MinidumpMemory64List)
+        // Grab the shared base RVA for all entries in the MinidumpMemory64List,
+        // since the minidump crate doesn't expose this to us
+        if let Ok(raw_stream) = minidump.get_raw_stream(MinidumpMemory64List::STREAM_TYPE) {
+            let Ok(base_rva_array) = raw_stream[8..16].try_into() else {
+                log::error!("Could not parse BaseRVA value shared by all entries in the MinidumpMemory64List stream");
                 return Err(());
+            };
+
+            let base_rva = u64::from_le_bytes(base_rva_array);
+            log::debug!("Found BaseRVA value {:#x}", base_rva);
+
+            let Ok(minidump_memory_list) = minidump.get_stream::<MinidumpMemory64List>() else {
+                log::error!("Could not parse valid memory segments from minidump: could not find a valid MinidumpMemory64List stream");
+                return Err(());
+            };
+
+            let mut current_rva = base_rva;
+            for memory_segment in minidump_memory_list.iter() {
+                log::debug!(
+                    "Found memory segment at RVA {:#x} with virtual address {:#x} and size {:#x}",
+                    current_rva,
+                    memory_segment.base_address,
+                    memory_segment.size,
+                );
+                segment_data.push(SegmentData::from_addresses_and_size(
+                    current_rva,
+                    memory_segment.base_address,
+                    memory_segment.size,
+                ));
+                current_rva += memory_segment.size;
             }
-
-            // Memory segments
-            let mut segment_data = Vec::<SegmentData>::new();
-
-            // Memory segments in a full memory dump (MinidumpMemory64List)
-            // Grab the shared base RVA for all entries in the MinidumpMemory64List,
-            // since the minidump crate doesn't expose this to us
-            if let Ok(raw_stream) = minidump_obj.get_raw_stream(MinidumpMemory64List::STREAM_TYPE) {
-                if let Ok(base_rva_array) = raw_stream[8..16].try_into() {
-                    let base_rva = u64::from_le_bytes(base_rva_array);
-                    debug!("Found BaseRVA value {:#x}", base_rva);
-
-                    if let Ok(minidump_memory_list) =
-                        minidump_obj.get_stream::<MinidumpMemory64List>()
-                    {
-                        let mut current_rva = base_rva;
-                        for memory_segment in minidump_memory_list.iter() {
-                            debug!(
-                            "Found memory segment at RVA {:#x} with virtual address {:#x} and size {:#x}",
-                            current_rva,
-                            memory_segment.base_address,
-                            memory_segment.size,
-                        );
-                            segment_data.push(SegmentData::from_addresses_and_size(
-                                current_rva,
-                                memory_segment.base_address,
-                                memory_segment.size,
-                            ));
-                            current_rva += memory_segment.size;
-                        }
-                    }
-                } else {
-                    error!("Could not parse BaseRVA value shared by all entries in the MinidumpMemory64List stream")
-                }
-            } else {
-                warn!("Could not read memory from minidump: could not find a valid MinidumpMemory64List stream. This minidump may not be a full memory dump. Trying to find partial dump memory from a MinidumpMemoryList now...");
-                // Memory segments in a regular memory dump (MinidumpMemoryList),
-                // i.e. one that does not include the full process memory data.
-                if let Ok(minidump_memory_list) = minidump_obj.get_stream::<MinidumpMemoryList>() {
-                    for memory_segment in minidump_memory_list.by_addr() {
-                        debug!(
-                            "Found memory segment at RVA {:#x} with virtual address {:#x} and size {:#x}",
-                            memory_segment.desc.memory.rva,
-                            memory_segment.base_address,
-                            memory_segment.size
-                        );
-                        segment_data.push(SegmentData::from_addresses_and_size(
-                            memory_segment.desc.memory.rva as u64,
-                            memory_segment.base_address,
-                            memory_segment.size,
-                        ));
-                    }
-                } else {
-                    error!("Could not read any memory from minidump: could not find a valid MinidumpMemory64List stream or a valid MinidumpMemoryList stream.");
-                }
+        } else {
+            log::warn!("Could not read memory from minidump: could not find a valid MinidumpMemory64List stream. This minidump may not be a full memory dump. Trying to find partial dump memory from a MinidumpMemoryList now...");
+            // Memory segments in a regular memory dump (MinidumpMemoryList),
+            // i.e. one that does not include the full process memory data.
+            let Ok(minidump_memory_list) = minidump.get_stream::<MinidumpMemoryList>() else {
+                log::error!("Could not read any memory from minidump: could not find a valid MinidumpMemory64List stream or a valid MinidumpMemoryList stream.");
+                return Err(());
+            };
+            for memory_segment in minidump_memory_list.by_addr() {
+                log::debug!(
+                    "Found memory segment at RVA {:#x} with virtual address {:#x} and size {:#x}",
+                    memory_segment.desc.memory.rva,
+                    memory_segment.base_address,
+                    memory_segment.size
+                );
+                segment_data.push(SegmentData::from_addresses_and_size(
+                    memory_segment.desc.memory.rva as u64,
+                    memory_segment.base_address,
+                    memory_segment.size,
+                ));
             }
+        }
 
-            // Memory protection information
-            let mut segment_protection_data = HashMap::new();
+        // Memory protection information
+        let mut segment_protection_data = HashMap::new();
 
-            if let Ok(minidump_memory_info_list) =
-                minidump_obj.get_stream::<MinidumpMemoryInfoList>()
-            {
-                for memory_info in minidump_memory_info_list.iter() {
-                    if let Some(memory_range) = memory_info.memory_range() {
-                        debug!(
+        if let Ok(minidump_memory_info_list) = minidump.get_stream::<MinidumpMemoryInfoList>() {
+            for memory_info in minidump_memory_info_list.iter() {
+                if let Some(memory_range) = memory_info.memory_range() {
+                    log::debug!(
                             "Found memory protection info for memory segment ranging from virtual address {:#x} to {:#x}: {:#?}",
                             memory_range.start,
                             memory_range.end,
                             memory_info.protection
                         );
-                        segment_protection_data.insert(
-                            // The range returned to us by MinidumpMemoryInfoList is an
-                            // end-inclusive range_map::Range; we need to add 1 to
-                            // the end index to make it into an end-exclusive std::ops::Range.
-                            Range {
-                                start: memory_range.start,
-                                end: memory_range.end + 1,
-                            },
-                            memory_info.protection,
-                        );
-                    }
+                    segment_protection_data.insert(
+                        // The range returned to us by MinidumpMemoryInfoList is an
+                        // end-inclusive range_map::Range; we need to add 1 to
+                        // the end index to make it into an end-exclusive std::ops::Range.
+                        Range {
+                            start: memory_range.start,
+                            end: memory_range.end + 1,
+                        },
+                        memory_info.protection,
+                    );
                 }
             }
+        }
 
-            for segment in segment_data.iter() {
-                if let Some(segment_protection) =
-                    segment_protection_data.get(&segment.mapped_addr_range)
-                {
-                    let segment_memory_protection =
-                        MinidumpBinaryView::translate_memory_protection(*segment_protection);
+        for segment in segment_data.iter() {
+            if let Some(segment_protection) =
+                segment_protection_data.get(&segment.mapped_addr_range)
+            {
+                let segment_memory_protection =
+                    MinidumpBinaryView::translate_memory_protection(*segment_protection);
 
-                    info!(
+                log::info!(
                         "Adding memory segment at virtual address {:#x} to {:#x}, from data range {:#x} to {:#x}, with protections readable {}, writable {}, executable {}",
                          segment.mapped_addr_range.start,
                          segment.mapped_addr_range.end,
@@ -242,56 +214,57 @@ impl MinidumpBinaryView {
                          segment_memory_protection.readable,
                          segment_memory_protection.writable,
                          segment_memory_protection.executable,
-                    );
+                );
 
-                    let segment_flags = SegmentFlags::new()
-                        .readable(segment_memory_protection.readable)
-                        .writable(segment_memory_protection.writable)
-                        .executable(segment_memory_protection.executable);
-
-                    self.add_segment(
-                        Segment::builder(segment.mapped_addr_range.clone())
-                            .parent_backing(segment.rva_range.clone())
-                            .is_auto(true)
-                            .flags(segment_flags),
-                    );
-                } else {
-                    error!(
-                        "Could not find memory protection information for memory segment from {:#x} to {:#x}", segment.mapped_addr_range.start,
+                self.add_segment(
+                    Segment::builder(segment.mapped_addr_range.clone())
+                        .parent_backing(segment.rva_range.clone())
+                        .is_auto(true)
+                        .flags(segment_memory_protection),
+                );
+            } else {
+                log::warn!(
+                        "Could not find memory protection information for memory segment from {:#x} to {:#x}",segment.mapped_addr_range.start,
                         segment.mapped_addr_range.end,
                     );
-                }
-            }
 
-            // Module information
-            // This stretches the concept a bit, but we can add each module as a
-            // separate "section" of the binary.
-            // Sections can be named, and can span multiple segments.
-            if let Ok(minidump_module_list) = minidump_obj.get_stream::<MinidumpModuleList>() {
-                for module_info in minidump_module_list.by_addr() {
-                    info!(
-                        "Found module with name {} at virtual address {:#x} with size {:#x}",
-                        module_info.name,
-                        module_info.base_address(),
-                        module_info.size(),
-                    );
-                    let module_address_range = Range {
-                        start: module_info.base_address(),
-                        end: module_info.base_address() + module_info.size(),
-                    };
-                    self.add_section(
-                        Section::builder(module_info.name.clone(), module_address_range)
-                            .is_auto(true),
-                    );
-                }
-            } else {
-                warn!("Could not find valid module information in minidump: could not find a valid MinidumpModuleList stream");
+                self.add_segment(
+                    Segment::builder(segment.mapped_addr_range.clone())
+                        .parent_backing(segment.rva_range.clone())
+                        .is_auto(true),
+                );
             }
-        } else {
-            error!("Could not parse data as minidump");
-            return Err(());
         }
+
+        // Module information
+        // This stretches the concept a bit, but we can add each module as a
+        // separate "section" of the binary.
+        // Sections can be named, and can span multiple segments.
+        if let Ok(minidump_module_list) = minidump.get_stream::<MinidumpModuleList>() {
+            self.add_module_list_info(&minidump_module_list);
+        } else {
+            log::warn!("Could not find valid module information in minidump: could not find a valid MinidumpModuleList stream");
+        }
+
         Ok(())
+    }
+
+    fn add_module_list_info(&self, minidump_module_list: &MinidumpModuleList) {
+        for module_info in minidump_module_list.by_addr() {
+            log::info!(
+                "Found module with name {} at virtual address {:#x} with size {:#x}",
+                module_info.name,
+                module_info.base_address(),
+                module_info.size(),
+            );
+            let module_address_range = Range {
+                start: module_info.base_address(),
+                end: module_info.base_address() + module_info.size(),
+            };
+            self.add_section(
+                Section::builder(module_info.name.clone(), module_address_range).is_auto(true),
+            );
+        }
     }
 
     fn translate_minidump_platform(
@@ -331,16 +304,18 @@ impl MinidumpBinaryView {
             },
             minidump::system_info::Os::NaCl => None,
             minidump::system_info::Os::Android => None,
-            minidump::system_info::Os::Ios => None,
+            minidump::system_info::Os::Ios => match minidump_cpu_arch {
+                minidump::system_info::Cpu::Arm64 => Platform::by_name("ios-aarch64"),
+                minidump::system_info::Cpu::Arm => Platform::by_name("ios-armv7"),
+                _ => None,
+            },
             minidump::system_info::Os::Ps3 => None,
             minidump::system_info::Os::Solaris => None,
-            _ => None,
+            minidump::system_info::Os::Unknown(_) => None,
         }
     }
 
-    fn translate_memory_protection(
-        minidump_memory_protection: MemoryProtection,
-    ) -> SegmentMemoryProtection {
+    fn translate_memory_protection(minidump_memory_protection: MemoryProtection) -> SegmentFlags {
         let (readable, writable, executable) = match minidump_memory_protection {
             MemoryProtection::PAGE_NOACCESS => (false, false, false),
             MemoryProtection::PAGE_READONLY => (true, false, false),
@@ -356,11 +331,11 @@ impl MinidumpBinaryView {
             MemoryProtection::PAGE_WRITECOMBINE => (false, false, false),
             _ => (false, false, false),
         };
-        SegmentMemoryProtection {
-            readable,
-            writable,
-            executable,
-        }
+
+        SegmentFlags::new()
+            .readable(readable)
+            .writable(writable)
+            .executable(executable)
     }
 }
 
@@ -371,9 +346,11 @@ impl AsRef<BinaryView> for MinidumpBinaryView {
 }
 
 impl BinaryViewBase for MinidumpBinaryView {
-    // TODO: This should be filled out with the actual address size
-    // from the platform information in the minidump.
-    fn address_size(&self) -> usize {
+    fn entry_point(&self) -> u64 {
+        // TODO: We should fill this out with a real entry point.
+        // This can be done by getting the main module of the minidump
+        // with MinidumpModuleList::main_module,
+        // then parsing the PE metadata of the main module to find its entry point(s).
         0
     }
 
@@ -383,11 +360,9 @@ impl BinaryViewBase for MinidumpBinaryView {
         Endianness::LittleEndian
     }
 
-    fn entry_point(&self) -> u64 {
-        // TODO: We should fill this out with a real entry point.
-        // This can be done by getting the main module of the minidump
-        // with MinidumpModuleList::main_module,
-        // then parsing the PE metadata of the main module to find its entry point(s).
+    // TODO: This should be filled out with the actual address size
+    // from the platform information in the minidump.
+    fn address_size(&self) -> usize {
         0
     }
 }
@@ -401,5 +376,26 @@ unsafe impl CustomBinaryView for MinidumpBinaryView {
 
     fn init(&mut self, _args: Self::Args) -> BinaryViewResult<()> {
         MinidumpBinaryView::init(self)
+    }
+}
+
+#[derive(Debug)]
+struct SegmentData {
+    rva_range: Range<u64>,
+    mapped_addr_range: Range<u64>,
+}
+
+impl SegmentData {
+    fn from_addresses_and_size(rva: u64, mapped_addr: u64, size: u64) -> Self {
+        SegmentData {
+            rva_range: Range {
+                start: rva,
+                end: rva + size,
+            },
+            mapped_addr_range: Range {
+                start: mapped_addr,
+                end: mapped_addr + size,
+            },
+        }
     }
 }

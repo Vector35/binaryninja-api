@@ -1692,9 +1692,9 @@ dependencies = [
 
 [[package]]
 name = "minidump"
-version = "0.23.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d24e8d3964f4a60ee45309dc76cfc3023588b0b62fcb79baa3e9134d4298c7ac"
+checksum = "7a30545aa9eded3d58064b370aa0efc43be2e5a3fdb14e46fe7d7f1043280090"
 dependencies = [
  "debugid",
  "encoding_rs",
@@ -1704,7 +1704,7 @@ dependencies = [
  "procfs-core",
  "range-map",
  "scroll 0.12.0",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "time",
  "tracing",
  "uuid",
@@ -1712,9 +1712,9 @@ dependencies = [
 
 [[package]]
 name = "minidump-common"
-version = "0.23.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c464c28d59ae40fd48a1da695e338910f19f71e1e585dd37261d81eaa3adbee"
+checksum = "1dad3a7b1bd550c5f6f181b6b0fee6794f81aef6809e71467a6170ac2c0107b7"
 dependencies = [
  "bitflags 2.8.0",
  "debugid",
@@ -1723,16 +1723,6 @@ dependencies = [
  "range-map",
  "scroll 0.12.0",
  "smart-default",
-]
-
-[[package]]
-name = "minidump_bn"
-version = "0.1.0"
-dependencies = [
- "binaryninja",
- "binaryninjacore-sys",
- "log",
- "minidump",
 ]
 
 [[package]]
@@ -3026,6 +3016,16 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "view_minidump"
+version = "0.1.0"
+dependencies = [
+ "binaryninja",
+ "binaryninjacore-sys",
+ "log",
+ "minidump",
+]
 
 [[package]]
 name = "walkdir"

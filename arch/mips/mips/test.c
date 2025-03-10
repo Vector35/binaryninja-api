@@ -162,18 +162,34 @@ int main(int ac, char **av)
 
 	while (instindex < ac)
 	{
-		insword = strtoul(av[instindex], NULL, 16);
-
-		if (0 == disassemble(insword, baseaddr, version, flags, instxt))
+		char *p = av[instindex];
+		char buf[9] = {0};
+		int n;
+		// while (p && *p && (n = strnlen(p, 9)) >= 8)
+		while (strnlen(p, 8) > 0 && strlen(strncpy(buf, p, 8)) <= 8)
 		{
-			printf("%08llX: %08X %s\n", baseaddr, insword, instxt);
-		}
-		else
-		{
-			printf("%08llX: %08X ??\n", baseaddr, insword);
+			char *endptr;
+			insword = strtoul(buf, &endptr, 16);
+			if (endptr == buf)
+			{
+				fprintf(stderr, "ERROR: invalid opcode starting at \"%s\"\n", p);
+				result = -1;
+				goto cleanup;
+			}
+			if (version == MIPS_R5900)
+				insword = ntohl(insword);
+			if (0 == disassemble(insword, baseaddr, version, flags, instxt))
+			{
+				printf("%08llX: %08X %s\n", baseaddr, insword, instxt);
+			}
+			else
+			{
+				printf("%08llX: %08X ??\n", baseaddr, insword);
+			}
+			baseaddr += 4;
+			p += 8;
 		}
 
-		baseaddr += 4;
 		instindex++;
 	}
 

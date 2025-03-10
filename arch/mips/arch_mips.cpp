@@ -102,6 +102,7 @@ enum ElfMipsRelocationType : uint32_t
 
 	// This range is reserved for vendor specific relocations.
 	R_MIPS_LOVENDOR  =  100,
+	R_MIPS_VCALLMS   =  119,  // MIPS R5900 (Emotion Engine) specific relocation for the Vector Unit (VU) micromode call instruction
 	R_MIPS64_COPY    =  125,
 	R_MIPS_COPY      =  126,
 	R_MIPS_JUMP_SLOT =  127,
@@ -165,6 +166,7 @@ static const char* GetRelocationString(ElfMipsRelocationType rel)
 		{ R_MIPS_TLS_TPREL_LO16, "R_MIPS_TLS_TPREL_LO16"},
 		{ R_MIPS_GLOB_DAT, "R_MIPS_GLOB_DAT"},
 		{ R_MIPS_LOVENDOR, "R_MIPS_LOVENDOR"},
+		{ R_MIPS_VCALLMS,  "R_MIPS_VCALLMS"},
 		{ R_MIPS64_COPY, "R_MIPS64_COPY"},
 		{ R_MIPS_COPY, "R_MIPS_COPY"},
 		{ R_MIPS_JUMP_SLOT, "R_MIPS_JUMP_SLOT"},
@@ -932,11 +934,19 @@ public:
 					reg = get_register((Reg)instr.operands[i].reg);
 				if (reg != NULL)
 				{
+					char reg_tmp[sizeof(operand)] = {0};
 					if (instr.operands[i].reg >= REG_VI0 && instr.operands[i].reg <= REG_VI15)
 					{
-						char reg_tmp[sizeof(operand)] = {0};
 						switch (instr.operation)
 						{
+						case MIPS_VISWR:
+						case MIPS_VILWR:
+							if (i == 2)
+							{
+								snprintf(reg_tmp, sizeof(reg_tmp), "(%s).%s", reg, dest);
+								reg = reg_tmp;
+							}
+							break;
 						case MIPS_VLQI:
 						case MIPS_VSQI:
 							snprintf(reg_tmp, sizeof(reg_tmp), "(%s++)", reg);
@@ -950,6 +960,10 @@ public:
 						default:
 							break;
 						}
+					}
+					if (reg == reg_tmp)
+					{
+						// Done
 					}
 					else if (instr.operands[i].reg >= REG_VF0 && instr.operands[i].reg <= REG_VF31)
 					{
@@ -3386,6 +3400,7 @@ public:
 			dest64[0] = swap64(originalValue + displacement);
 			break;
 		}
+		case R_MIPS_LITERAL:
 		case R_MIPS_GPREL32:
 		{
 			if (!GetGpAddr(view, gpAddr))
@@ -3394,6 +3409,8 @@ public:
 			dest32[0] = swap(vRel32);
 			break;
 		}
+		case R_MIPS_VCALLMS:
+			break;
 		default:
 			break;
 		}
@@ -3472,6 +3489,10 @@ public:
 				break;
 			case R_MIPS_HIGHER:
 			case R_MIPS_HIGHEST:
+				break;
+			case R_MIPS_VCALLMS:
+				break;
+			case R_MIPS_LITERAL:
 				break;
 			default:
 				result[i].type = UnhandledRelocation;

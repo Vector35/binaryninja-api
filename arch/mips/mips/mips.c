@@ -3286,16 +3286,28 @@ uint32_t mips_decompose_instruction(
 		// case MIPS_VWAITQ:
 		// case MIPS_VMTIR:
 		// case MIPS_VMFIR:
-		case MIPS_VILWR:
-		case MIPS_VISWR:
+		// case MIPS_VILWR:
+		// case MIPS_VISWR:
 		// case MIPS_VRNEXT:
 		// case MIPS_VRGET:
 		// case MIPS_VRINIT:
 		// case MIPS_VRXOR:
 			break;
 
+		case MIPS_VILWR:
+		case MIPS_VISWR:
+			instruction->operands[i].reg = ins.v.ft + REG_VI0;
+			instruction->operands[i++].operandClass = V_REG;
+			instruction->operands[i].reg = ins.v.fs + REG_VI0;
+			instruction->operands[i++].operandClass = V_REG;
+
+			instruction->operands[0].reg = ins.v.dest;
+			instruction->operands[0].operandClass = V_DEST;
+			instruction->operands[0].immediate = 1;
+			break;
+
 		case MIPS_VCALLMS:
-			instruction->operands[0].immediate = ins.vi.imm15;
+			instruction->operands[0].immediate = ins.vi.imm15; // << 3;
             instruction->operands[0].operandClass = IMM;
             break;
 
@@ -3311,7 +3323,6 @@ uint32_t mips_decompose_instruction(
 
 	    // <OP>.dest ft.dest, (is++).dest
 		case MIPS_VLQI:
-			// instruction->operands[i].reg = ins.v.ft + REG_VF0;
 			instruction->operands[i].reg = ins.v.ft;
 			instruction->operands[i++].operandClass = V_REG;
 			instruction->operands[i].reg = ins.v.fs + REG_VI0;
@@ -3323,7 +3334,6 @@ uint32_t mips_decompose_instruction(
 			break;
 	    // <OP>.dest fs.dest, (it++).dest
 		case MIPS_VSQI:
-			// instruction->operands[i].reg = ins.v.fs + REG_VF0;
 			instruction->operands[i].reg = ins.v.fs;
 			instruction->operands[i++].operandClass = V_REG;
 			instruction->operands[i].reg = ins.v.ft + REG_VI0;
@@ -3335,7 +3345,6 @@ uint32_t mips_decompose_instruction(
 			break;
 	    // <OP>.dest ft.dest, (--is).dest
 		case MIPS_VLQD:
-			// instruction->operands[i].reg = ins.v.ft + REG_VF0;
 			instruction->operands[i].reg = ins.v.ft;
 			instruction->operands[i++].operandClass = V_REG;
 			instruction->operands[i].reg = ins.v.fs + REG_VI0;
@@ -3345,10 +3354,8 @@ uint32_t mips_decompose_instruction(
 			instruction->operands[0].operandClass = V_DEST;
 			instruction->operands[0].immediate = -1;
 			break;
-
 		// <OP>.dest fs.dest, (--it).dest
 		case MIPS_VSQD:
-			// instruction->operands[i].reg = ins.v.fs + REG_VF0;
 			instruction->operands[i].reg = ins.v.fs;
 			instruction->operands[i++].operandClass = V_REG;
 			instruction->operands[i].reg = ins.v.ft + REG_VI0;
@@ -3684,16 +3691,37 @@ uint32_t mips_disassemble(
 		char* outBuffer,
 		uint32_t outBufferSize)
 {
-	char operands[MAX_OPERANDS][64] = {{0},{0},{0},{0}};
+	char operands[MAX_OPERANDS+1][64] = {{0},{0},{0},{0}, {0}};
 	char operation[64] = {0};
 	char* operandPtr = NULL;
 	char dest[5] = {0};
+	int first_operand = 0;
+	const char* reg = NULL;
+	int max_oplen = 0;
+
 	strlcpy(operation, OperationStrings[instruction->operation], sizeof(operation));
-	for (uint32_t i = 0;
+	if (instruction->operands[0].operandClass == V_DEST)
+	{
+		char* p = dest;
+		if (instruction->operands[0].reg & 8)
+			*p++ = 'x';
+		if (instruction->operands[0].reg & 4)
+			*p++ = 'y';
+		if (instruction->operands[0].reg & 2)
+			*p++ = 'z';
+		if (instruction->operands[0].reg & 1)
+			*p++ = 'w';
+		*p = '\0';
+		strcat(operation, ".");
+		strcat(operation, dest);
+		first_operand++;
+	}
+	size_t n = strnlen(operation, sizeof(operation));
+	for (uint32_t i = first_operand;
 			i < MAX_OPERANDS && instruction->operands[i].operandClass != NONE; i++)
 	{
 		operandPtr = operands[i];
-		if (i != 0)
+		if (i != first_operand)
 		{
 			*operandPtr++ = ',';
 			*operandPtr++ = ' ';
@@ -3742,47 +3770,136 @@ uint32_t mips_disassemble(
 					RegisterStrings[instruction->operands[i].reg]);
 				break;
 			case V_REG:
-				strcpy(operandPtr, RegisterStrings[instruction->operands[i].reg + FPREG_F0]);
-				if (dest[0])
+				// #define V_FMT "$vf%02d"  // Use this if leading zeroes are preferred
+				#define V_FMT "$vf%d"
+				reg = NULL;
+				if (instruction->operands[i].reg >= REG_VP)
+					reg = get_register((Reg)instruction->operands[i].reg);
+				if (reg != NULL)
 				{
-					strcat(operandPtr, "_");
-					strcat(operandPtr, dest);
+					char reg_tmp[64] = {0};
+					if (instruction->operands[i].reg >= REG_VI0 && instruction->operands[i].reg <= REG_VI15)
+					{
+						switch (instruction->operation)
+						{
+						case MIPS_VISWR:
+						case MIPS_VILWR:
+							if (i == 2)
+							{
+								snprintf(operandPtr, 64, "(%s).%s", reg, dest);
+								continue;
+							}
+							break;
+						case MIPS_VLQI:
+						case MIPS_VSQI:
+							snprintf(operandPtr, 64, "(%s++)", reg);
+							continue;
+						case MIPS_VLQD:
+						case MIPS_VSQD:
+							snprintf(operandPtr, 64, "(--%s)", reg);
+							continue;
+						default:
+							break;
+						}
+					}
+					if (instruction->operands[i].reg >= REG_VF0 && instruction->operands[i].reg <= REG_VF31)
+					{
+						if (instruction->operands[i].immediate > 0 && instruction->operands[i].immediate <= 4)
+							snprintf(operandPtr, 64, "%s.%c",
+								reg,
+								"xyzw"[instruction->operands[i].immediate-1]);
+						else if (dest[0])
+							snprintf(operandPtr, 64, "%s.%s", reg, dest);
+					}
+					else
+						snprintf(operandPtr, 64, "%s", reg);
 				}
+				else if (instruction->operands[i].immediate > 0 && instruction->operands[i].immediate <= 4)
+					snprintf(operandPtr, 64, V_FMT ".%c",
+						instruction->operands[i].reg,
+						"xyzw"[instruction->operands[i].immediate-1]);
+				else if (instruction->operands[i].immediate == 'A')
+				{
+					if (dest[0])
+						snprintf(operandPtr, 64, "ACC.%s", dest);
+					else
+						snprintf(operandPtr, 64, "ACC");
+				}
+				else if (instruction->operands[i].immediate > 'A' && instruction->operands[i].immediate <= 'Z')
+					snprintf(operandPtr, 64, "%c",
+						(char) instruction->operands[i].immediate);
+				else if (dest[0])
+					snprintf(operandPtr, 64, V_FMT ".%s",
+						instruction->operands[i].reg, dest);
+				else
+					snprintf(operandPtr, 64, V_FMT, instruction->operands[i].reg);
 				break;
 			case V_DEST:
 			{
-				char* p = dest;
-				if (instruction->operands[i].reg & 8)
-					*p++ = 'x';
-				if (instruction->operands[i].reg & 4)
-					*p++ = 'y';
-				if (instruction->operands[i].reg & 2)
-					*p++ = 'z';
-				if (instruction->operands[i].reg & 1)
-					*p++ = 'w';
-				*p = '\0';
-				strcat(operation, ".");
-				strcat(operation, dest);
+				// char* p = dest;
+				// if (*p == '\0' && (instruction->operands[i].reg & 0xF) != 0)
+				// {
+				// 	if (instruction->operands[i].reg & 8)
+				// 		*p++ = 'x';
+				// 	if (instruction->operands[i].reg & 4)
+				// 		*p++ = 'y';
+				// 	if (instruction->operands[i].reg & 2)
+				// 		*p++ = 'z';
+				// 	if (instruction->operands[i].reg & 1)
+				// 		*p++ = 'w';
+				// 	*p = '\0';
+				// }
 				break;
 			}
 			case V_REG_FIELD:
 			{
-				char *p = operandPtr;
-				*p++ = "xyzw"[instruction->operands[i].reg];
-				*p = '\0';
+				snprintf(operandPtr, 64, V_FMT ".%c",
+					instruction->operands[i].reg,
+					"xyzw"[instruction->operands[i].immediate]);
 				break;
 			}
+			// case V_REG:
+			// 	strcpy(operandPtr, RegisterStrings[instruction->operands[i].reg + FPREG_F0]);
+			// 	if (dest[0])
+			// 	{
+			// 		strcat(operandPtr, "_");
+			// 		strcat(operandPtr, dest);
+			// 	}
+			// 	break;
+			// case V_DEST:
+			// {
+			// 	char* p = dest;
+			// 	if (instruction->operands[i].reg & 8)
+			// 		*p++ = 'x';
+			// 	if (instruction->operands[i].reg & 4)
+			// 		*p++ = 'y';
+			// 	if (instruction->operands[i].reg & 2)
+			// 		*p++ = 'z';
+			// 	if (instruction->operands[i].reg & 1)
+			// 		*p++ = 'w';
+			// 	*p = '\0';
+			// 	strcat(operation, ".");
+			// 	strcat(operation, dest);
+			// 	break;
+			// }
+			// case V_REG_FIELD:
+			// {
+			// 	char *p = operandPtr;
+			// 	*p++ = "xyzw"[instruction->operands[i].reg];
+			// 	*p = '\0';
+			// 	break;
+			// }
 		}
 	}
 	if (instruction->operation != MIPS_INVALID && instruction->operation < MIPS_OPERATION_END)
 	{
-		snprintf(outBuffer, outBufferSize, "%s\t%s%s%s%s",
+		snprintf(outBuffer, outBufferSize, "%-13s\t%s%s%s%s",
 				// OperationStrings[instruction->operation],
 				operation,
-				operands[0],
-				operands[1],
-				operands[2],
-				operands[3]);
+				operands[first_operand],
+				operands[first_operand+1],
+				operands[first_operand+2],
+				operands[first_operand+3]);
 		return 0;
 	}
 	return 1;

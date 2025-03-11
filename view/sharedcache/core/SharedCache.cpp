@@ -3647,11 +3647,8 @@ extern "C"
 
 	bool BNDSCViewLoadImageWithInstallName(BNSharedCache* cache, char* name, bool skipObjC)
 	{
-		std::string imageName = std::string(name);
-		BNFreeString(name);
-
 		if (cache->object)
-			return cache->object->LoadImageWithInstallName(imageName, skipObjC);
+			return cache->object->LoadImageWithInstallName(name, skipObjC);
 
 		return false;
 	}
@@ -3659,9 +3656,7 @@ extern "C"
 	bool BNDSCViewLoadSectionAtAddress(BNSharedCache* cache, uint64_t addr)
 	{
 		if (cache->object)
-		{
 			return cache->object->LoadSectionAtAddress(addr);
-		}
 
 		return false;
 	}
@@ -3678,6 +3673,7 @@ extern "C"
 
 	void BNDSCViewProcessObjCSectionsForImageWithInstallName(BNSharedCache* cache, char* name, bool deallocName)
 	{
+		// TODO: This is insane...
 		std::string imageName = std::string(name);
 		if (deallocName)
 			BNFreeString(name);
@@ -3938,13 +3934,11 @@ extern "C"
 		return nullptr;
 	}
 
-	char* BNDSCViewGetImageHeaderForName(BNSharedCache* cache, char* name)
+	char* BNDSCViewGetImageHeaderForName(BNSharedCache* cache, const char* name)
 	{
-		std::string imageName = std::string(name);
-		BNFreeString(name);
 		if (cache->object)
 		{
-			auto header = cache->object->SerializedImageHeaderForName(imageName);
+			auto header = cache->object->SerializedImageHeaderForName(name);
 			return BNAllocString(header.c_str());
 		}
 

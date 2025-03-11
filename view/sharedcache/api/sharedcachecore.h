@@ -156,7 +156,7 @@ extern "C"
 	SHAREDCACHE_FFI_API void BNDSCFindSymbolAtAddressAndApplyToAddress(BNSharedCache* cache, uint64_t symbolLocation, uint64_t targetLocation, bool triggerReanalysis);
 
 	SHAREDCACHE_FFI_API char* BNDSCViewGetImageHeaderForAddress(BNSharedCache* cache, uint64_t address);
-	SHAREDCACHE_FFI_API char* BNDSCViewGetImageHeaderForName(BNSharedCache* cache, char* name);
+	SHAREDCACHE_FFI_API char* BNDSCViewGetImageHeaderForName(BNSharedCache* cache, const char* name);
 
 	[[maybe_unused]] SHAREDCACHE_FFI_API BNDSCMemoryUsageInfo BNDSCViewGetMemoryUsageInfo();
 

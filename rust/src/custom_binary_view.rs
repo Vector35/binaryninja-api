@@ -280,7 +280,7 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
             let bv = unsafe { BinaryView::from_raw(bv).to_owned() };
             let metadata = unsafe { Metadata::from_raw(metadata).to_owned() };
             match (context.recognizer)(&bv, &metadata) {
-                Some(plat) => plat.handle,
+                Some(plat) => unsafe { Ref::into_raw(plat).handle },
                 None => std::ptr::null_mut(),
             }
         }

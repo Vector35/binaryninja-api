@@ -3066,9 +3066,9 @@ class Function:
 		:return: List of ReferenceSource objects of the call sites to this function
 		:rtype: list(ReferenceSource)
 		"""
-		for x in self.view.get_code_refs(self.start):
-			if isinstance(x.llil, lowlevelil.LowLevelILCall):
-				yield x
+		for ref in self.view.get_code_refs(self.start):
+			if isinstance(ref.llil, lowlevelil.LowLevelILCall):
+				yield ref
 
 	@property
 	def workflow(self):

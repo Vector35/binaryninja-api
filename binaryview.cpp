@@ -1791,6 +1791,11 @@ bool BinaryView::Save(const string& path)
 	return BNSaveToFilename(m_object, path.c_str());
 }
 
+bool BinaryView::FinalizeNewSegments()
+{
+	return BNBinaryViewFinalizeNewSegments(m_object);
+}
+
 
 void BinaryView::DefineRelocation(Architecture* arch, BNRelocationInfo& info, uint64_t target, uint64_t reloc)
 {

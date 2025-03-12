@@ -7470,6 +7470,8 @@ extern "C"
 	BINARYNINJACOREAPI BNSettings* BNBinaryViewGetLoadSettings(BNBinaryView* view, const char* typeName);
 	BINARYNINJACOREAPI void BNBinaryViewSetLoadSettings(BNBinaryView* view, const char* typeName, BNSettings* settings);
 
+	BINARYNINJACOREAPI bool BNBinaryViewFinalizeNewSegments(BNBinaryView* view);
+
 	// Relocation object methods
 	BINARYNINJACOREAPI BNRelocation* BNNewRelocationReference(BNRelocation* reloc);
 	BINARYNINJACOREAPI void BNFreeRelocation(BNRelocation* reloc);

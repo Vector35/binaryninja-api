@@ -5123,6 +5123,19 @@ namespace BinaryNinja {
 		*/
 		bool Save(const std::string& path);
 
+		/*! Performs "finalization" on segments added after initial Finalization (performed after an Init() has completed).
+
+		 	Finalizing a segment involves optimizing the relocation info stored in that segment, so if a segment is added
+		 		and relocations are defined for that segment by some automated process, this function should be called afterwards.
+
+		 	An example of this can be seen in the KernelCache plugin, in `KernelCache::LoadImageWithInstallName`.
+		 		After we load an image, map new segments, and define relocations for all of them, we call this function
+		 		to let core know it is now safe to finalize the new segments
+
+		    \return Whether finalization was successful.
+		*/
+		bool FinalizeNewSegments();
+
 		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, uint64_t target, uint64_t reloc);
 		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, Ref<Symbol> target, uint64_t reloc);
 		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRanges() const;

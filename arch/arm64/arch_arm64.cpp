@@ -3616,6 +3616,7 @@ extern "C"
 
 		// Register ARM64 Relocation handlers
 		arm64->RegisterRelocationHandler("Mach-O", new Arm64MachoRelocationHandler());
+		arm64->RegisterRelocationHandler("KCView", new Arm64MachoRelocationHandler());
 		arm64->RegisterRelocationHandler("ELF", new Arm64ElfRelocationHandler());
 		arm64->RegisterRelocationHandler("PE", new Arm64PeRelocationHandler());
 		arm64->RegisterRelocationHandler("COFF", new Arm64COFFRelocationHandler());

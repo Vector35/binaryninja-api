@@ -4851,6 +4851,7 @@ extern "C"
 		x86->RegisterCallingConvention(conv);
 
 		x86->RegisterRelocationHandler("Mach-O", new x86MachoRelocationHandler());
+		x86->RegisterRelocationHandler("KCView", new x86MachoRelocationHandler());
 		x86->RegisterRelocationHandler("ELF", new x86ElfRelocationHandler());
 		x86->RegisterRelocationHandler("COFF", new CoffRelocationHandler());
 		x86->RegisterRelocationHandler("PE", new PeRelocationHandler());
@@ -4867,6 +4868,7 @@ extern "C"
 		x64->RegisterCallingConvention(conv);
 
 		x64->RegisterRelocationHandler("Mach-O", new x64MachoRelocationHandler());
+		x64->RegisterRelocationHandler("KCView", new x64MachoRelocationHandler());
 		x64->RegisterRelocationHandler("ELF", new x64ElfRelocationHandler());
 		x64->RegisterRelocationHandler("COFF", new CoffRelocationHandler());
 		x64->RegisterRelocationHandler("PE", new PeRelocationHandler());

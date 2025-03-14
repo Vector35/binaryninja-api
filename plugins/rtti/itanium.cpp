@@ -16,16 +16,10 @@ TypeInfo::TypeInfo(BinaryView *view, uint64_t address)
     reader.Seek(address);
     base = reader.ReadPointer();
     auto typeNameAddr = reader.ReadPointer();
+    if (!view->IsValidOffset(typeNameAddr))
+        return;
     reader.Seek(typeNameAddr);
-    // For the sake of my sanity we just do this...
-    try
-    {
-        type_name = reader.ReadCString(512);
-    }
-    catch (std::exception& e)
-    {
-        type_name = "";
-    }
+    type_name = reader.ReadCString(512);
 }
 
 
@@ -276,22 +270,21 @@ std::optional<BaseClassInfo> ItaniumRTTIProcessor::ProcessVFTBaseClassInfo(uint6
     reader.Seek(vftAddr - 0x10);
 
     auto adjustmentOffset = static_cast<int32_t>(reader.Read32());
-    [[maybe_unused]]
-    auto _what = static_cast<int32_t>(reader.Read32());
+    auto baseIdx = static_cast<int32_t>(reader.Read32());
     uint64_t classOffset = std::abs(adjustmentOffset);
 
     std::optional<BaseClassInfo> selectedBaseClassInfo = std::nullopt;
     // Assuming we do not have a baseClassInfo already passed we can deduce it here.
     for (auto& baseClass : classInfo.baseClasses)
     {
-        if (baseClass.offset == 0)
-        {
-            // If the base class is at offset 0 that means it has yet to be adjusted.
-            // NOTE: This should only happen for `TIVSIClass`. If this assigns more than
-            // one base class to this offset we are screwed.
-            baseClass.offset = classOffset;
-            LogInfo("Adjusting base class offset for %llx to %llx", vftAddr, classOffset);
-        }
+        // if (baseClass.offset == 0)
+        // {
+        //     // If the base class is at offset 0 that means it has yet to be adjusted.
+        //     // NOTE: This should only happen for `TIVSIClass`. If this assigns more than
+        //     // one base class to this offset we are screwed.
+        //     baseClass.offset = classOffset;
+        //     LogInfo("Adjusting base class offset for %llx to %llx", vftAddr, classOffset);
+        // }
 
         if (baseClass.offset == classOffset)
         {
@@ -345,6 +338,8 @@ std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
         if (!subTypeInfoVariant.has_value())
         {
             // Allow externals to be used in place of a backed subtype.
+            // TODO: We should probably warn that vtables will likely be inaccurate.
+            // TODO: Because we wont know what offsets are valid.
             auto externTypeName = nameFromTypeInfoSymbol(siClassTypeInfo.base_type);
             if (!externTypeName.has_value())
                 return std::nullopt;
@@ -431,12 +426,17 @@ std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVFT(uint64_
             {
                 // TODO: Sometimes vFunc idx will be zeroed iirc.
                 // We allow vfuncs to point to extern functions.
-                if (!m_view->GetSymbolByAddress(vFuncAddr))
+                auto vFuncSym = m_view->GetSymbolByAddress(vFuncAddr);
+                if (!vFuncSym)
                     break;
                 DataVariable dv;
                 bool foundDv = m_view->GetDataVariableAtAddress(vFuncAddr, dv);
                 // Last virtual function, or hit the next vtable.
-                if (!foundDv || dv.type.GetValue() == nullptr || !dv.type->IsFunction())
+                if (!foundDv || !dv.type->m_object)
+                    break;
+                // Void externs are very likely to be a func.
+                // TODO: Add some sanity checks for this!
+                if (!dv.type->IsFunction() && !(dv.type->IsVoid() && vFuncSym->GetType() == ExternalSymbol))
                     break;
             }
             else
@@ -488,6 +488,7 @@ std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVFT(uint64_
                 // We should set the vtable as a base class so that xrefs are propagated (among other things).
                 // NOTE: this means that `this` params will be assumed pre-adjusted, this is normally fine assuming type propagation
                 // NOTE: never occurs on the vft types. Other-wise we need to change this.
+                // TODO: Different type name please lol
                 auto baseVftTypeName = fmt::format("{}::VTable", baseClassInfo->className);
                 NamedTypeReferenceBuilder baseVftNTR;
                 baseVftNTR.SetName(baseVftTypeName);
@@ -595,6 +596,7 @@ void ItaniumRTTIProcessor::ProcessRTTI()
         }
     };
 
+    m_view->BeginBulkModifySymbols();
     // Scan data sections for rtti.
     for (const Ref<Section> &section: m_view->GetSections())
     {
@@ -603,6 +605,49 @@ void ItaniumRTTIProcessor::ProcessRTTI()
             m_logger->LogDebug("Attempting to find RTTI in section %llx", section->GetStart());
             scan(section);
         }
+    }
+    m_view->EndBulkModifySymbols();
+
+    // Go through all classes and recurse into the base classes using the base class name
+    for (auto &[classAddr, classInfo]: m_classInfo)
+    {
+        std::set<std::string> visitedBases;
+        std::deque<BaseClassInfo> baseQueue(classInfo.baseClasses.begin(), classInfo.baseClasses.end());
+
+        while (!baseQueue.empty())
+        {
+            BaseClassInfo baseClass = baseQueue.front();
+            baseQueue.pop_front();
+
+            if (visitedBases.find(baseClass.className) != visitedBases.end())
+                continue;
+
+            visitedBases.insert(baseClass.className);
+
+            auto baseClassIt = std::find_if(m_classInfo.begin(), m_classInfo.end(),
+                                            [&](const auto &item) {
+                                                return item.second.className == baseClass.className;
+                                            });
+
+            if (baseClassIt != m_classInfo.end())
+            {
+                const ClassInfo &nestedBaseClassInfo = baseClassIt->second;
+                baseQueue.insert(baseQueue.end(), nestedBaseClassInfo.baseClasses.begin(),
+                                 nestedBaseClassInfo.baseClasses.end());
+            }
+
+            classInfo.baseClasses.push_back(baseClass);
+        }
+
+        // Remove duplicates in the baseClasses vector while preserving order
+        std::sort(classInfo.baseClasses.begin(), classInfo.baseClasses.end(),
+                  [](const BaseClassInfo &a, const BaseClassInfo &b) { return a.className < b.className; });
+
+        classInfo.baseClasses.erase(
+            std::unique(classInfo.baseClasses.begin(), classInfo.baseClasses.end(),
+                        [](const BaseClassInfo &a, const BaseClassInfo &b) { return a.className == b.className; }),
+            classInfo.baseClasses.end()
+        );
     }
 
     auto end_time = std::chrono::high_resolution_clock::now();
@@ -613,6 +658,7 @@ void ItaniumRTTIProcessor::ProcessRTTI()
 
 void ItaniumRTTIProcessor::ProcessVFT()
 {
+    BinaryReader optReader = BinaryReader(m_view);
     std::map<uint64_t, std::set<uint64_t>> vftMap = {};
     std::map<uint64_t, std::optional<VirtualFunctionTableInfo>> vftFinishedMap = {};
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -624,6 +670,11 @@ void ItaniumRTTIProcessor::ProcessVFT()
             DataVariable dv;
             if (m_view->GetDataVariableAtAddress(ref, dv) && m_classInfo.find(dv.address) != m_classInfo.end())
                 continue;
+            // Verify that there is two 4 byte values above the type info pointer
+            optReader.Seek(ref - 8);
+            auto beforeTypeInfoRef = optReader.ReadPointer();
+            if (m_view->IsValidOffset(beforeTypeInfoRef))
+                continue;
             // TODO: This is not pointing at where it should, remember that the vtable will be inside another structure.
             auto vftAddr = ref + m_view->GetAddressSize();
             // Found a vtable reference to colocator
@@ -634,7 +685,6 @@ void ItaniumRTTIProcessor::ProcessVFT()
 
     if (virtualFunctionTableSweep)
     {
-        BinaryReader optReader = BinaryReader(m_view);
         auto addrSize = m_view->GetAddressSize();
         auto scan = [&](const Ref<Segment> &segment) {
             uint64_t startAddr = segment->GetStart();

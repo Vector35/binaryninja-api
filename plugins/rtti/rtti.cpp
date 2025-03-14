@@ -14,26 +14,11 @@ std::optional<std::string> RTTI::DemangleNameMS(BinaryView* view, bool allowMang
 }
 
 
-std::string RemoveItaniumPrefix(std::string& name) {
-    // Remove class prefixes.
-    // 1 and 7 is class_type
-    // 9 is si_class_type
-    // 1..4 is vmi_class_type
-    if (name.rfind('1', 0) == 0)
-        name = name.substr(1);
-    if (name.rfind('7', 0) == 0)
-        name = name.substr(1);
-    if (name.rfind('9', 0) == 0)
-        name = name.substr(1);
-    if (name.rfind('8', 0) == 0)
-        name = name.substr(1);
-    if (name.rfind('4', 0) == 0)
-        name = name.substr(1);
-    if (name.rfind('6', 0) == 0)
-        name = name.substr(1);
-    if (name.rfind('2', 0) == 0)
-        name = name.substr(1);
-    if (name.rfind('2', 0) == 0)
+std::string RemoveItaniumPrefix(std::string &name)
+{
+    // Remove numerical prefixes.
+    // TODO: We might want to use the numbers for figuring out the class info.
+    while (!name.empty() && std::isdigit(name[0]))
         name = name.substr(1);
     return name;
 }

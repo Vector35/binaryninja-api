@@ -41,6 +41,19 @@ public:
 };
 
 
+class BINARYNINJAUIAPI ProjectItemDelegate: public QStyledItemDelegate
+{
+	Q_OBJECT
+
+	ProjectRef m_project;
+
+public:
+	ProjectItemDelegate(ProjectRef project, QObject* parent = nullptr);
+
+	virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+};
+
+
 class BINARYNINJAUIAPI ProjectItemModel: public QStandardItemModel, public BinaryNinja::ProjectNotification
 {
 	Q_OBJECT
@@ -101,6 +114,7 @@ public:
 		IdRole,
 		DiskPathRole,
 		SortRole,
+		SyncStateRole,
 	};
 
 	enum {
@@ -108,8 +122,19 @@ public:
 		FolderType,
 	};
 
+	enum SyncState {
+		Synced,
+		Unknown,
+		MissingFromRemote,
+		MissingFromLocal,
+		MissingFromLocalAndRemote, // For folders that have some contents missing from either
+		Uploading,
+		Downloading,
+	};
+
 	enum {
 		COL_NAME = 0,
+		COL_SYNC_STATUS,
 		COL_TYPE,
 		COL_SIZE_ON_DISK,
 		COL_CREATED,
@@ -342,6 +367,8 @@ protected:
 	void PromptEditProjectDetails();
 	void Refresh();
 	void DownloadSelectedFilesRecursive();
+	void UploadSelectedFilesRecursive();
+
 
 public:
 	ProjectBrowser(QWidget* parent, ProjectRef project);

@@ -2752,6 +2752,10 @@ namespace BinaryNinja {
 		bool Export(const std::string& destination, const std::function<bool(size_t progress, size_t total)>& progressCallback = {}) const;
 	};
 
+	namespace Collaboration
+	{
+		class RemoteFile;
+	}
 	/*!
 
 	\ingroup project
@@ -2773,6 +2777,7 @@ namespace BinaryNinja {
 		void SetFolder(Ref<ProjectFolder> folder);
 		bool Export(const std::string& destination) const;
 		int64_t GetCreationTimestamp() const;
+		Ref<Collaboration::RemoteFile> GetRemoteFile() const;
 	};
 
 
@@ -20436,8 +20441,9 @@ namespace BinaryNinja::Collaboration
 		Ref<RemoteFile> GetFileByName(const std::string& name);
 		void PullFiles(std::function<bool(size_t, size_t)> progress = {});
 		void PullFolders(std::function<bool(size_t, size_t)> progress = {});
-		Ref<RemoteFile> CreateFile(const std::string& filename, std::vector<uint8_t>& contents, const std::string& name, const std::string& description, Ref<RemoteFolder> folder, BNRemoteFileType type, std::function<bool(size_t, size_t)> progress = {}, Ref<ProjectFile> coreFile = nullptr);
-		Ref<RemoteFolder> CreateFolder(const std::string& name, const std::string& description, Ref<RemoteFolder> parent, std::function<bool(size_t, size_t)> progress = {}, Ref<ProjectFolder> coreFolder = nullptr);
+		Ref<RemoteFile> UploadProjectFile(Ref<ProjectFile> projectFile, std::function<bool(size_t, size_t)> progress);
+		Ref<RemoteFile> CreateFile(const std::string& filename, std::vector<uint8_t>& contents, const std::string& name, const std::string& description, Ref<RemoteFolder> folder, BNRemoteFileType type, std::function<bool(size_t, size_t)> progress = {});
+		Ref<RemoteFolder> CreateFolder(const std::string& name, const std::string& description, Ref<RemoteFolder> parent, std::function<bool(size_t, size_t)> progress = {});
 		void PushFile(Ref<RemoteFile> file, const std::vector<std::pair<std::string, std::string>>& extraFields = {});
 		void PushFolder(Ref<RemoteFolder> folder, const std::vector<std::pair<std::string, std::string>>& extraFields = {});
 		void DeleteFolder(const Ref<RemoteFolder> folder);

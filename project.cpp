@@ -625,6 +625,17 @@ int64_t ProjectFile::GetCreationTimestamp() const
 }
 
 
+Ref<Collaboration::RemoteFile> ProjectFile::GetRemoteFile() const
+{
+
+	BNRemoteFile* remoteFile = BNProjectFileGetRemoteFile(m_object);
+	if (remoteFile == nullptr)
+		return nullptr;
+	return new Collaboration::RemoteFile(remoteFile);
+}
+
+
+
 ProjectFolder::ProjectFolder(BNProjectFolder* folder)
 {
 	m_object = folder;

@@ -3924,6 +3924,7 @@ extern "C"
 	BINARYNINJACOREAPI BNProject* BNProjectFileGetProject(BNProjectFile* file);
 	BINARYNINJACOREAPI bool BNProjectFileExport(BNProjectFile* file, const char* destination);
 	BINARYNINJACOREAPI int64_t BNProjectFileGetCreationTimestamp(BNProjectFile* file);
+	BINARYNINJACOREAPI BNRemoteFile* BNProjectFileGetRemoteFile(BNProjectFile* file);
 
 
 	// ProjectFolder object
@@ -7916,6 +7917,7 @@ extern "C"
 	BINARYNINJACOREAPI BNRemoteFile* BNRemoteProjectGetFileById(BNRemoteProject* project, const char* id);
 	BINARYNINJACOREAPI BNRemoteFile* BNRemoteProjectGetFileByName(BNRemoteProject* project, const char* name);
 	BINARYNINJACOREAPI bool BNRemoteProjectPullFiles(BNRemoteProject* project, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNRemoteFile* BNRemoteProjectUploadProjectFile(BNRemoteProject* project, BNProjectFile* file, BNProgressFunction progress, void* progressContext);
 	BINARYNINJACOREAPI BNRemoteFile* BNRemoteProjectCreateFile(BNRemoteProject* project, const char* filename, uint8_t* contents, size_t contentsSize, const char* name, const char* description, BNRemoteFolder* folder, BNRemoteFileType type, BNProgressFunction progress, void* progressContext);
 	BINARYNINJACOREAPI bool BNRemoteProjectPushFile(BNRemoteProject* project, BNRemoteFile* file, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
 	BINARYNINJACOREAPI bool BNRemoteProjectDeleteFile(BNRemoteProject* project, BNRemoteFile* file);

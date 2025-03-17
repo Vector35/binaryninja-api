@@ -1353,7 +1353,18 @@ void RemoteProject::PullFolders(std::function<bool(size_t, size_t)> progress)
 }
 
 
-Ref<RemoteFile> RemoteProject::CreateFile(const std::string& filename, std::vector<uint8_t>& contents, const std::string& name, const std::string& description, Ref<RemoteFolder> folder, BNRemoteFileType type, std::function<bool(size_t, size_t)> progress, Ref<ProjectFile> coreFile)
+Ref<RemoteFile> RemoteProject::UploadProjectFile(Ref<ProjectFile> projectFile, std::function<bool(size_t, size_t)> progress)
+{
+	ProgressContext pctxt;
+	pctxt.callback = progress;
+	BNRemoteFile* remoteFile = BNRemoteProjectUploadProjectFile(m_object, projectFile->m_object, ProgressCallback, &pctxt);
+	if (remoteFile == nullptr)
+		return nullptr;
+	return new RemoteFile(remoteFile);
+}
+
+
+Ref<RemoteFile> RemoteProject::CreateFile(const std::string& filename, std::vector<uint8_t>& contents, const std::string& name, const std::string& description, Ref<RemoteFolder> folder, BNRemoteFileType type, std::function<bool(size_t, size_t)> progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -1364,7 +1375,7 @@ Ref<RemoteFile> RemoteProject::CreateFile(const std::string& filename, std::vect
 }
 
 
-Ref<RemoteFolder> RemoteProject::CreateFolder(const std::string& name, const std::string& description, Ref<RemoteFolder> parent, std::function<bool(size_t, size_t)> progress, Ref<ProjectFolder> coreFolder)
+Ref<RemoteFolder> RemoteProject::CreateFolder(const std::string& name, const std::string& description, Ref<RemoteFolder> parent, std::function<bool(size_t, size_t)> progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;

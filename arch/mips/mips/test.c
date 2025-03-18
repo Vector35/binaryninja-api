@@ -164,8 +164,6 @@ int main(int ac, char **av)
 	{
 		char *p = av[instindex];
 		char buf[9] = {0};
-		int n;
-		// while (p && *p && (n = strnlen(p, 9)) >= 8)
 		while (strnlen(p, 8) > 0 && strlen(strncpy(buf, p, 8)) <= 8)
 		{
 			char *endptr;

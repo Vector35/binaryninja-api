@@ -3424,6 +3424,11 @@ uint32_t mips_decompose_instruction(
 			break;
 
 		// <OP>bc.dest   fd.dest, fs.dest, ft.bc
+		case MIPS_VMINIx:
+		case MIPS_VMINIy:
+		case MIPS_VMINIz:
+		case MIPS_VMINIw:
+
 		case MIPS_VADDx:
 		case MIPS_VADDy:
 		case MIPS_VADDz:
@@ -3481,10 +3486,6 @@ uint32_t mips_decompose_instruction(
 			break;
 
 		// <OP>i.dest   fd.dest, fs.dest, I
-		case MIPS_VMINIx:
-		case MIPS_VMINIy:
-		case MIPS_VMINIz:
-		case MIPS_VMINIw:
 		case MIPS_VMAXi:
 		case MIPS_VMULi:
 		case MIPS_VMINIi:
@@ -3697,7 +3698,6 @@ uint32_t mips_disassemble(
 	char dest[5] = {0};
 	int first_operand = 0;
 	const char* reg = NULL;
-	int max_oplen = 0;
 
 	strlcpy(operation, OperationStrings[instruction->operation], sizeof(operation));
 	if (instruction->operands[0].operandClass == V_DEST)
@@ -3716,7 +3716,6 @@ uint32_t mips_disassemble(
 		strcat(operation, dest);
 		first_operand++;
 	}
-	size_t n = strnlen(operation, sizeof(operation));
 	for (uint32_t i = first_operand;
 			i < MAX_OPERANDS && instruction->operands[i].operandClass != NONE; i++)
 	{
@@ -3777,7 +3776,6 @@ uint32_t mips_disassemble(
 					reg = get_register((Reg)instruction->operands[i].reg);
 				if (reg != NULL)
 				{
-					char reg_tmp[64] = {0};
 					if (instruction->operands[i].reg >= REG_VI0 && instruction->operands[i].reg <= REG_VI15)
 					{
 						switch (instruction->operation)

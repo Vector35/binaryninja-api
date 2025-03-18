@@ -1128,12 +1128,14 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 		case PPC_ID_ICBLC:
 		case PPC_ID_ICBLQ:
 		case PPC_ID_ICBTLS:
+		{
 			uint32_t ct = (word32 >> 21) & 0xf;
 
 			PushUIMMValue(instruction, ct);
 			PushRAor0(instruction, word32);
 			PushRB(instruction, word32);
 			break;
+		}
 
 		// <op> TH, rA, rB (cache-related)
 		case PPC_ID_DCBTEP:

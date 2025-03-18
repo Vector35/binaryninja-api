@@ -1,0 +1,49 @@
+---
+source: plugins/svd/tests/mapper.rs
+expression: register_ty
+---
+Type {
+    type_class: StructureTypeClass,
+    width: 2,
+    alignment: 1,
+    is_signed: true (255 confidence),
+    is_const: false (255 confidence),
+    is_volatile: false (255 confidence),
+    child_type: None,
+    calling_convention: None,
+    parameters: Some(
+        [],
+    ),
+    has_variable_arguments: false (255 confidence),
+    can_return: true (255 confidence),
+    pure: false (255 confidence),
+    get_structure: Some(
+        Structure {
+            width: 2,
+            structure_type: StructStructureType,
+            base_structures: [],
+            members: [
+                StructureMember {
+                    ty: Type { type_class: StructureTypeClass, width: 1, alignment: 1, is_signed: true (255 confidence), is_const: false (255 confidence), is_volatile: false (255 confidence), child_type: None, calling_convention: None, parameters: Some([]), has_variable_arguments: false (255 confidence), can_return: true (255 confidence), pure: false (255 confidence), get_structure: Some(Structure { width: 1, structure_type: UnionStructureType, base_structures: [], members: [StructureMember { ty: Type { type_class: EnumerationTypeClass, width: 1, alignment: 1, is_signed: false (255 confidence), is_const: false (255 confidence), is_volatile: false (255 confidence), child_type: None, calling_convention: None, parameters: Some([]), has_variable_arguments: false (255 confidence), can_return: true (255 confidence), pure: false (255 confidence), get_structure: None, get_enumeration: Some(Enumeration { members: [EnumerationMember { name: "Stopped", value: 0, default: false }, EnumerationMember { name: "Running", value: 1, default: false }] }), get_named_type_reference: None, count: 0, offset: 0, stack_adjustment: 0 (0 confidence), registered_name: None } (255 confidence), name: "RUN", offset: 0, access: PublicAccess, scope: NoScope }] }), get_enumeration: None, get_named_type_reference: None, count: 0, offset: 0, stack_adjustment: 0 (0 confidence), registered_name: None } (255 confidence),
+                    name: "bitfield_0x0",
+                    offset: 0,
+                    access: PublicAccess,
+                    scope: NoScope,
+                },
+                StructureMember {
+                    ty: Type { type_class: StructureTypeClass, width: 1, alignment: 1, is_signed: true (255 confidence), is_const: false (255 confidence), is_volatile: false (255 confidence), child_type: None, calling_convention: None, parameters: Some([]), has_variable_arguments: false (255 confidence), can_return: true (255 confidence), pure: false (255 confidence), get_structure: Some(Structure { width: 1, structure_type: UnionStructureType, base_structures: [], members: [StructureMember { ty: Type { type_class: EnumerationTypeClass, width: 1, alignment: 1, is_signed: false (255 confidence), is_const: false (255 confidence), is_volatile: false (255 confidence), child_type: None, calling_convention: None, parameters: Some([]), has_variable_arguments: false (255 confidence), can_return: true (255 confidence), pure: false (255 confidence), get_structure: None, get_enumeration: Some(Enumeration { members: [EnumerationMember { name: "No_Match", value: 0, default: false }, EnumerationMember { name: "Match_Hit", value: 1, default: false }] }), get_named_type_reference: None, count: 0, offset: 0, stack_adjustment: 0 (0 confidence), registered_name: None } (255 confidence), name: "MATCH", offset: 0, access: PublicAccess, scope: NoScope }, StructureMember { ty: Type { type_class: EnumerationTypeClass, width: 1, alignment: 1, is_signed: false (255 confidence), is_const: false (255 confidence), is_volatile: false (255 confidence), child_type: None, calling_convention: None, parameters: Some([]), has_variable_arguments: false (255 confidence), can_return: true (255 confidence), pure: false (255 confidence), get_structure: None, get_enumeration: Some(Enumeration { members: [EnumerationMember { name: "No_Underflow", value: 0, default: false }, EnumerationMember { name: "Underflow", value: 1, default: false }] }), get_named_type_reference: None, count: 0, offset: 0, stack_adjustment: 0 (0 confidence), registered_name: None } (255 confidence), name: "UN", offset: 0, access: PublicAccess, scope: NoScope }, StructureMember { ty: Type { type_class: EnumerationTypeClass, width: 1, alignment: 1, is_signed: false (255 confidence), is_const: false (255 confidence), is_volatile: false (255 confidence), child_type: None, calling_convention: None, parameters: Some([]), has_variable_arguments: false (255 confidence), can_return: true (255 confidence), pure: false (255 confidence), get_structure: None, get_enumeration: Some(Enumeration { members: [EnumerationMember { name: "No_Overflow", value: 0, default: false }, EnumerationMember { name: "Overflow_occured", value: 1, default: false }] }), get_named_type_reference: None, count: 0, offset: 0, stack_adjustment: 0 (0 confidence), registered_name: None } (255 confidence), name: "OV", offset: 0, access: PublicAccess, scope: NoScope }, StructureMember { ty: Type { type_class: EnumerationTypeClass, width: 1, alignment: 1, is_signed: false (255 confidence), is_const: false (255 confidence), is_volatile: false (255 confidence), child_type: None, calling_convention: None, parameters: Some([]), has_variable_arguments: false (255 confidence), can_return: true (255 confidence), pure: false (255 confidence), get_structure: None, get_enumeration: Some(Enumeration { members: [EnumerationMember { name: "Ready", value: 0, default: false }, EnumerationMember { name: "In_Reset", value: 1, default: false }] }), get_named_type_reference: None, count: 0, offset: 0, stack_adjustment: 0 (0 confidence), registered_name: None } (255 confidence), name: "RST", offset: 0, access: PublicAccess, scope: NoScope }, StructureMember { ty: Type { type_class: EnumerationTypeClass, width: 1, alignment: 1, is_signed: false (255 confidence), is_const: false (255 confidence), is_volatile: false (255 confidence), child_type: None, calling_convention: None, parameters: Some([]), has_variable_arguments: false (255 confidence), can_return: true (255 confidence), pure: false (255 confidence), get_structure: None, get_enumeration: Some(Enumeration { members: [EnumerationMember { name: "RELOAD0", value: 0, default: false }, EnumerationMember { name: "RELOAD1", value: 1, default: false }, EnumerationMember { name: "RELOAD2", value: 2, default: false }, EnumerationMember { name: "RELOAD3", value: 3, default: false }] }), get_named_type_reference: None, count: 0, offset: 0, stack_adjustment: 0 (0 confidence), registered_name: None } (255 confidence), name: "RELOAD", offset: 0, access: PublicAccess, scope: NoScope }] }), get_enumeration: None, get_named_type_reference: None, count: 0, offset: 0, stack_adjustment: 0 (0 confidence), registered_name: None } (255 confidence),
+                    name: "bitfield_0x1",
+                    offset: 1,
+                    access: PublicAccess,
+                    scope: NoScope,
+                },
+            ],
+        },
+    ),
+    get_enumeration: None,
+    get_named_type_reference: None,
+    count: 0,
+    offset: 0,
+    stack_adjustment: 0 (0 confidence),
+    registered_name: None,
+}

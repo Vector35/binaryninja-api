@@ -54,7 +54,7 @@ class BINARYNINJAUIAPI ProjectItemModel: public QStandardItemModel, public Binar
 
 	QFileSystemWatcher* m_fsWatcher;
 
-	std::unordered_map<std::string, QPersistentModelIndex> m_idIndexMap;
+	std::unordered_map<std::string, QStandardItem*> m_itemsById;
 
 	QHash<QString, QString> m_pathMimeTypeCache;
 	QHash<QString, size_t> m_pathSizeCache;
@@ -139,12 +139,14 @@ class BINARYNINJAUIAPI SortFilterProjectItemModel: public QSortFilterProxyModel
 {
 	bool m_acceptAllFolders = false;
 
+	ProjectRef m_project;
+
 protected:
 	virtual bool lessThan(const QModelIndex& sourceLeft, const QModelIndex& sourceRight) const override;
 	virtual bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
 
 public:
-	SortFilterProjectItemModel(QObject* parent = nullptr): QSortFilterProxyModel(parent) {};
+	SortFilterProjectItemModel(ProjectRef project, QObject* parent = nullptr): QSortFilterProxyModel(parent), m_project(project) {};
 
 	void setAcceptAllFolders(bool accept) { m_acceptAllFolders = accept; }
 	bool acceptAllFolders() const { return m_acceptAllFolders; }
@@ -227,6 +229,8 @@ Q_SIGNALS:
 
 class BINARYNINJAUIAPI InfoWidget: public QWidget
 {
+	ProjectRef m_project;
+
 	std::unordered_map<std::string, ProjectFileRef> m_files;
 	std::unordered_map<std::string, ProjectFolderRef> m_folders;
 
@@ -248,7 +252,7 @@ class BINARYNINJAUIAPI InfoWidget: public QWidget
 	void saveDescription();
 
 public:
-	InfoWidget(QWidget* parent = nullptr);
+	InfoWidget(ProjectRef project, QWidget* parent = nullptr);
 
 	bool ContainsFile(const std::string& id);
 	bool ContainsFolder(const std::string& id);
@@ -315,6 +319,8 @@ class BINARYNINJAUIAPI ProjectBrowser: public QWidget, public UIContextNotificat
 
 	void initActions();
 
+	std::vector<ProjectFileRef> GetSelectedFilesRecursive();
+
 private slots:
 	void itemDoubleClicked(const QModelIndex& index);
 	void openProjectFile(ProjectFileRef file, bool openWithOptions = false);
@@ -335,6 +341,7 @@ protected:
 	void PromptAnalyzeSelected();
 	void PromptEditProjectDetails();
 	void Refresh();
+	void DownloadSelectedFilesRecursive();
 
 public:
 	ProjectBrowser(QWidget* parent, ProjectRef project);

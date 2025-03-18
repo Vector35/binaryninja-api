@@ -90,6 +90,8 @@ class BINARYNINJAUIAPI RenderContext
 	FontParameters m_fontParams;
 	bool m_drawIndents;
 	std::vector<QColor> m_braceColors;
+	QIcon m_collapsedIcon;
+	QIcon m_expandedIcon;
 
   public:
 	RenderContext(QWidget* parent, float fontScale = 1.0f);

@@ -631,6 +631,15 @@ int Remote::GetServerVersion()
 }
 
 
+std::string Remote::GetServerBuildVersion()
+{
+	char* buildVersion = BNRemoteGetServerBuildVersion(m_object);
+	std::string result = buildVersion;
+	BNFreeString(buildVersion);
+	return result;
+}
+
+
 std::string Remote::GetServerBuildId()
 {
 	char* buildId = BNRemoteGetServerBuildId(m_object);

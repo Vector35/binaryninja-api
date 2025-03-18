@@ -1,0 +1,9 @@
+---
+source: plugins/svd/tests/mapper.rs
+expression: types
+---
+[
+    "struct TIMER0",
+    "struct TIMER1",
+    "struct TIMER2",
+]

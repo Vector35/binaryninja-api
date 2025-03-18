@@ -429,7 +429,7 @@ class FileMetadata:
 			>>> state = bv.begin_undo_actions()
 			>>> bv.convert_to_nop(0x100012f1)
 			True
-			>>> bv.commit_undo_actions(state)
+			>>> bv.forget_undo_actions(state)
 			>>> bv.get_disassembly(0x100012f1)
 			'nop'
 			>>> bv.undo()

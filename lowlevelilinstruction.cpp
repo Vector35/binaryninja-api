@@ -81,7 +81,8 @@ unordered_map<LowLevelILOperandUsage, LowLevelILOperandType> LowLevelILInstructi
     {OutputMemoryIntrinsicLowLevelOperandUsage, SSARegisterOrFlagListLowLevelOperand},
     {SourceMemoryVersionsLowLevelOperandUsage, IndexListLowLevelOperand},
     {TargetsLowLevelOperandUsage, IndexMapLowLevelOperand},
-    {RegisterStackAdjustmentsLowLevelOperandUsage, RegisterStackAdjustmentsLowLevelOperand}};
+    {RegisterStackAdjustmentsLowLevelOperandUsage, RegisterStackAdjustmentsLowLevelOperand},
+		{ConstraintLowLevelOperandUsage, ConstraintLowLevelOperand}};
 
 
 unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>> LowLevelILInstructionBase::operationOperandUsage =
@@ -105,6 +106,10 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>> LowLevelILI
                 DestRegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
         {LLIL_SET_FLAG, {DestFlagLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
         {LLIL_SET_FLAG_SSA, {DestSSAFlagLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+        {LLIL_FORCE_VER, {DestRegisterLowLevelOperandUsage}},
+        {LLIL_FORCE_VER_SSA, {DestSSARegisterLowLevelOperandUsage, SourceSSARegisterLowLevelOperandUsage}},
+        {LLIL_ASSERT, {SourceRegisterLowLevelOperandUsage, ConstraintLowLevelOperandUsage}},
+        {LLIL_ASSERT_SSA, {SourceSSARegisterLowLevelOperandUsage, ConstraintLowLevelOperandUsage}},
         {LLIL_LOAD, {SourceExprLowLevelOperandUsage}},
         {LLIL_LOAD_SSA, {SourceExprLowLevelOperandUsage, SourceMemoryVersionLowLevelOperandUsage}},
         {LLIL_STORE, {DestExprLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
@@ -1546,6 +1551,12 @@ map<uint32_t, int32_t> LowLevelILInstructionBase::GetRawOperandAsRegisterStackAd
 }
 
 
+PossibleValueSet LowLevelILInstructionBase::GetRawOperandAsPossibleValueSet(size_t operand) const
+{
+	return function->GetCachedPossibleValueSet(operands[operand]);
+}
+
+
 void LowLevelILInstructionBase::UpdateRawOperand(size_t operandIndex, ExprId value)
 {
 	operands[operandIndex] = value;
@@ -2102,6 +2113,14 @@ ExprId LowLevelILInstruction::CopyTo(
 	case LLIL_SET_FLAG_SSA:
 		return dest->SetFlagSSA(
 		    GetDestSSAFlag<LLIL_SET_FLAG_SSA>(), subExprHandler(GetSourceExpr<LLIL_SET_FLAG_SSA>()), *this);
+	case LLIL_FORCE_VER:
+		return dest->ForceVer(size, GetDestRegister<LLIL_FORCE_VER>(), *this);
+	case LLIL_FORCE_VER_SSA:
+		return dest->ForceVerSSA(size, GetDestSSARegister<LLIL_FORCE_VER_SSA>(), GetSourceSSARegister<LLIL_FORCE_VER_SSA>(), *this);
+	case LLIL_ASSERT:
+		return dest->Assert(size, GetSourceRegister<LLIL_ASSERT>(), GetConstraint<LLIL_ASSERT>(), *this);
+	case LLIL_ASSERT_SSA:
+		return dest->AssertSSA(size, GetSourceSSARegister<LLIL_ASSERT_SSA>(), GetConstraint<LLIL_ASSERT_SSA>(), *this);
 	case LLIL_LOAD:
 		return dest->Load(size, subExprHandler(GetSourceExpr<LLIL_LOAD>()), flags, *this);
 	case LLIL_LOAD_SSA:
@@ -2899,6 +2918,30 @@ ExprId LowLevelILFunction::SetFlag(uint32_t flag, ExprId val, const ILSourceLoca
 ExprId LowLevelILFunction::SetFlagSSA(const SSAFlag& flag, ExprId val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_SET_FLAG_SSA, loc, 0, 0, flag.flag, flag.version, val);
+}
+
+
+ExprId LowLevelILFunction::ForceVer(size_t size, uint32_t reg, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FORCE_VER, loc, size, 0, reg);
+}
+
+
+ExprId LowLevelILFunction::ForceVerSSA(size_t size, SSARegister dst, SSARegister src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FORCE_VER_SSA, loc, size, 0, dst.reg, dst.version, src.reg, src.version);
+}
+
+
+ExprId LowLevelILFunction::Assert(size_t size, uint32_t reg, const PossibleValueSet& pvs, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_ASSERT, loc, size, 0, reg, CachePossibleValueSet(pvs));
+}
+
+
+ExprId LowLevelILFunction::AssertSSA(size_t size, SSARegister src, const PossibleValueSet& pvs, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_ASSERT_SSA, loc, size, 0, src.reg, src.version, CachePossibleValueSet(pvs));
 }
 
 

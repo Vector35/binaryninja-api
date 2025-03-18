@@ -422,7 +422,7 @@ QVariant SymbolTableModel::data(const QModelIndex& index, int role) const {
 	case 0: // Address column
 		return QString("0x%1").arg(symbol.address, 0, 16); // Display address as hexadecimal
 	case 1: // Name column
-		return QString::fromStdString(symbol.name);
+		return QString::fromUtf8(symbol.name.c_str(), symbol.name.size());
 	case 2: // Image column
 		return QString::fromStdString(symbol.image);
 	default:
@@ -453,6 +453,9 @@ void SymbolTableModel::updateSymbols() {
 }
 
 const SharedCacheAPI::DSCSymbol& SymbolTableModel::symbolAt(int row) const {
+	if (row < 0 || row >= static_cast<int>(m_symbols.size())) {
+		return m_symbols.at(0);
+	}
 	return m_symbols.at(row);
 }
 
@@ -473,7 +476,7 @@ void SymbolTableModel::setFilter(std::string text)
 		m_symbols.reserve(m_parent->m_symbols.size());
 		for (const auto& symbol : m_parent->m_symbols)
 		{
-			if (symbol.name.find(m_filter) != std::string::npos)
+			if (((std::string_view)symbol.name).find(m_filter) != std::string::npos)
 			{
 				m_symbols.push_back(symbol);
 			}
@@ -516,7 +519,7 @@ void SymbolTableView::setFilter(const std::string& filter) {
 
 DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(parent), View(), m_data(data), m_cache(new SharedCacheAPI::SharedCache(data))
 {
-	setBinaryDataNavigable(false);
+	setBinaryDataNavigable(true);
 	setupView(this);
 
 	m_triageCollection = new DockableTabCollection();
@@ -549,6 +552,8 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 	mappingTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
 	mappingTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
 
+	mappingTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
 	auto sectionTable = new QTableView(cacheInfoSubwidget);
 	auto sectionModel = new QStandardItemModel(0, 3, sectionTable);
 	sectionModel->setHorizontalHeaderLabels({"Name", "VM Address", "Size"});
@@ -558,6 +563,8 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 	sectionTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
 	sectionTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
 	sectionTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+
+	sectionTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
 	auto mappingLabel = new QLabel("Mappings");
 	auto sectionLabel = new QLabel("Sections");
@@ -703,15 +710,6 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 						m_cache->LoadImageWithInstallName(name);
 					});
 			});
-		connect(loadImageTable, &FilterableTableView::doubleClicked, this, [=](const QModelIndex& index)
-			{
-				auto name = loadImageModel->item(index.row(), 0)->text().toStdString();
-				WorkerPriorityEnqueue([this, name]()
-					{
-						m_cache->LoadImageWithInstallName(name);
-					});
-			});
-
 		auto loadImageLayout = new QVBoxLayout;
 		loadImageLayout->addWidget(loadImageFilterEdit);
 		loadImageLayout->addWidget(loadImageTable);
@@ -758,24 +756,28 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 		symbolSearch->setSelectionBehavior(QAbstractItemView::SelectRows);
 		symbolSearch->setSelectionMode(QAbstractItemView::SingleSelection);
 
+		std::function<void(uint64_t)> navigateToAddress = [=](uint64_t addr){
+			ExecuteOnMainThread([addr, this](){
+				if (BinaryNinja::Settings::Instance()->Get<bool>("ui.view.graph.preferred"))
+					m_data->Navigate("Graph:DSCView", addr);
+				else
+					m_data->Navigate("Linear:DSCView", addr);
+			});
+		};
+
 		connect(symbolSearch, &SymbolTableView::activated, this, [=](const QModelIndex& index)
 			{
 				auto symbol = symbolSearch->getSymbolAtRow(index.row());
-				auto dialog = new QMessageBox(this);
-				dialog->setText("Load " + QString::fromStdString(symbol.image) + "?");
-				dialog->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-
-				connect(dialog, &QMessageBox::buttonClicked, this, [=](QAbstractButton* button)
+				WorkerPriorityEnqueue([this, symbol, navigateToAddress]()
 				{
-					if (button == dialog->button(QMessageBox::Yes))
+					if (m_data->IsValidOffset(symbol.address))
+						navigateToAddress(symbol.address);
+					else
 					{
-						WorkerPriorityEnqueue([this, symbol]()
-						{
-							m_cache->LoadImageWithInstallName(symbol.image);
-						});
+						m_cache->LoadImageWithInstallName(symbol.image);
+						navigateToAddress(symbol.address);
 					}
 				});
-				dialog->exec();
 			});
 
 		m_triageTabs->addTab(symbolWidget, "Symbol Search");
@@ -884,7 +886,7 @@ BinaryViewRef DSCTriageView::getData()
 
 bool DSCTriageView::navigate(uint64_t offset)
 {
-	return true;
+	return false;
 }
 
 

@@ -1,12 +1,11 @@
-use binaryninja::binaryview::BinaryViewExt;
+use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
-use binaryninja::types::Conf;
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::path::PathBuf;
 use warp_ninja::convert::from_bn_type;
 
 pub fn type_conversion_benchmark(c: &mut Criterion) {
-    let session = Session::new();
+    let session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     for entry in std::fs::read_dir(out_dir).expect("Failed to read OUT_DIR") {
         let entry = entry.expect("Failed to read directory entry");
@@ -26,7 +25,7 @@ pub fn type_conversion_benchmark(c: &mut Criterion) {
                 c.bench_function("type conversion all types", |b| {
                     b.iter(|| {
                         for ty in &types {
-                            from_bn_type(&bv, &ty.type_object(), u8::MAX);
+                            from_bn_type(&bv, &ty.ty, u8::MAX);
                         }
                     })
                 });

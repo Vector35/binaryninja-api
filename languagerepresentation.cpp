@@ -1,10 +1,12 @@
 #include "binaryninjaapi.h"
+#include "ffi.h"
 #include "highlevelilinstruction.h"
 
 using namespace BinaryNinja;
 using namespace std;
 
-LanguageRepresentationFunction::LanguageRepresentationFunction(Architecture* arch, Function* func, HighLevelILFunction* highLevelIL)
+LanguageRepresentationFunction::LanguageRepresentationFunction(
+	LanguageRepresentationFunctionType* type, Architecture* arch, Function* func, HighLevelILFunction* highLevelIL)
 {
 	BNCustomLanguageRepresentationFunction callbacks;
 	callbacks.context = this;
@@ -20,8 +22,8 @@ LanguageRepresentationFunction::LanguageRepresentationFunction(Architecture* arc
 	callbacks.getAnnotationStartString = GetAnnotationStartStringCallback;
 	callbacks.getAnnotationEndString = GetAnnotationEndStringCallback;
 	AddRefForRegistration();
-	m_object = BNCreateCustomLanguageRepresentationFunction(arch->GetObject(), func->GetObject(),
-		highLevelIL->GetObject(), &callbacks);
+	m_object = BNCreateCustomLanguageRepresentationFunction(
+		type->GetObject(), arch->GetObject(), func->GetObject(), highLevelIL->GetObject(), &callbacks);
 }
 
 
@@ -38,19 +40,7 @@ vector<DisassemblyTextLine> LanguageRepresentationFunction::GetExprText(
 	BNDisassemblyTextLine* lines = BNGetLanguageRepresentationFunctionExprText(m_object, instr.function->GetObject(),
 		instr.exprIndex, settings ? settings->GetObject() : nullptr, instr.ast, precedence, statement, &count);
 
-	vector<DisassemblyTextLine> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = lines[i].addr;
-		line.instrIndex = lines[i].instrIndex;
-		line.highlight = lines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		line.tags = Tag::ConvertTagList(lines[i].tags, lines[i].tagCount);
-		result.push_back(line);
-	}
-
+	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
@@ -63,19 +53,7 @@ vector<DisassemblyTextLine> LanguageRepresentationFunction::GetLinearLines(
 	BNDisassemblyTextLine* lines = BNGetLanguageRepresentationFunctionLinearLines(m_object, instr.function->GetObject(),
 		instr.exprIndex, settings ? settings->GetObject() : nullptr, instr.ast, &count);
 
-	vector<DisassemblyTextLine> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = lines[i].addr;
-		line.instrIndex = lines[i].instrIndex;
-		line.highlight = lines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		line.tags = Tag::ConvertTagList(lines[i].tags, lines[i].tagCount);
-		result.push_back(line);
-	}
-
+	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
@@ -88,19 +66,7 @@ vector<DisassemblyTextLine> LanguageRepresentationFunction::GetBlockLines(
 	BNDisassemblyTextLine* lines = BNGetLanguageRepresentationFunctionBlockLines(
 		m_object, block->GetObject(), settings ? settings->GetObject() : nullptr, &count);
 
-	vector<DisassemblyTextLine> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = lines[i].addr;
-		line.instrIndex = lines[i].instrIndex;
-		line.highlight = lines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		line.tags = Tag::ConvertTagList(lines[i].tags, lines[i].tagCount);
-		result.push_back(line);
-	}
-
+	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
@@ -109,6 +75,12 @@ vector<DisassemblyTextLine> LanguageRepresentationFunction::GetBlockLines(
 BNHighlightColor LanguageRepresentationFunction::GetHighlight(BasicBlock* block)
 {
 	return BNGetLanguageRepresentationFunctionHighlight(m_object, block->GetObject());
+}
+
+
+Ref<LanguageRepresentationFunctionType> LanguageRepresentationFunction::GetLanguage() const
+{
+	return new CoreLanguageRepresentationFunctionType(BNGetLanguageRepresentationType(m_object));
 }
 
 
@@ -312,6 +284,7 @@ void LanguageRepresentationFunctionType::Register(LanguageRepresentationFunction
 	callbacks.isValid = IsValidCallback;
 	callbacks.getTypePrinter = GetTypePrinterCallback;
 	callbacks.getTypeParser = GetTypeParserCallback;
+	callbacks.getLineFormatter = GetLineFormatterCallback;
 	callbacks.getFunctionTypeTokens = GetFunctionTypeTokensCallback;
 	callbacks.freeLines = FreeLinesCallback;
 
@@ -363,6 +336,16 @@ BNTypeParser* LanguageRepresentationFunctionType::GetTypeParserCallback(void* ct
 }
 
 
+BNLineFormatter* LanguageRepresentationFunctionType::GetLineFormatterCallback(void* ctxt)
+{
+	LanguageRepresentationFunctionType* type = (LanguageRepresentationFunctionType*)ctxt;
+	Ref<LineFormatter> result = type->GetLineFormatter();
+	if (!result)
+		return nullptr;
+	return result->GetObject();
+}
+
+
 BNDisassemblyTextLine* LanguageRepresentationFunctionType::GetFunctionTypeTokensCallback(
 	void* ctxt, BNFunction* func, BNDisassemblySettings* settings, size_t* count)
 {
@@ -370,31 +353,13 @@ BNDisassemblyTextLine* LanguageRepresentationFunctionType::GetFunctionTypeTokens
 	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
 	Ref<DisassemblySettings> settingsObj = settings ? new DisassemblySettings(BNNewDisassemblySettingsReference(settings)) : nullptr;
 	auto lines = type->GetFunctionTypeTokens(funcObj, settingsObj);
-	*count = lines.size();
-	BNDisassemblyTextLine* buf = new BNDisassemblyTextLine[lines.size()];
-	for (size_t i = 0; i < lines.size(); i++)
-	{
-		const DisassemblyTextLine& line = lines[i];
-		buf[i].addr = line.addr;
-		buf[i].instrIndex = line.instrIndex;
-		buf[i].highlight = line.highlight;
-		buf[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(line.tokens);
-		buf[i].count = line.tokens.size();
-		buf[i].tags = Tag::CreateTagList(line.tags, &(buf[i].tagCount));
-	}
-
-	return buf;
+	return AllocAPIObjectList<DisassemblyTextLine>(lines, count);
 }
 
 
 void LanguageRepresentationFunctionType::FreeLinesCallback(void*, BNDisassemblyTextLine* lines, size_t count)
 {
-	for (size_t i = 0; i < count; i++)
-	{
-		InstructionTextToken::FreeInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		Tag::FreeTagList(lines[i].tags, lines[i].tagCount);
-	}
-	delete[] lines;
+	FreeAPIObjectList<DisassemblyTextLine>(lines, count);
 }
 
 
@@ -472,6 +437,15 @@ Ref<TypeParser> CoreLanguageRepresentationFunctionType::GetTypeParser()
 }
 
 
+Ref<LineFormatter> CoreLanguageRepresentationFunctionType::GetLineFormatter()
+{
+	BNLineFormatter* formatter = BNGetLanguageRepresentationFunctionTypeLineFormatter(m_object);
+	if (!formatter)
+		return nullptr;
+	return new CoreLineFormatter(formatter);
+}
+
+
 vector<DisassemblyTextLine> CoreLanguageRepresentationFunctionType::GetFunctionTypeTokens(
 	Function* func, DisassemblySettings* settings)
 {
@@ -479,19 +453,7 @@ vector<DisassemblyTextLine> CoreLanguageRepresentationFunctionType::GetFunctionT
 	BNDisassemblyTextLine* lines = BNGetLanguageRepresentationFunctionTypeFunctionTypeTokens(m_object,
 		func->GetObject(), settings ? settings->GetObject() : nullptr, &count);
 
-	vector<DisassemblyTextLine> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = lines[i].addr;
-		line.instrIndex = lines[i].instrIndex;
-		line.highlight = lines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		line.tags = Tag::ConvertTagList(lines[i].tags, lines[i].tagCount);
-		result.push_back(line);
-	}
-
+	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }

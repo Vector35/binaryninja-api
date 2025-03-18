@@ -1,0 +1,39 @@
+---
+source: plugins/warp/src/lib.rs
+expression: functions
+---
+[
+    FunctionGUID {
+        guid: 13b16f81-0c6f-5aee-ad9f-0d142658cf18,
+    },
+    FunctionGUID {
+        guid: 1e794537-6289-59e7-bef9-0c72f3989db8,
+    },
+    FunctionGUID {
+        guid: 29690354-fa27-54d1-a8be-18535b19b1c3,
+    },
+    FunctionGUID {
+        guid: 3cc2e827-b707-5c9d-82e9-d76ac3abc904,
+    },
+    FunctionGUID {
+        guid: 6a7eb6dd-be3e-50dd-ae91-cea8f3eb4f06,
+    },
+    FunctionGUID {
+        guid: 6abe3fc2-6d29-5fde-a31e-bb8249db6bf9,
+    },
+    FunctionGUID {
+        guid: 6b0d368e-83d9-55fc-9683-5812e651a49b,
+    },
+    FunctionGUID {
+        guid: 8a2b7bda-5fdb-5ba3-888b-20d5b8d7b2cd,
+    },
+    FunctionGUID {
+        guid: bfaf2f0a-d92d-5ef7-879d-86eb0ca01257,
+    },
+    FunctionGUID {
+        guid: f034945d-32e2-5d86-8a86-3761cc54f419,
+    },
+    FunctionGUID {
+        guid: f552d8ee-3064-50ed-af18-4e60f095c9ea,
+    },
+]

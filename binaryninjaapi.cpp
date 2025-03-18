@@ -383,15 +383,21 @@ map<string, uint64_t> BinaryNinja::GetMemoryUsageInfo()
 }
 
 
-std::function<bool(size_t, size_t)> BinaryNinja::SplitProgress(
-    std::function<bool(size_t, size_t)> originalFn, size_t subpart, size_t subpartCount)
+bool BinaryNinja::DefaultProgressFunction(size_t, size_t)
+{
+	return true;
+}
+
+
+BinaryNinja::ProgressFunction BinaryNinja::SplitProgress(
+    BinaryNinja::ProgressFunction originalFn, size_t subpart, size_t subpartCount)
 {
 	return SplitProgress(originalFn, subpart, std::vector<double>(subpartCount, 1.0 / (double)subpartCount));
 }
 
 
-std::function<bool(size_t, size_t)> BinaryNinja::SplitProgress(
-    std::function<bool(size_t, size_t)> originalFn, size_t subpart, std::vector<double> subpartWeights)
+BinaryNinja::ProgressFunction BinaryNinja::SplitProgress(
+    BinaryNinja::ProgressFunction originalFn, size_t subpart, std::vector<double> subpartWeights)
 {
 	if (!originalFn)
 		return [](size_t, size_t) {

@@ -1413,6 +1413,7 @@ class Segment:
 		return f"<segment: {self.start:#x}-{self.end:#x}, {r}{w}{x}>"
 
 	@classmethod
+	@deprecation.deprecated(deprecated_in="4.3.6653", details="Use `SegmentDescriptorList` instead.")
 	def serialize(cls, image_base: int, start: int, length: int, data_offset: int=0, data_length: int=0, flags: 'SegmentFlag'=SegmentFlag.SegmentReadable, auto_defined=True, segments: str="[]"):
 		"""
 		Serialize segment parameters into a JSON string. This is useful for generating a properly formatted segment description as options when using `load`.
@@ -1431,9 +1432,10 @@ class Segment:
 		:Example::
 			>>> base = 0x400000
 			>>> rom_base = 0xffff0000
-			>>> segments = Segment.serialize(image_base=base, start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
-			>>> segments = Segment.serialize(image_base=base, start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable, segments=segments)
-			>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': segments})
+			>>> segments = SegmentDescriptorList(base)
+			>>> segments.append(start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
+			>>> segments.append(start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable)
+			>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': json.dumps(segments)})
 		"""
 		segments_list = json.loads(segments)
 		segment_info = {
@@ -1507,6 +1509,39 @@ class Segment:
 		return core.BNSegmentIsAutoDefined(self.handle)
 
 
+class SegmentDescriptorList(list):
+	def __init__(self, image_base: int):
+		"""
+		Initialize the SegmentDescriptorList with a base image address.
+
+		:param int image_base: The base address of the image.
+		"""
+		super().__init__()
+		self.image_base = image_base
+
+	def append(self, start: int, length: int, data_offset: int = 0, data_length: int = 0,
+				flags: 'SegmentFlag' = SegmentFlag.SegmentReadable, auto_defined: bool = True):
+		"""
+		Append a segment descriptor to the list.
+
+		:param int start: The start address of the segment.
+		:param int length: The length of the segment.
+		:param int data_offset: The offset of the data within the segment.
+		:param int data_length: The length of the data within the segment.
+		:param SegmentFlag flags: The flags of the segment.
+		:param bool auto_defined: Whether the segment is auto-defined.
+		"""
+		segment_info = {
+			"start": start - self.image_base,
+			"length": length,
+			"data_offset": data_offset,
+			"data_length": data_length,
+			"flags": flags,
+			"auto_defined": auto_defined
+		}
+		super().append(segment_info)
+
+
 class Section:
 	"""
 	The ``Section`` object is returned during BinaryView creation and should not be directly instantiated.
@@ -1541,6 +1576,7 @@ class Section:
 		return i >= self.start and i < self.end
 
 	@classmethod
+	@deprecation.deprecated(deprecated_in="4.3.6653", details="Use `SectionDescriptorList` instead.")
 	def serialize(cls, image_base: int, name: str, start: int, length: int, semantics: SectionSemantics=SectionSemantics.DefaultSectionSemantics, type: str="", align: int=1, entry_size: int=0, link: str="", info_section: str="", info_data: int=0, auto_defined: bool=True, sections: str="[]"):
 		"""
 		Serialize section parameters into a JSON string. This is useful for generating a properly formatted section description as options when using `load`.
@@ -1625,6 +1661,50 @@ class Section:
 	@property
 	def end(self) -> int:
 		return self.start + self.length
+
+
+class SectionDescriptorList(list):
+	def __init__(self, image_base: int):
+		"""
+		Initialize the SectionDescriptorList with a base image address.
+
+		:param int image_base: The base address of the image.
+		"""
+		super().__init__()
+		self.image_base = image_base
+
+	def append(self, name: str, start: int, length: int, semantics: 'SectionSemantics' = SectionSemantics.DefaultSectionSemantics,
+				type: str = "", align: int = 1, entry_size: int = 0, link: str = "", info_section: str = "",
+				info_data: int = 0, auto_defined: bool = True):
+		"""
+		Append a section descriptor to the list.
+
+		:param str name: The name of the section.
+		:param int start: The start address of the section.
+		:param int length: The length of the section.
+		:param SectionSemantics semantics: The semantics of the section.
+		:param str type: The type of the section.
+		:param int align: The alignment of the section.
+		:param int entry_size: The size of each entry in the section.
+		:param str link: An optional link field.
+		:param str info_section: An optional info_section field.
+		:param int info_data: An optional info_data field.
+		:param bool auto_defined: Whether the section is auto-defined.
+		"""
+		section_info = {
+			"name": name,
+			"start": start - self.image_base,
+			"length": length,
+			"semantics": semantics,
+			"type": type,
+			"align": align,
+			"entry_size": entry_size,
+			"link": link,
+			"info_section": info_section,
+			"info_data": info_data,
+			"auto_defined": auto_defined
+		}
+		super().append(section_info)
 
 
 class TagType:
@@ -2166,9 +2246,10 @@ class MemoryMap:
 
 		>>> base = 0x10000
 		>>> rom_base = 0xc0000000
-		>>> segments = Segment.serialize(image_base=base, start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
-		>>> segments = Segment.serialize(image_base=base, start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable, segments=segments)
-		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': segments})
+		>>> segments = SegmentDescriptorList(base)
+		>>> segments.append(start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
+		>>> segments.append(start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable)
+		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': json.dumps(segments)})
 		>>> view.memory_map
 			<region: 0x10000 - 0x10004>
 				size: 0x4
@@ -4225,6 +4306,31 @@ class BinaryView:
 		"""
 		self._file.commit_undo_actions(id)
 
+	def forget_undo_actions(self, id: Optional[str] = None) -> None:
+		"""
+		``forget_undo_actions`` removes the actions taken since a call to :py:func:`begin_undo_actions`
+		Pass as `id` the value returned by :py:func:`begin_undo_actions`. Empty values of
+		`id` will remove all changes since the last call to :py:func:`begin_undo_actions`.
+
+		:param Optional[str] id: id of undo state, from :py:func:`begin_undo_actions`
+		:rtype: None
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> state = bv.begin_undo_actions()
+			>>> bv.convert_to_nop(0x100012f1)
+			True
+			>>> bv.forget_undo_actions(state)
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>> bv.undo()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>>
+		"""
+		self._file.forget_undo_actions(id)
+
 	def revert_undo_actions(self, id: Optional[str] = None) -> None:
 		"""
 		``revert_undo_actions`` reverts the actions taken since a call to :py:func:`begin_undo_actions`
@@ -4782,6 +4888,7 @@ class BinaryView:
 		``set_function_analysis_update_disabled``, functions would not be put into the analysis queue at all.
 
 		Use with caution -- in most cases, this is NOT what you want, and you should use ``set_analysis_hold`` instead.
+
 		:param disabled:
 		:return:
 		"""
@@ -4824,9 +4931,8 @@ class BinaryView:
 
 	def abort_analysis(self) -> None:
 		"""
-		``abort_analysis`` will abort the currently running analysis.
-
-		.. warning:: This method should be considered non-recoverable and generally only used when shutdown is imminent after stopping.
+		``abort_analysis`` aborts analysis and suspends the workflow machine. This operation is recoverable, and the workflow machine
+		can be re-enabled via the ``enable`` API on WorkflowMachine.
 
 		:rtype: None
 		"""
@@ -4996,7 +5102,7 @@ class BinaryView:
 			]
 
 		fns = []
-		addresses = [sym.address for sym in self.get_symbols_by_name(name, ordered_filter=ordered_filter)]
+		addresses = list(dict.fromkeys(sym.address for sym in self.get_symbols_by_name(name, ordered_filter=ordered_filter)))
 		if len(addresses) == 0 and name.startswith("sub_"):
 			try:
 				addresses = [int(name[4:], 16)]
@@ -7540,7 +7646,7 @@ class BinaryView:
 		view, while those two APIs do not.
 
 		:param str text: C source code string of type to create
-		:param import_dependencies: If Type Library / Type Archive types should be imported during parsing
+		:param import_dependencies: If Type Library types should be imported during parsing
 		:return: A tuple of a :py:class:`Type` and type name
 		:rtype: tuple(Type, QualifiedName)
 		:Example:
@@ -7577,7 +7683,7 @@ class BinaryView:
 		:param str text: C source code string of types, variables, and function types, to create
 		:param options: Optional list of string options to be passed into the type parser
 		:param include_dirs: Optional list of header search directories
-		:param import_dependencies: If Type Library / Type Archive types should be imported during parsing
+		:param import_dependencies: If Type Library types should be imported during parsing
 		:return: :py:class:`~binaryninja.typeparser.TypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: TypeParserResult
 		:Example:
@@ -8930,20 +9036,9 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	def _LinearDisassemblyLine_convertor(
 	    self, lines: core.BNLinearDisassemblyLineHandle
 	) -> 'lineardisassembly.LinearDisassemblyLine':
-		func = None
-		block = None
-		line = lines[0]
-		if line.function:
-			func = _function.Function(self, core.BNNewFunctionReference(line.function))
-		if line.block:
-			block_handle = core.BNNewBasicBlockReference(line.block)
-			assert block_handle is not None, "core.BNNewBasicBlockReference returned None"
-			block = basicblock.BasicBlock(block_handle, self)
-		color = highlight.HighlightColor._from_core_struct(line.contents.highlight)
-		addr = line.contents.addr
-		tokens = _function.InstructionTextToken._from_core_struct(line.contents.tokens, line.contents.count)
-		contents = _function.DisassemblyTextLine(tokens, addr, color=color)
-		return lineardisassembly.LinearDisassemblyLine(line.type, func, block, contents)
+		line = lineardisassembly.LinearDisassemblyLine._from_core_struct(lines[0])
+		core.BNFreeLinearDisassemblyLines(lines, 1)
+		return line
 
 	def find_all_text(
 	    self, start: int, end: int, text: str, settings: Optional[_function.DisassemblySettings] = None,
@@ -9116,7 +9211,8 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 
 			return self.QueueGenerator(t, results)
 
-	def search(self, pattern: str, start: int = None, end: int = None, raw: bool = False, ignore_case: bool = False, overlap: bool = False, align: int = 1) -> QueueGenerator:
+	def search(self, pattern: str, start: int = None, end: int = None, raw: bool = False, ignore_case: bool = False, overlap: bool = False, align: int = 1,
+		limit: int = None, progress_callback: Optional[ProgressFuncType] = None, match_callback: Optional[DataMatchCallbackType] = None) -> QueueGenerator:
 		r"""
 		Searches for matches of the specified `pattern` within this BinaryView with an optionally provided address range specified by `start` and `end`.
 		The search pattern can be interpreted in various ways:
@@ -9135,6 +9231,12 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		:param bool ignore_case: Whether to perform case-insensitive matching (default: False).
 		:param bool overlap: Whether to allow matches to overlap (default: False).
 		:param int align: The alignment of matches, must be a power of 2 (default: 1).
+		:param int limit: The maximum number of matches to return (default: None).
+		:param callback progress_callback: An optional function to be called with the current progress and total count. \
+		This function should return a boolean value that decides whether the search should continue or stop.
+		:param callback match_callback: A function that gets called when a match is found. The callback takes two parameters: \
+		the address of the match, and the actual DataBuffer that satisfies the search. This function can return a boolean value \
+		that decides whether the search should continue or stop.
 
 		:return: A generator object that yields the offset and matched DataBuffer for each match found.
 		:rtype: QueueGenerator
@@ -9165,10 +9267,33 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			"overlap": overlap,
 			"align": align
 		}
+
+		if progress_callback:
+			progress_callback_obj = ctypes.CFUNCTYPE(
+				ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong
+			)(lambda ctxt, cur, total: progress_callback(cur, total))
+		else:
+			progress_callback_obj = ctypes.CFUNCTYPE(
+				ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong
+			)(lambda ctxt, cur, total: True)
+
+		match_count = 0
+		def internal_match_callback(ctxt, offset, match):
+			nonlocal match_count
+			match_count += 1
+			data_buffer = databuffer.DataBuffer(handle=match)
+			results.put((offset, data_buffer))
+			if match_callback is not None:
+				should_continue = match_callback(offset, data_buffer)
+				if not should_continue:
+					return False
+			if limit is not None and match_count >= limit:
+				return False
+			return True
+
+		match_callback_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.POINTER(core.BNDataBuffer))(internal_match_callback)
 		results = queue.Queue()
-		match_callback_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.POINTER(core.BNDataBuffer)
-		)(lambda ctxt, offset, match: results.put((offset, databuffer.DataBuffer(handle=match))) or True)
-		t = threading.Thread(target=lambda: core.BNSearch(self.handle, json.dumps(query), None, match_callback_obj))
+		t = threading.Thread(target=lambda: core.BNSearch(self.handle, json.dumps(query), None, progress_callback_obj, None, match_callback_obj))
 		return self.QueueGenerator(t, results)
 
 	def reanalyze(self) -> None:

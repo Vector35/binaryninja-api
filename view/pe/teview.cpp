@@ -257,14 +257,10 @@ bool TEView::Init()
 				break;
 			default:
 				LogError("TE platform '0x%x' is not supported", header.machine);
+				if (!m_parseOnly)
+					m_logger->LogWarn("Unable to determine architecture. Please open the file with options and select a valid architecture.");
 				return false;
 			}
-		}
-
-		if (!platform)
-		{
-			LogError("Platform not supported by this version of Binary Ninja");
-			return false;
 		}
 
 		m_arch = platform->GetArchitecture();
@@ -371,13 +367,13 @@ bool TEViewType::IsTypeValidForData(BinaryView* bv)
 	return false;
 }
 
-Ref<Settings> TEViewType::GetLoadSettingsForData(BinaryView *bv)
+Ref<Settings> TEViewType::GetLoadSettingsForData(BinaryView* data)
 {
-	Ref<BinaryView> viewRef = Parse(bv);
+	Ref<BinaryView> viewRef = Parse(data);
 	if (!viewRef || !viewRef->Init())
 	{
-		m_logger->LogError("View type '%s' could not be created", GetName().c_str());
-		return nullptr;
+		m_logger->LogWarn("Failed to initialize view of type '%s'. Generating default load settings.", GetName().c_str());
+		viewRef = data;
 	}
 
 	// specify default load settings that can be overridden

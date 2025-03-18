@@ -52,7 +52,7 @@ extern "C" {
 		// TODO:	2. Identify if the function is unique to a class, renaming and retyping if true
 		// TODO:	3. Identify functions which address a VFT and are probably a constructor (alloc use), retyping if true
 		// TODO:	4. Identify functions which address a VFT and are probably a deconstructor (free use), retyping if true
-		Ref<Workflow> msvcMetaWorkflow = Workflow::Instance("core.module.metaAnalysis")->Clone("core.module.metaAnalysis");
+		Ref<Workflow> msvcMetaWorkflow = Workflow::Instance("core.module.metaAnalysis")->Clone();
 
 		// Add RTTI analysis.
 		msvcMetaWorkflow->RegisterActivity(R"~({
@@ -80,7 +80,7 @@ extern "C" {
 		// Run rtti before debug info is applied.
 		msvcMetaWorkflow->Insert("core.module.loadDebugInfo", "plugin.msvc.rttiAnalysis");
 		// Run vft after functions have analyzed (so that the virtual functions have analyzed)
-		msvcMetaWorkflow->Insert("core.module.notifyCompletion", "plugin.msvc.vftAnalysis");
+		msvcMetaWorkflow->Insert("core.module.deleteUnusedAutoFunctions", "plugin.msvc.vftAnalysis");
 		Workflow::RegisterWorkflow(msvcMetaWorkflow);
 
 		return true;

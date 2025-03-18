@@ -6,14 +6,14 @@
 // there are changes to the API that affect linking, including new functions,
 // new types, modifications to existing functions or types, or new versions
 // of the Qt libraries.
-#define BN_CURRENT_UI_ABI_VERSION 8
+#define BN_CURRENT_UI_ABI_VERSION 9
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions, or a new version of Qt.
-#define BN_MINIMUM_UI_ABI_VERSION 8
+#define BN_MINIMUM_UI_ABI_VERSION 9
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJAUI_LIBRARY
@@ -77,6 +77,7 @@ typedef BinaryNinja::Ref<BinaryNinja::DownloadProvider> DownloadProviderRef;
 typedef BinaryNinja::Ref<BinaryNinja::Enumeration> EnumerationRef;
 typedef BinaryNinja::Ref<BinaryNinja::ExternalLibrary> ExternalLibraryRef;
 typedef BinaryNinja::Ref<BinaryNinja::ExternalLocation> ExternalLocationRef;
+typedef BinaryNinja::Ref<BinaryNinja::FieldResolutionInfo> FieldResolutionInfoRef;
 typedef BinaryNinja::Ref<BinaryNinja::FileMetadata> FileMetadataRef;
 typedef BinaryNinja::Ref<BinaryNinja::FlowGraph> FlowGraphRef;
 typedef BinaryNinja::Ref<BinaryNinja::FlowGraphLayoutRequest> FlowGraphLayoutRequestRef;

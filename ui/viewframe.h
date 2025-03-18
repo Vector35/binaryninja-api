@@ -122,15 +122,6 @@ class BINARYNINJAUIAPI View
 	bool writeDataToClipboard(const BinaryNinja::DataBuffer& data, bool binary, TransformRef xform);
 	BinaryNinja::DataBuffer readDataFromClipboard(TransformRef xform);
 
-	// FIXME: Support for typeview, where the default navigation mode is not compatible with the navigation interface
-	// The view concept and navigation interface needs to be revisited at some point
-	// New interface/design should be pushed to NavigationHandler and through API
-	// The empty string is global navigation (inside view) by default, allows offset to be interpreted by mode
-	friend class ViewNavigationMode;
-	virtual std::string getNavigationMode() { return ""; }
-	virtual void setNavigationMode(std::string mode) { (void)mode; }
-	virtual std::vector<std::string> getNavigationModes() { return {}; }
-
   public:
 	View();
 	virtual ~View() {}
@@ -259,25 +250,6 @@ class BINARYNINJAUIAPI View
 	void notifyContextMenuCreated();
 };
 
-/*!
-
-	\ingroup viewframe
-*/
-class BINARYNINJAUIAPI ViewNavigationMode
-{
-	View* m_view;
-	std::string m_mode;
-
-	ViewNavigationMode();
-
-  public:
-	ViewNavigationMode(View* view, std::string mode) : m_view(view)
-	{
-		m_mode = m_view->getNavigationMode();
-		m_view->setNavigationMode(mode);
-	}
-	~ViewNavigationMode() { m_view->setNavigationMode(m_mode); }
-};
 
 /*!
 

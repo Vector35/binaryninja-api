@@ -1,14 +1,18 @@
 use crate::convert::{from_bn_symbol, from_bn_type_internal};
 use crate::{build_function, function_guid};
 use binaryninja::architecture::Architecture;
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::Function as BNFunction;
-use binaryninja::llil::{FunctionMutability, NonSSA, NonSSAVariant};
+use binaryninja::low_level_il::function::{
+    FunctionMutability, LowLevelILFunction, NonSSA, RegularNonSSA,
+};
+use binaryninja::low_level_il::RegularLowLevelILFunction;
 use binaryninja::rc::Guard;
 use binaryninja::rc::Ref as BNRef;
 use binaryninja::symbol::Symbol as BNSymbol;
 use binaryninja::types::NamedTypeReference as BNNamedTypeReference;
-use binaryninja::{llil, ObjectDestructor};
+use binaryninja::ObjectDestructor;
 use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
 use std::collections::HashSet;
@@ -64,9 +68,9 @@ pub fn try_cached_function_match(function: &BNFunction) -> Option<Function> {
         .to_owned()
 }
 
-pub fn cached_function<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
+pub fn cached_function<A: Architecture>(
     function: &BNFunction,
-    llil: &llil::Function<A, M, NonSSA<V>>,
+    llil: &RegularLowLevelILFunction<A>,
 ) -> Function {
     let view = function.view();
     let view_id = ViewID::from(view.as_ref());
@@ -118,9 +122,9 @@ where
     }
 }
 
-pub fn cached_function_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
+pub fn cached_function_guid<A: Architecture, M: FunctionMutability>(
     function: &BNFunction,
-    llil: &llil::Function<A, M, NonSSA<V>>,
+    llil: &LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
 ) -> FunctionGUID {
     let view = function.view();
     let view_id = ViewID::from(view);
@@ -198,10 +202,10 @@ pub struct FunctionCache {
 }
 
 impl FunctionCache {
-    pub fn function<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
+    pub fn function<A: Architecture>(
         &self,
         function: &BNFunction,
-        llil: &llil::Function<A, M, NonSSA<V>>,
+        llil: &RegularLowLevelILFunction<A>,
     ) -> Function {
         let function_id = FunctionID::from(function);
         match self.cache.get(&function_id) {
@@ -228,9 +232,9 @@ impl GUIDCache {
         let func_platform = function.platform();
         let mut constraints = HashSet::new();
         for call_site in &function.call_sites() {
-            for cs_ref_addr in view.get_code_refs_from(call_site.address, Some(function)) {
+            for cs_ref_addr in view.code_refs_from_addr(call_site.address, Some(function)) {
                 match view.function_at(&func_platform, cs_ref_addr) {
-                    Ok(cs_ref_func) => {
+                    Some(cs_ref_func) => {
                         // Call site is a function, constrain on it.
                         let cs_ref_func_id = FunctionID::from(cs_ref_func.as_ref());
                         if cs_ref_func_id != func_id {
@@ -241,11 +245,11 @@ impl GUIDCache {
                                 .insert(self.function_constraint(&cs_ref_func, call_site_offset));
                         }
                     }
-                    Err(_) => {
+                    None => {
                         // We could be dealing with an extern symbol, get the symbol as a constraint.
                         let call_site_offset: i64 =
                             call_site.address.wrapping_sub(func_start) as i64;
-                        if let Ok(call_site_sym) = view.symbol_by_address(cs_ref_addr) {
+                        if let Some(call_site_sym) = view.symbol_by_address(cs_ref_addr) {
                             constraints.insert(
                                 self.function_constraint_from_symbol(
                                     &call_site_sym,
@@ -326,10 +330,10 @@ impl GUIDCache {
         }
     }
 
-    pub fn function_guid<A: Architecture, M: FunctionMutability, V: NonSSAVariant>(
+    pub fn function_guid<A: Architecture, M: FunctionMutability>(
         &self,
         function: &BNFunction,
-        llil: &llil::Function<A, M, NonSSA<V>>,
+        llil: &LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
     ) -> FunctionGUID {
         let function_id = FunctionID::from(function);
         match self.cache.get(&function_id) {
@@ -368,8 +372,12 @@ impl TypeRefCache {
             Some(cache) => cache.to_owned(),
             None => match type_ref.target(view) {
                 Some(raw_ty) => {
-                    let computed_ty =
-                        ComputedType::new(from_bn_type_internal(view, visited_refs, &raw_ty, 255));
+                    let computed_ty = ComputedType::new(from_bn_type_internal(
+                        view,
+                        visited_refs,
+                        &raw_ty,
+                        MAX_CONFIDENCE,
+                    ));
                     self.cache
                         .entry(ntr_id)
                         .insert(Some(computed_ty))
@@ -474,6 +482,6 @@ impl ObjectDestructor for CacheDestructor {
         if let Some(cache) = TYPE_REF_CACHE.get() {
             cache.remove(&view_id);
         }
-        log::debug!("Removed WARP caches for {:?}", view);
+        log::debug!("Removed WARP caches for {:?}", view.file().filename());
     }
 }

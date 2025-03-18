@@ -1033,7 +1033,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 
 	def _get_stack_pointer_register(self, ctxt):
 		if self.stack_pointer is None:
-			return None
+			return 0
 		try:
 			return self._all_regs[self.stack_pointer]
 		except KeyError:
@@ -1621,6 +1621,8 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		:return: flag write type
 		:rtype: int
 		"""
+		if write_type == '':
+			return FlagWriteTypeIndex(0)
 		return self._flag_write_types[write_type]
 
 	def get_semantic_flag_class_by_name(self, sem_class: SemanticClassName) -> SemanticClassIndex:

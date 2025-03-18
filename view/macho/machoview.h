@@ -268,14 +268,129 @@ typedef int vm_prot_t;
 #define  SEG_UNIXSTACK      "__UNIXSTACK"
 #define  SEG_IMPORT         "__IMPORT"
 
-//Symbol Types (N_TYPE)
-#define  N_UNDF 0x0
-#define  N_ABS  0x2
-#define  N_SECT 0xe
-#define  N_PBUD 0xc
-#define  N_INDR 0xa
+/*
+ * Symbols with a index into the string table of zero (n_un.n_strx == 0) are
+ * defined to have a null, "", name.  Therefore all string indexes to non null
+ * names must not have a zero string index.  This is bit historical information
+ * that has never been well documented.
+ */
 
-#define N_ARM_THUMB_DEF	0x0008
+/*
+ * The n_type field really contains four fields:
+ *	unsigned char N_STAB:3,
+ *		      N_PEXT:1,
+ *		      N_TYPE:3,
+ *		      N_EXT:1;
+ * which are used via the following masks.
+ */
+#define	N_STAB	0xe0  /* if any of these bits set, a symbolic debugging entry */
+#define	N_PEXT	0x10  /* private external symbol bit */
+#define	N_TYPE	0x0e  /* mask for the type bits */
+#define	N_EXT	0x01  /* external symbol bit, set for external symbols */
+
+/*
+ * Only symbolic debugging entries have some of the N_STAB bits set and if any
+ * of these bits are set then it is a symbolic debugging entry (a stab).  In
+ * which case then the values of the n_type field (the entire field) are given
+ * in <mach-o/stab.h>
+ */
+
+/*
+ * Values for N_TYPE bits of the n_type field.
+ */
+#define	N_UNDF	0x0		/* undefined, n_sect == NO_SECT */
+#define	N_ABS	0x2		/* absolute, n_sect == NO_SECT */
+#define	N_SECT	0xe		/* defined in section number n_sect */
+#define	N_PBUD	0xc		/* prebound undefined (defined in a dylib) */
+#define N_INDR	0xa		/* indirect */
+
+/* 
+ * If the type is N_INDR then the symbol is defined to be the same as another
+ * symbol.  In this case the n_value field is an index into the string table
+ * of the other symbol's name.  When the other symbol is defined then they both
+ * take on the defined type and value.
+ */
+
+/*
+ * If the type is N_SECT then the n_sect field contains an ordinal of the
+ * section the symbol is defined in.  The sections are numbered from 1 and 
+ * refer to sections in order they appear in the load commands for the file
+ * they are in.  This means the same ordinal may very well refer to different
+ * sections in different files.
+ *
+ * The n_value field for all symbol table entries (including N_STAB's) gets
+ * updated by the link editor based on the value of it's n_sect field and where
+ * the section n_sect references gets relocated.  If the value of the n_sect 
+ * field is NO_SECT then it's n_value field is not changed by the link editor.
+ */
+#define	NO_SECT		0	/* symbol is not in any section */
+#define MAX_SECT	255	/* 1 thru 255 inclusive */
+
+/*
+ * The bit 0x0020 of the n_desc field is used for two non-overlapping purposes
+ * and has two different symbolic names, N_NO_DEAD_STRIP and N_DESC_DISCARDED.
+ */
+
+/*
+ * The N_NO_DEAD_STRIP bit of the n_desc field only ever appears in a 
+ * relocatable .o file (MH_OBJECT filetype). And is used to indicate to the
+ * static link editor it is never to dead strip the symbol.
+ */
+#define N_NO_DEAD_STRIP 0x0020 /* symbol is not to be dead stripped */
+
+/*
+ * The N_DESC_DISCARDED bit of the n_desc field never appears in linked image.
+ * But is used in very rare cases by the dynamic link editor to mark an in
+ * memory symbol as discared and longer used for linking.
+ */
+#define N_DESC_DISCARDED 0x0020	/* symbol is discarded */
+
+/*
+ * The N_WEAK_REF bit of the n_desc field indicates to the dynamic linker that
+ * the undefined symbol is allowed to be missing and is to have the address of
+ * zero when missing.
+ */
+#define N_WEAK_REF	0x0040 /* symbol is weak referenced */
+
+/*
+ * The N_WEAK_DEF bit of the n_desc field indicates to the static and dynamic
+ * linkers that the symbol definition is weak, allowing a non-weak symbol to
+ * also be used which causes the weak definition to be discared.  Currently this
+ * is only supported for symbols in coalesed sections.
+ */
+#define N_WEAK_DEF	0x0080 /* coalesed symbol is a weak definition */
+
+/*
+ * The N_REF_TO_WEAK bit of the n_desc field indicates to the dynamic linker
+ * that the undefined symbol should be resolved using flat namespace searching.
+ */
+#define	N_REF_TO_WEAK	0x0080 /* reference to a weak symbol */
+
+/*
+ * The N_ARM_THUMB_DEF bit of the n_desc field indicates that the symbol is
+ * a defintion of a Thumb function.
+ */
+#define N_ARM_THUMB_DEF	0x0008 /* symbol is a Thumb function (ARM) */
+
+/*
+ * The N_SYMBOL_RESOLVER bit of the n_desc field indicates that the
+ * that the function is actually a resolver function and should
+ * be called to get the address of the real function to use.
+ * This bit is only available in .o files (MH_OBJECT filetype)
+ */
+#define N_SYMBOL_RESOLVER  0x0100 
+
+/*
+ * The N_ALT_ENTRY bit of the n_desc field indicates that the
+ * symbol is pinned to the previous content.
+ */
+#define N_ALT_ENTRY 0x0200
+
+/*
+ * The N_COLD_FUNC bit of the n_desc field indicates that the symbol is used
+ * infrequently and the linker should order it towards the end of the section.
+ */
+#define N_COLD_FUNC 0x0400
 
 /*
  * An indirect symbol table entry is simply a 32bit index into the symbol table

@@ -15,6 +15,7 @@
 #include "uicontext.h"
 #include "instructionedit.h"
 #include "ilchooser.h"
+#include "commands.h"
 #include <assembledialog.h>
 
 #define LINEAR_VIEW_UPDATE_CHECK_INTERVAL 200
@@ -242,6 +243,10 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	QWidget* m_dataButtonContainer = nullptr;
 	QHBoxLayout* m_dataButtonLayout = nullptr;
 
+	std::set<std::string> m_layers;
+
+	FieldResolutionState m_fieldResolution;
+
 	void setTopToAddress(uint64_t addr);
 	void setTopToOrderingIndex(uint64_t idx);
 	void refreshLines(size_t lineOffset = 0, bool refreshUIContext = true);
@@ -327,8 +332,6 @@ private Q_SLOTS:
 	void defineNameAtAddr(uint64_t addr);
 	void defineName();
 	void undefine();
-	void setUserVariableValue();
-	void clearUserVariableValue();
 	void createFunc(const UIActionContext& context);
 	void createFuncWithPlatform(PlatformRef platform, bool autoSelect = false);
 	void defineFuncName();
@@ -499,6 +502,9 @@ public:
 	void setDisplayedFileName();
 	void setAddressBaseOffset(bool toHere);
 
+	void toggleRenderLayer(const std::string& layer);
+	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> applyRenderLayers(BinaryNinja::Ref<BinaryNinja::LinearViewCursor> cursor);
+
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target) override;
 	QFont getFont() override { return m_render.getFont(); }
 
@@ -530,6 +536,7 @@ protected:
 	void moveToStartOfView();
 	void moveToEndOfView();
 	void selectNone();
+	void selectAll();
 	void navigateToHighlightedToken();
 	void splitToNewTabAndNavigateFromCursorPosition();
 	void splitToNewWindowAndNavigateFromCursorPosition();

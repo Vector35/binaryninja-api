@@ -2214,7 +2214,7 @@ uint32_t mips_decompose_instruction(
 		case MIPS_DSLL32:
 		case MIPS_DSRA32:
 		case MIPS_DSRL32:
-			INS_3(REG, ins.r.rd, REG, ins.r.rt, IMM, ins.r.sa+32)
+			INS_3(REG, ins.r.rd, REG, ins.r.rt, IMM, ins.r.sa)
 			if (ins.r.rs != 0)
 				return 1;
 			break;

@@ -24,24 +24,35 @@ using namespace std;
 using namespace BinaryNinja;
 
 
-LinearDisassemblyLine LinearDisassemblyLine::FromAPIObject(BNLinearDisassemblyLine* line)
+BNLinearDisassemblyLine LinearDisassemblyLine::GetAPIObject() const
+{
+	BNLinearDisassemblyLine result;
+	result.type = this->type;
+	result.function = this->function ? BNNewFunctionReference(this->function->GetObject()) : nullptr;
+	result.block = this->block ? BNNewBasicBlockReference(this->block->GetObject()) : nullptr;
+	result.contents = this->contents.GetAPIObject();
+	return result;
+}
+
+
+LinearDisassemblyLine LinearDisassemblyLine::FromAPIObject(const BNLinearDisassemblyLine* line)
 {
 	LinearDisassemblyLine result;
 	result.type = line->type;
 	result.function = line->function ? new Function(BNNewFunctionReference(line->function)) : nullptr;
 	result.block = line->block ? new BasicBlock(BNNewBasicBlockReference(line->block)) : nullptr;
-	result.contents.addr = line->contents.addr;
-	result.contents.instrIndex = line->contents.instrIndex;
-	result.contents.highlight = line->contents.highlight;
-	result.contents.tokens =
-	    InstructionTextToken::ConvertInstructionTextTokenList(line->contents.tokens, line->contents.count);
-	result.contents.tags = Tag::ConvertTagList(line->contents.tags, line->contents.tagCount);
-	result.contents.typeInfo.hasTypeInfo = line->contents.typeInfo.hasTypeInfo;
-	result.contents.typeInfo.fieldIndex = line->contents.typeInfo.fieldIndex;
-	result.contents.typeInfo.parentType =
-	    line->contents.typeInfo.parentType ? new Type(BNNewTypeReference(line->contents.typeInfo.parentType)) : nullptr;
-	result.contents.typeInfo.offset = line->contents.typeInfo.offset;
+	result.contents = DisassemblyTextLine::FromAPIObject(&line->contents);
 	return result;
+}
+
+
+void LinearDisassemblyLine::FreeAPIObject(BNLinearDisassemblyLine* line)
+{
+	if (line->function)
+		BNFreeFunction(line->function);
+	if (line->block)
+		BNFreeBasicBlock(line->block);
+	DisassemblyTextLine::FreeAPIObject(&line->contents);
 }
 
 

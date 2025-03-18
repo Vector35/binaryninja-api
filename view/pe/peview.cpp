@@ -640,6 +640,10 @@ bool PEView::Init()
 				m_logger->LogError("PE architecture '0x%x' is not supported", header.machine);
 				break;
 			}
+
+			if (!m_parseOnly)
+				m_logger->LogWarn("Unable to determine architecture. Please open the file with options and select a valid architecture.");
+
 			return false;
 		}
 
@@ -3086,8 +3090,8 @@ Ref<Settings> PEViewType::GetLoadSettingsForData(BinaryView* data)
 	Ref<BinaryView> viewRef = Parse(data);
 	if (!viewRef || !viewRef->Init())
 	{
-		m_logger->LogError("View type '%s' could not be created", GetName().c_str());
-		return nullptr;
+		m_logger->LogWarn("Failed to initialize view of type '%s'. Generating default load settings.", GetName().c_str());
+		viewRef = data;
 	}
 
 	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);

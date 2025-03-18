@@ -33,7 +33,7 @@ class SplitPaneWidget;
 
     \ingroup featuremap
 */
-class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI FeatureMap : public QWidget
 {
 	Q_OBJECT
 
@@ -42,7 +42,6 @@ class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDa
 	std::unique_ptr<QImage> m_staticImage = nullptr;
 	std::vector<BNAddressRange> m_ranges;
 
-	SplitPaneWidget* m_owner = nullptr;
 	BinaryViewRef m_data;
 	std::unique_ptr<NotificationsDispatcher> m_dispatcher = nullptr;
 
@@ -81,15 +80,7 @@ class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDa
 
 	void renderDataVariable(const BinaryNinja::DataVariable& var, bool ignoreString = false);
 
-	virtual void OnAnalysisFunctionAdded(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
-	virtual void OnAnalysisFunctionRemoved(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
-	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
-	virtual void OnDataVariableAdded(BinaryNinja::BinaryView* data, const BinaryNinja::DataVariable& var) override;
-	virtual void OnDataVariableRemoved(BinaryNinja::BinaryView* data, const BinaryNinja::DataVariable& var) override;
-	virtual void OnDataVariableUpdated(BinaryNinja::BinaryView* data, const BinaryNinja::DataVariable& var) override;
-	virtual void OnStringFound(BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
-	virtual void OnStringRemoved(BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
-
+	uint8_t getSymbolColor(const SymbolRef& symbol);
 	void drawImageRect(uint64_t addr, size_t len, uint8_t color);
 
 	virtual QSize sizeHint() const override;

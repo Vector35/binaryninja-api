@@ -52,10 +52,9 @@ set(BINJA_LIB_DIR ${BN_INSTALL_BIN_DIR})
 set_property(TARGET ${PROJECT_NAME} PROPERTY OUTPUT_FILE_PATH ${OUTPUT_FILE_PATH})
 
 # Add the whole api to the depends too
-file(GLOB_RECURSE API_SOURCES CONFIGURE_DEPENDS
+file(GLOB API_SOURCES CONFIGURE_DEPENDS
         ${BN_API_SOURCE_DIR}/binaryninjacore.h
-        ${BN_API_SOURCE_DIR}/rust/src/*.rs
-        ${BN_API_SOURCE_DIR}/rust/binaryninjacore-sys/src/*.rs)
+        ${BN_API_SOURCE_DIR}/rust/src/*/*.rs)
 
 find_program(RUSTUP_PATH rustup REQUIRED HINTS ~/.cargo/bin)
 set(RUSTUP_COMMAND ${RUSTUP_PATH} run ${CARGO_STABLE_VERSION} cargo)

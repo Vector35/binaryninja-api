@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "ffi.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -33,6 +34,24 @@ DisassemblySettings::DisassemblySettings()
 DisassemblySettings::DisassemblySettings(BNDisassemblySettings* settings)
 {
 	m_object = settings;
+}
+
+
+Ref<DisassemblySettings> DisassemblySettings::GetDefaultSettings()
+{
+	return new DisassemblySettings(BNDefaultDisassemblySettings());
+}
+
+
+Ref<DisassemblySettings> DisassemblySettings::GetDefaultGraphSettings()
+{
+	return new DisassemblySettings(BNDefaultGraphDisassemblySettings());
+}
+
+
+Ref<DisassemblySettings> DisassemblySettings::GetDefaultLinearSettings()
+{
+	return new DisassemblySettings(BNDefaultLinearDisassemblySettings());
 }
 
 
@@ -125,6 +144,34 @@ void DisassemblySettings::SetCallParameterHints(BNDisassemblyCallParameterHints 
 }
 
 
+BNDisassemblyTextLineTypeInfo DisassemblyTextLineTypeInfo::GetAPIObject() const
+{
+	BNDisassemblyTextLineTypeInfo result;
+	result.hasTypeInfo = this->hasTypeInfo;
+	result.parentType = this->parentType ? BNNewTypeReference(this->parentType->GetObject()) : nullptr;
+	result.fieldIndex = this->fieldIndex;
+	result.offset = this->offset;
+	return result;
+}
+
+
+void DisassemblyTextLineTypeInfo::FreeAPIObject(BNDisassemblyTextLineTypeInfo *value)
+{
+	BNFreeType(value->parentType);
+}
+
+
+DisassemblyTextLineTypeInfo DisassemblyTextLineTypeInfo::FromAPIObject(const BNDisassemblyTextLineTypeInfo *value)
+{
+	DisassemblyTextLineTypeInfo result;
+	result.hasTypeInfo = value->hasTypeInfo;
+	result.fieldIndex = value->fieldIndex;
+	result.parentType = value->parentType ? new Type(BNNewTypeReference(value->parentType)) : nullptr;
+	result.offset = value->offset;
+	return result;
+}
+
+
 DisassemblyTextLine::DisassemblyTextLine()
 {
 	addr = 0;
@@ -141,6 +188,108 @@ DisassemblyTextLine::DisassemblyTextLine()
 	typeInfo.fieldIndex = -1;
 	typeInfo.parentType = nullptr;
 	typeInfo.offset = 0;
+}
+
+
+BNDisassemblyTextLine DisassemblyTextLine::GetAPIObject() const
+{
+	BNDisassemblyTextLine result;
+	result.addr = this->addr;
+	result.instrIndex = this->instrIndex;
+	result.highlight = this->highlight;
+	result.tokens = InstructionTextToken::CreateInstructionTextTokenList(this->tokens);
+	result.count = this->tokens.size();
+	result.tags = Tag::CreateTagList(this->tags, &(result.tagCount));
+	result.typeInfo = this->typeInfo.GetAPIObject();
+	return result;
+}
+
+
+void DisassemblyTextLine::FreeAPIObject(BNDisassemblyTextLine *value)
+{
+	InstructionTextToken::FreeInstructionTextTokenList(value->tokens, value->count);
+	Tag::FreeTagList(value->tags, value->tagCount);
+	DisassemblyTextLineTypeInfo::FreeAPIObject(&value->typeInfo);
+}
+
+
+DisassemblyTextLine DisassemblyTextLine::FromAPIObject(const BNDisassemblyTextLine *value)
+{
+	DisassemblyTextLine result;
+	result.addr = value->addr;
+	result.instrIndex = value->instrIndex;
+	result.highlight = value->highlight;
+	result.tokens = InstructionTextToken::ConvertInstructionTextTokenList(value->tokens, value->count);
+	result.tags = Tag::ConvertTagList(value->tags, value->tagCount);
+	result.typeInfo = DisassemblyTextLineTypeInfo::FromAPIObject(&value->typeInfo);
+	return result;
+}
+
+
+size_t DisassemblyTextLine::GetTotalWidth() const
+{
+	size_t result = 0;
+	for (auto& i : tokens)
+		result += i.width;
+	return result;
+}
+
+
+static void FindAddressAndIndentationTokens(
+	const vector<InstructionTextToken>& tokens, const std::function<void(const InstructionTextToken&)>& callback)
+{
+	size_t startToken = 0;
+	for (size_t i = 0; i < tokens.size(); i++)
+	{
+		if (tokens[i].type == AddressSeparatorToken)
+		{
+			startToken = i + 1;
+			break;
+		}
+	}
+
+	for (size_t i = 0; i < startToken; i++)
+		callback(tokens[i]);
+	for (size_t i = startToken; i < tokens.size(); i++)
+	{
+		if (tokens[i].type == AddressDisplayToken || tokens[i].type == AddressSeparatorToken
+			|| tokens[i].type == CollapseStateIndicatorToken)
+		{
+			callback(tokens[i]);
+			continue;
+		}
+
+		bool whitespace = true;
+		for (auto ch : tokens[i].text)
+		{
+			if (!isspace(ch))
+			{
+				whitespace = false;
+				break;
+			}
+		}
+
+		if (!whitespace)
+			break;
+
+		callback(tokens[i]);
+	}
+}
+
+
+size_t DisassemblyTextLine::GetAddressAndIndentationWidth() const
+{
+	size_t result = 0;
+	FindAddressAndIndentationTokens(tokens, [&](const InstructionTextToken& token) { result += token.width; });
+	return result;
+}
+
+
+vector<InstructionTextToken> DisassemblyTextLine::GetAddressAndIndentationTokens() const
+{
+	vector<InstructionTextToken> result;
+	FindAddressAndIndentationTokens(tokens, [&](const InstructionTextToken& token) { result.push_back(token); });
+	return result;
 }
 
 
@@ -350,19 +499,7 @@ vector<DisassemblyTextLine> BasicBlock::GetDisassemblyText(DisassemblySettings* 
 	size_t count;
 	BNDisassemblyTextLine* lines = BNGetBasicBlockDisassemblyText(m_object, settings->GetObject(), &count);
 
-	vector<DisassemblyTextLine> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		DisassemblyTextLine line;
-		line.addr = lines[i].addr;
-		line.instrIndex = lines[i].instrIndex;
-		line.highlight = lines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		line.tags = Tag::ConvertTagList(lines[i].tags, lines[i].tagCount);
-		result.push_back(line);
-	}
-
+	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);;
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
@@ -504,6 +641,12 @@ bool BasicBlock::IsLowLevelILBlock() const
 bool BasicBlock::IsMediumLevelILBlock() const
 {
 	return BNIsMediumLevelILBasicBlock(m_object);
+}
+
+
+bool BasicBlock::IsHighLevelILBlock() const
+{
+	return BNIsHighLevelILBasicBlock(m_object);
 }
 
 

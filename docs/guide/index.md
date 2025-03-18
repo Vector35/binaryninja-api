@@ -63,7 +63,7 @@ The following files and folders may be created in the user folder but are not cr
 
 ### QSettings Locations
 
-Some settings such as window locations, saved checkboxes, recent file lists, disassembly settings, dialog histories are stored in `QSettings`.
+Some settings such as window locations, saved checkboxes, recent file lists, disassembly settings, dialog histories are stored in `QSettings`. Note that the `BN_QSETTINGS_POSTFIX` environment variable can be used to temporarily use a different QSetting file which is useful for different profiles or testing purposes.
 
 If you ever have the need to flush these, you can find the install locations as described in the [QT documentation](https://doc.qt.io/qt-6/qsettings.html#platform-specific-notes).
 

@@ -2,18 +2,21 @@ cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
 project(sharedcache)
 
-if((NOT BN_API_PATH) AND (NOT BN_INTERNAL_BUILD))
-    set(BN_API_PATH $ENV{BN_API_PATH} CACHE STRING "Path to Binary Ninja API source")
-    if(NOT BN_API_PATH)
-        message(FATAL_ERROR "Provide path to Binary Ninja API source in BN_API_PATH")
-    endif()
+if(NOT BN_INTERNAL_BUILD)
+    find_path(
+        BN_API_PATH
+        NAMES binaryninjaapi.h
+        HINTS ../.. binaryninjaapi $ENV{BN_API_PATH}
+        REQUIRED
+    )
+    add_subdirectory(${BN_API_PATH} binaryninjaapi)
 endif()
 
 if (NOT BN_INTERNAL_BUILD)
     if(WIN32)
         set(MSVC_VERSION msvc2022_64 CACHE STRING "Version of MSVC Qt is built with" )
     endif()
-    set(QT_VERSION 6.7.2 CACHE STRING "Version of Qt to use")
+    set(QT_VERSION 6.8.2 CACHE STRING "Version of Qt to use")
 
     if(NOT CMAKE_PREFIX_PATH)
         if(APPLE)
@@ -30,7 +33,7 @@ endif()
 set(HARD_FAIL_MODE OFF CACHE BOOL "Enable hard fail mode")
 set(SLIDEINFO_DEBUG_TAGS OFF CACHE BOOL "Enable debug tags in slideinfo")
 set(VIEW_NAME "DSCView" CACHE STRING "Name of the view")
-set(METADATA_VERSION 3 CACHE STRING "Version of the metadata")
+set(METADATA_VERSION 5 CACHE STRING "Version of the metadata")
 
 add_subdirectory(core)
 add_subdirectory(api)
@@ -49,6 +52,7 @@ else()
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/plugins
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/plugins
             )
+    bn_install_plugin(sharedcache)
 endif()
 
 set_target_properties(sharedcache PROPERTIES

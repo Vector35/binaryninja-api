@@ -22,7 +22,7 @@ To install on Windows, use the installer linked from the email you received afte
 
 ## License
 
-When you first run Binary Ninja, it will prompt you for your license key. You should have received your license key via the same email that included your download links. If not, please contact [support](https://binary.ninja/support).
+When you first run Binary Ninja, it will prompt you for your license key. You should have received your license key via the same email that included your download links. Additionally, you can manage your licenses in the [Binary Ninja Portal](https://portal.binary.ninja) or by contacting [support](https://binary.ninja/support).
 
 ## Opening Files
 

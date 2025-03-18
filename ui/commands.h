@@ -34,6 +34,30 @@ bool BINARYNINJAUIAPI createStructMembers(
 bool BINARYNINJAUIAPI inputPossibleValueSet(QWidget* parent, BinaryViewRef data, FunctionRef currentFunction, const BinaryNinja::FunctionViewType& funcType,
     const BinaryNinja::Variable& var, size_t ilInstructionIndex = BN_INVALID_EXPR);
 
+
+bool BINARYNINJAUIAPI inputUserVariableValue(View* parent, HighlightTokenState& highlight);
+bool BINARYNINJAUIAPI eligibleForUserVariableValue(View* parent, HighlightTokenState& highlight);
+
+bool BINARYNINJAUIAPI clearUserVariableValue(View* parent, HighlightTokenState& highlight);
+bool BINARYNINJAUIAPI eligibleToClearUserVariableValue(View* parent, HighlightTokenState& highlight);
+
+bool BINARYNINJAUIAPI forceVariableVersion(View* parent, HighlightTokenState& highlight);
+bool BINARYNINJAUIAPI eligibleToForceVariableVersion(View* parent, HighlightTokenState& highlight);
+
+bool BINARYNINJAUIAPI clearVariableVersion(View* parent, HighlightTokenState& highlight);
+bool BINARYNINJAUIAPI eligibleToClearVariableVersion(View* parent, HighlightTokenState& highlight);
+
+struct BINARYNINJAUIAPI FieldResolutionState
+{
+	std::vector<std::pair<std::string, FieldResolutionInfoRef>> goodFieldResolutions = {};
+	std::vector<std::pair<std::string, FieldResolutionInfoRef>> badFieldResolutions = {};
+
+	size_t registeredGoodFieldResolutions = 0;
+	size_t registeredBadFieldResolutions = 0;
+
+	void bindDynamicActions(View* view, HighlightTokenState& highlight);
+};
+
 bool BINARYNINJAUIAPI getEnumSelection(QWidget* parent, BinaryViewRef data, FunctionRef func, uint64_t constValue,
 	TypeRef& selectedEnum, bool checkValue, bool canTruncate);
 

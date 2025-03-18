@@ -1,5 +1,5 @@
 use crate::cache::try_cached_function_guid;
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
 use binaryninja::function::Function as BNFunction;
 use binaryninja::rc::Guard as BNGuard;
@@ -26,11 +26,10 @@ impl Command for FindFunctionFromGUID {
         log::info!("Searching functions for GUID... {}", searched_guid);
         let funcs = view.functions();
         thread::spawn(move || {
-            let background_task = binaryninja::backgroundtask::BackgroundTask::new(
+            let background_task = binaryninja::background_task::BackgroundTask::new(
                 format!("Searching functions for GUID... {}", searched_guid),
                 false,
-            )
-            .unwrap();
+            );
 
             // Only run this for functions which have already generated a GUID.
             let matched = funcs

@@ -40,11 +40,11 @@ use binaryninjacore_sys::{
 use std::ops::Range;
 use std::os::raw::c_void;
 
-use crate::binaryview::BinaryView;
+use crate::binary_view::BinaryView;
 use crate::function::Function;
 use crate::string::BnStrCompatible;
 
-/// The trait required for generic commands.  See [register] for example usage.
+/// The trait required for generic commands.  See [register_command] for example usage.
 pub trait Command: 'static + Sync {
     fn action(&self, view: &BinaryView);
     fn valid(&self, view: &BinaryView) -> bool;
@@ -68,7 +68,7 @@ where
 /// # Example
 /// ```no_run
 /// # use binaryninja::command::Command;
-/// # use binaryninja::binaryview::BinaryView;
+/// # use binaryninja::binary_view::BinaryView;
 /// struct MyCommand;
 ///
 /// impl Command for MyCommand {
@@ -82,10 +82,10 @@ where
 ///     }
 /// }
 ///
-/// # use binaryninja::command::register;
+/// # use binaryninja::command::register_command;
 /// #[no_mangle]
 /// pub extern "C" fn CorePluginInit() -> bool {
-///     register(
+///     register_command(
 ///         "My Plugin Command",
 ///         "A description of my command",
 ///         MyCommand {},
@@ -93,7 +93,7 @@ where
 ///     true
 /// }
 /// ```
-pub fn register<S, C>(name: S, desc: S, command: C)
+pub fn register_command<S, C>(name: S, desc: S, command: C)
 where
     S: BnStrCompatible,
     C: Command,
@@ -145,7 +145,7 @@ where
     }
 }
 
-/// The trait required for address-associated commands.  See [register_for_address] for example usage.
+/// The trait required for address-associated commands.  See [register_command_for_address] for example usage.
 pub trait AddressCommand: 'static + Sync {
     fn action(&self, view: &BinaryView, addr: u64);
     fn valid(&self, view: &BinaryView, addr: u64) -> bool;
@@ -169,7 +169,7 @@ where
 /// # Example
 /// ```no_run
 /// # use binaryninja::command::AddressCommand;
-/// # use binaryninja::binaryview::BinaryView;
+/// # use binaryninja::binary_view::BinaryView;
 /// struct MyCommand;
 ///
 /// impl AddressCommand for MyCommand {
@@ -183,10 +183,10 @@ where
 ///     }
 /// }
 ///
-/// # use binaryninja::command::register_for_address;
+/// # use binaryninja::command::register_command_for_address;
 /// #[no_mangle]
 /// pub extern "C" fn CorePluginInit() -> bool {
-///     register_for_address(
+///     register_command_for_address(
 ///         "My Plugin Command",
 ///         "A description of my command",
 ///         MyCommand {},
@@ -194,7 +194,7 @@ where
 ///     true
 /// }
 /// ```
-pub fn register_for_address<S, C>(name: S, desc: S, command: C)
+pub fn register_command_for_address<S, C>(name: S, desc: S, command: C)
 where
     S: BnStrCompatible,
     C: AddressCommand,
@@ -246,7 +246,7 @@ where
     }
 }
 
-/// The trait required for range-associated commands.  See [register_for_range] for example usage.
+/// The trait required for range-associated commands.  See [register_command_for_range] for example usage.
 pub trait RangeCommand: 'static + Sync {
     fn action(&self, view: &BinaryView, range: Range<u64>);
     fn valid(&self, view: &BinaryView, range: Range<u64>) -> bool;
@@ -271,7 +271,7 @@ where
 /// ```no_run
 /// # use std::ops::Range;
 /// # use binaryninja::command::RangeCommand;
-/// # use binaryninja::binaryview::BinaryView;
+/// # use binaryninja::binary_view::BinaryView;
 /// struct MyCommand;
 ///
 /// impl RangeCommand for MyCommand {
@@ -285,10 +285,10 @@ where
 ///     }
 /// }
 ///
-/// # use binaryninja::command::register_for_range;
+/// # use binaryninja::command::register_command_for_range;
 /// #[no_mangle]
 /// pub extern "C" fn CorePluginInit() -> bool {
-///     register_for_range(
+///     register_command_for_range(
 ///         "My Plugin Command",
 ///         "A description of my command",
 ///         MyCommand {},
@@ -296,7 +296,7 @@ where
 ///     true
 /// }
 /// ```
-pub fn register_for_range<S, C>(name: S, desc: S, command: C)
+pub fn register_command_for_range<S, C>(name: S, desc: S, command: C)
 where
     S: BnStrCompatible,
     C: RangeCommand,
@@ -353,7 +353,7 @@ where
     }
 }
 
-/// The trait required for function-associated commands.  See [register_for_function] for example usage.
+/// The trait required for function-associated commands.  See [register_command_for_function] for example usage.
 pub trait FunctionCommand: 'static + Sync {
     fn action(&self, view: &BinaryView, func: &Function);
     fn valid(&self, view: &BinaryView, func: &Function) -> bool;
@@ -377,9 +377,9 @@ where
 /// # Example
 /// ```no_run
 /// # use binaryninja::command::FunctionCommand;
-/// # use binaryninja::binaryview::BinaryView;
+/// # use binaryninja::binary_view::BinaryView;
 /// # use binaryninja::function::Function;
-/// # use binaryninja::command::register_for_function;
+/// # use binaryninja::command::register_command_for_function;
 /// struct MyCommand;
 ///
 /// impl FunctionCommand for MyCommand {
@@ -395,7 +395,7 @@ where
 ///
 /// #[no_mangle]
 /// pub extern "C" fn CorePluginInit() -> bool {
-///     register_for_function(
+///     register_command_for_function(
 ///         "My Plugin Command",
 ///         "A description of my command",
 ///         MyCommand {},
@@ -403,7 +403,7 @@ where
 ///     true
 /// }
 /// ```
-pub fn register_for_function<S, C>(name: S, desc: S, command: C)
+pub fn register_command_for_function<S, C>(name: S, desc: S, command: C)
 where
     S: BnStrCompatible,
     C: FunctionCommand,

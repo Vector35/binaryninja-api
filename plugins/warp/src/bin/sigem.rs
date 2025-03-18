@@ -7,7 +7,7 @@ use ar::Archive;
 use clap::{arg, Parser};
 use rayon::prelude::*;
 
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::function::Function as BNFunction;
 use binaryninja::rc::Guard as BNGuard;
 use binaryninja::settings::Settings;
@@ -47,6 +47,7 @@ struct Args {
     /// The external debug information file to use
     #[arg(short, long)]
     debug_info: Option<PathBuf>,
+    // TODO: Add a file filter and default to filter out files starting with "."
 }
 
 fn default_settings(bn_settings: &Settings) -> Value {
@@ -75,6 +76,10 @@ fn main() {
     let args = Args::parse();
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
+    // TODO: After analysis finishes for a file we should save off the bndb to another directory called the bndb cache
+    // TODO: This cache should be used before opening a file for first analysis.
+
+    // TODO: We should resolve the path to something sensible in cases where user is passing CWD.
     // If no output file was given, just prepend binary with extension sbin
     let output_file = args
         .output
@@ -87,22 +92,18 @@ fn main() {
     }
 
     log::debug!("Starting Binary Ninja session...");
-    let _headless_session = binaryninja::headless::Session::new();
+    let _headless_session =
+        binaryninja::headless::Session::new().expect("Failed to initialize session");
 
     // Adjust the amount of worker threads so that we can actually free BinaryViews.
-    let bn_settings = Settings::new("");
     let worker_count = rayon::current_num_threads() * 4;
     log::debug!("Adjusting Binary Ninja worker count to {}...", worker_count);
-    bn_settings.set_integer(
-        "analysis.limits.workerThreadCount",
-        worker_count as u64,
-        None,
-        None,
-    );
+    binaryninja::worker_thread::set_worker_thread_count(worker_count);
 
     // Make sure caches are flushed when the views get destructed.
     register_cache_destructor();
 
+    let bn_settings = Settings::new();
     let settings = default_settings(&bn_settings);
 
     log::info!("Creating functions for {:?}...", args.path);
@@ -222,7 +223,6 @@ fn data_from_directory(settings: &Value, dir: PathBuf) -> Option<Data> {
     }
 }
 
-// TODO: Pass settings.
 fn data_from_file(settings: &Value, path: &Path) -> Option<Data> {
     match path.extension() {
         Some(ext) if ext == "a" || ext == "lib" || ext == "rlib" => {
@@ -253,8 +253,9 @@ mod tests {
         env_logger::init();
         // TODO: Store oracles here to get more out of this test.
         let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
-        let _headless_session = binaryninja::headless::Session::new();
-        let bn_settings = Settings::new("");
+        let _headless_session =
+            binaryninja::headless::Session::new().expect("Failed to initialize session");
+        let bn_settings = Settings::new();
         let settings = default_settings(&bn_settings);
         for entry in std::fs::read_dir(out_dir).expect("Failed to read OUT_DIR") {
             let entry = entry.expect("Failed to read directory entry");

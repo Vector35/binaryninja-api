@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
-
+import abc
 import ctypes
 import dataclasses
 from json import dumps
@@ -313,8 +313,15 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		:param escaping: Style of escaping literals which may not be parsable
 		:return: List of text tokens representing the type
 		"""
-		raise NotImplementedError()
 
+		before = self.get_type_tokens_before_name(type, platform, base_confidence, None, escaping)
+		after = self.get_type_tokens_after_name(type, platform, base_confidence, None, escaping)
+		if len(before) > 0 and before[-1].text[-1] != ' ' and before[-1].text[-1] != '*' and before[-1].text[-1] != '&' and len(after) > 0 and after[0].text[0] != ' ':
+			if type.type_class != types.TypeClass.FunctionTypeClass:
+				before.append(_function.InstructionTextToken(_function.InstructionTextTokenType.TextToken, " "))
+		return before + after
+
+	@abc.abstractmethod
 	def get_type_tokens_before_name(self, type: types.Type, platform: Optional[_platform.Platform] = None, base_confidence: int = core.max_confidence, parent_type: Optional[types.Type] = None, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[_function.InstructionTextToken]:
 		"""
 		In a single-line text representation of a type, generate the tokens that should
@@ -329,6 +336,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		"""
 		raise NotImplementedError()
 
+	@abc.abstractmethod
 	def get_type_tokens_after_name(self, type: types.Type, platform: Optional[_platform.Platform] = None, base_confidence: int = core.max_confidence, parent_type: Optional[types.Type] = None, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[_function.InstructionTextToken]:
 		"""
 		In a single-line text representation of a type, generate the tokens that should
@@ -353,7 +361,13 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		:param escaping: Style of escaping literals which may not be parsable
 		:return: String representing the type
 		"""
-		raise NotImplementedError()
+		before = self.get_type_string_before_name(type, platform, escaping)
+		q_name = types.QualifiedName.escape(name, escaping)
+		after = self.get_type_string_after_name(type, platform, escaping)
+		if (len(before) > 0 and len(q_name) > 0 and before[-1] != ' ' and q_name[0] != ' ') \
+			or (len(before) > 0 and len(after) > 0 and before[-1] != ' ' and after[0] != ' '):
+			return before + " " + q_name + after
+		return before + q_name + after
 
 	def get_type_string_before_name(self, type: types.Type, platform: Optional[_platform.Platform] = None, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		"""
@@ -365,7 +379,8 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		:param escaping: Style of escaping literals which may not be parsable
 		:return: String representing the type
 		"""
-		raise NotImplementedError()
+		tokens = self.get_type_tokens_before_name(type, platform, core.max_confidence, None, escaping)
+		return ''.join(token.text for token in tokens)
 
 	def get_type_string_after_name(self, type: types.Type, platform: Optional[_platform.Platform] = None, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		"""
@@ -377,8 +392,10 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		:param escaping: Style of escaping literals which may not be parsable
 		:return: String representing the type
 		"""
-		raise NotImplementedError()
+		tokens = self.get_type_tokens_after_name(type, platform, core.max_confidence, None, escaping)
+		return ''.join(token.text for token in tokens)
 
+	@abc.abstractmethod
 	def get_type_lines(self, type: types.Type, container: 'typecontainer.TypeContainer', name: types.QualifiedNameType, padding_cols = 64, collapsed = False, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[types.TypeDefinitionLine]:
 		"""
 		Generate a multi-line representation of a type

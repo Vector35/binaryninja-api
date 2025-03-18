@@ -203,12 +203,13 @@ The following environment variables may be helpful when troubleshooting issues:
 | --- | --- | ----------- |
 | BN_LICENSE | File Contents (String) | This variable is useful for using Binary Ninja with a license passed from outside a docker image without storing the raw license file inside. [Must contain](https://github.com/Vector35/debugger/blob/dev/scripts/build.py#L195-L196) the full contents of the license file.  |
 | BN_USER_DIRECTORY | Path (String) | This variable overrides the [default user folder](https://docs.binary.ninja/guide/index.html#user-folder) path. |
+| BN_QSETTINGS_POSTFIX | Postfix (String) | This environment variable is treated as a string postfix that can be used to separate saved QSettings for testing purposes. |
 | BN_DISABLE_REPOSITORY_PLUGINS | Flag (True if exists) | This setting will only disable plugins installed via the plugin manager. |
 | BN_DISABLE_USER_PLUGINS | Flag (True if exists) | This environment variable will disable all plugins loaded from the [plugins user folder](https://docs.binary.ninja/guide/index.html#user-folder). |
 | BN_DISABLE_USER_SETTINGS | Flag (True if exists) | This flag will cause Binary Ninja to ignore any [`settings.json`](https://docs.binary.ninja/guide/settings.html).|
 | BN_SCREENSHOT | Flag (True if exists) | This flag removes some small UI clutter to enable cleaner screenshots. |
 | BN_DEBUG_HTTP | Flag (True if exists) | This flag enables additional debug logging of HTTP activity. |
-| BN_DEBUG_EXCEPTION_TRACES | Flag (True if exists) | This variable includes stack traces when exceptions are handled (MacOS and Linux only). |
+| BN_DEBUG_EXCEPTION_TRACES | Flag (Enabled by default, disabled if set to "0") | This variable includes stack traces when exceptions are handled (MacOS and Linux only). |
 | BN_DEBUG_CLANG | Flag (True if exists) | If set, this flag adds additional debugging information to stdout from clang type parsing. |
 
 

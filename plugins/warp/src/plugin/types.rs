@@ -1,5 +1,5 @@
 use crate::convert::to_bn_type;
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
 use std::time::Instant;
 
@@ -7,10 +7,13 @@ pub struct LoadTypes;
 
 impl Command for LoadTypes {
     fn action(&self, view: &BinaryView) {
-        let Some(file) = binaryninja::interaction::get_open_filename_input(
-            "Apply Signature File Types",
-            "*.sbin",
-        ) else {
+        // NOTE: Because we only can consume signatures from a specific directory, we don't need to use the interaction API.
+        // If we did need to load signature files from a project than this would need to change.
+        let Some(file) = rfd::FileDialog::new()
+            .add_filter("Signature Files", &["sbin"])
+            .set_file_name(format!("{}.sbin", view.file().filename()))
+            .pick_file()
+        else {
             return;
         };
 
@@ -31,11 +34,10 @@ impl Command for LoadTypes {
 
         let view = view.to_owned();
         std::thread::spawn(move || {
-            let background_task = binaryninja::backgroundtask::BackgroundTask::new(
+            let background_task = binaryninja::background_task::BackgroundTask::new(
                 format!("Applying {} types...", data.types.len()),
                 true,
-            )
-            .unwrap();
+            );
 
             let start = Instant::now();
             for comp_ty in data.types {

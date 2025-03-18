@@ -290,7 +290,7 @@ automatically detect the plugin target and will compile and install correctly. H
 setup for building and live debugging your plugin:
 
 1. If you installed Binary Ninja somewhere other than the default, add an environment variable in your CMake Profile pointing at the installation, e.g.: `BN_INSTALL_DIR=/Applications/Binary Ninja.app`
-2. If you are writing a UI plugin, you will need to include the directory containing `qmake` to the `PATH` Environment Variable in your CMake Profile, e.g.: `PATH=/usr/bin:/bin:/usr/sbin:/sbin:/Users/user/Qt/6.7.2/clang_64/bin`
+2. If you are writing a UI plugin, you will need to include the directory containing `qmake` to the `PATH` Environment Variable in your CMake Profile, e.g.: `PATH=/usr/bin:/bin:/usr/sbin:/sbin:/Users/user/Qt/6.8.2/clang_64/bin`
 3. In your Run Configuration's Before Launch steps, add an Install step. This will copy the updated version of your plugin before starting, so you don't have to run Install manually.
 4. Set the Executable of your Run Configuration to point to the Binary Ninja executable. This allows you to compile your plugin and start Binary Ninja automatically.
    i. On macOS, you will need the full path to /Applications/Binary Ninja.app/Contents/MacOS/binaryninja
@@ -320,7 +320,7 @@ You need to set up a task in `.vscode/tasks.json` to build and install your plug
                         // You will need this if your Binary Ninja installation is not in the default location   
                         "BN_INSTALL_DIR": "C:\\Users\\User\\AppData\\Local\\Vector35\\BinaryNinja",
                         // You will need this if you are writing a UI plugin
-                        "PATH": "C:\\Users\\User\\Qt\\6.7.2\\msvc2019_64\\bin"
+                        "PATH": "C:\\Users\\User\\Qt\\6.8.2\\msvc2019_64\\bin"
                     }
                 }
             }

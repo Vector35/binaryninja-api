@@ -515,6 +515,12 @@ void TypeDefinitionLine::FreeTypeDefinitionLineList(BNTypeDefinitionLine* lines,
 }
 
 
+FieldResolutionInfo::FieldResolutionInfo(BNFieldResolutionInfo* info)
+{
+	m_object = info;
+}
+
+
 BaseStructure::BaseStructure(NamedTypeReference* _type, uint64_t _offset, uint64_t _width) :
 	type(_type), offset(_offset), width(_width)
 {}
@@ -1274,7 +1280,7 @@ Ref<Type> Type::WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTy
 
 
 bool Type::AddTypeMemberTokens(BinaryView* data, vector<InstructionTextToken>& tokens, int64_t offset,
-    vector<string>& nameList, size_t size, bool indirect)
+    vector<string>& nameList, size_t size, bool indirect, FieldResolutionInfo* info)
 {
 	size_t tokenCount;
 	BNInstructionTextToken* list;
@@ -1282,8 +1288,8 @@ bool Type::AddTypeMemberTokens(BinaryView* data, vector<InstructionTextToken>& t
 	size_t nameCount;
 	char** names = nullptr;
 
-	if (!BNAddTypeMemberTokens(
-	        m_object, data->GetObject(), &list, &tokenCount, offset, &names, &nameCount, size, indirect))
+	if (!BNAddTypeMemberTokens(m_object, data->GetObject(), &list, &tokenCount,
+				offset, &names, &nameCount, size, indirect, info ? info->m_object : nullptr))
 		return false;
 
 	vector<InstructionTextToken> newTokens =
@@ -1298,6 +1304,30 @@ bool Type::AddTypeMemberTokens(BinaryView* data, vector<InstructionTextToken>& t
 	BNFreeStringList(names, nameCount);
 
 	return true;
+}
+
+struct EnumerateTypesForAccessCallbackInfo
+{
+	const std::function<void(const Confidence<Ref<Type>>& type, FieldResolutionInfo* path)>* callback;
+};
+
+
+static void EnumerateTypesForAccessCallback(void* ctxt, BNTypeWithConfidence* tc, BNFieldResolutionInfo* info)
+{
+	EnumerateTypesForAccessCallbackInfo* enumerateFunc = (EnumerateTypesForAccessCallbackInfo *) ctxt;
+
+	Confidence<Ref<Type>> typeRef(tc->type ? new Type(BNNewTypeReference(tc->type)) : nullptr, tc->confidence);
+	Ref<FieldResolutionInfo> path = new FieldResolutionInfo(BNNewFieldResolutionInfoReference(info));
+
+	(*enumerateFunc->callback)(typeRef, path);
+}
+
+bool Type::EnumerateTypesForAccess(BinaryView* data, uint64_t offset, size_t size, uint8_t baseConfidence,
+	const std::function<void(const Confidence<Ref<Type>>& type, FieldResolutionInfo* path)>& terminal)
+{
+	EnumerateTypesForAccessCallbackInfo callbackInfo = { &terminal };
+	return BNEnumerateTypesForAccess(m_object, data->GetObject(), offset, size, baseConfidence,
+		EnumerateTypesForAccessCallback, &callbackInfo);
 }
 
 

@@ -14,13 +14,6 @@
 #include "lowlevelilinstruction.h"
 #include "rapidjsonwrapper.h"
 
-enum {
-	N_STAB = 0xe0,
-	N_PEXT = 0x10,
-	N_TYPE = 0x0e,
-	N_EXT  = 0x01
-};
-
 using namespace BinaryNinja;
 using namespace std;
 
@@ -3863,8 +3856,8 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 	Ref<BinaryView> viewRef = Parse(data);
 	if (!viewRef || !viewRef->Init())
 	{
-		m_logger->LogError("View type '%s' could not be created", GetName().c_str());
-		return nullptr;
+		m_logger->LogWarn("Failed to initialize view of type '%s'. Generating default load settings.", GetName().c_str());
+		viewRef = data;
 	}
 
 	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);

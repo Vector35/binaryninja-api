@@ -8,7 +8,10 @@
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QStyledItemDelegate>
+#include <QtCore/QSortFilterProxyModel>
 
+#include "binaryninjaapi.h"
+#include "notificationsdispatcher.h"
 #include "render.h"
 #include "sidebar.h"
 #include "uitypes.h"
@@ -20,17 +23,6 @@
 	\defgroup memorymap MemoryMap
  	\ingroup uiapi
 */
-
-/*!
-
-    \ingroup memorymap
-*/
-class BINARYNINJAUIAPI DataComparedTableItem : public QTableWidgetItem
-{
-public:
-	DataComparedTableItem(const QString& text, int type=QTableWidgetItem::ItemType::Type): QTableWidgetItem(text, type) {};
-	bool operator<(const QTableWidgetItem& other) const;
-};
 
 /*!
 
@@ -91,74 +83,138 @@ public:
 	SectionDialog(QWidget* parent, BinaryViewRef data, SectionRef section = nullptr);
 };
 
-/*!
 
-    \ingroup memorymap
-*/
-class BINARYNINJAUIAPI SegmentWidget : public QWidget, public BinaryNinja::BinaryDataNotification
+enum class SegmentColumn : int {
+	START = 0,
+	END,
+	LENGTH,
+	DATA_OFFSET,
+	DATA_LENGTH,
+	FLAGS,
+	SOURCE,
+	COLUMN_COUNT,
+};
+
+
+class BINARYNINJAUIAPI SegmentModel : public QAbstractItemModel
 {
-	Q_OBJECT
-
-	enum SEGMENT_COLUMN {
-		START = 0,
-		END,
-		DATA_OFFSET,
-		DATA_LENGTH,
-		FLAGS,
-		COLUMN_COUNT,
-	};
-
 	BinaryViewRef m_data;
-	QTableWidget* m_table;
-	std::mutex m_updateMutex;
 
-	void updateInfo();
-	void showContextMenu(const QPoint& point);
+	std::vector<SegmentRef> m_segments;
 
-	void addSegment();
-	void editSegment(SegmentRef segment);
-	void removeSegment(SegmentRef segment);
+	QHash<QPersistentModelIndex, bool> m_highlightedIndices;
 
 public:
-	SegmentWidget(BinaryViewRef data);
-	virtual ~SegmentWidget();
+	SegmentModel(BinaryViewRef data, QObject* parent = nullptr);
+	~SegmentModel();
 
-	void updateFont();
-	void highlightRelatedSegments(SectionRef section);
-	void itemChanged(QTableWidgetItem* current, QTableWidgetItem* previous);
+	int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 
-	virtual void OnSegmentAdded(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override;
-	virtual void OnSegmentUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override;
-	virtual void OnSegmentRemoved(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override;
+	QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
+	QModelIndex parent(const QModelIndex& child) const override;
+	bool hasChildren(const QModelIndex&) const override;
 
-Q_SIGNALS:
-	void currentSegmentChanged(SegmentRef current);
-	void addressDoubleClicked(uint64_t address);
-	void rawAddressDoubleClicked(uint64_t address);
-	void segmentsChanged();
+	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+	bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
+
+	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+
+	void updateSegments(std::vector<SegmentRef>&& segments);
 };
 
 /*!
 
     \ingroup memorymap
 */
-class BINARYNINJAUIAPI SectionWidget : public QWidget, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI SegmentWidget : public QWidget
 {
 	Q_OBJECT
 
-	enum SECTION_COLUMN {
-		NAME = 0,
-		START,
-		END,
-		SEMANTICS,
-		COLUMN_COUNT,
-	};
-
 	BinaryViewRef m_data;
-	QTableWidget* m_table;
+	QTableView* m_table;
+	SegmentModel* m_model;
+	QSortFilterProxyModel* m_proxyModel;
 	std::mutex m_updateMutex;
 
-	void updateInfo();
+	//void updateInfo();
+	void showContextMenu(const QPoint& point);
+	QMenu* createHeaderContextMenu(const QPoint& p);
+	void restoreDefaults();
+
+	void addSegment();
+	void editSegment(SegmentRef segment);
+	void disableSegment(SegmentRef segment);
+	void removeSegment(SegmentRef segment);
+
+public:
+	SegmentWidget(BinaryViewRef data, QWidget* parent = nullptr);
+	virtual ~SegmentWidget();
+
+	SegmentModel* model() { return m_model; }
+
+	void updateFont();
+	void highlightRelatedSegments(SectionRef section);
+	void currentRowChanged(const QModelIndex& current, const QModelIndex& previous);
+
+Q_SIGNALS:
+	void currentSegmentChanged(SegmentRef current);
+	void addressDoubleClicked(uint64_t address);
+	void rawAddressDoubleClicked(uint64_t address);
+};
+
+
+enum class SectionColumn: int
+{
+	NAME = 0,
+	START,
+	END,
+	SEMANTICS,
+	COLUMN_COUNT,
+};
+
+
+class BINARYNINJAUIAPI SectionModel : public QAbstractItemModel
+{
+	BinaryViewRef m_data;
+
+	std::vector<SectionRef> m_sections;
+
+	QHash<QPersistentModelIndex, bool> m_highlightedIndices;
+
+public:
+	SectionModel(BinaryViewRef data, QObject* parent = nullptr);
+	~SectionModel();
+
+	int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+
+	QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
+	QModelIndex parent(const QModelIndex& child) const override;
+	bool hasChildren(const QModelIndex&) const override;
+
+	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+	bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
+
+	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+
+	void updateSections(std::vector<SectionRef>&& sections);
+};
+
+/*!
+
+    \ingroup memorymap
+*/
+class BINARYNINJAUIAPI SectionWidget : public QWidget
+{
+	Q_OBJECT
+
+	BinaryViewRef m_data;
+	QTableView* m_table;
+	SectionModel* m_model;
+	QSortFilterProxyModel* m_proxyModel;
+	std::mutex m_updateMutex;
+
 	void showContextMenu(const QPoint& point);
 
 	void addSection();
@@ -166,21 +222,18 @@ class BINARYNINJAUIAPI SectionWidget : public QWidget, public BinaryNinja::Binar
 	void removeSection(SectionRef section);
 
 public:
-	SectionWidget(BinaryViewRef data);
+	SectionWidget(BinaryViewRef data, QWidget* parent = nullptr);
 	virtual ~SectionWidget();
+
+	SectionModel* model() { return m_model; }
 
 	void updateFont();
 	void highlightRelatedSections(SegmentRef segment);
-	void itemChanged(QTableWidgetItem* current, QTableWidgetItem* previous);
-
-	virtual void OnSectionAdded(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override;
-	virtual void OnSectionUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override;
-	virtual void OnSectionRemoved(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override;
+	void currentRowChanged(const QModelIndex& current, const QModelIndex& previous);
 
 Q_SIGNALS:
 	void currentSectionChanged(SectionRef current);
 	void addressDoubleClicked(uint64_t address);
-	void sectionsChanged();
 };
 
 // I hate C++
@@ -196,6 +249,7 @@ class BINARYNINJAUIAPI MemoryMapView : public QWidget, public View
 	Q_OBJECT
 
 	BinaryViewRef m_data;
+	std::unique_ptr<NotificationsDispatcher> m_dispatcher = nullptr;
 	MemoryMapContainer* m_container;
 
 	SectionWidget* m_sectionWidget;

@@ -399,19 +399,20 @@ class DebugInfo(object):
 		return None
 
 	def get_data_variable_by_name(self, parser_name: str, name: str) -> Optional[Tuple[int, _types.Type]]:
-		result = core.BNGetDebugDataVariableByName(self.handle, parser_name, name)
-		if result is not None:
-			core.BNFreeString(result.name)
-			return (result.address, _types.Type.create(result.type))
-		return None
+		name_and_var = core.BNDataVariableAndName()
+		if not core.BNGetDebugDataVariableByName(self.handle, parser_name, name, name_and_var):
+			return None
+		result = (name_and_var.address, _types.Type.create(core.BNNewTypeReference(name_and_var.type)))
+		core.BNFreeDataVariableAndName(name_and_var)
+		return result
 
 	def get_data_variable_by_address(self, parser_name: str, address: int) -> Optional[Tuple[str, _types.Type]]:
-		name_and_var = core.BNGetDebugDataVariableByAddress(self.handle, parser_name, address)
-		if name_and_var is not None:
-			result = (str(name_and_var.name), _types.Type.create(name_and_var.type))
-			core.BNFreeString(name_and_var.name)
-			return result
-		return None
+		name_and_var = core.BNDataVariableAndName()
+		if not core.BNGetDebugDataVariableByAddress(self.handle, parser_name, address, name_and_var):
+			return None
+		result = (str(name_and_var.name), _types.Type.create(core.BNNewTypeReference(name_and_var.type)))
+		core.BNFreeDataVariableAndName(name_and_var)
+		return result
 
 	def get_types_by_name(self, name: str) -> List[Tuple[str, _types.Type]]:
 		""" The first element in the Tuple returned in the list is the name of the debug info parser the type came from """

@@ -64,8 +64,15 @@ extern "C"
 		LoadProgressFinished,
 	} BNDSCViewLoadProgress;
 
+	typedef enum BNBackingCacheType {
+		BackingCacheTypePrimary,
+		BackingCacheTypeSecondary,
+		BackingCacheTypeSymbols,
+	} BNBackingCacheType;
+
 	typedef struct BNBinaryView BNBinaryView;
 	typedef struct BNSharedCache BNSharedCache;
+	typedef struct BNStringRef BNStringRef;
 
 	typedef struct BNDSCImageMemoryMapping {
 		char* filePath;
@@ -97,7 +104,7 @@ extern "C"
 
 	typedef struct BNDSCBackingCache {
 		char* path;
-		bool isPrimary;
+		BNBackingCacheType cacheType;
 		BNDSCBackingCacheMapping* mappings;
 		size_t mappingCount;
 	} BNDSCBackingCache;
@@ -109,7 +116,7 @@ extern "C"
 
 	typedef struct BNDSCSymbolRep {
 		uint64_t address;
-		char* name;
+		BNStringRef* name;
 		char* image;
 	} BNDSCSymbolRep;
 
@@ -120,9 +127,12 @@ extern "C"
 
 	SHAREDCACHE_FFI_API char** BNDSCViewGetInstallNames(BNSharedCache* cache, size_t* count);
 
-	SHAREDCACHE_FFI_API bool BNDSCViewLoadImageWithInstallName(BNSharedCache* cache, char* name);
+	SHAREDCACHE_FFI_API bool BNDSCViewLoadImageWithInstallName(BNSharedCache* cache, char* name, bool skipObjC);
 	SHAREDCACHE_FFI_API bool BNDSCViewLoadSectionAtAddress(BNSharedCache* cache, uint64_t name);
-	SHAREDCACHE_FFI_API bool BNDSCViewLoadImageContainingAddress(BNSharedCache* cache, uint64_t address);
+	SHAREDCACHE_FFI_API bool BNDSCViewLoadImageContainingAddress(BNSharedCache* cache, uint64_t address, bool skipObjC);
+	
+	SHAREDCACHE_FFI_API void BNDSCViewProcessObjCSectionsForImageWithInstallName(BNSharedCache* cache, char* name, bool deallocName);
+	SHAREDCACHE_FFI_API void BNDSCViewProcessAllObjCSections(BNSharedCache* cache);
 
 	SHAREDCACHE_FFI_API char* BNDSCViewGetNameForAddress(BNSharedCache* cache, uint64_t address);
 	SHAREDCACHE_FFI_API char* BNDSCViewGetImageNameForAddress(BNSharedCache* cache, uint64_t address);

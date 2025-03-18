@@ -34,6 +34,10 @@
  avoid that.
  * */
 
+#ifndef SHAREDCACHE_CORE_METADATASERIALIZABLE_HPP
+#define SHAREDCACHE_CORE_METADATASERIALIZABLE_HPP
+
+#include <cassert>
 #include "binaryninjaapi.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -41,8 +45,7 @@
 #include "../api/sharedcachecore.h"
 #include "view/macho/machoview.h"
 
-#ifndef SHAREDCACHE_CORE_METADATASERIALIZABLE_HPP
-#define SHAREDCACHE_CORE_METADATASERIALIZABLE_HPP
+using namespace BinaryNinja;
 
 namespace SharedCacheCore {
 
@@ -51,15 +54,12 @@ namespace SharedCacheCore {
 #define MSS_SUBCLASS(name)		 		 Serialize(context, #name, name)
 #define MSL(name)						 name = context.load<decltype(name)>(#name)
 #define MSL_CAST(name, storedType, type) name = (type)context.load<storedType>(#name)
-#define MSL_SUBCLASS(name)				 Deserialize(context, #name, name)
-
-using namespace BinaryNinja;
 
 struct DeserializationContext;
 
 struct SerializationContext {
 	rapidjson::StringBuffer buffer;
-	rapidjson::PrettyWriter<rapidjson::StringBuffer> writer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer;
 
 	SerializationContext() : buffer(), writer(buffer) {
 	}
@@ -83,47 +83,39 @@ struct DeserializationContext {
 	}
 };
 
-template <typename Derived>
-class MetadataSerializable
-{
+template <typename Derived, typename LoadResult = Derived>
+class MetadataSerializable {
 public:
-	std::string AsString() const
-	{
+	template <typename... Args>
+	std::string AsString(Args&&... args) const {
 		SerializationContext context;
-		Store(context);
+		Store(context, std::forward<Args>(args)...);
 
 		return context.buffer.GetString();
 	}
 
-	void LoadFromString(const std::string& s)
-	{
+	static LoadResult LoadFromString(const std::string& s) {
 		DeserializationContext context;
-		context.doc.Parse(s.c_str());
-		AsDerived().Load(context);
+		[[maybe_unused]] rapidjson::ParseResult result = context.doc.Parse(s.c_str());
+		assert(result);
+		return Derived::Load(context);
 	}
 
-	void LoadFromValue(rapidjson::Value& s)
-	{
+	static LoadResult LoadFromValue(rapidjson::Value& s) {
 		DeserializationContext context;
 		context.doc.CopyFrom(s, context.doc.GetAllocator());
-		AsDerived().Load(context);
+		return Derived::Load(context);
 	}
 
-	Ref<Metadata> AsMetadata() {
-		return new Metadata(AsString());
+	template <typename... Args>
+	Ref<Metadata> AsMetadata(Args&&... args) const {
+		return new Metadata(AsString(std::forward<Args>(args)...));
 	}
 
-	bool LoadFromMetadata(const Ref<Metadata>& meta)
-	{
-		if (!meta->IsString())
-			return false;
-		LoadFromString(meta->GetString());
-		return true;
-	}
-
-	void Store(SerializationContext& context) const {
+	template <typename... Args>
+	void Store(SerializationContext& context, Args&&... args) const {
 		context.writer.StartObject();
-		AsDerived().Store(context);
+		AsDerived().Store(context, std::forward<Args>(args)...);
 		context.writer.EndObject();
 	}
 
@@ -158,8 +150,8 @@ void Serialize(SerializationContext& context, const std::pair<First, Second>& va
 	context.writer.EndArray();
 }
 
-template <typename K, typename V>
-void Serialize(SerializationContext& context, const std::map<K, V>& value)
+template <typename K, typename V, typename L>
+void Serialize(SerializationContext& context, const std::map<K, V, L>& value)
 {
 	context.writer.StartArray();
 	for (auto& pair : value)
@@ -189,6 +181,15 @@ void Serialize(SerializationContext& context, const std::vector<T>& values)
 		Serialize(context, value);
 	}
 	context.writer.EndArray();
+}
+
+template <typename T>
+void Serialize(SerializationContext& context, const std::optional<T>& value)
+{
+	if (value.has_value())
+		Serialize(context, *value);
+	else
+		context.writer.Null();
 }
 
 SHAREDCACHE_FFI_API void Serialize(SerializationContext& context, const char*);

@@ -1,0 +1,7 @@
+---
+source: plugins/svd/tests/mapper.rs
+expression: value
+---
+Object {
+    "MemoryMap": Array [],
+}

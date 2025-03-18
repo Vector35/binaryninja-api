@@ -65,6 +65,86 @@ namespace BinaryNinja
 
 	//endregion
 
+	//region Generic API Objects
+
+	/*! Helper class to determine if a type is "API-able" aka has the following interface:
+
+			struct Foo
+			{
+				BNFoo GetAPIObject() const;
+				static Foo FromAPIObject(const BNFoo* obj);
+				static void FreeAPIObject(BNFoo* obj);
+			};
+
+		If you get weird compiler errors around here, make sure you've implemented
+		the above interface correctly (with the `const`s too!).
+	 */
+	template<
+		typename T,
+		// Grab the type for TAPI from the return type of GetAPIObject()
+		// Store into template argument for easier lookup
+		typename TAPI_ = decltype(std::declval<T>().GetAPIObject())
+	>
+	// Subtype of bool_constant to allow std::enable_if usage
+	struct APIAble : std::bool_constant<
+		// Make sure T::FromAPIObject(TAPI*) actually works
+		std::is_invocable_v<decltype(T::FromAPIObject), const TAPI_*>
+		// Make sure T::FromAPIObject(TAPI*) returns T
+		&& std::is_same_v<T, decltype(T::FromAPIObject(std::declval<const TAPI_*>()))>
+		// Make sure T::FreeAPIObject(TAPI*) actually works
+		&& std::is_invocable_v<decltype(T::FreeAPIObject), TAPI_*>
+	>
+	{
+		// For reference by users of APIAble
+		typedef TAPI_ TAPI;
+	};
+
+	template<typename T, typename _ = std::enable_if_t<APIAble<T>::value, void>>
+	void AllocAPIObjectList(const std::vector<T>& objects, typename APIAble<T>::TAPI BN_API_PTR** output, size_t* count)
+	{
+		*count = objects.size();
+		*output = new typename APIAble<T>::TAPI[objects.size()];
+
+		size_t i = 0;
+		for (const auto& o: objects)
+		{
+			(*output)[i] = o.GetAPIObject();
+			i ++;
+		}
+	}
+
+	template<typename T, typename _ = std::enable_if_t<APIAble<T>::value, void>>
+	typename APIAble<T>::TAPI BN_API_PTR* AllocAPIObjectList(const std::vector<T>& objects, size_t* count)
+	{
+		typename APIAble<T>::TAPI* result;
+		AllocAPIObjectList(objects, &result, count);
+		return result;
+	}
+
+	template<typename T, typename _ = std::enable_if_t<APIAble<T>::value, void>>
+	std::vector<T> ParseAPIObjectList(const typename APIAble<T>::TAPI* objects, size_t count)
+	{
+		std::vector<T> result;
+		result.reserve(count);
+		for (size_t i = 0; i < count; i ++)
+		{
+			result.push_back(T::FromAPIObject(&objects[i]));
+		}
+		return result;
+	}
+
+	template<typename T, typename _ = std::enable_if_t<APIAble<T>::value, void>>
+	void FreeAPIObjectList(typename APIAble<T>::TAPI BN_API_PTR* objects, size_t count)
+	{
+		for (size_t i = 0; i <  count; i ++)
+		{
+			T::FreeAPIObject(&objects[i]);
+		}
+		delete[] objects;
+	}
+
+	//endregion
+
 	//------------------------------------------------------------------------------------
 	//region Try/Catch Helpers
 

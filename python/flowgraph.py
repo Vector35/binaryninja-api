@@ -156,30 +156,7 @@ class FlowGraphNode:
 		block = core.BNGetFlowGraphBasicBlock(self.handle)
 		if not block:
 			return None
-		func_handle = core.BNGetBasicBlockFunction(block)
-		if not func_handle:
-			core.BNFreeBasicBlock(block)
-			return None
-
-		view = binaryview.BinaryView(handle=core.BNGetFunctionData(func_handle))
-		func = function.Function(view, func_handle)
-
-		if core.BNIsLowLevelILBasicBlock(block):
-			block = lowlevelil.LowLevelILBasicBlock(
-			    block, lowlevelil.LowLevelILFunction(func.arch, core.BNGetBasicBlockLowLevelILFunction(block), func),
-			    view
-			)
-		elif core.BNIsMediumLevelILBasicBlock(block):
-			mlil_func = mediumlevelil.MediumLevelILFunction(
-			    func.arch, core.BNGetBasicBlockMediumLevelILFunction(block), func
-			)
-			block = mediumlevelil.MediumLevelILBasicBlock(block, mlil_func, view)
-		elif core.BNIsHighLevelILBasicBlock(block):
-			hlil_func = highlevelil.HighLevelILFunction(func.arch, core.BNGetBasicBlockHighLevelILFunction(block), func)
-			block = highlevelil.HighLevelILBasicBlock(block, hlil_func, view)
-		else:
-			block = basicblock.BasicBlock(block, view)
-		return block
+		return basicblock.BasicBlock._from_core_block(block)
 
 	@basic_block.setter
 	def basic_block(self, block):
@@ -613,6 +590,11 @@ class FlowGraph:
 		return result
 
 	@property
+	def node_count(self) -> int:
+		"""Number of nodes in graph (read-only)"""
+		return core.BNGetFlowGraphNodeCount(self.handle)
+
+	@property
 	def has_nodes(self):
 		"""Whether the flow graph has at least one node (read-only)"""
 		return core.BNFlowGraphHasNodes(self.handle)
@@ -835,11 +817,34 @@ class FlowGraph:
 		"""
 		``append`` adds a node to a flow graph.
 
+		.. note:: After the graph has completed layout, this function has no effect.
+
 		:param FlowGraphNode node: Node to add
 		:return: Index of node
 		:rtype: int
 		"""
 		return core.BNAddFlowGraphNode(self.handle, node.handle)
+
+	def replace(self, index, node):
+		"""
+		``replace`` replaces an existing node in the graph with a new node.
+		Any existing edges referencing the old node will be updated to point to
+		the new node.
+
+		.. note:: After the graph has completed layout, this function has no effect.
+
+		:param index: Index of the node to replace
+		:param node: New node with which to replace the old node
+		"""
+		core.BNReplaceFlowGraphNode(self.handle, index, node.handle)
+
+	def clear(self):
+		"""
+		``clear`` clears all the nodes in the graph
+
+		.. note:: After the graph has completed layout, this function has no effect.
+		"""
+		core.BNClearFlowGraphNodes(self.handle)
 
 	def show(self, title):
 		"""
@@ -868,6 +873,50 @@ class FlowGraph:
 
 	def is_option_set(self, option):
 		return core.BNIsFlowGraphOptionSet(self.handle, option)
+
+	@property
+	def render_layers(self) -> List['binaryninja.RenderLayer']:
+		"""
+		Get the list of Render Layers which will be applied to this Flow Graph,
+		after it calls populate_nodes.
+		:return: List of Render Layers
+		"""
+		count = ctypes.c_size_t(0)
+		layers = core.BNGetFlowGraphRenderLayers(self.handle, count)
+		assert layers is not None, "core.BNGetFlowGraphRenderLayers returned None"
+
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(binaryninja.RenderLayer(handle=layers[i]))
+
+			return result
+		finally:
+			core.BNFreeRenderLayerList(layers)
+
+	@render_layers.setter
+	def render_layers(self, render_layers: List['binaryninja.RenderLayer']):
+		for layer in self.render_layers:
+			self.remove_render_layer(layer)
+		for layer in render_layers:
+			self.add_render_layer(layer)
+
+	def add_render_layer(self, layer: 'binaryninja.RenderLayer'):
+		"""
+		Add a Render Layer to be applied to this Flow Graph. Note that layers will
+		be applied in the order in which they are added.
+
+		:param layer: Render Layer to add
+		"""
+		core.BNAddFlowGraphRenderLayer(self.handle, layer.handle)
+
+	def remove_render_layer(self, layer: 'binaryninja.RenderLayer'):
+		"""
+		Remove a Render Layer from being applied to this Flow Graph
+
+		:param layer: Render Layer to remove
+		"""
+		core.BNRemoveFlowGraphRenderLayer(self.handle, layer.handle)
 
 
 class CoreFlowGraph(FlowGraph):

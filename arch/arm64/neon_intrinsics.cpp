@@ -14391,7 +14391,7 @@ static void add_input_reg(
 }
 
 static void add_input_imm(
-    vector<ExprId>& inputs, LowLevelILFunction& il, InstructionOperand& operand, size_t size=0)
+    vector<ExprId>& inputs, LowLevelILFunction& il, InstructionOperand& operand, size_t size=8)
 {
 	inputs.push_back(il.Const(size, operand.immediate));
 }

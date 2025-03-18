@@ -222,6 +222,12 @@ bool Snapshot::HasContents()
 }
 
 
+bool Snapshot::HasData()
+{
+	return GetDatabase()->SnapshotHasData(GetId());
+}
+
+
 bool Snapshot::HasUndo()
 {
 	return BNSnapshotHasUndo(m_object);

@@ -316,16 +316,7 @@ class PseudoPythonFunction(LanguageRepresentationFunction):
                     tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, ": "))
                     tokens.append(instr.var.type.get_tokens())
             elif instr.operation == HighLevelILOperation.HLIL_FLOAT_CONST:
-                # The constant value in the instruction contains the raw bits of the floating point value. Convert
-                # this to a floating point value and display it.
-                if instr.size == 4:
-                    value = struct.unpack("<f", struct.pack("<I", instr.constant))[0]
-                    tokens.append(InstructionTextToken(InstructionTextTokenType.FloatToken, f"{value:g}"))
-                elif instr.size == 8:
-                    value = struct.unpack("<d", struct.pack("<Q", instr.constant))[0]
-                    tokens.append(InstructionTextToken(InstructionTextTokenType.FloatToken, f"{value:g}"))
-                else:
-                    tokens.append_integer_text_token(instr, instr.constant, instr.size)
+                tokens.append(InstructionTextToken(InstructionTextTokenType.FloatingPointToken, f"{instr.constant:g}"))
             elif instr.operation == HighLevelILOperation.HLIL_CONST:
                 # Check for bool type. Display these as True or False. The default handling will use C style
                 # booleans instead of Python style.
@@ -1075,7 +1066,7 @@ class PseudoPythonFunctionType(LanguageRepresentationFunctionType):
     language_name = "Pseudo Python"
 
     def create(self, arch: Architecture, owner: Function, hlil: HighLevelILFunction):
-        return PseudoPythonFunction(arch, owner, hlil)
+        return PseudoPythonFunction(self, arch, owner, hlil)
 
     def function_type_tokens(self, func: Function, settings: DisassemblySettings) -> DisassemblyTextLine:
         tokens = []

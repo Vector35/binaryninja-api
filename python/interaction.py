@@ -1273,10 +1273,16 @@ def get_open_filename_input(prompt: str, ext: str = "") -> Optional[str]:
 	:param str prompt: Prompt to display.
 	:param str ext: Optional, file extension
 	:Example:
-		>>> get_open_filename_input("filename:", "Executables (*.exe *.com);;Python Files (*.py);;All Files (*)")
-		'foo.exe'
 		>>> get_open_filename_input("filename:", "*.py")
 		'test.py'
+		>>> get_open_filename_input("filename:", "All Files (*)")
+		'test.py'
+		>>> get_open_filename_input("filename:", "Executables (*.exe)")
+		'foo.exe'
+		>>> get_open_filename_input("filename:", "Executables (*.exe *.com)")
+		'foo.exe'
+		>>> get_open_filename_input("filename:", "Executables (*.exe *.com);;Python Files (*.py);;All Files (*)")
+		'foo.exe'
 	"""
 	value = ctypes.c_char_p()
 	if not core.BNGetOpenFileNameInput(value, prompt, ext):
@@ -1299,7 +1305,19 @@ def get_save_filename_input(prompt: str, ext: str = "", default_name: str = "") 
 	:param str ext: Optional, file extension
 	:param str default_name: Optional, default file name.
 	:Example:
-		>>> get_save_filename_input("filename:", "exe", "foo.exe")
+		>>> get_save_filename_input("filename:", "*.py", "test.py")
+		filename: test.py
+		'test.py'
+		>>> get_save_filename_input("filename:", "All Files (*)", "test.py")
+		filename: test.py
+		'test.py'
+		>>> get_save_filename_input("filename:", "Executables (*.exe)", "foo.exe")
+		filename: foo.exe
+		'foo.exe'
+		>>> get_save_filename_input("filename:", "Executables (*.exe *.com)", "foo.exe")
+		filename: foo.exe
+		'foo.exe'
+		>>> get_save_filename_input("filename:", "Executables (*.exe *.com);;Python Files (*.py);;All Files (*)", "foo.exe")
 		filename: foo.exe
 		'foo.exe'
 	"""

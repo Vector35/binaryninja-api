@@ -50,6 +50,7 @@ else()
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/plugins
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/plugins
             )
+    bn_install_plugin(sharedcacheui)
 endif()
 
 set_target_properties(sharedcacheui PROPERTIES

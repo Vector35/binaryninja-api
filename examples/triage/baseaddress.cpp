@@ -400,7 +400,7 @@ BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent,
 
 	m_layout->addWidget(new QLabel("Analysis Level:"), row, column, Qt::AlignLeft);
 	m_inputs.AnalysisBox = new QComboBox(this);
-	auto analysisItemList = QStringList() << "basic" << "controlFlow" << "full";
+	auto analysisItemList = QStringList() << "full" << "basic" << "controlFlow";
 	m_inputs.AnalysisBox->addItems(analysisItemList);
 	m_layout->addWidget(m_inputs.AnalysisBox, row++, column + 1, Qt::AlignLeft);
 

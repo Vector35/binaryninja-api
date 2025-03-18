@@ -92,7 +92,7 @@ The following demonstrates attributes of interest on a loaded type library in va
 		print('\t"%s" %s' % (str(key), str(val)))
 ```
 
-Named objects (via dictionary `.named_objects` are functions signatures and a module's exported variables. Named types (via dictionary `.named_types`) are the textual named you might use to declare a variable. For example,
+Named objects (via dictionary `.named_objects` are functions signatures and a module's exported variables. Named types (via dictionary `.named_types`) are the textual names you might use to declare a variable. For example,
 
 For example, `.named_objects['fegetexceptionflag']` looks up its function prototype: `int32_t (fexcept_t* flagp)` and `.named_types['fexcept_t']` looks up `uint16_t`, its typedef.
 

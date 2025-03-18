@@ -80,6 +80,9 @@ from .externallibrary import *
 from .undo import *
 from .fileaccessor import *
 from .languagerepresentation import *
+from .lineformatter import *
+from .renderlayer import *
+from binaryninja.sharedcache import *
 # We import each of these by name to prevent conflicts between
 # log.py and the function 'log' which we don't import below
 from .log import (
@@ -201,8 +204,6 @@ def get_unique_identifier():
 def get_install_directory():
 	"""
 	``get_install_directory`` returns a string pointing to the installed binary currently running
-
-	.. warning:: ONLY for use within the Binary Ninja UI, behavior is undefined and unreliable if run headlessly
 	"""
 	return core.BNGetInstallDirectory()
 

@@ -51,7 +51,7 @@ namespace BinaryNinja {
 		uint32_t offset;
 		uint32_t cdOffset;
 		int32_t pTypeDescriptor;
-		int32_t pClassHeirarchyDescriptor;
+		int32_t pClassHierarchyDescriptor;
 		// Only on 64 bit
 		int32_t pSelf;
 
@@ -95,10 +95,13 @@ namespace BinaryNinja {
 		Ref<BinaryView> m_view;
 		Ref<Logger> m_logger;
 		bool allowMangledClassNames;
+		bool allowAnonymousClassNames;
 		bool checkWritableRData;
 		bool virtualFunctionTableSweep;
 
 		std::map<uint64_t, ClassInfo> m_classInfo;
+
+		std::set<uint64_t> m_visitedClassHierarchyDescAddrs;
 
 		void DeserializedMetadata(const Ref<Metadata> &metadata);
 
@@ -109,7 +112,7 @@ namespace BinaryNinja {
 		std::optional<VirtualFunctionTableInfo> ProcessVFT(uint64_t vftAddr, const ClassInfo &classInfo);
 
 	public:
-		MicrosoftRTTIProcessor(const Ref<BinaryView> &view, bool useMangled = true, bool checkRData = true, bool vftSweep = true);
+		MicrosoftRTTIProcessor(const Ref<BinaryView> &view, bool useMangled = true, bool checkRData = true, bool vftSweep = true, bool allowAnonymous = true);
 
 		Ref<Metadata> SerializedMetadata();
 

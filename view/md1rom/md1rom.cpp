@@ -423,8 +423,8 @@ Ref<Settings> Md1romViewType::GetLoadSettingsForData(BinaryNinja::BinaryView* da
 	Ref<BinaryView> viewRef = Parse(data);
 	if (!viewRef || !viewRef->Init())
 	{
-		m_logger->LogError("View type '%s' could not be created", GetName().c_str());
-		return nullptr;
+		m_logger->LogWarn("Failed to initialize view of type '%s'. Generating default load settings.", GetName().c_str());
+		viewRef = data;
 	}
 
 	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);

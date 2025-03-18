@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 86
+#define BN_CURRENT_CORE_ABI_VERSION 101
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 86
+#define BN_MINIMUM_CORE_ABI_VERSION 100
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -230,6 +230,7 @@ extern "C"
 	typedef struct BNTypeBuilder BNTypeBuilder;
 	typedef struct BNTypeLibrary BNTypeLibrary;
 	typedef struct BNTypeLibraryMapping BNTypeLibraryMapping;
+	typedef struct BNFieldResolutionInfo BNFieldResolutionInfo;
 	typedef struct BNStructure BNStructure;
 	typedef struct BNStructureBuilder BNStructureBuilder;
 	typedef struct BNTagType BNTagType;
@@ -301,6 +302,11 @@ extern "C"
 	typedef struct BNUndoEntry BNUndoEntry;
 	typedef struct BNDemangler BNDemangler;
 	typedef struct BNFirmwareNinja BNFirmwareNinja;
+	typedef struct BNFirmwareNinjaReferenceNode BNFirmwareNinjaReferenceNode;
+	typedef struct BNFirmwareNinjaRelationship BNFirmwareNinjaRelationship;
+	typedef struct BNLineFormatter BNLineFormatter;
+	typedef struct BNRenderLayer BNRenderLayer;
+	typedef struct BNStringRef BNStringRef;
 
 	//! Console log levels
 	typedef enum BNLogLevel
@@ -504,6 +510,8 @@ extern "C"
 		LLIL_SET_FLAG,            // Not valid in SSA form (see LLIL_SET_FLAG_SSA)
 		LLIL_SET_REG_STACK_REL,   // Not valid in SSA form (see LLIL_SET_REG_STACK_REL_SSA)
 		LLIL_REG_STACK_PUSH,      // Not valid in SSA form (expanded)
+		LLIL_ASSERT,
+		LLIL_FORCE_VER,
 		LLIL_LOAD,                // Not valid in SSA form (see LLIL_LOAD_SSA)
 		LLIL_STORE,               // Not valid in SSA form (see LLIL_STORE_SSA)
 		LLIL_PUSH,                // Not valid in SSA form (expanded)
@@ -623,6 +631,8 @@ extern "C"
 		LLIL_REG_STACK_FREE_REL_SSA,
 		LLIL_REG_STACK_FREE_ABS_SSA,
 		LLIL_SET_FLAG_SSA,
+		LLIL_ASSERT_SSA,
+		LLIL_FORCE_VER_SSA,
 		LLIL_FLAG_SSA,
 		LLIL_FLAG_BIT_SSA,
 		LLIL_CALL_SSA,
@@ -726,6 +736,7 @@ extern "C"
 		HighLevelILLinearDisassembly = 65,
 		WaitForIL = 66,
 		IndentHLILBody = 67,
+		DisableLineFormatting = 68,
 
 		// Debugging options
 		ShowFlagUsage = 128,
@@ -1194,6 +1205,8 @@ extern "C"
 		MLIL_SET_VAR,        // Not valid in SSA form (see MLIL_SET_VAR_SSA)
 		MLIL_SET_VAR_FIELD,  // Not valid in SSA form (see MLIL_SET_VAR_FIELD)
 		MLIL_SET_VAR_SPLIT,  // Not valid in SSA form (see MLIL_SET_VAR_SPLIT_SSA)
+		MLIL_ASSERT,
+		MLIL_FORCE_VER,
 		MLIL_LOAD,           // Not valid in SSA form (see MLIL_LOAD_SSA)
 		MLIL_LOAD_STRUCT,    // Not valid in SSA form (see MLIL_LOAD_STRUCT_SSA)
 		MLIL_STORE,          // Not valid in SSA form (see MLIL_STORE_SSA)
@@ -1314,6 +1327,8 @@ extern "C"
 		MLIL_VAR_ALIASED,
 		MLIL_VAR_ALIASED_FIELD,
 		MLIL_VAR_SPLIT_SSA,
+		MLIL_ASSERT_SSA,
+		MLIL_FORCE_VER_SSA,
 		MLIL_CALL_SSA,
 		MLIL_CALL_UNTYPED_SSA,
 		MLIL_SYSCALL_SSA,
@@ -1390,6 +1405,8 @@ extern "C"
 		HLIL_VAR_INIT,
 		HLIL_ASSIGN,
 		HLIL_ASSIGN_UNPACK,
+		HLIL_FORCE_VER,
+		HLIL_ASSERT,
 		HLIL_VAR,
 		HLIL_STRUCT_FIELD,
 		HLIL_ARRAY_INDEX,
@@ -1491,6 +1508,8 @@ extern "C"
 		HLIL_VAR_INIT_SSA,
 		HLIL_ASSIGN_MEM_SSA,
 		HLIL_ASSIGN_UNPACK_MEM_SSA,
+		HLIL_FORCE_VER_SSA,
+		HLIL_ASSERT_SSA,
 		HLIL_VAR_SSA,
 		HLIL_ARRAY_INDEX_SSA,
 		HLIL_DEREF_SSA,
@@ -2000,6 +2019,7 @@ extern "C"
 		LinearDisassemblyBlockColor,
 		LinearDisassemblyNoteColor,
 		LinearDisassemblySeparatorColor,
+		LinearDisassemblyCodeFoldColor,
 		StringColor,
 		TypeNameColor,
 		FieldNameColor,
@@ -2604,8 +2624,16 @@ extern "C"
 	{
 		BNVariable var;
 		BNArchitectureAndAddress defSite;
+		bool after;
 		BNPossibleValueSet value;
 	} BNUserVariableValue;
+
+	typedef struct BNVariableFieldResolutionInfo
+	{
+		BNArchitectureAndAddress location;
+		BNVariable var;
+		BNFieldResolutionInfo* info;
+	} BNVariableFieldResolutionInfo;
 
 	typedef enum BNFunctionUpdateType
 	{
@@ -3144,7 +3172,8 @@ extern "C"
 		ExceedFunctionUpdateCountSkipReason,
 		NewAutoFunctionAnalysisSuppressedReason,
 		BasicAnalysisSkipReason,
-		IntermediateAnalysisSkipReason
+		IntermediateAnalysisSkipReason,
+		AnalysisPipelineSuspendedReason
 	} BNAnalysisSkipReason;
 
 	typedef enum BNSettingsScope
@@ -3438,6 +3467,7 @@ extern "C"
 		bool (*isValid)(void* ctxt, BNBinaryView* view);
 		BNTypePrinter* (*getTypePrinter)(void* ctxt);
 		BNTypeParser* (*getTypeParser)(void* ctxt);
+		BNLineFormatter* (*getLineFormatter)(void* ctxt);
 		BNDisassemblyTextLine* (*getFunctionTypeTokens)(
 			void* ctxt, BNFunction* func, BNDisassemblySettings* settings, size_t* count);
 		void (*freeLines)(void* ctxt, BNDisassemblyTextLine* lines, size_t count);
@@ -3505,6 +3535,7 @@ extern "C"
 		StoreToOOBMemoryMemoryHeuristic,
 		LoadFromOOBMemoryMemoryHeuristic,
 		RepeatLoadStoreMemoryHeuristic,
+		CallParamOOBPointerMemoryHeuristic,
 	} BNFirmwareNinjaMemoryHeuristic;
 
 	typedef enum BNFirmwareNinjaMemoryAccessType
@@ -3537,8 +3568,53 @@ extern "C"
 		size_t unique;
 	} BNFirmwareNinjaDeviceAccesses;
 
+	typedef struct BNLineFormatterSettings
+	{
+		BNHighLevelILFunction* highLevelIL;
+		size_t desiredLineLength;
+		size_t minimumContentLength;
+		size_t tabWidth;
+		char* languageName;
+		char* commentStartString;
+		char* commentEndString;
+		char* annotationStartString;
+		char* annotationEndString;
+	} BNLineFormatterSettings;
+
+	typedef struct BNCustomLineFormatter
+	{
+		void* context;
+		BNDisassemblyTextLine* (*formatLines)(void* ctxt, BNDisassemblyTextLine* inLines, size_t inCount,
+			const BNLineFormatterSettings* settings, size_t* outCount);
+		void (*freeLines)(void* ctxt, BNDisassemblyTextLine* lines, size_t count);
+	} BNCustomLineFormatter;
+
+	typedef struct BNRenderLayerCallbacks
+	{
+		void* context;
+		void (*applyToFlowGraph)(void* ctxt, BNFlowGraph* graph);
+		void (*applyToLinearViewObject)(
+			void* ctxt,
+			BNLinearViewObject* obj,
+			BNLinearViewObject* prev,
+			BNLinearViewObject* next,
+			BNLinearDisassemblyLine* inLines,
+			size_t inLineCount,
+			BNLinearDisassemblyLine** outLines,
+			size_t* outLineCount
+		);
+		void (*freeLines)(void* ctxt, BNLinearDisassemblyLine* lines, size_t count);
+	} BNRenderLayerCallbacks;
+
+	typedef enum BNRenderLayerDefaultEnableState
+	{
+		DisabledByDefaultRenderLayerDefaultEnableState,
+		EnabledByDefaultRenderLayerDefaultEnableState,
+		AlwaysEnabledRenderLayerDefaultEnableState,
+	} BNRenderLayerDefaultEnableState;
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
+	BINARYNINJACOREAPI char* BNAllocStringWithLength(const char* contents, size_t len);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
 	BINARYNINJACOREAPI void BNFreeStringList(char** strs, size_t count);
@@ -3825,6 +3901,8 @@ extern "C"
 
 	BINARYNINJACOREAPI void BNProjectBeginBulkOperation(BNProject* project);
 	BINARYNINJACOREAPI void BNProjectEndBulkOperation(BNProject* project);
+
+	BINARYNINJACOREAPI BNRemoteProject* BNProjectGetRemoteProject(BNProject* project);
 
 	// ProjectFile object
 	BINARYNINJACOREAPI BNProjectFile* BNNewProjectFileReference(BNProjectFile* file);
@@ -4145,7 +4223,8 @@ extern "C"
 	    BNProgressFunction progress, void* matchCtxt,
 	    bool (*matchCallback)(void* matchCtxt, uint64_t addr, BNLinearDisassemblyLine* line));
 
-	BINARYNINJACOREAPI bool BNSearch(BNBinaryView* view, const char* query, void* context, bool (*callback)(void*, uint64_t, BNDataBuffer*));
+	BINARYNINJACOREAPI bool BNSearch(BNBinaryView* view, const char* query, void* context, BNProgressFunction progressCallback, void* matchContext, bool (*callback)(void*, uint64_t, BNDataBuffer*));
+	BINARYNINJACOREAPI char* BNDetectSearchMode(const char* query);
 	BINARYNINJACOREAPI bool BNPerformSearch(const char* query, const uint8_t* buffer, size_t size, bool(*callback)(void*, size_t, size_t), void* context);
 
 	BINARYNINJACOREAPI void BNBeginBulkAddSegments(BNBinaryView* view);
@@ -4871,6 +4950,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNDeleteUserStackVariable(BNFunction* func, int64_t offset);
 	BINARYNINJACOREAPI bool BNGetStackVariableAtFrameOffset(
 	    BNFunction* func, BNArchitecture* arch, uint64_t addr, int64_t offset, BNVariableNameAndType* var);
+	BINARYNINJACOREAPI bool BNGetStackVariableAtFrameOffsetAfterInstruction(
+	    BNFunction* func, BNArchitecture* arch, uint64_t addr, int64_t offset, BNVariableNameAndType* var);
 	BINARYNINJACOREAPI void BNFreeVariableNameAndType(BNVariableNameAndType* var);
 
 	BINARYNINJACOREAPI BNVariableNameAndType* BNGetFunctionVariables(BNFunction* func, size_t* count);
@@ -5100,6 +5181,10 @@ extern "C"
 	BINARYNINJACOREAPI bool BNLinearViewCursorPrevious(BNLinearViewCursor* cursor);
 	BINARYNINJACOREAPI BNLinearDisassemblyLine* BNGetLinearViewCursorLines(BNLinearViewCursor* cursor, size_t* count);
 	BINARYNINJACOREAPI int BNCompareLinearViewCursors(BNLinearViewCursor* a, BNLinearViewCursor* b);
+
+	BINARYNINJACOREAPI BNRenderLayer** BNGetLinearViewCursorRenderLayers(BNLinearViewCursor* cursor, size_t* count);
+	BINARYNINJACOREAPI void BNAddLinearViewCursorRenderLayer(BNLinearViewCursor* cursor, BNRenderLayer* layer);
+	BINARYNINJACOREAPI void BNRemoveLinearViewCursorRenderLayer(BNLinearViewCursor* cursor, BNRenderLayer* layer);
 
 	BINARYNINJACOREAPI void BNDefineDataVariable(BNBinaryView* view, uint64_t addr, BNTypeWithConfidence* type);
 	BINARYNINJACOREAPI void BNDefineUserDataVariable(BNBinaryView* view, uint64_t addr, BNTypeWithConfidence* type);
@@ -5335,13 +5420,25 @@ extern "C"
 	BINARYNINJACOREAPI BNFlowGraph* BNGetUnresolvedStackAdjustmentGraph(BNFunction* func);
 
 	BINARYNINJACOREAPI void BNSetUserVariableValue(BNFunction* func, const BNVariable* var,
-	    const BNArchitectureAndAddress* defSite, const BNPossibleValueSet* value);
+	    const BNArchitectureAndAddress* defSite, bool after, const BNPossibleValueSet* value);
 	BINARYNINJACOREAPI void BNClearUserVariableValue(
-	    BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite);
+	    BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite, bool after);
 	BINARYNINJACOREAPI BNUserVariableValue* BNGetAllUserVariableValues(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeUserVariableValues(BNUserVariableValue* result);
 	BINARYNINJACOREAPI bool BNParsePossibleValueSet(BNBinaryView* view, const char* valueText,
 	    BNRegisterValueType state, BNPossibleValueSet* result, uint64_t here, char** errors);
+
+	BINARYNINJACOREAPI void BNCreateForcedVariableVersion(BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite);
+	BINARYNINJACOREAPI void BNClearForcedVariableVersion(BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite);
+
+	BINARYNINJACOREAPI void BNSetFieldResolutionForVariableAt(BNFunction* func, const BNVariable* var,
+			const BNArchitectureAndAddress* defSite, const BNFieldResolutionInfo* info);
+	BINARYNINJACOREAPI BNFieldResolutionInfo* BNGetFieldResolutionForVariableAt(BNFunction* func, const BNVariable* var,
+			const BNArchitectureAndAddress* defSite);
+	BINARYNINJACOREAPI BNVariableFieldResolutionInfo* BNGetAllVariableFieldResolutions(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI void BNFreeVariableFieldResolutions(BNVariableFieldResolutionInfo* result, size_t count);
+	BINARYNINJACOREAPI void BNClearFieldResolutionForVariableAt(BNFunction* func, const BNVariable* var,
+			const BNArchitectureAndAddress* defSite);
 
 	BINARYNINJACOREAPI void BNRequestFunctionDebugReport(BNFunction* func, const char* name);
 
@@ -5399,6 +5496,7 @@ extern "C"
 
 	// Activity
 	BINARYNINJACOREAPI BNActivity* BNCreateActivity(const char* configuration, void* ctxt, void (*action)(void*, BNAnalysisContext*));
+	BINARYNINJACOREAPI BNActivity* BNCreateActivityWithEligibility(const char* configuration, void* ctxt, void (*action)(void*, BNAnalysisContext*), bool (*eligibilityHandler)(void*, BNActivity*, BNAnalysisContext*));
 	BINARYNINJACOREAPI BNActivity* BNNewActivityReference(BNActivity* activity);
 	BINARYNINJACOREAPI void BNFreeActivity(BNActivity* activity);
 
@@ -5429,6 +5527,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNWorkflowAssignSubactivities(BNWorkflow* workflow, const char* activity, const char** activities, size_t size);
 	BINARYNINJACOREAPI bool BNWorkflowClear(BNWorkflow* workflow);
 	BINARYNINJACOREAPI bool BNWorkflowInsert(BNWorkflow* workflow, const char* activity, const char** activities, size_t size);
+	BINARYNINJACOREAPI bool BNWorkflowInsertAfter(BNWorkflow* workflow, const char* activity, const char** activities, size_t size);
 	BINARYNINJACOREAPI bool BNWorkflowRemove(BNWorkflow* workflow, const char* activity);
 	BINARYNINJACOREAPI bool BNWorkflowReplace(BNWorkflow* workflow, const char* activity, const char* newActivity);
 
@@ -5452,6 +5551,9 @@ extern "C"
 
 	// Disassembly settings
 	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);
+	BINARYNINJACOREAPI BNDisassemblySettings* BNDefaultDisassemblySettings(void);
+	BINARYNINJACOREAPI BNDisassemblySettings* BNDefaultGraphDisassemblySettings(void);
+	BINARYNINJACOREAPI BNDisassemblySettings* BNDefaultLinearDisassemblySettings(void);
 	BINARYNINJACOREAPI BNDisassemblySettings* BNNewDisassemblySettingsReference(BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI BNDisassemblySettings* BNDuplicateDisassemblySettings(BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI void BNFreeDisassemblySettings(BNDisassemblySettings* settings);
@@ -5520,13 +5622,20 @@ extern "C"
 	BINARYNINJACOREAPI BNFlowGraphNode** BNGetFlowGraphNodesInRegion(
 	    BNFlowGraph* graph, int left, int top, int right, int bottom, size_t* count);
 	BINARYNINJACOREAPI void BNFreeFlowGraphNodeList(BNFlowGraphNode** nodes, size_t count);
+	BINARYNINJACOREAPI size_t BNGetFlowGraphNodeCount(BNFlowGraph* graph);
 	BINARYNINJACOREAPI bool BNFlowGraphHasNodes(BNFlowGraph* graph);
 	BINARYNINJACOREAPI size_t BNAddFlowGraphNode(BNFlowGraph* graph, BNFlowGraphNode* node);
+	BINARYNINJACOREAPI void BNReplaceFlowGraphNode(BNFlowGraph* graph, size_t i, BNFlowGraphNode* newNode);
+	BINARYNINJACOREAPI void BNClearFlowGraphNodes(BNFlowGraph* graph);
 
 	BINARYNINJACOREAPI int BNGetFlowGraphWidth(BNFlowGraph* graph);
 	BINARYNINJACOREAPI int BNGetFlowGraphHeight(BNFlowGraph* graph);
 	BINARYNINJACOREAPI void BNFlowGraphSetWidth(BNFlowGraph* graph, int width);
 	BINARYNINJACOREAPI void BNFlowGraphSetHeight(BNFlowGraph* graph, int height);
+
+	BINARYNINJACOREAPI BNRenderLayer** BNGetFlowGraphRenderLayers(BNFlowGraph* graph, size_t* count);
+	BINARYNINJACOREAPI void BNAddFlowGraphRenderLayer(BNFlowGraph* graph, BNRenderLayer* layer);
+	BINARYNINJACOREAPI void BNRemoveFlowGraphRenderLayer(BNFlowGraph* graph, BNRenderLayer* layer);
 
 	BINARYNINJACOREAPI BNFlowGraphNode* BNCreateFlowGraphNode(BNFlowGraph* graph);
 	BINARYNINJACOREAPI BNFlowGraphNode* BNNewFlowGraphNodeReference(BNFlowGraphNode* node);
@@ -5586,8 +5695,11 @@ extern "C"
 	BINARYNINJACOREAPI BNSymbolBinding BNGetSymbolBinding(BNSymbol* sym);
 	BINARYNINJACOREAPI BNNameSpace BNGetSymbolNameSpace(BNSymbol* sym);
 	BINARYNINJACOREAPI char* BNGetSymbolShortName(BNSymbol* sym);
+	BINARYNINJACOREAPI BNStringRef* BNGetSymbolShortNameRef(BNSymbol* sym);
 	BINARYNINJACOREAPI char* BNGetSymbolFullName(BNSymbol* sym);
+	BINARYNINJACOREAPI BNStringRef* BNGetSymbolFullNameRef(BNSymbol* sym);
 	BINARYNINJACOREAPI char* BNGetSymbolRawName(BNSymbol* sym);
+	BINARYNINJACOREAPI BNStringRef* BNGetSymbolRawNameRef(BNSymbol* sym);
 	BINARYNINJACOREAPI void* BNGetSymbolRawBytes(BNSymbol* sym, size_t* count);
 	BINARYNINJACOREAPI void BNFreeSymbolRawBytes(void* bytes);
 
@@ -5674,6 +5786,9 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t* BNLowLevelILGetOperandList(
 	    BNLowLevelILFunction* func, size_t expr, size_t operand, size_t* count);
 	BINARYNINJACOREAPI void BNLowLevelILFreeOperandList(uint64_t* operands);
+
+	BINARYNINJACOREAPI size_t BNCacheLowLevelILPossibleValueSet(BNLowLevelILFunction* func, BNPossibleValueSet* pvs);
+	BINARYNINJACOREAPI BNPossibleValueSet BNGetCachedLowLevelILPossibleValueSet(BNLowLevelILFunction* func, size_t idx);
 
 	BINARYNINJACOREAPI BNLowLevelILInstruction BNGetLowLevelILByIndex(BNLowLevelILFunction* func, size_t i);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILIndexForInstruction(BNLowLevelILFunction* func, size_t i);
@@ -5828,6 +5943,9 @@ extern "C"
 	    BNMediumLevelILFunction* func, size_t expr, size_t operand, size_t* count);
 	BINARYNINJACOREAPI void BNMediumLevelILFreeOperandList(uint64_t* operands);
 
+	BINARYNINJACOREAPI size_t BNCacheMediumLevelILPossibleValueSet(BNMediumLevelILFunction* func, BNPossibleValueSet* pvs);
+	BINARYNINJACOREAPI BNPossibleValueSet BNGetCachedMediumLevelILPossibleValueSet(BNMediumLevelILFunction* func, size_t idx);
+
 	BINARYNINJACOREAPI BNMediumLevelILInstruction BNGetMediumLevelILByIndex(BNMediumLevelILFunction* func, size_t i);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILIndexForInstruction(BNMediumLevelILFunction* func, size_t i);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILInstructionForExpr(BNMediumLevelILFunction* func, size_t expr);
@@ -5896,13 +6014,23 @@ extern "C"
 
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAVarVersionAtILInstruction(
 	    BNMediumLevelILFunction* func, const BNVariable* var, size_t instr);
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAVarVersionAfterILInstruction(
+	    BNMediumLevelILFunction* func, const BNVariable* var, size_t instr);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAMemoryVersionAtILInstruction(
+	    BNMediumLevelILFunction* func, size_t instr);
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAMemoryVersionAfterILInstruction(
 	    BNMediumLevelILFunction* func, size_t instr);
 	BINARYNINJACOREAPI BNVariable BNGetMediumLevelILVariableForRegisterAtInstruction(
 	    BNMediumLevelILFunction* func, uint32_t reg, size_t instr);
+	BINARYNINJACOREAPI BNVariable BNGetMediumLevelILVariableForRegisterAfterInstruction(
+	    BNMediumLevelILFunction* func, uint32_t reg, size_t instr);
 	BINARYNINJACOREAPI BNVariable BNGetMediumLevelILVariableForFlagAtInstruction(
 	    BNMediumLevelILFunction* func, uint32_t flag, size_t instr);
+	BINARYNINJACOREAPI BNVariable BNGetMediumLevelILVariableForFlagAfterInstruction(
+	    BNMediumLevelILFunction* func, uint32_t flag, size_t instr);
 	BINARYNINJACOREAPI BNVariable BNGetMediumLevelILVariableForStackLocationAtInstruction(
+	    BNMediumLevelILFunction* func, int64_t offset, size_t instr);
+	BINARYNINJACOREAPI BNVariable BNGetMediumLevelILVariableForStackLocationAfterInstruction(
 	    BNMediumLevelILFunction* func, int64_t offset, size_t instr);
 
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILRegisterValueAtInstruction(
@@ -5975,6 +6103,9 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t* BNHighLevelILGetOperandList(
 	    BNHighLevelILFunction* func, size_t expr, size_t operand, size_t* count);
 	BINARYNINJACOREAPI void BNHighLevelILFreeOperandList(uint64_t* operands);
+
+	BINARYNINJACOREAPI size_t BNCacheHighLevelILPossibleValueSet(BNHighLevelILFunction* func, BNPossibleValueSet* pvs);
+	BINARYNINJACOREAPI BNPossibleValueSet BNGetCachedHighLevelILPossibleValueSet(BNHighLevelILFunction* func, size_t idx);
 
 	BINARYNINJACOREAPI BNHighLevelILInstruction BNGetHighLevelILByIndex(
 	    BNHighLevelILFunction* func, size_t i, bool asFullAst);
@@ -6142,15 +6273,19 @@ extern "C"
 		BNLanguageRepresentationFunctionType* type, BNBinaryView* view);
 	BINARYNINJACOREAPI BNTypePrinter* BNGetLanguageRepresentationFunctionTypePrinter(BNLanguageRepresentationFunctionType* type);
 	BINARYNINJACOREAPI BNTypeParser* BNGetLanguageRepresentationFunctionTypeParser(BNLanguageRepresentationFunctionType* type);
+	BINARYNINJACOREAPI BNLineFormatter* BNGetLanguageRepresentationFunctionTypeLineFormatter(
+		BNLanguageRepresentationFunctionType* type);
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetLanguageRepresentationFunctionTypeFunctionTypeTokens(
 		BNLanguageRepresentationFunctionType* type, BNFunction* func, BNDisassemblySettings* settings, size_t* count);
 
 	BINARYNINJACOREAPI BNLanguageRepresentationFunction* BNCreateCustomLanguageRepresentationFunction(
-		BNArchitecture* arch, BNFunction* func, BNHighLevelILFunction* highLevelIL,
-		BNCustomLanguageRepresentationFunction* callbacks);
+		BNLanguageRepresentationFunctionType* type, BNArchitecture* arch, BNFunction* func,
+		BNHighLevelILFunction* highLevelIL, BNCustomLanguageRepresentationFunction* callbacks);
 	BINARYNINJACOREAPI BNLanguageRepresentationFunction* BNNewLanguageRepresentationFunctionReference(
 		BNLanguageRepresentationFunction* func);
 	BINARYNINJACOREAPI void BNFreeLanguageRepresentationFunction(BNLanguageRepresentationFunction* func);
+	BINARYNINJACOREAPI BNLanguageRepresentationFunctionType* BNGetLanguageRepresentationType(
+		BNLanguageRepresentationFunction* func);
 	BINARYNINJACOREAPI BNArchitecture* BNGetLanguageRepresentationArchitecture(BNLanguageRepresentationFunction* func);
 	BINARYNINJACOREAPI BNFunction* BNGetLanguageRepresentationOwnerFunction(BNLanguageRepresentationFunction* func);
 	BINARYNINJACOREAPI BNHighLevelILFunction* BNGetLanguageRepresentationILFunction(BNLanguageRepresentationFunction* func);
@@ -6172,6 +6307,9 @@ extern "C"
 		BNLanguageRepresentationFunction* func);
 	BINARYNINJACOREAPI char* BNGetLanguageRepresentationFunctionAnnotationEndString(
 		BNLanguageRepresentationFunction* func);
+
+	BINARYNINJACOREAPI BNFieldResolutionInfo* BNNewFieldResolutionInfoReference(BNFieldResolutionInfo* info);
+	BINARYNINJACOREAPI void BNFreeFieldResolutionInfo(BNFieldResolutionInfo* info);
 
 	// Types
 	BINARYNINJACOREAPI bool BNTypesEqual(BNType* a, BNType* b);
@@ -6293,9 +6431,12 @@ extern "C"
 	    BNType* type, BNNamedTypeReference* from, BNNamedTypeReference* to);
 
 	BINARYNINJACOREAPI bool BNAddTypeMemberTokens(BNType* type, BNBinaryView* data, BNInstructionTextToken** tokens,
-	    size_t* tokenCount, int64_t offset, char*** nameList, size_t* nameCount, size_t size, bool indirect);
+	    size_t* tokenCount, int64_t offset, char*** nameList, size_t* nameCount, size_t size, bool indirect, BNFieldResolutionInfo* info);
 	BINARYNINJACOREAPI BNTypeDefinitionLine* BNGetTypeLines(BNType* type, BNTypeContainer* types, const char* name, int paddingCols, bool collapsed, BNTokenEscapingType escaping, size_t* count);
 	BINARYNINJACOREAPI void BNFreeTypeDefinitionLineList(BNTypeDefinitionLine* list, size_t count);
+
+	BINARYNINJACOREAPI bool BNEnumerateTypesForAccess(BNType* type, BNBinaryView* data, uint64_t offset, size_t size, uint8_t baseConfidence,
+			void (*terminal)(void*, BNTypeWithConfidence*, BNFieldResolutionInfo*), void* ctxt);
 
 	BINARYNINJACOREAPI BNQualifiedName BNTypeBuilderGetTypeName(BNTypeBuilder* nt);
 	BINARYNINJACOREAPI void BNTypeBuilderSetTypeName(BNTypeBuilder* type, BNQualifiedName* name);
@@ -6513,6 +6654,8 @@ extern "C"
 	BINARYNINJACOREAPI BNBinaryView* BNLoadFilename(const char* const filename, const bool updateAnalysis, const char* options, BNProgressFunction progress, void* progressContext);
 	BINARYNINJACOREAPI BNBinaryView* BNLoadProjectFile(BNProjectFile* projectFile, const bool updateAnalysis, const char* options, BNProgressFunction progress, void* progressContext);
 	BINARYNINJACOREAPI BNBinaryView* BNLoadBinaryView(BNBinaryView* view, const bool updateAnalysis, const char* options, BNProgressFunction progress, void* progressContext);
+
+	BINARYNINJACOREAPI BNBinaryView* BNParseTextFormat(const char* filename);
 
 	BINARYNINJACOREAPI BNExternalLibrary* BNBinaryViewAddExternalLibrary(BNBinaryView* view, const char* name, BNProjectFile* backingFile, bool isAuto);
 	BINARYNINJACOREAPI void BNBinaryViewRemoveExternalLibrary(BNBinaryView* view, const char* name);
@@ -7471,10 +7614,10 @@ extern "C"
 		BNDebugInfo* const debugInfo, const BNDataVariableAndName* var);
 	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariables(
 		BNDebugInfo* const debugInfo, const char* const name, size_t* count);
-	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariableByName(
-		BNDebugInfo* const debugInfo, const char* const parserName, const char* const variableName);
-	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariableByAddress(
-		BNDebugInfo* const debugInfo, const char* const parserName, const uint64_t address);
+	BINARYNINJACOREAPI bool BNGetDebugDataVariableByName(
+		BNDebugInfo* const debugInfo, const char* const parserName, const char* const variableName, BNDataVariableAndName* var);
+	BINARYNINJACOREAPI bool BNGetDebugDataVariableByAddress(
+		BNDebugInfo* const debugInfo, const char* const parserName, const uint64_t address, BNDataVariableAndName* var);
 	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariablesByName(
 		BNDebugInfo* const debugInfo, const char* const variableName, size_t* count);
 	BINARYNINJACOREAPI BNDataVariableAndNameAndDebugParser* BNGetDebugDataVariablesByAddress(
@@ -7672,6 +7815,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNRemoteGetUsername(BNRemote* remote);
 	BINARYNINJACOREAPI char* BNRemoteGetToken(BNRemote* remote);
 	BINARYNINJACOREAPI int BNRemoteGetServerVersion(BNRemote* remote);
+	BINARYNINJACOREAPI char* BNRemoteGetServerBuildVersion(BNRemote* remote);
 	BINARYNINJACOREAPI char* BNRemoteGetServerBuildId(BNRemote* remote);
 	BINARYNINJACOREAPI bool BNRemoteGetAuthBackends(BNRemote* remote, char*** backendIds, char*** backendNames, size_t* count);
 	BINARYNINJACOREAPI bool BNRemoteHasPulledProjects(BNRemote* remote);
@@ -8037,12 +8181,105 @@ extern "C"
 	BINARYNINJACOREAPI int BNFirmwareNinjaQueryBoardDevices(BNFirmwareNinja* fn, BNArchitecture* arch, const char* board, BNFirmwareNinjaDevice** devices);
 	BINARYNINJACOREAPI int BNFirmwareNinjaFindSectionsWithEntropy(BNFirmwareNinja* fn, BNFirmwareNinjaSection** sections, float highCodeEntropyThreshold, float lowCodeEntropyThreshold, size_t blockSize, BNFirmwareNinjaSectionAnalysisMode mode);
 	BINARYNINJACOREAPI void BNFirmwareNinjaFreeSections(BNFirmwareNinjaSection *sections, int size);
-	BINARYNINJACOREAPI int BNFirmwareNinjaGetFunctionMemoryAccesses(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMemoryAccesses*** mmio, BNProgressFunction progress, void* progressContext);
-	BINARYNINJACOREAPI void BNFirmwareNinjaFreeFunctionMemoryAccesses(BNFirmwareNinjaFunctionMemoryAccesses **mmio, int size);
-	BINARYNINJACOREAPI void BNFirmwareNinjaStoreFunctionMemoryAccessesToMetadata(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMemoryAccesses** mmio, int size);
-	BINARYNINJACOREAPI int BNFirmwareNinjaQueryFunctionMemoryAccessesFromMetadata(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMemoryAccesses*** mmio);
-	BINARYNINJACOREAPI int BNFirmwareNinjaGetBoardDeviceAccesses(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMemoryAccesses** mmio, int size, BNFirmwareNinjaDeviceAccesses** accesses, BNArchitecture* arch);
+	BINARYNINJACOREAPI int BNFirmwareNinjaGetFunctionMemoryAccesses(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMemoryAccesses*** fma, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI void BNFirmwareNinjaFreeFunctionMemoryAccesses(BNFirmwareNinjaFunctionMemoryAccesses **fma, int size);
+	BINARYNINJACOREAPI void BNFirmwareNinjaStoreFunctionMemoryAccessesToMetadata(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMemoryAccesses** fma, int size);
+	BINARYNINJACOREAPI int BNFirmwareNinjaQueryFunctionMemoryAccessesFromMetadata(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMemoryAccesses*** fma);
+	BINARYNINJACOREAPI int BNFirmwareNinjaGetBoardDeviceAccesses(BNFirmwareNinja* fn, BNFirmwareNinjaFunctionMemoryAccesses** fma, int size, BNFirmwareNinjaDeviceAccesses** accesses, BNArchitecture* arch);
 	BINARYNINJACOREAPI void BNFirmwareNinjaFreeBoardDeviceAccesses(BNFirmwareNinjaDeviceAccesses *accesses, int size);
+	BINARYNINJACOREAPI BNFirmwareNinjaReferenceNode* BNFirmwareNinjaGetMemoryRegionReferenceTree(BNFirmwareNinja* fn, uint64_t start, uint64_t end, BNFirmwareNinjaFunctionMemoryAccesses** fma, int size, uint64_t* value);
+	BINARYNINJACOREAPI BNFirmwareNinjaReferenceNode* BNFirmwareNinjaGetAddressReferenceTree(BNFirmwareNinja* fn, uint64_t address, BNFirmwareNinjaFunctionMemoryAccesses** fma, int size, uint64_t* value);
+	BINARYNINJACOREAPI BNFirmwareNinjaRelationship** BNFirmwareNinjaQueryRelationships(BNFirmwareNinja* fn, size_t* count);
+	BINARYNINJACOREAPI void BNFirmwareNinjaAddRelationship(BNFirmwareNinja* fn, BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI BNFirmwareNinjaRelationship* BNFirmwareNinjaGetRelationshipByGuid(BNFirmwareNinja* fn, const char* guid);
+	BINARYNINJACOREAPI void BNFirmwareNinjaRemoveRelationshipByGuid(BNFirmwareNinja* fn, const char* guid);
+
+	BINARYNINJACOREAPI bool BNFirmwareNinjaReferenceNodeIsFunction(BNFirmwareNinjaReferenceNode* node);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaReferenceNodeIsDataVariable(BNFirmwareNinjaReferenceNode* node);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaReferenceNodeHasChildren(BNFirmwareNinjaReferenceNode* node);
+	BINARYNINJACOREAPI BNFunction* BNFirmwareNinjaReferenceNodeGetFunction(BNFirmwareNinjaReferenceNode* node);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaReferenceNodeGetDataVariable(BNFirmwareNinjaReferenceNode* node, BNDataVariable* dataVariable);
+	BINARYNINJACOREAPI BNFirmwareNinjaReferenceNode** BNFirmwareNinjaReferenceNodeGetChildren(BNFirmwareNinjaReferenceNode* parent, size_t* count);
+	BINARYNINJACOREAPI void BNFreeFirmwareNinjaReferenceNode(BNFirmwareNinjaReferenceNode* node);
+	BINARYNINJACOREAPI BNFirmwareNinjaReferenceNode* BNNewFirmwareNinjaReferenceNodeReference(BNFirmwareNinjaReferenceNode* node);
+	BINARYNINJACOREAPI void BNFreeFirmwareNinjaReferenceNodes(BNFirmwareNinjaReferenceNode** nodes, size_t count);
+
+	BINARYNINJACOREAPI BNFirmwareNinjaRelationship* BNCreateFirmwareNinjaRelationship(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNFreeFirmwareNinjaRelationship(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI BNFirmwareNinjaRelationship* BNNewFirmwareNinjaRelationshipReference(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI void BNFirmwareNinjaRelationshipSetPrimaryAddress(BNFirmwareNinjaRelationship* rel, uint64_t address);
+	BINARYNINJACOREAPI void BNFirmwareNinjaRelationshipSetPrimaryDataVariable(BNFirmwareNinjaRelationship* rel, uint64_t dataVariableAddress);
+	BINARYNINJACOREAPI void BNFirmwareNinjaRelationshipSetPrimaryFunction(BNFirmwareNinjaRelationship* rel, BNFunction* function);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipPrimaryIsDataVariable(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipPrimaryIsFunction(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipPrimaryIsAddress(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipGetPrimaryDataVariable(BNFirmwareNinjaRelationship* rel, BNDataVariable* dataVariable);
+	BINARYNINJACOREAPI BNFunction* BNFirmwareNinjaRelationshipGetPrimaryFunction(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipGetPrimaryAddress(BNFirmwareNinjaRelationship* rel, uint64_t* result);
+	BINARYNINJACOREAPI void BNFirmwareNinjaRelationshipSetSecondaryExternalAddress(BNFirmwareNinjaRelationship* rel, BNProjectFile* projectFile, uint64_t address);
+	BINARYNINJACOREAPI void BNFirmwareNinjaRelationshipSetSecondaryExternalSymbol(BNFirmwareNinjaRelationship* rel, BNProjectFile* projectFile, const char* symbol);
+	BINARYNINJACOREAPI void BNFirmwareNinjaRelationshipSetSecondaryAddress(BNFirmwareNinjaRelationship* rel, uint64_t address);
+	BINARYNINJACOREAPI void BNFirmwareNinjaRelationshipSetSecondaryDataVariable(BNFirmwareNinjaRelationship* rel, uint64_t dataVariableAddress);
+	BINARYNINJACOREAPI void BNFirmwareNinjaRelationshipSetSecondaryFunction(BNFirmwareNinjaRelationship* rel, BNFunction* function);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipSecondaryIsDataVariable(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipSecondaryIsFunction(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipSecondaryIsAddress(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipSecondaryIsExternalAddress(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipSecondaryIsExternalSymbol(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI BNProjectFile* BNFirmwareNinjaRelationshipGetSecondaryExternalProjectFile(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipGetSecondaryAddress(BNFirmwareNinjaRelationship* rel, uint64_t* result);
+	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipGetSecondaryDataVariable(BNFirmwareNinjaRelationship* rel, BNDataVariable* dataVariable);
+	BINARYNINJACOREAPI BNFunction* BNFirmwareNinjaRelationshipGetSecondaryFunction(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI const char* BNFirmwareNinjaRelationshipGetSecondaryExternalSymbol(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI void BNFirmwareNinjaRelationshipSetDescription(BNFirmwareNinjaRelationship* rel, const char* description);
+	BINARYNINJACOREAPI const char* BNFirmwareNinjaRelationshipGetDescription(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI void BNFirmwareNinjaRelationshipSetProvenance(BNFirmwareNinjaRelationship* rel, const char* provenance);
+	BINARYNINJACOREAPI const char* BNFirmwareNinjaRelationshipGetProvenance(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI const char* BNFirmwareNinjaRelationshipGetGuid(BNFirmwareNinjaRelationship* rel);
+
+	// Line formatters
+	BINARYNINJACOREAPI BNLineFormatter* BNRegisterLineFormatter(const char* name, BNCustomLineFormatter* callbacks);
+	BINARYNINJACOREAPI BNLineFormatter** BNGetLineFormatterList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeLineFormatterList(BNLineFormatter** formatters);
+	BINARYNINJACOREAPI BNLineFormatter* BNGetLineFormatterByName(const char* name);
+	BINARYNINJACOREAPI BNLineFormatter* BNGetDefaultLineFormatter();
+
+	BINARYNINJACOREAPI char* BNGetLineFormatterName(BNLineFormatter* formatter);
+
+	BINARYNINJACOREAPI BNDisassemblyTextLine* BNFormatLines(BNLineFormatter* formatter, BNDisassemblyTextLine* inLines,
+		size_t inCount, const BNLineFormatterSettings* settings, size_t* outCount);
+
+	BINARYNINJACOREAPI BNLineFormatterSettings* BNGetDefaultLineFormatterSettings(
+		BNDisassemblySettings* settings, BNHighLevelILFunction* func);
+	BINARYNINJACOREAPI BNLineFormatterSettings* BNGetLanguageRepresentationLineFormatterSettings(
+		BNDisassemblySettings* settings, BNLanguageRepresentationFunction* func);
+	BINARYNINJACOREAPI void BNFreeLineFormatterSettings(BNLineFormatterSettings* settings);
+
+	// Render Layers
+	BINARYNINJACOREAPI BNRenderLayer* BNRegisterRenderLayer(const char* name, BNRenderLayerCallbacks* callbacks, BNRenderLayerDefaultEnableState enableState);
+	BINARYNINJACOREAPI BNRenderLayer** BNGetRenderLayerList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeRenderLayerList(BNRenderLayer** renderLayers);
+	BINARYNINJACOREAPI BNRenderLayer* BNGetRenderLayerByName(const char* name);
+	BINARYNINJACOREAPI char* BNGetRenderLayerName(BNRenderLayer* renderLayer);
+	BINARYNINJACOREAPI BNRenderLayerDefaultEnableState BNGetRenderLayerDefaultEnableState(BNRenderLayer* renderLayer);
+
+	BINARYNINJACOREAPI void BNApplyRenderLayerToFlowGraph(BNRenderLayer* renderLayer, BNFlowGraph* graph);
+	BINARYNINJACOREAPI void BNApplyRenderLayerToLinearViewObject(
+		BNRenderLayer* renderLayer,
+		BNLinearViewObject* obj,
+		BNLinearViewObject* prev,
+		BNLinearViewObject* next,
+		BNLinearDisassemblyLine* inLines,
+		size_t inLineCount,
+		BNLinearDisassemblyLine** outLines,
+		size_t* outLineCount
+	);
+
+	BINARYNINJACOREAPI void BNFreeStringRef(BNStringRef* ref);
+	BINARYNINJACOREAPI BNStringRef* BNDuplicateStringRef(BNStringRef* ref);
+	BINARYNINJACOREAPI const char* BNGetStringRefContents(BNStringRef* ref);
+	BINARYNINJACOREAPI size_t BNGetStringRefSize(BNStringRef* ref);
+
 #ifdef __cplusplus
 }
 #endif

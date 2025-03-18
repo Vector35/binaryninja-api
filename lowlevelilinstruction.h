@@ -184,7 +184,8 @@ namespace BinaryNinja
 		SSARegisterStackListLowLevelOperand,
 		SSAFlagListLowLevelOperand,
 		SSARegisterOrFlagListLowLevelOperand,
-		RegisterStackAdjustmentsLowLevelOperand
+		RegisterStackAdjustmentsLowLevelOperand,
+		ConstraintLowLevelOperand,
 	};
 
 	/*!
@@ -244,7 +245,8 @@ namespace BinaryNinja
 		SourceMemoryVersionsLowLevelOperandUsage,
 		TargetsLowLevelOperandUsage,
 		RegisterStackAdjustmentsLowLevelOperandUsage,
-		OffsetLowLevelOperandUsage
+		OffsetLowLevelOperandUsage,
+		ConstraintLowLevelOperandUsage,
 	};
 }  // namespace BinaryNinjaCore
 
@@ -718,6 +720,7 @@ namespace BinaryNinja
 		LowLevelILSSAFlagList GetRawOperandAsSSAFlagList(size_t operand) const;
 		LowLevelILSSARegisterOrFlagList GetRawOperandAsSSARegisterOrFlagList(size_t operand) const;
 		_STD_MAP<uint32_t, int32_t> GetRawOperandAsRegisterStackAdjustments(size_t operand) const;
+		PossibleValueSet GetRawOperandAsPossibleValueSet(size_t operand) const;
 
 		void UpdateRawOperand(size_t operandIndex, ExprId value);
 		void UpdateRawOperandAsSSARegisterList(size_t operandIndex, const _STD_VECTOR<SSARegister>& regs);
@@ -1116,6 +1119,11 @@ namespace BinaryNinja
 		{
 			As<N>().SetOutputSSARegisterOrFlagList(outputs);
 		}
+		template <BNLowLevelILOperation N>
+		PossibleValueSet GetConstraint() const
+		{
+			return As<N>().GetConstraint();
+		}
 
 		bool GetOperandIndexForUsage(LowLevelILOperandUsage usage, size_t& operandIndex) const;
 
@@ -1364,6 +1372,32 @@ namespace BinaryNinja
 		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(2); }
 		void SetDestSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(1, version); }
 		void SetSourceSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(2, version); }
+	};
+	template <>
+	struct LowLevelILInstructionAccessor<LLIL_FORCE_VER> : public LowLevelILInstructionBase
+	{
+		uint32_t GetDestRegister() const { return GetRawOperandAsRegister(0); }
+	};
+	template <>
+	struct LowLevelILInstructionAccessor<LLIL_FORCE_VER_SSA> : public LowLevelILInstructionBase
+	{
+		SSARegister GetDestSSARegister() const { return GetRawOperandAsSSARegister(0); }
+		void SetDestSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		SSARegister GetSourceSSARegister() const { return GetRawOperandAsSSARegister(2); }
+		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(3, version); }
+	};
+	template <>
+	struct LowLevelILInstructionAccessor<LLIL_ASSERT> : public LowLevelILInstructionBase
+	{
+		uint32_t GetSourceRegister() const { return GetRawOperandAsRegister(0); }
+		PossibleValueSet GetConstraint() const { return GetRawOperandAsPossibleValueSet(1); }
+	};
+	template <>
+	struct LowLevelILInstructionAccessor<LLIL_ASSERT_SSA> : public LowLevelILInstructionBase
+	{
+		SSARegister GetSourceSSARegister() const { return GetRawOperandAsSSARegister(0); }
+		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		PossibleValueSet GetConstraint() const { return GetRawOperandAsPossibleValueSet(2); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_SET_FLAG> : public LowLevelILInstructionBase

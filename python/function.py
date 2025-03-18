@@ -135,6 +135,18 @@ class DisassemblySettings:
 			option = DisassemblyOption[option]
 		core.BNSetDisassemblySettingsOption(self.handle, option, state)
 
+	@staticmethod
+	def default_settings() -> 'DisassemblySettings':
+		return DisassemblySettings(core.BNDefaultDisassemblySettings())
+
+	@staticmethod
+	def default_graph_settings() -> 'DisassemblySettings':
+		return DisassemblySettings(core.BNDefaultGraphDisassemblySettings())
+
+	@staticmethod
+	def default_linear_settings() -> 'DisassemblySettings':
+		return DisassemblySettings(core.BNDefaultLinearDisassemblySettings())
+
 
 @dataclass
 class ILReferenceSource:
@@ -193,7 +205,7 @@ class FunctionViewType:
 		if isinstance(view_type, FunctionViewType):
 			self.view_type = view_type.view_type
 			self.name = view_type.name
-		if isinstance(view_type, FunctionGraphType):
+		elif isinstance(view_type, FunctionGraphType):
 			self.view_type = view_type
 			self.name = None
 		else:
@@ -1788,7 +1800,11 @@ class Function:
 
 		idx = core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)
 
-		llil = self.llil
+		try:
+			llil = self.llil
+		except ILException:
+			return None
+
 		if idx == len(llil):
 			return None
 
@@ -2626,6 +2642,18 @@ class Function:
 		core.BNFreeVariableNameAndType(found_var)
 		return result
 
+	def get_stack_var_at_frame_offset_after_instruction(
+	    self, offset: int, addr: int, arch: Optional['architecture.Architecture'] = None
+	) -> Optional['variable.Variable']:
+		if arch is None:
+			arch = self.arch
+		found_var = core.BNVariableNameAndType()
+		if not core.BNGetStackVariableAtFrameOffsetAfterInstruction(self.handle, arch.handle, addr, offset, found_var):
+			return None
+		result = variable.Variable.from_BNVariable(self, found_var.var)
+		core.BNFreeVariableNameAndType(found_var)
+		return result
+
 	def get_type_tokens(self, settings: Optional['DisassemblySettings'] = None) -> List['DisassemblyTextLine']:
 		_settings = None
 		if settings is not None:
@@ -2811,7 +2839,21 @@ class Function:
 			arch = self.arch
 		return core.BNIsCallInstruction(self.handle, arch.handle, addr)
 
-	def set_user_var_value(self, var: 'variable.Variable', def_addr: int, value: 'variable.PossibleValueSet') -> None:
+	def create_forced_var_version(self, var: 'variable.Variable', def_addr: int) -> None:
+		def_site = core.BNArchitectureAndAddress()
+		def_site.arch = self.arch.handle
+		def_site.address = def_addr
+
+		core.BNCreateForcedVariableVersion(self.handle, var.to_BNVariable(), def_site)
+
+	def clear_forced_var_version(self, var: 'variable.Variable', def_addr: int) -> None:
+		def_site = core.BNArchitectureAndAddress()
+		def_site.arch = self.arch.handle
+		def_site.address = def_addr
+
+		core.BNClearForcedVariableVersion(self.handle, var.to_BNVariable(), def_site)
+
+	def set_user_var_value(self, var: 'variable.Variable', def_addr: int, value: 'variable.PossibleValueSet', after: bool = True) -> None:
 		"""
 		`set_user_var_value` allows the user to specify a PossibleValueSet value for an MLIL variable at its \
 		definition site.
@@ -2822,8 +2864,9 @@ class Function:
 		the HLIL layer.
 
 		:param Variable var: Variable for which the value is to be set
-		:param int def_addr: Address of the definition site of the variable
+		:param int def_addr: Address where the variable is set
 		:param PossibleValueSet value: Informed value of the variable
+		:param bool after: Whether the value happens before or after the instruction
 		:rtype: None
 
 		:Example:
@@ -2833,27 +2876,27 @@ class Function:
 			>>> var_value = PossibleValueSet.constant(5)
 			>>> current_function.set_user_var_value(mlil_var, def_address, var_value)
 		"""
-		if var.index == 0:
-			# Special case: function parameters have index 0 and are defined at the start of the function
-			def_addr = self.start
-		else:
-			var_defs = self.mlil.get_var_definitions(var)
-			if var_defs is None:
-				raise ValueError("Could not get definition for Variable")
-			found = False
-			for site in var_defs:
-				if site.address == def_addr:
-					found = True
-					break
-			if not found:
-				raise ValueError("No definition for Variable found at given address")
+		#if var.index == 0:
+		#	# Special case: function parameters have index 0 and are defined at the start of the function
+		#	def_addr = self.start
+		#else:
+		#	var_defs = self.mlil.get_var_definitions(var)
+		#	if var_defs is None:
+		#		raise ValueError("Could not get definition for Variable")
+		#	found = False
+		#	for site in var_defs:
+		#		if site.address == def_addr:
+		#			found = True
+		#			break
+		#	if not found:
+		#		raise ValueError("No definition for Variable found at given address")
 		def_site = core.BNArchitectureAndAddress()
 		def_site.arch = self.arch.handle
 		def_site.address = def_addr
 
-		core.BNSetUserVariableValue(self.handle, var.to_BNVariable(), def_site, value._to_core_struct())
+		core.BNSetUserVariableValue(self.handle, var.to_BNVariable(), def_site, after, value._to_core_struct())
 
-	def clear_user_var_value(self, var: 'variable.Variable', def_addr: int) -> None:
+	def clear_user_var_value(self, var: 'variable.Variable', def_addr: int, after: bool = True) -> None:
 		"""
 		Clears a previously defined user variable value.
 
@@ -2880,7 +2923,7 @@ class Function:
 		def_site.arch = self.arch.handle
 		def_site.address = def_addr
 
-		core.BNClearUserVariableValue(self.handle, var.to_BNVariable(), def_site)
+		core.BNClearUserVariableValue(self.handle, var.to_BNVariable(), def_site, after)
 
 	def get_all_user_var_values(
 	    self
@@ -3323,15 +3366,29 @@ class AdvancedFunctionAnalysisDataRequestor:
 
 
 @dataclass
+class DisassemblyTextLineTypeInfo:
+	parent_type: Optional['types.Type']
+	field_index: int
+	offset: int
+
+
+@dataclass
 class DisassemblyTextLine:
 	tokens: List['InstructionTextToken']
 	highlight: '_highlight.HighlightColor'
 	address: Optional[int]
 	il_instruction: Optional[ILInstructionType]
+	tags: List['binaryview.Tag']
+	type_info: Optional[DisassemblyTextLineTypeInfo]
 
 	def __init__(
-	    self, tokens: List['InstructionTextToken'], address: Optional[int] = None, il_instr: Optional[ILInstructionType] = None,
-	    color: Optional[Union['_highlight.HighlightColor', HighlightStandardColor]] = None
+			self,
+			tokens: List['InstructionTextToken'],
+			address: Optional[int] = None,
+			il_instr: Optional[ILInstructionType] = None,
+			color: Optional[Union['_highlight.HighlightColor', HighlightStandardColor]] = None,
+			tags: Optional[List['binaryview.Tag']] = None,
+			type_info: Optional[DisassemblyTextLineTypeInfo] = None,
 	):
 		self.address = address
 		self.tokens = tokens
@@ -3346,6 +3403,10 @@ class DisassemblyTextLine:
 				self.highlight = _highlight.HighlightColor(color)
 			else:
 				self.highlight = color
+		if tags is None:
+			tags = []
+		self.tags = tags
+		self.type_info = type_info
 
 	def __str__(self):
 		return "".join(map(str, self.tokens))
@@ -3354,6 +3415,110 @@ class DisassemblyTextLine:
 		if self.address is None:
 			return f"<disassemblyTextLine {self}>"
 		return f"<disassemblyTextLine {self.address:#x}: {self}>"
+
+	@property
+	def total_width(self):
+		return sum(token.width for token in self.tokens)
+
+	def _find_address_and_indentation_tokens(self, callback):
+		start_token = 0
+		for i in range(len(self.tokens)):
+			if self.tokens[i].type == InstructionTextTokenType.AddressSeparatorToken:
+				start_token = i + 1
+				break
+
+		for token in self.tokens[:start_token]:
+			callback(token)
+
+		for token in self.tokens[start_token:]:
+			if token.type in [InstructionTextTokenType.AddressDisplayToken,
+							  InstructionTextTokenType.AddressSeparatorToken,
+							  InstructionTextTokenType.CollapseStateIndicatorToken]:
+				callback(token)
+				continue
+			if len(token.text) != 0 and not token.text.isspace():
+				break
+			callback(token)
+
+	@property
+	def address_and_indentation_width(self):
+		result = 0
+
+		def sum_width(token):
+			nonlocal result
+			result += token.width
+
+		self._find_address_and_indentation_tokens(sum_width)
+		return result
+
+	@property
+	def address_and_indentation_tokens(self):
+		result = []
+
+		def collect_tokens(token):
+			nonlocal result
+			result.append(token)
+
+		self._find_address_and_indentation_tokens(collect_tokens)
+		return result
+
+	@classmethod
+	def _from_core_struct(cls, struct: core.BNDisassemblyTextLine, il_func: Optional['ILFunctionType'] = None):
+		il_instr = None
+		if il_func is not None and struct.instrIndex < len(il_func):
+			try:
+				il_instr = il_func[struct.instrIndex]
+			except:
+				il_instr = None
+		tokens = InstructionTextToken._from_core_struct(struct.tokens, struct.count)
+
+		tags = []
+		for i in range(struct.tagCount):
+			tags.append(binaryview.Tag(handle=core.BNNewTagReference(struct.tags[i])))
+
+		type_info = None
+		if struct.typeInfo.hasTypeInfo:
+			parent_type = None
+			if struct.typeInfo.parentType:
+				parent_type = types.Type.create(core.BNNewTypeReference(struct.typeInfo.parentType))
+			type_info = DisassemblyTextLineTypeInfo(
+				parent_type=parent_type,
+				field_index=struct.typeInfo.fieldIndex,
+				offset=struct.typeInfo.offset
+			)
+
+		return DisassemblyTextLine(
+			tokens,
+			struct.addr,
+			il_instr,
+			_highlight.HighlightColor._from_core_struct(struct.highlight),
+			tags,
+			type_info
+		)
+
+	def _to_core_struct(self) -> core.BNDisassemblyTextLine:
+		result = core.BNDisassemblyTextLine()
+		result.addr = self.address
+		if self.il_instruction is not None:
+			result.instrIndex = self.il_instruction.instr_index
+		else:
+			result.instrIndex = 0xffffffffffffffff
+		result.tokens = InstructionTextToken._get_core_struct(self.tokens)
+		result.count = len(self.tokens)
+		result.highlight = self.highlight._to_core_struct()
+		result.tagCount = len(self.tags)
+		result.tags = (ctypes.POINTER(core.BNTag) * len(self.tags))()
+		for i, tag in enumerate(self.tags):
+			result.tags[i] = tag.handle
+		if self.type_info is None:
+			result.typeInfo.hasTypeInfo = False
+		else:
+			result.typeInfo.hasTypeInfo = True
+			if self.type_info.parent_type is not None:
+				result.typeInfo.parentType = self.type_info.parent_type.handle
+			result.typeInfo.fieldIndex = self.type_info.field_index
+			result.typeInfo.offset = self.type_info.offset
+		return result
 
 
 class DisassemblyTextRenderer:
@@ -3405,7 +3570,7 @@ class DisassemblyTextRenderer:
 	def basic_block(self) -> Optional['basicblock.BasicBlock']:
 		result = core.BNGetDisassemblyTextRendererBasicBlock(self.handle)
 		if result:
-			return basicblock.BasicBlock(handle=result)
+			return basicblock.BasicBlock._from_core_block(handle=result)
 		return None
 
 	@basic_block.setter

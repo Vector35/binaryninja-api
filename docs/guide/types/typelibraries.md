@@ -16,7 +16,7 @@ __image of linear view showing a bunch of imported functions from a type library
 
 Compared to [Platform Types](./platformtypes.md), only Type Libraries needed by your binary will be imported into your analysis. If you want to manually import additional Type Libraries (e.g. if your binary dynamically loads a library), you can use the **Import Type Library** action in [Types View](./basictypes.md#the-type-list). Just pick a Type Library from the list shown, and it will be added to the list where you can import types from it. 
 
-If you want to use types from a Type Library that have not yet been imported, you can select them in the [Types View](./basictypes.md#the-type-list) and use the **Import Types** action. They will be copied into your analysis's System Types and you can use them in your own structure and function annotations.
+If you want to use types from a Type Library that have not yet been imported, you can select them in the [Types View](./basictypes.md#the-type-list) and use the **Add Type Library** action. They will be copied into your analysis's System Types and you can use them in your own structure and function annotations.
 
 ## Design and Purpose
 

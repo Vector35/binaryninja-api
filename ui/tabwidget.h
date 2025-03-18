@@ -387,6 +387,7 @@ class BINARYNINJAUIAPI SplitTabWidget : public QWidget
 	void selectWidget(QWidget* widget);
 	bool isWidgetVisible(QWidget* widget);
 	bool closeTab(QWidget* widget);
+	void setTabSizes(const QList<int>& sizes);
 
 	void setTabStyle(DockableTabStyle* style);
 

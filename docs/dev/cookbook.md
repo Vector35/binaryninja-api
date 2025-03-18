@@ -18,7 +18,7 @@ for func in bv.functions:
   print(func.name)
   print(func.start)
   print(func.parameter_vars)
-  print(func.function_type)
+  print(func.return_type)
 ```
 
 ### Getting a specific function

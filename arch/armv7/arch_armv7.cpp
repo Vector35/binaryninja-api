@@ -1214,7 +1214,7 @@ public:
 					else if (instr.operands[i].cls == REG_LIST_DOUBLE)
 						base = REG_D0;
 
-					for (int32_t j = 0; j < 16; j++)
+					for (int32_t j = 0; j < 32; j++)
 					{
 						if (((instr.operands[i].reg >> j) & 1) == 1)
 						{
@@ -2409,6 +2409,70 @@ public:
 				mov->imm4 = (newTarget >> 28) & 0xf;
 				break;
 			}
+			case R_ARM_THM_MOVW_ABS_NC:
+			case R_ARM_THM_MOVT_ABS:
+			{
+				/*
+					MOVW<c> <Rd>,#<imm16>
+						|15 14 13 12 11|10 |9  8 |7 |6 |5 |4 |3  2  1  0 |15|14 13 12|11 10  9  8 |7  6  5  4  3  2  1  0|
+						|1  1  1  1  0 |i  |1  0 |0 |1 |0 |0 |imm4       |0 |imm3    |Rd          |imm8                  |
+					MOVT<c> <Rd>,#<imm16>
+						|15 14 13 12 11|10 |9  8 |7 |6 |5 |4 |3  2  1  0 |15|14 13 12|11 10  9  8 |7  6  5  4  3  2  1  0|
+						|1  1  1  1  0 |i  |1  0 |1 |1 |0 |0 |imm4       |0 |imm3    |Rd          |imm8                  |
+					imm16 = imm4:i:imm3:imm8
+						i    = imm16[11]    = upper_insn[10]
+						imm4 = imm16[12:15] = upper_insn[3:0]
+						imm3 = imm16[8:10]  = lower_insn[14:12]
+						imm8 = imm16[0:7]   = lower_insn[7:0]
+				*/
+				#pragma pack(push, 1)
+				// TODO: not portable
+				// see PE_IMAGE_REL_THUMB_MOV32 for a slightly different approach to structuring this
+				struct _mov {
+					// lower word
+					uint32_t imm4:4;
+					uint32_t group2:6;
+					uint32_t i:1;
+					// bit 3 of group3 (bit 7 of the lower word) determines if it's movt or movw:
+					// MOVT: 0b101100
+					// MOVW: 0b100100
+					uint32_t group3:5;
+					// upper word
+					uint32_t imm8:8;
+					uint32_t rd:4;
+					uint32_t imm3:3;
+					uint32_t group1_15:1;
+				};
+				union _target {
+					// XXX: endianness?
+					struct {
+						uint16_t imm8:8;
+						uint16_t imm3:3;
+						uint16_t i:1;
+						uint16_t imm4:4;
+					};
+					uint16_t word;
+				};
+				#pragma pack(pop)
+				_mov* mov = (_mov*)dest32;
+				int16_t addend = mov->imm8 | (mov->imm3 << 8) | (mov->i << (8 + 3)) | (mov->imm4 << (8 + 3 + 1));
+				int64_t newTarget = target + addend;
+				_target t;
+				if (info.nativeType == R_ARM_THM_MOVW_ABS_NC) {
+					// MOVW takes the lower 16-bit word
+					t.word = (newTarget & 0xffff);
+				}
+				else // if (info.nativeType == R_ARM_THM_MOVT_ABS)
+				{
+					// MOVT takes the upper 16-bit word
+					t.word = (newTarget >> 16) & 0xffff;
+				}
+				mov->imm8 = t.imm8;
+				mov->imm3 = t.imm3;
+				mov->imm4 = t.imm4;
+				mov->i = t.i;
+				break;
+			}
 			case R_ARM_TLS_DTPMOD32:
 				/* Default to module index 0. */
 				dest32[0] = 0;
@@ -2465,6 +2529,8 @@ public:
 			case R_ARM_JUMP_SLOT:
 				reloc.type = ELFJumpSlotRelocationType;
 				break;
+			case R_ARM_THM_MOVW_ABS_NC:
+			case R_ARM_THM_MOVT_ABS:
 			case R_ARM_MOVW_ABS_NC:
 			case R_ARM_MOVT_ABS:
 				break;
@@ -2544,8 +2610,6 @@ public:
 			case R_ARM_THM_PC8:
 			case R_ARM_THM_SWI8:
 			case R_ARM_THM_XPC22:
-			case R_ARM_THM_MOVW_ABS_NC:
-			case R_ARM_THM_MOVT_ABS:
 			case R_ARM_THM_MOVW_PREL_NC:
 			case R_ARM_THM_MOVT_PREL:
 			case R_ARM_THM_JUMP19:

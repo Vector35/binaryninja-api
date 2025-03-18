@@ -152,12 +152,17 @@ class Activity(object):
 	"""
 
 	_action_callbacks = {}
+	_eligibility_callbacks = {}
 
-	def __init__(self, configuration: str = "", handle: Optional[core.BNActivityHandle] = None, action: Optional[Callable[[Any], None]] = None):
+	def __init__(self, configuration: str = "", handle: Optional[core.BNActivityHandle] = None, action: Optional[Callable[[Any], None]] = None, eligibility: Optional[Callable[[Any], bool]] = None):
 		if handle is None:
-			#cls._notify(ac, callback)
 			action_callback = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNAnalysisContext))(lambda ctxt, ac: self._action(ac))
-			_handle = core.BNCreateActivity(configuration, None, action_callback)
+			if eligibility:
+				eligibility_callback = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNActivity), ctypes.POINTER(core.BNAnalysisContext))(lambda ctxt, act, ac: eligibility(act, ac))
+				_handle = core.BNCreateActivityWithEligibility(configuration, None, action_callback, eligibility_callback)
+				self.__class__._eligibility_callbacks[len(self.__class__._eligibility_callbacks)] = eligibility_callback
+			else:
+				_handle = core.BNCreateActivity(configuration, None, action_callback)
 			self.action = action
 			self.__class__._action_callbacks[len(self.__class__._action_callbacks)] = action_callback
 		else:
@@ -349,7 +354,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		``clone`` Clone a new Workflow, copying all Activities and the execution strategy.
 
-		:param str name: the name for the new Workflow
+		:param str name: if specified, name the new Workflow, otherwise the name is copied from the original
 		:param str activity: if specified, perform the clone operation using ``activity`` as the root
 		:return: a new Workflow
 		:rtype: Workflow
@@ -482,7 +487,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNWorkflowClear(self.handle)
 
-	def insert(self, activity: ActivityType, activities: List[str]) -> bool:
+	def insert(self, activity: ActivityType, activities: Union[List[str], str]) -> bool:
 		"""
 		``insert`` Insert the list of ``activities`` before the specified ``activity`` and at the same level.
 
@@ -491,10 +496,28 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		:return: True on success, False otherwise
 		:rtype: bool
 		"""
+		if isinstance(activities, str):
+			activities = [activities]
 		input_list = (ctypes.c_char_p * len(activities))()
 		for i in range(0, len(activities)):
 			input_list[i] = str(activities[i]).encode('charmap')
 		return core.BNWorkflowInsert(self.handle, str(activity), input_list, len(activities))
+
+	def insert_after(self, activity: ActivityType, activities: Union[List[str], str]) -> bool:
+		"""
+		``insert_after`` Insert the list of ``activities`` after the specified ``activity`` and at the same level.
+
+		:param str activity: the Activity node for which to insert ``activities`` after
+		:param list[str] activities: the list of Activities to insert
+		:return: True on success, False otherwise
+		:rtype: bool
+		"""
+		if isinstance(activities, str):
+			activities = [activities]
+		input_list = (ctypes.c_char_p * len(activities))()
+		for i in range(0, len(activities)):
+			input_list[i] = str(activities[i]).encode('charmap')
+		return core.BNWorkflowInsertAfter(self.handle, str(activity), input_list, len(activities))
 
 	def remove(self, activity: ActivityType) -> bool:
 		"""
@@ -645,13 +668,6 @@ class WorkflowMachine:
 		else:
 			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
-	def abort(self):
-		request = json.dumps({"command": "abort"})
-		if self.is_function_machine:
-			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
-		else:
-			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
-
 	def halt(self):
 		request = json.dumps({"command": "halt"})
 		if self.is_function_machine:
@@ -763,7 +779,6 @@ class WorkflowMachineCLI(cmd.Cmd):
 		"d": "dump",
 		"c": "resume",
 		"r": "run",
-		"a": "abort",
 		"h": "halt",
 		"s": "step",
 		"b": "breakpoint",
@@ -847,11 +862,6 @@ class WorkflowMachineCLI(cmd.Cmd):
 	def do_run(self, line):
 		"""Run the workflow machine and generate a default configuration if the workflow is not configured."""
 		status = self.machine.run()
-		print(json.dumps(status, indent=4))
-
-	def do_abort(self, line):
-		"""Abort the workflow machine."""
-		status = self.machine.abort()
 		print(json.dumps(status, indent=4))
 
 	def do_halt(self, line):

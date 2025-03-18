@@ -1,0 +1,10 @@
+accepted = [
+    "Apache-2.0",
+    "MIT",
+    "Unicode-DFS-2016",
+    "Unicode-3.0",
+    "ISC",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "LicenseRef-scancode-google-patent-license-fuchsia"
+]

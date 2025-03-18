@@ -1196,16 +1196,17 @@ void ObjCProcessor::ProcessObjCData()
 	m_symbolQueue = new SymbolQueue();
 	auto addrSize = m_data->GetAddressSize();
 
-	m_typeNames.relativePtr = defineTypedef(m_data, {"rptr_t"}, Type::IntegerType(4, true));
-	auto rptr_t = Type::NamedType(m_data, m_typeNames.relativePtr);
+	// m_typeNames.relativePtr = defineTypedef(m_data, {"rptr_t"}, Type::IntegerType(4, true));
+	// auto rptr_t = Type::NamedType(m_data, m_typeNames.relativePtr);
+	auto rptr_t = Type::NamedType(m_data, defineTypedef(m_data, {"rptr_t"}, Type::IntegerType(4, true)));
 
-	m_typeNames.id = defineTypedef(m_data, {"id"}, Type::PointerType(addrSize, Type::VoidType()));
-	m_typeNames.sel = defineTypedef(m_data, {"SEL"}, Type::PointerType(addrSize, Type::IntegerType(1, false)));
-
-	m_typeNames.BOOL = defineTypedef(m_data, {"BOOL"}, Type::IntegerType(1, false));
-	m_typeNames.nsInteger = defineTypedef(m_data, {"NSInteger"}, Type::IntegerType(addrSize, true));
-	m_typeNames.nsuInteger = defineTypedef(m_data, {"NSUInteger"}, Type::IntegerType(addrSize, false));
-	m_typeNames.cgFloat = defineTypedef(m_data, {"CGFloat"}, Type::FloatType(addrSize));
+	// m_typeNames.id = defineTypedef(m_data, {"id"}, Type::PointerType(addrSize, Type::VoidType()));
+	// m_typeNames.sel = defineTypedef(m_data, {"SEL"}, Type::PointerType(addrSize, Type::IntegerType(1, false)));
+	//
+	// m_typeNames.BOOL = defineTypedef(m_data, {"BOOL"}, Type::IntegerType(1, false));
+	// m_typeNames.nsInteger = defineTypedef(m_data, {"NSInteger"}, Type::IntegerType(addrSize, true));
+	// m_typeNames.nsuInteger = defineTypedef(m_data, {"NSUInteger"}, Type::IntegerType(addrSize, false));
+	// m_typeNames.cgFloat = defineTypedef(m_data, {"CGFloat"}, Type::FloatType(addrSize));
 
 	// https://github.com/apple-oss-distributions/objc4/blob/196363c165b175ed925ef6b9b99f558717923c47/runtime/objc-abi.h
 	EnumerationBuilder imageInfoFlagBuilder;
@@ -1440,12 +1441,22 @@ void ObjCProcessor::ProcessCFStrings()
 					uint8_t* rawData = static_cast<uint8_t*>(data.GetData());
 					uint8_t* offsetAddress = rawData + bufferOff;
 					uint16_t c = *reinterpret_cast<uint16_t*>(offsetAddress);
-					if (c == 0x20)
+					if (c == 0x20) {
 						str.push_back('_');
-					else if (c < 0x80)
+					} else if (c == '\r') {
+						str.push_back('\\');
+						str.push_back('r');
+					} else if (c == '\n') {
+						str.push_back('\\');
+						str.push_back('n');
+					} else if (c == '\t') {
+						str.push_back('\\');
+						str.push_back('t');
+					} else if (c > 0x20 && c < 0x80) {
 						str.push_back(c);
-					else
+					} else {
 						str.push_back('?');
+					}
 				}
 				DefineObjCSymbol(
 					DataSymbol, Type::ArrayType(Type::WideCharType(2), size + 1), "ustr_" + str, strLoc, true);
@@ -1455,11 +1466,26 @@ void ObjCProcessor::ProcessCFStrings()
 			else  // UTF8 / ASCII
 			{
 				reader.Seek(strLoc);
-				str = reader.ReadCString(size + 1);
-				for (auto& c : str)
+				std::string rawStr = reader.ReadCString(size + 1);
+				str = "";
+				for (signed char c : rawStr)
 				{
-					if (c == ' ')
-						c = '_';
+					if (c == 0x20) {
+						str.push_back('_');
+					} else if (c == '\r') {
+						str.push_back('\\');
+						str.push_back('r');
+					} else if (c == '\n') {
+						str.push_back('\\');
+						str.push_back('n');
+					} else if (c == '\t') {
+						str.push_back('\\');
+						str.push_back('t');
+					} else if (c > 0x20 || c < 0) {
+						str.push_back(c);
+					} else {
+						str.push_back('?');
+					}
 				}
 				DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), str.size() + 1), "cstr_" + str,
 					strLoc, true);

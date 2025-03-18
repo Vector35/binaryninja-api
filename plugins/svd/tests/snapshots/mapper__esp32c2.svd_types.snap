@@ -1,0 +1,33 @@
+---
+source: plugins/svd/tests/mapper.rs
+expression: types
+---
+[
+    "struct APB_CTRL",
+    "struct APB_SARADC",
+    "struct ASSIST_DEBUG",
+    "struct BB",
+    "struct DMA",
+    "struct ECC",
+    "struct EFUSE",
+    "struct EXTMEM",
+    "struct GPIO",
+    "struct I2C0",
+    "struct INTERRUPT_CORE0",
+    "struct IO_MUX",
+    "struct LEDC",
+    "struct MODEM_CLKRST",
+    "struct RNG",
+    "struct RTC_CNTL",
+    "struct SENSITIVE",
+    "struct SHA",
+    "struct SPI0",
+    "struct SPI1",
+    "struct SPI2",
+    "struct SYSTEM",
+    "struct SYSTIMER",
+    "struct TIMG0",
+    "struct UART0",
+    "struct UART1",
+    "struct XTS_AES",
+]

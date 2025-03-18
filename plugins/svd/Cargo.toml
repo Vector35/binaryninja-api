@@ -1,0 +1,18 @@
+[package]
+name = "svd_ninja"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+binaryninja.workspace = true
+binaryninjacore-sys.workspace = true
+svd-parser = { version = "0.14.8", features = ["expand"] }
+log = "0.4"
+serde_json = "1.0"
+
+[dev-dependencies]
+insta = { version = "1.42", features = ["yaml"] }

@@ -8,6 +8,7 @@
 #include "menus.h"
 #include "uicontext.h"
 #include "commentdialog.h"
+#include "commands.h"
 #include "instructionedit.h"
 
 /*!
@@ -82,11 +83,13 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 		size_t lineIndexForAddress;
 		size_t tokenIndex;
 		size_t characterIndex;
-		// Directly from QMouseEvent, not used in comparator
+		// Directly from QMouseEvent, not used in comparators
 		int cursorX;
 		int cursorY;
 
+		bool operator==(const CursorPosition& other) const;
 		bool operator<(const CursorPosition& other) const;
+		bool operator<=(const CursorPosition& other) const;
 	};
 
 	BinaryViewRef m_data;
@@ -145,6 +148,8 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	FlowGraphRef m_recenterWithGraph;
 	int m_recenterXofs, m_recenterYofs;
 
+	FieldResolutionState m_fieldResolution;
+
 	static int m_layoutCompleteEventType;
 	static int m_updateCompleteEventType;
 
@@ -180,7 +185,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 
 	virtual void contextMenuEvent(QContextMenuEvent*) override;
 	void bindActions();
-	void bindDynamicActions();
+	virtual void bindDynamicActions();
 
 	void navigateToAddress(uint64_t addr);
 	void navigateToGotoLabel(uint64_t label);
@@ -345,8 +350,6 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void followPointer();
 	void defineName();
 	void undefine();
-	void setUserVariableValue();
-	void clearUserVariableValue();
 	void defineFuncName();
 	void editFunctionProperties();
 	void createFunc(const UIActionContext& context);

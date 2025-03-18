@@ -650,7 +650,7 @@ bool ElfView::Init()
 		vector<string> readWriteDataSectionNames = {".data", ".bss"};
 		vector<string> readOnlyDataSectionNames = {".rodata", ".dynamic", ".dynsym", ".dynstr", ".ehframe",
 			".ctors", ".dtors", ".got", ".got2", ".data.rel.ro", ".gnu.hash"};
-		if ((m_elfSections[i].flags & ELF_SHF_EXECINSTR) ||  In(sectionNames[i], readOnlyCodeSectionNames))
+		if ((m_elfSections[i].flags & ELF_SHF_EXECINSTR) || In(sectionNames[i], readOnlyCodeSectionNames))
 			semantics = ReadOnlyCodeSectionSemantics;
 		else if (!(m_elfSections[i].flags & ELF_SHF_WRITE) || In(sectionNames[i], readOnlyDataSectionNames))
 			semantics = ReadOnlyDataSectionSemantics;
@@ -739,6 +739,9 @@ bool ElfView::Init()
 			m_logger->LogError("ELF architecture %d is not supported", m_commonHeader.arch);
 			break;
 		}
+
+		if (!m_parseOnly)
+			m_logger->LogWarn("Unable to determine architecture. Please open the file with options and select a valid architecture.");
 		return false;
 	}
 
@@ -1113,69 +1116,74 @@ bool ElfView::Init()
 				{
 				case ELF_STT_OBJECT:
 				case ELF_STT_NOTYPE:
-					if (entry.section != ELF_SHN_UNDEF)
-						DefineElfSymbol(DataSymbol, entry.name, gotEntry, true, entry.binding, 4, Type::PointerType(
-							GetDefaultPlatform()->GetArchitecture(), Type::VoidType())->WithConfidence(BN_FULL_CONFIDENCE));
-					else
+				{
+					bool relocationExists = false;
+					for (auto& reloc : relocs)
 					{
-						bool relocationExists = false;
-						for (auto& reloc : relocs)
+						if (reloc.offset == gotEntry)
 						{
-							if (reloc.offset == gotEntry)
-							{
-								relocationExists = true;
-								break;
-							}
+							relocationExists = true;
+							break;
 						}
-						if (!relocationExists)
-						{
-							int relocType = m_arch->GetAddressSize() == 4 ? 126 /* R_MIPS_COPY */ : 125 /* R_MIPS64_COPY */;
-							relocs.push_back(ELFRelocEntry(gotEntry, i, relocType, 0, 0, false));
-						}
-						DefineElfSymbol(ImportAddressSymbol, entry.name, gotEntry, true, entry.binding, entry.size);
 					}
-					break;
-				case ELF_STT_FUNC:
+					if (!relocationExists)
+					{
+						int relocType = m_addressSize == 4 ? 126 /* R_MIPS_COPY */ : 125 /* R_MIPS64_COPY */;
+						relocs.push_back(ELFRelocEntry(gotEntry, i, relocType, 0, 0, false));
+					}
 					if (entry.section != ELF_SHN_UNDEF)
+					{
+						DefineElfSymbol(DataSymbol, entry.name, gotEntry, true, entry.binding, 4,
+							Type::PointerType(GetDefaultPlatform()->GetArchitecture(),
+								Type::VoidType())->WithConfidence(BN_FULL_CONFIDENCE));
+					}
+					else
+						DefineElfSymbol(ImportAddressSymbol, entry.name, gotEntry, true, entry.binding, entry.size);
+					break;
+				}
+				case ELF_STT_FUNC:
+				{
+					bool relocationExists = false;
+					for (auto& reloc : relocs)
+					{
+						if (reloc.offset == gotEntry)
+						{
+							relocationExists = true;
+							break;
+						}
+					}
+					if (!relocationExists)
+					{
+						int relocType = m_addressSize == 4 ? 127 /*R_MIPS_JUMP_SLOT*/ : 125 /* R_MIPS64_COPY */;
+						relocs.push_back(ELFRelocEntry(gotEntry, i, relocType, 0, 0, false));
+					}
+					if (entry.section != ELF_SHN_UNDEF)
+					{
 						DefineElfSymbol(DataSymbol, entry.name, gotEntry, true, entry.binding, 4,
 							Type::PointerType(GetDefaultPlatform()->GetArchitecture(),
 								Type::FunctionType(Type::IntegerType(GetDefaultPlatform()->GetArchitecture()->GetAddressSize(), true),
 									GetDefaultPlatform()->GetDefaultCallingConvention(), vector<FunctionParameter>())->WithConfidence(0)));
+					}
 					else
-					{
-						bool relocationExists = false;
-						for (auto& reloc : relocs)
-						{
-							if (reloc.offset == gotEntry)
-							{
-								relocationExists = true;
-								break;
-							}
-						}
-						if (!relocationExists)
-						{
-							int relocType = m_arch->GetAddressSize() == 4 ? 127 /*R_MIPS_JUMP_SLOT*/ : 125 /* R_MIPS64_COPY */;
-							relocs.push_back(ELFRelocEntry(gotEntry, i, relocType, 0, 0, false));
-						}
 						DefineElfSymbol(ImportAddressSymbol, entry.name, gotEntry, true, entry.binding, entry.size);
-						// TODO for now create associated PLT entry if it exists. At some point we could extend the detection in RecognizeELFPLTEntries in arch_mips.
-						Ref<Symbol> sym = GetSymbolByAddress(gotEntry);
-						if (entry.value && sym && (sym->GetType() == ImportAddressSymbol))
+					// TODO for now create associated PLT entry if it exists. At some point we could extend the detection in RecognizeELFPLTEntries in arch_mips.
+					Ref<Symbol> sym = GetSymbolByAddress(gotEntry);
+					if (entry.value && sym && (sym->GetType() == ImportAddressSymbol))
+					{
+						uint64_t adjustedAddress = entry.value + imageBaseAdjustment;
+						Ref<Platform> targetPlatform = platform->GetAssociatedPlatformByAddress(adjustedAddress);
+						Ref<Function> func = AddFunctionForAnalysis(targetPlatform, adjustedAddress);
+						if (func)
 						{
-							uint64_t adjustedAddress = entry.value + imageBaseAdjustment;
-							Ref<Platform> targetPlatform = platform->GetAssociatedPlatformByAddress(adjustedAddress);
-							Ref<Function> func = AddFunctionForAnalysis(targetPlatform, adjustedAddress);
-							if (func)
-							{
-								Ref<Symbol> funcSym = new Symbol(ImportedFunctionSymbol,
-										sym->GetShortName(), sym->GetFullName(), sym->GetRawName(),
-										adjustedAddress, NoBinding, sym->GetNameSpace(), sym->GetOrdinal());
-								DefineAutoSymbol(funcSym);
-								func->ApplyImportedTypes(funcSym);
-							}
+							Ref<Symbol> funcSym = new Symbol(ImportedFunctionSymbol,
+									sym->GetShortName(), sym->GetFullName(), sym->GetRawName(),
+									adjustedAddress, NoBinding, sym->GetNameSpace(), sym->GetOrdinal());
+							DefineAutoSymbol(funcSym);
+							func->ApplyImportedTypes(funcSym);
 						}
 					}
 					break;
+				}
 				default:
 					m_logger->LogDebug("ELF symbol type of %d not handled.", entry.type);
 					break;
@@ -1685,14 +1693,36 @@ bool ElfView::Init()
 
 			for (auto& s : gotSectionsToCreate)
 			{
-				// Don't try creating a section if it starts in an already-created
-				// section.
+				// Don't try creating a section if it starts in an already-created section.
 				if (GetSectionsAt(s.first).size() > 0)
 					continue;
 
 				stringstream ss;
 				ss << ".got_recovered_" << std::hex << s.first;
 				AddAutoSection(ss.str(), s.first, s.second, ReadOnlyDataSectionSemantics);
+			}
+		}
+
+		// Perform fixup processing on the local GOT entries if the view is relocatable.
+		if (m_relocatable)
+		{
+			uint64_t lastLocalGotEntry = gotStart + (localMipsSyms - 1) * (m_elf32 ? 4 : 8);
+			for (auto gotEntry : m_gotEntryLocations)
+			{
+				if (gotEntry > lastLocalGotEntry)
+					break;
+
+				virtualReader.Seek(gotEntry);
+				auto target = virtualReader.ReadPointer();
+				if (!target)
+					continue;
+
+				BNRelocationInfo relocInfo;
+				memset(&relocInfo, 0, sizeof(BNRelocationInfo));
+				relocInfo.address = gotEntry;
+				relocInfo.size = m_addressSize;
+				relocInfo.nativeType = m_addressSize == 4 ? 127 /*R_MIPS_JUMP_SLOT*/ : 125 /* R_MIPS64_COPY */;
+				DefineRelocation(m_arch, relocInfo, target + baseAddress, relocInfo.address);
 			}
 		}
 	}
@@ -2345,8 +2375,8 @@ bool ElfView::Init()
 		DefineAutoSymbol(new Symbol(DataSymbol, "__elf_rela_table", m_relocaSection.offset, NoBinding));
 	}
 
-	// In 32-bit mips with .got, add .extern symbol "RTL_Resolve"
-	if (gotStart && In(m_arch->GetName(), {"mips32", "mipsel32", "mips64", "nanomips"}))
+	// Create resolver symbol for MIPS load files containing a global offset table
+	if (gotStart && (m_arch->GetName().find("mips") != std::string::npos))
 	{
 		const char *name = "RTL_Resolve";
 
@@ -2390,8 +2420,8 @@ bool ElfView::Init()
 		memset(&relocInfo, 0, sizeof(BNRelocationInfo));
 		relocInfo.base = gotStart;
 		relocInfo.address = gotStart;
-		relocInfo.size = m_arch->GetAddressSize();
-		relocInfo.nativeType = m_arch->GetAddressSize() == 4 ? 2 /* R_MIPS_32 */ : 18 /* R_MIPS_64 */;
+		relocInfo.size = m_addressSize;
+		relocInfo.nativeType = m_addressSize == 4 ? 2 /* R_MIPS_32 */ : 18 /* R_MIPS_64 */;
 
 		DefineRelocation(m_arch, relocInfo, symbol, relocInfo.address);
 	}
@@ -2670,7 +2700,9 @@ void ElfView::ParseMiniDebugInfo()
 		return;
 	}
 
-	Ref<BinaryView> debugBv = Load(debugElf, false);
+	// Load debug bv at same address as this bv
+	string debugBvOptions = fmt::format("{{\"loader.imageBase\": {}}}", GetStart());
+	Ref<BinaryView> debugBv = Load(debugElf, false, debugBvOptions);
 	if (!debugBv)
 	{
 		m_logger->LogError("Invalid .gnu_debugdata contents: Failed to create BinaryView");
@@ -2682,7 +2714,7 @@ void ElfView::ParseMiniDebugInfo()
 		DefineElfSymbol(
 			symbol->GetType(),
 			symbol->GetRawName(),
-			GetStart() + symbol->GetAddress(),
+			symbol->GetAddress(),
 			false,
 			symbol->GetBinding()
 		);
@@ -2944,8 +2976,8 @@ Ref<Settings> ElfViewType::GetLoadSettingsForData(BinaryView* data)
 	Ref<BinaryView> viewRef = Parse(data);
 	if (!viewRef || !viewRef->Init())
 	{
-		m_logger->LogError("View type '%s' could not be created", GetName().c_str());
-		return nullptr;
+		m_logger->LogWarn("Failed to initialize view of type '%s'. Generating default load settings.", GetName().c_str());
+		viewRef = data;
 	}
 
 	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);

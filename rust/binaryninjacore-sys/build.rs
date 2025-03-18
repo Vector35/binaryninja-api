@@ -1,5 +1,3 @@
-extern crate bindgen;
-
 use std::env;
 use std::fs::File;
 use std::io::BufRead;
@@ -65,17 +63,13 @@ fn main() {
         // Make a symlink "libbinaryninjacore.so" pointing to "libbinaryninjacore.so.1"
         if symlink_target.exists() && symlink_source.symlink_metadata().is_err() {
             use std::os::unix::fs;
-            fs::symlink(
-                symlink_target,
-                symlink_source,
-            )
-            .expect("failed to create required symlink");
+            fs::symlink(symlink_target, symlink_source).expect("failed to create required symlink");
         }
         println!("cargo:rustc-link-search={}", out_dir);
     }
 
-    println!("cargo:rustc-link-lib=binaryninjacore");
-    println!("cargo:rustc-link-search={}", link_path.to_str().unwrap());
+    // Emit the path to binaryninjacore consumers of this crate should pass to the linker.
+    println!("cargo:path={}", link_path.to_str().unwrap());
 
     let current_line = "#define BN_CURRENT_UI_ABI_VERSION ";
     let minimum_line = "#define BN_MINIMUM_UI_ABI_VERSION ";

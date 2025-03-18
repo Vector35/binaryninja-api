@@ -26,7 +26,7 @@ BinaryNinja::ExceptionWithStackTrace::ExceptionWithStackTrace(const std::string&
 {
 	m_originalMessage = message;
 	m_message = message;
-	if (getenv("BN_DEBUG_EXCEPTION_TRACES"))
+	if (auto var = getenv("BN_DEBUG_EXCEPTION_TRACES"); !var || var[0] != '0')
 	{
 		char* stackTrace = BNGetCurrentStackTraceString();
 		if (stackTrace)
@@ -88,7 +88,7 @@ BinaryNinja::ExceptionWithStackTrace::ExceptionWithStackTrace(std::exception_ptr
 			m_message = "Some unknown exception";
 		}
 	}
-	if (getenv("BN_DEBUG_EXCEPTION_TRACES"))
+	if (auto var = getenv("BN_DEBUG_EXCEPTION_TRACES"); !var || var[0] != '0')
 	{
 		char* stackTrace = BNGetCurrentStackTraceString();
 		if (stackTrace)

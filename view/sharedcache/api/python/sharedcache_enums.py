@@ -1,6 +1,12 @@
 import enum
 
 
+class BackingCacheType(enum.IntEnum):
+	BackingCacheTypePrimary = 0
+	BackingCacheTypeSecondary = 1
+	BackingCacheTypeSymbols = 2
+
+
 class DSCViewLoadProgress(enum.IntEnum):
 	LoadProgressNotStarted = 0
 	LoadProgressLoadingCaches = 1

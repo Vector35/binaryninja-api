@@ -650,6 +650,83 @@ BinaryDataNotification::BinaryDataNotification(NotificationTypes notifications)
 }
 
 
+StringRef::StringRef()
+{
+	m_ref = nullptr;
+}
+
+
+StringRef::StringRef(BNStringRef* ref)
+{
+	m_ref = ref;
+}
+
+
+StringRef::StringRef(const StringRef& other)
+{
+	m_ref = BNDuplicateStringRef(other.m_ref);
+}
+
+
+StringRef::StringRef(StringRef&& other)
+{
+	m_ref = other.m_ref;
+	other.m_ref = nullptr;
+}
+
+
+StringRef::~StringRef()
+{
+	if (m_ref)
+	{
+		BNFreeStringRef(m_ref);
+	}
+}
+
+
+StringRef& StringRef::operator=(const StringRef& other)
+{
+	if (m_ref)
+	{
+		BNFreeStringRef(m_ref);
+		m_ref = nullptr;
+	}
+	if (other.m_ref)
+	{
+		m_ref = BNDuplicateStringRef(other.m_ref);
+	}
+	return *this;
+}
+
+
+StringRef& StringRef::operator=(StringRef&& other)
+{
+	if (m_ref)
+	{
+		BNFreeStringRef(m_ref);
+	}
+	m_ref = other.m_ref;
+	other.m_ref = nullptr;
+	return *this;
+}
+
+
+const char* StringRef::c_str() const
+{
+	if (!m_ref)
+		return ""; // todo: nullptr?
+	return BNGetStringRefContents(m_ref);
+}
+
+
+size_t StringRef::size() const
+{
+	if (!m_ref)
+		return 0;
+	return BNGetStringRefSize(m_ref);
+}
+
+
 Symbol::Symbol(BNSymbolType type, const string& shortName, const string& fullName, const string& rawName, uint64_t addr,
     BNSymbolBinding binding, const NameSpace& nameSpace, uint64_t ordinal)
 {
@@ -665,6 +742,19 @@ Symbol::Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymb
 	BNNameSpace ns = nameSpace.GetAPIObject();
 	m_object = BNCreateSymbol(type, name.c_str(), name.c_str(), name.c_str(), addr, binding, &ns, ordinal);
 	NameSpace::FreeAPIObject(&ns);
+}
+
+
+Symbol::Symbol(BNSymbolType type, const string& shortName, const string& fullName, const string& rawName, uint64_t addr,
+	BNNameSpace* nameSpace, BNSymbolBinding binding, uint64_t ordinal)
+{
+	m_object = BNCreateSymbol(type, shortName.c_str(), fullName.c_str(), rawName.c_str(), addr, binding, nameSpace, ordinal);
+}
+
+
+Symbol::Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNNameSpace* nameSpace, BNSymbolBinding binding, uint64_t ordinal)
+{
+	m_object = BNCreateSymbol(type, name.c_str(), name.c_str(), name.c_str(), addr, binding, nameSpace, ordinal);
 }
 
 
@@ -704,6 +794,13 @@ string Symbol::GetShortName() const
 }
 
 
+StringRef Symbol::GetShortNameRef() const
+{
+	BNStringRef* name = BNGetSymbolShortNameRef(m_object);
+	return StringRef(name);
+}
+
+
 string Symbol::GetFullName() const
 {
 	char* name = BNGetSymbolFullName(m_object);
@@ -713,12 +810,26 @@ string Symbol::GetFullName() const
 }
 
 
+StringRef Symbol::GetFullNameRef() const
+{
+	BNStringRef* name = BNGetSymbolFullNameRef(m_object);
+	return StringRef(name);
+}
+
+
 string Symbol::GetRawName() const
 {
 	char* name = BNGetSymbolRawName(m_object);
 	string result = name;
 	BNFreeString(name);
 	return result;
+}
+
+
+StringRef Symbol::GetRawNameRef() const
+{
+	BNStringRef* name = BNGetSymbolRawNameRef(m_object);
+	return StringRef(name);
 }
 
 
@@ -2175,6 +2286,8 @@ bool BinaryView::HasDataVariables() const
 
 Ref<Function> BinaryView::GetAnalysisFunction(Platform* platform, uint64_t addr)
 {
+	if (!platform)
+		return nullptr;
 	BNFunction* func = BNGetAnalysisFunction(m_object, platform->GetObject(), addr);
 	if (!func)
 		return nullptr;
@@ -4682,11 +4795,22 @@ bool BinaryView::FindAllConstant(uint64_t start, uint64_t end, uint64_t constant
 }
 
 
-bool BinaryView::Search(const string& query, const std::function<bool(uint64_t offset, const DataBuffer& buffer)>& otherCallback)
+string BinaryView::DetectSearchMode(const string& query)
 {
+	char* searchMode = BNDetectSearchMode(query.c_str());
+	string result = searchMode;
+	BNFreeString(searchMode);
+	return result;
+}
+
+
+bool BinaryView::Search(const string& query, const std::function<bool(size_t current, size_t total)>& progressCallback, const std::function<bool(uint64_t offset, const DataBuffer& buffer)>& matchCallback)
+{
+	ProgressContext fp;
+	fp.callback = progressCallback;
 	MatchCallbackContextForDataBuffer mc;
-	mc.func = otherCallback;
-	return BNSearch(m_object, query.c_str(), &mc, MatchCallbackForDataBuffer);
+	mc.func = matchCallback;
+	return BNSearch(m_object, query.c_str(), &fp, ProgressCallback, &mc, MatchCallbackForDataBuffer);
 }
 
 
@@ -5520,6 +5644,15 @@ Ref<BinaryView> BinaryNinja::Load(Ref<ProjectFile> projectFile, bool updateAnaly
 	ProgressContext cb;
 	cb.callback = progress;
 	BNBinaryView* handle = BNLoadProjectFile(projectFile->GetObject(), updateAnalysis, options.c_str(), ProgressCallback, &cb);
+	if (!handle)
+		return nullptr;
+	return new BinaryView(handle);
+}
+
+
+Ref<BinaryView> BinaryNinja::ParseTextFormat(const std::string& filename)
+{
+	BNBinaryView* handle = BNParseTextFormat(filename.c_str());
 	if (!handle)
 		return nullptr;
 	return new BinaryView(handle);

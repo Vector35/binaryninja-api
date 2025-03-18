@@ -380,7 +380,7 @@ class PossibleValueSet:
 			return self.ranges == other.ranges
 		elif self.type in [RegisterValueType.InSetOfValues, RegisterValueType.NotInSetOfValues]:
 			return self.values == other.values
-		elif self.type == RegisterValueType.UndeterminedValue and hasattr(other, 'type'):
+		elif self.type == RegisterValueType.UndeterminedValue and hasattr(other, '_type'):
 			return self.type == other.type
 		else:
 			return self == other
@@ -899,7 +899,7 @@ class Variable(CoreVariable):
 	@property
 	def il_function(self) -> 'function.ILFunctionType':
 		"""returns the IL Function object which this variable belongs to"""
-		return self.var._il_function
+		return self._il_function
 
 	def set_name_async(self, name: Optional[str]) -> None:
 		"""

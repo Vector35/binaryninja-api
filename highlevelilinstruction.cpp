@@ -784,6 +784,12 @@ HighLevelILIndexList HighLevelILInstructionBase::GetRawOperandAsIndexList(size_t
 }
 
 
+PossibleValueSet HighLevelILInstructionBase::GetRawOperandAsPossibleValueSet(size_t operand) const
+{
+	return function->GetCachedPossibleValueSet(operands[operand]);
+}
+
+
 void HighLevelILInstructionBase::UpdateRawOperand(size_t operandIndex, ExprId value)
 {
 	operands[operandIndex] = value;
@@ -1424,6 +1430,14 @@ ExprId HighLevelILInstruction::CopyTo(
 		return dest->AssignUnpackMemSSA(output, GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>(),
 		    subExprHandler(GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>()),
 		    GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>(), *this);
+	case HLIL_FORCE_VER:
+		return dest->ForceVer(size, GetDestVariable<HLIL_FORCE_VER>(), GetVariable<HLIL_FORCE_VER>(), *this);
+	case HLIL_FORCE_VER_SSA:
+		return dest->ForceVerSSA(size, GetDestSSAVariable<HLIL_FORCE_VER_SSA>(), GetSSAVariable<HLIL_FORCE_VER_SSA>(), *this);
+	case HLIL_ASSERT:
+		return dest->Assert(size, GetVariable<HLIL_ASSERT>(), GetConstraint<HLIL_ASSERT>(), *this);
+	case HLIL_ASSERT_SSA:
+		return dest->AssertSSA(size, GetSSAVariable<HLIL_ASSERT_SSA>(), GetConstraint<HLIL_ASSERT_SSA>(), *this);
 	case HLIL_VAR:
 		return dest->Var(size, GetVariable<HLIL_VAR>(), *this);
 	case HLIL_VAR_SSA:
@@ -2660,6 +2674,30 @@ ExprId HighLevelILFunction::AssignUnpackMemSSA(
 {
 	return AddExprWithLocation(
 	    HLIL_ASSIGN_UNPACK_MEM_SSA, loc, 0, output.size(), AddOperandList(output), destMemVersion, src, srcMemVersion);
+}
+
+
+ExprId HighLevelILFunction::ForceVer(size_t size, const Variable& dest, const Variable& src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_FORCE_VER, loc, size, dest.ToIdentifier(), src.ToIdentifier());
+}
+
+
+ExprId HighLevelILFunction::ForceVerSSA(size_t size, const SSAVariable& dest, const SSAVariable& src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_FORCE_VER_SSA, loc, size, dest.var.ToIdentifier(), dest.version, src.var.ToIdentifier(), src.version);
+}
+
+
+ExprId HighLevelILFunction::Assert(size_t size, const Variable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_ASSERT, loc, size, src.ToIdentifier(), CachePossibleValueSet(pvs));
+}
+
+
+ExprId HighLevelILFunction::AssertSSA(size_t size, const SSAVariable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_ASSERT_SSA, loc, size, src.var.ToIdentifier(), src.version, CachePossibleValueSet(pvs));
 }
 
 

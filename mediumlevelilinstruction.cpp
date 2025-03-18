@@ -55,7 +55,7 @@ unordered_map<MediumLevelILOperandUsage, MediumLevelILOperandType> MediumLevelIL
     {LowSSAVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
     {OffsetMediumLevelOperandUsage, IntegerMediumLevelOperand},
     {ConstantMediumLevelOperandUsage, IntegerMediumLevelOperand},
-	 {ConstantDataMediumLevelOperandUsage, ConstantDataMediumLevelOperand},
+    {ConstantDataMediumLevelOperandUsage, ConstantDataMediumLevelOperand},
     {VectorMediumLevelOperandUsage, IntegerMediumLevelOperand},
     {IntrinsicMediumLevelOperandUsage, IntrinsicMediumLevelOperand},
     {TargetMediumLevelOperandUsage, IndexMediumLevelOperand},
@@ -75,7 +75,8 @@ unordered_map<MediumLevelILOperandUsage, MediumLevelILOperandType> MediumLevelIL
     {UntypedParameterExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
     {UntypedParameterSSAExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
     {ParameterSSAMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
-    {SourceSSAVariablesMediumLevelOperandUsages, SSAVariableListMediumLevelOperand}};
+    {SourceSSAVariablesMediumLevelOperandUsages, SSAVariableListMediumLevelOperand},
+    {ConstraintMediumLevelOperandUsage, ConstraintMediumLevelOperand}};
 
 
 unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
@@ -97,6 +98,10 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
         {MLIL_SET_VAR_ALIASED_FIELD,
             {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage,
                 OffsetMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
+				{MLIL_FORCE_VER, {DestVariableMediumLevelOperandUsage, SourceVariableMediumLevelOperandUsage}},
+				{MLIL_FORCE_VER_SSA, {DestSSAVariableMediumLevelOperandUsage, SourceSSAVariableMediumLevelOperandUsage}},
+				{MLIL_ASSERT, {SourceVariableMediumLevelOperandUsage, ConstraintMediumLevelOperandUsage}},
+				{MLIL_ASSERT_SSA, {SourceSSAVariableMediumLevelOperandUsage, ConstraintMediumLevelOperandUsage}},
         {MLIL_LOAD, {SourceExprMediumLevelOperandUsage}},
         {MLIL_LOAD_STRUCT, {SourceExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
         {MLIL_LOAD_SSA, {SourceExprMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
@@ -1035,6 +1040,12 @@ MediumLevelILInstructionList MediumLevelILInstructionBase::GetRawOperandAsExprLi
 }
 
 
+PossibleValueSet MediumLevelILInstructionBase::GetRawOperandAsPossibleValueSet(size_t operand) const
+{
+	return function->GetCachedPossibleValueSet(operands[operand]);
+}
+
+
 void MediumLevelILInstructionBase::UpdateRawOperand(size_t operandIndex, ExprId value)
 {
 	operands[operandIndex] = value;
@@ -1668,6 +1679,14 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 	case MLIL_VAR_SPLIT_SSA:
 		return dest->VarSplitSSA(
 		    size, GetHighSSAVariable<MLIL_VAR_SPLIT_SSA>(), GetLowSSAVariable<MLIL_VAR_SPLIT_SSA>(), *this);
+	case MLIL_FORCE_VER:
+		return dest->ForceVer(size, GetDestVariable<MLIL_FORCE_VER>(), GetSourceVariable<MLIL_FORCE_VER>(), *this);
+	case MLIL_FORCE_VER_SSA:
+		return dest->ForceVerSSA(size, GetDestSSAVariable<MLIL_FORCE_VER_SSA>(), GetSourceSSAVariable<MLIL_FORCE_VER_SSA>(), *this);
+	case MLIL_ASSERT:
+		return dest->Assert(size, GetSourceVariable<MLIL_ASSERT>(), GetConstraint<MLIL_ASSERT>(), *this);
+	case MLIL_ASSERT_SSA:
+		return dest->AssertSSA(size, GetSourceSSAVariable<MLIL_ASSERT_SSA>(), GetConstraint<MLIL_ASSERT_SSA>(), *this);
 	case MLIL_ADDRESS_OF:
 		return dest->AddressOf(GetSourceVariable<MLIL_ADDRESS_OF>(), *this);
 	case MLIL_ADDRESS_OF_FIELD:
@@ -2305,6 +2324,30 @@ ExprId MediumLevelILFunction::SetVarAliasedField(size_t size, const Variable& de
 {
 	return AddExprWithLocation(
 	    MLIL_SET_VAR_ALIASED_FIELD, loc, size, dest.ToIdentifier(), newMemVersion, prevMemVersion, offset, src);
+}
+
+
+ExprId MediumLevelILFunction::ForceVer(size_t size, const Variable& dest, const Variable& src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FORCE_VER, loc, size, dest.ToIdentifier(), src.ToIdentifier());
+}
+
+
+ExprId MediumLevelILFunction::ForceVerSSA(size_t size, const SSAVariable& dest, const SSAVariable& src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FORCE_VER_SSA, loc, size, dest.var.ToIdentifier(), dest.version, src.var.ToIdentifier(), src.version);
+}
+
+
+ExprId MediumLevelILFunction::Assert(size_t size, const Variable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_ASSERT, loc, size, src.ToIdentifier(), CachePossibleValueSet(pvs));
+}
+
+
+ExprId MediumLevelILFunction::AssertSSA(size_t size, const SSAVariable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_ASSERT_SSA, loc, size, src.var.ToIdentifier(), src.version, CachePossibleValueSet(pvs));
 }
 
 

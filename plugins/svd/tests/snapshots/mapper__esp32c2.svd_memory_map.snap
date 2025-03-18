@@ -1,0 +1,5 @@
+---
+source: plugins/svd/tests/mapper.rs
+expression: map
+---
+"{\"MemoryMap\":[]}"

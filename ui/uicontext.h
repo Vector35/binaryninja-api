@@ -522,6 +522,7 @@ public:
 	virtual ProjectRef openProject(const QString& path);
 	virtual ViewFrame* openFileContext(FileContext* file, const QString& forcedView = "", bool addTab = true);
 	virtual bool openProjectFile(ProjectFileRef file, ExternalLocationRef loc = nullptr, bool openWithOptions = false);
+	virtual bool openUrl(const QUrl& url, bool openWithOptions = false);
 	virtual void recreateViewFrames(FileContext* file) = 0;
 
 	UIActionHandler* globalActions() { return &m_globalActions; }

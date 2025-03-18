@@ -7,9 +7,9 @@ using namespace std;
 using namespace BinaryNinja;
 
 
-PseudoRustFunction::PseudoRustFunction(
-	Architecture* arch, Function* owner, HighLevelILFunction* highLevelILFunction) :
-	LanguageRepresentationFunction(arch, owner, highLevelILFunction), m_highLevelIL(highLevelILFunction)
+PseudoRustFunction::PseudoRustFunction(LanguageRepresentationFunctionType* type, Architecture* arch, Function* owner,
+	HighLevelILFunction* highLevelILFunction) :
+	LanguageRepresentationFunction(type, arch, owner, highLevelILFunction), m_highLevelIL(highLevelILFunction)
 {
 }
 
@@ -576,7 +576,13 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 	{
 		tokens.AppendOpenParen();
 		tokens.AppendOpenParen();
-		for (auto& token: instr.GetType()->GetTokens(GetArchitecture()->GetStandalonePlatform()))
+		RustTypePrinter printer;
+		auto typeTokens = printer.GetTypeTokens(
+			instr.GetType(),
+			GetArchitecture()->GetStandalonePlatform(),
+			QualifiedName()
+		);
+		for (auto& token: typeTokens)
 		{
 			tokens.Append(token);
 		}
@@ -586,131 +592,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 	if (settings && settings->IsOptionSet(ShowILOpcodes))
 	{
 		tokens.Append(OperationToken, "/*");
-		switch (instr.operation)
-		{
-		case HLIL_NOP: tokens.Append(OperationToken, "HLIL_NOP"); break;
-		case HLIL_BLOCK: tokens.Append(OperationToken, "HLIL_BLOCK"); break;
-		case HLIL_IF: tokens.Append(OperationToken, "HLIL_IF"); break;
-		case HLIL_WHILE: tokens.Append(OperationToken, "HLIL_WHILE"); break;
-		case HLIL_DO_WHILE: tokens.Append(OperationToken, "HLIL_DO_WHILE"); break;
-		case HLIL_FOR: tokens.Append(OperationToken, "HLIL_FOR"); break;
-		case HLIL_SWITCH: tokens.Append(OperationToken, "HLIL_SWITCH"); break;
-		case HLIL_CASE: tokens.Append(OperationToken, "HLIL_CASE"); break;
-		case HLIL_BREAK: tokens.Append(OperationToken, "HLIL_BREAK"); break;
-		case HLIL_CONTINUE: tokens.Append(OperationToken, "HLIL_CONTINUE"); break;
-		case HLIL_JUMP: tokens.Append(OperationToken, "HLIL_JUMP"); break;
-		case HLIL_RET: tokens.Append(OperationToken, "HLIL_RET"); break;
-		case HLIL_NORET: tokens.Append(OperationToken, "HLIL_NORET"); break;
-		case HLIL_GOTO: tokens.Append(OperationToken, "HLIL_GOTO"); break;
-		case HLIL_LABEL: tokens.Append(OperationToken, "HLIL_LABEL"); break;
-		case HLIL_VAR_DECLARE: tokens.Append(OperationToken, "HLIL_VAR_DECLARE"); break;
-		case HLIL_VAR_INIT: tokens.Append(OperationToken, "HLIL_VAR_INIT"); break;
-		case HLIL_ASSIGN: tokens.Append(OperationToken, "HLIL_ASSIGN"); break;
-		case HLIL_ASSIGN_UNPACK: tokens.Append(OperationToken, "HLIL_ASSIGN_UNPACK"); break;
-		case HLIL_VAR: tokens.Append(OperationToken, "HLIL_VAR"); break;
-		case HLIL_STRUCT_FIELD: tokens.Append(OperationToken, "HLIL_STRUCT_FIELD"); break;
-		case HLIL_ARRAY_INDEX: tokens.Append(OperationToken, "HLIL_ARRAY_INDEX"); break;
-		case HLIL_SPLIT: tokens.Append(OperationToken, "HLIL_SPLIT"); break;
-		case HLIL_DEREF: tokens.Append(OperationToken, "HLIL_DEREF"); break;
-		case HLIL_DEREF_FIELD: tokens.Append(OperationToken, "HLIL_DEREF_FIELD"); break;
-		case HLIL_ADDRESS_OF: tokens.Append(OperationToken, "HLIL_ADDRESS_OF"); break;
-		case HLIL_CONST: tokens.Append(OperationToken, "HLIL_CONST"); break;
-		case HLIL_CONST_DATA: tokens.Append(OperationToken, "HLIL_CONST_DATA"); break;
-		case HLIL_CONST_PTR: tokens.Append(OperationToken, "HLIL_CONST_PTR"); break;
-		case HLIL_EXTERN_PTR: tokens.Append(OperationToken, "HLIL_EXTERN_PTR"); break;
-		case HLIL_FLOAT_CONST: tokens.Append(OperationToken, "HLIL_FLOAT_CONST"); break;
-		case HLIL_IMPORT: tokens.Append(OperationToken, "HLIL_IMPORT"); break;
-		case HLIL_ADD: tokens.Append(OperationToken, "HLIL_ADD"); break;
-		case HLIL_ADC: tokens.Append(OperationToken, "HLIL_ADC"); break;
-		case HLIL_SUB: tokens.Append(OperationToken, "HLIL_SUB"); break;
-		case HLIL_SBB: tokens.Append(OperationToken, "HLIL_SBB"); break;
-		case HLIL_AND: tokens.Append(OperationToken, "HLIL_AND"); break;
-		case HLIL_OR: tokens.Append(OperationToken, "HLIL_OR"); break;
-		case HLIL_XOR: tokens.Append(OperationToken, "HLIL_XOR"); break;
-		case HLIL_LSL: tokens.Append(OperationToken, "HLIL_LSL"); break;
-		case HLIL_LSR: tokens.Append(OperationToken, "HLIL_LSR"); break;
-		case HLIL_ASR: tokens.Append(OperationToken, "HLIL_ASR"); break;
-		case HLIL_ROL: tokens.Append(OperationToken, "HLIL_ROL"); break;
-		case HLIL_RLC: tokens.Append(OperationToken, "HLIL_RLC"); break;
-		case HLIL_ROR: tokens.Append(OperationToken, "HLIL_ROR"); break;
-		case HLIL_RRC: tokens.Append(OperationToken, "HLIL_RRC"); break;
-		case HLIL_MUL: tokens.Append(OperationToken, "HLIL_MUL"); break;
-		case HLIL_MULU_DP: tokens.Append(OperationToken, "HLIL_MULU_DP"); break;
-		case HLIL_MULS_DP: tokens.Append(OperationToken, "HLIL_MULS_DP"); break;
-		case HLIL_DIVU: tokens.Append(OperationToken, "HLIL_DIVU"); break;
-		case HLIL_DIVU_DP: tokens.Append(OperationToken, "HLIL_DIVU_DP"); break;
-		case HLIL_DIVS: tokens.Append(OperationToken, "HLIL_DIVS"); break;
-		case HLIL_DIVS_DP: tokens.Append(OperationToken, "HLIL_DIVS_DP"); break;
-		case HLIL_MODU: tokens.Append(OperationToken, "HLIL_MODU"); break;
-		case HLIL_MODU_DP: tokens.Append(OperationToken, "HLIL_MODU_DP"); break;
-		case HLIL_MODS: tokens.Append(OperationToken, "HLIL_MODS"); break;
-		case HLIL_MODS_DP: tokens.Append(OperationToken, "HLIL_MODS_DP"); break;
-		case HLIL_NEG: tokens.Append(OperationToken, "HLIL_NEG"); break;
-		case HLIL_NOT: tokens.Append(OperationToken, "HLIL_NOT"); break;
-		case HLIL_SX: tokens.Append(OperationToken, "HLIL_SX"); break;
-		case HLIL_ZX: tokens.Append(OperationToken, "HLIL_ZX"); break;
-		case HLIL_LOW_PART: tokens.Append(OperationToken, "HLIL_LOW_PART"); break;
-		case HLIL_CALL: tokens.Append(OperationToken, "HLIL_CALL"); break;
-		case HLIL_CMP_E: tokens.Append(OperationToken, "HLIL_CMP_E"); break;
-		case HLIL_CMP_NE: tokens.Append(OperationToken, "HLIL_CMP_NE"); break;
-		case HLIL_CMP_SLT: tokens.Append(OperationToken, "HLIL_CMP_SLT"); break;
-		case HLIL_CMP_ULT: tokens.Append(OperationToken, "HLIL_CMP_ULT"); break;
-		case HLIL_CMP_SLE: tokens.Append(OperationToken, "HLIL_CMP_SLE"); break;
-		case HLIL_CMP_ULE: tokens.Append(OperationToken, "HLIL_CMP_ULE"); break;
-		case HLIL_CMP_SGE: tokens.Append(OperationToken, "HLIL_CMP_SGE"); break;
-		case HLIL_CMP_UGE: tokens.Append(OperationToken, "HLIL_CMP_UGE"); break;
-		case HLIL_CMP_SGT: tokens.Append(OperationToken, "HLIL_CMP_SGT"); break;
-		case HLIL_CMP_UGT: tokens.Append(OperationToken, "HLIL_CMP_UGT"); break;
-		case HLIL_TEST_BIT: tokens.Append(OperationToken, "HLIL_TEST_BIT"); break;
-		case HLIL_BOOL_TO_INT: tokens.Append(OperationToken, "HLIL_BOOL_TO_INT"); break;
-		case HLIL_ADD_OVERFLOW: tokens.Append(OperationToken, "HLIL_ADD_OVERFLOW"); break;
-		case HLIL_SYSCALL: tokens.Append(OperationToken, "HLIL_SYSCALL"); break;
-		case HLIL_TAILCALL: tokens.Append(OperationToken, "HLIL_TAILCALL"); break;
-		case HLIL_INTRINSIC: tokens.Append(OperationToken, "HLIL_INTRINSIC"); break;
-		case HLIL_BP: tokens.Append(OperationToken, "HLIL_BP"); break;
-		case HLIL_TRAP: tokens.Append(OperationToken, "HLIL_TRAP"); break;
-		case HLIL_UNDEF: tokens.Append(OperationToken, "HLIL_UNDEF"); break;
-		case HLIL_UNIMPL: tokens.Append(OperationToken, "HLIL_UNIMPL"); break;
-		case HLIL_UNIMPL_MEM: tokens.Append(OperationToken, "HLIL_UNIMPL_MEM"); break;
-		case HLIL_FADD: tokens.Append(OperationToken, "HLIL_FADD"); break;
-		case HLIL_FSUB: tokens.Append(OperationToken, "HLIL_FSUB"); break;
-		case HLIL_FMUL: tokens.Append(OperationToken, "HLIL_FMUL"); break;
-		case HLIL_FDIV: tokens.Append(OperationToken, "HLIL_FDIV"); break;
-		case HLIL_FSQRT: tokens.Append(OperationToken, "HLIL_FSQRT"); break;
-		case HLIL_FNEG: tokens.Append(OperationToken, "HLIL_FNEG"); break;
-		case HLIL_FABS: tokens.Append(OperationToken, "HLIL_FABS"); break;
-		case HLIL_FLOAT_TO_INT: tokens.Append(OperationToken, "HLIL_FLOAT_TO_INT"); break;
-		case HLIL_INT_TO_FLOAT: tokens.Append(OperationToken, "HLIL_INT_TO_FLOAT"); break;
-		case HLIL_FLOAT_CONV: tokens.Append(OperationToken, "HLIL_FLOAT_CONV"); break;
-		case HLIL_ROUND_TO_INT: tokens.Append(OperationToken, "HLIL_ROUND_TO_INT"); break;
-		case HLIL_FLOOR: tokens.Append(OperationToken, "HLIL_FLOOR"); break;
-		case HLIL_CEIL: tokens.Append(OperationToken, "HLIL_CEIL"); break;
-		case HLIL_FTRUNC: tokens.Append(OperationToken, "HLIL_FTRUNC"); break;
-		case HLIL_FCMP_E: tokens.Append(OperationToken, "HLIL_FCMP_E"); break;
-		case HLIL_FCMP_NE: tokens.Append(OperationToken, "HLIL_FCMP_NE"); break;
-		case HLIL_FCMP_LT: tokens.Append(OperationToken, "HLIL_FCMP_LT"); break;
-		case HLIL_FCMP_LE: tokens.Append(OperationToken, "HLIL_FCMP_LE"); break;
-		case HLIL_FCMP_GE: tokens.Append(OperationToken, "HLIL_FCMP_GE"); break;
-		case HLIL_FCMP_GT: tokens.Append(OperationToken, "HLIL_FCMP_GT"); break;
-		case HLIL_FCMP_O: tokens.Append(OperationToken, "HLIL_FCMP_O"); break;
-		case HLIL_FCMP_UO: tokens.Append(OperationToken, "HLIL_FCMP_UO"); break;
-		case HLIL_UNREACHABLE: tokens.Append(OperationToken, "HLIL_UNREACHABLE"); break;
-		case HLIL_WHILE_SSA: tokens.Append(OperationToken, "HLIL_WHILE_SSA"); break;
-		case HLIL_DO_WHILE_SSA: tokens.Append(OperationToken, "HLIL_DO_WHILE_SSA"); break;
-		case HLIL_FOR_SSA: tokens.Append(OperationToken, "HLIL_FOR_SSA"); break;
-		case HLIL_VAR_INIT_SSA: tokens.Append(OperationToken, "HLIL_VAR_INIT_SSA"); break;
-		case HLIL_ASSIGN_MEM_SSA: tokens.Append(OperationToken, "HLIL_ASSIGN_MEM_SSA"); break;
-		case HLIL_ASSIGN_UNPACK_MEM_SSA: tokens.Append(OperationToken, "HLIL_ASSIGN_UNPACK_MEM_SSA"); break;
-		case HLIL_VAR_SSA: tokens.Append(OperationToken, "HLIL_VAR_SSA"); break;
-		case HLIL_ARRAY_INDEX_SSA: tokens.Append(OperationToken, "HLIL_ARRAY_INDEX_SSA"); break;
-		case HLIL_DEREF_SSA: tokens.Append(OperationToken, "HLIL_DEREF_SSA"); break;
-		case HLIL_DEREF_FIELD_SSA: tokens.Append(OperationToken, "HLIL_DEREF_FIELD_SSA"); break;
-		case HLIL_CALL_SSA: tokens.Append(OperationToken, "HLIL_CALL_SSA"); break;
-		case HLIL_SYSCALL_SSA: tokens.Append(OperationToken, "HLIL_SYSCALL_SSA"); break;
-		case HLIL_INTRINSIC_SSA: tokens.Append(OperationToken, "HLIL_INTRINSIC_SSA"); break;
-		case HLIL_VAR_PHI: tokens.Append(OperationToken, "HLIL_VAR_PHI"); break;
-		case HLIL_MEM_PHI: tokens.Append(OperationToken, "HLIL_MEM_PHI"); break;
-		}
+		tokens.Append(OperationToken, fmt::format("{}", instr.operation));
 		tokens.Append(OperationToken, "*/");
 		tokens.Append(TextToken, " ");
 	}
@@ -2932,7 +2814,7 @@ PseudoRustFunctionType::PseudoRustFunctionType(): LanguageRepresentationFunction
 Ref<LanguageRepresentationFunction> PseudoRustFunctionType::Create(Architecture* arch, Function* owner,
 	HighLevelILFunction* highLevelILFunction)
 {
-	return new PseudoRustFunction(arch, owner, highLevelILFunction);
+	return new PseudoRustFunction(this, arch, owner, highLevelILFunction);
 }
 
 

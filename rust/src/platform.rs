@@ -14,18 +14,20 @@
 
 //! Contains all information related to the execution environment of the binary, mainly the calling conventions used
 
-use std::{borrow::Borrow, collections::HashMap, os::raw, path::Path, ptr, slice};
-
-use binaryninjacore_sys::*;
-
+use crate::type_container::TypeContainer;
+use crate::type_parser::{TypeParserError, TypeParserErrorSeverity, TypeParserResult};
 use crate::{
     architecture::{Architecture, CoreArchitecture},
-    callingconvention::CallingConvention,
+    calling_convention::CoreCallingConvention,
     rc::*,
     string::*,
-    typelibrary::TypeLibrary,
-    types::{QualifiedName, QualifiedNameAndType, Type},
+    type_library::TypeLibrary,
+    types::QualifiedNameAndType,
 };
+use binaryninjacore_sys::*;
+use std::fmt::Debug;
+use std::ptr::NonNull;
+use std::{borrow::Borrow, ffi, ptr};
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Platform {
@@ -37,7 +39,7 @@ unsafe impl Sync for Platform {}
 
 macro_rules! cc_func {
     ($get_name:ident, $get_api:ident, $set_name:ident, $set_api:ident) => {
-        pub fn $get_name(&self) -> Option<Ref<CallingConvention<CoreArchitecture>>> {
+        pub fn $get_name(&self) -> Option<Ref<CoreCallingConvention>> {
             let arch = self.arch();
 
             unsafe {
@@ -46,16 +48,19 @@ macro_rules! cc_func {
                 if cc.is_null() {
                     None
                 } else {
-                    Some(CallingConvention::ref_from_raw(cc, arch))
+                    Some(CoreCallingConvention::ref_from_raw(
+                        cc,
+                        arch.as_ref().handle(),
+                    ))
                 }
             }
         }
 
-        pub fn $set_name<A: Architecture>(&self, cc: &CallingConvention<A>) {
+        pub fn $set_name(&self, cc: &CoreCallingConvention) {
             let arch = self.arch();
 
             assert!(
-                cc.arch_handle.borrow().as_ref().0 == arch.0,
+                cc.arch_handle.borrow().as_ref().handle == arch.handle,
                 "use of calling convention with non-matching Platform architecture!"
             );
 
@@ -67,9 +72,13 @@ macro_rules! cc_func {
 }
 
 impl Platform {
+    pub(crate) unsafe fn from_raw(handle: *mut BNPlatform) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle }
+    }
+
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNPlatform) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-
         Ref::new(Self { handle })
     }
 
@@ -81,7 +90,7 @@ impl Platform {
             if res.is_null() {
                 None
             } else {
-                Some(Ref::new(Self { handle: res }))
+                Some(Self::ref_from_raw(res))
             }
         }
     }
@@ -98,7 +107,7 @@ impl Platform {
     pub fn list_by_arch(arch: &CoreArchitecture) -> Array<Platform> {
         unsafe {
             let mut count = 0;
-            let handles = BNGetPlatformListByArchitecture(arch.0, &mut count);
+            let handles = BNGetPlatformListByArchitecture(arch.handle, &mut count);
 
             Array::new(handles, count, ())
         }
@@ -125,7 +134,7 @@ impl Platform {
             let mut count = 0;
             let handles = BNGetPlatformListByOSAndArchitecture(
                 raw_name.as_ref().as_ptr() as *mut _,
-                arch.0,
+                arch.handle,
                 &mut count,
             );
 
@@ -145,10 +154,8 @@ impl Platform {
     pub fn new<A: Architecture, S: BnStrCompatible>(arch: &A, name: S) -> Ref<Self> {
         let name = name.into_bytes_with_nul();
         unsafe {
-            let handle = BNCreatePlatform(arch.as_ref().0, name.as_ref().as_ptr() as *mut _);
-
+            let handle = BNCreatePlatform(arch.as_ref().handle, name.as_ref().as_ptr() as *mut _);
             assert!(!handle.is_null());
-
             Ref::new(Self { handle })
         }
     }
@@ -164,10 +171,23 @@ impl Platform {
         unsafe { CoreArchitecture::from_raw(BNGetPlatformArchitecture(self.handle)) }
     }
 
-    pub fn get_type_libraries_by_name(&self, name: &QualifiedName) -> Array<TypeLibrary> {
+    pub fn type_container(&self) -> TypeContainer {
+        let type_container_ptr = NonNull::new(unsafe { BNGetPlatformTypeContainer(self.handle) });
+        // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`
+        // TODO: We are cloning here for platforms but we dont need to do this for [BinaryViewExt::type_container]
+        // TODO: Why does this require that we, construct a TypeContainer, duplicate the type container, then drop the original.
+        unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
+    }
+
+    pub fn get_type_libraries_by_name<T: BnStrCompatible>(&self, name: T) -> Array<TypeLibrary> {
         let mut count = 0;
+        let name = name.into_bytes_with_nul();
         let result = unsafe {
-            BNGetPlatformTypeLibrariesByName(self.handle, &name.0 as *const _ as *mut _, &mut count)
+            BNGetPlatformTypeLibrariesByName(
+                self.handle,
+                name.as_ref().as_ptr() as *mut _,
+                &mut count,
+            )
         };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
@@ -216,11 +236,10 @@ impl Platform {
         BNSetPlatformSystemCallConvention
     );
 
-    pub fn calling_conventions(&self) -> Array<CallingConvention<CoreArchitecture>> {
+    pub fn calling_conventions(&self) -> Array<CoreCallingConvention> {
         unsafe {
             let mut count = 0;
             let handles = BNGetPlatformCallingConventions(self.handle, &mut count);
-
             Array::new(handles, count, self.arch())
         }
     }
@@ -229,7 +248,6 @@ impl Platform {
         unsafe {
             let mut count = 0;
             let handles = BNGetPlatformTypes(self.handle, &mut count);
-
             Array::new(handles, count, ())
         }
     }
@@ -238,7 +256,6 @@ impl Platform {
         unsafe {
             let mut count = 0;
             let handles = BNGetPlatformVariables(self.handle, &mut count);
-
             Array::new(handles, count, ())
         }
     }
@@ -247,108 +264,143 @@ impl Platform {
         unsafe {
             let mut count = 0;
             let handles = BNGetPlatformFunctions(self.handle, &mut count);
-
             Array::new(handles, count, ())
         }
     }
-}
 
-pub trait TypeParser {
-    fn parse_types_from_source<S: BnStrCompatible, P: AsRef<Path>>(
+    // TODO: system_calls
+    // TODO: add a helper function to define a system call (platform function with a specific type)
+
+    // TODO: Documentation, specifically how this differs from the TypeParser impl
+    pub fn preprocess_source(
         &self,
-        _source: S,
-        _filename: S,
-        _include_directories: &[P],
-        _auto_type_source: S,
-    ) -> Result<TypeParserResult, String> {
-        Err(String::new())
+        source: &str,
+        file_name: &str,
+        include_dirs: &[BnString],
+    ) -> Result<BnString, TypeParserError> {
+        let source_cstr = BnString::new(source);
+        let file_name_cstr = BnString::new(file_name);
+
+        let mut result = ptr::null_mut();
+        let mut error_string = ptr::null_mut();
+        let success = unsafe {
+            BNPreprocessSource(
+                source_cstr.as_ptr(),
+                file_name_cstr.as_ptr(),
+                &mut result,
+                &mut error_string,
+                include_dirs.as_ptr() as *mut *const ffi::c_char,
+                include_dirs.len(),
+            )
+        };
+
+        if success {
+            assert!(!result.is_null());
+            Ok(unsafe { BnString::from_raw(result) })
+        } else {
+            assert!(!error_string.is_null());
+            Err(TypeParserError::new(
+                TypeParserErrorSeverity::FatalSeverity,
+                unsafe { BnString::from_raw(error_string) }.to_string(),
+                file_name.to_string(),
+                0,
+                0,
+            ))
+        }
+    }
+
+    // TODO: Documentation, specifically how this differs from the TypeParser impl
+    pub fn parse_types_from_source(
+        &self,
+        src: &str,
+        filename: &str,
+        include_dirs: &[BnString],
+        auto_type_source: &str,
+    ) -> Result<TypeParserResult, TypeParserError> {
+        let source_cstr = BnString::new(src);
+        let file_name_cstr = BnString::new(filename);
+        let auto_type_source = BnString::new(auto_type_source);
+
+        let mut raw_result = BNTypeParserResult::default();
+        let mut error_string = ptr::null_mut();
+        let success = unsafe {
+            BNParseTypesFromSource(
+                self.handle,
+                source_cstr.as_ptr(),
+                file_name_cstr.as_ptr(),
+                &mut raw_result,
+                &mut error_string,
+                include_dirs.as_ptr() as *mut *const ffi::c_char,
+                include_dirs.len(),
+                auto_type_source.as_ptr(),
+            )
+        };
+
+        if success {
+            let result = TypeParserResult::from_raw(&raw_result);
+            // NOTE: This is safe because the core allocated the TypeParserResult
+            TypeParserResult::free_raw(raw_result);
+            Ok(result)
+        } else {
+            assert!(!error_string.is_null());
+            Err(TypeParserError::new(
+                TypeParserErrorSeverity::FatalSeverity,
+                unsafe { BnString::from_raw(error_string) }.to_string(),
+                filename.to_string(),
+                0,
+                0,
+            ))
+        }
+    }
+
+    // TODO: Documentation, specifically how this differs from the TypeParser impl
+    pub fn parse_types_from_source_file(
+        &self,
+        filename: &str,
+        include_dirs: &[BnString],
+        auto_type_source: &str,
+    ) -> Result<TypeParserResult, TypeParserError> {
+        let file_name_cstr = BnString::new(filename);
+        let auto_type_source = BnString::new(auto_type_source);
+
+        let mut raw_result = BNTypeParserResult::default();
+        let mut error_string = ptr::null_mut();
+        let success = unsafe {
+            BNParseTypesFromSourceFile(
+                self.handle,
+                file_name_cstr.as_ptr(),
+                &mut raw_result,
+                &mut error_string,
+                include_dirs.as_ptr() as *mut *const ffi::c_char,
+                include_dirs.len(),
+                auto_type_source.as_ptr(),
+            )
+        };
+
+        if success {
+            let result = TypeParserResult::from_raw(&raw_result);
+            // NOTE: This is safe because the core allocated the TypeParserResult
+            TypeParserResult::free_raw(raw_result);
+            Ok(result)
+        } else {
+            assert!(!error_string.is_null());
+            Err(TypeParserError::new(
+                TypeParserErrorSeverity::FatalSeverity,
+                unsafe { BnString::from_raw(error_string) }.to_string(),
+                filename.to_string(),
+                0,
+                0,
+            ))
+        }
     }
 }
 
-#[derive(Clone, Default)]
-pub struct TypeParserResult {
-    pub types: HashMap<String, Ref<Type>>,
-    pub variables: HashMap<String, Ref<Type>>,
-    pub functions: HashMap<String, Ref<Type>>,
-}
-
-impl TypeParser for Platform {
-    fn parse_types_from_source<S: BnStrCompatible, P: AsRef<Path>>(
-        &self,
-        source: S,
-        filename: S,
-        include_directories: &[P],
-        auto_type_source: S,
-    ) -> Result<TypeParserResult, String> {
-        let mut result = BNTypeParserResult {
-            functionCount: 0,
-            typeCount: 0,
-            variableCount: 0,
-            functions: ptr::null_mut(),
-            types: ptr::null_mut(),
-            variables: ptr::null_mut(),
-        };
-
-        let mut type_parser_result = TypeParserResult::default();
-
-        let mut error_string: *mut raw::c_char = ptr::null_mut();
-
-        let src = source.into_bytes_with_nul();
-        let filename = filename.into_bytes_with_nul();
-        let auto_type_source = auto_type_source.into_bytes_with_nul();
-
-        let mut include_dirs = vec![];
-
-        for dir in include_directories.iter() {
-            let d = dir
-                .as_ref()
-                .to_string_lossy()
-                .to_string()
-                .into_bytes_with_nul();
-            include_dirs.push(d.as_ptr() as _);
-        }
-
-        unsafe {
-            let success = BNParseTypesFromSource(
-                self.handle,
-                src.as_ref().as_ptr() as _,
-                filename.as_ref().as_ptr() as _,
-                &mut result,
-                &mut error_string,
-                include_dirs.as_mut_ptr(),
-                include_dirs.len(),
-                auto_type_source.as_ref().as_ptr() as _,
-            );
-
-            let error_msg = BnString::from_raw(error_string);
-
-            if !success {
-                return Err(error_msg.to_string());
-            }
-
-            for i in slice::from_raw_parts(result.types, result.typeCount) {
-                let name = QualifiedName(i.name);
-                type_parser_result
-                    .types
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
-            }
-
-            for i in slice::from_raw_parts(result.functions, result.functionCount) {
-                let name = QualifiedName(i.name);
-                type_parser_result
-                    .functions
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
-            }
-
-            for i in slice::from_raw_parts(result.variables, result.variableCount) {
-                let name = QualifiedName(i.name);
-                type_parser_result
-                    .variables
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
-            }
-        }
-
-        Ok(type_parser_result)
+impl Debug for Platform {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Platform")
+            .field("name", &self.name())
+            .field("arch", &self.arch().name())
+            .finish()
     }
 }
 
@@ -379,11 +431,12 @@ impl CoreArrayProvider for Platform {
 }
 
 unsafe impl CoreArrayProviderInner for Platform {
-    unsafe fn free(raw: *mut *mut BNPlatform, count: usize, _context: &()) {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreePlatformList(raw, count);
     }
-    unsafe fn wrap_raw<'a>(raw: &'a *mut BNPlatform, context: &'a ()) -> Self::Wrapped<'a> {
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         debug_assert!(!raw.is_null());
-        Guard::new(Platform { handle: *raw }, context)
+        Guard::new(Self::from_raw(*raw), context)
     }
 }

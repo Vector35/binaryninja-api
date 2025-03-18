@@ -1550,6 +1550,8 @@ namespace BinaryNinja {
 	*/
 	Ref<BinaryView> Load(Ref<ProjectFile> rawData, bool updateAnalysis = true, const std::string& options = "{}", std::function<bool(size_t, size_t)> progress = {});
 
+	Ref<BinaryView> ParseTextFormat(const std::string& filename);
+
 	/*!
 		Deprecated. Use non-metadata version.
 	*/
@@ -1998,6 +2000,9 @@ namespace BinaryNinja {
 	*/
 	bool OpenUrl(const std::string& url);
 
+	typedef std::function<bool(size_t, size_t)> ProgressFunction;
+	bool DefaultProgressFunction(size_t, size_t);
+
 	/*! Run a given task in a background thread, and show an updating progress bar which the user can cancel
 
 		@threadsafe
@@ -2009,7 +2014,7 @@ namespace BinaryNinja {
 		            to cancel, and the task should handle this appropriately.
 		\return True if not cancelled
 	*/
-	bool RunProgressDialog(const std::string& title, bool canCancel, std::function<void(std::function<bool(size_t, size_t)> progress)> task);
+	bool RunProgressDialog(const std::string& title, bool canCancel, std::function<void(ProgressFunction progress)> task);
 
 	/*!
 	    Split a single progress function into equally sized subparts.
@@ -2028,8 +2033,8 @@ namespace BinaryNinja {
 	    \param subpartCount Total number of subparts
 	    \return A function that will call originalFn() within a modified progress region
 	*/
-	std::function<bool(size_t, size_t)> SplitProgress(
-	    std::function<bool(size_t, size_t)> originalFn, size_t subpart, size_t subpartCount);
+	ProgressFunction SplitProgress(
+	    ProgressFunction originalFn, size_t subpart, size_t subpartCount);
 
 
 	/*!
@@ -2050,8 +2055,8 @@ namespace BinaryNinja {
 	    \param subpartWeights Weights of subparts, described above
 	    \return A function that will call originalFn() within a modified progress region
 	*/
-	std::function<bool(size_t, size_t)> SplitProgress(
-	    std::function<bool(size_t, size_t)> originalFn, size_t subpart, std::vector<double> subpartWeights);
+	ProgressFunction SplitProgress(
+	    ProgressFunction originalFn, size_t subpart, std::vector<double> subpartWeights);
 
 	struct ProgressContext
 	{
@@ -2771,6 +2776,10 @@ namespace BinaryNinja {
 	};
 
 
+	namespace Collaboration
+	{
+		class RemoteProject;
+	}
 	/*!
 
 		\ingroup project
@@ -2822,6 +2831,8 @@ namespace BinaryNinja {
 
 		void BeginBulkOperation();
 		void EndBulkOperation();
+
+		Ref<Collaboration::RemoteProject> GetRemoteProject();
 	};
 
 	/*!
@@ -3883,6 +3894,35 @@ namespace BinaryNinja {
 		static NameSpace FromAPIObject(const BNNameSpace* name);
 	};
 
+	class StringRef
+	{
+		BNStringRef* m_ref;
+
+	public:
+		StringRef();
+		explicit StringRef(BNStringRef* ref);
+		StringRef(const StringRef& other);
+		StringRef(StringRef&& other);
+		~StringRef();
+		StringRef& operator=(const StringRef& other);
+		StringRef& operator=(StringRef&& other);
+
+		operator std::string_view() const { return std::string_view(c_str(), size()); }
+		operator std::string const() { return c_str(); }
+
+		const char* c_str() const;
+		size_t size() const;
+		BNStringRef* GetObject() { return m_ref; }
+
+		bool operator==(const StringRef& other) const { return this->operator std::string_view() == other.operator std::string_view(); }
+		bool operator!=(const StringRef& other) const { return this->operator std::string_view() != other.operator std::string_view(); }
+		bool operator<(const StringRef& other) const { return this->operator std::string_view() < other.operator std::string_view(); }
+		bool operator==(const std::string& other) const { return this->operator std::string_view() == other; }
+		bool operator!=(const std::string& other) const { return this->operator std::string_view() != other; }
+		bool operator==(const std::string_view& other) const { return this->operator std::string_view() == other; }
+		bool operator!=(const std::string_view& other) const { return this->operator std::string_view() != other; }
+	};
+
 	/*!
 		\ingroup types
 	*/
@@ -3894,6 +3934,10 @@ namespace BinaryNinja {
 		    const NameSpace& nameSpace = NameSpace(DEFAULT_INTERNAL_NAMESPACE), uint64_t ordinal = 0);
 		Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding = NoBinding,
 		    const NameSpace& nameSpace = NameSpace(DEFAULT_INTERNAL_NAMESPACE), uint64_t ordinal = 0);
+		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName, const std::string& rawName,
+			uint64_t addr, BNNameSpace* nameSpace, BNSymbolBinding binding = NoBinding, uint64_t ordinal = 0);
+		Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNNameSpace* nameSpace,
+			BNSymbolBinding binding = NoBinding, uint64_t ordinal = 0);
 		Symbol(BNSymbol* sym);
 
 		/*!
@@ -3928,14 +3972,29 @@ namespace BinaryNinja {
 		std::string GetShortName() const;
 
 		/*!
+		    \return Symbol short name
+		*/
+		StringRef GetShortNameRef() const;
+
+		/*!
 		    \return Symbol full name
 		*/
 		std::string GetFullName() const;
 
 		/*!
+		    \return Symbol full name
+		*/
+		StringRef GetFullNameRef() const;
+
+		/*!
 		    \return Symbol raw name
 		*/
 		std::string GetRawName() const;
+
+		/*!
+		    \return Symbol raw name
+		*/
+		StringRef GetRawNameRef() const;
 
 		/*!
 			\return Symbol Address
@@ -4040,9 +4099,13 @@ namespace BinaryNinja {
 	struct DisassemblyTextLineTypeInfo
 	{
 		bool hasTypeInfo;
-		BinaryNinja::Ref<BinaryNinja::Type> parentType;
+		Ref<Type> parentType;
 		size_t fieldIndex;
 		uint64_t offset;
+
+		BNDisassemblyTextLineTypeInfo GetAPIObject() const;
+		static void FreeAPIObject(BNDisassemblyTextLineTypeInfo* value);
+		static DisassemblyTextLineTypeInfo FromAPIObject(const BNDisassemblyTextLineTypeInfo* value);
 
 		DisassemblyTextLineTypeInfo() : hasTypeInfo(false), parentType(nullptr), fieldIndex(-1), offset(0) {}
 	};
@@ -4057,6 +4120,14 @@ namespace BinaryNinja {
 		DisassemblyTextLineTypeInfo typeInfo;
 
 		DisassemblyTextLine();
+
+		BNDisassemblyTextLine GetAPIObject() const;
+		static void FreeAPIObject(BNDisassemblyTextLine* value);
+		static DisassemblyTextLine FromAPIObject(const BNDisassemblyTextLine* value);
+
+		size_t GetTotalWidth() const;
+		size_t GetAddressAndIndentationWidth() const;
+		std::vector<InstructionTextToken> GetAddressAndIndentationTokens() const;
 	};
 
 	/*!
@@ -4069,7 +4140,9 @@ namespace BinaryNinja {
 		Ref<BasicBlock> block;
 		DisassemblyTextLine contents;
 
-		static LinearDisassemblyLine FromAPIObject(BNLinearDisassemblyLine* line);
+		BNLinearDisassemblyLine GetAPIObject() const;
+		static LinearDisassemblyLine FromAPIObject(const BNLinearDisassemblyLine* line);
+		static void FreeAPIObject(BNLinearDisassemblyLine* line);
 	};
 
 	class NamedTypeReference;
@@ -5151,9 +5224,9 @@ namespace BinaryNinja {
 		*/
 		void UpdateAnalysis();
 
-		/*! Abort the currently running analysis
+		/*! Abort analysis and suspend the workflow machine
 
-			This method should be considered non-recoverable and generally only used when shutdown is imminent after stopping.
+			Stops analysis and transitions the workflow machine to the Suspend state. This operation is recoverable, and the workflow machine can be re-enabled via the WorkflowMachine Enable API.
 		*/
 		void AbortAnalysis();
 
@@ -6417,7 +6490,11 @@ namespace BinaryNinja {
 			const FunctionViewType& viewType, const std::function<bool(size_t current, size_t total)>& progress,
 		    const std::function<bool(uint64_t addr, const LinearDisassemblyLine& line)>& matchCallback);
 
-		bool Search(const std::string& query, const std::function<bool(uint64_t offset, const DataBuffer& buffer)>& otherCallback);
+		std::string DetectSearchMode(const std::string& query);
+
+		bool Search(const std::string& query,
+			const std::function<bool(size_t current, size_t total)>& progressCallback,
+			const std::function<bool(uint64_t addr, const DataBuffer& buffer)>& matchCallback);
 
 		void Reanalyze();
 
@@ -7127,6 +7204,14 @@ namespace BinaryNinja {
 		Ref<Architecture> GetArchitecture(uint32_t id, BNEndianness endian);
 
 		/*! Register a Platform for a specific view type
+
+			\param name Name of the BinaryViewType
+			\param id ID of the platform
+			\param platform The Platform to register
+		*/
+		static void RegisterPlatform(const std::string& name, uint32_t id, Platform* platform);
+
+		/*! Register a Platform for a specific view type (this form is deprecated as of 4.3, please use the form without architecture as an argument instead)
 
 			\param name Name of the BinaryViewType
 			\param id ID of the platform
@@ -8681,6 +8766,12 @@ namespace BinaryNinja {
 		{}
 	};
 
+	class FieldResolutionInfo : public CoreRefCountObject<BNFieldResolutionInfo, BNNewFieldResolutionInfoReference, BNFreeFieldResolutionInfo>
+	{
+	  public:
+		FieldResolutionInfo(BNFieldResolutionInfo* info);
+	};
+
 	struct QualifiedNameAndType
 	{
 		QualifiedName name;
@@ -9230,7 +9321,9 @@ namespace BinaryNinja {
 		Ref<Type> WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTypeReference* to);
 
 		bool AddTypeMemberTokens(BinaryView* data, std::vector<InstructionTextToken>& tokens, int64_t offset,
-		    std::vector<std::string>& nameList, size_t size = 0, bool indirect = false);
+		    std::vector<std::string>& nameList, size_t size = 0, bool indirect = false, FieldResolutionInfo* info = nullptr);
+		bool EnumerateTypesForAccess(BinaryView* data, uint64_t offset, size_t size, uint8_t baseConfidence,
+			const std::function<void(const Confidence<Ref<Type>>& type, FieldResolutionInfo* path)>& terminal);
 		std::vector<TypeDefinitionLine> GetLines(const TypeContainer& types, const std::string& name,
 			int paddingCols = 64, bool collapsed = false, BNTokenEscapingType escaping = NoTokenEscapingType);
 
@@ -9943,15 +10036,19 @@ namespace BinaryNinja {
 	{
 	  protected:
 		std::function<void(Ref<AnalysisContext> analysisContext)> m_action;
+		std::function<bool(Ref<Activity>, Ref<AnalysisContext>)> m_eligibility;
 
-		static void Run(void* ctxt, BNAnalysisContext* analysisContext);
+		static void RunAction(void* ctxt, BNAnalysisContext* analysisContext);
+		static bool CheckEligibility(void* ctxt, BNActivity* activity, BNAnalysisContext* analysisContext);
 
 	  public:
 		/*!
 			\param configuration a JSON representation of the activity configuration
 			\param action Workflow action, a function taking a Ref<AnalysisContext> as an argument.
+			\param eligibility A function that determines whether the activity is eligible to run
 		*/
-		Activity(const std::string& configuration, const std::function<void(Ref<AnalysisContext>)>& action);
+		Activity(const std::string& configuration, const std::function<void(Ref<AnalysisContext>)>& action,
+			const std::function<bool(Ref<Activity>, Ref<AnalysisContext>)>& eligibility = nullptr);
 		Activity(BNActivity* activity);
 		virtual ~Activity();
 
@@ -9970,6 +10067,22 @@ namespace BinaryNinja {
 	public:
 		WorkflowMachine(Ref<BinaryView> view);
 		WorkflowMachine(Ref<Function> function);
+
+		/*! Enable the workflow machine
+
+			Re-enables the workflow machine if it is in the Suspend state.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Enable();
+
+		/*! Disable the workflow machine
+
+			Disables analysis and suspends the workflow machine, equivalent to AbortAnalysis.
+			This operation is recoverable and the workflow machine can be re-enabled via the Enable API.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Disable();
+
 
 		std::optional<bool> QueryOverride(const std::string& activity);
 		bool SetOverride(const std::string& activity, bool enable);
@@ -10019,11 +10132,11 @@ namespace BinaryNinja {
 
 		/*! Clone a workflow, copying all Activities and the execution strategy
 
-			\param name Name for the new Workflow
+			\param name If specified, name the new Workflow, otherwise the name is copied from the original
 			\param activity If specified, perform the clone with `activity` as the root
 			\return A new Workflow
 		*/
-		Ref<Workflow> Clone(const std::string& name, const std::string& activity = "");
+		Ref<Workflow> Clone(const std::string& name = "", const std::string& activity = "");
 
 		/*! Register an Activity with this Workflow
 
@@ -10134,6 +10247,22 @@ namespace BinaryNinja {
 		*/
 		bool Insert(const std::string& activity, const std::vector<std::string>& activities);
 
+		/*! Insert an activity after the specified activity and at the same level.
+
+			\param activity Name of the activity to insert the new one after
+			\param newActivity Name of the new activity to be inserted
+			\return true on success, false otherwise
+		*/
+		bool InsertAfter(const std::string& activity, const std::string& newActivity);
+
+		/*! Insert a list of activities after the specified activity and at the same level.
+
+			\param activity Name of the activity to insert the new one after
+			\param newActivity Name of the new activities to be inserted
+			\return true on success, false otherwise
+		*/
+		bool InsertAfter(const std::string& activity, const std::vector<std::string>& activities);
+
 		/*! Remove an activity by name
 
 			\param activity Name of the activity to remove
@@ -10170,6 +10299,10 @@ namespace BinaryNinja {
 		DisassemblySettings();
 		DisassemblySettings(BNDisassemblySettings* settings);
 		DisassemblySettings* Duplicate();
+
+		static Ref<DisassemblySettings> GetDefaultSettings();
+		static Ref<DisassemblySettings> GetDefaultGraphSettings();
+		static Ref<DisassemblySettings> GetDefaultLinearSettings();
 
 		bool IsOptionSet(BNDisassemblyOption option) const;
 		void SetOption(BNDisassemblyOption option, bool state = true);
@@ -10402,17 +10535,23 @@ namespace BinaryNinja {
 		*/
 		bool IsILBlock() const;
 
+		/*! Whether the basic block contains Low Level IL
+
+			\return Whether the basic block contains Low Level IL
+		*/
+		bool IsLowLevelILBlock() const;
+
 		/*! Whether the basic block contains Medium Level IL
 
 			\return Whether the basic block contains Medium Level IL
 		*/
-		bool IsLowLevelILBlock() const;
+		bool IsMediumLevelILBlock() const;
 
 		/*! Whether the basic block contains High Level IL
 
 			\return Whether the basic block contains High Level IL
 		*/
-		bool IsMediumLevelILBlock() const;
+		bool IsHighLevelILBlock() const;
 
 		/*! Get the Low Level IL Function for this basic block
 
@@ -10553,7 +10692,7 @@ namespace BinaryNinja {
 		size_t count;
 
 		static PossibleValueSet FromAPIObject(BNPossibleValueSet& value);
-		BNPossibleValueSet ToAPIObject();
+		BNPossibleValueSet ToAPIObject() const;
 		static void FreeAPIObject(BNPossibleValueSet* value);
 	};
 
@@ -10934,6 +11073,7 @@ namespace BinaryNinja {
 		void DeleteAutoStackVariable(int64_t offset);
 		void DeleteUserStackVariable(int64_t offset);
 		bool GetStackVariableAtFrameOffset(Architecture* arch, uint64_t addr, int64_t offset, VariableNameAndType& var);
+		bool GetStackVariableAtFrameOffsetAfterInstruction(Architecture* arch, uint64_t addr, int64_t offset, VariableNameAndType& var);
 
 		/*! List of Function Variables
 
@@ -11109,10 +11249,18 @@ namespace BinaryNinja {
 
 		Ref<FlowGraph> GetUnresolvedStackAdjustmentGraph();
 
-		void SetUserVariableValue(const Variable& var, uint64_t defAddr, PossibleValueSet& value);
-		void ClearUserVariableValue(const Variable& var, uint64_t defAddr);
-		std::map<Variable, std::map<ArchAndAddr, PossibleValueSet>> GetAllUserVariableValues();
+		void SetUserVariableValue(const Variable& var, const ArchAndAddr& defAddr, PossibleValueSet& value, bool after = true);
+		void ClearUserVariableValue(const Variable& var, const ArchAndAddr& defAddr, bool after = true);
+		std::map<Variable, std::map<std::pair<ArchAndAddr, bool>, PossibleValueSet>> GetAllUserVariableValues();
 		void ClearAllUserVariableValues();
+
+		void CreateForcedVariableVersion(const Variable& var, const ArchAndAddr& location);
+		void ClearForcedVariableVersion(const Variable& var, const ArchAndAddr& location);
+
+		void SetFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location, FieldResolutionInfo* info);
+		void ClearFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location);
+		Ref<FieldResolutionInfo> GetFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location);
+		std::map<Variable, std::map<ArchAndAddr, Ref<FieldResolutionInfo>>> GetAllFieldResolutions();
 
 		void RequestDebugReport(const std::string& name);
 
@@ -11431,6 +11579,12 @@ namespace BinaryNinja {
 		*/
 		Ref<FlowGraphNode> GetNode(size_t i);
 
+		/*! Get the total number of nodes in the graph
+
+			\return Node count
+		 */
+		size_t GetNodeCount() const;
+
 		/*! Whether the FlowGraph has any nodes added
 
 			\return Whether the FlowGraph has any nodes added
@@ -11439,12 +11593,29 @@ namespace BinaryNinja {
 
 		/*! Add a node to this flowgraph
 
+			\note After the graph has completed layout, this function has no effect.
+
 			\param node Node to be added.
 			\return Index of the node
 		*/
 		size_t AddNode(FlowGraphNode* node);
 
+		/*! Replace an existing node in the graph with a new node.
+			Any existing edges referencing the old node will be updated to point to
+			the new node.
 
+			\note After the graph has completed layout, this function has no effect.
+
+			\param i Index of the node to replace
+			\param newNode New node with which to replace the old node
+		 */
+		void ReplaceNode(size_t i, FlowGraphNode* newNode);
+
+		/*! Clear all the nodes in the graph
+
+			\note After the graph has completed layout, this function has no effect.
+		 */
+		void ClearNodes();
 
 		/*! Flow graph width
 
@@ -11536,6 +11707,26 @@ namespace BinaryNinja {
 
 		void SetOption(BNFlowGraphOption option, bool value = true);
 		bool IsOptionSet(BNFlowGraphOption option);
+
+		/*! Get the list of Render Layers which will be applied to this Flow Graph,
+			after it calls PopulateNodes.
+
+			\return List of Render Layers
+		 */
+		std::vector<class RenderLayer*> GetRenderLayers() const;
+
+		/*! Add a Render Layer to be applied to this Flow Graph. Note that layers will
+			be applied in the order in which they are added.
+
+			\param layer Render Layer to add
+		 */
+		void AddRenderLayer(class RenderLayer* layer);
+
+		/*! Remove a Render Layer from being applied to this Flow Graph
+
+			\param layer Render Layer to remove
+		 */
+		void RemoveRenderLayer(class RenderLayer* layer);
 	};
 
 	/*!
@@ -11680,6 +11871,9 @@ namespace BinaryNinja {
 		std::vector<SSARegisterStack> GetSSARegisterStacks();
 		std::vector<SSAFlag> GetSSAFlags();
 
+		size_t CachePossibleValueSet(const PossibleValueSet& pvs);
+		PossibleValueSet GetCachedPossibleValueSet(size_t idx);
+
 		ExprId AddExpr(BNLowLevelILOperation operation, size_t size, uint32_t flags, ExprId a = 0, ExprId b = 0,
 		    ExprId c = 0, ExprId d = 0);
 		ExprId AddExprWithLocation(BNLowLevelILOperation operation, uint64_t addr, uint32_t sourceOperand, size_t size,
@@ -11767,6 +11961,12 @@ namespace BinaryNinja {
 		*/
 		ExprId SetFlag(uint32_t flag, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetFlagSSA(const SSAFlag& flag, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
+
+		ExprId ForceVer(size_t size, uint32_t reg, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ForceVerSSA(size_t size, SSARegister dst, SSARegister src, const ILSourceLocation& loc = ILSourceLocation());
+
+		ExprId Assert(size_t size, uint32_t reg, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssertSSA(size_t size, SSARegister reg, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
 
 		/*! Reads \c size bytes from the expression \c addr
 
@@ -12161,7 +12361,7 @@ namespace BinaryNinja {
 			\param b RHS expression
 			\param flags Flags to set
 			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>sbc.<size>{<flags>}(a, b)</tt>
+			\return The expression <tt>mul.<size>{<flags>}(a, b)</tt>
 		*/
 		ExprId Mult(
 		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
@@ -13064,6 +13264,9 @@ namespace BinaryNinja {
 		*/
 		BNMediumLevelILLabel* GetLabelForSourceInstruction(size_t i);
 
+		size_t CachePossibleValueSet(const PossibleValueSet& pvs);
+		PossibleValueSet GetCachedPossibleValueSet(size_t idx);
+
 		ExprId AddExpr(BNMediumLevelILOperation operation, size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0,
 		    ExprId d = 0, ExprId e = 0);
 		ExprId AddExprWithLocation(BNMediumLevelILOperation operation, uint64_t addr, uint32_t sourceOperand,
@@ -13087,6 +13290,13 @@ namespace BinaryNinja {
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetVarAliasedField(size_t size, const Variable& dest, size_t newMemVersion, size_t prevMemVersion,
 		    uint64_t offset, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		ExprId ForceVer(size_t size, const Variable& dest, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ForceVerSSA(size_t size, const SSAVariable& dest, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
+
+		ExprId Assert(size_t size, const Variable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssertSSA(size_t size, const SSAVariable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
+
 		ExprId Load(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId LoadStruct(size_t size, ExprId src, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId LoadSSA(size_t size, ExprId src, size_t memVersion, const ILSourceLocation& loc = ILSourceLocation());
@@ -13342,10 +13552,15 @@ namespace BinaryNinja {
 		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		size_t GetSSAVarVersionAtInstruction(const Variable& var, size_t instr) const;
+		size_t GetSSAVarVersionAfterInstruction(const Variable& var, size_t instr) const;
 		size_t GetSSAMemoryVersionAtInstruction(size_t instr) const;
+		size_t GetSSAMemoryVersionAfterInstruction(size_t instr) const;
 		Variable GetVariableForRegisterAtInstruction(uint32_t reg, size_t instr) const;
+		Variable GetVariableForRegisterAfterInstruction(uint32_t reg, size_t instr) const;
 		Variable GetVariableForFlagAtInstruction(uint32_t flag, size_t instr) const;
+		Variable GetVariableForFlagAfterInstruction(uint32_t flag, size_t instr) const;
 		Variable GetVariableForStackLocationAtInstruction(int64_t offset, size_t instr) const;
+		Variable GetVariableForStackLocationAfterInstruction(int64_t offset, size_t instr) const;
 
 		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
 		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
@@ -13429,6 +13644,9 @@ namespace BinaryNinja {
 		void SetRootExpr(ExprId expr);
 		void SetRootExpr(const HighLevelILInstruction& expr);
 
+		size_t CachePossibleValueSet(const PossibleValueSet& pvs);
+		PossibleValueSet GetCachedPossibleValueSet(size_t idx);
+
 		ExprId AddExpr(BNHighLevelILOperation operation, size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0,
 		    ExprId d = 0, ExprId e = 0);
 		ExprId AddExprWithLocation(BNHighLevelILOperation operation, uint64_t addr, uint32_t sourceOperand, size_t size,
@@ -13473,6 +13691,13 @@ namespace BinaryNinja {
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AssignUnpackMemSSA(const std::vector<ExprId>& output, size_t destMemVersion, ExprId src,
 		    size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
+
+		ExprId ForceVer(size_t size, const Variable& dest, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ForceVerSSA(size_t size, const SSAVariable& dest, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
+
+		ExprId Assert(size_t size, const Variable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssertSSA(size_t size, const SSAVariable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
+
 		ExprId Var(size_t size, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarSSA(size_t size, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarPhi(const SSAVariable& dest, const std::vector<SSAVariable>& sources,
@@ -13694,6 +13919,82 @@ namespace BinaryNinja {
 		std::set<SSAVariable> GetSSAVariables();
 	};
 
+	struct LineFormatterSettings
+	{
+		Ref<HighLevelILFunction> highLevelIL;
+		size_t desiredLineLength;
+		size_t minimumContentLength;
+		size_t tabWidth;
+		std::string languageName;
+		std::string commentStartString;
+		std::string commentEndString;
+		std::string annotationStartString;
+		std::string annotationEndString;
+
+		/*! Gets the default line formatter settings for High Level IL code.
+
+		    \param settings The settings for reformatting.
+		    \param func High Level IL function to be reformatted.
+		    \return Settings for reformatting.
+		*/
+		static LineFormatterSettings GetDefault(DisassemblySettings* settings, HighLevelILFunction* func);
+
+		/*! Gets the default line formatter settings for a language representation function.
+
+		    \param settings The settings for reformatting.
+		    \param func Language representation function to be reformatted.
+		    \return Settings for reformatting.
+		*/
+		static LineFormatterSettings GetLanguageRepresentationSettings(
+			DisassemblySettings* settings, LanguageRepresentationFunction* func);
+
+		static LineFormatterSettings FromAPIObject(const BNLineFormatterSettings* settings);
+		BNLineFormatterSettings ToAPIObject() const;
+	};
+
+	class LineFormatter : public StaticCoreRefCountObject<BNLineFormatter>
+	{
+		std::string m_nameForRegister;
+
+		static BNDisassemblyTextLine* FormatLinesCallback(void* ctxt, BNDisassemblyTextLine* inLines, size_t inCount,
+			const BNLineFormatterSettings* settings, size_t* outCount);
+		static void FreeLinesCallback(void* ctxt, BNDisassemblyTextLine* lines, size_t count);
+
+	public:
+		LineFormatter(const std::string& name);
+		LineFormatter(BNLineFormatter* formatter);
+
+		/*! Registers the line formatter.
+
+		    \param formatter The line formatter to register.
+		*/
+		static void Register(LineFormatter* formatter);
+
+		static std::vector<Ref<LineFormatter>> GetList();
+		static Ref<LineFormatter> GetByName(const std::string& name);
+		static Ref<LineFormatter> GetDefault();
+
+		/*! Reformats the given list of lines. Returns a new list of lines containing the reformatted code.
+
+		    \param lines The lines to reformat.
+		    \param settings The settings for reformatting.
+		    \return A new list of reformatted lines.
+		*/
+		virtual std::vector<DisassemblyTextLine> FormatLines(
+			const std::vector<DisassemblyTextLine>& lines, const LineFormatterSettings& settings) = 0;
+	};
+
+	class CoreLineFormatter : public LineFormatter
+	{
+	public:
+		CoreLineFormatter(BNLineFormatter* formatter);
+
+		std::vector<DisassemblyTextLine> FormatLines(
+			const std::vector<DisassemblyTextLine>& lines, const LineFormatterSettings& settings) override;
+	};
+
+	class LanguageRepresentationFunctionType;
+
 	/*! LanguageRepresentationFunction represents a single function in a registered high level language.
 
 	    \ingroup highlevelil
@@ -13703,7 +14004,8 @@ namespace BinaryNinja {
 	        BNFreeLanguageRepresentationFunction>
 	{
 	public:
-		LanguageRepresentationFunction(Architecture* arch, Function* func, HighLevelILFunction* highLevelIL);
+		LanguageRepresentationFunction(LanguageRepresentationFunctionType* type, Architecture* arch, Function* func,
+			HighLevelILFunction* highLevelIL);
 		LanguageRepresentationFunction(BNLanguageRepresentationFunction* func);
 
 		/*! Gets the lines of tokens for a given High Level IL instruction.
@@ -13742,6 +14044,7 @@ namespace BinaryNinja {
 		*/
 		BNHighlightColor GetHighlight(BasicBlock* block);
 
+		Ref<LanguageRepresentationFunctionType> GetLanguage() const;
 		Ref<Architecture> GetArchitecture() const;
 		Ref<Function> GetFunction() const;
 		Ref<HighLevelILFunction> GetHighLevelILFunction() const;
@@ -13890,6 +14193,13 @@ namespace BinaryNinja {
 		*/
 		virtual Ref<TypeParser> GetTypeParser() { return nullptr; }
 
+		/*! Returns the line formatter for formatting code in this language. If NULL is returned, the default
+		    formatter will be used.
+
+		    \return The optional formatter for formatting code in this language.
+		*/
+		virtual Ref<LineFormatter> GetLineFormatter() { return nullptr; }
+
 		/*! Returns a list of lines representing a function prototype in this language. If no lines are returned, the
 		    default C-style prototype will be used.
 
@@ -13916,6 +14226,7 @@ namespace BinaryNinja {
 		static bool IsValidCallback(void* ctxt, BNBinaryView* view);
 		static BNTypePrinter* GetTypePrinterCallback(void* ctxt);
 		static BNTypeParser* GetTypeParserCallback(void* ctxt);
+		static BNLineFormatter* GetLineFormatterCallback(void* ctxt);
 		static BNDisassemblyTextLine* GetFunctionTypeTokensCallback(
 			void* ctxt, BNFunction* func, BNDisassemblySettings* settings, size_t* count);
 		static void FreeLinesCallback(void* ctxt, BNDisassemblyTextLine* lines, size_t count);
@@ -13930,6 +14241,7 @@ namespace BinaryNinja {
 		bool IsValid(BinaryView* view) override;
 		Ref<TypePrinter> GetTypePrinter() override;
 		Ref<TypeParser> GetTypeParser() override;
+		Ref<LineFormatter> GetLineFormatter() override;
 		std::vector<DisassemblyTextLine> GetFunctionTypeTokens(
 			Function* func, DisassemblySettings* settings = nullptr) override;
 	};
@@ -17002,6 +17314,26 @@ namespace BinaryNinja {
 
 		Ref<LinearViewCursor> Duplicate();
 
+		/*! Get the list of Render Layers which will be applied to this cursor, at the
+			end of calls to GetLines.
+
+			\return List of Render Layers
+		 */
+		std::vector<class RenderLayer*> GetRenderLayers() const;
+
+		/*! Add a Render Layer to be applied to this cursor. Note that layers will
+			be applied in the order in which they are added.
+
+			\param layer Render Layer to add
+		 */
+		void AddRenderLayer(class RenderLayer* layer);
+
+		/*! Remove a Render Layer from being applied to this cursor
+
+			\param layer Render Layer to remove
+		 */
+		void RemoveRenderLayer(class RenderLayer* layer);
+
 		static int Compare(LinearViewCursor* a, LinearViewCursor* b);
 	};
 
@@ -18397,8 +18729,251 @@ namespace BinaryNinja {
 		size_t unique;
 	};
 
-	/*! FirmwareNinja is a class containing features specific to embedded firmware analysis. This class is only
-		available in the Ultimate Edition of Binary Ninja.
+
+	/*! FirmwareNinjaReferenceNode is a class used to build reference trees for memory regions, functions, and data
+		variables. This class is only available in the Ultimate Edition of Binary Ninja.
+
+		\ingroup firmwareninja
+	*/
+	class FirmwareNinjaReferenceNode : public CoreRefCountObject<BNFirmwareNinjaReferenceNode, BNNewFirmwareNinjaReferenceNodeReference, BNFreeFirmwareNinjaReferenceNode>
+	{
+	public:
+		FirmwareNinjaReferenceNode(BNFirmwareNinjaReferenceNode* node);
+		~FirmwareNinjaReferenceNode();
+
+		/*! Returns true if the reference tree node contains a function
+
+			\return true if the reference tree node contains a function, false otherwise
+		 */
+		bool IsFunction();
+
+		/*! Returns true if the reference tree node contains a data variable
+
+			\return true if the reference tree node contains a data variable, false otherwise
+		 */
+		bool IsDataVariable();
+
+		/*! Returns true if the reference tree node contains child nodes
+
+			\return true if the reference tree node contains child nodes, false otherwise
+		 */
+		bool HasChildren();
+
+		/*! Get the function contained in the reference tree node
+
+			\param function Output function object
+			\return true if the function was queried successfully, false if the reference tree node does not contain a function
+		 */
+		bool GetFunction(Ref<Function>& function);
+
+		/*! Get the data variable contained in the reference tree node
+
+			\param function Output data variable object
+			\return true if the data variable was queried successfully, false if the reference tree node does not contain a data variable
+		 */
+		bool GetDataVariable(DataVariable& variable);
+
+		/*! Get the child nodes contained in the reference tree node
+
+			\return Vector of child reference tree nodes
+		 */
+		std::vector<Ref<FirmwareNinjaReferenceNode>> GetChildren();
+	};
+
+	/*! FirmwareNinjaRelationship is a class used to represent inter-binary and cross-binary relationships. This class is
+		only available in the Ultimate Edition of Binary Ninja.
+
+		\ingroup firmwareninja
+	*/
+	class FirmwareNinjaRelationship : public CoreRefCountObject<BNFirmwareNinjaRelationship, BNNewFirmwareNinjaRelationshipReference, BNFreeFirmwareNinjaRelationship>
+	{
+	public:
+		FirmwareNinjaRelationship(Ref<BinaryView> view, BNFirmwareNinjaRelationship* relationship = nullptr);
+		~FirmwareNinjaRelationship();
+
+		/*! Set the primary relationship object to an address
+
+			\param address Address in current binary view
+		 */
+		void SetPrimaryAddress(uint64_t address);
+
+		/*! Set the primary relationship object to a data variable
+
+			\param var DataVariable in current binary view
+		 */
+		void SetPrimaryDataVariable(DataVariable& variable);
+
+		/*! Set the primary relationship object to a function
+
+			\param function Function in current binary view
+		 */
+		void SetPrimaryFunction(Ref<Function> function);
+
+		/*! Determine if the primary object is an address
+
+		  \return true if the primary object is an address, false otherwise
+		 */
+		bool PrimaryIsAddress() const;
+
+		/*! Returns true if the primary object is a data variable
+
+		  \return true if the primary object is a data variable, false otherwise
+		 */
+		bool PrimaryIsDataVariable() const;
+
+		/*! Returns true if the primary object is a function
+
+		  \return true if the primary object is a function, false otherwise
+		 */
+		bool PrimaryIsFunction() const;
+
+		/*! Get the primary data variable contained in the relationship
+
+		  \param var Output data variable
+		  \return true if the data variable was queried successfully, false if the primary object is not a data variable
+		 */
+		bool GetPrimaryDataVariable(DataVariable& var);
+
+		/*! Get the primary address contained in the relationship
+
+		  \return Optional address with a value if the primary object is an address
+		 */
+		std::optional<uint64_t> GetPrimaryAddress() const;
+
+		/*! Get the primary function contained in the relationship
+
+		  \return Function object if the primary object is a function, nullptr otherwise
+		 */
+		Ref<Function> GetPrimaryFunction() const;
+
+		/*! Set the secondary relationship object to an address
+
+			\param address Address in current binary view
+		 */
+		void SetSecondaryAddress(uint64_t address);
+
+		/*! Set the secondary relationship object to a data variable
+
+			\param var DataVariable in current binary view
+		 */
+		void SetSecondaryDataVariable(DataVariable& variable);
+
+		/*! Set the secondary relationship object to a function
+
+			\param function Function in current binary view
+		 */
+		void SetSecondaryFunction(Ref<Function> function);
+
+		/*! Set the secondary relationship object to an external address
+
+			\param projectFile Project file for external binary in the project
+			\param address Address in the external binary
+		 */
+		void SetSecondaryExternalAddress(Ref<ProjectFile> projectFile, uint64_t address);
+
+		/*! Set the secondary relationship object to an external symbol
+
+			\param projectFile Project file for the external binary in the project
+			\param sybmol Symbol in external binary
+		 */
+		void SetSecondaryExternalSymbol(Ref<ProjectFile> projectFile, const std::string& symbol);
+
+		/*! Determine if the secondary object is an address in the current binary view
+
+		  \return true if the secondary object is an address in the current binary view, false otherwise
+		 */
+		bool SecondaryIsAddress() const;
+
+		/*! Returns true if the secondary object is a data variable in the current binary view
+
+		  \return true if the secondary object is a data variable in the current binary view, false otherwise
+		 */
+		bool SecondaryIsDataVariable() const;
+
+		/*! Returns true if the secondary object is a function in the current binary view
+
+		  \return true if the secondary object is a function in the current binary view, false otherwise
+		 */
+		bool SecondaryIsFunction() const;
+
+		/*! Returns true if the secondary object is an address contained in another binary in the project
+
+		  \return true if the secondary object is an external address, false otherwise
+		 */
+		bool SecondaryIsExternalAddress() const;
+
+		/*! Returns true if the secondary object is a symbol contained in another binary in the project
+
+		  \return true if the secondary object is an external symbol, false otherwise
+		 */
+		bool SecondaryIsExternalSymbol() const;
+
+		/*! Get the secondary object's external project file
+
+		  \return The secondary object's external project file or nullptr if the secondary object is not an external address
+		 */
+		Ref<ProjectFile> GetSecondaryExternalProjectFile() const;
+
+		/*! Get the secondary address from the relationship
+
+		  \return Optional address containing a value, if the secondary object is an address
+		 */
+		std::optional<uint64_t> GetSecondaryAddress() const;
+
+		/*! Get the secondary data variable from the relationship
+
+		  \param var Output data variable
+		  \return true if the data variable was queried successfully, false if the secondary object is not a data variable
+		 */
+		bool GetSecondaryDataVariable(DataVariable& variable);
+
+		/*! Get the secondary function from the relationship
+
+		  \return Function object if the secondary object is a function, nullptr otherwise
+		 */
+		Ref<Function> GetSecondaryFunction() const;
+
+
+		/*! Get the secondary external address from the relationship
+
+		  \return External symbol string, or empty string if the secondary object is not an external symbol
+		 */
+		std::string GetSecondaryExternalSymbol() const;
+
+
+		/*! Set the description of the relationship
+
+		  \param description Description string
+		 */
+		void SetDescription(const std::string& description);
+
+		/*! Get the description of the relationship
+
+		  \return Description string, or empty string if not set
+		 */
+		std::string GetDescription() const;
+
+		/*! Set the provenance for the relationship
+
+		  \param provenance Provenance string
+		 */
+		void SetProvenance(const std::string& provenance);
+
+		/*! Get the provenance for the relationship
+
+		  \return Provenance string, or empty string if not set
+		 */
+		std::string GetProvenance() const;
+
+		/*! Get the relationship identifier
+
+		  \return Relationship GUID string
+		 */
+		std::string GetGuid() const;
+	};
+
+	/*! FirmwareNinja is a class containing features specific to firmware analysis. This class is only available in the
+		Ultimate Edition of Binary Ninja.
 
 		\ingroup firmwareninja
 	*/
@@ -18441,7 +19016,7 @@ namespace BinaryNinja {
 		/*! Query Firmware Ninja device definitions for the specified board
 
 			\param board Name of the board to query devices for
-			\return Vector of Firmware Ninja device definitions
+			\return Vector containing Firmware Ninja device definitions
 		 */
 		std::vector<FirmwareNinjaDevice> QueryDevicesForBoard(const std::string& board);
 
@@ -18451,7 +19026,7 @@ namespace BinaryNinja {
 			\param board lowCodeEntropyThreshold Low threshold for code entropy value range
 			\param blockSize Size of blocks to analyze
 			\param mode Analysis mode of operation
-			\return Vector of Firmware Ninja section information
+			\return Vector containing Firmware Ninja section information
 		 */
 		std::vector<BNFirmwareNinjaSection> FindSections(float highCodeEntropyThreshold, float lowCodeEntropyThreshold,
 			size_t blockSize, BNFirmwareNinjaSectionAnalysisMode mode);
@@ -18460,31 +19035,98 @@ namespace BinaryNinja {
 
 			\param progress Progress callback function
 			\param progressContext Progress context
-			\return Vector of Firmware Ninja function memory accesses information
+			\return Vector containing Firmware Ninja function memory accesses
 		 */
 		std::vector<FirmwareNinjaFunctionMemoryAccesses> GetFunctionMemoryAccesses(BNProgressFunction progress,
 			void* progressContext);
 
 		/*! Store Firmware Ninja function memory accesses information in the binary view metadata
 
-			\param fma Vector of Firmware Ninja function memory accesses information
+			\param fma Vector containin Firmware Ninja function memory accesses
 		 */
 		void StoreFunctionMemoryAccesses(const std::vector<FirmwareNinjaFunctionMemoryAccesses>& fma);
 
-		/*! Query cached Firmware Ninja function memory accesses information from the binary view metadata
+		/*! Query Firmware Ninja function memory accesses that are stored in the binary view metadata
 
-			\return Vector of Firmware Ninja memory analyis information
+			\return Vector containing Firmware Ninja function memory accesses
 		 */
 		std::vector<FirmwareNinjaFunctionMemoryAccesses> QueryFunctionMemoryAccesses();
 
-		/*! Compute number of accesses mad to memory-mapped hardware devices for each board that is compatible with the
-			current architecture
+		/*! Compute number of accesses made to memory-mapped hardware devices for each bundled board that is compatible with
+			the current architecture
 
-			\param fma Vector of Firmware Ninja function memory accesses information
-			\return Vector of Firmware Ninja device accesses information for each board
+			\param fma Vector containing Firmware Ninja function memory accesses
+			\return Vector containing Firmware Ninja device accesses for each board
 		 */
 		std::vector<FirmwareNinjaDeviceAccesses> GetBoardDeviceAccesses(
 			const std::vector<FirmwareNinjaFunctionMemoryAccesses>& fma);
+
+
+		/*! Returns a tree of reference nodes that reference the memory region represented by the given Firmware Ninja
+			device
+
+			\param device Firmware Ninja device
+			\param fma Vector containing Firmware Ninja function memory accesses
+			\param value (Optional) only build reference trees that originate with a write of the specified value
+			\return Root reference node for the tree
+		 */
+		Ref<FirmwareNinjaReferenceNode> GetReferenceTree(
+			FirmwareNinjaDevice& device,
+			const std::vector<FirmwareNinjaFunctionMemoryAccesses>& fma,
+			uint64_t* value = nullptr
+		);
+
+		/*! Returns a tree of reference nodes that reference the memory region represented by the given section
+
+			\param device Firmware Ninja device
+			\param fma Vector containing Firmware Ninja function memory accesses
+			\param value (Optional) only build reference trees that originate with a write of the specified value
+			\return Root reference node of tree
+		 */
+		Ref<FirmwareNinjaReferenceNode> GetReferenceTree(
+			Section& section,
+			const std::vector<FirmwareNinjaFunctionMemoryAccesses>& fma,
+			uint64_t* value = nullptr
+		);
+
+
+		/*! Returns a tree of reference nodes that reference the given address
+
+			\param device Firmware Ninja device
+			\param fma Vector containing Firmware Ninja function memory accesses
+			\param value (Optional) only build reference trees that originate with a write of the specified value
+			\return Root reference node of tree
+		 */
+		Ref<FirmwareNinjaReferenceNode> GetReferenceTree(
+			uint64_t address,
+			const std::vector<FirmwareNinjaFunctionMemoryAccesses>& fma,
+			uint64_t* value = nullptr
+		);
+
+		/*! Query Firmware Ninja relationships from the binary view metadata
+
+		  \return Vector containing Firmware Ninja relationships
+		 */
+		std::vector<Ref<FirmwareNinjaRelationship>> QueryRelationships();
+
+		/*! Store a Firmware Ninja relationship in the binary view metadata
+
+			\param relationship Firmware Ninja relationship
+		 */
+		void AddRelationship(Ref<FirmwareNinjaRelationship> relationship);
+
+		/* Query a Firmware Ninja relationship by GUID
+
+			\param guid GUID of the relationship to query
+			\return Firmware Ninja relationship if found, nullptr otherwise
+		 */
+		Ref<FirmwareNinjaRelationship> GetRelationshipByGuid(const std::string& guid);
+
+		/*! Remove a Firmware Ninja relationship from the binary view metadata
+
+			\param guid GUID of the relationship to remove
+		 */
+		void RemoveRelationshipByGuid(const std::string& guid);
 	};
 
 
@@ -18814,6 +19456,248 @@ namespace BinaryNinja {
 		static void AddNamesForOuterStructureMembers(
 			BinaryView* data, Type* type, const HighLevelILInstruction& var, std::vector<std::string>& nameList);
 	};
+
+	/*! RenderLayer is a plugin class that allows you to customize the presentation of
+		Linear and Graph view output, adding, changing, or removing lines before they are
+		presented in the UI.
+	 */
+	class RenderLayer: public StaticCoreRefCountObject<BNRenderLayer>
+	{
+		std::string m_nameForRegister;
+		static std::unordered_map<BNRenderLayer*, RenderLayer*> g_registeredInstances;
+
+	protected:
+		explicit RenderLayer(const std::string& name);
+		RenderLayer(BNRenderLayer* layer);
+		virtual ~RenderLayer() = default;
+		static void ApplyToFlowGraphCallback(void* ctxt, BNFlowGraph* graph);
+		static void ApplyToLinearViewObjectCallback(
+			void* ctxt,
+			BNLinearViewObject* obj,
+			BNLinearViewObject* prev,
+			BNLinearViewObject* next,
+			BNLinearDisassemblyLine* inLines,
+			size_t inLineCount,
+			BNLinearDisassemblyLine** outLines,
+			size_t* outLineCount
+		);
+		static void FreeLinesCallback(void* ctxt, BNLinearDisassemblyLine* lines, size_t count);
+
+	public:
+		/*! Register a custom Render Layer.
+
+			Specify enableState to change whether the layer is enabled by default in the UI.
+			If it is set to AlwaysEnabled, the Render Layer will always be enabled
+			and will not be displayed in the UI.
+
+			\param layer Render Layer to register
+			\param enableState Whether the layer should be enabled by default
+		*/
+		static void Register(RenderLayer* layer, BNRenderLayerDefaultEnableState enableState = DisabledByDefaultRenderLayerDefaultEnableState);
+
+		/*! Get the list of all currently registered Render Layers.
+
+			\return List of Render Layers
+		*/
+		static std::vector<Ref<RenderLayer>> GetList();
+
+		/*! Look up a Render Layer by its name
+
+			\param name Name of Render Layer
+			\return Render Layer, if it exists. Otherwise, nullptr.
+		*/
+		static Ref<RenderLayer> GetByName(const std::string& name);
+
+		/*! Get the name of a Render Layer
+
+			\return Render Layer's name
+		*/
+		std::string GetName() const;
+
+		/*! Get whether the Render Layer is enabled by default
+
+			\return Default enable state
+		 */
+		BNRenderLayerDefaultEnableState GetDefaultEnableState() const;
+
+		/*! Apply this Render Layer to a single Basic Block of Disassembly lines.
+			Subclasses should modify the input `lines` list to make modifications to
+			the presentation of the block.
+
+			\note This function will only handle Disassembly lines, and not any ILs.
+
+			\param block Basic Block containing those lines
+			\param lines Lines of text for the block, to be modified by this function
+		 */
+		virtual void ApplyToDisassemblyBlock(
+			Ref<BasicBlock> block,
+			std::vector<DisassemblyTextLine>& lines
+		)
+		{
+			(void)block;
+			(void)lines;
+		}
+
+		/*! Apply this Render Layer to a single Basic Block of Low Level IL lines.
+			Subclasses should modify the input `lines` list to make modifications to
+			the presentation of the block.
+
+			\note This function will only handle Lifted IL/LLIL/LLIL(SSA) lines.
+			You can use the block's `function_graph_type` property to determine which is being handled.
+
+			\param block Basic Block containing those lines
+			\param lines Lines of text for the block, to be modified by this function
+		 */
+		virtual void ApplyToLowLevelILBlock(
+			Ref<BasicBlock> block,
+			std::vector<DisassemblyTextLine>& lines
+		)
+		{
+			(void)block;
+			(void)lines;
+		}
+
+		/*! Apply this Render Layer to a single Basic Block of Medium Level IL lines.
+			Subclasses should modify the input `lines` list to make modifications to
+			the presentation of the block.
+
+			\note This function will only handle MLIL/MLIL(SSA)/Mapped MLIL/Mapped MLIL(SSA) lines.
+			You can use the block's `function_graph_type` property to determine which is being handled.
+
+			\param block Basic Block containing those lines
+			\param lines Lines of text for the block, to be modified by this function
+		 */
+		virtual void ApplyToMediumLevelILBlock(
+			Ref<BasicBlock> block,
+			std::vector<DisassemblyTextLine>& lines
+		)
+		{
+			(void)block;
+			(void)lines;
+		}
+
+		/*! Apply this Render Layer to a single Basic Block of High Level IL lines.
+			Subclasses should modify the input `lines` list to make modifications to
+			the presentation of the block.
+
+			\note This function will only handle HLIL/HLIL(SSA)/Language Representation lines.
+			You can use the block's `function_graph_type` property to determine which is being handled.
+
+			\warning This function will NOT apply to High Level IL bodies as displayed
+			in Linear View! Those are handled by `ApplyToHighLevelILBody` instead as they
+			do not have a Basic Block associated with them.
+
+			\param block Basic Block containing those lines
+			\param lines Lines of text for the block, to be modified by this function
+		 */
+		virtual void ApplyToHighLevelILBlock(
+			Ref<BasicBlock> block,
+			std::vector<DisassemblyTextLine>& lines
+		)
+		{
+			(void)block;
+			(void)lines;
+		}
+
+		/*! Apply this Render Layer to the entire body of a High Level IL function.
+			Subclasses should modify the input `lines` list to make modifications to
+			the presentation of the function.
+
+			\warning This function only applies to Linear View, and not to Graph View!
+			If you want to handle Graph View too, you will need to use `ApplyToHighLevelILBlock`
+			and handle the lines one block at a time.
+
+			\param function Function containing those lines
+			\param lines Lines of text for the function, to be modified by this function
+		 */
+		virtual void ApplyToHighLevelILBody(
+			Ref<Function> function,
+			std::vector<LinearDisassemblyLine>& lines
+		)
+		{
+			(void)function;
+			(void)lines;
+		}
+
+		/*! Apply to lines generated by Linear View that are not part of a function.
+			It is up to your implementation to figure out which type of Linear View Object
+			lines these are, and what to do with them.
+
+			\param obj Linear View Object being rendered
+			\param prev Linear View Object located directly above this one
+			\param next Linear View Object located directly below this one
+			\param lines Lines rendered by `obj`, to be modified by this function
+		 */
+		virtual void ApplyToMiscLinearLines(
+			Ref<LinearViewObject> obj,
+			Ref<LinearViewObject> prev,
+			Ref<LinearViewObject> next,
+			std::vector<LinearDisassemblyLine>& lines
+		)
+		{
+			(void)obj;
+			(void)prev;
+			(void)next;
+			(void)lines;
+		}
+
+		/*! Apply to lines generated by a Basic Block, of any type. If not overridden, this
+			function will call the appropriate ApplyToXLevelILBlock function.
+
+			\param block Basic Block containing those lines
+			\param lines Lines of text for the block, to be modified by this function
+		 */
+		virtual void ApplyToBlock(
+			Ref<BasicBlock> block,
+			std::vector<DisassemblyTextLine>& lines
+		);
+
+		/*! Apply this Render Layer to a Flow Graph, potentially modifying its nodes,
+			their edges, their lines, and their lines' content.
+
+			\note If you override this function, you will need to call the parent
+			implementation if you want to use the higher level ApplyToXLevelILBlock
+			functionality.
+
+			\param graph Graph to modify
+		*/
+		virtual void ApplyToFlowGraph(Ref<FlowGraph> graph);
+
+		/*! Apply this Render Layer to the lines produced by a LinearViewObject for rendering
+			in Linear View, potentially modifying the lines and their contents.
+
+			\note If you override this function, you will need to call the parent
+			implementation if you want to use the higher level ApplyToXLevelILBlock
+			functionality.
+
+			\param obj Linear View Object being rendered
+			\param prev Linear View Object located directly above this one
+			\param next Linear View Object located directly below this one
+			\param lines Lines originally rendered by the Linear View Object
+			\return Updated set of lines to display in Linear View
+		*/
+		virtual void ApplyToLinearViewObject(
+			Ref<LinearViewObject> obj,
+			Ref<LinearViewObject> prev,
+			Ref<LinearViewObject> next,
+			std::vector<LinearDisassemblyLine>& lines
+		);
+	};
+
+	class CoreRenderLayer: public RenderLayer
+	{
+	public:
+		CoreRenderLayer(BNRenderLayer* layer);
+		virtual ~CoreRenderLayer() = default;
+
+		virtual void ApplyToFlowGraph(Ref<FlowGraph> graph) override;
+		virtual void ApplyToLinearViewObject(
+			Ref<LinearViewObject> obj,
+			Ref<LinearViewObject> prev,
+			Ref<LinearViewObject> next,
+			std::vector<LinearDisassemblyLine>& lines
+		) override;
+	};
 }  // namespace BinaryNinja
 
 
@@ -18920,6 +19804,7 @@ namespace BinaryNinja::Collaboration
 		std::string GetUsername();
 		std::string GetToken();
 		int GetServerVersion();
+		std::string GetServerBuildVersion();
 		std::string GetServerBuildId();
 		std::vector<std::pair<std::string, std::string>> GetAuthBackends();
 		bool HasPulledProjects();
@@ -19918,6 +20803,15 @@ namespace std
 			return std::hash<decltype(T::GetObject(value.GetPtr()))>()(T::GetObject(value.GetPtr()));
 		}
 	};
+
+	template<> struct hash<BinaryNinja::StringRef>
+	{
+		typedef BinaryNinja::StringRef argument_type;
+		size_t operator()(argument_type const& value) const
+		{
+			return std::hash<std::string_view>()(value.operator std::string_view());
+		}
+	};
 }  // namespace std
 
 
@@ -19949,6 +20843,19 @@ template<> struct fmt::formatter<BinaryNinja::NameList>
 {
 	format_context::iterator format(const BinaryNinja::NameList& obj, format_context& ctx) const;
 	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator { return ctx.begin(); }
+};
+
+
+template<> struct fmt::formatter<BinaryNinja::StringRef> : fmt::formatter<std::string_view>
+{
+	format_context::iterator format(const BinaryNinja::StringRef& obj, format_context& ctx) const
+	{
+		return fmt::formatter<std::string_view>::format(obj.operator std::string_view(), ctx);
+	}
+	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator
+	{
+		return fmt::formatter<std::string_view>::parse(ctx);
+	}
 };
 
 template<typename T>

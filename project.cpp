@@ -522,6 +522,16 @@ void Project::EndBulkOperation()
 }
 
 
+Ref<Collaboration::RemoteProject> Project::GetRemoteProject()
+{
+
+	BNRemoteProject* project = BNProjectGetRemoteProject(m_object);
+	if (project == nullptr)
+		return nullptr;
+	return new Collaboration::RemoteProject(project);
+}
+
+
 ProjectFile::ProjectFile(BNProjectFile* file)
 {
 	m_object = file;

@@ -238,11 +238,25 @@ StructureType.create(members=[(Type.int(4), 'field_0'), (Type.int(4), 'field_4')
 StructureType.create(members=[(Type.int(4), 'field_0')], type=StructureVariant.ClassStructureType)
 ```
 
-#### Create Anonymous Enumerations
+#### Create Enumerations
 
 ```python
 Type.enumeration(members=[('ENUM_2', 2), ('ENUM_4', 4), ('ENUM_8', 8)])
 Type.enumeration(members=['ENUM_0', 'ENUM_1', 'ENUM_2'])
+
+# Anonymous Enumeration
+enum = Type.enumeration(arch.bv.arch, members={
+    "ZERO": 0,
+    "ONE": 1,
+    "TWO": 2
+}, width = 4)
+
+# Named Enumeration
+builder = TypeBuilder.enumeration()
+for member in enum.members:
+    builder.append(member.name, member.value)
+
+registered_type = bv.define_user_type("Enum_Name", builder.immutable_copy())
 ```
 
 ### Accessing Types

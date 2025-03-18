@@ -994,7 +994,8 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		break;
 	case armv7::ARMV7_MRS:
 	{
-		int dest_reg = ReadILOperand(il, instr, 0);
+		int dest_reg = GetRegisterByIndex(instr->fields[instr->format->operands[0].field0], instr->format->operands[0].prefix);
+
 		int intrinsic_id = ARMV7_INTRIN_MRS;
 
 		il.AddInstruction(

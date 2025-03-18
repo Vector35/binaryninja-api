@@ -2726,6 +2726,9 @@ public:
 		return registers;
 	}
 
+	MipsVersion GetMIPSVersion() {
+		return m_version;
+	}
 };
 
 class MipsO32CallingConvention: public CallingConvention
@@ -2765,6 +2768,77 @@ public:
 	{
 		return vector<uint32_t> { REG_S0, REG_S1, REG_S2, REG_S3, REG_S4, REG_S5, REG_S6, REG_S7,
 			REG_GP, REG_FP };
+	}
+
+	virtual uint32_t GetGlobalPointerRegister() override
+	{
+		return REG_GP;
+	}
+
+	virtual vector<uint32_t> GetImplicitlyDefinedRegisters() override
+	{
+		return vector<uint32_t> { REG_T9 };
+	}
+
+	virtual RegisterValue GetIncomingRegisterValue(uint32_t reg, Function* func) override
+	{
+		RegisterValue result;
+		if (reg == REG_T9)
+		{
+			result.state = ConstantPointerValue;
+			result.value = func->GetStart();
+		}
+		return result;
+	}
+};
+
+class MipsPS2CallingConvention: public CallingConvention
+{
+public:
+	MipsPS2CallingConvention(Architecture* arch): CallingConvention(arch, "ps2")
+	{
+	}
+	virtual uint32_t GetIntegerReturnValueRegister() override
+	{
+		return REG_V0;
+	}
+
+	virtual uint32_t GetHighIntegerReturnValueRegister() override
+	{
+		return REG_V1;
+	}
+
+	virtual vector<uint32_t> GetIntegerArgumentRegisters() override
+	{
+		return vector<uint32_t>{ REG_A0, REG_A1, REG_A2, REG_A3, REG_T0, REG_T1, REG_T2, REG_T3 };
+	}
+
+	virtual vector<uint32_t> GetFloatArgumentRegisters() override
+	{
+		return vector<uint32_t>{ FPREG_F12, FPREG_F13, FPREG_F14, FPREG_F15, FPREG_F16, FPREG_F17, FPREG_F18, FPREG_F19 };
+	}
+
+	virtual uint32_t GetFloatReturnValueRegister() override
+	{
+		return FPREG_F0;
+	}
+
+	virtual bool IsStackReservedForArgumentRegisters() override
+	{
+		return true;
+	}
+
+	virtual vector<uint32_t> GetCallerSavedRegisters() override
+	{
+		return vector<uint32_t> { REG_AT, REG_V0, REG_V1, REG_A0, REG_A1, REG_A2, REG_A3, REG_T0, REG_T1,
+			REG_T2, REG_T3, REG_T4, REG_T5, REG_T6, REG_T7, REG_T8, REG_T9 };
+	}
+
+	virtual vector<uint32_t> GetCalleeSavedRegisters() override
+	{
+		return vector<uint32_t> { REG_S0, REG_S1, REG_S2, REG_S3, REG_S4, REG_S5, REG_S6, REG_S7,
+			REG_GP, REG_FP, FPREG_F20, FPREG_F21, FPREG_F22, FPREG_F23, FPREG_F24, FPREG_F25,
+			FPREG_F26, FPREG_F27, FPREG_F28, FPREG_F29, FPREG_F30, FPREG_F31 };
 	}
 
 	virtual uint32_t GetGlobalPointerRegister() override
@@ -3331,7 +3405,8 @@ public:
 				uint32_t inst2 = *(uint32_t*)(cur->relocationDataCache);
 				Instruction instruction;
 				memset(&instruction, 0, sizeof(instruction));
-				if (mips_decompose(&inst2, sizeof(uint32_t), &instruction, m_version, cur->address, arch->GetEndianness(), DECOMPOSE_FLAGS_PSEUDO_OP))
+				MipsArchitecture& march = dynamic_cast<MipsArchitecture&>(*arch);
+				if (mips_decompose(&inst2, sizeof(uint32_t), &instruction, march.GetMIPSVersion(), cur->address, arch->GetEndianness(), DECOMPOSE_FLAGS_PSEUDO_OP))
 					break;
 
 				int32_t immediate = swap(inst2) & 0xffff;
@@ -3611,15 +3686,13 @@ extern "C"
 		MipsN64CallingConvention* n64LE = new MipsN64CallingConvention(mips64el);
 		MipsN64CallingConvention* n64BE = new MipsN64CallingConvention(mips64eb);
 		MipsN64CallingConvention* n64BEc = new MipsN64CallingConvention(cnmips64eb);
+		MipsPS2CallingConvention* ps2LE = new MipsPS2CallingConvention(r5900l);
+		MipsPS2CallingConvention* ps2BE = new MipsPS2CallingConvention(r5900b);
 
 		mipseb->RegisterCallingConvention(o32BE);
 		mipseb->SetDefaultCallingConvention(o32BE);
 		mipsel->RegisterCallingConvention(o32LE);
 		mipsel->SetDefaultCallingConvention(o32LE);
-		r5900l->RegisterCallingConvention(o32LE);
-		r5900l->SetDefaultCallingConvention(o32LE);
-		r5900b->RegisterCallingConvention(o32BE);
-		r5900b->SetDefaultCallingConvention(o32BE);
 		mips3->RegisterCallingConvention(o32BE);
 		mips3->SetDefaultCallingConvention(o32BE);
 		mips3el->RegisterCallingConvention(o32LE);
@@ -3630,6 +3703,10 @@ extern "C"
 		mips64eb->SetDefaultCallingConvention(n64BE);
 		cnmips64eb->RegisterCallingConvention(n64BEc);
 		cnmips64eb->SetDefaultCallingConvention(n64BEc);
+		r5900l->RegisterCallingConvention(ps2LE);
+		r5900l->SetDefaultCallingConvention(ps2LE);
+		r5900b->RegisterCallingConvention(ps2BE);
+		r5900b->SetDefaultCallingConvention(ps2BE);
 
 		MipsLinuxSyscallCallingConvention* linuxSyscallBE = new MipsLinuxSyscallCallingConvention(mipseb);
 		MipsLinuxSyscallCallingConvention* linuxSyscallLE = new MipsLinuxSyscallCallingConvention(mipsel);

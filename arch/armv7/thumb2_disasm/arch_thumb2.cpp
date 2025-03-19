@@ -207,6 +207,7 @@ public:
 					((decomp.format->operands[0].type == OPERAND_FORMAT_REG) &&
 						(decomp.fields[decomp.format->operands[0].field0] == 14))) {
 						result.AddBranch(FunctionReturn);
+						result.archTransitionByTargetAddr = true;
 				} else {
 					result.AddBranch(UnresolvedBranch);
 					result.archTransitionByTargetAddr = true;

@@ -705,7 +705,10 @@ protected:
 			if (UNCONDITIONAL(instr.cond))
 			{
 				if (instr.operands[0].cls == REG && instr.operands[0].reg == REG_LR)
+				{
 					result.AddBranch(FunctionReturn);
+					result.archTransitionByTargetAddr = true;
+				}
 				else
 				{
 					result.AddBranch(UnresolvedBranch);

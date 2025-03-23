@@ -1584,6 +1584,11 @@ bool SharedCache::LoadImageContainingAddress(uint64_t address, bool skipObjC)
 	return false;
 }
 
+static std::string GetNameForMemoryDataRegion(const SharedCacheMachOHeader& header, const std::string& regionName)
+{
+    return fmt::format("{}{}", header.installName.substr(0, header.installName.size() - header.identifierPrefix.size()), regionName);
+}
+
 bool SharedCache::LoadSectionAtAddress(uint64_t address)
 {
 	std::lock(m_mutex, m_viewSpecificState->viewOperationsThatInfluenceMetadataMutex);
@@ -1656,7 +1661,7 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
 
 	auto targetFile = vm->MappingAtAddress(targetSegment->start).first.fileAccessor->lock();
 	auto buff = reader.ReadBuffer(targetSegment->start, targetSegment->size);
-	m_dscView->GetMemoryMap()->AddDataMemoryRegion(targetSegment->prettyName, targetSegment->start, buff, targetSegment->flags);
+    m_dscView->GetMemoryMap()->AddDataMemoryRegion(GetNameForMemoryDataRegion(targetHeader, targetSegment->prettyName), targetSegment->start, buff, targetSegment->flags);
 
 	SetMemoryRegionIsLoaded(lock, *targetSegment);
 
@@ -1818,7 +1823,7 @@ bool SharedCache::LoadImageWithInstallName(std::lock_guard<std::mutex>& lock, st
 
 		auto targetFile = vm->MappingAtAddress(region.start).first.fileAccessor->lock();
 		auto buff = reader.ReadBuffer(region.start, region.size);
-		m_dscView->GetMemoryMap()->AddDataMemoryRegion(region.prettyName, region.start, buff, region.flags);
+		m_dscView->GetMemoryMap()->AddDataMemoryRegion(GetNameForMemoryDataRegion(header, region.prettyName), region.start, buff, region.flags);
 
 		SetMemoryRegionIsLoaded(lock, region);
 		regionsToLoad.push_back(&region);
@@ -2250,13 +2255,18 @@ std::optional<SharedCacheMachOHeader> SharedCache::LoadHeaderForAddress(std::sha
 
 		for (auto& section : header.sections)
 		{
-			char sectionName[17];
+			char sectionName[sizeof(section.sectname)+1];
 			memcpy(sectionName, section.sectname, sizeof(section.sectname));
-			sectionName[16] = 0;
+			sectionName[sizeof(sectionName)-1] = 0;
+            
+			char segmentName[sizeof(section.segname)+1];
+			memcpy(segmentName, section.segname, sizeof(section.segname));
+			segmentName[sizeof(segmentName)-1] = 0;
+
 			if (header.identifierPrefix.empty())
-				header.sectionNames.push_back(sectionName);
+				header.sectionNames.push_back(fmt::format("{}.{}", segmentName, sectionName));
 			else
-				header.sectionNames.push_back(header.identifierPrefix + "::" + sectionName);
+				header.sectionNames.push_back(fmt::format("{}::{}.{}", header.identifierPrefix, segmentName, sectionName));
 		}
 	}
 	catch (ReadException&)

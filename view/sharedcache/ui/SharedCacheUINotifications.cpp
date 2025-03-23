@@ -51,6 +51,18 @@ void UINotifications::OnViewChange(UIContext* context, ViewFrame* frame, const Q
 					Ref<SharedCacheAPI::SharedCache> cache = new SharedCacheAPI::SharedCache(view);
 					DisplayDSCPicker(ctx.context, view);
 				}));
+				ah->bindAction("Load Image by Address", UIAction([view = view](const UIActionContext& ctx) {
+					Ref<SharedCacheAPI::SharedCache> cache = new SharedCacheAPI::SharedCache(ctx.binaryView);
+					uint64_t addr = 0;
+					bool gotAddr = GetAddressInput(addr, "Address", "Address");
+					if (gotAddr)
+					{
+						BackgroundThread::create(ctx.context->mainWindow())->thenBackground(
+						[cache=cache, addr=addr]() {
+							cache->LoadImageContainingAddress(addr);
+						})->start();
+					}
+				}));
 				ah->bindAction("Load Section by Address", UIAction([view = view](const UIActionContext& ctx) {
 					Ref<SharedCacheAPI::SharedCache> cache = new SharedCacheAPI::SharedCache(ctx.binaryView);
 					uint64_t addr = 0;
@@ -121,12 +133,15 @@ void UINotifications::OnViewChange(UIContext* context, ViewFrame* frame, const Q
 				});
 				if (auto linearView = qobject_cast<LinearView*>(viewInt->widget()))
 				{
-					linearView->contextMenu().addAction("Load ADDRHERE", VIEW_NAME);
-					linearView->contextMenu().addAction("Load IMGHERE", VIEW_NAME);
-					linearView->contextMenu().addAction("Load Image by Name", "DSCView2");
-					linearView->contextMenu().addAction("Load Section by Address", "DSCView2");
-					linearView->contextMenu().setGroupOrdering(VIEW_NAME, 0);
-					linearView->contextMenu().setGroupOrdering("DSCView2", 1);
+                    constexpr auto groupOneName = VIEW_NAME;
+                    constexpr auto groupTwoName = VIEW_NAME "2";
+					linearView->contextMenu().addAction("Load ADDRHERE", groupOneName);
+					linearView->contextMenu().addAction("Load IMGHERE", groupOneName);
+					linearView->contextMenu().addAction("Load Image by Name", groupTwoName);
+					linearView->contextMenu().addAction("Load Image by Address", groupTwoName);
+					linearView->contextMenu().addAction("Load Section by Address", groupTwoName);
+					linearView->contextMenu().setGroupOrdering(groupOneName, 0);
+					linearView->contextMenu().setGroupOrdering(groupTwoName, 1);
 				}
 			}
 		}

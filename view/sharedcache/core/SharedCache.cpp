@@ -1586,7 +1586,7 @@ bool SharedCache::LoadImageContainingAddress(uint64_t address, bool skipObjC)
 
 static std::string GetNameForMemoryDataRegion(const SharedCacheMachOHeader& header, const std::string& regionName)
 {
-    return fmt::format("{}{}", header.installName.substr(0, header.installName.size() - header.identifierPrefix.size()), regionName);
+	return fmt::format("{}{}", header.installName.substr(0, header.installName.size() - header.identifierPrefix.size()), regionName);
 }
 
 bool SharedCache::LoadSectionAtAddress(uint64_t address)
@@ -1661,7 +1661,7 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
 
 	auto targetFile = vm->MappingAtAddress(targetSegment->start).first.fileAccessor->lock();
 	auto buff = reader.ReadBuffer(targetSegment->start, targetSegment->size);
-    m_dscView->GetMemoryMap()->AddDataMemoryRegion(GetNameForMemoryDataRegion(targetHeader, targetSegment->prettyName), targetSegment->start, buff, targetSegment->flags);
+	m_dscView->GetMemoryMap()->AddDataMemoryRegion(GetNameForMemoryDataRegion(targetHeader, targetSegment->prettyName), targetSegment->start, buff, targetSegment->flags);
 
 	SetMemoryRegionIsLoaded(lock, *targetSegment);
 
@@ -1689,22 +1689,34 @@ static void GetObjCSettings(Ref<BinaryView> view, bool* processObjCMetadata, boo
 		*processObjCMetadata = settings->Get<bool>("loader.dsc.processObjC", view);
 }
 
-static void ProcessObjCSectionsForImageWithName(std::string baseName, std::shared_ptr<VM> vm, std::shared_ptr<DSCObjC::DSCObjCProcessor> objc, bool processCFStrings, bool processObjCMetadata, Ref<Logger> logger)
+static void ProcessObjCSectionsForMemoryRegion(const MemoryRegion& region, std::shared_ptr<VM> vm, std::shared_ptr<DSCObjC::DSCObjCProcessor> objc, bool processCFStrings, bool processObjCMetadata, Ref<Logger> logger)
 {
 	try
 	{
 		if (processObjCMetadata)
-			objc->ProcessObjCData(vm, baseName);
+			objc->ProcessObjCData(vm, region.prettyName);
 		if (processCFStrings)
-			objc->ProcessCFStrings(vm, baseName);
+			objc->ProcessCFStrings(vm, region.prettyName);
 	}
 	catch (const std::exception& ex)
 	{
-		logger->LogWarn("Error processing ObjC data for image %s: %s", baseName.c_str(), ex.what());
+		logger->LogWarn("Error processing ObjC data for memory region %s: %s", region.prettyName.c_str(), ex.what());
 	}
 	catch (...)
 	{
-		logger->LogWarn("Error processing ObjC data for image %s", baseName.c_str());
+		logger->LogWarn("Error processing ObjC data for memory region %s", region.prettyName.c_str());
+	}
+}
+
+void SharedCache::ProcessObjCSectionsForImage(std::lock_guard<std::mutex>& lock, const CacheImage& image, std::shared_ptr<VM> vm, bool processCFStrings, bool processObjCMetadata)
+{
+	const auto objc = std::make_shared<DSCObjC::DSCObjCProcessor>(m_dscView, this, false);
+	for (auto regionStart : image.regionStarts)
+	{
+		const auto& region = m_cacheInfo->memoryRegions.find(regionStart)->second;
+		if (!MemoryRegionIsLoaded(lock, region))
+			continue;
+		ProcessObjCSectionsForMemoryRegion(region, vm, objc, processCFStrings, processObjCMetadata, m_logger);
 	}
 }
 
@@ -1717,10 +1729,17 @@ void SharedCache::ProcessObjCSectionsForImageWithInstallName(std::string install
 	if (!processObjCMetadata && !processCFStrings)
 		return;
 
-	auto objc = std::make_shared<DSCObjC::DSCObjCProcessor>(m_dscView, this, false);
 	auto vm = GetVMMap();
 
-	ProcessObjCSectionsForImageWithName(base_name(installName), vm, objc, processCFStrings, processObjCMetadata, m_logger);
+	for (const auto& image : this->m_cacheInfo->images)
+	{
+		if (image.installName != installName)
+			continue;
+		
+		std::lock_guard lock(m_mutex);
+		ProcessObjCSectionsForImage(lock, image, vm, processCFStrings, processObjCMetadata);
+		break;
+	}
 }
 
 void SharedCache::ProcessAllObjCSections()
@@ -1741,18 +1760,9 @@ void SharedCache::ProcessAllObjCSections(std::lock_guard<std::mutex>& lock)
 	auto objc = std::make_shared<DSCObjC::DSCObjCProcessor>(m_dscView, this, false);
 	auto vm = GetVMMap();
 
-	std::set<uint64_t> processedImageHeaders;
 	for (auto region : GetMappedRegions())
 	{
-		// Don't repeat the same images multiple times
-		auto header = HeaderForAddress(region->start);
-		if (!header)
-			continue;
-		if (processedImageHeaders.find(header->textBase) != processedImageHeaders.end())
-			continue;
-		processedImageHeaders.insert(header->textBase);
-
-		ProcessObjCSectionsForImageWithName(header->identifierPrefix, vm, objc, processCFStrings, processObjCMetadata, m_logger);
+		ProcessObjCSectionsForMemoryRegion(*region, vm, objc, processCFStrings, processObjCMetadata, m_logger);
 	}
 }
 
@@ -1853,7 +1863,7 @@ bool SharedCache::LoadImageWithInstallName(std::lock_guard<std::mutex>& lock, st
 		bool processObjCMetadata;
 		GetObjCSettings(m_dscView, &processCFStrings, &processObjCMetadata);
 
-		ProcessObjCSectionsForImageWithName(h->identifierPrefix, vm, std::make_shared<DSCObjC::DSCObjCProcessor>(m_dscView, this, false), processCFStrings, processObjCMetadata, m_logger);
+		ProcessObjCSectionsForImage(lock, *targetImage, vm, processCFStrings, processObjCMetadata);
 	}
 
 	m_dscView->AddAnalysisOption("linearsweep");
@@ -2258,7 +2268,7 @@ std::optional<SharedCacheMachOHeader> SharedCache::LoadHeaderForAddress(std::sha
 			char sectionName[sizeof(section.sectname)+1];
 			memcpy(sectionName, section.sectname, sizeof(section.sectname));
 			sectionName[sizeof(sectionName)-1] = 0;
-            
+			
 			char segmentName[sizeof(section.segname)+1];
 			memcpy(segmentName, section.segname, sizeof(section.segname));
 			segmentName[sizeof(segmentName)-1] = 0;

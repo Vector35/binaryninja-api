@@ -1124,13 +1124,13 @@ void DSCObjCProcessor::ApplyMethodTypes(Class& cls)
 void DSCObjCProcessor::PostProcessObjCSections(VMReader* reader, std::string baseName)
 {
 	auto ptrSize = m_data->GetAddressSize();
-	if (auto imageInfo = m_data->GetSectionByName(baseName + "::__objc_imageinfo"))
+	if (auto imageInfo = m_data->GetSectionByName(baseName + ".__objc_imageinfo"))
 	{
 		auto start = imageInfo->GetStart();
 		auto type = Type::NamedType(m_data, m_typeNames.imageInfo);
 		m_data->DefineDataVariable(start, type);
 	}
-	if (auto selrefs = m_data->GetSectionByName(baseName + "::__objc_selrefs"))
+	if (auto selrefs = m_data->GetSectionByName(baseName + ".__objc_selrefs"))
 	{
 		auto start = selrefs->GetStart();
 		auto end = selrefs->GetEnd();
@@ -1153,7 +1153,7 @@ void DSCObjCProcessor::PostProcessObjCSections(VMReader* reader, std::string bas
 			DefineObjCSymbol(DataSymbol, type, "selRef_" + sel, i, true);
 		}
 	}
-	if (auto superRefs = m_data->GetSectionByName(baseName + "::__objc_classrefs"))
+	if (auto superRefs = m_data->GetSectionByName(baseName + ".__objc_classrefs"))
 	{
 		auto start = superRefs->GetStart();
 		auto end = superRefs->GetEnd();
@@ -1171,7 +1171,7 @@ void DSCObjCProcessor::PostProcessObjCSections(VMReader* reader, std::string bas
 			}
 		}
 	}
-	if (auto superRefs = m_data->GetSectionByName(baseName + "::__objc_superrefs"))
+	if (auto superRefs = m_data->GetSectionByName(baseName + ".__objc_superrefs"))
 	{
 		auto start = superRefs->GetStart();
 		auto end = superRefs->GetEnd();
@@ -1189,7 +1189,7 @@ void DSCObjCProcessor::PostProcessObjCSections(VMReader* reader, std::string bas
 			}
 		}
 	}
-	if (auto protoRefs = m_data->GetSectionByName(baseName + "::__objc_protorefs"))
+	if (auto protoRefs = m_data->GetSectionByName(baseName + ".__objc_protorefs"))
 	{
 		auto start = protoRefs->GetStart();
 		auto end = protoRefs->GetEnd();
@@ -1207,7 +1207,7 @@ void DSCObjCProcessor::PostProcessObjCSections(VMReader* reader, std::string bas
 			}
 		}
 	}
-	if (auto ivars = m_data->GetSectionByName(baseName + "::__objc_ivar"))
+	if (auto ivars = m_data->GetSectionByName(baseName + ".__objc_ivar"))
 	{
 		auto start = ivars->GetStart();
 		auto end = ivars->GetEnd();
@@ -1408,23 +1408,23 @@ void DSCObjCProcessor::ProcessObjCData(std::shared_ptr<VM> vm, std::string baseN
 	m_typeNames.protocol = finalizeStructureBuilder(m_data, protocolBuilder, "objc_protocol_t").first;
 
 	m_data->BeginBulkModifySymbols();
-	if (auto classList = m_data->GetSectionByName(baseName + "::__objc_classlist"))
+	if (auto classList = m_data->GetSectionByName(baseName + ".__objc_classlist"))
 		LoadClasses(&reader, classList);
-	if (auto nonLazyClassList = m_data->GetSectionByName(baseName + "::__objc_nlclslist"))
+	if (auto nonLazyClassList = m_data->GetSectionByName(baseName + ".__objc_nlclslist"))
 		LoadClasses(&reader, nonLazyClassList);  // See: https://stackoverflow.com/a/15318325
 
 	GenerateClassTypes();
 	for (auto& [_, cls] : m_classes)
 		ApplyMethodTypes(cls);
 
-	if (auto catList = m_data->GetSectionByName(baseName + "::__objc_catlist"))  // Do this after loading class type data.
+	if (auto catList = m_data->GetSectionByName(baseName + ".__objc_catlist"))  // Do this after loading class type data.
 		LoadCategories(&reader, catList);
-	if (auto nonLazyCatList = m_data->GetSectionByName(baseName + "::__objc_nlcatlist"))  // Do this after loading class type data.
+	if (auto nonLazyCatList = m_data->GetSectionByName(baseName + ".__objc_nlcatlist"))  // Do this after loading class type data.
 		LoadCategories(&reader, nonLazyCatList);
 	for (auto& [_, cat] : m_categories)
 		ApplyMethodTypes(cat);
 
-	if (auto protoList = m_data->GetSectionByName(baseName + "::__objc_protolist"))
+	if (auto protoList = m_data->GetSectionByName(baseName + ".__objc_protolist"))
 		LoadProtocols(&reader, protoList);
 
 	PostProcessObjCSections(&reader, baseName);
@@ -1477,7 +1477,7 @@ void DSCObjCProcessor::ProcessCFStrings(std::shared_ptr<VM> vm, std::string base
 	m_typeNames.cfStringUTF16 = type.first;
 
 	auto reader = VMReader(vm);
-	if (auto cfstrings = m_data->GetSectionByName(baseName + "::__cfstring"))
+	if (auto cfstrings = m_data->GetSectionByName(baseName + ".__cfstring"))
 	{
 		auto start = cfstrings->GetStart();
 		auto end = cfstrings->GetEnd();

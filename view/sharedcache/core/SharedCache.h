@@ -647,6 +647,7 @@ private:
 			uint64_t stringsOffset, size_t stringsSize, uint64_t nlistEntriesOffset, uint32_t nlistCount, uint32_t nlistStartIndex = 0);
 		void ApplySymbol(Ref<BinaryView> view, Ref<TypeLibrary> typeLib, Ref<Symbol> symbol);
 
+		void ProcessObjCSectionsForImage(std::lock_guard<std::mutex>& lock, const CacheImage& image, std::shared_ptr<VM> vm, bool processCFStrings, bool processObjCMetadata);
 		void ProcessAllObjCSections(std::lock_guard<std::mutex>&);
 		bool LoadImageWithInstallName(std::lock_guard<std::mutex>&, std::string installName, bool skipObjC);
 

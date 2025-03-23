@@ -2422,8 +2422,28 @@ void SharedCache::InitializeHeader(
 	if (settings && settings->Contains("loader.dsc.processFunctionStarts"))
 		applyFunctionStarts = settings->Get<bool>("loader.dsc.processFunctionStarts", view);
 
+	// For identifying the span of memory containing the image header if it 
+	// hasn't already been initialized
+	uint64_t headerRegionEnd = 0;
+	MemoryRegion const* headerRegion = nullptr;
+	for (const auto& region : regionsToLoad)
+	{
+		if (region->start != header.textBase)
+			continue;
+		
+		if (!MemoryRegionIsHeaderInitialized(lock, *region))
+		{
+			headerRegion = region;
+			headerRegionEnd = region->start + region->size;
+		}
+		break;
+	}
+
 	for (size_t i = 0; i < header.sections.size(); i++)
 	{
+		if (headerRegion && header.sections[i].addr < headerRegionEnd)
+			headerRegionEnd = header.sections[i].addr;
+
 		bool skip = false;
 		for (const auto& region : regionsToLoad)
 		{
@@ -2547,6 +2567,22 @@ void SharedCache::InitializeHeader(
 
 		view->AddUserSection(header.sectionNames[i], header.sections[i].addr, header.sections[i].size, semantics,
 			type, header.sections[i].align);
+	}
+
+	// If the memory region containing the header is not initialized and was 
+	// found then add a section for it
+	if (headerRegion && headerRegionEnd > headerRegion->start)
+	{
+		for (const auto& region : regionsToLoad)
+		{
+			if (region->start != header.textBase)
+				continue;
+
+			const auto headerSectionName = fmt::format("{}::__header", header.identifierPrefix);
+			view->AddUserSection(headerSectionName, region->start, headerRegionEnd - region->start, 
+				SectionSemanticsForRegion(*region));
+			break;
+		}
 	}
 
 	auto typeLib = view->GetTypeLibrary(header.installName);

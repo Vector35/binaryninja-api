@@ -127,7 +127,8 @@ void SharedCacheWorkflow::FixupStubs(Ref<AnalysisContext> ctx)
 			return;
 		auto section = bv->GetSectionsAt(funcStart)[0];
 
-		auto imageName = section->GetName();
+        const auto sectionName = section->GetName();
+		auto imageName = sectionName;
 		// remove everything after ::
 		auto pos = imageName.find("::");
 		if (pos != std::string::npos)
@@ -152,7 +153,7 @@ void SharedCacheWorkflow::FixupStubs(Ref<AnalysisContext> ctx)
 		}
 
 		// Processor that automatically loads the libObjC image when it encounters a stub (so we can do inlining).
-		if (workflowState->autoLoadObjCStubRequirements && section->GetName().find("__objc_stubs") != std::string::npos)
+		if (workflowState->autoLoadObjCStubRequirements && sectionName.find("__objc_stubs") != std::string::npos)
 		{
 			auto firstInstruction = mlil->GetInstruction(0);
 			if (firstInstruction.operation == MLIL_TAILCALL)
@@ -271,10 +272,10 @@ void SharedCacheWorkflow::FixupStubs(Ref<AnalysisContext> ctx)
 			return;
 		}
 
-		if (section->GetName().find("::_stubs") != std::string::npos // Branch Islands (iOS 16)
-			|| section->GetName().find("dyld_shared_cache_branch_islands") != std::string::npos // Branch Islands (iOS 11-?)
-			|| section->GetName().find("::__stubs") != std::string::npos // Stubs (non arm64e)
-			|| section->GetName().find("::__auth_stubs") != std::string::npos // Stubs (arm64e)
+		if (sectionName.find("::_stubs") != std::string::npos // Branch Islands (iOS 16)
+			|| sectionName.find("dyld_shared_cache_branch_islands") != std::string::npos // Branch Islands (iOS 11-?)
+			|| sectionName.find(".__stubs") != std::string::npos // Stubs (non arm64e)
+			|| sectionName.find(".__auth_stubs") != std::string::npos // Stubs (arm64e)
 			)
 		{
 			auto firstInstruction = mlil->GetInstruction(0);

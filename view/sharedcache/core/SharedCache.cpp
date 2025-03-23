@@ -2422,6 +2422,7 @@ void SharedCache::InitializeHeader(
 	if (settings && settings->Contains("loader.dsc.processFunctionStarts"))
 		applyFunctionStarts = settings->Get<bool>("loader.dsc.processFunctionStarts", view);
 
+	std::set<const MemoryRegion*> regionsWithNoSections(regionsToLoad.begin(), regionsToLoad.end());
 	for (size_t i = 0; i < header.sections.size(); i++)
 	{
 		bool skip = false;
@@ -2429,6 +2430,7 @@ void SharedCache::InitializeHeader(
 		{
 			if (header.sections[i].addr >= region->start && header.sections[i].addr < region->start + region->size)
 			{
+				regionsWithNoSections.erase(region);
 				if (MemoryRegionIsHeaderInitialized(lock, *region))
 					skip = true;
 				break;
@@ -2547,6 +2549,16 @@ void SharedCache::InitializeHeader(
 
 		view->AddUserSection(header.sectionNames[i], header.sections[i].addr, header.sections[i].size, semantics,
 			type, header.sections[i].align);
+	}
+
+	// Some segments like `libobjc.A.dylib::__OBJC_RW` don't have any sections. A section is added for segments like 
+	// this so that they display nicely in Binary Ninja. Otherwise it can be confusing where data came from if it has 
+	// no section.
+	for (const auto& region : regionsWithNoSections)
+	{
+		if (MemoryRegionIsHeaderInitialized(lock, *region))
+			continue;
+		view->AddUserSection(region->prettyName, region->start, region->size, SectionSemanticsForRegion(*region));
 	}
 
 	auto typeLib = view->GetTypeLibrary(header.installName);

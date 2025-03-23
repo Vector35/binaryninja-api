@@ -1621,6 +1621,8 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		:return: flag write type
 		:rtype: int
 		"""
+		if write_type == '':
+			return FlagWriteTypeIndex(0)
 		return self._flag_write_types[write_type]
 
 	def get_semantic_flag_class_by_name(self, sem_class: SemanticClassName) -> SemanticClassIndex:

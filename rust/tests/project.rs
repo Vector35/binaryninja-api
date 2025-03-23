@@ -2,23 +2,17 @@ use binaryninja::headless::Session;
 use binaryninja::metadata::Metadata;
 use binaryninja::project::Project;
 use binaryninja::rc::Ref;
-use rstest::*;
 use std::time::SystemTime;
 
 // TODO: We should use tempdir to manage the project directory.
-
-#[fixture]
-#[once]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
 
 fn unique_project(name: &str) -> String {
     format!("{}/{}", std::env::temp_dir().to_str().unwrap(), name)
 }
 
-#[rstest]
-fn create_delete_empty(_session: &Session) {
+#[test]
+fn create_delete_empty() {
+    let _session = Session::new().expect("Failed to initialize session");
     use std::fs::canonicalize;
 
     let project_name = "create_delete_empty_project";
@@ -46,8 +40,9 @@ fn create_delete_empty(_session: &Session) {
     std::fs::remove_dir_all(project_path).unwrap();
 }
 
-#[rstest]
-fn create_close_open_close(_session: &Session) {
+#[test]
+fn create_close_open_close() {
+    let _session = Session::new().expect("Failed to initialize session");
     let project_name = "create_close_open_close";
     let project_path = unique_project(project_name);
     // create the project
@@ -74,8 +69,9 @@ fn create_close_open_close(_session: &Session) {
     std::fs::remove_dir_all(project_path).unwrap();
 }
 
-#[rstest]
-fn modify_project(_session: &Session) {
+#[test]
+fn modify_project() {
+    let _session = Session::new().expect("Failed to initialize session");
     let project_name = "modify_project_project";
     let project_path = unique_project(project_name);
     // create the project

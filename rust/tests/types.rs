@@ -3,24 +3,11 @@ use binaryninja::confidence::Conf;
 use binaryninja::file_metadata::FileMetadata;
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
-use binaryninja::rc::Ref;
 use binaryninja::types::{MemberAccess, MemberScope, StructureBuilder, StructureMember, Type};
-use rstest::*;
 
-#[fixture]
-#[once]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
-
-#[fixture]
-#[once]
-fn empty_view() -> Ref<BinaryView> {
-    BinaryView::from_data(&FileMetadata::new(), &[]).expect("Failed to create view")
-}
-
-#[rstest]
-fn test_type_to_string(_session: &Session) {
+#[test]
+fn test_type_to_string() {
+    let _session = Session::new().expect("Failed to initialize session");
     let test_type = Type::int(4, true);
     assert_eq!(test_type.to_string(), "int32_t".to_string());
 
@@ -33,8 +20,9 @@ fn test_type_to_string(_session: &Session) {
     assert_eq!(test_fn_type.to_string(), "int32_t()");
 }
 
-#[rstest]
-fn test_structure_builder(_session: &Session) {
+#[test]
+fn test_structure_builder() {
+    let _session = Session::new().expect("Failed to initialize session");
     let mut builder = StructureBuilder::new();
     builder.insert(
         &Type::int(4, true),
@@ -68,8 +56,11 @@ fn test_structure_builder(_session: &Session) {
     );
 }
 
-#[rstest]
-fn add_type_to_view(_session: &Session, empty_view: &BinaryView) {
+#[test]
+fn add_type_to_view() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let empty_view =
+        BinaryView::from_data(&FileMetadata::new(), &[]).expect("Failed to create view");
     let test_type = Type::int(4, true);
     empty_view.define_auto_type("test", "me", &test_type);
     assert!(empty_view.type_by_name("test").is_some());

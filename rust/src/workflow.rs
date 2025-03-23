@@ -529,6 +529,34 @@ impl Workflow {
         }
     }
 
+    /// Insert the list of `activities` after the specified `activity` and at the same level.
+    ///
+    /// * `activity` - the Activity node for which to insert `activities` after
+    /// * `activities` - the list of Activities to insert
+    pub fn insert_after<A, I>(&self, activity: A, activities: I) -> bool
+    where
+        A: BnStrCompatible,
+        I: IntoIterator,
+        I::Item: BnStrCompatible,
+    {
+        let input_list: Vec<_> = activities
+            .into_iter()
+            .map(|a| a.into_bytes_with_nul())
+            .collect();
+        let mut input_list_ptr: Vec<*const _> = input_list
+            .iter()
+            .map(|x| x.as_ref().as_ptr() as *const c_char)
+            .collect();
+        unsafe {
+            BNWorkflowInsertAfter(
+                self.handle.as_ptr(),
+                activity.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                input_list_ptr.as_mut_ptr(),
+                input_list.len(),
+            )
+        }
+    }
+
     /// Remove the specified `activity`
     pub fn remove<A: BnStrCompatible>(&self, activity: A) -> bool {
         unsafe {

@@ -1800,7 +1800,11 @@ class Function:
 
 		idx = core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)
 
-		llil = self.llil
+		try:
+			llil = self.llil
+		except ILException:
+			return None
+
 		if idx == len(llil):
 			return None
 

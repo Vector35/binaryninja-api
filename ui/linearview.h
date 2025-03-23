@@ -15,6 +15,7 @@
 #include "uicontext.h"
 #include "instructionedit.h"
 #include "ilchooser.h"
+#include "commands.h"
 #include <assembledialog.h>
 
 #define LINEAR_VIEW_UPDATE_CHECK_INTERVAL 200
@@ -243,6 +244,8 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	QHBoxLayout* m_dataButtonLayout = nullptr;
 
 	std::set<std::string> m_layers;
+
+	FieldResolutionState m_fieldResolution;
 
 	void setTopToAddress(uint64_t addr);
 	void setTopToOrderingIndex(uint64_t idx);

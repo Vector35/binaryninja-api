@@ -354,7 +354,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		``clone`` Clone a new Workflow, copying all Activities and the execution strategy.
 
-		:param str name: the name for the new Workflow
+		:param str name: if specified, name the new Workflow, otherwise the name is copied from the original
 		:param str activity: if specified, perform the clone operation using ``activity`` as the root
 		:return: a new Workflow
 		:rtype: Workflow
@@ -487,7 +487,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNWorkflowClear(self.handle)
 
-	def insert(self, activity: ActivityType, activities: List[str]) -> bool:
+	def insert(self, activity: ActivityType, activities: Union[List[str], str]) -> bool:
 		"""
 		``insert`` Insert the list of ``activities`` before the specified ``activity`` and at the same level.
 
@@ -496,10 +496,28 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		:return: True on success, False otherwise
 		:rtype: bool
 		"""
+		if isinstance(activities, str):
+			activities = [activities]
 		input_list = (ctypes.c_char_p * len(activities))()
 		for i in range(0, len(activities)):
 			input_list[i] = str(activities[i]).encode('charmap')
 		return core.BNWorkflowInsert(self.handle, str(activity), input_list, len(activities))
+
+	def insert_after(self, activity: ActivityType, activities: Union[List[str], str]) -> bool:
+		"""
+		``insert_after`` Insert the list of ``activities`` after the specified ``activity`` and at the same level.
+
+		:param str activity: the Activity node for which to insert ``activities`` after
+		:param list[str] activities: the list of Activities to insert
+		:return: True on success, False otherwise
+		:rtype: bool
+		"""
+		if isinstance(activities, str):
+			activities = [activities]
+		input_list = (ctypes.c_char_p * len(activities))()
+		for i in range(0, len(activities)):
+			input_list[i] = str(activities[i]).encode('charmap')
+		return core.BNWorkflowInsertAfter(self.handle, str(activity), input_list, len(activities))
 
 	def remove(self, activity: ActivityType) -> bool:
 		"""

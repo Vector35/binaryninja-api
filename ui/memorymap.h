@@ -10,6 +10,8 @@
 #include <QtWidgets/QStyledItemDelegate>
 #include <QtCore/QSortFilterProxyModel>
 
+#include "binaryninjaapi.h"
+#include "notificationsdispatcher.h"
 #include "render.h"
 #include "sidebar.h"
 #include "uitypes.h"
@@ -94,7 +96,7 @@ enum class SegmentColumn : int {
 };
 
 
-class BINARYNINJAUIAPI SegmentModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI SegmentModel : public QAbstractItemModel
 {
 	BinaryViewRef m_data;
 
@@ -118,9 +120,7 @@ public:
 
 	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-	virtual void OnSegmentAdded(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override;
-	virtual void OnSegmentUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override;
-	virtual void OnSegmentRemoved(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override;
+	void updateSegments(std::vector<SegmentRef>&& segments);
 };
 
 /*!
@@ -151,6 +151,8 @@ public:
 	SegmentWidget(BinaryViewRef data, QWidget* parent = nullptr);
 	virtual ~SegmentWidget();
 
+	SegmentModel* model() { return m_model; }
+
 	void updateFont();
 	void highlightRelatedSegments(SectionRef section);
 	void currentRowChanged(const QModelIndex& current, const QModelIndex& previous);
@@ -172,7 +174,7 @@ enum class SectionColumn: int
 };
 
 
-class BINARYNINJAUIAPI SectionModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI SectionModel : public QAbstractItemModel
 {
 	BinaryViewRef m_data;
 
@@ -196,9 +198,7 @@ public:
 
 	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-	virtual void OnSectionAdded(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override;
-	virtual void OnSectionUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override;
-	virtual void OnSectionRemoved(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override;
+	void updateSections(std::vector<SectionRef>&& sections);
 };
 
 /*!
@@ -225,6 +225,8 @@ public:
 	SectionWidget(BinaryViewRef data, QWidget* parent = nullptr);
 	virtual ~SectionWidget();
 
+	SectionModel* model() { return m_model; }
+
 	void updateFont();
 	void highlightRelatedSections(SegmentRef segment);
 	void currentRowChanged(const QModelIndex& current, const QModelIndex& previous);
@@ -247,6 +249,7 @@ class BINARYNINJAUIAPI MemoryMapView : public QWidget, public View
 	Q_OBJECT
 
 	BinaryViewRef m_data;
+	std::unique_ptr<NotificationsDispatcher> m_dispatcher = nullptr;
 	MemoryMapContainer* m_container;
 
 	SectionWidget* m_sectionWidget;

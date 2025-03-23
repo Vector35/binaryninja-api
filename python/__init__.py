@@ -203,8 +203,6 @@ def get_unique_identifier():
 def get_install_directory():
 	"""
 	``get_install_directory`` returns a string pointing to the installed binary currently running
-
-	.. warning:: ONLY for use within the Binary Ninja UI, behavior is undefined and unreliable if run headlessly
 	"""
 	return core.BNGetInstallDirectory()
 

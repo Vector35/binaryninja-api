@@ -32,7 +32,6 @@ pub fn byte_width(bit_width: u32) -> u32 {
 
 #[derive(Clone, Debug)]
 pub struct AddressBlockMemoryInfo {
-    pub name: String,
     pub segment: SegmentBuilder,
     pub segment_flags: SegmentFlags,
     pub section: SectionBuilder,
@@ -96,9 +95,43 @@ impl DeviceMapper {
 
     // TODO: Add address blocks from derived peripherals?
     pub fn map_peripheral_to_view(&self, view: &BinaryView, peripheral: &PeripheralInfo) {
+        // Get the size to extend the current block by.
+        let extend_block_size = |current_block: &AddressBlock, new_block: &AddressBlock| {
+            (new_block.offset + new_block.size - current_block.offset).max(current_block.size)
+        };
+
+        let merge_blocks = |mut coalesced_blocks: Vec<AddressBlock>,
+                            new_block: AddressBlock|
+         -> Vec<AddressBlock> {
+            if let Some(current_block) = coalesced_blocks.last_mut() {
+                // Check if the new block can be merged with the last block.
+                // TODO: We don't account for the offset between the blocks
+                // TODO: Because we dont that means a register block 0x1000 away from another register block
+                // TODO: will still be merged, which is undesirable considering that SVD address blocks
+                // TODO: are suppose to be distinct memory regions!
+                if current_block.usage == new_block.usage {
+                    current_block.size = extend_block_size(current_block, &new_block);
+                    return coalesced_blocks;
+                }
+            }
+            // Push as a new block if not mergeable.
+            coalesced_blocks.push(new_block);
+            coalesced_blocks
+        };
+
         if let Some(address_blocks) = &peripheral.address_block {
-            for address_block in address_blocks {
-                self.map_peripheral_block_to_view(view, peripheral, address_block);
+            // Because some SVD authors decided to create address blocks for sub-regions
+            // we must first coalesce all contiguous register address blocks.
+            let mut sorted_blocks = address_blocks.clone();
+            sorted_blocks.sort_by_key(|block| block.offset);
+            let merged_blocks: Vec<AddressBlock> =
+                sorted_blocks.into_iter().fold(Vec::new(), merge_blocks);
+            // Update the peripheral so downstream usage sees only merged blocks.
+            let mut updated_peripheral = peripheral.clone();
+            updated_peripheral.address_block = Some(merged_blocks.clone());
+
+            for address_block in merged_blocks {
+                self.map_peripheral_block_to_view(view, &updated_peripheral, &address_block);
             }
         }
     }
@@ -115,12 +148,25 @@ impl DeviceMapper {
             block_addr,
             peripheral.name
         );
-        let memory_info = self.peripheral_block_memory_info(peripheral, address_block);
+
+        // We don't postfix the block offset in case we only have a single peripheral address block
+        // as it is unnecessary to talk about a unique block in that case.
+        let periph_block_len = peripheral.address_block.as_ref().unwrap().len();
+        let block_name = if address_block.offset == 0 || periph_block_len == 1 {
+            // Block name: "PERIPH"
+            peripheral.name.to_owned()
+        } else {
+            // Block name: "PERIPH_0x40"
+            format!("{}_0x{:x}", peripheral.name, address_block.offset)
+        };
+
+        let memory_info =
+            self.peripheral_block_memory_info(peripheral, address_block, block_name.clone());
 
         // Add the block segment, section and backing memory.
         let data_memory = DataBuffer::new(&vec![0; address_block.size as usize]).unwrap();
         let added_memory = view.memory_map().add_data_memory_region(
-            &memory_info.name,
+            &block_name,
             block_addr,
             &data_memory,
             Some(memory_info.segment_flags),
@@ -131,7 +177,7 @@ impl DeviceMapper {
         if !added_memory {
             log::error!(
                 "Failed to add memory for peripheral block! {} @ 0x{:x}",
-                memory_info.name,
+                block_name,
                 block_addr
             );
         }
@@ -146,11 +192,11 @@ impl DeviceMapper {
                         view.set_comment_at(block_addr, periph_desc);
                     }
                     // Add register descriptions
-                    self.add_comments_for_registers(view, peripheral, address_block);
+                    self.add_comments_for_registers(view, peripheral);
                 }
 
                 // Registers will get the peripheral type.
-                let peripheral_ty = self.peripheral_type(peripheral);
+                let peripheral_ty = self.peripheral_type(peripheral, address_block);
                 let peripheral_ty_id = format!("SVD:{}", peripheral.name);
                 let id = view.define_auto_type_with_id(
                     &peripheral.name,
@@ -186,19 +232,12 @@ impl DeviceMapper {
         }
     }
 
-    pub fn add_comments_for_registers(
-        &self,
-        view: &BinaryView,
-        peripheral: &PeripheralInfo,
-        address_block: &AddressBlock,
-    ) {
-        let block_addr = peripheral.base_address + address_block.offset as u64;
+    pub fn add_comments_for_registers(&self, view: &BinaryView, peripheral: &PeripheralInfo) {
         // Adding comments will add a bunch of undo actions.
         let undo_id = view.file().begin_undo_actions(true);
         for register in peripheral.all_registers() {
-            // TODO: The register offset is the enclosing element.
-            // TODO: We need to add a recursive function that keeps track of the offset.
-            let register_addr = block_addr + register.address_offset as u64;
+            // Turns out the "enclosing element" seems to always be the peripheral base address?
+            let register_addr = peripheral.base_address + register.address_offset as u64;
             if let Some(description) = &register.description {
                 view.set_comment_at(register_addr, description);
             }
@@ -253,16 +292,10 @@ impl DeviceMapper {
         &self,
         peripheral: &PeripheralInfo,
         address_block: &AddressBlock,
+        block_name: String,
     ) -> AddressBlockMemoryInfo {
         let block_addr = peripheral.base_address + address_block.offset as u64;
         let block_range = block_addr..(block_addr + address_block.size as u64);
-        let block_name = if address_block.offset == 0 {
-            // Block name: "PERIPH"
-            peripheral.name.to_owned()
-        } else {
-            // Block name: "PERIPH_0x40"
-            format!("{}_0x{:x}", peripheral.name, address_block.offset)
-        };
 
         let block_access = peripheral.default_register_properties.access;
         let semantics = match block_access {
@@ -292,7 +325,7 @@ impl DeviceMapper {
             }
         };
 
-        let section = SectionBuilder::new(block_name.clone(), block_range.clone())
+        let section = SectionBuilder::new(block_name, block_range.clone())
             .section_type(section_type_str)
             .semantics(semantics);
         let segment_flags = SegmentFlags::new()
@@ -304,7 +337,6 @@ impl DeviceMapper {
         let segment = SegmentBuilder::new(block_range).flags(segment_flags);
 
         AddressBlockMemoryInfo {
-            name: block_name,
             segment,
             segment_flags,
             section,
@@ -314,7 +346,11 @@ impl DeviceMapper {
     // TODO: In the future we might need to have partial types for each [`AddressBlock`]
     // TODO: Support using header name, this requires we define the peripheral type id as the real peripheral name.
     // TODO: cont. the reason is so that we can resolve the derived peripheral.
-    pub fn peripheral_type(&self, peripheral: &PeripheralInfo) -> Ref<Type> {
+    pub fn peripheral_type(
+        &self,
+        peripheral: &PeripheralInfo,
+        address_block: &AddressBlock,
+    ) -> Ref<Type> {
         let mut peripheral_struct = StructureBuilder::new();
 
         if let Some(derived_periph_name) = &peripheral.derived_from {
@@ -327,30 +363,19 @@ impl DeviceMapper {
             peripheral_struct.base_structures(&[base_struct]);
         }
 
+        // Take the address block size and use it as the structure width.
         // TODO: Support non-contiguous register address blocks (i.e. partial types).
-        if let Some(address_blocks) = &peripheral.address_block {
-            // If we have more than one address block with registers we likely have an incorrect type.
-            let register_address_blocks: Vec<_> = address_blocks
-                .iter()
-                .filter(|a| a.usage == AddressBlockUsage::Registers)
-                .collect();
-            if register_address_blocks.len() > 1 {
-                log::warn!(
-                    "Peripheral {} has more than one register address block. The type likely is incorrect.",
-                    peripheral.name
-                );
-            } else if register_address_blocks.len() == 1 {
-                // Take the address block size and use it as the structure width.
-                let register_address_block = register_address_blocks[0];
-                peripheral_struct.width(register_address_block.size as u64);
-            }
-        }
+        peripheral_struct.width(address_block.size as u64);
 
         if let Some(register_clusters) = &peripheral.registers {
             for register_cluster in register_clusters {
                 match register_cluster {
                     RegisterCluster::Register(register) => {
-                        let register_member = self.register_member(register);
+                        let mut register_member = self.register_member(register);
+                        // TODO: If we want registers to be relative to the peripheral than we must
+                        // TODO: assert that we create the peripheral type at offset 0 from the base address.
+                        // Make the register member relative to the address block, not the peripheral.
+                        register_member.offset -= address_block.offset as u64;
                         let overwrite = false; // TODO: Handle overwrites?
                         peripheral_struct.insert_member(register_member, overwrite);
                     }
@@ -367,7 +392,6 @@ impl DeviceMapper {
     pub fn register_member(&self, register: &Register) -> StructureMember {
         let register_ty = self.register_type(register);
         let conf_register_ty = Conf::new(register_ty, MAX_CONFIDENCE);
-        // TODO: Offset in peripheral
         StructureMember::new(
             conf_register_ty,
             register.name.to_owned(),

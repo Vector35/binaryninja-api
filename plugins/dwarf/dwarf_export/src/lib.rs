@@ -109,7 +109,8 @@ fn export_type(
             Some(float_die_uid)
         }
         TypeClass::StructureTypeClass => {
-            let structure_die_uid = match t.get_structure().unwrap().structure_type() {
+            let ty_struct = t.get_structure().unwrap();
+            let structure_die_uid = match ty_struct.structure_type() {
                 StructureType::ClassStructureType => {
                     dwarf.unit.add(root, constants::DW_TAG_class_type)
                 }
@@ -122,6 +123,30 @@ fn export_type(
             };
             defined_types.push((t.to_owned(), structure_die_uid));
 
+            for base_struct in ty_struct.base_structures() {
+                let inheritance_uid = dwarf.unit.add(structure_die_uid, gimli::DW_TAG_inheritance);
+                let base_struct_uid = export_type(
+                    base_struct.ty.name().to_string(),
+                    base_struct.ty.target(bv).unwrap().as_ref(),
+                    bv,
+                    defined_types,
+                    dwarf,
+                )
+                .unwrap();
+                dwarf
+                    .unit
+                    .get_mut(inheritance_uid)
+                    .set(gimli::DW_AT_type, AttributeValue::UnitRef(base_struct_uid));
+                dwarf.unit.get_mut(inheritance_uid).set(
+                    gimli::DW_AT_data_member_location,
+                    AttributeValue::Data8(base_struct.offset),
+                );
+                dwarf.unit.get_mut(inheritance_uid).set(
+                    gimli::DW_AT_accessibility,
+                    AttributeValue::Accessibility(gimli::DW_ACCESS_public),
+                );
+            }
+
             dwarf.unit.get_mut(structure_die_uid).set(
                 gimli::DW_AT_name,
                 AttributeValue::String(name.as_bytes().to_vec()),
@@ -131,7 +156,7 @@ fn export_type(
                 AttributeValue::Data2(t.width() as u16),
             );
 
-            for struct_member in t.get_structure().unwrap().members() {
+            for struct_member in ty_struct.members() {
                 let struct_member_die_uid =
                     dwarf.unit.add(structure_die_uid, constants::DW_TAG_member);
                 dwarf.unit.get_mut(struct_member_die_uid).set(

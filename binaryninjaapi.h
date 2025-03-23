@@ -5224,9 +5224,9 @@ namespace BinaryNinja {
 		*/
 		void UpdateAnalysis();
 
-		/*! Abort the currently running analysis
+		/*! Abort analysis and suspend the workflow machine
 
-			This method should be considered non-recoverable and generally only used when shutdown is imminent after stopping.
+			Stops analysis and transitions the workflow machine to the Suspend state. This operation is recoverable, and the workflow machine can be re-enabled via the WorkflowMachine Enable API.
 		*/
 		void AbortAnalysis();
 
@@ -6490,7 +6490,11 @@ namespace BinaryNinja {
 			const FunctionViewType& viewType, const std::function<bool(size_t current, size_t total)>& progress,
 		    const std::function<bool(uint64_t addr, const LinearDisassemblyLine& line)>& matchCallback);
 
-		bool Search(const std::string& query, const std::function<bool(uint64_t offset, const DataBuffer& buffer)>& otherCallback);
+		std::string DetectSearchMode(const std::string& query);
+
+		bool Search(const std::string& query,
+			const std::function<bool(size_t current, size_t total)>& progressCallback,
+			const std::function<bool(uint64_t addr, const DataBuffer& buffer)>& matchCallback);
 
 		void Reanalyze();
 
@@ -7200,6 +7204,14 @@ namespace BinaryNinja {
 		Ref<Architecture> GetArchitecture(uint32_t id, BNEndianness endian);
 
 		/*! Register a Platform for a specific view type
+
+			\param name Name of the BinaryViewType
+			\param id ID of the platform
+			\param platform The Platform to register
+		*/
+		static void RegisterPlatform(const std::string& name, uint32_t id, Platform* platform);
+
+		/*! Register a Platform for a specific view type (this form is deprecated as of 4.3, please use the form without architecture as an argument instead)
 
 			\param name Name of the BinaryViewType
 			\param id ID of the platform
@@ -8754,6 +8766,12 @@ namespace BinaryNinja {
 		{}
 	};
 
+	class FieldResolutionInfo : public CoreRefCountObject<BNFieldResolutionInfo, BNNewFieldResolutionInfoReference, BNFreeFieldResolutionInfo>
+	{
+	  public:
+		FieldResolutionInfo(BNFieldResolutionInfo* info);
+	};
+
 	struct QualifiedNameAndType
 	{
 		QualifiedName name;
@@ -9303,7 +9321,9 @@ namespace BinaryNinja {
 		Ref<Type> WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTypeReference* to);
 
 		bool AddTypeMemberTokens(BinaryView* data, std::vector<InstructionTextToken>& tokens, int64_t offset,
-		    std::vector<std::string>& nameList, size_t size = 0, bool indirect = false);
+		    std::vector<std::string>& nameList, size_t size = 0, bool indirect = false, FieldResolutionInfo* info = nullptr);
+		bool EnumerateTypesForAccess(BinaryView* data, uint64_t offset, size_t size, uint8_t baseConfidence,
+			const std::function<void(const Confidence<Ref<Type>>& type, FieldResolutionInfo* path)>& terminal);
 		std::vector<TypeDefinitionLine> GetLines(const TypeContainer& types, const std::string& name,
 			int paddingCols = 64, bool collapsed = false, BNTokenEscapingType escaping = NoTokenEscapingType);
 
@@ -10048,6 +10068,22 @@ namespace BinaryNinja {
 		WorkflowMachine(Ref<BinaryView> view);
 		WorkflowMachine(Ref<Function> function);
 
+		/*! Enable the workflow machine
+
+			Re-enables the workflow machine if it is in the Suspend state.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Enable();
+
+		/*! Disable the workflow machine
+
+			Disables analysis and suspends the workflow machine, equivalent to AbortAnalysis.
+			This operation is recoverable and the workflow machine can be re-enabled via the Enable API.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Disable();
+
+
 		std::optional<bool> QueryOverride(const std::string& activity);
 		bool SetOverride(const std::string& activity, bool enable);
 		bool ClearOverride(const std::string& activity);
@@ -10096,11 +10132,11 @@ namespace BinaryNinja {
 
 		/*! Clone a workflow, copying all Activities and the execution strategy
 
-			\param name Name for the new Workflow
+			\param name If specified, name the new Workflow, otherwise the name is copied from the original
 			\param activity If specified, perform the clone with `activity` as the root
 			\return A new Workflow
 		*/
-		Ref<Workflow> Clone(const std::string& name, const std::string& activity = "");
+		Ref<Workflow> Clone(const std::string& name = "", const std::string& activity = "");
 
 		/*! Register an Activity with this Workflow
 
@@ -10210,6 +10246,22 @@ namespace BinaryNinja {
 			\return true on success, false otherwise
 		*/
 		bool Insert(const std::string& activity, const std::vector<std::string>& activities);
+
+		/*! Insert an activity after the specified activity and at the same level.
+
+			\param activity Name of the activity to insert the new one after
+			\param newActivity Name of the new activity to be inserted
+			\return true on success, false otherwise
+		*/
+		bool InsertAfter(const std::string& activity, const std::string& newActivity);
+
+		/*! Insert a list of activities after the specified activity and at the same level.
+
+			\param activity Name of the activity to insert the new one after
+			\param newActivity Name of the new activities to be inserted
+			\return true on success, false otherwise
+		*/
+		bool InsertAfter(const std::string& activity, const std::vector<std::string>& activities);
 
 		/*! Remove an activity by name
 
@@ -11204,6 +11256,11 @@ namespace BinaryNinja {
 
 		void CreateForcedVariableVersion(const Variable& var, const ArchAndAddr& location);
 		void ClearForcedVariableVersion(const Variable& var, const ArchAndAddr& location);
+
+		void SetFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location, FieldResolutionInfo* info);
+		void ClearFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location);
+		Ref<FieldResolutionInfo> GetFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location);
+		std::map<Variable, std::map<ArchAndAddr, Ref<FieldResolutionInfo>>> GetAllFieldResolutions();
 
 		void RequestDebugReport(const std::string& name);
 

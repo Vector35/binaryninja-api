@@ -141,7 +141,6 @@ class BINARYNINJAUIAPI StringsView : public QTableView, public View, public Filt
 	QSettings m_settings;
 	StringsListModel* m_list;
 	StringItemDelegate* m_itemDelegate;
-	QTimer* m_updateTimer;
 
 	uint64_t m_selectionBegin, m_selectionEnd;
 	uint64_t m_currentlySelectedDataAddress;
@@ -180,6 +179,7 @@ class BINARYNINJAUIAPI StringsView : public QTableView, public View, public Filt
 
 	void copyText();
 	virtual bool canCopy() override;
+	virtual void notifyRefresh() override;
 
   protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;
@@ -190,7 +190,6 @@ class BINARYNINJAUIAPI StringsView : public QTableView, public View, public Filt
 
   private Q_SLOTS:
 	void goToString(const QModelIndex& idx);
-	void updateTimerEvent();
 };
 
 /*!
@@ -252,6 +251,7 @@ class BINARYNINJAUIAPI StringsViewSidebarWidget : public SidebarWidget
 	StringsViewSidebarWidget(BinaryViewRef data);
 	virtual QWidget* headerWidget() override { return m_header; }
 	virtual void focus() override;
+	virtual void notifyRefresh() override;
 
   protected:
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;

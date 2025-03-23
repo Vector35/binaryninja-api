@@ -4888,6 +4888,7 @@ class BinaryView:
 		``set_function_analysis_update_disabled``, functions would not be put into the analysis queue at all.
 
 		Use with caution -- in most cases, this is NOT what you want, and you should use ``set_analysis_hold`` instead.
+
 		:param disabled:
 		:return:
 		"""
@@ -4930,9 +4931,8 @@ class BinaryView:
 
 	def abort_analysis(self) -> None:
 		"""
-		``abort_analysis`` will abort the currently running analysis.
-
-		.. warning:: This method should be considered non-recoverable and generally only used when shutdown is imminent after stopping.
+		``abort_analysis`` aborts analysis and suspends the workflow machine. This operation is recoverable, and the workflow machine
+		can be re-enabled via the ``enable`` API on WorkflowMachine.
 
 		:rtype: None
 		"""
@@ -9211,7 +9211,8 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 
 			return self.QueueGenerator(t, results)
 
-	def search(self, pattern: str, start: int = None, end: int = None, raw: bool = False, ignore_case: bool = False, overlap: bool = False, align: int = 1) -> QueueGenerator:
+	def search(self, pattern: str, start: int = None, end: int = None, raw: bool = False, ignore_case: bool = False, overlap: bool = False, align: int = 1,
+		limit: int = None, progress_callback: Optional[ProgressFuncType] = None, match_callback: Optional[DataMatchCallbackType] = None) -> QueueGenerator:
 		r"""
 		Searches for matches of the specified `pattern` within this BinaryView with an optionally provided address range specified by `start` and `end`.
 		The search pattern can be interpreted in various ways:
@@ -9230,6 +9231,12 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		:param bool ignore_case: Whether to perform case-insensitive matching (default: False).
 		:param bool overlap: Whether to allow matches to overlap (default: False).
 		:param int align: The alignment of matches, must be a power of 2 (default: 1).
+		:param int limit: The maximum number of matches to return (default: None).
+		:param callback progress_callback: An optional function to be called with the current progress and total count. \
+		This function should return a boolean value that decides whether the search should continue or stop.
+		:param callback match_callback: A function that gets called when a match is found. The callback takes two parameters: \
+		the address of the match, and the actual DataBuffer that satisfies the search. This function can return a boolean value \
+		that decides whether the search should continue or stop.
 
 		:return: A generator object that yields the offset and matched DataBuffer for each match found.
 		:rtype: QueueGenerator
@@ -9260,10 +9267,33 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			"overlap": overlap,
 			"align": align
 		}
+
+		if progress_callback:
+			progress_callback_obj = ctypes.CFUNCTYPE(
+				ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong
+			)(lambda ctxt, cur, total: progress_callback(cur, total))
+		else:
+			progress_callback_obj = ctypes.CFUNCTYPE(
+				ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong
+			)(lambda ctxt, cur, total: True)
+
+		match_count = 0
+		def internal_match_callback(ctxt, offset, match):
+			nonlocal match_count
+			match_count += 1
+			data_buffer = databuffer.DataBuffer(handle=match)
+			results.put((offset, data_buffer))
+			if match_callback is not None:
+				should_continue = match_callback(offset, data_buffer)
+				if not should_continue:
+					return False
+			if limit is not None and match_count >= limit:
+				return False
+			return True
+
+		match_callback_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.POINTER(core.BNDataBuffer))(internal_match_callback)
 		results = queue.Queue()
-		match_callback_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.POINTER(core.BNDataBuffer)
-		)(lambda ctxt, offset, match: results.put((offset, databuffer.DataBuffer(handle=match))) or True)
-		t = threading.Thread(target=lambda: core.BNSearch(self.handle, json.dumps(query), None, match_callback_obj))
+		t = threading.Thread(target=lambda: core.BNSearch(self.handle, json.dumps(query), None, progress_callback_obj, None, match_callback_obj))
 		return self.QueueGenerator(t, results)
 
 	def reanalyze(self) -> None:

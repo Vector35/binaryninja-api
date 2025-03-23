@@ -19,10 +19,14 @@
 # IN THE SOFTWARE.
 
 from dataclasses import dataclass
+from typing import Union
 from .flowgraph import FlowGraph, FlowGraphNode
 from .enums import BranchType
 from .interaction import show_graph_report
 from .log import log_warn
+from . import lowlevelil
+from . import mediumlevelil
+from . import highlevelil
 
 
 # This file contains a list of top level abstract classes for implementing BNIL instructions
@@ -204,3 +208,27 @@ class SSAVariableInstruction(SSA, VariableInstruction):
 @dataclass(frozen=True, repr=False, eq=False)
 class AliasedVariableInstruction(VariableInstruction):
 	pass
+
+
+@dataclass
+class ILSourceLocation:
+	"""
+	ILSourceLocation is used to indicate where expressions were defined during the lifting process
+	and gets propagated through the lifting process as an instruction's address/source_operand properties.
+	These are used for, for example, integer display types and expression addresses.
+	"""
+	address: int
+	source_operand: int
+
+	@classmethod
+	def from_instruction(
+			cls,
+			instr: Union['lowlevelil.LowLevelILInstruction', 'mediumlevelil.MediumLevelILInstruction', 'highlevelil.HighLevelILInstruction']
+	) -> 'ILSourceLocation':
+		"""
+		Get the source location of a given instruction
+		:param instr: Instruction, Low, Medium, or High level
+		:return: Its location
+		"""
+		return cls(instr.address, instr.source_operand)
+

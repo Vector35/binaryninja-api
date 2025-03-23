@@ -1,18 +1,12 @@
 use binaryninja::binary_reader::BinaryReader;
 use binaryninja::binary_view::{BinaryViewBase, BinaryViewExt};
 use binaryninja::headless::Session;
-use rstest::*;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::PathBuf;
 
-#[fixture]
-#[once]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
-
-#[rstest]
-fn test_binary_reader_seek(_session: &Session) {
+#[test]
+fn test_binary_reader_seek() {
+    let _session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     let mut reader = BinaryReader::new(&view);
@@ -49,8 +43,9 @@ fn test_binary_reader_seek(_session: &Session) {
     );
 }
 
-#[rstest]
-fn test_binary_reader_read(_session: &Session) {
+#[test]
+fn test_binary_reader_read() {
+    let _session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     let mut reader = BinaryReader::new(&view);

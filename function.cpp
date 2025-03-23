@@ -2699,6 +2699,73 @@ void Function::ClearForcedVariableVersion(const Variable& var, const ArchAndAddr
 }
 
 
+void Function::SetFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location, FieldResolutionInfo* info)
+{
+	auto defSite = BNArchitectureAndAddress();
+	defSite.arch = location.arch->m_object;
+	defSite.address = location.address;
+
+	auto var_data = BNVariable();
+	var_data.type = var.type;
+	var_data.index = var.index;
+	var_data.storage = var.storage;
+
+	BNSetFieldResolutionForVariableAt(m_object, &var_data, &defSite, info->m_object);
+}
+
+
+void Function::ClearFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location)
+{
+	auto defSite = BNArchitectureAndAddress();
+	defSite.arch = location.arch->m_object;
+	defSite.address = location.address;
+
+	auto var_data = BNVariable();
+	var_data.type = var.type;
+	var_data.index = var.index;
+	var_data.storage = var.storage;
+
+	BNClearFieldResolutionForVariableAt(m_object, &var_data, &defSite);
+}
+
+
+Ref<FieldResolutionInfo> Function::GetFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location)
+{
+	auto defSite = BNArchitectureAndAddress();
+	defSite.arch = location.arch->m_object;
+	defSite.address = location.address;
+
+	auto var_data = BNVariable();
+	var_data.type = var.type;
+	var_data.index = var.index;
+	var_data.storage = var.storage;
+
+	BNFieldResolutionInfo* result = BNGetFieldResolutionForVariableAt(m_object, &var_data, &defSite);
+	return result ? new FieldResolutionInfo(result) : nullptr;
+}
+
+
+std::map<Variable, std::map<ArchAndAddr, Ref<FieldResolutionInfo>>> Function::GetAllFieldResolutions()
+{
+	map<Variable, map<ArchAndAddr, Ref<FieldResolutionInfo>>> result;
+
+	size_t count;
+	BNVariableFieldResolutionInfo* info = BNGetAllVariableFieldResolutions(m_object, &count);
+
+	for (size_t i = 0; i < count; i++)
+	{
+		Variable var(info[i].var.type, info[i].var.index, info[i].var.storage);
+		ArchAndAddr location(new CoreArchitecture(info[i].location.arch), info[i].location.address);
+		Ref<FieldResolutionInfo> fieldInfo(new FieldResolutionInfo(BNNewFieldResolutionInfoReference(info[i].info)));
+
+		result[var][location] = fieldInfo;
+	}
+
+	BNFreeVariableFieldResolutions(info, count);
+	return result;
+}
+
+
 void Function::RequestDebugReport(const string& name)
 {
 	BNRequestFunctionDebugReport(m_object, name.c_str());

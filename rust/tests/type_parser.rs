@@ -3,7 +3,6 @@ use binaryninja::platform::Platform;
 use binaryninja::type_parser::{CoreTypeParser, TypeParser, TypeParserError};
 use binaryninja::types::Type;
 use binaryninjacore_sys::BNTypeParserErrorSeverity::ErrorSeverity;
-use rstest::*;
 
 const TEST_TYPES: &str = r#"
 typedef int int32_t;
@@ -27,14 +26,9 @@ typedef struct {
 } struct_type;
 "#;
 
-#[fixture]
-#[once]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
-
-#[rstest]
-fn test_string_to_type(_session: &Session) {
+#[test]
+fn test_string_to_type() {
+    let _session = Session::new().expect("Failed to initialize session");
     let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
     let plat_type_container = platform.type_container();
     let parser = CoreTypeParser::default();
@@ -45,8 +39,9 @@ fn test_string_to_type(_session: &Session) {
     assert_eq!(test_type, parsed_type.ty);
 }
 
-#[rstest]
-fn test_string_to_types(_session: &Session) {
+#[test]
+fn test_string_to_types() {
+    let _session = Session::new().expect("Failed to initialize session");
     let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
     let plat_type_container = platform.type_container();
     let parser = CoreTypeParser::default();
@@ -64,8 +59,9 @@ fn test_string_to_types(_session: &Session) {
     assert_eq!(14, parsed_type.types.len());
 }
 
-#[rstest]
-fn test_parse_error(_session: &Session) {
+#[test]
+fn test_parse_error() {
+    let _session = Session::new().expect("Failed to initialize session");
     let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
     let plat_type_container = platform.type_container();
     let parser = CoreTypeParser::default();

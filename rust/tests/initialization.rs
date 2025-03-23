@@ -5,12 +5,11 @@ use binaryninja::headless::{
     init, init_with_opts, shutdown, InitializationError, InitializationOptions,
 };
 use binaryninja::set_license;
-use rstest::rstest;
 
 // NOTE: Do not add any tests here, behavior will change (i.e. a failure might pass) if we initialize
 // NOTE: The core in another test. The only test here should be `test_license_validation`.
 
-#[rstest]
+#[test]
 fn test_license_validation() {
     // Release floating license if we already have one, otherwise the failure will succeed.
     release_license();

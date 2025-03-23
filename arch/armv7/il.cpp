@@ -167,11 +167,71 @@ static ExprId GetShiftedOffset(LowLevelILFunction& il, InstructionOperand& op)
 }
 
 
-static ExprId GetShiftedRegister(LowLevelILFunction& il, InstructionOperand& op)
+static ExprId GetRegisterShiftedRegister(LowLevelILFunction& il, Register reg, Register shiftReg, Shift shiftType)
 {
-	return GetShifted(il, op.reg, op.imm, op.shift);
+	if (shiftType == SHIFT_NONE)
+		return il.Register(get_register_size(reg), reg);
+
+	uint32_t regSize = get_register_size(reg);
+	uint32_t shiftRegSize = get_register_size(shiftReg);
+	switch (shiftType)
+	{
+		case SHIFT_ASR:
+			return il.ArithShiftRight(
+				regSize,
+				il.Register(regSize, reg),
+				il.And(
+					shiftRegSize,
+					il.Register(shiftRegSize, shiftReg),
+					il.Const(shiftRegSize, 0xff)
+				));
+		case SHIFT_LSL:
+			return il.ShiftLeft(
+				regSize,
+				il.Register(regSize, reg),
+				il.And(
+					shiftRegSize,
+					il.Register(shiftRegSize, shiftReg),
+					il.Const(shiftRegSize, 0xff)
+				));
+		case SHIFT_LSR:
+			return il.LogicalShiftRight(
+				regSize,
+				il.Register(regSize, reg),
+				il.And(
+					shiftRegSize,
+					il.Register(shiftRegSize, shiftReg),
+					il.Const(shiftRegSize, 0xff)
+				));
+		case SHIFT_ROR:
+			return il.RotateRight(
+				regSize,
+				il.Register(regSize, reg),
+				il.And(
+					shiftRegSize,
+					il.Register(shiftRegSize, shiftReg),
+					il.Const(shiftRegSize, 0xff)
+				));
+		case SHIFT_RRX:
+			//RRX can only shift 1 at a time
+			return il.RotateRightCarry(
+				regSize,
+				il.Register(regSize, reg),
+				il.Const(1, 1),
+				il.Flag(IL_FLAG_C)
+			);
+		default:
+			return 0;
+	}
 }
 
+
+static ExprId GetShiftedRegister(LowLevelILFunction& il, InstructionOperand& op)
+{
+	if (op.flags.offsetRegUsed == 1)
+		return GetRegisterShiftedRegister(il, op.reg, op.offset, op.shift);
+	return GetShifted(il, op.reg, op.imm, op.shift);
+}
 
 
 static ExprId ReadAddress(LowLevelILFunction& il, InstructionOperand& op, size_t addr)
@@ -227,7 +287,7 @@ static ExprId ReadILOperand(LowLevelILFunction& il, InstructionOperand& op, size
 		case REG:
 			if (op.shift == SHIFT_NONE)
 				return ReadRegisterOrPointer(il, op, addr);
-			else if (op.flags.offsetRegUsed == 1)
+			else if (op.flags.offsetRegUsed == 1 && op.imm != 0)
 			{
 				return GetShiftedOffset(il, op);
 			}

@@ -122,6 +122,54 @@ WorkflowMachine::WorkflowMachine(Ref<Function> function): m_function(function)
 }
 
 
+bool WorkflowMachine::Enable()
+{
+	rapidjson::Document request(rapidjson::kObjectType);
+	rapidjson::Document::AllocatorType& allocator = request.GetAllocator();
+	request.AddMember("command", "enable", allocator);
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	request.Accept(writer);
+
+	string jsonResult;
+	if (m_function)
+		jsonResult = BNPostWorkflowRequestForFunction(m_function->GetObject(), buffer.GetString());
+	else
+		jsonResult = BNPostWorkflowRequestForBinaryView(m_view->GetObject(), buffer.GetString());
+
+	rapidjson::Document response(rapidjson::kObjectType);
+	response.Parse(jsonResult.c_str());
+	if (response.HasMember("commandStatus") && response["commandStatus"].HasMember("accepted"))
+		return response["commandStatus"]["accepted"].GetBool();
+
+	return false;
+}
+
+
+bool WorkflowMachine::Disable()
+{
+	rapidjson::Document request(rapidjson::kObjectType);
+	rapidjson::Document::AllocatorType& allocator = request.GetAllocator();
+	request.AddMember("command", "disable", allocator);
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	request.Accept(writer);
+
+	string jsonResult;
+	if (m_function)
+		jsonResult = BNPostWorkflowRequestForFunction(m_function->GetObject(), buffer.GetString());
+	else
+		jsonResult = BNPostWorkflowRequestForBinaryView(m_view->GetObject(), buffer.GetString());
+
+	rapidjson::Document response(rapidjson::kObjectType);
+	response.Parse(jsonResult.c_str());
+	if (response.HasMember("commandStatus") && response["commandStatus"].HasMember("accepted"))
+		return response["commandStatus"]["accepted"].GetBool();
+
+	return false;
+}
+
+
 std::optional<bool> WorkflowMachine::QueryOverride(const string& activity)
 {
 	rapidjson::Document request(rapidjson::kObjectType);
@@ -407,6 +455,35 @@ bool Workflow::Insert(const string& activity, const vector<string>& activities)
 		buffer[i] = BNAllocString(activities[i].c_str());
 
 	bool result = BNWorkflowInsert(m_object, activity.c_str(), (const char**)buffer, activities.size());
+
+	for (size_t i = 0; i < activities.size(); i++)
+		BNFreeString(buffer[i]);
+	delete[] buffer;
+	return result;
+}
+
+
+bool Workflow::InsertAfter(const string& activity, const string& newActivity)
+{
+	char* buffer[1];
+	buffer[0] = BNAllocString(newActivity.c_str());
+
+	bool result = BNWorkflowInsertAfter(m_object, activity.c_str(), (const char**)buffer, 1);
+	BNFreeString(buffer[0]);
+	return result;
+}
+
+
+bool Workflow::InsertAfter(const string& activity, const vector<string>& activities)
+{
+	char** buffer = new char*[activities.size()];
+	if (!buffer)
+		return false;
+
+	for (size_t i = 0; i < activities.size(); i++)
+		buffer[i] = BNAllocString(activities[i].c_str());
+
+	bool result = BNWorkflowInsertAfter(m_object, activity.c_str(), (const char**)buffer, activities.size());
 
 	for (size_t i = 0; i < activities.size(); i++)
 		BNFreeString(buffer[i]);

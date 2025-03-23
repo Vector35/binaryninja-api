@@ -2,17 +2,11 @@ use binaryninja::binary_view::{AnalysisState, BinaryViewBase, BinaryViewExt};
 use binaryninja::headless::Session;
 use binaryninja::main_thread::execute_on_main_thread_and_wait;
 use binaryninja::symbol::{SymbolBuilder, SymbolType};
-use rstest::*;
 use std::path::PathBuf;
 
-#[fixture]
-#[once]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
-
-#[rstest]
-fn test_binary_loading(_session: &Session) {
+#[test]
+fn test_binary_loading() {
+    let _session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     assert!(view.has_initial_analysis(), "No initial analysis");
@@ -21,8 +15,9 @@ fn test_binary_loading(_session: &Session) {
     assert_eq!(view.file().is_database_backed(), false);
 }
 
-#[rstest]
-fn test_binary_saving(_session: &Session) {
+#[test]
+fn test_binary_saving() {
+    let _session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     // Verify the contents before we modify.
@@ -48,8 +43,9 @@ fn test_binary_saving(_session: &Session) {
     );
 }
 
-#[rstest]
-fn test_binary_saving_database(_session: &Session) {
+#[test]
+fn test_binary_saving_database() {
+    let _session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     // Update a symbol to verify modification

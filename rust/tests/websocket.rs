@@ -5,13 +5,6 @@ use binaryninja::websocket::{
     register_websocket_provider, CoreWebsocketClient, CoreWebsocketProvider, WebsocketClient,
     WebsocketClientCallback, WebsocketProvider,
 };
-use rstest::*;
-
-#[fixture]
-#[once]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
 
 struct MyWebsocketProvider {
     core: CoreWebsocketProvider,
@@ -90,8 +83,9 @@ impl WebsocketClientCallback for MyClientCallbacks {
     }
 }
 
-#[rstest]
-fn reg_websocket_provider(_session: &Session) {
+#[test]
+fn reg_websocket_provider() {
+    let _session = Session::new().expect("Failed to initialize session");
     let provider = register_websocket_provider::<MyWebsocketProvider>("RustWebsocketProvider");
     let client = provider.create_client().unwrap();
     let mut callback = MyClientCallbacks::default();
@@ -99,8 +93,9 @@ fn reg_websocket_provider(_session: &Session) {
     assert!(success, "Failed to initialize connection!");
 }
 
-#[rstest]
-fn listen_websocket_provider(_session: &Session) {
+#[test]
+fn listen_websocket_provider() {
+    let _session = Session::new().expect("Failed to initialize session");
     let provider = register_websocket_provider::<MyWebsocketProvider>("RustWebsocketProvider2");
 
     let client = provider.create_client().unwrap();

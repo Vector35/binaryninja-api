@@ -31,7 +31,7 @@ std::optional<BinaryNinja::PossibleValueSet> BINARYNINJAUIAPI getPossibleValueSe
 std::optional<uint64_t> BINARYNINJAUIAPI getAddressOfILTokenExpr(View* view, HighlightTokenState token);
 
 template <typename T>
-std::optional<T> visitILInstructionForToken(View* view, HighlightTokenState token,
+std::optional<T> visitILInstructionForToken(View* view, const HighlightTokenState& token,
 		const std::function<std::optional<T>(BinaryNinja::LowLevelILInstruction&)>& llil,
 		const std::function<std::optional<T>(BinaryNinja::MediumLevelILInstruction&)>& mlil,
 		const std::function<std::optional<T>(BinaryNinja::HighLevelILInstruction&)>& hlil)

@@ -1,17 +1,11 @@
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use binaryninja::high_level_il::{HighLevelILInstructionKind, HighLevelInstructionIndex};
-use rstest::*;
 use std::path::PathBuf;
 
-#[fixture]
-#[once]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
-
-#[rstest]
-fn test_hlil_info(_session: &Session) {
+#[test]
+fn test_hlil_info() {
+    let _session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     let image_base = view.original_image_base();

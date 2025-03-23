@@ -1,15 +1,9 @@
 use binaryninja::headless::Session;
 use binaryninja::secrets_provider::{CoreSecretsProvider, SecretsProvider};
-use rstest::*;
 
-#[fixture]
-#[once]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
-
-#[rstest]
-fn list_secrets_provider(_session: &Session) {
+#[test]
+fn list_secrets_provider() {
+    let _session = Session::new().expect("Failed to initialize session");
     let providers = CoreSecretsProvider::all();
     assert!(providers.len() > 0);
     let providers_again = CoreSecretsProvider::all();
@@ -36,8 +30,9 @@ impl SecretsProvider for MySecretsProvider {
     }
 }
 
-#[rstest]
-fn custom_secrets_provider(_session: &Session) {
+#[test]
+fn custom_secrets_provider() {
+    let _session = Session::new().expect("Failed to initialize session");
     let my_provider = CoreSecretsProvider::new("MySecretsProvider", MySecretsProvider {});
     assert!(my_provider.has_data("my_key"));
     assert!(!my_provider.has_data("not_my_key"));

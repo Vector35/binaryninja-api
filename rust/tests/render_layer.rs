@@ -5,25 +5,20 @@ use binaryninja::function::NativeBlock;
 use binaryninja::headless::Session;
 use binaryninja::linear_view::LinearViewObject;
 use binaryninja::render_layer::{register_render_layer, CoreRenderLayer, RenderLayer};
-use rstest::{fixture, rstest};
 use std::path::PathBuf;
 
-#[fixture]
-#[once]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
-
-#[rstest]
-fn test_render_layer_register(_session: &Session) {
+#[test]
+fn test_render_layer_register() {
+    let _session = Session::new().expect("Failed to initialize session");
     struct EmptyRenderLayer;
     impl RenderLayer for EmptyRenderLayer {}
     register_render_layer("Test Render Layer", EmptyRenderLayer, Default::default());
     CoreRenderLayer::render_layer_by_name("Test Render Layer").expect("Failed to get render layer");
 }
 
-#[rstest]
-fn test_render_layer_linear_view(_session: &Session) {
+#[test]
+fn test_render_layer_linear_view() {
+    let _session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
 

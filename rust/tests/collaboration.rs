@@ -1,22 +1,14 @@
 use binaryninja::binary_view::BinaryViewExt;
-use binaryninja::collaboration::{
-    has_collaboration_support, NoNameChangeset, Remote, RemoteFileType, RemoteProject,
-};
+use binaryninja::collaboration::{NoNameChangeset, Remote, RemoteFileType, RemoteProject};
 use binaryninja::headless::Session;
+use binaryninja::rc::Ref;
 use binaryninja::symbol::{SymbolBuilder, SymbolType};
 use rstest::*;
 use serial_test::serial;
+use std::env;
 use std::path::PathBuf;
 
-#[fixture]
-#[once]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
-
-// TODO: This cannot run in CI, as headless does not have collaboration, we should gate this.
 // TODO: Why cant we create_project for the same project name? why does that fail.
-
 // TODO: Remote connection / disconnection is NOT thread safe, the core needs to lock on each.
 // TODO: Because of this we run these tests serially, this isnt _really_ an issue for real code, as
 // TODO: Real code shouldnt be trying to connect to the same remote on multiple threads.
@@ -28,6 +20,13 @@ fn temp_project_scope<T: Fn(&RemoteProject)>(remote: &Remote, project_name: &str
         // TODO: have connected by the time this errors out. Maybe?
         let _ = remote.connect();
     }
+
+    if let Ok(home_dir) = env::var("HOME").or_else(|_| env::var("USERPROFILE")) {
+        eprintln!("Current user directory: {}", home_dir);
+    } else {
+        eprintln!("Unable to determine the current user directory.");
+    }
+
     let project = remote
         .create_project(project_name, "Test project for test purposes")
         .expect("Failed to create project");
@@ -56,15 +55,26 @@ fn temp_project_scope<T: Fn(&RemoteProject)>(remote: &Remote, project_name: &str
         .expect("Failed to delete project");
 }
 
+/// Get the selected remote to test with.
+fn selected_remote() -> Option<Ref<Remote>> {
+    // If the user has initialized with a enterprise server we might already have an active remote.
+    match binaryninja::collaboration::active_remote() {
+        Some(remote) => Some(remote),
+        None => {
+            let remotes = binaryninja::collaboration::known_remotes();
+            remotes.iter().next().map(|r| r.clone())
+        }
+    }
+}
+
 #[rstest]
 #[serial]
-fn test_connection(_session: &Session) {
-    if !has_collaboration_support() {
-        eprintln!("No collaboration support, skipping test...");
+fn test_connection() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let Some(remote) = selected_remote() else {
+        eprintln!("No known remotes, skipping test...");
         return;
-    }
-    let remotes = binaryninja::collaboration::known_remotes();
-    let remote = remotes.iter().next().expect("No known remotes!");
+    };
     assert!(remote.connect().is_ok(), "Failed to connect to remote");
     remote
         .disconnect()
@@ -74,13 +84,12 @@ fn test_connection(_session: &Session) {
 
 #[rstest]
 #[serial]
-fn test_project_creation(_session: &Session) {
-    if !has_collaboration_support() {
-        eprintln!("No collaboration support, skipping test...");
+fn test_project_creation() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let Some(remote) = selected_remote() else {
+        eprintln!("No known remotes, skipping test...");
         return;
-    }
-    let remotes = binaryninja::collaboration::known_remotes();
-    let remote = remotes.iter().next().expect("No known remotes!");
+    };
     temp_project_scope(&remote, "test_creation", |project| {
         // Create the file than verify it by opening and checking contents.
         let created_file = project
@@ -155,13 +164,12 @@ fn test_project_creation(_session: &Session) {
 
 #[rstest]
 #[serial]
-fn test_project_sync(_session: &Session) {
-    if !has_collaboration_support() {
-        eprintln!("No collaboration support, skipping test...");
+fn test_project_sync() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let Some(remote) = selected_remote() else {
+        eprintln!("No known remotes, skipping test...");
         return;
-    }
-    let remotes = binaryninja::collaboration::known_remotes();
-    let remote = remotes.iter().next().expect("No known remotes!");
+    };
     temp_project_scope(&remote, "test_sync", |project| {
         // Open a view so that we can upload it.
         let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();

@@ -58,7 +58,7 @@ extern "C"
 
 			platform = new DecreeX86Platform(x86);
 			Platform::Register("decree", platform);
-			BinaryViewType::RegisterPlatform("ELF", 'C', x86, platform);
+			BinaryViewType::RegisterPlatform("ELF", 'C', platform);
 		}
 
 		return true;

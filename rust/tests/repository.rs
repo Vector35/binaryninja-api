@@ -1,14 +1,9 @@
 use binaryninja::headless::Session;
 use binaryninja::repository::RepositoryManager;
-use rstest::*;
 
-#[fixture]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
-
-#[rstest]
-fn test_list(_session: Session) {
+#[test]
+fn test_list() {
+    let _session = Session::new().expect("Failed to initialize session");
     let manager = RepositoryManager::default();
     let repositories = manager.repositories();
     for repository in &repositories {

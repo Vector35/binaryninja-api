@@ -174,6 +174,17 @@ Ref<Architecture> BinaryViewType::GetArchitecture(uint32_t id, BNEndianness endi
 }
 
 
+void BinaryViewType::RegisterPlatform(const string& name, uint32_t id, Platform* platform)
+{
+	Ref<BinaryViewType> type = BinaryViewType::GetByName(name);
+	if (!type)
+		return;
+	Ref<Architecture> arch = platform->GetArchitecture();
+	if (!arch)
+		return;
+	type->RegisterPlatform(id, arch, platform);
+}
+
 void BinaryViewType::RegisterPlatform(const string& name, uint32_t id, Architecture* arch, Platform* platform)
 {
 	Ref<BinaryViewType> type = BinaryViewType::GetByName(name);

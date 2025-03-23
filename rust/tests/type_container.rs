@@ -2,40 +2,22 @@ use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::file_metadata::FileMetadata;
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
-use binaryninja::rc::Ref;
 use binaryninja::types::Type;
-use rstest::*;
 
-#[fixture]
-#[once]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
-
-#[fixture]
-#[once]
-fn platform() -> Ref<Platform> {
-    // TODO: Because some behavior might be platform specific we might need to move this back into each test.
-    // TODO: See test_parse_type
-    Platform::by_name("windows-x86_64").expect("windows-x86_64 exists")
-}
-
-#[fixture]
-#[once]
-fn empty_view() -> Ref<BinaryView> {
-    BinaryView::from_data(&FileMetadata::new(), &[]).expect("Failed to create view")
-}
-
-#[rstest]
-fn test_types(_session: &Session, platform: &Platform) {
+#[test]
+fn test_types() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
     let type_container = platform.type_container();
     let types = type_container.types().unwrap();
     // windows-x86_64 has a few thousand, not zero.
     assert_eq!(types.len(), platform.types().len());
 }
 
-#[rstest]
-fn test_type_id(_session: &Session, platform: &Platform) {
+#[test]
+fn test_type_id() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
     let type_container = platform.type_container();
     let type_ids = type_container.type_ids().unwrap();
     let first_type_id = type_ids.iter().next().unwrap();
@@ -52,8 +34,11 @@ fn test_type_id(_session: &Session, platform: &Platform) {
     assert_eq!(found_type, found_type_for_type_name);
 }
 
-#[rstest]
-fn test_add_delete_type(_session: &Session, empty_view: &BinaryView) {
+#[test]
+fn test_add_delete_type() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let empty_view =
+        BinaryView::from_data(&FileMetadata::new(), &[]).expect("Failed to create view");
     let view_type_container = empty_view.type_container();
     let test_type = Type::int(4, true);
     assert!(
@@ -71,8 +56,10 @@ fn test_add_delete_type(_session: &Session, empty_view: &BinaryView) {
     assert_eq!(view_type_container.type_ids().unwrap().len(), 0)
 }
 
-#[rstest]
-fn test_immutable_container(_session: &Session, platform: &Platform) {
+#[test]
+fn test_immutable_container() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
     // Platform type containers are immutable, so we shouldn't be able to delete/add/rename types.
     let plat_type_container = platform.type_container();
     assert!(
@@ -101,8 +88,10 @@ fn test_immutable_container(_session: &Session, platform: &Platform) {
     );
 }
 
-#[rstest]
-fn test_parse_type(_session: &Session, platform: &Platform) {
+#[test]
+fn test_parse_type() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
     let type_container = platform.type_container();
     // HANDLE will be pulled in from the platform, which is `windows-x86_64`.
     let parsed_type = type_container
@@ -113,8 +102,12 @@ fn test_parse_type(_session: &Session, platform: &Platform) {
     assert_eq!(parsed_type.ty.to_string(), "HANDLE");
 }
 
-#[rstest]
-fn test_container_lifetime(_session: &Session, platform: &Platform, empty_view: &BinaryView) {
+#[test]
+fn test_container_lifetime() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
+    let empty_view =
+        BinaryView::from_data(&FileMetadata::new(), &[]).expect("Failed to create view");
     let plat_type_container_dropped = platform.type_container();
     let view_type_container_dropped = empty_view.type_container();
     let _plat_types_dropped = plat_type_container_dropped.types();

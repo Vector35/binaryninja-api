@@ -1,17 +1,11 @@
 use binaryninja::base_detection::{BaseAddressDetectionConfidence, BaseAddressDetectionSettings};
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
-use rstest::{fixture, rstest};
 use std::path::PathBuf;
 
-#[fixture]
-#[once]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
-
-#[rstest]
-fn test_base_detection(_session: &Session) {
+#[test]
+fn test_base_detection() {
+    let _session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("raw_base_detection_aarch64"))
         .expect("Failed to create view");

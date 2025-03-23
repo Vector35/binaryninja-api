@@ -52,6 +52,7 @@ else()
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/plugins
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/plugins
             )
+    bn_install_plugin(sharedcache)
 endif()
 
 set_target_properties(sharedcache PROPERTIES

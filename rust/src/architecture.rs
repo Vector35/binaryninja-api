@@ -2954,9 +2954,12 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
-        let boxed_types = unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(tl, count)) };
-        for ty in boxed_types {
-            Conf::<Ref<Type>>::free_raw(ty);
+        if !tl.is_null() {
+            let boxed_types =
+                unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(tl, count)) };
+            for ty in boxed_types {
+                Conf::<Ref<Type>>::free_raw(ty);
+            }
         }
     }
 

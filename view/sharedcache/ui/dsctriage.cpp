@@ -516,7 +516,7 @@ void SymbolTableView::setFilter(const std::string& filter) {
 
 DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(parent), View(), m_data(data), m_cache(new SharedCacheAPI::SharedCache(data))
 {
-	setBinaryDataNavigable(false);
+	setBinaryDataNavigable(true);
 	setupView(this);
 
 	m_triageCollection = new DockableTabCollection();
@@ -884,7 +884,7 @@ BinaryViewRef DSCTriageView::getData()
 
 bool DSCTriageView::navigate(uint64_t offset)
 {
-	return true;
+	return false;
 }
 
 

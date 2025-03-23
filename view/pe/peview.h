@@ -478,7 +478,6 @@ namespace BinaryNinja
 		virtual uint64_t PerformGetEntryPoint() const override;
 
 		virtual bool PerformIsExecutable() const override { return true; }
-		virtual BNEndianness PerformGetDefaultEndianness() const override { return LittleEndian; }
 		virtual bool PerformIsRelocatable() const override { return m_relocatable; }
 		virtual size_t PerformGetAddressSize() const override;
 

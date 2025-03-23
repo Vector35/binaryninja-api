@@ -170,8 +170,6 @@ class BINARYNINJAUIAPI LogItemDelegate : public QStyledItemDelegate, public Bina
 	Q_OBJECT
 
 	QWidget* m_owner;
-	ViewFrame* m_viewFrame = nullptr;
-	View* m_view = nullptr;
 	BinaryViewRef m_data;
 	std::vector<BNAddressRange> m_mappedRanges;
 	QFont m_font;

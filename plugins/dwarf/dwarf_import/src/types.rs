@@ -19,7 +19,8 @@ use crate::{die_handlers::*, ReaderType};
 use binaryninja::{
     rc::*,
     types::{
-        MemberAccess, MemberScope, ReferenceType, StructureBuilder, StructureType, Type, TypeClass,
+        BaseStructure, MemberAccess, MemberScope, ReferenceType, StructureBuilder, StructureType,
+        Type, TypeClass,
     },
 };
 
@@ -172,63 +173,101 @@ fn do_structure_parse<R: ReaderType>(
         debug_info_builder.add_type(get_uid(dwarf, unit, entry), full_name, ntr, false);
     }
 
-    // Get all the children and populate
+    // Get all the children and base classes to populate
+    let mut base_structures = Vec::new();
     let mut tree = unit.entries_tree(Some(entry.offset())).unwrap();
     let mut children = tree.root().unwrap().children();
     while let Ok(Some(child)) = children.next() {
-        if child.entry().tag() == constants::DW_TAG_member {
-            if let Some(child_type_id) = get_type(
-                dwarf,
-                unit,
-                child.entry(),
-                debug_info_builder_context,
-                debug_info_builder,
-            ) {
-                if let Some(t) = debug_info_builder.get_type(child_type_id) {
-                    let child_type = t.get_type();
-                    if let Some(child_name) = debug_info_builder_context
-                        .get_name(dwarf, unit, child.entry())
-                        .map_or(
-                            if child_type.type_class() == TypeClass::StructureTypeClass {
-                                Some("".to_string())
-                            } else {
-                                None
-                            },
-                            Some,
-                        )
-                    {
-                        // TODO : support DW_AT_data_bit_offset for offset as well
-                        if let Ok(Some(raw_struct_offset)) =
-                            child.entry().attr(constants::DW_AT_data_member_location)
-                        {
-                            // TODO : Let this fail; don't unwrap_or_default get_expr_value
-                            let struct_offset =
-                                get_attr_as_u64(&raw_struct_offset).unwrap_or_else(|| {
-                                    get_expr_value(unit, raw_struct_offset).unwrap_or_default()
-                                });
+        match child.entry().tag() {
+            constants::DW_TAG_member => {
+                let Some(child_type_id) = get_type(
+                    dwarf,
+                    unit,
+                    child.entry(),
+                    debug_info_builder_context,
+                    debug_info_builder,
+                ) else {
+                    continue;
+                };
 
-                            structure_builder.insert(
-                                child_type.as_ref(),
-                                child_name,
-                                struct_offset,
-                                false,
-                                MemberAccess::NoAccess, // TODO : Resolve actual scopes, if possible
-                                MemberScope::NoScope,
-                            );
-                        } else {
-                            structure_builder.append(
-                                child_type.as_ref(),
-                                child_name,
-                                MemberAccess::NoAccess,
-                                MemberScope::NoScope,
-                            );
-                        }
-                    }
+                let Some(child_dbg_ty) = debug_info_builder.get_type(child_type_id) else {
+                    continue;
+                };
+                let child_type = child_dbg_ty.get_type();
+
+                let Some(child_name) = debug_info_builder_context
+                    .get_name(dwarf, unit, child.entry())
+                    .or_else(|| match child_type.type_class() {
+                        TypeClass::StructureTypeClass => Some(String::new()),
+                        _ => None,
+                    })
+                else {
+                    continue;
+                };
+
+                // TODO : support DW_AT_data_bit_offset for offset as well
+                if let Ok(Some(raw_struct_offset)) =
+                    child.entry().attr(constants::DW_AT_data_member_location)
+                {
+                    // TODO : Let this fail; don't unwrap_or_default get_expr_value
+                    let struct_offset = get_attr_as_u64(&raw_struct_offset).unwrap_or_else(|| {
+                        get_expr_value(unit, raw_struct_offset).unwrap_or_default()
+                    });
+
+                    structure_builder.insert(
+                        child_type.as_ref(),
+                        child_name,
+                        struct_offset,
+                        false,
+                        MemberAccess::NoAccess, // TODO : Resolve actual scopes, if possible
+                        MemberScope::NoScope,
+                    );
+                } else {
+                    structure_builder.append(
+                        child_type.as_ref(),
+                        child_name,
+                        MemberAccess::NoAccess,
+                        MemberScope::NoScope,
+                    );
                 }
             }
+            constants::DW_TAG_inheritance => {
+                let Some(base_type_id) = get_type(
+                    dwarf,
+                    unit,
+                    child.entry(),
+                    debug_info_builder_context,
+                    debug_info_builder,
+                ) else {
+                    warn!("Failed to get base type for inheritance");
+                    continue;
+                };
+                let Some(base_dbg_ty) = debug_info_builder.get_type(base_type_id) else {
+                    continue;
+                };
+                let base_type = base_dbg_ty.get_type();
+
+                let Ok(Some(raw_data_member_location)) =
+                    child.entry().attr(constants::DW_AT_data_member_location)
+                else {
+                    warn!("Failed to get DW_AT_data_member_location for inheritance");
+                    continue;
+                };
+
+                let base_offset = get_attr_as_u64(&raw_data_member_location).unwrap_or_else(|| {
+                    get_expr_value(unit, raw_data_member_location).unwrap_or_default()
+                });
+
+                if let Some(ntr) = base_type.get_named_type_reference() {
+                    let base_struct = BaseStructure::new(ntr, base_offset, 0);
+                    base_structures.push(base_struct);
+                }
+            }
+            _ => {}
         }
     }
 
+    structure_builder.base_structures(&base_structures);
     let finalized_structure = Type::structure(&structure_builder.finalize());
     if let Some(full_name) = full_name {
         debug_info_builder.add_type(

@@ -8,17 +8,11 @@ use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstructionKind, LowLevelInstructionIndex,
 };
 use binaryninja::low_level_il::{LowLevelILRegister, VisitorAction};
-use rstest::*;
 use std::path::PathBuf;
 
-#[fixture]
-#[once]
-fn session() -> Session {
-    Session::new().expect("Failed to initialize session")
-}
-
-#[rstest]
-fn test_llil_info(_session: &Session) {
+#[test]
+fn test_llil_info() {
+    let _session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     let image_base = view.original_image_base();
@@ -170,8 +164,9 @@ fn test_llil_info(_session: &Session) {
     }
 }
 
-#[rstest]
-fn test_llil_visitor(_session: &Session) {
+#[test]
+fn test_llil_visitor() {
+    let _session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     let image_base = view.original_image_base();

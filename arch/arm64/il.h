@@ -1,6 +1,7 @@
 #pragma once
 
 #include "binaryninjaapi.h"
+#include "sysregs_enum.h"
 #include "disassembler/arm64dis.h"
 #include "disassembler/encodings_dec.h"
 #include "disassembler/encodings_fmt.h"

@@ -5,7 +5,7 @@
 
 #include "il.h"
 #include "neon_intrinsics.h"
-#include "sysregs.h"
+#include "sysregs_gen.h"
 
 using namespace BinaryNinja;
 
@@ -2268,12 +2268,15 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_MRS:
 	{
-		ExprId reg = ILREG_O(operand2);
-		const char* name = get_system_register_name((SystemReg)operand2.sysreg);
+		// ExprId reg = ILREG_O(operand2);
+		// size_t opsz = get_register_size(operand2.reg[0]);
+
+		ExprId reg = il.Const(4, operand2.sysreg);
+		const char* name = get_system_register_name((SystemReg)(operand2.sysreg));
 
 		if (strlen(name) == 0)
 		{
-			LogWarn("Unknown system register %d @ 0x%" PRIx64
+			LogWarn("MRS Unknown system register %d @ 0x%" PRIx64
 			        ": S%d_%d_c%d_c%d_%d, using generic system register instead\n",
 			    operand2.sysreg, addr, operand2.implspec[0], operand2.implspec[1], operand2.implspec[2],
 			    operand2.implspec[3], operand2.implspec[4]);
@@ -2297,13 +2300,13 @@ bool GetLowLevelILForInstruction(
 	case ARM64_MSR:
 	{
 		uint32_t dst = operand1.sysreg;
-		const char* name = get_system_register_name((SystemReg)dst);
+		const char* name = get_system_register_name((SystemReg)(dst));
 
 		if (strlen(name) == 0)
 		{
-			LogWarn("Unknown system register %d @ 0x%" PRIx64
+			LogWarn("MSR Unknown system register %d @ 0x%" PRIx64
 			        ": S%d_%d_c%d_c%d_%d, using generic system register instead\n",
-			    dst, addr, operand1.implspec[0], operand1.implspec[1], operand1.implspec[2],
+			    operand1.sysreg, addr, operand1.implspec[0], operand1.implspec[1], operand1.implspec[2],
 			    operand1.implspec[3], operand1.implspec[4]);
 			dst = FAKEREG_SYSREG_UNKNOWN;
 		}
@@ -2312,11 +2315,13 @@ bool GetLowLevelILForInstruction(
 		{
 		case IMM32:
 			il.AddInstruction(il.Intrinsic(
-			    {RegisterOrFlag::Register(dst)}, ARM64_INTRIN_MSR, {il.Const(4, IMM_O(operand2))}));
+			    // {RegisterOrFlag::Register(dst)}, ARM64_INTRIN_MSR, {il.Const(4, IMM_O(operand2))}));
+			    {}, ARM64_INTRIN_MSR, {il.Const(4, dst), il.Const(4, IMM_O(operand2))}));
 			break;
 		case REG:
 			il.AddInstruction(
-			    il.Intrinsic({RegisterOrFlag::Register(dst)}, ARM64_INTRIN_MSR, {ILREG_O(operand2)}));
+			    // il.Intrinsic({}, ARM64_INTRIN_MSR, {RegisterOrFlag::Register(dst),ILREG_O(operand2)}));
+			    il.Intrinsic({}, ARM64_INTRIN_MSR, {il.Const(4, dst), ILREG_O(operand2)}));
 			break;
 		default:
 			LogError("unknown MSR operand class: %x\n", operand2.operandClass);

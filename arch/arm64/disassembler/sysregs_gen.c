@@ -1495,7 +1495,7 @@ const char *get_system_register_name(enum SystemReg sr)
 
 const char *get_system_register_name_decomposed(int op0, int op1, int CRn, int CRm, int op2)
 {
-	enum SystemReg sr = (enum SystemReg)(32769+(op0<<14)|(op1<<11)|(CRn<<7)|(CRm<<3)|op2);
+	enum SystemReg sr = (enum SystemReg)((op0<<14)|(op1<<11)|(CRn<<7)|(CRm<<3)|op2);
 	return get_system_register_name(sr);
 }
 

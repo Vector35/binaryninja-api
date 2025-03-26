@@ -1230,10 +1230,10 @@ const char* reg_lookup_c[16] = {"c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7", 
 	{ \
 		SystemReg sr = ((ctx->sys_op0 << 14) | (ctx->sys_op1 << 11) | (ctx->sys_crn << 7) | \
 		                (ctx->sys_crm << 3) | ctx->sys_op2); \
-		const char* name = get_system_register_name(32769+sr); \
+		const char* name = get_system_register_name(sr); \
 		if (name[0]) \
 		{ \
-			ADD_OPERAND_SYSTEMREG(32769+sr); \
+			ADD_OPERAND_SYSTEMREG(sr); \
 		} \
 		else \
 		{ \

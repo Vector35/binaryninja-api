@@ -2272,16 +2272,16 @@ bool GetLowLevelILForInstruction(
 		// size_t opsz = get_register_size(operand2.reg[0]);
 
 		ExprId reg = il.Const(4, operand2.sysreg);
-		const char* name = get_system_register_name((SystemReg)(operand2.sysreg));
-
-		if (strlen(name) == 0)
-		{
-			LogWarn("MRS Unknown system register %d @ 0x%" PRIx64
-			        ": S%d_%d_c%d_c%d_%d, using generic system register instead\n",
-			    operand2.sysreg, addr, operand2.implspec[0], operand2.implspec[1], operand2.implspec[2],
-			    operand2.implspec[3], operand2.implspec[4]);
-			reg = il.Register(8, FAKEREG_SYSREG_UNKNOWN);
-		}
+		// const char* name = get_system_register_name((SystemReg)(operand2.sysreg));
+		//
+		// if (strlen(name) == 0)
+		// {
+		// 	LogWarn("MRS Unknown system register %d @ 0x%" PRIx64
+		// 	        ": S%d_%d_c%d_c%d_%d, using generic system register instead\n",
+		// 	    operand2.sysreg, addr, operand2.implspec[0], operand2.implspec[1], operand2.implspec[2],
+		// 	    operand2.implspec[3], operand2.implspec[4]);
+		// 	reg = il.Register(8, FAKEREG_SYSREG_UNKNOWN);
+		// }
 
 		il.AddInstruction(
 		    il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_MRS, {reg}));
@@ -2300,16 +2300,16 @@ bool GetLowLevelILForInstruction(
 	case ARM64_MSR:
 	{
 		uint32_t dst = operand1.sysreg;
-		const char* name = get_system_register_name((SystemReg)(dst));
-
-		if (strlen(name) == 0)
-		{
-			LogWarn("MSR Unknown system register %d @ 0x%" PRIx64
-			        ": S%d_%d_c%d_c%d_%d, using generic system register instead\n",
-			    operand1.sysreg, addr, operand1.implspec[0], operand1.implspec[1], operand1.implspec[2],
-			    operand1.implspec[3], operand1.implspec[4]);
-			dst = FAKEREG_SYSREG_UNKNOWN;
-		}
+		// const char* name = get_system_register_name((SystemReg)(dst));
+		//
+		// if (strlen(name) == 0)
+		// {
+		// 	LogWarn("MSR Unknown system register %d @ 0x%" PRIx64
+		// 	        ": S%d_%d_c%d_c%d_%d, using generic system register instead\n",
+		// 	    operand1.sysreg, addr, operand1.implspec[0], operand1.implspec[1], operand1.implspec[2],
+		// 	    operand1.implspec[3], operand1.implspec[4]);
+		// 	dst = FAKEREG_SYSREG_UNKNOWN;
+		// }
 
 		switch (operand2.operandClass)
 		{

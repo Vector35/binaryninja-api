@@ -10,7 +10,7 @@
 
 #include "encodings_dec.h"
 #include "regs.h"
-#include "sysregs.h"
+#include "sysregs_gen.h"
 
 #ifdef _MSC_VER
 	#undef REG_NONE  // collides with winnt's define

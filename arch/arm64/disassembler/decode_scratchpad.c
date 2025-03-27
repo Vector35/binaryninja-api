@@ -7521,51 +7521,72 @@ int decode_scratchpad(context* ctx, Instruction* instr)
 	case ENC_AT_SYS_CR_SYSTEMINSTRS:
 	{
 		char* at_op = "";
-		switch ((ctx->sys_op1 << 4) | ((ctx->sys_crm & 1) << 3) | (ctx->sys_op2 & 7))
+		switch (AT_OP(ctx->sys_op1, ctx->sys_crm, ctx->sys_op2))
 		{
-		case 0b0000000:
-			at_op = "S1E1R";
-			break;
-		case 0b0000001:
-			at_op = "S1E1W";
-			break;
-		case 0b0000010:
-			at_op = "S1E0R";
-			break;
-		case 0b0000011:
-			at_op = "S1E0W";
-			break;
-		case 0b0001000:
-			at_op = "S1E1RP";
-			break;
-		case 0b0001001:
-			at_op = "S1E1WP";
-			break;
-		case 0b1000000:
-			at_op = "S1E2R";
-			break;
-		case 0b1000001:
-			at_op = "S1E2W";
-			break;
-		case 0b1000100:
-			at_op = "S12E1R";
-			break;
-		case 0b1000101:
-			at_op = "S12E1W";
-			break;
-		case 0b1000110:
-			at_op = "S12E1R";
-			break;
-		case 0b1000111:
-			at_op = "S12E0W";
-			break;
-		case 0b1100000:
-			at_op = "S1E3R";
-			break;
-		case 0b1100001:
-			at_op = "S1E3W";
-			break;
+		case AT_OP(0b000, 0b1000, 0b000): at_op = "S1E1R"; break;
+		case AT_OP(0b000, 0b1000, 0b001): at_op = "S1E1W"; break;
+		case AT_OP(0b000, 0b1000, 0b010): at_op = "S1E0R"; break;
+		case AT_OP(0b000, 0b1000, 0b011): at_op = "S1E0W"; break;
+		case AT_OP(0b000, 0b1001, 0b000): at_op = "S1E1RP"; break;
+		case AT_OP(0b000, 0b1001, 0b001): at_op = "S1E1WP"; break;
+		case AT_OP(0b000, 0b1001, 0b010): at_op = "S1E1A"; break;
+		case AT_OP(0b100, 0b1000, 0b000): at_op = "S1E2R"; break;
+		case AT_OP(0b100, 0b1000, 0b001): at_op = "S1E2W"; break;
+		case AT_OP(0b100, 0b1000, 0b100): at_op = "S12E1R"; break;
+		case AT_OP(0b100, 0b1000, 0b101): at_op = "S12E1W"; break;
+		case AT_OP(0b100, 0b1000, 0b110): at_op = "S12E0R"; break;
+		case AT_OP(0b100, 0b1000, 0b111): at_op = "S12E0W"; break;
+		case AT_OP(0b100, 0b1001, 0b010): at_op = "S1E2A"; break;
+		case AT_OP(0b110, 0b1000, 0b000): at_op = "S1E3R"; break;
+		case AT_OP(0b110, 0b1000, 0b001): at_op = "S1E3W"; break;
+		case AT_OP(0b110, 0b1001, 0b010): at_op = "S1E3A"; break;
 		}
+		// switch ((ctx->sys_op1 << 4) | ((ctx->sys_crm & 1) << 3) | (ctx->sys_op2 & 7))
+		// {
+		// case 0b0000000:
+		// 	at_op = "S1E1R";
+		// 	break;
+		// case 0b0000001:
+		// 	at_op = "S1E1W";
+		// 	break;
+		// case 0b0000010:
+		// 	at_op = "S1E0R";
+		// 	break;
+		// case 0b0000011:
+		// 	at_op = "S1E0W";
+		// 	break;
+		// case 0b0001000:
+		// 	at_op = "S1E1RP";
+		// 	break;
+		// case 0b0001001:
+		// 	at_op = "S1E1WP";
+		// 	break;
+		// case 0b1000000:
+		// 	at_op = "S1E2R";
+		// 	break;
+		// case 0b1000001:
+		// 	at_op = "S1E2W";
+		// 	break;
+		// case 0b1000100:
+		// 	at_op = "S12E1R";
+		// 	break;
+		// case 0b1000101:
+		// 	at_op = "S12E1W";
+		// 	break;
+		// case 0b1000110:
+		// 	at_op = "S12E1R";
+		// 	break;
+		// case 0b1000111:
+		// 	at_op = "S12E0W";
+		// 	break;
+		// case 0b1100000:
+		// 	at_op = "S1E3R";
+		// 	break;
+		// case 0b1100001:
+		// 	at_op = "S1E3W";
+		// 	break;
+		// }
+		instr->operands[i].immediate = AT_OP(ctx->sys_op1, ctx->sys_crm, ctx->sys_op2);
 		// <at_op>
 		ADD_OPERAND_NAME(at_op)
 		// <Xt>
@@ -8079,164 +8100,344 @@ int decode_scratchpad(context* ctx, Instruction* instr)
 	{
 		uint64_t op1 = ctx->op1;
 		uint64_t op2 = ctx->op2;
+		uint64_t crn = ctx->CRn;
 		uint64_t crm = ctx->CRm;
 		const char* tlbi_op = "error";
-		if (op1 == 0b000 && crm == 0b0001 && op2 == 0b000 && HaveTLBIOS())
-			tlbi_op = "vmalle1os";
-		else if (op1 == 0b000 && crm == 0b0001 && op2 == 0b001 && HaveTLBIOS())
-			tlbi_op = "vae1os";
-		else if (op1 == 0b000 && crm == 0b0001 && op2 == 0b010 && HaveTLBIOS())
-			tlbi_op = "aside1os";
-		else if (op1 == 0b000 && crm == 0b0001 && op2 == 0b011 && HaveTLBIOS())
-			tlbi_op = "vaae1os";
-		else if (op1 == 0b000 && crm == 0b0001 && op2 == 0b101 && HaveTLBIOS())
-			tlbi_op = "vale1os";
-		else if (op1 == 0b000 && crm == 0b0001 && op2 == 0b111 && HaveTLBIOS())
-			tlbi_op = "vaale1os";
-		else if (op1 == 0b000 && crm == 0b0010 && op2 == 0b001 && HaveTLBIRANGE())
-			tlbi_op = "rvae1is";
-		else if (op1 == 0b000 && crm == 0b0010 && op2 == 0b011 && HaveTLBIRANGE())
-			tlbi_op = "rvaae1is";
-		else if (op1 == 0b000 && crm == 0b0010 && op2 == 0b101 && HaveTLBIRANGE())
-			tlbi_op = "rvale1is";
-		else if (op1 == 0b000 && crm == 0b0010 && op2 == 0b111 && HaveTLBIRANGE())
-			tlbi_op = "rvaale1is";
-		else if (op1 == 0b000 && crm == 0b0011 && op2 == 0b000)
-			tlbi_op = "vmalle1is";
-		else if (op1 == 0b000 && crm == 0b0011 && op2 == 0b001)
-			tlbi_op = "vae1is";
-		else if (op1 == 0b000 && crm == 0b0011 && op2 == 0b010)
-			tlbi_op = "aside1is";
-		else if (op1 == 0b000 && crm == 0b0011 && op2 == 0b011)
-			tlbi_op = "vaae1is";
-		else if (op1 == 0b000 && crm == 0b0011 && op2 == 0b101)
-			tlbi_op = "vale1is";
-		else if (op1 == 0b000 && crm == 0b0011 && op2 == 0b111)
-			tlbi_op = "vaale1is";
-		else if (op1 == 0b000 && crm == 0b0101 && op2 == 0b001 && HaveTLBIRANGE())
-			tlbi_op = "rvae1os";
-		else if (op1 == 0b000 && crm == 0b0101 && op2 == 0b011 && HaveTLBIRANGE())
-			tlbi_op = "rvaae1os";
-		else if (op1 == 0b000 && crm == 0b0101 && op2 == 0b101 && HaveTLBIRANGE())
-			tlbi_op = "rvale1os";
-		else if (op1 == 0b000 && crm == 0b0101 && op2 == 0b111 && HaveTLBIRANGE())
-			tlbi_op = "rvaale1os";
-		else if (op1 == 0b000 && crm == 0b0110 && op2 == 0b001 && HaveTLBIRANGE())
-			tlbi_op = "rvae1";
-		else if (op1 == 0b000 && crm == 0b0110 && op2 == 0b011 && HaveTLBIRANGE())
-			tlbi_op = "rvaae1";
-		else if (op1 == 0b000 && crm == 0b0110 && op2 == 0b101 && HaveTLBIRANGE())
-			tlbi_op = "rvale1";
-		else if (op1 == 0b000 && crm == 0b0110 && op2 == 0b111 && HaveTLBIRANGE())
-			tlbi_op = "rvaale1";
-		else if (op1 == 0b000 && crm == 0b0111 && op2 == 0b000)
-			tlbi_op = "vmalle1";
-		else if (op1 == 0b000 && crm == 0b0111 && op2 == 0b001)
-			tlbi_op = "vae1";
-		else if (op1 == 0b000 && crm == 0b0111 && op2 == 0b010)
-			tlbi_op = "aside1";
-		else if (op1 == 0b000 && crm == 0b0111 && op2 == 0b011)
-			tlbi_op = "vaae1";
-		else if (op1 == 0b000 && crm == 0b0111 && op2 == 0b101)
-			tlbi_op = "vale1";
-		else if (op1 == 0b000 && crm == 0b0111 && op2 == 0b111)
-			tlbi_op = "vaale1";
-		else if (op1 == 0b100 && crm == 0b0000 && op2 == 0b001)
-			tlbi_op = "ipas2e1is";
-		else if (op1 == 0b100 && crm == 0b0000 && op2 == 0b010 && HaveTLBIRANGE())
-			tlbi_op = "ripas2e1is";
-		else if (op1 == 0b100 && crm == 0b0000 && op2 == 0b101)
-			tlbi_op = "ipas2le1is";
-		else if (op1 == 0b100 && crm == 0b0000 && op2 == 0b110 && HaveTLBIRANGE())
-			tlbi_op = "ripas2le1is";
-		else if (op1 == 0b100 && crm == 0b0001 && op2 == 0b000 && HaveTLBIOS())
-			tlbi_op = "alle2os";
-		else if (op1 == 0b100 && crm == 0b0001 && op2 == 0b001 && HaveTLBIOS())
-			tlbi_op = "vae2os";
-		else if (op1 == 0b100 && crm == 0b0001 && op2 == 0b100 && HaveTLBIOS())
-			tlbi_op = "alle1os";
-		else if (op1 == 0b100 && crm == 0b0001 && op2 == 0b101 && HaveTLBIOS())
-			tlbi_op = "vale2os";
-		else if (op1 == 0b100 && crm == 0b0001 && op2 == 0b110 && HaveTLBIOS())
-			tlbi_op = "vmalls12e1os";
-		else if (op1 == 0b100 && crm == 0b0010 && op2 == 0b001 && HaveTLBIRANGE())
-			tlbi_op = "rvae2is";
-		else if (op1 == 0b100 && crm == 0b0010 && op2 == 0b101 && HaveTLBIRANGE())
-			tlbi_op = "rvale2is";
-		else if (op1 == 0b100 && crm == 0b0011 && op2 == 0b000)
-			tlbi_op = "alle2is";
-		else if (op1 == 0b100 && crm == 0b0011 && op2 == 0b001)
-			tlbi_op = "vae2is";
-		else if (op1 == 0b100 && crm == 0b0011 && op2 == 0b100)
-			tlbi_op = "alle1is";
-		else if (op1 == 0b100 && crm == 0b0011 && op2 == 0b101)
-			tlbi_op = "vale2is";
-		else if (op1 == 0b100 && crm == 0b0011 && op2 == 0b110)
-			tlbi_op = "vmalls12e1is";
-		else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b000 && HaveTLBIOS())
-			tlbi_op = "ipas2e1os";
-		else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b001)
-			tlbi_op = "ipas2e1";
-		else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b010 && HaveTLBIRANGE())
-			tlbi_op = "ripas2e1";
-		else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b011 && HaveTLBIRANGE())
-			tlbi_op = "ripas2e1os";
-		else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b100 && HaveTLBIOS())
-			tlbi_op = "ipas2le1os";
-		else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b101)
-			tlbi_op = "ipas2le1";
-		else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b110 && HaveTLBIRANGE())
-			tlbi_op = "ripas2le1";
-		else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b111 && HaveTLBIRANGE())
-			tlbi_op = "ripas2le1os";
-		else if (op1 == 0b100 && crm == 0b0101 && op2 == 0b001 && HaveTLBIRANGE())
-			tlbi_op = "rvae2os";
-		else if (op1 == 0b100 && crm == 0b0101 && op2 == 0b101 && HaveTLBIRANGE())
-			tlbi_op = "rvale2os";
-		else if (op1 == 0b100 && crm == 0b0110 && op2 == 0b001 && HaveTLBIRANGE())
-			tlbi_op = "rvae2";
-		else if (op1 == 0b100 && crm == 0b0110 && op2 == 0b101 && HaveTLBIRANGE())
-			tlbi_op = "rvale2";
-		else if (op1 == 0b100 && crm == 0b0111 && op2 == 0b000)
-			tlbi_op = "alle2";
-		else if (op1 == 0b100 && crm == 0b0111 && op2 == 0b001)
-			tlbi_op = "vae2";
-		else if (op1 == 0b100 && crm == 0b0111 && op2 == 0b100)
-			tlbi_op = "alle1";
-		else if (op1 == 0b100 && crm == 0b0111 && op2 == 0b101)
-			tlbi_op = "vale2";
-		else if (op1 == 0b100 && crm == 0b0111 && op2 == 0b110)
-			tlbi_op = "vmalls12e1";
-		else if (op1 == 0b110 && crm == 0b0001 && op2 == 0b000 && HaveTLBIOS())
-			tlbi_op = "alle3os";
-		else if (op1 == 0b110 && crm == 0b0001 && op2 == 0b001 && HaveTLBIOS())
-			tlbi_op = "vae3os";
-		else if (op1 == 0b110 && crm == 0b0001 && op2 == 0b101 && HaveTLBIOS())
-			tlbi_op = "vale3os";
-		else if (op1 == 0b110 && crm == 0b0010 && op2 == 0b001 && HaveTLBIRANGE())
-			tlbi_op = "rvae3is";
-		else if (op1 == 0b110 && crm == 0b0010 && op2 == 0b101 && HaveTLBIRANGE())
-			tlbi_op = "rvale3is";
-		else if (op1 == 0b110 && crm == 0b0011 && op2 == 0b000)
-			tlbi_op = "alle3is";
-		else if (op1 == 0b110 && crm == 0b0011 && op2 == 0b001)
-			tlbi_op = "vae3is";
-		else if (op1 == 0b110 && crm == 0b0011 && op2 == 0b101)
-			tlbi_op = "vale3is";
-		else if (op1 == 0b110 && crm == 0b0101 && op2 == 0b001 && HaveTLBIRANGE())
-			tlbi_op = "rvae3os";
-		else if (op1 == 0b110 && crm == 0b0101 && op2 == 0b101 && HaveTLBIRANGE())
-			tlbi_op = "rvale3os";
-		else if (op1 == 0b110 && crm == 0b0110 && op2 == 0b001 && HaveTLBIRANGE())
-			tlbi_op = "rvae3";
-		else if (op1 == 0b110 && crm == 0b0110 && op2 == 0b101 && HaveTLBIRANGE())
-			tlbi_op = "rvale3";
-		else if (op1 == 0b110 && crm == 0b0111 && op2 == 0b000)
-			tlbi_op = "alle3";
-		else if (op1 == 0b110 && crm == 0b0111 && op2 == 0b001)
-			tlbi_op = "vae3";
-		else if (op1 == 0b110 && crm == 0b0111 && op2 == 0b101)
-			tlbi_op = "vale3";
+		instr->operands[i].immediate = -1;
+		switch (TLBI_OP(op1, crn, crm, op2))
+		{
+#define HaveXS() (1)
+#define HaveTLBIW() (1)
+#define HaveRME() (1)
+		case TLBI_OP(0b000, 0b1000, 0b0001, 0b000): if HaveTLBIOS() tlbi_op = "vmalle1os"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0001, 0b001): if HaveTLBIOS() tlbi_op = "vae1os"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0001, 0b010): if HaveTLBIOS() tlbi_op = "aside1os"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0001, 0b011): if HaveTLBIOS() tlbi_op = "vaae1os"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0001, 0b101): if HaveTLBIOS() tlbi_op = "vale1os"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0001, 0b111): if HaveTLBIOS() tlbi_op = "vaale1os"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0010, 0b001): if HaveTLBIRANGE() tlbi_op = "rvae1is"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0010, 0b011): if HaveTLBIRANGE() tlbi_op = "rvaae1is"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0010, 0b101): if HaveTLBIRANGE() tlbi_op = "rvale1is"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0010, 0b111): if HaveTLBIRANGE() tlbi_op = "rvaale1is"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0011, 0b000): tlbi_op = "vmalle1is"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0011, 0b001): tlbi_op = "vae1is"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0011, 0b010): tlbi_op = "aside1is"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0011, 0b011): tlbi_op = "vaae1is"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0011, 0b101): tlbi_op = "vale1is"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0011, 0b111): tlbi_op = "vaale1is"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0101, 0b001): if HaveTLBIRANGE() tlbi_op = "rvae1os"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0101, 0b011): if HaveTLBIRANGE() tlbi_op = "rvaae1os"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0101, 0b101): if HaveTLBIRANGE() tlbi_op = "rvale1os"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0101, 0b111): if HaveTLBIRANGE() tlbi_op = "rvaale1os"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0110, 0b001): if HaveTLBIRANGE() tlbi_op = "rvae1"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0110, 0b011): if HaveTLBIRANGE() tlbi_op = "rvaae1"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0110, 0b101): if HaveTLBIRANGE() tlbi_op = "rvale1"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0110, 0b111): if HaveTLBIRANGE() tlbi_op = "rvaale1"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0111, 0b000): tlbi_op = "vmalle1"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0111, 0b001): tlbi_op = "vae1"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0111, 0b010): tlbi_op = "aside1"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0111, 0b011): tlbi_op = "vaae1"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0111, 0b101): tlbi_op = "vale1"; break;
+        case TLBI_OP(0b000, 0b1000, 0b0111, 0b111): tlbi_op = "vaale1"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0001, 0b000): if HaveXS() tlbi_op = "vmalle1osnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0001, 0b001): if HaveXS() tlbi_op = "vae1osnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0001, 0b010): if HaveXS() tlbi_op = "aside1osnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0001, 0b011): if HaveXS() tlbi_op = "vaae1osnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0001, 0b101): if HaveXS() tlbi_op = "vale1osnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0001, 0b111): if HaveXS() tlbi_op = "vaale1osnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0010, 0b001): if HaveXS() tlbi_op = "rvae1isnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0010, 0b011): if HaveXS() tlbi_op = "rvaae1isnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0010, 0b101): if HaveXS() tlbi_op = "rvale1isnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0010, 0b111): if HaveXS() tlbi_op = "rvaale1isnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0011, 0b000): if HaveXS() tlbi_op = "vmalle1isnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0011, 0b001): if HaveXS() tlbi_op = "vae1isnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0011, 0b010): if HaveXS() tlbi_op = "aside1isnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0011, 0b011): if HaveXS() tlbi_op = "vaae1isnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0011, 0b101): if HaveXS() tlbi_op = "vale1isnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0011, 0b111): if HaveXS() tlbi_op = "vaale1isnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0101, 0b001): if HaveXS() tlbi_op = "rvae1osnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0101, 0b011): if HaveXS() tlbi_op = "rvaae1osnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0101, 0b101): if HaveXS() tlbi_op = "rvale1osnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0101, 0b111): if HaveXS() tlbi_op = "rvaale1osnxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0110, 0b001): if HaveXS() tlbi_op = "rvae1nxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0110, 0b011): if HaveXS() tlbi_op = "rvaae1nxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0110, 0b101): if HaveXS() tlbi_op = "rvale1nxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0110, 0b111): if HaveXS() tlbi_op = "rvaale1nxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0111, 0b000): if HaveXS() tlbi_op = "vmalle1nxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0111, 0b001): if HaveXS() tlbi_op = "vae1nxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0111, 0b010): if HaveXS() tlbi_op = "aside1nxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0111, 0b011): if HaveXS() tlbi_op = "vaae1nxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0111, 0b101): if HaveXS() tlbi_op = "vale1nxs"; break;
+        case TLBI_OP(0b000, 0b1001, 0b0111, 0b111): if HaveXS() tlbi_op = "vaale1nxs"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0000, 0b001): tlbi_op = "ipas2e1is"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0000, 0b010): if HaveTLBIRANGE() tlbi_op = "ripas2e1is"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0000, 0b101): tlbi_op = "ipas2le1is"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0000, 0b110): if HaveTLBIRANGE() tlbi_op = "ripas2le1is"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0001, 0b000): if HaveTLBIOS() tlbi_op = "alle2os"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0001, 0b001): if HaveTLBIOS() tlbi_op = "vae2os"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0001, 0b100): if HaveTLBIOS() tlbi_op = "alle1os"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0001, 0b101): if HaveTLBIOS() tlbi_op = "vale2os"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0001, 0b110): if HaveTLBIOS() tlbi_op = "vmalls12e1os"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0010, 0b001): if HaveTLBIRANGE() tlbi_op = "rvae2is"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0010, 0b010): if HaveTLBIW() tlbi_op = "vmallws2e1is"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0010, 0b101): if HaveTLBIRANGE() tlbi_op = "rvale2is"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0011, 0b000): tlbi_op = "alle2is"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0011, 0b001): tlbi_op = "vae2is"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0011, 0b100): tlbi_op = "alle1is"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0011, 0b101): tlbi_op = "vale2is"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0011, 0b110): tlbi_op = "vmalls12e1is"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0100, 0b000): if HaveTLBIOS() tlbi_op = "ipas2e1os"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0100, 0b001): tlbi_op = "ipas2e1"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0100, 0b010): if HaveTLBIRANGE() tlbi_op = "ripas2e1"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0100, 0b011): if HaveTLBIRANGE() tlbi_op = "ripas2e1os"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0100, 0b100): if HaveTLBIOS() tlbi_op = "ipas2le1os"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0100, 0b101): tlbi_op = "ipas2le1"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0100, 0b110): if HaveTLBIRANGE() tlbi_op = "ripas2le1"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0100, 0b111): if HaveTLBIRANGE() tlbi_op = "ripas2le1os"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0101, 0b001): if HaveTLBIRANGE() tlbi_op = "rvae2os"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0101, 0b010): if HaveTLBIW() tlbi_op = "vmallws2e1os"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0101, 0b101): if HaveTLBIRANGE() tlbi_op = "rvale2os"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0110, 0b001): if HaveTLBIRANGE() tlbi_op = "rvae2"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0110, 0b010): if HaveTLBIW() tlbi_op = "vmallws2e1"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0110, 0b101): if HaveTLBIRANGE() tlbi_op = "rvale2"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0111, 0b000): tlbi_op = "alle2"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0111, 0b001): tlbi_op = "vae2"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0111, 0b100): tlbi_op = "alle1"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0111, 0b101): tlbi_op = "vale2"; break;
+        case TLBI_OP(0b100, 0b1000, 0b0111, 0b110): tlbi_op = "vmalls12e1"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0000, 0b001): if HaveXS() tlbi_op = "ipas2e1isnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0000, 0b010): if HaveXS() tlbi_op = "ripas2e1isnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0000, 0b101): if HaveXS() tlbi_op = "ipas2le1isnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0000, 0b110): if HaveXS() tlbi_op = "ripas2le1isnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0001, 0b000): if HaveXS() tlbi_op = "alle2osnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0001, 0b001): if HaveXS() tlbi_op = "vae2osnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0001, 0b100): if HaveXS() tlbi_op = "alle1osnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0001, 0b101): if HaveXS() tlbi_op = "vale2osnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0001, 0b110): if HaveXS() tlbi_op = "vmalls12e1osnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0010, 0b001): if HaveXS() tlbi_op = "rvae2isnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0010, 0b010): if HaveTLBIW() tlbi_op = "vmallws2e1isnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0010, 0b101): if HaveXS() tlbi_op = "rvale2isnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0011, 0b000): if HaveXS() tlbi_op = "alle2isnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0011, 0b001): if HaveXS() tlbi_op = "vae2isnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0011, 0b100): if HaveXS() tlbi_op = "alle1isnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0011, 0b101): if HaveXS() tlbi_op = "vale2isnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0011, 0b110): if HaveXS() tlbi_op = "vmalls12e1isnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0100, 0b000): if HaveXS() tlbi_op = "ipas2e1osnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0100, 0b001): if HaveXS() tlbi_op = "ipas2e1nxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0100, 0b010): if HaveXS() tlbi_op = "ripas2e1nxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0100, 0b011): if HaveXS() tlbi_op = "ripas2e1osnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0100, 0b100): if HaveXS() tlbi_op = "ipas2le1osnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0100, 0b101): if HaveXS() tlbi_op = "ipas2le1nxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0100, 0b110): if HaveXS() tlbi_op = "ripas2le1nxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0100, 0b111): if HaveXS() tlbi_op = "ripas2le1osnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0101, 0b001): if HaveXS() tlbi_op = "rvae2osnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0101, 0b010): if HaveTLBIW() tlbi_op = "vmallws2e1osnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0101, 0b101): if HaveXS() tlbi_op = "rvale2osnxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0110, 0b001): if HaveXS() tlbi_op = "rvae2nxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0110, 0b010): if HaveTLBIW() tlbi_op = "vmallws2e1nxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0110, 0b101): if HaveXS() tlbi_op = "rvale2nxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0111, 0b000): if HaveXS() tlbi_op = "alle2nxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0111, 0b001): if HaveXS() tlbi_op = "vae2nxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0111, 0b100): if HaveXS() tlbi_op = "alle1nxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0111, 0b101): if HaveXS() tlbi_op = "vale2nxs"; break;
+        case TLBI_OP(0b100, 0b1001, 0b0111, 0b110): if HaveXS() tlbi_op = "vmalls12e1nxs"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0001, 0b000): if HaveTLBIOS() tlbi_op = "alle3os"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0001, 0b001): if HaveTLBIOS() tlbi_op = "vae3os"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0001, 0b100): if HaveRME() tlbi_op = "paallos"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0001, 0b101): if HaveTLBIOS() tlbi_op = "vale3os"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0010, 0b001): if HaveTLBIRANGE() tlbi_op = "rvae3is"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0010, 0b101): if HaveTLBIRANGE() tlbi_op = "rvale3is"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0011, 0b000): tlbi_op = "alle3is"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0011, 0b001): tlbi_op = "vae3is"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0011, 0b101): tlbi_op = "vale3is"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0100, 0b011): if HaveRME() tlbi_op = "rpaos"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0100, 0b111): if HaveRME() tlbi_op = "rpalos"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0101, 0b001): if HaveTLBIRANGE() tlbi_op = "rvae3os"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0101, 0b101): if HaveTLBIRANGE() tlbi_op = "rvale3os"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0110, 0b001): if HaveTLBIRANGE() tlbi_op = "rvae3"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0110, 0b101): if HaveTLBIRANGE() tlbi_op = "rvale3"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0111, 0b000): tlbi_op = "alle3"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0111, 0b001): tlbi_op = "vae3"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0111, 0b100): if HaveRME() tlbi_op = "paall"; break;
+        case TLBI_OP(0b110, 0b1000, 0b0111, 0b101): tlbi_op = "vale3"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0001, 0b000): if HaveXS() tlbi_op = "alle3osnxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0001, 0b001): if HaveXS() tlbi_op = "vae3osnxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0001, 0b101): if HaveXS() tlbi_op = "vale3osnxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0010, 0b001): if HaveXS() tlbi_op = "rvae3isnxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0010, 0b101): if HaveXS() tlbi_op = "rvale3isnxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0011, 0b000): if HaveXS() tlbi_op = "alle3isnxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0011, 0b001): if HaveXS() tlbi_op = "vae3isnxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0011, 0b101): if HaveXS() tlbi_op = "vale3isnxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0101, 0b001): if HaveXS() tlbi_op = "rvae3osnxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0101, 0b101): if HaveXS() tlbi_op = "rvale3osnxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0110, 0b001): if HaveXS() tlbi_op = "rvae3nxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0110, 0b101): if HaveXS() tlbi_op = "rvale3nxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0111, 0b000): if HaveXS() tlbi_op = "alle3nxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0111, 0b001): if HaveXS() tlbi_op = "vae3nxs"; break;
+        case TLBI_OP(0b110, 0b1001, 0b0111, 0b101): if HaveXS() tlbi_op = "vale3nxs"; break;
+
+
+		}
+		// if (op1 == 0b000 && crm == 0b0001 && op2 == 0b000 && HaveTLBIOS())
+		// 	tlbi_op = "vmalle1os";
+		// else if (op1 == 0b000 && crm == 0b0001 && op2 == 0b001 && HaveTLBIOS())
+		// 	tlbi_op = "vae1os";
+		// else if (op1 == 0b000 && crm == 0b0001 && op2 == 0b010 && HaveTLBIOS())
+		// 	tlbi_op = "aside1os";
+		// else if (op1 == 0b000 && crm == 0b0001 && op2 == 0b011 && HaveTLBIOS())
+		// 	tlbi_op = "vaae1os";
+		// else if (op1 == 0b000 && crm == 0b0001 && op2 == 0b101 && HaveTLBIOS())
+		// 	tlbi_op = "vale1os";
+		// else if (op1 == 0b000 && crm == 0b0001 && op2 == 0b111 && HaveTLBIOS())
+		// 	tlbi_op = "vaale1os";
+		// else if (op1 == 0b000 && crm == 0b0010 && op2 == 0b001 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvae1is";
+		// else if (op1 == 0b000 && crm == 0b0010 && op2 == 0b011 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvaae1is";
+		// else if (op1 == 0b000 && crm == 0b0010 && op2 == 0b101 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvale1is";
+		// else if (op1 == 0b000 && crm == 0b0010 && op2 == 0b111 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvaale1is";
+		// else if (op1 == 0b000 && crm == 0b0011 && op2 == 0b000)
+		// 	tlbi_op = "vmalle1is";
+		// else if (op1 == 0b000 && crm == 0b0011 && op2 == 0b001)
+		// 	tlbi_op = "vae1is";
+		// else if (op1 == 0b000 && crm == 0b0011 && op2 == 0b010)
+		// 	tlbi_op = "aside1is";
+		// else if (op1 == 0b000 && crm == 0b0011 && op2 == 0b011)
+		// 	tlbi_op = "vaae1is";
+		// else if (op1 == 0b000 && crm == 0b0011 && op2 == 0b101)
+		// 	tlbi_op = "vale1is";
+		// else if (op1 == 0b000 && crm == 0b0011 && op2 == 0b111)
+		// 	tlbi_op = "vaale1is";
+		// else if (op1 == 0b000 && crm == 0b0101 && op2 == 0b001 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvae1os";
+		// else if (op1 == 0b000 && crm == 0b0101 && op2 == 0b011 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvaae1os";
+		// else if (op1 == 0b000 && crm == 0b0101 && op2 == 0b101 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvale1os";
+		// else if (op1 == 0b000 && crm == 0b0101 && op2 == 0b111 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvaale1os";
+		// else if (op1 == 0b000 && crm == 0b0110 && op2 == 0b001 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvae1";
+		// else if (op1 == 0b000 && crm == 0b0110 && op2 == 0b011 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvaae1";
+		// else if (op1 == 0b000 && crm == 0b0110 && op2 == 0b101 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvale1";
+		// else if (op1 == 0b000 && crm == 0b0110 && op2 == 0b111 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvaale1";
+		// else if (op1 == 0b000 && crm == 0b0111 && op2 == 0b000)
+		// 	tlbi_op = "vmalle1";
+		// else if (op1 == 0b000 && crm == 0b0111 && op2 == 0b001)
+		// 	tlbi_op = "vae1";
+		// else if (op1 == 0b000 && crm == 0b0111 && op2 == 0b010)
+		// 	tlbi_op = "aside1";
+		// else if (op1 == 0b000 && crm == 0b0111 && op2 == 0b011)
+		// 	tlbi_op = "vaae1";
+		// else if (op1 == 0b000 && crm == 0b0111 && op2 == 0b101)
+		// 	tlbi_op = "vale1";
+		// else if (op1 == 0b000 && crm == 0b0111 && op2 == 0b111)
+		// 	tlbi_op = "vaale1";
+		// else if (op1 == 0b100 && crm == 0b0000 && op2 == 0b001)
+		// 	tlbi_op = "ipas2e1is";
+		// else if (op1 == 0b100 && crm == 0b0000 && op2 == 0b010 && HaveTLBIRANGE())
+		// 	tlbi_op = "ripas2e1is";
+		// else if (op1 == 0b100 && crm == 0b0000 && op2 == 0b101)
+		// 	tlbi_op = "ipas2le1is";
+		// else if (op1 == 0b100 && crm == 0b0000 && op2 == 0b110 && HaveTLBIRANGE())
+		// 	tlbi_op = "ripas2le1is";
+		// else if (op1 == 0b100 && crm == 0b0001 && op2 == 0b000 && HaveTLBIOS())
+		// 	tlbi_op = "alle2os";
+		// else if (op1 == 0b100 && crm == 0b0001 && op2 == 0b001 && HaveTLBIOS())
+		// 	tlbi_op = "vae2os";
+		// else if (op1 == 0b100 && crm == 0b0001 && op2 == 0b100 && HaveTLBIOS())
+		// 	tlbi_op = "alle1os";
+		// else if (op1 == 0b100 && crm == 0b0001 && op2 == 0b101 && HaveTLBIOS())
+		// 	tlbi_op = "vale2os";
+		// else if (op1 == 0b100 && crm == 0b0001 && op2 == 0b110 && HaveTLBIOS())
+		// 	tlbi_op = "vmalls12e1os";
+		// else if (op1 == 0b100 && crm == 0b0010 && op2 == 0b001 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvae2is";
+		// else if (op1 == 0b100 && crm == 0b0010 && op2 == 0b101 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvale2is";
+		// else if (op1 == 0b100 && crm == 0b0011 && op2 == 0b000)
+		// 	tlbi_op = "alle2is";
+		// else if (op1 == 0b100 && crm == 0b0011 && op2 == 0b001)
+		// 	tlbi_op = "vae2is";
+		// else if (op1 == 0b100 && crm == 0b0011 && op2 == 0b100)
+		// 	tlbi_op = "alle1is";
+		// else if (op1 == 0b100 && crm == 0b0011 && op2 == 0b101)
+		// 	tlbi_op = "vale2is";
+		// else if (op1 == 0b100 && crm == 0b0011 && op2 == 0b110)
+		// 	tlbi_op = "vmalls12e1is";
+		// else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b000 && HaveTLBIOS())
+		// 	tlbi_op = "ipas2e1os";
+		// else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b001)
+		// 	tlbi_op = "ipas2e1";
+		// else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b010 && HaveTLBIRANGE())
+		// 	tlbi_op = "ripas2e1";
+		// else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b011 && HaveTLBIRANGE())
+		// 	tlbi_op = "ripas2e1os";
+		// else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b100 && HaveTLBIOS())
+		// 	tlbi_op = "ipas2le1os";
+		// else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b101)
+		// 	tlbi_op = "ipas2le1";
+		// else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b110 && HaveTLBIRANGE())
+		// 	tlbi_op = "ripas2le1";
+		// else if (op1 == 0b100 && crm == 0b0100 && op2 == 0b111 && HaveTLBIRANGE())
+		// 	tlbi_op = "ripas2le1os";
+		// else if (op1 == 0b100 && crm == 0b0101 && op2 == 0b001 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvae2os";
+		// else if (op1 == 0b100 && crm == 0b0101 && op2 == 0b101 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvale2os";
+		// else if (op1 == 0b100 && crm == 0b0110 && op2 == 0b001 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvae2";
+		// else if (op1 == 0b100 && crm == 0b0110 && op2 == 0b101 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvale2";
+		// else if (op1 == 0b100 && crm == 0b0111 && op2 == 0b000)
+		// 	tlbi_op = "alle2";
+		// else if (op1 == 0b100 && crm == 0b0111 && op2 == 0b001)
+		// 	tlbi_op = "vae2";
+		// else if (op1 == 0b100 && crm == 0b0111 && op2 == 0b100)
+		// 	tlbi_op = "alle1";
+		// else if (op1 == 0b100 && crm == 0b0111 && op2 == 0b101)
+		// 	tlbi_op = "vale2";
+		// else if (op1 == 0b100 && crm == 0b0111 && op2 == 0b110)
+		// 	tlbi_op = "vmalls12e1";
+		// else if (op1 == 0b110 && crm == 0b0001 && op2 == 0b000 && HaveTLBIOS())
+		// 	tlbi_op = "alle3os";
+		// else if (op1 == 0b110 && crm == 0b0001 && op2 == 0b001 && HaveTLBIOS())
+		// 	tlbi_op = "vae3os";
+		// else if (op1 == 0b110 && crm == 0b0001 && op2 == 0b101 && HaveTLBIOS())
+		// 	tlbi_op = "vale3os";
+		// else if (op1 == 0b110 && crm == 0b0010 && op2 == 0b001 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvae3is";
+		// else if (op1 == 0b110 && crm == 0b0010 && op2 == 0b101 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvale3is";
+		// else if (op1 == 0b110 && crm == 0b0011 && op2 == 0b000)
+		// 	tlbi_op = "alle3is";
+		// else if (op1 == 0b110 && crm == 0b0011 && op2 == 0b001)
+		// 	tlbi_op = "vae3is";
+		// else if (op1 == 0b110 && crm == 0b0011 && op2 == 0b101)
+		// 	tlbi_op = "vale3is";
+		// else if (op1 == 0b110 && crm == 0b0101 && op2 == 0b001 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvae3os";
+		// else if (op1 == 0b110 && crm == 0b0101 && op2 == 0b101 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvale3os";
+		// else if (op1 == 0b110 && crm == 0b0110 && op2 == 0b001 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvae3";
+		// else if (op1 == 0b110 && crm == 0b0110 && op2 == 0b101 && HaveTLBIRANGE())
+		// 	tlbi_op = "rvale3";
+		// else if (op1 == 0b110 && crm == 0b0111 && op2 == 0b000)
+		// 	tlbi_op = "alle3";
+		// else if (op1 == 0b110 && crm == 0b0111 && op2 == 0b001)
+		// 	tlbi_op = "vae3";
+		// else if (op1 == 0b110 && crm == 0b0111 && op2 == 0b101)
+		// 	tlbi_op = "vale3";
+		instr->operands[i].implspec[OP1] = op1;
+		instr->operands[i].implspec[CRM] = crm;
+		instr->operands[i].implspec[OP2] = op2;
+		instr->operands[i].immediate = TLBI_OP(op1, crn, crm, op2);
 		// NON-SYNTAX: <tlbi_op>{,<Xt>}
 		ADD_OPERAND_NAME(tlbi_op);
 		if (ctx->Rt != 31)

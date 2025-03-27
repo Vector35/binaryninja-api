@@ -2268,23 +2268,19 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_MRS:
 	{
-		// ExprId reg = ILREG_O(operand2);
-		// size_t opsz = get_register_size(operand2.reg[0]);
+		uint32_t reg = operand2.sysreg;
+		const char* name = get_system_register_name((SystemReg)(reg));
 
-		ExprId reg = il.Const(4, operand2.sysreg);
-		// const char* name = get_system_register_name((SystemReg)(operand2.sysreg));
-		//
-		// if (strlen(name) == 0)
-		// {
-		// 	LogWarn("MRS Unknown system register %d @ 0x%" PRIx64
-		// 	        ": S%d_%d_c%d_c%d_%d, using generic system register instead\n",
-		// 	    operand2.sysreg, addr, operand2.implspec[0], operand2.implspec[1], operand2.implspec[2],
-		// 	    operand2.implspec[3], operand2.implspec[4]);
-		// 	reg = il.Register(8, FAKEREG_SYSREG_UNKNOWN);
-		// }
+		if (strlen(name) == 0)
+		{
+			LogDebug("MSR Unknown system register %d @ 0x%" PRIx64
+					": S%d_%d_c%d_c%d_%d",
+				operand2.sysreg, addr, operand2.implspec[0], operand2.implspec[1], operand2.implspec[2],
+				operand2.implspec[3], operand2.implspec[4]);
+		}
 
 		il.AddInstruction(
-		    il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_MRS, {reg}));
+		    il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_MRS, {il.Const(4, reg)}));
 		break;
 	}
 	case ARM64_MSUB:
@@ -2300,28 +2296,23 @@ bool GetLowLevelILForInstruction(
 	case ARM64_MSR:
 	{
 		uint32_t dst = operand1.sysreg;
-		// const char* name = get_system_register_name((SystemReg)(dst));
-		//
-		// if (strlen(name) == 0)
-		// {
-		// 	LogWarn("MSR Unknown system register %d @ 0x%" PRIx64
-		// 	        ": S%d_%d_c%d_c%d_%d, using generic system register instead\n",
-		// 	    operand1.sysreg, addr, operand1.implspec[0], operand1.implspec[1], operand1.implspec[2],
-		// 	    operand1.implspec[3], operand1.implspec[4]);
-		// 	dst = FAKEREG_SYSREG_UNKNOWN;
-		// }
+		const char* name = get_system_register_name((SystemReg)(dst));
+
+		if (strlen(name) == 0)
+		{
+			LogDebug("MSR Unknown system register %d @ 0x%" PRIx64
+			        ": S%d_%d_c%d_c%d_%d",
+			    operand1.sysreg, addr, operand1.implspec[0], operand1.implspec[1], operand1.implspec[2],
+			    operand1.implspec[3], operand1.implspec[4]);
+		}
 
 		switch (operand2.operandClass)
 		{
 		case IMM32:
-			il.AddInstruction(il.Intrinsic(
-			    // {RegisterOrFlag::Register(dst)}, ARM64_INTRIN_MSR, {il.Const(4, IMM_O(operand2))}));
-			    {}, ARM64_INTRIN_MSR, {il.Const(4, dst), il.Const(4, IMM_O(operand2))}));
+			il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_MSR, {il.Const(4, dst), il.Const(4, IMM_O(operand2))}));
 			break;
 		case REG:
-			il.AddInstruction(
-			    // il.Intrinsic({}, ARM64_INTRIN_MSR, {RegisterOrFlag::Register(dst),ILREG_O(operand2)}));
-			    il.Intrinsic({}, ARM64_INTRIN_MSR, {il.Const(4, dst), ILREG_O(operand2)}));
+			il.AddInstruction( il.Intrinsic({}, ARM64_INTRIN_MSR, {il.Const(4, dst), ILREG_O(operand2)}));
 			break;
 		default:
 			LogError("unknown MSR operand class: %x\n", operand2.operandClass);
@@ -2921,6 +2912,15 @@ bool GetLowLevelILForInstruction(
 	case ARM64_TST:
 		il.AddInstruction(il.And(REGSZ_O(operand1), ILREG_O(operand1),
 		    ReadILOperand(il, operand2, REGSZ_O(operand1)), SETFLAGS));
+		break;
+	case ARM64_TLBI:
+		if (operand2.operandClass == REG)
+			il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_TLBI_REG, {il.Const(4, operand1.immediate), ReadILOperand(il, operand2, 8)}));
+		else
+			il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_TLBI, {il.Const(4, operand1.immediate)}));
+		break;
+	case ARM64_AT:
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_AT, {il.Const(4, operand1.immediate), ReadILOperand(il, operand2, 8)}));
 		break;
 	case ARM64_UMADDL:
 		il.AddInstruction(ILSETREG_O(operand1,

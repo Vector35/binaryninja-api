@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 enum SystemReg {
 	SYSREG_NONE=0,
 	REG_EDSCR                      =4 /* 4 */,  // S0_0_c0_c0_4 at min EL0: EDSCR
@@ -1552,8 +1554,7 @@ enum SystemReg {
 #ifdef __cplusplus
 extern "C" {
 #endif
-const char *get_system_register_name(enum SystemReg);
-const char *get_system_register_name_decomposed(int op0, int op1, int CRn, int CRm, int op2);
+bool has_system_register_name(enum SystemReg);
 #ifdef __cplusplus
 }
 #endif

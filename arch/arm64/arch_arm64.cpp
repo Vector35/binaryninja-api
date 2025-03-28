@@ -1006,6 +1006,10 @@ class Arm64Architecture : public Architecture
 			return "__aesd";
 		case ARM64_INTRIN_AESE:
 			return "__aese";
+		case ARM64_INTRIN_AESIMC:
+			return "__aesimc";
+		case ARM64_INTRIN_AESMC:
+			return "__aesmc";
 		case ARM64_INTRIN_LDXR:
 			return "__ldxr";
 		case ARM64_INTRIN_LDXRB:
@@ -1082,7 +1086,6 @@ class Arm64Architecture : public Architecture
 			};
 			break;
 		case ARM64_INTRIN_CLZ:        // reads <Xn>
-		case ARM64_INTRIN_DC:         // reads <Xt>
 		case ARM64_INTRIN_PRFM:
 		case ARM64_INTRIN_REV:   // reads <Xn>
 		case ARM64_INTRIN_RBIT:  // reads <Xn>
@@ -1106,9 +1109,14 @@ class Arm64Architecture : public Architecture
 				NameAndType("tlbi_op", Confidence<Ref<Type>>(Type::EnumerationType(this, get_tlbi_op_enum(), 4, false), BN_FULL_CONFIDENCE)),
 				NameAndType(Type::IntegerType(8, false))
 			};
-		case ARM64_INTRIN_AT:      // reads <tlbi_op>, <Xn>
+		case ARM64_INTRIN_AT:      // reads <at_op>, <Xn>
 			return {
 				NameAndType("at_op", Confidence<Ref<Type>>(Type::EnumerationType(this, get_at_op_enum(), 4, false), BN_FULL_CONFIDENCE)),
+				NameAndType(Type::IntegerType(8, false))
+			};
+		case ARM64_INTRIN_DC:      // reads <dc_op>, <Xn>
+			return {
+				NameAndType("dc_op", Confidence<Ref<Type>>(Type::EnumerationType(this, get_dc_op_enum(), 4, false), BN_FULL_CONFIDENCE)),
 				NameAndType(Type::IntegerType(8, false))
 			};
 		case ARM64_INTRIN_AESD:

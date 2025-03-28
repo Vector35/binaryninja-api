@@ -11,6 +11,7 @@
 #include "encodings_dec.h"
 #include "regs.h"
 #include "sysregs_gen.h"
+#include "sysregs_fmt_gen.h"
 
 #ifdef _MSC_VER
 	#undef REG_NONE  // collides with winnt's define
@@ -115,12 +116,17 @@ enum SliceIndicator
 //-----------------------------------------------------------------------------
 // <tlbi_op>: TLBI operands
 //-----------------------------------------------------------------------------
-#define TLBI_OP(op1, crn, crm, op2) (((op1 & 7) << 11) | ((crn & 0xF) << 7) | ((crm & 0xF) << 3) | (op2) & 7)
+#define TLBI_OP(op1, crn, crm, op2) (((op1 & 7) << 11) | ((crn & 0xF) << 7) | ((crm & 0xF) << 3) | ((op2) & 7))
 
 //-----------------------------------------------------------------------------
 // <at_op>: AT operands
 //-----------------------------------------------------------------------------
-#define AT_OP(op1, crm, op2) (((op1 & 7) << 7) | ((crm & 0xF) << 3) | (op2) & 7)
+#define AT_OP(op1, crm, op2) (TLBI_OP(op1, 7, crm, op2))
+
+//-----------------------------------------------------------------------------
+// <dc_op>: DC operands
+//-----------------------------------------------------------------------------
+#define DC_OP(op1, crm, op2) (TLBI_OP(op1, 7, crm, op2))
 
 //-----------------------------------------------------------------------------
 // disassembly context (INPUT into disassembler)
@@ -519,23 +525,23 @@ enum ImplSpec
 enum ATOp
 {
 	AT_OP_INVALID=-1,
-	AT_OP_S1E1R=AT_OP(000, 1000, 000),
-	AT_OP_S1E1W=AT_OP(000, 1000, 001),
-	AT_OP_S1E0R=AT_OP(000, 1000, 010),
-	AT_OP_S1E0W=AT_OP(000, 1000, 011),
-	AT_OP_S1E1RP=AT_OP(000, 1001, 000),
-	AT_OP_S1E1WP=AT_OP(000, 1001, 001),
-	AT_OP_S1E1A=AT_OP(000, 1001, 010),
-	AT_OP_S1E2R=AT_OP(100, 1000, 000),
-	AT_OP_S1E2W=AT_OP(100, 1000, 001),
-	AT_OP_S12E1R=AT_OP(100, 1000, 100),
-	AT_OP_S12E1W=AT_OP(100, 1000, 101),
-	AT_OP_S12E0R=AT_OP(100, 1000, 110),
-	AT_OP_S12E0W=AT_OP(100, 1000, 111),
-	AT_OP_S1E2A=AT_OP(100, 1001, 010),
-	AT_OP_S1E3R=AT_OP(110, 1000, 000),
-	AT_OP_S1E3W=AT_OP(110, 1000, 001),
-	AT_OP_S1E3A=AT_OP(110, 1001, 010),
+	AT_OP_S1E1R=AT_OP(0b000, 0b1000, 0b000),
+	AT_OP_S1E1W=AT_OP(0b000, 0b1000, 0b001),
+	AT_OP_S1E0R=AT_OP(0b000, 0b1000, 0b010),
+	AT_OP_S1E0W=AT_OP(0b000, 0b1000, 0b011),
+	AT_OP_S1E1RP=AT_OP(0b000, 0b1001, 0b000),
+	AT_OP_S1E1WP=AT_OP(0b000, 0b1001, 0b001),
+	AT_OP_S1E1A=AT_OP(0b000, 0b1001, 0b010),
+	AT_OP_S1E2R=AT_OP(0b100, 0b1000, 0b000),
+	AT_OP_S1E2W=AT_OP(0b100, 0b1000, 0b001),
+	AT_OP_S12E1R=AT_OP(0b100, 0b1000, 0b100),
+	AT_OP_S12E1W=AT_OP(0b100, 0b1000, 0b101),
+	AT_OP_S12E0R=AT_OP(0b100, 0b1000, 0b110),
+	AT_OP_S12E0W=AT_OP(0b100, 0b1000, 0b111),
+	AT_OP_S1E2A=AT_OP(0b100, 0b1001, 0b010),
+	AT_OP_S1E3R=AT_OP(0b110, 0b1000, 0b000),
+	AT_OP_S1E3W=AT_OP(0b110, 0b1000, 0b001),
+	AT_OP_S1E3A=AT_OP(0b110, 0b1001, 0b010),
 };
 
 enum TlbiOp
@@ -709,6 +715,49 @@ enum TlbiOp
 	TLBI_VALE3NXS=TLBI_OP(0b110, 0b1001, 0b0111, 0b101),
 };
 
+enum DCOp
+{
+	DC_OP_INVALID=-1,
+	DC_OP_IVAC=DC_OP(0b000, 0b0110, 0b001),
+	DC_OP_ISW=DC_OP(0b000, 0b0110, 0b010),
+	DC_OP_IGVAC=DC_OP(0b000, 0b0110, 0b011),
+	DC_OP_IGSW=DC_OP(0b000, 0b0110, 0b100),
+	DC_OP_IGDVAC=DC_OP(0b000, 0b0110, 0b101),
+	DC_OP_IGDSW=DC_OP(0b000, 0b0110, 0b110),
+	DC_OP_CSW=DC_OP(0b000, 0b1010, 0b010),
+	DC_OP_CGSW=DC_OP(0b000, 0b1010, 0b100),
+	DC_OP_CGDSW=DC_OP(0b000, 0b1010, 0b110),
+	DC_OP_CISW=DC_OP(0b000, 0b1110, 0b010),
+	DC_OP_CIGSW=DC_OP(0b000, 0b1110, 0b100),
+	DC_OP_CIGDSW=DC_OP(0b000, 0b1110, 0b110),
+	DC_OP_CIVAPS=DC_OP(0b000, 0b1111, 0b001),
+	DC_OP_CIGDVAPS=DC_OP(0b000, 0b1111, 0b101),
+	DC_OP_ZVA=DC_OP(0b011, 0b0100, 0b001),
+	DC_OP_GVA=DC_OP(0b011, 0b0100, 0b011),
+	DC_OP_GZVA=DC_OP(0b011, 0b0100, 0b100),
+	DC_OP_CVAC=DC_OP(0b011, 0b1010, 0b001),
+	DC_OP_CGVAC=DC_OP(0b011, 0b1010, 0b011),
+	DC_OP_CGDVAC=DC_OP(0b011, 0b1010, 0b101),
+	DC_OP_CVAOC=DC_OP(0b011, 0b1011, 0b000),
+	DC_OP_CVAU=DC_OP(0b011, 0b1011, 0b001),
+	DC_OP_CGDVAOC=DC_OP(0b011, 0b1011, 0b111),
+	DC_OP_CVAP=DC_OP(0b011, 0b1100, 0b001),
+	DC_OP_CGVAP=DC_OP(0b011, 0b1100, 0b011),
+	DC_OP_CGDVAP=DC_OP(0b011, 0b1100, 0b101),
+	DC_OP_CVADP=DC_OP(0b011, 0b1101, 0b001),
+	DC_OP_CGVADP=DC_OP(0b011, 0b1101, 0b011),
+	DC_OP_CGDVADP=DC_OP(0b011, 0b1101, 0b101),
+	DC_OP_CIVAC=DC_OP(0b011, 0b1110, 0b001),
+	DC_OP_CIGVAC=DC_OP(0b011, 0b1110, 0b011),
+	DC_OP_CIGDVAC=DC_OP(0b011, 0b1110, 0b101),
+	DC_OP_CIVAOC=DC_OP(0b011, 0b1111, 0b000),
+	DC_OP_CIGDVAOC=DC_OP(0b011, 0b1111, 0b111),
+	DC_OP_CIPAE=DC_OP(0b100, 0b1110, 0b000),
+	DC_OP_CIGDPAE=DC_OP(0b100, 0b1110, 0b111),
+	DC_OP_CIPAPA=DC_OP(0b110, 0b1110, 0b001),
+	DC_OP_CIGDPAPA=DC_OP(0b110, 0b1110, 0b101),
+};
+
 #ifndef __cplusplus
 typedef enum SystemReg SystemReg;
 typedef enum OperandClass OperandClass;
@@ -788,7 +837,7 @@ extern "C"
 
 	int aarch64_decompose(uint32_t instructionValue, Instruction* instr, uint64_t address);
 	size_t get_register_size(enum Register);
-	const char* tlbi_op(int32_t op);
+	// const char* tlbi_op(int32_t op);
 
 #ifdef __cplusplus
 }

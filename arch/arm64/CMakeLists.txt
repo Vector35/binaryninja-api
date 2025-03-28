@@ -8,8 +8,8 @@ file(GLOB SOURCES
 	*.h
 	disassembler/decode.c
 	disassembler/format.c
-#	disassembler/sysregs.c
 	disassembler/sysregs_gen.c
+	disassembler/sysregs_fmt_gen.c
 	disassembler/regs.c
 	disassembler/encodings_dec.c
 	disassembler/encodings_fmt.c

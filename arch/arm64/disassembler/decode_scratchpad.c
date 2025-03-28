@@ -7608,69 +7608,122 @@ int decode_scratchpad(context* ctx, Instruction* instr)
 	}
 	case ENC_DC_SYS_CR_SYSTEMINSTRS:
 	{
+#define HavePoP() (1)
+#define HavePoPS() (1)
+#define HaveMT() (1)
+#define HaveMTE() (1)
+#define HaveDP() (1)
+#define HaveDPB() (1)
+#define HaveOCCM() (1)
+#define HaveOCCMO() (1)
+#define HaveRM() (1)
+#define HaveRME() (1)
+#define HaveME() (1)
+#define HaveMEC() (1)
 		const char* dc_op = "RESERVED";
 		uint64_t op1 = ctx->op1;
 		uint64_t op2 = ctx->op2;
 		uint64_t CRm = ctx->CRm;
-		if (op1 == 0b000 && CRm == 0b0110 && op2 == 0b001)
-			dc_op = "ivac";
-		else if (op1 == 0b000 && CRm == 0b0110 && op2 == 0b010)
-			dc_op = "isw";
-		else if (op1 == 0b000 && CRm == 0b0110 && op2 == 0b011 && HasMTE())
-			dc_op = "igvac";
-		else if (op1 == 0b000 && CRm == 0b0110 && op2 == 0b100 && HasMTE())
-			dc_op = "igsw";
-		else if (op1 == 0b000 && CRm == 0b0110 && op2 == 0b101 && HasMTE())
-			dc_op = "igdvac";
-		else if (op1 == 0b000 && CRm == 0b0110 && op2 == 0b110 && HasMTE())
-			dc_op = "igdsw";
-		else if (op1 == 0b000 && CRm == 0b1010 && op2 == 0b010)
-			dc_op = "csw";
-		else if (op1 == 0b000 && CRm == 0b1010 && op2 == 0b100 && HasMTE())
-			dc_op = "cgsw";
-		else if (op1 == 0b000 && CRm == 0b1010 && op2 == 0b010 && HasMTE())
-			dc_op = "cgdsw";
-		else if (op1 == 0b000 && CRm == 0b1110 && op2 == 0b010)
-			dc_op = "cisw";
-		else if (op1 == 0b000 && CRm == 0b1110 && op2 == 0b100 && HasMTE())
-			dc_op = "cigsw";
-		else if (op1 == 0b000 && CRm == 0b1110 && op2 == 0b110 && HasMTE())
-			dc_op = "cigdsw";
-		else if (op1 == 0b011 && CRm == 0b0100 && op2 == 0b001)
-			dc_op = "zva";
-		else if (op1 == 0b011 && CRm == 0b0100 && op2 == 0b011 && HasMTE())
-			dc_op = "gva";
-		else if (op1 == 0b011 && CRm == 0b0100 && op2 == 0b100 && HasMTE())
-			dc_op = "gzva";
-		else if (op1 == 0b011 && CRm == 0b1010 && op2 == 0b001)
-			dc_op = "cvac";
-		else if (op1 == 0b011 && CRm == 0b1010 && op2 == 0b011 && HasMTE())
-			dc_op = "cgvac";
-		else if (op1 == 0b011 && CRm == 0b1010 && op2 == 0b101 && HasMTE())
-			dc_op = "cgdvac";
-		else if (op1 == 0b011 && CRm == 0b1011 && op2 == 0b001)
-			dc_op = "cvau";
-		else if (op1 == 0b011 && CRm == 0b1100 && op2 == 0b001 && HaveDCPoP())
-			dc_op = "cvap";
-		else if (op1 == 0b011 && CRm == 0b1100 && op2 == 0b011 && HasMTE())
-			dc_op = "cgvap";
-		else if (op1 == 0b011 && CRm == 0b1100 && op2 == 0b101 && HasMTE())
-			dc_op = "cgdvap";
-		else if (op1 == 0b011 && CRm == 0b1101 && op2 == 0b001 && HaveDCCVADP())
-			dc_op = "cvadp";
-		else if (op1 == 0b011 && CRm == 0b1101 && op2 == 0b011 && HasMTE())
-			dc_op = "cgvadp";
-		else if (op1 == 0b011 && CRm == 0b1101 && op2 == 0b101 && HasMTE())
-			dc_op = "cgdvadp";
-		else if (op1 == 0b011 && CRm == 0b1110 && op2 == 0b001)
-			dc_op = "civac";
-		else if (op1 == 0b011 && CRm == 0b1110 && op2 == 0b011 && HasMTE())
-			dc_op = "cigvac";
-		else if (op1 == 0b011 && CRm == 0b1110 && op2 == 0b101 && HasMTE())
-			dc_op = "cgdvac";
-
-		// <dc_op>,<Xt>
+		switch (DC_OP(op1, CRm, op2)) {
+		case DC_OP(0b000, 0b0110, 0b001): dc_op = "IVAC"; break;
+		case DC_OP(0b000, 0b0110, 0b010): dc_op = "ISW"; break;
+		case DC_OP(0b000, 0b0110, 0b011): if (HaveMTE()) dc_op = "IGVAC"; break;
+		case DC_OP(0b000, 0b0110, 0b100): if (HaveMTE()) dc_op = "IGSW"; break;
+		case DC_OP(0b000, 0b0110, 0b101): if (HaveMTE()) dc_op = "IGDVAC"; break;
+		case DC_OP(0b000, 0b0110, 0b110): if (HaveMTE()) dc_op = "IGDSW"; break;
+		case DC_OP(0b000, 0b1010, 0b010): dc_op = "CSW"; break;
+		case DC_OP(0b000, 0b1010, 0b100): if (HaveMTE()) dc_op = "CGSW"; break;
+		case DC_OP(0b000, 0b1010, 0b110): if (HaveMTE()) dc_op = "CGDSW"; break;
+		case DC_OP(0b000, 0b1110, 0b010): dc_op = "CISW"; break;
+		case DC_OP(0b000, 0b1110, 0b100): if (HaveMTE()) dc_op = "CIGSW"; break;
+		case DC_OP(0b000, 0b1110, 0b110): if (HaveMTE()) dc_op = "CIGDSW"; break;
+		case DC_OP(0b000, 0b1111, 0b001): if (HavePoP()) dc_op = "CIVAPS"; break;
+		case DC_OP(0b000, 0b1111, 0b101): if (HavePoPS() && HaveMTE()) dc_op = "CIGDVAPS"; break;
+		case DC_OP(0b011, 0b0100, 0b001): dc_op = "ZVA"; break;
+		case DC_OP(0b011, 0b0100, 0b011): if (HaveMT()) dc_op = "GVA"; break;
+		case DC_OP(0b011, 0b0100, 0b100): if (HaveMT()) dc_op = "GZVA"; break;
+		case DC_OP(0b011, 0b1010, 0b001): dc_op = "CVAC"; break;
+		case DC_OP(0b011, 0b1010, 0b011): if (HaveMT()) dc_op = "CGVAC"; break;
+		case DC_OP(0b011, 0b1010, 0b101): if (HaveMT()) dc_op = "CGDVAC"; break;
+		case DC_OP(0b011, 0b1011, 0b000): if (HaveOCCM()) dc_op = "CVAOC"; break;
+		case DC_OP(0b011, 0b1011, 0b001): dc_op = "CVAU"; break;
+		case DC_OP(0b011, 0b1011, 0b111): if (HaveOCCMO() && HaveMT()) dc_op = "CGDVAOC"; break;
+		case DC_OP(0b011, 0b1100, 0b001): if (HaveDP()) dc_op = "CVAP"; break;
+		case DC_OP(0b011, 0b1100, 0b011): if (HaveMT()) dc_op = "CGVAP"; break;
+		case DC_OP(0b011, 0b1100, 0b101): if (HaveMT()) dc_op = "CGDVAP"; break;
+		case DC_OP(0b011, 0b1101, 0b001): if (HaveDPB()) dc_op = "CVADP"; break;
+		case DC_OP(0b011, 0b1101, 0b011): if (HaveMT()) dc_op = "CGVADP"; break;
+		case DC_OP(0b011, 0b1101, 0b101): if (HaveMT()) dc_op = "CGDVADP"; break;
+		case DC_OP(0b011, 0b1110, 0b001): dc_op = "CIVAC"; break;
+		case DC_OP(0b011, 0b1110, 0b011): if (HaveMT()) dc_op = "CIGVAC"; break;
+		case DC_OP(0b011, 0b1110, 0b101): if (HaveMT()) dc_op = "CIGDVAC"; break;
+		case DC_OP(0b011, 0b1111, 0b000): if (HaveOCCM()) dc_op = "CIVAOC"; break;
+		case DC_OP(0b011, 0b1111, 0b111): if (HaveOCCMO() && HaveMT()) dc_op = "CIGDVAOC"; break;
+		case DC_OP(0b100, 0b1110, 0b000): if (HaveME()) dc_op = "CIPAE"; break;
+		case DC_OP(0b100, 0b1110, 0b111): if (HaveMEC() && HaveMTE()) dc_op = "CIGDPAE"; break;
+		case DC_OP(0b110, 0b1110, 0b001): if (HaveRM()) dc_op = "CIPAPA"; break;
+		case DC_OP(0b110, 0b1110, 0b101): if (HaveRME() && HaveMTE()) dc_op = "CIGDPAPA"; break;
+		}
+//		if (op1 == 0b000 && CRm == 0b0110 && op2 == 0b001)
+//			dc_op = "ivac";
+//		else if (op1 == 0b000 && CRm == 0b0110 && op2 == 0b010)
+//			dc_op = "isw";
+//		else if (op1 == 0b000 && CRm == 0b0110 && op2 == 0b011 && HasMTE())
+//			dc_op = "igvac";
+//		else if (op1 == 0b000 && CRm == 0b0110 && op2 == 0b100 && HasMTE())
+//			dc_op = "igsw";
+//		else if (op1 == 0b000 && CRm == 0b0110 && op2 == 0b101 && HasMTE())
+//			dc_op = "igdvac";
+//		else if (op1 == 0b000 && CRm == 0b0110 && op2 == 0b110 && HasMTE())
+//			dc_op = "igdsw";
+//		else if (op1 == 0b000 && CRm == 0b1010 && op2 == 0b010)
+//			dc_op = "csw";
+//		else if (op1 == 0b000 && CRm == 0b1010 && op2 == 0b100 && HasMTE())
+//			dc_op = "cgsw";
+//		else if (op1 == 0b000 && CRm == 0b1010 && op2 == 0b010 && HasMTE())
+//			dc_op = "cgdsw";
+//		else if (op1 == 0b000 && CRm == 0b1110 && op2 == 0b010)
+//			dc_op = "cisw";
+//		else if (op1 == 0b000 && CRm == 0b1110 && op2 == 0b100 && HasMTE())
+//			dc_op = "cigsw";
+//		else if (op1 == 0b000 && CRm == 0b1110 && op2 == 0b110 && HasMTE())
+//			dc_op = "cigdsw";
+//		else if (op1 == 0b011 && CRm == 0b0100 && op2 == 0b001)
+//			dc_op = "zva";
+//		else if (op1 == 0b011 && CRm == 0b0100 && op2 == 0b011 && HasMTE())
+//			dc_op = "gva";
+//		else if (op1 == 0b011 && CRm == 0b0100 && op2 == 0b100 && HasMTE())
+//			dc_op = "gzva";
+//		else if (op1 == 0b011 && CRm == 0b1010 && op2 == 0b001)
+//			dc_op = "cvac";
+//		else if (op1 == 0b011 && CRm == 0b1010 && op2 == 0b011 && HasMTE())
+//			dc_op = "cgvac";
+//		else if (op1 == 0b011 && CRm == 0b1010 && op2 == 0b101 && HasMTE())
+//			dc_op = "cgdvac";
+//		else if (op1 == 0b011 && CRm == 0b1011 && op2 == 0b001)
+//			dc_op = "cvau";
+//		else if (op1 == 0b011 && CRm == 0b1100 && op2 == 0b001 && HaveDCPoP())
+//			dc_op = "cvap";
+//		else if (op1 == 0b011 && CRm == 0b1100 && op2 == 0b011 && HasMTE())
+//			dc_op = "cgvap";
+//		else if (op1 == 0b011 && CRm == 0b1100 && op2 == 0b101 && HasMTE())
+//			dc_op = "cgdvap";
+//		else if (op1 == 0b011 && CRm == 0b1101 && op2 == 0b001 && HaveDCCVADP())
+//			dc_op = "cvadp";
+//		else if (op1 == 0b011 && CRm == 0b1101 && op2 == 0b011 && HasMTE())
+//			dc_op = "cgvadp";
+//		else if (op1 == 0b011 && CRm == 0b1101 && op2 == 0b101 && HasMTE())
+//			dc_op = "cgdvadp";
+//		else if (op1 == 0b011 && CRm == 0b1110 && op2 == 0b001)
+//			dc_op = "civac";
+//		else if (op1 == 0b011 && CRm == 0b1110 && op2 == 0b011 && HasMTE())
+//			dc_op = "cigvac";
+//		else if (op1 == 0b011 && CRm == 0b1110 && op2 == 0b101 && HasMTE())
+//			dc_op = "cgdvac";
+		instr->operands[i].immediate = DC_OP(op1, CRm, op2);
+		// <dc_op>
 		ADD_OPERAND_NAME(dc_op);
+        // <Xt>
 		ADD_OPERAND_XT;
 
 		break;

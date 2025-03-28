@@ -1,11 +1,11 @@
-	#include <stddef.h>
+#include <stddef.h>
 
-	#include "sysregs_gen.h"
+#include "sysregs_gen.h"
 
-	/* must parallel has_system_register_name() from the decode side */
-	const char *get_system_register_name(enum SystemReg sr)
-	{
-		switch(sr) {
+/* must parallel has_system_register_name() from the decode side */
+bool has_system_register_name(enum SystemReg sr)
+{
+	switch(sr) {
 		case REG_EDSCR:
 		case REG_EDPRSR:
 		case REG_UAOIMM:
@@ -1489,14 +1489,9 @@
 		case REG_UPMC7:
 		case REG_AON_CNT_CTL7:
 		case REG_CPU_CNT_CTL7:
-			return true;
-		default: return false;
-		}
+		return true;
+	default: return false;
 	}
+}
 
-	const char *get_system_register_name_decomposed(int op0, int op1, int CRn, int CRm, int op2)
-	{
-		enum SystemReg sr = (enum SystemReg)((op0<<14)|(op1<<11)|(CRn<<7)|(CRm<<3)|op2);
-		return get_system_register_name(sr);
-	}
 

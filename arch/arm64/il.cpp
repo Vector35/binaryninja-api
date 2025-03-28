@@ -1184,6 +1184,16 @@ bool GetLowLevelILForInstruction(
 	switch (instr.operation)
 	{
 	case ARM64_ADD:
+		switch (instr.encoding)
+		{
+		case ENC_ADD_Z_P_ZZ_:
+		case ENC_ADD_Z_ZI_:
+		case ENC_ADD_Z_ZZ_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+				return true;
+		default: break;
+		}
 	case ARM64_ADDS:
 		il.AddInstruction(
 		    ILSETREG_O(operand1, il.Add(REGSZ_O(operand1), ILREG_O(operand2),
@@ -1197,24 +1207,98 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_AND:
 	case ARM64_ANDS:
+		switch (instr.encoding)
+		{
+		case ENC_AND_P_P_PP_Z:
+		case ENC_AND_Z_P_ZZ_:
+		case ENC_AND_Z_ZI_:
+		case ENC_AND_Z_ZZ_:
+		case ENC_ANDS_P_P_PP_Z:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+				return true;
+		default: break;
+		}
 		il.AddInstruction(
 		    ILSETREG_O(operand1, il.And(REGSZ_O(operand1), ILREG_O(operand2),
 		                             ReadILOperand(il, operand3, REGSZ_O(operand1)), SETFLAGS)));
 		break;
 	case ARM64_ADR:
+		switch (instr.encoding)
+		{
+		case ENC_ADR_Z_AZ_SD_SAME_SCALED:
+		case ENC_ADR_Z_AZ_D_S32_SCALED:
+		case ENC_ADR_Z_AZ_D_U32_SCALED:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+					return true;
+		default: break;
+		}
 	case ARM64_ADRP:
 		il.AddInstruction(ILSETREG_O(operand1, il.ConstPointer(REGSZ_O(operand1), IMM_O(operand2))));
 		break;
 	case ARM64_ASR:
+		switch (instr.encoding)
+		{
+		case ENC_ASR_Z_P_ZI_:
+		case ENC_ASR_Z_P_ZW_:
+		case ENC_ASR_Z_P_ZZ_:
+		case ENC_ASR_Z_ZI_:
+		case ENC_ASR_Z_ZW_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+				return true;
+		default: break;
+		}
 		il.AddInstruction(ILSETREG_O(operand1, il.ArithShiftRight(REGSZ_O(operand2), ILREG_O(operand2),
 		                                           ReadILOperand(il, operand3, REGSZ_O(operand2)))));
 		break;
 	case ARM64_AESD:
+		switch (instr.encoding)
+		{
+		case ENC_AESD_Z_ZZ_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+				return true;
+		default: break;
+		}
 		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_AESD,
 		    {ILREG_O(operand1), ILREG_O(operand2)}));
 		break;
 	case ARM64_AESE:
+		switch (instr.encoding)
+		{
+		case ENC_AESE_Z_ZZ_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+					return true;
+			default: break;
+		}
 		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_AESE,
+		    {ILREG_O(operand1), ILREG_O(operand2)}));
+		break;
+	case ARM64_AESIMC:
+		switch (instr.encoding)
+		{
+		case ENC_AESIMC_Z_Z_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+					return true;
+			default: break;
+		}
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_AESIMC,
+		    {ILREG_O(operand1), ILREG_O(operand2)}));
+		break;
+	case ARM64_AESMC:
+		switch (instr.encoding)
+		{
+		case ENC_AESMC_Z_Z_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+					return true;
+			default: break;
+		}
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_AESMC,
 		    {ILREG_O(operand1), ILREG_O(operand2)}));
 		break;
 	case ARM64_BTI:
@@ -1317,7 +1401,16 @@ bool GetLowLevelILForInstruction(
 		return false;
 	case ARM64_BIC:
 	case ARM64_BICS:
-		switch (instr.encoding) {
+		switch (instr.encoding)
+		{
+		case ENC_BIC_AND_Z_ZI_:
+		case ENC_BIC_P_P_PP_Z:
+		case ENC_BIC_Z_P_ZZ_:
+		case ENC_BIC_Z_ZZ_:
+		case ENC_BICS_P_P_PP_Z:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+				return true;
 		case ENC_BIC_ASIMDIMM_L_HL:
 		case ENC_BIC_ASIMDIMM_L_SL:
 			il.AddInstruction(ILSETREG_O(operand1,
@@ -1512,8 +1605,9 @@ bool GetLowLevelILForInstruction(
 		    {RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_CLZ, {ILREG_O(operand2)}));
 		break;
 	case ARM64_DC:
-		il.AddInstruction(
-		    il.Intrinsic({}, ARM64_INTRIN_DC, {ILREG_O(operand2)})); /* operand1 is <dc_op> */
+		// il.AddInstruction(
+		//     il.Intrinsic({}, ARM64_INTRIN_DC, {ILREG_O(operand2)})); /* operand1 is <dc_op> */
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_DC, {il.Const(4, operand1.immediate), ReadILOperand(il, operand2, 8)}));
 		break;
 	case ARM64_DMB:
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_DMB, {}));
@@ -1522,11 +1616,30 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_DSB, {}));
 		break;
 	case ARM64_EON:
+		switch (instr.encoding)
+		{
+		case ENC_EON_EOR_Z_ZI_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.Xor(REGSZ_O(operand1), ILREG_O(operand2),
 		                  il.Not(REGSZ_O(operand1), ReadILOperand(il, operand3, REGSZ_O(operand1))))));
 		break;
 	case ARM64_EOR:
+		switch (instr.encoding)
+		{
+		case ENC_EOR_P_P_PP_Z:
+		case ENC_EOR_Z_P_ZZ_:
+		case ENC_EOR_Z_ZI_:
+		case ENC_EOR_Z_ZZ_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 		il.AddInstruction(ILSETREG_O(operand1, il.Xor(REGSZ_O(operand1), ILREG_O(operand2),
 		                                           ReadILOperand(il, operand3, REGSZ_O(operand1)))));
 		break;
@@ -1601,8 +1714,8 @@ bool GetLowLevelILForInstruction(
 			for (int i = 0; i < dst_n; ++i)
 				il.AddInstruction(ILSETREG(
 					dsts[i], il.FloatAdd(rsize, ILREG(srcs1[i]), ILREG(srcs2[i]))));
+			break;
 		}
-		break;
 		default:
 			ABORT_LIFT;
 		}
@@ -1649,7 +1762,6 @@ bool GetLowLevelILForInstruction(
 			break;
 		}
 		case ENC_FADDP_Z_P_ZZ_:
-			il.AddInstruction(il.Unimplemented());
 		default:
 			ABORT_LIFT;
 		}
@@ -1781,8 +1893,9 @@ bool GetLowLevelILForInstruction(
 					dsts[i], il.FloatDiv(rsize, ILREG(srcs1[i]), ILREG(srcs2[i]))));
 			break;
 		}
+		case ENC_FDIV_Z_P_ZZ_:
 		default:
-			il.AddInstruction(il.Unimplemented());
+			ABORT_LIFT;
 		}
 		break;
 	case ARM64_FMOV:
@@ -1855,7 +1968,7 @@ bool GetLowLevelILForInstruction(
 			break;
 		}
 		default:
-			il.AddInstruction(il.Unimplemented());
+			ABORT_LIFT;
 		}
 		break;
 	case ARM64_FMUL:
@@ -1906,7 +2019,7 @@ bool GetLowLevelILForInstruction(
 			break;
 		}
 		default:
-			il.AddInstruction(il.Unimplemented());
+			ABORT_LIFT;
 		}
 		break;
 	case ARM64_FNEG:
@@ -1936,7 +2049,7 @@ bool GetLowLevelILForInstruction(
 			break;
 		}
 		default:
-			il.AddInstruction(il.Unimplemented());
+			ABORT_LIFT;
 		}
 		break;
 	case ARM64_FNMUL:
@@ -1979,6 +2092,16 @@ bool GetLowLevelILForInstruction(
 	case ARM64_LDRAB:
 		SetPacAttr = true;
 	case ARM64_LDR:
+		switch (instr.encoding)
+		{
+		case ENC_LDR_P_BI_:
+		case ENC_LDR_Z_BI_:
+		case ENC_LDR_ZA_RI_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 	case ARM64_LDUR:
 		LoadStoreOperand(il, true, instr.operands[0], instr.operands[1], 0);
 		if (SetPacAttr)
@@ -2131,8 +2254,39 @@ bool GetLowLevelILForInstruction(
 		    ILSETREG_O(operand1, il.LogicalShiftRight(REGSZ_O(operand2), ILREG_O(operand2),
 		                             ReadILOperand(il, operand3, REGSZ_O(operand2)))));
 		break;
-	case ARM64_DUP:
 	case ARM64_MOV:
+		switch (instr.encoding)
+		{
+		case ENC_MOV_AND_P_P_PP_Z:
+		case ENC_MOV_CPY_Z_O_I_:
+		case ENC_MOV_CPY_Z_P_I_:
+		case ENC_MOV_CPY_Z_P_R_:
+		case ENC_MOV_CPY_Z_P_V_:
+		case ENC_MOV_DUP_Z_I_:
+		case ENC_MOV_DUP_Z_R_:
+		case ENC_MOV_DUP_Z_ZI_:
+		case ENC_MOV_DUP_Z_ZI_2:
+		case ENC_MOV_DUPM_Z_I_:
+		case ENC_MOV_MOVA_Z_P_RZA_B:
+		case ENC_MOV_MOVA_Z_P_RZA_H:
+		case ENC_MOV_MOVA_Z_P_RZA_W:
+		case ENC_MOV_MOVA_Z_P_RZA_D:
+		case ENC_MOV_MOVA_Z_P_RZA_Q:
+		case ENC_MOV_MOVA_ZA_P_RZ_B:
+		case ENC_MOV_MOVA_ZA_P_RZ_H:
+		case ENC_MOV_MOVA_ZA_P_RZ_W:
+		case ENC_MOV_MOVA_ZA_P_RZ_D:
+		case ENC_MOV_MOVA_ZA_P_RZ_Q:
+		case ENC_MOV_ORR_P_P_PP_Z:
+		case ENC_MOV_ORR_Z_ZZ_:
+		case ENC_MOV_SEL_P_P_PP_:
+		case ENC_MOV_SEL_Z_P_ZZ_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
+	case ARM64_DUP:
 	case ARM64_MOVN:
 	case ARM64_UMOV:
 	case ARM64_INS:
@@ -2217,6 +2371,10 @@ bool GetLowLevelILForInstruction(
 			}
 			break;
 		}
+		case ENC_DUP_P_P_PI_:
+		case ENC_DUP_Z_I_:
+		case ENC_DUP_Z_R_:
+		case ENC_DUP_Z_ZI_:
 		default:
 			// case ENC_MOVS_ORRS_P_P_PP_Z:
 			// il.AddInstruction(il.Unimplemented());
@@ -2254,12 +2412,20 @@ bool GetLowLevelILForInstruction(
 	case ARM64_MUL:
 		switch (instr.encoding)
 		{
-			case ENC_MUL_ASIMDSAME_ONLY:
-			case ENC_MUL_ASIMDELEM_R:
-				break;
-			default:
-				il.AddInstruction(
-					ILSETREG_O(operand1, il.Mult(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3))));
+		case ENC_MUL_Z_P_ZZ_:
+		case ENC_MUL_Z_ZI_:
+		case ENC_MUL_Z_ZZ_:
+		case ENC_MUL_Z_ZZI_H:
+		case ENC_MUL_Z_ZZI_S:
+		case ENC_MUL_Z_ZZI_D:
+		case ENC_MUL_ASIMDSAME_ONLY:
+		case ENC_MUL_ASIMDELEM_R:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default:
+			il.AddInstruction(
+				ILSETREG_O(operand1, il.Mult(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3))));
 		}
 		break;
 	case ARM64_MADD:
@@ -2321,6 +2487,16 @@ bool GetLowLevelILForInstruction(
 		break;
 	}
 	case ARM64_NEG:
+		switch (instr.encoding)
+		{
+		case ENC_NEG_ASISDMISC_R:
+		case ENC_NEG_ASIMDMISC_R:
+		case ENC_NEG_Z_P_Z_:
+		if (!preferIntrinsics())
+			il.AddInstruction(il.Unimplemented());
+				return true;
+		default: break;
+		}
 	case ARM64_NEGS:
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.Neg(REGSZ_O(operand1), ReadILOperand(il, instr.operands[1], REGSZ_O(operand1)),
@@ -2448,6 +2624,15 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_PRFM, {ReadILOperand(il, operand2, 8)}));
 		break;
 	case ARM64_ORN:
+		switch (instr.encoding)
+		{
+		case ENC_ORN_ORR_Z_ZI_:
+		case ENC_ORN_P_P_PP_Z:
+		if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.Or(REGSZ_O(operand1), ILREG_O(operand2),
 		                  il.Not(REGSZ_O(operand1), ReadILOperand(il, operand3, REGSZ_O(operand1))))));
@@ -2476,9 +2661,12 @@ bool GetLowLevelILForInstruction(
 		case ENC_ORR_ASIMDSAME_ONLY:
 			// Let the neon intrinsic lifter take over.
 			break;
+		case ENC_ORR_P_P_PP_Z:
+		case ENC_ORR_Z_P_ZZ_:
+		case ENC_ORR_Z_ZI_:
+		case ENC_ORR_Z_ZZ_:
 		default:
-			il.AddInstruction(il.Unimplemented());
-			break;
+			ABORT_LIFT;
 		}
 		break;
 	case ARM64_PSB:
@@ -2672,7 +2860,7 @@ bool GetLowLevelILForInstruction(
 		case ENC_UCVTF_Z_P_Z_X2D:
 		case ENC_UCVTF_Z_P_Z_X2FP16:
 		case ENC_UCVTF_Z_P_Z_X2S:
-			break;
+			ABORT_LIFT;
 		default:
 			break;
 		}
@@ -2810,6 +2998,16 @@ bool GetLowLevelILForInstruction(
 		LoadStoreOperandPair(il, false, instr.operands[0], instr.operands[1], instr.operands[2]);
 		break;
 	case ARM64_STR:
+		switch (instr.encoding)
+		{
+	case ENC_STR_P_BI_:
+	case ENC_STR_Z_BI_:
+	case ENC_STR_ZA_RI_:
+		if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 	case ARM64_STLR:
 	case ARM64_STUR:
 	case ARM64_STLUR:
@@ -2828,6 +3026,16 @@ bool GetLowLevelILForInstruction(
 		LoadStoreOperandSize(il, false, false, 2, instr.operands[0], instr.operands[1]);
 		break;
 	case ARM64_SUB:
+		switch (instr.encoding)
+		{
+		case ENC_SUB_Z_P_ZZ_:
+		case ENC_SUB_Z_ZI_:
+		case ENC_SUB_Z_ZZ_:
+		if (!preferIntrinsics())
+			il.AddInstruction(il.Unimplemented());
+				return true;
+		default: break;
+		}
 	case ARM64_SUBS:
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.Sub(REGSZ_O(operand1), ILREG_O(operand2),
@@ -2886,14 +3094,38 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Store(2, ILREG_O(operand3), il.LowPart(2, ILREG_O(operand1))));
 		break;
 	case ARM64_SXTB:
+		switch (instr.encoding)
+		{
+		case ENC_SXTB_Z_P_Z_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 		il.AddInstruction(
 		    ILSETREG_O(operand1, ExtractRegister(il, operand2, 0, 1, true, REGSZ_O(operand1))));
 		break;
 	case ARM64_SXTH:
+		switch (instr.encoding)
+		{
+		case ENC_SXTH_Z_P_Z_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 		il.AddInstruction(
 		    ILSETREG_O(operand1, ExtractRegister(il, operand2, 0, 2, true, REGSZ_O(operand1))));
 		break;
 	case ARM64_SXTW:
+		switch (instr.encoding)
+		{
+		case ENC_SXTW_Z_P_Z_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 		il.AddInstruction(
 		    ILSETREG_O(operand1, ExtractRegister(il, operand2, 0, 4, true, REGSZ_O(operand1))));
 		break;
@@ -3077,6 +3309,14 @@ bool GetLowLevelILForInstruction(
 					il.Const(1, 64)))));
 		break;
 	case ARM64_UDIV:
+		switch (instr.encoding)
+		{
+		case ENC_UDIV_Z_P_ZZ_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.DivUnsigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3))));
 		break;
@@ -3109,10 +3349,26 @@ bool GetLowLevelILForInstruction(
 		break;
 	}
 	case ARM64_UXTB:
+		switch (instr.encoding)
+		{
+		case ENC_UXTB_Z_P_Z_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 		il.AddInstruction(
 		    ILSETREG_O(operand1, ExtractRegister(il, operand2, 0, 1, false, REGSZ_O(operand1))));
 		break;
 	case ARM64_UXTH:
+		switch (instr.encoding)
+		{
+		case ENC_UXTH_Z_P_Z_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 		il.AddInstruction(
 		    ILSETREG_O(operand1, ExtractRegister(il, operand2, 0, 2, false, REGSZ_O(operand1))));
 		break;

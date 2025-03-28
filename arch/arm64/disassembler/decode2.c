@@ -27518,7 +27518,8 @@ int SYS(context *ctx, Instruction *instr)
 		if(ctx->CRn==7 && SysOp(ctx->op1,7,ctx->CRm,ctx->op2)==Sys_DC) return DC_SYS(ctx, instr);
 		if(ctx->op1==3 && ctx->CRn==7 && ctx->CRm==3 && ctx->op2==5) return DVP_SYS(ctx, instr);
 		if(ctx->CRn==7 && SysOp(ctx->op1,7,ctx->CRm,ctx->op2)==Sys_IC) return IC_SYS(ctx, instr);
-		if(ctx->CRn==8 && SysOp(ctx->op1,8,ctx->CRm,ctx->op2)==Sys_TLBI) return TLBI_SYS(ctx, instr);
+		// if(ctx->CRn==8 && SysOp(ctx->op1,8,ctx->CRm,ctx->op2)==Sys_TLBI) return TLBI_SYS(ctx, instr);
+		if(((ctx->CRn&14)==8) && SysOp(ctx->op1,ctx->CRn,ctx->CRm,ctx->op2)==Sys_TLBI) return TLBI_SYS(ctx, instr);
 		OK(ENC_SYS_CR_SYSTEMINSTRS);
 	}
 	return rc;
@@ -27666,8 +27667,10 @@ int TLBI_SYS(context *ctx, Instruction *instr)
 {
 	int rc = DECODE_STATUS_UNMATCHED;
 	/* class iclass_system */
-	/* 1101010100|L=0|op0=01|op1=xxx|CRn=1000|CRm=xxxx|op2=xxx|Rt=xxxxx */
-	if((INSWORD & 0xFFF8F000)==0xD5088000) {
+	// /* 1101010100|L=0|op0=01|op1=xxx|CRn=1000|CRm=xxxx|op2=xxx|Rt=xxxxx */
+	// if((INSWORD & 0xFFF8F000)==0xD5088000) {
+	/* 110|101|0100|L=0|01|op1=xxx|CRn=100x|CRm=xxxx|op2=xxx|Rt=xxxxx */
+	if((INSWORD & 0xFFF8E000)==0xD5088000) {
 		decode_fields32(ENC_TLBI_SYS_CR_SYSTEMINSTRS, ctx, instr);
 		OK(ENC_TLBI_SYS_CR_SYSTEMINSTRS);
 	}

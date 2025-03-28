@@ -3993,3 +3993,4 @@ bool NeonGetLowLevelILForInstruction(
     Architecture* arch, uint64_t addr, LowLevelILFunction& il, Instruction& instr, size_t addrSize);
 Ref<Enumeration> get_tlbi_op_enum();
 Ref<Enumeration> get_at_op_enum();
+Ref<Enumeration> get_dc_op_enum();

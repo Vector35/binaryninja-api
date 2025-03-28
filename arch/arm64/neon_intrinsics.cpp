@@ -202,6 +202,52 @@ Ref<Enumeration> get_at_op_enum()
 	return _enum;
 }
 
+Ref<Enumeration> get_dc_op_enum()
+{
+	EnumerationBuilder builder;
+	builder.AddMemberWithValue("invalid", DC_OP_INVALID);
+	builder.AddMemberWithValue("IVAC", DC_OP_IVAC);
+	builder.AddMemberWithValue("ISW", DC_OP_ISW);
+	builder.AddMemberWithValue("IGVAC", DC_OP_IGVAC);
+	builder.AddMemberWithValue("IGSW", DC_OP_IGSW);
+	builder.AddMemberWithValue("IGDVAC", DC_OP_IGDVAC);
+	builder.AddMemberWithValue("IGDSW", DC_OP_IGDSW);
+	builder.AddMemberWithValue("CSW", DC_OP_CSW);
+	builder.AddMemberWithValue("CGSW", DC_OP_CGSW);
+	builder.AddMemberWithValue("CGDSW", DC_OP_CGDSW);
+	builder.AddMemberWithValue("CISW", DC_OP_CISW);
+	builder.AddMemberWithValue("CIGSW", DC_OP_CIGSW);
+	builder.AddMemberWithValue("CIGDSW", DC_OP_CIGDSW);
+	builder.AddMemberWithValue("CIVAPS", DC_OP_CIVAPS);
+	builder.AddMemberWithValue("CIGDVAPS", DC_OP_CIGDVAPS);
+	builder.AddMemberWithValue("ZVA", DC_OP_ZVA);
+	builder.AddMemberWithValue("GVA", DC_OP_GVA);
+	builder.AddMemberWithValue("GZVA", DC_OP_GZVA);
+	builder.AddMemberWithValue("CVAC", DC_OP_CVAC);
+	builder.AddMemberWithValue("CGVAC", DC_OP_CGVAC);
+	builder.AddMemberWithValue("CGDVAC", DC_OP_CGDVAC);
+	builder.AddMemberWithValue("CVAOC", DC_OP_CVAOC);
+	builder.AddMemberWithValue("CVAU", DC_OP_CVAU);
+	builder.AddMemberWithValue("CGDVAOC", DC_OP_CGDVAOC);
+	builder.AddMemberWithValue("CVAP", DC_OP_CVAP);
+	builder.AddMemberWithValue("CGVAP", DC_OP_CGVAP);
+	builder.AddMemberWithValue("CGDVAP", DC_OP_CGDVAP);
+	builder.AddMemberWithValue("CVADP", DC_OP_CVADP);
+	builder.AddMemberWithValue("CGVADP", DC_OP_CGVADP);
+	builder.AddMemberWithValue("CGDVADP", DC_OP_CGDVADP);
+	builder.AddMemberWithValue("CIVAC", DC_OP_CIVAC);
+	builder.AddMemberWithValue("CIGVAC", DC_OP_CIGVAC);
+	builder.AddMemberWithValue("CIGDVAC", DC_OP_CIGDVAC);
+	builder.AddMemberWithValue("CIVAOC", DC_OP_CIVAOC);
+	builder.AddMemberWithValue("CIGDVAOC", DC_OP_CIGDVAOC);
+	builder.AddMemberWithValue("CIPAE", DC_OP_CIPAE);
+	builder.AddMemberWithValue("CIGDPAE", DC_OP_CIGDPAE);
+	builder.AddMemberWithValue("CIPAPA", DC_OP_CIPAPA);
+	builder.AddMemberWithValue("CIGDPAPA", DC_OP_CIGDPAPA);
+	Ref<Enumeration> _enum = builder.Finalize();
+	return _enum;
+}
+
 string NeonGetIntrinsicName(uint32_t intrinsic)
 {
 	switch (intrinsic)

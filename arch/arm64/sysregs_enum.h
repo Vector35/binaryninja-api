@@ -2,6 +2,7 @@
 
 #include "binaryninjaapi.h"
 #include "disassembler/sysregs_gen.h"
+#include "disassembler/sysregs_fmt_gen.h"
 
 using namespace BinaryNinja;
 using namespace std;

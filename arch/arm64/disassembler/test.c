@@ -8,8 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <sys/time.h>
 
 #include "decode.h"
 #include "format.h"
@@ -184,25 +182,81 @@ char* shifttype_to_str(enum ShiftType st)
 	}
 }
 
+const char * bin(uint64_t v, size_t len)
+{
+//	static char c[64];
+	char * c = (char *) calloc(len+1, sizeof(char));
+
+	int i = len-1;
+	for (int i = len - 1; i >= 0; i--)
+	{
+		c[i] = v & 1 ? '1' : '0';
+		v >>= 1;
+	}
+	return c;
+}
+
+int decode_spec(context* ctx, Instruction* dec);        // from decode0.c
 int disassemble(uint64_t address, uint32_t insword, char* result)
 {
 	int rc;
 	Instruction instr;
+	static bool seen[ENC_ZIPQ2_Z_ZZ_+1] = {false};
+	// static enum ENCODING last_enc = ENC_UNKNOWN;
 	memset(&instr, 0, sizeof(instr));
 
+	context ctx = {0};
+	ctx.halted = 1;  // enable disassembly of exception instructions like DCPS1
+	ctx.insword = insword;
+	ctx.address = address;
+	ctx.features0 = ARCH_FEATURES_ALL;
+	ctx.features01 = ARCH_FEATURES_ALL;
+	ctx.features1 = ARCH_FEATURES_ALL;
+	ctx.features11 = ARCH_FEATURES_ALL;
+	ctx.EDSCR_HDE = 1;
+
+	/* have the spec-generated code populate all the pcode variables */
+	rc = decode_spec(&ctx, &instr);
+
 	rc = aarch64_decompose(insword, &instr, address);
+	// enum ENCODING enc = last_enc;
+	// if (rc == -9)
+	// 	last_enc = instr.encoding;
+	// if (verbose > 1 && instr.encoding == enc)
+	//     return -10;
+	if (verbose > 2 && rc == -9 && seen[instr.encoding])
+		return -10;
+	seen[instr.encoding] = true;
+	if (verbose > 2)
+	{
+		if (rc != -9)
+			return rc;
+	}
+	if (verbose > 1)
+	{
+		if (rc != 0 && rc != -9)
+			return rc;
+	}
 	if (verbose)
 		printf("aarch64_decompose() returned %d\n", rc);
-	if (rc)
-		return rc;
+	// if (rc)
+	// 	return rc;
 
 	if (verbose)
 	{
 		printf("  instr.insword: %08X\n", instr.insword);
 		printf(" instr.encoding: %d %s\n", instr.encoding, enc_to_str(instr.encoding));
-		printf("instr.operation: %d %s\n", instr.operation, operation_to_str(instr.operation));
+		if (rc)
+			printf("instr.operation: %d %s (%s)\n", instr.operation, operation_to_str(instr.operation), operation_to_str(enc_to_oper(instr.encoding)));
+		else
+			printf("instr.operation: %d %s\n", instr.operation, operation_to_str(instr.operation));
 		printf(" instr.setflags: %d\n", instr.setflags);
-		for (int i = 0; i < MAX_OPERANDS && instr.operands[i].operandClass != NONE; i++)
+        if (instr.operation == ARM64_SYS)
+        {
+          	printf("instr.op0: %s op1: %s CRn: %s CRm: %s op2: %s\n", bin(ctx.op0, 3), bin(ctx.op1, 3), bin(ctx.CRn, 4), bin(ctx.CRm, 4), bin(ctx.op2, 3));
+          	printf("instr.op0: %s op1: %s CRn: %s CRm: %s op2: %s\n", bin(ctx.sys_op0, 3), bin(ctx.sys_op1, 3), bin(ctx.sys_crn, 4), bin(ctx.sys_crm, 4), bin(ctx.sys_op2, 3));
+        }
+		for (int i = 0; !rc && i < MAX_OPERANDS && instr.operands[i].operandClass != NONE; i++)
 		{
 			printf("instr.operands[%d]\n", i);
 
@@ -218,6 +272,8 @@ int disassemble(uint64_t address, uint32_t insword, char* result)
 			case FIMM32:
 				printf("\t\t%f\n", *(float*)&(operand.immediate));
 				break;
+			case ACCUM_ARRAY:
+			case INDEXED_ELEMENT:
 			case IMM32:
 				printf("\t.imm32: 0x%llX\n", operand.immediate & 0xFFFFFFFF);
 				break;
@@ -242,6 +298,8 @@ int disassemble(uint64_t address, uint32_t insword, char* result)
 			printf("\t.arrSpec: %d %s\n", operand.arrSpec, arrspec_to_str(operand.arrSpec));
 		}
 	}
+	if (rc)
+		return rc;
 
 	rc = aarch64_disassemble(&instr, result, 1024);
 	if (verbose)
@@ -252,33 +310,10 @@ int disassemble(uint64_t address, uint32_t insword, char* result)
 	return 0;
 }
 
-double subtract_timespecs(struct timespec t1, struct timespec t0)
-{
-	double delta = 0;
-
-	delta += (double)(t1.tv_nsec - t0.tv_nsec) / 1000000000.0;
-	if (delta < 0)
-	{
-		t1.tv_sec -= 1;
-		delta += 1;
-	}
-
-	delta += (double)t1.tv_sec - t0.tv_sec;
-
-	return delta;
-}
-
 /* main */
 int main(int ac, char** av)
 {
-	srand(0xCAFE);
-
-	Instruction instr;
-	uint32_t insword;
 	char instxt[1024] = {'\0'};
-
-	double delta;
-	struct timespec t0, t1;
 
 	if (ac <= 1)
 	{
@@ -287,67 +322,121 @@ int main(int ac, char** av)
 		return -1;
 	}
 
-	if (!strcmp(av[1], "decode-speed"))
+	if (!strcmp(av[1], "speed"))
 	{
-		verbose = false;
-
-		clock_gettime(CLOCK_MONOTONIC, &t0);
-
-		for (int64_t num_decoded=0; true; num_decoded += 1)
+		srand(0xCAFE);
+		for (int i = 0; i < 10000000; i++)
 		{
-			insword = (rand() << 16) ^ rand();
-			aarch64_decompose(insword, &instr, 0);
-			if ((num_decoded & 0xFFFFFF) == 0)
-			{
-				clock_gettime(CLOCK_MONOTONIC, &t1);
-				delta = subtract_timespecs(t1, t0);
-				printf("%lld instructions in %fs, or %.0f instructions/s\n",
-					num_decoded, delta, num_decoded/delta);
-			}
+			uint32_t insword = (rand() << 16) ^ rand();
+			uint32_t le = ntohl(insword);
+			printf("%08X: 0x%08X %08X ", i, insword, le);
+			disassemble(0, insword, instxt);
+			// printf("%08X: %s\n", 0, instxt);
 		}
 		return 0;
 	}
 
-	// There's no disassemble speed test yet because randomly generated instruction words often do
-	// not decode.
+	if (!strcmp(av[1], "all"))
+	{
+		verbose = 2;
+		for (int i = 0; i < 0xFFFFFFFF; i++)
+		{
+			uint32_t insword = i;
+			uint32_t le = ntohl(insword);
+			int rc = disassemble(0, insword, instxt);
+			if (rc == 0 || rc == -9)
+				printf("%08X: 0x%08X %08X ", i, insword, le);
+		}
+		return 0;
+	}
 
-	if (!strcmp(av[1], "strain") || !strcmp(av[1], "strainer") || !strcmp(av[1], "stress") ||
-	    !strcmp(av[1], "stresser"))
+	if (!strcmp(av[1], "error"))
+	{
+		verbose = 3;
+		for (int i = 0; i < 0xFFFFFFFF; i++)
+		{
+			uint32_t insword = i;
+			uint32_t le = ntohl(insword);
+			int rc = disassemble(0, insword, instxt);
+			if (rc == -9)
+				printf("%08X: 0x%08X %08X\n", i, insword, le);
+		}
+		return 0;
+	}
+
+	if (!strcmp(av[1], "strain") || !strcmp(av[1], "strainer") ||
+	    !strcmp(av[1], "stress") || !strcmp(av[1], "stresser"))
 	{
 		verbose = 0;
-		for (insword = 0; insword != 0xFFFFFFFF; insword++)
+		uint32_t insword = 0;
+
+		while(1)
 		{
 			disassemble(0, insword, instxt);
 
-			if ((insword & 0xFFFFFF) == 0)
+			if ((insword & 0xFFFFF) == 0)
 				printf("%08X: %s\n", insword, instxt);
+
+			if(insword == 0xFFFFFFFF)
+				break;
+
+			insword += 1;
 		}
+		return 0;
 	}
 
-	if (!strcmp(av[1], "random"))
+	if (!strcmp(av[1], "straindecode") || !strcmp(av[1], "strainerdecode") ||
+	    !strcmp(av[1], "stressdecode") || !strcmp(av[1], "stresserdecode"))
 	{
-		bool silent = ac > 2 && !strcmp(av[2], "silent");
-		verbose = 0;
+		/* decoded struct */
+		Instruction instr;
+		memset(&instr, 0, sizeof(instr));
+
+		/* where to start decoding */
+		uint32_t insword = 0;
+		if(ac > 2)
+			insword = strtoul(av[2], NULL, 16);
+
+		/* go! */
+		while(1)
+		{
+			aarch64_decompose(insword, &instr, 0);
+
+			//if(1)
+			if((insword & 0xFFFFF) == 0)
+				printf("%08X\n", insword);
+
+			if(insword == 0xFFFFFFFF)
+				break;
+
+			insword += 1;
+		}
+
+		return 0;
+	}
+
+	if (!strcmp(av[1], "test"))
+	{
+		srand(0xCAFE);
 		while (1)
 		{
-			insword = (rand() << 16) ^ rand();
-			if (disassemble(0, insword, instxt) == 0)
-			{
-				if (!silent)
-					printf("%08X: %s\n", insword, instxt);
-			}
-			else
-			{
-				if (!silent)
-					printf("%08X: (error)\n", insword);
-			}
+			Instruction instr;
+			memset(&instr, 0, sizeof(instr));
+			uint32_t insword = (rand() << 16) ^ rand();
+			aarch64_decompose(insword, &instr, 0);
+			printf("%08X: %d\n", insword, instr.encoding);
 		}
+
+		return 0;
 	}
 
 	else
 	{
-		insword = strtoul(av[1], NULL, 16);
-		if (disassemble(0, insword, instxt) == 0)
-			printf("%08X: %s\n", insword, instxt);
+        for (int i = 1; i < ac; i++)
+        {
+			uint32_t insword = strtoul(av[i], NULL, 16);
+			if (disassemble(0, insword, instxt) == 0)
+				printf("%08X: %s\n", insword, instxt);
+        }
 	}
 }

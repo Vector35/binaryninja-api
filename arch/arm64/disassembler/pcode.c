@@ -134,6 +134,14 @@ int HighestSetBit(uint64_t x)
 	return -1;
 }
 
+int HighestSetBitNZ(uint64_t x)
+{
+	// assert !IsZero(x);
+	if (x == 0)
+		return -1;
+	return HighestSetBit(x);
+}
+
 int LowestSetBit(uint64_t x)
 {
 	for (int i = 0; i < 64; ++i)
@@ -144,6 +152,13 @@ int LowestSetBit(uint64_t x)
 	}
 
 	return -1;
+}
+int LowestSetBitNZ(uint64_t x)
+{
+	// assert !IsZero(x);
+	if (x == 0)
+		return -1;
+	return LowestSetBit(x);
 }
 
 bool SVEMoveMaskPreferred(uint32_t imm13)
@@ -768,8 +783,7 @@ uint64_t FPOne(bool sign, int N)
 uint64_t FPTwo(bool sign, int N)
 {
 	// width should be 16, 32, 64
-	//int F;
-	int E, exp;
+	int E, F, exp;
 
 	switch (N)
 	{
@@ -781,7 +795,7 @@ uint64_t FPTwo(bool sign, int N)
 		E = 11;
 	}
 
-	//F = N - (E + 1);
+	F = N - (E + 1);
 	exp = 1 << (E - 1);
 	return (sign << E) | exp;
 }

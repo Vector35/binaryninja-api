@@ -16686,7 +16686,8 @@ bool NeonGetLowLevelILForInstruction(
 		add_input_reg(inputs, il, instr.operands[2]);
 		add_output_reg(outputs, il, instr.operands[0]);
 		break;
-	case ENC_FCMLA_ASIMDELEM_C_H:
+	// case ENC_FCMLA_ASIMDELEM_C_H:
+	case ENC_FCMLA_ADVSIMD_ELT:
 		if (instr.operands[0].arrSpec == ARRSPEC_4HALVES && instr.operands[1].arrSpec == ARRSPEC_4HALVES && instr.operands[2].arrSpec == ARRSPEC_1HALF && instr.operands[2].laneUsed && (instr.operands[3].operandClass && instr.operands[3].operandClass <= FIMM32 && instr.operands[3].immediate == 0))
 			// float16x4_t vcmla_laneq_f16(float16x4_t r, float16x4_t a, float16x8_t b, const int lane)
 			// argprep: r -> Vd.4H; a -> Vn.4H; b -> Vm.H; lane -> <lane>
@@ -16727,14 +16728,15 @@ bool NeonGetLowLevelILForInstruction(
 			// argprep: r -> Vd.8H; a -> Vn.8H; b -> Vm.H; lane -> <lane>
 			// results: Vd.8H -> result
 			intrin_id = ARM64_INTRIN_VCMLAQ_ROT90_LANEQ_F16;  // FCMLA Vd.8H,Vn.8H,Vm.H[lane],#90
-		add_input_reg(inputs, il, instr.operands[0]);
-		add_input_reg(inputs, il, instr.operands[1]);
-		add_input_reg(inputs, il, instr.operands[2]);
-		add_input_lane(inputs, il, instr.operands[2]);
-		add_input_imm(inputs, il, instr.operands[3]);
-		add_output_reg(outputs, il, instr.operands[0]);
-		break;
-	case ENC_FCMLA_ASIMDELEM_C_S:
+	// 	add_input_reg(inputs, il, instr.operands[0]);
+	// 	add_input_reg(inputs, il, instr.operands[1]);
+	// 	add_input_reg(inputs, il, instr.operands[2]);
+	// 	add_input_lane(inputs, il, instr.operands[2]);
+	// 	add_input_imm(inputs, il, instr.operands[3]);
+	// 	add_output_reg(outputs, il, instr.operands[0]);
+	// 	break;
+	// case ENC_FCMLA_ASIMDELEM_C_S:
+		else
 		if (instr.operands[0].arrSpec == ARRSPEC_2SINGLES && instr.operands[1].arrSpec == ARRSPEC_2SINGLES && instr.operands[2].arrSpec == ARRSPEC_2SINGLES && instr.operands[2].laneUsed && (instr.operands[3].operandClass && instr.operands[3].operandClass <= FIMM32 && instr.operands[3].immediate == 0))
 			// float32x2_t vcmla_lane_f32(float32x2_t r, float32x2_t a, float32x2_t b, const int lane)
 			// argprep: r -> Vd.2S; a -> Vn.2S; b -> Vm.2S; lane -> <lane>

@@ -7,9 +7,12 @@
 enum Operation enc_to_oper(enum ENCODING enc)
 {
 	switch(enc) {
+		case ENC_ABS_32_DP_1SRC:
+		case ENC_ABS_64_DP_1SRC:
 		case ENC_ABS_ASISDMISC_R:
 		case ENC_ABS_ASIMDMISC_R:
-		case ENC_ABS_Z_P_Z_:
+		case ENC_ABS_Z_P_Z_M:
+		case ENC_ABS_Z_P_Z_Z:
 			return ARM64_ABS;
 		case ENC_ADC_32_ADDSUB_CARRY:
 		case ENC_ADC_64_ADDSUB_CARRY:
@@ -29,9 +32,17 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_ADD_64_ADDSUB_SHIFT:
 		case ENC_ADD_ASISDSAME_ONLY:
 		case ENC_ADD_ASIMDSAME_ONLY:
+		case ENC_ADD_MZ_ZZV_2X1:
+		case ENC_ADD_MZ_ZZV_4X1:
 		case ENC_ADD_Z_P_ZZ_:
 		case ENC_ADD_Z_ZI_:
 		case ENC_ADD_Z_ZZ_:
+		case ENC_ADD_ZA_ZW_2X2:
+		case ENC_ADD_ZA_ZW_4X4:
+		case ENC_ADD_ZA_ZZV_2X1:
+		case ENC_ADD_ZA_ZZV_4X1:
+		case ENC_ADD_ZA_ZZW_2X2:
+		case ENC_ADD_ZA_ZZW_4X4:
 			return ARM64_ADD;
 		case ENC_ADDG_64_ADDSUB_IMMTAGS:
 			return ARM64_ADDG;
@@ -52,6 +63,12 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_ADDP;
 		case ENC_ADDPL_R_RI_:
 			return ARM64_ADDPL;
+		case ENC_ADDPT_64_ADDSUB_PT:
+		case ENC_ADDPT_Z_P_ZZ_:
+		case ENC_ADDPT_Z_ZZ_:
+			return ARM64_ADDPT;
+		case ENC_ADDQV_Z_P_Z_:
+			return ARM64_ADDQV;
 		case ENC_ADDS_32S_ADDSUB_EXT:
 		case ENC_ADDS_64S_ADDSUB_EXT:
 		case ENC_ADDS_32S_ADDSUB_IMM:
@@ -59,6 +76,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_ADDS_32_ADDSUB_SHIFT:
 		case ENC_ADDS_64_ADDSUB_SHIFT:
 			return ARM64_ADDS;
+		case ENC_ADDSPL_R_RI_:
+			return ARM64_ADDSPL;
+		case ENC_ADDSVL_R_RI_:
+			return ARM64_ADDSVL;
 		case ENC_ADDV_ASIMDALL_ONLY:
 			return ARM64_ADDV;
 		case ENC_ADDVA_ZA_PP_Z_32:
@@ -74,11 +95,21 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_ADRP_ONLY_PCRELADDR:
 			return ARM64_ADRP;
 		case ENC_AESD_B_CRYPTOAES:
+		case ENC_AESD_MZ_ZZI_2X1:
+		case ENC_AESD_MZ_ZZI_4X1:
 		case ENC_AESD_Z_ZZ_:
 			return ARM64_AESD;
+		case ENC_AESDIMC_MZ_ZZI_2X1:
+		case ENC_AESDIMC_MZ_ZZI_4X1:
+			return ARM64_AESDIMC;
 		case ENC_AESE_B_CRYPTOAES:
+		case ENC_AESE_MZ_ZZI_2X1:
+		case ENC_AESE_MZ_ZZI_4X1:
 		case ENC_AESE_Z_ZZ_:
 			return ARM64_AESE;
+		case ENC_AESEMC_MZ_ZZI_2X1:
+		case ENC_AESEMC_MZ_ZZI_4X1:
+			return ARM64_AESEMC;
 		case ENC_AESIMC_B_CRYPTOAES:
 		case ENC_AESIMC_Z_Z_:
 			return ARM64_AESIMC;
@@ -95,6 +126,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_AND_Z_ZI_:
 		case ENC_AND_Z_ZZ_:
 			return ARM64_AND;
+		case ENC_ANDQV_Z_P_Z_:
+			return ARM64_ANDQV;
 		case ENC_ANDS_32S_LOG_IMM:
 		case ENC_ANDS_64S_LOG_IMM:
 		case ENC_ANDS_32_LOG_SHIFT:
@@ -103,6 +136,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_ANDS;
 		case ENC_ANDV_R_P_Z_:
 			return ARM64_ANDV;
+		case ENC_APAS_SYS_CR_SYSTEMINSTRS:
+			return ARM64_APAS;
 		case ENC_ASR_ASRV_32_DP_2SRC:
 		case ENC_ASR_ASRV_64_DP_2SRC:
 		case ENC_ASR_SBFM_32M_BITFIELD:
@@ -134,16 +169,28 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_AUTIA;
 		case ENC_AUTIA1716_HI_HINTS:
 			return ARM64_AUTIA1716;
+		case ENC_AUTIA171615_64LR_DP_1SRC:
+			return ARM64_AUTIA171615;
 		case ENC_AUTIASP_HI_HINTS:
 			return ARM64_AUTIASP;
+		case ENC_AUTIASPPC_ONLY_DP_1SRC_IMM:
+			return ARM64_AUTIASPPC;
+		case ENC_AUTIASPPCR_64LRR_DP_1SRC:
+			return ARM64_AUTIASPPCR;
 		case ENC_AUTIAZ_HI_HINTS:
 			return ARM64_AUTIAZ;
 		case ENC_AUTIB_64P_DP_1SRC:
 			return ARM64_AUTIB;
 		case ENC_AUTIB1716_HI_HINTS:
 			return ARM64_AUTIB1716;
+		case ENC_AUTIB171615_64LR_DP_1SRC:
+			return ARM64_AUTIB171615;
 		case ENC_AUTIBSP_HI_HINTS:
 			return ARM64_AUTIBSP;
+		case ENC_AUTIBSPPC_ONLY_DP_1SRC_IMM:
+			return ARM64_AUTIBSPPC;
+		case ENC_AUTIBSPPCR_64LRR_DP_1SRC:
+			return ARM64_AUTIBSPPCR;
 		case ENC_AUTIBZ_HI_HINTS:
 			return ARM64_AUTIBZ;
 		case ENC_AUTIZA_64Z_DP_1SRC:
@@ -155,6 +202,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_B_ONLY_CONDBRANCH:
 		case ENC_B_ONLY_BRANCH_IMM:
 			return ARM64_B;
+		case ENC_BC_ONLY_CONDBRANCH:
+			return ARM64_BC;
 		case ENC_BCAX_VVV16_CRYPTO4:
 		case ENC_BCAX_Z_ZZZ_:
 			return ARM64_BCAX;
@@ -162,22 +211,63 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_BDEP;
 		case ENC_BEXT_Z_ZZ_:
 			return ARM64_BEXT;
+		case ENC_BF1CVT_MZ2_Z8_:
+		case ENC_BF1CVT_Z_Z8_B2BF:
+			return ARM64_BF1CVT;
+		case ENC_BF1CVTL_ASIMDMISC_V:
+		case ENC_BF1CVTL_MZ2_Z8_:
+			return ARM64_BF1CVTL;
+		//case ENC_BF1CVTL_ASIMDMISC_V:
+		//	return ARM64_BF1CVTL2;
+		case ENC_BF1CVTLT_Z_Z8_B2BF:
+			return ARM64_BF1CVTLT;
+		case ENC_BF2CVT_MZ2_Z8_:
+		case ENC_BF2CVT_Z_Z8_B2BF:
+			return ARM64_BF2CVT;
+		case ENC_BF2CVTL_ASIMDMISC_V:
+		case ENC_BF2CVTL_MZ2_Z8_:
+			return ARM64_BF2CVTL;
+		//case ENC_BF2CVTL_ASIMDMISC_V:
+		//	return ARM64_BF2CVTL2;
+		case ENC_BF2CVTLT_Z_Z8_B2BF:
+			return ARM64_BF2CVTLT;
+		case ENC_BFADD_Z_P_ZZ_:
+		case ENC_BFADD_Z_ZZ_:
+		case ENC_BFADD_ZA_ZW_2X2_16:
+		case ENC_BFADD_ZA_ZW_4X4_16:
+			return ARM64_BFADD;
 		case ENC_BFC_BFM_32M_BITFIELD:
 		case ENC_BFC_BFM_64M_BITFIELD:
 			return ARM64_BFC;
+		case ENC_BFCLAMP_MZ_ZZ_2:
+		case ENC_BFCLAMP_MZ_ZZ_4:
+		case ENC_BFCLAMP_Z_ZZ_:
+			return ARM64_BFCLAMP;
 		case ENC_BFCVT_BS_FLOATDP1:
+		case ENC_BFCVT_Z8_MZ2_:
+		case ENC_BFCVT_Z_MZ2_:
 		case ENC_BFCVT_Z_P_Z_S2BF:
+		case ENC_BFCVT_Z_P_Z_S2BFZ:
 			return ARM64_BFCVT;
 		case ENC_BFCVTN_ASIMDMISC_4S:
+		case ENC_BFCVTN_Z8_MZ2_BF2B:
+		case ENC_BFCVTN_Z_MZ2_:
 			return ARM64_BFCVTN;
 		//case ENC_BFCVTN_ASIMDMISC_4S:
 		//	return ARM64_BFCVTN2;
 		case ENC_BFCVTNT_Z_P_Z_S2BF:
+		case ENC_BFCVTNT_Z_P_Z_S2BFZ:
 			return ARM64_BFCVTNT;
 		case ENC_BFDOT_ASIMDELEM_E:
 		case ENC_BFDOT_ASIMDSAME2_D:
 		case ENC_BFDOT_Z_ZZZ_:
 		case ENC_BFDOT_Z_ZZZI_:
+		case ENC_BFDOT_ZA_ZZI_2XI:
+		case ENC_BFDOT_ZA_ZZI_4XI:
+		case ENC_BFDOT_ZA_ZZV_2X1:
+		case ENC_BFDOT_ZA_ZZV_4X1:
+		case ENC_BFDOT_ZA_ZZW_2X2:
+		case ENC_BFDOT_ZA_ZZW_4X4:
 			return ARM64_BFDOT;
 		case ENC_BFI_BFM_32M_BITFIELD:
 		case ENC_BFI_BFM_64M_BITFIELD:
@@ -185,8 +275,49 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_BFM_32M_BITFIELD:
 		case ENC_BFM_64M_BITFIELD:
 			return ARM64_BFM;
+		case ENC_BFMAX_MZ_ZZV_2X1:
+		case ENC_BFMAX_MZ_ZZV_4X1:
+		case ENC_BFMAX_MZ_ZZW_2X2:
+		case ENC_BFMAX_MZ_ZZW_4X4:
+		case ENC_BFMAX_Z_P_ZZ_:
+			return ARM64_BFMAX;
+		case ENC_BFMAXNM_MZ_ZZV_2X1:
+		case ENC_BFMAXNM_MZ_ZZV_4X1:
+		case ENC_BFMAXNM_MZ_ZZW_2X2:
+		case ENC_BFMAXNM_MZ_ZZW_4X4:
+		case ENC_BFMAXNM_Z_P_ZZ_:
+			return ARM64_BFMAXNM;
+		case ENC_BFMIN_MZ_ZZV_2X1:
+		case ENC_BFMIN_MZ_ZZV_4X1:
+		case ENC_BFMIN_MZ_ZZW_2X2:
+		case ENC_BFMIN_MZ_ZZW_4X4:
+		case ENC_BFMIN_Z_P_ZZ_:
+			return ARM64_BFMIN;
+		case ENC_BFMINNM_MZ_ZZV_2X1:
+		case ENC_BFMINNM_MZ_ZZV_4X1:
+		case ENC_BFMINNM_MZ_ZZW_2X2:
+		case ENC_BFMINNM_MZ_ZZW_4X4:
+		case ENC_BFMINNM_Z_P_ZZ_:
+			return ARM64_BFMINNM;
+		case ENC_BFMLA_Z_P_ZZZ_:
+		case ENC_BFMLA_Z_ZZZI_H:
+		case ENC_BFMLA_ZA_ZZI_H2XI:
+		case ENC_BFMLA_ZA_ZZI_H4XI:
+		case ENC_BFMLA_ZA_ZZV_2X1_16:
+		case ENC_BFMLA_ZA_ZZV_4X1_16:
+		case ENC_BFMLA_ZA_ZZW_2X2_16:
+		case ENC_BFMLA_ZA_ZZW_4X4_16:
+			return ARM64_BFMLA;
 		case ENC_BFMLAL_ASIMDELEM_F:
 		case ENC_BFMLAL_ASIMDSAME2_F_:
+		case ENC_BFMLAL_ZA_ZZI_1:
+		case ENC_BFMLAL_ZA_ZZI_2XI:
+		case ENC_BFMLAL_ZA_ZZI_4XI:
+		case ENC_BFMLAL_ZA_ZZV_1:
+		case ENC_BFMLAL_ZA_ZZV_2X1:
+		case ENC_BFMLAL_ZA_ZZV_4X1:
+		case ENC_BFMLAL_ZA_ZZW_2X2:
+		case ENC_BFMLAL_ZA_ZZW_4X4:
 			return ARM64_BFMLAL;
 		case ENC_BFMLALB_Z_ZZZ_:
 		case ENC_BFMLALB_Z_ZZZI_:
@@ -194,13 +325,81 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_BFMLALT_Z_ZZZ_:
 		case ENC_BFMLALT_Z_ZZZI_:
 			return ARM64_BFMLALT;
+		case ENC_BFMLS_Z_P_ZZZ_:
+		case ENC_BFMLS_Z_ZZZI_H:
+		case ENC_BFMLS_ZA_ZZI_H2XI:
+		case ENC_BFMLS_ZA_ZZI_H4XI:
+		case ENC_BFMLS_ZA_ZZV_2X1_16:
+		case ENC_BFMLS_ZA_ZZV_4X1_16:
+		case ENC_BFMLS_ZA_ZZW_2X2_16:
+		case ENC_BFMLS_ZA_ZZW_4X4_16:
+			return ARM64_BFMLS;
+		case ENC_BFMLSL_ZA_ZZI_1:
+		case ENC_BFMLSL_ZA_ZZI_2XI:
+		case ENC_BFMLSL_ZA_ZZI_4XI:
+		case ENC_BFMLSL_ZA_ZZV_1:
+		case ENC_BFMLSL_ZA_ZZV_2X1:
+		case ENC_BFMLSL_ZA_ZZV_4X1:
+		case ENC_BFMLSL_ZA_ZZW_2X2:
+		case ENC_BFMLSL_ZA_ZZW_4X4:
+			return ARM64_BFMLSL;
+		case ENC_BFMLSLB_Z_ZZZ_:
+		case ENC_BFMLSLB_Z_ZZZI_:
+			return ARM64_BFMLSLB;
+		case ENC_BFMLSLT_Z_ZZZ_:
+		case ENC_BFMLSLT_Z_ZZZI_:
+			return ARM64_BFMLSLT;
 		case ENC_BFMMLA_ASIMDSAME2_E:
 		case ENC_BFMMLA_Z_ZZZ_:
 			return ARM64_BFMMLA;
+		case ENC_BFMOP4A_ZA32_ZZ_H1X2:
+		case ENC_BFMOP4A_ZA32_ZZ_H1X1:
+		case ENC_BFMOP4A_ZA32_ZZ_H2X1:
+		case ENC_BFMOP4A_ZA32_ZZ_H2X2:
+		case ENC_BFMOP4A_ZA_ZZ_H1X2:
+		case ENC_BFMOP4A_ZA_ZZ_H1X1:
+		case ENC_BFMOP4A_ZA_ZZ_H2X1:
+		case ENC_BFMOP4A_ZA_ZZ_H2X2:
+			return ARM64_BFMOP4A;
+		case ENC_BFMOP4S_ZA32_ZZ_H1X2:
+		case ENC_BFMOP4S_ZA32_ZZ_H1X1:
+		case ENC_BFMOP4S_ZA32_ZZ_H2X1:
+		case ENC_BFMOP4S_ZA32_ZZ_H2X2:
+		case ENC_BFMOP4S_ZA_ZZ_H1X2:
+		case ENC_BFMOP4S_ZA_ZZ_H1X1:
+		case ENC_BFMOP4S_ZA_ZZ_H2X1:
+		case ENC_BFMOP4S_ZA_ZZ_H2X2:
+			return ARM64_BFMOP4S;
 		case ENC_BFMOPA_ZA32_PP_ZZ_:
+		case ENC_BFMOPA_ZA_PP_ZZ_16:
 			return ARM64_BFMOPA;
 		case ENC_BFMOPS_ZA32_PP_ZZ_:
+		case ENC_BFMOPS_ZA_PP_ZZ_16:
 			return ARM64_BFMOPS;
+		case ENC_BFMUL_MZ_ZZV_2X1:
+		case ENC_BFMUL_MZ_ZZV_4X1:
+		case ENC_BFMUL_MZ_ZZW_2X2:
+		case ENC_BFMUL_MZ_ZZW_4X4:
+		case ENC_BFMUL_Z_P_ZZ_:
+		case ENC_BFMUL_Z_ZZ_:
+		case ENC_BFMUL_Z_ZZI_H:
+			return ARM64_BFMUL;
+		case ENC_BFSCALE_MZ_ZZV_2X1:
+		case ENC_BFSCALE_MZ_ZZV_4X1:
+		case ENC_BFSCALE_MZ_ZZW_2X2:
+		case ENC_BFSCALE_MZ_ZZW_4X4:
+		case ENC_BFSCALE_Z_P_ZZ_:
+			return ARM64_BFSCALE;
+		case ENC_BFSUB_Z_P_ZZ_:
+		case ENC_BFSUB_Z_ZZ_:
+		case ENC_BFSUB_ZA_ZW_2X2_16:
+		case ENC_BFSUB_ZA_ZW_4X4_16:
+			return ARM64_BFSUB;
+		case ENC_BFTMOPA_ZA32_ZZZI_H2X1:
+		case ENC_BFTMOPA_ZA_ZZZI_H2X1:
+			return ARM64_BFTMOPA;
+		case ENC_BFVDOT_ZA_ZZI_2XI:
+			return ARM64_BFVDOT;
 		case ENC_BFXIL_BFM_32M_BITFIELD:
 		case ENC_BFXIL_BFM_64M_BITFIELD:
 			return ARM64_BFXIL;
@@ -209,9 +408,9 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_BIC_ASIMDIMM_L_HL:
 		case ENC_BIC_ASIMDIMM_L_SL:
 		case ENC_BIC_ASIMDSAME_ONLY:
-		case ENC_BIC_AND_Z_ZI_:
 		case ENC_BIC_32_LOG_SHIFT:
 		case ENC_BIC_64_LOG_SHIFT:
+		case ENC_BIC_Z_ZI__AND_Z_ZI_:
 		case ENC_BIC_P_P_PP_Z:
 		case ENC_BIC_Z_P_ZZ_:
 		case ENC_BIC_Z_ZZ_:
@@ -236,6 +435,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_BLRAB;
 		case ENC_BLRABZ_64_BRANCH_REG:
 			return ARM64_BLRABZ;
+		case ENC_BMOPA_ZA_PP_ZZ_32:
+			return ARM64_BMOPA;
+		case ENC_BMOPS_ZA_PP_ZZ_32:
+			return ARM64_BMOPS;
 		case ENC_BR_64_BRANCH_REG:
 			return ARM64_BR;
 		case ENC_BRAA_64P_BRANCH_REG:
@@ -246,6 +449,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_BRAB;
 		case ENC_BRABZ_64_BRANCH_REG:
 			return ARM64_BRABZ;
+		case ENC_BRB_SYS_CR_SYSTEMINSTRS:
+			return ARM64_BRB;
 		case ENC_BRK_EX_EXCEPTION:
 			return ARM64_BRK;
 		case ENC_BRKA_P_P_P_:
@@ -328,6 +533,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_CASALB;
 		case ENC_CASALH_C32_COMSWAP:
 			return ARM64_CASALH;
+		case ENC_CASALT_C64_COMSWAP_UNPRIV:
+			return ARM64_CASALT;
+		case ENC_CASAT_C64_COMSWAP_UNPRIV:
+			return ARM64_CASAT;
 		case ENC_CASB_C32_COMSWAP:
 			return ARM64_CASB;
 		case ENC_CASH_C32_COMSWAP:
@@ -339,6 +548,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_CASLB;
 		case ENC_CASLH_C32_COMSWAP:
 			return ARM64_CASLH;
+		case ENC_CASLT_C64_COMSWAP_UNPRIV:
+			return ARM64_CASLT;
 		case ENC_CASP_CP32_COMSWAPPR:
 		case ENC_CASP_CP64_COMSWAPPR:
 			return ARM64_CASP;
@@ -348,9 +559,109 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_CASPAL_CP32_COMSWAPPR:
 		case ENC_CASPAL_CP64_COMSWAPPR:
 			return ARM64_CASPAL;
+		case ENC_CASPALT_CP64_COMSWAPPR_UNPRIV:
+			return ARM64_CASPALT;
+		case ENC_CASPAT_CP64_COMSWAPPR_UNPRIV:
+			return ARM64_CASPAT;
 		case ENC_CASPL_CP32_COMSWAPPR:
 		case ENC_CASPL_CP64_COMSWAPPR:
 			return ARM64_CASPL;
+		case ENC_CASPLT_CP64_COMSWAPPR_UNPRIV:
+			return ARM64_CASPLT;
+		case ENC_CASPT_CP64_COMSWAPPR_UNPRIV:
+			return ARM64_CASPT;
+		case ENC_CAST_C64_COMSWAP_UNPRIV:
+			return ARM64_CAST;
+		case ENC_CBBEQ_8_REGS:
+			return ARM64_CBBEQ;
+		case ENC_CBBGE_8_REGS:
+			return ARM64_CBBGE;
+		case ENC_CBBGT_8_REGS:
+			return ARM64_CBBGT;
+		case ENC_CBBHI_8_REGS:
+			return ARM64_CBBHI;
+		case ENC_CBBHS_8_REGS:
+			return ARM64_CBBHS;
+		case ENC_CBBLE_CBBGE_8_REGS:
+			return ARM64_CBBLE;
+		case ENC_CBBLO_CBBHI_8_REGS:
+			return ARM64_CBBLO;
+		case ENC_CBBLS_CBBHS_8_REGS:
+			return ARM64_CBBLS;
+		case ENC_CBBLT_CBBGT_8_REGS:
+			return ARM64_CBBLT;
+		case ENC_CBBNE_8_REGS:
+			return ARM64_CBBNE;
+		case ENC_CBEQ_32_IMM:
+		case ENC_CBEQ_64_IMM:
+		case ENC_CBEQ_32_REGS:
+		case ENC_CBEQ_64_REGS:
+			return ARM64_CBEQ;
+		case ENC_CBGE_CBGT_32_IMM:
+		case ENC_CBGE_CBGT_64_IMM:
+		case ENC_CBGE_32_REGS:
+		case ENC_CBGE_64_REGS:
+			return ARM64_CBGE;
+		case ENC_CBGT_32_IMM:
+		case ENC_CBGT_64_IMM:
+		case ENC_CBGT_32_REGS:
+		case ENC_CBGT_64_REGS:
+			return ARM64_CBGT;
+		case ENC_CBHEQ_16_REGS:
+			return ARM64_CBHEQ;
+		case ENC_CBHGE_16_REGS:
+			return ARM64_CBHGE;
+		case ENC_CBHGT_16_REGS:
+			return ARM64_CBHGT;
+		case ENC_CBHHI_16_REGS:
+			return ARM64_CBHHI;
+		case ENC_CBHHS_16_REGS:
+			return ARM64_CBHHS;
+		case ENC_CBHI_32_IMM:
+		case ENC_CBHI_64_IMM:
+		case ENC_CBHI_32_REGS:
+		case ENC_CBHI_64_REGS:
+			return ARM64_CBHI;
+		case ENC_CBHLE_CBHGE_16_REGS:
+			return ARM64_CBHLE;
+		case ENC_CBHLO_CBHHI_16_REGS:
+			return ARM64_CBHLO;
+		case ENC_CBHLS_CBHHS_16_REGS:
+			return ARM64_CBHLS;
+		case ENC_CBHLT_CBHGT_16_REGS:
+			return ARM64_CBHLT;
+		case ENC_CBHNE_16_REGS:
+			return ARM64_CBHNE;
+		case ENC_CBHS_CBHI_32_IMM:
+		case ENC_CBHS_CBHI_64_IMM:
+		case ENC_CBHS_32_REGS:
+		case ENC_CBHS_64_REGS:
+			return ARM64_CBHS;
+		case ENC_CBLE_CBLT_32_IMM:
+		case ENC_CBLE_CBLT_64_IMM:
+		case ENC_CBLE_CBGE_32_REGS:
+		case ENC_CBLE_CBGE_64_REGS:
+			return ARM64_CBLE;
+		case ENC_CBLO_CBHI_32_REGS:
+		case ENC_CBLO_CBHI_64_REGS:
+		case ENC_CBLO_32_IMM:
+		case ENC_CBLO_64_IMM:
+			return ARM64_CBLO;
+		case ENC_CBLS_CBLO_32_IMM:
+		case ENC_CBLS_CBLO_64_IMM:
+		case ENC_CBLS_CBHS_32_REGS:
+		case ENC_CBLS_CBHS_64_REGS:
+			return ARM64_CBLS;
+		case ENC_CBLT_CBGT_32_REGS:
+		case ENC_CBLT_CBGT_64_REGS:
+		case ENC_CBLT_32_IMM:
+		case ENC_CBLT_64_IMM:
+			return ARM64_CBLT;
+		case ENC_CBNE_32_IMM:
+		case ENC_CBNE_64_IMM:
+		case ENC_CBNE_32_REGS:
+		case ENC_CBNE_64_REGS:
+			return ARM64_CBNE;
 		case ENC_CBNZ_32_COMPBRANCH:
 		case ENC_CBNZ_64_COMPBRANCH:
 			return ARM64_CBNZ;
@@ -375,6 +686,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_CFINV;
 		case ENC_CFP_SYS_CR_SYSTEMINSTRS:
 			return ARM64_CFP;
+		case ENC_CHKFEAT_HF_HINTS:
+			return ARM64_CHKFEAT;
 		case ENC_CINC_CSINC_32_CONDSEL:
 		case ENC_CINC_CSINC_64_CONDSEL:
 			return ARM64_CINC;
@@ -389,17 +702,21 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_CLASTB_V_P_Z_:
 		case ENC_CLASTB_Z_P_ZZ_:
 			return ARM64_CLASTB;
+		case ENC_CLRBHB_HI_HINTS:
+			return ARM64_CLRBHB;
 		case ENC_CLREX_BN_BARRIERS:
 			return ARM64_CLREX;
 		case ENC_CLS_ASIMDMISC_R:
 		case ENC_CLS_32_DP_1SRC:
 		case ENC_CLS_64_DP_1SRC:
-		case ENC_CLS_Z_P_Z_:
+		case ENC_CLS_Z_P_Z_M:
+		case ENC_CLS_Z_P_Z_Z:
 			return ARM64_CLS;
 		case ENC_CLZ_ASIMDMISC_R:
 		case ENC_CLZ_32_DP_1SRC:
 		case ENC_CLZ_64_DP_1SRC:
-		case ENC_CLZ_Z_P_Z_:
+		case ENC_CLZ_Z_P_Z_M:
+		case ENC_CLZ_Z_P_Z_Z:
 			return ARM64_CLZ;
 		case ENC_CMEQ_ASISDSAME_ONLY:
 		case ENC_CMEQ_ASIMDSAME_ONLY:
@@ -466,21 +783,21 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_CMPHS_P_P_ZW_:
 		case ENC_CMPHS_P_P_ZZ_:
 			return ARM64_CMPHS;
-		case ENC_CMPLE_CMPGE_P_P_ZZ_:
 		case ENC_CMPLE_P_P_ZI_:
 		case ENC_CMPLE_P_P_ZW_:
+		case ENC_CMPLE_P_P_ZZ__CMPGE_P_P_ZZ_:
 			return ARM64_CMPLE;
-		case ENC_CMPLO_CMPHI_P_P_ZZ_:
 		case ENC_CMPLO_P_P_ZI_:
 		case ENC_CMPLO_P_P_ZW_:
+		case ENC_CMPLO_P_P_ZZ__CMPHI_P_P_ZZ_:
 			return ARM64_CMPLO;
-		case ENC_CMPLS_CMPHS_P_P_ZZ_:
 		case ENC_CMPLS_P_P_ZI_:
 		case ENC_CMPLS_P_P_ZW_:
+		case ENC_CMPLS_P_P_ZZ__CMPHS_P_P_ZZ_:
 			return ARM64_CMPLS;
-		case ENC_CMPLT_CMPGT_P_P_ZZ_:
 		case ENC_CMPLT_P_P_ZI_:
 		case ENC_CMPLT_P_P_ZW_:
+		case ENC_CMPLT_P_P_ZZ__CMPGT_P_P_ZZ_:
 			return ARM64_CMPLT;
 		case ENC_CMPNE_P_P_ZI_:
 		case ENC_CMPNE_P_P_ZW_:
@@ -494,10 +811,14 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_CNEG_CSNEG_32_CONDSEL:
 		case ENC_CNEG_CSNEG_64_CONDSEL:
 			return ARM64_CNEG;
-		case ENC_CNOT_Z_P_Z_:
+		case ENC_CNOT_Z_P_Z_M:
+		case ENC_CNOT_Z_P_Z_Z:
 			return ARM64_CNOT;
+		case ENC_CNT_32_DP_1SRC:
+		case ENC_CNT_64_DP_1SRC:
 		case ENC_CNT_ASIMDMISC_R:
-		case ENC_CNT_Z_P_Z_:
+		case ENC_CNT_Z_P_Z_M:
+		case ENC_CNT_Z_P_Z_Z:
 			return ARM64_CNT;
 		case ENC_CNTB_R_S_:
 			return ARM64_CNTB;
@@ -506,11 +827,15 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_CNTH_R_S_:
 			return ARM64_CNTH;
 		case ENC_CNTP_R_P_P_:
+		case ENC_CNTP_R_PN_:
 			return ARM64_CNTP;
 		case ENC_CNTW_R_S_:
 			return ARM64_CNTW;
+		case ENC_COMPACT_Z_P_Z_S:
 		case ENC_COMPACT_Z_P_Z_:
 			return ARM64_COMPACT;
+		case ENC_COSP_SYS_CR_SYSTEMINSTRS:
+			return ARM64_COSP;
 		case ENC_CPP_SYS_CR_SYSTEMINSTRS:
 			return ARM64_CPP;
 		case ENC_CPY_Z_O_I_:
@@ -518,6 +843,198 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_CPY_Z_P_R_:
 		case ENC_CPY_Z_P_V_:
 			return ARM64_CPY;
+		case ENC_CPYE_CPY_MEMCMS:
+			return ARM64_CPYE;
+		case ENC_CPYEN_CPY_MEMCMS:
+			return ARM64_CPYEN;
+		case ENC_CPYERN_CPY_MEMCMS:
+			return ARM64_CPYERN;
+		case ENC_CPYERT_CPY_MEMCMS:
+			return ARM64_CPYERT;
+		case ENC_CPYERTN_CPY_MEMCMS:
+			return ARM64_CPYERTN;
+		case ENC_CPYERTRN_CPY_MEMCMS:
+			return ARM64_CPYERTRN;
+		case ENC_CPYERTWN_CPY_MEMCMS:
+			return ARM64_CPYERTWN;
+		case ENC_CPYET_CPY_MEMCMS:
+			return ARM64_CPYET;
+		case ENC_CPYETN_CPY_MEMCMS:
+			return ARM64_CPYETN;
+		case ENC_CPYETRN_CPY_MEMCMS:
+			return ARM64_CPYETRN;
+		case ENC_CPYETWN_CPY_MEMCMS:
+			return ARM64_CPYETWN;
+		case ENC_CPYEWN_CPY_MEMCMS:
+			return ARM64_CPYEWN;
+		case ENC_CPYEWT_CPY_MEMCMS:
+			return ARM64_CPYEWT;
+		case ENC_CPYEWTN_CPY_MEMCMS:
+			return ARM64_CPYEWTN;
+		case ENC_CPYEWTRN_CPY_MEMCMS:
+			return ARM64_CPYEWTRN;
+		case ENC_CPYEWTWN_CPY_MEMCMS:
+			return ARM64_CPYEWTWN;
+		case ENC_CPYFE_CPY_MEMCMS:
+			return ARM64_CPYFE;
+		case ENC_CPYFEN_CPY_MEMCMS:
+			return ARM64_CPYFEN;
+		case ENC_CPYFERN_CPY_MEMCMS:
+			return ARM64_CPYFERN;
+		case ENC_CPYFERT_CPY_MEMCMS:
+			return ARM64_CPYFERT;
+		case ENC_CPYFERTN_CPY_MEMCMS:
+			return ARM64_CPYFERTN;
+		case ENC_CPYFERTRN_CPY_MEMCMS:
+			return ARM64_CPYFERTRN;
+		case ENC_CPYFERTWN_CPY_MEMCMS:
+			return ARM64_CPYFERTWN;
+		case ENC_CPYFET_CPY_MEMCMS:
+			return ARM64_CPYFET;
+		case ENC_CPYFETN_CPY_MEMCMS:
+			return ARM64_CPYFETN;
+		case ENC_CPYFETRN_CPY_MEMCMS:
+			return ARM64_CPYFETRN;
+		case ENC_CPYFETWN_CPY_MEMCMS:
+			return ARM64_CPYFETWN;
+		case ENC_CPYFEWN_CPY_MEMCMS:
+			return ARM64_CPYFEWN;
+		case ENC_CPYFEWT_CPY_MEMCMS:
+			return ARM64_CPYFEWT;
+		case ENC_CPYFEWTN_CPY_MEMCMS:
+			return ARM64_CPYFEWTN;
+		case ENC_CPYFEWTRN_CPY_MEMCMS:
+			return ARM64_CPYFEWTRN;
+		case ENC_CPYFEWTWN_CPY_MEMCMS:
+			return ARM64_CPYFEWTWN;
+		case ENC_CPYFM_CPY_MEMCMS:
+			return ARM64_CPYFM;
+		case ENC_CPYFMN_CPY_MEMCMS:
+			return ARM64_CPYFMN;
+		case ENC_CPYFMRN_CPY_MEMCMS:
+			return ARM64_CPYFMRN;
+		case ENC_CPYFMRT_CPY_MEMCMS:
+			return ARM64_CPYFMRT;
+		case ENC_CPYFMRTN_CPY_MEMCMS:
+			return ARM64_CPYFMRTN;
+		case ENC_CPYFMRTRN_CPY_MEMCMS:
+			return ARM64_CPYFMRTRN;
+		case ENC_CPYFMRTWN_CPY_MEMCMS:
+			return ARM64_CPYFMRTWN;
+		case ENC_CPYFMT_CPY_MEMCMS:
+			return ARM64_CPYFMT;
+		case ENC_CPYFMTN_CPY_MEMCMS:
+			return ARM64_CPYFMTN;
+		case ENC_CPYFMTRN_CPY_MEMCMS:
+			return ARM64_CPYFMTRN;
+		case ENC_CPYFMTWN_CPY_MEMCMS:
+			return ARM64_CPYFMTWN;
+		case ENC_CPYFMWN_CPY_MEMCMS:
+			return ARM64_CPYFMWN;
+		case ENC_CPYFMWT_CPY_MEMCMS:
+			return ARM64_CPYFMWT;
+		case ENC_CPYFMWTN_CPY_MEMCMS:
+			return ARM64_CPYFMWTN;
+		case ENC_CPYFMWTRN_CPY_MEMCMS:
+			return ARM64_CPYFMWTRN;
+		case ENC_CPYFMWTWN_CPY_MEMCMS:
+			return ARM64_CPYFMWTWN;
+		case ENC_CPYFP_CPY_MEMCMS:
+			return ARM64_CPYFP;
+		case ENC_CPYFPN_CPY_MEMCMS:
+			return ARM64_CPYFPN;
+		case ENC_CPYFPRN_CPY_MEMCMS:
+			return ARM64_CPYFPRN;
+		case ENC_CPYFPRT_CPY_MEMCMS:
+			return ARM64_CPYFPRT;
+		case ENC_CPYFPRTN_CPY_MEMCMS:
+			return ARM64_CPYFPRTN;
+		case ENC_CPYFPRTRN_CPY_MEMCMS:
+			return ARM64_CPYFPRTRN;
+		case ENC_CPYFPRTWN_CPY_MEMCMS:
+			return ARM64_CPYFPRTWN;
+		case ENC_CPYFPT_CPY_MEMCMS:
+			return ARM64_CPYFPT;
+		case ENC_CPYFPTN_CPY_MEMCMS:
+			return ARM64_CPYFPTN;
+		case ENC_CPYFPTRN_CPY_MEMCMS:
+			return ARM64_CPYFPTRN;
+		case ENC_CPYFPTWN_CPY_MEMCMS:
+			return ARM64_CPYFPTWN;
+		case ENC_CPYFPWN_CPY_MEMCMS:
+			return ARM64_CPYFPWN;
+		case ENC_CPYFPWT_CPY_MEMCMS:
+			return ARM64_CPYFPWT;
+		case ENC_CPYFPWTN_CPY_MEMCMS:
+			return ARM64_CPYFPWTN;
+		case ENC_CPYFPWTRN_CPY_MEMCMS:
+			return ARM64_CPYFPWTRN;
+		case ENC_CPYFPWTWN_CPY_MEMCMS:
+			return ARM64_CPYFPWTWN;
+		case ENC_CPYM_CPY_MEMCMS:
+			return ARM64_CPYM;
+		case ENC_CPYMN_CPY_MEMCMS:
+			return ARM64_CPYMN;
+		case ENC_CPYMRN_CPY_MEMCMS:
+			return ARM64_CPYMRN;
+		case ENC_CPYMRT_CPY_MEMCMS:
+			return ARM64_CPYMRT;
+		case ENC_CPYMRTN_CPY_MEMCMS:
+			return ARM64_CPYMRTN;
+		case ENC_CPYMRTRN_CPY_MEMCMS:
+			return ARM64_CPYMRTRN;
+		case ENC_CPYMRTWN_CPY_MEMCMS:
+			return ARM64_CPYMRTWN;
+		case ENC_CPYMT_CPY_MEMCMS:
+			return ARM64_CPYMT;
+		case ENC_CPYMTN_CPY_MEMCMS:
+			return ARM64_CPYMTN;
+		case ENC_CPYMTRN_CPY_MEMCMS:
+			return ARM64_CPYMTRN;
+		case ENC_CPYMTWN_CPY_MEMCMS:
+			return ARM64_CPYMTWN;
+		case ENC_CPYMWN_CPY_MEMCMS:
+			return ARM64_CPYMWN;
+		case ENC_CPYMWT_CPY_MEMCMS:
+			return ARM64_CPYMWT;
+		case ENC_CPYMWTN_CPY_MEMCMS:
+			return ARM64_CPYMWTN;
+		case ENC_CPYMWTRN_CPY_MEMCMS:
+			return ARM64_CPYMWTRN;
+		case ENC_CPYMWTWN_CPY_MEMCMS:
+			return ARM64_CPYMWTWN;
+		case ENC_CPYP_CPY_MEMCMS:
+			return ARM64_CPYP;
+		case ENC_CPYPN_CPY_MEMCMS:
+			return ARM64_CPYPN;
+		case ENC_CPYPRN_CPY_MEMCMS:
+			return ARM64_CPYPRN;
+		case ENC_CPYPRT_CPY_MEMCMS:
+			return ARM64_CPYPRT;
+		case ENC_CPYPRTN_CPY_MEMCMS:
+			return ARM64_CPYPRTN;
+		case ENC_CPYPRTRN_CPY_MEMCMS:
+			return ARM64_CPYPRTRN;
+		case ENC_CPYPRTWN_CPY_MEMCMS:
+			return ARM64_CPYPRTWN;
+		case ENC_CPYPT_CPY_MEMCMS:
+			return ARM64_CPYPT;
+		case ENC_CPYPTN_CPY_MEMCMS:
+			return ARM64_CPYPTN;
+		case ENC_CPYPTRN_CPY_MEMCMS:
+			return ARM64_CPYPTRN;
+		case ENC_CPYPTWN_CPY_MEMCMS:
+			return ARM64_CPYPTWN;
+		case ENC_CPYPWN_CPY_MEMCMS:
+			return ARM64_CPYPWN;
+		case ENC_CPYPWT_CPY_MEMCMS:
+			return ARM64_CPYPWT;
+		case ENC_CPYPWTN_CPY_MEMCMS:
+			return ARM64_CPYPWTN;
+		case ENC_CPYPWTRN_CPY_MEMCMS:
+			return ARM64_CPYPWTRN;
+		case ENC_CPYPWTWN_CPY_MEMCMS:
+			return ARM64_CPYPWTWN;
 		case ENC_CRC32B_32C_DP_2SRC:
 			return ARM64_CRC32B;
 		case ENC_CRC32CB_32C_DP_2SRC:
@@ -558,6 +1075,9 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_CTERMEQ;
 		case ENC_CTERMNE_RR_:
 			return ARM64_CTERMNE;
+		case ENC_CTZ_32_DP_1SRC:
+		case ENC_CTZ_64_DP_1SRC:
+			return ARM64_CTZ;
 		case ENC_DC_SYS_CR_SYSTEMINSTRS:
 			return ARM64_DC;
 		case ENC_DCPS1_DC_EXCEPTION:
@@ -592,18 +1112,19 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_DUP_ASISDONE_ONLY:
 		case ENC_DUP_ASIMDINS_DV_V:
 		case ENC_DUP_ASIMDINS_DR_R:
-		case ENC_DUP_P_P_PI_:
 		case ENC_DUP_Z_I_:
 		case ENC_DUP_Z_R_:
 		case ENC_DUP_Z_ZI_:
 			return ARM64_DUP;
 		case ENC_DUPM_Z_I_:
 			return ARM64_DUPM;
+		case ENC_DUPQ_Z_ZI_:
+			return ARM64_DUPQ;
 		case ENC_DVP_SYS_CR_SYSTEMINSTRS:
 			return ARM64_DVP;
 		case ENC_EON_32_LOG_SHIFT:
 		case ENC_EON_64_LOG_SHIFT:
-		case ENC_EON_EOR_Z_ZI_:
+		case ENC_EON_Z_ZI__EOR_Z_ZI_:
 			return ARM64_EON;
 		case ENC_EOR_ASIMDSAME_ONLY:
 		case ENC_EOR_32_LOG_IMM:
@@ -620,6 +1141,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_EOR3;
 		case ENC_EORBT_Z_ZZ_:
 			return ARM64_EORBT;
+		case ENC_EORQV_Z_P_Z_:
+			return ARM64_EORQV;
 		case ENC_EORS_P_P_PP_Z:
 			return ARM64_EORS;
 		case ENC_EORTB_Z_ZZ_:
@@ -634,13 +1157,37 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_ERETAB;
 		case ENC_ESB_HI_HINTS:
 			return ARM64_ESB;
+		case ENC_EXPAND_Z_P_Z_:
+			return ARM64_EXPAND;
 		case ENC_EXT_ASIMDEXT_ONLY:
 		case ENC_EXT_Z_ZI_CON:
 		case ENC_EXT_Z_ZI_DES:
 			return ARM64_EXT;
+		case ENC_EXTQ_Z_ZI_DES:
+			return ARM64_EXTQ;
 		case ENC_EXTR_32_EXTRACT:
 		case ENC_EXTR_64_EXTRACT:
 			return ARM64_EXTR;
+		case ENC_F1CVT_MZ2_Z8_:
+		case ENC_F1CVT_Z_Z8_B2H:
+			return ARM64_F1CVT;
+		case ENC_F1CVTL_ASIMDMISC_V:
+		case ENC_F1CVTL_MZ2_Z8_:
+			return ARM64_F1CVTL;
+		//case ENC_F1CVTL_ASIMDMISC_V:
+		//	return ARM64_F1CVTL2;
+		case ENC_F1CVTLT_Z_Z8_B2H:
+			return ARM64_F1CVTLT;
+		case ENC_F2CVT_MZ2_Z8_:
+		case ENC_F2CVT_Z_Z8_B2H:
+			return ARM64_F2CVT;
+		case ENC_F2CVTL_ASIMDMISC_V:
+		case ENC_F2CVTL_MZ2_Z8_:
+			return ARM64_F2CVTL;
+		//case ENC_F2CVTL_ASIMDMISC_V:
+		//	return ARM64_F2CVTL2;
+		case ENC_F2CVTLT_Z_Z8_B2H:
+			return ARM64_F2CVTLT;
 		case ENC_FABD_ASISDSAMEFP16_ONLY:
 		case ENC_FABD_ASISDSAME_ONLY:
 		case ENC_FABD_ASIMDSAMEFP16_ONLY:
@@ -652,7 +1199,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FABS_H_FLOATDP1:
 		case ENC_FABS_S_FLOATDP1:
 		case ENC_FABS_D_FLOATDP1:
-		case ENC_FABS_Z_P_Z_:
+		case ENC_FABS_Z_P_Z_M:
+		case ENC_FABS_Z_P_Z_Z:
 			return ARM64_FABS;
 		case ENC_FACGE_ASISDSAMEFP16_ONLY:
 		case ENC_FACGE_ASISDSAME_ONLY:
@@ -666,9 +1214,9 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FACGT_ASIMDSAME_ONLY:
 		case ENC_FACGT_P_P_ZZ_:
 			return ARM64_FACGT;
-		case ENC_FACLE_FACGE_P_P_ZZ_:
+		case ENC_FACLE_P_P_ZZ__FACGE_P_P_ZZ_:
 			return ARM64_FACLE;
-		case ENC_FACLT_FACGT_P_P_ZZ_:
+		case ENC_FACLT_P_P_ZZ__FACGT_P_P_ZZ_:
 			return ARM64_FACLT;
 		case ENC_FADD_ASIMDSAMEFP16_ONLY:
 		case ENC_FADD_ASIMDSAME_ONLY:
@@ -678,6 +1226,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FADD_Z_P_ZS_:
 		case ENC_FADD_Z_P_ZZ_:
 		case ENC_FADD_Z_ZZ_:
+		case ENC_FADD_ZA_ZW_2X2:
+		case ENC_FADD_ZA_ZW_2X2_16:
+		case ENC_FADD_ZA_ZW_4X4:
+		case ENC_FADD_ZA_ZW_4X4_16:
 			return ARM64_FADD;
 		case ENC_FADDA_V_P_Z_:
 			return ARM64_FADDA;
@@ -687,8 +1239,22 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FADDP_ASIMDSAME_ONLY:
 		case ENC_FADDP_Z_P_ZZ_:
 			return ARM64_FADDP;
+		case ENC_FADDQV_Z_P_Z_:
+			return ARM64_FADDQV;
 		case ENC_FADDV_V_P_Z_:
 			return ARM64_FADDV;
+		case ENC_FAMAX_ASIMDSAMEFP16_ONLY:
+		case ENC_FAMAX_ASIMDSAME_ONLY:
+		case ENC_FAMAX_MZ_ZZW_2X2:
+		case ENC_FAMAX_MZ_ZZW_4X4:
+		case ENC_FAMAX_Z_P_ZZ_:
+			return ARM64_FAMAX;
+		case ENC_FAMIN_ASIMDSAMEFP16_ONLY:
+		case ENC_FAMIN_ASIMDSAME_ONLY:
+		case ENC_FAMIN_MZ_ZZW_2X2:
+		case ENC_FAMIN_MZ_ZZW_4X4:
+		case ENC_FAMIN_Z_P_ZZ_:
+			return ARM64_FAMIN;
 		case ENC_FCADD_ASIMDSAME2_C:
 		case ENC_FCADD_Z_P_ZZ_:
 			return ARM64_FCADD;
@@ -700,6 +1266,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCCMPE_S_FLOATCCMP:
 		case ENC_FCCMPE_D_FLOATCCMP:
 			return ARM64_FCCMPE;
+		case ENC_FCLAMP_MZ_ZZ_2:
+		case ENC_FCLAMP_MZ_ZZ_4:
+		case ENC_FCLAMP_Z_ZZ_:
+			return ARM64_FCLAMP;
 		case ENC_FCMEQ_ASISDSAMEFP16_ONLY:
 		case ENC_FCMEQ_ASISDSAME_ONLY:
 		case ENC_FCMEQ_ASIMDSAMEFP16_ONLY:
@@ -733,8 +1303,7 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCMGT_P_P_Z0_:
 		case ENC_FCMGT_P_P_ZZ_:
 			return ARM64_FCMGT;
-		case ENC_FCMLA_ASIMDELEM_C_H:
-		case ENC_FCMLA_ASIMDELEM_C_S:
+		case ENC_FCMLA_ADVSIMD_ELT:
 		case ENC_FCMLA_ASIMDSAME2_C:
 		case ENC_FCMLA_Z_P_ZZZ_:
 		case ENC_FCMLA_Z_ZZZI_H:
@@ -744,15 +1313,15 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCMLE_ASISDMISC_FZ:
 		case ENC_FCMLE_ASIMDMISCFP16_FZ:
 		case ENC_FCMLE_ASIMDMISC_FZ:
-		case ENC_FCMLE_FCMGE_P_P_ZZ_:
 		case ENC_FCMLE_P_P_Z0_:
+		case ENC_FCMLE_P_P_ZZ__FCMGE_P_P_ZZ_:
 			return ARM64_FCMLE;
 		case ENC_FCMLT_ASISDMISCFP16_FZ:
 		case ENC_FCMLT_ASISDMISC_FZ:
 		case ENC_FCMLT_ASIMDMISCFP16_FZ:
 		case ENC_FCMLT_ASIMDMISC_FZ:
-		case ENC_FCMLT_FCMGT_P_P_ZZ_:
 		case ENC_FCMLT_P_P_Z0_:
+		case ENC_FCMLT_P_P_ZZ__FCMGT_P_P_ZZ_:
 			return ARM64_FCMLT;
 		case ENC_FCMNE_P_P_Z0_:
 		case ENC_FCMNE_P_P_ZZ_:
@@ -785,12 +1354,22 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCVT_DS_FLOATDP1:
 		case ENC_FCVT_HD_FLOATDP1:
 		case ENC_FCVT_SD_FLOATDP1:
+		case ENC_FCVT_MZ2_Z_:
+		case ENC_FCVT_Z8_MZ2_:
+		case ENC_FCVT_Z8_MZ4_:
+		case ENC_FCVT_Z_MZ2_:
 		case ENC_FCVT_Z_P_Z_H2S:
+		case ENC_FCVT_Z_P_Z_H2SZ:
 		case ENC_FCVT_Z_P_Z_H2D:
+		case ENC_FCVT_Z_P_Z_H2DZ:
 		case ENC_FCVT_Z_P_Z_S2H:
+		case ENC_FCVT_Z_P_Z_S2HZ:
 		case ENC_FCVT_Z_P_Z_S2D:
+		case ENC_FCVT_Z_P_Z_S2DZ:
 		case ENC_FCVT_Z_P_Z_D2H:
+		case ENC_FCVT_Z_P_Z_D2HZ:
 		case ENC_FCVT_Z_P_Z_D2S:
+		case ENC_FCVT_Z_P_Z_D2SZ:
 			return ARM64_FCVT;
 		case ENC_FCVTAS_ASISDMISCFP16_R:
 		case ENC_FCVTAS_ASISDMISC_R:
@@ -802,6 +1381,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCVTAS_64S_FLOAT2INT:
 		case ENC_FCVTAS_32D_FLOAT2INT:
 		case ENC_FCVTAS_64D_FLOAT2INT:
+		case ENC_FCVTAS_SISD_32H:
+		case ENC_FCVTAS_SISD_64H:
+		case ENC_FCVTAS_SISD_64S:
+		case ENC_FCVTAS_SISD_32D:
 			return ARM64_FCVTAS;
 		case ENC_FCVTAU_ASISDMISCFP16_R:
 		case ENC_FCVTAU_ASISDMISC_R:
@@ -813,13 +1396,20 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCVTAU_64S_FLOAT2INT:
 		case ENC_FCVTAU_32D_FLOAT2INT:
 		case ENC_FCVTAU_64D_FLOAT2INT:
+		case ENC_FCVTAU_SISD_32H:
+		case ENC_FCVTAU_SISD_64H:
+		case ENC_FCVTAU_SISD_64S:
+		case ENC_FCVTAU_SISD_32D:
 			return ARM64_FCVTAU;
 		case ENC_FCVTL_ASIMDMISC_L:
+		case ENC_FCVTL_MZ2_Z_:
 			return ARM64_FCVTL;
 		//case ENC_FCVTL_ASIMDMISC_L:
 		//	return ARM64_FCVTL2;
 		case ENC_FCVTLT_Z_P_Z_H2S:
+		case ENC_FCVTLT_Z_P_Z_H2SZ:
 		case ENC_FCVTLT_Z_P_Z_S2D:
+		case ENC_FCVTLT_Z_P_Z_S2DZ:
 			return ARM64_FCVTLT;
 		case ENC_FCVTMS_ASISDMISCFP16_R:
 		case ENC_FCVTMS_ASISDMISC_R:
@@ -831,6 +1421,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCVTMS_64S_FLOAT2INT:
 		case ENC_FCVTMS_32D_FLOAT2INT:
 		case ENC_FCVTMS_64D_FLOAT2INT:
+		case ENC_FCVTMS_SISD_32H:
+		case ENC_FCVTMS_SISD_64H:
+		case ENC_FCVTMS_SISD_64S:
+		case ENC_FCVTMS_SISD_32D:
 			return ARM64_FCVTMS;
 		case ENC_FCVTMU_ASISDMISCFP16_R:
 		case ENC_FCVTMU_ASISDMISC_R:
@@ -842,11 +1436,23 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCVTMU_64S_FLOAT2INT:
 		case ENC_FCVTMU_32D_FLOAT2INT:
 		case ENC_FCVTMU_64D_FLOAT2INT:
+		case ENC_FCVTMU_SISD_32H:
+		case ENC_FCVTMU_SISD_64H:
+		case ENC_FCVTMU_SISD_64S:
+		case ENC_FCVTMU_SISD_32D:
 			return ARM64_FCVTMU;
 		case ENC_FCVTN_ASIMDMISC_N:
+		case ENC_FCVTN_ASIMDSAME2_D:
+		case ENC_FCVTN_ASIMDSAME2_H:
+		case ENC_FCVTN_Z8_MZ2_H2B:
+		case ENC_FCVTN_Z8_MZ4_:
+		case ENC_FCVTN_Z_MZ2_:
 			return ARM64_FCVTN;
 		//case ENC_FCVTN_ASIMDMISC_N:
+		//case ENC_FCVTN_ASIMDSAME2_H:
 		//	return ARM64_FCVTN2;
+		case ENC_FCVTNB_Z8_MZ2_S2B:
+			return ARM64_FCVTNB;
 		case ENC_FCVTNS_ASISDMISCFP16_R:
 		case ENC_FCVTNS_ASISDMISC_R:
 		case ENC_FCVTNS_ASIMDMISCFP16_R:
@@ -857,9 +1463,16 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCVTNS_64S_FLOAT2INT:
 		case ENC_FCVTNS_32D_FLOAT2INT:
 		case ENC_FCVTNS_64D_FLOAT2INT:
+		case ENC_FCVTNS_SISD_32H:
+		case ENC_FCVTNS_SISD_64H:
+		case ENC_FCVTNS_SISD_64S:
+		case ENC_FCVTNS_SISD_32D:
 			return ARM64_FCVTNS;
+		case ENC_FCVTNT_Z8_MZ2_S2B:
 		case ENC_FCVTNT_Z_P_Z_S2H:
+		case ENC_FCVTNT_Z_P_Z_S2HZ:
 		case ENC_FCVTNT_Z_P_Z_D2S:
+		case ENC_FCVTNT_Z_P_Z_D2SZ:
 			return ARM64_FCVTNT;
 		case ENC_FCVTNU_ASISDMISCFP16_R:
 		case ENC_FCVTNU_ASISDMISC_R:
@@ -871,6 +1484,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCVTNU_64S_FLOAT2INT:
 		case ENC_FCVTNU_32D_FLOAT2INT:
 		case ENC_FCVTNU_64D_FLOAT2INT:
+		case ENC_FCVTNU_SISD_32H:
+		case ENC_FCVTNU_SISD_64H:
+		case ENC_FCVTNU_SISD_64S:
+		case ENC_FCVTNU_SISD_32D:
 			return ARM64_FCVTNU;
 		case ENC_FCVTPS_ASISDMISCFP16_R:
 		case ENC_FCVTPS_ASISDMISC_R:
@@ -882,6 +1499,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCVTPS_64S_FLOAT2INT:
 		case ENC_FCVTPS_32D_FLOAT2INT:
 		case ENC_FCVTPS_64D_FLOAT2INT:
+		case ENC_FCVTPS_SISD_32H:
+		case ENC_FCVTPS_SISD_64H:
+		case ENC_FCVTPS_SISD_64S:
+		case ENC_FCVTPS_SISD_32D:
 			return ARM64_FCVTPS;
 		case ENC_FCVTPU_ASISDMISCFP16_R:
 		case ENC_FCVTPU_ASISDMISC_R:
@@ -893,8 +1514,13 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCVTPU_64S_FLOAT2INT:
 		case ENC_FCVTPU_32D_FLOAT2INT:
 		case ENC_FCVTPU_64D_FLOAT2INT:
+		case ENC_FCVTPU_SISD_32H:
+		case ENC_FCVTPU_SISD_64H:
+		case ENC_FCVTPU_SISD_64S:
+		case ENC_FCVTPU_SISD_32D:
 			return ARM64_FCVTPU;
 		case ENC_FCVTX_Z_P_Z_D2S:
+		case ENC_FCVTX_Z_P_Z_D2SZ:
 			return ARM64_FCVTX;
 		case ENC_FCVTXN_ASISDMISC_N:
 		case ENC_FCVTXN_ASIMDMISC_N:
@@ -902,6 +1528,7 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		//case ENC_FCVTXN_ASIMDMISC_N:
 		//	return ARM64_FCVTXN2;
 		case ENC_FCVTXNT_Z_P_Z_D2S:
+		case ENC_FCVTXNT_Z_P_Z_D2SZ:
 			return ARM64_FCVTXNT;
 		case ENC_FCVTZS_ASISDSHF_C:
 		case ENC_FCVTZS_ASIMDSHF_C:
@@ -921,13 +1548,26 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCVTZS_64S_FLOAT2INT:
 		case ENC_FCVTZS_32D_FLOAT2INT:
 		case ENC_FCVTZS_64D_FLOAT2INT:
+		case ENC_FCVTZS_SISD_32H:
+		case ENC_FCVTZS_SISD_64H:
+		case ENC_FCVTZS_SISD_64S:
+		case ENC_FCVTZS_SISD_32D:
+		case ENC_FCVTZS_MZ_Z_2:
+		case ENC_FCVTZS_MZ_Z_4:
 		case ENC_FCVTZS_Z_P_Z_FP162H:
+		case ENC_FCVTZS_Z_P_Z_FP162HZ:
 		case ENC_FCVTZS_Z_P_Z_FP162W:
+		case ENC_FCVTZS_Z_P_Z_FP162WZ:
 		case ENC_FCVTZS_Z_P_Z_FP162X:
+		case ENC_FCVTZS_Z_P_Z_FP162XZ:
 		case ENC_FCVTZS_Z_P_Z_S2W:
+		case ENC_FCVTZS_Z_P_Z_S2WZ:
 		case ENC_FCVTZS_Z_P_Z_S2X:
+		case ENC_FCVTZS_Z_P_Z_S2XZ:
 		case ENC_FCVTZS_Z_P_Z_D2W:
+		case ENC_FCVTZS_Z_P_Z_D2WZ:
 		case ENC_FCVTZS_Z_P_Z_D2X:
+		case ENC_FCVTZS_Z_P_Z_D2XZ:
 			return ARM64_FCVTZS;
 		case ENC_FCVTZU_ASISDSHF_C:
 		case ENC_FCVTZU_ASIMDSHF_C:
@@ -947,13 +1587,26 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FCVTZU_64S_FLOAT2INT:
 		case ENC_FCVTZU_32D_FLOAT2INT:
 		case ENC_FCVTZU_64D_FLOAT2INT:
+		case ENC_FCVTZU_SISD_32H:
+		case ENC_FCVTZU_SISD_64H:
+		case ENC_FCVTZU_SISD_64S:
+		case ENC_FCVTZU_SISD_32D:
+		case ENC_FCVTZU_MZ_Z_2:
+		case ENC_FCVTZU_MZ_Z_4:
 		case ENC_FCVTZU_Z_P_Z_FP162H:
+		case ENC_FCVTZU_Z_P_Z_FP162HZ:
 		case ENC_FCVTZU_Z_P_Z_FP162W:
+		case ENC_FCVTZU_Z_P_Z_FP162WZ:
 		case ENC_FCVTZU_Z_P_Z_FP162X:
+		case ENC_FCVTZU_Z_P_Z_FP162XZ:
 		case ENC_FCVTZU_Z_P_Z_S2W:
+		case ENC_FCVTZU_Z_P_Z_S2WZ:
 		case ENC_FCVTZU_Z_P_Z_S2X:
+		case ENC_FCVTZU_Z_P_Z_S2XZ:
 		case ENC_FCVTZU_Z_P_Z_D2W:
+		case ENC_FCVTZU_Z_P_Z_D2WZ:
 		case ENC_FCVTZU_Z_P_Z_D2X:
+		case ENC_FCVTZU_Z_P_Z_D2XZ:
 			return ARM64_FCVTZU;
 		case ENC_FDIV_ASIMDSAMEFP16_ONLY:
 		case ENC_FDIV_ASIMDSAME_ONLY:
@@ -964,13 +1617,45 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_FDIV;
 		case ENC_FDIVR_Z_P_ZZ_:
 			return ARM64_FDIVR;
+		case ENC_FDOT_ASIMDELEM_G:
+		case ENC_FDOT_ASIMDSAME2_D:
+		case ENC_FDOT_ASIMDELEM_D:
+		case ENC_FDOT_ASIMDSAME2_DD:
+		case ENC_FDOT_Z32_ZZ8Z8_:
+		case ENC_FDOT_Z32_ZZ8Z8I_:
+		case ENC_FDOT_Z_ZZ8Z8_:
+		case ENC_FDOT_Z_ZZ8Z8I_:
+		case ENC_FDOT_Z_ZZZ_:
+		case ENC_FDOT_Z_ZZZI_:
+		case ENC_FDOT_ZA32_Z8Z8I_2XI:
+		case ENC_FDOT_ZA32_Z8Z8I_4XI:
+		case ENC_FDOT_ZA32_Z8Z8V_2X1:
+		case ENC_FDOT_ZA32_Z8Z8V_4X1:
+		case ENC_FDOT_ZA32_Z8Z8W_2X2:
+		case ENC_FDOT_ZA32_Z8Z8W_4X4:
+		case ENC_FDOT_ZA_Z8Z8I_2XI:
+		case ENC_FDOT_ZA_Z8Z8I_4XI:
+		case ENC_FDOT_ZA_Z8Z8V_2X1:
+		case ENC_FDOT_ZA_Z8Z8V_4X1:
+		case ENC_FDOT_ZA_Z8Z8W_2X2:
+		case ENC_FDOT_ZA_Z8Z8W_4X4:
+		case ENC_FDOT_ZA_ZZI_2XI:
+		case ENC_FDOT_ZA_ZZI_4XI:
+		case ENC_FDOT_ZA_ZZV_2X1:
+		case ENC_FDOT_ZA_ZZV_4X1:
+		case ENC_FDOT_ZA_ZZW_2X2:
+		case ENC_FDOT_ZA_ZZW_4X4:
+			return ARM64_FDOT;
 		case ENC_FDUP_Z_I_:
 			return ARM64_FDUP;
 		case ENC_FEXPA_Z_Z_:
 			return ARM64_FEXPA;
+		case ENC_FIRSTP_R_P_P_:
+			return ARM64_FIRSTP;
 		case ENC_FJCVTZS_32D_FLOAT2INT:
 			return ARM64_FJCVTZS;
-		case ENC_FLOGB_Z_P_Z_:
+		case ENC_FLOGB_Z_P_Z_M:
+		case ENC_FLOGB_Z_P_Z_Z:
 			return ARM64_FLOGB;
 		case ENC_FMAD_Z_P_ZZZ_:
 			return ARM64_FMAD;
@@ -983,6 +1668,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FMAX_H_FLOATDP2:
 		case ENC_FMAX_S_FLOATDP2:
 		case ENC_FMAX_D_FLOATDP2:
+		case ENC_FMAX_MZ_ZZV_2X1:
+		case ENC_FMAX_MZ_ZZV_4X1:
+		case ENC_FMAX_MZ_ZZW_2X2:
+		case ENC_FMAX_MZ_ZZW_4X4:
 		case ENC_FMAX_Z_P_ZS_:
 		case ENC_FMAX_Z_P_ZZ_:
 			return ARM64_FMAX;
@@ -991,6 +1680,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FMAXNM_H_FLOATDP2:
 		case ENC_FMAXNM_S_FLOATDP2:
 		case ENC_FMAXNM_D_FLOATDP2:
+		case ENC_FMAXNM_MZ_ZZV_2X1:
+		case ENC_FMAXNM_MZ_ZZV_4X1:
+		case ENC_FMAXNM_MZ_ZZW_2X2:
+		case ENC_FMAXNM_MZ_ZZW_4X4:
 		case ENC_FMAXNM_Z_P_ZS_:
 		case ENC_FMAXNM_Z_P_ZZ_:
 			return ARM64_FMAXNM;
@@ -1000,6 +1693,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FMAXNMP_ASIMDSAME_ONLY:
 		case ENC_FMAXNMP_Z_P_ZZ_:
 			return ARM64_FMAXNMP;
+		case ENC_FMAXNMQV_Z_P_Z_:
+			return ARM64_FMAXNMQV;
 		case ENC_FMAXNMV_ASIMDALL_ONLY_H:
 		case ENC_FMAXNMV_ASIMDALL_ONLY_SD:
 		case ENC_FMAXNMV_V_P_Z_:
@@ -1010,6 +1705,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FMAXP_ASIMDSAME_ONLY:
 		case ENC_FMAXP_Z_P_ZZ_:
 			return ARM64_FMAXP;
+		case ENC_FMAXQV_Z_P_Z_:
+			return ARM64_FMAXQV;
 		case ENC_FMAXV_ASIMDALL_ONLY_H:
 		case ENC_FMAXV_ASIMDALL_ONLY_SD:
 		case ENC_FMAXV_V_P_Z_:
@@ -1019,6 +1716,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FMIN_H_FLOATDP2:
 		case ENC_FMIN_S_FLOATDP2:
 		case ENC_FMIN_D_FLOATDP2:
+		case ENC_FMIN_MZ_ZZV_2X1:
+		case ENC_FMIN_MZ_ZZV_4X1:
+		case ENC_FMIN_MZ_ZZW_2X2:
+		case ENC_FMIN_MZ_ZZW_4X4:
 		case ENC_FMIN_Z_P_ZS_:
 		case ENC_FMIN_Z_P_ZZ_:
 			return ARM64_FMIN;
@@ -1027,6 +1728,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FMINNM_H_FLOATDP2:
 		case ENC_FMINNM_S_FLOATDP2:
 		case ENC_FMINNM_D_FLOATDP2:
+		case ENC_FMINNM_MZ_ZZV_2X1:
+		case ENC_FMINNM_MZ_ZZV_4X1:
+		case ENC_FMINNM_MZ_ZZW_2X2:
+		case ENC_FMINNM_MZ_ZZW_4X4:
 		case ENC_FMINNM_Z_P_ZS_:
 		case ENC_FMINNM_Z_P_ZZ_:
 			return ARM64_FMINNM;
@@ -1036,6 +1741,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FMINNMP_ASIMDSAME_ONLY:
 		case ENC_FMINNMP_Z_P_ZZ_:
 			return ARM64_FMINNMP;
+		case ENC_FMINNMQV_Z_P_Z_:
+			return ARM64_FMINNMQV;
 		case ENC_FMINNMV_ASIMDALL_ONLY_H:
 		case ENC_FMINNMV_ASIMDALL_ONLY_SD:
 		case ENC_FMINNMV_V_P_Z_:
@@ -1046,6 +1753,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FMINP_ASIMDSAME_ONLY:
 		case ENC_FMINP_Z_P_ZZ_:
 			return ARM64_FMINP;
+		case ENC_FMINQV_Z_P_Z_:
+			return ARM64_FMINQV;
 		case ENC_FMINV_ASIMDALL_ONLY_H:
 		case ENC_FMINV_ASIMDALL_ONLY_SD:
 		case ENC_FMINV_V_P_Z_:
@@ -1060,16 +1769,83 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FMLA_Z_ZZZI_H:
 		case ENC_FMLA_Z_ZZZI_S:
 		case ENC_FMLA_Z_ZZZI_D:
+		case ENC_FMLA_ZA_ZZI_H2XI:
+		case ENC_FMLA_ZA_ZZI_S2XI:
+		case ENC_FMLA_ZA_ZZI_D2XI:
+		case ENC_FMLA_ZA_ZZI_H4XI:
+		case ENC_FMLA_ZA_ZZI_S4XI:
+		case ENC_FMLA_ZA_ZZI_D4XI:
+		case ENC_FMLA_ZA_ZZV_2X1:
+		case ENC_FMLA_ZA_ZZV_2X1_16:
+		case ENC_FMLA_ZA_ZZV_4X1:
+		case ENC_FMLA_ZA_ZZV_4X1_16:
+		case ENC_FMLA_ZA_ZZW_2X2:
+		case ENC_FMLA_ZA_ZZW_2X2_16:
+		case ENC_FMLA_ZA_ZZW_4X4:
+		case ENC_FMLA_ZA_ZZW_4X4_16:
 			return ARM64_FMLA;
 		case ENC_FMLAL_ASIMDELEM_LH:
 		case ENC_FMLAL_ASIMDSAME_F:
+		case ENC_FMLAL_ZA_Z8Z8I_1:
+		case ENC_FMLAL_ZA_Z8Z8I_2XI:
+		case ENC_FMLAL_ZA_Z8Z8I_4XI:
+		case ENC_FMLAL_ZA_Z8Z8V_1:
+		case ENC_FMLAL_ZA_Z8Z8V_2X1:
+		case ENC_FMLAL_ZA_Z8Z8V_4X1:
+		case ENC_FMLAL_ZA_Z8Z8W_2X2:
+		case ENC_FMLAL_ZA_Z8Z8W_4X4:
+		case ENC_FMLAL_ZA_ZZI_1:
+		case ENC_FMLAL_ZA_ZZI_2XI:
+		case ENC_FMLAL_ZA_ZZI_4XI:
+		case ENC_FMLAL_ZA_ZZV_1:
+		case ENC_FMLAL_ZA_ZZV_2X1:
+		case ENC_FMLAL_ZA_ZZV_4X1:
+		case ENC_FMLAL_ZA_ZZW_2X2:
+		case ENC_FMLAL_ZA_ZZW_4X4:
 			return ARM64_FMLAL;
 		case ENC_FMLAL2_ASIMDELEM_LH:
 		case ENC_FMLAL2_ASIMDSAME_F:
 			return ARM64_FMLAL2;
+		case ENC_FMLALB_ASIMDELEM_H:
+		case ENC_FMLALB_ASIMDSAME2_J:
+		case ENC_FMLALB_Z_Z8Z8Z8_:
+		case ENC_FMLALB_Z_Z8Z8Z8I_:
 		case ENC_FMLALB_Z_ZZZ_:
 		case ENC_FMLALB_Z_ZZZI_S:
 			return ARM64_FMLALB;
+		case ENC_FMLALL_ZA32_Z8Z8I_1:
+		case ENC_FMLALL_ZA32_Z8Z8I_2XI:
+		case ENC_FMLALL_ZA32_Z8Z8I_4XI:
+		case ENC_FMLALL_ZA32_Z8Z8V_1:
+		case ENC_FMLALL_ZA32_Z8Z8V_2X1:
+		case ENC_FMLALL_ZA32_Z8Z8V_4X1:
+		case ENC_FMLALL_ZA32_Z8Z8W_2X2:
+		case ENC_FMLALL_ZA32_Z8Z8W_4X4:
+			return ARM64_FMLALL;
+		case ENC_FMLALLBB_ASIMDELEM_J:
+		case ENC_FMLALLBB_ASIMDSAME2_G:
+		case ENC_FMLALLBB_Z32_Z8Z8Z8_:
+		case ENC_FMLALLBB_Z32_Z8Z8Z8I_:
+			return ARM64_FMLALLBB;
+		case ENC_FMLALLBT_ASIMDELEM_J:
+		case ENC_FMLALLBT_ASIMDSAME2_G:
+		case ENC_FMLALLBT_Z32_Z8Z8Z8_:
+		case ENC_FMLALLBT_Z32_Z8Z8Z8I_:
+			return ARM64_FMLALLBT;
+		case ENC_FMLALLTB_ASIMDELEM_J:
+		case ENC_FMLALLTB_ASIMDSAME2_G:
+		case ENC_FMLALLTB_Z32_Z8Z8Z8_:
+		case ENC_FMLALLTB_Z32_Z8Z8Z8I_:
+			return ARM64_FMLALLTB;
+		case ENC_FMLALLTT_ASIMDELEM_J:
+		case ENC_FMLALLTT_ASIMDSAME2_G:
+		case ENC_FMLALLTT_Z32_Z8Z8Z8_:
+		case ENC_FMLALLTT_Z32_Z8Z8Z8I_:
+			return ARM64_FMLALLTT;
+		case ENC_FMLALT_ASIMDELEM_H:
+		case ENC_FMLALT_ASIMDSAME2_J:
+		case ENC_FMLALT_Z_Z8Z8Z8_:
+		case ENC_FMLALT_Z_Z8Z8Z8I_:
 		case ENC_FMLALT_Z_ZZZ_:
 		case ENC_FMLALT_Z_ZZZI_S:
 			return ARM64_FMLALT;
@@ -1083,9 +1859,31 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FMLS_Z_ZZZI_H:
 		case ENC_FMLS_Z_ZZZI_S:
 		case ENC_FMLS_Z_ZZZI_D:
+		case ENC_FMLS_ZA_ZZI_H2XI:
+		case ENC_FMLS_ZA_ZZI_S2XI:
+		case ENC_FMLS_ZA_ZZI_D2XI:
+		case ENC_FMLS_ZA_ZZI_H4XI:
+		case ENC_FMLS_ZA_ZZI_S4XI:
+		case ENC_FMLS_ZA_ZZI_D4XI:
+		case ENC_FMLS_ZA_ZZV_2X1:
+		case ENC_FMLS_ZA_ZZV_2X1_16:
+		case ENC_FMLS_ZA_ZZV_4X1:
+		case ENC_FMLS_ZA_ZZV_4X1_16:
+		case ENC_FMLS_ZA_ZZW_2X2:
+		case ENC_FMLS_ZA_ZZW_2X2_16:
+		case ENC_FMLS_ZA_ZZW_4X4:
+		case ENC_FMLS_ZA_ZZW_4X4_16:
 			return ARM64_FMLS;
 		case ENC_FMLSL_ASIMDELEM_LH:
 		case ENC_FMLSL_ASIMDSAME_F:
+		case ENC_FMLSL_ZA_ZZI_1:
+		case ENC_FMLSL_ZA_ZZI_2XI:
+		case ENC_FMLSL_ZA_ZZI_4XI:
+		case ENC_FMLSL_ZA_ZZV_1:
+		case ENC_FMLSL_ZA_ZZV_2X1:
+		case ENC_FMLSL_ZA_ZZV_4X1:
+		case ENC_FMLSL_ZA_ZZW_2X2:
+		case ENC_FMLSL_ZA_ZZW_4X4:
 			return ARM64_FMLSL;
 		case ENC_FMLSL2_ASIMDELEM_LH:
 		case ENC_FMLSL2_ASIMDSAME_F:
@@ -1096,24 +1894,71 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FMLSLT_Z_ZZZ_:
 		case ENC_FMLSLT_Z_ZZZI_S:
 			return ARM64_FMLSLT;
+		case ENC_FMMLA_ASIMD_FP8FP16:
+		case ENC_FMMLA_ASIMD_FP8FP32:
+		case ENC_FMMLA_Z16_ZZ8Z8_:
+		case ENC_FMMLA_Z32_ZZ8Z8_:
+		case ENC_FMMLA_Z32_ZZZ_H:
 		case ENC_FMMLA_Z_ZZZ_S:
 		case ENC_FMMLA_Z_ZZZ_D:
 			return ARM64_FMMLA;
+		case ENC_FMOP4A_ZA16_Z8Z8_B1X2:
+		case ENC_FMOP4A_ZA16_Z8Z8_B1X1:
+		case ENC_FMOP4A_ZA16_Z8Z8_B2X1:
+		case ENC_FMOP4A_ZA16_Z8Z8_B2X2:
+		case ENC_FMOP4A_ZA32_Z8Z8_B1X2:
+		case ENC_FMOP4A_ZA32_Z8Z8_B1X1:
+		case ENC_FMOP4A_ZA32_Z8Z8_B2X1:
+		case ENC_FMOP4A_ZA32_Z8Z8_B2X2:
+		case ENC_FMOP4A_ZA32_ZZ_H1X2:
+		case ENC_FMOP4A_ZA32_ZZ_H1X1:
+		case ENC_FMOP4A_ZA32_ZZ_H2X1:
+		case ENC_FMOP4A_ZA32_ZZ_H2X2:
+		case ENC_FMOP4A_ZA_ZZ_H1X2:
+		case ENC_FMOP4A_ZA_ZZ_H1X1:
+		case ENC_FMOP4A_ZA_ZZ_H2X1:
+		case ENC_FMOP4A_ZA_ZZ_H2X2:
+		case ENC_FMOP4A_ZA_ZZ_S1X2:
+		case ENC_FMOP4A_ZA_ZZ_S1X1:
+		case ENC_FMOP4A_ZA_ZZ_S2X1:
+		case ENC_FMOP4A_ZA_ZZ_S2X2:
+		case ENC_FMOP4A_ZA_ZZ_D1X2:
+		case ENC_FMOP4A_ZA_ZZ_D1X1:
+		case ENC_FMOP4A_ZA_ZZ_D2X1:
+		case ENC_FMOP4A_ZA_ZZ_D2X2:
+			return ARM64_FMOP4A;
+		case ENC_FMOP4S_ZA32_ZZ_H1X2:
+		case ENC_FMOP4S_ZA32_ZZ_H1X1:
+		case ENC_FMOP4S_ZA32_ZZ_H2X1:
+		case ENC_FMOP4S_ZA32_ZZ_H2X2:
+		case ENC_FMOP4S_ZA_ZZ_H1X2:
+		case ENC_FMOP4S_ZA_ZZ_H1X1:
+		case ENC_FMOP4S_ZA_ZZ_H2X1:
+		case ENC_FMOP4S_ZA_ZZ_H2X2:
+		case ENC_FMOP4S_ZA_ZZ_S1X2:
+		case ENC_FMOP4S_ZA_ZZ_S1X1:
+		case ENC_FMOP4S_ZA_ZZ_S2X1:
+		case ENC_FMOP4S_ZA_ZZ_S2X2:
+		case ENC_FMOP4S_ZA_ZZ_D1X2:
+		case ENC_FMOP4S_ZA_ZZ_D1X1:
+		case ENC_FMOP4S_ZA_ZZ_D2X1:
+		case ENC_FMOP4S_ZA_ZZ_D2X2:
+			return ARM64_FMOP4S;
+		case ENC_FMOPA_ZA16_PP_Z8Z8_8:
+		case ENC_FMOPA_ZA32_PP_Z8Z8_8:
 		case ENC_FMOPA_ZA32_PP_ZZ_16:
+		case ENC_FMOPA_ZA_PP_ZZ_16:
 		case ENC_FMOPA_ZA_PP_ZZ_32:
 		case ENC_FMOPA_ZA_PP_ZZ_64:
 			return ARM64_FMOPA;
 		case ENC_FMOPS_ZA32_PP_ZZ_16:
+		case ENC_FMOPS_ZA_PP_ZZ_16:
 		case ENC_FMOPS_ZA_PP_ZZ_32:
 		case ENC_FMOPS_ZA_PP_ZZ_64:
 			return ARM64_FMOPS;
 		case ENC_FMOV_ASIMDIMM_H_H:
 		case ENC_FMOV_ASIMDIMM_S_S:
 		case ENC_FMOV_ASIMDIMM_D2_D:
-		case ENC_FMOV_CPY_Z_P_I_:
-		case ENC_FMOV_DUP_Z_I_:
-		case ENC_FMOV_FCPY_Z_P_I_:
-		case ENC_FMOV_FDUP_Z_I_:
 		case ENC_FMOV_H_FLOATDP1:
 		case ENC_FMOV_S_FLOATDP1:
 		case ENC_FMOV_D_FLOATDP1:
@@ -1130,6 +1975,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FMOV_H_FLOATIMM:
 		case ENC_FMOV_S_FLOATIMM:
 		case ENC_FMOV_D_FLOATIMM:
+		case ENC_FMOV_Z_P_0__CPY_Z_P_I_:
+		case ENC_FMOV_Z_0__DUP_Z_I_:
+		case ENC_FMOV_Z_P_I__FCPY_Z_P_I_:
+		case ENC_FMOV_Z_I__FDUP_Z_I_:
 			return ARM64_FMOV;
 		case ENC_FMSB_Z_P_ZZZ_:
 			return ARM64_FMSB;
@@ -1146,6 +1995,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FMUL_H_FLOATDP2:
 		case ENC_FMUL_S_FLOATDP2:
 		case ENC_FMUL_D_FLOATDP2:
+		case ENC_FMUL_MZ_ZZV_2X1:
+		case ENC_FMUL_MZ_ZZV_4X1:
+		case ENC_FMUL_MZ_ZZW_2X2:
+		case ENC_FMUL_MZ_ZZW_4X4:
 		case ENC_FMUL_Z_P_ZS_:
 		case ENC_FMUL_Z_P_ZZ_:
 		case ENC_FMUL_Z_ZZ_:
@@ -1168,7 +2021,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FNEG_H_FLOATDP1:
 		case ENC_FNEG_S_FLOATDP1:
 		case ENC_FNEG_D_FLOATDP1:
-		case ENC_FNEG_Z_P_Z_:
+		case ENC_FNEG_Z_P_Z_M:
+		case ENC_FNEG_Z_P_Z_Z:
 			return ARM64_FNEG;
 		case ENC_FNMAD_Z_P_ZZZ_:
 			return ARM64_FNMAD;
@@ -1204,72 +2058,96 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_FRECPS;
 		case ENC_FRECPX_ASISDMISCFP16_R:
 		case ENC_FRECPX_ASISDMISC_R:
-		case ENC_FRECPX_Z_P_Z_:
+		case ENC_FRECPX_Z_P_Z_M:
+		case ENC_FRECPX_Z_P_Z_Z:
 			return ARM64_FRECPX;
 		case ENC_FRINT32X_ASIMDMISC_R:
 		case ENC_FRINT32X_S_FLOATDP1:
 		case ENC_FRINT32X_D_FLOATDP1:
+		case ENC_FRINT32X_Z_P_Z_M:
+		case ENC_FRINT32X_Z_P_Z_Z:
 			return ARM64_FRINT32X;
 		case ENC_FRINT32Z_ASIMDMISC_R:
 		case ENC_FRINT32Z_S_FLOATDP1:
 		case ENC_FRINT32Z_D_FLOATDP1:
+		case ENC_FRINT32Z_Z_P_Z_M:
+		case ENC_FRINT32Z_Z_P_Z_Z:
 			return ARM64_FRINT32Z;
 		case ENC_FRINT64X_ASIMDMISC_R:
 		case ENC_FRINT64X_S_FLOATDP1:
 		case ENC_FRINT64X_D_FLOATDP1:
+		case ENC_FRINT64X_Z_P_Z_M:
+		case ENC_FRINT64X_Z_P_Z_Z:
 			return ARM64_FRINT64X;
 		case ENC_FRINT64Z_ASIMDMISC_R:
 		case ENC_FRINT64Z_S_FLOATDP1:
 		case ENC_FRINT64Z_D_FLOATDP1:
+		case ENC_FRINT64Z_Z_P_Z_M:
+		case ENC_FRINT64Z_Z_P_Z_Z:
 			return ARM64_FRINT64Z;
 		case ENC_FRINTA_ASIMDMISCFP16_R:
 		case ENC_FRINTA_ASIMDMISC_R:
 		case ENC_FRINTA_H_FLOATDP1:
 		case ENC_FRINTA_S_FLOATDP1:
 		case ENC_FRINTA_D_FLOATDP1:
-		case ENC_FRINTA_Z_P_Z_:
+		case ENC_FRINTA_MZ_Z_2:
+		case ENC_FRINTA_MZ_Z_4:
+		case ENC_FRINTA_Z_P_Z_M:
+		case ENC_FRINTA_Z_P_Z_Z:
 			return ARM64_FRINTA;
 		case ENC_FRINTI_ASIMDMISCFP16_R:
 		case ENC_FRINTI_ASIMDMISC_R:
 		case ENC_FRINTI_H_FLOATDP1:
 		case ENC_FRINTI_S_FLOATDP1:
 		case ENC_FRINTI_D_FLOATDP1:
-		case ENC_FRINTI_Z_P_Z_:
+		case ENC_FRINTI_Z_P_Z_M:
+		case ENC_FRINTI_Z_P_Z_Z:
 			return ARM64_FRINTI;
 		case ENC_FRINTM_ASIMDMISCFP16_R:
 		case ENC_FRINTM_ASIMDMISC_R:
 		case ENC_FRINTM_H_FLOATDP1:
 		case ENC_FRINTM_S_FLOATDP1:
 		case ENC_FRINTM_D_FLOATDP1:
-		case ENC_FRINTM_Z_P_Z_:
+		case ENC_FRINTM_Z_P_Z_M:
+		case ENC_FRINTM_Z_P_Z_Z:
+		case ENC_FRINTM_MZ_Z_2:
+		case ENC_FRINTM_MZ_Z_4:
 			return ARM64_FRINTM;
 		case ENC_FRINTN_ASIMDMISCFP16_R:
 		case ENC_FRINTN_ASIMDMISC_R:
 		case ENC_FRINTN_H_FLOATDP1:
 		case ENC_FRINTN_S_FLOATDP1:
 		case ENC_FRINTN_D_FLOATDP1:
-		case ENC_FRINTN_Z_P_Z_:
+		case ENC_FRINTN_Z_P_Z_M:
+		case ENC_FRINTN_Z_P_Z_Z:
+		case ENC_FRINTN_MZ_Z_2:
+		case ENC_FRINTN_MZ_Z_4:
 			return ARM64_FRINTN;
 		case ENC_FRINTP_ASIMDMISCFP16_R:
 		case ENC_FRINTP_ASIMDMISC_R:
 		case ENC_FRINTP_H_FLOATDP1:
 		case ENC_FRINTP_S_FLOATDP1:
 		case ENC_FRINTP_D_FLOATDP1:
-		case ENC_FRINTP_Z_P_Z_:
+		case ENC_FRINTP_Z_P_Z_M:
+		case ENC_FRINTP_Z_P_Z_Z:
+		case ENC_FRINTP_MZ_Z_2:
+		case ENC_FRINTP_MZ_Z_4:
 			return ARM64_FRINTP;
 		case ENC_FRINTX_ASIMDMISCFP16_R:
 		case ENC_FRINTX_ASIMDMISC_R:
 		case ENC_FRINTX_H_FLOATDP1:
 		case ENC_FRINTX_S_FLOATDP1:
 		case ENC_FRINTX_D_FLOATDP1:
-		case ENC_FRINTX_Z_P_Z_:
+		case ENC_FRINTX_Z_P_Z_M:
+		case ENC_FRINTX_Z_P_Z_Z:
 			return ARM64_FRINTX;
 		case ENC_FRINTZ_ASIMDMISCFP16_R:
 		case ENC_FRINTZ_ASIMDMISC_R:
 		case ENC_FRINTZ_H_FLOATDP1:
 		case ENC_FRINTZ_S_FLOATDP1:
 		case ENC_FRINTZ_D_FLOATDP1:
-		case ENC_FRINTZ_Z_P_Z_:
+		case ENC_FRINTZ_Z_P_Z_M:
+		case ENC_FRINTZ_Z_P_Z_Z:
 			return ARM64_FRINTZ;
 		case ENC_FRSQRTE_ASISDMISCFP16_R:
 		case ENC_FRSQRTE_ASISDMISC_R:
@@ -1283,6 +2161,12 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FRSQRTS_ASIMDSAME_ONLY:
 		case ENC_FRSQRTS_Z_ZZ_:
 			return ARM64_FRSQRTS;
+		case ENC_FSCALE_ASIMDSAMEFP16_ONLY:
+		case ENC_FSCALE_ASIMDSAME_ONLY:
+		case ENC_FSCALE_MZ_ZZV_2X1:
+		case ENC_FSCALE_MZ_ZZV_4X1:
+		case ENC_FSCALE_MZ_ZZW_2X2:
+		case ENC_FSCALE_MZ_ZZW_4X4:
 		case ENC_FSCALE_Z_P_ZZ_:
 			return ARM64_FSCALE;
 		case ENC_FSQRT_ASIMDMISCFP16_R:
@@ -1290,7 +2174,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FSQRT_H_FLOATDP1:
 		case ENC_FSQRT_S_FLOATDP1:
 		case ENC_FSQRT_D_FLOATDP1:
-		case ENC_FSQRT_Z_P_Z_:
+		case ENC_FSQRT_Z_P_Z_M:
+		case ENC_FSQRT_Z_P_Z_Z:
 			return ARM64_FSQRT;
 		case ENC_FSUB_ASIMDSAMEFP16_ONLY:
 		case ENC_FSUB_ASIMDSAME_ONLY:
@@ -1300,16 +2185,53 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_FSUB_Z_P_ZS_:
 		case ENC_FSUB_Z_P_ZZ_:
 		case ENC_FSUB_Z_ZZ_:
+		case ENC_FSUB_ZA_ZW_2X2:
+		case ENC_FSUB_ZA_ZW_2X2_16:
+		case ENC_FSUB_ZA_ZW_4X4:
+		case ENC_FSUB_ZA_ZW_4X4_16:
 			return ARM64_FSUB;
 		case ENC_FSUBR_Z_P_ZS_:
 		case ENC_FSUBR_Z_P_ZZ_:
 			return ARM64_FSUBR;
 		case ENC_FTMAD_Z_ZZI_:
 			return ARM64_FTMAD;
+		case ENC_FTMOPA_ZA16_Z8Z8ZI_B2X1:
+		case ENC_FTMOPA_ZA32_Z8Z8ZI_B2X1:
+		case ENC_FTMOPA_ZA32_ZZZI_H2X1:
+		case ENC_FTMOPA_ZA_ZZZI_H2X1:
+		case ENC_FTMOPA_ZA_ZZZI_S2X1:
+			return ARM64_FTMOPA;
 		case ENC_FTSMUL_Z_ZZ_:
 			return ARM64_FTSMUL;
 		case ENC_FTSSEL_Z_ZZ_:
 			return ARM64_FTSSEL;
+		case ENC_FVDOT_ZA_Z8Z8I_2XI:
+		case ENC_FVDOT_ZA_ZZI_2XI:
+			return ARM64_FVDOT;
+		case ENC_FVDOTB_ZA32_Z8Z8I_2XI:
+			return ARM64_FVDOTB;
+		case ENC_FVDOTT_ZA32_Z8Z8I_2XI:
+			return ARM64_FVDOTT;
+		case ENC_GCSB_HD_HINTS:
+			return ARM64_GCSB;
+		case ENC_GCSPOPCX_SYS_CR_SYSTEMINSTRS:
+			return ARM64_GCSPOPCX;
+		case ENC_GCSPOPM_SYSL_RC_SYSTEMINSTRS:
+			return ARM64_GCSPOPM;
+		case ENC_GCSPOPX_SYS_CR_SYSTEMINSTRS:
+			return ARM64_GCSPOPX;
+		case ENC_GCSPUSHM_SYS_CR_SYSTEMINSTRS:
+			return ARM64_GCSPUSHM;
+		case ENC_GCSPUSHX_SYS_CR_SYSTEMINSTRS:
+			return ARM64_GCSPUSHX;
+		case ENC_GCSSS1_SYS_CR_SYSTEMINSTRS:
+			return ARM64_GCSSS1;
+		case ENC_GCSSS2_SYSL_RC_SYSTEMINSTRS:
+			return ARM64_GCSSS2;
+		case ENC_GCSSTR_64_LDST_GCS:
+			return ARM64_GCSSTR;
+		case ENC_GCSSTTR_64_LDST_GCS:
+			return ARM64_GCSSTTR;
 		case ENC_GMI_64G_DP_2SRC:
 			return ARM64_GMI;
 		case ENC_HINT_HM_HINTS:
@@ -1359,6 +2281,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_LASTB_R_P_Z_:
 		case ENC_LASTB_V_P_Z_:
 			return ARM64_LASTB;
+		case ENC_LASTP_R_P_P_:
+			return ARM64_LASTP;
 		case ENC_LD1_ASISDLSE_R1_1V:
 		case ENC_LD1_ASISDLSE_R2_2V:
 		case ENC_LD1_ASISDLSE_R3_3V:
@@ -1377,13 +2301,21 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_LD1_ASISDLSO_D1_1D:
 		case ENC_LD1_ASISDLSOP_B1_I1B:
 		case ENC_LD1_ASISDLSOP_BX1_R1B:
+		case ENC_LD1_ASISDLSOP_D1_I1D:
+		case ENC_LD1_ASISDLSOP_DX1_R1D:
 		case ENC_LD1_ASISDLSOP_H1_I1H:
 		case ENC_LD1_ASISDLSOP_HX1_R1H:
 		case ENC_LD1_ASISDLSOP_S1_I1S:
 		case ENC_LD1_ASISDLSOP_SX1_R1S:
-		case ENC_LD1_ASISDLSOP_D1_I1D:
-		case ENC_LD1_ASISDLSOP_DX1_R1D:
 			return ARM64_LD1;
+		case ENC_LD1B_MZ_P_BI_2:
+		case ENC_LD1B_MZ_P_BI_4:
+		case ENC_LD1B_MZ_P_BR_2:
+		case ENC_LD1B_MZ_P_BR_4:
+		case ENC_LD1B_MZX_P_BI_2X8:
+		case ENC_LD1B_MZX_P_BI_4X4:
+		case ENC_LD1B_MZX_P_BR_2X8:
+		case ENC_LD1B_MZX_P_BR_4X4:
 		case ENC_LD1B_Z_P_AI_S:
 		case ENC_LD1B_Z_P_AI_D:
 		case ENC_LD1B_Z_P_BI_U8:
@@ -1399,15 +2331,33 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_LD1B_Z_P_BZ_D_64_UNSCALED:
 		case ENC_LD1B_ZA_P_RRR_:
 			return ARM64_LD1B;
+		case ENC_LD1D_MZ_P_BI_2:
+		case ENC_LD1D_MZ_P_BI_4:
+		case ENC_LD1D_MZ_P_BR_2:
+		case ENC_LD1D_MZ_P_BR_4:
+		case ENC_LD1D_MZX_P_BI_2X8:
+		case ENC_LD1D_MZX_P_BI_4X4:
+		case ENC_LD1D_MZX_P_BR_2X8:
+		case ENC_LD1D_MZX_P_BR_4X4:
 		case ENC_LD1D_Z_P_AI_D:
 		case ENC_LD1D_Z_P_BI_U64:
+		case ENC_LD1D_Z_P_BI_U128:
 		case ENC_LD1D_Z_P_BR_U64:
+		case ENC_LD1D_Z_P_BR_U128:
 		case ENC_LD1D_Z_P_BZ_D_X32_SCALED:
 		case ENC_LD1D_Z_P_BZ_D_X32_UNSCALED:
 		case ENC_LD1D_Z_P_BZ_D_64_SCALED:
 		case ENC_LD1D_Z_P_BZ_D_64_UNSCALED:
 		case ENC_LD1D_ZA_P_RRR_:
 			return ARM64_LD1D;
+		case ENC_LD1H_MZ_P_BI_2:
+		case ENC_LD1H_MZ_P_BI_4:
+		case ENC_LD1H_MZ_P_BR_2:
+		case ENC_LD1H_MZ_P_BR_4:
+		case ENC_LD1H_MZX_P_BI_2X8:
+		case ENC_LD1H_MZX_P_BI_4X4:
+		case ENC_LD1H_MZX_P_BR_2X8:
+		case ENC_LD1H_MZX_P_BR_4X4:
 		case ENC_LD1H_Z_P_AI_S:
 		case ENC_LD1H_Z_P_AI_D:
 		case ENC_LD1H_Z_P_BI_U16:
@@ -1424,6 +2374,7 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_LD1H_Z_P_BZ_D_64_UNSCALED:
 		case ENC_LD1H_ZA_P_RRR_:
 			return ARM64_LD1H;
+		case ENC_LD1Q_Z_P_AR_D_64_UNSCALED:
 		case ENC_LD1Q_ZA_P_RRR_:
 			return ARM64_LD1Q;
 		case ENC_LD1R_ASISDLSO_R1:
@@ -1510,12 +2461,22 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_LD1SW_Z_P_BZ_D_64_SCALED:
 		case ENC_LD1SW_Z_P_BZ_D_64_UNSCALED:
 			return ARM64_LD1SW;
+		case ENC_LD1W_MZ_P_BI_2:
+		case ENC_LD1W_MZ_P_BI_4:
+		case ENC_LD1W_MZ_P_BR_2:
+		case ENC_LD1W_MZ_P_BR_4:
+		case ENC_LD1W_MZX_P_BI_2X8:
+		case ENC_LD1W_MZX_P_BI_4X4:
+		case ENC_LD1W_MZX_P_BR_2X8:
+		case ENC_LD1W_MZX_P_BR_4X4:
 		case ENC_LD1W_Z_P_AI_S:
 		case ENC_LD1W_Z_P_AI_D:
 		case ENC_LD1W_Z_P_BI_U32:
 		case ENC_LD1W_Z_P_BI_U64:
+		case ENC_LD1W_Z_P_BI_U128:
 		case ENC_LD1W_Z_P_BR_U32:
 		case ENC_LD1W_Z_P_BR_U64:
+		case ENC_LD1W_Z_P_BR_U128:
 		case ENC_LD1W_Z_P_BZ_S_X32_SCALED:
 		case ENC_LD1W_Z_P_BZ_D_X32_SCALED:
 		case ENC_LD1W_Z_P_BZ_D_X32_UNSCALED:
@@ -1549,6 +2510,9 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_LD2H_Z_P_BI_CONTIGUOUS:
 		case ENC_LD2H_Z_P_BR_CONTIGUOUS:
 			return ARM64_LD2H;
+		case ENC_LD2Q_Z_P_BI_CONTIGUOUS:
+		case ENC_LD2Q_Z_P_BR_CONTIGUOUS:
+			return ARM64_LD2Q;
 		case ENC_LD2R_ASISDLSO_R2:
 		case ENC_LD2R_ASISDLSOP_R2_I:
 		case ENC_LD2R_ASISDLSOP_RX2_R:
@@ -1581,6 +2545,9 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_LD3H_Z_P_BI_CONTIGUOUS:
 		case ENC_LD3H_Z_P_BR_CONTIGUOUS:
 			return ARM64_LD3H;
+		case ENC_LD3Q_Z_P_BI_CONTIGUOUS:
+		case ENC_LD3Q_Z_P_BR_CONTIGUOUS:
+			return ARM64_LD3Q;
 		case ENC_LD3R_ASISDLSO_R3:
 		case ENC_LD3R_ASISDLSOP_R3_I:
 		case ENC_LD3R_ASISDLSOP_RX3_R:
@@ -1613,6 +2580,9 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_LD4H_Z_P_BI_CONTIGUOUS:
 		case ENC_LD4H_Z_P_BR_CONTIGUOUS:
 			return ARM64_LD4H;
+		case ENC_LD4Q_Z_P_BI_CONTIGUOUS:
+		case ENC_LD4Q_Z_P_BR_CONTIGUOUS:
+			return ARM64_LD4Q;
 		case ENC_LD4R_ASISDLSO_R4:
 		case ENC_LD4R_ASISDLSOP_R4_I:
 		case ENC_LD4R_ASISDLSOP_RX4_R:
@@ -1650,6 +2620,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_LDADDLB;
 		case ENC_LDADDLH_32_MEMOP:
 			return ARM64_LDADDLH;
+		case ENC_LDAP1_ASISDLSO_D1:
+			return ARM64_LDAP1;
+		case ENC_LDAPR_32L_LDAPSTL_WRITEBACK:
+		case ENC_LDAPR_64L_LDAPSTL_WRITEBACK:
 		case ENC_LDAPR_32L_MEMOP:
 		case ENC_LDAPR_64L_MEMOP:
 			return ARM64_LDAPR;
@@ -1657,6 +2631,11 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_LDAPRB;
 		case ENC_LDAPRH_32L_MEMOP:
 			return ARM64_LDAPRH;
+		case ENC_LDAPUR_B_LDAPSTL_SIMD:
+		case ENC_LDAPUR_H_LDAPSTL_SIMD:
+		case ENC_LDAPUR_S_LDAPSTL_SIMD:
+		case ENC_LDAPUR_D_LDAPSTL_SIMD:
+		case ENC_LDAPUR_Q_LDAPSTL_SIMD:
 		case ENC_LDAPUR_32_LDAPSTL_UNSCALED:
 		case ENC_LDAPUR_64_LDAPSTL_UNSCALED:
 			return ARM64_LDAPUR;
@@ -1679,6 +2658,9 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_LDARB;
 		case ENC_LDARH_LR32_LDSTORD:
 			return ARM64_LDARH;
+		case ENC_LDATXR_LR32_LDSTEXCLR_UNPRIV:
+		case ENC_LDATXR_LR64_LDSTEXCLR_UNPRIV:
+			return ARM64_LDATXR;
 		case ENC_LDAXP_LP32_LDSTEXCLP:
 		case ENC_LDAXP_LP64_LDSTEXCLP:
 			return ARM64_LDAXP;
@@ -1689,6 +2671,46 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_LDAXRB;
 		case ENC_LDAXRH_LR32_LDSTEXCLR:
 			return ARM64_LDAXRH;
+		case ENC_LDBFADD_16:
+			return ARM64_LDBFADD;
+		case ENC_LDBFADDA_16:
+			return ARM64_LDBFADDA;
+		case ENC_LDBFADDAL_16:
+			return ARM64_LDBFADDAL;
+		case ENC_LDBFADDL_16:
+			return ARM64_LDBFADDL;
+		case ENC_LDBFMAX_16:
+			return ARM64_LDBFMAX;
+		case ENC_LDBFMAXA_16:
+			return ARM64_LDBFMAXA;
+		case ENC_LDBFMAXAL_16:
+			return ARM64_LDBFMAXAL;
+		case ENC_LDBFMAXL_16:
+			return ARM64_LDBFMAXL;
+		case ENC_LDBFMAXNM_16:
+			return ARM64_LDBFMAXNM;
+		case ENC_LDBFMAXNMA_16:
+			return ARM64_LDBFMAXNMA;
+		case ENC_LDBFMAXNMAL_16:
+			return ARM64_LDBFMAXNMAL;
+		case ENC_LDBFMAXNML_16:
+			return ARM64_LDBFMAXNML;
+		case ENC_LDBFMIN_16:
+			return ARM64_LDBFMIN;
+		case ENC_LDBFMINA_16:
+			return ARM64_LDBFMINA;
+		case ENC_LDBFMINAL_16:
+			return ARM64_LDBFMINAL;
+		case ENC_LDBFMINL_16:
+			return ARM64_LDBFMINL;
+		case ENC_LDBFMINNM_16:
+			return ARM64_LDBFMINNM;
+		case ENC_LDBFMINNMA_16:
+			return ARM64_LDBFMINNMA;
+		case ENC_LDBFMINNMAL_16:
+			return ARM64_LDBFMINNMAL;
+		case ENC_LDBFMINNML_16:
+			return ARM64_LDBFMINNML;
 		case ENC_LDCLR_32_MEMOP:
 		case ENC_LDCLR_64_MEMOP:
 			return ARM64_LDCLR;
@@ -1717,6 +2739,14 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_LDCLRLB;
 		case ENC_LDCLRLH_32_MEMOP:
 			return ARM64_LDCLRLH;
+		case ENC_LDCLRP_128_MEMOP_128:
+			return ARM64_LDCLRP;
+		case ENC_LDCLRPA_128_MEMOP_128:
+			return ARM64_LDCLRPA;
+		case ENC_LDCLRPAL_128_MEMOP_128:
+			return ARM64_LDCLRPAL;
+		case ENC_LDCLRPL_128_MEMOP_128:
+			return ARM64_LDCLRPL;
 		case ENC_LDEOR_32_MEMOP:
 		case ENC_LDEOR_64_MEMOP:
 			return ARM64_LDEOR;
@@ -1745,6 +2775,22 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_LDEORLB;
 		case ENC_LDEORLH_32_MEMOP:
 			return ARM64_LDEORLH;
+		case ENC_LDFADD_16:
+		case ENC_LDFADD_32:
+		case ENC_LDFADD_64:
+			return ARM64_LDFADD;
+		case ENC_LDFADDA_16:
+		case ENC_LDFADDA_32:
+		case ENC_LDFADDA_64:
+			return ARM64_LDFADDA;
+		case ENC_LDFADDAL_16:
+		case ENC_LDFADDAL_32:
+		case ENC_LDFADDAL_64:
+			return ARM64_LDFADDAL;
+		case ENC_LDFADDL_16:
+		case ENC_LDFADDL_32:
+		case ENC_LDFADDL_64:
+			return ARM64_LDFADDL;
 		case ENC_LDFF1B_Z_P_AI_S:
 		case ENC_LDFF1B_Z_P_AI_D:
 		case ENC_LDFF1B_Z_P_BR_U8:
@@ -1812,10 +2858,79 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_LDFF1W_Z_P_BZ_D_64_SCALED:
 		case ENC_LDFF1W_Z_P_BZ_D_64_UNSCALED:
 			return ARM64_LDFF1W;
+		case ENC_LDFMAX_16:
+		case ENC_LDFMAX_32:
+		case ENC_LDFMAX_64:
+			return ARM64_LDFMAX;
+		case ENC_LDFMAXA_16:
+		case ENC_LDFMAXA_32:
+		case ENC_LDFMAXA_64:
+			return ARM64_LDFMAXA;
+		case ENC_LDFMAXAL_16:
+		case ENC_LDFMAXAL_32:
+		case ENC_LDFMAXAL_64:
+			return ARM64_LDFMAXAL;
+		case ENC_LDFMAXL_16:
+		case ENC_LDFMAXL_32:
+		case ENC_LDFMAXL_64:
+			return ARM64_LDFMAXL;
+		case ENC_LDFMAXNM_16:
+		case ENC_LDFMAXNM_32:
+		case ENC_LDFMAXNM_64:
+			return ARM64_LDFMAXNM;
+		case ENC_LDFMAXNMA_16:
+		case ENC_LDFMAXNMA_32:
+		case ENC_LDFMAXNMA_64:
+			return ARM64_LDFMAXNMA;
+		case ENC_LDFMAXNMAL_16:
+		case ENC_LDFMAXNMAL_32:
+		case ENC_LDFMAXNMAL_64:
+			return ARM64_LDFMAXNMAL;
+		case ENC_LDFMAXNML_16:
+		case ENC_LDFMAXNML_32:
+		case ENC_LDFMAXNML_64:
+			return ARM64_LDFMAXNML;
+		case ENC_LDFMIN_16:
+		case ENC_LDFMIN_32:
+		case ENC_LDFMIN_64:
+			return ARM64_LDFMIN;
+		case ENC_LDFMINA_16:
+		case ENC_LDFMINA_32:
+		case ENC_LDFMINA_64:
+			return ARM64_LDFMINA;
+		case ENC_LDFMINAL_16:
+		case ENC_LDFMINAL_32:
+		case ENC_LDFMINAL_64:
+			return ARM64_LDFMINAL;
+		case ENC_LDFMINL_16:
+		case ENC_LDFMINL_32:
+		case ENC_LDFMINL_64:
+			return ARM64_LDFMINL;
+		case ENC_LDFMINNM_16:
+		case ENC_LDFMINNM_32:
+		case ENC_LDFMINNM_64:
+			return ARM64_LDFMINNM;
+		case ENC_LDFMINNMA_16:
+		case ENC_LDFMINNMA_32:
+		case ENC_LDFMINNMA_64:
+			return ARM64_LDFMINNMA;
+		case ENC_LDFMINNMAL_16:
+		case ENC_LDFMINNMAL_32:
+		case ENC_LDFMINNMAL_64:
+			return ARM64_LDFMINNMAL;
+		case ENC_LDFMINNML_16:
+		case ENC_LDFMINNML_32:
+		case ENC_LDFMINNML_64:
+			return ARM64_LDFMINNML;
 		case ENC_LDG_64LOFFSET_LDSTTAGS:
 			return ARM64_LDG;
 		case ENC_LDGM_64BULK_LDSTTAGS:
 			return ARM64_LDGM;
+		case ENC_LDIAPP_32LE_LDIAPPSTILP:
+		case ENC_LDIAPP_32L_LDIAPPSTILP:
+		case ENC_LDIAPP_64LS_LDIAPPSTILP:
+		case ENC_LDIAPP_64L_LDIAPPSTILP:
+			return ARM64_LDIAPP;
 		case ENC_LDLAR_LR32_LDSTORD:
 		case ENC_LDLAR_LR64_LDSTORD:
 			return ARM64_LDLAR;
@@ -1852,15 +2967,39 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_LDNP_32_LDSTNAPAIR_OFFS:
 		case ENC_LDNP_64_LDSTNAPAIR_OFFS:
 			return ARM64_LDNP;
+		case ENC_LDNT1B_MZ_P_BI_2:
+		case ENC_LDNT1B_MZ_P_BI_4:
+		case ENC_LDNT1B_MZ_P_BR_2:
+		case ENC_LDNT1B_MZ_P_BR_4:
+		case ENC_LDNT1B_MZX_P_BI_2X8:
+		case ENC_LDNT1B_MZX_P_BI_4X4:
+		case ENC_LDNT1B_MZX_P_BR_2X8:
+		case ENC_LDNT1B_MZX_P_BR_4X4:
 		case ENC_LDNT1B_Z_P_AR_S_X32_UNSCALED:
 		case ENC_LDNT1B_Z_P_AR_D_64_UNSCALED:
 		case ENC_LDNT1B_Z_P_BI_CONTIGUOUS:
 		case ENC_LDNT1B_Z_P_BR_CONTIGUOUS:
 			return ARM64_LDNT1B;
+		case ENC_LDNT1D_MZ_P_BI_2:
+		case ENC_LDNT1D_MZ_P_BI_4:
+		case ENC_LDNT1D_MZ_P_BR_2:
+		case ENC_LDNT1D_MZ_P_BR_4:
+		case ENC_LDNT1D_MZX_P_BI_2X8:
+		case ENC_LDNT1D_MZX_P_BI_4X4:
+		case ENC_LDNT1D_MZX_P_BR_2X8:
+		case ENC_LDNT1D_MZX_P_BR_4X4:
 		case ENC_LDNT1D_Z_P_AR_D_64_UNSCALED:
 		case ENC_LDNT1D_Z_P_BI_CONTIGUOUS:
 		case ENC_LDNT1D_Z_P_BR_CONTIGUOUS:
 			return ARM64_LDNT1D;
+		case ENC_LDNT1H_MZ_P_BI_2:
+		case ENC_LDNT1H_MZ_P_BI_4:
+		case ENC_LDNT1H_MZ_P_BR_2:
+		case ENC_LDNT1H_MZ_P_BR_4:
+		case ENC_LDNT1H_MZX_P_BI_2X8:
+		case ENC_LDNT1H_MZX_P_BI_4X4:
+		case ENC_LDNT1H_MZX_P_BR_2X8:
+		case ENC_LDNT1H_MZX_P_BR_4X4:
 		case ENC_LDNT1H_Z_P_AR_S_X32_UNSCALED:
 		case ENC_LDNT1H_Z_P_AR_D_64_UNSCALED:
 		case ENC_LDNT1H_Z_P_BI_CONTIGUOUS:
@@ -1874,6 +3013,14 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_LDNT1SH;
 		case ENC_LDNT1SW_Z_P_AR_D_64_UNSCALED:
 			return ARM64_LDNT1SW;
+		case ENC_LDNT1W_MZ_P_BI_2:
+		case ENC_LDNT1W_MZ_P_BI_4:
+		case ENC_LDNT1W_MZ_P_BR_2:
+		case ENC_LDNT1W_MZ_P_BR_4:
+		case ENC_LDNT1W_MZX_P_BI_2X8:
+		case ENC_LDNT1W_MZX_P_BI_4X4:
+		case ENC_LDNT1W_MZX_P_BR_2X8:
+		case ENC_LDNT1W_MZX_P_BR_4X4:
 		case ENC_LDNT1W_Z_P_AR_S_X32_UNSCALED:
 		case ENC_LDNT1W_Z_P_AR_D_64_UNSCALED:
 		case ENC_LDNT1W_Z_P_BI_CONTIGUOUS:
@@ -1936,6 +3083,7 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_LDR_P_BI_:
 		case ENC_LDR_Z_BI_:
 		case ENC_LDR_ZA_RI_:
+		case ENC_LDR_ZT_BR_:
 			return ARM64_LDR;
 		case ENC_LDRAA_64_LDST_PAC:
 		case ENC_LDRAA_64W_LDST_PAC:
@@ -2008,6 +3156,14 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_LDSETLB;
 		case ENC_LDSETLH_32_MEMOP:
 			return ARM64_LDSETLH;
+		case ENC_LDSETP_128_MEMOP_128:
+			return ARM64_LDSETP;
+		case ENC_LDSETPA_128_MEMOP_128:
+			return ARM64_LDSETPA;
+		case ENC_LDSETPAL_128_MEMOP_128:
+			return ARM64_LDSETPAL;
+		case ENC_LDSETPL_128_MEMOP_128:
+			return ARM64_LDSETPL;
 		case ENC_LDSMAX_32_MEMOP:
 		case ENC_LDSMAX_64_MEMOP:
 			return ARM64_LDSMAX;
@@ -2064,6 +3220,40 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_LDSMINLB;
 		case ENC_LDSMINLH_32_MEMOP:
 			return ARM64_LDSMINLH;
+		case ENC_LDTADD_32_MEMOP_UNPRIV:
+		case ENC_LDTADD_64_MEMOP_UNPRIV:
+			return ARM64_LDTADD;
+		case ENC_LDTADDA_32_MEMOP_UNPRIV:
+		case ENC_LDTADDA_64_MEMOP_UNPRIV:
+			return ARM64_LDTADDA;
+		case ENC_LDTADDAL_32_MEMOP_UNPRIV:
+		case ENC_LDTADDAL_64_MEMOP_UNPRIV:
+			return ARM64_LDTADDAL;
+		case ENC_LDTADDL_32_MEMOP_UNPRIV:
+		case ENC_LDTADDL_64_MEMOP_UNPRIV:
+			return ARM64_LDTADDL;
+		case ENC_LDTCLR_32_MEMOP_UNPRIV:
+		case ENC_LDTCLR_64_MEMOP_UNPRIV:
+			return ARM64_LDTCLR;
+		case ENC_LDTCLRA_32_MEMOP_UNPRIV:
+		case ENC_LDTCLRA_64_MEMOP_UNPRIV:
+			return ARM64_LDTCLRA;
+		case ENC_LDTCLRAL_32_MEMOP_UNPRIV:
+		case ENC_LDTCLRAL_64_MEMOP_UNPRIV:
+			return ARM64_LDTCLRAL;
+		case ENC_LDTCLRL_32_MEMOP_UNPRIV:
+		case ENC_LDTCLRL_64_MEMOP_UNPRIV:
+			return ARM64_LDTCLRL;
+		case ENC_LDTNP_Q_LDSTNAPAIR_OFFS:
+		case ENC_LDTNP_64_LDSTNAPAIR_OFFS:
+			return ARM64_LDTNP;
+		case ENC_LDTP_Q_LDSTPAIR_POST:
+		case ENC_LDTP_Q_LDSTPAIR_PRE:
+		case ENC_LDTP_Q_LDSTPAIR_OFF:
+		case ENC_LDTP_64_LDSTPAIR_POST:
+		case ENC_LDTP_64_LDSTPAIR_PRE:
+		case ENC_LDTP_64_LDSTPAIR_OFF:
+			return ARM64_LDTP;
 		case ENC_LDTR_32_LDST_UNPRIV:
 		case ENC_LDTR_64_LDST_UNPRIV:
 			return ARM64_LDTR;
@@ -2079,6 +3269,21 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_LDTRSH;
 		case ENC_LDTRSW_64_LDST_UNPRIV:
 			return ARM64_LDTRSW;
+		case ENC_LDTSET_32_MEMOP_UNPRIV:
+		case ENC_LDTSET_64_MEMOP_UNPRIV:
+			return ARM64_LDTSET;
+		case ENC_LDTSETA_32_MEMOP_UNPRIV:
+		case ENC_LDTSETA_64_MEMOP_UNPRIV:
+			return ARM64_LDTSETA;
+		case ENC_LDTSETAL_32_MEMOP_UNPRIV:
+		case ENC_LDTSETAL_64_MEMOP_UNPRIV:
+			return ARM64_LDTSETAL;
+		case ENC_LDTSETL_32_MEMOP_UNPRIV:
+		case ENC_LDTSETL_64_MEMOP_UNPRIV:
+			return ARM64_LDTSETL;
+		case ENC_LDTXR_LR32_LDSTEXCLR_UNPRIV:
+		case ENC_LDTXR_LR64_LDSTEXCLR_UNPRIV:
+			return ARM64_LDTXR;
 		case ENC_LDUMAX_32_MEMOP:
 		case ENC_LDUMAX_64_MEMOP:
 			return ARM64_LDUMAX;
@@ -2195,11 +3400,38 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_LSRV_32_DP_2SRC:
 		case ENC_LSRV_64_DP_2SRC:
 			return ARM64_LSRV;
+		case ENC_LUTI2_ASIMDTBL_L5:
+		case ENC_LUTI2_ASIMDTBL_L6:
+		case ENC_LUTI2_MZ2_ZTZ_1:
+		case ENC_LUTI2_MZ2_ZTZ_8:
+		case ENC_LUTI2_MZ4_ZTZ_1:
+		case ENC_LUTI2_MZ4_ZTZ_4:
+		case ENC_LUTI2_Z_ZTZ_:
+		case ENC_LUTI2_Z_ZZ_8:
+		case ENC_LUTI2_Z_ZZ_16:
+			return ARM64_LUTI2;
+		case ENC_LUTI4_ASIMDTBL_L5:
+		case ENC_LUTI4_ASIMDTBL_L7:
+		case ENC_LUTI4_MZ2_ZTZ_1:
+		case ENC_LUTI4_MZ2_ZTZ_8:
+		case ENC_LUTI4_MZ4_ZTMZ2_1:
+		case ENC_LUTI4_MZ4_ZTMZ2_4:
+		case ENC_LUTI4_MZ4_ZTZ_1:
+		case ENC_LUTI4_MZ4_ZTZ_4:
+		case ENC_LUTI4_Z_ZTZ_:
+		case ENC_LUTI4_Z_ZZ_8:
+		case ENC_LUTI4_Z_ZZ_2X16:
+		case ENC_LUTI4_Z_ZZ_1X16:
+			return ARM64_LUTI4;
 		case ENC_MAD_Z_P_ZZZ_:
 			return ARM64_MAD;
 		case ENC_MADD_32A_DP_3SRC:
 		case ENC_MADD_64A_DP_3SRC:
 			return ARM64_MADD;
+		case ENC_MADDPT_64A_DP_3SRC:
+			return ARM64_MADDPT;
+		case ENC_MADPT_Z_ZZZ_:
+			return ARM64_MADPT;
 		case ENC_MATCH_P_P_ZZ_:
 			return ARM64_MATCH;
 		case ENC_MLA_ASIMDELEM_R:
@@ -2209,6 +3441,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_MLA_Z_ZZZI_S:
 		case ENC_MLA_Z_ZZZI_D:
 			return ARM64_MLA;
+		case ENC_MLAPT_Z_ZZZ_:
+			return ARM64_MLAPT;
 		case ENC_MLS_ASIMDELEM_R:
 		case ENC_MLS_ASIMDSAME_ONLY:
 		case ENC_MLS_Z_P_ZZZ_:
@@ -2235,42 +3469,98 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_MOV_ORR_64_LOG_SHIFT:
 		case ENC_MOV_UMOV_ASIMDINS_W_W:
 		case ENC_MOV_UMOV_ASIMDINS_X_X:
-		case ENC_MOV_AND_P_P_PP_Z:
-		case ENC_MOV_CPY_Z_O_I_:
-		case ENC_MOV_CPY_Z_P_I_:
-		case ENC_MOV_CPY_Z_P_R_:
-		case ENC_MOV_CPY_Z_P_V_:
-		case ENC_MOV_DUP_Z_I_:
-		case ENC_MOV_DUP_Z_R_:
-		case ENC_MOV_DUP_Z_ZI_:
-		case ENC_MOV_DUP_Z_ZI_2:
-		case ENC_MOV_DUPM_Z_I_:
-		case ENC_MOV_MOVA_Z_P_RZA_B:
-		case ENC_MOV_MOVA_Z_P_RZA_H:
-		case ENC_MOV_MOVA_Z_P_RZA_W:
-		case ENC_MOV_MOVA_Z_P_RZA_D:
-		case ENC_MOV_MOVA_Z_P_RZA_Q:
-		case ENC_MOV_MOVA_ZA_P_RZ_B:
-		case ENC_MOV_MOVA_ZA_P_RZ_H:
-		case ENC_MOV_MOVA_ZA_P_RZ_W:
-		case ENC_MOV_MOVA_ZA_P_RZ_D:
-		case ENC_MOV_MOVA_ZA_P_RZ_Q:
-		case ENC_MOV_ORR_P_P_PP_Z:
-		case ENC_MOV_ORR_Z_ZZ_:
-		case ENC_MOV_SEL_P_P_PP_:
-		case ENC_MOV_SEL_Z_P_ZZ_:
+		case ENC_MOVZ_P_P_P__AND_P_P_PP_Z:
+		case ENC_MOV_Z_O_I__CPY_Z_O_I_:
+		case ENC_MOV_Z_P_I__CPY_Z_P_I_:
+		case ENC_MOV_Z_P_R__CPY_Z_P_R_:
+		case ENC_MOV_Z_P_V__CPY_Z_P_V_:
+		case ENC_MOV_Z_I__DUP_Z_I_:
+		case ENC_MOV_Z_R__DUP_Z_R_:
+		case ENC_MOV_Z_V__DUP_Z_ZI_:
+		case ENC_MOV_Z_ZI__DUP_Z_ZI_:
+		case ENC_MOV_Z_M__DUPM_Z_I_:
+		case ENC_MOV_MZ2_ZA_B1_MOVA_MZ2_ZA_B1:
+		case ENC_MOV_MZ2_ZA_H1_MOVA_MZ2_ZA_H1:
+		case ENC_MOV_MZ2_ZA_W1_MOVA_MZ2_ZA_W1:
+		case ENC_MOV_MZ2_ZA_D1_MOVA_MZ2_ZA_D1:
+		case ENC_MOV_MZ4_ZA_B1_MOVA_MZ4_ZA_B1:
+		case ENC_MOV_MZ4_ZA_H1_MOVA_MZ4_ZA_H1:
+		case ENC_MOV_MZ4_ZA_W1_MOVA_MZ4_ZA_W1:
+		case ENC_MOV_MZ4_ZA_D1_MOVA_MZ4_ZA_D1:
+		case ENC_MOV_MZ_ZA2_1_MOVA_MZ_ZA2_1:
+		case ENC_MOV_MZ_ZA4_1_MOVA_MZ_ZA4_1:
+		case ENC_MOV_Z_P_RZA_B_MOVA_Z_P_RZA_B:
+		case ENC_MOV_Z_P_RZA_H_MOVA_Z_P_RZA_H:
+		case ENC_MOV_Z_P_RZA_W_MOVA_Z_P_RZA_W:
+		case ENC_MOV_Z_P_RZA_D_MOVA_Z_P_RZA_D:
+		case ENC_MOV_Z_P_RZA_Q_MOVA_Z_P_RZA_Q:
+		case ENC_MOV_ZA2_Z_B1_MOVA_ZA2_Z_B1:
+		case ENC_MOV_ZA2_Z_H1_MOVA_ZA2_Z_H1:
+		case ENC_MOV_ZA2_Z_W1_MOVA_ZA2_Z_W1:
+		case ENC_MOV_ZA2_Z_D1_MOVA_ZA2_Z_D1:
+		case ENC_MOV_ZA4_Z_B1_MOVA_ZA4_Z_B1:
+		case ENC_MOV_ZA4_Z_H1_MOVA_ZA4_Z_H1:
+		case ENC_MOV_ZA4_Z_W1_MOVA_ZA4_Z_W1:
+		case ENC_MOV_ZA4_Z_D1_MOVA_ZA4_Z_D1:
+		case ENC_MOV_ZA_MZ2_1_MOVA_ZA_MZ2_1:
+		case ENC_MOV_ZA_MZ4_1_MOVA_ZA_MZ4_1:
+		case ENC_MOV_ZA_P_RZ_B_MOVA_ZA_P_RZ_B:
+		case ENC_MOV_ZA_P_RZ_H_MOVA_ZA_P_RZ_H:
+		case ENC_MOV_ZA_P_RZ_W_MOVA_ZA_P_RZ_W:
+		case ENC_MOV_ZA_P_RZ_D_MOVA_ZA_P_RZ_D:
+		case ENC_MOV_ZA_P_RZ_Q_MOVA_ZA_P_RZ_Q:
+		case ENC_MOV_P_P__ORR_P_P_PP_Z:
+		case ENC_MOV_Z_Z__ORR_Z_ZZ_:
+		case ENC_MOVM_P_P_P__SEL_P_P_PP_:
+		case ENC_MOV_Z_P_Z__SEL_Z_P_ZZ_:
 			return ARM64_MOV;
+		case ENC_MOVA_MZ2_ZA_B1:
+		case ENC_MOVA_MZ2_ZA_H1:
+		case ENC_MOVA_MZ2_ZA_W1:
+		case ENC_MOVA_MZ2_ZA_D1:
+		case ENC_MOVA_MZ4_ZA_B1:
+		case ENC_MOVA_MZ4_ZA_H1:
+		case ENC_MOVA_MZ4_ZA_W1:
+		case ENC_MOVA_MZ4_ZA_D1:
+		case ENC_MOVA_MZ_ZA2_1:
+		case ENC_MOVA_MZ_ZA4_1:
 		case ENC_MOVA_Z_P_RZA_B:
 		case ENC_MOVA_Z_P_RZA_H:
 		case ENC_MOVA_Z_P_RZA_W:
 		case ENC_MOVA_Z_P_RZA_D:
 		case ENC_MOVA_Z_P_RZA_Q:
+		case ENC_MOVA_ZA2_Z_B1:
+		case ENC_MOVA_ZA2_Z_H1:
+		case ENC_MOVA_ZA2_Z_W1:
+		case ENC_MOVA_ZA2_Z_D1:
+		case ENC_MOVA_ZA4_Z_B1:
+		case ENC_MOVA_ZA4_Z_H1:
+		case ENC_MOVA_ZA4_Z_W1:
+		case ENC_MOVA_ZA4_Z_D1:
+		case ENC_MOVA_ZA_MZ2_1:
+		case ENC_MOVA_ZA_MZ4_1:
 		case ENC_MOVA_ZA_P_RZ_B:
 		case ENC_MOVA_ZA_P_RZ_H:
 		case ENC_MOVA_ZA_P_RZ_W:
 		case ENC_MOVA_ZA_P_RZ_D:
 		case ENC_MOVA_ZA_P_RZ_Q:
 			return ARM64_MOVA;
+		case ENC_MOVAZ_MZ2_ZA_B1:
+		case ENC_MOVAZ_MZ2_ZA_H1:
+		case ENC_MOVAZ_MZ2_ZA_W1:
+		case ENC_MOVAZ_MZ2_ZA_D1:
+		case ENC_MOVAZ_MZ4_ZA_B1:
+		case ENC_MOVAZ_MZ4_ZA_H1:
+		case ENC_MOVAZ_MZ4_ZA_W1:
+		case ENC_MOVAZ_MZ4_ZA_D1:
+		case ENC_MOVAZ_MZ_ZA2_1:
+		case ENC_MOVAZ_MZ_ZA4_1:
+		case ENC_MOVAZ_Z_RZA_B:
+		case ENC_MOVAZ_Z_RZA_H:
+		case ENC_MOVAZ_Z_RZA_W:
+		case ENC_MOVAZ_Z_RZA_D:
+		case ENC_MOVAZ_Z_RZA_Q:
+			return ARM64_MOVAZ;
 		case ENC_MOVI_ASIMDIMM_N_B:
 		case ENC_MOVI_ASIMDIMM_L_HL:
 		case ENC_MOVI_ASIMDIMM_L_SL:
@@ -2287,12 +3577,18 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_MOVPRFX_Z_P_Z_:
 		case ENC_MOVPRFX_Z_Z_:
 			return ARM64_MOVPRFX;
-		case ENC_MOVS_ANDS_P_P_PP_Z:
-		case ENC_MOVS_ORRS_P_P_PP_Z:
+		case ENC_MOVZS_P_P_P__ANDS_P_P_PP_Z:
+		case ENC_MOVS_P_P__ORRS_P_P_PP_Z:
 			return ARM64_MOVS;
+		case ENC_MOVT_R_ZT_:
+		case ENC_MOVT_ZT_R_:
+		case ENC_MOVT_ZT_Z_:
+			return ARM64_MOVT;
 		case ENC_MOVZ_32_MOVEWIDE:
 		case ENC_MOVZ_64_MOVEWIDE:
 			return ARM64_MOVZ;
+		case ENC_MRRS_RS_SYSTEMMOVEPR:
+			return ARM64_MRRS;
 		case ENC_MRS_RS_SYSTEMMOVE:
 			return ARM64_MRS;
 		case ENC_MSB_Z_P_ZZZ_:
@@ -2300,9 +3596,13 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_MSR_SI_PSTATE:
 		case ENC_MSR_SR_SYSTEMMOVE:
 			return ARM64_MSR;
+		case ENC_MSRR_SR_SYSTEMMOVEPR:
+			return ARM64_MSRR;
 		case ENC_MSUB_32A_DP_3SRC:
 		case ENC_MSUB_64A_DP_3SRC:
 			return ARM64_MSUB;
+		case ENC_MSUBPT_64A_DP_3SRC:
+			return ARM64_MSUBPT;
 		case ENC_MUL_MADD_32A_DP_3SRC:
 		case ENC_MUL_MADD_64A_DP_3SRC:
 		case ENC_MUL_ASIMDELEM_R:
@@ -2332,7 +3632,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_NEG_SUB_64_ADDSUB_SHIFT:
 		case ENC_NEG_ASISDMISC_R:
 		case ENC_NEG_ASIMDMISC_R:
-		case ENC_NEG_Z_P_Z_:
+		case ENC_NEG_Z_P_Z_M:
+		case ENC_NEG_Z_P_Z_Z:
 			return ARM64_NEG;
 		case ENC_NEGS_SUBS_32_ADDSUB_SHIFT:
 		case ENC_NEGS_SUBS_64_ADDSUB_SHIFT:
@@ -2352,19 +3653,22 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_NORS_P_P_PP_Z:
 			return ARM64_NORS;
 		case ENC_NOT_ASIMDMISC_R:
-		case ENC_NOT_EOR_P_P_PP_Z:
-		case ENC_NOT_Z_P_Z_:
+		case ENC_NOT_P_P_P_Z_EOR_P_P_PP_Z:
+		case ENC_NOT_Z_P_Z_M:
+		case ENC_NOT_Z_P_Z_Z:
 			return ARM64_NOT;
-		case ENC_NOTS_EORS_P_P_PP_Z:
+		case ENC_NOTS_P_P_P_Z_EORS_P_P_PP_Z:
 			return ARM64_NOTS;
 		case ENC_ORN_ASIMDSAME_ONLY:
 		case ENC_ORN_32_LOG_SHIFT:
 		case ENC_ORN_64_LOG_SHIFT:
-		case ENC_ORN_ORR_Z_ZI_:
+		case ENC_ORN_Z_ZI__ORR_Z_ZI_:
 		case ENC_ORN_P_P_PP_Z:
 			return ARM64_ORN;
 		case ENC_ORNS_P_P_PP_Z:
 			return ARM64_ORNS;
+		case ENC_ORQV_Z_P_Z_:
+			return ARM64_ORQV;
 		case ENC_ORR_ASIMDIMM_L_HL:
 		case ENC_ORR_ASIMDIMM_L_SL:
 		case ENC_ORR_ASIMDSAME_ONLY:
@@ -2395,36 +3699,67 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_PACIA;
 		case ENC_PACIA1716_HI_HINTS:
 			return ARM64_PACIA1716;
+		case ENC_PACIA171615_64LR_DP_1SRC:
+			return ARM64_PACIA171615;
 		case ENC_PACIASP_HI_HINTS:
 			return ARM64_PACIASP;
+		case ENC_PACIASPPC_64LR_DP_1SRC:
+			return ARM64_PACIASPPC;
 		case ENC_PACIAZ_HI_HINTS:
 			return ARM64_PACIAZ;
 		case ENC_PACIB_64P_DP_1SRC:
 			return ARM64_PACIB;
 		case ENC_PACIB1716_HI_HINTS:
 			return ARM64_PACIB1716;
+		case ENC_PACIB171615_64LR_DP_1SRC:
+			return ARM64_PACIB171615;
 		case ENC_PACIBSP_HI_HINTS:
 			return ARM64_PACIBSP;
+		case ENC_PACIBSPPC_64LR_DP_1SRC:
+			return ARM64_PACIBSPPC;
 		case ENC_PACIBZ_HI_HINTS:
 			return ARM64_PACIBZ;
 		case ENC_PACIZA_64Z_DP_1SRC:
 			return ARM64_PACIZA;
 		case ENC_PACIZB_64Z_DP_1SRC:
 			return ARM64_PACIZB;
+		case ENC_PACM_HI_HINTS:
+			return ARM64_PACM;
+		case ENC_PACNBIASPPC_64LR_DP_1SRC:
+			return ARM64_PACNBIASPPC;
+		case ENC_PACNBIBSPPC_64LR_DP_1SRC:
+			return ARM64_PACNBIBSPPC;
+		case ENC_PEXT_PN_RR_:
+		case ENC_PEXT_PP_RR_:
+			return ARM64_PEXT;
 		case ENC_PFALSE_P_:
 			return ARM64_PFALSE;
 		case ENC_PFIRST_P_P_P_:
 			return ARM64_PFIRST;
+		case ENC_PMLAL_MZ_ZZZW_1X2:
+			return ARM64_PMLAL;
+		case ENC_PMOV_P_ZI_B:
+		case ENC_PMOV_P_ZI_D:
+		case ENC_PMOV_P_ZI_H:
+		case ENC_PMOV_P_ZI_S:
+		case ENC_PMOV_Z_PI_B:
+		case ENC_PMOV_Z_PI_D:
+		case ENC_PMOV_Z_PI_H:
+		case ENC_PMOV_Z_PI_S:
+			return ARM64_PMOV;
 		case ENC_PMUL_ASIMDSAME_ONLY:
 		case ENC_PMUL_Z_ZZ_:
 			return ARM64_PMUL;
 		case ENC_PMULL_ASIMDDIFF_L:
+		case ENC_PMULL_MZ_ZZW_1X2:
 			return ARM64_PMULL;
 		//case ENC_PMULL_ASIMDDIFF_L:
 		//	return ARM64_PMULL2;
 		case ENC_PMULLB_Z_ZZ_:
+		case ENC_PMULLB_Z_ZZ_Q:
 			return ARM64_PMULLB;
 		case ENC_PMULLT_Z_ZZ_:
+		case ENC_PMULLT_Z_ZZ_Q:
 			return ARM64_PMULLT;
 		case ENC_PNEXT_P_P_P_:
 			return ARM64_PNEXT;
@@ -2468,11 +3803,14 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_PRFW;
 		case ENC_PSB_HC_HINTS:
 			return ARM64_PSB;
+		case ENC_PSEL_P_PPI_:
+			return ARM64_PSEL;
 		case ENC_PSSBB_DSB_BO_BARRIERS:
 			return ARM64_PSSBB;
-		case ENC_PTEST_P_P_:
+		case ENC_PTEST__P_P_:
 			return ARM64_PTEST;
 		case ENC_PTRUE_P_S_:
+		case ENC_PTRUE_PN_I_:
 			return ARM64_PTRUE;
 		case ENC_PTRUES_P_S_:
 			return ARM64_PTRUES;
@@ -2494,21 +3832,160 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_RBIT_ASIMDMISC_R:
 		case ENC_RBIT_32_DP_1SRC:
 		case ENC_RBIT_64_DP_1SRC:
-		case ENC_RBIT_Z_P_Z_:
+		case ENC_RBIT_Z_P_Z_M:
+		case ENC_RBIT_Z_P_Z_Z:
 			return ARM64_RBIT;
+		case ENC_RCWCAS_C64_RCWCOMSWAP:
+			return ARM64_RCWCAS;
+		case ENC_RCWCASA_C64_RCWCOMSWAP:
+			return ARM64_RCWCASA;
+		case ENC_RCWCASAL_C64_RCWCOMSWAP:
+			return ARM64_RCWCASAL;
+		case ENC_RCWCASL_C64_RCWCOMSWAP:
+			return ARM64_RCWCASL;
+		case ENC_RCWCASP_C64_RCWCOMSWAPPR:
+			return ARM64_RCWCASP;
+		case ENC_RCWCASPA_C64_RCWCOMSWAPPR:
+			return ARM64_RCWCASPA;
+		case ENC_RCWCASPAL_C64_RCWCOMSWAPPR:
+			return ARM64_RCWCASPAL;
+		case ENC_RCWCASPL_C64_RCWCOMSWAPPR:
+			return ARM64_RCWCASPL;
+		case ENC_RCWCLR_64_MEMOP:
+			return ARM64_RCWCLR;
+		case ENC_RCWCLRA_64_MEMOP:
+			return ARM64_RCWCLRA;
+		case ENC_RCWCLRAL_64_MEMOP:
+			return ARM64_RCWCLRAL;
+		case ENC_RCWCLRL_64_MEMOP:
+			return ARM64_RCWCLRL;
+		case ENC_RCWCLRP_128_MEMOP_128:
+			return ARM64_RCWCLRP;
+		case ENC_RCWCLRPA_128_MEMOP_128:
+			return ARM64_RCWCLRPA;
+		case ENC_RCWCLRPAL_128_MEMOP_128:
+			return ARM64_RCWCLRPAL;
+		case ENC_RCWCLRPL_128_MEMOP_128:
+			return ARM64_RCWCLRPL;
+		case ENC_RCWSCAS_C64_RCWCOMSWAP:
+			return ARM64_RCWSCAS;
+		case ENC_RCWSCASA_C64_RCWCOMSWAP:
+			return ARM64_RCWSCASA;
+		case ENC_RCWSCASAL_C64_RCWCOMSWAP:
+			return ARM64_RCWSCASAL;
+		case ENC_RCWSCASL_C64_RCWCOMSWAP:
+			return ARM64_RCWSCASL;
+		case ENC_RCWSCASP_C64_RCWCOMSWAPPR:
+			return ARM64_RCWSCASP;
+		case ENC_RCWSCASPA_C64_RCWCOMSWAPPR:
+			return ARM64_RCWSCASPA;
+		case ENC_RCWSCASPAL_C64_RCWCOMSWAPPR:
+			return ARM64_RCWSCASPAL;
+		case ENC_RCWSCASPL_C64_RCWCOMSWAPPR:
+			return ARM64_RCWSCASPL;
+		case ENC_RCWSCLR_64_MEMOP:
+			return ARM64_RCWSCLR;
+		case ENC_RCWSCLRA_64_MEMOP:
+			return ARM64_RCWSCLRA;
+		case ENC_RCWSCLRAL_64_MEMOP:
+			return ARM64_RCWSCLRAL;
+		case ENC_RCWSCLRL_64_MEMOP:
+			return ARM64_RCWSCLRL;
+		case ENC_RCWSCLRP_128_MEMOP_128:
+			return ARM64_RCWSCLRP;
+		case ENC_RCWSCLRPA_128_MEMOP_128:
+			return ARM64_RCWSCLRPA;
+		case ENC_RCWSCLRPAL_128_MEMOP_128:
+			return ARM64_RCWSCLRPAL;
+		case ENC_RCWSCLRPL_128_MEMOP_128:
+			return ARM64_RCWSCLRPL;
+		case ENC_RCWSET_64_MEMOP:
+			return ARM64_RCWSET;
+		case ENC_RCWSETA_64_MEMOP:
+			return ARM64_RCWSETA;
+		case ENC_RCWSETAL_64_MEMOP:
+			return ARM64_RCWSETAL;
+		case ENC_RCWSETL_64_MEMOP:
+			return ARM64_RCWSETL;
+		case ENC_RCWSETP_128_MEMOP_128:
+			return ARM64_RCWSETP;
+		case ENC_RCWSETPA_128_MEMOP_128:
+			return ARM64_RCWSETPA;
+		case ENC_RCWSETPAL_128_MEMOP_128:
+			return ARM64_RCWSETPAL;
+		case ENC_RCWSETPL_128_MEMOP_128:
+			return ARM64_RCWSETPL;
+		case ENC_RCWSSET_64_MEMOP:
+			return ARM64_RCWSSET;
+		case ENC_RCWSSETA_64_MEMOP:
+			return ARM64_RCWSSETA;
+		case ENC_RCWSSETAL_64_MEMOP:
+			return ARM64_RCWSSETAL;
+		case ENC_RCWSSETL_64_MEMOP:
+			return ARM64_RCWSSETL;
+		case ENC_RCWSSETP_128_MEMOP_128:
+			return ARM64_RCWSSETP;
+		case ENC_RCWSSETPA_128_MEMOP_128:
+			return ARM64_RCWSSETPA;
+		case ENC_RCWSSETPAL_128_MEMOP_128:
+			return ARM64_RCWSSETPAL;
+		case ENC_RCWSSETPL_128_MEMOP_128:
+			return ARM64_RCWSSETPL;
+		case ENC_RCWSSWP_64_MEMOP:
+			return ARM64_RCWSSWP;
+		case ENC_RCWSSWPA_64_MEMOP:
+			return ARM64_RCWSSWPA;
+		case ENC_RCWSSWPAL_64_MEMOP:
+			return ARM64_RCWSSWPAL;
+		case ENC_RCWSSWPL_64_MEMOP:
+			return ARM64_RCWSSWPL;
+		case ENC_RCWSSWPP_128_MEMOP_128:
+			return ARM64_RCWSSWPP;
+		case ENC_RCWSSWPPA_128_MEMOP_128:
+			return ARM64_RCWSSWPPA;
+		case ENC_RCWSSWPPAL_128_MEMOP_128:
+			return ARM64_RCWSSWPPAL;
+		case ENC_RCWSSWPPL_128_MEMOP_128:
+			return ARM64_RCWSSWPPL;
+		case ENC_RCWSWP_64_MEMOP:
+			return ARM64_RCWSWP;
+		case ENC_RCWSWPA_64_MEMOP:
+			return ARM64_RCWSWPA;
+		case ENC_RCWSWPAL_64_MEMOP:
+			return ARM64_RCWSWPAL;
+		case ENC_RCWSWPL_64_MEMOP:
+			return ARM64_RCWSWPL;
+		case ENC_RCWSWPP_128_MEMOP_128:
+			return ARM64_RCWSWPP;
+		case ENC_RCWSWPPA_128_MEMOP_128:
+			return ARM64_RCWSWPPA;
+		case ENC_RCWSWPPAL_128_MEMOP_128:
+			return ARM64_RCWSWPPAL;
+		case ENC_RCWSWPPL_128_MEMOP_128:
+			return ARM64_RCWSWPPL;
 		case ENC_RDFFR_P_F_:
 		case ENC_RDFFR_P_P_F_:
 			return ARM64_RDFFR;
 		case ENC_RDFFRS_P_P_F_:
 			return ARM64_RDFFRS;
+		case ENC_RDSVL_R_I_:
+			return ARM64_RDSVL;
 		case ENC_RDVL_R_I_:
 			return ARM64_RDVL;
 		case ENC_RET_64R_BRANCH_REG:
 			return ARM64_RET;
 		case ENC_RETAA_64E_BRANCH_REG:
 			return ARM64_RETAA;
+		case ENC_RETAASPPC_ONLY_MISCBRANCH:
+			return ARM64_RETAASPPC;
+		case ENC_RETAASPPCR_64M_BRANCH_REG:
+			return ARM64_RETAASPPCR;
 		case ENC_RETAB_64E_BRANCH_REG:
 			return ARM64_RETAB;
+		case ENC_RETABSPPC_ONLY_MISCBRANCH:
+			return ARM64_RETABSPPC;
+		case ENC_RETABSPPCR_64M_BRANCH_REG:
+			return ARM64_RETABSPPCR;
 		case ENC_REV_32_DP_1SRC:
 		case ENC_REV_64_DP_1SRC:
 		case ENC_REV_P_P_:
@@ -2524,13 +4001,17 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_REV64_REV_64_DP_1SRC:
 		case ENC_REV64_ASIMDMISC_R:
 			return ARM64_REV64;
-		case ENC_REVB_Z_Z_:
+		case ENC_REVB_Z_Z_M:
+		case ENC_REVB_Z_Z_Z:
 			return ARM64_REVB;
-		case ENC_REVD_Z_P_Z_:
+		case ENC_REVD_Z_P_Z_M:
+		case ENC_REVD_Z_P_Z_Z:
 			return ARM64_REVD;
-		case ENC_REVH_Z_Z_:
+		case ENC_REVH_Z_Z_M:
+		case ENC_REVH_Z_Z_Z:
 			return ARM64_REVH;
-		case ENC_REVW_Z_Z_:
+		case ENC_REVW_Z_Z_M:
+		case ENC_REVW_Z_Z_Z:
 			return ARM64_REVW;
 		case ENC_RMIF_ONLY_RMIF:
 			return ARM64_RMIF;
@@ -2542,6 +4023,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_RORV_32_DP_2SRC:
 		case ENC_RORV_64_DP_2SRC:
 			return ARM64_RORV;
+		case ENC_RPRFM_R_LDST_REGOFF:
+			return ARM64_RPRFM;
 		case ENC_RSHRN_ASIMDSHF_N:
 			return ARM64_RSHRN;
 		//case ENC_RSHRN_ASIMDSHF_N:
@@ -2628,6 +4111,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_SBFX_SBFM_32M_BITFIELD:
 		case ENC_SBFX_SBFM_64M_BITFIELD:
 			return ARM64_SBFX;
+		case ENC_SCLAMP_MZ_ZZ_2:
+		case ENC_SCLAMP_MZ_ZZ_4:
 		case ENC_SCLAMP_Z_ZZ_:
 			return ARM64_SCLAMP;
 		case ENC_SCVTF_ASISDSHF_C:
@@ -2637,10 +4122,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_SCVTF_ASIMDMISCFP16_R:
 		case ENC_SCVTF_ASIMDMISC_R:
 		case ENC_SCVTF_H32_FLOAT2FIX:
-		case ENC_SCVTF_S32_FLOAT2FIX:
-		case ENC_SCVTF_D32_FLOAT2FIX:
 		case ENC_SCVTF_H64_FLOAT2FIX:
+		case ENC_SCVTF_S32_FLOAT2FIX:
 		case ENC_SCVTF_S64_FLOAT2FIX:
+		case ENC_SCVTF_D32_FLOAT2FIX:
 		case ENC_SCVTF_D64_FLOAT2FIX:
 		case ENC_SCVTF_H32_FLOAT2INT:
 		case ENC_SCVTF_S32_FLOAT2INT:
@@ -2648,13 +4133,26 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_SCVTF_H64_FLOAT2INT:
 		case ENC_SCVTF_S64_FLOAT2INT:
 		case ENC_SCVTF_D64_FLOAT2INT:
+		case ENC_SCVTF_SISD_32H:
+		case ENC_SCVTF_SISD_32D:
+		case ENC_SCVTF_SISD_64H:
+		case ENC_SCVTF_SISD_64S:
+		case ENC_SCVTF_MZ_Z_2:
+		case ENC_SCVTF_MZ_Z_4:
 		case ENC_SCVTF_Z_P_Z_H2FP16:
+		case ENC_SCVTF_Z_P_Z_H2FP16Z:
 		case ENC_SCVTF_Z_P_Z_W2FP16:
+		case ENC_SCVTF_Z_P_Z_W2FP16Z:
 		case ENC_SCVTF_Z_P_Z_W2S:
+		case ENC_SCVTF_Z_P_Z_W2SZ:
 		case ENC_SCVTF_Z_P_Z_W2D:
+		case ENC_SCVTF_Z_P_Z_W2DZ:
 		case ENC_SCVTF_Z_P_Z_X2FP16:
+		case ENC_SCVTF_Z_P_Z_X2FP16Z:
 		case ENC_SCVTF_Z_P_Z_X2S:
+		case ENC_SCVTF_Z_P_Z_X2SZ:
 		case ENC_SCVTF_Z_P_Z_X2D:
+		case ENC_SCVTF_Z_P_Z_X2DZ:
 			return ARM64_SCVTF;
 		case ENC_SDIV_32_DP_2SRC:
 		case ENC_SDIV_64_DP_2SRC:
@@ -2664,19 +4162,85 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_SDIVR;
 		case ENC_SDOT_ASIMDELEM_D:
 		case ENC_SDOT_ASIMDSAME2_D:
+		case ENC_SDOT_Z32_ZZZ_:
+		case ENC_SDOT_Z32_ZZZI_:
 		case ENC_SDOT_Z_ZZZ_:
 		case ENC_SDOT_Z_ZZZI_S:
 		case ENC_SDOT_Z_ZZZI_D:
+		case ENC_SDOT_ZA32_ZZI_2XI:
+		case ENC_SDOT_ZA32_ZZI_4XI:
+		case ENC_SDOT_ZA32_ZZV_2X1:
+		case ENC_SDOT_ZA32_ZZV_4X1:
+		case ENC_SDOT_ZA32_ZZW_2X2:
+		case ENC_SDOT_ZA32_ZZW_4X4:
+		case ENC_SDOT_ZA_ZZI_S2XI:
+		case ENC_SDOT_ZA_ZZI_D2XI:
+		case ENC_SDOT_ZA_ZZI_S4XI:
+		case ENC_SDOT_ZA_ZZI_D4XI:
+		case ENC_SDOT_ZA_ZZV_2X1:
+		case ENC_SDOT_ZA_ZZV_4X1:
+		case ENC_SDOT_ZA_ZZW_2X2:
+		case ENC_SDOT_ZA_ZZW_4X4:
 			return ARM64_SDOT;
+		case ENC_SEL_MZ_P_ZZ_2:
+		case ENC_SEL_MZ_P_ZZ_4:
 		case ENC_SEL_P_P_PP_:
 		case ENC_SEL_Z_P_ZZ_:
 			return ARM64_SEL;
+		case ENC_SETE_SET_MEMCMS:
+			return ARM64_SETE;
+		case ENC_SETEN_SET_MEMCMS:
+			return ARM64_SETEN;
+		case ENC_SETET_SET_MEMCMS:
+			return ARM64_SETET;
+		case ENC_SETETN_SET_MEMCMS:
+			return ARM64_SETETN;
 		case ENC_SETF16_ONLY_SETF:
 			return ARM64_SETF16;
 		case ENC_SETF8_ONLY_SETF:
 			return ARM64_SETF8;
 		case ENC_SETFFR_F_:
 			return ARM64_SETFFR;
+		case ENC_SETGE_SET_MEMCMS:
+			return ARM64_SETGE;
+		case ENC_SETGEN_SET_MEMCMS:
+			return ARM64_SETGEN;
+		case ENC_SETGET_SET_MEMCMS:
+			return ARM64_SETGET;
+		case ENC_SETGETN_SET_MEMCMS:
+			return ARM64_SETGETN;
+		case ENC_SETGM_SET_MEMCMS:
+			return ARM64_SETGM;
+		case ENC_SETGMN_SET_MEMCMS:
+			return ARM64_SETGMN;
+		case ENC_SETGMT_SET_MEMCMS:
+			return ARM64_SETGMT;
+		case ENC_SETGMTN_SET_MEMCMS:
+			return ARM64_SETGMTN;
+		case ENC_SETGP_SET_MEMCMS:
+			return ARM64_SETGP;
+		case ENC_SETGPN_SET_MEMCMS:
+			return ARM64_SETGPN;
+		case ENC_SETGPT_SET_MEMCMS:
+			return ARM64_SETGPT;
+		case ENC_SETGPTN_SET_MEMCMS:
+			return ARM64_SETGPTN;
+		case ENC_SETM_SET_MEMCMS:
+			return ARM64_SETM;
+		case ENC_SETMN_SET_MEMCMS:
+			return ARM64_SETMN;
+		case ENC_SETMT_SET_MEMCMS:
+			return ARM64_SETMT;
+		case ENC_SETMTN_SET_MEMCMS:
+			return ARM64_SETMTN;
+		case ENC_SETP_SET_MEMCMS:
+			return ARM64_SETP;
+		case ENC_SETPN_SET_MEMCMS:
+			return ARM64_SETPN;
+		case ENC_SETPT_SET_MEMCMS:
+			return ARM64_SETPT;
+		case ENC_SETPTN_SET_MEMCMS:
+			return ARM64_SETPTN;
 		case ENC_SEV_HI_HINTS:
 			return ARM64_SEV;
 		case ENC_SEVL_HI_HINTS:
@@ -2759,29 +4323,57 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_SMADDL_64WA_DP_3SRC:
 			return ARM64_SMADDL;
 		case ENC_SMAX_ASIMDSAME_ONLY:
+		case ENC_SMAX_32_MINMAX_IMM:
+		case ENC_SMAX_64_MINMAX_IMM:
+		case ENC_SMAX_32_DP_2SRC:
+		case ENC_SMAX_64_DP_2SRC:
+		case ENC_SMAX_MZ_ZZV_2X1:
+		case ENC_SMAX_MZ_ZZV_4X1:
+		case ENC_SMAX_MZ_ZZW_2X2:
+		case ENC_SMAX_MZ_ZZW_4X4:
 		case ENC_SMAX_Z_P_ZZ_:
 		case ENC_SMAX_Z_ZI_:
 			return ARM64_SMAX;
 		case ENC_SMAXP_ASIMDSAME_ONLY:
 		case ENC_SMAXP_Z_P_ZZ_:
 			return ARM64_SMAXP;
+		case ENC_SMAXQV_Z_P_Z_:
+			return ARM64_SMAXQV;
 		case ENC_SMAXV_ASIMDALL_ONLY:
 		case ENC_SMAXV_R_P_Z_:
 			return ARM64_SMAXV;
 		case ENC_SMC_EX_EXCEPTION:
 			return ARM64_SMC;
 		case ENC_SMIN_ASIMDSAME_ONLY:
+		case ENC_SMIN_32_MINMAX_IMM:
+		case ENC_SMIN_64_MINMAX_IMM:
+		case ENC_SMIN_32_DP_2SRC:
+		case ENC_SMIN_64_DP_2SRC:
+		case ENC_SMIN_MZ_ZZV_2X1:
+		case ENC_SMIN_MZ_ZZV_4X1:
+		case ENC_SMIN_MZ_ZZW_2X2:
+		case ENC_SMIN_MZ_ZZW_4X4:
 		case ENC_SMIN_Z_P_ZZ_:
 		case ENC_SMIN_Z_ZI_:
 			return ARM64_SMIN;
 		case ENC_SMINP_ASIMDSAME_ONLY:
 		case ENC_SMINP_Z_P_ZZ_:
 			return ARM64_SMINP;
+		case ENC_SMINQV_Z_P_Z_:
+			return ARM64_SMINQV;
 		case ENC_SMINV_ASIMDALL_ONLY:
 		case ENC_SMINV_R_P_Z_:
 			return ARM64_SMINV;
 		case ENC_SMLAL_ASIMDELEM_L:
 		case ENC_SMLAL_ASIMDDIFF_L:
+		case ENC_SMLAL_ZA_ZZI_1:
+		case ENC_SMLAL_ZA_ZZI_2XI:
+		case ENC_SMLAL_ZA_ZZI_4XI:
+		case ENC_SMLAL_ZA_ZZV_1:
+		case ENC_SMLAL_ZA_ZZV_2X1:
+		case ENC_SMLAL_ZA_ZZV_4X1:
+		case ENC_SMLAL_ZA_ZZW_2X2:
+		case ENC_SMLAL_ZA_ZZW_4X4:
 			return ARM64_SMLAL;
 		//case ENC_SMLAL_ASIMDELEM_L:
 		//case ENC_SMLAL_ASIMDDIFF_L:
@@ -2790,12 +4382,32 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_SMLALB_Z_ZZZI_S:
 		case ENC_SMLALB_Z_ZZZI_D:
 			return ARM64_SMLALB;
+		case ENC_SMLALL_ZA_ZZI_S:
+		case ENC_SMLALL_ZA_ZZI_D:
+		case ENC_SMLALL_ZA_ZZI_S2XI:
+		case ENC_SMLALL_ZA_ZZI_D2XI:
+		case ENC_SMLALL_ZA_ZZI_S4XI:
+		case ENC_SMLALL_ZA_ZZI_D4XI:
+		case ENC_SMLALL_ZA_ZZV_1:
+		case ENC_SMLALL_ZA_ZZV_2X1:
+		case ENC_SMLALL_ZA_ZZV_4X1:
+		case ENC_SMLALL_ZA_ZZW_2X2:
+		case ENC_SMLALL_ZA_ZZW_4X4:
+			return ARM64_SMLALL;
 		case ENC_SMLALT_Z_ZZZ_:
 		case ENC_SMLALT_Z_ZZZI_S:
 		case ENC_SMLALT_Z_ZZZI_D:
 			return ARM64_SMLALT;
 		case ENC_SMLSL_ASIMDELEM_L:
 		case ENC_SMLSL_ASIMDDIFF_L:
+		case ENC_SMLSL_ZA_ZZI_1:
+		case ENC_SMLSL_ZA_ZZI_2XI:
+		case ENC_SMLSL_ZA_ZZI_4XI:
+		case ENC_SMLSL_ZA_ZZV_1:
+		case ENC_SMLSL_ZA_ZZV_2X1:
+		case ENC_SMLSL_ZA_ZZV_4X1:
+		case ENC_SMLSL_ZA_ZZW_2X2:
+		case ENC_SMLSL_ZA_ZZW_4X4:
 			return ARM64_SMLSL;
 		//case ENC_SMLSL_ASIMDELEM_L:
 		//case ENC_SMLSL_ASIMDDIFF_L:
@@ -2804,6 +4416,18 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_SMLSLB_Z_ZZZI_S:
 		case ENC_SMLSLB_Z_ZZZI_D:
 			return ARM64_SMLSLB;
+		case ENC_SMLSLL_ZA_ZZI_S:
+		case ENC_SMLSLL_ZA_ZZI_D:
+		case ENC_SMLSLL_ZA_ZZI_S2XI:
+		case ENC_SMLSLL_ZA_ZZI_D2XI:
+		case ENC_SMLSLL_ZA_ZZI_S4XI:
+		case ENC_SMLSLL_ZA_ZZI_D4XI:
+		case ENC_SMLSLL_ZA_ZZV_1:
+		case ENC_SMLSLL_ZA_ZZV_2X1:
+		case ENC_SMLSLL_ZA_ZZV_4X1:
+		case ENC_SMLSLL_ZA_ZZW_2X2:
+		case ENC_SMLSLL_ZA_ZZW_4X4:
+			return ARM64_SMLSLL;
 		case ENC_SMLSLT_Z_ZZZ_:
 		case ENC_SMLSLT_Z_ZZZI_S:
 		case ENC_SMLSLT_Z_ZZZI_D:
@@ -2813,9 +4437,37 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_SMMLA;
 		case ENC_SMNEGL_SMSUBL_64WA_DP_3SRC:
 			return ARM64_SMNEGL;
+		case ENC_SMOP4A_ZA32_ZZ_H1X2:
+		case ENC_SMOP4A_ZA32_ZZ_H1X1:
+		case ENC_SMOP4A_ZA32_ZZ_H2X1:
+		case ENC_SMOP4A_ZA32_ZZ_H2X2:
+		case ENC_SMOP4A_ZA_ZZ_B1X2:
+		case ENC_SMOP4A_ZA_ZZ_B1X1:
+		case ENC_SMOP4A_ZA_ZZ_B2X1:
+		case ENC_SMOP4A_ZA_ZZ_B2X2:
+		case ENC_SMOP4A_ZA_ZZ_H1X2:
+		case ENC_SMOP4A_ZA_ZZ_H1X1:
+		case ENC_SMOP4A_ZA_ZZ_H2X1:
+		case ENC_SMOP4A_ZA_ZZ_H2X2:
+			return ARM64_SMOP4A;
+		case ENC_SMOP4S_ZA32_ZZ_H1X2:
+		case ENC_SMOP4S_ZA32_ZZ_H1X1:
+		case ENC_SMOP4S_ZA32_ZZ_H2X1:
+		case ENC_SMOP4S_ZA32_ZZ_H2X2:
+		case ENC_SMOP4S_ZA_ZZ_B1X2:
+		case ENC_SMOP4S_ZA_ZZ_B1X1:
+		case ENC_SMOP4S_ZA_ZZ_B2X1:
+		case ENC_SMOP4S_ZA_ZZ_B2X2:
+		case ENC_SMOP4S_ZA_ZZ_H1X2:
+		case ENC_SMOP4S_ZA_ZZ_H1X1:
+		case ENC_SMOP4S_ZA_ZZ_H2X1:
+		case ENC_SMOP4S_ZA_ZZ_H2X2:
+			return ARM64_SMOP4S;
+		case ENC_SMOPA_ZA32_PP_ZZ_16:
 		case ENC_SMOPA_ZA_PP_ZZ_32:
 		case ENC_SMOPA_ZA_PP_ZZ_64:
 			return ARM64_SMOPA;
+		case ENC_SMOPS_ZA32_PP_ZZ_16:
 		case ENC_SMOPS_ZA_PP_ZZ_32:
 		case ENC_SMOPS_ZA_PP_ZZ_64:
 			return ARM64_SMOPS;
@@ -2852,7 +4504,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_SPLICE;
 		case ENC_SQABS_ASISDMISC_R:
 		case ENC_SQABS_ASIMDMISC_R:
-		case ENC_SQABS_Z_P_Z_:
+		case ENC_SQABS_Z_P_Z_M:
+		case ENC_SQABS_Z_P_Z_Z:
 			return ARM64_SQABS;
 		case ENC_SQADD_ASISDSAME_ONLY:
 		case ENC_SQADD_ASIMDSAME_ONLY:
@@ -2862,6 +4515,18 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_SQADD;
 		case ENC_SQCADD_Z_ZZ_:
 			return ARM64_SQCADD;
+		case ENC_SQCVT_Z_MZ2_:
+		case ENC_SQCVT_Z_MZ4_:
+			return ARM64_SQCVT;
+		case ENC_SQCVTN_Z_MZ2_:
+		case ENC_SQCVTN_Z_MZ4_:
+			return ARM64_SQCVTN;
+		case ENC_SQCVTU_Z_MZ2_:
+		case ENC_SQCVTU_Z_MZ4_:
+			return ARM64_SQCVTU;
+		case ENC_SQCVTUN_Z_MZ2_:
+		case ENC_SQCVTUN_Z_MZ4_:
+			return ARM64_SQCVTUN;
 		case ENC_SQDECB_R_RS_SX:
 		case ENC_SQDECB_R_RS_X:
 			return ARM64_SQDECB;
@@ -2921,13 +4586,17 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_SQDMULH_ASIMDELEM_R:
 		case ENC_SQDMULH_ASISDSAME_ONLY:
 		case ENC_SQDMULH_ASIMDSAME_ONLY:
+		case ENC_SQDMULH_MZ_ZZV_2X1:
+		case ENC_SQDMULH_MZ_ZZV_4X1:
+		case ENC_SQDMULH_MZ_ZZW_2X2:
+		case ENC_SQDMULH_MZ_ZZW_4X4:
 		case ENC_SQDMULH_Z_ZZ_:
 		case ENC_SQDMULH_Z_ZZI_H:
 		case ENC_SQDMULH_Z_ZZI_S:
 		case ENC_SQDMULH_Z_ZZI_D:
 			return ARM64_SQDMULH;
-		case ENC_SQDMULL_ASISDELEM_L:
 		case ENC_SQDMULL_ASIMDELEM_L:
+		case ENC_SQDMULL_ASISDELEM_L:
 		case ENC_SQDMULL_ASISDDIFF_ONLY:
 		case ENC_SQDMULL_ASIMDDIFF_L:
 			return ARM64_SQDMULL;
@@ -2963,7 +4632,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_SQINCW;
 		case ENC_SQNEG_ASISDMISC_R:
 		case ENC_SQNEG_ASIMDMISC_R:
-		case ENC_SQNEG_Z_P_Z_:
+		case ENC_SQNEG_Z_P_Z_M:
+		case ENC_SQNEG_Z_P_Z_Z:
 			return ARM64_SQNEG;
 		case ENC_SQRDCMLAH_Z_ZZZ_:
 		case ENC_SQRDCMLAH_Z_ZZZI_H:
@@ -3002,8 +4672,13 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_SQRSHL;
 		case ENC_SQRSHLR_Z_P_ZZ_:
 			return ARM64_SQRSHLR;
+		case ENC_SQRSHR_Z_MZ2_:
+		case ENC_SQRSHR_Z_MZ4_:
+			return ARM64_SQRSHR;
 		case ENC_SQRSHRN_ASISDSHF_N:
 		case ENC_SQRSHRN_ASIMDSHF_N:
+		case ENC_SQRSHRN_Z_MZ2_:
+		case ENC_SQRSHRN_Z_MZ4_:
 			return ARM64_SQRSHRN;
 		//case ENC_SQRSHRN_ASIMDSHF_N:
 		//	return ARM64_SQRSHRN2;
@@ -3011,8 +4686,13 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_SQRSHRNB;
 		case ENC_SQRSHRNT_Z_ZI_:
 			return ARM64_SQRSHRNT;
+		case ENC_SQRSHRU_Z_MZ2_:
+		case ENC_SQRSHRU_Z_MZ4_:
+			return ARM64_SQRSHRU;
 		case ENC_SQRSHRUN_ASISDSHF_N:
 		case ENC_SQRSHRUN_ASIMDSHF_N:
+		case ENC_SQRSHRUN_Z_MZ2_:
+		case ENC_SQRSHRUN_Z_MZ4_:
 			return ARM64_SQRSHRUN;
 		//case ENC_SQRSHRUN_ASIMDSHF_N:
 		//	return ARM64_SQRSHRUN2;
@@ -3086,6 +4766,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_SRI;
 		case ENC_SRSHL_ASISDSAME_ONLY:
 		case ENC_SRSHL_ASIMDSAME_ONLY:
+		case ENC_SRSHL_MZ_ZZV_2X1:
+		case ENC_SRSHL_MZ_ZZV_4X1:
+		case ENC_SRSHL_MZ_ZZW_2X2:
+		case ENC_SRSHL_MZ_ZZW_4X4:
 		case ENC_SRSHL_Z_P_ZZ_:
 			return ARM64_SRSHL;
 		case ENC_SRSHLR_Z_P_ZZ_:
@@ -3163,6 +4847,14 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_ST1_ASISDLSOP_D1_I1D:
 		case ENC_ST1_ASISDLSOP_DX1_R1D:
 			return ARM64_ST1;
+		case ENC_ST1B_MZ_P_BI_2:
+		case ENC_ST1B_MZ_P_BI_4:
+		case ENC_ST1B_MZ_P_BR_2:
+		case ENC_ST1B_MZ_P_BR_4:
+		case ENC_ST1B_MZX_P_BI_2X8:
+		case ENC_ST1B_MZX_P_BI_4X4:
+		case ENC_ST1B_MZX_P_BR_2X8:
+		case ENC_ST1B_MZX_P_BR_4X4:
 		case ENC_ST1B_Z_P_AI_S:
 		case ENC_ST1B_Z_P_AI_D:
 		case ENC_ST1B_Z_P_BI_:
@@ -3172,15 +4864,33 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_ST1B_Z_P_BZ_D_64_UNSCALED:
 		case ENC_ST1B_ZA_P_RRR_:
 			return ARM64_ST1B;
+		case ENC_ST1D_MZ_P_BI_2:
+		case ENC_ST1D_MZ_P_BI_4:
+		case ENC_ST1D_MZ_P_BR_2:
+		case ENC_ST1D_MZ_P_BR_4:
+		case ENC_ST1D_MZX_P_BI_2X8:
+		case ENC_ST1D_MZX_P_BI_4X4:
+		case ENC_ST1D_MZX_P_BR_2X8:
+		case ENC_ST1D_MZX_P_BR_4X4:
 		case ENC_ST1D_Z_P_AI_D:
 		case ENC_ST1D_Z_P_BI_:
+		case ENC_ST1D_Z_P_BI_U128:
 		case ENC_ST1D_Z_P_BR_:
+		case ENC_ST1D_Z_P_BR_U128:
 		case ENC_ST1D_Z_P_BZ_D_X32_SCALED:
 		case ENC_ST1D_Z_P_BZ_D_X32_UNSCALED:
 		case ENC_ST1D_Z_P_BZ_D_64_SCALED:
 		case ENC_ST1D_Z_P_BZ_D_64_UNSCALED:
 		case ENC_ST1D_ZA_P_RRR_:
 			return ARM64_ST1D;
+		case ENC_ST1H_MZ_P_BI_2:
+		case ENC_ST1H_MZ_P_BI_4:
+		case ENC_ST1H_MZ_P_BR_2:
+		case ENC_ST1H_MZ_P_BR_4:
+		case ENC_ST1H_MZX_P_BI_2X8:
+		case ENC_ST1H_MZX_P_BI_4X4:
+		case ENC_ST1H_MZX_P_BR_2X8:
+		case ENC_ST1H_MZX_P_BR_4X4:
 		case ENC_ST1H_Z_P_AI_S:
 		case ENC_ST1H_Z_P_AI_D:
 		case ENC_ST1H_Z_P_BI_:
@@ -3193,12 +4903,23 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_ST1H_Z_P_BZ_D_64_UNSCALED:
 		case ENC_ST1H_ZA_P_RRR_:
 			return ARM64_ST1H;
+		case ENC_ST1Q_Z_P_AR_D_64_UNSCALED:
 		case ENC_ST1Q_ZA_P_RRR_:
 			return ARM64_ST1Q;
+		case ENC_ST1W_MZ_P_BI_2:
+		case ENC_ST1W_MZ_P_BI_4:
+		case ENC_ST1W_MZ_P_BR_2:
+		case ENC_ST1W_MZ_P_BR_4:
+		case ENC_ST1W_MZX_P_BI_2X8:
+		case ENC_ST1W_MZX_P_BI_4X4:
+		case ENC_ST1W_MZX_P_BR_2X8:
+		case ENC_ST1W_MZX_P_BR_4X4:
 		case ENC_ST1W_Z_P_AI_S:
 		case ENC_ST1W_Z_P_AI_D:
 		case ENC_ST1W_Z_P_BI_:
+		case ENC_ST1W_Z_P_BI_U128:
 		case ENC_ST1W_Z_P_BR_:
+		case ENC_ST1W_Z_P_BR_U128:
 		case ENC_ST1W_Z_P_BZ_S_X32_SCALED:
 		case ENC_ST1W_Z_P_BZ_D_X32_SCALED:
 		case ENC_ST1W_Z_P_BZ_D_X32_UNSCALED:
@@ -3236,6 +4957,9 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_ST2H_Z_P_BI_CONTIGUOUS:
 		case ENC_ST2H_Z_P_BR_CONTIGUOUS:
 			return ARM64_ST2H;
+		case ENC_ST2Q_Z_P_BI_CONTIGUOUS:
+		case ENC_ST2Q_Z_P_BR_CONTIGUOUS:
+			return ARM64_ST2Q;
 		case ENC_ST2W_Z_P_BI_CONTIGUOUS:
 		case ENC_ST2W_Z_P_BR_CONTIGUOUS:
 			return ARM64_ST2W;
@@ -3264,6 +4988,9 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_ST3H_Z_P_BI_CONTIGUOUS:
 		case ENC_ST3H_Z_P_BR_CONTIGUOUS:
 			return ARM64_ST3H;
+		case ENC_ST3Q_Z_P_BI_CONTIGUOUS:
+		case ENC_ST3Q_Z_P_BR_CONTIGUOUS:
+			return ARM64_ST3Q;
 		case ENC_ST3W_Z_P_BI_CONTIGUOUS:
 		case ENC_ST3W_Z_P_BR_CONTIGUOUS:
 			return ARM64_ST3W;
@@ -3292,6 +5019,9 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_ST4H_Z_P_BI_CONTIGUOUS:
 		case ENC_ST4H_Z_P_BR_CONTIGUOUS:
 			return ARM64_ST4H;
+		case ENC_ST4Q_Z_P_BI_CONTIGUOUS:
+		case ENC_ST4Q_Z_P_BR_CONTIGUOUS:
+			return ARM64_ST4Q;
 		case ENC_ST4W_Z_P_BI_CONTIGUOUS:
 		case ENC_ST4W_Z_P_BR_CONTIGUOUS:
 			return ARM64_ST4W;
@@ -3315,6 +5045,26 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_STADDLB;
 		case ENC_STADDLH_LDADDLH_32_MEMOP:
 			return ARM64_STADDLH;
+		case ENC_STBFADD_16:
+			return ARM64_STBFADD;
+		case ENC_STBFADDL_16:
+			return ARM64_STBFADDL;
+		case ENC_STBFMAX_16:
+			return ARM64_STBFMAX;
+		case ENC_STBFMAXL_16:
+			return ARM64_STBFMAXL;
+		case ENC_STBFMAXNM_16:
+			return ARM64_STBFMAXNM;
+		case ENC_STBFMAXNML_16:
+			return ARM64_STBFMAXNML;
+		case ENC_STBFMIN_16:
+			return ARM64_STBFMIN;
+		case ENC_STBFMINL_16:
+			return ARM64_STBFMINL;
+		case ENC_STBFMINNM_16:
+			return ARM64_STBFMINNM;
+		case ENC_STBFMINNML_16:
+			return ARM64_STBFMINNML;
 		case ENC_STCLR_LDCLR_32_MEMOP:
 		case ENC_STCLR_LDCLR_64_MEMOP:
 			return ARM64_STCLR;
@@ -3343,6 +5093,46 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_STEORLB;
 		case ENC_STEORLH_LDEORLH_32_MEMOP:
 			return ARM64_STEORLH;
+		case ENC_STFADD_16:
+		case ENC_STFADD_32:
+		case ENC_STFADD_64:
+			return ARM64_STFADD;
+		case ENC_STFADDL_16:
+		case ENC_STFADDL_32:
+		case ENC_STFADDL_64:
+			return ARM64_STFADDL;
+		case ENC_STFMAX_16:
+		case ENC_STFMAX_32:
+		case ENC_STFMAX_64:
+			return ARM64_STFMAX;
+		case ENC_STFMAXL_16:
+		case ENC_STFMAXL_32:
+		case ENC_STFMAXL_64:
+			return ARM64_STFMAXL;
+		case ENC_STFMAXNM_16:
+		case ENC_STFMAXNM_32:
+		case ENC_STFMAXNM_64:
+			return ARM64_STFMAXNM;
+		case ENC_STFMAXNML_16:
+		case ENC_STFMAXNML_32:
+		case ENC_STFMAXNML_64:
+			return ARM64_STFMAXNML;
+		case ENC_STFMIN_16:
+		case ENC_STFMIN_32:
+		case ENC_STFMIN_64:
+			return ARM64_STFMIN;
+		case ENC_STFMINL_16:
+		case ENC_STFMINL_32:
+		case ENC_STFMINL_64:
+			return ARM64_STFMINL;
+		case ENC_STFMINNM_16:
+		case ENC_STFMINNM_32:
+		case ENC_STFMINNM_64:
+			return ARM64_STFMINNM;
+		case ENC_STFMINNML_16:
+		case ENC_STFMINNML_32:
+		case ENC_STFMINNML_64:
+			return ARM64_STFMINNML;
 		case ENC_STG_64SPOST_LDSTTAGS:
 		case ENC_STG_64SPRE_LDSTTAGS:
 		case ENC_STG_64SOFFSET_LDSTTAGS:
@@ -3353,6 +5143,13 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_STGP_64_LDSTPAIR_PRE:
 		case ENC_STGP_64_LDSTPAIR_OFF:
 			return ARM64_STGP;
+		case ENC_STILP_32SE_LDIAPPSTILP:
+		case ENC_STILP_32S_LDIAPPSTILP:
+		case ENC_STILP_64SS_LDIAPPSTILP:
+		case ENC_STILP_64S_LDIAPPSTILP:
+			return ARM64_STILP;
+		case ENC_STL1_ASISDLSO_D1:
+			return ARM64_STL1;
 		case ENC_STLLR_SL32_LDSTORD:
 		case ENC_STLLR_SL64_LDSTORD:
 			return ARM64_STLLR;
@@ -3362,11 +5159,21 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_STLLRH;
 		case ENC_STLR_SL32_LDSTORD:
 		case ENC_STLR_SL64_LDSTORD:
+		case ENC_STLR_32S_LDAPSTL_WRITEBACK:
+		case ENC_STLR_64S_LDAPSTL_WRITEBACK:
 			return ARM64_STLR;
 		case ENC_STLRB_SL32_LDSTORD:
 			return ARM64_STLRB;
 		case ENC_STLRH_SL32_LDSTORD:
 			return ARM64_STLRH;
+		case ENC_STLTXR_SR32_LDSTEXCLR_UNPRIV:
+		case ENC_STLTXR_SR64_LDSTEXCLR_UNPRIV:
+			return ARM64_STLTXR;
+		case ENC_STLUR_B_LDAPSTL_SIMD:
+		case ENC_STLUR_H_LDAPSTL_SIMD:
+		case ENC_STLUR_S_LDAPSTL_SIMD:
+		case ENC_STLUR_D_LDAPSTL_SIMD:
+		case ENC_STLUR_Q_LDAPSTL_SIMD:
 		case ENC_STLUR_32_LDAPSTL_UNSCALED:
 		case ENC_STLUR_64_LDAPSTL_UNSCALED:
 			return ARM64_STLUR;
@@ -3384,26 +5191,61 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_STLXRB;
 		case ENC_STLXRH_SR32_LDSTEXCLR:
 			return ARM64_STLXRH;
+		case ENC_STMOPA_ZA32_ZZZI_H2X1:
+		case ENC_STMOPA_ZA_ZZZI_B2X1:
+			return ARM64_STMOPA;
 		case ENC_STNP_S_LDSTNAPAIR_OFFS:
 		case ENC_STNP_D_LDSTNAPAIR_OFFS:
 		case ENC_STNP_Q_LDSTNAPAIR_OFFS:
 		case ENC_STNP_32_LDSTNAPAIR_OFFS:
 		case ENC_STNP_64_LDSTNAPAIR_OFFS:
 			return ARM64_STNP;
+		case ENC_STNT1B_MZ_P_BI_2:
+		case ENC_STNT1B_MZ_P_BI_4:
+		case ENC_STNT1B_MZ_P_BR_2:
+		case ENC_STNT1B_MZ_P_BR_4:
+		case ENC_STNT1B_MZX_P_BI_2X8:
+		case ENC_STNT1B_MZX_P_BI_4X4:
+		case ENC_STNT1B_MZX_P_BR_2X8:
+		case ENC_STNT1B_MZX_P_BR_4X4:
 		case ENC_STNT1B_Z_P_AR_S_X32_UNSCALED:
 		case ENC_STNT1B_Z_P_AR_D_64_UNSCALED:
 		case ENC_STNT1B_Z_P_BI_CONTIGUOUS:
 		case ENC_STNT1B_Z_P_BR_CONTIGUOUS:
 			return ARM64_STNT1B;
+		case ENC_STNT1D_MZ_P_BI_2:
+		case ENC_STNT1D_MZ_P_BI_4:
+		case ENC_STNT1D_MZ_P_BR_2:
+		case ENC_STNT1D_MZ_P_BR_4:
+		case ENC_STNT1D_MZX_P_BI_2X8:
+		case ENC_STNT1D_MZX_P_BI_4X4:
+		case ENC_STNT1D_MZX_P_BR_2X8:
+		case ENC_STNT1D_MZX_P_BR_4X4:
 		case ENC_STNT1D_Z_P_AR_D_64_UNSCALED:
 		case ENC_STNT1D_Z_P_BI_CONTIGUOUS:
 		case ENC_STNT1D_Z_P_BR_CONTIGUOUS:
 			return ARM64_STNT1D;
+		case ENC_STNT1H_MZ_P_BI_2:
+		case ENC_STNT1H_MZ_P_BI_4:
+		case ENC_STNT1H_MZ_P_BR_2:
+		case ENC_STNT1H_MZ_P_BR_4:
+		case ENC_STNT1H_MZX_P_BI_2X8:
+		case ENC_STNT1H_MZX_P_BI_4X4:
+		case ENC_STNT1H_MZX_P_BR_2X8:
+		case ENC_STNT1H_MZX_P_BR_4X4:
 		case ENC_STNT1H_Z_P_AR_S_X32_UNSCALED:
 		case ENC_STNT1H_Z_P_AR_D_64_UNSCALED:
 		case ENC_STNT1H_Z_P_BI_CONTIGUOUS:
 		case ENC_STNT1H_Z_P_BR_CONTIGUOUS:
 			return ARM64_STNT1H;
+		case ENC_STNT1W_MZ_P_BI_2:
+		case ENC_STNT1W_MZ_P_BI_4:
+		case ENC_STNT1W_MZ_P_BR_2:
+		case ENC_STNT1W_MZ_P_BR_4:
+		case ENC_STNT1W_MZX_P_BI_2X8:
+		case ENC_STNT1W_MZX_P_BI_4X4:
+		case ENC_STNT1W_MZX_P_BR_2X8:
+		case ENC_STNT1W_MZX_P_BR_4X4:
 		case ENC_STNT1W_Z_P_AR_S_X32_UNSCALED:
 		case ENC_STNT1W_Z_P_AR_D_64_UNSCALED:
 		case ENC_STNT1W_Z_P_BI_CONTIGUOUS:
@@ -3457,6 +5299,7 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_STR_P_BI_:
 		case ENC_STR_Z_BI_:
 		case ENC_STR_ZA_RI_:
+		case ENC_STR_ZT_BR_:
 			return ARM64_STR;
 		case ENC_STRB_32_LDST_IMMPOST:
 		case ENC_STRB_32_LDST_IMMPRE:
@@ -3483,6 +5326,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_STSETLB;
 		case ENC_STSETLH_LDSETLH_32_MEMOP:
 			return ARM64_STSETLH;
+		case ENC_STSHH_HI_HINTS:
+			return ARM64_STSHH;
 		case ENC_STSMAX_LDSMAX_32_MEMOP:
 		case ENC_STSMAX_LDSMAX_64_MEMOP:
 			return ARM64_STSMAX;
@@ -3511,6 +5356,28 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_STSMINLB;
 		case ENC_STSMINLH_LDSMINLH_32_MEMOP:
 			return ARM64_STSMINLH;
+		case ENC_STTADD_LDTADD_32_MEMOP_UNPRIV:
+		case ENC_STTADD_LDTADD_64_MEMOP_UNPRIV:
+			return ARM64_STTADD;
+		case ENC_STTADDL_LDTADDL_32_MEMOP_UNPRIV:
+		case ENC_STTADDL_LDTADDL_64_MEMOP_UNPRIV:
+			return ARM64_STTADDL;
+		case ENC_STTCLR_LDTCLR_32_MEMOP_UNPRIV:
+		case ENC_STTCLR_LDTCLR_64_MEMOP_UNPRIV:
+			return ARM64_STTCLR;
+		case ENC_STTCLRL_LDTCLRL_32_MEMOP_UNPRIV:
+		case ENC_STTCLRL_LDTCLRL_64_MEMOP_UNPRIV:
+			return ARM64_STTCLRL;
+		case ENC_STTNP_Q_LDSTNAPAIR_OFFS:
+		case ENC_STTNP_64_LDSTNAPAIR_OFFS:
+			return ARM64_STTNP;
+		case ENC_STTP_Q_LDSTPAIR_POST:
+		case ENC_STTP_Q_LDSTPAIR_PRE:
+		case ENC_STTP_Q_LDSTPAIR_OFF:
+		case ENC_STTP_64_LDSTPAIR_POST:
+		case ENC_STTP_64_LDSTPAIR_PRE:
+		case ENC_STTP_64_LDSTPAIR_OFF:
+			return ARM64_STTP;
 		case ENC_STTR_32_LDST_UNPRIV:
 		case ENC_STTR_64_LDST_UNPRIV:
 			return ARM64_STTR;
@@ -3518,6 +5385,15 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_STTRB;
 		case ENC_STTRH_32_LDST_UNPRIV:
 			return ARM64_STTRH;
+		case ENC_STTSET_LDTSET_32_MEMOP_UNPRIV:
+		case ENC_STTSET_LDTSET_64_MEMOP_UNPRIV:
+			return ARM64_STTSET;
+		case ENC_STTSETL_LDTSETL_32_MEMOP_UNPRIV:
+		case ENC_STTSETL_LDTSETL_64_MEMOP_UNPRIV:
+			return ARM64_STTSETL;
+		case ENC_STTXR_SR32_LDSTEXCLR_UNPRIV:
+		case ENC_STTXR_SR64_LDSTEXCLR_UNPRIV:
+			return ARM64_STTXR;
 		case ENC_STUMAX_LDUMAX_32_MEMOP:
 		case ENC_STUMAX_LDUMAX_64_MEMOP:
 			return ARM64_STUMAX;
@@ -3589,6 +5465,12 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_SUB_Z_P_ZZ_:
 		case ENC_SUB_Z_ZI_:
 		case ENC_SUB_Z_ZZ_:
+		case ENC_SUB_ZA_ZW_2X2:
+		case ENC_SUB_ZA_ZW_4X4:
+		case ENC_SUB_ZA_ZZV_2X1:
+		case ENC_SUB_ZA_ZZV_4X1:
+		case ENC_SUB_ZA_ZZW_2X2:
+		case ENC_SUB_ZA_ZZW_4X4:
 			return ARM64_SUB;
 		case ENC_SUBG_64_ADDSUB_IMMTAGS:
 			return ARM64_SUBG;
@@ -3604,6 +5486,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_SUBP;
 		case ENC_SUBPS_64S_DP_2SRC:
 			return ARM64_SUBPS;
+		case ENC_SUBPT_64_ADDSUB_PT:
+		case ENC_SUBPT_Z_P_ZZ_:
+		case ENC_SUBPT_Z_ZZ_:
+			return ARM64_SUBPT;
 		case ENC_SUBR_Z_P_ZZ_:
 		case ENC_SUBR_Z_ZI_:
 			return ARM64_SUBR;
@@ -3616,13 +5502,44 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_SUBS;
 		case ENC_SUDOT_ASIMDELEM_D:
 		case ENC_SUDOT_Z_ZZZI_S:
+		case ENC_SUDOT_ZA_ZZI_S2XI:
+		case ENC_SUDOT_ZA_ZZI_S4XI:
+		case ENC_SUDOT_ZA_ZZV_S2X1:
+		case ENC_SUDOT_ZA_ZZV_S4X1:
 			return ARM64_SUDOT;
+		case ENC_SUMLALL_ZA_ZZI_S:
+		case ENC_SUMLALL_ZA_ZZI_S2XI:
+		case ENC_SUMLALL_ZA_ZZI_S4XI:
+		case ENC_SUMLALL_ZA_ZZV_S2X1:
+		case ENC_SUMLALL_ZA_ZZV_S4X1:
+			return ARM64_SUMLALL;
+		case ENC_SUMOP4A_ZA_ZZ_B1X2:
+		case ENC_SUMOP4A_ZA_ZZ_B1X1:
+		case ENC_SUMOP4A_ZA_ZZ_B2X1:
+		case ENC_SUMOP4A_ZA_ZZ_B2X2:
+		case ENC_SUMOP4A_ZA_ZZ_H1X2:
+		case ENC_SUMOP4A_ZA_ZZ_H1X1:
+		case ENC_SUMOP4A_ZA_ZZ_H2X1:
+		case ENC_SUMOP4A_ZA_ZZ_H2X2:
+			return ARM64_SUMOP4A;
+		case ENC_SUMOP4S_ZA_ZZ_B1X2:
+		case ENC_SUMOP4S_ZA_ZZ_B1X1:
+		case ENC_SUMOP4S_ZA_ZZ_B2X1:
+		case ENC_SUMOP4S_ZA_ZZ_B2X2:
+		case ENC_SUMOP4S_ZA_ZZ_H1X2:
+		case ENC_SUMOP4S_ZA_ZZ_H1X1:
+		case ENC_SUMOP4S_ZA_ZZ_H2X1:
+		case ENC_SUMOP4S_ZA_ZZ_H2X2:
+			return ARM64_SUMOP4S;
 		case ENC_SUMOPA_ZA_PP_ZZ_32:
 		case ENC_SUMOPA_ZA_PP_ZZ_64:
 			return ARM64_SUMOPA;
 		case ENC_SUMOPS_ZA_PP_ZZ_32:
 		case ENC_SUMOPS_ZA_PP_ZZ_64:
 			return ARM64_SUMOPS;
+		case ENC_SUNPK_MZ_Z_2:
+		case ENC_SUNPK_MZ_Z_4:
+			return ARM64_SUNPK;
 		case ENC_SUNPKHI_Z_Z_:
 			return ARM64_SUNPKHI;
 		case ENC_SUNPKLO_Z_Z_:
@@ -3631,8 +5548,16 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_SUQADD_ASIMDMISC_R:
 		case ENC_SUQADD_Z_P_ZZ_:
 			return ARM64_SUQADD;
+		case ENC_SUTMOPA_ZA_ZZZI_B2X1:
+			return ARM64_SUTMOPA;
+		case ENC_SUVDOT_ZA_ZZI_S4XI:
+			return ARM64_SUVDOT;
 		case ENC_SVC_EX_EXCEPTION:
 			return ARM64_SVC;
+		case ENC_SVDOT_ZA32_ZZI_2XI:
+		case ENC_SVDOT_ZA_ZZI_S4XI:
+		case ENC_SVDOT_ZA_ZZI_D4XI:
+			return ARM64_SVDOT;
 		case ENC_SWP_32_MEMOP:
 		case ENC_SWP_64_MEMOP:
 			return ARM64_SWP;
@@ -3661,40 +5586,69 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_SWPLB;
 		case ENC_SWPLH_32_MEMOP:
 			return ARM64_SWPLH;
+		case ENC_SWPP_128_MEMOP_128:
+			return ARM64_SWPP;
+		case ENC_SWPPA_128_MEMOP_128:
+			return ARM64_SWPPA;
+		case ENC_SWPPAL_128_MEMOP_128:
+			return ARM64_SWPPAL;
+		case ENC_SWPPL_128_MEMOP_128:
+			return ARM64_SWPPL;
+		case ENC_SWPT_32_MEMOP_UNPRIV:
+		case ENC_SWPT_64_MEMOP_UNPRIV:
+			return ARM64_SWPT;
+		case ENC_SWPTA_32_MEMOP_UNPRIV:
+		case ENC_SWPTA_64_MEMOP_UNPRIV:
+			return ARM64_SWPTA;
+		case ENC_SWPTAL_32_MEMOP_UNPRIV:
+		case ENC_SWPTAL_64_MEMOP_UNPRIV:
+			return ARM64_SWPTAL;
+		case ENC_SWPTL_32_MEMOP_UNPRIV:
+		case ENC_SWPTL_64_MEMOP_UNPRIV:
+			return ARM64_SWPTL;
 		case ENC_SXTB_SBFM_32M_BITFIELD:
 		case ENC_SXTB_SBFM_64M_BITFIELD:
-		case ENC_SXTB_Z_P_Z_:
+		case ENC_SXTB_Z_P_Z_M:
+		case ENC_SXTB_Z_P_Z_Z:
 			return ARM64_SXTB;
 		case ENC_SXTH_SBFM_32M_BITFIELD:
 		case ENC_SXTH_SBFM_64M_BITFIELD:
-		case ENC_SXTH_Z_P_Z_:
+		case ENC_SXTH_Z_P_Z_M:
+		case ENC_SXTH_Z_P_Z_Z:
 			return ARM64_SXTH;
 		case ENC_SXTL_SSHLL_ASIMDSHF_L:
 			return ARM64_SXTL;
 		//case ENC_SXTL_SSHLL_ASIMDSHF_L:
 		//	return ARM64_SXTL2;
 		case ENC_SXTW_SBFM_64M_BITFIELD:
-		case ENC_SXTW_Z_P_Z_:
+		case ENC_SXTW_Z_P_Z_M:
+		case ENC_SXTW_Z_P_Z_Z:
 			return ARM64_SXTW;
 		case ENC_SYS_CR_SYSTEMINSTRS:
 			return ARM64_SYS;
 		case ENC_SYSL_RC_SYSTEMINSTRS:
 			return ARM64_SYSL;
+		case ENC_SYSP_CR_SYSPAIRINSTRS:
+			return ARM64_SYSP;
+		case ENC_TBL_ASIMDTBL_L1_1:
 		case ENC_TBL_ASIMDTBL_L2_2:
 		case ENC_TBL_ASIMDTBL_L3_3:
 		case ENC_TBL_ASIMDTBL_L4_4:
-		case ENC_TBL_ASIMDTBL_L1_1:
 		case ENC_TBL_Z_ZZ_1:
 		case ENC_TBL_Z_ZZ_2:
 			return ARM64_TBL;
+		case ENC_TBLQ_Z_ZZ_:
+			return ARM64_TBLQ;
 		case ENC_TBNZ_ONLY_TESTBRANCH:
 			return ARM64_TBNZ;
+		case ENC_TBX_ASIMDTBL_L1_1:
 		case ENC_TBX_ASIMDTBL_L2_2:
 		case ENC_TBX_ASIMDTBL_L3_3:
 		case ENC_TBX_ASIMDTBL_L4_4:
-		case ENC_TBX_ASIMDTBL_L1_1:
 		case ENC_TBX_Z_ZZ_:
 			return ARM64_TBX;
+		case ENC_TBXQ_Z_ZZ_:
+			return ARM64_TBXQ;
 		case ENC_TBZ_ONLY_TESTBRANCH:
 			return ARM64_TBZ;
 		case ENC_TCANCEL_EX_EXCEPTION:
@@ -3703,6 +5657,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_TCOMMIT;
 		case ENC_TLBI_SYS_CR_SYSTEMINSTRS:
 			return ARM64_TLBI;
+		case ENC_TLBIP_SYSP_CR_SYSPAIRINSTRS:
+			return ARM64_TLBIP;
+		case ENC_TRCIT_SYS_CR_SYSTEMINSTRS:
+			return ARM64_TRCIT;
 		case ENC_TRN1_ASIMDPERM_ONLY:
 		case ENC_TRN1_P_PP_:
 		case ENC_TRN1_Z_ZZ_:
@@ -3780,6 +5738,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_UBFX_UBFM_32M_BITFIELD:
 		case ENC_UBFX_UBFM_64M_BITFIELD:
 			return ARM64_UBFX;
+		case ENC_UCLAMP_MZ_ZZ_2:
+		case ENC_UCLAMP_MZ_ZZ_4:
 		case ENC_UCLAMP_Z_ZZ_:
 			return ARM64_UCLAMP;
 		case ENC_UCVTF_ASISDSHF_C:
@@ -3789,10 +5749,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_UCVTF_ASIMDMISCFP16_R:
 		case ENC_UCVTF_ASIMDMISC_R:
 		case ENC_UCVTF_H32_FLOAT2FIX:
-		case ENC_UCVTF_S32_FLOAT2FIX:
-		case ENC_UCVTF_D32_FLOAT2FIX:
 		case ENC_UCVTF_H64_FLOAT2FIX:
+		case ENC_UCVTF_S32_FLOAT2FIX:
 		case ENC_UCVTF_S64_FLOAT2FIX:
+		case ENC_UCVTF_D32_FLOAT2FIX:
 		case ENC_UCVTF_D64_FLOAT2FIX:
 		case ENC_UCVTF_H32_FLOAT2INT:
 		case ENC_UCVTF_S32_FLOAT2INT:
@@ -3800,13 +5760,26 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_UCVTF_H64_FLOAT2INT:
 		case ENC_UCVTF_S64_FLOAT2INT:
 		case ENC_UCVTF_D64_FLOAT2INT:
+		case ENC_UCVTF_SISD_32H:
+		case ENC_UCVTF_SISD_32D:
+		case ENC_UCVTF_SISD_64H:
+		case ENC_UCVTF_SISD_64S:
+		case ENC_UCVTF_MZ_Z_2:
+		case ENC_UCVTF_MZ_Z_4:
 		case ENC_UCVTF_Z_P_Z_H2FP16:
+		case ENC_UCVTF_Z_P_Z_H2FP16Z:
 		case ENC_UCVTF_Z_P_Z_W2FP16:
+		case ENC_UCVTF_Z_P_Z_W2FP16Z:
 		case ENC_UCVTF_Z_P_Z_W2S:
+		case ENC_UCVTF_Z_P_Z_W2SZ:
 		case ENC_UCVTF_Z_P_Z_W2D:
+		case ENC_UCVTF_Z_P_Z_W2DZ:
 		case ENC_UCVTF_Z_P_Z_X2FP16:
+		case ENC_UCVTF_Z_P_Z_X2FP16Z:
 		case ENC_UCVTF_Z_P_Z_X2S:
+		case ENC_UCVTF_Z_P_Z_X2SZ:
 		case ENC_UCVTF_Z_P_Z_X2D:
+		case ENC_UCVTF_Z_P_Z_X2DZ:
 			return ARM64_UCVTF;
 		case ENC_UDF_ONLY_PERM_UNDEF:
 			return ARM64_UDF;
@@ -3818,9 +5791,25 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_UDIVR;
 		case ENC_UDOT_ASIMDELEM_D:
 		case ENC_UDOT_ASIMDSAME2_D:
+		case ENC_UDOT_Z32_ZZZ_:
+		case ENC_UDOT_Z32_ZZZI_:
 		case ENC_UDOT_Z_ZZZ_:
 		case ENC_UDOT_Z_ZZZI_S:
 		case ENC_UDOT_Z_ZZZI_D:
+		case ENC_UDOT_ZA32_ZZI_2XI:
+		case ENC_UDOT_ZA32_ZZI_4XI:
+		case ENC_UDOT_ZA32_ZZV_2X1:
+		case ENC_UDOT_ZA32_ZZV_4X1:
+		case ENC_UDOT_ZA32_ZZW_2X2:
+		case ENC_UDOT_ZA32_ZZW_4X4:
+		case ENC_UDOT_ZA_ZZI_S2XI:
+		case ENC_UDOT_ZA_ZZI_D2XI:
+		case ENC_UDOT_ZA_ZZI_S4XI:
+		case ENC_UDOT_ZA_ZZI_D4XI:
+		case ENC_UDOT_ZA_ZZV_2X1:
+		case ENC_UDOT_ZA_ZZV_4X1:
+		case ENC_UDOT_ZA_ZZW_2X2:
+		case ENC_UDOT_ZA_ZZW_4X4:
 			return ARM64_UDOT;
 		case ENC_UHADD_ASIMDSAME_ONLY:
 		case ENC_UHADD_Z_P_ZZ_:
@@ -3833,27 +5822,55 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_UMADDL_64WA_DP_3SRC:
 			return ARM64_UMADDL;
 		case ENC_UMAX_ASIMDSAME_ONLY:
+		case ENC_UMAX_32U_MINMAX_IMM:
+		case ENC_UMAX_64U_MINMAX_IMM:
+		case ENC_UMAX_32_DP_2SRC:
+		case ENC_UMAX_64_DP_2SRC:
+		case ENC_UMAX_MZ_ZZV_2X1:
+		case ENC_UMAX_MZ_ZZV_4X1:
+		case ENC_UMAX_MZ_ZZW_2X2:
+		case ENC_UMAX_MZ_ZZW_4X4:
 		case ENC_UMAX_Z_P_ZZ_:
 		case ENC_UMAX_Z_ZI_:
 			return ARM64_UMAX;
 		case ENC_UMAXP_ASIMDSAME_ONLY:
 		case ENC_UMAXP_Z_P_ZZ_:
 			return ARM64_UMAXP;
+		case ENC_UMAXQV_Z_P_Z_:
+			return ARM64_UMAXQV;
 		case ENC_UMAXV_ASIMDALL_ONLY:
 		case ENC_UMAXV_R_P_Z_:
 			return ARM64_UMAXV;
 		case ENC_UMIN_ASIMDSAME_ONLY:
+		case ENC_UMIN_32U_MINMAX_IMM:
+		case ENC_UMIN_64U_MINMAX_IMM:
+		case ENC_UMIN_32_DP_2SRC:
+		case ENC_UMIN_64_DP_2SRC:
+		case ENC_UMIN_MZ_ZZV_2X1:
+		case ENC_UMIN_MZ_ZZV_4X1:
+		case ENC_UMIN_MZ_ZZW_2X2:
+		case ENC_UMIN_MZ_ZZW_4X4:
 		case ENC_UMIN_Z_P_ZZ_:
 		case ENC_UMIN_Z_ZI_:
 			return ARM64_UMIN;
 		case ENC_UMINP_ASIMDSAME_ONLY:
 		case ENC_UMINP_Z_P_ZZ_:
 			return ARM64_UMINP;
+		case ENC_UMINQV_Z_P_Z_:
+			return ARM64_UMINQV;
 		case ENC_UMINV_ASIMDALL_ONLY:
 		case ENC_UMINV_R_P_Z_:
 			return ARM64_UMINV;
 		case ENC_UMLAL_ASIMDELEM_L:
 		case ENC_UMLAL_ASIMDDIFF_L:
+		case ENC_UMLAL_ZA_ZZI_1:
+		case ENC_UMLAL_ZA_ZZI_2XI:
+		case ENC_UMLAL_ZA_ZZI_4XI:
+		case ENC_UMLAL_ZA_ZZV_1:
+		case ENC_UMLAL_ZA_ZZV_2X1:
+		case ENC_UMLAL_ZA_ZZV_4X1:
+		case ENC_UMLAL_ZA_ZZW_2X2:
+		case ENC_UMLAL_ZA_ZZW_4X4:
 			return ARM64_UMLAL;
 		//case ENC_UMLAL_ASIMDELEM_L:
 		//case ENC_UMLAL_ASIMDDIFF_L:
@@ -3862,12 +5879,32 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_UMLALB_Z_ZZZI_S:
 		case ENC_UMLALB_Z_ZZZI_D:
 			return ARM64_UMLALB;
+		case ENC_UMLALL_ZA_ZZI_S:
+		case ENC_UMLALL_ZA_ZZI_D:
+		case ENC_UMLALL_ZA_ZZI_S2XI:
+		case ENC_UMLALL_ZA_ZZI_D2XI:
+		case ENC_UMLALL_ZA_ZZI_S4XI:
+		case ENC_UMLALL_ZA_ZZI_D4XI:
+		case ENC_UMLALL_ZA_ZZV_1:
+		case ENC_UMLALL_ZA_ZZV_2X1:
+		case ENC_UMLALL_ZA_ZZV_4X1:
+		case ENC_UMLALL_ZA_ZZW_2X2:
+		case ENC_UMLALL_ZA_ZZW_4X4:
+			return ARM64_UMLALL;
 		case ENC_UMLALT_Z_ZZZ_:
 		case ENC_UMLALT_Z_ZZZI_S:
 		case ENC_UMLALT_Z_ZZZI_D:
 			return ARM64_UMLALT;
 		case ENC_UMLSL_ASIMDELEM_L:
 		case ENC_UMLSL_ASIMDDIFF_L:
+		case ENC_UMLSL_ZA_ZZI_1:
+		case ENC_UMLSL_ZA_ZZI_2XI:
+		case ENC_UMLSL_ZA_ZZI_4XI:
+		case ENC_UMLSL_ZA_ZZV_1:
+		case ENC_UMLSL_ZA_ZZV_2X1:
+		case ENC_UMLSL_ZA_ZZV_4X1:
+		case ENC_UMLSL_ZA_ZZW_2X2:
+		case ENC_UMLSL_ZA_ZZW_4X4:
 			return ARM64_UMLSL;
 		//case ENC_UMLSL_ASIMDELEM_L:
 		//case ENC_UMLSL_ASIMDDIFF_L:
@@ -3876,6 +5913,18 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_UMLSLB_Z_ZZZI_S:
 		case ENC_UMLSLB_Z_ZZZI_D:
 			return ARM64_UMLSLB;
+		case ENC_UMLSLL_ZA_ZZI_S:
+		case ENC_UMLSLL_ZA_ZZI_D:
+		case ENC_UMLSLL_ZA_ZZI_S2XI:
+		case ENC_UMLSLL_ZA_ZZI_D2XI:
+		case ENC_UMLSLL_ZA_ZZI_S4XI:
+		case ENC_UMLSLL_ZA_ZZI_D4XI:
+		case ENC_UMLSLL_ZA_ZZV_1:
+		case ENC_UMLSLL_ZA_ZZV_2X1:
+		case ENC_UMLSLL_ZA_ZZV_4X1:
+		case ENC_UMLSLL_ZA_ZZW_2X2:
+		case ENC_UMLSLL_ZA_ZZW_4X4:
+			return ARM64_UMLSLL;
 		case ENC_UMLSLT_Z_ZZZ_:
 		case ENC_UMLSLT_Z_ZZZI_S:
 		case ENC_UMLSLT_Z_ZZZI_D:
@@ -3885,9 +5934,37 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_UMMLA;
 		case ENC_UMNEGL_UMSUBL_64WA_DP_3SRC:
 			return ARM64_UMNEGL;
+		case ENC_UMOP4A_ZA32_ZZ_H1X2:
+		case ENC_UMOP4A_ZA32_ZZ_H1X1:
+		case ENC_UMOP4A_ZA32_ZZ_H2X1:
+		case ENC_UMOP4A_ZA32_ZZ_H2X2:
+		case ENC_UMOP4A_ZA_ZZ_B1X2:
+		case ENC_UMOP4A_ZA_ZZ_B1X1:
+		case ENC_UMOP4A_ZA_ZZ_B2X1:
+		case ENC_UMOP4A_ZA_ZZ_B2X2:
+		case ENC_UMOP4A_ZA_ZZ_H1X2:
+		case ENC_UMOP4A_ZA_ZZ_H1X1:
+		case ENC_UMOP4A_ZA_ZZ_H2X1:
+		case ENC_UMOP4A_ZA_ZZ_H2X2:
+			return ARM64_UMOP4A;
+		case ENC_UMOP4S_ZA32_ZZ_H1X2:
+		case ENC_UMOP4S_ZA32_ZZ_H1X1:
+		case ENC_UMOP4S_ZA32_ZZ_H2X1:
+		case ENC_UMOP4S_ZA32_ZZ_H2X2:
+		case ENC_UMOP4S_ZA_ZZ_B1X2:
+		case ENC_UMOP4S_ZA_ZZ_B1X1:
+		case ENC_UMOP4S_ZA_ZZ_B2X1:
+		case ENC_UMOP4S_ZA_ZZ_B2X2:
+		case ENC_UMOP4S_ZA_ZZ_H1X2:
+		case ENC_UMOP4S_ZA_ZZ_H1X1:
+		case ENC_UMOP4S_ZA_ZZ_H2X1:
+		case ENC_UMOP4S_ZA_ZZ_H2X2:
+			return ARM64_UMOP4S;
+		case ENC_UMOPA_ZA32_PP_ZZ_16:
 		case ENC_UMOPA_ZA_PP_ZZ_32:
 		case ENC_UMOPA_ZA_PP_ZZ_64:
 			return ARM64_UMOPA;
+		case ENC_UMOPS_ZA32_PP_ZZ_16:
 		case ENC_UMOPS_ZA_PP_ZZ_32:
 		case ENC_UMOPS_ZA_PP_ZZ_64:
 			return ARM64_UMOPS;
@@ -3921,6 +5998,12 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_UQADD_Z_ZI_:
 		case ENC_UQADD_Z_ZZ_:
 			return ARM64_UQADD;
+		case ENC_UQCVT_Z_MZ2_:
+		case ENC_UQCVT_Z_MZ4_:
+			return ARM64_UQCVT;
+		case ENC_UQCVTN_Z_MZ2_:
+		case ENC_UQCVTN_Z_MZ4_:
+			return ARM64_UQCVTN;
 		case ENC_UQDECB_R_RS_UW:
 		case ENC_UQDECB_R_RS_X:
 			return ARM64_UQDECB;
@@ -3965,8 +6048,13 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_UQRSHL;
 		case ENC_UQRSHLR_Z_P_ZZ_:
 			return ARM64_UQRSHLR;
+		case ENC_UQRSHR_Z_MZ2_:
+		case ENC_UQRSHR_Z_MZ4_:
+			return ARM64_UQRSHR;
 		case ENC_UQRSHRN_ASISDSHF_N:
 		case ENC_UQRSHRN_ASIMDSHF_N:
+		case ENC_UQRSHRN_Z_MZ2_:
+		case ENC_UQRSHRN_Z_MZ4_:
 			return ARM64_UQRSHRN;
 		//case ENC_UQRSHRN_ASIMDSHF_N:
 		//	return ARM64_UQRSHRN2;
@@ -4010,13 +6098,18 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_UQXTNT_Z_ZZ_:
 			return ARM64_UQXTNT;
 		case ENC_URECPE_ASIMDMISC_R:
-		case ENC_URECPE_Z_P_Z_:
+		case ENC_URECPE_Z_P_Z_M:
+		case ENC_URECPE_Z_P_Z_Z:
 			return ARM64_URECPE;
 		case ENC_URHADD_ASIMDSAME_ONLY:
 		case ENC_URHADD_Z_P_ZZ_:
 			return ARM64_URHADD;
 		case ENC_URSHL_ASISDSAME_ONLY:
 		case ENC_URSHL_ASIMDSAME_ONLY:
+		case ENC_URSHL_MZ_ZZV_2X1:
+		case ENC_URSHL_MZ_ZZV_4X1:
+		case ENC_URSHL_MZ_ZZW_2X2:
+		case ENC_URSHL_MZ_ZZW_4X4:
 		case ENC_URSHL_Z_P_ZZ_:
 			return ARM64_URSHL;
 		case ENC_URSHLR_Z_P_ZZ_:
@@ -4026,7 +6119,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_URSHR_Z_P_ZI_:
 			return ARM64_URSHR;
 		case ENC_URSQRTE_ASIMDMISC_R:
-		case ENC_URSQRTE_Z_P_Z_:
+		case ENC_URSQRTE_Z_P_Z_M:
+		case ENC_URSQRTE_Z_P_Z_Z:
 			return ARM64_URSQRTE;
 		case ENC_URSRA_ASISDSHF_R:
 		case ENC_URSRA_ASIMDSHF_R:
@@ -4036,6 +6130,12 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_USDOT_ASIMDSAME2_D:
 		case ENC_USDOT_Z_ZZZ_S:
 		case ENC_USDOT_Z_ZZZI_S:
+		case ENC_USDOT_ZA_ZZI_S2XI:
+		case ENC_USDOT_ZA_ZZI_S4XI:
+		case ENC_USDOT_ZA_ZZV_S2X1:
+		case ENC_USDOT_ZA_ZZV_S4X1:
+		case ENC_USDOT_ZA_ZZW_S2X2:
+		case ENC_USDOT_ZA_ZZW_S4X4:
 			return ARM64_USDOT;
 		case ENC_USHL_ASISDSAME_ONLY:
 		case ENC_USHL_ASIMDSAME_ONLY:
@@ -4051,9 +6151,36 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_USHR_ASISDSHF_R:
 		case ENC_USHR_ASIMDSHF_R:
 			return ARM64_USHR;
+		case ENC_USMLALL_ZA_ZZI_S:
+		case ENC_USMLALL_ZA_ZZI_S2XI:
+		case ENC_USMLALL_ZA_ZZI_S4XI:
+		case ENC_USMLALL_ZA_ZZV_S:
+		case ENC_USMLALL_ZA_ZZV_S2X1:
+		case ENC_USMLALL_ZA_ZZV_S4X1:
+		case ENC_USMLALL_ZA_ZZW_S2X2:
+		case ENC_USMLALL_ZA_ZZW_S4X4:
+			return ARM64_USMLALL;
 		case ENC_USMMLA_ASIMDSAME2_G:
 		case ENC_USMMLA_Z_ZZZ_:
 			return ARM64_USMMLA;
+		case ENC_USMOP4A_ZA_ZZ_B1X2:
+		case ENC_USMOP4A_ZA_ZZ_B1X1:
+		case ENC_USMOP4A_ZA_ZZ_B2X1:
+		case ENC_USMOP4A_ZA_ZZ_B2X2:
+		case ENC_USMOP4A_ZA_ZZ_H1X2:
+		case ENC_USMOP4A_ZA_ZZ_H1X1:
+		case ENC_USMOP4A_ZA_ZZ_H2X1:
+		case ENC_USMOP4A_ZA_ZZ_H2X2:
+			return ARM64_USMOP4A;
+		case ENC_USMOP4S_ZA_ZZ_B1X2:
+		case ENC_USMOP4S_ZA_ZZ_B1X1:
+		case ENC_USMOP4S_ZA_ZZ_B2X1:
+		case ENC_USMOP4S_ZA_ZZ_B2X2:
+		case ENC_USMOP4S_ZA_ZZ_H1X2:
+		case ENC_USMOP4S_ZA_ZZ_H1X1:
+		case ENC_USMOP4S_ZA_ZZ_H2X1:
+		case ENC_USMOP4S_ZA_ZZ_H2X2:
+			return ARM64_USMOP4S;
 		case ENC_USMOPA_ZA_PP_ZZ_32:
 		case ENC_USMOPA_ZA_PP_ZZ_64:
 			return ARM64_USMOPA;
@@ -4068,6 +6195,8 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_USRA_ASIMDSHF_R:
 		case ENC_USRA_Z_ZI_:
 			return ARM64_USRA;
+		case ENC_USTMOPA_ZA_ZZZI_B2X1:
+			return ARM64_USTMOPA;
 		case ENC_USUBL_ASIMDDIFF_L:
 			return ARM64_USUBL;
 		//case ENC_USUBL_ASIMDDIFF_L:
@@ -4084,22 +6213,42 @@ enum Operation enc_to_oper(enum ENCODING enc)
 			return ARM64_USUBWB;
 		case ENC_USUBWT_Z_ZZ_:
 			return ARM64_USUBWT;
+		case ENC_USVDOT_ZA_ZZI_S4XI:
+			return ARM64_USVDOT;
+		case ENC_UTMOPA_ZA32_ZZZI_H2X1:
+		case ENC_UTMOPA_ZA_ZZZI_B2X1:
+			return ARM64_UTMOPA;
+		case ENC_UUNPK_MZ_Z_2:
+		case ENC_UUNPK_MZ_Z_4:
+			return ARM64_UUNPK;
 		case ENC_UUNPKHI_Z_Z_:
 			return ARM64_UUNPKHI;
 		case ENC_UUNPKLO_Z_Z_:
 			return ARM64_UUNPKLO;
+		case ENC_UVDOT_ZA32_ZZI_2XI:
+		case ENC_UVDOT_ZA_ZZI_S4XI:
+		case ENC_UVDOT_ZA_ZZI_D4XI:
+			return ARM64_UVDOT;
 		case ENC_UXTB_UBFM_32M_BITFIELD:
-		case ENC_UXTB_Z_P_Z_:
+		case ENC_UXTB_Z_P_Z_M:
+		case ENC_UXTB_Z_P_Z_Z:
 			return ARM64_UXTB;
 		case ENC_UXTH_UBFM_32M_BITFIELD:
-		case ENC_UXTH_Z_P_Z_:
+		case ENC_UXTH_Z_P_Z_M:
+		case ENC_UXTH_Z_P_Z_Z:
 			return ARM64_UXTH;
 		case ENC_UXTL_USHLL_ASIMDSHF_L:
 			return ARM64_UXTL;
 		//case ENC_UXTL_USHLL_ASIMDSHF_L:
 		//	return ARM64_UXTL2;
-		case ENC_UXTW_Z_P_Z_:
+		case ENC_UXTW_Z_P_Z_M:
+		case ENC_UXTW_Z_P_Z_Z:
 			return ARM64_UXTW;
+		case ENC_UZP_MZ_Z_4:
+		case ENC_UZP_MZ_Z_4Q:
+		case ENC_UZP_MZ_ZZ_2:
+		case ENC_UZP_MZ_ZZ_2Q:
+			return ARM64_UZP;
 		case ENC_UZP1_ASIMDPERM_ONLY:
 		case ENC_UZP1_P_PP_:
 		case ENC_UZP1_Z_ZZ_:
@@ -4110,6 +6259,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_UZP2_Z_ZZ_:
 		case ENC_UZP2_Z_ZZ_Q:
 			return ARM64_UZP2;
+		case ENC_UZPQ1_Z_ZZ_:
+			return ARM64_UZPQ1;
+		case ENC_UZPQ2_Z_ZZ_:
+			return ARM64_UZPQ2;
 		case ENC_WFE_HI_HINTS:
 			return ARM64_WFE;
 		case ENC_WFET_ONLY_SYSTEMINSTRSWITHREG:
@@ -4119,20 +6272,36 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_WFIT_ONLY_SYSTEMINSTRSWITHREG:
 			return ARM64_WFIT;
 		case ENC_WHILEGE_P_P_RR_:
+		case ENC_WHILEGE_PN_RR_:
+		case ENC_WHILEGE_PP_RR_:
 			return ARM64_WHILEGE;
 		case ENC_WHILEGT_P_P_RR_:
+		case ENC_WHILEGT_PN_RR_:
+		case ENC_WHILEGT_PP_RR_:
 			return ARM64_WHILEGT;
 		case ENC_WHILEHI_P_P_RR_:
+		case ENC_WHILEHI_PN_RR_:
+		case ENC_WHILEHI_PP_RR_:
 			return ARM64_WHILEHI;
 		case ENC_WHILEHS_P_P_RR_:
+		case ENC_WHILEHS_PN_RR_:
+		case ENC_WHILEHS_PP_RR_:
 			return ARM64_WHILEHS;
 		case ENC_WHILELE_P_P_RR_:
+		case ENC_WHILELE_PN_RR_:
+		case ENC_WHILELE_PP_RR_:
 			return ARM64_WHILELE;
 		case ENC_WHILELO_P_P_RR_:
+		case ENC_WHILELO_PN_RR_:
+		case ENC_WHILELO_PP_RR_:
 			return ARM64_WHILELO;
 		case ENC_WHILELS_P_P_RR_:
+		case ENC_WHILELS_PN_RR_:
+		case ENC_WHILELS_PP_RR_:
 			return ARM64_WHILELS;
 		case ENC_WHILELT_P_P_RR_:
+		case ENC_WHILELT_PN_RR_:
+		case ENC_WHILELT_PP_RR_:
 			return ARM64_WHILELT;
 		case ENC_WHILERW_P_RR_:
 			return ARM64_WHILERW;
@@ -4157,8 +6326,22 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		//	return ARM64_XTN2;
 		case ENC_YIELD_HI_HINTS:
 			return ARM64_YIELD;
+		case ENC_ZERO_ZA1_RI_2:
+		case ENC_ZERO_ZA1_RI_4:
+		case ENC_ZERO_ZA2_RI_1:
+		case ENC_ZERO_ZA2_RI_2:
+		case ENC_ZERO_ZA2_RI_4:
+		case ENC_ZERO_ZA4_RI_1:
+		case ENC_ZERO_ZA4_RI_2:
+		case ENC_ZERO_ZA4_RI_4:
 		case ENC_ZERO_ZA_I_:
+		case ENC_ZERO_ZT_I_:
 			return ARM64_ZERO;
+		case ENC_ZIP_MZ_Z_4:
+		case ENC_ZIP_MZ_Z_4Q:
+		case ENC_ZIP_MZ_ZZ_2:
+		case ENC_ZIP_MZ_ZZ_2Q:
+			return ARM64_ZIP;
 		case ENC_ZIP1_ASIMDPERM_ONLY:
 		case ENC_ZIP1_P_PP_:
 		case ENC_ZIP1_Z_ZZ_:
@@ -4169,6 +6352,10 @@ enum Operation enc_to_oper(enum ENCODING enc)
 		case ENC_ZIP2_Z_ZZ_:
 		case ENC_ZIP2_Z_ZZ_Q:
 			return ARM64_ZIP2;
+		case ENC_ZIPQ1_Z_ZZ_:
+			return ARM64_ZIPQ1;
+		case ENC_ZIPQ2_Z_ZZ_:
+			return ARM64_ZIPQ2;
 		default:
 			return ARM64_ERROR;
 	}
@@ -4179,11 +6366,20 @@ enum Operation enc_to_oper2(enum ENCODING enc)
 	switch(enc) {
 		case ENC_ADDHN_ASIMDDIFF_N:
 			return ARM64_ADDHN2;
+		case ENC_BF1CVTL_ASIMDMISC_V:
+			return ARM64_BF1CVTL2;
+		case ENC_BF2CVTL_ASIMDMISC_V:
+			return ARM64_BF2CVTL2;
 		case ENC_BFCVTN_ASIMDMISC_4S:
 			return ARM64_BFCVTN2;
+		case ENC_F1CVTL_ASIMDMISC_V:
+			return ARM64_F1CVTL2;
+		case ENC_F2CVTL_ASIMDMISC_V:
+			return ARM64_F2CVTL2;
 		case ENC_FCVTL_ASIMDMISC_L:
 			return ARM64_FCVTL2;
 		case ENC_FCVTN_ASIMDMISC_N:
+		case ENC_FCVTN_ASIMDSAME2_H:
 			return ARM64_FCVTN2;
 		case ENC_FCVTXN_ASIMDMISC_N:
 			return ARM64_FCVTXN2;

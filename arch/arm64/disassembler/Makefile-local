@@ -1,21 +1,22 @@
 # $ make -f Makefile-local
 
-DECODE_OBJS = pcode.o decode.o decode0.o decode1.o decode2.o decode_fields32.o decode_scratchpad.o encodings_dec.o
+DECODE_OBJS = pcode.o decode.o decode0.o decode1.o decode2.o decode_fields32.o decode_scratchpad.o encodings_dec.o sysregs_gen.o sysregs_fmt_gen.o
 
-FORMAT_OBJS = format.o encodings_fmt.o operations.o sysregs.o regs.o
+FORMAT_OBJS = format.o encodings_fmt.o operations.o sysregs_fmt_gen.o regs.o
 
-HEADERS = decode.h decode1.h decode2.h format.h pcode.h operations.h sysregs.h decode_fields32.h encodings_dec.h encodings_fmt.h regs.h
+HEADERS = decode.h decode1.h decode2.h format.h pcode.h operations.h sysregs_gen.h sysregs_fmt_gen.h decode_fields32.h encodings_dec.h encodings_fmt.h regs.h feature_flags.h
 
 #CFLAGS = -g -Wunused
-CFLAGS = -Os
-#CFLAGS = -g -Wpedantic
-#CFLAGS = -ofast
+#CFLAGS = -Os
+#CFLAGS = -g -Wpedantic -Wno-gnu-binary-literal
+#CFLAGS = -g -O0 -fsanitize=address
+CFLAGS = -ofast
 
 #$(info $(GENERATED_OBJECTS))
 
 .PHONY: all clean
 
-all: libdecode.a libformat.a gofer.so test
+all: libdecode.a libformat.a gofer.so test test_decode
 
 %.o: %.c $(HEADERS)
 	gcc -c $(CFLAGS) $< -o $@
@@ -30,7 +31,7 @@ libformat.a: $(FORMAT_OBJS)
 # test tools
 #------------------------------------------------------------------------------
 
-gofer.so: gofer.c libdecode.a
+gofer.so: gofer.c libdecode.a libformat.a
 	gcc $(CFLAGS) \
 		libdecode.a libformat.a \
 		-shared -o gofer.so gofer.c \
@@ -41,8 +42,11 @@ gofer.so: gofer.c libdecode.a
 test: test.c libdecode.a
 	gcc $(CFLAGS) test.c libdecode.a libformat.a -o test
 
+test_decode: test_decode.c libdecode.a
+	gcc $(CFLAGS) test_decode.c libdecode.a -o test_decode
+
 #------------------------------------------------------------------------------
-# 
+#
 #------------------------------------------------------------------------------
 clean:
 	rm -f *.o *.so *.a test

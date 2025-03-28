@@ -1,6 +1,14 @@
 #include "feature_flags.h"
 
 #define INSWORD (ctx->insword)
+#define EndOfDecode(code) \
+	{ \
+        switch (code) { \
+	    case Decode_UNDEF: return DECODE_STATUS_UNDEFINED; \
+	    case Decode_NOP: return DECODE_STATUS_END_OF_INSTRUCTION;\
+	    case Decode_OK: rc = DECODE_STATUS_OK ; break;\
+    	} \
+	}
 #define UNDEFINED \
 	{ \
 		return DECODE_STATUS_UNDEFINED; \
@@ -83,6 +91,13 @@
 #define SetBTypeNext(X)       ctx->BTypeNext = (X)
 #define Halted()              ctx->halted
 
+enum EndOfDecodeState
+{
+	Decode_UNDEF,
+ 	Decode_NOP,
+	Decode_OK,
+};
+
 enum SystemOp
 {
 	Sys_ERROR = -1,
@@ -153,6 +168,10 @@ enum SystemHintOp
 	SystemHintOp_CSDB,
 	SystemHintOp_WFET,
 	SystemHintOp_WFIT,
+	SystemHintOp_CHKFEAT,
+	SystemHintOp_CLRBHB,
+	SystemHintOp_GCSB,
+	SystemHintOp_STSHH,
 };
 
 enum ImmediateOp
@@ -293,6 +312,13 @@ enum MemOp
 	MemOp_PREFETCH
 };
 
+enum MOPSStage
+{
+	MOPSStage_Epilogue = 0,
+	MOPSStage_Main,
+	MOPSStage_Prologue
+};
+
 enum MoveWideOp
 {
 	MoveWideOp_ERROR = 0,
@@ -314,7 +340,9 @@ enum PSTATEField
 	PSTATEField_SP,
 	PSTATEField_SVCRZA,
 	PSTATEField_SVCRSM,
-	PSTATEField_SVCRSMZA
+	PSTATEField_SVCRSMZA,
+	PSTATEField_ALLINT,
+	PSTATEField_PM,
 };
 
 enum SVECmp
@@ -394,6 +422,7 @@ enum Unpredictable
 	Unpredictable_DBGxVR_RESS,
 	Unpredictable_WFxTDEBUG,
 	Unpredictable_LS64UNSUPPORTED,
+	Unpredictable_LSE128OVERLAP,
 };
 
 typedef struct DecodeBitMasks_ReturnType_
@@ -403,7 +432,13 @@ typedef struct DecodeBitMasks_ReturnType_
 } DecodeBitMasks_ReturnType;
 
 int HighestSetBit(uint64_t x);
+int HighestSetBitNZ(uint64_t x);
 int LowestSetBit(uint64_t x);
+int LowestSetBitNZ(uint64_t x);
+
+static inline int MaxImplementedAnyVL() { return 255; }
+static inline int MaxImplementedSVL() { return 255; }
+static inline int MaxImplementedVL() { return 255; }
 
 bool BFXPreferred(uint32_t sf, uint32_t uns, uint32_t imms, uint32_t immr);
 int BitCount(uint32_t x);

@@ -137,7 +137,9 @@ typedef struct context_
 	uint32_t insword;
 	uint64_t address;
 	uint64_t features0;  // bitmask of ARCH_FEATURE_XXX
+	uint64_t features01;  // bitmask of ARCH_FEATURE_XXX
 	uint64_t features1;  // bitmask of ARCH_FEATURE_XXX
+	uint64_t features11;  // bitmask of ARCH_FEATURE_XXX
 	// uint32_t exception_level; // used by AArch64.CheckSystemAccess()
 	// uint32_t security_state;
 	uint8_t pstate_btype;  // used by BTypeCompatible_BTI()
@@ -193,10 +195,16 @@ typedef struct context_
 	uint64_t acc;
 	uint64_t acctype;
 	uint64_t accumulate;
+	bool acqrel;
+	bool acquire;
 	uint64_t alias;
 	uint64_t amount;
 	uint64_t and_test;
 	uint64_t asimdimm;
+	bool auth_combined;
+	bool auth_then_branch;
+	bool autia1716;
+	bool autib1716;
 	uint64_t b;
 	uint64_t b40;
 	uint64_t b5;
@@ -204,8 +212,10 @@ typedef struct context_
 	uint64_t bit_val;
 	uint64_t branch_type;
 	uint64_t c;
+	uint64_t cc;
 	uint64_t cmode;
 	uint64_t cmp, cmph, cmpl, cmp_eq, cmp_with_zero;
+	uint64_t cmp_op;
 	uint64_t comment;
 	uint64_t comparison;
 	uint64_t cond; /* careful! this is the pcode scratchpad .cond, NOT the .cond field of a struct
@@ -216,9 +226,12 @@ typedef struct context_
 	uint64_t countop;
 	uint64_t crc32c;
 	uint64_t csize;
+	uint64_t d0;
+	uint64_t d1;
 	uint64_t d, da, data, datasize, double_table;
 	uint64_t dtype, dtypeh, dtypel;
 	uint64_t d_esize;
+	uint64_t decode_fltsize;
 	uint64_t decrypt;
 	uint64_t destsize;
 	uint64_t dm;
@@ -226,6 +239,7 @@ typedef struct context_
 	uint64_t domain;
 	uint64_t dst_index;
 	uint64_t dst_unsigned;
+	uint64_t dstride;
 	uint64_t dstsize;
 	uint64_t e;
 	uint64_t elements;
@@ -240,6 +254,7 @@ typedef struct context_
 	uint64_t extend_type;
 	uint64_t f, ff;
 	uint64_t field;
+	uint64_t flagmask;
 	uint64_t flags;
 	uint64_t fltsize;
 	uint64_t fpop;
@@ -252,6 +267,13 @@ typedef struct context_
 	uint64_t hw;
 	uint64_t i, i1, i2, i2h, i2l, i3h, i3l;
 	uint64_t idxdsize;
+	uint64_t i3;
+	uint64_t i4;
+	uint64_t i4A;
+	uint64_t i4B;
+	uint64_t i4C;
+	uint64_t i4h;
+	uint64_t i4l;
 	uint64_t imm;
 	uint64_t imm1;
 	uint64_t imm12;
@@ -288,7 +310,11 @@ typedef struct context_
 	uint64_t inzero;
 	uint64_t isBefore;
 	uint64_t is_tbl;
+    bool ispair;
+	bool issrc2;
+	uint64_t isize;
 	uint64_t iszero;
+	uint64_t K;
 	uint64_t ldacctype;
 	uint64_t len;
 	uint64_t level;
@@ -298,10 +324,19 @@ typedef struct context_
 	uint64_t mask;
 	uint64_t mbytes;
 	uint64_t memop;
+	uint64_t memcpy_d;
+	uint64_t memcpy_n;
+	uint64_t memcpy_s;
+	uint64_t memcpy_stage;
+	uint64_t memset_stage;
+	uint64_t memset_d;
+	uint64_t memset_n;
+	uint64_t memset_s;
 	uint64_t merging;
 	uint64_t min;
 	uint64_t min_EL;
 	uint64_t minimum;
+	uint64_t mreg;
 	uint64_t msb;
 	uint64_t msize;
 	uint64_t msz;
@@ -313,13 +348,21 @@ typedef struct context_
 	uint64_t neg_i;
 	uint64_t neg_r;
 	uint64_t negated;
+	uint64_t ngrp;
+	uint64_t nvec;
+	bool nontemporal;
 	uint64_t nreg;
+	uint64_t ntblr;
+	uint64_t num;
 	uint64_t nzcv;
 	uint64_t nXS;
 	uint64_t o0, o1, o2, o3;
 	uint64_t offs_size;
 	uint64_t offs_unsigned;
 	uint64_t offset;
+	uint64_t off2;
+	uint64_t off3;
+	uint64_t off4;
 	uint64_t op1_neg;
 	uint64_t op1_unsigned;
 	uint64_t op, op0, op1, op2, op3, op4, op21, op31, op54;
@@ -328,12 +371,16 @@ typedef struct context_
 	uint64_t opa_neg;
 	uint64_t opc;
 	uint64_t opc2;
+	uint64_t opc3;
 	uint64_t opcode, opcode2;
 	uint64_t operand;
 	uint64_t operation_;
 	uint64_t opt, option;
+	uint64_t options;
 	uint64_t osize;
 	uint64_t pac;
+	bool pacia1716;
+	bool pacib1716;
 	uint64_t page;
 	uint64_t pair;
 	uint64_t pairs;
@@ -341,6 +388,10 @@ typedef struct context_
 	uint64_t part1;
 	uint64_t pat;
 	uint64_t pattern;
+	uint64_t PNd;
+	uint64_t PNg;
+	uint64_t PNn;
+	uint64_t Pv;
 	uint64_t poly;
 	uint64_t pos;
 	uint64_t position;
@@ -348,12 +399,15 @@ typedef struct context_
 	uint64_t pref_hint;
 	uint64_t prfop;
 	uint64_t ptype;
+	uint64_t r;
 	uint64_t rd;
 	uint64_t read;
 	uint64_t regs;
 	uint64_t regsize;
+	bool release;
 	uint64_t replicate;
 	uint64_t rmode;
+	bool rnontemporal;
 	uint64_t rot;
 	uint64_t round;
 	uint64_t rounding;
@@ -379,6 +433,7 @@ typedef struct context_
 	uint64_t signed_;
 	uint64_t simm7;
 	uint64_t size;
+	bool soft;
 	uint64_t source_is_sp;
 	uint64_t src_index;
 	uint64_t src_unsigned;
@@ -395,16 +450,20 @@ typedef struct context_
 	uint64_t sys_op0;
 	uint64_t sys_op1;
 	uint64_t sys_op2;
+	uint64_t sys_L;
 	uint64_t sz;
 	uint64_t t, t2, tb;
+	uint64_t tagchecked;
 	uint64_t tag_checked;
 	uint64_t tag_offset;
 	uint64_t target_level;
 	uint64_t tmask;
 	uint64_t tsize;
+	uint64_t tstride;
 	uint64_t tsz;
 	uint64_t tszh;
 	uint64_t tszl;
+	uint64_t TT;
 	uint64_t types;
 	uint64_t u0, u1;
 	uint64_t uimm4;
@@ -416,9 +475,15 @@ typedef struct context_
 	uint64_t use_key_a;
 	uint64_t user_access_override;
 	uint64_t v, vertical;
+	uint64_t value2;
+	uint64_t vl;
+	uint64_t VR;
 	uint64_t wback;
 	uint64_t wb_unknown;
+	uint64_t width;
+	bool withstatus;
 	uint64_t wmask;
+	bool wnontemporal;
 	uint64_t writeback;
 	uint64_t xs;
 	uint64_t ZAda, ZAd, ZAn, ZAt, Zk, zero_data;
@@ -717,7 +782,7 @@ enum TlbiOp
 
 enum DCOp
 {
-	DC_OP_INVALID=-1,
+  	DC_OP_INVALID=-1,
 	DC_OP_IVAC=DC_OP(0b000, 0b0110, 0b001),
 	DC_OP_ISW=DC_OP(0b000, 0b0110, 0b010),
 	DC_OP_IGVAC=DC_OP(0b000, 0b0110, 0b011),
@@ -837,7 +902,7 @@ extern "C"
 
 	int aarch64_decompose(uint32_t instructionValue, Instruction* instr, uint64_t address);
 	size_t get_register_size(enum Register);
-	// const char* tlbi_op(int32_t op);
+//	const char* tlbi_op(int32_t op);
 
 #ifdef __cplusplus
 }

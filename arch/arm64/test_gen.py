@@ -4,10 +4,12 @@
 # TODO: proper command line argument parsing, and help
 
 import re, sys, codecs
+import binaryninja
 
 N_SAMPLES = 4  # number of samples for each encoding
 
 from arm64test import lift, ATTR_PTR_AUTH, path_il_h
+from disassembler import disasm_test
 
 if not sys.argv[1:]:
     sys.exit(-1)
@@ -229,6 +231,17 @@ elif sys.argv[1] == "recompute_arm64test":
             comment = m.group(1)
 
         data = codecs.decode(b0 + b1 + b2 + b3, "hex_codec")
+        new_asm = disassemble(0, data)
+        if new_asm:
+            new_asm = ' '.join(new_asm.split())
+            test_comment = comment and ' '.join(comment.split())
+            if test_comment and not test_comment.strip().startswith(new_asm):
+                if comment.strip():
+                    comment += ' // ' + new_asm
+            if not comment or not comment.strip():
+                comment = new_asm
+            # if i - 1 and lines[i - 1] and not lines[i - 1].strip().startswith('# ' + new_asm):
+            #     print(f'\n    # {new_asm}')
         print_case(data, comment)
 
         i += 1

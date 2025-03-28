@@ -1403,7 +1403,8 @@ bool GetLowLevelILForInstruction(
 	case ARM64_BICS:
 		switch (instr.encoding)
 		{
-		case ENC_BIC_AND_Z_ZI_:
+		// case ENC_BIC_AND_Z_ZI_:
+		case ENC_BIC_Z_ZI__AND_Z_ZI_:
 		case ENC_BIC_P_P_PP_Z:
 		case ENC_BIC_Z_P_ZZ_:
 		case ENC_BIC_Z_ZZ_:
@@ -1618,7 +1619,8 @@ bool GetLowLevelILForInstruction(
 	case ARM64_EON:
 		switch (instr.encoding)
 		{
-		case ENC_EON_EOR_Z_ZI_:
+		// case ENC_EON_EOR_Z_ZI_:
+		case ENC_EON_Z_ZI__EOR_Z_ZI_:
 			if (!preferIntrinsics())
 				il.AddInstruction(il.Unimplemented());
 			return true;
@@ -2257,30 +2259,75 @@ bool GetLowLevelILForInstruction(
 	case ARM64_MOV:
 		switch (instr.encoding)
 		{
-		case ENC_MOV_AND_P_P_PP_Z:
-		case ENC_MOV_CPY_Z_O_I_:
-		case ENC_MOV_CPY_Z_P_I_:
-		case ENC_MOV_CPY_Z_P_R_:
-		case ENC_MOV_CPY_Z_P_V_:
-		case ENC_MOV_DUP_Z_I_:
-		case ENC_MOV_DUP_Z_R_:
-		case ENC_MOV_DUP_Z_ZI_:
-		case ENC_MOV_DUP_Z_ZI_2:
-		case ENC_MOV_DUPM_Z_I_:
-		case ENC_MOV_MOVA_Z_P_RZA_B:
-		case ENC_MOV_MOVA_Z_P_RZA_H:
-		case ENC_MOV_MOVA_Z_P_RZA_W:
-		case ENC_MOV_MOVA_Z_P_RZA_D:
-		case ENC_MOV_MOVA_Z_P_RZA_Q:
-		case ENC_MOV_MOVA_ZA_P_RZ_B:
-		case ENC_MOV_MOVA_ZA_P_RZ_H:
-		case ENC_MOV_MOVA_ZA_P_RZ_W:
-		case ENC_MOV_MOVA_ZA_P_RZ_D:
-		case ENC_MOV_MOVA_ZA_P_RZ_Q:
-		case ENC_MOV_ORR_P_P_PP_Z:
-		case ENC_MOV_ORR_Z_ZZ_:
-		case ENC_MOV_SEL_P_P_PP_:
-		case ENC_MOV_SEL_Z_P_ZZ_:
+		// case ENC_MOV_AND_P_P_PP_Z:
+		case ENC_MOVZ_P_P_P__AND_P_P_PP_Z:
+		// case ENC_MOV_CPY_Z_O_I_:
+		case ENC_MOV_Z_O_I__CPY_Z_O_I_:
+		// case ENC_MOV_CPY_Z_P_I_:
+		case ENC_MOV_Z_P_I__CPY_Z_P_I_:
+		// case ENC_MOV_CPY_Z_P_R_:
+		case ENC_MOV_Z_P_R__CPY_Z_P_R_:
+		// case ENC_MOV_CPY_Z_P_V_:
+		case ENC_MOV_Z_P_V__CPY_Z_P_V_:
+		// case ENC_MOV_DUP_Z_I_:
+		case ENC_MOV_Z_I__DUP_Z_I_:
+		// case ENC_MOV_DUP_Z_R_:
+		case ENC_MOV_Z_R__DUP_Z_R_:
+		// case ENC_MOV_DUP_Z_ZI_:
+		case ENC_MOV_Z_V__DUP_Z_ZI_:
+		// case ENC_MOV_DUP_Z_ZI_2:
+		case ENC_MOV_Z_ZI__DUP_Z_ZI_:
+		// case ENC_MOV_DUPM_Z_I_:
+		case ENC_MOV_Z_M__DUPM_Z_I_:
+		// case ENC_MOV_MOVA_Z_P_RZA_B:
+		// case ENC_MOV_MOVA_Z_P_RZA_H:
+		// case ENC_MOV_MOVA_Z_P_RZA_W:
+		// case ENC_MOV_MOVA_Z_P_RZA_D:
+		// case ENC_MOV_MOVA_Z_P_RZA_Q:
+		case ENC_MOV_Z_P_RZA_B_MOVA_Z_P_RZA_B:
+		case ENC_MOV_Z_P_RZA_D_MOVA_Z_P_RZA_D:
+		case ENC_MOV_Z_P_RZA_H_MOVA_Z_P_RZA_H:
+		case ENC_MOV_Z_P_RZA_Q_MOVA_Z_P_RZA_Q:
+		case ENC_MOV_Z_P_RZA_W_MOVA_Z_P_RZA_W:
+		// case ENC_MOV_MOVA_ZA_P_RZ_B:
+		// case ENC_MOV_MOVA_ZA_P_RZ_H:
+		// case ENC_MOV_MOVA_ZA_P_RZ_W:
+		// case ENC_MOV_MOVA_ZA_P_RZ_D:
+		// case ENC_MOV_MOVA_ZA_P_RZ_Q:
+		case ENC_MOV_ZA_P_RZ_B_MOVA_ZA_P_RZ_B:
+		case ENC_MOV_ZA_P_RZ_D_MOVA_ZA_P_RZ_D:
+		case ENC_MOV_ZA_P_RZ_H_MOVA_ZA_P_RZ_H:
+		case ENC_MOV_ZA_P_RZ_W_MOVA_ZA_P_RZ_W:
+		// case ENC_MOV_MOVA_ZA_P_RZ_Q:
+		case ENC_MOV_ZA_P_RZ_Q_MOVA_ZA_P_RZ_Q:
+		// case ENC_MOV_ORR_P_P_PP_Z:
+		case ENC_MOV_P_P__ORR_P_P_PP_Z:
+		// case ENC_MOV_ORR_Z_ZZ_:
+		case ENC_MOV_Z_Z__ORR_Z_ZZ_:
+		// case ENC_MOV_SEL_P_P_PP_:
+		case ENC_MOVM_P_P_P__SEL_P_P_PP_:
+		// case ENC_MOV_SEL_Z_P_ZZ_:
+		case ENC_MOV_Z_P_Z__SEL_Z_P_ZZ_:
+		case ENC_MOV_MZ2_ZA_B1_MOVA_MZ2_ZA_B1:
+		case ENC_MOV_MZ2_ZA_D1_MOVA_MZ2_ZA_D1:
+		case ENC_MOV_MZ2_ZA_H1_MOVA_MZ2_ZA_H1:
+		case ENC_MOV_MZ2_ZA_W1_MOVA_MZ2_ZA_W1:
+		case ENC_MOV_MZ4_ZA_B1_MOVA_MZ4_ZA_B1:
+		case ENC_MOV_MZ4_ZA_D1_MOVA_MZ4_ZA_D1:
+		case ENC_MOV_MZ4_ZA_H1_MOVA_MZ4_ZA_H1:
+		case ENC_MOV_MZ4_ZA_W1_MOVA_MZ4_ZA_W1:
+		case ENC_MOV_MZ_ZA2_1_MOVA_MZ_ZA2_1:
+		case ENC_MOV_MZ_ZA4_1_MOVA_MZ_ZA4_1:
+		case ENC_MOV_ZA2_Z_B1_MOVA_ZA2_Z_B1:
+		case ENC_MOV_ZA2_Z_D1_MOVA_ZA2_Z_D1:
+		case ENC_MOV_ZA2_Z_H1_MOVA_ZA2_Z_H1:
+		case ENC_MOV_ZA2_Z_W1_MOVA_ZA2_Z_W1:
+		case ENC_MOV_ZA4_Z_B1_MOVA_ZA4_Z_B1:
+		case ENC_MOV_ZA4_Z_D1_MOVA_ZA4_Z_D1:
+		case ENC_MOV_ZA4_Z_H1_MOVA_ZA4_Z_H1:
+		case ENC_MOV_ZA4_Z_W1_MOVA_ZA4_Z_W1:
+		case ENC_MOV_ZA_MZ2_1_MOVA_ZA_MZ2_1:
+		case ENC_MOV_ZA_MZ4_1_MOVA_ZA_MZ4_1:
 			if (!preferIntrinsics())
 				il.AddInstruction(il.Unimplemented());
 			return true;
@@ -2371,7 +2418,7 @@ bool GetLowLevelILForInstruction(
 			}
 			break;
 		}
-		case ENC_DUP_P_P_PI_:
+		// case ENC_DUP_P_P_PI_:
 		case ENC_DUP_Z_I_:
 		case ENC_DUP_Z_R_:
 		case ENC_DUP_Z_ZI_:
@@ -2491,7 +2538,9 @@ bool GetLowLevelILForInstruction(
 		{
 		case ENC_NEG_ASISDMISC_R:
 		case ENC_NEG_ASIMDMISC_R:
-		case ENC_NEG_Z_P_Z_:
+		// case ENC_NEG_Z_P_Z_:
+		case ENC_NEG_Z_P_Z_M:
+		case ENC_NEG_Z_P_Z_Z:
 		if (!preferIntrinsics())
 			il.AddInstruction(il.Unimplemented());
 				return true;
@@ -2626,7 +2675,8 @@ bool GetLowLevelILForInstruction(
 	case ARM64_ORN:
 		switch (instr.encoding)
 		{
-		case ENC_ORN_ORR_Z_ZI_:
+		// case ENC_ORN_ORR_Z_ZI_:
+		case ENC_ORN_Z_ZI__ORR_Z_ZI_:
 		case ENC_ORN_P_P_PP_Z:
 		if (!preferIntrinsics())
 				il.AddInstruction(il.Unimplemented());
@@ -3096,7 +3146,9 @@ bool GetLowLevelILForInstruction(
 	case ARM64_SXTB:
 		switch (instr.encoding)
 		{
-		case ENC_SXTB_Z_P_Z_:
+		// case ENC_SXTB_Z_P_Z_:
+		case ENC_SXTB_Z_P_Z_M:
+		case ENC_SXTB_Z_P_Z_Z:
 			if (!preferIntrinsics())
 				il.AddInstruction(il.Unimplemented());
 			return true;
@@ -3108,7 +3160,9 @@ bool GetLowLevelILForInstruction(
 	case ARM64_SXTH:
 		switch (instr.encoding)
 		{
-		case ENC_SXTH_Z_P_Z_:
+		// case ENC_SXTH_Z_P_Z_:
+		case ENC_SXTH_Z_P_Z_M:
+		case ENC_SXTH_Z_P_Z_Z:
 			if (!preferIntrinsics())
 				il.AddInstruction(il.Unimplemented());
 			return true;
@@ -3120,7 +3174,9 @@ bool GetLowLevelILForInstruction(
 	case ARM64_SXTW:
 		switch (instr.encoding)
 		{
-		case ENC_SXTW_Z_P_Z_:
+		// case ENC_SXTW_Z_P_Z_:
+		case ENC_SXTW_Z_P_Z_M:
+		case ENC_SXTW_Z_P_Z_Z:
 			if (!preferIntrinsics())
 				il.AddInstruction(il.Unimplemented());
 			return true;
@@ -3351,7 +3407,9 @@ bool GetLowLevelILForInstruction(
 	case ARM64_UXTB:
 		switch (instr.encoding)
 		{
-		case ENC_UXTB_Z_P_Z_:
+		// case ENC_UXTB_Z_P_Z_:
+		case ENC_UXTB_Z_P_Z_M:
+		case ENC_UXTB_Z_P_Z_Z:
 			if (!preferIntrinsics())
 				il.AddInstruction(il.Unimplemented());
 			return true;
@@ -3363,7 +3421,9 @@ bool GetLowLevelILForInstruction(
 	case ARM64_UXTH:
 		switch (instr.encoding)
 		{
-		case ENC_UXTH_Z_P_Z_:
+		// case ENC_UXTH_Z_P_Z_:
+		case ENC_UXTH_Z_P_Z_M:
+		case ENC_UXTH_Z_P_Z_Z:
 			if (!preferIntrinsics())
 				il.AddInstruction(il.Unimplemented());
 			return true;

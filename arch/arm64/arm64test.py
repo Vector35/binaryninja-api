@@ -6301,7 +6301,10 @@ def lift(data, disasm=False):
             tokens.append(il2str(il))
             if disasm:
                 info = block.arch.get_instruction_info(bv[il.address:il.address+block.arch._get_max_instruction_length(None)], il.address)
-                asm.append(''.join(map(str, block.arch.get_instruction_text(bv[il.address:il.address + info.length], il.address)[0])))
+                if info is not None:
+                    asm.append(''.join(map(str, block.arch.get_instruction_text(bv[il.address:il.address + info.length], il.address)[0])))
+                else:
+                    print(f'no instruction info: {bv[il.address:il.address+block.arch._get_max_instruction_length(None)]=}, {il.address=:#x}')
     il_str = '; '.join(tokens)
 
     i = len(il_str)

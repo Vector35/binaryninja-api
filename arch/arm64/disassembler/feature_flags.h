@@ -1,197 +1,434 @@
 /* GENERATED FILE */
 #pragma once
-// 41 HasXXX() functions used by decode:
+// 99 HasXXX() functions used by decode:
+#define HasAES() (ctx->features0 & ARCH_FEATURE_AES)
+#define HasAdvSIMD() (ctx->features0 & ARCH_FEATURE_AdvSIMD)
 #define HasBF16() (ctx->features0 & ARCH_FEATURE_BF16)
 #define HasBTI() (ctx->features0 & ARCH_FEATURE_BTI)
+#define HasCHK() (ctx->features0 & ARCH_FEATURE_CHK)
+#define HasCLRBHB() (ctx->features0 & ARCH_FEATURE_CLRBHB)
+#define HasCMPBR() (ctx->features0 & ARCH_FEATURE_CMPBR)
+#define HasCPA() (ctx->features0 & ARCH_FEATURE_CPA)
+#define HasCRC32() (ctx->features0 & ARCH_FEATURE_CRC32)
+#define HasCSSC() (ctx->features0 & ARCH_FEATURE_CSSC)
+#define HasD128() (ctx->features0 & ARCH_FEATURE_D128)
 #define HasDGH() (ctx->features0 & ARCH_FEATURE_DGH)
 #define HasDotProd() (ctx->features0 & ARCH_FEATURE_DotProd)
 #define HasF32MM() (ctx->features0 & ARCH_FEATURE_F32MM)
 #define HasF64MM() (ctx->features0 & ARCH_FEATURE_F64MM)
+#define HasF8F16MM() (ctx->features0 & ARCH_FEATURE_F8F16MM)
+#define HasF8F32MM() (ctx->features0 & ARCH_FEATURE_F8F32MM)
+#define HasFAMINMAX() (ctx->features0 & ARCH_FEATURE_FAMINMAX)
 #define HasFCMA() (ctx->features0 & ARCH_FEATURE_FCMA)
 #define HasFHM() (ctx->features0 & ARCH_FEATURE_FHM)
+#define HasFP() (ctx->features0 & ARCH_FEATURE_FP)
 #define HasFP16() (ctx->features0 & ARCH_FEATURE_FP16)
+#define HasFP8() (ctx->features0 & ARCH_FEATURE_FP8)
+#define HasFP8DOT2() (ctx->features0 & ARCH_FEATURE_FP8DOT2)
+#define HasFP8DOT4() (ctx->features0 & ARCH_FEATURE_FP8DOT4)
+#define HasFP8FMA() (ctx->features0 & ARCH_FEATURE_FP8FMA)
+#define HasFPRCVT() (ctx->features0 & ARCH_FEATURE_FPRCVT)
 #define HasFRINTTS() (ctx->features0 & ARCH_FEATURE_FRINTTS)
 #define HasFlagM() (ctx->features0 & ARCH_FEATURE_FlagM)
 #define HasFlagM2() (ctx->features0 & ARCH_FEATURE_FlagM2)
+#define HasGCS() (ctx->features0 & ARCH_FEATURE_GCS)
+#define HasHBC() (ctx->features0 & ARCH_FEATURE_HBC)
 #define HasI8MM() (ctx->features0 & ARCH_FEATURE_I8MM)
 #define HasJSCVT() (ctx->features0 & ARCH_FEATURE_JSCVT)
 #define HasLOR() (ctx->features0 & ARCH_FEATURE_LOR)
 #define HasLRCPC() (ctx->features0 & ARCH_FEATURE_LRCPC)
 #define HasLRCPC2() (ctx->features0 & ARCH_FEATURE_LRCPC2)
+#define HasLRCPC3() (ctx->features0 & ARCH_FEATURE_LRCPC3)
 #define HasLS64() (ctx->features0 & ARCH_FEATURE_LS64)
+#define HasLS64_ACCDATA() (ctx->features0 & ARCH_FEATURE_LS64_ACCDATA)
 #define HasLS64_V() (ctx->features0 & ARCH_FEATURE_LS64_V)
 #define HasLSE() (ctx->features0 & ARCH_FEATURE_LSE)
+#define HasLSE128() (ctx->features0 & ARCH_FEATURE_LSE128)
+#define HasLSFE() (ctx->features0 & ARCH_FEATURE_LSFE)
+#define HasLSUI() (ctx->features0 & ARCH_FEATURE_LSUI)
+#define HasLUT() (ctx->features0 & ARCH_FEATURE_LUT)
+#define HasMOPS() (ctx->features0 & ARCH_FEATURE_MOPS)
 #define HasMTE() (ctx->features0 & ARCH_FEATURE_MTE)
 #define HasMTE2() (ctx->features0 & ARCH_FEATURE_MTE2)
 #define HasPAuth() (ctx->features0 & ARCH_FEATURE_PAuth)
+#define HasPAuth_LR() (ctx->features0 & ARCH_FEATURE_PAuth_LR)
+#define HasPCDPHINT() (ctx->features0 & ARCH_FEATURE_PCDPHINT)
 #define HasRAS() (ctx->features0 & ARCH_FEATURE_RAS)
 #define HasRDM() (ctx->features0 & ARCH_FEATURE_RDM)
+#define HasRPRFM() (ctx->features0 & ARCH_FEATURE_RPRFM)
+#define HasSB() (ctx->features0 & ARCH_FEATURE_SB)
+#define HasSHA1() (ctx->features0 & ARCH_FEATURE_SHA1)
+#define HasSHA256() (ctx->features0 & ARCH_FEATURE_SHA256)
 #define HasSHA3() (ctx->features0 & ARCH_FEATURE_SHA3)
 #define HasSHA512() (ctx->features0 & ARCH_FEATURE_SHA512)
 #define HasSM3() (ctx->features0 & ARCH_FEATURE_SM3)
 #define HasSM4() (ctx->features0 & ARCH_FEATURE_SM4)
 #define HasSME() (ctx->features0 & ARCH_FEATURE_SME)
-#define HasSME_F64F64() (ctx->features0 & ARCH_FEATURE_SME_F64F64)
-#define HasSME_I16I64() (ctx->features0 & ARCH_FEATURE_SME_I16I64)
-#define HasSPE() (ctx->features0 & ARCH_FEATURE_SPE)
-#define HasSVE_AES() (ctx->features0 & ARCH_FEATURE_SVE_AES)
-#define HasSVE_BitPerm() (ctx->features0 & ARCH_FEATURE_SVE_BitPerm)
-#define HasSVE_SHA3() (ctx->features0 & ARCH_FEATURE_SVE_SHA3)
-#define HasSVE_SM4() (ctx->features0 & ARCH_FEATURE_SVE_SM4)
-#define HasTME() (ctx->features0 & ARCH_FEATURE_TME)
-#define HasTRF() (ctx->features0 & ARCH_FEATURE_TRF)
-#define HasWFxT() (ctx->features0 & ARCH_FEATURE_WFxT)
-#define HasXS() (ctx->features0 & ARCH_FEATURE_XS)
+#define HasSME2() (ctx->features0 & ARCH_FEATURE_SME2)
+#define HasSME2p1() (ctx->features01 & ARCH_FEATURE_SME2p1)
+#define HasSME2p2() (ctx->features01 & ARCH_FEATURE_SME2p2)
+#define HasSME_B16B16() (ctx->features01 & ARCH_FEATURE_SME_B16B16)
+#define HasSME_F16F16() (ctx->features01 & ARCH_FEATURE_SME_F16F16)
+#define HasSME_F64F64() (ctx->features01 & ARCH_FEATURE_SME_F64F64)
+#define HasSME_F8F16() (ctx->features01 & ARCH_FEATURE_SME_F8F16)
+#define HasSME_F8F32() (ctx->features01 & ARCH_FEATURE_SME_F8F32)
+#define HasSME_I16I64() (ctx->features01 & ARCH_FEATURE_SME_I16I64)
+#define HasSME_LUTv2() (ctx->features01 & ARCH_FEATURE_SME_LUTv2)
+#define HasSME_MOP4() (ctx->features01 & ARCH_FEATURE_SME_MOP4)
+#define HasSME_TMOP() (ctx->features01 & ARCH_FEATURE_SME_TMOP)
+#define HasSPE() (ctx->features01 & ARCH_FEATURE_SPE)
+#define HasSSVE_FP8DOT2() (ctx->features01 & ARCH_FEATURE_SSVE_FP8DOT2)
+#define HasSSVE_FP8DOT4() (ctx->features01 & ARCH_FEATURE_SSVE_FP8DOT4)
+#define HasSSVE_FP8FMA() (ctx->features01 & ARCH_FEATURE_SSVE_FP8FMA)
+#define HasSVE() (ctx->features01 & ARCH_FEATURE_SVE)
+#define HasSVE2() (ctx->features01 & ARCH_FEATURE_SVE2)
+#define HasSVE2p1() (ctx->features01 & ARCH_FEATURE_SVE2p1)
+#define HasSVE2p2() (ctx->features01 & ARCH_FEATURE_SVE2p2)
+#define HasSVE_AES() (ctx->features01 & ARCH_FEATURE_SVE_AES)
+#define HasSVE_AES2() (ctx->features01 & ARCH_FEATURE_SVE_AES2)
+#define HasSVE_B16B16() (ctx->features01 & ARCH_FEATURE_SVE_B16B16)
+#define HasSVE_BFSCALE() (ctx->features01 & ARCH_FEATURE_SVE_BFSCALE)
+#define HasSVE_BitPerm() (ctx->features01 & ARCH_FEATURE_SVE_BitPerm)
+#define HasSVE_F16F32MM() (ctx->features01 & ARCH_FEATURE_SVE_F16F32MM)
+#define HasSVE_PMULL128() (ctx->features01 & ARCH_FEATURE_SVE_PMULL128)
+#define HasSVE_SHA3() (ctx->features01 & ARCH_FEATURE_SVE_SHA3)
+#define HasSVE_SM4() (ctx->features01 & ARCH_FEATURE_SVE_SM4)
+#define HasSYSINSTR128() (ctx->features01 & ARCH_FEATURE_SYSINSTR128)
+#define HasSYSREG128() (ctx->features01 & ARCH_FEATURE_SYSREG128)
+#define HasTHE() (ctx->features01 & ARCH_FEATURE_THE)
+#define HasTME() (ctx->features01 & ARCH_FEATURE_TME)
+#define HasTRF() (ctx->features01 & ARCH_FEATURE_TRF)
+#define HasWFxT() (ctx->features01 & ARCH_FEATURE_WFxT)
+#define HasXS() (ctx->features01 & ARCH_FEATURE_XS)
 
-// 52 HaveXXX() functions used by pcode:
-#define HaveAESExt() (ctx->features1 & ARCH_FEATURE_AESExt)
-#define HaveAtomicExt() (ctx->features1 & ARCH_FEATURE_AtomicExt)
-#define HaveBF16Ext() (ctx->features1 & ARCH_FEATURE_BF16Ext)
-#define HaveBTIExt() (ctx->features1 & ARCH_FEATURE_BTIExt)
-#define HaveBit128PMULLExt() (ctx->features1 & ARCH_FEATURE_Bit128PMULLExt)
-#define HaveCRCExt() (ctx->features1 & ARCH_FEATURE_CRCExt)
-#define HaveDGHExt() (ctx->features1 & ARCH_FEATURE_DGHExt)
-#define HaveDITExt() (ctx->features1 & ARCH_FEATURE_DITExt)
-#define HaveDOTPExt() (ctx->features1 & ARCH_FEATURE_DOTPExt)
-#define HaveFCADDExt() (ctx->features1 & ARCH_FEATURE_FCADDExt)
-#define HaveFJCVTZSExt() (ctx->features1 & ARCH_FEATURE_FJCVTZSExt)
-#define HaveFP16Ext() (ctx->features1 & ARCH_FEATURE_FP16Ext)
-#define HaveFP16MulNoRoundingToFP32Ext() (ctx->features1 & ARCH_FEATURE_FP16MulNoRoundingToFP32Ext)
-#define HaveFeatLS64() (ctx->features1 & ARCH_FEATURE_FeatLS64)
-#define HaveFeatWFxT() (ctx->features1 & ARCH_FEATURE_FeatWFxT)
-#define HaveFeatXS() (ctx->features1 & ARCH_FEATURE_FeatXS)
-#define HaveFlagFormatExt() (ctx->features1 & ARCH_FEATURE_FlagFormatExt)
-#define HaveFlagManipulateExt() (ctx->features1 & ARCH_FEATURE_FlagManipulateExt)
-#define HaveFrintExt() (ctx->features1 & ARCH_FEATURE_FrintExt)
-#define HaveInt8MatMulExt() (ctx->features1 & ARCH_FEATURE_Int8MatMulExt)
-#define HaveMTE2Ext() (ctx->features1 & ARCH_FEATURE_MTE2Ext)
-#define HaveMTEExt() (ctx->features1 & ARCH_FEATURE_MTEExt)
-#define HaveNVExt() (ctx->features1 & ARCH_FEATURE_NVExt)
-#define HavePACExt() (ctx->features1 & ARCH_FEATURE_PACExt)
-#define HavePANExt() (ctx->features1 & ARCH_FEATURE_PANExt)
-#define HaveQRDMLAHExt() (ctx->features1 & ARCH_FEATURE_QRDMLAHExt)
-#define HaveRASExt() (ctx->features1 & ARCH_FEATURE_RASExt)
-#define HaveSBExt() (ctx->features1 & ARCH_FEATURE_SBExt)
-#define HaveSHA1Ext() (ctx->features1 & ARCH_FEATURE_SHA1Ext)
-#define HaveSHA256Ext() (ctx->features1 & ARCH_FEATURE_SHA256Ext)
-#define HaveSHA3Ext() (ctx->features1 & ARCH_FEATURE_SHA3Ext)
-#define HaveSHA512Ext() (ctx->features1 & ARCH_FEATURE_SHA512Ext)
-#define HaveSM3Ext() (ctx->features1 & ARCH_FEATURE_SM3Ext)
-#define HaveSM4Ext() (ctx->features1 & ARCH_FEATURE_SM4Ext)
+// 107 HaveXXX()/IsImplemented(FEAT_XXX) functions used by pcode:
+#define HaveAES() (ctx->features1 & ARCH_FEATURE_AES)
+#define HaveAdvSIMD() (ctx->features1 & ARCH_FEATURE_AdvSIMD)
+#define HaveBF16() (ctx->features1 & ARCH_FEATURE_BF16)
+#define HaveBTI() (ctx->features1 & ARCH_FEATURE_BTI)
+#define HaveCHK() (ctx->features1 & ARCH_FEATURE_CHK)
+#define HaveCLRBHB() (ctx->features1 & ARCH_FEATURE_CLRBHB)
+#define HaveCMPBR() (ctx->features1 & ARCH_FEATURE_CMPBR)
+#define HaveCPA() (ctx->features1 & ARCH_FEATURE_CPA)
+#define HaveCRC32() (ctx->features1 & ARCH_FEATURE_CRC32)
+#define HaveCSSC() (ctx->features1 & ARCH_FEATURE_CSSC)
+#define HaveD128() (ctx->features1 & ARCH_FEATURE_D128)
+#define HaveDGH() (ctx->features1 & ARCH_FEATURE_DGH)
+#define HaveDIT() (ctx->features11 & ARCH_FEATURE_DIT)
+#define HaveDotProd() (ctx->features1 & ARCH_FEATURE_DotProd)
+#define HaveEBEP() (ctx->features11 & ARCH_FEATURE_EBEP)
+#define HaveF32MM() (ctx->features1 & ARCH_FEATURE_F32MM)
+#define HaveF64MM() (ctx->features1 & ARCH_FEATURE_F64MM)
+#define HaveF8F16MM() (ctx->features1 & ARCH_FEATURE_F8F16MM)
+#define HaveF8F32MM() (ctx->features1 & ARCH_FEATURE_F8F32MM)
+#define HaveFAMINMAX() (ctx->features1 & ARCH_FEATURE_FAMINMAX)
+#define HaveFCMA() (ctx->features1 & ARCH_FEATURE_FCMA)
+#define HaveFHM() (ctx->features1 & ARCH_FEATURE_FHM)
+#define HaveFP() (ctx->features1 & ARCH_FEATURE_FP)
+#define HaveFP16() (ctx->features1 & ARCH_FEATURE_FP16)
+#define HaveFP8() (ctx->features1 & ARCH_FEATURE_FP8)
+#define HaveFP8DOT2() (ctx->features1 & ARCH_FEATURE_FP8DOT2)
+#define HaveFP8DOT4() (ctx->features1 & ARCH_FEATURE_FP8DOT4)
+#define HaveFP8FMA() (ctx->features1 & ARCH_FEATURE_FP8FMA)
+#define HaveFPRCVT() (ctx->features1 & ARCH_FEATURE_FPRCVT)
+#define HaveFRINTTS() (ctx->features1 & ARCH_FEATURE_FRINTTS)
+#define HaveFlagM() (ctx->features1 & ARCH_FEATURE_FlagM)
+#define HaveFlagM2() (ctx->features1 & ARCH_FEATURE_FlagM2)
+#define HaveGCS() (ctx->features1 & ARCH_FEATURE_GCS)
+#define HaveHBC() (ctx->features1 & ARCH_FEATURE_HBC)
+#define HaveI8MM() (ctx->features1 & ARCH_FEATURE_I8MM)
+#define HaveJSCVT() (ctx->features1 & ARCH_FEATURE_JSCVT)
+#define HaveLOR() (ctx->features1 & ARCH_FEATURE_LOR)
+#define HaveLRCPC() (ctx->features1 & ARCH_FEATURE_LRCPC)
+#define HaveLRCPC2() (ctx->features1 & ARCH_FEATURE_LRCPC2)
+#define HaveLRCPC3() (ctx->features1 & ARCH_FEATURE_LRCPC3)
+#define HaveLS64() (ctx->features1 & ARCH_FEATURE_LS64)
+#define HaveLS64_ACCDATA() (ctx->features1 & ARCH_FEATURE_LS64_ACCDATA)
+#define HaveLS64_V() (ctx->features1 & ARCH_FEATURE_LS64_V)
+#define HaveLSE() (ctx->features1 & ARCH_FEATURE_LSE)
+#define HaveLSE128() (ctx->features1 & ARCH_FEATURE_LSE128)
+#define HaveLSFE() (ctx->features1 & ARCH_FEATURE_LSFE)
+#define HaveLSUI() (ctx->features1 & ARCH_FEATURE_LSUI)
+#define HaveLUT() (ctx->features1 & ARCH_FEATURE_LUT)
+#define HaveMOPS() (ctx->features1 & ARCH_FEATURE_MOPS)
+#define HaveMTE() (ctx->features1 & ARCH_FEATURE_MTE)
+#define HaveMTE2() (ctx->features1 & ARCH_FEATURE_MTE2)
+#define HaveNMI() (ctx->features11 & ARCH_FEATURE_NMI)
+#define HavePAN() (ctx->features11 & ARCH_FEATURE_PAN)
+#define HavePAuth() (ctx->features1 & ARCH_FEATURE_PAuth)
+#define HavePAuth_LR() (ctx->features1 & ARCH_FEATURE_PAuth_LR)
+#define HavePCDPHINT() (ctx->features1 & ARCH_FEATURE_PCDPHINT)
+#define HavePMULL() (ctx->features11 & ARCH_FEATURE_PMULL)
+#define HaveRAS() (ctx->features1 & ARCH_FEATURE_RAS)
+#define HaveRDM() (ctx->features1 & ARCH_FEATURE_RDM)
+#define HaveRPRFM() (ctx->features1 & ARCH_FEATURE_RPRFM)
+#define HaveSB() (ctx->features1 & ARCH_FEATURE_SB)
+#define HaveSHA1() (ctx->features1 & ARCH_FEATURE_SHA1)
+#define HaveSHA256() (ctx->features1 & ARCH_FEATURE_SHA256)
+#define HaveSHA3() (ctx->features1 & ARCH_FEATURE_SHA3)
+#define HaveSHA512() (ctx->features1 & ARCH_FEATURE_SHA512)
+#define HaveSM3() (ctx->features1 & ARCH_FEATURE_SM3)
+#define HaveSM4() (ctx->features1 & ARCH_FEATURE_SM4)
 #define HaveSME() (ctx->features1 & ARCH_FEATURE_SME)
-#define HaveSMEF64F64() (ctx->features1 & ARCH_FEATURE_SMEF64F64)
-#define HaveSMEI16I64() (ctx->features1 & ARCH_FEATURE_SMEI16I64)
-#define HaveSSBSExt() (ctx->features1 & ARCH_FEATURE_SSBSExt)
-#define HaveSVE() (ctx->features1 & ARCH_FEATURE_SVE)
-#define HaveSVE2() (ctx->features1 & ARCH_FEATURE_SVE2)
-#define HaveSVE2AES() (ctx->features1 & ARCH_FEATURE_SVE2AES)
-#define HaveSVE2BitPerm() (ctx->features1 & ARCH_FEATURE_SVE2BitPerm)
-#define HaveSVE2PMULL128() (ctx->features1 & ARCH_FEATURE_SVE2PMULL128)
-#define HaveSVE2SHA3() (ctx->features1 & ARCH_FEATURE_SVE2SHA3)
-#define HaveSVE2SM4() (ctx->features1 & ARCH_FEATURE_SVE2SM4)
-#define HaveSVEFP32MatMulExt() (ctx->features1 & ARCH_FEATURE_SVEFP32MatMulExt)
-#define HaveSVEFP64MatMulExt() (ctx->features1 & ARCH_FEATURE_SVEFP64MatMulExt)
-#define HaveSelfHostedTrace() (ctx->features1 & ARCH_FEATURE_SelfHostedTrace)
-#define HaveStatisticalProfiling() (ctx->features1 & ARCH_FEATURE_StatisticalProfiling)
-#define HaveTME() (ctx->features1 & ARCH_FEATURE_TME)
-#define HaveUAOExt() (ctx->features1 & ARCH_FEATURE_UAOExt)
-#define HaveVirtHostExt() (ctx->features1 & ARCH_FEATURE_VirtHostExt)
+#define HaveSME2() (ctx->features1 & ARCH_FEATURE_SME2)
+#define HaveSME2p1() (ctx->features11 & ARCH_FEATURE_SME2p1)
+#define HaveSME2p2() (ctx->features11 & ARCH_FEATURE_SME2p2)
+#define HaveSME_B16B16() (ctx->features11 & ARCH_FEATURE_SME_B16B16)
+#define HaveSME_F16F16() (ctx->features11 & ARCH_FEATURE_SME_F16F16)
+#define HaveSME_F64F64() (ctx->features11 & ARCH_FEATURE_SME_F64F64)
+#define HaveSME_F8F16() (ctx->features11 & ARCH_FEATURE_SME_F8F16)
+#define HaveSME_F8F32() (ctx->features11 & ARCH_FEATURE_SME_F8F32)
+#define HaveSME_I16I64() (ctx->features11 & ARCH_FEATURE_SME_I16I64)
+#define HaveSME_LUTv2() (ctx->features11 & ARCH_FEATURE_SME_LUTv2)
+#define HaveSME_MOP4() (ctx->features11 & ARCH_FEATURE_SME_MOP4)
+#define HaveSME_TMOP() (ctx->features11 & ARCH_FEATURE_SME_TMOP)
+#define HaveSPE() (ctx->features11 & ARCH_FEATURE_SPE)
+#define HaveSSBS() (ctx->features11 & ARCH_FEATURE_SSBS)
+#define HaveSVE() (ctx->features11 & ARCH_FEATURE_SVE)
+#define HaveSVE2() (ctx->features11 & ARCH_FEATURE_SVE2)
+#define HaveSVE2FP8DOT2() (ctx->features11 & ARCH_FEATURE_SVE2FP8DOT2)
+#define HaveSVE2FP8DOT4() (ctx->features11 & ARCH_FEATURE_SVE2FP8DOT4)
+#define HaveSVE2FP8FMA() (ctx->features11 & ARCH_FEATURE_SVE2FP8FMA)
+#define HaveSVE2p1() (ctx->features11 & ARCH_FEATURE_SVE2p1)
+#define HaveSVE2p2() (ctx->features11 & ARCH_FEATURE_SVE2p2)
+#define HaveSVE_AES() (ctx->features11 & ARCH_FEATURE_SVE_AES)
+#define HaveSVE_AES2() (ctx->features11 & ARCH_FEATURE_SVE_AES2)
+#define HaveSVE_B16B16() (ctx->features11 & ARCH_FEATURE_SVE_B16B16)
+#define HaveSVE_BFSCALE() (ctx->features11 & ARCH_FEATURE_SVE_BFSCALE)
+#define HaveSVE_BitPerm() (ctx->features11 & ARCH_FEATURE_SVE_BitPerm)
+#define HaveSVE_F16F32MM() (ctx->features11 & ARCH_FEATURE_SVE_F16F32MM)
+#define HaveSVE_PMULL128() (ctx->features11 & ARCH_FEATURE_SVE_PMULL128)
+#define HaveSVE_SHA3() (ctx->features11 & ARCH_FEATURE_SVE_SHA3)
+#define HaveSVE_SM4() (ctx->features11 & ARCH_FEATURE_SVE_SM4)
+#define HaveSYSINSTR128() (ctx->features11 & ARCH_FEATURE_SYSINSTR128)
+#define HaveSYSREG128() (ctx->features11 & ARCH_FEATURE_SYSREG128)
+#define HaveTHE() (ctx->features11 & ARCH_FEATURE_THE)
+#define HaveTME() (ctx->features11 & ARCH_FEATURE_TME)
+#define HaveTRF() (ctx->features11 & ARCH_FEATURE_TRF)
+#define HaveUAO() (ctx->features11 & ARCH_FEATURE_UAO)
+#define HaveVHE() (ctx->features11 & ARCH_FEATURE_VHE)
+#define HaveWFxT() (ctx->features11 & ARCH_FEATURE_WFxT)
+#define HaveXS() (ctx->features11 & ARCH_FEATURE_XS)
 
-// defines for features referenced at decode
-#define ARCH_FEATURE_BF16 ((uint64_t)1<<0)
-#define ARCH_FEATURE_BTI ((uint64_t)1<<1)
-#define ARCH_FEATURE_DGH ((uint64_t)1<<2)
-#define ARCH_FEATURE_DotProd ((uint64_t)1<<3)
-#define ARCH_FEATURE_F32MM ((uint64_t)1<<4)
-#define ARCH_FEATURE_F64MM ((uint64_t)1<<5)
-#define ARCH_FEATURE_FCMA ((uint64_t)1<<6)
-#define ARCH_FEATURE_FHM ((uint64_t)1<<7)
-#define ARCH_FEATURE_FP16 ((uint64_t)1<<8)
-#define ARCH_FEATURE_FRINTTS ((uint64_t)1<<9)
-#define ARCH_FEATURE_FlagM ((uint64_t)1<<10)
-#define ARCH_FEATURE_FlagM2 ((uint64_t)1<<11)
-#define ARCH_FEATURE_I8MM ((uint64_t)1<<12)
-#define ARCH_FEATURE_JSCVT ((uint64_t)1<<13)
-#define ARCH_FEATURE_LOR ((uint64_t)1<<14)
-#define ARCH_FEATURE_LRCPC ((uint64_t)1<<15)
-#define ARCH_FEATURE_LRCPC2 ((uint64_t)1<<16)
-#define ARCH_FEATURE_LS64 ((uint64_t)1<<17)
-#define ARCH_FEATURE_LS64_V ((uint64_t)1<<18)
-#define ARCH_FEATURE_LSE ((uint64_t)1<<19)
-#define ARCH_FEATURE_MTE ((uint64_t)1<<20)
-#define ARCH_FEATURE_MTE2 ((uint64_t)1<<21)
-#define ARCH_FEATURE_PAuth ((uint64_t)1<<22)
-#define ARCH_FEATURE_RAS ((uint64_t)1<<23)
-#define ARCH_FEATURE_RDM ((uint64_t)1<<24)
-#define ARCH_FEATURE_SHA3 ((uint64_t)1<<25)
-#define ARCH_FEATURE_SHA512 ((uint64_t)1<<26)
-#define ARCH_FEATURE_SM3 ((uint64_t)1<<27)
-#define ARCH_FEATURE_SM4 ((uint64_t)1<<28)
-#define ARCH_FEATURE_SME ((uint64_t)1<<29)
-#define ARCH_FEATURE_SME_F64F64 ((uint64_t)1<<30)
-#define ARCH_FEATURE_SME_I16I64 ((uint64_t)1<<31)
-#define ARCH_FEATURE_SPE ((uint64_t)1<<32)
-#define ARCH_FEATURE_SVE_AES ((uint64_t)1<<33)
-#define ARCH_FEATURE_SVE_BitPerm ((uint64_t)1<<34)
-#define ARCH_FEATURE_SVE_SHA3 ((uint64_t)1<<35)
-#define ARCH_FEATURE_SVE_SM4 ((uint64_t)1<<36)
-#define ARCH_FEATURE_TME ((uint64_t)1<<37)
-#define ARCH_FEATURE_TRF ((uint64_t)1<<38)
-#define ARCH_FEATURE_WFxT ((uint64_t)1<<39)
-#define ARCH_FEATURE_XS ((uint64_t)1<<40)
+// 110 defines for features referenced at decode
+#define ARCH_FEATURE_AES ((uint64_t)1<<0)  // 0
+#define ARCH_FEATURE_AdvSIMD ((uint64_t)1<<1)  // 1
+#define ARCH_FEATURE_BF16 ((uint64_t)1<<2)  // 2
+#define ARCH_FEATURE_BTI ((uint64_t)1<<3)  // 3
+#define ARCH_FEATURE_CHK ((uint64_t)1<<4)  // 4
+#define ARCH_FEATURE_CLRBHB ((uint64_t)1<<5)  // 5
+#define ARCH_FEATURE_CMPBR ((uint64_t)1<<6)  // 6
+#define ARCH_FEATURE_CPA ((uint64_t)1<<7)  // 7
+#define ARCH_FEATURE_CRC32 ((uint64_t)1<<8)  // 8
+#define ARCH_FEATURE_CSSC ((uint64_t)1<<9)  // 9
+#define ARCH_FEATURE_D128 ((uint64_t)1<<10)  // 10
+#define ARCH_FEATURE_DGH ((uint64_t)1<<11)  // 11
+#define ARCH_FEATURE_DotProd ((uint64_t)1<<12)  // 12
+#define ARCH_FEATURE_F32MM ((uint64_t)1<<13)  // 13
+#define ARCH_FEATURE_F64MM ((uint64_t)1<<14)  // 14
+#define ARCH_FEATURE_F8F16MM ((uint64_t)1<<15)  // 15
+#define ARCH_FEATURE_F8F32MM ((uint64_t)1<<16)  // 16
+#define ARCH_FEATURE_FAMINMAX ((uint64_t)1<<17)  // 17
+#define ARCH_FEATURE_FCMA ((uint64_t)1<<18)  // 18
+#define ARCH_FEATURE_FHM ((uint64_t)1<<19)  // 19
+#define ARCH_FEATURE_FP ((uint64_t)1<<20)  // 20
+#define ARCH_FEATURE_FP16 ((uint64_t)1<<21)  // 21
+#define ARCH_FEATURE_FP8 ((uint64_t)1<<22)  // 22
+#define ARCH_FEATURE_FP8DOT2 ((uint64_t)1<<23)  // 23
+#define ARCH_FEATURE_FP8DOT4 ((uint64_t)1<<24)  // 24
+#define ARCH_FEATURE_FP8FMA ((uint64_t)1<<25)  // 25
+#define ARCH_FEATURE_FPRCVT ((uint64_t)1<<26)  // 26
+#define ARCH_FEATURE_FRINTTS ((uint64_t)1<<27)  // 27
+#define ARCH_FEATURE_FlagM ((uint64_t)1<<28)  // 28
+#define ARCH_FEATURE_FlagM2 ((uint64_t)1<<29)  // 29
+#define ARCH_FEATURE_GCS ((uint64_t)1<<30)  // 30
+#define ARCH_FEATURE_HBC ((uint64_t)1<<31)  // 31
+#define ARCH_FEATURE_I8MM ((uint64_t)1<<32)  // 32
+#define ARCH_FEATURE_JSCVT ((uint64_t)1<<33)  // 33
+#define ARCH_FEATURE_LOR ((uint64_t)1<<34)  // 34
+#define ARCH_FEATURE_LRCPC ((uint64_t)1<<35)  // 35
+#define ARCH_FEATURE_LRCPC2 ((uint64_t)1<<36)  // 36
+#define ARCH_FEATURE_LRCPC3 ((uint64_t)1<<37)  // 37
+#define ARCH_FEATURE_LS64 ((uint64_t)1<<38)  // 38
+#define ARCH_FEATURE_LS64_ACCDATA ((uint64_t)1<<39)  // 39
+#define ARCH_FEATURE_LS64_V ((uint64_t)1<<40)  // 40
+#define ARCH_FEATURE_LSE ((uint64_t)1<<41)  // 41
+#define ARCH_FEATURE_LSE128 ((uint64_t)1<<42)  // 42
+#define ARCH_FEATURE_LSFE ((uint64_t)1<<43)  // 43
+#define ARCH_FEATURE_LSUI ((uint64_t)1<<44)  // 44
+#define ARCH_FEATURE_LUT ((uint64_t)1<<45)  // 45
+#define ARCH_FEATURE_MOPS ((uint64_t)1<<46)  // 46
+#define ARCH_FEATURE_MTE ((uint64_t)1<<47)  // 47
+#define ARCH_FEATURE_MTE2 ((uint64_t)1<<48)  // 48
+#define ARCH_FEATURE_PAuth ((uint64_t)1<<49)  // 49
+#define ARCH_FEATURE_PAuth_LR ((uint64_t)1<<50)  // 50
+#define ARCH_FEATURE_PCDPHINT ((uint64_t)1<<51)  // 51
+#define ARCH_FEATURE_RAS ((uint64_t)1<<52)  // 52
+#define ARCH_FEATURE_RDM ((uint64_t)1<<53)  // 53
+#define ARCH_FEATURE_RPRFM ((uint64_t)1<<54)  // 54
+#define ARCH_FEATURE_SB ((uint64_t)1<<55)  // 55
+#define ARCH_FEATURE_SHA1 ((uint64_t)1<<56)  // 56
+#define ARCH_FEATURE_SHA256 ((uint64_t)1<<57)  // 57
+#define ARCH_FEATURE_SHA3 ((uint64_t)1<<58)  // 58
+#define ARCH_FEATURE_SHA512 ((uint64_t)1<<59)  // 59
+#define ARCH_FEATURE_SM3 ((uint64_t)1<<60)  // 60
+#define ARCH_FEATURE_SM4 ((uint64_t)1<<61)  // 61
+#define ARCH_FEATURE_SME ((uint64_t)1<<62)  // 62
+#define ARCH_FEATURE_SME2 ((uint64_t)1<<63)  // 63
+#define ARCH_FEATURE_SME2p1 ((uint64_t)1<<0)  // 64
+#define ARCH_FEATURE_SME2p2 ((uint64_t)1<<1)  // 65
+#define ARCH_FEATURE_SME_B16B16 ((uint64_t)1<<2)  // 66
+#define ARCH_FEATURE_SME_F16F16 ((uint64_t)1<<3)  // 67
+#define ARCH_FEATURE_SME_F64F64 ((uint64_t)1<<4)  // 68
+#define ARCH_FEATURE_SME_F8F16 ((uint64_t)1<<5)  // 69
+#define ARCH_FEATURE_SME_F8F32 ((uint64_t)1<<6)  // 70
+#define ARCH_FEATURE_SME_I16I64 ((uint64_t)1<<7)  // 71
+#define ARCH_FEATURE_SME_LUTv2 ((uint64_t)1<<8)  // 72
+#define ARCH_FEATURE_SME_MOP4 ((uint64_t)1<<9)  // 73
+#define ARCH_FEATURE_SME_TMOP ((uint64_t)1<<10)  // 74
+#define ARCH_FEATURE_SPE ((uint64_t)1<<11)  // 75
+#define ARCH_FEATURE_SSVE_FP8DOT2 ((uint64_t)1<<12)  // 76
+#define ARCH_FEATURE_SSVE_FP8DOT4 ((uint64_t)1<<13)  // 77
+#define ARCH_FEATURE_SSVE_FP8FMA ((uint64_t)1<<14)  // 78
+#define ARCH_FEATURE_SVE ((uint64_t)1<<15)  // 79
+#define ARCH_FEATURE_SVE2 ((uint64_t)1<<16)  // 80
+#define ARCH_FEATURE_SVE2p1 ((uint64_t)1<<17)  // 81
+#define ARCH_FEATURE_SVE2p2 ((uint64_t)1<<18)  // 82
+#define ARCH_FEATURE_SVE_AES ((uint64_t)1<<19)  // 83
+#define ARCH_FEATURE_SVE_AES2 ((uint64_t)1<<20)  // 84
+#define ARCH_FEATURE_SVE_B16B16 ((uint64_t)1<<21)  // 85
+#define ARCH_FEATURE_SVE_BFSCALE ((uint64_t)1<<22)  // 86
+#define ARCH_FEATURE_SVE_BitPerm ((uint64_t)1<<23)  // 87
+#define ARCH_FEATURE_SVE_F16F32MM ((uint64_t)1<<24)  // 88
+#define ARCH_FEATURE_SVE_PMULL128 ((uint64_t)1<<25)  // 89
+#define ARCH_FEATURE_SVE_SHA3 ((uint64_t)1<<26)  // 90
+#define ARCH_FEATURE_SVE_SM4 ((uint64_t)1<<27)  // 91
+#define ARCH_FEATURE_SYSINSTR128 ((uint64_t)1<<28)  // 92
+#define ARCH_FEATURE_SYSREG128 ((uint64_t)1<<29)  // 93
+#define ARCH_FEATURE_THE ((uint64_t)1<<30)  // 94
+#define ARCH_FEATURE_TME ((uint64_t)1<<31)  // 95
+#define ARCH_FEATURE_TRF ((uint64_t)1<<32)  // 96
+#define ARCH_FEATURE_WFxT ((uint64_t)1<<33)  // 97
+#define ARCH_FEATURE_XS ((uint64_t)1<<34)  // 98
+#define ARCH_FEATURE_VHE ((uint64_t)1<<35)  // 99
+#define ARCH_FEATURE_UAO ((uint64_t)1<<36)  // 100
+#define ARCH_FEATURE_PAN ((uint64_t)1<<37)  // 101
+#define ARCH_FEATURE_NMI ((uint64_t)1<<38)  // 102
+#define ARCH_FEATURE_EBEP ((uint64_t)1<<39)  // 103
+#define ARCH_FEATURE_DIT ((uint64_t)1<<40)  // 104
+#define ARCH_FEATURE_SSBS ((uint64_t)1<<41)  // 105
+#define ARCH_FEATURE_PMULL ((uint64_t)1<<42)  // 106
+#define ARCH_FEATURE_SVE2FP8DOT4 ((uint64_t)1<<43)  // 107
+#define ARCH_FEATURE_SVE2FP8DOT2 ((uint64_t)1<<44)  // 108
+#define ARCH_FEATURE_SVE2FP8FMA ((uint64_t)1<<45)  // 109
 
-// defines for features referenced by pcode
-#define ARCH_FEATURE_AESExt ((uint64_t)1<<0)
-#define ARCH_FEATURE_AtomicExt ((uint64_t)1<<1)
-#define ARCH_FEATURE_BF16Ext ((uint64_t)1<<2)
-#define ARCH_FEATURE_BTIExt ((uint64_t)1<<3)
-#define ARCH_FEATURE_Bit128PMULLExt ((uint64_t)1<<4)
-#define ARCH_FEATURE_CRCExt ((uint64_t)1<<5)
-#define ARCH_FEATURE_DGHExt ((uint64_t)1<<6)
-#define ARCH_FEATURE_DITExt ((uint64_t)1<<7)
-#define ARCH_FEATURE_DOTPExt ((uint64_t)1<<8)
-#define ARCH_FEATURE_FCADDExt ((uint64_t)1<<9)
-#define ARCH_FEATURE_FJCVTZSExt ((uint64_t)1<<10)
-#define ARCH_FEATURE_FP16Ext ((uint64_t)1<<11)
-#define ARCH_FEATURE_FP16MulNoRoundingToFP32Ext ((uint64_t)1<<12)
-#define ARCH_FEATURE_FeatLS64 ((uint64_t)1<<13)
-#define ARCH_FEATURE_FeatWFxT ((uint64_t)1<<14)
-#define ARCH_FEATURE_FeatXS ((uint64_t)1<<15)
-#define ARCH_FEATURE_FlagFormatExt ((uint64_t)1<<16)
-#define ARCH_FEATURE_FlagManipulateExt ((uint64_t)1<<17)
-#define ARCH_FEATURE_FrintExt ((uint64_t)1<<18)
-#define ARCH_FEATURE_Int8MatMulExt ((uint64_t)1<<19)
-#define ARCH_FEATURE_MTE2Ext ((uint64_t)1<<20)
-#define ARCH_FEATURE_MTEExt ((uint64_t)1<<21)
-#define ARCH_FEATURE_NVExt ((uint64_t)1<<22)
-#define ARCH_FEATURE_PACExt ((uint64_t)1<<23)
-#define ARCH_FEATURE_PANExt ((uint64_t)1<<24)
-#define ARCH_FEATURE_QRDMLAHExt ((uint64_t)1<<25)
-#define ARCH_FEATURE_RASExt ((uint64_t)1<<26)
-#define ARCH_FEATURE_SBExt ((uint64_t)1<<27)
-#define ARCH_FEATURE_SHA1Ext ((uint64_t)1<<28)
-#define ARCH_FEATURE_SHA256Ext ((uint64_t)1<<29)
-#define ARCH_FEATURE_SHA3Ext ((uint64_t)1<<30)
-#define ARCH_FEATURE_SHA512Ext ((uint64_t)1<<31)
-#define ARCH_FEATURE_SM3Ext ((uint64_t)1<<32)
-#define ARCH_FEATURE_SM4Ext ((uint64_t)1<<33)
-//#define ARCH_FEATURE_SME ((uint64_t)1<<34)
-#define ARCH_FEATURE_SMEF64F64 ((uint64_t)1<<35)
-#define ARCH_FEATURE_SMEI16I64 ((uint64_t)1<<36)
-#define ARCH_FEATURE_SSBSExt ((uint64_t)1<<37)
-#define ARCH_FEATURE_SVE ((uint64_t)1<<38)
-#define ARCH_FEATURE_SVE2 ((uint64_t)1<<39)
-#define ARCH_FEATURE_SVE2AES ((uint64_t)1<<40)
-#define ARCH_FEATURE_SVE2BitPerm ((uint64_t)1<<41)
-#define ARCH_FEATURE_SVE2PMULL128 ((uint64_t)1<<42)
-#define ARCH_FEATURE_SVE2SHA3 ((uint64_t)1<<43)
-#define ARCH_FEATURE_SVE2SM4 ((uint64_t)1<<44)
-#define ARCH_FEATURE_SVEFP32MatMulExt ((uint64_t)1<<45)
-#define ARCH_FEATURE_SVEFP64MatMulExt ((uint64_t)1<<46)
-#define ARCH_FEATURE_SelfHostedTrace ((uint64_t)1<<47)
-#define ARCH_FEATURE_StatisticalProfiling ((uint64_t)1<<48)
-//#define ARCH_FEATURE_TME ((uint64_t)1<<49)
-#define ARCH_FEATURE_UAOExt ((uint64_t)1<<50)
-#define ARCH_FEATURE_VirtHostExt ((uint64_t)1<<51)
+// 107 defines for features referenced by pcode
+//#define ARCH_FEATURE_SHA1 ((uint64_t)1<<56)  // 0
+//#define ARCH_FEATURE_LSE128 ((uint64_t)1<<42)  // 1
+//#define ARCH_FEATURE_SME_F16F16 ((uint64_t)1<<3)  // 2
+//#define ARCH_FEATURE_LS64 ((uint64_t)1<<38)  // 3
+//#define ARCH_FEATURE_SVE2p1 ((uint64_t)1<<17)  // 4
+//#define ARCH_FEATURE_JSCVT ((uint64_t)1<<33)  // 5
+//#define ARCH_FEATURE_SM3 ((uint64_t)1<<60)  // 6
+//#define ARCH_FEATURE_MTE2 ((uint64_t)1<<48)  // 7
+//#define ARCH_FEATURE_FP8DOT4 ((uint64_t)1<<24)  // 8
+//#define ARCH_FEATURE_FPRCVT ((uint64_t)1<<26)  // 9
+//#define ARCH_FEATURE_F8F32MM ((uint64_t)1<<16)  // 10
+//#define ARCH_FEATURE_SME_F64F64 ((uint64_t)1<<4)  // 11
+//#define ARCH_FEATURE_SM4 ((uint64_t)1<<61)  // 12
+//#define ARCH_FEATURE_FP ((uint64_t)1<<20)  // 13
+//#define ARCH_FEATURE_SVE_BitPerm ((uint64_t)1<<23)  // 14
+//#define ARCH_FEATURE_SB ((uint64_t)1<<55)  // 15
+//#define ARCH_FEATURE_PAuth ((uint64_t)1<<49)  // 16
+//#define ARCH_FEATURE_FP8 ((uint64_t)1<<22)  // 17
+//#define ARCH_FEATURE_FlagM ((uint64_t)1<<28)  // 18
+//#define ARCH_FEATURE_RPRFM ((uint64_t)1<<54)  // 19
+//#define ARCH_FEATURE_LOR ((uint64_t)1<<34)  // 20
+//#define ARCH_FEATURE_EBEP ((uint64_t)1<<39)  // 21
+//#define ARCH_FEATURE_SME_I16I64 ((uint64_t)1<<7)  // 22
+//#define ARCH_FEATURE_SME_F8F32 ((uint64_t)1<<6)  // 23
+//#define ARCH_FEATURE_SVE2 ((uint64_t)1<<16)  // 24
+//#define ARCH_FEATURE_I8MM ((uint64_t)1<<32)  // 25
+//#define ARCH_FEATURE_SME2p1 ((uint64_t)1<<0)  // 26
+//#define ARCH_FEATURE_LS64_V ((uint64_t)1<<40)  // 27
+//#define ARCH_FEATURE_DGH ((uint64_t)1<<11)  // 28
+//#define ARCH_FEATURE_SVE_PMULL128 ((uint64_t)1<<25)  // 29
+//#define ARCH_FEATURE_AdvSIMD ((uint64_t)1<<1)  // 30
+//#define ARCH_FEATURE_FlagM2 ((uint64_t)1<<29)  // 31
+//#define ARCH_FEATURE_LRCPC3 ((uint64_t)1<<37)  // 32
+//#define ARCH_FEATURE_LSE ((uint64_t)1<<41)  // 33
+//#define ARCH_FEATURE_SME_LUTv2 ((uint64_t)1<<8)  // 34
+//#define ARCH_FEATURE_CMPBR ((uint64_t)1<<6)  // 35
+//#define ARCH_FEATURE_FP8DOT2 ((uint64_t)1<<23)  // 36
+//#define ARCH_FEATURE_MTE ((uint64_t)1<<47)  // 37
+//#define ARCH_FEATURE_SME2p2 ((uint64_t)1<<1)  // 38
+//#define ARCH_FEATURE_RAS ((uint64_t)1<<52)  // 39
+//#define ARCH_FEATURE_SSBS ((uint64_t)1<<41)  // 40
+//#define ARCH_FEATURE_CLRBHB ((uint64_t)1<<5)  // 41
+//#define ARCH_FEATURE_F32MM ((uint64_t)1<<13)  // 42
+//#define ARCH_FEATURE_CHK ((uint64_t)1<<4)  // 43
+//#define ARCH_FEATURE_SVE_AES ((uint64_t)1<<19)  // 44
+//#define ARCH_FEATURE_SVE2FP8DOT2 ((uint64_t)1<<44)  // 45
+//#define ARCH_FEATURE_F8F16MM ((uint64_t)1<<15)  // 46
+//#define ARCH_FEATURE_LS64_ACCDATA ((uint64_t)1<<39)  // 47
+//#define ARCH_FEATURE_SPE ((uint64_t)1<<11)  // 48
+//#define ARCH_FEATURE_RDM ((uint64_t)1<<53)  // 49
+//#define ARCH_FEATURE_LRCPC2 ((uint64_t)1<<36)  // 50
+//#define ARCH_FEATURE_SYSREG128 ((uint64_t)1<<29)  // 51
+//#define ARCH_FEATURE_VHE ((uint64_t)1<<35)  // 52
+//#define ARCH_FEATURE_SME_MOP4 ((uint64_t)1<<9)  // 53
+//#define ARCH_FEATURE_LSUI ((uint64_t)1<<44)  // 54
+//#define ARCH_FEATURE_FHM ((uint64_t)1<<19)  // 55
+//#define ARCH_FEATURE_CSSC ((uint64_t)1<<9)  // 56
+//#define ARCH_FEATURE_PAN ((uint64_t)1<<37)  // 57
+//#define ARCH_FEATURE_SME ((uint64_t)1<<62)  // 58
+//#define ARCH_FEATURE_FRINTTS ((uint64_t)1<<27)  // 59
+//#define ARCH_FEATURE_SVE2p2 ((uint64_t)1<<18)  // 60
+//#define ARCH_FEATURE_SME_F8F16 ((uint64_t)1<<5)  // 61
+//#define ARCH_FEATURE_HBC ((uint64_t)1<<31)  // 62
+//#define ARCH_FEATURE_SVE_F16F32MM ((uint64_t)1<<24)  // 63
+//#define ARCH_FEATURE_WFxT ((uint64_t)1<<33)  // 64
+//#define ARCH_FEATURE_SYSINSTR128 ((uint64_t)1<<28)  // 65
+//#define ARCH_FEATURE_SVE_BFSCALE ((uint64_t)1<<22)  // 66
+//#define ARCH_FEATURE_FAMINMAX ((uint64_t)1<<17)  // 67
+//#define ARCH_FEATURE_GCS ((uint64_t)1<<30)  // 68
+//#define ARCH_FEATURE_PAuth_LR ((uint64_t)1<<50)  // 69
+//#define ARCH_FEATURE_BTI ((uint64_t)1<<3)  // 70
+//#define ARCH_FEATURE_SME_B16B16 ((uint64_t)1<<2)  // 71
+//#define ARCH_FEATURE_LSFE ((uint64_t)1<<43)  // 72
+//#define ARCH_FEATURE_DotProd ((uint64_t)1<<12)  // 73
+//#define ARCH_FEATURE_D128 ((uint64_t)1<<10)  // 74
+//#define ARCH_FEATURE_LRCPC ((uint64_t)1<<35)  // 75
+//#define ARCH_FEATURE_CPA ((uint64_t)1<<7)  // 76
+//#define ARCH_FEATURE_SHA256 ((uint64_t)1<<57)  // 77
+//#define ARCH_FEATURE_AES ((uint64_t)1<<0)  // 78
+//#define ARCH_FEATURE_PCDPHINT ((uint64_t)1<<51)  // 79
+//#define ARCH_FEATURE_UAO ((uint64_t)1<<36)  // 80
+//#define ARCH_FEATURE_SVE ((uint64_t)1<<15)  // 81
+//#define ARCH_FEATURE_SVE_AES2 ((uint64_t)1<<20)  // 82
+//#define ARCH_FEATURE_CRC32 ((uint64_t)1<<8)  // 83
+//#define ARCH_FEATURE_SVE2FP8DOT4 ((uint64_t)1<<43)  // 84
+//#define ARCH_FEATURE_F64MM ((uint64_t)1<<14)  // 85
+//#define ARCH_FEATURE_XS ((uint64_t)1<<34)  // 86
+//#define ARCH_FEATURE_SVE2FP8FMA ((uint64_t)1<<45)  // 87
+//#define ARCH_FEATURE_NMI ((uint64_t)1<<38)  // 88
+//#define ARCH_FEATURE_DIT ((uint64_t)1<<40)  // 89
+//#define ARCH_FEATURE_FCMA ((uint64_t)1<<18)  // 90
+//#define ARCH_FEATURE_MOPS ((uint64_t)1<<46)  // 91
+//#define ARCH_FEATURE_BF16 ((uint64_t)1<<2)  // 92
+//#define ARCH_FEATURE_SVE_SM4 ((uint64_t)1<<27)  // 93
+//#define ARCH_FEATURE_SHA3 ((uint64_t)1<<58)  // 94
+//#define ARCH_FEATURE_TME ((uint64_t)1<<31)  // 95
+//#define ARCH_FEATURE_THE ((uint64_t)1<<30)  // 96
+//#define ARCH_FEATURE_SME2 ((uint64_t)1<<63)  // 97
+//#define ARCH_FEATURE_SVE_B16B16 ((uint64_t)1<<21)  // 98
+//#define ARCH_FEATURE_LUT ((uint64_t)1<<45)  // 99
+//#define ARCH_FEATURE_FP8FMA ((uint64_t)1<<25)  // 100
+//#define ARCH_FEATURE_PMULL ((uint64_t)1<<42)  // 101
+//#define ARCH_FEATURE_SVE_SHA3 ((uint64_t)1<<26)  // 102
+//#define ARCH_FEATURE_TRF ((uint64_t)1<<32)  // 103
+//#define ARCH_FEATURE_SHA512 ((uint64_t)1<<59)  // 104
+//#define ARCH_FEATURE_SME_TMOP ((uint64_t)1<<10)  // 105
+//#define ARCH_FEATURE_FP16 ((uint64_t)1<<21)  // 106
 
 #define ARCH_FEATURES_ALL 0xFFFFFFFFFFFFFFFF

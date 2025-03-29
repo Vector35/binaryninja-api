@@ -235,13 +235,21 @@ elif sys.argv[1] == "recompute_arm64test":
         if new_asm:
             new_asm = ' '.join(new_asm.split())
             test_comment = comment and ' '.join(comment.split())
-            if test_comment and not test_comment.strip().startswith(new_asm):
-                if comment.strip():
-                    comment += ' // ' + new_asm
-            if not comment or not comment.strip():
-                comment = new_asm
+            header_line = None
+            if i - 1 and lines[i - 1].strip():
+                header_line = ' '.join(lines[i - 1].strip().split())
+                header_line = re.sub(r'^# ([0-9a-fA-F]{8} ?)?', '', header_line)
+                # print(f'{header_line=}')
+            if not header_line or not header_line.startswith(new_asm):
+                if test_comment and not test_comment.strip().startswith(new_asm):
+                    if comment.strip():
+                        comment += ' // ' + new_asm
+                if not comment or not comment.strip():
+                    comment = new_asm
             # if i - 1 and lines[i - 1] and not lines[i - 1].strip().startswith('# ' + new_asm):
             #     print(f'\n    # {new_asm}')
+        else:
+            comment = (comment or '') + f" no disasm for {data.hex()}"
         print_case(data, comment)
 
         i += 1

@@ -10041,4 +10041,5 @@ void decode_fields32(enum ENCODING enc, context *ctx, Instruction *instr)
 		default:
 			break;
 	}
+	instr->setflags = (ctx->S==1) ? FLAGEFFECT_SETS : FLAGEFFECT_NONE;
 }

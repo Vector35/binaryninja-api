@@ -5848,7 +5848,7 @@ int decode_scratchpad(context* ctx, Instruction* instr)
 	case ENC_ADR_ONLY_PCRELADDR:
 	{
 		uint64_t eaddr =
-		    ctx->page ? (ctx->address & 0xFFFFFFFFFFFFF000) + ctx->imm : ctx->address + ctx->imm;
+		    (ctx->page || ctx->op) ? (ctx->address & 0xFFFFFFFFFFFFF000) + ctx->imm : ctx->address + ctx->imm;
 		// <Xd>,<label>
 		ADD_OPERAND_XD;
 		ADD_OPERAND_LABEL;

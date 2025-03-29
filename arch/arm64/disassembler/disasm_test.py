@@ -50,17 +50,42 @@ def normalize(instxt):
 
 	# remove leading hex zeros
 	# 0x00000000071eb000 -> 0x71eb000
-	instxt = re.sub(r'0x00+', r'0x', instxt)
+	instxt = re.sub(r'(-)?0x00+', r'\g<1>0x', instxt)
 
 	# decimal immediates to hex
 	# add x29, x15, x25, lsl #6 -> add x29, x15, x25, lsl #0x6
-	for dec_imm in re.findall(r'#\d+[,\]]', instxt):
-		hex_imm = '#0x%x' % int(dec_imm[1:-1]) + dec_imm[-1]
-		instxt = instxt.replace(dec_imm, hex_imm, 1)
-	for dec_imm in re.findall(r'#\d+$', instxt):
-		if not instxt.endswith(dec_imm): continue
-		hex_imm = '#0x%x' % int(dec_imm[1:])
-		instxt = instxt[0:-len(dec_imm)] + hex_imm
+	# for m in re.finditer(r'\b#(-?0x\d\d+)\b[,\]]', instxt):
+	# 	dec_imm = m.group(1)
+	# 	if int(dec_imm, 0) in range(-9, 10):
+	# 		hex_imm = f'|||#{dec_imm}|||'
+	# 		instxt = re.sub(r'\b#'+m.group(1)+r'\b', hex_imm, instxt)
+	# for m in re.finditer(r'\b#(-?0x\d\d+)\b$]', instxt):
+	# 	dec_imm = m.group(1)
+	# 	if int(dec_imm, 0) not in range(-9, 10):
+	# 		hex_imm = f'|||#{dec_imm:#x}|||'
+	# 		instxt = re.sub(r'\b#'+m.group(1)+r'\b', hex_imm, instxt)
+	# for m in re.finditer(r'\b#(-?\d\d+)\b[,\]]', instxt):
+	# 	dec_imm = m.group(1)
+	# 	if int(dec_imm) not in range(-9, 10):
+	# 		hex_imm = f'|||#{dec_imm:#x}|||'
+	# 		instxt = re.sub(r'\b#'+m.group(1)+r'\b', hex_imm, instxt)
+	# for m in re.finditer(r'\b#(-?\d\d+)\b$]', instxt):
+	# 	dec_imm = m.group(1)
+	# 	if int(dec_imm) not in range(-9, 10):
+	# 		hex_imm = f'|||#{dec_imm:#x}|||'
+	# 		instxt = re.sub(r'\b#'+m.group(1)+r'\b', hex_imm, instxt)
+
+	# for dec_imm in re.findall(r'#\d+[,\]]', instxt):
+	# for dec_imm in re.findall(r'#-?\d\d+[,\]]', instxt):
+	# 	if True or int(dec_imm[1:-1]) not in range(-10, 10):
+	# 		hex_imm = '#0x%x' % int(dec_imm[1:-1]) + dec_imm[-1]
+	# 		instxt = instxt.replace(dec_imm, hex_imm, 1)
+	# # for dec_imm in re.findall(r'#\d+$', instxt):
+	# for dec_imm in re.findall(r'#-?\d\d+$', instxt):
+	# 	if not instxt.endswith(dec_imm): continue
+	# 	if True or int(dec_imm[1:]) not in range(-10, 10):
+	# 		hex_imm = '#0x%x' % int(dec_imm[1:])
+	# 		instxt = instxt[0:-len(dec_imm)] + hex_imm
 
 	# #-3.375000000000000000e+00 -> #-3.375
 	for x in re.findall(r'#[-\+\.\de]{8,}', instxt):

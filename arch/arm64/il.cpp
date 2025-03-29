@@ -1190,8 +1190,11 @@ bool GetLowLevelILForInstruction(
 		case ENC_ADD_Z_ZI_:
 		case ENC_ADD_Z_ZZ_:
 			if (!preferIntrinsics())
+			{
 				il.AddInstruction(il.Unimplemented());
 				return true;
+			}
+			break;
 		default: break;
 		}
 	case ARM64_ADDS:
@@ -1215,8 +1218,11 @@ bool GetLowLevelILForInstruction(
 		case ENC_AND_Z_ZZ_:
 		case ENC_ANDS_P_P_PP_Z:
 			if (!preferIntrinsics())
+			{
 				il.AddInstruction(il.Unimplemented());
 				return true;
+			}
+			break;
 		default: break;
 		}
 		il.AddInstruction(
@@ -1230,9 +1236,12 @@ bool GetLowLevelILForInstruction(
 		case ENC_ADR_Z_AZ_D_S32_SCALED:
 		case ENC_ADR_Z_AZ_D_U32_SCALED:
 			if (!preferIntrinsics())
+			{
 				il.AddInstruction(il.Unimplemented());
-					return true;
-		default: break;
+				return true;
+			}
+			break;
+		default:
 		}
 	case ARM64_ADRP:
 		il.AddInstruction(ILSETREG_O(operand1, il.ConstPointer(REGSZ_O(operand1), IMM_O(operand2))));
@@ -1246,8 +1255,11 @@ bool GetLowLevelILForInstruction(
 		case ENC_ASR_Z_ZI_:
 		case ENC_ASR_Z_ZW_:
 			if (!preferIntrinsics())
+			{
 				il.AddInstruction(il.Unimplemented());
 				return true;
+			}
+			break;
 		default: break;
 		}
 		il.AddInstruction(ILSETREG_O(operand1, il.ArithShiftRight(REGSZ_O(operand2), ILREG_O(operand2),
@@ -1258,8 +1270,11 @@ bool GetLowLevelILForInstruction(
 		{
 		case ENC_AESD_Z_ZZ_:
 			if (!preferIntrinsics())
+			{
 				il.AddInstruction(il.Unimplemented());
 				return true;
+			}
+			break;
 		default: break;
 		}
 		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_AESD,
@@ -1410,8 +1425,11 @@ bool GetLowLevelILForInstruction(
 		case ENC_BIC_Z_ZZ_:
 		case ENC_BICS_P_P_PP_Z:
 			if (!preferIntrinsics())
+			{
 				il.AddInstruction(il.Unimplemented());
 				return true;
+			}
+			break;
 		case ENC_BIC_ASIMDIMM_L_HL:
 		case ENC_BIC_ASIMDIMM_L_SL:
 			il.AddInstruction(ILSETREG_O(operand1,

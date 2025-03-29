@@ -11,6 +11,7 @@ int decode_spec(context *ctx, Instruction *dec)
 	uint32_t op0, op1, op2, op3, op4, op5, op6, op21, op3xx;
 
 	dec->insword = ctx->insword;
+	dec->setflags = (ctx->S==1) ? FLAGEFFECT_SETS : FLAGEFFECT_NONE;
 	/* GROUP: root */
 	op0 = INSWORD>>31;
 	op1 = (INSWORD>>25)&15;

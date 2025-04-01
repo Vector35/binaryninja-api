@@ -67,7 +67,7 @@ pub struct Section {
 }
 
 impl Section {
-    unsafe fn from_raw(handle: *mut BNSection) -> Self {
+    pub(crate) unsafe fn from_raw(handle: *mut BNSection) -> Self {
         debug_assert!(!handle.is_null());
         Self { handle }
     }

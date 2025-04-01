@@ -42,6 +42,7 @@ pub mod component;
 pub mod confidence;
 pub mod custom_binary_view;
 pub mod data_buffer;
+pub mod data_notification;
 pub mod database;
 pub mod debuginfo;
 pub mod demangle;

@@ -2246,12 +2246,21 @@ class Arm64Architecture : public Architecture
 
 	virtual vector<uint32_t> GetSystemRegisters() override
 	{
-		static vector<uint32_t> system_regs(get_system_registers());
-		static std::once_flag once;
-		std::call_once(once, []() {
-			system_regs.push_back(FAKEREG_SYSREG_UNKNOWN);
-		});
-		return system_regs;
+		// static vector<uint32_t> system_regs;
+		// static std::once_flag once;
+		// std::call_once(once, []() {
+		// 	auto sysregs = get_system_registers();
+		// 	system_regs.insert(system_regs.begin(), sysregs.begin(), sysregs.end());
+		// 	system_regs.push_back(FAKEREG_SYSREG_UNKNOWN);
+		// });
+		// return system_regs;
+		// const vector<uint32_t> v = get_system_registers_fake();
+		// return  vector<uint32_t>(v);
+		constexpr auto sysregs = []() {
+			return get_system_registers();
+		};
+		auto sr = sysregs();
+		return sr;
 	}
 };
 

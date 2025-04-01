@@ -3157,21 +3157,21 @@ bool GetLowLevelILForInstruction(
 	case ARM64_UMADDL:
 		il.AddInstruction(ILSETREG_O(operand1,
 		    il.Add(REGSZ_O(operand1), ILREG_O(operand4),
-		        il.MultDoublePrecUnsigned(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
+		        il.MultDoublePrecUnsigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3)))));
 		break;
 	case ARM64_UMULL:
 		il.AddInstruction(ILSETREG_O(operand1,
-		    il.MultDoublePrecUnsigned(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3))));
+		    il.MultDoublePrecUnsigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3))));
 		break;
 	case ARM64_UMSUBL:
 		il.AddInstruction(ILSETREG_O(operand1,
 		    il.Sub(REGSZ_O(operand1), ILREG_O(operand4),
-		        il.MultDoublePrecUnsigned(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
+		        il.MultDoublePrecUnsigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3)))));
 		break;
 	case ARM64_UMNEGL:
 		il.AddInstruction(ILSETREG_O(operand1,
 		    il.Sub(REGSZ_O(operand1), il.Const(8, 0),
-		        il.MultDoublePrecUnsigned(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
+		        il.MultDoublePrecUnsigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3)))));
 		break;
 	case ARM64_UXTL:
 	case ARM64_UXTL2:
@@ -3225,7 +3225,7 @@ bool GetLowLevelILForInstruction(
 	case ARM64_SMADDL:
 		il.AddInstruction(ILSETREG_O(operand1,
 		    il.Add(REGSZ_O(operand1), ILREG_O(operand4),
-		        il.MultDoublePrecSigned(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
+		        il.MultDoublePrecSigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3)))));
 		break;
 	case ARM64_USHL:
 	{
@@ -3282,17 +3282,18 @@ bool GetLowLevelILForInstruction(
 	}
 	case ARM64_SMULL:
 		il.AddInstruction(ILSETREG_O(operand1,
-		    il.MultDoublePrecSigned(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3))));
+		    il.MultDoublePrecSigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3))));
 		break;
 	case ARM64_SMSUBL:
 		il.AddInstruction(ILSETREG_O(operand1,
 		    il.Sub(REGSZ_O(operand1), ILREG_O(operand4),
-		        il.MultDoublePrecSigned(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
+		        il.MultDoublePrecSigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3)))));
 		break;
 	case ARM64_SMNEGL:
 		il.AddInstruction(ILSETREG_O(operand1,
-		    il.Sub(REGSZ_O(operand1), il.Const(8, 0),
-		        il.MultDoublePrecSigned(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
+		    // il.Sub(REGSZ_O(operand1), il.Const(8, 0),
+		    il.Neg(REGSZ_O(operand1),
+		        il.MultDoublePrecSigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3)))));
 		break;
 	case ARM64_UMULH:
 		il.AddInstruction(ILSETREG_O(operand1,
@@ -3303,10 +3304,11 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_SMULH:
 		il.AddInstruction(ILSETREG_O(operand1,
-			il.LowPart(8,
-				il.LogicalShiftRight(16,
-					il.MultDoublePrecSigned(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)),
-					il.Const(1, 64)))));
+			il.SignExtend(8,
+				il.LowPart(8,
+					il.LogicalShiftRight(16,
+						il.MultDoublePrecSigned(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)),
+						il.Const(1, 64))))));
 		break;
 	case ARM64_UDIV:
 		switch (instr.encoding)

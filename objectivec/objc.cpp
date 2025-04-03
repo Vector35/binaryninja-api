@@ -581,26 +581,19 @@ void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSect
 			categoryBaseClassName = it->second.name;
 			category.associatedName = it->second.associatedName;
 		}
-		else
-		{	
-			auto symbol = m_data->GetSymbolByAddress(cat.cls);
-			if (!symbol)
-				symbol = SymbolForUnmappedAddress(cat.cls);
-
-			if (symbol)
+		else if (const auto symbol = GetSymbol(cat.cls))
+		{
+			if (symbol->GetType() == ImportedDataSymbol || symbol->GetType() == ImportAddressSymbol || symbol->GetType() == DataSymbol)
 			{
-				if (symbol->GetType() == ImportedDataSymbol || symbol->GetType() == ImportAddressSymbol || symbol->GetType() == DataSymbol)
-				{
-					// Symbols named `_OBJC_CLASS_$_` are references to external classes.
-					// Symbols named `cls_` are classes defined in a loaded image other than
-					// the image currently being analyzed. Classes from the current image
-					// are found via `m_classes`.
-					const std::string_view symbolName = symbol->GetFullNameRef();
-					if (symbolName.size() > 14 && symbolName.rfind("_OBJC_CLASS_$_", 0) == 0)
-						categoryBaseClassName = symbolName.substr(14);
-					else if (symbolName.size() > 4 && symbolName.rfind("cls_", 0) == 0)
-						categoryBaseClassName = symbolName.substr(4);
-				}
+				// Symbols named `_OBJC_CLASS_$_` are references to external classes.
+				// Symbols named `cls_` are classes defined in a loaded image other than
+				// the image currently being analyzed. Classes from the current image
+				// are found via `m_classes`.
+				const std::string_view symbolName = symbol->GetFullNameRef();
+				if (symbolName.size() > 14 && symbolName.rfind("_OBJC_CLASS_$_", 0) == 0)
+					categoryBaseClassName = symbolName.substr(14);
+				else if (symbolName.size() > 4 && symbolName.rfind("cls_", 0) == 0)
+					categoryBaseClassName = symbolName.substr(4);
 			}
 		}
 		if (categoryBaseClassName.empty())
@@ -1260,9 +1253,9 @@ uint64_t ObjCProcessor::GetObjCRelativeMethodBaseAddress(ObjCReader* reader)
 	return 0;
 }
 
-Ref<Symbol> ObjCProcessor::SymbolForUnmappedAddress(uint64_t address)
+Ref<Symbol> ObjCProcessor::GetSymbol(uint64_t address)
 {
-	return nullptr;
+	return m_data->GetSymbolByAddress(address);
 }
 
 void ObjCProcessor::ProcessObjCData(std::optional<std::string> imageName)

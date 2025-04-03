@@ -148,10 +148,10 @@ uint64_t SharedCacheObjCProcessor::GetObjCRelativeMethodBaseAddress(ObjCReader* 
 	return m_customRelativeMethodSelectorBase.value_or(0);
 }
 
-Ref<Symbol> SharedCacheObjCProcessor::SymbolForUnmappedAddress(uint64_t address)
+Ref<Symbol> SharedCacheObjCProcessor::GetSymbol(uint64_t address)
 {
 	if (const auto symbol = m_data->GetSymbolByAddress(address))
-		return nullptr;
+		return symbol;
 
 	const auto controller = DSC::SharedCacheController::FromView(*m_data);
 	if (!controller)
@@ -163,6 +163,8 @@ Ref<Symbol> SharedCacheObjCProcessor::SymbolForUnmappedAddress(uint64_t address)
 		return nullptr;
 
 	// Define the new symbol!
+	// While the method is "getting a symbol" and not applying it to the view, currently this is the more effective
+	// approach than monitoring every usage of this function to make sure they also define the symbol.
 	Ref<Symbol> symbol(new Symbol(cacheSymbol->type, cacheSymbol->name, address));
 	m_data->DefineAutoSymbol(symbol);
 	return symbol;

@@ -324,7 +324,9 @@ namespace BinaryNinja {
 		virtual uint64_t GetObjCRelativeMethodBaseAddress(ObjCReader* reader);
 		virtual void GetRelativeMethod(ObjCReader* reader, method_t& meth);
 		virtual std::shared_ptr<ObjCReader> GetReader() = 0;
-		virtual Ref<Symbol> SymbolForUnmappedAddress(uint64_t address);
+		// Because an objective-c processor might have access to other non-view symbols that we want to retrieve.
+		// By default, this will just get symbol at the address in the view.
+		virtual Ref<Symbol> GetSymbol(uint64_t address);
 
 	public:
 		virtual ~ObjCProcessor() = default;

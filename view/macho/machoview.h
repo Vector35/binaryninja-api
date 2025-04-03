@@ -144,6 +144,7 @@ typedef int vm_prot_t;
 #define S_THREAD_LOCAL_VARIABLES              0x13
 #define S_THREAD_LOCAL_VARIABLE_POINTERS      0x14
 #define S_THREAD_LOCAL_INIT_FUNCTION_POINTERS 0x15
+#define S_INIT_FUNC_OFFSETS                   0x16
 
 //Mach-O Commands
 #define LC_REQ_DYLD              0x80000000

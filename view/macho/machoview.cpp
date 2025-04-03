@@ -448,7 +448,7 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 							sect.flags,
 							sect.reserved1,
 							sect.reserved2);
-						if (!strncmp(sect.sectname, "__mod_init_func", 15))
+						if (!strncmp(sect.sectname, "__mod_init_func", 15) || !strncmp(sect.sectname, "__init_offsets", 14))
 							header.moduleInitSections.push_back(sect);
 						if ((sect.flags & (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS)) == (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS))
 							header.symbolStubSections.push_back(sect);
@@ -551,7 +551,7 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 							sect.reserved1,
 							sect.reserved2,
 							sect.reserved3);
-						if (!strncmp(sect.sectname, "__mod_init_func", 15))
+						if (!strncmp(sect.sectname, "__mod_init_func", 15) || !strncmp(sect.sectname, "__init_offsets", 14))
 							header.moduleInitSections.push_back(sect);
 						if ((sect.flags & (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS)) == (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS))
 							header.symbolStubSections.push_back(sect);
@@ -1640,7 +1640,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 		string type;
 		BNSectionSemantics semantics = DefaultSectionSemantics;
-		switch (header.sections[i].flags & 0xff)
+		switch (header.sections[i].flags & SECTION_TYPE)
 		{
 		case S_REGULAR:
 			if (header.sections[i].flags & S_ATTR_PURE_INSTRUCTIONS)
@@ -1730,6 +1730,10 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			break;
 		case S_THREAD_LOCAL_INIT_FUNCTION_POINTERS:
 			type = "THREAD_LOCAL_INIT_FUNCTION_POINTERS";
+			break;
+		case S_INIT_FUNC_OFFSETS:
+			type = "INIT_FUNC_OFFSETS";
+			semantics = ReadOnlyDataSectionSemantics;
 			break;
 		default:
 			type = "UNKNOWN";
@@ -1897,30 +1901,55 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		if (find(threadStarts.begin(), threadStarts.end(), moduleInitSection.offset) != threadStarts.end())
 			continue;
 
-		// The mod_init section contains a list of function pointers called at initialization
-		// if we don't have a defined entrypoint then use the first one in the list as the entrypoint
 		size_t i = 0;
 		reader.Seek(moduleInitSection.offset);
-		for (; i < (moduleInitSection.size / m_addressSize); i++)
-		{
-			uint64_t target = (m_addressSize == 4) ? reader.Read32() : reader.Read64();
-			target += m_imageBaseAdjustment;
-			if (m_header.ident.filetype == MH_FILESET)
-			{
-				// FIXME: This isn't a super robust way of detagging,
-				// 	  should look into xnu source and the tools used to build this cache (if they're public)
-				//	  and see if anything better can be done
 
-				// mask out top 8 bits
-				uint64_t tag = 0xFFFFFFFF00000000 & header.textBase;
-				// and combine them with bottom 8 of the original entry
-				target = tag | (target & 0xFFFFFFFF);
+		if (!strncmp(moduleInitSection.sectname, "__mod_init_func", 15))
+		{
+			// The mod_init section contains a list of function pointers called at initialization
+			// if we don't have a defined entrypoint then use the first one in the list as the entrypoint
+			for (; i < (moduleInitSection.size / m_addressSize); i++)
+			{
+				uint64_t target = (m_addressSize == 4) ? reader.Read32() : reader.Read64();
+				target += m_imageBaseAdjustment;
+				if (m_header.ident.filetype == MH_FILESET)
+				{
+					// FIXME: This isn't a super robust way of detagging,
+					// 	  should look into xnu source and the tools used to build this cache (if they're public)
+					//	  and see if anything better can be done
+
+					// mask out top 8 bits
+					uint64_t tag = 0xFFFFFFFF00000000 & header.textBase;
+					// and combine them with bottom 8 of the original entry
+					target = tag | (target & 0xFFFFFFFF);
+				}
+				Ref<Platform> targetPlatform = GetDefaultPlatform()->GetAssociatedPlatformByAddress(target);
+				auto name = "mod_init_func_" + to_string(modInitFuncCnt++);
+				AddEntryPointForAnalysis(targetPlatform, target);
+				auto symbol = new Symbol(FunctionSymbol, name, target, GlobalBinding);
+				DefineAutoSymbol(symbol);
 			}
-			Ref<Platform> targetPlatform = GetDefaultPlatform()->GetAssociatedPlatformByAddress(target);
-			auto name = "mod_init_func_" + to_string(modInitFuncCnt++);
-			AddEntryPointForAnalysis(targetPlatform, target);
-			auto symbol = new Symbol(FunctionSymbol, name, target, GlobalBinding);
-			DefineAutoSymbol(symbol);
+		}
+		else if (!strncmp(moduleInitSection.sectname, "__init_offsets", 14))
+		{
+			// The init_offsets section contains a list of 32-bit RVA offsets to functions called at initialization
+			// if we don't have a defined entrypoint then use the first one in the list as the entrypoint
+			for (; i < (moduleInitSection.size / 4); i++)
+			{
+				uint64_t target = reader.Read32();
+				target += header.textBase;
+				Ref<Platform> targetPlatform = GetDefaultPlatform()->GetAssociatedPlatformByAddress(target);
+				auto name = "mod_init_func_" + to_string(modInitFuncCnt++);
+				AddEntryPointForAnalysis(targetPlatform, target);
+				auto symbol = new Symbol(FunctionSymbol, name, target, GlobalBinding);
+				DefineAutoSymbol(symbol);
+
+				// FIXME: i don't know how to define proper pointer type at this stage of analysis
+				Ref<Type> pointerVar = TypeBuilder::PointerType(4, Type::VoidType())
+						.SetPointerBase(RelativeToConstantPointerBaseType, header.textBase)
+						.Finalize();
+				DefineDataVariable(GetStart() + reader.GetOffset() - 4, pointerVar);
+			}
 		}
 	}
 

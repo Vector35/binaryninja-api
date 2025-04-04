@@ -159,13 +159,13 @@ void AnalyzeStubFunction(Ref<Function> func, Ref<MediumLevelILFunction> mlil, Sh
 				if (defInstr.operation != MLIL_SET_VAR_SSA)
 					return;
 				expr = defInstr.GetSourceExpr<MLIL_SET_VAR_SSA>();
-				// Fallthrough to load ptr.
+				// Fallthrough to MLIL_LOAD_SSA.
 			}
 		case MLIL_LOAD_SSA:
 			expr = expr.GetSourceExpr<MLIL_LOAD_SSA>();
 			if (expr.operation != MLIL_CONST_PTR)
 				return;
-			// Fallthrough to const ptr.
+			// Fallthrough to MLIL_CONST_PTR.
 		case MLIL_CONST_PTR:
 			{
 				// First load the stub island, if we _do_ load the stub island stop and reanalyze for constant propagation.'
@@ -222,10 +222,13 @@ void AnalyzeStandardFunction(Ref<Function> func, Ref<MediumLevelILFunction> mlil
 	auto view = func->GetView();
 	auto identifyUnmappedSymbol = [&](uint64_t symbolAddr) {
 		// Skip if already loaded.
-		if (view->IsValidOffset(symbolAddr))
+		if (view->IsValidOffset(symbolAddr) || view->GetSymbolByAddress(symbolAddr))
 			return false;
 		const auto symbol = controller.GetSymbolAt(symbolAddr);
+		if (!symbol.has_value())
+			return false;
 		view->DefineAutoSymbol(symbol->GetBNSymbol(*view));
+		func->Reanalyze();
 		return true;
 	};
 
@@ -233,52 +236,70 @@ void AnalyzeStandardFunction(Ref<Function> func, Ref<MediumLevelILFunction> mlil
 		// Skip if already loaded.
 		if (view->IsValidOffset(regionAddr))
 			return false;
-		const auto region = controller.GetRegionContaining(regionAddr);
+		auto region = controller.GetRegionContaining(regionAddr);
 		if (!region.has_value())
 			return false;
-		// Only interested in stub islands which would contain the pointers to other image functions.
-		if (region->type != SharedCacheRegionTypeStubIsland)
+		// Only interested in non image regions, we DON'T want to implicitly load image regions (with functions presumably).
+		if (region->type == SharedCacheRegionTypeImage)
 			return false;
-
+		// Adjust the new region semantics to read only, this helps analysis pickup constant loads in our stub functions.
+		region->flags = static_cast<BNSegmentFlag>(SegmentReadable | SegmentContainsData);
 		return controller.ApplyRegion(*view, *region);
 	};
 
-	auto processJumpExpr = [&](const MediumLevelILInstruction& expr) {
+	// Promotes a constant to a constant pointer, if it's backed by a shared cache region.
+	// Constants won't be eligible for symbol rendering so to get it to render we must rewrite the IL to make
+	// it a constant pointer, our MLIL_CONST_PTR path will do the actual symbolizing.
+	auto promoteUnmappedPointerExpr = [&](MediumLevelILInstruction constExpr) {
+		const auto unmappedAddr = constExpr.GetConstant<MLIL_CONST>();
+		if (view->IsValidOffset(unmappedAddr))
+			return false;
+		if (!controller.GetRegionContaining(unmappedAddr))
+			return false;
+		const auto constSrcLoc = ILSourceLocation(constExpr.address, constExpr.sourceOperand);
+		const auto constPtrExpr = mlil->ConstPointer(constExpr.size, unmappedAddr, constSrcLoc);
+		constExpr.Replace(constPtrExpr);
+		return true;
+	};
+
+	auto processUnmappedExpr = [&](const MediumLevelILInstruction& expr) {
 		switch (expr.operation)
 		{
 		case MLIL_CONST_PTR:
 			loadStubIslandRegion(expr.GetConstant<MLIL_CONST_PTR>());
 			identifyUnmappedSymbol(expr.GetConstant<MLIL_CONST_PTR>());
 			break;
+		case MLIL_ADDRESS_OF:
+			{
+				// Typically a direct expression load/store will have the constant be promoted to a constant pointer
+				// however if an expression is only used as an address of and data flow does not fold it in, we won't get a
+				// constant pointer promotion. This case handles that limitation, by following through an address of to a
+				// simple constant assignment, which we then try and promote to a constant pointer.
+				const auto var = expr.GetSourceVariable<MLIL_ADDRESS_OF>();
+				// MLIL_ADDRESS_OF does not provide ssa var so we just check for single definitions.
+				auto defs = mlil->GetVariableDefinitions(var);
+				if (defs.size() != 1)
+					break;
+				const auto defInstr = mlil->GetInstruction(*defs.begin());
+				if (defInstr.operation != MLIL_SET_VAR_ALIASED && defInstr.operation != MLIL_SET_VAR_SSA)
+					break;
+				const auto constExpr = defInstr.GetSourceExpr();
+				if (constExpr.operation != MLIL_CONST)
+					break;
+				promoteUnmappedPointerExpr(constExpr);
+				break;
+			}
 		default:
 			break;
 		}
+		return true;
 	};
 
-	// Load all unmapped STUB regions / images that are called in this function.
+	// 1. Load all unmapped STUB regions / images that are called in this function.
+	// 2. Identify loads & stores to unmapped regions and add their respective symbol.
 	for (const auto& block : mlil->GetBasicBlocks())
-	{
 		for (size_t i = block->GetStart(), end = block->GetEnd(); i < end; ++i)
-		{
-			auto instr = mlil->GetInstruction(i);
-			switch (instr.operation)
-			{
-				case MLIL_CALL_SSA:
-					processJumpExpr(instr.GetDestExpr<MLIL_CALL_SSA>());
-					break;
-				case MLIL_JUMP:
-					processJumpExpr(instr.GetDestExpr<MLIL_JUMP>());
-					break;
-				default:
-					break;
-			}
-			// TODO: Check all instructions for accesses to select region types (stub etc...)
-			// TODO: ^ we actually dont really need to do this, the other type of access cont..
-			// TODO: the other two types of accesses (load & save) we dont want to load their regions, just
-			// TODO: their symbol information if available.
-			// TODO: See:
-		}
-	}
+			mlil->GetInstruction(i).VisitExprs(processUnmappedExpr);
 }
 
 void AnalyzeFunction(Ref<AnalysisContext> ctx)

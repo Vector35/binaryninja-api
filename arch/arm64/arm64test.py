@@ -2,6 +2,7 @@
 
 import os
 import re
+import struct
 import sys
 import pathlib
 
@@ -398,28 +399,62 @@ tests_2791 = [
 ]
 
 tests_msr = [
+    # mrs x23, s3_7_c14_c2_4                                           MOV_MOVA_ZA_P_RZ_Q
+    (b'\x97\xE2\x3F\xD5', 'LLIL_INTRINSIC([x23],_ReadMSR,[LLIL_CONST.d(0xFF14)])'),
+    # mrs x28, trcstallctlr                                            MOV_MOVA_ZA_P_RZ_Q
+    (b'\x1C\x0B\x31\xD5', 'LLIL_INTRINSIC([x28],_ReadMSR,[LLIL_CONST.d(0x8858)])'),
+    # mrs x17, trccidcvr0                                              MOV_MOVA_ZA_P_RZ_Q
+    (b'\x11\x30\x31\xD5', 'LLIL_INTRINSIC([x17],_ReadMSR,[LLIL_CONST.d(0x8980)])'),
+    # mrs x29, pmevcntr24_el0                                          MOV_MOVA_ZA_P_RZ_Q
+    (b'\x1D\xEB\x3B\xD5', 'LLIL_INTRINSIC([x29],_ReadMSR,[LLIL_CONST.d(0xDF58)])'),
+
+    # mrs x30, s3_1_c5_c3_1                                            MRS_RS_systemmove
+    (b'\x3E\x53\x39\xD5', 'LLIL_INTRINSIC([x30],_ReadMSR,[LLIL_CONST.d(0xCA99)])'),
+    # mrs x29, s3_4_c9_c3_2                                            MRS_RS_systemmove
+    (b'\x5D\x93\x3C\xD5', 'LLIL_INTRINSIC([x29],_ReadMSR,[LLIL_CONST.d(0xE49A)])'),
+    # mrs x16, s2_4_c0_c14_1                                           MRS_RS_systemmove
+    (b'\x30\x0E\x34\xD5', 'LLIL_INTRINSIC([x16],_ReadMSR,[LLIL_CONST.d(0xA071)])'),
+    # mrs x26, s2_3_c8_c14_1                                           MRS_RS_systemmove
+    (b'\x3A\x8E\x33\xD5', 'LLIL_INTRINSIC([x26],_ReadMSR,[LLIL_CONST.d(0x9C71)])'),
+    # msr spsel, #0x9                                                  MSR_SI_pstate
+    (b'\xBF\x49\x00\xD5', 'LLIL_INTRINSIC([],_WriteMSR,[LLIL_CONST.d(0xFF13),LLIL_CONST.d(0x9)])'),
+    # msr s0_0_c4_c5_4, xzr                                            MSR_SI_pstate
+    (b'\x9F\x45\x00\xD5', 'LLIL_INTRINSIC([],_WriteMSR,[LLIL_CONST.d(0xC213),LLIL_CONST.d(0x5)])'),
+    # msr daifset, #0xe                                                MSR_SI_pstate
+    (b'\xDF\x4E\x03\xD5', 'LLIL_INTRINSIC([],_WriteMSR,[LLIL_CONST.d(0xDA11),LLIL_CONST.d(0xE)])'),
+    # msr dit, #0x5                                                    MSR_SI_pstate
+    (b'\x5F\x45\x03\xD5', 'LLIL_INTRINSIC([],_WriteMSR,[LLIL_CONST.d(0xDA15),LLIL_CONST.d(0x5)])'),
+    # msr s3_3_c1_c9_1, x11                                            MSR_SR_systemmove
+    (b'\x2B\x19\x1B\xD5', 'LLIL_INTRINSIC([],_WriteMSR,[LLIL_CONST.d(0xD8C9),LLIL_REG.q(x11)])'),
+    # msr s3_6_c4_c7_7, x14                                            MSR_SR_systemmove
+    (b'\xEE\x47\x1E\xD5', 'LLIL_INTRINSIC([],_WriteMSR,[LLIL_CONST.d(0xF23F),LLIL_REG.q(x14)])'),
+    # msr s2_5_c11_c5_1, x25                                           MSR_SR_systemmove
+    (b'\x39\xB5\x15\xD5', 'LLIL_INTRINSIC([],_WriteMSR,[LLIL_CONST.d(0xADA9),LLIL_REG.q(x25)])'),
+    # msr s2_1_c11_c15_4, x7                                           MSR_SR_systemmove
+    (b'\x87\xBF\x11\xD5', 'LLIL_INTRINSIC([],_WriteMSR,[LLIL_CONST.d(0x8DFC),LLIL_REG.q(x7)])'),
+
     # msr, mrs with unnamed (implementation specific) sysregs
-    (b'\x2B\x19\x1B\xD5', 'LLIL_INTRINSIC([sysreg_unknown],_WriteStatusReg,[LLIL_REG.q(x11)])'), # msr s3_3_c1_c9_1, x11
-    (b'\xEE\x47\x1E\xD5', 'LLIL_INTRINSIC([sysreg_unknown],_WriteStatusReg,[LLIL_REG.q(x14)])'), # msr s3_6_c4_c7_7, x14
-    (b'\x39\xB5\x15\xD5', 'LLIL_INTRINSIC([sysreg_unknown],_WriteStatusReg,[LLIL_REG.q(x25)])'), # msr s2_5_c11_c5_1, x25
-    (b'\x87\xBF\x11\xD5', 'LLIL_INTRINSIC([sysreg_unknown],_WriteStatusReg,[LLIL_REG.q(x7)])'), # msr s2_1_c11_c15_4, x7
-    (b'\x3E\x53\x39\xD5', 'LLIL_INTRINSIC([x30],_ReadStatusReg,[LLIL_REG.q(sysreg_unknown)])'), # mrs x30, s3_1_c5_c3_1
-    (b'\x5D\x93\x3C\xD5', 'LLIL_INTRINSIC([x29],_ReadStatusReg,[LLIL_REG.q(sysreg_unknown)])'), # mrs x29, s3_4_c9_c3_2
-    (b'\x30\x0E\x34\xD5', 'LLIL_INTRINSIC([x16],_ReadStatusReg,[LLIL_REG.q(sysreg_unknown)])'), # mrs x16, s2_4_c0_c14_1
-    (b'\x3A\x8E\x33\xD5', 'LLIL_INTRINSIC([x26],_ReadStatusReg,[LLIL_REG.q(sysreg_unknown)])'), # mrs x26, s2_3_c8_c14_1
+    # (b'\x2B\x19\x1B\xD5', 'LLIL_INTRINSIC([sysreg_unknown],_WriteStatusReg,[LLIL_REG.q(x11)])'), # msr s3_3_c1_c9_1, x11
+    # (b'\xEE\x47\x1E\xD5', 'LLIL_INTRINSIC([sysreg_unknown],_WriteStatusReg,[LLIL_REG.q(x14)])'), # msr s3_6_c4_c7_7, x14
+    # (b'\x39\xB5\x15\xD5', 'LLIL_INTRINSIC([sysreg_unknown],_WriteStatusReg,[LLIL_REG.q(x25)])'), # msr s2_5_c11_c5_1, x25
+    # (b'\x87\xBF\x11\xD5', 'LLIL_INTRINSIC([sysreg_unknown],_WriteStatusReg,[LLIL_REG.q(x7)])'), # msr s2_1_c11_c15_4, x7
+    # (b'\x3E\x53\x39\xD5', 'LLIL_INTRINSIC([x30],_ReadStatusReg,[LLIL_REG.q(sysreg_unknown)])'), # mrs x30, s3_1_c5_c3_1
+    # (b'\x5D\x93\x3C\xD5', 'LLIL_INTRINSIC([x29],_ReadStatusReg,[LLIL_REG.q(sysreg_unknown)])'), # mrs x29, s3_4_c9_c3_2
+    # (b'\x30\x0E\x34\xD5', 'LLIL_INTRINSIC([x16],_ReadStatusReg,[LLIL_REG.q(sysreg_unknown)])'), # mrs x16, s2_4_c0_c14_1
+    # (b'\x3A\x8E\x33\xD5', 'LLIL_INTRINSIC([x26],_ReadStatusReg,[LLIL_REG.q(sysreg_unknown)])'), # mrs x26, s2_3_c8_c14_1
     # msr, mrs with named sysregs
-    (b'\x36\xE2\x1C\xD5', 'LLIL_INTRINSIC([cnthp_ctl_el2],_WriteStatusReg,[LLIL_REG.q(x22)])'), # msr cnthp_ctl_el2, x22
-    (b'\xF4\xEA\x1B\xD5', 'LLIL_INTRINSIC([pmevcntr23_el0],_WriteStatusReg,[LLIL_REG.q(x20)])'), # msr pmevcntr23_el0, x20
-    (b'\x05\xE1\x18\xD5', 'LLIL_INTRINSIC([cntkctl_el1],_WriteStatusReg,[LLIL_REG.q(x5)])'), # msr cntkctl_el1, x5
-    (b'\x00\xE2\x1D\xD5', 'LLIL_INTRINSIC([cntp_tval_el02],_WriteStatusReg,[LLIL_REG.q(x0)])'), # msr cntp_tval_el02, x
-    (b'\xF9\x20\x31\xD5', 'LLIL_INTRINSIC([x25],_ReadStatusReg,[LLIL_REG(trcdvcmr4)])'), # mrs x25, trcdvcmr4
-    (b'\x4D\xC9\x3C\xD5', 'LLIL_INTRINSIC([x13],_ReadStatusReg,[LLIL_REG(ich_ap1r2_el2)])'), # mrs x13, ich_ap1r2_el2
-    (b'\xC4\xC8\x38\xD5', 'LLIL_INTRINSIC([x4],_ReadStatusReg,[LLIL_REG(icc_ap0r2_el1)])'), # mrs x4, icc_ap0r2_el1
-    (b'\x80\x10\x30\xD5', 'LLIL_INTRINSIC([x0],_ReadStatusReg,[LLIL_REG(oslar_el1)])'), # mrs x0, oslar_el1
-    (b'\x21\x00\x1B\xD5', 'LLIL_INTRINSIC([ctr_el0],_WriteStatusReg,[LLIL_REG.q(x1)])'), # msr ctr_el0, x1
-    (b'\x23\x00\x3B\xD5', 'LLIL_INTRINSIC([x3],_ReadStatusReg,[LLIL_REG(ctr_el0)])'), # mrs x3, ctr_el0
-    (b'\xE1\x00\x1B\xD5', 'LLIL_INTRINSIC([dczid_el0],_WriteStatusReg,[LLIL_REG.q(x1)])'), # msr dczid_el0, x1
-    (b'\xE3\x00\x3B\xD5', 'LLIL_INTRINSIC([x3],_ReadStatusReg,[LLIL_REG(dczid_el0)])'), # mrs x3, dczid_el0
+    # (b'\x36\xE2\x1C\xD5', 'LLIL_INTRINSIC([cnthp_ctl_el2],_WriteStatusReg,[LLIL_REG.q(x22)])'), # msr cnthp_ctl_el2, x22
+    # (b'\xF4\xEA\x1B\xD5', 'LLIL_INTRINSIC([pmevcntr23_el0],_WriteStatusReg,[LLIL_REG.q(x20)])'), # msr pmevcntr23_el0, x20
+    # (b'\x05\xE1\x18\xD5', 'LLIL_INTRINSIC([cntkctl_el1],_WriteStatusReg,[LLIL_REG.q(x5)])'), # msr cntkctl_el1, x5
+    # (b'\x00\xE2\x1D\xD5', 'LLIL_INTRINSIC([cntp_tval_el02],_WriteStatusReg,[LLIL_REG.q(x0)])'), # msr cntp_tval_el02, x
+    # (b'\xF9\x20\x31\xD5', 'LLIL_INTRINSIC([x25],_ReadStatusReg,[LLIL_REG(trcdvcmr4)])'), # mrs x25, trcdvcmr4
+    # (b'\x4D\xC9\x3C\xD5', 'LLIL_INTRINSIC([x13],_ReadStatusReg,[LLIL_REG(ich_ap1r2_el2)])'), # mrs x13, ich_ap1r2_el2
+    # (b'\xC4\xC8\x38\xD5', 'LLIL_INTRINSIC([x4],_ReadStatusReg,[LLIL_REG(icc_ap0r2_el1)])'), # mrs x4, icc_ap0r2_el1
+    # (b'\x80\x10\x30\xD5', 'LLIL_INTRINSIC([x0],_ReadStatusReg,[LLIL_REG(oslar_el1)])'), # mrs x0, oslar_el1
+    # (b'\x21\x00\x1B\xD5', 'LLIL_INTRINSIC([ctr_el0],_WriteStatusReg,[LLIL_REG.q(x1)])'), # msr ctr_el0, x1
+    # (b'\x23\x00\x3B\xD5', 'LLIL_INTRINSIC([x3],_ReadStatusReg,[LLIL_REG(ctr_el0)])'), # mrs x3, ctr_el0
+    # (b'\xE1\x00\x1B\xD5', 'LLIL_INTRINSIC([dczid_el0],_WriteStatusReg,[LLIL_REG.q(x1)])'), # msr dczid_el0, x1
+    # (b'\xE3\x00\x3B\xD5', 'LLIL_INTRINSIC([x3],_ReadStatusReg,[LLIL_REG(dczid_el0)])'), # mrs x3, dczid_el0
 ]
 
 tests_ucvtf = [
@@ -695,89 +730,741 @@ tests_xtn_xtn2 = [
     (b'\xED\x2A\x61\x4E', 'LLIL_INTRINSIC([v13],vmovn_high_s32,[LLIL_REG.o(v23)])'),
 ]
 
-tests_dc_tlbi = [
-    # # dc cvadp, x26                                                    DC_SYS_CR_systeminstrs
-    # (b'\x3A\x7D\x0B\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x1BE9),LLIL_REG.q(x26)])'),
-    # # dc zva, x24                                                      DC_SYS_CR_systeminstrs
-    # (b'\x38\x74\x0B\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x1BA1),LLIL_REG.q(x24)])'),
-    # # dc zva, xzr                                                      DC_SYS_CR_systeminstrs
-    # (b'\x3F\x74\x0B\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x1BA1),LLIL_CONST.q(0x0)])'),
-    # # dc cisw, x18                                                     DC_SYS_CR_systeminstrs
-    # (b'\x52\x7E\x08\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x3F2),LLIL_REG.q(x18)])'),
-    # # tlbi alle3                                                       TLBI_SYS_CR_systeminstrs
-    # (b'\x1F\x87\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3438)])'),
-    (b'\x35\x76\x08\xd5', ''),
-    (b'\x55\x76\x08\xd5', ''),
-    (b'\x75\x76\x08\xd5', ''),
-    (b'\x95\x76\x08\xd5', ''),
-    (b'\xb5\x76\x08\xd5', ''),
-    (b'\xd5\x76\x08\xd5', ''),
-    (b'\x35\x7a\x08\xd5', ''),
-    (b'\x55\x7a\x08\xd5', ''),
-    (b'\x75\x7a\x08\xd5', ''),
-    (b'\x95\x7a\x08\xd5', ''),
-    (b'\xb5\x7a\x08\xd5', ''),
-    (b'\xd5\x7a\x08\xd5', ''),
-    (b'\x35\x7e\x08\xd5', ''),
-    (b'\x55\x7e\x08\xd5', ''),
-    (b'\x75\x7e\x08\xd5', ''),
-    (b'\x95\x7e\x08\xd5', ''),
-    (b'\xb5\x7e\x08\xd5', ''),
-    (b'\xd5\x7e\x08\xd5', ''),
-    (b'\x35\x74\x08\xd5', ''),
-    (b'\x55\x74\x08\xd5', ''),
-    (b'\x75\x74\x08\xd5', ''),
-    (b'\x95\x74\x08\xd5', ''),
-    (b'\xb5\x74\x08\xd5', ''),
-    (b'\xd5\x74\x08\xd5', ''),
-    (b'\x35\x7b\x08\xd5', ''),
-    (b'\x55\x7b\x08\xd5', ''),
-    (b'\x75\x7b\x08\xd5', ''),
-    (b'\x95\x7b\x08\xd5', ''),
-    (b'\xb5\x7b\x08\xd5', ''),
-    (b'\xd5\x7b\x08\xd5', ''),
-    (b'\x35\x7d\x08\xd5', ''),
-    (b'\x55\x7d\x08\xd5', ''),
-    (b'\x75\x7d\x08\xd5', ''),
-    (b'\x95\x7d\x08\xd5', ''),
-    (b'\xb5\x7d\x08\xd5', ''),
-    (b'\xd5\x7d\x08\xd5', ''),
-    (b'\x35\x76\x0b\xd5', ''),
-    (b'\x55\x76\x0b\xd5', ''),
-    (b'\x75\x76\x0b\xd5', ''),
-    (b'\x95\x76\x0b\xd5', ''),
-    (b'\xb5\x76\x0b\xd5', ''),
-    (b'\xd5\x76\x0b\xd5', ''),
-    (b'\x35\x7a\x0b\xd5', ''),
-    (b'\x55\x7a\x0b\xd5', ''),
-    (b'\x75\x7a\x0b\xd5', ''),
-    (b'\x95\x7a\x0b\xd5', ''),
-    (b'\xb5\x7a\x0b\xd5', ''),
-    (b'\xd5\x7a\x0b\xd5', ''),
-    (b'\x35\x7e\x0b\xd5', ''),
-    (b'\x55\x7e\x0b\xd5', ''),
-    (b'\x75\x7e\x0b\xd5', ''),
-    (b'\x95\x7e\x0b\xd5', ''),
-    (b'\xb5\x7e\x0b\xd5', ''),
-    (b'\xd5\x7e\x0b\xd5', ''),
-    (b'\x35\x74\x0b\xd5', ''),
-    (b'\x55\x74\x0b\xd5', ''),
-    (b'\x75\x74\x0b\xd5', ''),
-    (b'\x95\x74\x0b\xd5', ''),
-    (b'\xb5\x74\x0b\xd5', ''),
-    (b'\xd5\x74\x0b\xd5', ''),
-    (b'\x35\x7b\x0b\xd5', ''),
-    (b'\x55\x7b\x0b\xd5', ''),
-    (b'\x75\x7b\x0b\xd5', ''),
-    (b'\x95\x7b\x0b\xd5', ''),
-    (b'\xb5\x7b\x0b\xd5', ''),
-    (b'\xd5\x7b\x0b\xd5', ''),
-    (b'\x35\x7d\x0b\xd5', ''),
-    (b'\x55\x7d\x0b\xd5', ''),
-    (b'\x75\x7d\x0b\xd5', ''),
-    (b'\x95\x7d\x0b\xd5', ''),
-    (b'\xb5\x7d\x0b\xd5', ''),
-    (b'\xd5\x7d\x0b\xd5', ''),
+tests_dc_tlbi_at = [
+	# tlbi alle3                                                       TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x87\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3438)])'),
+	# tlbi vmalle1os, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\x15\x81\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x408),LLIL_REG.q(x21)])'),
+	# tlbi vae1os, x21                                                 TLBI_SYS_CR_systeminstrs
+	(b'\x35\x81\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x409),LLIL_REG.q(x21)])'),
+	# tlbi aside1os, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\x55\x81\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x40A),LLIL_REG.q(x21)])'),
+	# tlbi vaae1os, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x75\x81\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x40B),LLIL_REG.q(x21)])'),
+	# tlbi vale1os, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x81\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x40D),LLIL_REG.q(x21)])'),
+	# tlbi vaale1os, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x81\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x40F),LLIL_REG.q(x21)])'),
+	# tlbi rvae1is, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x35\x82\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x411),LLIL_REG.q(x21)])'),
+	# tlbi rvaae1is, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\x75\x82\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x413),LLIL_REG.q(x21)])'),
+	# tlbi rvale1is, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x82\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x415),LLIL_REG.q(x21)])'),
+	# tlbi rvaale1is, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x82\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x417),LLIL_REG.q(x21)])'),
+	# tlbi vmalle1is, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\x15\x83\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x418),LLIL_REG.q(x21)])'),
+	# tlbi vae1is, x21                                                 TLBI_SYS_CR_systeminstrs
+	(b'\x35\x83\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x419),LLIL_REG.q(x21)])'),
+	# tlbi aside1is, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\x55\x83\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x41A),LLIL_REG.q(x21)])'),
+	# tlbi vaae1is, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x75\x83\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x41B),LLIL_REG.q(x21)])'),
+	# tlbi vale1is, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x83\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x41D),LLIL_REG.q(x21)])'),
+	# tlbi vaale1is, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x83\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x41F),LLIL_REG.q(x21)])'),
+	# tlbi rvae1os, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x35\x85\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x429),LLIL_REG.q(x21)])'),
+	# tlbi rvaae1os, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\x75\x85\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x42B),LLIL_REG.q(x21)])'),
+	# tlbi rvale1os, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x85\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x42D),LLIL_REG.q(x21)])'),
+	# tlbi rvaale1os, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x85\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x42F),LLIL_REG.q(x21)])'),
+	# tlbi rvae1, x21                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x35\x86\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x431),LLIL_REG.q(x21)])'),
+	# tlbi rvaae1, x21                                                 TLBI_SYS_CR_systeminstrs
+	(b'\x75\x86\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x433),LLIL_REG.q(x21)])'),
+	# tlbi rvale1, x21                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x86\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x435),LLIL_REG.q(x21)])'),
+	# tlbi rvaale1, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x86\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x437),LLIL_REG.q(x21)])'),
+	# tlbi vmalle1, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x15\x87\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x438),LLIL_REG.q(x21)])'),
+	# tlbi vae1, x21                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x35\x87\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x439),LLIL_REG.q(x21)])'),
+	# tlbi aside1, x21                                                 TLBI_SYS_CR_systeminstrs
+	(b'\x55\x87\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x43A),LLIL_REG.q(x21)])'),
+	# tlbi vaae1, x21                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x75\x87\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x43B),LLIL_REG.q(x21)])'),
+	# tlbi vale1, x21                                                  TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x87\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x43D),LLIL_REG.q(x21)])'),
+	# tlbi vaale1, x21                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x87\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x43F),LLIL_REG.q(x21)])'),
+	# tlbi vmalle1osnxs, x21                                           TLBI_SYS_CR_systeminstrs
+	(b'\x15\x91\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x488),LLIL_REG.q(x21)])'),
+	# tlbi vae1osnxs, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\x35\x91\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x489),LLIL_REG.q(x21)])'),
+	# tlbi aside1osnxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\x55\x91\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x48A),LLIL_REG.q(x21)])'),
+	# tlbi vaae1osnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x75\x91\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x48B),LLIL_REG.q(x21)])'),
+	# tlbi vale1osnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x91\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x48D),LLIL_REG.q(x21)])'),
+	# tlbi vaale1osnxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x91\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x48F),LLIL_REG.q(x21)])'),
+	# tlbi rvae1isnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x35\x92\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x491),LLIL_REG.q(x21)])'),
+	# tlbi rvaae1isnxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\x75\x92\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x493),LLIL_REG.q(x21)])'),
+	# tlbi rvale1isnxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x92\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x495),LLIL_REG.q(x21)])'),
+	# tlbi rvaale1isnxs, x21                                           TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x92\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x497),LLIL_REG.q(x21)])'),
+	# tlbi vmalle1isnxs, x21                                           TLBI_SYS_CR_systeminstrs
+	(b'\x15\x93\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x498),LLIL_REG.q(x21)])'),
+	# tlbi vae1isnxs, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\x35\x93\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x499),LLIL_REG.q(x21)])'),
+	# tlbi aside1isnxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\x55\x93\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x49A),LLIL_REG.q(x21)])'),
+	# tlbi vaae1isnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x75\x93\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x49B),LLIL_REG.q(x21)])'),
+	# tlbi vale1isnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x93\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x49D),LLIL_REG.q(x21)])'),
+	# tlbi vaale1isnxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x93\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x49F),LLIL_REG.q(x21)])'),
+	# tlbi rvae1osnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x35\x95\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4A9),LLIL_REG.q(x21)])'),
+	# tlbi rvaae1osnxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\x75\x95\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4AB),LLIL_REG.q(x21)])'),
+	# tlbi rvale1osnxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x95\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4AD),LLIL_REG.q(x21)])'),
+	# tlbi rvaale1osnxs, x21                                           TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x95\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4AF),LLIL_REG.q(x21)])'),
+	# tlbi rvae1nxs, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\x35\x96\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4B1),LLIL_REG.q(x21)])'),
+	# tlbi rvaae1nxs, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\x75\x96\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4B3),LLIL_REG.q(x21)])'),
+	# tlbi rvale1nxs, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x96\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4B5),LLIL_REG.q(x21)])'),
+	# tlbi rvaale1nxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x96\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4B7),LLIL_REG.q(x21)])'),
+	# tlbi vmalle1nxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x15\x97\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4B8),LLIL_REG.q(x21)])'),
+	# tlbi vae1nxs, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x35\x97\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4B9),LLIL_REG.q(x21)])'),
+	# tlbi aside1nxs, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\x55\x97\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4BA),LLIL_REG.q(x21)])'),
+	# tlbi vaae1nxs, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\x75\x97\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4BB),LLIL_REG.q(x21)])'),
+	# tlbi vale1nxs, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x97\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4BD),LLIL_REG.q(x21)])'),
+	# tlbi vaale1nxs, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x97\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4BF),LLIL_REG.q(x21)])'),
+	# tlbi ipas2e1is, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\x35\x80\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2401),LLIL_REG.q(x21)])'),
+	# tlbi ripas2e1is, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x55\x80\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2402),LLIL_REG.q(x21)])'),
+	# tlbi ipas2le1is, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x80\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2405),LLIL_REG.q(x21)])'),
+	# tlbi ripas2le1is, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\xD5\x80\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2406),LLIL_REG.q(x21)])'),
+	# tlbi alle2os, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x15\x81\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2408),LLIL_REG.q(x21)])'),
+	# tlbi vae2os, x21                                                 TLBI_SYS_CR_systeminstrs
+	(b'\x35\x81\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2409),LLIL_REG.q(x21)])'),
+	# tlbi alle1os, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x95\x81\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x240C),LLIL_REG.q(x21)])'),
+	# tlbi vale2os, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x81\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x240D),LLIL_REG.q(x21)])'),
+	# tlbi vmalls12e1os, x21                                           TLBI_SYS_CR_systeminstrs
+	(b'\xD5\x81\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x240E),LLIL_REG.q(x21)])'),
+	# tlbi rvae2is, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x35\x82\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2411),LLIL_REG.q(x21)])'),
+	# tlbi vmallws2e1is, x21                                           TLBI_SYS_CR_systeminstrs
+	(b'\x55\x82\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2412),LLIL_REG.q(x21)])'),
+	# tlbi rvale2is, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x82\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2415),LLIL_REG.q(x21)])'),
+	# tlbi alle2is, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x15\x83\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2418),LLIL_REG.q(x21)])'),
+	# tlbi vae2is, x21                                                 TLBI_SYS_CR_systeminstrs
+	(b'\x35\x83\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2419),LLIL_REG.q(x21)])'),
+	# tlbi alle1is, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x95\x83\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x241C),LLIL_REG.q(x21)])'),
+	# tlbi vale2is, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x83\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x241D),LLIL_REG.q(x21)])'),
+	# tlbi vmalls12e1is, x21                                           TLBI_SYS_CR_systeminstrs
+	(b'\xD5\x83\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x241E),LLIL_REG.q(x21)])'),
+	# tlbi ipas2e1os, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\x15\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2420),LLIL_REG.q(x21)])'),
+	# tlbi ipas2e1, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x35\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2421),LLIL_REG.q(x21)])'),
+	# tlbi ripas2e1, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\x55\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2422),LLIL_REG.q(x21)])'),
+	# tlbi ripas2e1os, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x75\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2423),LLIL_REG.q(x21)])'),
+	# tlbi ipas2le1os, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x95\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2424),LLIL_REG.q(x21)])'),
+	# tlbi ipas2le1, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2425),LLIL_REG.q(x21)])'),
+	# tlbi ripas2le1, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\xD5\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2426),LLIL_REG.q(x21)])'),
+	# tlbi ripas2le1os, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2427),LLIL_REG.q(x21)])'),
+	# tlbi rvae2os, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x35\x85\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2429),LLIL_REG.q(x21)])'),
+	# tlbi vmallws2e1os, x21                                           TLBI_SYS_CR_systeminstrs
+	(b'\x55\x85\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x242A),LLIL_REG.q(x21)])'),
+	# tlbi rvale2os, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x85\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x242D),LLIL_REG.q(x21)])'),
+	# tlbi rvae2, x21                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x35\x86\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2431),LLIL_REG.q(x21)])'),
+	# tlbi vmallws2e1, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x55\x86\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2432),LLIL_REG.q(x21)])'),
+	# tlbi rvale2, x21                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x86\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2435),LLIL_REG.q(x21)])'),
+	# tlbi alle2, x21                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x15\x87\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2438),LLIL_REG.q(x21)])'),
+	# tlbi vae2, x21                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x35\x87\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2439),LLIL_REG.q(x21)])'),
+	# tlbi alle1, x21                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x95\x87\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x243C),LLIL_REG.q(x21)])'),
+	# tlbi vale2, x21                                                  TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x87\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x243D),LLIL_REG.q(x21)])'),
+	# tlbi vmalls12e1, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\xD5\x87\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x243E),LLIL_REG.q(x21)])'),
+	# tlbi ipas2e1isnxs, x21                                           TLBI_SYS_CR_systeminstrs
+	(b'\x35\x90\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2481),LLIL_REG.q(x21)])'),
+	# tlbi ripas2e1isnxs, x21                                          TLBI_SYS_CR_systeminstrs
+	(b'\x55\x90\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2482),LLIL_REG.q(x21)])'),
+	# tlbi ipas2le1isnxs, x21                                          TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x90\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2485),LLIL_REG.q(x21)])'),
+	# tlbi ripas2le1isnxs, x21                                         TLBI_SYS_CR_systeminstrs
+	(b'\xD5\x90\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2486),LLIL_REG.q(x21)])'),
+	# tlbi alle2osnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x15\x91\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2488),LLIL_REG.q(x21)])'),
+	# tlbi vae2osnxs, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\x35\x91\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2489),LLIL_REG.q(x21)])'),
+	# tlbi alle1osnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x95\x91\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x248C),LLIL_REG.q(x21)])'),
+	# tlbi vale2osnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x91\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x248D),LLIL_REG.q(x21)])'),
+	# tlbi vmalls12e1osnxs, x21                                        TLBI_SYS_CR_systeminstrs
+	(b'\xD5\x91\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x248E),LLIL_REG.q(x21)])'),
+	# tlbi rvae2isnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x35\x92\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2491),LLIL_REG.q(x21)])'),
+	# tlbi vmallws2e1isnxs, x21                                        TLBI_SYS_CR_systeminstrs
+	(b'\x55\x92\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2492),LLIL_REG.q(x21)])'),
+	# tlbi rvale2isnxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x92\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2495),LLIL_REG.q(x21)])'),
+	# tlbi alle2isnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x15\x93\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2498),LLIL_REG.q(x21)])'),
+	# tlbi vae2isnxs, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\x35\x93\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2499),LLIL_REG.q(x21)])'),
+	# tlbi alle1isnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x95\x93\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x249C),LLIL_REG.q(x21)])'),
+	# tlbi vale2isnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x93\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x249D),LLIL_REG.q(x21)])'),
+	# tlbi vmalls12e1isnxs, x21                                        TLBI_SYS_CR_systeminstrs
+	(b'\xD5\x93\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x249E),LLIL_REG.q(x21)])'),
+	# tlbi ipas2e1osnxs, x21                                           TLBI_SYS_CR_systeminstrs
+	(b'\x15\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A0),LLIL_REG.q(x21)])'),
+	# tlbi ipas2e1nxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x35\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A1),LLIL_REG.q(x21)])'),
+	# tlbi ripas2e1nxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\x55\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A2),LLIL_REG.q(x21)])'),
+	# tlbi ripas2e1osnxs, x21                                          TLBI_SYS_CR_systeminstrs
+	(b'\x75\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A3),LLIL_REG.q(x21)])'),
+	# tlbi ipas2le1osnxs, x21                                          TLBI_SYS_CR_systeminstrs
+	(b'\x95\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A4),LLIL_REG.q(x21)])'),
+	# tlbi ipas2le1nxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A5),LLIL_REG.q(x21)])'),
+	# tlbi ripas2le1nxs, x21                                           TLBI_SYS_CR_systeminstrs
+	(b'\xD5\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A6),LLIL_REG.q(x21)])'),
+	# tlbi ripas2le1osnxs, x21                                         TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A7),LLIL_REG.q(x21)])'),
+	# tlbi rvae2osnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x35\x95\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A9),LLIL_REG.q(x21)])'),
+	# tlbi vmallws2e1osnxs, x21                                        TLBI_SYS_CR_systeminstrs
+	(b'\x55\x95\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24AA),LLIL_REG.q(x21)])'),
+	# tlbi rvale2osnxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x95\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24AD),LLIL_REG.q(x21)])'),
+	# tlbi rvae2nxs, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\x35\x96\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24B1),LLIL_REG.q(x21)])'),
+	# tlbi vmallws2e1nxs, x21                                          TLBI_SYS_CR_systeminstrs
+	(b'\x55\x96\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24B2),LLIL_REG.q(x21)])'),
+	# tlbi rvale2nxs, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x96\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24B5),LLIL_REG.q(x21)])'),
+	# tlbi alle2nxs, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\x15\x97\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24B8),LLIL_REG.q(x21)])'),
+	# tlbi vae2nxs, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x35\x97\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24B9),LLIL_REG.q(x21)])'),
+	# tlbi alle1nxs, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\x95\x97\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24BC),LLIL_REG.q(x21)])'),
+	# tlbi vale2nxs, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x97\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24BD),LLIL_REG.q(x21)])'),
+	# tlbi vmalls12e1nxs, x21                                          TLBI_SYS_CR_systeminstrs
+	(b'\xD5\x97\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24BE),LLIL_REG.q(x21)])'),
+	# tlbi alle3os, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x15\x81\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3408),LLIL_REG.q(x21)])'),
+	# tlbi vae3os, x21                                                 TLBI_SYS_CR_systeminstrs
+	(b'\x35\x81\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3409),LLIL_REG.q(x21)])'),
+	# tlbi paallos, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x95\x81\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x340C),LLIL_REG.q(x21)])'),
+	# tlbi vale3os, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x81\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x340D),LLIL_REG.q(x21)])'),
+	# tlbi rvae3is, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x35\x82\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3411),LLIL_REG.q(x21)])'),
+	# tlbi rvale3is, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x82\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3415),LLIL_REG.q(x21)])'),
+	# tlbi alle3is, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x15\x83\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3418),LLIL_REG.q(x21)])'),
+	# tlbi vae3is, x21                                                 TLBI_SYS_CR_systeminstrs
+	(b'\x35\x83\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3419),LLIL_REG.q(x21)])'),
+	# tlbi vale3is, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x83\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x341D),LLIL_REG.q(x21)])'),
+	# tlbi rpaos, x21                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x75\x84\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3423),LLIL_REG.q(x21)])'),
+	# tlbi rpalos, x21                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xF5\x84\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3427),LLIL_REG.q(x21)])'),
+	# tlbi rvae3os, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x35\x85\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3429),LLIL_REG.q(x21)])'),
+	# tlbi rvale3os, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x85\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x342D),LLIL_REG.q(x21)])'),
+	# tlbi rvae3, x21                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x35\x86\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3431),LLIL_REG.q(x21)])'),
+	# tlbi rvale3, x21                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x86\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3435),LLIL_REG.q(x21)])'),
+	# tlbi alle3, x21                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x15\x87\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3438),LLIL_REG.q(x21)])'),
+	# tlbi vae3, x21                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x35\x87\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3439),LLIL_REG.q(x21)])'),
+	# tlbi paall, x21                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x95\x87\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x343C),LLIL_REG.q(x21)])'),
+	# tlbi vale3, x21                                                  TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x87\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x343D),LLIL_REG.q(x21)])'),
+	# tlbi alle3osnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x15\x91\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3488),LLIL_REG.q(x21)])'),
+	# tlbi vae3osnxs, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\x35\x91\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3489),LLIL_REG.q(x21)])'),
+	# tlbi vale3osnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x91\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x348D),LLIL_REG.q(x21)])'),
+	# tlbi rvae3isnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x35\x92\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3491),LLIL_REG.q(x21)])'),
+	# tlbi rvale3isnxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x92\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3495),LLIL_REG.q(x21)])'),
+	# tlbi alle3isnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x15\x93\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3498),LLIL_REG.q(x21)])'),
+	# tlbi vae3isnxs, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\x35\x93\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3499),LLIL_REG.q(x21)])'),
+	# tlbi vale3isnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x93\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x349D),LLIL_REG.q(x21)])'),
+	# tlbi rvae3osnxs, x21                                             TLBI_SYS_CR_systeminstrs
+	(b'\x35\x95\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34A9),LLIL_REG.q(x21)])'),
+	# tlbi rvale3osnxs, x21                                            TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x95\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34AD),LLIL_REG.q(x21)])'),
+	# tlbi rvae3nxs, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\x35\x96\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34B1),LLIL_REG.q(x21)])'),
+	# tlbi rvale3nxs, x21                                              TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x96\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34B5),LLIL_REG.q(x21)])'),
+	# tlbi alle3nxs, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\x15\x97\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34B8),LLIL_REG.q(x21)])'),
+	# tlbi vae3nxs, x21                                                TLBI_SYS_CR_systeminstrs
+	(b'\x35\x97\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34B9),LLIL_REG.q(x21)])'),
+	# tlbi vale3nxs, x21                                               TLBI_SYS_CR_systeminstrs
+	(b'\xB5\x97\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34BD),LLIL_REG.q(x21)])'),
+	# tlbi vmalle1os                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x81\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x408)])'),
+	# tlbi vae1os                                                      TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x81\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x409)])'),
+	# tlbi aside1os                                                    TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x81\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x40A)])'),
+	# tlbi vaae1os                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x81\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x40B)])'),
+	# tlbi vale1os                                                     TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x81\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x40D)])'),
+	# tlbi vaale1os                                                    TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x81\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x40F)])'),
+	# tlbi rvae1is                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x82\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x411)])'),
+	# tlbi rvaae1is                                                    TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x82\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x413)])'),
+	# tlbi rvale1is                                                    TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x82\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x415)])'),
+	# tlbi rvaale1is                                                   TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x82\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x417)])'),
+	# tlbi vmalle1is                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x83\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x418)])'),
+	# tlbi vae1is                                                      TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x83\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x419)])'),
+	# tlbi aside1is                                                    TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x83\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x41A)])'),
+	# tlbi vaae1is                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x83\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x41B)])'),
+	# tlbi vale1is                                                     TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x83\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x41D)])'),
+	# tlbi vaale1is                                                    TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x83\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x41F)])'),
+	# tlbi rvae1os                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x85\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x429)])'),
+	# tlbi rvaae1os                                                    TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x85\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x42B)])'),
+	# tlbi rvale1os                                                    TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x85\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x42D)])'),
+	# tlbi rvaale1os                                                   TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x85\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x42F)])'),
+	# tlbi rvae1                                                       TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x86\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x431)])'),
+	# tlbi rvaae1                                                      TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x86\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x433)])'),
+	# tlbi rvale1                                                      TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x86\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x435)])'),
+	# tlbi rvaale1                                                     TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x86\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x437)])'),
+	# tlbi vmalle1                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x87\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x438)])'),
+	# tlbi vae1                                                        TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x87\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x439)])'),
+	# tlbi aside1                                                      TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x87\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x43A)])'),
+	# tlbi vaae1                                                       TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x87\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x43B)])'),
+	# tlbi vale1                                                       TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x87\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x43D)])'),
+	# tlbi vaale1                                                      TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x87\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x43F)])'),
+	# tlbi vmalle1osnxs                                                TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x91\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x488)])'),
+	# tlbi vae1osnxs                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x91\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x489)])'),
+	# tlbi aside1osnxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x91\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x48A)])'),
+	# tlbi vaae1osnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x91\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x48B)])'),
+	# tlbi vale1osnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x91\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x48D)])'),
+	# tlbi vaale1osnxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x91\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x48F)])'),
+	# tlbi rvae1isnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x92\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x491)])'),
+	# tlbi rvaae1isnxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x92\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x493)])'),
+	# tlbi rvale1isnxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x92\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x495)])'),
+	# tlbi rvaale1isnxs                                                TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x92\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x497)])'),
+	# tlbi vmalle1isnxs                                                TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x93\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x498)])'),
+	# tlbi vae1isnxs                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x93\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x499)])'),
+	# tlbi aside1isnxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x93\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x49A)])'),
+	# tlbi vaae1isnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x93\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x49B)])'),
+	# tlbi vale1isnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x93\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x49D)])'),
+	# tlbi vaale1isnxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x93\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x49F)])'),
+	# tlbi rvae1osnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x95\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4A9)])'),
+	# tlbi rvaae1osnxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x95\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4AB)])'),
+	# tlbi rvale1osnxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x95\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4AD)])'),
+	# tlbi rvaale1osnxs                                                TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x95\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4AF)])'),
+	# tlbi rvae1nxs                                                    TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x96\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4B1)])'),
+	# tlbi rvaae1nxs                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x96\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4B3)])'),
+	# tlbi rvale1nxs                                                   TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x96\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4B5)])'),
+	# tlbi rvaale1nxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x96\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4B7)])'),
+	# tlbi vmalle1nxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x97\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4B8)])'),
+	# tlbi vae1nxs                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x97\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4B9)])'),
+	# tlbi aside1nxs                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x97\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4BA)])'),
+	# tlbi vaae1nxs                                                    TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x97\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4BB)])'),
+	# tlbi vale1nxs                                                    TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x97\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4BD)])'),
+	# tlbi vaale1nxs                                                   TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x97\x08\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x4BF)])'),
+	# tlbi ipas2e1is                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x80\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2401)])'),
+	# tlbi ripas2e1is                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x80\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2402)])'),
+	# tlbi ipas2le1is                                                  TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x80\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2405)])'),
+	# tlbi ripas2le1is                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xDF\x80\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2406)])'),
+	# tlbi alle2os                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x81\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2408)])'),
+	# tlbi vae2os                                                      TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x81\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2409)])'),
+	# tlbi alle1os                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x9F\x81\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x240C)])'),
+	# tlbi vale2os                                                     TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x81\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x240D)])'),
+	# tlbi vmalls12e1os                                                TLBI_SYS_CR_systeminstrs
+	(b'\xDF\x81\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x240E)])'),
+	# tlbi rvae2is                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x82\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2411)])'),
+	# tlbi vmallws2e1is                                                TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x82\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2412)])'),
+	# tlbi rvale2is                                                    TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x82\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2415)])'),
+	# tlbi alle2is                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x83\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2418)])'),
+	# tlbi vae2is                                                      TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x83\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2419)])'),
+	# tlbi alle1is                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x9F\x83\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x241C)])'),
+	# tlbi vale2is                                                     TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x83\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x241D)])'),
+	# tlbi vmalls12e1is                                                TLBI_SYS_CR_systeminstrs
+	(b'\xDF\x83\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x241E)])'),
+	# tlbi ipas2e1os                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2420)])'),
+	# tlbi ipas2e1                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2421)])'),
+	# tlbi ripas2e1                                                    TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2422)])'),
+	# tlbi ripas2e1os                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2423)])'),
+	# tlbi ipas2le1os                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x9F\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2424)])'),
+	# tlbi ipas2le1                                                    TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2425)])'),
+	# tlbi ripas2le1                                                   TLBI_SYS_CR_systeminstrs
+	(b'\xDF\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2426)])'),
+	# tlbi ripas2le1os                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x84\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2427)])'),
+	# tlbi rvae2os                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x85\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2429)])'),
+	# tlbi vmallws2e1os                                                TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x85\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x242A)])'),
+	# tlbi rvale2os                                                    TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x85\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x242D)])'),
+	# tlbi rvae2                                                       TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x86\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2431)])'),
+	# tlbi vmallws2e1                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x86\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2432)])'),
+	# tlbi rvale2                                                      TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x86\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2435)])'),
+	# tlbi alle2                                                       TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x87\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2438)])'),
+	# tlbi vae2                                                        TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x87\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2439)])'),
+	# tlbi alle1                                                       TLBI_SYS_CR_systeminstrs
+	(b'\x9F\x87\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x243C)])'),
+	# tlbi vale2                                                       TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x87\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x243D)])'),
+	# tlbi vmalls12e1                                                  TLBI_SYS_CR_systeminstrs
+	(b'\xDF\x87\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x243E)])'),
+	# tlbi ipas2e1isnxs                                                TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x90\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2481)])'),
+	# tlbi ripas2e1isnxs                                               TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x90\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2482)])'),
+	# tlbi ipas2le1isnxs                                               TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x90\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2485)])'),
+	# tlbi ripas2le1isnxs                                              TLBI_SYS_CR_systeminstrs
+	(b'\xDF\x90\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2486)])'),
+	# tlbi alle2osnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x91\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2488)])'),
+	# tlbi vae2osnxs                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x91\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2489)])'),
+	# tlbi alle1osnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x9F\x91\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x248C)])'),
+	# tlbi vale2osnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x91\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x248D)])'),
+	# tlbi vmalls12e1osnxs                                             TLBI_SYS_CR_systeminstrs
+	(b'\xDF\x91\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x248E)])'),
+	# tlbi rvae2isnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x92\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2491)])'),
+	# tlbi vmallws2e1isnxs                                             TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x92\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2492)])'),
+	# tlbi rvale2isnxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x92\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2495)])'),
+	# tlbi alle2isnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x93\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2498)])'),
+	# tlbi vae2isnxs                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x93\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x2499)])'),
+	# tlbi alle1isnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x9F\x93\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x249C)])'),
+	# tlbi vale2isnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x93\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x249D)])'),
+	# tlbi vmalls12e1isnxs                                             TLBI_SYS_CR_systeminstrs
+	(b'\xDF\x93\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x249E)])'),
+	# tlbi ipas2e1osnxs                                                TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A0)])'),
+	# tlbi ipas2e1nxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A1)])'),
+	# tlbi ripas2e1nxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A2)])'),
+	# tlbi ripas2e1osnxs                                               TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A3)])'),
+	# tlbi ipas2le1osnxs                                               TLBI_SYS_CR_systeminstrs
+	(b'\x9F\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A4)])'),
+	# tlbi ipas2le1nxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A5)])'),
+	# tlbi ripas2le1nxs                                                TLBI_SYS_CR_systeminstrs
+	(b'\xDF\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A6)])'),
+	# tlbi ripas2le1osnxs                                              TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x94\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A7)])'),
+	# tlbi rvae2osnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x95\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24A9)])'),
+	# tlbi vmallws2e1osnxs                                             TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x95\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24AA)])'),
+	# tlbi rvale2osnxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x95\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24AD)])'),
+	# tlbi rvae2nxs                                                    TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x96\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24B1)])'),
+	# tlbi vmallws2e1nxs                                               TLBI_SYS_CR_systeminstrs
+	(b'\x5F\x96\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24B2)])'),
+	# tlbi rvale2nxs                                                   TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x96\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24B5)])'),
+	# tlbi alle2nxs                                                    TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x97\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24B8)])'),
+	# tlbi vae2nxs                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x97\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24B9)])'),
+	# tlbi alle1nxs                                                    TLBI_SYS_CR_systeminstrs
+	(b'\x9F\x97\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24BC)])'),
+	# tlbi vale2nxs                                                    TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x97\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24BD)])'),
+	# tlbi vmalls12e1nxs                                               TLBI_SYS_CR_systeminstrs
+	(b'\xDF\x97\x0C\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x24BE)])'),
+	# tlbi alle3os                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x81\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3408)])'),
+	# tlbi vae3os                                                      TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x81\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3409)])'),
+	# tlbi paallos                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x9F\x81\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x340C)])'),
+	# tlbi vale3os                                                     TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x81\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x340D)])'),
+	# tlbi rvae3is                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x82\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3411)])'),
+	# tlbi rvale3is                                                    TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x82\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3415)])'),
+	# tlbi alle3is                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x83\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3418)])'),
+	# tlbi vae3is                                                      TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x83\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3419)])'),
+	# tlbi vale3is                                                     TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x83\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x341D)])'),
+	# tlbi rpaos                                                       TLBI_SYS_CR_systeminstrs
+	(b'\x7F\x84\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3423)])'),
+	# tlbi rpalos                                                      TLBI_SYS_CR_systeminstrs
+	(b'\xFF\x84\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3427)])'),
+	# tlbi rvae3os                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x85\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3429)])'),
+	# tlbi rvale3os                                                    TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x85\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x342D)])'),
+	# tlbi rvae3                                                       TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x86\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3431)])'),
+	# tlbi rvale3                                                      TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x86\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3435)])'),
+	# tlbi alle3                                                       TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x87\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3438)])'),
+	# tlbi vae3                                                        TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x87\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3439)])'),
+	# tlbi paall                                                       TLBI_SYS_CR_systeminstrs
+	(b'\x9F\x87\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x343C)])'),
+	# tlbi vale3                                                       TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x87\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x343D)])'),
+	# tlbi alle3osnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x91\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3488)])'),
+	# tlbi vae3osnxs                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x91\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3489)])'),
+	# tlbi vale3osnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x91\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x348D)])'),
+	# tlbi rvae3isnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x92\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3491)])'),
+	# tlbi rvale3isnxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x92\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3495)])'),
+	# tlbi alle3isnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x93\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3498)])'),
+	# tlbi vae3isnxs                                                   TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x93\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x3499)])'),
+	# tlbi vale3isnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x93\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x349D)])'),
+	# tlbi rvae3osnxs                                                  TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x95\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34A9)])'),
+	# tlbi rvale3osnxs                                                 TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x95\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34AD)])'),
+	# tlbi rvae3nxs                                                    TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x96\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34B1)])'),
+	# tlbi rvale3nxs                                                   TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x96\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34B5)])'),
+	# tlbi alle3nxs                                                    TLBI_SYS_CR_systeminstrs
+	(b'\x1F\x97\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34B8)])'),
+	# tlbi vae3nxs                                                     TLBI_SYS_CR_systeminstrs
+	(b'\x3F\x97\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34B9)])'),
+	# tlbi vale3nxs                                                    TLBI_SYS_CR_systeminstrs
+	(b'\xBF\x97\x0E\xD5', 'LLIL_INTRINSIC([],__tlbi,[LLIL_CONST.d(0x34BD)])'),
+	# dc cvadp, x26                                                    DC_SYS_CR_systeminstrs
+    (b'\x3A\x7D\x0B\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x1BE9),LLIL_REG.q(x26)])'),
+    # dc zva, x24                                                      DC_SYS_CR_systeminstrs
+    (b'\x38\x74\x0B\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x1BA1),LLIL_REG.q(x24)])'),
+    # dc zva, xzr                                                      DC_SYS_CR_systeminstrs
+    (b'\x3F\x74\x0B\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x1BA1),LLIL_CONST.q(0x0)])'),
+    # dc cisw, x18                                                     DC_SYS_CR_systeminstrs
+    (b'\x52\x7E\x08\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x3F2),LLIL_REG.q(x18)])'),
+    # dc cvadp, x3                                                     DC_SYS_CR_systeminstrs
+    (b'\x23\x7D\x0B\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x1BE9),LLIL_REG.q(x3)])'),
+    # dc csw, x21                                                      DC_SYS_CR_systeminstrs
+    (b'\x55\x7A\x08\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x3D2),LLIL_REG.q(x21)])'),
+    # dc cvadp, x2                                                     DC_SYS_CR_systeminstrs
+    (b'\x22\x7D\x0B\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x1BE9),LLIL_REG.q(x2)])'),
+    # dc cisw, x23                                                     DC_SYS_CR_systeminstrs
+    (b'\x57\x7E\x08\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x3F2),LLIL_REG.q(x23)])'),
+    # dc csw, x19                                                      DC_SYS_CR_systeminstrs
+    (b'\x53\x7A\x08\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x3D2),LLIL_REG.q(x19)])'),
+    # dc isw, x5                                                       DC_SYS_CR_systeminstrs
+    (b'\x45\x76\x08\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x3B2),LLIL_REG.q(x5)])'),
+    # dc civac, x24                                                    DC_SYS_CR_systeminstrs
+    (b'\x38\x7E\x0B\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x1BF1),LLIL_REG.q(x24)])'),
+    # dc cvau, x4                                                      DC_SYS_CR_systeminstrs
+    (b'\x24\x7B\x0B\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x1BD9),LLIL_REG.q(x4)])'),
+    # dc csw, x14                                                      DC_SYS_CR_systeminstrs
+    (b'\x4E\x7A\x08\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x3D2),LLIL_REG.q(x14)])'),
+    # dc csw, x5                                                       DC_SYS_CR_systeminstrs
+    (b'\x45\x7A\x08\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x3D2),LLIL_REG.q(x5)])'),
+    # dc isw, x3                                                       DC_SYS_CR_systeminstrs
+    (b'\x43\x76\x08\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x3B2),LLIL_REG.q(x3)])'),
+    # dc cvac, x14                                                     DC_SYS_CR_systeminstrs
+    (b'\x2E\x7A\x0B\xD5', 'LLIL_INTRINSIC([],__dc,[LLIL_CONST.d(0x1BD1),LLIL_REG.q(x14)])'),
+	# at s1e1wp, x10                                                   AT_SYS_CR_systeminstrs
+	(b'\x2A\x79\x08\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x3C9),LLIL_REG.q(x10)])'),
+	# at S1E1R, x21                                                    AT_SYS_CR_systeminstrs
+	(b'\x15\x78\x08\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x3C0),LLIL_REG.q(x21)])'),
+	# at S1E1W, x21                                                    AT_SYS_CR_systeminstrs
+	(b'\x35\x78\x08\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x3C1),LLIL_REG.q(x21)])'),
+	# at S1E0R, x21                                                    AT_SYS_CR_systeminstrs
+	(b'\x55\x78\x08\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x3C2),LLIL_REG.q(x21)])'),
+	# at S1E0W, x21                                                    AT_SYS_CR_systeminstrs
+	(b'\x75\x78\x08\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x3C3),LLIL_REG.q(x21)])'),
+	# at S1E1RP, x21                                                   AT_SYS_CR_systeminstrs
+	(b'\x15\x79\x08\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x3C8),LLIL_REG.q(x21)])'),
+	# at S1E1WP, x21                                                   AT_SYS_CR_systeminstrs
+	(b'\x35\x79\x08\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x3C9),LLIL_REG.q(x21)])'),
+	# at S1E1A, x21                                                    AT_SYS_CR_systeminstrs
+	(b'\x55\x79\x08\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x3CA),LLIL_REG.q(x21)])'),
+	# at S1E2R, x21                                                    AT_SYS_CR_systeminstrs
+	(b'\x15\x78\x0C\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x23C0),LLIL_REG.q(x21)])'),
+	# at S1E2W, x21                                                    AT_SYS_CR_systeminstrs
+	(b'\x35\x78\x0C\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x23C1),LLIL_REG.q(x21)])'),
+	# at S12E1R, x21                                                   AT_SYS_CR_systeminstrs
+	(b'\x95\x78\x0C\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x23C4),LLIL_REG.q(x21)])'),
+	# at S12E1W, x21                                                   AT_SYS_CR_systeminstrs
+	(b'\xB5\x78\x0C\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x23C5),LLIL_REG.q(x21)])'),
+	# at S12E0R, x21                                                   AT_SYS_CR_systeminstrs
+	(b'\xD5\x78\x0C\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x23C6),LLIL_REG.q(x21)])'),
+	# at S12E0W, x21                                                   AT_SYS_CR_systeminstrs
+	(b'\xF5\x78\x0C\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x23C7),LLIL_REG.q(x21)])'),
+	# at S1E2A, x21                                                    AT_SYS_CR_systeminstrs
+	(b'\x55\x79\x0C\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x23CA),LLIL_REG.q(x21)])'),
+	# at S1E3R, x21                                                    AT_SYS_CR_systeminstrs
+	(b'\x15\x78\x0E\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x33C0),LLIL_REG.q(x21)])'),
+	# at S1E3W, x21                                                    AT_SYS_CR_systeminstrs
+	(b'\x35\x78\x0E\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x33C1),LLIL_REG.q(x21)])'),
+	# at S1E3A, x21                                                    AT_SYS_CR_systeminstrs
+	(b'\x55\x79\x0E\xD5', 'LLIL_INTRINSIC([],__at,[LLIL_CONST.d(0x33CA),LLIL_REG.q(x21)])'),
 ]
 
 # tests_uxtl_uxtl2 = [
@@ -10616,7 +11303,7 @@ tests_grab_bag = [
     (b'\xE0\x0F\x40\xBD', 'LLIL_SET_REG.d(s0,LLIL_LOAD.d(LLIL_ADD.q(LLIL_REG.q(sp),LLIL_CONST.q(0xC))))'), # ldr s0, [sp, #0xc]
     (b'\xE1\x0B\x40\xBD', 'LLIL_SET_REG.d(s1,LLIL_LOAD.d(LLIL_ADD.q(LLIL_REG.q(sp),LLIL_CONST.q(0x8))))'), # ldr s1, [sp, #0x8]
     (b'\x29\x7D\x40\xD3', 'LLIL_SET_REG.q(x9,LLIL_LOW_PART.d(LLIL_REG.q(x9)))'), # ubfx x9, x9, #0, #0x20
-    (b'\x00\xC0\x1E\xD5', 'LLIL_INTRINSIC([vbar_el3],_WriteStatusReg,[LLIL_REG.q(x0)])'), # msr vbar_el3, x0
+    # (b'\x00\xC0\x1E\xD5', 'LLIL_INTRINSIC([vbar_el3],_WriteStatusReg,[LLIL_REG.q(x0)])'), # msr vbar_el3, x0
     (b'\x69\x01\x08\x4A', 'LLIL_SET_REG.d(w9,LLIL_XOR.d(LLIL_REG.d(w11),LLIL_REG.d(w8)))'), # eor w9, w11, w8
     (b'\x2C\x09\xD5\x4A', 'LLIL_SET_REG.d(w12,LLIL_XOR.d(LLIL_REG.d(w9),LLIL_ROR.d(LLIL_REG.d(w21),LLIL_CONST.b(0x2))))'), # eor w12, w9, w21, ror #0x2
     # adrp
@@ -10939,10 +11626,10 @@ tests_grab_bag = [
     #(b'\x5f\x22\x03\xd5', 'LLIL_INTRINSIC([],SystemHintOp_TSB,[])'), # hint 0x12 - now ARM64_TSB
     #(b'\x9f\x22\x03\xd5', 'LLIL_INTRINSIC([],SystemHintOp_CSDB,[])'), # hint 0x14 - now ARM64_CSDB
     #(b'\x5f\x24\x03\xd5', 'LLIL_INTRINSIC([],SystemHintOp_BTI,[])'), # hint 0x22 - now ARM64_BTI
-    (b'\x00\xC0\x1E\xD5', 'LLIL_INTRINSIC([vbar_el3],_WriteStatusReg,[LLIL_REG.q(x0)])'), # msr vbar_el3, x0
-    (b'\x00\x10\x1E\xD5', 'LLIL_INTRINSIC([sctlr_el3],_WriteStatusReg,[LLIL_REG.q(x0)])'), # msr sctlr_el3, x0
+    # (b'\x00\xC0\x1E\xD5', 'LLIL_INTRINSIC([vbar_el3],_WriteStatusReg,[LLIL_REG.q(x0)])'), # msr vbar_el3, x0
+    # (b'\x00\x10\x1E\xD5', 'LLIL_INTRINSIC([sctlr_el3],_WriteStatusReg,[LLIL_REG.q(x0)])'), # msr sctlr_el3, x0
 #    (b'\xff\x44\x03\xd5', 'LLIL_INTRINSIC([daifclr],_WriteStatusReg,[LLIL_CONST.d(0x4)])'), # msr daifclr, #0x4
-    (b'\x00\x10\x3E\xD5', 'LLIL_INTRINSIC([x0],_ReadStatusReg,[LLIL_REG(sctlr_el3)])'), # mrs x0, sctlr_el3
+#     (b'\x00\x10\x3E\xD5', 'LLIL_INTRINSIC([x0],_ReadStatusReg,[LLIL_REG(sctlr_el3)])'), # mrs x0, sctlr_el3
     (b'\xC1\x48\x52\x7A', 'LLIL_IF(LLIL_FLAG_GROUP(mi),1,3);' + \
                          ' LLIL_SUB.d{*}(LLIL_REG.d(w6),LLIL_CONST.d(0x12));' + \
                          ' LLIL_GOTO(8);' + \
@@ -11011,60 +11698,59 @@ tests_grab_bag = [
 ]
 
 test_cases = \
-    tests_shll + \
-    tests_udf + \
-    tests_pac + \
-    tests_load_acquire_store_release + \
-    tests_movk + \
-    tests_mvni + \
-    tests_2791 + \
-    tests_msr + \
-    tests_ucvtf + \
-    tests_ucvtf2 + \
-    tests_scvtf + \
-    tests_ret + \
-    tests_svc_hvc_smc + \
-    tests_clrex + \
-    tests_xtn_xtn2 + \
-    tests_dc_tlbi + \
-    tests_ldadd + \
-    tests_swp + \
-    tests_dup + \
-    tests_stlr + \
-    tests_ldnp + \
-    tests_stnp + \
-    tests_mov + \
-    tests_mov_add + \
-    tests_mov_dup_ins + \
-    tests_movi + \
-    tests_movn + \
-    tests_movz + \
-    tests_orr + \
-    tests_umov + \
-    tests_fsub + \
-    tests_fadd + \
-    tests_f_mathops + \
-    tests_fml + \
-    tests_fmul + \
-    tests_fcvt + \
-    tests_fcm + \
-    tests_fcmla + \
-    tests_fccmp_fccmpe + \
-    tests_fcmp_fcmpe + \
-    tests_fcsel + \
-    tests_fmov + \
-    tests_sha + \
-    tests_rev + \
-    tests_ldn_stn + \
-    tests_tbl + \
-    tests_cas + \
-    tests_smov + \
-    tests_raddhn_rshrn + \
-    tests_ngc_sbc + \
-    tests_vmul + \
-    tests_grab_bag
+	tests_shll + \
+	tests_udf + \
+	tests_pac + \
+	tests_load_acquire_store_release + \
+	tests_movk + \
+	tests_mvni + \
+	tests_2791 + \
+	tests_msr + \
+	tests_ucvtf + \
+	tests_ucvtf2 + \
+	tests_scvtf + \
+	tests_ret + \
+	tests_svc_hvc_smc + \
+	tests_clrex + \
+	tests_xtn_xtn2 + \
+	tests_dc_tlbi_at + \
+	tests_ldadd + \
+	tests_swp + \
+	tests_dup + \
+	tests_stlr + \
+	tests_ldnp + \
+	tests_stnp + \
+	tests_mov + \
+	tests_mov_add + \
+	tests_mov_dup_ins + \
+	tests_movi + \
+	tests_movn + \
+	tests_movz + \
+	tests_orr + \
+	tests_umov + \
+	tests_fsub + \
+	tests_fadd + \
+	tests_f_mathops + \
+	tests_fml + \
+	tests_fmul + \
+	tests_fcvt + \
+	tests_fcm + \
+	tests_fcmla + \
+	tests_fccmp_fccmpe + \
+	tests_fcmp_fcmpe + \
+	tests_fcsel + \
+	tests_fmov + \
+	tests_sha + \
+	tests_rev + \
+	tests_ldn_stn + \
+	tests_tbl + \
+	tests_cas + \
+	tests_smov + \
+	tests_raddhn_rshrn + \
+	tests_ngc_sbc + \
+	tests_vmul + \
+	tests_grab_bag
 
-test_cases = tests_dc_tlbi
 def il2str(il):
     sz_lookup = {1:'.b', 2:'.w', 4:'.d', 8:'.q', 16:'.o'}
     if isinstance(il, lowlevelil.LowLevelILInstruction):
@@ -11105,7 +11791,10 @@ def lift(data, disasm=False):
             tokens.append(il2str(il))
             if disasm:
                 info = block.arch.get_instruction_info(bv[il.address:il.address+block.arch._get_max_instruction_length(None)], il.address)
-                asm.append(''.join(map(str, block.arch.get_instruction_text(bv[il.address:il.address + info.length], il.address)[0])))
+                if info:
+                    asm.append(''.join(map(str, block.arch.get_instruction_text(bv[il.address:il.address + info.length], il.address)[0])))
+                else:
+                    asm.append(''.join(map(str, block.arch.get_instruction_text(bv[il.address:il.address+4], il.address)[0])))
     il_str = '; '.join(tokens)
 
     i = len(il_str)
@@ -11143,7 +11832,7 @@ def il_str_to_tree(ilstr):
 def test_all_lifts(no_fail=False):
     for test_i, test_info in enumerate(test_cases):
         if (test_i+1) % 25 == 0:
-            print(f'on test {test_i+1}/{len(test_cases)}')
+            print(f'on test {test_i+1}/{len(test_cases)}', file=sys.stderr)
 
         data, expected_lift = test_info[0], test_info[1]
         il_attrs = test_info[2] if len(test_info) == 3 else None
@@ -11152,6 +11841,7 @@ def test_all_lifts(no_fail=False):
         if actual_lift != expected_lift:
             print('LIFT MISMATCH AT TEST %d!' % test_i)
             print('\t   input: %s %s' % (data.hex(), '\n'.join(asm)))
+            print('\t    test: %s %s' % (struct.pack('>I', struct.unpack('<I', data)[0]).hex().upper(), re.sub(r' +', ' ', '\n'.join(asm))))
             print('\texpected: %s' % expected_lift)
             print('\t  actual: %s' % actual_lift)
             print('\t    tree:')
@@ -11178,7 +11868,7 @@ if __name__ == '__main__':
         if sys.argv[1] == '--no-fail':
             no_fail = True
     if test_all_lifts(no_fail):
-        print('success!')
+        print('success!', file=sys.stderr)
         sys.exit(0)
     else:
         sys.exit(-1)

@@ -199,8 +199,11 @@ class SharedCache
 	AddressRangeMap<CacheRegion> m_regions {};
 	// Describes the images of the cache.
 	std::unordered_map<uint64_t, CacheImage> m_images {};
-	// All the symbols for this cache. Both mapped and unmapped (not in the view).
+	// All the external symbols for this cache. Both mapped and unmapped (not in the view).
 	std::unordered_map<uint64_t, CacheSymbol> m_symbols {};
+	// Quickly lookup a symbol by name, populated by `FinalizeSymbols`.
+	// `m_namedSymbols` is modified in a worker thread spawned by view init so we must not get a symbol until its populated.
+	std::unordered_map<std::string, uint64_t> m_namedSymbols {};
 
 	bool ProcessEntryImage(const std::string& path, const dyld_cache_image_info& info);
 
@@ -211,12 +214,19 @@ class SharedCache
 public:
 	explicit SharedCache(uint64_t addressSize);
 
+	SharedCache(const SharedCache &) = delete;
+	SharedCache &operator=(const SharedCache &) = delete;
+
+	SharedCache(SharedCache &&) noexcept = default;
+	SharedCache &operator=(SharedCache &&) noexcept = default;
+
 	uint64_t GetBaseAddress() const { return m_baseAddress; }
 	std::shared_ptr<VirtualMemory> GetVirtualMemory() { return m_vm; }
 	const std::unordered_map<CacheEntryId, CacheEntry>& GetEntries() const { return m_entries; }
 	const AddressRangeMap<CacheRegion>& GetRegions() const { return m_regions; }
 	const std::unordered_map<uint64_t, CacheImage>& GetImages() const { return m_images; }
 	const std::unordered_map<uint64_t, CacheSymbol>& GetSymbols() const { return m_symbols; }
+	const std::unordered_map<std::string, uint64_t>& GetNamedSymbols() const { return m_namedSymbols; }
 
 	void AddImage(CacheImage image);
 
@@ -225,7 +235,7 @@ public:
 
 	void AddSymbol(CacheSymbol symbol);
 
-	void AddSymbols(std::vector<CacheSymbol> symbols);
+	void AddSymbols(std::vector<CacheSymbol>&& symbols);
 
 	// Adds the cache entry and populates the virtual memory using the mapping information.
 	// After being added the entry is read only, there is nothing that can modify it.
@@ -236,6 +246,9 @@ public:
 	void ProcessEntryRegions(const CacheEntry& entry);
 
 	void ProcessEntrySlideInfo(const CacheEntry& entry);
+
+	// Construct the named symbols lookup map for use with `GetSymbolWithName`.
+	void ProcessSymbols();
 
 	std::optional<CacheEntry> GetEntryContaining(uint64_t address) const;
 

@@ -201,10 +201,10 @@ void SharedCache::AddSymbol(CacheSymbol symbol)
 	m_symbols.insert({symbol.address, std::move(symbol)});
 }
 
-void SharedCache::AddSymbols(std::vector<CacheSymbol> symbols)
+void SharedCache::AddSymbols(std::vector<CacheSymbol>&& symbols)
 {
-	for (auto& symbol : symbols)
-		m_symbols.insert({symbol.address, std::move(symbol)});
+	for (auto&& symbol : symbols)
+		m_symbols.emplace(symbol.address, std::move(symbol));
 }
 
 CacheEntryId SharedCache::AddEntry(CacheEntry entry)
@@ -403,6 +403,14 @@ void SharedCache::ProcessEntrySlideInfo(const CacheEntry& entry)
 	slideInfoProcessor.ProcessEntry(*m_vm, entry);
 }
 
+void SharedCache::ProcessSymbols()
+{
+	// Populate the named symbols from the regular symbols map.
+	m_namedSymbols.reserve(m_symbols.size());
+	for (const auto& [address, symbol] : m_symbols)
+		m_namedSymbols.emplace(symbol.name, address);
+}
+
 std::optional<CacheEntry> SharedCache::GetEntryContaining(const uint64_t address) const
 {
 	for (const auto& [_, entry] : m_entries)
@@ -482,10 +490,10 @@ std::optional<CacheSymbol> SharedCache::GetSymbolAt(uint64_t address) const
 
 std::optional<CacheSymbol> SharedCache::GetSymbolWithName(const std::string& name) const
 {
-	for (const auto& [address, symbol] : m_symbols)
-		if (symbol.name == name)
-			return symbol;
-	return std::nullopt;
+	const auto it = m_namedSymbols.find(name);
+	if (it == m_namedSymbols.end())
+		return std::nullopt;
+	return GetSymbolAt(it->second);
 }
 
 CacheProcessor::CacheProcessor(Ref<BinaryView> view)

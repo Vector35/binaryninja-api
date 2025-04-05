@@ -214,6 +214,14 @@ class SharedCacheController:
         sccore.BNSharedCacheFreeSymbol(api_symbol)
         return symbol
 
+    def get_symbol_with_name(self, name: str) -> Optional[CacheSymbol]:
+        api_symbol = sccore.BNSharedCacheSymbol()
+        if not sccore.BNSharedCacheControllerGetSymbolWithName(self.handle, name, api_symbol):
+            return None
+        symbol = symbol_from_api(api_symbol)
+        sccore.BNSharedCacheFreeSymbol(api_symbol)
+        return symbol
+
     @property
     def regions(self) -> [CacheRegion]:
         count = ctypes.c_ulonglong()

@@ -842,6 +842,19 @@ bool SharedCacheView::Init()
 
 	auto cacheController = SharedCacheController::Initialize(*this, std::move(sharedCache));
 
+	{
+		// Load up all the symbols into the named symbols lookup map.
+		// NOTE: We do this on a separate thread as image & region loading does not consult this.
+		WorkerPriorityEnqueue([logger, cacheController]() {
+			auto& sharedCache = cacheController->GetCache();
+			auto startTime = std::chrono::high_resolution_clock::now();
+			sharedCache.ProcessSymbols();
+			auto endTime = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> elapsed = endTime - startTime;
+			logger->LogInfo("Processing %zu symbols took %.3f seconds (separate thread)", sharedCache.GetSymbols().size(), elapsed.count());
+		});
+	}
+
 	// Users can adjust which images are loaded by default using the `loader.dsc.autoLoadPattern` setting.
 	std::string autoLoadPattern = ".*libsystem_c.dylib";
 	if (settings && settings->Contains("loader.dsc.autoLoadPattern"))

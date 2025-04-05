@@ -54,7 +54,7 @@ void RegisterSharedCacheControllerDestructor()
 	BNRegisterObjectDestructionCallbacks(&callbacks);
 }
 
-SharedCacheController::SharedCacheController(SharedCache cache, Ref<Logger> logger) : m_cache(std::move(cache))
+SharedCacheController::SharedCacheController(SharedCache&& cache, Ref<Logger> logger) : m_cache(std::move(cache))
 {
 	INIT_DSC_API_OBJECT();
 	m_logger = std::move(logger);
@@ -65,7 +65,7 @@ SharedCacheController::SharedCacheController(SharedCache cache, Ref<Logger> logg
 	m_regionFilter = std::regex(".*LINKEDIT.*");
 }
 
-DSCRef<SharedCacheController> SharedCacheController::Initialize(BinaryView& view, SharedCache cache)
+DSCRef<SharedCacheController> SharedCacheController::Initialize(BinaryView& view, SharedCache&& cache)
 {
 	auto id = GetViewIdFromView(view);
 	std::unique_lock<std::shared_mutex> lock(GlobalControllersMutex);

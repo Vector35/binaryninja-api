@@ -195,7 +195,7 @@ extern "C"
 	bool BNSharedCacheControllerGetRegionAt(
 		BNSharedCacheController* controller, uint64_t address, BNSharedCacheRegion* outRegion)
 	{
-		auto region = controller->object->GetCache().GetRegionAt(address);
+		const auto region = controller->object->GetCache().GetRegionAt(address);
 		if (!region)
 			return false;
 		*outRegion = RegionToApi(*region);
@@ -205,7 +205,7 @@ extern "C"
 	bool BNSharedCacheControllerGetRegionContaining(
 		BNSharedCacheController* controller, uint64_t address, BNSharedCacheRegion* outRegion)
 	{
-		auto region = controller->object->GetCache().GetRegionContaining(address);
+		const auto region = controller->object->GetCache().GetRegionContaining(address);
 		if (!region)
 			return false;
 		*outRegion = RegionToApi(*region);
@@ -214,7 +214,7 @@ extern "C"
 
 	BNSharedCacheRegion* BNSharedCacheControllerGetRegions(BNSharedCacheController* controller, size_t* count)
 	{
-		auto regions = controller->object->GetCache().GetRegions();
+		const auto& regions = controller->object->GetCache().GetRegions();
 		*count = regions.size();
 		BNSharedCacheRegion* apiRegions = new BNSharedCacheRegion[*count];
 		int idx = 0;
@@ -225,7 +225,7 @@ extern "C"
 
 	BNSharedCacheRegion* BNSharedCacheControllerGetLoadedRegions(BNSharedCacheController* controller, size_t* count)
 	{
-		auto loadedRegionStarts = controller->object->GetLoadedRegions();
+		const auto& loadedRegionStarts = controller->object->GetLoadedRegions();
 
 		// TODO: This translation should likely exist in the core cache controller class?
 		std::vector<CacheRegion> loadedRegions;
@@ -271,7 +271,7 @@ extern "C"
 	bool BNSharedCacheControllerGetImageAt(
 		BNSharedCacheController* controller, uint64_t address, BNSharedCacheImage* outImage)
 	{
-		auto image = controller->object->GetCache().GetImageAt(address);
+		const auto image = controller->object->GetCache().GetImageAt(address);
 		if (!image)
 			return false;
 		*outImage = ImageToApi(*image);
@@ -281,7 +281,7 @@ extern "C"
 	bool BNSharedCacheControllerGetImageContaining(
 		BNSharedCacheController* controller, uint64_t address, BNSharedCacheImage* outImage)
 	{
-		auto image = controller->object->GetCache().GetImageContaining(address);
+		const auto image = controller->object->GetCache().GetImageContaining(address);
 		if (!image)
 			return false;
 		*outImage = ImageToApi(*image);
@@ -291,7 +291,7 @@ extern "C"
 	bool BNSharedCacheControllerGetImageWithName(
 		BNSharedCacheController* controller, const char* name, BNSharedCacheImage* outImage)
 	{
-		auto image = controller->object->GetCache().GetImageWithName(name);
+		const auto image = controller->object->GetCache().GetImageWithName(name);
 		if (!image)
 			return false;
 		*outImage = ImageToApi(*image);
@@ -317,7 +317,7 @@ extern "C"
 
 	BNSharedCacheImage* BNSharedCacheControllerGetImages(BNSharedCacheController* controller, size_t* count)
 	{
-		auto images = controller->object->GetCache().GetImages();
+		const auto& images = controller->object->GetCache().GetImages();
 		*count = images.size();
 		BNSharedCacheImage* apiImages = new BNSharedCacheImage[*count];
 		size_t idx = 0;
@@ -328,7 +328,7 @@ extern "C"
 
 	BNSharedCacheImage* BNSharedCacheControllerGetLoadedImages(BNSharedCacheController* controller, size_t* count)
 	{
-		auto loadedImageStarts = controller->object->GetLoadedImages();
+		const auto& loadedImageStarts = controller->object->GetLoadedImages();
 
 		// TODO: This translation should likely exist in the core cache controller class?
 		std::vector<CacheImage> loadedImages;
@@ -362,7 +362,7 @@ extern "C"
 	bool BNSharedCacheControllerGetSymbolAt(
 		BNSharedCacheController* controller, uint64_t address, BNSharedCacheSymbol* outSymbol)
 	{
-		auto symbol = controller->object->GetCache().GetSymbolAt(address);
+		const auto symbol = controller->object->GetCache().GetSymbolAt(address);
 		if (!symbol)
 			return false;
 		*outSymbol = SymbolToApi(*symbol);
@@ -372,7 +372,7 @@ extern "C"
 	bool BNSharedCacheControllerGetSymbolWithName(
 		BNSharedCacheController* controller, const char* name, BNSharedCacheSymbol* outSymbol)
 	{
-		auto symbol = controller->object->GetCache().GetSymbolWithName(name);
+		const auto symbol = controller->object->GetCache().GetSymbolWithName(name);
 		if (!symbol)
 			return false;
 		*outSymbol = SymbolToApi(*symbol);
@@ -381,7 +381,7 @@ extern "C"
 
 	BNSharedCacheSymbol* BNSharedCacheControllerGetSymbols(BNSharedCacheController* controller, size_t* count)
 	{
-		auto symbols = controller->object->GetCache().GetSymbols();
+		const auto& symbols = controller->object->GetCache().GetSymbols();
 		*count = symbols.size();
 		BNSharedCacheSymbol* apiSymbols = new BNSharedCacheSymbol[*count];
 		size_t idx = 0;
@@ -405,7 +405,7 @@ extern "C"
 
 	BNSharedCacheEntry* BNSharedCacheControllerGetEntries(BNSharedCacheController* controller, size_t* count)
 	{
-		auto entries = controller->object->GetCache().GetEntries();
+		const auto& entries = controller->object->GetCache().GetEntries();
 		*count = entries.size();
 		BNSharedCacheEntry* apiEntries = new BNSharedCacheEntry[*count];
 		size_t idx = 0;

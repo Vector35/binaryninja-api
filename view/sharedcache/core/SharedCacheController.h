@@ -35,11 +35,11 @@ namespace BinaryNinja::DSC {
 		bool m_processObjC;
 		bool m_processCFStrings;
 
-		explicit SharedCacheController(SharedCache cache, Ref<Logger> logger);
+		explicit SharedCacheController(SharedCache&& cache, Ref<Logger> logger);
 
 	public:
 		// Initialize the DSCacheView, this should be called from the view initialize function only!
-		static DSCRef<SharedCacheController> Initialize(BinaryView& view, SharedCache cache);
+		static DSCRef<SharedCacheController> Initialize(BinaryView& view, SharedCache&& cache);
 
 		// NOTE: This will not create one if it does not exist. To create one for the view call `Initialize`.
 		static DSCRef<SharedCacheController> FromView(BinaryView& view);

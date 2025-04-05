@@ -4,12 +4,10 @@
 # TODO: proper command line argument parsing, and help
 
 import re, sys, codecs
-import binaryninja
 
 N_SAMPLES = 4  # number of samples for each encoding
 
 from arm64test import lift, ATTR_PTR_AUTH, path_il_h
-from disassembler import disasm_test
 
 if not sys.argv[1:]:
     sys.exit(-1)
@@ -153,14 +151,14 @@ def gather_samples(mnems, encodings):
 if sys.argv[1] == "mnemonic":
     mnems = sys.argv[2:]
     for mnem in mnems:
-        print("searching for mnemonic -%s-" % mnem)
+        print("searching for mnemonic -%s-" % mnem, file=sys.stderr)
         gather_samples([mnem], [])
 
 # exact match (ignoring case) for encodings
 elif sys.argv[1] == "encoding":
     encnames = sys.argv[2:]
     for encname in encnames:
-        print("searching for encoding -%s-" % encname)
+        print("searching for encoding -%s-" % encname, file=sys.stderr)
         gather_samples([], [encname])
 
 elif sys.argv[1] == "mte":
@@ -231,25 +229,6 @@ elif sys.argv[1] == "recompute_arm64test":
             comment = m.group(1)
 
         data = codecs.decode(b0 + b1 + b2 + b3, "hex_codec")
-        new_asm = disassemble(0, data)
-        if new_asm:
-            new_asm = ' '.join(new_asm.split())
-            test_comment = comment and ' '.join(comment.split())
-            header_line = None
-            if i - 1 and lines[i - 1].strip():
-                header_line = ' '.join(lines[i - 1].strip().split())
-                header_line = re.sub(r'^# ([0-9a-fA-F]{8} ?)?', '', header_line)
-                # print(f'{header_line=}')
-            if not header_line or not header_line.startswith(new_asm):
-                if test_comment and not test_comment.strip().startswith(new_asm):
-                    if comment.strip():
-                        comment += ' // ' + new_asm
-                if not comment or not comment.strip():
-                    comment = new_asm
-            # if i - 1 and lines[i - 1] and not lines[i - 1].strip().startswith('# ' + new_asm):
-            #     print(f'\n    # {new_asm}')
-        else:
-            comment = (comment or '') + f" no disasm for {data.hex()}"
         print_case(data, comment)
 
         i += 1

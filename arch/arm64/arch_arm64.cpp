@@ -1921,8 +1921,6 @@ class Arm64Architecture : public Architecture
 			case REG_X30:
 			case REG_SP:
 				return RegisterInfo(reg, 0, 8);
-			case REG_XZR:
-				return RegisterInfo(reg, 0, 0);
 			case REG_V0:
 			case REG_V1:
 			case REG_V2:

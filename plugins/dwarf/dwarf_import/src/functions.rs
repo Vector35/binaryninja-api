@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -208,6 +208,11 @@ pub(crate) fn parse_lexical_block<R: ReaderType>(
             );
             return None;
         };
+
+        // DWARFv5 spec section 2.17 allows for undefined behavior in cases where the object currently being referred to doesn't exist
+        if low_pc == 0 && high_pc == 0 {
+            return None;
+        }
 
         if low_pc < high_pc {
             result.insert(low_pc..high_pc);

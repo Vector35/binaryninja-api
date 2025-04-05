@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -4027,7 +4027,7 @@ class LowLevelILFunction:
 			return dest.extern_pointer(expr.size, expr.constant, expr.offset, loc)
 		if expr.operation == LowLevelILOperation.LLIL_FLOAT_CONST:
 			expr: LowLevelILFloatConst
-			return dest.float_const_raw(expr.size, expr.constant, loc)
+			return dest.float_const_raw(expr.size, expr.instr.operands[0], loc)
 		if expr.operation in [
 			LowLevelILOperation.LLIL_POP,
 			LowLevelILOperation.LLIL_NORET,
@@ -4036,7 +4036,7 @@ class LowLevelILFunction:
 			LowLevelILOperation.LLIL_UNDEF,
 			LowLevelILOperation.LLIL_UNIMPL
 		]:
-			expr:Y
+			expr: LowLevelILInstruction
 			return dest.expr(expr.operation, size=expr.size, flags=expr.flags, source_location=loc)
 		if expr.operation in [
 			LowLevelILOperation.LLIL_PUSH,

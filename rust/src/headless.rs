@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,11 +18,10 @@ use crate::{
 };
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::SeqCst;
+use std::sync::atomic::{AtomicBool, AtomicUsize};
 use thiserror::Error;
 
-use crate::enterprise::release_license;
 use crate::main_thread::{MainThreadAction, MainThreadHandler};
 use crate::progress::ProgressCallback;
 use crate::rc::Ref;
@@ -33,9 +32,12 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 static MAIN_THREAD_HANDLE: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
-
+/// Prevent two threads from calling init() at the same time
+static INIT_LOCK: Mutex<()> = Mutex::new(());
 /// Used to prevent shutting down Binary Ninja if there are other [`Session`]'s.
 static SESSION_COUNT: AtomicUsize = AtomicUsize::new(0);
+/// If we checked out a floating license and should release it on shutdown
+static NEED_LICENSE_RELEASE: AtomicBool = AtomicBool::new(false);
 
 #[derive(Error, Debug)]
 pub enum InitializationError {
@@ -47,6 +49,8 @@ pub enum InitializationError {
     InvalidLicense,
     #[error("no license could located, please see `binaryninja::set_license` for details")]
     NoLicenseFound,
+    #[error("could not acquire initialization mutex")]
+    InitMutex,
 }
 
 /// Loads plugins, core architecture, platform, etc.
@@ -68,11 +72,14 @@ pub fn init() -> Result<(), InitializationError> {
 /// ⚠️ Important! Must be called at the end of scripts. ⚠️
 pub fn shutdown() {
     match crate::product().as_str() {
-        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => enterprise::release_license(),
+        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => {
+            if NEED_LICENSE_RELEASE.load(SeqCst) {
+                enterprise::release_license()
+            }
+        }
         _ => {}
     }
     unsafe { binaryninjacore_sys::BNShutdown() };
-    release_license();
     // TODO: We might want to drop the main thread here, however that requires getting the handler ctx to drop the sender.
 }
 
@@ -201,7 +208,9 @@ pub fn init_with_opts(options: InitializationOptions) -> Result<(), Initializati
         "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => {
             if options.checkout_license {
                 // We are allowed to check out a license, so do it!
-                enterprise::checkout_license(options.floating_license_duration)?;
+                if enterprise::checkout_license(options.floating_license_duration)? {
+                    NEED_LICENSE_RELEASE.store(true, SeqCst);
+                }
             }
         }
         _ => {}
@@ -271,10 +280,23 @@ pub fn license_location() -> Option<LicenseLocation> {
             if license_path().exists() {
                 Some(LicenseLocation::File)
             } else {
-                // Check to see if we might be authorizing with keychain credentials.
-                match std::env::var("BN_ENTERPRISE_USERNAME") {
-                    Ok(_) => Some(LicenseLocation::Keychain),
-                    Err(_) => None,
+                // Check to see if we might be authorizing with enterprise
+                if crate::product().as_str() == "Binary Ninja Enterprise Client"
+                    || crate::product().as_str() == "Binary Ninja Ultimate"
+                {
+                    // If we can't initialize enterprise, we probably are missing enterprise.server.url
+                    // and our license surely is not valid.
+                    if !enterprise::is_server_initialized() && !enterprise::initialize_server() {
+                        return None;
+                    }
+                    // If Enterprise thinks we are using a floating license, then report it will be in the keychain
+                    if enterprise::is_server_floating_license() {
+                        Some(LicenseLocation::Keychain)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
                 }
             }
         }
@@ -282,15 +304,19 @@ pub fn license_location() -> Option<LicenseLocation> {
 }
 
 /// Wrapper for [`init`] and [`shutdown`]. Instantiating this at the top of your script will initialize everything correctly and then clean itself up at exit as well.
-pub struct Session {}
+pub struct Session {
+    index: usize,
+}
 
 impl Session {
     /// Get a registered [`Session`] for use.
     ///
     /// This is required so that we can keep track of the [`SESSION_COUNT`].
     fn registered_session() -> Self {
-        let _previous_count = SESSION_COUNT.fetch_add(1, SeqCst);
-        Self {}
+        let previous_count = SESSION_COUNT.fetch_add(1, SeqCst);
+        Self {
+            index: previous_count,
+        }
     }
 
     /// Before calling new you must make sure that the license is retrievable, otherwise the core won't be able to initialize.
@@ -300,10 +326,18 @@ impl Session {
     pub fn new() -> Result<Self, InitializationError> {
         if license_location().is_some() {
             // We were able to locate a license, continue with initialization.
-            // Grab the session before initialization to prevent another thread from initializing
-            // and shutting down before this thread can increment the SESSION_COUNT.
+
+            // Grab the lock before initialization to prevent another thread from initializing
+            // and racing the call to BNInitPlugins.
+            let _lock = INIT_LOCK
+                .lock()
+                .map_err(|_| InitializationError::InitMutex)?;
             let session = Self::registered_session();
-            init()?;
+            // Since this whole section is locked, we're guaranteed to be index 0 if we're first.
+            // Only the first thread hitting this should be allowed to call BNInitPlugins
+            if session.index == 0 {
+                init()?;
+            }
             Ok(session)
         } else {
             // There was no license that could be automatically retrieved, you must call [Self::new_with_license].
@@ -316,8 +350,18 @@ impl Session {
     /// This differs from [`Session::new`] in that it does not check to see if there is a license that the core
     /// can discover by itself, therefor it is expected that you know where your license is when calling this directly.
     pub fn new_with_opts(options: InitializationOptions) -> Result<Self, InitializationError> {
-        init_with_opts(options)?;
-        Ok(Self::registered_session())
+        // Grab the lock before initialization to prevent another thread from initializing
+        // and racing the call to BNInitPlugins.
+        let _lock = INIT_LOCK
+            .lock()
+            .map_err(|_| InitializationError::InitMutex)?;
+        let session = Self::registered_session();
+        // Since this whole section is locked, we're guaranteed to be index 0 if we're first.
+        // Only the first thread hitting this should be allowed to call BNInitPlugins
+        if session.index == 0 {
+            init_with_opts(options)?;
+        }
+        Ok(session)
     }
 
     /// ```no_run

@@ -202,9 +202,17 @@ std::function<QVariant(QVariant)> convertToQVariantFunction(Func&& func);
     \b Example:
     \code{.cpp}
         // Passing `this` into create() will make the thread stop if `this` is deleted before it finishes.
+        // Though note that `this` could still be deleted during a background action,
+        // and the thread will only be stopped *after* the action is done, so you must be
+        // sure to always guard data accessed in background actions with something like
+        // a std::shared_ptr<T>.
         BackgroundThread::create(this)
         // Do actions serially in the background
-        ->thenBackground([this](QVariant) {
+        ->thenBackground([state = m_sharedPtrState](QVariant) {
+            // Note that state should be accessed through a shared pointer-like structure
+            // In case our parent gets deleted while we're doing background processing.
+
+            // Do our task background here
             bool success = SomeLongNetworkOperation();
             // Return value will be passed to next action's QVariant parameter
             return success;
@@ -217,7 +225,7 @@ std::function<QVariant(QVariant)> convertToQVariantFunction(Func&& func);
             // You don't have to return anything (next QVariant param will be QVariant())
         })
         // You can also combine with a ProgressTask for showing a progress dialog
-        ->thenBackgroundWithProgress(m_window, "Doing Task", "Please wait...", "Cancel", [this](QVariant var,
+        ->thenBackgroundWithProgress(m_window, "Doing Task", "Please wait...", "Cancel", [state = m_sharedPtrState](QVariant var,
    ProgressTask* task, ProgressFunction progress) {
             progress(0, 0);
             DoTask1WithProgress(SplitProgress(progress, 0, 1));
@@ -244,7 +252,7 @@ std::function<QVariant(QVariant)> convertToQVariantFunction(Func&& func);
             }
         })
         // You can also catch in the background
-        ->catchBackground([this](std::exception_ptr exc) {
+        ->catchBackground([state = m_sharedPtrState](std::exception_ptr exc) {
             ...
         })
         // Finally-actions will be run after all then-actions are finished
@@ -257,7 +265,7 @@ std::function<QVariant(QVariant)> convertToQVariantFunction(Func&& func);
             }
         })
         // You can also have finally-actions in the background
-        ->finallyBackground([this](bool success) {
+        ->finallyBackground([state = m_sharedPtrState](bool success) {
             ...
         })
         // Call start to start the thread

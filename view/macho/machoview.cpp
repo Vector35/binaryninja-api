@@ -1093,6 +1093,7 @@ bool MachoView::Init()
 
 	SetOriginalImageBase(initialImageBase);
 	uint64_t preferredImageBase = initialImageBase;
+	bool platformSetByUser = false;
 	if (settings)
 	{
 		if (settings->Contains("loader.imageBase"))
@@ -1100,11 +1101,13 @@ bool MachoView::Init()
 
 		if (settings->Contains("loader.platform"))
 		{
-			Ref<Platform> platform = Platform::GetByName(settings->Get<string>("loader.platform", this));
+			BNSettingsScope scope = SettingsAutoScope;
+			Ref<Platform> platform = Platform::GetByName(settings->Get<string>("loader.platform", this, &scope));
 			if (platform)
 			{
 				m_plat = platform;
 				m_arch = platform->GetArchitecture();
+				platformSetByUser = (scope == SettingsResourceScope);
 			}
 		}
 	}
@@ -1528,12 +1531,12 @@ bool MachoView::Init()
 	Ref<Type> filesetEntryCommandType = Type::StructureType(filesetEntryCommandStruct);
 	m_typeNames.filesetEntryCommandQualName = DefineType(filesetEntryCommandTypeId, filesetEntryCommandName, filesetEntryCommandType);
 
-	if (!InitializeHeader(m_header, true, preferredImageBase, preferredImageBaseDesc))
+	if (!InitializeHeader(m_header, true, preferredImageBase, preferredImageBaseDesc, platformSetByUser))
 		return false;
 
 	for (auto& it : m_subHeaders)
 	{
-		if (!InitializeHeader(it.second, false, it.first, ""))
+		if (!InitializeHeader(it.second, false, it.first, "", platformSetByUser))
 			return false;
 	}
 
@@ -1544,7 +1547,8 @@ bool MachoView::Init()
 }
 
 
-bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_t preferredImageBase, std::string preferredImageBaseDesc)
+bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_t preferredImageBase,
+	std::string preferredImageBaseDesc, bool platformSetByUser)
 {
 	Ref<Settings> settings = GetLoadSettings(GetTypeName());
 
@@ -1814,7 +1818,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		if (!platform)
 			platform = m_arch->GetStandalonePlatform();
 
-		if (header.m_entryPoints.size() > 0)
+		if (header.m_entryPoints.size() > 0 && !platformSetByUser)
 			platform = platform->GetAssociatedPlatformByAddress(header.m_entryPoints[0]);
 
 		SetDefaultPlatform(platform);
@@ -1840,13 +1844,13 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		parseObjCStructs = settings->Get<bool>("loader.macho.processObjectiveC", this);
 	if (settings && settings->Contains("loader.macho.processCFStrings"))
 		parseCFStrings = settings->Get<bool>("loader.macho.processCFStrings", this);
-	if (!ObjCProcessor::ViewHasObjCMetadata(this))
+	if (!MachoObjCProcessor::ViewHasObjCMetadata(this))
 		parseObjCStructs = false;
 	if (!GetSectionByName("__cfstring"))
 		parseCFStrings = false;
 	if (parseObjCStructs || parseCFStrings)
 	{
-		m_objcProcessor = new ObjCProcessor(this, m_backedByDatabase);
+		m_objcProcessor = new MachoObjCProcessor(this, m_backedByDatabase);
 	}
 	if (parseObjCStructs)
 	{
@@ -2332,7 +2336,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	if (parseCFStrings)
 	{
 		try {
-			m_objcProcessor->ProcessCFStrings();
+			m_objcProcessor->ProcessCFStrings(std::nullopt);
 		}
 		catch (std::exception& ex)
 		{
@@ -2344,7 +2348,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	if (parseObjCStructs)
 	{
 		try {
-			m_objcProcessor->ProcessObjCData();
+			m_objcProcessor->ProcessObjCData(std::nullopt);
 		}
 		catch (std::exception& ex)
 		{
@@ -3203,7 +3207,6 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 			// case DYLD_CHAINED_PTR_ARM64E_FIRMWARE: Unsupported.
 			case DYLD_CHAINED_PTR_64:
 			case DYLD_CHAINED_PTR_64_OFFSET:
-			case DYLD_CHAINED_PTR_64_KERNEL_CACHE:
 				strideSize = 4;
 				format = Generic64FixupFormat;
 				break;
@@ -3216,9 +3219,13 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 				strideSize = 4;
 				format = Firmware32FixupFormat;
 				break;
+			case DYLD_CHAINED_PTR_64_KERNEL_CACHE:
+				strideSize = 4;
+				format = Kernel64Format;
+				break;
 			case DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE:
 				strideSize = 1;
-				format = Generic64FixupFormat;
+				format = Kernel64Format;
 				break;
 			default:
 			{
@@ -3313,6 +3320,10 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 							nextEntryStrideCount = pointer.firmware32.next;
 							bind = false;
 							break;
+						case Kernel64Format:
+							nextEntryStrideCount = pointer.kernel64.next;
+							bind = false;
+							break;
 						}
 
 						m_logger->LogTrace("Chained Fixups: @ 0x%llx ( 0x%llx ) - %d 0x%llx", chainEntryAddress,
@@ -3343,6 +3354,8 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 							case DYLD_CHAINED_PTR_32:
 								ordinal = pointer.generic32.bind.ordinal;
 								break;
+							case DYLD_CHAINED_PTR_64_KERNEL_CACHE: // no binding
+							case DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE: // ''
 							default:
 								m_logger->LogWarn("Chained Fixups: Unknown Bind Pointer Format at %llx",
 									GetStart() + (chainEntryAddress - m_universalImageOffset));
@@ -3573,6 +3586,9 @@ void MachoView::ParseChainedStarts(MachOHeader& header, section_64 chainedStarts
 					nextEntryStrideCount = pointer.firmware32.next;
 					bind = false;
 					break;
+				case Kernel64Format:
+					nextEntryStrideCount = pointer.kernel64.next;
+					bind = false;
 				}
 
 				m_logger->LogTrace("Chained Starts: @ 0x%llx ( 0x%llx ) - %d 0x%llx", chainEntryAddress,
@@ -3872,7 +3888,7 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 			settings->UpdateProperty(override, "readOnly", false);
 	}
 
-	if (ObjCProcessor::ViewHasObjCMetadata(viewRef))
+	if (MachoObjCProcessor::ViewHasObjCMetadata(viewRef))
 	{
 		settings->RegisterSetting("loader.macho.processObjectiveC",
 			R"({

@@ -44,7 +44,6 @@ void VFTAnalysis(const Ref<AnalysisContext>& analysisContext)
 	auto itaniumProcessor = RTTI::Itanium::ItaniumRTTIProcessor(view);
 	itaniumProcessor.ProcessVFT();
 	view->StoreMetadata(VIEW_METADATA_RTTI, itaniumProcessor.SerializedMetadata(), true);
-	view->UpdateAnalysis();
 }
 
 

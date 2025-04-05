@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2024 Vector 35 Inc
+# Copyright (c) 2018-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -5210,7 +5210,7 @@ class MediumLevelILFunction:
 			return ExpressionIndex(core.BNMediumLevelILGoto(self.handle, label.handle))
 
 	def if_expr(
-		self, operand: ExpressionIndex, t: MediumLevelILLabel, f: MediumLevelILLabel, label: MediumLevelILLabel,
+		self, operand: ExpressionIndex, t: MediumLevelILLabel, f: MediumLevelILLabel,
 		loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""

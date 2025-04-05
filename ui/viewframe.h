@@ -422,7 +422,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	QWidget* getCurrentWidget() const { return m_view; }
 
 	bool isGraphViewPreferred();
-	void setPriorityView(const QString& viewType);
+	void setPriorityView(const QString& viewType, bool isBinaryDataNavigable);
 	bool setViewType(const QString& viewType);
 	void focus();
 

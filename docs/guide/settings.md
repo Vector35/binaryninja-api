@@ -105,6 +105,8 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | |  enum: Split oversized accesses to valid fields and include accessed gaps/alignment/padding bytes|`enum`|`allOffsets`| | |
 |analysis.outlining|Builtin Outlining of Constant Expressions|Enable outlining of constant expression compiler emitted builtins.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.outlining.builtins'>analysis.outlining.builtins</a>|
 |analysis.pointerSweep|Autorun Pointer Sweep|Automatically run pointer sweep when opening a binary for analysis.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.pointerSweep.autorun'>analysis.pointerSweep.autorun</a>|
+|analysis.rtti|RTTI Analysis|This analysis step attempts to parse and symbolize rtti information.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.rtti.rttiAnalysis'>analysis.rtti.rttiAnalysis</a>|
+|analysis.rtti|VFT Analysis|This analysis step attempts to parse and symbolize virtual function table information.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.rtti.vftAnalysis'>analysis.rtti.vftAnalysis</a>|
 |analysis.signatureMatcher|Autorun Function Signature Matcher|Automatically run the function signature matcher when opening a binary for analysis.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.signatureMatcher.autorun'>analysis.signatureMatcher.autorun</a>|
 |analysis.svd|Add Bitfields|Whether to add bitfields. Bitfields are not supported by Binary Ninja, so this is a workaround using unions.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.svd.addBitfields'>analysis.svd.addBitfields</a>|
 |analysis.svd|Add Comments|Whether to add comments. If you see comment placement is off, try disabling this.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.svd.addComments'>analysis.svd.addComments</a>|
@@ -125,9 +127,9 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |analysis.unicode|UTF-8 Encoding|Whether or not to consider UTF-8 code points when searching for strings.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.unicode.utf8'>analysis.unicode.utf8</a>|
 |analysis.workflows|Function Workflow|Specifies the workflow to be used for function-level analysis, including tasks such as disassembly and IL transformations.|`string`|`core.function.metaAnalysis`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.workflows.functionWorkflow'>analysis.workflows.functionWorkflow</a>|
 | | |  enum: This workflow defines the base function analysis provided by Binary Ninja.|`enum`|`core.function.baseAnalysis`| | |
-| | |  enum: Shared Cache Workflow|`enum`|`core.function.dsc`| | |
 | | |  enum: This workflow defines the adaptive function analysis for Binary Ninja, enabling adaptive composability of the default function analysis.|`enum`|`core.function.metaAnalysis`| | |
 | | |  enum: Enhanced analysis for Objective-C code.|`enum`|`core.function.objectiveC`| | |
+| | |  enum: Shared Cache Workflow|`enum`|`core.function.sharedCache`| | |
 |analysis.workflows|Module Workflow|Specifies the workflow to be used for module-level analysis, focusing on processing module-level data and coordinating function analyses.|`string`|`core.module.metaAnalysis`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.workflows.moduleWorkflow'>analysis.workflows.moduleWorkflow</a>|
 | | |  enum: This workflow defines the base module analysis for Binary Ninja.|`enum`|`core.module.baseAnalysis`| | |
 | | |  enum: This workflow defines the adaptive module analysis for Binary Ninja, enabling adaptive composability of the default module analysis.|`enum`|`core.module.metaAnalysis`| | |
@@ -137,9 +139,18 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |arch.x86|x86 Disassembly Case|Specify the case for opcodes, operands, and registers.|`boolean`|`True`|[`SettingsUserScope`]|<a id='arch.x86.disassembly.lowercase'>arch.x86.disassembly.lowercase</a>|
 |arch.x86|x86 Disassembly Separator|Specify the token separator between operands.|`string`|`, `|[`SettingsUserScope`]|<a id='arch.x86.disassembly.separator'>arch.x86.disassembly.separator</a>|
 |arch.x86|x86 Disassembly Syntax|Specify disassembly syntax for the x86/x86_64 architectures.|`string`|`BN_INTEL`|[`SettingsUserScope`]|<a id='arch.x86.disassembly.syntax'>arch.x86.disassembly.syntax</a>|
-| | |  enum: Sets the disassembly syntax to a simplified Intel format. (TBD) |`enum`|`BN_INTEL`| | |
-| | |  enum: Sets the disassembly syntax to Intel format. (Destination on the left) |`enum`|`INTEL`| | |
-| | |  enum: Sets the disassembly syntax to AT&T format. (Destination on the right) |`enum`|`AT&T`| | |
+| | |  enum: Sets the disassembly syntax to a simplified Intel format.|`enum`|`BN_INTEL`| | |
+| | |  enum: Sets the disassembly syntax to Intel format. (Destination on the left)|`enum`|`INTEL`| | |
+| | |  enum: Sets the disassembly syntax to AT&T format. (Destination on the right)|`enum`|`AT&T`| | |
+|collaboration|Active Server|URL of the server to automatically connect to on launch. (Ultimate Only)|`string`| |[`SettingsProjectScope`, `SettingsUserScope`]|<a id='collaboration.activeRemote'>collaboration.activeRemote</a>|
+|collaboration|Advanced Conflict Resolution|Show extra information when resolving merge conflicts (Ultimate Only)|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='collaboration.advancedMerge'>collaboration.advancedMerge</a>|
+|collaboration|Auto Connect|Automatically reconnect to last collaboration server if you were connected when Binary Ninja was closed (Ultimate Only)|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='collaboration.autoConnectOnLaunch'>collaboration.autoConnectOnLaunch</a>|
+|collaboration|Poll Interval|Time in seconds between polls for new snapshots. 0 to disable. (Ultimate Only)|`number`|`30`|[`SettingsUserScope`]|<a id='collaboration.autoPollInterval'>collaboration.autoPollInterval</a>|
+|collaboration|Collaboration Project Directory|Default path for files downloaded from a remote (Ultimate Only)|`string`|`/USER/FOLDER/PATH/remote`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='collaboration.directory'>collaboration.directory</a>|
+|collaboration|Synchronize Local Project Deletions on Open|When opening a remote project, if you have deleted files/folders locally, delete them on the remote as well. (Ultimate Only)|`boolean`|`False`|[`SettingsUserScope`]|<a id='collaboration.localProjectDeletionSynchronization'>collaboration.localProjectDeletionSynchronization</a>|
+|collaboration|Maximum Conflict Diff Size|Any conflicts larger than this will not be displayed with a diff, so that the UI doesn't hang. (Ultimate Only)|`number`|`200000`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='collaboration.maxConflictDiff'>collaboration.maxConflictDiff</a>|
+|collaboration|Collaboration Servers|Collaboration servers to use (Ultimate Only)|`string`|`{}`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='collaboration.servers'>collaboration.servers</a>|
+|collaboration|Sync On Save|Sync to connected remote on save of collaborative database (Ultimate Only)|`boolean`|`False`|[`SettingsUserScope`]|<a id='collaboration.syncOnSave'>collaboration.syncOnSave</a>|
 |core.function|Conditional No Returns|This analysis step attempts to identify no return calls that are conditional based upon passed in parameters.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='core.function.analyzeConditionalNoReturns'>core.function.analyzeConditionalNoReturns</a>|
 |core.function|Dataflow-Based Return Analysis|This analysis step transforms LLIL_RET instructions into other control flow based on dataflow information obtained from MLIL.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='core.function.analyzeReturns'>core.function.analyzeReturns</a>|
 |core.function|Tail Call Heuristics|This analysis step attempts to recover function starts that may be obscured by tail call optimization (TCO). The stack pointer, and other heuristics are applied to branch targets within a function to determine if they are function starts.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='core.function.analyzeTailCalls'>core.function.analyzeTailCalls</a>|
@@ -148,13 +159,14 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |core.module|Initial Pointer Analysis|This analysis step creates pointers for relocation entries in the binary.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='core.module.initialPointerAnalysis'>core.module.initialPointerAnalysis</a>|
 |core.module|Load Debug Info|This analysis step attempts to parse and load debug information from internal and external sources.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='core.module.loadDebugInfo'>core.module.loadDebugInfo</a>|
 |core.module|Strings Analysis|Enable automatic detection and analysis of strings within the binary.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='core.module.stringsAnalysis'>core.module.stringsAnalysis</a>|
+|corePlugins|RTTI Plugin|Enable the built-in RTTI plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.RTTI'>corePlugins.RTTI</a>|
 |corePlugins|Crypto Plugin|Enable the built-in crypto plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.crypto'>corePlugins.crypto</a>|
 |corePlugins|Database Viewer (Debug)|Enable the built-in Database Viewer plugin. Be aware this is a debug feature and may not be well-behaved.|`boolean`|`False`|[`SettingsUserScope`]|<a id='corePlugins.databaseViewer'>corePlugins.databaseViewer</a>|
 |corePlugins|Debugger|Enable the built-in debugger plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.debugger'>corePlugins.debugger</a>|
 |corePlugins|DWARF Export Plugin|Enable the DWARF export plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.dwarfExport'>corePlugins.dwarfExport</a>|
 |corePlugins|DWARF Import Plugin|Enable the DWARF import plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.dwarfImport'>corePlugins.dwarfImport</a>|
+|corePlugins|Firmware Ninja|Enable the Firmware Ninja plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.firmwareNinja'>corePlugins.firmwareNinja</a>|
 |corePlugins|IDB Import Plugin|Enable the IDB import plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.idbImport'>corePlugins.idbImport</a>|
-|corePlugins|MSVC RTTI Plugin|Enable the built-in MSVC RTTI plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.msvcRTTI'>corePlugins.msvcRTTI</a>|
 |corePlugins|PDB Import Plugin|Enable the built-in PDB import plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.pdbImport'>corePlugins.pdbImport</a>|
 |corePlugins|Stack Render Layer Plugin|Enable the built-in Stack Render Layer plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.stackRenderLayer'>corePlugins.stackRenderLayer</a>|
 |corePlugins|SVD Plugin|Enable the built-in SVD plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.svd'>corePlugins.svd</a>|
@@ -163,10 +175,13 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |corePlugins|WARP Plugin|Enable the built-in WARP plugin. (Experimental).|`boolean`|`False`|[`SettingsUserScope`]|<a id='corePlugins.warp'>corePlugins.warp</a>|
 |corePlugins.architectures|Aarch64 Architecture|Enable the built-in Aarch64 architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.aarch64'>corePlugins.architectures.aarch64</a>|
 |corePlugins.architectures|ARMv7 Architecture|Enable the built-in ARMv7 architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.armv7'>corePlugins.architectures.armv7</a>|
+|corePlugins.architectures|C-SKY / M-CORE Architectures|Enable the built-in C-SKY / M-CORE architecture modules. (Ultimate Only)|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.csky'>corePlugins.architectures.csky</a>|
 |corePlugins.architectures|MIPS Architecture|Enable the built-in MIPS architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.mips'>corePlugins.architectures.mips</a>|
 |corePlugins.architectures|MSP430 Architecture|Enable the built-in MSP430 architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.msp430'>corePlugins.architectures.msp430</a>|
+|corePlugins.architectures|nanoMIPS Architecture|Enable the built-in nanoMIPS architecture module. (Ultimate Only)|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.nanomips'>corePlugins.architectures.nanomips</a>|
 |corePlugins.architectures|PowerPC Architecture|Enable the built-in PowerPC architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.powerpc'>corePlugins.architectures.powerpc</a>|
 |corePlugins.architectures|RISC-V Architecture|Enable the built-in RISC-V architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.riscv'>corePlugins.architectures.riscv</a>|
+|corePlugins.architectures|TriCore Architecture|Enable the built-in TriCore architecture module. (Ultimate Only)|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.tricore'>corePlugins.architectures.tricore</a>|
 |corePlugins.architectures|x86/x86_64 Architecture|Enable the built-in x86/x86_64 architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.x86'>corePlugins.architectures.x86</a>|
 |corePlugins.demangler|GNU3 Demangler|Enable the built-in GNU3 Demangler module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.demangler.gnu3'>corePlugins.demangler.gnu3</a>|
 |corePlugins.demangler|MSVC Demangler|Enable the built-in MSVC Demangler module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.demangler.msvc'>corePlugins.demangler.msvc</a>|
@@ -178,13 +193,17 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |corePlugins.platforms|FreeBSD Platform|Enable the built-in FreeBSD platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.freebsd'>corePlugins.platforms.freebsd</a>|
 |corePlugins.platforms|Linux Platform|Enable the built-in Linux platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.linux'>corePlugins.platforms.linux</a>|
 |corePlugins.platforms|macOS Platform|Enable the built-in macOS platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.mac'>corePlugins.platforms.mac</a>|
+|corePlugins.platforms|macOS Kernel Platform|Enable the built-in macOS Kernel platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.macKernel'>corePlugins.platforms.macKernel</a>|
+|corePlugins.platforms|VxWorks Platform|Enable the built-in VxWorks platform module. (Ultimate Only)|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.vxworks'>corePlugins.platforms.vxworks</a>|
 |corePlugins.platforms|Windows Platform|Enable the built-in Windows platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.windows'>corePlugins.platforms.windows</a>|
 |corePlugins.platforms|Windows Kernel Platform|Enable the built-in Window Kernel platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.windows_kernel'>corePlugins.platforms.windows_kernel</a>|
 |corePlugins.view|ELF View|Enable the built-in ELF view module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.view.elf'>corePlugins.view.elf</a>|
+|corePlugins.view|Kernel Cache View|Enable the built-in kernelcache view plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.view.kernelCache'>corePlugins.view.kernelCache</a>|
 |corePlugins.view|Mach-O View|Enable the built-in Mach-O view module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.view.macho'>corePlugins.view.macho</a>|
 |corePlugins.view|MD1Rom View|Enable the built-in MD1Rom view module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.view.md1rom'>corePlugins.view.md1rom</a>|
 |corePlugins.view|PE/COFF View|Enable the built-in PE/COFF view module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.view.pe'>corePlugins.view.pe</a>|
 |corePlugins.view|Shared Cache View|Enable the built-in dyld_shared_cache view plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.view.sharedCache'>corePlugins.view.sharedCache</a>|
+|corePlugins.view|VxWorks View|Enable the built-in VxWorks view module. (Ultimate Only)|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.view.vxworks'>corePlugins.view.vxworks</a>|
 |corePlugins.workflows|Workflows Example Plugins|Enable the built-in example plugins.|`boolean`|`False`|[`SettingsUserScope`]|<a id='corePlugins.workflows.examples'>corePlugins.workflows.examples</a>|
 |corePlugins.workflows|Objective-C|Enable the built-in Objective-C plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.workflows.objc'>corePlugins.workflows.objc</a>|
 |debugger|Update the analysis aggressively|Whether to aggressively update the memory cache and analysis. If the target has self-modifying code, turning this on makes sure every function is re-analyzed every time the target stops, which gives the most accurate analysis. However, for large binaries with lots of functions, this may cause performance issues.|`boolean`|`False`|[`SettingsUserScope`]|<a id='debugger.aggressiveAnalysisUpdate'>debugger.aggressiveAnalysisUpdate</a>|
@@ -192,9 +211,17 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |debugger|Output current state when the DbgEng engine stops|Output the current state (e.g., register values, next instruction) in the debugger console when the target stops.|`boolean`|`True`|[`SettingsUserScope`]|<a id='debugger.dbgEngOutputStateOnStop'>debugger.dbgEngOutputStateOnStop</a>|
 |debugger|Hold Analysis During Debugging|When enabled, this holds the analysis for the binary view during debugging to increase performance.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='debugger.holdAnalysis'>debugger.holdAnalysis</a>|
 |debugger|Safe Mode|When enabled, this prevents the debugger from launching any file.|`boolean`|`False`|[`SettingsUserScope`]|<a id='debugger.safeMode'>debugger.safeMode</a>|
-|debugger|Stack Variable Annotations|Add stack variable annotations|`boolean`|`False`|[`SettingsUserScope`]|<a id='debugger.stackVariableAnnotations'>debugger.stackVariableAnnotations</a>|
+|debugger|Stack Variable Annotations|Annotate stack variables in linear view|`boolean`|`False`|[`SettingsUserScope`]|<a id='debugger.stackVariableAnnotations'>debugger.stackVariableAnnotations</a>|
 |debugger|Stop At Entry Point|Stop the target at program entry point|`boolean`|`True`|[`SettingsUserScope`]|<a id='debugger.stopAtEntryPoint'>debugger.stopAtEntryPoint</a>|
 |debugger|Stop At System Entry Point|Stop the target at system entry point|`boolean`|`False`|[`SettingsUserScope`]|<a id='debugger.stopAtSystemEntryPoint'>debugger.stopAtSystemEntryPoint</a>|
+|enterprise|Automatically Checkout License|If enabled, Binary Ninja will automatically check out a license with chosen Default License Checkout Duration on startup. (Ultimate Only)|`boolean`|`False`|[`SettingsUserScope`]|<a id='enterprise.autoCheckout'>enterprise.autoCheckout</a>|
+|enterprise|Automatically Refresh Floating License|If enabled, Binary Ninja will automatically refresh floating licenses as they near expiration. (Ultimate Only)|`boolean`|`True`|[`SettingsUserScope`]|<a id='enterprise.autoRefreshFloatingLicense'>enterprise.autoRefreshFloatingLicense</a>|
+|enterprise|Default License Checkout Duration|Specify the default selection for license checkout length when opening Binary Ninja. (Ultimate Only)|`string`|`Until Quit`|[`SettingsUserScope`]|<a id='enterprise.defaultCheckoutDuration'>enterprise.defaultCheckoutDuration</a>|
+|enterprise|Secrets Provider|Specify the default selection for license checkout length when opening Binary Ninja. Be sure to check in your license before changing this, as it was stored in whatever provider was selected when you checked it out. (Ultimate Only)|`string`|`AESFileSecretsProvider`|[`SettingsUserScope`]|<a id='enterprise.secretsProvider'>enterprise.secretsProvider</a>|
+| | | |`enum`|`SystemSecretsProvider`| | |
+| | | |`enum`|`AESFileSecretsProvider`| | |
+|enterprise.server|Enterprise Server Additional Headers|Additional headers to send with requests to Enterprise Servers. Must be a valid JSON string of the form {"https://example.com:443": {"x-foo": "bar"}} (Ultimate Only)|`string`|`{}`|[`SettingsUserScope`]|<a id='enterprise.server.additionalHeaders'>enterprise.server.additionalHeaders</a>|
+|enterprise.server|Enterprise Server URL|Base url for connected Enterprise Server. (Ultimate Only)|`string`| |[`SettingsUserScope`]|<a id='enterprise.server.url'>enterprise.server.url</a>|
 |files.elf|Enable ARM BE8 binary detection|Enable ARM BE8 binary detection for mixed little/big endianness for code/data|`boolean`|`True`|[`SettingsUserScope`]|<a id='files.elf.detectARMBE8Binary'>files.elf.detectARMBE8Binary</a>|
 |files.elf|Maximum ELF Section Header Count|Maximum number of entries to include in section header array|`number`|`100`|[`SettingsResourceScope`, `SettingsUserScope`]|<a id='files.elf.maxSectionHeaderCount'>files.elf.maxSectionHeaderCount</a>|
 |files.pic|Auto Rebase Load File|Automatically rebase a relocatable image which has a default load address of zero to 4MB for 64-bit binaries, or 64KB for 32-bit binaries.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='files.pic.autoRebase'>files.pic.autoRebase</a>|
@@ -205,6 +232,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |network|Download Provider|Specify the registered DownloadProvider which enables resource fetching over HTTPS.|`string`|`CoreDownloadProvider`|[`SettingsUserScope`]|<a id='network.downloadProviderName'>network.downloadProviderName</a>|
 | | | |`enum`|`CoreDownloadProvider`| | |
 | | | |`enum`|`PythonDownloadProvider`| | |
+|network|Enable Collaboration Server|Allow Binary Ninja to connect to collaboration servers to list Projects and Sync changes. (Ultimate Only|`boolean`|`True`|[`SettingsUserScope`]|<a id='network.enableCollaborationServer'>network.enableCollaborationServer</a>|
 |network|Enable Debuginfod Support|Enable using Debuginfod servers to fetch DWARF debug info for files with a .note.gnu.build-id section.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='network.enableDebuginfod'>network.enableDebuginfod</a>|
 |network|Enable External Resources|Allow Binary Ninja to download external images and resources when displaying markdown content (e.g. plugin descriptions).|`boolean`|`True`|[`SettingsUserScope`]|<a id='network.enableExternalResources'>network.enableExternalResources</a>|
 |network|Enable External URLs|Allow Binary Ninja to download and open external URLs.|`boolean`|`True`|[`SettingsUserScope`]|<a id='network.enableExternalUrls'>network.enableExternalUrls</a>|
@@ -216,6 +244,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |network|Log Downloads|When enabled, will log all URLs through the download provider.|`boolean`|`False`|[`SettingsUserScope`]|<a id='network.logDownloads'>network.logDownloads</a>|
 |network|Enable Auto Downloading PDBs|Automatically search for and download pdb files from specified symbol servers.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='network.pdbAutoDownload'>network.pdbAutoDownload</a>|
 |network|Websocket Provider|Specify the registered WebsocketProvider which enables communication over HTTPS.|`string`|`CoreWebsocketProvider`|[`SettingsUserScope`]|<a id='network.websocketProviderName'>network.websocketProviderName</a>|
+| | | |`enum`|`_EnterpriseWebsocketProvider`| | |
 | | | |`enum`|`CoreWebsocketProvider`| | |
 |pdb.features|Allow Unnamed Untyped Symbols|Allow creation of symbols with no name and void types, often used as static local variables. Generally, these are just noisy and not relevant.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='pdb.features.allowUnnamedVoidSymbols'>pdb.features.allowUnnamedVoidSymbols</a>|
 |pdb.features|Allow Untyped Symbols|Allow creation of symbols that have no type, and will be created as void-typed symbols. Generally, this happens in a stripped PDB when a Global symbol's mangled name does not contain type information.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='pdb.features.allowVoidGlobals'>pdb.features.allowVoidGlobals</a>|
@@ -233,8 +262,6 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |pdb.files|Local Symbol Store Relative Path|Path *relative* to the binaryninja _user_ directory, specifying the pdb symbol store. If the Local Symbol Store Absolute Path is specified, this is ignored.|`string`|`symbols`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='pdb.files.localStoreRelative'>pdb.files.localStoreRelative</a>|
 |pdb.files|Symbol Server List|List of servers to query for pdb symbols.|`array`|[`https://msdl.microsoft.com/download/symbols`]|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='pdb.files.symbolServerList'>pdb.files.symbolServerList</a>|
 |platform|Automatically Load Platform Type Libraries|Automatically load type libraries during platform initialization.|`boolean`|`True`|[`SettingsUserScope`]|<a id='platform.autoLoadTypeLibs'>platform.autoLoadTypeLibs</a>|
-|plugin.msvc|MSVC RTTI Analysis|This analysis step attempts to parse and symbolize msvc rtti information.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='plugin.msvc.rttiAnalysis'>plugin.msvc.rttiAnalysis</a>|
-|plugin.msvc|MSVC VFT Analysis|This analysis step attempts to parse and symbolize msvc virtual function table information.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='plugin.msvc.vftAnalysis'>plugin.msvc.vftAnalysis</a>|
 |pluginManager|Community Plugin Repository|Whether the community plugin repository is enabled|`boolean`|`True`|[`SettingsUserScope`]|<a id='pluginManager.communityRepo'>pluginManager.communityRepo</a>|
 |pluginManager|Community Plugin Manager Update Channel|Specify which community update channel the Plugin Manager should update plugins from.|`string`|`master`|[`SettingsUserScope`]|<a id='pluginManager.communityUpdateChannel'>pluginManager.communityUpdateChannel</a>|
 | | |  enum: The default channel. This setting should be used unless you are testing the Plugin Manager.|`enum`|`master`| | |
@@ -247,6 +274,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |projects|Project Folder Import Follows Symlinks|If enabled, follow symlinks when importing a folder to a project.|`boolean`|`False`|[`SettingsUserScope`]|<a id='projects.folderImportFollowsSymlinks'>projects.folderImportFollowsSymlinks</a>|
 |python|Python Path Override|Python interpreter binary which may be necessary to install plugin dependencies. Should be the same version as the one specified in the 'Python Interpreter' setting|`string`| |[`SettingsUserScope`]|<a id='python.binaryOverride'>python.binaryOverride</a>|
 |python|Python Interpreter|Python interpreter library(dylib/dll/so.1) to load if one is not already present when plugins are loaded.|`string`| |[`SettingsUserScope`]|<a id='python.interpreter'>python.interpreter</a>|
+|python|Update Analysis After Python Commands|Automatically update analysis after each Python console command or script execution. Disable to prevent analysis updates between sequential commands.|`boolean`|`True`|[`SettingsUserScope`]|<a id='python.updateAnalysisAfterCommand'>python.updateAnalysisAfterCommand</a>|
 |python|Python Virtual Environment Site-Packages|The 'site-packages' directory for your python virtual environment.|`string`| |[`SettingsUserScope`]|<a id='python.virtualenv'>python.virtualenv</a>|
 |python.log|Minimum Python Log Level|Set the minimum Python log level which applies in headless operation only. The log is connected to stderr. Additionally, stderr must be associated with a terminal device.|`string`|`WarningLog`|[`SettingsUserScope`]|<a id='python.log.minLevel'>python.log.minLevel</a>|
 | | |  enum: Print Debug, Info, Warning, Error, and Alert messages to stderr on the terminal device.|`enum`|`DebugLog`| | |
@@ -316,6 +344,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |ui.featureMap|Feature Map Location|Location of the feature map.|`string`|`right`|[`SettingsUserScope`]|<a id='ui.featureMap.location'>ui.featureMap.location</a>|
 | | |  enum: Feature map appears on the right side of the window.|`enum`|`right`| | |
 | | |  enum: Feature map appears at the top of the window.|`enum`|`top`| | |
+|ui.files|Always Open a New Instance from the Command Line|Force Binary Ninja to always open a new application instance when run from the command line with no arguments, instead of activating a running instance. If false, a new instance can always be opened using the '-n' command line argument.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.files.commandLine.newInstance'>ui.files.commandLine.newInstance</a>|
 |ui.files|Existing Database Detection|When opening a file in the UI, detect if a database exists and offer to open the database.|`string`|`prompt`|[`SettingsUserScope`]|<a id='ui.files.detection.database'>ui.files.detection.database</a>|
 | | |  enum: Enable detection and generate prompt.|`enum`|`prompt`| | |
 | | |  enum: Enable detection and automatically open the file or database, if found.|`enum`|`always`| | |
@@ -324,8 +353,9 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | |  enum: Enable detection and generate prompt.|`enum`|`prompt`| | |
 | | |  enum: Enable detection and automatically switch to the open view, if found.|`enum`|`always`| | |
 | | |  enum: Disable detection.|`enum`|`disable`| | |
-|ui.files|Auto Open with Options|Specify the file types which automatically open using the 'Open with Options' dialog.|`array`|[`Mapped`, `Universal`]|[`SettingsUserScope`]|<a id='ui.files.detection.openWithOptions'>ui.files.detection.openWithOptions</a>|
+|ui.files|Auto Open with Options|Specify the file types which automatically open using the 'Open with Options' dialog.|`array`|[`Mapped`, `Universal`, `VxWorks`]|[`SettingsUserScope`]|<a id='ui.files.detection.openWithOptions'>ui.files.detection.openWithOptions</a>|
 | | | |`enum`|`Mapped`| | |
+| | | |`enum`|`KCView`| | |
 | | | |`enum`|`DSCView`| | |
 | | | |`enum`|`ELF`| | |
 | | | |`enum`|`Mach-O`| | |
@@ -334,6 +364,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | | |`enum`|`PE`| | |
 | | | |`enum`|`COFF`| | |
 | | | |`enum`|`TE`| | |
+| | | |`enum`|`VxWorks`| | |
 |ui.files|Navigate to Programmer's Main|Detect and navigate to the 'main' function, rather than the entry point, after opening a binary.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.files.navigation.preferMain'>ui.files.navigation.preferMain</a>|
 |ui.files|Restore Recent Open with Options|Restores previously modified settings in the 'Open with Options' dialog when opening or reopening files (databases excluded). Load options are only included when reopening the same file.|`string`|`disable`|[`SettingsUserScope`]|<a id='ui.files.restore.viewOptions'>ui.files.restore.viewOptions</a>|
 | | |  enum: Only restore settings for files with existing history.|`enum`|`strict`| | |
@@ -406,7 +437,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |ui.theme|Color Blind Mode|Choose colors that are visible to those with red/green color blindness.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.theme.colorBlind'>ui.theme.colorBlind</a>|
 |ui.theme|Theme|Customize the appearance and style of Binary Ninja.|`string`|`Ninja Edit`|[`SettingsUserScope`]|<a id='ui.theme.name'>ui.theme.name</a>|
 |ui.theme|Random Theme on Startup|Randomize the theme on application startup.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.theme.randomize'>ui.theme.randomize</a>|
-|ui.theme|Use transient scrollbars|Enables transient scrollbar support provided by Qt.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.theme.transientScrollbars'>ui.theme.transientScrollbars</a>|
+|ui.theme|Transient Scrollbars|Enables transient scrollbar support provided by Qt.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.theme.transientScrollbars'>ui.theme.transientScrollbars</a>|
 |ui.types|Check for Type Errors Before Accept|When changing a type in the change type dialog, check your input for type errors before pressing Accept. This may cause slowdowns in analyses containing large numbers of times.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.types.checkParse'>ui.types.checkParse</a>|
 |ui.types|Match Types by Substring|When changing a type in the change type dialog, if this setting is enabled all substrings will be matched instead of only startsWith style matching|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.types.substring'>ui.types.substring</a>|
 |ui.view|Comment Width|Maximum width of comment before wrapping, in characters. A value of 0x0 means no wrapping.|`number`|`80`|[`SettingsUserScope`]|<a id='ui.view.common.commentWidth'>ui.view.common.commentWidth</a>|
@@ -439,7 +470,8 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |ui.view|Maximum Types in Editor|The maximum number of types to render in the type editor in Types View.|`number`|`100`|[`SettingsUserScope`]|<a id='ui.view.types.maxTypesInEditor'>ui.view.types.maxTypesInEditor</a>|
 |ui.view|Possible Value Set Function Complexity Limit|Function complexity limit for showing possible value set information. Complexity is calculated as the total number of outgoing edges in the function's MLIL SSA form.|`number`|`25`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.view.variables.pvsComplexityLimit'>ui.view.variables.pvsComplexityLimit</a>|
 |ui.window|File Path in Window Title|Controls whether the window title includes the full file path for the current file.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.window.title.showPath'>ui.window.title.showPath</a>|
-|updates|Update Channel Preferences|Select update channel and version.|`string`|`dev (4.3.7070-dev)`|[]|<a id='updates.channelPreferences'>updates.channelPreferences</a>|
+|updates|Update Channel Preferences|Select update channel and version.|`string`|`None`|[]|<a id='updates.channelPreferences'>updates.channelPreferences</a>|
 |updates|Show All Versions|Show all versions that are available for the current update channel in the UI.|`boolean`|`False`|[`SettingsUserScope`]|<a id='updates.showAllVersions'>updates.showAllVersions</a>|
+|updates|Use Enterprise Server For Updates|Use the enterprise server to check for updates. (Ultimate Only)|`boolean`|`False`|[`SettingsUserScope`]|<a id='updates.useEnterpriseServer'>updates.useEnterpriseServer</a>|
 |user|Email|The email that will be shown when collaborating with other users.|`string`| |[`SettingsUserScope`]|<a id='user.email'>user.email</a>|
 |user|Name|The name that will be shown when collaborating with other users.|`string`| |[`SettingsUserScope`]|<a id='user.name'>user.name</a>|

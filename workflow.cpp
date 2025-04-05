@@ -207,6 +207,56 @@ string WorkflowMachine::GetState()
 }
 
 
+std::pair<bool, bool> WorkflowMachine::GetLogStatus()
+{
+	rapidjson::Document request(rapidjson::kObjectType);
+	rapidjson::Document::AllocatorType& allocator = request.GetAllocator();
+	request.AddMember("command", "status", allocator);
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	request.Accept(writer);
+
+	string jsonResult;
+	if (m_function)
+		jsonResult = BNPostWorkflowRequestForFunction(m_function->GetObject(), buffer.GetString());
+	else
+		jsonResult = BNPostWorkflowRequestForBinaryView(m_view->GetObject(), buffer.GetString());
+
+	rapidjson::Document response(rapidjson::kObjectType);
+	response.Parse(jsonResult.c_str());
+	if (response.HasMember("logStatus") && response["logStatus"].HasMember("local") && response["logStatus"].HasMember("global"))
+		return {response["logStatus"]["local"].GetBool(), response["logStatus"]["global"].GetBool()};
+
+	return {false, false};
+}
+
+
+bool WorkflowMachine::SetLogEnabled(bool enable, bool global)
+{
+	rapidjson::Document request(rapidjson::kObjectType);
+	rapidjson::Document::AllocatorType& allocator = request.GetAllocator();
+	request.AddMember("command", "log", allocator);
+	request.AddMember("enable", enable, allocator);
+	request.AddMember("global", global, allocator);
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	request.Accept(writer);
+
+	string jsonResult;
+	if (m_function)
+		jsonResult = BNPostWorkflowRequestForFunction(m_function->GetObject(), buffer.GetString());
+	else
+		jsonResult = BNPostWorkflowRequestForBinaryView(m_view->GetObject(), buffer.GetString());
+
+	rapidjson::Document response(rapidjson::kObjectType);
+	response.Parse(jsonResult.c_str());
+	if (response.HasMember("commandStatus") && response["commandStatus"].HasMember("accepted"))
+		return response["commandStatus"]["accepted"].GetBool();
+
+	return false;
+}
+
+
 std::optional<bool> WorkflowMachine::QueryOverride(const string& activity)
 {
 	rapidjson::Document request(rapidjson::kObjectType);

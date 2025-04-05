@@ -112,6 +112,7 @@ typedef BinaryNinja::Ref<BinaryNinja::TypeArchive> TypeArchiveRef;
 typedef BinaryNinja::Ref<BinaryNinja::TypeLibrary> TypeLibraryRef;
 typedef BinaryNinja::Ref<BinaryNinja::WebsocketClient> WebsocketClientRef;
 typedef BinaryNinja::Ref<BinaryNinja::WebsocketProvider> WebsocketProviderRef;
+typedef BinaryNinja::Ref<BinaryNinja::Workflow> WorkflowRef;
 typedef BinaryNinja::Ref<BinaryNinja::RepoPlugin> RepoPluginRef;
 typedef BinaryNinja::Ref<BinaryNinja::Repository> RepositoryRef;
 typedef BinaryNinja::Ref<BinaryNinja::RepositoryManager> RepositoryManagerRef;

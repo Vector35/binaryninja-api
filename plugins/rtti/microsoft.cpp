@@ -620,6 +620,7 @@ MicrosoftRTTIProcessor::MicrosoftRTTIProcessor(const Ref<BinaryView> &view, bool
 
 void MicrosoftRTTIProcessor::ProcessRTTI()
 {
+    auto bgTask = new BackgroundTask("Scanning for Microsoft RTTI...", true);
     auto start_time = std::chrono::high_resolution_clock::now();
     uint64_t startAddr = m_view->GetOriginalImageBase();
     uint64_t endAddr = m_view->GetEnd();
@@ -630,6 +631,8 @@ void MicrosoftRTTIProcessor::ProcessRTTI()
         for (uint64_t coLocatorAddr = segment->GetStart(); coLocatorAddr < segment->GetEnd() - 0x18;
              coLocatorAddr += addrSize)
         {
+            if (bgTask->IsCancelled())
+                break;
             optReader.Seek(coLocatorAddr);
             uint32_t sigVal = optReader.Read32();
             if (sigVal == COL_SIG_REV1)
@@ -683,6 +686,7 @@ void MicrosoftRTTIProcessor::ProcessRTTI()
         }
     }
 
+    bgTask->Finish();
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_time = end_time - start_time;
     m_logger->LogDebug("ProcessRTTI took %f seconds", elapsed_time.count());
@@ -691,6 +695,7 @@ void MicrosoftRTTIProcessor::ProcessRTTI()
 
 void MicrosoftRTTIProcessor::ProcessVFT()
 {
+    auto bgTask = new BackgroundTask("Scanning for Microsoft RTTI...", true);
     std::map<uint64_t, uint64_t> vftMap = {};
     std::map<uint64_t, std::optional<VirtualFunctionTableInfo>> vftFinishedMap = {};
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -712,6 +717,8 @@ void MicrosoftRTTIProcessor::ProcessVFT()
             uint64_t endAddr = segment->GetEnd();
             for (uint64_t vtableAddr = startAddr; vtableAddr < endAddr - 0x18; vtableAddr += addrSize)
             {
+                if (bgTask->IsCancelled())
+                    break;
                 optReader.Seek(vtableAddr);
                 uint64_t coLocatorAddr = optReader.ReadPointer();
                 auto coLocator = m_classInfo.find(coLocatorAddr);
@@ -806,6 +813,7 @@ void MicrosoftRTTIProcessor::ProcessVFT()
     for (const auto &[coLocatorAddr, _]: vftMap)
         ProcessClassAndBases(coLocatorAddr);
 
+    bgTask->Finish();
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_time = end_time - start_time;
     m_logger->LogDebug("ProcessVFT took %f seconds", elapsed_time.count());

@@ -597,6 +597,7 @@ bool PEView::Init()
 		m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", this);
 		m_simplifyTemplates = viewSettings->Get<bool>("analysis.types.templateSimplifier", this);
 
+		bool platformSetByUser = false;
 		settings = GetLoadSettings(GetTypeName());
 		if (settings)
 		{
@@ -605,11 +606,13 @@ bool PEView::Init()
 
 			if (settings->Contains("loader.platform"))
 			{
-				Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this));
+				BNSettingsScope scope = SettingsAutoScope;
+				Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this, &scope));
 				if (platformOverride)
 				{
 					platform = platformOverride;
 					m_arch = platform->GetArchitecture();
+					platformSetByUser = (scope == SettingsResourceScope);
 				}
 			}
 		}
@@ -647,7 +650,9 @@ bool PEView::Init()
 			return false;
 		}
 
-		platform = platform->GetAssociatedPlatformByAddress(m_entryPoint);
+		if (!platformSetByUser)
+			platform = platform->GetAssociatedPlatformByAddress(m_entryPoint);
+
 		SetDefaultPlatform(platform);
 		SetDefaultArchitecture(platform->GetArchitecture());
 

@@ -1446,7 +1446,7 @@ namespace BinaryNinja
 			QualifiedName filesetEntryCommandQualName;
 		} m_typeNames;
 
-		ObjCProcessor* m_objcProcessor = nullptr;
+		MachoObjCProcessor* m_objcProcessor = nullptr;
 
 		uint64_t m_universalImageOffset;
 		bool m_parseOnly, m_backedByDatabase;
@@ -1472,7 +1472,8 @@ namespace BinaryNinja
 		std::vector<section_64> m_allSections;
 
 		MachOHeader HeaderForAddress(BinaryView* data, uint64_t address, bool isMainHeader, std::string identifierPrefix = "");
-		bool InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_t preferredImageBase, std::string preferredImageBaseDesc);
+		bool InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_t preferredImageBase,
+			std::string preferredImageBaseDesc, bool platformSetByUser);
 
 		void RebaseThreadStarts(BinaryReader& virtualReader, std::vector<uint32_t>& threadStarts, uint64_t stepMultiplier);
 		Ref<Symbol> DefineMachoSymbol(

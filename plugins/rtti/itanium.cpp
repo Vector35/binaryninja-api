@@ -321,7 +321,6 @@ std::optional<TypeInfoVariant> ReadTypeInfoVariant(BinaryView *view, uint64_t ob
         uint64_t typeInfoAddr = reader.ReadPointer();
         if (!view->IsValidOffset(typeInfoAddr))
             return std::nullopt;
-        LogInfo("Assuming base type info for %llx is at %llx", objectAddr, typeInfoAddr);
         auto vftSym = view->GetSymbolByAddress(typeInfoAddr);
         if (vftSym == nullptr)
             return std::nullopt;
@@ -660,6 +659,7 @@ ItaniumRTTIProcessor::ItaniumRTTIProcessor(const Ref<BinaryView> &view, bool use
 
 void ItaniumRTTIProcessor::ProcessRTTI()
 {
+    auto bgTask = new BackgroundTask("Scanning for Itanium RTTI...", true);
     auto start_time = std::chrono::high_resolution_clock::now();
     auto addrSize = m_view->GetAddressSize();
     uint64_t maxTypeInfoSize = TypeInfoSize(m_view);
@@ -667,6 +667,8 @@ void ItaniumRTTIProcessor::ProcessRTTI()
     auto scan = [&](const Ref<Section> &section) {
         for (uint64_t currAddr = section->GetStart(); currAddr <= section->GetEnd() - maxTypeInfoSize; currAddr += addrSize)
         {
+            if (bgTask->IsCancelled())
+                break;
             try
             {
                 if (auto classInfo = ProcessRTTI(currAddr))
@@ -733,6 +735,7 @@ void ItaniumRTTIProcessor::ProcessRTTI()
         );
     }
 
+    bgTask->Finish();
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_time = end_time - start_time;
     m_logger->LogDebug("ProcessRTTI took %f seconds", elapsed_time.count());
@@ -741,6 +744,7 @@ void ItaniumRTTIProcessor::ProcessRTTI()
 
 void ItaniumRTTIProcessor::ProcessVFT()
 {
+    auto bgTask = new BackgroundTask("Scanning for Itanium VFTs...", true);
     BinaryReader optReader = BinaryReader(m_view);
     std::map<uint64_t, std::set<uint64_t>> vftMap = {};
     std::map<uint64_t, std::optional<VirtualFunctionTableInfo>> vftFinishedMap = {};
@@ -812,12 +816,15 @@ void ItaniumRTTIProcessor::ProcessVFT()
 
     for (const auto &[coLocatorAddr, vftAddrs]: vftMap)
     {
+        if (bgTask->IsCancelled())
+            break;
         for (const auto& vftAddr: vftAddrs)
         {
             populateVftEntries(coLocatorAddr, vftAddr);
         }
     }
 
+    bgTask->Finish();
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_time = end_time - start_time;
     m_logger->LogDebug("ProcessVFT took %f seconds", elapsed_time.count());

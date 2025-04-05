@@ -20,10 +20,12 @@ pub enum EnterpriseCheckoutError {
 }
 
 /// Initialize the enterprise server connection to check out a floating license.
-pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutError> {
+/// Result value is if we actually checked out a license (i.e. Ok(false) means we already have a
+/// license checked out and will not need to release it later)
+pub fn checkout_license(duration: Duration) -> Result<bool, EnterpriseCheckoutError> {
     if crate::is_ui_enabled() {
         // We only need to check out a license if running headlessly.
-        return Ok(());
+        return Ok(false);
     }
 
     // The disparate core functions we call here might already have mutexes to guard.
@@ -72,9 +74,10 @@ pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutErro
                 last_error,
             ));
         }
+        Ok(true)
+    } else {
+        Ok(false)
     }
-
-    Ok(())
 }
 
 pub fn release_license() {

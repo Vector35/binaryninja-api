@@ -469,6 +469,7 @@ bool ElfView::Init()
 	m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", this);
 	m_simplifyTemplates = viewSettings->Get<bool>("analysis.types.templateSimplifier", this);
 
+	bool platformSetByUser = false;
 	Ref<Settings> settings = GetLoadSettings(GetTypeName());
 	if (settings)
 	{
@@ -477,11 +478,13 @@ bool ElfView::Init()
 
 		if (settings->Contains("loader.platform"))
 		{
-			Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this));
+			BNSettingsScope scope = SettingsAutoScope;
+			Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this, &scope));
 			if (platformOverride)
 			{
 				m_plat = platformOverride;
 				m_arch = m_plat->GetArchitecture();
+				platformSetByUser = (scope == SettingsResourceScope);
 			}
 		}
 	}
@@ -752,8 +755,9 @@ bool ElfView::Init()
 	GetParentView()->SetDefaultArchitecture(entryPointArch);
 
 	Ref<Platform> platform = m_plat ? m_plat : g_elfViewType->GetPlatform(m_ident.os, m_arch);
-	if (platform && (entryPointArch != m_arch))
+	if (platform && (entryPointArch != m_arch) && !platformSetByUser)
 		platform = platform->GetRelatedPlatform(entryPointArch);
+
 	if (!platform)
 		platform = entryPointArch->GetStandalonePlatform();
 

@@ -214,6 +214,8 @@ void GenericImportsModel::setFilter(const std::string& filterText)
 			m_entries.push_back(entry);
 		else if (FilteredView::match(std::to_string(entry->GetOrdinal()), filterText))
 			m_entries.push_back(entry);
+		else if (FilteredView::match(getLibrarySource(entry).toStdString(), filterText))
+		    m_entries.push_back(entry);
 	}
 	performSort(m_sortCol, m_sortOrder);
 	endResetModel();

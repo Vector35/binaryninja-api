@@ -1,389 +1,301 @@
-import os
 import ctypes
 import dataclasses
-import traceback
+from typing import Optional
 
 import binaryninja
+from binaryninja import BinaryView
 from binaryninja._binaryninjacore import BNFreeStringList, BNAllocString, BNFreeString
 
 from . import _sharedcachecore as sccore
 from .sharedcache_enums import *
 
+@dataclasses.dataclass
+class CacheRegion:
+    region_type: SharedCacheRegionType
+    name: str
+    start: int
+    size: int
+    image_start: int
+    # TODO: Might want to make this use the BN segment flag enum?
+    flags: sccore.SegmentFlagEnum
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return f"<CacheRegion '{self.name}': 0x{self.start:x} + {self.size:x}>"
 
 @dataclasses.dataclass
-class DSCMemoryMapping:
-	name: str
-	vmAddress: int
-	size: int
+class CacheImage:
+    name: str
+    header_address: int
+    region_starts: [int]
 
-	def __str__(self):
-		return repr(self)
+    def __str__(self):
+        return repr(self)
 
-	def __repr__(self):
-		return f"<DSCMemoryMapping '{self.name}': {self.vmAddress:x}+{self.size:x}>"
-
-
-@dataclasses.dataclass
-class LoadedRegion:
-	name: str
-	headerAddress: int
-	mappings: list[DSCMemoryMapping]
-
-	def __str__(self):
-		return repr(self)
-
-	def __repr__(self):
-		return f"<LoadedRegion {self.name} @ {self.headerAddress:x}>"
-
+    def __repr__(self):
+        return f"<CacheImage '{self.name}': 0x{self.header_address:x}>"
 
 @dataclasses.dataclass
-class DSCBackingCacheMapping:
-	vmAddress: int
-	size: int
-	fileOffset: int
-
-	def __str__(self):
-		return repr(self)
-
-	def __repr__(self):
-		return f"<DSCBackingCacheMapping {self.vmAddress:x}+{self.size:x} @ {self.fileOffset:x}"
-
-
-@dataclasses.dataclass
-class DSCBackingCache:
-	path: str
-	cacheType: BackingCacheType
-	mappings: list[DSCBackingCacheMapping]
-
-	def __str__(self):
-		return repr(self)
-
-	def __repr__(self):
-		cache_type_str = 'Unknown'
-		if self.cacheType == BackingCacheType.BackingCacheTypePrimary:
-			cache_type_str = 'Primary'
-		elif self.cacheType == BackingCacheType.BackingCacheTypeSecondary:
-			cache_type_str = 'Secondary'
-		elif self.cacheType == BackingCacheType.BackingCacheTypeSymbols:
-			cache_type_str = 'Symbols'
-		return f"<DSCBackingCache {self.path} {cache_type_str} | {len(self.mappings)} mappings>"
-
-
-@dataclasses.dataclass
-class DSCImageMemoryMapping:
-	filePath: str
-	name: str
-	vmAddress: int
-	size: int
-	loaded: bool
-	rawViewOffset: int
-
-	def __str__(self):
-		return repr(self)
-
-	def __repr__(self):
-		return f"<DSCImageMemoryMapping '{self.name}' {os.path.basename(self.filePath)} raw<{self.rawViewOffset:x}>: {self.vmAddress:x}+{self.size:x}>"
-
-
-@dataclasses.dataclass
-class DSCImage:
-	name: str
-	headerAddress: int
-	mappings: list[DSCImageMemoryMapping]
-
-	def __str__(self):
-		return repr(self)
-
-	def __repr__(self):
-		return f"<DSCImage {self.name} @ {self.headerAddress:x}>"
-
-
-@dataclasses.dataclass
-class DSCSymbol:
-	name: str
-	image: str
-	address: int
-
-	def __str__(self):
-		return repr(self)
-
-	def __repr__(self):
-		return f"<DSCSymbol {self.name} @ {self.address:x} ({self.image}>"
-
-
-class SharedCache:
-	"""
-	SharedCache is the primary class for interacting with the shared cache processor and DSCView metadata.
-
-	You can create a SharedCache object from a BinaryView object by calling `SharedCache(bv)`, where `bv` is the BinaryView.
-
-	By default `bv` in the console will return the instance of the BinaryView that is currently open, \
-		so in the UI, you can use `dsc = SharedCache(bv)` to create a SharedCache object in the scripting console.
-
-	Methods and attributes in this class have documentation which can be viewed by typing `SharedCache.method_or_attribute_name?` in the console.
-	"""
-	def __init__(self, view):
-		self.handle = sccore.BNGetSharedCache(view.handle)
-
-	def load_image_with_install_name(self, install_name, skip_loading_objective_c = False) -> bool:
-		"""
-		Locate an image with the provided install name and load it into the shared cache view
-
-		:param install_name: Install name of the image
-		:param skip_loading_objective_c: Whether to skip process Objective-C information for this image. Default false.
-		:return:
-		"""
-		return sccore.BNDSCViewLoadImageWithInstallName(self.handle, install_name, skip_loading_objective_c)
-
-	def load_section_at_address(self, addr) -> bool:
-		"""
-		Load a singular section at the provided address into the shared cache view.
-
-		This will partial-load the image, only mapping the requested segment containing this section.
-
-		Image info will still be processed, but will only be applied to mapped regions.
-
-		:param addr: Address within the section
-		:return:
-		"""
-		return sccore.BNDSCViewLoadSectionAtAddress(self.handle, addr)
-
-	def load_image_containing_address(self, addr, skip_loading_objective_c = False) -> bool:
-		"""
-		Load the image containing the provided address into the shared cache view.
-
-		:param addr: Address within the image to load
-		:param skip_loading_objective_c: Whether to skip processing Objective-C information for this image. Default false.
-		:return:
-		"""
-		return sccore.BNDSCViewLoadImageContainingAddress(self.handle, addr, skip_loading_objective_c)
-
-	def process_objc_sections_for_image_with_install_name(self, install_name) -> bool:
-		"""
-		Process Objective-C information for the image with the provided install name.
-
-		:param install_name: Install name of the image
-		:return:
-		"""
-		return sccore.BNDSCViewProcessObjCSectionsForImageWithInstallName(self.handle, install_name, False)
-
-	def process_all_objc_sections(self) -> bool:
-		"""
-		Process Objective-C information for all images in the shared cache view.
-
-		:return:
-		"""
-		return sccore.BNDSCViewProcessAllObjCSections(self.handle)
-
-	@property
-	def caches(self) -> list[DSCBackingCache]:
-		"""
-		Get all backing caches in the shared cache.
-		:return:
-		"""
-		count = ctypes.c_ulonglong()
-		value = sccore.BNDSCViewGetBackingCaches(self.handle, count)
-		if value is None:
-			return []
-
-		result = []
-		for i in range(count.value):
-			mappings = []
-			for j in range(value[i].mappingCount):
-				mapping = DSCBackingCacheMapping(
-					value[i].mappings[j].vmAddress,
-					value[i].mappings[j].size,
-					value[i].mappings[j].fileOffset
-				)
-				mappings.append(mapping)
-			result.append(DSCBackingCache(
-				value[i].path,
-				value[i].cacheType,
-				mappings
-			))
-
-		sccore.BNDSCViewFreeBackingCaches(value, count)
-		return result
-
-	@property
-	def images(self) -> list[DSCImage]:
-		"""
-		Get all images in the shared cache
-		:return:
-		"""
-		count = ctypes.c_ulonglong()
-		value = sccore.BNDSCViewGetAllImages(self.handle, count)
-		if value is None:
-			return []
-
-		result = []
-		for i in range(count.value):
-			mappings = []
-			for j in range(value[i].mappingCount):
-				mapping = DSCImageMemoryMapping(
-					value[i].mappings[j].filePath,
-					value[i].mappings[j].name,
-					value[i].mappings[j].vmAddress,
-					value[i].mappings[j].size,
-					value[i].mappings[j].loaded,
-					value[i].mappings[j].rawViewOffset
-				)
-				mappings.append(mapping)
-			result.append(DSCImage(
-				value[i].name,
-				value[i].headerAddress,
-				mappings
-			))
-
-		sccore.BNDSCViewFreeAllImages(value, count)
-		return result
-
-	@property
-	def loaded_regions(self) -> list[LoadedRegion]:
-		"""
-		Get all loaded regions in the shared cache
-
-		The internal logic for loading images treats a region as 'loaded' whenever
-		that region has been mapped into memory, and, if it's located within an image, header information has been applied to that region.
-
-		Individual segments within an image can be loaded independently of the image itself.
-
-		Only once all regions of an image are loaded will the header processor refuse to run on that region.
-		:return:
-		"""
-		count = ctypes.c_ulonglong()
-		value = sccore.BNDSCViewGetLoadedRegions(self.handle, count)
-		if value is None:
-			return []
-
-		result = []
-		for i in range(count.value):
-			mapping = DSCMemoryMapping(
-				value[i].name,
-				value[i].vmAddress,
-				value[i].size,
-			)
-			result.append(mapping)
-		sccore.BNDSCViewFreeLoadedRegions(value, count)
-		return result
-
-	def load_all_symbols_and_wait(self) -> list[DSCSymbol]:
-		"""
-		Load all symbols in the shared cache. This will block on the current thread waiting for processing to finish.
-
-		While all functions in this API are synchronous, this function can be particularly slow due to the large number
-			of symbols in the shared cache. "and_wait" is appended to the function name to indicate that this function
-			will block until processing is complete, and for performant applications, you should consider calling this
-			function in a separate thread and waiting on its return. An example of this is provided in the shared cache
-			triage view.
-
-		This may take several seconds if this is the first time this function is called. Subsequent calls will be faster.
-
-		In UI-based API usage, it is likely that the triage view will have already performed this operation, and calls
-			to this function will be much faster.
-
-		:return: A list of all symbols in the shared cache
-		"""
-		count = ctypes.c_ulonglong()
-		value = sccore.BNDSCViewLoadAllSymbolsAndWait(self.handle, count)
-		if value is None:
-			return []
-		result = []
-		for i in range(count.value):
-			sym = DSCSymbol(
-				value[i].name,
-				value[i].image,
-				value[i].address
-			)
-			result.append(sym)
-
-		sccore.BNDSCViewFreeSymbols(value, count)
-		return result
-
-	@property
-	def image_names(self) -> list[str]:
-		"""
-		Get all image names in the shared cache
-		:return:
-		"""
-		count = ctypes.c_ulonglong()
-		value = sccore.BNDSCViewGetInstallNames(self.handle, count)
-		if value is None:
-			return []
-
-		result = []
-		for i in range(count.value):
-			result.append(value[i].decode('utf-8'))
-
-		BNFreeStringList(value, count)
-		return result
-
-	@property
-	def state(self) -> DSCViewState:
-		"""
-		Get the current image state of the shared cache view. Useful for checking if images have been loaded yet or not.
-		:return:
-		"""
-		return DSCViewState(sccore.BNDSCViewGetState(self.handle))
-
-	def get_name_for_address(self, address) -> str:
-		"""
-		Get the "name" for the provided address. Specifically, the name of the memory region this address lies in.
-
-		If this lies within an image segment, this will be in the format image_name + "::" + segment_name.
-
-		It may also be the name of a branch pool or other non-image region.
-
-		This is the API call utilized on the first dynamic entry in the right-click context menu.
-
-		:param address: address to check
-		:return:
-		"""
-		name = sccore.BNDSCViewGetNameForAddress(self.handle, address)
-		if name is None:
-			return ""
-		result = name
-		return result
-
-	def get_image_name_for_address(self, address) -> str:
-		"""
-		Return the install name for the image containing the provided address.
-
-		If the address is not within an image, this will return an empty string.
-
-		This is the API call used in the second dynamic entry in the right-click context menu.
-
-		:param address: address to check
-		:return:
-		"""
-		name = sccore.BNDSCViewGetImageNameForAddress(self.handle, address)
-		if name is None:
-			return ""
-		result = name
-		return result
-
-	def find_symbol_at_addr_and_apply_to_addr(self, symbol_address, target_address, trigger_reanalysis) -> None:
-		"""
-		This is primarily a function utilized for automated backwards symbol propagation for stubs in the workflow, however
-			it is passed through here as well in the event you need to use it to do something similar, or want to create
-			your own version of the workflow.
-
-		This is currently a blocking function.
-
-		This will check the cache for a symbol located at symbol_address, and apply it to target_address, appending a
-			`j_` to the front of the symbol name copy at `target_address`.
-
-		It will additionally backwards-propagate type information that was specifically applied via TypeLibrary to the stub.
-
-		This includes calling conventions and can be seen in stubs pointing to objc_release_x[register] functions.
-
-		This check will not run if:
-		- The symbol address and target address are the same
-		- The target address has already been given a name by this function
-
-		:param symbol_address: Symbol address to check
-		:param target_address: Target address to apply symbol name and type to
-		:param trigger_reanalysis: Whether to reanalyze the function at target_address if the function already existed.
-		:return: None
-		"""
-		sccore.BNDSCFindSymbolAtAddressAndApplyToAddress(self.handle, symbol_address, target_address, trigger_reanalysis)
+class CacheSymbol:
+    symbol_type: sccore.SymbolTypeEnum
+    address: int
+    name: str
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return f"<CacheSymbol '{self.name}': 0x{self.address:x}>"
+
+def region_from_api(region: sccore.BNSharedCacheRegion) -> CacheRegion:
+    return CacheRegion(
+        region_type=SharedCacheRegionType(region.regionType),
+        name=region.name,
+        start=region.vmAddress,
+        size=region.size,
+        image_start=region.imageStart,
+        flags=region.flags
+    )
+
+def region_to_api(region: CacheRegion) -> sccore.BNSharedCacheRegion:
+    return sccore.BNSharedCacheRegion(
+        regionType=region.region_type,
+        _name=BNAllocString(region.name),
+        vmAddress=region.start,
+        size=region.size,
+        imageStart=region.image_start,
+        flags=region.flags
+    )
+
+def image_from_api(image: sccore.BNSharedCacheImage) -> CacheImage:
+    region_starts = []
+    for i in range(image.regionStartCount):
+        region_starts.append(image.regionStarts[i])
+    return CacheImage(
+        name=image.name,
+        header_address=image.headerAddress,
+        region_starts=region_starts
+    )
+
+def image_to_api(image: CacheImage) -> sccore.BNSharedCacheImage:
+    region_start_array = (ctypes.c_ulonglong * len(image.region_starts))()
+    for i, region_start in enumerate(image.region_starts):
+        region_start_array[i] = region_start
+    core_region_starts = sccore.BNSharedCacheAllocRegionList(region_start_array, len(region_start_array))
+    return sccore.BNSharedCacheImage(
+        _name=BNAllocString(image.name),
+        headerAddress=image.header_address,
+        regionStartCount=len(region_start_array),
+        regionStarts=core_region_starts
+    )
+
+def symbol_from_api(symbol: sccore.BNSharedCacheSymbol) -> CacheSymbol:
+    return CacheSymbol(
+        symbol_type=symbol.symbolType,
+        address=symbol.address,
+        name=symbol.name
+    )
+
+def symbol_to_api(symbol: CacheSymbol) -> sccore.BNSharedCacheSymbol:
+    return sccore.BNSharedCacheSymbol(
+        symbolType=symbol.symbol_type,
+        address=symbol.address,
+        _name=BNAllocString(symbol.name)
+    )
+
+class SharedCacheController:
+    def __init__(self, view: BinaryView):
+        """
+        Retrieve the shared cache controller for a given view.
+        Call `is_valid` to check if the controller is valid.
+        """
+        self.handle = sccore.BNGetSharedCacheController(view.handle)
+
+    def __del__(self):
+        if self.handle is not None:
+            sccore.BNFreeSharedCacheControllerReference(self.handle)
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return f"<SharedCacheController: {len(self.images)} images, {len(self.regions)} regions>"
+
+    def is_valid(self) -> bool:
+        return self.handle is not None
+
+    def apply_region(self, view: BinaryView, region: CacheRegion) -> bool:
+        api_region: sccore.BNSharedCacheRegion = region_to_api(region)
+        result = sccore.BNSharedCacheControllerApplyRegion(self.handle, view.handle, api_region)
+        sccore.BNSharedCacheFreeRegion(api_region)
+        return result
+
+    def apply_image(self, view: BinaryView, image: CacheImage) -> bool:
+        api_image: sccore.BNSharedCacheImage = image_to_api(image)
+        result = sccore.BNSharedCacheControllerApplyImage(self.handle, view.handle, api_image)
+        sccore.BNSharedCacheFreeImage(api_image)
+        return result
+
+    def is_region_loaded(self, region: CacheRegion) -> bool:
+        api_region: sccore.BNSharedCacheRegion = region_to_api(region)
+        result = sccore.BNSharedCacheControllerIsRegionLoaded(self.handle, api_region)
+        sccore.BNSharedCacheFreeRegion(api_region)
+        return result
+
+    def is_image_loaded(self, image: CacheImage) -> bool:
+        api_image: sccore.BNSharedCacheImage = image_to_api(image)
+        result = sccore.BNSharedCacheControllerIsImageLoaded(self.handle, api_image)
+        sccore.BNSharedCacheFreeImage(api_image)
+        return result
+
+    def get_region_at(self, address: int) -> Optional[CacheRegion]:
+        api_region = sccore.BNSharedCacheRegion()
+        if not sccore.BNSharedCacheControllerGetRegionAt(self.handle, address, api_region):
+            return None
+        region = region_from_api(api_region)
+        sccore.BNSharedCacheFreeRegion(api_region)
+        return region
+
+    def get_region_containing(self, address: int) -> Optional[CacheRegion]:
+        api_region = sccore.BNSharedCacheRegion()
+        if not sccore.BNSharedCacheControllerGetRegionContaining(self.handle, address, api_region):
+            return None
+        region = region_from_api(api_region)
+        sccore.BNSharedCacheFreeRegion(api_region)
+        return region
+
+    def get_image_at(self, address: int) -> Optional[CacheImage]:
+        api_image = sccore.BNSharedCacheImage()
+        if not sccore.BNSharedCacheControllerGetImageAt(self.handle, address, api_image):
+            return None
+        image = image_from_api(api_image)
+        sccore.BNSharedCacheFreeImage(api_image)
+        return image
+
+    def get_image_containing(self, address: int) -> Optional[CacheImage]:
+        api_image = sccore.BNSharedCacheImage()
+        if not sccore.BNSharedCacheControllerGetImageContaining(self.handle, address, api_image):
+            return None
+        image = image_from_api(api_image)
+        sccore.BNSharedCacheFreeImage(api_image)
+        return image
+
+    def get_image_with_name(self, name: str) -> Optional[CacheImage]:
+        api_image = sccore.BNSharedCacheImage()
+        if not sccore.BNSharedCacheControllerGetImageWithName(self.handle, name, api_image):
+            return None
+        image = image_from_api(api_image)
+        sccore.BNSharedCacheFreeImage(api_image)
+        return image
+
+    def get_image_dependencies(self, image: CacheImage) -> [str]:
+        """
+        Returns a list of image names that this image depends on.
+        """
+        count = ctypes.c_ulonglong()
+        api_image: sccore.BNSharedCacheImage = image_to_api(image)
+        value = sccore.BNSharedCacheControllerGetImageDependencies(self.handle, api_image, count)
+        sccore.BNSharedCacheFreeImage(api_image)
+        if value is None:
+            return []
+        result = []
+        for i in range(count.value):
+            result.append(value[i].decode("utf-8"))
+        BNFreeStringList(value, count)
+        return result
+
+    def get_symbol_at(self, address: int) -> Optional[CacheSymbol]:
+        api_symbol = sccore.BNSharedCacheSymbol()
+        if not sccore.BNSharedCacheControllerGetSymbolAt(self.handle, address, api_symbol):
+            return None
+        symbol = symbol_from_api(api_symbol)
+        sccore.BNSharedCacheFreeSymbol(api_symbol)
+        return symbol
+
+    @property
+    def regions(self) -> [CacheRegion]:
+        count = ctypes.c_ulonglong()
+        value = sccore.BNSharedCacheControllerGetRegions(self.handle, count)
+        if value is None:
+            return []
+        result = []
+        for i in range(count.value):
+            result.append(region_from_api(value[i]))
+        sccore.BNSharedCacheFreeRegionList(value, count)
+        return result
+
+    @property
+    def loaded_regions(self) -> [CacheRegion]:
+        """
+        Get a list of regions that are currently loaded in the view.
+        """
+        count = ctypes.c_ulonglong()
+        value = sccore.BNSharedCacheControllerGetLoadedRegions(self.handle, count)
+        if value is None:
+            return []
+        result = []
+        for i in range(count.value):
+            result.append(region_from_api(value[i]))
+        sccore.BNSharedCacheFreeRegionList(value, count)
+        return result
+
+    @property
+    def images(self) -> [CacheImage]:
+        count = ctypes.c_ulonglong()
+        value = sccore.BNSharedCacheControllerGetImages(self.handle, count)
+        if value is None:
+            return []
+        result = []
+        for i in range(count.value):
+            result.append(image_from_api(value[i]))
+        sccore.BNSharedCacheFreeImageList(value, count)
+        return result
+
+    @property
+    def loaded_images(self) -> [CacheImage]:
+        """
+        Get a list of images that are currently loaded in the view.
+        """
+        count = ctypes.c_ulonglong()
+        value = sccore.BNSharedCacheControllerGetLoadedImages(self.handle, count)
+        if value is None:
+            return []
+        result = []
+        for i in range(count.value):
+            result.append(image_from_api(value[i]))
+        sccore.BNSharedCacheFreeImageList(value, count)
+        return result
+
+    @property
+    def symbols(self) -> [CacheSymbol]:
+        count = ctypes.c_ulonglong()
+        value = sccore.BNSharedCacheControllerGetSymbols(self.handle, count)
+        if value is None:
+            return []
+        result = []
+        for i in range(count.value):
+            result.append(symbol_from_api(value[i]))
+        sccore.BNSharedCacheFreeSymbolList(value, count)
+        return result
+
+
+def _get_shared_cache(instance: binaryninja.PythonScriptingInstance):
+    if instance.interpreter.active_view is None:
+        return None
+    controller = SharedCacheController(instance.interpreter.active_view)
+    if not controller.is_valid():
+        return None
+    return controller
+
+
+binaryninja.PythonScriptingProvider.register_magic_variable(
+	"dsc",
+    _get_shared_cache
+)
+
+binaryninja.PythonScriptingProvider.register_magic_variable(
+    "shared_cache",
+    _get_shared_cache
+)

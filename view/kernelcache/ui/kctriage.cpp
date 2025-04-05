@@ -163,7 +163,7 @@ KCTriageView::KCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(parent
 		auto loadImageModel = new QStandardItemModel(0, 2, loadImageTable);
 		{
 			loadImageModel->setHorizontalHeaderLabels({"Name", "VM Address"});
-			BackgroundThread::create(loadImageTable)->thenBackground([this, loadImageModel](QVariant var)
+			BackgroundThread::create(loadImageTable)->thenBackground([this](QVariant var)
 				{
 					QVariantList rows;
 
@@ -190,7 +190,7 @@ KCTriageView::KCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(parent
 					}
 
 					return QVariant(rows);
-				})->thenMainThread([this, loadImageModel, loadImageTable](QVariant var){
+				})->thenMainThread([loadImageModel, loadImageTable](QVariant var){
 					QVariantList rows = var.toList();
 
 					if (loadImageModel->rowCount() > 0)
@@ -331,38 +331,6 @@ KCTriageView::KCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(parent
 		m_triageTabs->addTab(symbolWidget, "Symbol Search");
 		m_triageTabs->setCanCloseTab(symbolWidget, false);
 	} // symbolSearch
-
-	auto loadedRegions = new QTreeView;
-	{
-		auto loadedRegionsModel = new QStandardItemModel(0, 3, loadedRegions);
-		loadedRegionsModel->setHorizontalHeaderLabels({"VM Address", "Size", "Pretty Name"});
-
-		auto loadedRegionsLayout = new QVBoxLayout;
-		loadedRegionsLayout->addWidget(loadedRegions);
-
-		auto loadedRegionsWidget = new QWidget;
-		loadedRegionsWidget->setLayout(loadedRegionsLayout);
-
-		loadedRegions->setModel(loadedRegionsModel);
-
-		loadedRegions->header()->setSectionResizeMode(QHeaderView::Stretch);
-
-		loadedRegions->setSelectionBehavior(QAbstractItemView::SelectRows);
-		loadedRegions->setSelectionMode(QAbstractItemView::SingleSelection);
-
-		connect(loadedRegions, &QTreeView::doubleClicked, this, [=](const QModelIndex& index)
-			{
-				auto addr = loadedRegionsModel->item(index.row(), 0)->text().toULongLong(nullptr, 16);
-			});
-
-		connect(loadedRegions, &QTreeView::activated, this, [=](const QModelIndex& index)
-			{
-				auto addr = loadedRegionsModel->item(index.row(), 0)->text().toULongLong(nullptr, 16);
-			});
-
-		// m_triageTabs->addTab(loadedRegionsWidget, "Loaded Regions");
-	} // loadedRegions
-
 
 	{ // Doc tabs
 

@@ -1778,6 +1778,8 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			REQUIRE3OPS
 			ei0 = il.Register(4, oper1->reg);
 			ei0 = il.MultDoublePrecSigned(4, ei0, il.Register(4, oper2->reg));
+			// TODO: This may be incorrect for 64-bit mode:
+			// The 32-bit operands are the low-order 32 bits of RA and */ of RB.The high - order 32 bits of the 64 - bit product of the operands are placed into RT32 : 63. The contents of RT0 : 31 are undefined.
 			ei0 = il.LowPart(4, il.LogicalShiftRight(8, ei0, il.Const(1, 32)));
 			il.AddInstruction(il.SetRegister(4, oper0->reg, ei0,
 					ppc->update_cr0 ? IL_FLAGWRITE_CR0_S : 0
@@ -1788,6 +1790,8 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			REQUIRE3OPS
 			ei0 = il.Register(4, oper1->reg);
 			ei0 = il.MultDoublePrecUnsigned(4, ei0, il.Register(4, oper2->reg));
+			// TODO: This may be incorrect for 64-bit mode:
+			// The 32-bit operands are the low-order 32 bits of RA and */ of RB.The high - order 32 bits of the 64 - bit product of the operands are placed into RT32 : 63. The contents of RT0 : 31 are undefined.
 			ei0 = il.LowPart(4, il.LogicalShiftRight(8, ei0, il.Const(1, 32)));
 			il.AddInstruction(il.SetRegister(4, oper0->reg, ei0,
 					ppc->update_cr0 ? IL_FLAGWRITE_CR0_S : 0
@@ -1975,7 +1979,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 		case PPC_INS_FMUL:
 			REQUIRE3OPS
-			ei0 = il.MultDoublePrecSigned(8, operToIL(il, oper1, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8),
+			ei0 = il.FloatMult(8, operToIL(il, oper1, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8),
 				operToIL(il, oper2, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8));
 			ei1 = il.SetRegister(8, oper0->reg, ei0, (ppc->update_cr0) ? IL_FLAGWRITE_CR0_F : 0);
 			il.AddInstruction(ei1);
@@ -1990,7 +1994,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 		case PPC_INS_FDIV:
 			REQUIRE3OPS
-			ei0 = il.DivDoublePrecSigned(8, operToIL(il, oper1, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8),
+			ei0 = il.FloatDiv(8, operToIL(il, oper1, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8),
 				operToIL(il, oper2, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8));
 			ei1 = il.SetRegister(8, oper0->reg, ei0, (ppc->update_cr0) ? IL_FLAGWRITE_CR0_F : 0);
 			il.AddInstruction(ei1);
@@ -2005,7 +2009,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 		case PPC_INS_FMADD:
 			REQUIRE4OPS
-			ei0 = il.MultDoublePrecSigned(8, operToIL(il, oper1, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8),
+			ei0 = il.FloatMult(8, operToIL(il, oper1, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8),
 				operToIL(il, oper3, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8));
 			ei0 = il.FloatAdd(8, ei0, operToIL(il, oper2, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8));
 			ei1 = il.SetRegister(8, oper0->reg, ei0, (ppc->update_cr0) ? IL_FLAGWRITE_CR0_F : 0);
@@ -2022,7 +2026,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 		case PPC_INS_FMSUB:
 			REQUIRE4OPS
-			ei0 = il.MultDoublePrecSigned(8, operToIL(il, oper1, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8),
+			ei0 = il.FloatMult(8, operToIL(il, oper1, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8),
 				operToIL(il, oper3, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8));
 			ei0 = il.FloatSub(8, ei0, operToIL(il, oper2, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8));
 			ei1 = il.SetRegister(8, oper0->reg, ei0, (ppc->update_cr0) ? IL_FLAGWRITE_CR0_F : 0);
@@ -2059,7 +2063,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 		case PPC_INS_FNMADD:
 			REQUIRE4OPS
-			ei0 = il.MultDoublePrecSigned(8, operToIL(il, oper1, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8),
+			ei0 = il.FloatMult(8, operToIL(il, oper1, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8),
 				operToIL(il, oper3, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8));
 			ei0 = il.FloatAdd(8, ei0, operToIL(il, oper2, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8));
 			ei0 = il.FloatNeg(8, ei0);
@@ -2078,7 +2082,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 		case PPC_INS_FNMSUB:
 			REQUIRE4OPS
-			ei0 = il.MultDoublePrecSigned(8, operToIL(il, oper1, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8),
+			ei0 = il.FloatMult(8, operToIL(il, oper1, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8),
 				operToIL(il, oper3, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8));
 			ei0 = il.FloatSub(8, ei0, operToIL(il, oper2, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8));
 			ei0 = il.FloatNeg(8, ei0);
@@ -2117,7 +2121,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			REQUIRE2OPS
 			ei0 = il.FloatConstDouble(1);
 			ei1 = il.FloatSqrt(8, operToIL(il, oper1, PPC_IL_OPTIONS_DEFAULT, PPC_IL_EXTRA_DEFAULT, 8));
-			ei1 = il.DivDoublePrecSigned(8, ei0, ei1);
+			ei1 = il.FloatDiv(8, ei0, ei1);
 			ei1 = il.SetRegister(8, oper0->reg, ei1, (ppc->update_cr0) ? IL_FLAGWRITE_CR0_F : 0);
 			il.AddInstruction(ei1);
 			break;

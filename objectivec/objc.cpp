@@ -936,8 +936,17 @@ void ObjCProcessor::ReadIvarList(ObjCReader* reader, ClassBase& cls, std::string
 			ivarStruct.alignmentRaw = reader->Read32();
 			ivarStruct.size = reader->Read32();
 
-			reader->Seek(ivarStruct.offset);
-			ivar.offset = reader->Read32();
+			if (ivarStruct.offset)
+			{
+				reader->Seek(ivarStruct.offset);
+				ivar.offset = reader->Read32();
+			}
+			else
+			{
+				// `offset` can be 0 if the ivar is an anonymous bitfield.
+				ivar.offset = 0;
+			}
+
 			reader->Seek(ivarStruct.name);
 			ivar.name = reader->ReadCString();
 			reader->Seek(ivarStruct.type);

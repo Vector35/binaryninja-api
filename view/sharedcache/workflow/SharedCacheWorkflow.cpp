@@ -225,6 +225,8 @@ void AnalyzeStandardFunction(Ref<Function> func, Ref<MediumLevelILFunction> mlil
 		if (view->IsValidOffset(symbolAddr))
 			return false;
 		const auto symbol = controller.GetSymbolAt(symbolAddr);
+		if (!symbol.has_value())
+			return false;
 		view->DefineAutoSymbol(symbol->GetBNSymbol(*view));
 		return true;
 	};

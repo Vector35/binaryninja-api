@@ -64,6 +64,7 @@ pub mod main_thread;
 pub mod medium_level_il;
 pub mod metadata;
 pub mod platform;
+pub mod plugin_command;
 pub mod progress;
 pub mod project;
 pub mod rc;

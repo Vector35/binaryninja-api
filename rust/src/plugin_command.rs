@@ -4,11 +4,10 @@ use std::ffi::CStr;
 use binaryninjacore_sys::*;
 
 use crate::architecture::CoreArchitecture;
-use crate::binary_view::BinaryViewExt;
 use crate::high_level_il::HighLevelILFunction;
-use crate::low_level_il::function::{Finalized, LowLevelILFunction, NonSSA, RegularNonSSA};
+use crate::low_level_il::RegularLowLevelILFunction;
 use crate::medium_level_il::MediumLevelILFunction;
-use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::string::BnStrCompatible;
 use crate::{BinaryView, Function};
 
@@ -217,20 +216,19 @@ define_enum! {
     },
     BNGetValidPluginCommandsForLowLevelILFunction, BNRegisterPluginCommandForLowLevelILFunction, LowLevelILFunctionPluginCommand, CustomLowLevelILFunctionPluginCommand {
         lowLevelILFunctionCommand::lowLevelILFunctionIsValid(
-            // TODO I don't know what Generics should be used here
-            func: *mut BNLowLevelILFunction: &LowLevelILFunction<CoreArchitecture, Finalized, NonSSA<RegularNonSSA>> =
-            func.handle => &LowLevelILFunction::from_raw(
-                BinaryView::from_raw(view).default_arch().unwrap(),
-                func,
+            llil: *mut BNLowLevelILFunction: &RegularLowLevelILFunction<CoreArchitecture> =
+            llil.handle => &RegularLowLevelILFunction::from_raw(
+                get_function_from_llil(llil).arch(),
+                llil,
             ),
         ),
     },
     BNGetValidPluginCommandsForLowLevelILInstruction, BNRegisterPluginCommandForLowLevelILInstruction, LowLevelILInstructionPluginCommand, CustomLowLevelILInstructionPluginCommand {
         lowLevelILInstructionCommand::lowLevelILInstructionIsValid(
-            func: *mut BNLowLevelILFunction: &LowLevelILFunction<CoreArchitecture, Finalized, NonSSA<RegularNonSSA>> =
-            func.handle => &LowLevelILFunction::from_raw(
-                BinaryView::from_raw(view).default_arch().unwrap(),
-                func,
+            llil: *mut BNLowLevelILFunction: &RegularLowLevelILFunction<CoreArchitecture> =
+            llil.handle => &RegularLowLevelILFunction::from_raw(
+                get_function_from_llil(llil).arch(),
+                llil,
             ),
             instr: usize: usize = instr => instr,
         ),
@@ -258,4 +256,10 @@ define_enum! {
             instr: usize: usize = instr => instr,
         ),
     },
+}
+
+// TODO merge this into the low_level_il module
+unsafe fn get_function_from_llil(llil: *mut BNLowLevelILFunction) -> Ref<Function> {
+    let func = BNGetLowLevelILOwnerFunction(llil);
+    Function::ref_from_raw(func)
 }

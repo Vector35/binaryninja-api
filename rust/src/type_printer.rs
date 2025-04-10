@@ -42,7 +42,7 @@ pub fn register_type_printer<T: TypePrinter>(
 
 #[repr(transparent)]
 pub struct CoreTypePrinter {
-    handle: NonNull<BNTypePrinter>,
+    pub(crate) handle: NonNull<BNTypePrinter>,
 }
 
 impl CoreTypePrinter {

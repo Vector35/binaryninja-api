@@ -37,7 +37,7 @@ pub fn register_type_parser<T: TypeParser>(
 
 #[repr(transparent)]
 pub struct CoreTypeParser {
-    handle: NonNull<BNTypeParser>,
+    pub(crate) handle: NonNull<BNTypeParser>,
 }
 
 impl CoreTypeParser {

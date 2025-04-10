@@ -57,6 +57,8 @@ pub mod function_recognizer;
 pub mod headless;
 pub mod high_level_il;
 pub mod interaction;
+pub mod language_representation;
+pub mod line_formatter;
 pub mod linear_view;
 pub mod logger;
 pub mod low_level_il;

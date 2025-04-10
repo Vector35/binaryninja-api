@@ -40,6 +40,7 @@ pub use binaryninjacore_sys::BNHighlightStandardColor as HighlightStandardColor;
 use crate::architecture::RegisterId;
 use crate::confidence::Conf;
 use crate::high_level_il::HighLevelILFunction;
+use crate::language_representation::CoreLanguageRepresentationFunction;
 use crate::low_level_il::{LiftedILFunction, RegularLowLevelILFunction};
 use crate::medium_level_il::MediumLevelILFunction;
 use crate::variable::{
@@ -474,6 +475,42 @@ impl Function {
             false => Some(Conf::<Ref<Type>>::from_owned_raw(result)),
             true => None,
         }
+    }
+
+    /// Get the language representation of the function.
+    ///
+    ///  * `language` - The language representation, ex. "Pseudo C".
+    pub fn language_representation<S: BnStrCompatible>(
+        &self,
+        language: S,
+    ) -> Option<Ref<CoreLanguageRepresentationFunction>> {
+        let lang_name = language.into_bytes_with_nul();
+        let repr = unsafe {
+            BNGetFunctionLanguageRepresentation(
+                self.handle,
+                lang_name.as_ref().as_ptr() as *const c_char,
+            )
+        };
+        NonNull::new(repr)
+            .map(|handle| unsafe { CoreLanguageRepresentationFunction::ref_from_raw(handle) })
+    }
+
+    /// Get the language representation of the function, if available.
+    ///
+    ///  * `language` - The language representation, ex. "Pseudo C".
+    pub fn language_representation_if_available<S: BnStrCompatible>(
+        &self,
+        language: S,
+    ) -> Option<Ref<CoreLanguageRepresentationFunction>> {
+        let lang_name = language.into_bytes_with_nul();
+        let repr = unsafe {
+            BNGetFunctionLanguageRepresentationIfAvailable(
+                self.handle,
+                lang_name.as_ref().as_ptr() as *const c_char,
+            )
+        };
+        NonNull::new(repr)
+            .map(|handle| unsafe { CoreLanguageRepresentationFunction::ref_from_raw(handle) })
     }
 
     pub fn high_level_il(&self, full_ast: bool) -> Result<Ref<HighLevelILFunction>, ()> {

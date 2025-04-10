@@ -293,13 +293,13 @@ impl CoreRenderLayer {
         Self { handle }
     }
 
-    pub fn render_layers() -> Array<CoreRenderLayer> {
+    pub fn all() -> Array<CoreRenderLayer> {
         let mut count = 0;
         let result = unsafe { BNGetRenderLayerList(&mut count) };
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn render_layer_by_name(name: &str) -> Option<CoreRenderLayer> {
+    pub fn from_name(name: &str) -> Option<CoreRenderLayer> {
         let name_raw = name.to_cstr();
         let result = unsafe { BNGetRenderLayerByName(name_raw.as_ptr()) };
         NonNull::new(result).map(Self::from_raw)

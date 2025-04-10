@@ -54,6 +54,10 @@ impl CoreTypePrinter {
         Self { handle }
     }
 
+    pub(crate) unsafe fn as_raw(&self) -> *mut BNTypePrinter {
+        self.handle.as_ptr()
+    }
+
     pub fn printers() -> Array<CoreTypePrinter> {
         let mut count = 0;
         let result = unsafe { BNGetTypePrinterList(&mut count) };

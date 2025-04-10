@@ -49,6 +49,10 @@ impl CoreTypeParser {
         Self { handle }
     }
 
+    pub(crate) unsafe fn as_raw(&self) -> *mut BNTypeParser {
+        self.handle.as_ptr()
+    }
+
     pub fn parsers() -> Array<CoreTypeParser> {
         let mut count = 0;
         let result = unsafe { BNGetTypeParserList(&mut count) };

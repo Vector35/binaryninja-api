@@ -1,7 +1,6 @@
 #include "il.h"
 
 #include "mips.h"
-#include "arch/powerpc/capstone/arch/AArch64/AArch64GenRegisterInfo.inc"
 
 using namespace BinaryNinja;
 using namespace mips;

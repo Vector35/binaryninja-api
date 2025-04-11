@@ -681,9 +681,39 @@ clickable to navigate to the virtual address.
 Strings can be double clicked to navigate to them, and the table can be sorted or the list filtered by
 typing in the search box.
 
-## Dyld Shared Cache Triage (Alpha)
+## Dyld Shared Cache Triage
 
-The Dyld Shared Cache Triage View (or DSCView) allows loading dyld shared cache files from macOS and iOS. You can selectively load specific images, search for specific symbols, and follow analysis between specific images, search for specific symbols, and follow analysis references between any loaded images in one view.
+The Dyld Shared Cache Triage View (or DSCView) allows loading dyld shared cache files from macOS and iOS. 
+You can selectively load specific images, search for specific symbols, follow analysis between specific images, 
+and follow analysis references between any loaded images in one view.
+
+### Obtaining a Shared Cache
+
+The shared cache is a file that contains all of the shared libraries used by macOS and iOS.
+
+#### Using the ipsw tool
+
+1. Install ipsw
+2. Run `ipsw download ipsw --version [target iOS version] --device [target device model (e.g. iPhone10,3)`
+3. Run `ipsw extract --dyld [filename]`
+
+### Scripting
+
+The Shared Cache Python API is available in the `binaryninja.sharedcache` module. 
+
+Additionally, the `dsc` magic variable is available in the scripting console whenever a Shared Cache is opened.
+
+```python
+# Load all dependency images for the current loaded images
+from binaryninja import sharedcache
+for image in dsc.loaded_images:
+dependencies = dsc.get_image_dependencies(image)
+for dependency in dependencies:
+dep_image = dsc.get_image_with_name(dependency)
+if dep_image is None:
+    continue
+dsc.apply_image(bv, dep_image)
+```
 
 !!! note "Dyld Shared Cache Tabs"
 
@@ -705,12 +735,39 @@ The Dyld Shared Cache Triage View (or DSCView) allows loading dyld shared cache 
 
         The cache view shows currently loaded shared objects and is informational only.
 
-    === "Alpha"
 
-        ![Dyld Shared Cache Alpha](../img/dsc/alpha.png "Dyld Shared Cache Alpha"){ width="800" }
+## KernelCache Triage
 
-        The current DSCView is considered an Alpha feature and more details on the limitations and known-issues is included in this tab. As the DSCView leaves alpha state, this tab will be removed.
+The KernelCache Triage View (or KCView) allows loading specifically MH_FILESET KernelCache files from macOS and iOS.
 
+It is modeled after the Dyld Shared Cache Triage View and allows loading specific images and searching for specific symbols. 
+This feature is still in active development. 
+
+### Obtaining a KernelCache
+
+KernelCaches are located in the root of the ipsw file.
+
+You can obtain one for your target OS by downloading the correct ipsw and unzipping it, or by utilizing PartialZip to pull
+only the KernelCache from the firmware URL. 
+
+### Decompression
+
+KernelCaches are typically automatically decompressed by Binary Ninja, but if auto-decompression fails, it is also able to load 
+caches decompressed by other tools, as long as they are valid MH_FILESET Mach-Os. 
+
+### Scripting
+
+The KernelCache Python API is available in the `binaryninja.kernelcache` module. This API is modeled after a previous
+version of the Dyld Shared Cache API, and will be updated in the next release to mirror its structure. 
+
+A notable difference is a lack of single-section loading; KernelCache only supports loading entire images. 
+
+```python
+# Load the XNU kernel
+from binaryninja import kernelcache
+kc = kernelcache.KernelCache(bv)
+kc.load_image_with_install_name('com.apple.kernel')
+```
 
 ## Byte Overview
 

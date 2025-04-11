@@ -1124,6 +1124,28 @@ namespace BinaryNinja {
 		@addtogroup coreapi
 	 	@{
 	*/
+	struct VersionInfo
+	{
+		uint32_t major {};
+		uint32_t minor {};
+		uint32_t build {};
+		std::string channel;
+
+		VersionInfo() = default;
+
+		bool operator<(const VersionInfo &other) const
+		{
+			char* smallerChan = BNAllocString(channel.c_str());
+			char* largerChan = BNAllocString(other.channel.c_str());
+			BNVersionInfo smaller = { major, minor, build, smallerChan };
+			BNVersionInfo larger = { other.major, other.minor, other.build, largerChan };
+			bool result = BNVersionLessThan(smaller, larger);
+			BNFreeString(smallerChan);
+			BNFreeString(largerChan);
+			return result;
+		}
+	};
+	
 	std::string EscapeString(const std::string& s);
 	std::string UnescapeString(const std::string& s);
 
@@ -1160,6 +1182,8 @@ namespace BinaryNinja {
 	    std::string& output, std::string& errors, bool stdoutIsText = false, bool stderrIsText = true);
 
 	std::string GetVersionString();
+	VersionInfo GetVersionInfo();
+	VersionInfo ParseVersionString(const std::string& version);
 	std::string GetLicensedUserEmail();
 	std::string GetProduct();
 	std::string GetProductType();
@@ -16781,8 +16805,8 @@ namespace BinaryNinja {
 		std::string GetCommit() const;
 		std::string GetRepository() const;
 		std::string GetProjectData();
-		BNVersionInfo GetMinimumVersionInfo() const;
-		BNVersionInfo GetMaximumVersionInfo() const;
+		VersionInfo GetMinimumVersionInfo() const;
+		VersionInfo GetMaximumVersionInfo() const;
 		uint64_t GetLastUpdate();
 		bool IsViewOnly() const;
 		bool IsBeingDeleted() const;

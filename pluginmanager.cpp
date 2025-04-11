@@ -80,14 +80,28 @@ string RepoPlugin::GetLongdescription() const
 	RETURN_STRING(BNPluginGetLongdescription(m_object));
 }
 
-BNVersionInfo RepoPlugin::GetMinimumVersionInfo() const
+VersionInfo RepoPlugin::GetMinimumVersionInfo() const
 {
-	return BNPluginGetMinimumVersionInfo(m_object);
+	auto coreInfo = BNPluginGetMinimumVersionInfo(m_object);
+	VersionInfo result;
+	result.major = coreInfo.major;
+	result.minor = coreInfo.minor;
+	result.build = coreInfo.build;
+	result.channel = coreInfo.channel;
+	BNFreeString(coreInfo.channel);
+	return result;
 }
 
-BNVersionInfo RepoPlugin::GetMaximumVersionInfo() const
+VersionInfo RepoPlugin::GetMaximumVersionInfo() const
 {
-	return BNPluginGetMaximumVersionInfo(m_object);
+	auto coreInfo = BNPluginGetMaximumVersionInfo(m_object);
+	VersionInfo result;
+	result.major = coreInfo.major;
+	result.minor = coreInfo.minor;
+	result.build = coreInfo.build;
+	result.channel = coreInfo.channel;
+	BNFreeString(coreInfo.channel);
+	return result;
 }
 
 string RepoPlugin::GetName() const

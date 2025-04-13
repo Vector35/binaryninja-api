@@ -361,10 +361,6 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 		// <op> rX, rY (4-bit) no rc
 		case PPC_ID_VLE_SE_ADD:
 		case PPC_ID_VLE_SE_ANDC:
-		case PPC_ID_VLE_SE_CMP:
-		case PPC_ID_VLE_SE_CMPH:
-		case PPC_ID_VLE_SE_CMPHL:
-		case PPC_ID_VLE_SE_CMPL:
 		case PPC_ID_VLE_SE_MR:
 		case PPC_ID_VLE_SE_MULLW:
 		case PPC_ID_VLE_SE_OR:
@@ -395,6 +391,18 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 				PushRegister(instruction, PPC_OP_REG_RA, Gpr(ry));
 			}
 
+			break;
+
+		// <op> rX, rY, comparisons
+		case PPC_ID_VLE_SE_CMP:
+		case PPC_ID_VLE_SE_CMPH:
+		case PPC_ID_VLE_SE_CMPHL:
+		case PPC_ID_VLE_SE_CMPL:
+			if (translate)
+				PushRegister(instruction, PPC_OP_REG_CRFD_IMPLY0, Crf(0));
+
+			PushRegister(instruction, PPC_OP_REG_RA, Gpr(rx));
+			PushRegister(instruction, PPC_OP_REG_RB, Gpr(ry));
 			break;
 
 		// <op> rX, rY (4-bit) with rc

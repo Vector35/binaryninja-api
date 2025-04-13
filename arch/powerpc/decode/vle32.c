@@ -197,7 +197,8 @@ static InstructionId Decode32Vle0x1F(uint32_t word32, uint32_t decodeFlags)
 		case 0x471:
 			return PPC_ID_VLE_E_SRWIx;
 
-		return Decode0x1F(word32, decodeFlags);
+		default:
+			return Decode0x1F(word32, decodeFlags);
 	}
 }
 

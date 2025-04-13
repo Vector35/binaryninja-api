@@ -7,6 +7,15 @@
 
 struct CacheSymbol;
 
+// Used when reading symbol/string table info.
+struct TableInfo
+{
+	// VM address where the reading will begin.
+	uint64_t address;
+	// Number of entries in the table.
+	uint32_t entries;
+};
+
 struct SharedCacheMachOHeader
 {
 	uint64_t textBase = 0;
@@ -61,8 +70,7 @@ struct SharedCacheMachOHeader
 	static std::optional<SharedCacheMachOHeader> ParseHeaderForAddress(
 		std::shared_ptr<VirtualMemory> vm, uint64_t address, const std::string& imagePath);
 
-	// TODO: Replace view with address size?
-	std::vector<CacheSymbol> ReadSymbolTable(BinaryNinja::BinaryView& view, VirtualMemory& vm) const;
+	std::vector<CacheSymbol> ReadSymbolTable(VirtualMemory& vm, const TableInfo &symbolInfo, const TableInfo &stringInfo) const;
 
 	bool AddExportTerminalSymbol(
 		std::vector<CacheSymbol>& symbols, const std::string& symbolName, const uint8_t* current,

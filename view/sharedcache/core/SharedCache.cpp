@@ -80,10 +80,14 @@ std::optional<CacheEntry> CacheEntry::FromFile(const std::string& filePath, cons
 		// We found a single dyld data cache entry file. Mark it as such!
 		type = CacheEntryType::DyldData;
 	}
-	else if (fileName.find(".symbols") != std::string::npos)
+	else if (fileName.find(".symbols") != std::string::npos && mappings.size() == 1)
 	{
 		// We found a single symbols cache entry file. Mark it as such!
 		type = CacheEntryType::Symbols;
+		// Adjust the mapping for the symbol file, they seem to be only for the header.
+		// If we do not adjust the mapping than we will not be able to read the symbol table through the virtual memory.
+		mappings[0].fileOffset = 0;
+		mappings[0].size = file->Length();
 	}
 	else if (mappings.size() == 1 && header.imagesCountOld == 0 && header.imagesCount == 0
 		&& header.imagesTextOffset == 0)

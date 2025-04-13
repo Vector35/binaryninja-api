@@ -213,6 +213,71 @@ bool SharedCacheController::ApplyImage(BinaryView& view, const CacheImage& image
 		view.SetFunctionAnalysisUpdateDisabled(true);
 		machoProcessor.ApplyHeader(*image.header);
 		view.SetFunctionAnalysisUpdateDisabled(prevDisabledState);
+		
+		// Add symbols from the symbol cache files.
+		// This is done separate from applying the header as it constitutes knowing about other cache images.
+		// NOTE: If we want to move this into the `ApplyHeader` above we would need to give it some extra cache context.
+		const auto& cache = GetCache();
+		const auto vm = cache.GetVirtualMemory();
+		for (const auto& entry : cache.GetEntries())
+		{
+			if (entry.GetType() != CacheEntryType::Symbols && vm->GetAddressSize() == 8)
+				continue;
+			const auto& header = entry.GetHeader();
+
+			// This is where we get the symbol and string table information from in the .symbols file.
+			dyld_cache_local_symbols_info localSymbolsInfo = {};
+			auto localSymbolsInfoAddr = entry.GetMappedAddress(header.localSymbolsOffset);
+			if (!localSymbolsInfoAddr.has_value())
+				continue;
+			vm->Read(&localSymbolsInfo, *localSymbolsInfoAddr, sizeof(dyld_cache_local_symbols_info));
+
+			// Read each symbols entry, looking for the current image entry.
+			uint64_t localEntriesAddr = *localSymbolsInfoAddr + localSymbolsInfo.entriesOffset;
+			uint64_t localSymbolsAddr = *localSymbolsInfoAddr + localSymbolsInfo.nlistOffset;
+			uint64_t localStringsAddr = *localSymbolsInfoAddr + localSymbolsInfo.stringsOffset;
+			std::vector<dyld_cache_local_symbols_entry_64> symbolEntries;
+			symbolEntries.reserve(localSymbolsInfo.entriesCount);
+			dyld_cache_local_symbols_entry_64 localSymbolsEntry = {};
+
+			// TODO: Clean this up!!!! This is taken from the macho code...
+			auto typeLibraryFromName = [&](const std::string& name) -> Ref<TypeLibrary> {
+				// Check to see if we have already loaded the type library.
+				if (auto typeLib = view.GetTypeLibrary(name))
+					return typeLib;
+
+				auto typeLibs = view.GetDefaultPlatform()->GetTypeLibrariesByName(name);
+				if (!typeLibs.empty())
+					return typeLibs.front();
+				return nullptr;
+			};
+
+			// Pull the available type library for the image we are loading, so we can apply known types.
+			auto typeLib = typeLibraryFromName(image.GetName());
+
+			for (uint32_t i = 0; i < localSymbolsInfo.entriesCount; i++)
+			{
+				vm->Read(&localSymbolsEntry,  localEntriesAddr + i * sizeof(dyld_cache_local_symbols_entry_64),
+				         sizeof(dyld_cache_local_symbols_entry_64));
+				symbolEntries.push_back(localSymbolsEntry);
+				auto imageAddr = cache.GetBaseAddress() + localSymbolsEntry.dylibOffset;
+				if (image.headerAddress == imageAddr)
+				{
+					// We have found the entry to read!
+					// TODO: Support 32bit nlist
+					uint64_t symbolTableStart = localSymbolsAddr + (localSymbolsEntry.nlistStartIndex * sizeof(nlist_64));
+					TableInfo symbolInfo = { symbolTableStart, localSymbolsEntry.nlistCount };
+					TableInfo stringInfo = { localStringsAddr, localSymbolsInfo.stringsSize };
+					const auto symbols = image.header->ReadSymbolTable(*vm, symbolInfo, stringInfo);
+					m_logger->LogInfoF("Found {} symbols in .symbols for image {}", symbols.size(), image.path.c_str());
+					for (const auto& sym : symbols)
+					{
+						auto [symbol, symbolType] = sym.GetBNSymbolAndType(view);
+						ApplySymbol(&view, typeLib, symbol, symbolType);
+					}
+				}
+			}
+		}
 
 		// Load objective-c information.
 		auto objcProcessor = DSCObjC::SharedCacheObjCProcessor(&view, false, image.headerAddress);

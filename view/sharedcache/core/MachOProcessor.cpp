@@ -53,14 +53,14 @@ void SharedCacheMachOProcessor::ApplyHeader(SharedCacheMachOHeader& header)
 		auto typeLib = typeLibraryFromName(header.installName);
 		m_view->BeginBulkModifySymbols();
 
-		// TODO: Why does this need to only happen in linkeditSegment?
 		// Apply symbols from symbol table.
 		if (header.symtab.symoff != 0)
 		{
-			// Mach-O View symtab processing with
-			// a ton of stuff cut out so it can work
 			// NOTE: This table is read relative to the link edit segment file base.
-			const auto symbols = header.ReadSymbolTable(*m_view, *m_vm);
+			// NOTE: This does not handle the shared .symbols cache entry symbols, that is the responsibility of the caller.
+			TableInfo symbolInfo = { header.GetLinkEditFileBase() + header.symtab.symoff, header.symtab.nsyms };
+			TableInfo stringInfo = { header.GetLinkEditFileBase() + header.symtab.stroff, header.symtab.strsize };
+			const auto symbols = header.ReadSymbolTable(*m_vm, symbolInfo, stringInfo);
 			for (const auto& sym : symbols)
 			{
 				auto [symbol, symbolType] = sym.GetBNSymbolAndType(*m_view);
@@ -72,7 +72,6 @@ void SharedCacheMachOProcessor::ApplyHeader(SharedCacheMachOHeader& header)
 		if (header.exportTriePresent)
 		{
 			// NOTE: This table is read relative to the link edit segment file base.
-			// TODO: Remove this and use the m_symbols in the cache?
 			const auto exportSymbols = header.ReadExportSymbolTrie(*m_vm);
 			for (const auto& sym : exportSymbols)
 			{

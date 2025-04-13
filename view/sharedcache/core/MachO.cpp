@@ -457,32 +457,19 @@ std::optional<SharedCacheMachOHeader> SharedCacheMachOHeader::ParseHeaderForAddr
 	return header;
 }
 
-// TODO: Support reading from .symbols file.
-// TODO: Replace view with address size?
-std::vector<CacheSymbol> SharedCacheMachOHeader::ReadSymbolTable(BinaryView& view, VirtualMemory& vm) const
+std::vector<CacheSymbol> SharedCacheMachOHeader::ReadSymbolTable(VirtualMemory& vm, const TableInfo &symbolInfo, const TableInfo &stringInfo) const
 {
-	auto addressSize = view.GetAddressSize();
-	// NOTE: The symbol table will exist within the link edit segment, the table offsets are relative to the file not
-	// the linkedit segment.
-	uint64_t symbolsAddress = GetLinkEditFileBase() + symtab.symoff;
-	uint64_t stringsAddress = GetLinkEditFileBase() + symtab.stroff;
-
-	// TODO: This needs to be passed in as an optional argument.
-	// TODO: Sometimes symbol tables are shared and we have to offset into the table for a specific header.
-	// TODO: The "shared" symbol tables are stored in .symbols files.
-	int nlistStartIndex = 0;
-
 	std::vector<CacheSymbol> symbolList;
-	for (uint64_t i = 0; i < symtab.nsyms; i++)
+	// TODO: This assumes that 95% (or more) are going to be added.
+	symbolList.reserve(symbolInfo.entries);
+	for (uint64_t entryIndex = 0; entryIndex < symbolInfo.entries; entryIndex++)
 	{
-		uint64_t entryIndex = (nlistStartIndex + i);
-
 		nlist_64 nlist = {};
-		if (addressSize == 4)
+		if (vm.GetAddressSize() == 4)
 		{
 			// 32-bit DSC
 			struct nlist nlist32 = {};
-			vm.Read(&nlist, symbolsAddress + (entryIndex * sizeof(nlist32)), sizeof(nlist32));
+			vm.Read(&nlist, symbolInfo.address + (entryIndex * sizeof(nlist32)), sizeof(nlist32));
 			nlist.n_strx = nlist32.n_strx;
 			nlist.n_type = nlist32.n_type;
 			nlist.n_sect = nlist32.n_sect;
@@ -492,24 +479,24 @@ std::vector<CacheSymbol> SharedCacheMachOHeader::ReadSymbolTable(BinaryView& vie
 		else
 		{
 			// 64-bit DSC
-			vm.Read(&nlist, symbolsAddress + (entryIndex * sizeof(nlist)), sizeof(nlist));
+			vm.Read(&nlist, symbolInfo.address + (entryIndex * sizeof(nlist)), sizeof(nlist));
 		}
 
 		auto symbolAddress = nlist.n_value;
 		if (((nlist.n_type & N_TYPE) == N_INDR) || symbolAddress == 0)
 			continue;
 
-		if (nlist.n_strx >= symtab.strsize)
+		if (nlist.n_strx >= stringInfo.entries)
 		{
 			// TODO: where logger?
 			LogError(
 				"Symbol entry at index %llu has a string offset of %u which is outside the strings buffer of size %u "
 			    "for symbol table %x",
-				entryIndex, nlist.n_strx, symtab.strsize, symtab.stroff);
+				entryIndex, nlist.n_strx, stringInfo.address, stringInfo.entries);
 			continue;
 		}
 
-		std::string symbolName = vm.ReadCString(stringsAddress + nlist.n_strx);
+		std::string symbolName = vm.ReadCString(stringInfo.address + nlist.n_strx);
 		if (symbolName == "<redacted>")
 			continue;
 

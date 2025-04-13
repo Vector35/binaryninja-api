@@ -42,8 +42,11 @@ class VirtualMemory
 {
 	std::shared_mutex m_regionMutex;
 	AddressRangeMap<VirtualMemoryRegion> m_regions;
+	uint64_t m_addressSize = 8;
 
 public:
+	uint64_t GetAddressSize() const { return m_addressSize; }
+
 	// At no point do we ever store a strong pointer to a file accessor, that is the job of the `FileAccessorCache`.
 	void MapRegion(WeakFileAccessor fileAccessor, AddressRange mappedRange, uint64_t fileOffset);
 

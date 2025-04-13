@@ -478,10 +478,10 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 		case PPC_ID_VLE_SE_CMPI:
 		{
 			uint16_t ui5 = (word16 >> 4) & 0x1f;
-			PushRegister(instruction, PPC_OP_REG_RA, Gpr(rx));
 			if (translate)
 				PushRegister(instruction, PPC_OP_REG_CRFD_IMPLY0, Crf(0));
 
+			PushRegister(instruction, PPC_OP_REG_RA, Gpr(rx));
 			PushUIMMValue(instruction, ui5);
 			break;
 		}
@@ -663,7 +663,7 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 		// NOTE: LBZ, LHZ, and LWZ in VLE don't turn rX=0 into 0
 		case PPC_ID_VLE_SE_LBZ:
 		{
-			uint32_t sd4 = (word16 >> 12) & 0xf;
+			uint32_t sd4 = (word16 >> 8) & 0xf;
 			PushRegister(instruction, PPC_OP_REG_RD, Gpr(rz));
 			PushMem(instruction, PPC_OP_MEM_RA, Gpr(rx), (int32_t)sd4);
 			break;
@@ -671,7 +671,7 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 
 		case PPC_ID_VLE_SE_LHZ:
 		{
-			uint32_t sd4 = ((word16 >> 12) & 0xf) * 2;
+			uint32_t sd4 = ((word16 >> 8) & 0xf) * 2;
 			PushRegister(instruction, PPC_OP_REG_RD, Gpr(rz));
 			PushMem(instruction, PPC_OP_MEM_RA, Gpr(rx), (int32_t)sd4);
 			break;
@@ -687,7 +687,7 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 
 		case PPC_ID_VLE_SE_LWZ:
 		{
-			uint32_t sd4 = ((word16 >> 12) & 0xf) * 4;
+			uint32_t sd4 = ((word16 >> 8) & 0xf) * 4;
 			PushRegister(instruction, PPC_OP_REG_RD, Gpr(rz));
 			PushMem(instruction, PPC_OP_MEM_RA, Gpr(rx), (int32_t)sd4);
 			break;
@@ -706,7 +706,7 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 		// NOTE: STB, STH, and STW in VLE don't turn rX=0 into 0
 		case PPC_ID_VLE_SE_STB:
 		{
-			uint32_t sd4 = (word16 >> 12) & 0xf;
+			uint32_t sd4 = (word16 >> 8) & 0xf;
 			PushRegister(instruction, PPC_OP_REG_RS, Gpr(rz));
 			PushMem(instruction, PPC_OP_MEM_RA, Gpr(rx), (int32_t)sd4);
 			break;
@@ -714,7 +714,7 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 
 		case PPC_ID_VLE_SE_STH:
 		{
-			uint32_t sd4 = ((word16 >> 12) & 0xf) * 2;
+			uint32_t sd4 = ((word16 >> 8) & 0xf) * 2;
 			PushRegister(instruction, PPC_OP_REG_RS, Gpr(rz));
 			PushMem(instruction, PPC_OP_MEM_RA, Gpr(rx), (int32_t)sd4);
 			break;
@@ -722,7 +722,7 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 
 		case PPC_ID_VLE_SE_STW:
 		{
-			uint32_t sd4 = ((word16 >> 12) & 0xf) * 4;
+			uint32_t sd4 = ((word16 >> 8) & 0xf) * 4;
 			PushRegister(instruction, PPC_OP_REG_RS, Gpr(rz));
 			PushMem(instruction, PPC_OP_MEM_RA, Gpr(rx), (int32_t)sd4);
 			break;

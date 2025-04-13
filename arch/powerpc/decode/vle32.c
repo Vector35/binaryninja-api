@@ -48,7 +48,7 @@ static InstructionId Decode32Vle0x06(uint32_t word32, uint32_t decodeFlags)
 					return PPC_ID_VLE_E_CMPLI;
 
 				default:
-					return PPC_ID_INVALID;
+					;
 			}
 		}
 
@@ -643,19 +643,22 @@ void FillVle32BcxOperands(OperandsList *e_bcx, const Instruction *instruction)
 
 	switch (bo)
 	{
-		// Condition is true/false: use crn
+		// Condition is true/false: use crn, copy target
 		case 0:
 		case 1:
 			uint32_t crn = bi >> 2;
 
 			e_bcx->operands[0].cls = PPC_OP_REG_CRFS_IMPLY0;
 			e_bcx->operands[0].reg = Crf(crn);
-			e_bcx->numOperands = 1;
+			CopyOperand(&e_bcx->operands[1], &instruction->operands[2]);
+			e_bcx->numOperands = 2;
 			break;
 
 		// Decrement CTR, branch if equal/not to 0: no operands
 		case 2:
 		case 3:
+			CopyOperand(&e_bcx->operands[0], &instruction->operands[2]);
+			e_bcx->numOperands = 1;
 			break;
 
 		default:

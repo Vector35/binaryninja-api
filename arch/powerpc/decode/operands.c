@@ -12,11 +12,6 @@ int32_t sign_extend(uint32_t x, unsigned numBits)
 	return (x ^ m) - m;
 }
 
-static void CopyOperand(Operand* dst, const Operand* src)
-{
-	memcpy(dst, src, sizeof *dst);
-}
-
 Register Gpr(uint32_t value)
 {
 	return PPC_REG_GPR0 + value;
@@ -2966,7 +2961,7 @@ void FillBcxOperands(OperandsList* bcx, const Instruction* instruction)
 			bcx->numOperands = 2;
 			break;
 
-		// copy BI, target
+		// use BI, copy target
 		case 4:
 		case 6:
 		case 12:

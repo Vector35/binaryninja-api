@@ -192,14 +192,14 @@ static bool LiftBranches(Architecture* arch, LowLevelILFunction &il, const Instr
 
 			BNLowLevelILLabel* label = il.GetLabelForAddress(arch, target);
 
-			if (label && !(instruction->flags.lk && (target != (addr+4))))
+			if (label && !(instruction->flags.lk && (target != (addr+instruction->numBytes))))
 			{
 				/* branch to an instruction within the same function -- take
 				 * 'lk' bit behavior into account, but don't emit as a call
 				 */
 				if (instruction->flags.lk)
 				{
-					il.AddInstruction(il.SetRegister(addressSize_l, PPC_REG_LR, il.ConstPointer(addressSize_l, addr + 4)));
+					il.AddInstruction(il.SetRegister(addressSize_l, PPC_REG_LR, il.ConstPointer(addressSize_l, addr + instruction->numBytes)));
 				}	
 
 				il.AddInstruction(il.Goto(*label));
@@ -217,17 +217,50 @@ static bool LiftBranches(Architecture* arch, LowLevelILFunction &il, const Instr
 			break;
 		}
 		case PPC_ID_BCx: /* bc */
+		case PPC_ID_VLE_E_BCx:
+		case PPC_ID_VLE_SE_BC:
 		{
 			uint8_t bo = instruction->operands[0].uimm;
 			uint8_t bi = instruction->operands[1].uimm;
 			uint64_t target = instruction->operands[2].label;
 
+			if (instruction->id == PPC_ID_VLE_E_BCx)
+			{
+				// Table 2-5. BO32 Field Encodings in VLEPEM,
+				// mapped to their equivalent BO fields for
+				// normal BC instructions
+				//
+				// 0b00 -> branch if condition false    | 0b00100
+				// 0b01 -> branch if condition true     | 0b01100
+				// 0b10 -> dec CTR, branch if CTR != 0  | 0b10000
+				// 0b11 -> dec CTR, branch if CTR == 0  | 0b10010
+				switch (bo)
+				{
+					case 0: bo = 0x04; break;
+					case 1: bo = 0x0c; break;
+					case 2: bo = 0x10; break;
+					case 3: bo = 0x12; break;
+					default:
+						; // unreachable
+				}
+			}
+			else if (instruction->id == PPC_ID_VLE_SE_BC)
+			{
+				// Table 2-6. BO16 Field Encodings in VLEPEM,
+				// mapped to their equivalent BO fields for
+				// normal BC instructions
+				//
+				// 0b0 -> branch if condition false    | 0b00100
+				// 0b1 -> branch if condition true     | 0b01100
+				bo = (bo << 3) | 0x4;
+			}
+
 			BNLowLevelILLabel *existingTakenLabel = il.GetLabelForAddress(arch, target);
-			BNLowLevelILLabel *existingFalseLabel = il.GetLabelForAddress(arch, addr + 4);
+			BNLowLevelILLabel *existingFalseLabel = il.GetLabelForAddress(arch, addr + instruction->numBytes);
 
 			if (instruction->flags.lk)
 			{
-				il.AddInstruction(il.SetRegister(addressSize_l, PPC_REG_LR, il.ConstPointer(addressSize_l, addr + 4)));
+				il.AddInstruction(il.SetRegister(addressSize_l, PPC_REG_LR, il.ConstPointer(addressSize_l, addr + instruction->numBytes)));
 			}
 
 			LowLevelILLabel takenLabelManual, falseLabelManual;
@@ -251,7 +284,7 @@ static bool LiftBranches(Architecture* arch, LowLevelILFunction &il, const Instr
 			{
 				il.AddInstruction(il.Goto(*takenLabel));
 			}
-			else if (target != addr + 4)
+			else if (target != addr + instruction->numBytes)
 			{
 				if (instruction->flags.lk)
 				{
@@ -295,7 +328,7 @@ static bool LiftBranches(Architecture* arch, LowLevelILFunction &il, const Instr
 					return false;
 			}
 
-			BNLowLevelILLabel *existingFalseLabel = il.GetLabelForAddress(arch, addr + 4);
+			BNLowLevelILLabel *existingFalseLabel = il.GetLabelForAddress(arch, addr + instruction->numBytes);
 			BNLowLevelILLabel* falseLabel = existingFalseLabel;
 
 			LowLevelILLabel takenLabel, falseLabelManual;
@@ -321,6 +354,24 @@ static bool LiftBranches(Architecture* arch, LowLevelILFunction &il, const Instr
 
 			if (wasConditionalBranch && !existingFalseLabel)
 				il.MarkLabel(*falseLabel);
+
+			break;
+		}
+		case PPC_ID_VLE_SE_BLRx:
+		{
+			if (instruction->flags.lk)
+				il.AddInstruction(il.Call(il.Register(addressSize_l, PPC_REG_LR)));
+			else
+				il.AddInstruction(il.Return(il.Register(addressSize_l, PPC_REG_LR)));
+
+			break;
+		}
+		case PPC_ID_VLE_SE_BCTRx:
+		{
+			if (instruction->flags.lk)
+				il.AddInstruction(il.Call(il.Register(addressSize_l, PPC_REG_CTR)));
+			else
+				il.AddInstruction(il.Jump(il.Register(addressSize_l, PPC_REG_CTR)));
 
 			break;
 		}

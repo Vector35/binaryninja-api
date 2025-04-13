@@ -1761,9 +1761,25 @@ extern "C" {
 
 	struct Instruction
 	{
+		// When decoding with VLE -> base PPC translation (ie
+		// `decodeFlags & DECODE_FLAGS_VLE_TRANSLATE != 0), this ID may
+		// not faithfully represent the exact bytes corresponding to this
+		// instruction, but it will always represent something
+		// semantically equivalent; for example, PPC_ID_VLE_SE_BGENI
+		// may end up as a semantically equivalent PPC_ID_LI
+		// instruction.
+		//
+		// When `decodeFlags & DECODE_FLAGS_VLE_TRANSLATE == 0`, this
+		// ID always represents the bytes correspondong to the
+		// instruction
 		InstructionId id;
 
-		// these acronyms are from the documentation; sometimes they
+		// This always represents the number of bytes in the
+		// underlying bytes of the instruction, regardless of whether
+		// it was translated with `DECODE_FLAGS_VLE_TRANSLATE`.
+		size_t numBytes;
+
+		// These acronyms are from the documentation; sometimes they
 		// refer to the same bit (like RC and LK)
 		struct {
 			uint32_t rc: 1;

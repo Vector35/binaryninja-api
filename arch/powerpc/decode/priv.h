@@ -47,6 +47,8 @@ void PushMem(Instruction* instruction, OperandClass cls, Register reg, int32_t o
 void PushMemRA(Instruction* instruction, uint32_t word32);
 void PushLabel(Instruction* instruction, uint64_t address);
 
+void CopyOperand(Operand* dst, const Operand* src);
+
 InstructionId Decode0x04(uint32_t word32, uint32_t decodeFlags);
 InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags);
 InstructionId VleTranslateMnemonic(InstructionId id);

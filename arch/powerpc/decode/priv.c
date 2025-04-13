@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "priv.h"
 
 uint32_t GetA(uint32_t word32)
@@ -107,6 +109,11 @@ uint32_t GetMX64(uint32_t word32)
 	return ((mx & 0x1) << 5) | (mx >> 1);
 }
 
+void CopyOperand(Operand* dst, const Operand* src)
+{
+	memcpy(dst, src, sizeof *dst);
+}
+
 InstructionId VleTranslateMnemonic(InstructionId id)
 {
 	switch (id)
@@ -119,6 +126,7 @@ InstructionId VleTranslateMnemonic(InstructionId id)
 		case PPC_ID_VLE_E_ANDIx: return PPC_ID_ANDIx;
 		case PPC_ID_VLE_E_AND2I: return PPC_ID_ANDIx;
 		case PPC_ID_VLE_E_AND2IS: return PPC_ID_ANDIS;
+		case PPC_ID_VLE_E_Bx: return PPC_ID_Bx;
 		case PPC_ID_VLE_E_CMP16I: return PPC_ID_CMPWI;
 		case PPC_ID_VLE_E_CMPI: return PPC_ID_CMPWI;
 		case PPC_ID_VLE_E_CMPL16I: return PPC_ID_CMPLWI;
@@ -168,6 +176,7 @@ InstructionId VleTranslateMnemonic(InstructionId id)
 		case PPC_ID_VLE_SE_ANDx: return PPC_ID_ANDx;
 		case PPC_ID_VLE_SE_ANDC: return PPC_ID_ANDCx;
 		case PPC_ID_VLE_SE_ANDI: return PPC_ID_ANDIx;
+		case PPC_ID_VLE_SE_Bx: return PPC_ID_Bx;
 		case PPC_ID_VLE_SE_BCLRI: return PPC_ID_ANDIx;
 		case PPC_ID_VLE_SE_BGENI: return PPC_ID_LI;
 		case PPC_ID_VLE_SE_BMASKI: return PPC_ID_LI;
@@ -208,11 +217,10 @@ InstructionId VleTranslateMnemonic(InstructionId id)
 		case PPC_ID_VLE_SE_SUBF: return PPC_ID_SUBFx;
 		case PPC_ID_VLE_SE_SUBIx: return PPC_ID_ADDIx;
 
-		// We purposefully keep branch instructions as VLE instructions,
-		// for translating their operand lists as a special case
-		case PPC_ID_VLE_E_Bx:
+		// We purposefully keep some branch instructions as VLE
+		// instructions, for translating their operand lists as
+		// a special case
 		case PPC_ID_VLE_E_BCx:
-		case PPC_ID_VLE_SE_Bx:
 		case PPC_ID_VLE_SE_BC:
 		case PPC_ID_VLE_SE_BCTRx:
 		case PPC_ID_VLE_SE_BLRx:

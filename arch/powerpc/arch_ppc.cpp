@@ -345,6 +345,7 @@ class PowerpcArchitecture: public Architecture
 
 	bool FillInstruction(Instruction* instruction, const uint8_t* data, size_t length, uint64_t address, uint32_t extraFlags = 0)
 	{
+		instruction->numBytes = length;
 		switch (length)
 		{
 			case 2:
@@ -451,7 +452,9 @@ class PowerpcArchitecture: public Architecture
 
 			case PPC_ID_BCCTRx:
 			case PPC_ID_VLE_SE_BCTRx:
-				result.AddBranch(UnresolvedBranch);
+				if (!instruction.flags.lk)
+					result.AddBranch(UnresolvedBranch);
+
 				break;
 
 			case PPC_ID_TWU:

@@ -1177,7 +1177,7 @@ public:
 				if(reg == 15)
 					result.emplace_back(RegisterToken, "apsr_nzcv");
 				else {
-					snprintf(regname, sizeof(regname), "R%d", reg);
+					get_reg_name(REG_R0 + reg, regname);
 					result.emplace_back(RegisterToken, regname);
 				}
 				break;
@@ -1347,6 +1347,14 @@ public:
 	{
 		switch (intrinsic)
 		{
+		case ARMV7_INTRIN_COPROC_GETONEWORD:
+			return "Coproc_GetOneWord";
+		case ARMV7_INTRIN_COPROC_GETTWOWORDS:
+			return "Coproc_GetTwoWords";
+		case ARMV7_INTRIN_COPROC_SENDONEWORD:
+			return "Coproc_SendOneWord";
+		case ARMV7_INTRIN_COPROC_SENDTWOWORDS:
+			return "Coproc_SendTwoWords";
 		case ARMV7_INTRIN_DBG:
 			return "__dbg";
 		case ARMV7_INTRIN_DMB_SY:
@@ -1403,6 +1411,10 @@ public:
 	virtual vector<uint32_t> GetAllIntrinsics() override
 	{
 		return vector<uint32_t> {
+			ARMV7_INTRIN_COPROC_GETONEWORD,
+			ARMV7_INTRIN_COPROC_GETTWOWORDS,
+			ARMV7_INTRIN_COPROC_SENDONEWORD,
+			ARMV7_INTRIN_COPROC_SENDTWOWORDS,
 			ARMV7_INTRIN_DBG,
 			ARMV7_INTRIN_DMB_SY,
 			ARMV7_INTRIN_DMB_ST,
@@ -1433,6 +1445,37 @@ public:
 	{
 		switch (intrinsic)
 		{
+		case ARMV7_INTRIN_COPROC_GETONEWORD:
+			return {
+				NameAndType("cp", Type::IntegerType(1, false)),
+				NameAndType(Type::IntegerType(1, false)),
+				NameAndType("n", Type::IntegerType(1, false)),
+				NameAndType("m", Type::IntegerType(1, false)),
+				NameAndType(Type::IntegerType(1, false)),
+			};
+		case ARMV7_INTRIN_COPROC_GETTWOWORDS:
+			return {
+				NameAndType("cp", Type::IntegerType(1, false)),
+				NameAndType(Type::IntegerType(1, false)),
+				NameAndType("m", Type::IntegerType(1, false)),
+			};
+		case ARMV7_INTRIN_COPROC_SENDONEWORD:
+			return {
+				NameAndType(Type::IntegerType(4, false)),
+				NameAndType("cp", Type::IntegerType(1, false)),
+				NameAndType(Type::IntegerType(1, false)),
+				NameAndType("n", Type::IntegerType(1, false)),
+				NameAndType("m", Type::IntegerType(1, false)),
+				NameAndType(Type::IntegerType(1, false)),
+			};
+		case ARMV7_INTRIN_COPROC_SENDTWOWORDS:
+			return {
+				NameAndType(Type::IntegerType(4, false)),
+				NameAndType(Type::IntegerType(4, false)),
+				NameAndType("cp", Type::IntegerType(1, false)),
+				NameAndType(Type::IntegerType(1, false)),
+				NameAndType("m", Type::IntegerType(1, false)),
+			};
 		case ARMV7_INTRIN_MRS:
 			return {NameAndType(Type::IntegerType(4, false))};
 		case ARMV7_INTRIN_MSR:
@@ -1448,6 +1491,10 @@ public:
 	{
 		switch (intrinsic)
 		{
+		case ARMV7_INTRIN_COPROC_GETONEWORD:
+			return { Type::IntegerType(4, false) };
+		case ARMV7_INTRIN_COPROC_GETTWOWORDS:
+			return { Type::IntegerType(4, false), Type::IntegerType(4, false) };
 		case ARMV7_INTRIN_MRS:
 			return {Type::IntegerType(4, false)};
 		case ARMV7_INTRIN_MSR:

@@ -973,6 +973,44 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		il.AddInstruction(WriteArithOperand(il, instr, il.LogicalShiftRight(4, ReadArithOperand(il, instr, 0),
 			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_CNZ)));
 		break;
+	case armv7::ARMV7_MCR:
+	case armv7::ARMV7_MCR2:
+	{
+		int dest_reg_field = instr->fields[instr->format->operands[2].field0];
+		int dest_reg = GetRegisterByIndex(dest_reg_field, instr->format->operands[2].prefix);
+
+		il.AddInstruction(
+			il.Intrinsic({ }, ARMV7_INTRIN_COPROC_SENDONEWORD,
+				{
+					il.Register(4, dest_reg),
+					il.Const(1, instr->fields[instr->format->operands[0].field0]),
+					il.Const(1, instr->fields[instr->format->operands[1].field0]),
+					il.Const(1, instr->fields[instr->format->operands[3].field0]),
+					il.Const(1, instr->fields[instr->format->operands[4].field0]),
+					il.Const(1, instr->fields[instr->format->operands[5].field0]),
+				}
+			)
+		);
+		break;
+	}
+	case ARMV7_MCRR:
+	case ARMV7_MCRR2:
+	{
+		int rt = instr->fields[instr->format->operands[2].field0];
+		int rt2 = instr->fields[instr->format->operands[3].field0];
+		il.AddInstruction(
+			il.Intrinsic({ }, ARMV7_INTRIN_COPROC_SENDTWOWORDS,
+				{
+					il.Register(4, rt2),
+					il.Register(4, rt),
+					il.Const(1, instr->fields[instr->format->operands[0].field0]),
+					il.Const(1, instr->fields[instr->format->operands[1].field0]),
+					il.Const(1, instr->fields[instr->format->operands[4].field0]),
+				}
+			)
+		);
+		break;
+	}
 	case armv7::ARMV7_MLA:
 		il.AddInstruction(WriteILOperand(il, instr, 0, il.Add(4, ReadILOperand(il, instr, 3), il.Mult(4, ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2)))));
 		break;
@@ -992,6 +1030,66 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 			il.ShiftLeft(4, il.Const(2, instr->fields[instr->format->operands[1].field0]), il.Const(1, 16)),
 			il.And(4, il.Const(4, 0x0000ffff), ReadILOperand(il, instr, 0)))));
 		break;
+	case armv7::ARMV7_MRC:
+	case armv7::ARMV7_MRC2:
+	{
+		auto params = {
+			il.Const(1, instr->fields[instr->format->operands[0].field0]), /* cp */
+			il.Const(1, instr->fields[instr->format->operands[1].field0]), /* opc1 */
+			il.Const(1, instr->fields[instr->format->operands[3].field0]), /* crn */
+			il.Const(1, instr->fields[instr->format->operands[4].field0]), /* crm */
+			il.Const(1, instr->fields[instr->format->operands[5].field0]), /* opc2 */
+		};
+
+		int dest_reg_field = instr->fields[instr->format->operands[2].field0];
+		if (dest_reg_field == 15)
+		{
+			il.AddInstruction(
+				il.Intrinsic(
+					{ RegisterOrFlag::Register(LLIL_TEMP(0)) },
+					ARMV7_INTRIN_COPROC_GETONEWORD,
+					params
+				)
+			);
+			il.AddInstruction(il.SetFlag(IL_FLAG_N, il.TestBit(4, il.Register(4, LLIL_TEMP(0)), il.Const(1, 31))));
+			il.AddInstruction(il.SetFlag(IL_FLAG_Z, il.TestBit(4, il.Register(4, LLIL_TEMP(0)), il.Const(1, 30))));
+			il.AddInstruction(il.SetFlag(IL_FLAG_C, il.TestBit(4, il.Register(4, LLIL_TEMP(0)), il.Const(1, 29))));
+			il.AddInstruction(il.SetFlag(IL_FLAG_V, il.TestBit(4, il.Register(4, LLIL_TEMP(0)), il.Const(1, 28))));
+			break;
+		}
+
+		int dest_reg = GetRegisterByIndex(dest_reg_field, instr->format->operands[2].prefix);
+
+		il.AddInstruction(
+			il.Intrinsic(
+				{RegisterOrFlag::Register(dest_reg)}, /* outputs */
+				ARMV7_INTRIN_COPROC_GETONEWORD,
+				params /* inputs */
+			)
+		);
+		break;
+	}
+
+	case ARMV7_MRRC:
+	case ARMV7_MRRC2:
+	{
+		int rt = instr->fields[instr->format->operands[2].field0];
+		int rt2 = instr->fields[instr->format->operands[3].field0];
+
+		il.AddInstruction(
+			il.Intrinsic(
+				{ RegisterOrFlag::Register(rt2), RegisterOrFlag::Register(rt) },
+				ARMV7_INTRIN_COPROC_GETTWOWORDS,
+				{
+					il.Const(1, instr->fields[instr->format->operands[0].field0]),
+					il.Const(1, instr->fields[instr->format->operands[1].field0]),
+					il.Const(1, instr->fields[instr->format->operands[4].field0]),
+				}
+			)
+		);
+		break;
+	}
+
 	case armv7::ARMV7_MRS:
 	{
 		int dest_reg = GetRegisterByIndex(instr->fields[instr->format->operands[0].field0], instr->format->operands[0].prefix);

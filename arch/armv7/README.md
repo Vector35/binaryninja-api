@@ -7,8 +7,7 @@ If you're interested in contributing when you submit your first PR, you'll recei
 
 ## Building
 
-Building the architecture plugin requires `cmake` 3.9 or above. You will also need the
-[Binary Ninja API source](https://github.com/Vector35/binaryninja-api).
+Building the architecture plugin requires `cmake` 3.9 or above
 
 Run `cmake`. This can be done either from a separate build directory or from the source
 directory. Once that is complete, run `make` in the build directory to compile the plugin.
@@ -28,31 +27,13 @@ updates do not automatically uninstall your custom build.**
 
 ## Build Example
 
-### acquire repositories
-```
-mkdir ~/repos/vector35
-cd ~/repos/vector35
-git clone git@github.com:Vector35/binaryninja-api.git
-git clone git@github.com:Vector35/arch-armv7.git
-```
-### environment variables
-
-`export BN_API_PATH=~/repos/vector35/binaryninja-api`
-
 ### cmake, make
 ```
-cd arch-armv7
+cd binaryninja-api/arch/armv7
 cmake -DBN_INSTALL_DIR=/Applications/Binary\ Ninja\ DEV.app/ .
 make
 ```
 ## Build Troubleshooting
-
-### example
-
-    CMake Error at CMakeLists.txt:8 (message):
-      Provide path to Binary Ninja API source in BN_API_PATH
-    resolution:
-    ensure BN_API_PATH is in your environment
 
 ### example
 

@@ -111,6 +111,67 @@ for image in dsc.loaded_images:
         dsc.apply_image(bv, dep_image)
 ```
 
+## Settings
+
+Below is the list of shared cache view specific settings:
+
+### Process CFString Metadata
+- **Key**: `loader.dsc.processCFStrings`
+- **Type**: `boolean`
+- **Default**: `true`
+- **Description**: Processes CoreFoundation strings, applying string values from encoded metadata.
+
+---
+
+### Image Auto-Load Regex Pattern
+- **Key**: `loader.dsc.autoLoadPattern`
+- **Type**: `string`
+- **Default**: `.*libsystem_c.dylib`
+- **Description**: A regex pattern to auto-load matching images at the end of view initialization, defaulting to the `libsystem_c` image only.
+
+If you are processing shared cache files headlessly this is a **very** useful setting to override when loading. Because this is a regex
+you can make a regex to match on all the files you want to analyze and skip having to use the python or C++ api to load them manually.
+
+---
+
+### Process Objective-C Metadata
+- **Key**: `loader.dsc.processObjC`
+- **Type**: `boolean`
+- **Default**: `true`
+- **Description**: Processes Objective-C metadata, applying class and method names from encoded metadata.
+
+---
+
+### Region Regex Filter
+- **Key**: `loader.dsc.regionFilter`
+- **Type**: `string`
+- **Default**: `.*LINKEDIT.*`
+- **Description**: Regex filter for region names to skip loading. By default, this filters out the `LINKEDIT` region, which is unnecessary for view processing.
+
+---
+
+### Auto-Load Objective-C Stub Requirements
+- **Key**: `loader.dsc.autoLoadObjCStubRequirements`
+- **Type**: `boolean`
+- **Default**: `true`
+- **Description**: Automatically loads segments required for inlining Objective-C stubs. It is recommended to keep this turned on.
+
+---
+
+### Auto-Load Stub Islands
+- **Key**: `loader.dsc.autoLoadStubsAndDyldData`
+- **Type**: `boolean`
+- **Default**: `true`
+- **Description**: Automatically loads `stub` and `dylddata` regions that contain just branches and pointers. These are required for resolving stub names, and the performance impact is minimal. Recommended to keep this on.
+
+---
+
+### Process Mach-O Function Starts Tables
+- **Key**: `loader.dsc.processFunctionStarts`
+- **Type**: `boolean`
+- **Default**: `true`
+- **Description**: Adds function starts sourced from the `Function Starts` tables to the core for analysis.
+
 ## Glossary
 
 ### CacheEntry

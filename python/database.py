@@ -333,23 +333,23 @@ class Database:
 
 	def read_global(self, key: str) -> str:
 		"""Get a specific global by key"""
-		value = core.BNReadDatabaseGlobal(self.handle, key)
+		value = core.BNReadDatabaseGlobal(self.handle, str(key))
 		assert value is not None
 		return value
 
 	def write_global(self, key: str, value: str):
 		"""Write a global into the database"""
-		core.BNWriteDatabaseGlobal(self.handle, key, value)
+		core.BNWriteDatabaseGlobal(self.handle, str(key), str(value))
 
 	def read_global_data(self, key: str) -> databuffer.DataBuffer:
 		"""Get a specific global by key, as a binary buffer"""
-		handle = core.BNReadDatabaseGlobalData(self.handle, key)
+		handle = core.BNReadDatabaseGlobalData(self.handle, str(key))
 		assert handle is not None
 		return databuffer.DataBuffer(handle=handle)
 
 	def write_global_data(self, key: str, value: databuffer.DataBuffer):
 		"""Write a binary buffer into a global in the database"""
-		core.BNWriteDatabaseGlobalData(self.handle, key, value.handle)
+		core.BNWriteDatabaseGlobalData(self.handle, str(key), value.handle)
 
 	@property
 	def file(self) -> 'filemetadata.FileMetadata':

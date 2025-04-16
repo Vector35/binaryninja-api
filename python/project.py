@@ -139,7 +139,7 @@ class ProjectFile:
 
 		:param new_name: Desired name
 		"""
-		return core.BNProjectFileSetName(self._handle, new_name)
+		return core.BNProjectFileSetName(self._handle, str(new_name))
 
 	@property
 	def description(self) -> str:
@@ -157,7 +157,7 @@ class ProjectFile:
 
 		:param new_description: Desired description
 		"""
-		return core.BNProjectFileSetDescription(self._handle, new_description)
+		return core.BNProjectFileSetDescription(self._handle, str(new_description))
 
 	@property
 	def folder(self) -> Optional['ProjectFolder']:
@@ -257,7 +257,7 @@ class ProjectFolder:
 
 		:param new_name: Desired name
 		"""
-		return core.BNProjectFolderSetName(self._handle, new_name)
+		return core.BNProjectFolderSetName(self._handle, str(new_name))
 
 	@property
 	def description(self) -> str:
@@ -275,7 +275,7 @@ class ProjectFolder:
 
 		:param new_description: Desired description
 		"""
-		return core.BNProjectFolderSetDescription(self._handle, new_description)
+		return core.BNProjectFolderSetDescription(self._handle, str(new_description))
 
 	@property
 	def parent(self) -> Optional['ProjectFolder']:
@@ -353,7 +353,7 @@ class Project:
 		:raises ProjectException: If there was an error creating the project
 		"""
 		binaryninja._init_plugins()
-		project_handle = core.BNCreateProject(str(path), name)
+		project_handle = core.BNCreateProject(str(path), str(name))
 		if project_handle is None:
 			raise ProjectException("Failed to create project")
 		return Project(handle=project_handle)
@@ -417,7 +417,7 @@ class Project:
 
 		:param new_name: Desired name
 		"""
-		core.BNProjectSetName(self._handle, new_name)
+		core.BNProjectSetName(self._handle, str(new_name))
 
 	@property
 	def description(self) -> str:
@@ -435,7 +435,7 @@ class Project:
 
 		:param new_description: Desired description
 		"""
-		core.BNProjectSetDescription(self._handle, new_description)
+		core.BNProjectSetDescription(self._handle, str(new_description))
 
 	def query_metadata(self, key: str) -> MetadataValueType:
 		"""
@@ -443,7 +443,7 @@ class Project:
 
 		:param str key: Key to query
 		"""
-		md_handle = core.BNProjectQueryMetadata(self._handle, key)
+		md_handle = core.BNProjectQueryMetadata(self._handle, str(key))
 		if md_handle is None:
 			raise KeyError(key)
 		return Metadata(handle=md_handle).value
@@ -458,7 +458,7 @@ class Project:
 		_val = value
 		if not isinstance(_val, Metadata):
 			_val = Metadata(_val)
-		core.BNProjectStoreMetadata(self._handle, key, _val.handle)
+		core.BNProjectStoreMetadata(self._handle, str(key), _val.handle)
 
 	def remove_metadata(self, key: str):
 		"""
@@ -466,7 +466,7 @@ class Project:
 
 		:param str key: Key associated with the metadata object to remove
 		"""
-		core.BNProjectRemoveMetadata(self._handle, key)
+		core.BNProjectRemoveMetadata(self._handle, str(key))
 
 	def create_folder_from_path(self, path: Union[PathLike, str], parent: Optional[ProjectFolder] = None, description: str = "", progress_func: ProgressFuncType = _nop) -> ProjectFolder:
 		"""
@@ -483,7 +483,7 @@ class Project:
 			project=self._handle,
 			path=str(path),
 			parent=parent_handle,
-			description=description,
+			description=str(description),
 			ctxt=None,
 			progress=_wrap_progress(progress_func)
 		)
@@ -506,8 +506,8 @@ class Project:
 		folder_handle = core.BNProjectCreateFolder(
 			project=self._handle,
 			parent=parent_handle,
-			name=name,
-			description=description,
+			name=str(name),
+			description=str(description),
 		)
 
 		if folder_handle is None:
@@ -575,8 +575,8 @@ class Project:
 			project=self._handle,
 			path=str(path),
 			folder=folder_handle,
-			name=name,
-			description=description,
+			name=str(name),
+			description=str(description),
 			ctxt=None,
 			progress=_wrap_progress(progress_func)
 		)
@@ -596,6 +596,7 @@ class Project:
 		:param description: Description to assign to the created file
 		:param progress_func: Progress function that will be called as the file is being added
 		"""
+		description = description if description is not None else ""
 		folder_handle = folder._handle if folder is not None else None
 		buf = (ctypes.c_ubyte * len(contents))()
 		ctypes.memmove(buf, contents, len(contents))
@@ -604,8 +605,8 @@ class Project:
 			contents=buf,
 			contentsSize=len(contents),
 			folder=folder_handle,
-			name=name,
-			description=description,
+			name=str(name),
+			description=str(description),
 			ctxt=None,
 			progress=_wrap_progress(progress_func)
 		)
@@ -644,7 +645,7 @@ class Project:
 		:param id: Unique identifier for a file
 		:return: File with the requested id or None
 		"""
-		handle = core.BNProjectGetFileById(self._handle, id)
+		handle = core.BNProjectGetFileById(self._handle, str(id))
 		if handle is None:
 			return None
 		file = ProjectFile(handle)

@@ -896,6 +896,7 @@ from binaryninja import *
 		self.queued_input = ""
 		self.input_ready_state = ScriptingProviderInputReadyState.ReadyForScriptExecution
 		self.debugger_imported = False
+		from .sharedcache import SharedCacheController
 		from binaryninja.settings import Settings
 		if os.environ.get('BN_STANDALONE_DEBUGGER'):
 			# By the time this scriptingprovider.py file is imported, the user plugins are not loaded yet.

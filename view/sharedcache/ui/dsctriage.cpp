@@ -82,10 +82,11 @@ void DSCTriageView::loadImagesWithAddr(const std::vector<uint64_t>& addresses, b
 	for (const uint64_t& addr : addresses)
 	{
 		auto image = controller->GetImageContaining(addr);
-		// Only try to load if we have not already.
-		if (image.has_value() && !controller->IsImageLoaded(*image))
+		if (image.has_value())
 		{
-			images.insert({image->headerAddress, *image});
+			// Only try to load if we have not already.
+			if (!controller->IsImageLoaded(*image))
+				images.insert({image->headerAddress, *image});
 
 			// TODO: We currently only add direct dependencies, may want to make the depth configurable?
 			if (includeDependencies)

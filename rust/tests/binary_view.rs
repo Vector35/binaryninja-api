@@ -39,7 +39,10 @@ fn test_binary_saving() {
     assert!(view.save_to_path(&temp_path));
     // Verify that the file exists and is modified.
     let new_view = binaryninja::load(temp_path).expect("Failed to load new view");
-    assert_eq!(new_view.read_vec(contents_addr, 4), [0xff, 0xff, 0xff, 0xff]);
+    assert_eq!(
+        new_view.read_vec(contents_addr, 4),
+        [0xff, 0xff, 0xff, 0xff]
+    );
 }
 
 #[test]

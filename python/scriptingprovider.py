@@ -1258,7 +1258,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			) / f"python{sys.version_info.major}{sys.version_info.minor}" / "site-packages"
 			site_package_dir.mkdir(parents=True, exist_ok=True)
 			args.extend(["--target", str(site_package_dir)])
-		args.extend(list(filter(len, modules.split("\n"))))
+		args.extend(list(map(lambda module: f"\"{module}\"", filter(len, modules.split("\n")))))
 		logger.log_info(f"Running pip {args}")
 		status, result = self._run_args(args, env=python_env)
 		if status:

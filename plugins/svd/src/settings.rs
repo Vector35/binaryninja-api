@@ -5,12 +5,15 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct LoadSettings {
+    pub add_backing_regions: bool,
     pub add_bitfields: bool,
     pub add_comments: bool,
     pub auto_load_file: Option<PathBuf>,
 }
 
 impl LoadSettings {
+    pub const ADD_BACKING_REGIONS_DEFAULT: bool = true;
+    pub const ADD_BACKING_REGIONS_SETTING: &'static str = "analysis.svd.addBackingRegions";
     pub const ADD_BITFIELDS_DEFAULT: bool = true;
     pub const ADD_BITFIELDS_SETTING: &'static str = "analysis.svd.addBitfields";
     pub const ADD_COMMENTS_DEFAULT: bool = true;
@@ -21,6 +24,15 @@ impl LoadSettings {
     pub fn register() {
         let bn_settings = Settings::new();
 
+        let add_backing_region_props = json!({
+            "title" : "Add Backing Regions",
+            "type" : "boolean",
+            "default" : Self::ADD_BACKING_REGIONS_DEFAULT,
+            "description" : "Whether to add backing regions. Backing regions allow you to write to the underlying memory of a view, but will take up space in the BNDB.",
+        });
+        bn_settings
+            .register_setting_json(Self::ADD_BACKING_REGIONS_SETTING, add_backing_region_props.to_string());
+        
         let add_bitfields_props = json!({
             "title" : "Add Bitfields",
             "type" : "boolean",
@@ -53,6 +65,10 @@ impl LoadSettings {
         let mut load_settings = LoadSettings::default();
         let settings = Settings::new();
         let mut query_opts = QueryOptions::new_with_view(view);
+        if settings.contains(Self::ADD_BACKING_REGIONS_SETTING) {
+            load_settings.add_backing_regions =
+                settings.get_bool_with_opts(Self::ADD_BACKING_REGIONS_SETTING, &mut query_opts);
+        }
         if settings.contains(Self::ADD_BITFIELDS_SETTING) {
             load_settings.add_bitfields =
                 settings.get_bool_with_opts(Self::ADD_BITFIELDS_SETTING, &mut query_opts);
@@ -76,6 +92,7 @@ impl LoadSettings {
 impl Default for LoadSettings {
     fn default() -> Self {
         Self {
+            add_backing_regions: Self::ADD_BACKING_REGIONS_DEFAULT,
             add_bitfields: Self::ADD_BITFIELDS_DEFAULT,
             add_comments: Self::ADD_COMMENTS_DEFAULT,
             auto_load_file: None,

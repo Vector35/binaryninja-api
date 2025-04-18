@@ -163,24 +163,29 @@ impl DeviceMapper {
         let memory_info =
             self.peripheral_block_memory_info(peripheral, address_block, block_name.clone());
 
-        // Add the block segment, section and backing memory.
-        let data_memory = DataBuffer::new(&vec![0; address_block.size as usize]).unwrap();
-        let added_memory = view.memory_map().add_data_memory_region(
-            &block_name,
-            block_addr,
-            &data_memory,
-            Some(memory_info.segment_flags),
-        );
+        // Add the block segment, section and backing memory (optional).
+        if self.settings.add_backing_regions {
+            // Because adding a memory region will add a possibly large memory buffer in the BNDB, this
+            // is optional. if a user disables this, they cannot write to the segment until they add a backing memory region.
+            let data_memory = DataBuffer::new(&vec![0; address_block.size as usize]).unwrap();
+            let added_memory = view.memory_map().add_data_memory_region(
+                &block_name,
+                block_addr,
+                &data_memory,
+                Some(memory_info.segment_flags),
+            );
+            
+            if !added_memory {
+                log::error!(
+                    "Failed to add memory for peripheral block! {} @ 0x{:x}",
+                    block_name,
+                    block_addr
+                );
+            }
+        }
+        
         view.add_segment(memory_info.segment);
         view.add_section(memory_info.section);
-
-        if !added_memory {
-            log::error!(
-                "Failed to add memory for peripheral block! {} @ 0x{:x}",
-                block_name,
-                block_addr
-            );
-        }
 
         // Handle usage specific stuff like adding registers.
         match address_block.usage {

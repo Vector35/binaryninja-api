@@ -677,10 +677,7 @@ unsafe extern "C" fn line_formatter_format_lines_ffi<C: CustomLineFormater>(
     // NOTE dropped by line_formatter_free_lines_ffi
     let ctxt = ctxt as *mut C;
     let lines = core::slice::from_raw_parts(in_lines, in_count);
-    let lines: Vec<_> = lines
-        .into_iter()
-        .map(DisassemblyTextLine::from_raw)
-        .collect();
+    let lines: Vec<_> = lines.iter().map(DisassemblyTextLine::from_raw).collect();
     let result = (*ctxt).format_lines(&lines, &*settings);
     *out_count = result.len();
     let result: Box<[BNDisassemblyTextLine]> = result
@@ -833,7 +830,7 @@ impl HighLevelILTokenEmitter {
         unsafe {
             BNAddHighLevelILVarTextToken(
                 func.handle,
-                &mut BNVariable::from(var),
+                &BNVariable::from(var),
                 self.as_raw(),
                 expr_index,
                 size,

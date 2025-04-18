@@ -13,7 +13,7 @@ use binaryninja::language_representation::{
     register_line_formatter, CoreLanguageRepresentationFunction,
     CoreLanguageRepresentationFunctionType, CoreLineFormatter,
     CustomLanguageRepresentationFunction, CustomLanguageRepresentationFunctionType,
-    CustomLineFormater, HighLevelILTokenEmitter, LineFormatterSettings, OperatorPrecedence,
+    CustomLineFormatter, HighLevelILTokenEmitter, LineFormatterSettings, OperatorPrecedence,
 };
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
@@ -293,7 +293,7 @@ impl TypeParser for MyTypeParser {
     }
 }
 
-impl CustomLineFormater for MyLineFormatter {
+impl CustomLineFormatter for MyLineFormatter {
     fn format_lines(
         &self,
         lines: &[DisassemblyTextLine],

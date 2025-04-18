@@ -628,7 +628,7 @@ unsafe extern "C" fn function_type_free_lines_ffi(
     drop(lines);
 }
 
-pub trait CustomLineFormater {
+pub trait CustomLineFormatter {
     fn format_lines(
         &self,
         lines: &[DisassemblyTextLine],
@@ -650,7 +650,7 @@ impl CoreLineFormatter {
     }
 }
 
-pub fn register_line_formatter<C: CustomLineFormater, B: BnStrCompatible>(
+pub fn register_line_formatter<C: CustomLineFormatter, B: BnStrCompatible>(
     name: B,
     custom: C,
 ) -> CoreLineFormatter {
@@ -667,7 +667,7 @@ pub fn register_line_formatter<C: CustomLineFormater, B: BnStrCompatible>(
     unsafe { CoreLineFormatter::from_raw(ptr::NonNull::new(handle).unwrap()) }
 }
 
-unsafe extern "C" fn line_formatter_format_lines_ffi<C: CustomLineFormater>(
+unsafe extern "C" fn line_formatter_format_lines_ffi<C: CustomLineFormatter>(
     ctxt: *mut ffi::c_void,
     in_lines: *mut BNDisassemblyTextLine,
     in_count: usize,

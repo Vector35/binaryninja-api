@@ -330,6 +330,13 @@ std::optional<TypeInfoVariant> ReadTypeInfoVariant(BinaryView *view, uint64_t ob
     auto baseSymName = baseSym->GetShortName();
     if (baseSymName.find("__cxxabiv1") != std::string::npos)
     {
+        // Skip char array base data variables. This fixes the root base types being constructed twice at 0x0 and +0x8.
+        // 1400f81a0  void* _typeinfo_for___cxxabiv1::__class_type_info = data_1400fce10 <---- First at 0x0
+        // 1400f81a8  struct __cxxabiv1::__class_type_info _typeinfo_for_��@ = <----- Second at 0x8
+        DataVariable baseDV;
+        if (view->GetDataVariableAtAddress(typeInfo->base, baseDV) && baseDV.type->IsArray())
+            return std::nullopt;
+
         // symbol takes the form of `abi::base_name::addend`
         if (baseSymName.find("si_class_type_info") != std::string::npos)
             return TIVSIClass;

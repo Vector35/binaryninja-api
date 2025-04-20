@@ -1449,15 +1449,17 @@ dependencies = [
 
 [[package]]
 name = "idb-rs"
-version = "0.1.9"
-source = "git+https://github.com/Vector35/idb-rs?tag=0.1.9#204766075926e7920badc55b16164748ec76fdf5"
+version = "0.1.10"
+source = "git+https://github.com/Vector35/idb-rs?tag=0.1.10#f5e97df2a7949793d6d7319b95ee9aae2b3792c6"
 dependencies = [
  "anyhow",
  "bincode",
  "clap",
  "flate2",
+ "num-traits",
  "num_enum",
  "serde",
+ "zstd",
 ]
 
 [[package]]
@@ -3616,9 +3618,9 @@ dependencies = [
 
 [[package]]
 name = "zstd"
-version = "0.13.2"
+version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcf2b778a664581e31e389454a7072dab1647606d44f7feea22cd5abb9c9f3f9"
+checksum = "e91ee311a569c327171651566e07972200e76fcfe2242a4fa446149a3881c08a"
 dependencies = [
  "zstd-safe",
 ]

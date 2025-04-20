@@ -8,13 +8,14 @@ use binaryninja::debuginfo::{
     CustomDebugInfoParser, DebugFunctionInfo, DebugInfo, DebugInfoParser,
 };
 
-use idb_rs::id0::{ID0Section, IDBParam1, IDBParam2};
+use idb_rs::id0::{ID0Section, ID0SectionVariants, IDBParam1, IDBParam2};
 use idb_rs::til::section::TILSection;
 use idb_rs::til::TypeVariant as TILTypeVariant;
 
 use log::{error, trace, warn, LevelFilter};
 
 use anyhow::Result;
+use idb_rs::{IDAKind, IDAUsize};
 use binaryninja::logger::Logger;
 
 struct IDBDebugInfoParser;
@@ -118,7 +119,7 @@ fn parse_idb_info(
     };
     trace!("Parsing a IDB file");
     let file = std::io::BufReader::new(file);
-    let mut parser = idb_rs::IDBParser::new(file)?;
+    let mut parser = idb_rs::IDAVariants::new(file)?;
     if let Some(til_section) = parser.til_section_offset() {
         trace!("Parsing the TIL section");
         let til = parser.read_til_section(til_section)?;
@@ -128,9 +129,16 @@ fn parse_idb_info(
 
     if let Some(id0_section) = parser.id0_section_offset() {
         trace!("Parsing the ID0 section");
-        let id0 = parser.read_id0_section(id0_section)?;
+        let id0_variant = parser.read_id0_section(id0_section)?;
         // progress 50%-100%
-        parse_id0_section_info(debug_info, bv, debug_file, &id0)?;
+        match id0_variant {
+            ID0SectionVariants::IDA32(id0) => {
+                parse_id0_section_info(debug_info, bv, debug_file, &id0)?;
+            }
+            ID0SectionVariants::IDA64(id0) => {
+                parse_id0_section_info(debug_info, bv, debug_file, &id0)?;
+            }
+        }
     }
 
     Ok(())
@@ -148,7 +156,7 @@ fn parse_til_info(
     };
     let mut file = std::io::BufReader::new(file);
     trace!("Parsing the TIL section");
-    let til = TILSection::read(&mut file, idb_rs::IDBSectionCompression::None)?;
+    let til = TILSection::read(&mut file)?;
     import_til_section(debug_info, debug_file, &til, progress)
 }
 
@@ -218,11 +226,11 @@ pub fn import_til_section(
     Ok(())
 }
 
-fn parse_id0_section_info(
+fn parse_id0_section_info<K: IDAKind>(
     debug_info: &mut DebugInfo,
     bv: &BinaryView,
     debug_file: &BinaryView,
-    id0: &ID0Section,
+    id0: &ID0Section<K>,
 ) -> Result<()> {
     let version = match id0.ida_info()? {
         idb_rs::id0::IDBParam::V1(IDBParam1 { version, .. })
@@ -230,6 +238,7 @@ fn parse_id0_section_info(
     };
 
     for (addr, info) in get_info(id0, version)? {
+        let addr = addr.into_u64();
         // just in case we change this struct in the future, this line will for us to review this code
         // TODO merge this data with folder locations
         let AddrInfo {
@@ -264,7 +273,7 @@ fn parse_id0_section_info(
                 }
             });
 
-        match (label, &ty, bnty) {
+        match (&label, &ty, bnty) {
             (_, Some(ty), bnty) if matches!(&ty.type_variant, TILTypeVariant::Function(_)) => {
                 if bnty.is_none() {
                     error!("Unable to convert the function type at {addr:#x}",)
@@ -272,7 +281,7 @@ fn parse_id0_section_info(
                 if !debug_info.add_function(&DebugFunctionInfo::new(
                     None,
                     None,
-                    label.map(str::to_string),
+                    label.as_deref().map(str::to_string),
                     bnty,
                     Some(addr),
                     None,
@@ -283,7 +292,7 @@ fn parse_id0_section_info(
                 }
             }
             (_, Some(_ty), Some(bnty)) => {
-                if !debug_info.add_data_variable(addr, &bnty, label, &[]) {
+                if !debug_info.add_data_variable(addr, &bnty, label.as_deref(), &[]) {
                     error!("Unable to add the type at {addr:#x}")
                 }
             }
@@ -291,7 +300,7 @@ fn parse_id0_section_info(
                 // TODO types come from the TIL sections, can we make all types be just NamedTypes?
                 error!("Unable to convert type {addr:#x}");
                 // TODO how to add a label without a type associacted with it?
-                if let Some(name) = label {
+                if let Some(name) = label.as_deref() {
                     if !debug_info.add_data_variable(
                         addr,
                         &binaryninja::types::Type::void(),

@@ -9,5 +9,5 @@ license = "Apache-2.0"
 binaryninja.workspace = true
 binaryninjacore-sys.workspace = true
 gimli = "0.31"
-zstd = "0.13.2"
+zstd = "0.13.3"
 thiserror = "2.0"

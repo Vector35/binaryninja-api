@@ -768,6 +768,8 @@ void ItaniumRTTIProcessor::ProcessVFT()
                 continue;
             // Verify that there is two field sized values above the type info pointer
             optReader.Seek(ref - ArchFieldSize(m_view) * 2);
+            if (!m_view->IsValidOffset(optReader.GetOffset()))
+                continue;
             auto beforeTypeInfoRef = optReader.ReadPointer();
             if (m_view->IsValidOffset(beforeTypeInfoRef))
                 continue;

@@ -546,6 +546,15 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 	if ((instr->status & STATUS_UNDEFINED) || (!instr->format))
 		return false;
 
+	bool setflag = false;
+	const instruction_format* format = instr->format;
+
+	/* the standard "{S}" setflag field */
+	if (format->operationFlags & INSTR_FORMAT_FLAG_OPTIONAL_STATUS)
+		if(IS_FIELD_PRESENT(instr, FIELD_S))
+			if(instr->fields[FIELD_S])
+				setflag = true;
+
 	switch (instr->mnem)
 	{
 	case armv7::ARMV7_ADC:
@@ -560,13 +569,16 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		break;
 	case armv7::ARMV7_ADD:
 	case armv7::ARMV7_ADDW:
-		if (IsPCRelativeDataAddress(instr, ifThenBlock))
-			il.AddInstruction(WriteArithOperand(il, instr, il.Add(4, il.And(4, ReadILOperand(il, instr, 1, 4), il.Const(4, ~3)),
-				ReadILOperand(il, instr, 2, 4))));
-		else
-			il.AddInstruction(WriteArithOperand(il, instr, il.Add(4, ReadArithOperand(il, instr, 0),
-				ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
-		break;
+		if (!setflag)
+		{
+			if (IsPCRelativeDataAddress(instr, ifThenBlock))
+				il.AddInstruction(WriteArithOperand(il, instr, il.Add(4, il.And(4, ReadILOperand(il, instr, 1, 4), il.Const(4, ~3)),
+					ReadILOperand(il, instr, 2, 4))));
+			else
+				il.AddInstruction(WriteArithOperand(il, instr, il.Add(4, ReadArithOperand(il, instr, 0),
+					ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
+			break;
+		}
 	case armv7::ARMV7_ADDS:
 		il.AddInstruction(WriteArithOperand(il, instr, il.Add(4, ReadArithOperand(il, instr, 0),
 			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_ALL)));
@@ -576,17 +588,23 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 			instr->format->operands[1].field0]) & (~3))));
 		break;
 	case armv7::ARMV7_AND:
-		il.AddInstruction(WriteArithOperand(il, instr, il.And(4, ReadArithOperand(il, instr, 0),
+		if (!setflag)
+		{
+			il.AddInstruction(WriteArithOperand(il, instr, il.And(4, ReadArithOperand(il, instr, 0),
 			ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
-		break;
+			break;
+		}
 	case armv7::ARMV7_ANDS:
 		il.AddInstruction(WriteArithOperand(il, instr, il.And(4, ReadArithOperand(il, instr, 0),
 			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_ALL)));
 		break;
 	case armv7::ARMV7_ASR:
-		il.AddInstruction(WriteArithOperand(il, instr, il.ArithShiftRight(4, ReadArithOperand(il, instr, 0),
+		if (!setflag)
+		{
+			il.AddInstruction(WriteArithOperand(il, instr, il.ArithShiftRight(4, ReadArithOperand(il, instr, 0),
 			ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_CNZ : 0)));
-		break;
+			break;
+		}
 	case armv7::ARMV7_ASRS:
 		il.AddInstruction(WriteArithOperand(il, instr, il.ArithShiftRight(4, ReadArithOperand(il, instr, 0),
 			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_CNZ)));
@@ -641,9 +659,12 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		break;
 	}
 	case armv7::ARMV7_BIC:
-		il.AddInstruction(WriteArithOperand(il, instr, il.And(4, ReadArithOperand(il, instr, 0),
+		if (!setflag)
+		{
+			il.AddInstruction(WriteArithOperand(il, instr, il.And(4, ReadArithOperand(il, instr, 0),
 			il.Not(4, ReadArithOperand(il, instr, 1)), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
-		break;
+			break;
+		}
 	case armv7::ARMV7_BICS:
 		il.AddInstruction(WriteArithOperand(il, instr, il.And(4, ReadArithOperand(il, instr, 0),
 			il.Not(4, ReadArithOperand(il, instr, 1)), ifThenBlock ? 0 : IL_FLAGWRITE_ALL)));
@@ -775,9 +796,12 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		}
 		break;
 	case armv7::ARMV7_EOR:
-		il.AddInstruction(WriteArithOperand(il, instr, il.Xor(4, ReadArithOperand(il, instr, 0),
-			ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
-		break;
+		if (!setflag)
+		{
+			il.AddInstruction(WriteArithOperand(il, instr, il.Xor(4, ReadArithOperand(il, instr, 0),
+				ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
+			break;
+		}
 	case armv7::ARMV7_EORS:
 		il.AddInstruction(WriteArithOperand(il, instr, il.Xor(4, ReadArithOperand(il, instr, 0),
 			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_ALL)));
@@ -958,17 +982,23 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		}
 		break;
 	case armv7::ARMV7_LSL:
-		il.AddInstruction(WriteArithOperand(il, instr, il.ShiftLeft(4, ReadArithOperand(il, instr, 0),
-			ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_CNZ : 0)));
-		break;
+		if (!setflag)
+		{
+			il.AddInstruction(WriteArithOperand(il, instr, il.ShiftLeft(4, ReadArithOperand(il, instr, 0),
+				ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_CNZ : 0)));
+			break;
+		}
 	case armv7::ARMV7_LSLS:
 		il.AddInstruction(WriteArithOperand(il, instr, il.ShiftLeft(4, ReadArithOperand(il, instr, 0),
 			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_CNZ)));
 		break;
 	case armv7::ARMV7_LSR:
-		il.AddInstruction(WriteArithOperand(il, instr, il.LogicalShiftRight(4, ReadArithOperand(il, instr, 0),
-			ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_CNZ : 0)));
-		break;
+		if (!setflag)
+		{
+			il.AddInstruction(WriteArithOperand(il, instr, il.LogicalShiftRight(4, ReadArithOperand(il, instr, 0),
+				ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_CNZ : 0)));
+			break;
+		}
 	case armv7::ARMV7_LSRS:
 		il.AddInstruction(WriteArithOperand(il, instr, il.LogicalShiftRight(4, ReadArithOperand(il, instr, 0),
 			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_CNZ)));
@@ -981,8 +1011,11 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		break;
 	case armv7::ARMV7_MOV:
 	case armv7::ARMV7_MOVW:
-		il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1)));
-		break;
+		if (!setflag)
+		{
+			il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1)));
+			break;
+		}
 	case armv7::ARMV7_MOVS:
 		il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1), 4,
 			ifThenBlock ? 0 : IL_FLAGWRITE_NZ));
@@ -1026,16 +1059,22 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		break;
 	}
 	case armv7::ARMV7_MUL:
-		il.AddInstruction(WriteArithOperand(il, instr, il.Mult(4, ReadArithOperand(il, instr, 0),
-			ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_NZ : 0)));
-		break;
+		if (!setflag)
+		{
+			il.AddInstruction(WriteArithOperand(il, instr, il.Mult(4, ReadArithOperand(il, instr, 0),
+				ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_NZ : 0)));
+			break;
+		}
 	case armv7::ARMV7_MULS:
 		il.AddInstruction(WriteArithOperand(il, instr, il.Mult(4, ReadArithOperand(il, instr, 0),
 			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_NZ)));
 		break;
 	case armv7::ARMV7_MVN:
-		il.AddInstruction(WriteILOperand(il, instr, 0, il.Not(4, ReadArithOperand(il, instr, 1))));
-		break;
+		if (!setflag)
+		{
+			il.AddInstruction(WriteILOperand(il, instr, 0, il.Not(4, ReadArithOperand(il, instr, 1))));
+			break;
+		}
 	case armv7::ARMV7_MVNS:
 		il.AddInstruction(WriteILOperand(il, instr, 0, il.Not(4, ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_ALL)));
 		break;
@@ -1047,9 +1086,12 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 			il.Not(4, ReadArithOperand(il, instr, 1)), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
 		break;
 	case armv7::ARMV7_ORR:
-		il.AddInstruction(WriteArithOperand(il, instr, il.Or(4, ReadArithOperand(il, instr, 0),
-			ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
-		break;
+		if (!setflag)
+		{
+			il.AddInstruction(WriteArithOperand(il, instr, il.Or(4, ReadArithOperand(il, instr, 0),
+				ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
+			break;
+		}
 	case armv7::ARMV7_ORRS:
 		il.AddInstruction(WriteArithOperand(il, instr, il.Or(4, ReadArithOperand(il, instr, 0),
 			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_ALL)));
@@ -1073,17 +1115,23 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		il.AddInstruction(WriteILOperand(il, instr, 0, il.Or(4, il.ShiftLeft(4, il.Register(2, LLIL_TEMP(1)), il.Const(1, 16)), il.Register(2, LLIL_TEMP(0)))));
 		break;
     case armv7::ARMV7_ROR:
-        il.AddInstruction(WriteArithOperand(il, instr, il.RotateRight(4, ReadArithOperand(il, instr, 0),
-            ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
-        break;
+    	if (!setflag)
+    	{
+		    il.AddInstruction(WriteArithOperand(il, instr, il.RotateRight(4, ReadArithOperand(il, instr, 0),
+			    ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
+		    break;
+	    }
     case armv7::ARMV7_RORS:
         il.AddInstruction(WriteArithOperand(il, instr, il.RotateRight(4, ReadArithOperand(il, instr, 0),
             ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_ALL)));
         break;
 	case armv7::ARMV7_RSB:
-		il.AddInstruction(WriteArithOperand(il, instr, il.Sub(4, ReadArithOperand(il, instr, 1),
-			ReadArithOperand(il, instr, 0), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
-		break;
+		if (!setflag)
+		{
+			il.AddInstruction(WriteArithOperand(il, instr, il.Sub(4, ReadArithOperand(il, instr, 1),
+				ReadArithOperand(il, instr, 0), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
+			break;
+		}
 	case armv7::ARMV7_RSBS:
 		il.AddInstruction(WriteArithOperand(il, instr, il.Sub(4, ReadArithOperand(il, instr, 1),
 			ReadArithOperand(il, instr, 0), ifThenBlock ? 0 : IL_FLAGWRITE_ALL)));
@@ -1165,11 +1213,14 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		il.AddInstruction(WriteArithOperand(il, instr, il.DivSigned(4, ReadArithOperand(il, instr, 0), ReadArithOperand(il, instr, 1))));
 		break;
 	case armv7::ARMV7_SBC:
-		il.AddInstruction(WriteArithOperand(il, instr, il.SubBorrow(4, ReadArithOperand(il, instr, 0),
-									       ReadArithOperand(il, instr, 1),
-									       il.Not(1, il.Flag(IL_FLAG_C)),
-									       WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
-		break;
+		if (!setflag)
+		{
+			il.AddInstruction(WriteArithOperand(il, instr, il.SubBorrow(4, ReadArithOperand(il, instr, 0),
+				ReadArithOperand(il, instr, 1),
+				il.Not(1, il.Flag(IL_FLAG_C)),
+				WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
+			break;
+		}
 	case armv7::ARMV7_SBCS:
 		il.AddInstruction(WriteArithOperand(il, instr, il.SubBorrow(4, ReadArithOperand(il, instr, 0),
 									       ReadArithOperand(il, instr, 1),
@@ -1344,13 +1395,17 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 	}
 	case armv7::ARMV7_SUB:
 	case armv7::ARMV7_SUBW:
-		if (IsPCRelativeDataAddress(instr, ifThenBlock))
-			il.AddInstruction(WriteArithOperand(il, instr, il.Sub(4, il.And(4, ReadILOperand(il, instr, 1, 4), il.Const(4, ~3)),
-				ReadILOperand(il, instr, 2, 4))));
-		else
-			il.AddInstruction(WriteArithOperand(il, instr, il.Sub(4, ReadArithOperand(il, instr, 0),
-				ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
-		break;
+		if (!setflag)
+		{
+			if (IsPCRelativeDataAddress(instr, ifThenBlock))
+				il.AddInstruction(WriteArithOperand(il, instr, il.Sub(4,
+					il.And(4, ReadILOperand(il, instr, 1, 4), il.Const(4, ~3)),
+					ReadILOperand(il, instr, 2, 4))));
+			else
+				il.AddInstruction(WriteArithOperand(il, instr, il.Sub(4, ReadArithOperand(il, instr, 0),
+					ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
+			break;
+		}
 	case armv7::ARMV7_SUBS:
 		il.AddInstruction(WriteArithOperand(il, instr, il.Sub(4, ReadArithOperand(il, instr, 0),
 			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_ALL)));

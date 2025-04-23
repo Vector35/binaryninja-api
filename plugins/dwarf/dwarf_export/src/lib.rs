@@ -1,5 +1,15 @@
 mod edit_distance;
 
+use binaryninja::interaction::form::{Form, FormInputField};
+use binaryninja::logger::Logger;
+use binaryninja::{
+    binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
+    command::{register_command, Command},
+    confidence::Conf,
+    rc::Ref,
+    symbol::SymbolType,
+    types::{MemberAccess, StructureType, Type, TypeClass},
+};
 use gimli::{
     constants,
     write::{
@@ -7,21 +17,10 @@ use gimli::{
         UnitEntryId,
     },
 };
+use log::{error, info, LevelFilter};
 use object::{write, Architecture, BinaryFormat, SectionKind};
 use std::fs;
-
-use binaryninja::logger::Logger;
-use binaryninja::{
-    binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
-    command::{register_command, Command},
-    confidence::Conf,
-    interaction,
-    interaction::{FormResponses, FormResponses::Index},
-    rc::Ref,
-    symbol::SymbolType,
-    types::{MemberAccess, StructureType, Type, TypeClass},
-};
-use log::{error, info, LevelFilter};
+use std::path::{Path, PathBuf};
 
 fn export_type(
     name: String,
@@ -598,10 +597,11 @@ fn export_data_vars(
     }
 }
 
-fn present_form(bv_arch: &str) -> Vec<FormResponses> {
-    // TODO : Verify inputs (like save location) so that we can fail early
-    // TODO : Add Language field
-    // TODO : Choose to export types/functions/etc
+// TODO : Verify inputs (like save location) so that we can fail early
+// TODO : Add Language field
+// TODO : Choose to export types/functions/etc
+// TODO: Add actual / better support for formats other than elf?
+fn create_export_form(bv_arch: &str) -> Form {
     let archs = [
         "Unknown",
         "AArch64",
@@ -627,80 +627,37 @@ fn present_form(bv_arch: &str) -> Vec<FormResponses> {
         "Wasm32",
         "Xtensa",
     ];
-    interaction::FormInputBuilder::new()
-        .save_file_field(
-            "Save Location",
-            Some("Debug Files (*.dwo *.debug);;All Files (*)"),
-            None,
-            None,
-        )
-        .choice_field(
-            "Architecture",
-            &archs,
-            archs
-                .iter()
-                .enumerate()
-                .min_by(|&(_, arch_name_1), &(_, arch_name_2)| {
-                    edit_distance::distance(bv_arch, arch_name_1)
-                        .cmp(&edit_distance::distance(bv_arch, arch_name_2))
-                })
-                .map(|(index, _)| index),
-        )
-        // Add actual / better support for formats other than elf?
-        // .choice_field(
-        //     "Container Format",
-        //     &["Coff", "Elf", "MachO", "Pe", "Wasm", "Xcoff"],
-        //     None,
-        // )
-        .get_form_input("Export as DWARF")
+
+    let mut form = Form::new("Export as DWARF");
+    form.add_field(FormInputField::SaveFileName {
+        prompt: "Save Location".to_string(),
+        extension: Some("Debug Files (*.dwo *.debug);;All Files (*)".to_string()),
+        default_name: None,
+        default: None,
+        value: None,
+    });
+    form.add_field(FormInputField::Choice {
+        prompt: "Architecture".to_string(),
+        choices: archs.iter().map(|arch| arch.to_string()).collect(),
+        default: archs
+            .iter()
+            .enumerate()
+            .min_by(|&(_, arch_name_1), &(_, arch_name_2)| {
+                edit_distance::distance(bv_arch, arch_name_1)
+                    .cmp(&edit_distance::distance(bv_arch, arch_name_2))
+            })
+            .map(|(index, _)| index),
+        value: 0,
+    });
+    form
 }
 
 fn write_dwarf<T: gimli::Endianity>(
-    responses: Vec<FormResponses>,
+    file_path: &Path,
+    arch: Architecture,
     endian: T,
     dwarf: &mut DwarfUnit,
 ) {
-    if responses.len() < 2 {
-        return;
-    }
-
-    let arch = match responses[1] {
-        Index(0) => Architecture::Unknown,
-        Index(1) => Architecture::Aarch64,
-        Index(2) => Architecture::Aarch64_Ilp32,
-        Index(3) => Architecture::Arm,
-        Index(4) => Architecture::Avr,
-        Index(5) => Architecture::Bpf,
-        Index(6) => Architecture::I386,
-        Index(7) => Architecture::X86_64,
-        Index(8) => Architecture::X86_64_X32,
-        Index(9) => Architecture::Hexagon,
-        Index(10) => Architecture::LoongArch64,
-        Index(11) => Architecture::Mips,
-        Index(12) => Architecture::Mips64,
-        Index(13) => Architecture::Msp430,
-        Index(14) => Architecture::PowerPc,
-        Index(15) => Architecture::PowerPc64,
-        Index(16) => Architecture::Riscv32,
-        Index(17) => Architecture::Riscv64,
-        Index(18) => Architecture::S390x,
-        Index(19) => Architecture::Sbf,
-        Index(20) => Architecture::Sparc64,
-        Index(21) => Architecture::Wasm32,
-        Index(22) => Architecture::Xtensa,
-        _ => Architecture::Unknown,
-    };
-
-    // let format = match responses[2] {
-    //     Index(0) => BinaryFormat::Coff,
-    //     Index(1) => BinaryFormat::Elf,
-    //     Index(2) => BinaryFormat::MachO,
-    //     Index(3) => BinaryFormat::Pe,
-    //     Index(4) => BinaryFormat::Wasm,
-    //     Index(5) => BinaryFormat::Xcoff,
-    //     _ => BinaryFormat::Elf,
-    // };
-
     // TODO : Look in to other options (mangling, flags, etc (see Object::new))
     let mut out_object = write::Object::new(
         BinaryFormat::Elf,
@@ -738,16 +695,14 @@ fn write_dwarf<T: gimli::Endianity>(
         })
         .unwrap();
 
-    if let interaction::FormResponses::String(filename) = &responses[0] {
-        if let Ok(out_data) = out_object.write() {
-            if let Err(err) = fs::write(filename, out_data) {
-                error!("Failed to write DWARF file: {}", err);
-            } else {
-                info!("Successfully saved as DWARF to `{}`", filename);
-            }
+    if let Ok(out_data) = out_object.write() {
+        if let Err(err) = fs::write(file_path, out_data) {
+            error!("Failed to write DWARF file: {}", err);
         } else {
-            error!("Failed to write DWARF with requested settings");
+            info!("Successfully saved as DWARF to `{:?}`", file_path);
         }
+    } else {
+        error!("Failed to write DWARF with requested settings");
     }
 }
 
@@ -757,7 +712,42 @@ fn export_dwarf(bv: &BinaryView) {
     } else {
         String::from("Unknown")
     };
-    let responses = present_form(arch_name.as_str());
+    let mut export_form = create_export_form(arch_name.as_str());
+    if !export_form.prompt() {
+        return;
+    }
+
+    let arch_field = export_form.get_field_with_name("Architecture").unwrap();
+    let arch_field_idx = arch_field.try_value_index().unwrap_or_default();
+    let arch = match arch_field_idx {
+        0 => Architecture::Unknown,
+        1 => Architecture::Aarch64,
+        2 => Architecture::Aarch64_Ilp32,
+        3 => Architecture::Arm,
+        4 => Architecture::Avr,
+        5 => Architecture::Bpf,
+        6 => Architecture::I386,
+        7 => Architecture::X86_64,
+        8 => Architecture::X86_64_X32,
+        9 => Architecture::Hexagon,
+        10 => Architecture::LoongArch64,
+        11 => Architecture::Mips,
+        12 => Architecture::Mips64,
+        13 => Architecture::Msp430,
+        14 => Architecture::PowerPc,
+        15 => Architecture::PowerPc64,
+        16 => Architecture::Riscv32,
+        17 => Architecture::Riscv64,
+        18 => Architecture::S390x,
+        19 => Architecture::Sbf,
+        20 => Architecture::Sparc64,
+        21 => Architecture::Wasm32,
+        22 => Architecture::Xtensa,
+        _ => Architecture::Unknown,
+    };
+
+    let save_loc_field = export_form.get_field_with_name("Save Location").unwrap();
+    let save_loc_path = PathBuf::from(save_loc_field.try_value_string().unwrap_or_default());
 
     let encoding = gimli::Encoding {
         format: gimli::Format::Dwarf32,
@@ -782,9 +772,9 @@ fn export_dwarf(bv: &BinaryView) {
     // TODO: Sections? Segments?
 
     if bv.default_endianness() == binaryninja::Endianness::LittleEndian {
-        write_dwarf(responses, gimli::LittleEndian, &mut dwarf);
+        write_dwarf(&save_loc_path, arch, gimli::LittleEndian, &mut dwarf);
     } else {
-        write_dwarf(responses, gimli::BigEndian, &mut dwarf);
+        write_dwarf(&save_loc_path, arch, gimli::BigEndian, &mut dwarf);
     };
 }
 

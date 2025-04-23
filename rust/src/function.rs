@@ -480,15 +480,15 @@ impl Function {
     /// Get the language representation of the function.
     ///
     ///  * `language` - The language representation, ex. "Pseudo C".
-    pub fn language_representation<S: BnStrCompatible>(
+    pub fn language_representation(
         &self,
-        language: S,
+        language: &str,
     ) -> Option<Ref<CoreLanguageRepresentationFunction>> {
-        let lang_name = language.into_bytes_with_nul();
+        let lang_name = language.to_cstr();
         let repr = unsafe {
             BNGetFunctionLanguageRepresentation(
                 self.handle,
-                lang_name.as_ref().as_ptr() as *const c_char,
+                lang_name.as_ptr(),
             )
         };
         NonNull::new(repr)
@@ -498,15 +498,15 @@ impl Function {
     /// Get the language representation of the function, if available.
     ///
     ///  * `language` - The language representation, ex. "Pseudo C".
-    pub fn language_representation_if_available<S: BnStrCompatible>(
+    pub fn language_representation_if_available(
         &self,
-        language: S,
+        language: &str,
     ) -> Option<Ref<CoreLanguageRepresentationFunction>> {
-        let lang_name = language.into_bytes_with_nul();
+        let lang_name = language.to_cstr();
         let repr = unsafe {
             BNGetFunctionLanguageRepresentationIfAvailable(
                 self.handle,
-                lang_name.as_ref().as_ptr() as *const c_char,
+                lang_name.as_ptr(),
             )
         };
         NonNull::new(repr)

@@ -1103,6 +1103,46 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNApplyDebugInfo(self.as_ref().handle, debug_info.handle) }
     }
 
+    fn show_plaintext_report(&self, title: &str, plaintext: &str) {
+        let title = title.to_cstr();
+        let plaintext = plaintext.to_cstr();
+        unsafe {
+            BNShowPlainTextReport(
+                self.as_ref().handle,
+                title.as_ref().as_ptr() as *mut _,
+                plaintext.as_ref().as_ptr() as *mut _,
+            )
+        }
+    }
+
+    fn show_markdown_report(&self, title: &str, contents: &str, plaintext: &str) {
+        let title = title.to_cstr();
+        let contents = contents.to_cstr();
+        let plaintext = plaintext.to_cstr();
+        unsafe {
+            BNShowMarkdownReport(
+                self.as_ref().handle,
+                title.as_ref().as_ptr() as *mut _,
+                contents.as_ref().as_ptr() as *mut _,
+                plaintext.as_ref().as_ptr() as *mut _,
+            )
+        }
+    }
+
+    fn show_html_report(&self, title: &str, contents: &str, plaintext: &str) {
+        let title = title.to_cstr();
+        let contents = contents.to_cstr();
+        let plaintext = plaintext.to_cstr();
+        unsafe {
+            BNShowHTMLReport(
+                self.as_ref().handle,
+                title.as_ref().as_ptr() as *mut _,
+                contents.as_ref().as_ptr() as *mut _,
+                plaintext.as_ref().as_ptr() as *mut _,
+            )
+        }
+    }
+
     fn show_graph_report(&self, raw_name: &str, graph: &FlowGraph) {
         let raw_name = raw_name.to_cstr();
         unsafe {

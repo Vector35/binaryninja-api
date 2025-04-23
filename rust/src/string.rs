@@ -34,12 +34,16 @@ pub(crate) fn raw_to_string(ptr: *const c_char) -> Option<String> {
     }
 }
 
-// TODO: Make this pass in an iterator over something more generic...
-pub(crate) fn strings_to_string_list(strings: &[String]) -> *mut *mut c_char {
+pub(crate) fn strings_to_string_list<I, S>(strings: I) -> *mut *mut c_char
+where
+    I: IntoIterator<Item = S>,
+    // TODO make `S: BnStrCompatible,`
+    S: AsRef<str>,
+{
     use binaryninjacore_sys::BNAllocStringList;
     let bn_str_list = strings
-        .iter()
-        .map(|s| BnString::new(s.as_str()))
+        .into_iter()
+        .map(|s| BnString::new(s.as_ref()))
         .collect::<Vec<_>>();
     let mut raw_str_list = bn_str_list.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
     unsafe { BNAllocStringList(raw_str_list.as_mut_ptr(), raw_str_list.len()) }

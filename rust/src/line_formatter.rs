@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::ptr::NonNull;
 
 use binaryninjacore_sys::*;
@@ -6,22 +6,18 @@ use binaryninjacore_sys::*;
 use crate::disassembly::DisassemblyTextLine;
 use crate::high_level_il::HighLevelILFunction;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
-use crate::string::{raw_to_string, BnStrCompatible, BnString};
+use crate::string::{raw_to_string, BnString, IntoCStr};
 
 /// Register a [`LineFormatter`] with the API.
-pub fn register_line_formatter<C: LineFormatter, B: BnStrCompatible>(
-    name: B,
-    formatter: C,
-) -> CoreLineFormatter {
+pub fn register_line_formatter<C: LineFormatter>(name: &str, formatter: C) -> CoreLineFormatter {
     let custom = Box::leak(Box::new(formatter));
     let mut callbacks = BNCustomLineFormatter {
         context: custom as *mut C as *mut c_void,
         formatLines: Some(cb_format_lines::<C>),
         freeLines: Some(cb_free_lines),
     };
-    let name = name.into_bytes_with_nul();
-    let handle =
-        unsafe { BNRegisterLineFormatter(name.as_ref().as_ptr() as *const c_char, &mut callbacks) };
+    let name = name.to_cstr();
+    let handle = unsafe { BNRegisterLineFormatter(name.as_ptr(), &mut callbacks) };
     CoreLineFormatter::from_raw(NonNull::new(handle).unwrap())
 }
 
@@ -54,10 +50,9 @@ impl CoreLineFormatter {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn from_name<S: BnStrCompatible>(name: S) -> Option<CoreLineFormatter> {
-        let name_raw = name.into_bytes_with_nul();
-        let result =
-            unsafe { BNGetLineFormatterByName(name_raw.as_ref().as_ptr() as *const c_char) };
+    pub fn from_name(name: &str) -> Option<CoreLineFormatter> {
+        let name_raw = name.to_cstr();
+        let result = unsafe { BNGetLineFormatterByName(name_raw.as_ptr()) };
         NonNull::new(result).map(Self::from_raw)
     }
 

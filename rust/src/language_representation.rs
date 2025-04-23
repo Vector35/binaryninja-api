@@ -13,7 +13,7 @@ use crate::high_level_il::token_emitter::HighLevelILTokenEmitter;
 use crate::high_level_il::{HighLevelILFunction, HighLevelInstructionIndex};
 use crate::line_formatter::CoreLineFormatter;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 use crate::type_parser::CoreTypeParser;
 use crate::type_printer::CoreTypePrinter;
 
@@ -27,10 +27,9 @@ pub type SymbolDisplayResult = BNSymbolDisplayResult;
 pub fn register_language_representation_function_type<
     C: LanguageRepresentationFunctionType,
     F: FnOnce(CoreLanguageRepresentationFunctionType) -> C,
-    B: BnStrCompatible,
 >(
     creator: F,
-    name: B,
+    name: &str,
 ) -> CoreLanguageRepresentationFunctionType {
     let custom = Box::leak(Box::new(MaybeUninit::uninit()));
     let mut callbacks = BNCustomLanguageRepresentationFunctionType {
@@ -43,13 +42,9 @@ pub fn register_language_representation_function_type<
         getFunctionTypeTokens: Some(cb_get_function_type_tokens::<C>),
         freeLines: Some(cb_free_lines),
     };
-    let name = name.into_bytes_with_nul();
-    let core = unsafe {
-        BNRegisterLanguageRepresentationFunctionType(
-            name.as_ref().as_ptr() as *const c_char,
-            &mut callbacks,
-        )
-    };
+    let name = name.to_cstr();
+    let core =
+        unsafe { BNRegisterLanguageRepresentationFunctionType(name.as_ptr(), &mut callbacks) };
     let core =
         unsafe { CoreLanguageRepresentationFunctionType::from_raw(NonNull::new(core).unwrap()) };
     custom.write(creator(core));
@@ -138,11 +133,9 @@ impl CoreLanguageRepresentationFunctionType {
         self.handle.as_ptr()
     }
 
-    pub fn from_name<S: BnStrCompatible>(name: S) -> Option<Self> {
-        let name = name.into_bytes_with_nul();
-        let result = unsafe {
-            BNGetLanguageRepresentationFunctionTypeByName(name.as_ref().as_ptr() as *const c_char)
-        };
+    pub fn from_name(name: &str) -> Option<Self> {
+        let name = name.to_cstr();
+        let result = unsafe { BNGetLanguageRepresentationFunctionTypeByName(name.as_ptr()) };
         NonNull::new(result).map(|handle| unsafe { Self::from_raw(handle) })
     }
 

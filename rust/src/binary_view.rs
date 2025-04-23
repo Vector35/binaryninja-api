@@ -1109,6 +1109,60 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNApplyDebugInfo(self.as_ref().handle, debug_info.handle) }
     }
 
+    fn show_plaintext_report<S1: BnStrCompatible, S2: BnStrCompatible>(
+        &self,
+        title: S1,
+        plaintext: S2,
+    ) {
+        let title = title.into_bytes_with_nul();
+        let plaintext = plaintext.into_bytes_with_nul();
+        unsafe {
+            BNShowPlainTextReport(
+                self.as_ref().handle,
+                title.as_ref().as_ptr() as *mut _,
+                plaintext.as_ref().as_ptr() as *mut _,
+            )
+        }
+    }
+
+    fn show_markdown_report<S1: BnStrCompatible, S2: BnStrCompatible, S3: BnStrCompatible>(
+        &self,
+        title: S1,
+        contents: S2,
+        plaintext: S3,
+    ) {
+        let title = title.into_bytes_with_nul();
+        let contents = contents.into_bytes_with_nul();
+        let plaintext = plaintext.into_bytes_with_nul();
+        unsafe {
+            BNShowMarkdownReport(
+                self.as_ref().handle,
+                title.as_ref().as_ptr() as *mut _,
+                contents.as_ref().as_ptr() as *mut _,
+                plaintext.as_ref().as_ptr() as *mut _,
+            )
+        }
+    }
+
+    fn show_html_report<S1: BnStrCompatible, S2: BnStrCompatible, S3: BnStrCompatible>(
+        &self,
+        title: S1,
+        contents: S2,
+        plaintext: S3,
+    ) {
+        let title = title.into_bytes_with_nul();
+        let contents = contents.into_bytes_with_nul();
+        let plaintext = plaintext.into_bytes_with_nul();
+        unsafe {
+            BNShowHTMLReport(
+                self.as_ref().handle,
+                title.as_ref().as_ptr() as *mut _,
+                contents.as_ref().as_ptr() as *mut _,
+                plaintext.as_ref().as_ptr() as *mut _,
+            )
+        }
+    }
+
     fn show_graph_report<S: BnStrCompatible>(&self, raw_name: S, graph: &FlowGraph) {
         let raw_name = raw_name.into_bytes_with_nul();
         unsafe {

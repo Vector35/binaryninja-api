@@ -628,14 +628,14 @@ fn present_form(bv_arch: &str) -> Vec<FormResponses> {
         "Wasm32",
         "Xtensa",
     ];
-    interaction::FormInputBuilder::new()
-        .save_file_field(
+    let mut form = [
+        interaction::FormInput::save_file_field::<_, _, &str, &str>(
             "Save Location",
             Some("Debug Files (*.dwo *.debug);;All Files (*)"),
             None,
             None,
-        )
-        .choice_field(
+        ),
+        interaction::FormInput::choice_field(
             "Architecture",
             &archs,
             archs
@@ -646,14 +646,15 @@ fn present_form(bv_arch: &str) -> Vec<FormResponses> {
                         .cmp(&edit_distance::distance(bv_arch, arch_name_2))
                 })
                 .map(|(index, _)| index),
-        )
+        ),
         // Add actual / better support for formats other than elf?
-        // .choice_field(
-        //     "Container Format",
-        //     &["Coff", "Elf", "MachO", "Pe", "Wasm", "Xcoff"],
-        //     None,
-        // )
-        .get_form_input("Export as DWARF")
+        //interaction::FormInput::choice_field(
+        //    "Container Format",
+        //    &["Coff", "Elf", "MachO", "Pe", "Wasm", "Xcoff"],
+        //    None,
+        //),
+    ];
+    interaction::get_form_input("Export as DWARF", &mut form)
 }
 
 fn write_dwarf<T: gimli::Endianity>(

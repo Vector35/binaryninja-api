@@ -2,7 +2,7 @@
 
 #include <binaryninjaapi.h>
 #include "../core/MetadataSerializable.hpp"
-#include "../api/view/macho/machoview.h"
+#include "macho/types.h"
 #include "kernelcachecore.h"
 
 using namespace BinaryNinja;

@@ -4,7 +4,7 @@
 
 #include <binaryninjaapi.h>
 #include "KCView.h"
-#include "view/macho/machoview.h"
+#include "macho/types.h"
 #include "MetadataSerializable.hpp"
 #include "../api/kernelcachecore.h"
 

@@ -2,8 +2,7 @@
 
 #include "VirtualMemory.h"
 
-// TODO: Including this adds a bunch of binary ninja specific stuff :ugh:
-#include "view/macho/machoview.h"
+#include "macho/types.h"
 
 struct CacheSymbol;
 

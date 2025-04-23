@@ -6,7 +6,7 @@ if(NOT BN_INTERNAL_BUILD)
 	add_subdirectory(${PROJECT_SOURCE_DIR}/../.. ${PROJECT_BINARY_DIR}/api)
 endif()
 
-file(GLOB SOURCES *.cpp *.h ../../objectivec/*)
+file(GLOB SOURCES *.cpp *.h ../../objectivec/* ../../macho/*)
 
 if(DEMO)
 	add_library(view_macho STATIC ${SOURCES})

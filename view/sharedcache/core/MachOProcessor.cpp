@@ -1,5 +1,6 @@
 #include "MachOProcessor.h"
 #include "SharedCache.h"
+#include "macho/types.h"
 
 using namespace BinaryNinja;
 
@@ -267,116 +268,5 @@ void SharedCacheMachOProcessor::ApplyHeaderDataVariables(SharedCacheMachOHeader&
 	// TODO: By using a binary reader we assume the sections have all been mapped.
 	// TODO: Maybe we should just use the virtual memory reader...
 	// TODO: We can define symbols and data variables even if there is no backing region FWIW
-	BinaryReader reader(m_view);
-	// TODO: Do we support non 64 bit header?
-	reader.Seek(header.textBase + sizeof(mach_header_64));
-
-	m_view->DefineDataVariable(header.textBase, Type::NamedType(m_view, QualifiedName("mach_header_64")));
-	m_view->DefineAutoSymbol(
-		new Symbol(DataSymbol, "__macho_header::" + header.identifierPrefix, header.textBase, LocalBinding));
-
-	auto applyLoadCommand = [&](uint64_t cmdAddr, const load_command& load) {
-		switch (load.cmd)
-		{
-		case LC_SEGMENT:
-		{
-			m_view->DefineDataVariable(cmdAddr, Type::NamedType(m_view, QualifiedName("segment_command")));
-			reader.SeekRelative(5 * 8);
-			size_t numSections = reader.Read32();
-			reader.SeekRelative(4);
-			for (size_t j = 0; j < numSections; j++)
-			{
-				m_view->DefineDataVariable(reader.GetOffset(), Type::NamedType(m_view, QualifiedName("section")));
-				auto sectionSymName =
-					fmt::format("__macho_section::{}_[{}]", header.identifierPrefix, std::to_string(j));
-				auto sectionSym = new Symbol(DataSymbol, sectionSymName, reader.GetOffset(), LocalBinding);
-				m_view->DefineAutoSymbol(sectionSym);
-				reader.SeekRelative((8 * 8) + 4);
-			}
-			break;
-		}
-		case LC_SEGMENT_64:
-		{
-			m_view->DefineDataVariable(cmdAddr, Type::NamedType(m_view, QualifiedName("segment_command_64")));
-			reader.SeekRelative(7 * 8);
-			size_t numSections = reader.Read32();
-			reader.SeekRelative(4);
-			for (size_t j = 0; j < numSections; j++)
-			{
-				m_view->DefineDataVariable(reader.GetOffset(), Type::NamedType(m_view, QualifiedName("section_64")));
-				auto sectionSymName =
-					fmt::format("__macho_section_64::{}_[{}]", header.identifierPrefix, std::to_string(j));
-				auto sectionSym = new Symbol(DataSymbol, sectionSymName, reader.GetOffset(), LocalBinding);
-				m_view->DefineAutoSymbol(sectionSym);
-				reader.SeekRelative(10 * 8);
-			}
-			break;
-		}
-		case LC_SYMTAB:
-			m_view->DefineDataVariable(cmdAddr, Type::NamedType(m_view, QualifiedName("symtab")));
-			break;
-		case LC_DYSYMTAB:
-			m_view->DefineDataVariable(cmdAddr, Type::NamedType(m_view, QualifiedName("dysymtab")));
-			break;
-		case LC_UUID:
-			m_view->DefineDataVariable(cmdAddr, Type::NamedType(m_view, QualifiedName("uuid")));
-			break;
-		case LC_ID_DYLIB:
-		case LC_LOAD_DYLIB:
-		case LC_REEXPORT_DYLIB:
-		case LC_LOAD_WEAK_DYLIB:
-		case LC_LOAD_UPWARD_DYLIB:
-			m_view->DefineDataVariable(cmdAddr, Type::NamedType(m_view, QualifiedName("dylib_command")));
-			if (load.cmdsize - 24 <= 150)
-				m_view->DefineDataVariable(
-					cmdAddr + 24, Type::ArrayType(Type::IntegerType(1, true), load.cmdsize - 24));
-			break;
-		case LC_CODE_SIGNATURE:
-		case LC_SEGMENT_SPLIT_INFO:
-		case LC_FUNCTION_STARTS:
-		case LC_DATA_IN_CODE:
-		case LC_DYLIB_CODE_SIGN_DRS:
-		case LC_DYLD_EXPORTS_TRIE:
-		case LC_DYLD_CHAINED_FIXUPS:
-			m_view->DefineDataVariable(cmdAddr, Type::NamedType(m_view, QualifiedName("linkedit_data")));
-			break;
-		case LC_ENCRYPTION_INFO:
-			m_view->DefineDataVariable(cmdAddr, Type::NamedType(m_view, QualifiedName("encryption_info")));
-			break;
-		case LC_VERSION_MIN_MACOSX:
-		case LC_VERSION_MIN_IPHONEOS:
-			m_view->DefineDataVariable(cmdAddr, Type::NamedType(m_view, QualifiedName("version_min")));
-			break;
-		case LC_DYLD_INFO:
-		case LC_DYLD_INFO_ONLY:
-			m_view->DefineDataVariable(cmdAddr, Type::NamedType(m_view, QualifiedName("dyld_info")));
-			break;
-		default:
-			m_view->DefineDataVariable(cmdAddr, Type::NamedType(m_view, QualifiedName("load_command")));
-			break;
-		}
-	};
-
-	try
-	{
-		for (size_t i = 0; i < header.ident.ncmds; i++)
-		{
-			load_command load {};
-			uint64_t curOffset = reader.GetOffset();
-			load.cmd = reader.Read32();
-			load.cmdsize = reader.Read32();
-
-			applyLoadCommand(curOffset, load);
-			m_view->DefineAutoSymbol(new Symbol(DataSymbol,
-				"__macho_load_command::" + header.identifierPrefix + "_[" + std::to_string(i) + "]", curOffset,
-				LocalBinding));
-
-			uint64_t nextOffset = curOffset + load.cmdsize;
-			reader.Seek(nextOffset);
-		}
-	}
-	catch (ReadException&)
-	{
-		m_logger->LogError("Error when applying Mach-O header types at %llx", header.textBase);
-	}
+	MachO::ApplyHeaderTypes(m_view, m_logger, BinaryReader(m_view), header.identifierPrefix, header.textBase, header.ident.ncmds);
 }

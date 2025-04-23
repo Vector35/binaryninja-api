@@ -1,6 +1,6 @@
 #include "Utility.h"
 #include "binaryninjaapi.h"
-#include "view/macho/machoview.h"
+#include "macho/types.h"
 
 using namespace BinaryNinja;
 

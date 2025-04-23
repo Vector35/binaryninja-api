@@ -444,10 +444,18 @@ void CreateHeaderTypes(Ref<BinaryView> view)
 			// clang-format on
 		});
 
+	QualifiedName lcStringName("lc_str");
+	std::string lcStringTypeId = Type::GenerateAutoTypeId("macho", lcStringName);
+	auto lcStringType = Type::NamedType(view,
+		view->DefineType(lcStringTypeId, lcStringName,
+			TypeBuilder::PointerType(4, Type::IntegerType(1, true))
+				.SetPointerBase(RelativeToVariableAddressPointerBaseType, -8)
+				.Finalize()));
+
 	auto dylibType = BuildStruct(view, "dylib", false,
 		{
 			// clang-format off
-			{"name", Type::IntegerType(4, false)},
+			{"name", lcStringType},
 			{"timestamp", Type::IntegerType(4, false)},
 			{"current_version", Type::IntegerType(4, false)},
 			{"compatibility_version", Type::IntegerType(4, false)}
@@ -460,6 +468,34 @@ void CreateHeaderTypes(Ref<BinaryView> view)
 			{"cmd", cmdTypeEnum},
 			{"cmdsize", Type::IntegerType(4, false)},
 			{"dylib", dylibType}
+			// clang-format on
+		});
+
+	auto dylibUseMarkerEnum = BuildEnum(view, "dylib_use_marker_t", 4,
+		{
+			{"DYLIB_USE_MARKER", DYLIB_USE_MARKER},
+		});
+
+	auto dylibUseFlagsEnum = BuildEnum(view, "dylib_use_flags_t", 4,
+		{
+			// clang-format off
+			{"DYLIB_USE_WEAK_LINK", DYLIB_USE_WEAK_LINK},
+			{"DYLIB_USE_REEXPORT", DYLIB_USE_REEXPORT},
+			{"DYLIB_USE_UPWARD", DYLIB_USE_UPWARD},
+			{"DYLIB_USE_DELAYED_INIT", DYLIB_USE_DELAYED_INIT}
+			// clang-format on
+		});
+
+	auto dylibUseCommandType = BuildStruct(view, "dylib_use_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"nameoff", lcStringType},
+			{"marker", dylibUseMarkerEnum},
+			{"current_version", Type::IntegerType(4, false)},
+			{"compat_version", Type::IntegerType(4, false)},
+			{"flags", dylibUseFlagsEnum}
 			// clang-format on
 		});
 
@@ -550,11 +586,22 @@ void ApplyHeaderTypes(Ref<BinaryView> view, Ref<Logger> logger, const BinaryRead
 		case LC_REEXPORT_DYLIB:
 		case LC_LOAD_WEAK_DYLIB:
 		case LC_LOAD_UPWARD_DYLIB:
-			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("dylib_command")));
-			if (load.cmdsize - 24 <= 150)
-				view->DefineDataVariable(
-					cmdAddr + 24, Type::ArrayType(Type::IntegerType(1, true), load.cmdsize - 24));
+		{
+			reader.SeekRelative(4);
+			uint32_t timestamp = reader.Read32();
+			Ref<Type> type = Type::NamedType(view, QualifiedName("dylib_command"));
+			// A timestamp of `DYLIB_USE_MARKER` indicates this is a `dylib_use_command`.
+			if (timestamp == DYLIB_USE_MARKER)
+			{
+				type = Type::NamedType(view, QualifiedName("dylib_use_command"));
+			}
+			view->DefineDataVariable(cmdAddr, type);
+
+			if (load.cmdsize - type->GetWidth() <= 150)
+				view->DefineDataVariable(cmdAddr + type->GetWidth(),
+					Type::ArrayType(Type::IntegerType(1, true), load.cmdsize - type->GetWidth()));
 			break;
+		}
 		case LC_CODE_SIGNATURE:
 		case LC_SEGMENT_SPLIT_INFO:
 		case LC_FUNCTION_STARTS:

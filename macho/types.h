@@ -247,6 +247,13 @@ typedef int vm_prot_t;
 #define _MH_SIM_SUPPORT                   0x08000000u
 #define _MH_DYLIB_IN_CACHE                0x80000000u
 
+#define DYLIB_USE_WEAK_LINK	0x01
+#define DYLIB_USE_REEXPORT	0x02
+#define DYLIB_USE_UPWARD	0x04
+#define DYLIB_USE_DELAYED_INIT	0x08
+
+#define DYLIB_USE_MARKER	0x1a741800
+
 // Segment Names
 #define SEG_PAGEZERO      "__PAGEZERO"
 #define SEG_TEXT          "__TEXT"

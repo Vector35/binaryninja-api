@@ -19,6 +19,20 @@ namespace {
 		std::string typeId = Type::GenerateAutoTypeId("macho", qualName);
 		return Type::NamedType(view, view->DefineType(typeId, qualName, type));
 	}
+
+	Ref<Type> BuildStruct(Ref<BinaryView> view, const std::string& name, bool packed,
+		std::initializer_list<std::pair<std::string_view, Ref<Type>>> members)
+	{
+		StructureBuilder builder;
+		builder.SetPacked(packed);
+		for (const auto& member : members)
+			builder.AddMember(member.second, std::string(member.first));
+		Ref<Type> type = Type::StructureType(builder.Finalize());
+		QualifiedName qualName(name);
+		std::string typeId = Type::GenerateAutoTypeId("macho", qualName);
+		return Type::NamedType(view, view->DefineType(typeId, qualName, type));
+	}
+
 }  // namespace
 
 void CreateHeaderTypes(Ref<BinaryView> view)
@@ -143,22 +157,38 @@ void CreateHeaderTypes(Ref<BinaryView> view)
 			// clang-format on
 		});
 
-	StructureBuilder machoHeaderBuilder;
-	machoHeaderBuilder.AddMember(Type::IntegerType(4, false), "magic");
-	machoHeaderBuilder.AddMember(cpuTypeEnum, "cputype");
-	machoHeaderBuilder.AddMember(cpuSubTypeEnum, "cpusubtype");
-	machoHeaderBuilder.AddMember(fileTypeEnum, "filetype");
-	machoHeaderBuilder.AddMember(Type::IntegerType(4, false), "ncmds");
-	machoHeaderBuilder.AddMember(Type::IntegerType(4, false), "sizeofcmds");
-	machoHeaderBuilder.AddMember(flagsTypeEnum, "flags");
+	Ref<Type> headerType;
 	if (view->GetAddressSize() == 8)
-		machoHeaderBuilder.AddMember(Type::IntegerType(4, false), "reserved");
-	Ref<Structure> machoHeaderStruct = machoHeaderBuilder.Finalize();
-	QualifiedName headerName(view->GetAddressSize() == 8 ? "mach_header_64" : "mach_header");
-
-	std::string headerTypeId = Type::GenerateAutoTypeId("macho", headerName);
-	Ref<Type> machoHeaderType = Type::StructureType(machoHeaderStruct);
-	auto headerQualName = view->DefineType(headerTypeId, headerName, machoHeaderType);
+	{
+		headerType = BuildStruct(view, "mach_header_64", false,
+			{
+				// clang-format off
+				{"magic", Type::IntegerType(4, false)},
+				{"cputype", cpuTypeEnum},
+				{"cpusubtype", cpuSubTypeEnum},
+				{"filetype", fileTypeEnum},
+				{"ncmds", Type::IntegerType(4, false)},
+				{"sizeofcmds", Type::IntegerType(4, false)},
+				{"flags", flagsTypeEnum},
+				{"reserved", Type::IntegerType(4, false)}
+				// clang-format on
+			});
+	}
+	else
+	{
+		headerType = BuildStruct(view, "mach_header", false,
+			{
+				// clang-format off
+				{"magic", Type::IntegerType(4, false)},
+				{"cputype", cpuTypeEnum},
+				{"cpusubtype", cpuSubTypeEnum},
+				{"filetype", fileTypeEnum},
+				{"ncmds", Type::IntegerType(4, false)},
+				{"sizeofcmds", Type::IntegerType(4, false)},
+				{"flags", flagsTypeEnum}
+				// clang-format on
+			});
+	}
 
 	auto cmdTypeEnum = BuildEnum(view, "load_command_type_t", 4,
 		{
@@ -221,14 +251,13 @@ void CreateHeaderTypes(Ref<BinaryView> view)
 			// clang-format on
 		});
 
-	StructureBuilder loadCommandBuilder;
-	loadCommandBuilder.AddMember(cmdTypeEnum, "cmd");
-	loadCommandBuilder.AddMember(Type::IntegerType(4, false), "cmdsize");
-	Ref<Structure> loadCommandStruct = loadCommandBuilder.Finalize();
-	QualifiedName loadCommandName("load_command");
-	std::string loadCommandTypeId = Type::GenerateAutoTypeId("macho", loadCommandName);
-	Ref<Type> loadCommandType = Type::StructureType(loadCommandStruct);
-	auto loadCommandQualName = view->DefineType(loadCommandTypeId, loadCommandName, loadCommandType);
+	auto loadCommandType = BuildStruct(view, "load_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)}
+			// clang-format on
+		});
 
 	auto protTypeEnum = BuildEnum(view, "vm_prot_t", 4,
 		{
@@ -250,231 +279,212 @@ void CreateHeaderTypes(Ref<BinaryView> view)
 			// clang-format on
 		});
 
-	StructureBuilder loadSegmentCommandBuilder;
-	loadSegmentCommandBuilder.AddMember(cmdTypeEnum, "cmd");
-	loadSegmentCommandBuilder.AddMember(Type::IntegerType(4, false), "cmdsize");
-	loadSegmentCommandBuilder.AddMember(Type::ArrayType(Type::IntegerType(1, true), 16), "segname");
-	loadSegmentCommandBuilder.AddMember(Type::IntegerType(4, false), "vmaddr");
-	loadSegmentCommandBuilder.AddMember(Type::IntegerType(4, false), "vmsize");
-	loadSegmentCommandBuilder.AddMember(Type::IntegerType(4, false), "fileoff");
-	loadSegmentCommandBuilder.AddMember(Type::IntegerType(4, false), "filesize");
-	loadSegmentCommandBuilder.AddMember(protTypeEnum, "maxprot");
-	loadSegmentCommandBuilder.AddMember(protTypeEnum, "initprot");
-	loadSegmentCommandBuilder.AddMember(Type::IntegerType(4, false), "nsects");
-	loadSegmentCommandBuilder.AddMember(segFlagsTypeEnum, "flags");
-	Ref<Structure> loadSegmentCommandStruct = loadSegmentCommandBuilder.Finalize();
-	QualifiedName loadSegmentCommandName("segment_command");
-	std::string loadSegmentCommandTypeId = Type::GenerateAutoTypeId("macho", loadSegmentCommandName);
-	Ref<Type> loadSegmentCommandType = Type::StructureType(loadSegmentCommandStruct);
-	auto loadSegmentCommandQualName =
-		view->DefineType(loadSegmentCommandTypeId, loadSegmentCommandName, loadSegmentCommandType);
+	auto segmentCommandType = BuildStruct(view, "segment_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"segname", Type::ArrayType(Type::IntegerType(1, true), 16)},
+			{"vmaddr", Type::IntegerType(4, false)},
+			{"vmsize", Type::IntegerType(4, false)},
+			{"fileoff", Type::IntegerType(4, false)},
+			{"filesize", Type::IntegerType(4, false)},
+			{"maxprot", protTypeEnum},
+			{"initprot", protTypeEnum},
+			{"nsects", Type::IntegerType(4, false)},
+			{"flags", segFlagsTypeEnum}
+			// clang-format on
+		});
 
-	StructureBuilder loadSegmentCommand64Builder;
-	loadSegmentCommand64Builder.AddMember(cmdTypeEnum, "cmd");
-	loadSegmentCommand64Builder.AddMember(Type::IntegerType(4, false), "cmdsize");
-	loadSegmentCommand64Builder.AddMember(Type::ArrayType(Type::IntegerType(1, true), 16), "segname");
-	loadSegmentCommand64Builder.AddMember(Type::IntegerType(8, false), "vmaddr");
-	loadSegmentCommand64Builder.AddMember(Type::IntegerType(8, false), "vmsize");
-	loadSegmentCommand64Builder.AddMember(Type::IntegerType(8, false), "fileoff");
-	loadSegmentCommand64Builder.AddMember(Type::IntegerType(8, false), "filesize");
-	loadSegmentCommand64Builder.AddMember(protTypeEnum, "maxprot");
-	loadSegmentCommand64Builder.AddMember(protTypeEnum, "initprot");
-	loadSegmentCommand64Builder.AddMember(Type::IntegerType(4, false), "nsects");
-	loadSegmentCommand64Builder.AddMember(segFlagsTypeEnum, "flags");
-	Ref<Structure> loadSegmentCommand64Struct = loadSegmentCommand64Builder.Finalize();
-	QualifiedName loadSegment64CommandName("segment_command_64");
-	std::string loadSegment64CommandTypeId = Type::GenerateAutoTypeId("macho", loadSegment64CommandName);
-	Ref<Type> loadSegment64CommandType = Type::StructureType(loadSegmentCommand64Struct);
-	auto loadSegment64CommandQualName =
-		view->DefineType(loadSegment64CommandTypeId, loadSegment64CommandName, loadSegment64CommandType);
+	auto segmentCommand64Type = BuildStruct(view, "segment_command_64", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"segname", Type::ArrayType(Type::IntegerType(1, true), 16)},
+			{"vmaddr", Type::IntegerType(8, false)},
+			{"vmsize", Type::IntegerType(8, false)},
+			{"fileoff", Type::IntegerType(8, false)},
+			{"filesize", Type::IntegerType(8, false)},
+			{"maxprot", protTypeEnum},
+			{"initprot", protTypeEnum},
+			{"nsects", Type::IntegerType(4, false)},
+			{"flags", segFlagsTypeEnum}
+			// clang-format on
+		});
 
-	StructureBuilder sectionBuilder;
-	sectionBuilder.AddMember(Type::ArrayType(Type::IntegerType(1, true), 16), "sectname");
-	sectionBuilder.AddMember(Type::ArrayType(Type::IntegerType(1, true), 16), "segname");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "addr");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "size");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "offset");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "align");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "reloff");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "nreloc");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "flags");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "reserved1");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "reserved2");
-	Ref<Structure> sectionStruct = sectionBuilder.Finalize();
-	QualifiedName sectionName("section");
-	std::string sectionTypeId = Type::GenerateAutoTypeId("macho", sectionName);
-	Ref<Type> sectionType = Type::StructureType(sectionStruct);
-	auto sectionQualName = view->DefineType(sectionTypeId, sectionName, sectionType);
+	auto sectionType = BuildStruct(view, "section", true,
+		{
+			// clang-format off
+			{"sectname", Type::ArrayType(Type::IntegerType(1, true), 16)},
+			{"segname", Type::ArrayType(Type::IntegerType(1, true), 16)},
+			{"addr", Type::IntegerType(4, false)},
+			{"size", Type::IntegerType(4, false)},
+			{"offset", Type::IntegerType(4, false)},
+			{"align", Type::IntegerType(4, false)},
+			{"reloff", Type::IntegerType(4, false)},
+			{"nreloc", Type::IntegerType(4, false)},
+			{"flags", Type::IntegerType(4, false)},
+			{"reserved1", Type::IntegerType(4, false)},
+			{"reserved2", Type::IntegerType(4, false)}
+			// clang-format on
+		});
 
-	StructureBuilder section64Builder;
-	section64Builder.AddMember(Type::ArrayType(Type::IntegerType(1, true), 16), "sectname");
-	section64Builder.AddMember(Type::ArrayType(Type::IntegerType(1, true), 16), "segname");
-	section64Builder.AddMember(Type::IntegerType(8, false), "addr");
-	section64Builder.AddMember(Type::IntegerType(8, false), "size");
-	section64Builder.AddMember(Type::IntegerType(4, false), "offset");
-	section64Builder.AddMember(Type::IntegerType(4, false), "align");
-	section64Builder.AddMember(Type::IntegerType(4, false), "reloff");
-	section64Builder.AddMember(Type::IntegerType(4, false), "nreloc");
-	section64Builder.AddMember(Type::IntegerType(4, false), "flags");
-	section64Builder.AddMember(Type::IntegerType(4, false), "reserved1");
-	section64Builder.AddMember(Type::IntegerType(4, false), "reserved2");
-	section64Builder.AddMember(Type::IntegerType(4, false), "reserved3");
-	Ref<Structure> section64Struct = section64Builder.Finalize();
-	QualifiedName section64Name("section_64");
-	std::string section64TypeId = Type::GenerateAutoTypeId("macho", section64Name);
-	Ref<Type> section64Type = Type::StructureType(section64Struct);
-	auto section64QualName = view->DefineType(section64TypeId, section64Name, section64Type);
+	auto section64Type = BuildStruct(view, "section_64", true,
+		{
+			// clang-format off
+			{"sectname", Type::ArrayType(Type::IntegerType(1, true), 16)},
+			{"segname", Type::ArrayType(Type::IntegerType(1, true), 16)},
+			{"addr", Type::IntegerType(8, false)},
+			{"size", Type::IntegerType(8, false)},
+			{"offset", Type::IntegerType(4, false)},
+			{"align", Type::IntegerType(4, false)},
+			{"reloff", Type::IntegerType(4, false)},
+			{"nreloc", Type::IntegerType(4, false)},
+			{"flags", Type::IntegerType(4, false)},
+			{"reserved1", Type::IntegerType(4, false)},
+			{"reserved2", Type::IntegerType(4, false)},
+			{"reserved3", Type::IntegerType(4, false)}
+			// clang-format on
+		});
 
-	StructureBuilder symtabBuilder;
-	symtabBuilder.AddMember(cmdTypeEnum, "cmd");
-	symtabBuilder.AddMember(Type::IntegerType(4, false), "cmdsize");
-	symtabBuilder.AddMember(Type::IntegerType(4, false), "symoff");
-	symtabBuilder.AddMember(Type::IntegerType(4, false), "nsyms");
-	symtabBuilder.AddMember(Type::IntegerType(4, false), "stroff");
-	symtabBuilder.AddMember(Type::IntegerType(4, false), "strsize");
-	Ref<Structure> symtabStruct = symtabBuilder.Finalize();
-	QualifiedName symtabName("symtab");
-	std::string symtabTypeId = Type::GenerateAutoTypeId("macho", symtabName);
-	Ref<Type> symtabType = Type::StructureType(symtabStruct);
-	auto symtabQualName = view->DefineType(symtabTypeId, symtabName, symtabType);
+	auto symtabCommandType = BuildStruct(view, "symtab_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"symoff", Type::IntegerType(4, false)},
+			{"nsyms", Type::IntegerType(4, false)},
+			{"stroff", Type::IntegerType(4, false)},
+			{"strsize", Type::IntegerType(4, false)}
+			// clang-format on
+		});
 
-	StructureBuilder dynsymtabBuilder;
-	dynsymtabBuilder.AddMember(cmdTypeEnum, "cmd");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "cmdsize");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "ilocalsym");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "nlocalsym");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "iextdefsym");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "nextdefsym");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "iundefsym");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "nundefsym");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "tocoff");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "ntoc");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "modtaboff");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "nmodtab");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "extrefsymoff");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "nextrefsyms");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "indirectsymoff");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "nindirectsyms");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "extreloff");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "nextrel");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "locreloff");
-	dynsymtabBuilder.AddMember(Type::IntegerType(4, false), "nlocrel");
-	Ref<Structure> dynsymtabStruct = dynsymtabBuilder.Finalize();
-	QualifiedName dynsymtabName("dysymtab");
-	std::string dynsymtabTypeId = Type::GenerateAutoTypeId("macho", dynsymtabName);
-	Ref<Type> dynsymtabType = Type::StructureType(dynsymtabStruct);
-	auto dynsymtabQualName = view->DefineType(dynsymtabTypeId, dynsymtabName, dynsymtabType);
+	auto dysymtabCommandType = BuildStruct(view, "dysymtab_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"ilocalsym", Type::IntegerType(4, false)},
+			{"nlocalsym", Type::IntegerType(4, false)},
+			{"iextdefsym", Type::IntegerType(4, false)},
+			{"nextdefsym", Type::IntegerType(4, false)},
+			{"iundefsym", Type::IntegerType(4, false)},
+			{"nundefsym", Type::IntegerType(4, false)},
+			{"tocoff", Type::IntegerType(4, false)},
+			{"ntoc", Type::IntegerType(4, false)},
+			{"modtaboff", Type::IntegerType(4, false)},
+			{"nmodtab", Type::IntegerType(4, false)},
+			{"extrefsymoff", Type::IntegerType(4, false)},
+			{"nextrefsyms", Type::IntegerType(4, false)},
+			{"indirectsymoff", Type::IntegerType(4, false)},
+			{"nindirectsyms", Type::IntegerType(4, false)},
+			{"extreloff", Type::IntegerType(4, false)},
+			{"nextrel", Type::IntegerType(4, false)},
+			{"locreloff", Type::IntegerType(4, false)},
+			{"nlocrel", Type::IntegerType(4, false)}
+			// clang-format on
+		});
 
-	StructureBuilder uuidBuilder;
-	uuidBuilder.AddMember(cmdTypeEnum, "cmd");
-	uuidBuilder.AddMember(Type::IntegerType(4, false), "cmdsize");
-	uuidBuilder.AddMember(Type::ArrayType(Type::IntegerType(1, false), 16), "uuid");
-	Ref<Structure> uuidStruct = uuidBuilder.Finalize();
-	QualifiedName uuidName("uuid");
-	std::string uuidTypeId = Type::GenerateAutoTypeId("macho", uuidName);
-	Ref<Type> uuidType = Type::StructureType(uuidStruct);
-	auto uuidQualName = view->DefineType(uuidTypeId, uuidName, uuidType);
+	auto uuidCommandType = BuildStruct(view, "uuid_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"uuid", Type::ArrayType(Type::IntegerType(1, true), 16)}
+			// clang-format on
+		});
 
-	StructureBuilder linkeditDataBuilder;
-	linkeditDataBuilder.AddMember(cmdTypeEnum, "cmd");
-	linkeditDataBuilder.AddMember(Type::IntegerType(4, false), "cmdsize");
-	linkeditDataBuilder.AddMember(Type::IntegerType(4, false), "dataoff");
-	linkeditDataBuilder.AddMember(Type::IntegerType(4, false), "datasize");
-	Ref<Structure> linkeditDataStruct = linkeditDataBuilder.Finalize();
-	QualifiedName linkeditDataName("linkedit_data");
-	std::string linkeditDataTypeId = Type::GenerateAutoTypeId("macho", linkeditDataName);
-	Ref<Type> linkeditDataType = Type::StructureType(linkeditDataStruct);
-	auto linkeditDataQualName = view->DefineType(linkeditDataTypeId, linkeditDataName, linkeditDataType);
+	auto linkeditDataCommandType = BuildStruct(view, "linkedit_data_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"dataoff", Type::IntegerType(4, false)},
+			{"datasize", Type::IntegerType(4, false)}
+			// clang-format on
+		});
 
-	StructureBuilder encryptionInfoBuilder;
-	encryptionInfoBuilder.AddMember(cmdTypeEnum, "cmd");
-	encryptionInfoBuilder.AddMember(Type::IntegerType(4, false), "cmdsize");
-	encryptionInfoBuilder.AddMember(Type::IntegerType(4, false), "cryptoff");
-	encryptionInfoBuilder.AddMember(Type::IntegerType(4, false), "cryptsize");
-	encryptionInfoBuilder.AddMember(Type::IntegerType(4, false), "cryptid");
-	Ref<Structure> encryptionInfoStruct = encryptionInfoBuilder.Finalize();
-	QualifiedName encryptionInfoName("encryption_info");
-	std::string encryptionInfoTypeId = Type::GenerateAutoTypeId("macho", encryptionInfoName);
-	Ref<Type> encryptionInfoType = Type::StructureType(encryptionInfoStruct);
-	auto encryptionInfoQualName = view->DefineType(encryptionInfoTypeId, encryptionInfoName, encryptionInfoType);
+	auto encryptionInfoCommandType = BuildStruct(view, "encryption_info_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"cryptoff", Type::IntegerType(4, false)},
+			{"cryptsize", Type::IntegerType(4, false)},
+			{"cryptid", Type::IntegerType(4, false)}
+			// clang-format on
+		});
 
-	StructureBuilder versionMinBuilder;
-	versionMinBuilder.AddMember(cmdTypeEnum, "cmd");
-	versionMinBuilder.AddMember(Type::IntegerType(4, false), "cmdsize");
-	versionMinBuilder.AddMember(Type::IntegerType(4, false), "version");
-	versionMinBuilder.AddMember(Type::IntegerType(4, false), "sdk");
-	Ref<Structure> versionMinStruct = versionMinBuilder.Finalize();
-	QualifiedName versionMinName("version_min");
-	std::string versionMinTypeId = Type::GenerateAutoTypeId("macho", versionMinName);
-	Ref<Type> versionMinType = Type::StructureType(versionMinStruct);
-	auto versionMinQualName = view->DefineType(versionMinTypeId, versionMinName, versionMinType);
+	auto versionMinCommandType = BuildStruct(view, "version_min_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"version", Type::IntegerType(4, false)},
+			{"sdk", Type::IntegerType(4, false)}
+			// clang-format on
+		});
 
-	StructureBuilder dyldInfoBuilder;
-	dyldInfoBuilder.AddMember(cmdTypeEnum, "cmd");
-	dyldInfoBuilder.AddMember(Type::IntegerType(4, false), "cmdsize");
-	dyldInfoBuilder.AddMember(Type::IntegerType(4, false), "rebase_off");
-	dyldInfoBuilder.AddMember(Type::IntegerType(4, false), "rebase_size");
-	dyldInfoBuilder.AddMember(Type::IntegerType(4, false), "bind_off");
-	dyldInfoBuilder.AddMember(Type::IntegerType(4, false), "bind_size");
-	dyldInfoBuilder.AddMember(Type::IntegerType(4, false), "weak_bind_off");
-	dyldInfoBuilder.AddMember(Type::IntegerType(4, false), "weak_bind_size");
-	dyldInfoBuilder.AddMember(Type::IntegerType(4, false), "lazy_bind_off");
-	dyldInfoBuilder.AddMember(Type::IntegerType(4, false), "lazy_bind_size");
-	dyldInfoBuilder.AddMember(Type::IntegerType(4, false), "export_off");
-	dyldInfoBuilder.AddMember(Type::IntegerType(4, false), "export_size");
-	Ref<Structure> dyldInfoStruct = dyldInfoBuilder.Finalize();
-	QualifiedName dyldInfoName("dyld_info");
-	std::string dyldInfoTypeId = Type::GenerateAutoTypeId("macho", dyldInfoName);
-	Ref<Type> dyldInfoType = Type::StructureType(dyldInfoStruct);
-	auto dyldInfoQualName = view->DefineType(dyldInfoTypeId, dyldInfoName, dyldInfoType);
+	auto dyldInfoCommandType = BuildStruct(view, "dyld_info_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"rebase_off", Type::IntegerType(4, false)},
+			{"rebase_size", Type::IntegerType(4, false)},
+			{"bind_off", Type::IntegerType(4, false)},
+			{"bind_size", Type::IntegerType(4, false)},
+			{"weak_bind_off", Type::IntegerType(4, false)},
+			{"weak_bind_size", Type::IntegerType(4, false)},
+			{"lazy_bind_off", Type::IntegerType(4, false)},
+			{"lazy_bind_size", Type::IntegerType(4, false)},
+			{"export_off", Type::IntegerType(4, false)},
+			{"export_size", Type::IntegerType(4, false)}
+			// clang-format on
+		});
 
-	StructureBuilder dylibBuilder;
-	dylibBuilder.AddMember(Type::IntegerType(4, false), "name");
-	dylibBuilder.AddMember(Type::IntegerType(4, false), "timestamp");
-	dylibBuilder.AddMember(Type::IntegerType(4, false), "current_version");
-	dylibBuilder.AddMember(Type::IntegerType(4, false), "compatibility_version");
-	Ref<Structure> dylibStruct = dylibBuilder.Finalize();
-	QualifiedName dylibName("dylib");
-	std::string dylibTypeId = Type::GenerateAutoTypeId("macho", dylibName);
-	Ref<Type> dylibType = Type::StructureType(dylibStruct);
-	auto dylibQualName = view->DefineType(dylibTypeId, dylibName, dylibType);
+	auto dylibType = BuildStruct(view, "dylib", false,
+		{
+			// clang-format off
+			{"name", Type::IntegerType(4, false)},
+			{"timestamp", Type::IntegerType(4, false)},
+			{"current_version", Type::IntegerType(4, false)},
+			{"compatibility_version", Type::IntegerType(4, false)}
+			// clang-format on
+		});
 
-	StructureBuilder dylibCommandBuilder;
-	dylibCommandBuilder.AddMember(cmdTypeEnum, "cmd");
-	dylibCommandBuilder.AddMember(Type::IntegerType(4, false), "cmdsize");
-	dylibCommandBuilder.AddMember(Type::NamedType(view, dylibQualName), "dylib");
-	Ref<Structure> dylibCommandStruct = dylibCommandBuilder.Finalize();
-	QualifiedName dylibCommandName("dylib_command");
-	std::string dylibCommandTypeId = Type::GenerateAutoTypeId("macho", dylibCommandName);
-	Ref<Type> dylibCommandType = Type::StructureType(dylibCommandStruct);
-	auto dylibCommandQualName = view->DefineType(dylibCommandTypeId, dylibCommandName, dylibCommandType);
+	auto dylibCommandType = BuildStruct(view, "dylib_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"dylib", dylibType}
+			// clang-format on
+		});
 
-	StructureBuilder filesetEntryCommandBuilder;
-	filesetEntryCommandBuilder.AddMember(cmdTypeEnum, "cmd");
-	filesetEntryCommandBuilder.AddMember(Type::IntegerType(4, false), "cmdsize");
-	filesetEntryCommandBuilder.AddMember(Type::IntegerType(8, false), "vmaddr");
-	filesetEntryCommandBuilder.AddMember(Type::IntegerType(8, false), "fileoff");
-	filesetEntryCommandBuilder.AddMember(Type::IntegerType(4, false), "entry_id");
-	filesetEntryCommandBuilder.AddMember(Type::IntegerType(4, false), "reserved");
-	Ref<Structure> filesetEntryCommandStruct = filesetEntryCommandBuilder.Finalize();
-	QualifiedName filesetEntryCommandName("fileset_entry_command");
-	std::string filesetEntryCommandTypeId = Type::GenerateAutoTypeId("macho", filesetEntryCommandName);
-	Ref<Type> filesetEntryCommandType = Type::StructureType(filesetEntryCommandStruct);
-	auto filesetEntryCommandQualName =
-		view->DefineType(filesetEntryCommandTypeId, filesetEntryCommandName, filesetEntryCommandType);
+	auto filesetEntryCommandType = BuildStruct(view, "fileset_entry_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"vmaddr", Type::IntegerType(8, false)},
+			{"fileoff", Type::IntegerType(8, false)},
+			{"entry_id", Type::IntegerType(4, false)},
+			{"reserved", Type::IntegerType(4, false)}
+			// clang-format on
+		});
 
-	StructureBuilder unixThreadCommandBuilder;
-	unixThreadCommandBuilder.AddMember(cmdTypeEnum, "cmd");
-	unixThreadCommandBuilder.AddMember(Type::IntegerType(4, false), "cmdsize");
-	unixThreadCommandBuilder.AddMember(Type::IntegerType(4, false), "flavor");
-	unixThreadCommandBuilder.AddMember(Type::IntegerType(4, false), "count");
-	// The 'state' field is intentionally ignored.
-	Ref<Structure> unixThreadCommandStruct = unixThreadCommandBuilder.Finalize();
-	QualifiedName unixThreadCommandName = std::string("unix_thread_command");
-	std::string unixThreadCommandTypeId = Type::GenerateAutoTypeId("macho", unixThreadCommandName);
-	Ref<Type> unixThreadCommandType = Type::StructureType(unixThreadCommandStruct);
-	auto unixThreadCommandQualName =
-		view->DefineType(unixThreadCommandTypeId, unixThreadCommandName, unixThreadCommandType);
+	auto unixThreadCommandType = BuildStruct(view, "unix_thread_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"flavor", Type::IntegerType(4, false)},
+			{"count", Type::IntegerType(4, false)},
+			// The 'state' field is intentionally ignored.
+			// clang-format off
+		});
 }
 
 void ApplyHeaderTypes(Ref<BinaryView> view, Ref<Logger> logger, const BinaryReader& incomingReader,
@@ -527,13 +537,13 @@ void ApplyHeaderTypes(Ref<BinaryView> view, Ref<Logger> logger, const BinaryRead
 			break;
 		}
 		case LC_SYMTAB:
-			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("symtab")));
+			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("symtab_command")));
 			break;
 		case LC_DYSYMTAB:
-			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("dysymtab")));
+			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("dysymtab_command")));
 			break;
 		case LC_UUID:
-			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("uuid")));
+			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("uuid_command")));
 			break;
 		case LC_ID_DYLIB:
 		case LC_LOAD_DYLIB:
@@ -552,18 +562,18 @@ void ApplyHeaderTypes(Ref<BinaryView> view, Ref<Logger> logger, const BinaryRead
 		case LC_DYLIB_CODE_SIGN_DRS:
 		case LC_DYLD_EXPORTS_TRIE:
 		case LC_DYLD_CHAINED_FIXUPS:
-			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("linkedit_data")));
+			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("linkedit_data_command")));
 			break;
 		case LC_ENCRYPTION_INFO:
-			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("encryption_info")));
+			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("encryption_info_command")));
 			break;
 		case LC_VERSION_MIN_MACOSX:
 		case LC_VERSION_MIN_IPHONEOS:
-			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("version_min")));
+			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("version_min_command")));
 			break;
 		case LC_DYLD_INFO:
 		case LC_DYLD_INFO_ONLY:
-			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("dyld_info")));
+			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("dyld_info_command")));
 			break;
 		case LC_FILESET_ENTRY:
 			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("fileset_entry_command")));

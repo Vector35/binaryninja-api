@@ -107,6 +107,7 @@ typedef int vm_prot_t;
 #define SG_FVMLIB              0x2
 #define SG_NORELOC             0x4
 #define SG_PROTECTED_VERSION_1 0x8
+#define SG_READ_ONLY_DATA	   0x10
 
 // Section flags
 #define S_ATTR_SOME_INSTRUCTIONS 0x00000400
@@ -117,6 +118,10 @@ typedef int vm_prot_t;
 #define S_ATTR_NO_DEAD_STRIP       0x10000000  // no dead stripping
 #define S_ATTR_LIVE_SUPPORT        0x08000000  // blocks are live if they reference live blocks
 #define S_ATTR_SELF_MODIFYING_CODE 0x04000000  // Used with i386 code stubs written on by dyld
+#define S_ATTR_DEBUG	 		   0x02000000  // a debug section */
+#define S_ATTR_SOME_INSTRUCTIONS   0x00000400  // section contains some machine instructions
+#define S_ATTR_EXT_RELOC	 	   0x00000200  // section has external relocation entries
+#define S_ATTR_LOC_RELOC		   0x00000100  // section has local relocation entries
 
 #define S_REGULAR                             0x0
 #define S_ZEROFILL                            0x1
@@ -201,6 +206,10 @@ typedef int vm_prot_t;
 #define LC_DYLD_EXPORTS_TRIE   (0x33 | LC_REQ_DYLD)
 #define LC_DYLD_CHAINED_FIXUPS (0x34 | LC_REQ_DYLD)
 #define LC_FILESET_ENTRY       (0x35 | LC_REQ_DYLD)
+#define LC_ATOM_INFO		   0x36
+#define LC_FUNCTION_VARIANTS   0x37
+#define LC_FUNCTION_VARIANT_FIXUPS 0x38
+#define LC_TARGET_TRIPLE	   0x39
 
 // Mach-O File types
 #define MH_OBJECT      0x1
@@ -1014,14 +1023,44 @@ namespace BinaryNinja {
 		MACHO_PLATFORM_IOS = 2,
 		MACHO_PLATFORM_TVOS = 3,
 		MACHO_PLATFORM_WATCHOS = 4,
-		MACHO_PLATFORM_BRIDGEOS = 5
+		MACHO_PLATFORM_BRIDGEOS = 5,
+		MACHO_PLATFORM_MACCATALYST = 6,
+		MACHO_PLATFORM_IOSSIMULATOR = 7,
+		MACHO_PLATFORM_TVOSSIMULATOR = 8,
+		MACHO_PLATFORM_WATCHOSSIMULATOR = 9,
+		MACHO_PLATFORM_DRIVERKIT = 10,
+		MACHO_PLATFORM_VISIONOS = 11,
+		MACHO_PLATFORM_VISIONOSSIMULATOR = 12,
+
+		MACHO_PLATFORM_FIRMWARE = 13,
+		MACHO_PLATFORM_SEPOS = 14,
+
+		MACHO_PLATFORM_MACOS_EXCLAVECORE = 15,
+		MACHO_PLATFORM_MACOS_EXCLAVEKIT = 16,
+		MACHO_PLATFORM_IOS_EXCLAVECORE = 17,
+		MACHO_PLATFORM_IOS_EXCLAVEKIT = 18,
+		MACHO_PLATFORM_TVOS_EXCLAVECORE = 19,
+		MACHO_PLATFORM_TVOS_EXCLAVEKIT = 20,
+		MACHO_PLATFORM_WATCHOS_EXCLAVECORE = 21,
+		MACHO_PLATFORM_WATCHOS_EXCLAVEKIT = 22,
+		MACHO_PLATFORM_VISIONOS_EXCLAVECORE = 23,
+		MACHO_PLATFORM_VISIONOS_EXCLAVEKIT = 24,
 	};
 
 	enum MachoBuildTool
 	{
 		MACHO_TOOL_CLANG = 1,
 		MACHO_TOOL_SWIFT = 2,
-		MACHO_TOOL_LD = 3
+		MACHO_TOOL_LD = 3,
+		MACHO_TOOL_LLD = 4,
+		
+		MACHO_TOOL_METAL = 1024,
+		MACHO_TOOL_AIRLLD = 1025,
+		MACHO_TOOL_AIRNT = 1026,
+		MACHO_TOOL_AIRNT_PLUGIN = 1027,
+		MACHO_TOOL_AIRPACK = 1028,
+		MACHO_TOOL_GPUARCHIVER = 1031,
+		MACHO_TOOL_METAL_FRAMEWORK = 1032,
 	};
 
 	struct build_tool_version

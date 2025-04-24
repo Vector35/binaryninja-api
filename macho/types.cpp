@@ -275,7 +275,8 @@ void CreateHeaderTypes(Ref<BinaryView> view)
 			{"SG_HIGHVM", SG_HIGHVM},
 			{"SG_FVMLIB", SG_FVMLIB},
 			{"SG_NORELOC", SG_NORELOC},
-			{"SG_PROTECTED_VERSION_1", SG_PROTECTED_VERSION_1}
+			{"SG_PROTECTED_VERSION_1", SG_PROTECTED_VERSION_1},
+			{"SG_READ_ONLY_DATA", SG_READ_ONLY_DATA},
 			// clang-format on
 		});
 
@@ -313,6 +314,54 @@ void CreateHeaderTypes(Ref<BinaryView> view)
 			// clang-format on
 		});
 
+	// TODO: These three enums are technically a single field 32-bit field in the struct. The upper 24 bits are bit
+	// flags while the lower 8 bits are mutually exclusive. This prevents Binary Ninja from rendering them in an ORd
+	// form. The upper 24 bits are split into two enums because a 24 bit enum field isn't handle correctly either.
+	auto sectionTypeEnum = BuildEnum(view, "section_type_t", 1,
+		{
+			{"S_REGULAR", S_REGULAR},
+			{"S_ZEROFILL", S_ZEROFILL},
+			{"S_CSTRING_LITERALS", S_CSTRING_LITERALS},
+			{"S_4BYTE_LITERALS", S_4BYTE_LITERALS},
+			{"S_8BYTE_LITERALS", S_8BYTE_LITERALS},
+			{"S_LITERAL_POINTERS", S_LITERAL_POINTERS},
+			{"S_NON_LAZY_SYMBOL_POINTERS", S_NON_LAZY_SYMBOL_POINTERS},
+			{"S_LAZY_SYMBOL_POINTERS", S_LAZY_SYMBOL_POINTERS},
+			{"S_SYMBOL_STUBS", S_SYMBOL_STUBS},
+			{"S_MOD_INIT_FUNC_POINTERS", S_MOD_INIT_FUNC_POINTERS},
+			{"S_MOD_TERM_FUNC_POINTERS", S_MOD_TERM_FUNC_POINTERS},
+			{"S_COALESCED", S_COALESCED},
+			{"S_GB_ZEROFILL", S_GB_ZEROFILL},
+			{"S_INTERPOSING", S_INTERPOSING},
+			{"S_16BYTE_LITERALS", S_16BYTE_LITERALS},
+			{"S_DTRACE_DOF", S_DTRACE_DOF},
+			{"S_LAZY_DYLIB_SYMBOL_POINTERS", S_LAZY_DYLIB_SYMBOL_POINTERS},
+			{"S_THREAD_LOCAL_REGULAR", S_THREAD_LOCAL_REGULAR},
+			{"S_THREAD_LOCAL_ZEROFILL", S_THREAD_LOCAL_ZEROFILL},
+			{"S_THREAD_LOCAL_VARIABLES", S_THREAD_LOCAL_VARIABLES},
+			{"S_THREAD_LOCAL_VARIABLE_POINTERS", S_THREAD_LOCAL_VARIABLE_POINTERS},
+			{"S_THREAD_LOCAL_INIT_FUNCTION_POINTERS", S_THREAD_LOCAL_INIT_FUNCTION_POINTERS},
+			{"S_INIT_FUNC_OFFSETS", S_INIT_FUNC_OFFSETS},
+		});
+
+	auto sectionAttributesSysEnum = BuildEnum(view, "section_attr_sys_t", 1,
+		{
+			{"S_ATTR_DEBUG", (S_ATTR_DEBUG >> 24) & 0xff},
+			{"S_ATTR_SELF_MODIFYING_CODE", (S_ATTR_SELF_MODIFYING_CODE >> 24) & 0xff},
+			{"S_ATTR_LIVE_SUPPORT", (S_ATTR_LIVE_SUPPORT >> 24) & 0xff},
+			{"S_ATTR_NO_DEAD_STRIP", (S_ATTR_NO_DEAD_STRIP >> 24) & 0xff},
+			{"S_ATTR_STRIP_STATIC_SYMS", (S_ATTR_STRIP_STATIC_SYMS >> 24) & 0xff},
+			{"S_ATTR_NO_TOC", (S_ATTR_NO_TOC >> 24) & 0xff},
+			{"S_ATTR_PURE_INSTRUCTIONS", (S_ATTR_PURE_INSTRUCTIONS >> 24) & 0xff},
+		});
+
+	auto sectionAttributesUserEnum = BuildEnum(view, "section_attr_user_t", 2,
+		{
+			{"S_ATTR_LOC_RELOC", (S_ATTR_LOC_RELOC >> 8) & 0xffff},
+			{"S_ATTR_EXT_RELOC", (S_ATTR_EXT_RELOC >> 8) & 0xffff},
+			{"S_ATTR_SOME_INSTRUCTIONS", (S_ATTR_SOME_INSTRUCTIONS >> 8) & 0xffff},
+		});
+
 	auto sectionType = BuildStruct(view, "section", true,
 		{
 			// clang-format off
@@ -324,7 +373,9 @@ void CreateHeaderTypes(Ref<BinaryView> view)
 			{"align", Type::IntegerType(4, false)},
 			{"reloff", Type::IntegerType(4, false)},
 			{"nreloc", Type::IntegerType(4, false)},
-			{"flags", Type::IntegerType(4, false)},
+			{"type", sectionTypeEnum},
+			{"attrs_user", sectionAttributesUserEnum},
+			{"attrs_sys", sectionAttributesSysEnum},
 			{"reserved1", Type::IntegerType(4, false)},
 			{"reserved2", Type::IntegerType(4, false)}
 			// clang-format on
@@ -341,7 +392,9 @@ void CreateHeaderTypes(Ref<BinaryView> view)
 			{"align", Type::IntegerType(4, false)},
 			{"reloff", Type::IntegerType(4, false)},
 			{"nreloc", Type::IntegerType(4, false)},
-			{"flags", Type::IntegerType(4, false)},
+			{"type", sectionTypeEnum},
+			{"attrs_user", sectionAttributesUserEnum},
+			{"attrs_sys", sectionAttributesSysEnum},
 			{"reserved1", Type::IntegerType(4, false)},
 			{"reserved2", Type::IntegerType(4, false)},
 			{"reserved3", Type::IntegerType(4, false)}
@@ -499,6 +552,14 @@ void CreateHeaderTypes(Ref<BinaryView> view)
 			// clang-format on
 		});
 
+	QualifiedName filesetEntryIdName("fileset_entry_id");
+	std::string filesetEntryIdId = Type::GenerateAutoTypeId("macho", filesetEntryIdName);
+	auto filesetEntryIdType = Type::NamedType(view,
+		view->DefineType(filesetEntryIdId, filesetEntryIdName,
+			TypeBuilder::PointerType(4, Type::IntegerType(1, true))
+				.SetPointerBase(RelativeToVariableAddressPointerBaseType, -24)
+				.Finalize()));
+
 	auto filesetEntryCommandType = BuildStruct(view, "fileset_entry_command", false,
 		{
 			// clang-format off
@@ -506,7 +567,7 @@ void CreateHeaderTypes(Ref<BinaryView> view)
 			{"cmdsize", Type::IntegerType(4, false)},
 			{"vmaddr", Type::IntegerType(8, false)},
 			{"fileoff", Type::IntegerType(8, false)},
-			{"entry_id", Type::IntegerType(4, false)},
+			{"entry_id", filesetEntryIdType},
 			{"reserved", Type::IntegerType(4, false)}
 			// clang-format on
 		});
@@ -520,6 +581,103 @@ void CreateHeaderTypes(Ref<BinaryView> view)
 			{"count", Type::IntegerType(4, false)},
 			// The 'state' field is intentionally ignored.
 			// clang-format off
+		});
+
+	auto platformTypeEnum = BuildEnum(view, "macho_platform_t", 4,
+		{
+			// clang-format off
+			{"MACHO_PLATFORM_MACOS", MACHO_PLATFORM_MACOS},
+			{"MACHO_PLATFORM_IOS", MACHO_PLATFORM_IOS},
+			{"MACHO_PLATFORM_TVOS", MACHO_PLATFORM_TVOS},
+			{"MACHO_PLATFORM_WATCHOS", MACHO_PLATFORM_WATCHOS},
+			{"MACHO_PLATFORM_BRIDGEOS", MACHO_PLATFORM_BRIDGEOS},
+			{"MACHO_PLATFORM_MACCATALYST", MACHO_PLATFORM_MACCATALYST},
+			{"MACHO_PLATFORM_IOSSIMULATOR", MACHO_PLATFORM_IOSSIMULATOR},
+			{"MACHO_PLATFORM_TVOSSIMULATOR", MACHO_PLATFORM_TVOSSIMULATOR},
+			{"MACHO_PLATFORM_WATCHOSSIMULATOR", MACHO_PLATFORM_WATCHOSSIMULATOR},
+			{"MACHO_PLATFORM_DRIVERKIT", MACHO_PLATFORM_DRIVERKIT},
+			{"MACHO_PLATFORM_VISIONOS", MACHO_PLATFORM_VISIONOS},
+			{"MACHO_PLATFORM_VISIONOSSIMULATOR", MACHO_PLATFORM_VISIONOSSIMULATOR},
+			{"MACHO_PLATFORM_FIRMWARE", MACHO_PLATFORM_FIRMWARE},
+			{"MACHO_PLATFORM_SEPOS", MACHO_PLATFORM_SEPOS},
+			{"MACHO_PLATFORM_MACOS_EXCLAVECORE", MACHO_PLATFORM_MACOS_EXCLAVECORE},
+			{"MACHO_PLATFORM_MACOS_EXCLAVEKIT", MACHO_PLATFORM_MACOS_EXCLAVEKIT},
+			{"MACHO_PLATFORM_IOS_EXCLAVECORE", MACHO_PLATFORM_IOS_EXCLAVECORE},
+			{"MACHO_PLATFORM_IOS_EXCLAVEKIT", MACHO_PLATFORM_IOS_EXCLAVEKIT},
+			{"MACHO_PLATFORM_TVOS_EXCLAVECORE", MACHO_PLATFORM_TVOS_EXCLAVECORE},
+			{"MACHO_PLATFORM_TVOS_EXCLAVEKIT", MACHO_PLATFORM_TVOS_EXCLAVEKIT},
+			{"MACHO_PLATFORM_WATCHOS_EXCLAVECORE", MACHO_PLATFORM_WATCHOS_EXCLAVECORE},
+			{"MACHO_PLATFORM_WATCHOS_EXCLAVEKIT", MACHO_PLATFORM_WATCHOS_EXCLAVEKIT},
+			{"MACHO_PLATFORM_VISIONOS_EXCLAVECORE", MACHO_PLATFORM_VISIONOS_EXCLAVECORE},
+			{"MACHO_PLATFORM_VISIONOS_EXCLAVEKIT", MACHO_PLATFORM_VISIONOS_EXCLAVEKIT}
+			// clang-format on
+		});
+
+	auto buildToolEnum = BuildEnum(view, "macho_build_tool_t", 4,
+		{
+			// clang-format off
+			{"MACHO_TOOL_CLANG", MACHO_TOOL_CLANG},
+			{"MACHO_TOOL_SWIFT", MACHO_TOOL_SWIFT},
+			{"MACHO_TOOL_LD", MACHO_TOOL_LD},
+			{"MACHO_TOOL_LLD", MACHO_TOOL_LLD},
+			{"MACHO_TOOL_METAL", MACHO_TOOL_METAL},
+			{"MACHO_TOOL_AIRLLD", MACHO_TOOL_AIRLLD},
+			{"MACHO_TOOL_AIRNT", MACHO_TOOL_AIRNT},
+			{"MACHO_TOOL_AIRNT_PLUGIN", MACHO_TOOL_AIRNT_PLUGIN},
+			{"MACHO_TOOL_AIRPACK", MACHO_TOOL_AIRPACK},
+			{"MACHO_TOOL_GPUARCHIVER", MACHO_TOOL_GPUARCHIVER},
+			{"MACHO_TOOL_METAL_FRAMEWORK", MACHO_TOOL_METAL_FRAMEWORK},
+			// clang-format on
+		});
+
+	auto buildToolVersionType = BuildStruct(view, "build_tool_version", false,
+		{
+			// clang-format off
+			{"tool", buildToolEnum},
+			{"version", Type::IntegerType(4, false)}
+			// clang-format on
+		});
+
+	auto buildVersionCommandType = BuildStruct(view, "build_version_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"platform", platformTypeEnum},
+			{"minos", Type::IntegerType(4, false)},
+			{"sdk", Type::IntegerType(4, false)},
+			{"ntools", Type::IntegerType(4, false)},
+			{"tools", Type::ArrayType(buildToolVersionType, 0)}
+			// clang-format on
+		});
+
+	auto sourceVersionCommandType = BuildStruct(view, "source_version_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"version", Type::IntegerType(8, false)}
+			// clang-format on
+		});
+
+	auto entryPointCommandType = BuildStruct(view, "entry_point_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"entryoff", Type::IntegerType(8, false)},
+			{"stacksize", Type::IntegerType(8, false)}
+			// clang-format on
+		});
+
+	// Used for the various LC_LOAD_* commands that have only a single string field.
+	auto stringCommandType = BuildStruct(view, "string_command", false,
+		{
+			// clang-format off
+			{"cmd", cmdTypeEnum},
+			{"cmdsize", Type::IntegerType(4, false)},
+			{"value", lcStringType}
+			// clang-format on
 		});
 }
 
@@ -609,6 +767,9 @@ void ApplyHeaderTypes(Ref<BinaryView> view, Ref<Logger> logger, const BinaryRead
 		case LC_DYLIB_CODE_SIGN_DRS:
 		case LC_DYLD_EXPORTS_TRIE:
 		case LC_DYLD_CHAINED_FIXUPS:
+		case LC_ATOM_INFO:
+		case LC_FUNCTION_VARIANTS:
+		case LC_FUNCTION_VARIANT_FIXUPS:
 			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("linkedit_data_command")));
 			break;
 		case LC_ENCRYPTION_INFO:
@@ -623,14 +784,54 @@ void ApplyHeaderTypes(Ref<BinaryView> view, Ref<Logger> logger, const BinaryRead
 			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("dyld_info_command")));
 			break;
 		case LC_FILESET_ENTRY:
-			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("fileset_entry_command")));
+		{
+			auto type = Type::NamedType(view, QualifiedName("fileset_entry_command"));
+			view->DefineDataVariable(cmdAddr, type);
+			if (load.cmdsize - type->GetWidth() <= 150)
+				view->DefineDataVariable(cmdAddr + type->GetWidth(),
+					Type::ArrayType(Type::IntegerType(1, true), load.cmdsize - type->GetWidth()));
 			break;
+		}
 		case LC_UNIXTHREAD:
 		{
 			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("unix_thread_command")));
 			reader.SeekRelative(4);
 			uint32_t count = reader.Read32();
 			view->DefineDataVariable(reader.GetOffset(), Type::ArrayType(Type::IntegerType(8, true), count));
+			break;
+		}
+		case LC_BUILD_VERSION:
+		{
+			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("build_version_command")));
+			reader.SeekRelative(12);
+			uint32_t count = reader.Read32();
+			view->DefineDataVariable(
+				reader.GetOffset(), Type::ArrayType(Type::NamedType(view, QualifiedName("build_tool_version")), count));
+			break;
+		}
+		case LC_SOURCE_VERSION:
+			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("source_version_command")));
+			break;
+		case LC_MAIN:
+			view->DefineDataVariable(cmdAddr, Type::NamedType(view, QualifiedName("entry_point_command")));
+			break;
+		case LC_DYLD_ENVIRONMENT:
+		case LC_ID_DYLINKER:
+		case LC_LOAD_DYLINKER:
+		case LC_RPATH:
+		case LC_SUB_CLIENT:
+		case LC_SUB_FRAMEWORK:
+		case LC_SUB_LIBRARY:
+		case LC_SUB_UMBRELLA:
+		case LC_TARGET_TRIPLE:
+		{
+			Ref<Type> type = Type::NamedType(view, QualifiedName("string_command"));
+			view->DefineDataVariable(cmdAddr, type);
+
+			if (load.cmdsize - type->GetWidth() <= 150)
+				view->DefineDataVariable(cmdAddr + type->GetWidth(),
+					Type::ArrayType(Type::IntegerType(1, true), load.cmdsize - type->GetWidth()));
+
 			break;
 		}
 		default:

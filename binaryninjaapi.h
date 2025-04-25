@@ -578,6 +578,7 @@ namespace BinaryNinja {
 	class FlowGraph;
 	class ReportCollection;
 	struct FormInputField;
+	struct ArchAndAddr;
 
 	/*! Logs to the error console with the given BNLogLevel.
 
@@ -5299,6 +5300,13 @@ namespace BinaryNinja {
 		*/
 		void AbortAnalysis();
 
+
+		/*! Check whether analysis is currently running
+
+		    \return true if analysis is aborted, false otherwise
+		*/
+		bool AnalysisIsAborted() const;
+
 		/*! Define a DataVariable at a given address with a set type
 
 		    \param addr virtual address to define the DataVariable at
@@ -6895,6 +6903,17 @@ namespace BinaryNinja {
 		bool GetNewAutoFunctionAnalysisSuppressed();
 		void SetNewAutoFunctionAnalysisSuppressed(bool suppress);
 
+		/*! Determine whether the target analysis should be skipped for a given source function and target address
+
+			\param source Source function and address
+			\param sourceFunc Function at the source address
+			\param sourceEnd End address of the source function
+			\param target Target address to analyze
+			\return Whether the target analysis should be skipped
+		*/
+		bool ShouldSkipTargetAnalysis(const ArchAndAddr& source, Ref<Function> sourceFunc,
+			uint64_t sourceEnd, const ArchAndAddr& target);
+
 		/*! Returns a list of namespaces for the current BinaryView
 
 			\return A list of namespaces for the current BinaryView
@@ -8069,6 +8088,8 @@ namespace BinaryNinja {
 		static void FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count);
 		static bool GetInstructionLowLevelILCallback(
 		    void* ctxt, const uint8_t* data, uint64_t addr, size_t* len, BNLowLevelILFunction* il);
+		static bool AnalyzeBasicBlocksCallback(void *ctxt, BNFunction* function, bool incrementalUpdate,
+			BNFunctionAnalysisSkipOverride analysisSkipOverride);
 		static char* GetRegisterNameCallback(void* ctxt, uint32_t reg);
 		static char* GetFlagNameCallback(void* ctxt, uint32_t flag);
 		static char* GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags);
@@ -8238,6 +8259,9 @@ namespace BinaryNinja {
 		    \param[in,out] il the LowLevelILFunction to appended to.
 		*/
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il);
+
+		virtual bool AnalyzeBasicBlocks(Function& function, bool incrementalUpdate,
+			BNFunctionAnalysisSkipOverride analysisSkipOverride);
 
 		/*! Gets a register name from a register index.
 
@@ -8517,7 +8541,6 @@ namespace BinaryNinja {
 		    \return Whether the conversion was successful
 		*/
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value);
-
 		void RegisterFunctionRecognizer(FunctionRecognizer* recog);
 		void RegisterRelocationHandler(const std::string& viewName, RelocationHandler* handler);
 		Ref<RelocationHandler> GetRelocationHandler(const std::string& viewName);
@@ -8633,6 +8656,8 @@ namespace BinaryNinja {
 		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionLowLevelIL(
 		    const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
+		virtual bool AnalyzeBasicBlocks(Function& function, bool incrementalUpdate,
+			BNFunctionAnalysisSkipOverride analysisSkipOverride) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
@@ -10468,6 +10493,17 @@ namespace BinaryNinja {
 	/*!
 		\ingroup basicblocks
 	*/
+	struct PendingBasicBlockEdge
+	{
+		BNBranchType type;
+		Ref<Architecture> arch;
+		uint64_t target;
+		bool fallThrough;
+	};
+
+	/*!
+		\ingroup basicblocks
+	*/
 	class BasicBlock : public CoreRefCountObject<BNBasicBlock, BNNewBasicBlockReference, BNFreeBasicBlock>
 	{
 	  public:
@@ -10490,6 +10526,13 @@ namespace BinaryNinja {
 			\return Start address of the basic block
 		*/
 		uint64_t GetStart() const;
+
+
+		/*! Set the end of a basic block
+
+			\param end Ending address of the basic block
+		*/
+		void SetEnd(uint64_t end);
 
 		/*! Ending address of the basic block
 
@@ -10526,6 +10569,72 @@ namespace BinaryNinja {
 			\return Whether basic block has undetermined outgoing edges
 		*/
 		bool HasUndeterminedOutgoingEdges() const;
+
+
+		/*! Whether the basic block has invalid instructions
+
+			\return true if the basic block has invalid instructions, false otherwise
+		 */
+		bool HasInvalidInstructions() const;
+
+		/*! Set whether the basic block has invalid instructions
+
+			\param value true if the basic block has invalid instructions, false otherwise
+		*/
+		void SetHasInvalidInstructions(bool value);
+
+		/*! Add a pending outgoing edge to this basic block
+
+			\param type Type of the branch
+			\param addr Address of the target basic block
+			\param arch Optional architecture for the target basic block, default is nullptr
+			\param fallThrough Whether this is a fall-through edge, default false
+		*/
+		void AddPendingOutgoingEdge(BNBranchType type, uint64_t addr, Ref<Architecture> arch = nullptr,
+			bool fallThrough = false);
+
+		/*! Get a list of pending outgoing edges for this basic block
+
+			\return List of pending outgoing edges
+		*/
+		std::vector<PendingBasicBlockEdge> GetPendingOutgoingEdges() const;
+
+		/*! Clear the pending outgoing edges for this basic block
+		*/
+		void ClearPendingOutgoingEdges();
+
+		/*! Set whether basic block has undetermined outgoing edges
+
+			\param value Whether basic block has undetermined outgoing edges
+		*/
+		void SetUndeterminedOutgoingEdges(bool value);
+
+		/*! Get the instruction data for a specific address in this basic block
+
+			\param addr Address of the instruction
+			\param len Pointer to a size_t variable to store the length of the instruction data
+			\return Pointer to the instruction data
+		*/
+		const uint8_t* GetInstructionData(uint64_t addr, size_t* len) const;
+
+		/*! Add instruction data to the basic block
+
+			\param data Pointer to the instruction data
+			\param len Length of the instruction data
+		*/
+		void AddInstructionData(const void* data, size_t len);
+
+		/*! Set whether the basic blocks falls through to a function
+
+			\param value Whether the basic block falls through to a function
+		*/
+		void SetFallThroughToFunction(bool value);
+
+		/*! Determine whether the basic block falls through to a function
+
+			\return Whether basic block falls through to a function
+		*/
+		bool IsFallThroughToFunction() const;
 
 		/*! Whether basic block can return or is tagged as 'No Return'
 
@@ -10773,12 +10882,22 @@ namespace BinaryNinja {
 			address = a.address;
 			return *this;
 		}
-		bool operator==(const ArchAndAddr& a) const { return (arch == a.arch) && (address == a.address); }
+		bool operator==(const ArchAndAddr& a) const {
+			return (arch == a.arch) && (address == a.address);
+		}
 		bool operator<(const ArchAndAddr& a) const
 		{
+			/*
+			// TODO: revisit why this code doesn't seem to be using the Ref<T> operators correctly and causes
+			// crashes in some cases
 			if (arch < a.arch)
 				return true;
 			if (arch > a.arch)
+				return false;
+			*/
+			if (arch->GetObject() < a.arch->GetObject())
+				return true;
+			if (arch->GetObject() > a.arch->GetObject())
 				return false;
 			return address < a.address;
 		}
@@ -10917,6 +11036,24 @@ namespace BinaryNinja {
 			\return a list of BasicBlock references for this function
 		*/
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+
+		/*! Create a new basic block for this function
+
+			\param arch Architecture for the basic block
+			\param addr Address of the basic block
+			\return The new BasicBlock
+		*/
+		Ref<BasicBlock> CreateBasicBlock(Architecture* arch, uint64_t addr);
+
+		/*! Add a basic block to the function analysis basic block list
+
+			\param block The BasicBlock to add
+		*/
+		void AddBasicBlock(Ref<BasicBlock> block);
+
+		/*! Finalize basic block list for this function
+		*/
+		void FinalizeBasicBlocks();
 
 		/*! Get the basic block an address is located in
 
@@ -11244,8 +11381,21 @@ namespace BinaryNinja {
 		void SetUserIndirectBranches(
 		    Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
 
+		std::vector<IndirectBranchInfo> GetAutoIndirectBranches();
+		std::vector<IndirectBranchInfo> GetUserIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
+
+		void AddDirectCodeReference(const ArchAndAddr& source, uint64_t target);
+		void AddDirectNoReturnCall(const ArchAndAddr& location);
+		bool LocationHasNoReturnCalls(const ArchAndAddr& location) const;
+		Ref<Function> GetCalleeForAnalysis(Ref<Platform> platform, uint64_t addr, bool exact);
+		void AddTempOutgoingReference(Ref<Function> target);
+		bool HasTempOutgoingReference(Ref<Function> target) const;
+		void AddTempIncomingReference(Ref<Function> source);
+
+		bool GetContextualFunctionReturn(const ArchAndAddr& location, bool& value) const;
+		void SetContextualFunctionReturn(const ArchAndAddr& location, bool value);
 
 		std::vector<uint64_t> GetUnresolvedIndirectBranches();
 		bool HasUnresolvedIndirectBranches();

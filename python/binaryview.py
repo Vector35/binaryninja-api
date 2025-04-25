@@ -4972,6 +4972,43 @@ class BinaryView:
 		"""
 		core.BNAbortAnalysis(self.handle)
 
+	@property
+	def analysis_is_aborted(self) -> bool:
+		"""
+		``analysis_is_aborted`` checks if the analysis has been aborted.
+
+		.. note:: This property is intended for use by architecture plugins only.
+
+		:return: True if the analysis has been aborted, False otherwise
+		:rtype: bool
+		"""
+
+		return core.BNAnalysisIsAborted(self.handle)
+
+	def should_skip_target_analysis(self, source_location: '_function.ArchAndAddr', source_function: '_function.Function',
+		end: int, target_location: '_function.ArchAndAddr') -> bool:
+		"""
+		``should_skip_target_analysis`` checks if target analysis should be skipped.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param _function.ArchAndAddr source_location: The source location.
+		:param _function.Function source_function: The source function.
+		:param int end: The end address of the source branch instruction.
+		:param _function.ArchAndAddr target_location: The target location.
+		:return: True if the target analysis should be skipped, False otherwise
+		:rtype: bool
+		"""
+
+		bn_src_arch_and_addr = core.BNArchitectureAndAddress()
+		bn_src_arch_and_addr.arch = source_location.arch.handle
+		bn_src_arch_and_addr.address = source_location.addr
+		bn_target_arch_and_addr = core.BNArchitectureAndAddress()
+		bn_target_arch_and_addr.arch = target_location.arch.handle
+		bn_target_arch_and_addr.address = target_location.addr
+		return core.BNShouldSkipTargetAnalysis(self.handle, bn_src_arch_and_addr, source_function.handle, end,
+			bn_target_arch_and_addr)
+
 	def define_data_var(
 	    self, addr: int, var_type: StringOrType, name: Optional[Union[str, '_types.CoreSymbol']] = None
 	) -> None:

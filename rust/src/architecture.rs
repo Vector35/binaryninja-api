@@ -30,6 +30,7 @@ use crate::{
     string::*,
     types::{NameAndType, Type},
     Endianness,
+    function::Function,
 };
 use std::ops::Deref;
 use std::{
@@ -469,6 +470,19 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         addr: u64,
         il: &LowLevelILMutableFunction,
     ) -> Option<(usize, bool)>;
+
+    fn analyze_basic_blocks(
+        &self,
+        function: &mut Function,
+        context: *mut BNBasicBlockAnalysisContext,
+    ) {
+        unsafe {
+            BNArchitectureDefaultAnalyzeBasicBlocks(
+                function.handle,
+                context,
+            );
+        };
+    }
 
     /// Fallback flag value calculation path. This method is invoked when the core is unable to
     /// recover flag use semantics, and resorts to emitting instructions that explicitly set each
@@ -1533,6 +1547,20 @@ impl Architecture for CoreArchitecture {
         }
     }
 
+    fn analyze_basic_blocks(
+        &self,
+        function: &mut Function,
+        context: *mut BNBasicBlockAnalysisContext,
+    ) {
+        unsafe {
+            BNArchitectureAnalyzeBasicBlocks(
+                self.handle,
+                function.handle,
+                context,
+            );
+        };
+    }
+
     fn flag_write_llil<'a>(
         &self,
         _flag: Self::Flag,
@@ -2235,6 +2263,19 @@ where
             }
             None => false,
         }
+    }
+
+    extern "C" fn cb_analyze_basic_blocks<A>(
+        ctxt: *mut c_void,
+        function: *mut BNFunction,
+        context: *mut BNBasicBlockAnalysisContext,
+    )
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let mut function = unsafe { Function::from_raw(function) };
+        custom_arch.analyze_basic_blocks(&mut function, context);
     }
 
     extern "C" fn cb_reg_name<A>(ctxt: *mut c_void, reg: u32) -> *mut c_char
@@ -3155,6 +3196,7 @@ where
         getInstructionText: Some(cb_get_instruction_text::<A>),
         freeInstructionText: Some(cb_free_instruction_text),
         getInstructionLowLevelIL: Some(cb_instruction_llil::<A>),
+        analyzeBasicBlocks: Some(cb_analyze_basic_blocks::<A>),
 
         getRegisterName: Some(cb_reg_name::<A>),
         getFlagName: Some(cb_flag_name::<A>),

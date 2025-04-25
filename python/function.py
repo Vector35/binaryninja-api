@@ -85,7 +85,6 @@ FunctionViewTypeOrName = Union['FunctionViewType', FunctionGraphType, str]
 def _function_name_():
 	return inspect.stack()[1][0].f_code.co_name
 
-
 @dataclass(frozen=True)
 class ArchAndAddr:
 	arch: 'architecture.Architecture'
@@ -2613,6 +2612,185 @@ class Function:
 		if not block:
 			return None
 		return basicblock.BasicBlock(block, self._view)
+
+	def create_basic_block(self, arch: 'architecture.Architecture', addr: int) -> 'basicblock.BasicBlock':
+		"""
+		``create_basic_block`` creates a new BasicBlock at the specified address for the given Architecture.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param Architecture arch: Architecture of the BasicBlock to create
+		:param int addr: Address of the BasicBlock to create
+		:rtype: basicblock.BasicBlock
+		"""
+		if not isinstance(arch, architecture.Architecture):
+			raise TypeError("arch must be an instance of architecture.Architecture")
+
+		bnblock = core.BNCreateFunctionBasicBlock(self.handle, arch.handle, addr)
+		if not bnblock:
+			return None
+
+		return basicblock.BasicBlock(bnblock, self._view)
+
+	def add_basic_block(self, block: 'basicblock.BasicBlock') -> None:
+		"""
+		``add_basic_block`` adds the specified BasicBlock to the Function.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param basicblock.BasicBlock block: BasicBlock to add to the Function
+		:rtype: None
+		"""
+		if not isinstance(block, basicblock.BasicBlock):
+			raise TypeError("block must be an instance of basicblock.BasicBlock")
+
+		core.BNAddFunctionBasicBlock(self.handle, block.handle)
+
+	def finalize_basic_blocks(self) -> None:
+		"""
+		``finalize_basic_blocks`` finalizes the BasicBlocks in the Function, ensuring they are committed to analysis.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:rtype: None
+		"""
+		core.BNFinalizeFunctionBasicBlocks(self.handle)
+
+	def add_direct_code_reference(self, source: ArchAndAddr, target: int) -> None:
+		"""
+		``add_direct_code_reference`` adds a direct code reference from the source to the target address.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param ArchAndAddr source: Source address and architecture of the reference
+		:param int target: Target address of the reference
+		:rtype: None
+		"""
+		bn_arch_and_addr = core.BNArchitectureAndAddress()
+		bn_arch_and_addr.arch = source.arch.handle
+		bn_arch_and_addr.address = source.addr
+		core.BNFunctionAddDirectCodeReference(
+		    self.handle, bn_arch_and_addr, target
+		)
+
+	def add_direct_no_return_call(self, location: ArchAndAddr) -> None:
+		"""
+		``add_direct_no_return_call`` adds a direct no return call site to the function at the specified location.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param ArchAndAddr location: Location of the call site
+		:rtype: None
+		"""
+		bn_arch_and_addr = core.BNArchitectureAndAddress()
+		bn_arch_and_addr.arch = location.arch.handle
+		bn_arch_and_addr.address = location.addr
+		core.BNFunctionAddDirectNoReturnCall(self.handle, bn_arch_and_addr)
+
+	def location_has_no_return_calls(self, location: ArchAndAddr) -> bool:
+		"""
+		``location_has_no_return_calls`` checks if the specified location has any no return calls sites.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param ArchAndAddr location: Location to check for no return calls
+		:return: True if there are no return calls at the specified location, False otherwise
+		:rtype: bool
+		"""
+		bn_arch_and_addr = core.BNArchitectureAndAddress()
+		bn_arch_and_addr.arch = location.arch.handle
+		bn_arch_and_addr.address = location.addr
+		return core.BNFunctionLocationHasNoReturnCalls(self.handle, bn_arch_and_addr)
+
+	def get_callee_for_analysis(self, platform: 'platform.Platform', addr: int, exact: bool = False) -> Optional['Function']:
+		"""
+		``get_callee_for_analysis`` retrieves the callee function for the specified address and platform.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param platform.Platform platform: Platform of the callee function
+		:param int addr: Address of the callee function
+		:param bool exact: If True, only return a function if it exactly matches the address and platform
+		:return: The callee function or None if not found
+		:rtype: Optional[Function]
+		"""
+		func = core.BNGetCalleeForAnalysis(self.handle, platform.handle, addr, exact)
+		if func is None:
+			return None
+		return Function(func, self._view)
+
+	def add_temp_outgoing_reference(self, target: 'Function') -> None:
+		"""
+		``add_temp_outgoing_reference`` adds a temporary outgoing reference to the specified target function.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param Function target: Target function to add a temporary outgoing reference to
+		:rtype: None
+		"""
+		if not isinstance(target, Function):
+			raise TypeError("target must be an instance of Function")
+		core.BNFunctionAddTempOutgoingReference(self.handle, target.handle)
+
+	def has_temp_outgoing_reference(self, target: 'Function') -> bool:
+		"""
+		``has_temp_outgoing_reference`` checks if the function has a temporary outgoing reference to the specified target function.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param Function target: Target function to check for a temporary outgoing reference
+		:return: True if there is a temporary outgoing reference to the target function, False otherwise
+		:rtype: bool
+		"""
+		if not isinstance(target, Function):
+			raise TypeError("target must be an instance of Function")
+		return core.BNFunctionHasTempOutgoingReference(self.handle, target.handle)
+
+	def add_temp_incoming_reference(self, source: 'Function') -> None:
+		"""
+		``add_temp_incoming_reference`` adds a temporary incoming reference from the specified source function.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param Function source: Source function to add a temporary incoming reference from
+		:rtype: None
+		"""
+		if not isinstance(source, Function):
+			raise TypeError("source must be an instance of Function")
+		core.BNFunctionAddTempIncomingReference(self.handle, source.handle)
+
+	def get_contextual_function_return(self, location: ArchAndAddr) -> tuple[bool, bool]:
+		"""
+		``get_contextual_function_return`` checks if the specified location has a contextual function return.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param ArchAndAddr location: Location to check for a contextual function return
+		:return: A tuple containing a bool indicating whether the location has a contextual function return, and a bool containing the value that was set
+		:rtype: tuple[bool, bool]
+		"""
+		bn_arch_and_addr = core.BNArchitectureAndAddress()
+		bn_arch_and_addr.arch = location.arch.handle
+		bn_arch_and_addr.address = location.addr
+		result = ctypes.c_bool()
+		if not core.BNFunctionGetContextualFunctionReturn(self.handle, bn_arch_and_addr, ctypes.byref(result)):
+			return (False, False)
+		return (True, result.value)
+
+	def set_contextual_function_return(self, location: ArchAndAddr, value: bool) -> None:
+		"""
+		``set_contextual_function_return`` sets a contextual function return for the specified location.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param ArchAndAddr location: Location to set the contextual function return for
+		:param bool value: Value to set for the contextual function return
+		:rtype: None
+		"""
+		bn_arch_and_addr = core.BNArchitectureAndAddress()
+		bn_arch_and_addr.arch = location.arch.handle
+		bn_arch_and_addr.address = location.addr
+		core.BNFunctionSetContextualFunctionReturn(self.handle, bn_arch_and_addr, value)
 
 	def get_instr_highlight(
 	    self, addr: int, arch: Optional['architecture.Architecture'] = None

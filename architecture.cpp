@@ -24,6 +24,7 @@
 #include <inttypes.h>
 #include <vector>
 #include "binaryninjaapi.h"
+#include "lowlevelilinstruction.h"
 #include "ffi.h"
 
 using namespace BinaryNinja;
@@ -324,6 +325,15 @@ bool Architecture::GetInstructionLowLevelILCallback(
 	CallbackRef<Architecture> arch(ctxt);
 	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
 	return arch->GetInstructionLowLevelIL(data, addr, *len, *func);
+}
+
+
+void Architecture::AnalyzeBasicBlocksCallback(void *ctxt, BNFunction* function,
+	BNBasicBlockAnalysisContext* context)
+{
+	CallbackRef<Architecture> arch(ctxt);
+	Ref<Function> func(new Function(BNNewFunctionReference(function)));
+	arch->AnalyzeBasicBlocks(*func, *context);
 }
 
 
@@ -817,6 +827,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getInstructionText = GetInstructionTextCallback;
 	callbacks.freeInstructionText = FreeInstructionTextCallback;
 	callbacks.getInstructionLowLevelIL = GetInstructionLowLevelILCallback;
+	callbacks.analyzeBasicBlocks = AnalyzeBasicBlocksCallback;
 	callbacks.getRegisterName = GetRegisterNameCallback;
 	callbacks.getFlagName = GetFlagNameCallback;
 	callbacks.getFlagWriteTypeName = GetFlagWriteTypeNameCallback;
@@ -942,6 +953,12 @@ bool Architecture::GetInstructionLowLevelIL(const uint8_t*, uint64_t, size_t&, L
 {
 	il.AddInstruction(il.Undefined());
 	return false;
+}
+
+
+void Architecture::AnalyzeBasicBlocks(Function& function, BasicBlockAnalysisContext& context)
+{
+	DefaultAnalyzeBasicBlocks(function, context);
 }
 
 
@@ -1502,6 +1519,12 @@ bool CoreArchitecture::GetInstructionText(
 bool CoreArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il)
 {
 	return BNGetInstructionLowLevelIL(m_object, data, addr, &len, il.GetObject());
+}
+
+
+void CoreArchitecture::AnalyzeBasicBlocks(Function& function, BasicBlockAnalysisContext& context)
+{
+	BNArchitectureAnalyzeBasicBlocks(m_object, function.GetObject(), &context);
 }
 
 

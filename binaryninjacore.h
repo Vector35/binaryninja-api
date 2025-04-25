@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 112
+#define BN_CURRENT_CORE_ABI_VERSION 113
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -307,6 +307,8 @@ extern "C"
 	typedef struct BNLineFormatter BNLineFormatter;
 	typedef struct BNRenderLayer BNRenderLayer;
 	typedef struct BNStringRef BNStringRef;
+	typedef struct BNIndirectBranchInfo BNIndirectBranchInfo;
+	typedef struct BNArchitectureAndAddress BNArchitectureAndAddress;
 
 	typedef bool(*BNProgressFunction)(void*, size_t, size_t);
 
@@ -1856,6 +1858,30 @@ extern "C"
 		uint8_t confidence;
 	} BNTypeWithConfidence;
 
+	typedef enum BNFunctionAnalysisSkipOverride
+	{
+		DefaultFunctionAnalysisSkip,
+		NeverSkipFunctionAnalysis,
+		AlwaysSkipFunctionAnalysis
+	} BNFunctionAnalysisSkipOverride;
+
+	typedef struct BNBasicBlockAnalysisContext
+	{
+		size_t indirectBranchesCount;
+		BNIndirectBranchInfo* indirectBranches;
+		BNFunctionAnalysisSkipOverride analysisSkipOverride;
+		bool translateTailCalls;
+		bool disallowBranchToString;
+		bool haltOnInvalidInstructions;
+		uint64_t maxFunctionSize;
+
+		// OUT
+		bool maxSizeReached;
+
+		BNArchitectureAndAddress* haltedDisassemblyAddresses;
+		size_t haltedDisassemblyAddressesCount;
+	} BNBasicBlockAnalysisContext;
+
 	typedef struct BNCustomArchitecture
 	{
 		void* context;
@@ -1874,6 +1900,7 @@ extern "C"
 		void (*freeInstructionText)(BNInstructionTextToken* tokens, size_t count);
 		bool (*getInstructionLowLevelIL)(
 		    void* ctxt, const uint8_t* data, uint64_t addr, size_t* len, BNLowLevelILFunction* il);
+		void (*analyzeBasicBlocks)(void* ctxt, BNFunction* function, BNBasicBlockAnalysisContext* context);
 		char* (*getRegisterName)(void* ctxt, uint32_t reg);
 		char* (*getFlagName)(void* ctxt, uint32_t flag);
 		char* (*getFlagWriteTypeName)(void* ctxt, uint32_t flags);
@@ -1979,6 +2006,14 @@ extern "C"
 		bool backEdge;
 		bool fallThrough;
 	} BNBasicBlockEdge;
+
+	typedef struct BNPendingBasicBlockEdge
+	{
+		BNBranchType type;
+		BNArchitecture* arch;
+		uint64_t target;
+		bool fallThrough;
+	} BNPendingBasicBlockEdge;
 
 	typedef struct BNPoint
 	{
@@ -3144,13 +3179,6 @@ extern "C"
 		int32_t adjustment;
 		uint8_t confidence;
 	} BNRegisterStackAdjustment;
-
-	typedef enum BNFunctionAnalysisSkipOverride
-	{
-		DefaultFunctionAnalysisSkip,
-		NeverSkipFunctionAnalysis,
-		AlwaysSkipFunctionAnalysis
-	} BNFunctionAnalysisSkipOverride;
 
 	typedef enum BNReportType
 	{
@@ -4501,6 +4529,10 @@ extern "C"
 	BINARYNINJACOREAPI bool BNGetInstructionLowLevelIL(
 	    BNArchitecture* arch, const uint8_t* data, uint64_t addr, size_t* len, BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI void BNFreeInstructionText(BNInstructionTextToken* tokens, size_t count);
+	BINARYNINJACOREAPI bool BNArchitectureSetDefaultAnalyzeBasicBlocksCallback(void *callback);
+	BINARYNINJACOREAPI void BNArchitectureDefaultAnalyzeBasicBlocks(BNFunction* function, BNBasicBlockAnalysisContext* context);
+	BINARYNINJACOREAPI void BNArchitectureAnalyzeBasicBlocks(BNArchitecture* arch, BNFunction* function,
+		BNBasicBlockAnalysisContext* context);
 	BINARYNINJACOREAPI void BNFreeInstructionTextLines(BNInstructionTextLine* lines, size_t count);
 	BINARYNINJACOREAPI char* BNGetArchitectureRegisterName(BNArchitecture* arch, uint32_t reg);
 	BINARYNINJACOREAPI char* BNGetArchitectureFlagName(BNArchitecture* arch, uint32_t flag);
@@ -4616,6 +4648,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNUpdateAnalysisAndWait(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNUpdateAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNAbortAnalysis(BNBinaryView* view);
+	BINARYNINJACOREAPI bool BNAnalysisIsAborted(BNBinaryView* view);
 	BINARYNINJACOREAPI bool BNIsFunctionUpdateNeeded(BNFunction* func);
 	BINARYNINJACOREAPI void BNRequestAdvancedFunctionAnalysisData(BNFunction* func);
 	BINARYNINJACOREAPI void BNReleaseAdvancedFunctionAnalysisData(BNFunction* func);
@@ -4679,6 +4712,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeBasicBlock(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNBasicBlock** BNGetFunctionBasicBlockList(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeBasicBlockList(BNBasicBlock** blocks, size_t count);
+	BINARYNINJACOREAPI BNBasicBlock* BNCreateFunctionBasicBlock(BNFunction* func, BNArchitecture* arch, uint64_t addr);
+	BINARYNINJACOREAPI void BNAddFunctionBasicBlock(BNFunction* func, BNBasicBlock* block);
+	BINARYNINJACOREAPI void BNFinalizeFunctionBasicBlocks(BNFunction* func);
 	BINARYNINJACOREAPI BNBasicBlock* BNGetFunctionBasicBlockAtAddress(
 	    BNFunction* func, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI BNBasicBlock* BNGetRecentBasicBlockForAddress(BNBinaryView* view, uint64_t addr);
@@ -4816,14 +4852,26 @@ extern "C"
 	BINARYNINJACOREAPI BNArchitecture* BNGetBasicBlockArchitecture(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNBasicBlock* BNGetBasicBlockSource(BNBasicBlock* block);
 	BINARYNINJACOREAPI uint64_t BNGetBasicBlockStart(BNBasicBlock* block);
+	BINARYNINJACOREAPI void BNSetBasicBlockEnd(BNBasicBlock* block, uint64_t end);
 	BINARYNINJACOREAPI uint64_t BNGetBasicBlockEnd(BNBasicBlock* block);
 	BINARYNINJACOREAPI uint64_t BNGetBasicBlockLength(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNBasicBlockEdge* BNGetBasicBlockOutgoingEdges(BNBasicBlock* block, size_t* count);
 	BINARYNINJACOREAPI BNBasicBlockEdge* BNGetBasicBlockIncomingEdges(BNBasicBlock* block, size_t* count);
 	BINARYNINJACOREAPI void BNFreeBasicBlockEdgeList(BNBasicBlockEdge* edges, size_t count);
 	BINARYNINJACOREAPI bool BNBasicBlockHasUndeterminedOutgoingEdges(BNBasicBlock* block);
+	BINARYNINJACOREAPI void BNBasicBlockAddPendingOutgoingEdge(BNBasicBlock* block, BNBranchType type,
+	    uint64_t addr, BNArchitecture* arch, bool fallThrough);
+	BINARYNINJACOREAPI BNPendingBasicBlockEdge* BNGetBasicBlockPendingOutgoingEdges(BNBasicBlock* block, size_t* count);
+	BINARYNINJACOREAPI void BNFreePendingBasicBlockEdgeList(BNPendingBasicBlockEdge* edges);
+	BINARYNINJACOREAPI void BNClearBasicBlockPendingOutgoingEdges(BNBasicBlock* block);
+	BINARYNINJACOREAPI void BNBasicBlockSetUndeterminedOutgoingEdges(BNBasicBlock* block, bool value);
+	BINARYNINJACOREAPI const uint8_t* BNBasicBlockGetInstructionData(BNBasicBlock* block, uint64_t addr, size_t* len);
+	BINARYNINJACOREAPI void BNBasicBlockAddInstructionData(BNBasicBlock* block, const void* data, size_t len);
+	BINARYNINJACOREAPI void BNBasicBlockSetFallThroughToFunction(BNBasicBlock* block, bool value);
+	BINARYNINJACOREAPI bool BNBasicBlockIsFallThroughToFunction(BNBasicBlock* block);
 	BINARYNINJACOREAPI bool BNBasicBlockCanExit(BNBasicBlock* block);
 	BINARYNINJACOREAPI void BNBasicBlockSetCanExit(BNBasicBlock* block, bool value);
+	BINARYNINJACOREAPI void BNBasicBlockSetHasInvalidInstructions(BNBasicBlock* block, bool value);
 	BINARYNINJACOREAPI bool BNBasicBlockHasInvalidInstructions(BNBasicBlock* block);
 	BINARYNINJACOREAPI size_t BNGetBasicBlockIndex(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNBasicBlock** BNGetBasicBlockDominators(BNBasicBlock* block, size_t* count, bool post);
@@ -5048,6 +5096,18 @@ extern "C"
 	BINARYNINJACOREAPI BNIndirectBranchInfo* BNGetIndirectBranchesAt(
 	    BNFunction* func, BNArchitecture* arch, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI void BNFreeIndirectBranchList(BNIndirectBranchInfo* branches);
+	BINARYNINJACOREAPI void BNFunctionAddDirectCodeReference(BNFunction* func, BNArchitectureAndAddress* source,
+		uint64_t target);
+	BINARYNINJACOREAPI void BNFunctionAddDirectNoReturnCall(BNFunction* func, BNArchitectureAndAddress* location);
+	BINARYNINJACOREAPI bool BNFunctionLocationHasNoReturnCalls(BNFunction* func, BNArchitectureAndAddress* location);
+	BINARYNINJACOREAPI BNFunction* BNGetCalleeForAnalysis(BNFunction* func, BNPlatform* platform,
+		uint64_t addr, bool exact);
+	BINARYNINJACOREAPI void BNFunctionAddTempOutgoingReference(BNFunction* func, BNFunction* target);
+	BINARYNINJACOREAPI bool BNFunctionHasTempOutgoingReference(BNFunction* func, BNFunction* target);
+	BINARYNINJACOREAPI void BNFunctionAddTempIncomingReference(BNFunction* func, BNFunction* source);
+
+	BINARYNINJACOREAPI bool BNFunctionGetContextualFunctionReturn(BNFunction* func, BNArchitectureAndAddress* location, bool* value);
+	BINARYNINJACOREAPI void BNFunctionSetContextualFunctionReturn(BNFunction* func, BNArchitectureAndAddress* location, bool value);
 
 	BINARYNINJACOREAPI uint64_t* BNGetUnresolvedIndirectBranches(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI bool BNHasUnresolvedIndirectBranches(BNFunction* func);
@@ -5117,13 +5177,14 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetMaxFunctionSizeForAnalysis(BNBinaryView* view, uint64_t size);
 	BINARYNINJACOREAPI bool BNGetNewAutoFunctionAnalysisSuppressed(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSetNewAutoFunctionAnalysisSuppressed(BNBinaryView* view, bool suppress);
-
 	BINARYNINJACOREAPI BNAnalysisCompletionEvent* BNAddAnalysisCompletionEvent(
 	    BNBinaryView* view, void* ctxt, void (*callback)(void* ctxt));
 	BINARYNINJACOREAPI BNAnalysisCompletionEvent* BNNewAnalysisCompletionEventReference(
 	    BNAnalysisCompletionEvent* event);
 	BINARYNINJACOREAPI void BNFreeAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
 	BINARYNINJACOREAPI void BNCancelAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
+	BINARYNINJACOREAPI bool BNShouldSkipTargetAnalysis(BNBinaryView* view, BNArchitectureAndAddress* source,
+		BNFunction* sourceFunc, uint64_t sourceEnd, BNArchitectureAndAddress* target);
 
 	BINARYNINJACOREAPI BNAnalysisInfo* BNGetAnalysisInfo(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNFreeAnalysisInfo(BNAnalysisInfo* info);

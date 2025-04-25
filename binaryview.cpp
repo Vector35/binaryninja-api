@@ -2186,6 +2186,12 @@ void BinaryView::AbortAnalysis()
 }
 
 
+bool BinaryView::AnalysisIsAborted() const
+{
+	return BNAnalysisIsAborted(m_object);
+}
+
+
 void BinaryView::DefineDataVariable(uint64_t addr, const Confidence<Ref<Type>>& type)
 {
 	BNTypeWithConfidence tc;
@@ -5265,6 +5271,20 @@ bool BinaryView::GetNewAutoFunctionAnalysisSuppressed()
 void BinaryView::SetNewAutoFunctionAnalysisSuppressed(bool suppress)
 {
 	BNSetNewAutoFunctionAnalysisSuppressed(m_object, suppress);
+}
+
+
+bool BinaryView::ShouldSkipTargetAnalysis(const ArchAndAddr& source, Ref<Function> sourceFunc,
+	uint64_t sourceEnd, const ArchAndAddr& target)
+{
+	BNArchitectureAndAddress sourceCopy;
+	sourceCopy.arch = source.arch ? source.arch->GetObject() : nullptr;
+	sourceCopy.address = source.address;
+	BNArchitectureAndAddress targetCopy;
+	targetCopy.address = target.address;
+	targetCopy.arch = target.arch ? target.arch->GetObject() : nullptr;
+	auto func = sourceFunc ? sourceFunc->GetObject() : nullptr;
+	return BNShouldSkipTargetAnalysis(m_object, &sourceCopy, func, sourceEnd, &targetCopy);
 }
 
 

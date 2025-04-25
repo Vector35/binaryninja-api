@@ -307,6 +307,7 @@ extern "C"
 	typedef struct BNLineFormatter BNLineFormatter;
 	typedef struct BNRenderLayer BNRenderLayer;
 	typedef struct BNStringRef BNStringRef;
+	typedef struct BNIndirectBranchInfo BNIndirectBranchInfo;
 
 	typedef bool(*BNProgressFunction)(void*, size_t, size_t);
 
@@ -1851,6 +1852,16 @@ extern "C"
 		AlwaysSkipFunctionAnalysis
 	} BNFunctionAnalysisSkipOverride;
 
+	typedef struct BNBasicBlockAnalysisContext
+	{
+		size_t indirectBranchesCount;
+		BNIndirectBranchInfo* indirectBranches;
+		BNFunctionAnalysisSkipOverride analysisSkipOverride;
+		bool translateTailCalls;
+		bool disallowBranchToString;
+		uint64_t maxFunctionSize;
+	} BNBasicBlockAnalysisContext;
+
 	typedef struct BNCustomArchitecture
 	{
 		void* context;
@@ -1869,8 +1880,7 @@ extern "C"
 		void (*freeInstructionText)(BNInstructionTextToken* tokens, size_t count);
 		bool (*getInstructionLowLevelIL)(
 		    void* ctxt, const uint8_t* data, uint64_t addr, size_t* len, BNLowLevelILFunction* il);
-		bool (*analyzeBasicBlocks)(void* ctxt, BNFunction* function,
-			bool incrementalUpdate, BNFunctionAnalysisSkipOverride analysisSkipOverride);
+		void (*analyzeBasicBlocks)(void* ctxt, BNFunction* function, BNBasicBlockAnalysisContext* context);
 		char* (*getRegisterName)(void* ctxt, uint32_t reg);
 		char* (*getFlagName)(void* ctxt, uint32_t flag);
 		char* (*getFlagWriteTypeName)(void* ctxt, uint32_t flags);
@@ -4471,8 +4481,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNGetInstructionLowLevelIL(
 	    BNArchitecture* arch, const uint8_t* data, uint64_t addr, size_t* len, BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI void BNFreeInstructionText(BNInstructionTextToken* tokens, size_t count);
-	BINARYNINJACOREAPI bool BNArchitectureAnalyzeBasicBlocks(BNArchitecture* arch, BNFunction* function, 
-		bool incrementalUpdate, BNFunctionAnalysisSkipOverride analysisSkipOverride);
+	BINARYNINJACOREAPI void BNArchitectureAnalyzeBasicBlocks(BNArchitecture* arch, BNFunction* function,
+		BNBasicBlockAnalysisContext* context);
 	BINARYNINJACOREAPI void BNFreeInstructionTextLines(BNInstructionTextLine* lines, size_t count);
 	BINARYNINJACOREAPI char* BNGetArchitectureRegisterName(BNArchitecture* arch, uint32_t reg);
 	BINARYNINJACOREAPI char* BNGetArchitectureFlagName(BNArchitecture* arch, uint32_t flag);
@@ -5024,8 +5034,6 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetUserIndirectBranches(BNFunction* func, BNArchitecture* sourceArch, uint64_t source,
 	    BNArchitectureAndAddress* branches, size_t count);
 
-	BINARYNINJACOREAPI BNIndirectBranchInfo* BNGetAutoIndirectBranches(BNFunction* func, size_t* count);
-	BINARYNINJACOREAPI BNIndirectBranchInfo* BNGetUserIndirectBranches(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI BNIndirectBranchInfo* BNGetIndirectBranches(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI BNIndirectBranchInfo* BNGetIndirectBranchesAt(
 	    BNFunction* func, BNArchitecture* arch, uint64_t addr, size_t* count);

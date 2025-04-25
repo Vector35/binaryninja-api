@@ -467,11 +467,8 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn analyze_basic_blocks(
         &self,
         _function: &mut Function,
-        _incremental_update: bool,
-        _analysis_skip_override: BNFunctionAnalysisSkipOverride,
-    ) -> bool {
-        false
-    }
+        _context: *mut BNBasicBlockAnalysisContext,
+    ) {}
 
     /// Fallback flag value calculation path. This method is invoked when the core is unable to
     /// recover flag use semantics, and resorts to emitting instructions that explicitly set each
@@ -1538,19 +1535,15 @@ impl Architecture for CoreArchitecture {
     fn analyze_basic_blocks(
         &self,
         function: &mut Function,
-        incremental_update: bool,
-        analysis_skip_override: BNFunctionAnalysisSkipOverride,
-    ) -> bool {
-        let success: bool = unsafe {
+        context: *mut BNBasicBlockAnalysisContext,
+    ) {
+        unsafe {
             BNArchitectureAnalyzeBasicBlocks(
                 self.handle,
                 function.handle,
-                incremental_update,
-                analysis_skip_override,
-            )
+                context,
+            );
         };
-
-        return success;
     }
 
     fn flag_write_llil<'a>(
@@ -2265,15 +2258,14 @@ where
     extern "C" fn cb_analyze_basic_blocks<A>(
         ctxt: *mut c_void,
         function: *mut BNFunction,
-        incremental_update: bool,
-        analysis_skip_override: BNFunctionAnalysisSkipOverride,
-    ) -> bool
+        context: *mut BNBasicBlockAnalysisContext,
+    )
     where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let mut function = unsafe { Function::from_raw(function) };
-        return custom_arch.analyze_basic_blocks(&mut function, incremental_update, analysis_skip_override);
+        custom_arch.analyze_basic_blocks(&mut function, context);
     }
 
     extern "C" fn cb_reg_name<A>(ctxt: *mut c_void, reg: u32) -> *mut c_char

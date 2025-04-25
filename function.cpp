@@ -1755,52 +1755,6 @@ void Function::SetUserIndirectBranches(
 }
 
 
-std::vector<IndirectBranchInfo> Function::GetAutoIndirectBranches()
-{
-	size_t count;
-	BNIndirectBranchInfo* branches = BNGetAutoIndirectBranches(m_object, &count);
-
-	vector<IndirectBranchInfo> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		IndirectBranchInfo b;
-		b.sourceArch = new CoreArchitecture(branches[i].sourceArch);
-		b.sourceAddr = branches[i].sourceAddr;
-		b.destArch = new CoreArchitecture(branches[i].destArch);
-		b.destAddr = branches[i].destAddr;
-		b.autoDefined = branches[i].autoDefined;
-		result.push_back(b);
-	}
-
-	BNFreeIndirectBranchList(branches);
-	return result;
-}
-
-
-std::vector<IndirectBranchInfo> Function::GetUserIndirectBranches()
-{
-	size_t count;
-	BNIndirectBranchInfo* branches = BNGetUserIndirectBranches(m_object, &count);
-
-	vector<IndirectBranchInfo> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		IndirectBranchInfo b;
-		b.sourceArch = new CoreArchitecture(branches[i].sourceArch);
-		b.sourceAddr = branches[i].sourceAddr;
-		b.destArch = new CoreArchitecture(branches[i].destArch);
-		b.destAddr = branches[i].destAddr;
-		b.autoDefined = branches[i].autoDefined;
-		result.push_back(b);
-	}
-
-	BNFreeIndirectBranchList(branches);
-	return result;
-}
-
-
 vector<IndirectBranchInfo> Function::GetIndirectBranches()
 {
 	size_t count;

@@ -8088,8 +8088,7 @@ namespace BinaryNinja {
 		static void FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count);
 		static bool GetInstructionLowLevelILCallback(
 		    void* ctxt, const uint8_t* data, uint64_t addr, size_t* len, BNLowLevelILFunction* il);
-		static bool AnalyzeBasicBlocksCallback(void *ctxt, BNFunction* function, bool incrementalUpdate,
-			BNFunctionAnalysisSkipOverride analysisSkipOverride);
+		static void AnalyzeBasicBlocksCallback(void *ctxt, BNFunction* function, BNBasicBlockAnalysisContext* context);
 		static char* GetRegisterNameCallback(void* ctxt, uint32_t reg);
 		static char* GetFlagNameCallback(void* ctxt, uint32_t flag);
 		static char* GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags);
@@ -8260,8 +8259,7 @@ namespace BinaryNinja {
 		*/
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il);
 
-		virtual bool AnalyzeBasicBlocks(Function& function, bool incrementalUpdate,
-			BNFunctionAnalysisSkipOverride analysisSkipOverride);
+		virtual void AnalyzeBasicBlocks(Function& function, BNBasicBlockAnalysisContext* context);
 
 		/*! Gets a register name from a register index.
 
@@ -8656,8 +8654,7 @@ namespace BinaryNinja {
 		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionLowLevelIL(
 		    const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
-		virtual bool AnalyzeBasicBlocks(Function& function, bool incrementalUpdate,
-			BNFunctionAnalysisSkipOverride analysisSkipOverride) override;
+		virtual void AnalyzeBasicBlocks(Function& function, BNBasicBlockAnalysisContext* context) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
@@ -11381,8 +11378,6 @@ namespace BinaryNinja {
 		void SetUserIndirectBranches(
 		    Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
 
-		std::vector<IndirectBranchInfo> GetAutoIndirectBranches();
-		std::vector<IndirectBranchInfo> GetUserIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
 

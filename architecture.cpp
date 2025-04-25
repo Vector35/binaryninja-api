@@ -308,12 +308,12 @@ bool Architecture::GetInstructionLowLevelILCallback(
 }
 
 
-bool Architecture::AnalyzeBasicBlocksCallback(void *ctxt, BNFunction* function,
-	bool incrementalUpdate, BNFunctionAnalysisSkipOverride analysisSkipOverride)
+void Architecture::AnalyzeBasicBlocksCallback(void *ctxt, BNFunction* function,
+	BNBasicBlockAnalysisContext* context)
 {
 	CallbackRef<Architecture> arch(ctxt);
 	Ref<Function> func(new Function(BNNewFunctionReference(function)));
-	return arch->AnalyzeBasicBlocks(*func, incrementalUpdate, analysisSkipOverride);
+	arch->AnalyzeBasicBlocks(*func, context);
 }
 
 
@@ -983,36 +983,20 @@ static bool GetNextFunctionAfterAddress(Ref<BinaryView> data, Ref<Platform> plat
 }
 
 
-bool Architecture::AnalyzeBasicBlocks(Function& function, bool incrementalUpdate, BNFunctionAnalysisSkipOverride analysisSkipOverride)
+void Architecture::AnalyzeBasicBlocks(Function& function, BNBasicBlockAnalysisContext* context)
 {
 	auto data = function.GetView();
 	queue<ArchAndAddr> blocksToProcess;
 	map<ArchAndAddr, Ref<BasicBlock>> instrBlocks;
 	set<ArchAndAddr> seenBlocks;
-
-	// TODO - we might just want to create a generic analysis settings object that includes all of these
-	//bool tailCallTranslation = function.GetSettingsCache()->Get<bool>("core.function.translateTailCalls");
-	bool tailCallTranslation = true;
-	//bool disallowBranchToString = owner->IsDisallowBranchToStringEnabled();
-	bool disallowBranchToString = false;
-
-	// TODO: add an API for querying ONLY the indirect branches that are auto-defined
-	auto indirectBranches = function.GetAutoIndirectBranches();
-	map<ArchAndAddr, set<ArchAndAddr>> autoIndirectBranches;
-	for (auto& branchInfo : indirectBranches)
+	map<ArchAndAddr, set<ArchAndAddr>> indirectBranches;
+	for (size_t i = 0; i < context->indirectBranchesCount; i++)
 	{
-		auto sourceLocation = ArchAndAddr(branchInfo.sourceArch, branchInfo.sourceAddr);
-		auto destLocation = ArchAndAddr(branchInfo.destArch, branchInfo.destAddr);
-		autoIndirectBranches[sourceLocation].insert(destLocation);
-	}
-
-	map<ArchAndAddr, set<ArchAndAddr>> userIndirectBranches;
-	indirectBranches = function.GetUserIndirectBranches();
-	for (auto& branchInfo : indirectBranches)
-	{
-		auto sourceLocation = ArchAndAddr(branchInfo.sourceArch, branchInfo.sourceAddr);
-		auto destLocation = ArchAndAddr(branchInfo.destArch, branchInfo.destAddr);
-		userIndirectBranches[sourceLocation].insert(destLocation);
+		auto sourceLocation = ArchAndAddr(new CoreArchitecture(context->indirectBranches[i].sourceArch),
+			context->indirectBranches[i].sourceAddr);
+		auto destLocation = ArchAndAddr(new CoreArchitecture(context->indirectBranches[i].destArch),
+			context->indirectBranches[i].destAddr);
+		indirectBranches[sourceLocation].insert(destLocation);
 	}
 
 	BNStringReference strRef;
@@ -1091,11 +1075,11 @@ bool Architecture::AnalyzeBasicBlocks(Function& function, bool incrementalUpdate
 	}
 
 	uint64_t totalSize = 0;
-	uint64_t maxSize = data->GetMaxFunctionSizeForAnalysis();
+	uint64_t maxSize = context->maxFunctionSize;
 	while (blocksToProcess.size() != 0)
 	{
 		if (data->AnalysisIsAborted())
-			return true;
+			return;
 
 		// Get the next block to process
 		ArchAndAddr location = blocksToProcess.front();
@@ -1120,7 +1104,7 @@ bool Architecture::AnalyzeBasicBlocks(Function& function, bool incrementalUpdate
 		while (true)
 		{
 			if (data->AnalysisIsAborted())
-				return true;
+				return;
 
 			if (!delaySlotCount)
 			{
@@ -1298,7 +1282,7 @@ bool Architecture::AnalyzeBasicBlocks(Function& function, bool incrementalUpdate
 							function.AddDirectCodeReference(location, info.branchTarget[i]);
 
 							auto otherFunc = function.GetCalleeForAnalysis(targetPlatform, target.address, true);
-							if (tailCallTranslation && targetPlatform && otherFunc && (otherFunc->GetStart() != function.GetStart()))
+							if (context->translateTailCalls && targetPlatform && otherFunc && (otherFunc->GetStart() != function.GetStart()))
 							{
 								calledFunctions.insert(otherFunc);
 								if (info.branchType[i] == UnconditionalBranch)
@@ -1313,7 +1297,7 @@ bool Architecture::AnalyzeBasicBlocks(Function& function, bool incrementalUpdate
 									break;
 								}
 							}
-							else if (disallowBranchToString && data->GetStringAtAddress(location.address, strRef) && targetExceedsByteLimit(strRef))
+							else if (context->disallowBranchToString && data->GetStringAtAddress(location.address, strRef) && targetExceedsByteLimit(strRef))
 							{
 								BNLogInfo("Not adding branch target from 0x%" PRIx64 " to string at 0x%" PRIx64
 									" length:%zu",
@@ -1433,15 +1417,8 @@ bool Architecture::AnalyzeBasicBlocks(Function& function, bool incrementalUpdate
 							}
 						}
 
-						indirectBranchIter = userIndirectBranches.find(location);
-						endIter = userIndirectBranches.end();
-
-						if (indirectBranchIter == endIter)
-						{
-							indirectBranchIter = autoIndirectBranches.find(location);
-							endIter = autoIndirectBranches.end();
-						}
-
+						indirectBranchIter = indirectBranches.find(location);
+						endIter = indirectBranches.end();
 						if (indirectBranchIter != endIter)
 						{
 							for (auto& branch : indirectBranchIter->second)
@@ -1452,7 +1429,7 @@ bool Architecture::AnalyzeBasicBlocks(Function& function, bool incrementalUpdate
 									targetPlatform = funcPlatform->GetRelatedPlatform(branch.arch);
 
 								// Normal analysis should not inline indirect targets that are function starts
-								if (tailCallTranslation && data->GetAnalysisFunction(targetPlatform, branch.address))
+								if (context->translateTailCalls && data->GetAnalysisFunction(targetPlatform, branch.address))
 									continue;
 
 								block->AddPendingOutgoingEdge(IndirectBranch, branch.address, branch.arch);
@@ -1539,10 +1516,10 @@ bool Architecture::AnalyzeBasicBlocks(Function& function, bool incrementalUpdate
 			// We prefer to allow disassembly when function analysis is disabled, but only up to the maximum size.
 			// The log message and tag are generated in ProcessAnalysisSkip
 			totalSize += info.length;
-			if (analysisSkipOverride == NeverSkipFunctionAnalysis)
+			if (context->analysisSkipOverride == NeverSkipFunctionAnalysis)
 				maxSize = 0;
-			else if (!maxSize && (analysisSkipOverride == AlwaysSkipFunctionAnalysis))
-				maxSize = data->GetMaxFunctionSizeForAnalysis();
+			else if (!maxSize && (context->analysisSkipOverride == AlwaysSkipFunctionAnalysis))
+				maxSize = context->maxFunctionSize;
 			if (maxSize && (totalSize > maxSize))
 				break;
 
@@ -1558,7 +1535,7 @@ bool Architecture::AnalyzeBasicBlocks(Function& function, bool incrementalUpdate
 				delayInstructionEndsBlock = endsBlock;
 			}
 
-			if (block->CanExit() && tailCallTranslation && !delaySlotCount && hasNextFunc && (location.address == nextFuncAddr))
+			if (block->CanExit() && context->translateTailCalls && !delaySlotCount && hasNextFunc && (location.address == nextFuncAddr))
 			{
 				// Falling through into another function.  Don't consider this a tail call if the current block
 				// called the function, as this indicates a get PC construct.
@@ -1587,7 +1564,6 @@ bool Architecture::AnalyzeBasicBlocks(Function& function, bool incrementalUpdate
 
 	// Finalize the function basic block list
 	function.FinalizeBasicBlocks();
-	return true;
 }
 
 
@@ -2151,10 +2127,9 @@ bool CoreArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t ad
 }
 
 
-bool CoreArchitecture::AnalyzeBasicBlocks(Function& function, bool incrementalUpdate,
-	BNFunctionAnalysisSkipOverride analysisSkipOverride)
+void CoreArchitecture::AnalyzeBasicBlocks(Function& function, BNBasicBlockAnalysisContext* context)
 {
-	return BNArchitectureAnalyzeBasicBlocks(m_object, function.GetObject(), incrementalUpdate, analysisSkipOverride);
+	BNArchitectureAnalyzeBasicBlocks(m_object, function.GetObject(), context);
 }
 
 

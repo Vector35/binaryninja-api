@@ -26,6 +26,7 @@ use crate::helpers::{get_attr_die, get_name, get_uid, DieReference};
 use crate::types::parse_variable;
 
 use binaryninja::binary_view::BinaryViewBase;
+use binaryninja::debuginfo::DebugFunctionInfo;
 use binaryninja::{
     binary_view::{BinaryView, BinaryViewExt},
     debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser},
@@ -738,6 +739,125 @@ impl CustomDebugInfoParser for DWARFParser {
     }
 }
 
+
+struct EhFrameParser;
+
+impl CustomDebugInfoParser for EhFrameParser {
+    fn is_valid(&self, view: &BinaryView) -> bool {
+        view.parent_view().is_some() &&
+            (
+                view.section_by_name(".eh_frame").is_some() ||
+                view.section_by_name("__eh_frame").is_some()
+            )
+    }
+
+    fn parse_info(
+        &self,
+        debug_info: &mut DebugInfo,
+        bv: &BinaryView,
+        _debug_file: &BinaryView,
+        _progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
+    ) -> bool {
+        let mut bases = gimli::BaseAddresses::default();
+
+        let view_start = bv.start();
+
+        if let Some(section) = bv
+            .section_by_name(".eh_frame_hdr")
+            .or(bv.section_by_name("__eh_frame_hdr"))
+        {
+            bases = bases.set_eh_frame_hdr(section.start() - view_start);
+        }
+
+        if let Some(section) = bv
+            .section_by_name(".eh_frame")
+            .or(bv.section_by_name("__eh_frame"))
+        {
+            bases = bases.set_eh_frame(section.start() - view_start);
+        } else if let Some(section) = bv
+            .section_by_name(".debug_frame")
+            .or(bv.section_by_name("__debug_frame"))
+        {
+            bases = bases.set_eh_frame(section.start() - view_start);
+        }
+
+        if let Some(section) = bv
+            .section_by_name(".text")
+            .or(bv.section_by_name("__text"))
+        {
+            bases = bases.set_text(section.start() - view_start);
+        }
+
+        if let Some(section) = bv
+            .section_by_name(".got")
+            .or(bv.section_by_name("__got"))
+        {
+            bases = bases.set_got(section.start() - view_start);
+        }
+
+        let mut cies = HashMap::new();
+
+        let eh_frame_endian = get_endian(bv);
+        let eh_frame_section_reader = |section_id: SectionId| -> _ {
+            create_section_reader(section_id, bv, eh_frame_endian, false)
+        };
+        let mut eh_frame = gimli::EhFrame::load(eh_frame_section_reader).unwrap();
+        if let Some(view_arch) = bv.default_arch() {
+            if view_arch.name().as_str() == "aarch64" {
+                eh_frame.set_vendor(gimli::Vendor::AArch64);
+            }
+        }
+        eh_frame.set_address_size(bv.address_size() as u8);
+
+        let mut entries = eh_frame.entries(&bases);
+        loop {
+            match entries.next() {
+                Ok(None) => {
+                    break
+                },
+                Ok(Some(gimli::CieOrFde::Cie(_cie))) => {
+                    // TODO: do we want to do anything with standalone CIEs?
+                }
+                Ok(Some(gimli::CieOrFde::Fde(partial))) => {
+                    let fde = match partial.parse(|_, bases, o| {
+                        cies.entry(o)
+                            .or_insert_with(|| eh_frame.cie_from_offset(bases, o))
+                            .clone()
+                    }) {
+                        Ok(fde) => fde,
+                        Err(e) => {
+                            error!("Failed to parse FDE: {}", e);
+                            continue;
+                        }
+                    };
+
+                    let func_addr = view_start + fde.initial_address();
+
+                    // Do not create a function here if one already exists
+                    if bv.functions_at(func_addr).is_empty() {
+                        debug_info.add_function(&DebugFunctionInfo::new(
+                            None,
+                            None,
+                            None,
+                            None,
+                            Some(func_addr),
+                            None,
+                            vec![],
+                            vec![]
+                        ));
+                    }
+                },
+                Err(x) => {
+                    error!("{}", x);
+                    return false;
+                }
+            }
+        }
+        true
+    }
+}
+
+
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
     Logger::new("DWARF").init();
@@ -802,5 +922,6 @@ pub extern "C" fn CorePluginInit() -> bool {
     );
 
     DebugInfoParser::register("DWARF", DWARFParser {});
+    DebugInfoParser::register("EHFrame", EhFrameParser {});
     true
 }

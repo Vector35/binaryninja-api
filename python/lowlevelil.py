@@ -235,12 +235,12 @@ class ILIntrinsic:
 	@property
 	def inputs(self) -> List['architecture.IntrinsicInput']:
 		"""``inputs`` is only available if the IL intrinsic is an Architecture intrinsic """
-		return self.arch.intrinsics[self.name].inputs
+		return (self.arch.intrinsics.get(self.name, False) or self.arch._intrinsics[self.name]).inputs
 
 	@property
 	def outputs(self) -> List['types.Type']:
 		"""``outputs`` is only available if the IL intrinsic is an Architecture intrinsic """
-		return self.arch.intrinsics[self.name].outputs
+		return (self.arch.intrinsics.get(self.name, False) or self.arch._intrinsics[self.name]).outputs
 
 
 @dataclass(frozen=True)

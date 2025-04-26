@@ -297,13 +297,13 @@ impl CoreRenderLayer {
         Self { handle }
     }
 
-    pub fn render_layers() -> Array<CoreRenderLayer> {
+    pub fn all() -> Array<CoreRenderLayer> {
         let mut count = 0;
         let result = unsafe { BNGetRenderLayerList(&mut count) };
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn render_layer_by_name<S: BnStrCompatible>(name: S) -> Option<CoreRenderLayer> {
+    pub fn from_name<S: BnStrCompatible>(name: S) -> Option<CoreRenderLayer> {
         let name_raw = name.into_bytes_with_nul();
         let result = unsafe { BNGetRenderLayerByName(name_raw.as_ref().as_ptr() as *const c_char) };
         NonNull::new(result).map(Self::from_raw)

@@ -12,9 +12,10 @@ use binaryninja::language_representation::{
     create_language_representation_function, register_language_representation_function_type,
     register_line_formatter, CoreLanguageRepresentationFunction,
     CoreLanguageRepresentationFunctionType, CoreLineFormatter,
-    CustomLanguageRepresentationFunction, CustomLanguageRepresentationFunctionType,
+    CustomLanguageRepresentationFunction, LanguageRepresentationFunctionType,
     CustomLineFormatter, HighLevelILTokenEmitter, LineFormatterSettings, OperatorPrecedence,
 };
+use binaryninja::line_formatter::register_line_formatter;
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::type_container::TypeContainer;
@@ -114,7 +115,7 @@ impl CustomLanguageRepresentationFunction for MyLangRepr {
     }
 }
 
-impl CustomLanguageRepresentationFunctionType for MyLangReprType {
+impl LanguageRepresentationFunctionType for MyLangReprType {
     fn create(
         &self,
         arch: &CoreArchitecture,
@@ -293,16 +294,6 @@ impl TypeParser for MyTypeParser {
     }
 }
 
-impl CustomLineFormatter for MyLineFormatter {
-    fn format_lines(
-        &self,
-        lines: &[DisassemblyTextLine],
-        _settings: &LineFormatterSettings,
-    ) -> Vec<DisassemblyTextLine> {
-        lines.to_vec()
-    }
-}
-
 #[test]
 fn test_custom_language_representation() {
     const LANG_REPR_NAME: &str = "test_lang_repr";
@@ -310,7 +301,7 @@ fn test_custom_language_representation() {
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let (_, printer) = register_type_printer("my_type_printer", MyTypePrinter {});
     let (_, parser) = register_type_parser("my_type_parser", MyTypeParser {});
-    let line_formatter = register_line_formatter("my_line_formatter", MyLineFormatter {});
+    let line_formatter = CoreLineFormatter::from_name("default").unwrap();
     let my_repr = register_language_representation_function_type(
         |core| MyLangReprType {
             core,

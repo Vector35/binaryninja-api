@@ -15,12 +15,17 @@ pub struct HighLevelILFunction {
 }
 
 impl HighLevelILFunction {
+    pub(crate) unsafe fn from_raw(handle: *mut BNHighLevelILFunction, full_ast: bool) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle, full_ast }
+    }
+
     pub(crate) unsafe fn ref_from_raw(
         handle: *mut BNHighLevelILFunction,
         full_ast: bool,
     ) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-        Self { handle, full_ast }.to_owned()
+        Ref::new(Self { handle, full_ast })
     }
 
     pub fn instruction_from_index(

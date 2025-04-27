@@ -49,6 +49,9 @@ impl LanguageRepresentationFunctionType for MyLangReprType {
     }
 }
 
+unsafe impl Send for MyLangReprType {}
+unsafe impl Sync for MyLangReprType {}
+
 struct MyLangRepr;
 
 impl LanguageRepresentationFunction for MyLangRepr {

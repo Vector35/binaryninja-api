@@ -3,6 +3,12 @@
 #include "decode.h"
 #include "priv.h"
 
+void PushMemRA8(Instruction* instruction, uint32_t word32)
+{
+	int32_t offset = (int32_t)((int8_t)(word32 & 0xff));
+	PushMem(instruction, PPC_OP_MEM_RA, Gpr(GetA(word32)), offset);
+}
+
 static InstructionId Decode32Vle0x06(uint32_t word32, uint32_t decodeFlags)
 {
 	uint32_t subop = (word32 >> 12) & 0xf;
@@ -85,6 +91,34 @@ static InstructionId Decode32Vle0x06(uint32_t word32, uint32_t decodeFlags)
 
 		case 0x09:
 			return PPC_ID_VLE_E_STMW;
+
+		case 0x10:
+		{
+			uint32_t subsubop = (word32 >> 21) & 0x1f;
+			switch (subsubop)
+			{
+				case 0: return PPC_ID_VLE_E_LDVGPRW;
+				case 1: return PPC_ID_VLE_E_LDVSPRW;
+				case 4: return PPC_ID_VLE_E_LDVSRRW;
+				case 5: return PPC_ID_VLE_E_LDVCSRRW;
+				case 6: return PPC_ID_VLE_E_LDVDSRRW;
+				default: return PPC_ID_INVALID;
+			}
+		}
+
+		case 0x11:
+		{
+			uint32_t subsubop = (word32 >> 21) & 0x1f;
+			switch (subsubop)
+			{
+				case 0: return PPC_ID_VLE_E_STMVGPRW;
+				case 1: return PPC_ID_VLE_E_STMVSPRW;
+				case 4: return PPC_ID_VLE_E_STMVSRRW;
+				case 5: return PPC_ID_VLE_E_STMVCSRRW;
+				case 6: return PPC_ID_VLE_E_STMVDSRRW;
+				default: return PPC_ID_INVALID;
+			}
+		}
 
 		default:
 			return PPC_ID_INVALID;
@@ -406,12 +440,9 @@ static void FillOperands32Vle(Instruction* instruction, uint32_t word32, uint64_
 		case PPC_ID_VLE_E_LHZU:
 		case PPC_ID_VLE_E_LWZU:
 		case PPC_ID_VLE_E_LMW:
-		{
-			int32_t offset = (int32_t)(int8_t)((uint8_t)word32 & 0xff);
 			PushRD(instruction, word32);
-			PushMem(instruction, PPC_OP_MEM_RA, Gpr(GetA(word32)), offset);
+			PushMemRA8(instruction, word32);
 			break;
-		}
 
 		// stores
 		case PPC_ID_VLE_E_STB:
@@ -426,12 +457,23 @@ static void FillOperands32Vle(Instruction* instruction, uint32_t word32, uint64_
 		case PPC_ID_VLE_E_STHU:
 		case PPC_ID_VLE_E_STMW:
 		case PPC_ID_VLE_E_STWU:
-		{
-			int32_t offset = (int32_t)(int8_t)((uint8_t)word32 & 0xff);
 			PushRS(instruction, word32);
-			PushMem(instruction, PPC_OP_MEM_RA, Gpr(GetA(word32)), offset);
+			PushMemRA8(instruction, word32);
 			break;
-		}
+
+		// vector loads/stores
+		case PPC_ID_VLE_E_LDVGPRW:
+		case PPC_ID_VLE_E_LDVSPRW:
+		case PPC_ID_VLE_E_LDVSRRW:
+		case PPC_ID_VLE_E_LDVCSRRW:
+		case PPC_ID_VLE_E_LDVDSRRW:
+		case PPC_ID_VLE_E_STMVGPRW:
+		case PPC_ID_VLE_E_STMVSPRW:
+		case PPC_ID_VLE_E_STMVSRRW:
+		case PPC_ID_VLE_E_STMVCSRRW:
+		case PPC_ID_VLE_E_STMVDSRRW:
+			PushMemRA8(instruction, word32);
+			break;
 
 		// <op> rA, rS, SH, MB, ME
 		case PPC_ID_VLE_E_RLWIMI:

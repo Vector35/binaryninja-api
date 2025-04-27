@@ -1991,6 +1991,17 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_VLE_E_SUBFICx: return RcMnemonic(instruction, SubMnemVle32SUBFICx);
 		case PPC_ID_VLE_E_XORIx: return RcMnemonic(instruction, SubMnemVle32XORIx);
 
+		case PPC_ID_VLE_E_LDVGPRW: return "e_ldvgprw";
+		case PPC_ID_VLE_E_LDVSPRW: return "e_ldvsprw";
+		case PPC_ID_VLE_E_LDVSRRW: return "e_ldvsrrw";
+		case PPC_ID_VLE_E_LDVCSRRW: return "e_ldvcsrrw";
+		case PPC_ID_VLE_E_LDVDSRRW: return "e_ldvdsrrw";
+		case PPC_ID_VLE_E_STMVGPRW: return "e_stmvgprw";
+		case PPC_ID_VLE_E_STMVSPRW: return "e_stmvsprw";
+		case PPC_ID_VLE_E_STMVSRRW: return "e_stmvsrrw";
+		case PPC_ID_VLE_E_STMVCSRRW: return "e_stmvcsrrw";
+		case PPC_ID_VLE_E_STMVDSRRW: return "e_stmvdsrrw";
+
 		case PPC_ID_VLE_SE_ADD: return "se_add";
 		case PPC_ID_VLE_SE_ADDI: return "se_addi";
 		case PPC_ID_VLE_SE_ANDx: return RcMnemonic(instruction, SubMnemVle16ANDx);
@@ -2071,6 +2082,7 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_VLE_SE_MTLR: return "se_mtlr";
 		case PPC_ID_VLE_SE_MULLW: return "se_mullw";
 		case PPC_ID_VLE_SE_NEG: return "se_neg";
+		case PPC_ID_VLE_SE_NOP: return "se_nop";
 		case PPC_ID_VLE_SE_NOT: return "se_not";
 		case PPC_ID_VLE_SE_OR: return "se_or";
 		case PPC_ID_VLE_SE_RFCI: return "se_rfci";

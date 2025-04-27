@@ -1694,6 +1694,25 @@ extern "C" {
 		PPC_ID_VLE_E_SUBFICx,
 		PPC_ID_VLE_E_XORIx,
 
+		// Additional 32-bit VLE instructions from NXP EB696
+		//
+		// Note that chapter 3 "Instruction Operation Codes"
+		// and table 4 "Instruction Overview" list these as "LDMxxxx",
+		// but all of the mnemonics used in chapter 5 "Instruction
+		// Listings" are "LDxxxx" (note the lack of M)...assembly
+		// samples from an mpc5744 use the variant without the M, so we
+		// use that.
+		PPC_ID_VLE_E_LDVGPRW,
+		PPC_ID_VLE_E_LDVSPRW,
+		PPC_ID_VLE_E_LDVSRRW,
+		PPC_ID_VLE_E_LDVCSRRW,
+		PPC_ID_VLE_E_LDVDSRRW,
+		PPC_ID_VLE_E_STMVGPRW,
+		PPC_ID_VLE_E_STMVSPRW,
+		PPC_ID_VLE_E_STMVSRRW,
+		PPC_ID_VLE_E_STMVCSRRW,
+		PPC_ID_VLE_E_STMVDSRRW,
+
 		// 16-bit VLE instructions
 		PPC_ID_VLE_SE_ADD,
 		PPC_ID_VLE_SE_ADDI,
@@ -1734,6 +1753,7 @@ extern "C" {
 		PPC_ID_VLE_SE_MTLR,
 		PPC_ID_VLE_SE_MULLW,
 		PPC_ID_VLE_SE_NEG,
+		PPC_ID_VLE_SE_NOP,
 		PPC_ID_VLE_SE_NOT,
 		PPC_ID_VLE_SE_OR,
 		PPC_ID_VLE_SE_RFCI,

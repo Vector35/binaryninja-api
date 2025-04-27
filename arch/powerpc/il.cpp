@@ -642,12 +642,17 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			else
 				ei0 = il.Const(addressSize_l, oper2->uimm);
 			ei0 = il.And(addressSize_l, operToIL(il, oper1), ei0);
-			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0, IL_FLAGWRITE_CR0_S);
+
+			// VLE instructions that get translated to ANDIx may
+			// not have the rc bit set
+			if (instruction->flags.rc)
+				ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0, IL_FLAGWRITE_CR0_S);
+
 			il.AddInstruction(ei0);
 			break;
 
 		case PPC_ID_CMPW: /* compare (signed) word(32-bit) */
-			REQUIRE2OPS
+			REQUIRE3OPS
 			ei0 = operToIL(il, oper1);
 			ei1 = operToIL(il, oper2);
 			ei2 = il.Sub(addressSize_l, ei0, ei1, crxToFlagWriteType(oper0->reg, PPC_SUF_S));
@@ -655,7 +660,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			break;
 
 		case PPC_ID_CMPLW: /* compare logical(unsigned) word(32-bit) */
-			REQUIRE2OPS
+			REQUIRE3OPS
 			ei0 = operToIL(il, oper1);
 			ei1 = operToIL(il, oper2);
 			ei2 = il.Sub(addressSize_l, ei0, ei1, crxToFlagWriteType(oper0->reg, PPC_SUF_U));
@@ -663,7 +668,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			break;
 
 		case PPC_ID_CMPWI: /* compare (signed) word(32-bit) immediate */
-			REQUIRE2OPS
+			REQUIRE3OPS
 			ei0 = operToIL(il, oper1);
 			ei1 = operToIL_a(il, oper2, addressSize_l);
 			ei2 = il.Sub(addressSize_l, ei0, ei1, crxToFlagWriteType(oper0->reg, PPC_SUF_S));
@@ -671,7 +676,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			break;
 
 		case PPC_ID_CMPLWI: /* compare logical(unsigned) word(32-bit) immediate */
-			REQUIRE2OPS
+			REQUIRE3OPS
 			ei0 = operToIL(il, oper1);
 			ei1 = operToIL_a(il, oper2, addressSize_l);
 			ei2 = il.Sub(addressSize_l, ei0, ei1, crxToFlagWriteType(oper0->reg, PPC_SUF_U));
@@ -679,7 +684,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			break;
 
 		case PPC_ID_CMPDI:
-			REQUIRE2OPS
+			REQUIRE3OPS
 			ei0 = operToIL(il, oper1, 8);
 			ei1 = operToIL_a(il, oper2, 8);
 			ei2 = il.Sub(8, ei0, ei1, crxToFlagWriteType(oper0->reg, PPC_SUF_S));
@@ -821,6 +826,21 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 				il.Or(4, il.FlagBit(4, IL_FLAG_EQ_7, 1),
 				il.FlagBit(4, IL_FLAG_SO_7, 0))))))))))))))))))))))))))))))))));
 			break;
+
+		case PPC_ID_MCRF:
+		{
+			REQUIRE2OPS
+			uint32_t from = oper1->reg - PPC_REG_CRF0;
+			uint32_t to = oper0->reg - PPC_REG_CRF0;
+
+			il.AddInstruction(il.SetFlag(4*to + IL_FLAG_LT, il.FlagBit(0, 4*from + IL_FLAG_LT, 31 - (4*from + IL_FLAG_LT))));
+			il.AddInstruction(il.SetFlag(4*to + IL_FLAG_GT, il.FlagBit(0, 4*from + IL_FLAG_GT, 31 - (4*from + IL_FLAG_GT))));
+			il.AddInstruction(il.SetFlag(4*to + IL_FLAG_EQ, il.FlagBit(0, 4*from + IL_FLAG_EQ, 31 - (4*from + IL_FLAG_EQ))));
+			il.AddInstruction(il.SetFlag(4*to + IL_FLAG_SO, il.FlagBit(0, 4*from + IL_FLAG_SO, 31 - (4*from + IL_FLAG_SO))));
+
+			break;
+
+		}
 
 		case PPC_ID_MTCRF:
 			REQUIRE2OPS

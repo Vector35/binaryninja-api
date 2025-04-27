@@ -41,7 +41,6 @@ static InstructionId Decode16Vle0x00(uint16_t word16, uint32_t decodeFlags)
 
 	uint32_t subop = (word16 >> 4) & 0xfff;
 	switch (subop) {
-		// 0x0020----
 		case 0x002:
 			return PPC_ID_VLE_SE_NOT;
 
@@ -152,7 +151,16 @@ static InstructionId Decode16Vle(uint16_t word16, uint32_t decodeFlags)
 			return PPC_ID_VLE_SE_SLW;
 
 		case 0x44:
-			return PPC_ID_VLE_SE_OR;
+		{
+			// rY = 0, rX = 0
+			// Not technically documented, but compiler
+			// occasionally emits `or, r0, r0`, which are NOPs in
+			// 32-bit land
+			if ((word16 & 0xff) == 0x00)
+				return PPC_ID_VLE_SE_NOP;
+			else
+				return PPC_ID_VLE_SE_OR;
+		}
 
 		case 0x45:
 			return PPC_ID_VLE_SE_ANDC;
@@ -351,6 +359,7 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 		// <op>
 		case PPC_ID_VLE_SE_ILLEGAL:
 		case PPC_ID_VLE_SE_ISYNC:
+		case PPC_ID_VLE_SE_NOP:
 		case PPC_ID_VLE_SE_RFCI:
 		case PPC_ID_VLE_SE_RFDI:
 		case PPC_ID_VLE_SE_RFI:
@@ -443,8 +452,6 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 			else
 			{
 				PushRegister(instruction, PPC_OP_REG_RS, Gpr(rx));
-				if (translate)
-					PushRegister(instruction, PPC_OP_REG_RA, Gpr(rx));
 			}
 
 			break;
@@ -496,13 +503,26 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 
 		// <op> rX, OIMM (no rc)
 		case PPC_ID_VLE_SE_ADDI:
-		case PPC_ID_VLE_SE_CMPLI:
 		{
 			uint32_t oim5 = (word16 >> 4) & 0x1f;
 			PushRegister(instruction, PPC_OP_REG_RD, Gpr(rx));
+
 			if (translate)
 				PushRegister(instruction, PPC_OP_REG_RA, Gpr(rx));
+
 			PushSIMMValue(instruction, oim5 + 1);
+			break;
+		}
+
+		// <op> rX, OIMM (no rc)
+		case PPC_ID_VLE_SE_CMPLI:
+		{
+			uint32_t oim5 = (word16 >> 4) & 0x1f;
+			if (translate)
+				PushRegister(instruction, PPC_OP_REG_CRFD_IMPLY0, Crf(0));
+
+			PushRegister(instruction, PPC_OP_REG_RA, Gpr(rx));
+			PushUIMMValue(instruction, oim5 + 1);
 			break;
 		}
 

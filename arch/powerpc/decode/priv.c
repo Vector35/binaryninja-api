@@ -200,6 +200,7 @@ InstructionId VleTranslateMnemonic(InstructionId id)
 		case PPC_ID_VLE_SE_MTLR: return PPC_ID_MTLR;
 		case PPC_ID_VLE_SE_MULLW: return PPC_ID_MULLWx;
 		case PPC_ID_VLE_SE_NEG: return PPC_ID_NEGx;
+		case PPC_ID_VLE_SE_NOP: return PPC_ID_NOP;
 		case PPC_ID_VLE_SE_NOT: return PPC_ID_NORx;
 		case PPC_ID_VLE_SE_OR: return PPC_ID_ORx;
 		case PPC_ID_VLE_SE_RFCI: return PPC_ID_RFCI;
@@ -242,6 +243,9 @@ InstructionId VleTranslateMnemonic(InstructionId id)
 		case PPC_ID_VLE_SE_STB: // VLE treats rA=0 as valid base
 		case PPC_ID_VLE_SE_STH: // VLE treats rA=0 as valid base
 		case PPC_ID_VLE_SE_STW: // VLE treats rA=0 as valid base
+			return id;
+
+		default:
 			return id;
 	}
 }

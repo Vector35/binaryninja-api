@@ -445,8 +445,6 @@ class PowerpcArchitecture: public Architecture
 			case PPC_ID_VLE_SE_BLRx:
 				if (!instruction.flags.lk)
 					result.AddBranch(FunctionReturn);
-				else
-					result.AddBranch(UnresolvedBranch);
 
 				break;
 
@@ -462,7 +460,8 @@ class PowerpcArchitecture: public Architecture
 				break;
 
 			case PPC_ID_RFI:
-				result.AddBranch(UnresolvedBranch);
+			case PPC_ID_VLE_SE_RFI:
+				result.AddBranch(FunctionReturn);
 				break;
 		}
 

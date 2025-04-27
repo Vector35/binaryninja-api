@@ -16,9 +16,9 @@ impl LineFormatter for MyLineFormatter {
 }
 
 #[test]
-fn test_custom_language_representation() {
+fn test_custom_line_formatter() {
     let _session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let line_formatter = register_line_formatter("my_line_formatter", MyLineFormatter {});
-    assert!(line_formatter.name(), "my_line_formatter");
+    assert_eq!(line_formatter.name().as_str(), "my_line_formatter");
 }

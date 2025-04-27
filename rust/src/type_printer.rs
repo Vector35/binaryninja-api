@@ -46,16 +46,12 @@ pub fn register_type_printer<S: BnStrCompatible, T: TypePrinter>(
 
 #[repr(transparent)]
 pub struct CoreTypePrinter {
-    handle: NonNull<BNTypePrinter>,
+    pub(crate) handle: NonNull<BNTypePrinter>,
 }
 
 impl CoreTypePrinter {
     pub(crate) unsafe fn from_raw(handle: NonNull<BNTypePrinter>) -> CoreTypePrinter {
         Self { handle }
-    }
-
-    pub(crate) unsafe fn as_raw(&self) -> *mut BNTypePrinter {
-        self.handle.as_ptr()
     }
 
     pub fn printers() -> Array<CoreTypePrinter> {

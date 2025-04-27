@@ -1,6 +1,6 @@
 use std::ffi::{c_char, c_void};
 use std::mem::MaybeUninit;
-use std::ptr;
+use std::ptr::NonNull;
 
 use binaryninjacore_sys::*;
 
@@ -9,8 +9,8 @@ use crate::basic_block::{BasicBlock, BlockContext};
 use crate::binary_view::BinaryView;
 use crate::disassembly::{DisassemblySettings, DisassemblyTextLine};
 use crate::function::{Function, HighlightColor};
-use crate::high_level_il::{HighLevelILFunction, HighLevelInstructionIndex};
 use crate::high_level_il::token_emitter::HighLevelILTokenEmitter;
+use crate::high_level_il::{HighLevelILFunction, HighLevelInstructionIndex};
 use crate::line_formatter::CoreLineFormatter;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
@@ -50,15 +50,14 @@ pub fn register_language_representation_function_type<
             &mut callbacks,
         )
     };
-    let core = unsafe {
-        CoreLanguageRepresentationFunctionType::from_raw(ptr::NonNull::new(core).unwrap())
-    };
+    let core =
+        unsafe { CoreLanguageRepresentationFunctionType::from_raw(NonNull::new(core).unwrap()) };
     custom.write(creator(core));
     core
 }
 
-pub trait CustomLanguageRepresentationFunction: Send + Sync + 'static {
-    fn init_token_emitter(&self, tokens: &HighLevelILTokenEmitter);
+pub trait LanguageRepresentationFunction: Send + Sync {
+    fn on_token_emitter_init(&self, tokens: &HighLevelILTokenEmitter);
 
     fn expr_text(
         &self,
@@ -94,249 +93,27 @@ pub trait CustomLanguageRepresentationFunction: Send + Sync + 'static {
     fn annotation_end_string(&self) -> &str;
 }
 
-pub struct CoreLanguageRepresentationFunction {
-    handle: ptr::NonNull<BNLanguageRepresentationFunction>,
-}
-
-pub fn get_function_language_representation<B: BnStrCompatible>(
-    func: &Function,
-    lang_name: B,
-) -> Option<CoreLanguageRepresentationFunction> {
-    let lang_name = lang_name.into_bytes_with_nul();
-    let repr = unsafe {
-        BNGetFunctionLanguageRepresentationIfAvailable(
-            func.handle,
-            lang_name.as_ref().as_ptr() as *const c_char,
-        )
-    };
-    ptr::NonNull::new(repr)
-        .map(|handle| unsafe { CoreLanguageRepresentationFunction::from_raw(handle) })
-}
-
-impl CoreLanguageRepresentationFunction {
-    pub(crate) unsafe fn from_raw(handle: ptr::NonNull<BNLanguageRepresentationFunction>) -> Self {
-        Self { handle }
-    }
-
-    pub(crate) unsafe fn ref_from_raw(
-        handle: ptr::NonNull<BNLanguageRepresentationFunction>,
-    ) -> Ref<Self> {
-        unsafe { Ref::new(Self { handle }) }
-    }
-
-    pub(crate) unsafe fn into_raw(self) -> *mut BNLanguageRepresentationFunction {
-        // NOTE don't drop self, leak in the ptr form
-        let Self { handle } = self;
-        handle.as_ptr()
-    }
-
-    pub(crate) fn as_raw(&self) -> *mut BNLanguageRepresentationFunction {
-        self.handle.as_ptr()
-    }
-    
-    pub fn new() -> Self {
-        let core_arch: &CoreArchitecture = arch.as_ref();
-        let context: &mut C = Box::leak(Box::new(context));
-        let mut callbacks = BNCustomLanguageRepresentationFunction {
-            context: context as *mut C as *mut c_void,
-            freeObject: Some(cb_free_object::<C>),
-            externalRefTaken: Some(cb_external_ref_taken::<C>),
-            externalRefReleased: Some(cb_external_ref_released::<C>),
-            initTokenEmitter: Some(cb_init_token_emitter::<C>),
-            getExprText: Some(cb_get_expr_text::<C>),
-            beginLines: Some(cb_begin_lines::<C>),
-            endLines: Some(cb_end_lines::<C>),
-            getCommentStartString: Some(cb_get_comment_start_string::<C>),
-            getCommentEndString: Some(cb_get_comment_end_string::<C>),
-            getAnnotationStartString: Some(cb_get_annotation_start_string::<C>),
-            getAnnotationEndString: Some(cb_get_annotation_end_string::<C>),
-        };
-        let handle = unsafe {
-            BNCreateCustomLanguageRepresentationFunction(
-                type_.as_raw(),
-                core_arch.handle,
-                func.handle,
-                high_level_il.handle,
-                &mut callbacks,
-            )
-        };
-        unsafe { Self::from_raw(ptr::NonNull::new(handle).unwrap()) }
-    }
-
-    pub fn expr_text(
-        &self,
-        il: &HighLevelILFunction,
-        expr_index: HighLevelInstructionIndex,
-        settings: &DisassemblySettings,
-        as_full_ast: bool,
-        precedence: OperatorPrecedence,
-        statement: bool,
-    ) -> Array<DisassemblyTextLine> {
-        let mut count = 0;
-        let result = unsafe {
-            BNGetLanguageRepresentationFunctionExprText(
-                self.as_raw(),
-                il.handle,
-                expr_index.0,
-                settings.handle,
-                as_full_ast,
-                precedence,
-                statement,
-                &mut count,
-            )
-        };
-        unsafe { Array::new(result, count, ()) }
-    }
-
-    pub fn linear_lines(
-        &self,
-        il: &HighLevelILFunction,
-        expr_index: HighLevelInstructionIndex,
-        settings: &DisassemblySettings,
-        as_full_ast: bool,
-    ) -> Array<DisassemblyTextLine> {
-        let mut count = 0;
-        let result = unsafe {
-            BNGetLanguageRepresentationFunctionLinearLines(
-                self.as_raw(),
-                il.handle,
-                expr_index.0,
-                settings.handle,
-                as_full_ast,
-                &mut count,
-            )
-        };
-        unsafe { Array::new(result, count, ()) }
-    }
-
-    pub fn block_lines<C: BlockContext>(
-        &self,
-        block: &BasicBlock<C>,
-        settings: &DisassemblySettings,
-    ) -> Array<DisassemblyTextLine> {
-        let mut count = 0;
-        let result = unsafe {
-            BNGetLanguageRepresentationFunctionBlockLines(
-                self.as_raw(),
-                block.handle,
-                settings.handle,
-                &mut count,
-            )
-        };
-        unsafe { Array::new(result, count, ()) }
-    }
-
-    pub fn highlight<C: BlockContext>(&self, block: &BasicBlock<C>) -> HighlightColor {
-        let result =
-            unsafe { BNGetLanguageRepresentationFunctionHighlight(self.as_raw(), block.handle) };
-        result.into()
-    }
-
-    pub fn get_type(&self) -> CoreLanguageRepresentationFunctionType {
-        let repr_type = unsafe { BNGetLanguageRepresentationType(self.as_raw()) };
-        unsafe {
-            CoreLanguageRepresentationFunctionType::from_raw(ptr::NonNull::new(repr_type).unwrap())
-        }
-    }
-
-    pub fn arch(&self) -> CoreArchitecture {
-        let arch = unsafe { BNGetLanguageRepresentationArchitecture(self.as_raw()) };
-        unsafe { CoreArchitecture::from_raw(arch) }
-    }
-
-    pub fn owner_function(&self) -> Ref<Function> {
-        let func = unsafe { BNGetLanguageRepresentationOwnerFunction(self.as_raw()) };
-        unsafe { Function::ref_from_raw(func) }
-    }
-
-    pub fn hlil(&self) -> Ref<HighLevelILFunction> {
-        let hlil = unsafe { BNGetLanguageRepresentationILFunction(self.as_raw()) };
-        unsafe { HighLevelILFunction::ref_from_raw(hlil, false) }
-    }
-
-    pub fn comment_start_string(&self) -> BnString {
-        unsafe {
-            BnString::from_raw(BNGetLanguageRepresentationFunctionCommentStartString(
-                self.as_raw(),
-            ))
-        }
-    }
-
-    pub fn comment_end_string(&self) -> BnString {
-        unsafe {
-            BnString::from_raw(BNGetLanguageRepresentationFunctionCommentEndString(
-                self.as_raw(),
-            ))
-        }
-    }
-
-    pub fn annotation_start_string(&self) -> BnString {
-        unsafe {
-            BnString::from_raw(BNGetLanguageRepresentationFunctionAnnotationStartString(
-                self.as_raw(),
-            ))
-        }
-    }
-
-    pub fn annotation_end_string(&self) -> BnString {
-        unsafe {
-            BnString::from_raw(BNGetLanguageRepresentationFunctionAnnotationEndString(
-                self.as_raw(),
-            ))
-        }
-    }
-}
-
-unsafe impl RefCountable for CoreLanguageRepresentationFunction {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Self::ref_from_raw(
-            ptr::NonNull::new(BNNewLanguageRepresentationFunctionReference(
-                handle.as_raw(),
-            ))
-            .unwrap(),
-        )
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeLanguageRepresentationFunction(handle.as_raw())
-    }
-}
-
-impl ToOwned for CoreLanguageRepresentationFunction {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { <Self as RefCountable>::inc_ref(self) }
-    }
-}
-
-pub fn create_language_representation_function<
-    C: CustomLanguageRepresentationFunction,
-    A: Architecture,
->(
-    context: C,
-    type_: &CoreLanguageRepresentationFunctionType,
-    arch: &A,
-    func: &Function,
-    high_level_il: &HighLevelILFunction,
-) -> CoreLanguageRepresentationFunction {
-}
-
-pub trait LanguageRepresentationFunctionType {
+pub trait LanguageRepresentationFunctionType: Send + Sync {
     fn create(
         &self,
         arch: &CoreArchitecture,
         owner: &Function,
         high_level_il: &HighLevelILFunction,
-    ) -> CoreLanguageRepresentationFunction;
+    ) -> Ref<CoreLanguageRepresentationFunction>;
 
     fn is_valid(&self, view: &BinaryView) -> bool;
 
-    fn type_printer(&self) -> &CoreTypePrinter;
+    fn type_printer(&self) -> Option<CoreTypePrinter> {
+        None
+    }
 
-    fn type_parser(&self) -> &CoreTypeParser;
+    fn type_parser(&self) -> Option<CoreTypeParser> {
+        None
+    }
 
-    fn line_formatter(&self) -> &CoreLineFormatter;
+    fn line_formatter(&self) -> Option<CoreLineFormatter> {
+        None
+    }
 
     fn function_type_tokens(
         &self,
@@ -349,13 +126,11 @@ pub trait LanguageRepresentationFunctionType {
 #[repr(transparent)]
 #[derive(Clone, Copy)]
 pub struct CoreLanguageRepresentationFunctionType {
-    handle: ptr::NonNull<BNLanguageRepresentationFunctionType>,
+    handle: NonNull<BNLanguageRepresentationFunctionType>,
 }
 
 impl CoreLanguageRepresentationFunctionType {
-    pub(crate) unsafe fn from_raw(
-        handle: ptr::NonNull<BNLanguageRepresentationFunctionType>,
-    ) -> Self {
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNLanguageRepresentationFunctionType>) -> Self {
         Self { handle }
     }
 
@@ -366,11 +141,9 @@ impl CoreLanguageRepresentationFunctionType {
     pub fn from_name<S: BnStrCompatible>(name: S) -> Option<Self> {
         let name = name.into_bytes_with_nul();
         let result = unsafe {
-            BNGetLanguageRepresentationFunctionTypeByName(
-                name.as_ref().as_ptr() as *const c_char
-            )
+            BNGetLanguageRepresentationFunctionTypeByName(name.as_ref().as_ptr() as *const c_char)
         };
-        ptr::NonNull::new(result).map(|handle| unsafe { Self::from_raw(handle) })
+        NonNull::new(result).map(|handle| unsafe { Self::from_raw(handle) })
     }
 
     pub fn all() -> Array<Self> {
@@ -387,7 +160,7 @@ impl CoreLanguageRepresentationFunctionType {
         let mut count = 0;
         let result = unsafe {
             BNGetLanguageRepresentationFunctionTypeFunctionTypeTokens(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 func.handle,
                 settings.handle,
                 &mut count,
@@ -397,48 +170,51 @@ impl CoreLanguageRepresentationFunctionType {
     }
 
     pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetLanguageRepresentationFunctionTypeName(self.as_raw())) }
+        unsafe {
+            BnString::from_raw(BNGetLanguageRepresentationFunctionTypeName(
+                self.handle.as_ptr(),
+            ))
+        }
     }
 
-    pub fn create(
-        &self,
-        func: &Function,
-    ) -> Ref<CoreLanguageRepresentationFunction> {
+    pub fn create(&self, func: &Function) -> Ref<CoreLanguageRepresentationFunction> {
         let repr_func = unsafe {
             BNCreateLanguageRepresentationFunction(
-                self.as_raw(),
+                self.handle.as_ptr(),
                 func.arch().handle,
                 func.handle,
                 match func.high_level_il(false) {
                     Ok(hlil) => hlil.handle,
-                    Err(_) => std::ptr::null_mut()
+                    Err(_) => std::ptr::null_mut(),
                 },
             )
         };
 
         unsafe {
-            CoreLanguageRepresentationFunction::ref_from_raw(ptr::NonNull::new(repr_func).unwrap())
+            CoreLanguageRepresentationFunction::ref_from_raw(NonNull::new(repr_func).unwrap())
         }
     }
 
     pub fn is_valid(&self, view: &BinaryView) -> bool {
-        unsafe { BNIsLanguageRepresentationFunctionTypeValid(self.as_raw(), view.handle) }
+        unsafe { BNIsLanguageRepresentationFunctionTypeValid(self.handle.as_ptr(), view.handle) }
     }
 
     pub fn printer(&self) -> CoreTypePrinter {
-        let type_printer = unsafe { BNGetLanguageRepresentationFunctionTypePrinter(self.as_raw()) };
-        unsafe { CoreTypePrinter::from_raw(ptr::NonNull::new(type_printer).unwrap()) }
+        let type_printer =
+            unsafe { BNGetLanguageRepresentationFunctionTypePrinter(self.handle.as_ptr()) };
+        unsafe { CoreTypePrinter::from_raw(NonNull::new(type_printer).unwrap()) }
     }
 
     pub fn parser(&self) -> CoreTypeParser {
-        let type_parser = unsafe { BNGetLanguageRepresentationFunctionTypeParser(self.as_raw()) };
-        unsafe { CoreTypeParser::from_raw(ptr::NonNull::new(type_parser).unwrap()) }
+        let type_parser =
+            unsafe { BNGetLanguageRepresentationFunctionTypeParser(self.handle.as_ptr()) };
+        unsafe { CoreTypeParser::from_raw(NonNull::new(type_parser).unwrap()) }
     }
 
     pub fn line_formatter(&self) -> CoreLineFormatter {
         let formatter =
-            unsafe { BNGetLanguageRepresentationFunctionTypeLineFormatter(self.as_raw()) };
-        unsafe { CoreLineFormatter::from_raw(ptr::NonNull::new(formatter).unwrap()) }
+            unsafe { BNGetLanguageRepresentationFunctionTypeLineFormatter(self.handle.as_ptr()) };
+        CoreLineFormatter::from_raw(NonNull::new(formatter).unwrap())
     }
 }
 
@@ -463,6 +239,200 @@ unsafe impl CoreArrayProviderInner for CoreLanguageRepresentationFunctionType {
     }
 }
 
+pub struct CoreLanguageRepresentationFunction {
+    handle: NonNull<BNLanguageRepresentationFunction>,
+}
+
+impl CoreLanguageRepresentationFunction {
+    pub(crate) unsafe fn ref_from_raw(
+        handle: NonNull<BNLanguageRepresentationFunction>,
+    ) -> Ref<Self> {
+        unsafe { Ref::new(Self { handle }) }
+    }
+
+    pub fn new<C: LanguageRepresentationFunction, A: Architecture>(
+        repr_type: &CoreLanguageRepresentationFunctionType,
+        repr_context: C,
+        arch: &A,
+        func: &Function,
+        high_level_il: &HighLevelILFunction,
+    ) -> Ref<Self> {
+        let core_arch: &CoreArchitecture = arch.as_ref();
+        let context: &mut C = Box::leak(Box::new(repr_context));
+        let mut callbacks = BNCustomLanguageRepresentationFunction {
+            context: context as *mut C as *mut c_void,
+            freeObject: Some(cb_free_object::<C>),
+            externalRefTaken: Some(cb_external_ref_taken::<C>),
+            externalRefReleased: Some(cb_external_ref_released::<C>),
+            initTokenEmitter: Some(cb_init_token_emitter::<C>),
+            getExprText: Some(cb_get_expr_text::<C>),
+            beginLines: Some(cb_begin_lines::<C>),
+            endLines: Some(cb_end_lines::<C>),
+            getCommentStartString: Some(cb_get_comment_start_string::<C>),
+            getCommentEndString: Some(cb_get_comment_end_string::<C>),
+            getAnnotationStartString: Some(cb_get_annotation_start_string::<C>),
+            getAnnotationEndString: Some(cb_get_annotation_end_string::<C>),
+        };
+        let handle = unsafe {
+            BNCreateCustomLanguageRepresentationFunction(
+                repr_type.as_raw(),
+                core_arch.handle,
+                func.handle,
+                high_level_il.handle,
+                &mut callbacks,
+            )
+        };
+        unsafe { Self::ref_from_raw(NonNull::new(handle).unwrap()) }
+    }
+
+    pub fn expr_text(
+        &self,
+        il: &HighLevelILFunction,
+        expr_index: HighLevelInstructionIndex,
+        settings: &DisassemblySettings,
+        as_full_ast: bool,
+        precedence: OperatorPrecedence,
+        statement: bool,
+    ) -> Array<DisassemblyTextLine> {
+        let mut count = 0;
+        let result = unsafe {
+            BNGetLanguageRepresentationFunctionExprText(
+                self.handle.as_ptr(),
+                il.handle,
+                expr_index.0,
+                settings.handle,
+                as_full_ast,
+                precedence,
+                statement,
+                &mut count,
+            )
+        };
+        unsafe { Array::new(result, count, ()) }
+    }
+
+    pub fn linear_lines(
+        &self,
+        il: &HighLevelILFunction,
+        expr_index: HighLevelInstructionIndex,
+        settings: &DisassemblySettings,
+        as_full_ast: bool,
+    ) -> Array<DisassemblyTextLine> {
+        let mut count = 0;
+        let result = unsafe {
+            BNGetLanguageRepresentationFunctionLinearLines(
+                self.handle.as_ptr(),
+                il.handle,
+                expr_index.0,
+                settings.handle,
+                as_full_ast,
+                &mut count,
+            )
+        };
+        unsafe { Array::new(result, count, ()) }
+    }
+
+    pub fn block_lines<C: BlockContext>(
+        &self,
+        block: &BasicBlock<C>,
+        settings: &DisassemblySettings,
+    ) -> Array<DisassemblyTextLine> {
+        let mut count = 0;
+        let result = unsafe {
+            BNGetLanguageRepresentationFunctionBlockLines(
+                self.handle.as_ptr(),
+                block.handle,
+                settings.handle,
+                &mut count,
+            )
+        };
+        unsafe { Array::new(result, count, ()) }
+    }
+
+    pub fn highlight<C: BlockContext>(&self, block: &BasicBlock<C>) -> HighlightColor {
+        let result = unsafe {
+            BNGetLanguageRepresentationFunctionHighlight(self.handle.as_ptr(), block.handle)
+        };
+        result.into()
+    }
+
+    pub fn get_type(&self) -> CoreLanguageRepresentationFunctionType {
+        let repr_type = unsafe { BNGetLanguageRepresentationType(self.handle.as_ptr()) };
+        unsafe {
+            CoreLanguageRepresentationFunctionType::from_raw(NonNull::new(repr_type).unwrap())
+        }
+    }
+
+    pub fn arch(&self) -> CoreArchitecture {
+        let arch = unsafe { BNGetLanguageRepresentationArchitecture(self.handle.as_ptr()) };
+        unsafe { CoreArchitecture::from_raw(arch) }
+    }
+
+    pub fn owner_function(&self) -> Ref<Function> {
+        let func = unsafe { BNGetLanguageRepresentationOwnerFunction(self.handle.as_ptr()) };
+        unsafe { Function::ref_from_raw(func) }
+    }
+
+    pub fn hlil(&self) -> Ref<HighLevelILFunction> {
+        let hlil = unsafe { BNGetLanguageRepresentationILFunction(self.handle.as_ptr()) };
+        unsafe { HighLevelILFunction::ref_from_raw(hlil, false) }
+    }
+
+    pub fn comment_start_string(&self) -> BnString {
+        unsafe {
+            BnString::from_raw(BNGetLanguageRepresentationFunctionCommentStartString(
+                self.handle.as_ptr(),
+            ))
+        }
+    }
+
+    pub fn comment_end_string(&self) -> BnString {
+        unsafe {
+            BnString::from_raw(BNGetLanguageRepresentationFunctionCommentEndString(
+                self.handle.as_ptr(),
+            ))
+        }
+    }
+
+    pub fn annotation_start_string(&self) -> BnString {
+        unsafe {
+            BnString::from_raw(BNGetLanguageRepresentationFunctionAnnotationStartString(
+                self.handle.as_ptr(),
+            ))
+        }
+    }
+
+    pub fn annotation_end_string(&self) -> BnString {
+        unsafe {
+            BnString::from_raw(BNGetLanguageRepresentationFunctionAnnotationEndString(
+                self.handle.as_ptr(),
+            ))
+        }
+    }
+}
+
+unsafe impl RefCountable for CoreLanguageRepresentationFunction {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Self::ref_from_raw(
+            NonNull::new(BNNewLanguageRepresentationFunctionReference(
+                handle.handle.as_ptr(),
+            ))
+            .unwrap(),
+        )
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeLanguageRepresentationFunction(handle.handle.as_ptr())
+    }
+}
+
+impl ToOwned for CoreLanguageRepresentationFunction {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { <Self as RefCountable>::inc_ref(self) }
+    }
+}
+
 unsafe extern "C" fn cb_create<C: LanguageRepresentationFunctionType>(
     ctxt: *mut c_void,
     arch: *mut BNArchitecture,
@@ -477,7 +447,7 @@ unsafe extern "C" fn cb_create<C: LanguageRepresentationFunctionType>(
         handle: high_level_il,
     };
     let result = (*ctxt).create(&arch, &owner, &high_level_il);
-    result.into_raw()
+    Ref::into_raw(result).handle.as_ptr()
 }
 
 unsafe extern "C" fn cb_is_valid<C: LanguageRepresentationFunctionType>(
@@ -493,24 +463,30 @@ unsafe extern "C" fn cb_get_type_printer<C: LanguageRepresentationFunctionType>(
     ctxt: *mut c_void,
 ) -> *mut BNTypePrinter {
     let ctxt = ctxt as *mut C;
-    let result = (*ctxt).type_printer();
-    result.as_raw()
+    match (*ctxt).type_printer() {
+        None => std::ptr::null_mut(),
+        Some(printer) => printer.handle.as_ptr(),
+    }
 }
 
 unsafe extern "C" fn cb_get_type_parser<C: LanguageRepresentationFunctionType>(
     ctxt: *mut c_void,
 ) -> *mut BNTypeParser {
     let ctxt = ctxt as *mut C;
-    let result = (*ctxt).type_parser();
-    result.as_raw()
+    match (*ctxt).type_parser() {
+        None => std::ptr::null_mut(),
+        Some(parser) => parser.handle.as_ptr(),
+    }
 }
 
 unsafe extern "C" fn cb_get_line_formatter<C: LanguageRepresentationFunctionType>(
     ctxt: *mut c_void,
 ) -> *mut BNLineFormatter {
     let ctxt = ctxt as *mut C;
-    let result = (*ctxt).line_formatter();
-    result.handle.as_ptr()
+    match (*ctxt).line_formatter() {
+        None => std::ptr::null_mut(),
+        Some(formatter) => formatter.handle.as_ptr(),
+    }
 }
 
 unsafe extern "C" fn cb_get_function_type_tokens<C: LanguageRepresentationFunctionType>(
@@ -544,35 +520,31 @@ unsafe extern "C" fn cb_free_lines(
     }
 }
 
-unsafe extern "C" fn cb_free_object<C: CustomLanguageRepresentationFunction>(
-    ctxt: *mut c_void,
-) {
+unsafe extern "C" fn cb_free_object<C: LanguageRepresentationFunction>(ctxt: *mut c_void) {
     let ctxt = ctxt as *mut C;
     drop(Box::from_raw(ctxt))
 }
 
-unsafe extern "C" fn cb_external_ref_taken<C: CustomLanguageRepresentationFunction>(
+unsafe extern "C" fn cb_external_ref_taken<C: LanguageRepresentationFunction>(_ctxt: *mut c_void) {
+    // TODO Make an Arc? conflict with free?
+}
+
+unsafe extern "C" fn cb_external_ref_released<C: LanguageRepresentationFunction>(
     _ctxt: *mut c_void,
 ) {
     // TODO Make an Arc? conflict with free?
 }
 
-unsafe extern "C" fn cb_external_ref_released<C: CustomLanguageRepresentationFunction>(
-    _ctxt: *mut c_void,
-) {
-    // TODO Make an Arc? conflict with free?
-}
-
-unsafe extern "C" fn cb_init_token_emitter<C: CustomLanguageRepresentationFunction>(
+unsafe extern "C" fn cb_init_token_emitter<C: LanguageRepresentationFunction>(
     ctxt: *mut c_void,
     tokens: *mut BNHighLevelILTokenEmitter,
 ) {
     let ctxt = ctxt as *mut C;
-    let tokens = HighLevelILTokenEmitter::from_raw(ptr::NonNull::new(tokens).unwrap());
-    (*ctxt).init_token_emitter(&tokens)
+    let tokens = HighLevelILTokenEmitter::from_raw(NonNull::new(tokens).unwrap());
+    (*ctxt).on_token_emitter_init(&tokens)
 }
 
-unsafe extern "C" fn cb_get_expr_text<C: CustomLanguageRepresentationFunction>(
+unsafe extern "C" fn cb_get_expr_text<C: LanguageRepresentationFunction>(
     ctxt: *mut c_void,
     il: *mut BNHighLevelILFunction,
     expr_index: usize,
@@ -587,7 +559,7 @@ unsafe extern "C" fn cb_get_expr_text<C: CustomLanguageRepresentationFunction>(
         full_ast: as_full_ast,
         handle: il,
     };
-    let tokens = HighLevelILTokenEmitter::from_raw(ptr::NonNull::new(tokens).unwrap());
+    let tokens = HighLevelILTokenEmitter::from_raw(NonNull::new(tokens).unwrap());
     let settings = DisassemblySettings { handle: settings };
     (*ctxt).expr_text(
         &il,
@@ -600,7 +572,7 @@ unsafe extern "C" fn cb_get_expr_text<C: CustomLanguageRepresentationFunction>(
     );
 }
 
-unsafe extern "C" fn cb_begin_lines<C: CustomLanguageRepresentationFunction>(
+unsafe extern "C" fn cb_begin_lines<C: LanguageRepresentationFunction>(
     ctxt: *mut c_void,
     il: *mut BNHighLevelILFunction,
     expr_index: usize,
@@ -611,11 +583,11 @@ unsafe extern "C" fn cb_begin_lines<C: CustomLanguageRepresentationFunction>(
         full_ast: false,
         handle: il,
     };
-    let tokens = HighLevelILTokenEmitter::from_raw(ptr::NonNull::new(tokens).unwrap());
+    let tokens = HighLevelILTokenEmitter::from_raw(NonNull::new(tokens).unwrap());
     (*ctxt).begin_lines(&il, expr_index.into(), &tokens)
 }
 
-unsafe extern "C" fn cb_end_lines<C: CustomLanguageRepresentationFunction>(
+unsafe extern "C" fn cb_end_lines<C: LanguageRepresentationFunction>(
     ctxt: *mut c_void,
     il: *mut BNHighLevelILFunction,
     expr_index: usize,
@@ -626,11 +598,11 @@ unsafe extern "C" fn cb_end_lines<C: CustomLanguageRepresentationFunction>(
         full_ast: false,
         handle: il,
     };
-    let tokens = HighLevelILTokenEmitter::from_raw(ptr::NonNull::new(tokens).unwrap());
+    let tokens = HighLevelILTokenEmitter::from_raw(NonNull::new(tokens).unwrap());
     (*ctxt).end_lines(&il, expr_index.into(), &tokens)
 }
 
-unsafe extern "C" fn cb_get_comment_start_string<C: CustomLanguageRepresentationFunction>(
+unsafe extern "C" fn cb_get_comment_start_string<C: LanguageRepresentationFunction>(
     ctxt: *mut c_void,
 ) -> *mut c_char {
     let ctxt = ctxt as *mut C;
@@ -638,7 +610,7 @@ unsafe extern "C" fn cb_get_comment_start_string<C: CustomLanguageRepresentation
     BnString::into_raw(BnString::new(result))
 }
 
-unsafe extern "C" fn cb_get_comment_end_string<C: CustomLanguageRepresentationFunction>(
+unsafe extern "C" fn cb_get_comment_end_string<C: LanguageRepresentationFunction>(
     ctxt: *mut c_void,
 ) -> *mut c_char {
     let ctxt = ctxt as *mut C;
@@ -646,7 +618,7 @@ unsafe extern "C" fn cb_get_comment_end_string<C: CustomLanguageRepresentationFu
     BnString::into_raw(BnString::new(result))
 }
 
-unsafe extern "C" fn cb_get_annotation_start_string<C: CustomLanguageRepresentationFunction>(
+unsafe extern "C" fn cb_get_annotation_start_string<C: LanguageRepresentationFunction>(
     ctxt: *mut c_void,
 ) -> *mut c_char {
     let ctxt = ctxt as *mut C;
@@ -654,7 +626,7 @@ unsafe extern "C" fn cb_get_annotation_start_string<C: CustomLanguageRepresentat
     BnString::into_raw(BnString::new(result))
 }
 
-unsafe extern "C" fn cb_get_annotation_end_string<C: CustomLanguageRepresentationFunction>(
+unsafe extern "C" fn cb_get_annotation_end_string<C: LanguageRepresentationFunction>(
     ctxt: *mut c_void,
 ) -> *mut c_char {
     let ctxt = ctxt as *mut C;

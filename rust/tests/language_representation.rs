@@ -7,39 +7,52 @@ use binaryninja::disassembly::{
 };
 use binaryninja::function::Function;
 use binaryninja::headless::Session;
+use binaryninja::high_level_il::token_emitter::HighLevelILTokenEmitter;
 use binaryninja::high_level_il::{HighLevelILFunction, HighLevelInstructionIndex};
 use binaryninja::language_representation::{
-    create_language_representation_function, register_language_representation_function_type,
-    register_line_formatter, CoreLanguageRepresentationFunction,
-    CoreLanguageRepresentationFunctionType, CoreLineFormatter,
-    CustomLanguageRepresentationFunction, LanguageRepresentationFunctionType,
-    CustomLineFormatter, HighLevelILTokenEmitter, LineFormatterSettings, OperatorPrecedence,
+    register_language_representation_function_type, CoreLanguageRepresentationFunction,
+    CoreLanguageRepresentationFunctionType, LanguageRepresentationFunction,
+    LanguageRepresentationFunctionType, OperatorPrecedence,
 };
-use binaryninja::line_formatter::register_line_formatter;
-use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
-use binaryninja::type_container::TypeContainer;
-use binaryninja::type_parser::{
-    register_type_parser, CoreTypeParser, TypeParser, TypeParserError, TypeParserOption,
-};
-use binaryninja::type_printer::{
-    register_type_printer, CoreTypePrinter, TokenEscapingType, TypeDefinitionLine, TypePrinter,
-};
-use binaryninja::types::{QualifiedName, QualifiedNameAndType, Type};
 
-struct MyLangRepr {}
 struct MyLangReprType {
     core: CoreLanguageRepresentationFunctionType,
-    printer: CoreTypePrinter,
-    parser: CoreTypeParser,
-    line_formatter: CoreLineFormatter,
 }
-struct MyTypePrinter {}
-struct MyTypeParser {}
-struct MyLineFormatter {}
 
-impl CustomLanguageRepresentationFunction for MyLangRepr {
-    fn init_token_emitter(&self, _tokens: &HighLevelILTokenEmitter) {}
+impl LanguageRepresentationFunctionType for MyLangReprType {
+    fn create(
+        &self,
+        arch: &CoreArchitecture,
+        func: &Function,
+        high_level_il: &HighLevelILFunction,
+    ) -> Ref<CoreLanguageRepresentationFunction> {
+        CoreLanguageRepresentationFunction::new(
+            &self.core,
+            MyLangRepr {},
+            arch,
+            func,
+            high_level_il,
+        )
+    }
+
+    fn is_valid(&self, _view: &BinaryView) -> bool {
+        true
+    }
+
+    fn function_type_tokens(
+        &self,
+        _func: &Function,
+        _settings: &DisassemblySettings,
+    ) -> Vec<DisassemblyTextLine> {
+        todo!()
+    }
+}
+
+struct MyLangRepr;
+
+impl LanguageRepresentationFunction for MyLangRepr {
+    fn on_token_emitter_init(&self, _tokens: &HighLevelILTokenEmitter) {}
 
     fn expr_text(
         &self,
@@ -115,222 +128,27 @@ impl CustomLanguageRepresentationFunction for MyLangRepr {
     }
 }
 
-impl LanguageRepresentationFunctionType for MyLangReprType {
-    fn create(
-        &self,
-        arch: &CoreArchitecture,
-        func: &Function,
-        high_level_il: &HighLevelILFunction,
-    ) -> CoreLanguageRepresentationFunction {
-        create_language_representation_function(
-            MyLangRepr {},
-            &self.core,
-            arch,
-            func,
-            high_level_il,
-        )
-    }
-
-    fn is_valid(&self, _view: &BinaryView) -> bool {
-        true
-    }
-
-    fn type_printer(&self) -> &CoreTypePrinter {
-        &self.printer
-    }
-
-    fn type_parser(&self) -> &CoreTypeParser {
-        &self.parser
-    }
-
-    fn line_formatter(&self) -> &CoreLineFormatter {
-        &self.line_formatter
-    }
-
-    fn function_type_tokens(
-        &self,
-        _func: &Function,
-        _settings: &DisassemblySettings,
-    ) -> Vec<DisassemblyTextLine> {
-        todo!()
-    }
-}
-
-impl TypePrinter for MyTypePrinter {
-    fn get_type_tokens<T: Into<QualifiedName>>(
-        &self,
-        _type_: Ref<Type>,
-        _platform: Option<Ref<Platform>>,
-        _name: T,
-        _base_confidence: u8,
-        _escaping: TokenEscapingType,
-    ) -> Option<Vec<InstructionTextToken>> {
-        Some(vec![InstructionTextToken::new(
-            "SomeType",
-            InstructionTextTokenKind::Text,
-        )])
-    }
-
-    fn get_type_tokens_before_name(
-        &self,
-        _type_: Ref<Type>,
-        _platform: Option<Ref<Platform>>,
-        _base_confidence: u8,
-        _parent_type: Option<Ref<Type>>,
-        _escaping: TokenEscapingType,
-    ) -> Option<Vec<InstructionTextToken>> {
-        Some(vec![InstructionTextToken::new(
-            "<name>",
-            InstructionTextTokenKind::Text,
-        )])
-    }
-
-    fn get_type_tokens_after_name(
-        &self,
-        _type_: Ref<Type>,
-        _platform: Option<Ref<Platform>>,
-        _base_confidence: u8,
-        _parent_type: Option<Ref<Type>>,
-        _escaping: TokenEscapingType,
-    ) -> Option<Vec<binaryninja::disassembly::InstructionTextToken>> {
-        Some(vec![InstructionTextToken::new(
-            "</name>",
-            InstructionTextTokenKind::Text,
-        )])
-    }
-
-    fn get_type_string<T: Into<QualifiedName>>(
-        &self,
-        _type_: Ref<Type>,
-        _platform: Option<Ref<Platform>>,
-        _name: T,
-        _escaping: TokenEscapingType,
-    ) -> Option<String> {
-        None
-    }
-
-    fn get_type_string_before_name(
-        &self,
-        _type_: Ref<Type>,
-        _platform: Option<Ref<Platform>>,
-        _escaping: TokenEscapingType,
-    ) -> Option<String> {
-        None
-    }
-
-    fn get_type_string_after_name(
-        &self,
-        _type_: Ref<Type>,
-        _platform: Option<Ref<Platform>>,
-        _escaping: TokenEscapingType,
-    ) -> Option<String> {
-        None
-    }
-
-    fn get_type_lines<T: Into<QualifiedName>>(
-        &self,
-        _type_: Ref<Type>,
-        _types: &TypeContainer,
-        _name: T,
-        _padding_cols: isize,
-        _collapsed: bool,
-        _escaping: TokenEscapingType,
-    ) -> Option<Vec<TypeDefinitionLine>> {
-        None
-    }
-
-    fn print_all_types(
-        &self,
-        _names: Vec<QualifiedName>,
-        _types: Vec<Ref<Type>>,
-        _data: Ref<BinaryView>,
-        _padding_cols: isize,
-        _escaping: TokenEscapingType,
-    ) -> Option<String> {
-        None
-    }
-}
-
-impl TypeParser for MyTypeParser {
-    fn get_option_text(&self, _option: TypeParserOption, _value: &str) -> Option<String> {
-        None
-    }
-
-    fn preprocess_source(
-        &self,
-        _source: &str,
-        _file_name: &str,
-        _platform: &binaryninja::platform::Platform,
-        _existing_types: &TypeContainer,
-        _options: &[String],
-        _include_dirs: &[String],
-    ) -> Result<String, Vec<binaryninja::type_parser::TypeParserError>> {
-        todo!()
-    }
-
-    fn parse_types_from_source(
-        &self,
-        _source: &str,
-        _file_name: &str,
-        _platform: &binaryninja::platform::Platform,
-        _existing_types: &TypeContainer,
-        _options: &[String],
-        _include_dirs: &[String],
-        _auto_type_source: &str,
-    ) -> Result<
-        binaryninja::type_parser::TypeParserResult,
-        Vec<binaryninja::type_parser::TypeParserError>,
-    > {
-        todo!()
-    }
-
-    fn parse_type_string(
-        &self,
-        _source: &str,
-        _platform: &binaryninja::platform::Platform,
-        _existing_types: &TypeContainer,
-    ) -> Result<QualifiedNameAndType, Vec<TypeParserError>> {
-        todo!()
-    }
-}
-
 #[test]
 fn test_custom_language_representation() {
     const LANG_REPR_NAME: &str = "test_lang_repr";
     let _session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
-    let (_, printer) = register_type_printer("my_type_printer", MyTypePrinter {});
-    let (_, parser) = register_type_parser("my_type_parser", MyTypeParser {});
-    let line_formatter = CoreLineFormatter::from_name("default").unwrap();
+
     let my_repr = register_language_representation_function_type(
-        |core| MyLangReprType {
-            core,
-            printer,
-            parser,
-            line_formatter,
-        },
+        |core| MyLangReprType { core },
         LANG_REPR_NAME,
     );
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     let func = view
         .function_at(&view.default_platform().unwrap(), 0x36760)
         .unwrap();
-    let _repr = my_repr.create(
-        &view.default_arch().unwrap().as_ref(),
-        &func,
-        &func.high_level_il(false).unwrap(),
-    );
+    let _repr = my_repr.create(&func);
     let il = func.high_level_il(false).unwrap();
 
     let settings = DisassemblySettings::new();
     let root_idx = il.root_instruction_index();
     let result = _repr.linear_lines(&il, root_idx, &settings, false);
     let output: String = result.iter().map(|dis| dis.to_string()).collect();
-    let _repr = binaryninja::language_representation::get_function_language_representation(
-        &func,
-        LANG_REPR_NAME,
-    )
-    .unwrap();
     assert_eq!(
         format!("{output}"),
         "block 26

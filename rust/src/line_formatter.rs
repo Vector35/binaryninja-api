@@ -1,11 +1,7 @@
 use std::ffi::{c_char, c_void};
 use std::ptr::NonNull;
 
-use binaryninjacore_sys::{
-    BNCustomLineFormatter, BNDisassemblyTextLine, BNFreeLineFormatterList,
-    BNGetLineFormatterByName, BNGetLineFormatterList, BNGetLineFormatterName, BNLineFormatter,
-    BNLineFormatterSettings, BNRegisterLineFormatter,
-};
+use binaryninjacore_sys::*;
 
 use crate::disassembly::DisassemblyTextLine;
 use crate::high_level_il::HighLevelILFunction;
@@ -45,6 +41,11 @@ pub struct CoreLineFormatter {
 impl CoreLineFormatter {
     pub fn from_raw(handle: NonNull<BNLineFormatter>) -> Self {
         Self { handle }
+    }
+
+    /// Get the default [`CoreLineFormatter`] if available, because the user might have disabled it.
+    pub fn default_if_available() -> Option<Self> {
+        Some(unsafe { Self::from_raw(NonNull::new(BNGetDefaultLineFormatter())?) })
     }
 
     pub fn all() -> Array<CoreLineFormatter> {
@@ -116,12 +117,14 @@ impl LineFormatterSettings {
         }
     }
 
+    #[allow(unused)]
     pub(crate) fn from_owned_raw(value: BNLineFormatterSettings) -> Self {
         let owned = Self::from_raw(&value);
         Self::free_raw(value);
         owned
     }
 
+    #[allow(unused)]
     pub(crate) fn free_raw(value: BNLineFormatterSettings) {
         let _ = unsafe { HighLevelILFunction::ref_from_raw(value.highLevelIL, false) };
         let _ = unsafe { BnString::from_raw(value.languageName as *mut _) };

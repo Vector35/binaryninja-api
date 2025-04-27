@@ -41,16 +41,12 @@ pub fn register_type_parser<S: BnStrCompatible, T: TypeParser>(
 
 #[repr(transparent)]
 pub struct CoreTypeParser {
-    handle: NonNull<BNTypeParser>,
+    pub(crate) handle: NonNull<BNTypeParser>,
 }
 
 impl CoreTypeParser {
     pub(crate) unsafe fn from_raw(handle: NonNull<BNTypeParser>) -> Self {
         Self { handle }
-    }
-
-    pub(crate) unsafe fn as_raw(&self) -> *mut BNTypeParser {
-        self.handle.as_ptr()
     }
 
     pub fn parsers() -> Array<CoreTypeParser> {

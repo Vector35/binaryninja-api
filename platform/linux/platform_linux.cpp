@@ -315,21 +315,33 @@ extern "C"
 		}
 
 		Ref<Architecture> ppc = Architecture::GetByName("ppc");
-		Ref<Architecture> ppcle = Architecture::GetByName("ppc_le");
-		if (ppc && ppcle)
+		Ref<Architecture> ppcvle = Architecture::GetByName("ppcvle");
+		Ref<Architecture> ppcLE = Architecture::GetByName("ppc_le");
+		// TODO: VLEPEM says that VLE always uses big-endian instruction
+		//       encoding, but doesn't say anything about data
+		//       endianness, so in theory little-endian PPC should be
+		//       possible?
+		if (ppc && ppcvle && ppcLE)
 		{
-			Ref<Platform> platform;
-			Ref<Platform> platformle;
+			Ref<Platform> ppcPlatform;
+			Ref<Platform> ppcvlePlatform;
+			Ref<Platform> ppcLEPlatform;
 
-			platform = new LinuxPpc32Platform(ppc, "linux-ppc32");
-			platformle = new LinuxPpc32Platform(ppcle, "linux-ppc32_le");
-			Platform::Register("linux", platform);
-			Platform::Register("linux", platformle);
+			ppcPlatform = new LinuxPpc32Platform(ppc, "linux-ppc32");
+			ppcvlePlatform = new LinuxPpc32Platform(ppcvle, "linux-ppcvle32");
+			ppcLEPlatform = new LinuxPpc32Platform(ppcLE, "linux-ppc32_le");
+
+			Platform::Register("linux", ppcPlatform);
+			Platform::Register("linux", ppcvlePlatform);
+			Platform::Register("linux", ppcLEPlatform);
+
 			// Linux binaries sometimes have an OS identifier of zero, even though 3 is the correct one
-			BinaryViewType::RegisterPlatform("ELF", 0, ppc, platform);
-			BinaryViewType::RegisterPlatform("ELF", 3, ppc, platform);
-			BinaryViewType::RegisterPlatform("ELF", 0, ppcle, platformle);
-			BinaryViewType::RegisterPlatform("ELF", 3, ppcle, platformle);
+			BinaryViewType::RegisterPlatform("ELF", 0, ppc, ppcPlatform);
+			BinaryViewType::RegisterPlatform("ELF", 3, ppc, ppcPlatform);
+			BinaryViewType::RegisterPlatform("ELF", 0, ppcvle, ppcvlePlatform);
+			BinaryViewType::RegisterPlatform("ELF", 3, ppcvle, ppcvlePlatform);
+			BinaryViewType::RegisterPlatform("ELF", 0, ppcLE, ppcLEPlatform);
+			BinaryViewType::RegisterPlatform("ELF", 3, ppcLE, ppcLEPlatform);
 		}
 
 		Ref<Architecture> ppc64 = Architecture::GetByName("ppc64");

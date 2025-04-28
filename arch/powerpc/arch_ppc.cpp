@@ -301,11 +301,9 @@ class PowerpcArchitecture: public Architecture
 	/* initialization list */
 	PowerpcArchitecture(const char* name, BNEndianness endian_, size_t addressSize_=4, uint32_t decodeFlags_=DECODE_FLAGS_ALTIVEC | DECODE_FLAGS_VSX): Architecture(name)
 	{
-		Ref<Settings> settings = Settings::Instance();
-		uint32_t flag_vle = settings->Get<bool>("arch.ppc.disassembly.vlehack") ? DECODE_FLAGS_VLE : 0;
 		endian = endian_;
 		addressSize = addressSize_;
-		decodeFlags = decodeFlags_ | flag_vle;
+		decodeFlags = decodeFlags_;
 		if (addressSize == 8)
 			decodeFlags |= DECODE_FLAGS_PPC64;
 	}
@@ -351,8 +349,8 @@ class PowerpcArchitecture: public Architecture
 			case 2:
 			{
 				uint16_t word16 = *(const uint16_t *) data;
-				if (endian == BigEndian)
-					word16 = bswap16(word16);
+				// VLE is always big-endian
+				word16 = bswap16(word16);
 
 				return Decompose16(instruction, word16, address, decodeFlags | extraFlags);
 			}
@@ -361,7 +359,8 @@ class PowerpcArchitecture: public Architecture
 			{
 				uint32_t word32 = *(const uint32_t *) data;
 
-				if (endian == BigEndian)
+				// VLE is always big endian
+				if (((decodeFlags & DECODE_FLAGS_VLE) != 0) || endian == BigEndian)
 					word32 = bswap32(word32);
 
 				return Decompose32(instruction, word32, address, decodeFlags | extraFlags);
@@ -2551,6 +2550,93 @@ public:
 	}
 };
 
+#define SECTION_FLAG_EXECUTABLE         0x00000004
+#define SECTION_FLAG_VLE                0x10000000
+
+static Ref<Platform> ElfSpecialRecognize(BinaryView* view, Metadata* metadata)
+{
+	Ref<Metadata> eiClassMetadata = metadata->Get("EI_CLASS");
+	if (!eiClassMetadata || !eiClassMetadata->IsUnsignedInteger())
+		return nullptr;
+
+	uint64_t eiClass = eiClassMetadata->GetUnsignedInteger();
+
+	bool is32bit;
+	if (eiClass == 1)
+		is32bit = true;
+	else if (eiClass == 2)
+		is32bit = false;
+	else
+		return nullptr;
+
+	// TODO: Issue #6290, look for .ppc.EMB.apuinfo to figure out which
+	//       APU to use (Altivec vs. SPE vs. etc.)
+
+	// TODO: This only handles the cases when all executable sections share
+	//       the same VLE-ness; currently elf views don't support
+	//       granularity at the section level for different architectures
+	Ref<Metadata> numSectionsMetadata = metadata->Get("numSections");
+	if (!numSectionsMetadata || !numSectionsMetadata->IsUnsignedInteger())
+		return nullptr;
+
+	uint64_t numSections = numSectionsMetadata->GetUnsignedInteger();
+	bool foundFirst = false;
+	bool allVle = false;
+	for (unsigned i = 0; i < numSections; ++i)
+	{
+		char metaname[0x20];
+		snprintf(metaname, sizeof metaname, "sectionFlags[%d]", i);
+
+		Ref<Metadata> sectionFlagsMetadata = metadata->Get(metaname);
+		if (!sectionFlagsMetadata || !sectionFlagsMetadata->IsUnsignedInteger())
+		{
+			LogError("Internal error: there are %d sections in ELF metadata, but we're missing sectionFlags[%d]", numSections, i);
+
+			return nullptr;
+		}
+
+		uint64_t sectionFlags = sectionFlagsMetadata->GetUnsignedInteger();
+		LogDebug("sectionFlags[%d] = %" PRIx64, i, sectionFlags);
+
+		if ((sectionFlags & SECTION_FLAG_EXECUTABLE) == 0)
+		{
+			LogDebug("Skipping non-executable section");
+			continue;
+		}
+
+		bool isVle = (sectionFlags & SECTION_FLAG_VLE) != 0;
+		if (!foundFirst)
+		{
+			LogDebug("first code sectionFlags[%d] VLE=%d", i, isVle);
+			allVle = isVle;
+			foundFirst = true;
+		}
+		else if (isVle != allVle)
+		{
+			LogWarn("Executable section %d doesn't have same VLE flag as previously encountered ones: previous sections %s but this one %s", i,
+				allVle ? "have VLE" : "have no VLE",
+				isVle ? "has VLE" : "has no VLE");
+			return nullptr;
+		}
+		else
+		{
+			LogDebug("sectionFlags[%d] VLE=%d (same as others)", i, isVle);
+		}
+	}
+
+	if (allVle)
+	{
+		printf("OVERRIDING WITH VLE: %p\n", Platform::GetByName("linux-ppcvle"));
+		if (is32bit)
+			return Platform::GetByName("linux-ppcvle32");
+		else
+			return Platform::GetByName("linux-ppcvle64");
+	}
+
+	// No need to override, let the ELF view figure it out
+	return nullptr;
+}
+
 extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
@@ -2568,19 +2654,12 @@ extern "C"
 	{
 		MYLOG("ARCH POWERPC compiled at %s %s\n", __DATE__, __TIME__);
 
-		Ref<Settings> settings = Settings::Instance();
-		settings->RegisterSetting("arch.ppc.disassembly.vlehack",
-			R"({
-			"title" : "Hack to treat PPC ELFs as VLE",
-			"type" : "boolean",
-			"default" : false,
-			"description" : "Treat PPC ELFs as VLE, temporary bandaid for now",
-			"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
-			})");
-
 		/* create, register arch in global list of available architectures */
 		Architecture* ppc = new PowerpcArchitecture("ppc", BigEndian);
 		Architecture::Register(ppc);
+
+		Architecture* ppcvle = new PowerpcArchitecture("ppcvle", BigEndian, 4, DECODE_FLAGS_VLE);
+		Architecture::Register(ppcvle);
 
 		Architecture* ppc_qpx = new PowerpcArchitecture("ppc_qpx", BigEndian, 4, DECODE_FLAGS_QPX);
 		Architecture::Register(ppc_qpx);
@@ -2605,6 +2684,8 @@ extern "C"
 		conv = new PpcSvr4CallingConvention(ppc);
 		ppc->RegisterCallingConvention(conv);
 		ppc->SetDefaultCallingConvention(conv);
+		ppcvle->RegisterCallingConvention(conv);
+		ppcvle->SetDefaultCallingConvention(conv);
 		ppc_qpx->RegisterCallingConvention(conv);
 		ppc_qpx->SetDefaultCallingConvention(conv);
 		ppc_spe->RegisterCallingConvention(conv);
@@ -2616,6 +2697,7 @@ extern "C"
 
 		conv = new PpcLinuxSyscallCallingConvention(ppc);
 		ppc->RegisterCallingConvention(conv);
+		ppcvle->RegisterCallingConvention(conv);
 		ppc_qpx->RegisterCallingConvention(conv);
 		ppc_spe->RegisterCallingConvention(conv);
 		ppc_ps->RegisterCallingConvention(conv);
@@ -2638,6 +2720,7 @@ extern "C"
 		ppc_le->RegisterFunctionRecognizer(new PpcImportedFunctionRecognizer());
 
 		ppc->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
+		ppcvle->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
 		ppc_qpx->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
 		ppc_spe->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
 		ppc_ps->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
@@ -2694,6 +2777,15 @@ extern "C"
 			LittleEndian,
 			ppc64_le /* the architecture */
 		);
+
+		Ref<BinaryViewType> elf = BinaryViewType::GetByName("ELF");
+		if (elf)
+		{
+			elf->RegisterPlatformRecognizer(EM_PPC, BigEndian, ElfSpecialRecognize);
+			elf->RegisterPlatformRecognizer(EM_PPC, LittleEndian, ElfSpecialRecognize);
+			elf->RegisterPlatformRecognizer(EM_PPC64, BigEndian, ElfSpecialRecognize);
+			elf->RegisterPlatformRecognizer(EM_PPC64, LittleEndian, ElfSpecialRecognize);
+		}
 
 		return true;
 	}

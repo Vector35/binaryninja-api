@@ -2878,6 +2878,8 @@ uint64_t ElfViewType::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonH
 			"malicious. Treating it as 64-bit.");
 	}
 
+	bool is32bit = ident.fileClass == 1;
+
 	// parse Elf64Header
 	if (ident.fileClass == 1) // 32-bit ELF
 	{
@@ -2911,6 +2913,37 @@ uint64_t ElfViewType::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonH
 		return 0;
 	}
 
+	// This is some disgusting code duplication, the PowerPC ELF recognizer
+	// needs some section information passed to it:
+	// (1) contents of the .ppc.EMB.apuinfo to figure out additional
+	//     processor information (SPE, Altivec, etc.)
+	// (2) whether any sections have VLE flags
+	//
+	// But this function doesn't have a handle to the ElfView, so we
+	// duplicate the section iteration/parsing logic
+	//
+	// We're early enough in the process that if sizes aren't what we expect
+	// them to be, we just don't pass section info to the ELF recognizer
+	// function, but pass everything else to aid troubleshooting
+	uint16_t sectionHeaderSize = header.sectionHeaderSize;
+	uint32_t sectionCount = header.sectionHeaderCount;
+	if (is32bit && (sectionHeaderSize != sizeof(Elf32SectionHeader)))
+	{
+		m_logger->LogWarn(
+			"The section header size reported by e_shentsize (0x%lx) is different from the size of Elf32_Shdr (0x%lx). "
+			"Won't do first pass section header parsing.",
+			sectionHeaderSize, sizeof(Elf32SectionHeader));
+		sectionCount = 0;
+	}
+	else if (!is32bit && (sectionHeaderSize != sizeof(Elf64SectionHeader)))
+	{
+		m_logger->LogWarn(
+			"The section header size reported by e_shentsize (0x%lx) is different from the size of Elf64_Shdr (0x%lx). "
+			"Won't do first pass section header parsing.",
+			sectionHeaderSize, sizeof(Elf64SectionHeader));
+		sectionCount = 0;
+	}
+
 	map<string, Ref<Metadata>> metadataMap = {
 		{"EI_CLASS",    new Metadata((uint64_t) ident.fileClass)},
 		{"EI_DATA",     new Metadata((uint64_t) ident.encoding)},
@@ -2919,6 +2952,43 @@ uint64_t ElfViewType::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonH
 		{"e_machine",   new Metadata((uint64_t) commonHeader.arch)},
 		{"e_flags",     new Metadata((uint64_t) header.flags)},
 	};
+
+	BinaryReader sectionReader(data);
+	sectionReader.SetEndianness(endianness);
+	uint64_t flagsOffset = header.sectionHeaderOffset;
+	if (is32bit)
+		flagsOffset += offsetof(Elf32SectionHeader, flags);
+	else
+		flagsOffset += offsetof(Elf64SectionHeader, flags);
+
+	for (unsigned int i=0; i < sectionCount; ++i)
+	{
+		sectionReader.Seek(flagsOffset);
+		uint64_t flags;
+		try
+		{
+			if (is32bit)
+				flags = sectionReader.Read32();
+			else
+				flags = sectionReader.Read64();
+		}
+		catch (ReadException&)
+		{
+			m_logger->LogWarn("Failed to read section flags at offset %" PRIx64, flagsOffset);
+			// Note that any previously read flags values will
+			// still persist in the metadata map
+			sectionCount = 0;
+			break;
+		}
+
+		char metaname[0x20];
+		snprintf(metaname, sizeof metaname, "sectionFlags[%d]", i);
+
+		metadataMap[metaname] = new Metadata((uint64_t)flags);
+		flagsOffset += header.sectionHeaderSize;
+	}
+
+	metadataMap["numSections"] = new Metadata((uint64_t) sectionCount);
 
 	Ref<Metadata> metadata = new Metadata(metadataMap);
 	// retrieve architecture

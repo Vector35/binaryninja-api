@@ -37,6 +37,30 @@ public:
 
 /*!
 
+	\ingroup memorymap
+*/
+class BINARYNINJAUIAPI MemoryRegionDialog : public QDialog
+{
+	QPushButton* m_selectFileButton;
+	QPushButton* m_acceptButton;
+	QPushButton* m_cancelButton;
+	QLineEdit* m_nameField;
+	QLineEdit* m_startField;
+	QLineEdit* m_endField;
+	QLabel* m_contentsLabel;
+
+	BinaryViewRef m_data;
+	SegmentRef m_segment;
+	std::optional<std::string> m_filePath;
+
+	void SelectFile();
+	void Submit();
+public:
+	MemoryRegionDialog(QWidget* parent, BinaryViewRef data, SegmentRef associatedSegment = nullptr);
+};
+
+/*!
+
     \ingroup memorymap
 */
 class BINARYNINJAUIAPI SegmentDialog : public QDialog
@@ -92,6 +116,7 @@ enum class SegmentColumn : int {
 	DATA_LENGTH,
 	FLAGS,
 	SOURCE,
+	REGION,
 	COLUMN_COUNT,
 };
 
@@ -142,6 +167,7 @@ class BINARYNINJAUIAPI SegmentWidget : public QWidget
 	QMenu* createHeaderContextMenu(const QPoint& p);
 	void restoreDefaults();
 
+	void addMemoryRegion(SegmentRef segment);
 	void addSegment();
 	void editSegment(SegmentRef segment);
 	void disableSegment(SegmentRef segment);

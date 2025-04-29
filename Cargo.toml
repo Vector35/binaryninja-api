@@ -14,6 +14,7 @@ members = [
     "plugins/dwarf/dwarfdump",
     "plugins/dwarf/shared",
     "plugins/idb_import",
+    "plugins/lift_check_rust",
     "plugins/pdb-ng",
     "plugins/pdb-ng/demo",
     "plugins/warp", 

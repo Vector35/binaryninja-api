@@ -1,18 +1,28 @@
-use binaryninja::architecture::{Architecture, CoreArchitecture, Flag, Register, RegisterInfo};
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
-use binaryninja::command;
-use binaryninja::function::Function;
-use binaryninja::llil;
-use binaryninja::llil::{
-    Expression, Finalized, Instruction, LiftedNonSSA, NonSSA, ValueExpr, VisitorAction,
-};
+use binaryninja::architecture::{CoreArchitecture, Register, RegisterInfo};
+use binaryninja::logger::Logger;
+use binaryninja::low_level_il::expression::{ExpressionHandler, LowLevelILExpression, ValueExpr};
+use binaryninja::low_level_il::expression::LowLevelILExpressionKind::*;
+use binaryninja::low_level_il::function::{Finalized, LowLevelILFunction, Mutable, NonSSA};
+use binaryninja::low_level_il::instruction::LowLevelILInstructionKind::*;
+use log::{error, info, LevelFilter};
+use binaryninja::low_level_il::instruction::{InstructionHandler, LowLevelILInstruction};
+use binaryninja::low_level_il::{LowLevelILRegisterKind};
+use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
 
-fn check_expression(expr: &Expression<CoreArchitecture, Finalized, NonSSA<LiftedNonSSA>, ValueExpr>,
+pub const LIFT_CHECK_ACTIVITY_NAME: &str = "analysis.liftCheck";
+const LIFT_CHECK_ACTIVITY_CONFIG: &str = r#"{
+    "name": "analysis.liftCheck",
+    "title" : "Lift Check",
+    "description": "This analysis step checks all IL instructions in the function",
+    "eligibility": {
+        "auto": {}
+    }
+}"#;
+
+fn check_expression(expr: &LowLevelILExpression<Mutable, NonSSA, ValueExpr>,
                     required_size: Option<usize>)
 {
-    use llil::ExprInfo::*;
-
-    match expr.info() {
+    match expr.kind() {
         Reg(ref op) => {
             let size = op.size();
 
@@ -23,7 +33,7 @@ fn check_expression(expr: &Expression<CoreArchitecture, Finalized, NonSSA<Lifted
                 }
             }
 
-            if let llil::Register::ArchReg(r) = op.source_reg() {
+            if let LowLevelILRegisterKind::Arch(r) = op.source_reg() {
                 let reg_size = r.info().size();
 
                 if reg_size != size {
@@ -131,7 +141,7 @@ fn check_expression(expr: &Expression<CoreArchitecture, Finalized, NonSSA<Lifted
             }
 
             // rotate amounts just need to be >= 1 byte
-            if let Some(0) = op.right().info().size() {
+            if let Some(0) = op.right().kind().size() {
                 error!("LLIL_RLC/RRC can't rotate by a 0 byte expression! (addr: {:x} {:?})",
                        op.address(), expr);
             }
@@ -179,7 +189,7 @@ fn check_expression(expr: &Expression<CoreArchitecture, Finalized, NonSSA<Lifted
             }
 
             // rotate amounts just need to be >= 1 byte
-            if let Some(0) = op.right().info().size() {
+            if let Some(0) = op.right().kind().size() {
                 error!("LLIL shift/rotate ops can't rotate by a 0 byte expression! (addr: {:x} {:?})",
                        op.address(), expr);
             }
@@ -249,7 +259,7 @@ fn check_expression(expr: &Expression<CoreArchitecture, Finalized, NonSSA<Lifted
 
             let operand = op.operand();
 
-            if let Some(actual_size) = operand.info().size() {
+            if let Some(actual_size) = operand.kind().size() {
                 if actual_size >= op_size {
                     error!("LLIL extending op to {} bytes is invalid; source is already {} bytes (addr: {:x} {:?})",
                            op_size, actual_size, op.address(), expr);
@@ -271,7 +281,7 @@ fn check_expression(expr: &Expression<CoreArchitecture, Finalized, NonSSA<Lifted
 
             let operand = op.operand();
 
-            if let Some(actual_size) = operand.info().size() {
+            if let Some(actual_size) = operand.kind().size() {
                 if actual_size <= op_size {
                     error!("LLIL truncating op to {} bytes is invalid; source is already {} bytes (addr: {:x} {:?})",
                            op_size, actual_size, op.address(), expr);
@@ -315,15 +325,13 @@ fn check_expression(expr: &Expression<CoreArchitecture, Finalized, NonSSA<Lifted
     }
 }
 
-fn check_instruction(inst: &Instruction<CoreArchitecture, Finalized, NonSSA<LiftedNonSSA>>) {
-    use llil::InstrInfo::*;
-
-    match inst.info() {
+fn check_instruction(inst: &LowLevelILInstruction<Mutable, NonSSA>) {
+    match inst.kind() {
         SetReg(op) => {
             let required_expr_size = op.size();
 
             // TODO how to do sanity checking for temp registers?
-            if let llil::Register::ArchReg(r) = op.dest_reg() {
+            if let LowLevelILRegisterKind::Arch(r) = op.dest_reg() {
                 let reg_size = r.info().size();
 
                 if reg_size != required_expr_size {
@@ -337,14 +345,14 @@ fn check_instruction(inst: &Instruction<CoreArchitecture, Finalized, NonSSA<Lift
         SetRegSplit(op) => {
             let required_reg_size = op.size();
 
-            if let llil::Register::ArchReg(hi) = op.dest_reg_high() {
+            if let LowLevelILRegisterKind::Arch(hi) = op.dest_reg_high() {
                 if hi.info().size() != required_reg_size {
                     error!("LLIL_SET_REG_SPLIT received a register with wrong size (wanted {} bytes)! (addr: {:x})",
                            required_reg_size, op.address());
                 }
             }
 
-            if let llil::Register::ArchReg(lo) = op.dest_reg_low() {
+            if let LowLevelILRegisterKind::Arch(lo) = op.dest_reg_low() {
                 if lo.info().size() != required_reg_size {
                     error!("LLIL_SET_REG_SPLIT received a register with wrong size (wanted {} bytes)! (addr: {:x})",
                            required_reg_size, op.address());
@@ -364,7 +372,7 @@ fn check_instruction(inst: &Instruction<CoreArchitecture, Finalized, NonSSA<Lift
             }
 
             // TODO make sure size matches arch default addr len?
-            check_expression(&op.dest_mem_expr(), None);
+            check_expression(&op.dest_expr(), None);
             check_expression(&op.source_expr(), Some(required_expr_size));
         }
         Push(op) => {
@@ -391,37 +399,41 @@ fn check_instruction(inst: &Instruction<CoreArchitecture, Finalized, NonSSA<Lift
         If(op) => {
             check_expression(&op.condition(), Some(0));
         }
-        Value(e, _) => {
+        Value(e) => {
             check_expression(&e, None);
         }
         _ => {},
     }
 }
 
-pub fn check_function(func: &Function) {
-    if let Ok(llil) = func.lifted_il() {
-        for block in &llil.basic_blocks() {
-            for inst in &*block {
-                check_instruction(&inst);
+fn insert_workflow() {
+    let check_activity_fn = |ctx: &AnalysisContext| {
+        if let Some(il) = unsafe { ctx.llil_function() } {
+            for block in &il.basic_blocks() {
+                for instr in &*block {
+                    check_instruction(&instr);
+                }
             }
         }
-    }
+    };
+
+    let old_function_meta_workflow = Workflow::instance("core.function.metaAnalysis");
+    let function_meta_workflow = old_function_meta_workflow.clone_to("core.function.metaAnalysis");
+    let check_activity = Activity::new_with_action(LIFT_CHECK_ACTIVITY_CONFIG, check_activity_fn);
+    function_meta_workflow
+        .register_activity(&check_activity)
+        .unwrap();
+    function_meta_workflow.insert("core.function.generateMediumLevelIL", [LIFT_CHECK_ACTIVITY_NAME]);
+    function_meta_workflow.register().unwrap();
 }
 
-use rayon::prelude::*;
-use std::thread;
-use std::time;
 
-pub fn check_all_functions_parallel(bv: &BinaryView) {
-    let bv = bv.to_owned();
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "C" fn CorePluginInit() -> bool {
+    Logger::new("LiftCheck").with_level(LevelFilter::Debug).init();
 
-    thread::spawn(move || {
-        let start = time::Instant::now();
-        let functions = bv.functions();
+    insert_workflow();
 
-        functions.par_iter().for_each(|f| check_function(&f));
-
-        let elapsed = time::Instant::now().duration_since(start);
-        info!("LiftCheck parallel: checked {} functions in {:?} seconds", functions.len(), elapsed);
-    });
+    true
 }

@@ -88,18 +88,18 @@ enum Intrinsic {
 }
 
 #[derive(Copy, Clone)]
-struct Register<D: 'static + RiscVDisassembler> {
+struct Register<D: RiscVDisassembler> {
     id: RegisterId,
     _dis: PhantomData<D>,
 }
 
 #[derive(Debug, Copy, Clone)]
-struct RiscVIntrinsic<D: 'static + RiscVDisassembler> {
+struct RiscVIntrinsic<D: RiscVDisassembler> {
     id: Intrinsic,
     _dis: PhantomData<D>,
 }
 
-impl<D: 'static + RiscVDisassembler> Register<D> {
+impl<D: RiscVDisassembler> Register<D> {
     fn new(id: RegisterId) -> Self {
         Self {
             id,
@@ -118,7 +118,7 @@ impl<D: 'static + RiscVDisassembler> Register<D> {
     }
 }
 
-impl<D: 'static + RiscVDisassembler> From<riscv_dis::IntReg<D>> for Register<D> {
+impl<D: RiscVDisassembler> From<riscv_dis::IntReg<D>> for Register<D> {
     fn from(reg: riscv_dis::IntReg<D>) -> Self {
         Self {
             id: RegisterId(reg.id()),
@@ -127,7 +127,7 @@ impl<D: 'static + RiscVDisassembler> From<riscv_dis::IntReg<D>> for Register<D> 
     }
 }
 
-impl<D: 'static + RiscVDisassembler> From<FloatReg<D>> for Register<D> {
+impl<D: RiscVDisassembler> From<FloatReg<D>> for Register<D> {
     fn from(reg: FloatReg<D>) -> Self {
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
 
@@ -138,13 +138,13 @@ impl<D: 'static + RiscVDisassembler> From<FloatReg<D>> for Register<D> {
     }
 }
 
-impl<D: 'static + RiscVDisassembler> From<Register<D>> for LowLevelILRegister<Register<D>> {
+impl<D: RiscVDisassembler> From<Register<D>> for LowLevelILRegister<Register<D>> {
     fn from(reg: Register<D>) -> Self {
         LowLevelILRegister::ArchReg(reg)
     }
 }
 
-impl<D: 'static + RiscVDisassembler> RegisterInfo for Register<D> {
+impl<D: RiscVDisassembler> RegisterInfo for Register<D> {
     type RegType = Self;
 
     fn parent(&self) -> Option<Self> {
@@ -166,7 +166,7 @@ impl<D: 'static + RiscVDisassembler> RegisterInfo for Register<D> {
     }
 }
 
-impl<D: 'static + RiscVDisassembler> architecture::Register for Register<D> {
+impl<D: RiscVDisassembler> architecture::Register for Register<D> {
     type InfoType = Self;
 
     fn name(&self) -> Cow<str> {
@@ -204,7 +204,7 @@ impl<D: 'static + RiscVDisassembler> architecture::Register for Register<D> {
     }
 }
 
-impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableLowLevelIL<'a, RiscVArch<D>>
+impl<'a, D: RiscVDisassembler> LiftableLowLevelIL<'a, RiscVArch<D>>
     for Register<D>
 {
     type Result = ValueExpr;
@@ -221,7 +221,7 @@ impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableLowLevelIL<'a, Ri
     }
 }
 
-impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableLowLevelILWithSize<'a, RiscVArch<D>>
+impl<'a, D: RiscVDisassembler> LiftableLowLevelILWithSize<'a, RiscVArch<D>>
     for Register<D>
 {
     fn lift_with_size(
@@ -257,21 +257,21 @@ impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableLowLevelILWithSiz
     }
 }
 
-impl<D: 'static + RiscVDisassembler> Hash for Register<D> {
+impl<D: RiscVDisassembler> Hash for Register<D> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id.hash(state);
     }
 }
 
-impl<D: 'static + RiscVDisassembler> PartialEq for Register<D> {
+impl<D: RiscVDisassembler> PartialEq for Register<D> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-impl<D: 'static + RiscVDisassembler> Eq for Register<D> {}
+impl<D: RiscVDisassembler> Eq for Register<D> {}
 
-impl<D: 'static + RiscVDisassembler> fmt::Debug for Register<D> {
+impl<D: RiscVDisassembler> fmt::Debug for Register<D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(self.name().as_ref())
     }
@@ -636,13 +636,14 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
     }
 }
 
-struct RiscVArch<D: 'static + RiscVDisassembler + Send + Sync> {
+#[derive(Debug)]
+struct RiscVArch<D: RiscVDisassembler> {
     handle: CoreArchitecture,
     custom_handle: CustomArchitectureHandle<RiscVArch<D>>,
     _dis: PhantomData<D>,
 }
 
-impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture for RiscVArch<D> {
+impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
     type Handle = CustomArchitectureHandle<Self>;
 
     type RegisterInfo = Register<D>;
@@ -2652,7 +2653,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
     }
 }
 
-impl<D: 'static + RiscVDisassembler + Send + Sync> AsRef<CoreRelocationHandler>
+impl<D: RiscVDisassembler> AsRef<CoreRelocationHandler>
     for RiscVELFRelocationHandler<D>
 {
     fn as_ref(&self) -> &CoreRelocationHandler {
@@ -2660,17 +2661,17 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> AsRef<CoreRelocationHandler>
     }
 }
 
-struct RiscVCC<D: 'static + RiscVDisassembler + Send + Sync> {
+struct RiscVCC<D: RiscVDisassembler> {
     _dis: PhantomData<D>,
 }
 
-impl<D: 'static + RiscVDisassembler + Send + Sync> RiscVCC<D> {
+impl<D: RiscVDisassembler> RiscVCC<D> {
     fn new() -> Self {
         RiscVCC { _dis: PhantomData }
     }
 }
 
-impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConvention for RiscVCC<D> {
+impl<D: RiscVDisassembler> CallingConvention for RiscVCC<D> {
     fn caller_saved_registers(&self) -> Vec<RegisterId> {
         let mut regs = Vec::with_capacity(36);
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();

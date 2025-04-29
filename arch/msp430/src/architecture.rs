@@ -25,6 +25,7 @@ use log::error;
 
 const MIN_MNEMONIC: usize = 9;
 
+#[derive(Debug)]
 pub struct Msp430 {
     handle: CoreArchitecture,
     custom_handle: CustomArchitectureHandle<Msp430>,

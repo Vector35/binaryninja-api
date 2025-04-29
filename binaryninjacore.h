@@ -4481,6 +4481,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNGetInstructionLowLevelIL(
 	    BNArchitecture* arch, const uint8_t* data, uint64_t addr, size_t* len, BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI void BNFreeInstructionText(BNInstructionTextToken* tokens, size_t count);
+	BINARYNINJACOREAPI bool BNArchitectureSetDefaultAnalyzeBasicBlocksCallback(void *callback);
+	BINARYNINJACOREAPI void BNArchitectureDefaultAnalyzeBasicBlocks(BNFunction* function, BNBasicBlockAnalysisContext* context);
 	BINARYNINJACOREAPI void BNArchitectureAnalyzeBasicBlocks(BNArchitecture* arch, BNFunction* function,
 		BNBasicBlockAnalysisContext* context);
 	BINARYNINJACOREAPI void BNFreeInstructionTextLines(BNInstructionTextLine* lines, size_t count);

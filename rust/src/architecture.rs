@@ -466,9 +466,16 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
 
     fn analyze_basic_blocks(
         &self,
-        _function: &mut Function,
-        _context: *mut BNBasicBlockAnalysisContext,
-    ) {}
+        function: &mut Function,
+        context: *mut BNBasicBlockAnalysisContext,
+    ) {
+        unsafe {
+            BNArchitectureDefaultAnalyzeBasicBlocks(
+                function.handle,
+                context,
+            );
+        };
+    }
 
     /// Fallback flag value calculation path. This method is invoked when the core is unable to
     /// recover flag use semantics, and resorts to emitting instructions that explicitly set each

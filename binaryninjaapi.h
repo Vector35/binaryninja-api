@@ -8161,6 +8161,15 @@ namespace BinaryNinja {
 		*/
 		static void Register(Architecture* arch);
 
+		static void DefaultAnalyzeBasicBlocksCallback(BNFunction* function, BNBasicBlockAnalysisContext* context);
+
+		/*! Default implementation of AnalyzeBasicBlocks
+
+			\param function Function to analyze
+			\param context Context for the analysis
+		*/
+		static void DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAnalysisContext* context);
+
 		/*! Get an Architecture by name
 
 			\param name Name of the architecture
@@ -8259,6 +8268,11 @@ namespace BinaryNinja {
 		*/
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il);
 
+		/*! Analyze the basic blocks of a function
+
+			\param function Function to analyze
+			\param context Context for the analysis
+		*/
 		virtual void AnalyzeBasicBlocks(Function& function, BNBasicBlockAnalysisContext* context);
 
 		/*! Gets a register name from a register index.

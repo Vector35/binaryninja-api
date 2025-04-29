@@ -21,7 +21,7 @@ use super::VisitorAction;
 use super::*;
 use crate::architecture::Architecture;
 use std::fmt;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 
 /// Used as a marker for an [`LowLevelILExpression`] that **can** produce a value.
@@ -32,7 +32,7 @@ pub struct ValueExpr;
 #[derive(Copy, Clone, Debug)]
 pub struct VoidExpr;
 
-pub trait ExpressionResultType: 'static {}
+pub trait ExpressionResultType: 'static + Debug {}
 impl ExpressionResultType for ValueExpr {}
 impl ExpressionResultType for VoidExpr {}
 
@@ -102,9 +102,9 @@ where
     R: ExpressionResultType,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        f.debug_struct("Expression")
-            .field("index", &self.index)
-            .finish()
+        let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
+        let t = unsafe { LowLevelILExpressionKind::from_raw(self.function, op) };
+        t.fmt(f)
     }
 }
 

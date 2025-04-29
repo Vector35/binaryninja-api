@@ -418,7 +418,7 @@ pub trait Intrinsic: Debug + Sized + Clone + Copy {
     fn outputs(&self) -> Vec<Conf<Ref<Type>>>;
 }
 
-pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
+pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> + Debug {
     type Handle: Borrow<Self> + Clone;
 
     type RegisterInfo: RegisterInfo<RegType = Self::Register>;
@@ -3234,6 +3234,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct CustomArchitectureHandle<A>
 where
     A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,

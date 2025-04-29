@@ -35,7 +35,7 @@ pub struct Mutable;
 #[derive(Copy, Clone, Debug)]
 pub struct Finalized;
 
-pub trait FunctionMutability: 'static {}
+pub trait FunctionMutability: 'static + Debug {}
 impl FunctionMutability for Mutable {}
 impl FunctionMutability for Finalized {}
 
@@ -44,7 +44,7 @@ pub struct LiftedNonSSA;
 #[derive(Copy, Clone, Debug)]
 pub struct RegularNonSSA;
 
-pub trait NonSSAVariant: 'static {}
+pub trait NonSSAVariant: 'static + Debug {}
 impl NonSSAVariant for LiftedNonSSA {}
 impl NonSSAVariant for RegularNonSSA {}
 
@@ -53,7 +53,7 @@ pub struct SSA;
 #[derive(Copy, Clone, Debug)]
 pub struct NonSSA<V: NonSSAVariant>(V);
 
-pub trait FunctionForm: 'static {}
+pub trait FunctionForm: 'static + Debug {}
 impl FunctionForm for SSA {}
 impl<V: NonSSAVariant> FunctionForm for NonSSA<V> {}
 

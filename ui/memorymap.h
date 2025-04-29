@@ -37,6 +37,32 @@ public:
 
 /*!
 
+	\ingroup memorymap
+*/
+class BINARYNINJAUIAPI MemoryRegionDialog : public QDialog
+{
+
+	QPushButton* m_acceptButton;
+	QPushButton* m_cancelButton;
+	QLineEdit* m_nameField;
+	QLineEdit* m_startField;
+	QLineEdit* m_endField;
+	QComboBox* m_typeField;
+
+	QLineEdit* m_filledField;
+	QCheckBox* m_flagWrite;
+	QCheckBox* m_flagExec;
+
+	BinaryViewRef m_data;
+	SegmentRef m_segment;
+
+	void Submit();
+public:
+	MemoryRegionDialog(QWidget* parent, BinaryViewRef data, SegmentRef associatedSegment = nullptr);
+};
+
+/*!
+
     \ingroup memorymap
 */
 class BINARYNINJAUIAPI SegmentDialog : public QDialog
@@ -92,6 +118,7 @@ enum class SegmentColumn : int {
 	DATA_LENGTH,
 	FLAGS,
 	SOURCE,
+	REGION,
 	COLUMN_COUNT,
 };
 

@@ -1022,8 +1022,8 @@ impl DisassemblyTextRenderer {
         unsafe { Self::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
-    pub fn from_llil<A: Architecture, M: FunctionMutability, F: FunctionForm>(
-        func: &LowLevelILFunction<A, M, F>,
+    pub fn from_llil<M: FunctionMutability, F: FunctionForm>(
+        func: &LowLevelILFunction<M, F>,
         settings: Option<&DisassemblySettings>,
     ) -> Ref<Self> {
         let settings_ptr = settings.map(|s| s.handle).unwrap_or(ptr::null_mut());
@@ -1058,14 +1058,11 @@ impl DisassemblyTextRenderer {
         unsafe { Function::ref_from_raw(result) }
     }
 
-    pub fn llil<M: FunctionMutability, F: FunctionForm>(
-        &self,
-    ) -> Ref<LowLevelILFunction<CoreArchitecture, M, F>> {
-        let arch = self.arch();
+    pub fn llil<M: FunctionMutability, F: FunctionForm>(&self) -> Ref<LowLevelILFunction<M, F>> {
         let result =
             unsafe { BNGetDisassemblyTextRendererLowLevelILFunction(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { LowLevelILFunction::ref_from_raw(arch.handle(), result) }
+        unsafe { LowLevelILFunction::ref_from_raw(result) }
     }
 
     pub fn mlil(&self) -> Ref<MediumLevelILFunction> {

@@ -194,7 +194,7 @@ impl Architecture for Msp430 {
         &self,
         data: &[u8],
         addr: u64,
-        il: &mut MutableLiftedILFunction<Self>,
+        il: &mut MutableLiftedILFunction,
     ) -> Option<(usize, bool)> {
         match msp430_asm::decode(data) {
             Ok(inst) => {
@@ -226,8 +226,8 @@ impl Architecture for Msp430 {
     fn flag_group_llil<'a>(
         &self,
         _group: Self::FlagGroup,
-        _il: &'a mut MutableLiftedILFunction<Self>,
-    ) -> Option<MutableLiftedILExpr<'a, Self, ValueExpr>> {
+        _il: &'a mut MutableLiftedILFunction,
+    ) -> Option<MutableLiftedILExpr<'a, ValueExpr>> {
         None
     }
 

@@ -7,7 +7,7 @@ use binaryninja::low_level_il::expression::{
 use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstructionKind, LowLevelInstructionIndex,
 };
-use binaryninja::low_level_il::{LowLevelILRegister, VisitorAction};
+use binaryninja::low_level_il::{LowLevelILRegisterKind, VisitorAction};
 use std::path::PathBuf;
 
 #[test]
@@ -34,7 +34,7 @@ fn test_llil_info() {
         LowLevelILInstructionKind::SetReg(op) => {
             assert_eq!(op.size(), 4);
             match op.dest_reg() {
-                LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "edi"),
+                LowLevelILRegisterKind::Arch(reg) => assert_eq!(reg.name(), "edi"),
                 _ => panic!("Expected Register::ArchReg"),
             }
             assert_eq!(op.source_expr().index, LowLevelExpressionIndex(0));
@@ -55,7 +55,7 @@ fn test_llil_info() {
                 LowLevelILExpressionKind::Reg(op) => {
                     assert_eq!(op.size(), 4);
                     match op.source_reg() {
-                        LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "ebp"),
+                        LowLevelILRegisterKind::Arch(reg) => assert_eq!(reg.name(), "ebp"),
                         _ => panic!("Expected Register::ArchReg"),
                     }
                 }
@@ -73,7 +73,7 @@ fn test_llil_info() {
         LowLevelILInstructionKind::SetReg(op) => {
             assert_eq!(op.size(), 4);
             match op.dest_reg() {
-                LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "ebp"),
+                LowLevelILRegisterKind::Arch(reg) => assert_eq!(reg.name(), "ebp"),
                 _ => panic!("Expected Register::ArchReg"),
             }
             assert_eq!(op.source_expr().index, LowLevelExpressionIndex(4));
@@ -89,7 +89,7 @@ fn test_llil_info() {
         LowLevelILInstructionKind::SetReg(op) => {
             assert_eq!(op.size(), 4);
             match op.dest_reg() {
-                LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "eax"),
+                LowLevelILRegisterKind::Arch(reg) => assert_eq!(reg.name(), "eax"),
                 _ => panic!("Expected Register::ArchReg"),
             }
             assert_eq!(op.source_expr().index, LowLevelExpressionIndex(9));
@@ -128,7 +128,7 @@ fn test_llil_info() {
         LowLevelILInstructionKind::SetReg(op) => {
             assert_eq!(op.size(), 4);
             match op.dest_reg() {
-                LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "esp"),
+                LowLevelILRegisterKind::Arch(reg) => assert_eq!(reg.name(), "esp"),
                 _ => panic!("Expected Register::ArchReg"),
             }
             assert_eq!(op.source_expr().index, LowLevelExpressionIndex(17));
@@ -144,7 +144,7 @@ fn test_llil_info() {
         LowLevelILInstructionKind::SetReg(op) => {
             assert_eq!(op.size(), 4);
             match op.dest_reg() {
-                LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "ebp"),
+                LowLevelILRegisterKind::Arch(reg) => assert_eq!(reg.name(), "ebp"),
                 _ => panic!("Expected Register::ArchReg"),
             }
             assert_eq!(op.source_expr().index, LowLevelExpressionIndex(19));

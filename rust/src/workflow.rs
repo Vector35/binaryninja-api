@@ -1,8 +1,5 @@
 use binaryninjacore_sys::*;
-use std::ffi::{c_char, c_void};
-use std::ptr::NonNull;
 
-use crate::architecture::CoreArchitecture;
 use crate::basic_block::BasicBlock;
 use crate::binary_view::BinaryView;
 use crate::flowgraph::FlowGraph;
@@ -13,6 +10,8 @@ use crate::low_level_il::MutableLiftedILFunction;
 use crate::medium_level_il::MediumLevelILFunction;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnStrCompatible, BnString};
+use std::ffi::{c_char, c_void};
+use std::ptr::NonNull;
 
 #[repr(transparent)]
 /// The AnalysisContext struct is used to represent the current state of
@@ -47,21 +46,17 @@ impl AnalysisContext {
     }
 
     /// [`LowLevelILFunction`] used to represent Low Level IL
-    pub unsafe fn lifted_il_function(
-        &self,
-    ) -> Option<Ref<MutableLiftedILFunction<CoreArchitecture>>> {
+    pub unsafe fn lifted_il_function(&self) -> Option<Ref<MutableLiftedILFunction>> {
         let func = self.function();
         let result = unsafe { BNGetFunctionLiftedIL(func.handle) };
-        let arch = self.function().arch();
         unsafe {
             Some(LowLevelILFunction::ref_from_raw(
-                arch,
                 NonNull::new(result)?.as_ptr(),
             ))
         }
     }
 
-    pub fn set_lifted_il_function(&self, value: &MutableLiftedILFunction<CoreArchitecture>) {
+    pub fn set_lifted_il_function(&self, value: &MutableLiftedILFunction) {
         unsafe { BNSetLiftedILFunction(self.handle.as_ptr(), value.handle) }
     }
 
@@ -70,12 +65,10 @@ impl AnalysisContext {
     /// [`LowLevelILFunction`] used to represent Low Level IL
     pub unsafe fn llil_function<V: NonSSAVariant>(
         &self,
-    ) -> Option<Ref<LowLevelILFunction<CoreArchitecture, Mutable, NonSSA<V>>>> {
+    ) -> Option<Ref<LowLevelILFunction<Mutable, NonSSA<V>>>> {
         let result = unsafe { BNAnalysisContextGetLowLevelILFunction(self.handle.as_ptr()) };
-        let arch = self.function().arch();
         unsafe {
             Some(LowLevelILFunction::ref_from_raw(
-                arch,
                 NonNull::new(result)?.as_ptr(),
             ))
         }
@@ -85,7 +78,7 @@ impl AnalysisContext {
     // TODO: At some point we need to take the lifting code and make it available to regular IL.
     pub fn set_llil_function<V: NonSSAVariant>(
         &self,
-        value: &LowLevelILFunction<CoreArchitecture, Mutable, NonSSA<V>>,
+        value: &LowLevelILFunction<Mutable, NonSSA<V>>,
     ) {
         unsafe { BNSetLowLevelILFunction(self.handle.as_ptr(), value.handle) }
     }

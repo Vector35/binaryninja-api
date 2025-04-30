@@ -14,7 +14,6 @@
 
 //! Interfaces for creating and displaying pretty CFGs in Binary Ninja.
 
-use crate::architecture::CoreArchitecture;
 use crate::disassembly::DisassemblyTextLine;
 use crate::rc::*;
 use binaryninjacore_sys::*;
@@ -55,17 +54,11 @@ impl FlowGraph {
         unsafe { Array::new(nodes_ptr, count, ()) }
     }
 
-    pub fn low_level_il(&self) -> Result<Ref<RegularLowLevelILFunction<CoreArchitecture>>, ()> {
+    pub fn low_level_il(&self) -> Result<Ref<RegularLowLevelILFunction>, ()> {
         unsafe {
             let llil_ptr = BNGetFlowGraphLowLevelILFunction(self.handle);
             match llil_ptr.is_null() {
-                false => {
-                    let func_ptr = BNGetLowLevelILOwnerFunction(llil_ptr);
-                    let arch_ptr = BNGetFunctionArchitecture(func_ptr);
-                    let arch = CoreArchitecture::from_raw(arch_ptr);
-                    BNFreeFunction(func_ptr);
-                    Ok(RegularLowLevelILFunction::ref_from_raw(arch, llil_ptr))
-                }
+                false => Ok(RegularLowLevelILFunction::ref_from_raw(llil_ptr)),
                 true => Err(()),
             }
         }

@@ -15,33 +15,34 @@
 use binaryninjacore_sys::{BNGetLowLevelILByIndex, BNLowLevelILInstruction};
 
 use super::*;
-use crate::architecture::{FlagGroupId, FlagId, FlagWriteId, IntrinsicId, RegisterStackId};
+use crate::architecture::{
+    CoreFlag, CoreFlagGroup, CoreFlagWrite, CoreIntrinsic, CoreRegister, CoreRegisterStack,
+    FlagGroupId, FlagId, FlagWriteId, IntrinsicId, RegisterStackId,
+};
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::mem;
 
-pub struct Operation<'func, A, M, F, O>
+pub struct Operation<'func, M, F, O>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
     O: OperationArguments,
 {
-    pub(crate) function: &'func LowLevelILFunction<A, M, F>,
+    pub(crate) function: &'func LowLevelILFunction<M, F>,
     pub(crate) op: BNLowLevelILInstruction,
     _args: PhantomData<O>,
 }
 
-impl<'func, A, M, F, O> Operation<'func, A, M, F, O>
+impl<'func, M, F, O> Operation<'func, M, F, O>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
     O: OperationArguments,
 {
     pub(crate) fn new(
-        function: &'func LowLevelILFunction<A, M, F>,
+        function: &'func LowLevelILFunction<M, F>,
         op: BNLowLevelILInstruction,
     ) -> Self {
         Self {
@@ -56,13 +57,12 @@ where
     }
 }
 
-impl<A, M, O> Operation<'_, A, M, NonSSA<LiftedNonSSA>, O>
+impl<M, O> Operation<'_, M, NonSSA<LiftedNonSSA>, O>
 where
-    A: Architecture,
     M: FunctionMutability,
     O: OperationArguments,
 {
-    pub fn flag_write(&self) -> Option<A::FlagWrite> {
+    pub fn flag_write(&self) -> Option<CoreFlagWrite> {
         match self.op.flags {
             0 => None,
             id => self.function.arch().flag_write_from_id(FlagWriteId(id)),
@@ -73,9 +73,8 @@ where
 // LLIL_NOP, LLIL_NORET, LLIL_BP, LLIL_UNDEF, LLIL_UNIMPL
 pub struct NoArgs;
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, NoArgs>
+impl<M, F> Debug for Operation<'_, M, F, NoArgs>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -87,9 +86,8 @@ where
 // LLIL_POP
 pub struct Pop;
 
-impl<A, M, F> Operation<'_, A, M, F, Pop>
+impl<M, F> Operation<'_, M, F, Pop>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -98,9 +96,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Pop>
+impl<M, F> Debug for Operation<'_, M, F, Pop>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -115,9 +112,8 @@ where
 // LLIL_SYSCALL, LLIL_SYSCALL_SSA
 pub struct Syscall;
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Syscall>
+impl<M, F> Debug for Operation<'_, M, F, Syscall>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -129,22 +125,20 @@ where
 // LLIL_INTRINSIC, LLIL_INTRINSIC_SSA
 pub struct Intrinsic;
 
-impl<A, M, F> Operation<'_, A, M, F, Intrinsic>
+impl<M, F> Operation<'_, M, F, Intrinsic>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
     // TODO: Support register and expression lists
-    pub fn intrinsic(&self) -> Option<A::Intrinsic> {
+    pub fn intrinsic(&self) -> Option<CoreIntrinsic> {
         let raw_id = self.op.operands[2] as u32;
         self.function.arch().intrinsic_from_id(IntrinsicId(raw_id))
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Intrinsic>
+impl<M, F> Debug for Operation<'_, M, F, Intrinsic>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -159,9 +153,8 @@ where
 // LLIL_SET_REG, LLIL_SET_REG_SSA, LLIL_SET_REG_PARTIAL_SSA
 pub struct SetReg;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, SetReg>
+impl<'func, M, F> Operation<'func, M, F, SetReg>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -169,28 +162,12 @@ where
         self.op.size
     }
 
-    pub fn dest_reg(&self) -> LowLevelILRegister<A::Register> {
-        let raw_id = self.op.operands[0] as u32;
-
-        if raw_id >= 0x8000_0000 {
-            LowLevelILRegister::Temp(raw_id & 0x7fff_ffff)
-        } else {
-            self.function
-                .arch()
-                .register_from_id(RegisterId(raw_id))
-                .map(LowLevelILRegister::ArchReg)
-                .unwrap_or_else(|| {
-                    log::error!(
-                        "got garbage register from LLIL_SET_REG @ 0x{:x}",
-                        self.op.address
-                    );
-
-                    LowLevelILRegister::Temp(0)
-                })
-        }
+    pub fn dest_reg(&self) -> LowLevelILRegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[0] as u32);
+        LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id).expect("Bad register ID")
     }
 
-    pub fn source_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[1] as usize),
@@ -198,9 +175,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, SetReg>
+impl<M, F> Debug for Operation<'_, M, F, SetReg>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -217,9 +193,8 @@ where
 // LLIL_SET_REG_SPLIT, LLIL_SET_REG_SPLIT_SSA
 pub struct SetRegSplit;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, SetRegSplit>
+impl<'func, M, F> Operation<'func, M, F, SetRegSplit>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -227,49 +202,17 @@ where
         self.op.size
     }
 
-    pub fn dest_reg_high(&self) -> LowLevelILRegister<A::Register> {
-        let raw_id = self.op.operands[0] as u32;
-
-        if raw_id >= 0x8000_0000 {
-            LowLevelILRegister::Temp(raw_id & 0x7fff_ffff)
-        } else {
-            self.function
-                .arch()
-                .register_from_id(RegisterId(raw_id))
-                .map(LowLevelILRegister::ArchReg)
-                .unwrap_or_else(|| {
-                    log::error!(
-                        "got garbage register from LLIL_SET_REG_SPLIT @ 0x{:x}",
-                        self.op.address
-                    );
-
-                    LowLevelILRegister::Temp(0)
-                })
-        }
+    pub fn dest_reg_high(&self) -> LowLevelILRegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[0] as u32);
+        LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id).expect("Bad register ID")
     }
 
-    pub fn dest_reg_low(&self) -> LowLevelILRegister<A::Register> {
-        let raw_id = self.op.operands[1] as u32;
-
-        if raw_id >= 0x8000_0000 {
-            LowLevelILRegister::Temp(raw_id & 0x7fff_ffff)
-        } else {
-            self.function
-                .arch()
-                .register_from_id(RegisterId(raw_id))
-                .map(LowLevelILRegister::ArchReg)
-                .unwrap_or_else(|| {
-                    log::error!(
-                        "got garbage register from LLIL_SET_REG_SPLIT @ 0x{:x}",
-                        self.op.address
-                    );
-
-                    LowLevelILRegister::Temp(0)
-                })
-        }
+    pub fn dest_reg_low(&self) -> LowLevelILRegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[1] as u32);
+        LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id).expect("Bad register ID")
     }
 
-    pub fn source_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[2] as usize),
@@ -277,9 +220,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, SetRegSplit>
+impl<M, F> Debug for Operation<'_, M, F, SetRegSplit>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -297,13 +239,12 @@ where
 // LLIL_SET_FLAG, LLIL_SET_FLAG_SSA
 pub struct SetFlag;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, SetFlag>
+impl<'func, M, F> Operation<'func, M, F, SetFlag>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn dest_flag(&self) -> A::Flag {
+    pub fn dest_flag(&self) -> CoreFlag {
         // TODO: Error handling?
         // TODO: Test this.
         self.function
@@ -312,7 +253,7 @@ where
             .unwrap()
     }
 
-    pub fn source_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[1] as usize),
@@ -320,9 +261,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, SetFlag>
+impl<M, F> Debug for Operation<'_, M, F, SetFlag>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -338,9 +278,8 @@ where
 // LLIL_LOAD, LLIL_LOAD_SSA
 pub struct Load;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, Load>
+impl<'func, M, F> Operation<'func, M, F, Load>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -348,7 +287,7 @@ where
         self.op.size
     }
 
-    pub fn source_mem_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn source_mem_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
@@ -356,9 +295,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Load>
+impl<M, F> Debug for Operation<'_, M, F, Load>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -374,9 +312,8 @@ where
 // LLIL_STORE, LLIL_STORE_SSA
 pub struct Store;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, Store>
+impl<'func, M, F> Operation<'func, M, F, Store>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -384,14 +321,14 @@ where
         self.op.size
     }
 
-    pub fn dest_mem_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn dest_mem_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
         )
     }
 
-    pub fn source_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[1] as usize),
@@ -399,9 +336,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Store>
+impl<M, F> Debug for Operation<'_, M, F, Store>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -415,12 +351,11 @@ where
     }
 }
 
-// LLIL_REG, LLIL_REG_SSA, LLIL_REG_SSA_PARTIAL
+// LLIL_REG, LLIL_REG_SSLLIL_REG_SSA_PARTIAL
 pub struct Reg;
 
-impl<A, M, F> Operation<'_, A, M, F, Reg>
+impl<M, F> Operation<'_, M, F, Reg>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -428,31 +363,14 @@ where
         self.op.size
     }
 
-    pub fn source_reg(&self) -> LowLevelILRegister<A::Register> {
-        let raw_id = self.op.operands[0] as u32;
-
-        if raw_id >= 0x8000_0000 {
-            LowLevelILRegister::Temp(raw_id & 0x7fff_ffff)
-        } else {
-            self.function
-                .arch()
-                .register_from_id(RegisterId(raw_id))
-                .map(LowLevelILRegister::ArchReg)
-                .unwrap_or_else(|| {
-                    log::error!(
-                        "got garbage register from LLIL_REG @ 0x{:x}",
-                        self.op.address
-                    );
-
-                    LowLevelILRegister::Temp(0)
-                })
-        }
+    pub fn source_reg(&self) -> LowLevelILRegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[0] as u32);
+        LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id).expect("Bad register ID")
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Reg>
+impl<M, F> Debug for Operation<'_, M, F, Reg>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -468,9 +386,8 @@ where
 // LLIL_REG_SPLIT, LLIL_REG_SPLIT_SSA
 pub struct RegSplit;
 
-impl<A, M, F> Operation<'_, A, M, F, RegSplit>
+impl<M, F> Operation<'_, M, F, RegSplit>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -478,52 +395,19 @@ where
         self.op.size
     }
 
-    pub fn low_reg(&self) -> LowLevelILRegister<A::Register> {
-        let raw_id = self.op.operands[0] as u32;
-
-        if raw_id >= 0x8000_0000 {
-            LowLevelILRegister::Temp(raw_id & 0x7fff_ffff)
-        } else {
-            self.function
-                .arch()
-                .register_from_id(RegisterId(raw_id))
-                .map(LowLevelILRegister::ArchReg)
-                .unwrap_or_else(|| {
-                    log::error!(
-                        "got garbage register from LLIL_REG @ 0x{:x}",
-                        self.op.address
-                    );
-
-                    LowLevelILRegister::Temp(0)
-                })
-        }
+    pub fn low_reg(&self) -> LowLevelILRegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[0] as u32);
+        LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id).expect("Bad register ID")
     }
 
-    pub fn high_reg(&self) -> LowLevelILRegister<A::Register> {
-        let raw_id = self.op.operands[1] as u32;
-
-        if raw_id >= 0x8000_0000 {
-            LowLevelILRegister::Temp(raw_id & 0x7fff_ffff)
-        } else {
-            self.function
-                .arch()
-                .register_from_id(RegisterId(raw_id))
-                .map(LowLevelILRegister::ArchReg)
-                .unwrap_or_else(|| {
-                    log::error!(
-                        "got garbage register from LLIL_REG @ 0x{:x}",
-                        self.op.address
-                    );
-
-                    LowLevelILRegister::Temp(0)
-                })
-        }
+    pub fn high_reg(&self) -> LowLevelILRegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[1] as u32);
+        LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id).expect("Bad register ID")
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, RegSplit>
+impl<M, F> Debug for Operation<'_, M, F, RegSplit>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -540,9 +424,8 @@ where
 // LLIL_REG_STACK_PUSH
 pub struct RegStackPush;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, RegStackPush>
+impl<'func, M, F> Operation<'func, M, F, RegStackPush>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -550,7 +433,7 @@ where
         self.op.size
     }
 
-    pub fn dest_reg_stack(&self) -> A::RegisterStack {
+    pub fn dest_reg_stack(&self) -> CoreRegisterStack {
         let raw_id = self.op.operands[0] as u32;
         self.function
             .arch()
@@ -558,7 +441,7 @@ where
             .expect("Bad register stack ID")
     }
 
-    pub fn source_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[1] as usize),
@@ -566,9 +449,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, RegStackPush>
+impl<M, F> Debug for Operation<'_, M, F, RegStackPush>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -585,9 +467,8 @@ where
 // LLIL_REG_STACK_POP
 pub struct RegStackPop;
 
-impl<A, M, F> Operation<'_, A, M, F, RegStackPop>
+impl<M, F> Operation<'_, M, F, RegStackPop>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -595,7 +476,7 @@ where
         self.op.size
     }
 
-    pub fn source_reg_stack(&self) -> A::RegisterStack {
+    pub fn source_reg_stack(&self) -> CoreRegisterStack {
         let raw_id = self.op.operands[0] as u32;
         self.function
             .arch()
@@ -604,9 +485,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, RegStackPop>
+impl<M, F> Debug for Operation<'_, M, F, RegStackPop>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -622,9 +502,8 @@ where
 // LLIL_FLAG, LLIL_FLAG_SSA
 pub struct Flag;
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Flag>
+impl<M, F> Debug for Operation<'_, M, F, Flag>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -636,9 +515,8 @@ where
 // LLIL_FLAG_BIT, LLIL_FLAG_BIT_SSA
 pub struct FlagBit;
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, FlagBit>
+impl<M, F> Debug for Operation<'_, M, F, FlagBit>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -650,13 +528,12 @@ where
 // LLIL_JUMP
 pub struct Jump;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, Jump>
+impl<'func, M, F> Operation<'func, M, F, Jump>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn target(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn target(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
@@ -664,9 +541,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Jump>
+impl<M, F> Debug for Operation<'_, M, F, Jump>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -680,20 +556,18 @@ where
 // LLIL_JUMP_TO
 pub struct JumpTo;
 
-struct TargetListIter<'func, A, M, F>
+struct TargetListIter<'func, M, F>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    function: &'func LowLevelILFunction<A, M, F>,
+    function: &'func LowLevelILFunction<M, F>,
     cursor: BNLowLevelILInstruction,
     cursor_operand: usize,
 }
 
-impl<A, M, F> TargetListIter<'_, A, M, F>
+impl<M, F> TargetListIter<'_, M, F>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -710,13 +584,12 @@ where
     }
 }
 
-impl<'func, A, M, F> Operation<'func, A, M, F, JumpTo>
+impl<'func, M, F> Operation<'func, M, F, JumpTo>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn target(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn target(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
@@ -744,9 +617,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, JumpTo>
+impl<M, F> Debug for Operation<'_, M, F, JumpTo>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -761,13 +633,12 @@ where
 // LLIL_CALL, LLIL_CALL_SSA
 pub struct Call;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, Call>
+impl<'func, M, F> Operation<'func, M, F, Call>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn target(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn target(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
@@ -785,9 +656,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Call>
+impl<M, F> Debug for Operation<'_, M, F, Call>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -802,13 +672,12 @@ where
 // LLIL_RET
 pub struct Ret;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, Ret>
+impl<'func, M, F> Operation<'func, M, F, Ret>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn target(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn target(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
@@ -816,9 +685,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Ret>
+impl<M, F> Debug for Operation<'_, M, F, Ret>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -832,27 +700,26 @@ where
 // LLIL_IF
 pub struct If;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, If>
+impl<'func, M, F> Operation<'func, M, F, If>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn condition(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn condition(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
         )
     }
 
-    pub fn true_target(&self) -> LowLevelILInstruction<'func, A, M, F> {
+    pub fn true_target(&self) -> LowLevelILInstruction<'func, M, F> {
         LowLevelILInstruction::new(
             self.function,
             LowLevelInstructionIndex(self.op.operands[1] as usize),
         )
     }
 
-    pub fn false_target(&self) -> LowLevelILInstruction<'func, A, M, F> {
+    pub fn false_target(&self) -> LowLevelILInstruction<'func, M, F> {
         LowLevelILInstruction::new(
             self.function,
             LowLevelInstructionIndex(self.op.operands[2] as usize),
@@ -860,9 +727,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, If>
+impl<M, F> Debug for Operation<'_, M, F, If>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -878,13 +744,12 @@ where
 // LLIL_GOTO
 pub struct Goto;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, Goto>
+impl<'func, M, F> Operation<'func, M, F, Goto>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn target(&self) -> LowLevelILInstruction<'func, A, M, F> {
+    pub fn target(&self) -> LowLevelILInstruction<'func, M, F> {
         LowLevelILInstruction::new(
             self.function,
             LowLevelInstructionIndex(self.op.operands[0] as usize),
@@ -892,9 +757,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Goto>
+impl<M, F> Debug for Operation<'_, M, F, Goto>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -909,9 +773,8 @@ where
 // Valid only in Lifted IL
 pub struct FlagCond;
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, FlagCond>
+impl<M, F> Debug for Operation<'_, M, F, FlagCond>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -924,12 +787,11 @@ where
 // Valid only in Lifted IL
 pub struct FlagGroup;
 
-impl<A, M> Operation<'_, A, M, NonSSA<LiftedNonSSA>, FlagGroup>
+impl<M> Operation<'_, M, NonSSA<LiftedNonSSA>, FlagGroup>
 where
-    A: Architecture,
     M: FunctionMutability,
 {
-    pub fn flag_group(&self) -> A::FlagGroup {
+    pub fn flag_group(&self) -> CoreFlagGroup {
         let id = self.op.operands[0] as u32;
         self.function
             .arch()
@@ -938,9 +800,8 @@ where
     }
 }
 
-impl<A, M> Debug for Operation<'_, A, M, NonSSA<LiftedNonSSA>, FlagGroup>
+impl<M> Debug for Operation<'_, M, NonSSA<LiftedNonSSA>, FlagGroup>
 where
-    A: Architecture,
     M: FunctionMutability,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -950,9 +811,8 @@ where
     }
 }
 
-impl<A, M> Debug for Operation<'_, A, M, SSA, FlagGroup>
+impl<M> Debug for Operation<'_, M, SSA, FlagGroup>
 where
-    A: Architecture,
     M: FunctionMutability,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -963,9 +823,8 @@ where
 // LLIL_TRAP
 pub struct Trap;
 
-impl<A, M, F> Operation<'_, A, M, F, Trap>
+impl<M, F> Operation<'_, M, F, Trap>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -974,9 +833,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Trap>
+impl<M, F> Debug for Operation<'_, M, F, Trap>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -990,9 +848,8 @@ where
 // LLIL_REG_PHI
 pub struct RegPhi;
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, RegPhi>
+impl<M, F> Debug for Operation<'_, M, F, RegPhi>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1004,9 +861,8 @@ where
 // LLIL_FLAG_PHI
 pub struct FlagPhi;
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, FlagPhi>
+impl<M, F> Debug for Operation<'_, M, F, FlagPhi>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1018,9 +874,8 @@ where
 // LLIL_MEM_PHI
 pub struct MemPhi;
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, MemPhi>
+impl<M, F> Debug for Operation<'_, M, F, MemPhi>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1032,9 +887,8 @@ where
 // LLIL_CONST, LLIL_CONST_PTR
 pub struct Const;
 
-impl<A, M, F> Operation<'_, A, M, F, Const>
+impl<M, F> Operation<'_, M, F, Const>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1073,9 +927,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Const>
+impl<M, F> Debug for Operation<'_, M, F, Const>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1090,9 +943,8 @@ where
 // LLIL_EXTERN_PTR
 pub struct Extern;
 
-impl<A, M, F> Operation<'_, A, M, F, Extern>
+impl<M, F> Operation<'_, M, F, Extern>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1131,9 +983,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Extern>
+impl<M, F> Debug for Operation<'_, M, F, Extern>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1152,9 +1003,8 @@ where
 // LLIL_MODS
 pub struct BinaryOp;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, BinaryOp>
+impl<'func, M, F> Operation<'func, M, F, BinaryOp>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1162,14 +1012,14 @@ where
         self.op.size
     }
 
-    pub fn left(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn left(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
         )
     }
 
-    pub fn right(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn right(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[1] as usize),
@@ -1177,9 +1027,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, BinaryOp>
+impl<M, F> Debug for Operation<'_, M, F, BinaryOp>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1195,9 +1044,8 @@ where
 // LLIL_ADC, LLIL_SBB, LLIL_RLC, LLIL_RRC
 pub struct BinaryOpCarry;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, BinaryOpCarry>
+impl<'func, M, F> Operation<'func, M, F, BinaryOpCarry>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1205,21 +1053,21 @@ where
         self.op.size
     }
 
-    pub fn left(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn left(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
         )
     }
 
-    pub fn right(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn right(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[1] as usize),
         )
     }
 
-    pub fn carry(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn carry(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[2] as usize),
@@ -1227,9 +1075,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, BinaryOpCarry>
+impl<M, F> Debug for Operation<'_, M, F, BinaryOpCarry>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1246,9 +1093,8 @@ where
 // LLIL_DIVS_DP, LLIL_DIVU_DP, LLIL_MODU_DP, LLIL_MODS_DP
 pub struct DoublePrecDivOp;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, DoublePrecDivOp>
+impl<'func, M, F> Operation<'func, M, F, DoublePrecDivOp>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1256,14 +1102,14 @@ where
         self.op.size
     }
 
-    pub fn high(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn high(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
         )
     }
 
-    pub fn low(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn low(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[1] as usize),
@@ -1271,7 +1117,7 @@ where
     }
 
     // TODO: I don't think this actually exists?
-    pub fn right(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn right(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[2] as usize),
@@ -1279,9 +1125,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, DoublePrecDivOp>
+impl<M, F> Debug for Operation<'_, M, F, DoublePrecDivOp>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1300,9 +1145,8 @@ where
 // LLIL_ZX, LLIL_LOW_PART, LLIL_BOOL_TO_INT, LLIL_UNIMPL_MEM
 pub struct UnaryOp;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, UnaryOp>
+impl<'func, M, F> Operation<'func, M, F, UnaryOp>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1310,7 +1154,7 @@ where
         self.op.size
     }
 
-    pub fn operand(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn operand(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
@@ -1318,9 +1162,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, UnaryOp>
+impl<M, F> Debug for Operation<'_, M, F, UnaryOp>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1335,9 +1178,8 @@ where
 // LLIL_CMP_X
 pub struct Condition;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, Condition>
+impl<'func, M, F> Operation<'func, M, F, Condition>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1345,14 +1187,14 @@ where
         self.op.size
     }
 
-    pub fn left(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn left(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
         )
     }
 
-    pub fn right(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn right(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[1] as usize),
@@ -1360,9 +1202,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, Condition>
+impl<M, F> Debug for Operation<'_, M, F, Condition>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1378,9 +1219,8 @@ where
 // LLIL_UNIMPL_MEM
 pub struct UnimplMem;
 
-impl<'func, A, M, F> Operation<'func, A, M, F, UnimplMem>
+impl<'func, M, F> Operation<'func, M, F, UnimplMem>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
@@ -1388,7 +1228,7 @@ where
         self.op.size
     }
 
-    pub fn mem_expr(&self) -> LowLevelILExpression<'func, A, M, F, ValueExpr> {
+    pub fn mem_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
@@ -1396,9 +1236,8 @@ where
     }
 }
 
-impl<A, M, F> Debug for Operation<'_, A, M, F, UnimplMem>
+impl<M, F> Debug for Operation<'_, M, F, UnimplMem>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {

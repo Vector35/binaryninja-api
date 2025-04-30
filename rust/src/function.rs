@@ -529,45 +529,38 @@ impl Function {
         }
     }
 
-    pub fn low_level_il(&self) -> Result<Ref<RegularLowLevelILFunction<CoreArchitecture>>, ()> {
+    pub fn low_level_il(&self) -> Result<Ref<RegularLowLevelILFunction>, ()> {
         unsafe {
             let llil_ptr = BNGetFunctionLowLevelIL(self.handle);
             match llil_ptr.is_null() {
-                false => Ok(RegularLowLevelILFunction::ref_from_raw(
-                    self.arch(),
-                    llil_ptr,
-                )),
+                false => Ok(RegularLowLevelILFunction::ref_from_raw(llil_ptr)),
                 true => Err(()),
             }
         }
     }
 
-    pub fn low_level_il_if_available(
-        &self,
-    ) -> Option<Ref<RegularLowLevelILFunction<CoreArchitecture>>> {
+    pub fn low_level_il_if_available(&self) -> Option<Ref<RegularLowLevelILFunction>> {
         let llil_ptr = unsafe { BNGetFunctionLowLevelILIfAvailable(self.handle) };
         match llil_ptr.is_null() {
-            false => {
-                Some(unsafe { RegularLowLevelILFunction::ref_from_raw(self.arch(), llil_ptr) })
-            }
+            false => Some(unsafe { RegularLowLevelILFunction::ref_from_raw(llil_ptr) }),
             true => None,
         }
     }
 
-    pub fn lifted_il(&self) -> Result<Ref<LiftedILFunction<CoreArchitecture>>, ()> {
+    pub fn lifted_il(&self) -> Result<Ref<LiftedILFunction>, ()> {
         unsafe {
             let llil_ptr = BNGetFunctionLiftedIL(self.handle);
             match llil_ptr.is_null() {
-                false => Ok(LiftedILFunction::ref_from_raw(self.arch(), llil_ptr)),
+                false => Ok(LiftedILFunction::ref_from_raw(llil_ptr)),
                 true => Err(()),
             }
         }
     }
 
-    pub fn lifted_il_if_available(&self) -> Option<Ref<LiftedILFunction<CoreArchitecture>>> {
+    pub fn lifted_il_if_available(&self) -> Option<Ref<LiftedILFunction>> {
         let llil_ptr = unsafe { BNGetFunctionLiftedILIfAvailable(self.handle) };
         match llil_ptr.is_null() {
-            false => Some(unsafe { LiftedILFunction::ref_from_raw(self.arch(), llil_ptr) }),
+            false => Some(unsafe { LiftedILFunction::ref_from_raw(llil_ptr) }),
             true => None,
         }
     }

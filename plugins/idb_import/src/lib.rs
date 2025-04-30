@@ -1,4 +1,9 @@
 mod types;
+use std::path::Path;
+
+use binaryninja::command::Command;
+use binaryninja::type_library::TypeLibrary;
+use binaryninja::types::QualifiedName;
 use types::*;
 mod addr_info;
 use addr_info::*;
@@ -14,7 +19,7 @@ use idb_rs::til::TypeVariant as TILTypeVariant;
 
 use log::{error, trace, warn, LevelFilter};
 
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use binaryninja::logger::Logger;
 
 struct IDBDebugInfoParser;
@@ -59,17 +64,31 @@ impl CustomDebugInfoParser for TILDebugInfoParser {
     fn parse_info(
         &self,
         debug_info: &mut DebugInfo,
-        _bv: &BinaryView,
+        bv: &BinaryView,
         debug_file: &BinaryView,
         progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool {
-        match parse_til_info(debug_info, debug_file, progress) {
+        match parse_til_info(debug_info, bv, debug_file, progress) {
             Ok(()) => true,
             Err(error) => {
                 error!("Unable to parse TIL file: {error}");
                 false
             }
         }
+    }
+}
+
+struct LoadTilFile;
+
+impl Command for LoadTilFile {
+    fn action(&self, view: &BinaryView) {
+        if let Err(error) = interactive_import_til(view) {
+            error!("Unable to convert TIL file: {error}");
+        }
+    }
+
+    fn valid(&self, _view: &BinaryView) -> bool {
+        true
     }
 }
 
@@ -119,12 +138,25 @@ fn parse_idb_info(
     trace!("Parsing a IDB file");
     let file = std::io::BufReader::new(file);
     let mut parser = idb_rs::IDBParser::new(file)?;
+
+    let default_arch = bv
+        .default_arch()
+        .ok_or_else(|| anyhow!("Unable to get the default arch"))?;
+    let filename = debug_file.file().filename();
+    let mut type_lib = TypeLibrary::new(default_arch, filename);
+
     if let Some(til_section) = parser.til_section_offset() {
+        // TODO handle dependency, create a function for that with closures
         trace!("Parsing the TIL section");
         let til = parser.read_til_section(til_section)?;
         // progress 0%-50%
-        import_til_section(debug_info, debug_file, &til, progress)?;
+        import_til_section(&mut type_lib, debug_file, &til, progress)?;
     }
+
+    if !type_lib.finalize() {
+        return Err(anyhow!("Unable to finalize TypeLibrary"));
+    };
+    bv.add_type_library(&type_lib);
 
     if let Some(id0_section) = parser.id0_section_offset() {
         trace!("Parsing the ID0 section");
@@ -137,7 +169,8 @@ fn parse_idb_info(
 }
 
 fn parse_til_info(
-    debug_info: &mut DebugInfo,
+    _debug_info: &mut DebugInfo,
+    bv: &BinaryView,
     debug_file: &BinaryView,
     progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
 ) -> Result<()> {
@@ -147,21 +180,103 @@ fn parse_til_info(
         offset: 0,
     };
     let mut file = std::io::BufReader::new(file);
+
+    let default_arch = bv
+        .default_arch()
+        .ok_or_else(|| anyhow!("Unable to get the default arch"))?;
+    let filename = debug_file.file().filename();
+    let mut type_lib = TypeLibrary::new(default_arch, filename);
+
     trace!("Parsing the TIL section");
     let til = TILSection::read(&mut file, idb_rs::IDBSectionCompression::None)?;
-    import_til_section(debug_info, debug_file, &til, progress)
+    // TODO handle dependency, create a function for that with closures
+    import_til_section(&mut type_lib, debug_file, &til, progress)?;
+
+    if !type_lib.finalize() {
+        return Err(anyhow!("Unable to finalize TypeLibrary"));
+    };
+    bv.add_type_library(&type_lib);
+    Ok(())
 }
 
-pub fn import_til_section(
-    debug_info: &mut DebugInfo,
-    debug_file: &BinaryView,
+fn interactive_import_til(view: &BinaryView) -> Result<()> {
+    let Some(file) =
+        binaryninja::interaction::get_open_filename_input("Select a .til file", "*.til")
+    else {
+        return Ok(());
+    };
+
+    let default_arch = view
+        .default_arch()
+        .ok_or_else(|| anyhow!("Unable to get the default arch"))?;
+    let filename = file.file_name().unwrap().to_string_lossy();
+    let mut type_lib = TypeLibrary::new(default_arch, filename);
+
+    interactive_import_til_file(file.as_path(), view, &mut type_lib)?;
+    if !type_lib.finalize() {
+        return Err(anyhow!("Unable to finalize TypeLibrary"));
+    };
+    view.add_type_library(&type_lib);
+    Ok(())
+}
+
+fn interactive_import_til_file(
+    file: &Path,
+    view: &BinaryView,
+    type_library: &mut TypeLibrary,
+) -> Result<()> {
+    // TODO create a background task to not freeze bn, also create a progress
+    // user interface feedback
+    let file = std::fs::File::open(file)?;
+    let mut file = std::io::BufReader::new(file);
+    let til = TILSection::read(&mut file, idb_rs::IDBSectionCompression::None)?;
+    for dep in &til.header.dependencies {
+        let name = dep.as_utf8_lossy();
+        let message = format!("Select the dependency \"{name}.til\"",);
+        let Some(dep_file) = binaryninja::interaction::get_open_filename_input(&message, "*.til")
+        else {
+            return Err(anyhow!("Unable to get the dependency {name}"));
+        };
+
+        interactive_import_til_file(dep_file.as_path(), view, type_library)
+            .context("While importing dependency {name}")?;
+    }
+
+    fn dummy_progress(_: usize, _: usize) -> Result<(), ()> {
+        Ok(())
+    }
+    import_til_section(type_library, view, &til, dummy_progress)
+}
+
+fn import_til_section(
+    type_library: &mut TypeLibrary,
+    view: &BinaryView,
     til: &TILSection,
     progress: impl Fn(usize, usize) -> Result<(), ()>,
 ) -> Result<()> {
-    let types = types::translate_til_types(debug_file.default_arch().unwrap(), til, progress)?;
+    let default_arch = view
+        .default_arch()
+        .ok_or_else(|| anyhow!("Unable to get the default arch"))?;
+    let types = types::translate_til_types(default_arch, til, progress)?;
 
     // print any errors
+    print_til_convertsion_errors(&types);
+
+    // add all type to the type library
     for ty in &types {
+        if let TranslateTypeResult::Translated(bn_ty)
+        | TranslateTypeResult::PartiallyTranslated(bn_ty, _) = &ty.ty
+        {
+            let name = QualifiedName::new(vec![ty.name.as_utf8_lossy().to_string()]);
+            type_library.add_named_type(name, &bn_ty);
+        }
+    }
+
+    Ok(())
+}
+
+fn print_til_convertsion_errors(types: &[TranslatesIDBType]) {
+    for ty in types {
         match &ty.ty {
             TranslateTypeResult::NotYet => {
                 panic!(
@@ -179,7 +294,7 @@ pub fn import_til_section(
             TranslateTypeResult::PartiallyTranslated(_, error) => {
                 if let Some(error) = error {
                     error!(
-                        "Unable to parse type `{}` correctly: {error}",
+                        "Unable to correctly parse type `{}`: {error}",
                         ty.name.as_utf8_lossy(),
                     );
                 } else {
@@ -192,30 +307,6 @@ pub fn import_til_section(
             TranslateTypeResult::Translated(_) => {}
         };
     }
-
-    // add all type to binary ninja
-    for ty in &types {
-        if let TranslateTypeResult::Translated(bn_ty)
-        | TranslateTypeResult::PartiallyTranslated(bn_ty, _) = &ty.ty
-        {
-            if !debug_info.add_type(ty.name.as_utf8_lossy(), bn_ty, &[/* TODO */]) {
-                error!("Unable to add type `{}`", ty.name.as_utf8_lossy())
-            }
-        }
-    }
-
-    // add a second time to fix the references LOL
-    for ty in &types {
-        if let TranslateTypeResult::Translated(bn_ty)
-        | TranslateTypeResult::PartiallyTranslated(bn_ty, _) = &ty.ty
-        {
-            if !debug_info.add_type(ty.name.as_utf8_lossy(), bn_ty, &[/* TODO */]) {
-                error!("Unable to fix type `{}`", ty.name.as_utf8_lossy())
-            }
-        }
-    }
-
-    Ok(())
 }
 
 fn parse_id0_section_info(
@@ -330,7 +421,12 @@ pub extern "C" fn CorePluginInit() -> bool {
     Logger::new("IDB Import")
         .with_level(LevelFilter::Error)
         .init();
-    DebugInfoParser::register("IDB Parser", IDBDebugInfoParser);
-    DebugInfoParser::register("TIL Parser", TILDebugInfoParser);
+    binaryninja::command::register_command(
+        "Import TIL types",
+        "Convert and import a TIL file into a TypeLibrary",
+        LoadTilFile,
+    );
+    DebugInfoParser::register("idb_parser", IDBDebugInfoParser);
+    DebugInfoParser::register("til_parser", TILDebugInfoParser);
     true
 }

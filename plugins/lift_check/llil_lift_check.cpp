@@ -3,6 +3,160 @@
 
 using namespace BinaryNinja;
 
+enum
+{
+	ValidInNonSSA = 1 << 0,
+	ValidInSSA    = 1 << 1,
+	ValidAsParent = 1 << 2,
+	ValidAsChild  = 1 << 3,
+};
+
+static std::unordered_map<BNLowLevelILOperation, int> g_instructionValidity = {{
+	{ LLIL_NOP,                          ValidInNonSSA |              ValidAsParent | ValidAsChild },
+	{ LLIL_SET_REG,                      ValidInNonSSA |              ValidAsParent                },
+	{ LLIL_SET_REG_SPLIT,                ValidInNonSSA |              ValidAsParent                },
+	{ LLIL_SET_FLAG,                     ValidInNonSSA |              ValidAsParent                },
+	{ LLIL_SET_REG_STACK_REL,            ValidInNonSSA |              ValidAsParent                },
+	{ LLIL_REG_STACK_PUSH,               ValidInNonSSA |              ValidAsParent                },
+	{ LLIL_ASSERT,                       ValidInNonSSA |              ValidAsParent                },
+	{ LLIL_FORCE_VER,                    ValidInNonSSA |              ValidAsParent                },
+	{ LLIL_LOAD,                         ValidInNonSSA |                              ValidAsChild },
+	{ LLIL_STORE,                        ValidInNonSSA |              ValidAsParent                },
+	{ LLIL_PUSH,                         ValidInNonSSA |              ValidAsParent                },
+	{ LLIL_POP,                          ValidInNonSSA |                              ValidAsChild },
+	{ LLIL_REG,                          ValidInNonSSA |                              ValidAsChild },
+	{ LLIL_REG_SPLIT,                    ValidInNonSSA |                              ValidAsChild },
+	{ LLIL_REG_STACK_REL,                ValidInNonSSA |                              ValidAsChild },
+	{ LLIL_REG_STACK_POP,                ValidInNonSSA |                              ValidAsChild },
+	{ LLIL_REG_STACK_FREE_REG,           ValidInNonSSA |              ValidAsParent                },
+	{ LLIL_REG_STACK_FREE_REL,           ValidInNonSSA |              ValidAsParent                },
+	{ LLIL_CONST,                        ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_CONST_PTR,                    ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_EXTERN_PTR,                   ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FLOAT_CONST,                  ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FLAG,                         ValidInNonSSA |                              ValidAsChild },
+	{ LLIL_FLAG_BIT,                     ValidInNonSSA |                              ValidAsChild },
+	{ LLIL_ADD,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_ADC,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_SUB,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_SBB,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_AND,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_OR,                           ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_XOR,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_LSL,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_LSR,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_ASR,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_ROL,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_RLC,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_ROR,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_RRC,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_MUL,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_MULU_DP,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_MULS_DP,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_DIVU,                         ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_DIVU_DP,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_DIVS,                         ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_DIVS_DP,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_MODU,                         ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_MODU_DP,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_MODS,                         ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_MODS_DP,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_NEG,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_NOT,                          ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_SX,                           ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_ZX,                           ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_LOW_PART,                     ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_JUMP,                         ValidInNonSSA | ValidInSSA | ValidAsParent                },
+	{ LLIL_JUMP_TO,                      ValidInNonSSA | ValidInSSA | ValidAsParent                },
+	{ LLIL_CALL,                         ValidInNonSSA | ValidInSSA | ValidAsParent                },
+	{ LLIL_CALL_STACK_ADJUST,            ValidInNonSSA | ValidInSSA | ValidAsParent                },
+	{ LLIL_TAILCALL,                     ValidInNonSSA | ValidInSSA | ValidAsParent                },
+	{ LLIL_RET,                          ValidInNonSSA | ValidInSSA | ValidAsParent                },
+	{ LLIL_NORET,                        ValidInNonSSA | ValidInSSA | ValidAsParent                },
+	{ LLIL_IF,                           ValidInNonSSA | ValidInSSA | ValidAsParent                },
+	{ LLIL_GOTO,                         ValidInNonSSA | ValidInSSA | ValidAsParent                },
+	{ LLIL_FLAG_COND,                    0                                                         },
+	{ LLIL_FLAG_GROUP,                   0                                                         },
+	{ LLIL_CMP_E,                        ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_CMP_NE,                       ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_CMP_SLT,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_CMP_ULT,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_CMP_SLE,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_CMP_ULE,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_CMP_SGE,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_CMP_UGE,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_CMP_SGT,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_CMP_UGT,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_TEST_BIT,                     ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_BOOL_TO_INT,                  ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_ADD_OVERFLOW,                 ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_SYSCALL,                      ValidInNonSSA | ValidInSSA | ValidAsParent                },
+	{ LLIL_BP,                           ValidInNonSSA | ValidInSSA | ValidAsParent                },
+	{ LLIL_TRAP,                         ValidInNonSSA | ValidInSSA | ValidAsParent                },
+	{ LLIL_INTRINSIC,                    ValidInNonSSA | ValidInSSA | ValidAsParent                },
+	{ LLIL_UNDEF,                        ValidInNonSSA | ValidInSSA | ValidAsParent | ValidAsChild },
+	{ LLIL_UNIMPL,                       ValidInNonSSA | ValidInSSA | ValidAsParent | ValidAsChild },
+	{ LLIL_UNIMPL_MEM,                   ValidInNonSSA | ValidInSSA | ValidAsParent | ValidAsChild },
+	{ LLIL_FADD,                         ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FSUB,                         ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FMUL,                         ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FDIV,                         ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FSQRT,                        ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FNEG,                         ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FABS,                         ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FLOAT_TO_INT,                 ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_INT_TO_FLOAT,                 ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FLOAT_CONV,                   ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_ROUND_TO_INT,                 ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FLOOR,                        ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_CEIL,                         ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FTRUNC,                       ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FCMP_E,                       ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FCMP_NE,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FCMP_LT,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FCMP_LE,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FCMP_GE,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FCMP_GT,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FCMP_O,                       ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_FCMP_UO,                      ValidInNonSSA | ValidInSSA |                 ValidAsChild },
+	{ LLIL_SET_REG_SSA,                                  ValidInSSA | ValidAsParent                },
+	{ LLIL_SET_REG_SSA_PARTIAL,                          ValidInSSA | ValidAsParent                },
+	{ LLIL_SET_REG_SPLIT_SSA,                            ValidInSSA | ValidAsParent                },
+	{ LLIL_SET_REG_STACK_REL_SSA,                        ValidInSSA | ValidAsParent                },
+	{ LLIL_SET_REG_STACK_ABS_SSA,                        ValidInSSA | ValidAsParent                },
+	{ LLIL_REG_SPLIT_DEST_SSA,                           ValidInSSA |                 ValidAsChild },
+	{ LLIL_REG_STACK_DEST_SSA,                           ValidInSSA |                 ValidAsChild },
+	{ LLIL_REG_SSA,                                      ValidInSSA |                 ValidAsChild },
+	{ LLIL_REG_SSA_PARTIAL,                              ValidInSSA |                 ValidAsChild },
+	{ LLIL_REG_SPLIT_SSA,                                ValidInSSA |                 ValidAsChild },
+	{ LLIL_REG_STACK_REL_SSA,                            ValidInSSA |                 ValidAsChild },
+	{ LLIL_REG_STACK_ABS_SSA,                            ValidInSSA |                 ValidAsChild },
+	{ LLIL_REG_STACK_FREE_REL_SSA,                       ValidInSSA | ValidAsParent                },
+	{ LLIL_REG_STACK_FREE_ABS_SSA,                       ValidInSSA | ValidAsParent                },
+	{ LLIL_SET_FLAG_SSA,                                 ValidInSSA | ValidAsParent                },
+	{ LLIL_ASSERT_SSA,                                   ValidInSSA | ValidAsParent                },
+	{ LLIL_FORCE_VER_SSA,                                ValidInSSA | ValidAsParent                },
+	{ LLIL_FLAG_SSA,                                     ValidInSSA |                 ValidAsChild },
+	{ LLIL_FLAG_BIT_SSA,                                 ValidInSSA |                 ValidAsChild },
+	{ LLIL_CALL_SSA,                                     ValidInSSA | ValidAsParent                },
+	{ LLIL_SYSCALL_SSA,                                  ValidInSSA | ValidAsParent                },
+	{ LLIL_TAILCALL_SSA,                                 ValidInSSA | ValidAsParent                },
+	{ LLIL_CALL_PARAM,                                   ValidInSSA |                 ValidAsChild },
+	{ LLIL_CALL_STACK_SSA,                               ValidInSSA |                 ValidAsChild },
+	{ LLIL_CALL_OUTPUT_SSA,                              ValidInSSA |                 ValidAsChild },
+	{ LLIL_SEPARATE_PARAM_LIST_SSA,                      ValidInSSA |                 ValidAsChild },
+	{ LLIL_SHARED_PARAM_SLOT_SSA,                        ValidInSSA |                 ValidAsChild },
+	{ LLIL_MEMORY_INTRINSIC_OUTPUT_SSA,                  ValidInSSA |                 ValidAsChild },
+	{ LLIL_LOAD_SSA,                                     ValidInSSA |                 ValidAsChild },
+	{ LLIL_STORE_SSA,                                    ValidInSSA | ValidAsParent                },
+	{ LLIL_INTRINSIC_SSA,                                ValidInSSA | ValidAsParent                },
+	{ LLIL_MEMORY_INTRINSIC_SSA,                         ValidInSSA | ValidAsParent                },
+	{ LLIL_REG_PHI,                                      ValidInSSA | ValidAsParent                },
+	{ LLIL_REG_STACK_PHI,                                ValidInSSA | ValidAsParent                },
+	{ LLIL_FLAG_PHI,                                     ValidInSSA | ValidAsParent                },
+	{ LLIL_MEM_PHI,                                      ValidInSSA |                 ValidAsChild }
+}};
+
 LowLevelILVerifier::LowLevelILVerifier(Ref<LowLevelILFunction> function): m_il(function)
 {
 	m_logger = new Logger("LiftCheck");
@@ -419,10 +573,11 @@ bool LowLevelILVerifier::Verify()
 		Invariants:
 		-[ ] All blocks either branch to existing blocks or terminate
 		-[x] Sizes of expressions are consistent
-		-[ ] Base level instructions are of a limited subset of operations (setreg, call, etc)
-		-[ ] Child expressions are of a limited subset of operations (eg NOT goto)
+		-[x] Base level instructions are of a limited subset of operations (setreg, call, etc)
+		-[x] Child expressions are of a limited subset of operations (eg NOT goto)
 		-[ ] Expression parameters are in valid range
 		-[ ] Each expression has as most 1 parent
+		-[ ] Expr address aligns with instruction
 	 */
 
 	if (!m_il->GetFunction())
@@ -441,10 +596,54 @@ bool LowLevelILVerifier::Verify()
 	// Check expr sizes
 	for (auto& bb: m_il->GetBasicBlocks())
 	{
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
+		{
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			result &= CheckInstrSize(instr);
+		}
+	}
+
+	// Check exprs are where we expect them to be
+	for (auto& bb: m_il->GetBasicBlocks())
+	{
 		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex ++)
 		{
 			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
 			result &= CheckInstrSize(instr);
+
+			instr.VisitExprs([&](const LowLevelILInstruction& expr) {
+				if (auto found = g_instructionValidity.find(expr.operation); found != g_instructionValidity.end())
+				{
+					// We always check Non-SSA form (only the core generates SSA forms and I'd *like* to believe it is correct)
+					if ((found->second & ValidInNonSSA) == 0)
+					{
+						result = false;
+						m_logger->LogWarnF("Instruction {:?} is not valid in non-ssa form", expr);
+					}
+					if (expr.exprIndex == instr.exprIndex)
+					{
+						if ((found->second & ValidAsParent) == 0)
+						{
+							result = false;
+							m_logger->LogWarnF("Instruction {:?} is not valid as parent instruction", expr);
+						}
+					}
+					else
+					{
+						if ((found->second & ValidAsChild) == 0)
+						{
+							result = false;
+							m_logger->LogWarnF("Instruction {:?} is not valid as child instruction", expr);
+						}
+					}
+				}
+				else
+				{
+					result = false;
+					m_logger->LogWarnF("Unknown instruction operation {:?}", expr);
+				}
+				return true;
+			});
 		}
 	}
 

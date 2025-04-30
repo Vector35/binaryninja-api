@@ -576,7 +576,7 @@ bool LowLevelILVerifier::Verify()
 		-[x] Base level instructions are of a limited subset of operations (setreg, call, etc)
 		-[x] Child expressions are of a limited subset of operations (eg NOT goto)
 		-[ ] Expression parameters are in valid range
-		-[ ] Each expression has as most 1 parent
+		-[x] Each expression has as most 1 parent
 		-[ ] Expr address aligns with instruction
 	 */
 
@@ -641,6 +641,24 @@ bool LowLevelILVerifier::Verify()
 				{
 					result = false;
 					m_logger->LogWarnF("Unknown instruction operation {:?}", expr);
+				}
+				return true;
+			});
+		}
+	}
+
+	// Check exprs are used at most once
+	std::unordered_set<size_t> seenExprs;
+	for (auto& bb: m_il->GetBasicBlocks())
+	{
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
+		{
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			instr.VisitExprs([&](const LowLevelILInstruction& expr) {
+				if (seenExprs.insert(expr.exprIndex).second == false)
+				{
+					result = false;
+					m_logger->LogErrorF("Expression {:?} used more than once", expr);
 				}
 				return true;
 			});

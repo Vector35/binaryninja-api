@@ -246,6 +246,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self._cb.getInstructionLowLevelIL = self._cb.getInstructionLowLevelIL.__class__(
 		    self._get_instruction_low_level_il
 		)
+		self._cb.analyzeBasicBlocks = self._cb.analyzeBasicBlocks.__class__(self._analyze_basic_blocks)
 		self._cb.getRegisterName = self._cb.getRegisterName.__class__(self._get_register_name)
 		self._cb.getFlagName = self._cb.getFlagName.__class__(self._get_flag_name)
 		self._cb.getFlagWriteTypeName = self._cb.getFlagWriteTypeName.__class__(self._get_flag_write_type_name)
@@ -709,6 +710,12 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		except OSError:
 			log_error(traceback.format_exc())
 			return False
+
+	def _analyze_basic_blocks(self, ctx, func, context):
+		try:
+			self.analyze_basic_blocks(function.Function(handle=core.BNNewFunctionReference(func)), context)
+		except:
+			log_error(traceback.format_exc())
 
 	def _get_register_name(self, ctxt, reg):
 		try:
@@ -1424,6 +1431,21 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		:rtype: int
 		"""
 		raise NotImplementedError
+
+	def analyze_basic_blocks(self, func, context):
+		"""
+		``analyze_basic_blocks`` performs function-level basic block recovery and commits the blocks to analysis
+
+		.. note:: Architecture subclasses should not implement this method unless function-level lifting is required
+
+		:param Function func: the function to analyze
+		:param BNBasicBlockAnalysisContext context: the analysis context
+		"""
+
+		try:
+			core.BNArchitectureDefaultAnalyzeBasicBlocks(func.handle, context)
+		except:
+			log_error(traceback.format_exc())
 
 	def get_low_level_il_from_bytes(self, data: bytes, addr: int) -> 'lowlevelil.LowLevelILInstruction':
 		"""

@@ -1,3 +1,6 @@
+#include <map>
+#include <set>
+#include <queue>
 #include <inttypes.h>
 #include "binaryninjaapi.h"
 #include "binaryninjacore.h"
@@ -235,7 +238,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAna
 			size_t maxLen = data->Read(opcode, location.address, location.arch->GetMaxInstructionLength());
 			if (maxLen == 0)
 			{
-				//string text = fmt::bnformat("Could not read instruction at {:#x}", location.address);
+				string text = fmt::format("Could not read instruction at {:#x}", location.address);
+				function.CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
 				if (location.arch->GetInstructionAlignment() == 0)
 					location.address++;
 				else
@@ -248,8 +252,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAna
 			info.delaySlots = delaySlotCount;
 			if (!location.arch->GetInstructionInfo(opcode, location.address, maxLen, info))
 			{
-				//string text = fmt::bnformat("Could not get instruction info at {:#x}", location.address);
-				//function->CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
+				string text = fmt::format("Could not get instruction info at {:#x}", location.address);
+				function.CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
 				if (location.arch->GetInstructionAlignment() == 0)
 					location.address++;
 				else
@@ -261,8 +265,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAna
 			// The instruction is invalid if it has no length or is above maximum length
 			if ((info.length == 0) || (info.length > maxLen))
 			{
-				//string text = fmt::bnformat("Instruction of invalid length at {:#x}", location.address);
-				//function->CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
+				string text = fmt::format("Instruction of invalid length at {:#x}", location.address);
+				function.CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
 				if (location.arch->GetInstructionAlignment() == 0)
 					location.address++;
 				else
@@ -278,8 +282,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAna
 				((!IsOffsetCodeSemanticsFast(data, readOnlySections, dataExternSections, instrEnd) && IsOffsetCodeSemanticsFast(data, readOnlySections, dataExternSections,location.address)) ||
 				(!data->IsOffsetBackedByFile(instrEnd) && data->IsOffsetBackedByFile(location.address))))
 			{
-				//string text = fmt::bnformat("Instruction at {:#x} straddles a non-code section", location.address);
-				//function->CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
+				string text = fmt::format("Instruction at {:#x} straddles a non-code section", location.address);
+				function.CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
 				if (location.arch->GetInstructionAlignment() == 0)
 					location.address++;
 				else
@@ -420,8 +424,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAna
 							if (!fastPath && !IsOffsetCodeSemanticsFast(data, readOnlySections, dataExternSections, target.address) &&
 								IsOffsetCodeSemanticsFast(data, readOnlySections, dataExternSections, location.address))
 							{
-								//string message = fmt::bnformat("Non-code call target {:#x}", target.address);
-								//function->CreateAutoAddressTag(target.arch, location.address, "Non-code Branch", message, true);
+								string message = fmt::format("Non-code call target {:#x}", target.address);
+								function.CreateAutoAddressTag(target.arch, location.address, "Non-code Branch", message, true);
 								break;
 							}
 

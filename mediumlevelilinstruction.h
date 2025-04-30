@@ -211,6 +211,8 @@ namespace BinaryNinja
 	{
 	  public:
 		MediumLevelILInstructionAccessException() : ExceptionWithStackTrace("invalid access to MLIL instruction") {}
+		MediumLevelILInstructionAccessException(BNMediumLevelILOperation op, const std::string& msg) :
+			ExceptionWithStackTrace(fmt::format("invalid access to MLIL instruction {} of {}", op, msg).c_str()) {}
 	};
 
 	/*!

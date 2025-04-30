@@ -729,7 +729,8 @@ MediumLevelILOperand::MediumLevelILOperand(
 {
 	auto i = MediumLevelILInstructionBase::operandTypeForUsage.find(m_usage);
 	if (i == MediumLevelILInstructionBase::operandTypeForUsage.end())
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(instr.operation,
+			fmt::format("MediumLevelILOperand {} {}", usage, operandIndex));
 	m_type = i->second;
 }
 
@@ -737,7 +738,7 @@ MediumLevelILOperand::MediumLevelILOperand(
 uint64_t MediumLevelILOperand::GetInteger() const
 {
 	if (m_type != IntegerMediumLevelOperand)
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(m_instr.operation, "GetInteger");
 	return m_instr.GetRawOperandAsInteger(m_operandIndex);
 }
 
@@ -745,7 +746,7 @@ uint64_t MediumLevelILOperand::GetInteger() const
 ConstantData MediumLevelILOperand::GetConstantData() const
 {
 	if (m_type != ConstantDataMediumLevelOperand)
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(m_instr.operation, "GetConstantData");
 	return m_instr.GetRawOperandAsConstantData(m_operandIndex);
 }
 
@@ -753,7 +754,7 @@ ConstantData MediumLevelILOperand::GetConstantData() const
 size_t MediumLevelILOperand::GetIndex() const
 {
 	if (m_type != IndexMediumLevelOperand)
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(m_instr.operation, "GetIndex");
 	if ((m_usage == OutputSSAMemoryVersionMediumLevelOperandUsage)
 	    || (m_usage == ParameterSSAMemoryVersionMediumLevelOperandUsage))
 		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsIndex(0);
@@ -764,7 +765,7 @@ size_t MediumLevelILOperand::GetIndex() const
 uint32_t MediumLevelILOperand::GetIntrinsic() const
 {
 	if (m_type != IntrinsicMediumLevelOperand)
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(m_instr.operation, "GetIntrinsic");
 	return (uint32_t)m_instr.GetRawOperandAsInteger(m_operandIndex);
 }
 
@@ -772,7 +773,7 @@ uint32_t MediumLevelILOperand::GetIntrinsic() const
 MediumLevelILInstruction MediumLevelILOperand::GetExpr() const
 {
 	if (m_type != ExprMediumLevelOperand)
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(m_instr.operation, "GetExpr");
 	return m_instr.GetRawOperandAsExpr(m_operandIndex);
 }
 
@@ -780,7 +781,7 @@ MediumLevelILInstruction MediumLevelILOperand::GetExpr() const
 Variable MediumLevelILOperand::GetVariable() const
 {
 	if (m_type != VariableMediumLevelOperand)
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(m_instr.operation, "GetVariable");
 	return m_instr.GetRawOperandAsVariable(m_operandIndex);
 }
 
@@ -788,7 +789,7 @@ Variable MediumLevelILOperand::GetVariable() const
 SSAVariable MediumLevelILOperand::GetSSAVariable() const
 {
 	if (m_type != SSAVariableMediumLevelOperand)
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(m_instr.operation, "GetSSAVariable");
 	if (m_usage == PartialSSAVariableSourceMediumLevelOperandUsage)
 		return m_instr.GetRawOperandAsPartialSSAVariableSource(m_operandIndex - 2);
 	return m_instr.GetRawOperandAsSSAVariable(m_operandIndex);
@@ -798,7 +799,7 @@ SSAVariable MediumLevelILOperand::GetSSAVariable() const
 MediumLevelILIndexList MediumLevelILOperand::GetIndexList() const
 {
 	if (m_type != IndexListMediumLevelOperand)
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(m_instr.operation, "GetIndexList");
 	return m_instr.GetRawOperandAsIndexList(m_operandIndex);
 }
 
@@ -806,7 +807,7 @@ MediumLevelILIndexList MediumLevelILOperand::GetIndexList() const
 MediumLevelILIndexMap MediumLevelILOperand::GetIndexMap() const
 {
 	if (m_type != IndexMapMediumLevelOperand)
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(m_instr.operation, "GetIndexMap");
 	return m_instr.GetRawOperandAsIndexMap(m_operandIndex);
 }
 
@@ -814,7 +815,7 @@ MediumLevelILIndexMap MediumLevelILOperand::GetIndexMap() const
 MediumLevelILVariableList MediumLevelILOperand::GetVariableList() const
 {
 	if (m_type != VariableListMediumLevelOperand)
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(m_instr.operation, "GetVariableList");
 	if (m_usage == OutputVariablesSubExprMediumLevelOperandUsage)
 		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsVariableList(0);
 	return m_instr.GetRawOperandAsVariableList(m_operandIndex);
@@ -824,7 +825,7 @@ MediumLevelILVariableList MediumLevelILOperand::GetVariableList() const
 MediumLevelILSSAVariableList MediumLevelILOperand::GetSSAVariableList() const
 {
 	if (m_type != SSAVariableListMediumLevelOperand)
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(m_instr.operation, "GetSSAVariableList");
 	if (m_usage == OutputSSAVariablesSubExprMediumLevelOperandUsage)
 		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsSSAVariableList(1);
 	return m_instr.GetRawOperandAsSSAVariableList(m_operandIndex);
@@ -834,7 +835,7 @@ MediumLevelILSSAVariableList MediumLevelILOperand::GetSSAVariableList() const
 MediumLevelILInstructionList MediumLevelILOperand::GetExprList() const
 {
 	if (m_type != ExprListMediumLevelOperand)
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(m_instr.operation, "GetExprList");
 	if (m_usage == UntypedParameterExprsMediumLevelOperandUsage)
 		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsExprList(0);
 	if (m_usage == UntypedParameterSSAExprsMediumLevelOperandUsage)
@@ -958,10 +959,10 @@ MediumLevelILOperandList MediumLevelILInstructionBase::GetOperands() const
 {
 	auto usage = operationOperandUsage.find(operation);
 	if (usage == operationOperandUsage.end())
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(operation, "GetOperands");
 	auto operandIndex = operationOperandIndex.find(operation);
 	if (operandIndex == operationOperandIndex.end())
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(operation, "GetOperands");
 	return MediumLevelILOperandList(*(const MediumLevelILInstruction*)this, usage->second, operandIndex->second);
 }
 
@@ -1943,7 +1944,7 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 	case MLIL_UNIMPL:
 		return dest->Unimplemented(*this);
 	default:
-		throw MediumLevelILInstructionAccessException();
+		throw MediumLevelILInstructionAccessException(operation, "CopyTo");
 	}
 }
 
@@ -1966,7 +1967,7 @@ MediumLevelILInstruction MediumLevelILInstruction::GetSourceExpr() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(SourceExprMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetSourceExpr");
 }
 
 
@@ -1975,7 +1976,7 @@ Variable MediumLevelILInstruction::GetSourceVariable() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(SourceVariableMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetSourceVariable");
 }
 
 
@@ -1986,7 +1987,7 @@ SSAVariable MediumLevelILInstruction::GetSourceSSAVariable() const
 		return GetRawOperandAsSSAVariable(operandIndex);
 	if (GetOperandIndexForUsage(PartialSSAVariableSourceMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsPartialSSAVariableSource(operandIndex - 2);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetSourceSSAVariable");
 }
 
 
@@ -1995,7 +1996,7 @@ MediumLevelILInstruction MediumLevelILInstruction::GetDestExpr() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(DestExprMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetDestExpr");
 }
 
 
@@ -2004,7 +2005,7 @@ Variable MediumLevelILInstruction::GetDestVariable() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(DestVariableMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetDestVariable");
 }
 
 
@@ -2013,7 +2014,7 @@ SSAVariable MediumLevelILInstruction::GetDestSSAVariable() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(DestSSAVariableMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSAVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetDestSSAVariable");
 }
 
 
@@ -2022,7 +2023,7 @@ MediumLevelILInstruction MediumLevelILInstruction::GetLeftExpr() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(LeftExprMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetLeftExpr");
 }
 
 
@@ -2031,7 +2032,7 @@ MediumLevelILInstruction MediumLevelILInstruction::GetRightExpr() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(RightExprMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetRightExpr");
 }
 
 
@@ -2040,7 +2041,7 @@ MediumLevelILInstruction MediumLevelILInstruction::GetCarryExpr() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(CarryExprMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetCarryExpr");
 }
 
 
@@ -2049,7 +2050,7 @@ MediumLevelILInstruction MediumLevelILInstruction::GetStackExpr() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(StackExprMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetStackExpr");
 }
 
 
@@ -2058,7 +2059,7 @@ MediumLevelILInstruction MediumLevelILInstruction::GetConditionExpr() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(ConditionExprMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetConditionExpr");
 }
 
 
@@ -2067,7 +2068,7 @@ Variable MediumLevelILInstruction::GetHighVariable() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(HighVariableMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetHighVariable");
 }
 
 
@@ -2076,7 +2077,7 @@ Variable MediumLevelILInstruction::GetLowVariable() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(LowVariableMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetLowVariable");
 }
 
 
@@ -2085,7 +2086,7 @@ SSAVariable MediumLevelILInstruction::GetHighSSAVariable() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(HighSSAVariableMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSAVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetHighSSAVariable");
 }
 
 
@@ -2094,7 +2095,7 @@ SSAVariable MediumLevelILInstruction::GetLowSSAVariable() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(LowSSAVariableMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSAVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetLowSSAVariable");
 }
 
 
@@ -2103,7 +2104,7 @@ uint64_t MediumLevelILInstruction::GetOffset() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(OffsetMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsInteger(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetOffset");
 }
 
 
@@ -2112,7 +2113,7 @@ int64_t MediumLevelILInstruction::GetConstant() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(ConstantMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsInteger(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetConstant");
 }
 
 
@@ -2121,7 +2122,7 @@ ConstantData MediumLevelILInstruction::GetConstantData() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(ConstantDataMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsConstantData(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetConstantData");
 }
 
 
@@ -2130,7 +2131,7 @@ int64_t MediumLevelILInstruction::GetVector() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(VectorMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsInteger(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetVector");
 }
 
 
@@ -2139,7 +2140,7 @@ uint32_t MediumLevelILInstruction::GetIntrinsic() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(IntrinsicMediumLevelOperandUsage, operandIndex))
 		return (uint32_t)GetRawOperandAsInteger(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetIntrinsic");
 }
 
 
@@ -2148,7 +2149,7 @@ size_t MediumLevelILInstruction::GetTarget() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(TargetMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsIndex(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetTarget");
 }
 
 
@@ -2157,7 +2158,7 @@ size_t MediumLevelILInstruction::GetTrueTarget() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(TrueTargetMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsIndex(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetTrueTarget");
 }
 
 
@@ -2166,7 +2167,7 @@ size_t MediumLevelILInstruction::GetFalseTarget() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(FalseTargetMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsIndex(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetFalseTarget");
 }
 
 
@@ -2177,7 +2178,7 @@ size_t MediumLevelILInstruction::GetDestMemoryVersion() const
 		return GetRawOperandAsIndex(operandIndex);
 	if (GetOperandIndexForUsage(OutputSSAMemoryVersionMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsIndex(0);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetDestMemoryVersion");
 }
 
 
@@ -2188,7 +2189,7 @@ size_t MediumLevelILInstruction::GetSourceMemoryVersion() const
 		return GetRawOperandAsIndex(operandIndex);
 	if (GetOperandIndexForUsage(ParameterSSAMemoryVersionMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsIndex(0);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetSourceMemoryVersion");
 }
 
 
@@ -2197,7 +2198,7 @@ MediumLevelILIndexMap MediumLevelILInstruction::GetTargets() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(TargetsMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsIndexMap(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetTargets");
 }
 
 
@@ -2206,7 +2207,7 @@ MediumLevelILIndexList MediumLevelILInstruction::GetSourceMemoryVersions() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(SourceMemoryVersionsMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsIndexList(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetSourceMemoryVersions");
 }
 
 
@@ -2217,7 +2218,7 @@ MediumLevelILVariableList MediumLevelILInstruction::GetOutputVariables() const
 		return GetRawOperandAsVariableList(operandIndex);
 	if (GetOperandIndexForUsage(OutputVariablesSubExprMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsVariableList(0);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetOutputVariables");
 }
 
 
@@ -2228,7 +2229,7 @@ MediumLevelILSSAVariableList MediumLevelILInstruction::GetOutputSSAVariables() c
 		return GetRawOperandAsSSAVariableList(operandIndex);
 	if (GetOperandIndexForUsage(OutputSSAVariablesSubExprMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSAVariableList(1);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetOutputSSAVariables");
 }
 
 
@@ -2241,7 +2242,7 @@ MediumLevelILInstructionList MediumLevelILInstruction::GetParameterExprs() const
 		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsExprList(0);
 	if (GetOperandIndexForUsage(UntypedParameterSSAExprsMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsExprList(1);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetParameterExprs");
 }
 
 
@@ -2250,7 +2251,7 @@ MediumLevelILInstructionList MediumLevelILInstruction::GetSourceExprs() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(SourceExprsMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExprList(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetSourceExprs");
 }
 
 
@@ -2259,7 +2260,7 @@ MediumLevelILSSAVariableList MediumLevelILInstruction::GetSourceSSAVariables() c
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(SourceSSAVariablesMediumLevelOperandUsages, operandIndex))
 		return GetRawOperandAsSSAVariableList(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	throw MediumLevelILInstructionAccessException(operation, "GetSourceSSAVariables");
 }
 
 

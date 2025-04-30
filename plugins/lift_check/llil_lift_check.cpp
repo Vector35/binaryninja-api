@@ -288,8 +288,6 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 	{
 	case LLIL_SET_REG:
 	{
-		size_t instrSize = instr.size;
-
 		// TODO: how to do sanity checking for temp registers?
 		auto reg = instr.GetDestRegister<LLIL_SET_REG>();
 		if (!LLIL_REG_IS_TEMP(reg))
@@ -300,48 +298,44 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 			// As per discussion with rss, this is actually the "best" behavior in certain circumstances,
 			// namely x86's vmulss which operates on the low 32 bits of a 256 bit register and does
 			// nightmare semantics on the upper 96 bits + 128 bits
-			CHECK(instrSize == info.size, "setting {} byte register {} to {} byte value", info.size, m_arch->GetRegisterName(reg), instrSize);
+			CHECK(info.size == instr.size, "setting {} byte register {} to {} byte value", info.size, m_arch->GetRegisterName(reg), instr.size);
 		}
 
-		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG>(), instrSize);
+		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG>(), instr.size);
 		break;
 	}
 	case LLIL_SET_REG_SPLIT:
 	{
-		size_t instrSize = instr.size;
-
 		// TODO: how to do sanity checking for temp registers?
 		auto hi = instr.GetHighRegister<LLIL_SET_REG_SPLIT>();
 		if (!LLIL_REG_IS_TEMP(hi))
 		{
 			auto info = m_arch->GetRegisterInfo(hi);
-			CHECK(instrSize == info.size, "setting {} byte hi register {} to {} byte value", info.size, m_arch->GetRegisterName(hi), instrSize);
+			CHECK(info.size == instr.size, "setting {} byte hi register {} to {} byte value", info.size, m_arch->GetRegisterName(hi), instr.size);
 		}
 		auto lo = instr.GetHighRegister<LLIL_SET_REG_SPLIT>();
 		if (!LLIL_REG_IS_TEMP(lo))
 		{
 			auto info = m_arch->GetRegisterInfo(lo);
-			CHECK(instrSize == info.size, "setting {} byte lo register {} to {} byte value", info.size, m_arch->GetRegisterName(lo), instrSize);
+			CHECK(info.size == instr.size, "setting {} byte lo register {} to {} byte value", info.size, m_arch->GetRegisterName(lo), instr.size);
 		}
 
-		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG_SPLIT>(), instrSize * 2);
+		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG_SPLIT>(), instr.size * 2);
 		break;
 	}
 	case LLIL_SET_FLAG:
 	{
-		size_t instrSize = 0;
 		CHECK(instr.size == 0, "set flag size should be zero, is {:#x}", instr.size);
-		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_FLAG>(), instrSize);
+		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_FLAG>(), 0);
 		break;
 	}
 	case LLIL_STORE:
 	{
-		size_t instrSize = instr.size;
 		CHECK(instr.size != 0, "storing a zero byte value");
 
 		// TODO: Is this correct for eg arm64_32
 		result &= CheckExprSize(instr.GetDestExpr<LLIL_STORE>(), m_arch->GetAddressSize());
-		result &= CheckExprSize(instr.GetSourceExpr<LLIL_STORE>(), instrSize);
+		result &= CheckExprSize(instr.GetSourceExpr<LLIL_STORE>(), instr.size);
 		break;
 	}
 	case LLIL_PUSH:
@@ -409,6 +403,7 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 	case LLIL_TRAP:
 		break;
 	default:
+		m_logger->LogWarnF("Unexpected root instruction: {:?}", instr);
 		CheckExprSize(instr, std::nullopt);
 		break;
 	}

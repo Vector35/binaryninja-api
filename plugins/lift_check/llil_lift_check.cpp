@@ -191,7 +191,19 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		if (!LLIL_REG_IS_TEMP(reg))
 		{
 			auto info = m_arch->GetRegisterInfo(reg);
-			CHECK(expr.size == info.size, "attempting to load {:#x} bytes out of a {:#x} byte register", expr.size, info.size);
+
+			// TODO: There is a bug in our x86 lifter that stems from having incomplete sub-register support
+			// As per discussion with rss, this is actually the "best" behavior in certain circumstances,
+			// namely x86's vmulss which operates on the low 32 bits of a 256 bit register and does
+			// nightmare semantics on the upper 96 bits + 128 bits
+			if (expr.size < info.size)
+			{
+				m_logger->LogDebugF("{:?} loading only {:#x} bytes out of {:#x} byte register {}", expr, expr.size, info.size, m_arch->GetRegisterName(reg));
+			}
+			else
+			{
+				CHECK(expr.size == info.size, "attempting to load {:#x} bytes out of {:#x} byte register {}", expr.size, info.size, m_arch->GetRegisterName(reg));
+			}
 		}
 		break;
 	}
@@ -229,7 +241,19 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 	{
 		if (requiredSize.has_value())
 		{
-			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
+			// TODO: There is a bug in our x86 lifter that stems from having incomplete sub-register support
+			// As per discussion with rss, this is actually the "best" behavior in certain circumstances,
+			// namely x86's vmulss which operates on the low 32 bits of a 256 bit register and does
+			// nightmare semantics on the upper 96 bits + 128 bits
+
+			if (expr.size < *requiredSize)
+			{
+				m_logger->LogDebugF("{:?} loading only {:#x} bytes out of {:#x} byte memory", expr, expr.size, *requiredSize);
+			}
+			else
+			{
+				CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
+			}
 		}
 		// TODO: Is this correct for eg arm64_32
 		result &= CheckExprSize(expr.GetSourceExpr<LLIL_LOAD>(), m_arch->GetAddressSize());
@@ -256,6 +280,14 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 	case LLIL_CMP_UGE:
 	case LLIL_CMP_SGT:
 	case LLIL_CMP_UGT:
+	case LLIL_FCMP_E:
+	case LLIL_FCMP_NE:
+	case LLIL_FCMP_LT:
+	case LLIL_FCMP_LE:
+	case LLIL_FCMP_GE:
+	case LLIL_FCMP_GT:
+	case LLIL_FCMP_O:
+	case LLIL_FCMP_UO:
 	{
 		if (requiredSize.has_value() && *requiredSize != 0)
 		{
@@ -304,6 +336,10 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 	case LLIL_DIVS:
 	case LLIL_MODU:
 	case LLIL_MODS:
+	case LLIL_FADD:
+	case LLIL_FSUB:
+	case LLIL_FMUL:
+	case LLIL_FDIV:
 	{
 		if (requiredSize.has_value())
 		{
@@ -357,6 +393,9 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 	}
 	case LLIL_NEG:
 	case LLIL_NOT:
+	case LLIL_FSQRT:
+	case LLIL_FNEG:
+	case LLIL_FABS:
 	{
 		if (requiredSize.has_value())
 		{
@@ -440,6 +479,8 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 
 	switch (instr.operation)
 	{
+	case LLIL_NOP:
+		break;
 	case LLIL_SET_REG:
 	{
 		// TODO: how to do sanity checking for temp registers?
@@ -452,7 +493,14 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 			// As per discussion with rss, this is actually the "best" behavior in certain circumstances,
 			// namely x86's vmulss which operates on the low 32 bits of a 256 bit register and does
 			// nightmare semantics on the upper 96 bits + 128 bits
-			CHECK(info.size == instr.size, "setting {} byte register {} to {} byte value", info.size, m_arch->GetRegisterName(reg), instr.size);
+			if (info.size > instr.size)
+			{
+				m_logger->LogDebugF("{:?} setting {} byte register {} to {} byte value", instr, info.size, m_arch->GetRegisterName(reg), instr.size);
+			}
+			else
+			{
+				CHECK(info.size == instr.size, "setting {} byte register {} to {} byte value", info.size, m_arch->GetRegisterName(reg), instr.size);
+			}
 		}
 
 		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG>(), instr.size);
@@ -483,6 +531,22 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_FLAG>(), 0);
 		break;
 	}
+	case LLIL_SET_REG_STACK_REL:
+		// todo
+		m_logger->LogWarnF("todo: {:?}", instr);
+		break;
+	case LLIL_REG_STACK_PUSH:
+		// todo
+		m_logger->LogWarnF("todo: {:?}", instr);
+		break;
+	case LLIL_ASSERT:
+		// todo
+		m_logger->LogWarnF("todo: {:?}", instr);
+		break;
+	case LLIL_FORCE_VER:
+		// todo
+		m_logger->LogWarnF("todo: {:?}", instr);
+		break;
 	case LLIL_STORE:
 	{
 		CHECK(instr.size != 0, "storing a zero byte value");
@@ -496,6 +560,14 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		CHECK(instr.size != 0, "pushing a 0 byte value");
 		result &= CheckExprSize(instr.GetSourceExpr<LLIL_PUSH>(), instr.size);
 		break;
+	case LLIL_REG_STACK_FREE_REG:
+		// todo
+		m_logger->LogWarnF("todo: {:?}", instr);
+		break;
+	case LLIL_REG_STACK_FREE_REL:
+		// todo
+		m_logger->LogWarnF("todo: {:?}", instr);
+		break;
 	case LLIL_JUMP:
 		result &= CheckExprSize(instr.GetDestExpr<LLIL_JUMP>(), std::nullopt);
 		break;
@@ -505,19 +577,28 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 	case LLIL_CALL:
 		result &= CheckExprSize(instr.GetDestExpr<LLIL_CALL>(), std::nullopt);
 		break;
+	case LLIL_CALL_STACK_ADJUST:
+		result &= CheckExprSize(instr.GetDestExpr<LLIL_CALL_STACK_ADJUST>(), std::nullopt);
+		break;
 	case LLIL_TAILCALL:
 		result &= CheckExprSize(instr.GetDestExpr<LLIL_TAILCALL>(), std::nullopt);
 		break;
-	case LLIL_SYSCALL:
-		break;
 	case LLIL_RET:
 		result &= CheckExprSize(instr.GetDestExpr<LLIL_RET>(), std::nullopt);
+		break;
+	case LLIL_NORET:
 		break;
 	case LLIL_IF:
 		result &= CheckExprSize(instr.GetConditionExpr<LLIL_IF>(), 0);
 		break;
 	case LLIL_GOTO:
 		// TODO: Check target
+		break;
+	case LLIL_SYSCALL:
+		break;
+	case LLIL_BP:
+		break;
+	case LLIL_TRAP:
 		break;
 	case LLIL_INTRINSIC:
 	{
@@ -549,15 +630,15 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		}
 		break;
 	}
-	case LLIL_NOP:
-		break;
-	case LLIL_NORET:
 	case LLIL_UNDEF:
-	case LLIL_BP:
-	case LLIL_TRAP:
+		break;
+	case LLIL_UNIMPL:
+		break;
+	case LLIL_UNIMPL_MEM:
+		CheckExprSize(instr.GetSourceExpr<LLIL_UNIMPL_MEM>(), std::nullopt);
 		break;
 	default:
-		m_logger->LogWarnF("Unexpected root instruction: {:?}", instr);
+		m_logger->LogDebugF("Unexpected root instruction: {:?}", instr);
 		CheckExprSize(instr, std::nullopt);
 		break;
 	}
@@ -622,10 +703,14 @@ bool LowLevelILVerifier::Verify()
 					}
 					if (expr.exprIndex == instr.exprIndex)
 					{
+						// TODO: In practice this happens due to bugs in the core's flags resolver
+						// You get LLIL_FSUB as a root expression because we cannot determine that it is free of side effects
+						// Also, apparently this could apply to basically _any_ expr operation because any expr could have side effects
+						// rss used the example of "pop + pop"
 						if ((found->second & ValidAsParent) == 0)
 						{
 							result = false;
-							m_logger->LogWarnF("Instruction {:?} is not valid as parent instruction", expr);
+							m_logger->LogDebugF("Instruction {:?} is not valid as parent instruction", expr);
 						}
 					}
 					else

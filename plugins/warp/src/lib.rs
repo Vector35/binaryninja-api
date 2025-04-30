@@ -16,7 +16,7 @@ use binaryninja::low_level_il::function::{
 use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstruction, LowLevelILInstructionKind,
 };
-use binaryninja::low_level_il::{LowLevelILRegister, VisitorAction};
+use binaryninja::low_level_il::{LowLevelILRegisterKind, VisitorAction};
 use binaryninja::rc::Ref as BNRef;
 use std::path::PathBuf;
 use warp::signature::basic_block::BasicBlockGUID;
@@ -44,9 +44,9 @@ pub fn user_signature_dir() -> PathBuf {
     binaryninja::user_directory().join("signatures/")
 }
 
-pub fn build_function<A: Architecture, M: FunctionMutability>(
+pub fn build_function<M: FunctionMutability>(
     func: &BNFunction,
-    llil: &LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
+    llil: &LowLevelILFunction<M, NonSSA<RegularNonSSA>>,
 ) -> Function {
     let bn_fn_ty = func.function_type();
     Function {
@@ -76,9 +76,9 @@ pub fn sorted_basic_blocks(func: &BNFunction) -> Vec<BNRef<BNBasicBlock<NativeBl
     basic_blocks
 }
 
-pub fn function_guid<A: Architecture, M: FunctionMutability>(
+pub fn function_guid<M: FunctionMutability>(
     func: &BNFunction,
-    llil: &LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
+    llil: &LowLevelILFunction<M, NonSSA<RegularNonSSA>>,
 ) -> FunctionGUID {
     let basic_blocks = sorted_basic_blocks(func);
     let basic_block_guids = basic_blocks
@@ -88,9 +88,9 @@ pub fn function_guid<A: Architecture, M: FunctionMutability>(
     FunctionGUID::from_basic_blocks(&basic_block_guids)
 }
 
-pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
+pub fn basic_block_guid<M: FunctionMutability>(
     basic_block: &BNBasicBlock<NativeBlock>,
-    llil: &LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
+    llil: &LowLevelILFunction<M, NonSSA<RegularNonSSA>>,
 ) -> BasicBlockGUID {
     let func = basic_block.function();
     let view = func.view();
@@ -98,7 +98,7 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
     let max_instr_len = arch.max_instr_len();
 
     // NOPs and useless moves are blacklisted to allow for hot-patchable functions.
-    let is_blacklisted_instr = |instr: &LowLevelILInstruction<A, M, NonSSA<RegularNonSSA>>| {
+    let is_blacklisted_instr = |instr: &LowLevelILInstruction<M, NonSSA<RegularNonSSA>>| {
         match instr.kind() {
             LowLevelILInstructionKind::Nop(_) => true,
             LowLevelILInstructionKind::SetReg(op) => {
@@ -107,7 +107,7 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
                         if op.dest_reg() == source_op.source_reg() =>
                     {
                         match op.dest_reg() {
-                            LowLevelILRegister::ArchReg(r) => {
+                            LowLevelILRegisterKind::Arch(r) => {
                                 // If this register has no implicit extend then we can safely assume it's a NOP.
                                 // Ex. on x86_64 we don't want to remove `mov edi, edi` as it will zero the upper 32 bits.
                                 // Ex. on x86 we do want to remove `mov edi, edi` as it will not have a side effect like above.
@@ -116,7 +116,7 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
                                     ImplicitRegisterExtend::NoExtend
                                 )
                             }
-                            LowLevelILRegister::Temp(_) => false,
+                            LowLevelILRegisterKind::Temp(_) => false,
                         }
                     }
                     _ => false,
@@ -126,8 +126,8 @@ pub fn basic_block_guid<A: Architecture, M: FunctionMutability>(
         }
     };
 
-    let is_variant_instr = |instr: &LowLevelILInstruction<A, M, NonSSA<RegularNonSSA>>| {
-        let is_variant_expr = |expr: &LowLevelILExpressionKind<A, M, NonSSA<RegularNonSSA>>| {
+    let is_variant_instr = |instr: &LowLevelILInstruction<M, NonSSA<RegularNonSSA>>| {
+        let is_variant_expr = |expr: &LowLevelILExpressionKind<M, NonSSA<RegularNonSSA>>| {
             // TODO: Checking the section here is slow, we should gather all section ranges outside of this.
             match expr {
                 LowLevelILExpressionKind::ConstPtr(op)

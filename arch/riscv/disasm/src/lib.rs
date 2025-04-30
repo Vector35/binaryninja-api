@@ -2331,7 +2331,7 @@ impl StandardExtension for ExtensionSupported {
     }
 }
 
-pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone  + Send + Sync {
+pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Sync {
     type RegFile: RegFile;
     type MulDivExtension: StandardExtension;
     type AtomicExtension: StandardExtension;

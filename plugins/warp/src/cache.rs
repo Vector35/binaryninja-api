@@ -1,6 +1,5 @@
 use crate::convert::{from_bn_symbol, from_bn_type_internal};
 use crate::{build_function, function_guid};
-use binaryninja::architecture::Architecture;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::Function as BNFunction;
@@ -68,10 +67,7 @@ pub fn try_cached_function_match(function: &BNFunction) -> Option<Function> {
         .to_owned()
 }
 
-pub fn cached_function<A: Architecture>(
-    function: &BNFunction,
-    llil: &RegularLowLevelILFunction<A>,
-) -> Function {
+pub fn cached_function(function: &BNFunction, llil: &RegularLowLevelILFunction) -> Function {
     let view = function.view();
     let view_id = ViewID::from(view.as_ref());
     let function_cache = FUNCTION_CACHE.get_or_init(Default::default);
@@ -122,9 +118,9 @@ where
     }
 }
 
-pub fn cached_function_guid<A: Architecture, M: FunctionMutability>(
+pub fn cached_function_guid<M: FunctionMutability>(
     function: &BNFunction,
-    llil: &LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
+    llil: &LowLevelILFunction<M, NonSSA<RegularNonSSA>>,
 ) -> FunctionGUID {
     let view = function.view();
     let view_id = ViewID::from(view);
@@ -202,11 +198,7 @@ pub struct FunctionCache {
 }
 
 impl FunctionCache {
-    pub fn function<A: Architecture>(
-        &self,
-        function: &BNFunction,
-        llil: &RegularLowLevelILFunction<A>,
-    ) -> Function {
+    pub fn function(&self, function: &BNFunction, llil: &RegularLowLevelILFunction) -> Function {
         let function_id = FunctionID::from(function);
         match self.cache.get(&function_id) {
             Some(function) => function.value().to_owned(),
@@ -330,10 +322,10 @@ impl GUIDCache {
         }
     }
 
-    pub fn function_guid<A: Architecture, M: FunctionMutability>(
+    pub fn function_guid<M: FunctionMutability>(
         &self,
         function: &BNFunction,
-        llil: &LowLevelILFunction<A, M, NonSSA<RegularNonSSA>>,
+        llil: &LowLevelILFunction<M, NonSSA<RegularNonSSA>>,
     ) -> FunctionGUID {
         let function_id = FunctionID::from(function);
         match self.cache.get(&function_id) {

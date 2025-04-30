@@ -80,6 +80,13 @@ macro_rules! newtype {
 }
 
 newtype!(RegisterId, u32);
+
+impl RegisterId {
+    pub fn is_temporary(&self) -> bool {
+        self.0 & 0x8000_0000 != 0
+    }
+}
+
 newtype!(RegisterStackId, u32);
 newtype!(FlagId, u32);
 // TODO: Make this NonZero<u32>?
@@ -418,7 +425,7 @@ pub trait Intrinsic: Debug + Sized + Clone + Copy {
     fn outputs(&self) -> Vec<Conf<Ref<Type>>>;
 }
 
-pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> + Debug {
+pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     type Handle: Borrow<Self> + Clone;
 
     type RegisterInfo: RegisterInfo<RegType = Self::Register>;
@@ -460,7 +467,7 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> + Debug {
         &self,
         data: &[u8],
         addr: u64,
-        il: &mut MutableLiftedILFunction<Self>,
+        il: &mut MutableLiftedILFunction,
     ) -> Option<(usize, bool)>;
 
     /// Fallback flag value calculation path. This method is invoked when the core is unable to
@@ -477,8 +484,8 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> + Debug {
         flag: Self::Flag,
         flag_write_type: Self::FlagWrite,
         op: LowLevelILFlagWriteOp<Self::Register>,
-        il: &'a mut MutableLiftedILFunction<Self>,
-    ) -> Option<MutableLiftedILExpr<'a, Self, ValueExpr>> {
+        il: &'a mut MutableLiftedILFunction,
+    ) -> Option<MutableLiftedILExpr<'a, ValueExpr>> {
         let role = flag.role(flag_write_type.class());
         Some(get_default_flag_write_llil(self, role, op, il))
     }
@@ -506,8 +513,8 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> + Debug {
         &self,
         cond: FlagCondition,
         class: Option<Self::FlagClass>,
-        il: &'a mut MutableLiftedILFunction<Self>,
-    ) -> Option<MutableLiftedILExpr<'a, Self, ValueExpr>> {
+        il: &'a mut MutableLiftedILFunction,
+    ) -> Option<MutableLiftedILExpr<'a, ValueExpr>> {
         Some(get_default_flag_cond_llil(self, cond, class, il))
     }
 
@@ -528,8 +535,8 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> + Debug {
     fn flag_group_llil<'a>(
         &self,
         _group: Self::FlagGroup,
-        _il: &'a mut MutableLiftedILFunction<Self>,
-    ) -> Option<MutableLiftedILExpr<'a, Self, ValueExpr>> {
+        _il: &'a mut MutableLiftedILFunction,
+    ) -> Option<MutableLiftedILExpr<'a, ValueExpr>> {
         None
     }
 
@@ -1505,7 +1512,7 @@ impl Architecture for CoreArchitecture {
         &self,
         data: &[u8],
         addr: u64,
-        il: &mut MutableLiftedILFunction<Self>,
+        il: &mut MutableLiftedILFunction,
     ) -> Option<(usize, bool)> {
         let mut size = data.len();
         let success = unsafe {
@@ -1530,8 +1537,8 @@ impl Architecture for CoreArchitecture {
         _flag: Self::Flag,
         _flag_write: Self::FlagWrite,
         _op: LowLevelILFlagWriteOp<Self::Register>,
-        _il: &'a mut MutableLiftedILFunction<Self>,
-    ) -> Option<MutableLiftedILExpr<'a, Self, ValueExpr>> {
+        _il: &'a mut MutableLiftedILFunction,
+    ) -> Option<MutableLiftedILExpr<'a, ValueExpr>> {
         None
     }
 
@@ -1567,16 +1574,16 @@ impl Architecture for CoreArchitecture {
         &self,
         _cond: FlagCondition,
         _class: Option<Self::FlagClass>,
-        _il: &'a mut MutableLiftedILFunction<Self>,
-    ) -> Option<MutableLiftedILExpr<'a, Self, ValueExpr>> {
+        _il: &'a mut MutableLiftedILFunction,
+    ) -> Option<MutableLiftedILExpr<'a, ValueExpr>> {
         None
     }
 
     fn flag_group_llil<'a>(
         &self,
         _group: Self::FlagGroup,
-        _il: &'a mut MutableLiftedILFunction<Self>,
-    ) -> Option<MutableLiftedILExpr<'a, Self, ValueExpr>> {
+        _il: &'a mut MutableLiftedILFunction,
+    ) -> Option<MutableLiftedILExpr<'a, ValueExpr>> {
         None
     }
 
@@ -2218,12 +2225,9 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let custom_arch_handle = CustomArchitectureHandle {
-            handle: ctxt as *mut A,
-        };
-
         let data = unsafe { std::slice::from_raw_parts(data, *len) };
-        let mut lifter = unsafe { MutableLiftedILFunction::from_raw(custom_arch_handle, il) };
+        let mut lifter =
+            unsafe { MutableLiftedILFunction::from_raw_with_arch(il, Some(*custom_arch.as_ref())) };
 
         match custom_arch.instruction_llil(data, addr, &mut lifter) {
             Some((res_len, res_value)) => {
@@ -2606,14 +2610,11 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let custom_arch_handle = CustomArchitectureHandle {
-            handle: ctxt as *mut A,
-        };
-
         let flag_write = custom_arch.flag_write_from_id(FlagWriteId(flag_write));
         let flag = custom_arch.flag_from_id(FlagId(flag));
         let operands = unsafe { std::slice::from_raw_parts(operands_raw, operand_count) };
-        let mut lifter = unsafe { MutableLiftedILFunction::from_raw(custom_arch_handle, il) };
+        let mut lifter =
+            unsafe { MutableLiftedILFunction::from_raw_with_arch(il, Some(*custom_arch.as_ref())) };
 
         if let (Some(flag_write), Some(flag)) = (flag_write, flag) {
             if let Some(op) = LowLevelILFlagWriteOp::from_op(custom_arch, size, op, operands) {
@@ -2659,13 +2660,10 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let custom_arch_handle = CustomArchitectureHandle {
-            handle: ctxt as *mut A,
-        };
-
         let class = custom_arch.flag_class_from_id(FlagClassId(class));
 
-        let mut lifter = unsafe { MutableLiftedILFunction::from_raw(custom_arch_handle, il) };
+        let mut lifter =
+            unsafe { MutableLiftedILFunction::from_raw_with_arch(il, Some(*custom_arch.as_ref())) };
         if let Some(expr) = custom_arch.flag_cond_llil(cond, class, &mut lifter) {
             // TODO verify that returned expr is a bool value
             return expr.index.0;
@@ -2683,11 +2681,8 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let custom_arch_handle = CustomArchitectureHandle {
-            handle: ctxt as *mut A,
-        };
-
-        let mut lifter = unsafe { MutableLiftedILFunction::from_raw(custom_arch_handle, il) };
+        let mut lifter =
+            unsafe { MutableLiftedILFunction::from_raw_with_arch(il, Some(*custom_arch.as_ref())) };
 
         if let Some(group) = custom_arch.flag_group_from_id(FlagGroupId(group)) {
             if let Some(expr) = custom_arch.flag_group_llil(group, &mut lifter) {

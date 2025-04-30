@@ -1,7 +1,7 @@
 use binaryninja::architecture;
 use binaryninja::architecture::{ImplicitRegisterExtend, RegisterId};
 
-use binaryninja::low_level_il::LowLevelILRegister;
+use binaryninja::low_level_il::LowLevelILRegisterKind;
 use std::borrow::Cow;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -134,8 +134,8 @@ impl architecture::RegisterInfo for Register {
     }
 }
 
-impl From<Register> for LowLevelILRegister<Register> {
+impl From<Register> for LowLevelILRegisterKind<Register> {
     fn from(register: Register) -> Self {
-        LowLevelILRegister::ArchReg(register)
+        LowLevelILRegisterKind::Arch(register)
     }
 }

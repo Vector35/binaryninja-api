@@ -19,7 +19,7 @@ use super::operation;
 use super::operation::Operation;
 use super::VisitorAction;
 use super::*;
-use crate::architecture::Architecture;
+use crate::architecture::CoreFlagWrite;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
@@ -47,42 +47,39 @@ impl Display for LowLevelExpressionIndex {
 }
 
 // TODO: Probably want to rename this with a LowLevelIL prefix to avoid collisions when we add handlers for other ILs
-pub trait ExpressionHandler<'func, A, M, F>
+pub trait ExpressionHandler<'func, M, F>
 where
-    A: Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    fn kind(&self) -> LowLevelILExpressionKind<'func, A, M, F>;
+    fn kind(&self) -> LowLevelILExpressionKind<'func, M, F>;
 
     fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
     where
-        T: FnMut(&LowLevelILExpression<'func, A, M, F, ValueExpr>) -> VisitorAction;
+        T: FnMut(&LowLevelILExpression<'func, M, F, ValueExpr>) -> VisitorAction;
 }
 
-pub struct LowLevelILExpression<'func, A, M, F, R>
+pub struct LowLevelILExpression<'func, M, F, R>
 where
-    A: 'func + Architecture,
     M: FunctionMutability,
     F: FunctionForm,
     R: ExpressionResultType,
 {
-    pub(crate) function: &'func LowLevelILFunction<A, M, F>,
+    pub(crate) function: &'func LowLevelILFunction<M, F>,
     pub index: LowLevelExpressionIndex,
 
     // tag the 'return' type of this expression
     pub(crate) _ty: PhantomData<R>,
 }
 
-impl<'func, A, M, F, R> LowLevelILExpression<'func, A, M, F, R>
+impl<'func, M, F, R> LowLevelILExpression<'func, M, F, R>
 where
-    A: 'func + Architecture,
     M: FunctionMutability,
     F: FunctionForm,
     R: ExpressionResultType,
 {
     pub(crate) fn new(
-        function: &'func LowLevelILFunction<A, M, F>,
+        function: &'func LowLevelILFunction<M, F>,
         index: LowLevelExpressionIndex,
     ) -> Self {
         // TODO: Validate expression here?
@@ -94,27 +91,25 @@ where
     }
 }
 
-impl<'func, A, M, F, R> fmt::Debug for LowLevelILExpression<'func, A, M, F, R>
+impl<'func, M, F, R> fmt::Debug for LowLevelILExpression<'func, M, F, R>
 where
-    A: 'func + Architecture,
     M: FunctionMutability,
     F: FunctionForm,
     R: ExpressionResultType,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
-        let t = unsafe { LowLevelILExpressionKind::from_raw(self.function, op) };
-        t.fmt(f)
+        // SAFETY: This is safe we are not exposing the expression kind to the caller.
+        let kind = unsafe { LowLevelILExpressionKind::from_raw(self.function, op) };
+        kind.fmt(f)
     }
 }
 
-impl<'func, A, M> ExpressionHandler<'func, A, M, SSA>
-    for LowLevelILExpression<'func, A, M, SSA, ValueExpr>
+impl<'func, M> ExpressionHandler<'func, M, SSA> for LowLevelILExpression<'func, M, SSA, ValueExpr>
 where
-    A: 'func + Architecture,
     M: FunctionMutability,
 {
-    fn kind(&self) -> LowLevelILExpressionKind<'func, A, M, SSA> {
+    fn kind(&self) -> LowLevelILExpressionKind<'func, M, SSA> {
         #[allow(unused_imports)]
         use binaryninjacore_sys::BNLowLevelILOperation::*;
         let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
@@ -128,7 +123,7 @@ where
 
     fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
     where
-        T: FnMut(&LowLevelILExpression<'func, A, M, SSA, ValueExpr>) -> VisitorAction,
+        T: FnMut(&LowLevelILExpression<'func, M, SSA, ValueExpr>) -> VisitorAction,
     {
         // Visit the current expression.
         match f(self) {
@@ -141,13 +136,12 @@ where
     }
 }
 
-impl<'func, A, M> ExpressionHandler<'func, A, M, NonSSA<LiftedNonSSA>>
-    for LowLevelILExpression<'func, A, M, NonSSA<LiftedNonSSA>, ValueExpr>
+impl<'func, M> ExpressionHandler<'func, M, NonSSA<LiftedNonSSA>>
+    for LowLevelILExpression<'func, M, NonSSA<LiftedNonSSA>, ValueExpr>
 where
-    A: 'func + Architecture,
     M: FunctionMutability,
 {
-    fn kind(&self) -> LowLevelILExpressionKind<'func, A, M, NonSSA<LiftedNonSSA>> {
+    fn kind(&self) -> LowLevelILExpressionKind<'func, M, NonSSA<LiftedNonSSA>> {
         #[allow(unused_imports)]
         use binaryninjacore_sys::BNLowLevelILOperation::*;
         let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
@@ -161,9 +155,7 @@ where
 
     fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
     where
-        T: FnMut(
-            &LowLevelILExpression<'func, A, M, NonSSA<LiftedNonSSA>, ValueExpr>,
-        ) -> VisitorAction,
+        T: FnMut(&LowLevelILExpression<'func, M, NonSSA<LiftedNonSSA>, ValueExpr>) -> VisitorAction,
     {
         // Visit the current expression.
         match f(self) {
@@ -176,13 +168,12 @@ where
     }
 }
 
-impl<'func, A, M> ExpressionHandler<'func, A, M, NonSSA<RegularNonSSA>>
-    for LowLevelILExpression<'func, A, M, NonSSA<RegularNonSSA>, ValueExpr>
+impl<'func, M> ExpressionHandler<'func, M, NonSSA<RegularNonSSA>>
+    for LowLevelILExpression<'func, M, NonSSA<RegularNonSSA>, ValueExpr>
 where
-    A: 'func + Architecture,
     M: FunctionMutability,
 {
-    fn kind(&self) -> LowLevelILExpressionKind<'func, A, M, NonSSA<RegularNonSSA>> {
+    fn kind(&self) -> LowLevelILExpressionKind<'func, M, NonSSA<RegularNonSSA>> {
         use binaryninjacore_sys::BNLowLevelILOperation::*;
         let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
         match op.operation {
@@ -197,7 +188,7 @@ where
     fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
     where
         T: FnMut(
-            &LowLevelILExpression<'func, A, M, NonSSA<RegularNonSSA>, ValueExpr>,
+            &LowLevelILExpression<'func, M, NonSSA<RegularNonSSA>, ValueExpr>,
         ) -> VisitorAction,
     {
         // Visit the current expression.
@@ -211,129 +202,126 @@ where
     }
 }
 
-impl<'func, A, F> LowLevelILExpression<'func, A, Finalized, F, ValueExpr>
+impl<'func, F> LowLevelILExpression<'func, Finalized, F, ValueExpr>
 where
-    A: 'func + Architecture,
     F: FunctionForm,
 {
     // TODO possible values
 }
 
 #[derive(Debug)]
-pub enum LowLevelILExpressionKind<'func, A, M, F>
+pub enum LowLevelILExpressionKind<'func, M, F>
 where
-    A: 'func + Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    Load(Operation<'func, A, M, F, operation::Load>),
-    Pop(Operation<'func, A, M, F, operation::Pop>),
-    Reg(Operation<'func, A, M, F, operation::Reg>),
-    RegSplit(Operation<'func, A, M, F, operation::RegSplit>),
-    Const(Operation<'func, A, M, F, operation::Const>),
-    ConstPtr(Operation<'func, A, M, F, operation::Const>),
-    Flag(Operation<'func, A, M, F, operation::Flag>),
-    FlagBit(Operation<'func, A, M, F, operation::FlagBit>),
-    ExternPtr(Operation<'func, A, M, F, operation::Extern>),
+    Load(Operation<'func, M, F, operation::Load>),
+    Pop(Operation<'func, M, F, operation::Pop>),
+    Reg(Operation<'func, M, F, operation::Reg>),
+    RegSplit(Operation<'func, M, F, operation::RegSplit>),
+    Const(Operation<'func, M, F, operation::Const>),
+    ConstPtr(Operation<'func, M, F, operation::Const>),
+    Flag(Operation<'func, M, F, operation::Flag>),
+    FlagBit(Operation<'func, M, F, operation::FlagBit>),
+    ExternPtr(Operation<'func, M, F, operation::Extern>),
 
-    RegStackPop(Operation<'func, A, M, F, operation::RegStackPop>),
+    RegStackPop(Operation<'func, M, F, operation::RegStackPop>),
 
-    Add(Operation<'func, A, M, F, operation::BinaryOp>),
-    Adc(Operation<'func, A, M, F, operation::BinaryOpCarry>),
-    Sub(Operation<'func, A, M, F, operation::BinaryOp>),
-    Sbb(Operation<'func, A, M, F, operation::BinaryOpCarry>),
-    And(Operation<'func, A, M, F, operation::BinaryOp>),
-    Or(Operation<'func, A, M, F, operation::BinaryOp>),
-    Xor(Operation<'func, A, M, F, operation::BinaryOp>),
-    Lsl(Operation<'func, A, M, F, operation::BinaryOp>),
-    Lsr(Operation<'func, A, M, F, operation::BinaryOp>),
-    Asr(Operation<'func, A, M, F, operation::BinaryOp>),
-    Rol(Operation<'func, A, M, F, operation::BinaryOp>),
-    Rlc(Operation<'func, A, M, F, operation::BinaryOpCarry>),
-    Ror(Operation<'func, A, M, F, operation::BinaryOp>),
-    Rrc(Operation<'func, A, M, F, operation::BinaryOpCarry>),
-    Mul(Operation<'func, A, M, F, operation::BinaryOp>),
+    Add(Operation<'func, M, F, operation::BinaryOp>),
+    Adc(Operation<'func, M, F, operation::BinaryOpCarry>),
+    Sub(Operation<'func, M, F, operation::BinaryOp>),
+    Sbb(Operation<'func, M, F, operation::BinaryOpCarry>),
+    And(Operation<'func, M, F, operation::BinaryOp>),
+    Or(Operation<'func, M, F, operation::BinaryOp>),
+    Xor(Operation<'func, M, F, operation::BinaryOp>),
+    Lsl(Operation<'func, M, F, operation::BinaryOp>),
+    Lsr(Operation<'func, M, F, operation::BinaryOp>),
+    Asr(Operation<'func, M, F, operation::BinaryOp>),
+    Rol(Operation<'func, M, F, operation::BinaryOp>),
+    Rlc(Operation<'func, M, F, operation::BinaryOpCarry>),
+    Ror(Operation<'func, M, F, operation::BinaryOp>),
+    Rrc(Operation<'func, M, F, operation::BinaryOpCarry>),
+    Mul(Operation<'func, M, F, operation::BinaryOp>),
 
-    MulsDp(Operation<'func, A, M, F, operation::BinaryOp>),
-    MuluDp(Operation<'func, A, M, F, operation::BinaryOp>),
+    MulsDp(Operation<'func, M, F, operation::BinaryOp>),
+    MuluDp(Operation<'func, M, F, operation::BinaryOp>),
 
-    Divu(Operation<'func, A, M, F, operation::BinaryOp>),
-    Divs(Operation<'func, A, M, F, operation::BinaryOp>),
+    Divu(Operation<'func, M, F, operation::BinaryOp>),
+    Divs(Operation<'func, M, F, operation::BinaryOp>),
 
-    DivuDp(Operation<'func, A, M, F, operation::DoublePrecDivOp>),
-    DivsDp(Operation<'func, A, M, F, operation::DoublePrecDivOp>),
+    DivuDp(Operation<'func, M, F, operation::DoublePrecDivOp>),
+    DivsDp(Operation<'func, M, F, operation::DoublePrecDivOp>),
 
-    Modu(Operation<'func, A, M, F, operation::BinaryOp>),
-    Mods(Operation<'func, A, M, F, operation::BinaryOp>),
+    Modu(Operation<'func, M, F, operation::BinaryOp>),
+    Mods(Operation<'func, M, F, operation::BinaryOp>),
 
-    ModuDp(Operation<'func, A, M, F, operation::DoublePrecDivOp>),
-    ModsDp(Operation<'func, A, M, F, operation::DoublePrecDivOp>),
+    ModuDp(Operation<'func, M, F, operation::DoublePrecDivOp>),
+    ModsDp(Operation<'func, M, F, operation::DoublePrecDivOp>),
 
-    Neg(Operation<'func, A, M, F, operation::UnaryOp>),
-    Not(Operation<'func, A, M, F, operation::UnaryOp>),
-    Sx(Operation<'func, A, M, F, operation::UnaryOp>),
-    Zx(Operation<'func, A, M, F, operation::UnaryOp>),
-    LowPart(Operation<'func, A, M, F, operation::UnaryOp>),
+    Neg(Operation<'func, M, F, operation::UnaryOp>),
+    Not(Operation<'func, M, F, operation::UnaryOp>),
+    Sx(Operation<'func, M, F, operation::UnaryOp>),
+    Zx(Operation<'func, M, F, operation::UnaryOp>),
+    LowPart(Operation<'func, M, F, operation::UnaryOp>),
 
     // Valid only in Lifted IL
-    FlagCond(Operation<'func, A, M, NonSSA<LiftedNonSSA>, operation::FlagCond>),
+    FlagCond(Operation<'func, M, NonSSA<LiftedNonSSA>, operation::FlagCond>),
     // Valid only in Lifted IL
-    FlagGroup(Operation<'func, A, M, NonSSA<LiftedNonSSA>, operation::FlagGroup>),
+    FlagGroup(Operation<'func, M, NonSSA<LiftedNonSSA>, operation::FlagGroup>),
 
-    CmpE(Operation<'func, A, M, F, operation::Condition>),
-    CmpNe(Operation<'func, A, M, F, operation::Condition>),
-    CmpSlt(Operation<'func, A, M, F, operation::Condition>),
-    CmpUlt(Operation<'func, A, M, F, operation::Condition>),
-    CmpSle(Operation<'func, A, M, F, operation::Condition>),
-    CmpUle(Operation<'func, A, M, F, operation::Condition>),
-    CmpSge(Operation<'func, A, M, F, operation::Condition>),
-    CmpUge(Operation<'func, A, M, F, operation::Condition>),
-    CmpSgt(Operation<'func, A, M, F, operation::Condition>),
-    CmpUgt(Operation<'func, A, M, F, operation::Condition>),
+    CmpE(Operation<'func, M, F, operation::Condition>),
+    CmpNe(Operation<'func, M, F, operation::Condition>),
+    CmpSlt(Operation<'func, M, F, operation::Condition>),
+    CmpUlt(Operation<'func, M, F, operation::Condition>),
+    CmpSle(Operation<'func, M, F, operation::Condition>),
+    CmpUle(Operation<'func, M, F, operation::Condition>),
+    CmpSge(Operation<'func, M, F, operation::Condition>),
+    CmpUge(Operation<'func, M, F, operation::Condition>),
+    CmpSgt(Operation<'func, M, F, operation::Condition>),
+    CmpUgt(Operation<'func, M, F, operation::Condition>),
 
-    //TestBit(Operation<'func, A, M, F, operation::TestBit>), // TODO
-    BoolToInt(Operation<'func, A, M, F, operation::UnaryOp>),
+    //TestBit(Operation<'func, M, F, operation::TestBit>), // TODO
+    BoolToInt(Operation<'func, M, F, operation::UnaryOp>),
 
-    Fadd(Operation<'func, A, M, F, operation::BinaryOp>),
-    Fsub(Operation<'func, A, M, F, operation::BinaryOp>),
-    Fmul(Operation<'func, A, M, F, operation::BinaryOp>),
-    Fdiv(Operation<'func, A, M, F, operation::BinaryOp>),
-    Fsqrt(Operation<'func, A, M, F, operation::UnaryOp>),
-    Fneg(Operation<'func, A, M, F, operation::UnaryOp>),
-    Fabs(Operation<'func, A, M, F, operation::UnaryOp>),
-    FloatToInt(Operation<'func, A, M, F, operation::UnaryOp>),
-    IntToFloat(Operation<'func, A, M, F, operation::UnaryOp>),
-    FloatConv(Operation<'func, A, M, F, operation::UnaryOp>),
-    RoundToInt(Operation<'func, A, M, F, operation::UnaryOp>),
-    Floor(Operation<'func, A, M, F, operation::UnaryOp>),
-    Ceil(Operation<'func, A, M, F, operation::UnaryOp>),
-    Ftrunc(Operation<'func, A, M, F, operation::UnaryOp>),
+    Fadd(Operation<'func, M, F, operation::BinaryOp>),
+    Fsub(Operation<'func, M, F, operation::BinaryOp>),
+    Fmul(Operation<'func, M, F, operation::BinaryOp>),
+    Fdiv(Operation<'func, M, F, operation::BinaryOp>),
+    Fsqrt(Operation<'func, M, F, operation::UnaryOp>),
+    Fneg(Operation<'func, M, F, operation::UnaryOp>),
+    Fabs(Operation<'func, M, F, operation::UnaryOp>),
+    FloatToInt(Operation<'func, M, F, operation::UnaryOp>),
+    IntToFloat(Operation<'func, M, F, operation::UnaryOp>),
+    FloatConv(Operation<'func, M, F, operation::UnaryOp>),
+    RoundToInt(Operation<'func, M, F, operation::UnaryOp>),
+    Floor(Operation<'func, M, F, operation::UnaryOp>),
+    Ceil(Operation<'func, M, F, operation::UnaryOp>),
+    Ftrunc(Operation<'func, M, F, operation::UnaryOp>),
 
-    FcmpE(Operation<'func, A, M, F, operation::Condition>),
-    FcmpNE(Operation<'func, A, M, F, operation::Condition>),
-    FcmpLT(Operation<'func, A, M, F, operation::Condition>),
-    FcmpLE(Operation<'func, A, M, F, operation::Condition>),
-    FcmpGE(Operation<'func, A, M, F, operation::Condition>),
-    FcmpGT(Operation<'func, A, M, F, operation::Condition>),
-    FcmpO(Operation<'func, A, M, F, operation::Condition>),
-    FcmpUO(Operation<'func, A, M, F, operation::Condition>),
+    FcmpE(Operation<'func, M, F, operation::Condition>),
+    FcmpNE(Operation<'func, M, F, operation::Condition>),
+    FcmpLT(Operation<'func, M, F, operation::Condition>),
+    FcmpLE(Operation<'func, M, F, operation::Condition>),
+    FcmpGE(Operation<'func, M, F, operation::Condition>),
+    FcmpGT(Operation<'func, M, F, operation::Condition>),
+    FcmpO(Operation<'func, M, F, operation::Condition>),
+    FcmpUO(Operation<'func, M, F, operation::Condition>),
 
     // TODO ADD_OVERFLOW
-    Unimpl(Operation<'func, A, M, F, operation::NoArgs>),
-    UnimplMem(Operation<'func, A, M, F, operation::UnimplMem>),
+    Unimpl(Operation<'func, M, F, operation::NoArgs>),
+    UnimplMem(Operation<'func, M, F, operation::UnimplMem>),
 
-    Undef(Operation<'func, A, M, F, operation::NoArgs>),
+    Undef(Operation<'func, M, F, operation::NoArgs>),
 }
 
-impl<'func, A, M, F> LowLevelILExpressionKind<'func, A, M, F>
+impl<'func, M, F> LowLevelILExpressionKind<'func, M, F>
 where
-    A: 'func + Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
     // TODO: Document what "unchecked" means and how to consume this safely.
     pub(crate) unsafe fn from_raw(
-        function: &'func LowLevelILFunction<A, M, F>,
+        function: &'func LowLevelILFunction<M, F>,
         op: BNLowLevelILInstruction,
     ) -> Self {
         use binaryninjacore_sys::BNLowLevelILOperation::*;
@@ -472,7 +460,7 @@ where
             }
 
             _ => Some(self.raw_struct().size),
-            //TestBit(Operation<'func, A, M, F, operation::TestBit>), // TODO
+            //TestBit(Operation<'func, M, F, operation::TestBit>), // TODO
         }
     }
 
@@ -492,7 +480,7 @@ where
         }
     }
 
-    pub fn as_cmp_op(&self) -> Option<&Operation<'func, A, M, F, operation::Condition>> {
+    pub fn as_cmp_op(&self) -> Option<&Operation<'func, M, F, operation::Condition>> {
         use self::LowLevelILExpressionKind::*;
 
         match *self {
@@ -504,7 +492,7 @@ where
         }
     }
 
-    pub fn as_binary_op(&self) -> Option<&Operation<'func, A, M, F, operation::BinaryOp>> {
+    pub fn as_binary_op(&self) -> Option<&Operation<'func, M, F, operation::BinaryOp>> {
         use self::LowLevelILExpressionKind::*;
 
         match *self {
@@ -516,9 +504,7 @@ where
         }
     }
 
-    pub fn as_binary_op_carry(
-        &self,
-    ) -> Option<&Operation<'func, A, M, F, operation::BinaryOpCarry>> {
+    pub fn as_binary_op_carry(&self) -> Option<&Operation<'func, M, F, operation::BinaryOpCarry>> {
         use self::LowLevelILExpressionKind::*;
 
         match *self {
@@ -529,7 +515,7 @@ where
 
     pub fn as_double_prec_div_op(
         &self,
-    ) -> Option<&Operation<'func, A, M, F, operation::DoublePrecDivOp>> {
+    ) -> Option<&Operation<'func, M, F, operation::DoublePrecDivOp>> {
         use self::LowLevelILExpressionKind::*;
 
         match *self {
@@ -538,7 +524,7 @@ where
         }
     }
 
-    pub fn as_unary_op(&self) -> Option<&Operation<'func, A, M, F, operation::UnaryOp>> {
+    pub fn as_unary_op(&self) -> Option<&Operation<'func, M, F, operation::UnaryOp>> {
         use self::LowLevelILExpressionKind::*;
 
         match *self {
@@ -552,7 +538,7 @@ where
 
     pub fn visit_sub_expressions<T>(&self, mut visitor: T) -> VisitorAction
     where
-        T: FnMut(LowLevelILExpression<'func, A, M, F, ValueExpr>) -> VisitorAction,
+        T: FnMut(LowLevelILExpression<'func, M, F, ValueExpr>) -> VisitorAction,
     {
         use LowLevelILExpressionKind::*;
 
@@ -659,16 +645,13 @@ where
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => &op.op,
 
             UnimplMem(ref op) => &op.op,
-            //TestBit(Operation<'func, A, M, F, operation::TestBit>), // TODO
+            //TestBit(Operation<'func, M, F, operation::TestBit>), // TODO
         }
     }
 }
 
-impl<'func, A> LowLevelILExpressionKind<'func, A, Mutable, NonSSA<LiftedNonSSA>>
-where
-    A: 'func + Architecture,
-{
-    pub fn flag_write(&self) -> Option<A::FlagWrite> {
+impl<'func> LowLevelILExpressionKind<'func, Mutable, NonSSA<LiftedNonSSA>> {
+    pub fn flag_write(&self) -> Option<CoreFlagWrite> {
         use self::LowLevelILExpressionKind::*;
 
         match *self {
@@ -720,7 +703,7 @@ where
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => op.flag_write(),
 
             UnimplMem(ref op) => op.flag_write(),
-            //TestBit(Operation<'func, A, M, F, operation::TestBit>), // TODO
+            //TestBit(Operation<'func, M, F, operation::TestBit>), // TODO
         }
     }
 }

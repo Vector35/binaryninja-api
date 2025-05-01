@@ -358,6 +358,10 @@ namespace BinaryNinja {
 
 		bool operator<(const Ref<T>& obj) const { return T::GetObject(m_obj) < T::GetObject(obj.m_obj); }
 
+		bool operator>(const T* obj) const { return T::GetObject(m_obj) > T::GetObject(obj); }
+
+		bool operator>(const Ref<T>& obj) const { return T::GetObject(m_obj) > T::GetObject(obj.m_obj); }
+
 		T* GetPtr() const { return m_obj; }
 	};
 
@@ -10898,17 +10902,9 @@ namespace BinaryNinja {
 		}
 		bool operator<(const ArchAndAddr& a) const
 		{
-			/*
-			// TODO: revisit why this code doesn't seem to be using the Ref<T> operators correctly and causes
-			// crashes in some cases
 			if (arch < a.arch)
 				return true;
 			if (arch > a.arch)
-				return false;
-			*/
-			if (arch->GetObject() < a.arch->GetObject())
-				return true;
-			if (arch->GetObject() > a.arch->GetObject())
 				return false;
 			return address < a.address;
 		}

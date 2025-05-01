@@ -169,7 +169,7 @@ LowLevelILVerifier::LowLevelILVerifier(Ref<LowLevelILFunction> function): m_il(f
 	{                                                                                     \
 		if (!(condition))                                                                 \
 		{                                                                                 \
-			m_logger->LogErrorF("{:?} {} " message, expr, #condition, ## __VA_ARGS__ );   \
+			m_logger->LogErrorF("{:#x} {:?} {} " message, m_il->GetFunction()->GetStart(), expr, #condition, ## __VA_ARGS__ );   \
 			result = false;                                                               \
 		}                                                                                 \
 	}                                                                                     \
@@ -180,12 +180,47 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 	bool result = true;
 	switch (expr.operation)
 	{
+	case LLIL_NOP:
+		break;
+	case LLIL_LOAD:
+	{
+		if (requiredSize.has_value())
+		{
+			// TODO: There is a bug in our x86 lifter that stems from having incomplete sub-register support
+			// As per discussion with rss, this is actually the "best" behavior in certain circumstances,
+			// namely x86's vmulss which operates on the low 32 bits of a 256 bit register and does
+			// nightmare semantics on the upper 96 bits + 128 bits
+
+			if (expr.size < *requiredSize)
+			{
+				m_logger->LogDebugF("{:?} loading only {:#x} bytes out of {:#x} byte memory", expr, expr.size, *requiredSize);
+			}
+			else
+			{
+				CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
+			}
+		}
+		CHECK(expr.size != 0, "op should have a size");
+		// TODO: Is this correct for eg arm64_32
+		result &= CheckExprSize(expr.GetSourceExpr<LLIL_LOAD>(), m_arch->GetAddressSize());
+		break;
+	}
+	case LLIL_POP:
+	{
+		if (requiredSize.has_value())
+		{
+			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
+		}
+		CHECK(expr.size != 0, "op should have a size");
+		break;
+	}
 	case LLIL_REG:
 	{
 		if (requiredSize.has_value())
 		{
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
+		CHECK(expr.size != 0, "op should have a size");
 
 		auto reg = expr.GetSourceRegister<LLIL_REG>();
 		if (!LLIL_REG_IS_TEMP(reg))
@@ -213,6 +248,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		{
 			CHECK(expr.size * 2 == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
+		CHECK(expr.size != 0, "op should have a size");
 
 		auto hi = expr.GetHighRegister<LLIL_REG_SPLIT>();
 		if (!LLIL_REG_IS_TEMP(hi))
@@ -228,6 +264,57 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		}
 		break;
 	}
+	case LLIL_REG_STACK_REL:
+	{
+		if (requiredSize.has_value())
+		{
+			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
+		}
+		CHECK(expr.size != 0, "op should have a size");
+
+		auto regStack = expr.GetSourceRegisterStack<LLIL_REG_STACK_REL>();
+		auto info = m_arch->GetRegisterStackInfo(regStack);
+		auto firstReg = info.firstStorageReg;
+		auto firstInfo = m_arch->GetRegisterInfo(firstReg);
+		CHECK(expr.size == firstInfo.size, "attempting to load {:#x} bytes out of a {:#x} byte register stack", expr.size, firstInfo.size);
+		break;
+	}
+	case LLIL_REG_STACK_POP:
+	{
+		if (requiredSize.has_value())
+		{
+			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
+		}
+		CHECK(expr.size != 0, "op should have a size");
+
+		auto regStack = expr.GetSourceRegisterStack<LLIL_REG_STACK_POP>();
+		auto info = m_arch->GetRegisterStackInfo(regStack);
+		auto firstReg = info.firstStorageReg;
+		auto firstInfo = m_arch->GetRegisterInfo(firstReg);
+		CHECK(expr.size == firstInfo.size, "attempting to load {:#x} bytes out of a {:#x} byte register stack", expr.size, firstInfo.size);
+		break;
+	}
+	case LLIL_CONST:
+	{
+		if (requiredSize.has_value())
+		{
+			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
+		}
+		// LLIL_CONST explicitly can be a boolean (0 size)
+		break;
+	}
+	case LLIL_CONST_PTR:
+	case LLIL_EXTERN_PTR:
+	case LLIL_FLOAT_CONST:
+	{
+		if (requiredSize.has_value())
+		{
+			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
+		}
+		// But these ones cannot be a boolean
+		CHECK(expr.size != 0, "op should have a size");
+		break;
+	}
 	case LLIL_FLAG:
 	{
 		if (requiredSize.has_value() && *requiredSize != 0)
@@ -237,37 +324,25 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		CHECK(expr.size == 0, "op should be boolean (0 size) but is {:#x} size", expr.size);
 		break;
 	}
-	case LLIL_LOAD:
-	{
-		if (requiredSize.has_value())
-		{
-			// TODO: There is a bug in our x86 lifter that stems from having incomplete sub-register support
-			// As per discussion with rss, this is actually the "best" behavior in certain circumstances,
-			// namely x86's vmulss which operates on the low 32 bits of a 256 bit register and does
-			// nightmare semantics on the upper 96 bits + 128 bits
-
-			if (expr.size < *requiredSize)
-			{
-				m_logger->LogDebugF("{:?} loading only {:#x} bytes out of {:#x} byte memory", expr, expr.size, *requiredSize);
-			}
-			else
-			{
-				CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
-			}
-		}
-		// TODO: Is this correct for eg arm64_32
-		result &= CheckExprSize(expr.GetSourceExpr<LLIL_LOAD>(), m_arch->GetAddressSize());
-		break;
-	}
-	case LLIL_POP:
-	case LLIL_CONST:
-	case LLIL_CONST_PTR:
-	case LLIL_EXTERN_PTR:
+	case LLIL_FLAG_BIT:
 	{
 		if (requiredSize.has_value())
 		{
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
+		CHECK(expr.size != 0, "op should have a size");
+		break;
+	}
+	case LLIL_TEST_BIT:
+	{
+		// Like LLIL_CMP_xx, LLIL_TEST_BIT's size is the size of its inputs, producing a 0-size value
+		if (requiredSize.has_value() && *requiredSize != 0)
+		{
+			CHECK(expr.size == *requiredSize, "op producing boolean (0 size) value where {:#x} bytes are expected", *requiredSize);
+		}
+		CHECK(expr.size != 0, "op should have a size");
+		result &= CheckExprSize(expr.GetLeftExpr<LLIL_TEST_BIT>(), expr.size);
+		result &= CheckExprSize(expr.GetRightExpr<LLIL_TEST_BIT>(), std::nullopt);
 		break;
 	}
 	case LLIL_CMP_E:
@@ -293,7 +368,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		{
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where boolean (0 size) is expected", *requiredSize);
 		}
-		CHECK(expr.size != 0, "op should not be comparing as zero width");
+		CHECK(expr.size != 0, "op should have a size");
 		result &= CheckExprSize(expr.GetLeftExpr(), expr.size);
 		result &= CheckExprSize(expr.GetRightExpr(), expr.size);
 		break;
@@ -305,6 +380,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		{
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
+		CHECK(expr.size != 0, "op should have a size");
 		result &= CheckExprSize(expr.GetLeftExpr(), expr.size);
 		result &= CheckExprSize(expr.GetRightExpr(), expr.size);
 		result &= CheckExprSize(expr.GetCarryExpr(), 0);
@@ -317,6 +393,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		{
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
+		CHECK(expr.size != 0, "op should have a size");
 
 		// rotate amounts just need to be >= 1 byte
 		CHECK(expr.GetRightExpr().size != 0, "can't rotate by a 0 byte expression");
@@ -340,11 +417,13 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 	case LLIL_FSUB:
 	case LLIL_FMUL:
 	case LLIL_FDIV:
+	case LLIL_ADD_OVERFLOW: // overflowed result of an add, args are same as add and result is same size
 	{
 		if (requiredSize.has_value())
 		{
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
+		CHECK(expr.size != 0, "op should have a size");
 		result &= CheckExprSize(expr.GetLeftExpr(), expr.size);
 		result &= CheckExprSize(expr.GetRightExpr(), expr.size);
 		break;
@@ -359,6 +438,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		{
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
+		CHECK(expr.size != 0, "op should have a size");
 
 		// rotate amounts just need to be >= 1 byte
 		CHECK(expr.GetRightExpr().size != 0, "can't rotate by a 0 byte expression");
@@ -374,6 +454,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		{
 			CHECK(expr.size * 2 == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size * 2, *requiredSize);
 		}
+		CHECK(expr.size != 0, "op should have a size");
 		result &= CheckExprSize(expr.GetLeftExpr(), expr.size);
 		result &= CheckExprSize(expr.GetRightExpr(), expr.size);
 		break;
@@ -387,6 +468,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		{
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
+		CHECK(expr.size != 0, "op should have a size");
 		result &= CheckExprSize(expr.GetLeftExpr(), expr.size * 2);
 		result &= CheckExprSize(expr.GetRightExpr(), expr.size);
 		break;
@@ -396,11 +478,16 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 	case LLIL_FSQRT:
 	case LLIL_FNEG:
 	case LLIL_FABS:
+	case LLIL_ROUND_TO_INT:
+	case LLIL_FLOOR:
+	case LLIL_CEIL:
+	case LLIL_FTRUNC:
 	{
 		if (requiredSize.has_value())
 		{
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
+		CHECK(expr.size != 0, "op should have a size");
 		result &= CheckExprSize(expr.GetSourceExpr(), expr.size);
 		break;
 	}
@@ -411,9 +498,17 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		{
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
+		CHECK(expr.size != 0, "op should have a size");
 
 		size_t srcSize = expr.GetSourceExpr().size;
-		CHECK(srcSize < expr.size, "expanding op to {:#x} bytes is invalid; source is already {:#x} bytes", expr.size, srcSize);
+		if (srcSize == expr.size)
+		{
+			m_logger->LogDebugF("op {:?} is already {:#x} bytes", expr, expr.size);
+		}
+		else
+		{
+			CHECK(srcSize < expr.size, "expanding op to {:#x} bytes is invalid; source is already {:#x} bytes", expr.size, srcSize);
+		}
 
 		result &= CheckExprSize(expr.GetSourceExpr(), std::nullopt);
 		break;
@@ -424,6 +519,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		{
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
+		CHECK(expr.size != 0, "op should have a size");
 
 		size_t srcSize = expr.GetSourceExpr().size;
 		CHECK(srcSize > expr.size, "truncating op to {:#x} bytes is invalid; source is already {:#x} bytes", expr.size, srcSize);
@@ -437,10 +533,38 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		{
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
+		CHECK(expr.size != 0, "op should have a size");
 
 		result &= CheckExprSize(expr.GetSourceExpr(), 0);
 		break;
 	}
+	case LLIL_FLOAT_TO_INT:
+	case LLIL_INT_TO_FLOAT:
+	{
+		if (requiredSize.has_value())
+		{
+			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
+		}
+		CHECK(expr.size != 0, "op should have a size");
+
+		result &= CheckExprSize(expr.GetSourceExpr(), expr.size);
+		break;
+	}
+	case LLIL_FLOAT_CONV:
+	{
+		if (requiredSize.has_value())
+		{
+			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
+		}
+		CHECK(expr.size != 0, "op should have a size");
+		// Expr size is result size, input size is anything
+		result &= CheckExprSize(expr.GetSourceExpr(), std::nullopt);
+		break;
+	}
+	case LLIL_UNDEF:
+		break;
+	case LLIL_UNIMPL:
+		break;
 	case LLIL_UNIMPL_MEM:
 	{
 		if (requiredSize.has_value())
@@ -467,7 +591,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 	{                                                                                     \
 		if (!(condition))                                                                 \
 		{                                                                                 \
-			m_logger->LogErrorF("{:?} {} " message, instr, #condition, ## __VA_ARGS__ );  \
+			m_logger->LogErrorF("{:#x} {:?} {} " message, m_il->GetFunction()->GetStart(), instr, #condition, ## __VA_ARGS__ );  \
 			result = false;                                                               \
 		}                                                                                 \
 	}                                                                                     \
@@ -495,11 +619,11 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 			// nightmare semantics on the upper 96 bits + 128 bits
 			if (info.size > instr.size)
 			{
-				m_logger->LogDebugF("{:?} setting {} byte register {} to {} byte value", instr, info.size, m_arch->GetRegisterName(reg), instr.size);
+				m_logger->LogDebugF("{:?} setting {:#x} byte register {} to {:#x} byte value", instr, info.size, m_arch->GetRegisterName(reg), instr.size);
 			}
 			else
 			{
-				CHECK(info.size == instr.size, "setting {} byte register {} to {} byte value", info.size, m_arch->GetRegisterName(reg), instr.size);
+				CHECK(info.size == instr.size, "setting {:#x} byte register {} to {:#x} byte value", info.size, m_arch->GetRegisterName(reg), instr.size);
 			}
 		}
 
@@ -513,13 +637,13 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		if (!LLIL_REG_IS_TEMP(hi))
 		{
 			auto info = m_arch->GetRegisterInfo(hi);
-			CHECK(info.size == instr.size, "setting {} byte hi register {} to {} byte value", info.size, m_arch->GetRegisterName(hi), instr.size);
+			CHECK(info.size == instr.size, "setting {:#x} byte hi register {} to {:#x} byte value", info.size, m_arch->GetRegisterName(hi), instr.size);
 		}
 		auto lo = instr.GetHighRegister<LLIL_SET_REG_SPLIT>();
 		if (!LLIL_REG_IS_TEMP(lo))
 		{
 			auto info = m_arch->GetRegisterInfo(lo);
-			CHECK(info.size == instr.size, "setting {} byte lo register {} to {} byte value", info.size, m_arch->GetRegisterName(lo), instr.size);
+			CHECK(info.size == instr.size, "setting {:#x} byte lo register {} to {:#x} byte value", info.size, m_arch->GetRegisterName(lo), instr.size);
 		}
 
 		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG_SPLIT>(), instr.size * 2);
@@ -532,20 +656,32 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		break;
 	}
 	case LLIL_SET_REG_STACK_REL:
-		// todo
-		m_logger->LogWarnF("todo: {:?}", instr);
+	{
+		auto regStack = instr.GetDestRegisterStack<LLIL_SET_REG_STACK_REL>();
+		auto info = m_arch->GetRegisterStackInfo(regStack);
+		auto firstReg = info.firstStorageReg;
+		auto firstInfo = m_arch->GetRegisterInfo(firstReg);
+		CHECK(firstInfo.size == instr.size, "setting {:#x} byte register stack {} with {:#x} byte value", firstInfo.size, m_arch->GetRegisterStackName(regStack), instr.size);
+
+		// TODO: Check relative offset in stack?
+		result &= CheckExprSize(instr.GetDestExpr<LLIL_SET_REG_STACK_REL>(), std::nullopt);
+		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG_STACK_REL>(), instr.size);
 		break;
+	}
 	case LLIL_REG_STACK_PUSH:
-		// todo
-		m_logger->LogWarnF("todo: {:?}", instr);
+	{
+		auto regStack = instr.GetDestRegisterStack<LLIL_REG_STACK_PUSH>();
+		auto info = m_arch->GetRegisterStackInfo(regStack);
+		auto firstReg = info.firstStorageReg;
+		auto firstInfo = m_arch->GetRegisterInfo(firstReg);
+		CHECK(firstInfo.size == instr.size, "pushing {:#x} byte register stack {} with {:#x} byte value", firstInfo.size, m_arch->GetRegisterStackName(regStack), instr.size);
+
+		result &= CheckExprSize(instr.GetSourceExpr<LLIL_REG_STACK_PUSH>(), instr.size);
 		break;
+	}
 	case LLIL_ASSERT:
-		// todo
-		m_logger->LogWarnF("todo: {:?}", instr);
 		break;
 	case LLIL_FORCE_VER:
-		// todo
-		m_logger->LogWarnF("todo: {:?}", instr);
 		break;
 	case LLIL_STORE:
 	{
@@ -561,12 +697,10 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		result &= CheckExprSize(instr.GetSourceExpr<LLIL_PUSH>(), instr.size);
 		break;
 	case LLIL_REG_STACK_FREE_REG:
-		// todo
-		m_logger->LogWarnF("todo: {:?}", instr);
 		break;
 	case LLIL_REG_STACK_FREE_REL:
-		// todo
-		m_logger->LogWarnF("todo: {:?}", instr);
+		// TODO: Check relative offset in stack?
+		result &= CheckExprSize(instr.GetDestExpr<LLIL_REG_STACK_FREE_REL>(), std::nullopt);
 		break;
 	case LLIL_JUMP:
 		result &= CheckExprSize(instr.GetDestExpr<LLIL_JUMP>(), std::nullopt);

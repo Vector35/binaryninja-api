@@ -787,12 +787,25 @@ bool LowLevelILVerifier::Verify()
 	/*
 		Invariants:
 		-[ ] All blocks either branch to existing blocks or terminate
+		-[x] No jumping to entry block
 		-[x] Sizes of expressions are consistent
 		-[x] Base level instructions are of a limited subset of operations (setreg, call, etc)
 		-[x] Child expressions are of a limited subset of operations (eg NOT goto)
 		-[ ] Expression parameters are in valid range
 		-[x] Each expression has as most 1 parent
 		-[ ] Expr address aligns with instruction
+		-[x] Nothing in the flags attr except on lifted IL
+		-[ ] JUMP_TO has unique targets
+		-[ ] Lifted IL: not more than 1 pop per tree
+		-[ ] Lifted IL: no conflicting flag writes in the same tree (dont have two subs in same instr)
+		-[ ] (not possible through API) GetFlagWriteLowLevelIL when it resolves a flag calls the arch to get the value for a flag and that expr must not set flags
+
+		(low priority)
+		-[ ] suspiciously long expr tree
+		-[ ] SSA should not version a subregister (no REG_SSA with subreg)
+
+		(mlil)
+		all register parameters to a call need to be in the llil ssa call param list
 	 */
 
 	if (!m_il->GetFunction())
@@ -807,6 +820,43 @@ bool LowLevelILVerifier::Verify()
 	}
 
 	bool result = true;
+
+	// Check block layout
+	auto entryBlock = m_il->GetBasicBlockForInstruction(0);
+	if (!entryBlock)
+	{
+		m_logger->LogWarnF("no entry block for function");
+		result = false;
+	}
+	for (auto& bb: m_il->GetBasicBlocks())
+	{
+		for (auto& outgoing: bb->GetOutgoingEdges())
+		{
+			// TODO: This is currently valid but we want this to eventually be lifted as a tailcall
+			if (outgoing.target == entryBlock)
+			{
+				m_logger->LogDebugF("block {:#x} jumps to entry block", bb->GetStart());
+//				result = false;
+			}
+		}
+	}
+
+	// Check exprs don't set flags
+	for (auto& bb: m_il->GetBasicBlocks())
+	{
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
+		{
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			instr.VisitExprs([&](const LowLevelILInstruction& expr) {
+				if (expr.flags != 0)
+				{
+					LogErrorF("Found flags set by LLIL expression (should only be set on Lifted IL): {:?}", expr);
+					result = false;
+				}
+				return true;
+			});
+		}
+	}
 
 	// Check expr sizes
 	for (auto& bb: m_il->GetBasicBlocks())
@@ -824,8 +874,6 @@ bool LowLevelILVerifier::Verify()
 		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex ++)
 		{
 			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
-			result &= CheckInstrSize(instr);
-
 			instr.VisitExprs([&](const LowLevelILInstruction& expr) {
 				if (auto found = g_instructionValidity.find(expr.operation); found != g_instructionValidity.end())
 				{
@@ -833,7 +881,7 @@ bool LowLevelILVerifier::Verify()
 					if ((found->second & ValidInNonSSA) == 0)
 					{
 						result = false;
-						m_logger->LogWarnF("Instruction {:?} is not valid in non-ssa form", expr);
+						m_logger->LogErrorF("Instruction {:?} is not valid in non-ssa form", expr);
 					}
 					if (expr.exprIndex == instr.exprIndex)
 					{
@@ -852,14 +900,14 @@ bool LowLevelILVerifier::Verify()
 						if ((found->second & ValidAsChild) == 0)
 						{
 							result = false;
-							m_logger->LogWarnF("Instruction {:?} is not valid as child instruction", expr);
+							m_logger->LogErrorF("Instruction {:?} is not valid as child instruction", expr);
 						}
 					}
 				}
 				else
 				{
 					result = false;
-					m_logger->LogWarnF("Unknown instruction operation {:?}", expr);
+					m_logger->LogErrorF("Unknown instruction operation {:?}", expr);
 				}
 				return true;
 			});

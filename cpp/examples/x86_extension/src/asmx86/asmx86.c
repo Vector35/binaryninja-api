@@ -1,0 +1,2741 @@
+// Copyright (c) 2006-2015, Rusty Wagner
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without modification, are permitted provided that
+// the following conditions are met:
+//
+//    * Redistributions of source code must retain the above copyright notice, this list of conditions and the
+//      following disclaimer.
+//    * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and
+//      the following disclaimer in the documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+// PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+#include <stddef.h>
+#include "asmx86.h"
+
+#define DEC_FLAG_LOCK                   0x0020
+#define DEC_FLAG_REP                    0x0040
+#define DEC_FLAG_REP_COND               0x0080
+#define DEC_FLAG_BYTE                   0x0100
+#define DEC_FLAG_FLIP_OPERANDS          0x0200
+#define DEC_FLAG_IMM_SX                 0x0400
+#define DEC_FLAG_INC_OPERATION_FOR_64   0x0800
+#define DEC_FLAG_OPERATION_OP_SIZE      0x1000
+#define DEC_FLAG_FORCE_16BIT            0x2000
+#define DEC_FLAG_INVALID_IN_64BIT       0x4000
+#define DEC_FLAG_DEFAULT_TO_64BIT       0x8000
+
+#define DEC_FLAG_REG_RM_SIZE_MASK       0x03
+#define DEC_FLAG_REG_RM_2X_SIZE         0x01
+#define DEC_FLAG_REG_RM_FAR_SIZE        0x02
+#define DEC_FLAG_REG_RM_NO_SIZE         0x03
+
+
+#ifdef __cplusplus
+namespace x86
+{
+#endif
+	enum RepPrefix
+	{
+		REP_PREFIX_NONE = 0,
+		REP_PREFIX_REPNE,
+		REP_PREFIX_REPE
+	};
+#ifndef __cplusplus
+	typedef enum RepPrefix RepPrefix;
+#endif
+
+	struct DecodeState
+	{
+		Instruction* result;
+		InstructionOperand* operand0;
+		InstructionOperand* operand1;
+		const uint8_t* opcodeStart;
+		const uint8_t* opcode;
+		uint64_t addr;
+		size_t len, origLen;
+		uint16_t opSize, finalOpSize, addrSize;
+		uint32_t flags;
+		bool invalid;
+		bool insufficientLength;
+		bool opPrefix;
+		RepPrefix rep;
+		bool using64, rex;
+		bool rexRM1, rexRM2, rexReg;
+		int64_t* ripRelFixup;
+	};
+#ifndef __cplusplus
+	typedef struct DecodeState DecodeState;
+#endif
+
+#include "asmx86str.h"
+
+	typedef void (*DecodingFunction)(DecodeState* state);
+
+	static void InvalidDecode(DecodeState* state);
+	static void DecodeTwoByte(DecodeState* state);
+	static void DecodeFpu(DecodeState* state);
+	static void DecodeNoOperands(DecodeState* state);
+	static void DecodeRegRM(DecodeState* state);
+	static void DecodeRegRMImm(DecodeState* state);
+	static void DecodeRMRegImm8(DecodeState* state);
+	static void DecodeRMRegCL(DecodeState* state);
+	static void DecodeEaxImm(DecodeState* state);
+	static void DecodePushPopSeg(DecodeState* state);
+	static void DecodeOpReg(DecodeState* state);
+	static void DecodeEaxOpReg(DecodeState* state);
+	static void DecodeOpRegImm(DecodeState* state);
+	static void DecodeNop(DecodeState* state);
+	static void DecodeImm(DecodeState* state);
+	static void DecodeImm16Imm8(DecodeState* state);
+	static void DecodeEdiDx(DecodeState* state);
+	static void DecodeDxEsi(DecodeState* state);
+	static void DecodeRelImm(DecodeState* state);
+	static void DecodeRelImmAddrSize(DecodeState* state);
+	static void DecodeGroupRM(DecodeState* state);
+	static void DecodeGroupRMImm(DecodeState* state);
+	static void DecodeGroupRMImm8V(DecodeState* state);
+	static void DecodeGroupRMOne(DecodeState* state);
+	static void DecodeGroupRMCl(DecodeState* state);
+	static void DecodeGroupF6F7(DecodeState* state);
+	static void DecodeGroupFF(DecodeState* state);
+	static void DecodeGroup0F00(DecodeState* state);
+	static void DecodeGroup0F01(DecodeState* state);
+	static void DecodeGroup0FAE(DecodeState* state);
+	static void Decode0FB8(DecodeState* state);
+	static void DecodeRMSRegV(DecodeState* state);
+	static void DecodeRM8(DecodeState* state);
+	static void DecodeRMV(DecodeState* state);
+	static void DecodeFarImm(DecodeState* state);
+	static void DecodeEaxAddr(DecodeState* state);
+	static void DecodeEdiEsi(DecodeState* state);
+	static void DecodeEdiEax(DecodeState* state);
+	static void DecodeEaxEsi(DecodeState* state);
+	static void DecodeAlEbxAl(DecodeState* state);
+	static void DecodeEaxImm8(DecodeState* state);
+	static void DecodeEaxDx(DecodeState* state);
+	static void Decode3DNow(DecodeState* state);
+	static void DecodeSSETable(DecodeState* state);
+	static void DecodeSSETableImm8(DecodeState* state);
+	static void DecodeSSETableMem8(DecodeState* state);
+	static void DecodeSSE(DecodeState* state);
+	static void DecodeSSESingle(DecodeState* state);
+	static void DecodeSSEPacked(DecodeState* state);
+	static void DecodeMMX(DecodeState* state);
+	static void DecodeMMXSSEOnly(DecodeState* state);
+	static void DecodeMMXGroup(DecodeState* state);
+	static void DecodePinsrw(DecodeState* state);
+	static void DecodeRegCR(DecodeState* state);
+	static void DecodeMovSXZX8(DecodeState* state);
+	static void DecodeMovSXZX16(DecodeState* state);
+	static void DecodeMem16(DecodeState* state);
+	static void DecodeMem32(DecodeState* state);
+	static void DecodeMem64(DecodeState* state);
+	static void DecodeMem80(DecodeState* state);
+	static void DecodeMemFloatEnv(DecodeState* state);
+	static void DecodeMemFloatSave(DecodeState* state);
+	static void DecodeFPUReg(DecodeState* state);
+	static void DecodeFPURegST0(DecodeState* state);
+	static void DecodeRegGroupNoOperands(DecodeState* state);
+	static void DecodeRegGroupAX(DecodeState* state);
+	static void DecodeCmpXch8B(DecodeState* state);
+	static void DecodeMovNti(DecodeState* state);
+	static void DecodeCrc32(DecodeState* state);
+	static void DecodeArpl(DecodeState* state);
+
+
+// Instruction encodings, first is flags and second is decoder function
+#define ENC_INVALID 0, InvalidDecode
+#define ENC_TWO_BYTE 0, DecodeTwoByte
+#define ENC_FPU 0, DecodeFpu
+#define ENC_NO_OPERANDS 0, DecodeNoOperands
+#define ENC_OP_SIZE DEC_FLAG_OPERATION_OP_SIZE, DecodeNoOperands
+#define ENC_OP_SIZE_DEF64 DEC_FLAG_DEFAULT_TO_64BIT | DEC_FLAG_OPERATION_OP_SIZE, DecodeNoOperands
+#define ENC_OP_SIZE_NO64 DEC_FLAG_INVALID_IN_64BIT | DEC_FLAG_OPERATION_OP_SIZE, DecodeNoOperands
+#define ENC_REG_RM_8 DEC_FLAG_BYTE, DecodeRegRM
+#define ENC_RM_REG_8 DEC_FLAG_BYTE | DEC_FLAG_FLIP_OPERANDS, DecodeRegRM
+#define ENC_RM_REG_8_LOCK DEC_FLAG_BYTE | DEC_FLAG_FLIP_OPERANDS | DEC_FLAG_LOCK, DecodeRegRM
+#define ENC_RM_REG_16 DEC_FLAG_FLIP_OPERANDS | DEC_FLAG_FORCE_16BIT, DecodeRegRM
+#define ENC_REG_RM_V 0, DecodeRegRM
+#define ENC_RM_REG_V DEC_FLAG_FLIP_OPERANDS, DecodeRegRM
+#define ENC_RM_REG_V_LOCK DEC_FLAG_FLIP_OPERANDS | DEC_FLAG_LOCK, DecodeRegRM
+#define ENC_REG_RM2X_V DEC_FLAG_REG_RM_2X_SIZE, DecodeRegRM
+#define ENC_REG_RM_IMM_V 0, DecodeRegRMImm
+#define ENC_REG_RM_IMMSX_V DEC_FLAG_IMM_SX, DecodeRegRMImm
+#define ENC_REG_RM_0 DEC_FLAG_REG_RM_NO_SIZE, DecodeRegRM
+#define ENC_REG_RM_F DEC_FLAG_REG_RM_FAR_SIZE, DecodeRegRM
+#define ENC_RM_REG_DEF64 DEC_FLAG_FLIP_OPERANDS | DEC_FLAG_DEFAULT_TO_64BIT, DecodeRegRM
+#define ENC_RM_REG_IMM8_V 0, DecodeRMRegImm8
+#define ENC_RM_REG_CL_V 0, DecodeRMRegCL
+#define ENC_EAX_IMM_8 DEC_FLAG_BYTE, DecodeEaxImm
+#define ENC_EAX_IMM_V 0, DecodeEaxImm
+#define ENC_PUSH_POP_SEG 0, DecodePushPopSeg
+#define ENC_OP_REG_V 0, DecodeOpReg
+#define ENC_OP_REG_V_DEF64 DEC_FLAG_DEFAULT_TO_64BIT, DecodeOpReg
+#define ENC_EAX_OP_REG_V 0, DecodeEaxOpReg
+#define ENC_OP_REG_IMM_8 DEC_FLAG_BYTE, DecodeOpRegImm
+#define ENC_OP_REG_IMM_V 0, DecodeOpRegImm
+#define ENC_NOP 0, DecodeNop
+#define ENC_IMM_V_DEF64 DEC_FLAG_DEFAULT_TO_64BIT, DecodeImm
+#define ENC_IMMSX_V_DEF64 DEC_FLAG_IMM_SX | DEC_FLAG_DEFAULT_TO_64BIT, DecodeImm
+#define ENC_IMM_8 DEC_FLAG_BYTE, DecodeImm
+#define ENC_IMM_16 DEC_FLAG_FORCE_16BIT, DecodeImm
+#define ENC_IMM16_IMM8 0, DecodeImm16Imm8
+#define ENC_EDI_DX_8_REP DEC_FLAG_BYTE | DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP, DecodeEdiDx
+#define ENC_EDI_DX_OP_SIZE_REP DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP, DecodeEdiDx
+#define ENC_DX_ESI_8_REP DEC_FLAG_BYTE | DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP, DecodeDxEsi
+#define ENC_DX_ESI_OP_SIZE_REP DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP, DecodeDxEsi
+#define ENC_RELIMM_8_DEF64 DEC_FLAG_BYTE | DEC_FLAG_DEFAULT_TO_64BIT, DecodeRelImm
+#define ENC_RELIMM_V_DEF64 DEC_FLAG_DEFAULT_TO_64BIT, DecodeRelImm
+#define ENC_RELIMM_8_ADDR_SIZE_DEF64 DEC_FLAG_BYTE | DEC_FLAG_DEFAULT_TO_64BIT, DecodeRelImmAddrSize
+#define ENC_GROUP_RM_8 DEC_FLAG_BYTE, DecodeGroupRM
+#define ENC_GROUP_RM_V 0, DecodeGroupRM
+#define ENC_GROUP_RM_8_LOCK DEC_FLAG_BYTE | DEC_FLAG_LOCK, DecodeGroupRM
+#define ENC_GROUP_RM_0 DEC_FLAG_REG_RM_NO_SIZE, DecodeGroupRM
+#define ENC_GROUP_RM_IMM_8 DEC_FLAG_BYTE, DecodeGroupRMImm
+#define ENC_GROUP_RM_IMM_8_LOCK DEC_FLAG_BYTE | DEC_FLAG_LOCK, DecodeGroupRMImm
+#define ENC_GROUP_RM_IMM_8_NO64_LOCK DEC_FLAG_BYTE | DEC_FLAG_INVALID_IN_64BIT | DEC_FLAG_LOCK, DecodeGroupRMImm
+#define ENC_GROUP_RM_IMM8_V 0, DecodeGroupRMImm8V
+#define ENC_GROUP_RM_IMM_V 0, DecodeGroupRMImm
+#define ENC_GROUP_RM_IMM_V_LOCK DEC_FLAG_LOCK, DecodeGroupRMImm
+#define ENC_GROUP_RM_IMMSX_V_LOCK DEC_FLAG_IMM_SX | DEC_FLAG_LOCK, DecodeGroupRMImm
+#define ENC_GROUP_RM_ONE_8 DEC_FLAG_BYTE, DecodeGroupRMOne
+#define ENC_GROUP_RM_ONE_V 0, DecodeGroupRMOne
+#define ENC_GROUP_RM_CL_8 DEC_FLAG_BYTE, DecodeGroupRMCl
+#define ENC_GROUP_RM_CL_V 0, DecodeGroupRMCl
+#define ENC_GROUP_F6 DEC_FLAG_BYTE | DEC_FLAG_LOCK, DecodeGroupF6F7
+#define ENC_GROUP_F7 DEC_FLAG_LOCK, DecodeGroupF6F7
+#define ENC_GROUP_FF DEC_FLAG_LOCK, DecodeGroupFF
+#define ENC_GROUP_0F00 0, DecodeGroup0F00
+#define ENC_GROUP_0F01 0, DecodeGroup0F01
+#define ENC_GROUP_0FAE 0, DecodeGroup0FAE
+#define ENC_0FB8 0, Decode0FB8
+#define ENC_RM_SREG_V 0, DecodeRMSRegV
+#define ENC_SREG_RM_V DEC_FLAG_FLIP_OPERANDS, DecodeRMSRegV
+#define ENC_RM_8 0, DecodeRM8
+#define ENC_RM_V_DEF64 DEC_FLAG_DEFAULT_TO_64BIT, DecodeRMV
+#define ENC_FAR_IMM_NO64 DEC_FLAG_INVALID_IN_64BIT, DecodeFarImm
+#define ENC_EAX_ADDR_8 DEC_FLAG_BYTE, DecodeEaxAddr
+#define ENC_EAX_ADDR_V 0, DecodeEaxAddr
+#define ENC_ADDR_EAX_8 DEC_FLAG_BYTE | DEC_FLAG_FLIP_OPERANDS, DecodeEaxAddr
+#define ENC_ADDR_EAX_V DEC_FLAG_FLIP_OPERANDS, DecodeEaxAddr
+#define ENC_EDI_ESI_8_REP DEC_FLAG_BYTE | DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP, DecodeEdiEsi
+#define ENC_EDI_ESI_OP_SIZE_REP DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP, DecodeEdiEsi
+#define ENC_ESI_EDI_8_REPC DEC_FLAG_BYTE | DEC_FLAG_FLIP_OPERANDS | DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP_COND, DecodeEdiEsi
+#define ENC_ESI_EDI_OP_SIZE_REPC DEC_FLAG_FLIP_OPERANDS | DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP_COND, DecodeEdiEsi
+#define ENC_EDI_EAX_8_REP DEC_FLAG_BYTE | DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP, DecodeEdiEax
+#define ENC_EDI_EAX_OP_SIZE_REP DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP, DecodeEdiEax
+#define ENC_EAX_ESI_8_REP DEC_FLAG_BYTE | DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP, DecodeEaxEsi
+#define ENC_EAX_ESI_OP_SIZE_REP DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP, DecodeEaxEsi
+#define ENC_EAX_EDI_8_REPC DEC_FLAG_BYTE | DEC_FLAG_FLIP_OPERANDS | DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP_COND, DecodeEdiEax
+#define ENC_EAX_EDI_OP_SIZE_REPC DEC_FLAG_FLIP_OPERANDS | DEC_FLAG_OPERATION_OP_SIZE | DEC_FLAG_REP_COND, DecodeEdiEax
+#define ENC_AL_EBX_AL 0, DecodeAlEbxAl
+#define ENC_EAX_IMM8_8 DEC_FLAG_BYTE, DecodeEaxImm8
+#define ENC_EAX_IMM8_V 0, DecodeEaxImm8
+#define ENC_IMM8_EAX_8 DEC_FLAG_BYTE | DEC_FLAG_FLIP_OPERANDS, DecodeEaxImm8
+#define ENC_IMM8_EAX_V DEC_FLAG_FLIP_OPERANDS, DecodeEaxImm8
+#define ENC_EAX_DX_8 DEC_FLAG_BYTE, DecodeEaxDx
+#define ENC_EAX_DX_V 0, DecodeEaxDx
+#define ENC_DX_EAX_8 DEC_FLAG_BYTE | DEC_FLAG_FLIP_OPERANDS, DecodeEaxDx
+#define ENC_DX_EAX_V DEC_FLAG_FLIP_OPERANDS, DecodeEaxDx
+#define ENC_3DNOW 0, Decode3DNow
+#define ENC_SSE_TABLE 0, DecodeSSETable
+#define ENC_SSE_TABLE_FLIP DEC_FLAG_FLIP_OPERANDS, DecodeSSETable
+#define ENC_SSE_TABLE_IMM_8 0, DecodeSSETableImm8
+#define ENC_SSE_TABLE_IMM_8_FLIP DEC_FLAG_FLIP_OPERANDS, DecodeSSETableImm8
+#define ENC_SSE_TABLE_INCOP64 DEC_FLAG_INC_OPERATION_FOR_64, DecodeSSETable
+#define ENC_SSE_TABLE_INCOP64_FLIP DEC_FLAG_INC_OPERATION_FOR_64 | DEC_FLAG_FLIP_OPERANDS, DecodeSSETable
+#define ENC_SSE_TABLE_MEM8 0, DecodeSSETableMem8
+#define ENC_SSE_TABLE_MEM8_FLIP DEC_FLAG_FLIP_OPERANDS, DecodeSSETableMem8
+#define ENC_SSE 0, DecodeSSE
+#define ENC_SSE_SINGLE 0, DecodeSSESingle
+#define ENC_SSE_PACKED 0, DecodeSSEPacked
+#define ENC_MMX 0, DecodeMMX
+#define ENC_MMX_SSEONLY 0, DecodeMMXSSEOnly
+#define ENC_MMX_GROUP 0, DecodeMMXGroup
+#define ENC_PINSRW 0, DecodePinsrw
+#define ENC_REG_CR DEC_FLAG_DEFAULT_TO_64BIT | DEC_FLAG_LOCK, DecodeRegCR
+#define ENC_CR_REG DEC_FLAG_FLIP_OPERANDS | DEC_FLAG_DEFAULT_TO_64BIT | DEC_FLAG_LOCK, DecodeRegCR
+#define ENC_MOVSXZX_8 0, DecodeMovSXZX8
+#define ENC_MOVSXZX_16 0, DecodeMovSXZX16
+#define ENC_MEM_16 0, DecodeMem16
+#define ENC_MEM_32 0, DecodeMem32
+#define ENC_MEM_64 0, DecodeMem64
+#define ENC_MEM_80 0, DecodeMem80
+#define ENC_MEM_FLOATENV 0, DecodeMemFloatEnv
+#define ENC_MEM_FLOATSAVE 0, DecodeMemFloatSave
+#define ENC_FPUREG 0, DecodeFPUReg
+#define ENC_ST0_FPUREG DEC_FLAG_FLIP_OPERANDS, DecodeFPURegST0
+#define ENC_FPUREG_ST0 0, DecodeFPURegST0
+#define ENC_REGGROUP_NO_OPERANDS 0, DecodeRegGroupNoOperands
+#define ENC_REGGROUP_AX 0, DecodeRegGroupAX
+#define ENC_CMPXCH8B 0, DecodeCmpXch8B
+#define ENC_MOVNTI 0, DecodeMovNti
+#define ENC_CRC32_8 DEC_FLAG_BYTE, DecodeCrc32
+#define ENC_CRC32_V 0, DecodeCrc32
+#define ENC_ARPL 0, DecodeArpl
+
+
+	struct InstructionEncoding
+	{
+		uint16_t operation;
+		uint16_t flags;
+		DecodingFunction func;
+	};
+#ifndef __cplusplus
+	typedef struct InstructionEncoding InstructionEncoding;
+#endif
+
+	struct SparseInstructionEncoding
+	{
+		uint8_t opcode;
+		InstructionEncoding encoding;
+	};
+#ifndef __cplusplus
+	typedef struct SparseInstructionEncoding SparseInstructionEncoding;
+#endif
+
+
+	static const InstructionEncoding mainOpcodeMap[256] =
+	{
+		{ADD, ENC_RM_REG_8_LOCK}, {ADD, ENC_RM_REG_V_LOCK}, {ADD, ENC_REG_RM_8}, {ADD, ENC_REG_RM_V}, // 0x00
+		{ADD, ENC_EAX_IMM_8}, {ADD, ENC_EAX_IMM_V}, {PUSH, ENC_PUSH_POP_SEG}, {POP, ENC_PUSH_POP_SEG}, // 0x04
+		{OR, ENC_RM_REG_8_LOCK}, {OR, ENC_RM_REG_V_LOCK}, {OR, ENC_REG_RM_8}, {OR, ENC_REG_RM_V}, // 0x08
+		{OR, ENC_EAX_IMM_8}, {OR, ENC_EAX_IMM_V}, {PUSH, ENC_PUSH_POP_SEG}, {INVALID, ENC_TWO_BYTE}, // 0x0c
+		{ADC, ENC_RM_REG_8_LOCK}, {ADC, ENC_RM_REG_V_LOCK}, {ADC, ENC_REG_RM_8}, {ADC, ENC_REG_RM_V}, // 0x10
+		{ADC, ENC_EAX_IMM_8}, {ADC, ENC_EAX_IMM_V}, {PUSH, ENC_PUSH_POP_SEG}, {POP, ENC_PUSH_POP_SEG}, // 0x14
+		{SBB, ENC_RM_REG_8_LOCK}, {SBB, ENC_RM_REG_V_LOCK}, {SBB, ENC_REG_RM_8}, {SBB, ENC_REG_RM_V}, // 0x18
+		{SBB, ENC_EAX_IMM_8}, {SBB, ENC_EAX_IMM_V}, {PUSH, ENC_PUSH_POP_SEG}, {POP, ENC_PUSH_POP_SEG}, // 0x1c
+		{AND, ENC_RM_REG_8_LOCK}, {AND, ENC_RM_REG_V_LOCK}, {AND, ENC_REG_RM_8}, {AND, ENC_REG_RM_V}, // 0x20
+		{AND, ENC_EAX_IMM_8}, {AND, ENC_EAX_IMM_V}, {INVALID, ENC_INVALID}, {DAA, ENC_NO_OPERANDS}, // 0x24
+		{SUB, ENC_RM_REG_8_LOCK}, {SUB, ENC_RM_REG_V_LOCK}, {SUB, ENC_REG_RM_8}, {SUB, ENC_REG_RM_V}, // 0x28
+		{SUB, ENC_EAX_IMM_8}, {SUB, ENC_EAX_IMM_V}, {INVALID, ENC_INVALID}, {DAS, ENC_NO_OPERANDS}, // 0x2c
+		{XOR, ENC_RM_REG_8_LOCK}, {XOR, ENC_RM_REG_V_LOCK}, {XOR, ENC_REG_RM_8}, {XOR, ENC_REG_RM_V}, // 0x30
+		{XOR, ENC_EAX_IMM_8}, {XOR, ENC_EAX_IMM_V}, {INVALID, ENC_INVALID}, {AAA, ENC_NO_OPERANDS}, // 0x34
+		{CMP, ENC_RM_REG_8}, {CMP, ENC_RM_REG_V}, {CMP, ENC_REG_RM_8}, {CMP, ENC_REG_RM_V}, // 0x38
+		{CMP, ENC_EAX_IMM_8}, {CMP, ENC_EAX_IMM_V}, {INVALID, ENC_INVALID}, {AAS, ENC_NO_OPERANDS}, // 0x3c
+		{INC, ENC_OP_REG_V}, {INC, ENC_OP_REG_V}, {INC, ENC_OP_REG_V}, {INC, ENC_OP_REG_V}, // 0x40
+		{INC, ENC_OP_REG_V}, {INC, ENC_OP_REG_V}, {INC, ENC_OP_REG_V}, {INC, ENC_OP_REG_V}, // 0x44
+		{DEC, ENC_OP_REG_V}, {DEC, ENC_OP_REG_V}, {DEC, ENC_OP_REG_V}, {DEC, ENC_OP_REG_V}, // 0x48
+		{DEC, ENC_OP_REG_V}, {DEC, ENC_OP_REG_V}, {DEC, ENC_OP_REG_V}, {DEC, ENC_OP_REG_V}, // 0x4c
+		{PUSH, ENC_OP_REG_V_DEF64}, {PUSH, ENC_OP_REG_V_DEF64}, {PUSH, ENC_OP_REG_V_DEF64}, {PUSH, ENC_OP_REG_V_DEF64}, // 0x50
+		{PUSH, ENC_OP_REG_V_DEF64}, {PUSH, ENC_OP_REG_V_DEF64}, {PUSH, ENC_OP_REG_V_DEF64}, {PUSH, ENC_OP_REG_V_DEF64}, // 0x54
+		{POP, ENC_OP_REG_V_DEF64}, {POP, ENC_OP_REG_V_DEF64}, {POP, ENC_OP_REG_V_DEF64}, {POP, ENC_OP_REG_V_DEF64}, // 0x58
+		{POP, ENC_OP_REG_V_DEF64}, {POP, ENC_OP_REG_V_DEF64}, {POP, ENC_OP_REG_V_DEF64}, {POP, ENC_OP_REG_V_DEF64}, // 0x5c
+		{PUSHA, ENC_OP_SIZE_NO64}, {POPA, ENC_OP_SIZE_NO64}, {BOUND, ENC_REG_RM2X_V}, {ARPL, ENC_ARPL}, // 0x60
+		{INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, // 0x64
+		{PUSH, ENC_IMM_V_DEF64}, {IMUL, ENC_REG_RM_IMM_V}, {PUSH, ENC_IMMSX_V_DEF64}, {IMUL, ENC_REG_RM_IMMSX_V}, // 0x68
+		{INSB, ENC_EDI_DX_8_REP}, {INSW, ENC_EDI_DX_OP_SIZE_REP}, {OUTSB, ENC_DX_ESI_8_REP}, {OUTSW, ENC_DX_ESI_OP_SIZE_REP}, // 0x6c
+		{JO, ENC_RELIMM_8_DEF64}, {JNO, ENC_RELIMM_8_DEF64}, {JB, ENC_RELIMM_8_DEF64}, {JAE, ENC_RELIMM_8_DEF64}, // 0x70
+		{JE, ENC_RELIMM_8_DEF64}, {JNE, ENC_RELIMM_8_DEF64}, {JBE, ENC_RELIMM_8_DEF64}, {JA, ENC_RELIMM_8_DEF64}, // 0x74
+		{JS, ENC_RELIMM_8_DEF64}, {JNS, ENC_RELIMM_8_DEF64}, {JPE, ENC_RELIMM_8_DEF64}, {JPO, ENC_RELIMM_8_DEF64}, // 0x78
+		{JL, ENC_RELIMM_8_DEF64}, {JGE, ENC_RELIMM_8_DEF64}, {JLE, ENC_RELIMM_8_DEF64}, {JG, ENC_RELIMM_8_DEF64}, // 0x7c
+		{0, ENC_GROUP_RM_IMM_8_LOCK}, {0, ENC_GROUP_RM_IMM_V_LOCK}, {0, ENC_GROUP_RM_IMM_8_NO64_LOCK}, {0, ENC_GROUP_RM_IMMSX_V_LOCK}, // 0x80
+		{TEST, ENC_RM_REG_8}, {TEST, ENC_RM_REG_V}, {XCHG, ENC_RM_REG_8_LOCK}, {XCHG, ENC_RM_REG_V_LOCK}, // 0x84
+		{MOV, ENC_RM_REG_8}, {MOV, ENC_RM_REG_V}, {MOV, ENC_REG_RM_8}, {MOV, ENC_REG_RM_V}, // 0x88
+		{MOV, ENC_RM_SREG_V}, {LEA, ENC_REG_RM_0}, {MOV, ENC_SREG_RM_V}, {POP, ENC_RM_V_DEF64}, // 0x8c
+		{NOP, ENC_NOP}, {XCHG, ENC_EAX_OP_REG_V}, {XCHG, ENC_EAX_OP_REG_V}, {XCHG, ENC_EAX_OP_REG_V}, // 0x90
+		{XCHG, ENC_EAX_OP_REG_V}, {XCHG, ENC_EAX_OP_REG_V}, {XCHG, ENC_EAX_OP_REG_V}, {XCHG, ENC_EAX_OP_REG_V}, // 0x94
+		{CBW, ENC_OP_SIZE}, {CWD, ENC_OP_SIZE}, {CALLF, ENC_FAR_IMM_NO64}, {FWAIT, ENC_NO_OPERANDS}, // 0x98
+		{PUSHF, ENC_OP_SIZE_DEF64}, {POPF, ENC_OP_SIZE_DEF64}, {SAHF, ENC_NO_OPERANDS}, {LAHF, ENC_NO_OPERANDS}, // 0x9c
+		{MOV, ENC_EAX_ADDR_8}, {MOV, ENC_EAX_ADDR_V}, {MOV, ENC_ADDR_EAX_8}, {MOV, ENC_ADDR_EAX_V}, // 0xa0
+		{MOVSB, ENC_EDI_ESI_8_REP}, {MOVSW, ENC_EDI_ESI_OP_SIZE_REP}, {CMPSB, ENC_ESI_EDI_8_REPC}, {CMPSW, ENC_ESI_EDI_OP_SIZE_REPC}, // 0xa4
+		{TEST, ENC_EAX_IMM_8}, {TEST, ENC_EAX_IMM_V}, {STOSB, ENC_EDI_EAX_8_REP}, {STOSW, ENC_EDI_EAX_OP_SIZE_REP}, // 0xa8
+		{LODSB, ENC_EAX_ESI_8_REP}, {LODSW, ENC_EAX_ESI_OP_SIZE_REP}, {SCASB, ENC_EAX_EDI_8_REPC}, {SCASW, ENC_EAX_EDI_OP_SIZE_REPC}, // 0xac
+		{MOV, ENC_OP_REG_IMM_8}, {MOV, ENC_OP_REG_IMM_8}, {MOV, ENC_OP_REG_IMM_8}, {MOV, ENC_OP_REG_IMM_8}, // 0xb0
+		{MOV, ENC_OP_REG_IMM_8}, {MOV, ENC_OP_REG_IMM_8}, {MOV, ENC_OP_REG_IMM_8}, {MOV, ENC_OP_REG_IMM_8}, // 0xb4
+		{MOV, ENC_OP_REG_IMM_V}, {MOV, ENC_OP_REG_IMM_V}, {MOV, ENC_OP_REG_IMM_V}, {MOV, ENC_OP_REG_IMM_V}, // 0xb8
+		{MOV, ENC_OP_REG_IMM_V}, {MOV, ENC_OP_REG_IMM_V}, {MOV, ENC_OP_REG_IMM_V}, {MOV, ENC_OP_REG_IMM_V}, // 0xbc
+		{1, ENC_GROUP_RM_IMM_8}, {1, ENC_GROUP_RM_IMM8_V}, {RETN, ENC_IMM_16}, {RETN, ENC_NO_OPERANDS}, // 0xc0
+		{LES, ENC_REG_RM_F}, {LDS, ENC_REG_RM_F}, {2, ENC_GROUP_RM_IMM_8}, {2, ENC_GROUP_RM_IMM_V}, // 0xc4
+		{ENTER, ENC_IMM16_IMM8}, {LEAVE, ENC_NO_OPERANDS}, {RETF, ENC_IMM_16}, {RETF, ENC_NO_OPERANDS}, // 0xc8
+		{INT3, ENC_NO_OPERANDS}, {INT, ENC_IMM_8}, {INTO, ENC_NO_OPERANDS}, {IRET, ENC_NO_OPERANDS}, // 0xcc
+		{1, ENC_GROUP_RM_ONE_8}, {1, ENC_GROUP_RM_ONE_V}, {1, ENC_GROUP_RM_CL_8}, {1, ENC_GROUP_RM_CL_V}, // 0xd0
+		{AAM, ENC_IMM_8}, {AAD, ENC_IMM_8}, {INVALID, ENC_INVALID}, {XLAT, ENC_AL_EBX_AL}, // 0xd4
+		{0, ENC_FPU}, {1, ENC_FPU}, {2, ENC_FPU}, {3, ENC_FPU}, // 0xd8
+		{4, ENC_FPU}, {5, ENC_FPU}, {6, ENC_FPU}, {7, ENC_FPU}, // 0xdc
+		{LOOPNE, ENC_RELIMM_8_DEF64}, {LOOPE, ENC_RELIMM_8_DEF64}, {LOOP, ENC_RELIMM_8_DEF64}, {JCXZ, ENC_RELIMM_8_ADDR_SIZE_DEF64}, // 0xe0
+		{IN, ENC_EAX_IMM8_8}, {IN, ENC_EAX_IMM8_V}, {OUT, ENC_IMM8_EAX_8}, {OUT, ENC_IMM8_EAX_V}, // 0xe4
+		{CALL, ENC_RELIMM_V_DEF64}, {JMP, ENC_RELIMM_V_DEF64}, {JMPF, ENC_FAR_IMM_NO64}, {JMP, ENC_RELIMM_8_DEF64}, // 0xe8
+		{IN, ENC_EAX_DX_8}, {IN, ENC_EAX_DX_V}, {OUT, ENC_DX_EAX_8}, {OUT, ENC_DX_EAX_V}, // 0xec
+		{INVALID, ENC_INVALID}, {INT1, ENC_NO_OPERANDS}, {INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, // 0xf0
+		{HLT, ENC_NO_OPERANDS}, {CMC, ENC_NO_OPERANDS}, {3, ENC_GROUP_F6}, {3, ENC_GROUP_F7}, // 0xf4
+		{CLC, ENC_NO_OPERANDS}, {STC, ENC_NO_OPERANDS}, {CLI, ENC_NO_OPERANDS}, {STI, ENC_NO_OPERANDS}, // 0xf8
+		{CLD, ENC_NO_OPERANDS}, {STD, ENC_NO_OPERANDS}, {4, ENC_GROUP_RM_8_LOCK}, {5, ENC_GROUP_FF}, // 0xfc
+	};
+
+
+	static const InstructionEncoding twoByteOpcodeMap[256] =
+	{
+		{6, ENC_GROUP_0F00}, {7, ENC_GROUP_0F01}, {LAR, ENC_REG_RM_V}, {LSL, ENC_REG_RM_V}, // 0x00
+		{INVALID, ENC_INVALID}, {SYSCALL, ENC_NO_OPERANDS}, {CLTS, ENC_NO_OPERANDS}, {SYSRET, ENC_NO_OPERANDS}, // 0x04
+		{INVD, ENC_NO_OPERANDS}, {WBINVD, ENC_NO_OPERANDS}, {INVALID, ENC_INVALID}, {UD2, ENC_NO_OPERANDS}, // 0x08
+		{INVALID, ENC_INVALID}, {8, ENC_GROUP_RM_0}, {FEMMS, ENC_NO_OPERANDS}, {0, ENC_3DNOW}, // 0x0c
+		{0, ENC_SSE_TABLE}, {0, ENC_SSE_TABLE_FLIP}, {1, ENC_SSE_TABLE}, {2, ENC_SSE_TABLE_FLIP}, // 0x10
+		{3, ENC_SSE_TABLE}, {4, ENC_SSE_TABLE}, {5, ENC_SSE_TABLE}, {6, ENC_SSE_TABLE_FLIP}, // 0x14
+		{9, ENC_GROUP_RM_0}, {10, ENC_GROUP_RM_0}, {10, ENC_GROUP_RM_0}, {10, ENC_GROUP_RM_0}, // 0x18
+		{10, ENC_GROUP_RM_0}, {10, ENC_GROUP_RM_0}, {10, ENC_GROUP_RM_0}, {10, ENC_GROUP_RM_0}, // 0x1c
+		{REG_CR0, ENC_REG_CR}, {REG_DR0, ENC_REG_CR}, {REG_CR0, ENC_CR_REG}, {REG_DR0, ENC_CR_REG}, // 0x20
+		{REG_TR0, ENC_REG_CR}, {INVALID, ENC_INVALID}, {REG_TR0, ENC_CR_REG}, {INVALID, ENC_INVALID}, // 0x24
+		{7, ENC_SSE_TABLE}, {7, ENC_SSE_TABLE_FLIP}, {8, ENC_SSE_TABLE}, {9, ENC_SSE_TABLE_FLIP}, // 0x28
+		{10, ENC_SSE_TABLE}, {11, ENC_SSE_TABLE}, {12, ENC_SSE_TABLE}, {13, ENC_SSE_TABLE}, // 0x2c
+		{WRMSR, ENC_NO_OPERANDS}, {RDTSC, ENC_NO_OPERANDS}, {RDMSR, ENC_NO_OPERANDS}, {RDPMC, ENC_NO_OPERANDS}, // 0x30
+		{SYSENTER, ENC_NO_OPERANDS}, {SYSEXIT, ENC_NO_OPERANDS}, {INVALID, ENC_INVALID}, {GETSEC, ENC_NO_OPERANDS}, // 0x34
+		{INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, // 0x38
+		{INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, // 0x3c
+		{CMOVO, ENC_REG_RM_V}, {CMOVNO, ENC_REG_RM_V}, {CMOVB, ENC_REG_RM_V}, {CMOVAE, ENC_REG_RM_V}, // 0x40
+		{CMOVE, ENC_REG_RM_V}, {CMOVNE, ENC_REG_RM_V}, {CMOVBE, ENC_REG_RM_V}, {CMOVA, ENC_REG_RM_V}, // 0x44
+		{CMOVS, ENC_REG_RM_V}, {CMOVNS, ENC_REG_RM_V}, {CMOVPE, ENC_REG_RM_V}, {CMOVPO, ENC_REG_RM_V}, // 0x48
+		{CMOVL, ENC_REG_RM_V}, {CMOVGE, ENC_REG_RM_V}, {CMOVLE, ENC_REG_RM_V}, {CMOVG, ENC_REG_RM_V}, // 0x4c
+		{14, ENC_SSE_TABLE}, {SQRTPS, ENC_SSE}, {RSQRTPS, ENC_SSE_SINGLE}, {RCPPS, ENC_SSE_SINGLE}, // 0x50
+		{ANDPS, ENC_SSE_PACKED}, {ANDNPS, ENC_SSE_PACKED}, {ORPS, ENC_SSE_PACKED}, {XORPS, ENC_SSE_PACKED}, // 0x54
+		{ADDPS, ENC_SSE}, {MULPS, ENC_SSE}, {15, ENC_SSE_TABLE}, {16, ENC_SSE_TABLE}, // 0x58
+		{SUBPS, ENC_SSE}, {MINPS, ENC_SSE}, {DIVPS, ENC_SSE}, {MAXPS, ENC_SSE}, // 0x5c
+		{17, ENC_SSE_TABLE}, {18, ENC_SSE_TABLE}, {19, ENC_SSE_TABLE}, {PACKSSWB, ENC_MMX}, // 0x60
+		{PCMPGTB, ENC_MMX}, {PCMPGTW, ENC_MMX}, {PCMPGTD, ENC_MMX}, {PACKUSWB, ENC_MMX}, // 0x64
+		{PUNPCKHBW, ENC_MMX}, {PUNPCKHWD, ENC_MMX}, {PUNPCKHDQ, ENC_MMX}, {PACKSSDW, ENC_MMX}, // 0x68
+		{PUNPCKLQDQ, ENC_MMX_SSEONLY}, {PUNPCKHQDQ, ENC_MMX_SSEONLY}, {20, ENC_SSE_TABLE_INCOP64}, {21, ENC_SSE_TABLE}, // 0x6c
+		{22, ENC_SSE_TABLE_IMM_8}, {0, ENC_MMX_GROUP}, {1, ENC_MMX_GROUP}, {2, ENC_MMX_GROUP}, // 0x70
+		{PCMPEQB, ENC_MMX}, {PCMPEQW, ENC_MMX}, {PCMPEQD, ENC_MMX}, {EMMS, ENC_NO_OPERANDS}, // 0x74
+		{VMREAD, ENC_RM_REG_DEF64}, {VMWRITE, ENC_RM_REG_DEF64}, {INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, // 0x78
+		{23, ENC_SSE_TABLE}, {24, ENC_SSE_TABLE}, {25, ENC_SSE_TABLE_INCOP64_FLIP}, {21, ENC_SSE_TABLE_FLIP}, // 0x7c
+		{JO, ENC_RELIMM_V_DEF64}, {JNO, ENC_RELIMM_V_DEF64}, {JB, ENC_RELIMM_V_DEF64}, {JAE, ENC_RELIMM_V_DEF64}, // 0x80
+		{JE, ENC_RELIMM_V_DEF64}, {JNE, ENC_RELIMM_V_DEF64}, {JBE, ENC_RELIMM_V_DEF64}, {JA, ENC_RELIMM_V_DEF64}, // 0x84
+		{JS, ENC_RELIMM_V_DEF64}, {JNS, ENC_RELIMM_V_DEF64}, {JPE, ENC_RELIMM_V_DEF64}, {JPO, ENC_RELIMM_V_DEF64}, // 0x88
+		{JL, ENC_RELIMM_V_DEF64}, {JGE, ENC_RELIMM_V_DEF64}, {JLE, ENC_RELIMM_V_DEF64}, {JG, ENC_RELIMM_V_DEF64}, // 0x8c
+		{SETO, ENC_RM_8}, {SETNO, ENC_RM_8}, {SETB, ENC_RM_8}, {SETAE, ENC_RM_8}, // 0x90
+		{SETE, ENC_RM_8}, {SETNE, ENC_RM_8}, {SETBE, ENC_RM_8}, {SETA, ENC_RM_8}, // 0x94
+		{SETS, ENC_RM_8}, {SETNS, ENC_RM_8}, {SETPE, ENC_RM_8}, {SETPO, ENC_RM_8}, // 0x98
+		{SETL, ENC_RM_8}, {SETGE, ENC_RM_8}, {SETLE, ENC_RM_8}, {SETG, ENC_RM_8}, // 0x9c
+		{PUSH, ENC_PUSH_POP_SEG}, {POP, ENC_PUSH_POP_SEG}, {CPUID, ENC_NO_OPERANDS}, {BT, ENC_RM_REG_V}, // 0xa0
+		{SHLD, ENC_RM_REG_IMM8_V}, {SHLD, ENC_RM_REG_CL_V}, {INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, // 0xa4
+		{PUSH, ENC_PUSH_POP_SEG}, {POP, ENC_PUSH_POP_SEG}, {RSM, ENC_NO_OPERANDS}, {BTS, ENC_RM_REG_V}, // 0xa8
+		{SHRD, ENC_RM_REG_IMM8_V}, {SHRD, ENC_RM_REG_CL_V}, {24, ENC_GROUP_0FAE}, {IMUL, ENC_REG_RM_V}, // 0xac
+		{CMPXCHG, ENC_RM_REG_8_LOCK}, {CMPXCHG, ENC_RM_REG_V_LOCK}, {LSS, ENC_REG_RM_F}, {BTR, ENC_RM_REG_V}, // 0xb0
+		{LFS, ENC_REG_RM_F}, {LGS, ENC_REG_RM_F}, {MOVZX, ENC_MOVSXZX_8}, {MOVZX, ENC_MOVSXZX_16}, // 0xb4
+		{POPCNT, ENC_0FB8}, {INVALID, ENC_INVALID}, {11, ENC_GROUP_RM_IMM8_V}, {BTC, ENC_RM_REG_V}, // 0xb8
+		{BSF, ENC_REG_RM_V}, {BSR, ENC_REG_RM_V}, {MOVSX, ENC_MOVSXZX_8}, {MOVSX, ENC_MOVSXZX_16}, // 0xbc
+		{XADD, ENC_RM_REG_8}, {XADD, ENC_RM_REG_V_LOCK}, {26, ENC_SSE_TABLE_IMM_8}, {MOVNTI, ENC_MOVNTI}, // 0xc0
+		{27, ENC_PINSRW}, {28, ENC_SSE_TABLE_IMM_8_FLIP}, {29, ENC_SSE_TABLE_IMM_8}, {CMPXCH8B, ENC_CMPXCH8B}, // 0xc4
+		{BSWAP, ENC_OP_REG_V}, {BSWAP, ENC_OP_REG_V}, {BSWAP, ENC_OP_REG_V}, {BSWAP, ENC_OP_REG_V}, // 0xc8
+		{BSWAP, ENC_OP_REG_V}, {BSWAP, ENC_OP_REG_V}, {BSWAP, ENC_OP_REG_V}, {BSWAP, ENC_OP_REG_V}, // 0xcc
+		{30, ENC_SSE_TABLE}, {PSRLW, ENC_MMX}, {PSRLD, ENC_MMX}, {PSRLQ, ENC_MMX}, // 0xd0
+		{PADDQ, ENC_MMX}, {PMULLW, ENC_MMX}, {31, ENC_SSE_TABLE}, {32, ENC_SSE_TABLE}, // 0xd4
+		{PSUBUSB, ENC_MMX}, {PSUBUSW, ENC_MMX}, {PMINUB, ENC_MMX}, {PAND, ENC_MMX}, // 0xd8
+		{PADDUSB, ENC_MMX}, {PADDUSW, ENC_MMX}, {PMAXUB, ENC_MMX}, {PANDN, ENC_MMX}, // 0xdc
+		{PAVGB, ENC_MMX}, {PSRAW, ENC_MMX}, {PSRAD, ENC_MMX}, {PAVGW, ENC_MMX}, // 0xe0
+		{PMULHUW, ENC_MMX}, {PMULHW, ENC_MMX}, {33, ENC_SSE_TABLE}, {34, ENC_SSE_TABLE_FLIP}, // 0xe4
+		{PSUBSB, ENC_MMX}, {PSUBSW, ENC_MMX}, {PMINSW, ENC_MMX}, {POR, ENC_MMX}, // 0xe8
+		{PADDSB, ENC_MMX}, {PADDSW, ENC_MMX}, {PMAXSW, ENC_MMX}, {PXOR, ENC_MMX}, // 0xec
+		{35, ENC_SSE_TABLE}, {PSLLW, ENC_MMX}, {PSLLD, ENC_MMX}, {PSLLQ, ENC_MMX}, // 0xf0
+		{PMULUDQ, ENC_MMX}, {PMADDWD, ENC_MMX}, {PSADBW, ENC_MMX}, {36, ENC_SSE_TABLE}, // 0xf4
+		{PSUBB, ENC_MMX}, {PSUBW, ENC_MMX}, {PSUBD, ENC_MMX}, {PSUBQ, ENC_MMX}, // 0xf8
+		{PADDB, ENC_MMX}, {PADDW, ENC_MMX}, {PADDD, ENC_MMX}, {INVALID, ENC_INVALID} // 0xfc
+	};
+
+
+	static const SparseInstructionEncoding threeByte0F38Map[] =
+	{
+		{0x00, {PSHUFB, ENC_MMX}}, {0x01, {PHADDW, ENC_MMX}}, {0x02, {PHADDD, ENC_MMX}}, {0x03, {PHADDSW, ENC_MMX}},
+		{0x04, {PMADDUBSW, ENC_MMX}}, {0x05, {PHSUBW, ENC_MMX}}, {0x06, {PHSUBD, ENC_MMX}}, {0x07, {PHSUBSW, ENC_MMX}},
+		{0x08, {PSIGNB, ENC_MMX}}, {0x09, {PSIGNW, ENC_MMX}}, {0x0a, {PSIGND, ENC_MMX}}, {0x0b, {PMULHRSW, ENC_MMX}},
+		{0x10, {PBLENDVB, ENC_MMX_SSEONLY}}, {0x14, {BLENDVPS, ENC_MMX_SSEONLY}}, {0x15, {BLENDVPD, ENC_MMX_SSEONLY}},
+		{0x17, {PTEST, ENC_MMX_SSEONLY}}, {0x1c, {PABSB, ENC_MMX}}, {0x1d, {PABSW, ENC_MMX}}, {0x1e, {PABSD, ENC_MMX}},
+		{0x20, {37, ENC_SSE_TABLE}}, {0x21, {38, ENC_SSE_TABLE}}, {0x22, {39, ENC_SSE_TABLE}}, {0x23, {40, ENC_SSE_TABLE}},
+		{0x24, {41, ENC_SSE_TABLE}}, {0x25, {42, ENC_SSE_TABLE}}, {0x28, {PMULDQ, ENC_MMX_SSEONLY}}, {0x29, {PCMPEQQ, ENC_MMX_SSEONLY}},
+		{0x2a, {43, ENC_SSE_TABLE}}, {0x2b, {PACKUSDW, ENC_MMX_SSEONLY}}, {0x30, {44, ENC_SSE_TABLE}}, {0x31, {45, ENC_SSE_TABLE}},
+		{0x32, {46, ENC_SSE_TABLE}}, {0x33, {47, ENC_SSE_TABLE}}, {0x34, {48, ENC_SSE_TABLE}}, {0x35, {49, ENC_SSE_TABLE}},
+		{0x37, {PCMPGTQ, ENC_MMX_SSEONLY}}, {0x38, {PMINSB, ENC_MMX_SSEONLY}}, {0x39, {PMINSD, ENC_MMX_SSEONLY}},
+		{0x3a, {PMINUW, ENC_MMX_SSEONLY}}, {0x3b, {PMINUD, ENC_MMX_SSEONLY}}, {0x3c, {PMAXSB, ENC_MMX_SSEONLY}},
+		{0x3d, {PMAXSD, ENC_MMX_SSEONLY}}, {0x3e, {PMAXUW, ENC_MMX_SSEONLY}}, {0x3f, {PMAXUD, ENC_MMX_SSEONLY}},
+		{0x40, {PMULLD, ENC_MMX_SSEONLY}}, {0x41, {PHMINPOSUW, ENC_MMX_SSEONLY}}, {0xf0, {CRC32, ENC_CRC32_8}}, {0xf1, {CRC32, ENC_CRC32_V}}
+	};
+
+
+	static const SparseInstructionEncoding threeByte0F3AMap[] =
+	{
+		{0x08, {ROUNDPS, ENC_MMX_SSEONLY}}, {0x09, {ROUNDPD, ENC_MMX_SSEONLY}}, {0x0a, {50, ENC_SSE_TABLE}}, {0x0b, {51, ENC_SSE_TABLE}},
+		{0x0c, {BLENDPS, ENC_MMX_SSEONLY}}, {0x0d, {BLENDPD, ENC_MMX_SSEONLY}}, {0x0e, {PBLENDW, ENC_MMX_SSEONLY}}, {0x0f, {PALIGNR, ENC_MMX}},
+		{0x14, {52, ENC_SSE_TABLE_MEM8_FLIP}}, {0x15, {53, ENC_SSE_TABLE_FLIP}}, {0x16, {54, ENC_SSE_TABLE_INCOP64_FLIP}},
+		{0x17, {55, ENC_SSE_TABLE_FLIP}}, {0x20, {56, ENC_SSE_TABLE_MEM8}}, {0x21, {57, ENC_SSE_TABLE}}, {0x22, {58, ENC_SSE_TABLE_INCOP64}},
+		{0x40, {DPPS, ENC_MMX_SSEONLY}}, {0x41, {DPPD, ENC_MMX_SSEONLY}}, {0x42, {MPSADBW, ENC_MMX_SSEONLY}},
+		{0x60, {PCMPESTRM, ENC_MMX_SSEONLY}}, {0x61, {PCMPESTRI, ENC_MMX_SSEONLY}}, {0x62, {PCMPISTRM, ENC_MMX_SSEONLY}},
+		{0x63, {PCMPISTRI, ENC_MMX_SSEONLY}}
+	};
+
+
+	static const InstructionEncoding fpuMemOpcodeMap[8][8] =
+	{
+		{ // 0xd8
+			{FADD, ENC_MEM_32}, {FMUL, ENC_MEM_32}, {FCOM, ENC_MEM_32}, {FCOMP, ENC_MEM_32}, // 0
+			{FSUB, ENC_MEM_32}, {FSUBR, ENC_MEM_32}, {FDIV, ENC_MEM_32}, {FDIVR, ENC_MEM_32} // 4
+		},
+		{ // 0xd9
+			{FLD, ENC_MEM_32}, {INVALID, ENC_INVALID}, {FST, ENC_MEM_32}, {FSTP, ENC_MEM_32}, // 0
+			{FLDENV, ENC_MEM_FLOATENV}, {FLDCW, ENC_MEM_16}, {FSTENV, ENC_MEM_FLOATENV}, {FSTCW, ENC_MEM_16} // 4
+		},
+		{ // 0xda
+			{FIADD, ENC_MEM_32}, {FIMUL, ENC_MEM_32}, {FICOM, ENC_MEM_32}, {FICOMP, ENC_MEM_32}, // 0
+			{FISUB, ENC_MEM_32}, {FISUBR, ENC_MEM_32}, {FIDIV, ENC_MEM_32}, {FIDIVR, ENC_MEM_32} // 4
+		},
+		{ // 0xdb
+			{FILD, ENC_MEM_32}, {FISTTP, ENC_MEM_32}, {FIST, ENC_MEM_32}, {FISTP, ENC_MEM_32}, // 0
+			{INVALID, ENC_INVALID}, {FLD, ENC_MEM_80}, {INVALID, ENC_INVALID}, {FSTP, ENC_MEM_80} // 4
+		},
+		{ // 0xdc
+			{FADD, ENC_MEM_64}, {FMUL, ENC_MEM_64}, {FCOM, ENC_MEM_64}, {FCOMP, ENC_MEM_64}, // 0
+			{FSUB, ENC_MEM_64}, {FSUBR, ENC_MEM_64}, {FDIV, ENC_MEM_64}, {FDIVR, ENC_MEM_64} // 4
+		},
+		{ // 0xdd
+			{FLD, ENC_MEM_64}, {FISTTP, ENC_MEM_64}, {FST, ENC_MEM_64}, {FSTP, ENC_MEM_64}, // 0
+			{FRSTOR, ENC_MEM_FLOATSAVE}, {INVALID, ENC_INVALID}, {FSAVE, ENC_MEM_FLOATSAVE}, {FSTSW, ENC_MEM_16} // 4
+		},
+		{ // 0xde
+			{FIADD, ENC_MEM_16}, {FIMUL, ENC_MEM_16}, {FICOM, ENC_MEM_16}, {FICOMP, ENC_MEM_16}, // 0
+			{FISUB, ENC_MEM_16}, {FISUBR, ENC_MEM_16}, {FIDIV, ENC_MEM_16}, {FIDIVR, ENC_MEM_16} // 4
+		},
+		{ // 0xdf
+			{FILD, ENC_MEM_16}, {FISTTP, ENC_MEM_16}, {FIST, ENC_MEM_16}, {FISTP, ENC_MEM_16}, // 0
+			{FBLD, ENC_MEM_80}, {FILD, ENC_MEM_64}, {FBSTP, ENC_MEM_80}, {FISTP, ENC_MEM_64}
+		}
+	};
+
+
+	static const InstructionEncoding fpuRegOpcodeMap[8][8] =
+	{
+		{ // 0xd8
+			{FADD, ENC_ST0_FPUREG}, {FMUL, ENC_ST0_FPUREG}, {FCOM, ENC_ST0_FPUREG}, {FCOMP, ENC_ST0_FPUREG}, // 0
+			{FSUB, ENC_ST0_FPUREG}, {FSUBR, ENC_ST0_FPUREG}, {FDIV, ENC_ST0_FPUREG}, {FDIVR, ENC_ST0_FPUREG} // 4
+		},
+		{ // 0xd9
+			{FLD, ENC_FPUREG}, {FXCH, ENC_ST0_FPUREG}, {12, ENC_REGGROUP_NO_OPERANDS}, {INVALID, ENC_INVALID}, // 0
+			{13, ENC_REGGROUP_NO_OPERANDS}, {14, ENC_REGGROUP_NO_OPERANDS}, {15, ENC_REGGROUP_NO_OPERANDS}, {16, ENC_REGGROUP_NO_OPERANDS} // 4
+		},
+		{ // 0xda
+			{FCMOVB, ENC_ST0_FPUREG}, {FCMOVE, ENC_ST0_FPUREG}, {FCMOVBE, ENC_ST0_FPUREG}, {FCMOVU, ENC_ST0_FPUREG}, // 0
+			{INVALID, ENC_INVALID}, {17, ENC_REGGROUP_NO_OPERANDS}, {INVALID, ENC_INVALID}, {INVALID, ENC_INVALID} // 4
+		},
+		{ // 0xdb
+			{FCMOVNB, ENC_ST0_FPUREG}, {FCMOVNE, ENC_ST0_FPUREG}, {FCMOVNBE, ENC_ST0_FPUREG}, {FCMOVNU, ENC_ST0_FPUREG}, // 0
+			{18, ENC_REGGROUP_NO_OPERANDS}, {FUCOMI, ENC_ST0_FPUREG}, {FCOMI, ENC_ST0_FPUREG}, {21, ENC_REGGROUP_NO_OPERANDS} // 4
+		},
+		{ // 0xdc
+			{FADD, ENC_FPUREG_ST0}, {FMUL, ENC_FPUREG_ST0}, {INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, // 0
+			{FSUBR, ENC_FPUREG_ST0}, {FSUB, ENC_FPUREG_ST0}, {FDIVR, ENC_FPUREG_ST0}, {FDIV, ENC_FPUREG_ST0} // 4
+		},
+		{ // 0xdd
+			{FFREE, ENC_FPUREG}, {INVALID, ENC_INVALID}, {FST, ENC_FPUREG}, {FSTP, ENC_FPUREG}, // 0
+			{FUCOM, ENC_ST0_FPUREG}, {FUCOMP, ENC_ST0_FPUREG}, {INVALID, ENC_INVALID}, {22, ENC_REGGROUP_NO_OPERANDS} // 4
+		},
+		{ // 0xde
+			{FADDP, ENC_FPUREG_ST0}, {FMULP, ENC_FPUREG_ST0}, {INVALID, ENC_INVALID}, {19, ENC_REGGROUP_NO_OPERANDS}, // 0
+			{FSUBRP, ENC_FPUREG_ST0}, {FSUBP, ENC_FPUREG_ST0}, {FDIVRP, ENC_FPUREG_ST0}, {FDIVP, ENC_FPUREG_ST0} // 4
+		},
+		{ // 0xdf
+			{FFREEP, ENC_FPUREG}, {INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, {INVALID, ENC_INVALID}, // 0
+			{20, ENC_REGGROUP_AX}, {FUCOMIP, ENC_ST0_FPUREG}, {FCOMIP, ENC_ST0_FPUREG}, {23, ENC_REGGROUP_NO_OPERANDS} // 4
+		}
+	};
+
+
+	static const uint16_t groupOperations[26][8] =
+	{
+		{ADD, OR, ADC, SBB, AND, SUB, XOR, CMP}, // Group 0
+		{ROL, ROR, RCL, RCR, SHL, SHR, SHL, SAR}, // Group 1
+		{MOV, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID}, // Group 2
+		{TEST, TEST, NOT, NEG, MUL, IMUL, DIV, IDIV}, // Group 3
+		{INC, DEC, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID}, // Group 4
+		{INC, DEC, CALL, CALLF, JMP, JMPF, PUSH, INVALID}, // Group 5
+		{SLDT, STR, LLDT, LTR, VERR, VERW, INVALID, INVALID}, // Group 6
+		{SGDT, SIDT, LGDT, LIDT, SMSW, INVALID, LMSW, INVLPG}, // Group 7
+		{PREFETCH, PREFETCHW, PREFETCH, PREFETCH, PREFETCH, PREFETCH, PREFETCH, PREFETCH}, // Group 8
+		{PREFETCHNTA, PREFETCHT0, PREFETCHT1, PREFETCHT2, MMXNOP, MMXNOP, MMXNOP, MMXNOP}, // Group 9
+		{MMXNOP, MMXNOP, MMXNOP, MMXNOP, MMXNOP, MMXNOP, MMXNOP, MMXNOP}, // Group 10
+		{INVALID, INVALID, INVALID, INVALID, BT, BTS, BTR, BTC}, // Group 11
+		{FNOP, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID}, // Group 12
+		{FCHS, FABS, INVALID, INVALID, FTST, FXAM, INVALID, INVALID}, // Group 13
+		{FLD1, FLDL2T, FLDL2E, FLDPI, FLDLG2, FLDLN2, FLDZ, INVALID}, // Group 14
+		{F2XM1, FYL2X, FPTAN, FPATAN, FXTRACT, FPREM1, FDECSTP, FINCSTP}, // Group 15
+		{FPREM, FYL2XP1, FSQRT, FSINCOS, FRNDINT, FSCALE, FSIN, FCOS}, // Group 16
+		{INVALID, FUCOMPP, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID}, // Group 17
+		{FENI, FDISI, FCLEX, FINIT, FSETPM, FRSTPM, INVALID, INVALID}, // Group 18
+		{INVALID, FCOMPP, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID}, // Group 19
+		{FSTSW, FSTDW, FSTSG, INVALID, INVALID, INVALID, INVALID, INVALID}, // Group 20
+		{INVALID, INVALID, INVALID, INVALID, FRINT2, INVALID, INVALID, INVALID}, // Group 21
+		{INVALID, INVALID, INVALID, INVALID, FRICHOP, INVALID, INVALID, INVALID}, // Group 22
+		{INVALID, INVALID, INVALID, INVALID, FRINEAR, INVALID, INVALID, INVALID}, // Group 23
+		{FXSAVE, FXRSTOR, LDMXCSR, STMXCSR, XSAVE, XRSTOR, INVALID, CLFLUSH}, // Group 24
+		{INVALID, INVALID, INVALID, INVALID, INVALID, LFENCE, MFENCE, SFENCE}, // Group 25
+	};
+
+
+	static const uint16_t group0F01RegOperations[8][8] =
+	{
+		{INVALID, VMCALL, VMLAUNCH, VMRESUME, VMXOFF, INVALID, INVALID, INVALID},
+		{MONITOR, MWAIT, CLAC, STAC, INVALID, INVALID, INVALID, ENCLS},
+		{XGETBV, XSETBV, INVALID, INVALID, VMFUNC, XEND, XTEXT, ENCLU},
+		{INVALID, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID},
+		{INVALID, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID},
+		{INVALID, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID},
+		{INVALID, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID},
+		{SWAPGS, RDTSCP, INVALID, INVALID, INVALID, INVALID, INVALID, INVALID}
+	};
+
+
+	static const uint16_t mmxGroupOperations[3][8][2] =
+	{
+		{ // Group 0
+			{INVALID, INVALID}, {INVALID, INVALID}, {PSRLW, PSRLW}, {INVALID, INVALID},
+			{PSRAW, PSRAW}, {INVALID, INVALID}, {PSLLW, PSLLW}, {INVALID, INVALID}
+		},
+		{ // Group 1
+			{INVALID, INVALID}, {INVALID, INVALID}, {PSRLD, PSRLD}, {INVALID, INVALID},
+			{PSRAD, PSRAD}, {INVALID, INVALID}, {PSLLD, PSLLD}, {INVALID, INVALID}
+		},
+		{ // Group 2
+			{INVALID, INVALID}, {INVALID, INVALID}, {PSRLQ, PSRLQ}, {INVALID, PSRLDQ},
+			{INVALID, INVALID}, {INVALID, INVALID}, {PSLLQ, PSLLQ}, {INVALID, PSLLDQ}
+		}
+	};
+
+
+	enum SSETableOperandType
+	{
+		SSE_16,
+		SSE_32,
+		SSE_64,
+		SSE_128,
+		SSE_128_FLIP,
+		GPR_32_OR_64,
+		MMX_32,
+		MMX_64
+	};
+
+	struct SSETableOperationEntry
+	{
+		uint16_t operation;
+		uint8_t regType;
+		uint8_t rmType;
+	};
+
+#ifndef __cplusplus
+	typedef struct SSETableOperationEntry SSETableOperationEntry;
+#endif
+
+	struct SSETableEntry
+	{
+		SSETableOperationEntry regOps[4];
+		SSETableOperationEntry memOps[4];
+	};
+
+#ifndef __cplusplus
+	typedef struct SSETableEntry SSETableEntry;
+#endif
+
+	static const SSETableEntry sseTable[] =
+	{
+		{ // Entry 0
+			{{MOVUPS, SSE_128, SSE_128}, {MOVUPD, SSE_128, SSE_128}, {MOVSD, SSE_128, SSE_128}, {MOVSS, SSE_128, SSE_128}},
+			{{MOVUPS, SSE_128, SSE_128}, {MOVUPD, SSE_128, SSE_128}, {MOVSD, SSE_128, SSE_64}, {MOVSS, SSE_128, SSE_32}}
+		},
+		{ // Entry 1
+			{{INVALID, 0, 0}, {MOVHLPS, SSE_128, SSE_128}, {MOVDDUP, SSE_128, SSE_128}, {MOVSLDUP, SSE_128, SSE_128}},
+			{{MOVLPS, SSE_128, SSE_64}, {MOVLPD, SSE_128, SSE_64}, {MOVDDUP, SSE_128, SSE_64}, {MOVSLDUP, SSE_128, SSE_128}}
+		},
+		{ // Entry 2
+			{{INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{MOVLPS, SSE_128, SSE_64}, {MOVLPD, SSE_128, SSE_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 3
+			{{UNPCKLPS, SSE_128, SSE_128}, {UNPCKLPD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{UNPCKLPS, SSE_128, SSE_128}, {UNPCKLPD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 4
+			{{UNPCKHPS, SSE_128, SSE_128}, {UNPCKHPD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{UNPCKHPS, SSE_128, SSE_128}, {UNPCKHPD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 5
+			{{INVALID, 0, 0}, {MOVLHPS, SSE_128, SSE_128}, {INVALID, 0, 0}, {MOVSHDUP, SSE_128, SSE_128}},
+			{{MOVHPS, SSE_128, SSE_64}, {MOVHPD, SSE_128, SSE_64}, {INVALID, 0, 0}, {MOVSHDUP, SSE_128, SSE_128}}
+		},
+		{ // Entry 6
+			{{INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{MOVHPS, SSE_128, SSE_64}, {MOVHPD, SSE_128, SSE_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 7
+			{{MOVAPS, SSE_128, SSE_128}, {MOVAPD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{MOVAPS, SSE_128, SSE_128}, {MOVAPD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 8
+			{{CVTPI2PS, SSE_128, MMX_64}, {CVTPI2PD, SSE_128, MMX_64}, {CVTSI2SD, SSE_128, GPR_32_OR_64}, {CVTSI2SS, SSE_128, GPR_32_OR_64}},
+			{{CVTPI2PS, SSE_128, MMX_64}, {CVTPI2PD, SSE_128, MMX_64}, {CVTSI2SD, SSE_128, GPR_32_OR_64}, {CVTSI2SS, SSE_128, GPR_32_OR_64}}
+		},
+		{ // Entry 9
+			{{INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{MOVNTPS, SSE_128, SSE_128}, {MOVNTPD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 10
+			{{CVTTPS2PI, MMX_64, SSE_128}, {CVTTPD2PI, MMX_64, SSE_128}, {CVTTSD2SI, GPR_32_OR_64, SSE_128}, {CVTTSS2SI, GPR_32_OR_64, SSE_128}},
+			{{CVTTPS2PI, MMX_64, SSE_64}, {CVTTPD2PI, MMX_64, SSE_128}, {CVTTSD2SI, GPR_32_OR_64, SSE_64}, {CVTTSS2SI, GPR_32_OR_64, SSE_32}}
+		},
+		{ // Entry 11
+			{{CVTPS2PI, MMX_64, SSE_128}, {CVTPD2PI, MMX_64, SSE_128}, {CVTSD2SI, GPR_32_OR_64, SSE_128}, {CVTSS2SI, GPR_32_OR_64, SSE_128}},
+			{{CVTPS2PI, MMX_64, SSE_64}, {CVTPD2PI, MMX_64, SSE_128}, {CVTSD2SI, GPR_32_OR_64, SSE_64}, {CVTSS2SI, GPR_32_OR_64, SSE_32}}
+		},
+		{ // Entry 12
+			{{UCOMISS, SSE_128, SSE_128}, {UCOMISD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{UCOMISS, SSE_128, SSE_32}, {UCOMISD, SSE_128, SSE_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 13
+			{{COMISS, SSE_128, SSE_128}, {COMISD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{COMISS, SSE_128, SSE_32}, {COMISD, SSE_128, SSE_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 14
+			{{MOVMSKPS, GPR_32_OR_64, SSE_128}, {MOVMSKPD, GPR_32_OR_64, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 15
+			{{CVTPS2PD, SSE_128, SSE_128}, {CVTPD2PS, SSE_128, SSE_128}, {CVTSD2SS, SSE_128, SSE_128}, {CVTSS2SD, SSE_128, SSE_128}},
+			{{CVTPS2PD, SSE_128, SSE_64}, {CVTPD2PS, SSE_128, SSE_128}, {CVTSD2SS, SSE_128, SSE_64}, {CVTSS2SD, SSE_128, SSE_32}}
+		},
+		{ // Entry 16
+			{{CVTDQ2PS, SSE_128, SSE_128}, {CVTPS2DQ, SSE_128, SSE_128}, {INVALID, 0, 0}, {CVTTPS2DQ, SSE_128, SSE_128}},
+			{{CVTDQ2PS, SSE_128, SSE_128}, {CVTPS2DQ, SSE_128, SSE_128}, {INVALID, 0, 0}, {CVTTPS2DQ, SSE_128, SSE_128}}
+		},
+		{ // Entry 17
+			{{PUNPCKLBW, MMX_64, MMX_64}, {PUNPCKLBW, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{PUNPCKLBW, MMX_64, MMX_32}, {PUNPCKLBW, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 18
+			{{PUNPCKLWD, MMX_64, MMX_64}, {PUNPCKLWD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{PUNPCKLWD, MMX_64, MMX_32}, {PUNPCKLWD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 19
+			{{PUNPCKLDQ, MMX_64, MMX_64}, {PUNPCKLDQ, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{PUNPCKLDQ, MMX_64, MMX_32}, {PUNPCKLDQ, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 20
+			{{MOVD, MMX_64, GPR_32_OR_64}, {MOVD, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{MOVD, MMX_64, GPR_32_OR_64}, {MOVD, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 21
+			{{MOVQ, MMX_64, MMX_64}, {MOVDQA, SSE_128, SSE_128}, {INVALID, 0, 0}, {MOVDQU, SSE_128, SSE_128}},
+			{{MOVQ, MMX_64, MMX_64}, {MOVDQA, SSE_128, SSE_128}, {INVALID, 0, 0}, {MOVDQU, SSE_128, SSE_128}}
+		},
+		{ // Entry 22
+			{{PSHUFW, MMX_64, MMX_64}, {PSHUFD, SSE_128, SSE_128}, {PSHUFLW, SSE_128, SSE_128}, {PSHUFHW, SSE_128, SSE_128}},
+			{{PSHUFW, MMX_64, MMX_64}, {PSHUFD, SSE_128, SSE_128}, {PSHUFLW, SSE_128, SSE_128}, {PSHUFHW, SSE_128, SSE_128}}
+		},
+		{ // Entry 23
+			{{INVALID, 0, 0}, {HADDPD, SSE_128, SSE_128}, {HADDPS, SSE_128, SSE_128}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {HADDPD, SSE_128, SSE_128}, {HADDPS, SSE_128, SSE_128}, {INVALID, 0, 0}}
+		},
+		{ // Entry 24
+			{{INVALID, 0, 0}, {HSUBPD, SSE_128, SSE_128}, {HSUBPS, SSE_128, SSE_128}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {HSUBPD, SSE_128, SSE_128}, {HSUBPS, SSE_128, SSE_128}, {INVALID, 0, 0}}
+		},
+		{ // Entry 25
+			{{MOVD, MMX_64, GPR_32_OR_64}, {MOVD, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {MOVQ, SSE_128_FLIP, SSE_128_FLIP}},
+			{{MOVD, MMX_64, GPR_32_OR_64}, {MOVD, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {MOVQ, SSE_128_FLIP, SSE_128_FLIP}}
+		},
+		{ // Entry 26
+			{{CMPPS, SSE_128, SSE_128}, {CMPPD, SSE_128, SSE_128}, {CMPSD, SSE_128, SSE_128}, {CMPSS, SSE_128, SSE_128}},
+			{{CMPPS, SSE_128, SSE_128}, {CMPPD, SSE_128, SSE_128}, {CMPSD, SSE_128, SSE_64}, {CMPSS, SSE_128, SSE_32}}
+		},
+		{ // Entry 27
+			{{PINSRW, MMX_64, GPR_32_OR_64}, {PINSRW, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{PINSRW, MMX_64, GPR_32_OR_64}, {PINSRW, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 28
+			{{PEXTRW, MMX_64, GPR_32_OR_64}, {PEXTRW, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{PEXTRW, MMX_64, GPR_32_OR_64}, {PEXTRW, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 29
+			{{SHUFPS, SSE_128, SSE_128}, {SHUFPD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{SHUFPS, SSE_128, SSE_128}, {SHUFPD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 30
+			{{INVALID, 0, 0}, {ADDSUBPD, SSE_128, SSE_128}, {ADDSUBPS, SSE_128, SSE_128}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {ADDSUBPD, SSE_128, SSE_128}, {ADDSUBPS, SSE_128, SSE_128}, {INVALID, 0, 0}}
+		},
+		{ // Entry 31
+			{{INVALID, 0, 0}, {MOVQ, SSE_128_FLIP, SSE_128_FLIP}, {MOVDQ2Q, MMX_64, SSE_128}, {MOVQ2DQ, SSE_128, MMX_64}},
+			{{INVALID, 0, 0}, {MOVQ, SSE_128_FLIP, SSE_128_FLIP}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 32
+			{{PMOVMSKB, GPR_32_OR_64, MMX_64}, {PMOVMSKB, GPR_32_OR_64, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 33
+			{{INVALID, 0, 0}, {CVTTPD2DQ, SSE_128, SSE_128}, {CVTPD2DQ, SSE_128, SSE_128}, {CVTDQ2PD, SSE_128, SSE_128}},
+			{{INVALID, 0, 0}, {CVTTPD2DQ, SSE_128, SSE_128}, {CVTPD2DQ, SSE_128, SSE_128}, {CVTDQ2PD, SSE_128, SSE_128}}
+		},
+		{ // Entry 34
+			{{INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{MOVNTQ, MMX_64, MMX_64}, {MOVNTDQ, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 35
+			{{INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {INVALID, 0, 0}, {LDDQU, SSE_128, SSE_128}, {INVALID, 0, 0}}
+		},
+		{ // Entry 36
+			{{MASKMOVQ, MMX_64, MMX_64}, {MASKMOVDQU, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 37
+			{{INVALID, 0, 0}, {PMOVSXBW, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PMOVSXBW, SSE_128, SSE_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 38
+			{{INVALID, 0, 0}, {PMOVSXBD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PMOVSXBD, SSE_128, SSE_32}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 39
+			{{INVALID, 0, 0}, {PMOVSXBQ, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PMOVSXBQ, SSE_128, SSE_16}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 40
+			{{INVALID, 0, 0}, {PMOVSXWD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PMOVSXWD, SSE_128, SSE_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 41
+			{{INVALID, 0, 0}, {PMOVSXWQ, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PMOVSXWQ, SSE_128, SSE_32}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 42
+			{{INVALID, 0, 0}, {PMOVSXDQ, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PMOVSXDQ, SSE_128, SSE_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 43
+			{{INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {MOVNTDQA, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 44
+			{{INVALID, 0, 0}, {PMOVZXBW, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PMOVZXBW, SSE_128, SSE_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 45
+			{{INVALID, 0, 0}, {PMOVZXBD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PMOVZXBD, SSE_128, SSE_32}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 46
+			{{INVALID, 0, 0}, {PMOVZXBQ, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PMOVZXBQ, SSE_128, SSE_16}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 47
+			{{INVALID, 0, 0}, {PMOVZXWD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PMOVZXWD, SSE_128, SSE_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 48
+			{{INVALID, 0, 0}, {PMOVZXWQ, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PMOVZXWQ, SSE_128, SSE_32}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 49
+			{{INVALID, 0, 0}, {PMOVZXDQ, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PMOVZXDQ, SSE_128, SSE_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 50
+			{{INVALID, 0, 0}, {ROUNDSS, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {ROUNDSS, SSE_128, SSE_32}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 51
+			{{INVALID, 0, 0}, {ROUNDSD, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {ROUNDSD, SSE_128, SSE_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 52
+			{{INVALID, 0, 0}, {PEXTRB, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PEXTRB, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 53
+			{{INVALID, 0, 0}, {PEXTRW, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PEXTRW, SSE_128, SSE_16}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 54
+			{{INVALID, 0, 0}, {PEXTRD, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PEXTRD, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 55
+			{{INVALID, 0, 0}, {EXTRACTPS, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {EXTRACTPS, SSE_128, SSE_32}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 56
+			{{INVALID, 0, 0}, {PINSRB, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PINSRB, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 57
+			{{INVALID, 0, 0}, {INSERTPS, SSE_128, SSE_128}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {INSERTPS, SSE_128, SSE_32}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		},
+		{ // Entry 58
+			{{INVALID, 0, 0}, {PINSRD, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}},
+			{{INVALID, 0, 0}, {PINSRD, SSE_128, GPR_32_OR_64}, {INVALID, 0, 0}, {INVALID, 0, 0}}
+		}
+	};
+
+
+	struct SparseOpEntry
+	{
+		uint8_t opcode;
+		uint16_t operation;
+	};
+#ifndef __cplusplus
+	typedef struct SparseOpEntry SparseOpEntry;
+#endif
+
+	static const SparseOpEntry sparse3DNowOpcodes[] =
+	{
+		{0x0c, PI2FW}, {0x0d, PI2FD},
+		{0x1c, PF2IW}, {0x1d, PF2ID},
+		{0x86, PFRCPV}, {0x87, PFRSQRTV}, {0x8a, PFNACC}, {0x8e, PFPNACC},
+		{0x90, PFCMPGE}, {0x94, PFMIN}, {0x96, PFRCP}, {0x97, PFRSQRT}, {0x9a, PFSUB}, {0x9e, PFADD},
+		{0xa0, PFCMPGT}, {0xa4, PFMAX}, {0xa6, PFRCPIT1}, {0xa7, PFRSQIT1}, {0xaa, PFSUBR}, {0xae, PFACC},
+		{0xb0, PFCMPEQ}, {0xb4, PFMUL}, {0xb6, PFRCPIT2}, {0xb7, PMULHRW}, {0xbb, PSWAPD}, {0xbf, PAVGUSB}
+	};
+
+
+	typedef uint8_t RegDef;
+	static const RegDef reg8List[8] = {REG_AL, REG_CL, REG_DL, REG_BL, REG_AH, REG_CH, REG_DH, REG_BH};
+	static const RegDef reg8List64[16] = {REG_AL, REG_CL, REG_DL, REG_BL, REG_SPL, REG_BPL, REG_SIL, REG_DIL,
+		REG_R8B, REG_R9B, REG_R10B, REG_R11B, REG_R12B, REG_R13B, REG_R14B, REG_R15B};
+	static const RegDef reg16List[16] = {REG_AX, REG_CX, REG_DX, REG_BX, REG_SP, REG_BP, REG_SI, REG_DI,
+		REG_R8W, REG_R9W, REG_R10W, REG_R11W, REG_R12W, REG_R13W, REG_R14W, REG_R15W};
+	static const RegDef reg32List[16] = {REG_EAX, REG_ECX, REG_EDX, REG_EBX, REG_ESP, REG_EBP, REG_ESI, REG_EDI,
+		REG_R8D, REG_R9D, REG_R10D, REG_R11D, REG_R12D, REG_R13D, REG_R14D, REG_R15D};
+	static const RegDef reg64List[16] = {REG_RAX, REG_RCX, REG_RDX, REG_RBX, REG_RSP, REG_RBP, REG_RSI, REG_RDI,
+		REG_R8, REG_R9, REG_R10, REG_R11, REG_R12, REG_R13, REG_R14, REG_R15};
+	static const RegDef mmxRegList[16] = {REG_MM0, REG_MM1, REG_MM2, REG_MM3, REG_MM4, REG_MM5, REG_MM6, REG_MM7,
+		REG_MM0, REG_MM1, REG_MM2, REG_MM3, REG_MM4, REG_MM5, REG_MM6, REG_MM7};
+	static const RegDef xmmRegList[16] = {REG_XMM0, REG_XMM1, REG_XMM2, REG_XMM3, REG_XMM4, REG_XMM5, REG_XMM6, REG_XMM7,
+		REG_XMM8, REG_XMM9, REG_XMM10, REG_XMM11, REG_XMM12, REG_XMM13, REG_XMM14, REG_XMM15};
+	static const RegDef fpuRegList[16] = {REG_ST0, REG_ST1, REG_ST2, REG_ST3, REG_ST4, REG_ST5, REG_ST6, REG_ST7,
+		REG_ST0, REG_ST1, REG_ST2, REG_ST3, REG_ST4, REG_ST5, REG_ST6, REG_ST7};
+
+
+	struct RMDef
+	{
+		OperandType first;
+		OperandType second;
+		SegmentRegister segment;
+	};
+#ifndef __cplusplus
+	typedef struct RMDef RMDef;
+#endif
+
+
+	static const RegDef* GetByteRegList(DecodeState* state)
+	{
+		if (state->rex)
+			return reg8List64;
+		return reg8List;
+	}
+
+
+	static const RegDef* GetRegListForOpSize(DecodeState* state)
+	{
+		switch (state->opSize)
+		{
+		case 2:
+			return reg16List;
+		case 4:
+			return reg32List;
+		case 8:
+			return reg64List;
+		default:
+			return NULL;
+		}
+	}
+
+
+	static const RegDef* GetRegListForFinalOpSize(DecodeState* state)
+	{
+		switch (state->finalOpSize)
+		{
+		case 1:
+			return GetByteRegList(state);
+		case 2:
+			return reg16List;
+		case 4:
+			return reg32List;
+		case 8:
+			return reg64List;
+		default:
+			return NULL;
+		}
+	}
+
+
+	static const RegDef* GetRegListForAddrSize(DecodeState* state)
+	{
+		switch (state->addrSize)
+		{
+		case 2:
+			return reg16List;
+		case 4:
+			return reg32List;
+		case 8:
+			return reg64List;
+		default:
+			return NULL;
+		}
+	}
+
+
+	static uint16_t GetFinalOpSize(DecodeState* state)
+	{
+		if (state->flags & DEC_FLAG_BYTE)
+			return 1;
+		return state->opSize;
+	}
+
+
+	static uint8_t Read8(DecodeState* state)
+	{
+		uint8_t val;
+
+		if (state->len < 1)
+		{
+			// Read past end of buffer, returning 0xcc from now on will guarantee exit
+			state->invalid = true;
+			state->insufficientLength = true;
+			state->len = 0;
+			return 0xcc;
+		}
+
+		val = *(state->opcode++);
+		state->len--;
+		return val;
+	}
+
+
+	static uint8_t Peek8(DecodeState* state)
+	{
+		uint8_t val;
+
+		if (state->len < 1)
+		{
+			// Read past end of buffer, returning 0xcc from now on will guarantee exit
+			state->invalid = true;
+			state->insufficientLength = true;
+			state->len = 0;
+			return 0xcc;
+		}
+
+		val = *state->opcode;
+		return val;
+	}
+
+
+	static uint16_t Read16(DecodeState* state)
+	{
+		uint16_t val;
+
+		if (state->len < 2)
+		{
+			// Read past end of buffer
+			state->invalid = true;
+			state->insufficientLength = true;
+			state->len = 0;
+			return 0;
+		}
+
+		val = *((uint16_t*)state->opcode);
+		state->opcode += 2;
+		state->len -= 2;
+		return val;
+	}
+
+
+	static uint32_t Read32(DecodeState* state)
+	{
+		uint32_t val;
+
+		if (state->len < 4)
+		{
+			// Read past end of buffer
+			state->invalid = true;
+			state->insufficientLength = true;
+			state->len = 0;
+			return 0;
+		}
+
+		val = *((uint32_t*)state->opcode);
+		state->opcode += 4;
+		state->len -= 4;
+		return val;
+	}
+
+
+	static uint64_t Read64(DecodeState* state)
+	{
+		uint64_t val;
+
+		if (state->len < 8)
+		{
+			// Read past end of buffer
+			state->invalid = true;
+			state->insufficientLength = true;
+			state->len = 0;
+			return 0;
+		}
+
+		val = *((uint64_t*)state->opcode);
+		state->opcode += 8;
+		state->len -= 8;
+		return val;
+	}
+
+
+	static int64_t ReadSigned8(DecodeState* state)
+	{
+		return (int64_t)(int8_t)Read8(state);
+	}
+
+
+	static int64_t ReadSigned16(DecodeState* state)
+	{
+		return (int64_t)(int16_t)Read16(state);
+	}
+
+
+	static int64_t ReadSigned32(DecodeState* state)
+	{
+		return (int64_t)(int32_t)Read32(state);
+	}
+
+
+	static int64_t ReadFinalOpSize(DecodeState* state)
+	{
+		if (state->flags & DEC_FLAG_IMM_SX)
+			return ReadSigned8(state);
+		switch (state->finalOpSize)
+		{
+		case 1:
+			return Read8(state);
+		case 2:
+			return Read16(state);
+		case 4:
+			return Read32(state);
+		case 8:
+			return ReadSigned32(state);
+		}
+		return 0;
+	}
+
+
+	static int64_t ReadAddrSize(DecodeState* state)
+	{
+		switch (state->addrSize)
+		{
+		case 2:
+			return Read16(state);
+		case 4:
+		case 8:
+			return Read32(state);
+		}
+		return 0;
+	}
+
+
+	static int64_t ReadSignedFinalOpSize(DecodeState* state)
+	{
+		switch (state->finalOpSize)
+		{
+		case 1:
+			return ReadSigned8(state);
+		case 2:
+			return ReadSigned16(state);
+		case 4:
+		case 8:
+			return ReadSigned32(state);
+		}
+		return 0;
+	}
+
+
+	static void UpdateOperationForAddrSize(DecodeState* state)
+	{
+		if (state->addrSize == 4)
+			state->result->operation = (InstructionOperation)(state->result->operation + 1);
+		else if (state->addrSize == 8)
+			state->result->operation = (InstructionOperation)(state->result->operation + 2);
+	}
+
+
+	static void ProcessEncoding(DecodeState* state, const InstructionEncoding* encoding)
+	{
+		state->result->operation = (InstructionOperation)encoding->operation;
+
+		state->flags = encoding->flags;
+		if (state->using64 && (state->flags & DEC_FLAG_INVALID_IN_64BIT))
+		{
+			state->invalid = true;
+			return;
+		}
+		if (state->using64 && (state->flags & DEC_FLAG_DEFAULT_TO_64BIT))
+			state->opSize = state->opPrefix ? 4 : 8;
+		state->finalOpSize = GetFinalOpSize(state);
+
+		if (state->flags & DEC_FLAG_FLIP_OPERANDS)
+		{
+			state->operand0 = &state->result->operands[1];
+			state->operand1 = &state->result->operands[0];
+		}
+		else
+		{
+			state->operand0 = &state->result->operands[0];
+			state->operand1 = &state->result->operands[1];
+		}
+
+		if (state->flags & DEC_FLAG_FORCE_16BIT)
+			state->finalOpSize = 2;
+
+		if (state->flags & DEC_FLAG_OPERATION_OP_SIZE)
+		{
+			if (state->finalOpSize == 4)
+				state->result->operation = (InstructionOperation)(state->result->operation + 1);
+			else if (state->finalOpSize == 8)
+				state->result->operation = (InstructionOperation)(state->result->operation + 2);
+		}
+
+		if (state->flags & DEC_FLAG_REP)
+		{
+			if (state->rep != REP_PREFIX_NONE)
+				state->result->flags |= X86_FLAG_REP;
+		}
+		else if (state->flags & DEC_FLAG_REP_COND)
+		{
+			if (state->rep == REP_PREFIX_REPNE)
+				state->result->flags |= X86_FLAG_REPNE;
+			else if (state->rep == REP_PREFIX_REPE)
+				state->result->flags |= X86_FLAG_REPE;
+		}
+
+		encoding->func(state);
+
+		if (state->result->operation == INVALID)
+			state->invalid = true;
+
+		if (state->result->flags & X86_FLAG_LOCK)
+		{
+			// Ensure instruction allows lock and it has proper semantics
+			if (!(state->flags & DEC_FLAG_LOCK))
+				state->invalid = true;
+			else if (state->result->operation == CMP)
+				state->invalid = true;
+			else if ((state->result->operands[0].operand != MEM) && (state->result->operands[1].operand != MEM))
+				state->invalid = true;
+		}
+	}
+
+
+	static void ProcessOpcode(DecodeState* state, const InstructionEncoding* map, uint8_t opcode)
+	{
+		ProcessEncoding(state, &map[opcode]);
+	}
+
+
+	static void ProcessSparseOpcode(DecodeState* state, const SparseInstructionEncoding* map, size_t mapSize, uint8_t opcode)
+	{
+		int i, min, max;
+		state->result->operation = INVALID;
+		for (min = 0, max = (int)mapSize - 1, i = (min + max) / 2;
+			min <= max; i = (min + max) / 2)
+		{
+			if (opcode > map[i].opcode)
+				min = i + 1;
+			else if (opcode < map[i].opcode)
+				max = i - 1;
+			else
+			{
+				ProcessEncoding(state, &map[i].encoding);
+				break;
+			}
+		}
+	}
+
+
+	static SegmentRegister GetFinalSegment(DecodeState* state, SegmentRegister seg)
+	{
+		return (state->result->segment == SEG_DEFAULT) ? seg : state->result->segment;
+	}
+
+
+	static void SetMemOperand(DecodeState* state, InstructionOperand* oper, const RMDef* def, int64_t immed)
+	{
+		oper->operand = MEM;
+		oper->components[0] = def->first;
+		oper->components[1] = def->second;
+		oper->immediate = immed;
+		oper->segment = GetFinalSegment(state, def->segment);
+	}
+
+
+	static void DecodeRM(DecodeState* state, InstructionOperand* rmOper, const RegDef* regList, uint16_t rmSize, uint8_t* regOper)
+	{
+		uint8_t rmByte = Read8(state);
+		uint8_t mod = rmByte >> 6;
+		uint8_t rm = rmByte & 7;
+		InstructionOperand temp;
+
+		if (regOper)
+			*regOper = (rmByte >> 3) & 7;
+
+		if (!rmOper)
+			rmOper = &temp;
+
+		rmOper->size = rmSize;
+		if (state->addrSize == 2)
+		{
+			static const RMDef rm16Components[9] = {{REG_BX, REG_SI, SEG_DS}, {REG_BX, REG_DI, SEG_DS},
+				{REG_BP, REG_SI, SEG_SS}, {REG_BP, REG_DI, SEG_SS}, {REG_SI, NONE, SEG_DS},
+				{REG_DI, NONE, SEG_DS}, {REG_BP, NONE, SEG_SS}, {REG_BX, NONE, SEG_DS},
+				{NONE, NONE, SEG_DS}};
+			switch (mod)
+			{
+			case 0:
+				if (rm == 6)
+				{
+					rm = 8;
+					SetMemOperand(state, rmOper, &rm16Components[rm], Read16(state));
+				}
+				else
+					SetMemOperand(state, rmOper, &rm16Components[rm], 0);
+				break;
+			case 1:
+				SetMemOperand(state, rmOper, &rm16Components[rm], ReadSigned8(state));
+				break;
+			case 2:
+				SetMemOperand(state, rmOper, &rm16Components[rm], ReadSigned16(state));
+				break;
+			case 3:
+				rmOper->operand = (OperandType)regList[rm];
+				break;
+			}
+			if (rmOper->components[0] == NONE)
+				rmOper->immediate &= 0xffff;
+		}
+		else
+		{
+			const RegDef* addrRegList = GetRegListForAddrSize(state);
+			uint8_t rmReg1Offset = state->rexRM1 ? 8 : 0;
+			uint8_t rmReg2Offset = state->rexRM2 ? 8 : 0;
+			SegmentRegister seg = SEG_DEFAULT;
+			rmOper->operand = MEM;
+			if ((mod != 3) && (rm == 4))
+			{
+				// SIB byte present
+				uint8_t sibByte = Read8(state);
+				uint8_t base = sibByte & 7;
+				uint8_t index = (sibByte >> 3) & 7;
+				rmOper->scale = 1 << (sibByte >> 6);
+				if ((mod != 0) || (base != 5))
+					rmOper->components[0] = (OperandType)addrRegList[base + rmReg1Offset];
+				if ((index + rmReg2Offset) != 4)
+					rmOper->components[1] = (OperandType)addrRegList[index + rmReg2Offset];
+				switch (mod)
+				{
+				case 0:
+					if (base == 5)
+						rmOper->immediate = ReadSigned32(state);
+					break;
+				case 1:
+					rmOper->immediate = ReadSigned8(state);
+					break;
+				case 2:
+					rmOper->immediate = ReadSigned32(state);
+					break;
+				}
+				if (((base + rmReg1Offset) == 4) || ((base + rmReg1Offset) == 5))
+					seg = SEG_SS;
+				else
+					seg = SEG_DS;
+			}
+			else
+			{
+				switch (mod)
+				{
+				case 0:
+					if (rm == 5)
+					{
+						rmOper->immediate = ReadSigned32(state);
+						if (state->addrSize == 8)
+						{
+							state->ripRelFixup = &rmOper->immediate;
+							rmOper->relative = true;
+						}
+					}
+					else
+						rmOper->components[0] = (OperandType)addrRegList[rm + rmReg1Offset];
+					seg = SEG_DS;
+					break;
+				case 1:
+					rmOper->components[0] = (OperandType)addrRegList[rm + rmReg1Offset];
+					rmOper->immediate = ReadSigned8(state);
+					seg = (rm == 5) ? SEG_SS : SEG_DS;
+					break;
+				case 2:
+					rmOper->components[0] = (OperandType)addrRegList[rm + rmReg1Offset];
+					rmOper->immediate = ReadSigned32(state);
+					seg = (rm == 5) ? SEG_SS : SEG_DS;
+					break;
+				case 3:
+					rmOper->operand = (OperandType)regList[rm + rmReg1Offset];
+					break;
+				}
+			}
+			if (seg != SEG_DEFAULT)
+				rmOper->segment = GetFinalSegment(state, seg);
+		}
+	}
+
+
+	static void DecodeRMReg(DecodeState* state, InstructionOperand* rmOper, const RegDef* rmRegList, uint16_t rmSize,
+		InstructionOperand* regOper, const RegDef* regList, uint16_t regSize)
+	{
+		uint8_t reg;
+		DecodeRM(state, rmOper, rmRegList, rmSize, &reg);
+		if (regOper)
+		{
+			uint8_t regOffset = state->rexReg ? 8 : 0;
+			regOper->size = regSize;
+			regOper->operand = (OperandType)regList[reg + regOffset];
+		}
+	}
+
+
+	static void SetOperandToEsEdi(DecodeState* state, InstructionOperand* oper, uint16_t size)
+	{
+		const RegDef* addrRegList = GetRegListForAddrSize(state);
+		oper->operand = MEM;
+		oper->components[0] = (OperandType)addrRegList[7];
+		oper->size = size;
+		oper->segment = SEG_ES;
+	}
+
+
+	static void SetOperandToDsEsi(DecodeState* state, InstructionOperand* oper, uint16_t size)
+	{
+		const RegDef* addrRegList = GetRegListForAddrSize(state);
+		oper->operand = MEM;
+		oper->components[0] = (OperandType)addrRegList[6];
+		oper->size = size;
+		oper->segment = GetFinalSegment(state, SEG_DS);
+	}
+
+
+	static void SetOperandToImmAddr(DecodeState* state, InstructionOperand* oper)
+	{
+		oper->operand = MEM;
+		oper->immediate = ReadAddrSize(state);
+		oper->segment = GetFinalSegment(state, SEG_DS);
+		oper->size = state->finalOpSize;
+	}
+
+
+	static void SetOperandToEaxFinalOpSize(DecodeState* state, InstructionOperand* oper)
+	{
+		const RegDef* regList = GetRegListForFinalOpSize(state);
+		oper->operand = (OperandType)regList[0];
+		oper->size = state->finalOpSize;
+	}
+
+
+	static void SetOperandToOpReg(DecodeState* state, InstructionOperand* oper)
+	{
+		const RegDef* regList = GetRegListForFinalOpSize(state);
+		uint8_t regOffset = state->rexRM1 ? 8 : 0;
+		oper->operand = (OperandType)regList[(state->opcode[-1] & 7) + regOffset];
+		oper->size = state->finalOpSize;
+	}
+
+
+	static void SetOperandToImm(DecodeState* state, InstructionOperand* oper)
+	{
+		oper->operand = IMM;
+		oper->size = state->finalOpSize;
+		oper->immediate = ReadFinalOpSize(state);
+	}
+
+
+	static void SetOperandToImm8(DecodeState* state, InstructionOperand* oper)
+	{
+		oper->operand = IMM;
+		oper->size = 1;
+		oper->immediate = Read8(state);
+	}
+
+
+	static void SetOperandToImm16(DecodeState* state, InstructionOperand* oper)
+	{
+		oper->operand = IMM;
+		oper->size = 2;
+		oper->immediate = Read16(state);
+	}
+
+
+	static uint8_t DecodeSSEPrefix(DecodeState* state)
+	{
+		if (state->opPrefix)
+		{
+			state->opPrefix = false;
+			return 1;
+		}
+		else if (state->rep == REP_PREFIX_REPNE)
+		{
+			state->rep = REP_PREFIX_NONE;
+			return 2;
+		}
+		else if (state->rep == REP_PREFIX_REPE)
+		{
+			state->rep = REP_PREFIX_NONE;
+			return 3;
+		}
+		return 0;
+	}
+
+
+	static uint16_t GetSizeForSSEType(uint8_t type)
+	{
+		if (type == 2)
+			return 8;
+		if (type == 3)
+			return 4;
+		return 16;
+	}
+
+
+	static InstructionOperand* GetOperandForSSEEntryType(DecodeState* state, uint16_t type, uint8_t operandIndex)
+	{
+		if (type == SSE_128_FLIP)
+			operandIndex = 1 - operandIndex;
+		if (operandIndex == 0)
+			return state->operand0;
+		return state->operand1;
+	}
+
+
+	static const RegDef* GetRegListForSSEEntryType(DecodeState* state, uint16_t type)
+	{
+		switch (type)
+		{
+		case MMX_32:
+		case MMX_64:
+			return mmxRegList;
+		case GPR_32_OR_64:
+			return (state->opSize == 8) ? reg64List : reg32List;
+		default:
+			return xmmRegList;
+		}
+	}
+
+
+	static uint16_t GetSizeForSSEEntryType(DecodeState* state, uint16_t type)
+	{
+		switch (type)
+		{
+		case SSE_16:
+			return 2;
+		case SSE_32:
+		case MMX_32:
+			return 4;
+		case SSE_64:
+		case MMX_64:
+			return 8;
+		case GPR_32_OR_64:
+			return (state->opSize == 8) ? 8 : 4;
+		default:
+			return 16;
+		}
+	}
+
+
+	static void UpdateOperationForSSEEntryType(DecodeState* state, uint16_t type)
+	{
+		if ((type == GPR_32_OR_64) && (state->opSize == 8))
+			state->result->operation = (InstructionOperation)((int)state->result->operation + 1);
+	}
+
+
+	static void InvalidDecode(DecodeState* state)
+	{
+		state->invalid = true;
+	}
+
+
+	static void DecodeTwoByte(DecodeState* state)
+	{
+		uint8_t opcode = Read8(state);
+		if (opcode == 0x38)
+			ProcessSparseOpcode(state, threeByte0F38Map, sizeof(threeByte0F38Map) / sizeof(SparseInstructionEncoding), Read8(state));
+		else if (opcode == 0x3a)
+		{
+			ProcessSparseOpcode(state, threeByte0F3AMap, sizeof(threeByte0F3AMap) / sizeof(SparseInstructionEncoding), Read8(state));
+			SetOperandToImm8(state, &state->result->operands[2]);
+		}
+		else
+			ProcessOpcode(state, twoByteOpcodeMap, opcode);
+	}
+
+
+	static void DecodeFpu(DecodeState* state)
+	{
+		uint8_t modRM = Peek8(state);
+		uint8_t reg = (modRM >> 3) & 7;
+		uint8_t op = (uint8_t)state->result->operation;
+
+		const InstructionEncoding* map;
+		if ((modRM & 0xc0) == 0xc0)
+			map = fpuRegOpcodeMap[op];
+		else
+			map = fpuMemOpcodeMap[op];
+		ProcessEncoding(state, &map[reg]);
+	}
+
+
+	static void DecodeNoOperands(DecodeState* state)
+	{
+	}
+
+
+	static void DecodeRegRM(DecodeState* state)
+	{
+		uint16_t size = state->finalOpSize;
+		const RegDef* regList = GetRegListForFinalOpSize(state);
+		switch (state->flags & DEC_FLAG_REG_RM_SIZE_MASK)
+		{
+		case 0:
+			break;
+		case DEC_FLAG_REG_RM_2X_SIZE:
+			size *= 2;
+			break;
+		case DEC_FLAG_REG_RM_FAR_SIZE:
+			size += 2;
+			break;
+		case DEC_FLAG_REG_RM_NO_SIZE:
+			size = 0;
+			break;
+		}
+
+		DecodeRMReg(state, state->operand1, regList, size, state->operand0, regList, state->finalOpSize);
+
+		if ((size != state->finalOpSize) && (state->operand1->operand != MEM))
+			state->invalid = true;
+	}
+
+
+	static void DecodeRegRMImm(DecodeState* state)
+	{
+		const RegDef* regList = GetRegListForFinalOpSize(state);
+		DecodeRMReg(state, state->operand1, regList, state->finalOpSize, state->operand0, regList, state->finalOpSize);
+		SetOperandToImm(state, &state->result->operands[2]);
+	}
+
+
+	static void DecodeRMRegImm8(DecodeState* state)
+	{
+		const RegDef* regList = GetRegListForFinalOpSize(state);
+		DecodeRMReg(state, state->operand0, regList, state->finalOpSize, state->operand1, regList, state->finalOpSize);
+		SetOperandToImm8(state, &state->result->operands[2]);
+	}
+
+
+	static void DecodeRMRegCL(DecodeState* state)
+	{
+		const RegDef* regList = GetRegListForFinalOpSize(state);
+		DecodeRMReg(state, state->operand0, regList, state->finalOpSize, state->operand1, regList, state->finalOpSize);
+		state->result->operands[2].operand = REG_CL;
+		state->result->operands[2].size = 1;
+	}
+
+
+	static void DecodeEaxImm(DecodeState* state)
+	{
+		SetOperandToEaxFinalOpSize(state, state->operand0);
+		SetOperandToImm(state, state->operand1);
+	}
+
+
+	static void DecodePushPopSeg(DecodeState* state)
+	{
+		int8_t offset = 0;
+		if (state->opcode[-1] >= 0xa0) // FS/GS
+			offset = -16;
+		state->operand0->operand = (OperandType)(REG_ES + (state->opcode[-1] >> 3) + offset);
+		state->operand0->size = state->opSize;
+	}
+
+
+	static void DecodeOpReg(DecodeState* state)
+	{
+		SetOperandToOpReg(state, state->operand0);
+	}
+
+
+	static void DecodeEaxOpReg(DecodeState* state)
+	{
+		SetOperandToEaxFinalOpSize(state, state->operand0);
+		SetOperandToOpReg(state, state->operand1);
+	}
+
+
+	static void DecodeOpRegImm(DecodeState* state)
+	{
+		SetOperandToOpReg(state, state->operand0);
+		state->operand1->operand = IMM;
+		state->operand1->size = state->finalOpSize;
+		state->operand1->immediate = (state->opSize == 8) ? Read64(state) : ReadFinalOpSize(state);
+	}
+
+
+	static void DecodeNop(DecodeState* state)
+	{
+		if (state->rexRM1)
+		{
+			state->result->operation = XCHG;
+			DecodeEaxOpReg(state);
+		}
+	}
+
+
+	static void DecodeImm(DecodeState* state)
+	{
+		SetOperandToImm(state, state->operand0);
+	}
+
+
+	static void DecodeImm16Imm8(DecodeState* state)
+	{
+		SetOperandToImm16(state, state->operand0);
+		SetOperandToImm8(state, state->operand1);
+	}
+
+
+	static void DecodeEdiDx(DecodeState* state)
+	{
+		SetOperandToEsEdi(state, state->operand0, state->finalOpSize);
+		state->operand1->operand = REG_DX;
+		state->operand1->size = 2;
+	}
+
+
+	static void DecodeDxEsi(DecodeState* state)
+	{
+		state->operand0->operand = REG_DX;
+		state->operand0->size = 2;
+		SetOperandToDsEsi(state, state->operand1, state->finalOpSize);
+	}
+
+
+	static void DecodeRelImm(DecodeState* state)
+	{
+		state->operand0->operand = IMM;
+		state->operand0->size = state->opSize;
+		state->operand0->immediate = ReadSignedFinalOpSize(state);
+		state->operand0->immediate += state->addr + (state->opcode - state->opcodeStart);
+	}
+
+
+	static void DecodeRelImmAddrSize(DecodeState* state)
+	{
+		DecodeRelImm(state);
+		UpdateOperationForAddrSize(state);
+	}
+
+
+	static void DecodeGroupRM(DecodeState* state)
+	{
+		const RegDef* regList = GetRegListForFinalOpSize(state);
+		uint8_t regField;
+		DecodeRM(state, state->operand0, regList, state->finalOpSize, &regField);
+		state->result->operation = (InstructionOperation)groupOperations[(int)state->result->operation][regField];
+	}
+
+
+	static void DecodeGroupRMImm(DecodeState* state)
+	{
+		DecodeGroupRM(state);
+		SetOperandToImm(state, state->operand1);
+	}
+
+
+	static void DecodeGroupRMImm8V(DecodeState* state)
+	{
+		DecodeGroupRM(state);
+		SetOperandToImm8(state, state->operand1);
+	}
+
+
+	static void DecodeGroupRMOne(DecodeState* state)
+	{
+		DecodeGroupRM(state);
+		state->operand1->operand = IMM;
+		state->operand1->size = 1;
+		state->operand1->immediate = 1;
+	}
+
+
+	static void DecodeGroupRMCl(DecodeState* state)
+	{
+		DecodeGroupRM(state);
+		state->operand1->operand = REG_CL;
+		state->operand1->size = 1;
+	}
+
+
+	static void DecodeGroupF6F7(DecodeState* state)
+	{
+		DecodeGroupRM(state);
+		if (state->result->operation == TEST)
+			SetOperandToImm(state, state->operand1);
+		// Check for valid locking semantics
+		if ((state->result->flags & X86_FLAG_LOCK) && (state->result->operation != NOT) && (state->result->operation != NEG))
+			state->invalid = true;
+	}
+
+
+	static void DecodeGroupFF(DecodeState* state)
+	{
+		if (state->using64)
+		{
+			// Default to 64-bit for jumps and calls
+			uint8_t rm = Peek8(state);
+			uint8_t regField = (rm >> 3) & 7;
+			if ((regField >= 2) && (regField <= 5))
+				state->finalOpSize = state->opSize = state->opPrefix ? 4 : 8;
+			else if (regField == 6)
+				state->finalOpSize = state->opSize = 8; // Prefix doesn't matter for 64 bit push
+		}
+		DecodeGroupRM(state);
+		// Check for valid far jump/call semantics
+		if ((state->result->operation == CALLF) || (state->result->operation == JMPF))
+		{
+			if (state->operand0->operand != MEM)
+				state->invalid = true;
+			state->operand0->size += 2;
+		}
+		// Check for valid locking semantics
+		if ((state->result->flags & X86_FLAG_LOCK) && (state->result->operation != INC) && (state->result->operation != DEC))
+			state->invalid = true;
+	}
+
+
+	static void DecodeGroup0F00(DecodeState* state)
+	{
+		uint8_t rm = Peek8(state);
+		uint8_t regField = (rm >> 3) & 7;
+		if (regField >= 2)
+			state->opSize = 2;
+		DecodeGroupRM(state);
+	}
+
+
+	static void DecodeGroup0F01(DecodeState* state)
+	{
+		uint8_t rm = Peek8(state);
+		uint8_t modField = (rm >> 6) & 3;
+		uint8_t regField = (rm >> 3) & 7;
+		uint8_t rmField = rm & 7;
+
+		if ((modField == 3) && (regField != 4) && (regField != 6))
+		{
+			state->result->operation = (InstructionOperation)group0F01RegOperations[regField][rmField];
+			Read8(state);
+			return;
+		}
+
+		if (regField < 4)
+			state->opSize = state->using64 ? 10 : 6;
+		else if (regField != 7)
+			state->opSize = 2;
+		else
+			state->opSize = 1;
+		DecodeGroupRM(state);
+	}
+
+
+	static void DecodeGroup0FAE(DecodeState* state)
+	{
+		uint8_t rm = Peek8(state);
+		uint8_t modField = (rm >> 6) & 3;
+		uint8_t regField = (rm >> 3) & 7;
+
+		if (((rm & 0xf8) == 0xe8) || ((rm & 0xf8) == 0xf8) || ((rm & 0xf8) == 0xf0))
+		{
+			state->result->operation = (InstructionOperation)groupOperations[(int)state->result->operation + 1][regField];
+			Read8(state);
+			return;
+		}
+
+		if (modField == 3)
+		{
+			state->result->operation = (InstructionOperation)groupOperations[(int)state->result->operation + 1][regField];
+			return;
+		}
+
+		if ((regField & 2) == 0)
+			state->opSize = 512;
+		else if ((regField & 6) == 2)
+			state->opSize = 4;
+		else
+			state->opSize = 1;
+		DecodeGroupRM(state);
+	}
+
+
+	static void Decode0FB8(DecodeState* state)
+	{
+		if (state->rep != REP_PREFIX_REPE)
+		{
+			if (state->using64)
+				state->opSize = state->opPrefix ? 4 : 8;
+			state->finalOpSize = GetFinalOpSize(state);
+			DecodeRelImm(state);
+			return;
+		}
+
+		DecodeRegRM(state);
+	}
+
+
+	static void DecodeRMSRegV(DecodeState* state)
+	{
+		const RegDef* regList = GetRegListForOpSize(state);
+		uint8_t regField;
+		DecodeRM(state, state->operand0, regList, state->opSize, &regField);
+		if (regField >= 6)
+			state->invalid = true;
+		state->operand1->operand = (OperandType)(REG_ES + regField);
+		state->operand1->size = 2;
+		if (state->result->operands[0].operand == REG_CS)
+			state->invalid = true;
+	}
+
+
+	static void DecodeRM8(DecodeState* state)
+	{
+		const RegDef* regList = GetByteRegList(state);
+		DecodeRM(state, state->operand0, regList, 1, NULL);
+	}
+
+
+	static void DecodeRMV(DecodeState* state)
+	{
+		const RegDef* regList = GetRegListForOpSize(state);
+		DecodeRM(state, state->operand0, regList, state->opSize, NULL);
+	}
+
+
+	static void DecodeFarImm(DecodeState* state)
+	{
+		SetOperandToImm(state, state->operand1);
+		SetOperandToImm16(state, state->operand0);
+	}
+
+
+	static void DecodeEaxAddr(DecodeState* state)
+	{
+		SetOperandToEaxFinalOpSize(state, state->operand0);
+		SetOperandToImmAddr(state, state->operand1);
+	}
+
+
+	static void DecodeEdiEsi(DecodeState* state)
+	{
+		SetOperandToEsEdi(state, state->operand0, state->finalOpSize);
+		SetOperandToDsEsi(state, state->operand1, state->finalOpSize);
+	}
+
+
+	static void DecodeEdiEax(DecodeState* state)
+	{
+		SetOperandToEsEdi(state, state->operand0, state->finalOpSize);
+		SetOperandToEaxFinalOpSize(state, state->operand1);
+	}
+
+
+	static void DecodeEaxEsi(DecodeState* state)
+	{
+		SetOperandToEaxFinalOpSize(state, state->operand0);
+		SetOperandToDsEsi(state, state->operand1, state->finalOpSize);
+	}
+
+
+	static void DecodeAlEbxAl(DecodeState* state)
+	{
+		const RegDef* regList = GetRegListForAddrSize(state);
+		state->operand0->operand = REG_AL;
+		state->operand0->size = 1;
+		state->operand1->operand = MEM;
+		state->operand1->components[0] = (OperandType)regList[3];
+		state->operand1->components[1] = REG_AL;
+		state->operand1->size = 1;
+		state->operand1->segment = GetFinalSegment(state, SEG_DS);
+	}
+
+
+	static void DecodeEaxImm8(DecodeState* state)
+	{
+		SetOperandToEaxFinalOpSize(state, state->operand0);
+		SetOperandToImm8(state, state->operand1);
+	}
+
+
+	static void DecodeEaxDx(DecodeState* state)
+	{
+		SetOperandToEaxFinalOpSize(state, state->operand0);
+		state->operand1->operand = REG_DX;
+		state->operand1->size = 2;
+	}
+
+
+	static void Decode3DNow(DecodeState* state)
+	{
+		uint8_t op;
+		int i, min, max;
+		DecodeRMReg(state, state->operand1, mmxRegList, 8, state->operand0, mmxRegList, 8);
+		op = Read8(state);
+		state->result->operation = INVALID;
+		for (min = 0, max = (int)(sizeof(sparse3DNowOpcodes) / sizeof(SparseOpEntry)) - 1, i = (min + max) / 2;
+			min <= max; i = (min + max) / 2)
+		{
+			if (op > sparse3DNowOpcodes[i].opcode)
+				min = i + 1;
+			else if (op < sparse3DNowOpcodes[i].opcode)
+				max = i - 1;
+			else
+			{
+				state->result->operation = (InstructionOperation)sparse3DNowOpcodes[i].operation;
+				break;
+			}
+		}
+	}
+
+
+	static void DecodeSSETable(DecodeState* state)
+	{
+		uint8_t type = DecodeSSEPrefix(state);
+		uint8_t rm = Peek8(state);
+		uint8_t modField = (rm >> 6) & 3;
+
+		const SSETableEntry* entry = &sseTable[(int)state->result->operation];
+		const SSETableOperationEntry* opEntry;
+
+		if (modField == 3)
+			opEntry = &entry->regOps[type];
+		else
+			opEntry = &entry->memOps[type];
+
+		state->result->operation = (InstructionOperation)opEntry->operation;
+		DecodeRMReg(state, GetOperandForSSEEntryType(state, opEntry->rmType, 1), GetRegListForSSEEntryType(state, opEntry->rmType),
+			GetSizeForSSEEntryType(state, opEntry->rmType), GetOperandForSSEEntryType(state, opEntry->regType, 0),
+			GetRegListForSSEEntryType(state, opEntry->regType), GetSizeForSSEEntryType(state, opEntry->regType));
+
+		if (state->flags & DEC_FLAG_INC_OPERATION_FOR_64)
+		{
+			UpdateOperationForSSEEntryType(state, opEntry->regType);
+			UpdateOperationForSSEEntryType(state, opEntry->rmType);
+		}
+	}
+
+
+	static void DecodeSSETableImm8(DecodeState* state)
+	{
+		DecodeSSETable(state);
+		SetOperandToImm8(state, &state->result->operands[2]);
+	}
+
+
+	static void DecodeSSETableMem8(DecodeState* state)
+	{
+		DecodeSSETable(state);
+		if (state->operand0->operand == MEM)
+			state->operand0->size = 1;
+		if (state->operand1->operand == MEM)
+			state->operand1->size = 1;
+	}
+
+
+	static void DecodeSSE(DecodeState* state)
+	{
+		uint8_t type = DecodeSSEPrefix(state);
+		uint8_t rm = Peek8(state);
+		uint8_t modField = (rm >> 6) & 3;
+		uint16_t size;
+
+		state->result->operation = (InstructionOperation)((int)state->result->operation + type);
+		if (modField == 3)
+			size = 16;
+		else
+			size = GetSizeForSSEType(type);
+		DecodeRMReg(state, state->operand1, xmmRegList, size, state->operand0, xmmRegList, 16);
+	}
+
+
+	static void DecodeSSESingle(DecodeState* state)
+	{
+		uint8_t type = DecodeSSEPrefix(state);
+
+		if ((type == 1) || (type == 2))
+		{
+			state->invalid = true;
+			return;
+		}
+
+		state->result->operation = (InstructionOperation)((int)state->result->operation + (type & 1));
+		DecodeRMReg(state, state->operand1, xmmRegList, 16, state->operand0, xmmRegList, 16);
+	}
+
+
+	static void DecodeSSEPacked(DecodeState* state)
+	{
+		uint8_t type = DecodeSSEPrefix(state);
+
+		if ((type == 2) || (type == 3))
+		{
+			state->invalid = true;
+			return;
+		}
+
+		state->result->operation = (InstructionOperation)((int)state->result->operation + (type & 1));
+		DecodeRMReg(state, state->operand1, xmmRegList, 16, state->operand0, xmmRegList, 16);
+	}
+
+
+	static void DecodeMMX(DecodeState* state)
+	{
+		if (state->opPrefix)
+			DecodeRMReg(state, state->operand1, xmmRegList, 16, state->operand0, xmmRegList, 16);
+		else
+			DecodeRMReg(state, state->operand1, mmxRegList, 8, state->operand0, mmxRegList, 8);
+	}
+
+
+	static void DecodeMMXSSEOnly(DecodeState* state)
+	{
+		if (state->opPrefix)
+			DecodeRMReg(state, state->operand1, xmmRegList, 16, state->operand0, xmmRegList, 16);
+		else
+			state->invalid = true;
+	}
+
+
+	static void DecodeMMXGroup(DecodeState* state)
+	{
+		uint8_t regField;
+		if (state->opPrefix)
+		{
+			DecodeRM(state, state->operand0, xmmRegList, 16, &regField);
+			state->result->operation = (InstructionOperation)mmxGroupOperations[(int)state->result->operation][regField][1];
+		}
+		else
+		{
+			DecodeRM(state, state->operand0, mmxRegList, 8, &regField);
+			state->result->operation = (InstructionOperation)mmxGroupOperations[(int)state->result->operation][regField][0];
+		}
+		SetOperandToImm8(state, state->operand1);
+	}
+
+
+	static void DecodePinsrw(DecodeState* state)
+	{
+		DecodeSSETableImm8(state);
+		if (state->operand1->operand == MEM)
+			state->operand1->size = 2;
+	}
+
+
+	static void DecodeRegCR(DecodeState* state)
+	{
+		const RegDef* regList;
+		uint8_t reg;
+		if (state->opSize == 2)
+			state->opSize = 4;
+		regList = GetRegListForOpSize(state);
+		reg = Read8(state);
+		if (state->result->flags & X86_FLAG_LOCK)
+		{
+			state->result->flags &= ~X86_FLAG_LOCK;
+			state->rexReg = true;
+		}
+		state->operand0->operand = regList[(reg & 7) + (state->rexRM1 ? 8 : 0)];
+		state->operand0->size = state->opSize;
+		state->operand1->operand = (OperandType)((int)state->result->operation + ((reg >> 3) & 7) +
+			(state->rexReg ? 8 : 0));
+		state->operand1->size = state->opSize;
+		state->result->operation = MOV;
+	}
+
+
+	static void DecodeMovSXZX8(DecodeState* state)
+	{
+		DecodeRMReg(state, state->operand1, GetByteRegList(state), 1, state->operand0, GetRegListForOpSize(state), state->opSize);
+	}
+
+
+	static void DecodeMovSXZX16(DecodeState* state)
+	{
+		DecodeRMReg(state, state->operand1, reg16List, 2, state->operand0, GetRegListForOpSize(state), state->opSize);
+	}
+
+
+	static void DecodeMem16(DecodeState* state)
+	{
+		DecodeRM(state, state->operand0, reg32List, 2, NULL);
+		if (state->operand0->operand != MEM)
+			state->invalid = true;
+	}
+
+
+	static void DecodeMem32(DecodeState* state)
+	{
+		DecodeRM(state, state->operand0, reg32List, 4, NULL);
+		if (state->operand0->operand != MEM)
+			state->invalid = true;
+	}
+
+
+	static void DecodeMem64(DecodeState* state)
+	{
+		DecodeRM(state, state->operand0, reg32List, 8, NULL);
+		if (state->operand0->operand != MEM)
+			state->invalid = true;
+	}
+
+
+	static void DecodeMem80(DecodeState* state)
+	{
+		DecodeRM(state, state->operand0, reg32List, 10, NULL);
+		if (state->operand0->operand != MEM)
+			state->invalid = true;
+	}
+
+
+	static void DecodeMemFloatEnv(DecodeState* state)
+	{
+		DecodeRM(state, state->operand0, reg32List, (state->opSize == 2) ? 14 : 28, NULL);
+		if (state->operand0->operand != MEM)
+			state->invalid = true;
+	}
+
+
+	static void DecodeMemFloatSave(DecodeState* state)
+	{
+		DecodeRM(state, state->operand0, reg32List, (state->opSize == 2) ? 94 : 108, NULL);
+		if (state->operand0->operand != MEM)
+			state->invalid = true;
+	}
+
+
+	static void DecodeFPUReg(DecodeState* state)
+	{
+		DecodeRM(state, state->operand0, fpuRegList, 10, NULL);
+	}
+
+
+	static void DecodeFPURegST0(DecodeState* state)
+	{
+		DecodeFPUReg(state);
+		state->operand1->operand = REG_ST0;
+		state->operand1->size = 10;
+	}
+
+
+	static void DecodeRegGroupNoOperands(DecodeState* state)
+	{
+		uint8_t rmByte = Read8(state);
+		state->result->operation = (InstructionOperation)groupOperations[(int)state->result->operation][rmByte & 7];
+	}
+
+
+	static void DecodeRegGroupAX(DecodeState* state)
+	{
+		DecodeRegGroupNoOperands(state);
+		state->operand0->operand = REG_AX;
+		state->operand0->size = 2;
+	}
+
+
+	static void DecodeCmpXch8B(DecodeState* state)
+	{
+		uint8_t rm = Peek8(state);
+		uint8_t regField = (rm >> 3) & 7;
+
+		if (regField == 1)
+		{
+			if (state->opSize == 2)
+				state->opSize = 4;
+			else if (state->opSize == 8)
+				state->result->operation = CMPXCH16B;
+			DecodeRM(state, state->operand0, GetRegListForOpSize(state), state->opSize * 2, NULL);
+		}
+		else if (regField == 6)
+		{
+			if (state->opPrefix)
+				state->result->operation = VMCLEAR;
+			else if (state->rep == REP_PREFIX_REPE)
+				state->result->operation = VMXON;
+			else
+				state->result->operation = VMPTRLD;
+			DecodeRM(state, state->operand0, reg64List, 8, NULL);
+		}
+		else if (regField == 7)
+		{
+			state->result->operation = VMPTRST;
+			DecodeRM(state, state->operand0, reg64List, 8, NULL);
+		}
+		else
+			state->invalid = true;
+
+		if (state->operand0->operand != MEM)
+			state->invalid = true;
+	}
+
+
+	static void DecodeMovNti(DecodeState* state)
+	{
+		if (state->opSize == 2)
+			state->opSize = 4;
+		DecodeRMReg(state, state->operand0, GetRegListForOpSize(state), state->opSize, state->operand1, GetRegListForOpSize(state), state->opSize);
+		if (state->operand0->operand != MEM)
+			state->invalid = true;
+	}
+
+
+	static void DecodeCrc32(DecodeState* state)
+	{
+		const RegDef* srcRegList = GetRegListForFinalOpSize(state);
+		const RegDef* destRegList = (state->opSize == 8) ? reg64List : reg32List;
+		uint16_t destSize = (state->opSize == 8) ? 8 : 4;
+		DecodeRMReg(state, state->operand1, srcRegList, state->finalOpSize, state->operand0, destRegList, destSize);
+	}
+
+
+	static void DecodeArpl(DecodeState* state)
+	{
+		if (state->using64)
+		{
+			// In 64-bit ARPL is repurposed to MOVSXD
+			const RegDef* regList = GetRegListForFinalOpSize(state);
+			state->result->operation = MOVSXD;
+			DecodeRMReg(state, state->operand1, reg32List, 4, state->operand0, regList, state->finalOpSize);
+		}
+		else
+		{
+			// ARPL instruction
+			state->operand0 = &state->result->operands[1];
+			state->operand1 = &state->result->operands[0];
+			state->finalOpSize = 2;
+			DecodeRegRM(state);
+		}
+	}
+
+
+	static void ProcessPrefixes(DecodeState* state)
+	{
+		uint8_t rex = 0;
+		bool addrPrefix = false;
+
+		while (!state->invalid)
+		{
+			uint8_t prefix = Read8(state);
+			if ((prefix >= 0x26) && (prefix <= 0x3e) && ((prefix & 7) == 6))
+			{
+				// Segment prefix
+				state->result->segment = (SegmentRegister)(SEG_ES + ((prefix >> 3) - 4));
+			}
+			else if ((prefix == 0x64) || (prefix == 0x65))
+			{
+				// FS/GS prefix
+				state->result->segment = (SegmentRegister)(SEG_ES + (prefix - 0x60));
+			}
+			else if (prefix == 0x66)
+			{
+				state->opPrefix = true;
+				state->result->flags |= X86_FLAG_OPSIZE;
+			}
+			else if (prefix == 0x67)
+			{
+				addrPrefix = true;
+				state->result->flags |= X86_FLAG_ADDRSIZE;
+			}
+			else if (prefix == 0xf0)
+				state->result->flags |= X86_FLAG_LOCK;
+			else if (prefix == 0xf2)
+				state->rep = REP_PREFIX_REPNE;
+			else if (prefix == 0xf3)
+				state->rep = REP_PREFIX_REPE;
+			else if (state->using64 && (prefix >= 0x40) && (prefix <= 0x4f))
+			{
+				// REX prefix
+				rex = prefix;
+				continue;
+			}
+			else
+			{
+				// Not a prefix, continue instruction processing
+				state->opcode--;
+				state->len++;
+				break;
+			}
+
+			// Force ignore REX unless it is the last prefix
+			rex = 0;
+		}
+
+		if (state->opPrefix)
+			state->opSize = (state->opSize == 2) ? 4 : 2;
+		if (addrPrefix)
+			state->addrSize = (state->addrSize == 4) ? 2 : 4;
+
+		if (rex)
+		{
+			// REX prefix found before opcode
+			state->rex = true;
+			state->rexRM1 = (rex & 1) != 0;
+			state->rexRM2 = (rex & 2) != 0;
+			state->rexReg = (rex & 4) != 0;
+			if (rex & 8)
+				state->opSize = 8;
+		}
+	}
+
+
+	static void ClearOperand(InstructionOperand* oper)
+	{
+		oper->operand = NONE;
+		oper->components[0] = NONE;
+		oper->components[1] = NONE;
+		oper->scale = 1;
+		oper->immediate = 0;
+		oper->relative = false;
+	}
+
+
+	static void InitDisassemble(DecodeState* state)
+	{
+		ClearOperand(&state->result->operands[0]);
+		ClearOperand(&state->result->operands[1]);
+		ClearOperand(&state->result->operands[2]);
+		state->result->operation = INVALID;
+		state->result->flags = 0;
+		state->result->segment = SEG_DEFAULT;
+		state->invalid = false;
+		state->insufficientLength = false;
+		state->opPrefix = false;
+		state->rep = REP_PREFIX_NONE;
+		state->ripRelFixup = NULL;
+		state->rex = false;
+		state->rexReg = false;
+		state->rexRM1 = false;
+		state->rexRM2 = false;
+		state->origLen = state->len;
+	}
+
+
+	static void FinishDisassemble(DecodeState* state)
+	{
+		state->result->length = state->opcode - state->opcodeStart;
+		if (state->ripRelFixup)
+			*state->ripRelFixup += state->addr + state->result->length;
+		if (state->insufficientLength && (state->origLen < 15))
+			state->result->flags |= X86_FLAG_INSUFFICIENT_LENGTH;
+	}
+
+
+	bool Disassemble16(const uint8_t* opcode, uint64_t addr, size_t maxLen, Instruction* result)
+	{
+		DecodeState state;
+		state.result = result;
+		state.opcodeStart = opcode;
+		state.opcode = opcode;
+		state.addr = addr;
+		state.len = (maxLen > 15) ? 15 : maxLen;
+		state.addrSize = 2;
+		state.opSize = 2;
+		state.using64 = false;
+		InitDisassemble(&state);
+
+		ProcessPrefixes(&state);
+		ProcessOpcode(&state, mainOpcodeMap, Read8(&state));
+		FinishDisassemble(&state);
+		return !state.invalid;
+	}
+
+
+	bool Disassemble32(const uint8_t* opcode, uint64_t addr, size_t maxLen, Instruction* result)
+	{
+		DecodeState state;
+		state.result = result;
+		state.opcodeStart = opcode;
+		state.opcode = opcode;
+		state.addr = addr;
+		state.len = (maxLen > 15) ? 15 : maxLen;
+		state.addrSize = 4;
+		state.opSize = 4;
+		state.using64 = false;
+		InitDisassemble(&state);
+
+		ProcessPrefixes(&state);
+		ProcessOpcode(&state, mainOpcodeMap, Read8(&state));
+		FinishDisassemble(&state);
+		return !state.invalid;
+	}
+
+
+	bool Disassemble64(const uint8_t* opcode, uint64_t addr, size_t maxLen, Instruction* result)
+	{
+		DecodeState state;
+		state.result = result;
+		state.opcodeStart = opcode;
+		state.opcode = opcode;
+		state.addr = addr;
+		state.len = (maxLen > 15) ? 15 : maxLen;
+		state.addrSize = 8;
+		state.opSize = 4;
+		state.using64 = true;
+		InitDisassemble(&state);
+
+		ProcessPrefixes(&state);
+		ProcessOpcode(&state, mainOpcodeMap, Read8(&state));
+		FinishDisassemble(&state);
+		return !state.invalid;
+	}
+
+
+	static void WriteChar(char** out, size_t* outMaxLen, char ch)
+	{
+		if (*outMaxLen > 1)
+		{
+			*((*out)++) = ch;
+			(*outMaxLen)--;
+		}
+	}
+
+
+	static void WriteString(char** out, size_t* outMaxLen, const char* str)
+	{
+		for (; *str; str++)
+			WriteChar(out, outMaxLen, *str);
+	}
+
+
+	static void WriteHex(char** out, size_t* outMaxLen, uint64_t val, uint32_t width, bool prefix)
+	{
+		char temp[17];
+		int32_t i;
+		if (prefix)
+			WriteString(out, outMaxLen, "0x");
+		if (width > 16)
+			width = 16;
+		for (i = (width - 1); i >= 0; i--, val >>= 4)
+		{
+			char digit = (char)(val & 0xf);
+			if (digit < 10)
+				temp[i] = digit + '0';
+			else
+				temp[i] = digit + 'a' - 10;
+		}
+		temp[width] = 0;
+		WriteString(out, outMaxLen, temp);
+	}
+
+
+	static const char* GetSizeString(uint16_t size)
+	{
+		switch (size)
+		{
+		case 1:
+			return "byte ";
+		case 2:
+			return "word ";
+		case 4:
+			return "dword ";
+		case 6:
+			return "fword ";
+		case 8:
+			return "qword ";
+		case 10:
+			return "tword ";
+		case 16:
+			return "oword ";
+		default:
+			return "";
+		}
+	}
+
+
+	static void WriteOperand(char** out, size_t* outMaxLen, OperandType type, uint8_t scale, bool plus)
+	{
+		if (plus)
+			WriteString(out, outMaxLen, "+");
+		WriteString(out, outMaxLen, operandString[type]);
+		if (scale != 1)
+		{
+			WriteChar(out, outMaxLen, '*');
+			WriteChar(out, outMaxLen, scale + '0');
+		}
+	}
+
+
+	size_t FormatInstructionString(char* out, size_t outMaxLen, const char* fmt, const uint8_t* opcode,
+		uint64_t addr, const Instruction* instr)
+	{
+		char* start = out;
+		size_t len;
+		for (; *fmt; fmt++)
+		{
+			if (*fmt == '%')
+			{
+				uint32_t width = 0;
+				for (fmt++; *fmt; fmt++)
+				{
+					if (*fmt == 'a')
+					{
+						if (width == 0)
+							width = sizeof(void*) * 2;
+						WriteHex(&out, &outMaxLen, addr, width, false);
+						break;
+					}
+					else if (*fmt == 'b')
+					{
+						size_t i;
+						for (i = 0; i < instr->length; i++)
+							WriteHex(&out, &outMaxLen, opcode[i], 2, false);
+						for (; i < width; i++)
+							WriteString(&out, &outMaxLen, "  ");
+						break;
+					}
+					else if (*fmt == 'i')
+					{
+						char* operationStart = out;
+						if (instr->flags & X86_FLAG_ANY_REP)
+						{
+							WriteString(&out, &outMaxLen, "rep");
+							if (instr->flags & X86_FLAG_REPNE)
+								WriteChar(&out, &outMaxLen, 'n');
+							if (instr->flags & (X86_FLAG_REPNE | X86_FLAG_REPE))
+								WriteChar(&out, &outMaxLen, 'e');
+							WriteChar(&out, &outMaxLen, ' ');
+						}
+						if (instr->flags & X86_FLAG_LOCK)
+							WriteString(&out, &outMaxLen, "lock ");
+						WriteString(&out, &outMaxLen, operationString[instr->operation]);
+						for (; ((size_t)(out - operationStart) < (size_t)width) && (outMaxLen > 1); )
+							WriteChar(&out, &outMaxLen, ' ');
+						break;
+					}
+					else if (*fmt == 'o')
+					{
+						uint32_t i;
+						for (i = 0; i < 3; i++)
+						{
+							if (instr->operands[i].operand == NONE)
+								break;
+							if (i != 0)
+								WriteString(&out, &outMaxLen, ", ");
+							if (instr->operands[i].operand == IMM)
+								WriteHex(&out, &outMaxLen, instr->operands[i].immediate, instr->operands[i].size * 2, true);
+							else if (instr->operands[i].operand == MEM)
+							{
+								bool plus = false;
+								WriteString(&out, &outMaxLen, GetSizeString(instr->operands[i].size));
+								if ((instr->segment != SEG_DEFAULT) || (instr->operands[i].segment == SEG_ES))
+								{
+									WriteOperand(&out, &outMaxLen, (OperandType)(instr->operands[i].segment + REG_ES), 1, false);
+									WriteChar(&out, &outMaxLen, ':');
+								}
+								WriteChar(&out, &outMaxLen, '[');
+								if (instr->operands[i].components[0] != NONE)
+								{
+									WriteOperand(&out, &outMaxLen, instr->operands[i].components[0], 1, false);
+									plus = true;
+								}
+								if (instr->operands[i].components[1] != NONE)
+								{
+									WriteOperand(&out, &outMaxLen, instr->operands[i].components[1], instr->operands[i].scale, plus);
+									plus = true;
+								}
+								if ((instr->operands[i].immediate != 0) || ((instr->operands[i].components[0] == NONE) &&
+									(instr->operands[i].components[1] == NONE)))
+								{
+									if (plus && ((int64_t)instr->operands[i].immediate >= -0x80) &&
+										((int64_t)instr->operands[i].immediate < 0))
+									{
+										WriteChar(&out, &outMaxLen, '-');
+										WriteHex(&out, &outMaxLen, -(int64_t)instr->operands[i].immediate, 2, true);
+									}
+									else if (plus && ((int64_t)instr->operands[i].immediate > 0) &&
+										((int64_t)instr->operands[i].immediate <= 0x7f))
+									{
+										WriteChar(&out, &outMaxLen, '+');
+										WriteHex(&out, &outMaxLen, instr->operands[i].immediate, 2, true);
+									}
+									else
+									{
+										if (plus)
+											WriteChar(&out, &outMaxLen, '+');
+										WriteHex(&out, &outMaxLen, instr->operands[i].immediate, 8, true);
+									}
+								}
+								WriteChar(&out, &outMaxLen, ']');
+							}
+							else
+								WriteOperand(&out, &outMaxLen, instr->operands[i].operand, 1, false);
+						}
+						break;
+					}
+					else if ((*fmt >= '0') && (*fmt <= '9'))
+						width = (width * 10) + (*fmt - '0');
+					else
+					{
+						WriteChar(&out, &outMaxLen, *fmt);
+						break;
+					}
+				}
+			}
+			else
+				WriteChar(&out, &outMaxLen, *fmt);
+		}
+		len = out - start;
+		if (outMaxLen > 0)
+			*(out++) = 0;
+		return len;
+	}
+
+
+	size_t DisassembleToString16(char* out, size_t outMaxLen, const char* fmt, const uint8_t* opcode,
+		uint64_t addr, size_t maxLen, Instruction* instr)
+	{
+		if (!Disassemble16(opcode, addr, maxLen, instr))
+			return 0;
+		return FormatInstructionString(out, outMaxLen, fmt, opcode, addr, instr);
+	}
+
+
+	size_t DisassembleToString32(char* out, size_t outMaxLen, const char* fmt, const uint8_t* opcode,
+		uint64_t addr, size_t maxLen, Instruction* instr)
+	{
+		if (!Disassemble32(opcode, addr, maxLen, instr))
+			return 0;
+		return FormatInstructionString(out, outMaxLen, fmt, opcode, addr, instr);
+	}
+
+
+	size_t DisassembleToString64(char* out, size_t outMaxLen, const char* fmt, const uint8_t* opcode,
+		uint64_t addr, size_t maxLen, Instruction* instr)
+	{
+		if (!Disassemble64(opcode, addr, maxLen, instr))
+			return 0;
+		return FormatInstructionString(out, outMaxLen, fmt, opcode, addr, instr);
+	}
+#ifdef __cplusplus
+}
+#endif

@@ -1,0 +1,7 @@
+#!/bin/csh -f
+#
+# edit setup.py, set the version number
+python setup.py sdist --formats=gztar,zip
+cp dist/* /home/mjcharne/www/mbuild/download
+make-web-accessible /home/mjcharne/www/mbuild/download
+

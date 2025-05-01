@@ -1,0 +1,61 @@
+#BEGIN_LEGAL
+#
+#Copyright (c) 2022 Intel Corporation
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#  
+#END_LEGAL
+
+
+# This is based mostly on my read of the wikpedia page:
+#  https://en.wikipedia.org/wiki/Template:AMD_x86_CPU_features
+
+# FIXME: need a proper baseline for AMD_K10 as a starting point. I
+#  used WESTMERE to avoid TSX/RTM.
+
+# FIXME: not sure when LZCNT entered the picture
+
+# FIXME: guessing about F16C and RDWRFSGS
+
+AMD_K10: ALL_OF(WESTMERE) PREFETCHW 3DNOW SSE4A AMD SVM PREFETCH_NOP LZCNT
+
+
+AMD_BULLDOZER: ALL_OF(AMD_K10) \
+    NOT(3DNOW)   \
+    FMA4 LWP XOP \
+    AVX AVXAES XSAVE XSAVEOPT F16C RDWRFSGS
+
+AMD_PILEDRIVER: ALL_OF(AMD_BULLDOZER) TBM FMA
+
+AMD_ZEN: ALL_OF(AMD_PILEDRIVER) \
+    NOT(FMA4) \
+    NOT(LWP) \
+    NOT(XOP) \
+    AVX2 AVX2GATHER \
+    BMI2 MOVBE ADOX_ADCX  SHA \
+    RDRAND RDSEED \
+    SMAP XSAVEC XSAVES CLFLUSHOPT CLZERO
+
+AMD_ZENPLUS: ALL_OF(AMD_ZEN)
+
+# Guessing about MONITORX
+AMD_ZEN2: ALL_OF(AMD_ZENPLUS) \
+ WBNOINVD CLWB RDPID RDPRU MCOMMIT \
+ MONITORX
+
+# Guessing
+AMD_FUTURE: ALL_OF(AMD_ZEN2) \
+    SNP \
+    AMD_INVLPGB
+
+

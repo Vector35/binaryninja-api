@@ -1,0 +1,4 @@
+#!/usr/bin/env python
+from __future__ import print_function
+for i in range(0,1000*1000*100):
+    print(i)

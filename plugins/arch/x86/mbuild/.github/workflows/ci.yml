@@ -1,0 +1,48 @@
+on: pull_request
+
+jobs:
+  linux:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+    - name: Install prerequisites
+      run: |
+          python -m pip install --quiet --upgrade pip setuptools
+          python -m pip install .
+    - name: test
+      run: |
+          python tests/1.py
+          python tests/2.py
+          python tests/3.py		  
+  macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+    - name: Install prerequisites
+      run: |
+          python -m pip install --quiet --upgrade pip setuptools
+          python -m pip install .
+    - name: test
+      run: |
+          python tests/1.py
+          python tests/2.py
+          python tests/3.py		  
+
+  windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+    - name: Install prerequisites
+      run: |
+          python -m pip install --quiet --upgrade pip setuptools
+          python -m pip install .
+    - name: test
+      run: |
+          python tests/1.py
+          python tests/2.py
+          python tests/3.py
+          
+         

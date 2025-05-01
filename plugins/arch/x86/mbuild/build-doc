@@ -1,0 +1,10 @@
+#!/bin/csh
+
+seet webdir=/var/www/html/mjcharne/mbuild
+epydoc -v --simple-term --no-private --html -o epydoc-out --name mbuild --url 'http://mjc.intel.com/mjcharne/mbuild' mbuild/__init__.py 
+rm -rf $webdir/epydoc.old
+mv $webdir/epydoc $webdir/epydoc.old
+mkdir -p $webdir/epydoc 
+cp epydoc-out/* $webdir/epydoc 
+make-web-accessible $webdir/epydoc
+

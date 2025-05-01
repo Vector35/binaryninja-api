@@ -1,0 +1,223 @@
+#BEGIN_LEGAL
+#
+#Copyright (c) 2023 Intel Corporation
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#  
+#END_LEGAL
+#
+#
+#
+#    ***** GENERATED FILE -- DO NOT EDIT! *****
+#    ***** GENERATED FILE -- DO NOT EDIT! *****
+#    ***** GENERATED FILE -- DO NOT EDIT! *****
+#
+#
+#
+INSTRUCTIONS()::
+# EMITTING CLRSSBSY (CLRSSBSY-N/A-1)
+{
+ICLASS:      CLRSSBSY
+CPL:         0
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0xAE MOD[mm] MOD!=3 REG[0b110] RM[nnn]  f3_refining_prefix     MODRM()  
+OPERANDS:    MEM0:rw:q:u64
+IFORM:       CLRSSBSY_MEMu64
+}
+
+
+# EMITTING ENDBR32 (ENDBR32-N/A-1)
+{
+ICLASS:      ENDBR32
+CPL:         3
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0x1E MOD[0b11] MOD=3  REG[0b111] RM[0b011]  f3_refining_prefix     CET=1 
+OPERANDS:    
+IFORM:       ENDBR32
+}
+
+
+# EMITTING ENDBR64 (ENDBR64-N/A-1)
+{
+ICLASS:      ENDBR64
+CPL:         3
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0x1E MOD[0b11] MOD=3  REG[0b111] RM[0b010]  f3_refining_prefix     CET=1 
+OPERANDS:    
+IFORM:       ENDBR64
+}
+
+
+# EMITTING INCSSPD (INCSSPD-N/A-1)
+{
+ICLASS:      INCSSPD
+CPL:         3
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0xAE MOD[0b11] MOD=3  REG[0b101] RM[nnn] f3_refining_prefix norexw_prefix 
+OPERANDS:    REG0=GPR32_B():r:d:u8 REG1=XED_REG_SSP:rw:SUPP:u64
+IFORM:       INCSSPD_GPR32u8
+}
+
+
+# EMITTING INCSSPQ (INCSSPQ-N/A-1)
+{
+ICLASS:      INCSSPQ
+CPL:         3
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0xAE MOD[0b11] MOD=3  REG[0b101] RM[nnn] f3_refining_prefix rexw_prefix mode64 
+OPERANDS:    REG0=GPR64_B():r:q:u8 REG1=XED_REG_SSP:rw:SUPP:u64
+IFORM:       INCSSPQ_GPR64u8
+}
+
+
+# EMITTING RDSSPD (RDSSPD-N/A-1)
+{
+ICLASS:      RDSSPD
+CPL:         3
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0x1E MOD[0b11] MOD=3  REG[0b001] RM[nnn] f3_refining_prefix norexw_prefix CET=1
+OPERANDS:    REG0=GPR32_B():w:d:u32 REG1=XED_REG_SSP:r:SUPP:u64
+IFORM:       RDSSPD_GPR32u32
+}
+
+
+# EMITTING RDSSPQ (RDSSPQ-N/A-1)
+{
+ICLASS:      RDSSPQ
+CPL:         3
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0x1E MOD[0b11] MOD=3  REG[0b001] RM[nnn] f3_refining_prefix rexw_prefix mode64 CET=1 
+OPERANDS:    REG0=GPR64_B():w:q:u64 REG1=XED_REG_SSP:r:SUPP:u64
+IFORM:       RDSSPQ_GPR64u64
+}
+
+
+# EMITTING RSTORSSP (RSTORSSP-N/A-1)
+{
+ICLASS:      RSTORSSP
+CPL:         3
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0x01 MOD[mm] MOD!=3 REG[0b101] RM[nnn]  MODRM()  f3_refining_prefix     
+OPERANDS:    MEM0:rw:q:u64 REG0=XED_REG_SSP:w:SUPP:u64
+IFORM:       RSTORSSP_MEMu64
+}
+
+
+# EMITTING SAVEPREVSSP (SAVEPREVSSP-N/A-1)
+{
+ICLASS:      SAVEPREVSSP
+CPL:         3
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0x01 MOD[0b11] MOD=3  REG[0b101] RM[0b010]  f3_refining_prefix     
+OPERANDS:    REG0=XED_REG_SSP:r:SUPP:u64
+IFORM:       SAVEPREVSSP
+}
+
+
+# EMITTING SETSSBSY (SETSSBSY-N/A-1)
+{
+ICLASS:      SETSSBSY
+CPL:         0
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0x01 MOD[0b11] MOD=3  REG[0b101] RM[0b000]  f3_refining_prefix     
+OPERANDS:    
+IFORM:       SETSSBSY
+}
+
+
+# EMITTING WRSSD (WRSSD-N/A-1)
+{
+ICLASS:      WRSSD
+CPL:         3
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0x38 0xF6 MOD[mm] MOD!=3 REG[rrr] RM[nnn] MODRM() no_refining_prefix norexw_prefix
+OPERANDS:    MEM0:w:d:u32 REG0=GPR32_R():r:d:u32
+IFORM:       WRSSD_MEMu32_GPR32u32
+}
+
+
+# EMITTING WRSSQ (WRSSQ-N/A-1)
+{
+ICLASS:      WRSSQ
+CPL:         3
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0x38 0xF6 MOD[mm] MOD!=3 REG[rrr] RM[nnn] MODRM() no_refining_prefix rexw_prefix mode64
+OPERANDS:    MEM0:w:q:u64 REG0=GPR64_R():r:q:u64
+IFORM:       WRSSQ_MEMu64_GPR64u64
+}
+
+
+# EMITTING WRUSSD (WRUSSD-N/A-1)
+{
+ICLASS:      WRUSSD
+CPL:         0
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0x38 0xF5 MOD[mm] MOD!=3 REG[rrr] RM[nnn] MODRM() osz_refining_prefix norexw_prefix
+OPERANDS:    MEM0:w:d:u32 REG0=GPR32_R():r:d:u32
+IFORM:       WRUSSD_MEMu32_GPR32u32
+}
+
+
+# EMITTING WRUSSQ (WRUSSQ-N/A-1)
+{
+ICLASS:      WRUSSQ
+CPL:         0
+CATEGORY:    CET
+EXTENSION:   CET
+ISA_SET:     CET
+REAL_OPCODE: Y
+PATTERN:    0x0F 0x38 0xF5 MOD[mm] MOD!=3 REG[rrr] RM[nnn] MODRM() osz_refining_prefix rexw_prefix mode64
+OPERANDS:    MEM0:w:q:u64 REG0=GPR64_R():r:q:u64
+IFORM:       WRUSSQ_MEMu64_GPR64u64
+}
+
+

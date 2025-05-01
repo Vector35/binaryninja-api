@@ -1,0 +1,1 @@
+ BUILDDIR/xed -chip-check SNOW_RIDGE -d 0f1c00

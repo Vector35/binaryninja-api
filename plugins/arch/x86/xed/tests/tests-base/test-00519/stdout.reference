@@ -1,0 +1,9 @@
+Setting chip to ICE_LAKE_SERVER
+660FAE30
+ICLASS:     CLWB
+CATEGORY:   CLWB
+EXTENSION:  CLWB
+IFORM:      CLWB_MEMmprefetch
+ISA_SET:    CLWB
+ATTRIBUTES: PREFETCH 
+SHORT:      clwb ptr [eax]

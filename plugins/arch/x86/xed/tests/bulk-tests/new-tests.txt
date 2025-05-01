@@ -1,0 +1,102 @@
+#BEGIN_LEGAL
+#
+#Copyright (c) 2023 Intel Corporation
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#  
+#END_LEGAL
+DEC                  ; BUILDDIR/xed  -d 0fbc00
+DEC HSW              ; BUILDDIR/xed  -d f30fbc00
+DEC HSW              ; BUILDDIR/xed -chip-check HASWELL -d f30fbc00
+DEC HSW              ; BUILDDIR/xed -chip-check IVYBRIDGE -d f30fbc00
+DEC HSW              ; BUILDDIR/xed -chip-check HASWELL -d 0fbc00
+DEC                  ; BUILDDIR/xed -chip-check QUARK -d F2E100
+DEC                  ; BUILDDIR/xed -chip-check QUARK -d E100
+DEC                  ; BUILDDIR/xed -chip-check QUARK -d F3E100
+DEC                  ; BUILDDIR/xed -chip-check PENTIUM -d F2E100
+DEC                  ; BUILDDIR/xed -chip-check PENTIUM -d E100
+DEC                  ; BUILDDIR/xed -chip-check PENTIUM -d F3E100
+DEC ENC              ; BUILDDIR/xed   -64 -de  f266440f38f1fa
+DEC ENC              ; BUILDDIR/xed   -64 -de  f2480f38f1fa
+DEC ENC              ; BUILDDIR/xed   -64 -de  f2440f38f1fa
+DEC ENC              ; BUILDDIR/xed   -32 -de  f20f38f1fa
+DEC ENC              ; BUILDDIR/xed   -32 -de  f2660f38f1fa
+DEC ENC              ; BUILDDIR/xed   -16 -de  f20f38f1fa
+DEC ENC              ; BUILDDIR/xed   -16 -de  f2660f38f1fa
+DEC AVX              ; BUILDDIR/xed   -64 -chip-check SANDYBRIDGE -d 0fae30
+DEC ENC              ; BUILDDIR/xed -de f2 f0 01 03
+ENC                  ; BUILDDIR/xed -e movsd_xmm xmm0 MEM4:eax
+DEC END              ; BUILDDIR/xed -de f30f5100
+ENC                  ; BUILDDIR/xed -e sqrtss xmm0 mem4:eax
+DEC AVX              ; BUILDDIR/xed -16 -d 36 C4 E2 68 F3 0C 
+DEC AVX              ; BUILDDIR/xed -32 -d 65  C4 E3 7B  F0 BC 35 79 4A B6 0D 67
+DEC AVX              ; BUILDDIR/xed -32 -d 65  C4 E3 FB  F0 BC 35 79 4A B6 0D 67
+DEC AVX              ; BUILDDIR/xed -64 -d 65  C4 E3 7B  F0 BC 35 79 4A B6 0D 67
+DEC AVX              ; BUILDDIR/xed -64 -d 65  C4 E3 FB  F0 BC 35 79 4A B6 0D 67
+DEC AVX              ; BUILDDIR/xed-ex-cpuid f3 0f bc 00
+DEC AVX              ; BUILDDIR/xed-ex-cpuid -nobmi f3 0f bc 00
+DEC AVX              ; BUILDDIR/xed -d c4 e2 b1 92 12
+ENC                  ; BUILDDIR/xed -64 -e JRCXZ BRDISP:1E
+DEC ENC              ; BUILDDIR/xed -64 -de e31e
+DEC                  ; BUILDDIR/xed -64 -d e31e
+DEC AVX              ; BUILDDIR/xed -d C4C3F916E0F8
+DEC AVX              ; BUILDDIR/xed -64 -d C4C3F916E0F8
+DEC AVX   DISABLED           ; BUILDDIR/xed -64 -d 6464262E6426C4EB791D05ED830A00
+ENC                  ; BUILDDIR/xed -64 -e rdfsbase/64 rax
+ENC                  ; BUILDDIR/xed -64 -e rdfsbase eax
+DEC                  ; BUILDDIR/xed -64 -d 66 f3 0f ae c0
+DEC                  ; BUILDDIR/xed -64 -d f3 0f ae c0
+DEC ENC              ; BUILDDIR/xed  -16 -de 62 00
+DEC ENC              ; BUILDDIR/xed  -16 -de 66 62 00
+DEC ENC              ; BUILDDIR/xed      -de 62 00	
+DEC ENC              ; BUILDDIR/xed      -de 66 62 00
+# tag these tests with AVX512X because the chips mentioned currently
+# only come with AVX512 configurations
+DEC AVX512X       ; BUILDDIR/xed -chip-check SKYLAKE_SERVER -d 66 0fae 30
+DEC AVX512X       ; BUILDDIR/xed -chip-check CANNONLAKE -d 66 0fae 30
+DEC AVX512X       ; BUILDDIR/xed -chip-check ICE_LAKE_SERVER -d 66 0fae 30
+DEC               ; BUILDDIR/xed -d 0f1c00
+DEC               ; BUILDDIR/xed -set CLDEMOTE 1 -d 0f1c00
+DEC               ; BUILDDIR/xed -chip-check SNOW_RIDGE -d 0f1c00
+ENC               ; BUILDDIR/xed -set CLDEMOTE 1 -e CLDEMOTE MEM:eax
+ENC               ; BUILDDIR/xed -set CLDEMOTE 1 -e CLDEMOTE MEM1:eax
+ENC               ; BUILDDIR/xed -chip-check TREMONT -e CLDEMOTE MEM1:eax
+DEC AVX           ; BUILDDIR/xed -64 -d 64 67 67 65 65 2e 36 26 64 2e c4
+DEC AVX           ; BUILDDIR/xed -64 -d 67 64 67 3e 2e 67 67 2e 67 2e c4
+DEC AVX  DISABLED ; BUILDDIR/xed -64 -d 67 67 67 67 67 2e 67 67 67 67 c4 fe fe fe
+DEC DISABLED      ; BUILDDIR/xed -32 -d f0 f0 f0 f0 f0 f0 f0 f0 f0 f0 f0 0f 3e 51 c0
+DEC               ; BUILDDIR/xed-ex1 cc
+DEC               ; BUILDDIR/xed-ex1 01 00
+DEC               ; BUILDDIR/xed-ex1 0f a8
+DEC               ; BUILDDIR/xed-ex1 0f 38 00 ff
+DEC               ; BUILDDIR/xed-ex1 0f 3a 0f ff ff
+DEC AMD           ; BUILDDIR/xed-ex1 0f 0f 30 0c
+DEC               ; BUILDDIR/xed -64 -d 62
+DEC               ; BUILDDIR/xed -64 -d c4
+DEC               ; BUILDDIR/xed -64 -d c5
+DEC AVX           ; BUILDDIR/xed -64 -d 67 67 c4 ff 79 62 e6 55 bc bc bc bc bc bc bc
+ENC               ; BUILDDIR/xed.exe -64 -e PUSH RBP
+ENC               ; BUILDDIR/xed.exe -64 -e PUSH EBP
+ENC               ; BUILDDIR/xed.exe -e PUSH RBP
+ENC               ; BUILDDIR/xed.exe -e PUSH EBP
+ENC               ; BUILDDIR/xed.exe -64 -e ADD RAX RBX
+ENC               ; BUILDDIR/xed.exe -64 -e ADD EAX EBX
+# Test SDM's recommended NOPs
+DEC ENC           ; BUILDDIR/xed -de 6690
+DEC ENC           ; BUILDDIR/xed -de 0F1F00
+DEC ENC           ; BUILDDIR/xed -de 0F1F4000
+DEC ENC           ; BUILDDIR/xed -de 0F1F440000
+DEC ENC           ; BUILDDIR/xed -de 660F1F440000
+DEC ENC           ; BUILDDIR/xed -de 0F1F8000000000
+DEC ENC           ; BUILDDIR/xed -de 0F1F840000000000
+DEC ENC           ; BUILDDIR/xed -de 660F1F840000000000

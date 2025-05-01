@@ -1,0 +1,10 @@
+66480F7EC0
+ICLASS:     MOVQ
+CATEGORY:   DATAXFER
+EXTENSION:  SSE2
+IFORM:      MOVQ_GPR64_XMMq
+ISA_SET:    SSE2
+ATTRIBUTES:
+SHORT:      movq rax, xmm0
+Encodable! 66480F7EC0
+Identical re-encoding

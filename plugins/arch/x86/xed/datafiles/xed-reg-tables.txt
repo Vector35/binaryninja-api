@@ -1,0 +1,211 @@
+#BEGIN_LEGAL
+#
+#Copyright (c) 2022 Intel Corporation
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#  
+#END_LEGAL
+########################################################################
+## file: xed-reg-tables.txt
+########################################################################
+
+# Need to handle flags, rIP, seg-selectors, pseudo regs
+# Also does not specify register width
+
+# What about something like this:
+#     op1=GPRv_R():rw
+# we need to know what to bind the result to ultimately.
+# Just specifying a register is confusing to me. Don't know where to store it.
+# Have a "store-here" location for this kind of thing?
+
+
+xed_reg_enum_t rFLAGS()::
+mode16 | OUTREG=XED_REG_FLAGS
+mode32 | OUTREG=XED_REG_EFLAGS
+mode64 | OUTREG=XED_REG_RFLAGS
+
+#####################################################
+
+
+xed_reg_enum_t MMX_R()::
+REG=0x0  | OUTREG=XED_REG_MMX0
+REG=0x1  | OUTREG=XED_REG_MMX1
+REG=0x2  | OUTREG=XED_REG_MMX2
+REG=0x3  | OUTREG=XED_REG_MMX3
+REG=0x4  | OUTREG=XED_REG_MMX4
+REG=0x5  | OUTREG=XED_REG_MMX5
+REG=0x6  | OUTREG=XED_REG_MMX6
+REG=0x7  | OUTREG=XED_REG_MMX7
+
+xed_reg_enum_t MMX_B()::
+RM=0x0  | OUTREG=XED_REG_MMX0
+RM=0x1  | OUTREG=XED_REG_MMX1
+RM=0x2  | OUTREG=XED_REG_MMX2
+RM=0x3  | OUTREG=XED_REG_MMX3
+RM=0x4  | OUTREG=XED_REG_MMX4
+RM=0x5  | OUTREG=XED_REG_MMX5
+RM=0x6  | OUTREG=XED_REG_MMX6
+RM=0x7  | OUTREG=XED_REG_MMX7
+
+#################################
+
+
+xed_reg_enum_t X87()::
+RM=0x0  | OUTREG=XED_REG_ST0
+RM=0x1  | OUTREG=XED_REG_ST1
+RM=0x2  | OUTREG=XED_REG_ST2
+RM=0x3  | OUTREG=XED_REG_ST3
+RM=0x4  | OUTREG=XED_REG_ST4
+RM=0x5  | OUTREG=XED_REG_ST5
+RM=0x6  | OUTREG=XED_REG_ST6
+RM=0x7  | OUTREG=XED_REG_ST7
+
+###################
+
+xed_reg_enum_t SEG()::
+REG=0x0  | OUTREG=XED_REG_ES
+REG=0x1  | OUTREG=XED_REG_CS
+REG=0x2  | OUTREG=XED_REG_SS
+REG=0x3  | OUTREG=XED_REG_DS
+REG=0x4  | OUTREG=XED_REG_FS
+REG=0x5  | OUTREG=XED_REG_GS
+REG=0x6  | OUTREG=XED_REG_ERROR     enc
+REG=0x7  | OUTREG=XED_REG_ERROR
+
+# MOV to SEG cannot load CS 
+xed_reg_enum_t SEG_MOV()::
+REG=0x0  | OUTREG=XED_REG_ES
+REG=0x1  | OUTREG=XED_REG_ERROR
+REG=0x2  | OUTREG=XED_REG_SS
+REG=0x3  | OUTREG=XED_REG_DS
+REG=0x4  | OUTREG=XED_REG_FS
+REG=0x5  | OUTREG=XED_REG_GS
+REG=0x6  | OUTREG=XED_REG_ERROR     enc
+REG=0x7  | OUTREG=XED_REG_ERROR
+
+
+###################################################
+
+# We have two versions of FINAL_DSEG called FINAL_DSEG and
+# FINAL_DSEG1. This is required because in the nonterminal function, I
+# don't know if which memop (MEM0 or MEM1) the segment selector is
+# being applied to. I set USING_DEFAULT_SEGMENT0 for MEM0 and
+# USING_DEFAULT_SEGMENT1 for MEM1.
+
+
+# These set USING_DEFAULT_SEGMENT0
+
+xed_reg_enum_t FINAL_DSEG()::
+mode16 | OUTREG=FINAL_DSEG_NOT64()  
+mode32 | OUTREG=FINAL_DSEG_NOT64() 
+mode64 | OUTREG=FINAL_DSEG_MODE64() 
+
+xed_reg_enum_t FINAL_DSEG_NOT64()::
+SEG_OVD=0 | OUTREG=XED_REG_DS  USING_DEFAULT_SEGMENT0=1 enc # default data seg
+SEG_OVD=1 | OUTREG=XED_REG_CS  USING_DEFAULT_SEGMENT0=0
+SEG_OVD=2 | OUTREG=XED_REG_DS  USING_DEFAULT_SEGMENT0=1 # explicit ds seg
+SEG_OVD=3 | OUTREG=XED_REG_ES  USING_DEFAULT_SEGMENT0=0
+SEG_OVD=4 | OUTREG=XED_REG_FS  USING_DEFAULT_SEGMENT0=0
+SEG_OVD=5 | OUTREG=XED_REG_GS  USING_DEFAULT_SEGMENT0=0
+SEG_OVD=6 | OUTREG=XED_REG_SS  USING_DEFAULT_SEGMENT0=0
+
+xed_reg_enum_t FINAL_DSEG_MODE64()::
+SEG_OVD=0 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT0=1  enc
+SEG_OVD=1 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT0=1 
+SEG_OVD=2 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT0=1  
+SEG_OVD=3 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT0=1 
+SEG_OVD=4 | OUTREG=XED_REG_FS      USING_DEFAULT_SEGMENT0=0 
+SEG_OVD=5 | OUTREG=XED_REG_GS      USING_DEFAULT_SEGMENT0=0 
+SEG_OVD=6 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT0=1 
+
+
+# These set USING_DEFAULT_SEGMENT1 
+
+xed_reg_enum_t FINAL_DSEG1()::
+mode16 | OUTREG=FINAL_DSEG1_NOT64()  
+mode32 | OUTREG=FINAL_DSEG1_NOT64() 
+mode64 | OUTREG=FINAL_DSEG1_MODE64() 
+
+xed_reg_enum_t FINAL_DSEG1_NOT64()::
+SEG_OVD=0 | OUTREG=XED_REG_DS  USING_DEFAULT_SEGMENT1=1 enc # default data seg
+SEG_OVD=1 | OUTREG=XED_REG_CS  USING_DEFAULT_SEGMENT1=0
+SEG_OVD=2 | OUTREG=XED_REG_DS  USING_DEFAULT_SEGMENT1=1 # explicit ds seg
+SEG_OVD=3 | OUTREG=XED_REG_ES  USING_DEFAULT_SEGMENT1=0
+SEG_OVD=4 | OUTREG=XED_REG_FS  USING_DEFAULT_SEGMENT1=0
+SEG_OVD=5 | OUTREG=XED_REG_GS  USING_DEFAULT_SEGMENT1=0
+SEG_OVD=6 | OUTREG=XED_REG_SS  USING_DEFAULT_SEGMENT1=0
+
+xed_reg_enum_t FINAL_DSEG1_MODE64()::
+SEG_OVD=0 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT1=1  enc
+SEG_OVD=1 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT1=1 
+SEG_OVD=2 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT1=1  
+SEG_OVD=3 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT1=1 
+SEG_OVD=4 | OUTREG=XED_REG_FS      USING_DEFAULT_SEGMENT1=0 
+SEG_OVD=5 | OUTREG=XED_REG_GS      USING_DEFAULT_SEGMENT1=0 
+SEG_OVD=6 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT1=1 
+
+
+
+
+
+###################################################
+
+# FINAL_ESEG is only called for STRING OPS and only specifies MEM0's SEG0.
+
+xed_reg_enum_t FINAL_ESEG()::
+mode16 | OUTREG=XED_REG_ES        USING_DEFAULT_SEGMENT0=1
+mode32 | OUTREG=XED_REG_ES        USING_DEFAULT_SEGMENT0=1
+mode64 | OUTREG=XED_REG_INVALID   USING_DEFAULT_SEGMENT0=1
+
+xed_reg_enum_t FINAL_ESEG1()::
+mode16 | OUTREG=XED_REG_ES        USING_DEFAULT_SEGMENT1=1
+mode32 | OUTREG=XED_REG_ES        USING_DEFAULT_SEGMENT1=1
+mode64 | OUTREG=XED_REG_INVALID   USING_DEFAULT_SEGMENT1=1
+
+# For synthesized stack operands (see generator.py)
+xed_reg_enum_t FINAL_SSEG1()::
+mode16 | OUTREG=XED_REG_SS       USING_DEFAULT_SEGMENT1=1
+mode32 | OUTREG=XED_REG_SS       USING_DEFAULT_SEGMENT1=1
+mode64 | OUTREG=XED_REG_INVALID  USING_DEFAULT_SEGMENT1=1
+
+# For stack operands that cannot be overridden
+xed_reg_enum_t FINAL_SSEG0()::
+mode16 | OUTREG=XED_REG_SS       USING_DEFAULT_SEGMENT0=1
+mode32 | OUTREG=XED_REG_SS       USING_DEFAULT_SEGMENT0=1
+mode64 | OUTREG=XED_REG_INVALID  USING_DEFAULT_SEGMENT0=1
+
+# This is only called for MODRM BYTEs and they only set MEM0's SEG0.
+
+xed_reg_enum_t FINAL_SSEG()::
+mode16 | OUTREG=FINAL_SSEG_NOT64()  
+mode32 | OUTREG=FINAL_SSEG_NOT64() 
+mode64 | OUTREG=FINAL_SSEG_MODE64() 
+
+xed_reg_enum_t FINAL_SSEG_NOT64()::
+SEG_OVD=0 | OUTREG=XED_REG_SS  USING_DEFAULT_SEGMENT0=1     enc # default stack seg
+SEG_OVD=1 | OUTREG=XED_REG_CS  USING_DEFAULT_SEGMENT0=0
+SEG_OVD=2 | OUTREG=XED_REG_DS  USING_DEFAULT_SEGMENT0=0
+SEG_OVD=3 | OUTREG=XED_REG_ES  USING_DEFAULT_SEGMENT0=0
+SEG_OVD=4 | OUTREG=XED_REG_FS  USING_DEFAULT_SEGMENT0=0
+SEG_OVD=5 | OUTREG=XED_REG_GS  USING_DEFAULT_SEGMENT0=0
+SEG_OVD=6 | OUTREG=XED_REG_SS  USING_DEFAULT_SEGMENT0=1 # explicit ss seg
+
+xed_reg_enum_t FINAL_SSEG_MODE64()::
+SEG_OVD=0 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT0=1  enc
+SEG_OVD=1 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT0=1 
+SEG_OVD=2 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT0=1  
+SEG_OVD=3 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT0=1 
+SEG_OVD=4 | OUTREG=XED_REG_FS      USING_DEFAULT_SEGMENT0=0 
+SEG_OVD=5 | OUTREG=XED_REG_GS      USING_DEFAULT_SEGMENT0=0 
+SEG_OVD=6 | OUTREG=XED_REG_INVALID USING_DEFAULT_SEGMENT0=1 
+

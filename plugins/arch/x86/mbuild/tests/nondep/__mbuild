@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+# -*- python -*-
+import sys
+import os
+import glob
+
+def find_dir(d):
+    idir = os.getcwd()	
+    last_idir = ''	
+    while idir != last_idir:
+        mfile = os.path.join(idir,d)
+        if os.path.exists(mfile):
+            return mfile
+        last_idir = idir
+        idir = os.path.dirname(idir)
+    print "Could not find %s file, looking upwards"% (mfile)
+    sys.exit(1)
+
+#sys.path = [find_dir('mbuild')] + sys.path
+sys.path.append('../..')
+import mbuild
+
+
+def build(env, phase='BUILD',terminate_on_errors=False):
+    """Build everything in the work queue"""
+    okay = env.work_queue.build(die_on_errors=False)
+    if not okay:
+        if terminate_on_errors:
+            mbuild.die("[%s] failed." % phase)
+        else:
+            mbuild.msgb("[%s] failed." % phase)
+    else:
+        mbuild.msgb(phase, "succeeded")
+
+def compile_and_link(env,fn):
+    env['file']=fn
+    (base,ext) = os.path.splitext(fn)
+    if ext in ['.cpp','.C']:
+        env['x_compiler'] = "%(CXX)s"
+        env['tflags'] = "%(CXXFLAGS)s"
+    else:
+        env['x_compiler'] = "%(CC)s"
+        env['tflags'] = "%(CCFLAGS)s"
+    env['exe'] = "%s.%s.%s.exe" % (base, env['build_os'],env['host_cpu'])
+    cmd = "%(x_compiler)s  %(tflags)s %(file)s %(EXEOUT)s%(exe)s" 
+    cmd = env.expand_string(cmd)
+    env.work_queue.add(mbuild.command_t(cmd))
+
+    
+def work():
+    env = mbuild.env_t()
+    env.parser.add_option("--build", 
+                          dest="build", action="store_true", default=False,
+                          help="Build tests")
+
+    env.parse_args()
+    env.work_queue = mbuild.work_queue_t(env['jobs'])
+    
+    if env['build']:
+        for s in glob.glob('*.c'):
+            compile_and_link(env,s)
+        build(env)
+        
+if __name__ == "__main__":
+    work()
+
+

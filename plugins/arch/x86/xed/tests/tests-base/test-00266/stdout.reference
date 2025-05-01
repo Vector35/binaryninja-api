@@ -1,0 +1,3 @@
+Setting chip to NEHALEM
+Attempting to decode: 0f 01 d0 
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x0 len: 3 PC: 0x0: [0F01D0]

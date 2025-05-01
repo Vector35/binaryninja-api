@@ -1,0 +1,103 @@
+/* blank lines */
+--blank-lines-after-declarations
+--blank-lines-after-procedures
+--no-blank-lines-before-block-comments
+--leave-optional-blank-lines
+/* comments */
+--no-comment-delimiters-on-blank-lines
+--start-left-side-of-comments
+/* statements */
+--braces-on-if-line
+--cuddle-else
+--cuddle-do-while
+--case-indentation 4
+--case-brace-indentation 4
+--space-special-semicolon
+--no-space-after-function-call-names
+--no-space-after-casts
+--space-after-for
+--space-after-if
+--space-after-while
+--no-space-after-parentheses
+/* declarations */
+--no-blank-lines-after-commas
+--dont-break-function-decl-args
+--procnames-start-lines
+--braces-on-struct-decl-line
+/* indentation */
+--continuation-indentation 4
+--indent-level 4
+--continue-at-parentheses
+--parameter-indentation 4
+--leave-preprocessor-space
+/* breaking long lines */
+--line-length 78
+--break-after-boolean-operator
+--honour-newlines
+/* typedefs */
+-Tit_recursion_node
+-Tyasm_arch
+-Tyasm_arch_base
+-Tyasm_arch_create_error
+-Tyasm_arch_insnprefix
+-Tyasm_arch_machine
+-Tyasm_arch_module
+-Tyasm_arch_regtmod
+-Tyasm_assoc_data_callback
+-Tyasm_bc_add_span_func
+-Tyasm_bytecode_callback
+-Tyasm_bytecode
+-Tyasm_dataval
+-Tyasm_datavalhead
+-Tyasm_dbgfmt
+-Tyasm_dbgfmt_base
+-Tyasm_dbgfmt_module
+-Tyasm_effaddr
+-Tyasm_effaddr_callback
+-Tyasm_error_class
+-Tyasm_errwarns
+-Tyasm_expr
+-Tyasm_expr_op
+-Tyasm_expr_xform_func
+-Tyasm_expr__item
+-Tyasm_floatnum
+-Tyasm_intnum
+-Tyasm_insn_operand
+-Tyasm_insn_operands
+-Tyasm_linemap
+-Tyasm_listfmt
+-Tyasm_listfmt_base
+-Tyasm_listfmt_module
+-Tyasm_md5_context
+-Tyasm_module_type
+-Tyasm_optimizer
+-Tyasm_object
+-Tyasm_objfmt
+-Tyasm_objfmt_base
+-Tyasm_objfmt_module
+-Tyasm_preproc
+-Tyasm_preproc_base
+-Tyasm_preproc_module
+-Tyasm_print_error_func
+-Tyasm_print_warning_func
+-Tyasm_parser
+-Tyasm_parser_module
+-Tyasm_reloc
+-Tyasm_scanner
+-Tyasm_section
+-Tyasm_symrec
+-Tyasm_symrec_get_label_bytecodep
+-Tyasm_symtab
+-Tyasm_symtab_iter
+-Tyasm_symtab_traverse_callback
+-Tyasm_sym_vis
+-Tyasm_valparam
+-Tyasm_valparamhead
+-Tyasm_value
+-Tyasm_warn_class
+-Tyasm__assoc_data
+-TFILE
+-THAMT
+-THAMTEntry
+-TIntervalTree
+-TIntervalTreeNode

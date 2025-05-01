@@ -2768,7 +2768,6 @@ class EnumerationType(IntegerType):
 		assert handle is not None, "Attempted to create EnumerationType without handle"
 		super(EnumerationType, self).__init__(handle, platform, confidence)
 		enum_handle = core.BNGetTypeEnumeration(handle)
-		core.BNNewEnumerationReference(enum_handle)
 		assert enum_handle is not None, "core.BNGetTypeEnumeration returned None"
 		self.enum_handle = enum_handle
 

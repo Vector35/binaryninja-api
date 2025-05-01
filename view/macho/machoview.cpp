@@ -3118,6 +3118,32 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 		std::vector<import_entry> importTable;
 		parentReader.Seek(importsAddress);
 
+		auto processChainedImport =
+			[symbolsAddress, &importTable](
+				uint64_t ordinal, uint64_t addend, uint32_t nameOffset, bool weak, auto& reader) {
+				import_entry entry;
+				entry.lib_ordinal = ordinal;
+				entry.addend = addend;
+				entry.weak = weak;
+
+				auto nextEntryAddress = reader.GetOffset();
+				size_t symNameAddr = symbolsAddress + nameOffset;
+
+				reader.Seek(symNameAddr);
+				try
+				{
+					string symbolName = reader.ReadCString();
+					entry.name = symbolName;
+				}
+				catch (ReadException& ex)
+				{
+					entry.name = "";
+				}
+
+				importTable.push_back(entry);
+				reader.Seek(nextEntryAddress);
+			};
+
 		switch (fixupsHeader.imports_format)
 		{
 			case DYLD_CHAINED_IMPORT:
@@ -3125,38 +3151,34 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 				for (size_t i = 0; i < fixupsHeader.imports_count; i++)
 				{
 					uint32_t importEntry = parentReader.Read32();
-					uint64_t nextEntryAddress = parentReader.GetOffset();
-
 					dyld_chained_import import = *(reinterpret_cast<dyld_chained_import*>(&importEntry));
-
-					import_entry entry;
-
-					entry.lib_ordinal = (uint64_t)import.lib_ordinal;
-					entry.addend = 0;
-					entry.weak = (import.weak_import == 1);
-
-					size_t symNameAddr = symbolsAddress + import.name_offset;
-
-					parentReader.Seek(symNameAddr);
-					try {
-						string symbolName = parentReader.ReadCString();
-						entry.name = symbolName;
-					}
-					catch (ReadException& ex)
-					{
-						entry.name = "";
-					}
-
-					importTable.push_back(entry);
-					parentReader.Seek(nextEntryAddress);
+					processChainedImport(import.lib_ordinal, 0, import.name_offset, import.weak_import, parentReader);
 				}
 				break;
 			}
 			case DYLD_CHAINED_IMPORT_ADDEND:
+			{
+				for (size_t i = 0; i < fixupsHeader.imports_count; i++)
+				{
+					dyld_chained_import_addend import;
+					parentReader.Read(&import, sizeof(import));
+					processChainedImport(import.lib_ordinal, import.addend, import.name_offset, import.weak_import, parentReader);
+				}
+				break;
+			}
 			case DYLD_CHAINED_IMPORT_ADDEND64:
+			{
+				for (size_t i = 0; i < fixupsHeader.imports_count; i++)
+				{
+					dyld_chained_import_addend64 import;
+					parentReader.Read(&import, sizeof(import));
+					processChainedImport(import.lib_ordinal, import.addend, import.name_offset, import.weak_import, parentReader);
+				}
+				break;
+			}
 			default:
 			{
-				m_logger->LogWarn("Chained Fixups: Unknown import binding format");
+				m_logger->LogWarn("Chained Fixups: Unknown import binding format %d", fixupsHeader.imports_format);
 				processBinds = false; // We can still handle rebases.
 				break;
 			}
@@ -3392,6 +3414,7 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 									externReloc.size = m_addressSize;
 									externReloc.pcRelative = false;
 									externReloc.external = true;
+									externReloc.addend = entry.addend;
 									header.externalRelocations.emplace_back(externReloc, entry.name);
 								}
 								else

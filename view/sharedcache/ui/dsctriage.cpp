@@ -78,7 +78,8 @@ void DSCTriageView::loadImagesWithAddr(const std::vector<uint64_t>& addresses, b
 	if (!controller)
 		return;
 
-	std::map<uint64_t, CacheImage> images = {};
+	typedef std::vector<CacheImage> ImageList;
+	ImageList images = {};
 	for (const uint64_t& addr : addresses)
 	{
 		auto image = controller->GetImageContaining(addr);
@@ -86,7 +87,7 @@ void DSCTriageView::loadImagesWithAddr(const std::vector<uint64_t>& addresses, b
 		{
 			// Only try to load if we have not already.
 			if (!controller->IsImageLoaded(*image))
-				images.insert({image->headerAddress, *image});
+				images.emplace_back(*image);
 
 			// TODO: We currently only add direct dependencies, may want to make the depth configurable?
 			if (includeDependencies)
@@ -97,7 +98,7 @@ void DSCTriageView::loadImagesWithAddr(const std::vector<uint64_t>& addresses, b
 					auto depImage = controller->GetImageWithName(depName);
 					if (depImage.has_value() && !controller->IsImageLoaded(*depImage))
 					{
-						images.insert({depImage->headerAddress, *depImage});
+						images.emplace_back(*depImage);
 					}
 				}
 			}
@@ -107,26 +108,46 @@ void DSCTriageView::loadImagesWithAddr(const std::vector<uint64_t>& addresses, b
 	// Don't create a worker action if we don't have any images.
 	if (images.empty())
 		return;
+	Ref<BackgroundTask> imageLoadTask = new BackgroundTask("Loading images...", true);
 
-	WorkerPriorityEnqueue([controller, this, images]() {
-		size_t loadedImages = 0;
-		const std::string initialLoad = fmt::format("Loading images... (0/{})", images.size());
-		auto imageLoadTask = BackgroundTask(initialLoad, true);
-
-		for (const auto& [addr, image] : images)
+	// Apply the images in a future than update the triage view and run analysis.
+	QPointer<QFutureWatcher<ImageList>> watcher = new QFutureWatcher<ImageList>(this);
+	connect(watcher, &QFutureWatcher<ImageList>::finished, this, [watcher, this]() {
+		if (watcher)
 		{
-			if (imageLoadTask.IsCancelled())
-				break;
-			std::string newLoad = fmt::format("Loading images... ({}/{})", loadedImages++, images.size());
-			imageLoadTask.SetProgressText(newLoad);
-			if (controller->ApplyImage(*this->m_data, image))
-				setImageLoaded(image.headerAddress);
-		}
-		imageLoadTask.Finish();
+			auto loadedImages = watcher->result();
+			if (loadedImages.empty())
+				return;
 
-		// We have loaded images, lets make sure to update analysis!
-		this->m_data->AddAnalysisOption("linearsweep");
-		this->m_data->UpdateAnalysis();
+			// Update the triage to display the images as loaded.
+			for (const auto& image : loadedImages)
+				setImageLoaded(image.headerAddress);
+
+			// Run analysis.
+			this->m_data->AddAnalysisOption("linearsweep");
+			this->m_data->UpdateAnalysis();
+		}
+	});
+	QFuture<ImageList> future = QtConcurrent::run([this, controller, images, imageLoadTask]() {
+		ImageList loadedImages = {};
+		for (const auto& image : images)
+		{
+			if (imageLoadTask->IsCancelled() || QThread::currentThread()->isInterruptionRequested())
+				break;
+			std::string newLoad = fmt::format("Loading images... ({}/{})", loadedImages.size(), images.size());
+			imageLoadTask->SetProgressText(newLoad);
+			if (controller->ApplyImage(*this->m_data, image))
+				loadedImages.emplace_back(image);
+		}
+		imageLoadTask->Finish();
+		return loadedImages;
+	});
+	watcher->setFuture(future);
+	connect(this, &QObject::destroyed, this, [watcher, imageLoadTask]() {
+		if (watcher && watcher->isRunning()) {
+			watcher->cancel();
+			imageLoadTask->Cancel();
+		}
 	});
 }
 

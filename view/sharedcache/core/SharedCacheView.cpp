@@ -176,10 +176,26 @@ bool SharedCacheView::Init()
 	m_logger = new Logger("SharedCache.View", GetFile()->GetSessionId());
 
 	uint32_t platform;
+	// NOTE: This entry only exists on ios 11 and later, older versions will just assume iOS.
 	GetParentView()->Read(&platform, 0xd8, 4);
 	char magic[17];
 	GetParentView()->Read(&magic, 0, 16);
 	magic[16] = 0;
+
+	if (std::string(magic) == "dyld_v1   arm64" || std::string(magic) == "dyld_v1  arm64e"
+		|| std::string(magic) == "dyld_v1arm64_32")
+	{
+		arch = "aarch64";
+	}
+	else if (std::string(magic) == "dyld_v1  x86_64" || std::string(magic) == "dyld_v1 x86_64h")
+	{
+		arch = "x86_64";
+	}
+	else
+	{
+		m_logger->LogError("Unknown magic: %s", magic);
+		return false;
+	}
 
 	// TODO: Do we want to add any warnings about platform support here?
 	// TODO: Do we still consider macos experimental?
@@ -200,24 +216,12 @@ bool SharedCacheView::Init()
 	case DSCPlatformWatchOS:
 	case DSCPlatformWatchOSSimulator:
 	case DSCPlatformBridgeOS:
+		m_logger->LogError("Unsupported platform: %d", platform);
+		return false;
 	default:
-		m_logger->LogError("Unknown platform: %d", platform);
-		return false;
-	}
-
-	if (std::string(magic) == "dyld_v1   arm64" || std::string(magic) == "dyld_v1  arm64e"
-		|| std::string(magic) == "dyld_v1arm64_32")
-	{
-		arch = "aarch64";
-	}
-	else if (std::string(magic) == "dyld_v1  x86_64" || std::string(magic) == "dyld_v1 x86_64h")
-	{
-		arch = "x86_64";
-	}
-	else
-	{
-		m_logger->LogError("Unknown magic: %s", magic);
-		return false;
+		m_logger->LogWarn("Unknown platform: %d selecting iOS...", platform);
+		os = "ios";
+		break;
 	}
 
 	SetDefaultPlatform(Platform::GetByName(os + "-" + arch));

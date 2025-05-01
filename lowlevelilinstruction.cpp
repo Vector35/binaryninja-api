@@ -3765,7 +3765,7 @@ fmt::format_context::iterator fmt::formatter<LowLevelILInstruction>::format(cons
 
 		for (auto& token: tokens)
 		{
-			fmt::format_to(ctx.out(), token.text);
+			fmt::format_to(ctx.out(), "{}", token.text);
 		}
 	}
 	else

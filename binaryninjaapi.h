@@ -1156,6 +1156,28 @@ namespace BinaryNinja {
 		@addtogroup coreapi
 	 	@{
 	*/
+	struct VersionInfo
+	{
+		uint32_t major {};
+		uint32_t minor {};
+		uint32_t build {};
+		std::string channel;
+
+		VersionInfo() = default;
+
+		bool operator<(const VersionInfo &other) const
+		{
+			char* smallerChan = BNAllocString(channel.c_str());
+			char* largerChan = BNAllocString(other.channel.c_str());
+			BNVersionInfo smaller = { major, minor, build, smallerChan };
+			BNVersionInfo larger = { other.major, other.minor, other.build, largerChan };
+			bool result = BNVersionLessThan(smaller, larger);
+			BNFreeString(smallerChan);
+			BNFreeString(largerChan);
+			return result;
+		}
+	};
+	
 	std::string EscapeString(const std::string& s);
 	std::string UnescapeString(const std::string& s);
 
@@ -1192,6 +1214,8 @@ namespace BinaryNinja {
 	    std::string& output, std::string& errors, bool stdoutIsText = false, bool stderrIsText = true);
 
 	std::string GetVersionString();
+	VersionInfo GetVersionInfo();
+	VersionInfo ParseVersionString(const std::string& version);
 	std::string GetLicensedUserEmail();
 	std::string GetProduct();
 	std::string GetProductType();
@@ -10113,16 +10137,44 @@ namespace BinaryNinja {
 		bool PostRequest(const std::string& command);
 
 	public:
+
+		// TODO: Convert to BNWorkflowMachineStatus structure
+		struct Status
+		{
+			std::string state = "Invalid";
+			std::string activity;
+			bool localLogEnabled;
+			bool globalLogEnabled;
+		};
+
 		WorkflowMachine(Ref<BinaryView> view);
 		WorkflowMachine(Ref<Function> function);
 
 		bool PostJsonRequest(const std::string& request);
 
-		/*! Start the workflow WorkflowMachine
+		void ShowTopology();
+
+		WorkflowMachine::Status GetStatus();
+
+		/*! Resume the workflow machine
+
+			Resumes the workflow machine for the given BinaryView or Function.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Resume();
+
+		/*! Start the workflow Machine
 			Starts the workflow machine for the given BinaryView or Function.
 			\return true if the command is accepted, false otherwise.
 		*/
 		bool Run();
+
+		/*! Configure the workflow machine
+
+			Configures the workflow machine.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Configure();
 
 		/*! Halt the workflow machine
 
@@ -10160,12 +10212,6 @@ namespace BinaryNinja {
 			\return true if the command is accepted, false otherwise.
 		*/
 		bool Step();
-
-		// TODO: Add new BNWorkflowMachineStatus structure and cooresponding API
-		// BNWorkflowMachineStatus GetStatus();
-		// TODO remove the following APIs once the above is implemented
-		std::string GetState();
-		std::pair<bool, bool> GetLogStatus();
 
 		bool SetLogEnabled(bool enable, bool global = false);
 
@@ -16814,8 +16860,8 @@ namespace BinaryNinja {
 		std::string GetCommit() const;
 		std::string GetRepository() const;
 		std::string GetProjectData();
-		BNVersionInfo GetMinimumVersionInfo() const;
-		BNVersionInfo GetMaximumVersionInfo() const;
+		VersionInfo GetMinimumVersionInfo() const;
+		VersionInfo GetMaximumVersionInfo() const;
 		uint64_t GetLastUpdate();
 		bool IsViewOnly() const;
 		bool IsBeingDeleted() const;

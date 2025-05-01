@@ -981,7 +981,8 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		break;
 	case armv7::ARMV7_MOV:
 	case armv7::ARMV7_MOVW:
-		il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1)));
+		il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1), 4,
+			WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_NZ : 0));
 		break;
 	case armv7::ARMV7_MOVS:
 		il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1), 4,
@@ -1034,7 +1035,8 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_NZ)));
 		break;
 	case armv7::ARMV7_MVN:
-		il.AddInstruction(WriteILOperand(il, instr, 0, il.Not(4, ReadArithOperand(il, instr, 1))));
+		il.AddInstruction(WriteILOperand(il, instr, 0, il.Not(4, ReadArithOperand(il, instr, 1),
+			WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
 		break;
 	case armv7::ARMV7_MVNS:
 		il.AddInstruction(WriteILOperand(il, instr, 0, il.Not(4, ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_ALL)));

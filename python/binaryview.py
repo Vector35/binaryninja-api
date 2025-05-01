@@ -9545,9 +9545,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		seg = core.BNGetSegmentAt(self.handle, addr)
 		if not seg:
 			return None
-		segment_handle = core.BNNewSegmentReference(seg)
-		assert segment_handle is not None, "core.BNNewSegmentReference returned None"
-		return Segment(segment_handle)
+		return Segment(seg)
 
 	def get_address_for_data_offset(self, offset: int) -> Optional[int]:
 		"""
@@ -9639,9 +9637,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		section = core.BNGetSectionByName(self.handle, name)
 		if section is None:
 			return None
-		section_handle = core.BNNewSectionReference(section)
-		assert section_handle is not None, "core.BNNewSectionReference returned None"
-		result = Section(section_handle)
+		result = Section(section)
 		return result
 
 	def get_unique_section_names(self, name_list: List[str]) -> List[str]:

@@ -46,13 +46,28 @@ bool VirtualMemory::IsAddressMapped(uint64_t address)
 	return m_regions.find(address) != m_regions.end();
 }
 
-void VirtualMemory::WritePointer(size_t address, size_t pointer)
+void VirtualMemory::WritePointer(uint64_t address, size_t pointer)
 {
 	uint64_t offset;
 	auto region = GetRegionAtAddress(address, offset);
 	if (!region.has_value())
 		throw UnmappedRegionException(address);
 	region->fileAccessor.lock()->WritePointer(offset, pointer);
+}
+
+uint64_t VirtualMemory::ReadPointer(uint64_t address)
+{
+	switch (m_addressSize)
+	{
+	case 8:
+		return ReadUInt64(address);
+	case 4:
+		return ReadUInt32(address);
+	case 2:
+		return ReadUInt16(address);
+	default:
+		throw std::runtime_error("Unsupported address size");
+	}
 }
 
 std::string VirtualMemory::ReadCString(uint64_t address)
@@ -145,7 +160,7 @@ BinaryNinja::DataBuffer VirtualMemory::ReadBuffer(uint64_t address, size_t lengt
 	return region->fileAccessor.lock()->ReadBuffer(offset, length);
 }
 
-std::pair<const uint8_t*, const uint8_t*> VirtualMemory::ReadSpan(size_t address, size_t length)
+std::pair<const uint8_t*, const uint8_t*> VirtualMemory::ReadSpan(uint64_t address, size_t length)
 {
 	uint64_t offset;
 	auto region = GetRegionAtAddress(address, offset);
@@ -177,7 +192,7 @@ std::string VirtualMemoryReader::ReadCString(uint64_t address, size_t maxLength)
 	if (!region.has_value())
 		throw UnmappedRegionException(address);
 	// TODO: Advance cursor?
-	return region->fileAccessor.lock()->ReadNullTermString(offset);
+	return region->fileAccessor.lock()->ReadNullTermString(offset, maxLength);
 }
 
 uint64_t VirtualMemoryReader::ReadULEB128(size_t cursorLimit)
@@ -250,12 +265,8 @@ uint64_t VirtualMemoryReader::ReadPointer()
 
 uint64_t VirtualMemoryReader::ReadPointer(uint64_t address)
 {
-	if (m_addressSize == 8)
-		return ReadUInt64(address);
-	if (m_addressSize == 4)
-		return ReadUInt32(address);
-	// TODO: Throw here or assert.
-	return 0;
+	m_cursor = m_memory->GetAddressSize();
+	return m_memory->ReadPointer(address);
 }
 
 uint8_t VirtualMemoryReader::ReadUInt8()

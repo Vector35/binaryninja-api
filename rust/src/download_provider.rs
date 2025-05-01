@@ -121,7 +121,11 @@ impl DownloadInstance {
         }
     }
 
-    unsafe extern "C" fn o_progress_callback(ctxt: *mut c_void, progress: usize, total: usize) -> bool {
+    unsafe extern "C" fn o_progress_callback(
+        ctxt: *mut c_void,
+        progress: usize,
+        total: usize,
+    ) -> bool {
         let callbacks = ctxt as *mut DownloadInstanceOutputCallbacks;
         if let Some(func) = &mut (*callbacks).progress {
             (func)(progress, total)
@@ -186,7 +190,11 @@ impl DownloadInstance {
         }
     }
 
-    unsafe extern "C" fn i_progress_callback(ctxt: *mut c_void, progress: usize, total: usize) -> bool {
+    unsafe extern "C" fn i_progress_callback(
+        ctxt: *mut c_void,
+        progress: usize,
+        total: usize,
+    ) -> bool {
         let callbacks = ctxt as *mut DownloadInstanceInputOutputCallbacks;
         if let Some(func) = &mut (*callbacks).progress {
             (func)(progress, total)

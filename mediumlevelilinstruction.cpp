@@ -3205,7 +3205,7 @@ fmt::format_context::iterator fmt::formatter<MediumLevelILInstruction>::format(c
 
 		for (auto& token: tokens)
 		{
-			fmt::format_to(ctx.out(), token.text);
+			fmt::format_to(ctx.out(), "{}", token.text);
 		}
 	}
 	else

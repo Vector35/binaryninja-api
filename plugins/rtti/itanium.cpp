@@ -397,15 +397,9 @@ std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
 
     auto typeInfo = TypeInfo(m_view, objectAddr);
     auto className = DemangleNameItanium(m_view, allowMangledClassNames, typeInfo.type_name);
-    if (!className.has_value())
+    if (!className.has_value() || className->empty())
         return std::nullopt;
     auto classInfo = ClassInfo{RTTIProcessorType::Itanium, className.value()};
-
-    auto typeInfoName = fmt::format("_typeinfo_for_{}", classInfo.className);
-    auto typeInfoSymbol = m_view->GetSymbolByAddress(objectAddr);
-    if (typeInfoSymbol != nullptr)
-        m_view->UndefineAutoSymbol(typeInfoSymbol);
-    m_view->DefineAutoSymbol(new Symbol{DataSymbol, typeInfoName, objectAddr});
 
     auto nameFromTypeInfoSymbol = [&](uint64_t addr) -> std::optional<std::string> {
         auto sym = m_view->GetSymbolByAddress(addr);
@@ -457,7 +451,6 @@ std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
     else if (typeInfoVariant == TIVVMIClass)
     {
         auto vmiClassTypeInfo = VMIClassTypeInfo(m_view, objectAddr);
-        m_view->DefineDataVariable(objectAddr, Confidence(VMIClassTypeInfoType(m_view, vmiClassTypeInfo.base_count), 255));
         for (const auto& baseInfo : vmiClassTypeInfo.base_info)
         {
             // Remove the flags and just get the offset
@@ -488,11 +481,19 @@ std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
             auto baseClassInfo = BaseClassInfo {baseClassName.value(), offset};
             classInfo.baseClasses.emplace_back(baseClassInfo);
         }
+        m_view->DefineDataVariable(objectAddr, Confidence(VMIClassTypeInfoType(m_view, vmiClassTypeInfo.base_count), 255));
     }
     else
     {
         m_view->DefineDataVariable(objectAddr, Confidence(ClassTypeInfoType(m_view), 255));
     }
+
+    // Defining the data variable was a success, so we can add the symbol now.
+    auto typeInfoName = fmt::format("_typeinfo_for_{}", classInfo.className);
+    auto typeInfoSymbol = m_view->GetSymbolByAddress(objectAddr);
+    if (typeInfoSymbol != nullptr)
+        m_view->UndefineAutoSymbol(typeInfoSymbol);
+    m_view->DefineAutoSymbol(new Symbol{DataSymbol, typeInfoName, objectAddr});
 
     return classInfo;
 }

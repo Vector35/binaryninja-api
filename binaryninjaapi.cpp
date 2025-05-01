@@ -203,6 +203,36 @@ string BinaryNinja::GetVersionString()
 }
 
 
+VersionInfo BinaryNinja::GetVersionInfo()
+{
+	BNVersionInfo result = BNGetVersionInfo();
+	VersionInfo info;
+	info.major = result.major;
+	info.minor = result.minor;
+	info.build = result.build;
+	info.channel = "";
+	if (result.channel)
+		info.channel = result.channel;
+	BNFreeString(result.channel);
+	return info;
+}
+
+
+VersionInfo ParseVersionString(const string &version)
+{
+	BNVersionInfo result = BNParseVersionString(version.c_str());
+	VersionInfo info;
+	info.major = result.major;
+	info.minor = result.minor;
+	info.build = result.build;
+	info.channel = "";
+	if (result.channel)
+		info.channel = result.channel;
+	BNFreeString(result.channel);
+	return info;
+}
+
+
 string BinaryNinja::GetLicensedUserEmail()
 {
 	char* str = BNGetLicensedUserEmail();

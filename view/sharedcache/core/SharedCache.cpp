@@ -325,15 +325,16 @@ void SharedCache::ProcessEntryRegions(const CacheEntry& entry)
 	// Collect pool addresses as non image memory regions.
 	for (size_t i = 0; i < entryHeader.branchPoolsCount; i++)
 	{
-		auto branchPoolAddr = entryHeader.branchPoolsOffset + (i * m_vm->GetAddressSize());
-		auto header = SharedCacheMachOHeader::ParseHeaderForAddress(
-			m_vm, branchPoolAddr, "dyld_shared_cache_branch_islands_" + std::to_string(i));
+		auto branchPoolIdxAddr = *entry.GetMappedAddress(entryHeader.branchPoolsOffset) + (i * m_vm->GetAddressSize());
+		auto branchPoolAddr = m_vm->ReadPointer(branchPoolIdxAddr);
+		auto branchHeader = SharedCacheMachOHeader::ParseHeaderForAddress(
+			m_vm, branchPoolAddr, fmt::format("dyld_shared_cache_branch_islands_{}", i));
 		// Stop processing branch pools if a header fails to parse.
-		if (!header.has_value())
+		if (!branchHeader.has_value())
 			break;
 
 		// Gather all non image regions from the branch islands.
-		for (const auto& segment : header->segments)
+		for (const auto& segment : branchHeader->segments)
 		{
 			CacheRegion stubIslandRegion;
 			stubIslandRegion.start = segment.vmaddr;

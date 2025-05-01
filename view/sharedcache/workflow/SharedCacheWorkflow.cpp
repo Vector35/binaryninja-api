@@ -120,20 +120,22 @@ void AnalyzeStubFunction(Ref<Function> func, Ref<MediumLevelILFunction> mlil, Sh
 	auto view = func->GetView();
 	auto loadStubIslandRegion = [&](uint64_t regionAddr) {
 		auto region = controller.GetRegionContaining(regionAddr);
-		if (!region.has_value())
+		if (!region.has_value() || controller.IsRegionLoaded(*region))
 			return false;
 		// Only interested in non image regions, we DON'T want to implicitly load image regions (with functions presumably).
 		if (region->type == SharedCacheRegionTypeImage)
 			return false;
 		// Adjust the new region semantics to read only, this helps analysis pickup constant loads in our stub functions.
-		region->flags = static_cast<BNSegmentFlag>(SegmentReadable | SegmentContainsData);
+		// NOTE: We do NOT do this for stub island as that contains CODE!
+		if (region->type != SharedCacheRegionTypeStubIsland)
+			region->flags = static_cast<BNSegmentFlag>(SegmentReadable | SegmentContainsData);
 		return controller.ApplyRegion(*view, *region);
 	};
 
 	// We allow the user to automatically load the directly referenced objc images as having the calls inlined is extremely useful for objc.
 	auto loadTargetImage = [&](uint64_t imageAddr) {
 		const auto image = controller.GetImageContaining(imageAddr);
-		if (!image.has_value())
+		if (!image.has_value() || controller.IsImageLoaded(*image))
 			return false;
 		return controller.ApplyImage(*view, *image);
 	};
@@ -242,7 +244,7 @@ void AnalyzeStandardFunction(Ref<Function> func, Ref<MediumLevelILFunction> mlil
 		if (view->IsValidOffset(regionAddr))
 			return false;
 		auto region = controller.GetRegionContaining(regionAddr);
-		if (!region.has_value())
+		if (!region.has_value() || controller.IsRegionLoaded(*region))
 			return false;
 		// Only interested in non image regions, we DON'T want to implicitly load image regions (with functions presumably).
 		if (region->type == SharedCacheRegionTypeImage)

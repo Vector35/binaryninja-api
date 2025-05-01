@@ -92,7 +92,7 @@ Ref<ExternalLibrary> ExternalLocation::GetExternalLibrary()
 	BNExternalLibrary* lib = BNExternalLocationGetExternalLibrary(m_object);
 	if (!lib)
 		return nullptr;
-	return new ExternalLibrary(BNNewExternalLibraryReference(lib));
+	return new ExternalLibrary(lib);
 }
 
 

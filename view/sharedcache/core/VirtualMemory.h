@@ -61,7 +61,9 @@ public:
 	bool IsAddressMapped(uint64_t address);
 
 	// Write a pointer at a given address. This pointer is never persisted when a file accessor is closed.
-	void WritePointer(size_t address, size_t pointer);
+	void WritePointer(uint64_t address, size_t pointer);
+
+	uint64_t ReadPointer(uint64_t address);
 
 	std::string ReadCString(uint64_t address);
 
@@ -83,7 +85,7 @@ public:
 
 	BinaryNinja::DataBuffer ReadBuffer(uint64_t address, size_t length);
 
-	std::pair<const uint8_t*, const uint8_t*> ReadSpan(size_t address, size_t length);
+	std::pair<const uint8_t*, const uint8_t*> ReadSpan(uint64_t address, size_t length);
 
 	void Read(void* dest, uint64_t address, size_t length);
 };

@@ -643,31 +643,27 @@ class WorkflowMachine:
 			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def configure(self, advanced: bool = True, incremental: bool = False):
-		request = json.dumps({"command": "configure", "advanced": advanced, "incremental": incremental})
 		if self.is_function_machine:
+			request = json.dumps({"command": "configure", "advanced": advanced, "incremental": incremental})
 			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
 		else:
+			request = json.dumps({"command": "configure"})
 			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
-	def resume(self):
-		request = json.dumps({"command": "run"})
+	def resume(self, advanced: bool = True, incremental: bool = False):
 		if self.is_function_machine:
+			request = json.dumps({"command": "resume", "advanced": advanced, "incremental": incremental})
 			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
 		else:
+			request = json.dumps({"command": "resume"})
 			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
-	def run(self):
-		status = self.status()
-		if 'machineState' in status and 'state' in status['machineState']:
-			if status['machineState']['state'] == 'Idle':
-				self.configure()
-		else:
-			raise AttributeError("Unknown status response!")
-
-		request = json.dumps({"command": "run"})
+	def run(self, advanced: bool = True, incremental: bool = False):
 		if self.is_function_machine:
+			request = json.dumps({"command": "run", "advanced": advanced, "incremental": incremental})
 			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
 		else:
+			request = json.dumps({"command": "run"})
 			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def halt(self):
@@ -783,8 +779,8 @@ class WorkflowMachineCLI(cmd.Cmd):
 		"l": "log",
 		"m": "metrics",
 		"d": "dump",
-		"c": "resume",
 		"r": "run",
+		"c": "resume",
 		"h": "halt",
 		"s": "step",
 		"b": "breakpoint",

@@ -25,13 +25,19 @@ Component::Component(BNComponent* component)
 
 std::string Component::GetDisplayName()
 {
-	return BNComponentGetDisplayName(m_object);
+	char* result = BNComponentGetDisplayName(m_object);
+	string stringResult = result;
+	BNFreeString(result);
+	return stringResult;
 }
 
 
 std::string Component::GetName()
 {
-	return BNComponentGetOriginalName(m_object);
+	char* result = BNComponentGetOriginalName(m_object);
+	string stringResult = result;
+	BNFreeString(result);
+	return stringResult;
 }
 
 
@@ -55,7 +61,10 @@ Ref<Component> Component::GetParent()
 
 std::string Component::GetGuid()
 {
-	return string(BNComponentGetGuid(m_object));
+	char* result = BNComponentGetGuid(m_object);
+	string stringResult = result;
+	BNFreeString(result);
+	return stringResult;
 }
 
 

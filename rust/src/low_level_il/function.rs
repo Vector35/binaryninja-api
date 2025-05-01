@@ -198,6 +198,12 @@ impl LowLevelILFunction<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
 
         unsafe { Self::ref_from_raw(arch, handle) }
     }
+
+    pub fn generate_ssa_form(&self) {
+        use binaryninjacore_sys::BNGenerateLowLevelILSSAForm;
+
+        unsafe { BNGenerateLowLevelILSSAForm(self.handle) };
+    }
 }
 
 impl<A, M, F> ToOwned for LowLevelILFunction<A, M, F>

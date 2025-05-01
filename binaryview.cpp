@@ -3835,7 +3835,7 @@ Ref<BackgroundTask> BinaryView::GetBackgroundAnalysisTask()
 	if (!task)
 		return nullptr;
 
-	return new BackgroundTask(BNNewBackgroundTaskReference(task));
+	return new BackgroundTask(task);
 }
 
 
@@ -4954,7 +4954,7 @@ Ref<Segment> BinaryView::GetSegmentAt(uint64_t addr)
 	if (!segment)
 		return nullptr;
 
-	return new Segment(BNNewSegmentReference(segment));
+	return new Segment(segment);
 }
 
 
@@ -5043,7 +5043,7 @@ Ref<Section> BinaryView::GetSectionByName(const string& name)
 {
 	BNSection* section = BNGetSectionByName(m_object, name.c_str());
 	if (section)
-		return new Section(BNNewSectionReference(section));
+		return new Section(section);
 	return nullptr;
 }
 
@@ -5386,7 +5386,7 @@ Ref<ExternalLibrary> BinaryView::AddExternalLibrary(const std::string& name, Ref
 	BNExternalLibrary* lib = BNBinaryViewAddExternalLibrary(m_object, name.c_str(), backingFile ? backingFile->m_object : nullptr, isAuto);
 	if (!lib)
 		return nullptr;
-	return new ExternalLibrary(BNNewExternalLibraryReference(lib));
+	return new ExternalLibrary(lib);
 }
 
 

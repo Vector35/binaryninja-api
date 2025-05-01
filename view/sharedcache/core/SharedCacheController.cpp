@@ -33,7 +33,8 @@ void DeleteController(const FileMetadata& file)
 	{
 		auto controller = it->second;
 		// Someone is still holding the controller, lets warn about this.
-		if (controller->m_refs > 1)
+		// 2 is expected here because we have one held in `controllers` and one held by `controller`.
+		if (controller->m_refs > 2)
 			LogWarn("Deleting SharedCacheController for view %llx, but there are still %d references", id,
 				controller->m_refs.load());
 
@@ -159,7 +160,10 @@ bool SharedCacheController::ApplyRegion(BinaryView& view, const CacheRegion& reg
 	// TODO: We can use the AddRemoteMemoryRegion if we want to reload on view init.
 	// TODO: ^ The above is only useful if we assume that all files will be available across database loads.
 	// TODO: we might allow a user to select non-persisted memory regions as an option.
-	view.GetMemoryMap()->AddDataMemoryRegion(memoryRegionName, region.start, buffer, region.flags);
+	bool addedMemoryRegion = view.GetMemoryMap()->AddDataMemoryRegion(memoryRegionName, region.start, buffer, region.flags);
+	if (!addedMemoryRegion)
+		return false;
+
 	// TODO: We might want to make this auto if we decide to "reload" all loaded region in view init.
 	// If we are not associated with an image we can create a section here to set the semantics.
 	// This is important for stub regions, as they will deref non image data that we want to retrieve the value of.
@@ -194,10 +198,12 @@ bool SharedCacheController::ApplyImage(BinaryView& view, const CacheImage& image
 {
 	// Load all regions of an image and mark the image as loaded.
 	// NOTE: The regions lock m_loadMutex themselves, so we do not hold it up here.
+	view.BeginBulkAddSegments();
 	bool loadedRegion = false;
 	for (const auto& regionStart : image.regionStarts)
 		if (ApplyRegionAtAddress(view, regionStart))
 			loadedRegion = true;
+	view.EndBulkAddSegments();
 
 	// The ApplyRegionAtAddress no longer holds the lock, we can take it now.
 	std::unique_lock<std::shared_mutex> lock(m_loadMutex);

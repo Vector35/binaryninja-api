@@ -164,6 +164,8 @@ LowLevelILVerifier::LowLevelILVerifier(Ref<LowLevelILFunction> function): m_il(f
 }
 
 
+bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::optional<size_t> requiredSize)
+{
 #define CHECK(condition, message, ...)                                                    \
 	do                                                                                    \
 	{                                                                                     \
@@ -175,8 +177,6 @@ LowLevelILVerifier::LowLevelILVerifier(Ref<LowLevelILFunction> function): m_il(f
 	}                                                                                     \
 	while (false)
 
-bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::optional<size_t> requiredSize)
-{
 	bool result = true;
 	switch (expr.operation)
 	{
@@ -331,6 +331,9 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
 		CHECK(expr.size != 0, "op should have a size");
+		auto bit = expr.GetBitIndex<LLIL_FLAG_BIT>();
+		auto bitWidth = expr.size * 8;
+		CHECK(bit < bitWidth, "trying to set bit {} on a {} bit result value", bit, bitWidth);
 		break;
 	}
 	case LLIL_TEST_BIT:
@@ -501,14 +504,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		CHECK(expr.size != 0, "op should have a size");
 
 		size_t srcSize = expr.GetSourceExpr().size;
-		if (srcSize == expr.size)
-		{
-			m_logger->LogDebugF("op {:?} is already {:#x} bytes", expr, expr.size);
-		}
-		else
-		{
-			CHECK(srcSize < expr.size, "expanding op to {:#x} bytes is invalid; source is already {:#x} bytes", expr.size, srcSize);
-		}
+		CHECK(srcSize <= expr.size, "expanding op to {:#x} bytes is invalid; source is already {:#x} bytes", expr.size, srcSize);
 
 		result &= CheckExprSize(expr.GetSourceExpr(), std::nullopt);
 		break;
@@ -522,7 +518,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		CHECK(expr.size != 0, "op should have a size");
 
 		size_t srcSize = expr.GetSourceExpr().size;
-		CHECK(srcSize > expr.size, "truncating op to {:#x} bytes is invalid; source is already {:#x} bytes", expr.size, srcSize);
+		CHECK(srcSize >= expr.size, "truncating op to {:#x} bytes is invalid; source is already {:#x} bytes", expr.size, srcSize);
 
 		result &= CheckExprSize(expr.GetSourceExpr(), std::nullopt);
 		break;
@@ -546,8 +542,8 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
 		CHECK(expr.size != 0, "op should have a size");
-
-		result &= CheckExprSize(expr.GetSourceExpr(), expr.size);
+		// Expr size is result size, input size is anything
+		result &= CheckExprSize(expr.GetSourceExpr(), std::nullopt);
 		break;
 	}
 	case LLIL_FLOAT_CONV:
@@ -582,10 +578,12 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 	}
 	}
 	return result;
-}
 #undef CHECK
+}
 
 
+bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
+{
 #define CHECK(condition, message, ...)                                                    \
 	do                                                                                    \
 	{                                                                                     \
@@ -597,8 +595,6 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 	}                                                                                     \
 	while (false)
 
-bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
-{
 	bool result = true;
 
 	switch (instr.operation)
@@ -726,7 +722,6 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		result &= CheckExprSize(instr.GetConditionExpr<LLIL_IF>(), 0);
 		break;
 	case LLIL_GOTO:
-		// TODO: Check target
 		break;
 	case LLIL_SYSCALL:
 		break;
@@ -741,26 +736,18 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		auto actualInputs = instr.GetParameterExprs<LLIL_INTRINSIC>();
 		auto actualOutputs = instr.GetOutputRegisterOrFlagList<LLIL_INTRINSIC>();
 
-		CHECK(expectInputs.size() == actualInputs.size(), "intrinsic expects {} inputs but has {}", expectInputs.size(), actualInputs.size());
-		CHECK(expectOutputs.size() == actualOutputs.size(), "intrinsic expects {} outputs but has {}", expectOutputs.size(), actualOutputs.size());
-
-		if (expectInputs.size() == actualInputs.size())
+		// Not even going to take a chance on msvc breaking min() here
+		for (size_t i = 0; i < (std::min)(actualInputs.size(), expectInputs.size()); i++)
 		{
-			for (size_t i = 0; i < expectInputs.size(); i++)
-			{
-				auto expectSize = expectInputs[i].type->GetWidth();
-				auto actualSize = actualInputs[i].size;
-				CHECK(expectSize == actualSize, "intrinsic argument {} size expects {:#x} but is {:#x}", i, expectSize, actualSize);
-			}
+			auto expectSize = expectInputs[i].type->GetWidth();
+			auto actualSize = actualInputs[i].size;
+			CHECK(expectSize == actualSize, "intrinsic argument {} size expects {:#x} but is {:#x}", i, expectSize, actualSize);
 		}
-		if (expectOutputs.size() == actualOutputs.size())
+		for (size_t i = 0; i < (std::min)(actualOutputs.size(), expectOutputs.size()); i++)
 		{
-			for (size_t i = 0; i < expectOutputs.size(); i++)
-			{
-				auto expectSize = expectOutputs[i]->GetWidth();
-				auto actualSize = actualOutputs[i].isFlag ? 0 : m_arch->GetRegisterInfo(actualOutputs[i].index).size;
-				CHECK(expectSize == actualSize, "intrinsic output {} size expects {:#x} but is {:#x}", i, expectSize, actualSize);
-			}
+			auto expectSize = expectOutputs[i]->GetWidth();
+			auto actualSize = actualOutputs[i].isFlag ? 0 : m_arch->GetRegisterInfo(actualOutputs[i].index).size;
+			CHECK(expectSize == actualSize, "intrinsic output {} size expects {:#x} but is {:#x}", i, expectSize, actualSize);
 		}
 		break;
 	}
@@ -777,10 +764,387 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		break;
 	}
 	return result;
+#undef CHECK
 }
 
-#undef CHECK
 
+bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruction& expr)
+{
+#define CHECK(condition, message, ...)                                                    \
+	do                                                                                    \
+	{                                                                                     \
+		if (!(condition))                                                                 \
+		{                                                                                 \
+			m_logger->LogErrorF("{:#x} {:?} {} " message, m_il->GetFunction()->GetStart(), expr, #condition, ## __VA_ARGS__ );   \
+			result = false;                                                               \
+		}                                                                                 \
+	}                                                                                     \
+	while (false)
+
+
+#undef CHECEK
+	bool result = true;
+	switch (expr.operation)
+	{
+	case LLIL_NOP: break;
+	case LLIL_SET_REG:
+	{
+		auto reg = expr.GetDestRegister<LLIL_SET_REG>();
+		if (!LLIL_REG_IS_TEMP(reg))
+		{
+			auto name = m_arch->GetRegisterName(reg);
+			CHECK(!name.empty(), "unknown register index {}", reg);
+		}
+		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_SET_REG>());
+		break;
+	}
+	case LLIL_SET_REG_SPLIT:
+	{
+		auto hi = expr.GetHighRegister<LLIL_SET_REG_SPLIT>();
+		if (!LLIL_REG_IS_TEMP(hi))
+		{
+			auto name = m_arch->GetRegisterName(hi);
+			CHECK(!name.empty(), "unknown high register index {}", hi);
+		}
+		auto lo = expr.GetHighRegister<LLIL_SET_REG_SPLIT>();
+		if (!LLIL_REG_IS_TEMP(lo))
+		{
+			auto name = m_arch->GetRegisterName(lo);
+			CHECK(!name.empty(), "unknown low register index {}", lo);
+		}
+		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_SET_REG_SPLIT>());
+		break;
+	}
+	case LLIL_SET_FLAG:
+	{
+		auto flag = expr.GetDestFlag<LLIL_SET_FLAG>();
+		auto name = m_arch->GetFlagName(flag);
+		CHECK(!name.empty(), "unknown flag index {}", flag);
+		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_SET_FLAG>());
+		break;
+	}
+	case LLIL_SET_REG_STACK_REL:
+	{
+		auto regStack = expr.GetDestRegisterStack<LLIL_SET_REG_STACK_REL>();
+		auto name = m_arch->GetRegisterStackName(regStack);
+		CHECK(!name.empty(), "unknown register stack index {}", regStack);
+		result &= CheckExprOperands(expr.GetDestExpr<LLIL_SET_REG_STACK_REL>());
+		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_SET_REG_STACK_REL>());
+		break;
+	}
+	case LLIL_REG_STACK_PUSH:
+	{
+		auto regStack = expr.GetDestRegisterStack<LLIL_REG_STACK_PUSH>();
+		auto name = m_arch->GetRegisterStackName(regStack);
+		CHECK(!name.empty(), "unknown register stack index {}", regStack);
+		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_REG_STACK_PUSH>());
+		break;
+	}
+	case LLIL_ASSERT:
+	{
+		auto reg = expr.GetSourceRegister<LLIL_ASSERT>();
+		// rss says: technically you can assert on a temp, but only if the definition
+		// of the temp register dominates the assert
+		// he also says that you have to do this on the SSA form (because dominators)
+		// so TODO: that, maybe
+		CHECK(!LLIL_REG_IS_TEMP(reg), "cannot assert on temp register {}", reg);
+		auto name = m_arch->GetRegisterName(reg);
+		CHECK(!name.empty(), "unknown register index {}", reg);
+		// todo: probably no way to check that a PossibleValueSet is valid
+//		auto constraint = expr.GetConstraint<LLIL_ASSERT>();
+		break;
+	}
+	case LLIL_FORCE_VER:
+	{
+		auto reg = expr.GetDestRegister<LLIL_FORCE_VER>();
+		// similar thing rss said above
+		CHECK(!LLIL_REG_IS_TEMP(reg), "cannot force version on temp register {}", reg);
+		auto name = m_arch->GetRegisterName(reg);
+		CHECK(!name.empty(), "unknown register index {}", reg);
+		break;
+	}
+	case LLIL_STORE:
+		result &= CheckExprOperands(expr.GetDestExpr<LLIL_STORE>());
+		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_STORE>());
+		break;
+	case LLIL_PUSH:
+		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_PUSH>());
+		break;
+	case LLIL_REG_STACK_FREE_REG:
+	{
+		auto reg = expr.GetDestRegister<LLIL_REG_STACK_FREE_REG>();
+		auto name = m_arch->GetRegisterName(reg);
+		CHECK(!name.empty(), "unknown register index {}", reg);
+		auto regStack = m_arch->GetRegisterStackForRegister(reg);
+		auto regStackName = m_arch->GetRegisterStackName(regStack);
+		CHECK(!regStackName.empty(), "register {} is not in any register stack", name);
+		break;
+	}
+	case LLIL_REG_STACK_FREE_REL:
+	{
+		auto regStack = expr.GetDestRegisterStack<LLIL_REG_STACK_FREE_REL>();
+		auto name = m_arch->GetRegisterStackName(regStack);
+		CHECK(!name.empty(), "unknown register stack index {}", regStack);
+		result &= CheckExprOperands(expr.GetDestExpr<LLIL_REG_STACK_FREE_REL>());
+		break;
+	}
+	case LLIL_JUMP:
+		result &= CheckExprOperands(expr.GetDestExpr<LLIL_JUMP>());
+		break;
+	case LLIL_JUMP_TO:
+	{
+		auto targets = expr.GetTargets<LLIL_JUMP_TO>();
+		std::unordered_set<size_t> seenValues;
+		std::unordered_set<uint64_t> seenDests;
+		for (auto& [value, dest] : targets)
+		{
+			if (!seenValues.insert(value).second)
+			{
+				m_logger->LogErrorF("{:?} {} duplicate jump target value {}", expr, value);
+				result = false;
+			}
+			if (!seenDests.insert(dest).second)
+			{
+				m_logger->LogErrorF("{:?} {} duplicate jump target dest {}", expr, dest);
+				result = false;
+			}
+		}
+		result &= CheckExprOperands(expr.GetDestExpr<LLIL_JUMP_TO>());
+		break;
+	}
+	case LLIL_CALL:
+		result &= CheckExprOperands(expr.GetDestExpr<LLIL_CALL>());
+		break;
+	case LLIL_CALL_STACK_ADJUST:
+	{
+		for (auto& [regStack, offset]: expr.GetRegisterStackAdjustments<LLIL_CALL_STACK_ADJUST>())
+		{
+			auto name = m_arch->GetRegisterStackName(regStack);
+			CHECK(!name.empty(), "unknown register stack index {}", regStack);
+		}
+		result &= CheckExprOperands(expr.GetDestExpr<LLIL_CALL_STACK_ADJUST>());
+		break;
+	}
+	case LLIL_TAILCALL:
+		result &= CheckExprOperands(expr.GetDestExpr<LLIL_TAILCALL>());
+		break;
+	case LLIL_RET:
+		result &= CheckExprOperands(expr.GetDestExpr<LLIL_RET>());
+		break;
+	case LLIL_NORET:
+		break;
+	case LLIL_IF:
+	{
+		size_t instrCount = m_il->GetInstructionCount();
+		size_t trueTarget = expr.GetTrueTarget<LLIL_IF>();
+		size_t falseTarget = expr.GetFalseTarget<LLIL_IF>();
+		CHECK(trueTarget < instrCount, "true target {} out of range of function with {} instructions", trueTarget, instrCount);
+		CHECK(falseTarget < instrCount, "false target {} out of range of function with {} instructions", falseTarget, instrCount);
+		result &= CheckExprOperands(expr.GetConditionExpr<LLIL_IF>());
+		break;
+	}
+	case LLIL_GOTO:
+	{
+		size_t instrCount = m_il->GetInstructionCount();
+		size_t target = expr.GetTarget<LLIL_GOTO>();
+		CHECK(target < instrCount, "target {} out of range of function with {} instructions", target, instrCount);
+		break;
+	}
+	case LLIL_SYSCALL:
+		// Apparently syscall number is not exposed at LLIL
+		break;
+	case LLIL_BP:
+		break;
+	case LLIL_TRAP:
+		// Pretty sure trap vector value is unconstrained
+		break;
+	case LLIL_INTRINSIC:
+	{
+		auto intrinsic = expr.GetIntrinsic<LLIL_INTRINSIC>();
+		auto name = m_arch->GetIntrinsicName(intrinsic);
+		CHECK(!name.empty(), "unknown intrinsic index {}", intrinsic);
+
+		auto expectInputs = m_arch->GetIntrinsicInputs(expr.GetIntrinsic<LLIL_INTRINSIC>());
+		auto expectOutputs = m_arch->GetIntrinsicOutputs(expr.GetIntrinsic<LLIL_INTRINSIC>());
+		auto actualInputs = expr.GetParameterExprs<LLIL_INTRINSIC>();
+		auto actualOutputs = expr.GetOutputRegisterOrFlagList<LLIL_INTRINSIC>();
+
+		CHECK(expectInputs.size() == actualInputs.size(), "intrinsic expects {} inputs but has {}", expectInputs.size(), actualInputs.size());
+		CHECK(expectOutputs.size() == actualOutputs.size(), "intrinsic expects {} outputs but has {}", expectOutputs.size(), actualOutputs.size());
+
+		for (auto& input: actualInputs)
+		{
+			result &= CheckExprOperands(input);
+		}
+		for (auto& output: actualOutputs)
+		{
+			if (output.isFlag)
+			{
+				auto flagName = m_arch->GetFlagName(output.index);
+				CHECK(!flagName.empty(), "unknown flag index {}", output.index);
+			}
+			else
+			{
+				auto regName = m_arch->GetRegisterName(output.index);
+				CHECK(!regName.empty(), "unknown register index {}", output.index);
+			}
+		}
+		break;
+	}
+	case LLIL_UNDEF:
+		break;
+	case LLIL_UNIMPL:
+		break;
+	case LLIL_UNIMPL_MEM:
+		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_UNIMPL_MEM>());
+		break;
+	case LLIL_LOAD:
+		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_LOAD>());
+		break;
+	case LLIL_POP:
+		break;
+	case LLIL_REG:
+	{
+		auto reg = expr.GetSourceRegister<LLIL_REG>();
+		if (!LLIL_REG_IS_TEMP(reg))
+		{
+			auto name = m_arch->GetRegisterName(reg);
+			CHECK(!name.empty(), "unknown register index {}", reg);
+		}
+		break;
+	}
+	case LLIL_REG_SPLIT:
+	{
+		auto hi = expr.GetHighRegister<LLIL_REG_SPLIT>();
+		if (!LLIL_REG_IS_TEMP(hi))
+		{
+			auto name = m_arch->GetRegisterName(hi);
+			CHECK(!name.empty(), "unknown high register index {}", hi);
+		}
+		auto lo = expr.GetLowRegister<LLIL_REG_SPLIT>();
+		if (!LLIL_REG_IS_TEMP(lo))
+		{
+			auto name = m_arch->GetRegisterName(lo);
+			CHECK(!name.empty(), "unknown low register index {}", lo);
+		}
+		break;
+	}
+	case LLIL_REG_STACK_REL:
+	{
+		auto regStack = expr.GetSourceRegisterStack<LLIL_REG_STACK_REL>();
+		auto name = m_arch->GetRegisterStackName(regStack);
+		CHECK(!name.empty(), "unknown register stack index {}", regStack);
+		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_REG_STACK_REL>());
+		break;
+	}
+	case LLIL_REG_STACK_POP:
+	{
+		auto regStack = expr.GetSourceRegisterStack<LLIL_REG_STACK_POP>();
+		auto name = m_arch->GetRegisterStackName(regStack);
+		CHECK(!name.empty(), "unknown register stack index {}", regStack);
+		break;
+	}
+	case LLIL_CONST:
+	case LLIL_CONST_PTR:
+	case LLIL_EXTERN_PTR: // could check this actually exists in the bv but not critical
+	case LLIL_FLOAT_CONST: // could check float is real but that is hard
+		break;
+	case LLIL_FLAG:
+	{
+		auto flag = expr.GetSourceFlag<LLIL_FLAG>();
+		auto name = m_arch->GetFlagName(flag);
+		CHECK(!name.empty(), "unknown flag index {}", flag);
+		break;
+	}
+	case LLIL_FLAG_BIT:
+	{
+		auto flag = expr.GetSourceFlag<LLIL_FLAG_BIT>();
+		auto name = m_arch->GetFlagName(flag);
+		CHECK(!name.empty(), "unknown flag index {}", flag);
+		break;
+	}
+	case LLIL_NEG:
+	case LLIL_NOT:
+	case LLIL_FSQRT:
+	case LLIL_FNEG:
+	case LLIL_FABS:
+	case LLIL_ROUND_TO_INT: // float->float, round towards nearest (x86 frndint which rounds to nearest)
+	case LLIL_FLOOR:
+	case LLIL_CEIL:
+	case LLIL_FTRUNC: // float->float, round towards zero (ppc fctiwz which rounds towards zero, and apparently fctiw is unimplemented)
+	case LLIL_SX:
+	case LLIL_ZX:
+	case LLIL_LOW_PART:
+	case LLIL_BOOL_TO_INT:
+	case LLIL_FLOAT_TO_INT: // float->int, rounding unspecified (x86 lifter uses this for both cvtss2si and cvttss2si)
+	case LLIL_INT_TO_FLOAT: // int->float
+	case LLIL_FLOAT_CONV: // float->float, rounding unspecified (x86 lifter uses for cvtsd2ss and that depends on FPU status word)
+		// TODO: do we want to check inputs look like ints / floats where relevant
+		result &= CheckExprOperands(expr.GetSourceExpr());
+		break;
+	case LLIL_TEST_BIT:
+	case LLIL_CMP_E:
+	case LLIL_CMP_NE:
+	case LLIL_CMP_SLE:
+	case LLIL_CMP_ULE:
+	case LLIL_CMP_SLT:
+	case LLIL_CMP_ULT:
+	case LLIL_CMP_SGE:
+	case LLIL_CMP_UGE:
+	case LLIL_CMP_SGT:
+	case LLIL_CMP_UGT:
+	case LLIL_FCMP_E:
+	case LLIL_FCMP_NE:
+	case LLIL_FCMP_LT:
+	case LLIL_FCMP_LE:
+	case LLIL_FCMP_GE:
+	case LLIL_FCMP_GT:
+	case LLIL_FCMP_O:
+	case LLIL_FCMP_UO:
+	case LLIL_ADD:
+	case LLIL_SUB:
+	case LLIL_AND:
+	case LLIL_OR:
+	case LLIL_XOR:
+	case LLIL_MUL:
+	case LLIL_DIVU:
+	case LLIL_DIVS:
+	case LLIL_MODU:
+	case LLIL_MODS:
+	case LLIL_FADD:
+	case LLIL_FSUB:
+	case LLIL_FMUL:
+	case LLIL_FDIV:
+	case LLIL_ADD_OVERFLOW:
+	case LLIL_LSL:
+	case LLIL_LSR:
+	case LLIL_ASR:
+	case LLIL_ROL:
+	case LLIL_ROR:
+	case LLIL_MULS_DP:
+	case LLIL_MULU_DP:
+	case LLIL_DIVS_DP:
+	case LLIL_DIVU_DP:
+	case LLIL_MODS_DP:
+	case LLIL_MODU_DP:
+		// TODO: do we want to check inputs look like ints / floats where relevant
+		result &= CheckExprOperands(expr.GetLeftExpr());
+		result &= CheckExprOperands(expr.GetRightExpr());
+		break;
+	case LLIL_ADC:
+	case LLIL_SBB:
+	case LLIL_RLC:
+	case LLIL_RRC:
+		result &= CheckExprOperands(expr.GetLeftExpr());
+		result &= CheckExprOperands(expr.GetRightExpr());
+		result &= CheckExprOperands(expr.GetCarryExpr());
+		break;
+	default:
+		m_logger->LogErrorF("Unhandled expr operation: {:?}", expr);
+		break;
+	}
+	return result;
+}
 
 bool LowLevelILVerifier::Verify()
 {
@@ -791,7 +1155,7 @@ bool LowLevelILVerifier::Verify()
 		-[x] Sizes of expressions are consistent
 		-[x] Base level instructions are of a limited subset of operations (setreg, call, etc)
 		-[x] Child expressions are of a limited subset of operations (eg NOT goto)
-		-[ ] Expression parameters are in valid range
+		-[x] Expression parameters are in valid range
 		-[x] Each expression has as most 1 parent
 		-[ ] Expr address aligns with instruction
 		-[x] Nothing in the flags attr except on lifted IL
@@ -868,6 +1232,16 @@ bool LowLevelILVerifier::Verify()
 		}
 	}
 
+	// Check expr operands
+	for (auto& bb: m_il->GetBasicBlocks())
+	{
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
+		{
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			result &= CheckExprOperands(instr);
+		}
+	}
+
 	// Check exprs are where we expect them to be
 	for (auto& bb: m_il->GetBasicBlocks())
 	{
@@ -892,7 +1266,7 @@ bool LowLevelILVerifier::Verify()
 						if ((found->second & ValidAsParent) == 0)
 						{
 							result = false;
-							m_logger->LogDebugF("Instruction {:?} is not valid as parent instruction", expr);
+							m_logger->LogDebugF("Instruction {:?} is not expected to be parent instruction", expr);
 						}
 					}
 					else

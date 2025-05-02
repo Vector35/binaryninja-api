@@ -13,6 +13,8 @@ class LowLevelILVerifier
 	bool CheckExprSize(const BinaryNinja::LowLevelILInstruction& expr, std::optional<size_t> requiredSize);
 	bool CheckInstrSize(const BinaryNinja::LowLevelILInstruction& instr);
 
+	bool CheckExprOperands(const BinaryNinja::LowLevelILInstruction& expr);
+
 public:
 	LowLevelILVerifier(BinaryNinja::Ref<BinaryNinja::LowLevelILFunction> function);
 	bool Verify();

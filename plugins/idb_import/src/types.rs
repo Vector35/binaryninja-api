@@ -114,7 +114,6 @@ pub struct TranslatesIDBType<'a> {
 
 pub struct TranslateIDBTypes<'a, F> {
     pub arch: CoreArchitecture,
-    pub total: usize,
     pub progress: F,
     // key til addr and type idx
     pub types_by_idx: HashMap<(usize, usize), usize>,
@@ -129,19 +128,16 @@ where
     F: Fn(usize, usize) -> Result<(), ()>,
 {
     pub fn from_types(arch: CoreArchitecture, tils: &'a [TILSection], progress: F) -> Result<Self> {
-        let total = tils
-            .iter()
-            .map(|til| til.symbols.len() + til.types.len())
-            .sum();
-        let mut types = Vec::with_capacity(total);
-        let mut types_by_idx = HashMap::with_capacity(total);
-        let mut types_by_ord = HashMap::with_capacity(total);
-        let mut types_by_name = HashMap::with_capacity(total);
         let all_types = tils.iter().flat_map(|til| {
             core::iter::repeat(til).zip(til.types.iter().enumerate().zip(core::iter::repeat(false)))
             // TODO: it's unclear how the demangle symbols and types names/ord, for now only parse types
             //.chain(til.symbols.iter().zip(core::iter::repeat(true)))
         });
+        let total = all_types.clone().count();
+        let mut types = Vec::with_capacity(total);
+        let mut types_by_idx = HashMap::with_capacity(total);
+        let mut types_by_ord = HashMap::with_capacity(total);
+        let mut types_by_name = HashMap::with_capacity(total);
         for (i, (til, ((ty_idx, ty), is_symbol))) in all_types.enumerate() {
             // TODO sanitized the input
             // TODO find out how the namespaces used by TIL works
@@ -189,7 +185,6 @@ where
         }
 
         Ok(TranslateIDBTypes {
-            total,
             arch,
             progress,
             tils,
@@ -201,7 +196,7 @@ where
     }
 
     fn resolve(&mut self) -> Result<()> {
-        if (self.progress)(0, self.total).is_err() {
+        if (self.progress)(0, self.types.len()).is_err() {
             return Err(anyhow!("IDB import aborted"));
         }
 
@@ -238,14 +233,15 @@ where
                 }
 
                 // count the number of finished types
-                if let TranslateTypeResult::Translated(_) = &self.types[i].ty {
-                    num_translated += 1
+                let was_translated =
+                    matches!(&self.types[i].ty, TranslateTypeResult::Translated(_));
+                if was_translated {
+                    num_translated += 1;
                 }
-
-                all_done &= matches!(&self.types[i].ty, TranslateTypeResult::Translated(_));
+                all_done &= was_translated;
             }
 
-            if (self.progress)(num_translated, self.total).is_err() {
+            if (self.progress)(num_translated, self.types.len()).is_err() {
                 // error means the user aborted the progress
                 return Err(anyhow!("User aborted during processing"));
             }
@@ -770,21 +766,12 @@ pub fn translate_ephemeral_type(debug_file: &BinaryView, ty: &TILType) -> Transl
             macros: None,
         }],
         types: vec![],
-        total: 0,
         types_by_idx: HashMap::new(),
         types_by_ord: HashMap::new(),
         types_by_name: HashMap::new(),
     };
 
     translator.translate_type(&translator.tils[0], ty)
-}
-
-pub fn translate_tils_types(
-    arch: CoreArchitecture,
-    tils: &[TILSection],
-    progress: impl Fn(usize, usize) -> Result<(), ()>,
-) -> Result<Vec<TranslatesIDBType<'_>>> {
-    translate_til_types(arch, tils, progress)
 }
 
 pub fn translate_til_types(

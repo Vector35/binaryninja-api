@@ -2,6 +2,7 @@ mod types;
 use std::fs::File;
 use std::io::BufReader;
 
+use binaryninja::background_task::BackgroundTask;
 use binaryninja::command::Command;
 use binaryninja::string::BnStrCompatible;
 use binaryninja::type_library::TypeLibrary;
@@ -84,7 +85,7 @@ struct LoadTilFile;
 
 impl Command for LoadTilFile {
     fn action(&self, view: &BinaryView) {
-        if let Err(error) = interactive_import_til(view) {
+        if let Err(error) = background_import_til(view) {
             error!("Unable to convert TIL file: {error}");
         }
     }
@@ -124,10 +125,6 @@ impl std::io::Seek for BinaryViewReader<'_> {
         self.offset = new_offset;
         Ok(new_offset)
     }
-}
-
-fn dummy_progress(_: usize, _: usize) -> Result<(), ()> {
-    Ok(())
 }
 
 fn import_idb_info<P: Fn(usize, usize) -> Result<(), ()>>(
@@ -181,7 +178,18 @@ fn import_til_info_from_debug_file<P: Fn(usize, usize) -> Result<(), ()>>(
     import_til_to_type_library(til, filename, bv, progress)
 }
 
+fn background_import_til(view: &BinaryView) -> Result<()> {
+    let moved_view = view.to_owned();
+    binaryninja::worker_thread::execute_on_worker_thread_interactive(c"Til Import", move || {
+        if let Err(err) = interactive_import_til(&moved_view) {
+            error!("Unable to import TIL: {err}");
+        }
+    });
+    Ok(())
+}
+
 fn interactive_import_til(view: &BinaryView) -> Result<()> {
+    let bt = BackgroundTask::new("Import TIL", true);
     let Some(file) =
         binaryninja::interaction::get_open_filename_input("Select a .til file", "*.til")
     else {
@@ -192,8 +200,19 @@ fn interactive_import_til(view: &BinaryView) -> Result<()> {
     let mut file = BufReader::new(File::open(&file)?);
     let til = TILSection::read(&mut file, idb_rs::IDBSectionCompression::None)?;
 
-    // TODO remove the extension?
-    import_til_to_type_library(til, filename, view, dummy_progress)
+    let progress = |current, total| {
+        if bt.is_cancelled() {
+            return Err(());
+        }
+        bt.set_progress_text(format!(
+            "Import TIL progress: {}%",
+            ((current as f32 / total as f32) * 100f32) as u32
+        ));
+        Ok(())
+    };
+    import_til_to_type_library(til, filename, view, progress)?;
+    bt.finish();
+    Ok(())
 }
 
 fn import_til_to_type_library<S, P>(
@@ -271,7 +290,7 @@ fn import_til_section<P: Fn(usize, usize) -> Result<(), ()>>(
     let default_arch = view
         .default_arch()
         .ok_or_else(|| anyhow!("Unable to get the default arch"))?;
-    let types = types::translate_tils_types(default_arch, tils, progress)?;
+    let types = types::translate_til_types(default_arch, tils, progress)?;
 
     // print any errors
     print_til_convertsion_errors(&types)?;
@@ -437,11 +456,11 @@ pub extern "C" fn CorePluginInit() -> bool {
         .with_level(LevelFilter::Error)
         .init();
     binaryninja::command::register_command(
-        "Import TIL types",
-        "Convert and import a TIL file into a TypeLibrary",
+        c"Import TIL types",
+        c"Convert and import a TIL file into a TypeLibrary",
         LoadTilFile,
     );
-    DebugInfoParser::register("idb_parser", IDBDebugInfoParser);
-    DebugInfoParser::register("til_parser", TILDebugInfoParser);
+    DebugInfoParser::register(c"idb_parser", IDBDebugInfoParser);
+    DebugInfoParser::register(c"til_parser", TILDebugInfoParser);
     true
 }

@@ -365,21 +365,28 @@ void AnalyzeFunction(Ref<AnalysisContext> ctx)
 
 void SharedCacheWorkflow::Register()
 {
-	Ref<Workflow> workflow = Workflow::Instance("core.function.baseAnalysis")->Clone("core.function.sharedCache");
+	Ref<Workflow> workflow = Workflow::Instance("core.function.metaAnalysis")->Clone("core.function.metaAnalysis");
 
 	// Register and insert activities here.
 	ObjCActivity::Register(*workflow);
-	workflow->RegisterActivity(new Activity("core.analysis.sharedCache.analysis", &AnalyzeFunction));
+	workflow->RegisterActivity(new Activity(R"({
+	  "name": "core.analysis.sharedCache.analysis",
+	  "eligibility": {
+	    "predicates": [
+	      {
+	        "type": "viewType",
+	        "operator": "in",
+	        "value": [
+	          "DSCView"
+	        ]
+	      }
+	    ]
+	  }
+	})", &AnalyzeFunction));
 	std::vector<std::string> inserted = { "core.analysis.sharedCache.analysis" };
 	workflow->Insert("core.function.analyzeTailCalls", inserted);
 
-	static constexpr auto WORKFLOW_DESCRIPTION = R"({
-	  "title": "Shared Cache Workflow",
-	  "description": "Shared Cache Workflow",
-	  "capabilities": []
-	})";
-
-	Workflow::RegisterWorkflow(workflow, WORKFLOW_DESCRIPTION);
+	Workflow::RegisterWorkflow(workflow);
 }
 
 extern "C"

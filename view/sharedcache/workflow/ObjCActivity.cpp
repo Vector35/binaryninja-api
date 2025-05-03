@@ -7,8 +7,21 @@ using namespace BinaryNinja;
 
 void ObjCActivity::Register(Workflow &workflow)
 {
-    workflow.RegisterActivity(new Activity("core.analysis.objc.adjustCallType", &AdjustCallType));
-	workflow.Insert("core.function.analyzeTailCalls", "core.analysis.objc.adjustCallType");
+    workflow.RegisterActivity(new Activity(R"({
+	  "name": "core.analysis.sharedCache.objc.adjustCallType",
+	  "eligibility": {
+	    "predicates": [
+	      {
+	        "type": "viewType",
+	        "operator": "in",
+	        "value": [
+	          "DSCView"
+	        ]
+	      }
+	    ]
+	  }
+	})", &AdjustCallType));
+	workflow.Insert("core.function.analyzeTailCalls", "core.analysis.sharedCache.objc.adjustCallType");
 }
 
 std::vector<std::string> splitSelector(const std::string& selector) {

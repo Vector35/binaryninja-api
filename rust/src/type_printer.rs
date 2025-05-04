@@ -951,7 +951,7 @@ unsafe extern "C" fn cb_print_all_types<T: TypePrinter>(
 
 unsafe extern "C" fn cb_free_string(_ctxt: *mut c_void, string: *mut c_char) {
     // SAFETY: The returned string is just BnString
-    let _ = BnString::from_raw(string);
+    BnString::free_raw(string);
 }
 
 unsafe extern "C" fn cb_free_tokens(

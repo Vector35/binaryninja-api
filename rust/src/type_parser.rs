@@ -323,8 +323,8 @@ impl TypeParserError {
     }
 
     pub(crate) fn free_raw(value: BNTypeParserError) {
-        let _ = unsafe { BnString::from_raw(value.message) };
-        let _ = unsafe { BnString::from_raw(value.fileName) };
+        unsafe { BnString::free_raw(value.message) };
+        unsafe { BnString::free_raw(value.fileName) };
     }
 
     pub fn new(
@@ -677,7 +677,7 @@ unsafe extern "C" fn cb_parse_type_string<T: TypeParser>(
 
 unsafe extern "C" fn cb_free_string(_ctxt: *mut c_void, string: *mut c_char) {
     // SAFETY: The returned string is just BnString
-    let _ = BnString::from_raw(string);
+    BnString::free_raw(string);
 }
 
 unsafe extern "C" fn cb_free_result(_ctxt: *mut c_void, result: *mut BNTypeParserResult) {

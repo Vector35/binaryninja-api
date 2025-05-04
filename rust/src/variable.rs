@@ -186,7 +186,7 @@ impl NamedVariableWithType {
 
     pub(crate) fn free_raw(value: BNVariableNameAndType) {
         let _ = unsafe { Type::ref_from_raw(value.type_) };
-        let _ = unsafe { BnString::from_raw(value.name) };
+        unsafe { BnString::free_raw(value.name) };
     }
 
     pub fn new(variable: Variable, ty: Conf<Ref<Type>>, name: String, auto_defined: bool) -> Self {
@@ -307,7 +307,7 @@ impl StackVariableReference {
 
     pub(crate) fn free_raw(value: BNStackVariableReference) {
         let _ = unsafe { Type::ref_from_raw(value.type_) };
-        let _ = unsafe { BnString::from_raw(value.name) };
+        unsafe { BnString::free_raw(value.name) };
     }
 }
 

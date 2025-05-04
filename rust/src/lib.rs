@@ -279,8 +279,8 @@ where
 pub fn install_directory() -> PathBuf {
     let install_dir_ptr: *mut c_char = unsafe { BNGetInstallDirectory() };
     assert!(!install_dir_ptr.is_null());
-    let bn_install_dir = unsafe { BnString::from_raw(install_dir_ptr) };
-    PathBuf::from(bn_install_dir.to_string())
+    let install_dir_str = unsafe { BnString::into_string(install_dir_ptr) };
+    PathBuf::from(install_dir_str)
 }
 
 pub fn bundled_plugin_directory() -> Result<PathBuf, ()> {
@@ -288,7 +288,7 @@ pub fn bundled_plugin_directory() -> Result<PathBuf, ()> {
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
+    Ok(PathBuf::from(unsafe { BnString::into_string(s) }))
 }
 
 pub fn set_bundled_plugin_directory(new_dir: impl AsRef<Path>) {
@@ -299,8 +299,8 @@ pub fn set_bundled_plugin_directory(new_dir: impl AsRef<Path>) {
 pub fn user_directory() -> PathBuf {
     let user_dir_ptr: *mut c_char = unsafe { BNGetUserDirectory() };
     assert!(!user_dir_ptr.is_null());
-    let bn_user_dir = unsafe { BnString::from_raw(user_dir_ptr) };
-    PathBuf::from(bn_user_dir.to_string())
+    let user_dir_str = unsafe { BnString::into_string(user_dir_ptr) };
+    PathBuf::from(user_dir_str)
 }
 
 pub fn user_plugin_directory() -> Result<PathBuf, ()> {
@@ -308,7 +308,8 @@ pub fn user_plugin_directory() -> Result<PathBuf, ()> {
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
+    let user_plugin_dir_str = unsafe { BnString::into_string(s) };
+    Ok(PathBuf::from(user_plugin_dir_str))
 }
 
 pub fn repositories_directory() -> Result<PathBuf, ()> {
@@ -316,14 +317,15 @@ pub fn repositories_directory() -> Result<PathBuf, ()> {
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
+    let repo_dir_str = unsafe { BnString::into_string(s) };
+    Ok(PathBuf::from(repo_dir_str))
 }
 
-pub fn settings_file_name() -> PathBuf {
+pub fn settings_file_path() -> PathBuf {
     let settings_file_name_ptr: *mut c_char = unsafe { BNGetSettingsFileName() };
     assert!(!settings_file_name_ptr.is_null());
-    let bn_settings_file_name = unsafe { BnString::from_raw(settings_file_name_ptr) };
-    PathBuf::from(bn_settings_file_name.to_string())
+    let settings_file_path_str = unsafe { BnString::into_string(settings_file_name_ptr) };
+    PathBuf::from(settings_file_path_str)
 }
 
 /// Write the installation directory of the currently running core instance to disk.
@@ -340,7 +342,7 @@ pub fn path_relative_to_bundled_plugin_directory(path: impl AsRef<Path>) -> Resu
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
+    Ok(PathBuf::from(unsafe { BnString::into_string(s) }))
 }
 
 pub fn path_relative_to_user_plugin_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
@@ -350,7 +352,7 @@ pub fn path_relative_to_user_plugin_directory(path: impl AsRef<Path>) -> Result<
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
+    Ok(PathBuf::from(unsafe { BnString::into_string(s) }))
 }
 
 pub fn path_relative_to_user_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
@@ -360,7 +362,7 @@ pub fn path_relative_to_user_directory(path: impl AsRef<Path>) -> Result<PathBuf
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(unsafe { BnString::from_raw(s) }.to_string()))
+    Ok(PathBuf::from(unsafe { BnString::into_string(s) }))
 }
 
 /// Returns if the running thread is the "main thread"
@@ -476,7 +478,7 @@ impl VersionInfo {
     }
 
     pub(crate) fn free_raw(value: BNVersionInfo) {
-        let _ = unsafe { BnString::from_raw(value.channel) };
+        unsafe { BnString::free_raw(value.channel) };
     }
 
     pub fn from_string<S: BnStrCompatible>(string: S) -> Self {

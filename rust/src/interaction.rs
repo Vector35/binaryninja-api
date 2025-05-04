@@ -37,7 +37,7 @@ pub fn get_text_line_input(prompt: &str, title: &str) -> Option<String> {
         return None;
     }
 
-    Some(unsafe { BnString::from_raw(value).to_string() })
+    Some(unsafe { BnString::into_string(value) })
 }
 
 pub fn get_integer_input(prompt: &str, title: &str) -> Option<i64> {

@@ -112,8 +112,8 @@ impl TypeArchive {
         let result = unsafe { BNGetTypeArchivePath(self.handle.as_ptr()) };
         match result.is_null() {
             false => {
-                let bn_res = unsafe { BnString::from_raw(result) };
-                Some(PathBuf::from(bn_res.to_string()))
+                let path_str = unsafe { BnString::into_string(result) };
+                Some(PathBuf::from(path_str))
             }
             true => None,
         }
@@ -136,7 +136,8 @@ impl TypeArchive {
     pub fn current_snapshot_id(&self) -> TypeArchiveSnapshotId {
         let result = unsafe { BNGetTypeArchiveCurrentSnapshotId(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        TypeArchiveSnapshotId(unsafe { BnString::from_raw(result) }.to_string())
+        let id = unsafe { BnString::into_string(result) };
+        TypeArchiveSnapshotId(id)
     }
 
     /// Revert the type archive's current snapshot to the given snapshot
@@ -651,7 +652,8 @@ impl TypeArchive {
         let result =
             unsafe { BNTypeArchiveDeserializeSnapshot(self.handle.as_ptr(), data.as_raw()) };
         assert!(!result.is_null());
-        TypeArchiveSnapshotId(unsafe { BnString::from_raw(result) }.to_string())
+        let id = unsafe { BnString::into_string(result) };
+        TypeArchiveSnapshotId(id)
     }
 
     /// Register a notification listener
@@ -1149,21 +1151,21 @@ impl TypeArchiveMergeConflict {
     pub fn base_snapshot_id(&self) -> TypeArchiveSnapshotId {
         let value = unsafe { BNTypeArchiveMergeConflictGetBaseSnapshotId(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        let id = unsafe { BnString::from_raw(value) }.to_string();
+        let id = unsafe { BnString::into_string(value) };
         TypeArchiveSnapshotId(id)
     }
 
     pub fn first_snapshot_id(&self) -> TypeArchiveSnapshotId {
         let value = unsafe { BNTypeArchiveMergeConflictGetFirstSnapshotId(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        let id = unsafe { BnString::from_raw(value) }.to_string();
+        let id = unsafe { BnString::into_string(value) };
         TypeArchiveSnapshotId(id)
     }
 
     pub fn second_snapshot_id(&self) -> TypeArchiveSnapshotId {
         let value = unsafe { BNTypeArchiveMergeConflictGetSecondSnapshotId(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        let id = unsafe { BnString::from_raw(value) }.to_string();
+        let id = unsafe { BnString::into_string(value) };
         TypeArchiveSnapshotId(id)
     }
 

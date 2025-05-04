@@ -49,7 +49,7 @@ use crate::variable::{
 use crate::workflow::Workflow;
 use std::fmt::{Debug, Formatter};
 use std::ptr::NonNull;
-use std::time::Duration;
+use std::time::{Duration, UNIX_EPOCH};
 use std::{ffi::c_char, hash::Hash, ops::Range};
 
 /// Used to describe a location within a [`Function`].
@@ -259,7 +259,7 @@ impl FunctionViewType {
     }
 
     pub(crate) fn free_raw(value: BNFunctionViewType) {
-        let _ = unsafe { BnString::from_raw(value.name as *mut _) };
+        unsafe { BnString::free_raw(value.name as *mut _) };
     }
 }
 
@@ -2520,22 +2520,37 @@ pub struct PerformanceInfo {
     pub seconds: Duration,
 }
 
-impl From<BNPerformanceInfo> for PerformanceInfo {
-    fn from(value: BNPerformanceInfo) -> Self {
+impl PerformanceInfo {
+    pub fn new(name: String, seconds: Duration) -> Self {
         Self {
-            name: unsafe { BnString::from_raw(value.name) }.to_string(),
+            name: name.to_string(),
+            seconds,
+        }
+    }
+
+    pub(crate) fn from_raw(value: &BNPerformanceInfo) -> Self {
+        Self {
+            name: raw_to_string(value.name as *mut _).unwrap(),
             seconds: Duration::from_secs_f64(value.seconds),
         }
     }
-}
 
-impl From<&BNPerformanceInfo> for PerformanceInfo {
-    fn from(value: &BNPerformanceInfo) -> Self {
-        Self {
-            // TODO: Name will be freed by this. FIX!
-            name: unsafe { BnString::from_raw(value.name) }.to_string(),
-            seconds: Duration::from_secs_f64(value.seconds),
+    pub(crate) fn from_owned_raw(value: BNPerformanceInfo) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNPerformanceInfo {
+        let bn_name = BnString::new(value.name);
+        BNPerformanceInfo {
+            name: BnString::into_raw(bn_name),
+            seconds: value.seconds.as_secs_f64(),
         }
+    }
+
+    pub(crate) fn free_raw(value: BNPerformanceInfo) {
+        unsafe { BnString::free_raw(value.name) };
     }
 }
 
@@ -2551,8 +2566,7 @@ unsafe impl CoreArrayProviderInner for PerformanceInfo {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        // TODO: Swap this to the ref version.
-        Self::from(*raw)
+        Self::from_raw(raw)
     }
 }
 

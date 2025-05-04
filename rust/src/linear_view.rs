@@ -267,7 +267,7 @@ impl LinearViewObjectIdentifier {
     }
 
     pub fn free_raw(value: BNLinearViewObjectIdentifier) {
-        let _ = unsafe { BnString::from_raw(value.name) };
+        unsafe { BnString::free_raw(value.name) };
     }
 }
 

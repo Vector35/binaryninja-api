@@ -934,7 +934,8 @@ impl Type {
 
     pub fn generate_auto_demangled_type_id<T: Into<QualifiedName>>(name: T) -> String {
         let mut raw_name = QualifiedName::into_raw(name.into());
-        let type_id = unsafe { BnString::into_string(BNGenerateAutoDemangledTypeId(&mut raw_name)) };
+        let type_id =
+            unsafe { BnString::into_string(BNGenerateAutoDemangledTypeId(&mut raw_name)) };
         QualifiedName::free_raw(raw_name);
         type_id
     }
@@ -1109,7 +1110,7 @@ impl FunctionParameter {
     }
 
     pub(crate) fn free_raw(value: BNFunctionParameter) {
-        let _ = unsafe { BnString::from_raw(value.name) };
+        unsafe { BnString::free_raw(value.name) };
         let _ = unsafe { Type::ref_from_raw(value.type_) };
     }
 
@@ -1184,7 +1185,7 @@ impl EnumerationMember {
     }
 
     pub(crate) fn free_raw(value: BNEnumerationMember) {
-        let _ = unsafe { BnString::from_raw(value.name) };
+        unsafe { BnString::free_raw(value.name) };
     }
 
     pub fn new(name: String, value: u64, default: bool) -> Self {
@@ -1723,7 +1724,7 @@ impl StructureMember {
 
     pub(crate) fn free_raw(value: BNStructureMember) {
         let _ = unsafe { Type::ref_from_raw(value.type_) };
-        let _ = unsafe { BnString::from_raw(value.name) };
+        unsafe { BnString::free_raw(value.name) };
     }
 
     pub fn new(
@@ -1987,7 +1988,7 @@ impl QualifiedName {
     }
 
     pub(crate) fn free_raw(value: BNQualifiedName) {
-        unsafe { BNFreeString(value.join) };
+        unsafe { BnString::free_raw(value.join) };
         unsafe { BNFreeStringList(value.name, value.nameCount) };
     }
 

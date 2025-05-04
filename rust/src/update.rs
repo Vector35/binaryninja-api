@@ -75,9 +75,9 @@ impl UpdateChannel {
     }
 
     pub(crate) fn free_raw(value: BNUpdateChannel) {
-        let _ = unsafe { BnString::from_raw(value.name) };
-        let _ = unsafe { BnString::from_raw(value.description) };
-        let _ = unsafe { BnString::from_raw(value.latestVersion) };
+        unsafe { BnString::free_raw(value.name) };
+        unsafe { BnString::free_raw(value.description) };
+        unsafe { BnString::free_raw(value.latestVersion) };
     }
 
     pub fn all() -> Result<Array<UpdateChannel>, BnString> {

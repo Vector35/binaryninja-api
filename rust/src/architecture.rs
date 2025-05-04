@@ -1810,6 +1810,7 @@ impl Architecture for CoreArchitecture {
             Ok(result) => result,
             Err(_) => return Err("Result buffer allocation failed".to_string()),
         };
+        // TODO: This is actually a list of errors.
         let mut error_raw: *mut c_char = std::ptr::null_mut();
         let res = unsafe {
             BNAssemble(

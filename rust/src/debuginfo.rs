@@ -807,15 +807,8 @@ impl DebugInfo {
             }
 
             for local_variable in &new_func.local_variables {
-                local_variables_array.push(BNVariableNameAndType {
-                    var: local_variable.variable.into(),
-                    autoDefined: local_variable.auto_defined,
-                    typeConfidence: local_variable.ty.confidence,
-                    name: BNAllocString(
-                        local_variable.name.clone().into_bytes_with_nul().as_ptr() as _
-                    ),
-                    type_: local_variable.ty.contents.handle,
-                });
+                // NOTE: must be manually freed after call to BNAddDebugFunction is over.
+                local_variables_array.push(NamedVariableWithType::into_raw(local_variable.clone()));
             }
 
             let result = BNAddDebugFunction(
@@ -841,11 +834,11 @@ impl DebugInfo {
             );
 
             for i in components_array {
-                BNFreeString(i);
+                BnString::free_raw(i);
             }
 
             for i in &local_variables_array {
-                BNFreeString(i.name);
+                NamedVariableWithType::free_raw(*i);
             }
             result
         }

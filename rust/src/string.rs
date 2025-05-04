@@ -80,7 +80,7 @@ impl BnString {
     pub(crate) unsafe fn from_raw(raw: *mut c_char) -> Self {
         Self { raw }
     }
-    
+
     /// Free a raw string allocated by BNAllocString.
     pub(crate) unsafe fn free_raw(raw: *mut c_char) {
         use binaryninjacore_sys::BNFreeString;

@@ -19,13 +19,23 @@ pub enum EnterpriseCheckoutError {
     RefreshExpiredLicenseFailed(String),
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum EnterpriseCheckoutStatus {
+    /// The UI is managing the enterprise checkout.
+    AlreadyManaged,
+    /// Checkout was successful, attached duration is the duration of the license, if any.
+    Success(Option<Duration>),
+}
+
 /// Initialize the enterprise server connection to check out a floating license.
 /// Result value is if we actually checked out a license (i.e. Ok(false) means we already have a
 /// license checked out and will not need to release it later)
-pub fn checkout_license(duration: Duration) -> Result<bool, EnterpriseCheckoutError> {
+pub fn checkout_license(
+    duration: Duration,
+) -> Result<EnterpriseCheckoutStatus, EnterpriseCheckoutError> {
     if crate::is_ui_enabled() {
         // We only need to check out a license if running headlessly.
-        return Ok(false);
+        return Ok(EnterpriseCheckoutStatus::AlreadyManaged);
     }
 
     // The disparate core functions we call here might already have mutexes to guard.
@@ -67,20 +77,19 @@ pub fn checkout_license(duration: Duration) -> Result<bool, EnterpriseCheckoutEr
     if !is_server_license_still_activated()
         || (!is_server_floating_license() && crate::license_expiration_time() < SystemTime::now())
     {
-        // If the license is expired we should refresh the license.
+        // If the license is expired, we should refresh the license.
         if !update_server_license(duration) {
             let last_error = server_last_error().to_string();
             return Err(EnterpriseCheckoutError::RefreshExpiredLicenseFailed(
                 last_error,
             ));
         }
-        Ok(true)
-    } else {
-        Ok(false)
     }
+
+    Ok(EnterpriseCheckoutStatus::Success(license_duration()))
 }
 
-pub fn release_license() {
+pub fn release_license(release_floating: bool) {
     if !crate::is_ui_enabled() {
         // This might look dumb, why would we want to connect to the server, would that not just mean
         // we don't need to release the license? Well no, you could have run a script, acquired a license for 10 hours
@@ -91,6 +100,10 @@ pub fn release_license() {
         }
         if !is_server_connected() {
             connect_server();
+        }
+        // We optionally release floating licenses as users typically want to keep them around.
+        if is_server_floating_license() && !release_floating {
+            return;
         }
         // We should only release the license if we are running headlessly.
         release_server_license();
@@ -141,8 +154,14 @@ pub fn server_token() -> String {
     unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerToken()) }
 }
 
-pub fn license_duration() -> Duration {
-    Duration::from_secs(unsafe { binaryninjacore_sys::BNGetEnterpriseServerLicenseDuration() })
+pub fn license_duration() -> Option<Duration> {
+    let duration =
+        Duration::from_secs(unsafe { binaryninjacore_sys::BNGetEnterpriseServerLicenseDuration() });
+    match duration {
+        // If the core returns 0 there is no license duration.
+        Duration::ZERO => None,
+        _ => Some(duration),
+    }
 }
 
 pub fn license_expiration_time() -> SystemTime {

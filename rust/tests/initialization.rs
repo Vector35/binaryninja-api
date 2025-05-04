@@ -11,8 +11,8 @@ use binaryninja::set_license;
 
 #[test]
 fn test_license_validation() {
-    // Release floating license if we already have one, otherwise the failure will succeed.
-    release_license();
+    // Release the floating license if we already have one, otherwise the failure will succeed.
+    release_license(true);
     // Make sure we properly report invalid license.
     let options = InitializationOptions::default()
         .with_license_checkout(false)

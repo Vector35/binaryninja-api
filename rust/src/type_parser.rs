@@ -6,7 +6,7 @@ use std::ptr::NonNull;
 
 use crate::platform::Platform;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
-use crate::string::{raw_to_string, BnStrCompatible, BnString};
+use crate::string::{raw_to_string, AsCStr, BnString};
 use crate::type_container::TypeContainer;
 use crate::types::{QualifiedName, QualifiedNameAndType, Type};
 
@@ -14,7 +14,7 @@ pub type TypeParserErrorSeverity = BNTypeParserErrorSeverity;
 pub type TypeParserOption = BNTypeParserOption;
 
 /// Register a custom parser with the API
-pub fn register_type_parser<S: BnStrCompatible, T: TypeParser>(
+pub fn register_type_parser<S: AsCStr, T: TypeParser>(
     name: S,
     parser: T,
 ) -> (&'static mut T, CoreTypeParser) {
@@ -30,10 +30,7 @@ pub fn register_type_parser<S: BnStrCompatible, T: TypeParser>(
         freeErrorList: Some(cb_free_error_list),
     };
     let result = unsafe {
-        BNRegisterTypeParser(
-            name.into_bytes_with_nul().as_ref().as_ptr() as *const _,
-            &mut callback,
-        )
+        BNRegisterTypeParser(name.to_cstr().as_ref().as_ptr() as *const _, &mut callback)
     };
     let core = unsafe { CoreTypeParser::from_raw(NonNull::new(result).unwrap()) };
     (parser, core)
@@ -55,8 +52,8 @@ impl CoreTypeParser {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn parser_by_name<S: BnStrCompatible>(name: S) -> Option<CoreTypeParser> {
-        let name_raw = name.into_bytes_with_nul();
+    pub fn parser_by_name<S: AsCStr>(name: S) -> Option<CoreTypeParser> {
+        let name_raw = name.to_cstr();
         let result = unsafe { BNGetTypeParserByName(name_raw.as_ref().as_ptr() as *const c_char) };
         NonNull::new(result).map(|x| unsafe { Self::from_raw(x) })
     }

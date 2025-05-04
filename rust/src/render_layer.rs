@@ -6,7 +6,7 @@ use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
 use crate::linear_view::{LinearDisassemblyLine, LinearDisassemblyLineType, LinearViewObject};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
-use crate::string::BnStrCompatible;
+use crate::string::AsCStr;
 use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void};
 use std::ptr::NonNull;
@@ -61,7 +61,7 @@ impl Default for RenderLayerDefaultState {
 }
 
 /// Register a [`RenderLayer`] with the API.
-pub fn register_render_layer<S: BnStrCompatible, T: RenderLayer>(
+pub fn register_render_layer<S: AsCStr, T: RenderLayer>(
     name: S,
     render_layer: T,
     default_state: RenderLayerDefaultState,
@@ -75,7 +75,7 @@ pub fn register_render_layer<S: BnStrCompatible, T: RenderLayer>(
     };
     let result = unsafe {
         BNRegisterRenderLayer(
-            name.into_bytes_with_nul().as_ref().as_ptr() as *const _,
+            name.to_cstr().as_ref().as_ptr() as *const _,
             &mut callback,
             default_state.into(),
         )
@@ -303,8 +303,8 @@ impl CoreRenderLayer {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn render_layer_by_name<S: BnStrCompatible>(name: S) -> Option<CoreRenderLayer> {
-        let name_raw = name.into_bytes_with_nul();
+    pub fn render_layer_by_name<S: AsCStr>(name: S) -> Option<CoreRenderLayer> {
+        let name_raw = name.to_cstr();
         let result = unsafe { BNGetRenderLayerByName(name_raw.as_ref().as_ptr() as *const c_char) };
         NonNull::new(result).map(Self::from_raw)
     }

@@ -1,4 +1,4 @@
-use crate::string::BnStrCompatible;
+use crate::string::AsCStr;
 use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void};
 
@@ -17,10 +17,10 @@ impl WorkerThreadActionExecutor {
     }
 }
 
-pub fn execute_on_worker_thread<F: Fn() + 'static, S: BnStrCompatible>(name: S, f: F) {
+pub fn execute_on_worker_thread<F: Fn() + 'static, S: AsCStr>(name: S, f: F) {
     let boxed_executor = Box::new(WorkerThreadActionExecutor { func: Box::new(f) });
     let raw_executor = Box::into_raw(boxed_executor);
-    let name = name.into_bytes_with_nul();
+    let name = name.to_cstr();
     unsafe {
         BNWorkerEnqueueNamed(
             raw_executor as *mut c_void,
@@ -30,10 +30,10 @@ pub fn execute_on_worker_thread<F: Fn() + 'static, S: BnStrCompatible>(name: S, 
     }
 }
 
-pub fn execute_on_worker_thread_priority<F: Fn() + 'static, S: BnStrCompatible>(name: S, f: F) {
+pub fn execute_on_worker_thread_priority<F: Fn() + 'static, S: AsCStr>(name: S, f: F) {
     let boxed_executor = Box::new(WorkerThreadActionExecutor { func: Box::new(f) });
     let raw_executor = Box::into_raw(boxed_executor);
-    let name = name.into_bytes_with_nul();
+    let name = name.to_cstr();
     unsafe {
         BNWorkerPriorityEnqueueNamed(
             raw_executor as *mut c_void,
@@ -43,10 +43,10 @@ pub fn execute_on_worker_thread_priority<F: Fn() + 'static, S: BnStrCompatible>(
     }
 }
 
-pub fn execute_on_worker_thread_interactive<F: Fn() + 'static, S: BnStrCompatible>(name: S, f: F) {
+pub fn execute_on_worker_thread_interactive<F: Fn() + 'static, S: AsCStr>(name: S, f: F) {
     let boxed_executor = Box::new(WorkerThreadActionExecutor { func: Box::new(f) });
     let raw_executor = Box::into_raw(boxed_executor);
-    let name = name.into_bytes_with_nul();
+    let name = name.to_cstr();
     unsafe {
         BNWorkerInteractiveEnqueueNamed(
             raw_executor as *mut c_void,

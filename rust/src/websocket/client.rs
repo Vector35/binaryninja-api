@@ -1,5 +1,5 @@
 use crate::rc::{Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void, CStr};
 use std::ptr::NonNull;
@@ -21,8 +21,8 @@ pub trait WebsocketClient: Sync + Send {
     fn connect<I, K, V>(&self, host: &str, headers: I) -> bool
     where
         I: IntoIterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible;
+        K: AsCStr,
+        V: AsCStr;
 
     fn write(&self, data: &[u8]) -> bool;
 
@@ -77,14 +77,14 @@ impl CoreWebsocketClient {
     ) -> bool
     where
         I: IntoIterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible,
+        K: AsCStr,
+        V: AsCStr,
         C: WebsocketClientCallback,
     {
-        let url = host.into_bytes_with_nul();
+        let url = host.to_cstr();
         let (header_keys, header_values): (Vec<K::Result>, Vec<V::Result>) = headers
             .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
+            .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
         let header_keys: Vec<*const c_char> = header_keys
             .iter()
@@ -129,7 +129,7 @@ impl CoreWebsocketClient {
 
     /// Call the error callback function
     pub fn notify_error(&self, msg: &str) {
-        let error = msg.into_bytes_with_nul();
+        let error = msg.to_cstr();
         unsafe {
             BNNotifyWebsocketClientError(self.handle.as_ptr(), error.as_ptr() as *const c_char)
         }

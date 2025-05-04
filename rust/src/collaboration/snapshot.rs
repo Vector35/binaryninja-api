@@ -8,7 +8,7 @@ use crate::collaboration::undo::{RemoteUndoEntry, RemoteUndoEntryId};
 use crate::database::snapshot::Snapshot;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use binaryninjacore_sys::*;
 
 // TODO: RemoteSnapshotId ?
@@ -226,12 +226,12 @@ impl RemoteSnapshot {
     }
 
     /// Create a new Undo Entry in this snapshot.
-    pub fn create_undo_entry<S: BnStrCompatible>(
+    pub fn create_undo_entry<S: AsCStr>(
         &self,
         parent: Option<u64>,
         data: S,
     ) -> Result<Ref<RemoteUndoEntry>, ()> {
-        let data = data.into_bytes_with_nul();
+        let data = data.to_cstr();
         let value = unsafe {
             BNCollaborationSnapshotCreateUndoEntry(
                 self.handle.as_ptr(),

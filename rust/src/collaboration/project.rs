@@ -15,7 +15,7 @@ use crate::file_metadata::FileMetadata;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::Project;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 #[repr(transparent)]
 pub struct RemoteProject {
@@ -136,8 +136,8 @@ impl RemoteProject {
     }
 
     /// Set the description of the file. You will need to push the file to update the remote version.
-    pub fn set_name<S: BnStrCompatible>(&self, name: S) -> Result<(), ()> {
-        let name = name.into_bytes_with_nul();
+    pub fn set_name<S: AsCStr>(&self, name: S) -> Result<(), ()> {
+        let name = name.to_cstr();
         let success = unsafe {
             BNRemoteProjectSetName(
                 self.handle.as_ptr(),
@@ -155,8 +155,8 @@ impl RemoteProject {
     }
 
     /// Set the description of the file. You will need to push the file to update the remote version.
-    pub fn set_description<S: BnStrCompatible>(&self, description: S) -> Result<(), ()> {
-        let description = description.into_bytes_with_nul();
+    pub fn set_description<S: AsCStr>(&self, description: S) -> Result<(), ()> {
+        let description = description.to_cstr();
         let success = unsafe {
             BNRemoteProjectSetDescription(
                 self.handle.as_ptr(),
@@ -230,12 +230,12 @@ impl RemoteProject {
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     /// NOTE: If files have not been pulled, they will be pulled upon calling this.
-    pub fn get_file_by_id<S: BnStrCompatible>(&self, id: S) -> Result<Option<Ref<RemoteFile>>, ()> {
+    pub fn get_file_by_id<S: AsCStr>(&self, id: S) -> Result<Option<Ref<RemoteFile>>, ()> {
         // TODO: This sync should be removed?
         if !self.has_pulled_files() {
             self.pull_files()?;
         }
-        let id = id.into_bytes_with_nul();
+        let id = id.to_cstr();
         let result = unsafe {
             BNRemoteProjectGetFileById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
         };
@@ -246,15 +246,12 @@ impl RemoteProject {
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     /// NOTE: If files have not been pulled, they will be pulled upon calling this.
-    pub fn get_file_by_name<S: BnStrCompatible>(
-        &self,
-        name: S,
-    ) -> Result<Option<Ref<RemoteFile>>, ()> {
+    pub fn get_file_by_name<S: AsCStr>(&self, name: S) -> Result<Option<Ref<RemoteFile>>, ()> {
         // TODO: This sync should be removed?
         if !self.has_pulled_files() {
             self.pull_files()?;
         }
-        let id = name.into_bytes_with_nul();
+        let id = name.to_cstr();
         let result = unsafe {
             BNRemoteProjectGetFileByName(
                 self.handle.as_ptr(),
@@ -311,9 +308,9 @@ impl RemoteProject {
         file_type: RemoteFileType,
     ) -> Result<Ref<RemoteFile>, ()>
     where
-        F: BnStrCompatible,
-        N: BnStrCompatible,
-        D: BnStrCompatible,
+        F: AsCStr,
+        N: AsCStr,
+        D: AsCStr,
     {
         self.create_file_with_progress(
             filename,
@@ -348,17 +345,17 @@ impl RemoteProject {
         mut progress: P,
     ) -> Result<Ref<RemoteFile>, ()>
     where
-        F: BnStrCompatible,
-        N: BnStrCompatible,
-        D: BnStrCompatible,
+        F: AsCStr,
+        N: AsCStr,
+        D: AsCStr,
         P: ProgressCallback,
     {
         // TODO: This sync should be removed?
         self.open()?;
 
-        let filename = filename.into_bytes_with_nul();
-        let name = name.into_bytes_with_nul();
-        let description = description.into_bytes_with_nul();
+        let filename = filename.to_cstr();
+        let name = name.to_cstr();
+        let description = description.to_cstr();
         let folder_handle = parent_folder.map_or(std::ptr::null_mut(), |f| f.handle.as_ptr());
         let file_ptr = unsafe {
             BNRemoteProjectCreateFile(
@@ -386,15 +383,15 @@ impl RemoteProject {
     pub fn push_file<I, K, V>(&self, file: &RemoteFile, extra_fields: I) -> Result<(), ()>
     where
         I: Iterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible,
+        K: AsCStr,
+        V: AsCStr,
     {
         // TODO: This sync should be removed?
         self.open()?;
 
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
+            .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
         let mut keys_raw = keys
             .iter()
@@ -446,15 +443,12 @@ impl RemoteProject {
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     /// NOTE: If folders have not been pulled, they will be pulled upon calling this.
-    pub fn get_folder_by_id<S: BnStrCompatible>(
-        &self,
-        id: S,
-    ) -> Result<Option<Ref<RemoteFolder>>, ()> {
+    pub fn get_folder_by_id<S: AsCStr>(&self, id: S) -> Result<Option<Ref<RemoteFolder>>, ()> {
         // TODO: This sync should be removed?
         if !self.has_pulled_folders() {
             self.pull_folders()?;
         }
-        let id = id.into_bytes_with_nul();
+        let id = id.to_cstr();
         let result = unsafe {
             BNRemoteProjectGetFolderById(
                 self.handle.as_ptr(),
@@ -505,8 +499,8 @@ impl RemoteProject {
         parent_folder: Option<&RemoteFolder>,
     ) -> Result<Ref<RemoteFolder>, ()>
     where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
+        N: AsCStr,
+        D: AsCStr,
     {
         self.create_folder_with_progress(name, description, parent_folder, NoProgressCallback)
     }
@@ -527,15 +521,15 @@ impl RemoteProject {
         mut progress: P,
     ) -> Result<Ref<RemoteFolder>, ()>
     where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
+        N: AsCStr,
+        D: AsCStr,
         P: ProgressCallback,
     {
         // TODO: This sync should be removed?
         self.open()?;
 
-        let name = name.into_bytes_with_nul();
-        let description = description.into_bytes_with_nul();
+        let name = name.to_cstr();
+        let description = description.to_cstr();
         let folder_handle = parent_folder.map_or(std::ptr::null_mut(), |f| f.handle.as_ptr());
         let file_ptr = unsafe {
             BNRemoteProjectCreateFolder(
@@ -562,15 +556,15 @@ impl RemoteProject {
     pub fn push_folder<I, K, V>(&self, folder: &RemoteFolder, extra_fields: I) -> Result<(), ()>
     where
         I: Iterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible,
+        K: AsCStr,
+        V: AsCStr,
     {
         // TODO: This sync should be removed?
         self.open()?;
 
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
+            .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
         let mut keys_raw = keys
             .iter()
@@ -637,10 +631,7 @@ impl RemoteProject {
     /// Get a specific permission in the Project by its id.
     ///
     /// NOTE: If group or user permissions have not been pulled, they will be pulled upon calling this.
-    pub fn get_permission_by_id<S: BnStrCompatible>(
-        &self,
-        id: S,
-    ) -> Result<Option<Ref<Permission>>, ()> {
+    pub fn get_permission_by_id<S: AsCStr>(&self, id: S) -> Result<Option<Ref<Permission>>, ()> {
         // TODO: This sync should be removed?
         if !self.has_pulled_user_permissions() {
             self.pull_user_permissions()?;
@@ -650,7 +641,7 @@ impl RemoteProject {
             self.pull_group_permissions()?;
         }
 
-        let id = id.into_bytes_with_nul();
+        let id = id.to_cstr();
         let value = unsafe {
             BNRemoteProjectGetPermissionById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const _)
         };
@@ -745,7 +736,7 @@ impl RemoteProject {
     ///
     /// * `user_id` - User id
     /// * `level` - Permission level
-    pub fn create_user_permission<S: BnStrCompatible>(
+    pub fn create_user_permission<S: AsCStr>(
         &self,
         user_id: S,
         level: CollaborationPermissionLevel,
@@ -760,13 +751,13 @@ impl RemoteProject {
     /// * `user_id` - User id
     /// * `level` - Permission level
     /// * `progress` - The progress callback to call
-    pub fn create_user_permission_with_progress<S: BnStrCompatible, F: ProgressCallback>(
+    pub fn create_user_permission_with_progress<S: AsCStr, F: ProgressCallback>(
         &self,
         user_id: S,
         level: CollaborationPermissionLevel,
         mut progress: F,
     ) -> Result<Ref<Permission>, ()> {
-        let user_id = user_id.into_bytes_with_nul();
+        let user_id = user_id.to_cstr();
         let value = unsafe {
             BNRemoteProjectCreateUserPermission(
                 self.handle.as_ptr(),
@@ -795,12 +786,12 @@ impl RemoteProject {
     ) -> Result<(), ()>
     where
         I: Iterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible,
+        K: AsCStr,
+        V: AsCStr,
     {
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
+            .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
         let mut keys_raw = keys
             .iter()
@@ -836,8 +827,8 @@ impl RemoteProject {
     /// # Arguments
     ///
     /// * `username` - Username of user to check
-    pub fn can_user_view<S: BnStrCompatible>(&self, username: S) -> bool {
-        let username = username.into_bytes_with_nul();
+    pub fn can_user_view<S: AsCStr>(&self, username: S) -> bool {
+        let username = username.to_cstr();
         unsafe {
             BNRemoteProjectCanUserView(
                 self.handle.as_ptr(),
@@ -851,8 +842,8 @@ impl RemoteProject {
     /// # Arguments
     ///
     /// * `username` - Username of user to check
-    pub fn can_user_edit<S: BnStrCompatible>(&self, username: S) -> bool {
-        let username = username.into_bytes_with_nul();
+    pub fn can_user_edit<S: AsCStr>(&self, username: S) -> bool {
+        let username = username.to_cstr();
         unsafe {
             BNRemoteProjectCanUserEdit(
                 self.handle.as_ptr(),
@@ -866,8 +857,8 @@ impl RemoteProject {
     /// # Arguments
     ///
     /// * `username` - Username of user to check
-    pub fn can_user_admin<S: BnStrCompatible>(&self, username: S) -> bool {
-        let username = username.into_bytes_with_nul();
+    pub fn can_user_admin<S: AsCStr>(&self, username: S) -> bool {
+        let username = username.to_cstr();
         unsafe {
             BNRemoteProjectCanUserAdmin(
                 self.handle.as_ptr(),

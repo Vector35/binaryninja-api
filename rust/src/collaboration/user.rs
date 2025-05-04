@@ -4,7 +4,7 @@ use std::ffi::c_char;
 use std::ptr::NonNull;
 
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 #[repr(transparent)]
 pub struct RemoteUser {
@@ -49,8 +49,8 @@ impl RemoteUser {
     }
 
     /// Set user's username. You will need to push the user to update the Remote
-    pub fn set_username<U: BnStrCompatible>(&self, username: U) -> Result<(), ()> {
-        let username = username.into_bytes_with_nul();
+    pub fn set_username<U: AsCStr>(&self, username: U) -> Result<(), ()> {
+        let username = username.to_cstr();
         let result = unsafe {
             BNCollaborationUserSetUsername(
                 self.handle.as_ptr(),
@@ -72,8 +72,8 @@ impl RemoteUser {
     }
 
     /// Set user's email. You will need to push the user to update the Remote
-    pub fn set_email<U: BnStrCompatible>(&self, email: U) -> Result<(), ()> {
-        let username = email.into_bytes_with_nul();
+    pub fn set_email<U: AsCStr>(&self, email: U) -> Result<(), ()> {
+        let username = email.to_cstr();
         let result = unsafe {
             BNCollaborationUserSetEmail(
                 self.handle.as_ptr(),

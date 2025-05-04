@@ -102,7 +102,7 @@ use std::cmp;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void, CStr};
 use std::path::{Path, PathBuf};
-use string::BnStrCompatible;
+use string::AsCStr;
 use string::BnString;
 use string::IntoJson;
 
@@ -128,7 +128,7 @@ pub fn load_with_progress<P: ProgressCallback>(
     file_path: impl AsRef<Path>,
     mut progress: P,
 ) -> Option<Ref<BinaryView>> {
-    let file_path = file_path.as_ref().into_bytes_with_nul();
+    let file_path = file_path.as_ref().to_cstr();
     let options = c"";
     let handle = unsafe {
         BNLoadFilename(
@@ -193,13 +193,9 @@ where
     O: IntoJson,
     P: ProgressCallback,
 {
-    let file_path = file_path.as_ref().into_bytes_with_nul();
+    let file_path = file_path.as_ref().to_cstr();
     let options_or_default = if let Some(opt) = options {
-        opt.get_json_string()
-            .ok()?
-            .into_bytes_with_nul()
-            .as_ref()
-            .to_vec()
+        opt.get_json_string().ok()?.to_cstr().to_bytes().to_vec()
     } else {
         Metadata::new_of_type(MetadataType::KeyValueDataType)
             .get_json_string()
@@ -247,11 +243,7 @@ where
     P: ProgressCallback,
 {
     let options_or_default = if let Some(opt) = options {
-        opt.get_json_string()
-            .ok()?
-            .into_bytes_with_nul()
-            .as_ref()
-            .to_vec()
+        opt.get_json_string().ok()?.to_cstr().to_bytes().to_vec()
     } else {
         Metadata::new_of_type(MetadataType::KeyValueDataType)
             .get_json_string()
@@ -292,7 +284,7 @@ pub fn bundled_plugin_directory() -> Result<PathBuf, ()> {
 }
 
 pub fn set_bundled_plugin_directory(new_dir: impl AsRef<Path>) {
-    let new_dir = new_dir.as_ref().into_bytes_with_nul();
+    let new_dir = new_dir.as_ref().to_cstr();
     unsafe { BNSetBundledPluginDirectory(new_dir.as_ptr() as *const c_char) };
 }
 
@@ -336,7 +328,7 @@ pub fn save_last_run() {
 }
 
 pub fn path_relative_to_bundled_plugin_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
-    let path_raw = path.as_ref().into_bytes_with_nul();
+    let path_raw = path.as_ref().to_cstr();
     let s: *mut c_char =
         unsafe { BNGetPathRelativeToBundledPluginDirectory(path_raw.as_ptr() as *const c_char) };
     if s.is_null() {
@@ -346,7 +338,7 @@ pub fn path_relative_to_bundled_plugin_directory(path: impl AsRef<Path>) -> Resu
 }
 
 pub fn path_relative_to_user_plugin_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
-    let path_raw = path.as_ref().into_bytes_with_nul();
+    let path_raw = path.as_ref().to_cstr();
     let s: *mut c_char =
         unsafe { BNGetPathRelativeToUserPluginDirectory(path_raw.as_ptr() as *const c_char) };
     if s.is_null() {
@@ -356,7 +348,7 @@ pub fn path_relative_to_user_plugin_directory(path: impl AsRef<Path>) -> Result<
 }
 
 pub fn path_relative_to_user_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
-    let path_raw = path.as_ref().into_bytes_with_nul();
+    let path_raw = path.as_ref().to_cstr();
     let s: *mut c_char =
         unsafe { BNGetPathRelativeToUserDirectory(path_raw.as_ptr() as *const c_char) };
     if s.is_null() {
@@ -481,8 +473,8 @@ impl VersionInfo {
         unsafe { BnString::free_raw(value.channel) };
     }
 
-    pub fn from_string<S: BnStrCompatible>(string: S) -> Self {
-        let string = string.into_bytes_with_nul();
+    pub fn from_string<S: AsCStr>(string: S) -> Self {
+        let string = string.to_cstr();
         let result = unsafe { BNParseVersionString(string.as_ref().as_ptr() as *const c_char) };
         Self::from_owned_raw(result)
     }
@@ -540,14 +532,14 @@ pub fn license_count() -> i32 {
 /// 1. Check the BN_LICENSE environment variable
 /// 2. Check the Binary Ninja user directory for license.dat
 #[cfg(not(feature = "demo"))]
-pub fn set_license<S: BnStrCompatible + Default>(license: Option<S>) {
-    let license = license.unwrap_or_default().into_bytes_with_nul();
+pub fn set_license<S: AsCStr + Default>(license: Option<S>) {
+    let license = license.unwrap_or_default().to_cstr();
     let license_slice = license.as_ref();
     unsafe { BNSetLicense(license_slice.as_ptr() as *const c_char) }
 }
 
 #[cfg(feature = "demo")]
-pub fn set_license<S: BnStrCompatible + Default>(_license: Option<S>) {}
+pub fn set_license<S: AsCStr + Default>(_license: Option<S>) {}
 
 pub fn product() -> String {
     unsafe { BnString::into_string(BNGetProduct()) }
@@ -566,8 +558,8 @@ pub fn is_ui_enabled() -> bool {
     unsafe { BNIsUIEnabled() }
 }
 
-pub fn is_database<S: BnStrCompatible>(filename: S) -> bool {
-    let filename = filename.into_bytes_with_nul();
+pub fn is_database<S: AsCStr>(filename: S) -> bool {
+    let filename = filename.to_cstr();
     let filename_slice = filename.as_ref();
     unsafe { BNIsDatabase(filename_slice.as_ptr() as *const c_char) }
 }
@@ -596,16 +588,12 @@ pub fn plugin_ui_abi_minimum_version() -> u32 {
     BN_MINIMUM_UI_ABI_VERSION
 }
 
-pub fn add_required_plugin_dependency<S: BnStrCompatible>(name: S) {
-    unsafe {
-        BNAddRequiredPluginDependency(name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
-    };
+pub fn add_required_plugin_dependency<S: AsCStr>(name: S) {
+    unsafe { BNAddRequiredPluginDependency(name.to_cstr().as_ref().as_ptr() as *const c_char) };
 }
 
-pub fn add_optional_plugin_dependency<S: BnStrCompatible>(name: S) {
-    unsafe {
-        BNAddOptionalPluginDependency(name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
-    };
+pub fn add_optional_plugin_dependency<S: AsCStr>(name: S) {
+    unsafe { BNAddOptionalPluginDependency(name.to_cstr().as_ref().as_ptr() as *const c_char) };
 }
 
 // Provide ABI version automatically so that the core can verify binary compatibility

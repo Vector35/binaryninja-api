@@ -30,7 +30,7 @@ pub use user::*;
 use binaryninjacore_sys::*;
 
 use crate::rc::{Array, Ref};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 // TODO: Should we pull metadata and information required to call a function? Or should we add documentation
 // TODO: on what functions need to have been called prior? I feel like we should make the user have to pull
@@ -73,23 +73,23 @@ pub fn known_remotes() -> Array<Remote> {
 }
 
 /// Get Remote by unique `id`
-pub fn get_remote_by_id<S: BnStrCompatible>(id: S) -> Option<Ref<Remote>> {
-    let id = id.into_bytes_with_nul();
+pub fn get_remote_by_id<S: AsCStr>(id: S) -> Option<Ref<Remote>> {
+    let id = id.to_cstr();
     let value = unsafe { BNCollaborationGetRemoteById(id.as_ref().as_ptr() as *const c_char) };
     NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
 
 /// Get Remote by `address`
-pub fn get_remote_by_address<S: BnStrCompatible>(address: S) -> Option<Ref<Remote>> {
-    let address = address.into_bytes_with_nul();
+pub fn get_remote_by_address<S: AsCStr>(address: S) -> Option<Ref<Remote>> {
+    let address = address.to_cstr();
     let value =
         unsafe { BNCollaborationGetRemoteByAddress(address.as_ref().as_ptr() as *const c_char) };
     NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
 
 /// Get Remote by `name`
-pub fn get_remote_by_name<S: BnStrCompatible>(name: S) -> Option<Ref<Remote>> {
-    let name = name.into_bytes_with_nul();
+pub fn get_remote_by_name<S: AsCStr>(name: S) -> Option<Ref<Remote>> {
+    let name = name.to_cstr();
     let value = unsafe { BNCollaborationGetRemoteByName(name.as_ref().as_ptr() as *const c_char) };
     NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
@@ -106,15 +106,15 @@ pub fn save_remotes() {
 
 pub fn store_data_in_keychain<K, I, DK, DV>(key: K, data: I) -> bool
 where
-    K: BnStrCompatible,
+    K: AsCStr,
     I: IntoIterator<Item = (DK, DV)>,
-    DK: BnStrCompatible,
-    DV: BnStrCompatible,
+    DK: AsCStr,
+    DV: AsCStr,
 {
-    let key = key.into_bytes_with_nul();
+    let key = key.to_cstr();
     let (data_keys, data_values): (Vec<DK::Result>, Vec<DV::Result>) = data
         .into_iter()
-        .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
+        .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
         .unzip();
     let data_keys_ptr: Box<[*const c_char]> = data_keys
         .iter()
@@ -134,15 +134,13 @@ where
     }
 }
 
-pub fn has_data_in_keychain<K: BnStrCompatible>(key: K) -> bool {
-    let key = key.into_bytes_with_nul();
+pub fn has_data_in_keychain<K: AsCStr>(key: K) -> bool {
+    let key = key.to_cstr();
     unsafe { BNCollaborationHasDataInKeychain(key.as_ref().as_ptr() as *const c_char) }
 }
 
-pub fn get_data_from_keychain<K: BnStrCompatible>(
-    key: K,
-) -> Option<(Array<BnString>, Array<BnString>)> {
-    let key = key.into_bytes_with_nul();
+pub fn get_data_from_keychain<K: AsCStr>(key: K) -> Option<(Array<BnString>, Array<BnString>)> {
+    let key = key.to_cstr();
     let mut keys = std::ptr::null_mut();
     let mut values = std::ptr::null_mut();
     let count = unsafe {
@@ -157,7 +155,7 @@ pub fn get_data_from_keychain<K: BnStrCompatible>(
     keys.zip(values)
 }
 
-pub fn delete_data_from_keychain<K: BnStrCompatible>(key: K) -> bool {
-    let key = key.into_bytes_with_nul();
+pub fn delete_data_from_keychain<K: AsCStr>(key: K) -> bool {
+    let key = key.to_cstr();
     unsafe { BNCollaborationDeleteDataFromKeychain(key.as_ref().as_ptr() as *const c_char) }
 }

@@ -5,7 +5,7 @@ use std::ptr::NonNull;
 
 use crate::project::folder::ProjectFolder;
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 #[repr(transparent)]
 pub struct RemoteFolder {
@@ -104,8 +104,8 @@ impl RemoteFolder {
     }
 
     /// Set the display name of the folder. You will need to push the folder to update the remote version.
-    pub fn set_name<S: BnStrCompatible>(&self, name: S) -> Result<(), ()> {
-        let name = name.into_bytes_with_nul();
+    pub fn set_name<S: AsCStr>(&self, name: S) -> Result<(), ()> {
+        let name = name.to_cstr();
         let success = unsafe {
             BNRemoteFolderSetName(
                 self.handle.as_ptr(),
@@ -123,8 +123,8 @@ impl RemoteFolder {
     }
 
     /// Set the description of the folder. You will need to push the folder to update the remote version.
-    pub fn set_description<S: BnStrCompatible>(&self, description: S) -> Result<(), ()> {
-        let description = description.into_bytes_with_nul();
+    pub fn set_description<S: AsCStr>(&self, description: S) -> Result<(), ()> {
+        let description = description.to_cstr();
         let success = unsafe {
             BNRemoteFolderSetDescription(
                 self.handle.as_ptr(),

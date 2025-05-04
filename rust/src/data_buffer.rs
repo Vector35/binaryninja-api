@@ -19,7 +19,7 @@ use binaryninjacore_sys::*;
 use std::ffi::c_void;
 use std::slice;
 
-use crate::string::BnString;
+use crate::string::{AsCStr, BnString};
 
 pub struct DataBuffer(*mut BNDataBuffer);
 
@@ -128,8 +128,9 @@ impl DataBuffer {
         unsafe { BnString::into_string(BNDataBufferToBase64(self.0)) }
     }
 
-    pub fn from_base64(value: &BnString) -> Self {
-        Self(unsafe { BNDecodeBase64(value.as_ptr()) })
+    pub fn from_base64(value: &str) -> Self {
+        let t = value.to_cstr();
+        Self(unsafe { BNDecodeBase64(t.as_ptr()) })
     }
 
     pub fn zlib_compress(&self) -> Self {

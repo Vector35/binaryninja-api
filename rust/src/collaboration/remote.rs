@@ -10,7 +10,7 @@ use crate::enterprise;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::Project;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 #[repr(transparent)]
 pub struct Remote {
@@ -27,9 +27,9 @@ impl Remote {
     }
 
     /// Create a Remote and add it to the list of known remotes (saved to Settings)
-    pub fn new<N: BnStrCompatible, A: BnStrCompatible>(name: N, address: A) -> Ref<Self> {
-        let name = name.into_bytes_with_nul();
-        let address = address.into_bytes_with_nul();
+    pub fn new<N: AsCStr, A: AsCStr>(name: N, address: A) -> Ref<Self> {
+        let name = name.to_cstr();
+        let address = address.to_cstr();
         let result = unsafe {
             BNCollaborationCreateRemote(
                 name.as_ref().as_ptr() as *const c_char,
@@ -168,13 +168,13 @@ impl Remote {
     }
 
     /// Requests an authentication token using a username and password.
-    pub fn request_authentication_token<U: BnStrCompatible, P: BnStrCompatible>(
+    pub fn request_authentication_token<U: AsCStr, P: AsCStr>(
         &self,
         username: U,
         password: P,
     ) -> Option<BnString> {
-        let username = username.into_bytes_with_nul();
-        let password = password.into_bytes_with_nul();
+        let username = username.to_cstr();
+        let password = password.to_cstr();
         let token = unsafe {
             BNRemoteRequestAuthenticationToken(
                 self.handle.as_ptr(),
@@ -229,9 +229,9 @@ impl Remote {
                 token.unwrap().to_string()
             }
         };
-        let username = options.username.into_bytes_with_nul();
+        let username = options.username.to_cstr();
         let username_ptr = username.as_ptr() as *const c_char;
-        let token = token.into_bytes_with_nul();
+        let token = token.to_cstr();
         let token_ptr = token.as_ptr() as *const c_char;
         let success = unsafe { BNRemoteConnect(self.handle.as_ptr(), username_ptr, token_ptr) };
         success.then_some(()).ok_or(())
@@ -281,15 +281,12 @@ impl Remote {
     /// Gets a specific project in the Remote by its id.
     ///
     /// NOTE: If projects have not been pulled, they will be pulled upon calling this.
-    pub fn get_project_by_id<S: BnStrCompatible>(
-        &self,
-        id: S,
-    ) -> Result<Option<Ref<RemoteProject>>, ()> {
+    pub fn get_project_by_id<S: AsCStr>(&self, id: S) -> Result<Option<Ref<RemoteProject>>, ()> {
         if !self.has_pulled_projects() {
             self.pull_projects()?;
         }
 
-        let id = id.into_bytes_with_nul();
+        let id = id.to_cstr();
         let value = unsafe {
             BNRemoteGetProjectById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
         };
@@ -299,7 +296,7 @@ impl Remote {
     /// Gets a specific project in the Remote by its name.
     ///
     /// NOTE: If projects have not been pulled, they will be pulled upon calling this.
-    pub fn get_project_by_name<S: BnStrCompatible>(
+    pub fn get_project_by_name<S: AsCStr>(
         &self,
         name: S,
     ) -> Result<Option<Ref<RemoteProject>>, ()> {
@@ -307,7 +304,7 @@ impl Remote {
             self.pull_projects()?;
         }
 
-        let name = name.into_bytes_with_nul();
+        let name = name.to_cstr();
         let value = unsafe {
             BNRemoteGetProjectByName(
                 self.handle.as_ptr(),
@@ -347,7 +344,7 @@ impl Remote {
     ///
     /// * `name` - Project name
     /// * `description` - Project description
-    pub fn create_project<N: BnStrCompatible, D: BnStrCompatible>(
+    pub fn create_project<N: AsCStr, D: AsCStr>(
         &self,
         name: N,
         description: D,
@@ -358,8 +355,8 @@ impl Remote {
         if !self.has_pulled_projects() {
             self.pull_projects()?;
         }
-        let name = name.into_bytes_with_nul();
-        let description = description.into_bytes_with_nul();
+        let name = name.to_cstr();
+        let description = description.to_cstr();
         let value = unsafe {
             BNRemoteCreateProject(
                 self.handle.as_ptr(),
@@ -403,12 +400,12 @@ impl Remote {
     pub fn push_project<I, K, V>(&self, project: &RemoteProject, extra_fields: I) -> Result<(), ()>
     where
         I: Iterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible,
+        K: AsCStr,
+        V: AsCStr,
     {
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
+            .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
         let mut keys_raw = keys
             .iter()
@@ -472,15 +469,12 @@ impl Remote {
     ///
     /// If groups have not been pulled, they will be pulled upon calling this.
     /// This function is only available to accounts with admin status on the Remote.
-    pub fn get_group_by_name<S: BnStrCompatible>(
-        &self,
-        name: S,
-    ) -> Result<Option<Ref<RemoteGroup>>, ()> {
+    pub fn get_group_by_name<S: AsCStr>(&self, name: S) -> Result<Option<Ref<RemoteGroup>>, ()> {
         if !self.has_pulled_groups() {
             self.pull_groups()?;
         }
 
-        let name = name.into_bytes_with_nul();
+        let name = name.to_cstr();
         let value = unsafe {
             BNRemoteGetGroupByName(
                 self.handle.as_ptr(),
@@ -496,11 +490,11 @@ impl Remote {
     /// # Arguments
     ///
     /// * `prefix` - Prefix of name for groups
-    pub fn search_groups<S: BnStrCompatible>(
+    pub fn search_groups<S: AsCStr>(
         &self,
         prefix: S,
     ) -> Result<(Array<GroupId>, Array<BnString>), ()> {
-        let prefix = prefix.into_bytes_with_nul();
+        let prefix = prefix.to_cstr();
         let mut count = 0;
         let mut group_ids = std::ptr::null_mut();
         let mut group_names = std::ptr::null_mut();
@@ -560,15 +554,12 @@ impl Remote {
     /// * `usernames` - List of usernames of users in the group
     pub fn create_group<N, I>(&self, name: N, usernames: I) -> Result<Ref<RemoteGroup>, ()>
     where
-        N: BnStrCompatible,
+        N: AsCStr,
         I: IntoIterator,
-        I::Item: BnStrCompatible,
+        I::Item: AsCStr,
     {
-        let name = name.into_bytes_with_nul();
-        let usernames: Vec<_> = usernames
-            .into_iter()
-            .map(|s| s.into_bytes_with_nul())
-            .collect();
+        let name = name.to_cstr();
+        let usernames: Vec<_> = usernames.into_iter().map(|s| s.to_cstr()).collect();
         let mut username_ptrs: Vec<_> = usernames
             .iter()
             .map(|s| s.as_ref().as_ptr() as *const c_char)
@@ -597,12 +588,12 @@ impl Remote {
     pub fn push_group<I, K, V>(&self, group: &RemoteGroup, extra_fields: I) -> Result<(), ()>
     where
         I: IntoIterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible,
+        K: AsCStr,
+        V: AsCStr,
     {
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
+            .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
         let mut keys_raw: Vec<_> = keys
             .iter()
@@ -663,11 +654,11 @@ impl Remote {
     /// # Arguments
     ///
     /// * `id` - The identifier of the user to retrieve.
-    pub fn get_user_by_id<S: BnStrCompatible>(&self, id: S) -> Result<Option<Ref<RemoteUser>>, ()> {
+    pub fn get_user_by_id<S: AsCStr>(&self, id: S) -> Result<Option<Ref<RemoteUser>>, ()> {
         if !self.has_pulled_users() {
             self.pull_users()?;
         }
-        let id = id.into_bytes_with_nul();
+        let id = id.to_cstr();
         let value = unsafe {
             BNRemoteGetUserById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
         };
@@ -683,14 +674,14 @@ impl Remote {
     /// # Arguments
     ///
     /// * `username` - The username of the user to retrieve.
-    pub fn get_user_by_username<S: BnStrCompatible>(
+    pub fn get_user_by_username<S: AsCStr>(
         &self,
         username: S,
     ) -> Result<Option<Ref<RemoteUser>>, ()> {
         if !self.has_pulled_users() {
             self.pull_users()?;
         }
-        let username = username.into_bytes_with_nul();
+        let username = username.to_cstr();
         let value = unsafe {
             BNRemoteGetUserByUsername(
                 self.handle.as_ptr(),
@@ -718,11 +709,11 @@ impl Remote {
     /// # Arguments
     ///
     /// * `prefix` - The prefix to search for in usernames.
-    pub fn search_users<S: BnStrCompatible>(
+    pub fn search_users<S: AsCStr>(
         &self,
         prefix: S,
     ) -> Result<(Array<BnString>, Array<BnString>), ()> {
-        let prefix = prefix.into_bytes_with_nul();
+        let prefix = prefix.to_cstr();
         let mut count = 0;
         let mut user_ids = std::ptr::null_mut();
         let mut usernames = std::ptr::null_mut();
@@ -783,7 +774,7 @@ impl Remote {
     /// # Arguments
     ///
     /// * Various details about the new user to be created.
-    pub fn create_user<U: BnStrCompatible, E: BnStrCompatible, P: BnStrCompatible>(
+    pub fn create_user<U: AsCStr, E: AsCStr, P: AsCStr>(
         &self,
         username: U,
         email: E,
@@ -792,9 +783,9 @@ impl Remote {
         group_ids: &[u64],
         user_permission_ids: &[u64],
     ) -> Result<Ref<RemoteUser>, ()> {
-        let username = username.into_bytes_with_nul();
-        let email = email.into_bytes_with_nul();
-        let password = password.into_bytes_with_nul();
+        let username = username.to_cstr();
+        let email = email.to_cstr();
+        let password = password.to_cstr();
 
         let value = unsafe {
             BNRemoteCreateUser(
@@ -825,12 +816,12 @@ impl Remote {
     pub fn push_user<I, K, V>(&self, user: &RemoteUser, extra_fields: I) -> Result<(), ()>
     where
         I: Iterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible,
+        K: AsCStr,
+        V: AsCStr,
     {
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
+            .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
         let mut keys_raw: Vec<_> = keys
             .iter()

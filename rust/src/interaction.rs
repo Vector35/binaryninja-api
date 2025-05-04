@@ -21,7 +21,7 @@ use std::path::PathBuf;
 
 use crate::binary_view::BinaryView;
 use crate::rc::Ref;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 pub fn get_text_line_input(prompt: &str, title: &str) -> Option<String> {
     let mut value: *mut c_char = std::ptr::null_mut();
@@ -29,8 +29,8 @@ pub fn get_text_line_input(prompt: &str, title: &str) -> Option<String> {
     let result = unsafe {
         BNGetTextLineInput(
             &mut value,
-            prompt.into_bytes_with_nul().as_ptr() as *mut _,
-            title.into_bytes_with_nul().as_ptr() as *mut _,
+            prompt.to_cstr().as_ptr() as *mut _,
+            title.to_cstr().as_ptr() as *mut _,
         )
     };
     if !result {
@@ -46,8 +46,8 @@ pub fn get_integer_input(prompt: &str, title: &str) -> Option<i64> {
     let result = unsafe {
         BNGetIntegerInput(
             &mut value,
-            prompt.into_bytes_with_nul().as_ptr() as *mut _,
-            title.into_bytes_with_nul().as_ptr() as *mut _,
+            prompt.to_cstr().as_ptr() as *mut _,
+            title.to_cstr().as_ptr() as *mut _,
         )
     };
 
@@ -64,8 +64,8 @@ pub fn get_address_input(prompt: &str, title: &str) -> Option<u64> {
     let result = unsafe {
         BNGetAddressInput(
             &mut value,
-            prompt.into_bytes_with_nul().as_ptr() as *mut _,
-            title.into_bytes_with_nul().as_ptr() as *mut _,
+            prompt.to_cstr().as_ptr() as *mut _,
+            title.to_cstr().as_ptr() as *mut _,
             std::ptr::null_mut(),
             0,
         )
@@ -84,8 +84,8 @@ pub fn get_open_filename_input(prompt: &str, extension: &str) -> Option<PathBuf>
     let result = unsafe {
         BNGetOpenFileNameInput(
             &mut value,
-            prompt.into_bytes_with_nul().as_ptr() as *mut _,
-            extension.into_bytes_with_nul().as_ptr() as *mut _,
+            prompt.to_cstr().as_ptr() as *mut _,
+            extension.to_cstr().as_ptr() as *mut _,
         )
     };
     if !result {
@@ -106,9 +106,9 @@ pub fn get_save_filename_input(
     let result = unsafe {
         BNGetSaveFileNameInput(
             &mut value,
-            prompt.into_bytes_with_nul().as_ptr() as *mut _,
-            extension.into_bytes_with_nul().as_ptr() as *mut _,
-            default_name.into_bytes_with_nul().as_ptr() as *mut _,
+            prompt.to_cstr().as_ptr() as *mut _,
+            extension.to_cstr().as_ptr() as *mut _,
+            default_name.to_cstr().as_ptr() as *mut _,
         )
     };
     if !result {
@@ -125,8 +125,8 @@ pub fn get_directory_name_input(prompt: &str, default_name: &str) -> Option<Path
     let result = unsafe {
         BNGetDirectoryNameInput(
             &mut value,
-            prompt.into_bytes_with_nul().as_ptr() as *mut _,
-            default_name.into_bytes_with_nul().as_ptr() as *mut _,
+            prompt.to_cstr().as_ptr() as *mut _,
+            default_name.to_cstr().as_ptr() as *mut _,
         )
     };
     if !result {
@@ -148,8 +148,8 @@ pub fn show_message_box(
 ) -> MessageBoxButtonResult {
     unsafe {
         BNShowMessageBox(
-            title.into_bytes_with_nul().as_ptr() as *mut _,
-            text.into_bytes_with_nul().as_ptr() as *mut _,
+            title.to_cstr().as_ptr() as *mut _,
+            text.to_cstr().as_ptr() as *mut _,
             buttons,
             icon,
         )
@@ -495,7 +495,7 @@ impl FormInputBuilder {
             BNGetFormInput(
                 self.fields.as_mut_ptr(),
                 self.fields.len(),
-                title.into_bytes_with_nul().as_ptr() as *const _,
+                title.to_cstr().as_ptr() as *const _,
             )
         } {
             let result = self
@@ -577,7 +577,7 @@ pub fn run_progress_dialog<F: Fn(Box<dyn Fn(usize, usize) -> Result<(), ()>>)>(
 
     if unsafe {
         BNRunProgressDialog(
-            title.into_bytes_with_nul().as_ptr() as *mut _,
+            title.to_cstr().as_ptr() as *mut _,
             can_cancel,
             Some(cb_task::<F>),
             &mut ctxt as *mut _ as *mut c_void,

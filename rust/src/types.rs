@@ -24,7 +24,7 @@ use crate::{
     binary_view::{BinaryView, BinaryViewExt},
     calling_convention::CoreCallingConvention,
     rc::*,
-    string::{BnStrCompatible, BnString},
+    string::{AsCStr, BnString},
 };
 
 use crate::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
@@ -258,10 +258,10 @@ impl TypeBuilder {
         }
     }
 
-    pub fn named_int<S: BnStrCompatible>(width: usize, is_signed: bool, alt_name: S) -> Self {
+    pub fn named_int<S: AsCStr>(width: usize, is_signed: bool, alt_name: S) -> Self {
         let mut is_signed = Conf::new(is_signed, MAX_CONFIDENCE).into();
         // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.into_bytes_with_nul(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
+        let alt_name = alt_name.to_cstr(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
 
         unsafe {
             Self::from_raw(BNCreateIntegerTypeBuilder(
@@ -281,9 +281,9 @@ impl TypeBuilder {
         }
     }
 
-    pub fn named_float<S: BnStrCompatible>(width: usize, alt_name: S) -> Self {
+    pub fn named_float<S: AsCStr>(width: usize, alt_name: S) -> Self {
         // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.into_bytes_with_nul(); // See same line in `named_int` above
+        let alt_name = alt_name.to_cstr(); // See same line in `named_int` above
 
         unsafe {
             Self::from_raw(BNCreateFloatTypeBuilder(
@@ -649,10 +649,10 @@ impl Type {
         }
     }
 
-    pub fn named_int<S: BnStrCompatible>(width: usize, is_signed: bool, alt_name: S) -> Ref<Self> {
+    pub fn named_int<S: AsCStr>(width: usize, is_signed: bool, alt_name: S) -> Ref<Self> {
         let mut is_signed = Conf::new(is_signed, MAX_CONFIDENCE).into();
         // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.into_bytes_with_nul(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
+        let alt_name = alt_name.to_cstr(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
 
         unsafe {
             Self::ref_from_raw(BNCreateIntegerType(
@@ -672,9 +672,9 @@ impl Type {
         }
     }
 
-    pub fn named_float<S: BnStrCompatible>(width: usize, alt_name: S) -> Ref<Self> {
+    pub fn named_float<S: AsCStr>(width: usize, alt_name: S) -> Ref<Self> {
         // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.into_bytes_with_nul(); // See same line in `named_int` above
+        let alt_name = alt_name.to_cstr(); // See same line in `named_int` above
 
         unsafe { Self::ref_from_raw(BNCreateFloatType(width, alt_name.as_ref().as_ptr() as _)) }
     }
@@ -1217,24 +1217,24 @@ impl EnumerationBuilder {
         unsafe { Enumeration::ref_from_raw(BNFinalizeEnumerationBuilder(self.handle)) }
     }
 
-    pub fn append<S: BnStrCompatible>(&mut self, name: S) -> &mut Self {
-        let name = name.into_bytes_with_nul();
+    pub fn append<S: AsCStr>(&mut self, name: S) -> &mut Self {
+        let name = name.to_cstr();
         unsafe {
             BNAddEnumerationBuilderMember(self.handle, name.as_ref().as_ptr() as _);
         }
         self
     }
 
-    pub fn insert<S: BnStrCompatible>(&mut self, name: S, value: u64) -> &mut Self {
-        let name = name.into_bytes_with_nul();
+    pub fn insert<S: AsCStr>(&mut self, name: S, value: u64) -> &mut Self {
+        let name = name.to_cstr();
         unsafe {
             BNAddEnumerationBuilderMemberWithValue(self.handle, name.as_ref().as_ptr() as _, value);
         }
         self
     }
 
-    pub fn replace<S: BnStrCompatible>(&mut self, id: usize, name: S, value: u64) -> &mut Self {
-        let name = name.into_bytes_with_nul();
+    pub fn replace<S: AsCStr>(&mut self, id: usize, name: S, value: u64) -> &mut Self {
+        let name = name.to_cstr();
         unsafe {
             BNReplaceEnumerationBuilderMember(self.handle, id, name.as_ref().as_ptr() as _, value);
         }
@@ -1476,14 +1476,14 @@ impl StructureBuilder {
         self
     }
 
-    pub fn append<'a, S: BnStrCompatible, T: Into<Conf<&'a Type>>>(
+    pub fn append<'a, S: AsCStr, T: Into<Conf<&'a Type>>>(
         &mut self,
         ty: T,
         name: S,
         access: MemberAccess,
         scope: MemberScope,
     ) -> &mut Self {
-        let name = name.into_bytes_with_nul();
+        let name = name.to_cstr();
         let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
         unsafe {
             BNAddStructureBuilderMember(
@@ -1513,7 +1513,7 @@ impl StructureBuilder {
         self
     }
 
-    pub fn insert<'a, S: BnStrCompatible, T: Into<Conf<&'a Type>>>(
+    pub fn insert<'a, S: AsCStr, T: Into<Conf<&'a Type>>>(
         &mut self,
         ty: T,
         name: S,
@@ -1522,7 +1522,7 @@ impl StructureBuilder {
         access: MemberAccess,
         scope: MemberScope,
     ) -> &mut Self {
-        let name = name.into_bytes_with_nul();
+        let name = name.to_cstr();
         let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
         unsafe {
             BNAddStructureBuilderMemberAtOffset(
@@ -1538,14 +1538,14 @@ impl StructureBuilder {
         self
     }
 
-    pub fn replace<'a, S: BnStrCompatible, T: Into<Conf<&'a Type>>>(
+    pub fn replace<'a, S: AsCStr, T: Into<Conf<&'a Type>>>(
         &mut self,
         index: usize,
         ty: T,
         name: S,
         overwrite_existing: bool,
     ) -> &mut Self {
-        let name = name.into_bytes_with_nul();
+        let name = name.to_cstr();
         let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
         unsafe {
             BNReplaceStructureBuilderMember(
@@ -1870,12 +1870,12 @@ impl NamedTypeReference {
     /// You should not assign type ids yourself: if you use this to reference a type you are going
     /// to create but have not yet created, you may run into problems when giving your types to
     /// a BinaryView.
-    pub fn new_with_id<T: Into<QualifiedName>, S: BnStrCompatible>(
+    pub fn new_with_id<T: Into<QualifiedName>, S: AsCStr>(
         type_class: NamedTypeReferenceClass,
         type_id: S,
         name: T,
     ) -> Ref<Self> {
-        let type_id = type_id.into_bytes_with_nul();
+        let type_id = type_id.to_cstr();
         let mut raw_name = QualifiedName::into_raw(name.into());
         let result = unsafe {
             Self::ref_from_raw(BNCreateNamedType(

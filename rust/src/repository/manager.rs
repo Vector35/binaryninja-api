@@ -1,6 +1,6 @@
 use crate::rc::{Array, Ref, RefCountable};
 use crate::repository::Repository;
-use crate::string::BnStrCompatible;
+use crate::string::AsCStr;
 use binaryninjacore_sys::{
     BNCreateRepositoryManager, BNFreeRepositoryManager, BNGetRepositoryManager,
     BNNewRepositoryManagerReference, BNRepositoryGetRepositoryByPath, BNRepositoryManager,
@@ -29,8 +29,8 @@ impl RepositoryManager {
         Ref::new(Self { handle })
     }
 
-    pub fn new<S: BnStrCompatible>(plugins_path: S) -> Ref<Self> {
-        let plugins_path = plugins_path.into_bytes_with_nul();
+    pub fn new<S: AsCStr>(plugins_path: S) -> Ref<Self> {
+        let plugins_path = plugins_path.to_cstr();
         let result =
             unsafe { BNCreateRepositoryManager(plugins_path.as_ref().as_ptr() as *const c_char) };
         unsafe { Self::ref_from_raw(NonNull::new(result).unwrap()) }
@@ -61,13 +61,9 @@ impl RepositoryManager {
     /// * `repository_path` - path to where the repository will be stored on disk locally
     ///
     /// Returns true if the repository was successfully added, false otherwise.
-    pub fn add_repository<U: BnStrCompatible, P: BnStrCompatible>(
-        &self,
-        url: U,
-        repository_path: P,
-    ) -> bool {
-        let url = url.into_bytes_with_nul();
-        let repo_path = repository_path.into_bytes_with_nul();
+    pub fn add_repository<U: AsCStr, P: AsCStr>(&self, url: U, repository_path: P) -> bool {
+        let url = url.to_cstr();
+        let repo_path = repository_path.to_cstr();
         unsafe {
             BNRepositoryManagerAddRepository(
                 self.handle.as_ptr(),
@@ -77,8 +73,8 @@ impl RepositoryManager {
         }
     }
 
-    pub fn repository_by_path<P: BnStrCompatible>(&self, path: P) -> Option<Repository> {
-        let path = path.into_bytes_with_nul();
+    pub fn repository_by_path<P: AsCStr>(&self, path: P) -> Option<Repository> {
+        let path = path.to_cstr();
         let result = unsafe {
             BNRepositoryGetRepositoryByPath(
                 self.handle.as_ptr(),

@@ -15,7 +15,7 @@ use crate::database::snapshot::{Snapshot, SnapshotId};
 use crate::file_metadata::FileMetadata;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 pub struct Database {
     pub(crate) handle: NonNull<BNDatabase>,
@@ -62,7 +62,7 @@ impl Database {
         unsafe { BNSetDatabaseCurrentSnapshot(self.handle.as_ptr(), id.0) }
     }
 
-    pub fn write_snapshot_data<N: BnStrCompatible>(
+    pub fn write_snapshot_data<N: AsCStr>(
         &self,
         parents: &[SnapshotId],
         file: &BinaryView,
@@ -90,10 +90,10 @@ impl Database {
         mut progress: P,
     ) -> SnapshotId
     where
-        N: BnStrCompatible,
+        N: AsCStr,
         P: ProgressCallback,
     {
-        let name_raw = name.into_bytes_with_nul();
+        let name_raw = name.to_cstr();
         let name_ptr = name_raw.as_ref().as_ptr() as *const c_char;
 
         let new_id = unsafe {
@@ -133,8 +133,8 @@ impl Database {
             Err(())
         }
     }
-    pub fn has_global<S: BnStrCompatible>(&self, key: S) -> bool {
-        let key_raw = key.into_bytes_with_nul();
+    pub fn has_global<S: AsCStr>(&self, key: S) -> bool {
+        let key_raw = key.to_cstr();
         let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
         unsafe { BNDatabaseHasGlobal(self.handle.as_ptr(), key_ptr) != 0 }
     }
@@ -156,33 +156,33 @@ impl Database {
     }
 
     /// Get a specific global by key
-    pub fn read_global<S: BnStrCompatible>(&self, key: S) -> Option<BnString> {
-        let key_raw = key.into_bytes_with_nul();
+    pub fn read_global<S: AsCStr>(&self, key: S) -> Option<BnString> {
+        let key_raw = key.to_cstr();
         let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
         let result = unsafe { BNReadDatabaseGlobal(self.handle.as_ptr(), key_ptr) };
         unsafe { NonNull::new(result).map(|_| BnString::from_raw(result)) }
     }
 
     /// Write a global into the database
-    pub fn write_global<K: BnStrCompatible, V: BnStrCompatible>(&self, key: K, value: V) -> bool {
-        let key_raw = key.into_bytes_with_nul();
+    pub fn write_global<K: AsCStr, V: AsCStr>(&self, key: K, value: V) -> bool {
+        let key_raw = key.to_cstr();
         let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
-        let value_raw = value.into_bytes_with_nul();
+        let value_raw = value.to_cstr();
         let value_ptr = value_raw.as_ref().as_ptr() as *const c_char;
         unsafe { BNWriteDatabaseGlobal(self.handle.as_ptr(), key_ptr, value_ptr) }
     }
 
     /// Get a specific global by key, as a binary buffer
-    pub fn read_global_data<S: BnStrCompatible>(&self, key: S) -> Option<DataBuffer> {
-        let key_raw = key.into_bytes_with_nul();
+    pub fn read_global_data<S: AsCStr>(&self, key: S) -> Option<DataBuffer> {
+        let key_raw = key.to_cstr();
         let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
         let result = unsafe { BNReadDatabaseGlobalData(self.handle.as_ptr(), key_ptr) };
         NonNull::new(result).map(|_| DataBuffer::from_raw(result))
     }
 
     /// Write a binary buffer into a global in the database
-    pub fn write_global_data<K: BnStrCompatible>(&self, key: K, value: &DataBuffer) -> bool {
-        let key_raw = key.into_bytes_with_nul();
+    pub fn write_global_data<K: AsCStr>(&self, key: K, value: &DataBuffer) -> bool {
+        let key_raw = key.to_cstr();
         let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
         unsafe { BNWriteDatabaseGlobalData(self.handle.as_ptr(), key_ptr, value.as_raw()) }
     }

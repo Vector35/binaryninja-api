@@ -29,7 +29,7 @@ fn test_binary_saving() {
     let modified_contents = view.read_vec(contents_addr, 4);
     assert_eq!(modified_contents, [0xff, 0xff, 0xff, 0xff]);
 
-    // HACK: To prevent us from deadlocking in save_to_path we wait for all main thread actions to finish.
+    // HACK: To prevent us from deadlocking in save_to_path, we wait for all main thread actions to finish.
     execute_on_main_thread_and_wait(|| {});
 
     // Save the modified file
@@ -56,7 +56,7 @@ fn test_binary_saving_database() {
         SymbolBuilder::new(SymbolType::Function, "test", entry_function.start()).create();
     view.define_user_symbol(&new_entry_func_symbol);
     // Verify that we modified the binary
-    assert_eq!(entry_function.symbol().raw_name().as_str(), "test");
+    assert_eq!(entry_function.symbol().raw_name().to_string_lossy(), "test");
     // Save the modified database.
     assert!(view.file().create_database(out_dir.join("atox.obj.bndb")));
     // Verify that the file exists and is modified.
@@ -65,5 +65,8 @@ fn test_binary_saving_database() {
     let new_entry_function = new_view
         .entry_point_function()
         .expect("Failed to get entry point function");
-    assert_eq!(new_entry_function.symbol().raw_name().as_str(), "test");
+    assert_eq!(
+        new_entry_function.symbol().raw_name().to_string_lossy(),
+        "test"
+    );
 }

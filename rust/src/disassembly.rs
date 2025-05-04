@@ -22,7 +22,7 @@ use crate::function::{Location, NativeBlock};
 use crate::high_level_il as hlil;
 use crate::low_level_il as llil;
 use crate::medium_level_il as mlil;
-use crate::string::BnStrCompatible;
+use crate::string::AsCStr;
 use crate::string::{raw_to_string, strings_to_string_list, BnString};
 
 use crate::rc::*;
@@ -1242,7 +1242,7 @@ impl DisassemblyTextRenderer {
         unsafe { Array::new(tokens, count, ()) }
     }
 
-    pub fn wrap_comment<S1: BnStrCompatible, S2: BnStrCompatible, S3: BnStrCompatible>(
+    pub fn wrap_comment<S1: AsCStr, S2: AsCStr, S3: AsCStr>(
         &self,
         cur_line: DisassemblyTextLine,
         comment: S1,
@@ -1251,9 +1251,9 @@ impl DisassemblyTextRenderer {
         indent_spaces: S3,
     ) -> Array<DisassemblyTextLine> {
         let cur_line_raw = DisassemblyTextLine::into_raw(cur_line);
-        let comment_raw = comment.into_bytes_with_nul();
-        let leading_spaces_raw = leading_spaces.into_bytes_with_nul();
-        let indent_spaces_raw = indent_spaces.into_bytes_with_nul();
+        let comment_raw = comment.to_cstr();
+        let leading_spaces_raw = leading_spaces.to_cstr();
+        let indent_spaces_raw = indent_spaces.to_cstr();
         let mut count = 0;
         let lines = unsafe {
             BNDisassemblyTextRendererWrapComment(

@@ -153,9 +153,9 @@ impl SymbolBuilder {
     }
 
     pub fn create(self) -> Ref<Symbol> {
-        let raw_name = self.raw_name.into_bytes_with_nul();
-        let short_name = self.short_name.map(|s| s.into_bytes_with_nul());
-        let full_name = self.full_name.map(|s| s.into_bytes_with_nul());
+        let raw_name = self.raw_name.to_cstr();
+        let short_name = self.short_name.map(|s| s.to_cstr());
+        let full_name = self.full_name.map(|s| s.to_cstr());
 
         // Lifetimes, man
         let raw_name = raw_name.as_ptr() as _;

@@ -52,7 +52,7 @@ impl FileMetadata {
         Self::ref_from_raw(unsafe { BNCreateFileMetadata() })
     }
 
-    pub fn with_filename<S: BnStrCompatible>(name: S) -> Ref<Self> {
+    pub fn with_filename<S: AsCStr>(name: S) -> Ref<Self> {
         let ret = FileMetadata::new();
         ret.set_filename(name);
         ret
@@ -75,8 +75,8 @@ impl FileMetadata {
         }
     }
 
-    pub fn set_filename<S: BnStrCompatible>(&self, name: S) {
-        let name = name.into_bytes_with_nul();
+    pub fn set_filename<S: AsCStr>(&self, name: S) {
+        let name = name.to_cstr();
 
         unsafe {
             BNSetFilename(self.handle, name.as_ref().as_ptr() as *mut _);
@@ -107,8 +107,8 @@ impl FileMetadata {
         self.is_database_backed_for_view_type("")
     }
 
-    pub fn is_database_backed_for_view_type<S: BnStrCompatible>(&self, view_type: S) -> bool {
-        let view_type = view_type.into_bytes_with_nul();
+    pub fn is_database_backed_for_view_type<S: AsCStr>(&self, view_type: S) -> bool {
+        let view_type = view_type.to_cstr();
 
         unsafe { BNIsBackedByDatabase(self.handle, view_type.as_ref().as_ptr() as *const _) }
     }
@@ -135,15 +135,15 @@ impl FileMetadata {
         unsafe { BnString::into_string(BNBeginUndoActions(self.handle, anonymous_allowed)) }
     }
 
-    pub fn commit_undo_actions<S: BnStrCompatible>(&self, id: S) {
-        let id = id.into_bytes_with_nul();
+    pub fn commit_undo_actions<S: AsCStr>(&self, id: S) {
+        let id = id.to_cstr();
         unsafe {
             BNCommitUndoActions(self.handle, id.as_ref().as_ptr() as *const _);
         }
     }
 
-    pub fn revert_undo_actions<S: BnStrCompatible>(&self, id: S) {
-        let id = id.into_bytes_with_nul();
+    pub fn revert_undo_actions<S: AsCStr>(&self, id: S) {
+        let id = id.to_cstr();
         unsafe {
             BNRevertUndoActions(self.handle, id.as_ref().as_ptr() as *const _);
         }
@@ -169,8 +169,8 @@ impl FileMetadata {
         unsafe { BNGetCurrentOffset(self.handle) }
     }
 
-    pub fn navigate_to<S: BnStrCompatible>(&self, view: S, offset: u64) -> Result<(), ()> {
-        let view = view.into_bytes_with_nul();
+    pub fn navigate_to<S: AsCStr>(&self, view: S, offset: u64) -> Result<(), ()> {
+        let view = view.to_cstr();
 
         unsafe {
             if BNNavigate(self.handle, view.as_ref().as_ptr() as *const _, offset) {
@@ -181,8 +181,8 @@ impl FileMetadata {
         }
     }
 
-    pub fn view_of_type<S: BnStrCompatible>(&self, view: S) -> Option<Ref<BinaryView>> {
-        let view = view.into_bytes_with_nul();
+    pub fn view_of_type<S: AsCStr>(&self, view: S) -> Option<Ref<BinaryView>> {
+        let view = view.to_cstr();
 
         unsafe {
             let raw_view_ptr = BNGetFileViewOfType(self.handle, view.as_ref().as_ptr() as *const _);
@@ -215,7 +215,7 @@ impl FileMetadata {
             return false;
         };
 
-        let file_path = file_path.as_ref().into_bytes_with_nul();
+        let file_path = file_path.as_ref().to_cstr();
         unsafe {
             BNCreateDatabase(
                 raw_view.handle,
@@ -226,7 +226,7 @@ impl FileMetadata {
     }
 
     // TODO: Pass settings?
-    pub fn create_database_with_progress<S: BnStrCompatible, P: ProgressCallback>(
+    pub fn create_database_with_progress<S: AsCStr, P: ProgressCallback>(
         &self,
         file_path: impl AsRef<Path>,
         mut progress: P,
@@ -235,7 +235,7 @@ impl FileMetadata {
         let Some(raw_view) = self.view_of_type("Raw") else {
             return false;
         };
-        let file_path = file_path.as_ref().into_bytes_with_nul();
+        let file_path = file_path.as_ref().to_cstr();
         unsafe {
             BNCreateDatabaseWithProgress(
                 raw_view.handle,
@@ -256,11 +256,11 @@ impl FileMetadata {
         unsafe { BNSaveAutoSnapshot(raw_view.handle, ptr::null_mut() as *mut _) }
     }
 
-    pub fn open_database_for_configuration<S: BnStrCompatible>(
+    pub fn open_database_for_configuration<S: AsCStr>(
         &self,
         filename: S,
     ) -> Result<Ref<BinaryView>, ()> {
-        let filename = filename.into_bytes_with_nul();
+        let filename = filename.to_cstr();
         unsafe {
             let bv =
                 BNOpenDatabaseForConfiguration(self.handle, filename.as_ref().as_ptr() as *const _);
@@ -273,8 +273,8 @@ impl FileMetadata {
         }
     }
 
-    pub fn open_database<S: BnStrCompatible>(&self, filename: S) -> Result<Ref<BinaryView>, ()> {
-        let filename = filename.into_bytes_with_nul();
+    pub fn open_database<S: AsCStr>(&self, filename: S) -> Result<Ref<BinaryView>, ()> {
+        let filename = filename.to_cstr();
         let filename_ptr = filename.as_ref().as_ptr() as *mut _;
 
         let view = unsafe { BNOpenExistingDatabase(self.handle, filename_ptr) };
@@ -286,12 +286,12 @@ impl FileMetadata {
         }
     }
 
-    pub fn open_database_with_progress<S: BnStrCompatible, P: ProgressCallback>(
+    pub fn open_database_with_progress<S: AsCStr, P: ProgressCallback>(
         &self,
         filename: S,
         mut progress: P,
     ) -> Result<Ref<BinaryView>, ()> {
-        let filename = filename.into_bytes_with_nul();
+        let filename = filename.to_cstr();
         let filename_ptr = filename.as_ref().as_ptr() as *mut _;
 
         let view = unsafe {

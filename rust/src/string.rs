@@ -44,29 +44,27 @@ pub(crate) fn strings_to_string_list(strings: &[String]) -> *mut *mut c_char {
     unsafe { BNAllocStringList(raw_str_list.as_mut_ptr(), raw_str_list.len()) }
 }
 
-/// Is the equivalent of `core::ffi::CString` but using the alloc and free from `binaryninjacore-sys`.
+/// A nul-terminated C string allocated by the core.
+///
+/// Received from a variety of core function calls, and must be used when giving strings to the
+/// core from many core-invoked callbacks, or otherwise passing ownership of the string to the core.
+///
+/// These are strings we're responsible for freeing, such as strings allocated by the core and
+/// given to us through the API and then forgotten about by the core.
+///
+/// When passing to the core, make sure to use [`BnString::to_cstr`] and [`CStr::as_ptr`].
+///
+/// When giving ownership to the core, make sure to prevent dropping by calling [`BnString::into_raw`].
 #[repr(transparent)]
 pub struct BnString {
     raw: *mut c_char,
 }
 
-/// A nul-terminated C string allocated by the core.
-///
-/// Received from a variety of core function calls, and
-/// must be used when giving strings to the core from many
-/// core-invoked callbacks.
-///
-/// These are strings we're responsible for freeing, such as
-/// strings allocated by the core and given to us through the API
-/// and then forgotten about by the core.
 impl BnString {
-    pub fn new<S: BnStrCompatible>(s: S) -> Self {
+    pub fn new<S: AsCStr>(s: S) -> Self {
         use binaryninjacore_sys::BNAllocString;
-        let raw = s.into_bytes_with_nul();
-        unsafe {
-            let ptr = raw.as_ref().as_ptr() as *mut _;
-            Self::from_raw(BNAllocString(ptr))
-        }
+        let raw = s.to_cstr();
+        unsafe { Self::from_raw(BNAllocString(raw.as_ptr())) }
     }
 
     /// Take an owned core string and convert it to [`String`].
@@ -190,118 +188,116 @@ unsafe impl CoreArrayProviderInner for BnString {
     }
 }
 
-pub unsafe trait BnStrCompatible {
-    type Result: AsRef<[u8]>;
+pub unsafe trait AsCStr {
+    type Result: Deref<Target = CStr>;
 
-    fn into_bytes_with_nul(self) -> Self::Result;
+    fn to_cstr(self) -> Self::Result;
 }
 
-unsafe impl<'a> BnStrCompatible for &'a CStr {
-    type Result = &'a [u8];
-
-    fn into_bytes_with_nul(self) -> Self::Result {
-        self.to_bytes_with_nul()
-    }
-}
-
-unsafe impl BnStrCompatible for BnString {
+unsafe impl<'a> AsCStr for &'a CStr {
     type Result = Self;
 
-    fn into_bytes_with_nul(self) -> Self::Result {
+    fn to_cstr(self) -> Self::Result {
         self
     }
 }
 
-unsafe impl BnStrCompatible for &BnString {
+unsafe impl AsCStr for BnString {
     type Result = Self;
 
-    fn into_bytes_with_nul(self) -> Self::Result {
+    fn to_cstr(self) -> Self::Result {
         self
     }
 }
 
-unsafe impl BnStrCompatible for CString {
-    type Result = Vec<u8>;
+unsafe impl AsCStr for &BnString {
+    type Result = BnString;
 
-    fn into_bytes_with_nul(self) -> Self::Result {
-        self.into_bytes_with_nul()
+    fn to_cstr(self) -> Self::Result {
+        self.clone()
     }
 }
 
-unsafe impl BnStrCompatible for &str {
-    type Result = Vec<u8>;
+unsafe impl AsCStr for CString {
+    type Result = Self;
 
-    fn into_bytes_with_nul(self) -> Self::Result {
-        let ret = CString::new(self).expect("can't pass strings with internal nul bytes to core!");
-        ret.into_bytes_with_nul()
+    fn to_cstr(self) -> Self::Result {
+        self
     }
 }
 
-unsafe impl BnStrCompatible for String {
-    type Result = Vec<u8>;
+unsafe impl AsCStr for &str {
+    type Result = CString;
 
-    fn into_bytes_with_nul(self) -> Self::Result {
-        self.as_str().into_bytes_with_nul()
+    fn to_cstr(self) -> Self::Result {
+        CString::new(self).expect("can't pass strings with internal nul bytes to core!")
     }
 }
 
-unsafe impl BnStrCompatible for &String {
-    type Result = Vec<u8>;
+unsafe impl AsCStr for String {
+    type Result = CString;
 
-    fn into_bytes_with_nul(self) -> Self::Result {
-        self.as_str().into_bytes_with_nul()
+    fn to_cstr(self) -> Self::Result {
+        CString::new(self).expect("can't pass strings with internal nul bytes to core!")
     }
 }
 
-unsafe impl<'a> BnStrCompatible for &'a Cow<'a, str> {
-    type Result = Vec<u8>;
+unsafe impl AsCStr for &String {
+    type Result = CString;
 
-    fn into_bytes_with_nul(self) -> Self::Result {
-        self.to_string().into_bytes_with_nul()
+    fn to_cstr(self) -> Self::Result {
+        self.clone().to_cstr()
     }
 }
 
-unsafe impl BnStrCompatible for Cow<'_, str> {
-    type Result = Vec<u8>;
+unsafe impl<'a> AsCStr for &'a Cow<'a, str> {
+    type Result = CString;
 
-    fn into_bytes_with_nul(self) -> Self::Result {
-        self.to_string().into_bytes_with_nul()
+    fn to_cstr(self) -> Self::Result {
+        self.to_string().to_cstr()
     }
 }
 
-unsafe impl BnStrCompatible for &QualifiedName {
-    type Result = Vec<u8>;
+unsafe impl AsCStr for Cow<'_, str> {
+    type Result = CString;
 
-    fn into_bytes_with_nul(self) -> Self::Result {
-        self.to_string().into_bytes_with_nul()
+    fn to_cstr(self) -> Self::Result {
+        self.to_string().to_cstr()
     }
 }
 
-unsafe impl BnStrCompatible for PathBuf {
-    type Result = Vec<u8>;
+unsafe impl AsCStr for &QualifiedName {
+    type Result = CString;
 
-    fn into_bytes_with_nul(self) -> Self::Result {
-        self.as_path().into_bytes_with_nul()
+    fn to_cstr(self) -> Self::Result {
+        self.to_string().to_cstr()
     }
 }
 
-unsafe impl BnStrCompatible for &Path {
-    type Result = Vec<u8>;
+unsafe impl AsCStr for PathBuf {
+    type Result = CString;
 
-    fn into_bytes_with_nul(self) -> Self::Result {
-        let ret = CString::new(self.as_os_str().as_encoded_bytes())
-            .expect("can't pass paths with internal nul bytes to core!");
-        ret.into_bytes_with_nul()
+    fn to_cstr(self) -> Self::Result {
+        self.as_path().to_cstr()
+    }
+}
+
+unsafe impl AsCStr for &Path {
+    type Result = CString;
+
+    fn to_cstr(self) -> Self::Result {
+        CString::new(self.as_os_str().as_encoded_bytes())
+            .expect("can't pass paths with internal nul bytes to core!")
     }
 }
 
 pub trait IntoJson {
-    type Output: BnStrCompatible;
+    type Output: AsCStr;
 
     fn get_json_string(self) -> Result<Self::Output, ()>;
 }
 
-impl<S: BnStrCompatible> IntoJson for S {
+impl<S: AsCStr> IntoJson for S {
     type Output = S;
 
     fn get_json_string(self) -> Result<Self::Output, ()> {

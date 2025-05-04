@@ -20,7 +20,7 @@ use std::fmt::Debug;
 
 use crate::binary_view::BinaryView;
 use crate::rc::*;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 use crate::function::Function;
 
@@ -44,8 +44,8 @@ impl Settings {
         Self::new_with_id(GLOBAL_INSTANCE_ID)
     }
 
-    pub fn new_with_id<S: BnStrCompatible>(instance_id: S) -> Ref<Self> {
-        let instance_id = instance_id.into_bytes_with_nul();
+    pub fn new_with_id<S: AsCStr>(instance_id: S) -> Ref<Self> {
+        let instance_id = instance_id.to_cstr();
         unsafe {
             let handle = BNCreateSettings(instance_id.as_ref().as_ptr() as *mut _);
             debug_assert!(!handle.is_null());
@@ -53,8 +53,8 @@ impl Settings {
         }
     }
 
-    pub fn set_resource_id<S: BnStrCompatible>(&self, resource_id: S) {
-        let resource_id = resource_id.into_bytes_with_nul();
+    pub fn set_resource_id<S: AsCStr>(&self, resource_id: S) {
+        let resource_id = resource_id.to_cstr();
         unsafe { BNSettingsSetResourceId(self.handle, resource_id.as_ref().as_ptr() as *mut _) };
     }
 
@@ -62,16 +62,16 @@ impl Settings {
         unsafe { BnString::into_string(BNSettingsSerializeSchema(self.handle)) }
     }
 
-    pub fn deserialize_schema<S: BnStrCompatible>(&self, schema: S) -> bool {
+    pub fn deserialize_schema<S: AsCStr>(&self, schema: S) -> bool {
         self.deserialize_schema_with_scope(schema, SettingsScope::SettingsAutoScope)
     }
 
-    pub fn deserialize_schema_with_scope<S: BnStrCompatible>(
+    pub fn deserialize_schema_with_scope<S: AsCStr>(
         &self,
         schema: S,
         scope: SettingsScope,
     ) -> bool {
-        let schema = schema.into_bytes_with_nul();
+        let schema = schema.to_cstr();
         unsafe {
             BNSettingsDeserializeSchema(
                 self.handle,
@@ -82,8 +82,8 @@ impl Settings {
         }
     }
 
-    pub fn contains<S: BnStrCompatible>(&self, key: S) -> bool {
-        let key = key.into_bytes_with_nul();
+    pub fn contains<S: AsCStr>(&self, key: S) -> bool {
+        let key = key.to_cstr();
 
         unsafe { BNSettingsContains(self.handle, key.as_ref().as_ptr() as *mut _) }
     }
@@ -97,16 +97,12 @@ impl Settings {
 
     // TODO Update the settings API to take an optional BinaryView or Function. Separate functions or...?
 
-    pub fn get_bool<S: BnStrCompatible>(&self, key: S) -> bool {
+    pub fn get_bool<S: AsCStr>(&self, key: S) -> bool {
         self.get_bool_with_opts(key, &mut QueryOptions::default())
     }
 
-    pub fn get_bool_with_opts<S: BnStrCompatible>(
-        &self,
-        key: S,
-        options: &mut QueryOptions,
-    ) -> bool {
-        let key = key.into_bytes_with_nul();
+    pub fn get_bool_with_opts<S: AsCStr>(&self, key: S, options: &mut QueryOptions) -> bool {
+        let key = key.to_cstr();
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
             _ => std::ptr::null_mut(),
@@ -126,16 +122,12 @@ impl Settings {
         }
     }
 
-    pub fn get_double<S: BnStrCompatible>(&self, key: S) -> f64 {
+    pub fn get_double<S: AsCStr>(&self, key: S) -> f64 {
         self.get_double_with_opts(key, &mut QueryOptions::default())
     }
 
-    pub fn get_double_with_opts<S: BnStrCompatible>(
-        &self,
-        key: S,
-        options: &mut QueryOptions,
-    ) -> f64 {
-        let key = key.into_bytes_with_nul();
+    pub fn get_double_with_opts<S: AsCStr>(&self, key: S, options: &mut QueryOptions) -> f64 {
+        let key = key.to_cstr();
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
             _ => std::ptr::null_mut(),
@@ -155,16 +147,12 @@ impl Settings {
         }
     }
 
-    pub fn get_integer<S: BnStrCompatible>(&self, key: S) -> u64 {
+    pub fn get_integer<S: AsCStr>(&self, key: S) -> u64 {
         self.get_integer_with_opts(key, &mut QueryOptions::default())
     }
 
-    pub fn get_integer_with_opts<S: BnStrCompatible>(
-        &self,
-        key: S,
-        options: &mut QueryOptions,
-    ) -> u64 {
-        let key = key.into_bytes_with_nul();
+    pub fn get_integer_with_opts<S: AsCStr>(&self, key: S, options: &mut QueryOptions) -> u64 {
+        let key = key.to_cstr();
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
             _ => std::ptr::null_mut(),
@@ -184,16 +172,12 @@ impl Settings {
         }
     }
 
-    pub fn get_string<S: BnStrCompatible>(&self, key: S) -> String {
+    pub fn get_string<S: AsCStr>(&self, key: S) -> String {
         self.get_string_with_opts(key, &mut QueryOptions::default())
     }
 
-    pub fn get_string_with_opts<S: BnStrCompatible>(
-        &self,
-        key: S,
-        options: &mut QueryOptions,
-    ) -> String {
-        let key = key.into_bytes_with_nul();
+    pub fn get_string_with_opts<S: AsCStr>(&self, key: S, options: &mut QueryOptions) -> String {
+        let key = key.to_cstr();
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
             _ => std::ptr::null_mut(),
@@ -213,16 +197,16 @@ impl Settings {
         }
     }
 
-    pub fn get_string_list<S: BnStrCompatible>(&self, key: S) -> Array<BnString> {
+    pub fn get_string_list<S: AsCStr>(&self, key: S) -> Array<BnString> {
         self.get_string_list_with_opts(key, &mut QueryOptions::default())
     }
 
-    pub fn get_string_list_with_opts<S: BnStrCompatible>(
+    pub fn get_string_list_with_opts<S: AsCStr>(
         &self,
         key: S,
         options: &mut QueryOptions,
     ) -> Array<BnString> {
-        let key = key.into_bytes_with_nul();
+        let key = key.to_cstr();
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
             _ => std::ptr::null_mut(),
@@ -248,16 +232,12 @@ impl Settings {
         }
     }
 
-    pub fn get_json<S: BnStrCompatible>(&self, key: S) -> String {
+    pub fn get_json<S: AsCStr>(&self, key: S) -> String {
         self.get_json_with_opts(key, &mut QueryOptions::default())
     }
 
-    pub fn get_json_with_opts<S: BnStrCompatible>(
-        &self,
-        key: S,
-        options: &mut QueryOptions,
-    ) -> String {
-        let key = key.into_bytes_with_nul();
+    pub fn get_json_with_opts<S: AsCStr>(&self, key: S, options: &mut QueryOptions) -> String {
+        let key = key.to_cstr();
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
             _ => std::ptr::null_mut(),
@@ -277,17 +257,12 @@ impl Settings {
         }
     }
 
-    pub fn set_bool<S: BnStrCompatible>(&self, key: S, value: bool) {
+    pub fn set_bool<S: AsCStr>(&self, key: S, value: bool) {
         self.set_bool_with_opts(key, value, &QueryOptions::default())
     }
 
-    pub fn set_bool_with_opts<S: BnStrCompatible>(
-        &self,
-        key: S,
-        value: bool,
-        options: &QueryOptions,
-    ) {
-        let key = key.into_bytes_with_nul();
+    pub fn set_bool_with_opts<S: AsCStr>(&self, key: S, value: bool, options: &QueryOptions) {
+        let key = key.to_cstr();
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
             _ => std::ptr::null_mut(),
@@ -308,16 +283,11 @@ impl Settings {
         }
     }
 
-    pub fn set_double<S: BnStrCompatible>(&self, key: S, value: f64) {
+    pub fn set_double<S: AsCStr>(&self, key: S, value: f64) {
         self.set_double_with_opts(key, value, &QueryOptions::default())
     }
-    pub fn set_double_with_opts<S: BnStrCompatible>(
-        &self,
-        key: S,
-        value: f64,
-        options: &QueryOptions,
-    ) {
-        let key = key.into_bytes_with_nul();
+    pub fn set_double_with_opts<S: AsCStr>(&self, key: S, value: f64, options: &QueryOptions) {
+        let key = key.to_cstr();
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
             _ => std::ptr::null_mut(),
@@ -338,17 +308,12 @@ impl Settings {
         }
     }
 
-    pub fn set_integer<S: BnStrCompatible>(&self, key: S, value: u64) {
+    pub fn set_integer<S: AsCStr>(&self, key: S, value: u64) {
         self.set_integer_with_opts(key, value, &QueryOptions::default())
     }
 
-    pub fn set_integer_with_opts<S: BnStrCompatible>(
-        &self,
-        key: S,
-        value: u64,
-        options: &QueryOptions,
-    ) {
-        let key = key.into_bytes_with_nul();
+    pub fn set_integer_with_opts<S: AsCStr>(&self, key: S, value: u64, options: &QueryOptions) {
+        let key = key.to_cstr();
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
             _ => std::ptr::null_mut(),
@@ -369,18 +334,18 @@ impl Settings {
         }
     }
 
-    pub fn set_string<S1: BnStrCompatible, S2: BnStrCompatible>(&self, key: S1, value: S2) {
+    pub fn set_string<S1: AsCStr, S2: AsCStr>(&self, key: S1, value: S2) {
         self.set_string_with_opts(key, value, &QueryOptions::default())
     }
 
-    pub fn set_string_with_opts<S1: BnStrCompatible, S2: BnStrCompatible>(
+    pub fn set_string_with_opts<S1: AsCStr, S2: AsCStr>(
         &self,
         key: S1,
         value: S2,
         options: &QueryOptions,
     ) {
-        let key = key.into_bytes_with_nul();
-        let value = value.into_bytes_with_nul();
+        let key = key.to_cstr();
+        let value = value.to_cstr();
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
             _ => std::ptr::null_mut(),
@@ -401,7 +366,7 @@ impl Settings {
         }
     }
 
-    pub fn set_string_list<S1: BnStrCompatible, S2: BnStrCompatible, I: Iterator<Item = S2>>(
+    pub fn set_string_list<S1: AsCStr, S2: AsCStr, I: Iterator<Item = S2>>(
         &self,
         key: S1,
         value: I,
@@ -409,18 +374,14 @@ impl Settings {
         self.set_string_list_with_opts(key, value, &QueryOptions::default())
     }
 
-    pub fn set_string_list_with_opts<
-        S1: BnStrCompatible,
-        S2: BnStrCompatible,
-        I: Iterator<Item = S2>,
-    >(
+    pub fn set_string_list_with_opts<S1: AsCStr, S2: AsCStr, I: Iterator<Item = S2>>(
         &self,
         key: S1,
         value: I,
         options: &QueryOptions,
     ) -> bool {
-        let key = key.into_bytes_with_nul();
-        let raw_list: Vec<_> = value.map(|s| s.into_bytes_with_nul()).collect();
+        let key = key.to_cstr();
+        let raw_list: Vec<_> = value.map(|s| s.to_cstr()).collect();
         let mut raw_list_ptr: Vec<_> = raw_list
             .iter()
             .map(|s| s.as_ref().as_ptr() as *const c_char)
@@ -447,18 +408,18 @@ impl Settings {
         }
     }
 
-    pub fn set_json<S1: BnStrCompatible, S2: BnStrCompatible>(&self, key: S1, value: S2) -> bool {
+    pub fn set_json<S1: AsCStr, S2: AsCStr>(&self, key: S1, value: S2) -> bool {
         self.set_json_with_opts(key, value, &QueryOptions::default())
     }
 
-    pub fn set_json_with_opts<S1: BnStrCompatible, S2: BnStrCompatible>(
+    pub fn set_json_with_opts<S1: AsCStr, S2: AsCStr>(
         &self,
         key: S1,
         value: S2,
         options: &QueryOptions,
     ) -> bool {
-        let key = key.into_bytes_with_nul();
-        let value = value.into_bytes_with_nul();
+        let key = key.to_cstr();
+        let value = value.to_cstr();
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
             _ => std::ptr::null_mut(),
@@ -479,9 +440,9 @@ impl Settings {
         }
     }
 
-    pub fn get_property_string<S: BnStrCompatible>(&self, key: S, property: S) -> String {
-        let key = key.into_bytes_with_nul();
-        let property = property.into_bytes_with_nul();
+    pub fn get_property_string<S: AsCStr>(&self, key: S, property: S) -> String {
+        let key = key.to_cstr();
+        let property = property.to_cstr();
         unsafe {
             BnString::into_string(BNSettingsQueryPropertyString(
                 self.handle,
@@ -491,13 +452,9 @@ impl Settings {
         }
     }
 
-    pub fn get_property_string_list<S: BnStrCompatible>(
-        &self,
-        key: S,
-        property: S,
-    ) -> Array<BnString> {
-        let key = key.into_bytes_with_nul();
-        let property = property.into_bytes_with_nul();
+    pub fn get_property_string_list<S: AsCStr>(&self, key: S, property: S) -> Array<BnString> {
+        let key = key.to_cstr();
+        let property = property.to_cstr();
         let mut size: usize = 0;
         unsafe {
             Array::new(
@@ -513,9 +470,9 @@ impl Settings {
         }
     }
 
-    pub fn update_bool_property<S: BnStrCompatible>(&self, key: S, property: S, value: bool) {
-        let key = key.into_bytes_with_nul();
-        let property = property.into_bytes_with_nul();
+    pub fn update_bool_property<S: AsCStr>(&self, key: S, property: S, value: bool) {
+        let key = key.to_cstr();
+        let property = property.to_cstr();
         unsafe {
             BNSettingsUpdateBoolProperty(
                 self.handle,
@@ -526,9 +483,9 @@ impl Settings {
         }
     }
 
-    pub fn update_integer_property<S: BnStrCompatible>(&self, key: S, property: S, value: u64) {
-        let key = key.into_bytes_with_nul();
-        let property = property.into_bytes_with_nul();
+    pub fn update_integer_property<S: AsCStr>(&self, key: S, property: S, value: u64) {
+        let key = key.to_cstr();
+        let property = property.to_cstr();
         unsafe {
             BNSettingsUpdateUInt64Property(
                 self.handle,
@@ -539,9 +496,9 @@ impl Settings {
         }
     }
 
-    pub fn update_double_property<S: BnStrCompatible>(&self, key: S, property: S, value: f64) {
-        let key = key.into_bytes_with_nul();
-        let property = property.into_bytes_with_nul();
+    pub fn update_double_property<S: AsCStr>(&self, key: S, property: S, value: f64) {
+        let key = key.to_cstr();
+        let property = property.to_cstr();
         unsafe {
             BNSettingsUpdateDoubleProperty(
                 self.handle,
@@ -552,10 +509,10 @@ impl Settings {
         }
     }
 
-    pub fn update_string_property<S: BnStrCompatible>(&self, key: S, property: S, value: S) {
-        let key = key.into_bytes_with_nul();
-        let property = property.into_bytes_with_nul();
-        let value = value.into_bytes_with_nul();
+    pub fn update_string_property<S: AsCStr>(&self, key: S, property: S, value: S) {
+        let key = key.to_cstr();
+        let property = property.to_cstr();
+        let value = value.to_cstr();
         unsafe {
             BNSettingsUpdateStringProperty(
                 self.handle,
@@ -566,15 +523,15 @@ impl Settings {
         }
     }
 
-    pub fn update_string_list_property<S: BnStrCompatible, I: Iterator<Item = S>>(
+    pub fn update_string_list_property<S: AsCStr, I: Iterator<Item = S>>(
         &self,
         key: S,
         property: S,
         value: I,
     ) {
-        let key = key.into_bytes_with_nul();
-        let property = property.into_bytes_with_nul();
-        let raw_list: Vec<_> = value.map(|s| s.into_bytes_with_nul()).collect();
+        let key = key.to_cstr();
+        let property = property.to_cstr();
+        let raw_list: Vec<_> = value.map(|s| s.to_cstr()).collect();
         let mut raw_list_ptr: Vec<_> = raw_list
             .iter()
             .map(|s| s.as_ref().as_ptr() as *const c_char)
@@ -591,13 +548,9 @@ impl Settings {
         }
     }
 
-    pub fn register_group<S1: BnStrCompatible, S2: BnStrCompatible>(
-        &self,
-        group: S1,
-        title: S2,
-    ) -> bool {
-        let group = group.into_bytes_with_nul();
-        let title = title.into_bytes_with_nul();
+    pub fn register_group<S1: AsCStr, S2: AsCStr>(&self, group: S1, title: S2) -> bool {
+        let group = group.to_cstr();
+        let title = title.to_cstr();
 
         unsafe {
             BNSettingsRegisterGroup(
@@ -608,13 +561,9 @@ impl Settings {
         }
     }
 
-    pub fn register_setting_json<S1: BnStrCompatible, S2: BnStrCompatible>(
-        &self,
-        group: S1,
-        properties: S2,
-    ) -> bool {
-        let group = group.into_bytes_with_nul();
-        let properties = properties.into_bytes_with_nul();
+    pub fn register_setting_json<S1: AsCStr, S2: AsCStr>(&self, group: S1, properties: S2) -> bool {
+        let group = group.to_cstr();
+        let properties = properties.to_cstr();
 
         unsafe {
             BNSettingsRegisterSetting(

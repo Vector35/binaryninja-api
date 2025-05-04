@@ -1,7 +1,7 @@
 use crate::binary_view::{BinaryView, BinaryViewExt};
 use crate::function::Function;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use crate::types::ComponentReferencedType;
 use std::ffi::c_char;
 use std::fmt::Debug;
@@ -39,20 +39,20 @@ impl ComponentBuilder {
         let result = match (&self.parent, &self.name) {
             (None, None) => unsafe { BNCreateComponent(self.view.handle) },
             (None, Some(name)) => {
-                let name_raw = name.into_bytes_with_nul();
+                let name_raw = name.to_cstr();
                 unsafe {
                     BNCreateComponentWithName(self.view.handle, name_raw.as_ptr() as *mut c_char)
                 }
             }
             (Some(guid), None) => {
-                let guid_raw = guid.into_bytes_with_nul();
+                let guid_raw = guid.to_cstr();
                 unsafe {
                     BNCreateComponentWithParent(self.view.handle, guid_raw.as_ptr() as *mut c_char)
                 }
             }
             (Some(guid), Some(name)) => {
-                let guid_raw = guid.into_bytes_with_nul();
-                let name_raw = name.into_bytes_with_nul();
+                let guid_raw = guid.to_cstr();
+                let name_raw = name.to_cstr();
                 unsafe {
                     BNCreateComponentWithParentAndName(
                         self.view.handle,
@@ -164,8 +164,8 @@ impl Component {
         unsafe { BnString::into_string(result) }
     }
 
-    pub fn set_name<S: BnStrCompatible>(&self, name: S) {
-        let name = name.into_bytes_with_nul();
+    pub fn set_name<S: AsCStr>(&self, name: S) {
+        let name = name.to_cstr();
         unsafe {
             BNComponentSetName(
                 self.handle.as_ptr(),

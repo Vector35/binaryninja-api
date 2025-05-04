@@ -11,7 +11,7 @@ use crate::file_metadata::FileMetadata;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
 use crate::rc::Ref;
-use crate::string::{raw_to_string, BnStrCompatible, BnString};
+use crate::string::{raw_to_string, AsCStr, BnString};
 use crate::type_archive::{TypeArchive, TypeArchiveMergeConflict};
 
 // TODO: PathBuf
@@ -43,10 +43,7 @@ pub fn default_file_path(file: &RemoteFile) -> Result<BnString, ()> {
 ///
 /// * `file` - Remote File to download and open
 /// * `db_path` - File path for saved database
-pub fn download_file<S: BnStrCompatible>(
-    file: &RemoteFile,
-    db_path: S,
-) -> Result<Ref<FileMetadata>, ()> {
+pub fn download_file<S: AsCStr>(file: &RemoteFile, db_path: S) -> Result<Ref<FileMetadata>, ()> {
     download_file_with_progress(file, db_path, NoProgressCallback)
 }
 
@@ -57,12 +54,12 @@ pub fn download_file<S: BnStrCompatible>(
 /// * `file` - Remote File to download and open
 /// * `db_path` - File path for saved database
 /// * `progress` - Function to call for progress updates
-pub fn download_file_with_progress<S: BnStrCompatible, F: ProgressCallback>(
+pub fn download_file_with_progress<S: AsCStr, F: ProgressCallback>(
     file: &RemoteFile,
     db_path: S,
     mut progress: F,
 ) -> Result<Ref<FileMetadata>, ()> {
-    let db_path = db_path.into_bytes_with_nul();
+    let db_path = db_path.to_cstr();
     let result = unsafe {
         BNCollaborationDownloadFile(
             file.handle.as_ptr(),
@@ -223,7 +220,7 @@ pub fn get_local_snapshot_for_remote(
 
 pub fn download_database<S>(file: &RemoteFile, location: S, force: bool) -> Result<(), ()>
 where
-    S: BnStrCompatible,
+    S: AsCStr,
 {
     download_database_with_progress(file, location, force, NoProgressCallback)
 }
@@ -235,10 +232,10 @@ pub fn download_database_with_progress<S, F>(
     mut progress: F,
 ) -> Result<(), ()>
 where
-    S: BnStrCompatible,
+    S: AsCStr,
     F: ProgressCallback,
 {
-    let db_path = location.into_bytes_with_nul();
+    let db_path = location.to_cstr();
     let success = unsafe {
         BNCollaborationDownloadDatabaseForFile(
             file.handle.as_ptr(),
@@ -478,12 +475,12 @@ pub fn get_snapshot_author(
 /// * `database` - Parent database
 /// * `snapshot` - Snapshot to edit
 /// * `author` - Target author
-pub fn set_snapshot_author<S: BnStrCompatible>(
+pub fn set_snapshot_author<S: AsCStr>(
     database: &Database,
     snapshot: &Snapshot,
     author: S,
 ) -> Result<(), ()> {
-    let author = author.into_bytes_with_nul();
+    let author = author.to_cstr();
     let success = unsafe {
         BNCollaborationSetSnapshotAuthor(
             database.handle.as_ptr(),
@@ -653,11 +650,11 @@ pub fn get_remote_file_for_local_type_archive(database: &TypeArchive) -> Option<
 }
 
 /// Get the remote snapshot associated with a local snapshot (if it exists) in a Type Archive
-pub fn get_remote_snapshot_from_local_type_archive<S: BnStrCompatible>(
+pub fn get_remote_snapshot_from_local_type_archive<S: AsCStr>(
     type_archive: &TypeArchive,
     snapshot_id: S,
 ) -> Option<Ref<RemoteSnapshot>> {
-    let snapshot_id = snapshot_id.into_bytes_with_nul();
+    let snapshot_id = snapshot_id.to_cstr();
     let value = unsafe {
         BNCollaborationGetRemoteSnapshotFromLocalTypeArchive(
             type_archive.handle.as_ptr(),
@@ -682,11 +679,11 @@ pub fn get_local_snapshot_from_remote_type_archive(
 }
 
 /// Test if a snapshot is ignored from the archive
-pub fn is_type_archive_snapshot_ignored<S: BnStrCompatible>(
+pub fn is_type_archive_snapshot_ignored<S: AsCStr>(
     type_archive: &TypeArchive,
     snapshot_id: S,
 ) -> bool {
-    let snapshot_id = snapshot_id.into_bytes_with_nul();
+    let snapshot_id = snapshot_id.to_cstr();
     unsafe {
         BNCollaborationIsTypeArchiveSnapshotIgnored(
             type_archive.handle.as_ptr(),
@@ -697,7 +694,7 @@ pub fn is_type_archive_snapshot_ignored<S: BnStrCompatible>(
 
 /// Download a type archive from its remote, saving all snapshots to an archive in the
 /// specified `location`. Returns a [`TypeArchive`] for using later.
-pub fn download_type_archive<S: BnStrCompatible>(
+pub fn download_type_archive<S: AsCStr>(
     file: &RemoteFile,
     location: S,
 ) -> Result<Option<Ref<TypeArchive>>, ()> {
@@ -706,13 +703,13 @@ pub fn download_type_archive<S: BnStrCompatible>(
 
 /// Download a type archive from its remote, saving all snapshots to an archive in the
 /// specified `location`. Returns a [`TypeArchive`] for using later.
-pub fn download_type_archive_with_progress<S: BnStrCompatible, F: ProgressCallback>(
+pub fn download_type_archive_with_progress<S: AsCStr, F: ProgressCallback>(
     file: &RemoteFile,
     location: S,
     mut progress: F,
 ) -> Result<Option<Ref<TypeArchive>>, ()> {
     let mut value = std::ptr::null_mut();
-    let db_path = location.into_bytes_with_nul();
+    let db_path = location.to_cstr();
     let success = unsafe {
         BNCollaborationDownloadTypeArchive(
             file.handle.as_ptr(),

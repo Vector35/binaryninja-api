@@ -1,5 +1,5 @@
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 use crate::websocket::client;
 use crate::websocket::client::{CoreWebsocketClient, WebsocketClient};
 use binaryninjacore_sys::*;
@@ -11,7 +11,7 @@ pub fn register_websocket_provider<W>(name: &str) -> &'static mut W
 where
     W: WebsocketProvider,
 {
-    let name = name.into_bytes_with_nul();
+    let name = name.to_cstr();
     let provider_uninit = MaybeUninit::uninit();
     // SAFETY: Websocket provider is never freed
     let leaked_provider = Box::leak(Box::new(provider_uninit));
@@ -80,8 +80,8 @@ impl CoreWebsocketProvider {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn by_name<S: BnStrCompatible>(name: S) -> Option<CoreWebsocketProvider> {
-        let name = name.into_bytes_with_nul();
+    pub fn by_name<S: AsCStr>(name: S) -> Option<CoreWebsocketProvider> {
+        let name = name.to_cstr();
         let result =
             unsafe { BNGetWebsocketProviderByName(name.as_ref().as_ptr() as *const c_char) };
         NonNull::new(result).map(|h| unsafe { Self::from_raw(h) })

@@ -82,8 +82,8 @@ impl Platform {
         Ref::new(Self { handle })
     }
 
-    pub fn by_name<S: BnStrCompatible>(name: S) -> Option<Ref<Self>> {
-        let raw_name = name.into_bytes_with_nul();
+    pub fn by_name<S: AsCStr>(name: S) -> Option<Ref<Self>> {
+        let raw_name = name.to_cstr();
         unsafe {
             let res = BNGetPlatformByName(raw_name.as_ref().as_ptr() as *mut _);
 
@@ -113,8 +113,8 @@ impl Platform {
         }
     }
 
-    pub fn list_by_os<S: BnStrCompatible>(name: S) -> Array<Platform> {
-        let raw_name = name.into_bytes_with_nul();
+    pub fn list_by_os<S: AsCStr>(name: S) -> Array<Platform> {
+        let raw_name = name.to_cstr();
 
         unsafe {
             let mut count = 0;
@@ -124,11 +124,8 @@ impl Platform {
         }
     }
 
-    pub fn list_by_os_and_arch<S: BnStrCompatible>(
-        name: S,
-        arch: &CoreArchitecture,
-    ) -> Array<Platform> {
-        let raw_name = name.into_bytes_with_nul();
+    pub fn list_by_os_and_arch<S: AsCStr>(name: S, arch: &CoreArchitecture) -> Array<Platform> {
+        let raw_name = name.to_cstr();
 
         unsafe {
             let mut count = 0;
@@ -151,8 +148,8 @@ impl Platform {
         }
     }
 
-    pub fn new<A: Architecture, S: BnStrCompatible>(arch: &A, name: S) -> Ref<Self> {
-        let name = name.into_bytes_with_nul();
+    pub fn new<A: Architecture, S: AsCStr>(arch: &A, name: S) -> Ref<Self> {
+        let name = name.to_cstr();
         unsafe {
             let handle = BNCreatePlatform(arch.as_ref().handle, name.as_ref().as_ptr() as *mut _);
             assert!(!handle.is_null());
@@ -179,9 +176,9 @@ impl Platform {
         unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
     }
 
-    pub fn get_type_libraries_by_name<T: BnStrCompatible>(&self, name: T) -> Array<TypeLibrary> {
+    pub fn get_type_libraries_by_name<T: AsCStr>(&self, name: T) -> Array<TypeLibrary> {
         let mut count = 0;
-        let name = name.into_bytes_with_nul();
+        let name = name.to_cstr();
         let result = unsafe {
             BNGetPlatformTypeLibrariesByName(
                 self.handle,
@@ -193,8 +190,8 @@ impl Platform {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn register_os<S: BnStrCompatible>(&self, os: S) {
-        let os = os.into_bytes_with_nul();
+    pub fn register_os<S: AsCStr>(&self, os: S) {
+        let os = os.to_cstr();
 
         unsafe {
             BNRegisterPlatform(os.as_ref().as_ptr() as *mut _, self.handle);

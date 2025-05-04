@@ -270,10 +270,10 @@ impl SectionBuilder {
     }
 
     pub(crate) fn create(self, view: &BinaryView) {
-        let name = self.name.into_bytes_with_nul();
-        let ty = self.ty.into_bytes_with_nul();
-        let linked_section = self.linked_section.into_bytes_with_nul();
-        let info_section = self.info_section.into_bytes_with_nul();
+        let name = self.name.to_cstr();
+        let ty = self.ty.to_cstr();
+        let linked_section = self.linked_section.to_cstr();
+        let info_section = self.info_section.to_cstr();
 
         let start = self.range.start;
         let len = self.range.end.wrapping_sub(start);

@@ -1,5 +1,5 @@
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString, IntoJson};
+use crate::string::{AsCStr, BnString, IntoJson};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::os::raw::c_char;
@@ -267,14 +267,14 @@ impl Metadata {
         Ok(Some(unsafe { Self::ref_from_raw(ptr) }))
     }
 
-    pub fn get<S: BnStrCompatible>(&self, key: S) -> Result<Option<Ref<Metadata>>, ()> {
+    pub fn get<S: AsCStr>(&self, key: S) -> Result<Option<Ref<Metadata>>, ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
         let ptr: *mut BNMetadata = unsafe {
             BNMetadataGetForKey(
                 self.handle,
-                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                key.to_cstr().as_ref().as_ptr() as *const c_char,
             )
         };
         if ptr.is_null() {
@@ -291,7 +291,7 @@ impl Metadata {
         Ok(())
     }
 
-    pub fn insert<S: BnStrCompatible>(&self, key: S, value: &Metadata) -> Result<(), ()> {
+    pub fn insert<S: AsCStr>(&self, key: S, value: &Metadata) -> Result<(), ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
@@ -299,7 +299,7 @@ impl Metadata {
         unsafe {
             BNMetadataSetValueForKey(
                 self.handle,
-                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                key.to_cstr().as_ref().as_ptr() as *const c_char,
                 value.handle,
             )
         };
@@ -315,7 +315,7 @@ impl Metadata {
         Ok(())
     }
 
-    pub fn remove_key<S: BnStrCompatible>(&self, key: S) -> Result<(), ()> {
+    pub fn remove_key<S: AsCStr>(&self, key: S) -> Result<(), ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
@@ -323,7 +323,7 @@ impl Metadata {
         unsafe {
             BNMetadataRemoveKey(
                 self.handle,
-                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                key.to_cstr().as_ref().as_ptr() as *const c_char,
             )
         };
         Ok(())
@@ -398,7 +398,7 @@ impl From<String> for Ref<Metadata> {
     fn from(value: String) -> Self {
         unsafe {
             Metadata::ref_from_raw(BNCreateMetadataStringData(
-                value.into_bytes_with_nul().as_ptr() as *const c_char,
+                value.to_cstr().as_ptr() as *const c_char
             ))
         }
     }
@@ -408,7 +408,7 @@ impl From<&str> for Ref<Metadata> {
     fn from(value: &str) -> Self {
         unsafe {
             Metadata::ref_from_raw(BNCreateMetadataStringData(
-                value.into_bytes_with_nul().as_ptr() as *const c_char,
+                value.to_cstr().as_ptr() as *const c_char
             ))
         }
     }
@@ -444,12 +444,10 @@ impl From<&Array<Metadata>> for Ref<Metadata> {
     }
 }
 
-impl<S: BnStrCompatible> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
+impl<S: AsCStr> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
     fn from(value: HashMap<S, Ref<Metadata>>) -> Self {
-        let data: Vec<(S::Result, Ref<Metadata>)> = value
-            .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v))
-            .collect();
+        let data: Vec<(S::Result, Ref<Metadata>)> =
+            value.into_iter().map(|(k, v)| (k.to_cstr(), v)).collect();
         let mut keys: Vec<*const c_char> = data
             .iter()
             .map(|(k, _)| k.as_ref().as_ptr() as *const c_char)
@@ -468,14 +466,12 @@ impl<S: BnStrCompatible> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
 
 impl<S, T> From<&[(S, T)]> for Ref<Metadata>
 where
-    S: BnStrCompatible + Copy,
+    S: AsCStr + Copy,
     for<'a> &'a T: Into<Ref<Metadata>>,
 {
     fn from(value: &[(S, T)]) -> Self {
-        let data: Vec<(S::Result, Ref<Metadata>)> = value
-            .iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into()))
-            .collect();
+        let data: Vec<(S::Result, Ref<Metadata>)> =
+            value.iter().map(|(k, v)| (k.to_cstr(), v.into())).collect();
         let mut keys: Vec<*const c_char> = data
             .iter()
             .map(|(k, _)| k.as_ref().as_ptr() as *const c_char)
@@ -494,7 +490,7 @@ where
 
 impl<S, T, const N: usize> From<[(S, T); N]> for Ref<Metadata>
 where
-    S: BnStrCompatible + Copy,
+    S: AsCStr + Copy,
     for<'a> &'a T: Into<Ref<Metadata>>,
 {
     fn from(value: [(S, T); N]) -> Self {
@@ -548,11 +544,11 @@ impl From<&Vec<f64>> for Ref<Metadata> {
     }
 }
 
-impl<S: BnStrCompatible> From<Vec<S>> for Ref<Metadata> {
+impl<S: AsCStr> From<Vec<S>> for Ref<Metadata> {
     fn from(value: Vec<S>) -> Self {
         let mut refs = vec![];
         for v in value {
-            refs.push(v.into_bytes_with_nul());
+            refs.push(v.to_cstr());
         }
         let mut pointers = vec![];
         for r in &refs {

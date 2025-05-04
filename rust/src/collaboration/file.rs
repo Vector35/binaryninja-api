@@ -16,7 +16,7 @@ use crate::file_metadata::FileMetadata;
 use crate::progress::{NoProgressCallback, ProgressCallback, SplitProgressBuilder};
 use crate::project::file::ProjectFile;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{AsCStr, BnString};
 
 pub type RemoteFileType = BNRemoteFileType;
 
@@ -94,8 +94,8 @@ impl RemoteFile {
         success.then_some(()).ok_or(())
     }
 
-    pub fn set_metadata<S: BnStrCompatible>(&self, folder: S) -> Result<(), ()> {
-        let folder_raw = folder.into_bytes_with_nul();
+    pub fn set_metadata<S: AsCStr>(&self, folder: S) -> Result<(), ()> {
+        let folder_raw = folder.to_cstr();
         let success = unsafe {
             BNRemoteFileSetMetadata(
                 self.handle.as_ptr(),
@@ -190,8 +190,8 @@ impl RemoteFile {
     }
 
     /// Set the description of the file. You will need to push the file to update the remote version.
-    pub fn set_name<S: BnStrCompatible>(&self, name: S) -> Result<(), ()> {
-        let name = name.into_bytes_with_nul();
+    pub fn set_name<S: AsCStr>(&self, name: S) -> Result<(), ()> {
+        let name = name.to_cstr();
         let success = unsafe {
             BNRemoteFileSetName(
                 self.handle.as_ptr(),
@@ -209,8 +209,8 @@ impl RemoteFile {
     }
 
     /// Set the description of the file. You will need to push the file to update the remote version.
-    pub fn set_description<S: BnStrCompatible>(&self, description: S) -> Result<(), ()> {
-        let description = description.into_bytes_with_nul();
+    pub fn set_description<S: AsCStr>(&self, description: S) -> Result<(), ()> {
+        let description = description.to_cstr();
         let success = unsafe {
             BNRemoteFileSetDescription(
                 self.handle.as_ptr(),
@@ -263,15 +263,12 @@ impl RemoteFile {
     /// Get a specific Snapshot in the File by its id
     ///
     /// NOTE: If snapshots have not been pulled, they will be pulled upon calling this.
-    pub fn snapshot_by_id<S: BnStrCompatible>(
-        &self,
-        id: S,
-    ) -> Result<Option<Ref<RemoteSnapshot>>, ()> {
+    pub fn snapshot_by_id<S: AsCStr>(&self, id: S) -> Result<Option<Ref<RemoteSnapshot>>, ()> {
         // TODO: This sync should be removed?
         if !self.has_pulled_snapshots() {
             self.pull_snapshots()?;
         }
-        let id = id.into_bytes_with_nul();
+        let id = id.to_cstr();
         let result = unsafe {
             BNRemoteFileGetSnapshotById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
         };
@@ -314,9 +311,9 @@ impl RemoteFile {
         parent_ids: I,
     ) -> Result<Ref<RemoteSnapshot>, ()>
     where
-        S: BnStrCompatible,
+        S: AsCStr,
         I: IntoIterator,
-        I::Item: BnStrCompatible,
+        I::Item: AsCStr,
     {
         self.create_snapshot_with_progress(
             name,
@@ -346,16 +343,13 @@ impl RemoteFile {
         mut progress: P,
     ) -> Result<Ref<RemoteSnapshot>, ()>
     where
-        S: BnStrCompatible,
+        S: AsCStr,
         P: ProgressCallback,
         I: IntoIterator,
-        I::Item: BnStrCompatible,
+        I::Item: AsCStr,
     {
-        let name = name.into_bytes_with_nul();
-        let parent_ids: Vec<_> = parent_ids
-            .into_iter()
-            .map(|id| id.into_bytes_with_nul())
-            .collect();
+        let name = name.to_cstr();
+        let parent_ids: Vec<_> = parent_ids.into_iter().map(|id| id.to_cstr()).collect();
         let mut parent_ids_raw: Vec<_> = parent_ids
             .iter()
             .map(|x| x.as_ref().as_ptr() as *const c_char)
@@ -430,7 +424,7 @@ impl RemoteFile {
     /// * `progress_function` - Function to call for progress updates
     pub fn download<S>(&self, db_path: S) -> Result<Ref<FileMetadata>, ()>
     where
-        S: BnStrCompatible,
+        S: AsCStr,
     {
         sync::download_file(self, db_path)
     }
@@ -447,14 +441,14 @@ impl RemoteFile {
         progress_function: F,
     ) -> Result<Ref<FileMetadata>, ()>
     where
-        S: BnStrCompatible,
+        S: AsCStr,
         F: ProgressCallback,
     {
         sync::download_file_with_progress(self, db_path, progress_function)
     }
 
     /// Download a remote file and save it to a BNDB at the given `path`, returning the associated [`FileMetadata`].
-    pub fn download_database<S: BnStrCompatible>(&self, path: S) -> Result<Ref<FileMetadata>, ()> {
+    pub fn download_database<S: AsCStr>(&self, path: S) -> Result<Ref<FileMetadata>, ()> {
         let file = self.download(path)?;
         let database = file.database().ok_or(())?;
         self.sync(&database, DatabaseConflictHandlerFail, NoNameChangeset)?;
@@ -464,7 +458,7 @@ impl RemoteFile {
     // TODO: This might be a bad helper... maybe remove...
     // TODO: AsRef<Path>
     /// Download a remote file and save it to a BNDB at the given `path`.
-    pub fn download_database_with_progress<S: BnStrCompatible>(
+    pub fn download_database_with_progress<S: AsCStr>(
         &self,
         path: S,
         progress: impl ProgressCallback,

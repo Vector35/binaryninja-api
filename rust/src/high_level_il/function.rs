@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 
 use binaryninjacore_sys::*;
 
-use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelInstructionIndex};
+use super::{HighLevelILBlock, HighLevelInstructionIndex, Instruction};
 use crate::basic_block::BasicBlock;
 use crate::function::{Function, Location};
 use crate::rc::{Array, Ref, RefCountable};
@@ -23,28 +23,22 @@ impl HighLevelILFunction {
         Self { handle, full_ast }.to_owned()
     }
 
-    pub fn instruction_from_index(
-        &self,
-        index: HighLevelInstructionIndex,
-    ) -> Option<HighLevelILInstruction> {
+    pub fn instruction_from_index(&self, index: HighLevelInstructionIndex) -> Option<Instruction> {
         if index.0 >= self.instruction_count() {
             None
         } else {
-            Some(HighLevelILInstruction::new(self.to_owned(), index))
+            Some(Instruction::new(self.to_owned(), index))
         }
     }
 
     pub fn instruction_from_expr_index(
         &self,
         expr_index: HighLevelInstructionIndex,
-    ) -> Option<HighLevelILInstruction> {
+    ) -> Option<Instruction> {
         if expr_index.0 >= self.expression_count() {
             None
         } else {
-            Some(HighLevelILInstruction::new_expr(
-                self.to_owned(),
-                expr_index,
-            ))
+            Some(Instruction::new_expr(self.to_owned(), expr_index))
         }
     }
 
@@ -53,11 +47,11 @@ impl HighLevelILFunction {
         HighLevelInstructionIndex(unsafe { BNGetHighLevelILRootExpr(self.handle) })
     }
 
-    pub fn root(&self) -> HighLevelILInstruction {
-        HighLevelILInstruction::new_expr(self.as_ast(), self.root_instruction_index())
+    pub fn root(&self) -> Instruction {
+        Instruction::new_expr(self.as_ast(), self.root_instruction_index())
     }
 
-    pub fn set_root(&self, new_root: &HighLevelILInstruction) {
+    pub fn set_root(&self, new_root: &Instruction) {
         unsafe { BNSetHighLevelILRootExpr(self.handle, new_root.expr_index.0) }
     }
 
@@ -130,7 +124,7 @@ impl HighLevelILFunction {
     ///
     /// Since SSA variables can only be defined once, this will return the single instruction where that occurs.
     /// For SSA variable version 0s, which don't have definitions, this will return None instead.
-    pub fn ssa_variable_definition(&self, variable: SSAVariable) -> Option<HighLevelILInstruction> {
+    pub fn ssa_variable_definition(&self, variable: SSAVariable) -> Option<Instruction> {
         let index = unsafe {
             BNGetHighLevelILSSAVarDefinition(
                 self.handle,
@@ -141,13 +135,13 @@ impl HighLevelILFunction {
         self.instruction_from_index(HighLevelInstructionIndex(index))
     }
 
-    pub fn ssa_memory_definition(&self, version: usize) -> Option<HighLevelILInstruction> {
+    pub fn ssa_memory_definition(&self, version: usize) -> Option<Instruction> {
         let index = unsafe { BNGetHighLevelILSSAMemoryDefinition(self.handle, version) };
         self.instruction_from_index(HighLevelInstructionIndex(index))
     }
 
     /// Gets all the instructions that use the given SSA variable.
-    pub fn ssa_variable_uses(&self, variable: SSAVariable) -> Array<HighLevelILInstruction> {
+    pub fn ssa_variable_uses(&self, variable: SSAVariable) -> Array<Instruction> {
         let mut count = 0;
         let instrs = unsafe {
             BNGetHighLevelILSSAVarUses(
@@ -161,7 +155,7 @@ impl HighLevelILFunction {
         unsafe { Array::new(instrs, count, self.to_owned()) }
     }
 
-    pub fn ssa_memory_uses(&self, version: usize) -> Array<HighLevelILInstruction> {
+    pub fn ssa_memory_uses(&self, version: usize) -> Array<Instruction> {
         let mut count = 0;
         let instrs = unsafe { BNGetHighLevelILSSAMemoryUses(self.handle, version, &mut count) };
         assert!(!instrs.is_null());
@@ -176,11 +170,7 @@ impl HighLevelILFunction {
     }
 
     /// Determines if `variable` is live at a given point in the function
-    pub fn is_ssa_variable_live_at(
-        &self,
-        variable: SSAVariable,
-        instr: &HighLevelILInstruction,
-    ) -> bool {
+    pub fn is_ssa_variable_live_at(&self, variable: SSAVariable, instr: &Instruction) -> bool {
         unsafe {
             BNIsHighLevelILSSAVarLiveAt(
                 self.handle,
@@ -191,7 +181,7 @@ impl HighLevelILFunction {
         }
     }
 
-    pub fn variable_definitions(&self, variable: Variable) -> Array<HighLevelILInstruction> {
+    pub fn variable_definitions(&self, variable: Variable) -> Array<Instruction> {
         let mut count = 0;
         let defs = unsafe {
             BNGetHighLevelILVariableDefinitions(self.handle, &variable.into(), &mut count)
@@ -200,7 +190,7 @@ impl HighLevelILFunction {
         unsafe { Array::new(defs, count, self.to_owned()) }
     }
 
-    pub fn variable_uses(&self, variable: Variable) -> Array<HighLevelILInstruction> {
+    pub fn variable_uses(&self, variable: Variable) -> Array<Instruction> {
         let mut count = 0;
         let instrs =
             unsafe { BNGetHighLevelILVariableUses(self.handle, &variable.into(), &mut count) };
@@ -209,7 +199,7 @@ impl HighLevelILFunction {
     }
 
     /// Determines if `variable` is live at a given point in the function
-    pub fn is_variable_live_at(&self, variable: Variable, instr: &HighLevelILInstruction) -> bool {
+    pub fn is_variable_live_at(&self, variable: Variable, instr: &Instruction) -> bool {
         unsafe { BNIsHighLevelILVarLiveAt(self.handle, &variable.into(), instr.expr_index.0) }
     }
 

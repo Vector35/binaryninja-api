@@ -4,7 +4,7 @@ use binaryninjacore_sys::BNHighLevelILOperation;
 use binaryninjacore_sys::BNMediumLevelILOperation;
 
 use crate::high_level_il::{
-    HighLevelILFunction, HighLevelILInstruction, HighLevelInstructionIndex,
+    HighLevelILFunction, HighLevelInstructionIndex, Instruction as HighLevelILInstruction,
 };
 use crate::medium_level_il::{
     MediumLevelILFunction, MediumLevelILInstruction, MediumLevelInstructionIndex,

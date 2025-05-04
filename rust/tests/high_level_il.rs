@@ -1,6 +1,6 @@
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
-use binaryninja::high_level_il::{HighLevelILInstructionKind, HighLevelInstructionIndex};
+use binaryninja::high_level_il::{HighLevelInstructionIndex, InstructionKind};
 use std::path::PathBuf;
 
 #[test]
@@ -27,7 +27,7 @@ fn test_hlil_info() {
     assert_eq!(instr_0.address, image_base + 0x00025f22);
     println!("{:?}", instr_0.kind);
     match instr_0.kind {
-        HighLevelILInstructionKind::Ret(op) => {
+        InstructionKind::Ret(op) => {
             assert_eq!(op.first_src, 4);
             assert_eq!(op.num_srcs, 1);
         }

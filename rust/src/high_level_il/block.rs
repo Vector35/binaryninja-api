@@ -3,7 +3,7 @@ use std::ops::Range;
 use crate::basic_block::{BasicBlock, BlockContext};
 use crate::rc::Ref;
 
-use super::{HighLevelILFunction, HighLevelILInstruction, HighLevelInstructionIndex};
+use super::{HighLevelILFunction, HighLevelInstructionIndex, Instruction};
 
 pub struct HighLevelILBlockIter {
     function: Ref<HighLevelILFunction>,
@@ -11,7 +11,7 @@ pub struct HighLevelILBlockIter {
 }
 
 impl Iterator for HighLevelILBlockIter {
-    type Item = HighLevelILInstruction;
+    type Item = Instruction;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.range
@@ -34,11 +34,11 @@ impl core::fmt::Debug for HighLevelILBlock {
 }
 
 impl BlockContext for HighLevelILBlock {
-    type Instruction = HighLevelILInstruction;
+    type Instruction = Instruction;
     type InstructionIndex = HighLevelInstructionIndex;
     type Iter = HighLevelILBlockIter;
 
-    fn start(&self, block: &BasicBlock<Self>) -> HighLevelILInstruction {
+    fn start(&self, block: &BasicBlock<Self>) -> Instruction {
         // TODO: Is this start index already mappedd?????
         self.function
             .instruction_from_index(block.start_index())

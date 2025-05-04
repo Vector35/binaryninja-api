@@ -40,15 +40,15 @@ impl Display for HighLevelInstructionIndex {
 }
 
 #[derive(Clone)]
-pub struct HighLevelILInstruction {
+pub struct Instruction {
     pub function: Ref<HighLevelILFunction>,
     pub address: u64,
     pub expr_index: HighLevelInstructionIndex,
     pub size: usize,
-    pub kind: HighLevelILInstructionKind,
+    pub kind: InstructionKind,
 }
 
-impl HighLevelILInstruction {
+impl Instruction {
     pub(crate) fn new(
         function: Ref<HighLevelILFunction>,
         index: HighLevelInstructionIndex,
@@ -65,7 +65,7 @@ impl HighLevelILInstruction {
         let op =
             unsafe { BNGetHighLevelILByIndex(function.handle, expr_index.0, function.full_ast) };
         use BNHighLevelILOperation::*;
-        use HighLevelILInstructionKind as Op;
+        use InstructionKind as Op;
         let kind = match op.operation {
             HLIL_NOP => Op::Nop,
             HLIL_BREAK => Op::Break,
@@ -553,8 +553,8 @@ impl HighLevelILInstruction {
     }
 
     pub fn lift(&self) -> HighLevelILLiftedInstruction {
-        use HighLevelILInstructionKind::*;
         use HighLevelILLiftedInstructionKind as Lifted;
+        use InstructionKind::*;
         let kind = match self.kind {
             Nop => Lifted::Nop,
             Break => Lifted::Break,
@@ -949,13 +949,13 @@ impl HighLevelILInstruction {
     }
 }
 
-impl CoreArrayProvider for HighLevelILInstruction {
+impl CoreArrayProvider for Instruction {
     type Raw = usize;
     type Context = Ref<HighLevelILFunction>;
     type Wrapped<'a> = Self;
 }
 
-unsafe impl CoreArrayProviderInner for HighLevelILInstruction {
+unsafe impl CoreArrayProviderInner for Instruction {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         unsafe { BNFreeILInstructionList(raw) }
     }
@@ -965,7 +965,7 @@ unsafe impl CoreArrayProviderInner for HighLevelILInstruction {
     }
 }
 
-impl Debug for HighLevelILInstruction {
+impl Debug for Instruction {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         // TODO: Actual debug impl please!
         write!(
@@ -978,7 +978,7 @@ impl Debug for HighLevelILInstruction {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum HighLevelILInstructionKind {
+pub enum InstructionKind {
     Nop,
     Break,
     Continue,

@@ -1759,9 +1759,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         structure.width(data.size);
 
         self.namespace_stack.push(union_name.to_string());
-        let success = self.parse_union_fields(&mut structure, data.fields, finder);
+        let _success = self.parse_union_fields(&mut structure, data.fields, finder);
         self.namespace_stack.pop();
-        let _ = success?;
 
         let new_type = Type::structure(structure.finalize().as_ref());
         Ok(Some(Box::new(ParsedType::Named(union_name, new_type))))
@@ -2015,7 +2014,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         // for some reason
                         if let Some(raw_name) = Self::type_data_to_raw_name(&parsed) {
                             if let Some(&full_index) = self.full_type_indices.get(&raw_name) {
-                                if let None = self.type_stack.iter().find(|&&idx| idx == full_index)
+                                if self
+                                    .type_stack
+                                    .iter()
+                                    .find(|&&idx| idx == full_index)
+                                    .is_none()
                                 {
                                     if full_index != index {
                                         return self.try_type_index_to_bare(
@@ -2050,8 +2053,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                             // for some reason
                             if let Some(raw_name) = Self::type_data_to_raw_name(&parsed) {
                                 if let Some(&full_index) = self.full_type_indices.get(&raw_name) {
-                                    if let None =
-                                        self.type_stack.iter().find(|&&idx| idx == full_index)
+                                    if self
+                                        .type_stack
+                                        .iter()
+                                        .find(|&&idx| idx == full_index)
+                                        .is_none()
                                     {
                                         if full_index != index {
                                             return self.try_type_index_to_bare(

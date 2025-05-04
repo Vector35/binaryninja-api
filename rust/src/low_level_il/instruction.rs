@@ -100,7 +100,7 @@ where
     }
 }
 
-impl<'func, M, F> Debug for LowLevelILInstruction<'func, M, F>
+impl<M, F> Debug for LowLevelILInstruction<'_, M, F>
 where
     M: FunctionMutability,
     F: FunctionForm,

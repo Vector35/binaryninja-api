@@ -91,7 +91,7 @@ where
     }
 }
 
-impl<'func, M, F, R> fmt::Debug for LowLevelILExpression<'func, M, F, R>
+impl<M, F, R> Debug for LowLevelILExpression<'_, M, F, R>
 where
     M: FunctionMutability,
     F: FunctionForm,
@@ -202,7 +202,7 @@ where
     }
 }
 
-impl<'func, F> LowLevelILExpression<'func, Finalized, F, ValueExpr>
+impl<F> LowLevelILExpression<'_, Finalized, F, ValueExpr>
 where
     F: FunctionForm,
 {
@@ -650,7 +650,7 @@ where
     }
 }
 
-impl<'func> LowLevelILExpressionKind<'func, Mutable, NonSSA<LiftedNonSSA>> {
+impl LowLevelILExpressionKind<'_, Mutable, NonSSA<LiftedNonSSA>> {
     pub fn flag_write(&self) -> Option<CoreFlagWrite> {
         use self::LowLevelILExpressionKind::*;
 

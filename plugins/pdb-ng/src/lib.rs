@@ -540,7 +540,7 @@ impl PDBParser {
 
 impl CustomDebugInfoParser for PDBParser {
     fn is_valid(&self, view: &BinaryView) -> bool {
-        view.type_name().to_string() == "PE" || is_pdb(view)
+        view.type_name() == "PE" || is_pdb(view)
     }
 
     fn parse_info(

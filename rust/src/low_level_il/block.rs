@@ -51,7 +51,7 @@ where
     }
 }
 
-impl<'func, M, F> Debug for LowLevelILBlock<'func, M, F>
+impl<M, F> Debug for LowLevelILBlock<'_, M, F>
 where
     M: FunctionMutability,
     F: FunctionForm,
@@ -63,7 +63,7 @@ where
     }
 }
 
-impl<'func, M, F> Clone for LowLevelILBlock<'func, M, F>
+impl<M, F> Clone for LowLevelILBlock<'_, M, F>
 where
     M: FunctionMutability,
     F: FunctionForm,

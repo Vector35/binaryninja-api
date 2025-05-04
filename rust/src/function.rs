@@ -49,7 +49,7 @@ use crate::variable::{
 use crate::workflow::Workflow;
 use std::fmt::{Debug, Formatter};
 use std::ptr::NonNull;
-use std::time::{Duration, UNIX_EPOCH};
+use std::time::Duration;
 use std::{ffi::c_char, hash::Hash, ops::Range};
 
 /// Used to describe a location within a [`Function`].
@@ -2520,6 +2520,7 @@ pub struct PerformanceInfo {
     pub seconds: Duration,
 }
 
+#[allow(unused)]
 impl PerformanceInfo {
     pub fn new(name: String, seconds: Duration) -> Self {
         Self {

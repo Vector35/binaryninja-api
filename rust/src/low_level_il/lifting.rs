@@ -667,7 +667,7 @@ impl<'a> LiftableLowLevelILWithSize<'a>
     }
 }
 
-impl<'func, R> LowLevelILExpression<'func, Mutable, NonSSA<LiftedNonSSA>, R>
+impl<R> LowLevelILExpression<'_, Mutable, NonSSA<LiftedNonSSA>, R>
 where
     R: ExpressionResultType,
 {

@@ -105,9 +105,9 @@ impl DownloadInstance {
         Ref::new(Self::from_raw(handle))
     }
 
-    fn get_error(&self) -> BnString {
+    fn get_error(&self) -> String {
         let err: *mut c_char = unsafe { BNGetErrorForDownloadInstance(self.handle) };
-        unsafe { BnString::from_raw(err) }
+        unsafe { BnString::into_string(err) }
     }
 
     unsafe extern "C" fn o_write_callback(data: *mut u8, len: u64, ctxt: *mut c_void) -> u64 {
@@ -138,7 +138,7 @@ impl DownloadInstance {
         &mut self,
         url: S,
         callbacks: DownloadInstanceOutputCallbacks,
-    ) -> Result<(), BnString> {
+    ) -> Result<(), String> {
         let callbacks = Box::into_raw(Box::new(callbacks));
         let mut cbs = BNDownloadInstanceOutputCallbacks {
             writeCallback: Some(Self::o_write_callback),
@@ -215,7 +215,7 @@ impl DownloadInstance {
         url: U,
         headers: I,
         callbacks: DownloadInstanceInputOutputCallbacks,
-    ) -> Result<DownloadResponse, BnString> {
+    ) -> Result<DownloadResponse, String> {
         let mut header_keys = vec![];
         let mut header_values = vec![];
         for (key, value) in headers {

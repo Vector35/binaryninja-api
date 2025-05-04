@@ -69,9 +69,24 @@ impl BnString {
         }
     }
 
+    /// Take an owned core string and convert it to [`String`].
+    ///
+    /// This expects the passed raw string to be owned, as in, freed by us.
+    pub unsafe fn into_string(raw: *mut c_char) -> String {
+        Self::from_raw(raw).to_string()
+    }
+
     /// Construct a BnString from an owned const char* allocated by BNAllocString
     pub(crate) unsafe fn from_raw(raw: *mut c_char) -> Self {
         Self { raw }
+    }
+    
+    /// Free a raw string allocated by BNAllocString.
+    pub(crate) unsafe fn free_raw(raw: *mut c_char) {
+        use binaryninjacore_sys::BNFreeString;
+        if !raw.is_null() {
+            BNFreeString(raw);
+        }
     }
 
     /// Consumes the `BnString`, returning a raw pointer to the string.
@@ -87,34 +102,11 @@ impl BnString {
         mem::forget(value);
         res
     }
-
-    pub fn as_str(&self) -> &str {
-        unsafe { CStr::from_ptr(self.raw).to_str().unwrap() }
-    }
-
-    pub fn as_bytes(&self) -> &[u8] {
-        self.as_str().as_bytes()
-    }
-
-    pub fn as_bytes_with_null(&self) -> &[u8] {
-        self.deref().to_bytes()
-    }
-
-    pub fn len(&self) -> usize {
-        self.as_str().len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.as_str().is_empty()
-    }
 }
 
 impl Drop for BnString {
     fn drop(&mut self) {
-        use binaryninjacore_sys::BNFreeString;
-        unsafe {
-            BNFreeString(self.raw);
-        }
+        unsafe { BnString::free_raw(self.raw) };
     }
 }
 
@@ -134,6 +126,18 @@ impl Deref for BnString {
 
     fn deref(&self) -> &CStr {
         unsafe { CStr::from_ptr(self.raw) }
+    }
+}
+
+impl From<String> for BnString {
+    fn from(s: String) -> Self {
+        Self::new(s)
+    }
+}
+
+impl From<&str> for BnString {
+    fn from(s: &str) -> Self {
+        Self::new(s)
     }
 }
 
@@ -201,6 +205,14 @@ unsafe impl<'a> BnStrCompatible for &'a CStr {
 }
 
 unsafe impl BnStrCompatible for BnString {
+    type Result = Self;
+
+    fn into_bytes_with_nul(self) -> Self::Result {
+        self
+    }
+}
+
+unsafe impl BnStrCompatible for &BnString {
     type Result = Self;
 
     fn into_bytes_with_nul(self) -> Self::Result {

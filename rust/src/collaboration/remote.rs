@@ -65,17 +65,17 @@ impl Remote {
     }
 
     /// Gets the name of the remote.
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNRemoteGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Gets the address of the remote.
-    pub fn address(&self) -> BnString {
+    pub fn address(&self) -> String {
         let result = unsafe { BNRemoteGetAddress(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Checks if the remote is connected.
@@ -84,17 +84,17 @@ impl Remote {
     }
 
     /// Gets the username used to connect to the remote.
-    pub fn username(&self) -> BnString {
+    pub fn username(&self) -> String {
         let result = unsafe { BNRemoteGetUsername(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Gets the token used to connect to the remote.
-    pub fn token(&self) -> BnString {
+    pub fn token(&self) -> String {
         let result = unsafe { BNRemoteGetToken(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Gets the server version. If metadata has not been pulled, it will be pulled upon calling this.

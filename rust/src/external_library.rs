@@ -24,10 +24,10 @@ impl ExternalLibrary {
     }
 
     /// Get the name of this external library
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNExternalLibraryGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Get the file backing this external library

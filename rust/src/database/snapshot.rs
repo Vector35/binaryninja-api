@@ -45,8 +45,8 @@ impl Snapshot {
     }
 
     /// Get the displayed snapshot name
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetSnapshotName(self.handle.as_ptr())) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNGetSnapshotName(self.handle.as_ptr())) }
     }
 
     /// Set the displayed snapshot name

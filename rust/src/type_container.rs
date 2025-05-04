@@ -44,17 +44,17 @@ impl TypeContainer {
 
     /// Get an id string for the Type Container. This will be unique within a given
     /// analysis session, but may not be globally unique.
-    pub fn id(&self) -> BnString {
+    pub fn id(&self) -> String {
         let result = unsafe { BNTypeContainerGetId(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Get a user-friendly name for the Type Container.
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNTypeContainerGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Get the type of underlying model the Type Container is accessing.

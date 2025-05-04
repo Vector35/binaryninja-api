@@ -103,17 +103,17 @@ impl RemoteProject {
     }
 
     /// Get the URL of the project
-    pub fn url(&self) -> BnString {
+    pub fn url(&self) -> String {
         let result = unsafe { BNRemoteProjectGetUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Get the unique ID of the project
-    pub fn id(&self) -> BnString {
+    pub fn id(&self) -> String {
         let result = unsafe { BNRemoteProjectGetId(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Created date of the project
@@ -129,10 +129,10 @@ impl RemoteProject {
     }
 
     /// Displayed name of file
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNRemoteProjectGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Set the description of the file. You will need to push the file to update the remote version.
@@ -148,10 +148,10 @@ impl RemoteProject {
     }
 
     /// Desciprtion of the file
-    pub fn description(&self) -> BnString {
+    pub fn description(&self) -> String {
         let result = unsafe { BNRemoteProjectGetDescription(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Set the description of the file. You will need to push the file to update the remote version.
@@ -879,9 +879,9 @@ impl RemoteProject {
     /// Get the default directory path for a remote Project. This is based off
     /// the Setting for collaboration.directory, the project's id, and the
     /// project's remote's id.
-    pub fn default_project_path(&self) -> BnString {
+    pub fn default_project_path(&self) -> String {
         let result = unsafe { BNCollaborationDefaultProjectPath(self.handle.as_ptr()) };
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Upload a file, with database, to the remote under the given project

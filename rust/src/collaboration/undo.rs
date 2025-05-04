@@ -57,10 +57,10 @@ impl RemoteUndoEntry {
     }
 
     /// Web api endpoint url
-    pub fn url(&self) -> BnString {
+    pub fn url(&self) -> String {
         let value = unsafe { BNCollaborationUndoEntryGetUrl(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Unique id

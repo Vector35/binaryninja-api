@@ -108,18 +108,18 @@ impl MergeConflict {
 
     /// String representing the type name of the data, not the same as data_type.
     /// This is like "typeName" or "tag" depending on what object the conflict represents.
-    pub fn conflict_type(&self) -> BnString {
+    pub fn conflict_type(&self) -> String {
         let result = unsafe { BNAnalysisMergeConflictGetType(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Lookup key for the merge conflict, ideally a tree path that contains the name of the conflict
     /// and all the recursive children leading up to this conflict.
-    pub fn key(&self) -> BnString {
+    pub fn key(&self) -> String {
         let result = unsafe { BNAnalysisMergeConflictGetKey(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Call this when you've resolved the conflict to save the result

@@ -110,9 +110,9 @@ impl DataBuffer {
         }
     }
 
-    pub fn to_escaped_string(&self, null_terminates: bool, escape_printable: bool) -> BnString {
+    pub fn to_escaped_string(&self, null_terminates: bool, escape_printable: bool) -> String {
         unsafe {
-            BnString::from_raw(BNDataBufferToEscapedString(
+            BnString::into_string(BNDataBufferToEscapedString(
                 self.0,
                 null_terminates,
                 escape_printable,
@@ -124,8 +124,8 @@ impl DataBuffer {
         Self(unsafe { BNDecodeEscapedString(value.as_ptr()) })
     }
 
-    pub fn to_base64(&self) -> BnString {
-        unsafe { BnString::from_raw(BNDataBufferToBase64(self.0)) }
+    pub fn to_base64(&self) -> String {
+        unsafe { BnString::into_string(BNDataBufferToBase64(self.0)) }
     }
 
     pub fn from_base64(value: &BnString) -> Self {

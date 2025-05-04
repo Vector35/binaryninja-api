@@ -84,18 +84,18 @@ impl Project {
     }
 
     /// Get the unique id of this project
-    pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectGetId(self.handle.as_ptr())) }
+    pub fn id(&self) -> String {
+        unsafe { BnString::into_string(BNProjectGetId(self.handle.as_ptr())) }
     }
 
     /// Get the path of the project
-    pub fn path(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectGetPath(self.handle.as_ptr())) }
+    pub fn path(&self) -> String {
+        unsafe { BnString::into_string(BNProjectGetPath(self.handle.as_ptr())) }
     }
 
     /// Get the name of the project
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectGetName(self.handle.as_ptr())) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNProjectGetName(self.handle.as_ptr())) }
     }
 
     /// Set the name of the project
@@ -110,8 +110,8 @@ impl Project {
     }
 
     /// Get the description of the project
-    pub fn description(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectGetDescription(self.handle.as_ptr())) }
+    pub fn description(&self) -> String {
+        unsafe { BnString::into_string(BNProjectGetDescription(self.handle.as_ptr())) }
     }
 
     /// Set the description of the project

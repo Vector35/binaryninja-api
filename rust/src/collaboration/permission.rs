@@ -37,17 +37,17 @@ impl Permission {
     }
 
     /// Web api endpoint url
-    pub fn url(&self) -> BnString {
+    pub fn url(&self) -> String {
         let value = unsafe { BNCollaborationPermissionGetUrl(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// unique id
-    pub fn id(&self) -> BnString {
+    pub fn id(&self) -> String {
         let value = unsafe { BNCollaborationPermissionGetId(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Level of permission

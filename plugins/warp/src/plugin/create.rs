@@ -18,7 +18,7 @@ pub struct CreateSignatureFile;
 impl Command for CreateSignatureFile {
     fn action(&self, view: &BinaryView) {
         let is_function_named = |f: &Guard<Function>| {
-            !f.symbol().short_name().as_str().contains("sub_") || f.has_user_annotations()
+            !f.symbol().short_name().to_string_lossy().contains("sub_") || f.has_user_annotations()
         };
         let mut signature_dir = user_signature_dir();
         if let Some(default_plat) = view.default_platform() {

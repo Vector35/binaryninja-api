@@ -30,10 +30,10 @@ impl RemoteGroup {
     }
 
     /// Web api endpoint url
-    pub fn url(&self) -> BnString {
+    pub fn url(&self) -> String {
         let value = unsafe { BNCollaborationGroupGetUrl(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Unique id
@@ -42,10 +42,10 @@ impl RemoteGroup {
     }
 
     /// Group name
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let value = unsafe { BNCollaborationGroupGetName(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Set group name

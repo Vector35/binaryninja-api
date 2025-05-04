@@ -36,13 +36,13 @@ impl ProjectFolder {
     }
 
     /// Get the unique id of this folder
-    pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFolderGetId(self.handle.as_ptr())) }
+    pub fn id(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFolderGetId(self.handle.as_ptr())) }
     }
 
     /// Get the name of this folder
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFolderGetName(self.handle.as_ptr())) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFolderGetName(self.handle.as_ptr())) }
     }
 
     /// Set the name of this folder
@@ -57,8 +57,8 @@ impl ProjectFolder {
     }
 
     /// Get the description of this folder
-    pub fn description(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFolderGetDescription(self.handle.as_ptr())) }
+    pub fn description(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFolderGetDescription(self.handle.as_ptr())) }
     }
 
     /// Set the description of this folder

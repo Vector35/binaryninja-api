@@ -131,7 +131,7 @@ fn main() {
 fn data_from_view(view: &BinaryView) -> Data {
     let mut data = Data::default();
     let is_function_named = |f: &BNGuard<BNFunction>| {
-        !f.symbol().short_name().as_str().contains("sub_") || f.has_user_annotations()
+        !f.symbol().short_name().to_string_lossy().contains("sub_") || f.has_user_annotations()
     };
 
     data.functions = view

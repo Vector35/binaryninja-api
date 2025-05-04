@@ -455,8 +455,8 @@ impl CoreCallingConvention {
         })
     }
 
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetCallingConventionName(self.handle)) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNGetCallingConventionName(self.handle)) }
     }
 
     pub fn variables_for_parameters(

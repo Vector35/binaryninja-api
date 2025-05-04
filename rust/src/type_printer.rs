@@ -67,10 +67,10 @@ impl CoreTypePrinter {
         NonNull::new(result).map(|x| unsafe { Self::from_raw(x) })
     }
 
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNGetTypePrinterName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     pub fn get_type_tokens<T: Into<QualifiedName>>(

@@ -37,8 +37,8 @@ impl ProjectFile {
     }
 
     /// Get the path on disk to this file's contents
-    pub fn path_on_disk(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFileGetPathOnDisk(self.handle.as_ptr())) }
+    pub fn path_on_disk(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFileGetPathOnDisk(self.handle.as_ptr())) }
     }
 
     /// Check if this file's contents exist on disk
@@ -47,13 +47,13 @@ impl ProjectFile {
     }
 
     /// Get the unique id of this file
-    pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFileGetId(self.handle.as_ptr())) }
+    pub fn id(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFileGetId(self.handle.as_ptr())) }
     }
 
     /// Get the name of this file
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFileGetName(self.handle.as_ptr())) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFileGetName(self.handle.as_ptr())) }
     }
 
     /// Set the name of this file
@@ -68,8 +68,8 @@ impl ProjectFile {
     }
 
     /// Get the description of this file
-    pub fn description(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFileGetDescription(self.handle.as_ptr())) }
+    pub fn description(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFileGetDescription(self.handle.as_ptr())) }
     }
 
     /// Set the description of this file

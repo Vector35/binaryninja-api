@@ -108,10 +108,10 @@ impl MemoryMap {
         }
     }
 
-    pub fn active_memory_region_at(&self, addr: u64) -> BnString {
+    pub fn active_memory_region_at(&self, addr: u64) -> String {
         unsafe {
             let name_raw = BNGetActiveMemoryRegionAt(self.view.handle, addr);
-            BnString::from_raw(name_raw)
+            BnString::into_string(name_raw)
         }
     }
 

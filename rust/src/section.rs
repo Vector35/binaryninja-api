@@ -90,12 +90,12 @@ impl Section {
         SectionBuilder::new(name, range)
     }
 
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNSectionGetName(self.handle)) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNSectionGetName(self.handle)) }
     }
 
-    pub fn section_type(&self) -> BnString {
-        unsafe { BnString::from_raw(BNSectionGetType(self.handle)) }
+    pub fn section_type(&self) -> String {
+        unsafe { BnString::into_string(BNSectionGetType(self.handle)) }
     }
 
     pub fn start(&self) -> u64 {
@@ -122,12 +122,12 @@ impl Section {
         unsafe { BNSectionGetSemantics(self.handle).into() }
     }
 
-    pub fn linked_section(&self) -> BnString {
-        unsafe { BnString::from_raw(BNSectionGetLinkedSection(self.handle)) }
+    pub fn linked_section(&self) -> String {
+        unsafe { BnString::into_string(BNSectionGetLinkedSection(self.handle)) }
     }
 
-    pub fn info_section(&self) -> BnString {
-        unsafe { BnString::from_raw(BNSectionGetInfoSection(self.handle)) }
+    pub fn info_section(&self) -> String {
+        unsafe { BnString::into_string(BNSectionGetInfoSection(self.handle)) }
     }
 
     pub fn info_data(&self) -> u64 {

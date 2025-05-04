@@ -56,10 +56,10 @@ impl CoreSecretsProvider {
         NonNull::new(result).map(|h| unsafe { Self::from_raw(h) })
     }
 
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNGetSecretsProviderName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Check if data for a specific key exists, but do not retrieve it
@@ -71,12 +71,12 @@ impl CoreSecretsProvider {
     }
 
     /// Retrieve data for the given key, if it exists
-    pub fn get_data<S: BnStrCompatible>(&self, key: S) -> BnString {
+    pub fn get_data<S: BnStrCompatible>(&self, key: S) -> String {
         let key = key.into_bytes_with_nul();
         let result = unsafe {
             BNGetSecretsProviderData(self.handle.as_ptr(), key.as_ref().as_ptr() as *const c_char)
         };
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Store data with the given key

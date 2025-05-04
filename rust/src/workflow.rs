@@ -204,10 +204,10 @@ impl Activity {
         unsafe { Activity::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNActivityGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 }
 
@@ -303,10 +303,10 @@ impl Workflow {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNGetWorkflowName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Register this [Workflow], making it immutable and available for use.
@@ -382,7 +382,7 @@ impl Workflow {
     }
 
     /// Retrieve the configuration as an adjacency list in JSON for the [Workflow].
-    pub fn configuration(&self) -> BnString {
+    pub fn configuration(&self) -> String {
         self.configuration_with_activity("")
     }
 
@@ -390,7 +390,7 @@ impl Workflow {
     /// [Workflow], just for the given `activity`.
     ///
     /// `activity` - return the configuration for the `activity`
-    pub fn configuration_with_activity<A: BnStrCompatible>(&self, activity: A) -> BnString {
+    pub fn configuration_with_activity<A: BnStrCompatible>(&self, activity: A) -> String {
         let result = unsafe {
             BNWorkflowGetConfiguration(
                 self.handle.as_ptr(),
@@ -398,7 +398,7 @@ impl Workflow {
             )
         };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Whether this [Workflow] is registered or not. A [Workflow] becomes immutable once registered.

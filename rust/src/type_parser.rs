@@ -61,10 +61,10 @@ impl CoreTypeParser {
         NonNull::new(result).map(|x| unsafe { Self::from_raw(x) })
     }
 
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNGetTypeParserName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 }
 

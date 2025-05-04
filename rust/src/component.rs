@@ -86,10 +86,10 @@ impl Component {
         Ref::new(Self { handle })
     }
 
-    pub fn guid(&self) -> BnString {
+    pub fn guid(&self) -> String {
         let result = unsafe { BNComponentGetGuid(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Add function to this component.
@@ -145,10 +145,10 @@ impl Component {
     }
 
     /// Original name of the component
-    pub fn display_name(&self) -> BnString {
+    pub fn display_name(&self) -> String {
         let result = unsafe { BNComponentGetDisplayName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Original name set for this component
@@ -158,10 +158,10 @@ impl Component {
     /// remain what was originally set (e.g. "MyComponentName")
     /// If this component has a duplicate name and is moved to a component where none of its siblings share its name,
     /// .name will return the original "MyComponentName"
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNComponentGetOriginalName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     pub fn set_name<S: BnStrCompatible>(&self, name: S) {
@@ -307,22 +307,5 @@ unsafe impl CoreArrayProviderInner for Component {
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         let raw_ptr = NonNull::new(*raw).unwrap();
         Guard::new(Self::from_raw(raw_ptr), context)
-    }
-}
-
-// TODO: Should we keep this?
-pub trait IntoComponentGuid {
-    fn component_guid(self) -> BnString;
-}
-
-impl IntoComponentGuid for &Component {
-    fn component_guid(self) -> BnString {
-        self.guid()
-    }
-}
-
-impl<S: BnStrCompatible> IntoComponentGuid for S {
-    fn component_guid(self) -> BnString {
-        BnString::new(self)
     }
 }

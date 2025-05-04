@@ -58,8 +58,8 @@ impl Settings {
         unsafe { BNSettingsSetResourceId(self.handle, resource_id.as_ref().as_ptr() as *mut _) };
     }
 
-    pub fn serialize_schema(&self) -> BnString {
-        unsafe { BnString::from_raw(BNSettingsSerializeSchema(self.handle)) }
+    pub fn serialize_schema(&self) -> String {
+        unsafe { BnString::into_string(BNSettingsSerializeSchema(self.handle)) }
     }
 
     pub fn deserialize_schema<S: BnStrCompatible>(&self, schema: S) -> bool {
@@ -184,7 +184,7 @@ impl Settings {
         }
     }
 
-    pub fn get_string<S: BnStrCompatible>(&self, key: S) -> BnString {
+    pub fn get_string<S: BnStrCompatible>(&self, key: S) -> String {
         self.get_string_with_opts(key, &mut QueryOptions::default())
     }
 
@@ -192,7 +192,7 @@ impl Settings {
         &self,
         key: S,
         options: &mut QueryOptions,
-    ) -> BnString {
+    ) -> String {
         let key = key.into_bytes_with_nul();
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
@@ -203,7 +203,7 @@ impl Settings {
             _ => std::ptr::null_mut(),
         };
         unsafe {
-            BnString::from_raw(BNSettingsGetString(
+            BnString::into_string(BNSettingsGetString(
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
                 view_ptr,
@@ -248,7 +248,7 @@ impl Settings {
         }
     }
 
-    pub fn get_json<S: BnStrCompatible>(&self, key: S) -> BnString {
+    pub fn get_json<S: BnStrCompatible>(&self, key: S) -> String {
         self.get_json_with_opts(key, &mut QueryOptions::default())
     }
 
@@ -256,7 +256,7 @@ impl Settings {
         &self,
         key: S,
         options: &mut QueryOptions,
-    ) -> BnString {
+    ) -> String {
         let key = key.into_bytes_with_nul();
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
@@ -267,7 +267,7 @@ impl Settings {
             _ => std::ptr::null_mut(),
         };
         unsafe {
-            BnString::from_raw(BNSettingsGetJson(
+            BnString::into_string(BNSettingsGetJson(
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
                 view_ptr,
@@ -479,11 +479,11 @@ impl Settings {
         }
     }
 
-    pub fn get_property_string<S: BnStrCompatible>(&self, key: S, property: S) -> BnString {
+    pub fn get_property_string<S: BnStrCompatible>(&self, key: S, property: S) -> String {
         let key = key.into_bytes_with_nul();
         let property = property.into_bytes_with_nul();
         unsafe {
-            BnString::from_raw(BNSettingsQueryPropertyString(
+            BnString::into_string(BNSettingsQueryPropertyString(
                 self.handle,
                 key.as_ref().as_ptr() as *mut _,
                 property.as_ref().as_ptr() as *mut _,

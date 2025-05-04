@@ -68,10 +68,10 @@ impl FileMetadata {
         unsafe { BNFileMetadataGetSessionId(self.handle) }
     }
 
-    pub fn filename(&self) -> BnString {
+    pub fn filename(&self) -> String {
         unsafe {
             let raw = BNGetFilename(self.handle);
-            BnString::from_raw(raw)
+            BnString::into_string(raw)
         }
     }
 
@@ -131,8 +131,8 @@ impl FileMetadata {
         }
     }
 
-    pub fn begin_undo_actions(&self, anonymous_allowed: bool) -> BnString {
-        unsafe { BnString::from_raw(BNBeginUndoActions(self.handle, anonymous_allowed)) }
+    pub fn begin_undo_actions(&self, anonymous_allowed: bool) -> String {
+        unsafe { BnString::into_string(BNBeginUndoActions(self.handle, anonymous_allowed)) }
     }
 
     pub fn commit_undo_actions<S: BnStrCompatible>(&self, id: S) {
@@ -161,8 +161,8 @@ impl FileMetadata {
         }
     }
 
-    pub fn current_view(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetCurrentView(self.handle)) }
+    pub fn current_view(&self) -> String {
+        unsafe { BnString::into_string(BNGetCurrentView(self.handle)) }
     }
 
     pub fn current_offset(&self) -> u64 {

@@ -92,8 +92,8 @@ pub fn get_open_filename_input(prompt: &str, extension: &str) -> Option<PathBuf>
         return None;
     }
 
-    let string = unsafe { BnString::from_raw(value) };
-    Some(PathBuf::from(string.as_str()))
+    let path = unsafe { BnString::into_string(value) };
+    Some(PathBuf::from(path))
 }
 
 pub fn get_save_filename_input(
@@ -115,8 +115,8 @@ pub fn get_save_filename_input(
         return None;
     }
 
-    let string = unsafe { BnString::from_raw(value) };
-    Some(PathBuf::from(string.as_str()))
+    let path = unsafe { BnString::into_string(value) };
+    Some(PathBuf::from(path))
 }
 
 pub fn get_directory_name_input(prompt: &str, default_name: &str) -> Option<PathBuf> {
@@ -133,8 +133,8 @@ pub fn get_directory_name_input(prompt: &str, default_name: &str) -> Option<Path
         return None;
     }
 
-    let string = unsafe { BnString::from_raw(value) };
-    Some(PathBuf::from(string.as_str()))
+    let path = unsafe { BnString::into_string(value) };
+    Some(PathBuf::from(path))
 }
 
 pub type MessageBoxButtonSet = BNMessageBoxButtonSet;

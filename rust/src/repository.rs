@@ -31,17 +31,17 @@ impl Repository {
     }
 
     /// String URL of the git repository where the plugin repository's are stored
-    pub fn url(&self) -> BnString {
+    pub fn url(&self) -> String {
         let result = unsafe { BNRepositoryGetUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// String local path to store the given plugin repository
-    pub fn path(&self) -> BnString {
+    pub fn path(&self) -> String {
         let result = unsafe { BNRepositoryGetRepoPath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// List of RepoPlugin objects contained within this repository
@@ -65,10 +65,10 @@ impl Repository {
 
     // TODO: Make this a PathBuf?
     /// String full path the repository
-    pub fn full_path(&self) -> BnString {
+    pub fn full_path(&self) -> String {
         let result = unsafe { BNRepositoryGetPluginsPath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 }
 

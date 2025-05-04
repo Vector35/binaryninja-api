@@ -76,17 +76,17 @@ impl RemoteFolder {
     }
 
     /// Get web API endpoint URL.
-    pub fn url(&self) -> BnString {
+    pub fn url(&self) -> String {
         let result = unsafe { BNRemoteFolderGetUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Get unique ID.
-    pub fn id(&self) -> BnString {
+    pub fn id(&self) -> String {
         let result = unsafe { BNRemoteFolderGetId(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Unique id of parent folder, if there is a parent. None, otherwise
@@ -97,10 +97,10 @@ impl RemoteFolder {
     }
 
     /// Displayed name of folder
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNRemoteFolderGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Set the display name of the folder. You will need to push the folder to update the remote version.
@@ -116,10 +116,10 @@ impl RemoteFolder {
     }
 
     /// Description of the folder
-    pub fn description(&self) -> BnString {
+    pub fn description(&self) -> String {
         let result = unsafe { BNRemoteFolderGetDescription(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Set the description of the folder. You will need to push the folder to update the remote version.

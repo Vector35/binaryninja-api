@@ -242,8 +242,8 @@ impl UpdateVersion {
     }
 
     pub(crate) fn free_raw(value: BNUpdateVersion) {
-        let _ = unsafe { BnString::from_raw(value.version) };
-        let _ = unsafe { BnString::from_raw(value.notes) };
+        unsafe { BnString::free_raw(value.version) };
+        unsafe { BnString::free_raw(value.notes) };
     }
 }
 

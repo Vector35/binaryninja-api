@@ -47,12 +47,12 @@ impl Tag {
         unsafe { Self::ref_from_raw(BNCreateTag(t.handle, data.as_ref().as_ptr() as *mut _)) }
     }
 
-    pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagGetId(self.handle)) }
+    pub fn id(&self) -> String {
+        unsafe { BnString::into_string(BNTagGetId(self.handle)) }
     }
 
-    pub fn data(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagGetData(self.handle)) }
+    pub fn data(&self) -> String {
+        unsafe { BnString::into_string(BNTagGetData(self.handle)) }
     }
 
     pub fn ty(&self) -> Ref<TagType> {
@@ -145,12 +145,12 @@ impl TagType {
         tag_type
     }
 
-    pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagTypeGetId(self.handle)) }
+    pub fn id(&self) -> String {
+        unsafe { BnString::into_string(BNTagTypeGetId(self.handle)) }
     }
 
-    pub fn icon(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagTypeGetIcon(self.handle)) }
+    pub fn icon(&self) -> String {
+        unsafe { BnString::into_string(BNTagTypeGetIcon(self.handle)) }
     }
 
     pub fn set_icon<S: BnStrCompatible>(&self, icon: S) {
@@ -160,8 +160,8 @@ impl TagType {
         }
     }
 
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagTypeGetName(self.handle)) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNTagTypeGetName(self.handle)) }
     }
 
     pub fn set_name<S: BnStrCompatible>(&self, name: S) {

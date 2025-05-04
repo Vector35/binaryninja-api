@@ -66,8 +66,8 @@ impl Logger {
         }
     }
 
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNLoggerGetName(self.handle.as_ptr())) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNLoggerGetName(self.handle.as_ptr())) }
     }
 
     pub fn session_id(&self) -> usize {
@@ -144,7 +144,7 @@ impl log::Log for Ref<Logger> {
                 BNLog(
                     self.session_id(),
                     level,
-                    logger_name.as_ptr(),
+                    logger_name.as_ptr() as *const c_char,
                     0,
                     percent_s.as_ptr(),
                     msg.as_ptr(),

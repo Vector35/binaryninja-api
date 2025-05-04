@@ -27,7 +27,7 @@ use crate::architecture::{Architecture, CoreArchitecture};
 use crate::base_detection::BaseAddressDetection;
 use crate::basic_block::BasicBlock;
 use crate::binary_view::memory_map::MemoryMap;
-use crate::component::{Component, IntoComponentGuid};
+use crate::component::Component;
 use crate::confidence::Conf;
 use crate::data_buffer::DataBuffer;
 use crate::debuginfo::DebugInfo;
@@ -187,9 +187,9 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn type_name(&self) -> BnString {
+    fn type_name(&self) -> String {
         let ptr: *mut c_char = unsafe { BNGetViewType(self.as_ref().handle) };
-        unsafe { BnString::from_raw(ptr) }
+        unsafe { BnString::into_string(ptr) }
     }
 
     fn parent_view(&self) -> Option<Ref<BinaryView>> {
@@ -204,9 +204,9 @@ pub trait BinaryViewExt: BinaryViewBase {
         self.file().view_of_type("Raw")
     }
 
-    fn view_type(&self) -> BnString {
+    fn view_type(&self) -> String {
         let ptr: *mut c_char = unsafe { BNGetViewType(self.as_ref().handle) };
-        unsafe { BnString::from_raw(ptr) }
+        unsafe { BnString::into_string(ptr) }
     }
 
     /// Reads up to `len` bytes from address `offset`
@@ -1493,9 +1493,14 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNRemoveComponent(self.as_ref().handle, component.handle.as_ptr()) }
     }
 
-    fn remove_component_by_guid<P: IntoComponentGuid>(&self, guid: P) -> bool {
-        let path = guid.component_guid();
-        unsafe { BNRemoveComponentByGuid(self.as_ref().handle, path.as_ptr()) }
+    fn remove_component_by_guid<P: BnStrCompatible>(&self, guid: P) -> bool {
+        let path = guid.into_bytes_with_nul();
+        unsafe {
+            BNRemoveComponentByGuid(
+                self.as_ref().handle,
+                path.as_ref().as_ptr() as *const c_char,
+            )
+        }
     }
 
     fn data_variable_parent_components(&self, data_variable: &DataVariable) -> Array<Component> {

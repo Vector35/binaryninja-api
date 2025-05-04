@@ -16,8 +16,8 @@ pub struct GotoLabel {
 }
 
 impl GotoLabel {
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetGotoLabelName(self.function.handle, self.target)) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNGetGotoLabelName(self.function.handle, self.target)) }
     }
 
     fn set_name<S: BnStrCompatible>(&self, name: S) {
@@ -323,7 +323,7 @@ pub struct LiftedLabel {
 }
 
 impl LiftedLabel {
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         self.target.name()
     }
 

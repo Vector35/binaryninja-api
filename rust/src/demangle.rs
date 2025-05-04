@@ -232,8 +232,8 @@ impl Demangler {
         }
     }
 
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetDemanglerName(self.handle)) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNGetDemanglerName(self.handle)) }
     }
 
     pub fn from_name<S: BnStrCompatible>(name: S) -> Option<Self> {

@@ -26,10 +26,10 @@ impl UndoEntry {
         Ref::new(Self { handle })
     }
 
-    pub fn id(&self) -> BnString {
+    pub fn id(&self) -> String {
         let result = unsafe { BNUndoEntryGetId(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     pub fn actions(&self) -> Array<UndoAction> {
@@ -115,10 +115,10 @@ impl UndoAction {
     }
 
     /// Gets the [`UndoAction`] summary as text rather than [`InstructionTextToken`]'s.
-    pub fn summary_as_string(&self) -> BnString {
+    pub fn summary_as_string(&self) -> String {
         let result = unsafe { BNUndoActionGetSummaryText(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 }
 

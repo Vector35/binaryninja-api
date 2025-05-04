@@ -141,8 +141,8 @@ impl DebugInfoParser {
     }
 
     /// Returns the name of the current parser
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetDebugInfoParserName(self.handle)) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNGetDebugInfoParserName(self.handle)) }
     }
 
     /// Returns whether this debug-info parser is valid for the provided binary view

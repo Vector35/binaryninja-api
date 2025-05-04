@@ -59,10 +59,10 @@ impl Changeset {
     }
 
     /// Changeset name
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNCollaborationChangesetGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Set the name of the changeset, e.g. in a name changeset function.

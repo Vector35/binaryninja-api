@@ -71,7 +71,7 @@ pub fn init() -> Result<(), InitializationError> {
 ///
 /// ⚠️ Important! Must be called at the end of scripts. ⚠️
 pub fn shutdown() {
-    match crate::product().as_str() {
+    match crate::product().to_string().as_str() {
         "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => {
             if NEED_LICENSE_RELEASE.load(SeqCst) {
                 enterprise::release_license()

@@ -98,13 +98,13 @@ pub fn release_license() {
 }
 
 // TODO: If "" string return None
-pub fn server_username() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerUsername()) }
+pub fn server_username() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerUsername()) }
 }
 
 // TODO: If "" string return None
-pub fn server_url() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerUrl()) }
+pub fn server_url() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerUrl()) }
 }
 
 pub fn set_server_url<S: BnStrCompatible>(url: S) -> Result<(), ()> {
@@ -121,24 +121,24 @@ pub fn set_server_url<S: BnStrCompatible>(url: S) -> Result<(), ()> {
     }
 }
 
-pub fn server_name() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerName()) }
+pub fn server_name() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerName()) }
 }
 
-pub fn server_id() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerId()) }
+pub fn server_id() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerId()) }
 }
 
 pub fn server_version() -> u64 {
     unsafe { binaryninjacore_sys::BNGetEnterpriseServerVersion() }
 }
 
-pub fn server_build_id() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerBuildId()) }
+pub fn server_build_id() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerBuildId()) }
 }
 
-pub fn server_token() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerToken()) }
+pub fn server_token() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerToken()) }
 }
 
 pub fn license_duration() -> Duration {
@@ -226,8 +226,8 @@ pub fn initialize_server() -> bool {
     unsafe { binaryninjacore_sys::BNInitializeEnterpriseServer() }
 }
 
-pub fn server_last_error() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerLastError()) }
+pub fn server_last_error() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerLastError()) }
 }
 
 pub fn server_authentication_methods() -> (Array<BnString>, Array<BnString>) {

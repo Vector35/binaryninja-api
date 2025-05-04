@@ -71,8 +71,8 @@ impl BackgroundTask {
         unsafe { BNFinishBackgroundTask(self.handle) }
     }
 
-    pub fn progress_text(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetBackgroundTaskProgressText(self.handle)) }
+    pub fn progress_text(&self) -> String {
+        unsafe { BnString::into_string(BNGetBackgroundTaskProgressText(self.handle)) }
     }
 
     pub fn set_progress_text<S: BnStrCompatible>(&self, text: S) {

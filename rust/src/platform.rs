@@ -160,10 +160,10 @@ impl Platform {
         }
     }
 
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         unsafe {
             let raw_name = BNGetPlatformName(self.handle);
-            BnString::from_raw(raw_name)
+            BnString::into_string(raw_name)
         }
     }
 
@@ -301,7 +301,7 @@ impl Platform {
             assert!(!error_string.is_null());
             Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
-                unsafe { BnString::from_raw(error_string) }.to_string(),
+                unsafe { BnString::into_string(error_string) },
                 file_name.to_string(),
                 0,
                 0,

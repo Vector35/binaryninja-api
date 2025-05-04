@@ -302,9 +302,7 @@ impl InstructionTextToken {
     }
 
     pub(crate) fn free_raw(value: BNInstructionTextToken) {
-        if !value.text.is_null() {
-            unsafe { BNFreeString(value.text) };
-        }
+        unsafe { BnString::free_raw(value.text) };
         if !value.typeNames.is_null() {
             unsafe { BNFreeStringList(value.typeNames, value.namesCount) };
         }

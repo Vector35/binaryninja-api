@@ -1412,8 +1412,8 @@ impl CoreArchitecture {
         }
     }
 
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetArchitectureName(self.handle)) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNGetArchitectureName(self.handle)) }
     }
 }
 

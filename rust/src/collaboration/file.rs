@@ -106,30 +106,30 @@ impl RemoteFile {
     }
 
     /// Web API endpoint URL
-    pub fn url(&self) -> BnString {
+    pub fn url(&self) -> String {
         let result = unsafe { BNRemoteFileGetUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Chat log API endpoint URL
-    pub fn chat_log_url(&self) -> BnString {
+    pub fn chat_log_url(&self) -> String {
         let result = unsafe { BNRemoteFileGetChatLogUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
-    pub fn user_positions_url(&self) -> BnString {
+    pub fn user_positions_url(&self) -> String {
         let result = unsafe { BNRemoteFileGetUserPositionsUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Unique ID
-    pub fn id(&self) -> BnString {
+    pub fn id(&self) -> String {
         let result = unsafe { BNRemoteFileGetId(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// All files share the same properties, but files with different types may make different
@@ -144,10 +144,10 @@ impl RemoteFile {
         crate::ffi::time_from_bn(result.try_into().unwrap())
     }
 
-    pub fn created_by(&self) -> BnString {
+    pub fn created_by(&self) -> String {
         let result = unsafe { BNRemoteFileGetCreatedBy(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Last modified of the file
@@ -163,30 +163,30 @@ impl RemoteFile {
     }
 
     /// Username of user who pushed the last snapshot in the file
-    pub fn last_snapshot_by(&self) -> BnString {
+    pub fn last_snapshot_by(&self) -> String {
         let result = unsafe { BNRemoteFileGetLastSnapshotBy(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
-    pub fn last_snapshot_name(&self) -> BnString {
+    pub fn last_snapshot_name(&self) -> String {
         let result = unsafe { BNRemoteFileGetLastSnapshotName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Hash of file contents (no algorithm guaranteed)
-    pub fn hash(&self) -> BnString {
+    pub fn hash(&self) -> String {
         let result = unsafe { BNRemoteFileGetHash(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Displayed name of file
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNRemoteFileGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Set the description of the file. You will need to push the file to update the remote version.
@@ -202,10 +202,10 @@ impl RemoteFile {
     }
 
     /// Desciprtion of the file
-    pub fn description(&self) -> BnString {
+    pub fn description(&self) -> String {
         let result = unsafe { BNRemoteFileGetDescription(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Set the description of the file. You will need to push the file to update the remote version.
@@ -220,10 +220,10 @@ impl RemoteFile {
         success.then_some(()).ok_or(())
     }
 
-    pub fn metadata(&self) -> BnString {
+    pub fn metadata(&self) -> String {
         let result = unsafe { BNRemoteFileGetMetadata(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Size of raw content of file, in bytes
@@ -234,10 +234,10 @@ impl RemoteFile {
     /// Get the default filepath for a remote File. This is based off the Setting for
     /// collaboration.directory, the file's id, the file's project's id, and the file's
     /// remote's id.
-    pub fn default_path(&self) -> BnString {
+    pub fn default_path(&self) -> String {
         let result = unsafe { BNCollaborationDefaultFilePath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// If the file has pulled the snapshots yet
@@ -410,16 +410,16 @@ impl RemoteFile {
     //    todo!()
     //}
 
-    pub fn request_user_positions(&self) -> BnString {
+    pub fn request_user_positions(&self) -> String {
         let result = unsafe { BNRemoteFileRequestUserPositions(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
-    pub fn request_chat_log(&self) -> BnString {
+    pub fn request_chat_log(&self) -> String {
         let result = unsafe { BNRemoteFileRequestChatLog(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     // TODO: AsRef<Path>

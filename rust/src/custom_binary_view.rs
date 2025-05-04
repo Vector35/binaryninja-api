@@ -15,6 +15,7 @@
 //! An interface for providing your own [BinaryView]s to Binary Ninja.
 
 use binaryninjacore_sys::*;
+use std::ffi::c_char;
 
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
@@ -211,12 +212,12 @@ pub trait BinaryViewTypeBase: AsRef<BinaryViewType> {
 }
 
 pub trait BinaryViewTypeExt: BinaryViewTypeBase {
-    fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetBinaryViewTypeName(self.as_ref().handle)) }
+    fn name(&self) -> String {
+        unsafe { BnString::into_string(BNGetBinaryViewTypeName(self.as_ref().handle)) }
     }
 
-    fn long_name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetBinaryViewTypeLongName(self.as_ref().handle)) }
+    fn long_name(&self) -> String {
+        unsafe { BnString::into_string(BNGetBinaryViewTypeLongName(self.as_ref().handle)) }
     }
 
     fn register_arch<A: Architecture>(&self, id: u32, endianness: Endianness, arch: &A) {
@@ -502,7 +503,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
 
         let view_name = view_type.name();
 
-        if let Some(bv) = file.view_of_type(view_name.as_str()) {
+        if let Some(bv) = file.view_of_type(&view_name) {
             // while it seems to work most of the time, you can get really unlucky
             // if the a free of the existing view of the same type kicks off while
             // BNCreateBinaryViewOfType is still running. the freeObject callback
@@ -514,7 +515,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
             // going to try and stop this from happening in the first place.
             log::error!(
                 "attempt to create duplicate view of type '{}' (existing: {:?})",
-                view_name.as_str(),
+                view_name,
                 bv.handle
             );
 
@@ -879,7 +880,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
 
         unsafe {
             let res = BNCreateCustomBinaryView(
-                view_name.as_ptr(),
+                view_name.as_ptr() as *const c_char,
                 file.handle,
                 parent.handle,
                 &mut bn_obj,

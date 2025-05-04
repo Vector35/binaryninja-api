@@ -87,10 +87,10 @@ impl CoreWebsocketProvider {
         NonNull::new(result).map(|h| unsafe { Self::from_raw(h) })
     }
 
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNGetWebsocketProviderName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 }
 

@@ -757,8 +757,8 @@ impl TypeArchive {
             )
         };
         assert!(!result.is_null());
-        let id_str = unsafe { BnString::from_raw(result) };
-        TypeArchiveSnapshotId(id_str.to_string())
+        let id_str = unsafe { BnString::into_string(result) };
+        TypeArchiveSnapshotId(id_str)
     }
 
     /// Merge two snapshots in the archive to produce a new snapshot
@@ -1140,10 +1140,10 @@ impl TypeArchiveMergeConflict {
         NonNull::new(value).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
     }
 
-    pub fn type_id(&self) -> BnString {
+    pub fn type_id(&self) -> String {
         let value = unsafe { BNTypeArchiveMergeConflictGetTypeId(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     pub fn base_snapshot_id(&self) -> TypeArchiveSnapshotId {

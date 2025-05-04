@@ -174,9 +174,9 @@ impl BaseAddressDetectionSettings {
         let arch_name = value
             .arch
             .map(|a| a.name().as_ptr())
-            .unwrap_or(BASE_ADDRESS_AUTO_DETECTION_ARCH.as_ptr() as *const c_char);
+            .unwrap_or(BASE_ADDRESS_AUTO_DETECTION_ARCH.as_ptr() as *const u8);
         BNBaseAddressDetectionSettings {
-            Architecture: arch_name,
+            Architecture: arch_name as *const c_char,
             Analysis: value.analysis.as_raw().as_ptr(),
             MinStrlen: value.min_string_len,
             Alignment: value.alignment.get(),

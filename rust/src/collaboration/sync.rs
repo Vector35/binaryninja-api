@@ -3,7 +3,6 @@ use super::{
 };
 use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void};
-use std::mem::ManuallyDrop;
 use std::ptr::NonNull;
 
 use crate::binary_view::{BinaryView, BinaryViewExt};
@@ -12,7 +11,7 @@ use crate::file_metadata::FileMetadata;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
 use crate::rc::Ref;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{raw_to_string, BnStrCompatible, BnString};
 use crate::type_archive::{TypeArchive, TypeArchiveMergeConflict};
 
 // TODO: PathBuf
@@ -859,13 +858,11 @@ pub trait DatabaseConflictHandler: Sized {
         let keys = core::slice::from_raw_parts(keys, conflict_count);
         let conflicts = core::slice::from_raw_parts(conflicts, conflict_count);
         keys.iter().zip(conflicts.iter()).all(|(key, conflict)| {
-            // NOTE this is a reference, not owned, so ManuallyDrop is required, or just implement `ref_from_raw`
-            // TODO: Replace with raw_to_string
-            let key = ManuallyDrop::new(BnString::from_raw(*key as *mut _));
+            let key = raw_to_string(*key).unwrap();
             // TODO I guess dont drop here?
             let raw_ptr = NonNull::new(*conflict).unwrap();
             let conflict = MergeConflict::from_raw(raw_ptr);
-            ctxt.handle_conflict(key.as_str(), &conflict)
+            ctxt.handle_conflict(&key, &conflict)
         })
     }
 }

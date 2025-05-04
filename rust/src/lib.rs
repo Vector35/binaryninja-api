@@ -433,8 +433,8 @@ pub trait ObjectDestructor: 'static + Sync + Sized {
     }
 }
 
-pub fn version() -> BnString {
-    unsafe { BnString::from_raw(BNGetVersionString()) }
+pub fn version() -> String {
+    unsafe { BnString::into_string(BNGetVersionString()) }
 }
 
 pub fn build_id() -> u32 {
@@ -512,16 +512,16 @@ pub fn version_info() -> VersionInfo {
     VersionInfo::from_owned_raw(info_raw)
 }
 
-pub fn serial_number() -> BnString {
-    unsafe { BnString::from_raw(BNGetSerialNumber()) }
+pub fn serial_number() -> String {
+    unsafe { BnString::into_string(BNGetSerialNumber()) }
 }
 
 pub fn is_license_validated() -> bool {
     unsafe { BNIsLicenseValidated() }
 }
 
-pub fn licensed_user_email() -> BnString {
-    unsafe { BnString::from_raw(BNGetLicensedUserEmail()) }
+pub fn licensed_user_email() -> String {
+    unsafe { BnString::into_string(BNGetLicensedUserEmail()) }
 }
 
 pub fn license_path() -> PathBuf {
@@ -547,12 +547,12 @@ pub fn set_license<S: BnStrCompatible + Default>(license: Option<S>) {
 #[cfg(feature = "demo")]
 pub fn set_license<S: BnStrCompatible + Default>(_license: Option<S>) {}
 
-pub fn product() -> BnString {
-    unsafe { BnString::from_raw(BNGetProduct()) }
+pub fn product() -> String {
+    unsafe { BnString::into_string(BNGetProduct()) }
 }
 
-pub fn product_type() -> BnString {
-    unsafe { BnString::from_raw(BNGetProductType()) }
+pub fn product_type() -> String {
+    unsafe { BnString::into_string(BNGetProductType()) }
 }
 
 pub fn license_expiration_time() -> std::time::SystemTime {

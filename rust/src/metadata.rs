@@ -239,7 +239,7 @@ impl Metadata {
                     };
                     map.insert(key, value);
                 }
-                
+
                 unsafe { BNFreeMetadataValueStore(ptr) };
 
                 Ok(map)

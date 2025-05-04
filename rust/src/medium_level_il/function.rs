@@ -91,10 +91,10 @@ impl MediumLevelILFunction {
         unsafe { BNGetMediumLevelILExprCount(self.handle) }
     }
 
-    pub fn ssa_form(&self) -> MediumLevelILFunction {
+    pub fn ssa_form(&self) -> Ref<MediumLevelILFunction> {
         let ssa = unsafe { BNGetMediumLevelILSSAForm(self.handle) };
         assert!(!ssa.is_null());
-        MediumLevelILFunction { handle: ssa }
+        unsafe { MediumLevelILFunction::ref_from_raw(ssa) }
     }
 
     pub fn function(&self) -> Ref<Function> {

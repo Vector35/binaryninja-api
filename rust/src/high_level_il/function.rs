@@ -69,13 +69,10 @@ impl HighLevelILFunction {
         unsafe { BNGetHighLevelILExprCount(self.handle) }
     }
 
-    pub fn ssa_form(&self) -> HighLevelILFunction {
+    pub fn ssa_form(&self) -> Ref<HighLevelILFunction> {
         let ssa = unsafe { BNGetHighLevelILSSAForm(self.handle) };
         assert!(!ssa.is_null());
-        HighLevelILFunction {
-            handle: ssa,
-            full_ast: self.full_ast,
-        }
+        unsafe { HighLevelILFunction::ref_from_raw(ssa, self.full_ast) }
     }
 
     pub fn function(&self) -> Ref<Function> {

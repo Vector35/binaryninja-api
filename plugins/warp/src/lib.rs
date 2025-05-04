@@ -9,7 +9,7 @@ use binaryninja::basic_block::BasicBlock as BNBasicBlock;
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::{Function as BNFunction, NativeBlock};
-use binaryninja::low_level_il::expression::{ExpressionHandler, LowLevelILExpressionKind};
+use binaryninja::low_level_il::expression::{ExpressionHandler, ExpressionKind};
 use binaryninja::low_level_il::function::{
     FunctionMutability, LowLevelILFunction, NonSSA, RegularNonSSA,
 };
@@ -101,9 +101,7 @@ pub fn basic_block_guid<M: FunctionMutability>(
             InstructionKind::Nop(_) => true,
             InstructionKind::SetReg(op) => {
                 match op.source_expr().kind() {
-                    LowLevelILExpressionKind::Reg(source_op)
-                        if op.dest_reg() == source_op.source_reg() =>
-                    {
+                    ExpressionKind::Reg(source_op) if op.dest_reg() == source_op.source_reg() => {
                         match op.dest_reg() {
                             LowLevelILRegisterKind::Arch(r) => {
                                 // If this register has no implicit extend then we can safely assume it's a NOP.
@@ -125,18 +123,16 @@ pub fn basic_block_guid<M: FunctionMutability>(
     };
 
     let is_variant_instr = |instr: &Instruction<M, NonSSA<RegularNonSSA>>| {
-        let is_variant_expr = |expr: &LowLevelILExpressionKind<M, NonSSA<RegularNonSSA>>| {
+        let is_variant_expr = |expr: &ExpressionKind<M, NonSSA<RegularNonSSA>>| {
             // TODO: Checking the section here is slow, we should gather all section ranges outside of this.
             match expr {
-                LowLevelILExpressionKind::ConstPtr(op)
-                    if !view.sections_at(op.value()).is_empty() =>
-                {
+                ExpressionKind::ConstPtr(op) if !view.sections_at(op.value()).is_empty() => {
                     // Constant Pointer must be in a section for it to be relocatable.
                     // NOTE: We cannot utilize segments here as there will be a zero based segment.
                     true
                 }
-                LowLevelILExpressionKind::ExternPtr(_) => true,
-                LowLevelILExpressionKind::Const(op) if !view.sections_at(op.value()).is_empty() => {
+                ExpressionKind::ExternPtr(_) => true,
+                ExpressionKind::Const(op) if !view.sections_at(op.value()).is_empty() => {
                     // Constant value must be in a section for it to be relocatable.
                     // NOTE: We cannot utilize segments here as there will be a zero based segment.
                     true

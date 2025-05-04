@@ -61,7 +61,7 @@ where
     /// NOTE: This does not visit the root expression, i.e. the instruction.
     fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
     where
-        T: FnMut(&LowLevelILExpression<'func, M, F, ValueExpr>) -> VisitorAction;
+        T: FnMut(&Expression<'func, M, F, ValueExpr>) -> VisitorAction;
 }
 
 pub struct Instruction<'func, M, F>
@@ -131,7 +131,7 @@ where
 
     fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
     where
-        T: FnMut(&LowLevelILExpression<'func, M, SSA, ValueExpr>) -> VisitorAction,
+        T: FnMut(&Expression<'func, M, SSA, ValueExpr>) -> VisitorAction,
     {
         // Recursively visit sub expressions.
         self.kind().visit_sub_expressions(|e| e.visit_tree(f))
@@ -157,7 +157,7 @@ where
 
     fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
     where
-        T: FnMut(&LowLevelILExpression<'func, M, NonSSA<LiftedNonSSA>, ValueExpr>) -> VisitorAction,
+        T: FnMut(&Expression<'func, M, NonSSA<LiftedNonSSA>, ValueExpr>) -> VisitorAction,
     {
         // Recursively visit sub expressions.
         self.kind().visit_sub_expressions(|e| e.visit_tree(f))
@@ -183,9 +183,7 @@ where
 
     fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
     where
-        T: FnMut(
-            &LowLevelILExpression<'func, M, NonSSA<RegularNonSSA>, ValueExpr>,
-        ) -> VisitorAction,
+        T: FnMut(&Expression<'func, M, NonSSA<RegularNonSSA>, ValueExpr>) -> VisitorAction,
     {
         // Recursively visit sub expressions.
         self.kind().visit_sub_expressions(|e| e.visit_tree(f))
@@ -227,7 +225,7 @@ where
     Undef(Operation<'func, M, F, operation::NoArgs>),
 
     /// The instruction is an expression.
-    Value(LowLevelILExpression<'func, M, F, ValueExpr>),
+    Value(Expression<'func, M, F, ValueExpr>),
 }
 
 impl<'func, M, F> InstructionKind<'func, M, F>
@@ -283,13 +281,13 @@ where
             LLIL_BP => InstructionKind::Bp(Operation::new(function, op)),
             LLIL_TRAP => InstructionKind::Trap(Operation::new(function, op)),
             LLIL_UNDEF => InstructionKind::Undef(Operation::new(function, op)),
-            _ => InstructionKind::Value(LowLevelILExpression::new(function, expr_index)),
+            _ => InstructionKind::Value(Expression::new(function, expr_index)),
         }
     }
 
     fn visit_sub_expressions<T>(&self, mut visitor: T) -> VisitorAction
     where
-        T: FnMut(&LowLevelILExpression<'func, M, F, ValueExpr>) -> VisitorAction,
+        T: FnMut(&Expression<'func, M, F, ValueExpr>) -> VisitorAction,
     {
         use InstructionKind::*;
 

@@ -38,15 +38,14 @@ use self::instruction::*;
 pub type MutableLiftedILFunction = LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>>;
 pub type LiftedILFunction = LowLevelILFunction<Finalized, NonSSA<LiftedNonSSA>>;
 pub type MutableLiftedILExpr<'a, ReturnType> =
-    LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, ReturnType>;
+    Expression<'a, Mutable, NonSSA<LiftedNonSSA>, ReturnType>;
 pub type RegularLowLevelILFunction = LowLevelILFunction<Finalized, NonSSA<RegularNonSSA>>;
 pub type RegularLowLevelILInstruction<'a> = Instruction<'a, Finalized, NonSSA<RegularNonSSA>>;
 pub type RegularLowLevelILInstructionKind<'a> =
     InstructionKind<'a, Finalized, NonSSA<RegularNonSSA>>;
 pub type RegularLowLevelILExpression<'a, ReturnType> =
-    LowLevelILExpression<'a, Finalized, NonSSA<RegularNonSSA>, ReturnType>;
-pub type RegularLowLevelILExpressionKind<'a> =
-    LowLevelILExpressionKind<'a, Finalized, NonSSA<RegularNonSSA>>;
+    Expression<'a, Finalized, NonSSA<RegularNonSSA>, ReturnType>;
+pub type RegularLowLevelILExpressionKind<'a> = ExpressionKind<'a, Finalized, NonSSA<RegularNonSSA>>;
 pub type LowLevelILSSAFunction = LowLevelILFunction<Finalized, SSA>;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

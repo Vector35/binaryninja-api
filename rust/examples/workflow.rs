@@ -1,5 +1,5 @@
 use binaryninja::binary_view::BinaryViewExt;
-use binaryninja::low_level_il::expression::{ExpressionHandler, LowLevelILExpressionKind};
+use binaryninja::low_level_il::expression::{ExpressionHandler, ExpressionKind};
 use binaryninja::low_level_il::instruction::InstructionHandler;
 use binaryninja::low_level_il::VisitorAction;
 use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
@@ -29,7 +29,7 @@ fn example_activity(analysis_context: &AnalysisContext) {
             for instr in basic_block.iter() {
                 if let Some(llil_instr) = llil.instruction_at(instr) {
                     llil_instr.visit_tree(&mut |expr| {
-                        if let LowLevelILExpressionKind::Const(_op) = expr.kind() {
+                        if let ExpressionKind::Const(_op) = expr.kind() {
                             // Replace all consts with 0x1337.
                             println!("Replacing llil expression @ 0x{:x} : {}", instr, expr.index);
                             unsafe {
@@ -71,7 +71,7 @@ pub fn main() {
             for block in &llil.basic_blocks() {
                 for instr in block.iter() {
                     instr.visit_tree(&mut |expr| {
-                        if let LowLevelILExpressionKind::Const(value) = expr.kind() {
+                        if let ExpressionKind::Const(value) = expr.kind() {
                             if value.value() == 0x1337 {
                                 println!(
                                     "Found constant 0x1337 at instruction 0x{:x} in function {}",

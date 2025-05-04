@@ -37,7 +37,7 @@ use std::marker::PhantomData;
 use binaryninja::architecture::{BranchKind, IntrinsicId, RegisterId};
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use binaryninja::logger::Logger;
-use binaryninja::low_level_il::expression::{LowLevelILExpressionKind, ValueExpr};
+use binaryninja::low_level_il::expression::{ExpressionKind, ValueExpr};
 use binaryninja::low_level_il::instruction::InstructionKind;
 use binaryninja::low_level_il::lifting::{
     LiftableLowLevelIL, LiftableLowLevelILWithSize, LowLevelILLabel,
@@ -2868,9 +2868,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         let (auipc_dest, plt_base) = match auipc {
             InstructionKind::SetReg(r) => {
                 let value = match r.source_expr().kind() {
-                    LowLevelILExpressionKind::Const(v) | LowLevelILExpressionKind::ConstPtr(v) => {
-                        v.value()
-                    }
+                    ExpressionKind::Const(v) | ExpressionKind::ConstPtr(v) => v.value(),
                     _ => return false,
                 };
                 (r.dest_reg(), value)
@@ -2882,43 +2880,28 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         let load = next_llil_instr.next().unwrap().kind();
         let (mut entry, mut target_reg) = match load {
             InstructionKind::SetReg(r) => match r.source_expr().kind() {
-                LowLevelILExpressionKind::Load(l) => {
+                ExpressionKind::Load(l) => {
                     let target_reg = r.dest_reg();
                     let entry = match l.source_mem_expr().kind() {
-                        LowLevelILExpressionKind::Reg(lr) if lr.source_reg() == auipc_dest => {
-                            plt_base
-                        }
-                        LowLevelILExpressionKind::Add(a) => {
-                            match (a.left().kind(), a.right().kind()) {
-                                (
-                                    LowLevelILExpressionKind::Reg(a),
-                                    LowLevelILExpressionKind::Const(b)
-                                    | LowLevelILExpressionKind::ConstPtr(b),
-                                ) if a.source_reg() == auipc_dest => {
-                                    plt_base.wrapping_add(b.value())
-                                }
-                                (
-                                    LowLevelILExpressionKind::Const(b)
-                                    | LowLevelILExpressionKind::ConstPtr(b),
-                                    LowLevelILExpressionKind::Reg(a),
-                                ) if a.source_reg() == auipc_dest => {
-                                    plt_base.wrapping_add(b.value())
-                                }
-                                _ => return false,
-                            }
-                        }
-                        LowLevelILExpressionKind::Sub(a) => {
-                            match (a.left().kind(), a.right().kind()) {
-                                (
-                                    LowLevelILExpressionKind::Reg(a),
-                                    LowLevelILExpressionKind::Const(b)
-                                    | LowLevelILExpressionKind::ConstPtr(b),
-                                ) if a.source_reg() == auipc_dest => {
-                                    plt_base.wrapping_sub(b.value())
-                                }
-                                _ => return false,
-                            }
-                        }
+                        ExpressionKind::Reg(lr) if lr.source_reg() == auipc_dest => plt_base,
+                        ExpressionKind::Add(a) => match (a.left().kind(), a.right().kind()) {
+                            (
+                                ExpressionKind::Reg(a),
+                                ExpressionKind::Const(b) | ExpressionKind::ConstPtr(b),
+                            ) if a.source_reg() == auipc_dest => plt_base.wrapping_add(b.value()),
+                            (
+                                ExpressionKind::Const(b) | ExpressionKind::ConstPtr(b),
+                                ExpressionKind::Reg(a),
+                            ) if a.source_reg() == auipc_dest => plt_base.wrapping_add(b.value()),
+                            _ => return false,
+                        },
+                        ExpressionKind::Sub(a) => match (a.left().kind(), a.right().kind()) {
+                            (
+                                ExpressionKind::Reg(a),
+                                ExpressionKind::Const(b) | ExpressionKind::ConstPtr(b),
+                            ) if a.source_reg() == auipc_dest => plt_base.wrapping_sub(b.value()),
+                            _ => return false,
+                        },
                         _ => return false,
                     };
                     (entry, target_reg)
@@ -2945,7 +2928,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         match &temp_reg_inst {
             InstructionKind::SetReg(r) if llil.instruction_count() >= 5 => {
                 match r.source_expr().kind() {
-                    LowLevelILExpressionKind::Reg(op) if target_reg == op.source_reg() => {
+                    ExpressionKind::Reg(op) if target_reg == op.source_reg() => {
                         // Update the target_reg to the temp reg.
                         target_reg = r.dest_reg();
                         temp_reg_inst = next_llil_instr.next().unwrap().kind()
@@ -2961,9 +2944,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         let (next_pc_dest, next_pc, cur_pc) = match next_pc_inst {
             InstructionKind::SetReg(r) => {
                 let value = match r.source_expr().kind() {
-                    LowLevelILExpressionKind::Const(v) | LowLevelILExpressionKind::ConstPtr(v) => {
-                        v.value()
-                    }
+                    ExpressionKind::Const(v) | ExpressionKind::ConstPtr(v) => v.value(),
                     _ => return false,
                 };
                 (r.dest_reg(), value, r.address())
@@ -2979,13 +2960,13 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         match jump {
             InstructionKind::TailCall(j) => {
                 match j.target().kind() {
-                    LowLevelILExpressionKind::Reg(r) if r.source_reg() == target_reg => (),
+                    ExpressionKind::Reg(r) if r.source_reg() == target_reg => (),
                     _ => return false,
                 };
             }
             InstructionKind::Jump(j) => {
                 match j.target().kind() {
-                    LowLevelILExpressionKind::Reg(r) if r.source_reg() == target_reg => (),
+                    ExpressionKind::Reg(r) if r.source_reg() == target_reg => (),
                     _ => return false,
                 };
             }

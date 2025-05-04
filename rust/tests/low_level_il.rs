@@ -2,7 +2,7 @@ use binaryninja::architecture::Register;
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use binaryninja::low_level_il::expression::{
-    ExpressionHandler, LowLevelExpressionIndex, LowLevelILExpressionKind,
+    ExpressionHandler, ExpressionKind, LowLevelExpressionIndex,
 };
 use binaryninja::low_level_il::instruction::{
     InstructionHandler, InstructionKind, LowLevelInstructionIndex,
@@ -52,7 +52,7 @@ fn test_llil_info() {
             assert_eq!(op.operand().index, LowLevelExpressionIndex(2));
             println!("{:?}", op.operand().kind());
             match op.operand().kind() {
-                LowLevelILExpressionKind::Reg(op) => {
+                ExpressionKind::Reg(op) => {
                     assert_eq!(op.size(), 4);
                     match op.source_reg() {
                         LowLevelILRegisterKind::Arch(reg) => assert_eq!(reg.name(), "ebp"),

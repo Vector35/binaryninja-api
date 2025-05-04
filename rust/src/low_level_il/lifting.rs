@@ -480,7 +480,7 @@ where
         )
     };
 
-    LowLevelILExpression::new(il, LowLevelExpressionIndex(expr_idx))
+    Expression::new(il, LowLevelExpressionIndex(expr_idx))
 }
 
 pub fn get_default_flag_cond_llil<'func, A>(
@@ -503,7 +503,7 @@ where
             il.handle,
         );
 
-        LowLevelILExpression::new(il, LowLevelExpressionIndex(expr_idx))
+        Expression::new(il, LowLevelExpressionIndex(expr_idx))
     }
 }
 
@@ -628,7 +628,7 @@ where
     }
 }
 
-impl<'a, R> LiftableLowLevelIL<'a> for LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, R>
+impl<'a, R> LiftableLowLevelIL<'a> for Expression<'a, Mutable, NonSSA<LiftedNonSSA>, R>
 where
     R: ExpressionResultType,
 {
@@ -641,7 +641,7 @@ where
 }
 
 impl<'a> LiftableLowLevelILWithSize<'a>
-    for LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
+    for Expression<'a, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
 {
     fn lift_with_size(
         il: &'a MutableLiftedILFunction,
@@ -667,7 +667,7 @@ impl<'a> LiftableLowLevelILWithSize<'a>
     }
 }
 
-impl<'func, R> LowLevelILExpression<'func, Mutable, NonSSA<LiftedNonSSA>, R>
+impl<'func, R> Expression<'func, Mutable, NonSSA<LiftedNonSSA>, R>
 where
     R: ExpressionResultType,
 {
@@ -701,7 +701,7 @@ impl<'a, R> ExpressionBuilder<'a, R>
 where
     R: ExpressionResultType,
 {
-    pub fn from_expr(expr: LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, R>) -> Self {
+    pub fn from_expr(expr: Expression<'a, Mutable, NonSSA<LiftedNonSSA>, R>) -> Self {
         use binaryninjacore_sys::BNGetLowLevelILByIndex;
 
         let instr = unsafe { BNGetLowLevelILByIndex(expr.function.handle, expr.index.0) };
@@ -725,7 +725,7 @@ where
         self
     }
 
-    pub fn build(self) -> LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, R> {
+    pub fn build(self) -> Expression<'a, Mutable, NonSSA<LiftedNonSSA>, R> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
 
         let expr_idx = unsafe {
@@ -741,13 +741,10 @@ where
             )
         };
 
-        LowLevelILExpression::new(self.function, LowLevelExpressionIndex(expr_idx))
+        Expression::new(self.function, LowLevelExpressionIndex(expr_idx))
     }
 
-    pub fn with_source_operand(
-        self,
-        op: u32,
-    ) -> LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, R> {
+    pub fn with_source_operand(self, op: u32) -> Expression<'a, Mutable, NonSSA<LiftedNonSSA>, R> {
         self.build().with_source_operand(op)
     }
 
@@ -796,13 +793,13 @@ impl<'a> LiftableLowLevelILWithSize<'a> for ExpressionBuilder<'a, ValueExpr> {
 
 macro_rules! no_arg_lifter {
     ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name(&self) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, $result> {
+        pub fn $name(&self) -> Expression<Mutable, NonSSA<LiftedNonSSA>, $result> {
             use binaryninjacore_sys::BNLowLevelILAddExpr;
             use binaryninjacore_sys::BNLowLevelILOperation::$op;
 
             let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, $op, 0, 0, 0, 0, 0, 0) };
 
-            LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+            Expression::new(self, LowLevelExpressionIndex(expr_idx))
         }
     };
 }
@@ -832,7 +829,7 @@ macro_rules! unsized_unary_op_lifter {
         pub fn $name<'a, E>(
             &'a self,
             expr: E,
-        ) -> LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, $result>
+        ) -> Expression<'a, Mutable, NonSSA<LiftedNonSSA>, $result>
         where
             E: LiftableLowLevelIL<'a, Result = ValueExpr>,
         {
@@ -845,7 +842,7 @@ macro_rules! unsized_unary_op_lifter {
                 BNLowLevelILAddExpr(self.handle, $op, 0, 0, expr.index.0 as u64, 0, 0, 0)
             };
 
-            LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+            Expression::new(self, LowLevelExpressionIndex(expr_idx))
         }
     };
 }
@@ -974,7 +971,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
     pub fn expression<'a, E: LiftableLowLevelIL<'a>>(
         &'a self,
         expr: E,
-    ) -> LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, E::Result> {
+    ) -> Expression<'a, Mutable, NonSSA<LiftedNonSSA>, E::Result> {
         E::lift(self, expr)
     }
 
@@ -1006,44 +1003,41 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         &self,
         size: usize,
         val: u64,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    ) -> Expression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CONST;
 
         let expr_idx =
             unsafe { BNLowLevelILAddExpr(self.handle, LLIL_CONST, size, 0, val, 0, 0, 0) };
 
-        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+        Expression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
     pub fn const_ptr_sized(
         &self,
         size: usize,
         val: u64,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    ) -> Expression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CONST_PTR;
 
         let expr_idx =
             unsafe { BNLowLevelILAddExpr(self.handle, LLIL_CONST_PTR, size, 0, val, 0, 0, 0) };
 
-        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+        Expression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
-    pub fn const_ptr(
-        &self,
-        val: u64,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    pub fn const_ptr(&self, val: u64) -> Expression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
         self.const_ptr_sized(self.arch().address_size(), val)
     }
 
-    pub fn trap(&self, val: u64) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, VoidExpr> {
+    pub fn trap(&self, val: u64) -> Expression<Mutable, NonSSA<LiftedNonSSA>, VoidExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_TRAP;
 
         let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, LLIL_TRAP, 0, 0, val, 0, 0, 0) };
 
-        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+        Expression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
     no_arg_lifter!(unimplemented, LLIL_UNIMPL, ValueExpr);
@@ -1064,7 +1058,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         cond: C,
         true_label: &'b mut LowLevelILLabel,
         false_label: &'b mut LowLevelILLabel,
-    ) -> LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, VoidExpr>
+    ) -> Expression<'a, Mutable, NonSSA<LiftedNonSSA>, VoidExpr>
     where
         C: LiftableLowLevelIL<'b, Result = ValueExpr>,
     {
@@ -1097,14 +1091,14 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         *true_label = new_true_label;
         *false_label = new_false_label;
 
-        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+        Expression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
     // TODO: Wtf are these lifetimes??
     pub fn goto<'a: 'b, 'b>(
         &'a self,
         label: &'b mut LowLevelILLabel,
-    ) -> LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, VoidExpr> {
+    ) -> Expression<'a, Mutable, NonSSA<LiftedNonSSA>, VoidExpr> {
         use binaryninjacore_sys::BNLowLevelILGoto;
 
         let mut raw_label = BNLowLevelILLabel::from(*label);
@@ -1118,14 +1112,14 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         }
         *label = new_label;
 
-        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+        Expression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
     pub fn reg<R: ArchReg, LR: Into<LowLevelILRegisterKind<R>>>(
         &self,
         size: usize,
         reg: LR,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    ) -> Expression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_REG;
 
@@ -1135,7 +1129,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         let expr_idx =
             unsafe { BNLowLevelILAddExpr(self.handle, LLIL_REG, size, 0, reg.0 as u64, 0, 0, 0) };
 
-        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+        Expression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
     pub fn reg_split<R: ArchReg, LR: Into<LowLevelILRegisterKind<R>>>(
@@ -1143,7 +1137,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         size: usize,
         hi_reg: LR,
         lo_reg: LR,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    ) -> Expression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_REG_SPLIT;
 
@@ -1164,7 +1158,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
             )
         };
 
-        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+        Expression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
     pub fn set_reg<'a, R, LR, E>(
@@ -1232,10 +1226,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         }
     }
 
-    pub fn flag(
-        &self,
-        flag: impl Flag,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    pub fn flag(&self, flag: impl Flag) -> Expression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLAG;
 
@@ -1244,13 +1235,13 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
             BNLowLevelILAddExpr(self.handle, LLIL_FLAG, 0, 0, flag.id().0 as u64, 0, 0, 0)
         };
 
-        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+        Expression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
     pub fn flag_cond(
         &self,
         cond: FlagCondition,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    ) -> Expression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLAG_COND;
 
@@ -1258,13 +1249,13 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         let expr_idx =
             unsafe { BNLowLevelILAddExpr(self.handle, LLIL_FLAG_COND, 0, 0, cond as u64, 0, 0, 0) };
 
-        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+        Expression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
     pub fn flag_group(
         &self,
         group: impl FlagGroup,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    ) -> Expression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLAG_GROUP;
 
@@ -1282,7 +1273,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
             )
         };
 
-        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+        Expression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
     pub fn set_flag<'a, E>(

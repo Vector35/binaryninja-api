@@ -160,10 +160,10 @@ impl Platform {
         }
     }
 
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         unsafe {
             let raw_name = BNGetPlatformName(self.handle);
-            BnString::from_raw(raw_name)
+            BnString::to_string(raw_name)
         }
     }
 

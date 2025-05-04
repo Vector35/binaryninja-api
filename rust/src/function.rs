@@ -368,8 +368,8 @@ impl Function {
         }
     }
 
-    pub fn comment(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetFunctionComment(self.handle)) }
+    pub fn comment(&self) -> String {
+        unsafe { BnString::to_string(BNGetFunctionComment(self.handle)) }
     }
 
     pub fn set_comment<S: BnStrCompatible>(&self, comment: S) {
@@ -390,8 +390,8 @@ impl Function {
         unsafe { BNSetUserFunctionCanReturn(self.handle, &mut bool_with_confidence) }
     }
 
-    pub fn comment_at(&self, addr: u64) -> BnString {
-        unsafe { BnString::from_raw(BNGetCommentForAddress(self.handle, addr)) }
+    pub fn comment_at(&self, addr: u64) -> String {
+        unsafe { BnString::to_string(BNGetCommentForAddress(self.handle, addr)) }
     }
 
     pub fn set_comment_at<S: BnStrCompatible>(&self, addr: u64, comment: S) {
@@ -459,11 +459,11 @@ impl Function {
         unsafe { Array::new(lines, count, ()) }
     }
 
-    pub fn variable_name(&self, var: &Variable) -> BnString {
+    pub fn variable_name(&self, var: &Variable) -> String {
         unsafe {
             let raw_var = BNVariable::from(var);
             let raw_name = BNGetVariableName(self.handle, &raw_var);
-            BnString::from_raw(raw_name)
+            BnString::to_string(raw_name)
         }
     }
 
@@ -1732,10 +1732,10 @@ impl Function {
         value: u64,
         operand: usize,
         arch: Option<CoreArchitecture>,
-    ) -> BnString {
+    ) -> String {
         let arch = arch.unwrap_or_else(|| self.arch());
         unsafe {
-            BnString::from_raw(BNGetIntegerConstantDisplayTypeEnumerationType(
+            BnString::to_string(BNGetIntegerConstantDisplayTypeEnumerationType(
                 self.handle,
                 arch.handle,
                 instr_addr,
@@ -1757,7 +1757,7 @@ impl Function {
         value: u64,
         operand: usize,
         arch: Option<CoreArchitecture>,
-    ) -> (IntegerDisplayType, BnString) {
+    ) -> (IntegerDisplayType, String) {
         let arch = arch.unwrap_or_else(|| self.arch());
         let name = self.int_enum_display_typeid(instr_addr, value, operand, Some(arch));
         let display = self.int_display_type(instr_addr, value, operand, Some(arch));
@@ -2339,8 +2339,8 @@ impl Function {
     /// Returns a string representing the provenance. This portion of the API
     /// is under development. Currently the provenance information is
     /// undocumented, not persistent, and not saved to a database.
-    pub fn provenance(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetProvenanceString(self.handle)) }
+    pub fn provenance(&self) -> String {
+        unsafe { BnString::to_string(BNGetProvenanceString(self.handle)) }
     }
 
     /// Get registers that are used for the return value
@@ -2771,7 +2771,7 @@ impl Default for HighlightColor {
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Comment {
     pub addr: u64,
-    pub comment: BnString,
+    pub comment: String,
 }
 
 impl CoreArrayProvider for Comment {

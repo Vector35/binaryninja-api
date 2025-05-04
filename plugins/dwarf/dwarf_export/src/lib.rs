@@ -18,7 +18,6 @@ use binaryninja::{
     interaction,
     interaction::{FormResponses, FormResponses::Index},
     rc::Ref,
-    string::BnString,
     symbol::SymbolType,
     types::{MemberAccess, StructureType, Type, TypeClass},
 };
@@ -422,7 +421,7 @@ fn export_functions(
         // Set subprogram DIE attributes
         dwarf.unit.get_mut(function_die_uid).set(
             gimli::DW_AT_name,
-            AttributeValue::String(function.symbol().short_name().as_bytes().to_vec()),
+            AttributeValue::String(function.symbol().short_name().to_bytes().to_vec()),
         );
 
         // TODO : (DW_AT_main_subprogram VS DW_TAG_entry_point)
@@ -557,7 +556,7 @@ fn export_data_vars(
         if let Some(symbol) = data_var_sym {
             dwarf.unit.get_mut(var_die_uid).set(
                 gimli::DW_AT_name,
-                AttributeValue::String(symbol.full_name().as_bytes().to_vec()),
+                AttributeValue::String(symbol.full_name().to_bytes().to_vec()),
             );
 
             if symbol.external() {
@@ -756,7 +755,7 @@ fn export_dwarf(bv: &BinaryView) {
     let arch_name = if let Some(arch) = bv.default_arch() {
         arch.name()
     } else {
-        BnString::new("Unknown")
+        String::from("Unknown")
     };
     let responses = present_form(arch_name.as_str());
 

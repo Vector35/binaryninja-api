@@ -106,7 +106,7 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
         if let Some(symbol) = view
             .symbols()
             .iter()
-            .find(|symbol| symbol.full_name().as_str() == "__elf_section_headers")
+            .find(|symbol| symbol.full_name().to_string_lossy() == "__elf_section_headers")
         {
             if let Some(data_var) = view
                 .data_variables()

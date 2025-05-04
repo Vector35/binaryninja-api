@@ -932,9 +932,9 @@ impl Type {
         }
     }
 
-    pub fn generate_auto_demangled_type_id<T: Into<QualifiedName>>(name: T) -> BnString {
+    pub fn generate_auto_demangled_type_id<T: Into<QualifiedName>>(name: T) -> String {
         let mut raw_name = QualifiedName::into_raw(name.into());
-        let type_id = unsafe { BnString::from_raw(BNGenerateAutoDemangledTypeId(&mut raw_name)) };
+        let type_id = unsafe { BnString::to_string(BNGenerateAutoDemangledTypeId(&mut raw_name)) };
         QualifiedName::free_raw(raw_name);
         type_id
     }

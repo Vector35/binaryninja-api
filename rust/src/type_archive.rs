@@ -1140,10 +1140,10 @@ impl TypeArchiveMergeConflict {
         NonNull::new(value).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
     }
 
-    pub fn type_id(&self) -> BnString {
+    pub fn type_id(&self) -> String {
         let value = unsafe { BNTypeArchiveMergeConflictGetTypeId(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::to_string(value) }
     }
 
     pub fn base_snapshot_id(&self) -> TypeArchiveSnapshotId {

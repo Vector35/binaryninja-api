@@ -69,6 +69,13 @@ impl BnString {
         }
     }
 
+    /// Take an owned core string and convert it to [`String`].
+    ///
+    /// This expects the passed raw string to be owned, as in, freed by us.
+    pub unsafe fn to_string(raw: *mut c_char) -> String {
+        Self::from_raw(raw).to_string()
+    }
+
     /// Construct a BnString from an owned const char* allocated by BNAllocString
     pub(crate) unsafe fn from_raw(raw: *mut c_char) -> Self {
         Self { raw }
@@ -86,26 +93,6 @@ impl BnString {
         // the core, so ensure we don't free it
         mem::forget(value);
         res
-    }
-
-    pub fn as_str(&self) -> &str {
-        unsafe { CStr::from_ptr(self.raw).to_str().unwrap() }
-    }
-
-    pub fn as_bytes(&self) -> &[u8] {
-        self.as_str().as_bytes()
-    }
-
-    pub fn as_bytes_with_null(&self) -> &[u8] {
-        self.deref().to_bytes()
-    }
-
-    pub fn len(&self) -> usize {
-        self.as_str().len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.as_str().is_empty()
     }
 }
 
@@ -201,6 +188,14 @@ unsafe impl<'a> BnStrCompatible for &'a CStr {
 }
 
 unsafe impl BnStrCompatible for BnString {
+    type Result = Self;
+
+    fn into_bytes_with_nul(self) -> Self::Result {
+        self
+    }
+}
+
+unsafe impl BnStrCompatible for &BnString {
     type Result = Self;
 
     fn into_bytes_with_nul(self) -> Self::Result {

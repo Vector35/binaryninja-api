@@ -506,7 +506,7 @@ pub struct PlatformID(u64);
 impl From<&Platform> for PlatformID {
     fn from(value: &Platform) -> Self {
         let mut hasher = DefaultHasher::new();
-        hasher.write(value.name().to_bytes());
+        hasher.write(value.name().as_bytes());
         Self(hasher.finish())
     }
 }
